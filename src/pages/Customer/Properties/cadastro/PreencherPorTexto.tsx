@@ -1,7 +1,7 @@
 // "Preencher a partir de um texto": cola o texto (ou sobe .txt, book em PDF,
 // Word ou foto) e os campos do cadastro se preenchem LOCALMENTE, sem IA. Só na
 // criação. O texto fica na página porque o "Gerar com IA" da descrição também o usa.
-import { useRef, useState } from 'react';
+import { useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { toast } from 'sonner';
 import { Loader2, Upload, Wand2 } from 'lucide-react';
 import { Button, Textarea } from '@/components/ui/ds';
@@ -14,7 +14,8 @@ interface Props {
   form: PropertyFormData;
   setF: (patch: Partial<PropertyFormData>) => void;
   texto: string;
-  aoMudarTexto: (texto: string) => void;
+  /** O `setState` do texto: a leitura de arquivo soma ao que estiver lá quando terminar. */
+  aoMudarTexto: Dispatch<SetStateAction<string>>;
 }
 
 export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto }: Props) {
@@ -180,7 +181,7 @@ export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto }: P
         }
         if (!text) { toast.error('Não consegui extrair texto desse PDF.'); return; }
       }
-      aoMudarTexto(texto ? `${texto}\n\n${text}` : text);
+      aoMudarTexto(prev => (prev ? `${prev}\n\n${text}` : text));
       await doParseText(text);
     } catch {
       toast.error('Não consegui ler o arquivo. Tente colar o texto.');

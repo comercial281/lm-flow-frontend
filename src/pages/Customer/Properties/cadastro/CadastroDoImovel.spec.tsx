@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 
@@ -8,12 +8,15 @@ vi.mock('@/services/properties/propertiesService', async importOriginal => {
   const real = await importOriginal<typeof import('@/services/properties/propertiesService')>();
   return { ...real, propertiesService: { ...real.propertiesService, ...svc } };
 });
-vi.mock('@/contexts/TenantFeaturesContext', () => ({ useFeature: () => true }));
+// Funções do cliente: todas ligadas, salvo as que o teste desligar.
+const desligadas = vi.hoisted(() => new Set<string>());
+vi.mock('@/contexts/TenantFeaturesContext', () => ({ useFeature: (k: string) => !desligadas.has(k) }));
 vi.mock('@/services/contacts/labelsService', () => ({ labelsService: { getLabels: () => Promise.resolve({ data: [] }) } }));
 vi.mock('@/services/users/usersService', () => ({ default: { getUsers: () => Promise.resolve({ data: [] }) } }));
 vi.mock('@/services/propertyOwners/propertyOwnersService', () => ({ propertyOwnersService: { list: () => Promise.resolve({ data: [], meta: { total: 0 } }) } }));
 
 import CadastroDoImovel from './CadastroDoImovel';
+import { NO_ACCESS_MESSAGE } from '@/components/permissions/noAccessCopy';
 
 function Onde() { const l = useLocation(); return <p data-testid="onde">{l.pathname}{l.search}</p>; }
 // O endereço fica sempre à vista (fora das rotas): depois de "Criar" a página
@@ -28,6 +31,8 @@ function abrir(url: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.restoreAllMocks();
+  desligadas.clear();
   // jsdom não tem IntersectionObserver nem scrollIntoView
   globalThis.IntersectionObserver = class { observe() {} disconnect() {} unobserve() {} } as unknown as typeof IntersectionObserver;
   Element.prototype.scrollIntoView = vi.fn();
@@ -149,5 +154,77 @@ describe('CadastroDoImovel: campos por tipo (herdados da janela)', () => {
     fireEvent.change(screen.getByPlaceholderText('Ex: Apartamento 3 quartos - Jardim Europa'), { target: { value: 'Vista Taquaral' } });
     fireEvent.click(screen.getByRole('button', { name: 'Criar e escolher onde divulgar →' }));
     await waitFor(() => expect(svc.create).toHaveBeenCalledWith(expect.objectContaining({ typologies: [] })));
+  });
+});
+
+// IntersectionObserver de mentira que o teste comanda: diz quais seções entraram na faixa.
+function observadorComandado() {
+  const vivos: Array<{ cb: IntersectionObserverCallback }> = [];
+  globalThis.IntersectionObserver = class {
+    cb: IntersectionObserverCallback;
+    constructor(cb: IntersectionObserverCallback) { this.cb = cb; vivos.push(this); }
+    observe() {} disconnect() {} unobserve() {}
+  } as unknown as typeof IntersectionObserver;
+  return (entram: string[], saem: string[] = []) => act(() => {
+    const entradas = [
+      ...entram.map(id => ({ target: document.getElementById(`secao-${id}`)!, isIntersecting: true })),
+      ...saem.map(id => ({ target: document.getElementById(`secao-${id}`)!, isIntersecting: false })),
+    ] as unknown as IntersectionObserverEntry[];
+    vivos.forEach(o => o.cb(entradas, o as unknown as IntersectionObserver));
+  });
+}
+
+describe('CadastroDoImovel: índice e erros', () => {
+  it('erro numa seção do meio marca essa seção no índice', async () => {
+    abrir('/properties/new?tipo=revenda');
+    await userEvent.type(await screen.findByLabelText('Título'), 'Casa no Cambuí');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar e escolher onde divulgar →' }));
+    expect(svc.create).not.toHaveBeenCalled();
+    expect(screen.getByRole('link', { name: 'Valores' })).toHaveAttribute('aria-current', 'true');
+    expect(screen.getByRole('link', { name: 'Básico' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('depois do erro, rolar a página devolve o índice à rolagem', async () => {
+    const mostrar = observadorComandado();
+    const agora = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    abrir('/properties/new?tipo=revenda');
+    await userEvent.type(await screen.findByLabelText('Título'), 'Casa no Cambuí');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar e escolher onde divulgar →' }));
+    expect(screen.getByRole('link', { name: 'Valores' })).toHaveAttribute('aria-current', 'true');
+
+    // Ainda rolando até o erro: a seção do erro continua marcada.
+    mostrar(['localizacao']);
+    expect(screen.getByRole('link', { name: 'Valores' })).toHaveAttribute('aria-current', 'true');
+
+    // A pessoa rola depois: o índice volta a acompanhar.
+    agora.mockReturnValue(1_002_000);
+    mostrar(['equipe'], ['localizacao']);
+    expect(screen.getByRole('link', { name: 'Equipe' })).toHaveAttribute('aria-current', 'true');
+    expect(screen.getByRole('link', { name: 'Valores' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('empreendimento tem o resumo de composição em Tipologias e valores', async () => {
+    abrir('/properties/new?tipo=empreendimento');
+    const tipologias = await screen.findByRole('region', { name: 'Tipologias e valores' });
+    expect(within(tipologias).getByText('Resumo do empreendimento (aparece no cartão e nos filtros)')).toBeInTheDocument();
+    expect(within(tipologias).getByText('Quartos')).toBeInTheDocument();
+    expect(within(tipologias).getByText('Área total (m²)')).toBeInTheDocument();
+  });
+
+  it('sem a função de cadastrar ligada, /properties/new não abre e não cria', async () => {
+    desligadas.add('properties_create');
+    abrir('/properties/new?tipo=revenda');
+    expect(await screen.findByText(NO_ACCESS_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Novo imóvel' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Criar e escolher onde divulgar →' })).toBeNull();
+    expect(svc.create).not.toHaveBeenCalled();
+  });
+
+  it('sem a função de cadastrar, a edição continua abrindo', async () => {
+    desligadas.add('properties_create');
+    svc.get.mockResolvedValue({ id: 'e1', code: 'AP1', title: 'Apê', transaction_type: 'sale', category_type: 'residential',
+      property_type: 'apartment', status: 'active', stage: 'ready', listing_kind: 'resale', sale_price: 1, created_at: '', updated_at: '' });
+    abrir('/properties/e1/editar');
+    expect(await screen.findByRole('heading', { name: 'Editar imóvel' })).toBeInTheDocument();
   });
 });

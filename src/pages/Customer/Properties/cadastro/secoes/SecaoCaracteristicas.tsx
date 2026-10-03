@@ -3,10 +3,13 @@ import type { PropsDaSecao } from './tipos';
 
 // Características do imóvel + comodidades do condomínio (aparecem na página pública).
 export default function SecaoCaracteristicas({ form: f, setF }: PropsDaSecao) {
-  const alternar = (key: 'features' | 'condo_features', slug: string) => {
-    const atual = f[key] ?? [];
-    setF({ [key]: atual.includes(slug) ? atual.filter(s => s !== slug) : [...atual, slug] });
-  };
+  // Por atualização funcional (prev), como a janela antiga fazia: cliques
+  // seguidos não se atropelam.
+  const alternar = (key: 'features' | 'condo_features', slug: string) =>
+    setF(prev => {
+      const atual = prev[key] ?? [];
+      return { [key]: atual.includes(slug) ? atual.filter(s => s !== slug) : [...atual, slug] };
+    });
   const grupo = (titulo: string, key: 'features' | 'condo_features', opcoes: typeof PROPERTY_FEATURES) => (
     <div>
       <p className="mb-2 block text-sm font-medium">{titulo}</p>

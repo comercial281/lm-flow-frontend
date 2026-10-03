@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { Button, Input, Label as UILabel } from '@/components/ui/ds';
 import { EMPTY_TYPOLOGY, typologyName, type PropertyTypology } from '@/features/properties/typologies';
+import { GradeDeComposicao } from './SecaoComposicao';
 import { numeroOuNulo, type PropsDaSecao } from './tipos';
 
 // Empreendimento. As várias plantas do mesmo empreendimento e, abaixo da
@@ -8,10 +9,15 @@ import { numeroOuNulo, type PropsDaSecao } from './tipos';
 // o RESUMO que alimenta busca, filtro e card — normalmente o da planta de entrada.
 export default function SecaoTipologias({ form: f, setF }: PropsDaSecao) {
   const lista = f.typologies ?? [];
-  const addTypology = () => setF({ typologies: [...lista, { ...EMPTY_TYPOLOGY }] });
-  const removeTypology = (index: number) => setF({ typologies: lista.filter((_, i) => i !== index) });
+  // Lista repetível: cada linha é uma planta com números próprios. Sempre por
+  // atualização funcional (prev) — o corretor mexe em várias linhas seguidas e
+  // um patch em cima de `form` capturado perderia a edição anterior.
+  const addTypology = () =>
+    setF(prev => ({ typologies: [...(prev.typologies ?? []), { ...EMPTY_TYPOLOGY }] }));
+  const removeTypology = (index: number) =>
+    setF(prev => ({ typologies: (prev.typologies ?? []).filter((_, i) => i !== index) }));
   const setTypology = (index: number, patch: Partial<PropertyTypology>) =>
-    setF({ typologies: lista.map((t, i) => (i === index ? { ...t, ...patch } : t)) });
+    setF(prev => ({ typologies: (prev.typologies ?? []).map((t, i) => (i === index ? { ...t, ...patch } : t)) }));
 
   return (
     <div className="mt-4 space-y-4">
@@ -128,6 +134,13 @@ export default function SecaoTipologias({ form: f, setF }: PropsDaSecao) {
           <Input type="number" value={f.iptu ?? ''} onChange={e => setF({ iptu: numeroOuNulo(e.target.value) })}
             placeholder="1200" className="mt-1" />
         </div>
+      </div>
+
+      {/* Os mesmos campos soltos de composição da janela antiga: o servidor não
+          os tira das tipologias ao salvar, então o cadastro manual preenche aqui. */}
+      <div>
+        <p className="text-sm font-medium">Resumo do empreendimento (aparece no cartão e nos filtros)</p>
+        <GradeDeComposicao form={f} setF={setF} />
       </div>
     </div>
   );

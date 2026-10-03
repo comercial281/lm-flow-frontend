@@ -29,8 +29,8 @@ vi.mock('@/services/users/usersService', () => ({
 }));
 // O lote com IA e o mapa têm testes próprios; aqui só importa que a tela os chama.
 vi.mock('../PropertyImportDialog', () => ({
-  default: ({ open, listingKind, onManual, onReview }: { open: boolean; listingKind?: string; onManual?: () => void; onReview?: (id: string) => void }) =>
-    (open ? <div data-testid="lote">lote {listingKind}<button onClick={onManual}>Cadastrar à mão</button><button onClick={() => onReview?.('d1')}>Revisar d1</button></div> : null),
+  default: ({ open, listingKind, retomarRevisao, onManual, onReview }: { open: boolean; listingKind?: string; retomarRevisao?: boolean; onManual?: () => void; onReview?: (id: string) => void }) =>
+    (open ? <div data-testid="lote">lote {listingKind}{retomarRevisao ? ' retomando' : ''}<button onClick={onManual}>Cadastrar à mão</button><button onClick={() => onReview?.('d1')}>Revisar d1</button></div> : null),
 }));
 vi.mock('@/services/propertyPhotos/propertyPhotosService', async importOriginal => {
   const real = await importOriginal<typeof import('@/services/propertyPhotos/propertyPhotosService')>();
@@ -190,6 +190,7 @@ describe('Tela de Imóveis', () => {
     svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 3 });
     abrir('/properties?aba=empreendimentos');
     fireEvent.click(await screen.findByRole('button', { name: /Novo empreendimento/ }));
+    expect(screen.getByTestId('lote')).not.toHaveTextContent('retomando');
     fireEvent.click(screen.getByRole('button', { name: 'Revisar d1' }));
     await waitFor(() => expect(screen.getByTestId('onde')).toHaveTextContent('/properties/d1/editar?de=lote'));
   });
@@ -197,7 +198,7 @@ describe('Tela de Imóveis', () => {
   it('?importar=1 (volta da revisão) reabre o lote e tira o parâmetro', async () => {
     svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 3 });
     abrir('/properties?aba=empreendimentos&importar=1');
-    expect(await screen.findByTestId('lote')).toBeInTheDocument();
+    expect(await screen.findByTestId('lote')).toHaveTextContent('retomando');
     await waitFor(() => expect(screen.getByTestId('onde')).not.toHaveTextContent('importar'));
     expect(screen.getByTestId('onde')).toHaveTextContent('aba=empreendimentos');
   });

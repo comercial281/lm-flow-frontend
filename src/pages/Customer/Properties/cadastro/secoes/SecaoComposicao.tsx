@@ -10,9 +10,11 @@ const CAMPOS = [
   { label: 'Área total (m²)', key: 'total_area_m2' as const },
 ];
 
-export default function SecaoComposicao({ form: f, setF }: PropsDaSecao) {
+// Quartos, suítes, banheiros, vagas e áreas. A revenda usa na seção Composição;
+// o empreendimento, como resumo, em Tipologias e valores.
+export function GradeDeComposicao({ form: f, setF }: Pick<PropsDaSecao, 'form' | 'setF'>) {
   return (
-    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
       {CAMPOS.map(({ label, key }) => (
         <div key={key}>
           <UILabel>{label}</UILabel>
@@ -22,4 +24,8 @@ export default function SecaoComposicao({ form: f, setF }: PropsDaSecao) {
       ))}
     </div>
   );
+}
+
+export default function SecaoComposicao({ form, setF }: PropsDaSecao) {
+  return <div className="mt-4"><GradeDeComposicao form={form} setF={setF} /></div>;
 }

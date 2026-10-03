@@ -5,12 +5,13 @@
 //   /properties/:id/editar[?de=lote]               editar (do lote, volta para ele)
 // Quais seções cada tipo tem mora em `secoesDoCadastro`; a validação e o que
 // vai para o servidor, em `formularioDoCadastro`.
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { propertiesService, type Property, type PropertyFormData } from '@/services/properties/propertiesService';
 import { propertyPhotosService } from '@/services/propertyPhotos/propertyPhotosService';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { useCan } from '@/hooks/useCan';
 import { useAlteracoesNaoSalvas, mesmoConteudo, PEDIDO_SAIR_SEM_SALVAR } from '@/hooks/useAlteracoesNaoSalvas';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { EmptyState } from '@/components/base';
@@ -31,6 +32,8 @@ import {
 import IndiceDoCadastro from './IndiceDoCadastro';
 import BarraDoCadastro from './BarraDoCadastro';
 import PreencherPorTexto from './PreencherPorTexto';
+import { propertiesActionGates } from '../propertiesActionGates';
+import type { MudancaDoFormulario } from './secoes/tipos';
 import { useSecaoVisivel } from './useSecaoVisivel';
 import EmBreve from './secoes/EmBreve';
 import SecaoBasico from './secoes/SecaoBasico';
@@ -52,6 +55,11 @@ function mensagemDoErro(e: unknown, reserva: string): string {
   return err?.response?.data?.error?.message || err?.response?.data?.message || reserva;
 }
 
+// Depois de rolar até um erro, o índice fica na seção do erro enquanto a
+// rolagem suave anda. Passado esse tempo, a primeira mudança de seção visível
+// (a pessoa rolou) devolve o índice ao acompanhamento da rolagem.
+const ESPERA_DA_ROLAGEM_MS = 800;
+
 const rolarAte = (secao: SecaoId) =>
   document.getElementById(`secao-${secao}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -67,6 +75,8 @@ function Cadastro() {
   const [sp] = useSearchParams();
   const navigate = useNavigate();
   const canAiDesc = useFeature('properties_ai_description');
+  // Cadastrar segue a mesma trava do botão "Novo" da lista: função ligada no cliente e cargo.
+  const podeCriar = propertiesActionGates(useFeature('properties_create'), useCan()).create;
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   const editandoId = id ?? null;
@@ -76,7 +86,8 @@ function Cadastro() {
   const kind: ListingKind = imovel ? tipoDoImovel(imovel) : (tipoDaUrl(sp.get('tipo')) ?? 'resale');
   const [form, setForm] = useState<PropertyFormData>(() => ({ ...FORMULARIO_VAZIO, ...formularioNovo(kind) }));
   const [inicial, setInicial] = useState(form);
-  const setF = (patch: Partial<PropertyFormData>) => setForm(prev => ({ ...prev, ...patch }));
+  const setF = (patch: MudancaDoFormulario) =>
+    setForm(prev => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
 
   // Mídias escolhidas na criação: sobem logo depois de criar o imóvel.
   const [arquivos, setArquivos] = useState<File[]>([]);
@@ -91,6 +102,10 @@ function Cadastro() {
   const [secaoComErro, setSecaoComErro] = useState<SecaoId | null>(null);
   const visivel = useSecaoVisivel(pronto ? secoes.map(s => s.id) : []);
   const ativa = secaoComErro ?? visivel;
+  const erroMarcadoEm = useRef(0);
+  useEffect(() => {
+    if (Date.now() - erroMarcadoEm.current > ESPERA_DA_ROLAGEM_MS) setSecaoComErro(null);
+  }, [visivel]);
 
   const temAlteracao = pronto && (!mesmoConteudo(form, inicial) || arquivos.length > 0);
   useAlteracoesNaoSalvas(temAlteracao);
@@ -118,6 +133,7 @@ function Cadastro() {
   const irParaErro = ({ secao, mensagem }: ErroDoCadastro) => {
     toast.error(mensagem);
     setSecaoComErro(secao);
+    erroMarcadoEm.current = Date.now();
     rolarAte(secao);
   };
 
@@ -198,7 +214,7 @@ function Cadastro() {
     }
   };
 
-  if (recusado) return <NoAccessState />;
+  if (recusado || (!editandoId && !podeCriar)) return <NoAccessState />;
 
   const props = { form, setF, editando: imovel };
   const conteudoDa = (secao: SecaoId): ReactNode => {

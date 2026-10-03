@@ -110,6 +110,8 @@ export default function Properties() {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   const [importOpen, setImportOpen]     = useState(false);
+  // Aberto pela volta da revisão (?importar=1): o lote reabre na lista de onde saiu.
+  const [voltouDaRevisao, setVoltouDaRevisao] = useState(false);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [toDelete, setToDelete]                 = useState<Property | null>(null);
@@ -205,10 +207,11 @@ export default function Properties() {
   useEffect(() => () => { if (searchTimeout.current) clearTimeout(searchTimeout.current); }, []);
 
   // Volta da revisão de um imóvel do lote (/properties/:id/editar?de=lote): o
-  // lote reabre (ele se recupera sozinho do sessionStorage) e o parâmetro sai.
+  // lote reabre na lista de onde a pessoa saiu e o parâmetro sai.
   const importarNoEndereco = searchParams.get('importar') === '1';
   useEffect(() => {
     if (!importarNoEndereco) return;
+    setVoltouDaRevisao(true);
     setImportOpen(true);
     setSearchParams(prev => {
       const novo = new URLSearchParams(prev);
@@ -662,7 +665,8 @@ export default function Properties() {
       {/* Importação em lote com IA (books/URLs -> rascunhos) */}
       <PropertyImportDialog
         open={importOpen}
-        onClose={() => setImportOpen(false)}
+        onClose={() => { setImportOpen(false); setVoltouDaRevisao(false); }}
+        retomarRevisao={voltouDaRevisao}
         onManual={() => { setImportOpen(false); openCreate(kind ?? 'resale'); }}
         onReview={id => navigate(`/properties/${id}/editar?de=lote`)}
         onChanged={() => { load(1); recontar(); }}
