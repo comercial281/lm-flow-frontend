@@ -23,21 +23,24 @@ export default function SecaoProprietario({ form, setF }: PropsDaSecao) {
   const ownerId = form.owner_id ?? null;
   const [escolhido, setEscolhido] = useState<Escolhido | null>(null);
   const [semAcesso, setSemAcesso] = useState(false);
+  const [falhou, setFalhou] = useState(false);
+  const [tentativa, setTentativa] = useState(0);
 
   // Com owner_id e sem dados na mão (edição ou ?proprietario=), busca o cartão.
   useEffect(() => {
-    if (!ownerId) { setEscolhido(null); setSemAcesso(false); return; }
+    if (!ownerId) { setEscolhido(null); setSemAcesso(false); setFalhou(false); return; }
     if (escolhido?.id === ownerId) return;
     let cancelado = false;
     setSemAcesso(false);
+    setFalhou(false);
     propertyOwnersService.get(ownerId)
       .then(o => { if (!cancelado) setEscolhido(o); })
-      .catch(e => { if (!cancelado) { if (naoEncontrado(e)) setSemAcesso(true); else toast.error('Erro ao carregar o proprietário'); } });
+      .catch(e => { if (!cancelado) { if (naoEncontrado(e)) setSemAcesso(true); else setFalhou(true); } });
     return () => { cancelado = true; };
-  }, [ownerId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ownerId, tentativa]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const escolher = (o: Escolhido) => { setEscolhido(o); setSemAcesso(false); setF({ owner_id: o.id }); };
-  const trocar = () => { setEscolhido(null); setSemAcesso(false); setF({ owner_id: null }); };
+  const escolher = (o: Escolhido) => { setEscolhido(o); setSemAcesso(false); setFalhou(false); setF({ owner_id: o.id }); };
+  const trocar = () => { setEscolhido(null); setSemAcesso(false); setFalhou(false); setF({ owner_id: null }); };
 
   if (ownerId) {
     return (
@@ -57,6 +60,14 @@ export default function SecaoProprietario({ form, setF }: PropsDaSecao) {
           <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed p-3">
             <p className="text-sm text-muted-foreground">Proprietário sem acesso ou removido</p>
             <button type="button" onClick={trocar} className="text-sm font-medium text-primary hover:underline">Trocar</button>
+          </div>
+        ) : falhou ? (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed p-3">
+            <p className="text-sm text-muted-foreground">Não foi possível carregar o proprietário</p>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setTentativa(t => t + 1)} className="text-sm font-medium text-primary hover:underline">Tentar de novo</button>
+              <button type="button" onClick={trocar} className="text-sm font-medium text-primary hover:underline">Trocar</button>
+            </div>
           </div>
         ) : (
           <div role="status" className="h-16 animate-pulse rounded-lg border bg-muted/40">

@@ -69,4 +69,40 @@ describe('SecaoProprietario', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Trocar' }));
     expect(setF).toHaveBeenCalledWith({ owner_id: null });
   });
+
+  it('falha que não é 404 deixa tentar de novo ou trocar', async () => {
+    own.get.mockRejectedValueOnce({ response: { status: 500 } });
+    const setF = vi.fn();
+    render(<SecaoProprietario form={{ ...form, owner_id: 'o1' }} setF={setF} editando={null} />);
+    expect(await screen.findByText('Não foi possível carregar o proprietário')).toBeInTheDocument();
+    own.get.mockResolvedValueOnce({ ...maria, properties: [], history: [] });
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    expect(await screen.findByText('Maria Souza')).toBeInTheDocument();
+    expect(own.get).toHaveBeenCalledTimes(2);
+  });
+
+  it('falha que não é 404: Trocar limpa o proprietário', async () => {
+    own.get.mockRejectedValue(new Error('rede'));
+    const setF = vi.fn();
+    render(<SecaoProprietario form={{ ...form, owner_id: 'o1' }} setF={setF} editando={null} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Trocar' }));
+    expect(setF).toHaveBeenCalledWith({ owner_id: null });
+  });
+
+  it('resposta velha da busca não sobrescreve a nova', async () => {
+    let soltaVelha: (v: unknown) => void = () => {};
+    own.list.mockImplementation(({ q }: { q: string }) => q === 'ma'
+      ? new Promise(r => { soltaVelha = r; })
+      : Promise.resolve({ data: [{ id: 'o2', name: 'Marcos Lima', phone: null }], meta: { total: 1 } }));
+    render(<SecaoProprietario form={form} setF={vi.fn()} editando={null} />);
+    const campo = screen.getByPlaceholderText('Buscar proprietário por nome ou telefone');
+    await userEvent.type(campo, 'ma');
+    await waitFor(() => expect(own.list).toHaveBeenCalledWith({ q: 'ma', per_page: 8 }));
+    await userEvent.type(campo, 'r');
+    expect(await screen.findByRole('button', { name: /Marcos Lima/ })).toBeInTheDocument();
+    soltaVelha({ data: [maria], meta: { total: 1 } });
+    await new Promise(r => setTimeout(r, 20));
+    expect(screen.queryByRole('button', { name: /Maria Souza/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Marcos Lima/ })).toBeInTheDocument();
+  });
 });

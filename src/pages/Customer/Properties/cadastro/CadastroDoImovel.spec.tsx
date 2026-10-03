@@ -13,7 +13,8 @@ const desligadas = vi.hoisted(() => new Set<string>());
 vi.mock('@/contexts/TenantFeaturesContext', () => ({ useFeature: (k: string) => !desligadas.has(k) }));
 vi.mock('@/services/contacts/labelsService', () => ({ labelsService: { getLabels: () => Promise.resolve({ data: [] }) } }));
 vi.mock('@/services/users/usersService', () => ({ default: { getUsers: () => Promise.resolve({ data: [] }) } }));
-vi.mock('@/services/propertyOwners/propertyOwnersService', () => ({ propertyOwnersService: { list: () => Promise.resolve({ data: [], meta: { total: 0 } }) } }));
+const own = vi.hoisted(() => ({ get: vi.fn() }));
+vi.mock('@/services/propertyOwners/propertyOwnersService', () => ({ propertyOwnersService: { list: () => Promise.resolve({ data: [], meta: { total: 0 } }), get: own.get } }));
 
 import CadastroDoImovel from './CadastroDoImovel';
 import { NO_ACCESS_MESSAGE } from '@/components/permissions/noAccessCopy';
@@ -66,6 +67,27 @@ describe('CadastroDoImovel', () => {
     await userEvent.type(screen.getByLabelText('Valor de venda'), '500000');
     await userEvent.click(screen.getByRole('button', { name: 'Criar e escolher onde divulgar →' }));
     await waitFor(() => expect(screen.getByTestId('onde')).toHaveTextContent('/properties/n1/editar?passo=divulgar'));
+  });
+
+  it('?proprietario= na revenda cria com o proprietário escolhido', async () => {
+    own.get.mockResolvedValue({ id: 'o1', name: 'Maria Souza', phone: null, properties: [], history: [] });
+    svc.create.mockResolvedValue({ id: 'n3', listing_kind: 'resale' });
+    abrir('/properties/new?tipo=revenda&proprietario=o1');
+    expect(await screen.findByText('Maria Souza')).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Título'), 'Casa');
+    await userEvent.type(screen.getByLabelText('Valor de venda'), '500000');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar e escolher onde divulgar →' }));
+    await waitFor(() => expect(svc.create).toHaveBeenCalledWith(expect.objectContaining({ owner_id: 'o1' })));
+  });
+
+  it('?proprietario= no empreendimento é ignorado', async () => {
+    svc.create.mockResolvedValue({ id: 'n4', listing_kind: 'development' });
+    abrir('/properties/new?tipo=empreendimento&proprietario=o1');
+    await userEvent.type(await screen.findByLabelText('Título'), 'Residencial');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await waitFor(() => expect(svc.create).toHaveBeenCalled());
+    expect(svc.create.mock.calls[0][0].owner_id ?? null).toBeNull();
+    expect(own.get).not.toHaveBeenCalled();
   });
 
   it('salvar rascunho cria como draft e volta para a lista', async () => {

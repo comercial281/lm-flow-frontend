@@ -88,7 +88,8 @@ function Cadastro() {
   const [recusado, setRecusado] = useState(false);
   const kind: ListingKind = imovel ? tipoDoImovel(imovel) : (tipoDaUrl(sp.get('tipo')) ?? 'resale');
   // ?proprietario=<id> (vindo da Gestão de proprietários) já cria com ele escolhido.
-  const proprietarioDaUrl = editandoId ? null : sp.get('proprietario');
+  // Só revenda tem a seção Proprietário.
+  const proprietarioDaUrl = !editandoId && kind === 'resale' ? sp.get('proprietario') : null;
   const [form, setForm] = useState<PropertyFormData>(() => ({
     ...FORMULARIO_VAZIO,
     ...formularioNovo(kind),
