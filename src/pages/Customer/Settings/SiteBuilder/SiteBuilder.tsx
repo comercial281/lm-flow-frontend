@@ -24,7 +24,7 @@ import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useAlteracoesNaoSalvas } from '@/hooks/useAlteracoesNaoSalvas';
 import BarraSalvar from '@/components/base/BarraSalvar';
 import MeuSiteBarra from './MeuSiteBarra';
-import PreencherComIA from './telas/PreencherComIA';
+import TelaPainel from './telas/TelaPainel';
 import TelaAparencia from './telas/TelaAparencia';
 import TelaFinanciamento from './telas/TelaFinanciamento';
 import TelaAnuncie from './telas/TelaAnuncie';
@@ -85,10 +85,6 @@ export default function SiteBuilder() {
   // em vez de sair da página. Sem site ainda, só a tela Endereço abre: é onde
   // se cria o site.
   const [searchParams, setSearchParams] = useSearchParams();
-  const tela: TelaId = site ? telaDaUrl(searchParams) : 'endereco';
-  const irPara = useCallback((t: TelaId) => {
-    setSearchParams(t === 'painel' ? {} : { tela: t }, { replace: true });
-  }, [setSearchParams]);
 
   // Gate das páginas de anúncio: default DESLIGADO, a Leal Mídia sempre vê.
   // `archivedKeys` é a camada acima — tira o item do ar pra TODO MUNDO, inclusive
@@ -100,6 +96,13 @@ export default function SiteBuilder() {
   // Só o super-admin recebe o aviso "oculto pro cliente" — o cliente sem a chave
   // nem vê o item, então nunca veria o aviso.
   const landingsHiddenFromClient = isSuper && !landingsToggle;
+  // `?tela=anuncios` sem a função liberada cai no Painel: o título de uma coisa
+  // que o cliente não comprou nunca aparece.
+  const telaDoEndereco = site ? telaDaUrl(searchParams) : 'endereco';
+  const tela: TelaId = telaDoEndereco === 'anuncios' && !canLandings ? 'painel' : telaDoEndereco;
+  const irPara = useCallback((t: TelaId) => {
+    setSearchParams(t === 'painel' ? {} : { tela: t }, { replace: true });
+  }, [setSearchParams]);
   const [saving, setSaving] = useState(false);
 
   // Site form
@@ -273,8 +276,7 @@ export default function SiteBuilder() {
           </p>
         </div>
 
-        {/* Até o TelaPainel existir, o Painel mostra só o "Preencher com IA". */}
-        {tela === 'painel' && <PreencherComIA site={site} setF={setF} />}
+        {site && tela === 'painel' && <TelaPainel site={site} irPara={irPara} setF={setF} podeAnuncios={canLandings} />}
         {tela === 'aparencia' && (
           <TelaAparencia {...formProps} heroPickPreview={heroPickPreview} setHeroPickPreview={setHeroPickPreview} />
         )}

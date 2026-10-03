@@ -53,7 +53,7 @@ export default function TelaAnuncie({
                 onChange={e => { setEmailsText(e.target.value); marcarAlterado(); }}
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                Separe por vírgula (até 5). A ficha também fica guardada na aba Leads.
+                Separe por vírgula (até 5). A ficha também fica guardada em Contatos do site.
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Button

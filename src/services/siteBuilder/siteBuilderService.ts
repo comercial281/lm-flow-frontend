@@ -325,6 +325,16 @@ export interface ArticleFormData {
   meta_description?: string;
 }
 
+export type DashboardScope = 'site' | 'landing';
+export interface DashboardNumbers { visits: number; visitors: number; contacts: number; conversion_rate: number | null }
+export interface SiteDashboard extends DashboardNumbers {
+  period_days: 7 | 30 | 90; scope: DashboardScope; counting_since: string | null;
+  previous: DashboardNumbers | null;
+  sources: { key: 'google' | 'direct' | 'ads' | 'social' | 'other'; count: number; pct: number }[];
+  top_properties: { id: string; code: string; title: string; views: number; cover_url: string | null }[];
+  published_properties: number;
+}
+
 export interface SiteLead {
   id: string;
   name?: string | null;
@@ -506,6 +516,12 @@ export const siteBuilderService = {
   async listLeads(siteId: string, params: { status?: string; per_page?: number } = {}): Promise<{ data: SiteLead[]; meta: { total: number } }> {
     const res = await api.get(`/sites/${siteId}/leads`, { params });
     return res.data as { data: SiteLead[]; meta: { total: number } };
+  },
+
+  /** Números do Painel: visitas, origens, imóveis mais vistos (período e escopo). */
+  async getDashboard(siteId: string, opts: { period: 7 | 30 | 90; scope: DashboardScope }): Promise<SiteDashboard> {
+    const res = await api.get(`/sites/${siteId}/dashboard`, { params: { period: opts.period, scope: opts.scope } });
+    return (res.data as { data: SiteDashboard }).data;
   },
 };
 

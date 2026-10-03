@@ -6,8 +6,7 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import { siteBuilderService, type Site, type SiteFormData } from '@/services/siteBuilder/siteBuilderService';
 
 // "Preencher com IA": proposta da IA que cai no formulário do pai (setF) — o
-// usuário revisa e salva. Mora no Painel enquanto o TelaPainel não existe; o
-// TelaPainel vai embutir este componente.
+// usuário revisa e salva. Embutido no cartão "Seu site está N% pronto" do Painel.
 interface Props {
   site: Site | null;
   setF: (field: Partial<SiteFormData>) => void;
@@ -23,7 +22,7 @@ export default function PreencherComIA({ site, setF }: Props) {
   // IA lê o material colado e devolve os campos NOS LUGARES CERTOS do form.
   // Nada é salvo sozinho: o form fica sujo e o usuário revisa + salva.
   const handleAiSetup = async () => {
-    if (!site) { toast.error('Crie o site primeiro (aba Configurações).'); return; }
+    if (!site) { toast.error('Crie o site primeiro (em Endereço do site).'); return; }
     if (aiText.trim().length < 40) { toast.error('Cole um material com mais contexto (mín. 40 caracteres).'); return; }
     setAiRunning(true);
     try {
@@ -64,7 +63,7 @@ export default function PreencherComIA({ site, setF }: Props) {
         in_menu: true,
         menu_position: 99,
       });
-      toast.success('Página "Sobre nós" criada (aba Páginas).');
+      toast.success('Página "Sobre nós" criada (em Personalizar › Páginas).');
       setAiAboutHtml(null);
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Falha ao criar a página.'));
@@ -80,7 +79,7 @@ export default function PreencherComIA({ site, setF }: Props) {
       </h2>
       <p className="mb-3 text-xs text-muted-foreground">
         Cole a apresentação da imobiliária (texto do Instagram, sobre-nós, documento institucional).
-        A IA distribui as informações nos campos certos abaixo — nome, SEO, contato e página Sobre.
+        A IA distribui as informações nas telas do Meu site — nome, SEO, contato e página Sobre.
         Nada é salvo sozinho: você revisa e clica em Salvar.
       </p>
       <Textarea

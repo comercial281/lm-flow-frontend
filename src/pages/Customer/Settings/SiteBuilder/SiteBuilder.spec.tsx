@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   updateSite: vi.fn(),
   createSite: vi.fn(),
   listPages: vi.fn(),
+  getDashboard: vi.fn(),
+  listLeads: vi.fn(),
 }));
 
 vi.mock('@/services/siteBuilder/siteBuilderService', async importOriginal => {
@@ -23,6 +25,8 @@ vi.mock('@/services/siteBuilder/siteBuilderService', async importOriginal => {
       updateSite: mocks.updateSite,
       createSite: mocks.createSite,
       listPages: mocks.listPages,
+      getDashboard: mocks.getDashboard,
+      listLeads: mocks.listLeads,
     },
   };
 });
@@ -57,6 +61,14 @@ describe('SiteBuilder (casca do Meu site)', () => {
     vi.clearAllMocks();
     mocks.listSites.mockResolvedValue([SITE]);
     mocks.listPages.mockResolvedValue([]);
+    mocks.getDashboard.mockRejectedValue(new Error('sem painel nos testes da casca'));
+    mocks.listLeads.mockResolvedValue({ data: [], meta: { total: 0 } });
+  });
+
+  it('?tela=anuncios sem a função liberada cai no Painel', async () => {
+    abrir('/settings/site-builder?tela=anuncios');
+    expect(await screen.findByRole('heading', { name: 'Painel' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Páginas de anúncio' })).toBeNull();
   });
 
   it('sem site, abre só a criação, com o botão Criar site e sem a barra de topo', async () => {
