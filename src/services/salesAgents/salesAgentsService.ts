@@ -89,6 +89,12 @@ export interface SalesAgent {
    *  lead que ela atendeu e que não foi para a roleta). Lista VAZIA = todos os
    *  leads desse público — não é "nenhum funil, não sai nada". */
   followup_pipeline_ids: string[];
+  /** Reengajamento: antes do follow-up, a IA retoma a pergunta que ficou no ar
+   *  (1ª depois de `first_hours` sem resposta, 2ª `second_hours` depois da 1ª).
+   *  Só vale com o follow-up ligado. Horas de 1 a 48; o servidor manda resolvidas. */
+  reengagement_enabled: boolean;
+  reengagement_first_hours: number;
+  reengagement_second_hours: number;
   /** PARA ONDE ela entrega o lead quando passa pro corretor.
    *
    *  `inbox_roleta` é a roleta do NÚMERO da conversa — o padrão e o
@@ -208,7 +214,7 @@ export interface HealthReport {
 /** Um turno da IA: respondeu, pulou (com motivo) ou falhou (com o erro real). */
 export interface SalesAgentRun {
   id: string;
-  kind: 'live' | 'followup' | 'engage' | 'test';
+  kind: 'live' | 'followup' | 'engage' | 'test' | 'reengage';
   status: 'replied' | 'skipped' | 'failed';
   delivered: boolean;
   skip_reason: string | null;
@@ -485,6 +491,9 @@ export interface SalesAgentPayload {
   followup_drip_min_minutes?: number;
   followup_drip_max_minutes?: number;
   followup_pipeline_ids?: string[];
+  reengagement_enabled?: boolean;
+  reengagement_first_hours?: number;
+  reengagement_second_hours?: number;
   handoff_target?: SalesAgentHandoffTarget;
   handoff_roleta_config_id?: string | null;
   handoff_user_id?: string | null;

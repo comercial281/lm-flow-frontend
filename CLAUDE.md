@@ -5612,3 +5612,59 @@ Armadilhas:
    não monta fluxo sozinha.
 7. **Não é `featureKey` novo:** Automações usa as travas que a aba FlowBuilder
    tinha (`lead_automations` + `client_manage_automations`).
+
+## A IA retoma a pergunta antes do follow-up (desde 2026-10-03)
+
+Pedido do dono do produto: quando a IA pergunta e o lead some no meio da conversa,
+ela manda outra mensagem pouco depois, e outra mais tarde; sem resposta, o lead
+segue pro follow-up automático.
+
+O que aparece na tela, em *IA Vendedora → Configuração → Follow-up automático*:
+
+- **Bloco *Antes do follow-up: reengajamento***, logo depois de *De quais leads ela
+  vai atrás*. Chave (estreia desligada) e dois campos: *1ª mensagem depois de [2] h
+  sem resposta* e *2ª mensagem [8] h depois da 1ª* (1 a 48).
+- Na conversa, a retomada aparece com o selo azul **🤖 Reengajamento** no lugar de
+  *Atendente* (o follow-up é o amarelo).
+- No Diagnóstico, cada retomada é uma linha do tipo *Reengajamento*.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Só quem conversou e parou no meio.** Quem nunca respondeu é do *Robô Sem
+  Resposta*, em Automações.
+- **É uma etapa do follow-up**, não uma automação: só funciona com ele ligado, segue
+  o MESMO horário (*Quando o follow-up pode sair*), o mesmo gotejamento e o mesmo
+  público. Nada de horário próprio: seriam duas verdades sobre quando a IA toma a
+  iniciativa. Com o padrão 9h–17h, a retomada pode escorregar pra manhã seguinte;
+  quem quiser no mesmo dia alarga o horário.
+- **A 2ª conta da 1ª**, não da pergunta original (espaça mais as mensagens, o que
+  protege o número).
+- **Mora na IA, não no construtor**: quem escreve é a IA, com o contexto, e o
+  construtor não sabe que ela perguntou alguma coisa. Ponto de encaixe na sprint 3
+  das automações (Follow-up no construtor).
+- **A retomada não puxa visita** (isso é do follow-up): retoma o que ficou no ar; a
+  2ª oferece uma saída fácil.
+- **Selo só pra retomada.** Automação continua sem selo.
+- **O aviso de fora do horário não é resposta.** O lead que escreveu fora do
+  horário e só recebeu o aviso não ganha retomada: quem está esperando é ele.
+- **Se o lead volta a falar enquanto a retomada é escrita**, ela não sai e a IA
+  responde a ele como responde qualquer mensagem (com a mesma espera pra juntar as
+  mensagens seguidas). No Diagnóstico a linha *Reengajamento* fica como *Respondeu*,
+  porque o texto foi escrito e pago, e mostra embaixo o motivo de não ter saído:
+  *O lead respondeu enquanto a retomada era escrita*. No painel da conversa aparece
+  o mesmo motivo. Se ele fala no instante do envio, a retomada já saiu, e a IA
+  responde a ele logo depois.
+
+Armadilhas:
+
+1. **Os três campos PRECISAM estar no `saveAgent`** (com `??`). Fora da lista, a
+   tela diz *Salvo* e o servidor nunca recebe.
+2. **O estado não é gravado na conversa**: o servidor lê das mensagens depois da
+   última fala do lead (`SalesAgents::ReengagementState`). O estado é a mensagem
+   com a marca `content_attributes.reengagement` MAIS as linhas *Reengajamento*
+   entregues do Diagnóstico (`sales_agent_runs`, `kind = 'reengage'`): o teto de 2
+   retomadas e a liberação do follow-up leem essas linhas, porque a bolha marcada
+   pode não ser gravada mesmo com a mensagem entregue. Nenhum dos dois pode ser
+   removido nem reaproveitado.
+3. **Em *Só follow-up* o reengajamento não age** (a IA não responde ao vivo); o
+   bloco avisa em vez de esconder.
