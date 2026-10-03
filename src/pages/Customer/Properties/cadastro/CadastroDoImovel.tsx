@@ -50,6 +50,7 @@ import SecaoEquipe from './secoes/SecaoEquipe';
 import SecaoDadosInternos from './secoes/SecaoDadosInternos';
 import SecaoConstrutora from './secoes/SecaoConstrutora';
 import SecaoComissao from './secoes/SecaoComissao';
+import SecaoProprietario from './secoes/SecaoProprietario';
 
 // A mensagem real do servidor (ex.: "Valor de venda é obrigatório..."), não um genérico.
 function mensagemDoErro(e: unknown, reserva: string): string {
@@ -86,7 +87,13 @@ function Cadastro() {
   const [erroDeCarga, setErroDeCarga] = useState(false);
   const [recusado, setRecusado] = useState(false);
   const kind: ListingKind = imovel ? tipoDoImovel(imovel) : (tipoDaUrl(sp.get('tipo')) ?? 'resale');
-  const [form, setForm] = useState<PropertyFormData>(() => ({ ...FORMULARIO_VAZIO, ...formularioNovo(kind) }));
+  // ?proprietario=<id> (vindo da Gestão de proprietários) já cria com ele escolhido.
+  const proprietarioDaUrl = editandoId ? null : sp.get('proprietario');
+  const [form, setForm] = useState<PropertyFormData>(() => ({
+    ...FORMULARIO_VAZIO,
+    ...formularioNovo(kind),
+    ...(proprietarioDaUrl ? { owner_id: proprietarioDaUrl } : {}),
+  }));
   const [inicial, setInicial] = useState(form);
   const setF = (patch: MudancaDoFormulario) =>
     setForm(prev => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
@@ -237,8 +244,8 @@ function Cadastro() {
       case 'dadosInternos': return <SecaoDadosInternos {...props} />;
       case 'construtora': return <SecaoConstrutora {...props} />;
       case 'comissao': return <SecaoComissao {...props} />;
-      // Proprietário (B5) e Onde divulgar (B6).
-      case 'proprietario':
+      case 'proprietario': return <SecaoProprietario {...props} />;
+      // Onde divulgar (B6).
       case 'ondeDivulgar':
         return <EmBreve />;
     }
