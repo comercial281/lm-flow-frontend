@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input } from '@/components/ui/ds';
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input } from '@/components/ui/ds';
 import { costsService } from '@/services/superAdmin/costsService';
 import type { Invoice, InvoiceInput } from '@/types/admin/costs';
 import { rotuloMes } from './formatoCustos';
@@ -14,10 +14,11 @@ export default function LancarFaturas({ month, aberta, aoFechar, aoSalvar }: { m
 
   useEffect(() => {
     const minha = ++seq.current;
-    // Limpa sempre: ao reabrir (ou trocar o mês) não sobra valor do mês anterior.
+    // Fechar também invalida busca em voo (o seq já subiu), mas não esvazia a janela
+    // enquanto ela some. Só ao abrir (ou trocar o mês) limpa: não sobra valor do mês anterior.
+    if (!aberta) return;
     setLinhas([]);
     setErro(null);
-    if (!aberta) return;
     costsService.invoices(month)
       .then((list: Invoice[]) => {
         if (minha !== seq.current) return;
@@ -49,7 +50,10 @@ export default function LancarFaturas({ month, aberta, aoFechar, aoSalvar }: { m
   return (
     <Dialog open={aberta} onOpenChange={(o) => { if (!o) aoFechar(); }}>
       <DialogContent>
-        <DialogHeader><DialogTitle>Faturas de {rotuloMes(month)}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Faturas de {rotuloMes(month)}</DialogTitle>
+          <DialogDescription>Valor de cada fatura em US$. Vazio apaga o lançamento.</DialogDescription>
+        </DialogHeader>
         <div className="flex flex-col gap-3">
           {linhas.map((l, idx) => (
             <label key={l.provider} className="flex items-center justify-between gap-3 text-sm">
@@ -63,11 +67,11 @@ export default function LancarFaturas({ month, aberta, aoFechar, aoSalvar }: { m
               />
             </label>
           ))}
-          <p className="text-xs text-muted-foreground">Deixe vazio o que não tem fatura neste mês.</p>
+          {linhas.length === 0 && !erro && <p className="text-sm text-muted-foreground" role="status">Carregando faturas…</p>}
           {erro && <p className="text-sm text-destructive" role="alert">{erro}</p>}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={aoFechar}>Cancelar</Button>
+          <Button variant="outline" onClick={aoFechar} disabled={salvando}>Cancelar</Button>
           <Button onClick={salvar} disabled={salvando || linhas.length === 0}>{salvando ? 'Salvando…' : 'Salvar'}</Button>
         </DialogFooter>
       </DialogContent>
