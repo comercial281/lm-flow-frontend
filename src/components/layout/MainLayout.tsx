@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { menuRecolhido, ROTA_CONVERSAS } from './menuRecolhidoEm';
+import { menuRecolhido, ROTA_RECOLHE_MENU } from './menuRecolhidoEm';
 import {
   Button,
   Dialog,
@@ -61,11 +61,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
 
   // Estados do layout
-  // `salvo` é a preferência da pessoa (gravada). Em Conversas o menu recolhe
+  // `salvo` é a preferência da pessoa (gravada). Em Conversas (e no cadastro de
+  // imóvel, ver ROTA_RECOLHE_MENU) o menu recolhe
   // sozinho, sem mexer nela; `escolhaNaVisita` guarda só o clique da visita.
   const [salvo, setSalvo] = useState(false);
   const [escolhaNaVisita, setEscolhaNaVisita] = useState<boolean | null>(null);
-  const emConversas = ROTA_CONVERSAS.test(useLocation().pathname);
+  const emConversas = ROTA_RECOLHE_MENU.test(useLocation().pathname);
   const isCollapsed = menuRecolhido({ salvo, emConversas, escolhaNaVisita });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
