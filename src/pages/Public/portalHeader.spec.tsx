@@ -91,6 +91,17 @@ describe('PortalHeader', () => {
     });
   });
 
+  describe('tradução', () => {
+    it('mostra o botão de idiomas quando ligada', async () => {
+      const { container } = await montarCom({ translate: { enabled: true, languages: ['en'] } });
+      expect(container.querySelector('#lmf-google-translate')).toBeTruthy();
+    });
+    it('não mostra quando desligada', async () => {
+      const { container } = await montarCom({ translate: { enabled: false, languages: ['en'] } });
+      expect(container.querySelector('#lmf-google-translate')).toBeNull();
+    });
+  });
+
   describe('na home', () => {
     it('não desenha a barra de contato — nem antes, nem depois de rolar', async () => {
       const { container } = await montar(true);
