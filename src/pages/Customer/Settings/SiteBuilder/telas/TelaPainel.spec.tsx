@@ -72,11 +72,34 @@ describe('TelaPainel', () => {
     expect(irPara).toHaveBeenCalledWith('contatos');
   });
 
+  it('falha nos contatos (500) mostra erro, não "ninguém pediu contato"', async () => {
+    vi.mocked(siteBuilderService.getDashboard).mockResolvedValue(zerado as never);
+    vi.mocked(siteBuilderService.listLeads).mockRejectedValue({ response: { status: 500 } });
+    montar();
+    expect(await screen.findByText('Não deu para carregar os contatos.')).toBeTruthy();
+    expect(screen.queryByText('Ninguém pediu contato ainda.')).toBeNull();
+    vi.mocked(siteBuilderService.listLeads).mockResolvedValue({ data: [], meta: { total: 0 } });
+    await userEvent.click(screen.getAllByText('Tentar de novo')[0]);
+    expect(await screen.findByText('Ninguém pediu contato ainda.')).toBeTruthy();
+  });
+
+  it('botões de período expõem aria-pressed', async () => {
+    vi.mocked(siteBuilderService.getDashboard).mockResolvedValue(zerado as never);
+    montar();
+    expect(screen.getByText('30 dias').getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByText('7 dias').getAttribute('aria-pressed')).toBe('false');
+    await screen.findByText('Visitas');
+  });
+
   it('item pendente de "pronto" leva para a tela dele', async () => {
     vi.mocked(siteBuilderService.getDashboard).mockResolvedValue(zerado as never);
     const irPara = vi.fn();
     montar(irPara);
-    expect(screen.getByText('Seu site está 0% pronto')).toBeTruthy();
+    // Enquanto os números não chegam, nem porcentagem nem o item "imóvel".
+    expect(screen.queryByText(/% pronto/)).toBeNull();
+    expect(screen.queryByText('Ao menos 1 imóvel no site')).toBeNull();
+    expect(await screen.findByText('Seu site está 0% pronto')).toBeTruthy();
+    expect(screen.getByText('Ao menos 1 imóvel no site')).toBeTruthy();
     await userEvent.click(screen.getByText('Dados de contato'));
     expect(irPara).toHaveBeenCalledWith('dados');
   });

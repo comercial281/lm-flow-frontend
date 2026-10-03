@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Circle } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
@@ -38,7 +38,9 @@ export default function TelaPainel({ site, irPara, setF, podeAnuncios = false }:
   const [dash, setDash] = useState<SiteDashboard | null>(null);
   const [erro, setErro] = useState(false);
 
-  const carregar = useCallback(() => {
+  const [tentativa, setTentativa] = useState(0);
+
+  useEffect(() => {
     let vivo = true;
     setDash(null);
     setErro(false);
@@ -46,11 +48,12 @@ export default function TelaPainel({ site, irPara, setF, podeAnuncios = false }:
       .then(d => { if (vivo) setDash(d); })
       .catch(() => { if (vivo) setErro(true); });
     return () => { vivo = false; };
-  }, [site.id, period, scope]);
+  }, [site.id, period, scope, tentativa]);
 
-  useEffect(() => carregar(), [carregar]);
-
+  // Sem os números carregados não se sabe quantos imóveis estão no ar: o item
+  // "imóvel" e a porcentagem só aparecem depois, para não mostrar pendência falsa.
   const pronto = siteReadiness(site, dash?.published_properties ?? 0);
+  const itensPronto = dash ? pronto.itens : pronto.itens.filter(i => i.id !== 'imovel');
   const abrirItem = (id: string, tela: TelaId) => (id === 'imovel' ? navigate('/properties') : irPara(tela));
 
   return (
@@ -58,19 +61,19 @@ export default function TelaPainel({ site, irPara, setF, podeAnuncios = false }:
       <div className="flex flex-wrap items-center justify-end gap-3">
         {podeAnuncios && (
           <div className="flex gap-1" role="group" aria-label="O que contar">
-            <Button size="sm" variant={scope === 'site' ? 'default' : 'outline'} onClick={() => setScope('site')}>Site</Button>
-            <Button size="sm" variant={scope === 'landing' ? 'default' : 'outline'} onClick={() => setScope('landing')}>Páginas de anúncio</Button>
+            <Button size="sm" variant={scope === 'site' ? 'default' : 'outline'} onClick={() => setScope('site')} aria-pressed={scope === 'site'}>Site</Button>
+            <Button size="sm" variant={scope === 'landing' ? 'default' : 'outline'} onClick={() => setScope('landing')} aria-pressed={scope === 'landing'}>Páginas de anúncio</Button>
           </div>
         )}
         <div className="flex gap-1" role="group" aria-label="Período">
           {PERIODOS.map(p => (
-            <Button key={p} size="sm" variant={period === p ? 'default' : 'outline'} onClick={() => setPeriod(p)}>{p} dias</Button>
+            <Button key={p} size="sm" variant={period === p ? 'default' : 'outline'} onClick={() => setPeriod(p)} aria-pressed={period === p}>{p} dias</Button>
           ))}
         </div>
       </div>
 
       {erro && (
-        <EmptyState tipo="erro" title="Não deu para carregar os números do site." aoTentarDeNovo={carregar} className="py-8" />
+        <EmptyState tipo="erro" title="Não deu para carregar os números do site." aoTentarDeNovo={() => setTentativa(t => t + 1)} className="py-8" />
       )}
       {!erro && !dash && <Esqueleto />}
       {dash && (
@@ -86,12 +89,14 @@ export default function TelaPainel({ site, irPara, setF, podeAnuncios = false }:
       <ContatosRecentes siteId={site.id} aoVerTodos={() => irPara('contatos')} />
 
       <section className="space-y-4 rounded-xl border border-border bg-card p-5">
-        <h2 className="text-base font-semibold">Seu site está {pronto.percent}% pronto</h2>
-        <div className="h-2 overflow-hidden rounded-full bg-muted">
-          <div className="h-full rounded-full bg-primary" style={{ width: `${pronto.percent}%` }} />
-        </div>
+        <h2 className="text-base font-semibold">{dash ? `Seu site está ${pronto.percent}% pronto` : 'Seu site'}</h2>
+        {dash && (
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary" style={{ width: `${pronto.percent}%` }} />
+          </div>
+        )}
         <ul className="space-y-1">
-          {pronto.itens.map(i => (
+          {itensPronto.map(i => (
             <li key={i.id}>
               {i.feito ? (
                 <span className="flex items-center gap-2 p-1.5 text-sm text-muted-foreground">
