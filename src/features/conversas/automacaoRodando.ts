@@ -57,3 +57,15 @@ export function linhasAutomaticas(
   const fu = followup ? linhaDoFollowup(followup, agora) : null;
   return fu ? [...linhas, fu] : linhas;
 }
+
+/** Identifica o conjunto de automações rodando: "Enviar e manter" vale até ele mudar. */
+export function assinaturaDasLinhas(linhas: LinhaAutomatica[]): string {
+  return linhas.map(l => l.key).sort().join('|');
+}
+
+/** O botão principal da pergunta na hora de enviar. */
+export function rotuloDeParar(linhas: LinhaAutomatica[]): string {
+  const tipos = new Set(linhas.map(l => l.tipo));
+  if (tipos.size > 1 || linhas.length > 1) return 'Enviar e tirar das automações';
+  return tipos.has('followup') ? 'Enviar e parar o follow-up' : 'Enviar e tirar do fluxo';
+}
