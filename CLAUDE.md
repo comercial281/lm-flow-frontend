@@ -5579,6 +5579,6 @@ Decisões do dono (não reabrir sem ele pedir): cadastro em página e não em ja
 
 Armadilhas:
 
-1. **As regras moram em `src/features/properties/cadastro/`** (`secoesDoCadastro`, `formularioDoCadastro`, `errosDoCadastro`, `payloadDoCadastro`), com spec; as telas em `src/pages/Customer/Properties/cadastro/`. Regra nova não entra na tela.
+1. **As regras moram em `src/features/properties/cadastro/`** (`secoesDoCadastro.ts` e `formularioDoCadastro.ts`, que traz `errosDoCadastro` e `payloadDoCadastro`), com spec; as telas em `src/pages/Customer/Properties/cadastro/`. Regra nova não entra na tela.
 2. **`mascaraReais`:** o PR #421 (máscara de preço dos filtros) cria um `mascaraReais`; `cadastro/secoes/campos.tsx` tem um helper local equivalente. Unificar depois que os dois entrarem.
 3. **Pendências conhecidas:** histórico de captações aprovadas/recusadas, abrir WhatsApp dentro do LM Flow, ficha da construtora e funil de captação com IA ficaram fora. O servidor ainda substitui a lista inteira do portal (endpoint por imóvel fecharia a corrida de vez).
