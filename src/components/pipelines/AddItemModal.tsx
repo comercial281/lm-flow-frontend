@@ -24,6 +24,8 @@ import { contactsService } from '@/services/contacts';
 import { toast } from 'sonner';
 import { Contact, ContactFormData } from '@/types/contacts';
 import { ManualOriginInput } from '@/components/shared';
+import { PhoneInput } from '@/components/shared/PhoneInput';
+import '@/components/shared/PhoneInput.css';
 import { contactSaveError } from '@/utils/contactErrors';
 import { telefone } from '@/lib/formato';
 
@@ -418,10 +420,11 @@ export default function AddItemModal({
               </div>
               <div className="grid gap-2">
                 <Label>Telefone (WhatsApp)</Label>
-                <Input
-                  placeholder="ex: 5543998196577"
+                <PhoneInput
                   value={newLead.phone}
-                  onChange={e => setNewLead(p => ({ ...p, phone: e.target.value }))}
+                  onChange={value => setNewLead(p => ({ ...p, phone: value }))}
+                  placeholder="(11) 99999-9999"
+                  defaultCountry="BR"
                 />
               </div>
               <div className="grid gap-2">
