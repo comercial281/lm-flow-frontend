@@ -4731,7 +4731,7 @@ O que aparece na tela, no menu da Área do Admin:
 - **Mensagem de acesso** saiu da janela e virou aba; a variável `{senha}` saiu da lista (a senha é criada pela pessoa, pelo link, desde a fase 1).
 - **WhatsApp** é o Comunicado. Neste passo a escrita continua na janela de sempre, com todos os clientes marcados (decisão). Confirmação e tela própria entram no PR de Comunicação.
 - **Push** ainda tem três abas por dentro (Regras, Disparo manual, Histórico): viram seções no PR de Comunicação. É a única exceção ao "sem terceiro nível", e é temporária.
-- **Custos** ainda é a tela Custo da IA (US$, N dias). O rateio de Railway, Evolution e Vercel entra no PR de Custos.
+- **Custos** é a tela nova de 03/10 (ver seção "Custos do admin").
 - **Banner** ainda não tem aba: entra com a spec própria.
 
 ## Número que envia os avisos: vazio = número da Leal Mídia (desde 2026-10-01)
@@ -5708,3 +5708,16 @@ Armadilhas:
 1. **As regras moram em `src/features/properties/cadastro/`** (`secoesDoCadastro.ts` e `formularioDoCadastro.ts`, que traz `errosDoCadastro` e `payloadDoCadastro`), com spec; as telas em `src/pages/Customer/Properties/cadastro/`. Regra nova não entra na tela.
 2. **`mascaraReais`:** o PR #421 (máscara de preço dos filtros) cria um `mascaraReais`; `cadastro/secoes/campos.tsx` tem um helper local equivalente. Unificar depois que os dois entrarem.
 3. **Pendências conhecidas:** histórico de captações aprovadas/recusadas, abrir WhatsApp dentro do LM Flow, ficha da construtora e funil de captação com IA ficaram fora. O servidor ainda substitui a lista inteira do portal (endpoint por imóvel fecharia a corrida de vez).
+
+## Custos do admin (03/10/2026)
+
+Clientes → Custos (`/admin/clientes/custos`, `src/pages/SuperAdmin/Custos/`). Spec: `LM FLOW/specs/2026-10-03-admin-registro-custos-usuarios-design.md`.
+
+- **Uma régua só pro dinheiro, em R$ por mês.** IA exata (registro de chamadas do backend, `public.ai_calls`) + Railway, Vercel e Evolution lançados à mão em US$ no botão *Lançar faturas do mês*. A conferência com a fatura fica em US$ e os fornecedores aparecem com nome de gente (Anthropic, OpenAI, ElevenLabs).
+- **Filtro por cliente:** só a IA dele; a estrutura mostra "não é dividida por cliente" e sai do total; somem o recorte por cliente e a conferência. Margem e divisão da estrutura ficam pra quando o "quanto o cliente paga" existir (decisão do Tony, 03/10). Não reabrir sem ele pedir.
+- **Trocou o filtro, a tela recarrega do zero:** durante a carga aparece o esqueleto, nunca os números do filtro anterior; resposta que chega fora de ordem é ignorada; na lista de chamadas as linhas antigas somem até chegarem as novas.
+- **Mês sem chamada:** o gráfico dia a dia vira "Nenhuma chamada de IA neste mês" e a conferência diz "Fatura ainda não lançada". Nunca erro, nunca divisão por zero.
+- **Sem a palavra token na tela:** a coluna se chama *Tamanho*.
+- **Erro nunca vira vazio** em nenhuma das três cargas (resumo, chamadas, detalhe).
+- Conteúdo da chamada só aparece no prazo (7 dias, 30 se falhou); fora dele o painel diz "Conteúdo apagado depois de N dias".
+- O endpoint antigo `/super/sales_agents/costs` sai num PR do backend depois que esta tela estiver no ar. A tela antiga (`CustoIA.tsx`) e `superAgentsService.costs()` já foram removidas.

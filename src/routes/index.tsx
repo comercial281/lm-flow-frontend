@@ -128,7 +128,7 @@ function SuperAdminRoute({ children }: { children: ReactNode }) {
 // Clientes → aba Clientes (a lista). As outras abas são rotas próprias desde 01/10/2026.
 const PooledClients = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClients'));
 const PushCentral = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral'));
-const CustoIA = lazyWithRetry(() => import('@/pages/SuperAdmin/CustoIA'));
+const Custos = lazyWithRetry(() => import('@/pages/SuperAdmin/Custos'));
 // IA Vendedora → aba Agentes. As outras abas são rotas próprias desde 01/10/2026.
 const SuperAgents = lazyWithRetry(() => import('@/pages/SuperAdmin/SuperAgents'));
 
@@ -1241,7 +1241,7 @@ const AppRouter = () => {
               <Route path="/admin/clientes/numeros" element={<AdminConteudo><AdminNumeros /></AdminConteudo>} />
               {/* Custos: por enquanto a tela Custo da IA. O rateio de Railway,
                   Evolution e Vercel entra no PR de Custos. */}
-              <Route path="/admin/clientes/custos" element={<CustoIA />} />
+              <Route path="/admin/clientes/custos" element={<Custos />} />
               {/* Usuários */}
               <Route path="/admin/usuarios" element={<AdminConteudo><AdminUsuarios /></AdminConteudo>} />
               <Route path="/admin/usuarios/logs" element={<AdminConteudo><AdminLogs /></AdminConteudo>} />
