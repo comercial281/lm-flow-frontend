@@ -5,6 +5,8 @@ import { Seletor } from '@/components/base/Seletor';
 import { costsService } from '@/services/superAdmin/costsService';
 import type { CostsSummary } from '@/types/admin/costs';
 import CartoesDoMes from './CartoesDoMes';
+import Conferencia from './Conferencia';
+import Recortes from './Recortes';
 import { rotuloMes } from './formatoCustos';
 
 // Clientes → Custos. Uma régua só pro dinheiro do LM Flow: IA exata (registro de
@@ -20,6 +22,8 @@ export default function Custos() {
   const [month, setMonth] = useState(mesAtual);
   const [tenant, setTenant] = useState<string | null>(null);
   const [summary, setSummary] = useState<CostsSummary | null>(null);
+  // A janela de lançar fatura é a Task F5; até lá só guardamos o pedido.
+  const [, setLancando] = useState(false);
   const [estado, setEstado] = useState<'carregando' | 'pronto' | 'erro'>('carregando');
 
   // Só a última chamada vale: resposta atrasada de filtro antigo não sobrescreve a atual.
@@ -73,7 +77,10 @@ export default function Custos() {
         {estado === 'pronto' && summary && (
           <>
             <CartoesDoMes summary={summary} />
-            <div data-testid="custos-detalhes" className="flex flex-col gap-6" />
+            <div data-testid="custos-detalhes" className="flex flex-col gap-6">
+              <Recortes summary={summary} />
+              <Conferencia reconciliation={summary.reconciliation} aoLancar={() => setLancando(true)} />
+            </div>
           </>
         )}
       </div>
