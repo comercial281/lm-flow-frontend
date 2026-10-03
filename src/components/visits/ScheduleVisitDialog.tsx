@@ -46,6 +46,12 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   diaInicial?: Date | null;
   /**
+   * Horário já marcado ao abrir (o clique na grade de Semana/Dia). Passa pela
+   * mesma conferência de quem escolhe na grade: ocupado, folga ou fora do
+   * horário de visita, ele é desmarcado quando os horários do dia chegam.
+   */
+  inicioInicial?: Date | null;
+  /**
    * Cliente já escolhido ao abrir (o card do lead abre daqui). Igual a escolher
    * na lista: o dono dele vira o corretor, e o corretor travado continua travado.
    */
@@ -73,7 +79,7 @@ const hojeSemHora = () => {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 };
 
-export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, leadInicial, onCreated }: Props) {
+export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, inicioInicial, leadInicial, onCreated }: Props) {
   const [travado, setTravado] = useState<PersonRef | null>(null);
   const [verificandoCargo, setVerificandoCargo] = useState(true);
   const [lead, setLead] = useState<LeadPickerItem | null>(null);
@@ -112,6 +118,8 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, leadInicia
   // O efeito abaixo lê o valor mais recente só no instante em que abre.
   const diaInicialRef = useRef<Date | null | undefined>(diaInicial);
   diaInicialRef.current = diaInicial;
+  const inicioInicialRef = useRef<Date | null | undefined>(inicioInicial);
+  inicioInicialRef.current = inicioInicial;
   const leadInicialRef = useRef<LeadPickerItem | null | undefined>(leadInicial);
   leadInicialRef.current = leadInicial;
 
@@ -123,7 +131,7 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, leadInicia
     setLead(leadInicialRef.current ?? null);
     setCorretor(leadInicialRef.current?.owner ?? null);
     setDia(diaInicialRef.current ?? hojeSemHora());
-    setInicio(null);
+    setInicio(inicioInicialRef.current ?? null);
     setDuracao(60);
     setObservacoes('');
     setImovel(null);

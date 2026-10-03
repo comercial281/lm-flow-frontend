@@ -5365,3 +5365,50 @@ Armadilhas:
    segundo contato herda o estado do primeiro.
 3. **Os atendimentos vêm de `GET /pipelines/by_contact/:id`**, o mesmo de Conversas.
    A ordem (mais recente primeiro) mora em `atendimentosDoContato`.
+
+## Agenda de Visitas: visões Semana e Dia (desde 2026-10-02)
+
+Pedido do dono do produto: visualização de dia e de semana na Agenda de Visitas,
+com o calendário da Lais como referência. Até aqui o calendário só tinha o mês.
+
+O que aparece na tela, no *Calendário* da Agenda de Visitas:
+
+- **Barra nova no topo do calendário**: *Hoje*, ‹ ›, o período ("27 de setembro a
+  3 de outubro de 2026", "Sexta, 2 de outubro de 2026") e as pílulas **Mês ·
+  Semana · Dia**. A escolha fica guardada no navegador.
+- **Semana e Dia são grade de horas** (00h–24h, a rolagem abre uma hora antes da
+  primeira visita ou do começo do horário de visita). Cada visita é um bloco do
+  tamanho da duração, com hora e nome, na cor do status; visitas no mesmo horário
+  ficam lado a lado. Linha roxa do "agora" no dia de hoje.
+- **Clicar no dia (no topo da Semana) abre o Dia.**
+- **Clicar num horário vazio abre o Agendar visita naquele dia, com o horário já
+  marcado** (de 30 em 30). Se o horário estiver ocupado, de folga ou fora do
+  horário de visita, o modal desmarca sozinho. Dia que já passou não abre, como
+  no mês.
+- **Com a agenda ligada, o que está fora do horário de visita fica em cinza**
+  (dia da semana sem visita, data fechada, antes do início e depois do fim).
+- **O contador do cabeçalho segue a visão**: "3 visitas suas nesta semana",
+  "1 visita hoje", "2 visitas em 05/10".
+- Sem permissão de agendar, clicar no calendário (mês, semana ou dia) não abre o
+  modal. Antes o mês abria e só falhava ao salvar.
+
+Decisões:
+
+- **O mês continua sendo a visão padrão** de quem nunca escolheu. Ninguém muda de
+  tela por efeito de deploy.
+- **Cada visão pede ao servidor só o período dela** (`since`/`until` da lista,
+  como o mês já fazia). Não tem metade de backend.
+
+Armadilhas:
+
+1. **As contas moram em `src/features/visits/gradeDoCalendario.ts`**, com spec
+   (semana de domingo a sábado, título, posição e sobreposição dos blocos, clique
+   em 30 min, faixa do horário de visita, rolagem). Encostar não é sobrepor, igual
+   à regra do servidor.
+2. **A rolagem automática acontece uma vez por período, e só com a lista daquele
+   período na mão** (`carregadoPara`). Recarregar a mesma semana (agendar,
+   cancelar) não tira a pessoa de onde ela estava.
+3. **O horário marcado pelo clique entra pelo `inicioInicial` do
+   `ScheduleVisitDialog`** e passa pela mesma conferência da grade de horários do
+   modal; não validar de novo na Agenda.
+4. **Não é `featureKey` nem `clientToggleKey`.**
