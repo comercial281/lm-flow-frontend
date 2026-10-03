@@ -93,11 +93,12 @@ export const MISSING_FIELD_LABELS: Record<string, string> = {
 export const propertyImportsService = {
   async createBatch(
     files: File[],
-    opts: { urls?: string[]; onProgress?: (percent: number) => void } = {},
+    opts: { urls?: string[]; onProgress?: (percent: number) => void; listingKind?: 'development' | 'resale' } = {},
   ): Promise<PropertyImportBatch> {
     const fd = new FormData();
     files.forEach(f => fd.append('files[]', f, f.name));
     (opts.urls ?? []).forEach(u => fd.append('urls[]', u));
+    if (opts.listingKind) fd.append('listing_kind', opts.listingKind);
 
     const res = await api.post('/property_import_batches', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },

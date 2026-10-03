@@ -2,7 +2,7 @@
 // trocar de roleta e tirar o lead do funil. Remover pede confirmação numa janela,
 // nunca no confirm() do navegador.
 import { useState } from 'react';
-import { Link, Loader2, MoreHorizontal, Shuffle, Trash2 } from 'lucide-react';
+import { Link, Loader2, Merge, MoreHorizontal, Shuffle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Button,
@@ -25,6 +25,7 @@ import {
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import type { PipelineItem } from '@/types/analytics';
+import { contatoDoCard, semFunil } from '@/features/cardDoLead/cardDoLead';
 
 interface CardMoreMenuProps {
   item: PipelineItem;
@@ -33,6 +34,8 @@ interface CardMoreMenuProps {
   onTrocarRoleta: (roletaId: string) => Promise<void> | void;
   onCriarRoleta: () => void;
   onRemovido: () => void;
+  /** Gestor: "Juntar com outro contato" (veio da antiga Detalhes do Contato). */
+  onJuntar?: () => void;
 }
 
 export default function CardMoreMenu({
@@ -42,14 +45,21 @@ export default function CardMoreMenu({
   onTrocarRoleta,
   onCriarRoleta,
   onRemovido,
+  onJuntar,
 }: CardMoreMenuProps) {
+  // Card de quem não está em funil (aberto de Contatos): o link é o do contato
+  // e não há o que remover do funil.
+  const foraDoFunil = semFunil(item);
+  const contatoId = contatoDoCard(item)?.id;
   const [roletaAberta, setRoletaAberta] = useState(false);
   const [roletaEscolhida, setRoletaEscolhida] = useState('');
   const [removerAberto, setRemoverAberto] = useState(false);
   const [removendo, setRemovendo] = useState(false);
 
   const copiarLink = () => {
-    const url = `${window.location.origin}/pipelines/${item.pipeline_id}?card=${item.id}`;
+    const url = foraDoFunil
+      ? `${window.location.origin}/contacts/${contatoId}`
+      : `${window.location.origin}/pipelines/${item.pipeline_id}?card=${item.id}`;
     navigator.clipboard.writeText(url)
       .then(() => toast.success('Link do card copiado'))
       .catch(() => toast.error('Não consegui copiar o link'));
@@ -86,11 +96,21 @@ export default function CardMoreMenu({
             <Shuffle className="h-3.5 w-3.5 mr-2" />
             Trocar roleta
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setRemoverAberto(true)}>
-            <Trash2 className="h-3.5 w-3.5 mr-2" />
-            Remover do funil
-          </DropdownMenuItem>
+          {onJuntar && (
+            <DropdownMenuItem onClick={onJuntar}>
+              <Merge className="h-3.5 w-3.5 mr-2" />
+              Juntar com outro contato
+            </DropdownMenuItem>
+          )}
+          {!foraDoFunil && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setRemoverAberto(true)}>
+                <Trash2 className="h-3.5 w-3.5 mr-2" />
+                Remover do funil
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

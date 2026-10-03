@@ -116,3 +116,84 @@ export function visitaSemFeedback(visita: Pick<Visit, 'status' | 'scheduled_at' 
 export function visitasEmOrdem<T extends { scheduled_at: string }>(visitas: T[]): T[] {
   return [...visitas].sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
 }
+
+// ── Card aberto pela pessoa (Contatos) ───────────────────────────────────────
+// Spec 2026-10-02-fase-4-card-do-contato. Contato = cliente; cada card no funil
+// = um atendimento dele (o modelo do Kenlo). De Contatos o card abre com os
+// atendimentos em abinhas no topo; sem atendimento, abre "sem funil".
+
+type ContatoParaCard = {
+  id: string;
+  name?: string | null;
+  default_assignee?: { id: string; name: string; avatar_url?: string | null } | null;
+  additional_attributes?: { lead_origin?: Record<string, unknown> } | Record<string, unknown> | null;
+  created_at?: string | number;
+  updated_at?: string | number;
+};
+
+/**
+ * O card de quem não está em funil nenhum: o MESMO formato do card do funil, sem
+ * id de card. `semFunil()` é o que o card consulta pra esconder etapa,
+ * Ganho/Perdido, Conversão Meta e "Remover do funil".
+ */
+export function itemSemFunil(contato: ContatoParaCard, conversaId?: string | null): PipelineItem {
+  const dono = contato.default_assignee;
+  return {
+    id: '',
+    item_id: String(contato.id),
+    type: 'contact',
+    pipeline_id: '',
+    stage_id: '',
+    is_lead: true,
+    created_at: contato.created_at ?? '',
+    updated_at: contato.updated_at ?? '',
+    contact: contato as unknown as PipelineItem['contact'],
+    assignee: dono ? { id: String(dono.id), name: dono.name, avatar_url: dono.avatar_url ?? undefined } : undefined,
+    lead_origin: ((contato.additional_attributes as { lead_origin?: Record<string, unknown> } | null)?.lead_origin ??
+      null) as PipelineItem['lead_origin'],
+    roleta: null,
+    // Mesmo campo que o servidor manda no lead de formulário: a aba Conversa e
+    // o botão Conversa já sabem achar a conversa por ele.
+    ...(conversaId ? { whatsapp_conversation_id: conversaId } : {}),
+  } as PipelineItem;
+}
+
+export function semFunil(item: PipelineItem | null | undefined): boolean {
+  return !item?.id;
+}
+
+export interface Atendimento {
+  item: PipelineItem;
+  pipeline: { id: string; name: string };
+  stages: Array<{ id: string; name: string; color: string; position: number }>;
+}
+
+const quando = (v: unknown) => {
+  const n = typeof v === 'number' ? v : Date.parse(String(v ?? ''));
+  return Number.isFinite(n) ? (n < 1e12 ? n * 1000 : n) : 0;
+};
+
+/**
+ * Os atendimentos do contato, a partir de GET /pipelines/by_contact: um por
+ * card no funil, do mais recente pro mais antigo (é o que abre primeiro).
+ */
+export function atendimentosDoContato(
+  pipelines: Array<{ id: string; name: string; stages?: Array<{ id: string; name: string; color: string; position: number; items?: PipelineItem[] }> }>,
+): Atendimento[] {
+  const lista: Atendimento[] = [];
+  for (const pipeline of pipelines ?? []) {
+    const stages = [...(pipeline.stages ?? [])].sort((a, b) => a.position - b.position);
+    for (const stage of stages) {
+      for (const item of stage.items ?? []) {
+        lista.push({
+          item: { ...item, stage_id: item.stage_id || String(stage.id), pipeline_id: item.pipeline_id || pipeline.id },
+          pipeline: { id: pipeline.id, name: pipeline.name },
+          stages: stages.map(({ id, name, color, position }) => ({ id, name, color, position })),
+        });
+      }
+    }
+  }
+  return lista.sort(
+    (a, b) => quando(b.item.updated_at ?? b.item.entered_at) - quando(a.item.updated_at ?? a.item.entered_at),
+  );
+}
