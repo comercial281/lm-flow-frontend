@@ -12,16 +12,21 @@ import NoAccessState from '@/components/permissions/NoAccessState';
 import PaginaComAbas from '@/components/base/PaginaComAbas';
 
 // Moldura das telas em /automations/*. Até a fase 4 era UMA página com 7 abas
-// (regras, funis, FlowBuilder, origem, follow-up, lembretes, roleta). No menu
-// novo cada uma foi para o lugar dela — Fluxos de mensagem, Automações,
-// Follow-up, Roleta de leads, Origem — SEM mudar o endereço. Quem decide título
-// e abas agora é o item do menu dono do endereço (PaginaComAbas).
+// (regras, funis, construtor, origem, follow-up, lembretes, roleta). No menu
+// novo cada uma foi para o lugar dela — Funis de mensagem, Automações,
+// Follow-up, Roleta de leads, Formulários — SEM mudar o endereço. Quem decide
+// título e abas agora é o item do menu dono do endereço (PaginaComAbas).
 
-/** Telas de /automations que o menu leva, na ordem do menu. */
+// /automations puro (link antigo) quer dizer "as automações": abre a página
+// Automações (o construtor, desde 03/10/2026) quando a pessoa a vê.
+const AUTOMACOES = '/automations/flow-builder';
+
+/** Telas de /automations que o menu leva: Automações primeiro, depois a ordem do menu. */
 function telasDeAutomacoes(secoes: MenuSection[]): string[] {
-  return itensDoMenu(secoes)
+  const telas = itensDoMenu(secoes)
     .filter(i => !('abas' in i && i.abas?.length) && i.href.startsWith('/automations/'))
     .map(i => i.href);
+  return telas.includes(AUTOMACOES) ? [AUTOMACOES, ...telas.filter(t => t !== AUTOMACOES)] : telas;
 }
 
 export default function AutomationsLayout() {

@@ -2,17 +2,19 @@ import { useCallback, useEffect, useState, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button, Input, Badge } from '@/components/ui/ds';
-import { GitBranch, Plus, Search, Folder, FolderPlus, Pencil, Play, Pause, Copy, Archive, Trash2 } from 'lucide-react';
+import { Zap, Plus, Search, Folder, FolderPlus, Pencil, Play, Pause, Copy, Archive, Trash2, LayoutTemplate } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import { flowAutomationsService, flowAutomationFoldersService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation, FlowAutomationFolder } from '@/types/flowAutomations';
-import { flowTriggerLabel, normalizeTrigger, serializeTrigger } from '@/features/flowAutomations/trigger';
-import { EXAMPLE_FLOW_DESCRIPTION, EXAMPLE_FLOW_NAME, buildExampleFlow } from '@/features/flowAutomations/exampleFlow';
+import { flowTriggerLabel, normalizeTrigger } from '@/features/flowAutomations/trigger';
+import { enableProblem } from '@/features/flowAutomations/readiness';
+import { FlowTemplateList, FlowTemplatesDialog } from '@/components/flowAutomations/FlowTemplates';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { usePergunta } from '@/hooks/usePergunta';
-// Lista de fluxos — mirror da grade de cards da aba Automações do Hub (12/08):
-// filete colorido, selo de estado, menu de ações. Pasta é lugar (entra), não filtro.
+// A página Automações (sprint 2, 03/10/2026): a lista de fluxos do construtor.
+// Grade de cards com filete colorido, selo de estado e ações. Pasta é lugar
+// (entra), não filtro. Fluxo novo nasce em "Novo fluxo" ou num dos Modelos.
 export default function FlowAutomationsList() {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const { perguntar, dialogoDePergunta } = usePergunta();
@@ -52,27 +54,21 @@ export default function FlowAutomationsList() {
     }
   };
 
-  // Estado vazio: abre o exemplo pronto já montado (gatilho + blocos), pela
-  // mesma rota de criar e salvar que o canvas usa.
-  const [creatingExample, setCreatingExample] = useState(false);
-  const handleCreateExample = async () => {
-    if (creatingExample) return;
-    setCreatingExample(true);
-    try {
-      const { trigger, flow } = buildExampleFlow();
-      const created = await flowAutomationsService.create({ name: EXAMPLE_FLOW_NAME, folder_id: folderId ?? null });
-      await flowAutomationsService.update(created.id, { trigger: serializeTrigger(trigger) });
-      await flowAutomationsService.saveFlow(created.id, flow);
-      navigate(`/automations/flow-builder/${created.id}`);
-    } catch {
-      toast.error('Não deu pra abrir o exemplo. Tente de novo.');
-    } finally {
-      setCreatingExample(false);
-    }
-  };
+  // Modelos: o servidor cria o fluxo desligado e a tela abre ele no canvas.
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const openFlow = (flow: FlowAutomation) => navigate(`/automations/flow-builder/${flow.id}`);
 
   const toggle = async (a: FlowAutomation) => {
     try {
+      // Ligar confere o fluxo salvo: bloco de modelo com campo em branco não liga.
+      if (!a.is_enabled) {
+        const full = await flowAutomationsService.get(a.id);
+        const problem = enableProblem(normalizeTrigger(full.trigger), full.nodes ?? []);
+        if (problem) {
+          toast.error(problem);
+          return;
+        }
+      }
       await flowAutomationsService.toggle(a.id);
       load();
     } catch {
@@ -168,11 +164,11 @@ export default function FlowAutomationsList() {
     <>
     <div className="h-full flex flex-col p-4">
       <div className="flex items-center gap-2 mb-2">
-        <GitBranch className="h-5 w-5 text-primary" />
-        <h1 className="text-xl font-bold">FlowBuilder</h1>
+        <Zap className="h-5 w-5 text-primary" aria-hidden="true" />
+        <h1 className="text-xl font-bold">Automações</h1>
       </div>
       <p className="text-sm text-muted-foreground mb-4">
-        Monte uma automação com blocos: mande mensagem, espere o lead responder e decida o que fazer em cada caso.
+        Cada fluxo começa quando algo acontece com o lead e segue os blocos: manda mensagem, avisa a equipe, espera a resposta e decide o que fazer em cada caso.
       </p>
 
       <div className="flex items-center gap-2 mb-4">
@@ -180,6 +176,7 @@ export default function FlowAutomationsList() {
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input className="pl-8" placeholder="Buscar fluxo..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+        <Button variant="outline" onClick={() => setTemplatesOpen(true)}><LayoutTemplate className="h-4 w-4 mr-1" /> Modelos</Button>
         <Button onClick={handleCreate}><Plus className="h-4 w-4 mr-1" /> Novo fluxo</Button>
       </div>
 
@@ -220,13 +217,15 @@ export default function FlowAutomationsList() {
       )}
 
       {!loading && automations.length === 0 && !search && (
-        <EmptyState
-          icon={GitBranch}
-          title="Nenhum fluxo ainda"
-          description="Comece pelo exemplo pronto e troque só os textos e o tempo, ou crie um fluxo do zero em Novo fluxo."
-          exemplo={`${EXAMPLE_FLOW_NAME}: ${EXAMPLE_FLOW_DESCRIPTION}`}
-          action={{ label: `Abrir o exemplo "${EXAMPLE_FLOW_NAME}"`, onClick: handleCreateExample, disabled: creatingExample }}
-        />
+        <div className="flex flex-col items-center">
+          <EmptyState
+            icon={Zap}
+            title="Nenhum fluxo ainda"
+            description="Comece por um modelo: ele cria o fluxo desligado, você ajusta os textos e liga. Ou crie um fluxo do zero em Novo fluxo."
+            className="pb-6"
+          />
+          <FlowTemplateList onApplied={openFlow} className="w-full max-w-xl" />
+        </div>
       )}
       {!loading && automations.length === 0 && search && (
         <EmptyState tipo="semResultado" aoLimparFiltros={() => setSearch('')} />
@@ -267,6 +266,7 @@ export default function FlowAutomationsList() {
         ))}
       </div>
     </div>
+      <FlowTemplatesDialog open={templatesOpen} onClose={() => setTemplatesOpen(false)} onApplied={openFlow} />
       {dialogoDeConfirmacao}
       {dialogoDePergunta}
     </>

@@ -290,11 +290,14 @@ export default function AiUnderstandingPanel({ conversation, embutido = false }:
                         : run.status === 'failed'
                           ? 'text-red-600 dark:text-red-400'
                           : 'text-muted-foreground';
+                    // Gerou e não enviou pode ser DE PROPÓSITO (o lead voltou a falar
+                    // no meio, resposta vazia): com motivo, o motivo é o que conta.
+                    // O texto genérico fica só pra quando não há motivo.
                     const rotulo =
                       run.status === 'replied'
                         ? run.delivered
                           ? 'Respondeu o lead'
-                          : 'Gerou resposta, mas não conseguiu enviar'
+                          : (run.reason_label ?? 'Gerou resposta, mas não conseguiu enviar')
                         : run.status === 'failed'
                           ? `Falhou: ${run.error_message ?? 'erro no servidor'}`
                           : (run.reason_label ?? 'Não respondeu');

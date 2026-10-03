@@ -12,6 +12,11 @@ import DuplicateAgentDialog from '@/components/salesAgents/DuplicateAgentDialog'
 import TestMediaBubble from './TestMediaBubble';
 import SendToMeButton from './SendToMeButton';
 import { DOC_ACCEPT, docUploadError } from './docUpload';
+import {
+  REENGAGEMENT_DEFAULT_FIRST_HOURS,
+  REENGAGEMENT_DEFAULT_SECOND_HOURS,
+  clampReengagementHours,
+} from './reengagementHours';
 import type { AgentPerformance } from '@/types/aiResults';
 import { dolar, plural } from '@/lib/formato';
 import {
@@ -235,6 +240,12 @@ export default function SalesAgents() {
         // preserva. (Diferente das colunas do bloco de cima, onde `null` significa
         // "não escolhi coluna nenhuma".)
         followup_pipeline_ids: patch.followup_pipeline_ids ?? selected.followup_pipeline_ids,
+        // Reengajamento. Com `??`: nenhum dos três é limpável (a chave é booleana e
+        // as horas voltam sempre resolvidas do servidor). Fora desta lista, a tela
+        // diria "Salvo" e o servidor nunca receberia — armadilha nº 1 do follow-up.
+        reengagement_enabled: patch.reengagement_enabled ?? selected.reengagement_enabled,
+        reengagement_first_hours: patch.reengagement_first_hours ?? selected.reengagement_first_hours,
+        reengagement_second_hours: patch.reengagement_second_hours ?? selected.reengagement_second_hours,
         // PARA ONDE ela entrega o lead. O modo entra com `??` (ele nunca é
         // limpável — o servidor devolve sempre um dos três); os dois ALVOS
         // entram com `in`, porque `null` ali é escolha legítima: voltar para "a
@@ -2447,6 +2458,10 @@ function FollowupSection({
               o lead, depois quando pode fazer, e só então o ritmo. */}
           <FollowupPipelinesRow agent={agent} onSave={onSave} />
 
+          {/* Antes do "o que fazer quando o lead sumir": é a ordem em que as coisas
+              acontecem com o lead. */}
+          <ReengagementRow agent={agent} onChange={onChange} onSave={onSave} />
+
           <FollowupActionPicker agent={agent} onSave={onSave} />
 
           <FollowupHoursRow agent={agent} onSave={onSave} />
@@ -2494,6 +2509,77 @@ function FollowupSection({
               </div>
             </div>
           </label>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Reengajamento: antes do follow-up, a IA retoma a pergunta que ficou no ar.
+ *
+ * Só pra quem conversou e parou NO MEIO (quem nunca respondeu é do Robô Sem
+ * Resposta). Mora dentro do follow-up porque é uma etapa dele: mesmo horário
+ * ("Quando o follow-up pode sair"), mesmo gotejamento e mesmo público. Um horário
+ * próprio aqui seriam duas verdades sobre quando a IA toma a iniciativa.
+ */
+function ReengagementRow({
+  agent, onChange, onSave,
+}: {
+  agent: SalesAgent;
+  onChange: (a: SalesAgent) => void;
+  onSave: (patch: Partial<SalesAgent>) => void;
+}) {
+  const on = !!agent.reengagement_enabled;
+  return (
+    <div className="rounded-md border border-sidebar-border p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-medium">Antes do follow-up: reengajamento</div>
+          <div className="text-xs text-muted-foreground">
+            Quando a IA pergunta e o lead para de responder no meio da conversa, ela retoma a pergunta duas
+            vezes. Sem resposta, o lead segue pro follow-up abaixo. Segue o horário de{' '}
+            <strong>Quando o follow-up pode sair</strong>.
+          </div>
+        </div>
+        <Toggle on={on} onChange={(v) => onSave({ reengagement_enabled: v })} rotulo="reengajamento" />
+      </div>
+
+      {/* Em "Só follow-up" a IA não responde ao vivo: não existe pergunta dela pra
+          retomar, e o servidor não manda nada. Dizer isso evita "liguei e não sai". */}
+      {on && agent.followup_only && (
+        <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+          Com &quot;Só follow-up&quot; marcado a IA não responde ao vivo, então não há pergunta pra retomar: o
+          reengajamento não age.
+        </p>
+      )}
+
+      {on && (
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <div>
+            <Label htmlFor="re_first" className="text-xs">1ª mensagem depois de</Label>
+            <div className="mt-1 flex items-center gap-2">
+              <Input id="re_first" type="number" min={1} max={48} className="w-20"
+                value={agent.reengagement_first_hours ?? REENGAGEMENT_DEFAULT_FIRST_HOURS}
+                onChange={(e) => onChange({ ...agent, reengagement_first_hours: Number(e.target.value) })}
+                onBlur={() => onSave({
+                  reengagement_first_hours: clampReengagementHours(agent.reengagement_first_hours, REENGAGEMENT_DEFAULT_FIRST_HOURS),
+                })} />
+              <span className="text-xs text-muted-foreground">h sem resposta</span>
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="re_second" className="text-xs">2ª mensagem</Label>
+            <div className="mt-1 flex items-center gap-2">
+              <Input id="re_second" type="number" min={1} max={48} className="w-20"
+                value={agent.reengagement_second_hours ?? REENGAGEMENT_DEFAULT_SECOND_HOURS}
+                onChange={(e) => onChange({ ...agent, reengagement_second_hours: Number(e.target.value) })}
+                onBlur={() => onSave({
+                  reengagement_second_hours: clampReengagementHours(agent.reengagement_second_hours, REENGAGEMENT_DEFAULT_SECOND_HOURS),
+                })} />
+              <span className="text-xs text-muted-foreground">h depois da 1ª</span>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -5271,6 +5357,7 @@ const RUN_STATUS_LABEL: Record<string, string> = {
 const RUN_KIND_LABEL: Record<string, string> = {
   live: 'Conversa',
   followup: 'Follow-up',
+  reengage: 'Reengajamento',
   engage: 'Acionada pelo corretor',
   test: 'Teste',
 };
@@ -5486,7 +5573,10 @@ function DiagnosticsTab({ agent }: { agent: SalesAgent }) {
                     <span className="text-muted-foreground">· {RUN_KIND_LABEL[run.kind] ?? run.kind}</span>
                     <span className="text-muted-foreground">· {new Date(run.created_at).toLocaleString('pt-BR')}</span>
                   </div>
-                  {run.status !== 'replied' && run.reason_label && (
+                  {/* Respondeu mas NÃO enviou também tem motivo quando foi de propósito
+                      (o lead voltou a falar no meio da retomada, resposta vazia): sem
+                      ele a linha fica verde, "Respondeu", e ninguém entende o custo. */}
+                  {run.reason_label && (run.status !== 'replied' || (run.delivered === false && run.skip_reason)) && (
                     <div className="text-muted-foreground">{run.reason_label}</div>
                   )}
                   {/* Turno PULADO carrega o detalhe concreto do bloqueio (qual mensagem
@@ -5497,7 +5587,7 @@ function DiagnosticsTab({ agent }: { agent: SalesAgent }) {
                       {run.error_class === 'Detalhe' ? run.error_message : `${run.error_class}: ${run.error_message}`}
                     </div>
                   )}
-                  {run.status === 'replied' && !run.delivered && (
+                  {run.status === 'replied' && !run.delivered && !run.skip_reason && (
                     <div className="text-amber-600">A resposta foi gerada mas o WhatsApp não aceitou o envio.</div>
                   )}
                 </div>

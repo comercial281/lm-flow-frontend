@@ -1,16 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/ds';
-import type { FlowNodeKind } from '@/types/flowAutomations';
 import { nodeColor } from '@/lib/flowAutomationGraph';
-import { paletteGroups } from '@/features/flowAutomations/palette';
+import { paletteGroups, type PaletteItem } from '@/features/flowAutomations/palette';
 import { cn } from '@/lib/utils';
 
 interface Props {
-  onPick: (kind: FlowNodeKind) => void;
+  onPick: (item: PaletteItem) => void;
 }
 
-// Paleta de blocos: só os que o motor garante nesta versão (palette.ts), com
+// Paleta de blocos: os da sprint 1 e as ações das Automações (palette.ts), com
 // busca por nome e a mesma cor do cartão no canvas.
 export function FlowNodePalette({ onPick }: Props) {
   const [query, setQuery] = useState('');
@@ -31,16 +30,16 @@ export function FlowNodePalette({ onPick }: Props) {
       </div>
       <div className="flex-1 overflow-auto p-2 space-y-3">
         {groups.length === 0 && <p className="text-xs text-muted-foreground px-1">Nenhum bloco com esse nome.</p>}
-        {groups.map(({ group, label, defs }) => (
+        {groups.map(({ group, label, items }) => (
           <div key={group}>
             <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground px-1 mb-1">
               {label}
             </div>
             <div className="space-y-1">
-              {defs.map(def => (
+              {items.map(item => (
                 <button
-                  key={def.kind}
-                  onClick={() => onPick(def.kind)}
+                  key={item.key}
+                  onClick={() => onPick(item)}
                   className={cn(
                     'w-full text-left text-xs rounded-md border border-border px-2 py-1.5',
                     'hover:border-primary hover:bg-accent transition-colors'
@@ -48,9 +47,9 @@ export function FlowNodePalette({ onPick }: Props) {
                 >
                   <span
                     className="inline-block h-2 w-2 rounded-full mr-1.5 align-middle"
-                    style={{ backgroundColor: nodeColor(def.kind, def.group) }}
+                    style={{ backgroundColor: nodeColor(item.kind, item.group) }}
                   />
-                  {def.label}
+                  {item.label}
                 </button>
               ))}
             </div>

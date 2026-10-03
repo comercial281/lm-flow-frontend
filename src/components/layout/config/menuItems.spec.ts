@@ -151,10 +151,45 @@ describe('menu novo: seções (fase 4)', () => {
   });
 
   it('o dono do endereço é o casamento mais longo, inclusive em tela interna', () => {
-    expect(donoDoEndereco(secoes, '/automations/flow-builder/42')?.item.name).toBe('Fluxos de mensagem');
+    expect(donoDoEndereco(secoes, '/automations/flow-builder/42')?.item.name).toBe('Automações');
     expect(donoDoEndereco(secoes, '/bolsao/listas')?.aba?.name).toBe('Listas e regras');
     expect(donoDoEndereco(secoes, '/bolsao')?.aba?.name).toBe('Pegar leads');
     expect(donoDoEndereco(secoes, '/pipelines/7')?.secao.id).toBe('principal');
     expect(donoDoEndereco(secoes, '/profile')).toBeNull();
+  });
+});
+
+describe('Automações · sprint 2 (03/10/2026)', () => {
+  const vendas = secoes.find(s => s.id === 'vendas')!;
+
+  it('Vendas e automação: Funis de mensagem, Disparos, IA Vendedora, Follow-up e Automações, sem abas', () => {
+    expect(vendas.itens.map(i => i.name)).toEqual(['Funis de mensagem', 'Disparos', 'IA Vendedora', 'Follow-up', 'Automações']);
+    vendas.itens.forEach(i => expect(i.abas ?? []).toEqual([]));
+  });
+
+  it('Funis de mensagem abre o editor de funis', () => {
+    expect(vendas.itens.find(i => i.name === 'Funis de mensagem')?.href).toBe('/automations/message-funnels');
+  });
+
+  it('Automações abre direto a lista de fluxos, com a chave do construtor', () => {
+    const automacoes = vendas.itens.find(i => i.name === 'Automações')!;
+    expect(automacoes.href).toBe('/automations/flow-builder');
+    expect(`${automacoes.resource}.${automacoes.action}`).toBe('flow_automations.read');
+    expect(automacoes.clientToggleKey).toBe('client_manage_automations');
+  });
+
+  it('o canvas de um fluxo acende Automações, sem fileira de abas', () => {
+    const dono = donoDoEndereco(secoes, '/automations/flow-builder/abc');
+    expect(dono?.item.name).toBe('Automações');
+    expect(dono?.aba).toBeUndefined();
+  });
+
+  it('Regras de lead e Lembretes saíram do menu (abrem só pelo endereço), e "FlowBuilder" não aparece', () => {
+    const hrefs = todos.map(i => i.href);
+    expect(hrefs).not.toContain('/automations/lead-automations');
+    expect(hrefs).not.toContain('/automations/whatsapp-reminders');
+    expect(todos.map(i => i.name)).not.toContain('FlowBuilder');
+    expect(todos.map(i => i.name)).not.toContain('Fluxos de mensagem');
+    expect(donoDoEndereco(secoes, '/automations/lead-automations')).toBeNull();
   });
 });

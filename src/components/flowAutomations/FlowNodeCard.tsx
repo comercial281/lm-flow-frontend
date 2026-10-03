@@ -1,19 +1,29 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Pencil, Copy, Trash2, Zap } from 'lucide-react';
-import { FLOW_NODE_DEF_BY_KIND, type FlowAutomationNode } from '@/types/flowAutomations';
+import { Pencil, Copy, Trash2, Zap, AlertTriangle } from 'lucide-react';
+import type { FlowAutomationNode } from '@/types/flowAutomations';
 import {
   nodeColor, looseOutputs, NODE_WIDTH, TRIGGER_NODE_ID, branchHandles, handleColor, handleLabel, isBranching,
   type OutputHandle,
 } from '@/lib/flowAutomationGraph';
-import { HIDDEN_BLOCK_NOTICE, isVisibleKind } from '@/features/flowAutomations/palette';
+import { HIDDEN_BLOCK_NOTICE, blockGroup, blockLabel, isVisibleNode } from '@/features/flowAutomations/palette';
+import { leadActionOf } from '@/features/flowAutomations/leadAction';
+import type { LeadAutomationAction } from '@/services/leadAutomation/leadAutomationService';
 import { conditionSentence, type ConditionLookups } from '@/features/flowAutomations/conditions';
 import { WAIT_FOR_REPLY_HELP, describeWait, describeWaitForReply } from '@/features/flowAutomations/waitTime';
 import { sendFromOf } from '@/features/numbers/sendFrom';
 import { cn } from '@/lib/utils';
 
+/** O que o cartão precisa pra montar a frase do bloco. */
+export interface FlowLookups extends ConditionLookups {
+  /** A frase da ação (bloco `lead_action`): a mesma da lista de regras. */
+  actionSummary?: (action: LeadAutomationAction) => string;
+}
+
 export interface FlowNodeCardData {
   node: FlowAutomationNode;
-  lookups: ConditionLookups;
+  lookups: FlowLookups;
+  /** O que falta preencher no bloco (readiness.ts), ou null. */
+  problem?: string | null;
   onEdit: (id: string) => void;
   onDuplicate: (id: string) => void;
   onRemove: (id: string) => void;
@@ -34,9 +44,9 @@ function sendFromLine(config: Record<string, unknown>): string | null {
   return null;
 }
 
-export function summaryLine(node: FlowAutomationNode, lookups: ConditionLookups = {}): string {
+export function summaryLine(node: FlowAutomationNode, lookups: FlowLookups = {}): string {
   const cfg = node.config || {};
-  if (!isVisibleKind(node.kind)) return HIDDEN_BLOCK_NOTICE;
+  if (!isVisibleNode(node)) return HIDDEN_BLOCK_NOTICE;
   switch (node.kind) {
     case 'send_whatsapp':
       return (cfg.text as string) || '(mensagem vazia)';
@@ -56,6 +66,8 @@ export function summaryLine(node: FlowAutomationNode, lookups: ConditionLookups 
       const id = String(cfg.stage_id ?? '');
       return id ? `Para a etapa "${lookups.stageName?.(id) ?? id}"` : '(escolha a etapa)';
     }
+    case 'lead_action':
+      return lookups.actionSummary?.(leadActionOf(cfg)) ?? '';
     default:
       return node.label || '';
   }
@@ -84,21 +96,20 @@ export function FlowTriggerNode({ data }: NodeProps) {
 }
 
 export function FlowNodeCard({ id, data, selected }: NodeProps) {
-  const { node, lookups, onEdit, onDuplicate, onRemove, onAddFrom } = data as unknown as FlowNodeCardData;
-  const def = FLOW_NODE_DEF_BY_KIND[node.kind];
-  const hidden = !isVisibleKind(node.kind);
-  const color = hidden ? '#94a3b8' : nodeColor(node.kind, def?.group || 'control');
+  const { node, lookups, problem, onEdit, onDuplicate, onRemove, onAddFrom } = data as unknown as FlowNodeCardData;
+  const hidden = !isVisibleNode(node);
+  const color = hidden ? '#94a3b8' : nodeColor(node.kind, blockGroup(node));
   const loose = looseOutputs(node);
   const branching = isBranching(node);
   const branches = branchHandles(node);
-  const title = node.label || def?.label || 'Bloco';
+  const title = node.label || blockLabel(node);
   const envio = node.kind === 'send_whatsapp' ? sendFromLine(node.config || {}) : null;
 
   return (
     <div
       className={cn(
         'rounded-lg border bg-card shadow-sm transition-shadow',
-        selected ? 'ring-2 ring-primary' : 'border-border',
+        selected ? 'ring-2 ring-primary' : problem ? 'border-amber-500' : 'border-border',
         hidden && 'opacity-80'
       )}
       style={{ width: NODE_WIDTH }}
@@ -124,6 +135,12 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
         {summaryLine(node, lookups)}
       </div>
       {envio && <div className="px-3 -mt-1 pb-2 text-[11px] text-muted-foreground/80">{envio}</div>}
+      {problem && (
+        <div className="mx-3 mb-2 flex items-start gap-1 rounded bg-amber-500/10 px-1.5 py-1 text-[11px] text-amber-700 dark:text-amber-300">
+          <AlertTriangle className="h-3 w-3 mt-px shrink-0" aria-hidden="true" />
+          <span>{problem}</span>
+        </div>
+      )}
       {node.kind === 'wait_for_reply' && (
         <div className="px-3 -mt-1 pb-2 text-[11px] text-muted-foreground/80">{WAIT_FOR_REPLY_HELP}</div>
       )}

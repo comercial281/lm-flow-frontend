@@ -22,6 +22,7 @@ import {
   type FormOrigin,
   type EvolutionInstance,
   WAIT_ACTION_NOTICE,
+  missingActionParams,
 } from '@/services/leadAutomation/leadAutomationService';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import SendFromField from '@/components/numbers/SendFromField';
@@ -55,29 +56,8 @@ const TRIGGERS_WITH_CONDITION = new Set([
 export const triggerNeedsCondition = (trigger: string): boolean =>
   TRIGGERS_WITH_CONDITION.has(trigger);
 
-// Params obrigatórios por action.type — chaves exatas do backend (LeadAutomation::Executor).
-const ACTIONS_REQUIRING_PARAMS: Record<string, string[]> = {
-  send_whatsapp_message:   ['message'],
-  send_audio:              ['media_url'],
-  send_image:              ['media_url'],
-  send_video:              ['media_url'],
-  send_document:           ['media_url'],
-  send_sticker:            ['media_url'],
-  send_message_funnel:     ['funnel_id'],
-  start_followup_sequence: ['sequence_slug'],
-  assign_broker:           ['user_id'],
-  add_label:               ['label_id'],
-  remove_label:            ['label_id'],
-  move_pipeline_stage:     ['stage_id'],
-  create_task:             ['title'],
-  notify_group:            ['group_jid', 'message'],
-  notify_user:             ['user_id', 'message'],
-  send_quick_reply:        ['quick_reply_id'],
-  notify_broker:           ['message'],
-  notify_gestor:           ['message'],
-  notify_push:             ['user_ids', 'message'],
-  // assign_via_roleta e wait não têm params obrigatórios
-};
+// Params obrigatórios por action.type: ACTION_REQUIRED_PARAMS, em
+// leadAutomationService.ts (o construtor de fluxos usa o mesmo mapa).
 
 // ============================================================================
 // Resources (lookup pra dropdowns)
@@ -1345,15 +1325,12 @@ export function validateRule(
   }
 
   for (const action of actions) {
-    const required = ACTIONS_REQUIRING_PARAMS[action.type] ?? [];
-    for (const key of required) {
-      const value = action.params?.[key];
-      if (value === undefined || value === '' || value === null || (Array.isArray(value) && value.length === 0)) {
-        return {
-          ok: false,
-          error: `Preencha "${key}" na ação "${action.type}".`,
-        };
-      }
+    const [key] = missingActionParams(action);
+    if (key) {
+      return {
+        ok: false,
+        error: `Preencha "${key}" na ação "${action.type}".`,
+      };
     }
 
     // "Enviar pelo número" (fase 2b.2): "um número específico" sem o número.

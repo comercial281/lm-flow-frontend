@@ -7,7 +7,7 @@ import { donoDoEndereco } from '@/components/layout/config/menuItems';
 // ── PÁGINA COM ABAS (fase 4) ─────────────────────────────────────────────────
 //
 // Moldura das páginas que juntam várias telas sob um assunto (Integrações,
-// Bolsão, Fluxos de mensagem, Automações, Campos personalizados). Entra como
+// Bolsão, Campos personalizados). Entra como
 // rota-moldura SEM endereço próprio: as telas de dentro mantêm o endereço que
 // já tinham, então link salvo e link com filtro continuam valendo.
 //

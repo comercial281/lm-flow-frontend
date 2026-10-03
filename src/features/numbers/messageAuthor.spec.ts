@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DEVICE_SENT_LABEL, agentDisplayNameFor, isFollowupMessage } from './messageAuthor';
+import { DEVICE_SENT_LABEL, agentDisplayNameFor, isFollowupMessage, isReengagementMessage } from './messageAuthor';
 
 // O nome ao lado do selo "Atendente" (fase 2b.2, E41). Mensagem nossa nunca é
 // assinada pelo lead; automática não leva nome; digitada no celular de número
@@ -40,5 +40,23 @@ describe('isFollowupMessage', () => {
     expect(isFollowupMessage({ content_attributes: { sales_agent: true } })).toBe(false);
     expect(isFollowupMessage({ content_attributes: { automated: true } })).toBe(false);
     expect(isFollowupMessage({ sender: { type: 'user', name: 'Ana' }, content_attributes: null })).toBe(false);
+  });
+});
+
+// Reengajamento (03/10/2026): a IA retoma a pergunta antes do follow-up. Selo
+// próprio, azul — e um não pode ser lido como o outro.
+describe('isReengagementMessage', () => {
+  it('retomada da IA (marca reengagement)', () => {
+    expect(isReengagementMessage({ content_attributes: { sales_agent: true, reengagement: true } })).toBe(true);
+  });
+
+  it('follow-up, resposta da IA e mensagem de gente: não', () => {
+    expect(isReengagementMessage({ content_attributes: { sales_agent: true, followup: true } })).toBe(false);
+    expect(isReengagementMessage({ content_attributes: { sales_agent: true } })).toBe(false);
+    expect(isReengagementMessage({ sender: { type: 'user', name: 'Ana' }, content_attributes: null })).toBe(false);
+  });
+
+  it('a retomada não é follow-up', () => {
+    expect(isFollowupMessage({ content_attributes: { sales_agent: true, reengagement: true } })).toBe(false);
   });
 });

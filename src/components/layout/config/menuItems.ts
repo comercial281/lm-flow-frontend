@@ -16,7 +16,6 @@ import {
   Tags,
   GraduationCap,
   Zap,
-  Bell,
   Building2,
   Building,
   CalendarClock,
@@ -25,7 +24,6 @@ import {
   Megaphone,
   MessageSquarePlus,
   Rocket,
-  GitBranch,
   Repeat,
   Shuffle,
   ClipboardList,
@@ -154,6 +152,10 @@ export const MENU_FREE_BY_DESIGN = ['/tutorials'];
  *   - Interesses ........... /property-interests
  *   - Ações agendadas ...... /contacts/scheduled-actions
  *   - Marketplace .......... /marketplace
+ * Saíram em 03/10/2026 (Automações · sprint 2): a página Automações virou o
+ * construtor de fluxos. Abrem pelo endereço (suporte, avisos do Follow-up):
+ *   - Regras de lead ....... /automations/lead-automations
+ *   - Lembretes ............ /automations/whatsapp-reminders
  *
  * Também saiu o "Personalizar menu" (esconder/favoritar/reordenar): com seções
  * fixas ele quebrava os rótulos. Ver a seção "Menu novo" no CLAUDE.md.
@@ -254,21 +256,19 @@ export const getCustomerMenuSections = (): MenuSection[] => [
     rotulo: 'Vendas e automação',
     icone: Zap,
     itens: [
-      // Fluxos = o conteúdo da conversa (o que a mensagem diz).
-      itemComAbas({ name: 'Fluxos de mensagem', icon: Rocket }, [
-        { name: 'Editor de funis', href: '/automations/message-funnels', icon: Rocket, ...permissionFromRoute('/automations/message-funnels'), featureKey: 'message_funnels' },
-        // FlowBuilder reusa o flag das regras por não ter registro próprio.
-        { name: 'FlowBuilder', href: '/automations/flow-builder', icon: GitBranch, ...permissionFromRoute('/automations/flow-builder'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations' },
-      ]),
+      // Funis de mensagem = o conteúdo da conversa (o que a mensagem diz). Era
+      // "Fluxos de mensagem", com a aba FlowBuilder; desde 03/10/2026 "fluxo" é
+      // o nome das automações, e aqui fica só o editor de funis.
+      { name: 'Funis de mensagem', href: '/automations/message-funnels', icon: Rocket, ...permissionFromRoute('/automations/message-funnels'), featureKey: 'message_funnels' },
       { name: 'Disparos', href: '/disparos', icon: Megaphone, ...permissionFromRoute('/disparos'), featureKey: 'disparos' },
       // Feature gerenciada pela Leal Mídia: super-admin SEMPRE vê; cliente só se ligar o toggle.
       { name: 'IA Vendedora', href: '/ia-vendedora', icon: Bot, ...permissionFromRoute('/ia-vendedora'), clientToggleKey: 'client_manage_automations' },
       { name: 'Follow-up', href: '/automations/follow-ups', icon: Repeat, ...permissionFromRoute('/automations/follow-ups'), featureKey: 'follow_ups' },
-      // Automações = "quando X acontecer, faça Y".
-      itemComAbas({ name: 'Automações', icon: Zap }, [
-        { name: 'Regras de lead', href: '/automations/lead-automations', icon: Zap, ...permissionFromRoute('/automations/lead-automations'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations' },
-        { name: 'Lembretes', href: '/automations/whatsapp-reminders', icon: Bell, ...permissionFromRoute('/automations/whatsapp-reminders') },
-      ]),
+      // Automações = "quando X acontecer, faça Y": o construtor de fluxos, direto
+      // na lista (sprint 2, 03/10/2026). Reusa a função das regras por não ter
+      // registro próprio. "Regras de lead" e "Lembretes" saíram do menu e abrem
+      // só pelo endereço (suporte e avisos da tela de Follow-up apontam pra lá).
+      { name: 'Automações', href: '/automations/flow-builder', icon: Zap, ...permissionFromRoute('/automations/flow-builder'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations' },
     ],
   },
   {
@@ -336,7 +336,7 @@ export function itemAtivo(item: MenuItem, pathname: string): boolean {
 
 /**
  * Item (e aba) do menu dono do endereço. Ganha o casamento mais longo, para
- * /automations/flow-builder/:id cair em Fluxos e não em outro item.
+ * /automations/flow-builder/:id cair em Automações e não em outro item.
  */
 export function donoDoEndereco(
   secoes: MenuSection[],
