@@ -1,4 +1,5 @@
 import BarChartCard from '@/components/charts/BarChartCard';
+import EmptyState from '@/components/base/EmptyState';
 import { dataCurta, dinheiro, numero, plural } from '@/lib/formato';
 import type { CostsSummary } from '@/types/admin/costs';
 import ListaEmBarras from './ListaEmBarras';
@@ -17,9 +18,16 @@ export default function Recortes({ summary }: { summary: CostsSummary }) {
       )}
       <ListaEmBarras titulo="Por modelo" vazio={VAZIO}
         itens={summary.by_model.map((m) => ({ chave: m.key, rotulo: m.label, valor: m.brl, parte: m.share, detalhe: chamadas(m.calls) }))} />
-      <BarChartCard title="Gasto de IA dia a dia"
-        data={summary.daily.map((d) => ({ name: dataCurta(d.day), value: d.brl }))}
-        valueFormatter={(v: number) => dinheiro(v)} />
+      {summary.totals.calls === 0 ? (
+        <section className="rounded-lg border bg-card p-4">
+          <h3 className="mb-3 text-sm font-semibold">Gasto de IA dia a dia</h3>
+          <EmptyState tipo="vazio" title={VAZIO} />
+        </section>
+      ) : (
+        <BarChartCard title="Gasto de IA dia a dia" highlightMax={false}
+          data={summary.daily.map((d) => ({ name: dataCurta(d.day), value: d.brl }))}
+          valueFormatter={(v: number) => dinheiro(v)} />
+      )}
     </div>
   );
 }

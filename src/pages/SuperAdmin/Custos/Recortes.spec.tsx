@@ -4,7 +4,7 @@ import Recortes from './Recortes';
 import Conferencia from './Conferencia';
 import { fakeSummary } from './fakeSummary';
 
-vi.mock('@/components/charts/BarChartCard', () => ({ default: ({ title }: { title: string }) => <div>{title}</div> }));
+vi.mock('@/components/charts/BarChartCard', () => ({ default: ({ title }: { title: string }) => <div data-testid="grafico">{title}</div> }));
 
 describe('Recortes', () => {
   it('mostra função, cliente e modelo com a parte de cada um', () => {
@@ -13,6 +13,7 @@ describe('Recortes', () => {
       by_model: [{ key: 'claude-haiku-4-5', label: 'claude-haiku-4-5', brl: 300, usd: 60, calls: 500, share: 1 }],
       by_tenant: [{ schema: 'tenant_a', name: 'Alfa', brl: 300, usd: 60, calls: 500, share: 1 }],
       daily: [{ day: '2026-10-01', brl: 10 }],
+      totals: { ...fakeSummary().totals, calls: 500 },
     })} />);
     expect(screen.getByText('Follow-up')).toBeInTheDocument();
     expect(screen.getByText('75%')).toBeInTheDocument();
@@ -21,8 +22,10 @@ describe('Recortes', () => {
   });
 
   it('mês sem chamada: vazio que explica, sem quebrar', () => {
-    render(<Recortes summary={fakeSummary()} />);
-    expect(screen.getAllByText('Nenhuma chamada de IA neste mês').length).toBeGreaterThan(0);
+    render(<Recortes summary={fakeSummary({ daily: [{ day: '2026-10-01', brl: 0 }], totals: { ...fakeSummary().totals, calls: 0 } })} />);
+    expect(screen.getAllByText('Nenhuma chamada de IA neste mês')).toHaveLength(4);
+    expect(screen.queryByTestId('grafico')).not.toBeInTheDocument();
+    expect(screen.getByText('Gasto de IA dia a dia')).toBeInTheDocument();
   });
 
   it('com cliente filtrado, o recorte por cliente some', () => {

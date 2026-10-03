@@ -79,7 +79,7 @@ export default function Custos() {
             <CartoesDoMes summary={summary} />
             <div data-testid="custos-detalhes" className="flex flex-col gap-6">
               <Recortes summary={summary} />
-              <Conferencia reconciliation={summary.reconciliation} aoLancar={() => setLancando(true)} />
+              {!summary.tenant && <Conferencia reconciliation={summary.reconciliation} aoLancar={() => setLancando(true)} />}
             </div>
           </>
         )}
