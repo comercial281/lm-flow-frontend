@@ -7,21 +7,14 @@ import { Seletor } from '@/components/base/Seletor';
 import { dataHora, dinheiro, numero } from '@/lib/formato';
 import { costsService } from '@/services/superAdmin/costsService';
 import type { CostCall, CostCallsPage, CostSlice } from '@/types/admin/costs';
-import { tamanho } from './formatoCustos';
+import { OPCOES_FORNECEDOR, tamanho } from './formatoCustos';
 import DetalheDaChamada from './DetalheDaChamada';
-
-const FORNECEDORES = [
-  { valor: '', rotulo: 'Todos os fornecedores' },
-  { valor: 'anthropic', rotulo: 'Anthropic' },
-  { valor: 'openai', rotulo: 'OpenAI' },
-  { valor: 'elevenlabs', rotulo: 'ElevenLabs' },
-];
 
 export default function ListaDeChamadas({ month, tenant, funcoes }: { month: string; tenant: string | null; funcoes: CostSlice[] }) {
   const [feature, setFeature] = useState('');
   const [provider, setProvider] = useState('');
   const [onlyErrors, setOnlyErrors] = useState(false);
-  const [dados, setDados] = useState<CostCallsPage | null>(null);
+  const [dados, setDados] = useState<(CostCallsPage & { chave: string }) | null>(null);
   const [erro, setErro] = useState(false);
   const [aberta, setAberta] = useState<string | null>(null);
 
@@ -41,28 +34,32 @@ export default function ListaDeChamadas({ month, tenant, funcoes }: { month: str
     try {
       const r = await costsService.calls({ month, tenant, feature, provider, onlyErrors, page });
       if (minha !== seq.current) return;
-      setDados(r);
+      setDados({ ...r, chave });
     } catch {
       if (minha !== seq.current) return;
+      setDados(null);
       setErro(true);
     }
-  }, [month, tenant, feature, provider, onlyErrors, page]);
+  }, [month, tenant, feature, provider, onlyErrors, page, chave]);
 
   useEffect(() => { void carregar(); }, [carregar]);
 
-  const paginas = dados ? Math.max(1, Math.ceil(dados.meta.total / dados.meta.per_page)) : 1;
+  // Dados de outro conjunto de filtros contam como "carregando": nada de linha velha sob filtro novo.
+  // Só troca de página mantém as linhas antigas até a próxima chegar.
+  const atual = dados && dados.chave === chave && !erro ? dados : null;
+  const paginas = atual ? Math.max(1, Math.ceil(atual.meta.total / atual.meta.per_page)) : 1;
 
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold">Chamadas {dados ? `(${numero(dados.meta.total)})` : ''}</h3>
+        <h3 className="text-sm font-semibold">Chamadas {atual ? `(${numero(atual.meta.total)})` : ''}</h3>
         <div className="flex flex-wrap items-center gap-3">
           <Seletor aria-label="Função" value={feature} onChange={(e) => setFeature(e.target.value)} className="w-56">
             <option value="">Todas as funções</option>
             {funcoes.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
           </Seletor>
           <Seletor aria-label="Fornecedor" value={provider} onChange={(e) => setProvider(e.target.value)} className="w-48">
-            {FORNECEDORES.map((f) => <option key={f.valor} value={f.valor}>{f.rotulo}</option>)}
+            {OPCOES_FORNECEDOR.map((f) => <option key={f.valor} value={f.valor}>{f.rotulo}</option>)}
           </Seletor>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={onlyErrors} onCheckedChange={(v) => setOnlyErrors(v === true)} aria-label="Só erros" />
@@ -75,8 +72,8 @@ export default function ListaDeChamadas({ month, tenant, funcoes }: { month: str
         <EmptyState tipo="erro" title="Não deu para carregar as chamadas" aoTentarDeNovo={carregar} />
       ) : (
         <BaseTable<CostCall>
-          data={dados?.items ?? []}
-          loading={!dados}
+          data={atual?.items ?? []}
+          loading={!atual}
           getRowKey={(c) => c.id}
           emptyTitle="Nenhuma chamada com esses filtros"
           columns={[
@@ -95,7 +92,7 @@ export default function ListaDeChamadas({ month, tenant, funcoes }: { month: str
         />
       )}
 
-      {dados && paginas > 1 && (
+      {atual && !erro && paginas > 1 && (
         <div className="flex items-center justify-end gap-2 text-sm">
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => irPara(page - 1)}>Anterior</Button>
           <span className="tabular-nums text-muted-foreground">{page} de {paginas}</span>

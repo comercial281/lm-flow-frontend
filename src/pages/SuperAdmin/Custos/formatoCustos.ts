@@ -20,3 +20,14 @@ export function tamanho(c: Pick<CostCall, 'input_tokens' | 'output_tokens' | 'ca
   const total = c.input_tokens + c.output_tokens + c.cache_read_tokens + c.cache_write_tokens;
   return numero(total);
 }
+
+const FORNECEDORES: Record<string, string> = { anthropic: 'Anthropic', openai: 'OpenAI', elevenlabs: 'ElevenLabs' };
+export const OPCOES_FORNECEDOR = [
+  { valor: '', rotulo: 'Todos os fornecedores' },
+  ...Object.entries(FORNECEDORES).map(([valor, rotulo]) => ({ valor, rotulo })),
+];
+
+/** "anthropic" → "Anthropic" (id desconhecido aparece como veio). */
+export function nomeFornecedor(id: string): string {
+  return FORNECEDORES[id] ?? id;
+}

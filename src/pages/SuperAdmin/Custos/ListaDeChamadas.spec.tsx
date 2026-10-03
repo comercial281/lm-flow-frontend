@@ -80,4 +80,20 @@ describe('ListaDeChamadas', () => {
     expect(screen.queryByText('Resposta velha')).not.toBeInTheDocument();
     expect(screen.getByText('Resposta nova')).toBeInTheDocument();
   });
+
+  it('trocar filtro esconde linhas e contagem antigas até a resposta nova', async () => {
+    let solta: (v: unknown) => void = () => {};
+    apiGet.mockImplementationOnce(() => Promise.resolve(pagina([linha], 1, 1)));
+    apiGet.mockImplementationOnce(() => new Promise((r) => { solta = r; }));
+    render(<ListaDeChamadas month="2026-10" tenant={null} funcoes={[]} />);
+    await waitFor(() => expect(screen.getByText('Follow-up')).toBeInTheDocument());
+    expect(screen.getByText('Chamadas (1)')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Só erros'));
+    await waitFor(() => expect(apiGet).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText('Follow-up')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ok')).not.toBeInTheDocument();
+    expect(screen.queryByText('Chamadas (1)')).not.toBeInTheDocument();
+    await act(async () => { solta(pagina([{ ...linha, id: 'e1', feature_label: 'Só falha', status: 'error' }], 1, 1)); });
+    expect(screen.getByText('Só falha')).toBeInTheDocument();
+  });
 });

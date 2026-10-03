@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/ds';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/ds';
 import EmptyState from '@/components/base/EmptyState';
 import { dataHora, dinheiro, dolar, numero } from '@/lib/formato';
 import { costsService } from '@/services/superAdmin/costsService';
 import type { CostCallDetail } from '@/types/admin/costs';
-import { tamanho } from './formatoCustos';
+import { nomeFornecedor, tamanho } from './formatoCustos';
 
 const QUEM: Record<string, string> = { conversation: 'Conversa', contact: 'Contato', user: 'Usuário', job: 'Rotina automática' };
 
@@ -39,14 +39,14 @@ export default function DetalheDaChamada({ id, aoFechar }: { id: string; aoFecha
   return (
     <Sheet open onOpenChange={(o) => { if (!o) aoFechar(); }}>
       <SheetContent side="right" className="flex w-full flex-col gap-4 overflow-y-auto sm:max-w-xl">
-        <SheetHeader><SheetTitle>{c ? c.feature_label : 'Chamada'}</SheetTitle></SheetHeader>
+        <SheetHeader><SheetTitle>{c ? c.feature_label : 'Chamada'}</SheetTitle><SheetDescription className="sr-only">Detalhe da chamada de IA</SheetDescription></SheetHeader>
         {erro && <EmptyState tipo="erro" title="Não deu para abrir a chamada" aoTentarDeNovo={carregar} />}
         {c && (
           <>
             <div className="flex flex-col gap-2 px-4">
               {linha('Quando', dataHora(c.created_at))}
               {linha('Cliente', c.tenant_name)}
-              {linha('Fornecedor e modelo', `${c.provider} · ${c.model ?? '—'}`)}
+              {linha('Fornecedor e modelo', `${nomeFornecedor(c.provider)} · ${c.model ?? '—'}`)}
               {linha('Custo', c.priced ? `${dinheiro(c.cost_brl)} (${dolar(c.cost_usd, 4)})` : 'Sem preço na tabela')}
               {linha('Tamanho', tamanho(c))}
               {c.audio_seconds == null && c.characters == null &&
