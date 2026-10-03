@@ -9,6 +9,15 @@ export type ListingKind = 'development' | 'resale';
 export type Stage = 'pre_launch' | 'launch' | 'in_construction' | 'ready';
 export type Tom = 'ok' | 'alerta' | 'neutro' | 'info' | 'marca';
 
+/** Cor de cada tom nos selos e pílulas (situação do imóvel, status do proprietário). */
+export const TONS: Record<Tom, string> = {
+  ok: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+  alerta: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  neutro: 'bg-muted text-muted-foreground',
+  info: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
+  marca: 'bg-primary/10 text-primary',
+};
+
 /** Servidor antigo não manda o campo: tudo cai em Revenda, sem tela em branco. */
 export function tipoDoImovel(p: { listing_kind?: string | null }): ListingKind {
   return p.listing_kind === 'development' ? 'development' : 'resale';

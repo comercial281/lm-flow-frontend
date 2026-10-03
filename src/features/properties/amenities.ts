@@ -16,10 +16,10 @@ export interface Amenity {
 
 /** Características do próprio imóvel. */
 export const PROPERTY_FEATURES: Amenity[] = [
-  { slug: 'piscina', label: 'Piscina' },
+  { slug: 'piscina', label: 'Piscina privativa' },
   { slug: 'churrasqueira', label: 'Churrasqueira' },
   { slug: 'hidromassagem', label: 'Hidromassagem' },
-  { slug: 'sauna', label: 'Sauna' },
+  { slug: 'sauna', label: 'Sauna privativa' },
   { slug: 'varanda', label: 'Varanda' },
   { slug: 'varanda_gourmet', label: 'Varanda gourmet' },
   { slug: 'aceita_pet', label: 'Aceita pet' },
@@ -35,7 +35,6 @@ export const PROPERTY_FEATURES: Amenity[] = [
   { slug: 'lareira', label: 'Lareira' },
   { slug: 'jardim', label: 'Jardim' },
   { slug: 'quintal', label: 'Quintal' },
-  { slug: 'agua', label: 'Água' },
 ];
 
 /** Comodidades do condomínio. */
@@ -59,8 +58,11 @@ export const CONDO_FEATURES: Amenity[] = [
   { slug: 'bicicletario', label: 'Bicicletário' },
 ];
 
+/** Saíram das opções, mas imóvel antigo pode ter: o nome continua para leitura. */
+const LEGADO: Amenity[] = [{ slug: 'agua', label: 'Água' }];
+
 const LABEL_BY_SLUG: Record<string, string> = Object.fromEntries(
-  [...PROPERTY_FEATURES, ...CONDO_FEATURES].map(a => [a.slug, a.label]),
+  [...PROPERTY_FEATURES, ...CONDO_FEATURES, ...LEGADO].map(a => [a.slug, a.label]),
 );
 
 /** Converte uma lista de slugs em rótulos, descartando slugs desconhecidos. */

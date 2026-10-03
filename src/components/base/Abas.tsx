@@ -25,6 +25,8 @@ export interface Aba {
   para?: string;
   /** A aba só fica ativa no endereço exato (quando o endereço dela é começo do de outra aba). */
   exata?: boolean;
+  /** Bolinha vermelha de novidade ao lado do nome (ex.: captação nova chegou). */
+  marcador?: boolean;
 }
 
 export interface AbasProps {
@@ -35,6 +37,10 @@ export interface AbasProps {
   aoTrocar?: (chave: string) => void;
   className?: string;
 }
+
+const Marcador = () => (
+  <span role="img" aria-label="Novidade" data-marcador className="ml-1.5 inline-block h-2 w-2 rounded-full bg-destructive" />
+);
 
 const classeDaAba = (ativa: boolean) =>
   cn(
@@ -49,10 +55,11 @@ export default function Abas({ abas, rotulo, ativa, aoTrocar, className }: AbasP
   if (saoLinks) {
     return (
       <nav aria-label={rotulo} onClickCapture={aoClicar} className={cn('flex items-center gap-1 overflow-x-auto', className)}>
-        {abas.map(({ chave, rotulo: nome, icone: Icone, para, exata }) => (
+        {abas.map(({ chave, rotulo: nome, icone: Icone, para, exata, marcador }) => (
           <NavLink key={chave} to={para!} end={exata} className={({ isActive }) => classeDaAba(isActive)}>
             {Icone && <Icone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
             {nome}
+            {marcador && <Marcador />}
           </NavLink>
         ))}
         {dialogoDeConfirmacao}
@@ -62,7 +69,7 @@ export default function Abas({ abas, rotulo, ativa, aoTrocar, className }: AbasP
 
   return (
     <div role="tablist" aria-label={rotulo} className={cn('flex items-center gap-1 overflow-x-auto border-b border-border', className)}>
-      {abas.map(({ chave, rotulo: nome, icone: Icone }) => (
+      {abas.map(({ chave, rotulo: nome, icone: Icone, marcador }) => (
         <button
           key={chave}
           type="button"
@@ -73,6 +80,7 @@ export default function Abas({ abas, rotulo, ativa, aoTrocar, className }: AbasP
         >
           {Icone && <Icone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
           {nome}
+          {marcador && <Marcador />}
         </button>
       ))}
     </div>

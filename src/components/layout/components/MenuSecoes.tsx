@@ -66,6 +66,8 @@ export default function MenuSecoes({ secoes, mobile = false, aoNavegar }: MenuSe
         const estaAberta = aberta === secao.id;
         const Icone = secao.icone;
         const temAtivo = secao.itens.some(i => itemAtivo(i, pathname));
+        // Seção fechada esconde o item com novidade: a bolinha aparece no cabeçalho.
+        const novidadeEscondida = !estaAberta && secao.itens.some(i => i.marcador);
         return (
           <div key={secao.id} className="mb-1">
             <button
@@ -79,6 +81,7 @@ export default function MenuSecoes({ secoes, mobile = false, aoNavegar }: MenuSe
             >
               {Icone && <Icone className="flex-shrink-0" style={{ width: '1.125rem', height: '1.125rem' }} aria-hidden="true" />}
               <span className="flex-1 min-w-0 truncate text-left">{secao.rotulo}</span>
+              {novidadeEscondida && <span aria-hidden="true" data-marcador className="inline-block h-2 w-2 shrink-0 rounded-full bg-destructive" />}
               <ChevronDown
                 className={cn(
                   'h-3.5 w-3.5 opacity-60 transition-transform duration-200 motion-reduce:transition-none',

@@ -67,3 +67,25 @@ describe('Abas de estado', () => {
     expect(aoTrocar).toHaveBeenCalledWith('mensagem');
   });
 });
+
+describe('bolinha de novidade', () => {
+  it('aparece só na aba marcada (aba de estado)', () => {
+    render(
+      <MemoryRouter>
+        <Abas rotulo="Partes" ativa="a" aoTrocar={() => {}}
+          abas={[{ chave: 'a', rotulo: 'Uma' }, { chave: 'b', rotulo: 'Outra', marcador: true }]} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryAllByLabelText('Novidade')).toHaveLength(1);
+    expect(screen.getByRole('tab', { name: /Outra/ })).toContainElement(screen.getByLabelText('Novidade'));
+  });
+
+  it('aparece também na aba que é link', () => {
+    render(
+      <MemoryRouter initialEntries={['/automations/follow-ups']}>
+        <Abas rotulo="Setores" abas={[LINKS[0], { ...LINKS[1], marcador: true }]} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: /Lembretes/ })).toContainElement(screen.getByLabelText('Novidade'));
+  });
+});

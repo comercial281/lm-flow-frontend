@@ -20,6 +20,12 @@ const trecho = (path: string) => {
   return src.slice(i, fim === -1 ? undefined : fim);
 };
 
+describe('endereço antigo da Captação', () => {
+  it('/property-capture-requests redireciona para a aba Novas captações', () => {
+    expect(trecho('/property-capture-requests')).toContain('<Navigate to="/property-owners?aba=captacoes" replace />');
+  });
+});
+
 describe('toda rota do CRM confere o cargo', () => {
   it.each([
     ['/ia-vendedora', 'sales_agents', 'read'],
@@ -33,6 +39,8 @@ describe('toda rota do CRM confere o cargo', () => {
     ['/settings/pixel-capi', 'capi_configs', 'read'],
     ['/properties', 'properties', 'read'],
     ['/properties/map', 'properties', 'read'],
+    ['/properties/new', 'properties', 'create'],
+    ['/properties/:id/editar', 'properties', 'update'],
     ['/books', 'properties', 'read'],
     ['/visits', 'visits', 'read'],
     ['/proposals', 'proposals', 'read'],
