@@ -5058,6 +5058,9 @@ O que aparece na tela hoje:
   `text-xl`, Visita/Conversa/IA em botões quadrados com ícone em cima, etiqueta
   como "Adicionar etiqueta" visível, e a origem como selo colorido junto de
   telefone/e-mail (solta no meio parecia subtítulo sem dono).
+- **Imóveis de interesse rola por dentro (pedido do dono, 02/10):** a lista para
+  em ~3 imóveis (360px) e rola dentro da caixa; com muitos imóveis o Detalhes não
+  cresce pra baixo.
 - **Sem botão Salvar.** Tudo grava na hora.
 
 Decisões do dono (não reabrir sem ele pedir):

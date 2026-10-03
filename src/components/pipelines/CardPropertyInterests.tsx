@@ -224,7 +224,9 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
           <p className="text-xs text-muted-foreground">Use a busca acima para adicionar.</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        // Scroll só dentro da lista: com muitos imóveis o card não empurra
+        // o resto do Detalhes pra baixo (~3 imóveis visíveis por vez).
+        <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
           {interests.map(interest => (
             <div key={interest.id} className="flex items-start gap-3 rounded-lg border border-border p-3">
               <Home className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
