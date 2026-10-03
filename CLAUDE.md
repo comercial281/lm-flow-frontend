@@ -5575,6 +5575,11 @@ Decisões (não reabrir sem o dono pedir):
 - **A retomada não puxa visita** (isso é do follow-up): retoma o que ficou no ar; a
   2ª oferece uma saída fácil.
 - **Selo só pra retomada.** Automação continua sem selo.
+- **O aviso de fora do horário não é resposta.** O lead que escreveu fora do
+  horário e só recebeu o aviso não ganha retomada: quem está esperando é ele.
+- **Se o lead volta a falar enquanto a retomada é escrita**, ela não sai e a IA
+  responde a ele normalmente (no Diagnóstico: *O lead respondeu enquanto a
+  retomada era escrita*).
 
 Armadilhas:
 
