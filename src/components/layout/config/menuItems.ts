@@ -36,6 +36,7 @@ import {
   Share2,
   SlidersHorizontal,
   Braces,
+  UserRoundCheck,
 } from 'lucide-react';
 import { openFeedbackDialog } from '@/components/feedback/openFeedback';
 
@@ -80,6 +81,12 @@ export interface MenuItem {
    * O Sidebar usa isso pra mostrar o selo "oculto pro cliente" — só o super vê.
    */
   hiddenFromClient?: boolean;
+  /**
+   * Anotado em runtime (não configurar à mão): bolinha vermelha de novidade ao
+   * lado do nome. Hoje só a Gestão de proprietários usa, quando chega captação
+   * nova (ver `aplicarProprietariosNoMenu`).
+   */
+  marcador?: boolean;
 }
 
 export interface SubMenuItem {
@@ -140,8 +147,9 @@ export const MENU_FREE_BY_DESIGN = ['/tutorials'];
  * Em breve (voltam quando estiverem prontas):
  *   - Propostas ............ /proposals
  *   - Contratos ............ /contracts
- *   - Captação ............. /property-capture-requests
- *   - Gestão de proprietários, Plano/assinatura (ainda sem tela)
+ *   - Captação ............. /property-capture-requests (vira a aba Novas
+ *     captações da Gestão de proprietários, que voltou ao menu em 03/10/2026)
+ *   - Plano/assinatura (ainda sem tela)
  * Sem plano de voltar:
  *   - Interesses ........... /property-interests
  *   - Ações agendadas ...... /contacts/scheduled-actions
@@ -202,6 +210,11 @@ export const getCustomerMenuSections = (): MenuSection[] => [
     icone: Building2,
     itens: [
       { name: 'Meus imóveis', href: '/properties', icon: Building2, ...permissionFromRoute('/properties'), featureKey: 'properties' },
+      // Proprietários da revenda + Novas captações do site. O cargo só pede a
+      // leitura; o resto é decidido em runtime (`aplicarProprietariosNoMenu`,
+      // no MainLayout): o gestor sempre vê, o corretor só com algum
+      // proprietário liberado para ele. A bolinha é captação nova não vista.
+      { id: 'proprietarios', name: 'Gestão de proprietários', href: '/property-owners', icon: UserRoundCheck, ...permissionFromRoute('/property-owners'), featureKey: 'properties' },
       // Gestão do site: pede `sites.update` além da leitura (ver `gestao`).
       { name: 'Meu site', href: '/settings/site-builder', icon: Globe, ...gestao('/settings/site-builder', 'sites.update'), featureKey: 'site_builder' },
       // Books (PDF) salvos nos imóveis — visualizar e baixar

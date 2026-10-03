@@ -24,6 +24,8 @@ import {
   SiteBuilder,
   Properties,
   CadastroDoImovel,
+  GestaoDeProprietarios,
+  FichaDoProprietario,
   PropertyBooks,
   Visits,
   Proposals,
@@ -1096,6 +1098,27 @@ const AppRouter = () => {
               element={
                 <PermissionRoute resource="properties" action="update">
                   <CadastroDoImovel />
+                </PermissionRoute>
+              }
+            />
+
+            {/* Gestão de proprietários: a lista (com a aba Novas captações) e a
+                ficha. O corretor só vê os proprietários liberados para ele
+                (o servidor recorta; fora do recorte a ficha dá 404). */}
+            <Route
+              path="/property-owners"
+              element={
+                <PermissionRoute resource="properties" action="read">
+                  <GestaoDeProprietarios />
+                </PermissionRoute>
+              }
+            />
+
+            <Route
+              path="/property-owners/:id"
+              element={
+                <PermissionRoute resource="properties" action="read">
+                  <FichaDoProprietario />
                 </PermissionRoute>
               }
             />

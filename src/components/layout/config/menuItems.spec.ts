@@ -45,6 +45,7 @@ describe('o menu do CRM confere o cargo', () => {
     ['/ia-vendedora', 'sales_agents.read'],
     ['/properties', 'properties.read'],
     ['/books', 'properties.read'],
+    ['/property-owners', 'properties.read'],
     ['/settings/portals', 'portals.read'],
     ['/visits', 'visits.read'],
     ['/automations/message-funnels', 'message_funnels.read'],
@@ -102,9 +103,19 @@ describe('menu novo: seções (fase 4)', () => {
   it('o Corretor de fábrica vê só Principal, Imóveis e Leads', () => {
     const vistas = comCargo(CORRETOR);
     expect(vistas.map(s => s.id)).toEqual(['principal', 'imoveis', 'leads']);
+    // Gestão de proprietários passa no cargo; quem tira do corretor sem
+    // proprietário liberado é o `aplicarProprietariosNoMenu`, no MainLayout.
     expect(vistas.flatMap(s => s.itens.map(i => i.name))).toEqual([
-      'Dashboard', 'Conversas', 'Funil de vendas', 'Visitas', 'Meus imóveis', 'Books', 'Contatos', 'Bolsão',
+      'Dashboard', 'Conversas', 'Funil de vendas', 'Visitas', 'Meus imóveis', 'Gestão de proprietários', 'Books', 'Contatos', 'Bolsão',
     ]);
+  });
+
+  it('Gestão de proprietários fica em Imóveis, logo depois de Meus imóveis', () => {
+    const imoveis = secoes.find(s => s.id === 'imoveis')!;
+    expect(imoveis.itens.map(i => i.href).slice(0, 2)).toEqual(['/properties', '/property-owners']);
+    const item = imoveis.itens[1];
+    expect(item.featureKey).toBe('properties');
+    expect(item.marcador).toBeUndefined();
   });
 
   it('o Bolsão do Corretor fica com uma aba só (Listas e regras é do gestor)', () => {

@@ -74,11 +74,14 @@ class ProfileService {
   }
 
   /**
-   * Update UI settings
+   * Update UI settings.
+   * ⚠️ O servidor TROCA o objeto inteiro: mande sempre o ui_settings completo
+   * (o atual + a mudança), senão as outras chaves somem.
    */
   async updateUISettings(settings: {
     editor_message_key?: 'enter' | 'cmd_enter';
     font_size?: string;
+    [chave: string]: unknown;
   }): Promise<UserProfile> {
     const response = await apiAuth.put('/profile', {
       profile: { ui_settings: settings },

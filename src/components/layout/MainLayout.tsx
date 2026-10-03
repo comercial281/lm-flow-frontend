@@ -19,6 +19,7 @@ import {
   filterMenuItemsByPermissions,
 } from './config/menuItems';
 import { MenuProvider } from '@/contexts/MenuContext';
+import { aplicarProprietariosNoMenu, useProprietariosNoMenu } from '@/features/properties/proprietarios/menuDeProprietarios';
 
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../contexts/AuthContext';
@@ -112,12 +113,17 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // arquivamento. A MESMA lista desenha o menu, a gaveta do celular, a busca e
   // as abas das páginas (MenuContext) — nunca discordam.
   const regras = [can, canAny, canAll, user?.role?.key, user?.email, tenantFeatures, archivedKeys, isSupport] as const;
+  // Gestão de proprietários: aparece (ou não) e ganha a bolinha conforme o dado, não só o cargo.
+  const { visivel: proprietariosVisivel, marcador: proprietariosMarcador } = useProprietariosNoMenu();
   const secoes = useMemo(() => {
-    const filtradas = filterMenuSections(getCustomerMenuSections(), ...regras);
+    const filtradas = aplicarProprietariosNoMenu(
+      filterMenuSections(getCustomerMenuSections(), ...regras),
+      { visivel: proprietariosVisivel, marcador: proprietariosMarcador },
+    );
     if (dashboardApps.length === 0) return filtradas;
     return filtradas.map(secao => ({ ...secao, itens: injectDashboardAppsIntoMenu(secao.itens, dashboardApps) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dashboardApps, ...regras]);
+  }, [dashboardApps, proprietariosVisivel, proprietariosMarcador, ...regras]);
   const rodape = useMemo(
     () => filterMenuItemsByPermissions(getFooterMenuItems(), ...regras),
     // eslint-disable-next-line react-hooks/exhaustive-deps

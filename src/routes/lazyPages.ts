@@ -30,6 +30,9 @@ export const SiteBuilder = lazyWithRetry(() => import('@/pages/Customer/Settings
 export const Properties = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.Properties })));
 // Cadastro de imóvel (/properties/new e /properties/:id/editar): abre a partir da lista de Imóveis.
 export const CadastroDoImovel = lazyWithRetry(() => import('@/pages/Customer/Properties/cadastro/CadastroDoImovel'));
+// Gestão de proprietários (lista + Novas captações) e a ficha de cada um.
+export const GestaoDeProprietarios = lazyWithRetry(() => import('@/pages/Customer/PropertyOwners/GestaoDeProprietarios'));
+export const FichaDoProprietario = lazyWithRetry(() => import('@/pages/Customer/PropertyOwners/FichaDoProprietario'));
 export const PropertyBooks = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.PropertyBooks })));
 export const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then(m => ({ default: m.Visits })));
 export const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));
@@ -62,6 +65,7 @@ export const routePrefetchMap: Record<string, () => Promise<unknown>> = {
   '/equipe': TeamAccess.__preload,
   '/properties': Properties.__preload,
   '/books': PropertyBooks.__preload,
+  '/property-owners': GestaoDeProprietarios.__preload,
   '/settings/portals': PortalsList.__preload,
   '/visits': Visits.__preload,
   '/proposals': Proposals.__preload,

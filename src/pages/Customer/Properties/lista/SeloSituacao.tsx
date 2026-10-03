@@ -1,7 +1,7 @@
 // src/pages/Customer/Properties/lista/SeloSituacao.tsx
 import type { Tom } from '@/features/properties/listingKind';
 
-const TONS: Record<Tom, string> = {
+export const TONS: Record<Tom, string> = {
   ok: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   alerta: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
   neutro: 'bg-muted text-muted-foreground',
