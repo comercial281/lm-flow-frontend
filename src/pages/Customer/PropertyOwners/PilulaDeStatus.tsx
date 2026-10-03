@@ -9,7 +9,7 @@ import {
   type StatusDoProprietario,
 } from '@/services/propertyOwners/propertyOwnersService';
 import { STATUS_DO_PROPRIETARIO, rotuloDoStatus } from '@/features/properties/proprietarios/statusDoProprietario';
-import { TONS } from '@/pages/Customer/Properties/lista/SeloSituacao';
+import { TONS } from '@/features/properties/listingKind';
 
 /**
  * Status do proprietário que se troca ali mesmo (gestor e corretor liberado).

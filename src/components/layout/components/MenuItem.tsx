@@ -33,7 +33,7 @@ export default function MenuItem({
       onClick={onClick}
       aria-current={isActive ? 'page' : undefined}
       className={cn(
-        'relative flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group',
+        'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group',
         mobile ? 'w-full' : isCollapsed ? 'justify-center' : '',
         isActive
           ? isCollapsed && !mobile
@@ -49,10 +49,6 @@ export default function MenuItem({
         )}
         style={{ width: '1.125rem', height: '1.125rem' }}
       />
-      {/* Recolhido só sobra o ícone: a bolinha vai no canto dele. */}
-      {isCollapsed && !mobile && item.marcador && (
-        <span role="img" aria-label="Novidade" data-marcador className="absolute right-2 top-1.5 h-2 w-2 rounded-full bg-destructive" />
-      )}
       {(!isCollapsed || mobile) && (
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <span className="font-medium text-sm min-w-0 truncate">{item.name}</span>

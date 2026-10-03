@@ -40,6 +40,8 @@ export function useProprietariosNoMenu(): EstadoDosProprietarios {
     return () => { cancelado = true; };
   }, [podeGerir, podeLer]);
 
-  const { tem } = useCaptacoesNovas(can('property_capture_requests', 'read'));
-  return { visivel: podeGerir || total > 0, marcador: tem };
+  const visivel = podeLer && (podeGerir || total > 0);
+  // Só pergunta por captação nova quando o item aparece e a pessoa lê captações.
+  const { tem } = useCaptacoesNovas(visivel && can('property_capture_requests', 'read'));
+  return { visivel, marcador: tem };
 }

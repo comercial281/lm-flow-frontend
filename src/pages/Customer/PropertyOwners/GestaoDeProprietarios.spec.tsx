@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { act } from 'react';
 
 const own = vi.hoisted(() => ({ list: vi.fn(), mudarStatus: vi.fn(), count: vi.fn(), create: vi.fn() }));
 const cap = vi.hoisted(() => ({ list: vi.fn() }));
@@ -17,6 +18,7 @@ vi.mock('@/hooks/useCan', () => ({ useCan: () => (r: string, a: string) => (r ==
 vi.mock('@/services/profile/profileService', () => ({ profileService: perfil }));
 vi.mock('./NovasCaptacoes', () => ({ default: () => <p>lista de captações</p> }));
 import GestaoDeProprietarios from './GestaoDeProprietarios';
+import { useAuthStore } from '@/store/authStore';
 
 const maria = { id: 'o1', name: 'Maria Souza', phone: '11999998888', status: 'available', source: 'site_capture',
   properties: [{ id: 'p1', code: 'AP0461' }], status_changed_at: '2026-10-02T10:00:00Z', status_changed_by: { id: 'u1', name: 'Ivan' },
@@ -27,6 +29,7 @@ beforeEach(() => {
   own.list.mockResolvedValue({ data: [maria], meta: { total: 1 } });
   cap.list.mockResolvedValue({ data: [], meta: { total: 2 } });
   perfil.updateUISettings.mockResolvedValue({});
+  useAuthStore.setState({ currentUser: null });
 });
 
 function Onde() { return <p data-testid="onde">{useLocation().pathname}</p>; }
@@ -85,6 +88,24 @@ describe('GestaoDeProprietarios', () => {
     await waitFor(() => expect(perfil.updateUISettings).toHaveBeenCalledWith(
       expect.objectContaining({ captacoes_vistas_ate: expect.any(String) }),
     ));
+  });
+
+  it('com a aba aberta, pedido que chega depois também conta como visto', async () => {
+    useAuthStore.setState({ currentUser: { id: 'u1', ui_settings: { font_size: 'large' } } as never });
+    let novos = 0;
+    cap.list.mockImplementation(async (p: Record<string, string>) => (p.created_after
+      ? { data: [], meta: { total: novos } }
+      : { data: [{ id: 'c1', created_at: '2026-10-03T12:00:00.000Z' }], meta: { total: 2 } }));
+    abrir('/property-owners?aba=captacoes');
+    await waitFor(() => expect(perfil.updateUISettings).toHaveBeenCalledTimes(1));
+    expect(perfil.updateUISettings).toHaveBeenLastCalledWith({ font_size: 'large', captacoes_vistas_ate: '2026-10-03T12:00:00.001Z' });
+    novos = 1;
+    // A bolinha acende de novo (conferência ao voltar para a aba do navegador)...
+    await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+    // ...e, com a aba aberta, se apaga sozinha.
+    await waitFor(() => expect(perfil.updateUISettings).toHaveBeenCalledTimes(2));
+    novos = 0;
+    await waitFor(() => expect(screen.getByRole('tab', { name: /Novas captações/ }).querySelector('[data-marcador]')).toBeNull());
   });
 
   it('corretor não vê Novo proprietário', async () => {

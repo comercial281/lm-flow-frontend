@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Abas from '@/components/base/Abas';
 import { useCan } from '@/hooks/useCan';
@@ -20,10 +20,15 @@ export default function GestaoDeProprietarios() {
   const aba: Aba = veCaptacoes && params.get('aba') === ABA_DE_CAPTACOES ? 'captacoes' : 'proprietarios';
   const { tem, marcarComoVistas } = useCaptacoesNovas(veCaptacoes);
 
-  // Abrir a aba (clicando ou pelo link ?aba=captacoes) apaga a bolinha.
+  // Abrir a aba (clicando ou pelo link ?aba=captacoes) apaga a bolinha. Com a
+  // aba aberta, pedido que chega depois também conta como visto na hora.
+  const marcouAoEntrar = useRef(false);
   useEffect(() => {
-    if (aba === 'captacoes') void marcarComoVistas();
-  }, [aba, marcarComoVistas]);
+    if (aba !== 'captacoes') { marcouAoEntrar.current = false; return; }
+    if (marcouAoEntrar.current && !tem) return;
+    marcouAoEntrar.current = true;
+    void marcarComoVistas();
+  }, [aba, tem, marcarComoVistas]);
 
   const trocarAba = (chave: string) =>
     setParams(antes => {
