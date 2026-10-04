@@ -15,6 +15,7 @@ import {
   PortalFooter, PortalHeader, PropertyCard,
   type PortalProperty, type SiteInfo as PortalSiteInfo,
 } from './portalShared';
+import { resolverHome, type AbaId } from '@/features/siteBuilder/public/homeConfig';
 import FinalidadeChoice from './FinalidadeChoice';
 import { usePortalTracking } from './usePortalTracking';
 import { FINALIDADE_PARAM, finalidadeDoImovel, finalidadeInicial, type Finalidade } from './finalidade';
@@ -183,6 +184,12 @@ export default function ImovelPublicPage() {
   const fontStack = font.includes(',') ? font : `${font}, system-ui, sans-serif`;
   const fontHref = `https://fonts.googleapis.com/css2?family=${fontPrimary.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`;
   const wa = site.contact?.whatsapp;
+  // Abas do topo e do rodapé: só o liga/desliga do Personalizar. A ficha não
+  // carrega o catálogo inteiro, então não esconde aba sem imóvel como a home.
+  const abas = useMemo(() => {
+    const ligadas = resolverHome(site.home).search.tabs;
+    return (['sale', 'rent', 'launch'] as AbaId[]).filter(k => ligadas[k]);
+  }, [site]);
   const waHref = useMemo(() => {
     if (!wa || !prop) return null;
     return `https://wa.me/${onlyDigits(wa)}?text=${encodeURIComponent(`Olá! Tenho interesse no imóvel ${prop.code} — ${prop.title}.`)}`;
@@ -300,7 +307,7 @@ export default function ImovelPublicPage() {
           chegava por anúncio não tinha como alcançar o resto do site. Dois
           cabeçalhos também garantiam que toda melhoria alcançasse quatro
           páginas e esquecesse a quinta — justamente a que recebe a verba. */}
-      <PortalHeader site={site} tenant={tenant!} />
+      <PortalHeader site={site} tenant={tenant!} abas={abas} />
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <Link to={`/portal/${tenant}`} className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-neutral-500 hover:text-[var(--brand)]">
@@ -534,7 +541,7 @@ export default function ImovelPublicPage() {
           : <a href="#contato" className="rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: 'var(--brand)' }}>Tenho interesse</a>}
       </div>
 
-      <PortalFooter site={site} tenant={tenant!} />
+      <PortalFooter site={site} tenant={tenant!} abas={abas} />
 
       {/* Lightbox — foto em tela cheia */}
       {lightbox && cover && (
