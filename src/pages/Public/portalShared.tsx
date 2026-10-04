@@ -4,6 +4,7 @@ import { fetchAllPortalProperties } from './portalProperties';
 import { imovelHref } from './finalidade';
 import { menuPagesLinks } from '@/features/siteBuilder/public/portalMenu';
 import PortalTranslate from './PortalTranslate';
+import { tituloDaAba } from '@/features/siteBuilder/public/tituloDaAba';
 import { filterProperties, type PortalFilters, type PortalProperty, type PortalTab } from '@/features/siteBuilder/public/filtros';
 import { ROTULO_TIPO, rotuloTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { resolverHome, type AbaId } from '@/features/siteBuilder/public/homeConfig';
@@ -25,6 +26,8 @@ export type { PortalFilters, PortalProperty, PortalTab };
 /* ── Tipos ───────────────────────────────────────────────────────────────── */
 export interface Branding {
   logo_url?: string | null;
+  /** Ícone da aba do navegador (Meu site › Aparência). */
+  favicon_url?: string | null;
   primary_color?: string | null;
   accent_color?: string | null;
   font_family?: string | null;
@@ -142,7 +145,7 @@ export function usePortalData(tenant?: string) {
         const siteJson = siteRes.ok ? ((await siteRes.json()).data as SiteInfo) : {};
         setSite(siteJson || {});
         setItems(propsJson || []);
-        document.title = siteJson?.seo?.title || `${siteJson?.name || 'Imóveis'} — Encontre seu imóvel`;
+        document.title = tituloDaAba(siteJson?.seo?.title, siteJson?.name);
         const meta = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]') || (() => {
           const m = document.createElement('meta'); m.name = 'robots'; document.head.appendChild(m); return m;
         })();
@@ -612,7 +615,7 @@ export function PortalFooter({ site, tenant, onHome = false, abas }: { site: Sit
           <div className="mt-3 space-y-1.5 text-[13px] text-neutral-600">
             {site.contact?.phone && <div><a href={`tel:${onlyDigits(site.contact.phone)}`} className="hover:text-[var(--brand)]">{site.contact.phone}</a></div>}
             {site.contact?.email && <div><a href={`mailto:${site.contact.email}`} className="break-all hover:text-[var(--brand)]">{site.contact.email}</a></div>}
-            {site.contact?.address && <div className="text-neutral-500">{site.contact.address}</div>}
+            {site.contact?.address && <div className="whitespace-pre-line text-neutral-500">{site.contact.address}</div>}
           </div>
           {socialEntries(site).length > 0 && (
             <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[13px]">

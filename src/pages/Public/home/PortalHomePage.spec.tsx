@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import PortalHomePage from '../PortalHomePage';
@@ -230,5 +230,30 @@ describe('PortalHomePage por blocos', () => {
     expect(screen.queryByRole('option', { name: 'Pronto para morar' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
     expect((await screen.findByTestId('busca')).textContent).toBe('?tab=rent');
+  });
+});
+
+describe('PortalHomePage · ícone da aba', () => {
+  it('o ícone enviado em Aparência vira o ícone da aba do site', async () => {
+    const doLmFlow = Object.assign(document.createElement('link'), { rel: 'icon', href: '/favicon.ico' });
+    document.head.appendChild(doLmFlow);
+    await abrirHome({ branding: { favicon_url: 'https://cdn/icone.png' } }, [imovel('R1')]);
+    expect(doLmFlow.getAttribute('href')).toBe('https://cdn/icone.png');
+    cleanup();
+    expect(doLmFlow.getAttribute('href')).toBe('/favicon.ico');
+    doLmFlow.remove();
+  });
+});
+
+describe('PortalHomePage · rodapé', () => {
+  it('o endereço em duas linhas aparece em duas linhas no rodapé', async () => {
+    await abrirHome({ contact: { address: 'Rua A, 10\nCentro, Campinas' } }, [imovel('R1')]);
+    const endereco = screen.getByText((_, el) => el?.tagName === 'DIV' && el.children.length === 0 && el.textContent === 'Rua A, 10\nCentro, Campinas');
+    expect(endereco.className).toContain('whitespace-pre-line');
+  });
+
+  it('a aba do navegador usa o nome do site com a frase padrão', async () => {
+    await abrirHome({ name: 'Imob XYZ' }, [imovel('R1')]);
+    expect(document.title).toBe('Imob XYZ — Encontre seu imóvel');
   });
 });

@@ -1,9 +1,11 @@
 import { useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { toast } from 'sonner';
 import { Button, Input, Label as UILabel, Switch } from '@/components/ui/ds';
-import { AlertTriangle, Landmark, Loader2, Trash2, Upload } from 'lucide-react';
+import { AlertTriangle, Loader2, Trash2, Upload } from 'lucide-react';
 import { siteBuilderService, type SiteFinancingPage } from '@/services/siteBuilder/siteBuilderService';
 import { bankLogoSource, financingWarning } from '@/features/siteBuilder/portalPages';
+import { Secao, Secoes } from '../ui/Secao';
+import { CLASSE_DO_CAMPO, CampoTexto } from '../ui/Campo';
 
 interface Props {
   financingPage: SiteFinancingPage;
@@ -47,66 +49,59 @@ export default function TelaFinanciamento({ financingPage, setFinancingPage, mar
   };
 
   return (
-    <>
+    <Secoes>
       {/* Financiamento e bancos — a segunda pergunta de todo lead de imóvel,
           que até aqui só era respondida no WhatsApp. */}
-      <section className="rounded-xl border border-border bg-card p-5">
-        <div className="mb-1 flex items-start justify-between gap-4">
-          <div>
-            <h2 className="flex items-center gap-2 text-base font-semibold">
-              <Landmark className="h-4 w-4 text-muted-foreground" /> Financiamento e bancos
-            </h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Uma página no site com os bancos parceiros. O visitante clica no banco
-              e cai direto no simulador dele.
-            </p>
+      <Secao
+        titulo="Página de financiamento"
+        descricao="Uma página no site com os bancos parceiros. O visitante clica no banco e cai direto no simulador dele."
+        acao={
+          <div className="flex items-center gap-3">
+            <Switch
+              id="financiamento-ligado"
+              checked={financingPage.enabled}
+              onCheckedChange={enabled => { setFinancingPage(p => ({ ...p, enabled })); marcarAlterado(); }}
+            />
+            <UILabel htmlFor="financiamento-ligado" className="cursor-pointer text-base font-normal">
+              Mostrar a página no site
+            </UILabel>
           </div>
-          <Switch
-            checked={financingPage.enabled}
-            onCheckedChange={enabled => { setFinancingPage(p => ({ ...p, enabled })); marcarAlterado(); }}
-          />
-        </div>
+        }
+      >
+        {!financingPage.enabled && (
+          <p className="text-sm text-muted-foreground">Ligue a chave para mostrar a página e escolher os bancos.</p>
+        )}
+      </Secao>
 
-        {financingPage.enabled && (
-          <div className="mt-4 space-y-4 border-t border-border pt-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <UILabel>Título da página</UILabel>
-                <Input
-                  value={financingPage.title}
-                  onChange={e => { setFinancingPage(p => ({ ...p, title: e.target.value })); marcarAlterado(); }}
-                />
-              </div>
-              <div>
-                <UILabel>Chamada acima dos bancos</UILabel>
-                <Input
-                  value={financingPage.intro}
-                  onChange={e => { setFinancingPage(p => ({ ...p, intro: e.target.value })); marcarAlterado(); }}
-                />
-              </div>
-            </div>
-            <div>
-              <UILabel>Texto abaixo dos bancos</UILabel>
-              <Input
-                value={financingPage.footer}
-                onChange={e => { setFinancingPage(p => ({ ...p, footer: e.target.value })); marcarAlterado(); }}
-              />
-              <p className="mt-1 text-xs text-muted-foreground">Deixe em branco para voltar ao texto padrão.</p>
-            </div>
+      {financingPage.enabled && (
+        <Secao titulo="Textos da página" descricao="O que o visitante lê na página, acima e abaixo dos bancos.">
+          <div className="grid gap-5 md:grid-cols-2">
+            <CampoTexto id="financiamento-titulo" rotulo="Título da página" valor={financingPage.title}
+              aoMudar={v => { setFinancingPage(p => ({ ...p, title: v })); marcarAlterado(); }} />
+            <CampoTexto id="financiamento-chamada" rotulo="Chamada acima dos bancos" valor={financingPage.intro}
+              aoMudar={v => { setFinancingPage(p => ({ ...p, intro: v })); marcarAlterado(); }} />
+            <CampoTexto id="financiamento-rodape" rotulo="Texto abaixo dos bancos" valor={financingPage.footer}
+              ajuda="Deixe em branco para voltar ao texto padrão." className="md:col-span-2"
+              aoMudar={v => { setFinancingPage(p => ({ ...p, footer: v })); marcarAlterado(); }} />
+          </div>
+        </Secao>
+      )}
 
+      {financingPage.enabled && (
+        <Secao
+          titulo="Bancos"
+          descricao="Os cinco já vêm com o simulador oficial de cada banco: a página funciona assim que você liga. Para tirar um banco da página, desligue a chave dele."
+        >
             <div className="space-y-3">
-              <p className="text-xs text-muted-foreground">
-                Os cinco já vêm com o <strong>simulador oficial</strong> de cada banco — a página
-                funciona assim que você liga a chave acima. Trocar o link só é preciso se você tiver
-                um endereço de parceria; apagando o campo, ele volta ao oficial.
-                Para <strong>tirar um banco da página, desligue a chave dele</strong>.
+              <p className="text-sm text-muted-foreground">
+                Trocar o link só é preciso se você tiver um endereço de parceria; apagando o campo, ele volta ao oficial.
               </p>
               <input
                 ref={bankLogoInputRef} type="file" accept="image/*" className="hidden"
                 onChange={handleBankLogoFile}
               />
               {financingPage.banks.map((bank, i) => (
-                <div key={bank.key} className="rounded-lg border border-border p-3">
+                <div key={bank.key} className="rounded-lg border border-border p-4">
                   <div className="flex items-center gap-3">
                     <span
                       className="flex h-9 w-9 flex-none items-center justify-center overflow-hidden rounded-full text-[9px] font-bold leading-none"
@@ -118,6 +113,7 @@ export default function TelaFinanciamento({ financingPage, setFinancingPage, mar
                     </span>
                     <div className="min-w-0 flex-1 text-sm font-medium">{bank.name}</div>
                     <Switch
+                      aria-label={`Mostrar ${bank.name} na página`}
                       checked={bank.enabled !== false}
                       onCheckedChange={enabled => {
                         setFinancingPage(p => {
@@ -133,6 +129,8 @@ export default function TelaFinanciamento({ financingPage, setFinancingPage, mar
                     <div className="mt-3 space-y-2">
                       <div className="flex items-center gap-2">
                         <Input
+                          aria-label={`Link de simulação: ${bank.name}`}
+                          className={CLASSE_DO_CAMPO}
                           placeholder="Link de simulação (https://...)"
                           value={bank.url ?? ''}
                           onChange={e => {
@@ -214,9 +212,8 @@ export default function TelaFinanciamento({ financingPage, setFinancingPage, mar
                 {financingWarning(financingPage)}
               </p>
             )}
-          </div>
-        )}
-      </section>
-    </>
+        </Secao>
+      )}
+    </Secoes>
   );
 }

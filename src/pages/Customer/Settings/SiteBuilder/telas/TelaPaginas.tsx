@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-  Input, Label as UILabel, Textarea,
+  Label as UILabel,
 } from '@/components/ui/ds';
 import { Edit, FileText, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { formatDateBR } from '@/utils/dateUtils';
@@ -10,6 +10,7 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   siteBuilderService, type PageFormData, type Site, type SitePage,
 } from '@/services/siteBuilder/siteBuilderService';
+import { CampoTexto, CampoTextoLongo } from '../ui/Campo';
 
 const EMPTY_PAGE_FORM: PageFormData = {
   title: '',
@@ -159,42 +160,37 @@ export default function TelaPaginas({ site }: { site: Site }) {
 
       {/* Page modal */}
       <Dialog open={pageModal} onOpenChange={setPageModal}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingPage ? 'Editar página' : 'Nova página'}</DialogTitle>
             <DialogDescription>Configure o conteúdo e as opções desta página</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <UILabel>Título *</UILabel>
-              <Input value={pageForm.title}
-                onChange={e => setPageForm(f => ({ ...f, title: e.target.value }))}
-                placeholder="Ex: Sobre nós" className="mt-1" />
-            </div>
-            <div>
-              <UILabel>Endereço da página (URL)</UILabel>
-              <Input value={pageForm.slug ?? ''}
-                onChange={e => setPageForm(f => ({ ...f, slug: e.target.value }))}
-                placeholder="sobre-nos" className="mt-1 font-mono" />
-            </div>
-            <div>
-              <UILabel>Conteúdo (HTML)</UILabel>
-              <Textarea value={pageForm.content_html ?? ''}
-                onChange={e => setPageForm(f => ({ ...f, content_html: e.target.value }))}
-                rows={5} placeholder="<h1>...</h1>" className="mt-1 font-mono text-xs resize-none" />
-            </div>
-            <div className="flex gap-6">
+          <div className="space-y-5 py-2">
+            <CampoTexto id="pagina-titulo" rotulo="Título *" valor={pageForm.title} placeholder="Ex: Sobre nós"
+              ajuda="Aparece no menu do site e no alto da página."
+              aoMudar={title => setPageForm(f => ({ ...f, title }))} />
+            <CampoTexto id="pagina-endereco" rotulo="Endereço da página (URL)" valor={pageForm.slug ?? ''} placeholder="sobre-nos"
+              classeDoControle="font-mono" ajuda="O final do endereço da página, sem espaço nem acento."
+              aoMudar={slug => setPageForm(f => ({ ...f, slug }))} />
+            <CampoTextoLongo id="pagina-conteudo" rotulo="Conteúdo (HTML)" valor={pageForm.content_html ?? ''}
+              rows={8} placeholder="<h1>...</h1>" classeDoControle="resize-y font-mono text-sm md:text-sm"
+              ajuda="O texto da página no formato das páginas da internet (HTML). Na dúvida, peça para quem cuida do seu site."
+              aoMudar={content_html => setPageForm(f => ({ ...f, content_html }))} />
+            <div className="flex flex-wrap gap-x-8 gap-y-3">
               <div className="flex items-center gap-2">
                 <input type="checkbox" id="page_active" checked={pageForm.active ?? true}
-                  onChange={e => setPageForm(f => ({ ...f, active: e.target.checked }))} className="rounded" />
-                <UILabel htmlFor="page_active" className="cursor-pointer">Ativa</UILabel>
+                  onChange={e => setPageForm(f => ({ ...f, active: e.target.checked }))} className="h-4 w-4 rounded" />
+                <UILabel htmlFor="page_active" className="cursor-pointer text-base font-normal">Ativa</UILabel>
               </div>
               <div className="flex items-center gap-2">
                 <input type="checkbox" id="page_menu" checked={pageForm.in_menu ?? true}
-                  onChange={e => setPageForm(f => ({ ...f, in_menu: e.target.checked }))} className="rounded" />
-                <UILabel htmlFor="page_menu" className="cursor-pointer">Exibir no menu</UILabel>
+                  onChange={e => setPageForm(f => ({ ...f, in_menu: e.target.checked }))} className="h-4 w-4 rounded" />
+                <UILabel htmlFor="page_menu" className="cursor-pointer text-base font-normal">Exibir no menu</UILabel>
               </div>
             </div>
+            <p className="text-sm text-muted-foreground">
+              Desmarcada, a página sai do ar. Com Exibir no menu, o link dela aparece no menu do topo do site.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPageModal(false)}>Cancelar</Button>

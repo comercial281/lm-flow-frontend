@@ -6,6 +6,7 @@ import { API, PortalFooter, PortalHeader, Stat, usePortalData } from './portalSh
 import FinalidadeChoice from './FinalidadeChoice';
 import { finalidadeInicial, type Finalidade } from './finalidade';
 import { usePortalTracking } from './usePortalTracking';
+import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 import { trackLead } from '@/features/siteBuilder/public/siteTracking';
 import HomeCapa from './home/HomeCapa';
 import HomeVitrines from './home/HomeVitrines';
@@ -30,6 +31,7 @@ export default function PortalHomePage() {
   const { state, site, items, fontHref, wa, cities, hoods, types, home, abas, cssVars } = usePortalData(tenant);
   const { pathname } = useLocation();
   usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'home', path: pathname });
+  useIconeDaAba(site.branding?.favicon_url);
 
   // lead capture
   const [leadName, setLeadName] = useState('');

@@ -7,6 +7,7 @@ import {
 } from './portalShared';
 import { rotuloTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { usePortalTracking } from './usePortalTracking';
+import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — ANUNCIE SEU IMÓVEL
@@ -64,6 +65,7 @@ export default function PortalAnunciePage() {
   const { state, site, fontHref, wa, abas, cssVars } = usePortalData(tenant);
   const { pathname } = useLocation();
   usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'listing', path: pathname });
+  useIconeDaAba(site.branding?.favicon_url);
 
   const [step, setStep] = useState<1 | 2>(1);
   const [sent, setSent] = useState(false);

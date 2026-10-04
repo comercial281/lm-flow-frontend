@@ -4,6 +4,7 @@ import {
   type PortalBank,
 } from './portalShared';
 import { usePortalTracking } from './usePortalTracking';
+import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — SIMULE SEU FINANCIAMENTO
@@ -63,6 +64,7 @@ export default function PortalFinanciamentoPage() {
   const { state, site, fontHref, wa, abas, cssVars } = usePortalData(tenant);
   const { pathname } = useLocation();
   usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'financing', path: pathname });
+  useIconeDaAba(site.branding?.favicon_url);
 
   if (state === 'loading') {
     return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;

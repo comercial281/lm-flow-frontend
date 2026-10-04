@@ -22,6 +22,8 @@ interface PhoneInputProps {
    * - `digits`: `5511999999999`, para as telas que guardam só os dígitos
    */
   valueFormat?: 'e164' | 'digits';
+  /** Liga o campo de número a um texto de ajuda/aviso (aria-describedby). */
+  describedBy?: string;
 }
 
 /**
@@ -53,6 +55,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   id,
   inputClassName,
   valueFormat = 'e164',
+  describedBy,
 }) => {
   // O que este campo acabou de emitir. Sem isso, no modo `digits` um número
   // pela metade com 10–11 dígitos ("5511987654") seria relido como DDD e
@@ -87,6 +90,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         disabled,
       }}
       numberInputProps={{
+        'aria-describedby': describedBy,
         className: cn(
           'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors',
           'file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground',
