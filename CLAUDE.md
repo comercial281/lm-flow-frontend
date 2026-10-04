@@ -4716,7 +4716,7 @@ O que aparece na tela, no menu da Área do Admin:
 |---|---|
 | Visão Geral | Dashboard · Leads ao vivo |
 | Clientes | Clientes · Números conectados · Custos |
-| Usuários | Usuários · Logs · Mensagem de acesso |
+| Usuários | Usuários (lista de todos os clientes + ficha) · Logs · Mensagem de acesso |
 | Comunicação | Avisos na tela · Push · WhatsApp |
 | Plataforma | Academia · Menus arquivados · Site · Sugestões e bugs |
 | IA Vendedora | Agentes · Dashboard · Conhecimento · Aviso de visita |
@@ -5836,3 +5836,17 @@ Clientes → Custos (`/admin/clientes/custos`, `src/pages/SuperAdmin/Custos/`). 
 3. O stub do `gtag` precisa empurrar `arguments` no `dataLayer`, não um array: o gtag.js ignora array.
 4. A exceção do glossário "Google Tag Manager" mora em `telas/TelaRastreamento.tsx`.
 5. Não é `featureKey` nem `clientToggleKey`: o Meu site continua no `site_builder`; Páginas de anúncio continua no `useClientToggle('landing_pages')` literal.
+
+## Usuários de todos os clientes (03/10/2026)
+
+Usuários → Usuários (`/admin/usuarios`, `src/pages/SuperAdmin/Usuarios/`) e a ficha (`/admin/usuarios/:tenant/:userId`). Spec: `LM FLOW/specs/2026-10-03-admin-registro-custos-usuarios-design.md` (seção 3). Substitui a tela de um cliente por vez (UserMetricsView, removida).
+
+- **Uma lista só, todos os clientes.** Busca por nome, e-mail ou telefone (com ou sem máscara); filtros de cliente, cargo e situação (*Ativo* / *Sumido há 7+ dias* / *Nunca entrou* / *Desativado*). Desativados e a equipe Leal Mídia ficam fora por padrão.
+- **A chave da pessoa é cliente + id:** o mesmo e-mail em dois clientes vira duas linhas e duas fichas.
+- **Cliente que falha não esconde os outros:** aviso "Não deu para ler: …" acima da tabela.
+- **20 por página**, com as mesmas travas da lista de chamadas (linhas velhas somem ao trocar filtro; resposta atrasada é descartada).
+- *Enviar link de acesso* pede confirmação (manda WhatsApp). *Copiar* não pede. O principal não tem link.
+- **Ficha:** cartões de 30 dias, entradas com aparelho (selo *Aparelho novo*: aparelho que não aparecia antes ou há mais de 90 dias), telas que mais usa e histórico de ações.
+- **Aba acesa na ficha:** a aba Usuários tem `tambem` (regex da ficha, dois trechos depois de `/admin/usuarios/`) em `adminMenuItems.ts`; vale pra moldura (`donoDoEnderecoAdmin`) e pra faixa (`Abas`). Logs e Mensagem de acesso têm um trecho só, então não colidem.
+- `superLogsService.userMetrics` e `UserMetricsResponse` ficaram: a tela de Logs ainda usa. Saíram `userMetricDetail` e `UserMetricDetail`.
+- **Notificações** (push, avisos por WhatsApp, avisos na tela) entram na entrega 3B.

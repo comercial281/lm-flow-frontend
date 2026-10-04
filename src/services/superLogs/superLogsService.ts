@@ -83,22 +83,6 @@ export interface UserMetricsResponse {
   unavailable?: boolean;
 }
 
-export interface UserMetricDetail {
-  user: { id: string; name?: string; email?: string };
-  sessions: Array<{
-    id: string; started_at: string; ended_at: string | null; last_seen_at: string;
-    duration_seconds: number; clicks: number; screens: number; ip?: string;
-    end_reason?: string; online: boolean;
-  }>;
-  time_per_screen: Array<{ screen: string; seconds: number; visits: number }>;
-  clicks_per_screen: Array<{ screen: string; clicks: number }>;
-  top_elements: Array<{ label: string; clicks: number }>;
-  hourly: Array<{ hour: number; accesses: number }>;
-  totals: { accesses: number; total_seconds: number; total_clicks: number };
-  server_time: string;
-  unavailable?: boolean;
-}
-
 /** Fase 1 (Cargos): @lealmidia.com.br / fantasmas fora da Equipe, por cliente (GET /super/support_review). */
 export interface SupportReviewPerson {
   id: string;
@@ -137,8 +121,6 @@ const superLogsService = {
     apiClient.get<{ data: UserMetricsResponse }>('/super/user_metrics', {
       params: { client, include_internal: includeInternal || undefined },
     }),
-  userMetricDetail: (client: string, userId: string) =>
-    apiClient.get<{ data: UserMetricDetail }>(`/super/user_metrics/${userId}`, { params: { client } }),
 
   // Equipe Leal Mídia + quem sou eu (pro gate do admin)
   whoami: () => apiClient.get<{ data: Whoami }>('/super/whoami'),

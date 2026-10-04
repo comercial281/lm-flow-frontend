@@ -25,6 +25,8 @@ export interface AdminAba {
   href: string;
   icon: LucideIcon;
   exata?: boolean;
+  /** Outros endereços que também pertencem a esta aba (ex.: a ficha de um usuário). */
+  tambem?: RegExp[];
 }
 
 export interface AdminMenuItem {
@@ -63,7 +65,14 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     icon: Users,
     description: 'Todas as pessoas de todos os clientes: acessos, logs e a mensagem de acesso',
     abas: [
-      { name: 'Usuários', href: '/admin/usuarios', icon: Users, exata: true },
+      {
+        name: 'Usuários',
+        href: '/admin/usuarios',
+        icon: Users,
+        exata: true,
+        // Ficha: /admin/usuarios/:cliente/:id (dois trechos; Logs e Mensagem de acesso têm um só).
+        tambem: [/^\/admin\/usuarios\/[^/]+\/[^/]+\/?$/],
+      },
       { name: 'Logs', href: '/admin/usuarios/logs', icon: ScrollText },
       { name: 'Mensagem de acesso', href: '/admin/usuarios/mensagem-de-acesso', icon: MessageCircle },
     ],
@@ -124,6 +133,12 @@ export function donoDoEnderecoAdmin(
     const candidatos: { href: string; exata?: boolean; aba?: AdminAba }[] = item.abas?.length
       ? item.abas.map(aba => ({ href: aba.href, exata: aba.exata, aba }))
       : [{ href: item.href }];
+    // Endereços extras de uma aba (ficha de usuário) contam como o href da aba.
+    for (const aba of item.abas ?? []) {
+      if (aba.tambem?.some(r => r.test(pathname))) {
+        if (!melhor || aba.href.length > melhor.tamanho) melhor = { item, aba, tamanho: aba.href.length };
+      }
+    }
     for (const c of candidatos) {
       if (enderecoCasa(pathname, c.href, c.exata) && (!melhor || c.href.length > melhor.tamanho)) {
         melhor = { item, aba: c.aba, tamanho: c.href.length };

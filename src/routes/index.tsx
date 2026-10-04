@@ -141,7 +141,8 @@ import AdminConteudo from '@/pages/Admin/Area/AdminConteudo';
 import { ComAbaAntiga, RedirecionaComBusca } from '@/routes/AdminRedirecionamentos';
 const AdminLeadsAoVivo = lazyWithRetry(() => import('@/pages/SuperAdmin/LeadsFeed'));
 const AdminNumeros = lazyWithRetry(() => import('@/pages/SuperAdmin/NumberOwnership'));
-const AdminUsuarios = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientInstances/UserMetricsView'));
+const AdminUsuarios = lazyWithRetry(() => import('@/pages/SuperAdmin/Usuarios'));
+const AdminFichaDoUsuario = lazyWithRetry(() => import('@/pages/SuperAdmin/Usuarios/Ficha'));
 const AdminLogs = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientInstances/LogsView'));
 const AdminMensagemDeAcesso = lazyWithRetry(() => import('@/pages/SuperAdmin/MensagemDeAcesso'));
 const AdminAvisosNaTela = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral/NotificationsTab'));
@@ -1251,6 +1252,7 @@ const AppRouter = () => {
               <Route path="/admin/clientes/custos" element={<Custos />} />
               {/* Usuários */}
               <Route path="/admin/usuarios" element={<AdminConteudo><AdminUsuarios /></AdminConteudo>} />
+              <Route path="/admin/usuarios/:tenant/:userId" element={<AdminConteudo><AdminFichaDoUsuario /></AdminConteudo>} />
               <Route path="/admin/usuarios/logs" element={<AdminConteudo><AdminLogs /></AdminConteudo>} />
               <Route path="/admin/usuarios/mensagem-de-acesso" element={<AdminMensagemDeAcesso />} />
               {/* Comunicação */}

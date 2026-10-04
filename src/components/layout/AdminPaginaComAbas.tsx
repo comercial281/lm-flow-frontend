@@ -25,7 +25,7 @@ export default function AdminPaginaComAbas() {
         </div>
         <Abas
           rotulo={`Abas de ${dono.item.name}`}
-          abas={abas.map(aba => ({ chave: aba.href, rotulo: aba.name, icone: aba.icon, para: aba.href, exata: aba.exata }))}
+          abas={abas.map(aba => ({ chave: aba.href, rotulo: aba.name, icone: aba.icon, para: aba.href, exata: aba.exata, tambem: aba.tambem }))}
         />
       </div>
       <div className="flex-1 min-w-0 min-h-0 overflow-auto">
