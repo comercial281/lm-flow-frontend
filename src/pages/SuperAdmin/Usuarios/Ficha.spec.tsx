@@ -20,6 +20,7 @@ const perfil = (extra: Record<string, unknown> = {}) => ({
     summary: { top_screens: [{ screen: 'Conversas', seconds: 3600 }] },
     entries: [{ started_at: new Date().toISOString(), last_seen_at: null, duration_seconds: 600, ip: '10.0.0.1', device: 'Chrome no Mac', new_device: true }],
     actions: [{ occurred_at: new Date().toISOString(), category: 'lead', action: 'create', title: 'Criou um lead', description: 'Lead João' }],
+    notifications: null,
     ...extra,
   } },
 });

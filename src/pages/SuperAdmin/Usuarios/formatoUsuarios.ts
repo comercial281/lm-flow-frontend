@@ -41,6 +41,33 @@ export const OPCOES_NOTIFICACAO: { valor: '' | 'com_problema'; rotulo: string }[
   { valor: 'com_problema', rotulo: 'Com problema' },
 ];
 
+const ROTULOS_PERMISSAO = { granted: 'Ligada', denied: 'Bloqueada', default: 'Não perguntada', unsupported: 'Sem suporte neste aparelho' } as const;
+export const rotuloPermissao = (p: keyof typeof ROTULOS_PERMISSAO): string => ROTULOS_PERMISSAO[p] ?? p;
+export const statusDaPermissao = (p: keyof typeof ROTULOS_PERMISSAO): 'success' | 'error' | 'pending' | 'inactive' =>
+  p === 'granted' ? 'success' : p === 'denied' ? 'error' : p === 'default' ? 'pending' : 'inactive';
+
+/** Passos do push que a pessoa alcançou: Saiu → Apareceu → Clicou. */
+export function passosDoPush(d: { status: string; shown_at: string | null; clicked_at: string | null }): { rotulo: string; feito: boolean }[] {
+  return [
+    { rotulo: 'Saiu', feito: d.status !== 'falhou' },
+    { rotulo: 'Apareceu', feito: Boolean(d.shown_at) },
+    { rotulo: 'Clicou', feito: Boolean(d.clicked_at) },
+  ];
+}
+
+const ROTULOS_WHATSAPP = { enviado: 'Enviado', entregue: 'Entregue', lido: 'Lido', falhou: 'Falhou' } as const;
+export const rotuloWhatsapp = (s: string): string => ROTULOS_WHATSAPP[s as keyof typeof ROTULOS_WHATSAPP] ?? s;
+export const statusDoWhatsapp = (s: string): 'success' | 'error' | 'pending' =>
+  s === 'falhou' ? 'error' : s === 'lido' || s === 'entregue' ? 'success' : 'pending';
+
+/** Tipo do aviso, só quando diz algo a mais que o texto. */
+export function origemDoAviso(kind: string | null): string | null {
+  if (kind === 'push_regra') return 'Regra da Central de Push';
+  if (kind === 'push_manual') return 'Disparo manual';
+  if (kind === 'automacao_lead') return 'Automação de lead';
+  return null;
+}
+
 /** 4800 → "1 h 20 min" · 720 → "12 min" · 30 → "< 1 min" · 0/nulo → "—" */
 export function duracao(segundos: number | null | undefined): string {
   const seg = segundos ?? 0;

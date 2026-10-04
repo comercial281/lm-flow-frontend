@@ -6052,3 +6052,26 @@ Usuários → Usuários (`/admin/usuarios`, `src/pages/SuperAdmin/Usuarios/`) e 
 3. Nomes de tipo de imóvel: sempre `rotuloTipo`/`pluralTipo` (`tiposDeImovel.ts`), nunca a chave crua.
 4. Não é `featureKey` nem `clientToggleKey`.
 5. O servidor descarta em silêncio chamada livre sem título, link fora de http(s), página não escolhida e atalho sem rótulo: a tela avisa cada caso antes do Salvar. Avisos âmbar que existem: Chamadas — "Sem título, a chamada não é salva.", "Sem página escolhida, a chamada não é salva.", "Sem um link que comece com http:// ou https://, a chamada não é salva.", página fora do menu, site sem WhatsApp; Mais buscados — "Sem rótulo, o atalho não é salvo."; Vitrines — De R$ maior que Até R$. Enquanto a lista de páginas não chega (ou falha) a tela de Chamadas não afirma nada sobre a página escolhida. Remover chamada, atalho ou vitrine pede confirmação.
+
+## Notificações na ficha do usuário (04/10/2026)
+
+**O que é:** a ficha da pessoa (Admin → Usuários → nome) mostra se o aviso está chegando, por canal. A lista ganhou a coluna **Notificação** e o filtro **Com problema**.
+
+- **Push:**
+  - a permissão do navegador por aparelho (*Ligada / Bloqueada / Não perguntada / Sem suporte*), vinda do heartbeat de 60 s;
+  - quantos aparelhos têm Modo Plantão;
+  - os últimos 10 envios com *Saiu → Apareceu → Clicou*, ou *Falhou* com o motivo.
+- **WhatsApp:** os últimos 10 avisos com *Enviado / Entregue / Lido*, ou *Falhou*. A pessoa é achada pelo número (cadastro ou campo da roleta), com e sem o 55.
+- **Na tela:** os últimos 10 avisos do sininho com *Lido / Não lido*.
+- **Situação na lista:**
+  - *Bloqueada* quando o aparelho visto por último negou o push;
+  - *Falhando* quando as 3 últimas entregas de um canal em 7 dias falharam;
+  - *Ok* nos outros casos.
+
+**Como funciona:**
+- O `public/push-sw.js` devolve um recibo assinado (vem dentro do push) em `POST /api/v1/push/receipts`, em `text/plain` para não disparar a pergunta prévia de CORS.
+- Aparelho com o service worker antigo em cache fica em *Saiu* até recarregar o app. Isso é esperado, não é erro.
+- *Entregue/Lido* vem do webhook do número que mandou o aviso.
+- Se o registro não puder ser lido, a seção mostra erro com *Tentar de novo* (nunca vira vazio).
+
+**Não reabrir sem o dono pedir:** push sem recibo nunca vira *Falhou*. Só falha o que o servidor de push recusou.
