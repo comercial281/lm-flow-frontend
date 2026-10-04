@@ -176,4 +176,24 @@ describe('SiteBuilder (casca do Meu site)', () => {
     await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
     expect(mocks.updateSite.mock.calls[0][1].logo_url).toBeNull();
   });
+
+  it('remover o ícone da aba e salvar grava null', async () => {
+    mocks.listSites.mockResolvedValue([{ ...SITE, branding: { favicon_url: 'https://cdn/icone.png' } }]);
+    mocks.updateSite.mockResolvedValue(SITE);
+    abrir('/settings/site-builder?tela=aparencia');
+    await userEvent.click(await screen.findByRole('button', { name: 'Remover ícone da aba' }));
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Remover' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
+    expect(mocks.updateSite.mock.calls[0][1].favicon_url).toBeNull();
+  });
+
+  it('abrir Dados com telefone de ramal não mostra a barra de salvar', async () => {
+    mocks.listSites.mockResolvedValue([{ ...SITE, contact: { phone: '(11) 3333-4444 ramal 21', whatsapp: '11987654321' } }]);
+    abrir('/settings/site-builder?tela=dados');
+    await screen.findByRole('heading', { name: 'Dados de contato' });
+    expect((screen.getByLabelText('Telefone') as HTMLInputElement).value).toBe('(11) 3333-4444 ramal 21');
+    expect(screen.queryByRole('region', { name: 'Alterações não salvas' })).toBeNull();
+  });
 });
+

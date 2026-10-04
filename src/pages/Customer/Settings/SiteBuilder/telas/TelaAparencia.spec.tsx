@@ -64,11 +64,21 @@ describe('TelaAparencia · Logotipos', () => {
     expect(espiao).toHaveBeenCalledWith({ favicon_url: null });
   });
 
-  it('a prévia da aba mostra o nome do site e o ícone', () => {
+  it('a prévia da aba mostra o mesmo título do site e o ícone', () => {
     render(<Montar espiao={vi.fn()} inicial={{ favicon_url: 'https://cdn/icone.png' }} />);
     const aba = screen.getByTestId('previa-da-aba');
-    expect(within(aba).getByText('Imobiliária Horizonte Azul')).toBeTruthy();
+    expect(within(aba).getByText('Imobiliária Horizonte Azul — Encontre seu imóvel')).toBeTruthy();
     expect(aba.querySelector('img')?.getAttribute('src')).toBe('https://cdn/icone.png');
+  });
+
+  it('com título de Aparecer no Google, a prévia usa ele', () => {
+    render(<Montar espiao={vi.fn()} inicial={{ seo_title: 'Horizonte Azul | Imóveis em Campinas' }} />);
+    expect(within(screen.getByTestId('previa-da-aba')).getByText('Horizonte Azul | Imóveis em Campinas')).toBeTruthy();
+  });
+
+  it('a escolha da foto do banner é um grupo com nome', () => {
+    render(<Montar espiao={vi.fn()} />);
+    expect(screen.getByRole('group', { name: 'Foto' })).toBeTruthy();
   });
 
   it('sem ícone, a prévia avisa do ícone padrão', () => {

@@ -7,6 +7,7 @@ import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
 import HeroImagePicker, { type HeroImagePick } from '@/features/siteBuilder/HeroImagePicker';
 import { EMPTY_HERO_IMAGE, HERO_IMAGE_MODE_LABELS, heroImageChoiceFrom, heroImageWarning } from '@/features/siteBuilder/heroImage';
 import { Seletor } from '@/components/base/Seletor';
+import { tituloDaAba } from '@/features/siteBuilder/public/tituloDaAba';
 import { Secao, Secoes } from '../ui/Secao';
 import { CLASSE_DO_CAMPO, Campo } from '../ui/Campo';
 import EnvioDeImagem from '../ui/EnvioDeImagem';
@@ -43,9 +44,10 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
       logo_url: url,
       ...(colors ? { primary_color: colors.primary, accent_color: colors.accent } : {}),
     });
+    // O arquivo sobe na hora, mas só vai pro site depois do Salvar.
     toast.success(colors
-      ? `Logo no ar. Cores extraídas: ${colors.primary} / ${colors.accent} — revise e salve.`
-      : 'Logo no ar. Não achei cor de marca na imagem (P&B?) — cores mantidas.');
+      ? `Logo enviado. Cores tiradas dele: ${colors.primary} / ${colors.accent}. Confira e clique em Salvar para ir pro site.`
+      : 'Logo enviado. Não achei cor de marca na imagem, as cores ficaram como estavam. Clique em Salvar para ir pro site.');
   };
 
   // Ícone da aba: mesmo envio do logo, sem mexer nas cores.
@@ -66,7 +68,7 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
     try {
       const { url } = await siteBuilderService.uploadAsset(file);
       setF({ hero_video_url: url });
-      toast.success('Vídeo no ar. Revise o preview e clique em Salvar.');
+      toast.success('Vídeo enviado. Revise a prévia e clique em Salvar para ir pro site.');
     } catch {
       toast.error('Falha no upload do vídeo.');
     } finally {
@@ -104,7 +106,7 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
     <Secoes>
       <Secao
         titulo="Logotipos"
-        descricao="O logo e o ícone que identificam a sua imobiliária no site. Envie o arquivo e clique em Salvar."
+        descricao="O logo e o ícone que identificam a sua imobiliária no site. O arquivo sobe na hora, mas só vai pro site depois que você clicar em Salvar."
       >
         <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,auto)]">
           <div className="space-y-3">
@@ -145,19 +147,19 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
                 descricao: 'O navegador volta a mostrar um ícone padrão na aba do site. Vale depois de salvar.',
               }}
             />
-            <PreviaDaAba icone={siteForm.favicon_url} nome={siteForm.name} />
+            <PreviaDaAba icone={siteForm.favicon_url} titulo={tituloDaAba(siteForm.seo_title, siteForm.name)} />
           </div>
         </div>
       </Secao>
 
       <Secao
         titulo="Cores"
-        descricao="As cores dos botões, títulos e destaques do site. Saem do logo quando você envia um novo, e você pode trocar aqui."
+        descricao="As cores da marca no site. Saem do logo quando você envia um novo, e você pode trocar aqui."
       >
         <div className="grid gap-5 sm:grid-cols-2">
-          <CampoDeCor id="aparencia-cor-principal" rotulo="Cor principal" ajuda="Botões, links e a faixa do topo."
+          <CampoDeCor id="aparencia-cor-principal" rotulo="Cor principal" ajuda="Botões de Tenho interesse, preços, selos dos imóveis, a aba escolhida na busca e os links."
             valor={siteForm.primary_color ?? ''} padrao="#7C3AED" aoMudar={primary_color => setF({ primary_color })} />
-          <CampoDeCor id="aparencia-cor-destaque" rotulo="Cor de destaque" ajuda="Selos e detalhes que chamam a atenção."
+          <CampoDeCor id="aparencia-cor-destaque" rotulo="Cor de destaque" ajuda="Guardada para os modelos novos do site. Hoje o site usa só a cor principal."
             valor={siteForm.accent_color ?? ''} padrao="#9333EA" aoMudar={accent_color => setF({ accent_color })} />
         </div>
       </Secao>
@@ -204,8 +206,8 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
               : { mode: 'property', property_id: null, photo_id: null } });
           };
           return (
-            <div className="space-y-3">
-              <p className="text-sm font-medium">Foto</p>
+            <fieldset className="space-y-3">
+              <legend className="mb-3 text-sm font-medium">Foto</legend>
               <div className="flex flex-wrap gap-2">
                 {(['auto', 'property', 'upload'] as const).map(mode => (
                   <label key={mode} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-base ${choice.mode === mode ? 'border-primary bg-primary/5' : 'border-border'}`}>
@@ -261,7 +263,7 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
                     : <p className="text-sm text-amber-700">Sem foto enviada, o site continua no automático.</p>}
                 </div>
               )}
-            </div>
+            </fieldset>
           );
         })()}
 
@@ -365,8 +367,9 @@ function CampoDeCor({ id, rotulo, ajuda, valor, padrao, aoMudar }: CampoDeCorPro
 }
 
 // Como o site aparece na aba do navegador: o ícone (ou o genérico, sem ícone) e o
-// nome do site cortado, igual o navegador faz.
-function PreviaDaAba({ icone, nome }: { icone: string | null | undefined; nome: string }) {
+// título da aba cortado, igual o navegador faz. O título sai da MESMA regra do
+// site público (tituloDaAba): o de Aparecer no Google ou "Nome — Encontre seu imóvel".
+function PreviaDaAba({ icone, titulo }: { icone: string | null | undefined; titulo: string }) {
   return (
     <figure className="max-w-[280px] space-y-2">
       <div className="rounded-t-lg bg-zinc-200/70 px-2 pt-2 dark:bg-zinc-800">
@@ -375,7 +378,7 @@ function PreviaDaAba({ icone, nome }: { icone: string | null | undefined; nome: 
           {icone
             ? <img src={icone} alt="" className="h-4 w-4 flex-none object-contain" />
             : <Globe className="h-4 w-4 flex-none text-zinc-400" aria-hidden />}
-          <span className="min-w-0 flex-1 truncate">{nome.trim() || 'Seu site'}</span>
+          <span className="min-w-0 flex-1 truncate" title={titulo}>{titulo}</span>
           <X className="h-3.5 w-3.5 flex-none text-zinc-400" aria-hidden />
         </div>
       </div>

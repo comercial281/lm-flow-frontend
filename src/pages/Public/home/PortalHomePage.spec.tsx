@@ -244,3 +244,16 @@ describe('PortalHomePage · ícone da aba', () => {
     doLmFlow.remove();
   });
 });
+
+describe('PortalHomePage · rodapé', () => {
+  it('o endereço em duas linhas aparece em duas linhas no rodapé', async () => {
+    await abrirHome({ contact: { address: 'Rua A, 10\nCentro, Campinas' } }, [imovel('R1')]);
+    const endereco = screen.getByText((_, el) => el?.tagName === 'DIV' && el.children.length === 0 && el.textContent === 'Rua A, 10\nCentro, Campinas');
+    expect(endereco.className).toContain('whitespace-pre-line');
+  });
+
+  it('a aba do navegador usa o nome do site com a frase padrão', async () => {
+    await abrirHome({ name: 'Imob XYZ' }, [imovel('R1')]);
+    expect(document.title).toBe('Imob XYZ — Encontre seu imóvel');
+  });
+});
