@@ -25,6 +25,8 @@ export type { PortalFilters, PortalProperty, PortalTab };
 /* ── Tipos ───────────────────────────────────────────────────────────────── */
 export interface Branding {
   logo_url?: string | null;
+  /** Ícone da aba do navegador (Meu site › Aparência). */
+  favicon_url?: string | null;
   primary_color?: string | null;
   accent_color?: string | null;
   font_family?: string | null;

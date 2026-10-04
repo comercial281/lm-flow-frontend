@@ -9,6 +9,7 @@ import { opcoesDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixa
 import { opcaoDoTexto } from '@/features/siteBuilder/public/filtros';
 import { FASES } from '@/features/properties/listingKind';
 import { usePortalTracking } from './usePortalTracking';
+import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — página dedicada de BUSCA / FILTROS (Produto A).
@@ -57,6 +58,7 @@ export default function PortalSearchPage() {
     return () => clearTimeout(t);
   }, [caminhoAtual, caminhoRegistrado]);
   usePortalTracking(state === 'ok' ? site : null, tenant, caminhoRegistrado ? { kind: 'search', path: caminhoRegistrado } : null);
+  useIconeDaAba(site.branding?.favicon_url);
 
   // Só vale aba visível; a da URL que não é (desligada ou sem imóvel) cai na primeira visível.
   const tabDaUrl = params.get('tab') as PortalTab | null;

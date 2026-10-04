@@ -18,6 +18,7 @@ import {
 import { resolverHome, type AbaId } from '@/features/siteBuilder/public/homeConfig';
 import FinalidadeChoice from './FinalidadeChoice';
 import { usePortalTracking } from './usePortalTracking';
+import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 import { FINALIDADE_PARAM, finalidadeDoImovel, finalidadeInicial, type Finalidade } from './finalidade';
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -91,6 +92,7 @@ export default function ImovelPublicPage() {
   const [suggestions, setSuggestions] = useState<PortalProperty[]>([]);
   const { pathname } = useLocation();
   usePortalTracking(state === 'ok' && siteLoaded ? site : null, tenant, { kind: 'property', path: pathname, propertyCode: code });
+  useIconeDaAba(site.branding?.favicon_url);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');

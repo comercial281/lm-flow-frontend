@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { PortalFooter, PortalHeader, usePortalData } from './portalShared';
 import { usePortalTracking } from './usePortalTracking';
+import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 
 /* Página criada no Meu site (Páginas), aberta em /portal/:tenant/p/:slug.
    O HTML (`content_html`) chega já sanitizado pelo servidor. */
@@ -15,6 +16,7 @@ export default function PortalCustomPage() {
   const { state, site, fontHref, abas, cssVars } = usePortalData(tenant);
   const { pathname } = useLocation();
   usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'page', path: pathname, pageSlug: slug });
+  useIconeDaAba(site.branding?.favicon_url);
 
   const [page, setPage] = useState<CustomPage | null>(null);
   const [loading, setLoading] = useState(true);
