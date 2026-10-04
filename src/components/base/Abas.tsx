@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGuardaDeSaida } from '@/hooks/useAlteracoesNaoSalvas';
@@ -25,6 +25,8 @@ export interface Aba {
   para?: string;
   /** A aba só fica ativa no endereço exato (quando o endereço dela é começo do de outra aba). */
   exata?: boolean;
+  /** Outros endereços que também acendem esta aba (ex.: a ficha aberta a partir dela). */
+  tambem?: RegExp[];
   /** Bolinha vermelha de novidade ao lado do nome (ex.: captação nova chegou). */
   marcador?: boolean;
 }
@@ -50,18 +52,34 @@ const classeDaAba = (ativa: boolean) =>
 
 export default function Abas({ abas, rotulo, ativa, aoTrocar, className }: AbasProps) {
   const { aoClicar, dialogoDeConfirmacao } = useGuardaDeSaida();
+  const { pathname } = useLocation();
   const saoLinks = abas.length > 0 && abas.every(a => a.para);
 
   if (saoLinks) {
     return (
       <nav aria-label={rotulo} onClickCapture={aoClicar} className={cn('flex items-center gap-1 overflow-x-auto', className)}>
-        {abas.map(({ chave, rotulo: nome, icone: Icone, para, exata, marcador }) => (
-          <NavLink key={chave} to={para!} end={exata} className={({ isActive }) => classeDaAba(isActive)}>
-            {Icone && <Icone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
-            {nome}
-            {marcador && <Marcador />}
-          </NavLink>
-        ))}
+        {abas.map(({ chave, rotulo: nome, icone: Icone, para, exata, tambem, marcador }) => {
+          const conteudo = (
+            <>
+              {Icone && <Icone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+              {nome}
+              {marcador && <Marcador />}
+            </>
+          );
+          // Endereço extra da aba (ficha): o NavLink não sabe que é dela, então acendemos à mão.
+          if (tambem?.some(r => r.test(pathname))) {
+            return (
+              <Link key={chave} to={para!} aria-current="page" className={classeDaAba(true)}>
+                {conteudo}
+              </Link>
+            );
+          }
+          return (
+            <NavLink key={chave} to={para!} end={exata} className={({ isActive }) => classeDaAba(isActive)}>
+              {conteudo}
+            </NavLink>
+          );
+        })}
         {dialogoDeConfirmacao}
       </nav>
     );
