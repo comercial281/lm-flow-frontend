@@ -29,6 +29,8 @@ import MeuSiteBarra from './MeuSiteBarra';
 import TelaPainel from './telas/TelaPainel';
 import TelaAparencia from './telas/TelaAparencia';
 import TelaBusca from './telas/TelaBusca';
+import TelaVitrines from './telas/TelaVitrines';
+import TelaChamadas from './telas/TelaChamadas';
 import TelaMaisBuscados from './telas/TelaMaisBuscados';
 import TelaFinanciamento from './telas/TelaFinanciamento';
 import TelaAnuncie from './telas/TelaAnuncie';
@@ -333,6 +335,8 @@ export default function SiteBuilder() {
           <TelaAparencia {...formProps} heroPickPreview={heroPickPreview} setHeroPickPreview={setHeroPickPreview} />
         )}
         {tela === 'busca' && <TelaBusca {...formProps} />}
+        {tela === 'vitrines' && <TelaVitrines {...formProps} />}
+        {tela === 'chamadas' && <TelaChamadas {...formProps} />}
         {tela === 'buscados' && <TelaMaisBuscados {...formProps} />}
         {tela === 'financiamento' && (
           <TelaFinanciamento financingPage={financingPage} setFinancingPage={setFinancingPage} marcarAlterado={marcarAlterado} />
