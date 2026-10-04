@@ -4,6 +4,7 @@ import {
   I, Ic, PortalFooter, PortalHeader, PropertyCard, Select,
   filterProperties, usePortalData, type PortalFilters, type PortalTab,
 } from './portalShared';
+import PaginaManutencao from './PaginaManutencao';
 import { opcaoDoTipo, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { opcoesDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
 import { opcaoDoTexto } from '@/features/siteBuilder/public/filtros';
@@ -45,7 +46,7 @@ const RESULTS_PAGE_SIZE = 30;
 export default function PortalSearchPage() {
   const { tenant } = useParams<{ tenant: string }>();
   const [params, setParams] = useSearchParams();
-  const { state, site, items, fontHref, wa, cities, hoods, types, abas, cssVars } = usePortalData(tenant);
+  const { state, site, items, fontHref, wa, cities, hoods, types, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname, search } = useLocation();
 
   // Uma visita por carga da página, levando os filtros (pathname + query) de quando a URL
@@ -57,7 +58,8 @@ export default function PortalSearchPage() {
     const t = setTimeout(() => setCaminhoRegistrado(caminhoAtual), ESPERA_VISITA_MS);
     return () => clearTimeout(t);
   }, [caminhoAtual, caminhoRegistrado]);
-  usePortalTracking(state === 'ok' ? site : null, tenant, caminhoRegistrado ? { kind: 'search', path: caminhoRegistrado } : null);
+  // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
+  usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, caminhoRegistrado ? { kind: 'search', path: caminhoRegistrado } : null);
   useIconeDaAba(site.branding?.favicon_url);
 
   // Só vale aba visível; a da URL que não é (desligada ou sem imóvel) cai na primeira visível.
@@ -115,6 +117,8 @@ export default function PortalSearchPage() {
   if (state === 'loading') {
     return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   }
+  // Em manutenção a página de manutenção vem antes do erro e das listas (que dão 404).
+  if (manutencao) return <PaginaManutencao site={site} />;
   if (state === 'error') {
     return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Portal indisponível.</div>;
   }

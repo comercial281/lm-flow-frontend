@@ -3,6 +3,7 @@ import { useParams, useLocation } from 'react-router-dom';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import { API, PortalFooter, PortalHeader, Stat, usePortalData } from './portalShared';
+import PaginaManutencao from './PaginaManutencao';
 import FinalidadeChoice from './FinalidadeChoice';
 import { finalidadeInicial, type Finalidade } from './finalidade';
 import { usePortalTracking } from './usePortalTracking';
@@ -28,9 +29,10 @@ import HomeMaisBuscados from './home/HomeMaisBuscados';
 
 export default function PortalHomePage() {
   const { tenant } = useParams<{ tenant: string }>();
-  const { state, site, items, fontHref, wa, cities, hoods, types, home, abas, cssVars } = usePortalData(tenant);
+  const { state, site, items, fontHref, wa, cities, hoods, types, home, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
-  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'home', path: pathname });
+  // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
+  usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'home', path: pathname });
   useIconeDaAba(site.branding?.favicon_url);
 
   // lead capture
@@ -63,6 +65,8 @@ export default function PortalHomePage() {
   if (state === 'loading') {
     return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   }
+  // Em manutenção a página de manutenção vem antes do erro e das listas (que dão 404).
+  if (manutencao) return <PaginaManutencao site={site} />;
   if (state === 'error') {
     return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Portal indisponível.</div>;
   }

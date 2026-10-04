@@ -4,6 +4,7 @@ import {
   Ic, I, PortalFooter, PortalHeader, PropertyCard, fetchArticle, onlyDigits, usePortalData,
   type PortalArticleFull,
 } from './portalShared';
+import PaginaManutencao from './PaginaManutencao';
 import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 
@@ -29,9 +30,10 @@ function setMetaDescription(content: string) {
 
 export default function PortalArticlePage() {
   const { tenant, slug } = useParams<{ tenant: string; slug: string }>();
-  const { state, site, items, fontHref, abas, cssVars } = usePortalData(tenant);
+  const { state, site, items, fontHref, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
-  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'article', path: pathname, pageSlug: slug });
+  // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
+  usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'article', path: pathname, pageSlug: slug });
   useIconeDaAba(site.branding?.favicon_url);
 
   // Vitrine de imóveis ao fim do artigo (destaques, com fallback pros primeiros).
@@ -65,6 +67,8 @@ export default function PortalArticlePage() {
   if (state === 'loading') {
     return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   }
+  // Em manutenção a página de manutenção vem antes do erro e das listas (que dão 404).
+  if (manutencao) return <PaginaManutencao site={site} />;
   if (state === 'error') {
     return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Portal indisponível.</div>;
   }

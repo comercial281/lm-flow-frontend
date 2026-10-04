@@ -3,6 +3,7 @@ import {
   I, Ic, PortalFooter, PortalHeader, onlyDigits, usePortalData,
   type PortalBank,
 } from './portalShared';
+import PaginaManutencao from './PaginaManutencao';
 import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 
@@ -61,14 +62,17 @@ function BankBadge({ bank }: { bank: PortalBank }) {
 
 export default function PortalFinanciamentoPage() {
   const { tenant } = useParams<{ tenant: string }>();
-  const { state, site, fontHref, wa, abas, cssVars } = usePortalData(tenant);
+  const { state, site, fontHref, wa, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
-  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'financing', path: pathname });
+  // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
+  usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'financing', path: pathname });
   useIconeDaAba(site.branding?.favicon_url);
 
   if (state === 'loading') {
     return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   }
+  // Em manutenção a página de manutenção vem antes do erro e das listas (que dão 404).
+  if (manutencao) return <PaginaManutencao site={site} />;
   if (state === 'error') {
     return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Portal indisponível.</div>;
   }

@@ -12,7 +12,7 @@ import {
   type PropertyTypology,
 } from '@/features/properties/typologies';
 import {
-  PortalFooter, PortalHeader, PropertyCard,
+  PortalFooter, PortalHeader, PropertyCard, estaEmManutencao,
   type PortalProperty, type SiteInfo as PortalSiteInfo,
 } from './portalShared';
 import { resolverHome, type AbaId } from '@/features/siteBuilder/public/homeConfig';
@@ -93,6 +93,10 @@ export default function ImovelPublicPage() {
   const [active, setActive] = useState(0);
   const [lightbox, setLightbox] = useState(false);
   const [suggestions, setSuggestions] = useState<PortalProperty[]>([]);
+  // Site em manutenção: a ficha continua abrindo (o link vai por WhatsApp e
+  // anúncio), mas o topo e o rodapé ficam só com logo e WhatsApp, o "Voltar aos
+  // imóveis" some e "Você também pode gostar" também (a lista dá 404).
+  const manutencao = estaEmManutencao(site);
   const { pathname } = useLocation();
   usePortalTracking(state === 'ok' && siteLoaded ? site : null, tenant, { kind: 'property', path: pathname, propertyCode: code });
   useIconeDaAba(site.branding?.favicon_url);
@@ -157,6 +161,7 @@ export default function ImovelPublicPage() {
   // excluindo o atual. Sem endpoint novo — usa a listagem pública do portal.
   useEffect(() => {
     if (!tenant || !code || !prop) return;
+    if (manutencao) { setSuggestions([]); return; }
     let alive = true;
     const fetchList = async (city?: string): Promise<PortalProperty[]> => {
       const qs = new URLSearchParams({ per_page: '8' });
@@ -178,7 +183,7 @@ export default function ImovelPublicPage() {
       if (alive) setSuggestions(list.slice(0, 3));
     })();
     return () => { alive = false; };
-  }, [tenant, code, prop]);
+  }, [tenant, code, prop, manutencao]);
 
   const brand = site.branding?.primary_color || '#0E7C5A';
   const font = site.branding?.font_family || 'Inter';
@@ -312,9 +317,11 @@ export default function ImovelPublicPage() {
       <PortalHeader site={site} tenant={tenant!} abas={abas} />
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        <Link to={`/portal/${tenant}`} className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-neutral-500 hover:text-[var(--brand)]">
-          <Ic d={I.back} s={16} /> Voltar aos imóveis
-        </Link>
+        {!manutencao && (
+          <Link to={`/portal/${tenant}`} className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-neutral-500 hover:text-[var(--brand)]">
+            <Ic d={I.back} s={16} /> Voltar aos imóveis
+          </Link>
+        )}
 
         {/* Galeria */}
         {cover && (
@@ -525,7 +532,7 @@ export default function ImovelPublicPage() {
         </section>
 
         {/* Imóveis recomendados */}
-        {suggestions.length > 0 && (
+        {!manutencao && suggestions.length > 0 && (
           <section className="mt-14">
             <h2 className="font-[var(--display)] text-2xl font-semibold sm:text-3xl">Você também pode gostar</h2>
             <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

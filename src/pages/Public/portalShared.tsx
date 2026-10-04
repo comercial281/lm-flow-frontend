@@ -59,6 +59,12 @@ export interface PortalListing {
      aberto e servi-los entregaria o e-mail do dono a qualquer robô coletor. */
 }
 export interface SiteInfo {
+  /**
+   * Site em manutenção (Meu site › Endereço do site, caixas Ativo/Publicado).
+   * Só `true` conta: servidor antigo, sem o campo, é site no ar. Em manutenção o
+   * servidor manda só nome, marca, contato e título; as listas dão 404.
+   */
+  maintenance?: boolean;
   name?: string;
   branding?: Branding;
   /** Banner da home: vídeo tem prioridade; sem os dois, a capa do primeiro imóvel. */
@@ -122,6 +128,35 @@ export function Ic({ d, s = 18, cls = '' }: { d: string; s?: number; cls?: strin
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className={cls}><path d={d} /></svg>;
 }
 
+/** Site em manutenção? Só `maintenance === true` (servidor antigo, sem o campo, está no ar). */
+export function estaEmManutencao(site: SiteInfo | null | undefined): boolean {
+  return site?.maintenance === true;
+}
+
+/** Cores, fonte e variáveis CSS do site (logo, cores e fonte do Meu site). */
+export function tokensDoSite(site: SiteInfo) {
+  const brand = site.branding?.primary_color || '#0E7C5A';
+  const accent = site.branding?.accent_color || brand;
+  const font = site.branding?.font_family || 'Inter';
+  const fontPrimary = font.split(',')[0].trim();
+  const fontStack = font.includes(',') ? font : `${font}, system-ui, sans-serif`;
+  const fontHref = `https://fonts.googleapis.com/css2?family=${fontPrimary.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`;
+  const cssVars = {
+    ['--brand' as string]: brand,
+    ['--accent' as string]: accent,
+    ['--ink' as string]: '#17140F',
+    ['--paper' as string]: '#FAF7F2',
+    ['--display' as string]: fontStack,
+    fontFamily: fontStack,
+  } as CSSProperties;
+  return { brand, accent, font, fontStack, fontHref, cssVars };
+}
+
+/** Link do botão verde do WhatsApp (o número vem gravado só com dígitos e o 55). */
+export function linkDoWhatsApp(wa?: string | null): string | null {
+  return wa ? `https://wa.me/${onlyDigits(wa)}` : null;
+}
+
 /* ── Hook de dados do portal (site + imóveis + tokens derivados) ──────────── */
 export function usePortalData(tenant?: string) {
   const [state, setState] = useState<'loading' | 'ok' | 'error'>('loading');
@@ -137,12 +172,17 @@ export function usePortalData(tenant?: string) {
         // portal filtra no navegador e monta cidade/bairro do que carregou.
         // Ver portalProperties.ts — foi uma página de 60 que fez um cliente
         // com 390 imóveis publicados ver 60 no site.
+        //
+        // Em manutenção a lista dá 404 (vira lista vazia) e o site vem reduzido:
+        // a página de manutenção não depende da lista, então nem uma falha dela
+        // derruba a página. Fora da manutenção, falha da lista segue sendo erro.
         const [siteRes, propsJson] = await Promise.all([
           fetch(`${API}/api/public/v1/site`, { headers: { 'X-Tenant': tenant } }),
-          fetchAllPortalProperties(API, tenant),
+          fetchAllPortalProperties(API, tenant).catch(() => null),
         ]);
         if (!active) return;
         const siteJson = siteRes.ok ? ((await siteRes.json()).data as SiteInfo) : {};
+        if (propsJson === null && !estaEmManutencao(siteJson)) throw new Error('catálogo indisponível');
         setSite(siteJson || {});
         setItems(propsJson || []);
         document.title = tituloDaAba(siteJson?.seo?.title, siteJson?.name);
@@ -158,13 +198,9 @@ export function usePortalData(tenant?: string) {
     return () => { active = false; };
   }, [tenant]);
 
-  const brand = site.branding?.primary_color || '#0E7C5A';
-  const accent = site.branding?.accent_color || brand;
-  const font = site.branding?.font_family || 'Inter';
-  const fontPrimary = font.split(',')[0].trim();
-  const fontStack = font.includes(',') ? font : `${font}, system-ui, sans-serif`;
-  const fontHref = `https://fonts.googleapis.com/css2?family=${fontPrimary.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`;
+  const { brand, accent, font, fontStack, fontHref, cssVars } = useMemo(() => tokensDoSite(site), [site]);
   const wa = site.contact?.whatsapp;
+  const manutencao = estaEmManutencao(site);
 
   const cities = useMemo(() => [...new Set(items.map(i => i.address?.city).filter(Boolean) as string[])].sort(), [items]);
   const hoods = useMemo(() => [...new Set(items.map(i => i.address?.neighborhood).filter(Boolean) as string[])].sort(), [items]);
@@ -174,16 +210,7 @@ export function usePortalData(tenant?: string) {
   const home = useMemo(() => resolverHome(site.home), [site]);
   const abas = useMemo(() => abasVisiveis(home, items), [home, items]);
 
-  const cssVars = {
-    ['--brand' as string]: brand,
-    ['--accent' as string]: accent,
-    ['--ink' as string]: '#17140F',
-    ['--paper' as string]: '#FAF7F2',
-    ['--display' as string]: fontStack,
-    fontFamily: fontStack,
-  } as CSSProperties;
-
-  return { state, site, items, brand, accent, font, fontStack, fontHref, wa, cities, hoods, types, home, abas, cssVars };
+  return { state, site, items, brand, accent, font, fontStack, fontHref, wa, cities, hoods, types, home, abas, cssVars, manutencao };
 }
 
 /* ── Blog: fetch de artigos (mesmo padrão público, header X-Tenant) ───────── */
@@ -414,13 +441,84 @@ function PortalTopBar({ site }: { site: SiteInfo }) {
 /** Abas do menu (Comprar/Alugar/Lançamentos) que a página mostra; sem `abas`, as três. */
 const abaVisivel = (abas?: AbaId[]) => (n: NavItem) => n.kind !== 'tab' || !abas || abas.includes(n.value);
 
+interface PropsDaMoldura { site: SiteInfo; tenant: string; onHome?: boolean; abas?: AbaId[] }
+
+/** Logo do site, ou o nome quando não há logo. */
+function MarcaDoSite({ site, logoCls, nomeCls }: { site: SiteInfo; logoCls: string; nomeCls: string }) {
+  return site.branding?.logo_url
+    ? <img src={site.branding.logo_url} alt={site.name || 'Portal'} className={logoCls} />
+    : <span className={nomeCls}>{site.name || 'Imóveis'}</span>;
+}
+
+/** Botão verde do WhatsApp do topo e do rodapé. */
+function BotaoWhatsApp({ href, rotuloSempre = false }: { href: string; rotuloSempre?: boolean }) {
+  return (
+    <a
+      href={href} target="_blank" rel="noreferrer"
+      aria-label="Falar no WhatsApp"
+      className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold text-white sm:px-4"
+      style={{ background: '#25D366' }}
+    >
+      <Ic d={I.wa} s={16} /> <span className={rotuloSempre ? '' : 'hidden sm:inline'}>WhatsApp</span>
+    </a>
+  );
+}
+
+/**
+ * Topo do site em manutenção (só a ficha do imóvel usa: as outras páginas viram
+ * a página Em manutenção). Só o logo, que leva pra raiz (a página de
+ * manutenção), e o WhatsApp: sem abas, menu de páginas, blog nem busca.
+ */
+function TopoEmManutencao({ site, tenant }: PropsDaMoldura) {
+  const waHref = linkDoWhatsApp(site.contact?.whatsapp);
+  return (
+    <div className="sticky top-0 z-40">
+      <header className="border-b border-black/[0.06] bg-[var(--paper)]/90 backdrop-blur-md">
+        <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-4 px-4 sm:h-[84px] sm:px-6">
+          <Link to={`/portal/${tenant}`} className="flex items-center gap-2.5">
+            <MarcaDoSite site={site} logoCls="h-12 w-auto max-w-[200px] object-contain sm:h-14 sm:max-w-[260px]"
+              nomeCls="font-[var(--display)] text-xl font-semibold tracking-tight" />
+          </Link>
+          {waHref && <BotaoWhatsApp href={waHref} />}
+        </div>
+      </header>
+    </div>
+  );
+}
+
+/** Rodapé do site em manutenção: o logo (leva pra raiz) e o WhatsApp. */
+function RodapeEmManutencao({ site, tenant }: PropsDaMoldura) {
+  const waHref = linkDoWhatsApp(site.contact?.whatsapp);
+  return (
+    <footer className="border-t border-black/[0.06] bg-white">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-10 sm:px-6">
+        <Link to={`/portal/${tenant}`}>
+          <MarcaDoSite site={site} logoCls="h-9 w-auto max-w-[150px] object-contain"
+            nomeCls="font-[var(--display)] text-lg font-semibold" />
+        </Link>
+        {waHref && <BotaoWhatsApp href={waHref} rotuloSempre />}
+      </div>
+    </footer>
+  );
+}
+
+/** Topo do site. Em manutenção, o topo enxuto (só logo e WhatsApp). */
+export function PortalHeader(props: PropsDaMoldura) {
+  return estaEmManutencao(props.site) ? <TopoEmManutencao {...props} /> : <TopoCompleto {...props} />;
+}
+
+/** Rodapé do site. Em manutenção, o rodapé enxuto (só logo e WhatsApp). */
+export function PortalFooter(props: PropsDaMoldura) {
+  return estaEmManutencao(props.site) ? <RodapeEmManutencao {...props} /> : <RodapeCompleto {...props} />;
+}
+
 /**
  * `onHome`: na home o cabeçalho é TRANSPARENTE sobre a foto de capa e vira
  * sólido na rolagem; nas demais páginas ele é sólido desde o topo. Os links de
  * seção (Sobre/Contato) rolam a própria home via âncora e, fora dela, navegam
  * de volta apontando a seção.
  */
-export function PortalHeader({ site, tenant, onHome = false, abas }: { site: SiteInfo; tenant: string; onHome?: boolean; abas?: AbaId[] }) {
+function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
   const [menuOpen, setMenuOpen] = useState(false);
   // Só na home: antes de rolar, o cabeçalho flutua sobre a capa.
   const [scrolled, setScrolled] = useState(!onHome);
@@ -570,7 +668,7 @@ function FooterCol({ children, title }: { children: ReactNode; title: string }) 
 }
 const footerLinkCls = 'text-[13px] text-neutral-600 hover:text-[var(--brand)]';
 
-export function PortalFooter({ site, tenant, onHome = false, abas }: { site: SiteInfo; tenant: string; onHome?: boolean; abas?: AbaId[] }) {
+function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
   const wa = site.contact?.whatsapp;
   const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
   const showStats = site.sections?.stats !== false;
