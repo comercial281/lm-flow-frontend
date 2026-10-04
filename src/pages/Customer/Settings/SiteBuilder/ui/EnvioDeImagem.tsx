@@ -1,4 +1,4 @@
-import { useRef, useState, type DragEvent } from 'react';
+import { useId, useRef, useState, type DragEvent } from 'react';
 import { ImagePlus, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -10,11 +10,13 @@ import { cn } from '@/lib/utils';
 //
 // Quem usa decide o que é "enviar" (subir o arquivo e gravar o endereço no
 // formulário) e o que é "remover" (gravar null). A caixa cuida do resto: escolher
-// o arquivo, conferir tipo e tamanho, girar enquanto sobe, avisar se falhou e
+// o arquivo, conferir tipo (PNG, JPG, WEBP) e tamanho, girar enquanto sobe, avisar se falhou e
 // pedir confirmação antes de remover.
 
-const TIPOS_ACEITOS = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
-const EXTENSOES_ACEITAS = /\.(png|jpe?g|webp|svg)$/i;
+// Sem SVG: o armazenamento entrega SVG como download, então ele não apareceria
+// nem como imagem no site nem como ícone da aba.
+const TIPOS_ACEITOS = ['image/png', 'image/jpeg', 'image/webp'];
+const EXTENSOES_ACEITAS = /\.(png|jpe?g|webp)$/i;
 
 const TAMANHO: Record<'logo' | 'icone', string> = {
   logo: 'h-48 w-full max-w-[440px]',
@@ -54,6 +56,7 @@ export default function EnvioDeImagem({
   const [arrastando, setArrastando] = useState(false);
   const [imagemQuebrada, setImagemQuebrada] = useState<string | null>(null);
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+  const idFormatos = useId();
 
   const nome = rotulo.toLowerCase();
   const temImagem = !!url;
@@ -63,7 +66,7 @@ export default function EnvioDeImagem({
 
   const receber = async (arquivo: File | undefined) => {
     if (!arquivo || enviando) return;
-    if (!aceita(arquivo)) { setErro('Use uma imagem PNG, JPG, WEBP ou SVG.'); return; }
+    if (!aceita(arquivo)) { setErro('Use uma imagem PNG, JPG ou WEBP.'); return; }
     if (arquivo.size > tamanhoMaximoMb * 1024 * 1024) {
       setErro(`A imagem passa de ${tamanhoMaximoMb} MB. Use uma menor.`);
       return;
@@ -141,6 +144,7 @@ export default function EnvioDeImagem({
         <button
           type="button"
           aria-label={`Enviar ${nome}`}
+          aria-describedby={idFormatos}
           disabled={enviando}
           onClick={escolher}
           onDragOver={arrastarPorCima}
@@ -163,12 +167,12 @@ export default function EnvioDeImagem({
         </button>
       )}
 
-      <p className="text-xs text-muted-foreground">PNG, JPG, WEBP ou SVG, até {tamanhoMaximoMb} MB.</p>
+      <p id={idFormatos} className="text-xs text-muted-foreground">PNG, JPG ou WEBP, até {tamanhoMaximoMb} MB.</p>
 
       {temImagem && (
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" size="sm" disabled={enviando} onClick={escolher}
-            aria-label={`Trocar ${nome}`}>
+            aria-label={`Trocar ${nome}`} aria-describedby={idFormatos}>
             <RefreshCw className="mr-1.5 h-4 w-4" aria-hidden /> Trocar
           </Button>
           <Button type="button" variant="ghost" size="sm" disabled={enviando} onClick={remover}

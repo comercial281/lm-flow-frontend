@@ -78,7 +78,10 @@ describe('EnvioDeImagem', () => {
     expect(screen.getByText('Arraste a imagem aqui ou clique para enviar')).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: 'Enviar logo do site' }));
     expect(clique).toHaveBeenCalled();
-    expect(input.accept).toContain('image/svg+xml');
+    expect(input.accept).not.toContain('svg');
+    // A frase de formatos aceitos é a descrição do botão.
+    const botao = screen.getByRole('button', { name: 'Enviar logo do site' });
+    expect(document.getElementById(botao.getAttribute('aria-describedby')!)?.textContent).toBe('PNG, JPG ou WEBP, até 8 MB.');
   });
 
   it('escolher o arquivo chama o envio', async () => {
@@ -92,7 +95,7 @@ describe('EnvioDeImagem', () => {
   it('soltar o arquivo na caixa chama o envio', async () => {
     const enviar = vi.fn().mockResolvedValue(undefined);
     render(<Envio enviar={enviar} />);
-    const f = arquivo('icone.svg', 'image/svg+xml');
+    const f = arquivo('icone.webp', 'image/webp');
     fireEvent.drop(screen.getByRole('button', { name: 'Enviar logo do site' }), { dataTransfer: { files: [f] } });
     await waitFor(() => expect(enviar).toHaveBeenCalledWith(f));
   });
@@ -147,7 +150,27 @@ describe('EnvioDeImagem', () => {
     fireEvent.drop(screen.getByRole('button', { name: 'Enviar logo do site' }), {
       dataTransfer: { files: [arquivo('contrato.pdf', 'application/pdf')] },
     });
-    expect(await screen.findByText('Use uma imagem PNG, JPG, WEBP ou SVG.')).toBeTruthy();
+    expect(await screen.findByText('Use uma imagem PNG, JPG ou WEBP.')).toBeTruthy();
+    expect(enviar).not.toHaveBeenCalled();
+  });
+
+  it('SVG é recusado (o site não mostraria)', async () => {
+    const enviar = vi.fn();
+    render(<Envio enviar={enviar} />);
+    fireEvent.drop(screen.getByRole('button', { name: 'Enviar logo do site' }), {
+      dataTransfer: { files: [arquivo('logo.svg', 'image/svg+xml')] },
+    });
+    expect(await screen.findByText('Use uma imagem PNG, JPG ou WEBP.')).toBeTruthy();
+    expect(enviar).not.toHaveBeenCalled();
+  });
+
+  it('arquivo maior que o limite é recusado sem enviar', async () => {
+    const enviar = vi.fn();
+    render(<Envio enviar={enviar} />);
+    const grande = arquivo();
+    Object.defineProperty(grande, 'size', { value: 9 * 1024 * 1024 });
+    fireEvent.drop(screen.getByRole('button', { name: 'Enviar logo do site' }), { dataTransfer: { files: [grande] } });
+    expect(await screen.findByText('A imagem passa de 8 MB. Use uma menor.')).toBeTruthy();
     expect(enviar).not.toHaveBeenCalled();
   });
 });
