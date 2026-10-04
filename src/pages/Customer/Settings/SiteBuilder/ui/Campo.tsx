@@ -44,12 +44,14 @@ export function Campo({ id, rotulo, ajuda, aviso, erro, className, children }: C
 type PropsDoInput = Omit<ComponentProps<typeof Input>, 'id' | 'value' | 'onChange'>;
 
 interface CampoTextoProps extends Omit<CampoProps, 'children'>, PropsDoInput {
+  /** Classes do campo em si (o `className` vai na volta dele). */
+  classeDoControle?: string;
   valor: string;
   aoMudar: (valor: string) => void;
 }
 
 /** Campo de uma linha. */
-export function CampoTexto({ id, rotulo, ajuda, aviso, erro, className, valor, aoMudar, ...input }: CampoTextoProps) {
+export function CampoTexto({ id, rotulo, ajuda, aviso, erro, className, classeDoControle, valor, aoMudar, ...input }: CampoTextoProps) {
   return (
     <Campo id={id} rotulo={rotulo} ajuda={ajuda} aviso={aviso} erro={erro} className={className}>
       <Input
@@ -59,7 +61,7 @@ export function CampoTexto({ id, rotulo, ajuda, aviso, erro, className, valor, a
         onChange={e => aoMudar(e.target.value)}
         aria-invalid={erro ? true : undefined}
         aria-describedby={descricaoDoCampo(id, { ajuda, aviso, erro })}
-        className={cn(CLASSE_DO_CAMPO, input.className as string | undefined)}
+        className={cn(CLASSE_DO_CAMPO, classeDoControle)}
       />
     </Campo>
   );
@@ -68,12 +70,13 @@ export function CampoTexto({ id, rotulo, ajuda, aviso, erro, className, valor, a
 type PropsDoTextarea = Omit<ComponentProps<typeof Textarea>, 'id' | 'value' | 'onChange'>;
 
 interface CampoTextoLongoProps extends Omit<CampoProps, 'children'>, PropsDoTextarea {
+  classeDoControle?: string;
   valor: string;
   aoMudar: (valor: string) => void;
 }
 
 /** Campo de várias linhas. */
-export function CampoTextoLongo({ id, rotulo, ajuda, aviso, erro, className, valor, aoMudar, ...area }: CampoTextoLongoProps) {
+export function CampoTextoLongo({ id, rotulo, ajuda, aviso, erro, className, classeDoControle, valor, aoMudar, ...area }: CampoTextoLongoProps) {
   return (
     <Campo id={id} rotulo={rotulo} ajuda={ajuda} aviso={aviso} erro={erro} className={className}>
       <Textarea
@@ -83,7 +86,7 @@ export function CampoTextoLongo({ id, rotulo, ajuda, aviso, erro, className, val
         onChange={e => aoMudar(e.target.value)}
         aria-invalid={erro ? true : undefined}
         aria-describedby={descricaoDoCampo(id, { ajuda, aviso, erro })}
-        className={cn('text-base md:text-base', area.className as string | undefined)}
+        className={cn('text-base md:text-base', classeDoControle)}
       />
     </Campo>
   );
