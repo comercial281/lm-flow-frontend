@@ -4716,7 +4716,7 @@ O que aparece na tela, no menu da Área do Admin:
 |---|---|
 | Visão Geral | Dashboard · Leads ao vivo |
 | Clientes | Clientes · Números conectados · Custos |
-| Usuários | Usuários · Logs · Mensagem de acesso |
+| Usuários | Usuários (lista de todos os clientes + ficha) · Logs · Mensagem de acesso |
 | Comunicação | Avisos na tela · Push · WhatsApp |
 | Plataforma | Academia · Menus arquivados · Site · Sugestões e bugs |
 | IA Vendedora | Agentes · Dashboard · Conhecimento · Aviso de visita |
@@ -4724,7 +4724,7 @@ O que aparece na tela, no menu da Área do Admin:
 
 - **Mesmo padrão do menu novo do CRM:** cada item é uma página, as subdivisões são abas no topo, sem terceiro nível. A moldura (`AdminPaginaComAbas`) lê as abas do próprio menu (`adminMenuItems.ts`): menu e abas não têm como discordar. **O nome do item é o único h1**; o título de cada tela de dentro é h2.
 - **Cada aba é uma rota.** Aba que já tinha endereço manteve (`/admin/push`, `/admin/academia`, `/admin/plataforma`). O item aceso no menu é o DONO do endereço (`donoDoEnderecoAdmin`), não o prefixo.
-- **Link antigo continua valendo.** `?tab=` de Clientes e da IA Vendedora leva pra aba nova (`adminEnderecosAntigos.ts`); `/admin/uso?client=x` vira `/admin/usuarios?client=x`, e Usuários abre no cliente do link (antes o link dos Logs não filtrava nada).
+- **Link antigo continua valendo.** `?tab=` de Clientes e da IA Vendedora leva pra aba nova (`adminEnderecosAntigos.ts`); `/admin/uso` vira `/admin/usuarios` (a lista nova não lê `?client=`; o botão "Uso detalhado" dos Logs abre a lista inteira, e o filtro de cliente é pelo seletor).
 - **Logs e Atividade viraram uma tela só** (já eram o mesmo componente). `/admin/uso` era cópia de Métricas de Uso: virou Usuários.
 - **Conhecimento** junta Cérebro Universal, Princípios e Aperfeiçoamento, um embaixo do outro.
 - **Aviso de visita** saiu de Plataforma e foi para IA Vendedora → Aviso de visita, sem mudar comportamento (decisões de 21/09 mantidas).
@@ -6002,6 +6002,21 @@ Armadilhas:
    segundos; o resto continua em minutos (`waitTime.ts`).
 8. **Os funis antigos** (`message_funnels`, o editor de antes) não aparecem
    mais no campo de mensagem: a conversão (`rake lm_flow:funis:converter_funis_mensagem`
-   do `#388`) precisa rodar junto com este PR. Disparos em massa e o
-   agendamento ainda leem os funis antigos.
+   do `#388`) precisa rodar junto com este PR. A conversão NÃO desativa o
+   funil antigo (decisão de 04/10): Disparos, disparo em massa do Funil de
+   vendas, agendamento de envio e a ação "Disparar funil de mensagens" ainda
+   leem os funis antigos — migrar essas telas é passo à parte.
 
+## Usuários de todos os clientes (03/10/2026)
+
+Usuários → Usuários (`/admin/usuarios`, `src/pages/SuperAdmin/Usuarios/`) e a ficha (`/admin/usuarios/:tenant/:userId`). Spec: `LM FLOW/specs/2026-10-03-admin-registro-custos-usuarios-design.md` (seção 3). Substitui a tela de um cliente por vez (UserMetricsView, removida).
+
+- **Uma lista só, todos os clientes.** Busca por nome, e-mail ou telefone (com ou sem máscara); filtros de cliente, cargo e situação (*Ativo* / *Sumido há 7+ dias* / *Nunca entrou* / *Desativado*). Desativados e a equipe Leal Mídia ficam fora por padrão.
+- **A chave da pessoa é cliente + id:** o mesmo e-mail em dois clientes vira duas linhas e duas fichas.
+- **Cliente que falha não esconde os outros:** aviso "Não deu para ler: …" acima da tabela.
+- **20 por página**, com as mesmas travas da lista de chamadas (linhas velhas somem ao trocar filtro; resposta atrasada é descartada).
+- *Enviar link de acesso* pede confirmação (manda WhatsApp). *Copiar* não pede. O principal não tem link.
+- **Ficha:** cartões de 30 dias, entradas com aparelho (selo *Aparelho novo*: aparelho que não aparecia antes ou há mais de 90 dias), telas que mais usa e histórico de ações.
+- **Aba acesa na ficha:** a aba Usuários tem `tambem` (regex da ficha, dois trechos depois de `/admin/usuarios/`) em `adminMenuItems.ts`; vale pra moldura (`donoDoEnderecoAdmin`) e pra faixa (`Abas`). Logs e Mensagem de acesso têm um trecho só, então não colidem.
+- `superLogsService.userMetrics` e `UserMetricsResponse` ficaram: a tela de Logs ainda usa. Saíram `userMetricDetail` e `UserMetricDetail`.
+- **Notificações** (push, avisos por WhatsApp, avisos na tela) entram na entrega 3B.
