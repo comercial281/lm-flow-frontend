@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { Site } from '@/services/siteBuilder/siteBuilderService';
 
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   listPages: vi.fn(),
   getDashboard: vi.fn(),
   listLeads: vi.fn(),
+  uploadAsset: vi.fn(),
 }));
 
 vi.mock('@/services/siteBuilder/siteBuilderService', async importOriginal => {
@@ -27,6 +29,7 @@ vi.mock('@/services/siteBuilder/siteBuilderService', async importOriginal => {
       listPages: mocks.listPages,
       getDashboard: mocks.getDashboard,
       listLeads: mocks.listLeads,
+      uploadAsset: mocks.uploadAsset,
     },
   };
 });
@@ -43,6 +46,7 @@ vi.mock('@/services/core/tenant', async importOriginal => ({
   getTenantSlug: () => 'imob',
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('@/features/siteBuilder/HeroImagePicker', () => ({ default: () => null }));
 
 import SiteBuilder from './SiteBuilder';
 
@@ -142,5 +146,34 @@ describe('SiteBuilder (casca do Meu site)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryAllByRole('button', { name: /Remover/ })).toHaveLength(0));
+  });
+
+  it('Aparência mostra o ícone da aba que veio do servidor', async () => {
+    mocks.listSites.mockResolvedValue([{ ...SITE, branding: { favicon_url: 'https://cdn/icone.png' } }]);
+    abrir('/settings/site-builder?tela=aparencia');
+    const img = await screen.findByRole('img', { name: 'Ícone da aba' }) as HTMLImageElement;
+    expect(img.src).toBe('https://cdn/icone.png');
+  });
+
+  it('enviar o ícone e salvar leva o favicon_url', async () => {
+    mocks.uploadAsset.mockResolvedValue({ url: 'https://cdn/novo.png' });
+    mocks.updateSite.mockResolvedValue({ ...SITE, branding: { favicon_url: 'https://cdn/novo.png' } });
+    abrir('/settings/site-builder?tela=aparencia');
+    await screen.findByRole('heading', { name: 'Aparência' });
+    await userEvent.upload(screen.getByLabelText('Escolher arquivo: ícone da aba'), new File(['x'], 'i.png', { type: 'image/png' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
+    expect(mocks.updateSite.mock.calls[0][1]).toMatchObject({ favicon_url: 'https://cdn/novo.png' });
+  });
+
+  it('remover o logo e salvar grava null', async () => {
+    mocks.listSites.mockResolvedValue([{ ...SITE, branding: { logo_url: 'https://cdn/logo.png' } }]);
+    mocks.updateSite.mockResolvedValue(SITE);
+    abrir('/settings/site-builder?tela=aparencia');
+    await userEvent.click(await screen.findByRole('button', { name: 'Remover logo do site' }));
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Remover' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
+    expect(mocks.updateSite.mock.calls[0][1].logo_url).toBeNull();
   });
 });

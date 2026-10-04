@@ -68,6 +68,7 @@ const EMPTY_SITE_FORM: SiteFormData = {
   active: true,
   published: false,
   logo_url: '',
+  favicon_url: '',
   hero_video_url: '',
   hero_image: { ...EMPTY_HERO_IMAGE },
   sections: { stats: true, lead_capture: true },
@@ -165,6 +166,7 @@ export default function SiteBuilder() {
           active: s.active,
           published: s.published,
           logo_url: s.branding.logo_url ?? '',
+          favicon_url: s.branding.favicon_url ?? '',
           hero_video_url: s.hero_video_url ?? '',
           hero_image: heroImageChoiceFrom(s.hero_image),
           sections: {
@@ -321,7 +323,7 @@ export default function SiteBuilder() {
           podeAnuncios={canLandings}
         />
       )}
-      <div className="mx-auto w-full max-w-6xl space-y-5 px-6 py-6">
+      <div className="mx-auto w-full max-w-[1400px] space-y-5 px-6 py-6">
         <div className="space-y-1">
           {trilha && <p className="text-xs font-medium text-muted-foreground">{trilha}</p>}
           <h1 className="text-2xl font-semibold">{site ? info.titulo : 'Criar o site'}</h1>
