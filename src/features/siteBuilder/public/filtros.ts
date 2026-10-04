@@ -24,6 +24,8 @@ export interface PortalProperty {
   delivery_forecast?: string | null;
   sale_price_from?: number | null;
   rent_price_from?: number | null;
+  /** iso8601, para "Mais recentes". Servidor velho não manda. */
+  created_at?: string | null;
 }
 
 /* Filtros aplicados na busca (dirigidos pela URL na página de busca). */
@@ -58,6 +60,27 @@ export function opcaoDoTexto(opcoes: string[], valor: string): string {
   if (!valor) return '';
   const alvo = normalizarTexto(valor);
   return opcoes.find(o => normalizarTexto(o) === alvo) ?? valor;
+}
+
+/**
+ * Opções de cidade/bairro sem repetir grafia: "Campinas", "campinas " e
+ * "CAMPINAS" viram uma opção só, com a grafia que mais aparece (no empate, a
+ * primeira), sem espaço nas pontas e em ordem alfabética do português.
+ */
+export function opcoesSemRepetir(valores: (string | null | undefined)[]): string[] {
+  const grupos = new Map<string, Map<string, number>>();
+  for (const v of valores) {
+    const chave = normalizarTexto(v);
+    if (!chave) continue;
+    const grafias = grupos.get(chave) ?? new Map<string, number>();
+    const g = (v as string).trim();
+    grafias.set(g, (grafias.get(g) ?? 0) + 1);
+    grupos.set(chave, grafias);
+  }
+  // Map guarda a ordem de chegada: com `>` estrito, o empate fica com a primeira.
+  const maisComum = (grafias: Map<string, number>) =>
+    [...grafias].reduce((melhor, atual) => (atual[1] > melhor[1] ? atual : melhor))[0];
+  return [...grupos.values()].map(maisComum).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 }
 
 export function filterProperties(items: PortalProperty[], f: PortalFilters): PortalProperty[] {

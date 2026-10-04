@@ -1,15 +1,15 @@
 import { Link } from 'react-router-dom';
 import type { PortalProperty } from '../portalShared';
-import type { HomeConfig } from '@/features/siteBuilder/public/homeConfig';
+import type { AbaId, HomeConfig } from '@/features/siteBuilder/public/homeConfig';
 import { atalhosDoSite } from '@/features/siteBuilder/public/maisBuscados';
 
 /* Atalhos "Mais buscados": automáticos (tipo + bairro com mais imóveis) ou os
    que o cliente escreveu no Personalizar. Sem atalho, a faixa some. */
 
-interface Props { home: HomeConfig; items: PortalProperty[]; tenant: string }
+interface Props { home: HomeConfig; items: PortalProperty[]; tenant: string; abas: AbaId[] }
 
-export default function HomeMaisBuscados({ home, items, tenant }: Props) {
-  const atalhos = atalhosDoSite(home, items);
+export default function HomeMaisBuscados({ home, items, tenant, abas }: Props) {
+  const atalhos = atalhosDoSite(home, items, abas);
   if (atalhos.length === 0) return null;
 
   return (

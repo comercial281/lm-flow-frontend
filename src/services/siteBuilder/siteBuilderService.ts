@@ -1,6 +1,8 @@
 import api from '@/services/core/api';
 import type { BlockInstance } from '@/features/landing/blocks/contract';
 import type { HomeConfig } from '@/features/siteBuilder/public/homeConfig';
+import type { FichaConfigDoAdmin } from '@/features/siteBuilder/public/fichaConfig';
+import type { ListaConfig } from '@/features/siteBuilder/public/listaConfig';
 
 export interface SiteBranding {
   logo_url?: string | null;
@@ -167,6 +169,10 @@ export interface Site {
   sections?: SiteSections;
   /** Página inicial por blocos, já resolvida pelo servidor (settings['home']). */
   home?: HomeConfig;
+  /** Página do imóvel, com os e-mails da cópia (settings['property_page']). Servidor velho não manda. */
+  property_page?: FichaConfigDoAdmin;
+  /** Lista de imóveis (settings['listing']). Servidor velho não manda. */
+  listing?: ListaConfig;
   /** Página *Simule seu financiamento*, já resolvida pelo servidor. */
   financiamento?: SiteFinancingPage | null;
   /** Página *Anuncie seu imóvel*, já resolvida pelo servidor (com os e-mails). */
@@ -282,6 +288,10 @@ export interface SiteFormData {
   sections?: SiteSections;
   /** Sempre o objeto inteiro: o servidor troca cada bloco recebido por completo. */
   home?: HomeConfig;
+  /** Sempre o objeto inteiro (com `email_copy`): o servidor troca cada bloco recebido. */
+  property_page?: FichaConfigDoAdmin;
+  /** Sempre o objeto inteiro. */
+  listing?: ListaConfig;
   /**
    * As duas páginas extras. Viajam ANINHADAS — declaradas escalares no servidor
    * o Rails descartaria o hash em silêncio, a tela diria *Salvo* e nada mudaria.

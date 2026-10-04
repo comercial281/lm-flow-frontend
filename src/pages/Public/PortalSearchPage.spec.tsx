@@ -51,6 +51,18 @@ beforeEach(() => { vi.mocked(sendSiteVisit).mockClear(); });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('PortalSearchPage', () => {
+  it('cidade com grafias diferentes no cadastro vira uma opção só, com a grafia mais comum', async () => {
+    await abrirBusca([
+      imovel('R1'), imovel('R2'),
+      imovel('R3', { address: { city: 'campinas ', neighborhood: 'centro' } }),
+    ]);
+
+    expect(screen.getAllByRole('option', { name: 'Campinas' })).toHaveLength(1);
+    expect(screen.queryByRole('option', { name: 'campinas' })).toBeNull();
+    expect(screen.getAllByRole('option', { name: 'Centro' })).toHaveLength(1);
+    expect(screen.queryByRole('option', { name: 'centro' })).toBeNull();
+  });
+
   it('?tab=launch mostra só empreendimentos; Alugar não aparece sem imóvel de aluguel', async () => {
     await abrirBusca([imovel('R1'), empreendimento('E1')], '/portal/imob/imoveis?tab=launch');
 

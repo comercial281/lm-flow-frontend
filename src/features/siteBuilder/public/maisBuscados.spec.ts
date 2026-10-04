@@ -2,6 +2,10 @@ import { describe, it, expect } from 'vitest';
 import type { PortalProperty } from '@/pages/Public/portalShared';
 import { resolverHome } from './homeConfig';
 import { atalhosAutomaticos, atalhosDoSite } from './maisBuscados';
+import { abasVisiveis } from './vitrines';
+import type { AbaId } from './homeConfig';
+
+const TODAS: AbaId[] = ['sale', 'rent', 'launch'];
 
 const p = (code: string, type: string, hood: string, o: Partial<PortalProperty> = {}): PortalProperty => ({
   id: code, code, title: code, transaction_type: 'sale', property_type: type, address: { city: 'Campinas', neighborhood: hood },
@@ -31,22 +35,48 @@ describe('mais buscados', () => {
   it('manual vence; desligado → nada', () => {
     const manual = resolverHome({ most_searched: { mode: 'manual', items: [
       { label: 'Casas até 400 mil', transaction: 'sale', property_type: 'house', city: null, neighborhood: null, price_max: 400000 }] } });
-    expect(atalhosDoSite(manual, items)).toEqual([{ label: 'Casas até 400 mil', query: 'type=house&price_max=400000' }]);
-    expect(atalhosDoSite(resolverHome({ most_searched: { enabled: false } }), items)).toEqual([]);
+    expect(atalhosDoSite(manual, items, TODAS)).toEqual([{ label: 'Casas até 400 mil', query: 'type=house&price_max=400000' }]);
+    expect(atalhosDoSite(resolverHome({ most_searched: { enabled: false } }), items, TODAS)).toEqual([]);
   });
   it('manual: atalho cuja busca dá 0 imóvel some', () => {
     const h = manual({ label: 'Casas baratas', property_type: 'house', price_max: 100000 }, { label: 'Aluguel', transaction: 'rent' },
       { label: 'Terrenos', property_type: 'lot' });
-    expect(atalhosDoSite(h, items).map(a => a.label)).toEqual(['Terrenos']);
+    expect(atalhosDoSite(h, items, TODAS).map(a => a.label)).toEqual(['Terrenos']);
   });
   it('manual: cidade e bairro casam sem maiúscula/acento/espaço; finalidade nula conta como Comprar', () => {
     const h = manual({ label: 'Cambuí', city: 'CAMPÍNAS ', neighborhood: 'cambui' }, { label: 'Sem finalidade', transaction: null },
       { label: 'Santos', city: 'Santos' });
-    expect(atalhosDoSite(h, items)).toEqual([
+    expect(atalhosDoSite(h, items, TODAS)).toEqual([
       { label: 'Cambuí', query: 'city=CAMP%C3%8DNAS&neighborhood=cambui' },
       { label: 'Sem finalidade', query: '' },
     ]);
     // Finalidade nula é Comprar: imóvel só de aluguel não segura o atalho.
-    expect(atalhosDoSite(manual({ label: 'X', transaction: null }), [p('L', 'house', 'Centro', { transaction_type: 'rent' })])).toEqual([]);
+    expect(atalhosDoSite(manual({ label: 'X', transaction: null }), [p('L', 'house', 'Centro', { transaction_type: 'rent' })], TODAS)).toEqual([]);
+  });
+
+  describe('respeita as abas visíveis', () => {
+    const catalogo = [...items, p('L1', 'house', 'Centro', { transaction_type: 'rent', rent_price_from: 2000 })];
+    const h = manual({ label: 'Casas pra alugar', transaction: 'rent', property_type: 'house' },
+      { label: 'Casas à venda', transaction: 'sale', property_type: 'house' }, { label: 'Qualquer', transaction: null });
+    it('com as abas ligadas, os três aparecem', () => {
+      expect(atalhosDoSite(h, catalogo, abasVisiveis(h, catalogo)).map(a => a.label)).toEqual(['Casas pra alugar', 'Casas à venda', 'Qualquer']);
+    });
+    it('atalho de aluguel some se Alugar não está visível (mesmo havendo imóvel de aluguel)', () => {
+      const semAlugar = { ...h, search: { ...h.search, tabs: { ...h.search.tabs, rent: false } } };
+      const abas = abasVisiveis(semAlugar, catalogo);
+      expect(abas).toEqual(['sale']);
+      expect(atalhosDoSite(semAlugar, catalogo, abas).map(a => a.label)).toEqual(['Casas à venda', 'Qualquer']);
+    });
+    it('atalho sem aba, ou de compra, some se Comprar não está visível', () => {
+      const semComprar = { ...h, search: { ...h.search, tabs: { ...h.search.tabs, sale: false } } };
+      const abas = abasVisiveis(semComprar, catalogo);
+      expect(abas).toEqual(['rent']);
+      expect(atalhosDoSite(semComprar, catalogo, abas).map(a => a.label)).toEqual(['Casas pra alugar']);
+    });
+    it('o automático não muda', () => {
+      const auto = resolverHome({ search: { tabs: { sale: false, rent: false } } });
+      expect(atalhosDoSite(auto, items, [])).toEqual(atalhosAutomaticos(items));
+      expect(atalhosDoSite(auto, items, []).length).toBeGreaterThan(0);
+    });
   });
 });

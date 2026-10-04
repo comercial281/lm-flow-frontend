@@ -85,9 +85,9 @@ export const HOME_FABRICA: HomeConfig = {
   most_searched: { enabled: true, mode: 'auto', items: [] },
 };
 
-const strOuNull = (v: unknown): string | null => (typeof v === 'string' ? v : null);
+export const strOuNull = (v: unknown): string | null => (typeof v === 'string' ? v : null);
 const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
-const numOuNull = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+export const numOuNull = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
 function regras(raw: unknown): RegrasVitrine {
   const r = obj(raw);
@@ -116,7 +116,7 @@ function vitrines(raw: unknown): Vitrine[] {
   return lista.length ? lista : HOME_FABRICA.showcases;
 }
 
-const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {});
+export const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {});
 
 // Texto que não é texto (número, objeto…) vira null = texto de fábrica: o
 // cartão nunca desenha "[object Object]" nem quebra no encodeURIComponent.

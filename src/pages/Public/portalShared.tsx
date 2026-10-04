@@ -5,7 +5,7 @@ import { imovelHref } from './finalidade';
 import { menuPagesLinks } from '@/features/siteBuilder/public/portalMenu';
 import PortalTranslate from './PortalTranslate';
 import { tituloDaAba } from '@/features/siteBuilder/public/tituloDaAba';
-import { filterProperties, type PortalFilters, type PortalProperty, type PortalTab } from '@/features/siteBuilder/public/filtros';
+import { filterProperties, opcoesSemRepetir, type PortalFilters, type PortalProperty, type PortalTab } from '@/features/siteBuilder/public/filtros';
 import { ROTULO_TIPO, rotuloTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { resolverHome, type AbaId } from '@/features/siteBuilder/public/homeConfig';
 import { abasVisiveis } from '@/features/siteBuilder/public/vitrines';
@@ -83,6 +83,10 @@ export interface SiteInfo {
   menu?: { title: string; slug: string }[] | null;
   /** Configuração da página inicial (settings.home). Ler sempre por `resolverHome`. */
   home?: unknown;
+  /** Página do imóvel (settings.property_page, sem os e-mails). Ler sempre por `resolverFicha`. */
+  property_page?: unknown;
+  /** Lista de imóveis (settings.listing). Ler sempre por `resolverLista`. */
+  listing?: unknown;
 }
 /* Artigo do blog público (item da listagem). */
 export interface PortalArticleSummary {
@@ -202,8 +206,9 @@ export function usePortalData(tenant?: string) {
   const wa = site.contact?.whatsapp;
   const manutencao = estaEmManutencao(site);
 
-  const cities = useMemo(() => [...new Set(items.map(i => i.address?.city).filter(Boolean) as string[])].sort(), [items]);
-  const hoods = useMemo(() => [...new Set(items.map(i => i.address?.neighborhood).filter(Boolean) as string[])].sort(), [items]);
+  // Uma opção por cidade/bairro, mesmo com grafias diferentes no cadastro.
+  const cities = useMemo(() => opcoesSemRepetir(items.map(i => i.address?.city)), [items]);
+  const hoods = useMemo(() => opcoesSemRepetir(items.map(i => i.address?.neighborhood)), [items]);
   const types = useMemo(() => [...new Set(items.map(i => i.property_type).filter(Boolean))], [items]);
   // Página inicial (Personalizar) e as abas que existem de verdade: aba ligada
   // sem imóvel some da capa, do topo e do rodapé.
