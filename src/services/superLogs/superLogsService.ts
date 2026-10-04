@@ -1,49 +1,5 @@
 import apiClient from '@/services/core/api';
 
-export interface LogClient {
-  id: string;
-  name: string;
-  master?: boolean;
-  slug?: string;
-  has_backend?: boolean;
-}
-
-export interface ActivityEvent {
-  id: string;
-  occurred_at: string;
-  source: string;
-  category: string;
-  action: string;
-  level: 'info' | 'success' | 'warning' | 'error';
-  title: string;
-  description?: string | null;
-  actor?: { id?: string; name?: string; email?: string; type?: string };
-  subject?: { type?: string; id?: string };
-  http?: { method?: string; endpoint?: string; status?: number };
-  ip_address?: string | null;
-  metadata?: Record<string, unknown>;
-}
-
-export interface ActivityResponse {
-  events: ActivityEvent[];
-  server_time: string;
-  categories?: Record<string, number>;
-  unavailable?: boolean;
-}
-
-export interface ActivityParams {
-  client?: string;
-  category?: string;
-  level?: string;
-  q?: string;
-  actor_id?: string;
-  since?: string;
-  before?: string;
-  limit?: number;
-  include_raw?: boolean;
-  include_internal?: boolean;
-}
-
 export interface Whoami {
   email?: string;
   is_owner: boolean;
@@ -60,27 +16,6 @@ export interface TeamMember {
   owner: boolean;
   added_by?: string;
   created_at?: string;
-}
-
-export interface UserMetricRow {
-  user_id: string;
-  name: string;
-  email?: string;
-  accesses: number;
-  total_seconds: number;
-  avg_seconds: number;
-  last_seen_at: string | null;
-  first_seen_at: string | null;
-  clicks: number;
-  screens: number;
-  online: boolean;
-}
-
-export interface UserMetricsResponse {
-  users: UserMetricRow[];
-  overview: { total_users: number; online_now: number; total_seconds: number; total_accesses: number };
-  server_time: string;
-  unavailable?: boolean;
 }
 
 /** Fase 1 (Cargos): @lealmidia.com.br / fantasmas fora da Equipe, por cliente (GET /super/support_review). */
@@ -115,13 +50,6 @@ export interface SupportReview {
 }
 
 const superLogsService = {
-  logClients: () => apiClient.get<{ data: { clients: LogClient[] } }>('/super/log_clients'),
-  activity: (params: ActivityParams) => apiClient.get<{ data: ActivityResponse }>('/super/activity', { params }),
-  userMetrics: (client: string, includeInternal = false) =>
-    apiClient.get<{ data: UserMetricsResponse }>('/super/user_metrics', {
-      params: { client, include_internal: includeInternal || undefined },
-    }),
-
   // Equipe Leal Mídia + quem sou eu (pro gate do admin)
   whoami: () => apiClient.get<{ data: Whoami }>('/super/whoami'),
   team: () => apiClient.get<{ data: { members: TeamMember[] } }>('/super/team'),
