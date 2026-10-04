@@ -35,7 +35,7 @@ import PendingOffersBanner from '@/components/roleta/PendingOffersBanner';
 import { PendingOffersProvider } from '@/contexts/PendingOffersContext';
 import { WelcomeTourModal } from '@/components/WelcomeTourModal';
 import GlobalCommandPalette from '@/components/command-palette/GlobalCommandPalette';
-import FeedbackWidget from '@/components/feedback/FeedbackWidget';
+import SupportWidget from '@/components/support/SupportWidget';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -216,8 +216,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
       {/* Instalar app (PWA) na tela inicial */}
       <InstallAppPrompt />
 
-      {/* Botão flutuante de Sugestões/Bugs (cai na aba do admin) */}
-      <FeedbackWidget />
+      {/* Chat de suporte: dúvidas, chamados e prints (responde pelo item Suporte do admin) */}
+      <SupportWidget />
 
       {/* Logout Dialog */}
       <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
