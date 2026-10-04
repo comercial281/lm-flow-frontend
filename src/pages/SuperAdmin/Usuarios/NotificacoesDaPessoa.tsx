@@ -50,7 +50,7 @@ export default function NotificacoesDaPessoa({ dados, telefone, aoTentarDeNovo }
 
       <Cartao titulo="WhatsApp">
         <p className="mb-3 text-sm text-muted-foreground">
-          {telefone ? `Número de WhatsApp: ${formatarTelefone(telefone)}` : 'Pessoa sem número de WhatsApp no cadastro: os avisos não têm para onde ir.'}
+          {telefone ? `Número de WhatsApp: ${formatarTelefone(telefone)}` : 'Sem número de WhatsApp no cadastro da pessoa. Se houver um número no campo da roleta, os avisos vão para ele.'}
         </p>
         {dados.whatsapp.length === 0 ? (
           <EmptyState tipo="vazio" title="Nenhum aviso por WhatsApp ainda" />

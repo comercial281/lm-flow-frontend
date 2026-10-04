@@ -44,7 +44,7 @@ describe('NotificacoesDaPessoa', () => {
   it('vazios dizem o que fazer', () => {
     render(<NotificacoesDaPessoa dados={dados({ permissions: [], push_devices: 0, push: [], whatsapp: [], bell: [] })} telefone={null} />);
     expect(screen.getByText('Nenhum push enviado ainda')).toBeInTheDocument();
-    expect(screen.getByText(/sem número de WhatsApp no cadastro/)).toBeInTheDocument();
+    expect(screen.getByText(/Sem número de WhatsApp no cadastro da pessoa\. Se houver um número no campo da roleta/)).toBeInTheDocument();
     expect(screen.getByText('Nenhum aviso na tela')).toBeInTheDocument();
   });
 
