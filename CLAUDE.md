@@ -6132,3 +6132,35 @@ Usuários → Logs (`/admin/usuarios/logs`, `src/pages/SuperAdmin/Logs/`). Spec:
 - **Cliente que falha não esconde os outros:** aviso "Não deu para ler: …" acima da tabela. Erro geral mostra *Tentar de novo*, nunca lista vazia.
 - A página não se embrulha em `AdminConteudo`: a rota já faz isso.
 - **A ficha** do usuário marca as ações sensíveis do histórico com o mesmo selo *Sensível*.
+
+## Chat de suporte (desde 2026-10-04)
+
+Pedido do dono do produto, com o print do widget de suporte do site da Lais: o botão "Sugestões/Bugs" abria uma janela de mão única. Virou um **card de suporte** (spec `specs/2026-10-04-chat-de-suporte-design.md` na pasta LM FLOW).
+
+O que aparece na tela:
+
+- **Bolinha no canto** (ícone de chat) com contador de chamados com resposta não lida. Abre o card ancorado no canto, sem escurecer a tela; no celular, tela inteira. Esc, X ou a bolinha fecham.
+- **Aba Início:** "Olá, {nome} 👋 / Como podemos ajudar?", **Falar com o time**, busca **Qual é a sua dúvida?** + perguntas do roteiro, **Reportar um bug**, **Dar uma sugestão**, **Falar no WhatsApp**. Busca sem resultado oferece falar com o time com o texto já escrito.
+- **Roteiro:** resposta em balões; termina em **Isso resolveu?** (Sim volta ao Início; Não abre chamado com a pergunta como assunto).
+- **Aba Mensagens:** chamados da pessoa, situação (**Aberto · Aguardando você · Resolvido**) e bolinha de não lido. O chamado aberto é um chat com prints (até 3, colar com Ctrl+V ou anexar). Resolvido mostra a faixa e deixa escrever de novo (reabre).
+- **Menu do avatar:** "Sugestões/Bugs" virou **Ajuda e suporte**.
+- **Link do e-mail** (`?suporte=<id>`) abre o card direto no chamado.
+- **Fechar não perde o texto:** o card continua montado depois da primeira abertura e só fica escondido; o rascunho volta ao reabrir.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- Chamado respondido pelo **admin** (item Suporte), não pela tela Conversas da conta da Leal Mídia.
+- **Cada pessoa vê só os próprios chamados**; o gestor não vê os do corretor.
+- **Roteiro sem texto livre**: a pessoa navega por botões. Texto livre só dentro de chamado.
+- Duas abas (Início, Mensagens); a "Ajuda" da Lais é o Guia do LM Flow, como botão nas respostas.
+
+Armadilhas:
+
+1. **O roteiro é dado:** `src/components/support/roteiro.ts`. O `roteiro.spec.ts` trava opção apontando pra passo que não existe, passo inalcançável e fim sem "Isso resolveu?". Texto puro, nome de tela como aparece na tela (conferidos com as telas reais: Reconectar / Dispositivos conectados → Conectar dispositivo; Imóveis → Meu site; "Preencher a partir de um texto"; o botão Plantão).
+2. **A bolinha some em Conversas e nas telas de montar** (`escondeBolinha`, em `SupportWidget.tsx`): `/conversations` (`/conversations-old` não conta) e os canvas de `flow-builder`, `follow-ups` e `message-funnels/:id`. Regra herdada do FeedbackWidget antigo: a bolinha cobria o "Salvar". O acesso nessas telas é o menu do avatar (`openSupport`).
+3. **Card fechado = `hidden` + `inert` + `aria-hidden`.** Nada nele recebe foco nem é lido por leitor de tela, e a busca de um chamado aberto **pausa** enquanto o card está fechado.
+4. **No celular o card respeita áreas seguras e `--keyboard-inset`** (mesma fórmula do `MainLayout`): o teclado não cobre a caixa de texto.
+5. **`useChamado` exige `carregar` memoizado por chamado** (`useCallback([id])`): função nova a cada render dispara a busca em loop. Só a requisição mais recente grava estado (resposta atrasada é descartada) e a caixa de texto fica travada enquanto envia.
+6. **A conversa e a caixa de texto (`SupportThread`, `SupportComposer`) são as mesmas do admin.** Mexer nelas mexe nos dois lados.
+7. **A regra das imagens existe duas vezes de propósito** (`imagensSuporte.ts` e `SupportTickets::Images` no servidor): aqui é pra recusar na hora; quem manda é o servidor (confere os bytes).
+8. **Sem tempo real:** conversa aberta busca a cada 10 s; contador a cada 2 min e ao voltar pra aba.
