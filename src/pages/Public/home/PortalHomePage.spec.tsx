@@ -132,11 +132,11 @@ describe('PortalHomePage por blocos', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Alugar' }));
-    fireEvent.change(screen.getByDisplayValue('Faixa de preço'), { target: { value: '1500-3000' } });
+    fireEvent.change(screen.getByDisplayValue('Faixa de preço'), { target: { value: '1500.01-3000' } });
     fireEvent.change(screen.getByDisplayValue('Suítes'), { target: { value: '2' } });
     fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
 
-    expect((await screen.findByTestId('busca')).textContent).toBe('?tab=rent&price_min=1500&price_max=3000&suites=2');
+    expect((await screen.findByTestId('busca')).textContent).toBe('?tab=rent&price_min=1500.01&price_max=3000&suites=2');
   });
 
   it('catálogo vazio: sem fileira de abas, sem vitrines, e a busca cai em Comprar', async () => {
@@ -167,5 +167,17 @@ describe('PortalHomePage por blocos', () => {
     const faixa = screen.getByRole('heading', { level: 3, name: 'Anuncie seu imóvel' }).closest('section') as HTMLElement;
     expect(faixa.style.backgroundImage).toBe('');
     expect(faixa.style.background).toContain('var(--ink)');
+  });
+
+  it('chamadas com foto https: a foto vira o fundo', async () => {
+    await abrirHome({ home: { callouts: { layout: 'photo', background_url: 'https://x.com/f.jpg', overlay: 40 } }, anuncie: { enabled: true } } as SiteInfo, [imovel('R1')]);
+    const faixa = screen.getByRole('heading', { level: 3, name: 'Anuncie seu imóvel' }).closest('section') as HTMLElement;
+    expect(faixa.style.backgroundImage).toContain('https://x.com/f.jpg');
+  });
+
+  it('sem imóvel de compra, a vitrine de destaque some o "Ver todos" que cairia em Comprar', async () => {
+    await abrirHome({}, [imovel('L1', { transaction_type: 'rent', rent_price_from: 3000, sale_price_from: null, featured: true })]);
+    const dest = screen.getByRole('heading', { level: 2, name: 'Imóveis em destaque' }).closest('section')!;
+    expect(within(dest).queryByRole('link', { name: /Ver todos/ })).toBeNull();
   });
 });

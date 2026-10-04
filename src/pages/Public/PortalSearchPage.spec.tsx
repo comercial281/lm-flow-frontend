@@ -79,12 +79,9 @@ describe('PortalSearchPage', () => {
     expect((screen.getByRole('option', { name: 'Em obra' }).closest('select') as HTMLSelectElement).value).toBe('in_construction');
   });
 
-  it('a visita da busca leva o filtro, só depois de 1,5 s sem mudança', async () => {
+  it('a visita da busca é uma só por carga, depois de 1,5 s, com os filtros da hora', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     await abrirBusca([imovel('R1'), empreendimento('E1', { stage: 'in_construction' })]);
-    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
-    vi.mocked(sendSiteVisit).mockClear();
-
     selecionar('Em obra', 'in_construction');
     await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
     expect(sendSiteVisit).not.toHaveBeenCalled();
@@ -92,5 +89,10 @@ describe('PortalSearchPage', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(600); });
     expect(sendSiteVisit).toHaveBeenCalledTimes(1);
     expect(vi.mocked(sendSiteVisit).mock.calls[0][0]).toMatchObject({ kind: 'search', path: '/portal/imob/imoveis?stage=in_construction' });
+
+    selecionar('Em obra', '');
+    selecionar('Suítes', '1');
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+    expect(sendSiteVisit).toHaveBeenCalledTimes(1);
   });
 });

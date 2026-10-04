@@ -1,29 +1,31 @@
 // Faixas prontas do campo "Faixa de preço" da busca do site público. Uma faixa
 // vira `price_min`/`price_max` na URL (ponta aberta fica de fora); a página de
 // busca lê a URL de volta com `faixaDaBusca` para marcar a opção certa.
-// Divisa: o teto é inclusivo e o piso exclusivo (ver `filterProperties`), então um
-// imóvel de R$ 200 mil está só em 'Até R$ 200 mil'.
+// Divisa: o filtro é inclusivo nas duas pontas (igual às vitrines), então as faixas
+// são disjuntas por construção: o piso de cada faixa é o teto da anterior + 1 centavo.
+// Um imóvel de R$ 200 mil está só em 'Até R$ 200 mil'.
 import type { AbaId } from './homeConfig';
 
 export interface FaixaDePreco { valor: string; rotulo: string; price_min: number | null; price_max: number | null }
 
+const centavo = (teto: number) => (teto * 100 + 1) / 100;
 const faixa = (rotulo: string, min: number | null, max: number | null): FaixaDePreco =>
   ({ valor: `${min ?? ''}-${max ?? ''}`, rotulo, price_min: min, price_max: max });
 
 const COMPRA: FaixaDePreco[] = [
   faixa('Até R$ 200 mil', null, 200_000),
-  faixa('R$ 200 mil a R$ 400 mil', 200_000, 400_000),
-  faixa('R$ 400 mil a R$ 700 mil', 400_000, 700_000),
-  faixa('R$ 700 mil a R$ 1 mi', 700_000, 1_000_000),
-  faixa('R$ 1 mi a R$ 2 mi', 1_000_000, 2_000_000),
-  faixa('Acima de R$ 2 mi', 2_000_000, null),
+  faixa('R$ 200 mil a R$ 400 mil', centavo(200_000), 400_000),
+  faixa('R$ 400 mil a R$ 700 mil', centavo(400_000), 700_000),
+  faixa('R$ 700 mil a R$ 1 mi', centavo(700_000), 1_000_000),
+  faixa('R$ 1 mi a R$ 2 mi', centavo(1_000_000), 2_000_000),
+  faixa('Acima de R$ 2 mi', centavo(2_000_000), null),
 ];
 
 const ALUGUEL: FaixaDePreco[] = [
   faixa('Até R$ 1.500', null, 1_500),
-  faixa('R$ 1.500 a R$ 3.000', 1_500, 3_000),
-  faixa('R$ 3.000 a R$ 5.000', 3_000, 5_000),
-  faixa('Acima de R$ 5.000', 5_000, null),
+  faixa('R$ 1.500 a R$ 3.000', centavo(1_500), 3_000),
+  faixa('R$ 3.000 a R$ 5.000', centavo(3_000), 5_000),
+  faixa('Acima de R$ 5.000', centavo(5_000), null),
 ];
 
 /** Aluguel tem faixas próprias; Comprar e Lançamentos usam as de compra. */

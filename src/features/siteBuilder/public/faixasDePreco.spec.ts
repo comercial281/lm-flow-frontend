@@ -18,14 +18,14 @@ describe('faixas de preço da busca', () => {
   it('cada faixa vira price_min/price_max na URL (ponta aberta fica de fora)', () => {
     const [ate, , , , , acima] = faixasDePreco('sale');
     expect(precoDaFaixa('sale', ate.valor)).toEqual({ price_max: '200000' });
-    expect(precoDaFaixa('sale', faixasDePreco('sale')[1].valor)).toEqual({ price_min: '200000', price_max: '400000' });
-    expect(precoDaFaixa('sale', acima.valor)).toEqual({ price_min: '2000000' });
-    expect(precoDaFaixa('rent', faixasDePreco('rent')[1].valor)).toEqual({ price_min: '1500', price_max: '3000' });
+    expect(precoDaFaixa('sale', faixasDePreco('sale')[1].valor)).toEqual({ price_min: '200000.01', price_max: '400000' });
+    expect(precoDaFaixa('sale', acima.valor)).toEqual({ price_min: '2000000.01' });
+    expect(precoDaFaixa('rent', faixasDePreco('rent')[1].valor)).toEqual({ price_min: '1500.01', price_max: '3000' });
     expect(precoDaFaixa('sale', 'lixo')).toEqual({});
   });
   it('a URL volta para a faixa escolhida; preço fora das faixas não marca nenhuma', () => {
     expect(faixaDaBusca('sale', null, '200000')).toBe(faixasDePreco('sale')[0].valor);
-    expect(faixaDaBusca('rent', '5000', null)).toBe(faixasDePreco('rent')[3].valor);
+    expect(faixaDaBusca('rent', '5000.01', null)).toBe(faixasDePreco('rent')[3].valor);
     expect(faixaDaBusca('sale', '123', '456')).toBe('');
     expect(faixaDaBusca('sale', null, null)).toBe('');
   });

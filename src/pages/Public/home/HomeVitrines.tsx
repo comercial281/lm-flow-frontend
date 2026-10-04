@@ -37,7 +37,7 @@ export default function HomeVitrines({ home, items, tenant, wa, abas }: Props) {
         const tab = abaDaVitrine(vitrine);
         // O "Ver todos" que cai numa aba escondida levaria a uma busca que não é a da vitrine: sem o link.
         const abaDoLink = new URLSearchParams(q).get('tab');
-        const temLink = !abaDoLink || abas.includes(abaDoLink as AbaId);
+        const temLink = abas.includes((abaDoLink ?? 'sale') as AbaId);
         return (
           <section key={vitrine.id} className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
             <div className="mb-7 flex items-end justify-between gap-4">

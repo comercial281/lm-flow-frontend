@@ -19,7 +19,7 @@ import { usePortalTracking } from './usePortalTracking';
 const ROTULO_ABA: Record<PortalTab, string> = { sale: 'Comprar', rent: 'Alugar', launch: 'Lançamentos' };
 const MAIS_DE: [string, string][] = [['1', '1+'], ['2', '2+'], ['3', '3+']];
 
-/** Espera sem mudança na URL antes de contar a visita da busca (a digitação do código troca a URL a cada tecla). */
+/** Espera sem mudança na URL antes de contar a visita da busca. */
 const ESPERA_VISITA_MS = 1500;
 
 /**
@@ -35,14 +35,16 @@ export default function PortalSearchPage() {
   const { state, site, items, fontHref, wa, cities, hoods, types, abas, cssVars } = usePortalData(tenant);
   const { pathname, search } = useLocation();
 
-  // A visita leva os filtros (pathname + query), mas só depois que a URL para de mudar.
+  // Uma visita por carga da página, levando os filtros (pathname + query) de quando a URL
+  // assentou pela 1ª vez. Mexer nos filtros depois não conta visita nova.
   const caminhoAtual = pathname + search;
-  const [caminhoRegistrado, setCaminhoRegistrado] = useState(caminhoAtual);
+  const [caminhoRegistrado, setCaminhoRegistrado] = useState<string | null>(null);
   useEffect(() => {
+    if (caminhoRegistrado) return;
     const t = setTimeout(() => setCaminhoRegistrado(caminhoAtual), ESPERA_VISITA_MS);
     return () => clearTimeout(t);
-  }, [caminhoAtual]);
-  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'search', path: caminhoRegistrado });
+  }, [caminhoAtual, caminhoRegistrado]);
+  usePortalTracking(state === 'ok' ? site : null, tenant, caminhoRegistrado ? { kind: 'search', path: caminhoRegistrado } : null);
 
   // Só vale aba visível; a da URL que não é (desligada ou sem imóvel) cai na primeira visível.
   const tabDaUrl = params.get('tab') as PortalTab | null;

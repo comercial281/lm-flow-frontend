@@ -70,6 +70,16 @@ describe('vitrines', () => {
     const lista = [p('C1', { property_type: 'cobertura' }), p('C2', { property_type: 'penthouse' }), p('A1')];
     expect(itensDaVitrine(lista, v).map(x => x.code)).toEqual(['C1', 'C2']);
   });
+  it('vitrine com preço mínimo e o "Ver todos" concordam num imóvel exatamente no mínimo', () => {
+    const rules = { transaction: 'sale' as const, listing_kind: null, property_types: [], cities: [], neighborhoods: [],
+      price_min: 500000, price_max: null, stages: [], featured_only: false };
+    const v = { id: 'm', kind: 'custom' as const, enabled: true, title: 'A partir de 500 mil', rules };
+    const lista = [p('NA_DIVISA', { sale_price_from: 500000 }), p('ABAIXO', { sale_price_from: 499999 })];
+    const q = new URLSearchParams(buscaDaRegra(rules));
+    const busca = filterProperties(lista, { ...f('sale'), price_min: q.get('price_min') ?? '' }).map(x => x.code);
+    expect(itensDaVitrine(lista, v).map(x => x.code)).toEqual(['NA_DIVISA']);
+    expect(busca).toEqual(['NA_DIVISA']);
+  });
   it('vitrine desligada ou vazia some', () => {
     const h = resolverHome({ showcases: [{ id: 'featured', kind: 'featured', enabled: false }] });
     expect(vitrinesVisiveis(h, [p('B')]).map(v => v.vitrine.id)).toEqual([]);
