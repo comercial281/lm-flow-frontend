@@ -1,6 +1,6 @@
 // Mapa pequeno da Localização do cadastro: um alfinete arrastável no ponto do imóvel.
 // Carregado sob demanda (React.lazy) pela SecaoLocalizacao, como a VisaoMapa da lista.
-import { useEffect, useRef, type MutableRefObject } from 'react';
+import { useEffect, useMemo, useRef, type MutableRefObject } from 'react';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -54,9 +54,24 @@ function Recentralizar({ centro, zoom, arrastado }: {
   return null;
 }
 
+// Sem ponto (lat/lng nulos): o mapa abre no Brasil, sem alfinete — um arraste sem
+// querer, nesse zoom, gravaria um ponto qualquer.
 export default function MapaDoCadastro({ lat, lng, zoom, aoArrastar }: Props) {
-  const centro: [number, number] = lat != null && lng != null ? [lat, lng] : CENTRO_DO_BRASIL;
+  const temPonto = lat != null && lng != null;
+  const centro = useMemo<[number, number]>(
+    () => (lat != null && lng != null ? [lat, lng] : CENTRO_DO_BRASIL), [lat, lng],
+  );
   const arrastado = useRef<[number, number] | null>(null);
+  // O Marker do react-leaflet religa os eventos quando o objeto muda: fica o mesmo, e chama a função mais recente.
+  const aoArrastarRef = useRef(aoArrastar);
+  useEffect(() => { aoArrastarRef.current = aoArrastar; }, [aoArrastar]);
+  const eventos = useMemo(() => ({
+    dragend: (e: L.LeafletEvent) => {
+      const { lat: novaLat, lng: novaLng } = (e.target as L.Marker).getLatLng();
+      arrastado.current = [novaLat, novaLng];
+      aoArrastarRef.current(novaLat, novaLng);
+    },
+  }), []);
   return (
     // `isolate`: as camadas do Leaflet (z-index 400 a 1000) não pintam por cima das janelas da casa.
     <div className="relative isolate h-[240px] overflow-hidden rounded-xl border">
@@ -66,18 +81,7 @@ export default function MapaDoCadastro({ lat, lng, zoom, aoArrastar }: Props) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <Recentralizar centro={centro} zoom={zoom} arrastado={arrastado} />
-        <Marker
-          position={centro}
-          icon={alfinete}
-          draggable
-          eventHandlers={{
-            dragend: e => {
-              const { lat: novaLat, lng: novaLng } = (e.target as L.Marker).getLatLng();
-              arrastado.current = [novaLat, novaLng];
-              aoArrastar(novaLat, novaLng);
-            },
-          }}
-        />
+        {temPonto && <Marker position={centro} icon={alfinete} draggable eventHandlers={eventos} />}
       </MapContainer>
     </div>
   );
