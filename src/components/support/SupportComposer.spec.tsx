@@ -44,4 +44,18 @@ describe('SupportComposer', () => {
     await waitFor(() => expect(onEnviar).toHaveBeenCalled());
     expect(screen.getByRole('textbox')).toHaveValue('não perder');
   });
+
+  it('trava a caixa enquanto envia', async () => {
+    let fim: () => void = () => {};
+    const onEnviar = vi.fn(() => new Promise<void>(r => { fim = r; }));
+    render(<SupportComposer onEnviar={onEnviar} />);
+    const caixa = screen.getByRole('textbox');
+    fireEvent.change(caixa, { target: { value: 'oi' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    await waitFor(() => expect(caixa).toBeDisabled());
+    expect(screen.getByLabelText('Anexar imagem')).toBeDisabled();
+    fim();
+    await waitFor(() => expect(caixa).not.toBeDisabled());
+    expect(caixa).toHaveValue('');
+  });
 });

@@ -17,6 +17,8 @@ interface Props {
 /**
  * Caixa de texto do chat de suporte (cliente e admin). Aceita print colado
  * (Ctrl+V) e anexado. Só limpa quando o envio deu certo: falhou, o texto fica.
+ * Durante o envio a caixa e o anexo ficam travados: o que fosse digitado ali
+ * seria apagado junto com o que foi enviado.
  */
 export default function SupportComposer({ onEnviar, placeholder = 'Escreva sua mensagem', exigeTexto, extra, textoInicial }: Props) {
   const [texto, setTexto] = useState(textoInicial ?? '');
@@ -29,7 +31,7 @@ export default function SupportComposer({ onEnviar, placeholder = 'Escreva sua m
   useEffect(() => () => miniaturas.forEach(m => URL.revokeObjectURL(m.url)), [miniaturas]);
 
   const adicionar = (novas: File[]) => {
-    if (!novas.length) return;
+    if (!novas.length || enviando) return;
     const r = juntarImagens(imagens, novas);
     setImagens(r.imagens);
     setErro(r.erro);
@@ -82,6 +84,7 @@ export default function SupportComposer({ onEnviar, placeholder = 'Escreva sua m
         placeholder={placeholder}
         rows={3}
         maxLength={4000}
+        disabled={enviando}
       />
       <div className="flex items-center justify-between gap-2">
         <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
@@ -92,6 +95,7 @@ export default function SupportComposer({ onEnviar, placeholder = 'Escreva sua m
             type="file"
             accept="image/png,image/jpeg,image/webp"
             multiple
+            disabled={enviando}
             aria-label="Anexar imagem"
             className="sr-only"
             onChange={e => {
