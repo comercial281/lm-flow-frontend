@@ -33,7 +33,9 @@ export default function SupportInicio({ onPergunta, onChamado }: Props) {
             value={termo}
             onChange={e => setTermo(e.target.value)}
             placeholder="Qual é a sua dúvida?"
-            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            aria-label="Qual é a sua dúvida?"
+            // 16px no celular: abaixo disso o iOS dá zoom ao focar.
+            className="w-full bg-transparent text-base outline-none sm:text-sm placeholder:text-muted-foreground"
           />
         </label>
         {achadas.length > 0 ? (

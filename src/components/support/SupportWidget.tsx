@@ -62,6 +62,8 @@ export default function SupportWidget() {
   const { naoLidos, atualizar } = useNaoLidos();
   const bolinha = useRef<HTMLButtonElement>(null);
   const card = useRef<HTMLDivElement>(null);
+  // Tocar na aba Mensagens sempre recarrega a lista (vira `recarga` do SupportMensagens).
+  const [recargaMensagens, setRecargaMensagens] = useState(0);
 
   const abrir = useCallback((alvo: AlvoSuporte = {}) => {
     if (alvo.chamadoId) setTela({ nome: 'chamado', id: alvo.chamadoId });
@@ -102,6 +104,19 @@ export default function SupportWidget() {
     if (aberto) card.current?.focus();
   }, [aberto]);
 
+  // Esc no document: o menu do avatar (Radix) devolve o foco ao avatar depois do nosso
+  // card.focus(), e o keydown do card nunca recebe a tecla. Vale pra qualquer entrada.
+  const fecharRef = useRef(fechar);
+  fecharRef.current = fechar;
+  useEffect(() => {
+    if (!aberto) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') fecharRef.current();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [aberto]);
+
   const aba = ABA_DA_TELA[tela.nome];
   const podeVoltar = tela.nome === 'roteiro' || tela.nome === 'novo' || tela.nome === 'chamado';
   const voltar = () => setTela(aba === 'inicio' ? { nome: 'inicio' } : { nome: 'mensagens' });
@@ -113,13 +128,13 @@ export default function SupportWidget() {
           ref={bolinha}
           type="button"
           onClick={() => (aberto ? fechar() : abrir())}
-          aria-label="Abrir ajuda e suporte"
+          aria-label={naoLidos > 0 && !aberto ? `Abrir ajuda e suporte, ${naoLidos} com resposta nova` : 'Abrir ajuda e suporte'}
           aria-expanded={aberto}
           className="fixed bottom-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90"
         >
           {aberto ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
           {naoLidos > 0 && !aberto && (
-            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground">
+            <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground">
               {naoLidos}
             </span>
           )}
@@ -135,9 +150,6 @@ export default function SupportWidget() {
           // Fechado = fora da ordem de Tab e dos leitores de tela, mas montado.
           inert={!aberto}
           aria-hidden={!aberto}
-          onKeyDown={e => {
-            if (e.key === 'Escape') fechar();
-          }}
           // Mobile: encolhe com o teclado, como o MainLayout (var(--keyboard-inset), 0px com teclado fechado).
           className={cn(
             'fixed inset-x-0 top-0 z-50 flex h-[calc(100dvh-var(--keyboard-inset,0px))] flex-col overflow-hidden bg-background shadow-2xl outline-none sm:inset-auto sm:right-4 sm:bottom-20 sm:h-[600px] sm:max-h-[calc(100vh-6rem)] sm:w-[380px] sm:rounded-2xl sm:border sm:border-border',
@@ -189,14 +201,14 @@ export default function SupportWidget() {
               />
             )}
             {tela.nome === 'mensagens' && (
-              <SupportMensagens onAbrir={id => setTela({ nome: 'chamado', id })} onNovo={() => setTela({ nome: 'novo', kind: 'question' })} />
+              <SupportMensagens aberto={aberto} recarga={recargaMensagens} onAbrir={id => setTela({ nome: 'chamado', id })} onNovo={() => setTela({ nome: 'novo', kind: 'question' })} />
             )}
             {tela.nome === 'chamado' && (
               <SupportChamadoCliente id={tela.id} recemCriado={tela.recemCriado} aberto={aberto} onLido={() => void atualizar()} />
             )}
           </div>
 
-          <nav role="tablist" className="grid grid-cols-2 border-t border-border pb-[env(safe-area-inset-bottom)] sm:pb-0">
+          <nav role="tablist" className="grid grid-cols-2 border-t border-border pb-[max(0px,env(safe-area-inset-bottom)-var(--keyboard-inset,0px))] sm:pb-0">
             {(
               [
                 { chave: 'inicio', rotulo: 'Início', icone: Home, ir: { nome: 'inicio' } as Tela },
@@ -208,13 +220,18 @@ export default function SupportWidget() {
                 type="button"
                 role="tab"
                 aria-selected={aba === chave}
-                onClick={() => setTela(ir)}
+                onClick={() => {
+                  setTela(ir);
+                  if (chave === 'mensagens') setRecargaMensagens(n => n + 1);
+                }}
                 className={cn('flex flex-col items-center gap-0.5 py-2.5 text-xs', aba === chave ? 'font-semibold text-primary' : 'text-muted-foreground')}
               >
                 <span className="relative">
                   <Icone className="h-5 w-5" aria-hidden="true" />
                   {chave === 'mensagens' && naoLidos > 0 && (
-                    <span className="absolute -right-2 -top-1 h-2 w-2 rounded-full bg-destructive" aria-label={`${naoLidos} com resposta nova`} />
+                    <span className="absolute -right-2 -top-1 h-2 w-2 rounded-full bg-destructive">
+                      <span className="sr-only">{naoLidos} com resposta nova</span>
+                    </span>
                   )}
                 </span>
                 {rotulo}

@@ -58,4 +58,18 @@ describe('SupportComposer', () => {
     await waitFor(() => expect(caixa).not.toBeDisabled());
     expect(caixa).toHaveValue('');
   });
+
+  it('depois de enviar, a caixa volta a ter o foco (o teclado do celular não fecha)', async () => {
+    let termina!: () => void;
+    const onEnviar = vi.fn(() => new Promise<void>(r => (termina = r)));
+    render(<SupportComposer onEnviar={onEnviar} />);
+    const caixa = screen.getByRole('textbox');
+    caixa.focus();
+    fireEvent.change(caixa, { target: { value: 'oi' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    await waitFor(() => expect(caixa).toBeDisabled());
+    termina();
+    await waitFor(() => expect(caixa).not.toBeDisabled());
+    await waitFor(() => expect(document.activeElement).toBe(caixa));
+  });
 });

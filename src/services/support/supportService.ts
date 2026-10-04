@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import api from '@/services/core/api';
 
 // Chat de suporte — lado do CLIENTE. Token e X-Tenant vêm do interceptor do
@@ -54,6 +55,10 @@ export function erroDaApi(e: unknown, padrao: string): string {
   return typeof msg === 'string' && msg.trim() ? msg : padrao;
 }
 
+// 403 'Acesso restrito' já vira a frase do servidor no nosso toast: cala o do interceptor do core.
+// (cast: o interceptor lê o campo, mas ele não está no tipo do axios)
+const SEM_TOAST_403 = { silentForbidden: true } as AxiosRequestConfig;
+
 export const supportService = {
   async list(): Promise<SupportTicketSummary[]> {
     const { data } = await api.get('/support_tickets');
@@ -72,11 +77,11 @@ export const supportService = {
       { kind: input.kind, body: input.body, subject: input.subject, faq_topic: input.faqTopic, page_url: input.pageUrl },
       input.imagens,
     );
-    const { data } = await api.post('/support_tickets', form);
+    const { data } = await api.post('/support_tickets', form, SEM_TOAST_403);
     return data.data;
   },
   async reply(id: string, body: string, imagens: File[]): Promise<SupportTicketDetail> {
-    const { data } = await api.post(`/support_tickets/${id}/messages`, formulario({ body }, imagens));
+    const { data } = await api.post(`/support_tickets/${id}/messages`, formulario({ body }, imagens), SEM_TOAST_403);
     return data.data;
   },
 };

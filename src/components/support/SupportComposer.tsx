@@ -26,6 +26,16 @@ export default function SupportComposer({ onEnviar, placeholder = 'Escreva sua m
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const arquivo = useRef<HTMLInputElement>(null);
+  const caixa = useRef<HTMLTextAreaElement>(null);
+  const devolverFoco = useRef(false);
+
+  // Travar a caixa tira o foco e fecha o teclado do iPhone: devolve quando destravar.
+  useEffect(() => {
+    if (!enviando && devolverFoco.current) {
+      devolverFoco.current = false;
+      caixa.current?.focus();
+    }
+  }, [enviando]);
 
   const miniaturas = useMemo(() => imagens.map(f => ({ f, url: URL.createObjectURL(f) })), [imagens]);
   useEffect(() => () => miniaturas.forEach(m => URL.revokeObjectURL(m.url)), [miniaturas]);
@@ -41,6 +51,7 @@ export default function SupportComposer({ onEnviar, placeholder = 'Escreva sua m
 
   const enviar = async () => {
     if (!podeEnviar) return;
+    devolverFoco.current = document.activeElement === caixa.current;
     setEnviando(true);
     try {
       await onEnviar(texto.trim(), imagens);
@@ -75,6 +86,7 @@ export default function SupportComposer({ onEnviar, placeholder = 'Escreva sua m
       )}
       {erro && <p className="text-xs text-destructive">{erro}</p>}
       <Textarea
+        ref={caixa}
         value={texto}
         onChange={e => setTexto(e.target.value)}
         onPaste={e => adicionar(Array.from(e.clipboardData?.files ?? []))}

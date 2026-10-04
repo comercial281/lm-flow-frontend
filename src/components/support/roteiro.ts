@@ -88,7 +88,7 @@ export const ROTEIRO: Record<PassoId, Passo> = {
   ]),
   'lead-sem-aviso': fim([
     'Confira com o gestor da sua imobiliária se você está ativo na Roleta de leads.',
-    'Para receber o aviso no celular, ligue o Modo Plantão: o botão Plantão, com um sininho, no topo da tela.',
+    'Para receber o aviso no celular, ligue o Modo Plantão: toque no sininho do Plantão, o que fica ao lado esquerdo do sino de avisos, no topo da tela.',
     'No iPhone, o aviso só funciona com o LM Flow instalado na Tela de Início. Dentro do WhatsApp ou do Instagram não há aviso: abra no Chrome ou no Safari.',
   ]),
   'ia-nao-respondeu': {

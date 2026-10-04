@@ -53,6 +53,8 @@ describe('SupportWidget', () => {
     svc.unreadCount.mockResolvedValue(2);
     montar();
     expect(await screen.findByText('2')).toBeInTheDocument();
+    // O nome acessível da bolinha leva a contagem (o número visual é aria-hidden).
+    expect(screen.getByRole('button', { name: /Abrir ajuda e suporte, 2 com resposta nova/ })).toBeInTheDocument();
   });
 
   it('a bolinha some em Conversas, mas o menu do avatar ainda abre o card', async () => {
@@ -173,5 +175,52 @@ describe('SupportWidget', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
     expect(document.activeElement).toBe(antes);
     antes.remove();
+  });
+
+  it('Esc no document fecha o card (o menu do avatar devolve o foco ao avatar)', async () => {
+    montar('/conversations/1');
+    const avatar = document.createElement('button');
+    document.body.appendChild(avatar);
+    act(() => openSupport());
+    await screen.findByRole('dialog');
+    avatar.focus();
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    avatar.remove();
+  });
+
+  it('reabrir o card recarrega a lista de Mensagens', async () => {
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: /Abrir ajuda e suporte/ }));
+    fireEvent.click(await screen.findByRole('tab', { name: /Mensagens/ }));
+    await screen.findByText('Você ainda não abriu nenhum chamado.');
+    expect(svc.list).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+    fireEvent.click(screen.getByRole('button', { name: /Abrir ajuda e suporte/ }));
+    await waitFor(() => expect(svc.list).toHaveBeenCalledTimes(2));
+  });
+
+  it('tocar de novo na aba Mensagens recarrega a lista', async () => {
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: /Abrir ajuda e suporte/ }));
+    fireEvent.click(await screen.findByRole('tab', { name: /Mensagens/ }));
+    await screen.findByText('Você ainda não abriu nenhum chamado.');
+    fireEvent.click(screen.getByRole('tab', { name: /Mensagens/ }));
+    await waitFor(() => expect(svc.list).toHaveBeenCalledTimes(2));
+  });
+
+  it('o chamado abre rolado até a última mensagem', async () => {
+    const topo = vi.fn();
+    const proto = HTMLElement.prototype;
+    Object.defineProperty(proto, 'scrollHeight', { configurable: true, get: () => 900 });
+    Object.defineProperty(proto, 'scrollTop', { configurable: true, get: () => 0, set: topo });
+    try {
+      montar('/dashboard?suporte=t1');
+      await screen.findByText('Socorro');
+      expect(topo).toHaveBeenCalledWith(900);
+    } finally {
+      delete (proto as unknown as Record<string, unknown>).scrollHeight;
+      delete (proto as unknown as Record<string, unknown>).scrollTop;
+    }
   });
 });

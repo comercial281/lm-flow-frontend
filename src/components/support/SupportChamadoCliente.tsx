@@ -20,6 +20,14 @@ export default function SupportChamadoCliente({ id, recemCriado, aberto, onLido 
   const { dado, erro, recarregar } = useChamado(carregar, aberto ? 10000 : 0);
 
   // Reabriu o card: o que veio enquanto estava fechado aparece já, sem esperar o próximo tick.
+  // Chat abre no fim: a mensagem mais nova é a que importa (carga, envio e polling).
+  const rolagem = useRef<HTMLDivElement>(null);
+  const total = dado?.messages.length;
+  useEffect(() => {
+    const el = rolagem.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [total, recemCriado]);
+
   const estavaAberto = useRef(aberto);
   useEffect(() => {
     if (aberto && !estavaAberto.current) void recarregar();
@@ -45,7 +53,7 @@ export default function SupportChamadoCliente({ id, recemCriado, aberto, onLido 
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto">
+      <div ref={rolagem} className="flex-1 overflow-y-auto">
         <SupportThread mensagens={dado.messages} eu="customer" />
         {recemCriado && (
           <p className="mx-3 mb-3 w-fit max-w-[85%] rounded-2xl bg-muted px-3 py-2 text-sm">
