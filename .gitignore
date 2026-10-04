@@ -4,6 +4,7 @@ CHAT_IMPLEMENTATION_ROADMAP.md
 
 # Logs
 logs
+!src/pages/SuperAdmin/Logs/
 *.log
 npm-debug.log*
 yarn-debug.log*

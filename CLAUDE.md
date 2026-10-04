@@ -6087,3 +6087,4 @@ Usuários → Logs (`/admin/usuarios/logs`, `src/pages/SuperAdmin/Logs/`). Spec:
 - **Carregar mais** (30 por vez) pede os anteriores ao último item da lista; trocar filtro recomeça do zero e resposta atrasada é descartada.
 - **Cliente que falha não esconde os outros:** aviso "Não deu para ler: …" acima da tabela. Erro geral mostra *Tentar de novo*, nunca lista vazia.
 - A página não se embrulha em `AdminConteudo`: a rota já faz isso.
+- **A ficha** do usuário marca as ações sensíveis do histórico com o mesmo selo *Sensível*.
