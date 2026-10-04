@@ -3,7 +3,8 @@
 // Spec: LM FLOW/specs/2026-10-03-meu-site-painel-design.md (A1).
 
 export type GrupoId = 'painel' | 'personalizar' | 'marketing' | 'config';
-export type TelaId = 'painel' | 'contatos' | 'aparencia' | 'busca' | 'vitrines' | 'chamadas' | 'buscados' | 'paginas' | 'financiamento' | 'anuncie' | 'traducao'
+export type TelaId = 'painel' | 'contatos' | 'aparencia' | 'busca' | 'vitrines' | 'chamadas' | 'buscados' | 'ficha' | 'lista'
+  | 'paginas' | 'financiamento' | 'anuncie' | 'traducao'
   | 'blog' | 'anuncios' | 'redes' | 'rastreamento' | 'marca' | 'endereco' | 'dados' | 'destino' | 'google';
 
 export interface TelaInfo {
@@ -31,6 +32,8 @@ export const TELAS: TelaInfo[] = [
   { id: 'vitrines', grupo: 'personalizar', rotulo: 'Página inicial · Vitrines', dica: 'Faixas de imóveis', titulo: 'Vitrines', frase: 'Faixas de imóveis na página inicial. Elas se atualizam sozinhas.', noMenu: true },
   { id: 'chamadas', grupo: 'personalizar', rotulo: 'Página inicial · Chamadas', dica: 'Financiamento, Anuncie e outros', titulo: 'Chamadas', frase: 'Os atalhos da página inicial: financiamento, anunciar imóvel, encomenda e os seus.', noMenu: true },
   { id: 'buscados', grupo: 'personalizar', rotulo: 'Página inicial · Mais buscados', dica: 'Atalhos pra busca', titulo: 'Mais buscados', frase: 'Atalhos que levam direto pra busca, por tipo e bairro.', noMenu: true },
+  { id: 'ficha', grupo: 'personalizar', rotulo: 'Página do imóvel', dica: 'O que aparece em cada imóvel', titulo: 'Página do imóvel', frase: 'O que aparece na página de cada imóvel e quem recebe cópia dos contatos feitos nela.', noMenu: true },
+  { id: 'lista', grupo: 'personalizar', rotulo: 'Lista de imóveis', dica: 'Ordem e visual dos cartões', titulo: 'Lista de imóveis', frase: 'A ordem e o visual dos imóveis na busca do site.', noMenu: true },
   { id: 'paginas', grupo: 'personalizar', rotulo: 'Páginas', dica: 'Sobre nós e outras', titulo: 'Páginas', frase: 'Páginas que você cria e que podem aparecer no menu do site.', noMenu: true },
   { id: 'financiamento', grupo: 'personalizar', rotulo: 'Financiamento', dica: 'Simulador dos bancos', titulo: 'Financiamento', frase: 'A página com os simuladores dos bancos.', noMenu: true },
   { id: 'anuncie', grupo: 'personalizar', rotulo: 'Anuncie seu imóvel', dica: 'Captação de imóvel', titulo: 'Anuncie seu imóvel', frase: 'A página onde o proprietário oferece o imóvel.', noMenu: true },

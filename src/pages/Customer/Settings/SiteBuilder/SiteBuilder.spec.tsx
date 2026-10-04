@@ -195,5 +195,118 @@ describe('SiteBuilder (casca do Meu site)', () => {
     expect((screen.getByLabelText('Telefone') as HTMLInputElement).value).toBe('(11) 3333-4444 ramal 21');
     expect(screen.queryByRole('region', { name: 'Alterações não salvas' })).toBeNull();
   });
-});
 
+  describe('Página do imóvel e Lista de imóveis', () => {
+    // A barra abre a lista suspensa no ponteiro (Radix): userEvent, como no MeuSiteBarra.spec.
+    const navegar = async (grupo: RegExp, item: RegExp) => {
+      await userEvent.click(screen.getByRole('button', { name: grupo }));
+      await userEvent.click(await screen.findByRole('menuitem', { name: item }));
+    };
+    const salvar = async (vez = 1) => {
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+      await waitFor(() => expect(mocks.updateSite).toHaveBeenCalledTimes(vez));
+      return mocks.updateSite.mock.calls[vez - 1][1];
+    };
+    const barra = () => screen.queryByRole('region', { name: 'Alterações não salvas' });
+
+    it('abrir as duas telas sem mexer não mostra o Salvar, e salvar outra coisa não leva os blocos', async () => {
+      mocks.updateSite.mockResolvedValue(SITE);
+      abrir('/settings/site-builder?tela=ficha');
+      await screen.findByRole('heading', { name: 'Página do imóvel' });
+      expect(barra()).toBeNull();
+
+      await navegar(/Personalizar/, /Lista de imóveis/);
+      await screen.findByRole('heading', { name: 'Lista de imóveis' });
+      expect(barra()).toBeNull();
+
+      await navegar(/Configurações/, /Dados de contato/);
+      await userEvent.type(await screen.findByLabelText('Telefone'), '11999990000');
+      const payload = await salvar();
+      expect(payload).not.toHaveProperty('property_page');
+      expect(payload).not.toHaveProperty('listing');
+    });
+
+    it('carrega os e-mails da cópia; mexer numa caixinha leva o property_page inteiro, com os e-mails em lista', async () => {
+      mocks.listSites.mockResolvedValue([{ ...SITE, property_page: { resale: { map: false }, email_copy: ['dono@imob.com'] } }]);
+      mocks.updateSite.mockResolvedValue(SITE);
+      abrir('/settings/site-builder?tela=ficha');
+      await screen.findByRole('heading', { name: 'Página do imóvel' });
+      expect((screen.getByLabelText('E-mail 1') as HTMLInputElement).value).toBe('dono@imob.com');
+      expect(screen.getByRole('checkbox', { name: 'Mapa' })).toHaveAttribute('aria-checked', 'false');
+
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Você também pode gostar' }));
+      expect(barra()).toBeTruthy();
+      const payload = await salvar();
+
+      expect(payload.property_page).toEqual({
+        resale: { map: false, popular_badge: true, values: true, similar: false },
+        development: { map: true, popular_badge: true, stage_and_forecast: true, typologies: true, builder: true, similar: true },
+        financing_badges: true,
+        email_copy: ['dono@imob.com'],
+      });
+      expect(payload).not.toHaveProperty('listing');
+      expect(payload).not.toHaveProperty('home');
+    });
+
+    it('e-mail com espaço nas pontas sai aparado e campo em branco não viaja', async () => {
+      mocks.updateSite.mockResolvedValue(SITE);
+      abrir('/settings/site-builder?tela=ficha');
+      await screen.findByRole('heading', { name: 'Página do imóvel' });
+      await userEvent.click(screen.getByRole('button', { name: /Adicionar e-mail/ }));
+      await userEvent.type(screen.getByLabelText('E-mail 1'), ' novo@imob.com ');
+      await userEvent.click(screen.getByRole('button', { name: /Adicionar e-mail/ }));
+
+      const payload = await salvar();
+      expect(payload.property_page.email_copy).toEqual(['novo@imob.com']);
+    });
+
+    it('depois de salvar, a tela mostra o que o servidor gravou e a flag zera', async () => {
+      mocks.updateSite.mockResolvedValue({ ...SITE, property_page: { email_copy: ['ok@imob.com'] } });
+      abrir('/settings/site-builder?tela=ficha');
+      await screen.findByRole('heading', { name: 'Página do imóvel' });
+      await userEvent.click(screen.getByRole('button', { name: /Adicionar e-mail/ }));
+      await userEvent.type(screen.getByLabelText('E-mail 1'), 'ok@imob.com');
+      await userEvent.click(screen.getByRole('button', { name: /Adicionar e-mail/ }));
+      await userEvent.type(screen.getByLabelText('E-mail 2'), 'errado@');
+      expect((await salvar()).property_page.email_copy).toEqual(['ok@imob.com', 'errado@']);
+
+      // O servidor descartou o inválido: a tela relê o gravado.
+      await waitFor(() => expect(screen.queryByLabelText('E-mail 2')).toBeNull());
+      expect((screen.getByLabelText('E-mail 1') as HTMLInputElement).value).toBe('ok@imob.com');
+
+      await navegar(/Configurações/, /Dados de contato/);
+      await userEvent.type(await screen.findByLabelText('Telefone'), '11999990000');
+      expect(await salvar(2)).not.toHaveProperty('property_page');
+    });
+
+    it('Descartar zera a alteração da Página do imóvel', async () => {
+      mocks.updateSite.mockResolvedValue(SITE);
+      abrir('/settings/site-builder?tela=ficha');
+      await screen.findByRole('heading', { name: 'Página do imóvel' });
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Mapa' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Descartar' }));
+      await waitFor(() => expect(mocks.listSites).toHaveBeenCalledTimes(2));
+      expect(await screen.findByRole('checkbox', { name: 'Mapa' })).toHaveAttribute('aria-checked', 'true');
+
+      await navegar(/Configurações/, /Dados de contato/);
+      await userEvent.type(await screen.findByLabelText('Telefone'), '11999990000');
+      expect(await salvar()).not.toHaveProperty('property_page');
+    });
+
+    it('Lista de imóveis: a miniatura leva o listing inteiro, sem o property_page', async () => {
+      mocks.listSites.mockResolvedValue([{ ...SITE, listing: { default_sort: 'price_asc', card_layout: 'grid' } }]);
+      mocks.updateSite.mockResolvedValue({ ...SITE, listing: { default_sort: 'price_asc', card_layout: 'rows' } });
+      abrir('/settings/site-builder?tela=lista');
+      await screen.findByRole('heading', { name: 'Lista de imóveis' });
+      expect((screen.getByLabelText('Ordem padrão') as HTMLSelectElement).value).toBe('price_asc');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Linhas largas' }));
+      const payload = await salvar();
+      expect(payload.listing).toEqual({ default_sort: 'price_asc', card_layout: 'rows' });
+      expect(payload).not.toHaveProperty('property_page');
+
+      await waitFor(() => expect(barra()).toBeNull());
+      expect(screen.getByRole('button', { name: 'Linhas largas' })).toHaveAttribute('aria-pressed', 'true');
+    });
+  });
+});

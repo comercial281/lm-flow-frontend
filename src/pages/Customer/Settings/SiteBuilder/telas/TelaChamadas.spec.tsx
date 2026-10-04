@@ -172,4 +172,30 @@ describe('TelaChamadas', () => {
     await userEvent.click(dialogo.getByRole('button', { name: 'Remover' }));
     expect(ultimoHome(espiao).callouts.custom).toEqual([]);
   });
+
+  it('Financiamento e Anuncie dizem se a página está ligada, pelo último salvo', () => {
+    const site = { id: 's1', financiamento: { enabled: true }, anuncie: { enabled: false } } as unknown as Site;
+    render(<Montar espiao={vi.fn()} site={site} />);
+
+    const fin = within(screen.getByRole('group', { name: 'Financiamento' }));
+    expect(fin.getByText('Página ligada')).toBeTruthy();
+    expect(fin.queryByText(/Página desligada/)).toBeNull();
+
+    const anuncie = within(screen.getByRole('group', { name: 'Anuncie seu imóvel' }));
+    expect(anuncie.getByText(/^Página desligada: a chamada não aparece no site\./)).toBeTruthy();
+    expect(anuncie.getByText(/salve para valer/)).toBeTruthy();
+    expect(anuncie.queryByText('Página ligada')).toBeNull();
+
+    // Encomenda leva pro formulário da página inicial: não tem página pra ligar.
+    const encomenda = within(screen.getByRole('group', { name: 'Imóvel sob encomenda' }));
+    expect(encomenda.queryByText(/Página (ligada|desligada)/)).toBeNull();
+  });
+
+  it('site salvo sem os dados da página: Financiamento e Anuncie contam como desligadas', () => {
+    render(<Montar espiao={vi.fn()} site={{ id: 's1' } as Site} />);
+
+    for (const nome of ['Financiamento', 'Anuncie seu imóvel']) {
+      expect(within(screen.getByRole('group', { name: nome })).getByText(/^Página desligada/)).toBeTruthy();
+    }
+  });
 });

@@ -52,4 +52,15 @@ describe('meuSiteMenu', () => {
     expect(telaInfo('busca').titulo).toBe('Busca rápida');
     expect(trilhaDe('chamadas')).toBe('Personalizar');
   });
+
+  it('Página do imóvel e Lista de imóveis ficam no Personalizar, logo depois da página inicial', () => {
+    const ids = itensDoGrupo('personalizar', { podeAnuncios: true }).map(t => t.id);
+    expect(ids.slice(ids.indexOf('buscados'), ids.indexOf('buscados') + 3)).toEqual(['buscados', 'ficha', 'lista']);
+    expect(telaDaUrl(new URLSearchParams('tela=ficha'))).toBe('ficha');
+    expect(telaDaUrl(new URLSearchParams('tela=lista'))).toBe('lista');
+    expect(telaInfo('ficha').titulo).toBe('Página do imóvel');
+    expect(telaInfo('lista').titulo).toBe('Lista de imóveis');
+    expect(trilhaDe('ficha')).toBe('Personalizar');
+    expect(trilhaDe('lista')).toBe('Personalizar');
+  });
 });

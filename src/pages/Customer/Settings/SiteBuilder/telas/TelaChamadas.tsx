@@ -31,6 +31,14 @@ const PRONTAS: { id: ChamadaPadraoId; destino: string }[] = [
   { id: 'wanted', destino: 'Leva pro formulário de contato da página inicial.' },
 ];
 
+// Financiamento e Anuncie só aparecem no site com a página ligada. A tela lê o
+// ÚLTIMO SALVO (`site`), não o que está sendo editado em outra tela.
+function paginaLigada(site: FormProps['site'], id: ChamadaPadraoId): boolean | null {
+  if (id === 'financing') return site?.financiamento?.enabled === true;
+  if (id === 'listing') return site?.anuncie?.enabled === true;
+  return null;
+}
+
 const CHAMADA_NOVA: ChamadaLivre = { title: '', text: null, button: null, dest_type: 'page', dest_value: null };
 
 const texto = (v: string) => (v.trim() === '' ? null : v);
@@ -146,6 +154,7 @@ export default function TelaChamadas({ site, siteForm, setF }: FormProps) {
         {PRONTAS.map(({ id, destino }) => {
           const p = c.defaults[id];
           const f = TEXTO_FABRICA[id];
+          const ligada = paginaLigada(site, id);
           return (
             <fieldset key={id} className="rounded-lg border border-border p-4 space-y-4">
               <legend className="px-1 text-sm font-medium">{f.title}</legend>
@@ -156,6 +165,12 @@ export default function TelaChamadas({ site, siteForm, setF }: FormProps) {
               <CamposDeTexto idBase={`pronta-${id}`} titulo={p.title ?? ''} texto={p.text ?? ''} botao={p.button ?? ''}
                 dicas={f} mudar={(campo, v) => mudarPronta(id, { [campo]: texto(v) })} />
               <p className="text-sm text-muted-foreground">{destino}</p>
+              {ligada === true && <p className="text-sm text-emerald-700 dark:text-emerald-400">Página ligada</p>}
+              {ligada === false && (
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  Página desligada: a chamada não aparece no site. Se você acabou de ligar a página, salve para valer.
+                </p>
+              )}
             </fieldset>
           );
         })}
