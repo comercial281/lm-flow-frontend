@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, act, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 
 const apiGet = vi.hoisted(() => vi.fn());
 const apiPost = vi.hoisted(() => vi.fn());
@@ -28,7 +28,8 @@ const pagina = (items: unknown[], extra: Record<string, unknown> = {}) => ({
   } },
 });
 
-const montar = () => render(<MemoryRouter><Usuarios /></MemoryRouter>);
+const Url = () => { const l = useLocation(); return <div data-testid="url">{l.pathname}{l.search}</div>; };
+const montar = (inicial = '/admin/usuarios') => render(<MemoryRouter initialEntries={[inicial]}><Usuarios /><Url /></MemoryRouter>);
 
 describe('Usuarios', () => {
   beforeEach(() => { apiGet.mockReset(); apiPost.mockReset(); toast.success.mockReset(); toast.error.mockReset(); });
@@ -148,5 +149,61 @@ describe('Usuarios', () => {
     await act(async () => { solta({ data: { success: true, data: { ...pagina([{ ...ana, name: 'Pagina Dois', user_id: 'u5' }]).data.data, meta: { total: 45, page: 2, per_page: 20 } } } }); });
     await waitFor(() => expect(screen.getByText('Pagina Dois')).toBeInTheDocument());
     expect(screen.getByRole('button', { name: /anterior/i })).not.toBeDisabled();
+  });
+
+  it('abre já filtrado pela URL e manda os mesmos parâmetros pra API', async () => {
+    apiGet.mockResolvedValue(pagina([ana]));
+    montar('/admin/usuarios?q=maria&situation=sumido');
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/users', { params: { per_page: 20, q: 'maria', situation: 'sumido' } }));
+    expect((screen.getByLabelText('Buscar') as HTMLInputElement).value).toBe('maria');
+    expect((screen.getByLabelText('Situação') as HTMLSelectElement).value).toBe('sumido');
+  });
+
+  it('mudar filtro atualiza a URL e a busca entra na URL depois de 300 ms', async () => {
+    apiGet.mockResolvedValue(pagina([ana]));
+    montar();
+    await waitFor(() => expect(screen.getByText('Ana Souza')).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText('Incluir equipe Leal Mídia'));
+    await waitFor(() => expect(screen.getByTestId('url')).toHaveTextContent('/admin/usuarios?equipe=1'));
+    fireEvent.change(screen.getByLabelText('Buscar'), { target: { value: 'ana' } });
+    expect(screen.getByTestId('url')).not.toHaveTextContent('q=ana');
+    await waitFor(() => expect(screen.getByTestId('url')).toHaveTextContent('q=ana'));
+    expect(screen.getByTestId('url')).toHaveTextContent('equipe=1');
+  });
+
+  it('o link do nome leva a busca atual pra ficha voltar à mesma lista', async () => {
+    apiGet.mockResolvedValue(pagina([ana]));
+    montar('/admin/usuarios?q=ana&page=1');
+    await waitFor(() => expect(screen.getByText('Ana Souza')).toBeInTheDocument());
+    expect(screen.getByRole('link', { name: 'Ana Souza' })).toHaveAttribute('href', '/admin/usuarios/tenant_a/u1?q=ana&page=1');
+  });
+
+  it('desativado não mostra ações de link', async () => {
+    apiGet.mockResolvedValue(pagina([{ ...ana, situation: 'desativado' }]));
+    montar();
+    await waitFor(() => expect(screen.getByText('Ana Souza')).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /link/i })).not.toBeInTheDocument();
+  });
+
+  it('sem telefone: Enviar link desabilitado com explicação, Copiar continua', async () => {
+    apiGet.mockResolvedValue(pagina([{ ...ana, phone: null }]));
+    montar();
+    await waitFor(() => expect(screen.getByText('Ana Souza')).toBeInTheDocument());
+    const enviar = screen.getByRole('button', { name: /enviar link/i });
+    expect(enviar).toBeDisabled();
+    expect(enviar).toHaveAttribute('title', 'Sem WhatsApp no cadastro — use Copiar link');
+    expect(screen.getByRole('button', { name: /copiar link/i })).not.toBeDisabled();
+  });
+
+  it('erro do backend vira mensagem amigável (404 e demais)', async () => {
+    apiGet.mockResolvedValue(pagina([ana]));
+    apiPost.mockRejectedValueOnce({ response: { status: 404, data: { error: 'usuario nao encontrado' } } });
+    montar();
+    await waitFor(() => expect(screen.getByText('Ana Souza')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /copiar link/i }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Não achei essa pessoa nesse cliente.'));
+    apiPost.mockRejectedValueOnce({ response: { status: 500, data: { error: 'schema do cliente nao existe' } } });
+    fireEvent.click(screen.getByRole('button', { name: /copiar link/i }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Não deu para gerar o link. Tente de novo.'));
   });
 });

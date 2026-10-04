@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import AdminConteudo from '@/pages/Admin/Area/AdminConteudo';
 import BaseTable from '@/components/base/BaseTable';
 import { BaseStatusBadge } from '@/components/base';
@@ -16,30 +16,52 @@ import { OPCOES_SITUACAO, duracao, rotuloSituacao, statusDaSituacao } from './fo
 const TODOS = '__todos__';
 const ESPERA_DA_BUSCA_MS = 300;
 
+const SITUACOES = OPCOES_SITUACAO.map((o) => o.valor);
+
 export default function Usuarios() {
-  const [busca, setBusca] = useState('');
-  const [q, setQ] = useState('');
-  const [tenant, setTenant] = useState<string | null>(null);
-  const [role, setRole] = useState('');
-  const [situation, setSituation] = useState<UserFilters['situation']>('');
-  const [includeTeam, setIncludeTeam] = useState(false);
+  // Filtros e página moram na URL (?q, tenant, role, situation, equipe=1, page): voltar da ficha
+  // devolve a mesma lista, e o link pode ser compartilhado.
+  const [params, setParams] = useSearchParams();
+  const q = params.get('q') ?? '';
+  const tenant = params.get('tenant');
+  const role = params.get('role') ?? '';
+  const situacaoUrl = params.get('situation') ?? '';
+  const situation = (SITUACOES.includes(situacaoUrl as UserFilters['situation']) ? situacaoUrl : '') as UserFilters['situation'];
+  const includeTeam = params.get('equipe') === '1';
+  const page = Math.max(1, parseInt(params.get('page') ?? '', 10) || 1);
+
+  const [busca, setBusca] = useState(q);
   const [dados, setDados] = useState<(UsersPage & { chave: string }) | null>(null);
   const [erro, setErro] = useState(false);
   // Opções dos Seletores: última lista conhecida, sobrevive a erro e a troca de filtro.
   const [tenants, setTenants] = useState<UsersPage['tenants']>([]);
   const [roles, setRoles] = useState<string[]>([]);
 
-  // Espera 300 ms depois da última tecla antes de buscar.
-  useEffect(() => {
-    const t = setTimeout(() => setQ(busca.trim()), ESPERA_DA_BUSCA_MS);
-    return () => clearTimeout(t);
-  }, [busca]);
+  // Mudou qualquer filtro, volta pra página 1 (só `page` explícito preserva a página).
+  const atualizar = useCallback((mudanca: Record<string, string | null>) => {
+    setParams((atual) => {
+      const novo = new URLSearchParams(atual);
+      for (const [k, v] of Object.entries(mudanca)) { if (v) novo.set(k, v); else novo.delete(k); }
+      if (!('page' in mudanca)) novo.delete('page');
+      return novo;
+    }, { replace: true });
+  }, [setParams]);
 
-  // A página vale só pro conjunto de filtros em que foi escolhida; mudou o filtro, volta pra 1.
+  // Espera 300 ms depois da última tecla antes de jogar a busca na URL (e buscar).
+  const escrito = useRef(q);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const valor = busca.trim();
+      escrito.current = valor;
+      if (valor !== q) atualizar({ q: valor || null });
+    }, ESPERA_DA_BUSCA_MS);
+    return () => clearTimeout(t);
+  }, [busca, q, atualizar]);
+  // URL mudou por fora (voltar, limpar filtros): o campo acompanha.
+  useEffect(() => { if (q !== escrito.current) { escrito.current = q; setBusca(q); } }, [q]);
+
   const chave = `${q}|${tenant ?? ''}|${role}|${situation}|${includeTeam}`;
-  const [escolha, setEscolha] = useState({ chave, page: 1 });
-  const page = escolha.chave === chave ? escolha.page : 1;
-  const irPara = (p: number) => setEscolha({ chave, page: p });
+  const irPara = (p: number) => atualizar({ page: p > 1 ? String(p) : null });
 
   // Só a última busca vale: resposta atrasada de filtro/página antiga não sobrescreve.
   const seq = useRef(0);
@@ -66,7 +88,7 @@ export default function Usuarios() {
   const atual = dados && dados.chave === chave && !erro ? dados : null;
   const trocandoPagina = Boolean(atual && atual.meta.page !== page);
   const comFiltro = Boolean(q || tenant || role || situation || includeTeam);
-  const limparFiltros = () => { setBusca(''); setQ(''); setTenant(null); setRole(''); setSituation(''); setIncludeTeam(false); };
+  const limparFiltros = () => { escrito.current = ''; setBusca(''); setParams({}, { replace: true }); };
   const paginas = atual ? Math.max(1, Math.ceil(atual.meta.total / atual.meta.per_page)) : 1;
   const falhas = atual?.errors ?? [];
 
@@ -74,20 +96,20 @@ export default function Usuarios() {
     <AdminConteudo>
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-3">
-          <Input aria-label="Buscar" placeholder="Nome, e-mail ou telefone" value={busca} onChange={(e) => setBusca(e.target.value)} className="w-64" />
-          <Seletor aria-label="Cliente" value={tenant ?? TODOS} onChange={(e) => setTenant(e.target.value === TODOS ? null : e.target.value)} className="w-56">
+          <Input aria-label="Buscar" placeholder="Nome, e-mail ou telefone" value={busca} onChange={(e) => setBusca(e.target.value)} className="w-full sm:w-64" />
+          <Seletor aria-label="Cliente" value={tenant ?? TODOS} onChange={(e) => atualizar({ tenant: e.target.value === TODOS ? null : e.target.value })} className="w-full sm:w-56">
             <option value={TODOS}>Todos os clientes</option>
             {tenants.map((t) => <option key={t.schema} value={t.schema}>{t.name}</option>)}
           </Seletor>
-          <Seletor aria-label="Cargo" value={role} onChange={(e) => setRole(e.target.value)} className="w-48">
+          <Seletor aria-label="Cargo" value={role} onChange={(e) => atualizar({ role: e.target.value || null })} className="w-full sm:w-48">
             <option value="">Todos os cargos</option>
             {roles.map((r) => <option key={r} value={r}>{r}</option>)}
           </Seletor>
-          <Seletor aria-label="Situação" value={situation} onChange={(e) => setSituation(e.target.value as UserFilters['situation'])} className="w-48">
+          <Seletor aria-label="Situação" value={situation} onChange={(e) => atualizar({ situation: e.target.value || null })} className="w-full sm:w-48">
             {OPCOES_SITUACAO.map((o) => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}
           </Seletor>
           <label className="flex items-center gap-2 text-sm">
-            <Checkbox checked={includeTeam} onCheckedChange={(v) => setIncludeTeam(v === true)} aria-label="Incluir equipe Leal Mídia" />
+            <Checkbox checked={includeTeam} onCheckedChange={(v) => atualizar({ equipe: v === true ? '1' : null })} aria-label="Incluir equipe Leal Mídia" />
             Incluir equipe Leal Mídia
           </label>
         </div>
@@ -118,7 +140,7 @@ export default function Usuarios() {
               columns={[
                 { key: 'name', label: 'Nome', render: (u) => (
                   <div className="flex flex-col">
-                    <Link to={`/admin/usuarios/${u.tenant_schema}/${u.user_id}`} className="text-primary underline-offset-2 hover:underline">{u.name}</Link>
+                    <Link to={`/admin/usuarios/${u.tenant_schema}/${u.user_id}${params.toString() ? `?${params}` : ''}`} className="text-primary underline-offset-2 hover:underline">{u.name}</Link>
                     {u.email && <span className="text-xs text-muted-foreground">{u.email}</span>}
                   </div>
                 ) },
