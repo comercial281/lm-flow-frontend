@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useParams, useSearchParams, useLocation } from 'react-router-dom';
 import {
-  I, Ic, PortalFooter, PortalHeader, PropertyCard, Select,
+  I, Ic, PortalFooter, PortalHeader, PropertyCard, PropertyRow, Select,
   filterProperties, usePortalData, type PortalFilters, type PortalTab,
 } from './portalShared';
 import PaginaManutencao from './PaginaManutencao';
@@ -11,6 +11,8 @@ import { opcaoDoTexto } from '@/features/siteBuilder/public/filtros';
 import { FASES } from '@/features/properties/listingKind';
 import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
+import { ORDENS, ROTULO_ORDEM, ehOrdem, resolverLista, type Ordem } from '@/features/siteBuilder/public/listaConfig';
+import { ordenarImoveis } from '@/features/siteBuilder/public/ordenar';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — página dedicada de BUSCA / FILTROS (Produto A).
@@ -42,6 +44,24 @@ const ESPERA_VISITA_MS = 1500;
  * título continua sendo o total filtrado — é ele que responde "quantos tem".
  */
 const RESULTS_PAGE_SIZE = 30;
+
+/** "Ordenar por" da lista: `<select>` nativo, como os filtros do site público. */
+function OrdenarPor({ valor, onChange }: { valor: Ordem; onChange: (v: Ordem) => void }) {
+  return (
+    <label className="flex items-center gap-2 text-[13px] text-neutral-500">
+      <span className="shrink-0">Ordenar por</span>
+      <span className="relative">
+        <select value={valor} onChange={e => { if (ehOrdem(e.target.value)) onChange(e.target.value); }}
+          className="appearance-none rounded-full border border-black/[0.08] bg-white py-2 pl-3.5 pr-8 text-[13px] font-semibold text-[var(--ink)] outline-none focus:border-[var(--brand)]">
+          {ORDENS.map(o => <option key={o} value={o}>{ROTULO_ORDEM[o]}</option>)}
+        </select>
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+        </span>
+      </span>
+    </label>
+  );
+}
 
 export default function PortalSearchPage() {
   const { tenant } = useParams<{ tenant: string }>();
@@ -84,7 +104,7 @@ export default function PortalSearchPage() {
   // Atualiza um ou mais filtros na URL. `replace` evita poluir o histórico
   // (usado na digitação do código); os controles discretos empurram histórico
   // para o botão "voltar" restaurar o filtro anterior.
-  const update = (patch: Partial<Record<keyof PortalFilters, string>>, replace = false) => {
+  const update = (patch: Partial<Record<keyof PortalFilters | 'sort', string>>, replace = false) => {
     const next = new URLSearchParams(params);
     for (const [k, v] of Object.entries(patch)) {
       if (v) next.set(k, v); else next.delete(k);
@@ -92,9 +112,25 @@ export default function PortalSearchPage() {
     setParams(next, { replace });
   };
 
-  const clearAll = () => setParams(new URLSearchParams(filters.tab === 'sale' ? {} : { tab: filters.tab }), { replace: true });
+  // Ordem não é filtro: "Limpar filtros" mantém a escolhida.
+  const clearAll = () => {
+    const next = new URLSearchParams(filters.tab === 'sale' ? {} : { tab: filters.tab });
+    const sort = params.get('sort');
+    if (sort) next.set('sort', sort);
+    setParams(next, { replace: true });
+  };
 
+  // Ordem: a da URL (?sort=) ou, sem ela (ou com um valor que não existe), o
+  // padrão do site (Meu site › Lista de imóveis). Servidor velho = Mais recentes.
+  const lista = useMemo(() => resolverLista(site.listing), [site.listing]);
+  const sortDaUrl = params.get('sort');
+  const ordem: Ordem = ehOrdem(sortDaUrl) ? sortDaUrl : lista.default_sort;
+  // Escolher o padrão tira o ?sort= da URL: o link fica limpo e segue o site.
+  const trocarOrdem = (o: Ordem) => update({ sort: o === lista.default_sort ? '' : o });
+
+  // Filtra, ordena e só então pagina ("Mostrar mais").
   const filtered = useMemo(() => filterProperties(items, filters), [items, filters]);
+  const ordenados = useMemo(() => ordenarImoveis(filtered, ordem, filters.tab), [filtered, ordem, filters.tab]);
   const hasActiveFilters = !!(filters.type || filters.city || filters.neighborhood || filters.bedrooms || filters.code
     || filters.price_min || filters.price_max || filters.suites || filters.parking || filters.stage);
 
@@ -108,11 +144,11 @@ export default function PortalSearchPage() {
   const bairro = opcoesDeTexto(hoods, filters.neighborhood);
   const preco = opcoesDePreco(filters.tab, filters.price_min, filters.price_max);
 
-  // Mudou o filtro, a lista recomeça do topo.
+  // Mudou o filtro ou a ordem, a lista recomeça do topo.
   const [visible, setVisible] = useState(RESULTS_PAGE_SIZE);
-  useEffect(() => { setVisible(RESULTS_PAGE_SIZE); }, [filters]);
-  const shown = filtered.slice(0, visible);
-  const remaining = filtered.length - shown.length;
+  useEffect(() => { setVisible(RESULTS_PAGE_SIZE); }, [filters, ordem]);
+  const shown = ordenados.slice(0, visible);
+  const remaining = ordenados.length - shown.length;
 
   if (state === 'loading') {
     return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
@@ -175,16 +211,20 @@ export default function PortalSearchPage() {
 
       {/* ── Resultados ────────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-        <div className="mb-7 flex items-end justify-between gap-4">
+        <div className="mb-7 flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
           <div>
             <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">Resultados</span>
             <h2 className="mt-1 font-[var(--display)] text-2xl font-semibold sm:text-3xl">
               {filtered.length} {filtered.length !== 1 ? 'imóveis' : 'imóvel'} encontrado{filtered.length !== 1 ? 's' : ''}
             </h2>
           </div>
-          {hasActiveFilters && (
-            <button type="button" onClick={clearAll} className="shrink-0 text-[13px] font-semibold text-[var(--brand)] underline">Limpar filtros</button>
-          )}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            {hasActiveFilters && (
+              <button type="button" onClick={clearAll} className="shrink-0 text-[13px] font-semibold text-[var(--brand)] underline">Limpar filtros</button>
+            )}
+            {/* Com um imóvel só, não há o que ordenar. */}
+            {filtered.length > 1 && <OrdenarPor valor={ordem} onChange={trocarOrdem} />}
+          </div>
         </div>
 
         {filtered.length === 0 ? (
@@ -193,9 +233,16 @@ export default function PortalSearchPage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {shown.map(p => <PropertyCard key={p.id} tenant={tenant!} p={p} wa={wa} tab={filters.tab} />)}
-            </div>
+            {/* Cartões em grade (padrão) ou em linhas largas (Meu site › Lista de imóveis). */}
+            {lista.card_layout === 'rows' ? (
+              <div className="flex flex-col gap-4">
+                {shown.map(p => <PropertyRow key={p.id} tenant={tenant!} p={p} wa={wa} tab={filters.tab} />)}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {shown.map(p => <PropertyCard key={p.id} tenant={tenant!} p={p} wa={wa} tab={filters.tab} />)}
+              </div>
+            )}
             {remaining > 0 && (
               <div className="mt-10 flex flex-col items-center gap-2">
                 <button type="button" onClick={() => setVisible(v => v + RESULTS_PAGE_SIZE)}
