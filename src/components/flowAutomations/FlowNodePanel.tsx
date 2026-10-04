@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-  Button, Input, Label, Textarea,
-} from '@/components/ui/ds';
+import React, { useRef, useState } from 'react';
+import { Button, Input, Label, Textarea } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import SendFromField from '@/components/numbers/SendFromField';
 import { applySendFrom, sendFromOf } from '@/features/numbers/sendFrom';
 import type { FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
 import { ActionEditor, type AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
-import { HIDDEN_BLOCK_NOTICE, blockLabel, isVisibleNode } from '@/features/flowAutomations/palette';
+import { HIDDEN_BLOCK_NOTICE, blockGroup, blockLabel, isVisibleNode } from '@/features/flowAutomations/palette';
+import { blockDescription, blockIcon } from '@/features/flowAutomations/blockInfo';
+import { nodeColor } from '@/lib/flowAutomationGraph';
+import { mesmoConteudo } from '@/hooks/useAlteracoesNaoSalvas';
 import { leadActionConfig, leadActionOf } from '@/features/flowAutomations/leadAction';
 import { nodeProblem } from '@/features/flowAutomations/readiness';
 import { WAIT_FOR_REPLY_HELP, WAIT_UNITS, joinMinutes, splitMinutes, type WaitUnit } from '@/features/flowAutomations/waitTime';
@@ -32,22 +32,17 @@ import { cleanProgressPrefix, progressOf, progressTagName, withProgress } from '
 import { RECOVERED_EFFECTS } from '@/features/flowAutomations/recovered';
 import { moveStageModeOf, stageNameOf, withMoveStageMode, withStageName } from '@/features/flowAutomations/moveStage';
 import { FormAnswerPicker } from './FormAnswerPicker';
+import { FlowSidePanel } from './FlowSidePanel';
+import { VariableChipBar } from './VariableChipBar';
 
 interface Props {
   node: FlowAutomationNode | null;
   resources: AutomationResources;
   onClose: () => void;
   onSave: (id: string, patch: { label: string; config: FlowNodeConfig }) => void;
+  /** Avisa o canvas quando o rascunho do painel difere do bloco (pra perguntar antes de descartar). */
+  onDirtyChange?: (dirty: boolean) => void;
 }
-
-// Variáveis que o construtor preenche no envio (FlowAutomations::VariableInterpolator).
-// São outras que as das Automações: aqui {{nome}} sairia vazio.
-const FLOW_MESSAGE_VARS: { label: string; token: string }[] = [
-  { label: 'Primeiro nome', token: '{{first_name}}' },
-  { label: 'Nome completo', token: '{{name}}' },
-  { label: 'Telefone', token: '{{phone}}' },
-  { label: 'E-mail', token: '{{email}}' },
-];
 
 // "Por um tempo, saindo só em horário comercial" (o modo `schedule`) virou a
 // caixa "Só em horário comercial" do modo Por um tempo (sprint 3).
@@ -207,18 +202,27 @@ function LabelChecklist({ selected, onChange, resources }: { selected: string[];
   );
 }
 
-// Janela de configuração de um bloco: rascunho local, só aplica em "Salvar".
-// O fluxo inteiro só vai pro servidor no Salvar do topo do canvas.
-export function FlowNodeConfigModal({ node, resources, onClose, onSave }: Props) {
+// Painel lateral de um bloco (sprint 4; antes era uma janela): rascunho local,
+// só aplica em "Salvar". O fluxo inteiro só vai pro servidor no Salvar do topo
+// do canvas.
+export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange }: Props) {
   const [label, setLabel] = useState(node?.label || '');
   const [config, setConfig] = useState<FlowNodeConfig>(node?.config || {});
   const [problem, setProblem] = useState<string | null>(null);
+  const messageRef = useRef<HTMLTextAreaElement>(null);
 
   React.useEffect(() => {
     setLabel(node?.label || '');
     setConfig(node?.config || {});
     setProblem(null);
   }, [node?.id]);
+
+  // O rascunho mudou alguma coisa do bloco? (o canvas pergunta antes de descartar)
+  const dirty = !!node && !mesmoConteudo({ label: label || '', config }, { label: node.label || '', config: node.config || {} });
+  React.useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty]); // eslint-disable-line react-hooks/exhaustive-deps -- só quando muda
+  React.useEffect(() => () => onDirtyChange?.(false), []); // eslint-disable-line react-hooks/exhaustive-deps -- ao fechar
 
   if (!node) return null;
   const activeNode = node; // const próprio pra narrowing sobreviver dentro das funções aninhadas
@@ -309,26 +313,24 @@ export function FlowNodeConfigModal({ node, resources, onClose, onSave }: Props)
         return (
           <>
             <div className="space-y-1">
-              <Label className="text-xs">Mensagem</Label>
+              <Label className="text-xs" htmlFor="flow-node-message">Mensagem</Label>
+              <p className="text-xs text-muted-foreground">
+                Toque numa variável pra pôr o dado do lead no texto, onde o cursor estiver.
+              </p>
               <Textarea
-                rows={4}
+                id="flow-node-message"
+                ref={messageRef}
+                rows={8}
+                className="min-h-[180px]"
                 value={(config.text as string) || ''}
                 onChange={e => set('text', e.target.value)}
-                placeholder="Oi {{first_name}}, tudo bem?"
+                placeholder="Oi {{nome}}, tudo bem?"
               />
-              <div className="flex flex-wrap items-center gap-1 mt-1.5">
-                <span className="text-xs text-muted-foreground mr-1">Inserir variável:</span>
-                {FLOW_MESSAGE_VARS.map(v => (
-                  <button
-                    key={v.token}
-                    type="button"
-                    onClick={() => set('text', `${(config.text as string) || ''}${v.token}`)}
-                    className="text-xs px-2 py-0.5 rounded-full border border-input bg-muted/40 hover:bg-muted transition-colors"
-                  >
-                    {v.label}
-                  </button>
-                ))}
-              </div>
+              <VariableChipBar
+                targetRef={messageRef}
+                value={(config.text as string) || ''}
+                onChange={next => set('text', next)}
+              />
             </div>
             <SendFromField
               scope="lead_automation_rules"
@@ -519,26 +521,31 @@ export function FlowNodeConfigModal({ node, resources, onClose, onSave }: Props)
   };
 
   return (
-    <Dialog open={!!node} onOpenChange={o => !o && onClose()}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          {!hidden && (
-            <div className="space-y-1">
-              <Label className="text-xs">Apelido do bloco (opcional)</Label>
-              <Input value={label} onChange={e => setLabel(e.target.value)} placeholder={title} />
-            </div>
-          )}
-          {renderFields()}
-          {problem && <p className="text-xs text-destructive" role="alert">{problem}</p>}
-        </div>
-        <DialogFooter>
+    <FlowSidePanel
+      testId="painel-do-bloco"
+      title={title}
+      description={hidden ? undefined : blockDescription(activeNode)}
+      icon={blockIcon(activeNode)}
+      color={hidden ? '#94a3b8' : nodeColor(activeNode.kind, blockGroup(activeNode))}
+      onClose={onClose}
+      footer={(
+        <>
           <Button variant="outline" onClick={onClose}>{hidden ? 'Fechar' : 'Cancelar'}</Button>
           {!hidden && <Button onClick={save}>Salvar</Button>}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      )}
+    >
+      <div className="space-y-5">
+        {renderFields()}
+        {!hidden && (
+          <div className="space-y-1">
+            <Label className="text-xs" htmlFor="flow-node-label">Apelido do bloco (opcional)</Label>
+            <Input id="flow-node-label" value={label} onChange={e => setLabel(e.target.value)} placeholder={title} />
+            <p className="text-xs text-muted-foreground">Aparece no cartão no lugar do nome do bloco.</p>
+          </div>
+        )}
+        {problem && <p className="text-xs text-destructive" role="alert">{problem}</p>}
+      </div>
+    </FlowSidePanel>
   );
 }
