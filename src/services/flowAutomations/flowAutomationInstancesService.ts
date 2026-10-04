@@ -66,14 +66,19 @@ export const flowAutomationInstancesService = {
   },
 
   /** Põe o lead num fluxo agora (o "Iniciar" do card), pela mesma trava de reentrada do gatilho. */
-  async start(ref: { conversationId?: string | null; contactId?: string | null }, flowAutomationId: string): Promise<{ message?: string }> {
+  /**
+   * Sprint 4: o "Disparar" do funil de conversa usa a mesma rota, com a conversa
+   * (as mensagens saem pelo número dela). `started` = 201 (começou agora); 200 =
+   * o lead já estava no funil (a mensagem diz isso).
+   */
+  async start(ref: { conversationId?: string | null; contactId?: string | null }, flowAutomationId: string): Promise<{ message?: string; started: boolean }> {
     // Os dois quando há: o contato acha o lead, a conversa diz por onde a mensagem sai.
     const lead = {
       ...(ref.contactId ? { contact_id: ref.contactId } : {}),
       ...(ref.conversationId ? { conversation_id: ref.conversationId } : {}),
     };
-    const { data } = await api.post(`${BASE}/start`, { ...lead, flow_automation_id: flowAutomationId });
-    return { message: (data as { message?: string } | null)?.message };
+    const res = await api.post(`${BASE}/start`, { ...lead, flow_automation_id: flowAutomationId });
+    return { message: (res.data as { message?: string } | null)?.message, started: res.status !== 200 };
   },
 
   async stop(id: string): Promise<{ message?: string }> {

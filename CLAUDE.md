@@ -5837,6 +5837,176 @@ Clientes → Custos (`/admin/clientes/custos`, `src/pages/SuperAdmin/Custos/`). 
 4. A exceção do glossário "Google Tag Manager" mora em `telas/TelaRastreamento.tsx`.
 5. Não é `featureKey` nem `clientToggleKey`: o Meu site continua no `site_builder`; Páginas de anúncio continua no `useClientToggle('landing_pages')` literal.
 
+## Construtor: bloco Início, painel Blocos e painel lateral (04/10/2026)
+
+Sprint 4 de 4 da unificação das automações, parte A (layout do construtor).
+Decisões do dono do produto em 04/10, não reabrir sem ele pedir. Spec:
+`LM FLOW/specs/2026-10-04-automacoes-sprint-4-layout-e-funil-do-corretor-design.md`.
+Referência visual: o construtor do Leona. Vale pra Automações e Follow-up (e
+pros funis de conversa da parte B, que vêm em outro PR). Só frontend.
+
+O que aparece na tela:
+
+- **Bloco "Início"** no canvas, verde, sempre uma coluna antes do primeiro
+  bloco: "Quando: Etiqueta adicionada (Etiqueta: follow-up) · ou Visita
+  realizada". Clicar abre o painel do gatilho (com "+ Ou quando…"). Não se
+  apaga, não se arrasta e não tem entrada: nada vem antes dele. Gatilho
+  incompleto deixa a borda amarela com o motivo. **A barra de gatilho do topo
+  saiu**, e o "Testar" do topo também.
+- **"Blocos"** no canto superior esquerdo do canvas: abre e fecha o painel com
+  "Buscar blocos..." e as seções Mensagem pro lead · Lead · Avisos · Controle,
+  cada bloco com ícone e nome (a frase do bloco no balão). Clicar põe no fim do
+  caminho principal (como antes); **arrastar pro canvas** põe onde soltou. O
+  "+ Respondeu" de um cartão abre o painel sozinho. Aberto/fechado fica lembrado
+  neste navegador.
+- **"Simular"** ao lado de "Blocos": o teste de antes ("Resultado da simulação").
+- **Painel do bloco à direita** (420px, o canvas continua visível), no lugar da
+  janela: ícone, nome e uma linha do que o bloco faz; campos um embaixo do
+  outro; o apelido vai por último; Cancelar e Salvar num rodapé fixo. Clicar no
+  cartão (não só no lápis) abre. Cancelar, o X, Esc, outro bloco ou o Início
+  com o rascunho mexido perguntam "Descartar o que você mudou?". O rascunho
+  conta como alteração não salva (menu e fechar a aba perguntam).
+- **Mensagem grande com as variáveis em botõezinhos**: um clique põe
+  `{{variável}}` onde o cursor está. Aparecem as prontas (`{{nome}}`,
+  `{{corretor}}`, `{{imovel_titulo}}`…) e, em azul, as que a imobiliária criou.
+  Isso substitui a aba Variáveis dos Funis de mensagem (a aba sai na parte B).
+- **Celular (< 768px):** os dois painéis viram tela cheia por cima do canvas;
+  Blocos começa fechado e fecha sozinho ao escolher um bloco; o minimapa some.
+- **Configurações do fluxo** continuam numa janela.
+
+Armadilhas:
+
+1. **O Início não existe no banco.** É o nó sintético `TRIGGER_NODE_ID`
+   (`flowStart`); a linha que sai dele é o `initial_node_id`, e ligar do Início
+   a um bloco muda o primeiro bloco. Posição calculada, nunca gravada.
+2. **Variáveis:** a lista mora em `features/flowAutomations/messageVariables.ts`
+   e o botão em `components/flowAutomations/VariableChipBar.tsx`, usado TAMBÉM
+   pela tela de regras (`ActionEditor`, modo "pôr no fim"). O canvas carrega as
+   da imobiliária uma vez (`/tenant_template_variables`) e passa por
+   `MessageVariablesContext`; fora do canvas, só as prontas. O Mandar WhatsApp do
+   construtor oferece agora as variáveis das Automações: o servidor preenche as
+   duas famílias desde 02/10 (`VariableInterpolator` chama o das regras antes),
+   então `{{first_name}}` de fluxo antigo continua saindo.
+3. **Ícone e frase de cada bloco:** `features/flowAutomations/blockInfo.ts`
+   (`blockIcon`/`blockDescription`, pela `blockKey`). Bloco novo na paleta
+   ganha linha lá.
+4. **Um painel por vez:** `useSidePanel` (painel aberto + rascunho mexido). Os
+   painéis avisam o rascunho por `onDirtyChange`; quem troca de painel chama
+   `request` (pergunta se precisar) e quem fecha depois de salvar, `replace`.
+5. **Arraste:** tipo `BLOCK_DRAG_TYPE` com a `key` do item da paleta; o canvas
+   converte a posição com `screenToFlowPosition` (instância do `onInit`).
+6. **Pontos de encaixe do guia (parte B, em uso desde a seção abaixo):** o
+   canvas aceita `banner` (faixa acima do canvas) e `highlightedNodeId` (o bloco
+   do passo atual; `TRIGGER_NODE_ID` destaca o Início); os cartões têm
+   `highlighted` (`data-highlighted="true"`, borda que pisca). Sem as props, o
+   canvas usa o guia do próprio fluxo.
+7. **Teste com React Flow no jsdom:** sem medida, os blocos ficam no DOM com
+   `visibility: hidden`; busque por `getByLabelText`/`getByTestId`, não por
+   `getByRole` (ver `FlowCanvasLayout.spec.tsx`, que também cria
+   `ResizeObserver`/`DOMMatrixReadOnly` de mentira).
+
+## Funis de mensagem viram funis de conversa, com construção guiada (04/10/2026)
+
+Sprint 4 de 4 da unificação das automações, parte B (o funil do corretor e o
+guia). Decisões do dono do produto em 04/10, não reabrir sem ele pedir. Spec:
+`LM FLOW/specs/2026-10-04-automacoes-sprint-4-layout-e-funil-do-corretor-design.md`.
+Depende do backend `lm-flow#388` (tipo `conversation`, dono e "Da equipe",
+modo guiado no servidor, passos do guia, modelos e o disparo) e vem DEPOIS do PR
+da parte A (o layout do construtor).
+
+**O papel do funil (Tony, 04/10):** é uma **ferramenta individual do corretor**,
+e não automação da empresa. Cada funil é um fluxo do construtor com `kind =
+'conversation'` e gatilho fixo ("Disparo pela conversa").
+
+O que aparece na tela:
+
+- **Página Funis de mensagem** (`/automations/message-funnels`), sem abas
+  internas: busca, **"+ Novo funil"** e as abas **Meus funis** / **Da equipe**
+  (selo "Da equipe"). Cada funil mostra o estado: "Termine de montar: passo 2
+  de 5" (com "Continuar o passo a passo"), "Pronto pra disparar" ou
+  "Desligado". Chave Ligado (quem edita), chave **Da equipe** (só o gestor),
+  Duplicar e Excluir. O funil da equipe, pro corretor, abre só pra ver, com
+  **"Duplicar pra ter a sua cópia"**.
+- **"+ Novo funil"** abre os **modelos** (Apresentação do imóvel, Pós-visita,
+  Pedir documentos, Reaquecer lead parado, Primeiro contato): cartão com nome e
+  pra que serve; ao escolher, a sequência (cada mensagem e espera) e **Usar este
+  modelo**, que cria a cópia de quem escolheu (desligada) e abre o canvas com o
+  guia. O gestor (quem tem acesso às Automações) também vê **Começar do zero**.
+- **Construção guiada**, em todo fluxo que traz passos (funis, "Follow-up
+  padrão" e modelos das Automações): faixa no topo "**Passo 2 de 5:** clique no
+  bloco destacado e escreva a mensagem de abertura" com **Abrir o bloco**; o
+  bloco do passo pisca, os feitos ganham ✓ e os outros o número; o **checklist**
+  "Passo a passo · 1 de 5 feitos" (✓ feito · ● atual · ○ falta), recolhível, no
+  canto do canvas. O painel do bloco mostra o passo e a dica no topo. **Salvar
+  no painel grava na hora** e o guia avança sozinho; no fim, "**Pronto! Seu
+  funil já pode ser disparado nas conversas.**" (o servidor liga o funil
+  sozinho). A chave de ligar recusa com "Falta terminar o guia antes de ligar:
+  Passo 2 de 3 — …".
+- **Modo guiado** (o corretor no funil dele): sem Blocos, Simular e
+  Configurações; não arrasta bloco nem ligação; não duplica bloco; **Excluir só
+  em mensagem** ("Tirar esta mensagem do funil?"), religando a anterior à
+  seguinte e já gravando; sem apelido do bloco. Tudo que ele salva grava na
+  hora. O Início mostra "Você dispara o funil numa conversa…" e não abre painel.
+- **Mensagem do funil:** "Tipo de mensagem" Texto · Foto · Vídeo · Documento ·
+  Áudio · Figurinha · Contato. Arquivo sobe pelo botão (com prévia); texto vira
+  legenda na foto, no vídeo e no documento; contato tem nome e telefone. Sai
+  pelo número da conversa do disparo (sem "Enviar pelo número"). O **Esperar**
+  do funil fala em segundos/minutos/horas.
+- **"Disparar funil" no campo de mensagem** (o botão de funil; substitui o
+  quadradinho antigo, também na aba Conversa do card): busca, **Meus funis** /
+  **Da equipe** com o nome grande; clicar mostra a **prévia** (cada mensagem e
+  espera, em ordem) e **Disparar**. Roda no servidor, pelo número da conversa,
+  mesmo com a tela fechada; a faixa acima do campo mostra **Funil "X" · em
+  andamento** com Parar ("Enviar e parar o funil" na pergunta ao enviar). Funil
+  com o guia pela metade aparece com **Termine de montar** (leva pro canvas);
+  desligado aparece apagado. Sem funil próprio e com da equipe, abre na equipe.
+- **Um painel por vez** no campo de mensagem: emoji, Disparar funil e Enviar
+  book; abrir um fecha o outro.
+- **Menu:** **Variáveis de mensagem** virou item de Minha imobiliária (era aba
+  de Campos personalizados, que ficou só com os atributos; a tela se chama
+  "Variáveis de mensagem"). O Corretor de fábrica vê **Funis de mensagem** em
+  Vendas e automação (chave `message_funnels.read`, que o `#388` dá a ele).
+  `/settings/message-funnels` leva pra página nova.
+
+Armadilhas:
+
+1. **Quem pode o quê vem do servidor**, em `permissions` de cada fluxo
+   (`can_edit`, `guided`, `can_mark_team`, `can_create_blank`):
+   `features/flowAutomations/guide.ts` (`isGuided`, `isReadOnly`). Sem fluxo na
+   lista, "gestor" = `flow_automations.update` (`useCan`), a mesma régua do
+   servidor. O servidor recusa o resto em PT-BR (`serverMessage` mostra como veio).
+2. **Modo guiado no `save_flow`:** o servidor junta o config que chega POR CIMA
+   do gravado. Chave que some não apaga nada: trocar o tipo da mensagem grava os
+   campos do tipo anterior com texto vazio (`withMessageKind`). Tirar mensagem
+   manda o ponteiro já religado (`removeAndRewire`); o PATCH do cabeçalho vai só
+   com o nome, e só se mudou.
+3. **Passo do guia:** `node.guide` é só leitura e não volta no `save_flow`
+   (`buildSaveFlowPayload` tira). Salvar no painel de um bloco com passo marca
+   `guide_done: true` no nó e grava na hora (`persist`); a resposta do
+   `save_flow` já é o fluxo atualizado (`applyFlow`, sem recarregar a tela).
+   O "Pronto!" só aparece se o guia terminou nesta visita.
+4. **Funil de conversa = `kind: 'conversation'`** (`features/flowAutomations/kind.ts`):
+   gatilho fixo, o canvas não confere nem manda gatilho (`enableProblem(...,
+   kind)`), o Início é `fixed`. O canvas abre em `/automations/message-funnels/:id`
+   com a chave `message_funnels.read` (rota, `permissionRoutes` e spec).
+5. **Disparar:** `POST /flow_automation_instances/start` com a conversa;
+   `started` (201) × "já está no funil" (200, aviso em `toast.info`). A prévia é
+   montada dos blocos (`funnelPreview`, a partir do primeiro); a lista não traz
+   blocos, então clicar busca o fluxo. Depois de disparar, o campo chama
+   `onFunnelStarted` → `useAutomacaoRodando().atualizar`.
+6. **Um painel por vez:** `useComposerPanel` (`message-input/composerPanel.ts`).
+   `close(painel)` só fecha se for ESSE o aberto: o "clicou fora" do emoji chega
+   antes do clique no botão de outro painel.
+7. **Esperar em segundos:** `wait.config.seconds` soma com `minutes` no
+   servidor. Bloco com segundos (ou no funil de conversa) usa o campo de
+   segundos; o resto continua em minutos (`waitTime.ts`).
+8. **Os funis antigos** (`message_funnels`, o editor de antes) não aparecem
+   mais no campo de mensagem: a conversão (`rake lm_flow:funis:converter_funis_mensagem`
+   do `#388`) precisa rodar junto com este PR. A conversão NÃO desativa o
+   funil antigo (decisão de 04/10): Disparos, disparo em massa do Funil de
+   vendas, agendamento de envio e a ação "Disparar funil de mensagens" ainda
+   leem os funis antigos — migrar essas telas é passo à parte.
+
 ## Usuários de todos os clientes (03/10/2026)
 
 Usuários → Usuários (`/admin/usuarios`, `src/pages/SuperAdmin/Usuarios/`) e a ficha (`/admin/usuarios/:tenant/:userId`). Spec: `LM FLOW/specs/2026-10-03-admin-registro-custos-usuarios-design.md` (seção 3). Substitui a tela de um cliente por vez (UserMetricsView, removida).

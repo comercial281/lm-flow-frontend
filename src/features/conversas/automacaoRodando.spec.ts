@@ -82,3 +82,16 @@ describe('fluxo de follow-up na faixa', () => {
     expect(rotuloDeParar([linhaDoFluxo(fluxo({ kind: 'followup' }), agora)])).toBe('Enviar e parar o follow-up');
   });
 });
+
+// Sprint 4 (04/10/2026): o funil de conversa disparado no campo de mensagem
+// aparece como "Funil "X"", com o Parar da instância.
+describe('funil de conversa na faixa', () => {
+  it('kind conversation vira "Funil "X""', async () => {
+    const f = linhaDoFluxo(fluxo({ kind: 'conversation', flow_name: 'Apresentação do imóvel' }), agora);
+    expect(f.texto).toBe('Funil "Apresentação do imóvel" · em andamento');
+    expect(f.tipo).toBe('funil');
+    expect(f.id).toBe('i1');
+    const { rotuloDeParar } = await import('./automacaoRodando');
+    expect(rotuloDeParar([f])).toBe('Enviar e parar o funil');
+  });
+});

@@ -160,10 +160,30 @@ export function triggerEvents(t: FlowTrigger): string[] {
   return [t.event, ...(t.alternatives ?? []).map(a => a.event)].filter(Boolean);
 }
 
-/** "Etapa alterada ou Etiqueta adicionada": o botão do topo do canvas e a lista. */
+/** "Etapa alterada ou Etiqueta adicionada": a lista de fluxos. */
 export function flowTriggerSummary(t: FlowTrigger): string {
   const events = triggerEvents(t);
   return events.length ? events.map(flowTriggerLabel).join(' ou ') : NO_TRIGGER_LABEL;
+}
+
+/**
+ * A linha do bloco Início (sprint 4): cada gatilho com os filtros dele entre
+ * parênteses, e os do "Ou quando" depois de " · ou ". Ex.: "Etapa alterada
+ * (Etapa: Follow-up) · ou Etiqueta adicionada (Etiqueta: follow-up)".
+ * `describe` é a frase do filtro (a mesma da lista de regras); sem ela, só os nomes.
+ */
+export function triggerOneLine(
+  t: FlowTrigger,
+  describe?: (event: string, condition: FlowTriggerCondition) => string,
+): string {
+  if (!t.event) return NO_TRIGGER_LABEL;
+  const part = (p: FlowTriggerPart) => {
+    const label = flowTriggerLabel(p.event);
+    if (!p.event || !describe) return label;
+    const filters = filledConditions(p.conditions).map(c => describe(p.event, c)).filter(Boolean);
+    return filters.length ? `${label} (${filters.join(', ')})` : label;
+  };
+  return [part(t), ...(t.alternatives ?? []).filter(a => a.event).map(a => `ou ${part(a)}`)].join(' · ');
 }
 
 // ── "+ Ou quando…" (sprint 3) ──────────────────────────────────────────────

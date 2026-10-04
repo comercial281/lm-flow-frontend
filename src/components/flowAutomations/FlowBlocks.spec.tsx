@@ -11,7 +11,7 @@ vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
 vi.mock('@/services/numbers/numbersService', () => ({ default: { sendNumbers } }));
 
 import { FormAnswerPicker } from './FormAnswerPicker';
-import { FlowNodeConfigModal } from './FlowNodeConfigModal';
+import { FlowNodePanel } from './FlowNodePanel';
 import { emptyFormAnswer, pickForm, type FormAnswerConfig } from '@/features/flowAutomations/formAnswer';
 import type { AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
 import type { FlowAutomationNode } from '@/types/flowAutomations';
@@ -75,7 +75,7 @@ const node = (patch: Partial<FlowAutomationNode>): FlowAutomationNode => ({
 describe('janela do bloco', () => {
   it('Aguardar resposta: "Sem limite" grava indefinite', async () => {
     const onSave = vi.fn();
-    render(<FlowNodeConfigModal node={node({ config: { minutes: 30, indefinite: false } })} resources={resources} onClose={() => {}} onSave={onSave} />);
+    render(<FlowNodePanel node={node({ config: { minutes: 30, indefinite: false } })} resources={resources} onClose={() => {}} onSave={onSave} />);
     expect(screen.getByText('Respondeu: o lead mandou qualquer mensagem depois da última que este fluxo enviou.')).toBeTruthy();
     fireEvent.click(screen.getByLabelText('Sem limite (espera até o lead responder)'));
     fireEvent.click(screen.getByText('Salvar'));
@@ -84,7 +84,7 @@ describe('janela do bloco', () => {
 
   it('Aguardar resposta: 2 horas vira 120 minutos', async () => {
     const onSave = vi.fn();
-    render(<FlowNodeConfigModal node={node({ config: { minutes: 30, indefinite: false } })} resources={resources} onClose={() => {}} onSave={onSave} />);
+    render(<FlowNodePanel node={node({ config: { minutes: 30, indefinite: false } })} resources={resources} onClose={() => {}} onSave={onSave} />);
     fireEvent.change(screen.getByLabelText('Unidade'), { target: { value: 'h' } });
     fireEvent.change(screen.getByLabelText('Prazo'), { target: { value: '2' } });
     fireEvent.click(screen.getByText('Salvar'));
@@ -92,14 +92,14 @@ describe('janela do bloco', () => {
   });
 
   it('Mandar WhatsApp tem "Enviar pelo número"', async () => {
-    render(<FlowNodeConfigModal node={node({ kind: 'send_whatsapp', config: { text: 'Oi' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    render(<FlowNodePanel node={node({ kind: 'send_whatsapp', config: { text: 'Oi' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
     expect(await screen.findByText('Enviar pelo número')).toBeTruthy();
     expect(screen.getByText('O número do responsável pelo lead')).toBeTruthy();
   });
 
   it('ação das Automações: o editor da regra, gravando { action_type, params }', async () => {
     const onSave = vi.fn();
-    render(<FlowNodeConfigModal node={node({ kind: 'lead_action', config: { action_type: 'notify_broker', params: {} } })} resources={resources} onClose={() => {}} onSave={onSave} />);
+    render(<FlowNodePanel node={node({ kind: 'lead_action', config: { action_type: 'notify_broker', params: {} } })} resources={resources} onClose={() => {}} onSave={onSave} />);
     expect(screen.getByRole('heading', { name: 'Avisar corretor' })).toBeTruthy();
     fireEvent.click(screen.getByText('Salvar'));
     expect(screen.getByRole('alert').textContent).toBe('Falta preencher a mensagem.');
@@ -112,7 +112,7 @@ describe('janela do bloco', () => {
   });
 
   it('bloco escondido abre com o aviso e sem Salvar', () => {
-    render(<FlowNodeConfigModal node={node({ kind: 'http_call', config: { url: 'x' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    render(<FlowNodePanel node={node({ kind: 'http_call', config: { url: 'x' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
     expect(screen.getByText(/Este bloco volta na próxima versão/)).toBeTruthy();
     expect(screen.queryByText('Salvar')).toBeNull();
   });

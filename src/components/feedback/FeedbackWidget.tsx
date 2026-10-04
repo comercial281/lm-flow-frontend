@@ -17,6 +17,13 @@ import { FEEDBACK_OPEN_EVENT } from './openFeedback';
 
 /** Rotas do chat (/conversations e /conversations/:id). */
 const CHAT_ROUTE = /^\/conversations(\/|$)/;
+// Canvas do construtor (fluxo, follow-up e funil): o painel lateral do bloco
+// tem o "Salvar" no canto inferior direito, exatamente onde o botão flutuante
+// ficava por cima (04/10/2026). As listas continuam com o botão.
+const BUILDER_CANVAS_ROUTE = /^\/automations\/(flow-builder|follow-ups|message-funnels)\/[^/]+/;
+
+export const hidesFloatingFeedback = (pathname: string): boolean =>
+  CHAT_ROUTE.test(pathname) || BUILDER_CANVAS_ROUTE.test(pathname);
 
 /**
  * Botão flutuante de "Sugestões/Bugs" para o cliente.
@@ -25,7 +32,8 @@ const CHAT_ROUTE = /^\/conversations(\/|$)/;
  * Sugestão ou Bug, escreve a mensagem e envia — cai na aba "Sugestões/Bugs" do
  * admin (Leal Mídia) e dispara um e-mail de aviso. Sem anexo nesta versão.
  *
- * Exceção: na aba de Conversas o botão flutuante não é renderizado. Ele é
+ * Exceção: na aba de Conversas e no canvas do construtor (ver
+ * BUILDER_CANVAS_ROUTE) o botão flutuante não é renderizado. Ele é
  * `fixed bottom-4 right-4` e caía exatamente em cima do botão de enviar do
  * MessageInput, bloqueando o envio da mensagem. Qualquer reposicionamento ali
  * cobriria outra coisa (a última mensagem ou a lista de conversas), porque o
@@ -46,7 +54,7 @@ export default function FeedbackWidget() {
     return () => window.removeEventListener(FEEDBACK_OPEN_EVENT, onOpen);
   }, []);
 
-  const hideFloatingButton = CHAT_ROUTE.test(location.pathname);
+  const hideFloatingButton = hidesFloatingFeedback(location.pathname);
 
   const reset = () => {
     setKind('suggestion');

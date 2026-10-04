@@ -12,6 +12,7 @@ import { LegacyFollowupStrip } from '@/components/flowAutomations/LegacyFollowup
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { enableProblem } from '@/features/flowAutomations/readiness';
+import { serverMessage } from '@/features/flowAutomations/guide';
 import { FlowTemplateList, FlowTemplatesDialog } from '@/components/flowAutomations/FlowTemplates';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -88,8 +89,9 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
       }
       await flowAutomationsService.toggle(a.id);
       load();
-    } catch {
-      toast.error('Erro ao ligar/desligar');
+    } catch (e) {
+      // Sprint 4: com passo do guia pendente o servidor recusa e diz qual falta.
+      toast.error(serverMessage(e, 'Erro ao ligar/desligar'));
     }
   };
 

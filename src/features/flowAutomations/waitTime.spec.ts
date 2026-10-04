@@ -21,3 +21,19 @@ describe('tempo em minutos, horas ou dias (guardado em minutos)', () => {
     expect(describeWaitForReply({ minutes: 1440, business_hours: true })).toBe('Espera a resposta por até 1 dia, em horário comercial');
   });
 });
+
+// Sprint 4: o Esperar do funil de conversa fala em segundos (minutos + segundos somam).
+describe('Esperar em segundos (funil de conversa)', () => {
+  it('ida e volta e a linha do bloco', async () => {
+    const { joinSeconds, splitSeconds, waitTotalSeconds, describeSeconds } = await import('./waitTime');
+    expect(joinSeconds(5, 's')).toEqual({ minutes: 0, seconds: 5 });
+    expect(joinSeconds(2, 'min')).toEqual({ minutes: 2, seconds: 0 });
+    expect(joinSeconds(90, 's')).toEqual({ minutes: 1, seconds: 30 });
+    expect(splitSeconds(waitTotalSeconds({ minutes: 0, seconds: 10 }))).toEqual({ amount: 10, unit: 's' });
+    expect(splitSeconds(120)).toEqual({ amount: 2, unit: 'min' });
+    expect(describeSeconds(90)).toBe('1 minuto e 30 segundos');
+    expect(describeWait({ mode: 'interval', minutes: 0, seconds: 5 })).toBe('Espera 5 segundos');
+    // Sem segundos, continua em minutos como antes.
+    expect(describeWait({ mode: 'interval', minutes: 30 })).toBe('Espera 30 minutos');
+  });
+});

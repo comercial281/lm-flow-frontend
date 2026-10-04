@@ -9,7 +9,8 @@ import type { FlowAutomation, FlowAutomationKind } from '@/types/flowAutomations
 
 export function kindOf(flow: Pick<FlowAutomation, 'kind' | 'state'> | null | undefined): FlowAutomationKind {
   const raw = flow?.kind ?? flow?.state?.kind;
-  return raw === 'followup' ? 'followup' : 'automation';
+  if (raw === 'followup' || raw === 'conversation') return raw;
+  return 'automation';
 }
 
 export interface FlowKindCopy {
@@ -48,6 +49,19 @@ export const FLOW_KIND_COPY: Record<FlowAutomationKind, FlowKindCopy> = {
     emptyDescription:
       'O follow-up novo já vem montado com o modelo "Follow-up padrão": 4 mensagens, a espera da resposta entre elas e o que fazer quando o lead responde. Você troca os textos, os tempos e a coluna, escolhe o gatilho e liga.',
     searchPlaceholder: 'Buscar follow-up...',
+  },
+  // Sprint 4: o funil de conversa do corretor (página Funis de mensagem). A lista
+  // é própria (Meus funis / Da equipe); daqui sai o endereço e os nomes.
+  conversation: {
+    listPath: '/automations/message-funnels',
+    title: 'Funis de mensagem',
+    description:
+      'Sequências de mensagens que você dispara numa conversa, pelo botão de funil do campo de mensagem. As mensagens saem uma depois da outra, com o tempo de espera entre elas, mesmo com a tela fechada.',
+    newButton: 'Novo funil',
+    newName: 'Novo funil',
+    emptyTitle: 'Nenhum funil ainda',
+    emptyDescription: 'Escolha um modelo pronto em "Novo funil": você ajusta os textos com o passo a passo e já pode disparar.',
+    searchPlaceholder: 'Buscar funil...',
   },
 };
 
