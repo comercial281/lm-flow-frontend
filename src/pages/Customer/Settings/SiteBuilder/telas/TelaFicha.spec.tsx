@@ -125,6 +125,30 @@ describe('TelaFicha', () => {
     expect(ultima(espiao).email_copy).toEqual(['joao@imob.com.br']);
   });
 
+  it('e-mail repetido na lista avisa em âmbar no 2º (sem diferença de maiúscula); o 1º não avisa', async () => {
+    render(<Montar espiao={vi.fn()} ficha={{ ...FABRICA, email_copy: ['dono@imob.com', ' DONO@imob.com', 'outro@imob.com'] }} />);
+
+    const avisos = screen.getAllByText('Esse e-mail já está na lista; ao salvar fica um só.');
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0].className).toMatch(/amber/);
+    expect(screen.getByLabelText('E-mail 2')).toHaveAccessibleDescription('Esse e-mail já está na lista; ao salvar fica um só.');
+    expect(screen.getByLabelText('E-mail 1')).not.toHaveAccessibleDescription(/já está na lista/);
+    expect(screen.getByLabelText('E-mail 3')).not.toHaveAccessibleDescription(/já está na lista/);
+    // Repetido não é inválido: o campo não fica marcado como errado.
+    expect(screen.getByLabelText('E-mail 2')).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('o aviso de repetido some quando o e-mail é trocado', async () => {
+    render(<Montar espiao={vi.fn()} ficha={{ ...FABRICA, email_copy: ['dono@imob.com', 'dono@imob.com'] }} />);
+    expect(screen.getByText(/já está na lista/)).toBeTruthy();
+
+    const campo = screen.getByLabelText('E-mail 2');
+    await userEvent.clear(campo);
+    await userEvent.type(campo, 'gerente@imob.com');
+    fireEvent.blur(campo);
+    expect(screen.queryByText(/já está na lista/)).toBeNull();
+  });
+
   it('remover um e-mail preenchido pede confirmação; cancelar mantém', async () => {
     const espiao = vi.fn();
     render(<Montar espiao={espiao} ficha={{ ...FABRICA, email_copy: ['a@imob.com', 'b@imob.com'] }} />);

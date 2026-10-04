@@ -244,8 +244,9 @@ export default function SiteBuilder() {
       delete payload.primary_domain;
       if (!homeAlterado) delete payload.home;
       if (!fichaAlterada) delete payload.property_page;
-      // `email_copy` vai SEMPRE como lista: o servidor descarta texto ou null em silêncio
-      // (e apagaria os e-mails gravados). Campo em branco não viaja.
+      // `email_copy` vai SEMPRE como lista: texto ou null o permit do servidor descarta
+      // em silêncio, o merge mantém os e-mails ANTIGOS e a tela diria "Salvo" sem ter
+      // mudado nada. Campo em branco não viaja.
       else if (payload.property_page) {
         payload.property_page = {
           ...payload.property_page,

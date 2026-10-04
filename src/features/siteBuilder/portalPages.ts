@@ -166,6 +166,13 @@ export function emailDeliveryLabel(value?: string | null): { text: string; tone:
   if (value === 'enviado') return { text: 'E-mail enviado', tone: 'ok' };
   if (value === 'sem_destinatario') return { text: 'Sem e-mail de destino cadastrado', tone: 'warn' };
   if (value === 'sem_email_configurado') return { text: 'A plataforma não tem envio de e-mail configurado', tone: 'bad' };
+  // Travas da cópia por e-mail da página do imóvel (Sites::PropertyLeadEmailJob). O contato entrou normalmente.
+  if (value === 'ignorado: repetido') {
+    return { text: 'Sem cópia por e-mail: a mesma pessoa pediu este imóvel há menos de 1 hora', tone: 'warn' };
+  }
+  if (value === 'ignorado: limite') {
+    return { text: 'Sem cópia por e-mail: o site já mandou 30 cópias na última hora', tone: 'warn' };
+  }
   if (value.startsWith('falhou')) return { text: `Não saiu — ${value.replace(/^falhou:\s*/, '')}`, tone: 'bad' };
   return { text: value, tone: 'warn' };
 }

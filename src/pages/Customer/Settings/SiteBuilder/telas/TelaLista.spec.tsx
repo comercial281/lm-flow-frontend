@@ -41,7 +41,7 @@ describe('TelaLista', () => {
     expect(ultima(espiao)).toEqual({ default_sort: 'recent', card_layout: 'rows' });
     expect(linhas).toHaveAttribute('aria-pressed', 'true');
     expect(grade).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByText(/Um imóvel por linha/)).toBeTruthy();
+    expect(screen.getByText(/Um imóvel por linha\. Foto à esquerda, dados ao lado e preço com os botões à direita no computador \(embaixo dos dados no tablet\)/)).toBeTruthy();
 
     await userEvent.click(grade);
     expect(ultima(espiao)).toEqual({ default_sort: 'recent', card_layout: 'grid' });

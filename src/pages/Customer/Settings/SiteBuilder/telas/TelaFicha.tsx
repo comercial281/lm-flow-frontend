@@ -47,7 +47,7 @@ const OPCOES_EMPREENDIMENTO: Record<ChaveEmpreendimento, Opcao> = {
   },
   typologies: {
     rotulo: 'Tipologias disponíveis',
-    frase: 'A tabela com as plantas do empreendimento, quando ele tem mais de uma.',
+    frase: 'A tabela com as plantas cadastradas no empreendimento.',
   },
   builder: {
     rotulo: 'Construtora',
@@ -132,16 +132,21 @@ export default function TelaFicha({ siteForm, setF }: FormProps) {
         )}
         {emails.map((email, i) => {
           const id = `ficha-email-${i}`;
-          const aviso = editando !== i && email.trim() !== '' && !emailValido(email)
+          const preenchido = editando !== i && email.trim() !== '';
+          const invalido = preenchido && !emailValido(email);
+          // O servidor grava em minúsculo e sem repetidos: o 2º igual (sem diferença de maiúscula) avisa.
+          const chave = email.trim().toLowerCase();
+          const repetido = preenchido && !invalido && emails.findIndex(x => x.trim().toLowerCase() === chave) < i;
+          const aviso = invalido
             ? 'Esse e-mail não parece certo e não vai ser salvo. Confira se tem @ e o final, como .com.br.'
-            : undefined;
+            : repetido ? 'Esse e-mail já está na lista; ao salvar fica um só.' : undefined;
           return (
             <div key={i} className="space-y-2">
               <UILabel htmlFor={id} className="text-sm font-medium">E-mail {i + 1}</UILabel>
               <div className="flex items-center gap-2">
                 <Input id={id} className={CLASSE_DO_CAMPO} inputMode="email" autoComplete="off" value={email}
                   placeholder="gerente@imobiliaria.com.br"
-                  aria-invalid={aviso ? true : undefined}
+                  aria-invalid={invalido ? true : undefined}
                   aria-describedby={descricaoDoCampo(id, { aviso })}
                   onFocus={() => setEditando(i)}
                   onBlur={() => setEditando(null)}

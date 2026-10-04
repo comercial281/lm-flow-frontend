@@ -45,8 +45,8 @@ export default function TelaLista({ siteForm, setF }: FormProps) {
         </div>
         <p className="text-sm text-muted-foreground">
           {lista.card_layout === 'rows'
-            ? 'Um imóvel por linha: foto à esquerda, dados no meio e preço com os botões à direita. No celular, a foto fica em cima.'
-            : 'Três cartões por linha no computador, com a foto em cima e os dados embaixo.'}
+            ? 'Um imóvel por linha. Foto à esquerda, dados ao lado e preço com os botões à direita no computador (embaixo dos dados no tablet). No celular, a foto fica em cima.'
+            : 'Três cartões por linha no computador (dois no tablet, um no celular), com a foto em cima e os dados embaixo.'}
         </p>
       </Secao>
     </Secoes>

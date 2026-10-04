@@ -274,8 +274,9 @@ export default function ImovelPublicPage() {
   // Características/comodidades → rótulos (via catálogo compartilhado).
   const featureLabels = labelsFor(prop.features);
   const condoLabels = labelsFor(prop.condo_features);
-  // Tipologias (plantas) do empreendimento — [] quando o imóvel tem uma só ou
-  // quando o tenant ainda não recebeu a coluna (backend devolve [] nesse caso).
+  // Tipologias (plantas) do empreendimento: a tabela aparece com qualquer
+  // tipologia cadastrada, até com uma só. [] quando não há nenhuma ou quando o
+  // tenant ainda não recebeu a coluna (o backend devolve [] nesse caso).
   const typologies = ficha.tipologias ? prop.typologies ?? [] : [];
 
   // Localização (privacidade, decisão de 03/10): revenda: só a região (bairro/

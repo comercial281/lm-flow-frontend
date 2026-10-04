@@ -172,4 +172,16 @@ describe('emailDeliveryLabel', () => {
     expect(emailDeliveryLabel('falhou: conexão recusada')?.text).toBe('Não saiu — conexão recusada');
     expect(emailDeliveryLabel(null)).toBeNull();
   });
+
+  it('cópia da página do imóvel barrada por repetição: aviso em português, sem o valor cru', () => {
+    const r = emailDeliveryLabel('ignorado: repetido');
+    expect(r).toEqual({ text: 'Sem cópia por e-mail: a mesma pessoa pediu este imóvel há menos de 1 hora', tone: 'warn' });
+    expect(r?.text).not.toContain('ignorado');
+  });
+
+  it('cópia da página do imóvel barrada pelo limite por hora: aviso em português, sem o valor cru', () => {
+    const r = emailDeliveryLabel('ignorado: limite');
+    expect(r).toEqual({ text: 'Sem cópia por e-mail: o site já mandou 30 cópias na última hora', tone: 'warn' });
+    expect(r?.text).not.toContain('ignorado');
+  });
 });
