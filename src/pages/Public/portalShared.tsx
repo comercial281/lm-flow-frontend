@@ -10,6 +10,7 @@ import { ROTULO_TIPO, rotuloTipo } from '@/features/siteBuilder/public/tiposDeIm
 import { resolverHome, type AbaId } from '@/features/siteBuilder/public/homeConfig';
 import { abasVisiveis } from '@/features/siteBuilder/public/vitrines';
 import { seloDaFase } from '@/features/properties/listingKind';
+import { ORDENS, ROTULO_ORDEM, ehOrdem, type Ordem } from '@/features/siteBuilder/public/listaConfig';
 
 // Tipos e filtro moram em filtros.ts (sem ciclo com vitrines.ts); reexportados aqui.
 export { filterProperties };
@@ -284,7 +285,7 @@ function dadosDoCartao({ tenant, p, wa, tab }: PropsDoCartao) {
 function SelosNaFoto({ selos }: { selos: string[] }) {
   if (selos.length === 0) return null;
   return (
-    <div className="absolute left-3 right-3 top-3 flex flex-wrap gap-1.5">
+    <div className="pointer-events-none absolute left-3 right-3 top-3 flex flex-wrap gap-1.5">
       {selos.map(selo => (
         <span key={selo} className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white" style={{ background: 'var(--brand)' }}>
           {selo}
@@ -305,10 +306,10 @@ function IconesDoImovel({ s }: { s: NonNullable<PortalProperty['icon_summary']> 
   );
 }
 
-function BotoesDoCartao({ href, waLink }: { href: string; waLink: string | null }) {
+function BotoesDoCartao({ href, waLink, titulo }: { href: string; waLink: string | null; titulo: string }) {
   return (
     <>
-      <Link to={href} className="flex-1 rounded-full px-3 py-2 text-center text-[13px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--ink)' }}>
+      <Link to={href} aria-label={`Ver detalhes de ${titulo}`} className="flex-1 rounded-full px-3 py-2 text-center text-[13px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--ink)' }}>
         Ver detalhes
       </Link>
       {waLink && (
@@ -326,22 +327,28 @@ export function PropertyCard(props: PropsDoCartao) {
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_-16px_rgba(0,0,0,0.25)]">
-      <Link to={href} className="relative block aspect-[4/3] overflow-hidden bg-neutral-100">
-        {p.cover_url ? (
-          <img src={p.cover_url} alt={p.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.06]" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-neutral-300">
-            <Ic d={I.pin} s={40} />
-          </div>
-        )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+      {/* A foto é um atalho de mouse pro mesmo endereço de "Ver detalhes": fora do Tab e
+          do leitor de tela, que já têm o título e o botão. Selos e preço ficam por cima
+          da foto, FORA do link escondido, pra continuarem sendo lidos; o clique neles
+          passa pro link (pointer-events-none). */}
+      <div className="relative">
+        <Link to={href} tabIndex={-1} aria-hidden className="relative block aspect-[4/3] overflow-hidden bg-neutral-100">
+          {p.cover_url ? (
+            <img src={p.cover_url} alt={p.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.06]" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-neutral-300">
+              <Ic d={I.pin} s={40} />
+            </div>
+          )}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+        </Link>
         <SelosNaFoto selos={selos} />
         {p.display_price && (
-          <span className="absolute bottom-3 left-3 rounded-full bg-white/95 px-3.5 py-1.5 text-[15px] font-bold text-[var(--ink)] shadow-sm backdrop-blur">
+          <span className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-white/95 px-3.5 py-1.5 text-[15px] font-bold text-[var(--ink)] shadow-sm backdrop-blur">
             {p.display_price}
           </span>
         )}
-      </Link>
+      </div>
 
       <div className="flex flex-1 flex-col p-4">
         <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand)]">{typeLabel}</span>
@@ -357,7 +364,7 @@ export function PropertyCard(props: PropsDoCartao) {
         <IconesDoImovel s={s} />
 
         <div className="mt-4 flex items-center gap-2 border-t border-black/[0.06] pt-3">
-          <BotoesDoCartao href={href} waLink={waLink} />
+          <BotoesDoCartao href={href} waLink={waLink} titulo={p.title} />
         </div>
       </div>
     </article>
@@ -376,16 +383,19 @@ export function PropertyRow(props: PropsDoCartao) {
 
   return (
     <article className="group grid overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-shadow duration-300 hover:shadow-[0_20px_40px_-16px_rgba(0,0,0,0.25)] sm:grid-cols-[240px_minmax(0,1fr)] lg:grid-cols-[280px_minmax(0,1fr)_220px]">
-      <Link to={href} className="relative block aspect-[4/3] overflow-hidden bg-neutral-100 sm:row-span-2 sm:aspect-auto sm:min-h-[200px] lg:row-span-1">
-        {p.cover_url ? (
-          <img src={p.cover_url} alt={p.title} loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.06]" />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-neutral-300">
-            <Ic d={I.pin} s={40} />
-          </div>
-        )}
+      {/* Foto como no cartão: link só de mouse, selos por cima e fora dele. */}
+      <div className="relative aspect-[4/3] overflow-hidden bg-neutral-100 sm:row-span-2 sm:aspect-auto sm:min-h-[200px] lg:row-span-1">
+        <Link to={href} tabIndex={-1} aria-hidden className="absolute inset-0 block">
+          {p.cover_url ? (
+            <img src={p.cover_url} alt={p.title} loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.06]" />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-neutral-300">
+              <Ic d={I.pin} s={40} />
+            </div>
+          )}
+        </Link>
         <SelosNaFoto selos={selos} />
-      </Link>
+      </div>
 
       <div className="flex min-w-0 flex-col p-4 sm:p-5">
         <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand)]">{typeLabel}</span>
@@ -405,10 +415,32 @@ export function PropertyRow(props: PropsDoCartao) {
           <span className="text-[19px] font-bold leading-tight text-[var(--ink)] lg:text-[20px]">{p.display_price}</span>
         )}
         <div className="flex flex-1 items-center gap-2 sm:ml-auto sm:max-w-[280px] lg:ml-0 lg:max-w-none lg:flex-none">
-          <BotoesDoCartao href={href} waLink={waLink} />
+          <BotoesDoCartao href={href} waLink={waLink} titulo={p.title} />
         </div>
       </div>
     </article>
+  );
+}
+
+/**
+ * "Ordenar por" da busca: `<select>` nativo, como os filtros do site público.
+ * Mora aqui (e não na página de busca) porque este arquivo é a exceção da lista
+ * nativa no conferir-padrao: o portal público é outro público, com outro visual.
+ */
+export function OrdenarPor({ valor, onChange }: { valor: Ordem; onChange: (v: Ordem) => void }) {
+  return (
+    <label className="flex items-center gap-2 text-[13px] text-neutral-500">
+      <span className="shrink-0">Ordenar por</span>
+      <span className="relative">
+        <select value={valor} onChange={e => { if (ehOrdem(e.target.value)) onChange(e.target.value); }}
+          className="appearance-none rounded-full border border-black/[0.08] bg-white py-2 pl-3.5 pr-8 text-[13px] font-semibold text-[var(--ink)] outline-none focus:border-[var(--brand)] focus-visible:ring-2 focus-visible:ring-[var(--brand)]/40">
+          {ORDENS.map(o => <option key={o} value={o}>{ROTULO_ORDEM[o]}</option>)}
+        </select>
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+        </span>
+      </span>
+    </label>
   );
 }
 

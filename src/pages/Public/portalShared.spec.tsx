@@ -23,15 +23,18 @@ function desenhar(Comp: typeof PropertyCard, p: PortalProperty = IMOVEL, wa: str
   return { article: container.querySelector('article')!, unmount };
 }
 
+const DETALHES = 'Ver detalhes de Apartamento no Cambuí';
+
 /** O que a pessoa lê e clica, na ordem em que aparece. */
 function conteudo(article: HTMLElement) {
   const w = within(article);
   return {
     textos: ['Exclusivo', 'Apartamento', 'Apartamento no Cambuí', 'Cambuí, Campinas', '3', '2 suítes', '98 m²', 'R$ 3.500/mês']
       .filter(t => w.queryAllByText(t, { exact: false }).length > 0),
-    detalhes: w.getByRole('link', { name: 'Ver detalhes' }).getAttribute('href'),
+    detalhes: w.getByRole('link', { name: DETALHES }).getAttribute('href'),
     whatsapp: w.queryByRole('link', { name: 'Falar no WhatsApp' })?.getAttribute('href') ?? null,
-    foto: w.queryByRole('img', { name: 'Apartamento no Cambuí' })?.getAttribute('src') ?? null,
+    // A foto fica fora do leitor de tela (o link dela é escondido): procura pelo elemento.
+    foto: article.querySelector('img[alt="Apartamento no Cambuí"]')?.getAttribute('src') ?? null,
   };
 }
 
@@ -56,7 +59,7 @@ describe('PropertyRow', () => {
     expect(foto.querySelector('img')).not.toBeNull();
     expect(within(dados).getByRole('heading', { level: 3 })).toHaveTextContent('Apartamento no Cambuí');
     expect(within(preco).getByText('R$ 3.500/mês')).toBeInTheDocument();
-    expect(within(preco).getByRole('link', { name: 'Ver detalhes' })).toBeInTheDocument();
+    expect(within(preco).getByRole('link', { name: DETALHES })).toBeInTheDocument();
     // 1 coluna no celular; foto de 280 px ao lado no computador
     expect(article).toHaveClass('grid', 'lg:grid-cols-[280px_minmax(0,1fr)_220px]');
     expect(article.className).not.toMatch(/(^| )grid-cols-/);
@@ -66,7 +69,7 @@ describe('PropertyRow', () => {
     const { article } = desenhar(PropertyRow);
 
     expect(within(article).getByText('Exclusivo')).toHaveStyle({ background: 'var(--brand)' });
-    expect(within(article).getByRole('link', { name: 'Ver detalhes' })).toHaveStyle({ background: 'var(--ink)' });
+    expect(within(article).getByRole('link', { name: DETALHES })).toHaveStyle({ background: 'var(--ink)' });
     expect(article.outerHTML).not.toMatch(/\b(bg-card|bg-muted|bg-primary|text-primary|text-muted-foreground|text-foreground|border-primary)\b/);
   });
 
@@ -82,12 +85,37 @@ describe('PropertyRow', () => {
     expect(within(article).queryByRole('img')).toBeNull();
     expect(within(article).queryByText(/R\$/)).toBeNull();
     expect(within(article).queryByRole('link', { name: 'Falar no WhatsApp' })).toBeNull();
-    expect(within(article).getByRole('link', { name: 'Ver detalhes' })).toBeInTheDocument();
+    expect(within(article).getByRole('link', { name: DETALHES })).toBeInTheDocument();
   });
 
   it('empreendimento mostra a fase no selo, como no cartão', () => {
     const { article } = desenhar(PropertyRow, { ...IMOVEL, listing_kind: 'development', stage: 'launch', exclusive: false });
 
     expect(within(article).getByText('Na planta')).toHaveStyle({ background: 'var(--brand)' });
+  });
+});
+
+describe.each([['PropertyCard', PropertyCard], ['PropertyRow', PropertyRow]] as const)('%s: foto e botões pra quem usa teclado ou leitor de tela', (_, Comp) => {
+  it('o link da foto sai do Tab e do leitor de tela; "Ver detalhes" diz qual imóvel', () => {
+    const { article } = desenhar(Comp);
+
+    const fotoLink = article.querySelector('img')!.closest('a')!;
+    expect(fotoLink).toHaveAttribute('tabindex', '-1');
+    expect(fotoLink).toHaveAttribute('aria-hidden', 'true');
+    expect(fotoLink).toHaveAttribute('href', '/imovel/imob/AP10?finalidade=locacao');
+
+    const detalhes = within(article).getByRole('link', { name: DETALHES });
+    expect(detalhes).toHaveAttribute('aria-label', DETALHES);
+    expect(detalhes).toHaveTextContent('Ver detalhes');
+    // Só a foto sai: título, "Ver detalhes" e WhatsApp continuam acessíveis.
+    expect(within(article).getAllByRole('link').map(a => a.getAttribute('aria-label') ?? a.textContent))
+      .toEqual(['Apartamento no Cambuí', DETALHES, 'Falar no WhatsApp']);
+  });
+
+  it('selos e preço por cima da foto continuam fora do trecho escondido', () => {
+    const { article } = desenhar(Comp);
+
+    expect(within(article).getByText('Exclusivo').closest('[aria-hidden]')).toBeNull();
+    expect(within(article).getAllByText('R$ 3.500/mês').every(e => e.closest('[aria-hidden]') === null)).toBe(true);
   });
 });

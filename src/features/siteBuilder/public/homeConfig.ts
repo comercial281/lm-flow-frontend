@@ -85,9 +85,9 @@ export const HOME_FABRICA: HomeConfig = {
   most_searched: { enabled: true, mode: 'auto', items: [] },
 };
 
-export const strOuNull = (v: unknown): string | null => (typeof v === 'string' ? v : null);
+const strOuNull = (v: unknown): string | null => (typeof v === 'string' ? v : null);
 const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
-export const numOuNull = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+const numOuNull = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
 function regras(raw: unknown): RegrasVitrine {
   const r = obj(raw);

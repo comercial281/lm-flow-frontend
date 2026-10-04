@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useParams, useSearchParams, useLocation } from 'react-router-dom';
 import {
-  I, Ic, PortalFooter, PortalHeader, PropertyCard, PropertyRow, Select,
+  I, Ic, OrdenarPor, PortalFooter, PortalHeader, PropertyCard, PropertyRow, Select,
   filterProperties, usePortalData, type PortalFilters, type PortalTab,
 } from './portalShared';
 import PaginaManutencao from './PaginaManutencao';
@@ -11,7 +11,7 @@ import { opcaoDoTexto } from '@/features/siteBuilder/public/filtros';
 import { FASES } from '@/features/properties/listingKind';
 import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
-import { ORDENS, ROTULO_ORDEM, ehOrdem, resolverLista, type Ordem } from '@/features/siteBuilder/public/listaConfig';
+import { ehOrdem, resolverLista, type Ordem } from '@/features/siteBuilder/public/listaConfig';
 import { ordenarImoveis } from '@/features/siteBuilder/public/ordenar';
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -44,24 +44,6 @@ const ESPERA_VISITA_MS = 1500;
  * título continua sendo o total filtrado — é ele que responde "quantos tem".
  */
 const RESULTS_PAGE_SIZE = 30;
-
-/** "Ordenar por" da lista: `<select>` nativo, como os filtros do site público. */
-function OrdenarPor({ valor, onChange }: { valor: Ordem; onChange: (v: Ordem) => void }) {
-  return (
-    <label className="flex items-center gap-2 text-[13px] text-neutral-500">
-      <span className="shrink-0">Ordenar por</span>
-      <span className="relative">
-        <select value={valor} onChange={e => { if (ehOrdem(e.target.value)) onChange(e.target.value); }}
-          className="appearance-none rounded-full border border-black/[0.08] bg-white py-2 pl-3.5 pr-8 text-[13px] font-semibold text-[var(--ink)] outline-none focus:border-[var(--brand)]">
-          {ORDENS.map(o => <option key={o} value={o}>{ROTULO_ORDEM[o]}</option>)}
-        </select>
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-        </span>
-      </span>
-    </label>
-  );
-}
 
 export default function PortalSearchPage() {
   const { tenant } = useParams<{ tenant: string }>();

@@ -170,11 +170,12 @@ describe('PortalSearchPage', () => {
   });
 
   describe('ordem e formato da lista', () => {
-    // created_at: R1 mais antigo, R3 mais novo. Preço e área cruzados pra cada ordem dar uma sequência diferente.
+    // created_at: R1 mais antigo, R3 mais novo. Preço e área cruzados pra cada ordem dar uma sequência diferente:
+    // recentes R3 R2 R1 · menor preço R1 R3 R2 · maior preço R2 R3 R1 · maior área R3 R1 R2.
     const CATALOGO = [
-      imovel('R1', { sale_price_from: 300000, created_at: '2026-01-01T00:00:00Z', icon_summary: { useful_area_m2: 120 } }),
+      imovel('R1', { sale_price_from: 300000, created_at: '2026-01-01T00:00:00Z', icon_summary: { useful_area_m2: 90 } }),
       imovel('R2', { sale_price_from: 900000, created_at: '2026-02-01T00:00:00Z', icon_summary: { useful_area_m2: 60 } }),
-      imovel('R3', { sale_price_from: 500000, created_at: '2026-03-01T00:00:00Z', icon_summary: { useful_area_m2: 90 } }),
+      imovel('R3', { sale_price_from: 500000, created_at: '2026-03-01T00:00:00Z', icon_summary: { useful_area_m2: 120 } }),
     ];
 
     it('"Ordenar por" tem as 4 opções, e a escolhida vai pra URL e muda os cartões', async () => {
@@ -192,7 +193,7 @@ describe('PortalSearchPage', () => {
 
       ordenar('area_desc');
       expect(urlAtual().get('sort')).toBe('area_desc');
-      expect(titulos()).toEqual(['Imóvel R1', 'Imóvel R3', 'Imóvel R2']);
+      expect(titulos()).toEqual(['Imóvel R3', 'Imóvel R1', 'Imóvel R2']);
 
       ordenar('price_desc');
       expect(titulos()).toEqual(['Imóvel R2', 'Imóvel R3', 'Imóvel R1']);
@@ -218,7 +219,7 @@ describe('PortalSearchPage', () => {
       await abrirBusca(CATALOGO, '/portal/imob/imoveis?sort=area_desc', { listing: { default_sort: 'price_desc' } });
 
       expect(ordenarPor().value).toBe('area_desc');
-      expect(titulos()).toEqual(['Imóvel R1', 'Imóvel R3', 'Imóvel R2']);
+      expect(titulos()).toEqual(['Imóvel R3', 'Imóvel R1', 'Imóvel R2']);
     });
 
     it('?sort= inválido vira o padrão do site', async () => {
@@ -247,6 +248,23 @@ describe('PortalSearchPage', () => {
       expect(vistos[0]).toBe('Imóvel R35');
       expect(vistos).not.toContain('Imóvel R1');
       expect(screen.getByText('Mostrando 30 de 35')).toBeInTheDocument();
+    });
+
+    it('depois do "Mostrar mais", trocar a ordem volta a mostrar só os 30 primeiros', async () => {
+      const muitos = Array.from({ length: 35 }, (_, i) => imovel(`R${i + 1}`, { sale_price_from: (35 - i) * 1000 }));
+      await abrirBusca(muitos, '/portal/imob/imoveis?sort=price_asc');
+
+      fireEvent.click(screen.getByRole('button', { name: /Mostrar mais/ }));
+      expect(titulos()).toHaveLength(35);
+      expect(screen.queryByRole('button', { name: /Mostrar mais/ })).toBeNull();
+
+      ordenar('price_desc');
+      const vistos = titulos();
+      expect(vistos).toHaveLength(30);
+      expect(vistos[0]).toBe('Imóvel R1');
+      expect(vistos).not.toContain('Imóvel R35');
+      expect(screen.getByText('Mostrando 30 de 35')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Mostrar mais/ })).toBeInTheDocument();
     });
 
     it('com um imóvel só, o "Ordenar por" não aparece', async () => {
