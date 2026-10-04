@@ -15,10 +15,10 @@ export default function SecaoLocalizacao({ form: f, setF }: PropsDaSecao) {
     try {
       const data = await propertiesService.cepLookup(clean);
       const patch: Partial<PropertyFormData> = {};
-      if (data.logradouro) patch.address_street = data.logradouro;
-      if (data.bairro) patch.address_neighborhood = data.bairro;
-      if (data.localidade) patch.address_city = data.localidade;
-      if (data.uf) patch.address_state = data.uf;
+      if (data.address_street) patch.address_street = data.address_street;
+      if (data.address_neighborhood) patch.address_neighborhood = data.address_neighborhood;
+      if (data.address_city) patch.address_city = data.address_city;
+      if (data.address_state) patch.address_state = data.address_state;
       setF(patch);
     } catch {
       // silent — CEP not found is non-fatal
