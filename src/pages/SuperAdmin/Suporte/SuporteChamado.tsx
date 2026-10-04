@@ -1,3 +1,4 @@
+import { Seletor } from '@/components/base/Seletor';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -119,16 +120,16 @@ export default function SuporteChamado() {
 
         <label className="block space-y-1">
           <span className="text-muted-foreground">Situação</span>
-          <select
+          <Seletor
             aria-label="Situação"
             value={dado.status}
             onChange={e => void mudar({ status: e.target.value as SupportStatus }, 'Situação salva.')}
-            className="w-full rounded-md border border-border bg-background px-2 py-1.5"
+            className="w-full"
           >
             {(Object.keys(STATUS_TIME) as SupportStatus[]).map(s => (
               <option key={s} value={s}>{STATUS_TIME[s]}</option>
             ))}
-          </select>
+          </Seletor>
         </label>
 
         <div className="space-y-1">

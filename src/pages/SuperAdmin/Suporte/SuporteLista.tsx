@@ -1,3 +1,4 @@
+import { Seletor } from '@/components/base/Seletor';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
@@ -84,16 +85,16 @@ export default function SuporteLista() {
             {s ? STATUS_TIME[s] : 'Todas'}
           </button>
         ))}
-        <select
+        <Seletor
           value={kind}
           onChange={e => { setKind(e.target.value as SupportKind | ''); setPage(1); }}
           aria-label="Tipo"
-          className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+          className="text-sm"
         >
           {TIPOS.map(k => (
             <option key={k || 'todos'} value={k}>{k ? KIND_LABEL[k] : 'Todos os tipos'}</option>
           ))}
-        </select>
+        </Seletor>
         <label className="flex items-center gap-2 rounded-md border border-border px-2 py-1">
           <Search className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
           <input
