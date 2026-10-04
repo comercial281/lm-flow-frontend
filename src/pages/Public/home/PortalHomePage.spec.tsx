@@ -180,4 +180,55 @@ describe('PortalHomePage por blocos', () => {
     const dest = screen.getByRole('heading', { level: 2, name: 'Imóveis em destaque' }).closest('section')!;
     expect(within(dest).queryByRole('link', { name: /Ver todos/ })).toBeNull();
   });
+
+  it('empreendimento exclusivo mostra os dois selos: fase e Exclusivo', async () => {
+    await abrirHome({}, [empreendimento('E1', { stage: 'ready', exclusive: true }), imovel('R1', { exclusive: true, featured: true })]);
+
+    const lanc = screen.getByRole('heading', { level: 2, name: 'Lançamentos' }).closest('section')!;
+    expect(within(lanc).getByText('Pronto para morar')).toBeInTheDocument();
+    expect(within(lanc).getByText('Exclusivo')).toBeInTheDocument();
+    // Revenda: Exclusivo vence Destaque, um selo só.
+    const dest = screen.getByRole('heading', { level: 2, name: 'Imóveis em destaque' }).closest('section')!;
+    const cartaoR1 = within(dest).getByText('Imóvel R1').closest('article')!;
+    expect(within(cartaoR1).getByText('Exclusivo')).toBeInTheDocument();
+    expect(within(cartaoR1).queryByText('Destaque')).toBeNull();
+  });
+
+  it('vitrine de destaques: o botão diz "Ver todos os imóveis"', async () => {
+    await abrirHome({}, [imovel('R1', { featured: true })]);
+
+    const dest = screen.getByRole('heading', { level: 2, name: 'Imóveis em destaque' }).closest('section')!;
+    const links = within(dest).getAllByRole('link', { name: /Ver todos os imóveis/ });
+    expect(links[0]).toHaveAttribute('href', '/portal/imob/imoveis');
+  });
+
+  it('vitrine livre: "Ver todos" só quando a regra cabe na busca', async () => {
+    const regra = (o: Record<string, unknown>) => ({ transaction: 'sale', listing_kind: null, property_types: [], cities: [], neighborhoods: [],
+      price_min: null, price_max: null, stages: [], featured_only: false, ...o });
+    await abrirHome({ home: { showcases: [
+      { id: 'cabe', kind: 'custom', enabled: true, title: 'Em Campinas', rules: regra({ cities: ['campinas'] }) },
+      { id: 'nao', kind: 'custom', enabled: true, title: 'Duas cidades', rules: regra({ cities: ['Campinas', 'Santos'] }) },
+    ] } }, [imovel('R1')]);
+
+    const cabe = screen.getByRole('heading', { level: 2, name: 'Em Campinas' }).closest('section')!;
+    expect(within(cabe).getByText('Imóvel R1')).toBeInTheDocument();
+    expect(within(cabe).getAllByRole('link', { name: /Ver todos/ })[0]).toHaveAttribute('href', '/portal/imob/imoveis?city=campinas');
+    const nao = screen.getByRole('heading', { level: 2, name: 'Duas cidades' }).closest('section')!;
+    expect(within(nao).getByText('Imóvel R1')).toBeInTheDocument();
+    expect(within(nao).queryByRole('link', { name: /Ver todos/ })).toBeNull();
+  });
+
+  it('capa: o campo Fase some na aba Alugar e a fase escolhida não vai pra busca', async () => {
+    await abrirHome(
+      { home: { search: { fields: ['stage'] } } },
+      [empreendimento('E1'), imovel('L1', { transaction_type: 'rent', rent_price_from: 2000, sale_price_from: null })],
+    );
+
+    fireEvent.change(screen.getByDisplayValue('Fase'), { target: { value: 'ready' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Alugar' }));
+    expect(screen.queryByDisplayValue('Fase')).toBeNull();
+    expect(screen.queryByRole('option', { name: 'Pronto para morar' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?tab=rent');
+  });
 });

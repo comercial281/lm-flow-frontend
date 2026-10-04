@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { filterProperties, type PortalProperty } from './filtros';
-import { faixaDaBusca, faixasDePreco, precoDaFaixa } from './faixasDePreco';
+import { faixaDaBusca, faixasDePreco, opcoesDePreco, precoDaFaixa } from './faixasDePreco';
 
 describe('faixas de preço da busca', () => {
   it('compra (e lançamentos) usam as faixas de compra', () => {
@@ -43,5 +43,28 @@ describe('faixas de preço da busca', () => {
         }
       }
     }
+  });
+});
+
+describe('opcoesDePreco: preço da URL fora das faixas prontas', () => {
+  const extra = (r: ReturnType<typeof opcoesDePreco>) => r.opcoes.find(([v]) => v === r.valor)?.[1]?.replace(/\s/g, ' ');
+  it('faixa pronta: marca a pronta, sem opção a mais', () => {
+    const r = opcoesDePreco('sale', null, '200000');
+    expect(r.valor).toBe('-200000');
+    expect(r.opcoes).toHaveLength(faixasDePreco('sale').length);
+  });
+  it('sem preço: nada marcado', () => {
+    expect(opcoesDePreco('sale', '', '').valor).toBe('');
+  });
+  it('"Até", "A partir de" e "a", em reais pt-BR, marcados', () => {
+    expect(extra(opcoesDePreco('sale', null, '350000'))).toBe('Até R$ 350.000');
+    expect(extra(opcoesDePreco('sale', '1500000', null))).toBe('A partir de R$ 1.500.000');
+    expect(extra(opcoesDePreco('rent', '2000', '2500'))).toBe('R$ 2.000 a R$ 2.500');
+    expect(opcoesDePreco('sale', null, '350000').opcoes).toHaveLength(faixasDePreco('sale').length + 1);
+  });
+  it('a faixa pronta escrita de outro jeito ("200000.0") não duplica a opção', () => {
+    const r = opcoesDePreco('sale', null, '200000.0');
+    expect(r.valor).toBe('-200000');
+    expect(r.opcoes).toHaveLength(faixasDePreco('sale').length);
   });
 });

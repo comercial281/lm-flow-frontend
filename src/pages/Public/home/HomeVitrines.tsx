@@ -16,11 +16,12 @@ function abaDaVitrine(v: Vitrine): PortalTab {
   return 'sale';
 }
 
-/** Query string do "Ver todos": a busca que traz o mesmo recorte. */
-function buscaDaVitrine(v: Vitrine): string {
+/** Query string do "Ver todos": a busca que traz o mesmo recorte; null = sem o link. */
+function buscaDaVitrine(v: Vitrine): string | null {
   if (v.kind === 'launches') return 'tab=launch';
-  if (v.kind === 'custom' && v.rules) return buscaDaRegra(v.rules);
-  return '';
+  // Destaques não têm filtro na busca: o botão diz que leva a todos os imóveis.
+  if (v.kind === 'featured') return '';
+  return v.rules ? buscaDaRegra(v.rules) : null;
 }
 
 interface Props { home: HomeConfig; items: PortalProperty[]; tenant: string; wa?: string | null; abas: AbaId[] }
@@ -35,9 +36,11 @@ export default function HomeVitrines({ home, items, tenant, wa, abas }: Props) {
         const q = buscaDaVitrine(vitrine);
         const verTodos = `/portal/${tenant}/imoveis${q ? `?${q}` : ''}`;
         const tab = abaDaVitrine(vitrine);
-        // O "Ver todos" que cai numa aba escondida levaria a uma busca que não é a da vitrine: sem o link.
-        const abaDoLink = new URLSearchParams(q).get('tab');
-        const temLink = abas.includes((abaDoLink ?? 'sale') as AbaId);
+        // Regra que não cabe na busca, ou "Ver todos" que cai numa aba escondida,
+        // levaria a uma busca que não é a da vitrine: sem o link.
+        const abaDoLink = new URLSearchParams(q ?? '').get('tab');
+        const temLink = q !== null && abas.includes((abaDoLink ?? 'sale') as AbaId);
+        const rotuloLink = vitrine.kind === 'featured' ? 'Ver todos os imóveis' : 'Ver todos';
         return (
           <section key={vitrine.id} className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
             <div className="mb-7 flex items-end justify-between gap-4">
@@ -48,7 +51,7 @@ export default function HomeVitrines({ home, items, tenant, wa, abas }: Props) {
                 <h2 className={`${vitrine.kind === 'featured' ? 'mt-1 ' : ''}font-[var(--display)] text-3xl font-semibold sm:text-4xl`}>{vitrine.title}</h2>
               </div>
               {temLink && <Link to={verTodos} className="hidden shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 sm:inline-flex" style={{ background: 'var(--ink)' }}>
-                Ver todos <Ic d={I.arrow} s={16} />
+                {rotuloLink} <Ic d={I.arrow} s={16} />
               </Link>}
             </div>
 
@@ -57,7 +60,7 @@ export default function HomeVitrines({ home, items, tenant, wa, abas }: Props) {
             </div>
             {temLink && <div className="mt-8 text-center sm:hidden">
               <Link to={verTodos} className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: 'var(--ink)' }}>
-                Ver todos <Ic d={I.arrow} s={16} />
+                {rotuloLink} <Ic d={I.arrow} s={16} />
               </Link>
             </div>}
           </section>

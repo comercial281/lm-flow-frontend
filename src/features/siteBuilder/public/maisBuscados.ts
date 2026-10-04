@@ -1,5 +1,5 @@
-import type { PortalProperty } from './filtros';
-import type { HomeConfig } from './homeConfig';
+import { filterProperties, type PortalFilters, type PortalProperty } from './filtros';
+import type { AtalhoManual, HomeConfig } from './homeConfig';
 import { opcaoDoTipo, pluralTipo, rotuloTipo } from './tiposDeImovel';
 
 export interface Atalho { label: string; query: string }
@@ -23,17 +23,32 @@ export function atalhosAutomaticos(items: PortalProperty[], max = 8): Atalho[] {
                  query: new URLSearchParams({ type: x.type, neighborhood: x.hood }).toString() }));
 }
 
+/**
+ * Filtros da busca a que um atalho manual leva. Finalidade nula conta como
+ * Comprar (a tela não oferece mais "Qualquer"); cidade e bairro casam como na
+ * busca (`normalizarTexto`), então vão como o cliente escreveu, só sem as pontas.
+ */
+function filtrosDoAtalho(a: AtalhoManual): PortalFilters {
+  return {
+    tab: a.transaction === 'rent' ? 'rent' : 'sale',
+    type: a.property_type ?? '', city: a.city?.trim() ?? '', neighborhood: a.neighborhood?.trim() ?? '',
+    bedrooms: '', code: '', price_max: a.price_max != null ? String(a.price_max) : '',
+  };
+}
+
 export function atalhosDoSite(home: HomeConfig, items: PortalProperty[]): Atalho[] {
   const m = home.most_searched;
   if (!m.enabled) return [];
   if (m.mode === 'auto') return atalhosAutomaticos(items);
-  return m.items.map(a => {
+  // Atalho que leva a uma busca sem imóvel não aparece: seria um link pra "nada encontrado".
+  return m.items.map(filtrosDoAtalho).flatMap((f, i) => {
+    if (filterProperties(items, f).length === 0) return [];
     const q = new URLSearchParams();
-    if (a.transaction === 'rent') q.set('tab', 'rent');
-    if (a.property_type) q.set('type', a.property_type);
-    if (a.city) q.set('city', a.city);
-    if (a.neighborhood) q.set('neighborhood', a.neighborhood);
-    if (a.price_max != null) q.set('price_max', String(a.price_max));
-    return { label: a.label, query: q.toString() };
+    if (f.tab === 'rent') q.set('tab', 'rent');
+    if (f.type) q.set('type', f.type);
+    if (f.city) q.set('city', f.city);
+    if (f.neighborhood) q.set('neighborhood', f.neighborhood);
+    if (f.price_max) q.set('price_max', f.price_max);
+    return [{ label: m.items[i].label, query: q.toString() }];
   });
 }

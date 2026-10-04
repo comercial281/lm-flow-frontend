@@ -5,7 +5,8 @@ import {
   filterProperties, usePortalData, type PortalFilters, type PortalTab,
 } from './portalShared';
 import { opcaoDoTipo, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
-import { faixaDaBusca, faixasDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
+import { opcoesDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
+import { opcaoDoTexto } from '@/features/siteBuilder/public/filtros';
 import { FASES } from '@/features/properties/listingKind';
 import { usePortalTracking } from './usePortalTracking';
 
@@ -18,6 +19,17 @@ import { usePortalTracking } from './usePortalTracking';
 
 const ROTULO_ABA: Record<PortalTab, string> = { sale: 'Comprar', rent: 'Alugar', launch: 'Lançamentos' };
 const MAIS_DE: [string, string][] = [['1', '1+'], ['2', '2+'], ['3', '3+']];
+
+/**
+ * Seletor de cidade/bairro: a URL pode vir com "campinas" (vitrine, atalho) e a
+ * opção é "Campinas" — marca a equivalente. Sem nenhuma, o valor da URL vira
+ * opção: com filtro ativo o campo nunca mostra o rótulo vazio.
+ */
+function opcoesDeTexto(lista: string[], valor: string): { valor: string; opcoes: [string, string][] } {
+  const marcada = opcaoDoTexto(lista, valor);
+  const opcoes = lista.map((x): [string, string] => [x, x]);
+  return { valor: marcada, opcoes: marcada && !lista.includes(marcada) ? [...opcoes, [marcada, marcada]] : opcoes };
+}
 
 /** Espera sem mudança na URL antes de contar a visita da busca. */
 const ESPERA_VISITA_MS = 1500;
@@ -61,7 +73,8 @@ export default function PortalSearchPage() {
     price_max: params.get('price_max') || '',
     suites: params.get('suites') || '',
     parking: params.get('parking') || '',
-    stage: params.get('stage') || '',
+    // Fase escondida em Alugar não filtra (um ?stage= velho na URL zeraria a lista).
+    stage: tab === 'rent' ? '' : params.get('stage') || '',
   }), [params, tab]);
 
   // Atualiza um ou mais filtros na URL. `replace` evita poluir o histórico
@@ -82,10 +95,14 @@ export default function PortalSearchPage() {
     || filters.price_min || filters.price_max || filters.suites || filters.parking || filters.stage);
 
   // Aluguel tem faixas de preço próprias: trocar de/para Alugar zera o preço.
+  // Alugar não tem empreendimento: a fase escolhida sai junto.
   const trocarAba = (k: PortalTab) => {
-    const preco = (k === 'rent') !== (filters.tab === 'rent') ? { price_min: '', price_max: '' } : {};
-    update({ tab: k === 'sale' ? '' : k, ...preco });
+    const zerarPreco = (k === 'rent') !== (filters.tab === 'rent') ? { price_min: '', price_max: '' } : {};
+    update({ tab: k === 'sale' ? '' : k, ...zerarPreco, ...(k === 'rent' ? { stage: '' } : {}) });
   };
+  const cidade = opcoesDeTexto(cities, filters.city);
+  const bairro = opcoesDeTexto(hoods, filters.neighborhood);
+  const preco = opcoesDePreco(filters.tab, filters.price_min, filters.price_max);
 
   // Mudou o filtro, a lista recomeça do topo.
   const [visible, setVisible] = useState(RESULTS_PAGE_SIZE);
@@ -125,15 +142,18 @@ export default function PortalSearchPage() {
 
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               <Select value={opcaoDoTipo(types, filters.type)} onChange={v => update({ type: v })} label="Tipo" options={opcoesDeTipo(types)} />
-              <Select value={filters.city} onChange={v => update({ city: v })} label="Cidade" options={cities.map(c => [c, c])} />
-              <Select value={filters.neighborhood} onChange={v => update({ neighborhood: v })} label="Bairro" options={hoods.map(h => [h, h])} />
+              <Select value={cidade.valor} onChange={v => update({ city: v })} label="Cidade" options={cidade.opcoes} />
+              <Select value={bairro.valor} onChange={v => update({ neighborhood: v })} label="Bairro" options={bairro.opcoes} />
               <Select value={filters.bedrooms} onChange={v => update({ bedrooms: v })} label="Dormitórios" options={[['1', '1+'], ['2', '2+'], ['3', '3+'], ['4', '4+']]} />
-              <Select value={faixaDaBusca(filters.tab, filters.price_min, filters.price_max)}
+              <Select value={preco.valor}
                 onChange={v => update({ price_min: '', price_max: '', ...precoDaFaixa(filters.tab, v) })}
-                label="Faixa de preço" options={faixasDePreco(filters.tab).map(x => [x.valor, x.rotulo])} />
+                label="Faixa de preço" options={preco.opcoes} />
               <Select value={filters.suites ?? ''} onChange={v => update({ suites: v })} label="Suítes" options={MAIS_DE} />
               <Select value={filters.parking ?? ''} onChange={v => update({ parking: v })} label="Vagas" options={MAIS_DE} />
-              <Select value={filters.stage ?? ''} onChange={v => update({ stage: v })} label="Fase" options={FASES.map(x => [x.valor, x.rotulo])} />
+              {/* Fase é de empreendimento, e Alugar não tem empreendimento. */}
+              {filters.tab !== 'rent' && (
+                <Select value={filters.stage ?? ''} onChange={v => update({ stage: v })} label="Fase" options={FASES.map(x => [x.valor, x.rotulo])} />
+              )}
             </div>
 
             <div className="mt-2">

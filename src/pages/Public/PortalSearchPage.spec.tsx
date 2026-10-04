@@ -95,4 +95,50 @@ describe('PortalSearchPage', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
     expect(sendSiteVisit).toHaveBeenCalledTimes(1);
   });
+
+  it('?city=campinas (minúscula, de vitrine/atalho) filtra e o seletor marca "Campinas"', async () => {
+    await abrirBusca([imovel('R1'), imovel('R2', { address: { city: 'Santos', neighborhood: 'Gonzaga' } })],
+      '/portal/imob/imoveis?city=CAMP%C3%8DNAS%20&neighborhood=centro');
+
+    expect(titulos()).toEqual(['Imóvel R1']);
+    const cidade = screen.getByRole('option', { name: 'Cidade' }).closest('select') as HTMLSelectElement;
+    expect(cidade.value).toBe('Campinas');
+    expect(screen.getAllByRole('option', { name: 'Campinas' })).toHaveLength(1);
+    const bairro = screen.getByRole('option', { name: 'Bairro' }).closest('select') as HTMLSelectElement;
+    expect(bairro.value).toBe('Centro');
+  });
+
+  it('cidade da URL que não está na lista vira opção marcada (o campo não fica no rótulo vazio)', async () => {
+    await abrirBusca([imovel('R1')], '/portal/imob/imoveis?city=Sorocaba');
+
+    const cidade = screen.getByRole('option', { name: 'Cidade' }).closest('select') as HTMLSelectElement;
+    expect(cidade.value).toBe('Sorocaba');
+    expect(titulos()).toEqual([]);
+  });
+
+  it('?price_max=350000 (fora das faixas prontas) mostra "Até R$ 350.000" marcado', async () => {
+    await abrirBusca([imovel('R1', { sale_price_from: 300000 }), imovel('R2')], '/portal/imob/imoveis?price_max=350000');
+
+    expect(titulos()).toEqual(['Imóvel R1']);
+    const preco = screen.getByRole('option', { name: 'Faixa de preço' }).closest('select') as HTMLSelectElement;
+    expect(preco.value).toBe('-350000');
+    expect(preco.selectedOptions[0].textContent?.replace(/\s/g, ' ')).toBe('Até R$ 350.000');
+  });
+
+  it('?price_min&price_max fora das faixas: "R$ X a R$ Y"', async () => {
+    await abrirBusca([imovel('R1')], '/portal/imob/imoveis?price_min=450000&price_max=550000');
+
+    const preco = screen.getByRole('option', { name: 'Faixa de preço' }).closest('select') as HTMLSelectElement;
+    expect(preco.selectedOptions[0].textContent?.replace(/\s/g, ' ')).toBe('R$ 450.000 a R$ 550.000');
+  });
+
+  it('na aba Alugar o filtro Fase some e um ?stage= da URL não zera a lista', async () => {
+    const aluguel = imovel('L1', { transaction_type: 'rent', rent_price_from: 2000, sale_price_from: null });
+    await abrirBusca([imovel('R1'), aluguel, empreendimento('E1')], '/portal/imob/imoveis?tab=rent&stage=ready');
+
+    expect(screen.queryByRole('option', { name: 'Fase' })).toBeNull();
+    expect(titulos()).toEqual(['Imóvel L1']);
+    fireEvent.click(screen.getByRole('button', { name: 'Comprar' }));
+    expect(screen.getByRole('option', { name: 'Fase' })).toBeInTheDocument();
+  });
 });

@@ -85,6 +85,7 @@ export const HOME_FABRICA: HomeConfig = {
   most_searched: { enabled: true, mode: 'auto', items: [] },
 };
 
+const strOuNull = (v: unknown): string | null => (typeof v === 'string' ? v : null);
 const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
 const numOuNull = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
@@ -117,6 +118,28 @@ function vitrines(raw: unknown): Vitrine[] {
 
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {});
 
+// Texto que não é texto (número, objeto…) vira null = texto de fábrica: o
+// cartão nunca desenha "[object Object]" nem quebra no encodeURIComponent.
+function chamadaPadrao(raw: unknown): ChamadaPadrao {
+  const o = obj(raw);
+  return {
+    enabled: typeof o.enabled === 'boolean' ? o.enabled : true,
+    title: strOuNull(o.title), text: strOuNull(o.text), button: strOuNull(o.button),
+  };
+}
+
+function chamadasLivres(raw: unknown): ChamadaLivre[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((x): ChamadaLivre | null => {
+    const o = obj(x);
+    if (typeof o.title !== 'string' || !(['page', 'url', 'whatsapp'] as string[]).includes(o.dest_type as string)) return null;
+    return {
+      title: o.title, text: strOuNull(o.text), button: strOuNull(o.button),
+      dest_type: o.dest_type as ChamadaLivre['dest_type'], dest_value: strOuNull(o.dest_value),
+    };
+  }).filter((c): c is ChamadaLivre => c !== null);
+}
+
 export function resolverHome(raw: unknown): HomeConfig {
   const r = obj(raw);
   const s = obj(r.search), c = obj(r.callouts), m = obj(r.most_searched), d = obj(c.defaults);
@@ -134,17 +157,8 @@ export function resolverHome(raw: unknown): HomeConfig {
       layout: (['band', 'photo', 'cards'] as const).find(x => x === c.layout) ?? 'band',
       background_url: typeof c.background_url === 'string' ? c.background_url : null,
       overlay: typeof c.overlay === 'number' ? c.overlay : 40,
-      defaults: {
-        financing: { ...HOME_FABRICA.callouts.defaults.financing, ...obj(d.financing) } as ChamadaPadrao,
-        listing: { ...HOME_FABRICA.callouts.defaults.listing, ...obj(d.listing) } as ChamadaPadrao,
-        wanted: { ...HOME_FABRICA.callouts.defaults.wanted, ...obj(d.wanted) } as ChamadaPadrao,
-      },
-      custom: Array.isArray(c.custom)
-        ? (c.custom as unknown[]).filter((x): x is ChamadaLivre => {
-          const o = obj(x);
-          return typeof o.title === 'string' && (['page', 'url', 'whatsapp'] as string[]).includes(o.dest_type as string);
-        })
-        : [],
+      defaults: { financing: chamadaPadrao(d.financing), listing: chamadaPadrao(d.listing), wanted: chamadaPadrao(d.wanted) },
+      custom: chamadasLivres(c.custom),
     },
     most_searched: {
       enabled: m.enabled !== false,

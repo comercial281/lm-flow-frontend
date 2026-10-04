@@ -226,10 +226,14 @@ export function usePublishedArticlesExist(tenant?: string): boolean {
 /* ── Card de imóvel ──────────────────────────────────────────────────────── */
 export function PropertyCard({ tenant, p, wa, tab }: { tenant: string; p: PortalProperty; wa?: string | null; tab?: PortalTab }) {
   const s = p.icon_summary ?? {};
-  // Empreendimento mostra a fase (e a entrega) no lugar de "Destaque"; Exclusivo continua vencendo.
-  const badge = p.exclusive ? 'Exclusivo'
-    : p.listing_kind === 'development' ? seloDaFase(p.stage ?? 'ready', p.delivery_forecast)
-    : (p.featured ? 'Destaque' : null);
+  // Empreendimento mostra a fase (e a entrega) no lugar de "Destaque" e, se for
+  // exclusivo, os dois selos. Na revenda Exclusivo vence Destaque.
+  const dev = p.listing_kind === 'development';
+  const selos = [
+    dev ? seloDaFase(p.stage ?? 'ready', p.delivery_forecast) : null,
+    p.exclusive ? 'Exclusivo' : null,
+    !dev && !p.exclusive && p.featured ? 'Destaque' : null,
+  ].filter((x): x is string => !!x);
   const typeLabel = rotuloTipo(p.property_type);
   const local = [p.address?.neighborhood, p.address?.city].filter(Boolean).join(', ');
   const waLink = wa ? `https://wa.me/${onlyDigits(wa)}?text=${encodeURIComponent(`Olá! Tenho interesse no imóvel ${p.code} (${p.title}).`)}` : null;
@@ -246,10 +250,14 @@ export function PropertyCard({ tenant, p, wa, tab }: { tenant: string; p: Portal
           </div>
         )}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
-        {badge && (
-          <span className="absolute left-3 top-3 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white" style={{ background: 'var(--brand)' }}>
-            {badge}
-          </span>
+        {selos.length > 0 && (
+          <div className="absolute left-3 right-3 top-3 flex flex-wrap gap-1.5">
+            {selos.map(selo => (
+              <span key={selo} className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white" style={{ background: 'var(--brand)' }}>
+                {selo}
+              </span>
+            ))}
+          </div>
         )}
         {p.display_price && (
           <span className="absolute bottom-3 left-3 rounded-full bg-white/95 px-3.5 py-1.5 text-[15px] font-bold text-[var(--ink)] shadow-sm backdrop-blur">

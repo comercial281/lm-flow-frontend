@@ -1,5 +1,5 @@
 import type { SiteInfo } from '@/pages/Public/portalShared';
-import { filterProperties, type PortalProperty } from './filtros';
+import { filterProperties, normalizarTexto, type PortalProperty } from './filtros';
 import { rotuloTipo } from './tiposDeImovel';
 import { resolverHome, TEXTO_FABRICA, type AbaId, type HomeConfig, type RegrasVitrine, type Vitrine } from './homeConfig';
 
@@ -10,13 +10,17 @@ export function abasVisiveis(home: HomeConfig, items: PortalProperty[]): AbaId[]
   return ABAS.filter(t => home.search.tabs[t] && filterProperties(items, vazio(t)).length > 0);
 }
 
+/** Cidades/bairros da regra já normalizados; nome vazio não conta. */
+const textos = (l: string[]) => l.map(normalizarTexto).filter(Boolean);
+
 function casaRegra(p: PortalProperty, r: RegrasVitrine): boolean {
+  const cidades = textos(r.cities), bairros = textos(r.neighborhoods);
   if (r.transaction === 'rent' && !['rent', 'season', 'sale_rent'].includes(p.transaction_type)) return false;
   if (r.transaction === 'sale' && ['rent', 'season'].includes(p.transaction_type)) return false;
   if (r.listing_kind && (p.listing_kind ?? 'resale') !== r.listing_kind) return false;
   if (r.property_types.length && !r.property_types.some(t => rotuloTipo(t) === rotuloTipo(p.property_type))) return false;
-  if (r.cities.length && !r.cities.includes(p.address?.city ?? '')) return false;
-  if (r.neighborhoods.length && !r.neighborhoods.includes(p.address?.neighborhood ?? '')) return false;
+  if (cidades.length && !cidades.includes(normalizarTexto(p.address?.city))) return false;
+  if (bairros.length && !bairros.includes(normalizarTexto(p.address?.neighborhood))) return false;
   if (r.stages.length && !(p.listing_kind === 'development' && r.stages.includes(p.stage ?? ''))) return false;
   if (r.featured_only && !(p.featured || p.exclusive)) return false;
   if (r.price_min != null || r.price_max != null) {
@@ -41,17 +45,38 @@ export function vitrinesVisiveis(home: HomeConfig, items: PortalProperty[]): { v
     .filter(x => x.itens.length > 0);
 }
 
-/** Query string do "Ver todos" de uma vitrine. */
-export function buscaDaRegra(r: RegrasVitrine): string {
+/**
+ * Aba da busca que traz EXATAMENTE o recorte da regra, ou null quando nenhuma traz.
+ * Lançamentos = todo empreendimento; Comprar inclui empreendimento; Alugar exclui.
+ */
+function abaDaRegra(r: RegrasVitrine): AbaId | null {
+  if (r.listing_kind === 'development') return r.transaction === 'rent' ? null : 'launch';
+  // Revenda só cabe numa aba que já exclui empreendimento: Alugar.
+  if (r.listing_kind === 'resale') return r.transaction === 'rent' ? 'rent' : null;
+  // Finalidade "Qualquer" junta compra e aluguel: nenhuma aba é isso.
+  return r.transaction;
+}
+
+/**
+ * Query string do "Ver todos" de uma vitrine livre, ou null quando a regra não
+ * cabe inteira na URL da busca (mais de um tipo/cidade/bairro/fase, só
+ * destaques, finalidade "Qualquer", revenda de compra). Na dúvida, sem o link:
+ * um "Ver todos" que mostra outra coisa engana o visitante.
+ */
+export function buscaDaRegra(r: RegrasVitrine): string | null {
+  const umSo = (l: string[], chave: (x: string) => string) => new Set(l.map(chave)).size <= 1;
+  if (r.featured_only || r.stages.length > 1) return null;
+  if (!umSo(r.property_types, rotuloTipo) || !umSo(r.cities, normalizarTexto) || !umSo(r.neighborhoods, normalizarTexto)) return null;
+  const tab = abaDaRegra(r);
+  if (!tab || (tab === 'rent' && r.stages.length)) return null;
   const q = new URLSearchParams();
-  const tab = r.listing_kind === 'development' ? 'launch' : r.transaction === 'rent' ? 'rent' : null;
-  if (tab) q.set('tab', tab);
-  if (r.property_types.length === 1) q.set('type', r.property_types[0]);
-  if (r.cities.length === 1) q.set('city', r.cities[0]);
-  if (r.neighborhoods.length === 1) q.set('neighborhood', r.neighborhoods[0]);
+  if (tab !== 'sale') q.set('tab', tab);
+  if (r.property_types.length) q.set('type', r.property_types[0]);
+  if (r.cities.length) q.set('city', r.cities[0]);
+  if (r.neighborhoods.length) q.set('neighborhood', r.neighborhoods[0]);
   if (r.price_min != null) q.set('price_min', String(r.price_min));
   if (r.price_max != null) q.set('price_max', String(r.price_max));
-  if (r.stages.length === 1) q.set('stage', r.stages[0]);
+  if (r.stages.length) q.set('stage', r.stages[0]);
   return q.toString();
 }
 
@@ -64,7 +89,7 @@ export function chamadasVisiveis(site: SiteInfo, tenant: string): CartaoChamada[
   const home = resolverHome(site.home);
   const d = home.callouts.defaults;
   const zap = (site.contact?.whatsapp ?? '').replace(/\D/g, '');
-  const pagina = (slug: string) => (site.menu ?? []).some(m => m.slug === slug);
+  const pagina = (slug: string) => (site.menu ?? []).some(m => m && m.slug === slug);
   const padrao = (key: 'financing' | 'listing' | 'wanted', ok: boolean, icone: CartaoChamada['icone'], to: string): CartaoChamada | null => {
     const c = d[key];
     if (!ok || !c.enabled) return null;

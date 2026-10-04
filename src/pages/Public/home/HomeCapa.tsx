@@ -38,13 +38,15 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
   const [valores, setValores] = useState<Partial<Record<CampoBusca, string>>>({});
   const set = (k: CampoBusca) => (v: string) => setValores(s => ({ ...s, [k]: v }));
 
-  const campos = CAMPOS_BUSCA.filter(c => home.search.fields.includes(c));
+  // Fase é de empreendimento, e Alugar não tem empreendimento: o campo some nessa aba.
+  const campos = CAMPOS_BUSCA.filter(c => home.search.fields.includes(c) && !(c === 'stage' && tab === 'rent'));
   const selects = campos.filter(c => c !== 'code');
   const temCodigo = campos.includes('code');
 
   const trocarAba = (k: AbaId) => {
     // As faixas de preço do aluguel são outras: a faixa marcada não vale mais.
     if (faixasDePreco(k) !== faixasDePreco(tab)) setValores(s => ({ ...s, price: '' }));
+    if (k === 'rent') setValores(s => ({ ...s, stage: '' }));
     setTab(k);
     onTab?.(k);
   };

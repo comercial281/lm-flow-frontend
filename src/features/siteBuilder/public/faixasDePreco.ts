@@ -5,6 +5,7 @@
 // são disjuntas por construção: o piso de cada faixa é o teto da anterior + 1 centavo.
 // Um imóvel de R$ 200 mil está só em 'Até R$ 200 mil'.
 import type { AbaId } from './homeConfig';
+import { dinheiro } from '@/lib/formato';
 
 export interface FaixaDePreco { valor: string; rotulo: string; price_min: number | null; price_max: number | null }
 
@@ -47,4 +48,25 @@ export function precoDaFaixa(tab: AbaId, valor: string): { price_min?: string; p
 export function faixaDaBusca(tab: AbaId, min?: string | null, max?: string | null): string {
   if (!min && !max) return '';
   return faixasDePreco(tab).find(f => String(f.price_min ?? '') === (min ?? '') && String(f.price_max ?? '') === (max ?? ''))?.valor ?? '';
+}
+
+const numeroDaUrl = (v?: string | null) => (v && !Number.isNaN(Number(v)) ? Number(v) : null);
+const reais = (n: number) => dinheiro(n, { centavos: false });
+
+/**
+ * Opções do campo "Faixa de preço" e a marcada. Preço da URL que não é faixa
+ * pronta (vitrine, atalho, link colado) ganha uma opção própria com o valor
+ * ("Até R$ 350.000"), senão o campo mostraria "Faixa de preço" com o filtro ativo.
+ */
+export function opcoesDePreco(tab: AbaId, min?: string | null, max?: string | null): { valor: string; opcoes: [string, string][] } {
+  const opcoes = faixasDePreco(tab).map((f): [string, string] => [f.valor, f.rotulo]);
+  const pronta = faixaDaBusca(tab, min, max);
+  const pMin = numeroDaUrl(min), pMax = numeroDaUrl(max);
+  if (pronta || (pMin == null && pMax == null)) return { valor: pronta, opcoes };
+  const rotulo = pMin != null && pMax != null ? `${reais(pMin)} a ${reais(pMax)}`
+    : pMax != null ? `Até ${reais(pMax)}` : `A partir de ${reais(pMin!)}`;
+  const valor = `${pMin ?? ''}-${pMax ?? ''}`;
+  // "200000.0" é a faixa pronta de 200 mil escrita de outro jeito: marca a pronta.
+  if (opcoes.some(([v]) => v === valor)) return { valor, opcoes };
+  return { valor, opcoes: [...opcoes, [valor, rotulo]] };
 }

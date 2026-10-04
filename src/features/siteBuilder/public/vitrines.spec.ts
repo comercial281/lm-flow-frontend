@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { PortalProperty, SiteInfo } from '@/pages/Public/portalShared';
-import { filterProperties } from './filtros';
-import { resolverHome } from './homeConfig';
+import { filterProperties, normalizarTexto } from './filtros';
+import { resolverHome, type RegrasVitrine } from './homeConfig';
 import { atalhosDoSite } from './maisBuscados';
 import { abasVisiveis, itensDaVitrine, vitrinesVisiveis, buscaDaRegra, chamadasVisiveis } from './vitrines';
 
@@ -75,7 +75,7 @@ describe('vitrines', () => {
       price_min: 500000, price_max: null, stages: [], featured_only: false };
     const v = { id: 'm', kind: 'custom' as const, enabled: true, title: 'A partir de 500 mil', rules };
     const lista = [p('NA_DIVISA', { sale_price_from: 500000 }), p('ABAIXO', { sale_price_from: 499999 })];
-    const q = new URLSearchParams(buscaDaRegra(rules));
+    const q = new URLSearchParams(buscaDaRegra(rules) ?? '');
     const busca = filterProperties(lista, { ...f('sale'), price_min: q.get('price_min') ?? '' }).map(x => x.code);
     expect(itensDaVitrine(lista, v).map(x => x.code)).toEqual(['NA_DIVISA']);
     expect(busca).toEqual(['NA_DIVISA']);
@@ -93,6 +93,56 @@ describe('vitrines', () => {
   });
 });
 
+describe('cidade e bairro sem diferença de maiúscula, acento e espaço (D5)', () => {
+  const regra = (o: Partial<RegrasVitrine>): RegrasVitrine => ({ transaction: 'sale', listing_kind: null, property_types: [], cities: [],
+    neighborhoods: [], price_min: null, price_max: null, stages: [], featured_only: false, ...o });
+  const lista = [p('A', { address: { city: 'Campinas', neighborhood: 'Cambuí' } }), p('B', { address: { city: 'Santos', neighborhood: 'Gonzaga' } })];
+  it('normalizarTexto', () => {
+    expect(['campinas', 'Campinas', 'CAMPÍNAS ', '  campinas'].map(normalizarTexto)).toEqual(Array(4).fill('campinas'));
+    expect(normalizarTexto(undefined)).toBe('');
+  });
+  it('vitrine: "campinas", "Campinas" e "CAMPÍNAS " casam; bairro "cambui" casa com Cambuí', () => {
+    for (const cidade of ['campinas', 'Campinas', 'CAMPÍNAS ']) {
+      const v = { id: 'c', kind: 'custom' as const, enabled: true, title: 'C', rules: regra({ cities: [cidade] }) };
+      expect(itensDaVitrine(lista, v).map(x => x.code)).toEqual(['A']);
+    }
+    const v = { id: 'b', kind: 'custom' as const, enabled: true, title: 'B', rules: regra({ neighborhoods: ['cambui'] }) };
+    expect(itensDaVitrine(lista, v).map(x => x.code)).toEqual(['A']);
+  });
+  it('busca: o "Ver todos" de uma vitrine com "campinas" não dá 0', () => {
+    for (const cidade of ['campinas', 'Campinas', 'CAMPÍNAS ']) {
+      expect(filterProperties(lista, f('sale', { city: cidade })).map(x => x.code)).toEqual(['A']);
+    }
+    expect(filterProperties(lista, f('sale', { neighborhood: ' GONZAGA' })).map(x => x.code)).toEqual(['B']);
+  });
+});
+
+describe('"Ver todos" da vitrine livre só quando a regra cabe na busca (D2)', () => {
+  const regra = (o: Partial<RegrasVitrine>): RegrasVitrine => ({ transaction: 'sale', listing_kind: null, property_types: [], cities: [],
+    neighborhoods: [], price_min: null, price_max: null, stages: [], featured_only: false, ...o });
+  it.each([
+    ['dois tipos de nome diferente', { property_types: ['house', 'apartment'] }],
+    ['duas cidades', { cities: ['Campinas', 'Santos'] }],
+    ['dois bairros', { neighborhoods: ['Cambuí', 'Centro'] }],
+    ['duas fases', { listing_kind: 'development' as const, stages: ['ready', 'launch'] }],
+    ['só destaques e exclusivos', { featured_only: true }],
+    ['finalidade Qualquer', { transaction: null }],
+    ['revenda de compra (Comprar inclui empreendimento)', { listing_kind: 'resale' as const }],
+    ['empreendimento de aluguel', { listing_kind: 'development' as const, transaction: 'rent' as const }],
+    ['fase em Alugar', { transaction: 'rent' as const, stages: ['ready'] }],
+  ])('esconde: %s', (_, o) => {
+    expect(buscaDaRegra(regra(o as Partial<RegrasVitrine>))).toBeNull();
+  });
+  it('mostra: um tipo por nome (cobertura + penthouse), uma cidade escrita de dois jeitos', () => {
+    expect(buscaDaRegra(regra({ property_types: ['cobertura', 'penthouse'], cities: ['Campinas', 'campinas '] })))
+      .toBe('type=cobertura&city=Campinas');
+  });
+  it('mostra: revenda de aluguel vai pra Alugar; empreendimento vai pra Lançamentos', () => {
+    expect(buscaDaRegra(regra({ listing_kind: 'resale', transaction: 'rent' }))).toBe('tab=rent');
+    expect(buscaDaRegra(regra({ listing_kind: 'development', transaction: 'sale', stages: ['ready'] }))).toBe('tab=launch&stage=ready');
+  });
+});
+
 describe('home torta do servidor não derruba o site', () => {
   it('itens nulos e vitrine sem regras completas', () => {
     const h = resolverHome({ showcases: [null, { id: 'x', kind: 'custom', title: 'T' }, { id: 'y', kind: 'custom', title: 'Y', rules: { cities: 'x' } }],
@@ -105,6 +155,13 @@ describe('home torta do servidor não derruba o site', () => {
 });
 
 describe('chamadas', () => {
+  it('item nulo no menu do site não derruba a chamada pra página', () => {
+    const site = { menu: [null, { title: 'Sobre', slug: 'sobre' }],
+      home: { callouts: { custom: [{ title: 'Pg', text: null, button: null, dest_type: 'page', dest_value: 'sobre' }] } } } as unknown as SiteInfo;
+    expect(() => chamadasVisiveis(site, 'imob')).not.toThrow();
+    expect(chamadasVisiveis(site, 'imob').find(x => x.title === 'Pg')?.to).toBe('/portal/imob/p/sobre');
+  });
+
   const base = (o: Partial<SiteInfo> = {}): SiteInfo => ({ financiamento: { enabled: true }, anuncie: { enabled: true },
     sections: { lead_capture: true }, contact: { whatsapp: '5511999990000' }, menu: [{ title: 'Sobre', slug: 'sobre' }], ...o } as SiteInfo);
   it('padrão com texto de fábrica; destino desligado some', () => {
