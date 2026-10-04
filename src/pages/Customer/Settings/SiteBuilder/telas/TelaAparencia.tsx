@@ -157,7 +157,7 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
         descricao="As cores da marca no site. Saem do logo quando você envia um novo, e você pode trocar aqui."
       >
         <div className="grid gap-5 sm:grid-cols-2">
-          <CampoDeCor id="aparencia-cor-principal" rotulo="Cor principal" ajuda="Botões de Tenho interesse, preços, selos dos imóveis, a aba escolhida na busca e os links."
+          <CampoDeCor id="aparencia-cor-principal" rotulo="Cor principal" ajuda="Botões de Tenho interesse, selos dos imóveis, preço das plantas, a aba escolhida na busca e os links."
             valor={siteForm.primary_color ?? ''} padrao="#7C3AED" aoMudar={primary_color => setF({ primary_color })} />
           <CampoDeCor id="aparencia-cor-destaque" rotulo="Cor de destaque" ajuda="Guardada para os modelos novos do site. Hoje o site usa só a cor principal."
             valor={siteForm.accent_color ?? ''} padrao="#9333EA" aoMudar={accent_color => setF({ accent_color })} />

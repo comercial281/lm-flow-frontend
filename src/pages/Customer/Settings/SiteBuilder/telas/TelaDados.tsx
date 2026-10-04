@@ -69,7 +69,7 @@ export default function TelaDados({ siteForm, setF }: FormProps) {
     ? 'Isso não parece um e-mail. Confira se tem o @ e o final (.com, .com.br).'
     : undefined;
   const avisoZap = faltaCodigoDoPais(whatsapp)
-    ? 'Falta o código do país (55): o botão do WhatsApp do site pode não funcionar. Confira o número e salve de novo.'
+    ? 'Falta o código do país (55): o botão do WhatsApp do site pode não funcionar. Digite o número de novo com o 55 na frente e salve.'
     : undefined;
 
   const ajudaTelefone = 'Aparece no rodapé de todas as páginas e, no computador, na faixa de cima das páginas internas. No celular, quem toca no número já liga.';
