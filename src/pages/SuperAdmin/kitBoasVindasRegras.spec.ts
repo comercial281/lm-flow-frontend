@@ -46,8 +46,26 @@ describe('textos', () => {
   it('último envio', () => {
     expect(textoUltimoEnvio(null)).toBe('Ainda não enviado.');
     expect(textoUltimoEnvio(envio())).toMatch(/^Enviado em 04\/10\/2026 às \d\d:\d\d por Tony · 2 de 2 peças$/);
-    expect(textoUltimoEnvio(envio({ sent: 1 }))).toMatch(/1 de 2 peças · 1 falhou$/);
-    expect(textoUltimoEnvio(envio({ sent: 1, total: 3 }))).toMatch(/1 de 3 peças · 2 falharam$/);
+    expect(textoUltimoEnvio(envio({ sent: 1, items: [
+      { kind: 'text', label: 'Mensagem', status: 'sent' },
+      { kind: 'video', label: 'Vídeo', status: 'failed' },
+    ] }))).toMatch(/1 de 2 peças · 1 falhou$/);
+  });
+  it('só conta como falha o que falhou; peça que não chegou a sair não é falha', () => {
+    const interrompido = envio({ state: 'interrupted', sent: 1, total: 3, items: [
+      { kind: 'text', label: 'Mensagem', status: 'sent' },
+      { kind: 'video', label: 'Vídeo', status: 'failed', detail: 'x' },
+      { kind: 'image', label: 'Imagem 1', status: 'queued' },
+    ] });
+    expect(textoUltimoEnvio(interrompido))
+      .toMatch(/^Envio interrompido em 04\/10\/2026 às \d\d:\d\d por Tony · 1 de 3 peças · 1 falhou · 1 não saiu$/);
+  });
+  it('nada saiu: não diz "Enviado"', () => {
+    const nada = envio({ sent: 0, items: [
+      { kind: 'text', label: 'Mensagem', status: 'failed' },
+      { kind: 'video', label: 'Vídeo', status: 'failed' },
+    ] });
+    expect(textoUltimoEnvio(nada)).toMatch(/^Tentativa em .* por Tony · 0 de 2 peças · 2 falharam$/);
   });
   it('andamento', () => {
     const p = envio({ state: 'running', items: [

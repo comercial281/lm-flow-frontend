@@ -43,10 +43,18 @@ export function textoUltimoEnvio(d: KitDelivery | null): string {
   if (!d) return 'Ainda não enviado.';
   const total = d.total ?? d.items.length;
   const sent = d.sent ?? d.items.filter(i => i.status === 'sent').length;
-  const base = `Enviado em ${dataHora(d.finished_at || d.started_at)} por ${d.by} · ${sent} de ${plural(total, 'peça', 'peças')}`;
-  const falhas = total - sent;
-  if (falhas <= 0) return base;
-  return `${base} · ${falhas} ${falhas === 1 ? 'falhou' : 'falharam'}`;
+  // Falha é o que tentou e não foi. O que nem chegou a sair (envio interrompido)
+  // aparece separado: chamar de falha mandaria procurar defeito na peça.
+  const falhas = d.items.filter(i => i.status === 'failed').length;
+  const naoSairam = d.items.filter(i => i.status === 'queued').length;
+  const quando = dataHora(d.finished_at || d.started_at);
+  const abertura = d.state === 'interrupted'
+    ? `Envio interrompido em ${quando}`
+    : sent === 0 ? `Tentativa em ${quando}` : `Enviado em ${quando}`;
+  let texto = `${abertura} por ${d.by} · ${sent} de ${plural(total, 'peça', 'peças')}`;
+  if (falhas > 0) texto += ` · ${falhas} ${falhas === 1 ? 'falhou' : 'falharam'}`;
+  if (naoSairam > 0) texto += ` · ${naoSairam} ${naoSairam === 1 ? 'não saiu' : 'não saíram'}`;
+  return texto;
 }
 
 export function textoAndamento(p: KitDelivery): string {

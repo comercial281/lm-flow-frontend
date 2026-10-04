@@ -24,7 +24,8 @@ export interface KitPiece { kind: KitPieceKind; label: string; text?: string; ur
 export interface KitItem { kind: KitPieceKind; label: string; status: 'queued' | 'sent' | 'failed'; detail?: string | null }
 export interface KitGroup { jid: string; name: string; source: 'cadastro' | 'nome'; found?: boolean }
 export interface KitDelivery {
-  state: 'running' | 'done';
+  /** `interrupted`: o servidor reiniciou no meio do envio; o registro guarda o que saiu. */
+  state: 'running' | 'done' | 'interrupted';
   started_at: string;
   finished_at?: string | null;
   by: string;
@@ -63,8 +64,9 @@ export const welcomeKitService = {
     const res = await api.get(`${BASE}/tenants/${tenantId}/preview`);
     return res.data.data;
   },
-  async deliver(tenantId: string): Promise<KitDelivery> {
-    const res = await api.post(`${BASE}/tenants/${tenantId}/deliveries`);
+  /** `expectedJid`: o grupo que a confirmação nomeou. Se mudou desde a prévia, o servidor recusa. */
+  async deliver(tenantId: string, expectedJid: string): Promise<KitDelivery> {
+    const res = await api.post(`${BASE}/tenants/${tenantId}/deliveries`, { expected_jid: expectedJid });
     return res.data.data.progress;
   },
 };

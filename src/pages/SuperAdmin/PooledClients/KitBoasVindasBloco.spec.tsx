@@ -61,6 +61,28 @@ describe('Funções → Kit de boas-vindas', () => {
     expect(kit.deliver).not.toHaveBeenCalled();
   });
 
+  it('envio interrompido: mostra o registro e deixa preparar de novo', async () => {
+    const parado = { ...andamento('done', 'queued'), state: 'interrupted' as const };
+    kit.tenantState.mockResolvedValue({ configured: true, last: parado, progress: parado });
+    abrir();
+    expect(await screen.findByText(/^Envio interrompido em/)).toBeInTheDocument();
+    expect(screen.queryByText(/Enviando/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Preparar envio' })).toBeEnabled();
+  });
+
+  it('grupo mudou desde a prévia: mostra o motivo e pede para preparar de novo', async () => {
+    kit.deliver.mockRejectedValue({
+      response: { status: 422, data: { error: 'O grupo do cliente mudou desde a prévia. Prepare o envio de novo.' } },
+    });
+    abrir();
+    fireEvent.click(await screen.findByRole('button', { name: 'Preparar envio' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Enviar no grupo (2 peças)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Enviar' }));
+    expect(await screen.findByText(/O grupo do cliente mudou/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Enviar no grupo/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Preparar envio' })).toBeInTheDocument();
+  });
+
   it('sem destino: mostra o motivo e não deixa enviar', async () => {
     kit.preview.mockResolvedValue({ ...previa, target: null, reason: 'Esta imobiliária tem 2 grupos.' });
     abrir();
@@ -78,7 +100,7 @@ describe('Funções → Kit de boas-vindas', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Enviar no grupo (2 peças)' }));
     expect(kit.deliver).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole('button', { name: 'Enviar' }));
-    await waitFor(() => expect(kit.deliver).toHaveBeenCalledWith('t-1'));
+    await waitFor(() => expect(kit.deliver).toHaveBeenCalledWith('t-1', '1@g.us'));
     expect(await screen.findByText('Enviando 2 de 2…')).toBeInTheDocument();
   });
 

@@ -26,6 +26,7 @@ export default function KitBoasVindas() {
   const [carregado, setCarregado] = useState<KitToSave | null>(null);
   const [form, setForm] = useState<KitToSave | null>(null);
   const [padrao, setPadrao] = useState('');
+  const [configurado, setConfigurado] = useState(true);
   const [vars, setVars] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -44,6 +45,7 @@ export default function KitBoasVindas() {
       images: p.kit.images,
     };
     setPadrao(p.default_template);
+    setConfigurado(p.kit.configured);
     setVars(p.vars);
     setCarregado(f);
     setForm(f);
@@ -320,8 +322,11 @@ export default function KitBoasVindas() {
             </div>
           </section>
 
+          {/* Kit nunca salvo: a barra aparece mesmo sem mexer. Sem isso, quem só quer o
+              texto padrão não consegue salvar, e o bloco de Funções segue dizendo
+              que o kit não foi montado. */}
           <BarraSalvar
-            visivel={temAlteracao}
+            visivel={temAlteracao || !configurado}
             salvando={salvando}
             aoSalvar={() => void salvar()}
             aoDescartar={() => setForm(carregado)}

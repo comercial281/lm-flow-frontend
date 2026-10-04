@@ -56,6 +56,21 @@ describe('Plataforma → Kit de boas-vindas', () => {
     }));
   });
 
+  // Sem isso, quem só quer o texto padrão nunca consegue salvar, e o bloco de
+  // Funções segue dizendo que o kit não foi montado.
+  it('kit nunca salvo: a barra aparece sem mexer, e o texto padrão vai em branco', async () => {
+    kit.get.mockResolvedValue({
+      ...payload([]), kit: { ...payload([]).kit, configured: false, raw_template: '', template: 'Padrão {nome} {link}', video: null },
+    });
+    render(<KitBoasVindas />);
+    await screen.findByLabelText('Mensagem');
+    expect(screen.getByRole('region', { name: 'Alterações não salvas' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(kit.save).toHaveBeenCalledWith(
+      { template: '', instance: 'Operacional (LM01)', video: null, images: [] },
+    ));
+  });
+
   it('a prévia mostra o texto com o cliente de exemplo', async () => {
     render(<KitBoasVindas />);
     expect(await screen.findByText('Oi Imobiliária Exemplo: https://cliente.lmflow.com.br')).toBeInTheDocument();

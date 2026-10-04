@@ -6224,3 +6224,6 @@ Armadilhas:
 4. **Texto igual ao padrão é gravado em branco** (vazio = padrão), para não travar o texto no dia em que o padrão da casa mudar.
 5. **As regras moram em `src/pages/SuperAdmin/kitBoasVindasRegras.ts`**, com spec. O nome não é `kitBoasVindas.ts` de propósito: no Mac (sem diferença de maiúscula no nome do arquivo) `./KitBoasVindas` carregaria as regras no lugar da página.
 6. **Não é `featureKey` nem `clientToggleKey`** — é configuração de plataforma. Os scanners do catálogo não entram nesta história.
+7. **Envio interrompido** (o servidor reiniciou no meio): o servidor fecha como `interrupted` e o bloco mostra "Envio interrompido em … · 3 de 8 peças · 5 não saíram", com *Preparar envio* de volta. Peça que nem chegou a sair não conta como falha.
+8. **O envio leva o grupo que a confirmação nomeou** (`expected_jid`). Se o grupo mudou desde a prévia, o servidor recusa e o bloco volta para *Preparar envio*.
+9. **Kit nunca salvo mostra a barra de Salvar sem mexer**: quem só quer o texto padrão precisa conseguir salvar, senão Funções segue dizendo que o kit não foi montado.

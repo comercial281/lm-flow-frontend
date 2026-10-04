@@ -59,7 +59,7 @@ export default function KitBoasVindasBloco({ tenantId }: { tenantId: string }) {
         const s = await welcomeKitService.tenantState(tenantId);
         if (cancelado) return;
         setEstado(s);
-        if (!s.progress || s.progress.state === 'done') {
+        if (!s.progress || s.progress.state !== 'running') {
           setAndamento(null);
           setAcompanhando(false);
           return;
@@ -104,7 +104,7 @@ export default function KitBoasVindasBloco({ tenantId }: { tenantId: string }) {
     setErroAcao(null);
     setDemorou(false);
     try {
-      setAndamento(await welcomeKitService.deliver(tenantId));
+      setAndamento(await welcomeKitService.deliver(tenantId, prev.target.jid));
       setPrev(null);
       setAcompanhando(true);
     } catch (e) {
@@ -116,7 +116,10 @@ export default function KitBoasVindasBloco({ tenantId }: { tenantId: string }) {
         setPrev(null);
         setAcompanhando(true);
       } else {
+        // Recusado (grupo mudou desde a prévia, sem destino): a prévia que estava
+        // na tela não vale mais, então volta para *Preparar envio*.
         setErroAcao(motivo(e, 'Não consegui começar o envio.'));
+        setPrev(null);
       }
     } finally {
       setEnviando(false);
