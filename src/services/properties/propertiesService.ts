@@ -8,6 +8,13 @@ export interface Construtora { name?: string; contact_name?: string; phone?: str
 export interface DadosInternos { keys_location?: string; registration_number?: string; iptu_code?: string; notary?: string; appraised_value?: string; notes?: string }
 export interface Comissao { percent?: string; notes?: string }
 
+export interface CepAchado {
+  address_street?: string; address_neighborhood?: string; address_city?: string; address_state?: string;
+}
+export type PrecisaoDoPonto = 'number' | 'street' | 'neighborhood' | 'city';
+/** `failed` = o serviço de mapa estava ocupado/falhou (diferente de "não achou"). */
+export interface PontoAchado { lat: number | null; lng: number | null; precision: PrecisaoDoPonto | null; failed: boolean }
+
 export interface Property {
   id: string;
   code: string;
@@ -43,6 +50,8 @@ export interface Property {
   address_zip?: string;
   latitude?: number | null;
   longitude?: number | null;
+  /** Quem pôs o ponto no mapa: o servidor ('auto') ou o usuário arrastando o alfinete ('manual'). */
+  location_source?: 'auto' | 'manual' | null;
   exclusive?: boolean;
   featured?: boolean;
   published_on_site?: boolean;
@@ -147,6 +156,7 @@ export interface PropertyFormData {
   address_zip?: string;
   latitude?: number | null;
   longitude?: number | null;
+  location_source?: 'auto' | 'manual' | '' | null;
   exclusive?: boolean;
   featured?: boolean;
   published_on_site?: boolean;
@@ -377,13 +387,16 @@ export const propertiesService = {
     return (res.data as { data: { score: number; label: string; breakdown: Record<string, number> } }).data;
   },
 
-  async cepLookup(cep: string): Promise<{
-    logradouro: string; bairro: string; localidade: string; uf: string;
-  }> {
+  async cepLookup(cep: string): Promise<CepAchado> {
     const res = await api.get('/properties/cep_lookup', { params: { cep } });
-    return (res.data as { data: Record<string, string> }).data as {
-      logradouro: string; bairro: string; localidade: string; uf: string;
-    };
+    return (res.data as { data: CepAchado }).data;
+  },
+
+  async geocode(e: {
+    street?: string; number?: string; neighborhood?: string; city?: string; state?: string; cep?: string;
+  }): Promise<PontoAchado> {
+    const res = await api.get('/properties/geocode', { params: e });
+    return (res.data as { data: PontoAchado }).data;
   },
 
   async batchGenerateDescriptions(ids: string[]): Promise<Array<{

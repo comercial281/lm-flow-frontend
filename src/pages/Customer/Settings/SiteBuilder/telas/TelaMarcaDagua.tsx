@@ -6,6 +6,7 @@ import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { estiloDaMarca } from '@/features/siteBuilder/watermarkPreview';
 import { siteBuilderService, type Site, type SiteWatermark } from '@/services/siteBuilder/siteBuilderService';
 import { propertiesService } from '@/services/properties/propertiesService';
+import { Secao, Secoes } from '../ui/Secao';
 import type { FormProps } from './tipos';
 
 type Posicao = SiteWatermark['position'];
@@ -85,14 +86,18 @@ export default function TelaMarcaDagua({ site, siteForm, setF, onLogoAtualizado 
   };
 
   return (
-    <section className="rounded-xl border border-border bg-card p-5 space-y-5">
+    <Secoes>
+      <Secao
+        titulo="Logo nas fotos"
+        descricao="Seu logo por cima das fotos dos imóveis, no site e nas páginas de anúncio, para ninguém usar as fotos sem pedir. Os portais (ZAP, OLX…) continuam recebendo a foto sem marca."
+      >
       <div className="flex items-center gap-3">
         <Checkbox id="marca-ativa" checked={marca.enabled}
           onCheckedChange={v => atualizar({ enabled: v === true })} />
-        <UILabel htmlFor="marca-ativa" className="cursor-pointer">Colocar marca d'água nas fotos dos imóveis</UILabel>
+        <UILabel htmlFor="marca-ativa" className="cursor-pointer text-base font-normal">Colocar marca d'água nas fotos dos imóveis</UILabel>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted">
           {fotoExemplo ? (
             <img src={fotoExemplo} alt="" className="h-full w-full object-cover" />
@@ -121,7 +126,7 @@ export default function TelaMarcaDagua({ site, siteForm, setF, onLogoAtualizado 
                 <Button type="button" variant="ghost" size="sm" disabled={enviando} onClick={remover}>Remover</Button>
               )}
             </div>
-            <p className="text-sm text-muted-foreground">Use o logo branco ou com fundo transparente (PNG).</p>
+            <p className="text-sm text-muted-foreground">Use o logo branco ou com fundo transparente (PNG). É salvo na hora.</p>
           </div>
 
           <div className="space-y-2">
@@ -145,10 +150,8 @@ export default function TelaMarcaDagua({ site, siteForm, setF, onLogoAtualizado 
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        Vale para o site e as páginas de anúncio. Os portais (ZAP, OLX…) continuam recebendo a foto sem marca.
-      </p>
       {dialogoDeConfirmacao}
-    </section>
+      </Secao>
+    </Secoes>
   );
 }

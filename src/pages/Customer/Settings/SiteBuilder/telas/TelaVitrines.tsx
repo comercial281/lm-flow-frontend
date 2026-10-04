@@ -6,6 +6,8 @@ import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { HOME_FABRICA, type HomeConfig, type RegrasVitrine, type Vitrine } from '@/features/siteBuilder/public/homeConfig';
 import { ROTULO_TIPO, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { FASES } from '@/features/properties/listingKind';
+import { Secao, Secoes } from '../ui/Secao';
+import { CLASSE_DO_CAMPO, CampoTexto } from '../ui/Campo';
 import type { FormProps } from './tipos';
 
 // Teto do servidor (Sites::HomeConfig::MAX_SHOWCASES), contando as 2 de fábrica.
@@ -59,8 +61,12 @@ export default function TelaVitrines({ siteForm, setF }: FormProps) {
   };
 
   return (
-    <section className="rounded-xl border border-border bg-card p-5 space-y-4">
-      <Reorder.Group axis="y" values={lista} onReorder={gravar} className="space-y-2">
+    <Secoes>
+      <Secao
+        titulo="Faixas de imóveis"
+        descricao="Cada vitrine é uma faixa de imóveis na página inicial, com até 6, os mais recentes primeiro. Vitrine sem imóvel some sozinha do site. Arraste pela alça ou use as setas para mudar a ordem."
+      >
+      <Reorder.Group axis="y" values={lista} onReorder={gravar} className="space-y-3">
         {lista.map((v, i) => (
           <ItemVitrine key={v.id} vitrine={v} primeira={i === 0} ultima={i === lista.length - 1}
             aberta={aberta === v.id} alternarEditor={() => setAberta(aberta === v.id ? null : v.id)}
@@ -73,11 +79,9 @@ export default function TelaVitrines({ siteForm, setF }: FormProps) {
           <Plus className="mr-1.5 h-4 w-4" aria-hidden /> Nova vitrine
         </Button>
       )}
-      <p className="text-sm text-muted-foreground">
-        Vitrine sem imóvel some sozinha do site. Cada uma mostra até 6, os mais recentes primeiro.
-      </p>
       {dialogoDeConfirmacao}
-    </section>
+      </Secao>
+    </Secoes>
   );
 }
 
@@ -100,7 +104,7 @@ function ItemVitrine({ vitrine: v, primeira, ultima, aberta, alternarEditor, mud
 
   return (
     <Reorder.Item value={v} dragListener={false} dragControls={controles} className="list-none">
-      <div className="rounded-lg border border-border bg-card p-3 space-y-3">
+      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" aria-label="Arrastar pra mudar a ordem" title="Arrastar pra mudar a ordem"
             onPointerDown={e => controles.start(e)}
@@ -111,7 +115,7 @@ function ItemVitrine({ vitrine: v, primeira, ultima, aberta, alternarEditor, mud
             <Checkbox id={`${idBase}-mostrar`} checked={v.enabled} onCheckedChange={c => mudar({ enabled: c === true })} />
             <UILabel htmlFor={`${idBase}-mostrar`} className="cursor-pointer">Mostrar</UILabel>
           </div>
-          <Input aria-label="Título da vitrine" className="min-w-0 flex-1" maxLength={80} value={v.title}
+          <Input aria-label="Título da vitrine" className={`min-w-0 flex-1 ${CLASSE_DO_CAMPO}`} maxLength={80} value={v.title}
             placeholder={TITULO_FABRICA[v.id] && !livre ? TITULO_FABRICA[v.id] : 'Vitrine'}
             onChange={e => mudar({ title: e.target.value })} />
           <div className="flex flex-none items-center gap-1">
@@ -170,7 +174,7 @@ function EditorDeRegra({ idBase, regras, mudar }: { idBase: string; regras: Regr
   const preco = (v: string) => (v === '' ? null : Number(v));
 
   return (
-    <div className="space-y-4 rounded-md border border-dashed border-border p-3">
+    <div className="space-y-5 rounded-md border border-dashed border-border p-4">
       <Escolha rotulo="Finalidade" valor={regras.transaction} mudar={transaction => mudar({ transaction })}
         opcoes={[[null, 'Qualquer'], ['sale', 'Comprar'], ['rent', 'Alugar']]} />
       <Escolha rotulo="Cadastro" valor={regras.listing_kind}
@@ -189,23 +193,17 @@ function EditorDeRegra({ idBase, regras, mudar }: { idBase: string; regras: Regr
             </div>
           ))}
         </div>
-        <p className="text-xs text-muted-foreground">Nenhum marcado: todos os tipos.</p>
+        <p className="text-sm text-muted-foreground">Nenhum marcado: todos os tipos.</p>
       </fieldset>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-5 sm:grid-cols-2">
         <CampoLista id={`${idBase}-cidades`} rotulo="Cidades" lista={regras.cities} mudar={cities => mudar({ cities })} />
         <CampoLista id={`${idBase}-bairros`} rotulo="Bairros" lista={regras.neighborhoods} mudar={neighborhoods => mudar({ neighborhoods })} />
-        <p className="text-xs text-muted-foreground sm:col-span-2">Cidade e bairro como no cadastro dos imóveis; maiúscula e acento não fazem diferença.</p>
-        <div>
-          <UILabel htmlFor={`${idBase}-de`}>De R$</UILabel>
-          <Input id={`${idBase}-de`} className="mt-1" type="number" min={0} inputMode="numeric" value={regras.price_min ?? ''}
-            onChange={e => mudar({ price_min: preco(e.target.value) })} />
-        </div>
-        <div>
-          <UILabel htmlFor={`${idBase}-ate`}>Até R$</UILabel>
-          <Input id={`${idBase}-ate`} className="mt-1" type="number" min={0} inputMode="numeric" value={regras.price_max ?? ''}
-            onChange={e => mudar({ price_max: preco(e.target.value) })} />
-        </div>
+        <p className="text-sm text-muted-foreground sm:col-span-2">Cidade e bairro como no cadastro dos imóveis; maiúscula e acento não fazem diferença.</p>
+        <CampoTexto id={`${idBase}-de`} rotulo="De R$" type="number" min={0} inputMode="numeric"
+          valor={String(regras.price_min ?? '')} aoMudar={v => mudar({ price_min: preco(v) })} />
+        <CampoTexto id={`${idBase}-ate`} rotulo="Até R$" type="number" min={0} inputMode="numeric"
+          valor={String(regras.price_max ?? '')} aoMudar={v => mudar({ price_max: preco(v) })} />
         {regras.price_min != null && regras.price_max != null && regras.price_min > regras.price_max && (
           <p className="text-sm text-amber-600 sm:col-span-2">O valor em De R$ está maior que o de Até R$: nenhum imóvel cabe e a vitrine some do site.</p>
         )}
@@ -223,7 +221,7 @@ function EditorDeRegra({ idBase, regras, mudar }: { idBase: string; regras: Regr
               </div>
             ))}
           </div>
-          <p className="text-xs text-muted-foreground">Fase vale só para empreendimentos.</p>
+          <p className="text-sm text-muted-foreground">Fase vale só para empreendimentos.</p>
         </fieldset>
       )}
 
@@ -248,13 +246,10 @@ function CampoLista({ id, rotulo, lista, mudar }: { id: string; rotulo: string; 
     if (separar(texto).join('\n') !== lista.join('\n')) setTexto(lista.join(', '));
   }
   return (
-    <div>
-      <UILabel htmlFor={id}>{rotulo}</UILabel>
-      <Input id={id} className="mt-1" value={texto} placeholder="Separe por vírgula"
-        onChange={e => {
-          setTexto(e.target.value);
-          mudar(separar(e.target.value));
-        }} />
-    </div>
+    <CampoTexto id={id} rotulo={rotulo} valor={texto} placeholder="Separe por vírgula"
+      aoMudar={v => {
+        setTexto(v);
+        mudar(separar(v));
+      }} />
   );
 }

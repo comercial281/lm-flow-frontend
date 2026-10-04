@@ -14,11 +14,11 @@ const ontem = new Date(Date.now() - 10 * 86_400_000).toISOString();
 const ana = {
   tenant_schema: 'tenant_a', tenant_name: 'Alfa Imóveis', tenant_id: 't1', user_id: 'u1',
   name: 'Ana Souza', email: 'ana@alfa.com', phone: '11940871974', role: 'Gerente', team: false,
-  last_seen_at: ontem, accesses_30d: 3, seconds_30d: 4800, situation: 'sumido',
+  last_seen_at: ontem, accesses_30d: 3, seconds_30d: 4800, situation: 'sumido', notification: 'bloqueada',
 };
 const principal = {
   ...ana, tenant_schema: 'public', tenant_name: 'Leal Mídia (principal)', tenant_id: null, user_id: 'u9',
-  name: 'Paulo Principal', email: 'paulo@lm.com', role: 'Administrador',
+  name: 'Paulo Principal', email: 'paulo@lm.com', role: 'Administrador', notification: 'ok',
 };
 
 const pagina = (items: unknown[], extra: Record<string, unknown> = {}) => ({
@@ -205,5 +205,30 @@ describe('Usuarios', () => {
     apiPost.mockRejectedValueOnce({ response: { status: 500, data: { error: 'schema do cliente nao existe' } } });
     fireEvent.click(screen.getByRole('button', { name: /copiar link/i }));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Não deu para gerar o link. Tente de novo.'));
+  });
+
+  it('mostra a coluna Notificação', async () => {
+    apiGet.mockResolvedValue(pagina([ana, principal]));
+    montar();
+    await waitFor(() => expect(screen.getByText('Bloqueada')).toBeInTheDocument());
+    expect(screen.getByRole('columnheader', { name: 'Notificação' })).toBeInTheDocument();
+    expect(screen.getByText('Ok')).toBeInTheDocument();
+  });
+
+  it('notificação não lida (null) vira traço', async () => {
+    apiGet.mockResolvedValue(pagina([{ ...ana, notification: null }]));
+    montar();
+    const linha = (await screen.findByText('Ana Souza')).closest('tr') as HTMLElement;
+    expect(within(linha).queryByText('Bloqueada')).not.toBeInTheDocument();
+    expect(within(linha).getByText('—')).toBeInTheDocument();
+  });
+
+  it('filtro Com problema vai na URL e na consulta', async () => {
+    apiGet.mockResolvedValue(pagina([ana]));
+    montar('/admin/usuarios?notificacao=com_problema');
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/users', { params: { per_page: 20, notification: 'com_problema' } }));
+    expect((screen.getByLabelText('Notificação') as HTMLSelectElement).value).toBe('com_problema');
+    fireEvent.change(screen.getByLabelText('Notificação'), { target: { value: '' } });
+    await waitFor(() => expect(screen.getByTestId('url')).not.toHaveTextContent('notificacao'));
   });
 });

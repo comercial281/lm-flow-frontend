@@ -1,9 +1,11 @@
 import { Plus, Trash2 } from 'lucide-react';
-import { Button, Checkbox, Input, Label as UILabel } from '@/components/ui/ds';
+import { Button, Checkbox, Label as UILabel } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { HOME_FABRICA, type AtalhoManual, type HomeConfig } from '@/features/siteBuilder/public/homeConfig';
 import { ROTULO_TIPO, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
+import { Secao, Secoes } from '../ui/Secao';
+import { CLASSE_DO_CAMPO, CampoTexto } from '../ui/Campo';
 import type { FormProps } from './tipos';
 
 const MAX_ATALHOS = 8;
@@ -30,10 +32,14 @@ export default function TelaMaisBuscados({ siteForm, setF }: FormProps) {
   };
 
   return (
-    <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <Secoes>
+      <Secao
+        titulo="Atalhos da busca"
+        descricao='Botões na página inicial que levam direto pra uma busca pronta, como "Apartamentos no Centro". O visitante clica e já vê os imóveis.'
+      >
       <div className="flex items-center gap-3">
         <Checkbox id="buscados-ativo" checked={ms.enabled} onCheckedChange={v => mudar({ enabled: v === true })} />
-        <UILabel htmlFor="buscados-ativo" className="cursor-pointer">Mostrar mais buscados na página inicial</UILabel>
+        <UILabel htmlFor="buscados-ativo" className="cursor-pointer text-base font-normal">Mostrar mais buscados na página inicial</UILabel>
       </div>
 
       {ms.enabled && (
@@ -53,47 +59,35 @@ export default function TelaMaisBuscados({ siteForm, setF }: FormProps) {
           ) : (
             <div className="space-y-3">
               {ms.items.map((it, i) => (
-                <div key={i} className="rounded-lg border border-border p-3 space-y-3">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <UILabel htmlFor={`atalho-${i}-rotulo`}>Rótulo</UILabel>
-                      <Input id={`atalho-${i}-rotulo`} className="mt-1" value={it.label}
-                        onChange={e => mudarItem(i, { label: e.target.value })} />
-                      {it.label.trim() === '' && <p className="mt-1 text-sm text-amber-600">Sem rótulo, o atalho não é salvo.</p>}
-                    </div>
-                    <div>
+                <div key={i} className="rounded-lg border border-border p-4 space-y-4">
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <CampoTexto id={`atalho-${i}-rotulo`} rotulo="Rótulo" valor={it.label}
+                      aviso={it.label.trim() === '' ? 'Sem rótulo, o atalho não é salvo.' : undefined}
+                      aoMudar={v => mudarItem(i, { label: v })} />
+                    <div className="space-y-2">
                       <UILabel htmlFor={`atalho-${i}-finalidade`}>Finalidade</UILabel>
                       {/* Sem "Qualquer": o atalho leva a uma aba da busca. Atalho antigo sem finalidade é Comprar. */}
-                      <Seletor id={`atalho-${i}-finalidade`} className="mt-1 w-full" value={it.transaction ?? 'sale'}
+                      <Seletor id={`atalho-${i}-finalidade`} className={`w-full ${CLASSE_DO_CAMPO}`} value={it.transaction ?? 'sale'}
                         onChange={e => mudarItem(i, { transaction: e.target.value === 'rent' ? 'rent' : 'sale' })}>
                         <option value="sale">Comprar</option>
                         <option value="rent">Alugar</option>
                       </Seletor>
                     </div>
-                    <div>
+                    <div className="space-y-2">
                       <UILabel htmlFor={`atalho-${i}-tipo`}>Tipo</UILabel>
-                      <Seletor id={`atalho-${i}-tipo`} className="mt-1 w-full" value={it.property_type ?? ''}
+                      <Seletor id={`atalho-${i}-tipo`} className={`w-full ${CLASSE_DO_CAMPO}`} value={it.property_type ?? ''}
                         onChange={e => mudarItem(i, { property_type: e.target.value || null })}>
                         <option value="">Qualquer tipo</option>
                         {OPCOES_TIPO.map(([valor, rotulo]) => <option key={valor} value={valor}>{rotulo}</option>)}
                       </Seletor>
                     </div>
-                    <div>
-                      <UILabel htmlFor={`atalho-${i}-cidade`}>Cidade</UILabel>
-                      <Input id={`atalho-${i}-cidade`} className="mt-1" value={it.city ?? ''}
-                        onChange={e => mudarItem(i, { city: texto(e.target.value) })} />
-                    </div>
-                    <div>
-                      <UILabel htmlFor={`atalho-${i}-bairro`}>Bairro</UILabel>
-                      <Input id={`atalho-${i}-bairro`} className="mt-1" value={it.neighborhood ?? ''}
-                        onChange={e => mudarItem(i, { neighborhood: texto(e.target.value) })} />
-                    </div>
-                    <div>
-                      <UILabel htmlFor={`atalho-${i}-preco`}>Preço até</UILabel>
-                      <Input id={`atalho-${i}-preco`} className="mt-1" type="number" min={0} inputMode="numeric"
-                        value={it.price_max ?? ''}
-                        onChange={e => mudarItem(i, { price_max: e.target.value === '' ? null : Number(e.target.value) })} />
-                    </div>
+                    <CampoTexto id={`atalho-${i}-cidade`} rotulo="Cidade" valor={it.city ?? ''}
+                      aoMudar={v => mudarItem(i, { city: texto(v) })} />
+                    <CampoTexto id={`atalho-${i}-bairro`} rotulo="Bairro" valor={it.neighborhood ?? ''}
+                      aoMudar={v => mudarItem(i, { neighborhood: texto(v) })} />
+                    <CampoTexto id={`atalho-${i}-preco`} rotulo="Preço até" type="number" min={0} inputMode="numeric"
+                      valor={String(it.price_max ?? '')}
+                      aoMudar={v => mudarItem(i, { price_max: v === '' ? null : Number(v) })} />
                   </div>
                   <Button type="button" variant="ghost" size="sm" onClick={() => remover(i)}>
                     <Trash2 className="mr-1.5 h-4 w-4" aria-hidden /> Remover
@@ -110,6 +104,7 @@ export default function TelaMaisBuscados({ siteForm, setF }: FormProps) {
         </>
       )}
       {dialogoDeConfirmacao}
-    </section>
+      </Secao>
+    </Secoes>
   );
 }

@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import SaleRentDestination from '@/components/pipelines/SaleRentDestination';
 import type { LeadDestinationOptions } from '@/components/pipelines/useLeadDestinationOptions';
 import type { SiteRoutingState } from '../siteLeadRouting';
+import { Secao, Secoes } from '../ui/Secao';
 
 interface Props {
   leadRouting: SiteRoutingState;
@@ -12,18 +13,20 @@ interface Props {
 
 export default function TelaDestino({ leadRouting, setLeadRouting, routingOptions, marcarAlterado }: Props) {
   return (
-    <>
+    <Secoes>
       {/* Destino do lead: para onde vão os leads dos formulários do site e
           quem atende, separado por Venda e Locação (spec 2026-09-30). Sem
           funil = funil padrão; sem roleta = entra sem responsável, como todo
           site funcionou até aqui. A etiqueta do imóvel é aplicada por cima. */}
-      <section className="rounded-xl border border-border bg-card p-5">
-        <h2 className="text-base font-semibold mb-1">Destino do lead</h2>
-        <p className="mb-4 text-xs text-muted-foreground">
-          Para onde vai o lead dos formulários do site. O imóvel decide se ele é de Venda ou de
-          Locação; no formulário da home e no imóvel de Venda + Locação, quem preenche escolhe.
-          Funil em branco usa o funil padrão; roleta em branco deixa o lead sem responsável.
-        </p>
+      <Secao
+        titulo="Destino do contato"
+        descricao={
+          <>
+            <p>Para onde vai quem preenche um formulário do site. O imóvel decide se é de Venda ou de Locação; no formulário da página inicial e no imóvel de Venda + Locação, quem preenche escolhe.</p>
+            <p className="mt-2">Funil em branco usa o funil padrão; roleta em branco deixa o contato sem responsável.</p>
+          </>
+        }
+      >
         <SaleRentDestination
           sale={leadRouting.sale}
           rent={leadRouting.rent}
@@ -35,7 +38,7 @@ export default function TelaDestino({ leadRouting, setLeadRouting, routingOption
           showRent={leadRouting.supported}
           showLabel
         />
-      </section>
-    </>
+      </Secao>
+    </Secoes>
   );
 }
