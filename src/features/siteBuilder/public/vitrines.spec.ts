@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { PortalProperty, SiteInfo } from '@/pages/Public/portalShared';
 import { filterProperties } from './filtros';
 import { resolverHome } from './homeConfig';
+import { atalhosDoSite } from './maisBuscados';
 import { abasVisiveis, itensDaVitrine, vitrinesVisiveis, buscaDaRegra, chamadasVisiveis } from './vitrines';
 
 const p = (code: string, o: Partial<PortalProperty> = {}): PortalProperty => ({
@@ -67,6 +68,17 @@ describe('vitrines', () => {
   });
 });
 
+describe('home torta do servidor não derruba o site', () => {
+  it('itens nulos e vitrine sem regras completas', () => {
+    const h = resolverHome({ showcases: [null, { id: 'x', kind: 'custom', title: 'T' }, { id: 'y', kind: 'custom', title: 'Y', rules: { cities: 'x' } }],
+      callouts: { custom: [null, 3] }, most_searched: { mode: 'manual', items: [null] } });
+    expect(() => vitrinesVisiveis(h, [p('A')])).not.toThrow();
+    expect(() => chamadasVisiveis({ home: h } as SiteInfo, 'imob')).not.toThrow();
+    expect(() => atalhosDoSite(h, [p('A')])).not.toThrow();
+    expect(vitrinesVisiveis(h, [p('A')]).map(v => v.vitrine.id)).toEqual(['x', 'y']);
+  });
+});
+
 describe('chamadas', () => {
   const base = (o: Partial<SiteInfo> = {}): SiteInfo => ({ financiamento: { enabled: true }, anuncie: { enabled: true },
     sections: { lead_capture: true }, contact: { whatsapp: '5511999990000' }, menu: [{ title: 'Sobre', slug: 'sobre' }], ...o } as SiteInfo);
@@ -81,6 +93,10 @@ describe('chamadas', () => {
     const c = chamadasVisiveis(base({ home } as Partial<SiteInfo>), 'imob');
     expect(c.find(x => x.key === 'financing')?.title).toBe('Crédito');
     expect(c.find(x => x.key === 'wanted')).toBeUndefined();
+  });
+  it('url que não é http(s) não vira cartão', () => {
+    const home = { callouts: { custom: [{ title: 'X', text: null, button: null, dest_type: 'url', dest_value: 'javascript:alert(1)' }] } };
+    expect(chamadasVisiveis(base({ home } as Partial<SiteInfo>), 'imob').find(x => x.title === 'X')).toBeUndefined();
   });
   it('livres: whatsapp sem número some, página inexistente some, link externo abre fora', () => {
     const home = { callouts: { custom: [

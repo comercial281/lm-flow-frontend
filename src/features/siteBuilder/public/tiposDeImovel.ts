@@ -14,3 +14,9 @@ export const PLURAL_TIPO: Record<string, string> = {
 };
 export const rotuloTipo = (t: string) => ROTULO_TIPO[t] ?? 'Imóvel';
 export const pluralTipo = (t: string) => PLURAL_TIPO[t] ?? 'Imóveis';
+
+/** Opções de um seletor de tipo: um item por nome (cobertura/penthouse viram um só), mantendo a primeira chave. */
+export function opcoesDeTipo(tipos: string[]): [string, string][] {
+  const vistos = new Set<string>();
+  return tipos.map(t => [t, rotuloTipo(t)] as [string, string]).filter(([, l]) => (vistos.has(l) ? false : (vistos.add(l), true)));
+}

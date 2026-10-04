@@ -78,7 +78,7 @@ export function chamadasVisiveis(site: SiteInfo, tenant: string): CartaoChamada[
       const base = { key: `custom-${i}`, title: c.title, text: c.text ?? '', button: c.button ?? 'Saiba mais' };
       if (c.dest_type === 'whatsapp') return zap ? { ...base, icone: 'whatsapp', to: `https://wa.me/${zap}?text=${encodeURIComponent(c.title)}`, externo: true } : null;
       if (c.dest_type === 'page') return c.dest_value && pagina(c.dest_value) ? { ...base, icone: 'page', to: `/portal/${tenant}/p/${encodeURIComponent(c.dest_value)}`, externo: false } : null;
-      return c.dest_value ? { ...base, icone: 'link', to: c.dest_value, externo: true } : null;
+      return typeof c.dest_value === 'string' && /^https?:\/\//i.test(c.dest_value) ? { ...base, icone: 'link', to: c.dest_value, externo: true } : null;
     }),
   ];
   return cards.filter((c): c is CartaoChamada => c !== null);

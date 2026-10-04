@@ -4,7 +4,7 @@ import {
   I, Ic, PortalFooter, PortalHeader, PropertyCard, Select,
   filterProperties, usePortalData, type PortalFilters, type PortalTab,
 } from './portalShared';
-import { rotuloTipo } from '@/features/siteBuilder/public/tiposDeImovel';
+import { opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { usePortalTracking } from './usePortalTracking';
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ export default function PortalSearchPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              <Select value={filters.type} onChange={v => update({ type: v })} label="Tipo" options={types.map(t => [t, rotuloTipo(t)])} />
+              <Select value={filters.type} onChange={v => update({ type: v })} label="Tipo" options={opcoesDeTipo(types)} />
               <Select value={filters.city} onChange={v => update({ city: v })} label="Cidade" options={cities.map(c => [c, c])} />
               <Select value={filters.neighborhood} onChange={v => update({ neighborhood: v })} label="Bairro" options={hoods.map(h => [h, h])} />
               <Select value={filters.bedrooms} onChange={v => update({ bedrooms: v })} label="Dormitórios" options={[['1', '1+'], ['2', '2+'], ['3', '3+'], ['4', '4+']]} />

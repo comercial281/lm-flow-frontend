@@ -85,6 +85,36 @@ export const HOME_FABRICA: HomeConfig = {
   most_searched: { enabled: true, mode: 'auto', items: [] },
 };
 
+const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+const numOuNull = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+
+function regras(raw: unknown): RegrasVitrine {
+  const r = obj(raw);
+  return {
+    transaction: r.transaction === 'sale' || r.transaction === 'rent' ? r.transaction : null,
+    listing_kind: r.listing_kind === 'resale' || r.listing_kind === 'development' ? r.listing_kind : null,
+    property_types: strs(r.property_types), cities: strs(r.cities), neighborhoods: strs(r.neighborhoods),
+    price_min: numOuNull(r.price_min), price_max: numOuNull(r.price_max),
+    stages: strs(r.stages), featured_only: r.featured_only === true,
+  };
+}
+
+// O servidor já sanea, mas um item torto não pode derrubar a home pública:
+// cada lista é filtrada pelo formato mínimo e normalizada.
+function vitrines(raw: unknown): Vitrine[] {
+  if (!Array.isArray(raw)) return HOME_FABRICA.showcases;
+  const lista = raw.map((x): Vitrine | null => {
+    const v = obj(x);
+    if (typeof v.id !== 'string' || !(['launches', 'featured', 'custom'] as const).includes(v.kind as 'custom')) return null;
+    const kind = v.kind as Vitrine['kind'];
+    const fabrica = HOME_FABRICA.showcases.find(f => f.kind === kind);
+    const base: Vitrine = { id: v.id, kind, enabled: typeof v.enabled === 'boolean' ? v.enabled : true,
+      title: typeof v.title === 'string' ? v.title : fabrica?.title ?? '' };
+    return kind === 'custom' ? { ...base, rules: regras(v.rules) } : base;
+  }).filter((v): v is Vitrine => v !== null);
+  return lista.length ? lista : HOME_FABRICA.showcases;
+}
+
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {});
 
 export function resolverHome(raw: unknown): HomeConfig {
@@ -96,9 +126,10 @@ export function resolverHome(raw: unknown): HomeConfig {
       title: typeof s.title === 'string' ? s.title : null,
       subtitle: typeof s.subtitle === 'string' ? s.subtitle : null,
       tabs: { sale: tabs.sale !== false, rent: tabs.rent !== false, launch: tabs.launch !== false },
+      // `fields: []` é válido de propósito: o cliente pode desligar todos os filtros da capa.
       fields: Array.isArray(s.fields) ? CAMPOS_BUSCA.filter(k => (s.fields as string[]).includes(k)) : HOME_FABRICA.search.fields,
     },
-    showcases: Array.isArray(r.showcases) && r.showcases.length ? (r.showcases as Vitrine[]) : HOME_FABRICA.showcases,
+    showcases: vitrines(r.showcases),
     callouts: {
       layout: (['band', 'photo', 'cards'] as const).find(x => x === c.layout) ?? 'band',
       background_url: typeof c.background_url === 'string' ? c.background_url : null,
@@ -108,12 +139,17 @@ export function resolverHome(raw: unknown): HomeConfig {
         listing: { ...HOME_FABRICA.callouts.defaults.listing, ...obj(d.listing) } as ChamadaPadrao,
         wanted: { ...HOME_FABRICA.callouts.defaults.wanted, ...obj(d.wanted) } as ChamadaPadrao,
       },
-      custom: Array.isArray(c.custom) ? (c.custom as ChamadaLivre[]) : [],
+      custom: Array.isArray(c.custom)
+        ? (c.custom as unknown[]).filter((x): x is ChamadaLivre => {
+          const o = obj(x);
+          return typeof o.title === 'string' && (['page', 'url', 'whatsapp'] as string[]).includes(o.dest_type as string);
+        })
+        : [],
     },
     most_searched: {
       enabled: m.enabled !== false,
       mode: m.mode === 'manual' ? 'manual' : 'auto',
-      items: Array.isArray(m.items) ? (m.items as AtalhoManual[]) : [],
+      items: Array.isArray(m.items) ? (m.items as unknown[]).filter((x): x is AtalhoManual => typeof obj(x).label === 'string') : [],
     },
   };
 }

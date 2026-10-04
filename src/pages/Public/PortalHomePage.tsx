@@ -6,7 +6,7 @@ import {
   API, HomeShortcuts, I, Ic, PortalFooter, PortalHeader, PropertyCard, Select, Stat,
   usePortalData, type PortalTab,
 } from './portalShared';
-import { rotuloTipo } from '@/features/siteBuilder/public/tiposDeImovel';
+import { opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import FinalidadeChoice from './FinalidadeChoice';
 import { finalidadeInicial, type Finalidade } from './finalidade';
 import { usePortalTracking } from './usePortalTracking';
@@ -147,7 +147,7 @@ export default function PortalHomePage() {
             </div>
 
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              <Select value={fType} onChange={setFType} label="Tipo" options={types.map(t => [t, rotuloTipo(t)])} />
+              <Select value={fType} onChange={setFType} label="Tipo" options={opcoesDeTipo(types)} />
               <Select value={fCity} onChange={setFCity} label="Cidade" options={cities.map(c => [c, c])} />
               <Select value={fNeighborhood} onChange={setFNeighborhood} label="Bairro" options={hoods.map(h => [h, h])} />
               <Select value={fBedrooms} onChange={setFBedrooms} label="Dormitórios" options={[['1', '1+'], ['2', '2+'], ['3', '3+'], ['4', '4+']]} />
