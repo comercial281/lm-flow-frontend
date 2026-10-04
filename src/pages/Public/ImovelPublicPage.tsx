@@ -20,6 +20,7 @@ import FinalidadeChoice from './FinalidadeChoice';
 import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 import { FINALIDADE_PARAM, finalidadeDoImovel, finalidadeInicial, type Finalidade } from './finalidade';
+import { consultaDoMapa } from './mapaDoImovelPublico';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — PÁGINA DO IMÓVEL (Produto A). Mesma pegada "Editorial
@@ -36,6 +37,8 @@ interface PropertyDTO {
   bedrooms?: number | null; bathrooms?: number | null; suites?: number | null; parking_spaces?: number | null;
   useful_area_m2?: number | null; total_area_m2?: number | null;
   address_neighborhood?: string; address_city?: string; address_state?: string;
+  // Só vêm preenchidos para empreendimento (revenda: null, só região).
+  latitude?: number | null; longitude?: number | null;
   features?: string[] | null; condo_features?: string[] | null;
   typologies?: PropertyTypology[] | null;
   responsible_name?: string; photos?: Photo[];
@@ -253,11 +256,11 @@ export default function ImovelPublicPage() {
   // quando o tenant ainda não recebeu a coluna (backend devolve [] nesse caso).
   const typologies = prop.typologies ?? [];
 
-  // Localização: só bairro (privacidade — sem rua/número). O mapa mostra a REGIÃO
-  // de forma aproximada, buscando pelo nome do bairro/cidade — sem pino no
-  // endereço exato.
-  const regionText = [prop.address_neighborhood, prop.address_city, prop.address_state].filter(Boolean).join(', ');
-  const mapQuery = regionText ? encodeURIComponent(regionText) : null;
+  // Localização (privacidade, decisão de 03/10): revenda: só a região (bairro/
+  // cidade, sem rua/número); empreendimento: ponto exato — o servidor só manda
+  // latitude/longitude para empreendimento.
+  const mapa = consultaDoMapa(prop);
+  const regionText = mapa?.legenda ?? '';
 
   const specs = [
     prop.bedrooms ? { d: I.bed, label: `${prop.bedrooms} ${prop.bedrooms > 1 ? 'quartos' : 'quarto'}` } : null,
@@ -464,15 +467,15 @@ export default function ImovelPublicPage() {
               </section>
             )}
 
-            {mapQuery && (
+            {mapa && (
               <section className="mt-9">
                 <h2 className="font-[var(--display)] text-2xl font-semibold">Localização</h2>
                 <p className="mt-1 text-[14px] text-neutral-500">{regionText}</p>
-                {/* Mapa aproximado da região (busca por bairro/cidade), sem pino no
-                    endereço exato — privacidade do imóvel. */}
+                {/* Revenda: mapa aproximado da região, sem pino. Empreendimento:
+                    alfinete no ponto exato (lat/lng do servidor). */}
                 <div className="mt-3 overflow-hidden rounded-[20px] ring-1 ring-black/[0.06]">
-                  <iframe title="Mapa da região" width="100%" height="300" loading="lazy" style={{ border: 0 }}
-                    src={`https://www.google.com/maps?q=${mapQuery}&z=14&output=embed`} />
+                  <iframe title={mapa.exato ? 'Mapa do empreendimento' : 'Mapa da região'} width="100%" height="300" loading="lazy" style={{ border: 0 }}
+                    src={`https://www.google.com/maps?q=${mapa.q}&z=${mapa.exato ? 16 : 14}&output=embed`} />
                 </div>
               </section>
             )}
