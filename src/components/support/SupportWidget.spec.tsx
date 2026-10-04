@@ -137,4 +137,41 @@ describe('SupportWidget', () => {
     fireEvent.keyDown(card, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
+
+  it('fechar e reabrir mantém o texto digitado e tira o card da árvore de acessibilidade', async () => {
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir ajuda e suporte' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Reportar um bug' }));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'rascunho' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir ajuda e suporte' }));
+    expect(await screen.findByRole('dialog', { name: 'Ajuda e suporte' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toHaveValue('rascunho');
+  });
+
+  it('"Recebemos!" não volta depois de fechar e reabrir', async () => {
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir ajuda e suporte' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Reportar um bug' }));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Socorro' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    expect(await screen.findByText(/Recebemos!/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir ajuda e suporte' }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.queryByText(/Recebemos!/)).toBeNull();
+  });
+
+  it('ao fechar, o foco volta pra quem o tinha ao abrir', async () => {
+    montar('/conversations/1');
+    const antes = document.createElement('button');
+    document.body.appendChild(antes);
+    antes.focus();
+    act(() => openSupport());
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+    expect(document.activeElement).toBe(antes);
+    antes.remove();
+  });
 });

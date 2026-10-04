@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { erroDaApi, supportService } from '@/services/support/supportService';
 import SupportThread from './SupportThread';
@@ -9,13 +9,22 @@ interface Props {
   id: string;
   /** Mostra o balão de confirmação logo depois de abrir. */
   recemCriado?: boolean;
+  /** Card aberto? Fechado, o chamado fica montado (guarda o rascunho) mas para de buscar. */
+  aberto: boolean;
   /** Abrir = ler: o contador da bolinha precisa recontar. */
   onLido: () => void;
 }
 
-export default function SupportChamadoCliente({ id, recemCriado, onLido }: Props) {
+export default function SupportChamadoCliente({ id, recemCriado, aberto, onLido }: Props) {
   const carregar = useCallback(() => supportService.show(id), [id]);
-  const { dado, erro, recarregar } = useChamado(carregar);
+  const { dado, erro, recarregar } = useChamado(carregar, aberto ? 10000 : 0);
+
+  // Reabriu o card: o que veio enquanto estava fechado aparece já, sem esperar o próximo tick.
+  const estavaAberto = useRef(aberto);
+  useEffect(() => {
+    if (aberto && !estavaAberto.current) void recarregar();
+    estavaAberto.current = aberto;
+  }, [aberto, recarregar]);
 
   useEffect(() => {
     if (dado) onLido();

@@ -9,6 +9,10 @@ import { erroDaApi } from '@/services/support/supportService';
  * identidade muda (outro id), o hook zera `dado`/`erro` e carrega na hora,
  * reiniciando o intervalo. Função nova a cada render = recarga a cada render.
  *
+ * `intervaloMs <= 0` = sem intervalo (card fechado: não gasta rede). O intervalo
+ * mora num efeito próprio de propósito: pausar/retomar NÃO zera `dado` — zerar
+ * desmontaria a caixa de texto e perderia o rascunho de quem fechou o card.
+ *
  * Só a requisição mais recente grava estado (uma resposta lenta de antes não
  * sobrescreve a de depois do envio) e o ciclo não empilha: com requisição
  * pendente, o tick é pulado.
@@ -41,15 +45,19 @@ export function useChamado<T>(carregar: () => Promise<T>, intervaloMs = 10000) {
     setDado(null);
     setErro(null);
     void recarregar();
-    const id = window.setInterval(() => {
-      if (document.visibilityState === 'visible' && !pendente.current) void recarregar();
-    }, intervaloMs);
     return () => {
-      window.clearInterval(id);
       seq.current++; // resposta em voo de antes não grava depois
       pendente.current = false;
     };
-  }, [carregar, recarregar, intervaloMs]);
+  }, [carregar, recarregar]);
+
+  useEffect(() => {
+    if (intervaloMs <= 0) return;
+    const id = window.setInterval(() => {
+      if (document.visibilityState === 'visible' && !pendente.current) void recarregar();
+    }, intervaloMs);
+    return () => window.clearInterval(id);
+  }, [recarregar, intervaloMs]);
 
   return { dado, erro, recarregar };
 }

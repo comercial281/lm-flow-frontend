@@ -55,6 +55,9 @@ export default function SupportWidget() {
   const nome = useAuthStore(s => s.currentUser?.name ?? '');
   const primeiroNome = nome.trim().split(/\s+/)[0] ?? '';
   const [aberto, setAberto] = useState(false);
+  // Depois da primeira abertura o card fica montado (escondido) pra guardar rascunho e tela.
+  const [jaAbriu, setJaAbriu] = useState(false);
+  const focoAnterior = useRef<HTMLElement | null>(null);
   const [tela, setTela] = useState<Tela>({ nome: 'inicio' });
   const { naoLidos, atualizar } = useNaoLidos();
   const bolinha = useRef<HTMLButtonElement>(null);
@@ -62,12 +65,20 @@ export default function SupportWidget() {
 
   const abrir = useCallback((alvo: AlvoSuporte = {}) => {
     if (alvo.chamadoId) setTela({ nome: 'chamado', id: alvo.chamadoId });
+    // Guarda quem tinha o foco pra devolver ao fechar (só na transição fechado → aberto).
+    if (!card.current || card.current.hasAttribute('inert')) {
+      focoAnterior.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    }
+    setJaAbriu(true);
     setAberto(true);
   }, []);
 
   const fechar = () => {
     setAberto(false);
-    bolinha.current?.focus();
+    // "Recebemos!" é só da primeira vez que o chamado abre.
+    setTela(t => (t.nome === 'chamado' && t.recemCriado ? { ...t, recemCriado: false } : t));
+    const volta = focoAnterior.current?.isConnected ? focoAnterior.current : bolinha.current;
+    volta?.focus();
   };
 
   useEffect(() => {
@@ -115,18 +126,25 @@ export default function SupportWidget() {
         </button>
       )}
 
-      {aberto && (
+      {jaAbriu && (
         <div
           ref={card}
           role="dialog"
           aria-label="Ajuda e suporte"
           tabIndex={-1}
+          // Fechado = fora da ordem de Tab e dos leitores de tela, mas montado.
+          inert={!aberto}
+          aria-hidden={!aberto}
           onKeyDown={e => {
             if (e.key === 'Escape') fechar();
           }}
-          className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-background shadow-2xl outline-none sm:inset-auto sm:bottom-20 sm:right-4 sm:h-[600px] sm:max-h-[calc(100vh-6rem)] sm:w-[380px] sm:rounded-2xl sm:border sm:border-border"
+          // Mobile: encolhe com o teclado, como o MainLayout (var(--keyboard-inset), 0px com teclado fechado).
+          className={cn(
+            'fixed inset-x-0 top-0 z-50 flex h-[calc(100dvh-var(--keyboard-inset,0px))] flex-col overflow-hidden bg-background shadow-2xl outline-none sm:inset-auto sm:right-4 sm:bottom-20 sm:h-[600px] sm:max-h-[calc(100vh-6rem)] sm:w-[380px] sm:rounded-2xl sm:border sm:border-border',
+            !aberto && 'hidden',
+          )}
         >
-          <header className="bg-gradient-to-b from-primary to-primary/80 px-5 pb-5 pt-4 text-primary-foreground">
+          <header className="bg-gradient-to-b from-primary to-primary/80 px-5 pb-5 pt-[calc(1rem+env(safe-area-inset-top))] text-primary-foreground sm:pt-4">
             <div className="flex items-center justify-between">
               {podeVoltar ? (
                 <button type="button" onClick={voltar} aria-label="Voltar" className="rounded-md p-1 hover:bg-white/10">
@@ -174,11 +192,11 @@ export default function SupportWidget() {
               <SupportMensagens onAbrir={id => setTela({ nome: 'chamado', id })} onNovo={() => setTela({ nome: 'novo', kind: 'question' })} />
             )}
             {tela.nome === 'chamado' && (
-              <SupportChamadoCliente id={tela.id} recemCriado={tela.recemCriado} onLido={() => void atualizar()} />
+              <SupportChamadoCliente id={tela.id} recemCriado={tela.recemCriado} aberto={aberto} onLido={() => void atualizar()} />
             )}
           </div>
 
-          <nav role="tablist" className="grid grid-cols-2 border-t border-border">
+          <nav role="tablist" className="grid grid-cols-2 border-t border-border pb-[env(safe-area-inset-bottom)] sm:pb-0">
             {(
               [
                 { chave: 'inicio', rotulo: 'Início', icone: Home, ir: { nome: 'inicio' } as Tela },

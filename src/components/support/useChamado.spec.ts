@@ -52,4 +52,15 @@ describe('useChamado', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
     expect(carregar).toHaveBeenCalledTimes(1);
   });
+
+  it('intervalo <= 0 só carrega uma vez, e voltar ao normal retoma sem zerar o dado', async () => {
+    const carregar = vi.fn().mockResolvedValue('x');
+    const { result, rerender } = renderHook(({ ms }) => useChamado(carregar, ms), { initialProps: { ms: 0 } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
+    expect(carregar).toHaveBeenCalledTimes(1);
+    rerender({ ms: 1000 });
+    expect(result.current.dado).toBe('x');
+    await act(async () => { await vi.advanceTimersByTimeAsync(2500); });
+    expect(carregar).toHaveBeenCalledTimes(3);
+  });
 });
