@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, Button, Label,
-} from '@/components/ui/ds';
+import { Button, Label } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import {
   ConditionEditor,
@@ -9,7 +7,9 @@ import {
   triggerNeedsCondition,
   type AutomationResources,
 } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Zap } from 'lucide-react';
+import { mesmoConteudo } from '@/hooks/useAlteracoesNaoSalvas';
+import { FlowSidePanel } from './FlowSidePanel';
 import {
   FLOW_TRIGGER_GROUPS,
   LEAD_CREATED_HINT,
@@ -35,13 +35,17 @@ import {
 //
 // Sprint 3 (03/10/2026): "+ Ou quando…" acrescenta outro gatilho. O fluxo
 // começa quando qualquer um acontece; cada um é editado com o mesmo editor.
+//
+// Sprint 4 (04/10/2026): deixou de ser janela. É o painel lateral do bloco
+// "Início", o primeiro bloco do canvas (a barra de gatilho do topo saiu).
 
 interface Props {
-  open: boolean;
   trigger: FlowTrigger;
   resources: AutomationResources;
   onClose: () => void;
   onSave: (next: FlowTrigger) => void;
+  /** Avisa o canvas quando o rascunho difere do gatilho (pra perguntar antes de descartar). */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 // Declarado fora do render: componente com Seletor criado dentro do render
@@ -106,16 +110,16 @@ function TriggerPartEditor({
   );
 }
 
-export function FlowTriggerDialog({ open, trigger, resources, onClose, onSave }: Props) {
+export function FlowTriggerPanel({ trigger, resources, onClose, onSave, onDirtyChange }: Props) {
+  // O canvas monta o painel ao abrir: o rascunho nasce do gatilho atual.
   const [draft, setDraft] = useState<FlowTrigger>(trigger);
   const [problem, setProblem] = useState<string | null>(null);
 
+  const dirty = !mesmoConteudo(draft, trigger);
   React.useEffect(() => {
-    if (open) {
-      setDraft(trigger);
-      setProblem(null);
-    }
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- reabre a partir do gatilho atual
+    onDirtyChange?.(dirty);
+  }, [dirty]); // eslint-disable-line react-hooks/exhaustive-deps -- só quando muda
+  React.useEffect(() => () => onDirtyChange?.(false), []); // eslint-disable-line react-hooks/exhaustive-deps -- ao fechar
 
   const alternatives = draft.alternatives ?? [];
   // "Quando outro fluxo chama este" é interno: não combina com "Ou quando".
@@ -136,62 +140,63 @@ export function FlowTriggerDialog({ open, trigger, resources, onClose, onSave }:
   };
 
   return (
-    <Dialog open={open} onOpenChange={o => !o && onClose()}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Gatilho do fluxo</DialogTitle>
-          <DialogDescription>O que precisa acontecer pra este fluxo começar.</DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-2">
-          <TriggerPartEditor
-            part={draft}
-            onChange={next => edit({ ...draft, event: next.event, conditions: next.conditions })}
-            resources={resources}
-            label="Quando"
-            ariaLabel="Gatilho"
-          />
-
-          {alternatives.map((alt, i) => (
-            <div key={i} className="relative rounded-lg border border-dashed border-border p-3">
-              <button
-                type="button"
-                onClick={() => edit(removeAlternative(draft, i))}
-                className="absolute right-2 top-2 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label={`Tirar o "Ou quando" ${i + 1}`}
-                title="Tirar"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-              <TriggerPartEditor
-                part={alt}
-                onChange={next => edit(updateAlternative(draft, i, next))}
-                resources={resources}
-                label="Ou quando"
-                ariaLabel={`Ou quando ${i + 1}`}
-              />
-            </div>
-          ))}
-
-          {canAddAlternative && (
-            <div>
-              <Button type="button" variant="outline" size="sm" onClick={() => edit(addAlternative(draft))}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> Ou quando…
-              </Button>
-              <p className="mt-1 text-xs text-muted-foreground">
-                O fluxo começa quando qualquer um destes acontecer.
-              </p>
-            </div>
-          )}
-
-          {problem && <p className="text-xs text-destructive" role="alert">{problem}</p>}
-        </div>
-
-        <DialogFooter>
+    <FlowSidePanel
+      testId="painel-do-inicio"
+      title="Início"
+      description="O que precisa acontecer pra este fluxo começar."
+      icon={Zap}
+      color="#059669"
+      onClose={onClose}
+      footer={(
+        <>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={save}>Salvar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      )}
+    >
+      <div className="space-y-4">
+        <TriggerPartEditor
+          part={draft}
+          onChange={next => edit({ ...draft, event: next.event, conditions: next.conditions })}
+          resources={resources}
+          label="Quando"
+          ariaLabel="Gatilho"
+        />
+
+        {alternatives.map((alt, i) => (
+          <div key={i} className="relative rounded-lg border border-dashed border-border p-3">
+            <button
+              type="button"
+              onClick={() => edit(removeAlternative(draft, i))}
+              className="absolute right-2 top-2 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label={`Tirar o "Ou quando" ${i + 1}`}
+              title="Tirar"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+            <TriggerPartEditor
+              part={alt}
+              onChange={next => edit(updateAlternative(draft, i, next))}
+              resources={resources}
+              label="Ou quando"
+              ariaLabel={`Ou quando ${i + 1}`}
+            />
+          </div>
+        ))}
+
+        {canAddAlternative && (
+          <div>
+            <Button type="button" variant="outline" size="sm" onClick={() => edit(addAlternative(draft))}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Ou quando…
+            </Button>
+            <p className="mt-1 text-xs text-muted-foreground">
+              O fluxo começa quando qualquer um destes acontecer.
+            </p>
+          </div>
+        )}
+
+        {problem && <p className="text-xs text-destructive" role="alert">{problem}</p>}
+      </div>
+    </FlowSidePanel>
   );
 }

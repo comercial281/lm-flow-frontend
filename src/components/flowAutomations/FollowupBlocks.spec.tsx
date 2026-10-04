@@ -13,9 +13,9 @@ vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
 }));
 vi.mock('@/services/numbers/numbersService', () => ({ default: { sendNumbers } }));
 
-import { FlowNodeConfigModal } from './FlowNodeConfigModal';
+import { FlowNodePanel } from './FlowNodePanel';
 import { FlowSettingsDialog } from './FlowSettingsDialog';
-import { FlowTriggerDialog } from './FlowTriggerDialog';
+import { FlowTriggerPanel } from './FlowTriggerPanel';
 import { summaryLine } from './FlowNodeCard';
 import type { AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
 import type { FlowAutomation, FlowAutomationNode } from '@/types/flowAutomations';
@@ -51,7 +51,7 @@ const savedConfig = (onSave: ReturnType<typeof vi.fn>) => onSave.mock.calls[0][1
 describe('Mandar WhatsApp: "Marcar progresso"', () => {
   it('grava o prefixo (limpo) e o número da mensagem', async () => {
     const onSave = vi.fn();
-    render(<FlowNodeConfigModal node={node({ config: { text: 'Oi' } })} resources={resources} onClose={() => {}} onSave={onSave} />);
+    render(<FlowNodePanel node={node({ config: { text: 'Oi' } })} resources={resources} onClose={() => {}} onSave={onSave} />);
     fireEvent.click(screen.getByLabelText('Marcar progresso'));
     fireEvent.change(screen.getByLabelText('Nome da etiqueta de progresso'), { target: { value: 'Follow Up Longo' } });
     fireEvent.change(screen.getByLabelText('Número da mensagem'), { target: { value: '2' } });
@@ -63,7 +63,7 @@ describe('Mandar WhatsApp: "Marcar progresso"', () => {
 
   it('desmarcar tira as duas chaves', async () => {
     const onSave = vi.fn();
-    render(<FlowNodeConfigModal node={node({ config: { text: 'Oi', progress_tag_prefix: 'fu', progress_step: 3 } })} resources={resources} onClose={() => {}} onSave={onSave} />);
+    render(<FlowNodePanel node={node({ config: { text: 'Oi', progress_tag_prefix: 'fu', progress_step: 3 } })} resources={resources} onClose={() => {}} onSave={onSave} />);
     fireEvent.click(screen.getByLabelText('Marcar progresso'));
     fireEvent.click(screen.getByText('Salvar'));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
@@ -82,7 +82,7 @@ describe('Mandar WhatsApp: "Marcar progresso"', () => {
 describe('"Só em horário comercial"', () => {
   it('Aguardar resposta grava business_hours', async () => {
     const onSave = vi.fn();
-    render(<FlowNodeConfigModal node={node({ kind: 'wait_for_reply', config: { minutes: 1440 } })} resources={resources} onClose={() => {}} onSave={onSave} />);
+    render(<FlowNodePanel node={node({ kind: 'wait_for_reply', config: { minutes: 1440 } })} resources={resources} onClose={() => {}} onSave={onSave} />);
     fireEvent.click(screen.getByLabelText('Só em horário comercial (seg–sex 8h–20h, sáb 9h–18h)'));
     fireEvent.click(screen.getByText('Salvar'));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
@@ -91,7 +91,7 @@ describe('"Só em horário comercial"', () => {
 
   it('Esperar: o modo antigo "saindo em horário comercial" aparece marcado, e desmarcar volta pro tempo comum', async () => {
     const onSave = vi.fn();
-    render(<FlowNodeConfigModal node={node({ kind: 'wait', config: { mode: 'schedule', minutes: 60 } })} resources={resources} onClose={() => {}} onSave={onSave} />);
+    render(<FlowNodePanel node={node({ kind: 'wait', config: { mode: 'schedule', minutes: 60 } })} resources={resources} onClose={() => {}} onSave={onSave} />);
     const caixa = screen.getByLabelText('Só em horário comercial (seg–sex 8h–20h, sáb 9h–18h)') as HTMLInputElement;
     expect(caixa.checked).toBe(true);
     fireEvent.click(caixa);
@@ -125,7 +125,7 @@ describe('bloco "Marcar como recuperado pelo follow-up"', () => {
 
   it('a janela lista os cinco efeitos e salva sem pedir nada', async () => {
     const onSave = vi.fn();
-    render(<FlowNodeConfigModal node={node({ kind: 'followup_recovered', config: {} })} resources={resources} onClose={() => {}} onSave={onSave} />);
+    render(<FlowNodePanel node={node({ kind: 'followup_recovered', config: {} })} resources={resources} onClose={() => {}} onSave={onSave} />);
     expect(screen.getByRole('heading', { name: 'Marcar como recuperado pelo follow-up' })).toBeTruthy();
     expect(RECOVERED_EFFECTS).toHaveLength(5);
     RECOVERED_EFFECTS.forEach(effect => expect(screen.getByText(effect)).toBeTruthy());
@@ -141,7 +141,7 @@ describe('bloco "Marcar como recuperado pelo follow-up"', () => {
 describe('"Mover de etapa" por nome de coluna', () => {
   it('grava stage_name e tira stage_id', async () => {
     const onSave = vi.fn();
-    render(<FlowNodeConfigModal node={node({ kind: 'move_stage', config: { stage_id: '' } })} resources={resources} onClose={() => {}} onSave={onSave} />);
+    render(<FlowNodePanel node={node({ kind: 'move_stage', config: { stage_id: '' } })} resources={resources} onClose={() => {}} onSave={onSave} />);
     fireEvent.click(screen.getByLabelText('Coluna com este nome no funil do card'));
     fireEvent.change(screen.getByLabelText('Nome da coluna'), { target: { value: 'Em atendimento' } });
     fireEvent.click(screen.getByText('Salvar'));
@@ -162,7 +162,7 @@ describe('"Mover de etapa" por nome de coluna', () => {
 describe('"Mover de etapa" de modelo antigo (stage_slug)', () => {
   it('salvar a janela grava como stage_name', async () => {
     const onSave = vi.fn();
-    render(<FlowNodeConfigModal node={node({ kind: 'move_stage', config: { stage_slug: 'em-atendimento' } })} resources={resources} onClose={() => {}} onSave={onSave} />);
+    render(<FlowNodePanel node={node({ kind: 'move_stage', config: { stage_slug: 'em-atendimento' } })} resources={resources} onClose={() => {}} onSave={onSave} />);
     expect((screen.getByLabelText('Nome da coluna') as HTMLInputElement).value).toBe('em-atendimento');
     fireEvent.click(screen.getByText('Salvar'));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
@@ -173,7 +173,7 @@ describe('"Mover de etapa" de modelo antigo (stage_slug)', () => {
 describe('bloco "Iniciar follow-up"', () => {
   it('lista os fluxos de follow-up e grava flow_automation_id', async () => {
     const onSave = vi.fn();
-    render(<FlowNodeConfigModal node={node({ kind: 'lead_action', config: { action_type: 'start_followup_flow', params: {} } })} resources={resources} onClose={() => {}} onSave={onSave} />);
+    render(<FlowNodePanel node={node({ kind: 'lead_action', config: { action_type: 'start_followup_flow', params: {} } })} resources={resources} onClose={() => {}} onSave={onSave} />);
     expect(screen.getByRole('heading', { name: 'Iniciar follow-up' })).toBeTruthy();
     expect(screen.getByRole('option', { name: 'Follow-up curto (desligado)' })).toBeTruthy();
     fireEvent.click(screen.getByText('Salvar'));
@@ -190,8 +190,7 @@ describe('gatilho: "+ Ou quando…"', () => {
   it('acrescenta outro gatilho, editado com o mesmo editor', () => {
     const onSave = vi.fn();
     render(
-      <FlowTriggerDialog
-        open
+      <FlowTriggerPanel
         trigger={{ event: 'lead.created', conditions: [], alternatives: [] }}
         resources={resources}
         onClose={() => {}}
@@ -214,8 +213,7 @@ describe('gatilho: "+ Ou quando…"', () => {
   it('o "Ou quando" pode ser tirado', () => {
     const onSave = vi.fn();
     render(
-      <FlowTriggerDialog
-        open
+      <FlowTriggerPanel
         trigger={{ event: 'lead.created', conditions: [], alternatives: [{ event: 'lead.visit_completed', conditions: [] }] }}
         resources={resources}
         onClose={() => {}}

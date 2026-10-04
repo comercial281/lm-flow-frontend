@@ -38,6 +38,7 @@ import {
   toggleAcceptedBy,
 } from './acceptedByFilter';
 import { Seletor } from '@/components/base/Seletor';
+import { VariableChipBar } from '@/components/flowAutomations/VariableChipBar';
 
 // ============================================================================
 // Catálogos por gatilho/ação
@@ -632,45 +633,11 @@ interface ActionEditorProps {
   resources: AutomationResources;
 }
 
-// Variáveis interpoladas pelo backend (LeadAutomation::Executor#interpolate).
-const MESSAGE_VARS: { label: string; token: string }[] = [
-  { label: 'Nome',          token: '{{nome}}' },
-  { label: 'Nome completo', token: '{{nome_completo}}' },
-  // Responsável pelo lead. Vazio até alguém assumir — no gatilho do aceite da
-  // roleta já é o corretor que acabou de aceitar.
-  { label: 'Corretor',      token: '{{corretor}}' },
-  { label: 'Corretor (completo)', token: '{{corretor_completo}}' },
-  { label: 'Telefone',      token: '{{telefone}}' },
-  { label: 'E-mail',        token: '{{email}}' },
-  { label: 'Data',          token: '{{data}}' },
-  { label: 'Hora',          token: '{{hora}}' },
-  { label: 'Link do card',  token: '{{link_do_card}}' },
-  { label: 'Origem',        token: '{{origem}}' },
-  { label: 'Campanha',      token: '{{campanha}}' },
-  { label: 'Conjunto',      token: '{{conjunto}}' },
-  { label: 'Anúncio',       token: '{{anuncio}}' },
-  { label: 'Título anúncio', token: '{{titulo_anuncio}}' },
-  { label: 'Plataforma',    token: '{{plataforma}}' },
-  { label: 'Respostas form', token: '{{respostas}}' },
-];
-
-// Chips de variável: 1 clique insere o token no campo. Reutilizável em msg/legenda/notificações.
+// Chips de variável: 1 clique insere o token no fim do campo. A lista é a
+// compartilhada com o construtor (features/flowAutomations/messageVariables.ts):
+// as prontas e, dentro do construtor, as que a imobiliária criou.
 function VariableChips({ onInsert }: { onInsert: (token: string) => void }) {
-  return (
-    <div className="flex flex-wrap items-center gap-1 mt-1.5">
-      <span className="text-xs text-muted-foreground mr-1">Inserir variável:</span>
-      {MESSAGE_VARS.map(v => (
-        <button
-          key={v.token}
-          type="button"
-          onClick={() => onInsert(v.token)}
-          className="text-xs px-2 py-0.5 rounded-full border border-input bg-muted/40 hover:bg-muted transition-colors"
-        >
-          {v.label}
-        </button>
-      ))}
-    </div>
-  );
+  return <VariableChipBar onInsert={onInsert} />;
 }
 
 export function ActionEditor({ action, onChange, resources }: ActionEditorProps) {

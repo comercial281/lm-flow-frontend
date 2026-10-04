@@ -16,6 +16,7 @@ import {
   removeAlternative,
   flowTriggerSummary,
   triggerEvents,
+  triggerOneLine,
   type FlowTrigger,
 } from './trigger';
 
@@ -193,5 +194,31 @@ describe('mais de um gatilho ("Ou quando")', () => {
     expect(triggerProblem(semEtiqueta)).toBe('No "Ou quando": escolha qual etiqueta dispara o fluxo.');
     const pronta = updateAlternative(vazia, 0, { event: 'lead.tag_added', conditions: [{ field: 'label', operator: 'eq', value: 'follow-up' }] });
     expect(triggerProblem(pronta)).toBeNull();
+  });
+});
+
+describe('linha do bloco Início (sprint 4)', () => {
+  const describe_ = (_event: string, c: { field: string; value: string | string[] }) => `${c.field === 'label' ? 'Etiqueta' : c.field}: ${c.value}`;
+
+  it('gatilho com filtro e "Ou quando" numa linha só', () => {
+    const t: FlowTrigger = {
+      event: 'lead.tag_added',
+      conditions: [{ field: 'label', operator: 'eq', value: 'follow-up' }],
+      alternatives: [{ event: 'lead.visit_completed', conditions: [] }],
+    };
+    expect(triggerOneLine(t, describe_)).toBe(
+      `${flowTriggerLabel('lead.tag_added')} (Etiqueta: follow-up) · ou ${flowTriggerLabel('lead.visit_completed')}`,
+    );
+  });
+
+  it('sem gatilho pede pra escolher; "Ou quando" ainda vazio não entra', () => {
+    expect(triggerOneLine({ event: '', conditions: [] })).toBe('Escolha o gatilho');
+    const t: FlowTrigger = { event: 'lead.created', conditions: [], alternatives: [{ event: '', conditions: [] }] };
+    expect(triggerOneLine(t)).toBe(flowTriggerLabel('lead.created'));
+  });
+
+  it('filtro vazio não aparece entre parênteses', () => {
+    const t: FlowTrigger = { event: 'lead.created', conditions: [{ field: 'form_id', operator: 'in', value: [] }] };
+    expect(triggerOneLine(t, describe_)).toBe(flowTriggerLabel('lead.created'));
   });
 });

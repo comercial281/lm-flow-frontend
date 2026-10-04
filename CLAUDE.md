@@ -5836,3 +5836,70 @@ Clientes → Custos (`/admin/clientes/custos`, `src/pages/SuperAdmin/Custos/`). 
 3. O stub do `gtag` precisa empurrar `arguments` no `dataLayer`, não um array: o gtag.js ignora array.
 4. A exceção do glossário "Google Tag Manager" mora em `telas/TelaRastreamento.tsx`.
 5. Não é `featureKey` nem `clientToggleKey`: o Meu site continua no `site_builder`; Páginas de anúncio continua no `useClientToggle('landing_pages')` literal.
+
+## Construtor: bloco Início, painel Blocos e painel lateral (04/10/2026)
+
+Sprint 4 de 4 da unificação das automações, parte A (layout do construtor).
+Decisões do dono do produto em 04/10, não reabrir sem ele pedir. Spec:
+`LM FLOW/specs/2026-10-04-automacoes-sprint-4-layout-e-funil-do-corretor-design.md`.
+Referência visual: o construtor do Leona. Vale pra Automações e Follow-up (e
+pros funis de conversa da parte B, que vêm em outro PR). Só frontend.
+
+O que aparece na tela:
+
+- **Bloco "Início"** no canvas, verde, sempre uma coluna antes do primeiro
+  bloco: "Quando: Etiqueta adicionada (Etiqueta: follow-up) · ou Visita
+  realizada". Clicar abre o painel do gatilho (com "+ Ou quando…"). Não se
+  apaga, não se arrasta e não tem entrada: nada vem antes dele. Gatilho
+  incompleto deixa a borda amarela com o motivo. **A barra de gatilho do topo
+  saiu**, e o "Testar" do topo também.
+- **"Blocos"** no canto superior esquerdo do canvas: abre e fecha o painel com
+  "Buscar blocos..." e as seções Mensagem pro lead · Lead · Avisos · Controle,
+  cada bloco com ícone e nome (a frase do bloco no balão). Clicar põe no fim do
+  caminho principal (como antes); **arrastar pro canvas** põe onde soltou. O
+  "+ Respondeu" de um cartão abre o painel sozinho. Aberto/fechado fica lembrado
+  neste navegador.
+- **"Simular"** ao lado de "Blocos": o teste de antes ("Resultado da simulação").
+- **Painel do bloco à direita** (420px, o canvas continua visível), no lugar da
+  janela: ícone, nome e uma linha do que o bloco faz; campos um embaixo do
+  outro; o apelido vai por último; Cancelar e Salvar num rodapé fixo. Clicar no
+  cartão (não só no lápis) abre. Cancelar, o X, Esc, outro bloco ou o Início
+  com o rascunho mexido perguntam "Descartar o que você mudou?". O rascunho
+  conta como alteração não salva (menu e fechar a aba perguntam).
+- **Mensagem grande com as variáveis em botõezinhos**: um clique põe
+  `{{variável}}` onde o cursor está. Aparecem as prontas (`{{nome}}`,
+  `{{corretor}}`, `{{imovel_titulo}}`…) e, em azul, as que a imobiliária criou.
+  Isso substitui a aba Variáveis dos Funis de mensagem (a aba sai na parte B).
+- **Celular (< 768px):** os dois painéis viram tela cheia por cima do canvas;
+  Blocos começa fechado e fecha sozinho ao escolher um bloco; o minimapa some.
+- **Configurações do fluxo** continuam numa janela.
+
+Armadilhas:
+
+1. **O Início não existe no banco.** É o nó sintético `TRIGGER_NODE_ID`
+   (`flowStart`); a linha que sai dele é o `initial_node_id`, e ligar do Início
+   a um bloco muda o primeiro bloco. Posição calculada, nunca gravada.
+2. **Variáveis:** a lista mora em `features/flowAutomations/messageVariables.ts`
+   e o botão em `components/flowAutomations/VariableChipBar.tsx`, usado TAMBÉM
+   pela tela de regras (`ActionEditor`, modo "pôr no fim"). O canvas carrega as
+   da imobiliária uma vez (`/tenant_template_variables`) e passa por
+   `MessageVariablesContext`; fora do canvas, só as prontas. O Mandar WhatsApp do
+   construtor oferece agora as variáveis das Automações: o servidor preenche as
+   duas famílias desde 02/10 (`VariableInterpolator` chama o das regras antes),
+   então `{{first_name}}` de fluxo antigo continua saindo.
+3. **Ícone e frase de cada bloco:** `features/flowAutomations/blockInfo.ts`
+   (`blockIcon`/`blockDescription`, pela `blockKey`). Bloco novo na paleta
+   ganha linha lá.
+4. **Um painel por vez:** `useSidePanel` (painel aberto + rascunho mexido). Os
+   painéis avisam o rascunho por `onDirtyChange`; quem troca de painel chama
+   `request` (pergunta se precisar) e quem fecha depois de salvar, `replace`.
+5. **Arraste:** tipo `BLOCK_DRAG_TYPE` com a `key` do item da paleta; o canvas
+   converte a posição com `screenToFlowPosition` (instância do `onInit`).
+6. **Pontos de encaixe do guia (parte B), sem uso ainda:** o canvas aceita
+   `banner` (faixa acima do canvas) e `highlightedNodeId` (o bloco do passo
+   atual; `TRIGGER_NODE_ID` destaca o Início); os cartões têm `highlighted`
+   (`data-highlighted="true"`, borda que pisca).
+7. **Teste com React Flow no jsdom:** sem medida, os blocos ficam no DOM com
+   `visibility: hidden`; busque por `getByLabelText`/`getByTestId`, não por
+   `getByRole` (ver `FlowCanvasLayout.spec.tsx`, que também cria
+   `ResizeObserver`/`DOMMatrixReadOnly` de mentira).
