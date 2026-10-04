@@ -6020,3 +6020,24 @@ Usuários → Usuários (`/admin/usuarios`, `src/pages/SuperAdmin/Usuarios/`) e 
 - **Aba acesa na ficha:** a aba Usuários tem `tambem` (regex da ficha, dois trechos depois de `/admin/usuarios/`) em `adminMenuItems.ts`; vale pra moldura (`donoDoEnderecoAdmin`) e pra faixa (`Abas`). Logs e Mensagem de acesso têm um trecho só, então não colidem.
 - `superLogsService.userMetrics` e `UserMetricsResponse` ficaram: a tela de Logs ainda usa. Saíram `userMetricDetail` e `UserMetricDetail`.
 - **Notificações** (push, avisos por WhatsApp, avisos na tela) entram na entrega 3B.
+
+## Localização dos imóveis (desde 2026-10-04)
+
+Fase 4, entrega 5. Spec: `LM FLOW/specs/2026-10-03-fase-4-imoveis-mapa-pelo-cep-design.md` (pasta do Tony, fora deste repo). Depende do backend `lm-flow#389` (endpoint `GET /properties/geocode`, `location_source` no JSON e nos params, privacidade por tipo), que já está no ar. Regras puras em `src/features/properties/localizacao.ts` (com spec); a tela é `src/pages/Customer/Properties/cadastro/secoes/SecaoLocalizacao.tsx` + `MapaDoCadastro.tsx` (Leaflet, só baixa quando o mapa aparece).
+
+**Cadastro (seção Localização):**
+
+- **O CEP voltou a preencher o endereço.** O consumo do `cepLookup` lia chaves antigas; agora usa as chaves `address_*` (rua, bairro, cidade, UF). Texto de erro: "CEP não encontrado".
+- **O ponto vem do servidor.** Sair dos campos de endereço (cidade + rua, CEP completo ou bairro) chama `propertiesService.geocode`; o Nominatim nunca é chamado pelo navegador. Sair de um campo sem mudar nada não procura de novo.
+- **Alfinete arrastável.** Arrastar grava `latitude`/`longitude` e `location_source = 'manual'`; o servidor grava `'auto'` quando o ponto veio da busca. `location_source` vai junto no salvar porque `payloadDoFormulario` espalha o form. A tela **nunca manda `metadata`** (o servidor troca o metadata inteiro e apagaria a origem).
+- **Textos por precisão** (`TEXTO_DO_PONTO`): número → "Achamos pelo endereço. Arraste o alfinete se precisar ajustar."; rua → "Não achamos o número exato, mostramos a rua. Arraste até o imóvel."; bairro ou nada → "Não achamos o endereço. Arraste o alfinete até o imóvel."; arrastado à mão → "Posição ajustada à mão.". Sem endereço: "Preencha o endereço para marcar o imóvel no mapa." Na revenda aparece a nota "No site e nos portais aparece só a região, não o endereço exato."
+- **Precisão `city` não grava ponto.** Só centraliza o mapa na cidade (igual à tarefa em lote do backend): evita publicar o centro da cidade como ponto exato de empreendimento.
+- **O mapa centra na cidade ao abrir** a edição de um imóvel com endereço e sem ponto (sem gravar nada). Ponto salvo abre no zoom 16; sem alfinete no zoom de país.
+- **Serviço ocupado:** o servidor devolve `failed`; a tela tenta de novo **uma vez**, em silêncio (1,5 s), e se falhar de novo trata como não achado. A nova tentativa não sai se a busca já foi trocada por outra, e resposta atrasada é descartada (corrida do CEP).
+- **O alfinete manual nunca pula.** Só volta a seguir o endereço pelo botão "Reposicionar pelo endereço" (`alfinetePodePular`).
+
+**Privacidade (decisão de 03/10):** **empreendimento** sai com ponto exato; **revenda** sai só com a região, para site, portais, catálogo Meta e landing. Dentro do LM Flow tudo é exato. No site público (`ImovelPublicPage`), a regra mora em `src/pages/Public/mapaDoImovelPublico.ts` (`consultaDoMapa`, com spec): com `latitude`/`longitude` (o servidor só manda para empreendimento) o iframe do Google Maps, sem chave, usa `q=lat,lng` e `z=16`; sem ponto mostra a região (bairro, cidade, UF), `z=14`, como antes; sem nada, sem mapa.
+
+**Pendências conhecidas:** o backend ainda não expõe `metadata.location_precision` no JSON (o aviso de pontos antigos não sabe a precisão real); sem ponto e sem cidade achada, o aviso "Arraste o alfinete" aparece sem alfinete na tela.
+
+**Não reabrir sem o dono pedir:** o alfinete exato só para empreendimento, a revenda só com região, e o ponto manual que não pula.
