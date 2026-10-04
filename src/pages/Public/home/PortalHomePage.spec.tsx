@@ -147,4 +147,25 @@ describe('PortalHomePage por blocos', () => {
     fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
     expect((await screen.findByTestId('busca')).textContent).toBe('');
   });
+
+  it('aba Lançamentos desligada: a vitrine continua, sem o "Ver todos" que levaria a uma aba escondida', async () => {
+    await abrirHome(
+      { home: { search: { tabs: { launch: false } } } },
+      [imovel('R1', { featured: true }), empreendimento('E1', { title: 'Torre Nova' })],
+    );
+
+    const lanc = screen.getByRole('heading', { level: 2, name: 'Lançamentos' }).closest('section')!;
+    expect(within(lanc).getByText('Torre Nova')).toBeInTheDocument();
+    expect(within(lanc).queryByRole('link', { name: /Ver todos/ })).toBeNull();
+    const dest = screen.getByRole('heading', { level: 2, name: 'Imóveis em destaque' }).closest('section')!;
+    expect(within(dest).getAllByRole('link', { name: /Ver todos/ }).length).toBeGreaterThan(0);
+  });
+
+  it('chamadas com foto: só usa a foto se for http(s); o fundo escuro fica de reserva', async () => {
+    const chamadas = (url: string) => ({ home: { callouts: { layout: 'photo', background_url: url, overlay: 40 } }, anuncie: { enabled: true } });
+    await abrirHome(chamadas('javascript:alert(1)') as SiteInfo, [imovel('R1')]);
+    const faixa = screen.getByRole('heading', { level: 3, name: 'Anuncie seu imóvel' }).closest('section') as HTMLElement;
+    expect(faixa.style.backgroundImage).toBe('');
+    expect(faixa.style.background).toContain('var(--ink)');
+  });
 });

@@ -1,5 +1,6 @@
 import type { SiteInfo } from '@/pages/Public/portalShared';
 import { filterProperties, type PortalProperty } from './filtros';
+import { rotuloTipo } from './tiposDeImovel';
 import { resolverHome, TEXTO_FABRICA, type AbaId, type HomeConfig, type RegrasVitrine, type Vitrine } from './homeConfig';
 
 const ABAS: AbaId[] = ['sale', 'rent', 'launch'];
@@ -13,7 +14,7 @@ function casaRegra(p: PortalProperty, r: RegrasVitrine): boolean {
   if (r.transaction === 'rent' && !['rent', 'season', 'sale_rent'].includes(p.transaction_type)) return false;
   if (r.transaction === 'sale' && ['rent', 'season'].includes(p.transaction_type)) return false;
   if (r.listing_kind && (p.listing_kind ?? 'resale') !== r.listing_kind) return false;
-  if (r.property_types.length && !r.property_types.includes(p.property_type)) return false;
+  if (r.property_types.length && !r.property_types.some(t => rotuloTipo(t) === rotuloTipo(p.property_type))) return false;
   if (r.cities.length && !r.cities.includes(p.address?.city ?? '')) return false;
   if (r.neighborhoods.length && !r.neighborhoods.includes(p.address?.neighborhood ?? '')) return false;
   if (r.stages.length && !(p.listing_kind === 'development' && r.stages.includes(p.stage ?? ''))) return false;

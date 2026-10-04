@@ -1,16 +1,19 @@
 import type { PortalProperty } from './filtros';
 import type { HomeConfig } from './homeConfig';
-import { pluralTipo } from './tiposDeImovel';
+import { opcaoDoTipo, pluralTipo, rotuloTipo } from './tiposDeImovel';
 
 export interface Atalho { label: string; query: string }
 
 export function atalhosAutomaticos(items: PortalProperty[], max = 8): Atalho[] {
+  // Agrupa pelo NOME do tipo (cobertura/penthouse contam juntos); a busca leva
+  // uma chave só desse nome, a primeira que aparece no catálogo.
+  const tipos = [...new Set(items.map(p => p.property_type).filter(Boolean))];
   const conta = new Map<string, { type: string; hood: string; n: number }>();
   for (const p of items) {
     const hood = p.address?.neighborhood;
     if (!hood || !p.property_type) continue;
-    const k = `${p.property_type}|${hood}`;
-    const cur = conta.get(k) ?? { type: p.property_type, hood, n: 0 };
+    const k = `${rotuloTipo(p.property_type)}|${hood}`;
+    const cur = conta.get(k) ?? { type: opcaoDoTipo(tipos, p.property_type), hood, n: 0 };
     cur.n += 1; conta.set(k, cur);
   }
   return [...conta.values()].filter(x => x.n >= 2)

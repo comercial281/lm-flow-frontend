@@ -15,6 +15,12 @@ describe('mais buscados', () => {
       { label: 'Casas em Barão Geraldo', query: 'type=house&neighborhood=Bar%C3%A3o+Geraldo' },
     ]);
   });
+  it('automático: sinônimos de tipo contam juntos e a busca leva uma chave só', () => {
+    const lista = [p('1', 'penthouse', 'Cambuí'), p('2', 'cobertura', 'Cambuí')];
+    expect(atalhosAutomaticos(lista)).toEqual([
+      { label: 'Coberturas em Cambuí', query: 'type=penthouse&neighborhood=Cambu%C3%AD' },
+    ]);
+  });
   it('limite de 8', () => {
     const muitos = Array.from({ length: 20 }, (_, i) => [p(`a${i}`, 'apartment', `B${i}`), p(`b${i}`, 'apartment', `B${i}`)]).flat();
     expect(atalhosAutomaticos(muitos).length).toBe(8);

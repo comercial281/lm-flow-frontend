@@ -66,7 +66,9 @@ export function filterProperties(items: PortalProperty[], f: PortalFilters): Por
     if (pMin != null || pMax != null) {
       const price = f.tab === 'rent' ? p.rent_price_from : p.sale_price_from;
       if (price == null) return false;
-      if (pMin != null && price < pMin) return false;
+      // Piso exclusivo, teto inclusivo: as faixas da busca se encostam (200 mil é
+      // 'Até 200 mil', não também '200 mil a 400 mil'), então o imóvel na divisa cai numa só.
+      if (pMin != null && price <= pMin) return false;
       if (pMax != null && price > pMax) return false;
     }
     if (f.code && !p.code.toLowerCase().includes(f.code.toLowerCase())) return false;

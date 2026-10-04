@@ -16,5 +16,5 @@ export function usePortalTracking(site: SiteInfo | null | undefined, tenant: str
     trackPageView(pathname);
     sendSiteVisit(visit, { api: API, tenant });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!site, tenant, pathname, visit?.kind, visit?.propertyCode, visit?.pageSlug]);
+  }, [!!site, tenant, pathname, visit?.kind, visit?.path, visit?.propertyCode, visit?.pageSlug]);
 }

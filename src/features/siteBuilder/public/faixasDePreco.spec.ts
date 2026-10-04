@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { filterProperties, type PortalProperty } from './filtros';
 import { faixaDaBusca, faixasDePreco, precoDaFaixa } from './faixasDePreco';
 
 describe('faixas de preço da busca', () => {
@@ -27,5 +28,20 @@ describe('faixas de preço da busca', () => {
     expect(faixaDaBusca('rent', '5000', null)).toBe(faixasDePreco('rent')[3].valor);
     expect(faixaDaBusca('sale', '123', '456')).toBe('');
     expect(faixaDaBusca('sale', null, null)).toBe('');
+  });
+  it('imóvel exatamente na divisa cai numa faixa só', () => {
+    const casa = (preco: number) => ({ id: 'x', code: 'x', title: 'x', transaction_type: 'sale', property_type: 'house', sale_price_from: preco }) as PortalProperty;
+    for (const tab of ['sale', 'rent'] as const) {
+      for (const f of faixasDePreco(tab)) {
+        for (const divisa of [f.price_min, f.price_max]) {
+          if (divisa == null) continue;
+          const dentro = faixasDePreco(tab).filter(g => filterProperties(
+            [{ ...casa(divisa), transaction_type: tab === 'rent' ? 'rent' : 'sale', rent_price_from: divisa }],
+            { tab, type: '', city: '', neighborhood: '', bedrooms: '', code: '',
+              price_min: String(g.price_min ?? ''), price_max: String(g.price_max ?? '') }).length === 1);
+          expect(dentro).toHaveLength(1);
+        }
+      }
+    }
   });
 });

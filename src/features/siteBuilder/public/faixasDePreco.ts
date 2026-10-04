@@ -1,6 +1,8 @@
 // Faixas prontas do campo "Faixa de preço" da busca do site público. Uma faixa
 // vira `price_min`/`price_max` na URL (ponta aberta fica de fora); a página de
 // busca lê a URL de volta com `faixaDaBusca` para marcar a opção certa.
+// Divisa: o teto é inclusivo e o piso exclusivo (ver `filterProperties`), então um
+// imóvel de R$ 200 mil está só em 'Até R$ 200 mil'.
 import type { AbaId } from './homeConfig';
 
 export interface FaixaDePreco { valor: string; rotulo: string; price_min: number | null; price_max: number | null }

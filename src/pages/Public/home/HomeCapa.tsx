@@ -114,7 +114,7 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
         <form onSubmit={runSearch} className="mt-8 rounded-[24px] bg-white/95 p-3 shadow-[0_30px_60px_-25px_rgba(0,0,0,0.5)] backdrop-blur sm:p-4">
           {/* Uma aba só não é escolha: a fileira some. */}
           {abas.length > 1 && (
-            <div className="mb-3 flex gap-1.5">
+            <div className="mb-3 flex flex-wrap gap-1.5">
               {abas.map(k => (
                 <button key={k} type="button" onClick={() => trocarAba(k)}
                   className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${tab === k ? 'text-white' : 'text-neutral-600 hover:bg-black/[0.04]'}`}

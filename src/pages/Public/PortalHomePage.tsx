@@ -82,7 +82,7 @@ export default function PortalHomePage() {
         cities={cities} hoods={hoods} types={types}
         onTab={k => { if (k !== 'launch') setEscolhaFinalidade(finalidadeInicial(k)); }}
       />
-      <HomeVitrines home={home} items={items} tenant={tenant!} wa={wa} />
+      <HomeVitrines home={home} items={items} tenant={tenant!} wa={wa} abas={abas} />
       <HomeChamadas site={site} tenant={tenant!} home={home} />
       <HomeMaisBuscados home={home} items={items} tenant={tenant!} />
 

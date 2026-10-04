@@ -59,13 +59,13 @@ export default function HomeChamadas({ site, tenant, home }: Props) {
   }
 
   // `photo` sem foto cai na faixa escura de sempre.
-  const comFoto = layout === 'photo' && !!background_url;
+  const comFoto = layout === 'photo' && !!background_url && /^https?:\/\//i.test(background_url);
   const filtro = Math.min(80, Math.max(0, overlay)) / 100;
 
   return (
     <section
       className={`relative border-y border-black/[0.06] ${comFoto ? 'bg-cover bg-center' : ''}`}
-      style={comFoto ? { backgroundImage: `url("${background_url!.replace(/["\\]/g, encodeURIComponent)}")` } : { background: 'var(--ink)' }}
+      style={comFoto ? { backgroundColor: 'var(--ink)', backgroundImage: `url("${background_url!.replace(/["\\]/g, encodeURIComponent)}")` } : { background: 'var(--ink)' }}
     >
       {comFoto && <div className="absolute inset-0" style={{ background: `rgba(0,0,0,${filtro})` }} />}
       <div className={`relative mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:px-6 ${colunas}`}>

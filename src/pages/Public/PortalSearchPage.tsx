@@ -5,6 +5,8 @@ import {
   filterProperties, usePortalData, type PortalFilters, type PortalTab,
 } from './portalShared';
 import { opcaoDoTipo, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
+import { faixaDaBusca, faixasDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
+import { FASES } from '@/features/properties/listingKind';
 import { usePortalTracking } from './usePortalTracking';
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -14,7 +16,11 @@ import { usePortalTracking } from './usePortalTracking';
    client-side sobre o inventário já carregado (mesmo endpoint da home).
 ──────────────────────────────────────────────────────────────────────────── */
 
-const TABS: [PortalTab, string][] = [['sale', 'Comprar'], ['rent', 'Alugar'], ['launch', 'Lançamentos']];
+const ROTULO_ABA: Record<PortalTab, string> = { sale: 'Comprar', rent: 'Alugar', launch: 'Lançamentos' };
+const MAIS_DE: [string, string][] = [['1', '1+'], ['2', '2+'], ['3', '3+']];
+
+/** Espera sem mudança na URL antes de contar a visita da busca (a digitação do código troca a URL a cada tecla). */
+const ESPERA_VISITA_MS = 1500;
 
 /**
  * Quantos cards aparecem por vez. O catálogo chega INTEIRO (centenas de
@@ -27,17 +33,34 @@ export default function PortalSearchPage() {
   const { tenant } = useParams<{ tenant: string }>();
   const [params, setParams] = useSearchParams();
   const { state, site, items, fontHref, wa, cities, hoods, types, abas, cssVars } = usePortalData(tenant);
-  const { pathname } = useLocation();
-  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'search', path: pathname });
+  const { pathname, search } = useLocation();
+
+  // A visita leva os filtros (pathname + query), mas só depois que a URL para de mudar.
+  const caminhoAtual = pathname + search;
+  const [caminhoRegistrado, setCaminhoRegistrado] = useState(caminhoAtual);
+  useEffect(() => {
+    const t = setTimeout(() => setCaminhoRegistrado(caminhoAtual), ESPERA_VISITA_MS);
+    return () => clearTimeout(t);
+  }, [caminhoAtual]);
+  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'search', path: caminhoRegistrado });
+
+  // Só vale aba visível; a da URL que não é (desligada ou sem imóvel) cai na primeira visível.
+  const tabDaUrl = params.get('tab') as PortalTab | null;
+  const tab: PortalTab = tabDaUrl && abas.includes(tabDaUrl) ? tabDaUrl : (abas[0] ?? 'sale');
 
   const filters: PortalFilters = useMemo(() => ({
-    tab: (params.get('tab') as PortalTab) || 'sale',
+    tab,
     type: params.get('type') || '',
     city: params.get('city') || '',
     neighborhood: params.get('neighborhood') || '',
     bedrooms: params.get('bedrooms') || '',
     code: params.get('code') || '',
-  }), [params]);
+    price_min: params.get('price_min') || '',
+    price_max: params.get('price_max') || '',
+    suites: params.get('suites') || '',
+    parking: params.get('parking') || '',
+    stage: params.get('stage') || '',
+  }), [params, tab]);
 
   // Atualiza um ou mais filtros na URL. `replace` evita poluir o histórico
   // (usado na digitação do código); os controles discretos empurram histórico
@@ -53,7 +76,14 @@ export default function PortalSearchPage() {
   const clearAll = () => setParams(new URLSearchParams(filters.tab === 'sale' ? {} : { tab: filters.tab }), { replace: true });
 
   const filtered = useMemo(() => filterProperties(items, filters), [items, filters]);
-  const hasActiveFilters = !!(filters.type || filters.city || filters.neighborhood || filters.bedrooms || filters.code);
+  const hasActiveFilters = !!(filters.type || filters.city || filters.neighborhood || filters.bedrooms || filters.code
+    || filters.price_min || filters.price_max || filters.suites || filters.parking || filters.stage);
+
+  // Aluguel tem faixas de preço próprias: trocar de/para Alugar zera o preço.
+  const trocarAba = (k: PortalTab) => {
+    const preco = (k === 'rent') !== (filters.tab === 'rent') ? { price_min: '', price_max: '' } : {};
+    update({ tab: k === 'sale' ? '' : k, ...preco });
+  };
 
   // Mudou o filtro, a lista recomeça do topo.
   const [visible, setVisible] = useState(RESULTS_PAGE_SIZE);
@@ -80,21 +110,28 @@ export default function PortalSearchPage() {
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
           <h1 className="font-[var(--display)] text-2xl font-semibold sm:text-3xl">Encontre seu imóvel</h1>
           <div className="mt-4 rounded-[24px] bg-[var(--paper)] p-3 ring-1 ring-black/[0.05] sm:p-4">
-            <div className="mb-3 flex gap-1.5">
-              {TABS.map(([k, l]) => (
-                <button key={k} type="button" onClick={() => update({ tab: k === 'sale' ? '' : k })}
+            {/* Uma aba só não é escolha: a fileira some. */}
+            {abas.length > 1 && <div className="mb-3 flex flex-wrap gap-1.5">
+              {abas.map(k => (
+                <button key={k} type="button" onClick={() => trocarAba(k)}
                   className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${filters.tab === k ? 'text-white' : 'text-neutral-600 hover:bg-black/[0.04]'}`}
                   style={filters.tab === k ? { background: 'var(--brand)' } : undefined}>
-                  {l}
+                  {ROTULO_ABA[k]}
                 </button>
               ))}
-            </div>
+            </div>}
 
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               <Select value={opcaoDoTipo(types, filters.type)} onChange={v => update({ type: v })} label="Tipo" options={opcoesDeTipo(types)} />
               <Select value={filters.city} onChange={v => update({ city: v })} label="Cidade" options={cities.map(c => [c, c])} />
               <Select value={filters.neighborhood} onChange={v => update({ neighborhood: v })} label="Bairro" options={hoods.map(h => [h, h])} />
               <Select value={filters.bedrooms} onChange={v => update({ bedrooms: v })} label="Dormitórios" options={[['1', '1+'], ['2', '2+'], ['3', '3+'], ['4', '4+']]} />
+              <Select value={faixaDaBusca(filters.tab, filters.price_min, filters.price_max)}
+                onChange={v => update({ price_min: '', price_max: '', ...precoDaFaixa(filters.tab, v) })}
+                label="Faixa de preço" options={faixasDePreco(filters.tab).map(x => [x.valor, x.rotulo])} />
+              <Select value={filters.suites ?? ''} onChange={v => update({ suites: v })} label="Suítes" options={MAIS_DE} />
+              <Select value={filters.parking ?? ''} onChange={v => update({ parking: v })} label="Vagas" options={MAIS_DE} />
+              <Select value={filters.stage ?? ''} onChange={v => update({ stage: v })} label="Fase" options={FASES.map(x => [x.valor, x.rotulo])} />
             </div>
 
             <div className="mt-2">

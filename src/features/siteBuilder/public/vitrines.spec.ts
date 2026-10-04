@@ -63,6 +63,13 @@ describe('vitrines', () => {
     expect(itensDaVitrine(items, v).map(x => x.code)).toEqual(['D']);
     expect(itensDaVitrine(Array.from({ length: 9 }, (_, i) => p(`Z${i}`, { featured: true })), resolverHome(null).showcases[1]).length).toBe(6);
   });
+  it('regra de tipo casa pelo nome: cobertura = penthouse', () => {
+    const v = { id: 'c', kind: 'custom' as const, enabled: true, title: 'Coberturas',
+      rules: { transaction: null, listing_kind: null, property_types: ['cobertura'], cities: [], neighborhoods: [],
+               price_min: null, price_max: null, stages: [], featured_only: false } };
+    const lista = [p('C1', { property_type: 'cobertura' }), p('C2', { property_type: 'penthouse' }), p('A1')];
+    expect(itensDaVitrine(lista, v).map(x => x.code)).toEqual(['C1', 'C2']);
+  });
   it('vitrine desligada ou vazia some', () => {
     const h = resolverHome({ showcases: [{ id: 'featured', kind: 'featured', enabled: false }] });
     expect(vitrinesVisiveis(h, [p('B')]).map(v => v.vitrine.id)).toEqual([]);
