@@ -4706,7 +4706,7 @@ Primeiro passo da refatoração da Área do Admin (spec `specs/2026-10-01-fase-4
 - Teto das caixinhas do SuperAdmin: 7 → 5.
 
 
-## Área do Admin em 7 itens, com abas no topo (desde 2026-10-01)
+## Área do Admin em 8 itens, com abas no topo (desde 2026-10-01; 7 itens até 04/10, quando entrou o Suporte)
 
 Segundo passo da refatoração da Área do Admin (spec `specs/2026-10-01-fase-4-area-do-admin-design.md` na pasta LM FLOW). Só mudança de lugar: nenhuma tela foi refeita.
 
@@ -4715,13 +4715,15 @@ O que aparece na tela, no menu da Área do Admin:
 | Item | Abas |
 |---|---|
 | Visão Geral | Dashboard · Leads ao vivo |
+| Suporte | — |
 | Clientes | Clientes · Números conectados · Custos |
 | Usuários | Usuários (lista de todos os clientes + ficha) · Logs · Mensagem de acesso |
 | Comunicação | Avisos na tela · Push · WhatsApp |
-| Plataforma | Academia · Menus arquivados · Site · Sugestões e bugs |
+| Plataforma | Academia · Menus arquivados · Site |
 | IA Vendedora | Agentes · Dashboard · Conhecimento · Aviso de visita |
 | Equipe | — |
 
+- **Suporte** (desde 04/10/2026) é o 8º item, o 2º do menu (logo depois de Visão Geral): os chamados do chat de suporte. Ver "Chat de suporte".
 - **Mesmo padrão do menu novo do CRM:** cada item é uma página, as subdivisões são abas no topo, sem terceiro nível. A moldura (`AdminPaginaComAbas`) lê as abas do próprio menu (`adminMenuItems.ts`): menu e abas não têm como discordar. **O nome do item é o único h1**; o título de cada tela de dentro é h2.
 - **Cada aba é uma rota.** Aba que já tinha endereço manteve (`/admin/push`, `/admin/academia`, `/admin/plataforma`). O item aceso no menu é o DONO do endereço (`donoDoEnderecoAdmin`), não o prefixo.
 - **Link antigo continua valendo.** `?tab=` de Clientes e da IA Vendedora leva pra aba nova (`adminEnderecosAntigos.ts`); `/admin/uso` vira `/admin/usuarios` (a lista nova não lê `?client=`; o botão "Uso detalhado" dos Logs abre a lista inteira, e o filtro de cliente é pelo seletor).
@@ -6164,3 +6166,12 @@ Armadilhas:
 6. **A conversa e a caixa de texto (`SupportThread`, `SupportComposer`) são as mesmas do admin.** Mexer nelas mexe nos dois lados.
 7. **A regra das imagens existe duas vezes de propósito** (`imagensSuporte.ts` e `SupportTickets::Images` no servidor): aqui é pra recusar na hora; quem manda é o servidor (confere os bytes).
 8. **Sem tempo real:** conversa aberta busca a cada 10 s; contador a cada 2 min e ao voltar pra aba.
+
+**No admin** (item **Suporte**, `/admin/suporte`, 2º do menu da Área do Admin): lista de todos os clientes, abrindo em **Aberto**, com filtros de situação e tipo e **busca com 300 ms de espera** (debounce); destaque pra mensagem do cliente não lida. Ao lado do item no menu, o **número de Abertos** (busca a cada 2 min; 403 é silenciado, quem não pode ver não leva erro). O chamado (`/admin/suporte/:id`) tem a conversa espelhada (a tela rola até a mensagem mais nova), resposta com print (e "Resolver" ao enviar), situação, **nota interna** (o cliente não vê), **Entrar no cliente** (o mesmo SSO do cartão) e Arquivar. Os endereços antigos de Sugestões e bugs levam pra cá. Quem vê: `front_support?` no servidor (hoje o dono e as contas fantasma; a Equipe quando `SUPPORT_BY_TEAM_LIST` ligar). O item **Suporte** some dos dois menus (lateral e horizontal do celular) pra quem não é suporte (`useIsSuperAdmin`, o mesmo `is_support`), e o número de Abertos nem busca; o servidor é a trava de verdade, e se recusar (403) as telas mostram o aviso de acesso restrito.
+
+Armadilhas do admin:
+
+9. **O menu do avatar esconde "Ajuda e suporte" dentro da Área do Admin:** ela não monta o cartão de suporte, então o item não teria o que abrir (prop `semAjudaESuporte` do `ProfileMenu`).
+10. **A nota interna só é preenchida quando o chamado muda.** A busca periódica nunca sobrescreve o que o admin está digitando. Entre dois admins editando a mesma nota, vale a última gravação (sem aviso de conflito, de propósito).
+11. **`page_url` e o texto do cliente são sempre texto puro**, nunca HTML nem link montado a partir do que o cliente mandou.
+12. **A tela antiga "Sugestões e bugs"** (`CustomerFeedbacks.tsx` e `customerFeedbackService.ts`) foi apagada; não recriar.

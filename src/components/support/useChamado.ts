@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { erroDaApi } from '@/services/support/supportService';
+import { isForbiddenError } from '@/services/core/forbidden';
 
 /**
  * Carrega um chamado e busca de novo a cada `intervaloMs` (10 s) enquanto a
@@ -20,6 +21,8 @@ import { erroDaApi } from '@/services/support/supportService';
 export function useChamado<T>(carregar: () => Promise<T>, intervaloMs = 10000) {
   const [dado, setDado] = useState<T | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  // 403 = recusa por acesso (a tela mostra o aviso de acesso restrito, não o erro genérico).
+  const [recusado, setRecusado] = useState(false);
   const ref = useRef(carregar);
   ref.current = carregar;
   const seq = useRef(0);
@@ -33,8 +36,10 @@ export function useChamado<T>(carregar: () => Promise<T>, intervaloMs = 10000) {
       if (id !== seq.current) return;
       setDado(novo);
       setErro(null);
+      setRecusado(false);
     } catch (e) {
       if (id !== seq.current) return;
+      setRecusado(isForbiddenError(e));
       setErro(erroDaApi(e, 'Não consegui carregar o chamado.'));
     } finally {
       if (id === seq.current) pendente.current = false;
@@ -44,6 +49,7 @@ export function useChamado<T>(carregar: () => Promise<T>, intervaloMs = 10000) {
   useEffect(() => {
     setDado(null);
     setErro(null);
+    setRecusado(false);
     void recarregar();
     return () => {
       seq.current++; // resposta em voo de antes não grava depois
@@ -59,5 +65,5 @@ export function useChamado<T>(carregar: () => Promise<T>, intervaloMs = 10000) {
     return () => window.clearInterval(id);
   }, [recarregar, intervaloMs]);
 
-  return { dado, erro, recarregar };
+  return { dado, erro, recusado, recarregar };
 }

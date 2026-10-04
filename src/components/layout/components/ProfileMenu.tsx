@@ -30,6 +30,8 @@ interface ProfileMenuProps {
   mobile?: boolean;
   setLogoutDialogOpen: (open: boolean) => void;
   setIsMobileMenuOpen?: (open: boolean) => void;
+  /** Área do Admin: lá não existe o SupportWidget, então "Ajuda e suporte" não faria nada. */
+  semAjudaESuporte?: boolean;
 }
 
 const CustomLink = ({ href, onClick, children, className }: { href: string; onClick?: () => void; children: React.ReactNode; className?: string }) => {
@@ -37,7 +39,7 @@ const CustomLink = ({ href, onClick, children, className }: { href: string; onCl
   return <a href={href} className={className}>{children}</a>;
 };
 
-export default function ProfileMenu({ user, mobile = false, setLogoutDialogOpen, setIsMobileMenuOpen }: ProfileMenuProps) {
+export default function ProfileMenu({ user, mobile = false, setLogoutDialogOpen, setIsMobileMenuOpen, semAjudaESuporte = false }: ProfileMenuProps) {
   const { t } = useLanguage('layout');
   const navigate = useNavigate();
   const updateAvailabilityStore = useAuthStore(s => s.updateAvailability);
@@ -74,6 +76,7 @@ export default function ProfileMenu({ user, mobile = false, setLogoutDialogOpen,
   const pode = useCan();
   // Item com `permissao` (Meus números) só para quem tem a chave.
   const profileMenuItems = getProfileMenuItems(t, navigate, setLogoutDialogOpen).filter(item => {
+    if (semAjudaESuporte && item.name === t('profile.feedback')) return false;
     if (!item.permissao) return true;
     const [resource, action] = item.permissao.split('.');
     return pode(resource, action);
