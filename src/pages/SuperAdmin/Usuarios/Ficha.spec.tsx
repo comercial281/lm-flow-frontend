@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 
 const apiGet = vi.hoisted(() => vi.fn());
 const apiPost = vi.hoisted(() => vi.fn());
@@ -66,5 +66,32 @@ describe('FichaDoUsuario', () => {
     fireEvent.click(await screen.findByRole('button', { name: /tentar de novo/i }));
     await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: 'Ana Souza' })).toBeInTheDocument());
     expect(apiGet).toHaveBeenCalledTimes(2);
+  });
+
+  it('resposta atrasada da ficha anterior não sobrescreve a atual', async () => {
+    let resolveU1: (v: unknown) => void = () => {};
+    const u1 = new Promise((r) => { resolveU1 = r; });
+    apiGet.mockImplementation((url: string) => (url.endsWith('/u1') ? u1 : Promise.resolve(perfil({ person: { ...pessoa, user_id: 'u2', name: 'Bia Lima' } }))));
+    render(
+      <MemoryRouter initialEntries={['/admin/usuarios/tenant_a/u1']}>
+        <Link to="/admin/usuarios/tenant_a/u2">ir para u2</Link>
+        <Routes><Route path="/admin/usuarios/:tenant/:userId" element={<FichaDoUsuario />} /></Routes>
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('link', { name: 'ir para u2' }));
+    await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: 'Bia Lima' })).toBeInTheDocument());
+    await act(async () => { resolveU1(perfil()); await Promise.resolve(); });
+    expect(screen.getByRole('heading', { level: 2, name: 'Bia Lima' })).toBeInTheDocument();
+    expect(screen.queryByText('Ana Souza')).not.toBeInTheDocument();
+  });
+
+  it('o link de volta mantém os filtros da lista', async () => {
+    apiGet.mockResolvedValue(perfil());
+    render(
+      <MemoryRouter initialEntries={['/admin/usuarios/tenant_a/u1?q=maria']}>
+        <Routes><Route path="/admin/usuarios/:tenant/:userId" element={<FichaDoUsuario />} /></Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: '← Usuários' })).toHaveAttribute('href', '/admin/usuarios?q=maria');
   });
 });
