@@ -10,6 +10,7 @@ import { dataHora, numero, tempoDesde, VAZIO } from '@/lib/formato';
 import { usersService } from '@/services/superAdmin/usersService';
 import type { UserEntry, UserProfile } from '@/types/admin/users';
 import AcoesDeAcesso from './AcoesDeAcesso';
+import NotificacoesDaPessoa from './NotificacoesDaPessoa';
 import { duracao, rotuloSituacao, statusDaSituacao } from './formatoUsuarios';
 
 // Ficha de uma pessoa (Clientes → Usuários → clique no nome). A chave é cliente + id.
@@ -59,7 +60,7 @@ export default function FichaDoUsuario() {
   } else if (estado.tipo === 'erro') {
     corpo = <EmptyState tipo="erro" title="Não deu para carregar esta pessoa" aoTentarDeNovo={() => void carregar()} />;
   } else {
-    corpo = <Conteudo perfil={estado.perfil} />;
+    corpo = <Conteudo perfil={estado.perfil} aoTentarDeNovo={() => void carregar()} />;
   }
 
   return (
@@ -72,8 +73,8 @@ export default function FichaDoUsuario() {
   );
 }
 
-function Conteudo({ perfil }: { perfil: UserProfile }) {
-  const { person, summary, entries, actions } = perfil;
+function Conteudo({ perfil, aoTentarDeNovo }: { perfil: UserProfile; aoTentarDeNovo: () => void }) {
+  const { person, summary, entries, actions, notifications } = perfil;
   const telaTop = summary.top_screens[0];
   const maximo = Math.max(1, ...summary.top_screens.map((t) => t.seconds));
 
@@ -148,6 +149,8 @@ function Conteudo({ perfil }: { perfil: UserProfile }) {
           )}
         </section>
       </div>
+
+      <NotificacoesDaPessoa dados={notifications ?? null} telefone={person.phone} aoTentarDeNovo={aoTentarDeNovo} />
 
       <section className="rounded-lg border bg-card p-4">
         <h3 className="mb-3 text-sm font-semibold">Histórico de ações</h3>
