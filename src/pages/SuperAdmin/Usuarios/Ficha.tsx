@@ -33,9 +33,9 @@ export default function FichaDoUsuario() {
       const perfil = await usersService.profile(tenant, userId);
       if (minha !== seq.current) return;
       setEstado({ tipo: 'pronto', perfil });
-    } catch (e: any) {
+    } catch (e) {
       if (minha !== seq.current) return;
-      setEstado(e?.response?.status === 404 ? { tipo: 'naoEncontrado' } : { tipo: 'erro' });
+      setEstado((e as { response?: { status?: number } })?.response?.status === 404 ? { tipo: 'naoEncontrado' } : { tipo: 'erro' });
     }
   }, [tenant, userId]);
 

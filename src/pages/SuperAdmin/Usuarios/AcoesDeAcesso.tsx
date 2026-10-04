@@ -7,7 +7,8 @@ import { usersService } from '@/services/superAdmin/usersService';
 import type { UserRow } from '@/types/admin/users';
 
 // Erro cru do backend ("schema do cliente nao existe") não vai pra tela.
-const mensagemDeErro = (e: any) => (e?.response?.status === 404
+type ErroDaApi = { response?: { status?: number; data?: { whatsapp?: { skipped?: string } } } };
+const mensagemDeErro = (e: ErroDaApi) => (e?.response?.status === 404
   ? 'Não achei essa pessoa nesse cliente.'
   : 'Não deu para gerar o link. Tente de novo.');
 
@@ -28,8 +29,8 @@ export default function AcoesDeAcesso({ row }: { row: UserRow }) {
       if (!url) { toast.error('Não veio o link. Tente de novo.'); return; }
       if (await copyText(url)) toast.success(`Link de acesso de ${quem} copiado. Vale uma vez, por 24 horas. Se você já tinha enviado um link, aquele deixa de valer.`);
       else toast.message('Copie o link de acesso:', { description: url });
-    } catch (e: any) {
-      toast.error(mensagemDeErro(e));
+    } catch (err) {
+      toast.error(mensagemDeErro(err as ErroDaApi));
     } finally {
       setOcupado(false);
     }
@@ -47,11 +48,11 @@ export default function AcoesDeAcesso({ row }: { row: UserRow }) {
       const wa = await usersService.sendAccessLink(tenantId, row.user_id);
       if (wa.sent) toast.success(`Link enviado no WhatsApp de ${quem}${wa.instance ? ` (${wa.instance})` : ''}.`);
       else toast.error(`Não enviou: ${wa.error ?? wa.skipped ?? 'motivo desconhecido'}`);
-    } catch (e: any) {
-      const skipped = e?.response?.data?.whatsapp?.skipped;
+    } catch (err) {
+      const skipped = (err as ErroDaApi)?.response?.data?.whatsapp?.skipped;
       toast.error(skipped === 'sem telefone'
         ? 'Esta pessoa não tem WhatsApp no cadastro. Use Copiar link de acesso.'
-        : mensagemDeErro(e));
+        : mensagemDeErro(err as ErroDaApi));
     } finally {
       setOcupado(false);
     }
