@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-  Input, Label as UILabel, Textarea,
 } from '@/components/ui/ds';
 import {
   Archive, Edit, Image as ImageIcon, Lightbulb, Loader2, Newspaper, Plus, RefreshCw, Send, Trash2, X,
@@ -14,6 +13,7 @@ import {
   siteBuilderService, ARTICLE_STATUS_COLORS, ARTICLE_STATUS_LABELS,
   type ArticleFormData, type Site, type SiteArticle,
 } from '@/services/siteBuilder/siteBuilderService';
+import { CampoTexto, CampoTextoLongo } from '../ui/Campo';
 
 const EMPTY_ARTICLE_FORM: ArticleFormData = {
   title: '',
@@ -268,19 +268,18 @@ export default function TelaBlog({ site }: { site: Site }) {
 
           <div className="grid gap-6 py-2 md:grid-cols-[1fr_260px]">
             {/* Coluna principal — formulário */}
-            <div className="space-y-4 min-w-0">
-              <div>
-                <UILabel>Título *</UILabel>
-                <Input value={articleForm.title}
-                  onChange={e => setArticleForm(f => ({ ...f, title: e.target.value }))}
-                  placeholder="Ex: Como financiar um imóvel?" className="mt-1" />
-              </div>
+            <div className="space-y-5 min-w-0">
+              <CampoTexto id="artigo-titulo" rotulo="Título *" valor={articleForm.title}
+                placeholder="Ex: Como financiar um imóvel?"
+                ajuda="Aparece no topo do artigo e na lista do blog. Também é o que o Google mostra."
+                aoMudar={title => setArticleForm(f => ({ ...f, title }))} />
 
-              <div>
-                <UILabel>Capa</UILabel>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Capa</p>
+                <p className="text-sm text-muted-foreground">A foto do topo do artigo e da lista do blog.</p>
                 <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverFile} />
                 {articleForm.cover_image_url ? (
-                  <div className="mt-1 relative w-full overflow-hidden rounded-lg border border-border">
+                  <div className="relative w-full overflow-hidden rounded-lg border border-border">
                     <img src={articleForm.cover_image_url} alt="Capa"
                       className="h-40 w-full object-cover"
                       onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
@@ -297,7 +296,7 @@ export default function TelaBlog({ site }: { site: Site }) {
                   </div>
                 ) : (
                   <button type="button" onClick={() => coverInputRef.current?.click()} disabled={coverUploading}
-                    className="mt-1 flex h-32 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-50">
+                    className="flex h-32 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-50">
                     {coverUploading
                       ? <><Loader2 className="h-5 w-5 animate-spin" /> Enviando...</>
                       : <><ImageIcon className="h-6 w-6" /> <span className="text-sm">Enviar imagem de capa</span></>}
@@ -305,16 +304,14 @@ export default function TelaBlog({ site }: { site: Site }) {
                 )}
               </div>
 
-              <div>
-                <UILabel>Resumo</UILabel>
-                <Textarea value={articleForm.excerpt ?? ''}
-                  onChange={e => setArticleForm(f => ({ ...f, excerpt: e.target.value }))}
-                  rows={2} placeholder="Breve descrição exibida na listagem..." className="mt-1 resize-none" />
-              </div>
+              <CampoTextoLongo id="artigo-resumo" rotulo="Resumo" valor={articleForm.excerpt ?? ''}
+                rows={2} placeholder="Breve descrição exibida na listagem..." classeDoControle="resize-none"
+                ajuda="Duas linhas que aparecem embaixo do título, na lista de artigos do blog."
+                aoMudar={excerpt => setArticleForm(f => ({ ...f, excerpt }))} />
 
-              <div>
-                <UILabel>Conteúdo</UILabel>
-                <div className="mt-1 relative">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Conteúdo</p>
+                <div className="relative">
                   <RichTextEditor ref={articleEditorRef} showToolbar
                     placeholder="Escreva o conteúdo do artigo... (use a barra para negrito, itálico e listas)" />
                   {articleLoadingBody && (

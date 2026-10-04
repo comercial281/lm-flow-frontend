@@ -8,6 +8,8 @@ import { siteBuilderService, type SitePage } from '@/services/siteBuilder/siteBu
 import {
   HOME_FABRICA, TEXTO_FABRICA, type ChamadaLivre, type ChamadaPadrao, type ChamadaPadraoId, type HomeConfig,
 } from '@/features/siteBuilder/public/homeConfig';
+import { Secao, Secoes } from '../ui/Secao';
+import { CLASSE_DO_CAMPO, CampoTexto } from '../ui/Campo';
 import type { FormProps } from './tipos';
 
 // Teto do servidor (Sites::HomeConfig::MAX_CUSTOM_CALLOUTS).
@@ -94,9 +96,11 @@ export default function TelaChamadas({ site, siteForm, setF }: FormProps) {
   };
 
   return (
-    <>
-      <section className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <h2 className="text-base font-semibold">Visual</h2>
+    <Secoes>
+      <Secao
+        titulo="Visual"
+        descricao="Como as chamadas aparecem na página inicial. A faixa só aparece com pelo menos 2 chamadas ligadas."
+      >
         <div role="group" aria-label="Visual" className="flex flex-wrap gap-3">
           {VISUAIS.map(v => (
             <button key={v.id} type="button" aria-pressed={c.layout === v.id} onClick={() => mudar({ layout: v.id })}
@@ -133,15 +137,17 @@ export default function TelaChamadas({ site, siteForm, setF }: FormProps) {
             </div>
           </div>
         )}
-      </section>
+      </Secao>
 
-      <section className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <h2 className="text-base font-semibold">Chamadas prontas</h2>
+      <Secao
+        titulo="Chamadas prontas"
+        descricao="Três chamadas que já vêm no site. Em branco, cada campo usa o texto que aparece de exemplo."
+      >
         {PRONTAS.map(({ id, destino }) => {
           const p = c.defaults[id];
           const f = TEXTO_FABRICA[id];
           return (
-            <fieldset key={id} className="rounded-lg border border-border p-3 space-y-3">
+            <fieldset key={id} className="rounded-lg border border-border p-4 space-y-4">
               <legend className="px-1 text-sm font-medium">{f.title}</legend>
               <div className="flex items-center gap-2">
                 <Checkbox id={`pronta-${id}-mostrar`} checked={p.enabled} onCheckedChange={v => mudarPronta(id, { enabled: v === true })} />
@@ -153,13 +159,14 @@ export default function TelaChamadas({ site, siteForm, setF }: FormProps) {
             </fieldset>
           );
         })}
-      </section>
+      </Secao>
 
-      <section className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <h2 className="text-base font-semibold">Suas chamadas</h2>
-        {c.custom.length === 0 && <p className="text-sm text-muted-foreground">Até 3 chamadas suas, pra uma página, um link ou o WhatsApp.</p>}
+      <Secao
+        titulo="Suas chamadas"
+        descricao="Até 3 chamadas suas, que levam pra uma página do site, um link ou o WhatsApp."
+      >
         {c.custom.map((x, i) => (
-          <fieldset key={i} className="rounded-lg border border-border p-3 space-y-3">
+          <fieldset key={i} className="rounded-lg border border-border p-4 space-y-4">
             <legend className="px-1 text-sm font-medium">Chamada {i + 1}</legend>
             <CamposDeTexto idBase={`livre-${i}`} titulo={x.title} texto={x.text ?? ''} botao={x.button ?? ''}
               dicas={{ title: '', text: '', button: 'Saiba mais' }}
@@ -178,11 +185,9 @@ export default function TelaChamadas({ site, siteForm, setF }: FormProps) {
             <Plus className="mr-1.5 h-4 w-4" aria-hidden /> Nova chamada
           </Button>
         )}
-      </section>
-
-      <p className="text-sm text-muted-foreground">A faixa aparece com pelo menos 2 chamadas ligadas.</p>
+      </Secao>
       {dialogoDeConfirmacao}
-    </>
+    </Secoes>
   );
 }
 
@@ -215,22 +220,13 @@ interface CamposProps {
 // Limites do servidor: título 60, texto 200, botão 40.
 function CamposDeTexto({ idBase, titulo, texto: valorTexto, botao, dicas, mudar }: CamposProps) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <div>
-        <UILabel htmlFor={`${idBase}-titulo`}>Título</UILabel>
-        <Input id={`${idBase}-titulo`} className="mt-1" maxLength={60} value={titulo} placeholder={dicas.title}
-          onChange={e => mudar('title', e.target.value)} />
-      </div>
-      <div>
-        <UILabel htmlFor={`${idBase}-botao`}>Botão</UILabel>
-        <Input id={`${idBase}-botao`} className="mt-1" maxLength={40} value={botao} placeholder={dicas.button}
-          onChange={e => mudar('button', e.target.value)} />
-      </div>
-      <div className="sm:col-span-2">
-        <UILabel htmlFor={`${idBase}-texto`}>Texto</UILabel>
-        <Input id={`${idBase}-texto`} className="mt-1" maxLength={200} value={valorTexto} placeholder={dicas.text}
-          onChange={e => mudar('text', e.target.value)} />
-      </div>
+    <div className="grid gap-5 sm:grid-cols-2">
+      <CampoTexto id={`${idBase}-titulo`} rotulo="Título" maxLength={60} valor={titulo} placeholder={dicas.title}
+        aoMudar={v => mudar('title', v)} />
+      <CampoTexto id={`${idBase}-botao`} rotulo="Botão" maxLength={40} valor={botao} placeholder={dicas.button}
+        aoMudar={v => mudar('button', v)} />
+      <CampoTexto id={`${idBase}-texto`} rotulo="Texto" maxLength={200} valor={valorTexto} placeholder={dicas.text}
+        aoMudar={v => mudar('text', v)} className="sm:col-span-2" />
     </div>
   );
 }
@@ -255,10 +251,10 @@ function Destino({ idBase, chamada: x, paginas, estadoPaginas, temZap, mudar }: 
 
   return (
     <div className="space-y-2">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div className="space-y-2">
           <UILabel htmlFor={`${idBase}-destino`}>Destino</UILabel>
-          <Seletor id={`${idBase}-destino`} className="mt-1 w-full" value={x.dest_type}
+          <Seletor id={`${idBase}-destino`} className={`w-full ${CLASSE_DO_CAMPO}`} value={x.dest_type}
             onChange={e => mudar({ dest_type: e.target.value as ChamadaLivre['dest_type'], dest_value: null })}>
             <option value="page">Uma página do site</option>
             <option value="url">Um link</option>
@@ -266,9 +262,9 @@ function Destino({ idBase, chamada: x, paginas, estadoPaginas, temZap, mudar }: 
           </Seletor>
         </div>
         {x.dest_type === 'page' && (
-          <div>
+          <div className="space-y-2">
             <UILabel htmlFor={`${idBase}-pagina`}>Página</UILabel>
-            <Seletor id={`${idBase}-pagina`} className="mt-1 w-full" value={x.dest_value ?? ''}
+            <Seletor id={`${idBase}-pagina`} className={`w-full ${CLASSE_DO_CAMPO}`} value={x.dest_value ?? ''}
               onChange={e => mudar({ dest_value: e.target.value || null })}>
               <option value="">Escolha uma página</option>
               {paginas.map(p => <option key={p.id} value={p.slug}>{p.title}</option>)}
@@ -332,9 +328,9 @@ function CampoLink({ id, valor, mudar }: { id: string; valor: string | null; mud
   const erro = limpo !== '' && !valido && (saiu || !comecando);
 
   return (
-    <div>
+    <div className="space-y-2">
       <UILabel htmlFor={id}>Endereço</UILabel>
-      <Input id={id} className="mt-1" inputMode="url" value={digitado} placeholder="https://"
+      <Input id={id} className={CLASSE_DO_CAMPO} inputMode="url" value={digitado} placeholder="https://"
         aria-invalid={erro} aria-describedby={erro ? `${id}-erro` : undefined}
         onBlur={() => setSaiu(true)}
         onChange={e => {
@@ -343,7 +339,7 @@ function CampoLink({ id, valor, mudar }: { id: string; valor: string | null; mud
           const novo = LINK_VALIDO.test(v.trim()) ? v.trim() : null;
           if (novo !== valor) mudar(novo);
         }} />
-      {erro && <p id={`${id}-erro`} className="mt-1 text-sm text-destructive">{ERRO_LINK}</p>}
+      {erro && <p id={`${id}-erro`} className="text-sm text-destructive">{ERRO_LINK}</p>}
     </div>
   );
 }
