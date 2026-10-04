@@ -1,6 +1,21 @@
 // Handlers de push notification e notificationclick
 // Importado pelo service worker gerado pelo vite-plugin-pwa via importScripts
 
+// Recibo de entrega (Usuários → ficha → Notificações). O servidor manda no push um
+// recibo assinado e o endereço; aqui só avisamos "apareceu" e "clicou".
+// text/plain de propósito: não dispara a pergunta prévia de CORS. Falha de rede
+// é engolida — recibo nunca pode atrapalhar o aviso.
+function enviarRecibo(data, evento) {
+  if (!data || !data.receipt || !data.receipt_url) return Promise.resolve();
+  return fetch(data.receipt_url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    body: JSON.stringify({ receipt: data.receipt, event: evento }),
+    keepalive: true,
+    credentials: 'omit',
+  }).catch(function () {});
+}
+
 self.addEventListener('push', function(event) {
   if (!event.data) return;
 
@@ -21,12 +36,14 @@ self.addEventListener('push', function(event) {
     // diferentes aparecem separados.
     tag: payload.tag || payload.url || 'lmflow-message',
     renotify: true,
-    data: { url: payload.url || '/conversations' },
+    data: { url: payload.url || '/conversations', receipt: payload.receipt, receipt_url: payload.receipt_url },
     vibrate: [200, 100, 200],
   };
 
   event.waitUntil(
-    self.registration.showNotification(payload.title, options)
+    self.registration.showNotification(payload.title, options).then(function () {
+      return enviarRecibo(options.data, 'shown');
+    })
   );
 });
 
@@ -60,7 +77,8 @@ self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   var url = (event.notification.data && event.notification.data.url) || '/conversations';
 
-  event.waitUntil(
+  event.waitUntil(Promise.all([
+    enviarRecibo(event.notification.data, 'clicked'),
     self.clients
       .matchAll({ type: 'window', includeUncontrolled: true })
       .then(function(clients) {
@@ -73,6 +91,6 @@ self.addEventListener('notificationclick', function(event) {
           }
         }
         return self.clients.openWindow(url);
-      })
-  );
+      }),
+  ]));
 });
