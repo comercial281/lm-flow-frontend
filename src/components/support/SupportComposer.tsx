@@ -52,6 +52,7 @@ export default function SupportComposer({ onEnviar, placeholder = 'Escreva sua m
   const enviar = async () => {
     if (!podeEnviar) return;
     devolverFoco.current = document.activeElement === caixa.current;
+    setErro(null);
     setEnviando(true);
     try {
       await onEnviar(texto.trim(), imagens);
@@ -59,7 +60,9 @@ export default function SupportComposer({ onEnviar, placeholder = 'Escreva sua m
       setImagens([]);
       setErro(null);
     } catch {
-      // Quem chamou mostra o erro (toast); aqui só não perde o que foi escrito.
+      // Não perde o que foi escrito e deixa o motivo à vista (o aviso do canto some
+      // sozinho e passava despercebido). Quem chamou ainda mostra o detalhe no aviso.
+      setErro('Não foi enviado. Confira a internet e tente de novo.');
     } finally {
       setEnviando(false);
     }

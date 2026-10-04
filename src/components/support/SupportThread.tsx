@@ -14,7 +14,8 @@ export default function SupportThread({ mensagens, eu }: Props) {
     <ol className="space-y-3 p-3">
       {mensagens.map(m => {
         const minha = m.author_side === eu;
-        const nome = m.author_side === 'team' ? `${m.author_name ?? 'Time'} · Suporte LM Flow` : (m.author_name ?? 'Cliente');
+        // Pedido do dono (04/10/2026): o cliente vê só "Suporte", nunca o nome de quem respondeu.
+        const nome = m.author_side === 'team' ? 'Suporte' : (m.author_name ?? 'Cliente');
         return (
           <li key={m.id} data-lado={minha ? 'eu' : 'outro'} className={cn('flex flex-col gap-1', minha ? 'items-end' : 'items-start')}>
             {!minha && <span className="text-xs text-muted-foreground">{nome}</span>}

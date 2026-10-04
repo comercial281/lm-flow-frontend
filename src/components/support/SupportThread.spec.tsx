@@ -9,9 +9,10 @@ const msgs: SupportMessage[] = [
 ];
 
 describe('SupportThread', () => {
-  it('do lado do cliente, a resposta do time mostra quem respondeu', () => {
+  it('do lado do cliente, a resposta do time aparece só como Suporte, sem o nome de quem respondeu', () => {
     render(<SupportThread mensagens={msgs} eu="customer" />);
-    expect(screen.getByText('Tony · Suporte LM Flow')).toBeInTheDocument();
+    expect(screen.getByText('Suporte')).toBeInTheDocument();
+    expect(screen.queryByText(/Tony/)).toBeNull();
     expect(screen.getByText('Não salva').closest('[data-lado]')).toHaveAttribute('data-lado', 'eu');
   });
 
