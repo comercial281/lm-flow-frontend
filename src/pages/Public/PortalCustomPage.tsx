@@ -12,7 +12,7 @@ interface CustomPage { title: string; slug: string; content_html: string }
 
 export default function PortalCustomPage() {
   const { tenant, slug } = useParams<{ tenant: string; slug: string }>();
-  const { state, site, fontHref, cssVars } = usePortalData(tenant);
+  const { state, site, fontHref, abas, cssVars } = usePortalData(tenant);
   const { pathname } = useLocation();
   usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'page', path: pathname, pageSlug: slug });
 
@@ -48,7 +48,7 @@ export default function PortalCustomPage() {
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href={fontHref} rel="stylesheet" />
 
-      <PortalHeader site={site} tenant={tenant!} />
+      <PortalHeader site={site} tenant={tenant!} abas={abas} />
 
       {loading ? (
         <div className="flex items-center justify-center py-24 text-neutral-400">Carregando página…</div>
@@ -65,7 +65,7 @@ export default function PortalCustomPage() {
         </article>
       )}
 
-      <PortalFooter site={site} tenant={tenant!} />
+      <PortalFooter site={site} tenant={tenant!} abas={abas} />
 
       {/* Sem plugin de typography no projeto: estilos básicos do corpo. */}
       <style>{`

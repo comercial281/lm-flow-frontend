@@ -33,6 +33,14 @@ describe('abas e filtros', () => {
     expect(filterProperties([a], f('sale', { suites: '2', parking: '2' }))).toEqual([]);
     expect(filterProperties([a, emp('E3', { stage: 'ready' })], f('sale', { stage: 'ready' })).map(x => x.code)).toEqual(['E3']);
   });
+  it('tipo pega os sinônimos do mesmo nome (cobertura = penthouse, terreno = lot…)', () => {
+    const lista = [p('C1', { property_type: 'cobertura' }), p('C2', { property_type: 'penthouse' }),
+      p('T1', { property_type: 'lot' }), p('T2', { property_type: 'terreno' }), p('A1')];
+    expect(filterProperties(lista, f('sale', { type: 'cobertura' })).map(x => x.code)).toEqual(['C1', 'C2']);
+    expect(filterProperties(lista, f('sale', { type: 'penthouse' })).map(x => x.code)).toEqual(['C1', 'C2']);
+    expect(filterProperties(lista, f('sale', { type: 'lot' })).map(x => x.code)).toEqual(['T1', 'T2']);
+    expect(filterProperties(lista, f('sale', { type: 'apartment' })).map(x => x.code)).toEqual(['A1']);
+  });
   it('aba desligada ou vazia some; tudo vazio → nenhuma', () => {
     const home = resolverHome({ search: { tabs: { rent: false } } });
     expect(abasVisiveis(home, items)).toEqual(['sale', 'launch']);

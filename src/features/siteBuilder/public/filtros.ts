@@ -1,5 +1,6 @@
 // Filtro puro dos imóveis do site público. Mora aqui (e não no portalShared)
 // para vitrines.ts poder usá-lo sem ciclo de import; o portalShared reexporta.
+import { rotuloTipo } from './tiposDeImovel';
 
 /* Aba de transação usada na busca. `launch` = lançamentos (empreendimento). */
 export type PortalTab = 'sale' | 'rent' | 'launch';
@@ -53,7 +54,9 @@ export function filterProperties(items: PortalProperty[], f: PortalFilters): Por
     if (f.tab === 'launch' && !isDev(p)) return false;
     if (f.tab === 'rent' && (isDev(p) || !RENT_TX.includes(p.transaction_type))) return false;
     if (f.tab === 'sale' && (p.transaction_type === 'rent' || p.transaction_type === 'season')) return false;
-    if (f.type && p.property_type !== f.type) return false;
+    // Tipo pelo NOME: o seletor junta sinônimos do servidor (cobertura/penthouse,
+    // terreno/lot…) numa opção só, então a opção tem de pegar todos eles.
+    if (f.type && p.property_type !== f.type && rotuloTipo(p.property_type) !== rotuloTipo(f.type)) return false;
     if (f.city && p.address?.city !== f.city) return false;
     if (f.neighborhood && p.address?.neighborhood !== f.neighborhood) return false;
     if (f.bedrooms && (p.icon_summary?.bedrooms ?? 0) < Number(f.bedrooms)) return false;

@@ -20,3 +20,9 @@ export function opcoesDeTipo(tipos: string[]): [string, string][] {
   const vistos = new Set<string>();
   return tipos.map(t => [t, rotuloTipo(t)] as [string, string]).filter(([, l]) => (vistos.has(l) ? false : (vistos.add(l), true)));
 }
+
+/** Opção do seletor que representa `valor` (um sinônimo na URL marca a opção do mesmo nome). */
+export function opcaoDoTipo(tipos: string[], valor: string): string {
+  if (!valor) return '';
+  return opcoesDeTipo(tipos).find(([, l]) => l === rotuloTipo(valor))?.[0] ?? valor;
+}

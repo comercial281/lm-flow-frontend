@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rotuloTipo, pluralTipo } from './tiposDeImovel';
+import { rotuloTipo, pluralTipo, opcaoDoTipo } from './tiposDeImovel';
 
 const ENUM = ['apartment','house','condo_house','lot','commercial_room','warehouse','farm','studio','kitnet','loft',
   'penthouse','duplex','triplex','cobertura','sobrado','sala_comercial','galpao','predio','terreno','chacara','sitio','other'];
@@ -12,5 +12,10 @@ describe('tiposDeImovel', () => {
   });
   it('tipo desconhecido não quebra', () => {
     expect(rotuloTipo('nave')).toBe('Imóvel');
+  });
+  it('sinônimo na URL marca a opção do mesmo nome no seletor', () => {
+    expect(opcaoDoTipo(['cobertura', 'penthouse', 'house'], 'penthouse')).toBe('cobertura');
+    expect(opcaoDoTipo(['cobertura', 'house'], 'house')).toBe('house');
+    expect(opcaoDoTipo(['house'], '')).toBe('');
   });
 });

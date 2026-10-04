@@ -5,7 +5,10 @@ import { imovelHref } from './finalidade';
 import { menuPagesLinks } from '@/features/siteBuilder/public/portalMenu';
 import PortalTranslate from './PortalTranslate';
 import { filterProperties, type PortalFilters, type PortalProperty, type PortalTab } from '@/features/siteBuilder/public/filtros';
-import { ROTULO_TIPO } from '@/features/siteBuilder/public/tiposDeImovel';
+import { ROTULO_TIPO, rotuloTipo } from '@/features/siteBuilder/public/tiposDeImovel';
+import { resolverHome, type AbaId } from '@/features/siteBuilder/public/homeConfig';
+import { abasVisiveis } from '@/features/siteBuilder/public/vitrines';
+import { seloDaFase } from '@/features/properties/listingKind';
 
 // Tipos e filtro moram em filtros.ts (sem ciclo com vitrines.ts); reexportados aqui.
 export { filterProperties };
@@ -108,6 +111,9 @@ export const I = {
   mail: 'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm18 2-10 7L2 6',
   bank: 'M3 21h18M4 10h16M5 10V7l7-4 7 4v3M6 10v8M10 10v8M14 10v8M18 10v8',
   sign: 'M4 3v18M4 5h13l-2.5 3L17 11H4',
+  chat: 'M7.9 20A9 9 0 1 0 4 16.1L2 22ZM8 12h.01M12 12h.01M16 12h.01',
+  link: 'M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7',
+  page: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M16 13H8M16 17H8M10 9H8',
 };
 export function Ic({ d, s = 18, cls = '' }: { d: string; s?: number; cls?: string }) {
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className={cls}><path d={d} /></svg>;
@@ -160,6 +166,10 @@ export function usePortalData(tenant?: string) {
   const cities = useMemo(() => [...new Set(items.map(i => i.address?.city).filter(Boolean) as string[])].sort(), [items]);
   const hoods = useMemo(() => [...new Set(items.map(i => i.address?.neighborhood).filter(Boolean) as string[])].sort(), [items]);
   const types = useMemo(() => [...new Set(items.map(i => i.property_type).filter(Boolean))], [items]);
+  // Página inicial (Personalizar) e as abas que existem de verdade: aba ligada
+  // sem imóvel some da capa, do topo e do rodapé.
+  const home = useMemo(() => resolverHome(site.home), [site]);
+  const abas = useMemo(() => abasVisiveis(home, items), [home, items]);
 
   const cssVars = {
     ['--brand' as string]: brand,
@@ -170,7 +180,7 @@ export function usePortalData(tenant?: string) {
     fontFamily: fontStack,
   } as CSSProperties;
 
-  return { state, site, items, brand, accent, font, fontStack, fontHref, wa, cities, hoods, types, cssVars };
+  return { state, site, items, brand, accent, font, fontStack, fontHref, wa, cities, hoods, types, home, abas, cssVars };
 }
 
 /* ── Blog: fetch de artigos (mesmo padrão público, header X-Tenant) ───────── */
@@ -216,8 +226,11 @@ export function usePublishedArticlesExist(tenant?: string): boolean {
 /* ── Card de imóvel ──────────────────────────────────────────────────────── */
 export function PropertyCard({ tenant, p, wa, tab }: { tenant: string; p: PortalProperty; wa?: string | null; tab?: PortalTab }) {
   const s = p.icon_summary ?? {};
-  const badge = p.exclusive ? 'Exclusivo' : (p.featured ? 'Destaque' : null);
-  const typeLabel = PROPERTY_TYPE_LABEL[p.property_type] || p.property_type;
+  // Empreendimento mostra a fase (e a entrega) no lugar de "Destaque"; Exclusivo continua vencendo.
+  const badge = p.exclusive ? 'Exclusivo'
+    : p.listing_kind === 'development' ? seloDaFase(p.stage ?? 'ready', p.delivery_forecast)
+    : (p.featured ? 'Destaque' : null);
+  const typeLabel = rotuloTipo(p.property_type);
   const local = [p.address?.neighborhood, p.address?.city].filter(Boolean).join(', ');
   const waLink = wa ? `https://wa.me/${onlyDigits(wa)}?text=${encodeURIComponent(`Olá! Tenho interesse no imóvel ${p.code} (${p.title}).`)}` : null;
   const href = imovelHref(tenant, p.code, tab);
@@ -387,13 +400,16 @@ function PortalTopBar({ site }: { site: SiteInfo }) {
   );
 }
 
+/** Abas do menu (Comprar/Alugar/Lançamentos) que a página mostra; sem `abas`, as três. */
+const abaVisivel = (abas?: AbaId[]) => (n: NavItem) => n.kind !== 'tab' || !abas || abas.includes(n.value);
+
 /**
  * `onHome`: na home o cabeçalho é TRANSPARENTE sobre a foto de capa e vira
  * sólido na rolagem; nas demais páginas ele é sólido desde o topo. Os links de
  * seção (Sobre/Contato) rolam a própria home via âncora e, fora dela, navegam
  * de volta apontando a seção.
  */
-export function PortalHeader({ site, tenant, onHome = false }: { site: SiteInfo; tenant: string; onHome?: boolean }) {
+export function PortalHeader({ site, tenant, onHome = false, abas }: { site: SiteInfo; tenant: string; onHome?: boolean; abas?: AbaId[] }) {
   const [menuOpen, setMenuOpen] = useState(false);
   // Só na home: antes de rolar, o cabeçalho flutua sobre a capa.
   const [scrolled, setScrolled] = useState(!onHome);
@@ -413,7 +429,7 @@ export function PortalHeader({ site, tenant, onHome = false }: { site: SiteInfo;
   const showStats = site.sections?.stats !== false;
   const showLeadCapture = site.sections?.lead_capture !== false;
   const nav = [
-    ...NAV.filter(n => (n.value === 'sobre' ? showStats : n.value === 'contato' ? showLeadCapture : true)),
+    ...NAV.filter(abaVisivel(abas)).filter(n => (n.value === 'sobre' ? showStats : n.value === 'contato' ? showLeadCapture : true)),
     ...extraPages(site),
     ...menuPagesLinks(site, tenant).map((l): NavItem => ({ label: l.label, kind: 'href', value: l.href })),
   ];
@@ -532,74 +548,6 @@ export function PortalHeader({ site, tenant, onHome = false }: { site: SiteInfo;
   );
 }
 
-/* ── Faixa de atalhos da home ────────────────────────────────────────────── */
-/**
- * Os três caminhos que não são "quero comprar": financiamento, anunciar o
- * próprio imóvel e pedir ajuda para achar.
- *
- * ⚠️ A faixa NÃO tem interruptor próprio, e é de propósito: ela aparece quando
- * existe pelo menos um destino de verdade. Como as duas páginas novas nascem
- * desligadas, nenhum site publicado ganha faixa sozinho no deploy — a doutrina
- * da casa de nada estrear ligado, sem custar mais uma chave para o gestor virar.
- */
-export function HomeShortcuts({ site, tenant }: { site: SiteInfo; tenant: string }) {
-  const showLeadCapture = site.sections?.lead_capture !== false;
-
-  const cards = [
-    site.financiamento?.enabled && {
-      key: 'financiamento',
-      icon: I.bank,
-      title: 'Financiamento',
-      desc: 'Simule com os principais bancos e descubra quanto você consegue financiar.',
-      cta: 'Faça uma simulação',
-      to: `/portal/${tenant}/financiamento`,
-    },
-    site.anuncie?.enabled && {
-      key: 'anuncie',
-      icon: I.sign,
-      title: 'Anuncie seu imóvel',
-      desc: 'Tem um imóvel para vender ou alugar? Preencha a ficha e a gente avalia.',
-      cta: 'Cadastre seu imóvel',
-      to: `/portal/${tenant}/anuncie`,
-    },
-    showLeadCapture && {
-      key: 'encomenda',
-      icon: I.search,
-      title: 'Imóvel sob encomenda',
-      desc: 'Descreva o que você procura e avisamos assim que encontrarmos.',
-      cta: 'Encomende seu imóvel',
-      to: '#contato',
-    },
-  ].filter(Boolean) as { key: string; icon: string; title: string; desc: string; cta: string; to: string }[];
-
-  // Só a busca de imóvel ligada não justifica uma faixa: ela repetiria, em
-  // forma de cartão, o bloco de captura que já está logo abaixo na home.
-  if (cards.length < 2) return null;
-
-  return (
-    <section className="border-y border-black/[0.06]" style={{ background: 'var(--ink)' }}>
-      <div className={`mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:px-6 ${cards.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
-        {cards.map(c => {
-          const inner = (
-            <>
-              <span className="text-white/80"><Ic d={c.icon} s={26} /></span>
-              <h3 className="mt-4 font-[var(--display)] text-[22px] font-semibold text-white">{c.title}</h3>
-              <p className="mt-2 max-w-xs text-[14px] leading-relaxed text-white/70">{c.desc}</p>
-              <span className="mt-5 inline-flex items-center gap-2 border-b-2 border-white/60 pb-1 text-[14px] font-semibold text-white transition-colors group-hover:border-[var(--brand)]">
-                {c.cta} <Ic d={I.arrow} s={16} />
-              </span>
-            </>
-          );
-          const cls = 'group flex flex-col items-start text-left';
-          return c.to.startsWith('#')
-            ? <a key={c.key} href={c.to} className={cls}>{inner}</a>
-            : <Link key={c.key} to={c.to} className={cls}>{inner}</Link>;
-        })}
-      </div>
-    </section>
-  );
-}
-
 /* ── Footer compartilhado ────────────────────────────────────────────────── */
 function FooterCol({ children, title }: { children: ReactNode; title: string }) {
   return (
@@ -611,13 +559,14 @@ function FooterCol({ children, title }: { children: ReactNode; title: string }) 
 }
 const footerLinkCls = 'text-[13px] text-neutral-600 hover:text-[var(--brand)]';
 
-export function PortalFooter({ site, tenant, onHome = false }: { site: SiteInfo; tenant: string; onHome?: boolean }) {
+export function PortalFooter({ site, tenant, onHome = false, abas }: { site: SiteInfo; tenant: string; onHome?: boolean; abas?: AbaId[] }) {
   const wa = site.contact?.whatsapp;
   const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
   const showStats = site.sections?.stats !== false;
   const showLeadCapture = site.sections?.lead_capture !== false;
   const hasBlog = usePublishedArticlesExist(tenant);
   const sectionHref = (id: string) => (onHome ? `#${id}` : `/portal/${tenant}#${id}`);
+  const abasDoRodape = NAV.filter(n => n.kind === 'tab').filter(abaVisivel(abas));
 
   return (
     <footer className="border-t border-black/[0.06] bg-white">
@@ -628,11 +577,13 @@ export function PortalFooter({ site, tenant, onHome = false }: { site: SiteInfo;
             : <span className="font-[var(--display)] text-lg font-semibold">{site.name || 'Imóveis'}</span>}
           <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-neutral-500">Seu portal de imóveis com atendimento de verdade.</p>
         </div>
-        <FooterCol title="Imóveis">
-          <li><Link to={`/portal/${tenant}/imoveis?tab=sale`} className={footerLinkCls}>Comprar</Link></li>
-          <li><Link to={`/portal/${tenant}/imoveis?tab=rent`} className={footerLinkCls}>Alugar</Link></li>
-          <li><Link to={`/portal/${tenant}/imoveis?tab=launch`} className={footerLinkCls}>Lançamentos</Link></li>
-        </FooterCol>
+        {abasDoRodape.length > 0 && (
+          <FooterCol title="Imóveis">
+            {abasDoRodape.map(n => (
+              <li key={n.value}><Link to={`/portal/${tenant}/imoveis?tab=${n.value}`} className={footerLinkCls}>{n.label}</Link></li>
+            ))}
+          </FooterCol>
+        )}
         <FooterCol title="Institucional">
           {showStats && <li><a href={sectionHref('sobre')} className={footerLinkCls}>Sobre nós</a></li>}
           {hasBlog && <li><Link to={`/portal/${tenant}/blog`} className={footerLinkCls}>Blog</Link></li>}

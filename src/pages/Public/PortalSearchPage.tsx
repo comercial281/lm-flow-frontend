@@ -4,7 +4,7 @@ import {
   I, Ic, PortalFooter, PortalHeader, PropertyCard, Select,
   filterProperties, usePortalData, type PortalFilters, type PortalTab,
 } from './portalShared';
-import { opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
+import { opcaoDoTipo, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { usePortalTracking } from './usePortalTracking';
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -26,7 +26,7 @@ const RESULTS_PAGE_SIZE = 30;
 export default function PortalSearchPage() {
   const { tenant } = useParams<{ tenant: string }>();
   const [params, setParams] = useSearchParams();
-  const { state, site, items, fontHref, wa, cities, hoods, types, cssVars } = usePortalData(tenant);
+  const { state, site, items, fontHref, wa, cities, hoods, types, abas, cssVars } = usePortalData(tenant);
   const { pathname } = useLocation();
   usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'search', path: pathname });
 
@@ -73,7 +73,7 @@ export default function PortalSearchPage() {
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href={fontHref} rel="stylesheet" />
 
-      <PortalHeader site={site} tenant={tenant!} />
+      <PortalHeader site={site} tenant={tenant!} abas={abas} />
 
       {/* ── Barra de busca / filtros ──────────────────────────────────────── */}
       <section className="border-b border-black/[0.06] bg-white">
@@ -91,7 +91,7 @@ export default function PortalSearchPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              <Select value={filters.type} onChange={v => update({ type: v })} label="Tipo" options={opcoesDeTipo(types)} />
+              <Select value={opcaoDoTipo(types, filters.type)} onChange={v => update({ type: v })} label="Tipo" options={opcoesDeTipo(types)} />
               <Select value={filters.city} onChange={v => update({ city: v })} label="Cidade" options={cities.map(c => [c, c])} />
               <Select value={filters.neighborhood} onChange={v => update({ neighborhood: v })} label="Bairro" options={hoods.map(h => [h, h])} />
               <Select value={filters.bedrooms} onChange={v => update({ bedrooms: v })} label="Dormitórios" options={[['1', '1+'], ['2', '2+'], ['3', '3+'], ['4', '4+']]} />
@@ -144,7 +144,7 @@ export default function PortalSearchPage() {
         )}
       </section>
 
-      <PortalFooter site={site} tenant={tenant!} />
+      <PortalFooter site={site} tenant={tenant!} abas={abas} />
     </div>
   );
 }
