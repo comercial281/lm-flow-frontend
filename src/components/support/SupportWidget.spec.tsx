@@ -140,6 +140,20 @@ describe('SupportWidget', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
+  it('anima ao abrir e ao fechar: entra visível e só some depois da transição', async () => {
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir ajuda e suporte' }));
+    const card = await screen.findByRole('dialog', { name: 'Ajuda e suporte' });
+    expect(card).not.toHaveClass('hidden');
+    await waitFor(() => expect(card).toHaveClass('opacity-100'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+    // Sai na hora (opacidade), mas continua na tela até a transição terminar.
+    expect(card).toHaveClass('opacity-0');
+    expect(card).not.toHaveClass('hidden');
+    await waitFor(() => expect(card).toHaveClass('hidden'));
+  });
+
   it('fechar e reabrir mantém o texto digitado e tira o card da árvore de acessibilidade', async () => {
     montar();
     fireEvent.click(screen.getByRole('button', { name: 'Abrir ajuda e suporte' }));

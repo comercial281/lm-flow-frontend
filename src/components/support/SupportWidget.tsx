@@ -23,6 +23,13 @@ const BUILDER_CANVAS_ROUTE = /^\/automations\/(flow-builder|follow-ups|message-f
 export const escondeBolinha = (pathname: string): boolean =>
   CHAT_ROUTE.test(pathname) || BUILDER_CANVAS_ROUTE.test(pathname);
 
+/** Mesmo tempo do `duration-200` do card (e do menu lateral). */
+const DURACAO_ANIMACAO_MS = 200;
+
+/** "Reduzir movimento" no sistema: fecha na hora, sem esperar a transição. */
+const reduzMovimento = (): boolean =>
+  typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 type Tela =
   | { nome: 'inicio' }
   | { nome: 'roteiro'; passo: PassoId }
@@ -57,6 +64,11 @@ export default function SupportWidget() {
   const [aberto, setAberto] = useState(false);
   // Depois da primeira abertura o card fica montado (escondido) pra guardar rascunho e tela.
   const [jaAbriu, setJaAbriu] = useState(false);
+  // Animação de abrir/fechar (pedido do dono, 04/10/2026): `visivel` tira o `hidden`, `entrou`
+  // liga as classes de "aberto". Abrir: visível já, entra no frame seguinte (senão o navegador
+  // pula a transição). Fechar: sai na hora e só some (hidden) depois da transição.
+  const [visivel, setVisivel] = useState(false);
+  const [entrou, setEntrou] = useState(false);
   const focoAnterior = useRef<HTMLElement | null>(null);
   const [tela, setTela] = useState<Tela>({ nome: 'inicio' });
   const { naoLidos, atualizar } = useNaoLidos();
@@ -72,8 +84,27 @@ export default function SupportWidget() {
       focoAnterior.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     }
     setJaAbriu(true);
+    setVisivel(true);
     setAberto(true);
   }, []);
+
+  useEffect(() => {
+    if (aberto) {
+      let vivo = true;
+      let segundo = 0;
+      const primeiro = requestAnimationFrame(() => {
+        segundo = requestAnimationFrame(() => vivo && setEntrou(true));
+      });
+      return () => {
+        vivo = false;
+        cancelAnimationFrame(primeiro);
+        cancelAnimationFrame(segundo);
+      };
+    }
+    setEntrou(false);
+    const t = window.setTimeout(() => setVisivel(false), reduzMovimento() ? 0 : DURACAO_ANIMACAO_MS);
+    return () => window.clearTimeout(t);
+  }, [aberto]);
 
   const fechar = () => {
     setAberto(false);
@@ -153,7 +184,10 @@ export default function SupportWidget() {
           // Mobile: encolhe com o teclado, como o MainLayout (var(--keyboard-inset), 0px com teclado fechado).
           className={cn(
             'fixed inset-x-0 top-0 z-50 flex h-[calc(100dvh-var(--keyboard-inset,0px))] flex-col overflow-hidden bg-background shadow-2xl outline-none sm:inset-auto sm:right-4 sm:bottom-20 sm:h-[600px] sm:max-h-[calc(100vh-6rem)] sm:w-[380px] sm:rounded-2xl sm:border sm:border-border',
-            !aberto && 'hidden',
+            // Celular (tela cheia): sobe de baixo. Computador: cresce a partir do canto da bolinha.
+            'transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none sm:origin-bottom-right',
+            entrou ? 'translate-y-0 opacity-100 sm:scale-100' : 'translate-y-6 opacity-0 sm:translate-y-2 sm:scale-95',
+            !visivel && 'hidden',
           )}
         >
           <header className="bg-gradient-to-b from-primary to-primary/80 px-5 pb-5 pt-[calc(1rem+env(safe-area-inset-top))] text-primary-foreground sm:pt-4">
