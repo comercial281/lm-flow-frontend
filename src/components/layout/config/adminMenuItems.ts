@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, Radio, Building2, Smartphone, Wallet, Users, ScrollText, MessageCircle,
-  Megaphone, Bell, BellRing, Landmark, GraduationCap, Archive, Globe, MessageSquarePlus,
+  Megaphone, Bell, BellRing, Landmark, GraduationCap, Archive, Globe, LifeBuoy,
   Bot, Sparkles, Brain, CalendarCheck, UsersRound,
 } from 'lucide-react';
 import { enderecoCasa } from './menuItems';
@@ -47,6 +47,14 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
       { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, exata: true },
       { name: 'Leads ao vivo', href: '/admin/leads-ao-vivo', icon: Radio },
     ],
+  },
+  // Chat de suporte (04/10/2026): a tela de trabalho do time, por isso item
+  // próprio e não aba de Plataforma. Sem abas: /admin/suporte/:id casa aqui.
+  {
+    name: 'Suporte',
+    href: '/admin/suporte',
+    icon: LifeBuoy,
+    description: 'Chamados dos clientes: dúvidas, bugs e sugestões',
   },
   {
     name: 'Clientes',
@@ -97,7 +105,6 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
       { name: 'Academia', href: '/admin/academia', icon: GraduationCap },
       { name: 'Menus arquivados', href: '/admin/plataforma/menus-arquivados', icon: Archive },
       { name: 'Site', href: '/admin/plataforma', icon: Globe, exata: true },
-      { name: 'Sugestões e bugs', href: '/admin/plataforma/sugestoes-e-bugs', icon: MessageSquarePlus },
     ],
   },
   {

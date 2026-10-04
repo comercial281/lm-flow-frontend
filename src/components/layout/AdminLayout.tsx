@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/ds';
 import { toast } from 'sonner';
+import { useChamadosAbertos } from '@/pages/SuperAdmin/Suporte/useChamadosAbertos';
 import { ADMIN_MENU_ITEMS, donoDoEnderecoAdmin } from './config/adminMenuItems';
 
 function cn(...classes: (string | undefined | null | false)[]) {
@@ -41,6 +42,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  // ⚠️ Antes de qualquer return antecipado (regra dos hooks).
+  const chamadosAbertos = useChamadosAbertos();
 
   const handleLogout = async () => {
     setLogoutDialogOpen(false);
@@ -85,7 +88,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </Link>
           <ThemeToggle />
           <DemoModeToggle />
-          <ProfileMenu user={user} setLogoutDialogOpen={setLogoutDialogOpen} />
+          <ProfileMenu user={user} setLogoutDialogOpen={setLogoutDialogOpen} semAjudaESuporte />
         </div>
       </header>
 
@@ -112,7 +115,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   )}
                 >
                   <item.icon className={cn('h-4 w-4 flex-shrink-0', active && 'text-primary')} />
-                  <span>{item.name}</span>
+                  <span className="flex-1">{item.name}</span>
+                  {item.href === '/admin/suporte' && chamadosAbertos > 0 && (
+                    <span className="rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground" aria-label={`${chamadosAbertos} chamados abertos`}>
+                      {chamadosAbertos}
+                    </span>
+                  )}
                 </Link>
               );
             })}

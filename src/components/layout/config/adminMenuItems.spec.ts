@@ -4,9 +4,9 @@ import { ADMIN_MENU_ITEMS, donoDoEnderecoAdmin } from './adminMenuItems';
 const dono = (p: string) => donoDoEnderecoAdmin(ADMIN_MENU_ITEMS, p);
 
 describe('menu da Área do Admin', () => {
-  it('tem os 7 itens, nesta ordem', () => {
+  it('tem os 8 itens, nesta ordem', () => {
     expect(ADMIN_MENU_ITEMS.map(i => i.name)).toEqual([
-      'Visão Geral', 'Clientes', 'Usuários', 'Comunicação', 'Plataforma', 'IA Vendedora', 'Equipe',
+      'Visão Geral', 'Suporte', 'Clientes', 'Usuários', 'Comunicação', 'Plataforma', 'IA Vendedora', 'Equipe',
     ]);
   });
 
@@ -37,7 +37,6 @@ describe('menu da Área do Admin', () => {
     ['/admin/academia', 'Plataforma', 'Academia'],
     ['/admin/plataforma/menus-arquivados', 'Plataforma', 'Menus arquivados'],
     ['/admin/plataforma', 'Plataforma', 'Site'],
-    ['/admin/plataforma/sugestoes-e-bugs', 'Plataforma', 'Sugestões e bugs'],
     ['/admin/agentes', 'IA Vendedora', 'Agentes'],
     ['/admin/agentes/dashboard', 'IA Vendedora', 'Dashboard'],
     ['/admin/agentes/conhecimento', 'IA Vendedora', 'Conhecimento'],
@@ -52,6 +51,17 @@ describe('menu da Área do Admin', () => {
     const d = dono('/admin/equipe');
     expect(d?.item.name).toBe('Equipe');
     expect(d?.aba).toBeUndefined();
+  });
+
+  it('Suporte não tem abas e casa a lista e o chamado aberto', () => {
+    expect(dono('/admin/suporte')?.item.name).toBe('Suporte');
+    expect(dono('/admin/suporte/9b2e-uuid')?.item.name).toBe('Suporte');
+    expect(dono('/admin/suporte')?.aba).toBeUndefined();
+  });
+
+  it('Sugestões e bugs saiu de Plataforma', () => {
+    const plataforma = ADMIN_MENU_ITEMS.find(i => i.name === 'Plataforma');
+    expect(plataforma?.abas?.map(a => a.name)).not.toContain('Sugestões e bugs');
   });
 
   it('endereço desconhecido não tem dono', () => {
