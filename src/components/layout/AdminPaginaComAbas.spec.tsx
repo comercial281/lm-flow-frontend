@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import AdminPaginaComAbas from './AdminPaginaComAbas';
 
@@ -30,6 +30,21 @@ describe('AdminPaginaComAbas', () => {
     abrir('/admin/clientes/numeros');
     expect(screen.getByRole('link', { name: 'Números conectados' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Clientes' })).not.toHaveAttribute('aria-current');
+  });
+
+  it.each([
+    ['/admin/usuarios', 'Usuários'],
+    ['/admin/usuarios/tenant_x/8f1c-uuid', 'Usuários'],
+    ['/admin/usuarios/logs', 'Logs'],
+  ])('em %s só a aba %s fica ativa', (url, ativa) => {
+    abrir(url);
+    expect(screen.getByRole('heading', { level: 1, name: 'Usuários' })).toBeInTheDocument();
+    const abas = screen.getByRole('navigation', { name: 'Abas de Usuários' });
+    for (const nome of ['Usuários', 'Logs', 'Mensagem de acesso']) {
+      const link = within(abas).getByRole('link', { name: nome });
+      if (nome === ativa) expect(link).toHaveAttribute('aria-current', 'page');
+      else expect(link).not.toHaveAttribute('aria-current');
+    }
   });
 
   it('item sem abas (Equipe) não ganha moldura: a tela tem o próprio título', () => {
