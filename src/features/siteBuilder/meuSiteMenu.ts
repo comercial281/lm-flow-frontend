@@ -3,7 +3,7 @@
 // Spec: LM FLOW/specs/2026-10-03-meu-site-painel-design.md (A1).
 
 export type GrupoId = 'painel' | 'personalizar' | 'marketing' | 'config';
-export type TelaId = 'painel' | 'contatos' | 'aparencia' | 'paginas' | 'financiamento' | 'anuncie' | 'traducao'
+export type TelaId = 'painel' | 'contatos' | 'aparencia' | 'busca' | 'vitrines' | 'chamadas' | 'buscados' | 'paginas' | 'financiamento' | 'anuncie' | 'traducao'
   | 'blog' | 'anuncios' | 'redes' | 'rastreamento' | 'marca' | 'endereco' | 'dados' | 'destino' | 'google';
 
 export interface TelaInfo {
@@ -27,6 +27,10 @@ export const TELAS: TelaInfo[] = [
   { id: 'painel', grupo: 'painel', rotulo: 'Painel', dica: '', titulo: 'Painel', frase: 'Como o seu site está indo.', noMenu: false },
   { id: 'contatos', grupo: 'painel', rotulo: 'Contatos do site', dica: '', titulo: 'Contatos do site', frase: 'Quem pediu contato pelo site.', noMenu: false },
   { id: 'aparencia', grupo: 'personalizar', rotulo: 'Aparência', dica: 'Logo, cores, banner', titulo: 'Aparência', frase: 'Logo, cores, fonte e o topo da página inicial.', noMenu: true },
+  { id: 'busca', grupo: 'personalizar', rotulo: 'Página inicial · Busca rápida', dica: 'Título e filtros da entrada', titulo: 'Busca rápida', frase: 'O título da capa e os filtros que o visitante vê ao entrar no site.', noMenu: true },
+  { id: 'vitrines', grupo: 'personalizar', rotulo: 'Página inicial · Vitrines', dica: 'Faixas de imóveis', titulo: 'Vitrines', frase: 'Faixas de imóveis na página inicial. Elas se atualizam sozinhas.', noMenu: true },
+  { id: 'chamadas', grupo: 'personalizar', rotulo: 'Página inicial · Chamadas', dica: 'Financiamento, Anuncie e outros', titulo: 'Chamadas', frase: 'Os atalhos da página inicial: financiamento, anunciar imóvel, encomenda e os seus.', noMenu: true },
+  { id: 'buscados', grupo: 'personalizar', rotulo: 'Página inicial · Mais buscados', dica: 'Atalhos pra busca', titulo: 'Mais buscados', frase: 'Atalhos que levam direto pra busca, por tipo e bairro.', noMenu: true },
   { id: 'paginas', grupo: 'personalizar', rotulo: 'Páginas', dica: 'Sobre nós e outras', titulo: 'Páginas', frase: 'Páginas que você cria e que podem aparecer no menu do site.', noMenu: true },
   { id: 'financiamento', grupo: 'personalizar', rotulo: 'Financiamento', dica: 'Simulador dos bancos', titulo: 'Financiamento', frase: 'A página com os simuladores dos bancos.', noMenu: true },
   { id: 'anuncie', grupo: 'personalizar', rotulo: 'Anuncie seu imóvel', dica: 'Captação de imóvel', titulo: 'Anuncie seu imóvel', frase: 'A página onde o proprietário oferece o imóvel.', noMenu: true },

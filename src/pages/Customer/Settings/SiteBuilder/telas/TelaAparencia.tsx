@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Button, Input, Label as UILabel, Switch } from '@/components/ui/ds';
+import { Button, Checkbox, Input, Label as UILabel } from '@/components/ui/ds';
 import { Image as ImageIcon, Loader2, Trash2, Upload } from 'lucide-react';
 import { extractLogoColors } from '@/utils/logoColors';
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
@@ -304,6 +304,7 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
         <h2 className="text-base font-semibold mb-1">Seções da home</h2>
         <p className="mb-4 text-xs text-muted-foreground">
           Ligue ou desligue blocos do portal. Desligado, o bloco some da home pública.
+          {' '}Vitrines, chamadas e mais buscados têm a própria tela em Personalizar.
         </p>
         <div className="divide-y divide-border">
           {[
@@ -323,10 +324,12 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
                 <div className="text-sm font-medium">{s.title}</div>
                 <p className="text-xs text-muted-foreground">{s.desc}</p>
               </div>
-              <Switch
+              <Checkbox
+                id={`secao-${s.key}`}
+                aria-label={s.title}
                 checked={siteForm.sections?.[s.key] ?? true}
                 onCheckedChange={checked =>
-                  setF({ sections: { ...siteForm.sections, [s.key]: checked } })
+                  setF({ sections: { ...siteForm.sections, [s.key]: checked === true } })
                 }
               />
             </div>

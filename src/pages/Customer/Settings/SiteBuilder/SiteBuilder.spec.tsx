@@ -108,4 +108,39 @@ describe('SiteBuilder (casca do Meu site)', () => {
     expect(mocks.updateSite.mock.calls[0][1]).toMatchObject({ contact_phone: '11999990000' });
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Alterações não salvas' })).toBeNull());
   });
+
+  it('salvar sem mexer na página inicial não manda home', async () => {
+    mocks.updateSite.mockResolvedValue(SITE);
+    abrir('/settings/site-builder?tela=dados');
+    await screen.findByRole('heading', { name: 'Dados de contato' });
+    fireEvent.change(screen.getByPlaceholderText('(11) 9999-9999'), { target: { value: '11999990000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
+    expect(mocks.updateSite.mock.calls[0][1]).not.toHaveProperty('home');
+  });
+
+  it('depois de mexer na Busca rápida o home inteiro viaja', async () => {
+    mocks.updateSite.mockResolvedValue(SITE);
+    abrir('/settings/site-builder?tela=busca');
+    await screen.findByRole('heading', { name: 'Busca rápida' });
+    fireEvent.click(screen.getByLabelText('Alugar'));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
+    const home = mocks.updateSite.mock.calls[0][1].home;
+    expect(home.search.tabs).toEqual({ sale: true, rent: false, launch: true });
+    expect(home.showcases).toHaveLength(2);
+    expect(home.most_searched.mode).toBe('auto');
+  });
+
+  it('atalho sem rótulo some da tela depois de salvar (servidor devolve sem ele)', async () => {
+    mocks.listSites.mockResolvedValue([{ ...SITE, home: { most_searched: { enabled: true, mode: 'manual', items: [] } } }]);
+    mocks.updateSite.mockResolvedValue({ ...SITE, home: { most_searched: { enabled: true, mode: 'manual', items: [] } } });
+    abrir('/settings/site-builder?tela=buscados');
+    await screen.findByRole('heading', { name: 'Mais buscados' });
+    fireEvent.click(screen.getByRole('button', { name: /Adicionar atalho/ }));
+    expect(screen.getAllByRole('button', { name: /Remover/ })).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryAllByRole('button', { name: /Remover/ })).toHaveLength(0));
+  });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { finalidadeDoImovel, finalidadeInicial, imovelHref } from './finalidade';
-import { filterProperties, type PortalFilters, type PortalProperty } from './portalShared';
+import { filterProperties, type PortalFilters, type PortalProperty } from '@/features/siteBuilder/public/filtros';
 
 const filtros = (tab: PortalFilters['tab']): PortalFilters =>
   ({ tab, type: '', city: '', neighborhood: '', bedrooms: '', code: '' });

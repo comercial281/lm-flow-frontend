@@ -1,15 +1,16 @@
-import { useMemo, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useState, type FormEvent } from 'react';
+import { useParams, useLocation } from 'react-router-dom';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
-import {
-  API, HomeShortcuts, I, Ic, PROPERTY_TYPE_LABEL, PortalFooter, PortalHeader, PropertyCard, Select, Stat,
-  usePortalData, type PortalTab,
-} from './portalShared';
+import { API, PortalFooter, PortalHeader, Stat, usePortalData } from './portalShared';
 import FinalidadeChoice from './FinalidadeChoice';
 import { finalidadeInicial, type Finalidade } from './finalidade';
 import { usePortalTracking } from './usePortalTracking';
 import { trackLead } from '@/features/siteBuilder/public/siteTracking';
+import HomeCapa from './home/HomeCapa';
+import HomeVitrines from './home/HomeVitrines';
+import HomeChamadas from './home/HomeChamadas';
+import HomeMaisBuscados from './home/HomeMaisBuscados';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — HOME (Produto A do LM Flow)
@@ -17,26 +18,18 @@ import { trackLead } from '@/features/siteBuilder/public/siteTracking';
    lead. TUDO é dirigido pelos tokens de marca do cliente (logo, cores, fonte,
    WhatsApp), vindos do registro do Site. Zero marca hardcoded.
 
-   A busca desta home é o ponto de ENTRADA: o formulário do hero leva à página
-   dedicada de busca/filtros (`/portal/:tenant/imoveis`), assim como os botões
-   do menu do topo (em PortalHeader). Aqui a listagem é apenas uma vitrine de
-   destaques.
+   A página é montada por BLOCOS configurados no Personalizar (settings.home),
+   nesta ordem: capa com busca · vitrines · chamadas · mais buscados · números
+   · captura de contato · rodapé. Cada bloco some sozinho quando não tem o que
+   mostrar. A busca da capa é só a ENTRADA: leva à página dedicada de
+   busca/filtros (`/portal/:tenant/imoveis`), como os botões do menu do topo.
 ──────────────────────────────────────────────────────────────────────────── */
 
 export default function PortalHomePage() {
   const { tenant } = useParams<{ tenant: string }>();
-  const navigate = useNavigate();
-  const { state, site, items, fontHref, wa, cities, hoods, types, cssVars } = usePortalData(tenant);
+  const { state, site, items, fontHref, wa, cities, hoods, types, home, abas, cssVars } = usePortalData(tenant);
   const { pathname } = useLocation();
   usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'home', path: pathname });
-
-  // filtros do formulário do hero (entrada da busca)
-  const [tab, setTab] = useState<PortalTab>('sale');
-  const [fType, setFType] = useState('');
-  const [fCity, setFCity] = useState('');
-  const [fNeighborhood, setFNeighborhood] = useState('');
-  const [fBedrooms, setFBedrooms] = useState('');
-  const [fCode, setFCode] = useState('');
 
   // lead capture
   const [leadName, setLeadName] = useState('');
@@ -44,27 +37,10 @@ export default function PortalHomePage() {
   const [leadPhoneErr, setLeadPhoneErr] = useState(false);
   const [leadSent, setLeadSent] = useState(false);
   // "Quero comprar / Quero alugar" (spec venda/locação, D3): marcado pela aba da
-  // busca do topo, e a pessoa troca se quiser.
-  const [leadFinalidade, setLeadFinalidade] = useState<Finalidade>('venda');
-
-  // Vitrine de destaques (com fallback para os primeiros imóveis).
-  const featured = useMemo(() => {
-    const f = items.filter(p => p.featured || p.exclusive);
-    return (f.length ? f : items).slice(0, 6);
-  }, [items]);
-
-  const runSearch = (e: FormEvent) => {
-    e.preventDefault();
-    const params = new URLSearchParams();
-    if (tab !== 'sale') params.set('tab', tab);
-    if (fType) params.set('type', fType);
-    if (fCity) params.set('city', fCity);
-    if (fNeighborhood) params.set('neighborhood', fNeighborhood);
-    if (fBedrooms) params.set('bedrooms', fBedrooms);
-    if (fCode) params.set('code', fCode);
-    const qs = params.toString();
-    navigate(`/portal/${tenant}/imoveis${qs ? `?${qs}` : ''}`);
-  };
+  // busca do topo, e a pessoa troca se quiser. Sem escolha ainda, segue a aba
+  // em que a capa abre (a primeira visível).
+  const [escolhaFinalidade, setEscolhaFinalidade] = useState<Finalidade | null>(null);
+  const leadFinalidade = escolhaFinalidade ?? finalidadeInicial(abas[0]);
 
   const submitLead = async (e: FormEvent) => {
     e.preventDefault();
@@ -99,105 +75,16 @@ export default function PortalHomePage() {
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href={fontHref} rel="stylesheet" />
 
-      <PortalHeader site={site} tenant={tenant!} onHome />
+      <PortalHeader site={site} tenant={tenant!} onHome abas={abas} />
 
-      {/* ── Hero + busca ──────────────────────────────────────────────── */}
-      <section id="topo" className="relative overflow-hidden">
-        <div className="absolute inset-0" style={{ background: '#17140f' }}>
-          {site.hero?.video_url ? (
-            <video
-              src={site.hero.video_url}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            // Foto escolhida no Site Builder (de um imóvel ou enviada); sem ela,
-            // a capa do primeiro imóvel da lista, como sempre foi.
-            <img src={site.hero?.image_url || items[0]?.cover_url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1600&q=80'} alt="" className="h-full w-full object-cover" />
-          )}
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(23,20,15,0.35) 0%, rgba(23,20,15,0.55) 55%, var(--paper) 100%)' }} />
-        </div>
-
-        {/* pt maior que antes: o cabeçalho agora FLUTUA sobre a capa (ele sai do
-            fluxo), então o título precisa do espaço dele de volta. */}
-        <div className="relative mx-auto max-w-6xl px-4 pb-8 pt-32 sm:px-6 sm:pt-40 md:pb-16 md:pt-44">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-white/80">{site.name || 'Portal Imobiliário'}</p>
-          <h1 className="mt-3 max-w-2xl font-[var(--display)] text-4xl font-semibold leading-[1.05] text-white sm:text-5xl md:text-6xl">
-            O imóvel certo pra sua próxima fase.
-          </h1>
-          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-white/85 sm:text-base">
-            {site.seo?.description || 'Apartamentos, casas e lançamentos com curadoria, fotos reais e atendimento humano de verdade.'}
-          </p>
-
-          {/* Busca (entrada → página dedicada de filtros) */}
-          <form onSubmit={runSearch} className="mt-8 rounded-[24px] bg-white/95 p-3 shadow-[0_30px_60px_-25px_rgba(0,0,0,0.5)] backdrop-blur sm:p-4">
-            <div className="mb-3 flex gap-1.5">
-              {([['sale', 'Comprar'], ['rent', 'Alugar'], ['launch', 'Lançamentos']] as const).map(([k, l]) => (
-                <button key={k} type="button" onClick={() => { setTab(k); if (k !== 'launch') setLeadFinalidade(finalidadeInicial(k)); }}
-                  className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${tab === k ? 'text-white' : 'text-neutral-600 hover:bg-black/[0.04]'}`}
-                  style={tab === k ? { background: 'var(--brand)' } : undefined}>
-                  {l}
-                </button>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              <Select value={fType} onChange={setFType} label="Tipo" options={types.map(t => [t, PROPERTY_TYPE_LABEL[t] || t])} />
-              <Select value={fCity} onChange={setFCity} label="Cidade" options={cities.map(c => [c, c])} />
-              <Select value={fNeighborhood} onChange={setFNeighborhood} label="Bairro" options={hoods.map(h => [h, h])} />
-              <Select value={fBedrooms} onChange={setFBedrooms} label="Dormitórios" options={[['1', '1+'], ['2', '2+'], ['3', '3+'], ['4', '4+']]} />
-            </div>
-
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <div className="relative flex-1">
-                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"><Ic d={I.search} s={17} /></span>
-                <input value={fCode} onChange={e => setFCode(e.target.value)} placeholder="Buscar por código do imóvel"
-                  className="w-full rounded-xl border border-black/[0.08] bg-white py-3 pl-10 pr-3 text-[14px] outline-none focus:border-[var(--brand)]" />
-              </div>
-              <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--brand)' }}>
-                <Ic d={I.search} s={17} /> Buscar
-              </button>
-            </div>
-          </form>
-        </div>
-      </section>
-
-      {/* ── Destaques ─────────────────────────────────────────────────── */}
-      <section id="resultados" className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-        <div className="mb-7 flex items-end justify-between gap-4">
-          <div>
-            <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">Selecionados a dedo</span>
-            <h2 className="mt-1 font-[var(--display)] text-3xl font-semibold sm:text-4xl">Imóveis em destaque</h2>
-          </div>
-          <Link to={`/portal/${tenant}/imoveis`} className="hidden shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 sm:inline-flex" style={{ background: 'var(--ink)' }}>
-            Ver todos os imóveis <Ic d={I.arrow} s={16} />
-          </Link>
-        </div>
-
-        {featured.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-black/10 py-16 text-center text-neutral-500">
-            Nenhum imóvel disponível no momento.
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {featured.map(p => <PropertyCard key={p.id} tenant={tenant!} p={p} wa={wa} />)}
-            </div>
-            <div className="mt-8 text-center sm:hidden">
-              <Link to={`/portal/${tenant}/imoveis`} className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: 'var(--ink)' }}>
-                Ver todos os imóveis <Ic d={I.arrow} s={16} />
-              </Link>
-            </div>
-          </>
-        )}
-      </section>
-
-      {/* ── Atalhos: financiamento, anunciar imóvel, imóvel sob encomenda ─ */}
-      <HomeShortcuts site={site} tenant={tenant!} />
+      <HomeCapa
+        site={site} home={home} items={items} tenant={tenant!} abas={abas}
+        cities={cities} hoods={hoods} types={types}
+        onTab={k => { if (k !== 'launch') setEscolhaFinalidade(finalidadeInicial(k)); }}
+      />
+      <HomeVitrines home={home} items={items} tenant={tenant!} wa={wa} abas={abas} />
+      <HomeChamadas site={site} tenant={tenant!} home={home} />
+      <HomeMaisBuscados home={home} items={items} tenant={tenant!} />
 
       {/* ── Trust band ────────────────────────────────────────────────── */}
       {showStats && (
@@ -229,7 +116,7 @@ export default function PortalHomePage() {
               </div>
             ) : (
               <form onSubmit={submitLead} className="rounded-2xl bg-white p-5 shadow-xl">
-                <div className="mb-4"><FinalidadeChoice value={leadFinalidade} onChange={setLeadFinalidade} /></div>
+                <div className="mb-4"><FinalidadeChoice value={leadFinalidade} onChange={setEscolhaFinalidade} /></div>
                 <label className="mb-1 block text-[12px] font-semibold uppercase tracking-wide text-neutral-500">Seu nome</label>
                 <input value={leadName} onChange={e => setLeadName(e.target.value)} required placeholder="Como podemos te chamar?" className="mb-3 w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] outline-none focus:border-[var(--brand)]" />
                 <label className="mb-1 block text-[12px] font-semibold uppercase tracking-wide text-neutral-500">WhatsApp</label>
@@ -251,7 +138,7 @@ export default function PortalHomePage() {
       </section>
       )}
 
-      <PortalFooter site={site} tenant={tenant!} onHome />
+      <PortalFooter site={site} tenant={tenant!} onHome abas={abas} />
     </div>
   );
 }

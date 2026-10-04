@@ -42,4 +42,14 @@ describe('meuSiteMenu', () => {
     expect(trilhaDe('painel')).toBe('');
     expect(telaInfo('marca').titulo).toBe("Marca d'água");
   });
+
+  it('as telas da página inicial ficam no Personalizar, logo depois de Aparência', () => {
+    const ids = itensDoGrupo('personalizar', { podeAnuncios: true }).map(t => t.id);
+    expect(ids.slice(ids.indexOf('aparencia'), ids.indexOf('aparencia') + 5))
+      .toEqual(['aparencia', 'busca', 'vitrines', 'chamadas', 'buscados']);
+    expect(telaDaUrl(new URLSearchParams('tela=vitrines'))).toBe('vitrines');
+    expect(telaDaUrl(new URLSearchParams('tela=buscados'))).toBe('buscados');
+    expect(telaInfo('busca').titulo).toBe('Busca rápida');
+    expect(trilhaDe('chamadas')).toBe('Personalizar');
+  });
 });

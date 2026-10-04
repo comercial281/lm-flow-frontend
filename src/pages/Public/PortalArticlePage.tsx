@@ -28,7 +28,7 @@ function setMetaDescription(content: string) {
 
 export default function PortalArticlePage() {
   const { tenant, slug } = useParams<{ tenant: string; slug: string }>();
-  const { state, site, items, fontHref, cssVars } = usePortalData(tenant);
+  const { state, site, items, fontHref, abas, cssVars } = usePortalData(tenant);
   const { pathname } = useLocation();
   usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'article', path: pathname, pageSlug: slug });
 
@@ -72,7 +72,7 @@ export default function PortalArticlePage() {
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href={fontHref} rel="stylesheet" />
 
-      <PortalHeader site={site} tenant={tenant!} />
+      <PortalHeader site={site} tenant={tenant!} abas={abas} />
 
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
         <Link to={`/portal/${tenant}/blog`} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-neutral-500 transition-colors hover:text-[var(--brand)]">
@@ -157,7 +157,7 @@ export default function PortalArticlePage() {
         </section>
       )}
 
-      <PortalFooter site={site} tenant={tenant!} />
+      <PortalFooter site={site} tenant={tenant!} abas={abas} />
 
       {/* Estilos do corpo do artigo (sem plugin de typography no projeto). */}
       <style>{`

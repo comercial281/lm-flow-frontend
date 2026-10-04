@@ -60,7 +60,7 @@ function BankBadge({ bank }: { bank: PortalBank }) {
 
 export default function PortalFinanciamentoPage() {
   const { tenant } = useParams<{ tenant: string }>();
-  const { state, site, fontHref, wa, cssVars } = usePortalData(tenant);
+  const { state, site, fontHref, wa, abas, cssVars } = usePortalData(tenant);
   const { pathname } = useLocation();
   usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'financing', path: pathname });
 
@@ -82,7 +82,7 @@ export default function PortalFinanciamentoPage() {
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href={fontHref} rel="stylesheet" />
 
-      <PortalHeader site={site} tenant={tenant!} />
+      <PortalHeader site={site} tenant={tenant!} abas={abas} />
 
       <main className="mx-auto max-w-4xl px-4 py-14 sm:px-6 sm:py-16">
         <h1 className="font-[var(--display)] text-3xl font-semibold sm:text-4xl">
@@ -148,7 +148,7 @@ export default function PortalFinanciamentoPage() {
         )}
       </main>
 
-      <PortalFooter site={site} tenant={tenant!} />
+      <PortalFooter site={site} tenant={tenant!} abas={abas} />
     </div>
   );
 }

@@ -19,6 +19,7 @@ import {
   financingFrom, financingPayload, listingFrom, listingPayload, parseEmails,
 } from '@/features/siteBuilder/portalPages';
 import { erroGa4, erroGtm, erroPixel, normalizarGa4, normalizarGtm, normalizarPixel } from '@/features/siteBuilder/trackingIds';
+import { resolverHome } from '@/features/siteBuilder/public/homeConfig';
 import { telaDaUrl, telaInfo, trilhaDe, type TelaId } from '@/features/siteBuilder/meuSiteMenu';
 import { useTenantFeatures, useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
@@ -27,6 +28,10 @@ import BarraSalvar from '@/components/base/BarraSalvar';
 import MeuSiteBarra from './MeuSiteBarra';
 import TelaPainel from './telas/TelaPainel';
 import TelaAparencia from './telas/TelaAparencia';
+import TelaBusca from './telas/TelaBusca';
+import TelaVitrines from './telas/TelaVitrines';
+import TelaChamadas from './telas/TelaChamadas';
+import TelaMaisBuscados from './telas/TelaMaisBuscados';
 import TelaFinanciamento from './telas/TelaFinanciamento';
 import TelaAnuncie from './telas/TelaAnuncie';
 import TelaEndereco from './telas/TelaEndereco';
@@ -118,6 +123,9 @@ export default function SiteBuilder() {
   // Site form
   const [siteForm, setSiteForm] = useState<SiteFormData>(EMPTY_SITE_FORM);
   const [siteFormDirty, setSiteFormDirty] = useState(false);
+  // `home` só viaja no Salvar se uma tela da página inicial mexeu nele: quem nunca abriu
+  // essas telas não grava o padrão de fábrica ao salvar, por exemplo, o logo.
+  const [homeAlterado, setHomeAlterado] = useState(false);
 
   // Destino do lead por finalidade (venda/locação), com roleta e responsável.
   // Mora fora do siteForm: a venda sai das colunas lead_*, o resto de lead_routing.
@@ -163,6 +171,7 @@ export default function SiteBuilder() {
             stats: s.sections?.stats ?? true,
             lead_capture: s.sections?.lead_capture ?? true,
           },
+          home: resolverHome(s.home),
           primary_color: s.branding.primary_color ?? '#7C3AED',
           accent_color: s.branding.accent_color ?? '#9333EA',
           font_family: s.branding.font_family ?? 'Inter',
@@ -185,6 +194,7 @@ export default function SiteBuilder() {
           custom_head_html: s.custom_code?.head ?? '',
           custom_body_html: s.custom_code?.body ?? '',
         });
+        setHomeAlterado(false);
         setLeadRouting(siteRoutingFrom(s));
         const fin = financingFrom(s);
         const lst = listingFrom(s);
@@ -218,6 +228,7 @@ export default function SiteBuilder() {
       // registra o domínio na Vercel). Mandá-lo aqui sobrescreveria o valor.
       const payload: SiteFormData = { ...siteForm };
       delete payload.primary_domain;
+      if (!homeAlterado) delete payload.home;
       payload.ga4_measurement_id = normalizarGa4(siteForm.ga4_measurement_id ?? '');
       payload.facebook_pixel_id = normalizarPixel(siteForm.facebook_pixel_id ?? '');
       payload.gtm_id = normalizarGtm(siteForm.gtm_id ?? '');
@@ -236,7 +247,10 @@ export default function SiteBuilder() {
           ga4_measurement_id: payload.ga4_measurement_id,
           facebook_pixel_id: payload.facebook_pixel_id,
           gtm_id: payload.gtm_id,
+          // O servidor sanea (tira atalho sem rótulo, apara texto): a tela mostra o que ficou gravado.
+          home: resolverHome(updated.home),
         }));
+        setHomeAlterado(false);
         setLeadRouting(siteRoutingFrom(updated));
         // Salvo: a prévia do banner passa a vir do servidor (site.hero_image).
         setHeroPickPreview(null);
@@ -264,6 +278,7 @@ export default function SiteBuilder() {
 
   const setF = (field: Partial<SiteFormData>) => {
     setSiteForm(prev => ({ ...prev, ...field }));
+    if ('home' in field) setHomeAlterado(true);
     setSiteFormDirty(true);
   };
 
@@ -319,6 +334,10 @@ export default function SiteBuilder() {
         {tela === 'aparencia' && (
           <TelaAparencia {...formProps} heroPickPreview={heroPickPreview} setHeroPickPreview={setHeroPickPreview} />
         )}
+        {tela === 'busca' && <TelaBusca {...formProps} />}
+        {tela === 'vitrines' && <TelaVitrines {...formProps} />}
+        {tela === 'chamadas' && <TelaChamadas {...formProps} />}
+        {tela === 'buscados' && <TelaMaisBuscados {...formProps} />}
         {tela === 'financiamento' && (
           <TelaFinanciamento financingPage={financingPage} setFinancingPage={setFinancingPage} marcarAlterado={marcarAlterado} />
         )}
