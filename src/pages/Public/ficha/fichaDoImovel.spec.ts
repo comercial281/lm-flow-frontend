@@ -46,6 +46,14 @@ describe('dadosDoPredio', () => {
     expect(dadosDoPredio({ ...emp, towers: 0, floors: -1, total_units: 1240, building_standard: 'xyz' }, f))
       .toEqual([{ rotulo: 'Unidades', valor: '1.240' }]);
   });
+
+  it('padrão com nome de propriedade do Object ("constructor", "toString") não vira rótulo', () => {
+    const f = fichaDoImovel(emp, fabrica);
+    for (const building_standard of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+      expect(dadosDoPredio({ ...emp, building_standard }, f)).toEqual([]);
+    }
+    expect(dadosDoPredio({ ...emp, building_standard: 'luxury' }, f)).toEqual([{ rotulo: 'Padrão', valor: 'Luxo' }]);
+  });
 });
 
 describe('sufixoDoIptu', () => {

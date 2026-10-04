@@ -85,7 +85,10 @@ const contagem = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) &&
 /** Dados do prédio do empreendimento: só os que existem no cadastro. */
 export function dadosDoPredio(p: CamposDaFicha, f: FichaDoImovel): { rotulo: string; valor: string }[] {
   if (f.tipo !== 'development') return [];
-  const padrao = p.building_standard ? ROTULO_PADRAO[p.building_standard] ?? null : null;
+  // Só chave própria: um "constructor" ou "toString" vindo no campo não vira rótulo.
+  // (Object.hasOwn é ES2022; o tsconfig do app está em ES2020.)
+  const padrao = p.building_standard && Object.prototype.hasOwnProperty.call(ROTULO_PADRAO, p.building_standard)
+    ? ROTULO_PADRAO[p.building_standard] : null;
   const pares: [string, string | null][] = [
     ['Torres', contagem(p.towers)],
     ['Andares', contagem(p.floors)],

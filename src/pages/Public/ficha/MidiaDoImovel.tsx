@@ -20,12 +20,18 @@ export default function MidiaDoImovel({ videoUrl, tourUrl }: { videoUrl?: string
   const players = itens.flatMap(i => (i.midia.tipo === 'embed' ? [{ ...i, src: i.midia.src }] : []));
   const botoes = itens.flatMap(i => (i.midia.tipo === 'link' ? [{ ...i, href: i.midia.href }] : []));
 
+  // Um player só ocupa a linha inteira; no computador, fica na largura da
+  // coluna de conteúdo da ficha (a página é `1fr 360px` com 40 px de vão) e
+  // alinhado à esquerda, pra não empurrar título e preço meia tela pra baixo.
+  // Com os dois, duas colunas.
+  const sozinho = players.length === 1 ? ' sm:col-span-2 lg:max-w-[calc(100%-400px)]' : '';
+
   return (
     <div className="mt-4 space-y-3">
       {players.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2">
           {players.map(i => (
-            <div key={i.titulo} className="aspect-video overflow-hidden rounded-[20px] bg-neutral-100 ring-1 ring-black/[0.06]">
+            <div key={i.titulo} className={`aspect-video overflow-hidden rounded-[20px] bg-neutral-100 ring-1 ring-black/[0.06]${sozinho}`}>
               <iframe
                 title={i.titulo}
                 src={i.src}

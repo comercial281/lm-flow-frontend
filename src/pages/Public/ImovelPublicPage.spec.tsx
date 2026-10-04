@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ImovelPublicPage from './ImovelPublicPage';
@@ -95,8 +95,8 @@ describe('ImovelPublicPage', () => {
     it('similar: false some com "Você também pode gostar" e a lista nem é pedida', async () => {
       const f = await abrirFicha({ property_page: { resale: { similar: false } } });
 
-      // dá tempo do efeito dos parecidos rodar, se fosse rodar
-      await new Promise(r => setTimeout(r, 20));
+      // esvazia os efeitos pendentes: se fosse pedir a lista, já teria pedido
+      await act(async () => {});
       expect(pediuParecidos(f)).toBe(false);
       expect(screen.queryByRole('heading', { name: 'Você também pode gostar' })).toBeNull();
     });
@@ -155,7 +155,7 @@ describe('ImovelPublicPage', () => {
 
     it('similar: false do empreendimento não pede a lista', async () => {
       const f = await abrirFicha({ property_page: { development: { similar: false } } }, {}, EMPREENDIMENTO);
-      await new Promise(r => setTimeout(r, 20));
+      await act(async () => {});
       expect(pediuParecidos(f)).toBe(false);
     });
 
@@ -257,7 +257,7 @@ describe('ImovelPublicPage', () => {
       expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
       expect(iframe).toHaveAttribute('loading', 'lazy');
       expect(iframe).toHaveAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
-      expect(iframe.getAttribute('allow')).toBeTruthy();
+      expect(iframe).toHaveAttribute('allow', 'encrypted-media; fullscreen; picture-in-picture');
     });
 
     it('domínio desconhecido vira botão-link, nunca iframe', async () => {
@@ -291,6 +291,8 @@ describe('ImovelPublicPage', () => {
       expect(iframe.tagName).toBe('IFRAME');
       expect(iframe).toHaveAttribute('src', 'https://my.matterport.com/show/?m=SxQL3iGyoDo&play=1');
       expect(iframe).toHaveAttribute('loading', 'lazy');
+      expect(iframe).toHaveAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+      expect(iframe).toHaveAttribute('allow', 'fullscreen; xr-spatial-tracking');
     });
 
     it('tour de outro endereço vira botão "Fazer o tour virtual"', async () => {
