@@ -24,6 +24,7 @@ const CORRETOR = new Set(`
   quick_replies.read macros.read person_roles.read dynamic_forms.read sites.read site_leads.read
   reports.read summary_reports.read capi_events.read bolsao_leads.read bolsao_leads.claim
   inboxes.read channels.read channels.update
+  message_funnels.read message_funnels.create message_funnels.update message_funnels.delete
 `.split(/\s+/).filter(Boolean));
 
 const comCargo = (chaves: Set<string>) => {
@@ -100,13 +101,14 @@ describe('o menu do CRM confere o cargo', () => {
 });
 
 describe('menu novo: seções (fase 4)', () => {
-  it('o Corretor de fábrica vê só Principal, Imóveis e Leads', () => {
+  it('o Corretor de fábrica vê Principal, Imóveis, Leads e, em Vendas e automação, só Funis de mensagem', () => {
     const vistas = comCargo(CORRETOR);
-    expect(vistas.map(s => s.id)).toEqual(['principal', 'imoveis', 'leads']);
+    expect(vistas.map(s => s.id)).toEqual(['principal', 'imoveis', 'leads', 'vendas']);
     // Gestão de proprietários passa no cargo; quem tira do corretor sem
     // proprietário liberado é o `aplicarProprietariosNoMenu`, no MainLayout.
     expect(vistas.flatMap(s => s.itens.map(i => i.name))).toEqual([
       'Dashboard', 'Conversas', 'Funil de vendas', 'Visitas', 'Meus imóveis', 'Gestão de proprietários', 'Books', 'Contatos', 'Bolsão',
+      'Funis de mensagem',
     ]);
   });
 
@@ -156,6 +158,28 @@ describe('menu novo: seções (fase 4)', () => {
     expect(donoDoEndereco(secoes, '/bolsao')?.aba?.name).toBe('Pegar leads');
     expect(donoDoEndereco(secoes, '/pipelines/7')?.secao.id).toBe('principal');
     expect(donoDoEndereco(secoes, '/profile')).toBeNull();
+  });
+});
+
+describe('Automações · sprint 4 (04/10/2026)', () => {
+  const imobiliaria = secoes.find(s => s.id === 'imobiliaria')!;
+
+  it('Variáveis de mensagem é item de Minha imobiliária, e Campos personalizados ficou sem abas', () => {
+    const variaveis = imobiliaria.itens.find(i => i.name === 'Variáveis de mensagem')!;
+    expect(variaveis.href).toBe('/settings/template-variables');
+    expect(variaveis.abas ?? []).toEqual([]);
+    const campos = imobiliaria.itens.find(i => i.name === 'Campos personalizados')!;
+    expect(campos.href).toBe('/settings/attributes');
+    expect(campos.abas ?? []).toEqual([]);
+    expect(todos.map(i => i.name)).not.toContain('Variáveis');
+  });
+
+  it('o canvas de um funil acende Funis de mensagem', () => {
+    expect(donoDoEndereco(secoes, '/automations/message-funnels/abc')?.item.name).toBe('Funis de mensagem');
+  });
+
+  it('o Corretor não ganha Minha imobiliária por causa das Variáveis de mensagem (só lê)', () => {
+    expect(comCargo(CORRETOR).map(s => s.id)).not.toContain('imobiliaria');
   });
 });
 

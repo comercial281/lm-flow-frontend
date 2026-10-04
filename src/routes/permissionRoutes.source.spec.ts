@@ -20,6 +20,12 @@ const trecho = (path: string) => {
   return src.slice(i, fim === -1 ? undefined : fim);
 };
 
+describe('endereço antigo dos funis', () => {
+  it('/settings/message-funnels leva pra página nova de Funis de mensagem', () => {
+    expect(trecho('/settings/message-funnels')).toContain('<Navigate to="/automations/message-funnels" replace />');
+  });
+});
+
 describe('endereço antigo da Captação', () => {
   it('/property-capture-requests redireciona para a aba Novas captações', () => {
     expect(trecho('/property-capture-requests')).toContain('<Navigate to="/property-owners?aba=captacoes" replace />');
@@ -51,7 +57,8 @@ describe('toda rota do CRM confere o cargo', () => {
     ['/settings/portals/:portalKey', 'portals', 'read'],
     ['/settings/facebook', 'lead_ads_form_configs', 'read'],
     ['message-funnels', 'message_funnels', 'read'],
-    ['/settings/message-funnels', 'message_funnels', 'read'],
+    // Sprint 4 das Automações: o canvas do funil de conversa abre pra quem lê os funis (o corretor).
+    ['message-funnels/:id', 'message_funnels', 'read'],
     ['origem', 'lead_ads_form_configs', 'read'],
     ['flow-builder', 'flow_automations', 'read'],
     ['flow-builder/:id', 'flow_automations', 'read'],

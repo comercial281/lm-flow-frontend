@@ -256,9 +256,11 @@ export const getCustomerMenuSections = (): MenuSection[] => [
     rotulo: 'Vendas e automação',
     icone: Zap,
     itens: [
-      // Funis de mensagem = o conteúdo da conversa (o que a mensagem diz). Era
-      // "Fluxos de mensagem", com a aba FlowBuilder; desde 03/10/2026 "fluxo" é
-      // o nome das automações, e aqui fica só o editor de funis.
+      // Funis de mensagem = os funis de conversa do corretor (sprint 4 das
+      // Automações, 04/10/2026): sequências que ele dispara na conversa, montadas
+      // no construtor a partir de modelos. O Corretor de fábrica tem
+      // `message_funnels.read` (backend lm-flow#388) e vê este item: é o único da
+      // seção pra quem não tem acesso às Automações.
       { name: 'Funis de mensagem', href: '/automations/message-funnels', icon: Rocket, ...permissionFromRoute('/automations/message-funnels'), featureKey: 'message_funnels' },
       { name: 'Disparos', href: '/disparos', icon: Megaphone, ...permissionFromRoute('/disparos'), featureKey: 'disparos' },
       // Feature gerenciada pela Leal Mídia: super-admin SEMPRE vê; cliente só se ligar o toggle.
@@ -302,10 +304,12 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       // página do Facebook está em Integrações → Facebook desde 01/10/2026.
       { name: 'Formulários', href: '/automations/origem', icon: ClipboardList, ...permissionFromRoute('/automations/origem'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations', hideOnRoot: true },
       { name: 'Etiquetas', href: '/settings/labels', icon: Tags, ...gestao('/settings/labels', 'labels.create') },
-      itemComAbas({ name: 'Campos personalizados', icon: SlidersHorizontal }, [
-        { name: 'Atributos', href: '/settings/attributes', icon: SlidersHorizontal, ...permissionFromRoute('/settings/attributes') },
-        { name: 'Variáveis', href: '/settings/template-variables', icon: Braces, ...gestao('/settings/template-variables', 'canned_responses.create') },
-      ]),
+      { name: 'Campos personalizados', href: '/settings/attributes', icon: SlidersHorizontal, ...permissionFromRoute('/settings/attributes') },
+      // As variáveis ({{empreendimento}}…) que a imobiliária cria pros textos. Era
+      // aba de Campos personalizados e dos Funis de mensagem; desde a sprint 4
+      // das Automações (04/10/2026) é item próprio. No construtor elas viram
+      // botõezinhos na caixa de mensagem.
+      { name: 'Variáveis de mensagem', href: '/settings/template-variables', icon: Braces, ...gestao('/settings/template-variables', 'canned_responses.create') },
     ],
   },
 ];

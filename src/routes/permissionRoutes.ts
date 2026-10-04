@@ -49,6 +49,7 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   // Filhas de /automations — path RELATIVO em index.tsx (o `<Route
   // path="/automations">` é quem dá o prefixo).
   { path: 'message-funnels', resource: 'message_funnels', action: 'read', automationsChild: true },
+  { path: 'message-funnels/:id', resource: 'message_funnels', action: 'read', automationsChild: true },
   { path: 'flow-builder', resource: 'flow_automations', action: 'read', automationsChild: true },
   { path: 'flow-builder/:id', resource: 'flow_automations', action: 'read', automationsChild: true },
   { path: 'template-variables', resource: 'canned_responses', action: 'read', automationsChild: true },
@@ -64,7 +65,6 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/settings/teams/:teamId/add-users', resource: 'teams', action: 'create' },
   { path: '/settings/labels', resource: 'labels', action: 'read' },
   { path: '/settings/attributes', resource: 'custom_attribute_definitions', action: 'read' },
-  { path: '/settings/message-funnels', resource: 'message_funnels', action: 'read' },
   { path: '/settings/template-variables', resource: 'canned_responses', action: 'read' },
   { path: '/settings/lead-automations', resource: 'lead_automation_rules', action: 'read' },
   { path: '/settings/lead-ads-forms', resource: 'lead_ads_form_configs', action: 'read' },

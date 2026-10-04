@@ -86,9 +86,8 @@ const PipelineKanban = lazyWithRetry(() => import('@/pages/Customer/Pipelines/Pi
 // os carrega junto. Só a sub-tela de adicionar gente a um Time continua com rota
 // (é navegação interna da lista de Times).
 const AddUsers = lazyWithRetry(() => import('@/pages/Customer/Settings/Teams').then(m => ({ default: m.AddUsers })));
-const MessageFunnels = lazyWithRetry(() => import('@/pages/Customer/Settings/MessageFunnels').then(m => ({ default: m.MessageFunnels })));
 const TemplateVariables = lazyWithRetry(() => import('@/pages/Customer/Settings/TemplateVariables').then(m => ({ default: m.TemplateVariables })));
-const EditorDeFunis = lazyWithRetry(() => import('@/pages/Customer/Automations/EditorDeFunis/EditorDeFunis'));
+const ConversationFunnels = lazyWithRetry(() => import('@/pages/Customer/Automations/MessageFunnels/ConversationFunnels'));
 const FlowAutomationsList = lazyWithRetry(() => import('@/pages/Customer/Automations/FlowBuilder/FlowAutomationsList'));
 const FlowAutomationCanvas = lazyWithRetry(() => import('@/pages/Customer/Automations/FlowBuilder/FlowAutomationCanvas'));
 const Origem = lazyWithRetry(() => import('@/pages/Customer/Automations/Origem/Origem'));
@@ -623,12 +622,26 @@ const AppRouter = () => {
                 (padrão correto) — só perdeu o MainLayout próprio, que agora
                 vem do grupo pai acima (evita duplicar). */}
             <Route path="/automations" element={<AutomationsLayout />}>
+              {/* Funis de mensagem (Automações · sprint 4, 04/10/2026): os funis de
+                  conversa do construtor (kind=conversation), sem abas internas. O
+                  corretor entra pela chave message_funnels, que o servidor aceita em
+                  /flow_automations pra fluxo kind=conversation. */}
               <Route
                 path="message-funnels"
                 element={
                   <Suspense fallback={outletSuspenseFallback}>
                     <PermissionRoute resource="message_funnels" action="read">
-                      <EditorDeFunis />
+                      <ConversationFunnels />
+                    </PermissionRoute>
+                  </Suspense>
+                }
+              />
+              <Route
+                path="message-funnels/:id"
+                element={
+                  <Suspense fallback={outletSuspenseFallback}>
+                    <PermissionRoute resource="message_funnels" action="read">
+                      <FlowAutomationCanvas />
                     </PermissionRoute>
                   </Suspense>
                 }
@@ -806,8 +819,10 @@ const AppRouter = () => {
               }
             />
 
-            {/* Atributos e Variáveis são as abas da página Campos personalizados
-                (fase 4) — moldura sem endereço, ver PaginaComAbas. */}
+            {/* Campos personalizados (Atributos) e Variáveis de mensagem eram as abas
+                de uma página (fase 4); desde a sprint 4 das Automações (04/10/2026)
+                cada uma é item próprio de Minha imobiliária. A moldura fica: sem
+                abas, ela não desenha nada. */}
             <Route element={<PaginaComAbas />}>
               <Route
                 path="/settings/attributes"
@@ -827,15 +842,9 @@ const AppRouter = () => {
               />
             </Route>
 
-            {/* Novo módulo unificado — Funis de Mensagem (substitui Prontas + Rápidas) */}
-            <Route
-              path="/settings/message-funnels"
-              element={
-                <PermissionRoute resource="message_funnels" action="read">
-                  <MessageFunnels />
-                </PermissionRoute>
-              }
-            />
+            {/* O editor de funis antigo saiu (Automações · sprint 4): o endereço leva
+                pra página nova, com os funis de conversa. */}
+            <Route path="/settings/message-funnels" element={<Navigate to="/automations/message-funnels" replace />} />
 
             {/* Fora da Fase 1 (Cargos): decisão do controlador, não protegida
                 nesta task — ver relatório da task B4. */}
