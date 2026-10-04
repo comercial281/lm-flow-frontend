@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   problemaNoVideo, problemaNaImagem, moverImagem, tamanhoLegivel, textoUltimoEnvio,
   textoAndamento, rotuloDoBotao, motivo, previaDoTexto, esperaEstourou,
-} from './kitBoasVindas';
+} from './kitBoasVindasRegras';
 import type { KitDelivery } from '@/services/superAdmin/welcomeKitService';
 
 const MB = 1024 * 1024;

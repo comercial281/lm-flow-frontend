@@ -155,6 +155,7 @@ const AdminAvisoDeVisita = lazyWithRetry(() => import('@/pages/SuperAdmin/AiVisi
 const AdminEquipe = lazyWithRetry(() => import('@/pages/Admin/Area/Equipe'));
 const AdminAcademia = lazyWithRetry(() => import('@/pages/Admin/Area/Academia'));
 const AdminPlataforma = lazyWithRetry(() => import('@/pages/SuperAdmin/Plataforma'));
+const AdminKitBoasVindas = lazyWithRetry(() => import('@/pages/SuperAdmin/KitBoasVindas'));
 const RoletaConfigPage = lazyWithRetry(() => import('@/pages/Customer/Settings/RoletaConfig/RoletaConfig'));
 const AcceptLeadPage = lazyWithRetry(() => import('@/pages/Customer/Roleta/AcceptLeadPage'));
 const AssignmentSettingsPage = lazyWithRetry(() => import('@/pages/Customer/Settings/AssignmentSettings/AssignmentSettings'));
@@ -1277,6 +1278,7 @@ const AppRouter = () => {
               {/* Plataforma */}
               <Route path="/admin/academia" element={<AdminAcademia />} />
               <Route path="/admin/plataforma" element={<AdminPlataforma />} />
+              <Route path="/admin/plataforma/kit-boas-vindas" element={<AdminKitBoasVindas />} />
               <Route path="/admin/plataforma/menus-arquivados" element={<AdminConteudo><AdminMenusArquivados /></AdminConteudo>} />
               <Route path="/admin/plataforma/sugestoes-e-bugs" element={<Navigate to="/admin/suporte" replace />} />
               {/* IA Vendedora */}

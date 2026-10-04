@@ -37,6 +37,7 @@ describe('menu da Área do Admin', () => {
     ['/admin/academia', 'Plataforma', 'Academia'],
     ['/admin/plataforma/menus-arquivados', 'Plataforma', 'Menus arquivados'],
     ['/admin/plataforma', 'Plataforma', 'Site'],
+    ['/admin/plataforma/kit-boas-vindas', 'Plataforma', 'Kit de boas-vindas'],
     ['/admin/agentes', 'IA Vendedora', 'Agentes'],
     ['/admin/agentes/dashboard', 'IA Vendedora', 'Dashboard'],
     ['/admin/agentes/conhecimento', 'IA Vendedora', 'Conhecimento'],
