@@ -140,6 +140,22 @@ function chamadasLivres(raw: unknown): ChamadaLivre[] {
   }).filter((c): c is ChamadaLivre => c !== null);
 }
 
+// Mesmo cuidado dos textos das chamadas: cidade/bairro/tipo que não são texto
+// virariam `.trim()` quebrando a home inteira.
+function atalhosManuais(raw: unknown): AtalhoManual[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((x): AtalhoManual | null => {
+    const o = obj(x);
+    if (typeof o.label !== 'string') return null;
+    return {
+      label: o.label,
+      transaction: o.transaction === 'rent' ? 'rent' : o.transaction === 'sale' ? 'sale' : null,
+      property_type: strOuNull(o.property_type), city: strOuNull(o.city), neighborhood: strOuNull(o.neighborhood),
+      price_max: typeof o.price_max === 'number' && Number.isFinite(o.price_max) ? o.price_max : null,
+    };
+  }).filter((a): a is AtalhoManual => a !== null);
+}
+
 export function resolverHome(raw: unknown): HomeConfig {
   const r = obj(raw);
   const s = obj(r.search), c = obj(r.callouts), m = obj(r.most_searched), d = obj(c.defaults);
@@ -163,7 +179,7 @@ export function resolverHome(raw: unknown): HomeConfig {
     most_searched: {
       enabled: m.enabled !== false,
       mode: m.mode === 'manual' ? 'manual' : 'auto',
-      items: Array.isArray(m.items) ? (m.items as unknown[]).filter((x): x is AtalhoManual => typeof obj(x).label === 'string') : [],
+      items: atalhosManuais(m.items),
     },
   };
 }

@@ -31,4 +31,15 @@ describe('resolverHome', () => {
       { title: 'Ok', text: 'Leia', button: 'Ir', dest_type: 'url', dest_value: 'https://x.com' },
     ]);
   });
+  it('atalhos manuais com cidade/bairro/tipo que não são texto viram null, sem quebrar', () => {
+    const h = resolverHome({ most_searched: { mode: 'manual', items: [
+      { label: 'Centro', transaction: 'x', property_type: 3, city: { a: 1 }, neighborhood: 42, price_max: 'muito' },
+      { label: 'Casas', transaction: 'rent', property_type: 'house', city: 'Campinas', neighborhood: null, price_max: 500000 },
+      { label: 9 },
+    ] } });
+    expect(h.most_searched.items).toEqual([
+      { label: 'Centro', transaction: null, property_type: null, city: null, neighborhood: null, price_max: null },
+      { label: 'Casas', transaction: 'rent', property_type: 'house', city: 'Campinas', neighborhood: null, price_max: 500000 },
+    ]);
+  });
 });
