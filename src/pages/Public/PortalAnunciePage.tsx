@@ -5,6 +5,7 @@ import { isValidBrPhone } from '@/lib/brPhone';
 import {
   API, I, Ic, PROPERTY_TYPE_LABEL, PortalFooter, PortalHeader, Select, onlyDigits, usePortalData,
 } from './portalShared';
+import { rotuloTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { usePortalTracking } from './usePortalTracking';
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -93,7 +94,8 @@ export default function PortalAnunciePage() {
   const [email, setEmail] = useState('');
 
   const tipoOptions = useMemo(
-    () => Object.entries(PROPERTY_TYPE_LABEL).map(([v, l]) => [v, l] as [string, string]),
+    // Sem rótulos repetidos (Cobertura, Terreno… aparecem com duas chaves).
+    () => Object.entries(PROPERTY_TYPE_LABEL).filter(([, l], i, a) => a.findIndex(x => x[1] === l) === i).map(([v, l]) => [v, l] as [string, string]),
     [],
   );
 
@@ -130,7 +132,7 @@ export default function PortalAnunciePage() {
             name: nome.trim(), phone: telefone, email: email.trim() || null,
             source: 'site',
             form_data: {
-              finalidade, tipo: tipo ? (PROPERTY_TYPE_LABEL[tipo] || tipo) : '', negocio,
+              finalidade, tipo: tipo ? rotuloTipo(tipo) : '', negocio,
               endereco, condominio_nome: condominioNome, condominio_valor: condominioValor,
               area_total: areaTotal, area_util: areaUtil,
               dormitorios, suites,

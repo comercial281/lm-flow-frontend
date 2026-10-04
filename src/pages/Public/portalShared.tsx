@@ -4,6 +4,12 @@ import { fetchAllPortalProperties } from './portalProperties';
 import { imovelHref } from './finalidade';
 import { menuPagesLinks } from '@/features/siteBuilder/public/portalMenu';
 import PortalTranslate from './PortalTranslate';
+import { filterProperties, type PortalFilters, type PortalProperty, type PortalTab } from '@/features/siteBuilder/public/filtros';
+import { ROTULO_TIPO } from '@/features/siteBuilder/public/tiposDeImovel';
+
+// Tipos e filtro moram em filtros.ts (sem ciclo com vitrines.ts); reexportados aqui.
+export { filterProperties };
+export type { PortalFilters, PortalProperty, PortalTab };
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — peças compartilhadas (Produto A do LM Flow)
@@ -63,21 +69,9 @@ export interface SiteInfo {
   custom_code?: { head?: string | null; body?: string | null } | null;
   translate?: { enabled?: boolean; languages?: string[] } | null;
   menu?: { title: string; slug: string }[] | null;
+  /** Configuração da página inicial (settings.home). Ler sempre por `resolverHome`. */
+  home?: unknown;
 }
-export interface PortalProperty {
-  id: string;
-  code: string;
-  title: string;
-  transaction_type: string;
-  property_type: string;
-  display_price?: string;
-  icon_summary?: { bedrooms?: number; bathrooms?: number; suites?: number; parking?: number; useful_area_m2?: number };
-  address?: { city?: string; neighborhood?: string };
-  cover_url?: string | null;
-  featured?: boolean;
-  exclusive?: boolean;
-}
-
 /* Artigo do blog público (item da listagem). */
 export interface PortalArticleSummary {
   id: string;
@@ -93,25 +87,9 @@ export interface PortalArticleSummary {
 /* Artigo completo (detalhe) — inclui o corpo em HTML já renderizado. */
 export type PortalArticleFull = PortalArticleSummary & { body_html?: string | null };
 
-/* Aba de transação usada na busca. `launch` = lançamentos. */
-export type PortalTab = 'sale' | 'rent' | 'launch';
-
-/* Filtros aplicados na busca (dirigidos pela URL na página de busca). */
-export interface PortalFilters {
-  tab: PortalTab;
-  type: string;
-  city: string;
-  neighborhood: string;
-  bedrooms: string;
-  code: string;
-}
-
 export const API = import.meta.env.VITE_API_URL as string;
 
-export const PROPERTY_TYPE_LABEL: Record<string, string> = {
-  apartment: 'Apartamento', house: 'Casa', condo: 'Casa em condomínio',
-  land: 'Terreno', commercial: 'Comercial', studio: 'Studio', farm: 'Chácara',
-};
+export const PROPERTY_TYPE_LABEL = ROTULO_TIPO;
 
 export function onlyDigits(s?: string | null) { return (s || '').replace(/\D/g, ''); }
 
@@ -133,26 +111,6 @@ export const I = {
 };
 export function Ic({ d, s = 18, cls = '' }: { d: string; s?: number; cls?: string }) {
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className={cls}><path d={d} /></svg>;
-}
-
-/* ── Filtro de imóveis (puro, reutilizável) ──────────────────────────────── */
-export function filterProperties(items: PortalProperty[], f: PortalFilters): PortalProperty[] {
-  return items.filter(p => {
-    // Alugar = Locação, Temporada e Venda + Locação; Comprar = tudo que não é só
-    // de aluguel. Antes, Temporada caía em Comprar e Venda + Locação nunca
-    // aparecia em Alugar — e a aba é o que marca "Quero alugar" no imóvel.
-    if (f.tab === 'rent' && !['rent', 'season', 'sale_rent'].includes(p.transaction_type)) return false;
-    if (f.tab === 'sale' && (p.transaction_type === 'rent' || p.transaction_type === 'season')) return false;
-    // "Lançamentos" ainda não tem campo próprio no backend — usamos `featured`
-    // como proxy interino até existir um flag de lançamento.
-    if (f.tab === 'launch' && !p.featured) return false;
-    if (f.type && p.property_type !== f.type) return false;
-    if (f.city && p.address?.city !== f.city) return false;
-    if (f.neighborhood && p.address?.neighborhood !== f.neighborhood) return false;
-    if (f.bedrooms && (p.icon_summary?.bedrooms ?? 0) < Number(f.bedrooms)) return false;
-    if (f.code && !p.code.toLowerCase().includes(f.code.toLowerCase())) return false;
-    return true;
-  });
 }
 
 /* ── Hook de dados do portal (site + imóveis + tokens derivados) ──────────── */
