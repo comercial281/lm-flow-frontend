@@ -6,12 +6,18 @@ import { copyText } from '@/utils/clipboard';
 import { usersService } from '@/services/superAdmin/usersService';
 import type { UserRow } from '@/types/admin/users';
 
+// Erro cru do backend ("schema do cliente nao existe") não vai pra tela.
+const mensagemDeErro = (e: any) => (e?.response?.status === 404
+  ? 'Não achei essa pessoa nesse cliente.'
+  : 'Não deu para gerar o link. Tente de novo.');
+
 // Copiar não pede confirmação (não manda nada pra ninguém). Enviar manda WhatsApp: pede.
 // Mensagens iguais às do PooledClients. Sem tenant_id (principal) não há link: sem ações.
 export default function AcoesDeAcesso({ row }: { row: UserRow }) {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [ocupado, setOcupado] = useState(false);
-  if (!row.tenant_id) return null;
+  // Sem tenant (principal) ou desativado: não há link que sirva (o envio mandaria um link morto).
+  if (!row.tenant_id || row.situation === 'desativado') return null;
   const tenantId = row.tenant_id;
   const quem = row.email ?? row.name;
 
@@ -20,10 +26,10 @@ export default function AcoesDeAcesso({ row }: { row: UserRow }) {
     try {
       const url = await usersService.copyAccessLink(tenantId, row.user_id);
       if (!url) { toast.error('Não veio o link. Tente de novo.'); return; }
-      if (await copyText(url)) toast.success(`Link de acesso de ${quem} copiado. Vale uma vez, por 24 horas.`);
+      if (await copyText(url)) toast.success(`Link de acesso de ${quem} copiado. Vale uma vez, por 24 horas. Se você já tinha enviado um link, aquele deixa de valer.`);
       else toast.message('Copie o link de acesso:', { description: url });
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'Falha ao gerar o link.');
+      toast.error(mensagemDeErro(e));
     } finally {
       setOcupado(false);
     }
@@ -45,7 +51,7 @@ export default function AcoesDeAcesso({ row }: { row: UserRow }) {
       const skipped = e?.response?.data?.whatsapp?.skipped;
       toast.error(skipped === 'sem telefone'
         ? 'Esta pessoa não tem WhatsApp no cadastro. Use Copiar link de acesso.'
-        : (e?.response?.data?.error || 'Falha ao enviar o link.'));
+        : mensagemDeErro(e));
     } finally {
       setOcupado(false);
     }
@@ -54,7 +60,13 @@ export default function AcoesDeAcesso({ row }: { row: UserRow }) {
   return (
     <div className="flex items-center justify-end gap-2">
       <Button variant="outline" size="sm" disabled={ocupado} onClick={() => void copiar()}>Copiar link</Button>
-      <Button variant="outline" size="sm" disabled={ocupado} onClick={() => void enviar()}>Enviar link</Button>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={ocupado || !row.phone}
+        title={row.phone ? undefined : 'Sem WhatsApp no cadastro — use Copiar link'}
+        onClick={() => void enviar()}
+      >Enviar link</Button>
       {dialogoDeConfirmacao}
     </div>
   );

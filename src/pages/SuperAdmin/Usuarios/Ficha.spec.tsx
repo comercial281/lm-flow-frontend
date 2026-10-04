@@ -94,4 +94,11 @@ describe('FichaDoUsuario', () => {
     );
     expect(screen.getByRole('link', { name: '← Usuários' })).toHaveAttribute('href', '/admin/usuarios?q=maria');
   });
+
+  it('pessoa desativada não tem botões de link de acesso', async () => {
+    apiGet.mockResolvedValue(perfil({ person: { ...pessoa, situation: 'desativado' } }));
+    montar();
+    await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: 'Ana Souza' })).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /link/i })).not.toBeInTheDocument();
+  });
 });
