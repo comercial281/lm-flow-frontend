@@ -6052,3 +6052,24 @@ Usuários → Usuários (`/admin/usuarios`, `src/pages/SuperAdmin/Usuarios/`) e 
 3. Nomes de tipo de imóvel: sempre `rotuloTipo`/`pluralTipo` (`tiposDeImovel.ts`), nunca a chave crua.
 4. Não é `featureKey` nem `clientToggleKey`.
 5. O servidor descarta em silêncio chamada livre sem título, link fora de http(s), página não escolhida e atalho sem rótulo: a tela avisa cada caso antes do Salvar. Avisos âmbar que existem: Chamadas — "Sem título, a chamada não é salva.", "Sem página escolhida, a chamada não é salva.", "Sem um link que comece com http:// ou https://, a chamada não é salva.", página fora do menu, site sem WhatsApp; Mais buscados — "Sem rótulo, o atalho não é salvo."; Vitrines — De R$ maior que Até R$. Enquanto a lista de páginas não chega (ou falha) a tela de Chamadas não afirma nada sobre a página escolhida. Remover chamada, atalho ou vitrine pede confirmação.
+
+## Meu site · arrumação visual do painel (desde 2026-10-04)
+
+> Pedido do dono (04/10): o painel do Meu site estava apertado (uma coluna no meio, campos pequenos e colados, sem dizer o que vai em cada campo), o logo era só um campo de link com miniatura e não havia como enviar o ícone da aba. Referência: tela "Aparência" do Kenlo Sites.
+
+**O que aparece na tela:** cada tela do Meu site é uma caixa só, dividida em faixas. Em cada faixa, à esquerda o título e uma frase dizendo o que é e onde aparece no site; à direita os campos, maiores. Aparência ganhou o bloco Logotipos com duas caixas grandes (Logo do site e Ícone da aba, arrastar ou clicar, Trocar e Remover) e a prévia da aba do navegador. O site público passa a usar o ícone da aba. Dados de contato com máscara de telefone e aviso de e-mail. O painel usa mais a largura da tela (até 1400px).
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **L1 · Explicação ao lado.** Faixa da largura toda: título + frase à esquerda (1/3, de `lg` pra cima), campos à direita; abaixo de `lg` empilha. Faixas separadas por divisória dentro de UMA caixa por tela.
+2. **L2 · Logotipos = duas caixas grandes, Logo do site e Ícone da aba, sem campo de link.** "Logo clara" (fundo escuro) fica pro C3. Remover grava `null`.
+3. **L3 · "Códigos avançados"**, sem o "(para quem entende)". Um spec impede a frase de voltar em `src`.
+4. **Padrão obrigatório das telas do Meu site** (pasta `SiteBuilder/ui/`): `Secoes` (a caixa) + `Secao` (`titulo`, `descricao`, `acao`, `id`); `Campo` (rótulo ligado por `htmlFor`/`id`, `ajuda`, `aviso` âmbar, `erro` vermelho), `CampoTexto` e `CampoTextoLongo`; `CLASSE_DO_CAMPO` (`h-11 text-base`) em Seletor, telefone e campo montado à mão; `EnvioDeImagem` para imagem que vai pro formulário (variantes `logo` e `icone`; PNG, JPG, WEBP, SVG; Remover com `useConfirmacao`; falha de envio em âmbar dentro da caixa). Tela nova ou campo novo no Meu site usa essas peças. Toda frase de bloco é do dia a dia: o que é e onde aparece no site.
+5. **Ícone da aba:** `favicon_url` entra no formulário igual ao `logo_url` (carrega de `branding`, viaja no Salvar). No site, `useIconeDaAba` (`features/siteBuilder/public/`) aponta TODOS os `<link rel~="icon">` do `<head>` pro ícone (sem `type`/`sizes`, que eram do LM Flow) e devolve cada atributo ao sair da página; endereço que não é http(s) é ignorado. Ligado em toda página pública que carrega o site (home, busca, ficha do imóvel, páginas, blog, artigo, financiamento, anuncie).
+6. **WhatsApp do site continua gravado só com dígitos e o 55** (`5511987654321`): o site monta o link do botão verde com eles. O campo é o `PhoneInput` da casa com `valueFormat="digits"`; número antigo sem o 55 ganha o 55 no próximo Salvar, como no resto do app.
+7. **Telefone do site é gravado como aparece no site**, `(11) 3333-4444`: o topo e o rodapé mostram o texto gravado, e o "ligar" usa só os dígitos. O campo é o `BrPhoneInput` com `entrega="mascarado"` (o padrão do componente continua só dígitos, para os formulários públicos). A máscara reescrevendo um valor antigo ao abrir a tela não vira alteração.
+
+**Armadilhas:**
+1. A caixa de imagem só cuida de escolher, conferir, girar e avisar: quem usa passa `enviar` (sobe e grava; erro lançado vira o aviso) e `aoRemover`. O logo continua tirando as cores no envio (`extractLogoColors`).
+2. A marca d'água NÃO usa `EnvioDeImagem`: o logo dela é gravado na hora pelo servidor, que só aceita PNG, JPG e WEBP.
+3. Telefone `0800`/`4004` não cabe na máscara brasileira: aparece como `(08) 00…` se for redigitado. Valor já gravado não muda enquanto ninguém mexe no campo.
+4. Não é `featureKey` nem `clientToggleKey`, e não tem metade de backend (o servidor já aceitava e devolvia `favicon_url`).
