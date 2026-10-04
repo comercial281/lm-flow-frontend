@@ -121,6 +121,9 @@ export default function SiteBuilder() {
   // Site form
   const [siteForm, setSiteForm] = useState<SiteFormData>(EMPTY_SITE_FORM);
   const [siteFormDirty, setSiteFormDirty] = useState(false);
+  // `home` só viaja no Salvar se uma tela da página inicial mexeu nele: quem nunca abriu
+  // essas telas não grava o padrão de fábrica ao salvar, por exemplo, o logo.
+  const [homeAlterado, setHomeAlterado] = useState(false);
 
   // Destino do lead por finalidade (venda/locação), com roleta e responsável.
   // Mora fora do siteForm: a venda sai das colunas lead_*, o resto de lead_routing.
@@ -189,6 +192,7 @@ export default function SiteBuilder() {
           custom_head_html: s.custom_code?.head ?? '',
           custom_body_html: s.custom_code?.body ?? '',
         });
+        setHomeAlterado(false);
         setLeadRouting(siteRoutingFrom(s));
         const fin = financingFrom(s);
         const lst = listingFrom(s);
@@ -222,6 +226,7 @@ export default function SiteBuilder() {
       // registra o domínio na Vercel). Mandá-lo aqui sobrescreveria o valor.
       const payload: SiteFormData = { ...siteForm };
       delete payload.primary_domain;
+      if (!homeAlterado) delete payload.home;
       payload.ga4_measurement_id = normalizarGa4(siteForm.ga4_measurement_id ?? '');
       payload.facebook_pixel_id = normalizarPixel(siteForm.facebook_pixel_id ?? '');
       payload.gtm_id = normalizarGtm(siteForm.gtm_id ?? '');
@@ -240,7 +245,10 @@ export default function SiteBuilder() {
           ga4_measurement_id: payload.ga4_measurement_id,
           facebook_pixel_id: payload.facebook_pixel_id,
           gtm_id: payload.gtm_id,
+          // O servidor sanea (tira atalho sem rótulo, apara texto): a tela mostra o que ficou gravado.
+          home: resolverHome(updated.home),
         }));
+        setHomeAlterado(false);
         setLeadRouting(siteRoutingFrom(updated));
         // Salvo: a prévia do banner passa a vir do servidor (site.hero_image).
         setHeroPickPreview(null);
@@ -268,6 +276,7 @@ export default function SiteBuilder() {
 
   const setF = (field: Partial<SiteFormData>) => {
     setSiteForm(prev => ({ ...prev, ...field }));
+    if ('home' in field) setHomeAlterado(true);
     setSiteFormDirty(true);
   };
 
