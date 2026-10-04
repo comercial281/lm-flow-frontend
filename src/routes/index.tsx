@@ -142,12 +142,13 @@ const AdminLeadsAoVivo = lazyWithRetry(() => import('@/pages/SuperAdmin/LeadsFee
 const AdminNumeros = lazyWithRetry(() => import('@/pages/SuperAdmin/NumberOwnership'));
 const AdminUsuarios = lazyWithRetry(() => import('@/pages/SuperAdmin/Usuarios'));
 const AdminFichaDoUsuario = lazyWithRetry(() => import('@/pages/SuperAdmin/Usuarios/Ficha'));
-const AdminLogs = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientInstances/LogsView'));
+const AdminLogs = lazyWithRetry(() => import('@/pages/SuperAdmin/Logs'));
 const AdminMensagemDeAcesso = lazyWithRetry(() => import('@/pages/SuperAdmin/MensagemDeAcesso'));
 const AdminAvisosNaTela = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral/NotificationsTab'));
 const AdminComunicadoWhatsapp = lazyWithRetry(() => import('@/pages/SuperAdmin/ComunicadoWhatsapp'));
 const AdminMenusArquivados = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClients/ArchivedFeaturesView'));
-const AdminSugestoesEBugs = lazyWithRetry(() => import('@/pages/SuperAdmin/CustomerFeedbacks'));
+const AdminSuporteLista = lazyWithRetry(() => import('@/pages/SuperAdmin/Suporte/SuporteLista'));
+const AdminSuporteChamado = lazyWithRetry(() => import('@/pages/SuperAdmin/Suporte/SuporteChamado'));
 const AdminIaDashboard = lazyWithRetry(() => import('@/pages/SuperAdmin/ResultadosIA'));
 const AdminIaConhecimento = lazyWithRetry(() => import('@/pages/SuperAdmin/IaConhecimento'));
 const AdminAvisoDeVisita = lazyWithRetry(() => import('@/pages/SuperAdmin/AiVisitNoticeSection'));
@@ -1253,6 +1254,9 @@ const AppRouter = () => {
               {/* Visão Geral */}
               <Route path="/admin" element={<AdminOverview />} />
               <Route path="/admin/leads-ao-vivo" element={<AdminConteudo><AdminLeadsAoVivo /></AdminConteudo>} />
+              {/* Suporte */}
+              <Route path="/admin/suporte" element={<AdminConteudo><AdminSuporteLista /></AdminConteudo>} />
+              <Route path="/admin/suporte/:id" element={<AdminConteudo><AdminSuporteChamado /></AdminConteudo>} />
               {/* Clientes */}
               <Route path="/admin/clientes" element={<ComAbaAntiga base="/admin/clientes"><PooledClients /></ComAbaAntiga>} />
               <Route path="/admin/clientes/numeros" element={<AdminConteudo><AdminNumeros /></AdminConteudo>} />
@@ -1274,7 +1278,7 @@ const AppRouter = () => {
               <Route path="/admin/academia" element={<AdminAcademia />} />
               <Route path="/admin/plataforma" element={<AdminPlataforma />} />
               <Route path="/admin/plataforma/menus-arquivados" element={<AdminConteudo><AdminMenusArquivados /></AdminConteudo>} />
-              <Route path="/admin/plataforma/sugestoes-e-bugs" element={<AdminConteudo><AdminSugestoesEBugs /></AdminConteudo>} />
+              <Route path="/admin/plataforma/sugestoes-e-bugs" element={<Navigate to="/admin/suporte" replace />} />
               {/* IA Vendedora */}
               <Route path="/admin/agentes" element={<ComAbaAntiga base="/admin/agentes"><SuperAgents /></ComAbaAntiga>} />
               <Route path="/admin/agentes/dashboard" element={<AdminIaDashboard />} />
@@ -1465,7 +1469,7 @@ const AppRouter = () => {
               01/10/2026). Continuam vivos pra não quebrar link salvo. */}
           <Route path="/admin/modo-cliente" element={<Navigate to="/admin/clientes" replace />} />
           <Route path="/admin/formularios" element={<Navigate to="/admin/clientes" replace />} />
-          <Route path="/admin/sugestoes-bugs" element={<Navigate to="/admin/plataforma/sugestoes-e-bugs" replace />} />
+          <Route path="/admin/sugestoes-bugs" element={<Navigate to="/admin/suporte" replace />} />
           <Route path="/admin/atividade" element={<Navigate to="/admin/usuarios/logs" replace />} />
           <Route path="/admin/auditoria" element={<Navigate to="/admin/usuarios/logs" replace />} />
           <Route path="/admin/uso" element={<RedirecionaComBusca para="/admin/usuarios" />} />

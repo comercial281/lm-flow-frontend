@@ -12,7 +12,7 @@ const CLIENTES: Record<string, string | null> = {
   atividade: '/admin/usuarios/logs',
   metrics: '/admin/usuarios',
   'archived-features': '/admin/plataforma/menus-arquivados',
-  'sugestoes-bugs': '/admin/plataforma/sugestoes-e-bugs',
+  'sugestoes-bugs': '/admin/suporte',
   dashboard: '/admin',
 };
 

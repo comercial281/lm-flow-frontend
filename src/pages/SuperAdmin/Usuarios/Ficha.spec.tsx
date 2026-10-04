@@ -102,4 +102,13 @@ describe('FichaDoUsuario', () => {
     await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: 'Ana Souza' })).toBeInTheDocument());
     expect(screen.queryByRole('button', { name: /link/i })).not.toBeInTheDocument();
   });
+
+  it('ação sensível no histórico ganha o selo', async () => {
+    apiGet.mockResolvedValue(perfil({
+      actions: [{ occurred_at: new Date().toISOString(), category: 'request', action: 'post_contacts_export', title: 'Exportou contatos', description: null, sensitive: true }],
+    }));
+    montar();
+    await waitFor(() => expect(screen.getByText('Exportou contatos')).toBeInTheDocument());
+    expect(screen.getByText('Sensível')).toBeInTheDocument();
+  });
 });

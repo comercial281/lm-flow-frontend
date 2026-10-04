@@ -4706,7 +4706,7 @@ Primeiro passo da refatoração da Área do Admin (spec `specs/2026-10-01-fase-4
 - Teto das caixinhas do SuperAdmin: 7 → 5.
 
 
-## Área do Admin em 7 itens, com abas no topo (desde 2026-10-01)
+## Área do Admin em 8 itens, com abas no topo (desde 2026-10-01; 7 itens até 04/10, quando entrou o Suporte)
 
 Segundo passo da refatoração da Área do Admin (spec `specs/2026-10-01-fase-4-area-do-admin-design.md` na pasta LM FLOW). Só mudança de lugar: nenhuma tela foi refeita.
 
@@ -4715,13 +4715,15 @@ O que aparece na tela, no menu da Área do Admin:
 | Item | Abas |
 |---|---|
 | Visão Geral | Dashboard · Leads ao vivo |
+| Suporte | — |
 | Clientes | Clientes · Números conectados · Custos |
 | Usuários | Usuários (lista de todos os clientes + ficha) · Logs · Mensagem de acesso |
 | Comunicação | Avisos na tela · Push · WhatsApp |
-| Plataforma | Academia · Menus arquivados · Site · Sugestões e bugs |
+| Plataforma | Academia · Menus arquivados · Site |
 | IA Vendedora | Agentes · Dashboard · Conhecimento · Aviso de visita |
 | Equipe | — |
 
+- **Suporte** (desde 04/10/2026) é o 8º item, o 2º do menu (logo depois de Visão Geral): os chamados do chat de suporte. Ver "Chat de suporte".
 - **Mesmo padrão do menu novo do CRM:** cada item é uma página, as subdivisões são abas no topo, sem terceiro nível. A moldura (`AdminPaginaComAbas`) lê as abas do próprio menu (`adminMenuItems.ts`): menu e abas não têm como discordar. **O nome do item é o único h1**; o título de cada tela de dentro é h2.
 - **Cada aba é uma rota.** Aba que já tinha endereço manteve (`/admin/push`, `/admin/academia`, `/admin/plataforma`). O item aceso no menu é o DONO do endereço (`donoDoEnderecoAdmin`), não o prefixo.
 - **Link antigo continua valendo.** `?tab=` de Clientes e da IA Vendedora leva pra aba nova (`adminEnderecosAntigos.ts`); `/admin/uso` vira `/admin/usuarios` (a lista nova não lê `?client=`; o botão "Uso detalhado" dos Logs abre a lista inteira, e o filtro de cliente é pelo seletor).
@@ -6018,8 +6020,29 @@ Usuários → Usuários (`/admin/usuarios`, `src/pages/SuperAdmin/Usuarios/`) e 
 - *Enviar link de acesso* pede confirmação (manda WhatsApp). *Copiar* não pede. O principal não tem link.
 - **Ficha:** cartões de 30 dias, entradas com aparelho (selo *Aparelho novo*: aparelho que não aparecia antes ou há mais de 90 dias), telas que mais usa e histórico de ações.
 - **Aba acesa na ficha:** a aba Usuários tem `tambem` (regex da ficha, dois trechos depois de `/admin/usuarios/`) em `adminMenuItems.ts`; vale pra moldura (`donoDoEnderecoAdmin`) e pra faixa (`Abas`). Logs e Mensagem de acesso têm um trecho só, então não colidem.
-- `superLogsService.userMetrics` e `UserMetricsResponse` ficaram: a tela de Logs ainda usa. Saíram `userMetricDetail` e `UserMetricDetail`.
+- `superLogsService.userMetrics` e `UserMetricsResponse` ficaram até a tela de Logs nova entrar (entrega 4, abaixo): saíram junto com ela. Saíram `userMetricDetail` e `UserMetricDetail`.
 - **Notificações** (push, avisos por WhatsApp, avisos na tela): ver a seção *Notificações na ficha do usuário (04/10/2026)*.
+
+## Localização dos imóveis (desde 2026-10-04)
+
+Fase 4, entrega 5. Spec: `LM FLOW/specs/2026-10-03-fase-4-imoveis-mapa-pelo-cep-design.md` (pasta do Tony, fora deste repo). Depende do backend `lm-flow#389` (endpoint `GET /properties/geocode`, `location_source` no JSON e nos params, privacidade por tipo), que já está no ar. Regras puras em `src/features/properties/localizacao.ts` (com spec); a tela é `src/pages/Customer/Properties/cadastro/secoes/SecaoLocalizacao.tsx` + `MapaDoCadastro.tsx` (Leaflet, só baixa quando o mapa aparece).
+
+**Cadastro (seção Localização):**
+
+- **O CEP voltou a preencher o endereço.** O consumo do `cepLookup` lia chaves antigas; agora usa as chaves `address_*` (rua, bairro, cidade, UF). Texto de erro: "CEP não encontrado".
+- **O ponto vem do servidor.** Sair dos campos de endereço (cidade + rua, CEP completo ou bairro) chama `propertiesService.geocode`; o Nominatim nunca é chamado pelo navegador. Sair de um campo sem mudar nada não procura de novo.
+- **Alfinete arrastável.** Arrastar grava `latitude`/`longitude` e `location_source = 'manual'`; o servidor grava `'auto'` quando o ponto veio da busca. `location_source` vai junto no salvar porque `payloadDoFormulario` espalha o form. A tela **nunca manda `metadata`** (o servidor troca o metadata inteiro e apagaria a origem).
+- **Textos por precisão** (`TEXTO_DO_PONTO`): número → "Achamos pelo endereço. Arraste o alfinete se precisar ajustar."; rua → "Não achamos o número exato, mostramos a rua. Arraste até o imóvel."; bairro ou nada → "Não achamos o endereço. Arraste o alfinete até o imóvel."; arrastado à mão → "Posição ajustada à mão.". Sem endereço: "Preencha o endereço para marcar o imóvel no mapa." Na revenda aparece a nota "No site e nos portais aparece só a região, não o endereço exato."
+- **Precisão `city` não grava ponto.** Só centraliza o mapa na cidade (igual à tarefa em lote do backend): evita publicar o centro da cidade como ponto exato de empreendimento.
+- **O mapa centra na cidade ao abrir** a edição de um imóvel com endereço e sem ponto (sem gravar nada). Ponto salvo abre no zoom 16; sem alfinete no zoom de país.
+- **Serviço ocupado:** o servidor devolve `failed`; a tela tenta de novo **uma vez**, em silêncio (1,5 s), e se falhar de novo trata como não achado. A nova tentativa não sai se a busca já foi trocada por outra, e resposta atrasada é descartada (corrida do CEP).
+- **O alfinete manual nunca pula.** Só volta a seguir o endereço pelo botão "Reposicionar pelo endereço" (`alfinetePodePular`).
+
+**Privacidade (decisão de 03/10):** **empreendimento** sai com ponto exato; **revenda** sai só com a região, para site, portais, catálogo Meta e landing. Dentro do LM Flow tudo é exato. No site público (`ImovelPublicPage`), a regra mora em `src/pages/Public/mapaDoImovelPublico.ts` (`consultaDoMapa`, com spec): com `latitude`/`longitude` (o servidor só manda para empreendimento) o iframe do Google Maps, sem chave, usa `q=lat,lng` e `z=16`; sem ponto mostra a região (bairro, cidade, UF), `z=14`, como antes; sem nada, sem mapa.
+
+**Pendências conhecidas:** o backend ainda não expõe `metadata.location_precision` no JSON (o aviso de pontos antigos não sabe a precisão real); sem ponto e sem cidade achada, o aviso "Arraste o alfinete" aparece sem alfinete na tela.
+
+**Não reabrir sem o dono pedir:** o alfinete exato só para empreendimento, a revenda só com região, e o ponto manual que não pula.
 
 ## Meu site · Personalizar: página inicial (desde 2026-10-04)
 
@@ -6122,3 +6145,56 @@ Usuários → Usuários (`/admin/usuarios`, `src/pages/SuperAdmin/Usuarios/`) e 
 - Se o registro não puder ser lido, a seção mostra erro com *Tentar de novo* (nunca vira vazio).
 
 **Não reabrir sem o dono pedir:** push sem recibo nunca vira *Falhou*. Só falha o que o servidor de push recusou.
+
+## Logs de todos os clientes (04/10/2026)
+
+Usuários → Logs (`/admin/usuarios/logs`, `src/pages/SuperAdmin/Logs/`). Spec: `LM FLOW/specs/2026-10-03-admin-registro-custos-usuarios-design.md` (seção 4). Substitui a tela de um cliente por vez (`LogsView`, removida, junto com `logClients`, `activity` e `userMetrics` do `superLogsService`). Dados de `GET /super/logs`.
+
+- **Uma lista só, todos os clientes**, mais recentes primeiro. Filtros (todos na URL): busca por pessoa, cliente, tipo de ação, período, *Só sensíveis* e *Incluir equipe Leal Mídia*.
+- **Selo *Sensível*** nas ações que o backend marca (exportar, mudar IA/roleta/cargos, dar ou tirar acesso, excluir em massa, aparelho novo, *Entrar* do admin). Ação sensível da equipe aparece mesmo com a equipe escondida.
+- **Tipo *Ação no sistema*** = só as ações sensíveis capturadas pela rede; *Mensagem* (WhatsApp) fica escondida até alguém escolher esse tipo.
+- **Carregar mais** (30 por vez) pede os anteriores ao último item da lista; trocar filtro recomeça do zero e resposta atrasada é descartada.
+- **Cliente que falha não esconde os outros:** aviso "Não deu para ler: …" acima da tabela. Erro geral mostra *Tentar de novo*, nunca lista vazia.
+- A página não se embrulha em `AdminConteudo`: a rota já faz isso.
+- **A ficha** do usuário marca as ações sensíveis do histórico com o mesmo selo *Sensível*.
+
+## Chat de suporte (desde 2026-10-04)
+
+Pedido do dono do produto, com o print do widget de suporte do site da Lais: o botão "Sugestões/Bugs" abria uma janela de mão única. Virou um **card de suporte** (spec `specs/2026-10-04-chat-de-suporte-design.md` na pasta LM FLOW).
+
+O que aparece na tela:
+
+- **Bolinha no canto** (ícone de chat) com contador de chamados com resposta não lida. Abre o card ancorado no canto, sem escurecer a tela; no celular, tela inteira. Esc, X ou a bolinha fecham.
+- **Aba Início:** "Olá, {nome} 👋 / Como podemos ajudar?", **Falar com o time**, busca **Qual é a sua dúvida?** + perguntas do roteiro, **Reportar um bug**, **Dar uma sugestão**, **Falar no WhatsApp**. Busca sem resultado oferece falar com o time com o texto já escrito.
+- **Roteiro:** resposta em balões; termina em **Isso resolveu?** (Sim volta ao Início; Não abre chamado com a pergunta como assunto).
+- **Aba Mensagens:** chamados da pessoa, situação (**Aberto · Aguardando você · Resolvido**) e bolinha de não lido. O chamado aberto é um chat com prints (até 3, colar com Ctrl+V ou anexar). Resolvido mostra a faixa e deixa escrever de novo (reabre).
+- **Menu do avatar:** "Sugestões/Bugs" virou **Ajuda e suporte**.
+- **Link do e-mail** (`?suporte=<id>`) abre o card direto no chamado.
+- **Fechar não perde o texto:** o card continua montado depois da primeira abertura e só fica escondido; o rascunho volta ao reabrir.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- Chamado respondido pelo **admin** (item Suporte), não pela tela Conversas da conta da Leal Mídia.
+- **Cada pessoa vê só os próprios chamados**; o gestor não vê os do corretor.
+- **Roteiro sem texto livre**: a pessoa navega por botões. Texto livre só dentro de chamado.
+- Duas abas (Início, Mensagens); a "Ajuda" da Lais é o Guia do LM Flow, como botão nas respostas.
+
+Armadilhas:
+
+1. **O roteiro é dado:** `src/components/support/roteiro.ts`. O `roteiro.spec.ts` trava opção apontando pra passo que não existe, passo inalcançável e fim sem "Isso resolveu?". Texto puro, nome de tela como aparece na tela (conferidos com as telas reais: Reconectar / Dispositivos conectados → Conectar dispositivo; Imóveis → Meu site; "Preencher a partir de um texto"; o botão Plantão).
+2. **A bolinha some em Conversas e nas telas de montar** (`escondeBolinha`, em `SupportWidget.tsx`): `/conversations` (`/conversations-old` não conta) e os canvas de `flow-builder`, `follow-ups` e `message-funnels/:id`. Regra herdada do FeedbackWidget antigo: a bolinha cobria o "Salvar". O acesso nessas telas é o menu do avatar (`openSupport`).
+3. **Card fechado = `hidden` + `inert` + `aria-hidden`.** Nada nele recebe foco nem é lido por leitor de tela, e a busca de um chamado aberto **pausa** enquanto o card está fechado.
+4. **No celular o card respeita áreas seguras e `--keyboard-inset`** (mesma fórmula do `MainLayout`): o teclado não cobre a caixa de texto.
+5. **`useChamado` exige `carregar` memoizado por chamado** (`useCallback([id])`): função nova a cada render dispara a busca em loop. Só a requisição mais recente grava estado (resposta atrasada é descartada) e a caixa de texto fica travada enquanto envia.
+6. **A conversa e a caixa de texto (`SupportThread`, `SupportComposer`) são as mesmas do admin.** Mexer nelas mexe nos dois lados.
+7. **A regra das imagens existe duas vezes de propósito** (`imagensSuporte.ts` e `SupportTickets::Images` no servidor): aqui é pra recusar na hora; quem manda é o servidor (confere os bytes).
+8. **Sem tempo real:** conversa aberta busca a cada 10 s; contador a cada 2 min e ao voltar pra aba.
+
+**No admin** (item **Suporte**, `/admin/suporte`, 2º do menu da Área do Admin): lista de todos os clientes, abrindo em **Aberto**, com filtros de situação e tipo e **busca com 300 ms de espera** (debounce); destaque pra mensagem do cliente não lida. Ao lado do item no menu, o **número de Abertos** (busca a cada 2 min; 403 é silenciado, quem não pode ver não leva erro). O chamado (`/admin/suporte/:id`) tem a conversa espelhada (a tela rola até a mensagem mais nova), resposta com print (e "Resolver" ao enviar), situação, **nota interna** (o cliente não vê), **Entrar no cliente** (o mesmo SSO do cartão) e Arquivar. Os endereços antigos de Sugestões e bugs levam pra cá. Quem vê: `front_support?` no servidor (hoje o dono e as contas fantasma; a Equipe quando `SUPPORT_BY_TEAM_LIST` ligar). O item **Suporte** some dos dois menus (lateral e horizontal do celular) pra quem não é suporte (`useIsSuperAdmin`, o mesmo `is_support`), e o número de Abertos nem busca; o servidor é a trava de verdade, e se recusar (403) as telas mostram o aviso de acesso restrito.
+
+Armadilhas do admin:
+
+9. **O menu do avatar esconde "Ajuda e suporte" dentro da Área do Admin:** ela não monta o cartão de suporte, então o item não teria o que abrir (prop `semAjudaESuporte` do `ProfileMenu`).
+10. **A nota interna só é preenchida quando o chamado muda.** A busca periódica nunca sobrescreve o que o admin está digitando. Entre dois admins editando a mesma nota, vale a última gravação (sem aviso de conflito, de propósito).
+11. **`page_url` e o texto do cliente são sempre texto puro**, nunca HTML nem link montado a partir do que o cliente mandou.
+12. **A tela antiga "Sugestões e bugs"** (`CustomerFeedbacks.tsx` e `customerFeedbackService.ts`) foi apagada; não recriar.

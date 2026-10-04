@@ -22,7 +22,7 @@ import {
   Globe,
   FileText,
   Megaphone,
-  MessageSquarePlus,
+  LifeBuoy,
   Rocket,
   Repeat,
   Shuffle,
@@ -36,7 +36,7 @@ import {
   Braces,
   UserRoundCheck,
 } from 'lucide-react';
-import { openFeedbackDialog } from '@/components/feedback/openFeedback';
+import { openSupport } from '@/components/support/openSupport';
 
 export interface MenuItem {
   id?: string;
@@ -384,13 +384,13 @@ export const getProfileMenuItems = (
       onClick: () => navigate('/channels'),
       permissao: 'channels.read',
     },
-    // Entrada fixa para o diálogo de feedback. Necessária porque na aba de
-    // Conversas o botão flutuante é escondido (cobria o botão de enviar).
+    // Entrada fixa para o card de suporte. Necessária porque na aba de
+    // Conversas a bolinha é escondida (cobria o botão de enviar).
     {
       name: t('profile.feedback'),
       href: '#',
-      icon: MessageSquarePlus,
-      onClick: () => openFeedbackDialog(),
+      icon: LifeBuoy,
+      onClick: () => openSupport(),
     },
     {
       name: t('profile.logout'),
