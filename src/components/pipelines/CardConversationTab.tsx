@@ -26,7 +26,7 @@ async function transcribeAudioUrl(audioUrl: string): Promise<string> {
 import { toast } from 'sonner';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import { chatService } from '@/services/chat/chatService';
-import MessageFunnelPopover from '@/components/chat/message-funnels/MessageFunnelPopover';
+import { DispararFunilPanel } from '@/components/chat/message-funnels/DispararFunilPanel';
 import { useWebSocketContext } from '@/contexts/chat/WebSocketContext';
 
 // Hook seguro — não lança se o WebSocketProvider não estiver na árvore acima.
@@ -46,7 +46,7 @@ import MessageLocation from '@/components/chat/messages/MessageLocation';
 import SystemMessage from '@/components/chat/messages/SystemMessage';
 import type { PipelineItem } from '@/types/analytics';
 import { MESSAGE_TYPE } from '@/types/chat/api';
-import type { Message, Conversation, Attachment } from '@/types/chat/api';
+import type { Message, Attachment } from '@/types/chat/api';
 
 interface CardConversationTabProps {
   item: PipelineItem;
@@ -281,10 +281,6 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
     e.target.value = '';
   };
 
-  const handleSendMessage = async (opts: { content: string; files?: File[] }) => {
-    await doSend(opts.content, opts.files);
-  };
-
   const toggleArchive = async () => {
     if (!conversationId) return;
     setArchiving(true);
@@ -304,9 +300,6 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
       setArchiving(false);
     }
   };
-
-  // Cast item.conversation to Conversation — funnel popover só usa contact fields
-  const convForFunnel = (item.conversation ?? null) as unknown as Conversation | null;
 
   if (!conversationId) {
     return (
@@ -432,8 +425,9 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
             </button>
             <button
               type="button"
-              title="Funis de mensagem"
-              onClick={() => setFunnelOpen(true)}
+              title="Disparar funil"
+              aria-label="Disparar funil"
+              onClick={() => setFunnelOpen(v => !v)}
               className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <Rocket className="h-4 w-4" />
@@ -477,12 +471,12 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
           {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
 
-        {/* Popover do funil: ancorado no input (relative acima), abre dentro da tela */}
-        <MessageFunnelPopover
+        {/* Disparar funil (sprint 4 das Automações): o mesmo painel do campo de
+            mensagem das Conversas, ancorado no input (relative acima). */}
+        <DispararFunilPanel
           isOpen={funnelOpen}
           onClose={() => setFunnelOpen(false)}
-          conversation={convForFunnel}
-          onSendMessage={handleSendMessage}
+          conversationId={conversationId}
         />
       </div>
 

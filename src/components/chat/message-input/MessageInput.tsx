@@ -36,7 +36,8 @@ import ReplyModeToggle from '../ReplyModeToggle';
 import AudioRecorder from '../audio';
 
 import { AIAssistanceButton } from '../ai-assistance';
-import { MessageFunnelPopover } from '../message-funnels';
+import { DispararFunilPanel } from '../message-funnels';
+import { useComposerPanel } from './composerPanel';
 import { PropertyBookPopover } from '../property-book';
 import { IconActionButton } from '@/components/base';
 import { RichTextEditor, RichTextEditorRef } from '../rich-text-editor';
@@ -68,8 +69,10 @@ interface MessageInputProps {
   inboxId: string;
   channelType?: string;
   channelProvider?: string;
-  // Conversa completa pra interpolação de variáveis no dispatch de funis
+  // Conversa completa (o campo usa pra decidir o que oferecer)
   selectedConversation?: Conversation | null;
+  /** Depois de disparar um funil: relê a faixa "automação rodando" (sprint 4). */
+  onFunnelStarted?: () => void;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
@@ -85,7 +88,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   inboxId,
   channelType,
   channelProvider,
-  selectedConversation = null,
+  onFunnelStarted,
 }) => {
   const { t } = useLanguage('chat');
   const { user } = useAuth();
@@ -120,8 +123,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const richEditorRef = useRef<RichTextEditorRef>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 🎯 EMOJI PICKER: Estado
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  // Emoji, Disparar funil e Enviar book: UM PAINEL POR VEZ (sprint 4).
+  const composerPanel = useComposerPanel();
+  const showEmojiPicker = composerPanel.open === 'emoji';
+  const showFunnels = composerPanel.open === 'funnel';
+  const showBookPicker = composerPanel.open === 'book';
 
   // 🎯 MESSAGE SIGNATURE: Hook para gerenciar assinatura
   const { isSignatureEnabled, toggleSignature, hasSignature, appendSignatureIfEnabled } =
@@ -129,11 +135,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   const [currentEditorMessage, setCurrentEditorMessage] = useState('');
 
-  // 🎯 FUNIS DE MENSAGEM (substitui Canned Responses + Quick Replies)
-  const [showFunnels, setShowFunnels] = useState(false);
-
   // 🏠 ENVIO DE BOOK DE IMÓVEL: buscar imóvel do acervo e mandar o PDF do book.
-  const [showBookPicker, setShowBookPicker] = useState(false);
   const isWhatsApp = channelType === 'Channel::Whatsapp';
 
   // Forçar modo de nota privada quando a conversa está pendente
@@ -267,9 +269,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
   }, []);
 
   // 🎯 EMOJI PICKER: Handler para toggle do emoji picker
+  const { toggle: togglePanel, close: closePanel } = composerPanel;
   const handleEmojiClick = useCallback(() => {
-    setShowEmojiPicker(prev => !prev);
-  }, []);
+    togglePanel('emoji');
+  }, [togglePanel]);
+  const closeEmoji = useCallback(() => closePanel('emoji'), [closePanel]);
 
   const handleEmojiSelect = useCallback(
     (emoji: string) => {
@@ -484,13 +488,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
             sem a variável) a conta resolve para calc(0.5rem + safe-area) — a
             mesma expressão de antes, não só parecida. */}
         <CardContent className="px-3 py-2 pb-[calc(0.5rem+max(0px,env(safe-area-inset-bottom)-var(--keyboard-inset,0px)))] relative">
-          {/* 🚀 FUNIS DE MENSAGEM (substitui Canned Responses + Quick Replies) */}
+          {/* 🚀 DISPARAR FUNIL (sprint 4): o funil roda no servidor, pelo número da conversa. */}
           {canMessageFunnel && (
-            <MessageFunnelPopover
+            <DispararFunilPanel
               isOpen={showFunnels}
-              onClose={() => setShowFunnels(false)}
-              conversation={selectedConversation}
-              onSendMessage={onSendMessage}
+              onClose={() => closePanel('funnel')}
+              conversationId={conversationId}
+              onStarted={onFunnelStarted}
             />
           )}
 
@@ -498,7 +502,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           {isWhatsApp && canSendAttachment && (
             <PropertyBookPopover
               isOpen={showBookPicker}
-              onClose={() => setShowBookPicker(false)}
+              onClose={() => closePanel('book')}
               conversationId={conversationId}
             />
           )}
@@ -600,7 +604,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                   <EmojiPicker
                     isOpen={showEmojiPicker}
                     onEmojiSelect={handleEmojiSelect}
-                    onClose={() => setShowEmojiPicker(false)}
+                    onClose={closeEmoji}
                   />
                 </div>
               )}
@@ -613,7 +617,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                   variant={showFunnels ? 'default' : 'ghost'}
                   disabled={isDisabled || isSending || isPendingConversation}
                   className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
-                  onClick={() => setShowFunnels(v => !v)}
+                  onClick={() => togglePanel('funnel')}
                   side="top"
                 />
               )}
@@ -626,7 +630,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                   variant={showBookPicker ? 'default' : 'ghost'}
                   disabled={isDisabled || isSending || isPendingConversation}
                   className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
-                  onClick={() => setShowBookPicker(v => !v)}
+                  onClick={() => togglePanel('book')}
                   side="top"
                 />
               )}

@@ -1,1 +1,1 @@
-export { default as MessageFunnelPopover } from './MessageFunnelPopover';
+export { DispararFunilPanel } from './DispararFunilPanel';

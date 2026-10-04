@@ -416,6 +416,7 @@ const ChatArea = ({
           channelType={selectedConversation?.inbox?.channel_type || ''}
           channelProvider={channelProvider}
           selectedConversation={selectedConversation}
+          onFunnelStarted={automacao.atualizar}
         />
       </div>
     </div>
