@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { PortalFooter, PortalHeader, usePortalData } from './portalShared';
+import PaginaManutencao from './PaginaManutencao';
 import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 
@@ -13,7 +14,7 @@ interface CustomPage { title: string; slug: string; content_html: string }
 
 export default function PortalCustomPage() {
   const { tenant, slug } = useParams<{ tenant: string; slug: string }>();
-  const { state, site, fontHref, abas, cssVars } = usePortalData(tenant);
+  const { state, site, fontHref, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
   usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'page', path: pathname, pageSlug: slug });
   useIconeDaAba(site.branding?.favicon_url);
@@ -41,6 +42,8 @@ export default function PortalCustomPage() {
   if (state === 'loading') {
     return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   }
+  // Em manutenção a página de manutenção vem antes do erro e das listas (que dão 404).
+  if (manutencao) return <PaginaManutencao site={site} />;
   if (state === 'error') {
     return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Portal indisponível.</div>;
   }

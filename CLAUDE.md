@@ -6068,13 +6068,35 @@ Usuários → Usuários (`/admin/usuarios`, `src/pages/SuperAdmin/Usuarios/`) e 
 6. **WhatsApp do site continua gravado só com dígitos e o 55** (`5511987654321`): o site monta o link do botão verde com eles. O campo é o `PhoneInput` da casa com `valueFormat="digits"`. Número antigo gravado SEM o 55 (10 ou 11 dígitos) aparece no campo como Brasil, mas **não é corrigido sozinho**: a tela mostra o aviso âmbar "Falta o código do país (55)…" e a pessoa confere e salva.
 7. **Telefone do site é gravado como aparece no site**, `(11) 3333-4444`: o topo e o rodapé mostram o texto gravado, e o "ligar" usa só os dígitos. O campo é o `BrPhoneInput` com `entrega="mascarado"` (o padrão do componente continua só dígitos, para os formulários públicos). Telefone gravado que **não cabe na máscara** (sobra letra ou barra, dois números, ramal, `0800`/`4004`, DDD começando com 0) vira **campo de texto livre**, com o aviso "Esse telefone tem mais de um número ou ramal. Ele aparece no site do jeito que está escrito."; o modo é decidido pelo valor carregado e não troca enquanto a pessoa digita.
 8. **Abrir a tela de Dados nunca grava.** Máscara e `PhoneInput` reescrevem o valor carregado e podem disparar `onChange` sem ninguém digitar: os dois campos só gravam com o foco dentro deles.
-9. **A ajuda diz o que o site faz hoje:** a cor de destaque não pinta nada (o `--accent` não é usado; fica guardada pros modelos novos); a faixa de cima (telefone, e-mail, redes) só aparece no computador e fora da página inicial, e as redes aparecem pelo nome, em texto; as caixas Ativo/Publicado só mudam o selo No ar do painel, o site continua abrindo. Mudou o site, muda a frase.
+9. **A ajuda diz o que o site faz hoje:** a cor de destaque não pinta nada (o `--accent` não é usado; fica guardada pros modelos novos); a faixa de cima (telefone, e-mail, redes) só aparece no computador e fora da página inicial, e as redes aparecem pelo nome, em texto; as caixas Ativo/Publicado (bloco No ar) põem o site em manutenção quando qualquer uma está desmarcada, e a ficha do imóvel aberta por link continua funcionando (ver "Meu site · site em manutenção"). Mudou o site, muda a frase.
 
 **Armadilhas:**
 1. A caixa de imagem só cuida de escolher, conferir, girar e avisar: quem usa passa `enviar` (sobe e grava; erro lançado vira o aviso) e `aoRemover`. O logo continua tirando as cores no envio (`extractLogoColors`).
 2. A marca d'água NÃO usa `EnvioDeImagem`: o logo dela é gravado na hora pelo servidor, que só aceita PNG, JPG e WEBP.
 3. O endereço do rodapé usa `whitespace-pre-line`: as duas linhas do campo Endereço aparecem em duas linhas no site.
 4. Não é `featureKey` nem `clientToggleKey`, e não tem metade de backend (o servidor já aceitava e devolvia `favicon_url`).
+
+## Meu site · site em manutenção (desde 2026-10-04)
+
+> Decisão do dono (04/10): site com **Ativo** ou **Publicado** desmarcado (Meu site › Endereço do site, bloco No ar) mostra a página "Em manutenção". Antes as duas caixas só mudavam o selo do painel e o site continuava abrindo.
+
+**O que aparece na tela:** no site, a página Em manutenção (logo ou nome, cores do site, "Estamos atualizando nosso site. Volte em breve." e, embaixo, "Enquanto isso, fale com a gente:" com WhatsApp, telefone e e-mail, só os que existem). Aba do navegador "<Nome> — Em manutenção" com o ícone do site. No painel, o selo da barra diz "Em manutenção" no lugar de "Fora do ar", e o bloco No ar explica o efeito.
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **M1.** Em manutenção = `!site.active || !site.published`. Quem decide é o servidor (`data.maintenance`); o site só lê. `maintenance` ausente (servidor antigo) = no ar.
+2. **M2.** A ficha do imóvel aberta por link continua funcionando (o link vai no WhatsApp e no anúncio), com envio de contato, fotos e contagem de visita. Em manutenção o topo e o rodapé dela mostram só o logo/nome (que leva pra raiz, a página de manutenção) e o WhatsApp: sem abas, menu de páginas, blog, busca, "Voltar aos imóveis" nem "Você também pode gostar" (a lista nem é pedida).
+3. **M3.** Viram a página de manutenção: página inicial, busca, páginas criadas, blog, artigo, Financiamento e Anuncie. Ela vem antes do erro e da tela vazia: as listas dão 404 em manutenção e isso nunca pode virar "Portal indisponível" nem "Nenhum artigo".
+4. **M4.** Páginas de anúncio (`landing/:slug`) não mudam: têm controller próprio.
+5. Enquanto a página de manutenção está aberta: `<meta name="robots" content="noindex">` e o título da aba; ao sair, os dois voltam como estavam.
+
+**Contrato do servidor** (`GET /api/public/v1/site`, sempre 200): em manutenção vem reduzido, `{ maintenance: true, id, name, slug, branding: { logo_url, favicon_url, primary_color, accent_color, font_family }, contact: { phone, whatsapp, email, address }, seo: { title } }`, sem `home`, `menu`, `hero`, `sections`, `social_links`, `tracking`, `custom_code` nem `translate` (Tag Manager e códigos não rodam). No ar, `maintenance: false` e o resto igual. Em manutenção respondem 404 "Site em manutenção": `site/pages`, `site/pages/:slug`, `site/articles`, `site/articles/:slug`, `site/properties` (lista) e `POST site/anuncie`. Seguem iguais: `site/imovel/:code`, `site/properties/:code`, `POST site/leads`, `POST site/visits` e as fotos.
+
+**Armadilhas:**
+1. **Backend sobe PRIMEIRO** (`lm-flow`, `saas-multitenant`). Contra o servidor antigo nada muda (sem o campo = no ar), mas o bloco No ar do painel já promete a manutenção: este PR não entra antes do backend.
+2. Uma regra só no site: `estaEmManutencao(site)` em `portalShared.tsx`. `PortalHeader`/`PortalFooter` trocam sozinhos pro topo/rodapé enxutos em manutenção, então página nova que usar os dois já nasce certa. Página nova do site que deva virar manutenção: `if (manutencao) return <PaginaManutencao site={site} />` logo depois do "Carregando…", antes do erro.
+3. Efeito de página que mexe no título roda DEPOIS do da página de manutenção (efeito do pai roda depois do do filho): precisa de `if (manutencao) return` (ver o título do Blog).
+4. `usePortalData` pede o site e a lista juntos; em manutenção a lista que falha (404 ou rede) não derruba a página. Fora da manutenção, falha de rede da lista continua sendo "Portal indisponível".
+5. Não é `featureKey` nem `clientToggleKey`.
 
 ## Notificações na ficha do usuário (04/10/2026)
 

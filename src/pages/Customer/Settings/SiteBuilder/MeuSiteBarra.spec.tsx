@@ -17,9 +17,11 @@ describe('MeuSiteBarra', () => {
     expect(screen.getByRole('link', { name: /Ver site/ }).getAttribute('href')).toBe(base.urlDoSite);
   });
 
-  it('fora do ar mostra o selo certo', () => {
+  it('Ativo ou Publicado desmarcado mostra o selo Em manutenção', () => {
     render(<MeuSiteBarra {...base} noAr={false} aoIr={vi.fn()} />);
-    expect(screen.getByText('Fora do ar')).toBeTruthy();
+    expect(screen.getByText('Em manutenção')).toBeTruthy();
+    expect(screen.queryByText('Fora do ar')).toBeNull();
+    expect(screen.queryByText('No ar')).toBeNull();
   });
 
   it('abre a lista suspensa e navega', async () => {

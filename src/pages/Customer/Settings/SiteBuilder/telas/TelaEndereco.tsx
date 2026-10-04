@@ -1,4 +1,4 @@
-import { Button, Label as UILabel } from '@/components/ui/ds';
+import { Button, Checkbox, Label as UILabel } from '@/components/ui/ds';
 import DomainSettings from '../DomainSettings';
 import { Secao, Secoes } from '../ui/Secao';
 import { CampoTexto } from '../ui/Campo';
@@ -25,16 +25,16 @@ export default function TelaEndereco({ site, siteForm, setF, aoCriar, salvando }
           </div>
         </Secao>
 
-        <Secao titulo="Selo No ar" descricao="Hoje estas duas caixas só mudam o selo No ar aqui do painel, ao lado do endereço do site. O site continua abrindo para os visitantes mesmo com elas desmarcadas.">
+        <Secao titulo="No ar" descricao="Com as duas marcadas, o site fica aberto pra todo mundo. Desmarcando qualquer uma, o site mostra a página Em manutenção; a página de um imóvel aberta por link continua funcionando.">
           <div className="flex flex-wrap gap-x-8 gap-y-3">
             <div className="flex items-center gap-3">
-              <input type="checkbox" id="active" checked={siteForm.active}
-                onChange={e => setF({ active: e.target.checked })} className="h-4 w-4 rounded" />
+              <Checkbox id="active" checked={siteForm.active}
+                onCheckedChange={v => setF({ active: v === true })} />
               <UILabel htmlFor="active" className="cursor-pointer text-base font-normal">Ativo</UILabel>
             </div>
             <div className="flex items-center gap-3">
-              <input type="checkbox" id="published" checked={siteForm.published}
-                onChange={e => setF({ published: e.target.checked })} className="h-4 w-4 rounded" />
+              <Checkbox id="published" checked={siteForm.published}
+                onCheckedChange={v => setF({ published: v === true })} />
               <UILabel htmlFor="published" className="cursor-pointer text-base font-normal">Publicado</UILabel>
             </div>
           </div>

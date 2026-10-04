@@ -22,7 +22,8 @@ export default function MeuSiteBarra({ tela, aoIr, enderecoVisivel, urlDoSite, n
       <div className="flex min-w-0 items-center gap-2 py-2">
         <Globe className="h-4 w-4 shrink-0 text-primary" aria-hidden />
         <span className="truncate text-sm font-semibold">{enderecoVisivel}</span>
-        <Badge variant={noAr ? 'default' : 'secondary'}>{noAr ? 'No ar' : 'Fora do ar'}</Badge>
+        {/* Fora do ar (Ativo ou Publicado desmarcado) o site mostra a página Em manutenção. */}
+        <Badge variant={noAr ? 'default' : 'secondary'}>{noAr ? 'No ar' : 'Em manutenção'}</Badge>
       </div>
       <nav aria-label="Menu do Meu site" className="flex flex-1 flex-wrap items-center gap-1">
         {GRUPOS.map(g => {
