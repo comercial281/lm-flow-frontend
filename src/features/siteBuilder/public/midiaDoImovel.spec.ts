@@ -20,6 +20,16 @@ describe('embedDoVideo', () => {
     expect(embedDoVideo('https://vimeo.com/123456789')).toEqual({ tipo: 'embed', src: 'https://player.vimeo.com/video/123456789' });
     expect(embedDoVideo('https://www.vimeo.com/123456789?share=copy')).toEqual({ tipo: 'embed', src: 'https://player.vimeo.com/video/123456789' });
   });
+  it('vimeo não listado mantém o hash (h) no embed', () => {
+    expect(embedDoVideo('https://vimeo.com/123456789?h=a1b2c3d4e5')).toEqual({ tipo: 'embed', src: 'https://player.vimeo.com/video/123456789?h=a1b2c3d4e5' });
+    // link de compartilhar do Vimeo: o hash vem no caminho
+    expect(embedDoVideo('https://vimeo.com/123456789/A1B2c3d4e5?share=copy')).toEqual({ tipo: 'embed', src: 'https://player.vimeo.com/video/123456789?h=A1B2c3d4e5' });
+  });
+  it('vimeo com hash inválido não leva o hash pro embed', () => {
+    expect(embedDoVideo('https://vimeo.com/123456789?h=abc"onload=1')).toEqual({ tipo: 'embed', src: 'https://player.vimeo.com/video/123456789' });
+    expect(embedDoVideo('https://vimeo.com/123456789?h=')).toEqual({ tipo: 'embed', src: 'https://player.vimeo.com/video/123456789' });
+    expect(embedDoVideo('https://vimeo.com/123456789/xyz!')?.tipo).toBe('link');
+  });
   it('domínio desconhecido vira link, nunca iframe', () => {
     expect(embedDoVideo('https://exemplo.com.br/video.mp4')).toEqual({ tipo: 'link', href: 'https://exemplo.com.br/video.mp4' });
     // parece YouTube mas não é
