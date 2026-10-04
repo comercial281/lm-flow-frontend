@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { I, Ic, linkDoWhatsApp, onlyDigits, tokensDoSite, type SiteInfo } from './portalShared';
-import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Página "Em manutenção" do site público (desde 04/10/2026).
@@ -11,9 +10,12 @@ import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
    do blog, do artigo, do Financiamento e do Anuncie. A ficha do imóvel aberta
    por link continua funcionando, com topo e rodapé enxutos.
 
-   Enquanto ela está aberta: a aba mostra "<Nome> — Em manutenção" com o ícone
-   do site, e o Google é avisado pra não guardar a página (robots noindex). Ao
-   sair, título e robots voltam como estavam.
+   Enquanto ela está aberta: a aba mostra "<Nome> — Em manutenção" e o Google é
+   avisado pra não guardar a página (robots noindex). Ao sair, título e robots
+   voltam como estavam. O ícone da aba é trocado pela página que a mostra
+   (`useIconeDaAba`), nunca aqui: duas trocas do mesmo ícone se desfazem fora
+   de ordem. Rastreamento (GA4, Pixel, GTM) e visita também não: a página que a
+   mostra passa `null` pro `usePortalTracking` em manutenção.
 ──────────────────────────────────────────────────────────────────────────── */
 
 export const TEXTO_MANUTENCAO = 'Estamos atualizando nosso site. Volte em breve.';
@@ -49,7 +51,6 @@ function useAbaEmManutencao(titulo: string) {
 export default function PaginaManutencao({ site }: { site: SiteInfo }) {
   const { fontHref, cssVars } = tokensDoSite(site);
   useAbaEmManutencao(tituloEmManutencao(site.name));
-  useIconeDaAba(site.branding?.favicon_url);
 
   const waHref = linkDoWhatsApp(site.contact?.whatsapp);
   const phone = site.contact?.phone?.trim();

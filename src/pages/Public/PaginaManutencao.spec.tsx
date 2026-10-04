@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PaginaManutencao, { TEXTO_MANUTENCAO } from './PaginaManutencao';
@@ -7,9 +8,15 @@ import PortalSearchPage from './PortalSearchPage';
 import PortalArticlePage from './PortalArticlePage';
 import PortalBlogPage from './PortalBlogPage';
 import ImovelPublicPage from './ImovelPublicPage';
+import PortalFinanciamentoPage from './PortalFinanciamentoPage';
+import PortalAnunciePage from './PortalAnunciePage';
+import PortalCustomPage from './PortalCustomPage';
 import type { SiteInfo } from './portalShared';
+import { rastreamentoDoSite } from './usePortalTracking';
+import { installSiteTracking } from '@/features/siteBuilder/public/siteTracking';
 
 vi.mock('@/features/siteBuilder/public/siteVisits', () => ({ sendSiteVisit: vi.fn() }));
+import { sendSiteVisit } from '@/features/siteBuilder/public/siteVisits';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Site em manutenção (Ativo ou Publicado desmarcado no Meu site). O servidor
@@ -30,13 +37,25 @@ const EM_MANUTENCAO: SiteInfo = {
   seo: { title: null },
 };
 
+/** Rastreamento que o servidor manda; GTM e códigos vêm de propósito, pra provar que não rodam. */
+const RASTREAMENTO: Pick<SiteInfo, 'tracking' | 'custom_code'> = {
+  tracking: { ga4: 'G-AB12', facebook_pixel: '123456', gtm_id: 'GTM-XYZ1' },
+  custom_code: { head: '<meta name="lmf-codigo" content="1">', body: null },
+};
+
 let chamadas: string[] = [];
+let envios: { url: string; body: string }[] = [];
 
 /** Servidor em manutenção: /site reduzido, listas em 404, ficha do imóvel no ar. */
 function servidor(site: SiteInfo, opcoes: { listaFalha?: boolean } = {}) {
   chamadas = [];
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+  envios = [];
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     chamadas.push(url);
+    if (init?.method === 'POST') {
+      envios.push({ url, body: String(init.body) });
+      return ok({ success: true });
+    }
     if (url.includes('/site/properties/C1')) return ok({ data: { code: 'C1', title: 'Casa no Cambuí', transaction_type: 'sale', address_city: 'Campinas', photos: [] } });
     if (site.maintenance) {
       if (url.includes('/site/properties') && opcoes.listaFalha) throw new TypeError('Failed to fetch');
@@ -59,6 +78,9 @@ function abrir(url: string, site: SiteInfo, opcoes?: { listaFalha?: boolean }) {
         <Route path="/portal/:tenant/imoveis" element={<PortalSearchPage />} />
         <Route path="/portal/:tenant/blog" element={<PortalBlogPage />} />
         <Route path="/portal/:tenant/blog/:slug" element={<PortalArticlePage />} />
+        <Route path="/portal/:tenant/financiamento" element={<PortalFinanciamentoPage />} />
+        <Route path="/portal/:tenant/anuncie" element={<PortalAnunciePage />} />
+        <Route path="/portal/:tenant/p/:slug" element={<PortalCustomPage />} />
         <Route path="/imovel/:tenant/:code" element={<ImovelPublicPage />} />
       </Routes>
     </MemoryRouter>,
@@ -66,13 +88,28 @@ function abrir(url: string, site: SiteInfo, opcoes?: { listaFalha?: boolean }) {
 }
 
 const robots = () => document.head.querySelector<HTMLMetaElement>('meta[name="robots"]');
+const icone = () => document.head.querySelector<HTMLLinkElement>('link[rel~="icon"]')?.getAttribute('href');
 
-beforeEach(() => { document.title = 'LM Flow'; });
+type JanelaRastreada = Window & { dataLayer?: unknown[]; gtag?: unknown; fbq?: { queue: unknown[][] }; _fbq?: unknown; __lmfTracking?: boolean; __lmPixelScriptRequested?: boolean };
+const janela = () => window as unknown as JanelaRastreada;
+function zerarRastreamento() {
+  const w = janela();
+  delete w.dataLayer; delete w.gtag; delete w.fbq; delete w._fbq; delete w.__lmfTracking; delete w.__lmPixelScriptRequested;
+}
+const scripts = () => Array.from(document.querySelectorAll('script')).map(x => x.getAttribute('src') ?? '');
+const camadaDoGa4 = () => (janela().dataLayer ?? []).map(a => Array.from(a as ArrayLike<unknown>));
+
+beforeEach(() => {
+  document.title = 'LM Flow';
+  zerarRastreamento();
+  vi.mocked(sendSiteVisit).mockClear();
+});
 afterEach(() => {
   // Desmonta antes de limpar o <head>: o React 19 põe lá a folha da fonte.
   cleanup();
   vi.unstubAllGlobals();
   document.head.innerHTML = '';
+  zerarRastreamento();
 });
 
 describe('site em manutenção: as páginas viram a página Em manutenção', () => {
@@ -81,6 +118,9 @@ describe('site em manutenção: as páginas viram a página Em manutenção', ()
     ['busca', '/portal/imob/imoveis?tab=rent'],
     ['blog', '/portal/imob/blog'],
     ['artigo', '/portal/imob/blog/um-artigo'],
+    ['Financiamento', '/portal/imob/financiamento'],
+    ['Anuncie', '/portal/imob/anuncie'],
+    ['página criada', '/portal/imob/p/quem-somos'],
   ])('%s mostra a página de manutenção com WhatsApp, telefone e e-mail, mesmo com as listas em 404', async (_nome, url) => {
     abrir(url, EM_MANUTENCAO);
 
@@ -94,6 +134,7 @@ describe('site em manutenção: as páginas viram a página Em manutenção', ()
     expect(screen.queryByText('Portal indisponível.')).toBeNull();
     expect(screen.queryByText('Artigo não encontrado.')).toBeNull();
     expect(screen.queryByText('Nenhum artigo publicado ainda.')).toBeNull();
+    expect(screen.queryByText('Página não encontrada.')).toBeNull();
     expect(screen.queryByRole('link', { name: 'Comprar' })).toBeNull();
     expect(document.title).toBe('Imob Teste — Em manutenção');
   });
@@ -147,19 +188,32 @@ describe('site no ar: nada muda', () => {
 });
 
 describe('aba do navegador e Google', () => {
-  it('título, noindex e ícone valem enquanto a página está aberta e voltam ao sair', () => {
+  it('título e noindex valem enquanto a página está aberta e voltam ao sair', () => {
     document.head.innerHTML = '<meta name="robots" content="index,follow"><link rel="icon" href="/favicon.ico">';
     document.title = 'LM Flow';
     const { unmount } = render(<PaginaManutencao site={EM_MANUTENCAO} />);
 
     expect(document.title).toBe('Imob Teste — Em manutenção');
     expect(robots()?.content).toBe('noindex');
-    expect(document.head.querySelector('link[rel~="icon"]')?.getAttribute('href')).toBe('https://cdn/icone.png');
+    // O ícone é da página que a mostra: a página de manutenção sozinha não mexe nele.
+    expect(icone()).toBe('/favicon.ico');
 
     unmount();
     expect(document.title).toBe('LM Flow');
     expect(robots()?.content).toBe('index,follow');
-    expect(document.head.querySelector('link[rel~="icon"]')?.getAttribute('href')).toBe('/favicon.ico');
+  });
+
+  it('no site, o ícone da aba é trocado uma vez só e o anterior volta ao sair', async () => {
+    document.head.innerHTML = '<link rel="icon" href="/favicon.ico" sizes="any">';
+    const { unmount } = abrir('/portal/imob', EM_MANUTENCAO);
+    await screen.findByRole('heading', { level: 1, name: TEXTO_MANUTENCAO });
+
+    expect(document.head.querySelectorAll('link[rel~="icon"]').length).toBe(1);
+    expect(icone()).toBe('https://cdn/icone.png');
+
+    unmount();
+    expect(icone()).toBe('/favicon.ico');
+    expect(document.head.querySelector('link[rel~="icon"]')?.getAttribute('sizes')).toBe('any');
   });
 
   it('sem robots no <head>, cria o noindex e tira ao sair', () => {
@@ -213,5 +267,52 @@ describe('ficha do imóvel em manutenção', () => {
     await screen.findByRole('heading', { level: 1, name: 'Casa no Cambuí' });
     expect(screen.getAllByRole('link', { name: 'Comprar' }).length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: /Voltar aos imóveis/ })).toBeInTheDocument();
+  });
+});
+
+describe('rastreamento em manutenção', () => {
+  it('a página de manutenção não instala GA4, Pixel nem GTM e não conta visita', async () => {
+    abrir('/portal/imob', { ...EM_MANUTENCAO, ...RASTREAMENTO });
+    await screen.findByRole('heading', { level: 1, name: TEXTO_MANUTENCAO });
+
+    expect(scripts().some(x => x.includes('googletagmanager.com'))).toBe(false);
+    expect(janela().gtag).toBeUndefined();
+    expect(janela().fbq).toBeUndefined();
+    expect(document.head.querySelector('meta[name="lmf-codigo"]')).toBeNull();
+    expect(sendSiteVisit).not.toHaveBeenCalled();
+  });
+
+  it('a ficha em manutenção instala GA4 e Pixel, envia o contato e dispara o Lead', async () => {
+    abrir('/imovel/imob/C1', { ...EM_MANUTENCAO, ...RASTREAMENTO });
+    await screen.findByRole('heading', { level: 1, name: 'Casa no Cambuí' });
+
+    expect(scripts().some(x => x.includes('gtag/js?id=G-AB12'))).toBe(true);
+    expect(janela().fbq?.queue).toContainEqual(['init', '123456']);
+    expect(scripts().some(x => x.includes('gtm.js'))).toBe(false);
+    expect(document.head.querySelector('meta[name="lmf-codigo"]')).toBeNull();
+
+    await userEvent.type(screen.getAllByPlaceholderText('Seu nome')[0], 'Maria');
+    await userEvent.type(screen.getAllByPlaceholderText('Seu WhatsApp')[0], '11987654321');
+    await userEvent.click(screen.getAllByRole('button', { name: 'Tenho interesse' })[0]);
+
+    expect((await screen.findAllByText('Recebemos seu interesse!')).length).toBeGreaterThan(0);
+    const lead = envios.find(e => e.url.includes('/site/leads'));
+    expect(lead).toBeTruthy();
+    expect(JSON.parse(lead!.body).lead).toMatchObject({ name: 'Maria', property_code: 'C1', form_type: 'imovel' });
+    expect(camadaDoGa4()).toContainEqual(['event', 'generate_lead']);
+    expect(janela().fbq?.queue).toContainEqual(['track', 'Lead']);
+  });
+
+  it('GTM e Códigos avançados nunca rodam em manutenção, nem em domínio próprio', () => {
+    installSiteTracking(rastreamentoDoSite({ ...EM_MANUTENCAO, ...RASTREAMENTO }), { host: 'www.imob.com.br' });
+
+    expect(scripts().some(x => x.includes('gtag/js?id=G-AB12'))).toBe(true);
+    expect(scripts().some(x => x.includes('gtm.js'))).toBe(false);
+    expect(document.head.querySelector('meta[name="lmf-codigo"]')).toBeNull();
+  });
+
+  it('no ar, em domínio próprio, o GTM continua entrando', () => {
+    installSiteTracking(rastreamentoDoSite({ name: 'Imob Teste', ...RASTREAMENTO }), { host: 'www.imob.com.br' });
+    expect(scripts().some(x => x.includes('gtm.js?id=GTM-XYZ1'))).toBe(true);
   });
 });

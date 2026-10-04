@@ -58,7 +58,8 @@ export default function PortalSearchPage() {
     const t = setTimeout(() => setCaminhoRegistrado(caminhoAtual), ESPERA_VISITA_MS);
     return () => clearTimeout(t);
   }, [caminhoAtual, caminhoRegistrado]);
-  usePortalTracking(state === 'ok' ? site : null, tenant, caminhoRegistrado ? { kind: 'search', path: caminhoRegistrado } : null);
+  // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
+  usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, caminhoRegistrado ? { kind: 'search', path: caminhoRegistrado } : null);
   useIconeDaAba(site.branding?.favicon_url);
 
   // Só vale aba visível; a da URL que não é (desligada ou sem imóvel) cai na primeira visível.

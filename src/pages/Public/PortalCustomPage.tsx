@@ -16,7 +16,8 @@ export default function PortalCustomPage() {
   const { tenant, slug } = useParams<{ tenant: string; slug: string }>();
   const { state, site, fontHref, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
-  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'page', path: pathname, pageSlug: slug });
+  // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
+  usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'page', path: pathname, pageSlug: slug });
   useIconeDaAba(site.branding?.favicon_url);
 
   const [page, setPage] = useState<CustomPage | null>(null);

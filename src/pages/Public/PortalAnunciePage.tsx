@@ -65,7 +65,8 @@ export default function PortalAnunciePage() {
   const { tenant } = useParams<{ tenant: string }>();
   const { state, site, fontHref, wa, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
-  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'listing', path: pathname });
+  // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
+  usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'listing', path: pathname });
   useIconeDaAba(site.branding?.favicon_url);
 
   const [step, setStep] = useState<1 | 2>(1);

@@ -31,7 +31,8 @@ export default function PortalHomePage() {
   const { tenant } = useParams<{ tenant: string }>();
   const { state, site, items, fontHref, wa, cities, hoods, types, home, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
-  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'home', path: pathname });
+  // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
+  usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'home', path: pathname });
   useIconeDaAba(site.branding?.favicon_url);
 
   // lead capture

@@ -32,7 +32,8 @@ export default function PortalArticlePage() {
   const { tenant, slug } = useParams<{ tenant: string; slug: string }>();
   const { state, site, items, fontHref, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
-  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'article', path: pathname, pageSlug: slug });
+  // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
+  usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'article', path: pathname, pageSlug: slug });
   useIconeDaAba(site.branding?.favicon_url);
 
   // Vitrine de imóveis ao fim do artigo (destaques, com fallback pros primeiros).

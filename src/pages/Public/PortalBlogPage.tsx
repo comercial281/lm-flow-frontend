@@ -65,7 +65,8 @@ export default function PortalBlogPage() {
   const { tenant } = useParams<{ tenant: string }>();
   const { state, site, fontHref, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
-  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'blog', path: pathname });
+  // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
+  usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'blog', path: pathname });
   useIconeDaAba(site.branding?.favicon_url);
 
   const [articles, setArticles] = useState<PortalArticleSummary[]>([]);
