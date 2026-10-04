@@ -217,7 +217,9 @@ describe('SupportWidget', () => {
     try {
       montar('/dashboard?suporte=t1');
       await screen.findByText('Socorro');
-      expect(topo).toHaveBeenCalledWith(900);
+      // O effect de rolagem é passivo: pode rodar depois do DOM com a mensagem (findBy resolve no
+      // MutationObserver), então a asserção espera em vez de checar de forma síncrona.
+      await waitFor(() => expect(topo).toHaveBeenCalledWith(900));
     } finally {
       delete (proto as unknown as Record<string, unknown>).scrollHeight;
       delete (proto as unknown as Record<string, unknown>).scrollTop;
