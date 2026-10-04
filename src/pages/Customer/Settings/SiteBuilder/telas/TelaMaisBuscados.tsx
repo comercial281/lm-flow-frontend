@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { Button, Checkbox, Input, Label as UILabel } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { HOME_FABRICA, type AtalhoManual, type HomeConfig } from '@/features/siteBuilder/public/homeConfig';
 import { ROTULO_TIPO, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import type { FormProps } from './tipos';
@@ -17,6 +18,16 @@ export default function TelaMaisBuscados({ siteForm, setF }: FormProps) {
   const mudarItem = (i: number, parte: Partial<AtalhoManual>) =>
     mudar({ items: ms.items.map((it, k) => (k === i ? { ...it, ...parte } : it)) });
   const texto = (v: string) => v.trim() === '' ? null : v;
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+  const remover = async (i: number) => {
+    const ok = await confirmar({
+      titulo: 'Remover atalho',
+      descricao: `O atalho "${ms.items[i].label.trim() || `Atalho ${i + 1}`}" sai da página inicial quando você salvar.`,
+      rotuloDaAcao: 'Remover',
+      destrutivo: true,
+    });
+    if (ok) mudar({ items: ms.items.filter((_, k) => k !== i) });
+  };
 
   return (
     <section className="rounded-xl border border-border bg-card p-5 space-y-4">
@@ -48,12 +59,13 @@ export default function TelaMaisBuscados({ siteForm, setF }: FormProps) {
                       <UILabel htmlFor={`atalho-${i}-rotulo`}>Rótulo</UILabel>
                       <Input id={`atalho-${i}-rotulo`} className="mt-1" value={it.label}
                         onChange={e => mudarItem(i, { label: e.target.value })} />
+                      {it.label.trim() === '' && <p className="mt-1 text-sm text-amber-600">Sem rótulo, o atalho não é salvo.</p>}
                     </div>
                     <div>
                       <UILabel htmlFor={`atalho-${i}-finalidade`}>Finalidade</UILabel>
-                      <Seletor id={`atalho-${i}-finalidade`} className="mt-1 w-full" value={it.transaction ?? ''}
-                        onChange={e => mudarItem(i, { transaction: e.target.value === 'rent' ? 'rent' : e.target.value === 'sale' ? 'sale' : null })}>
-                        <option value="">Qualquer</option>
+                      {/* Sem "Qualquer": o atalho leva a uma aba da busca. Atalho antigo sem finalidade é Comprar. */}
+                      <Seletor id={`atalho-${i}-finalidade`} className="mt-1 w-full" value={it.transaction ?? 'sale'}
+                        onChange={e => mudarItem(i, { transaction: e.target.value === 'rent' ? 'rent' : 'sale' })}>
                         <option value="sale">Comprar</option>
                         <option value="rent">Alugar</option>
                       </Seletor>
@@ -83,8 +95,7 @@ export default function TelaMaisBuscados({ siteForm, setF }: FormProps) {
                         onChange={e => mudarItem(i, { price_max: e.target.value === '' ? null : Number(e.target.value) })} />
                     </div>
                   </div>
-                  <Button type="button" variant="ghost" size="sm"
-                    onClick={() => mudar({ items: ms.items.filter((_, k) => k !== i) })}>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => remover(i)}>
                     <Trash2 className="mr-1.5 h-4 w-4" aria-hidden /> Remover
                   </Button>
                 </div>
@@ -98,6 +109,7 @@ export default function TelaMaisBuscados({ siteForm, setF }: FormProps) {
           )}
         </>
       )}
+      {dialogoDeConfirmacao}
     </section>
   );
 }

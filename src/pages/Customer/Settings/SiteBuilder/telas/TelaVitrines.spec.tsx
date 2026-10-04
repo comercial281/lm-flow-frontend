@@ -107,4 +107,26 @@ describe('TelaVitrines', () => {
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Remover' }));
     expect(ultimoHome(espiao).showcases.map(v => v.id)).toEqual(['launches', 'featured']);
   });
+
+  it('De R$ maior que Até R$ avisa que a vitrine fica vazia', async () => {
+    const home = { ...HOME_FABRICA, showcases: [...HOME_FABRICA.showcases, livre('x')] };
+    render(<Montar espiao={vi.fn()} home={home} />);
+    await userEvent.click(screen.getByRole('button', { name: /Editar regra/ }));
+    const aviso = /De R\$ está maior que o de Até R\$/;
+    await userEvent.type(screen.getByLabelText('De R$'), '900000');
+    expect(screen.queryByText(aviso)).toBeNull();
+    await userEvent.type(screen.getByLabelText('Até R$'), '500000');
+    expect(screen.getByText(aviso)).toBeTruthy();
+    await userEvent.clear(screen.getByLabelText('De R$'));
+    expect(screen.queryByText(aviso)).toBeNull();
+  });
+
+  it('a caixinha de destaque diz "Só destaques e exclusivos"', async () => {
+    const espiao = vi.fn();
+    const home = { ...HOME_FABRICA, showcases: [...HOME_FABRICA.showcases, livre('x')] };
+    render(<Montar espiao={espiao} home={home} />);
+    await userEvent.click(screen.getByRole('button', { name: /Editar regra/ }));
+    await userEvent.click(screen.getByLabelText('Só destaques e exclusivos'));
+    expect(ultimoHome(espiao).showcases[2].rules?.featured_only).toBe(true);
+  });
 });

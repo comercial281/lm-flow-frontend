@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TelaChamadas from './TelaChamadas';
 import type { Site, SiteFormData, SitePage } from '@/services/siteBuilder/siteBuilderService';
@@ -124,5 +124,52 @@ describe('TelaChamadas', () => {
     await userEvent.selectOptions(screen.getByLabelText('Destino'), 'whatsapp');
     expect(ultimoHome(espiao).callouts.custom[0]).toMatchObject({ dest_type: 'whatsapp', dest_value: null });
     expect(screen.queryByText(/ainda não tem WhatsApp/)).toBeNull();
+  });
+
+  it('enquanto as páginas não chegam, não afirma nada: sem "Página excluída", sem aviso de menu', async () => {
+    let responder!: (l: SitePage[]) => void;
+    servico.listPages.mockReturnValue(new Promise<SitePage[]>(r => { responder = r; }));
+    render(<Montar espiao={vi.fn()} site={{ id: 's1' } as Site}
+      home={comLivre({ title: 'Sobre', text: null, button: null, dest_type: 'page', dest_value: 'sobre' })} />);
+
+    const seletor = screen.getByLabelText('Página') as HTMLSelectElement;
+    expect(within(seletor).queryByRole('option', { name: 'Página excluída' })).toBeNull();
+    expect(seletor.value).toBe('sobre');
+    expect(screen.queryByText(/não está no menu do site/)).toBeNull();
+    expect(screen.queryByText(/Você ainda não tem páginas/)).toBeNull();
+
+    await act(async () => { responder([pagina({ slug: 'outra', title: 'Outra' })]); });
+    expect(within(seletor).getByRole('option', { name: 'Página excluída' })).toBeTruthy();
+    expect(screen.getByText(/não está no menu do site/)).toBeTruthy();
+  });
+
+  it('se a lista de páginas falha, mostra que não deu pra carregar (e nada de "excluída")', async () => {
+    servico.listPages.mockRejectedValue(new Error('rede'));
+    render(<Montar espiao={vi.fn()} site={{ id: 's1' } as Site}
+      home={comLivre({ title: 'Sobre', text: null, button: null, dest_type: 'page', dest_value: 'sobre' })} />);
+
+    expect(await screen.findByText('Não deu pra carregar as páginas do site agora.')).toBeTruthy();
+    expect(within(screen.getByLabelText('Página')).queryByRole('option', { name: 'Página excluída' })).toBeNull();
+    expect(screen.queryByText(/não está no menu do site/)).toBeNull();
+    expect(screen.queryByText(/Você ainda não tem páginas/)).toBeNull();
+  });
+
+  it('destino Um link sem endereço http(s) válido avisa que a chamada não é salva', async () => {
+    render(<Montar espiao={vi.fn()} home={comLivre({ title: 'Blog', text: null, button: null, dest_type: 'url', dest_value: null })} />);
+    const aviso = /Sem um link que comece com http:\/\/ ou https:\/\/, a chamada não é salva/;
+    expect(screen.getByText(aviso)).toBeTruthy();
+    await userEvent.type(screen.getByLabelText('Endereço'), 'https://blog.imob.com.br');
+    expect(screen.queryByText(aviso)).toBeNull();
+  });
+
+  it('Remover chamada pede confirmação', async () => {
+    const espiao = vi.fn();
+    render(<Montar espiao={espiao} home={comLivre({ title: 'Blog', text: null, button: null, dest_type: 'url', dest_value: 'https://a.com' })} />);
+    await userEvent.click(screen.getByRole('button', { name: /Remover/ }));
+    expect(espiao).not.toHaveBeenCalled();
+    const dialogo = within(screen.getByRole('dialog'));
+    expect(dialogo.getByText(/"Blog"/)).toBeTruthy();
+    await userEvent.click(dialogo.getByRole('button', { name: 'Remover' }));
+    expect(ultimoHome(espiao).callouts.custom).toEqual([]);
   });
 });

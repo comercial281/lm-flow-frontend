@@ -195,7 +195,7 @@ function EditorDeRegra({ idBase, regras, mudar }: { idBase: string; regras: Regr
       <div className="grid gap-3 sm:grid-cols-2">
         <CampoLista id={`${idBase}-cidades`} rotulo="Cidades" lista={regras.cities} mudar={cities => mudar({ cities })} />
         <CampoLista id={`${idBase}-bairros`} rotulo="Bairros" lista={regras.neighborhoods} mudar={neighborhoods => mudar({ neighborhoods })} />
-        <p className="text-xs text-muted-foreground sm:col-span-2">Cidade e bairro escritos como no cadastro dos imóveis.</p>
+        <p className="text-xs text-muted-foreground sm:col-span-2">Cidade e bairro como no cadastro dos imóveis; maiúscula e acento não fazem diferença.</p>
         <div>
           <UILabel htmlFor={`${idBase}-de`}>De R$</UILabel>
           <Input id={`${idBase}-de`} className="mt-1" type="number" min={0} inputMode="numeric" value={regras.price_min ?? ''}
@@ -206,6 +206,9 @@ function EditorDeRegra({ idBase, regras, mudar }: { idBase: string; regras: Regr
           <Input id={`${idBase}-ate`} className="mt-1" type="number" min={0} inputMode="numeric" value={regras.price_max ?? ''}
             onChange={e => mudar({ price_max: preco(e.target.value) })} />
         </div>
+        {regras.price_min != null && regras.price_max != null && regras.price_min > regras.price_max && (
+          <p className="text-sm text-amber-600 sm:col-span-2">O valor em De R$ está maior que o de Até R$: nenhum imóvel cabe e a vitrine some do site.</p>
+        )}
       </div>
 
       {regras.listing_kind !== 'resale' && (
@@ -226,7 +229,7 @@ function EditorDeRegra({ idBase, regras, mudar }: { idBase: string; regras: Regr
 
       <div className="flex items-center gap-2">
         <Checkbox id={`${idBase}-destaque`} checked={regras.featured_only} onCheckedChange={c => mudar({ featured_only: c === true })} />
-        <UILabel htmlFor={`${idBase}-destaque`} className="cursor-pointer">Só imóveis em destaque</UILabel>
+        <UILabel htmlFor={`${idBase}-destaque`} className="cursor-pointer">Só destaques e exclusivos</UILabel>
       </div>
     </div>
   );

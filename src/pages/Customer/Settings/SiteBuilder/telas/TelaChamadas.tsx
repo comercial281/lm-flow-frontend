@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Loader2, Plus, Trash2, Upload } from 'lucide-react';
 import { Button, Checkbox, Input, Label as UILabel } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { siteBuilderService, type SitePage } from '@/services/siteBuilder/siteBuilderService';
 import {
   HOME_FABRICA, TEXTO_FABRICA, type ChamadaLivre, type ChamadaPadrao, type ChamadaPadraoId, type HomeConfig,
@@ -42,17 +43,34 @@ export default function TelaChamadas({ site, siteForm, setF }: FormProps) {
   const mudarLivre = (i: number, parte: Partial<ChamadaLivre>) =>
     mudar({ custom: c.custom.map((x, k) => (k === i ? { ...x, ...parte } : x)) });
 
-  const [paginas, setPaginas] = useState<SitePage[]>([]);
+  // Páginas do site, por site. `null` = a busca falhou. Enquanto não chegam, a tela
+  // não afirma nada sobre elas (nem "Página excluída", nem "fora do menu").
+  const [resposta, setResposta] = useState<{ siteId: string; paginas: SitePage[] | null } | null>(null);
   const siteId = site?.id;
   useEffect(() => {
     if (!siteId) return;
     let vivo = true;
     // Landing de anúncio não é página do site: não entra no menu.
     siteBuilderService.listPages(siteId)
-      .then(lista => { if (vivo) setPaginas(lista.filter(p => p.page_kind !== 'ad_landing')); })
-      .catch(() => { if (vivo) setPaginas([]); });
+      .then(lista => { if (vivo) setResposta({ siteId, paginas: lista.filter(p => p.page_kind !== 'ad_landing') }); })
+      .catch(() => { if (vivo) setResposta({ siteId, paginas: null }); });
     return () => { vivo = false; };
   }, [siteId]);
+  // Site ainda não criado não tem página nenhuma.
+  const daVez = resposta && resposta.siteId === siteId ? resposta : null;
+  const estadoPaginas: EstadoPaginas = !siteId ? 'ok' : !daVez ? 'carregando' : daVez.paginas ? 'ok' : 'erro';
+  const paginas = daVez?.paginas ?? [];
+
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+  const removerLivre = async (i: number) => {
+    const ok = await confirmar({
+      titulo: 'Remover chamada',
+      descricao: `A chamada "${c.custom[i].title.trim() || `Chamada ${i + 1}`}" sai da página inicial quando você salvar.`,
+      rotuloDaAcao: 'Remover',
+      destrutivo: true,
+    });
+    if (ok) mudar({ custom: c.custom.filter((_, k) => k !== i) });
+  };
 
   // Foto de fundo do visual "Faixa com foto" (mesmo molde da foto da capa em Aparência).
   const fotoRef = useRef<HTMLInputElement | null>(null);
@@ -148,9 +166,9 @@ export default function TelaChamadas({ site, siteForm, setF }: FormProps) {
               // Nas livres o título é obrigatório: fica texto (vazio a chamada não é salva).
               mudar={(campo, v) => mudarLivre(i, campo === 'title' ? { title: v } : { [campo]: texto(v) })} />
             {x.title.trim() === '' && <p className="text-sm text-amber-600">Sem título, a chamada não é salva.</p>}
-            <Destino idBase={`livre-${i}`} chamada={x} paginas={paginas} temZap={!!siteForm.contact_whatsapp?.trim()}
-              mudar={parte => mudarLivre(i, parte)} />
-            <Button type="button" variant="ghost" size="sm" onClick={() => mudar({ custom: c.custom.filter((_, k) => k !== i) })}>
+            <Destino idBase={`livre-${i}`} chamada={x} paginas={paginas} estadoPaginas={estadoPaginas}
+              temZap={!!siteForm.contact_whatsapp?.trim()} mudar={parte => mudarLivre(i, parte)} />
+            <Button type="button" variant="ghost" size="sm" onClick={() => removerLivre(i)}>
               <Trash2 className="mr-1.5 h-4 w-4" aria-hidden /> Remover
             </Button>
           </fieldset>
@@ -163,6 +181,7 @@ export default function TelaChamadas({ site, siteForm, setF }: FormProps) {
       </section>
 
       <p className="text-sm text-muted-foreground">A faixa aparece com pelo menos 2 chamadas ligadas.</p>
+      {dialogoDeConfirmacao}
     </>
   );
 }
@@ -216,18 +235,23 @@ function CamposDeTexto({ idBase, titulo, texto: valorTexto, botao, dicas, mudar 
   );
 }
 
+type EstadoPaginas = 'carregando' | 'ok' | 'erro';
+
 interface DestinoProps {
   idBase: string;
   chamada: ChamadaLivre;
   paginas: SitePage[];
+  estadoPaginas: EstadoPaginas;
   temZap: boolean;
   mudar: (parte: Partial<ChamadaLivre>) => void;
 }
 
-function Destino({ idBase, chamada: x, paginas, temZap, mudar }: DestinoProps) {
+function Destino({ idBase, chamada: x, paginas, estadoPaginas, temZap, mudar }: DestinoProps) {
+  const carregado = estadoPaginas === 'ok';
   const escolhida = paginas.find(p => p.slug === x.dest_value);
   // A página gravada pode ter sido excluída: continua na lista pra não sumir em silêncio.
-  const semPagina = x.dest_type === 'page' && !!x.dest_value && !escolhida;
+  // Só dá pra dizer que foi excluída depois que a lista chegou.
+  const semPagina = carregado && x.dest_type === 'page' && !!x.dest_value && !escolhida;
 
   return (
     <div className="space-y-2">
@@ -249,6 +273,8 @@ function Destino({ idBase, chamada: x, paginas, temZap, mudar }: DestinoProps) {
               <option value="">Escolha uma página</option>
               {paginas.map(p => <option key={p.id} value={p.slug}>{p.title}</option>)}
               {semPagina && <option value={x.dest_value!}>Página excluída</option>}
+              {/* Lista ainda não chegou (ou falhou): a escolha gravada continua marcada. */}
+              {!carregado && x.dest_value && <option value={x.dest_value}>Página escolhida</option>}
             </Seletor>
           </div>
         )}
@@ -257,7 +283,10 @@ function Destino({ idBase, chamada: x, paginas, temZap, mudar }: DestinoProps) {
         )}
       </div>
 
-      {x.dest_type === 'page' && paginas.length === 0 && (
+      {x.dest_type === 'page' && estadoPaginas === 'erro' && (
+        <p className="text-sm text-muted-foreground">Não deu pra carregar as páginas do site agora.</p>
+      )}
+      {x.dest_type === 'page' && carregado && paginas.length === 0 && (
         <p className="text-sm text-muted-foreground">Você ainda não tem páginas. Crie em Personalizar › Páginas.</p>
       )}
       {x.dest_type === 'page' && !x.dest_value && paginas.length > 0 && (
@@ -267,6 +296,9 @@ function Destino({ idBase, chamada: x, paginas, temZap, mudar }: DestinoProps) {
         <p className="text-sm text-amber-600">
           Essa página não está no menu do site: a chamada só aparece quando ela estiver ativa e com Exibir no menu marcado, em Personalizar › Páginas.
         </p>
+      )}
+      {x.dest_type === 'url' && !x.dest_value && (
+        <p className="text-sm text-amber-600">Sem um link que comece com http:// ou https://, a chamada não é salva.</p>
       )}
       {x.dest_type === 'whatsapp' && (
         <>

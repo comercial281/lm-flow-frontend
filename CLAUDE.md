@@ -5861,7 +5861,7 @@ Usuários → Usuários (`/admin/usuarios`, `src/pages/SuperAdmin/Usuarios/`) e 
 1. Configuração em `sites.settings['home']`, lida só por `Sites::HomeConfig.resolve` (servidor) e `resolverHome` (site). Texto nulo = texto de fábrica.
 2. Lançamentos = `listing_kind = development`; Comprar inclui empreendimento; Alugar = só revenda de locação. Fim do "featured como lançamento".
 3. Fase é filtro, não aba. Abas: Comprar, Alugar, Lançamentos, com liga/desliga; aba sem imóvel some.
-4. Vitrines por regra (nunca imóvel a imóvel); 2 de fábrica sempre existem (só liga/desliga, nome e ordem); teto 6; 6 imóveis cada; vitrine vazia some. "Imóveis em destaque" pega destaque ou exclusivo e some quando não há nenhum (não cai nos mais recentes). O "Ver todos" de uma vitrine some quando a aba dela está escondida.
+4. Vitrines por regra (nunca imóvel a imóvel); 2 de fábrica sempre existem (só liga/desliga, nome e ordem); teto 6; 6 imóveis cada; vitrine vazia some. "Imóveis em destaque" pega destaque ou exclusivo e some quando não há nenhum (não cai nos mais recentes). O "Ver todos" de uma vitrine some quando a aba dela está escondida (ver também a 13). Na de destaques o botão diz "Ver todos os imóveis" (a busca não tem filtro de destaque).
 5. Chamadas: 3 de fábrica editáveis + até 3 livres (página, link http/https, WhatsApp); cartão com destino inexistente some; faixa precisa de 2+. Chamada pra página só aparece se a página está no menu do site (ativa + Exibir no menu). Link que não começa com http(s) é avisado na tela ("Use um endereço que comece com https://") e não é gravado.
 6. Mais buscados: automático pelo catálogo (tipo+bairro com 2+ imóveis) ou manual; vai virar "pelas visitas" quando o contador tiver histórico — a busca já grava os filtros na visita.
 7. Tudo filtra no navegador, em cima do catálogo inteiro (decisão de 14/09).
@@ -5869,11 +5869,16 @@ Usuários → Usuários (`/admin/usuarios`, `src/pages/SuperAdmin/Usuarios/`) e 
 9. Faixas de preço prontas são disjuntas por R$ 0,01 (a de cima começa em `200000.01`): o imóvel da divisa cai numa faixa só.
 10. A busca manda UMA visita interna por carga de página (com os filtros de quando a URL assentou); GA4/Pixel `page_view` só quando o endereço muda. Mexer nos filtros depois não conta visita nova.
 11. `home` só viaja no Salvar se uma tela da página inicial mexeu nele (`homeAlterado` no `SiteBuilder`); depois de salvar, a tela relê o `home` gravado. As telas sempre mandam o objeto `home` INTEIRO pro `setF`.
-12. Vitrine livre ganha id curto gerado na tela; o servidor troca se colidir. Cidades e bairros da regra casam pelo texto exato do cadastro.
+12. Vitrine livre ganha id curto gerado na tela; o servidor troca se colidir. Cidade e bairro casam sem diferença de maiúscula, acento e espaço nas pontas ("campinas" = "Campinas" = "CAMPÍNAS "), por UMA função (`normalizarTexto`, em `filtros.ts`) usada na regra da vitrine, no filtro da busca, nos atalhos manuais e no seletor de cidade/bairro da busca (que marca a opção equivalente).
+13. "Ver todos" da vitrine livre só aparece quando a regra cabe inteira na URL da busca (`buscaDaRegra` devolve null senão): no máximo 1 tipo (pelo nome), 1 cidade, 1 bairro e 1 fase; sem "Só destaques e exclusivos"; finalidade definida; Cadastro compatível com a aba (Empreendimentos → Lançamentos, com finalidade Qualquer ou Comprar; Revenda → só Alugar, porque Comprar inclui empreendimento). Na dúvida, sem o link.
+14. Atalho manual (Mais buscados) não tem finalidade "Qualquer": é Comprar ou Alugar. Atalho salvo sem finalidade é tratado como Comprar. Atalho cuja busca dá 0 imóvel não aparece no site.
+15. Empreendimento exclusivo mostra os dois selos no cartão (fase + Exclusivo); na revenda Exclusivo vence Destaque.
+16. Fase é só de empreendimento: o campo some na aba Alugar (capa e busca) e um `?stage=` na URL não filtra nessa aba.
+17. Na ficha do imóvel o topo e o rodapé mostram as abas pelo liga/desliga do Personalizar (a ficha não carrega o catálogo para checar aba vazia).
 
 **Armadilhas:**
 1. Backend vem PRIMEIRO (`lm-flow`, `saas-multitenant`): `home` no `/site` e os campos `listing_kind/stage/delivery_forecast/sale_price_from/rent_price_from` no resumo do imóvel.
 2. `home` no admin é permitido ANINHADO; escalar some sem aviso. `home` está em `DEDICATED_SETTINGS_KEYS`.
 3. Nomes de tipo de imóvel: sempre `rotuloTipo`/`pluralTipo` (`tiposDeImovel.ts`), nunca a chave crua.
 4. Não é `featureKey` nem `clientToggleKey`.
-5. O servidor descarta em silêncio chamada livre sem título, link fora de http(s) e página não escolhida: a tela avisa cada caso antes do Salvar.
+5. O servidor descarta em silêncio chamada livre sem título, link fora de http(s), página não escolhida e atalho sem rótulo: a tela avisa cada caso antes do Salvar. Avisos âmbar que existem: Chamadas — "Sem título, a chamada não é salva.", "Sem página escolhida, a chamada não é salva.", "Sem um link que comece com http:// ou https://, a chamada não é salva.", página fora do menu, site sem WhatsApp; Mais buscados — "Sem rótulo, o atalho não é salvo."; Vitrines — De R$ maior que Até R$. Enquanto a lista de páginas não chega (ou falha) a tela de Chamadas não afirma nada sobre a página escolhida. Remover chamada, atalho ou vitrine pede confirmação.
