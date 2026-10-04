@@ -10,7 +10,7 @@ import { dataHora, numero, plural, tempoDesde, VAZIO } from '@/lib/formato';
 import { usersService } from '@/services/superAdmin/usersService';
 import type { UserFilters, UserRow, UsersPage } from '@/types/admin/users';
 import AcoesDeAcesso from './AcoesDeAcesso';
-import { OPCOES_SITUACAO, duracao, nomeDoCliente, rotuloSituacao, statusDaSituacao } from './formatoUsuarios';
+import { OPCOES_SITUACAO, duracao, rotuloSituacao, statusDaSituacao } from './formatoUsuarios';
 
 // Clientes → Usuários. Todas as pessoas de todos os clientes numa lista só.
 const TODOS = '__todos__';
@@ -25,6 +25,9 @@ export default function Usuarios() {
   const [includeTeam, setIncludeTeam] = useState(false);
   const [dados, setDados] = useState<(UsersPage & { chave: string }) | null>(null);
   const [erro, setErro] = useState(false);
+  // Opções dos Seletores: última lista conhecida, sobrevive a erro e a troca de filtro.
+  const [tenants, setTenants] = useState<UsersPage['tenants']>([]);
+  const [roles, setRoles] = useState<string[]>([]);
 
   // Espera 300 ms depois da última tecla antes de buscar.
   useEffect(() => {
@@ -48,6 +51,8 @@ export default function Usuarios() {
       const r = await usersService.list({ q, tenant, role, situation, includeTeam, page });
       if (minha !== seq.current) return;
       setDados({ ...r, chave });
+      setTenants(r.tenants);
+      setRoles(r.roles);
     } catch {
       if (minha !== seq.current) return;
       setDados(null);
@@ -59,9 +64,6 @@ export default function Usuarios() {
 
   // Dados de outro conjunto de filtros contam como "carregando": nada de linha velha sob filtro novo.
   const atual = dados && dados.chave === chave && !erro ? dados : null;
-  // Listas dos Seletores sobrevivem à troca de filtro (vêm da última resposta, qualquer que seja).
-  const tenants = dados?.tenants ?? [];
-  const roles = dados?.roles ?? [];
   const trocandoPagina = Boolean(atual && atual.meta.page !== page);
   const comFiltro = Boolean(q || tenant || role || situation || includeTeam);
   const limparFiltros = () => { setBusca(''); setQ(''); setTenant(null); setRole(''); setSituation(''); setIncludeTeam(false); };
@@ -75,7 +77,7 @@ export default function Usuarios() {
           <Input aria-label="Buscar" placeholder="Nome, e-mail ou telefone" value={busca} onChange={(e) => setBusca(e.target.value)} className="w-64" />
           <Seletor aria-label="Cliente" value={tenant ?? TODOS} onChange={(e) => setTenant(e.target.value === TODOS ? null : e.target.value)} className="w-56">
             <option value={TODOS}>Todos os clientes</option>
-            {tenants.map((t) => <option key={t.schema} value={t.schema}>{nomeDoCliente(t.schema, t.name)}</option>)}
+            {tenants.map((t) => <option key={t.schema} value={t.schema}>{t.name}</option>)}
           </Seletor>
           <Seletor aria-label="Cargo" value={role} onChange={(e) => setRole(e.target.value)} className="w-48">
             <option value="">Todos os cargos</option>
@@ -120,7 +122,7 @@ export default function Usuarios() {
                     {u.email && <span className="text-xs text-muted-foreground">{u.email}</span>}
                   </div>
                 ) },
-                { key: 'tenant_name', label: 'Cliente', render: (u) => nomeDoCliente(u.tenant_schema, u.tenant_name) },
+                { key: 'tenant_name', label: 'Cliente', render: (u) => u.tenant_name },
                 { key: 'role', label: 'Cargo', render: (u) => u.role },
                 { key: 'last_seen_at', label: 'Último acesso', render: (u) => (
                   u.last_seen_at ? <span title={dataHora(u.last_seen_at)}>{tempoDesde(u.last_seen_at)}</span> : VAZIO

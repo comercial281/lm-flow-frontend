@@ -34,7 +34,3 @@ export function duracao(segundos: number | null | undefined): string {
   if (h === 0) return `${m} min`;
   return m === 0 ? `${h} h` : `${h} h ${m} min`;
 }
-
-/** O cliente principal (schema public) aparece com nome próprio. */
-export const nomeDoCliente = (schema: string, nome: string): string =>
-  schema === 'public' ? 'Leal Mídia (principal)' : nome;

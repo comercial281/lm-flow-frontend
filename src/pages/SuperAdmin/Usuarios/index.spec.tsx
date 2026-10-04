@@ -17,7 +17,7 @@ const ana = {
   last_seen_at: ontem, accesses_30d: 3, seconds_30d: 4800, situation: 'sumido',
 };
 const principal = {
-  ...ana, tenant_schema: 'public', tenant_name: 'Leal Mídia', tenant_id: null, user_id: 'u9',
+  ...ana, tenant_schema: 'public', tenant_name: 'Leal Mídia (principal)', tenant_id: null, user_id: 'u9',
   name: 'Paulo Principal', email: 'paulo@lm.com', role: 'Administrador',
 };
 
@@ -121,5 +121,32 @@ describe('Usuarios', () => {
     await act(async () => { soltaVelha(pagina([{ ...ana, user_id: 'u3', name: 'Velha Resposta' }])); });
     expect(screen.queryByText('Velha Resposta')).not.toBeInTheDocument();
     expect(screen.getByText('Bia Nova')).toBeInTheDocument();
+  });
+
+  it('erro geral mantém as opções e o cliente escolhido no seletor', async () => {
+    apiGet.mockResolvedValueOnce(pagina([ana]));
+    montar();
+    await waitFor(() => expect(screen.getByText('Ana Souza')).toBeInTheDocument());
+    apiGet.mockRejectedValueOnce(new Error('x'));
+    fireEvent.change(screen.getByLabelText('Cliente'), { target: { value: 'tenant_a' } });
+    await waitFor(() => expect(screen.getByRole('button', { name: /tentar de novo/i })).toBeInTheDocument());
+    const seletor = screen.getByLabelText('Cliente') as HTMLSelectElement;
+    expect(seletor.value).toBe('tenant_a');
+    expect(within(seletor).getByRole('option', { name: 'Alfa Imóveis' })).toBeInTheDocument();
+  });
+
+  it('Próxima busca a página 2 e trava os botões enquanto ela não chega', async () => {
+    let solta: (v: unknown) => void = () => {};
+    apiGet.mockResolvedValueOnce({ data: { success: true, data: { ...pagina([ana]).data.data, meta: { total: 45, page: 1, per_page: 20 } } } });
+    montar();
+    await waitFor(() => expect(screen.getByText('Ana Souza')).toBeInTheDocument());
+    apiGet.mockImplementationOnce(() => new Promise((r) => { solta = r; }));
+    fireEvent.click(screen.getByRole('button', { name: /próxima/i }));
+    await waitFor(() => expect(apiGet).toHaveBeenLastCalledWith('/super/users', { params: { per_page: 20, page: 2 } }));
+    expect(screen.getByRole('button', { name: /próxima/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /anterior/i })).toBeDisabled();
+    await act(async () => { solta({ data: { success: true, data: { ...pagina([{ ...ana, name: 'Pagina Dois', user_id: 'u5' }]).data.data, meta: { total: 45, page: 2, per_page: 20 } } } }); });
+    await waitFor(() => expect(screen.getByText('Pagina Dois')).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: /anterior/i })).not.toBeDisabled();
   });
 });
