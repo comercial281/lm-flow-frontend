@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { duracao } from './formatoUsuarios';
+import { duracao, rotuloNotificacao, statusDaNotificacao } from './formatoUsuarios';
 
 describe('duracao', () => {
   it('formata minutos e horas', () => {
@@ -14,5 +14,18 @@ describe('duracao', () => {
   it('zero e nulo viram traço', () => {
     expect(duracao(0)).toBe('—');
     expect(duracao(null)).toBe('—');
+  });
+});
+
+describe('notificação', () => {
+  it('rótulos e cores', () => {
+    expect(rotuloNotificacao('ok')).toBe('Ok');
+    expect(rotuloNotificacao('bloqueada')).toBe('Bloqueada');
+    expect(rotuloNotificacao('falhando')).toBe('Falhando');
+    expect(rotuloNotificacao(null)).toBe('—');
+    expect(statusDaNotificacao('ok')).toBe('success');
+    expect(statusDaNotificacao('bloqueada')).toBe('error');
+    expect(statusDaNotificacao('falhando')).toBe('warning');
+    expect(statusDaNotificacao(null)).toBe('inactive');
   });
 });
