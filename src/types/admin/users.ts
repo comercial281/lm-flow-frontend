@@ -1,6 +1,8 @@
 // Usuários de todos os clientes (entrega 3A). Espelha app/services/users do backend.
 export type UserSituation = 'ativo' | 'sumido' | 'nunca_entrou' | 'desativado';
 
+export type UserNotification = 'ok' | 'bloqueada' | 'falhando';
+
 export interface UserRow {
   tenant_schema: string;
   tenant_name: string;
@@ -15,6 +17,8 @@ export interface UserRow {
   accesses_30d: number;
   seconds_30d: number;
   situation: UserSituation;
+  // null: o registro de notificações não pôde ser lido.
+  notification: UserNotification | null;
 }
 
 export interface UsersPage {
@@ -30,6 +34,7 @@ export interface UserFilters {
   tenant: string | null;
   role: string;
   situation: '' | UserSituation;
+  notification: '' | 'com_problema';
   includeTeam: boolean;
   page: number;
 }

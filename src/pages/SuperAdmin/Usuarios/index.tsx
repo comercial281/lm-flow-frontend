@@ -10,7 +10,7 @@ import { dataHora, numero, plural, tempoDesde, VAZIO } from '@/lib/formato';
 import { usersService } from '@/services/superAdmin/usersService';
 import type { UserFilters, UserRow, UsersPage } from '@/types/admin/users';
 import AcoesDeAcesso from './AcoesDeAcesso';
-import { OPCOES_SITUACAO, duracao, rotuloSituacao, statusDaSituacao } from './formatoUsuarios';
+import { OPCOES_NOTIFICACAO, OPCOES_SITUACAO, duracao, rotuloNotificacao, rotuloSituacao, statusDaNotificacao, statusDaSituacao } from './formatoUsuarios';
 
 // Clientes → Usuários. Todas as pessoas de todos os clientes numa lista só.
 const TODOS = '__todos__';
@@ -19,7 +19,7 @@ const ESPERA_DA_BUSCA_MS = 300;
 const SITUACOES = OPCOES_SITUACAO.map((o) => o.valor);
 
 export default function Usuarios() {
-  // Filtros e página moram na URL (?q, tenant, role, situation, equipe=1, page): voltar da ficha
+  // Filtros e página moram na URL (?q, tenant, role, situation, notificacao, equipe=1, page): voltar da ficha
   // devolve a mesma lista, e o link pode ser compartilhado.
   const [params, setParams] = useSearchParams();
   const q = params.get('q') ?? '';
@@ -27,6 +27,7 @@ export default function Usuarios() {
   const role = params.get('role') ?? '';
   const situacaoUrl = params.get('situation') ?? '';
   const situation = (SITUACOES.includes(situacaoUrl as UserFilters['situation']) ? situacaoUrl : '') as UserFilters['situation'];
+  const notification = params.get('notificacao') === 'com_problema' ? 'com_problema' as const : '' as const;
   const includeTeam = params.get('equipe') === '1';
   const page = Math.max(1, parseInt(params.get('page') ?? '', 10) || 1);
 
@@ -60,7 +61,7 @@ export default function Usuarios() {
   // URL mudou por fora (voltar, limpar filtros): o campo acompanha.
   useEffect(() => { if (q !== escrito.current) { escrito.current = q; setBusca(q); } }, [q]);
 
-  const chave = `${q}|${tenant ?? ''}|${role}|${situation}|${includeTeam}`;
+  const chave = `${q}|${tenant ?? ''}|${role}|${situation}|${notification}|${includeTeam}`;
   const irPara = (p: number) => atualizar({ page: p > 1 ? String(p) : null });
 
   // Só a última busca vale: resposta atrasada de filtro/página antiga não sobrescreve.
@@ -70,7 +71,7 @@ export default function Usuarios() {
     const minha = ++seq.current;
     setErro(false);
     try {
-      const r = await usersService.list({ q, tenant, role, situation, includeTeam, page });
+      const r = await usersService.list({ q, tenant, role, situation, notification, includeTeam, page });
       if (minha !== seq.current) return;
       setDados({ ...r, chave });
       setTenants(r.tenants);
@@ -80,14 +81,14 @@ export default function Usuarios() {
       setDados(null);
       setErro(true);
     }
-  }, [q, tenant, role, situation, includeTeam, page, chave]);
+  }, [q, tenant, role, situation, notification, includeTeam, page, chave]);
 
   useEffect(() => { void carregar(); }, [carregar]);
 
   // Dados de outro conjunto de filtros contam como "carregando": nada de linha velha sob filtro novo.
   const atual = dados && dados.chave === chave && !erro ? dados : null;
   const trocandoPagina = Boolean(atual && atual.meta.page !== page);
-  const comFiltro = Boolean(q || tenant || role || situation || includeTeam);
+  const comFiltro = Boolean(q || tenant || role || situation || notification || includeTeam);
   const limparFiltros = () => { escrito.current = ''; setBusca(''); setParams({}, { replace: true }); };
   const paginas = atual ? Math.max(1, Math.ceil(atual.meta.total / atual.meta.per_page)) : 1;
   const falhas = atual?.errors ?? [];
@@ -107,6 +108,9 @@ export default function Usuarios() {
           </Seletor>
           <Seletor aria-label="Situação" value={situation} onChange={(e) => atualizar({ situation: e.target.value || null })} className="w-full sm:w-48">
             {OPCOES_SITUACAO.map((o) => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}
+          </Seletor>
+          <Seletor aria-label="Notificação" value={notification} onChange={(e) => atualizar({ notificacao: e.target.value || null })} className="w-full sm:w-52">
+            {OPCOES_NOTIFICACAO.map((o) => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}
           </Seletor>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={includeTeam} onCheckedChange={(v) => atualizar({ equipe: v === true ? '1' : null })} aria-label="Incluir equipe Leal Mídia" />
@@ -157,6 +161,11 @@ export default function Usuarios() {
                 ) },
                 { key: 'situation', label: 'Situação', render: (u) => (
                   <BaseStatusBadge status={statusDaSituacao(u.situation)} text={rotuloSituacao(u.situation)} />
+                ) },
+                { key: 'notification', label: 'Notificação', render: (u) => (
+                  u.notification
+                    ? <BaseStatusBadge status={statusDaNotificacao(u.notification)} text={rotuloNotificacao(u.notification)} />
+                    : VAZIO
                 ) },
                 { key: 'acoes', label: 'Ações', align: 'right', render: (u) => <AcoesDeAcesso row={u} /> },
               ]}

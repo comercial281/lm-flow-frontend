@@ -1,4 +1,4 @@
-import type { UserSituation } from '@/types/admin/users';
+import type { UserNotification, UserSituation } from '@/types/admin/users';
 import { VAZIO } from '@/lib/formato';
 
 const ROTULOS: Record<UserSituation, string> = {
@@ -23,6 +23,22 @@ export const OPCOES_SITUACAO: { valor: '' | UserSituation; rotulo: string }[] = 
   { valor: 'sumido', rotulo: ROTULOS.sumido },
   { valor: 'nunca_entrou', rotulo: ROTULOS.nunca_entrou },
   { valor: 'desativado', rotulo: ROTULOS.desativado },
+];
+
+const ROTULOS_NOTIFICACAO: Record<UserNotification, string> = { ok: 'Ok', bloqueada: 'Bloqueada', falhando: 'Falhando' };
+
+export const rotuloNotificacao = (n: UserNotification | null): string => (n ? ROTULOS_NOTIFICACAO[n] ?? n : VAZIO);
+
+export function statusDaNotificacao(n: UserNotification | null): 'success' | 'error' | 'warning' | 'inactive' {
+  if (n === 'ok') return 'success';
+  if (n === 'bloqueada') return 'error';
+  if (n === 'falhando') return 'warning';
+  return 'inactive';
+}
+
+export const OPCOES_NOTIFICACAO: { valor: '' | 'com_problema'; rotulo: string }[] = [
+  { valor: '', rotulo: 'Todas as notificações' },
+  { valor: 'com_problema', rotulo: 'Com problema' },
 ];
 
 /** 4800 → "1 h 20 min" · 720 → "12 min" · 30 → "< 1 min" · 0/nulo → "—" */
