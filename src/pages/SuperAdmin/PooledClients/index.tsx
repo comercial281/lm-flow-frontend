@@ -11,6 +11,7 @@ import {
   GROUP_KIND_LABEL, groupJidsFrom, groupLabel, groupsPatch, nameRuleHint, sortGroupsForPicker,
   type ClientGroupJids, type ClientGroupKind, type WaGroup,
 } from './clientGroups';
+import KitBoasVindasBloco from './KitBoasVindasBloco';
 
 import { toast } from 'sonner';
 
@@ -862,6 +863,9 @@ function FeaturesModal({ tenant, onClose, onTenantUpdated }: {
               })}
             </div>
           </div>
+          {/* Kit de boas-vindas: o envio do kit da Plataforma no grupo oficial do
+              cliente. Depois de Grupos WhatsApp porque é ele que decide o grupo. */}
+          <KitBoasVindasBloco tenantId={tenant.id} />
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1"
             style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.25)' }}>
             <div className="flex-1 min-w-0">
