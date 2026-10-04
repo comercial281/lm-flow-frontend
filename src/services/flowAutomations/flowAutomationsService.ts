@@ -51,7 +51,8 @@ class FlowAutomationsService {
   }
 
   // Follow-up novo (`kind: 'followup'`) nasce com o modelo "Follow-up padrão", montado pelo servidor.
-  async create(payload: { name: string; folder_id?: string | null; kind?: FlowAutomationKind }): Promise<FlowAutomation> {
+  // Funil de conversa do zero (`kind: 'conversation'`, sprint 4): só o gestor.
+  async create(payload: { name: string; folder_id?: string | null; kind?: FlowAutomationKind; team?: boolean }): Promise<FlowAutomation> {
     return unwrap<FlowAutomation>(await api.post(this.baseUrl, payload));
   }
 
@@ -66,15 +67,18 @@ class FlowAutomationsService {
   }
 
   // Modelos (sprint 2): a lista e "usar o modelo", que cria o fluxo desligado.
-  async templates(): Promise<FlowTemplate[]> {
-    return templatesFrom((await api.get(`${this.baseUrl}/templates`)).data);
+  // Sprint 4: `kind: 'conversation'` lista os modelos de funil de conversa.
+  async templates(kind?: FlowAutomationKind): Promise<FlowTemplate[]> {
+    const url = `${this.baseUrl}/templates`;
+    return templatesFrom((kind ? await api.get(url, { params: { kind } }) : await api.get(url)).data);
   }
 
   async applyTemplate(key: string): Promise<FlowAutomation> {
     return appliedFlowFrom<FlowAutomation>((await api.post(`${this.baseUrl}/templates/${encodeURIComponent(key)}/apply`)).data);
   }
 
-  async update(id: string, payload: Partial<Pick<FlowAutomation, 'name' | 'folder_id' | 'trigger' | 'reentry_window_hours' | 'once_per_lead' | 'business_hours_only' | 'max_depth'>>): Promise<FlowAutomation> {
+  // `team` (sprint 4): "Da equipe", só no funil de conversa e só o gestor.
+  async update(id: string, payload: Partial<Pick<FlowAutomation, 'name' | 'folder_id' | 'trigger' | 'reentry_window_hours' | 'once_per_lead' | 'business_hours_only' | 'max_depth' | 'team'>>): Promise<FlowAutomation> {
     return unwrap<FlowAutomation>(await api.patch(`${this.baseUrl}/${id}`, payload));
   }
 
@@ -104,6 +108,20 @@ class FlowAutomationsService {
 
   async duplicate(id: string): Promise<FlowAutomation> {
     return unwrap<FlowAutomation>(await api.post(`${this.baseUrl}/${id}/duplicate`));
+  }
+
+  /**
+   * Arquivo da mensagem do funil de conversa (sprint 4): foto, vídeo, documento,
+   * áudio ou figurinha. `POST /uploads` (campo `attachment`) devolve a URL em
+   * `data.file_url`, que vai no `media_url` do bloco.
+   */
+  async uploadMedia(file: File): Promise<string> {
+    const fd = new FormData();
+    fd.append('attachment', file);
+    const res = await api.post('/uploads', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+    const url = (res.data as { data?: { file_url?: string } } | null)?.data?.file_url;
+    if (!url) throw new Error('O servidor não devolveu o arquivo');
+    return url;
   }
 
   async testRun(id: string, params: { contact_id?: string; test_contact?: Record<string, string>; forced?: Record<string, 'yes' | 'no'> } = {}): Promise<TestRunResult> {

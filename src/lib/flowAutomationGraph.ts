@@ -213,11 +213,16 @@ export function normalizeLoadedNodes(nodes: FlowAutomationNode[]): FlowAutomatio
 export function buildSaveFlowPayload(nodes: FlowAutomationNode[], initialNodeId: string | null): SaveFlowPayload {
   return {
     initial_node_id: initialNodeId,
-    nodes: nodes.map(n => {
-      if (!isBranching(n)) return { ...n, next_yes_node_id: null, next_no_node_id: null };
+    nodes: nodes.map(node => {
+      // Sprint 4: o passo do guia (`guide`) é só leitura e não volta; o
+      // `guide_done` vai só quando a pessoa confirmou o bloco no painel.
+      const { guide: _guide, guide_done: guideDone, ...n } = node;
+      const confirmed = guideDone ? { guide_done: true } : {};
+      if (!isBranching(n)) return { ...n, ...confirmed, next_yes_node_id: null, next_no_node_id: null };
       const handles = branchHandles(n);
       return {
         ...n,
+        ...confirmed,
         next_node_id: null,
         next_yes_node_id: n.next_yes_node_id,
         next_no_node_id: handles.includes('no') ? n.next_no_node_id : null,
