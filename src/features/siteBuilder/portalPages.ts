@@ -155,7 +155,7 @@ export function bankLogoSource(bank: SiteFinancingBank): 'own' | 'inherited' | '
 export function listingWarning(page: SiteListingPage): string | null {
   if (!page.enabled) return null;
   if (parseEmails(page.emails).length === 0) {
-    return 'Sem e-mail de destino a ficha fica guardada na aba Leads e ninguém é avisado. Cadastre ao menos um e-mail.';
+    return 'Sem e-mail de destino a ficha fica guardada em Contatos do site e ninguém é avisado. Cadastre ao menos um e-mail.';
   }
   return null;
 }

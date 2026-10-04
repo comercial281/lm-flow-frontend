@@ -15,7 +15,7 @@ export default function TelaEndereco({ site, siteForm, setF, aoCriar, salvando }
   return (
     <div className="space-y-6">
       <Secoes>
-        <Secao titulo="Nome e endereço" descricao="O nome da imobiliária aparece no topo do site quando não há logo, no rodapé e na aba do navegador.">
+        <Secao titulo="Nome e endereço" descricao="O nome da imobiliária aparece no topo do site quando não há logo e no rodapé. Também vai na aba do navegador, se você não escrever um título em Aparecer no Google.">
           <div className="grid gap-5 md:grid-cols-2">
             <CampoTexto id="endereco-nome" rotulo="Nome do site *" valor={siteForm.name} placeholder="Imobiliária XYZ"
               ajuda="Use o nome que o cliente conhece." aoMudar={name => setF({ name })} />
@@ -25,7 +25,7 @@ export default function TelaEndereco({ site, siteForm, setF, aoCriar, salvando }
           </div>
         </Secao>
 
-        <Secao titulo="No ar" descricao="Com as duas marcadas, o painel mostra o selo No ar ao lado do endereço do site.">
+        <Secao titulo="Selo No ar" descricao="Hoje estas duas caixas só mudam o selo No ar aqui do painel, ao lado do endereço do site. O site continua abrindo para os visitantes mesmo com elas desmarcadas.">
           <div className="flex flex-wrap gap-x-8 gap-y-3">
             <div className="flex items-center gap-3">
               <input type="checkbox" id="active" checked={siteForm.active}

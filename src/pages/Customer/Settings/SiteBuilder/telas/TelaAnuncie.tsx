@@ -1,7 +1,7 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { toast } from 'sonner';
 import { Button, Label as UILabel, Switch } from '@/components/ui/ds';
-import { AlertTriangle, Loader2, Mail } from 'lucide-react';
+import { Loader2, Mail } from 'lucide-react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { siteBuilderService, type Site, type SiteListingPage } from '@/services/siteBuilder/siteBuilderService';
 import { listingWarning, parseEmails } from '@/features/siteBuilder/portalPages';
@@ -56,6 +56,7 @@ export default function TelaAnuncie({
             rotulo="Quem recebe a ficha por e-mail"
             placeholder="dono@imobiliaria.com, gerente@imobiliaria.com"
             ajuda="Separe por vírgula (até 5)."
+            aviso={aviso ?? undefined}
             valor={emailsText}
             aoMudar={v => { setEmailsText(v); marcarAlterado(); }}
           />
@@ -104,12 +105,6 @@ export default function TelaAnuncie({
               aoMudar={thanks_text => set({ thanks_text })} />
           </div>
 
-          {aviso && (
-            <p className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
-              <AlertTriangle className="mt-0.5 h-4 w-4 flex-none" />
-              {aviso}
-            </p>
-          )}
         </Secao>
       )}
     </Secoes>

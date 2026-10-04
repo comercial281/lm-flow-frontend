@@ -22,7 +22,7 @@ export default function TelaRedes({ siteForm, setF }: FormProps) {
     <Secoes>
       <Secao
         titulo="Links das redes"
-        descricao="Os ícones das redes aparecem no topo e no rodapé do site. Pode colar o link inteiro ou só o nome do perfil; rede em branco não aparece."
+        descricao="O nome de cada rede aparece como link no rodapé de todas as páginas e, no computador, na faixa de cima das páginas internas. Pode colar o link inteiro ou só o nome do perfil; rede em branco não aparece."
       >
         <div className="grid gap-5 md:grid-cols-2">
           {REDES.map(r => (
