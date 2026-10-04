@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/ds';
 import { toast } from 'sonner';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useChamadosAbertos } from '@/pages/SuperAdmin/Suporte/useChamadosAbertos';
 import { ADMIN_MENU_ITEMS, donoDoEnderecoAdmin } from './config/adminMenuItems';
 
@@ -43,7 +44,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   // ⚠️ Antes de qualquer return antecipado (regra dos hooks).
-  const chamadosAbertos = useChamadosAbertos();
+  // Suporte = o que o SERVIDOR diz (`is_support`, igual ao gate da API de chamados).
+  // Quem entra na Área do Admin sem ser suporte não vê o item nem dispara o polling.
+  const ehSuporte = useIsSuperAdmin();
+  const chamadosAbertos = useChamadosAbertos(ehSuporte);
 
   const handleLogout = async () => {
     setLogoutDialogOpen(false);
@@ -65,6 +69,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   // Comunicação; Academia mora em /admin/academia e é de Plataforma).
   const itemAtivo = donoDoEnderecoAdmin(ADMIN_MENU_ITEMS, location.pathname)?.item;
   const isActive = (href: string) => itemAtivo?.href === href;
+  const itensDoMenu = ADMIN_MENU_ITEMS.filter(item => ehSuporte || item.href !== '/admin/suporte');
+  const mostraAbertos = (href: string) => ehSuporte && href === '/admin/suporte' && chamadosAbertos > 0;
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -100,7 +106,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           className="hidden w-56 flex-col border-r border-sidebar-border bg-sidebar px-2 py-4 md:flex"
         >
           <div className="space-y-1">
-            {ADMIN_MENU_ITEMS.map(item => {
+            {itensDoMenu.map(item => {
               const active = isActive(item.href);
               return (
                 <Link
@@ -116,7 +122,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 >
                   <item.icon className={cn('h-4 w-4 flex-shrink-0', active && 'text-primary')} />
                   <span className="flex-1">{item.name}</span>
-                  {item.href === '/admin/suporte' && chamadosAbertos > 0 && (
+                  {mostraAbertos(item.href) && (
                     <span className="rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground" aria-label={`${chamadosAbertos} chamados abertos`}>
                       {chamadosAbertos}
                     </span>
@@ -136,18 +142,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <main className="flex-1 overflow-auto bg-background">
           {/* Menu horizontal no mobile (a sidebar some) */}
           <div className="flex gap-1 overflow-x-auto border-b border-sidebar-border bg-sidebar px-2 py-1.5 md:hidden">
-            {ADMIN_MENU_ITEMS.map(item => (
+            {itensDoMenu.map(item => (
               <Link
                 key={item.href}
                 to={item.href}
                 className={cn(
-                  'whitespace-nowrap rounded-md px-3 py-1.5 text-xs transition-colors',
+                  'flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-xs transition-colors',
                   isActive(item.href)
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-muted-foreground hover:bg-accent',
                 )}
               >
                 {item.name}
+                {mostraAbertos(item.href) && (
+                  <span className="rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground" aria-label={`${chamadosAbertos} chamados abertos`}>
+                    {chamadosAbertos}
+                  </span>
+                )}
               </Link>
             ))}
           </div>

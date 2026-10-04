@@ -1,7 +1,9 @@
 import { Seletor } from '@/components/base/Seletor';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { LifeBuoy, Search } from 'lucide-react';
+import NoAccessState from '@/components/permissions/NoAccessState';
+import { isForbiddenError } from '@/services/core/forbidden';
 import EmptyState from '@/components/base/EmptyState';
 import { cn } from '@/utils/cn';
 import { erroDaApi, type SupportKind, type SupportStatus } from '@/services/support/supportService';
@@ -28,6 +30,7 @@ export default function SuporteLista() {
   const [recarga, setRecarga] = useState(0);
   const [dado, setDado] = useState<{ tickets: SupportTicketAdminSummary[]; total: number; perPage: number } | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [recusado, setRecusado] = useState(false);
 
   useEffect(() => {
     const termo = q.trim();
@@ -50,8 +53,13 @@ export default function SuporteLista() {
           if (!vivo) return;
           setDado(r);
           setErro(null);
+          setRecusado(false);
         })
-        .catch(e => vivo && setErro(erroDaApi(e, 'Não consegui carregar os chamados.')));
+        .catch(e => {
+          if (!vivo) return;
+          setRecusado(isForbiddenError(e));
+          setErro(erroDaApi(e, 'Não consegui carregar os chamados.'));
+        });
     void carregar();
     const id = window.setInterval(() => document.visibilityState === 'visible' && void carregar(), INTERVALO_MS);
     return () => {
@@ -68,11 +76,19 @@ export default function SuporteLista() {
     setPage(1);
   };
 
+  // Filtro de abertura (Aberto, sem tipo, sem busca): vazio aqui é boa notícia, não "nada encontrado".
+  const filtroPadrao = status === 'open' && kind === '' && busca === '' && q.trim() === '';
+
   const paginas = dado ? Math.max(1, Math.ceil(dado.total / dado.perPage)) : 1;
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Chamados</h2>
+      <div className="border-l-4 border-primary pl-3">
+        <h1 className="flex items-center gap-2 text-xl font-semibold">
+          <LifeBuoy className="h-5 w-5" aria-hidden="true" /> Suporte
+        </h1>
+        <p className="text-sm text-muted-foreground">Chamados dos clientes: dúvidas, bugs e sugestões.</p>
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         {SITUACOES.map(s => (
           <button
@@ -101,26 +117,36 @@ export default function SuporteLista() {
             value={q}
             onChange={e => setQ(e.target.value)}
             placeholder="Buscar assunto, pessoa ou cliente"
+            aria-label="Buscar chamados"
             className="bg-transparent text-base outline-none sm:text-sm"
           />
         </label>
       </div>
 
-      {erro ? (
+      {recusado ? (
+        <NoAccessState />
+      ) : erro ? (
         <EmptyState tipo="erro" description={erro} action={{ label: 'Tentar de novo', onClick: () => setRecarga(r => r + 1) }} />
       ) : !dado ? (
         <p className="text-sm text-muted-foreground">Carregando…</p>
       ) : dado.tickets.length === 0 ? (
-        <EmptyState tipo="semResultado" action={{ label: 'Limpar filtros', onClick: limpar }} />
+        filtroPadrao ? (
+          <EmptyState title="Nenhum chamado esperando o time." description="Quando um cliente abrir um chamado, ele aparece aqui." />
+        ) : (
+          <EmptyState tipo="semResultado" action={{ label: 'Limpar filtros', onClick: limpar }} />
+        )
       ) : (
         <>
           <ul className="divide-y divide-border rounded-lg border border-border">
             {dado.tickets.map(t => (
               <li key={t.id}>
                 <Link to={`/admin/suporte/${t.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-accent">
-                  <span className={cn('h-2 w-2 flex-shrink-0 rounded-full', t.unread ? 'bg-primary' : 'bg-transparent')} aria-label={t.unread ? 'Mensagem nova do cliente' : undefined} />
+                  <span className={cn('h-2 w-2 flex-shrink-0 rounded-full', t.unread ? 'bg-primary' : 'bg-transparent')} aria-hidden="true" />
                   <span className="min-w-0 flex-1">
-                    <span className={cn('block truncate text-sm', t.unread && 'font-semibold')}>{t.subject}</span>
+                    <span className={cn('block truncate text-sm', t.unread && 'font-semibold')}>
+                      {t.unread && <span className="sr-only">Mensagem nova do cliente: </span>}
+                      {t.subject}
+                    </span>
                     <span className="block truncate text-xs text-muted-foreground">
                       {t.tenant_slug ?? 'painel raiz'} · {t.user_name ?? t.user_email ?? 'sem nome'} · {KIND_LABEL[t.kind]} · {STATUS_TIME[t.status]}
                     </span>

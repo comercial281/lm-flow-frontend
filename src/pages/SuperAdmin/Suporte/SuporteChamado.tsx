@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, Archive, LogIn } from 'lucide-react';
 import { Button, Textarea } from '@/components/ui/ds';
+import NoAccessState from '@/components/permissions/NoAccessState';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { erroDaApi, type SupportStatus } from '@/services/support/supportService';
 import { supportAdminService } from '@/services/support/supportAdminService';
@@ -17,7 +18,7 @@ export default function SuporteChamado() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const carregar = useCallback(() => supportAdminService.show(id), [id]);
-  const { dado, erro, recarregar } = useChamado(carregar);
+  const { dado, erro, recusado, recarregar } = useChamado(carregar);
   const [nota, setNota] = useState('');
   const [resolverAoEnviar, setResolverAoEnviar] = useState(false);
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
@@ -83,12 +84,14 @@ export default function SuporteChamado() {
     }
   };
 
+  if (recusado && !dado) return <NoAccessState />;
   if (erro && !dado) return <p className="text-sm text-destructive">{erro}</p>;
   if (!dado) return <p className="text-sm text-muted-foreground">Carregando…</p>;
 
   return (
-    <div className="grid h-full gap-4 lg:grid-cols-[1fr_300px]">
-      <div className="flex min-h-0 flex-col rounded-lg border border-border">
+    <div className="grid gap-4 lg:h-full lg:grid-cols-[1fr_300px]">
+      <h1 className="sr-only">Suporte</h1>
+      <div className="flex min-h-[60vh] min-w-0 flex-col rounded-lg border border-border lg:min-h-0">
         <div className="flex items-center gap-2 border-b border-border px-4 py-3">
           <Link to="/admin/suporte" aria-label="Voltar para a lista" className="rounded-md p-1 hover:bg-accent">
             <ArrowLeft className="h-4 w-4" />

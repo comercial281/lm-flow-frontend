@@ -48,10 +48,40 @@ describe('Suporte — lista', () => {
     expect(svc.list).toHaveBeenCalledTimes(1);
   });
 
-  it('vazio pelo filtro oferece limpar', async () => {
+  it('vazio no filtro de abertura diz que não tem nada esperando o time', async () => {
     svc.list.mockResolvedValue({ tickets: [], total: 0, page: 1, perPage: 30 });
     montar();
+    expect(await screen.findByText('Nenhum chamado esperando o time.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /limpar/i })).not.toBeInTheDocument();
+  });
+
+  it('vazio por outro filtro oferece limpar', async () => {
+    svc.list.mockResolvedValue({ tickets: [], total: 0, page: 1, perPage: 30 });
+    montar();
+    await screen.findByText('Nenhum chamado esperando o time.');
+    fireEvent.click(screen.getByRole('button', { name: 'Resolvido' }));
     expect(await screen.findByRole('button', { name: /limpar/i })).toBeInTheDocument();
+    expect(screen.queryByText('Nenhum chamado esperando o time.')).not.toBeInTheDocument();
+  });
+
+  it('o nome do item é o único h1, e a busca tem nome acessível', async () => {
+    montar();
+    await screen.findByText('Roleta travou');
+    expect(screen.getAllByRole('heading', { level: 1 }).map(h => h.textContent?.trim())).toEqual(['Suporte']);
+    expect(screen.getByRole('textbox', { name: 'Buscar chamados' })).toBeInTheDocument();
+  });
+
+  it('mensagem nova é anunciada em texto, não em aria-label de bolinha', async () => {
+    montar();
+    expect(await screen.findByText(/Mensagem nova do cliente/)).toHaveClass('sr-only');
+  });
+
+  it('403 mostra o aviso de acesso restrito, não o erro genérico', async () => {
+    svc.list.mockRejectedValue({ response: { status: 403, data: { error: 'Acesso restrito' } } });
+    montar();
+    expect(await screen.findByRole('status')).toBeInTheDocument();
+    expect(screen.queryByText('Acesso restrito')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /tentar de novo/i })).not.toBeInTheDocument();
   });
 
   it('erro aparece como erro', async () => {

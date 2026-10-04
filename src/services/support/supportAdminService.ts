@@ -8,8 +8,10 @@ import {
   type SupportTicketSummary,
 } from './supportService';
 
-// Chat de suporte — lado do TIME (item Suporte da Área do Admin). O servidor
-// trava em Users::SupportStaff.front_support?; a tela só aparece pra quem passa.
+// Chat de suporte — lado do TIME (item Suporte da Área do Admin). Quem manda é o
+// SERVIDOR: Users::SupportStaff.front_support? (403 pra o resto). O menu esconde o
+// item de quem não é suporte (`useIsSuperAdmin`, mesmo `is_support`), e as telas
+// mostram o aviso de acesso restrito se mesmo assim a API recusar.
 
 export interface SupportTicketAdminSummary extends SupportTicketSummary {
   tenant_slug: string | null;

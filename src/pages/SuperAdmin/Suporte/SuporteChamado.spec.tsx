@@ -78,4 +78,18 @@ describe('Suporte — chamado', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Entrar no cliente' }));
     await waitFor(() => expect(abrir).toHaveBeenCalledWith('https://casa-x.lmflow.com.br/sso?t=1', '_blank'));
   });
+
+  it('o nome do item é o único h1 e o assunto fica em h2', async () => {
+    montar();
+    await screen.findByText('Travou tudo');
+    expect(screen.getAllByRole('heading', { level: 1 }).map(h => h.textContent)).toEqual(['Suporte']);
+    expect(screen.getByRole('heading', { level: 2, name: 'Roleta travou' })).toBeInTheDocument();
+  });
+
+  it('403 mostra o aviso de acesso restrito', async () => {
+    svc.show.mockRejectedValue({ response: { status: 403, data: { error: 'Acesso restrito' } } });
+    montar();
+    expect(await screen.findByRole('status')).toBeInTheDocument();
+    expect(screen.queryByText('Acesso restrito')).not.toBeInTheDocument();
+  });
 });
