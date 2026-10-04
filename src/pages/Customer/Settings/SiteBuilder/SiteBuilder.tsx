@@ -19,6 +19,7 @@ import {
   financingFrom, financingPayload, listingFrom, listingPayload, parseEmails,
 } from '@/features/siteBuilder/portalPages';
 import { erroGa4, erroGtm, erroPixel, normalizarGa4, normalizarGtm, normalizarPixel } from '@/features/siteBuilder/trackingIds';
+import { resolverHome } from '@/features/siteBuilder/public/homeConfig';
 import { telaDaUrl, telaInfo, trilhaDe, type TelaId } from '@/features/siteBuilder/meuSiteMenu';
 import { useTenantFeatures, useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
@@ -27,6 +28,8 @@ import BarraSalvar from '@/components/base/BarraSalvar';
 import MeuSiteBarra from './MeuSiteBarra';
 import TelaPainel from './telas/TelaPainel';
 import TelaAparencia from './telas/TelaAparencia';
+import TelaBusca from './telas/TelaBusca';
+import TelaMaisBuscados from './telas/TelaMaisBuscados';
 import TelaFinanciamento from './telas/TelaFinanciamento';
 import TelaAnuncie from './telas/TelaAnuncie';
 import TelaEndereco from './telas/TelaEndereco';
@@ -163,6 +166,7 @@ export default function SiteBuilder() {
             stats: s.sections?.stats ?? true,
             lead_capture: s.sections?.lead_capture ?? true,
           },
+          home: resolverHome(s.home),
           primary_color: s.branding.primary_color ?? '#7C3AED',
           accent_color: s.branding.accent_color ?? '#9333EA',
           font_family: s.branding.font_family ?? 'Inter',
@@ -319,6 +323,8 @@ export default function SiteBuilder() {
         {tela === 'aparencia' && (
           <TelaAparencia {...formProps} heroPickPreview={heroPickPreview} setHeroPickPreview={setHeroPickPreview} />
         )}
+        {tela === 'busca' && <TelaBusca {...formProps} />}
+        {tela === 'buscados' && <TelaMaisBuscados {...formProps} />}
         {tela === 'financiamento' && (
           <TelaFinanciamento financingPage={financingPage} setFinancingPage={setFinancingPage} marcarAlterado={marcarAlterado} />
         )}

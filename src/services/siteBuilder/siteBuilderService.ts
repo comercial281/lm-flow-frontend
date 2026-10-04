@@ -1,5 +1,6 @@
 import api from '@/services/core/api';
 import type { BlockInstance } from '@/features/landing/blocks/contract';
+import type { HomeConfig } from '@/features/siteBuilder/public/homeConfig';
 
 export interface SiteBranding {
   logo_url?: string | null;
@@ -164,6 +165,8 @@ export interface Site {
   hero_image?: SiteHeroImage | null;
   /** Seções liga/desliga da home (armazenado em settings no backend). */
   sections?: SiteSections;
+  /** Página inicial por blocos, já resolvida pelo servidor (settings['home']). */
+  home?: HomeConfig;
   /** Página *Simule seu financiamento*, já resolvida pelo servidor. */
   financiamento?: SiteFinancingPage | null;
   /** Página *Anuncie seu imóvel*, já resolvida pelo servidor (com os e-mails). */
@@ -275,6 +278,8 @@ export interface SiteFormData {
   /** Foto do banner da home. Viaja aninhada; o servidor normaliza antes de gravar. */
   hero_image?: SiteHeroImageChoice;
   sections?: SiteSections;
+  /** Sempre o objeto inteiro: o servidor troca cada bloco recebido por completo. */
+  home?: HomeConfig;
   /**
    * As duas páginas extras. Viajam ANINHADAS — declaradas escalares no servidor
    * o Rails descartaria o hash em silêncio, a tela diria *Salvo* e nada mudaria.
