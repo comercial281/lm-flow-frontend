@@ -1251,8 +1251,10 @@ const AppRouter = () => {
                   Evolution) lançada à mão, numa tela só. */}
               <Route path="/admin/clientes/custos" element={<Custos />} />
               {/* Usuários */}
-              <Route path="/admin/usuarios" element={<AdminConteudo><AdminUsuarios /></AdminConteudo>} />
-              <Route path="/admin/usuarios/:tenant/:userId" element={<AdminConteudo><AdminFichaDoUsuario /></AdminConteudo>} />
+              {/* Lista e ficha já trazem o AdminConteudo (como o Custos): não embrulhar aqui. */}
+              <Route path="/admin/usuarios" element={<AdminUsuarios />} />
+              {/* Se este caminho mudar, mudar junto o `tambem` da aba Usuários em adminMenuItems.ts. */}
+              <Route path="/admin/usuarios/:tenant/:userId" element={<AdminFichaDoUsuario />} />
               <Route path="/admin/usuarios/logs" element={<AdminConteudo><AdminLogs /></AdminConteudo>} />
               <Route path="/admin/usuarios/mensagem-de-acesso" element={<AdminMensagemDeAcesso />} />
               {/* Comunicação */}

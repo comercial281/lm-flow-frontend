@@ -4724,7 +4724,7 @@ O que aparece na tela, no menu da Área do Admin:
 
 - **Mesmo padrão do menu novo do CRM:** cada item é uma página, as subdivisões são abas no topo, sem terceiro nível. A moldura (`AdminPaginaComAbas`) lê as abas do próprio menu (`adminMenuItems.ts`): menu e abas não têm como discordar. **O nome do item é o único h1**; o título de cada tela de dentro é h2.
 - **Cada aba é uma rota.** Aba que já tinha endereço manteve (`/admin/push`, `/admin/academia`, `/admin/plataforma`). O item aceso no menu é o DONO do endereço (`donoDoEnderecoAdmin`), não o prefixo.
-- **Link antigo continua valendo.** `?tab=` de Clientes e da IA Vendedora leva pra aba nova (`adminEnderecosAntigos.ts`); `/admin/uso?client=x` vira `/admin/usuarios?client=x`, e Usuários abre no cliente do link (antes o link dos Logs não filtrava nada).
+- **Link antigo continua valendo.** `?tab=` de Clientes e da IA Vendedora leva pra aba nova (`adminEnderecosAntigos.ts`); `/admin/uso` vira `/admin/usuarios` (a lista nova não lê `?client=`; o botão "Uso detalhado" dos Logs abre a lista inteira, e o filtro de cliente é pelo seletor).
 - **Logs e Atividade viraram uma tela só** (já eram o mesmo componente). `/admin/uso` era cópia de Métricas de Uso: virou Usuários.
 - **Conhecimento** junta Cérebro Universal, Princípios e Aperfeiçoamento, um embaixo do outro.
 - **Aviso de visita** saiu de Plataforma e foi para IA Vendedora → Aviso de visita, sem mudar comportamento (decisões de 21/09 mantidas).
