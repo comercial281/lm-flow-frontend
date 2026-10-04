@@ -40,7 +40,7 @@ export interface UserFilters {
 }
 
 export interface UserEntry { started_at: string; last_seen_at: string | null; duration_seconds: number; ip: string | null; device: string; new_device: boolean }
-export interface UserAction { occurred_at: string; category: string | null; action: string | null; title: string | null; description: string | null }
+export interface UserAction { occurred_at: string; category: string | null; action: string | null; title: string | null; description: string | null; sensitive?: boolean }
 
 export type DeliveryStatus = 'enviado' | 'falhou' | 'apareceu' | 'clicou' | 'entregue' | 'lido';
 export interface NotificationDeliveryRow {

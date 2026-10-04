@@ -163,6 +163,7 @@ function Conteudo({ perfil, aoTentarDeNovo }: { perfil: UserProfile; aoTentarDeN
                 <div className="flex flex-wrap items-baseline gap-x-3">
                   <span className="tabular-nums text-muted-foreground">{dataHora(a.occurred_at)}</span>
                   <span className="font-medium">{a.title ?? [a.category, a.action].filter(Boolean).join(' · ')}</span>
+                  {a.sensitive && <BaseStatusBadge status="warning" text="Sensível" />}
                 </div>
                 {a.description && <span className="text-muted-foreground">{a.description}</span>}
               </li>

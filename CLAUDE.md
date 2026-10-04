@@ -6018,7 +6018,7 @@ Usuários → Usuários (`/admin/usuarios`, `src/pages/SuperAdmin/Usuarios/`) e 
 - *Enviar link de acesso* pede confirmação (manda WhatsApp). *Copiar* não pede. O principal não tem link.
 - **Ficha:** cartões de 30 dias, entradas com aparelho (selo *Aparelho novo*: aparelho que não aparecia antes ou há mais de 90 dias), telas que mais usa e histórico de ações.
 - **Aba acesa na ficha:** a aba Usuários tem `tambem` (regex da ficha, dois trechos depois de `/admin/usuarios/`) em `adminMenuItems.ts`; vale pra moldura (`donoDoEnderecoAdmin`) e pra faixa (`Abas`). Logs e Mensagem de acesso têm um trecho só, então não colidem.
-- `superLogsService.userMetrics` e `UserMetricsResponse` ficaram: a tela de Logs ainda usa. Saíram `userMetricDetail` e `UserMetricDetail`.
+- `superLogsService.userMetrics` e `UserMetricsResponse` ficaram até a tela de Logs nova entrar (entrega 4, abaixo): saíram junto com ela. Saíram `userMetricDetail` e `UserMetricDetail`.
 - **Notificações** (push, avisos por WhatsApp, avisos na tela): ver a seção *Notificações na ficha do usuário (04/10/2026)*.
 
 ## Localização dos imóveis (desde 2026-10-04)
@@ -6120,3 +6120,15 @@ Fase 4, entrega 5. Spec: `LM FLOW/specs/2026-10-03-fase-4-imoveis-mapa-pelo-cep-
 - Se o registro não puder ser lido, a seção mostra erro com *Tentar de novo* (nunca vira vazio).
 
 **Não reabrir sem o dono pedir:** push sem recibo nunca vira *Falhou*. Só falha o que o servidor de push recusou.
+
+## Logs de todos os clientes (04/10/2026)
+
+Usuários → Logs (`/admin/usuarios/logs`, `src/pages/SuperAdmin/Logs/`). Spec: `LM FLOW/specs/2026-10-03-admin-registro-custos-usuarios-design.md` (seção 4). Substitui a tela de um cliente por vez (`LogsView`, removida, junto com `logClients`, `activity` e `userMetrics` do `superLogsService`). Dados de `GET /super/logs`.
+
+- **Uma lista só, todos os clientes**, mais recentes primeiro. Filtros (todos na URL): busca por pessoa, cliente, tipo de ação, período, *Só sensíveis* e *Incluir equipe Leal Mídia*.
+- **Selo *Sensível*** nas ações que o backend marca (exportar, mudar IA/roleta/cargos, dar ou tirar acesso, excluir em massa, aparelho novo, *Entrar* do admin). Ação sensível da equipe aparece mesmo com a equipe escondida.
+- **Tipo *Ação no sistema*** = só as ações sensíveis capturadas pela rede; *Mensagem* (WhatsApp) fica escondida até alguém escolher esse tipo.
+- **Carregar mais** (30 por vez) pede os anteriores ao último item da lista; trocar filtro recomeça do zero e resposta atrasada é descartada.
+- **Cliente que falha não esconde os outros:** aviso "Não deu para ler: …" acima da tabela. Erro geral mostra *Tentar de novo*, nunca lista vazia.
+- A página não se embrulha em `AdminConteudo`: a rota já faz isso.
+- **A ficha** do usuário marca as ações sensíveis do histórico com o mesmo selo *Sensível*.
