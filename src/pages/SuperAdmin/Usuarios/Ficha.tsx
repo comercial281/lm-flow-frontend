@@ -109,9 +109,9 @@ function Conteudo({ perfil }: { perfil: UserProfile }) {
           {entries.length === 0 ? (
             <EmptyState tipo="vazio" title="Ainda não entrou no LM Flow" />
           ) : (
-            <BaseTable<UserEntry>
-              data={entries}
-              getRowKey={(e) => `${e.started_at}:${e.ip ?? ''}:${e.device}`}
+            <BaseTable<UserEntry & { pos: number }>
+              data={entries.map((e, pos) => ({ ...e, pos }))}
+              getRowKey={(e) => `${e.started_at}:${e.ip ?? ''}:${e.device}:${e.pos}`}
               columns={[
                 { key: 'started_at', label: 'Quando', render: (e) => dataHora(e.started_at) },
                 { key: 'device', label: 'Aparelho', render: (e) => (

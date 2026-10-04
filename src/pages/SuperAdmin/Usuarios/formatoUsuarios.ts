@@ -25,9 +25,11 @@ export const OPCOES_SITUACAO: { valor: '' | UserSituation; rotulo: string }[] = 
   { valor: 'desativado', rotulo: ROTULOS.desativado },
 ];
 
-/** 4800 → "1 h 20 min" · 720 → "12 min" · 0/nulo → "—" */
+/** 4800 → "1 h 20 min" · 720 → "12 min" · 30 → "< 1 min" · 0/nulo → "—" */
 export function duracao(segundos: number | null | undefined): string {
-  const min = Math.round((segundos ?? 0) / 60);
+  const seg = segundos ?? 0;
+  if (seg > 0 && seg < 60) return '< 1 min';
+  const min = Math.round(seg / 60);
   if (min <= 0) return VAZIO;
   const h = Math.floor(min / 60);
   const m = min % 60;
