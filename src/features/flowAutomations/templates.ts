@@ -8,10 +8,42 @@
 //   POST /flow_automations/templates/:key/apply  → o fluxo criado
 // As rotas aceitam com ou sem o envelope `{ data }`.
 
+/**
+ * Um bloco do modelo, pra mostrar a sequência antes de escolher (sprint 4,
+ * "+ Novo funil"): mensagem (texto e/ou mídia) ou espera em segundos.
+ */
+export interface FlowTemplatePreviewStep {
+  kind: string;
+  label?: string;
+  text?: string;
+  media_kind?: string;
+  seconds?: number;
+}
+
 export interface FlowTemplate {
   key: string;
   name: string;
   description: string;
+  /** Sprint 4: quantos passos do guia o modelo traz (ausente no modelo montado na hora). */
+  guide_steps?: number;
+  /** Sprint 4: os blocos em ordem (ausente/vazio no modelo montado na hora). */
+  preview?: FlowTemplatePreviewStep[];
+}
+
+function previewFrom(raw: unknown): FlowTemplatePreviewStep[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap(item => {
+    if (!item || typeof item !== 'object') return [];
+    const r = item as Record<string, unknown>;
+    const kind = str(r.kind);
+    if (!kind) return [];
+    const step: FlowTemplatePreviewStep = { kind };
+    if (str(r.label)) step.label = str(r.label);
+    if (str(r.text)) step.text = str(r.text);
+    if (str(r.media_kind)) step.media_kind = str(r.media_kind);
+    if (typeof r.seconds === 'number') step.seconds = r.seconds;
+    return [step];
+  });
 }
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
@@ -29,7 +61,11 @@ export function templatesFrom(body: unknown): FlowTemplate[] {
     const key = str(raw.key).trim();
     const name = str(raw.name).trim();
     if (!key || !name) return [];
-    return [{ key, name, description: str(raw.description).trim() }];
+    const template: FlowTemplate = { key, name, description: str(raw.description).trim() };
+    if (typeof raw.guide_steps === 'number') template.guide_steps = raw.guide_steps;
+    const preview = previewFrom(raw.preview);
+    if (preview.length) template.preview = preview;
+    return [template];
   });
 }
 

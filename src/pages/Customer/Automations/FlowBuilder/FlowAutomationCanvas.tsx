@@ -6,8 +6,8 @@ import {
   type Node, type Edge, type NodeChange, type Connection, type ReactFlowInstance, BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { ArrowLeft, Save, Play, Loader2, Settings2, AlertTriangle, LayoutGrid } from 'lucide-react';
-import { Button, Input } from '@/components/ui/ds';
+import { ArrowLeft, Save, Play, Loader2, Settings2, AlertTriangle, LayoutGrid, Copy, Users } from 'lucide-react';
+import { Badge, Button, Input } from '@/components/ui/ds';
 import Chave from '@/components/base/Chave';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation, FlowAutomationNode, TestRunResult } from '@/types/flowAutomations';
@@ -23,6 +23,11 @@ import { FlowSettingsDialog } from '@/components/flowAutomations/FlowSettingsDia
 import { MOBILE_QUERY } from '@/components/flowAutomations/FlowSidePanel';
 import { MessageVariablesContext, useTenantMessageVariables } from '@/components/flowAutomations/VariableChipBar';
 import { useSidePanel } from '@/components/flowAutomations/useSidePanel';
+import { FlowGuideBanner, FlowGuideChecklist } from '@/components/flowAutomations/FlowGuide';
+import {
+  currentStep, guidePendingText, guideSteps, isGuided, isMessageNode, isReadOnly, messageCount, removeAndRewire,
+  serverMessage,
+} from '@/features/flowAutomations/guide';
 import {
   formatActionSummary,
   formatConditionSummary,
@@ -59,16 +64,26 @@ import { cn } from '@/lib/utils';
 
 export interface FlowAutomationCanvasProps {
   /**
-   * Faixa acima do canvas. Ponto de encaixe do guia de construção (sprint 4,
-   * parte B: "Passo 2 de 5: clique no bloco destacado…"). Ninguém passa ainda.
+   * Faixa acima do canvas. Sem ela, o canvas mostra a faixa do guia de
+   * construção quando o fluxo tem passos (sprint 4, parte B).
    */
   banner?: ReactNode;
   /**
-   * O bloco que pisca com borda destacada (o passo atual do guia).
-   * `TRIGGER_NODE_ID` destaca o Início. Ninguém passa ainda.
+   * O bloco que pisca com borda destacada. Sem ele, é o passo atual do guia.
+   * `TRIGGER_NODE_ID` destaca o Início.
    */
   highlightedNodeId?: string | null;
 }
+
+/** O Início do funil de conversa: o gatilho é fixo (sprint 4). */
+const CONVERSATION_TRIGGER_LINE = 'Você dispara o funil numa conversa, pelo botão de funil do campo de mensagem';
+
+const PEDIDO_TIRAR_MENSAGEM = {
+  titulo: 'Tirar esta mensagem do funil?',
+  descricao: 'A mensagem sai do funil e a anterior passa a seguir direto pra próxima. Isso já fica salvo.',
+  rotuloDaAcao: 'Tirar',
+  destrutivo: true,
+};
 
 /** Distância entre o Início e o primeiro bloco (a mesma entre colunas do layout). */
 const START_GAP_X = 320;
@@ -87,7 +102,7 @@ function snapshot(name: string, trigger: FlowTrigger, reentry: ReentrySetting, b
   };
 }
 
-export default function FlowAutomationCanvas({ banner, highlightedNodeId = null }: FlowAutomationCanvasProps = {}) {
+export default function FlowAutomationCanvas({ banner, highlightedNodeId }: FlowAutomationCanvasProps = {}) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const resources = useAutomationResources(true);
@@ -117,41 +132,64 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
   const dirtyPositions = useRef<Record<string, { x: number; y: number }>>({});
   const positionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // O fluxo como o servidor devolveu (no carregar e depois de salvar).
+  const applyFlow = useCallback((data: FlowAutomation) => {
+    const nextTrigger = normalizeTrigger(data.trigger);
+    const nextNodes = normalizeLoadedNodes(data.nodes || []);
+    const nextReentry = reentryOf(data);
+    const nextBusinessHours = businessHoursOnlyOf(data);
+    setAutomation(data);
+    setTrigger(nextTrigger);
+    setReentry(nextReentry);
+    setBusinessHoursOnly(nextBusinessHours);
+    setNodes(nextNodes);
+    setInitialNodeId(data.initial_node_id);
+    setLoaded(snapshot(data.name, nextTrigger, nextReentry, nextBusinessHours, nextNodes, data.initial_node_id));
+  }, []);
+
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
-      const data = await flowAutomationsService.get(id);
-      const nextTrigger = normalizeTrigger(data.trigger);
-      const nextNodes = normalizeLoadedNodes(data.nodes || []);
-      const nextReentry = reentryOf(data);
-      const nextBusinessHours = businessHoursOnlyOf(data);
-      setAutomation(data);
-      setTrigger(nextTrigger);
-      setReentry(nextReentry);
-      setBusinessHoursOnly(nextBusinessHours);
-      setNodes(nextNodes);
-      setInitialNodeId(data.initial_node_id);
-      setLoaded(snapshot(data.name, nextTrigger, nextReentry, nextBusinessHours, nextNodes, data.initial_node_id));
-    } catch {
-      toast.error('Não deu pra carregar o fluxo');
+      applyFlow(await flowAutomationsService.get(id));
+    } catch (e) {
+      toast.error(serverMessage(e, 'Não deu pra carregar o fluxo'));
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, applyFlow]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const hasChanges = !!automation && !!loaded
+  // Sprint 4: tipo do fluxo e o que quem abriu pode fazer. Funil de conversa:
+  // o corretor edita no MODO GUIADO (só conteúdo e tirar mensagem) e só VÊ os
+  // funis da equipe. O servidor garante; a tela esconde o que ele recusaria.
+  const kind = kindOf(automation);
+  const isConversation = kind === 'conversation';
+  const readOnly = isReadOnly(automation);
+  const guided = isGuided(automation);
+  const builderTools = !readOnly && !guided;
+
+  const hasChanges = !readOnly && !!automation && !!loaded
     && !mesmoConteudo(snapshot(automation.name, trigger, reentry, businessHoursOnly, nodes, initialNodeId), loaded);
   // O rascunho do painel lateral também é alteração não salva: sair pelo menu
   // ou fechar a aba com ele mexido pergunta antes.
   const unsaved = hasChanges || sidePanel.dirty;
-  // Follow-up (sprint 3) usa este mesmo canvas; a seta volta pra lista dele.
-  const listPath = FLOW_KIND_COPY[kindOf(automation)].listPath;
+  // Follow-up (sprint 3) e funil de conversa (sprint 4) usam este mesmo canvas; a seta volta pra lista dele.
+  const listPath = FLOW_KIND_COPY[kind].listPath;
   useAlteracoesNaoSalvas(unsaved);
+
+  // Construção guiada (sprint 4): os passos, o atual e o "Pronto!" quando o
+  // último fica feito nesta visita.
+  const steps = useMemo(() => (readOnly ? [] : guideSteps(nodes)), [nodes, readOnly]);
+  const step = currentStep(steps);
+  const [sawPendingStep, setSawPendingStep] = useState(false);
+  useEffect(() => {
+    if (step) setSawPendingStep(true);
+  }, [step]);
+  const highlighted = highlightedNodeId !== undefined ? highlightedNodeId : step?.nodeId ?? null;
 
   const setBlocksOpen = useCallback((open: boolean) => {
     setBlocksOpenState(open);
@@ -174,7 +212,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
     () => Object.fromEntries(nodes.map(n => [n.id, nodeProblem(n)])) as Record<string, string | null>,
     [nodes],
   );
-  const blockingProblem = useMemo(() => enableProblem(trigger, nodes), [trigger, nodes]);
+  const blockingProblem = useMemo(() => enableProblem(trigger, nodes, kind), [trigger, nodes, kind]);
 
   const positions = useMemo(() => resolvedPositions(nodes, initialNodeId), [nodes, initialNodeId]);
   const graphEdges = useMemo(() => buildEdges(nodes, initialNodeId), [nodes, initialNodeId]);
@@ -220,11 +258,61 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
     requestPanel({ type: 'node', id: newId });
   }, [nodes, initialNodeId, isMobile, requestPanel]);
 
-  const handleRemove = useCallback((nodeId: string) => {
+  // Grava no servidor: o cabeçalho (nome, gatilho, configurações) e os blocos.
+  // No modo guiado vai só o nome (o servidor recusa o resto) e o fluxo do
+  // funil de conversa não manda gatilho (é fixo). Devolve se gravou.
+  const persist = useCallback(async (nextNodes: FlowAutomationNode[], nextInitial: string | null): Promise<boolean> => {
+    if (!id || !automation) return false;
+    setSaving(true);
+    try {
+      if (guided) {
+        if (automation.name !== loaded?.name) await flowAutomationsService.update(id, { name: automation.name });
+      } else {
+        await flowAutomationsService.update(id, {
+          name: automation.name,
+          ...(isConversation ? {} : { trigger: serializeTrigger(trigger) }),
+          ...serializeReentry(reentry),
+          business_hours_only: businessHoursOnly,
+        });
+      }
+      // Manda o id ATUAL de cada bloco, definitivo (uuid) ou temporário (tmp_xxx,
+      // bloco novo desta sessão): o servidor decide "é novo?" batendo contra os
+      // blocos que já existem no fluxo. `initial_node_id` pode ser temporário
+      // também: o servidor resolve os dois pelo MESMO mapa.
+      const saved = await flowAutomationsService.saveFlow(id, buildSaveFlowPayload(nextNodes, nextInitial));
+      // A resposta já é o fluxo salvo (com o guia atualizado e, no funil de
+      // conversa, ligado se o último passo ficou pronto): sem recarregar a tela.
+      if (saved && Array.isArray(saved.nodes)) applyFlow(saved);
+      else await load();
+      toast.success(isConversation ? 'Funil salvo' : 'Fluxo salvo');
+      return true;
+    } catch (e: unknown) {
+      toast.error(serverMessage(e, 'Não deu pra salvar. Tente de novo.'));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [id, automation, guided, loaded, isConversation, trigger, reentry, businessHoursOnly, applyFlow, load]);
+
+  const handleRemove = useCallback(async (nodeId: string) => {
+    if (guided) {
+      // Modo guiado: só mensagem sai, religando as pontas, e já grava.
+      const target = nodes.find(n => n.id === nodeId);
+      if (!target || !isMessageNode(target)) return;
+      if (messageCount(nodes) <= 1) {
+        toast.error('O funil precisa de pelo menos uma mensagem.');
+        return;
+      }
+      if (!(await confirmar(PEDIDO_TIRAR_MENSAGEM))) return;
+      const next = removeAndRewire(nodes, initialNodeId, nodeId);
+      if (openPanel?.type === 'node' && openPanel.id === nodeId) replacePanel(null);
+      await persist(next.nodes, next.initialNodeId);
+      return;
+    }
     setNodes(prev => removeNode(prev, nodeId));
     if (initialNodeId === nodeId) setInitialNodeId(null);
     if (openPanel?.type === 'node' && openPanel.id === nodeId) replacePanel(null);
-  }, [initialNodeId, openPanel, replacePanel]);
+  }, [guided, nodes, initialNodeId, openPanel, replacePanel, confirmar, persist]);
 
   const handleDuplicate = useCallback((nodeId: string) => {
     const original = nodes.find(n => n.id === nodeId);
@@ -233,14 +321,27 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
     setNodes(prev => [...prev, { ...original, id: copyId, next_node_id: null, next_yes_node_id: null, next_no_node_id: null, pos_x: (original.pos_x || 0) + 40, pos_y: (original.pos_y || 0) + 40 }]);
   }, [nodes]);
 
-  const handleSaveNodeConfig = useCallback((nodeId: string, patch: { label: string; config: Record<string, unknown> }) => {
-    setNodes(prev => prev.map(n => (n.id === nodeId ? { ...n, label: patch.label || null, config: patch.config } : n)));
+  const handleSaveNodeConfig = useCallback(async (nodeId: string, patch: { label: string; config: Record<string, unknown> }) => {
+    const target = nodes.find(n => n.id === nodeId);
+    // Bloco com passo do guia: Salvar no painel confirma o passo (`guide_done`).
+    const confirmsStep = !!target?.guide;
+    const next = nodes.map(n => (n.id === nodeId
+      ? { ...n, label: guided ? n.label : patch.label || null, config: patch.config, ...(confirmsStep ? { guide_done: true } : {}) }
+      : n));
+    setNodes(next);
+    // O passo do guia que ainda falta (e tudo no modo guiado) grava NA HORA: o
+    // guia avança sozinho, e quem é leigo não precisa achar o Salvar do topo.
+    if (guided || (confirmsStep && !target?.guide?.done)) {
+      if (await persist(next, initialNodeId)) replacePanel(null);
+      return;
+    }
     replacePanel(null);
-  }, [replacePanel]);
+  }, [nodes, guided, initialNodeId, persist, replacePanel]);
 
   const openNode = useCallback((nodeId: string) => {
+    if (readOnly) return;
     requestPanel({ type: 'node', id: nodeId });
-  }, [requestPanel]);
+  }, [readOnly, requestPanel]);
 
   const addFrom = useCallback((sourceId: string, handle: OutputHandle) => {
     setPendingSource({ id: sourceId, handle });
@@ -264,6 +365,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
   }, [insertNode, pendingSource]);
 
   const onConnect = useCallback((connection: Connection) => {
+    if (!builderTools) return;
     if (!connection.source || !connection.target) return;
     if (connection.source === TRIGGER_NODE_ID) {
       setInitialNodeId(connection.target);
@@ -271,7 +373,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
     }
     const handle = (connection.sourceHandle as OutputHandle) || 'out';
     setNodes(prev => link(prev, connection.source!, handle, connection.target!));
-  }, []);
+  }, [builderTools]);
 
   const scheduleSavePositions = useCallback(() => {
     if (positionTimer.current) clearTimeout(positionTimer.current);
@@ -293,6 +395,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
   }, [id]);
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
+    if (!builderTools) return;
     // Aplica a posição localmente a cada frame do arraste; só agenda a
     // gravação quando o mouse solta (`dragging === false`).
     const posChanges = changes.filter((c): c is Extract<NodeChange, { type: 'position' }> => c.type === 'position' && !!c.position);
@@ -307,19 +410,29 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
       return next;
     });
     if (posChanges.some(c => c.dragging === false)) scheduleSavePositions();
-  }, [scheduleSavePositions]);
+  }, [scheduleSavePositions, builderTools]);
 
   // O bloco Início: o gatilho principal e cada "Ou quando", com os filtros, numa linha.
-  const startData: FlowStartNodeData = useMemo(() => ({
-    summary: triggerOneLine(trigger, (event, c) => formatConditionSummary(event, c, resources)),
-    hint: triggerEvents(trigger).includes('lead.created') ? LEAD_CREATED_HINT : null,
-    problem: triggerProblem(trigger),
-    editing: openPanel?.type === 'trigger',
-    highlighted: highlightedNodeId === TRIGGER_NODE_ID,
-    onEdit: () => {
-      requestPanel({ type: 'trigger' });
-    },
-  }), [trigger, resources, openPanel, highlightedNodeId, requestPanel]);
+  const startData: FlowStartNodeData = useMemo(() => {
+    // Funil de conversa (sprint 4): gatilho fixo, o Início só informa.
+    if (isConversation) {
+      return {
+        summary: CONVERSATION_TRIGGER_LINE, hint: null, problem: null, editing: false,
+        highlighted: highlighted === TRIGGER_NODE_ID, fixed: true, onEdit: () => {},
+      };
+    }
+    return {
+      summary: triggerOneLine(trigger, (event, c) => formatConditionSummary(event, c, resources)),
+      hint: triggerEvents(trigger).includes('lead.created') ? LEAD_CREATED_HINT : null,
+      problem: triggerProblem(trigger),
+      editing: openPanel?.type === 'trigger',
+      highlighted: highlighted === TRIGGER_NODE_ID,
+      fixed: readOnly,
+      onEdit: () => {
+        if (!readOnly) requestPanel({ type: 'trigger' });
+      },
+    };
+  }, [isConversation, trigger, resources, openPanel, highlighted, readOnly, requestPanel]);
 
   // O Início fica sempre uma coluna antes do primeiro bloco, na mesma altura.
   const startPosition = useMemo(() => {
@@ -330,31 +443,44 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
   const reactFlowNodes: Node[] = useMemo(() => {
     const startNode: Node = {
       id: TRIGGER_NODE_ID, type: 'flowStart', position: startPosition,
-      draggable: false, selectable: false, deletable: false, connectable: true,
+      draggable: false, selectable: false, deletable: false, connectable: builderTools,
       data: startData as unknown as Record<string, unknown>,
     };
-    const rest: Node[] = nodes.map(n => ({
-      id: n.id,
-      type: 'flowNode',
-      position: positions[n.id] || { x: 0, y: 0 },
-      data: {
-        node: n, lookups, problem: problems[n.id] ?? null,
-        editing: openPanel?.type === 'node' && openPanel.id === n.id,
-        highlighted: highlightedNodeId === n.id,
-        onEdit: openNode, onDuplicate: handleDuplicate, onRemove: handleRemove, onAddFrom: addFrom,
-      },
-    }));
+    const stepByNode = new Map(steps.map(st => [st.nodeId, st]));
+    const rest: Node[] = nodes.map(n => {
+      const st = stepByNode.get(n.id);
+      const allow = readOnly
+        ? { edit: false, duplicate: false, remove: false, add: false }
+        : guided
+          ? { edit: true, duplicate: false, remove: isMessageNode(n), add: false }
+          : undefined;
+      return {
+        id: n.id,
+        type: 'flowNode',
+        position: positions[n.id] || { x: 0, y: 0 },
+        draggable: builderTools,
+        connectable: builderTools,
+        data: {
+          node: n, lookups, problem: problems[n.id] ?? null,
+          editing: openPanel?.type === 'node' && openPanel.id === n.id,
+          highlighted: highlighted === n.id,
+          guideMark: st ? { step: st.step, state: st.done ? 'done' : step?.nodeId === n.id ? 'current' : 'pending' } : null,
+          allow,
+          onEdit: openNode, onDuplicate: handleDuplicate, onRemove: handleRemove, onAddFrom: addFrom,
+        },
+      };
+    });
     return [startNode, ...rest];
-  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlightedNodeId, openNode, handleDuplicate, handleRemove, addFrom]);
+  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, addFrom]);
 
   const reactFlowEdges: Edge[] = useMemo(
     () => graphEdges.map(e => ({
-      id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle, deletable: e.deletable,
+      id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle, deletable: e.deletable && builderTools,
       label: e.label || undefined,
       labelStyle: { fontSize: 10, fill: e.color },
       style: { stroke: e.color },
     })),
-    [graphEdges]
+    [graphEdges, builderTools]
   );
 
   const pendingLabel = useMemo(() => {
@@ -364,34 +490,30 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
   }, [pendingSource, nodes]);
 
   const save = async () => {
-    if (!id || !automation) return;
-    const issue = triggerProblem(trigger);
+    if (!id || !automation || readOnly) return;
+    const issue = isConversation ? null : triggerProblem(trigger);
     if (issue) {
       toast.error(issue);
       requestPanel({ type: 'trigger' });
       return;
     }
-    setSaving(true);
+    await persist(nodes, initialNodeId);
+  };
+
+  // Funil da equipe que a pessoa não edita: a cópia dela, e o canvas abre nela.
+  const duplicateForMe = async () => {
+    if (!automation) return;
     try {
-      await flowAutomationsService.update(id, {
-        name: automation.name,
-        trigger: serializeTrigger(trigger),
-        ...serializeReentry(reentry),
-        business_hours_only: businessHoursOnly,
-      });
-      // Manda o id ATUAL de cada bloco, definitivo (uuid) ou temporário (tmp_xxx,
-      // bloco novo desta sessão): o servidor decide "é novo?" batendo contra os
-      // blocos que já existem no fluxo. `initial_node_id` pode ser temporário
-      // também: o servidor resolve os dois pelo MESMO mapa.
-      await flowAutomationsService.saveFlow(id, buildSaveFlowPayload(nodes, initialNodeId));
-      toast.success('Fluxo salvo');
-      load();
-    } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { errors?: string[] } } })?.response?.data?.errors?.[0];
-      toast.error(msg || 'Não deu pra salvar. Tente de novo.');
-    } finally {
-      setSaving(false);
+      const copy = await flowAutomationsService.duplicate(automation.id);
+      toast.success('Pronto: este é o seu funil. Ajuste e salve.');
+      navigate(`${listPath}/${copy.id}`);
+    } catch (e) {
+      toast.error(serverMessage(e, 'Não deu pra duplicar agora. Tente de novo.'));
     }
+  };
+
+  const openStep = (nodeId: string) => {
+    requestPanel({ type: 'node', id: nodeId });
   };
 
   const runTest = async () => {
@@ -427,48 +549,86 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
             className="max-w-xs h-8"
             value={automation.name}
             onChange={e => setAutomation(a => (a ? { ...a, name: e.target.value } : a))}
-            aria-label="Nome do fluxo"
+            aria-label={isConversation ? 'Nome do funil' : 'Nome do fluxo'}
+            disabled={readOnly}
           />
-          <Chave
-            rotulo="Ligar o fluxo"
-            semRotuloVisivel
-            className="ml-2"
-            ligada={automation.is_enabled}
-            aoMudar={async () => {
-              // Ligar: o fluxo liga como está SALVO, então pede o Salvar antes e
-              // recusa enquanto faltar algo num bloco (modelo com campo em branco).
-              if (!automation.is_enabled) {
-                if (hasChanges) {
-                  toast.error('Salve as alterações antes de ligar: o fluxo liga como está salvo.');
-                  return;
+          {automation.team && (
+            <Badge variant="secondary" className="shrink-0 gap-1 text-[10px]">
+              <Users className="h-3 w-3" aria-hidden="true" /> Da equipe
+            </Badge>
+          )}
+          {!readOnly && (
+            <Chave
+              rotulo={isConversation ? 'Ligar o funil' : 'Ligar o fluxo'}
+              semRotuloVisivel
+              className="ml-2"
+              ligada={automation.is_enabled}
+              aoMudar={async () => {
+                // Ligar: o fluxo liga como está SALVO, então pede o Salvar antes e
+                // recusa enquanto faltar algo num bloco (modelo com campo em branco)
+                // ou um passo do guia (sprint 4).
+                if (!automation.is_enabled) {
+                  if (hasChanges) {
+                    toast.error('Salve as alterações antes de ligar: o fluxo liga como está salvo.');
+                    return false;
+                  }
+                  const pendingGuide = guidePendingText(steps);
+                  if (pendingGuide) {
+                    toast.error(pendingGuide);
+                    return false;
+                  }
+                  if (blockingProblem) {
+                    toast.error(blockingProblem);
+                    return false;
+                  }
                 }
-                if (blockingProblem) {
-                  toast.error(blockingProblem);
-                  return;
+                try {
+                  const updated = await flowAutomationsService.toggle(automation.id);
+                  // Só a chave: recarregar o fluxo apagaria o que ainda não foi salvo.
+                  setAutomation(a => (a ? { ...a, is_enabled: updated.is_enabled } : a));
+                  return true;
+                } catch (e) {
+                  toast.error(serverMessage(e, 'Não deu pra ligar agora. Tente de novo.'));
+                  return false;
                 }
-              }
-              const updated = await flowAutomationsService.toggle(automation.id);
-              // Só a chave: recarregar o fluxo apagaria o que ainda não foi salvo.
-              setAutomation(a => (a ? { ...a, is_enabled: updated.is_enabled } : a));
-            }}
-          />
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8"
-            onClick={() => setEditingSettings(true)}
-            title={businessHoursOnly ? `${reentrySummary(reentry)} · só em horário comercial` : reentrySummary(reentry)}
-          >
-            <Settings2 className="h-3.5 w-3.5 mr-1" aria-hidden="true" /> <span className="hidden sm:inline">Configurações</span>
-          </Button>
+              }}
+            />
+          )}
+          {builderTools && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8"
+              onClick={() => setEditingSettings(true)}
+              title={businessHoursOnly ? `${reentrySummary(reentry)} · só em horário comercial` : reentrySummary(reentry)}
+            >
+              <Settings2 className="h-3.5 w-3.5 mr-1" aria-hidden="true" /> <span className="hidden sm:inline">Configurações</span>
+            </Button>
+          )}
           <div className="flex-1" />
           {unsaved && <span className="hidden sm:inline text-xs text-muted-foreground">Alterações não salvas</span>}
-          <Button size="sm" onClick={save} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />} {saving ? 'Salvando…' : 'Salvar'}
-          </Button>
+          {readOnly ? (
+            <Button size="sm" variant="outline" onClick={duplicateForMe}>
+              <Copy className="h-4 w-4 mr-1" aria-hidden="true" /> Duplicar pra ter a sua cópia
+            </Button>
+          ) : (
+            <Button size="sm" onClick={save} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />} {saving ? 'Salvando…' : 'Salvar'}
+            </Button>
+          )}
         </div>
+        {readOnly && (
+          <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-1.5 text-xs text-muted-foreground" role="status" data-testid="faixa-so-ver">
+            <Users className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>
+              {automation.team
+                ? 'Este funil é da equipe: só o gestor edita. Você pode disparar ele nas conversas ou duplicar pra ter a sua cópia.'
+                : 'Você só pode ver este funil. Duplique pra ter a sua cópia.'}
+            </span>
+          </div>
+        )}
 
-        {!automation.is_enabled && blockingProblem && nodes.length > 0 && (
+        {!readOnly && !step && !automation.is_enabled && blockingProblem && nodes.length > 0 && (
           <div className="flex items-center gap-2 border-b border-amber-500/40 bg-amber-500/10 px-4 py-1.5 text-xs text-amber-700 dark:text-amber-300" role="status">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>{blockingProblem}</span>
@@ -480,10 +640,16 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
             <span>{reentryAlert}</span>
           </div>
         )}
-        {banner && <div data-testid="faixa-do-canvas">{banner}</div>}
+        {banner !== undefined ? (
+          banner && <div data-testid="faixa-do-canvas">{banner}</div>
+        ) : (
+          steps.length > 0 && (
+            <FlowGuideBanner steps={steps} kind={kind} showFinished={sawPendingStep} onOpenStep={openStep} />
+          )
+        )}
 
         <div className="flex-1 flex min-h-0">
-          {blocksOpen && (
+          {blocksOpen && builderTools && (
             <FlowBlocksPanel
               onPick={item => insertNode(item, pendingSource)}
               onClose={() => setBlocksOpen(false)}
@@ -504,6 +670,8 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
                   if (node.type === 'flowNode') openNode(node.id);
                 }}
                 onConnect={onConnect}
+                nodesConnectable={builderTools}
+                edgesFocusable={builderTools}
                 minZoom={0.2}
                 maxZoom={1.5}
                 zoomOnDoubleClick={false}
@@ -515,6 +683,11 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
               </ReactFlow>
             </ReactFlowProvider>
 
+            {steps.length > 0 && step && (
+              <FlowGuideChecklist steps={steps} onOpenStep={openStep} className="absolute right-2 top-2 z-10" />
+            )}
+
+            {builderTools && (
             <div className="absolute left-2 top-2 z-10 flex items-center gap-2">
               <Button
                 size="sm"
@@ -537,6 +710,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
                 {testing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />} Simular
               </Button>
             </div>
+            )}
 
             {pendingSource && (
               <div className="absolute top-12 left-2 z-10 rounded-md bg-primary/10 border border-primary text-primary text-xs px-2 py-1">
@@ -545,7 +719,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
               </div>
             )}
 
-            {nodes.length === 0 && (
+            {nodes.length === 0 && builderTools && (
               <p className="pointer-events-none absolute inset-x-0 bottom-16 z-10 mx-auto max-w-sm px-4 text-center text-sm text-muted-foreground">
                 Escolha o primeiro bloco em Blocos (ou arraste ele pra cá). Ele entra logo depois do Início.
               </p>
@@ -577,11 +751,14 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId = null 
               node={editingNode}
               resources={resources}
               onClose={() => requestPanel(null)}
-              onSave={handleSaveNodeConfig}
+              onSave={(nodeId, patch) => void handleSaveNodeConfig(nodeId, patch)}
               onDirtyChange={sidePanel.setDirty}
+              flowKind={kind}
+              guided={guided}
+              saving={saving}
             />
           )}
-          {openPanel?.type === 'trigger' && (
+          {openPanel?.type === 'trigger' && !isConversation && (
             <FlowTriggerPanel
               trigger={trigger}
               resources={resources}

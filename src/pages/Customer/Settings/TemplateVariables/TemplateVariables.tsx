@@ -228,15 +228,15 @@ export default function TemplateVariables() {
           <div className="flex items-center gap-2 mb-1">
             <Code size={20} className="text-primary" />
             <h1 className="text-2xl font-bold">
-              Variáveis de Funis{' '}
+              Variáveis de mensagem{' '}
               <span className="text-base font-normal text-muted-foreground">
                 ({custom.length} customizadas)
               </span>
             </h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            Variáveis prontas que você insere nos funis (como {'{{nome}}'}) e que viram texto real no
-            momento do envio, lido do lead da conversa.
+            Variáveis que você insere nas mensagens dos funis e das automações (como {'{{nome}}'}) e que
+            viram texto real no momento do envio, lido do lead da conversa.
           </p>
         </div>
         <Button onClick={openCreate}>

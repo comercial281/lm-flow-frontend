@@ -141,7 +141,12 @@ export function useAutomacaoRodando({ conversationId, atualizarQuando }: Opcoes)
 
   const pararUma = async (linha: LinhaAutomatica) => {
     const ok = await confirmar({
-      titulo: linha.tipo === 'fluxo' ? 'Parar o fluxo pra este lead?' : 'Parar o follow-up pra este lead?',
+      titulo:
+        linha.tipo === 'funil'
+          ? 'Parar o funil pra este lead?'
+          : linha.tipo === 'fluxo'
+            ? 'Parar o fluxo pra este lead?'
+            : 'Parar o follow-up pra este lead?',
       descricao: 'As mensagens automáticas que ainda iam sair pra este lead não saem mais. Os outros leads não mudam.',
       rotuloDaAcao: 'Parar',
       destrutivo: true,
@@ -215,5 +220,10 @@ export function useAutomacaoRodando({ conversationId, atualizarQuando }: Opcoes)
     </>
   );
 
-  return { linhas, faixa, dialogos, perguntarAntesDeEnviar, pararTudo };
+  // `atualizar`: relê agora (o "Disparar funil" do campo de mensagem chama depois de disparar).
+  const atualizar = useCallback(() => {
+    void carregar();
+  }, [carregar]);
+
+  return { linhas, faixa, dialogos, perguntarAntesDeEnviar, pararTudo, atualizar };
 }

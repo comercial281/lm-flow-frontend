@@ -9,8 +9,11 @@ import type { LeadFollowupState } from '@/services/leadFollowup/leadFollowupServ
  */
 export interface LinhaAutomatica {
   key: string;
-  /** Como a linha se apresenta. O fluxo de follow-up (sprint 3) é `followup`. */
-  tipo: 'fluxo' | 'followup';
+  /**
+   * Como a linha se apresenta. O fluxo de follow-up (sprint 3) é `followup`; o
+   * funil de conversa disparado no campo de mensagem (sprint 4) é `funil`.
+   */
+  tipo: 'fluxo' | 'followup' | 'funil';
   /** Fluxo (automação ou follow-up novo): id da instância. Follow-up antigo: vazio (para pelo lead). */
   id: string;
   texto: string;
@@ -28,8 +31,10 @@ export function quando(valor: unknown, agora: Date = new Date()): string {
 
 export function linhaDoFluxo(fluxo: RunningFlow, agora: Date = new Date()): LinhaAutomatica {
   // Sprint 3: o fluxo da aba Follow-up aparece como "Follow-up "X"".
+  // Sprint 4: o funil de conversa aparece como "Funil "X"".
   const followup = fluxo.kind === 'followup';
-  const rotulo = followup ? 'Follow-up' : 'Fluxo';
+  const funil = fluxo.kind === 'conversation';
+  const rotulo = followup ? 'Follow-up' : funil ? 'Funil' : 'Fluxo';
   const nome = fluxo.flow_name ? `${rotulo} "${fluxo.flow_name}"` : rotulo;
   let fase = 'em andamento';
   if (fluxo.phase === 'waiting_reply') {
@@ -37,7 +42,13 @@ export function linhaDoFluxo(fluxo: RunningFlow, agora: Date = new Date()): Linh
   } else if (fluxo.phase === 'waiting') {
     fase = fluxo.until ? `esperando até ${quando(fluxo.until, agora)}` : 'esperando';
   }
-  return { key: `fluxo-${fluxo.id}`, tipo: followup ? 'followup' : 'fluxo', id: fluxo.id, texto: `${nome} · ${fase}`, podeParar: fluxo.active };
+  return {
+    key: `fluxo-${fluxo.id}`,
+    tipo: followup ? 'followup' : funil ? 'funil' : 'fluxo',
+    id: fluxo.id,
+    texto: `${nome} · ${fase}`,
+    podeParar: fluxo.active,
+  };
 }
 
 export function linhaDoFollowup(estado: LeadFollowupState, agora: Date = new Date()): LinhaAutomatica | null {
@@ -71,5 +82,6 @@ export function assinaturaDasLinhas(linhas: LinhaAutomatica[]): string {
 export function rotuloDeParar(linhas: LinhaAutomatica[]): string {
   const tipos = new Set(linhas.map(l => l.tipo));
   if (tipos.size > 1 || linhas.length > 1) return 'Enviar e tirar das automações';
+  if (tipos.has('funil')) return 'Enviar e parar o funil';
   return tipos.has('followup') ? 'Enviar e parar o follow-up' : 'Enviar e tirar do fluxo';
 }

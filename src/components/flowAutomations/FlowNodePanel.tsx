@@ -3,15 +3,20 @@ import { Button, Input, Label, Textarea } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import SendFromField from '@/components/numbers/SendFromField';
 import { applySendFrom, sendFromOf } from '@/features/numbers/sendFrom';
-import type { FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
+import type { FlowAutomationKind, FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
 import { ActionEditor, type AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
 import { HIDDEN_BLOCK_NOTICE, blockGroup, blockLabel, isVisibleNode } from '@/features/flowAutomations/palette';
 import { blockDescription, blockIcon } from '@/features/flowAutomations/blockInfo';
 import { nodeColor } from '@/lib/flowAutomationGraph';
+import { cn } from '@/lib/utils';
 import { mesmoConteudo } from '@/hooks/useAlteracoesNaoSalvas';
 import { leadActionConfig, leadActionOf } from '@/features/flowAutomations/leadAction';
 import { nodeProblem } from '@/features/flowAutomations/readiness';
-import { WAIT_FOR_REPLY_HELP, WAIT_UNITS, joinMinutes, splitMinutes, type WaitUnit } from '@/features/flowAutomations/waitTime';
+import {
+  SECONDS_UNITS, WAIT_FOR_REPLY_HELP, WAIT_UNITS, joinMinutes, joinSeconds, splitMinutes, splitSeconds, waitHasSeconds,
+  waitTotalSeconds, type SecondsUnit, type WaitUnit,
+} from '@/features/flowAutomations/waitTime';
+import { guideRequiredProblem, stepLabel } from '@/features/flowAutomations/guide';
 import {
   CONDITION_CRITERIA,
   LEGACY_CRITERIA_LABELS,
@@ -33,6 +38,7 @@ import { RECOVERED_EFFECTS } from '@/features/flowAutomations/recovered';
 import { moveStageModeOf, stageNameOf, withMoveStageMode, withStageName } from '@/features/flowAutomations/moveStage';
 import { FormAnswerPicker } from './FormAnswerPicker';
 import { FlowSidePanel } from './FlowSidePanel';
+import { FunnelMessageFields, hasRichMessage } from './FunnelMessageFields';
 import { VariableChipBar } from './VariableChipBar';
 
 interface Props {
@@ -42,6 +48,15 @@ interface Props {
   onSave: (id: string, patch: { label: string; config: FlowNodeConfig }) => void;
   /** Avisa o canvas quando o rascunho do painel difere do bloco (pra perguntar antes de descartar). */
   onDirtyChange?: (dirty: boolean) => void;
+  /**
+   * Sprint 4: o tipo do fluxo. No funil de conversa a mensagem pode ser mídia ou
+   * contato e sai pelo número da conversa; o Esperar fala em segundos.
+   */
+  flowKind?: FlowAutomationKind;
+  /** Modo guiado (o corretor): sem apelido do bloco nem opções que o servidor não deixa mudar. */
+  guided?: boolean;
+  /** Salvando no servidor (o passo do guia grava na hora). */
+  saving?: boolean;
 }
 
 // "Por um tempo, saindo só em horário comercial" (o modo `schedule`) virou a
@@ -83,6 +98,33 @@ function DurationField({ minutes, onChange, label }: { minutes: unknown; onChang
         aria-label="Unidade"
       >
         {WAIT_UNITS.map(u => (
+          <option key={u.value} value={u.value}>{u.label}</option>
+        ))}
+      </Seletor>
+    </div>
+  );
+}
+
+// Esperar do funil de conversa (sprint 4): segundos, minutos ou horas.
+function SecondsField({ config, onChange }: { config: FlowNodeConfig; onChange: (next: { minutes: number; seconds: number }) => void }) {
+  const { amount, unit } = splitSeconds(waitTotalSeconds(config) || 5);
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        type="number"
+        min={1}
+        className="w-24"
+        value={amount}
+        onChange={e => onChange(joinSeconds(e.target.value, unit))}
+        aria-label="Quanto tempo"
+      />
+      <Seletor
+        value={unit}
+        onChange={e => onChange(joinSeconds(amount, e.target.value as SecondsUnit))}
+        className="w-32"
+        aria-label="Unidade"
+      >
+        {SECONDS_UNITS.map(u => (
           <option key={u.value} value={u.value}>{u.label}</option>
         ))}
       </Seletor>
@@ -205,7 +247,7 @@ function LabelChecklist({ selected, onChange, resources }: { selected: string[];
 // Painel lateral de um bloco (sprint 4; antes era uma janela): rascunho local,
 // só aplica em "Salvar". O fluxo inteiro só vai pro servidor no Salvar do topo
 // do canvas.
-export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange }: Props) {
+export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false }: Props) {
   const [label, setLabel] = useState(node?.label || '');
   const [config, setConfig] = useState<FlowNodeConfig>(node?.config || {});
   const [problem, setProblem] = useState<string | null>(null);
@@ -230,6 +272,8 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange 
   const hidden = !isVisibleNode(activeNode);
 
   const set = (key: string, value: unknown) => setConfig(c => ({ ...c, [key]: value }));
+  const isConversation = flowKind === 'conversation';
+  const guide = activeNode.guide ?? null;
 
   function conditionFields(kind: 'condition' | 'filter_label') {
     const criterion = criterionOf(config);
@@ -310,6 +354,22 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange 
     switch (activeNode.kind) {
       case 'send_whatsapp': {
         const envio = sendFromOf(config);
+        // Funil de conversa (sprint 4): texto, mídia ou contato, pelo número da conversa.
+        if (isConversation) {
+          return <FunnelMessageFields config={config} onChange={setConfig} conversation />;
+        }
+        if (hasRichMessage(node?.config ?? {})) {
+          return (
+            <>
+              <FunnelMessageFields config={config} onChange={setConfig} />
+              <SendFromField
+                scope="lead_automation_rules"
+                value={envio}
+                onChange={v => setConfig(c => applySendFrom(c, v))}
+              />
+            </>
+          );
+        }
         return (
           <>
             <div className="space-y-1">
@@ -409,6 +469,18 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange 
         );
       case 'wait': {
         const mode = waitModeOf(config);
+        // Funil de conversa (sprint 4): só "por um tempo", em segundos (é conversa ao vivo).
+        if (isConversation || waitHasSeconds(config)) {
+          return (
+            <div className="space-y-1">
+              <Label className="text-xs">Quanto tempo esperar antes da próxima mensagem</Label>
+              <SecondsField config={config} onChange={next => setConfig(c => ({ ...c, mode: 'interval', ...next }))} />
+              <p className="text-xs text-muted-foreground">
+                Esperas de até 2 minutos acontecem na hora; as maiores podem atrasar até 1 minuto.
+              </p>
+            </div>
+          );
+        }
         return (
           <>
             <div className="space-y-1">
@@ -511,8 +583,9 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange 
     const finalConfig = activeNode.kind === 'move_stage' && moveStageModeOf(config) === 'name'
       ? withStageName(config, stageNameOf(config))
       : config;
-    // Mesma régua do cartão e da chave de ligar (readiness.ts).
-    const issue = nodeProblem({ kind: activeNode.kind, config: finalConfig });
+    // Mesma régua do cartão e da chave de ligar (readiness.ts), e o que o passo
+    // do guia pede (sprint 4).
+    const issue = nodeProblem({ kind: activeNode.kind, config: finalConfig }) ?? guideRequiredProblem(guide, finalConfig);
     if (issue) {
       setProblem(issue);
       return;
@@ -531,13 +604,28 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange 
       footer={(
         <>
           <Button variant="outline" onClick={onClose}>{hidden ? 'Fechar' : 'Cancelar'}</Button>
-          {!hidden && <Button onClick={save}>Salvar</Button>}
+          {!hidden && <Button onClick={save} disabled={saving}>{saving ? 'Salvando…' : 'Salvar'}</Button>}
         </>
       )}
     >
       <div className="space-y-5">
+        {guide && (
+          <div
+            data-testid="dica-do-passo"
+            className={cn(
+              'rounded-md border px-3 py-2 text-sm',
+              guide.done ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-amber-400/60 bg-amber-400/10',
+            )}
+          >
+            <p className="font-semibold">
+              {guide.done ? '✓ ' : ''}{stepLabel(guide)} — {guide.title}
+            </p>
+            {guide.hint && <p className="mt-0.5 text-xs text-muted-foreground">Dica: {guide.hint}</p>}
+            {!guide.done && <p className="mt-1 text-xs text-muted-foreground">Quando terminar, clique em Salvar: o passo fica feito.</p>}
+          </div>
+        )}
         {renderFields()}
-        {!hidden && (
+        {!hidden && !guided && (
           <div className="space-y-1">
             <Label className="text-xs" htmlFor="flow-node-label">Apelido do bloco (opcional)</Label>
             <Input id="flow-node-label" value={label} onChange={e => setLabel(e.target.value)} placeholder={title} />

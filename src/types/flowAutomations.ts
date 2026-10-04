@@ -15,8 +15,12 @@ export type FlowNodeKind =
   // respondia, como bloco. Sem config.
   | 'followup_recovered';
 
-/** Sprint 3: o fluxo é uma automação (aba Automações) ou um follow-up (aba Follow-up). */
-export type FlowAutomationKind = 'automation' | 'followup';
+/**
+ * Sprint 3: o fluxo é uma automação (aba Automações) ou um follow-up (aba Follow-up).
+ * Sprint 4: `conversation` = funil de conversa do corretor (página Funis de mensagem),
+ * disparado à mão no campo de mensagem.
+ */
+export type FlowAutomationKind = 'automation' | 'followup' | 'conversation';
 
 // Gatilho do fluxo (sprint 1 das Automações, 02/10/2026): o MESMO evento e o
 // MESMO formato de condição das regras de Automações (LeadAutomationRule::TRIGGERS),
@@ -53,6 +57,21 @@ export interface FlowAutomationStep {
   active: boolean;
 }
 
+/**
+ * Passo da construção guiada (sprint 4): o fluxo criado de um modelo traz, em
+ * cada bloco que a pessoa precisa olhar, "Passo 2 de 5 — Escreva a mensagem de
+ * abertura" + uma dica. `required` são os campos do config que precisam estar
+ * preenchidos (caminho com ponto: `params.group_jid`). `done` vem do servidor.
+ */
+export interface FlowNodeGuide {
+  step: number;
+  total: number;
+  title: string;
+  hint: string;
+  required: string[];
+  done: boolean;
+}
+
 export interface FlowAutomationNode {
   id: string;
   kind: FlowNodeKind;
@@ -64,6 +83,33 @@ export interface FlowAutomationNode {
   pos_x: number | null;
   pos_y: number | null;
   steps: FlowAutomationStep[];
+  /** Sprint 4: o passo do guia deste bloco (null/ausente = bloco sem passo). Só leitura. */
+  guide?: FlowNodeGuide | null;
+  /**
+   * Sprint 4, só na tela: a pessoa clicou em Salvar no painel deste bloco. Vai
+   * no `save_flow` como `guide_done: true` e o servidor marca o passo como feito.
+   */
+  guide_done?: boolean;
+}
+
+/** Um passo do guia que falta (`guide_pending` do fluxo), em ordem. */
+export interface FlowGuidePending {
+  node_id: string;
+  step: number;
+  total: number;
+  title: string;
+}
+
+/** O que QUEM PEDIU pode fazer com o fluxo (sprint 4; muda algo só no funil de conversa). */
+export interface FlowPermissions {
+  /** Abrir o canvas pra salvar. Falso = só ver (funil da equipe, pro corretor). */
+  can_edit: boolean;
+  /** Modo guiado: salva só conteúdo (texto, mídia, tempo) e tira mensagem. */
+  guided: boolean;
+  /** Mexer em "Da equipe" (só o gestor). */
+  can_mark_team: boolean;
+  /** Criar do zero (só o gestor, no funil de conversa). */
+  can_create_blank: boolean;
 }
 
 // Contrato (spec 02/10): o backend devolve SEMPRE `{ event, conditions }`. O
@@ -100,6 +146,16 @@ export interface FlowAutomation {
   created_at: string;
   updated_at: string;
   nodes?: FlowAutomationNode[];
+  // ── Sprint 4: funil de conversa e construção guiada ──
+  owner_user_id?: string | number | null;
+  owner_name?: string | null;
+  /** "Da equipe": todo mundo vê e dispara, só o gestor edita. */
+  team?: boolean;
+  converted_from_message_funnel_id?: string | number | null;
+  /** Todos os passos do guia feitos (fluxo sem guia = true). */
+  guide_done?: boolean;
+  guide_pending?: FlowGuidePending[];
+  permissions?: FlowPermissions;
 }
 
 export interface FlowAutomationFolder {
