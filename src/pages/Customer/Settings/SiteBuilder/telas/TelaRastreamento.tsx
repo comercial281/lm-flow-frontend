@@ -1,6 +1,8 @@
-import { Badge, Input, Label as UILabel, Textarea } from '@/components/ui/ds';
+import { Badge } from '@/components/ui/ds';
 import { erroGa4, erroGtm, erroPixel } from '@/features/siteBuilder/trackingIds';
 import type { TelaId } from '@/features/siteBuilder/meuSiteMenu';
+import { Secao, Secoes } from '../ui/Secao';
+import { CampoTexto, CampoTextoLongo } from '../ui/Campo';
 import type { FormProps } from './tipos';
 
 interface Props extends FormProps {
@@ -15,24 +17,12 @@ function Selo({ ligado }: { ligado: boolean }) {
 
 function LinhaEnderecoProprio({ irPara }: { irPara: (t: TelaId) => void }) {
   return (
-    <p className="text-xs text-muted-foreground">
+    <p className="text-sm text-muted-foreground">
       Funciona só no seu endereço próprio.{' '}
       <button type="button" className="underline" onClick={() => irPara('endereco')}>
         Configure em Endereço do site.
       </button>
     </p>
-  );
-}
-
-function Cartao({ titulo, ligado, children }: { titulo: string; ligado: boolean; children: React.ReactNode }) {
-  return (
-    <section className="rounded-xl border border-border bg-card p-5 space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-base font-semibold">{titulo}</h2>
-        <Selo ligado={ligado} />
-      </div>
-      {children}
-    </section>
   );
 }
 
@@ -44,49 +34,57 @@ export default function TelaRastreamento({ site, siteForm, setF, irPara }: Props
   const eGtm = erroGtm(siteForm.gtm_id ?? '');
 
   return (
-    <div className="space-y-4">
-      <Cartao titulo="Google Analytics" ligado={!!salvo?.ga4_measurement_id}>
-        <p className="text-sm text-muted-foreground">
-          Cole o código que começa com G-. Onde achar: Analytics › Administrador › Fluxos de dados.
-        </p>
-        <Input value={siteForm.ga4_measurement_id ?? ''} onChange={e => setF({ ga4_measurement_id: e.target.value })}
-          placeholder="G-AB12CD34EF" className="font-mono" aria-label="Código de medição" />
-        {eGa4 && <p className="text-xs text-destructive">{eGa4}</p>}
-      </Cartao>
+    <Secoes>
+      <Secao
+        titulo="Google Analytics"
+        descricao="Mostra no Google quantas pessoas visitam o site, de onde vêm e quais páginas mais olham."
+        acao={<Selo ligado={!!salvo?.ga4_measurement_id} />}
+      >
+        <CampoTexto id="rastreio-ga4" rotulo="Código de medição" placeholder="G-AB12CD34EF" classeDoControle="font-mono"
+          ajuda="Começa com G-. Onde achar: Analytics › Administrador › Fluxos de dados."
+          erro={eGa4 ?? undefined} valor={siteForm.ga4_measurement_id ?? ''}
+          aoMudar={v => setF({ ga4_measurement_id: v })} />
+      </Secao>
 
-      <Cartao titulo="Pixel do Meta" ligado={!!salvo?.facebook_pixel_id}>
-        <p className="text-sm text-muted-foreground">
-          Cole o número do pixel. Onde achar: Gerenciador de Eventos › Fontes de dados.
-        </p>
-        <Input value={siteForm.facebook_pixel_id ?? ''} onChange={e => setF({ facebook_pixel_id: e.target.value })}
-          placeholder="123456789012345" className="font-mono" aria-label="Número do pixel" />
-        {ePixel && <p className="text-xs text-destructive">{ePixel}</p>}
-      </Cartao>
+      <Secao
+        titulo="Pixel do Meta"
+        descricao="Avisa o Meta (Facebook e Instagram) de quem visitou o site, para mostrar anúncios de novo a essas pessoas e contar os contatos que vieram dos anúncios."
+        acao={<Selo ligado={!!salvo?.facebook_pixel_id} />}
+      >
+        <CampoTexto id="rastreio-pixel" rotulo="Número do pixel" placeholder="123456789012345" classeDoControle="font-mono"
+          ajuda="Só números. Onde achar: Gerenciador de Eventos › Fontes de dados."
+          erro={ePixel ?? undefined} valor={siteForm.facebook_pixel_id ?? ''}
+          aoMudar={v => setF({ facebook_pixel_id: v })} />
+      </Secao>
 
-      <Cartao titulo="Google Tag Manager" ligado={!!salvo?.gtm_id}>
-        <p className="text-sm text-muted-foreground">Só se a sua agência pediu. Começa com GTM-.</p>
-        <Input value={siteForm.gtm_id ?? ''} onChange={e => setF({ gtm_id: e.target.value })}
-          placeholder="GTM-AB12CD" className="font-mono" aria-label="Código do contêiner" />
-        {eGtm && <p className="text-xs text-destructive">{eGtm}</p>}
+      <Secao
+        titulo="Google Tag Manager"
+        descricao="Só se a sua agência pediu. Serve para ela instalar outras ferramentas de medição sem mexer no site."
+        acao={<Selo ligado={!!salvo?.gtm_id} />}
+      >
+        <CampoTexto id="rastreio-gtm" rotulo="Código do contêiner" placeholder="GTM-AB12CD" classeDoControle="font-mono"
+          ajuda="Começa com GTM-." erro={eGtm ?? undefined} valor={siteForm.gtm_id ?? ''}
+          aoMudar={v => setF({ gtm_id: v })} />
         <LinhaEnderecoProprio irPara={irPara} />
-      </Cartao>
+      </Secao>
 
-      <details className="rounded-xl border border-border bg-card p-5">
-        <summary className="cursor-pointer text-base font-semibold">Códigos avançados (para quem entende)</summary>
-        <div className="mt-4 space-y-3">
-          <div>
-            <UILabel htmlFor="custom-head">Início do head</UILabel>
-            <Textarea id="custom-head" value={siteForm.custom_head_html ?? ''} rows={5}
-              onChange={e => setF({ custom_head_html: e.target.value })} className="mt-1 font-mono text-xs" />
+      <Secao
+        titulo="Códigos avançados"
+        descricao="Para colar o código que outra ferramenta pediu para instalar no site. Se ninguém pediu, deixe em branco."
+      >
+        <details className="group space-y-5">
+          <summary className="cursor-pointer text-sm font-medium">Mostrar os campos</summary>
+          <div className="mt-5 space-y-5">
+            <CampoTextoLongo id="custom-head" rotulo="Código no topo das páginas" rows={5} classeDoControle="font-mono text-xs md:text-xs"
+              ajuda="Entra no início do cabeçalho técnico (head) de todas as páginas do site."
+              valor={siteForm.custom_head_html ?? ''} aoMudar={v => setF({ custom_head_html: v })} />
+            <CampoTextoLongo id="custom-body" rotulo="Código no começo do conteúdo" rows={5} classeDoControle="font-mono text-xs md:text-xs"
+              ajuda="Entra logo no começo do corpo (body) de todas as páginas do site."
+              valor={siteForm.custom_body_html ?? ''} aoMudar={v => setF({ custom_body_html: v })} />
+            <LinhaEnderecoProprio irPara={irPara} />
           </div>
-          <div>
-            <UILabel htmlFor="custom-body">Início do body</UILabel>
-            <Textarea id="custom-body" value={siteForm.custom_body_html ?? ''} rows={5}
-              onChange={e => setF({ custom_body_html: e.target.value })} className="mt-1 font-mono text-xs" />
-          </div>
-          <LinhaEnderecoProprio irPara={irPara} />
-        </div>
-      </details>
-    </div>
+        </details>
+      </Secao>
+    </Secoes>
   );
 }
