@@ -14,6 +14,7 @@ export const usersService = {
     if (f.tenant) params.tenant = f.tenant;
     if (f.role) params.role = f.role;
     if (f.situation) params.situation = f.situation;
+    if (f.notification) params.notification = f.notification;
     if (f.includeTeam) params.include_team = 'true';
     if (f.page > 1) params.page = f.page;
     const res = await api.get('/super/users', { params });

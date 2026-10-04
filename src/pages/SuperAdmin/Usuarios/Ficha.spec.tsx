@@ -20,6 +20,7 @@ const perfil = (extra: Record<string, unknown> = {}) => ({
     summary: { top_screens: [{ screen: 'Conversas', seconds: 3600 }] },
     entries: [{ started_at: new Date().toISOString(), last_seen_at: null, duration_seconds: 600, ip: '10.0.0.1', device: 'Chrome no Mac', new_device: true }],
     actions: [{ occurred_at: new Date().toISOString(), category: 'lead', action: 'create', title: 'Criou um lead', description: 'Lead João' }],
+    notifications: null,
     ...extra,
   } },
 });
@@ -100,5 +101,14 @@ describe('FichaDoUsuario', () => {
     montar();
     await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: 'Ana Souza' })).toBeInTheDocument());
     expect(screen.queryByRole('button', { name: /link/i })).not.toBeInTheDocument();
+  });
+
+  it('ação sensível no histórico ganha o selo', async () => {
+    apiGet.mockResolvedValue(perfil({
+      actions: [{ occurred_at: new Date().toISOString(), category: 'request', action: 'post_contacts_export', title: 'Exportou contatos', description: null, sensitive: true }],
+    }));
+    montar();
+    await waitFor(() => expect(screen.getByText('Exportou contatos')).toBeInTheDocument());
+    expect(screen.getByText('Sensível')).toBeInTheDocument();
   });
 });

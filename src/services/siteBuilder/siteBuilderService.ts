@@ -269,8 +269,10 @@ export interface SiteFormData {
   primary_domain?: string;
   active?: boolean;
   published?: boolean;
-  logo_url?: string;
-  favicon_url?: string;
+  /** Remover o logo grava null (o servidor aceita e o site fica sem logo). */
+  logo_url?: string | null;
+  /** Ícone da aba do navegador do site. Remover grava null. */
+  favicon_url?: string | null;
   primary_color?: string;
   accent_color?: string;
   font_family?: string;

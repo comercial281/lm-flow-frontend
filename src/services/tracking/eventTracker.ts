@@ -63,6 +63,14 @@ function elementInfo(el: HTMLElement | null): { label?: string; selector?: strin
   return { label: (label || '').toString().slice(0, 200), selector };
 }
 
+// Permissão de push deste aparelho, para a ficha do usuário (Notificações).
+// Sem a API (ex.: Safari do iPhone fora do app instalado) → 'unsupported'.
+export function permissaoDeNotificacao(): 'granted' | 'denied' | 'default' | 'unsupported' {
+  if (typeof Notification === 'undefined' || !Notification) return 'unsupported';
+  const p = Notification.permission;
+  return p === 'granted' || p === 'denied' ? p : 'default';
+}
+
 class EventTracker {
   private queue: UiEvent[] = [];
   private running = false;
@@ -189,7 +197,11 @@ class EventTracker {
   private async heartbeat() {
     if (!this.running) return;
     try {
-      await api.post('/tracking/heartbeat', { path: this.currentPath, screen: this.currentScreen });
+      await api.post('/tracking/heartbeat', {
+        path: this.currentPath,
+        screen: this.currentScreen,
+        notification_permission: permissaoDeNotificacao(),
+      });
     } catch {
       // noop
     }

@@ -1,25 +1,23 @@
-import { Input, Label as UILabel, Textarea } from '@/components/ui/ds';
+import { Secao, Secoes } from '../ui/Secao';
+import { CampoTexto, CampoTextoLongo } from '../ui/Campo';
 import type { FormProps } from './tipos';
 
 export default function TelaGoogle({ siteForm, setF }: FormProps) {
   return (
-    <>
-      {/* SEO */}
-      <section className="rounded-xl border border-border bg-card p-5">
-        <h2 className="text-base font-semibold mb-4">SEO</h2>
-        <div className="space-y-3">
-          <div>
-            <UILabel>Título SEO</UILabel>
-            <Input value={siteForm.seo_title ?? ''} onChange={e => setF({ seo_title: e.target.value })}
-              placeholder="Imobiliária XYZ — Venda e locação de imóveis" className="mt-1" />
-          </div>
-          <div>
-            <UILabel>Meta description</UILabel>
-            <Textarea value={siteForm.seo_description ?? ''} onChange={e => setF({ seo_description: e.target.value })}
-              placeholder="Encontre o imóvel ideal..." rows={2} className="mt-1 resize-none" />
-          </div>
-        </div>
-      </section>
-    </>
+    <Secoes>
+      <Secao
+        titulo="Resultado no Google"
+        descricao="O título e a frase que o Google mostra na lista de resultados quando alguém pesquisa a sua imobiliária."
+      >
+        <CampoTexto id="google-titulo" rotulo="Título" valor={siteForm.seo_title ?? ''}
+          placeholder="Imobiliária XYZ — Venda e locação de imóveis"
+          ajuda="Também é o nome que aparece na aba do navegador. Use até uns 60 caracteres."
+          aoMudar={seo_title => setF({ seo_title })} />
+        <CampoTextoLongo id="google-descricao" rotulo="Descrição" valor={siteForm.seo_description ?? ''}
+          placeholder="Encontre o imóvel ideal..." rows={2} classeDoControle="resize-none"
+          ajuda="A frase embaixo do título nos resultados. Use até uns 160 caracteres. Também vira o subtítulo da capa, se você não escrever outro em Busca rápida."
+          aoMudar={seo_description => setF({ seo_description })} />
+      </Secao>
+    </Secoes>
   );
 }

@@ -16,6 +16,12 @@ vi.mock('@/services/users/usersService', () => ({ default: { getUsers: () => Pro
 vi.mock('@/services/portals/portalsService', () => ({ portalsService: { list: () => Promise.resolve([]), get: vi.fn() } }));
 const own = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('@/services/propertyOwners/propertyOwnersService', () => ({ propertyOwnersService: { list: () => Promise.resolve({ data: [], meta: { total: 0 } }), get: own.get } }));
+// Leaflet não roda no jsdom: o mapa vira um botão que "arrasta" o alfinete.
+vi.mock('./secoes/MapaDoCadastro', () => ({
+  default: ({ aoArrastar }: { aoArrastar: (lat: number, lng: number) => void }) => (
+    <button type="button" onClick={() => aoArrastar(-22.91, -47.07)}>arrastar alfinete</button>
+  ),
+}));
 
 import CadastroDoImovel from './CadastroDoImovel';
 import { NO_ACCESS_MESSAGE } from '@/components/permissions/noAccessCopy';
@@ -114,6 +120,21 @@ describe('CadastroDoImovel', () => {
     expect(enviado).not.toHaveProperty('featured');
     expect(enviado).not.toHaveProperty('published_on_site');
     expect(enviado).not.toHaveProperty('ai_enabled');
+  });
+
+  it('arrastar o alfinete e salvar manda o ponto e a origem manual, sem metadata', async () => {
+    svc.get.mockResolvedValue({ id: 'e2', code: 'AP3', title: 'Casa', transaction_type: 'sale', category_type: 'residential',
+      property_type: 'house', status: 'active', stage: 'ready', listing_kind: 'resale', sale_price: 1, created_at: '', updated_at: '',
+      address_street: 'Rua A', address_number: '1', address_city: 'Campinas', address_state: 'SP',
+      latitude: -22.9, longitude: -47.06, location_source: 'auto', metadata: { location_source: 'auto', outra: 1 } });
+    svc.update.mockResolvedValue({ id: 'e2', listing_kind: 'resale' });
+    abrir('/properties/e2/editar');
+    await userEvent.click(await screen.findByRole('button', { name: 'arrastar alfinete' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(svc.update).toHaveBeenCalledWith('e2', expect.objectContaining({
+      latitude: -22.91, longitude: -47.07, location_source: 'manual',
+    })));
+    expect(svc.update.mock.calls[0][1]).not.toHaveProperty('metadata');
   });
 
   it('editar um rascunho sem preço salva (o preço só é exigido fora do rascunho)', async () => {

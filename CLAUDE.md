@@ -6020,8 +6020,29 @@ Usuários → Usuários (`/admin/usuarios`, `src/pages/SuperAdmin/Usuarios/`) e 
 - *Enviar link de acesso* pede confirmação (manda WhatsApp). *Copiar* não pede. O principal não tem link.
 - **Ficha:** cartões de 30 dias, entradas com aparelho (selo *Aparelho novo*: aparelho que não aparecia antes ou há mais de 90 dias), telas que mais usa e histórico de ações.
 - **Aba acesa na ficha:** a aba Usuários tem `tambem` (regex da ficha, dois trechos depois de `/admin/usuarios/`) em `adminMenuItems.ts`; vale pra moldura (`donoDoEnderecoAdmin`) e pra faixa (`Abas`). Logs e Mensagem de acesso têm um trecho só, então não colidem.
-- `superLogsService.userMetrics` e `UserMetricsResponse` ficaram: a tela de Logs ainda usa. Saíram `userMetricDetail` e `UserMetricDetail`.
-- **Notificações** (push, avisos por WhatsApp, avisos na tela) entram na entrega 3B.
+- `superLogsService.userMetrics` e `UserMetricsResponse` ficaram até a tela de Logs nova entrar (entrega 4, abaixo): saíram junto com ela. Saíram `userMetricDetail` e `UserMetricDetail`.
+- **Notificações** (push, avisos por WhatsApp, avisos na tela): ver a seção *Notificações na ficha do usuário (04/10/2026)*.
+
+## Localização dos imóveis (desde 2026-10-04)
+
+Fase 4, entrega 5. Spec: `LM FLOW/specs/2026-10-03-fase-4-imoveis-mapa-pelo-cep-design.md` (pasta do Tony, fora deste repo). Depende do backend `lm-flow#389` (endpoint `GET /properties/geocode`, `location_source` no JSON e nos params, privacidade por tipo), que já está no ar. Regras puras em `src/features/properties/localizacao.ts` (com spec); a tela é `src/pages/Customer/Properties/cadastro/secoes/SecaoLocalizacao.tsx` + `MapaDoCadastro.tsx` (Leaflet, só baixa quando o mapa aparece).
+
+**Cadastro (seção Localização):**
+
+- **O CEP voltou a preencher o endereço.** O consumo do `cepLookup` lia chaves antigas; agora usa as chaves `address_*` (rua, bairro, cidade, UF). Texto de erro: "CEP não encontrado".
+- **O ponto vem do servidor.** Sair dos campos de endereço (cidade + rua, CEP completo ou bairro) chama `propertiesService.geocode`; o Nominatim nunca é chamado pelo navegador. Sair de um campo sem mudar nada não procura de novo.
+- **Alfinete arrastável.** Arrastar grava `latitude`/`longitude` e `location_source = 'manual'`; o servidor grava `'auto'` quando o ponto veio da busca. `location_source` vai junto no salvar porque `payloadDoFormulario` espalha o form. A tela **nunca manda `metadata`** (o servidor troca o metadata inteiro e apagaria a origem).
+- **Textos por precisão** (`TEXTO_DO_PONTO`): número → "Achamos pelo endereço. Arraste o alfinete se precisar ajustar."; rua → "Não achamos o número exato, mostramos a rua. Arraste até o imóvel."; bairro ou nada → "Não achamos o endereço. Arraste o alfinete até o imóvel."; arrastado à mão → "Posição ajustada à mão.". Sem endereço: "Preencha o endereço para marcar o imóvel no mapa." Na revenda aparece a nota "No site e nos portais aparece só a região, não o endereço exato."
+- **Precisão `city` não grava ponto.** Só centraliza o mapa na cidade (igual à tarefa em lote do backend): evita publicar o centro da cidade como ponto exato de empreendimento.
+- **O mapa centra na cidade ao abrir** a edição de um imóvel com endereço e sem ponto (sem gravar nada). Ponto salvo abre no zoom 16; sem alfinete no zoom de país.
+- **Serviço ocupado:** o servidor devolve `failed`; a tela tenta de novo **uma vez**, em silêncio (1,5 s), e se falhar de novo trata como não achado. A nova tentativa não sai se a busca já foi trocada por outra, e resposta atrasada é descartada (corrida do CEP).
+- **O alfinete manual nunca pula.** Só volta a seguir o endereço pelo botão "Reposicionar pelo endereço" (`alfinetePodePular`).
+
+**Privacidade (decisão de 03/10):** **empreendimento** sai com ponto exato; **revenda** sai só com a região, para site, portais, catálogo Meta e landing. Dentro do LM Flow tudo é exato. No site público (`ImovelPublicPage`), a regra mora em `src/pages/Public/mapaDoImovelPublico.ts` (`consultaDoMapa`, com spec): com `latitude`/`longitude` (o servidor só manda para empreendimento) o iframe do Google Maps, sem chave, usa `q=lat,lng` e `z=16`; sem ponto mostra a região (bairro, cidade, UF), `z=14`, como antes; sem nada, sem mapa.
+
+**Pendências conhecidas:** o backend ainda não expõe `metadata.location_precision` no JSON (o aviso de pontos antigos não sabe a precisão real); sem ponto e sem cidade achada, o aviso "Arraste o alfinete" aparece sem alfinete na tela.
+
+**Não reabrir sem o dono pedir:** o alfinete exato só para empreendimento, a revenda só com região, e o ponto manual que não pula.
 
 ## Meu site · Personalizar: página inicial (desde 2026-10-04)
 
@@ -6054,6 +6075,65 @@ Usuários → Usuários (`/admin/usuarios`, `src/pages/SuperAdmin/Usuarios/`) e 
 3. Nomes de tipo de imóvel: sempre `rotuloTipo`/`pluralTipo` (`tiposDeImovel.ts`), nunca a chave crua.
 4. Não é `featureKey` nem `clientToggleKey`.
 5. O servidor descarta em silêncio chamada livre sem título, link fora de http(s), página não escolhida e atalho sem rótulo: a tela avisa cada caso antes do Salvar. Avisos âmbar que existem: Chamadas — "Sem título, a chamada não é salva.", "Sem página escolhida, a chamada não é salva.", "Sem um link que comece com http:// ou https://, a chamada não é salva.", página fora do menu, site sem WhatsApp; Mais buscados — "Sem rótulo, o atalho não é salvo."; Vitrines — De R$ maior que Até R$. Enquanto a lista de páginas não chega (ou falha) a tela de Chamadas não afirma nada sobre a página escolhida. Remover chamada, atalho ou vitrine pede confirmação.
+
+## Meu site · arrumação visual do painel (desde 2026-10-04)
+
+> Pedido do dono (04/10): o painel do Meu site estava apertado (uma coluna no meio, campos pequenos e colados, sem dizer o que vai em cada campo), o logo era só um campo de link com miniatura e não havia como enviar o ícone da aba. Referência: tela "Aparência" do Kenlo Sites.
+
+**O que aparece na tela:** cada tela do Meu site é uma caixa só, dividida em faixas. Em cada faixa, à esquerda o título e uma frase dizendo o que é e onde aparece no site; à direita os campos, maiores. Aparência ganhou o bloco Logotipos com duas caixas grandes (Logo do site e Ícone da aba, arrastar ou clicar, Trocar e Remover) e a prévia da aba do navegador. O site público passa a usar o ícone da aba. Dados de contato com máscara de telefone e aviso de e-mail. O painel usa mais a largura da tela (até 1400px).
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **L1 · Explicação ao lado.** Faixa da largura toda: título + frase à esquerda (1/3, de `lg` pra cima), campos à direita; abaixo de `lg` empilha. Faixas separadas por divisória dentro de UMA caixa por tela.
+2. **L2 · Logotipos = duas caixas grandes, Logo do site e Ícone da aba, sem campo de link.** "Logo clara" (fundo escuro) fica pro C3. Remover grava `null`.
+3. **L3 · "Códigos avançados"**, sem o "(para quem entende)". Um spec impede a frase de voltar em `src`.
+4. **Padrão obrigatório das telas do Meu site** (pasta `SiteBuilder/ui/`): `Secoes` (a caixa) + `Secao` (`titulo`, `descricao`, `acao`, `id`); `Campo` (rótulo ligado por `htmlFor`/`id`, `ajuda`, `aviso` âmbar, `erro` vermelho), `CampoTexto` e `CampoTextoLongo`; `CLASSE_DO_CAMPO` (`h-11 text-base`) em Seletor, telefone e campo montado à mão; `EnvioDeImagem` para imagem que vai pro formulário (variantes `logo` e `icone`; PNG, JPG e WEBP, **sem SVG**: o armazenamento entrega SVG como download, então ele não apareceria nem como imagem nem como ícone; Remover com `useConfirmacao`; falha de envio em âmbar dentro da caixa). Tela nova ou campo novo no Meu site usa essas peças. Toda frase de bloco é do dia a dia: o que é e onde aparece no site.
+5. **Ícone da aba:** `favicon_url` entra no formulário igual ao `logo_url` (carrega de `branding`, viaja no Salvar). No site, `useIconeDaAba` (`features/siteBuilder/public/`) aponta TODOS os `<link rel~="icon">` do `<head>` pro ícone (sem `type`/`sizes`, que eram do LM Flow) e devolve cada atributo ao sair da página; endereço que não é http(s) é ignorado. Ligado em toda página pública que carrega o site (home, busca, ficha do imóvel, páginas, blog, artigo, financiamento, anuncie). O título da aba sai de UMA regra, `tituloDaAba` (o de Aparecer no Google ou "Nome — Encontre seu imóvel"), usada pelo site e pela prévia da aba em Aparência.
+6. **WhatsApp do site continua gravado só com dígitos e o 55** (`5511987654321`): o site monta o link do botão verde com eles. O campo é o `PhoneInput` da casa com `valueFormat="digits"`. Número antigo gravado SEM o 55 (10 ou 11 dígitos) aparece no campo como Brasil, mas **não é corrigido sozinho**: a tela mostra o aviso âmbar "Falta o código do país (55)…" e a pessoa confere e salva.
+7. **Telefone do site é gravado como aparece no site**, `(11) 3333-4444`: o topo e o rodapé mostram o texto gravado, e o "ligar" usa só os dígitos. O campo é o `BrPhoneInput` com `entrega="mascarado"` (o padrão do componente continua só dígitos, para os formulários públicos). Telefone gravado que **não cabe na máscara** (sobra letra ou barra, dois números, ramal, `0800`/`4004`, DDD começando com 0) vira **campo de texto livre**, com o aviso "Esse telefone tem mais de um número ou ramal. Ele aparece no site do jeito que está escrito."; o modo é decidido pelo valor carregado e não troca enquanto a pessoa digita.
+8. **Abrir a tela de Dados nunca grava.** Máscara e `PhoneInput` reescrevem o valor carregado e podem disparar `onChange` sem ninguém digitar: os dois campos só gravam com o foco dentro deles.
+9. **A ajuda diz o que o site faz hoje:** a cor de destaque não pinta nada (o `--accent` não é usado; fica guardada pros modelos novos); a faixa de cima (telefone, e-mail, redes) só aparece no computador e fora da página inicial, e as redes aparecem pelo nome, em texto; as caixas Ativo/Publicado só mudam o selo No ar do painel, o site continua abrindo. Mudou o site, muda a frase.
+
+**Armadilhas:**
+1. A caixa de imagem só cuida de escolher, conferir, girar e avisar: quem usa passa `enviar` (sobe e grava; erro lançado vira o aviso) e `aoRemover`. O logo continua tirando as cores no envio (`extractLogoColors`).
+2. A marca d'água NÃO usa `EnvioDeImagem`: o logo dela é gravado na hora pelo servidor, que só aceita PNG, JPG e WEBP.
+3. O endereço do rodapé usa `whitespace-pre-line`: as duas linhas do campo Endereço aparecem em duas linhas no site.
+4. Não é `featureKey` nem `clientToggleKey`, e não tem metade de backend (o servidor já aceitava e devolvia `favicon_url`).
+
+## Notificações na ficha do usuário (04/10/2026)
+
+**O que é:** a ficha da pessoa (Admin → Usuários → nome) mostra se o aviso está chegando, por canal. A lista ganhou a coluna **Notificação** e o filtro **Com problema**.
+
+- **Push:**
+  - a permissão do navegador por aparelho (*Ligada / Bloqueada / Não perguntada / Sem suporte*), vinda do heartbeat de 60 s;
+  - quantos aparelhos têm Modo Plantão;
+  - os últimos 10 envios com *Saiu → Apareceu → Clicou*, ou *Falhou* com o motivo.
+- **WhatsApp:** os últimos 10 avisos com *Enviado / Entregue / Lido*, ou *Falhou*. A pessoa é achada pelo número (cadastro ou campo da roleta), com e sem o 55.
+  - Só entram avisos para números de pessoas do cliente (cadastro ou roleta); mensagem para lead não é registrada.
+- **Na tela:** os últimos 10 avisos do sininho com *Lido / Não lido*.
+- **Situação na lista:**
+  - *Bloqueada* quando o aparelho visto por último negou o push;
+  - *Falhando* quando as 3 últimas entregas de um canal em 7 dias falharam (aparelho com inscrição vencida não conta);
+  - *Ok* nos outros casos.
+
+**Como funciona:**
+- O `public/push-sw.js` devolve um recibo assinado (vem dentro do push) em `POST /api/v1/push/receipts`, em `text/plain` para não disparar a pergunta prévia de CORS.
+- Aparelho com o service worker antigo em cache fica em *Saiu* até recarregar o app. Isso é esperado, não é erro.
+- *Entregue/Lido* vem do webhook do número que mandou o aviso.
+- Se o registro não puder ser lido, a seção mostra erro com *Tentar de novo* (nunca vira vazio).
+
+**Não reabrir sem o dono pedir:** push sem recibo nunca vira *Falhou*. Só falha o que o servidor de push recusou.
+
+## Logs de todos os clientes (04/10/2026)
+
+Usuários → Logs (`/admin/usuarios/logs`, `src/pages/SuperAdmin/Logs/`). Spec: `LM FLOW/specs/2026-10-03-admin-registro-custos-usuarios-design.md` (seção 4). Substitui a tela de um cliente por vez (`LogsView`, removida, junto com `logClients`, `activity` e `userMetrics` do `superLogsService`). Dados de `GET /super/logs`.
+
+- **Uma lista só, todos os clientes**, mais recentes primeiro. Filtros (todos na URL): busca por pessoa, cliente, tipo de ação, período, *Só sensíveis* e *Incluir equipe Leal Mídia*.
+- **Selo *Sensível*** nas ações que o backend marca (exportar, mudar IA/roleta/cargos, dar ou tirar acesso, excluir em massa, aparelho novo, *Entrar* do admin). Ação sensível da equipe aparece mesmo com a equipe escondida.
+- **Tipo *Ação no sistema*** = só as ações sensíveis capturadas pela rede; *Mensagem* (WhatsApp) fica escondida até alguém escolher esse tipo.
+- **Carregar mais** (30 por vez) pede os anteriores ao último item da lista; trocar filtro recomeça do zero e resposta atrasada é descartada.
+- **Cliente que falha não esconde os outros:** aviso "Não deu para ler: …" acima da tabela. Erro geral mostra *Tentar de novo*, nunca lista vazia.
+- A página não se embrulha em `AdminConteudo`: a rota já faz isso.
+- **A ficha** do usuário marca as ações sensíveis do histórico com o mesmo selo *Sensível*.
 
 ## Chat de suporte (desde 2026-10-04)
 

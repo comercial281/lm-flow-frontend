@@ -142,7 +142,7 @@ const AdminLeadsAoVivo = lazyWithRetry(() => import('@/pages/SuperAdmin/LeadsFee
 const AdminNumeros = lazyWithRetry(() => import('@/pages/SuperAdmin/NumberOwnership'));
 const AdminUsuarios = lazyWithRetry(() => import('@/pages/SuperAdmin/Usuarios'));
 const AdminFichaDoUsuario = lazyWithRetry(() => import('@/pages/SuperAdmin/Usuarios/Ficha'));
-const AdminLogs = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientInstances/LogsView'));
+const AdminLogs = lazyWithRetry(() => import('@/pages/SuperAdmin/Logs'));
 const AdminMensagemDeAcesso = lazyWithRetry(() => import('@/pages/SuperAdmin/MensagemDeAcesso'));
 const AdminAvisosNaTela = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral/NotificationsTab'));
 const AdminComunicadoWhatsapp = lazyWithRetry(() => import('@/pages/SuperAdmin/ComunicadoWhatsapp'));

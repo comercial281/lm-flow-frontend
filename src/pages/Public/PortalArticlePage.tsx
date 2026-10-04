@@ -5,6 +5,7 @@ import {
   type PortalArticleFull,
 } from './portalShared';
 import { usePortalTracking } from './usePortalTracking';
+import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — ARTIGO (detalhe de um post do blog) (Produto A).
@@ -31,6 +32,7 @@ export default function PortalArticlePage() {
   const { state, site, items, fontHref, abas, cssVars } = usePortalData(tenant);
   const { pathname } = useLocation();
   usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'article', path: pathname, pageSlug: slug });
+  useIconeDaAba(site.branding?.favicon_url);
 
   // Vitrine de imóveis ao fim do artigo (destaques, com fallback pros primeiros).
   const featured = useMemo(() => {

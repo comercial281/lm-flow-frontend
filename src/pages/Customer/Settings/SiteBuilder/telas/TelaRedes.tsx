@@ -1,5 +1,6 @@
-import { Input, Label as UILabel } from '@/components/ui/ds';
 import { REDES, linkDaRede, type RedeSocial } from '@/features/siteBuilder/socialLinks';
+import { Secao, Secoes } from '../ui/Secao';
+import { CampoTexto } from '../ui/Campo';
 import type { FormProps } from './tipos';
 
 export default function TelaRedes({ siteForm, setF }: FormProps) {
@@ -18,17 +19,19 @@ export default function TelaRedes({ siteForm, setF }: FormProps) {
   };
 
   return (
-    <section className="rounded-xl border border-border bg-card p-5 space-y-4">
-      {REDES.map(r => (
-        <div key={r.id}>
-          <UILabel htmlFor={`rede-${r.id}`}>{r.rotulo}</UILabel>
-          <Input id={`rede-${r.id}`} value={links[r.id] ?? ''} className="mt-1"
-            onChange={e => digitar(r.id, e.target.value)}
-            onBlur={e => confirmar(r.id, e.target.value)} />
-          <p className="mt-1 text-xs text-muted-foreground">{r.exemplo}</p>
+    <Secoes>
+      <Secao
+        titulo="Links das redes"
+        descricao="O nome de cada rede aparece como link no rodapé de todas as páginas e, no computador, na faixa de cima das páginas internas. Pode colar o link inteiro ou só o nome do perfil; rede em branco não aparece."
+      >
+        <div className="grid gap-5 md:grid-cols-2">
+          {REDES.map(r => (
+            <CampoTexto key={r.id} id={`rede-${r.id}`} rotulo={r.rotulo} ajuda={`Ex.: ${r.exemplo}`} valor={links[r.id] ?? ''}
+              aoMudar={v => digitar(r.id, v)}
+              onBlur={e => confirmar(r.id, e.target.value)} />
+          ))}
         </div>
-      ))}
-      <p className="text-sm text-muted-foreground">Os ícones aparecem no topo e no rodapé do site.</p>
-    </section>
+      </Secao>
+    </Secoes>
   );
 }
