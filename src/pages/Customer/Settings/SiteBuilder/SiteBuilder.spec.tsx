@@ -98,18 +98,18 @@ describe('SiteBuilder (casca do Meu site)', () => {
   });
 
   it('editar um campo mostra a barra de salvar, e salvar grava', async () => {
-    mocks.updateSite.mockResolvedValue({ ...SITE, contact: { phone: '11999990000' } });
+    mocks.updateSite.mockResolvedValue({ ...SITE, contact: { phone: '(11) 99999-0000' } });
     abrir('/settings/site-builder?tela=dados');
     await screen.findByRole('heading', { name: 'Dados de contato' });
     expect(screen.queryByRole('region', { name: 'Alterações não salvas' })).toBeNull();
 
-    fireEvent.change(screen.getByPlaceholderText('(11) 9999-9999'), { target: { value: '11999990000' } });
+    await userEvent.type(screen.getByLabelText('Telefone'), '11999990000');
     expect(screen.getByRole('region', { name: 'Alterações não salvas' })).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
     expect(mocks.updateSite.mock.calls[0][0]).toBe('s1');
-    expect(mocks.updateSite.mock.calls[0][1]).toMatchObject({ contact_phone: '11999990000' });
+    expect(mocks.updateSite.mock.calls[0][1]).toMatchObject({ contact_phone: '(11) 99999-0000' });
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Alterações não salvas' })).toBeNull());
   });
 
@@ -117,7 +117,7 @@ describe('SiteBuilder (casca do Meu site)', () => {
     mocks.updateSite.mockResolvedValue(SITE);
     abrir('/settings/site-builder?tela=dados');
     await screen.findByRole('heading', { name: 'Dados de contato' });
-    fireEvent.change(screen.getByPlaceholderText('(11) 9999-9999'), { target: { value: '11999990000' } });
+    await userEvent.type(screen.getByLabelText('Telefone'), '11999990000');
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
     expect(mocks.updateSite.mock.calls[0][1]).not.toHaveProperty('home');
