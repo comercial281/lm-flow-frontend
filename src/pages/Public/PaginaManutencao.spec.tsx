@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -136,7 +136,8 @@ describe('site em manutenção: as páginas viram a página Em manutenção', ()
     expect(screen.queryByText('Nenhum artigo publicado ainda.')).toBeNull();
     expect(screen.queryByText('Página não encontrada.')).toBeNull();
     expect(screen.queryByRole('link', { name: 'Comprar' })).toBeNull();
-    expect(document.title).toBe('Imob Teste — Em manutenção');
+    // O título é posto num efeito: espera ele assentar (corrida com o primeiro render).
+    await waitFor(() => expect(document.title).toBe('Imob Teste — Em manutenção'));
   });
 
   it('falha de rede na lista de imóveis também não vira erro', async () => {
@@ -286,7 +287,8 @@ describe('rastreamento em manutenção', () => {
     abrir('/imovel/imob/C1', { ...EM_MANUTENCAO, ...RASTREAMENTO });
     await screen.findByRole('heading', { level: 1, name: 'Casa no Cambuí' });
 
-    expect(scripts().some(x => x.includes('gtag/js?id=G-AB12'))).toBe(true);
+    // O rastreamento entra num efeito depois do site carregar: espera assentar.
+    await waitFor(() => expect(scripts().some(x => x.includes('gtag/js?id=G-AB12'))).toBe(true));
     expect(janela().fbq?.queue).toContainEqual(['init', '123456']);
     expect(scripts().some(x => x.includes('gtm.js'))).toBe(false);
     expect(document.head.querySelector('meta[name="lmf-codigo"]')).toBeNull();
