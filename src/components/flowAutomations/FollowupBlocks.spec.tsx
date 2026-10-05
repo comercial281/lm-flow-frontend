@@ -31,7 +31,7 @@ const followupFlows = [
 
 const resources: AutomationResources = {
   labels: [], sequences: [], followupFlows, users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
-  adOrigins: [], formOrigins: [], messageFunnels: [], evolutionInstances: [],
+  adOrigins: [], formOrigins: [], messageFunnels: [], conversationFunnels: [], evolutionInstances: [],
   reloadFunnels: () => {}, reloadLabels: () => {}, loading: false,
 };
 

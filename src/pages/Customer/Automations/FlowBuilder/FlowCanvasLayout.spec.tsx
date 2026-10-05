@@ -26,7 +26,7 @@ vi.mock('@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors', asyn
   const original = await importOriginal<typeof import('@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors')>();
   const resources = {
     labels: [{ id: 'l1', title: 'follow-up' }], sequences: [], followupFlows: [], users: [], pipelines: [],
-    stagesByPipeline: {}, quickReplies: [], adOrigins: [], formOrigins: [], messageFunnels: [], evolutionInstances: [],
+    stagesByPipeline: {}, quickReplies: [], adOrigins: [], formOrigins: [], messageFunnels: [], conversationFunnels: [], evolutionInstances: [],
     reloadFunnels: () => {}, reloadLabels: () => {}, loading: false,
   };
   return { ...original, useAutomationResources: () => resources };

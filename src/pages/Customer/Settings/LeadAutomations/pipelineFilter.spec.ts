@@ -17,7 +17,7 @@ const resources = {
   labels: [], sequences: [], followupFlows: [], users: [],
   pipelines: [{ id: 'p1', name: 'Lançamento' }, { id: 'p2', name: 'Locação' }],
   stagesByPipeline: {}, quickReplies: [], adOrigins: [], formOrigins: [],
-  messageFunnels: [], evolutionInstances: [],
+  messageFunnels: [], conversationFunnels: [], evolutionInstances: [],
   reloadFunnels: () => {}, reloadLabels: () => {}, loading: false,
 } as unknown as AutomationResources;
 

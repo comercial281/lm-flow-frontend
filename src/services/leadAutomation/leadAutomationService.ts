@@ -301,7 +301,9 @@ export const ACTION_REQUIRED_PARAMS: Record<string, string[]> = {
   send_video:              ['media_url'],
   send_document:           ['media_url'],
   send_sticker:            ['media_url'],
-  send_message_funnel:     ['funnel_id'],
+  // Desde 05/10/2026 o funil é o de conversa (`flow_automation_id`); a ação
+  // antiga com `funnel_id` continua valendo (ver missingActionParams).
+  send_message_funnel:     ['flow_automation_id'],
   start_followup_sequence: ['sequence_slug'],
   start_followup_flow:     ['flow_automation_id'],
   assign_broker:           ['user_id'],
@@ -320,10 +322,13 @@ export const ACTION_REQUIRED_PARAMS: Record<string, string[]> = {
 
 /** Os params obrigatórios da ação que estão vazios, na ordem do mapa. */
 export function missingActionParams(action: { type: string; params?: Record<string, unknown> | null }): string[] {
+  const empty = (value: unknown) =>
+    value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
+  // "Disparar funil de mensagens" no formato antigo (funil do editor de antes):
+  // o `funnel_id` sozinho ainda é ação completa.
+  if (action.type === 'send_message_funnel' && empty(action.params?.flow_automation_id) && !empty(action.params?.funnel_id)) {
+    return [];
+  }
   const required = ACTION_REQUIRED_PARAMS[action.type] ?? [];
-  return required.filter(key => {
-    const value = action.params?.[key];
-    return value === undefined || value === null || value === '' ||
-      (Array.isArray(value) && value.length === 0);
-  });
+  return required.filter(key => empty(action.params?.[key]));
 }

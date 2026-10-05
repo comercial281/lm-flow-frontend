@@ -23,7 +23,7 @@ const resources: AutomationResources = {
   quickReplies: [],
   adOrigins: [],
   formOrigins: [],
-  messageFunnels: [],
+  messageFunnels: [], conversationFunnels: [],
   evolutionInstances: [],
   reloadFunnels: () => {},
   reloadLabels: () => {},
