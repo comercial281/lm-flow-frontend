@@ -38,7 +38,7 @@ vi.mock('@/hooks/chat/useWebSocket', () => {
   return { useWebSocket: crm.useWebSocket, default: crm.useWebSocket };
 });
 
-import SiteDoDominioApp, { RotasDoSite } from './SiteDoDominio';
+import SiteDoDominioApp, { PAGINAS, paginaDoCaminho, RotasDoSite } from './SiteDoDominio';
 
 const SITE = { tenant: 'imob', slug: 'imob', host: 'www.imob.com.br' };
 
@@ -192,5 +192,43 @@ describe('domínio não resolvido', () => {
     expect(screen.queryByText(/entrar|senha/i)).toBeNull();
     expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex');
     semNadaDoCrm();
+  });
+});
+
+describe('código da página adiantado', () => {
+  it.each([
+    ['/', 'PortalHome'],
+    ['/login', 'PortalHome'],
+    ['/imoveis', 'PortalSearch'],
+    ['/imovel/AP1', 'ImovelPublic'],
+    ['/imovel/imob/AP1', 'ImovelPublic'],
+    ['/blog', 'PortalBlog'],
+    ['/blog/a', 'PortalArticle'],
+    ['/p/sobre', 'PortalCustomPage'],
+    ['/financiamento', 'PortalFinanciamento'],
+    ['/anuncie/', 'PortalAnuncie'],
+    ['/portal/imob/imoveis', 'PortalSearch'],
+    ['/portal/imob', 'PortalHome'],
+    ['/lp/oferta', 'LandingPublicView'],
+    ['/lp/oferta/obrigado', 'LandingResultView'],
+  ])('%s adianta %s', (caminho, pagina) => {
+    expect(paginaDoCaminho(caminho)).toBe(pagina);
+  });
+
+  it('pede o código da página junto com o resolve, sem esperar a resposta', async () => {
+    let responder: (r: unknown) => void = () => {};
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(r => { responder = r; })));
+    vi.stubGlobal('location', { ...window.location, hostname: 'www.imob.com.br', pathname: '/imovel/AP1' });
+    const ficha = vi.spyOn(PAGINAS.ImovelPublic, '__preload');
+    const home = vi.spyOn(PAGINAS.PortalHome, '__preload');
+    render(<SiteDoDominioApp />);
+    // O resolve ainda não respondeu e o código da ficha já foi pedido.
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/resolve?host=www.imob.com.br'), expect.anything());
+    expect(ficha).toHaveBeenCalledTimes(1);
+    expect(home).not.toHaveBeenCalled();
+    responder(resposta({}, 404));
+    expect(await screen.findByRole('heading', { name: 'Site não encontrado' })).toBeInTheDocument();
+    ficha.mockRestore();
+    home.mockRestore();
   });
 });

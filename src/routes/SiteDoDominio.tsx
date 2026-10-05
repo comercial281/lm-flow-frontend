@@ -33,6 +33,34 @@ const LandingPublicView = lazyWithRetry(() =>
 const LandingResultView = lazyWithRetry(() =>
   import('@/features/landing/public/LandingResultView').then(m => ({ default: m.LandingResultView })));
 
+/** As páginas do site, pelo nome. Exportado para o teste espiar o `__preload`. */
+export const PAGINAS = {
+  PortalHome, PortalSearch, ImovelPublic, PortalBlog, PortalArticle, PortalCustomPage,
+  PortalFinanciamento, PortalAnuncie, LandingPublicView, LandingResultView,
+};
+
+/**
+ * Que página o caminho vai abrir no domínio (o mesmo mapa das rotas abaixo,
+ * incluindo os endereços antigos que redirecionam). Qualquer outro caminho cai
+ * no início, então adianta o início.
+ */
+export function paginaDoCaminho(pathname: string): keyof typeof PAGINAS {
+  const semPortal = pathname.replace(/^\/portal\/[^/]*/, '');
+  const p = semPortal.replace(/\/+$/, '') || '/';
+  if (p === '/imoveis') return 'PortalSearch';
+  if (/^\/imovel\/[^/]+(\/[^/]+)?$/.test(p)) return 'ImovelPublic';
+  if (p === '/blog') return 'PortalBlog';
+  if (/^\/blog\/[^/]+$/.test(p)) return 'PortalArticle';
+  if (/^\/p\/[^/]+$/.test(p)) return 'PortalCustomPage';
+  if (p === '/financiamento') return 'PortalFinanciamento';
+  if (p === '/anuncie') return 'PortalAnuncie';
+  if (p.startsWith('/lp/')) {
+    const rota = rotaDaLandingNoDominio(p);
+    return rota && 'result' in rota && rota.result ? 'LandingResultView' : 'LandingPublicView';
+  }
+  return 'PortalHome';
+}
+
 /** /portal/<cliente>/<resto> → /<resto>, com a busca e a âncora. */
 function PortalAntigo() {
   const { pathname, search, hash } = useLocation();
@@ -90,6 +118,9 @@ export default function SiteDoDominioApp() {
   const [estado, setEstado] = useState<EstadoDoDominio | null>(null);
   useEffect(() => {
     let vivo = true;
+    // O código da página do caminho vem junto com a pergunta ao servidor, não
+    // depois dela: sem isto a tela fica em branco esperando duas viagens.
+    PAGINAS[paginaDoCaminho(window.location.pathname)].__preload().catch(() => {});
     void dominioDoSite().then(e => { if (vivo) setEstado(e); });
     return () => { vivo = false; };
   }, []);

@@ -9,6 +9,11 @@ import '@evoapi/design-system/styles';
 import './styles/globals.css';
 import SiteDoDominioApp from './routes/SiteDoDominio';
 import { reloadForNewVersion } from './utils/chunkReload';
+import { semInstalarApp } from './features/siteBuilder/public/semInstalarApp';
+
+// O index.html é o do CRM: sem o manifest e as metas do PWA, o navegador não
+// oferece "Instalar LM Flow" no site do cliente, mesmo se o middleware falhou.
+semInstalarApp();
 
 // Deploy novo trocou o nome de um pedaço do site já aberto: recarrega (com a
 // mesma trava anti-laço do CRM).
