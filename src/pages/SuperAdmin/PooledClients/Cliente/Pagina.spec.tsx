@@ -1,12 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
 vi.mock('@/services/core/api', () => ({ default: api }));
 
+const aviso = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
+vi.mock('sonner', () => ({ toast: aviso }));
+
 import Pagina from './Pagina';
+
+function Sonda() { const l = useLocation(); return <p>lista{l.search}</p>; }
 
 const cliente = { id: 'c1', name: '016 Imóveis', slug: 'imoveis016', schema_name: 'tenant_016', status: 'active',
   situation: 'ativo', members: 9, whatsapp_channels_used: 2, max_whatsapp_channels: 5, login_url: '' };
@@ -26,13 +31,13 @@ const montar = (url = '/admin/clientes/c1') => render(
   <MemoryRouter initialEntries={[url]}>
     <Routes>
       <Route path="/admin/clientes/:id" element={<Pagina />} />
-      <Route path="/admin/clientes" element={<p>lista</p>} />
+      <Route path="/admin/clientes" element={<Sonda />} />
     </Routes>
   </MemoryRouter>,
 );
 
 describe('Página do cliente', () => {
-  beforeEach(() => Object.values(api).forEach((f) => f.mockReset()));
+  beforeEach(() => { Object.values(api).forEach((f) => f.mockReset()); aviso.error.mockReset(); });
 
   it('topo, abas e Resumo com os números do mês', async () => {
     responder();
@@ -65,7 +70,23 @@ describe('Página do cliente', () => {
     await user.click(await screen.findByRole('menuitem', { name: 'Excluir' }));
     fireEvent.change(await screen.findByRole('textbox'), { target: { value: 'imoveis016' } });
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
-    expect(await screen.findByText('lista')).toBeInTheDocument();
+    expect(await screen.findByText('lista?filtro=arquivados')).toBeInTheDocument();
+    expect(api.delete).toHaveBeenCalledWith('/super/pooled_tenants/c1', { data: { confirm_slug: 'imoveis016' } });
+    expect(aviso.error).toHaveBeenCalledWith('paralisado, não apagado', expect.anything());
+  });
+
+  it('Atenção falhou: avisa (não finge que está saudável) e Tentar de novo refaz só essa leitura', async () => {
+    responder();
+    const base = api.get.getMockImplementation()!;
+    api.get.mockImplementation((url: string) => url === '/super/overview/attention' ? Promise.reject(new Error('x')) : base(url));
+    const user = userEvent.setup();
+    montar();
+    expect(await screen.findByText('Não deu pra conferir os problemas deste cliente.')).toBeInTheDocument();
+    const chamadas = (u: string) => api.get.mock.calls.filter((c) => c[0] === u).length;
+    expect(chamadas('/super/overview/attention')).toBe(1);
+    await user.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    await waitFor(() => expect(chamadas('/super/overview/attention')).toBe(2));
+    expect(chamadas('/super/overview/numbers')).toBe(1);
   });
 
   it('cliente inexistente', async () => {
