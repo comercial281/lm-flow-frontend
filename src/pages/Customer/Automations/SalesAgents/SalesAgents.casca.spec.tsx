@@ -115,7 +115,10 @@ describe('IA Vendedora · casca', () => {
 
   it('Duplicar abre a cópia em Configurar, sem voltar pra IA original', async () => {
     duplicada.copia = ia('ia-3', 'IA da Cheer (cópia)', { enabled: false });
+    // A recarga da lista fica pendente: a cópia já tem de ser a IA aberta.
+    let soltar: (v: unknown) => void = () => {};
     list.mockResolvedValueOnce([ia('ia-1', 'IA da Cheer'), ia('ia-2', 'IA Demo', { inbox_id: null })])
+      .mockReturnValueOnce(new Promise((res) => { soltar = res; }))
       .mockResolvedValue([ia('ia-1', 'IA da Cheer'), ia('ia-2', 'IA Demo', { inbox_id: null }), duplicada.copia]);
     abrir('/ia-vendedora?ia=ia-1');
     await screen.findByText('tela visao-geral · IA da Cheer');
@@ -123,7 +126,23 @@ describe('IA Vendedora · casca', () => {
     await userEvent.click(await screen.findByRole('menuitem', { name: /Duplicar esta IA/ }));
     await userEvent.click(await screen.findByRole('button', { name: 'confirmar cópia' }));
     expect(await screen.findByText('tela configurar · IA da Cheer (cópia)')).toBeInTheDocument();
+    soltar([ia('ia-1', 'IA da Cheer'), ia('ia-2', 'IA Demo', { inbox_id: null }), duplicada.copia]);
     await waitFor(() => expect(endereco()).toBe('?ia=ia-3&tela=configurar'));
+  });
+
+  it('ao trocar de IA, o selo não herda o veredito da anterior enquanto o Diagnóstico novo não chega', async () => {
+    const erro = { status: 'error', items: [{ key: 'inbox', label: 'Canal de WhatsApp', status: 'error', detail: 'O canal vinculado não existe mais.' }] };
+    // IA B com número: a configuração sozinha não a deixa parada.
+    list.mockResolvedValue([ia('ia-1', 'IA da Cheer'), ia('ia-2', 'IA Demo')]);
+    let soltar: (v: unknown) => void = () => {};
+    diagnostics.mockResolvedValueOnce(erro).mockReturnValueOnce(new Promise((res) => { soltar = res; }));
+    abrir('/ia-vendedora?ia=ia-1');
+    expect(await screen.findByText('Parada: o número desta IA não existe mais')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /IA da Cheer/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: /IA Demo/ }));
+    await screen.findByText('tela visao-geral · IA Demo');
+    expect(screen.queryByText('Parada: o número desta IA não existe mais')).toBeNull();
+    soltar({ status: 'ok', items: [] });
   });
 
   it('sem IA nenhuma: aviso e o botão Nova IA', async () => {

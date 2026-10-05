@@ -57,7 +57,7 @@ export default function SalesAgents() {
   const [saving, setSaving] = useState(false);
   const [duplicating, setDuplicating] = useState<SalesAgent | null>(null);
   const [loadFailure, setLoadFailure] = useState<LoadFailure | null>(null);
-  const [diagnostico, setDiagnostico] = useState<HealthReport | null>(null);
+  const [diagnostico, setDiagnostico] = useState<{ id: string; report: HealthReport } | null>(null);
   const [conferindo, setConferindo] = useState(false);
   const pode = useCan();
   // ⚠️ A chave vai LITERAL aqui. Os dois scanners do catálogo de funcionalidades
@@ -129,7 +129,7 @@ export default function SalesAgents() {
     setConferindo(true);
     salesAgentsService
       .diagnostics(selId)
-      .then((d) => { if (vivo) setDiagnostico(d); })
+      .then((d) => { if (vivo) setDiagnostico({ id: selId, report: d }); })
       .catch(() => { if (vivo) setDiagnostico(null); })
       .finally(() => { if (vivo) setConferindo(false); });
     return () => { vivo = false; };
@@ -335,7 +335,10 @@ export default function SalesAgents() {
   if (loadFailure === 'forbidden') return <NoAccessState />;
 
   const podeCriar = pode('sales_agents', 'create');
-  const situacao = selected ? situacaoDaIa(selected, diagnostico) : null;
+  // ⚠️ O relatório é de UMA IA: ao trocar A→B, o de A não vale pra B (o selo
+  // mentiria até o de B chegar). Só relido por `updated_at` mantém, sem piscar.
+  const diagnosticoDaIa = selected && diagnostico?.id === selected.id ? diagnostico.report : null;
+  const situacao = selected ? situacaoDaIa(selected, diagnosticoDaIa) : null;
   const info = telaInfo(tela);
   const trilha = trilhaDe(tela);
 
@@ -379,7 +382,7 @@ export default function SalesAgents() {
                 <TelaVisaoGeral
                   agent={selected}
                   situacao={situacao}
-                  diagnostico={diagnostico}
+                  diagnostico={diagnosticoDaIa}
                   conferindo={conferindo}
                   mostrarSugestoes={insightsLiberado}
                   aoIr={irPara}
@@ -409,7 +412,11 @@ export default function SalesAgents() {
             // ⚠️ A cópia entra na lista ANTES de o endereço apontar pra ela: sem
             // isso a resolução do endereço não acha o id e volta pra IA original.
             setDuplicating(null);
+            // ...e vira a `selected` já: `loadAgents` abaixo liga o loading e a
+            // resolução do endereço fica parada — sem isto, Configurar mostraria
+            // (e salvaria em) a IA ORIGINAL enquanto o endereço aponta pra cópia.
             setAgents((prev) => [...prev.filter((a) => a.id !== copy.id), copy]);
+            setSelected(copy);
             setSearchParams(paramsDaIa(copy.id, 'configurar'), { replace: true });
             loadAgents();
           }}
