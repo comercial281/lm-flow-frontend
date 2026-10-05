@@ -304,7 +304,7 @@ function Cadastro() {
                 aoEscolher={secao => { setSecaoComErro(null); rolarAte(secao); }}
               />
               <div className="mt-4 space-y-4 lg:mt-0">
-                {!editandoId && <PreencherPorTexto form={form} setF={setF} texto={texto} aoMudarTexto={setTexto} />}
+                {!editandoId && <PreencherPorTexto form={form} setF={setF} texto={texto} aoMudarTexto={setTexto} temBook={!!book} aoEscolherBook={setBook} />}
                 {secoes.map(s => (
                   <section key={s.id} id={`secao-${s.id}`} aria-labelledby={`titulo-${s.id}`} className="scroll-mt-24 rounded-xl border bg-card p-5">
                     <h2 id={`titulo-${s.id}`} className="text-base font-semibold">{s.titulo}</h2>

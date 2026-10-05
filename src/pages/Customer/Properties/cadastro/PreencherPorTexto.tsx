@@ -9,6 +9,10 @@ import { propertiesService, type PropertyFormData } from '@/services/properties/
 import { PROPERTY_FEATURES, CONDO_FEATURES } from '@/features/properties/amenities';
 import { cleanTypologies } from '@/features/properties/typologies';
 import { plural } from '@/lib/formato';
+import { FORMULARIO_VAZIO } from '@/features/properties/cadastro/formularioDoCadastro';
+import { formularioNovo } from '@/features/properties/formularioPorTipo';
+import { validarBook } from './secoes/BlocoDoBook';
+import { extractPdfText, extractDocxText, ocrImage, ocrPdfScanned } from './leituraDeArquivo';
 
 interface Props {
   form: PropertyFormData;
@@ -16,9 +20,21 @@ interface Props {
   texto: string;
   /** O `setState` do texto: a leitura de arquivo soma ao que estiver lá quando terminar. */
   aoMudarTexto: Dispatch<SetStateAction<string>>;
+  /** Já há book escolhido pro cadastro (o PDF lido não troca o que o corretor escolheu). */
+  temBook: boolean;
+  /** Guarda o PDF lido como book do empreendimento. */
+  aoEscolherBook: (f: File) => void;
 }
 
-export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto }: Props) {
+/** Campo sem valor: vazio, ou ainda no valor de fábrica (o tipo e a transação já nascem marcados). */
+export function campoVazio(form: PropertyFormData, k: keyof PropertyFormData): boolean {
+  const v = form[k];
+  if (v === null || v === undefined || v === '') return true;
+  const fabrica = { ...FORMULARIO_VAZIO, ...formularioNovo(form.listing_kind ?? 'resale') };
+  return v === fabrica[k];
+}
+
+export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto, temBook, aoEscolherBook }: Props) {
   const [aiOpen, setAiOpen]       = useState(false);
   const [aiRunning, setAiRunning] = useState(false);
   const [pdfReading, setPdfReading] = useState(false);
@@ -32,8 +48,12 @@ export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto }: P
     try {
       const r = await propertiesService.parseText(text);
       const patch: Partial<PropertyFormData> = {};
+      let achou = 0;
+      // Só preenche campo vazio: o que o corretor já digitou não muda.
       const put = <K extends keyof PropertyFormData>(k: K, v: PropertyFormData[K] | null | undefined) => {
-        if (v !== null && v !== undefined && v !== '') patch[k] = v;
+        if (v === null || v === undefined || v === '') return;
+        achou++;
+        if (campoVazio(form, k)) patch[k] = v;
       };
       if (form.listing_kind !== 'development') put('transaction_type', r.transaction_type);
       put('property_type', r.property_type);
@@ -56,14 +76,16 @@ export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto }: P
       const condoSet = new Set(CONDO_FEATURES.map(a => a.slug));
       const feats = (r.features ?? []).filter(s => featSet.has(s));
       const condos = (r.condo_features ?? []).filter(s => condoSet.has(s));
-      if (feats.length) patch.features = feats;
-      if (condos.length) patch.condo_features = condos;
+      if (feats.length) { achou++; patch.features = feats; }
+      if (condos.length) { achou++; patch.condo_features = condos; }
       // Tipologias achadas no book: só aplica quando veio alguma (não apaga as
       // que o corretor já digitou) e mantém as dele na frente.
       const found = cleanTypologies(r.typologies);
+      if (found.length && form.listing_kind === 'development') achou++;
       if (found.length && form.listing_kind === 'development') patch.typologies = [...cleanTypologies(form.typologies), ...found];
       const filled = Object.keys(patch).length;
-      if (!filled) { toast.error('Não achei dados reconhecíveis no texto. Revise e preencha manualmente.'); return; }
+      if (!achou) { toast.error('Não achei dados reconhecíveis no texto. Revise e preencha manualmente.'); return; }
+      if (!filled) { toast.info('Os campos já estavam preenchidos; nada foi trocado.'); return; }
       setF(patch);
       toast.success(`Preenchi ${plural(filled, 'campo', 'campos')} do texto. Revise antes de salvar.`);
     } catch (err) {
@@ -76,77 +98,6 @@ export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto }: P
 
   const runParseText = () => doParseText(texto.trim());
 
-  // Carrega um script UMD do CDN uma vez (usado pelo mammoth pra ler .docx).
-  const loadScriptOnce = (src: string) =>
-    new Promise<void>((resolve, reject) => {
-      if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
-      const s = document.createElement('script');
-      s.src = src;
-      s.onload = () => resolve();
-      s.onerror = () => reject(new Error('script load failed'));
-      document.head.appendChild(s);
-    });
-
-  // Extrai o texto de um PDF no navegador (pdf.js via CDN). Vazio = PDF escaneado.
-  const extractPdfText = async (buf: ArrayBuffer): Promise<string> => {
-    const cdnBase = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build';
-    // specifier em variável: o TS não tenta resolver o módulo do CDN (não é dep local)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pdfjs: any = await import(/* @vite-ignore */ `${cdnBase}/pdf.min.mjs`);
-    pdfjs.GlobalWorkerOptions.workerSrc = `${cdnBase}/pdf.worker.min.mjs`;
-    const pdf = await pdfjs.getDocument({ data: buf }).promise;
-    const pages = Math.min(pdf.numPages, 30);
-    let text = '';
-    for (let p = 1; p <= pages; p++) {
-      const page = await pdf.getPage(p);
-      const content = await page.getTextContent();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      text += content.items.map((it: any) => it.str ?? '').join(' ') + '\n';
-    }
-    return text.trim();
-  };
-
-  // Extrai o texto de um .docx (Word) no navegador (mammoth via CDN).
-  const extractDocxText = async (buf: ArrayBuffer): Promise<string> => {
-    await loadScriptOnce('https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mammoth = (window as any).mammoth;
-    const out = await mammoth.extractRawText({ arrayBuffer: buf });
-    return String(out?.value ?? '').trim();
-  };
-
-  // OCR em português (Tesseract via CDN) — foto ou PDF escaneado (sem camada de texto).
-  const ocrImage = async (img: Blob | HTMLCanvasElement): Promise<string> => {
-    await loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const Tesseract = (window as any).Tesseract;
-    const { data } = await Tesseract.recognize(img, 'por');
-    return String(data?.text ?? '').trim();
-  };
-
-  // PDF escaneado: renderiza cada página num canvas e passa por OCR (lento — limita 5 págs).
-  const ocrPdfScanned = async (buf: ArrayBuffer): Promise<string> => {
-    const cdnBase = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pdfjs: any = await import(/* @vite-ignore */ `${cdnBase}/pdf.min.mjs`);
-    pdfjs.GlobalWorkerOptions.workerSrc = `${cdnBase}/pdf.worker.min.mjs`;
-    const pdf = await pdfjs.getDocument({ data: buf }).promise;
-    const pages = Math.min(pdf.numPages, 5);
-    let text = '';
-    for (let p = 1; p <= pages; p++) {
-      const page = await pdf.getPage(p);
-      const viewport = page.getViewport({ scale: 2 });
-      const canvas = document.createElement('canvas');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) continue;
-      await page.render({ canvasContext: ctx, viewport }).promise;
-      text += `${await ocrImage(canvas)}\n`;
-    }
-    return text.trim();
-  };
-
   // TXT, book em PDF, Word ou FOTO: extrai o texto no navegador e preenche os
   // campos LOCALMENTE (sem IA). PDF sem texto (escaneado) e imagens passam por OCR.
   const onPickBook = async (file: File | undefined) => {
@@ -158,6 +109,11 @@ export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto }: P
     if (!isTxt && !isPdf && !isDocx && !isImage) {
       toast.error('Envie um .txt, ou o book em PDF, Word (.docx) ou foto (imagem).');
       return;
+    }
+    // O PDF vira o book do empreendimento antes de extrair o texto: fica anexado mesmo se não achar texto.
+    if (isPdf && form.listing_kind === 'development' && !temBook && validarBook(file) === null) {
+      aoEscolherBook(file);
+      toast.success('Book anexado: ele sobe junto quando você cadastrar.');
     }
     setPdfReading(true);
     try {
@@ -238,6 +194,7 @@ export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto }: P
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs text-muted-foreground">
               Preenche os campos localmente (sem IA). A descrição é gerada à parte, no botão.
+              {form.listing_kind === 'development' && ' O PDF também fica como book do imóvel.'}
             </p>
             <Button type="button" size="sm" onClick={runParseText} disabled={aiRunning || pdfReading}>
               {aiRunning
