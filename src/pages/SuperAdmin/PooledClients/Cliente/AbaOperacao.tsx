@@ -1,5 +1,4 @@
-// src/pages/SuperAdmin/PooledClients/Cliente/AbaOperacao.tsx
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { MessageCircle } from 'lucide-react';
 import api from '@/services/core/api';
@@ -45,11 +44,13 @@ export default function AbaOperacao({ cliente, aoMudar }: PropsDaAba) {
   const s = cliente.settings ?? {};
   const [groupJids, setGroupJids] = useState<ClientGroupJids>(groupJidsFrom(s));
   // Legado only_ad_leads=true barrava SÓ o WhatsApp orgânico. Espelha LeadOrigin::PipeEntry::LEGACY_ONLY_ADS.
-  const [fontes, setFontes] = useState<string[]>(
+  // Ref síncrona: dois cliques seguidos, antes do 1º PATCH voltar, partem do mesmo valor atual (otimista).
+  const fontes = useRef<string[]>(
     (Array.isArray(s.pipe_entry_sources) ? (s.pipe_entry_sources as string[])
       : (s.only_ad_leads ? PIPE_SOURCE_KEYS.filter((k) => k !== 'organic') : PIPE_SOURCE_KEYS)
     ).filter((k) => PIPE_SOURCE_KEYS.includes(k)),
   );
+  const [, redesenhar] = useState(0);
   const [demo, setDemo] = useState(s.demo_mode === true);
 
   // Grupos de WhatsApp: a lista do número operacional é uma ida à Evolution, só carrega ao clicar em Trocar.
@@ -76,9 +77,18 @@ export default function AbaOperacao({ cliente, aoMudar }: PropsDaAba) {
   };
 
   const mudarFonte = async (key: string, ligada: boolean) => {
-    const proximo = ligada ? [...fontes, key] : fontes.filter((k) => k !== key);
-    await patch({ pipe_entry_sources: proximo, ...groupsPatch(groupJids) });
-    setFontes(proximo);
+    const atual = fontes.current;
+    const proximo = ligada ? [...atual.filter((k) => k !== key), key] : atual.filter((k) => k !== key);
+    fontes.current = proximo;
+    redesenhar((n) => n + 1);
+    try {
+      await patch({ pipe_entry_sources: proximo, ...groupsPatch(groupJids) });
+    } catch (e) {
+      // desfaz só esta chave: outra pode ter mudado enquanto esta esperava
+      fontes.current = ligada ? fontes.current.filter((k) => k !== key) : [...fontes.current, key];
+      redesenhar((n) => n + 1);
+      throw e;
+    }
   };
 
   const carregarGrupos = async () => {
@@ -178,7 +188,7 @@ export default function AbaOperacao({ cliente, aoMudar }: PropsDaAba) {
         </p>
         <div className="flex flex-col gap-3">
           {PIPE_SOURCES.map((p) => (
-            <Chave key={p.key} rotulo={p.label} descricao={p.desc} ligada={fontes.includes(p.key)} aoMudar={(v) => mudarFonte(p.key, v)} />
+            <Chave key={p.key} rotulo={p.label} descricao={p.desc} ligada={fontes.current.includes(p.key)} aoMudar={(v) => mudarFonte(p.key, v)} />
           ))}
         </div>
       </section>
@@ -248,10 +258,10 @@ export default function AbaOperacao({ cliente, aoMudar }: PropsDaAba) {
         <h2 id="atendimento" className="text-sm font-semibold">Atendimento</h2>
         <Chave rotulo="Isolamento por corretor"
           descricao="Cada corretor só vê os leads dele na caixa e em Contatos, mesmo dividindo um número. Gerente e admin continuam vendo tudo. Desligue só se o time atende a caixa em conjunto de propósito."
-          ligada={cliente.broker_isolation ?? s.broker_isolation !== false}
+          ligada={cliente.broker_isolation ?? (s.broker_isolation !== false)}
           aoMudar={async (v) => { await patch({ broker_isolation: v }); }} />
         <Chave rotulo="Caixa só de campanha"
-          descricao="A caixa mostra só conversas que entraram em algum funil ou iniciadas na mão pelo painel. Quem foi barrado pelas origens acima (WhatsApp orgânico, form do site) some da caixa também, não só do funil."
+          descricao="A caixa mostra só conversas que entraram em algum funil ou iniciadas na mão pelo painel. Quem foi barrado pelas origens acima (WhatsApp orgânico, form do site) some da caixa também, não só do funil. Ligue para o corretor não ver mensagem de conhecido; deixe desligado para ele ver tudo e só o funil filtrar."
           ligada={cliente.campaign_only_inbox === true}
           aoMudar={async (v) => { await patch({ campaign_only_inbox: v }); }} />
       </section>
@@ -259,7 +269,7 @@ export default function AbaOperacao({ cliente, aoMudar }: PropsDaAba) {
       <section aria-labelledby="demo" className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
         <h2 id="demo" className="mb-2 text-sm font-semibold">Demonstração</h2>
         <Chave rotulo="Modo demonstração"
-          descricao="Só para o CRM que usamos em call de venda. Com a chave ligada, este cliente só manda WhatsApp para quem escreveu para o número dele primeiro, e não manda e-mail nenhum — assim os leads fictícios nunca recebem follow-up, funil ou aviso de gestor. Na tela nada muda: a mensagem aparece como enviada na conversa."
+          descricao="Só para o CRM que usamos em call de venda. Com a chave ligada, este cliente só manda WhatsApp para quem escreveu para o número dele primeiro, e não manda e-mail nenhum — assim os leads fictícios da demonstração nunca recebem follow-up, funil ou aviso de gestor. Na tela nada muda: a mensagem aparece como enviada na conversa."
           ligada={demo} aoMudar={mudarDemo} />
         {demo && (
           <div className="mt-3 flex flex-col gap-3 border-t border-amber-500/30 pt-3">
