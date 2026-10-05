@@ -10,11 +10,13 @@ describe('nenhuma tela guarda nem mostra senha legível', () => {
     arquivo => expect(read(arquivo)).not.toContain('plain_password'),
   );
 
-  // As janelas de Membros saíram do index.tsx na Task F2; a aba Pessoas (F5) devolve os botões e este teste volta a apontar pra ela.
-  it.skip('o painel raiz oferece Enviar e Copiar link de acesso', () => {
-    const src = read('src/pages/SuperAdmin/PooledClients/index.tsx');
-    expect(src).toContain('Enviar link de acesso');
-    expect(src).toContain('Copiar link de acesso');
+  it('a aba Pessoas oferece Enviar e Copiar link de acesso e não tem senha', () => {
+    const src = read('src/pages/SuperAdmin/PooledClients/Cliente/AbaPessoas.tsx');
+    expect(src).toContain('Enviar link a');
+    expect(src).toContain('Copiar link de');
+    expect(src).not.toContain('plain_password');
+    expect(src).not.toContain('set_password');
+    expect(src).not.toMatch(/type="password"/);
   });
 
   it('a tela Equipe oferece Copiar link de acesso', () => {

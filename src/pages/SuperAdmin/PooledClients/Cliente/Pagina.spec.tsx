@@ -95,6 +95,14 @@ describe('Página do cliente', () => {
     expect(await screen.findByText('Cliente não encontrado')).toBeInTheDocument();
   });
 
-  // A Task F5 (aba Pessoas) troca por `it` e faz passar.
-  it.todo('cliente sem schema: Pessoas mostra erro e a página continua de pé');
+  it('cliente sem schema: Pessoas mostra erro e a página continua de pé', async () => {
+    responder();
+    const base = api.get.getMockImplementation()!;
+    api.get.mockImplementation((url: string) => url === '/super/pooled_tenants/c1/members' ? Promise.reject(new Error('schema')) : base(url));
+    montar('/admin/clientes/c1?aba=pessoas');
+    expect(await screen.findByRole('heading', { level: 1, name: '016 Imóveis' })).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Pessoas' })).toHaveAttribute('aria-selected', 'true');
+  });
 });
