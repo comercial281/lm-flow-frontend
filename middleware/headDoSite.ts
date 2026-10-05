@@ -194,19 +194,69 @@ export function montarHead(html: string, dados: DadosDoHead, host: string): stri
 
 const ROBOTS_FECHADO = 'User-agent: *\nDisallow: /\n';
 
+/** Subdomínios lmflow que são do sistema, nunca de um cliente. */
+const SUBDOMINIOS_DO_SISTEMA = new Set(['app', 'www', 'api', 'admin']);
+
+/**
+ * O cliente do subdomínio lmflow (`imob.lmflow.com.br` → `imob`), ou null.
+ * `app`, `www`, `api`, `admin`, o `lmflow.com.br` puro e subdomínio de dois
+ * níveis não são de cliente.
+ */
+export function subdominioDoCliente(host: string): string | null {
+  const m = /^([a-z0-9-]+)\.lmflow\.com\.br$/.exec(limparHost(host));
+  if (!m || SUBDOMINIOS_DO_SISTEMA.has(m[1])) return null;
+  return m[1];
+}
+
+/** O `head` liberou o Google (`index`, sem `noindex`). */
+function liberaGoogle(dados: DadosDoHead): boolean {
+  const robots = robotsSeguro(dados).toLowerCase();
+  return !robots.includes('noindex') && robots.includes('index');
+}
+
+/**
+ * `robots.txt` do subdomínio do cliente (`imob.lmflow.com.br`), sem domínio
+ * próprio ativo: o Google lê o site por aqui. Libera só as páginas do site
+ * desse cliente (`/portal/imob…` e `/imovel/imob/…`) e o código que desenha a
+ * página; as telas do CRM, que dividem o endereço, ficam fechadas.
+ *
+ * Com domínio ativo o Google lê pelo domínio, e aqui fecha tudo (senão o mesmo
+ * site seria lido em dois endereços).
+ */
+function robotsDoSubdominio(slug: string, dados: DadosDoHead | null): string {
+  if (!dados || texto(dados.domain) || !liberaGoogle(dados)) return ROBOTS_FECHADO;
+  const tenant = texto(dados.tenant)?.toLowerCase();
+  if (tenant && tenant !== slug) return ROBOTS_FECHADO;
+  return [
+    'User-agent: *',
+    `Allow: /portal/${slug}$`,
+    `Allow: /portal/${slug}/`,
+    `Allow: /imovel/${slug}/`,
+    'Allow: /assets/',
+    'Allow: /favicon',
+    'Disallow: /',
+    '',
+    `Sitemap: https://${slug}.lmflow.com.br/sitemap.xml`,
+    '',
+  ].join('\n');
+}
+
 /**
  * O `robots.txt` de cada endereço:
  * - endereço do sistema (app.lmflow.com.br…), domínio sem site, servidor fora
  *   ou Google desligado: `Disallow: /`;
+ * - subdomínio do cliente (`imob.lmflow.com.br`) sem domínio próprio e com o
+ *   Google ligado: ver `robotsDoSubdominio`;
  * - domínio ativo com o Google ligado: libera as páginas do site (e o código
  *   que desenha a página, senão o Google vê a tela em branco), fecha o resto e
  *   aponta o sitemap.
  */
 export function robotsTxt(host: string, dados: DadosDoHead | null): string {
   const h = limparHost(host);
+  const slug = subdominioDoCliente(h);
+  if (slug) return robotsDoSubdominio(slug, dados);
   if (ehEnderecoDoSistema(h) || !dados || !noDominioAtivo(h, dados)) return ROBOTS_FECHADO;
-  const robots = robotsSeguro(dados).toLowerCase();
-  if (robots.includes('noindex') || !robots.includes('index')) return ROBOTS_FECHADO;
+  if (!liberaGoogle(dados)) return ROBOTS_FECHADO;
   return [
     'User-agent: *',
     'Allow: /$',
@@ -247,6 +297,13 @@ export function sitemapXml(urls: UrlDoSitemap[]): string {
     '</urlset>',
     '',
   ].join('\n');
+}
+
+/** O domínio ativo que veio na resposta do `/sitemap` (ou null). */
+export function dominioDaResposta(json: unknown): string | null {
+  const j = json as { domain?: unknown; data?: unknown } | null;
+  const d = j && typeof j.data === 'object' && j.data && !Array.isArray(j.data) ? (j.data as { domain?: unknown }) : null;
+  return texto(d?.domain) ?? texto(j?.domain);
 }
 
 /** Lê a resposta do `/sitemap`: `{ urls }`, `{ data: { urls } }` ou `{ data: [...] }`. */

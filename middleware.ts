@@ -21,6 +21,12 @@
  *   `/blog`, `/p/<slug>`…).
  * O resto (telas do CRM no endereço lmflow, arquivos, `/assets`) passa direto.
  *
+ * ROBOTS.TXT E SITEMAP.XML
+ * - domínio do cliente: abre as páginas do site com o Google ligado;
+ * - subdomínio do cliente (`imob.lmflow.com.br`), sem domínio próprio ativo:
+ *   abre só `/portal/imob` e `/imovel/imob/` com o Google ligado;
+ * - `app`, `www`, `api`, `admin` e o resto do sistema: `Disallow: /`.
+ *
  * A resposta é cacheada na borda por um minuto (`s-maxage`), então a página
  * vira, na prática, estática e se atualiza sozinha um minuto depois de publicada.
  *
@@ -47,11 +53,13 @@ import { landingEndpoint, parseLandingPath, type PublicLandingDTO } from './src/
 import { ehEnderecoDoSistema, limparHost, rotaDaLandingNoDominio } from './src/features/siteBuilder/public/dominioDoSite';
 import {
   dadosDaResposta,
+  dominioDaResposta,
   montarHead,
   paginaDoSite,
   robotsTxt,
   scriptDoSite,
   sitemapXml,
+  subdominioDoCliente,
   urlsDaResposta,
   type DadosDoHead,
 } from './middleware/headDoSite';
@@ -243,15 +251,21 @@ function resposta(body: string, status: number, contentType: string, cache: stri
   return new Response(body, { status, headers: { 'content-type': contentType, 'cache-control': cache } });
 }
 
-/** `robots.txt` do endereço. Endereço do sistema nem pergunta: `Disallow: /`. */
+/**
+ * `robots.txt` do endereço. Endereço do sistema (app, www, api, admin…) nem
+ * pergunta: `Disallow: /`. Domínio do cliente pergunta o `head` do `/`; o
+ * subdomínio do cliente (`imob.lmflow.com.br`), o do `/portal/imob`.
+ */
 async function robots(host: string): Promise<Response> {
   const base = apiBase();
+  const slug = subdominioDoCliente(host);
   let dados: DadosDoHead | null = null;
   let falhou = false;
-  if (!ehEnderecoDoSistema(host) && base) {
+  if ((slug || !ehEnderecoDoSistema(host)) && base) {
+    const endpoint = slug ? headEndpoint(base, host, `/portal/${slug}`, slug) : headEndpoint(base, host, '/', null);
     try {
       dados = await comPrazo(async signal => {
-        const res = await fetch(headEndpoint(base, host, '/', null), { headers: JSON_HEADERS, signal });
+        const res = await fetch(endpoint, { headers: JSON_HEADERS, signal });
         if (res.status === 404) return null;
         if (!res.ok) throw new Error(`head ${res.status}`);
         return dadosDaResposta(await res.json());
@@ -264,17 +278,25 @@ async function robots(host: string): Promise<Response> {
   return resposta(robotsTxt(host, dados), 200, 'text/plain; charset=utf-8', falhou ? 'no-store' : CACHE_DA_BORDA);
 }
 
-/** `sitemap.xml` do domínio. Endereço do sistema ou domínio sem site: 404. */
+/**
+ * `sitemap.xml` do domínio do cliente ou do subdomínio do cliente
+ * (`imob.lmflow.com.br`). Endereço do sistema ou sem site: 404. No subdomínio
+ * de um site que tem domínio ativo, também 404: o sitemap mora no domínio.
+ */
 async function sitemap(host: string): Promise<Response> {
   const base = apiBase();
+  const slug = subdominioDoCliente(host);
   const naoTem = () => resposta('Not found\n', 404, 'text/plain; charset=utf-8', CACHE_DA_BORDA);
-  if (ehEnderecoDoSistema(host) || !base) return naoTem();
+  if ((!slug && ehEnderecoDoSistema(host)) || !base) return naoTem();
+  const q = `host=${encodeURIComponent(host)}${slug ? `&tenant=${encodeURIComponent(slug)}` : ''}`;
   try {
     return await comPrazo(async signal => {
-      const res = await fetch(`${base}/api/public/v1/sitemap?host=${encodeURIComponent(host)}`, { headers: JSON_HEADERS, signal });
+      const res = await fetch(`${base}/api/public/v1/sitemap?${q}`, { headers: JSON_HEADERS, signal });
       if (res.status === 404) return naoTem();
       if (!res.ok) throw new Error(`sitemap ${res.status}`);
-      const urls = urlsDaResposta(await res.json());
+      const json = await res.json();
+      if (slug && dominioDaResposta(json)) return naoTem();
+      const urls = urlsDaResposta(json);
       if (!urls) throw new Error('sitemap sem lista');
       return resposta(sitemapXml(urls), 200, 'application/xml; charset=utf-8', CACHE_DA_BORDA);
     });

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import middleware from '../middleware';
-import { montarHead, paginaDoSite, robotsTxt, sitemapXml, type DadosDoHead } from './headDoSite';
+import { montarHead, paginaDoSite, robotsTxt, sitemapXml, subdominioDoCliente, type DadosDoHead } from './headDoSite';
 
 /* ────────────────────────────────────────────────────────────────────────────
    O <head> do site, o robots.txt e o sitemap.xml montados na borda. O HTML é o
@@ -260,6 +260,46 @@ describe('robotsTxt', () => {
   });
 });
 
+describe('robotsTxt no subdomínio do cliente (imob.lmflow.com.br)', () => {
+  const SUB = 'imob.lmflow.com.br';
+  /** O head do /portal/imob num site sem domínio próprio, com o Google ligado. */
+  const SEM_DOMINIO: DadosDoHead = { ...DADOS, domain: null, canonical: `https://${SUB}/portal/imob` };
+
+  it.each([
+    ['imob.lmflow.com.br', 'imob'],
+    ['IMOB.lmflow.com.br.', 'imob'],
+    ['app.lmflow.com.br', null],
+    ['www.lmflow.com.br', null],
+    ['api.lmflow.com.br', null],
+    ['admin.lmflow.com.br', null],
+    ['lmflow.com.br', null],
+    ['a.b.lmflow.com.br', null],
+    ['www.imob.com.br', null],
+  ])('%s → %s', (host, slug) => {
+    expect(subdominioDoCliente(host)).toBe(slug);
+  });
+
+  it('Google ligado e sem domínio: libera só /portal/imob e /imovel/imob, fecha o resto e aponta o sitemap', () => {
+    const linhas = robotsTxt(SUB, SEM_DOMINIO).split('\n');
+    for (const l of ['Allow: /portal/imob$', 'Allow: /portal/imob/', 'Allow: /imovel/imob/', 'Allow: /assets/', 'Disallow: /']) {
+      expect(linhas).toContain(l);
+    }
+    expect(linhas).toContain('Sitemap: https://imob.lmflow.com.br/sitemap.xml');
+    // Nada das telas do CRM nem dos caminhos limpos do domínio.
+    expect(linhas.some(l => /^Allow: \/(\$|imoveis|blog|p\/)/.test(l))).toBe(false);
+  });
+
+  it.each([
+    ['sem dados (404 ou falha)', null],
+    ['Google desligado', { ...SEM_DOMINIO, robots: 'noindex' }],
+    ['em manutenção', { ...SEM_DOMINIO, maintenance: true }],
+    ['com domínio próprio ativo (o Google lê pelo domínio)', DADOS],
+    ['head de outro cliente', { ...SEM_DOMINIO, tenant: 'outra' }],
+  ])('%s: Disallow: /', (_n, dados) => {
+    expect(robotsTxt(SUB, dados)).toBe('User-agent: *\nDisallow: /\n');
+  });
+});
+
 describe('sitemapXml', () => {
   const xmlValido = (xml: string) => {
     const d = new DOMParser().parseFromString(xml, 'application/xml');
@@ -472,6 +512,47 @@ describe('middleware: robots.txt e sitemap.xml', () => {
   it('sitemap aceita a lista envolta em data', async () => {
     servidor(url => (url.includes('/sitemap') ? json({ data: { urls: [{ loc: `https://${DOMINIO}/blog` }] } }) : undefined));
     expect(await (await pedir(`https://${DOMINIO}/sitemap.xml`)).text()).toContain(`<loc>https://${DOMINIO}/blog</loc>`);
+  });
+
+  it('subdomínio do cliente indexável: pergunta o head do /portal/<cliente> e libera o site', async () => {
+    const SUB = 'imob.lmflow.com.br';
+    servidor(url => (url.includes('/head') ? json({ data: { ...DADOS, domain: null } }) : undefined));
+    const res = await pedir(`https://${SUB}/robots.txt`);
+    const txt = await res.text();
+    expect(chamadas[0].url).toBe(`${API}/api/public/v1/head?host=${SUB}&path=%2Fportal%2Fimob&tenant=imob`);
+    expect(txt).toContain('Allow: /portal/imob/');
+    expect(txt).toContain('Allow: /imovel/imob/');
+    expect(txt).toContain(`Sitemap: https://${SUB}/sitemap.xml`);
+    expect(res.headers.get('cache-control')).toContain('s-maxage=60');
+  });
+
+  it('subdomínio do cliente com o Google desligado: Disallow: /', async () => {
+    servidor(url => (url.includes('/head') ? json({ data: { ...DADOS, domain: null, robots: 'noindex' } }) : undefined));
+    expect(await (await pedir('https://imob.lmflow.com.br/robots.txt')).text()).toBe('User-agent: *\nDisallow: /\n');
+  });
+
+  it.each(['app', 'www', 'api', 'admin'])('%s.lmflow.com.br: Disallow: / sem perguntar ao servidor', async sub => {
+    servidor(() => json({ data: { ...DADOS, domain: null } }));
+    expect(await (await pedir(`https://${sub}.lmflow.com.br/robots.txt`)).text()).toBe('User-agent: *\nDisallow: /\n');
+    expect(chamadas).toEqual([]);
+  });
+
+  it('sitemap do subdomínio do cliente: pergunta com host e tenant e devolve o XML', async () => {
+    const SUB = 'imob.lmflow.com.br';
+    servidor(url => (url.includes('/sitemap')
+      ? json({ data: { tenant: 'imob', domain: null, urls: [{ loc: `https://${SUB}/portal/imob` }] } })
+      : undefined));
+    const res = await pedir(`https://${SUB}/sitemap.xml`);
+    expect(res.status).toBe(200);
+    expect(chamadas[0].url).toBe(`${API}/api/public/v1/sitemap?host=${SUB}&tenant=imob`);
+    expect(await res.text()).toContain(`<loc>https://${SUB}/portal/imob</loc>`);
+  });
+
+  it('sitemap do subdomínio de um site com domínio ativo: 404 (o sitemap mora no domínio)', async () => {
+    servidor(url => (url.includes('/sitemap')
+      ? json({ data: { tenant: 'imob', domain: DOMINIO, urls: [{ loc: `https://${DOMINIO}/` }] } })
+      : undefined));
+    expect((await pedir('https://imob.lmflow.com.br/sitemap.xml')).status).toBe(404);
   });
 
   it('sitemap no endereço lmflow: 404 sem perguntar; servidor com 500: 503', async () => {
