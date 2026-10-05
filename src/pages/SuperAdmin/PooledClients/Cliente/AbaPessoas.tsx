@@ -28,6 +28,8 @@ export default function AbaPessoas({ cliente }: PropsDaAba) {
   const [instancias, setInstancias] = useState<CentralInstance[]>([]);
   const [instancia, setInstancia] = useState('');
   const [salvando, setSalvando] = useState(false);
+  // Link que não deu pra copiar (área de transferência bloqueada): fica na tela pra copiar à mão.
+  const [linkManual, setLinkManual] = useState<string | null>(null);
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   const carregar = useCallback(async () => {
@@ -54,9 +56,13 @@ export default function AbaPessoas({ cliente }: PropsDaAba) {
         email: email.trim(), name: nome.trim() || undefined, whatsapp_number: telefone.trim() || undefined,
         send_whatsapp: telefone.trim() ? enviarWa : false, instance: instancia || undefined,
       });
-      if (r.access_url) await copyText(r.access_url);
-      const wa = r.whatsapp?.sent ? ' e enviado no WhatsApp' : '';
-      toast.success(r.access_url ? `Link de acesso copiado${wa}.` : 'Pessoa adicionada.');
+      const copiou = r.access_url ? await copyText(r.access_url) : false;
+      if (r.access_url && !copiou) setLinkManual(r.access_url);
+      const enviou = !!r.whatsapp?.sent;
+      if (!r.access_url) toast.success('Pessoa adicionada.');
+      else if (copiou) toast.success(`Link de acesso copiado${enviou ? ' e enviado no WhatsApp' : ''}.`);
+      else toast.error(`Não deu pra copiar o link${enviou ? ' (foi enviado no WhatsApp)' : ''}. Ele está na tela.`);
+      if (telefone.trim() && enviarWa && !enviou) toast.error(`Não enviou: ${r.whatsapp?.skipped ?? r.whatsapp?.error ?? 'erro no envio'}`);
       setEmail(''); setNome(''); setTelefone('');
       void carregar();
     } catch (e: any) {
@@ -65,8 +71,10 @@ export default function AbaPessoas({ cliente }: PropsDaAba) {
   };
 
   const copiarLink = async (p: Pessoa) => {
-    try { await copyText(await clientesService.linkDeAcesso(cliente.id, p.id)); toast.success('Link de acesso copiado (vale 24 h).'); }
-    catch { toast.error('Não deu pra gerar o link.'); }
+    let url: string;
+    try { url = await clientesService.linkDeAcesso(cliente.id, p.id); } catch { toast.error('Não deu pra gerar o link.'); return; }
+    if (await copyText(url)) toast.success('Link de acesso copiado (vale 24 h).');
+    else { setLinkManual(url); toast.error('Não deu pra copiar o link. Ele está na tela.'); }
   };
 
   const enviarLink = async (p: Pessoa) => {
@@ -111,6 +119,13 @@ export default function AbaPessoas({ cliente }: PropsDaAba) {
             </li>
           ))}
         </ul>
+      )}
+
+      {linkManual && (
+        <div role="status" className="rounded-lg border p-3">
+          <Label htmlFor="link-manual">Não deu pra copiar. Copie o link:</Label>
+          <Input id="link-manual" readOnly value={linkManual} onFocus={(e) => e.currentTarget.select()} />
+        </div>
       )}
 
       <section aria-labelledby="nova-pessoa" className="rounded-lg border p-4">

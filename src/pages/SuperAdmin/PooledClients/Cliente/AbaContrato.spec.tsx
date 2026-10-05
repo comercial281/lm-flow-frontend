@@ -26,4 +26,27 @@ describe('Aba Contrato (limites)', () => {
     })));
     await waitFor(() => expect(aoMudar).toHaveBeenCalled());
   });
+
+  it('campo de números vazio ou inválido desabilita Salvar e não chama o servidor', () => {
+    render(<AbaContrato cliente={cliente as any} aoMudar={vi.fn()} recarregar={vi.fn()} />);
+    const salvar = screen.getByRole('button', { name: 'Salvar limites' });
+    fireEvent.change(screen.getByLabelText('Números de WhatsApp'), { target: { value: '' } });
+    expect(salvar).toBeDisabled();
+    expect(screen.getByText(/número inteiro/)).toBeInTheDocument();
+    fireEvent.click(salvar);
+    fireEvent.change(screen.getByLabelText('Números de WhatsApp'), { target: { value: 'abc' } });
+    expect(salvar).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Números de WhatsApp'), { target: { value: '0' } });
+    expect(salvar).toBeEnabled();
+    fireEvent.change(screen.getByLabelText('Preço do excedente (R$)'), { target: { value: '-1' } });
+    expect(salvar).toBeDisabled();
+    expect(api.patch).not.toHaveBeenCalled();
+  });
+
+  it('mostra os limites novos quando o cliente é atualizado por fora', () => {
+    const { rerender } = render(<AbaContrato cliente={cliente as any} aoMudar={vi.fn()} recarregar={vi.fn()} />);
+    rerender(<AbaContrato cliente={{ ...cliente, max_whatsapp_channels: 9, ai_leads_included: 100 } as any} aoMudar={vi.fn()} recarregar={vi.fn()} />);
+    expect(screen.getByLabelText('Números de WhatsApp')).toHaveValue('9');
+    expect(screen.getByLabelText('Franquia de leads da IA')).toHaveValue('100');
+  });
 });
