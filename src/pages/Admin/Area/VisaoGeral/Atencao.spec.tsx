@@ -51,6 +51,14 @@ describe('Atenção', () => {
     await waitFor(() => expect(screen.getByText(/Não deu pra conferir: Lento/)).toBeInTheDocument());
   });
 
+  it('sem problema mas com cliente não lido: não atesta que está tudo em ordem', async () => {
+    apiGet.mockResolvedValue(resposta({ clients: [], ok_count: 5, unreadable: [{ name: 'Lento', message: 'não deu tempo de ler' }] }));
+    montar();
+    await waitFor(() => expect(screen.getByText('Nenhum problema nos 5 clientes conferidos')).toBeInTheDocument());
+    expect(screen.getByText(/Não deu pra conferir: Lento/)).toBeInTheDocument();
+    expect(screen.queryByText(/Tudo em ordem/)).not.toBeInTheDocument();
+  });
+
   it('erro aparece como erro e tenta de novo', async () => {
     apiGet.mockRejectedValueOnce(new Error('caiu')).mockResolvedValueOnce(resposta());
     montar();

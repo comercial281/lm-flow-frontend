@@ -63,7 +63,9 @@ export default function Atencao() {
       {dados.clients.length === 0 ? (
         <div className="flex items-center gap-2 rounded-lg border p-4 text-sm">
           <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-          Tudo em ordem nos {numero(dados.ok_count)} clientes
+          {dados.unreadable.length > 0
+            ? `Nenhum problema nos ${numero(dados.ok_count)} clientes conferidos`
+            : `Tudo em ordem nos ${numero(dados.ok_count)} clientes`}
         </div>
       ) : (
         <section className="flex flex-col gap-3" aria-labelledby="precisa-de-atencao">
