@@ -53,7 +53,7 @@ export default function HomeVitrines({ home, items, tenant, wa, abas }: Props) {
                 )}
                 <h2 className={`${vitrine.kind === 'featured' ? 'mt-1 ' : ''}font-[var(--display)] text-3xl font-semibold sm:text-4xl`}>{vitrine.title}</h2>
               </div>
-              {temLink && <Link to={verTodos} className="hidden shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 sm:inline-flex" style={{ background: 'var(--ink)' }}>
+              {temLink && <Link to={verTodos} className="hidden shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 sm:inline-flex" style={{ background: 'var(--solid)' }}>
                 {rotuloLink} <Ic d={I.arrow} s={16} />
               </Link>}
             </div>
@@ -62,7 +62,7 @@ export default function HomeVitrines({ home, items, tenant, wa, abas }: Props) {
               {itens.map(p => <PropertyCard key={p.id} tenant={tenant} p={p} wa={wa} tab={tab} />)}
             </div>
             {temLink && <div className="mt-8 text-center sm:hidden">
-              <Link to={verTodos} className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: 'var(--ink)' }}>
+              <Link to={verTodos} className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: 'var(--solid)' }}>
                 {rotuloLink} <Ic d={I.arrow} s={16} />
               </Link>
             </div>}

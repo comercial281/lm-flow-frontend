@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useCtxDoSite, useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
@@ -15,7 +15,7 @@ import {
   type PropertyTypology,
 } from '@/features/properties/typologies';
 import {
-  PortalFooter, PortalHeader, PropertyCard, estaEmManutencao, robotsDoSite,
+  PortalFooter, PortalHeader, PropertyCard, estaEmManutencao, robotsDoSite, tokensDoSite,
   type PortalProperty, type SiteInfo as PortalSiteInfo,
 } from './portalShared';
 import { resolverHome, type AbaId } from '@/features/siteBuilder/public/homeConfig';
@@ -208,11 +208,9 @@ export default function ImovelPublicPage() {
     return () => { alive = false; };
   }, [tenant, code, prop, manutencao, parecidosLigados]);
 
-  const brand = site.branding?.primary_color || '#0E7C5A';
-  const font = site.branding?.font_family || 'Inter';
-  const fontPrimary = font.split(',')[0].trim();
-  const fontStack = font.includes(',') ? font : `${font}, system-ui, sans-serif`;
-  const fontHref = `https://fonts.googleapis.com/css2?family=${fontPrimary.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`;
+  // Mesmas cores, fonte e fundo do resto do site (antes a ficha montava as
+  // dela à mão, sem a cor de destaque, que pinta o selo Muito procurado).
+  const { fontHref, cssVars, fundo } = useMemo(() => tokensDoSite(site), [site]);
   const wa = site.contact?.whatsapp;
   // Abas do topo e do rodapé: só o liga/desliga do Personalizar. A ficha não
   // carrega o catálogo inteiro, então não esconde aba sem imóvel como a home.
@@ -253,7 +251,6 @@ export default function ImovelPublicPage() {
   if (state === 'loading') return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   if (state === 'notfound' || !prop || !ficha) return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Imóvel não encontrado.</div>;
 
-  const cssVars = { ['--brand' as string]: brand, ['--ink' as string]: '#17140F', ['--paper' as string]: '#FAF7F2', ['--display' as string]: fontStack, fontFamily: fontStack } as CSSProperties;
   const photos = prop.photos ?? [];
   const cover = photos[active] || photos[0];
   const typeLabel = rotuloTipo(prop.property_type || '');
@@ -343,7 +340,7 @@ export default function ImovelPublicPage() {
   );
 
   return (
-    <div style={cssVars} className="min-h-screen bg-[var(--paper)] pb-24 text-[var(--ink)] antialiased lg:pb-0">
+    <div style={cssVars} data-fundo={fundo} className="min-h-screen bg-[var(--paper)] pb-24 text-[var(--ink)] antialiased lg:pb-0">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href={fontHref} rel="stylesheet" />
 

@@ -8,12 +8,14 @@ import HeroImagePicker, { type HeroImagePick } from '@/features/siteBuilder/Hero
 import { EMPTY_HERO_IMAGE, HERO_IMAGE_MODE_LABELS, heroImageChoiceFrom, heroImageWarning } from '@/features/siteBuilder/heroImage';
 import { Seletor } from '@/components/base/Seletor';
 import { tituloDaAba } from '@/features/siteBuilder/public/tituloDaAba';
+import { FONTES_DO_SITE } from '@/features/siteBuilder/public/aparenciaConfig';
 import { Secao, Secoes } from '../ui/Secao';
 import { CLASSE_DO_CAMPO, Campo } from '../ui/Campo';
 import EnvioDeImagem from '../ui/EnvioDeImagem';
 import type { FormProps } from './tipos';
 
-const SITE_FONTS = ['Inter', 'Space Grotesk', 'Lato', 'Poppins', 'Montserrat', 'Roboto'];
+// As 10 fontes do site (Google Fonts): a lista mora junto da regra que as carrega no site.
+const SITE_FONTS = FONTES_DO_SITE;
 
 interface Props extends FormProps {
   // A prévia da foto de imóvel recém-escolhida mora no pai: o Salvar a limpa.
@@ -159,7 +161,7 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
         <div className="grid gap-5 sm:grid-cols-2">
           <CampoDeCor id="aparencia-cor-principal" rotulo="Cor principal" ajuda="Botões de Tenho interesse, selos dos imóveis, preço das plantas, a aba escolhida na busca e os links."
             valor={siteForm.primary_color ?? ''} padrao="#7C3AED" aoMudar={primary_color => setF({ primary_color })} />
-          <CampoDeCor id="aparencia-cor-destaque" rotulo="Cor de destaque" ajuda="Guardada para os modelos novos do site. Hoje o site usa só a cor principal."
+          <CampoDeCor id="aparencia-cor-destaque" rotulo="Cor de destaque" ajuda="Pinta os selos Destaque, Exclusivo e Muito procurado. O texto do selo fica branco ou escuro, o que for mais legível."
             valor={siteForm.accent_color ?? ''} padrao="#9333EA" aoMudar={accent_color => setF({ accent_color })} />
         </div>
       </Secao>
