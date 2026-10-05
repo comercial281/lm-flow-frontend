@@ -5,11 +5,12 @@ import { imovelHref } from './finalidade';
 import { menuPagesLinks } from '@/features/siteBuilder/public/portalMenu';
 import PortalTranslate from './PortalTranslate';
 import { tituloDaAba } from '@/features/siteBuilder/public/tituloDaAba';
-import { filterProperties, type PortalFilters, type PortalProperty, type PortalTab } from '@/features/siteBuilder/public/filtros';
+import { filterProperties, opcoesSemRepetir, type PortalFilters, type PortalProperty, type PortalTab } from '@/features/siteBuilder/public/filtros';
 import { ROTULO_TIPO, rotuloTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { resolverHome, type AbaId } from '@/features/siteBuilder/public/homeConfig';
 import { abasVisiveis } from '@/features/siteBuilder/public/vitrines';
 import { seloDaFase } from '@/features/properties/listingKind';
+import { ORDENS, ROTULO_ORDEM, ehOrdem, type Ordem } from '@/features/siteBuilder/public/listaConfig';
 
 // Tipos e filtro moram em filtros.ts (sem ciclo com vitrines.ts); reexportados aqui.
 export { filterProperties };
@@ -83,6 +84,10 @@ export interface SiteInfo {
   menu?: { title: string; slug: string }[] | null;
   /** Configuração da página inicial (settings.home). Ler sempre por `resolverHome`. */
   home?: unknown;
+  /** Página do imóvel (settings.property_page, sem os e-mails). Ler sempre por `resolverFicha`. */
+  property_page?: unknown;
+  /** Lista de imóveis (settings.listing). Ler sempre por `resolverLista`. */
+  listing?: unknown;
 }
 /* Artigo do blog público (item da listagem). */
 export interface PortalArticleSummary {
@@ -202,8 +207,9 @@ export function usePortalData(tenant?: string) {
   const wa = site.contact?.whatsapp;
   const manutencao = estaEmManutencao(site);
 
-  const cities = useMemo(() => [...new Set(items.map(i => i.address?.city).filter(Boolean) as string[])].sort(), [items]);
-  const hoods = useMemo(() => [...new Set(items.map(i => i.address?.neighborhood).filter(Boolean) as string[])].sort(), [items]);
+  // Uma opção por cidade/bairro, mesmo com grafias diferentes no cadastro.
+  const cities = useMemo(() => opcoesSemRepetir(items.map(i => i.address?.city)), [items]);
+  const hoods = useMemo(() => opcoesSemRepetir(items.map(i => i.address?.neighborhood)), [items]);
   const types = useMemo(() => [...new Set(items.map(i => i.property_type).filter(Boolean))], [items]);
   // Página inicial (Personalizar) e as abas que existem de verdade: aba ligada
   // sem imóvel some da capa, do topo e do rodapé.
@@ -254,8 +260,10 @@ export function usePublishedArticlesExist(tenant?: string): boolean {
 }
 
 /* ── Card de imóvel ──────────────────────────────────────────────────────── */
-export function PropertyCard({ tenant, p, wa, tab }: { tenant: string; p: PortalProperty; wa?: string | null; tab?: PortalTab }) {
-  const s = p.icon_summary ?? {};
+interface PropsDoCartao { tenant: string; p: PortalProperty; wa?: string | null; tab?: PortalTab }
+
+/** O que o cartão e a linha mostram: os dois formatos dizem a mesma coisa. */
+function dadosDoCartao({ tenant, p, wa, tab }: PropsDoCartao) {
   // Empreendimento mostra a fase (e a entrega) no lugar de "Destaque" e, se for
   // exclusivo, os dois selos. Na revenda Exclusivo vence Destaque.
   const dev = p.listing_kind === 'development';
@@ -264,37 +272,83 @@ export function PropertyCard({ tenant, p, wa, tab }: { tenant: string; p: Portal
     p.exclusive ? 'Exclusivo' : null,
     !dev && !p.exclusive && p.featured ? 'Destaque' : null,
   ].filter((x): x is string => !!x);
-  const typeLabel = rotuloTipo(p.property_type);
-  const local = [p.address?.neighborhood, p.address?.city].filter(Boolean).join(', ');
-  const waLink = wa ? `https://wa.me/${onlyDigits(wa)}?text=${encodeURIComponent(`Olá! Tenho interesse no imóvel ${p.code} (${p.title}).`)}` : null;
-  const href = imovelHref(tenant, p.code, tab);
+  return {
+    s: p.icon_summary ?? {},
+    selos,
+    typeLabel: rotuloTipo(p.property_type),
+    local: [p.address?.neighborhood, p.address?.city].filter(Boolean).join(', '),
+    waLink: wa ? `https://wa.me/${onlyDigits(wa)}?text=${encodeURIComponent(`Olá! Tenho interesse no imóvel ${p.code} (${p.title}).`)}` : null,
+    href: imovelHref(tenant, p.code, tab),
+  };
+}
+
+function SelosNaFoto({ selos }: { selos: string[] }) {
+  if (selos.length === 0) return null;
+  return (
+    <div className="pointer-events-none absolute left-3 right-3 top-3 flex flex-wrap gap-1.5">
+      {selos.map(selo => (
+        <span key={selo} className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white" style={{ background: 'var(--brand)' }}>
+          {selo}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function IconesDoImovel({ s }: { s: NonNullable<PortalProperty['icon_summary']> }) {
+  return (
+    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] text-neutral-600">
+      {!!s.bedrooms && <span className="inline-flex items-center gap-1.5"><Ic d={I.bed} s={15} /> {s.bedrooms}</span>}
+      {!!s.suites && <span className="inline-flex items-center gap-1.5"><Ic d={I.bath} s={15} /> {s.suites} suíte{s.suites > 1 ? 's' : ''}</span>}
+      {!!s.parking && <span className="inline-flex items-center gap-1.5"><Ic d={I.car} s={15} /> {s.parking}</span>}
+      {!!s.useful_area_m2 && <span className="inline-flex items-center gap-1.5"><Ic d={I.ruler} s={15} /> {s.useful_area_m2} m²</span>}
+    </div>
+  );
+}
+
+function BotoesDoCartao({ href, waLink, titulo }: { href: string; waLink: string | null; titulo: string }) {
+  return (
+    <>
+      <Link to={href} aria-label={`Ver detalhes de ${titulo}`} className="flex-1 rounded-full px-3 py-2 text-center text-[13px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--ink)' }}>
+        Ver detalhes
+      </Link>
+      {waLink && (
+        <a href={waLink} target="_blank" rel="noreferrer" aria-label="Falar no WhatsApp" title="Falar no WhatsApp" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white transition-transform hover:scale-105">
+          <Ic d={I.wa} s={18} />
+        </a>
+      )}
+    </>
+  );
+}
+
+export function PropertyCard(props: PropsDoCartao) {
+  const { p } = props;
+  const { s, selos, typeLabel, local, waLink, href } = dadosDoCartao(props);
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_-16px_rgba(0,0,0,0.25)]">
-      <Link to={href} className="relative block aspect-[4/3] overflow-hidden bg-neutral-100">
-        {p.cover_url ? (
-          <img src={p.cover_url} alt={p.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.06]" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-neutral-300">
-            <Ic d={I.pin} s={40} />
-          </div>
-        )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
-        {selos.length > 0 && (
-          <div className="absolute left-3 right-3 top-3 flex flex-wrap gap-1.5">
-            {selos.map(selo => (
-              <span key={selo} className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white" style={{ background: 'var(--brand)' }}>
-                {selo}
-              </span>
-            ))}
-          </div>
-        )}
+      {/* A foto é um atalho de mouse pro mesmo endereço de "Ver detalhes": fora do Tab e
+          do leitor de tela, que já têm o título e o botão. Selos e preço ficam por cima
+          da foto, FORA do link escondido, pra continuarem sendo lidos; o clique neles
+          passa pro link (pointer-events-none). */}
+      <div className="relative">
+        <Link to={href} tabIndex={-1} aria-hidden className="relative block aspect-[4/3] overflow-hidden bg-neutral-100">
+          {p.cover_url ? (
+            <img src={p.cover_url} alt={p.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.06]" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-neutral-300">
+              <Ic d={I.pin} s={40} />
+            </div>
+          )}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+        </Link>
+        <SelosNaFoto selos={selos} />
         {p.display_price && (
-          <span className="absolute bottom-3 left-3 rounded-full bg-white/95 px-3.5 py-1.5 text-[15px] font-bold text-[var(--ink)] shadow-sm backdrop-blur">
+          <span className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-white/95 px-3.5 py-1.5 text-[15px] font-bold text-[var(--ink)] shadow-sm backdrop-blur">
             {p.display_price}
           </span>
         )}
-      </Link>
+      </div>
 
       <div className="flex flex-1 flex-col p-4">
         <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand)]">{typeLabel}</span>
@@ -307,25 +361,86 @@ export function PropertyCard({ tenant, p, wa, tab }: { tenant: string; p: Portal
           </p>
         )}
 
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] text-neutral-600">
-          {!!s.bedrooms && <span className="inline-flex items-center gap-1.5"><Ic d={I.bed} s={15} /> {s.bedrooms}</span>}
-          {!!s.suites && <span className="inline-flex items-center gap-1.5"><Ic d={I.bath} s={15} /> {s.suites} suíte{s.suites > 1 ? 's' : ''}</span>}
-          {!!s.parking && <span className="inline-flex items-center gap-1.5"><Ic d={I.car} s={15} /> {s.parking}</span>}
-          {!!s.useful_area_m2 && <span className="inline-flex items-center gap-1.5"><Ic d={I.ruler} s={15} /> {s.useful_area_m2} m²</span>}
-        </div>
+        <IconesDoImovel s={s} />
 
         <div className="mt-4 flex items-center gap-2 border-t border-black/[0.06] pt-3">
-          <Link to={href} className="flex-1 rounded-full px-3 py-2 text-center text-[13px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--ink)' }}>
-            Ver detalhes
-          </Link>
-          {waLink && (
-            <a href={waLink} target="_blank" rel="noreferrer" aria-label="Falar no WhatsApp" className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#25D366] text-white transition-transform hover:scale-105">
-              <Ic d={I.wa} s={18} />
-            </a>
-          )}
+          <BotoesDoCartao href={href} waLink={waLink} titulo={p.title} />
         </div>
       </div>
     </article>
+  );
+}
+
+/**
+ * Linha larga da lista (Meu site › Lista de imóveis › cartões em linhas). Mesmo
+ * conteúdo do cartão: foto com os selos à esquerda (~280 px), dados no meio e
+ * preço com os botões ao lado. No celular empilha (foto em cima); no tablet o
+ * preço desce pra baixo dos dados. Cores sempre do site (--brand, --ink).
+ */
+export function PropertyRow(props: PropsDoCartao) {
+  const { p } = props;
+  const { s, selos, typeLabel, local, waLink, href } = dadosDoCartao(props);
+
+  return (
+    <article className="group grid overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-shadow duration-300 hover:shadow-[0_20px_40px_-16px_rgba(0,0,0,0.25)] sm:grid-cols-[240px_minmax(0,1fr)] lg:grid-cols-[280px_minmax(0,1fr)_220px]">
+      {/* Foto como no cartão: link só de mouse, selos por cima e fora dele. */}
+      <div className="relative aspect-[4/3] overflow-hidden bg-neutral-100 sm:row-span-2 sm:aspect-auto sm:min-h-[200px] lg:row-span-1">
+        <Link to={href} tabIndex={-1} aria-hidden className="absolute inset-0 block">
+          {p.cover_url ? (
+            <img src={p.cover_url} alt={p.title} loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.06]" />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-neutral-300">
+              <Ic d={I.pin} s={40} />
+            </div>
+          )}
+        </Link>
+        <SelosNaFoto selos={selos} />
+      </div>
+
+      <div className="flex min-w-0 flex-col p-4 sm:p-5">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand)]">{typeLabel}</span>
+        <Link to={href} className="mt-1">
+          <h3 className="font-[var(--display)] text-[18px] leading-snug text-[var(--ink)] line-clamp-2 transition-colors group-hover:text-[var(--brand)]">{p.title}</h3>
+        </Link>
+        {local && (
+          <p className="mt-1 flex items-center gap-1 text-[13px] text-neutral-500">
+            <Ic d={I.pin} s={13} /> {local}
+          </p>
+        )}
+        <IconesDoImovel s={s} />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 sm:col-start-2 sm:px-5 lg:col-start-3 lg:row-start-1 lg:flex-col lg:flex-nowrap lg:items-stretch lg:justify-center lg:border-l lg:border-t-0">
+        {p.display_price && (
+          <span className="text-[19px] font-bold leading-tight text-[var(--ink)] lg:text-[20px]">{p.display_price}</span>
+        )}
+        <div className="flex flex-1 items-center gap-2 sm:ml-auto sm:max-w-[280px] lg:ml-0 lg:max-w-none lg:flex-none">
+          <BotoesDoCartao href={href} waLink={waLink} titulo={p.title} />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+/**
+ * "Ordenar por" da busca: `<select>` nativo, como os filtros do site público.
+ * Mora aqui (e não na página de busca) porque este arquivo é a exceção da lista
+ * nativa no conferir-padrao: o portal público é outro público, com outro visual.
+ */
+export function OrdenarPor({ valor, onChange }: { valor: Ordem; onChange: (v: Ordem) => void }) {
+  return (
+    <label className="flex items-center gap-2 text-[13px] text-neutral-500">
+      <span className="shrink-0">Ordenar por</span>
+      <span className="relative">
+        <select value={valor} onChange={e => { if (ehOrdem(e.target.value)) onChange(e.target.value); }}
+          className="appearance-none rounded-full border border-black/[0.08] bg-white py-2 pl-3.5 pr-8 text-[13px] font-semibold text-[var(--ink)] outline-none focus:border-[var(--brand)] focus-visible:ring-2 focus-visible:ring-[var(--brand)]/40">
+          {ORDENS.map(o => <option key={o} value={o}>{ROTULO_ORDEM[o]}</option>)}
+        </select>
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+        </span>
+      </span>
+    </label>
   );
 }
 

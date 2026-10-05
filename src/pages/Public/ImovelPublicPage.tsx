@@ -21,6 +21,15 @@ import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 import { FINALIDADE_PARAM, finalidadeDoImovel, finalidadeInicial, type Finalidade } from './finalidade';
 import { consultaDoMapa } from './mapaDoImovelPublico';
+import { rotuloTipo } from '@/features/siteBuilder/public/tiposDeImovel';
+import { resolverFicha } from '@/features/siteBuilder/public/fichaConfig';
+import {
+  construtoraDoImovel, dadosDoPredio, faseDoImovel, fichaDoImovel, selosDoImovel, sufixoDoIptu,
+  type CamposDaFicha,
+} from './ficha/fichaDoImovel';
+import SelosDoImovel from './ficha/SelosDoImovel';
+import MidiaDoImovel from './ficha/MidiaDoImovel';
+import DadosDoEmpreendimento from './ficha/DadosDoEmpreendimento';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — PÁGINA DO IMÓVEL (Produto A). Mesma pegada "Editorial
@@ -29,7 +38,9 @@ import { consultaDoMapa } from './mapaDoImovelPublico';
 ──────────────────────────────────────────────────────────────────────────── */
 
 interface Photo { file_url: string; thumbnail_url?: string | null; caption?: string | null; alt_text?: string | null; is_cover?: boolean }
-interface PropertyDTO {
+// Os campos do C2 (CamposDaFicha) são todos opcionais: servidor velho não os
+// manda e a ficha fica igual à de antes.
+interface PropertyDTO extends CamposDaFicha {
   id?: string; code: string; title: string; description?: string;
   transaction_type?: string; property_type?: string;
   sale_price?: number | null; rent_price?: number | null;
@@ -52,7 +63,6 @@ interface PropertyDTO {
 type SiteInfo = PortalSiteInfo;
 
 const API = import.meta.env.VITE_API_URL as string;
-const TYPE_LABEL: Record<string, string> = { apartment: 'Apartamento', house: 'Casa', condo: 'Casa em condomínio', land: 'Terreno', commercial: 'Comercial', studio: 'Studio', farm: 'Chácara' };
 
 function onlyDigits(s?: string | null) { return (s || '').replace(/\D/g, ''); }
 function brl(n?: number | null) { return typeof n === 'number' ? n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }) : null; }
@@ -97,6 +107,10 @@ export default function ImovelPublicPage() {
   // anúncio), mas o topo e o rodapé ficam só com logo e WhatsApp, o "Voltar aos
   // imóveis" some e "Você também pode gostar" também (a lista dá 404).
   const manutencao = estaEmManutencao(site);
+  // "Página do imóvel" do Personalizar. Sem `property_page` (servidor velho),
+  // padrão de fábrica: tudo ligado, a ficha de antes.
+  const ficha = useMemo(() => (prop ? fichaDoImovel(prop, resolverFicha(site.property_page)) : null), [prop, site]);
+  const parecidosLigados = ficha?.parecidos ?? false;
   const { pathname } = useLocation();
   usePortalTracking(state === 'ok' && siteLoaded ? site : null, tenant, { kind: 'property', path: pathname, propertyCode: code });
   useIconeDaAba(site.branding?.favicon_url);
@@ -159,9 +173,10 @@ export default function ImovelPublicPage() {
 
   // Imóveis recomendados (fim da página): outros publicados da MESMA cidade,
   // excluindo o atual. Sem endpoint novo — usa a listagem pública do portal.
+  // Desligado na "Página do imóvel": a lista nem é pedida.
   useEffect(() => {
     if (!tenant || !code || !prop) return;
-    if (manutencao) { setSuggestions([]); return; }
+    if (manutencao || !parecidosLigados) { setSuggestions([]); return; }
     let alive = true;
     const fetchList = async (city?: string): Promise<PortalProperty[]> => {
       const qs = new URLSearchParams({ per_page: '8' });
@@ -183,7 +198,7 @@ export default function ImovelPublicPage() {
       if (alive) setSuggestions(list.slice(0, 3));
     })();
     return () => { alive = false; };
-  }, [tenant, code, prop, manutencao]);
+  }, [tenant, code, prop, manutencao, parecidosLigados]);
 
   const brand = site.branding?.primary_color || '#0E7C5A';
   const font = site.branding?.font_family || 'Inter';
@@ -226,12 +241,12 @@ export default function ImovelPublicPage() {
   };
 
   if (state === 'loading') return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
-  if (state === 'notfound' || !prop) return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Imóvel não encontrado.</div>;
+  if (state === 'notfound' || !prop || !ficha) return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Imóvel não encontrado.</div>;
 
   const cssVars = { ['--brand' as string]: brand, ['--ink' as string]: '#17140F', ['--paper' as string]: '#FAF7F2', ['--display' as string]: fontStack, fontFamily: fontStack } as CSSProperties;
   const photos = prop.photos ?? [];
   const cover = photos[active] || photos[0];
-  const typeLabel = TYPE_LABEL[prop.property_type || ''] || prop.property_type || 'Imóvel';
+  const typeLabel = rotuloTipo(prop.property_type || '');
 
   // Preço principal segue o tipo de transação (aluguel mostra "/mês"; venda, o
   // valor cheio). Locação sem venda cai no aluguel; senão, venda.
@@ -248,24 +263,33 @@ export default function ImovelPublicPage() {
     const v = brl(n);
     return v ? { label, value: `${v}${suffix}` } : null;
   };
-  const money = [
+  const moneyRows = [
     feeRow('Condomínio', prop.condo_fee, '/mês'),
-    feeRow('IPTU', prop.iptu, '/ano'),
+    feeRow('IPTU', prop.iptu, sufixoDoIptu(prop)),
     pricePerM2 ? { label: 'Valor do m²', value: pricePerM2 } : null,
   ].filter(Boolean) as { label: string; value: string }[];
+  // Revenda com "Valores" desligado: some a linha toda (aqui, no card e no celular).
+  const money = ficha.valores ? moneyRows : [];
 
   // Características/comodidades → rótulos (via catálogo compartilhado).
   const featureLabels = labelsFor(prop.features);
   const condoLabels = labelsFor(prop.condo_features);
-  // Tipologias (plantas) do empreendimento — [] quando o imóvel tem uma só ou
-  // quando o tenant ainda não recebeu a coluna (backend devolve [] nesse caso).
-  const typologies = prop.typologies ?? [];
+  // Tipologias (plantas) do empreendimento: a tabela aparece com qualquer
+  // tipologia cadastrada, até com uma só. [] quando não há nenhuma ou quando o
+  // tenant ainda não recebeu a coluna (o backend devolve [] nesse caso).
+  const typologies = ficha.tipologias ? prop.typologies ?? [] : [];
 
   // Localização (privacidade, decisão de 03/10): revenda: só a região (bairro/
   // cidade, sem rua/número); empreendimento: ponto exato — o servidor só manda
   // latitude/longitude para empreendimento.
-  const mapa = consultaDoMapa(prop);
-  const regionText = mapa?.legenda ?? '';
+  const local = consultaDoMapa(prop);
+  const regionText = local?.legenda ?? '';
+  const mapa = ficha.mapa ? local : null;
+
+  const selos = selosDoImovel(prop, ficha);
+  const fase = faseDoImovel(prop, ficha);
+  const dadosDoPredioList = dadosDoPredio(prop, ficha);
+  const construtora = construtoraDoImovel(prop, ficha);
 
   const specs = [
     prop.bedrooms ? { d: I.bed, label: `${prop.bedrooms} ${prop.bedrooms > 1 ? 'quartos' : 'quarto'}` } : null,
@@ -375,11 +399,14 @@ export default function ImovelPublicPage() {
           </div>
         )}
 
+        <MidiaDoImovel videoUrl={prop.video_url} tourUrl={prop.virtual_tour_url} />
+
         <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_360px]">
           {/* Conteúdo */}
           <div>
             <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">{typeLabel}</span>
             <h1 className="mt-1.5 font-[var(--display)] text-3xl font-semibold leading-tight sm:text-4xl">{prop.title}</h1>
+            <SelosDoImovel selos={selos} />
             {regionText && <p className="mt-2 flex items-center gap-1.5 text-[15px] text-neutral-500"><Ic d={I.pin} s={16} /> {regionText}</p>}
 
             {specs.length > 0 && (
@@ -460,6 +487,8 @@ export default function ImovelPublicPage() {
               </section>
             )}
 
+            <DadosDoEmpreendimento dados={dadosDoPredioList} construtora={construtora} />
+
             {condoLabels.length > 0 && (
               <section className="mt-9">
                 <h2 className="font-[var(--display)] text-2xl font-semibold">Comodidades do condomínio</h2>
@@ -496,6 +525,7 @@ export default function ImovelPublicPage() {
                   {price}{priceSuffix && <span className="text-base font-medium text-neutral-400">{priceSuffix}</span>}
                 </div>
               )}
+              {fase && <div className="mt-1.5 text-[14px] font-medium text-[var(--brand)]">{fase}</div>}
               <div className="mt-1 text-[13px] text-neutral-500">Código {prop.code}</div>
               {money.length > 0 && (
                 <div className="mt-3 space-y-1">
@@ -522,6 +552,7 @@ export default function ImovelPublicPage() {
               {price}{priceSuffix && <span className="text-sm font-medium text-neutral-400">{priceSuffix}</span>}
             </div>
           )}
+          {fase && <div className="mt-1 text-[14px] font-medium text-[var(--brand)]">{fase}</div>}
           {money.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-neutral-500">
               {money.map((m, i) => <span key={i}>{m.label} <span className="font-medium text-[var(--ink)]">{m.value}</span></span>)}
@@ -532,7 +563,7 @@ export default function ImovelPublicPage() {
         </section>
 
         {/* Imóveis recomendados */}
-        {!manutencao && suggestions.length > 0 && (
+        {!manutencao && ficha.parecidos && suggestions.length > 0 && (
           <section className="mt-14">
             <h2 className="font-[var(--display)] text-2xl font-semibold sm:text-3xl">Você também pode gostar</h2>
             <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -544,7 +575,12 @@ export default function ImovelPublicPage() {
 
       {/* Barra fixa (mobile) */}
       <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-black/[0.06] bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
-        {price && <div className="flex-1"><div className="text-[11px] text-neutral-400">{isRent ? 'aluguel' : 'a partir de'}</div><div className="font-[var(--display)] text-lg font-semibold leading-none">{price}{priceSuffix && <span className="text-[11px] font-medium text-neutral-400">{priceSuffix}</span>}</div></div>}
+        {(price || fase) && (
+          <div className="min-w-0 flex-1">
+            {price && <><div className="text-[11px] text-neutral-400">{isRent ? 'aluguel' : 'a partir de'}</div><div className="font-[var(--display)] text-lg font-semibold leading-none">{price}{priceSuffix && <span className="text-[11px] font-medium text-neutral-400">{priceSuffix}</span>}</div></>}
+            {fase && <div className="mt-1 truncate text-[11px] font-medium text-[var(--brand)]">{fase}</div>}
+          </div>
+        )}
         {waHref
           ? <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: '#25D366' }}><Ic d={I.wa} s={17} /> WhatsApp</a>
           : <a href="#contato" className="rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: 'var(--brand)' }}>Tenho interesse</a>}

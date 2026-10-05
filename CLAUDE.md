@@ -6064,7 +6064,7 @@ Fase 4, entrega 5. Spec: `LM FLOW/specs/2026-10-03-fase-4-imoveis-mapa-pelo-cep-
 11. `home` só viaja no Salvar se uma tela da página inicial mexeu nele (`homeAlterado` no `SiteBuilder`); depois de salvar, a tela relê o `home` gravado. As telas sempre mandam o objeto `home` INTEIRO pro `setF`.
 12. Vitrine livre ganha id curto gerado na tela; o servidor troca se colidir. Cidade e bairro casam sem diferença de maiúscula, acento e espaço nas pontas ("campinas" = "Campinas" = "CAMPÍNAS "), por UMA função (`normalizarTexto`, em `filtros.ts`) usada na regra da vitrine, no filtro da busca, nos atalhos manuais e no seletor de cidade/bairro da busca (que marca a opção equivalente).
 13. "Ver todos" da vitrine livre só aparece quando a regra cabe inteira na URL da busca (`buscaDaRegra` devolve null senão): no máximo 1 tipo (pelo nome), 1 cidade, 1 bairro e 1 fase; sem "Só destaques e exclusivos"; finalidade definida; Cadastro compatível com a aba (Empreendimentos → Lançamentos, com finalidade Qualquer ou Comprar; Revenda → só Alugar, porque Comprar inclui empreendimento). Na dúvida, sem o link.
-14. Atalho manual (Mais buscados) não tem finalidade "Qualquer": é Comprar ou Alugar. Atalho salvo sem finalidade é tratado como Comprar. Atalho cuja busca dá 0 imóvel não aparece no site.
+14. Atalho manual (Mais buscados) não tem finalidade "Qualquer": é Comprar ou Alugar. Atalho salvo sem finalidade é tratado como Comprar. Atalho cuja busca dá 0 imóvel não aparece no site. **Sobras do C1, entregues no C2:** o atalho manual some quando a aba dele está escondida (o de Alugar some com Alugar escondida; o de Comprar, ou sem aba, some com Comprar escondida), porque `atalhosDoSite` recebe as abas visíveis (o automático não muda); e no seletor de cidade e bairro da busca, grafias diferentes do cadastro ("Campinas", "campinas ") viram uma opção só, na grafia mais comum (`opcoesSemRepetir`, em `filtros.ts`).
 15. Empreendimento exclusivo mostra os dois selos no cartão (fase + Exclusivo); na revenda Exclusivo vence Destaque.
 16. Fase é só de empreendimento: o campo some na aba Alugar (capa e busca) e um `?stage=` na URL não filtra nessa aba.
 17. Na ficha do imóvel o topo e o rodapé mostram as abas pelo liga/desliga do Personalizar (a ficha não carrega o catálogo para checar aba vazia).
@@ -6121,6 +6121,34 @@ Fase 4, entrega 5. Spec: `LM FLOW/specs/2026-10-03-fase-4-imoveis-mapa-pelo-cep-
 3. Efeito de página que mexe no título roda DEPOIS do da página de manutenção (efeito do pai roda depois do do filho): precisa de `if (manutencao) return` (ver o título do Blog).
 4. `usePortalData` pede o site e a lista juntos; em manutenção a lista que falha (404 ou rede) não derruba a página. Fora da manutenção, falha de rede da lista continua sendo "Portal indisponível".
 5. Não é `featureKey` nem `clientToggleKey`.
+
+## Meu site · Personalizar: página do imóvel e lista (desde 2026-10-04)
+
+> Pedido do dono (03–04/10, varredura do Kenlo): "qualquer pessoa personaliza o site sozinha". Spec: `LM FLOW/specs/2026-10-04-meu-site-projeto-c-personalizar-design.md` (C2). Backend no `lm-flow` (`saas-multitenant`), `Sites::PropertyPageConfig` e `Sites::ListingConfig`.
+
+**O que aparece na tela:** Personalizar ganha **Página do imóvel** e **Lista de imóveis**, logo depois das telas da página inicial.
+- **Página do imóvel:** abas Imóveis | Empreendimentos, cada uma com as caixinhas dela e uma frase do que aparece no site (Imóveis: Mapa, Selo Muito procurado, Condomínio/IPTU/valor do m², Você também pode gostar; Empreendimentos: Mapa, Selo Muito procurado, Fase da obra e previsão de entrega, Tipologias disponíveis, Construtora, Você também pode gostar). Fora das abas, **Selos de financiamento** (vale pros dois) e **Cópia por e-mail** (até 3 e-mails, aviso âmbar pra e-mail inválido quando a pessoa sai do campo, "Adicionar e-mail" some no 3º, remover pede confirmação).
+- **Lista de imóveis:** "Ordem padrão" (Mais recentes, Menor preço, Maior preço, Maior área) e "Visual dos cartões" com duas miniaturas, Grade e Linhas largas.
+- **Chamadas:** Financiamento e Anuncie mostram "Página ligada" ou "Página desligada: a chamada não aparece no site…", pelo **último salvo** (`site.financiamento.enabled` / `site.anuncie.enabled`).
+- **No site:** selos abaixo do título (Muito procurado, Aceita financiamento, Aceita FGTS, Minha Casa Minha Vida), fase com previsão junto do preço, vídeo e tour virtual, Dados do empreendimento (torres, andares, unidades, padrão e construtora), IPTU mensal quando o cadastro diz. Na busca, "Ordenar por" e os cartões em linhas largas.
+
+**Decisões (não reabrir sem o dono pedir):**
+1. Configuração em `sites.settings['property_page']` e `sites.settings['listing']`, no molde do `home`: servidor lê por `resolve` e grava por `normalize`; no navegador, `resolverFicha`/`resolverLista` (`features/siteBuilder/public/`). Servidor velho ou bloco ausente = padrão de fábrica: tudo ligado, `recent`, `grid`, a ficha e a lista de antes.
+2. **`email_copy` só no admin.** O `/site` público nunca leva os e-mails (`public_payload` no servidor). No admin, a carga e o retorno do Salvar usam **`resolverFichaDoAdmin`**, o único que traz `email_copy`; com o `resolverFicha` a tela perderia os e-mails ao abrir e os apagaria no Salvar.
+3. **Cópia por e-mail:** cada contato da página de um imóvel (`form_type: 'imovel'`) vai também pros e-mails, num job (`Sites::PropertyLeadEmailJob`). O contato sempre entra no CRM e é roteado antes; a cópia nunca derruba o contato. Travas contra disparo em massa (o formulário é público): a mesma pessoa (telefone ou e-mail) no mesmo imóvel em menos de 1 h não gera outra cópia, e o site manda no máximo 30 cópias por hora. O desfecho fica em `lead.form_data['email_delivery']`, como o do Anuncie, e Contatos do site mostra os dois novos (`emailDeliveryLabel`, em âmbar): `ignorado: repetido` → "Sem cópia por e-mail: a mesma pessoa pediu este imóvel há menos de 1 hora"; `ignorado: limite` → "Sem cópia por e-mail: o site já mandou 30 cópias na última hora". A frase da tela diz as duas travas.
+4. **Construtora só com nome e site.** CNPJ, telefone e contato da construtora nunca saem no JSON público; o site só vira link se for http(s) (conferido de novo no navegador).
+5. **"Muito procurado" (`popular`) só como sim ou não:** mais de 30 visitas à página do imóvel nos últimos 30 dias, numa consulta `count` (sem índice novo). O número nunca sai.
+6. **A ordenação mora no navegador**, em cima do catálogo inteiro que o site já carrega: o servidor não ganha `sort`. Preço da ordem = o do aluguel na aba Alugar, o de compra nas outras; sem preço (ou sem área, em Maior área) vai pro fim; empate por `created_at` mais novo e depois pelo código. Filtra, ordena e só então pagina (30 por vez); trocar a ordem volta aos 30 primeiros. `?sort=` na URL vence o padrão do site; escolher o padrão tira o `?sort=`.
+7. Vídeo e tour: iframe só pra YouTube, Vimeo e Matterport, sempre remontado a partir de um id validado (`midiaDoImovel.ts`); outro endereço http(s) vira botão "Ver vídeo" / "Fazer o tour virtual"; `javascript:` não aparece. Aparecem sozinhos quando o cadastro tem, sem caixinha no admin.
+8. Na foto dos cartões (grade e linha) o link é só de mouse (`tabIndex={-1}`, `aria-hidden`); selos e preço por cima da foto ficam fora dele, pra continuarem lidos. "Ver detalhes" leva o nome do imóvel no `aria-label`.
+
+**Armadilhas:**
+1. **Backend vem PRIMEIRO.** O frontend aguenta o servidor velho (sem os blocos ou sem os campos novos da ficha): cai no padrão de fábrica e esconde o que falta.
+2. **Colunas novas da ficha sempre por `has_attribute?`** no servidor (`Force*` 294, 295, 240; sem migration). O `schema.rb` está defasado e não serve de referência.
+3. **`email_copy` vai SEMPRE como lista.** Texto ou `null` o permit aninhado do servidor descarta em silêncio; com o merge, os e-mails ANTIGOS ficam gravados e a mudança é ignorada, com a tela dizendo "Salvo". O `SiteBuilder` apara e tira campo em branco antes de mandar; o inválido viaja e o servidor descarta (a tela já avisou), e depois do Salvar a tela relê o gravado.
+4. Flags `fichaAlterada`/`listaAlterada` no `SiteBuilder`, no molde do `homeAlterado`: o bloco só viaja se a tela dele mexeu; zeram no Descartar e depois do Salvar. As telas sempre mandam o bloco INTEIRO pro `setF`.
+5. O "Ordenar por" do site é `<select>` nativo e mora em `portalShared.tsx` (`OrdenarPor`), a exceção de lista nativa do `conferir-padrao`. Não mover pra página de busca: o build reprova.
+6. Não é `featureKey` nem `clientToggleKey`.
 
 ## Notificações na ficha do usuário (04/10/2026)
 

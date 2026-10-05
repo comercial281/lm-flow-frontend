@@ -1,5 +1,5 @@
 import { filterProperties, type PortalFilters, type PortalProperty } from './filtros';
-import type { AtalhoManual, HomeConfig } from './homeConfig';
+import type { AbaId, AtalhoManual, HomeConfig } from './homeConfig';
 import { opcaoDoTipo, pluralTipo, rotuloTipo } from './tiposDeImovel';
 
 export interface Atalho { label: string; query: string }
@@ -36,12 +36,18 @@ function filtrosDoAtalho(a: AtalhoManual): PortalFilters {
   };
 }
 
-export function atalhosDoSite(home: HomeConfig, items: PortalProperty[]): Atalho[] {
+/**
+ * `abas` = as abas visíveis do site (`abasVisiveis`). Atalho manual cuja aba
+ * está escondida não aparece: levaria a uma aba que o site não oferece. O
+ * automático não depende de aba.
+ */
+export function atalhosDoSite(home: HomeConfig, items: PortalProperty[], abas: AbaId[]): Atalho[] {
   const m = home.most_searched;
   if (!m.enabled) return [];
   if (m.mode === 'auto') return atalhosAutomaticos(items);
   // Atalho que leva a uma busca sem imóvel não aparece: seria um link pra "nada encontrado".
   return m.items.map(filtrosDoAtalho).flatMap((f, i) => {
+    if (!abas.includes(f.tab)) return [];
     if (filterProperties(items, f).length === 0) return [];
     const q = new URLSearchParams();
     if (f.tab === 'rent') q.set('tab', 'rent');

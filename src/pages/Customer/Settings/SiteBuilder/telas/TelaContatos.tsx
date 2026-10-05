@@ -79,9 +79,10 @@ export default function TelaContatos({ site }: { site: Site }) {
                     <span className="text-xs text-muted-foreground">via {lead.source}</span>
                   )}
                 </div>
-                {/* Desfecho do e-mail da ficha de "Anuncie". Sem esta linha,
-                    e-mail não configurado apagaria em silêncio um imóvel que
-                    alguém ofereceu: a ficha fica guardada e ninguém sabe. */}
+                {/* Desfecho do e-mail: a ficha do "Anuncie" e a cópia do contato
+                    feito na página de um imóvel (com as travas de repetido e de
+                    limite por hora). Sem esta linha, e-mail que não saiu passaria
+                    em silêncio: o contato fica guardado e ninguém sabe. */}
                 {(() => {
                   const d = emailDeliveryLabel(lead.email_delivery);
                   if (!d) return null;

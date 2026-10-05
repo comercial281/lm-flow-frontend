@@ -116,7 +116,7 @@ function vitrines(raw: unknown): Vitrine[] {
   return lista.length ? lista : HOME_FABRICA.showcases;
 }
 
-const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {});
+export const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {});
 
 // Texto que não é texto (número, objeto…) vira null = texto de fábrica: o
 // cartão nunca desenha "[object Object]" nem quebra no encodeURIComponent.

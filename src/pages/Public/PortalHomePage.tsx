@@ -90,7 +90,7 @@ export default function PortalHomePage() {
       />
       <HomeVitrines home={home} items={items} tenant={tenant!} wa={wa} abas={abas} />
       <HomeChamadas site={site} tenant={tenant!} home={home} />
-      <HomeMaisBuscados home={home} items={items} tenant={tenant!} />
+      <HomeMaisBuscados home={home} items={items} tenant={tenant!} abas={abas} />
 
       {/* ── Trust band ────────────────────────────────────────────────── */}
       {showStats && (
