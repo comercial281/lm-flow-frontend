@@ -1,10 +1,19 @@
+// Painel → Visão geral: o que a IA precisa (pendências com "Corrigir"), o que ela
+// entregou (os números da antiga aba Resultados) e as sugestões esperando
+// resposta. É a primeira tela que abre.
 import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { RefreshCw, Loader2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
 import AiResultsPanel from '@/components/salesAgents/AiResultsPanel';
 import { type AgentPerformance } from '@/types/aiResults';
-import { salesAgentsService, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
+import {
+  salesAgentsService, type HealthReport, type SalesAgent, type SalesAgentSuggestion,
+} from '@/services/salesAgents/salesAgentsService';
+import { plural } from '@/lib/formato';
+import type { TelaId } from '@/features/salesAgents/iaMenu';
+import { motivoSemAtendimento, pendenciasDaIa, type Situacao } from '@/features/salesAgents/situacao';
+import { SuggestionCard } from './TelaSugestoes';
 
 // Aba Resultados — o que ESTA IA produziu, pro próprio cliente ver.
 //
@@ -22,7 +31,7 @@ import { salesAgentsService, type SalesAgent } from '@/services/salesAgents/sale
 // venda e outra de locação leria o número errado se a aba somasse as duas.
 const RESULT_PERIODS: [number, string][] = [[7, '7 dias'], [30, '30 dias'], [90, '90 dias']];
 
-export function ResultsTab({ agent }: { agent: SalesAgent }) {
+export function ResultsTab({ agent, motivo = null }: { agent: SalesAgent; motivo?: string | null }) {
   const [data, setData] = useState<AgentPerformance | null>(null);
   const [days, setDays] = useState(30);
   const [loading, setLoading] = useState(true);
@@ -70,8 +79,9 @@ export function ResultsTab({ agent }: { agent: SalesAgent }) {
         </p>
       ) : !data ? (
         <p className="text-sm text-muted-foreground rounded-lg border border-sidebar-border bg-sidebar p-4">
-          Esta IA ainda não tem atendimento registrado no período. Os números aparecem sozinhos
-          conforme ela responde os leads.
+          {motivo
+            ? `Nenhum atendimento no período. Motivo: ${motivo}. Os números aparecem sozinhos quando ela voltar a responder os leads.`
+            : 'Esta IA ainda não tem atendimento registrado no período. Os números aparecem sozinhos conforme ela responde os leads.'}
         </p>
       ) : (
         // Segura o desenho anterior mais apagado ao recarregar, em vez de piscar
@@ -89,6 +99,130 @@ export function ResultsTab({ agent }: { agent: SalesAgent }) {
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Até 3 sugestões esperando resposta; o resto fica em Painel → Sugestões. */
+function SugestoesPendentes({ agent, aoIr }: { agent: SalesAgent; aoIr: (tela: TelaId) => void }) {
+  const [pendentes, setPendentes] = useState<SalesAgentSuggestion[]>([]);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await salesAgentsService.listSuggestions(agent.id);
+      setPendentes(data.suggestions.filter((s) => s.status === 'pending'));
+    } catch {
+      // Leitura de fundo não grita: o bloco simplesmente não aparece.
+      setPendentes([]);
+    }
+  }, [agent.id]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const aplicar = async (s: SalesAgentSuggestion) => {
+    setBusyId(s.id);
+    try {
+      await salesAgentsService.applySuggestion(agent.id, s.id);
+      toast.success('Aplicada: virou lição em Ensinar');
+      await load();
+    } catch {
+      toast.error('Não consegui transformar em lição.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const descartar = async (s: SalesAgentSuggestion) => {
+    setBusyId(s.id);
+    try {
+      await salesAgentsService.dismissSuggestion(agent.id, s.id);
+      await load();
+    } catch {
+      toast.error('Não consegui descartar.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  if (pendentes.length === 0) return null;
+
+  return (
+    <section aria-labelledby="vg-sugestoes" className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h2 id="vg-sugestoes" className="text-sm font-medium">
+          {plural(pendentes.length, 'sugestão esperando você', 'sugestões esperando você')}
+        </h2>
+        <Button variant="ghost" size="sm" onClick={() => aoIr('sugestoes')}>Ver todas</Button>
+      </div>
+      <ul className="space-y-3">
+        {pendentes.slice(0, 3).map((s) => (
+          <SuggestionCard
+            key={s.id}
+            suggestion={s}
+            busy={busyId === s.id}
+            onApply={() => void aplicar(s)}
+            onDismiss={() => void descartar(s)}
+          />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+export interface TelaVisaoGeralProps {
+  agent: SalesAgent;
+  situacao: Situacao;
+  diagnostico: HealthReport | null;
+  /** O Diagnóstico ainda está sendo lido: não dá pra dizer "nada pendente". */
+  conferindo: boolean;
+  /** Mesma chave das telas Sugestões e Relatório semanal (`ia_insights`). */
+  mostrarSugestoes: boolean;
+  aoIr: (tela: TelaId) => void;
+}
+
+export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferindo, mostrarSugestoes, aoIr }: TelaVisaoGeralProps) {
+  const pendencias = pendenciasDaIa(agent, diagnostico);
+
+  return (
+    <div className="space-y-8">
+      <section aria-labelledby="vg-pendencias" className="space-y-2">
+        <h2 id="vg-pendencias" className="text-sm font-medium">O que precisa de atenção</h2>
+        {pendencias.length === 0 ? (
+          <p className="flex items-center gap-2 rounded-lg border border-sidebar-border bg-sidebar p-4 text-sm text-muted-foreground">
+            {conferindo ? (
+              <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Conferindo a situação desta IA…</>
+            ) : (
+              <><CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden /> Nada pendente: ela tem tudo para atender.</>
+            )}
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {pendencias.map((p) => (
+              <li
+                key={p.chave}
+                className={`flex items-start gap-3 rounded-md border p-3 ${p.grave ? 'border-red-500/40 bg-red-500/5' : 'border-amber-500/40 bg-amber-500/5'}`}
+              >
+                <AlertTriangle className={`mt-0.5 h-4 w-4 shrink-0 ${p.grave ? 'text-red-500' : 'text-amber-500'}`} aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium">{p.titulo}</div>
+                  <div className="text-xs text-muted-foreground">{p.detalhe}</div>
+                </div>
+                {p.corrigir && (
+                  <Button size="sm" variant="outline" onClick={() => aoIr(p.corrigir!.tela)}>Corrigir</Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section aria-labelledby="vg-numeros" className="space-y-2">
+        <h2 id="vg-numeros" className="text-sm font-medium">Números do período</h2>
+        <ResultsTab agent={agent} motivo={motivoSemAtendimento(situacao)} />
+      </section>
+
+      {mostrarSugestoes && <SugestoesPendentes agent={agent} aoIr={aoIr} />}
     </div>
   );
 }

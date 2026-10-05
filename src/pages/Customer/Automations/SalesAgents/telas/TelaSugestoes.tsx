@@ -94,7 +94,7 @@ export default function TelaSugestoes({ agent }: { agent: SalesAgent }) {
       }
     }
     setAnalyzing(false);
-    toast.message('A análise está demorando mais que o normal. Recarregue a aba em instantes.');
+    toast.message('A análise está demorando mais que o normal. Recarregue a página em instantes.');
   };
 
   const finalizarAnalise = (payload: SuggestionsPayload, quantasAntes: number) => {
@@ -111,7 +111,7 @@ export default function TelaSugestoes({ agent }: { agent: SalesAgent }) {
     setBusyId(s.id);
     try {
       await salesAgentsService.applySuggestion(agent.id, s.id);
-      toast.success('Aplicada — virou lição na aba Aprendizado');
+      toast.success('Aplicada: virou lição em Ensinar');
       await load();
     } catch {
       toast.error('Não consegui transformar em lição.');
@@ -261,7 +261,7 @@ export default function TelaSugestoes({ agent }: { agent: SalesAgent }) {
           <p className={noTeto ? 'text-amber-600' : undefined}>
             {plural(data.lessons_active, 'lição ativa', 'lições ativas')}.
             {noTeto
-              ? ` A IA lê no máximo ${data.lessons_cap} de cada tipo: aplicar mais não muda o comportamento dela. Remova as que já não valem, na aba Aprendizado.`
+              ? ` A IA lê no máximo ${data.lessons_cap} de cada tipo: aplicar mais não muda o comportamento dela. Remova as que já não valem, em Ensinar.`
               : ` Ela lê até ${data.lessons_cap} de cada tipo.`}
           </p>
         </div>

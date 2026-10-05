@@ -41,7 +41,7 @@ export function LimitsSection({ agent, onChange, onSave }: {
       <div className="space-y-3">
         {numField('max_new_leads_per_day', 'Máx. de leads novos por dia', 'Depois desse número de leads NOVOS no dia, a IA para de puxar conversa nova (quem já está conversando continua).', 'lim_leads')}
         {numField('max_active_conversations', 'Máx. de conversas ativas ao mesmo tempo', 'Teto de conversas em aberto que a IA está tocando ao mesmo tempo.', 'lim_conv')}
-        {numField('daily_budget_usd', 'Orçamento diário (US$)', 'Quando o gasto do dia (mesma conta da aba Resultados) bate este valor, a IA para de atender lead novo até o dia seguinte.', 'lim_budget')}
+        {numField('daily_budget_usd', 'Orçamento diário (US$)', 'Quando o gasto do dia (mesma conta dos números do Painel) bate este valor, a IA para de atender lead novo até o dia seguinte.', 'lim_budget')}
       </div>
     </div>
   );
