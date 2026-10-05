@@ -182,9 +182,15 @@ function Cadastro() {
         toast.success(rascunho ? 'Rascunho salvo' : 'Imóvel cadastrado');
       }
       if (book) {
+        // Book grande demora: um aviso com o andamento, no mesmo toast.
+        const idDoAviso = toast.loading('Enviando o book… 0%');
         try {
-          await propertiesService.uploadBook(criado.id, book);
+          await propertiesService.uploadBook(criado.id, book, pct => {
+            toast.loading(pct >= 100 ? 'Guardando o book…' : `Enviando o book… ${pct}%`, { id: idDoAviso });
+          });
+          toast.success('Book salvo', { id: idDoAviso });
         } catch {
+          toast.dismiss(idDoAviso);
           toast.warning('Imóvel cadastrado, mas o book não subiu. Suba de novo na edição do imóvel.');
         }
         setBook(null);

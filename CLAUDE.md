@@ -4199,7 +4199,7 @@ Decisões do dono (não reabrir sem ele pedir):
 
 - **O menu do corretor sai do cargo, não de um segundo menu.** Com o Corretor de
   fábrica ele vê Principal, Imóveis (Meus imóveis) e Leads (Contatos,
-  Bolsão). *(A tela Books, que aparecia aqui, saiu do menu em 04/10/2026: ver a seção *Book dentro do cadastro*.)* O `menuItems.spec` trava essa lista.
+  Bolsão). (A tela Books, que aparecia aqui, saiu do menu em 04/10/2026: ver a seção "Book dentro do cadastro".) O `menuItems.spec` trava essa lista.
 - **Telas de gestão pedem, no menu, a chave da rota + uma de escrita** (`gestao()`
   em `menuItems.ts`): WhatsApp (`inboxes.update`), Etiquetas (`labels.create`),
   Variáveis (`canned_responses.create`), Meu site (`sites.update`). O Corretor lê
@@ -6061,18 +6061,20 @@ Fase 4, entrega 6 (parte A). Spec: `LM FLOW/specs/2026-10-04-fase-4-imoveis-book
 **O que o bloco faz:**
 
 - **Quando aparece:** em **empreendimento** sempre. Em **revenda** só quando já tem book (`editando?.has_book`), e aí só *Ver book* e *Remover*: não sobe nem troca. Revenda sem book não mostra o bloco.
-- **Criação:** o PDF escolhido fica guardado na página (estado `book`, conta como alteração não salva) e sobe logo depois do `create`. Se o `create` falha, nada sobe e o arquivo continua escolhido (um segundo *Cadastrar* sobe uma vez só). Se o `create` dá certo e o envio falha, o imóvel fica criado, aparece o aviso para subir de novo na edição e a navegação segue.
-- **Edição:** subir, trocar e remover gravam na hora, como *Gerenciar fotos*. Remover pede confirmação (`useConfirmacao`). Durante um envio os botões ficam travados e o estado mostrado vem do imóvel que o servidor devolveu. *Ver book* abre o `PropertyBookDialog`.
+- **Criação:** o PDF escolhido fica guardado na página (estado `book`, conta como alteração não salva) e sobe logo depois do `create`, com o andamento num aviso só (*Enviando o book… N%*, *Guardando o book…* no 100%, *Book salvo* no fim). Se o `create` falha, nada sobe e o arquivo continua escolhido (um segundo *Cadastrar* sobe uma vez só). Se o `create` dá certo e o envio falha, o imóvel fica criado, aparece o aviso para subir de novo na edição e a navegação segue.
+- **Edição:** subir, trocar e remover gravam na hora, como *Gerenciar fotos*. Remover pede confirmação (`useConfirmacao`). Durante um envio ou remoção os botões ficam travados, aparece *Enviando… N%* (*Guardando o book…* no 100%), sair da tela pergunta antes (`useAlteracoesNaoSalvas`) e o estado mostrado vem do imóvel que o servidor devolveu. *Ver book* abre o `PropertyBookDialog`.
 - **Trava do arquivo:** só PDF (`application/pdf` ou `.pdf`), até **200 MB** (a mesma do servidor; há books de 60 a 75 MB, por isso mostra o andamento). Fora disso: aviso e nada sobe (`validarBook`).
 - **Preencher pelo book (só na criação, como antes):** o arquivo **PDF** em cadastro de **empreendimento** também vira o book do imóvel, **se ainda não houver um escolhido**; o aviso diz *Book anexado*. Word, foto e .txt não viram book.
-- **"Só vazio"** (`PreencherPorTexto.tsx`): um campo é preenchido quando está nulo, em branco ou igual ao valor de fábrica do cadastro novo (`{ ...FORMULARIO_VAZIO, ...formularioNovo(kind) }`). Preço ou quartos que o corretor já digitou não mudam. Características e tipologias continuam somando, sem apagar.
+- **"Só vazio"** (`PreencherPorTexto.tsx`): um campo é preenchido quando está nulo, em branco ou igual ao valor de fábrica do cadastro novo (`{ ...FORMULARIO_VAZIO, ...formularioNovo(kind) }`). Preço ou quartos que o corretor já digitou não mudam. Características e tipologias **somam** ao que já está marcado: o book nunca desmarca nada.
 
 **Fica:** o *Ver book* no menu ⋮ de cada imóvel da lista e o *Enviar book* do chat.
 
 Armadilhas:
 
 1. **Não recrie a rota `/books` com `PermissionRoute`:** o redirecionamento não pode barrar quem não tem a permissão antes de chegar em `/properties`. `/books` saiu de `permissionRoutes.ts` e do `menuItems.spec`.
-2. **O book da revenda é exceção só de leitura.** Não abra subir/trocar para revenda sem o dono pedir (decisão 2: o book é do empreendimento).
+2. **O "só vazio" lê o formulário ATUAL depois que a leitura termina** (`formRef` em `PreencherPorTexto`). O OCR pode levar minutos e o corretor segue digitando; comparar com o formulário de quando a leitura começou sobrescreve o que ele digitou nesse meio-tempo.
+3. **Características são união, nunca troca.** `patch.features = achadas` desmarcaria o que o corretor marcou. Só entra slug novo e válido; se nada é novo, nada vai no patch.
+4. **O book da revenda é exceção só de leitura.** Não abra subir/trocar para revenda sem o dono pedir (decisão 2: o book é do empreendimento).
 
 ## Meu site · Personalizar: página inicial (desde 2026-10-04)
 

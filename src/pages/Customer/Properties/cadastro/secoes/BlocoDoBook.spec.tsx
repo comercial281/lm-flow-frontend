@@ -14,6 +14,7 @@ vi.mock('@/components/properties/PropertyBookDialog', () => ({
 }));
 
 import BlocoDoBook, { validarBook } from './BlocoDoBook';
+import { temAlteracaoPendente, limparPendentes } from '@/hooks/useAlteracoesNaoSalvas';
 import type { Property } from '@/services/properties/propertiesService';
 
 const imovel = (extra: Partial<Property> = {}) => ({ id: 'p1', title: 'Residencial Sol', has_book: false, ...extra }) as Property;
@@ -27,7 +28,7 @@ function montar(props: Partial<React.ComponentProps<typeof BlocoDoBook>> = {}) {
   return { aoMudarBook, aoMudarImovel };
 }
 
-beforeEach(() => { vi.clearAllMocks(); });
+beforeEach(() => { vi.clearAllMocks(); limparPendentes(); });
 
 describe('validarBook', () => {
   it('aceita PDF e recusa outro tipo ou mais de 200 MB', () => {
@@ -71,6 +72,11 @@ describe('BlocoDoBook', () => {
   it('revenda sem book não renderiza nada', () => {
     montar({ kind: 'resale' });
     expect(screen.queryByText('Book')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('entrada-do-book')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Subir book (PDF)' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Trocar' })).not.toBeInTheDocument();
+    montar({ kind: 'resale', editando: imovel() });
+    expect(screen.queryByTestId('entrada-do-book')).not.toBeInTheDocument();
   });
 
   it('revenda com book: só Ver e Remover', () => {
@@ -135,5 +141,40 @@ describe('BlocoDoBook', () => {
     falhar(new Error('x'));
     await waitFor(() => expect(avisos.error).toHaveBeenCalledWith('Não consegui enviar o book'));
     expect(screen.getByRole('button', { name: 'Trocar' })).toBeEnabled();
+  });
+
+  it('no 100% sem resposta ainda mostra "Guardando o book…"', async () => {
+    svc.uploadBook.mockImplementation((_i, _f, onProgress) => { onProgress(100); return new Promise(() => {}); });
+    montar({ editando: imovel() });
+    fireEvent.change(entrada(), { target: { files: [pdf()] } });
+    expect(await screen.findByText('Guardando o book…')).toBeInTheDocument();
+    expect(screen.queryByText(/Enviando… 100%/)).not.toBeInTheDocument();
+  });
+
+  it('envio em andamento marca alteração pendente e solta ao terminar', async () => {
+    let ok!: (p: Property) => void;
+    svc.uploadBook.mockImplementation(() => new Promise(r => { ok = r; }));
+    montar({ editando: imovel() });
+    expect(temAlteracaoPendente()).toBe(false);
+    fireEvent.change(entrada(), { target: { files: [pdf()] } });
+    await waitFor(() => expect(temAlteracaoPendente()).toBe(true));
+    ok(imovel({ has_book: true }));
+    await waitFor(() => expect(temAlteracaoPendente()).toBe(false));
+  });
+
+  it('remoção em andamento trava os botões e marca alteração pendente', async () => {
+    let ok!: (p: Property) => void;
+    svc.removeBook.mockImplementation(() => new Promise(r => { ok = r; }));
+    montar({ editando: imovel({ has_book: true, book_file_name: 'b.pdf' }) });
+    await userEvent.click(screen.getByRole('button', { name: 'Remover' }));
+    const botoes = await screen.findAllByRole('button', { name: 'Remover' });
+    await userEvent.click(botoes[botoes.length - 1]);
+    await waitFor(() => expect(svc.removeBook).toHaveBeenCalled());
+    for (const nome of ['Ver book', 'Trocar']) {
+      expect(screen.getByRole('button', { name: nome })).toBeDisabled();
+    }
+    expect(temAlteracaoPendente()).toBe(true);
+    ok(imovel());
+    await waitFor(() => expect(temAlteracaoPendente()).toBe(false));
   });
 });

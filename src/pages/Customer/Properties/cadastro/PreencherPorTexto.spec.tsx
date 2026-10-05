@@ -126,3 +126,90 @@ describe('PDF vira book', () => {
     expect(p.aoEscolherBook).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('características somam, nunca desmarcam', () => {
+  it('soma a nova às já marcadas', async () => {
+    servico.parseText.mockResolvedValue({ features: ['churrasqueira'] });
+    const p = montar(novo('resale', { features: ['piscina', 'academia'] }));
+    await abrirEPreencher();
+    await userEvent.click(screen.getByRole('button', { name: /^Preencher$/ }));
+    await waitFor(() => expect(p.setF).toHaveBeenCalled());
+    expect(p.setF.mock.calls[0][0].features).toEqual(['piscina', 'academia', 'churrasqueira']);
+  });
+  it('só achou o que já estava marcado: nada de características no patch', async () => {
+    servico.parseText.mockResolvedValue({ features: ['piscina'], bedrooms: 2 });
+    const p = montar(novo('resale', { features: ['piscina', 'academia'] }));
+    await abrirEPreencher();
+    await userEvent.click(screen.getByRole('button', { name: /^Preencher$/ }));
+    await waitFor(() => expect(p.setF).toHaveBeenCalled());
+    expect(p.setF.mock.calls[0][0]).not.toHaveProperty('features');
+  });
+  it('só reconheceu característica já marcada: avisa que nada foi trocado', async () => {
+    servico.parseText.mockResolvedValue({ features: ['piscina'] });
+    const p = montar(novo('resale', { features: ['piscina'] }));
+    await abrirEPreencher();
+    await userEvent.click(screen.getByRole('button', { name: /^Preencher$/ }));
+    await waitFor(() => expect(avisos.info).toHaveBeenCalled());
+    expect(p.setF).not.toHaveBeenCalled();
+  });
+});
+
+describe('só vazio lê o formulário de DEPOIS da leitura', () => {
+  it('o preço digitado enquanto a leitura rodava não é trocado', async () => {
+    let resolver!: (v: unknown) => void;
+    servico.parseText.mockReturnValue(new Promise(r => { resolver = r; }));
+    const setF = vi.fn();
+    const props = { setF, aoMudarTexto: vi.fn(), aoEscolherBook: vi.fn(), temBook: false, texto: 'texto colado' };
+    const { rerender } = render(<PreencherPorTexto form={novo('resale')} {...props} />);
+    await abrirEPreencher();
+    await userEvent.click(screen.getByRole('button', { name: /^Preencher$/ }));
+    await waitFor(() => expect(servico.parseText).toHaveBeenCalled());
+    rerender(<PreencherPorTexto form={novo('resale', { sale_price: 400000 })} {...props} />);
+    resolver({ sale_price: 500000, bedrooms: 3 });
+    await waitFor(() => expect(setF).toHaveBeenCalled());
+    const patch = setF.mock.calls[0][0];
+    expect(patch).not.toHaveProperty('sale_price');
+    expect(patch.bedrooms).toBe(3);
+  });
+  it('quartos = 0 conta como preenchido', async () => {
+    servico.parseText.mockResolvedValue({ bedrooms: 0 });
+    const p = montar(novo('resale'));
+    await abrirEPreencher();
+    await userEvent.click(screen.getByRole('button', { name: /^Preencher$/ }));
+    await waitFor(() => expect(p.setF).toHaveBeenCalled());
+    expect(p.setF.mock.calls[0][0].bedrooms).toBe(0);
+  });
+});
+
+describe('arquivos que não viram book', () => {
+  const arq = (nome: string, tipo: string) => {
+    const f = new File(['x'], nome, { type: tipo });
+    f.arrayBuffer = async () => new ArrayBuffer(4);
+    f.text = async () => 'texto';
+    return f;
+  };
+  it('Word e foto em empreendimento nunca chamam aoEscolherBook', async () => {
+    servico.parseText.mockResolvedValue({});
+    leitura.extractDocxText.mockResolvedValue('texto');
+    leitura.ocrImage.mockResolvedValue('texto');
+    const p = montar(novo('development'));
+    await abrirEPreencher();
+    const input = document.querySelector('input[type=file]') as HTMLInputElement;
+    await userEvent.upload(input, arq('a.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'));
+    await waitFor(() => expect(leitura.extractDocxText).toHaveBeenCalled());
+    await userEvent.upload(input, arq('a.png', 'image/png'));
+    await waitFor(() => expect(leitura.ocrImage).toHaveBeenCalled());
+    expect(p.aoEscolherBook).not.toHaveBeenCalled();
+  });
+  it('PDF acima de 200 MB em empreendimento: avisa do book e a leitura segue', async () => {
+    servico.parseText.mockResolvedValue({});
+    const grande = arq('book.pdf', 'application/pdf');
+    Object.defineProperty(grande, 'size', { value: 201 * 1024 * 1024 });
+    const p = montar(novo('development'));
+    await abrirEPreencher();
+    await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement, grande);
+    await waitFor(() => expect(leitura.extractPdfText).toHaveBeenCalled());
+    expect(avisos.error).toHaveBeenCalledWith('O book passa de 200 MB');
+    expect(p.aoEscolherBook).not.toHaveBeenCalled();
+  });
+});

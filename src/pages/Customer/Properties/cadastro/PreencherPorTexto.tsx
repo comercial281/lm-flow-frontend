@@ -39,6 +39,10 @@ export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto, tem
   const [aiRunning, setAiRunning] = useState(false);
   const [pdfReading, setPdfReading] = useState(false);
   const pdfInputRef = useRef<HTMLInputElement>(null);
+  // A leitura (OCR) pode levar minutos e o corretor segue digitando: o "só vazio"
+  // olha o formulário de DEPOIS da leitura, não o de quando ela começou.
+  const formRef = useRef(form);
+  formRef.current = form;
 
   // Preenche o formulário a partir de um texto/TXT — 100% LOCAL (sem IA/API).
   // A descrição NÃO é preenchida aqui: é opcional, por botão (handleGenerateDescription).
@@ -47,15 +51,16 @@ export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto, tem
     setAiRunning(true);
     try {
       const r = await propertiesService.parseText(text);
+      const atual = formRef.current;
       const patch: Partial<PropertyFormData> = {};
       let achou = 0;
       // Só preenche campo vazio: o que o corretor já digitou não muda.
       const put = <K extends keyof PropertyFormData>(k: K, v: PropertyFormData[K] | null | undefined) => {
         if (v === null || v === undefined || v === '') return;
         achou++;
-        if (campoVazio(form, k)) patch[k] = v;
+        if (campoVazio(atual, k)) patch[k] = v;
       };
-      if (form.listing_kind !== 'development') put('transaction_type', r.transaction_type);
+      if (atual.listing_kind !== 'development') put('transaction_type', r.transaction_type);
       put('property_type', r.property_type);
       put('sale_price', r.sale_price);
       put('rent_price', r.rent_price);
@@ -70,19 +75,29 @@ export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto, tem
       put('address_neighborhood', r.address_neighborhood);
       put('address_city', r.address_city);
       put('address_state', r.address_state);
-      // Características/comodidades: só aplica quando achou algo (não apaga o que o
-      // corretor já marcou) e mantém só slugs válidos do catálogo.
+      // Características/comodidades: SOMAM ao que o corretor já marcou (nunca
+      // desmarcam) e só entram slugs válidos do catálogo. Só conta como preenchido
+      // quando entrou algo novo.
       const featSet = new Set(PROPERTY_FEATURES.map(a => a.slug));
       const condoSet = new Set(CONDO_FEATURES.map(a => a.slug));
       const feats = (r.features ?? []).filter(s => featSet.has(s));
       const condos = (r.condo_features ?? []).filter(s => condoSet.has(s));
-      if (feats.length) { achou++; patch.features = feats; }
-      if (condos.length) { achou++; patch.condo_features = condos; }
+      const somar = (atuais: string[] | undefined, achadas: string[]) => {
+        const base = atuais ?? [];
+        const novas = [...new Set(achadas)].filter(s => !base.includes(s));
+        return novas.length ? [...base, ...novas] : null;
+      };
+      if (feats.length) achou++;
+      if (condos.length) achou++;
+      const featsFinal = somar(atual.features, feats);
+      const condosFinal = somar(atual.condo_features, condos);
+      if (featsFinal) patch.features = featsFinal;
+      if (condosFinal) patch.condo_features = condosFinal;
       // Tipologias achadas no book: só aplica quando veio alguma (não apaga as
       // que o corretor já digitou) e mantém as dele na frente.
       const found = cleanTypologies(r.typologies);
-      if (found.length && form.listing_kind === 'development') achou++;
-      if (found.length && form.listing_kind === 'development') patch.typologies = [...cleanTypologies(form.typologies), ...found];
+      if (found.length && atual.listing_kind === 'development') achou++;
+      if (found.length && atual.listing_kind === 'development') patch.typologies = [...cleanTypologies(atual.typologies), ...found];
       const filled = Object.keys(patch).length;
       if (!achou) { toast.error('Não achei dados reconhecíveis no texto. Revise e preencha manualmente.'); return; }
       if (!filled) { toast.info('Os campos já estavam preenchidos; nada foi trocado.'); return; }
@@ -111,9 +126,15 @@ export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto, tem
       return;
     }
     // O PDF vira o book do empreendimento antes de extrair o texto: fica anexado mesmo se não achar texto.
-    if (isPdf && form.listing_kind === 'development' && !temBook && validarBook(file) === null) {
-      aoEscolherBook(file);
-      toast.success('Book anexado: ele sobe junto quando você cadastrar.');
+    // PDF inválido como book (ex.: passa de 200 MB) avisa, mas a leitura do texto segue.
+    if (isPdf && form.listing_kind === 'development' && !temBook) {
+      const erroDoBook = validarBook(file);
+      if (erroDoBook === null) {
+        aoEscolherBook(file);
+        toast.success('Book anexado: ele sobe junto quando você cadastrar.');
+      } else {
+        toast.error(erroDoBook);
+      }
     }
     setPdfReading(true);
     try {

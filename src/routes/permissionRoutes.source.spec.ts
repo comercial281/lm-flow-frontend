@@ -137,3 +137,11 @@ describe('permissionRoutes.ts não diverge de index.tsx (mapa único da Fase 1 C
     ).toEqual([]);
   });
 });
+
+describe('endereço antigo da tela Books', () => {
+  it('/books redireciona para /properties, sem PermissionRoute', () => {
+    const t = trecho('/books');
+    expect(t).toContain('<Navigate to="/properties" replace />');
+    expect(t).not.toContain('PermissionRoute');
+  });
+});

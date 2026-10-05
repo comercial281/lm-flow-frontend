@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { FileText, Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
+import { useAlteracoesNaoSalvas } from '@/hooks/useAlteracoesNaoSalvas';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
 import PropertyBookDialog from '@/components/properties/PropertyBookDialog';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -38,12 +39,16 @@ export default function BlocoDoBook({ kind, editando, book, aoMudarBook, aoMudar
   const [progresso, setProgresso] = useState<number | null>(null);
   const [removendo, setRemovendo] = useState(false);
 
+  const enviando = progresso !== null;
+  // Sair da tela com envio/remoção em andamento perde o resultado: pergunta antes.
+  // (O hook registra por id de instância, então convive com o da página.)
+  useAlteracoesNaoSalvas(enviando || removendo);
+
   const empreendimento = kind === 'development';
   const temBook = !!editando?.has_book;
   // Revenda: só aparece quando já há book (e só na edição).
   if (!empreendimento && !temBook) return null;
 
-  const enviando = progresso !== null;
   const travado = !!desabilitado || enviando || removendo;
 
   const escolher = (file: File | undefined) => {
@@ -115,7 +120,7 @@ export default function BlocoDoBook({ kind, editando, book, aoMudarBook, aoMudar
           {enviando && (
             <span role="status" className="flex items-center gap-1 text-xs text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Enviando… {progresso}%
+              {progresso === 100 ? 'Guardando o book…' : `Enviando… ${progresso}%`}
             </span>
           )}
           {temBook ? (
