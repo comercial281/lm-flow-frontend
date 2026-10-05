@@ -15,6 +15,8 @@ export interface ChatEventHandlers {
   onNotificationCreated?: (data: unknown) => void;
   onNotificationUpdated?: (data: unknown) => void;
   onNotificationDeleted?: (data: unknown) => void;
+  /** Chat de suporte: o chamado mudou (só o id; a tela recarrega pela API). */
+  onSupportUpdated?: (data: { ticket_id: string }) => void;
 }
 
 // Event types baseados no ActionCable do Evolution
@@ -346,10 +348,17 @@ export class ChatActionCableConnector extends BaseActionCableConnector {
     this.onEvent('notification.updated', this.onNotificationUpdated);
     this.onEvent('notification.deleted', this.onNotificationDeleted);
 
+    // Chat de suporte (SupportTickets::Realtime no servidor)
+    this.onEvent('support.updated', this.onSupportUpdated);
+
     // Eventos de sistema
     this.onEvent('user:logout', this.onUserLogout);
     this.onEvent('page:reload', this.onPageReload);
   }
+
+  private onSupportUpdated = (data: unknown): void => {
+    this.chatEventHandlers.onSupportUpdated?.(data as { ticket_id: string });
+  };
 
   /**
    * Handler para nova mensagem criada

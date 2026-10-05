@@ -11,6 +11,7 @@ import { supportAdminService } from '@/services/support/supportAdminService';
 import SupportThread from '@/components/support/SupportThread';
 import SupportComposer from '@/components/support/SupportComposer';
 import { useChamado } from '@/components/support/useChamado';
+import { useSinalSuporte } from '@/components/support/aoVivo';
 import { KIND_LABEL, STATUS_TIME } from '@/components/support/rotulos';
 
 /** Chamado aberto, lado do time: conversa, resposta, situação, nota interna. */
@@ -18,7 +19,11 @@ export default function SuporteChamado() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const carregar = useCallback(() => supportAdminService.show(id), [id]);
-  const { dado, erro, recusado, recarregar } = useChamado(carregar);
+  // Sinal ao vivo traz a mensagem do cliente na hora; a checagem a cada 30 s é só reserva.
+  const { dado, erro, recusado, recarregar } = useChamado(carregar, 30000);
+  useSinalSuporte(ticketId => {
+    if (ticketId === id) void recarregar();
+  });
   const [nota, setNota] = useState('');
   const [resolverAoEnviar, setResolverAoEnviar] = useState(false);
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();

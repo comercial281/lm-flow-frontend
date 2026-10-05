@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 const svc = vi.hoisted(() => ({ show: vi.fn(), update: vi.fn(), reply: vi.fn(), archive: vi.fn(), entrarNoCliente: vi.fn() }));
 vi.mock('@/services/support/supportAdminService', () => ({ supportAdminService: svc }));
 
 import SuporteChamado from './SuporteChamado';
+import { avisarSuporte } from '@/components/support/aoVivo';
 
 const chamado = {
   id: 't1', kind: 'bug', status: 'open', subject: 'Roleta travou', faq_topic: null, page_url: '/automations/roleta',
@@ -29,6 +30,14 @@ describe('Suporte — chamado', () => {
     svc.show.mockResolvedValue(chamado);
     svc.reply.mockResolvedValue(chamado);
     svc.update.mockResolvedValue(chamado);
+  });
+
+  it('sinal ao vivo do chamado aberto recarrega na hora', async () => {
+    montar();
+    await screen.findByText('Travou tudo');
+    const antes = svc.show.mock.calls.length;
+    act(() => avisarSuporte('t1'));
+    await waitFor(() => expect(svc.show.mock.calls.length).toBe(antes + 1));
   });
 
   it('mostra a conversa, a tela de origem e a nota interna', async () => {

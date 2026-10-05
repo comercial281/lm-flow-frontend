@@ -4,6 +4,7 @@ import EmptyState from '@/components/base/EmptyState';
 import { cn } from '@/utils/cn';
 import { erroDaApi, supportService, type SupportTicketSummary } from '@/services/support/supportService';
 import { KIND_LABEL, STATUS_CLIENTE, quandoFoi } from './rotulos';
+import { useSinalSuporte } from './aoVivo';
 
 interface Props {
   /** Card aberto? Reabriu, recarrega: o card fica montado escondido e a lista envelhece. */
@@ -31,6 +32,11 @@ export default function SupportMensagens({ aberto, recarga = 0, onAbrir, onNovo 
   useEffect(() => {
     void carregar();
   }, [recarga]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Mudou algum chamado (resposta do time, situação): a lista aberta acompanha.
+  useSinalSuporte(() => {
+    if (aberto) void carregar();
+  });
 
   const estavaAberto = useRef(aberto);
   useEffect(() => {

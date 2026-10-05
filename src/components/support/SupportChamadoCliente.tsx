@@ -4,6 +4,7 @@ import { erroDaApi, supportService } from '@/services/support/supportService';
 import SupportThread from './SupportThread';
 import SupportComposer from './SupportComposer';
 import { useChamado } from './useChamado';
+import { useSinalSuporte } from './aoVivo';
 
 interface Props {
   id: string;
@@ -17,7 +18,11 @@ interface Props {
 
 export default function SupportChamadoCliente({ id, recemCriado, aberto, onLido }: Props) {
   const carregar = useCallback(() => supportService.show(id), [id]);
-  const { dado, erro, recarregar } = useChamado(carregar, aberto ? 10000 : 0);
+  // Sinal ao vivo traz a resposta na hora; a checagem a cada 30 s é só reserva.
+  const { dado, erro, recarregar } = useChamado(carregar, aberto ? 30000 : 0);
+  useSinalSuporte(ticketId => {
+    if (aberto && ticketId === id) void recarregar();
+  });
 
   // Reabriu o card: o que veio enquanto estava fechado aparece já, sem esperar o próximo tick.
   // Chat abre no fim: a mensagem mais nova é a que importa (carga, envio e polling).
