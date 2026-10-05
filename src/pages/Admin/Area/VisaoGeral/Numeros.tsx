@@ -28,6 +28,7 @@ export default function Numeros() {
   const tenant = params.get('tenant');
 
   const [dados, setDados] = useState<DadosNumeros | null>(null);
+  const [tenants, setTenants] = useState<DadosNumeros['tenants']>([]);
   const [erro, setErro] = useState(false);
   const [ordem, setOrdem] = useState<keyof LinhaCliente>('leads');
   const seq = useRef(0);
@@ -47,7 +48,7 @@ export default function Numeros() {
     if (!refresh) setDados(null);
     try {
       const r = await overviewService.numeros({ periodo, tenant, refresh });
-      if (minha === seq.current) setDados(r);
+      if (minha === seq.current) { setDados(r); setTenants(r.tenants); }
     } catch {
       if (minha === seq.current) setErro(true);
     }
@@ -56,7 +57,7 @@ export default function Numeros() {
   useEffect(() => { void carregar(); }, [carregar]);
 
   const linhas = useMemo(() => {
-    const valor = (c: LinhaCliente) => (c.readable ? Number(c[ordem] ?? 0) : -1);
+    const valor = (c: LinhaCliente) => (ordem === 'ai_cost_brl' ? Number(c.ai_cost_brl ?? 0) : c.readable ? Number(c[ordem] ?? 0) : -1);
     return [...(dados?.clients ?? [])].sort((a, b) => valor(b) - valor(a) || a.name.localeCompare(b.name));
   }, [dados, ordem]);
 
@@ -70,7 +71,7 @@ export default function Numeros() {
         </Seletor>
         <Seletor aria-label="Cliente" value={tenant ?? TODOS} onChange={(e) => atualizarUrl({ tenant: e.target.value === TODOS ? null : e.target.value })} className="w-full sm:w-56">
           <option value={TODOS}>Todos os clientes</option>
-          {(dados?.tenants ?? []).map((t) => <option key={t.schema} value={t.schema}>{t.name}</option>)}
+          {tenants.map((t) => <option key={t.schema} value={t.schema}>{t.name}</option>)}
         </Seletor>
         {dados && (
           <span className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">

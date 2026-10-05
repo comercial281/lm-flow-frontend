@@ -98,4 +98,33 @@ describe('Números', () => {
     montar();
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
   });
+
+  it('lista de clientes do seletor não some entre cargas', async () => {
+    let soltar: (v: unknown) => void = () => {};
+    apiGet
+      .mockResolvedValueOnce(resposta())
+      .mockImplementationOnce(() => new Promise((r) => { soltar = r; }));
+    montar();
+    const seletor = await screen.findByLabelText('Cliente');
+    await waitFor(() => expect(within(seletor).getByRole('option', { name: 'Alfa' })).toBeInTheDocument());
+    fireEvent.change(seletor, { target: { value: 'tenant_a' } });
+    await waitFor(() => expect(apiGet).toHaveBeenCalledTimes(2));
+    const durante = screen.getByLabelText('Cliente') as HTMLSelectElement;
+    expect(within(durante).getByRole('option', { name: 'Alfa' })).toBeInTheDocument();
+    expect(durante.value).toBe('tenant_a');
+    soltar(resposta());
+  });
+
+  it('ordenar por Custo da IA usa o custo mesmo de cliente ilegível', async () => {
+    apiGet.mockResolvedValue(resposta({
+      clients: [
+        { schema: 'tenant_a', name: 'Alfa', readable: true, ai_cost_brl: 100, leads: 10 },
+        { schema: 'tenant_b', name: 'Beta', readable: false, ai_cost_brl: 500 },
+      ],
+    }));
+    montar();
+    fireEvent.click(await screen.findByRole('button', { name: 'Custo da IA' }));
+    const linhas = screen.getAllByRole('row').slice(1).map((r) => within(r).getAllByRole('cell')[0].textContent);
+    expect(linhas).toEqual(['Beta', 'Alfa']);
+  });
 });
