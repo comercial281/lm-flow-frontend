@@ -585,7 +585,9 @@ const EvolutionWhatsAppConfig: React.FC<{
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [instanceSettings, setInstanceSettings] = useState({
     rejectCall: true,
-    msgCall: 'Não aceito chamadas',
+    // Vazio de fábrica: a Evolution manda este texto pra TODO mundo que liga
+    // (ver Evolution::CallMessage no backend). Só vai se o gestor escrever.
+    msgCall: '',
     groupsIgnore: false,
     alwaysOnline: true,
     readMessages: false,
@@ -659,7 +661,7 @@ const EvolutionWhatsAppConfig: React.FC<{
             const ignoreStatus = settings.ignoreStatus ?? settings.ignore_status ?? true;
             setInstanceSettings({
               rejectCall: settings.rejectCall ?? settings.reject_call ?? true,
-              msgCall: settings.msgCall || settings.msg_call || 'Não aceito chamadas',
+              msgCall: settings.msgCall ?? settings.msg_call ?? '',
               groupsIgnore: settings.ignoreGroups ?? settings.ignore_groups ?? false, // Evolution Go uses ignoreGroups
               alwaysOnline: settings.alwaysOnline ?? settings.always_online ?? true,
               readMessages: settings.readMessages ?? settings.read_messages ?? true,
@@ -670,7 +672,7 @@ const EvolutionWhatsAppConfig: React.FC<{
             // Evolution (normal) settings mapping
             setInstanceSettings({
               rejectCall: settings.rejectCall ?? true,
-              msgCall: settings.msgCall || 'Não aceito chamadas',
+              msgCall: settings.msgCall ?? '',
               groupsIgnore: settings.groupsIgnore ?? false,
               alwaysOnline: settings.alwaysOnline ?? true,
               readMessages: settings.readMessages ?? false,
@@ -907,7 +909,7 @@ const EvolutionWhatsAppConfig: React.FC<{
         // Evolution Go: convert readStatus to ignoreStatus (invert) and groupsIgnore to ignoreGroups
         settingsPayload = {
           rejectCall: instanceSettings.rejectCall,
-          msgCall: instanceSettings.msgCall,
+          msgCall: instanceSettings.rejectCall ? instanceSettings.msgCall.trim() : '',
           ignoreGroups: instanceSettings.groupsIgnore, // Convert groupsIgnore to ignoreGroups
           alwaysOnline: instanceSettings.alwaysOnline,
           readMessages: instanceSettings.readMessages,
@@ -917,7 +919,7 @@ const EvolutionWhatsAppConfig: React.FC<{
         // Evolution (normal): use settings as-is
         settingsPayload = {
           rejectCall: instanceSettings.rejectCall,
-          msgCall: instanceSettings.msgCall,
+          msgCall: instanceSettings.rejectCall ? instanceSettings.msgCall.trim() : '',
           groupsIgnore: instanceSettings.groupsIgnore,
           alwaysOnline: instanceSettings.alwaysOnline,
           readMessages: instanceSettings.readMessages,
@@ -1563,6 +1565,9 @@ const EvolutionWhatsAppConfig: React.FC<{
                         'settings.configuration.whatsapp.instance.callRejectionPlaceholder',
                       )}
                     />
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      {t('settings.configuration.whatsapp.instance.callRejectionHint')}
+                    </p>
                   </div>
                 )}
 

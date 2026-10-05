@@ -953,8 +953,9 @@
           "syncFullHistory": "Sincronizar histórico completo",
           "readStatus": "Status de leitura",
           "ignoreStatus": "Ignorar Status",
-          "callRejectionMessage": "Mensagem de rejeição de chamada",
-          "callRejectionPlaceholder": "Mensagem quando rejeitar chamadas",
+          "callRejectionMessage": "Mensagem para quem ligar (opcional)",
+          "callRejectionPlaceholder": "Em branco, ninguém recebe mensagem",
+          "callRejectionHint": "A ligação é recusada e, se tiver texto aqui, ele vai pelo WhatsApp pra quem ligou. Em branco, não vai nada.",
           "saveSettings": "Salvar",
           "errors": {
             "nameNotFound": "Nome do número não encontrado",

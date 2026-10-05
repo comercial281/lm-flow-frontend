@@ -92,7 +92,7 @@ export const useChannelForm = () => {
           proxy_password: prev.proxy_password || '',
           // Instance settings defaults - exact same as Evolution.vue
           rejectCall: prev.rejectCall ?? true,
-          msgCall: prev.msgCall || 'I do not accept calls',
+          msgCall: prev.msgCall ?? '',
           groupsIgnore: prev.groupsIgnore ?? false,
           alwaysOnline: prev.alwaysOnline ?? true,
           readMessages: prev.readMessages ?? false,

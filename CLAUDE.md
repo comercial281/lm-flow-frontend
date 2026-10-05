@@ -6558,3 +6558,12 @@ O que ainda usa o serviço antigo no frontend:
 7. **O Diagnóstico guardado leva o id da IA** (`{ id, report }`) e só vale pra IA aberta: ao trocar de IA, o selo não herda o veredito da anterior enquanto o da nova carrega (`SalesAgents.casca.spec.tsx`).
 8. **Trocar de IA remonta a tela** (`key={selected.id}` no contêiner das telas, `SalesAgents.tsx`): Testar, números da Visão geral e Sugestões nunca carregam da IA anterior (a conversa de teste de A não vai pra B). Quem tirar o `key` traz o vazamento de volta (`SalesAgents.casca.spec.tsx`).
 9. **Diagnóstico que não carrega não vira "tudo certo":** se a leitura falha (502, perfil sem `sales_agents.diagnostics`), a Visão geral diz *"Não consegui conferir a situação desta IA agora."* no lugar de *"Nada pendente"*; as pendências que a própria configuração mostra continuam aparecendo e o selo segue só na configuração.
+
+## Canal WhatsApp: mensagem para quem liga é opcional e vem vazia (05/10/2026)
+
+Caso real: o Leonardo (Mais que Imóveis) desligou "Rejeitar chamadas" e o cliente que ligava continuava recebendo "Não aceito chamadas" no WhatsApp.
+
+- **A Evolution manda o texto pra todo mundo que liga, com a rejeição ligada OU desligada.** São duas checagens separadas no servidor dela. Por isso a mensagem só pode existir com a rejeição ligada, e em branco não manda nada.
+- **Vazia de fábrica**, na criação do canal (antes vinha "I do not accept calls", em inglês) e na tela de configuração (antes "Não aceito chamadas"). Ao abrir a tela, campo vazio continua vazio. Antes o texto de fábrica reaparecia e voltava a ser gravado no próximo salvar.
+- **Rejeição desligada = mensagem vazia na gravação**, aqui e no servidor (`Evolution::CallMessage`, backend). O campo esconder não basta: era exatamente o texto escondido que ia pra Evolution.
+- Não reabrir "voltar com um texto padrão" sem o dono pedir.
