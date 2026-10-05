@@ -372,5 +372,49 @@ describe('ImovelPublicPage', () => {
       const chamada = f.mock.calls.find(([url]) => String(url).endsWith('/site/leads'))!;
       expect(JSON.parse(String((chamada[1] as RequestInit).body)).lead.form_type).toBe('imovel');
     });
+
+    it('dois cliques seguidos mandam um pedido só', async () => {
+      let solta: (v: unknown) => void = () => {};
+      const f = await abrirFicha(LIGADO, { has_book: true }, EMPREENDIMENTO);
+      const base = f.getMockImplementation()!;
+      f.mockImplementation(async (url: string, init?: RequestInit) =>
+        String(url).endsWith('/site/leads') ? new Promise(res => { solta = res; }) : base(url, init));
+      const u = userEvent.setup();
+      await u.click(screen.getAllByRole('button', BOTAO)[0]);
+      await u.type(screen.getAllByPlaceholderText('Seu nome')[0], 'Ana');
+      await u.type(screen.getAllByPlaceholderText('Seu WhatsApp')[0], '11987654321');
+      const enviar = screen.getAllByRole('button', { name: 'Receber o book' })[0];
+      await u.click(enviar);
+      await u.click(enviar);
+      expect(f.mock.calls.filter(([url]) => String(url).endsWith('/site/leads'))).toHaveLength(1);
+      expect(enviar).toBeDisabled();
+      await act(async () => { solta(resposta({})); });
+    });
+
+    it('falha do servidor: avisa, mantém o formulário preenchido e não confirma', async () => {
+      const f = await abrirFicha(LIGADO, { has_book: true }, EMPREENDIMENTO);
+      const base = f.getMockImplementation()!;
+      f.mockImplementation(async (url: string, init?: RequestInit) =>
+        String(url).endsWith('/site/leads') ? { ok: false, status: 500, json: async () => ({}) } : base(url, init));
+      const u = userEvent.setup();
+      await u.click(screen.getAllByRole('button', BOTAO)[0]);
+      await u.type(screen.getAllByPlaceholderText('Seu nome')[0], 'Ana');
+      await u.type(screen.getAllByPlaceholderText('Seu WhatsApp')[0], '11987654321');
+      await u.click(screen.getAllByRole('button', { name: 'Receber o book' })[0]);
+      expect((await screen.findAllByText('Não consegui enviar agora. Tente de novo em instantes.')).length).toBeGreaterThan(0);
+      expect(screen.queryByText(/O book vai chegar/)).toBeNull();
+      expect(screen.getAllByPlaceholderText('Seu nome')[0]).toHaveValue('Ana');
+    });
+
+    it('telefone inválido no formulário do book não envia nada', async () => {
+      const f = await abrirFicha(LIGADO, { has_book: true }, EMPREENDIMENTO);
+      const u = userEvent.setup();
+      await u.click(screen.getAllByRole('button', BOTAO)[0]);
+      await u.type(screen.getAllByPlaceholderText('Seu nome')[0], 'Ana');
+      await u.type(screen.getAllByPlaceholderText('Seu WhatsApp')[0], '123');
+      await u.click(screen.getAllByRole('button', { name: 'Receber o book' })[0]);
+      expect(f.mock.calls.some(([url]) => String(url).endsWith('/site/leads'))).toBe(false);
+      expect(screen.getAllByText('Digite um telefone válido com DDD.').length).toBeGreaterThan(0);
+    });
   });
 });

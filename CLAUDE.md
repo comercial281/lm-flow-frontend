@@ -6189,7 +6189,7 @@ Armadilhas:
 > Entrega 6C da fase 4 de Imóveis. Spec: `LM FLOW/specs/2026-10-05-fase-4-imoveis-book-pelo-site-design.md` (pasta do Tony). Backend no `lm-flow` (`saas-multitenant`): gatilho `lead.book_requested`, `Sites::PropertyPageConfig` (`development.book_button`), `GET/PUT /sites/:id/book_flow`, modelo `book_pelo_site`, blocos `hand_to_ai` e `disable_ai`. O backend entra primeiro.
 
 **O que o dono vê, em três pontos:**
-- **Construtor:** no bloco "Enviar WhatsApp", o Arquivo ganha **"Book do imóvel de interesse"** (o servidor acha o book sozinho; acima de 16 MB vai como link); o painel Blocos ganha **"Passar para a IA"** e **"Desligar a IA"**; o gatilho novo é **"Pediu o book no site"**; o modelo **"Book pelo site"** vem pronto. As peças servem a qualquer fluxo (`features/flowAutomations/book.ts`: `BOOK_SOURCE`, `BOOK_LABEL`, `BOOK_SUMMARY`, `usesBook`, `withBook`). A prévia do funil e a do modelo mostram a linha "Manda o book do imóvel de interesse" em vez de um balão vazio.
+- **Construtor:** no bloco "Enviar WhatsApp", o Arquivo ganha **"Book do imóvel de interesse"** (o servidor acha o book sozinho; acima de 16 MB vai como link); o painel Blocos ganha **"Passar para a IA"** e **"Desligar a IA"**; o gatilho novo é **"Pediu o book no site"**; o modelo **"Book pelo site"** vem pronto. As peças servem a qualquer fluxo (`features/flowAutomations/book.ts`: `BOOK_SOURCE`, `BOOK_LABEL`, `BOOK_SUMMARY`, `usesBook`, `withBook`). A prévia do funil e a do modelo mostram a linha "Manda o book do imóvel de interesse" em vez de um balão vazio (o servidor manda `media_source` na prévia desde a entrega 6C).
 - **Meu site › Página do imóvel › Empreendimentos:** seção **"Receber o book no WhatsApp"** (`telas/BookPeloSite.tsx`): a chave e, ligada, três campos (**Enviar pelo número**, **Mensagem** com os botõezinhos de variável, **"Depois do book, a IA Vendedora assume a conversa"** Sim/Não, só se há IA ligada) e o link "Ver no construtor". Fluxo mexido no construtor: "Este fluxo foi personalizado no construtor" e a tela só liga e desliga. Fluxo desligado: aviso âmbar + "Ligar o fluxo". Fluxo excluído: aviso + "Recriar o fluxo".
 - **Página pública do empreendimento:** o botão **"Receber o book no WhatsApp"** abre o MESMO formulário de nome e telefone, com o título "Receba o book no WhatsApp" (telefone obrigatório), e envia `form_type: 'imovel_book'`. Confirmação: "Pronto! O book vai chegar no seu WhatsApp em alguns minutos." Na prévia do site vale o aviso de sempre (o contato não foi enviado de verdade).
 
@@ -6211,9 +6211,10 @@ Armadilhas:
 3. **Só o botão "Salvar o envio do book" manda os campos** (`send_from`, `send_from_inbox_id`, `mensagem`, `ia_assume`). A chave, "Ligar o fluxo" e "Recriar o fluxo" mandam só `{ ligado }`, e o servidor mantém o gravado. Fluxo personalizado nunca tem os nós sobrescritos pelo PUT.
 4. **O endereço do PDF NUNCA entra no payload público.** A página só sabe SE o imóvel tem book (`has_book`) e se a chave está ligada. Não "melhorar" mostrando o link, nem o tamanho, nem o nome do arquivo.
 5. **A resposta do PUT substitui os rascunhos dos campos** pelo que o servidor gravou: texto editado e não salvo se perde ao ligar, desligar ou "Ligar o fluxo".
-6. O formulário do botão e o de "Tenho interesse" são o mesmo componente e o mesmo estado (nome, telefone): o `pedindoBook` só troca título, botão e `form_type`. Não duplicar o formulário.
-7. O `readiness` e a prévia leem o book só por `usesBook`/`BOOK_SOURCE`; nada de escrever `'property_book'` na mão.
-8. Link do construtor: `/automations/flow-builder/:id`.
+6. Depois de enviar, o agradecimento substitui o formulário: o botão do book some até recarregar a página (aceito por ora). Falha do servidor mostra "Não consegui enviar agora. Tente de novo em instantes." e mantém o formulário preenchido; o botão de enviar fica travado durante o envio (sem pedido duplo).
+7. O formulário do botão e o de "Tenho interesse" são o mesmo componente e o mesmo estado (nome, telefone): o `pedindoBook` só troca título, botão e `form_type`. Não duplicar o formulário.
+8. O `readiness` e a prévia leem o book só por `usesBook`/`BOOK_SOURCE`; nada de escrever `'property_book'` na mão.
+9. Link do construtor: `/automations/flow-builder/:id`.
 
 ## Meu site · domínio próprio, Google e prévia (desde 2026-10-04)
 
