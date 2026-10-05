@@ -39,6 +39,7 @@ import { moveStageModeOf, stageNameOf, withMoveStageMode, withStageName } from '
 import { FormAnswerPicker } from './FormAnswerPicker';
 import { FlowSidePanel } from './FlowSidePanel';
 import { FunnelMessageFields, hasRichMessage } from './FunnelMessageFields';
+import { BOOK_HELP, BOOK_LABEL, usesBook, withBook } from '@/features/flowAutomations/book';
 import { VariableChipBar } from './VariableChipBar';
 
 interface Props {
@@ -392,6 +393,17 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
                 onChange={next => set('text', next)}
               />
             </div>
+            <div className="space-y-1">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={usesBook(config)}
+                  onChange={e => setConfig(c => withBook(c, e.target.checked))}
+                />
+                {BOOK_LABEL}
+              </label>
+              <p className="pl-6 text-xs text-muted-foreground">{BOOK_HELP}</p>
+            </div>
             <SendFromField
               scope="lead_automation_rules"
               value={envio}
@@ -467,6 +479,9 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
             <p className="text-xs text-muted-foreground">Use no caminho Respondeu do Aguardar resposta.</p>
           </div>
         );
+      case 'hand_to_ai':
+      case 'disable_ai':
+        return <p className="text-sm">{blockDescription(activeNode)}</p>;
       case 'wait': {
         const mode = waitModeOf(config);
         // Funil de conversa (sprint 4): só "por um tempo", em segundos (é conversa ao vivo).

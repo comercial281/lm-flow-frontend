@@ -241,6 +241,7 @@ export const TRIGGER_LABELS: Record<string, string> = {
   'lead.visit_reminder_1h':    'Lembrete — 1 hora antes da visita',
   'lead.visit_reminder_15min': 'Lembrete — 15 minutos antes da visita',
   'lead.interest_created':     'Interesse em imóvel',
+  'lead.book_requested':       'Pediu o book no site',
   'lead.inactive_7d':          'Inativo há 7 dias',
   'lead.inactive_14d':         'Inativo há 14 dias',
   'lead.property_matched':     'Imóvel compatível encontrado',

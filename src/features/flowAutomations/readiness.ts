@@ -27,6 +27,7 @@ export function nodeProblem(node: BlockLike): string | null {
       const mediaKind = String(config.media_kind ?? '').trim();
       const hasMedia = String(config.media_url ?? '').trim() !== '';
       const isContact = String(config.contact_phone ?? '').trim() !== '';
+      if (config.media_source === 'property_book') return sendFromProblem(sendFromOf(config)) ?? progressProblem(config);
       if (mediaKind && !hasMedia) return 'Escolha o arquivo pra mandar.';
       if (!hasMedia && !isContact && !String(config.text ?? '').trim()) return 'Escreva a mensagem.';
       return sendFromProblem(sendFromOf(config)) ?? progressProblem(config);

@@ -13,7 +13,9 @@ import { conditionSentence, type ConditionLookups } from '@/features/flowAutomat
 import { WAIT_FOR_REPLY_HELP, describeWait, describeWaitForReply } from '@/features/flowAutomations/waitTime';
 import { sendFromOf } from '@/features/numbers/sendFrom';
 import { progressLine } from '@/features/flowAutomations/progress';
+import { blockDescription } from '@/features/flowAutomations/blockInfo';
 import { RECOVERED_SUMMARY } from '@/features/flowAutomations/recovered';
+import { BOOK_SOURCE, BOOK_SUMMARY } from '@/features/flowAutomations/book';
 import { moveStageModeOf, stageNameOf } from '@/features/flowAutomations/moveStage';
 import { cn } from '@/lib/utils';
 
@@ -92,6 +94,7 @@ const MEDIA_LINE: Record<string, string> = {
 /** A linha da mensagem (sprint 4: mídia e contato do funil de conversa). */
 export function messageLine(cfg: Record<string, unknown>): string {
   const text = String(cfg.text ?? '').trim();
+  if (cfg.media_source === BOOK_SOURCE) return BOOK_SUMMARY;
   const media = String(cfg.media_kind ?? '').trim();
   if (MEDIA_LINE[media]) {
     if (!String(cfg.media_url ?? '').trim()) return `${MEDIA_LINE[media]} (escolha o arquivo)`;
@@ -130,6 +133,9 @@ export function summaryLine(node: FlowAutomationNode, lookups: FlowLookups = {})
     }
     case 'followup_recovered':
       return RECOVERED_SUMMARY;
+    case 'hand_to_ai':
+    case 'disable_ai':
+      return blockDescription(node);
     case 'lead_action':
       return lookups.actionSummary?.(leadActionOf(cfg)) ?? '';
     default:

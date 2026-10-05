@@ -7,7 +7,7 @@
 
 import {
   ArrowRightLeft, Bell, BellRing, Clock, Eraser, FileText, Filter, GitBranch, Hourglass, Image,
-  ListOrdered, Megaphone, MessageSquare, Mic, Repeat, Send, Shuffle, Smartphone, Sticker, Tag,
+  ListOrdered, Megaphone, MessageSquare, Mic, Bot, BotOff, Repeat, Send, Shuffle, Smartphone, Sticker, Tag,
   Trophy, User, UserCheck, ClipboardList, Users, Video, Zap, type LucideIcon,
 } from 'lucide-react';
 import type { FlowAutomationNode, FlowNodeConfig, FlowNodeKind } from '@/types/flowAutomations';
@@ -31,6 +31,8 @@ const ICONS: Record<string, LucideIcon> = {
   remove_label: Eraser,
   move_stage: ArrowRightLeft,
   followup_recovered: Trophy,
+  hand_to_ai: Bot,
+  disable_ai: BotOff,
   'lead_action:send_whatsapp_message': MessageSquare,
   'lead_action:send_audio': Mic,
   'lead_action:send_image': Image,
@@ -64,6 +66,8 @@ const DESCRIPTIONS: Record<string, string> = {
   remove_label: 'Tira etiquetas do lead.',
   move_stage: 'Leva o card do lead pra outra etapa do funil.',
   followup_recovered: 'Marca que o lead voltou a conversar graças ao follow-up.',
+  hand_to_ai: 'A IA Vendedora do número da conversa passa a responder este lead, mesmo sem os gatilhos dela. Vale o horário de atendimento dela.',
+  disable_ai: "A IA para de responder este lead (igual a 'IA desligada' no card).",
   'lead_action:send_whatsapp_message': 'Manda uma mensagem de texto pro lead no WhatsApp.',
   'lead_action:send_audio': 'Manda um áudio pro lead.',
   'lead_action:send_image': 'Manda uma imagem pro lead, com legenda se quiser.',

@@ -44,7 +44,7 @@ export const FLOW_TRIGGER_GROUPS: FlowTriggerGroup[] = [
       'lead.visit_reminder_24h', 'lead.visit_reminder_1h', 'lead.visit_reminder_15min',
     ],
   },
-  { label: 'Imóvel', events: ['lead.interest_created'] },
+  { label: 'Imóvel', events: ['lead.interest_created', 'lead.book_requested'] },
 ];
 
 export const FLOW_TRIGGER_EVENTS: FlowTriggerEvent[] = FLOW_TRIGGER_GROUPS.flatMap(g => g.events);
