@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import type { ReactNode, Dispatch, SetStateAction } from 'react';
 import { X, ChevronRight, ChevronLeft, Plus, Trash2, Loader2, Check } from 'lucide-react';
 import api from '@/services/core/api';
+import { pacotesService } from '@/services/superAdmin/pacotesService';
+import type { PacoteDaLista } from '@/types/admin/pacotes';
 import { Seletor } from '@/components/base/Seletor';
 import { PhoneInput } from '@/components/shared/PhoneInput';
 
@@ -28,6 +30,7 @@ interface WizardState {
   whatsapp_logs_group_jid: string;
   max_whatsapp_channels: number;
   template_ids: string[];
+  package_id: string;
 }
 
 const STEPS = ['Dados', 'Acesso', 'Leads', 'Templates'];
@@ -49,8 +52,9 @@ export default function NewTenantWizard({ onClose, onCreated }: { onClose: () =>
     extra_users: [], notify_email: true, notify_whatsapp: false,
     pipe_entry_sources: ['ads', 'organic', 'form', 'manual'], whatsapp_reminder_group_jid: '', whatsapp_logs_group_jid: '',
     max_whatsapp_channels: 5,
-    template_ids: [],
+    template_ids: [], package_id: '',
   });
+  const [pacotes, setPacotes] = useState<PacoteDaLista[]>([]);
 
   useEffect(() => {
     api.get('/super/pooled_tenants/provision_data')
@@ -58,6 +62,8 @@ export default function NewTenantWizard({ onClose, onCreated }: { onClose: () =>
       .catch(() => {})
       .finally(() => setLoadingData(false));
   }, []);
+
+  useEffect(() => { pacotesService.listar().then(setPacotes).catch(() => {}); }, []);
 
   const set = (k: keyof WizardState, v: any) => setState(s => ({ ...s, [k]: v }));
 
@@ -78,7 +84,8 @@ export default function NewTenantWizard({ onClose, onCreated }: { onClose: () =>
         pipe_entry_sources:          state.pipe_entry_sources,
         whatsapp_reminder_group_jid: state.whatsapp_reminder_group_jid || undefined,
         whatsapp_logs_group_jid:     state.whatsapp_logs_group_jid || undefined,
-        max_whatsapp_channels:       state.max_whatsapp_channels,
+        max_whatsapp_channels:       state.package_id ? undefined : state.max_whatsapp_channels,
+        package_id:                  state.package_id || undefined,
         notify_email:                state.notify_email,
         notify_whatsapp:             state.notify_whatsapp,
         template_ids:                state.template_ids,
@@ -119,7 +126,7 @@ export default function NewTenantWizard({ onClose, onCreated }: { onClose: () =>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          {step === 0 && <StepDados state={state} set={set} />}
+          {step === 0 && <StepDados state={state} set={set} pacotes={pacotes} />}
           {step === 1 && <StepAcesso state={state} set={set} setState={setState} />}
           {step === 2 && <StepLeads state={state} set={set} groups={provisionData.whatsapp_groups} loading={loadingData} />}
           {step === 3 && <StepTemplates state={state} set={set} templates={provisionData.templates} loading={loadingData} />}
@@ -190,7 +197,7 @@ function GroupSelect({ value, onChange, groups, placeholder, loading }: { value:
   );
 }
 
-function StepDados({ state, set }: { state: WizardState; set: (k: keyof WizardState, v: any) => void }) {
+function StepDados({ state, set, pacotes }: { state: WizardState; set: (k: keyof WizardState, v: any) => void; pacotes: PacoteDaLista[] }) {
   return (
     <div className="space-y-4">
       <Field label="Nome da imobiliaria *">
@@ -210,6 +217,13 @@ function StepDados({ state, set }: { state: WizardState; set: (k: keyof WizardSt
           valueFormat="digits"
           inputClassName="h-auto py-2 rounded-lg text-foreground placeholder:text-muted-foreground bg-muted border-input focus-visible:ring-ring"
         />
+      </Field>
+      <Field label="Pacote" hint="Funções e limites do cliente. Personalizado = sem pacote, você ajusta na página do cliente.">
+        <Seletor aria-label="Pacote" value={state.package_id} onChange={e => set('package_id', e.target.value)}
+          className="w-full px-3 py-2 rounded-lg text-sm text-foreground outline-none focus:ring-1 focus:ring-ring bg-background border border-input">
+          <option value="">Personalizado</option>
+          {pacotes.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </Seletor>
       </Field>
       <Field label="Slug do CRM" hint={`URL: ${(state.slug || slugify(state.name || 'cliente'))}.lmflow.com.br`}>
         <TextInput value={state.slug || slugify(state.name)} onChange={v => set('slug', slugify(v))} placeholder="casa-grande" />
@@ -279,7 +293,7 @@ function StepLeads({ state, set, groups, loading }: { state: WizardState; set: (
         ))}
       </div>
 
-      <div className="space-y-2 pt-2 border-t border-border">
+      {!state.package_id && <div className="space-y-2 pt-2 border-t border-border">
         <p className="text-xs font-medium text-muted-foreground">Limite de canais de WhatsApp</p>
         <div className="flex items-center gap-3">
           <input type="number" min={0} value={state.max_whatsapp_channels}
@@ -287,7 +301,7 @@ function StepLeads({ state, set, groups, loading }: { state: WizardState; set: (
             className="w-16 px-2 py-1.5 rounded-lg bg-muted border border-border text-foreground text-sm text-center outline-none" />
           <span className="text-xs text-muted-foreground">Quantas instancias este cliente pode conectar. 0 = ilimitado.</span>
         </div>
-      </div>
+      </div>}
 
       <div className="space-y-3 pt-2 border-t border-border">
         <p className="text-xs font-medium text-muted-foreground">Grupos WhatsApp</p>

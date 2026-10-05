@@ -84,6 +84,31 @@ describe('Aba Funções', () => {
     expect(api.patch).not.toHaveBeenCalled();
   });
 
+  it('marca ≠ pacote e filtra só o que difere', async () => {
+    api.get.mockResolvedValue({ data: { data: { catalog, features: { disparos: true, bolsao: false, visits: true } } } });
+    const c = { ...cliente, package: { id: 'p1', name: 'Completo' }, package_diff: { features: [{ key: 'bolsao', label: 'Bolsão', tenant: false, package: true }], limits: [] } };
+    const user = userEvent.setup();
+    render(<AbaFuncoes cliente={c as any} aoMudar={vi.fn()} recarregar={vi.fn()} />);
+    expect(await screen.findByText('≠ pacote')).toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: 'Só o que difere do pacote' }));
+    expect(screen.queryByRole('switch', { name: 'Disparos' })).not.toBeInTheDocument();
+  });
+
+  it('recarrega o cliente depois de gravar e depois do Desfazer', async () => {
+    api.get.mockResolvedValue({ data: { data: { catalog, features: { disparos: true, bolsao: true, visits: true } } } });
+    api.patch.mockImplementation((_u: string, body: { features: Record<string, boolean> }) =>
+      Promise.resolve({ data: { data: { features: { disparos: true, bolsao: true, visits: true, ...body.features } } } }));
+    const recarregar = vi.fn();
+    const user = userEvent.setup();
+    render(<AbaFuncoes cliente={cliente as any} aoMudar={vi.fn()} recarregar={recarregar} />);
+    await user.click(await screen.findByRole('switch', { name: 'Bolsão' }));
+    await waitFor(() => expect(recarregar).toHaveBeenCalledTimes(1));
+    const [, opcoes] = toast.mock.calls.find(([msg]) => msg === 'Bolsão desligada')!;
+    await opcoes.action.onClick();
+    await waitFor(() => expect(recarregar).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole('switch', { name: 'Bolsão' })).toHaveAttribute('aria-checked', 'true');
+  });
+
   it('erro ao carregar aparece como erro', async () => {
     api.get.mockRejectedValue(new Error('schema'));
     render(<AbaFuncoes cliente={cliente as any} aoMudar={vi.fn()} recarregar={vi.fn()} />);

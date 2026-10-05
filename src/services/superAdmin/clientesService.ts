@@ -55,6 +55,14 @@ export const clientesService = {
     const r = await api.patch(`${base(id)}/update_features`, { features: patch });
     return r.data.data.features;
   },
+  async trocarPacote(id: string, packageId: string, dryRun: boolean) {
+    const r = await api.post(`${base(id)}/assign_package`, { package_id: packageId, dry_run: dryRun });
+    return dryRun ? { changes: r.data.data.changes, undone: r.data.data.undone } : { cliente: r.data.data as ClientePooled, undone: r.data.undone as number };
+  },
+  async voltarAoPacote(id: string, dryRun: boolean) {
+    const r = await api.post(`${base(id)}/reset_to_package`, { dry_run: dryRun });
+    return dryRun ? { changes: r.data.data.changes, undone: r.data.data.undone } : { cliente: r.data.data as ClientePooled, undone: r.data.undone as number };
+  },
   async dadosDeProvisionamento(): Promise<{ whatsapp_groups: unknown[]; templates: unknown[] }> {
     const r = await api.get('/super/pooled_tenants/provision_data');
     return r.data.data;

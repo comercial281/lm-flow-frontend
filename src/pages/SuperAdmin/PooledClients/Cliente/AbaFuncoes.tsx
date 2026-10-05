@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import EmptyState from '@/components/base/EmptyState';
+import { Checkbox, Label } from '@/components/ui/ds';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { clientesService } from '@/services/superAdmin/clientesService';
 import { itemLabel, type CatalogItem } from '../../featureCatalog';
@@ -11,11 +12,13 @@ import type { PropsDaAba } from './Pagina';
 
 // Funções do cliente: cada interruptor grava na hora (otimista, volta no erro),
 // com "Desfazer". Desligar o menu inteiro confirma antes.
-export default function AbaFuncoes({ cliente }: PropsDaAba) {
+export default function AbaFuncoes({ cliente, recarregar }: PropsDaAba) {
   const [dados, setDados] = useState<{ catalog: CatalogItem[]; features: Record<string, boolean> } | null>(null);
   const [erro, setErro] = useState(false);
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+  const [somenteDiferentes, setSomenteDiferentes] = useState(false);
   const atual = useRef<Record<string, boolean>>({});
+  const diferentes = new Set((cliente.package_diff?.features ?? []).map((f) => f.key));
 
   const carregar = useCallback(async () => {
     setErro(false);
@@ -42,6 +45,7 @@ export default function AbaFuncoes({ cliente }: PropsDaAba) {
     try {
       const novas = await clientesService.mudarFuncoes(cliente.id, patch);
       aplicar(Object.fromEntries(chaves.filter((k) => k in novas).map((k) => [k, novas[k]])));
+      recarregar(); // o "≠ pacote" volta atualizado do servidor
       return true;
     } catch (e) {
       aplicar(antes);
@@ -79,7 +83,13 @@ export default function AbaFuncoes({ cliente }: PropsDaAba) {
   if (!dados) return <div aria-busy="true" className="h-60 animate-pulse rounded-lg bg-muted" />;
   return (
     <>
-      <QuadrosDeFuncoes catalog={dados.catalog} ligada={ligada} aoMudar={aoMudar} />
+      {cliente.package && (
+        <div className="mb-3 flex items-center gap-2">
+          <Checkbox id="so-difere" checked={somenteDiferentes} onCheckedChange={(v) => setSomenteDiferentes(v === true)} aria-label="Só o que difere do pacote" />
+          <Label htmlFor="so-difere" className="text-sm">Só o que difere do pacote</Label>
+        </div>
+      )}
+      <QuadrosDeFuncoes catalog={dados.catalog} ligada={ligada} aoMudar={aoMudar} diferentes={diferentes} somenteDiferentes={somenteDiferentes} />
       {dialogoDeConfirmacao}
     </>
   );
