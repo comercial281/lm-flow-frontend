@@ -65,7 +65,7 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
 
 export default function PortalAnunciePage() {
   const tenant = useTenantDoSite();
-  const { state, site, fontHref, wa, abas, cssVars, manutencao } = usePortalData(tenant);
+  const { state, site, fontHref, wa, abas, cssVars, fundo, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
   usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'listing', path: pathname });
@@ -171,7 +171,7 @@ export default function PortalAnunciePage() {
   };
 
   return (
-    <div style={cssVars} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
+    <div style={cssVars} data-fundo={fundo} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href={fontHref} rel="stylesheet" />
 
@@ -280,7 +280,7 @@ export default function PortalAnunciePage() {
 
                   <button type="submit"
                     className="inline-flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-semibold text-white transition-opacity hover:opacity-90"
-                    style={{ background: 'var(--ink)' }}>
+                    style={{ background: 'var(--solid)' }}>
                     Próximo <Ic d={I.arrow} s={17} />
                   </button>
                 </form>

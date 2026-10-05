@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { BrPhoneInput } from '@/components/shared/BrPhoneInput';
 import { PhoneInput } from '@/components/shared/PhoneInput';
 import { cn } from '@/lib/utils';
+import { ondeApareceContato, ondeApareceEndereco } from '@/features/siteBuilder/ondeApareceNoSite';
 import { Secao, Secoes } from '../ui/Secao';
 import { CLASSE_DO_CAMPO, Campo, CampoTexto, CampoTextoLongo, descricaoDoCampo } from '../ui/Campo';
 import type { FormProps } from './tipos';
@@ -72,14 +73,15 @@ export default function TelaDados({ siteForm, setF }: FormProps) {
     ? 'Falta o código do país (55): o botão do WhatsApp do site pode não funcionar. Digite o número de novo com o 55 na frente e salve.'
     : undefined;
 
-  const ajudaTelefone = 'Aparece no rodapé de todas as páginas e, no computador, na faixa de cima das páginas internas. No celular, quem toca no número já liga.';
+  // Onde cada um aparece depende da Aparência (rodapé compacto, faixa de cima).
+  const ajudaTelefone = ondeApareceContato(siteForm.appearance, 'telefone');
   const ajudaZap = 'Para onde vai o botão verde do WhatsApp, no topo, no rodapé e na página de cada imóvel.';
 
   return (
     <Secoes>
       <Secao
         titulo="Contato"
-        descricao="Como o visitante fala com a imobiliária. Estes dados aparecem no rodapé, nos botões do site e, no computador, na faixa de cima das páginas internas."
+        descricao="Como o visitante fala com a imobiliária. Embaixo de cada campo, onde ele aparece no site. O rodapé e a faixa de cima se ajustam em Aparência."
       >
         <div className="grid gap-5 md:grid-cols-2">
           {livre ? (
@@ -135,7 +137,7 @@ export default function TelaDados({ siteForm, setF }: FormProps) {
             inputMode="email"
             autoComplete="email"
             placeholder="contato@suaimobiliaria.com.br"
-            ajuda="Aparece no rodapé de todas as páginas e, no computador, na faixa de cima das páginas internas."
+            ajuda={ondeApareceContato(siteForm.appearance, 'email')}
             aviso={avisoEmail}
             valor={email}
             aoMudar={v => setF({ contact_email: v })}
@@ -146,7 +148,7 @@ export default function TelaDados({ siteForm, setF }: FormProps) {
             rotulo="Endereço"
             rows={2}
             placeholder="Rua, número, bairro, cidade"
-            ajuda="Aparece no rodapé do site. Pode usar duas linhas."
+            ajuda={ondeApareceEndereco(siteForm.appearance)}
             classeDoControle="resize-none"
             valor={siteForm.contact_address ?? ''}
             aoMudar={v => setF({ contact_address: v })}

@@ -3,6 +3,7 @@ import type { BlockInstance } from '@/features/landing/blocks/contract';
 import type { HomeConfig } from '@/features/siteBuilder/public/homeConfig';
 import type { FichaConfigDoAdmin } from '@/features/siteBuilder/public/fichaConfig';
 import type { ListaConfig } from '@/features/siteBuilder/public/listaConfig';
+import type { Aparencia } from '@/features/siteBuilder/public/aparenciaConfig';
 
 export interface SiteBranding {
   logo_url?: string | null;
@@ -180,6 +181,14 @@ export interface Site {
   property_page?: FichaConfigDoAdmin;
   /** Lista de imóveis (settings['listing']). Servidor velho não manda. */
   listing?: ListaConfig;
+  /** Aparência (settings['appearance'], C3). Servidor velho não manda. */
+  appearance?: unknown;
+  /**
+   * Menu (settings['menu'], C3), já resolvido pelo servidor: todas as páginas,
+   * ativas ou não, com `page_title`, e o `enabled` delas = `in_menu`. Ler com
+   * `resolverMenu`. Servidor velho não manda.
+   */
+  menu?: unknown;
   /** Página *Simule seu financiamento*, já resolvida pelo servidor. */
   financiamento?: SiteFinancingPage | null;
   /** Página *Anuncie seu imóvel*, já resolvida pelo servidor (com os e-mails). */
@@ -312,6 +321,14 @@ export interface SiteFormData {
   listing?: ListaConfig;
   /** "Aparecer no Google": sempre o bloco inteiro (permit aninhado no servidor). */
   google?: SiteGoogle;
+  /** Aparência (C3): sempre o objeto inteiro. Só viaja se a tela mexeu (`aparenciaAlterada`). */
+  appearance?: Aparencia;
+  /**
+   * Menu (C3). Na tela é o resolvido (com `page_title`); no Salvar vira
+   * `menuParaGravar` (`{ items: [{ key, label, enabled }], external }`).
+   * Só viaja se a tela mexeu (`menuAlterado`).
+   */
+  menu?: MenuDoPainel | MenuParaGravar;
   /**
    * As duas páginas extras. Viajam ANINHADAS — declaradas escalares no servidor
    * o Rails descartaria o hash em silêncio, a tela diria *Salvo* e nada mudaria.
@@ -359,6 +376,21 @@ export interface SiteListingForm {
   thanks_text?: string;
   emails?: string[];
 }
+
+/** Menu como a tela Menus edita (o resolvido do servidor). */
+export interface MenuDoPainel {
+  items: { key: string; label: string | null; enabled: boolean; page_title: string | null }[];
+  external: { label: string; url: string }[];
+}
+
+/** Menu como o servidor grava: item de página SEMPRE com `enabled` (ausente = ligado). */
+export interface MenuParaGravar {
+  items: { key: string; label: string | null; enabled: boolean }[];
+  external: { label: string; url: string }[];
+}
+
+/** Modelos de página prontos (`POST /sites/:id/pages/from_template`). */
+export type ModeloDePagina = 'about' | 'privacy';
 
 /** Exatamente o que o `page_params` do servidor aceita (nomes do servidor). */
 export interface PageFormData {
@@ -569,6 +601,17 @@ export const siteBuilderService = {
 
   async createPage(siteId: string, data: PageFormData): Promise<SitePage> {
     const res = await api.post(`/sites/${siteId}/pages`, { page: data });
+    return (res.data as { data: SitePage }).data;
+  },
+
+  /**
+   * Cria a página a partir de um modelo (Sobre nós ou Política de privacidade),
+   * DESATIVADA e fora do menu, com os dados do site. A privacidade pede o CPF
+   * ou o CNPJ em `document`; inválido volta 422 com `error.details.field = 'document'`.
+   */
+  async createPageFromTemplate(siteId: string, template: ModeloDePagina, document?: string): Promise<SitePage> {
+    const body = template === 'privacy' ? { template, document } : { template };
+    const res = await api.post(`/sites/${siteId}/pages/from_template`, body);
     return (res.data as { data: SitePage }).data;
   },
 

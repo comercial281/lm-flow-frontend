@@ -7,6 +7,7 @@ import { faixasDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixa
 import { FASES } from '@/features/properties/listingKind';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
+import { filtroDaCapa, resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Capa da página inicial: foto/vídeo, título, subtítulo e a busca rápida.
@@ -85,8 +86,14 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
   const titulo = home.search.title?.trim() || TITULO_CAPA_FABRICA;
   const subtitulo = home.search.subtitle?.trim() || site.seo?.description || SUBTITULO_PADRAO;
 
+  // Aparência: "Tela cheia" ocupa a altura da tela e centra o conteúdo; "Meia
+  // tela" (fábrica) é a de sempre, com a altura vinda só do respiro. O filtro
+  // escuro sobe ou desce com `hero_overlay` (45 = o degradê de sempre).
+  const ap = resolverAparencia(site.appearance);
+  const telaCheia = ap.hero_height === 'full';
+
   return (
-    <section id="topo" className="relative overflow-hidden">
+    <section id="topo" className={telaCheia ? 'relative flex min-h-[100svh] flex-col justify-center overflow-hidden' : 'relative overflow-hidden'}>
       <div className="absolute inset-0" style={{ background: '#17140f' }}>
         {site.hero?.video_url ? (
           <video
@@ -103,12 +110,12 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
           // a capa do primeiro imóvel da lista, como sempre foi.
           <img src={site.hero?.image_url || items[0]?.cover_url || CAPA_PADRAO} alt="" className="h-full w-full object-cover" />
         )}
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(23,20,15,0.35) 0%, rgba(23,20,15,0.55) 55%, var(--paper) 100%)' }} />
+        <div className="absolute inset-0" style={{ background: filtroDaCapa(ap.hero_overlay) }} />
       </div>
 
       {/* pt maior: o cabeçalho FLUTUA sobre a capa (ele sai do fluxo), então o
           título precisa do espaço dele de volta. */}
-      <div className="relative mx-auto max-w-6xl px-4 pb-8 pt-32 sm:px-6 sm:pt-40 md:pb-16 md:pt-44">
+      <div className={`relative mx-auto max-w-6xl px-4 pb-8 pt-32 sm:px-6 sm:pt-40 md:pb-16 md:pt-44${telaCheia ? ' w-full' : ''}`}>
         <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-white/80">{site.name || 'Portal Imobiliário'}</p>
         <h1 className="mt-3 max-w-2xl font-[var(--display)] text-4xl font-semibold leading-[1.05] text-white sm:text-5xl md:text-6xl">
           {titulo}

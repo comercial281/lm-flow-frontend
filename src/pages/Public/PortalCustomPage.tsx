@@ -19,7 +19,7 @@ export default function PortalCustomPage() {
   const { slug } = useParams<{ slug: string }>();
   const tenant = useTenantDoSite();
   const ctx = useCtxDoSite(tenant ?? '');
-  const { state, site, fontHref, abas, cssVars, manutencao } = usePortalData(tenant);
+  const { state, site, fontHref, abas, cssVars, fundo, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
   usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'page', path: pathname, pageSlug: slug });
@@ -55,7 +55,7 @@ export default function PortalCustomPage() {
   }
 
   return (
-    <div style={cssVars as CSSProperties} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
+    <div style={cssVars as CSSProperties} data-fundo={fundo} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href={fontHref} rel="stylesheet" />
 
@@ -84,7 +84,7 @@ export default function PortalCustomPage() {
         .custom-page h2{font-size:1.4em;font-weight:600;margin:1.6em 0 .6em}
         .custom-page h3{font-size:1.15em;font-weight:600;margin:1.4em 0 .5em}
         .custom-page p{margin:0 0 1.1em;line-height:1.7}
-        .custom-page a{color:var(--brand);text-decoration:underline}
+        .custom-page a{color:var(--brand-text);text-decoration:underline}
         .custom-page ul,.custom-page ol{margin:0 0 1.1em;padding-left:1.4em}
         .custom-page ul{list-style:disc}.custom-page ol{list-style:decimal}
         .custom-page img{max-width:100%;height:auto;border-radius:12px;margin:1.2em 0}

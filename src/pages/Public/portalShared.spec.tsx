@@ -65,11 +65,11 @@ describe('PropertyRow', () => {
     expect(article.className).not.toMatch(/(^| )grid-cols-/);
   });
 
-  it('cores do site: selo na --brand, "Ver detalhes" na --ink; nada das cores do sistema', () => {
+  it('cores do site: selo na --accent (texto pelo contraste), "Ver detalhes" na --solid; nada das cores do sistema', () => {
     const { article } = desenhar(PropertyRow);
 
-    expect(within(article).getByText('Exclusivo')).toHaveStyle({ background: 'var(--brand)' });
-    expect(within(article).getByRole('link', { name: DETALHES })).toHaveStyle({ background: 'var(--ink)' });
+    expect(within(article).getByText('Exclusivo')).toHaveStyle({ background: 'var(--accent)', color: 'var(--accent-ink)' });
+    expect(within(article).getByRole('link', { name: DETALHES })).toHaveStyle({ background: 'var(--solid)' });
     expect(article.outerHTML).not.toMatch(/\b(bg-card|bg-muted|bg-primary|text-primary|text-muted-foreground|text-foreground|border-primary)\b/);
   });
 

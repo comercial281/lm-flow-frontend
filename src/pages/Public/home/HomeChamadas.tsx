@@ -67,7 +67,7 @@ export default function HomeChamadas({ site, tenant, home }: Props) {
   return (
     <section
       className={`relative border-y border-black/[0.06] ${comFoto ? 'bg-cover bg-center' : ''}`}
-      style={comFoto ? { backgroundColor: 'var(--ink)', backgroundImage: `url("${background_url!.replace(/["\\]/g, encodeURIComponent)}")` } : { background: 'var(--ink)' }}
+      style={comFoto ? { backgroundColor: 'var(--solid)', backgroundImage: `url("${background_url!.replace(/["\\]/g, encodeURIComponent)}")` } : { background: 'var(--solid)' }}
     >
       {comFoto && <div className="absolute inset-0" style={{ background: `rgba(0,0,0,${filtro})` }} />}
       <div className={`relative mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:px-6 ${colunas}`}>

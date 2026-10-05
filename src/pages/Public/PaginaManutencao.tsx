@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { I, Ic, linkDoWhatsApp, onlyDigits, tokensDoSite, type SiteInfo } from './portalShared';
+import { logoNaSuperficie } from '@/features/siteBuilder/public/aparenciaConfig';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Página "Em manutenção" do site público (desde 04/10/2026).
@@ -49,22 +50,24 @@ function useAbaEmManutencao(titulo: string) {
 }
 
 export default function PaginaManutencao({ site }: { site: SiteInfo }) {
-  const { fontHref, cssVars } = tokensDoSite(site);
+  const { fontHref, cssVars, fundo, aparencia } = tokensDoSite(site);
   useAbaEmManutencao(tituloEmManutencao(site.name));
 
   const waHref = linkDoWhatsApp(site.contact?.whatsapp);
   const phone = site.contact?.phone?.trim();
   const email = site.contact?.email?.trim();
   const temContato = !!(waHref || phone || email);
+  // A caixa é o `--card`: no fundo escuro, a logo clara (se houver).
+  const logo = logoNaSuperficie(site.branding?.logo_url, aparencia, 'fundo').url;
 
   return (
-    <div style={cssVars} className="flex min-h-screen flex-col items-center justify-center bg-[var(--paper)] px-4 py-16 text-[var(--ink)] antialiased">
+    <div style={cssVars} data-fundo={fundo} className="flex min-h-screen flex-col items-center justify-center bg-[var(--paper)] px-4 py-16 text-[var(--ink)] antialiased">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href={fontHref} rel="stylesheet" />
 
       <main className="w-full max-w-xl rounded-[28px] bg-white px-6 py-12 text-center shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-black/[0.06] sm:px-12">
-        {site.branding?.logo_url ? (
-          <img src={site.branding.logo_url} alt={site.name || 'Logo'} className="mx-auto h-16 w-auto max-w-[260px] object-contain" />
+        {logo ? (
+          <img src={logo} alt={site.name || 'Logo'} className="mx-auto h-16 w-auto max-w-[260px] object-contain" />
         ) : (
           <p className="font-[var(--display)] text-2xl font-semibold tracking-tight text-[var(--brand)]">{site.name || 'Imóveis'}</p>
         )}

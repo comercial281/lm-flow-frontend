@@ -8,12 +8,15 @@ import HeroImagePicker, { type HeroImagePick } from '@/features/siteBuilder/Hero
 import { EMPTY_HERO_IMAGE, HERO_IMAGE_MODE_LABELS, heroImageChoiceFrom, heroImageWarning } from '@/features/siteBuilder/heroImage';
 import { Seletor } from '@/components/base/Seletor';
 import { tituloDaAba } from '@/features/siteBuilder/public/tituloDaAba';
+import { APARENCIA_FABRICA, FONTES_DO_SITE, type Aparencia } from '@/features/siteBuilder/public/aparenciaConfig';
 import { Secao, Secoes } from '../ui/Secao';
 import { CLASSE_DO_CAMPO, Campo } from '../ui/Campo';
 import EnvioDeImagem from '../ui/EnvioDeImagem';
+import { BlocoCapa, BlocoFaixaDeCima, BlocoFundo, BlocoRodape, BlocoTopo } from './BlocosDoVisual';
 import type { FormProps } from './tipos';
 
-const SITE_FONTS = ['Inter', 'Space Grotesk', 'Lato', 'Poppins', 'Montserrat', 'Roboto'];
+// As 10 fontes do site (Google Fonts): a lista mora junto da regra que as carrega no site.
+const SITE_FONTS = FONTES_DO_SITE;
 
 interface Props extends FormProps {
   // A prévia da foto de imóvel recém-escolhida mora no pai: o Salvar a limpa.
@@ -96,6 +99,15 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
     }
   };
 
+  // Aparência do site (C3): a tela edita o resolvido e manda o objeto INTEIRO
+  // pro formulário; só viaja no Salvar se algum bloco mexeu (`aparenciaAlterada`).
+  const ap: Aparencia = siteForm.appearance ?? APARENCIA_FABRICA;
+  const mudarAp = (parte: Partial<Aparencia>) => setF({ appearance: { ...ap, ...parte } });
+  // A foto que o banner mostra hoje (ou a recém-escolhida), pra prévia do filtro.
+  const fotoDoBanner = heroPickPreview?.url
+    ?? (siteForm.hero_image?.mode === 'upload' && siteForm.hero_image.url ? siteForm.hero_image.url : null)
+    ?? site?.hero_image?.url ?? null;
+
   const handleHeroPick = (pick: HeroImagePick) => {
     setHeroPickPreview(pick);
     setF({ hero_image: { mode: 'property', property_id: pick.property_id, photo_id: pick.photo_id } });
@@ -157,9 +169,9 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
         descricao="As cores da marca no site. Saem do logo quando você envia um novo, e você pode trocar aqui."
       >
         <div className="grid gap-5 sm:grid-cols-2">
-          <CampoDeCor id="aparencia-cor-principal" rotulo="Cor principal" ajuda="Botões de Tenho interesse, selos dos imóveis, preço das plantas, a aba escolhida na busca e os links."
+          <CampoDeCor id="aparencia-cor-principal" rotulo="Cor principal" ajuda="Pinta os botões Tenho interesse, o botão de busca e o de enviar dos formulários, os passos do Anuncie, a aba escolhida na busca, o selo da fase dos lançamentos, o preço das plantas, os números da faixa de números, os links e a barrinha da página de manutenção. Com o topo na cor principal, pinta o topo também. Os selos Destaque, Exclusivo e Muito procurado usam a cor de destaque."
             valor={siteForm.primary_color ?? ''} padrao="#7C3AED" aoMudar={primary_color => setF({ primary_color })} />
-          <CampoDeCor id="aparencia-cor-destaque" rotulo="Cor de destaque" ajuda="Guardada para os modelos novos do site. Hoje o site usa só a cor principal."
+          <CampoDeCor id="aparencia-cor-destaque" rotulo="Cor de destaque" ajuda="Pinta os selos Destaque, Exclusivo e Muito procurado. O texto do selo fica branco ou escuro, o que for mais legível."
             valor={siteForm.accent_color ?? ''} padrao="#9333EA" aoMudar={accent_color => setF({ accent_color })} />
         </div>
       </Secao>
@@ -179,6 +191,10 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
           </Seletor>
         </Campo>
       </Secao>
+
+      <BlocoFundo ap={ap} mudar={mudarAp} temLogo={!!siteForm.logo_url} />
+      <BlocoTopo ap={ap} mudar={mudarAp} corPrincipal={siteForm.primary_color || '#7C3AED'} />
+      <BlocoFaixaDeCima ap={ap} mudar={mudarAp} />
 
       {/* Banner da home: a FOTO (automática, de um imóvel ou enviada) e o vídeo,
           que quando preenchido passa por cima da foto. */}
@@ -303,6 +319,8 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
         )}
       </Secao>
 
+      <BlocoCapa ap={ap} mudar={mudarAp} foto={fotoDoBanner} />
+
       {/* Seções da home — liga/desliga blocos do portal. Nem toda imobiliária
           tem imóveis/cidades suficientes pra faixa de números fazer sentido. */}
       <Secao
@@ -339,6 +357,8 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
           ))}
         </div>
       </Secao>
+
+      <BlocoRodape ap={ap} mudar={mudarAp} />
     </Secoes>
   );
 }

@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchAllPortalProperties } from './portalProperties';
 import { imovelHref } from './finalidade';
-import { menuPagesLinks } from '@/features/siteBuilder/public/portalMenu';
+import { ehAba, itensDoMenu, menuPersonalizado, NOME_DE_FABRICA, type LinkDoMenu } from '@/features/siteBuilder/public/menuConfig';
 import { caminhoDoSite, type CtxDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { cabecalhosDoSite, ehPrevia } from '@/features/siteBuilder/public/previa';
@@ -14,6 +14,10 @@ import { resolverHome, type AbaId } from '@/features/siteBuilder/public/homeConf
 import { abasVisiveis } from '@/features/siteBuilder/public/vitrines';
 import { seloDaFase } from '@/features/properties/listingKind';
 import { ORDENS, ROTULO_ORDEM, ehOrdem, type Ordem } from '@/features/siteBuilder/public/listaConfig';
+import {
+  CORES_DO_FUNDO, TEXTO_RODAPE_FABRICA, clarearAte, fonteDoSite, logoNaSuperficie, resolverAparencia, textoSobre,
+  type Aparencia, type Superficie,
+} from '@/features/siteBuilder/public/aparenciaConfig';
 
 // Tipos e filtro moram em filtros.ts (sem ciclo com vitrines.ts); reexportados aqui.
 export { filterProperties };
@@ -93,13 +97,18 @@ export interface SiteInfo {
   tracking?: { gtm_id?: string | null; ga4?: string | null; facebook_pixel?: string | null } | null;
   custom_code?: { head?: string | null; body?: string | null } | null;
   translate?: { enabled?: boolean; languages?: string[] } | null;
+  /** Lista ANTIGA das páginas no menu (ativas e no menu). O site no ar lê como lista: não mudar. */
   menu?: { title: string; slug: string }[] | null;
+  /** Menu configurável (settings.menu, C3). Ler sempre por `resolverMenu`/`itensDoMenu`. Não vem em manutenção. */
+  menu_config?: unknown;
   /** Configuração da página inicial (settings.home). Ler sempre por `resolverHome`. */
   home?: unknown;
   /** Página do imóvel (settings.property_page, sem os e-mails). Ler sempre por `resolverFicha`. */
   property_page?: unknown;
   /** Lista de imóveis (settings.listing). Ler sempre por `resolverLista`. */
   listing?: unknown;
+  /** Aparência (settings.appearance, C3). Ler sempre por `resolverAparencia`. Vem também em manutenção. */
+  appearance?: unknown;
 }
 /* Artigo do blog público (item da listagem). */
 export interface PortalArticleSummary {
@@ -140,6 +149,12 @@ export const I = {
   chat: 'M7.9 20A9 9 0 1 0 4 16.1L2 22ZM8 12h.01M12 12h.01M16 12h.01',
   link: 'M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7',
   page: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M16 13H8M16 17H8M10 9H8',
+  /* Redes (faixa de cima "só ícones"). */
+  instagram: 'M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5ZM16 11.4A4 4 0 1 1 12.6 8a4 4 0 0 1 3.4 3.4ZM17.5 6.5h.01',
+  facebook: 'M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3Z',
+  youtube: 'M2.5 17a24.1 24.1 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.6 49.6 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.1 24.1 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.6 49.6 0 0 1-16.2 0A2 2 0 0 1 2.5 17ZM10 15l5-3-5-3Z',
+  linkedin: 'M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6ZM2 9h4v12H2ZM4 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z',
+  tiktok: 'M9 12a4 4 0 1 0 4 4V2a5 5 0 0 0 5 5',
 };
 export function Ic({ d, s = 18, cls = '' }: { d: string; s?: number; cls?: string }) {
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className={cls}><path d={d} /></svg>;
@@ -172,23 +187,40 @@ export function aplicarRobots(site: SiteInfo | null | undefined, doc: Document =
   meta.content = robotsDoSite(site);
 }
 
-/** Cores, fonte e variáveis CSS do site (logo, cores e fonte do Meu site). */
+/**
+ * Cores, fonte e variáveis CSS do site (logo, cores, fonte e aparência do Meu
+ * site). `--ink`/`--paper` seguem o fundo (claro = os de sempre); `--site-card`
+ * é a caixa e `--solid` a faixa ou botão escuro com texto branco. `--accent-ink`
+ * e `--brand-ink` são o texto (branco ou escuro) que dá contraste NA cor.
+ * `--brand-text` é o texto escrito na cor da marca: no claro, a própria
+ * `--brand`; no escuro, a marca clareada até 4,5:1 sobre a caixa escura (que é
+ * mais clara que o fundo, então vale pros dois).
+ *
+ * `fundo` vai no `data-fundo` da raiz da página: só sai no fundo escuro (no
+ * claro o atributo nem existe) e é ele que liga o bloco "Meu site · fundo
+ * escuro" do globals.css, que troca as caixas brancas e os cinzas fixos.
+ */
 export function tokensDoSite(site: SiteInfo) {
+  const aparencia = resolverAparencia(site.appearance);
   const brand = site.branding?.primary_color || '#0E7C5A';
   const accent = site.branding?.accent_color || brand;
-  const font = site.branding?.font_family || 'Inter';
-  const fontPrimary = font.split(',')[0].trim();
-  const fontStack = font.includes(',') ? font : `${font}, system-ui, sans-serif`;
-  const fontHref = `https://fonts.googleapis.com/css2?family=${fontPrimary.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`;
+  const { font, fontStack, fontHref } = fonteDoSite(site.branding?.font_family);
+  const cores = CORES_DO_FUNDO[aparencia.background];
   const cssVars = {
     ['--brand' as string]: brand,
     ['--accent' as string]: accent,
-    ['--ink' as string]: '#17140F',
-    ['--paper' as string]: '#FAF7F2',
+    ['--ink' as string]: cores.ink,
+    ['--paper' as string]: cores.paper,
+    ['--site-card' as string]: cores.card,
+    ['--solid' as string]: cores.solid,
+    ['--accent-ink' as string]: textoSobre(accent),
+    ['--brand-ink' as string]: textoSobre(brand),
+    ['--brand-text' as string]: aparencia.background === 'dark' ? clarearAte(brand, cores.card) : brand,
     ['--display' as string]: fontStack,
     fontFamily: fontStack,
   } as CSSProperties;
-  return { brand, accent, font, fontStack, fontHref, cssVars };
+  const fundo = aparencia.background === 'dark' ? 'escuro' as const : undefined;
+  return { brand, accent, font, fontStack, fontHref, cssVars, fundo, aparencia };
 }
 
 /** Link do botão verde do WhatsApp (o número vem gravado só com dígitos e o 55). */
@@ -234,7 +266,7 @@ export function usePortalData(tenant?: string) {
     return () => { active = false; };
   }, [tenant]);
 
-  const { brand, accent, font, fontStack, fontHref, cssVars } = useMemo(() => tokensDoSite(site), [site]);
+  const { brand, accent, font, fontStack, fontHref, cssVars, fundo } = useMemo(() => tokensDoSite(site), [site]);
   const wa = site.contact?.whatsapp;
   const manutencao = estaEmManutencao(site);
 
@@ -247,7 +279,7 @@ export function usePortalData(tenant?: string) {
   const home = useMemo(() => resolverHome(site.home), [site]);
   const abas = useMemo(() => abasVisiveis(home, items), [home, items]);
 
-  return { state, site, items, brand, accent, font, fontStack, fontHref, wa, cities, hoods, types, home, abas, cssVars, manutencao };
+  return { state, site, items, brand, accent, font, fontStack, fontHref, wa, cities, hoods, types, home, abas, cssVars, fundo, manutencao };
 }
 
 /* ── Blog: fetch de artigos (mesmo padrão público, header X-Tenant) ───────── */
@@ -299,10 +331,10 @@ function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
   // exclusivo, os dois selos. Na revenda Exclusivo vence Destaque.
   const dev = p.listing_kind === 'development';
   const selos = [
-    dev ? seloDaFase(p.stage ?? 'ready', p.delivery_forecast) : null,
-    p.exclusive ? 'Exclusivo' : null,
-    !dev && !p.exclusive && p.featured ? 'Destaque' : null,
-  ].filter((x): x is string => !!x);
+    dev ? { texto: seloDaFase(p.stage ?? 'ready', p.delivery_forecast), tipo: 'fase' as const } : null,
+    p.exclusive ? { texto: 'Exclusivo', tipo: 'destaque' as const } : null,
+    !dev && !p.exclusive && p.featured ? { texto: 'Destaque', tipo: 'destaque' as const } : null,
+  ].filter((x): x is SeloDoCartao => !!x);
   return {
     s: p.icon_summary ?? {},
     selos,
@@ -313,13 +345,26 @@ function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
   };
 }
 
-function SelosNaFoto({ selos }: { selos: string[] }) {
+/**
+ * Selo na foto do cartão. `destaque` (Destaque, Exclusivo) vai na cor de
+ * destaque da Aparência; `fase` (a do empreendimento) segue na cor principal.
+ */
+interface SeloDoCartao { texto: string; tipo: 'fase' | 'destaque' }
+
+/** Estilo do selo na cor de destaque, com o texto branco ou escuro pelo contraste. */
+export const ESTILO_SELO_DESTAQUE: CSSProperties = { background: 'var(--accent)', color: 'var(--accent-ink)' };
+
+function SelosNaFoto({ selos }: { selos: SeloDoCartao[] }) {
   if (selos.length === 0) return null;
   return (
     <div className="pointer-events-none absolute left-3 right-3 top-3 flex flex-wrap gap-1.5">
-      {selos.map(selo => (
-        <span key={selo} className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white" style={{ background: 'var(--brand)' }}>
-          {selo}
+      {selos.map(selo => selo.tipo === 'destaque' ? (
+        <span key={selo.texto} className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide" style={ESTILO_SELO_DESTAQUE}>
+          {selo.texto}
+        </span>
+      ) : (
+        <span key={selo.texto} className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white" style={{ background: 'var(--brand)' }}>
+          {selo.texto}
         </span>
       ))}
     </div>
@@ -340,7 +385,7 @@ function IconesDoImovel({ s }: { s: NonNullable<PortalProperty['icon_summary']> 
 function BotoesDoCartao({ href, waLink, titulo }: { href: string; waLink: string | null; titulo: string }) {
   return (
     <>
-      <Link to={href} aria-label={`Ver detalhes de ${titulo}`} className="flex-1 rounded-full px-3 py-2 text-center text-[13px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--ink)' }}>
+      <Link to={href} aria-label={`Ver detalhes de ${titulo}`} className="flex-1 rounded-full px-3 py-2 text-center text-[13px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--solid)' }}>
         Ver detalhes
       </Link>
       {waLink && (
@@ -502,28 +547,10 @@ export function Stat({ n, label }: { n: string; label: string }) {
 }
 
 /* ── Header compartilhado (menu do topo funcional) ───────────────────────── */
-type NavItem =
-  | { label: string; kind: 'tab'; value: PortalTab }
-  | { label: string; kind: 'section'; value: string }
-  | { label: string; kind: 'page'; value: string }
-  | { label: string; kind: 'href'; value: string };
-
-const NAV: NavItem[] = [
-  { label: 'Comprar', kind: 'tab', value: 'sale' },
-  { label: 'Alugar', kind: 'tab', value: 'rent' },
-  { label: 'Lançamentos', kind: 'tab', value: 'launch' },
-  { label: 'Sobre', kind: 'section', value: 'sobre' },
-  { label: 'Contato', kind: 'section', value: 'contato' },
-];
-
-/** "Financiamento" e "Anuncie seu imóvel" só existem no menu quando o gestor
- *  ligou a página no Site Builder — link para uma página desligada é beco. */
-export function extraPages(site: SiteInfo): NavItem[] {
-  const out: NavItem[] = [];
-  if (site.financiamento?.enabled) out.push({ label: 'Financiamento', kind: 'page', value: 'financiamento' });
-  if (site.anuncie?.enabled) out.push({ label: 'Anuncie seu imóvel', kind: 'page', value: 'anuncie' });
-  return out;
-}
+/* Os links do topo (e do rodapé, depois que o cliente mexe no menu) saem de
+   `itensDoMenu` (menuConfig.ts): ordem, nome e liga/desliga da tela Menus, e
+   some sozinho o item sem destino (aba sem imóvel, seção ou página desligada,
+   blog sem artigo). */
 
 /** As redes cadastradas no Site Builder, na ordem em que saem na barra fina. */
 const SOCIAL_ORDER = ['instagram', 'facebook', 'youtube', 'linkedin', 'tiktok'] as const;
@@ -542,41 +569,56 @@ export function socialEntries(site: SiteInfo): { key: string; label: string; url
   }));
 }
 
+/** Ícone de cada rede na faixa de cima "só ícones"; rede sem ícone próprio usa o de link. */
+const ICONE_DA_REDE: Record<string, string> = {
+  instagram: I.instagram, facebook: I.facebook, youtube: I.youtube, linkedin: I.linkedin, tiktok: I.tiktok,
+};
+
 /**
  * Barra fina acima do cabeçalho: telefone, e-mail e redes. Eles já eram
  * cadastrados no Site Builder e não apareciam em LUGAR NENHUM do site. Ela só
  * se desenha quando há o que mostrar — faixa vazia é pior que faixa nenhuma.
  *
+ * Modos (Meu site › Aparência › Faixa de cima, `appearance.top_bar`):
+ * - `two_phones` (fábrica): telefone, e-mail e redes pelo nome, a de sempre;
+ * - `one_phone`: só um contato, o telefone (sem telefone, o e-mail), e as redes;
+ * - `icons`: telefone, e-mail e redes só pelo ícone (o nome fica na dica e no leitor de tela);
+ * - `hidden`: sem a faixa.
+ *
  * ⚠️ Ela é do TOPO DA PÁGINA e rola para fora com o conteúdo: quem a desenhar
  * dentro do bloco que gruda no topo devolve o defeito de 17/09 — telefone e
  * e-mail numa faixa escura presa na tela durante a rolagem inteira.
  */
-function PortalTopBar({ site }: { site: SiteInfo }) {
+function PortalTopBar({ site, ap }: { site: SiteInfo; ap: Aparencia }) {
+  const modo = ap.top_bar;
   const phone = site.contact?.phone?.trim();
-  const email = site.contact?.email?.trim();
+  const emailCadastrado = site.contact?.email?.trim();
+  const email = modo === 'one_phone' && phone ? undefined : emailCadastrado;
   const socials = socialEntries(site);
-  if (!phone && !email && socials.length === 0) return null;
+  if (modo === 'hidden' || (!phone && !email && socials.length === 0)) return null;
+  const soIcones = modo === 'icons';
+  const dica = (rotulo: string) => (soIcones ? { 'aria-label': rotulo, title: rotulo } : {});
 
   return (
     <div className="hidden border-b border-white/10 bg-[var(--ink)] text-white/75 sm:block">
       <div className="mx-auto flex h-9 max-w-6xl items-center justify-between gap-6 px-4 text-[12.5px] sm:px-6">
         <div className="flex items-center gap-5">
           {phone && (
-            <a href={`tel:${onlyDigits(phone)}`} className="inline-flex items-center gap-1.5 transition-colors hover:text-white">
-              <Ic d={I.phone} s={13} /> {phone}
+            <a href={`tel:${onlyDigits(phone)}`} className="inline-flex items-center gap-1.5 transition-colors hover:text-white" {...dica(`Ligar para ${phone}`)}>
+              <Ic d={I.phone} s={13} />{soIcones ? null : <> {phone}</>}
             </a>
           )}
           {email && (
-            <a href={`mailto:${email}`} className="inline-flex items-center gap-1.5 transition-colors hover:text-white">
-              <Ic d={I.mail} s={13} /> {email}
+            <a href={`mailto:${email}`} className="inline-flex items-center gap-1.5 transition-colors hover:text-white" {...dica(`E-mail: ${email}`)}>
+              <Ic d={I.mail} s={13} />{soIcones ? null : <> {email}</>}
             </a>
           )}
         </div>
         {socials.length > 0 && (
           <div className="flex items-center gap-4">
             {socials.map(sn => (
-              <a key={sn.key} href={sn.url} target="_blank" rel="noreferrer" className="transition-colors hover:text-white">
-                {sn.label}
+              <a key={sn.key} href={sn.url} target="_blank" rel="noreferrer" className="transition-colors hover:text-white" {...dica(sn.label)}>
+                {soIcones ? <Ic d={ICONE_DA_REDE[sn.key] ?? I.link} s={14} /> : sn.label}
               </a>
             ))}
           </div>
@@ -586,15 +628,26 @@ function PortalTopBar({ site }: { site: SiteInfo }) {
   );
 }
 
-/** Abas do menu (Comprar/Alugar/Lançamentos) que a página mostra; sem `abas`, as três. */
-const abaVisivel = (abas?: AbaId[]) => (n: NavItem) => n.kind !== 'tab' || !abas || abas.includes(n.value);
+/** Abas (Comprar/Alugar/Lançamentos) que a página mostra; sem `abas`, as três. */
+const ABAS_DO_RODAPE: AbaId[] = ['sale', 'rent', 'launch'];
+const abaVisivel = (abas?: AbaId[]) => (aba: AbaId) => !abas || abas.includes(aba);
+
+/**
+ * Um link do menu, no topo ou no rodapé: página do site pelo roteador, seção
+ * da home por âncora simples e endereço de fora em outra aba.
+ */
+function LinkDoMenuEl({ l, cls, onClick }: { l: LinkDoMenu; cls?: string; onClick?: () => void }) {
+  if (l.externo) return <a href={l.href} target="_blank" rel="noopener noreferrer" onClick={onClick} className={cls}>{l.rotulo}</a>;
+  if (l.ancora) return <a href={l.href} onClick={onClick} className={cls}>{l.rotulo}</a>;
+  return <Link to={l.href} onClick={onClick} className={cls}>{l.rotulo}</Link>;
+}
 
 interface PropsDaMoldura { site: SiteInfo; tenant: string; onHome?: boolean; abas?: AbaId[] }
 
-/** Logo do site, ou o nome quando não há logo. */
-function MarcaDoSite({ site, logoCls, nomeCls }: { site: SiteInfo; logoCls: string; nomeCls: string }) {
-  return site.branding?.logo_url
-    ? <img src={site.branding.logo_url} alt={site.name || 'Portal'} className={logoCls} />
+/** Logo (a normal ou a clara, já escolhida) ou o nome quando não há logo. */
+function MarcaDoSite({ site, logo, logoCls, nomeCls }: { site: SiteInfo; logo: string | null; logoCls: string; nomeCls: string }) {
+  return logo
+    ? <img src={logo} alt={site.name || 'Portal'} className={logoCls} />
     : <span className={nomeCls}>{site.name || 'Imóveis'}</span>;
 }
 
@@ -613,21 +666,67 @@ function BotaoWhatsApp({ href, rotuloSempre = false }: { href: string; rotuloSem
 }
 
 /**
+ * Roupa do topo pelo estilo da Aparência (`appearance.header_style`):
+ * - `transparent` (fábrica): sobre a capa da home (`flutuando`) é o degradê
+ *   escuro com texto branco; fora dela, ou depois de rolar, o fundo do site
+ *   com vidro fosco. Igual ao de antes do C3, classe por classe;
+ * - `brand`: na cor principal, com o texto branco ou escuro pelo contraste;
+ * - `white`: branco, mesmo no fundo escuro (cores fixas, fora do bloco do
+ *   fundo escuro do globals.css).
+ */
+function roupaDoTopo(ap: Aparencia, flutuando: boolean): { header: string; link: string; nome: string; botao: string; superficie: Superficie } {
+  if (ap.header_style === 'brand') {
+    return {
+      header: 'border-transparent bg-[var(--brand)]',
+      link: 'text-[14px] font-medium text-[var(--brand-ink)]/85 transition-colors hover:text-[var(--brand-ink)]',
+      nome: 'text-[var(--brand-ink)]', botao: 'text-[var(--brand-ink)]', superficie: 'marca',
+    };
+  }
+  if (ap.header_style === 'white') {
+    return {
+      // Classes literais (o Tailwind só gera o que lê no código): #17140F = TINTA_ESCURA.
+      header: 'border-[#17140F]/[0.08] bg-[#FFFFFF]',
+      link: 'text-[14px] font-medium text-[#17140F]/70 transition-colors hover:text-[var(--brand)]',
+      nome: 'text-[#17140F]', botao: 'text-[#17140F]', superficie: 'branco',
+    };
+  }
+  return flutuando
+    ? {
+      header: 'border-white/15 bg-gradient-to-b from-black/40 to-transparent',
+      link: 'text-[14px] font-medium text-white/85 transition-colors hover:text-white',
+      nome: 'text-white', botao: 'text-white', superficie: 'foto',
+    }
+    : {
+      header: 'border-black/[0.06] bg-[var(--paper)]/90 backdrop-blur-md',
+      link: 'text-[14px] font-medium text-neutral-600 transition-colors hover:text-[var(--brand)]',
+      nome: '', botao: 'text-[var(--ink)]', superficie: 'fundo',
+    };
+}
+
+const juntar = (...cls: string[]) => cls.filter(Boolean).join(' ');
+
+/**
  * Topo do site em manutenção (só a ficha do imóvel usa: as outras páginas viram
  * a página Em manutenção). Só o logo, que leva pra raiz (a página de
  * manutenção), e o WhatsApp: sem abas, menu de páginas, blog nem busca.
+ * Segue o estilo do topo das páginas internas (a ficha nunca tem capa): o
+ * transparente é o fundo do site, a cor principal e o branco são eles mesmos,
+ * com a logo clara onde o fundo é escuro.
  */
 function TopoEmManutencao({ site, tenant }: PropsDaMoldura) {
   const ctx = useCtxDoSite(tenant);
   const waHref = linkDoWhatsApp(site.contact?.whatsapp);
+  const ap = resolverAparencia(site.appearance);
+  const roupa = roupaDoTopo(ap, false);
+  const logo = logoNaSuperficie(site.branding?.logo_url, ap, roupa.superficie, tokensDoSite(site).brand);
   return (
     <div className="sticky top-0 z-40">
       <FaixaDePrevia site={site} />
-      <header className="border-b border-black/[0.06] bg-[var(--paper)]/90 backdrop-blur-md">
+      <header className={`border-b ${roupa.header}`}>
         <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-4 px-4 sm:h-[84px] sm:px-6">
           <Link to={caminhoDoSite(ctx, '/')} className="flex items-center gap-2.5">
-            <MarcaDoSite site={site} logoCls="h-12 w-auto max-w-[200px] object-contain sm:h-14 sm:max-w-[260px]"
-              nomeCls="font-[var(--display)] text-xl font-semibold tracking-tight" />
+            <MarcaDoSite site={site} logo={logo.url} logoCls="h-12 w-auto max-w-[200px] object-contain sm:h-14 sm:max-w-[260px]"
+              nomeCls={juntar('font-[var(--display)] text-xl font-semibold tracking-tight', roupa.nome)} />
           </Link>
           {waHref && <BotaoWhatsApp href={waHref} />}
         </div>
@@ -640,11 +739,12 @@ function TopoEmManutencao({ site, tenant }: PropsDaMoldura) {
 function RodapeEmManutencao({ site, tenant }: PropsDaMoldura) {
   const ctx = useCtxDoSite(tenant);
   const waHref = linkDoWhatsApp(site.contact?.whatsapp);
+  const logo = logoNaSuperficie(site.branding?.logo_url, resolverAparencia(site.appearance), 'fundo');
   return (
     <footer className="border-t border-black/[0.06] bg-white">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-10 sm:px-6">
         <Link to={caminhoDoSite(ctx, '/')}>
-          <MarcaDoSite site={site} logoCls="h-9 w-auto max-w-[150px] object-contain"
+          <MarcaDoSite site={site} logo={logo.url} logoCls="h-9 w-auto max-w-[150px] object-contain"
             nomeCls="font-[var(--display)] text-lg font-semibold" />
         </Link>
         {waHref && <BotaoWhatsApp href={waHref} rotuloSempre />}
@@ -681,16 +781,30 @@ export function PortalFooter(props: PropsDaMoldura) {
  * `onHome`: na home o cabeçalho é TRANSPARENTE sobre a foto de capa e vira
  * sólido na rolagem; nas demais páginas ele é sólido desde o topo. Os links de
  * seção (Sobre/Contato) rolam a própria home via âncora e, fora dela, navegam
- * de volta apontando a seção.
+ * de volta apontando a seção. Nos estilos "na cor principal" e "branco" ele é
+ * sólido sempre, inclusive sobre a capa.
  */
 function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
   const [menuOpen, setMenuOpen] = useState(false);
+  // Escape fecha o menu do celular e devolve o foco ao botão que o abriu.
+  const botaoDoMenu = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setMenuOpen(false);
+      botaoDoMenu.current?.focus();
+    };
+    document.addEventListener('keydown', aoTeclar);
+    return () => document.removeEventListener('keydown', aoTeclar);
+  }, [menuOpen]);
   // Só na home: antes de rolar, o cabeçalho flutua sobre a capa.
   const [scrolled, setScrolled] = useState(!onHome);
   const wa = site.contact?.whatsapp;
   const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
   const hasBlog = usePublishedArticlesExist(tenant);
   const ctx = useCtxDoSite(tenant);
+  const ap = resolverAparencia(site.appearance);
 
   useEffect(() => {
     if (!onHome) { setScrolled(true); return; }
@@ -700,35 +814,21 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
     return () => window.removeEventListener('scroll', onScroll);
   }, [onHome]);
 
-  // Seções liga/desliga (Site Builder). Ausência da flag = visível (retrocompat).
-  const showStats = site.sections?.stats !== false;
-  const showLeadCapture = site.sections?.lead_capture !== false;
-  const nav = [
-    ...NAV.filter(abaVisivel(abas)).filter(n => (n.value === 'sobre' ? showStats : n.value === 'contato' ? showLeadCapture : true)),
-    ...extraPages(site),
-    ...menuPagesLinks(site, ctx).map((l): NavItem => ({ label: l.label, kind: 'href', value: l.href })),
-  ];
+  // O menu (tela Menus): sem menu_config ou com o de fábrica, os links de
+  // antes do C3, na mesma ordem (abas, Sobre, Contato, Financiamento, Anuncie,
+  // páginas, Blog). Sobre/Contato rolam a home por âncora e, fora dela, voltam
+  // pra home apontando a seção.
+  const nav = itensDoMenu(site, abas, hasBlog, { ctx, onHome });
 
-  const sectionHref = (id: string) => (onHome ? `#${id}` : caminhoDoSite(ctx, `/#${id}`));
   // Menu aberto sobre a capa é sempre sólido — texto branco sobre foto some.
-  const floating = onHome && !scrolled && !menuOpen;
+  // Só o topo transparente flutua; na cor principal e no branco ele é sólido.
+  const floating = ap.header_style === 'transparent' && onHome && !scrolled && !menuOpen;
+  const roupa = roupaDoTopo(ap, floating);
+  const logo = logoNaSuperficie(site.branding?.logo_url, ap, roupa.superficie, tokensDoSite(site).brand);
+  // Sobre a capa, sem logo clara, a normal vira branca (o de sempre).
+  const filtroDaLogo = floating && !logo.clara ? 'brightness-0 invert' : '';
 
-  const renderLink = (n: NavItem, onClick?: () => void, cls?: string) => {
-    if (n.kind === 'tab') {
-      return <Link key={n.label} to={caminhoDoSite(ctx, `/imoveis?tab=${n.value}`)} onClick={onClick} className={cls}>{n.label}</Link>;
-    }
-    if (n.kind === 'page') {
-      return <Link key={n.label} to={caminhoDoSite(ctx, `/${n.value}`)} onClick={onClick} className={cls}>{n.label}</Link>;
-    }
-    if (n.kind === 'href') {
-      return <Link key={n.value} to={n.value} onClick={onClick} className={cls}>{n.label}</Link>;
-    }
-    return <a key={n.label} href={sectionHref(n.value)} onClick={onClick} className={cls}>{n.label}</a>;
-  };
-
-  const desktopCls = floating
-    ? 'text-[14px] font-medium text-white/85 transition-colors hover:text-white'
-    : 'text-[14px] font-medium text-neutral-600 transition-colors hover:text-[var(--brand)]';
+  const desktopCls = roupa.link;
   const mobileCls = 'block py-2.5 text-[15px] font-medium text-neutral-700';
 
   return (
@@ -739,7 +839,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
           rolagem (antes disso o cabeçalho é transparente e ela nem existe), que
           é quando ninguém pediu por ela. Na home o topo é a capa, então lá ela
           não entra: os mesmos contatos continuam no rodapé. */}
-      {!onHome && <PortalTopBar site={site} />}
+      {!onHome && <PortalTopBar site={site} ap={ap} />}
 
       {/* Na home o cabeçalho NUNCA entra no fluxo — ele flutua sobre a capa e
           continua flutuando ao rolar, só trocando de roupa. Trocando de fora do
@@ -747,13 +847,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
           para baixo a altura do cabeçalho. */}
       <div className={onHome ? 'fixed inset-x-0 top-0 z-40' : 'sticky top-0 z-40'}>
         <FaixaDePrevia site={site} />
-        <header
-          className={`border-b transition-colors duration-300 ${
-            floating
-              ? 'border-white/15 bg-gradient-to-b from-black/40 to-transparent'
-              : 'border-black/[0.06] bg-[var(--paper)]/90 backdrop-blur-md'
-          }`}
-        >
+        <header className={`border-b transition-colors duration-300 ${roupa.header}`}>
           {/* Logo maior a pedido do dono (2026-09-16): 56px de altura no
               desktop, 48px no celular. A barra cresce junto (84px / 72px) para
               o logo não encostar nas bordas, e o hero da home compensa esse
@@ -762,22 +856,21 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
               por isso a largura sobe na mesma proporção (190 → 260). */}
           <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-4 px-4 sm:h-[84px] sm:px-6">
             <Link to={caminhoDoSite(ctx, '/')} className="flex items-center gap-2.5">
-              {site.branding?.logo_url ? (
+              {logo.url ? (
                 <img
-                  src={site.branding.logo_url}
+                  src={logo.url}
                   alt={site.name || 'Portal'}
-                  className={`h-12 w-auto max-w-[200px] object-contain sm:h-14 sm:max-w-[260px] ${floating ? 'brightness-0 invert' : ''}`}
+                  className={`h-12 w-auto max-w-[200px] object-contain sm:h-14 sm:max-w-[260px] ${filtroDaLogo}`}
                 />
               ) : (
-                <span className={`font-[var(--display)] text-xl font-semibold tracking-tight ${floating ? 'text-white' : ''}`}>
+                <span className={`font-[var(--display)] text-xl font-semibold tracking-tight ${roupa.nome}`}>
                   {site.name || 'Imóveis'}
                 </span>
               )}
             </Link>
 
-            <nav className="hidden items-center gap-6 lg:flex">
-              {nav.map(n => renderLink(n, undefined, desktopCls))}
-              {hasBlog && <Link to={caminhoDoSite(ctx, '/blog')} className={desktopCls}>Blog</Link>}
+            <nav aria-label="Menu principal" className="hidden items-center gap-6 lg:flex">
+              {nav.map(l => <LinkDoMenuEl key={l.chave} l={l} cls={desktopCls} />)}
             </nav>
 
             <div className="flex items-center gap-2">
@@ -793,9 +886,10 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
                 </a>
               )}
               <button
-                type="button" aria-label="Menu" aria-expanded={menuOpen}
+                ref={botaoDoMenu}
+                type="button" aria-label="Menu" aria-expanded={menuOpen} aria-controls="menu-do-celular"
                 onClick={() => setMenuOpen(o => !o)}
-                className={`inline-flex h-10 w-10 items-center justify-center rounded-full lg:hidden ${floating ? 'text-white' : 'text-[var(--ink)]'}`}
+                className={`inline-flex h-10 w-10 items-center justify-center rounded-full lg:hidden ${roupa.botao}`}
               >
                 <Ic d={menuOpen ? I.close : I.menu} s={22} />
               </button>
@@ -803,9 +897,8 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
           </div>
 
           {menuOpen && (
-            <nav className="border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 lg:hidden">
-              {nav.map(n => renderLink(n, () => setMenuOpen(false), mobileCls))}
-              {hasBlog && <Link to={caminhoDoSite(ctx, '/blog')} onClick={() => setMenuOpen(false)} className={mobileCls}>Blog</Link>}
+            <nav id="menu-do-celular" aria-label="Menu principal" className="border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 lg:hidden">
+              {nav.map(l => <LinkDoMenuEl key={l.chave} l={l} cls={mobileCls} onClick={() => setMenuOpen(false)} />)}
               {(site.contact?.phone || site.contact?.email) && (
                 <div className="mt-2 border-t border-black/[0.06] pt-2 text-[13px] text-neutral-500">
                   {site.contact?.phone && (
@@ -835,46 +928,127 @@ function FooterCol({ children, title }: { children: ReactNode; title: string }) 
 }
 const footerLinkCls = 'text-[13px] text-neutral-600 hover:text-[var(--brand)]';
 
+function LinkDoRodapeEl({ l }: { l: LinkDoMenu }) {
+  return <LinkDoMenuEl l={l} cls={footerLinkCls} />;
+}
+
+/**
+ * Links do rodapé ANTES do C3: Imóveis com as abas e Institucional com uma
+ * lista própria (Sobre nós, Blog, Contato, Anuncie, Financiamento), sem as
+ * páginas criadas. Vale enquanto o menu é o de fábrica (`menuPersonalizado`).
+ */
+function linksDoRodapeDeAntes(site: SiteInfo, abas: AbaId[] | undefined, hasBlog: boolean, ctx: CtxDoSite, onHome: boolean) {
+  const showStats = site.sections?.stats !== false;
+  const showLeadCapture = site.sections?.lead_capture !== false;
+  const sectionHref = (id: string) => (onHome ? `#${id}` : caminhoDoSite(ctx, `/#${id}`));
+  const link = (chave: string, rotulo: string, href: string, ancora = false): LinkDoMenu => ({ chave, rotulo, href, ancora, externo: false });
+  const imoveis = ABAS_DO_RODAPE.filter(abaVisivel(abas))
+    .map(aba => link(aba, NOME_DE_FABRICA[aba], caminhoDoSite(ctx, `/imoveis?tab=${aba}`)));
+  /* "Anuncie" rolava para o formulário de QUEM COMPRA: o proprietário que
+     queria VENDER caía no formulário contrário. Agora ele só existe quando a
+     página de verdade está ligada, e aponta para ela. */
+  const institucional = [
+    showStats && link('sobre', 'Sobre nós', sectionHref('sobre'), true),
+    hasBlog && link('blog', 'Blog', caminhoDoSite(ctx, '/blog')),
+    showLeadCapture && link('contato', 'Contato', sectionHref('contato'), true),
+    site.anuncie?.enabled && link('anuncie', 'Anuncie seu imóvel', caminhoDoSite(ctx, '/anuncie')),
+    site.financiamento?.enabled && link('financiamento', 'Financiamento', caminhoDoSite(ctx, '/financiamento')),
+  ].filter((l): l is LinkDoMenu => !!l);
+  return { imoveis, institucional, todos: [...imoveis, ...institucional] };
+}
+
+/**
+ * Links do rodapé que repetem o menu (depois que o cliente mexe na tela
+ * Menus): as abas do menu em Imóveis e o resto em Institucional (Sobre,
+ * Contato, Financiamento, Anuncie, páginas, Blog e os externos), cada coluna
+ * na ordem do menu. No compacto, o menu inteiro na ordem dele.
+ */
+function linksDoRodapeDoMenu(menu: LinkDoMenu[]) {
+  return {
+    imoveis: menu.filter(l => ehAba(l.chave)),
+    institucional: menu.filter(l => !ehAba(l.chave)),
+    todos: menu,
+  };
+}
+
+/**
+ * "feito com LM Flow": fica sempre, discreto, com o link pro site do LM Flow.
+ * O cliente não tira (não há opção na Aparência).
+ */
+function CreditoDoRodape({ nome }: { nome?: string }) {
+  return (
+    <>
+      © {nome || 'Portal'} — feito com{' '}
+      <a href="https://lmflow.com.br" target="_blank" rel="noopener" className="transition-colors hover:text-neutral-600">LM Flow</a>.
+    </>
+  );
+}
+
+/**
+ * Rodapé nos dois layouts da Aparência (`appearance.footer_layout`):
+ * - `columns` (fábrica): logo e frase, Imóveis, Institucional e Contato;
+ * - `compact`: uma faixa só, com logo, os mesmos links e o WhatsApp, e
+ *   embaixo a frase junto do crédito.
+ * A frase é o `footer_text` (sem ele, "Seu portal de imóveis com atendimento
+ * de verdade."). No fundo escuro a logo é a clara, quando existe.
+ */
 function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
   const wa = site.contact?.whatsapp;
   const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
-  const showStats = site.sections?.stats !== false;
-  const showLeadCapture = site.sections?.lead_capture !== false;
   const hasBlog = usePublishedArticlesExist(tenant);
   const ctx = useCtxDoSite(tenant);
-  const sectionHref = (id: string) => (onHome ? `#${id}` : caminhoDoSite(ctx, `/#${id}`));
-  const abasDoRodape = NAV.filter(n => n.kind === 'tab').filter(abaVisivel(abas));
+  const ap = resolverAparencia(site.appearance);
+  const logo = logoNaSuperficie(site.branding?.logo_url, ap, 'fundo');
+  const frase = ap.footer_text ?? TEXTO_RODAPE_FABRICA;
+  // O rodapé repete o menu depois que o cliente mexe nele; com o menu de
+  // fábrica (ou servidor velho) fica o rodapé de antes do C3.
+  const personalizado = menuPersonalizado(site);
+  const { imoveis, institucional, todos } = personalizado
+    ? linksDoRodapeDoMenu(itensDoMenu(site, abas, hasBlog, { ctx, onHome }))
+    : linksDoRodapeDeAntes(site, abas, hasBlog, ctx, onHome);
+
+  if (ap.footer_layout === 'compact') {
+    return (
+      <footer className="border-t border-black/[0.06] bg-white">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-4 px-4 py-6 sm:px-6">
+          <Link to={caminhoDoSite(ctx, '/')} className="shrink-0">
+            <MarcaDoSite site={site} logo={logo.url} logoCls="h-8 w-auto max-w-[140px] object-contain"
+              nomeCls="font-[var(--display)] text-lg font-semibold" />
+          </Link>
+          <nav aria-label="Links do rodapé" className="flex flex-1 flex-wrap items-center gap-x-5 gap-y-2">
+            {todos.map(l => <LinkDoRodapeEl key={l.chave} l={l} />)}
+          </nav>
+          {waHref && <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold text-white" style={{ background: '#25D366' }}><Ic d={I.wa} s={15} /> WhatsApp</a>}
+        </div>
+        <div className="border-t border-black/[0.06]">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-4 text-[12px] text-neutral-400 sm:px-6">
+            <p className="whitespace-pre-line text-neutral-500">{frase}</p>
+            <p><CreditoDoRodape nome={site.name} /></p>
+          </div>
+        </div>
+      </footer>
+    );
+  }
 
   return (
     <footer className="border-t border-black/[0.06] bg-white">
       <div className="mx-auto grid max-w-6xl grid-cols-2 gap-8 px-4 py-12 sm:grid-cols-4 sm:px-6">
         <div className="col-span-2 sm:col-span-1">
-          {site.branding?.logo_url
-            ? <img src={site.branding.logo_url} alt={site.name || ''} className="h-9 w-auto max-w-[150px] object-contain" />
+          {logo.url
+            ? <img src={logo.url} alt={site.name || ''} className="h-9 w-auto max-w-[150px] object-contain" />
             : <span className="font-[var(--display)] text-lg font-semibold">{site.name || 'Imóveis'}</span>}
-          <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-neutral-500">Seu portal de imóveis com atendimento de verdade.</p>
+          <p className={`mt-3 max-w-xs text-[13px] leading-relaxed text-neutral-500${ap.footer_text ? ' whitespace-pre-line' : ''}`}>{frase}</p>
         </div>
-        {abasDoRodape.length > 0 && (
+        {imoveis.length > 0 && (
           <FooterCol title="Imóveis">
-            {abasDoRodape.map(n => (
-              <li key={n.value}><Link to={caminhoDoSite(ctx, `/imoveis?tab=${n.value}`)} className={footerLinkCls}>{n.label}</Link></li>
-            ))}
+            {imoveis.map(l => <li key={l.chave}><LinkDoRodapeEl l={l} /></li>)}
           </FooterCol>
         )}
-        <FooterCol title="Institucional">
-          {showStats && <li><a href={sectionHref('sobre')} className={footerLinkCls}>Sobre nós</a></li>}
-          {hasBlog && <li><Link to={caminhoDoSite(ctx, '/blog')} className={footerLinkCls}>Blog</Link></li>}
-          {showLeadCapture && <li><a href={sectionHref('contato')} className={footerLinkCls}>Contato</a></li>}
-          {/* "Anuncie" rolava para o formulário de QUEM COMPRA: o proprietário
-              que queria VENDER caía no formulário contrário. Agora ele só existe
-              quando a página de verdade está ligada, e aponta para ela. */}
-          {site.anuncie?.enabled && (
-            <li><Link to={caminhoDoSite(ctx, '/anuncie')} className={footerLinkCls}>Anuncie seu imóvel</Link></li>
-          )}
-          {site.financiamento?.enabled && (
-            <li><Link to={caminhoDoSite(ctx, '/financiamento')} className={footerLinkCls}>Financiamento</Link></li>
-          )}
-        </FooterCol>
+        {(institucional.length > 0 || !personalizado) && (
+          <FooterCol title="Institucional">
+            {institucional.map(l => <li key={l.chave}><LinkDoRodapeEl l={l} /></li>)}
+          </FooterCol>
+        )}
         <div>
           <h4 className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-neutral-500">Contato</h4>
           {waHref && <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold text-white" style={{ background: '#25D366' }}><Ic d={I.wa} s={15} /> WhatsApp</a>}
@@ -893,7 +1067,7 @@ function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) 
         </div>
       </div>
       <div className="border-t border-black/[0.06] py-5 text-center text-[12px] text-neutral-400">
-        © {site.name || 'Portal'} — feito com LM Flow.
+        <CreditoDoRodape nome={site.name} />
       </div>
     </footer>
   );

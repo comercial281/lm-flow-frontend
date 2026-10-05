@@ -43,7 +43,8 @@ const CHAMADA_NOVA: ChamadaLivre = { title: '', text: null, button: null, dest_t
 
 const texto = (v: string) => (v.trim() === '' ? null : v);
 
-export default function TelaChamadas({ site, siteForm, setF }: FormProps) {
+// `versaoDasPaginas` muda quando o Salvar do menu regravou o "Exibir no menu" das páginas.
+export default function TelaChamadas({ site, siteForm, setF, versaoDasPaginas = 0 }: FormProps & { versaoDasPaginas?: number }) {
   const home: HomeConfig = siteForm.home ?? HOME_FABRICA;
   const c = home.callouts;
   // Sempre o objeto `home` inteiro: o servidor troca cada bloco recebido por completo.
@@ -65,7 +66,7 @@ export default function TelaChamadas({ site, siteForm, setF }: FormProps) {
       .then(lista => { if (vivo) setResposta({ siteId, paginas: lista.filter(p => p.page_kind !== 'ad_landing') }); })
       .catch(() => { if (vivo) setResposta({ siteId, paginas: null }); });
     return () => { vivo = false; };
-  }, [siteId]);
+  }, [siteId, versaoDasPaginas]);
   // Site ainda não criado não tem página nenhuma.
   const daVez = resposta && resposta.siteId === siteId ? resposta : null;
   const estadoPaginas: EstadoPaginas = !siteId ? 'ok' : !daVez ? 'carregando' : daVez.paginas ? 'ok' : 'erro';

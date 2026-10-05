@@ -166,7 +166,7 @@ describe('PortalHomePage por blocos', () => {
     await abrirHome(chamadas('javascript:alert(1)') as SiteInfo, [imovel('R1')]);
     const faixa = screen.getByRole('heading', { level: 3, name: 'Anuncie seu imóvel' }).closest('section') as HTMLElement;
     expect(faixa.style.backgroundImage).toBe('');
-    expect(faixa.style.background).toContain('var(--ink)');
+    expect(faixa.style.background).toContain('var(--solid)');
   });
 
   it('chamadas com foto https: a foto vira o fundo', async () => {
