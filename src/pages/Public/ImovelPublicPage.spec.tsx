@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ImovelPublicPage from './ImovelPublicPage';
 import type { SiteInfo } from './portalShared';
@@ -323,5 +324,53 @@ describe('ImovelPublicPage', () => {
     expect(screen.queryByText(/Construtora/)).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Dados do empreendimento' })).toBeNull();
     expect(screen.queryByText(/Pronto para morar/)).toBeNull();
+  });
+
+  describe('Receber o book no WhatsApp', () => {
+    const LIGADO = { property_page: { development: { book_button: true } } };
+    const BOTAO = { name: 'Receber o book no WhatsApp' };
+
+    it('o botão só aparece com a chave ligada, empreendimento e has_book', async () => {
+      await abrirFicha(LIGADO, { has_book: true }, EMPREENDIMENTO);
+      expect(screen.getAllByRole('button', BOTAO).length).toBeGreaterThan(0);
+    });
+
+    it.each([
+      ['chave desligada', {}, { has_book: true }, EMPREENDIMENTO],
+      ['empreendimento sem book', LIGADO, { has_book: false }, EMPREENDIMENTO],
+      ['servidor velho, sem has_book', LIGADO, {}, EMPREENDIMENTO],
+      ['revenda com book', LIGADO, { has_book: true }, REVENDA],
+    ])('sem botão: %s', async (_n, site, imovel, base) => {
+      await abrirFicha(site as SiteInfo, imovel, base);
+      expect(screen.queryByRole('button', BOTAO)).toBeNull();
+    });
+
+    it('envia form_type imovel_book e confirma que o book vai chegar', async () => {
+      const f = await abrirFicha(LIGADO, { has_book: true }, EMPREENDIMENTO);
+      const u = userEvent.setup();
+      await u.click(screen.getAllByRole('button', BOTAO)[0]);
+      expect(screen.getAllByText('Receba o book no WhatsApp').length).toBeGreaterThan(0);
+      await u.type(screen.getAllByPlaceholderText('Seu nome')[0], 'Ana');
+      await u.type(screen.getAllByPlaceholderText('Seu WhatsApp')[0], '11987654321');
+      await u.click(screen.getAllByRole('button', { name: 'Receber o book' })[0]);
+
+      const chamada = f.mock.calls.find(([url]) => String(url).endsWith('/site/leads'));
+      expect(chamada).toBeTruthy();
+      const lead = JSON.parse(String((chamada![1] as RequestInit).body)).lead;
+      expect(lead.form_type).toBe('imovel_book');
+      expect(lead.property_code).toBe('C1');
+      expect((await screen.findAllByText('Pronto! O book vai chegar no seu WhatsApp em alguns minutos.')).length).toBeGreaterThan(0);
+    });
+
+    it('o envio normal continua imovel', async () => {
+      const f = await abrirFicha(LIGADO, { has_book: true }, EMPREENDIMENTO);
+      const u = userEvent.setup();
+      await u.type(screen.getAllByPlaceholderText('Seu nome')[0], 'Ana');
+      await u.type(screen.getAllByPlaceholderText('Seu WhatsApp')[0], '11987654321');
+      await u.click(screen.getAllByRole('button', { name: 'Tenho interesse' })[0]);
+      await waitFor(() => expect(f.mock.calls.some(([url]) => String(url).endsWith('/site/leads'))).toBe(true));
+      const chamada = f.mock.calls.find(([url]) => String(url).endsWith('/site/leads'))!;
+      expect(JSON.parse(String((chamada[1] as RequestInit).body)).lead.form_type).toBe('imovel');
+    });
   });
 });

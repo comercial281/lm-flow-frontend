@@ -56,6 +56,8 @@ interface PropertyDTO extends CamposDaFicha {
   features?: string[] | null; condo_features?: string[] | null;
   typologies?: PropertyTypology[] | null;
   responsible_name?: string; photos?: Photo[];
+  /** Só o booleano: o endereço do book nunca vem para a página pública. */
+  has_book?: boolean;
 }
 /*
   O tipo local era estreito de propósito (só logo, cores e WhatsApp) porque esta
@@ -124,6 +126,9 @@ export default function ImovelPublicPage() {
   const [phone, setPhone] = useState('');
   const [phoneErr, setPhoneErr] = useState(false);
   const [sent, setSent] = useState(false);
+  // Pedido do book: o mesmo formulário de nome e telefone, em outro modo. O
+  // endereço do PDF nunca passa por aqui: a página só sabe SE o imóvel tem book.
+  const [pedindoBook, setPedindoBook] = useState(false);
   // Envio feito na prévia: o servidor não criou nada, e a tela não finge que criou.
   const [enviadoNaPrevia, setEnviadoNaPrevia] = useState(false);
   // Imóvel de Venda + Locação: a pessoa escolhe, marcada pela aba da busca de
@@ -225,6 +230,9 @@ export default function ImovelPublicPage() {
     return `https://wa.me/${onlyDigits(wa)}?text=${encodeURIComponent(`Olá! Tenho interesse no imóvel ${prop.code} — ${prop.title}.`)}`;
   }, [wa, prop]);
 
+  const mostraBook = !!prop && resolverFicha(site.property_page).development.book_button
+    && prop.listing_kind === 'development' && prop.has_book === true;
+
   const submitLead = async (e: FormEvent) => {
     e.preventDefault();
     if (!tenant || !code || !name.trim()) return;
@@ -234,10 +242,10 @@ export default function ImovelPublicPage() {
       const res = await fetch(`${API}/api/public/v1/site/leads`, {
         method: 'POST', headers: cabecalhosDoSite(tenant, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ lead: {
-          name, phone, source: 'portal', form_type: 'imovel',
+          name, phone, source: 'portal', form_type: pedindoBook ? 'imovel_book' : 'imovel',
           property_code: code, property_id: prop?.id,
           finalidade: finalidadeDoImovel(prop?.transaction_type) ?? finalidade,
-          message: `Interesse no imóvel ${code}`,
+          message: pedindoBook ? `Pediu o book do imóvel ${code}` : `Interesse no imóvel ${code}`,
           utm_source: params.get('utm_source') ?? undefined, utm_campaign: params.get('utm_campaign') ?? undefined,
           form_data: { page_url: window.location.href, referrer: document.referrer || null },
         } }),
@@ -320,11 +328,18 @@ export default function ImovelPublicPage() {
         <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full" style={{ background: '#25D366' }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
         </div>
-        <p className="font-semibold text-[var(--ink)]">Recebemos seu interesse!</p>
-        <p className="mt-1 text-sm text-neutral-500">Um especialista vai te chamar em breve.</p>
+        {pedindoBook ? (
+          <p className="font-semibold text-[var(--ink)]">Pronto! O book vai chegar no seu WhatsApp em alguns minutos.</p>
+        ) : (
+          <>
+            <p className="font-semibold text-[var(--ink)]">Recebemos seu interesse!</p>
+            <p className="mt-1 text-sm text-neutral-500">Um especialista vai te chamar em breve.</p>
+          </>
+        )}
       </div>
     ) : (
       <form onSubmit={submitLead} className="space-y-3">
+        {pedindoBook && <p className="text-[15px] font-semibold text-[var(--ink)]">Receba o book no WhatsApp</p>}
         {!finalidadeDoImovel(prop.transaction_type) && <FinalidadeChoice value={finalidade} onChange={setFinalidade} />}
         <input value={name} onChange={e => setName(e.target.value)} required placeholder="Seu nome" className="w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] outline-none focus:border-[var(--brand)]" />
         <BrPhoneInput
@@ -336,7 +351,11 @@ export default function ImovelPublicPage() {
           className={`w-full rounded-xl border px-4 py-3 text-[15px] outline-none focus:border-[var(--brand)] ${phoneErr ? 'border-red-400' : 'border-black/10'}`}
         />
         {phoneErr && <p className="-mt-1 text-[13px] text-red-500">Digite um telefone válido com DDD.</p>}
-        <button type="submit" className="w-full rounded-xl py-3.5 text-[15px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--brand)' }}>Tenho interesse</button>
+        <button type="submit" className="w-full rounded-xl py-3.5 text-[15px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--brand)' }}>{pedindoBook ? 'Receber o book' : 'Tenho interesse'}</button>
+        {pedindoBook && <button type="button" onClick={() => setPedindoBook(false)} className="w-full text-center text-[13px] text-neutral-500 underline">Voltar</button>}
+        {mostraBook && !pedindoBook && (
+          <button type="button" onClick={() => setPedindoBook(true)} className="flex w-full items-center justify-center gap-2 rounded-xl border py-3.5 text-[15px] font-semibold" style={{ borderColor: 'var(--brand)', color: 'var(--brand)' }}><Ic d={I.wa} s={18} /> Receber o book no WhatsApp</button>
+        )}
         {waHref && <a href={waHref} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-semibold text-white" style={{ background: '#25D366' }}><Ic d={I.wa} s={18} /> Chamar no WhatsApp</a>}
       </form>
     )

@@ -109,7 +109,7 @@ export default function BookPeloSite({ siteId, ligado, aoMudarChave }: Props) {
 
       {ligado && fluxo && !fluxo.existe && (
         <div className="space-y-2 rounded-md border border-amber-300 p-3 dark:border-amber-700">
-          <p className="text-sm text-amber-700 dark:text-amber-400">O fluxo do book foi apagado no construtor.</p>
+          <p className="text-sm text-amber-700 dark:text-amber-400">O fluxo do book foi excluído no construtor.</p>
           <Button type="button" variant="outline" disabled={ocupado} onClick={() => enviar({ ligado: true }, 'Fluxo recriado.')}>Recriar o fluxo</Button>
         </div>
       )}

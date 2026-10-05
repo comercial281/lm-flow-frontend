@@ -6,6 +6,7 @@
 import type { FlowAutomation, FlowAutomationNode } from '@/types/flowAutomations';
 import type { FlowTemplatePreviewStep } from './templates';
 import { waitTotalSeconds } from './waitTime';
+import { BOOK_SOURCE, usesBook } from './book';
 import { blockLabel } from './palette';
 
 const LEAD_ACTION_MEDIA: Record<string, string> = {
@@ -23,6 +24,7 @@ function stepOf(node: FlowAutomationNode): FlowTemplatePreviewStep {
         kind: 'send_whatsapp',
         ...(String(cfg.text ?? '').trim() ? { text: String(cfg.text) } : {}),
         ...(media ? { media_kind: media } : {}),
+        ...(usesBook(cfg) ? { media_source: BOOK_SOURCE } : {}),
       };
     }
     case 'wait':

@@ -6184,6 +6184,37 @@ Armadilhas:
 5. O "Ordenar por" do site é `<select>` nativo e mora em `portalShared.tsx` (`OrdenarPor`), a exceção de lista nativa do `conferir-padrao`. Não mover pra página de busca: o build reprova.
 6. Não é `featureKey` nem `clientToggleKey`.
 
+## Book pelo site (desde 2026-10-05)
+
+> Entrega 6C da fase 4 de Imóveis. Spec: `LM FLOW/specs/2026-10-05-fase-4-imoveis-book-pelo-site-design.md` (pasta do Tony). Backend no `lm-flow` (`saas-multitenant`): gatilho `lead.book_requested`, `Sites::PropertyPageConfig` (`development.book_button`), `GET/PUT /sites/:id/book_flow`, modelo `book_pelo_site`, blocos `hand_to_ai` e `disable_ai`. O backend entra primeiro.
+
+**O que o dono vê, em três pontos:**
+- **Construtor:** no bloco "Enviar WhatsApp", o Arquivo ganha **"Book do imóvel de interesse"** (o servidor acha o book sozinho; acima de 16 MB vai como link); o painel Blocos ganha **"Passar para a IA"** e **"Desligar a IA"**; o gatilho novo é **"Pediu o book no site"**; o modelo **"Book pelo site"** vem pronto. As peças servem a qualquer fluxo (`features/flowAutomations/book.ts`: `BOOK_SOURCE`, `BOOK_LABEL`, `BOOK_SUMMARY`, `usesBook`, `withBook`). A prévia do funil e a do modelo mostram a linha "Manda o book do imóvel de interesse" em vez de um balão vazio.
+- **Meu site › Página do imóvel › Empreendimentos:** seção **"Receber o book no WhatsApp"** (`telas/BookPeloSite.tsx`): a chave e, ligada, três campos (**Enviar pelo número**, **Mensagem** com os botõezinhos de variável, **"Depois do book, a IA Vendedora assume a conversa"** Sim/Não, só se há IA ligada) e o link "Ver no construtor". Fluxo mexido no construtor: "Este fluxo foi personalizado no construtor" e a tela só liga e desliga. Fluxo desligado: aviso âmbar + "Ligar o fluxo". Fluxo excluído: aviso + "Recriar o fluxo".
+- **Página pública do empreendimento:** o botão **"Receber o book no WhatsApp"** abre o MESMO formulário de nome e telefone, com o título "Receba o book no WhatsApp" (telefone obrigatório), e envia `form_type: 'imovel_book'`. Confirmação: "Pronto! O book vai chegar no seu WhatsApp em alguns minutos." Na prévia do site vale o aviso de sempre (o contato não foi enviado de verdade).
+
+**Decisões (não reabrir sem o Tony pedir):**
+1. **Quem manda o book é uma automação, não a IA.** A IA entra quando o lead responde (por isso "Passar para a IA"), e nunca abre a conversa.
+2. **A chave fica no Meu site, mas quem trabalha é um fluxo VISÍVEL no construtor** ("Book pelo site"): aparece nas Automações, na faixa "fluxo rodando" da conversa e no histórico do lead. Não existe automação escondida.
+3. **Nasce desligado em todo cliente** (`book_button` padrão `false`, ao contrário das outras caixinhas da ficha, que nascem ligadas): ligado, passa a mandar WhatsApp sozinho. Em `resolverFicha`, só o `true` explícito liga.
+4. **O botão exige três coisas:** chave ligada (`resolverFicha(site.property_page).development.book_button`), `listing_kind === 'development'` e `has_book === true`. Revenda nunca tem o botão (book em revenda está fora desta entrega); empreendimento sem book também não.
+5. O envio é o MESMO `POST /site/leads` do "Tenho interesse", só com `form_type: 'imovel_book'`; o servidor faz tudo o de sempre (contato, interesse, card, distribuição, cópia por e-mail) e dispara o gatilho, que vale a cada pedido (trava de 10 min por contato + imóvel no servidor).
+
+**Contrato com o backend:**
+- `has_book` (boolean) vem SÓ no `/site/properties/:code` (que a `ImovelPublicPage` já usa), não no `/site/imovel/:code`. Servidor velho não manda: sem botão.
+- `property_page.development.book_button` vem no `/site` público (booleano). O padrão de fábrica do navegador é `false`.
+- `GET/PUT /sites/:id/book_flow` devolve `{ existe, fluxo_id, fluxo_ligado, personalizado, ligado, send_from, send_from_inbox_id, mensagem, ia_assume }`; o cliente está em `siteBuilderService.getBookFlow/putBookFlow`.
+
+**Armadilhas:**
+1. **`book_button` é do servidor, não da página.** Quem o escreve é o serviço do fluxo (`book_flow`); o Salvar da página nunca o muda no servidor. A tela atualiza o valor local pelo `aplicarSemMarcar` (em `SiteBuilder`), SEM marcar `fichaAlterada`, e ele aceita um **updater** (mescla no `property_page` ATUAL), então um e-mail editado enquanto o PUT da chave voa não se perde e o Salvar seguinte não reenvia a ficha à toa.
+2. **A chave grava NA HORA**, não espera o Salvar da página (ligar cria ou religa o fluxo no servidor). Se o servidor recusar (422, sem número conectado), a chave fica como estava.
+3. **Só o botão "Salvar o envio do book" manda os campos** (`send_from`, `send_from_inbox_id`, `mensagem`, `ia_assume`). A chave, "Ligar o fluxo" e "Recriar o fluxo" mandam só `{ ligado }`, e o servidor mantém o gravado. Fluxo personalizado nunca tem os nós sobrescritos pelo PUT.
+4. **O endereço do PDF NUNCA entra no payload público.** A página só sabe SE o imóvel tem book (`has_book`) e se a chave está ligada. Não "melhorar" mostrando o link, nem o tamanho, nem o nome do arquivo.
+5. **A resposta do PUT substitui os rascunhos dos campos** pelo que o servidor gravou: texto editado e não salvo se perde ao ligar, desligar ou "Ligar o fluxo".
+6. O formulário do botão e o de "Tenho interesse" são o mesmo componente e o mesmo estado (nome, telefone): o `pedindoBook` só troca título, botão e `form_type`. Não duplicar o formulário.
+7. O `readiness` e a prévia leem o book só por `usesBook`/`BOOK_SOURCE`; nada de escrever `'property_book'` na mão.
+8. Link do construtor: `/automations/flow-builder/:id`.
+
 ## Meu site · domínio próprio, Google e prévia (desde 2026-10-04)
 
 > Fase 1 do plano `LM FLOW/plans/2026-10-04-meu-site-fase-final.md` (spec `LM FLOW/specs/2026-10-04-meu-site-fase-final-design.md`, pasta do Tony). Backend no `lm-flow` (`saas-multitenant`): tabela global `public.site_domains`, `resolve`/`head`/`sitemap` públicos, CORS pelo domínio ativo, `Sites::GoogleConfig` e o link de prévia.

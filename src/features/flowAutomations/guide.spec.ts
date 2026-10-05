@@ -114,4 +114,12 @@ describe('prévia do funil (Disparar funil)', () => {
       { kind: 'send_whatsapp', media_kind: 'image' },
     ]);
   });
+
+  it('envio do book do imóvel leva media_source (a prévia mostra a linha do book)', () => {
+    const steps = funnelPreview({
+      initial_node_id: 'm1',
+      nodes: [node('m1', { config: { text: '', media_source: 'property_book' }, next_node_id: null })],
+    });
+    expect(steps).toEqual([{ kind: 'send_whatsapp', media_source: 'property_book' }]);
+  });
 });

@@ -168,7 +168,7 @@ describe('Receber o book no WhatsApp', () => {
     putBookFlow.mockResolvedValue(flow({ ligado: true, existe: true, fluxo_id: 'f2', fluxo_ligado: true }));
     await abrir(ligada());
 
-    expect(await screen.findByText('O fluxo do book foi apagado no construtor.')).toBeTruthy();
+    expect(await screen.findByText('O fluxo do book foi excluído no construtor.')).toBeTruthy();
     expect(screen.queryByLabelText('Mensagem')).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Recriar o fluxo' }));
     expect(putBookFlow).toHaveBeenCalledWith('site-1', { ligado: true });
