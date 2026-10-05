@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { I, Ic, type SiteInfo } from '../portalShared';
 import type { HomeConfig } from '@/features/siteBuilder/public/homeConfig';
 import { chamadasVisiveis, type CartaoChamada } from '@/features/siteBuilder/public/vitrines';
+import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Faixa de chamadas da home: os caminhos que não são "quero comprar"
@@ -32,7 +33,8 @@ function Destino({ c, className, children }: { c: CartaoChamada; className: stri
 interface Props { site: SiteInfo; tenant: string; home: HomeConfig }
 
 export default function HomeChamadas({ site, tenant, home }: Props) {
-  const cards = chamadasVisiveis(site, tenant);
+  const ctx = useCtxDoSite(tenant);
+  const cards = chamadasVisiveis(site, ctx);
   if (cards.length < 2) return null;
 
   const { layout, background_url, overlay } = home.callouts;

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { useParams, useSearchParams, useLocation } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
+import { useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import {
   I, Ic, OrdenarPor, PortalFooter, PortalHeader, PropertyCard, PropertyRow, Select,
   filterProperties, usePortalData, type PortalFilters, type PortalTab,
@@ -46,7 +47,7 @@ const ESPERA_VISITA_MS = 1500;
 const RESULTS_PAGE_SIZE = 30;
 
 export default function PortalSearchPage() {
-  const { tenant } = useParams<{ tenant: string }>();
+  const tenant = useTenantDoSite();
   const [params, setParams] = useSearchParams();
   const { state, site, items, fontHref, wa, cities, hoods, types, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname, search } = useLocation();

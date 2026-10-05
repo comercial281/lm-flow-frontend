@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import { I, Ic, PropertyCard, type PortalProperty, type PortalTab } from '../portalShared';
 import type { AbaId, HomeConfig, Vitrine } from '@/features/siteBuilder/public/homeConfig';
 import { buscaDaRegra, vitrinesVisiveis } from '@/features/siteBuilder/public/vitrines';
+import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
+import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Vitrines da página inicial: as de fábrica (Lançamentos, Imóveis em destaque)
@@ -27,6 +29,7 @@ function buscaDaVitrine(v: Vitrine): string | null {
 interface Props { home: HomeConfig; items: PortalProperty[]; tenant: string; wa?: string | null; abas: AbaId[] }
 
 export default function HomeVitrines({ home, items, tenant, wa, abas }: Props) {
+  const ctx = useCtxDoSite(tenant);
   const lista = vitrinesVisiveis(home, items);
   if (lista.length === 0) return null;
 
@@ -34,7 +37,7 @@ export default function HomeVitrines({ home, items, tenant, wa, abas }: Props) {
     <div id="resultados">
       {lista.map(({ vitrine, itens }) => {
         const q = buscaDaVitrine(vitrine);
-        const verTodos = `/portal/${tenant}/imoveis${q ? `?${q}` : ''}`;
+        const verTodos = caminhoDoSite(ctx, `/imoveis${q ? `?${q}` : ''}`);
         const tab = abaDaVitrine(vitrine);
         // Regra que não cabe na busca, ou "Ver todos" que cai numa aba escondida,
         // levaria a uma busca que não é a da vitrine: sem o link.

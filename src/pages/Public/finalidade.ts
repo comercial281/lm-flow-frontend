@@ -1,4 +1,5 @@
 import type { PortalTab } from './portalShared';
+import { caminhoDoSite, type CtxDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 
 /**
  * Finalidade do lead do site: comprar (venda) ou alugar (locação).
@@ -25,7 +26,7 @@ export function finalidadeInicial(valor?: string | null): Finalidade {
 }
 
 /** Link da página do imóvel, levando a aba Alugar quando a busca estava nela. */
-export function imovelHref(tenant: string, code: string, tab?: PortalTab): string {
-  const base = `/imovel/${tenant}/${code}`;
+export function imovelHref(ctx: CtxDoSite, code: string, tab?: PortalTab): string {
+  const base = caminhoDoSite(ctx, `/imovel/${code}`);
   return tab === 'rent' ? `${base}?${FINALIDADE_PARAM}=locacao` : base;
 }

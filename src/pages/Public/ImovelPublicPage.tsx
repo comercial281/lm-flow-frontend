@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { useCtxDoSite, useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
+import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { trackLead } from '@/features/siteBuilder/public/siteTracking';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
@@ -95,7 +97,9 @@ function Ic({ d, s = 18, cls = '' }: { d: string; s?: number; cls?: string }) {
 }
 
 export default function ImovelPublicPage() {
-  const { tenant, code } = useParams<{ tenant: string; code: string }>();
+  const { code } = useParams<{ code: string }>();
+  const tenant = useTenantDoSite();
+  const ctx = useCtxDoSite(tenant ?? '');
   const [state, setState] = useState<'loading' | 'ok' | 'notfound'>('loading');
   const [site, setSite] = useState<SiteInfo>({});
   const [siteLoaded, setSiteLoaded] = useState(false);
@@ -342,7 +346,7 @@ export default function ImovelPublicPage() {
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         {!manutencao && (
-          <Link to={`/portal/${tenant}`} className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-neutral-500 hover:text-[var(--brand)]">
+          <Link to={caminhoDoSite(ctx, '/')} className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-neutral-500 hover:text-[var(--brand)]">
             <Ic d={I.back} s={16} /> Voltar aos imóveis
           </Link>
         )}

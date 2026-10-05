@@ -31,9 +31,14 @@ describe('finalidade do lead do site', () => {
   });
 
   it('o link do imóvel leva a aba Alugar, e só ela', () => {
-    expect(imovelHref('imob', 'AP0042', 'rent')).toBe('/imovel/imob/AP0042?finalidade=locacao');
-    expect(imovelHref('imob', 'AP0042', 'sale')).toBe('/imovel/imob/AP0042');
-    expect(imovelHref('imob', 'AP0042')).toBe('/imovel/imob/AP0042');
+    expect(imovelHref({ tenant: 'imob', dominio: false }, 'AP0042', 'rent')).toBe('/imovel/imob/AP0042?finalidade=locacao');
+    expect(imovelHref({ tenant: 'imob', dominio: false }, 'AP0042', 'sale')).toBe('/imovel/imob/AP0042');
+    expect(imovelHref({ tenant: 'imob', dominio: false }, 'AP0042')).toBe('/imovel/imob/AP0042');
+  });
+
+  it('no domínio do cliente o link do imóvel é /imovel/:código', () => {
+    expect(imovelHref({ tenant: 'imob', dominio: true }, 'AP0042', 'rent')).toBe('/imovel/AP0042?finalidade=locacao');
+    expect(imovelHref({ tenant: 'imob', dominio: true }, 'AP0042')).toBe('/imovel/AP0042');
   });
 });
 

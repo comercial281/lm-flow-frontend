@@ -10,6 +10,7 @@ import {
 import { loadLanding, type LandingPixel, type PublicLandingDTO } from './landingLoader';
 import { installPixel } from './metaPixel';
 import { sendSiteVisit } from '@/features/siteBuilder/public/siteVisits';
+import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 
 /**
  * A landing de anúncio pública, já com tenant e slug resolvidos. Quem resolve
@@ -20,6 +21,8 @@ import { sendSiteVisit } from '@/features/siteBuilder/public/siteVisits';
 export interface LandingPublicViewProps {
   tenant: string;
   slug: string;
+  /** Aberta no domínio do cliente: o resultado vai para `/lp/<slug>/obrigado`. */
+  noDominio?: boolean;
 }
 
 function toProperty(p: PublicLandingDTO['property']): LandingProperty | null {
@@ -55,7 +58,7 @@ function toProperty(p: PublicLandingDTO['property']): LandingProperty | null {
 
 /** Public, no-auth view of a published ad landing. Hosted by Leal Mídia
  *  (no client domain needed). NOINDEX. Tenant comes from the URL. */
-export function LandingPublicView({ tenant, slug }: LandingPublicViewProps) {
+export function LandingPublicView({ tenant, slug, noDominio = false }: LandingPublicViewProps) {
   const [state, setState] = useState<'loading' | 'ok' | 'notfound'>('loading');
   const [blocks, setBlocks] = useState<BlockInstance[]>([]);
   const [theme, setTheme] = useState<Partial<LandingTheme>>({});
@@ -175,7 +178,7 @@ export function LandingPublicView({ tenant, slug }: LandingPublicViewProps) {
       const resultMode = (leadForm?.config as { resultMode?: string } | undefined)?.resultMode;
       if (resultMode === 'url') {
         const path = qualification === 'disqualified' ? 'desqualificado' : 'obrigado';
-        window.location.assign(`/lp/${encodeURIComponent(tenant)}/${encodeURIComponent(slug)}/${path}`);
+        window.location.assign(caminhoDoSite({ tenant, dominio: noDominio }, `/lp/${encodeURIComponent(slug)}/${path}`));
       }
       return { qualification };
     } catch {

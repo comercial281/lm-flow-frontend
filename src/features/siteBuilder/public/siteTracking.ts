@@ -4,7 +4,12 @@
 // avançados SÓ em domínio próprio. Em *.lmflow.com.br o site divide o endereço
 // com o CRM, e a sessão de quem está logado fica no localStorage desse endereço:
 // código de terceiro ali leria a sessão.
+//
+// Domínio próprio é uma lista POSITIVA: só o endereço que o servidor confirmou
+// como domínio ativo do site (`dominioDoSite`). Endereço desconhecido, domínio
+// ainda não verificado ou removido não é domínio próprio.
 import { installPixel } from '@/features/landing/public/metaPixel';
+import { dominioConfirmado, ehEnderecoDoSistema, limparHost } from './dominioDoSite';
 
 export interface SiteTrackingConfig {
   tracking?: { gtm_id?: string | null; ga4?: string | null; facebook_pixel?: string | null } | null;
@@ -13,12 +18,11 @@ export interface SiteTrackingConfig {
 
 type W = Window & { dataLayer?: unknown[]; gtag?: (...a: unknown[]) => void; fbq?: (...a: unknown[]) => void; __lmfTracking?: boolean };
 
-const NOT_OWN = [/(^|\.)lmflow\.com\.br$/i, /\.vercel\.app$/i, /^localhost$/i, /^127\.0\.0\.1$/];
-
 export function isOwnDomain(host: string): boolean {
-  const h = host.toLowerCase().split(':')[0].replace(/\.+$/, '');
-  if (!h || h.startsWith('[') || /^\d+\.\d+\.\d+\.\d+$/.test(h)) return false;
-  return !NOT_OWN.some(r => r.test(h));
+  const h = limparHost(host);
+  if (ehEnderecoDoSistema(h)) return false;
+  const site = dominioConfirmado();
+  return !!site && site.host === h;
 }
 
 // Valores antigos nunca passaram pela validação da tela: id fora do formato

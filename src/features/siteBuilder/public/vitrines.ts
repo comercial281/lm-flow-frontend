@@ -1,6 +1,7 @@
 import type { SiteInfo } from '@/pages/Public/portalShared';
 import { filterProperties, normalizarTexto, type PortalProperty } from './filtros';
 import { rotuloTipo } from './tiposDeImovel';
+import { caminhoDoSite, type CtxDoSite } from './dominioDoSite';
 import { resolverHome, TEXTO_FABRICA, type AbaId, type HomeConfig, type RegrasVitrine, type Vitrine } from './homeConfig';
 
 const ABAS: AbaId[] = ['sale', 'rent', 'launch'];
@@ -85,7 +86,7 @@ export interface CartaoChamada {
   title: string; text: string; button: string; to: string; externo: boolean;
 }
 
-export function chamadasVisiveis(site: SiteInfo, tenant: string): CartaoChamada[] {
+export function chamadasVisiveis(site: SiteInfo, ctx: CtxDoSite): CartaoChamada[] {
   const home = resolverHome(site.home);
   const d = home.callouts.defaults;
   const zap = (site.contact?.whatsapp ?? '').replace(/\D/g, '');
@@ -97,13 +98,13 @@ export function chamadasVisiveis(site: SiteInfo, tenant: string): CartaoChamada[
     return { key, icone, title: c.title ?? f.title, text: c.text ?? f.text, button: c.button ?? f.button, to, externo: false };
   };
   const cards: (CartaoChamada | null)[] = [
-    padrao('financing', !!site.financiamento?.enabled, 'bank', `/portal/${tenant}/financiamento`),
-    padrao('listing', !!site.anuncie?.enabled, 'sign', `/portal/${tenant}/anuncie`),
+    padrao('financing', !!site.financiamento?.enabled, 'bank', caminhoDoSite(ctx, '/financiamento')),
+    padrao('listing', !!site.anuncie?.enabled, 'sign', caminhoDoSite(ctx, '/anuncie')),
     padrao('wanted', site.sections?.lead_capture !== false, 'search', '#contato'),
     ...home.callouts.custom.map((c, i): CartaoChamada | null => {
       const base = { key: `custom-${i}`, title: c.title, text: c.text ?? '', button: c.button ?? 'Saiba mais' };
       if (c.dest_type === 'whatsapp') return zap ? { ...base, icone: 'whatsapp', to: `https://wa.me/${zap}?text=${encodeURIComponent(c.title)}`, externo: true } : null;
-      if (c.dest_type === 'page') return c.dest_value && pagina(c.dest_value) ? { ...base, icone: 'page', to: `/portal/${tenant}/p/${encodeURIComponent(c.dest_value)}`, externo: false } : null;
+      if (c.dest_type === 'page') return c.dest_value && pagina(c.dest_value) ? { ...base, icone: 'page', to: caminhoDoSite(ctx, `/p/${encodeURIComponent(c.dest_value)}`), externo: false } : null;
       return typeof c.dest_value === 'string' && /^https?:\/\//i.test(c.dest_value) ? { ...base, icone: 'link', to: c.dest_value, externo: true } : null;
     }),
   ];

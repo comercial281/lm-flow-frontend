@@ -1,6 +1,7 @@
 // src/features/siteBuilder/public/siteTracking.spec.ts
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { isOwnDomain, installSiteTracking, trackLead, trackPageView } from './siteTracking';
+import { dominioDoSite, esquecerDominio } from './dominioDoSite';
 
 function fakeWin() {
   document.head.innerHTML = '';
@@ -10,14 +11,33 @@ function fakeWin() {
   return w;
 }
 
+/** Confirma o domínio como faria o middleware (window.__LMF_SITE__). */
+async function confirmar(host: string) {
+  await dominioDoSite({ win: { location: { hostname: host }, __LMF_SITE__: { tenant: 'imob', slug: 'imob' } } });
+}
+
+afterEach(() => { esquecerDominio(); });
+
 describe('isOwnDomain', () => {
   it.each([
-    ['horizonte.lmflow.com.br', false], ['app.lmflow.com.br', false], ['lmflow.com.br', false],
-    ['x.vercel.app', false], ['localhost', false], ['127.0.0.1', false],
-    ['www.horizonteimoveis.com.br', true], ['horizonteimoveis.com.br', true],
-    ['imob.lmflow.com.br.', false], ['APP.LMFLOW.COM.BR', false], ['x.vercel.app.', false],
-    ['[::1]', false], ['192.168.0.10', false], ['0.0.0.0', false], ['evil-lmflow.com.br', true],
-  ])('%s → %s', (host, esperado) => expect(isOwnDomain(host)).toBe(esperado));
+    'horizonte.lmflow.com.br', 'app.lmflow.com.br', 'lmflow.com.br', 'x.vercel.app', 'localhost', '127.0.0.1',
+    'www.horizonteimoveis.com.br', 'horizonteimoveis.com.br', 'evil-lmflow.com.br', '[::1]', '192.168.0.10',
+  ])('sem domínio confirmado, %s não é domínio próprio', host => expect(isOwnDomain(host)).toBe(false));
+
+  it('só o host confirmado por dominioDoSite é domínio próprio (lista positiva)', async () => {
+    await confirmar('www.horizonteimoveis.com.br');
+    expect(isOwnDomain('www.horizonteimoveis.com.br')).toBe(true);
+    expect(isOwnDomain('WWW.horizonteimoveis.com.br.')).toBe(true);
+    expect(isOwnDomain('horizonteimoveis.com.br')).toBe(false);
+    expect(isOwnDomain('outro.com.br')).toBe(false);
+    expect(isOwnDomain('horizonte.lmflow.com.br')).toBe(false);
+  });
+
+  it('domínio que o servidor recusou (404) não é domínio próprio', async () => {
+    await dominioDoSite({ win: { location: { hostname: 'www.removido.com.br' } }, api: 'https://api.x',
+      fetchFn: vi.fn(async () => ({ ok: false, status: 404, json: async () => ({}) }) as Response) });
+    expect(isOwnDomain('www.removido.com.br')).toBe(false);
+  });
 });
 
 describe('installSiteTracking', () => {
@@ -33,7 +53,15 @@ describe('installSiteTracking', () => {
     expect(typeof (window as unknown as { fbq?: unknown }).fbq).toBe('function');
   });
 
-  it('em domínio próprio: GTM e códigos avançados entram', () => {
+  it('domínio que não foi confirmado: GTM e códigos avançados NÃO entram', () => {
+    installSiteTracking({ tracking: { gtm_id: 'GTM-XYZ1' }, custom_code: { head: '<meta name="lmf-teste" content="1">', body: null } },
+      { host: 'www.imob.com.br' });
+    expect(document.querySelectorAll('script[src*="gtm.js"]').length).toBe(0);
+    expect(document.head.querySelector('meta[name="lmf-teste"]')).toBeNull();
+  });
+
+  it('em domínio próprio confirmado: GTM e códigos avançados entram', async () => {
+    await confirmar('www.imob.com.br');
     installSiteTracking({ tracking: { gtm_id: 'GTM-XYZ1' }, custom_code: { head: '<meta name="lmf-teste" content="1">', body: null } },
       { host: 'www.imob.com.br' });
     expect(Array.from(document.querySelectorAll('script')).some(s => (s.getAttribute('src') ?? '').includes('gtm.js?id=GTM-XYZ1'))).toBe(true);
@@ -50,7 +78,8 @@ describe('installSiteTracking', () => {
     expect(document.querySelectorAll('script[src*="gtag/js"]').length).toBe(1);
   });
 
-  it('GTM fora do formato não carrega nem em domínio próprio', () => {
+  it('GTM fora do formato não carrega nem em domínio próprio', async () => {
+    await confirmar('www.imob.com.br');
     installSiteTracking({ tracking: { gtm_id: 'G-AB12' } }, { host: 'www.imob.com.br' });
     expect(document.querySelectorAll('script[src*="gtm.js"]').length).toBe(0);
   });

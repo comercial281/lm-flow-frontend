@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import {
@@ -62,7 +63,7 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
 }
 
 export default function PortalAnunciePage() {
-  const { tenant } = useParams<{ tenant: string }>();
+  const tenant = useTenantDoSite();
   const { state, site, fontHref, wa, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.

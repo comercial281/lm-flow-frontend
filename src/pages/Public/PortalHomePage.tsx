@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import { API, PortalFooter, PortalHeader, Stat, usePortalData } from './portalShared';
@@ -28,7 +29,7 @@ import HomeMaisBuscados from './home/HomeMaisBuscados';
 ──────────────────────────────────────────────────────────────────────────── */
 
 export default function PortalHomePage() {
-  const { tenant } = useParams<{ tenant: string }>();
+  const tenant = useTenantDoSite();
   const { state, site, items, fontHref, wa, cities, hoods, types, home, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
