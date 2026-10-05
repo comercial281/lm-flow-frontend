@@ -28,6 +28,7 @@ describe('menu da Área do Admin', () => {
     ['/admin/clientes', 'Clientes', 'Clientes'],
     ['/admin/clientes/numeros', 'Clientes', 'Números conectados'],
     ['/admin/clientes/custos', 'Clientes', 'Custos'],
+    ['/admin/clientes/8f1c-uuid', 'Clientes', 'Clientes'],
     ['/admin/usuarios', 'Usuários', 'Usuários'],
     ['/admin/usuarios/tenant_x/8f1c-uuid', 'Usuários', 'Usuários'],
     ['/admin/usuarios/logs', 'Usuários', 'Logs'],

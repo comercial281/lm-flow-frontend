@@ -63,7 +63,14 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     icon: Building2,
     description: 'Cada cliente, os números de WhatsApp dele e quanto ele custa',
     abas: [
-      { name: 'Clientes', href: '/admin/clientes', icon: Building2, exata: true },
+      {
+        name: 'Clientes',
+        href: '/admin/clientes',
+        icon: Building2,
+        exata: true,
+        // Página do cliente: /admin/clientes/:id (Números e Custos têm endereço próprio).
+        tambem: [/^\/admin\/clientes\/(?!numeros\/?$|custos\/?$|pacotes\/?$)[^/]+\/?$/],
+      },
       { name: 'Números conectados', href: '/admin/clientes/numeros', icon: Smartphone },
       { name: 'Custos', href: '/admin/clientes/custos', icon: Wallet },
     ],

@@ -139,6 +139,7 @@ import AdminPaginaComAbas from '@/components/layout/AdminPaginaComAbas';
 import AdminConteudo from '@/pages/Admin/Area/AdminConteudo';
 import { ComAbaAntiga, RedirecionaComBusca } from '@/routes/AdminRedirecionamentos';
 const AdminLeadsAoVivo = lazyWithRetry(() => import('@/pages/SuperAdmin/LeadsFeed'));
+const AdminClientePagina = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClients/Cliente/Pagina'));
 const AdminNumeros = lazyWithRetry(() => import('@/pages/SuperAdmin/NumberOwnership'));
 const AdminUsuarios = lazyWithRetry(() => import('@/pages/SuperAdmin/Usuarios'));
 const AdminFichaDoUsuario = lazyWithRetry(() => import('@/pages/SuperAdmin/Usuarios/Ficha'));
@@ -1260,6 +1261,8 @@ const AppRouter = () => {
               {/* Custos: IA exata (registro de chamadas) + estrutura (Railway, Vercel,
                   Evolution) lançada à mão, numa tela só. */}
               <Route path="/admin/clientes/custos" element={<Custos />} />
+              {/* Se este caminho mudar, mudar junto o `tambem` da aba Clientes em adminMenuItems.ts. */}
+              <Route path="/admin/clientes/:id" element={<AdminConteudo><AdminClientePagina /></AdminConteudo>} />
               {/* Usuários */}
               {/* Lista e ficha já trazem o AdminConteudo (como o Custos): não embrulhar aqui. */}
               <Route path="/admin/usuarios" element={<AdminUsuarios />} />
