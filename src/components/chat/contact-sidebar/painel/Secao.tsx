@@ -8,6 +8,7 @@ const TONS = {
   roxo: 'bg-violet-100 text-violet-600 dark:bg-violet-950/60 dark:text-violet-400',
   rosa: 'bg-pink-100 text-pink-600 dark:bg-pink-950/60 dark:text-pink-400',
   laranja: 'bg-orange-100 text-orange-600 dark:bg-orange-950/60 dark:text-orange-400',
+  verde: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400',
 } as const;
 
 export type TomDaSecao = keyof typeof TONS;

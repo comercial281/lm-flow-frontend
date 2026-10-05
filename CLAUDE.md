@@ -6258,6 +6258,68 @@ Armadilhas:
 8. **O envio leva o grupo que a confirmação nomeou** (`expected_jid`). Se o grupo mudou desde a prévia, o servidor recusa e o bloco volta para *Preparar envio*.
 9. **Kit nunca salvo mostra a barra de Salvar sem mexer**: quem só quer o texto padrão precisa conseguir salvar, senão Funções segue dizendo que o kit não foi montado.
 
+## Conversa: menu "⋮" enxuto, Agendar mensagem e Agendados no painel (04/10/2026)
+
+Pedido do Tony: o "⋮" do topo da conversa tinha 17 itens soltos, e não dava pra
+agendar uma mensagem de dentro da conversa (só pelo card do lead). E quem abre a
+conversa não via que havia mensagem agendada pra sair.
+
+O que aparece na tela:
+
+- **O "⋮" do topo da conversa**, nesta ordem: **Agendar mensagem** · **Ativar IA
+  pra este lead** · **Marcar como não lida** (ou lida) · **Marcar como resolvida**
+  (resolvida: **Reabrir conversa**) · **Status ▸** Pendente · Pausar conversa (✓
+  no atual; pendente ou pausada, o submenu também tem **Reabrir conversa**) ·
+  **Prioridade ▸** Urgente · Alta · Média · Baixa (✓ na atual; com prioridade,
+  **Remover prioridade**) · **Fixar conversa** · **Arquivar conversa** ·
+  **Atribuir ▸** Atendente · Time · Desvincular corretor / Desvincular equipe (só
+  com vínculo) · separador · **Excluir conversa**.
+- **Saiu "Atribuir etiqueta"**: a seção Etiquetas do painel do lead já faz isso.
+- **Agendar mensagem abre a MESMA janela do "Agendar envio" do card do lead**
+  (`ScheduleActionModal`, com o contato da conversa). Some na oferta da roleta (a
+  janela mostra o telefone) e quando a função `card_schedule_action` está
+  desligada pro cliente (a mesma chave do card).
+- **Seção "Agendados" no painel do lead**, logo depois do Funil, com ícone verde.
+  Só existe quando o lead tem mensagem agendada que ainda não saiu. Cada linha:
+  quando sai ("Amanhã às 09:00", "14/10 às 14:30") e o começo da mensagem (~60
+  letras; mídia vira "Imagem", "Áudio"...; sequência ganha "(+N)"), com o lápis
+  (abre a mesma janela em modo edição, já preenchida) e o ✕ (pergunta "Cancelar
+  esta mensagem agendada?" e cancela). A tela **Ações agendadas** continua fora
+  do menu.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- Menu com submenus, não lista longa. Etiqueta só pelo painel.
+- Agendar reaproveita a janela do card; não existe uma segunda janela de agendar.
+- Agendados só aparece com agendamento pendente (sem "Nenhum agendamento").
+
+Armadilhas:
+
+1. **O "⋮" de verdade está no `ChatHeader`.** O `ConversationActionsDropdown`
+   não é renderizado por nenhuma tela (órfão; ver o comentário no topo do
+   `ChatHeader.spec`). Mexer nele não muda nada pro corretor.
+2. **Submenu precisa do `DropdownMenuPortal`** em volta do
+   `DropdownMenuSubContent`: o conteúdo do menu tem animação (transform) e
+   `overflow-hidden`, e o submenu sem portal fica recortado dentro dele.
+3. **As travas de cada item continuam nos handlers da página de Conversas**
+   (`useConversationHandlers`/`useAssignmentHandlers`: permissão de excluir,
+   desvincular, a pergunta de excluir). O menu só chama.
+4. **Dados dos Agendados:** `GET /scheduled_actions?contact_id=&status=scheduled&action_type=send_message`
+   (o índice do backend já filtra por contato, status e tipo; a janela cria por
+   contato, sem `conversation_id`). Cancelar = `DELETE /scheduled_actions/:id`
+   (vira `cancelled`); editar = `PATCH`. Regras de texto em
+   `src/features/conversas/agendados.ts` (com spec); a seção em
+   `painel/SecaoAgendados.tsx`.
+5. **Quando relê:** ao trocar de lead, quando a conversa mexe
+   (`last_activity_at`: a mensagem agendada que saiu some), a cada minuto, e no
+   aviso `lmflow:agendados-mudaram` (`avisarAgendadosMudaram`), que o "⋮" e o
+   "Agendar envio" do card disparam ao fechar a janela. Header e painel são
+   irmãos na página; o aviso no `window` evita subir estado até o `Chat.tsx`.
+   Só busca com o painel aberto e fora da oferta.
+6. **Data na edição:** a janela lê `scheduled_for.slice(0, 16)`. Funciona porque
+   o backend serializa no fuso de São Paulo (`-03:00`); navegador em outro fuso
+   veria a hora de São Paulo.
+
 ## Visão Geral nova (04/10/2026)
 
 Entrega 6 da Área do Admin (spec `LM FLOW/specs/2026-10-04-admin-visao-geral-entrega-6-design.md`). A Visão Geral tem três abas: **Atenção** (`/admin`, padrão), **Números** (`/admin/numeros`) e **Leads ao vivo**. A tela antiga (`Admin/Area/Overview.tsx`) saiu.

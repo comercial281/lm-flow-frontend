@@ -16,6 +16,7 @@ import SecaoFunil from './painel/SecaoFunil';
 import SecaoEtiquetas from './painel/SecaoEtiquetas';
 import SecaoNotas from './painel/SecaoNotas';
 import SecaoRespostas from './painel/SecaoRespostas';
+import SecaoAgendados from './painel/SecaoAgendados';
 
 interface ContactSidebarProps {
   isOpen: boolean;
@@ -37,8 +38,9 @@ const anuncioDe = (attrs: unknown): Objeto | null => {
 /**
  * O painel do lead ao lado da conversa (Proposta B, 02/10): o resumo no topo e
  * seções simples, uma embaixo da outra, com o conteúdo à vista. Topo (com a
- * faixa de selos) → Conversão Meta (uma linha) → Funil → O que a IA entendeu →
- * Etiquetas → Notas → Respostas do formulário.
+ * faixa de selos) → Conversão Meta (uma linha) → Funil → Agendados (só com
+ * mensagem agendada) → O que a IA entendeu → Etiquetas → Notas → Respostas do
+ * formulário.
  */
 const ContactSidebar: React.FC<ContactSidebarProps> = ({
   isOpen,
@@ -228,6 +230,17 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
               carregando={isLoadingPipelines}
               onAtualizado={handlePipelineUpdated}
               emOferta={emOferta}
+            />
+          )}
+
+          {/* Mensagens agendadas que ainda não saíram; some sem nenhuma. Só com o
+              painel aberto (não relê a cada minuto escondido) e fora da oferta
+              da roleta (editar abre a janela com o telefone do lead). */}
+          {contact && isOpen && !emOferta && (
+            <SecaoAgendados
+              key={`agendados-${contact.id}`}
+              contactId={String(contact.id)}
+              atualizarQuando={conversation?.last_activity_at}
             />
           )}
 

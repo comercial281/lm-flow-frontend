@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Button } from '@evoapi/design-system/button';
 import {
   Tooltip,
@@ -12,7 +12,6 @@ import {
   MessageCircle,
   CheckCircle,
   Clock,
-  Pause,
   Bot,
   BotOff,
   UserCheck,
@@ -24,8 +23,8 @@ import {
   User as UserIcon,
   Users,
   UserMinus,
-  Tag,
   Trash2,
+  CalendarClock,
   Mail,
   MailOpen,
   Unlock,
@@ -34,9 +33,14 @@ import {
 } from 'lucide-react';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuPortal,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@evoapi/design-system/dropdown-menu';
 import { toast } from 'sonner';
@@ -51,6 +55,14 @@ import { useNumerosDaConversa } from '@/features/numbers/useNumerosDaConversa';
 import { useLanguage } from '@/hooks/useLanguage';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { chatService } from '@/services/chat/chatService';
+import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { lazyWithRetry } from '@/utils/chunkReload';
+import { avisarAgendadosMudaram } from '@/features/conversas/agendados';
+
+// A mesma janela de agendamento do card do lead, carregada só quando abre.
+const ScheduleActionModal = lazyWithRetry(() =>
+  import('@/components/scheduledActions/ScheduleActionModal').then(m => ({ default: m.ScheduleActionModal })),
+);
 
 interface ChatHeaderProps {
   conversation: Conversation;
@@ -73,7 +85,6 @@ interface ChatHeaderProps {
   onUnarchiveConversation: (conversation: Conversation) => void;
   onAssignAgent: (conversation: Conversation) => void;
   onAssignTeam: (conversation: Conversation) => void;
-  onAssignTag: (conversation: Conversation) => void;
   onUnassignAgent: (conversation: Conversation) => void;
   onUnassignTeam: (conversation: Conversation) => void;
   onDeleteConversation: (conversation: Conversation) => void;
@@ -100,7 +111,6 @@ const ChatHeader = ({
   onUnarchiveConversation,
   onAssignAgent,
   onAssignTeam,
-  onAssignTag,
   onUnassignAgent,
   onUnassignTeam,
   onDeleteConversation,
@@ -113,6 +123,8 @@ const ChatHeader = ({
   // é o jeito clássico de a janela abrir e fechar sozinha.
   const [menuOpen, setMenuOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [agendando, setAgendando] = useState(false);
+  const canScheduleAction = useFeature('card_schedule_action');
   // Liga/desliga a IA NESTA conversa (pedido do Giovani, 19/08). Usa o mesmo
   // endpoint que o card do Kanban já lê pra pintar o robozinho — POST
   // /conversations/:id/sales_agent — em vez de escrever additional_attributes
@@ -153,6 +165,25 @@ const ChatHeader = ({
 
   const { inboxes } = useNumerosDaConversa();
 
+  // Quem é o lead pra agendar: o contato da conversa (ou o remetente, quando a
+  // conversa veio sem o contato embutido).
+  const contatoId = conversation.contact?.id ?? conversation.meta?.sender?.id ?? null;
+  // Mesma chave do "Agendar envio" do card do lead: desligou lá, some aqui.
+  // Na oferta da roleta não aparece: a janela mostra o telefone do lead.
+  const podeAgendar = canScheduleAction && contatoId != null && !emOferta;
+
+  const prioridades = [
+    { valor: 'urgent' as const, rotulo: 'Urgente', Icone: AlertTriangle, cor: 'text-red-600' },
+    { valor: 'high' as const, rotulo: 'Alta', Icone: ArrowUp, cor: 'text-orange-600' },
+    { valor: 'medium' as const, rotulo: 'Média', Icone: Minus, cor: 'text-blue-600' },
+    { valor: 'low' as const, rotulo: 'Baixa', Icone: ArrowDown, cor: 'text-gray-600' },
+  ];
+
+  // Menu enxuto (pedido do Tony, 04/10/2026): de 17 itens soltos para 9 linhas,
+  // com Status, Prioridade e Atribuir em submenu. "Atribuir etiqueta" saiu: a
+  // seção Etiquetas do painel do lead já faz isso. As regras de cada item
+  // (quando aparece, o que chama) são as mesmas de antes; as travas de
+  // permissão moram nos handlers da página de Conversas.
   const renderConversationStatusDropdown = () => {
     return (
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
@@ -161,8 +192,23 @@ const ChatHeader = ({
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          {/* IA Vendedora — primeiro item de propósito.
+        <DropdownMenuContent align="end" className="w-60">
+          {/* Agendar mensagem: a MESMA janela do "Agendar envio" do card do lead.
+              Fecha o menu antes de abrir a janela (mesma razão da IA, abaixo). */}
+          {podeAgendar && (
+            <DropdownMenuItem
+              onClick={() => {
+                setMenuOpen(false);
+                setAgendando(true);
+              }}
+              className="flex items-center gap-2"
+            >
+              <CalendarClock className="h-4 w-4" />
+              Agendar mensagem
+            </DropdownMenuItem>
+          )}
+
+          {/* IA Vendedora.
               É a ação que resgata o lead que ficou no vácuo (ex.: escreveu fora
               do horário de atuação e não teve resposta): a IA lê a conversa
               inteira e continua de onde parou, sem se reapresentar. Ela existia
@@ -178,9 +224,7 @@ const ChatHeader = ({
             Ativar IA pra este lead
           </DropdownMenuItem>
 
-          <DropdownMenuSeparator />
-
-          {/* Read/Unread Actions */}
+          {/* Lida / não lida */}
           {hasUnreadMessages ? (
             <DropdownMenuItem
               onClick={() => onMarkAsRead(conversation)}
@@ -199,20 +243,16 @@ const ChatHeader = ({
             </DropdownMenuItem>
           )}
 
-          <DropdownMenuSeparator />
-
-          {/* Status Actions */}
-          {currentStatus !== 'open' && (
+          {/* Resolver; resolvida, o mesmo lugar reabre. */}
+          {currentStatus === 'resolved' ? (
             <DropdownMenuItem
               onClick={() => onMarkAsOpen(conversation)}
               className="flex items-center gap-2"
             >
               <MessageCircle className="h-4 w-4" />
-              {t('chatHeader.actions.markAsOpen')}
+              Reabrir conversa
             </DropdownMenuItem>
-          )}
-
-          {currentStatus !== 'resolved' && (
+          ) : (
             <DropdownMenuItem
               onClick={() => onMarkAsResolved(conversation)}
               className="flex items-center gap-2"
@@ -222,72 +262,79 @@ const ChatHeader = ({
             </DropdownMenuItem>
           )}
 
-          {currentStatus !== 'pending' && (
-            <DropdownMenuItem
-              onClick={() => onPostpone(conversation)}
-              className="flex items-center gap-2"
-            >
+          {/* Status ▸ Pendente · Pausar conversa. Pendente ou pausada, o
+              submenu também reabre (antes era o "Marcar como aberta" solto). */}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
-              {t('chatHeader.actions.markAsPending')}
-            </DropdownMenuItem>
-          )}
+              Status
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent className="w-48">
+                <DropdownMenuCheckboxItem
+                  checked={currentStatus === 'pending'}
+                  disabled={currentStatus === 'pending'}
+                  onSelect={() => onPostpone(conversation)}
+                >
+                  Pendente
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={currentStatus === 'snoozed'}
+                  disabled={currentStatus === 'snoozed'}
+                  onSelect={() => onMarkAsSnoozed(conversation)}
+                >
+                  {t('chatHeader.actions.pauseConversation')}
+                </DropdownMenuCheckboxItem>
+                {(currentStatus === 'pending' || currentStatus === 'snoozed') && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => onMarkAsOpen(conversation)}
+                      className="flex items-center gap-2"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Reabrir conversa
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
 
-          {currentStatus !== 'snoozed' && (
-            <DropdownMenuItem
-              onClick={() => onMarkAsSnoozed(conversation)}
-              className="flex items-center gap-2"
-            >
-              <Pause className="h-4 w-4" />
-              {t('chatHeader.actions.pauseConversation')}
-            </DropdownMenuItem>
-          )}
-
-          <DropdownMenuSeparator />
-
-          {/* Priority Actions */}
-          <DropdownMenuItem
-            onClick={() => onSetPriority(conversation, 'urgent')}
-            className="flex items-center gap-2"
-          >
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-            {t('chatHeader.actions.priorityUrgent')}
-          </DropdownMenuItem>
-
-          <DropdownMenuItem
-            onClick={() => onSetPriority(conversation, 'high')}
-            className="flex items-center gap-2"
-          >
-            <ArrowUp className="h-4 w-4 text-orange-600" />
-            {t('chatHeader.actions.priorityHigh')}
-          </DropdownMenuItem>
-
-          <DropdownMenuItem
-            onClick={() => onSetPriority(conversation, 'medium')}
-            className="flex items-center gap-2"
-          >
-            <Minus className="h-4 w-4 text-blue-600" />
-            {t('chatHeader.actions.priorityMedium')}
-          </DropdownMenuItem>
-
-          <DropdownMenuItem
-            onClick={() => onSetPriority(conversation, 'low')}
-            className="flex items-center gap-2"
-          >
-            <ArrowDown className="h-4 w-4 text-gray-600" />
-            {t('chatHeader.actions.priorityLow')}
-          </DropdownMenuItem>
-
-          {conversation.priority && (
-            <DropdownMenuItem
-              onClick={() => onSetPriority(conversation, null)}
-              className="flex items-center gap-2"
-            >
-              <X className="h-4 w-4" />
-              {t('chatHeader.actions.removePriority')}
-            </DropdownMenuItem>
-          )}
-
-          <DropdownMenuSeparator />
+          {/* Prioridade ▸ Urgente · Alta · Média · Baixa, com o ✓ na atual. */}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="flex items-center gap-2">
+              <ArrowUp className="h-4 w-4" />
+              Prioridade
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent className="w-48">
+                {prioridades.map(({ valor, rotulo, Icone, cor }) => (
+                  <DropdownMenuCheckboxItem
+                    key={valor}
+                    checked={conversation.priority === valor}
+                    onSelect={() => onSetPriority(conversation, valor)}
+                    className="gap-2"
+                  >
+                    <Icone className={`h-4 w-4 ${cor}`} />
+                    {rotulo}
+                  </DropdownMenuCheckboxItem>
+                ))}
+                {conversation.priority && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => onSetPriority(conversation, null)}
+                      className="flex items-center gap-2"
+                    >
+                      <X className="h-4 w-4" />
+                      {t('chatHeader.actions.removePriority')}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
 
           <DropdownMenuItem
             onClick={() =>
@@ -315,52 +362,49 @@ const ChatHeader = ({
               : t('chatHeader.actions.archiveConversation')}
           </DropdownMenuItem>
 
-          <DropdownMenuSeparator />
-
-          <DropdownMenuItem
-            onClick={() => onAssignAgent(conversation)}
-            className="flex items-center gap-2"
-          >
-            <UserIcon className="h-4 w-4" />
-            {t('chatHeader.actions.assignAgent')}
-          </DropdownMenuItem>
-
-          <DropdownMenuItem
-            onClick={() => onAssignTeam(conversation)}
-            className="flex items-center gap-2"
-          >
-            <Users className="h-4 w-4" />
-            {t('chatHeader.actions.assignTeam')}
-          </DropdownMenuItem>
-
-          <DropdownMenuItem
-            onClick={() => onAssignTag(conversation)}
-            className="flex items-center gap-2"
-          >
-            <Tag className="h-4 w-4" />
-            {t('chatHeader.actions.assignTag')}
-          </DropdownMenuItem>
-
-          {/* Desvincular corretor/equipe — só aparece quando há vínculo */}
-          {conversation.assignee_id && (
-            <DropdownMenuItem
-              onClick={() => onUnassignAgent(conversation)}
-              className="flex items-center gap-2"
-            >
-              <UserMinus className="h-4 w-4" />
-              {t('chatHeader.actions.unassignAgent')}
-            </DropdownMenuItem>
-          )}
-
-          {conversation.team_id && (
-            <DropdownMenuItem
-              onClick={() => onUnassignTeam(conversation)}
-              className="flex items-center gap-2"
-            >
-              <UserMinus className="h-4 w-4" />
-              {t('chatHeader.actions.unassignTeam')}
-            </DropdownMenuItem>
-          )}
+          {/* Atribuir ▸ Atendente · Time · Desvincular (só com vínculo). */}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="flex items-center gap-2">
+              <UserIcon className="h-4 w-4" />
+              Atribuir
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent className="w-52">
+                <DropdownMenuItem
+                  onClick={() => onAssignAgent(conversation)}
+                  className="flex items-center gap-2"
+                >
+                  <UserIcon className="h-4 w-4" />
+                  Atendente
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onAssignTeam(conversation)}
+                  className="flex items-center gap-2"
+                >
+                  <Users className="h-4 w-4" />
+                  Time
+                </DropdownMenuItem>
+                {conversation.assignee_id && (
+                  <DropdownMenuItem
+                    onClick={() => onUnassignAgent(conversation)}
+                    className="flex items-center gap-2"
+                  >
+                    <UserMinus className="h-4 w-4" />
+                    {t('chatHeader.actions.unassignAgent')}
+                  </DropdownMenuItem>
+                )}
+                {conversation.team_id && (
+                  <DropdownMenuItem
+                    onClick={() => onUnassignTeam(conversation)}
+                    className="flex items-center gap-2"
+                  >
+                    <UserMinus className="h-4 w-4" />
+                    {t('chatHeader.actions.unassignTeam')}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
 
           <DropdownMenuSeparator />
 
@@ -499,6 +543,19 @@ const ChatHeader = ({
 
       {/* Fora do menu de propósito: montada aqui, ela sobrevive ao menu fechar. */}
       <ActivateAiDialog conversation={conversation} open={aiOpen} onOpenChange={setAiOpen} />
+
+      {agendando && contatoId != null && (
+        <Suspense fallback={null}>
+          <ScheduleActionModal
+            open
+            contactId={String(contatoId)}
+            onClose={() => {
+              setAgendando(false);
+              avisarAgendadosMudaram(contatoId);
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };
