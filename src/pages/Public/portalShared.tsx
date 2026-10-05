@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchAllPortalProperties } from './portalProperties';
 import { imovelHref } from './finalidade';
@@ -786,6 +786,18 @@ export function PortalFooter(props: PropsDaMoldura) {
  */
 function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
   const [menuOpen, setMenuOpen] = useState(false);
+  // Escape fecha o menu do celular e devolve o foco ao botão que o abriu.
+  const botaoDoMenu = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setMenuOpen(false);
+      botaoDoMenu.current?.focus();
+    };
+    document.addEventListener('keydown', aoTeclar);
+    return () => document.removeEventListener('keydown', aoTeclar);
+  }, [menuOpen]);
   // Só na home: antes de rolar, o cabeçalho flutua sobre a capa.
   const [scrolled, setScrolled] = useState(!onHome);
   const wa = site.contact?.whatsapp;
@@ -857,7 +869,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
               )}
             </Link>
 
-            <nav className="hidden items-center gap-6 lg:flex">
+            <nav aria-label="Menu principal" className="hidden items-center gap-6 lg:flex">
               {nav.map(l => <LinkDoMenuEl key={l.chave} l={l} cls={desktopCls} />)}
             </nav>
 
@@ -874,7 +886,8 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
                 </a>
               )}
               <button
-                type="button" aria-label="Menu" aria-expanded={menuOpen}
+                ref={botaoDoMenu}
+                type="button" aria-label="Menu" aria-expanded={menuOpen} aria-controls="menu-do-celular"
                 onClick={() => setMenuOpen(o => !o)}
                 className={`inline-flex h-10 w-10 items-center justify-center rounded-full lg:hidden ${roupa.botao}`}
               >
@@ -884,7 +897,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
           </div>
 
           {menuOpen && (
-            <nav className="border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 lg:hidden">
+            <nav id="menu-do-celular" aria-label="Menu principal" className="border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 lg:hidden">
               {nav.map(l => <LinkDoMenuEl key={l.chave} l={l} cls={mobileCls} onClick={() => setMenuOpen(false)} />)}
               {(site.contact?.phone || site.contact?.email) && (
                 <div className="mt-2 border-t border-black/[0.06] pt-2 text-[13px] text-neutral-500">

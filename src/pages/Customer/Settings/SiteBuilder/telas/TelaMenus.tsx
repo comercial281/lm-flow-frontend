@@ -89,7 +89,7 @@ export default function TelaMenus({ site, siteForm, setF, versaoDasPaginas = 0 }
           <>
             <p>A ordem e o nome de cada item no menu do topo do site, no computador e no celular. Arraste pela alça ou use as setas para mudar a ordem. Nome em branco usa o nome de sempre.</p>
             <p className="mt-2">Item sem destino some sozinho do site: aba sem imóvel, Blog sem artigo publicado, página desligada.</p>
-            <p className="mt-2">Depois que você salvar esta tela, o rodapé do site passa a repetir este menu, com as páginas que estiverem nele.</p>
+            <p className="mt-2">Depois que você salvar esta tela pela primeira vez, o rodapé do site passa a repetir este menu, com as páginas que estiverem nele, mesmo que você não tenha mudado nada. Até lá, o rodapé fica como sempre foi.</p>
           </>
         )}
       >
@@ -157,7 +157,8 @@ function ItemDoMenu({ item, primeiro, ultimo, aviso, mudar, mover }: ItemProps) 
     <Reorder.Item value={item} dragListener={false} dragControls={controles} className="list-none">
       <div className="space-y-2 rounded-lg border border-border bg-card p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" aria-label="Arrastar pra mudar a ordem" title="Arrastar pra mudar a ordem"
+          {/* Fora do Tab: pelo teclado a ordem muda com Subir/Descer. */}
+          <button type="button" tabIndex={-1} aria-label="Arrastar pra mudar a ordem" title="Arrastar pra mudar a ordem"
             onPointerDown={e => controles.start(e)}
             className="flex-none cursor-grab touch-none text-muted-foreground hover:text-foreground">
             <GripVertical className="h-4 w-4" aria-hidden />

@@ -155,3 +155,50 @@ describe('menuPersonalizado', () => {
     expect(com([...fabrica.slice(0, 7), fabrica[9], fabrica[7], fabrica[8]])).toBe(true);
   });
 });
+
+describe('saved (o cliente salvou a tela Menus)', () => {
+  const paginas = [{ title: 'A', slug: 'a' }, { title: 'B', slug: 'b' }];
+  const fabrica = [...FABRICA.slice(0, 7), fixo('page:a', { page_title: 'A' }), fixo('page:b', { page_title: 'B' }), fixo('blog')];
+
+  it('resolverMenu devolve saved: true/false quando o servidor manda; null quando não manda', () => {
+    expect(resolverMenu({ items: fabrica, external: [], saved: true })!.saved).toBe(true);
+    expect(resolverMenu({ items: fabrica, external: [], saved: false })!.saved).toBe(false);
+    expect(resolverMenu({ items: fabrica, external: [] })!.saved).toBeNull();
+    expect(resolverMenu({ items: fabrica, external: [], saved: 'sim' })!.saved).toBeNull();
+  });
+
+  it('saved: true com o menu de fábrica: repete o menu', () => {
+    expect(menuPersonalizado({ menu: paginas, menu_config: { items: fabrica, external: [], saved: true } })).toBe(true);
+  });
+
+  it('saved: false com duas páginas na mesma posição (ordem diferente da lista antiga): o rodapé de antes', () => {
+    const bAntes = [...fabrica.slice(0, 7), fabrica[8], fabrica[7], fabrica[9]];
+    expect(menuPersonalizado({ menu: paginas, menu_config: { items: bAntes, external: [], saved: false } })).toBe(false);
+    // E nem um nome trocado vence o saved: false (o servidor é quem sabe).
+    const renomeado = fabrica.map(i => (i.key === 'blog' ? { ...i, label: 'Notícias' } : i));
+    expect(menuPersonalizado({ menu: paginas, menu_config: { items: renomeado, external: [], saved: false } })).toBe(false);
+  });
+
+  it('servidor sem o campo: decide pela comparação com a fábrica', () => {
+    const bAntes = [...fabrica.slice(0, 7), fabrica[8], fabrica[7], fabrica[9]];
+    expect(menuPersonalizado({ menu: paginas, menu_config: { items: bAntes, external: [] } })).toBe(true);
+    expect(menuPersonalizado({ menu: paginas, menu_config: { items: fabrica, external: [] } })).toBe(false);
+  });
+});
+
+describe('rótulo e link externo: casos de borda', () => {
+  it('rótulo corta por caractere: emoji no limite não vira meio caractere', () => {
+    const rotulo = `${'a'.repeat(39)}🏠🏠`;
+    const m = resolverMenu({ items: [{ key: 'sale', label: rotulo }] })!;
+    expect(m.items[0].label).toBe(`${'a'.repeat(39)}🏠`);
+    expect([...m.items[0].label!]).toHaveLength(40);
+    expect(m.items[0].label!.endsWith('\uD83C')).toBe(false);
+  });
+
+  it('endereço com usuário ou senha não vale', () => {
+    expect(urlExterna('https://fulano@creci.org.br')).toBeNull();
+    expect(urlExterna('https://fulano:senha@creci.org.br')).toBeNull();
+    expect(urlExterna('https://:senha@creci.org.br')).toBeNull();
+    expect(urlExterna('https://creci.org.br/a@b')).toBe('https://creci.org.br/a@b');
+  });
+});

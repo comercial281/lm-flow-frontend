@@ -511,6 +511,31 @@ describe('SiteBuilder (casca do Meu site)', () => {
       await waitFor(() => expect(barra()).toBeNull());
     });
 
+    it('Descartar zera aparenciaAlterada e menuAlterado: salvar outra coisa depois não leva os blocos', async () => {
+      mocks.updateSite.mockResolvedValue(SITE);
+      abrir('/settings/site-builder?tela=aparencia');
+      await screen.findByRole('heading', { name: 'Aparência' });
+      fireEvent.click(within(screen.getByRole('group', { name: 'Fundo do site' })).getByRole('button', { name: /^Escuro/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'Descartar' }));
+      await waitFor(() => expect(mocks.listSites).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(barra()).toBeNull());
+
+      await userEvent.click(screen.getByRole('button', { name: /Personalizar/ }));
+      await userEvent.click(await screen.findByRole('menuitem', { name: /Menus/ }));
+      await userEvent.click(await screen.findByLabelText('Mostrar Alugar no menu'));
+      fireEvent.click(screen.getByRole('button', { name: 'Descartar' }));
+      await waitFor(() => expect(mocks.listSites).toHaveBeenCalledTimes(3));
+      await waitFor(() => expect(barra()).toBeNull());
+
+      await userEvent.click(screen.getByRole('button', { name: /Configurações/ }));
+      await userEvent.click(await screen.findByRole('menuitem', { name: /Dados de contato/ }));
+      await userEvent.type(await screen.findByLabelText('Telefone'), '11999990000');
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+      await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
+      expect(mocks.updateSite.mock.calls[0][1]).not.toHaveProperty('appearance');
+      expect(mocks.updateSite.mock.calls[0][1]).not.toHaveProperty('menu');
+    });
+
     it('salvar uma página na tela Páginas não vira alteração não salva do site', async () => {
       mocks.updatePage.mockResolvedValue({ ...PAGINA, in_menu: false });
       abrir('/settings/site-builder?tela=paginas');

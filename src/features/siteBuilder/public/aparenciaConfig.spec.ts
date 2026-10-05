@@ -49,6 +49,10 @@ describe('resolverAparencia', () => {
   it('texto do rodapé: em branco vira nulo (a frase de fábrica) e o teto é 200', () => {
     expect(resolverAparencia({ footer_text: '   ' }).footer_text).toBeNull();
     expect(resolverAparencia({ footer_text: 'a'.repeat(250) }).footer_text).toHaveLength(200);
+    // Corta por caractere: 199 letras + 2 emojis = 200 caracteres com o 1º emoji inteiro.
+    const comEmoji = resolverAparencia({ footer_text: `${'a'.repeat(199)}🏠🏠` }).footer_text!;
+    expect(comEmoji).toBe(`${'a'.repeat(199)}🏠`);
+    expect([...comEmoji]).toHaveLength(200);
   });
 });
 

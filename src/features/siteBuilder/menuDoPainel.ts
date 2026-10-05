@@ -36,6 +36,16 @@ export function nomeDeFabrica(item: { key: string; page_title: string | null }):
   return NOME_DE_FABRICA[item.key as ChaveFixa] ?? item.key;
 }
 
+/** `https://usuario:senha@site`: o site recusa (`urlExterna`), e o aviso diz o porquê. */
+function temUsuarioOuSenha(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return !!(u.username || u.password);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Avisos de um link externo, campo a campo (null = sem aviso). O servidor
  * descarta em silêncio link sem nome ou fora de http(s): a tela avisa antes.
@@ -46,7 +56,9 @@ export function avisosDoExterno(e: { label: string; url: string }): { nome: stri
     nome: rotuloLimpo(e.label) ? null : 'Sem nome, o link não é salvo.',
     endereco: !url
       ? 'Sem endereço, o link não é salvo.'
-      : urlExterna(url) ? null : 'Sem um endereço que comece com http:// ou https://, o link não é salvo.',
+      : urlExterna(url) ? null
+      : temUsuarioOuSenha(url) ? 'Endereço com usuário ou senha não é salvo.'
+      : 'Sem um endereço que comece com http:// ou https://, o link não é salvo.',
   };
 }
 

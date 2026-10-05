@@ -169,7 +169,6 @@ describe('TelaAparencia · visual do site (C3)', () => {
     const espiao = vi.fn();
     render(<Montar espiao={espiao} />);
     const campo = screen.getByLabelText('Frase do rodapé') as HTMLTextAreaElement;
-    expect(campo.maxLength).toBe(200);
     await userEvent.type(campo, 'Desde 1998');
     expect(espiao.mock.calls.at(-1)![0].appearance.footer_text).toBe('Desde 1998');
     expect(screen.getByText(/^10 de 200 caracteres/)).toBeTruthy();
@@ -194,5 +193,23 @@ describe('TelaAparencia · visual do site (C3)', () => {
       'aba escolhida na busca', 'selo da fase', 'preço das plantas', 'links', 'barrinha da página de manutenção']) {
       expect(ajuda).toContain(parte);
     }
+  });
+
+  it('o contador da frase do rodapé conta por caractere e corta no 200º (emoji inteiro)', () => {
+    const espiao = vi.fn();
+    render(<Montar espiao={espiao} />);
+    const campo = screen.getByLabelText('Frase do rodapé');
+    fireEvent.change(campo, { target: { value: '🏠🏠' } });
+    expect(screen.getByText(/^2 de 200 caracteres/)).toBeTruthy();
+    fireEvent.change(campo, { target: { value: `${'a'.repeat(199)}🏠🏠` } });
+    expect(espiao.mock.calls.at(-1)![0].appearance.footer_text).toBe(`${'a'.repeat(199)}🏠`);
+    expect(screen.getByText(/^200 de 200 caracteres/)).toBeTruthy();
+  });
+
+  it('a miniatura "Na cor principal" desenha o texto com a cor legível sobre a marca', () => {
+    render(<Montar espiao={vi.fn()} inicial={{ primary_color: '#FACC15' }} />);
+    const botao = within(screen.getByRole('group', { name: 'Estilo do topo' })).getByRole('button', { name: /^Na cor principal/ });
+    const barra = [...botao.querySelectorAll('span')].find(el => (el as HTMLElement).style.background === 'rgb(250, 204, 21)')!;
+    expect((barra.firstElementChild as HTMLElement).style.background).toBe('rgb(23, 20, 15)');
   });
 });

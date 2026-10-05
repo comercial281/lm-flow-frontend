@@ -136,3 +136,42 @@ describe('rodapé', () => {
     expect(coluna(c, 'Institucional')).toBeNull();
   });
 });
+
+describe('rodapé pelo saved', () => {
+  it('saved: true com o menu de fábrica: o rodapé repete o menu (com a página criada)', async () => {
+    const c = await montar(<PortalFooter site={{ ...base, menu_config: { items: comPagina(FABRICA), external: [], saved: true } }} tenant="imob" />);
+    expect(coluna(c, 'Institucional')).toContain('Quem somos');
+    expect(coluna(c, 'Institucional')).toContain('Sobre');
+    expect(coluna(c, 'Institucional')).not.toContain('Sobre nós');
+  });
+
+  it('saved: false com duas páginas na mesma posição: o rodapé de antes', async () => {
+    const outra = fixo('page:outra', { page_title: 'Outra' });
+    const site: SiteInfo = {
+      ...base,
+      menu: [{ title: 'Quem somos', slug: 'quem-somos' }, { title: 'Outra', slug: 'outra' }],
+      // Mesma posição: o menu_config veio na ordem contrária à da lista antiga.
+      menu_config: { items: [...FABRICA.slice(0, 7), outra, PAGINA, ...FABRICA.slice(7)], external: [], saved: false },
+    };
+    const c = await montar(<PortalFooter site={site} tenant="imob" />);
+    expect(coluna(c, 'Institucional')).toEqual(['Sobre nós', 'Contato', 'Anuncie seu imóvel', 'Financiamento']);
+  });
+});
+
+describe('menu do topo: acessibilidade', () => {
+  it('os dois nav se chamam "Menu principal"; o botão controla o menu do celular; Escape fecha e devolve o foco', async () => {
+    const c = await montar(<PortalHeader site={{ ...base, menu_config: MEXIDO }} tenant="imob" />);
+    const botao = c.querySelector('button[aria-label="Menu"]') as HTMLButtonElement;
+    expect(botao.getAttribute('aria-controls')).toBe('menu-do-celular');
+    act(() => { fireEvent.click(botao); });
+    const navs = [...c.querySelectorAll('header nav')];
+    expect(navs.map(n => n.getAttribute('aria-label'))).toEqual(['Menu principal', 'Menu principal']);
+    expect(navs[1].id).toBe('menu-do-celular');
+    expect(botao.getAttribute('aria-expanded')).toBe('true');
+    (navs[1].querySelector('a') as HTMLElement).focus();
+    act(() => { fireEvent.keyDown(document, { key: 'Escape' }); });
+    expect(c.querySelector('#menu-do-celular')).toBeNull();
+    expect(botao.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(botao);
+  });
+});

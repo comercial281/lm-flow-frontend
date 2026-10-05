@@ -14,28 +14,39 @@ import { resolverHome } from '@/features/siteBuilder/public/homeConfig';
    capa de ANTES do C3.
 
    `__fixtures__/moldura-antes-do-c3.json` foi gravado rodando ESTE arquivo no
-   commit c72c0c39 (main antes do C3), com `GERAR_MOLDURA=<caminho>`:
-     git worktree add /tmp/antes c72c0c39 && cp este spec lá &&
-     GERAR_MOLDURA=$PWD/src/pages/Public/__fixtures__/moldura-antes-do-c3.json \
-       npx vitest run src/pages/Public/molduraAntesDoC3.spec.tsx   (dentro de /tmp/antes)
+   commit c72c0c39 (main antes do C3). Comando único, completo, a partir da
+   raiz deste repositório (no c72c0c39 a pasta __fixtures__ não existe):
+     git worktree add /tmp/antes c72c0c39 &&
+     cp src/pages/Public/molduraAntesDoC3.spec.tsx /tmp/antes/src/pages/Public/ &&
+     mkdir -p /tmp/antes/src/pages/Public/__fixtures__ &&
+     (cd /tmp/antes && npx -y pnpm@9 install --no-frozen-lockfile &&
+       GERAR_MOLDURA=/tmp/antes/src/pages/Public/__fixtures__/moldura-antes-do-c3.json \
+       MOLDURA_DO_CODIGO_ANTIGO=c72c0c39 NODE_OPTIONS=--no-experimental-webstorage \
+       npx vitest run src/pages/Public/molduraAntesDoC3.spec.tsx -t 'gera ou confere') &&
+     cp /tmp/antes/src/pages/Public/__fixtures__/moldura-antes-do-c3.json src/pages/Public/__fixtures__/ &&
+     git worktree remove --force /tmp/antes
+   (`-t 'gera ou confere'`: só o teste que grava; os outros conferem o código
+   novo e falhariam lá, cortando o `&&`.)
    Não regravar a partir do código novo: aí o teste passa a provar nada.
 
    TRAVA: com `GERAR_MOLDURA` definido, o spec só regrava se receber também
    `MOLDURA_DO_CODIGO_ANTIGO=c72c0c39` E o `git rev-parse HEAD` de onde ele
    roda começar por `c72c0c39`. Em qualquer outro caso ele FALHA, com a
-   mensagem dizendo por quê. O comando completo, dentro de /tmp/antes:
-     GERAR_MOLDURA=<caminho> MOLDURA_DO_CODIGO_ANTIGO=c72c0c39 \
-       npx vitest run src/pages/Public/molduraAntesDoC3.spec.tsx
+   mensagem dizendo por quê.
 
-   Única diferença aceita, decidida no C3 e normalizada abaixo: o "LM Flow" do
-   crédito do rodapé virou link pro site do LM Flow. (As variáveis novas da raiz
+   Diferenças aceitas, decididas no C3 e normalizadas abaixo, cada uma por
+   regex do atributo exato: (1) o "LM Flow" do crédito do rodapé virou link
+   pro site do LM Flow; (2) acessibilidade do menu do topo: os `nav` ganharam
+   `aria-label="Menu principal"` e o botão do menu do celular ganhou
+   `aria-controls="menu-do-celular"`. (As variáveis novas da raiz
    e o `var(--solid)` não aparecem nestes trechos: moram na raiz da página e nos
    cartões/botões, fora do topo, rodapé e capa.)
 
    Menu (C3, Task 9): o servidor novo manda `menu_config` sempre, e pra quem
-   nunca salvou a tela Menus ele é o de fábrica. Com ele, topo e rodapé têm
-   de sair iguais ao fixture também (terceiro teste). O rodapé só passa a
-   repetir o menu depois que o cliente mexe nele: isso não aparece aqui.
+   nunca salvou a tela Menus ele é o de fábrica, com `saved: false`. Com ele,
+   topo e rodapé têm de sair iguais ao fixture também. Com `saved: true` (o
+   cliente salvou a tela Menus, mesmo sem mudar nada) o rodapé passa a repetir
+   o menu: diferença decidida, conferida no último teste.
 ──────────────────────────────────────────────────────────────────────────── */
 
 const FIXTURES = join(__dirname, '__fixtures__', 'moldura-antes-do-c3.json');
@@ -81,6 +92,7 @@ const MENU_DE_FABRICA = {
     { key: 'blog', label: null, enabled: true },
   ],
   external: [],
+  saved: false,
 };
 
 async function capturar(extra: Partial<SiteInfo> = {}): Promise<Record<string, string>> {
@@ -110,8 +122,13 @@ async function capturar(extra: Partial<SiteInfo> = {}): Promise<Record<string, s
   return r;
 }
 
-/** O crédito ganhou o link no C3 (decidido): volta ao texto de antes pra comparar. */
-const normalizar = (h: string) => h.replace(/feito com <a href="https:\/\/lmflow\.com\.br" target="_blank" rel="noopener"[^>]*>LM Flow<\/a>\./g, 'feito com LM Flow.');
+/** (1) O crédito ganhou o link no C3 (decidido): volta ao texto de antes pra comparar. */
+const tirarCredito = (h: string) => h.replace(/feito com <a href="https:\/\/lmflow\.com\.br" target="_blank" rel="noopener"[^>]*>LM Flow<\/a>\./g, 'feito com LM Flow.');
+/** (2) Acessibilidade do menu (decidida): só estes atributos, exatos. */
+const tirarAcessibilidadeDoMenu = (h: string) => h
+  .replace(/<nav aria-label="Menu principal" class="/g, '<nav class="')
+  .replace(/ aria-expanded="(true|false)" aria-controls="menu-do-celular"/g, ' aria-expanded="$1"');
+const normalizar = (h: string) => tirarAcessibilidadeDoMenu(tirarCredito(h));
 
 /** Só regrava no código de ANTES do C3 e com a confirmação explícita; senão falha. */
 const COMMIT_ANTIGO = 'c72c0c39';
@@ -147,13 +164,24 @@ describe('site sem appearance: topo, faixa de cima, rodapé e capa de antes do C
     }
   });
 
-  it('a única diferença normalizada é a do crédito, e ela está mesmo lá', async () => {
+  it('as diferenças normalizadas são só o crédito e os atributos do menu, e estão mesmo lá', async () => {
     const antes = JSON.parse(readFileSync(FIXTURES, 'utf8')) as Record<string, string>;
     const agora = await capturar();
     expect(antes.rodape).toContain('feito com LM Flow.');
     expect(agora.rodape).toContain('feito com <a href="https://lmflow.com.br"');
     const mudaram = Object.keys(antes).filter(k => agora[k] !== antes[k]);
-    expect(mudaram).toEqual(['rodape', 'rodape-home-sem-logo']);
+    const doRodape = ['rodape', 'rodape-home-sem-logo'];
+    const doTopo = mudaram.filter(k => !doRodape.includes(k));
+    expect(mudaram.filter(k => doRodape.includes(k))).toEqual(doRodape);
+    expect(doTopo).toEqual(['topo-home-flutuando', 'topo-home-flutuando-sem-logo', 'topo-home-rolado',
+      'topo-interno', 'topo-interno-sem-logo', 'topo-interno-previa']);
+    // Cada diferença é SÓ o atributo dela: tirar só ele já devolve o de antes.
+    for (const k of doRodape) expect(tirarCredito(agora[k]), k).toBe(antes[k]);
+    for (const k of doTopo) {
+      expect(agora[k], k).toContain('<nav aria-label="Menu principal" class="hidden items-center gap-6 lg:flex">');
+      expect(agora[k], k).toContain('aria-controls="menu-do-celular"');
+      expect(tirarAcessibilidadeDoMenu(agora[k]), k).toBe(antes[k]);
+    }
   });
 
   it('com o menu de fábrica do servidor novo (menu_config), topo e rodapé iguais ao fixture', async () => {
@@ -162,5 +190,18 @@ describe('site sem appearance: topo, faixa de cima, rodapé e capa de antes do C
     for (const k of Object.keys(antes)) {
       expect(normalizar(agora[k]), k).toBe(antes[k]);
     }
+  });
+
+  it('menu salvo (saved: true) igual ao de fábrica: o rodapé passa a repetir o menu (diferença decidida); o topo não muda', async () => {
+    const antes = JSON.parse(readFileSync(FIXTURES, 'utf8')) as Record<string, string>;
+    const agora = await capturar({ menu_config: { ...MENU_DE_FABRICA, saved: true } });
+    const doRodape = ['rodape', 'rodape-home-sem-logo'];
+    for (const k of Object.keys(antes).filter(x => !doRodape.includes(x))) {
+      expect(normalizar(agora[k]), k).toBe(antes[k]);
+    }
+    // O de antes não tinha a página criada no rodapé; o menu salvo tem.
+    expect(antes.rodape).not.toContain('/portal/imob/p/quem-somos');
+    expect(agora.rodape).toContain('href="/portal/imob/p/quem-somos"');
+    expect(normalizar(agora.rodape)).not.toBe(antes.rodape);
   });
 });

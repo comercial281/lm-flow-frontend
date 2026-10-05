@@ -93,6 +93,9 @@ describe('avisosDoExterno', () => {
     expect(avisosDoExterno({ label: 'CRECI', url: '' }).endereco).toBe('Sem endereço, o link não é salvo.');
     expect(avisosDoExterno({ label: ' ', url: 'https://x.com' }).nome).toBe('Sem nome, o link não é salvo.');
     expect(avisosDoExterno({ label: 'CRECI', url: 'https://imobiliária.com.br' })).toEqual({ nome: null, endereco: null });
+    expect(avisosDoExterno({ label: 'CRECI', url: 'https://fulano:senha@creci.org.br' }).endereco)
+      .toBe('Endereço com usuário ou senha não é salvo.');
+    expect(menuParaGravar({ items: [], external: [{ label: 'CRECI', url: 'https://fulano@creci.org.br' }] }).external).toEqual([]);
   });
 });
 

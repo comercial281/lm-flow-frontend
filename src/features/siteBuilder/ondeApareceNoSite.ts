@@ -10,12 +10,16 @@
 //   `two_phones` telefone, e-mail e o nome das redes; `one_phone` o telefone (o
 //   e-mail só quando não há telefone) e o nome das redes; `icons` os mesmos,
 //   só o ícone; `hidden` nada;
+// - o menu do celular (topo, fora da manutenção) mostra telefone e e-mail;
 // - a página de manutenção mostra WhatsApp, telefone e e-mail.
 import { APARENCIA_FABRICA, type Aparencia } from './public/aparenciaConfig';
 
 const FAIXA = 'no computador, na faixa de cima das páginas internas';
 
-/** Ajuda do telefone ou do e-mail. */
+/**
+ * Ajuda do telefone ou do e-mail. O menu do celular (topo, fora da
+ * manutenção) mostra os dois SEMPRE, qualquer que seja a Aparência.
+ */
 export function ondeApareceContato(apOuNada: Aparencia | undefined, contato: 'telefone' | 'email'): string {
   const ap = apOuNada ?? APARENCIA_FABRICA;
   const rodape = ap.footer_layout === 'columns';
@@ -24,11 +28,11 @@ export function ondeApareceContato(apOuNada: Aparencia | undefined, contato: 'te
     ap.top_bar === 'icons' ? 'só o ícone' : null,
     contato === 'email' && ap.top_bar === 'one_phone' ? 'só quando não há telefone' : null,
   ].filter(Boolean).map(d => `, ${d}`).join('');
-  const ligar = contato === 'telefone' && rodape ? ' No celular, quem toca no número já liga.' : '';
-  if (rodape && faixa) return `Aparece no rodapé de todas as páginas e, ${FAIXA}${detalhe}.${ligar}`;
-  if (rodape) return `Aparece no rodapé de todas as páginas.${ligar}`;
-  if (faixa) return `Aparece só ${FAIXA}${detalhe}. O rodapé compacto não mostra.`;
-  return 'Com o rodapé compacto e sem a faixa de cima, aparece só na página de manutenção.';
+  const ligar = contato === 'telefone' ? ' No celular, quem toca no número já liga.' : '';
+  if (rodape && faixa) return `Aparece no rodapé de todas as páginas, no menu do celular e, ${FAIXA}${detalhe}.${ligar}`;
+  if (rodape) return `Aparece no rodapé de todas as páginas e no menu do celular.${ligar}`;
+  if (faixa) return `Aparece no menu do celular e, ${FAIXA}${detalhe}. O rodapé compacto não mostra.${ligar}`;
+  return `Com o rodapé compacto e sem a faixa de cima, aparece só no menu do celular e na página de manutenção.${ligar}`;
 }
 
 /** Ajuda do endereço: só o rodapé em colunas mostra. */

@@ -82,7 +82,7 @@ describe('TelaPaginas', () => {
     await abrirEdicao();
     await userEvent.click(screen.getByRole('button', { name: 'Imagem' }));
     await userEvent.type(screen.getByLabelText('Endereço da imagem'), 'www.foto.com/a.jpg');
-    expect(screen.getByText(/Use um endereço que comece com https:\/\//)).toBeTruthy();
+    expect(screen.getByText('Use um endereço que comece com http:// ou https://. Imagem com outro endereço não é salva.')).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Pôr a imagem' }) as HTMLButtonElement).disabled).toBe(true);
     await userEvent.clear(screen.getByLabelText('Endereço da imagem'));
     await userEvent.type(screen.getByLabelText('Endereço da imagem'), 'https://cdn.x/fachada.jpg');

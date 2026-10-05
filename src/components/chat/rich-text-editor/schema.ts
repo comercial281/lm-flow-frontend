@@ -95,6 +95,10 @@ export const landingTextSchema = new Schema({
   }),
 });
 
+/** Destinos que a página do site aceita (os mesmos que o servidor guarda). */
+const LINK_ACEITO = /^(https?:\/\/|mailto:|tel:|\/(?![/\\]))/i;
+const IMAGEM_ACEITA = /^https?:\/\//i;
+
 /**
  * Esquema das PÁGINAS do site (Meu site › Páginas). Só o que o servidor guarda
  * ao gravar (Page.clean_html: `h2 h3 p ul ol li a img strong em blockquote br`):
@@ -162,9 +166,13 @@ export const paginaDoSiteSchema = new Schema({
       attrs: { src: {}, alt: { default: '' } },
       parseDOM: [{
         tag: 'img[src]',
-        getAttrs: (dom: HTMLElement | string) => (typeof dom === 'string'
-          ? false
-          : { src: dom.getAttribute('src') ?? '', alt: dom.getAttribute('alt') ?? '' }),
+        // Só imagem http(s): o servidor tira a outra ao gravar, e `data:`/`javascript:`
+        // nem entram no editor.
+        getAttrs: (dom: HTMLElement | string) => {
+          if (typeof dom === 'string') return false;
+          const src = (dom.getAttribute('src') ?? '').trim();
+          return IMAGEM_ACEITA.test(src) ? { src, alt: dom.getAttribute('alt') ?? '' } : false;
+        },
       }],
       toDOM(node) { return ['img', { src: node.attrs.src as string, alt: node.attrs.alt as string }]; },
     },
@@ -182,7 +190,14 @@ export const paginaDoSiteSchema = new Schema({
       inclusive: false,
       parseDOM: [{
         tag: 'a[href]',
-        getAttrs: (dom: HTMLElement | string) => ({ href: typeof dom === 'string' ? dom : (dom.getAttribute('href') ?? '') }),
+        // Os mesmos destinos que o servidor guarda: http(s), mailto:, tel: e
+        // caminho do site ("/imoveis", nunca "//outro-site"). Fora disso, o
+        // link some e o texto fica.
+        getAttrs: (dom: HTMLElement | string) => {
+          if (typeof dom === 'string') return false;
+          const href = (dom.getAttribute('href') ?? '').trim();
+          return LINK_ACEITO.test(href) ? { href } : false;
+        },
       }],
       toDOM(mark) { return ['a', { href: mark.attrs.href as string }, 0]; },
     },

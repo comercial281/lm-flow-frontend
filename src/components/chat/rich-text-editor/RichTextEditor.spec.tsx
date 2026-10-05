@@ -72,4 +72,20 @@ describe('RichTextEditor → páginas do site (paginaDoSiteSchema)', () => {
     expect(queryByTitle('Imagem')).toBeNull();
     expect(queryByTitle('Título')).toBeTruthy();
   });
+
+  it('link só http(s), mailto:, tel: e caminho do site; imagem só http(s): o resto some (o texto fica)', async () => {
+    const { htmlComoOEditorDevolve } = await import('./conteudoDoEditor');
+    const { paginaDoSiteSchema } = await import('./schema');
+    const html = htmlComoOEditorDevolve(
+      '<p><a href="javascript:alert(1)">js</a> <a href="//outro.com">dupla</a> <a href="ftp://x.com">ftp</a> '
+      + '<a href="/imoveis">busca</a> <a href="mailto:a@b.com">mail</a> <a href="tel:11999">tel</a> <a href="https://x.com">web</a> '
+      + '<img src="data:image/png;base64,AAA" alt="d"><img src="javascript:x" alt="j"><img src="https://x.com/i.png" alt="ok"></p>',
+      paginaDoSiteSchema,
+    );
+    expect(html).toBe(
+      '<p>js dupla ftp <a href="/imoveis">busca</a> <a href="mailto:a@b.com">mail</a> <a href="tel:11999">tel</a> '
+      + '<a href="https://x.com">web</a> <img src="https://x.com/i.png" alt="ok"></p>',
+    );
+  });
 });
+

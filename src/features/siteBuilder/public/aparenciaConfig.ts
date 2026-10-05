@@ -36,6 +36,14 @@ export interface Aparencia {
 export const FILTRO_FABRICA = 45;
 export const FILTRO_MAXIMO = 80;
 export const TETO_TEXTO_RODAPE = 200;
+
+/**
+ * Corta por caractere (code point), como o servidor (Ruby conta caractere):
+ * `String.slice` conta unidade UTF-16, e um emoji (2 unidades) no limite
+ * viraria meio caractere quebrado, ou o contador da tela não bateria.
+ */
+export const contarCaracteres = (t: string) => [...t].length;
+export const cortarCaracteres = (t: string, teto: number) => [...t].slice(0, teto).join('');
 export const TEXTO_RODAPE_FABRICA = 'Seu portal de imóveis com atendimento de verdade.';
 
 export const APARENCIA_FABRICA: Aparencia = {
@@ -59,7 +67,7 @@ export function resolverAparencia(raw: unknown): Aparencia {
   const filtro = typeof r.hero_overlay === 'number' && Number.isFinite(r.hero_overlay)
     ? Math.round(Math.min(FILTRO_MAXIMO, Math.max(0, r.hero_overlay)))
     : FILTRO_FABRICA;
-  const texto = typeof r.footer_text === 'string' ? r.footer_text.trim().slice(0, TETO_TEXTO_RODAPE) : '';
+  const texto = typeof r.footer_text === 'string' ? cortarCaracteres(r.footer_text.trim(), TETO_TEXTO_RODAPE).trim() : '';
   return {
     background: umDe(FUNDOS, r.background, APARENCIA_FABRICA.background),
     header_style: umDe(ESTILOS_DO_TOPO, r.header_style, APARENCIA_FABRICA.header_style),

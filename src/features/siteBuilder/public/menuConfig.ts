@@ -39,7 +39,15 @@ export const NOME_DE_FABRICA: Record<ChaveFixa, string> = {
 
 export interface ItemDoMenu { key: string; label: string | null; enabled: boolean; page_title: string | null }
 export interface LinkExterno { label: string; url: string }
-export interface MenuDoSite { items: ItemDoMenu[]; external: LinkExterno[] }
+export interface MenuDoSite {
+  items: ItemDoMenu[];
+  external: LinkExterno[];
+  /**
+   * O cliente já salvou a tela Menus (`settings['menu']` existe no servidor)?
+   * `null` quando o servidor não manda o campo (servidor anterior ao `saved`).
+   */
+  saved?: boolean | null;
+}
 
 /** Link pronto pro topo e pro rodapé. */
 export interface LinkDoMenu {
@@ -69,7 +77,9 @@ export function rotuloLimpo(v: unknown): string | null {
   if (typeof v !== 'string') return null;
   // eslint-disable-next-line no-control-regex
   const t = v.replace(/[\u0000-\u001F\u007F]/g, ' ').replace(/\s+/g, ' ').trim();
-  return t ? t.slice(0, ROTULO_MAX).trim() : null;
+  // Corta por caractere (code point), não por unidade UTF-16: um emoji no
+  // limite não vira meio caractere quebrado.
+  return t ? [...t].slice(0, ROTULO_MAX).join('').trim() : null;
 }
 
 /**
@@ -84,6 +94,8 @@ export function urlExterna(v: unknown): string | null {
   try {
     const u = new URL(t);
     if ((u.protocol !== 'http:' && u.protocol !== 'https:') || !u.hostname) return null;
+    // `https://usuario:senha@site` engana quem lê o link: não vale.
+    if (u.username || u.password) return null;
     return u.href;
   } catch {
     return null;
@@ -133,7 +145,7 @@ export function resolverMenu(raw: unknown): MenuDoSite | null {
     .filter((x): x is LinkExterno => !!x)
     .slice(0, EXTERNOS_MAX);
 
-  return { items, external };
+  return { items, external, saved: typeof m.saved === 'boolean' ? m.saved : null };
 }
 
 /** O menu de antes do C3: os fixos na ordem de sempre e as páginas da lista antiga. */
@@ -145,6 +157,7 @@ function menuDeAntes(site: Pick<SiteInfo, 'menu'>): MenuDoSite {
   return {
     items: [...CHAVES_ANTES_DAS_PAGINAS.map(fixo), ...paginas, ...CHAVES_DEPOIS_DAS_PAGINAS.map(fixo)],
     external: [],
+    saved: null,
   };
 }
 
@@ -154,17 +167,19 @@ export function menuDoSite(site: Pick<SiteInfo, 'menu' | 'menu_config'>): MenuDo
 }
 
 /**
- * O cliente já mexeu no menu? `menu_config` igual ao de fábrica (como o
- * servidor manda pra quem nunca salvou a tela Menus) conta como não mexido:
- * nada de externo nem nome trocado, todo fixo ligado, a ordem de fábrica e as
- * páginas ligadas na ordem da lista antiga. Sem `menu_config`, também não.
+ * O rodapé repete o menu? Quem decide é o servidor, pelo `saved` (o cliente
+ * já salvou a tela Menus): `true` repete, mesmo com o menu igual ao de
+ * fábrica; `false` fica o rodapé de antes do C3 (Review Focus 5), mesmo se a
+ * ordem das páginas parecer diferente (duas na mesma posição).
  *
- * O rodapé usa isto: enquanto o menu é o de fábrica, o rodapé é o de antes do
- * C3 (Review Focus 5); depois que o cliente mexe, ele repete o menu.
+ * Servidor sem o campo (`saved` null): decide pela comparação com a fábrica,
+ * nada de externo nem nome trocado, todo fixo ligado, a ordem de fábrica e as
+ * páginas ligadas na ordem da lista antiga. Sem `menu_config`, não.
  */
 export function menuPersonalizado(site: Pick<SiteInfo, 'menu' | 'menu_config'>): boolean {
   const m = resolverMenu(site.menu_config);
   if (!m) return false;
+  if (typeof m.saved === 'boolean') return m.saved;
   if (m.external.length > 0) return true;
   if (m.items.some(i => i.label !== null || (!ehPagina(i.key) && !i.enabled))) return true;
   const chaves = m.items.map(i => i.key);

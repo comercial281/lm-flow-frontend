@@ -1,7 +1,8 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
 import {
-  CORES_DO_FUNDO, FILTRO_FABRICA, FILTRO_MAXIMO, TETO_TEXTO_RODAPE, TEXTO_RODAPE_FABRICA, filtroDaCapa,
+  CORES_DO_FUNDO, FILTRO_FABRICA, FILTRO_MAXIMO, TETO_TEXTO_RODAPE, TEXTO_RODAPE_FABRICA, contarCaracteres, cortarCaracteres,
+  filtroDaCapa, textoSobre,
   type Aparencia, type AlturaDaCapa, type EstiloDoTopo, type FaixaDeCima, type Fundo, type LayoutDoRodape,
 } from '@/features/siteBuilder/public/aparenciaConfig';
 import { cn } from '@/lib/utils';
@@ -114,7 +115,7 @@ export function BlocoTopo({ ap, mudar, corPrincipal }: PropsDoBloco & { corPrinc
     <span className="relative flex h-full w-full flex-col" style={{ background: CORES_DO_FUNDO.light.paper }}>
       {estilo === 'transparent'
         ? <span className="absolute inset-x-0 top-0">{barra('transparent', '#FFFFFF')}</span>
-        : barra(estilo === 'brand' ? corPrincipal : '#FFFFFF', estilo === 'brand' ? '#FFFFFF' : '#17140F')}
+        : barra(estilo === 'brand' ? corPrincipal : '#FFFFFF', estilo === 'brand' ? textoSobre(corPrincipal) : '#17140F')}
       {capa}
     </span>
   );
@@ -280,12 +281,12 @@ export function BlocoRodape({ ap, mudar }: PropsDoBloco) {
         id="aparencia-rodape-texto"
         rotulo="Frase do rodapé"
         rows={3}
-        maxLength={TETO_TEXTO_RODAPE}
         placeholder={TEXTO_RODAPE_FABRICA}
         classeDoControle="resize-none"
-        ajuda={`${texto.length} de ${TETO_TEXTO_RODAPE} caracteres. Em branco, o site mostra a frase de sempre: “${TEXTO_RODAPE_FABRICA}”`}
+        ajuda={`${contarCaracteres(texto)} de ${TETO_TEXTO_RODAPE} caracteres. Em branco, o site mostra a frase de sempre: “${TEXTO_RODAPE_FABRICA}”`}
         valor={texto}
-        aoMudar={v => mudar({ footer_text: v === '' ? null : v.slice(0, TETO_TEXTO_RODAPE) })}
+        /* Sem `maxLength`: ele conta unidade UTF-16 e travaria antes dos 200 com emoji. */
+        aoMudar={v => mudar({ footer_text: v === '' ? null : cortarCaracteres(v, TETO_TEXTO_RODAPE) })}
       />
     </Secao>
   );

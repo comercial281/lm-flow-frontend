@@ -225,7 +225,7 @@ export default function TelaPaginas({ site, versaoDasPaginas = 0, aoMudarPagina 
   };
 
   const avisoDaImagem = imagemUrl.trim() && !ehHttp(imagemUrl)
-    ? 'Use um endereço que comece com https://. Imagem com outro endereço não é salva.'
+    ? 'Use um endereço que comece com http:// ou https://. Imagem com outro endereço não é salva.'
     : undefined;
 
   return (

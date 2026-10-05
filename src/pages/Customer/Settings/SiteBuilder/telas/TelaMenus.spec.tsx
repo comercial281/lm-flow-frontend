@@ -55,7 +55,9 @@ describe('TelaMenus', () => {
 
   it('a ajuda diz que o rodapé passa a repetir o menu depois de salvar', () => {
     render(<Montar espiao={vi.fn()} />);
-    expect(screen.getByText(/Depois que você salvar esta tela, o rodapé do site passa a repetir este menu/)).toBeTruthy();
+    expect(screen.getByText(/Depois que você salvar esta tela pela primeira vez, o rodapé do site passa a repetir este menu.*mesmo que você não tenha mudado nada\. Até lá, o rodapé fica como sempre foi\./)).toBeTruthy();
+    // A alça de arrastar fica fora do Tab (pelo teclado, Subir/Descer).
+    expect(screen.getAllByRole('button', { name: 'Arrastar pra mudar a ordem' })[0].getAttribute('tabindex')).toBe('-1');
   });
 
   it('reordenar: Descer troca com o de baixo e manda o menu inteiro', async () => {
