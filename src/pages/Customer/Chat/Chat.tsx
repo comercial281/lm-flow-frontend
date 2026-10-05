@@ -789,7 +789,6 @@ const Chat = () => {
                 onUnarchiveConversation={handleUnarchiveConversation}
                 onAssignAgent={handleAssignAgent}
                 onAssignTeam={handleAssignTeam}
-                onAssignTag={handleAssignTag}
                 onUnassignAgent={handleUnassignAgent}
                 onUnassignTeam={handleUnassignTeam}
                 onDeleteConversation={handleDeleteConversation}
