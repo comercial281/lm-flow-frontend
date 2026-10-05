@@ -75,6 +75,24 @@ export function quandoMudou(valor: unknown, agora: Date = new Date()): string {
   return d.getFullYear() === agora.getFullYear() ? fmtDataCurta.format(d) : fmtData.format(d);
 }
 
+/**
+ * Quando algo VAI acontecer (ou acabou de passar), pra uma linha de lista:
+ * "Hoje às 14:30" · "Amanhã às 09:00" · "Ontem às 18:00" · "04/10 às 14:30" ·
+ * "04/10/2027 às 14:30" (outro ano). Comparação pelo dia do calendário local.
+ */
+export function quandoAcontece(valor: unknown, agora: Date = new Date()): string {
+  const d = toDate(valor);
+  if (!d) return VAZIO;
+  const dia = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const dias = Math.round((dia(d) - dia(agora)) / 86_400_000);
+  const h = fmtHora.format(d);
+  if (dias === 0) return `Hoje às ${h}`;
+  if (dias === 1) return `Amanhã às ${h}`;
+  if (dias === -1) return `Ontem às ${h}`;
+  const quando = d.getFullYear() === agora.getFullYear() ? fmtDataCurta.format(d) : fmtData.format(d);
+  return `${quando} às ${h}`;
+}
+
 /** 30/09/2026 às 14:32 */
 export function dataHora(valor: unknown): string {
   const d = toDate(valor);

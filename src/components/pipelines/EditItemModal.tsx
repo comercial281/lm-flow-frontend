@@ -65,6 +65,7 @@ import ColocarNoFunil from './card/ColocarNoFunil';
 import { toast } from 'sonner';
 import type { ContactEvent } from '@/types/notifications/contact-events';
 import type { Label as LabelType } from '@/types/settings';
+import { avisarAgendadosMudaram } from '@/features/conversas/agendados';
 
 const CardConversationTab = lazyWithRetry(() => import('./CardConversationTab'));
 const VisitsProposalsTab = lazyWithRetry(() => import('./card/VisitsProposalsTab'));
@@ -789,7 +790,11 @@ export default function EditItemModal({
         <Suspense fallback={null}>
           <ScheduleActionModal
             open
-            onClose={() => setAgendandoEnvio(null)}
+            onClose={() => {
+              setAgendandoEnvio(null);
+              // O painel do lead ao lado da conversa relê a seção Agendados.
+              avisarAgendadosMudaram(contato.id);
+            }}
             contactId={String(contato.id)}
             mensagemInicial={agendandoEnvio}
           />

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { data, dataCurta, hora, dataHora, numero, porcentagem, dinheiro, dolar, plural, telefone, tempoDesde, quandoMudou, toDate, VAZIO, moedaValida } from './formato';
+import { data, dataCurta, hora, dataHora, numero, porcentagem, dinheiro, dolar, plural, telefone, tempoDesde, quandoMudou, quandoAcontece, toDate, VAZIO, moedaValida } from './formato';
 
 // Espaço não-quebrável: é o que o Intl põe entre "R$" e o número (não quebra linha).
 const NB = ' ';
@@ -158,5 +158,21 @@ describe('quandoMudou', () => {
   it('aceita segundos Unix e vazio vira travessão', () => {
     expect(quandoMudou(Math.floor(new Date(2026, 9, 2, 8, 0).getTime() / 1000), agora)).toBe('hoje 08:00');
     expect(quandoMudou(null, agora)).toBe(VAZIO);
+  });
+});
+
+describe('quandoAcontece', () => {
+  const agora = new Date(2026, 9, 4, 15, 0);
+  it('hoje, amanhã e ontem pela palavra, com a hora', () => {
+    expect(quandoAcontece(new Date(2026, 9, 4, 16, 5), agora)).toBe('Hoje às 16:05');
+    expect(quandoAcontece(new Date(2026, 9, 5, 9, 0), agora)).toBe('Amanhã às 09:00');
+    expect(quandoAcontece(new Date(2026, 9, 3, 18, 0), agora)).toBe('Ontem às 18:00');
+  });
+  it('outro dia do ano sem o ano; outro ano com o ano', () => {
+    expect(quandoAcontece(new Date(2026, 9, 14, 14, 30), agora)).toBe('14/10 às 14:30');
+    expect(quandoAcontece(new Date(2027, 0, 2, 8, 0), agora)).toBe('02/01/2027 às 08:00');
+  });
+  it('vazio vira travessão', () => {
+    expect(quandoAcontece(null, agora)).toBe(VAZIO);
   });
 });

@@ -206,4 +206,37 @@ describe('ScheduleActionModal', () => {
     await userEvent.selectOptions(unidade, 'hours');
     expect(unidade).toHaveValue('hours');
   });
+
+  // A seção "Agendados" do painel do lead (04/10/2026) abre esta janela pelo
+  // lápis: ela tem que chegar com o agendamento preenchido, não em branco.
+  it('em modo edição chega com a data e a mensagem do agendamento', async () => {
+    mockedInboxesService.list.mockResolvedValue({
+      success: true,
+      data: [buildInbox({ id: 'wa-cloud', name: 'WhatsApp Cloud', channel_type: 'Channel::WhatsappCloud' })],
+      meta: {} as never,
+      message: '',
+    });
+
+    render(
+      <ScheduleActionModal
+        open
+        onClose={vi.fn()}
+        contactId="c1"
+        action={{
+          id: 'a1',
+          contact_id: 'c1',
+          action_type: 'send_message',
+          status: 'scheduled',
+          scheduled_for: '2026-10-05T09:00:00-03:00',
+          payload: { channel: 'whatsapp', funnel_items: [{ kind: 'text', text_content: 'Oi, tudo certo pra visita?' }] },
+          created_by: 'u',
+          retry_count: 0,
+          max_retries: 3,
+        }}
+      />,
+    );
+
+    expect(await screen.findByDisplayValue('2026-10-05T09:00')).toBeTruthy();
+    expect(await screen.findByText('Oi, tudo certo pra visita?')).toBeTruthy();
+  });
 });

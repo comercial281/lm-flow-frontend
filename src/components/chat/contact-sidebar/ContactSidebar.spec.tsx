@@ -19,6 +19,15 @@ vi.mock('@/services/contacts/contactsService', () => ({
   },
 }));
 
+// Agendados do lead (04/10): sem mock, o painel aberto iria à rede.
+const listarAgendados = vi.fn();
+vi.mock('@/services/scheduledActions/scheduledActionsService', () => ({
+  scheduledActionsService: {
+    list: (...a: unknown[]) => listarAgendados(...a),
+    cancel: vi.fn(),
+  },
+}));
+
 const getPipelinesByConversation = vi.fn();
 vi.mock('@/services/pipelines', () => ({
   pipelinesService: {
@@ -140,6 +149,45 @@ describe('ContactSidebar — painel do lead em seções', () => {
     getContactConversations.mockReset();
     getPipelinesByConversation.mockResolvedValue([]);
     getContactConversations.mockResolvedValue({ data: [] });
+    listarAgendados.mockReset();
+    listarAgendados.mockResolvedValue([]);
+  });
+
+  it('Agendados: logo depois do Funil, só com mensagem agendada, e fora da oferta', async () => {
+    const amanha = new Date();
+    amanha.setDate(amanha.getDate() + 1);
+    amanha.setHours(9, 0, 0, 0);
+    listarAgendados.mockResolvedValue([
+      {
+        id: 'ag-1',
+        action_type: 'send_message',
+        status: 'scheduled',
+        scheduled_for: amanha.toISOString(),
+        payload: { funnel_items: [{ kind: 'text', text_content: 'Oi! Tudo certo pra visita?' }] },
+      },
+    ]);
+    getPipelinesByConversation.mockResolvedValue(funilComOLead);
+    const { unmount } = renderPainel();
+
+    const agendados = await screen.findByRole('region', { name: 'Agendados' });
+    expect(within(agendados).getByText('Amanhã às 09:00')).toBeTruthy();
+    expect(within(agendados).getByText('Oi! Tudo certo pra visita?')).toBeTruthy();
+    const funil = screen.getByRole('region', { name: 'Funil' });
+    expect(segue(funil, agendados)).toBe(true);
+    expect(listarAgendados).toHaveBeenCalledWith(expect.objectContaining({ contact_id: 'contato-1' }));
+    unmount();
+
+    listarAgendados.mockClear();
+    renderPainel(true);
+    await screen.findByRole('region', { name: 'Funil' });
+    expect(screen.queryByRole('region', { name: 'Agendados' })).toBeNull();
+    expect(listarAgendados).not.toHaveBeenCalled();
+  });
+
+  it('Agendados: sem mensagem agendada, a seção não existe', async () => {
+    renderPainel();
+    await waitFor(() => expect(listarAgendados).toHaveBeenCalled());
+    expect(screen.queryByRole('region', { name: 'Agendados' })).toBeNull();
   });
 
   it('os cards que saíram não aparecem', async () => {
