@@ -105,7 +105,7 @@ export const useChannelSubmission = (form?: FormData) => {
               : { enabled: false },
             instanceSettings: {
               rejectCall: !!form.rejectCall,
-              msgCall: getStr(form, 'msgCall', 'I do not accept calls'),
+              msgCall: form.rejectCall ? getStr(form, 'msgCall').trim() : '',
               groupsIgnore: !!form.groupsIgnore,
               alwaysOnline: !!form.alwaysOnline,
               readMessages: !!form.readMessages,
@@ -515,7 +515,7 @@ export const useChannelSubmission = (form?: FormData) => {
                 : { enabled: false },
               instanceSettings: {
                 rejectCall: !!form.rejectCall,
-                msgCall: getStr(form, 'msgCall', 'I do not accept calls'),
+                msgCall: form.rejectCall ? getStr(form, 'msgCall').trim() : '',
                 groupsIgnore: !!form.groupsIgnore,
                 alwaysOnline: !!form.alwaysOnline,
                 readMessages: !!form.readMessages,
@@ -553,7 +553,7 @@ export const useChannelSubmission = (form?: FormData) => {
                 : { enabled: false },
               instance_settings: {
                 rejectCall: !!form.rejectCall,
-                msgCall: getStr(form, 'msgCall', 'I do not accept calls'),
+                msgCall: form.rejectCall ? getStr(form, 'msgCall').trim() : '',
                 groupsIgnore: !!form.groupsIgnore,
                 alwaysOnline: !!form.alwaysOnline,
                 readMessages: !!form.readMessages,

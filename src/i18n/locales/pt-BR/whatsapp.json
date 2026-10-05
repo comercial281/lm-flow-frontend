@@ -170,8 +170,9 @@
         "enableSyncFeatures": "Importar a agenda do celular (todos os contatos)",
         "syncFullHistory": "Sincronizar Histórico Completo",
         "msgCall": {
-          "label": "Mensagem para Chamadas",
-          "placeholder": "Não atendemos chamadas por aqui"
+          "label": "Mensagem para quem ligar (opcional)",
+          "placeholder": "Em branco, ninguém recebe mensagem",
+          "helpText": "A ligação é recusada e, se tiver texto aqui, ele vai pelo WhatsApp pra quem ligou. Em branco, não vai nada."
         }
       }
     },

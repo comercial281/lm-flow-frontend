@@ -185,14 +185,19 @@ export const EvolutionForm = ({ form, onFormChange, hasEvolutionConfig }: Evolut
           />
         </div>
 
-        <div className="mt-4">
-          <FormField
-            label={t('evolutionForm.sections.instance.msgCall.label')}
-            value={getStr('msgCall')}
-            onChange={value => onFormChange('msgCall', value)}
-            placeholder={t('evolutionForm.sections.instance.msgCall.placeholder')}
-          />
-        </div>
+        {/* Só com a rejeição ligada: a Evolution manda este texto pra todo
+            mundo que liga, e em branco não manda nada. */}
+        {!!form.rejectCall && (
+          <div className="mt-4">
+            <FormField
+              label={t('evolutionForm.sections.instance.msgCall.label')}
+              value={getStr('msgCall')}
+              onChange={value => onFormChange('msgCall', value)}
+              placeholder={t('evolutionForm.sections.instance.msgCall.placeholder')}
+              helpText={t('evolutionForm.sections.instance.msgCall.helpText')}
+            />
+          </div>
+        )}
       </FormSection>
     </div>
   );
