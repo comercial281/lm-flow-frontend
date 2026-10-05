@@ -7,7 +7,7 @@ const FRANCHISE_BAR: Record<string, string> = {
   ok: 'bg-emerald-500',
   atencao: 'bg-amber-500',
   estourado: 'bg-red-500',
-  sem_franquia: 'bg-violet-500',
+  sem_franquia: 'bg-primary',
 };
 
 const brl = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

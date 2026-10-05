@@ -1,6 +1,6 @@
 // src/pages/SuperAdmin/PooledClients/index.spec.tsx
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 const apiGet = vi.hoisted(() => vi.fn());
@@ -80,5 +80,24 @@ describe('Lista de clientes', () => {
     montar();
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     expect(screen.queryByText(/nenhum cliente/i)).not.toBeInTheDocument();
+  });
+
+  it('recarga do provisionamento não pisca: mantém os cartões', async () => {
+    responder({ lista: [cliente('alfa', 'Alfa', { situation: 'provisionando' })] });
+    const base = apiGet.getMockImplementation()!;
+    let chamadas = 0;
+    // 2ª chamada da lista fica pendente: durante a recarga os cartões não podem sumir.
+    apiGet.mockImplementation((url: string) => (url.startsWith('/super/pooled_tenants') && ++chamadas === 2 ? new Promise(() => {}) : base(url)));
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    montar();
+    await screen.findByText('Alfa');
+    const pedidos = () => apiGet.mock.calls.filter(([u]) => String(u).startsWith('/super/pooled_tenants')).length;
+    expect(pedidos()).toBe(1);
+    try {
+      await act(async () => { await vi.advanceTimersByTimeAsync(4100); });
+    } finally { vi.useRealTimers(); }
+    expect(pedidos()).toBe(2);
+    expect(screen.getByText('Alfa')).toBeInTheDocument();
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull();
   });
 });

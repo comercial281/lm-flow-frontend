@@ -32,15 +32,15 @@ export default function PooledClients() {
   const [mostrarFunil, setMostrarFunil] = useState(false);
   const seq = useRef(0);
 
-  const carregar = useCallback(async () => {
+  // Recarga silenciosa (cliente provisionando): mantém a lista na tela e, se falhar, não mostra erro.
+  const carregar = useCallback(async (silencioso = false) => {
     const minha = ++seq.current;
-    setErro(false);
-    setClientes(null);
+    if (!silencioso) { setErro(false); setClientes(null); }
     try {
       const lista = await clientesService.listar(filtro === 'arquivados');
       if (minha === seq.current) setClientes(lista);
     } catch {
-      if (minha === seq.current) setErro(true);
+      if (!silencioso && minha === seq.current) setErro(true);
     }
   }, [filtro]);
 
@@ -51,7 +51,7 @@ export default function PooledClients() {
   // Cliente sendo criado: recarrega até sair de "Provisionando".
   useEffect(() => {
     if (!clientes?.some((t) => rotuloDaSituacao(t.situation, t.status).provisionando)) return undefined;
-    const id = setTimeout(() => { void carregar(); }, 4000);
+    const id = setTimeout(() => { void carregar(true); }, 4000);
     return () => clearTimeout(id);
   }, [clientes, carregar]);
 
