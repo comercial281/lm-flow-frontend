@@ -134,7 +134,8 @@ const SuperAgents = lazyWithRetry(() => import('@/pages/SuperAdmin/SuperAgents')
 const AdminLayout = lazyWithRetry(() => import('@/components/layout/AdminLayout'));
 // Shell da área de membros (Academia do cliente) — sem o CRM em volta.
 const MembersLayout = lazyWithRetry(() => import('@/components/layout/MembersLayout'));
-const AdminOverview = lazyWithRetry(() => import('@/pages/Admin/Area/Overview'));
+const AdminAtencao = lazyWithRetry(() => import('@/pages/Admin/Area/VisaoGeral/Atencao'));
+const AdminNumerosDaVisaoGeral = lazyWithRetry(() => import('@/pages/Admin/Area/VisaoGeral/Numeros'));
 import AdminPaginaComAbas from '@/components/layout/AdminPaginaComAbas';
 import AdminConteudo from '@/pages/Admin/Area/AdminConteudo';
 import { ComAbaAntiga, RedirecionaComBusca } from '@/routes/AdminRedirecionamentos';
@@ -1253,7 +1254,8 @@ const AppRouter = () => {
           >
             <Route element={<AdminPaginaComAbas />}>
               {/* Visão Geral */}
-              <Route path="/admin" element={<AdminOverview />} />
+              <Route path="/admin" element={<AdminConteudo><AdminAtencao /></AdminConteudo>} />
+              <Route path="/admin/numeros" element={<AdminConteudo><AdminNumerosDaVisaoGeral /></AdminConteudo>} />
               <Route path="/admin/leads-ao-vivo" element={<AdminConteudo><AdminLeadsAoVivo /></AdminConteudo>} />
               {/* Suporte */}
               <Route path="/admin/suporte" element={<AdminConteudo><AdminSuporteLista /></AdminConteudo>} />
