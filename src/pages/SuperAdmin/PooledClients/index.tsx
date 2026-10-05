@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { Seletor } from '@/components/base/Seletor';
+import { rotuloDaSituacao } from './situacao';
 // Consumo de IA do mês corrente, já cruzado com a franquia contratada.
 // Vem pronto do backend (SalesAgents::UsageReport) de propósito: a conta do
 // excedente é a mesma que vai virar fatura, e ter a regra em dois lugares é
@@ -47,15 +48,9 @@ interface PooledTenant {
   ai_usage?: AiUsage;
   ai_leads_included?: number | null;
   ai_lead_overage_price_brl?: number;
+  situation?: string;
 }
 interface Member { id: string; email: string; name?: string; whatsapp_number?: string | null; }
-
-const STATUS: Record<string, { label: string; cls: string }> = {
-  active:    { label: 'Ativo',         cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40' },
-  trial:     { label: 'Provisionando', cls: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/40' },
-  error:     { label: 'Erro',          cls: 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/40' },
-  suspended: { label: 'Suspenso',      cls: 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/40' },
-};
 
 // Origens de lead que o cliente pode ligar/desligar pra entrar no funil.
 // As chaves batem 1:1 com LeadOrigin::PipeEntry::GROUPS no backend.
@@ -1246,14 +1241,8 @@ export default function PooledClients() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 max-w-5xl mx-auto">
           {tenants.map(t => {
-            // "Provisionando" = status trial SÓ durante a janela real (criado há
-            // pouco). Tenant trial antigo já está provisionado (o job vira pra
-            // active no fim; legados ficam trial) — não pode travar o "Entrar".
-            const createdMs = t.created_at ? Date.parse(t.created_at) : 0;
-            const isProvisioning = t.status === 'trial' && createdMs > 0 && (Date.now() - createdMs) < 15 * 60 * 1000;
-            const st = isProvisioning
-              ? STATUS.trial
-              : (STATUS[t.status === 'trial' ? 'active' : t.status] || { label: t.status, cls: 'bg-white/10 text-white/60 border-white/20' });
+            const st = rotuloDaSituacao(t.situation, t.status);
+            const isProvisioning = st.provisionando;
             return (
               <div key={t.id} className="rounded-xl p-4 border" style={{ background: 'rgba(124,58,237,0.04)', borderColor: 'rgba(124,58,237,0.15)' }}>
                 <div className="flex items-start justify-between gap-2">

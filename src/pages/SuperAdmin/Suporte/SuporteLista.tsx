@@ -9,6 +9,7 @@ import { cn } from '@/utils/cn';
 import { erroDaApi, type SupportKind, type SupportStatus } from '@/services/support/supportService';
 import { supportAdminService, type SupportTicketAdminSummary } from '@/services/support/supportAdminService';
 import { KIND_LABEL, STATUS_TIME, quandoFoi } from '@/components/support/rotulos';
+import { useSinalSuporte } from '@/components/support/aoVivo';
 
 const SITUACOES: (SupportStatus | '')[] = ['open', 'waiting_customer', 'resolved', ''];
 const TIPOS: (SupportKind | '')[] = ['', 'question', 'bug', 'suggestion'];
@@ -28,6 +29,8 @@ export default function SuporteLista() {
   const [busca, setBusca] = useState('');
   const [page, setPage] = useState(1);
   const [recarga, setRecarga] = useState(0);
+  // Chamado novo ou mensagem nova chega pelo sinal ao vivo: a lista acompanha na hora.
+  useSinalSuporte(() => setRecarga(r => r + 1));
   const [dado, setDado] = useState<{ tickets: SupportTicketAdminSummary[]; total: number; perPage: number } | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [recusado, setRecusado] = useState(false);

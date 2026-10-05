@@ -22,7 +22,8 @@ describe('menu da Área do Admin', () => {
   });
 
   it.each([
-    ['/admin', 'Visão Geral', 'Dashboard'],
+    ['/admin', 'Visão Geral', 'Atenção'],
+    ['/admin/numeros', 'Visão Geral', 'Números'],
     ['/admin/leads-ao-vivo', 'Visão Geral', 'Leads ao vivo'],
     ['/admin/clientes', 'Clientes', 'Clientes'],
     ['/admin/clientes/numeros', 'Clientes', 'Números conectados'],
