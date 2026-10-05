@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useCtxDoSite, useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
+import { cabecalhosDoSite } from '@/features/siteBuilder/public/previa';
 import { PortalFooter, PortalHeader, usePortalData } from './portalShared';
 import PaginaManutencao from './PaginaManutencao';
 import { usePortalTracking } from './usePortalTracking';
@@ -32,7 +33,7 @@ export default function PortalCustomPage() {
     if (!tenant || !slug) return;
     setLoading(true);
     setPage(null);
-    fetch(`${API}/api/public/v1/site/pages/${encodeURIComponent(slug)}`, { headers: { 'X-Tenant': tenant } })
+    fetch(`${API}/api/public/v1/site/pages/${encodeURIComponent(slug)}`, { headers: cabecalhosDoSite(tenant) })
       .then(async res => (res.ok ? ((await res.json()).data as CustomPage) : null))
       .catch(() => null)
       .then(p => { if (active) setPage(p || null); })

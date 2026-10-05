@@ -60,6 +60,21 @@ describe('installSiteTracking', () => {
     expect(document.head.querySelector('meta[name="lmf-teste"]')).toBeNull();
   });
 
+  it('na prévia (preview: true) nada entra, nem em domínio próprio confirmado: GA4, Pixel, GTM e códigos', async () => {
+    const w = fakeWin();
+    await confirmar('www.imob.com.br');
+    installSiteTracking({
+      preview: true,
+      tracking: { ga4: 'G-AB12', facebook_pixel: '123456', gtm_id: 'GTM-XYZ1' },
+      custom_code: { head: '<meta name="lmf-teste" content="1">', body: null },
+    }, { host: 'www.imob.com.br' });
+    expect(document.querySelectorAll('script')).toHaveLength(0);
+    expect(document.head.querySelector('meta[name="lmf-teste"]')).toBeNull();
+    expect((w as { gtag?: unknown }).gtag).toBeUndefined();
+    expect(w.fbq).toBeUndefined();
+    expect(w.__lmfTracking).toBeUndefined();
+  });
+
   it('em domínio próprio confirmado: GTM e códigos avançados entram', async () => {
     await confirmar('www.imob.com.br');
     installSiteTracking({ tracking: { gtm_id: 'GTM-XYZ1' }, custom_code: { head: '<meta name="lmf-teste" content="1">', body: null } },

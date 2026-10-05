@@ -1,6 +1,8 @@
 // src/features/siteBuilder/public/siteVisits.ts
 // Contador de visitas do Meu site. Id do visitante aleatório no próprio site
 // (sem dado pessoal, sem cookie de terceiro). A origem é a da 1ª tela da sessão.
+import { cabecalhosDoSite } from './previa';
+
 export type VisitKind = 'home' | 'search' | 'property' | 'page' | 'blog' | 'article' | 'financing' | 'listing' | 'landing';
 export interface VisitInput { kind: VisitKind; path: string; propertyCode?: string; pageSlug?: string }
 
@@ -64,7 +66,7 @@ export function sendSiteVisit(input: VisitInput, ctx: {
       // Sem keepalive: numa SPA a página não fecha no meio do envio, e keepalive
       // + preflight de CORS falha calado em alguns navegadores.
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Tenant': ctx.tenant },
+      headers: cabecalhosDoSite(ctx.tenant, { 'Content-Type': 'application/json' }),
       body: JSON.stringify({ visit }),
     }).catch(() => undefined);
   } catch { /* contador nunca derruba o site */ }

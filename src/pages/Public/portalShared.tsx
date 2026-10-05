@@ -5,6 +5,7 @@ import { imovelHref } from './finalidade';
 import { menuPagesLinks } from '@/features/siteBuilder/public/portalMenu';
 import { caminhoDoSite, type CtxDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
+import { cabecalhosDoSite, ehPrevia } from '@/features/siteBuilder/public/previa';
 import PortalTranslate from './PortalTranslate';
 import { tituloDaAba } from '@/features/siteBuilder/public/tituloDaAba';
 import { filterProperties, opcoesSemRepetir, type PortalFilters, type PortalProperty, type PortalTab } from '@/features/siteBuilder/public/filtros';
@@ -68,6 +69,15 @@ export interface SiteInfo {
    * servidor manda só nome, marca, contato e título; as listas dão 404.
    */
   maintenance?: boolean;
+  /**
+   * Prévia antes de publicar: o servidor aceitou o token do `?previa=`
+   * (`X-Site-Preview`) e mandou o site inteiro. Só `true` conta.
+   */
+  preview?: boolean;
+  /** Domínio próprio ATIVO do site, ou null. */
+  domain?: string | null;
+  /** Caixinha "Aparecer no Google". Ausente (servidor velho) = desligada. */
+  google?: { indexable?: boolean | null } | null;
   name?: string;
   branding?: Branding;
   /** Banner da home: vídeo tem prioridade; sem os dois, a capa do primeiro imóvel. */
@@ -135,9 +145,31 @@ export function Ic({ d, s = 18, cls = '' }: { d: string; s?: number; cls?: strin
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className={cls}><path d={d} /></svg>;
 }
 
-/** Site em manutenção? Só `maintenance === true` (servidor antigo, sem o campo, está no ar). */
+/**
+ * Site em manutenção? Só `maintenance === true` (servidor antigo, sem o campo,
+ * está no ar). Na prévia o dono vê o site como se estivesse publicado.
+ */
 export function estaEmManutencao(site: SiteInfo | null | undefined): boolean {
-  return site?.maintenance === true;
+  return site?.maintenance === true && !ehPrevia(site);
+}
+
+/**
+ * `robots` do site no navegador. `index,follow` só com "Aparecer no Google"
+ * ligado, o site no ar e fora da prévia; o resto, `noindex`. É a mesma regra
+ * que o servidor usa no `<head>` montado pelo middleware: o site nunca troca o
+ * `noindex` dele por `index` depois de carregar.
+ */
+export function robotsDoSite(site: SiteInfo | null | undefined): 'index,follow' | 'noindex' {
+  if (!site || ehPrevia(site) || site.maintenance === true) return 'noindex';
+  return site.google?.indexable === true ? 'index,follow' : 'noindex';
+}
+
+/** Põe o `robots` do site no `<head>` (cria a tag se não houver). */
+export function aplicarRobots(site: SiteInfo | null | undefined, doc: Document = document): void {
+  const meta = doc.head.querySelector<HTMLMetaElement>('meta[name="robots"]') || (() => {
+    const m = doc.createElement('meta'); m.name = 'robots'; doc.head.appendChild(m); return m;
+  })();
+  meta.content = robotsDoSite(site);
 }
 
 /** Cores, fonte e variáveis CSS do site (logo, cores e fonte do Meu site). */
@@ -184,7 +216,7 @@ export function usePortalData(tenant?: string) {
         // a página de manutenção não depende da lista, então nem uma falha dela
         // derruba a página. Fora da manutenção, falha da lista segue sendo erro.
         const [siteRes, propsJson] = await Promise.all([
-          fetch(`${API}/api/public/v1/site`, { headers: { 'X-Tenant': tenant } }),
+          fetch(`${API}/api/public/v1/site`, { headers: cabecalhosDoSite(tenant) }),
           fetchAllPortalProperties(API, tenant).catch(() => null),
         ]);
         if (!active) return;
@@ -193,10 +225,7 @@ export function usePortalData(tenant?: string) {
         setSite(siteJson || {});
         setItems(propsJson || []);
         document.title = tituloDaAba(siteJson?.seo?.title, siteJson?.name);
-        const meta = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]') || (() => {
-          const m = document.createElement('meta'); m.name = 'robots'; document.head.appendChild(m); return m;
-        })();
-        meta.content = 'index,follow';
+        aplicarRobots(siteJson);
         setState('ok');
       } catch {
         if (active) setState('error');
@@ -227,7 +256,7 @@ export async function fetchArticles(
 ): Promise<{ data: PortalArticleSummary[]; total: number }> {
   const res = await fetch(
     `${API}/api/public/v1/site/articles?page=${page}&per_page=${perPage}`,
-    { headers: { 'X-Tenant': tenant } },
+    { headers: cabecalhosDoSite(tenant) },
   );
   if (!res.ok) return { data: [], total: 0 };
   const json = await res.json();
@@ -237,7 +266,7 @@ export async function fetchArticles(
 export async function fetchArticle(tenant: string, slug: string): Promise<PortalArticleFull | null> {
   const res = await fetch(
     `${API}/api/public/v1/site/articles/${encodeURIComponent(slug)}`,
-    { headers: { 'X-Tenant': tenant } },
+    { headers: cabecalhosDoSite(tenant) },
   );
   if (!res.ok) return null;
   const json = await res.json();
@@ -593,6 +622,7 @@ function TopoEmManutencao({ site, tenant }: PropsDaMoldura) {
   const waHref = linkDoWhatsApp(site.contact?.whatsapp);
   return (
     <div className="sticky top-0 z-40">
+      <FaixaDePrevia site={site} />
       <header className="border-b border-black/[0.06] bg-[var(--paper)]/90 backdrop-blur-md">
         <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-4 px-4 sm:h-[84px] sm:px-6">
           <Link to={caminhoDoSite(ctx, '/')} className="flex items-center gap-2.5">
@@ -620,6 +650,20 @@ function RodapeEmManutencao({ site, tenant }: PropsDaMoldura) {
         {waHref && <BotaoWhatsApp href={waHref} rotuloSempre />}
       </div>
     </footer>
+  );
+}
+
+/**
+ * Faixa da prévia (site aberto pelo link "Ver prévia" do painel). Mora DENTRO
+ * do bloco que gruda no topo: fica sempre à vista sem cobrir o topo do site
+ * nem a barra de contato da ficha, que é fixa embaixo no celular.
+ */
+export function FaixaDePrevia({ site }: { site: SiteInfo }) {
+  if (!ehPrevia(site)) return null;
+  return (
+    <div role="status" className="bg-amber-400 px-4 py-1.5 text-center text-[13px] font-semibold text-neutral-900">
+      Prévia: o site ainda não está publicado.
+    </div>
   );
 }
 
@@ -702,6 +746,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
           fluxo para dentro dele na primeira rolagem, a página inteira saltava
           para baixo a altura do cabeçalho. */}
       <div className={onHome ? 'fixed inset-x-0 top-0 z-40' : 'sticky top-0 z-40'}>
+        <FaixaDePrevia site={site} />
         <header
           className={`border-b transition-colors duration-300 ${
             floating

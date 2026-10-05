@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useCtxDoSite, useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
+import { cabecalhosDoSite } from '@/features/siteBuilder/public/previa';
 import { trackLead } from '@/features/siteBuilder/public/siteTracking';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
@@ -14,7 +15,7 @@ import {
   type PropertyTypology,
 } from '@/features/properties/typologies';
 import {
-  PortalFooter, PortalHeader, PropertyCard, estaEmManutencao,
+  PortalFooter, PortalHeader, PropertyCard, estaEmManutencao, robotsDoSite,
   type PortalProperty, type SiteInfo as PortalSiteInfo,
 } from './portalShared';
 import { resolverHome, type AbaId } from '@/features/siteBuilder/public/homeConfig';
@@ -134,8 +135,8 @@ export default function ImovelPublicPage() {
       if (!tenant || !code) return;
       try {
         const [siteRes, imovelRes] = await Promise.all([
-          fetch(`${API}/api/public/v1/site`, { headers: { 'X-Tenant': tenant } }),
-          fetch(`${API}/api/public/v1/site/properties/${encodeURIComponent(code)}`, { headers: { 'X-Tenant': tenant } }),
+          fetch(`${API}/api/public/v1/site`, { headers: cabecalhosDoSite(tenant) }),
+          fetch(`${API}/api/public/v1/site/properties/${encodeURIComponent(code)}`, { headers: cabecalhosDoSite(tenant) }),
         ]);
         if (!alive) return;
         if (!imovelRes.ok) { setState('notfound'); return; }
@@ -150,7 +151,8 @@ export default function ImovelPublicPage() {
         document.title = `${property.title} · ${siteName}`;
         const desc = (property.description || '').replace(/\s+/g, ' ').trim().slice(0, 160);
         if (desc) setMeta('description', desc);
-        setMeta('robots', 'index,follow');
+        // Mesma regra do resto do site: `index` só com o Google ligado, no ar e fora da prévia.
+        setMeta('robots', robotsDoSite(siteRes.ok ? siteInfo : null));
         setState('ok');
       } catch { if (alive) setState('notfound'); }
     })();
@@ -186,7 +188,7 @@ export default function ImovelPublicPage() {
       const qs = new URLSearchParams({ per_page: '8' });
       if (city) qs.set('city', city);
       try {
-        const res = await fetch(`${API}/api/public/v1/site/properties?${qs.toString()}`, { headers: { 'X-Tenant': tenant } });
+        const res = await fetch(`${API}/api/public/v1/site/properties?${qs.toString()}`, { headers: cabecalhosDoSite(tenant) });
         if (!res.ok) return [];
         return ((await res.json()).data as PortalProperty[]).filter(p => p.code !== code);
       } catch { return []; }
@@ -228,7 +230,7 @@ export default function ImovelPublicPage() {
     const params = new URLSearchParams(window.location.search);
     try {
       const res = await fetch(`${API}/api/public/v1/site/leads`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant },
+        method: 'POST', headers: cabecalhosDoSite(tenant, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ lead: {
           name, phone, source: 'portal', form_type: 'imovel',
           property_code: code, property_id: prop?.id,

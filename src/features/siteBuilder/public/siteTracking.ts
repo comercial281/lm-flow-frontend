@@ -14,6 +14,8 @@ import { dominioConfirmado, ehEnderecoDoSistema, limparHost } from './dominioDoS
 export interface SiteTrackingConfig {
   tracking?: { gtm_id?: string | null; ga4?: string | null; facebook_pixel?: string | null } | null;
   custom_code?: { head?: string | null; body?: string | null } | null;
+  /** Prévia antes de publicar: não instala nada (a prévia não é visita). */
+  preview?: boolean | null;
 }
 
 type W = Window & { dataLayer?: unknown[]; gtag?: (...a: unknown[]) => void; fbq?: (...a: unknown[]) => void; __lmfTracking?: boolean };
@@ -60,7 +62,7 @@ function injectHtml(doc: Document, html: string, target: HTMLElement, prepend: b
 
 export function installSiteTracking(cfg: SiteTrackingConfig, deps: { win?: Window; host?: string } = {}): void {
   const w = (deps.win ?? window) as W;
-  if (w.__lmfTracking) return;
+  if (w.__lmfTracking || cfg.preview === true) return;
   const doc = w.document;
   const host = deps.host ?? w.location.hostname;
   const t = cfg.tracking ?? {};

@@ -46,7 +46,7 @@ export const TELAS: TelaInfo[] = [
   { id: 'endereco', grupo: 'config', rotulo: 'Endereço do site', dica: 'Domínio próprio', titulo: 'Endereço do site', frase: 'Nome do site, endereço e o seu domínio próprio.', noMenu: true },
   { id: 'dados', grupo: 'config', rotulo: 'Dados de contato', dica: 'Telefone e e-mail', titulo: 'Dados de contato', frase: 'Telefone, WhatsApp, e-mail e endereço que aparecem no site.', noMenu: true },
   { id: 'destino', grupo: 'config', rotulo: 'Para onde vão os contatos', dica: 'Funil e roleta', titulo: 'Para onde vão os contatos', frase: 'Funil, etapa e quem recebe quem pede contato pelo site.', noMenu: true },
-  { id: 'google', grupo: 'config', rotulo: 'Aparecer no Google', dica: 'Título e descrição', titulo: 'Aparecer no Google', frase: 'O título e a descrição que o Google mostra.', noMenu: true },
+  { id: 'google', grupo: 'config', rotulo: 'Aparecer no Google', dica: 'Ligar e o que o Google mostra', titulo: 'Aparecer no Google', frase: 'Se o site aparece no Google, e o título e a descrição que ele mostra.', noMenu: true },
 ];
 
 const LEGADO: Record<string, TelaId> = {

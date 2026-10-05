@@ -181,6 +181,13 @@ describe('site no ar: nada muda', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'O imóvel certo pra sua próxima fase.' })).toBeInTheDocument();
     expect(screen.queryByText(TEXTO_MANUTENCAO)).toBeNull();
+    // "Aparecer no Google" vem desligado de fábrica: no ar, mas fora do Google.
+    expect(robots()?.content).toBe('noindex');
+  });
+
+  it('com "Aparecer no Google" ligado, a página inicial sai index,follow', async () => {
+    abrir('/portal/imob', { name: 'Imob Teste', maintenance: false, google: { indexable: true } });
+    expect(await screen.findByRole('heading', { level: 1, name: 'O imóvel certo pra sua próxima fase.' })).toBeInTheDocument();
     expect(robots()?.content).toBe('index,follow');
   });
 

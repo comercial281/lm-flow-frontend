@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
+import { cabecalhosDoSite } from '@/features/siteBuilder/public/previa';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import {
@@ -133,7 +134,7 @@ export default function PortalAnunciePage() {
     try {
       const res = await fetch(`${API}/api/public/v1/site/anuncie`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant },
+        headers: cabecalhosDoSite(tenant, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           lead: {
             name: nome.trim(), phone: telefone, email: email.trim() || null,

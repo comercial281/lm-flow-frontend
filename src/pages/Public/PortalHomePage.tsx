@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
+import { cabecalhosDoSite } from '@/features/siteBuilder/public/previa';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import { API, PortalFooter, PortalHeader, Stat, usePortalData } from './portalShared';
@@ -54,7 +55,7 @@ export default function PortalHomePage() {
     try {
       const res = await fetch(`${API}/api/public/v1/site/leads`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant },
+        headers: cabecalhosDoSite(tenant, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ lead: { name: leadName, phone: leadPhone, source: 'portal', form_type: 'home', finalidade: leadFinalidade, message: 'Quero ajuda pra encontrar um imóvel (portal home).' } }),
       });
       setLeadSent(true);

@@ -188,9 +188,9 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
       {state?.configured && status === 'none' && (
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Coloque o portal no endereço da imobiliária — por exemplo{' '}
-            <span className="font-mono">renatogarcia.com.br</span>. O portal continua sendo o mesmo,
-            só passa a atender também por esse endereço.
+            Coloque o site no endereço da imobiliária, por exemplo{' '}
+            <span className="font-mono">renatogarcia.com.br</span>. Quando o domínio ficar ativo, ele abre
+            só o site (nunca o LM Flow), e o endereço de hoje continua funcionando.
           </p>
           <div>
             <UILabel htmlFor="new-domain">Domínio do cliente</UILabel>
@@ -237,10 +237,15 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
           {status === 'active' && (
             <div className="flex gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm dark:border-emerald-900/40 dark:bg-emerald-900/10">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-              <p className="text-emerald-900 dark:text-emerald-300">
-                Está no ar, com certificado de segurança emitido e renovado automaticamente.
-                Não é preciso fazer mais nada.
-              </p>
+              <div className="text-emerald-900 dark:text-emerald-300">
+                <p className="font-medium">Ativo: o site abre em {state.domain}.</p>
+                <p className="mt-1">
+                  Nesse endereço aparece só o site, com um endereço curto para cada página. O endereço
+                  de hoje continua funcionando, e os links de
+                  imóvel que a IA manda passam a usar o domínio. O certificado de segurança é renovado
+                  sozinho: não é preciso fazer mais nada.
+                </p>
+              </div>
             </div>
           )}
 
