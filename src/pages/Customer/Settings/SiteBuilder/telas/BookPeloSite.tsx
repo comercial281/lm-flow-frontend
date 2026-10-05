@@ -52,9 +52,10 @@ export default function BookPeloSite({ siteId, ligado, aoMudarChave }: Props) {
   useEffect(() => {
     let vivo = true;
     carregar(() => vivo);
-    // Só oferece "a IA assume" se o cliente tem IA Vendedora ligada.
+    // Só oferece "a IA assume" se há IA Vendedora ligada que responde conversa
+    // (a que só faz follow-up não assume o book).
     salesAgentsService.list()
-      .then(l => { if (vivo) setTemIa(l.some(a => a.enabled)); })
+      .then(l => { if (vivo) setTemIa(l.some(a => a.enabled && !a.followup_only)); })
       .catch(() => { /* sem a lista, esconde a pergunta */ });
     return () => { vivo = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -79,6 +80,7 @@ export default function BookPeloSite({ siteId, ligado, aoMudarChave }: Props) {
 
   const campos = (): BookFlowBody => ({
     ligado: true,
+    // '' = "Automático": o servidor aceita e devolve '' quando é automático.
     send_from: envio.send_from === 'owner' || envio.send_from === 'number' ? envio.send_from : '',
     send_from_inbox_id: envio.send_from_inbox_id || null,
     mensagem,
@@ -143,6 +145,7 @@ export default function BookPeloSite({ siteId, ligado, aoMudarChave }: Props) {
                 <Button type="button" role="radio" aria-checked={iaAssume} variant={iaAssume ? 'default' : 'outline'} onClick={() => setIaAssume(true)}>Sim</Button>
                 <Button type="button" role="radio" aria-checked={!iaAssume} variant={!iaAssume ? 'default' : 'outline'} onClick={() => setIaAssume(false)}>Não</Button>
               </div>
+              <p className="mt-1 text-sm text-muted-foreground">Vale para o número por onde o book sair: a IA precisa estar ligada nele.</p>
             </Campo>
           )}
           <div className="flex items-center gap-3">

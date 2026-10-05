@@ -18,8 +18,8 @@ vi.mock('@/services/siteBuilder/siteBuilderService', async orig => ({
 const listAgentes = vi.fn();
 vi.mock('@/services/salesAgents/salesAgentsService', () => ({ default: { list: () => listAgentes() } }));
 vi.mock('@/components/numbers/SendFromField', () => ({
-  default: ({ scope, onChange }: { scope: string; onChange: (v: { send_from: string; send_from_inbox_id: string }) => void }) => (
-    <button type="button" data-scope={scope} onClick={() => onChange({ send_from: 'number', send_from_inbox_id: 'inbox-9' })}>Escolher número</button>
+  default: ({ scope, value, onChange }: { scope: string; value: { send_from: string }; onChange: (v: { send_from: string; send_from_inbox_id: string }) => void }) => (
+    <button type="button" data-scope={scope} data-value={value.send_from} onClick={() => onChange({ send_from: 'number', send_from_inbox_id: 'inbox-9' })}>Escolher número</button>
   ),
 }));
 
@@ -141,6 +141,34 @@ describe('Receber o book no WhatsApp', () => {
     expect(putBookFlow).toHaveBeenCalledWith('site-1', {
       ligado: true, send_from: 'number', send_from_inbox_id: 'inbox-9', mensagem: 'Segue o book', ia_assume: false,
     });
+  });
+
+  it('send_from "" (Automático) volta do GET como Automático e vai como "" no Salvar', async () => {
+    getBookFlow.mockResolvedValue(flow({ ligado: true, existe: true, fluxo_id: 'f1', fluxo_ligado: true, send_from: '' }));
+    putBookFlow.mockResolvedValue(flow({ ligado: true, existe: true, fluxo_id: 'f1', fluxo_ligado: true, send_from: '' }));
+    await abrir(ligada());
+
+    expect(await screen.findByRole('button', { name: 'Escolher número' })).toHaveAttribute('data-value', '');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar o envio do book' }));
+
+    expect(putBookFlow).toHaveBeenCalledWith('site-1', expect.objectContaining({ send_from: '', send_from_inbox_id: null }));
+  });
+
+  it('IA só de follow-up não conta: a pergunta "a IA assume" some', async () => {
+    listAgentes.mockResolvedValue([{ id: 'a1', enabled: true, followup_only: true }]);
+    getBookFlow.mockResolvedValue(flow({ ligado: true, existe: true, fluxo_id: 'f1', fluxo_ligado: true }));
+    await abrir(ligada());
+
+    await screen.findByRole('button', { name: 'Salvar o envio do book' });
+    expect(screen.queryByText(/a IA Vendedora assume a conversa/)).toBeNull();
+  });
+
+  it('com IA que responde conversa, a pergunta aparece com a explicação do número', async () => {
+    listAgentes.mockResolvedValue([{ id: 'a1', enabled: true, followup_only: false }]);
+    getBookFlow.mockResolvedValue(flow({ ligado: true, existe: true, fluxo_id: 'f1', fluxo_ligado: true }));
+    await abrir(ligada());
+
+    expect(await screen.findByText('Vale para o número por onde o book sair: a IA precisa estar ligada nele.')).toBeTruthy();
   });
 
   it('sem IA ligada no cliente, a pergunta some e o Salvar ainda manda o ia_assume do GET', async () => {

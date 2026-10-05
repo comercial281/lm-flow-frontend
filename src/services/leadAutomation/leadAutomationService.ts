@@ -252,6 +252,10 @@ export const TRIGGER_LABELS: Record<string, string> = {
   'lead.roleta_accepted':      'Corretor aceitou o lead (roleta)',
 };
 
+// Gatilhos que só existem no construtor de fluxos: o servidor recusa regra antiga
+// (Automações de Lead) com eles. Ficam em TRIGGER_LABELS só pra exibir o nome.
+export const FLOW_ONLY_TRIGGERS: string[] = ['lead.book_requested'];
+
 // Actions processadas pelo LeadAutomation::Executor.
 export const ACTION_TYPE_LABELS: Record<string, string> = {
   send_whatsapp_message:   'Enviar mensagem WhatsApp',

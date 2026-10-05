@@ -6204,6 +6204,11 @@ Armadilhas:
 - `has_book` (boolean) vem SÓ no `/site/properties/:code` (que a `ImovelPublicPage` já usa), não no `/site/imovel/:code`. Servidor velho não manda: sem botão.
 - `property_page.development.book_button` vem no `/site` público (booleano). O padrão de fábrica do navegador é `false`.
 - `GET/PUT /sites/:id/book_flow` devolve `{ existe, fluxo_id, fluxo_ligado, personalizado, ligado, send_from, send_from_inbox_id, mensagem, ia_assume }`; o cliente está em `siteBuilderService.getBookFlow/putBookFlow`.
+- **422 do `PUT /book_flow`** (a tela mostra a mensagem do servidor num aviso e a chave fica como estava): mensagem vazia, `send_from` inválido, ou sem número conectado pra mandar.
+- **`send_from: ''` = "Automático"** (o número é escolhido pelo servidor). O PUT aceita `''` e o GET devolve `''` quando é automático: a tela manda `''` como está e o seletor mostra "Automático (como sempre foi)". Nunca converter `''` em `'owner'`.
+- **"Pediu o book no site" é só do construtor de fluxos.** A tela antiga de Automações de Lead (`LeadAutomations.tsx`) NÃO oferece esse gatilho (o servidor recusa): `FLOW_ONLY_TRIGGERS`, em `leadAutomationService.ts` ao lado de `TRIGGER_LABELS`, filtra a lista; o rótulo continua em `TRIGGER_LABELS` só pra exibição.
+- **"A IA assume"** só aparece se há agente ligado que NÃO é só de follow-up (`enabled && !followup_only`); a explicação embaixo: "Vale para o número por onde o book sair: a IA precisa estar ligada nele."
+- Contatos recentes do Painel: `form_type: 'imovel_book'` aparece como "Pediu o book".
 
 **Armadilhas:**
 1. **`book_button` é do servidor, não da página.** Quem o escreve é o serviço do fluxo (`book_flow`); o Salvar da página nunca o muda no servidor. A tela atualiza o valor local pelo `aplicarSemMarcar` (em `SiteBuilder`), SEM marcar `fichaAlterada`, e ele aceita um **updater** (mescla no `property_page` ATUAL), então um e-mail editado enquanto o PUT da chave voa não se perde e o Salvar seguinte não reenvia a ficha à toa.

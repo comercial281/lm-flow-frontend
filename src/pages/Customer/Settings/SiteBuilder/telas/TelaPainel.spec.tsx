@@ -33,6 +33,20 @@ describe('TelaPainel', () => {
     expect(screen.getByText('Ainda sem visitas no período.')).toBeTruthy();
   });
 
+  it('contato que pediu o book mostra "Pediu o book"; o de imóvel comum segue "Pediu contato num imóvel"', async () => {
+    vi.mocked(siteBuilderService.getDashboard).mockResolvedValue(zerado as never);
+    vi.mocked(siteBuilderService.listLeads).mockResolvedValue({
+      data: [
+        { id: 'l1', name: 'Ana', status: 'received', form_type: 'imovel_book', property_id: 'p1' },
+        { id: 'l2', name: 'Beto', status: 'received', form_type: 'imovel', property_id: 'p2' },
+      ],
+      meta: { total: 2 },
+    } as never);
+    montar();
+    expect(await screen.findByText(/Pediu o book/)).toBeTruthy();
+    expect(screen.getByText(/Pediu contato num imóvel/)).toBeTruthy();
+  });
+
   it('erro ao carregar mostra estado de erro, não números zerados', async () => {
     vi.mocked(siteBuilderService.getDashboard).mockRejectedValue(new Error('x'));
     montar();
