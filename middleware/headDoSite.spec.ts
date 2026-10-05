@@ -63,6 +63,25 @@ describe('montarHead', () => {
     expect(meta(d, 'meta[property="og:url"]')).toBe('https://www.imob.com.br/blog/a');
   });
 
+  it('og:url é sempre o canonical: url pedido no app.lmflow.com.br não vaza pra prévia do link', () => {
+    const dados = { ...DADOS, url: 'https://app.lmflow.com.br/portal/imob/blog/a', canonical: `https://${DOMINIO}/blog/a` };
+    const d = doc(montarHead(INDEX_HTML, dados, LMFLOW));
+    expect(meta(d, 'meta[property="og:url"]')).toBe(`https://${DOMINIO}/blog/a`);
+    expect(d.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(`https://${DOMINIO}/blog/a`);
+  });
+
+  it('sem canonical, og:url cai no url do servidor', () => {
+    const d = doc(montarHead(INDEX_HTML, { ...DADOS, canonical: null, url: `https://${DOMINIO}/x` }, DOMINIO));
+    expect(meta(d, 'meta[property="og:url"]')).toBe(`https://${DOMINIO}/x`);
+  });
+
+  it('og:site_name com o nome do site (escapado); sem nome, a tag não sai', () => {
+    const d = doc(montarHead(INDEX_HTML, { ...DADOS, site_name: 'Imob "Teste" & Cia', type: 'home' }, DOMINIO));
+    expect(meta(d, 'meta[property="og:site_name"]')).toBe('Imob "Teste" & Cia');
+    expect(montarHead(INDEX_HTML, { ...DADOS, site_name: 'Imob "Teste" & Cia' }, DOMINIO)).toContain('content="Imob &quot;Teste&quot; &amp; Cia"');
+    expect(doc(montarHead(INDEX_HTML, { ...DADOS, site_name: null }, DOMINIO)).querySelector('meta[property="og:site_name"]')).toBeNull();
+  });
+
   it('twitter:card grande com foto, simples sem foto', () => {
     expect(meta(doc(montarHead(INDEX_HTML, DADOS, DOMINIO)), 'meta[name="twitter:card"]')).toBe('summary_large_image');
     const semFoto = doc(montarHead(INDEX_HTML, { ...DADOS, image: null }, DOMINIO));

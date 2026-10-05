@@ -12,6 +12,8 @@
 import { ehEnderecoDoSistema } from './features/siteBuilder/public/dominioDoSite';
 import { isChunkError, reloadForNewVersion } from './utils/chunkReload';
 
+// ⚠️ A trava de build só segue o import estático da entrada. Um novo `import()`
+// aqui não é conferido pela `conferir-dominio-limpo` (scripts/conferir-dominio-limpo.mjs).
 const app = ehEnderecoDoSistema(window.location.hostname)
   ? import('./mainDoSistema')
   : import('./mainDoSite');

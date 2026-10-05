@@ -114,9 +114,9 @@ export default function MeuSiteBarra({
         </Button>
       )}
       {comPrevia && linkDaPrevia && (
-        <div role="status" className="basis-full rounded-lg border bg-muted/40 p-3">
+        <div className="basis-full rounded-lg border bg-muted/40 p-3">
           <div className="flex items-start justify-between gap-2">
-            <p className="text-sm">Esse link vale 24 horas. Pode mandar pro dono aprovar.</p>
+            <p role="status" className="text-sm">Esse link vale 24 horas. Pode mandar pro dono aprovar.</p>
             <Button variant="ghost" size="sm" aria-label="Fechar aviso" onClick={() => setLinkDaPrevia(null)}>
               <X className="h-4 w-4" aria-hidden />
             </Button>

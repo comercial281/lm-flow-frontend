@@ -31,7 +31,9 @@ export interface DadosDoHead {
   /** `index,follow` só com o Google ligado, site publicado e fora da prévia. */
   robots?: string | null;
   maintenance?: boolean | null;
-  /** Nome do site, quando o servidor manda. Fora do contrato: só usado se vier. */
+  /** Tipo da página: `home`, `search`, `property`, `blog`, `article`, `page`, `financing`, `listing`, `landing`. */
+  type?: string | null;
+  /** Nome do site (vira o `og:site_name` e o título de reserva). */
   site_name?: string | null;
   name?: string | null;
 }
@@ -173,12 +175,16 @@ export function montarHead(html: string, dados: DadosDoHead, host: string): stri
 
   const imagem = texto(dados.image);
   const canonical = texto(dados.canonical);
-  const url = texto(dados.url) ?? canonical;
+  // O `og:url` é SEMPRE o canonical: o `url` do servidor é o endereço pedido, que
+  // pode ser o app.lmflow.com.br, e a prévia do link apontaria pra lá.
+  const url = canonical ?? texto(dados.url);
+  const nomeDoSite = texto(dados.site_name);
   const tags: string[] = [];
   if (!temTitulo) tags.push(`<title>${escapeHtml(tituloDaPagina)}</title>`);
   if (!META_ROBOTS.test(out)) tags.push(metaRobots);
   tags.push('<meta property="og:type" content="website" />');
   tags.push('<meta property="og:locale" content="pt_BR" />');
+  if (nomeDoSite) tags.push(`<meta property="og:site_name" content="${escapeHtml(nomeDoSite)}" />`);
   if (titulo) tags.push(`<meta property="og:title" content="${escapeHtml(titulo)}" />`);
   if (descricao) tags.push(`<meta property="og:description" content="${escapeHtml(descricao)}" />`);
   if (imagem) tags.push(`<meta property="og:image" content="${escapeHtml(imagem)}" />`);

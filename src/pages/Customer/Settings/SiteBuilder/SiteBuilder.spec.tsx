@@ -352,7 +352,8 @@ describe('SiteBuilder (casca do Meu site)', () => {
       expect(url.origin).toBe('https://imobteste.com.br');
       expect(url.searchParams.get('previa')).toBe('tok+a/b==--9f');
       expect(aba.opener).toBeNull();
-      expect(screen.getByText('Esse link vale 24 horas. Pode mandar pro dono aprovar.')).toBeTruthy();
+      // Só a frase é anunciada (role status), não o campo e os botões junto.
+      expect(screen.getByRole('status')).toHaveTextContent(/^Esse link vale 24 horas\. Pode mandar pro dono aprovar\.$/);
       expect((screen.getByLabelText('Link da prévia') as HTMLInputElement).value).toBe(aba.location.href);
       abrirJanela.mockRestore();
     });
@@ -400,6 +401,8 @@ describe('SiteBuilder (casca do Meu site)', () => {
       await screen.findByRole('heading', { name: 'Aparecer no Google' });
       const caixa = screen.getByRole('checkbox', { name: 'Aparecer no Google' });
       expect(caixa).toHaveAttribute('aria-checked', 'false');
+      // O leitor de tela lê as duas frases junto com a caixinha.
+      expect(caixa).toHaveAccessibleDescription(/Liga quando o site estiver pronto\..*O Google lê o site pelo endereço imob\.lmflow\.com\.br/);
 
       await userEvent.click(caixa);
       expect(barra()).toBeTruthy();

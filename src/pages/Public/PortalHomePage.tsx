@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
-import { cabecalhosDoSite } from '@/features/siteBuilder/public/previa';
+import { TEXTO_ENVIO_NA_PREVIA, cabecalhosDoSite, ehPrevia, envioFoiPrevia } from '@/features/siteBuilder/public/previa';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import { API, PortalFooter, PortalHeader, Stat, usePortalData } from './portalShared';
@@ -42,6 +42,8 @@ export default function PortalHomePage() {
   const [leadPhone, setLeadPhone] = useState('');
   const [leadPhoneErr, setLeadPhoneErr] = useState(false);
   const [leadSent, setLeadSent] = useState(false);
+  // Envio feito na prévia: o servidor não criou nada, e a tela não finge que criou.
+  const [enviadoNaPrevia, setEnviadoNaPrevia] = useState(false);
   // "Quero comprar / Quero alugar" (spec venda/locação, D3): marcado pela aba da
   // busca do topo, e a pessoa troca se quiser. Sem escolha ainda, segue a aba
   // em que a capa abre (a primeira visível).
@@ -58,9 +60,11 @@ export default function PortalHomePage() {
         headers: cabecalhosDoSite(tenant, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ lead: { name: leadName, phone: leadPhone, source: 'portal', form_type: 'home', finalidade: leadFinalidade, message: 'Quero ajuda pra encontrar um imóvel (portal home).' } }),
       });
+      const naPrevia = ehPrevia(site) || (res.ok && (await envioFoiPrevia(res)));
+      setEnviadoNaPrevia(naPrevia);
       setLeadSent(true);
-      // Conversão só conta quando o servidor aceitou o contato.
-      if (res.ok) trackLead();
+      // Conversão só conta quando o servidor aceitou o contato (e nunca na prévia).
+      if (res.ok && !naPrevia) trackLead();
     } catch { /* silencioso */ }
   };
 
@@ -114,7 +118,11 @@ export default function PortalHomePage() {
               <h2 className="font-[var(--display)] text-3xl font-semibold leading-tight sm:text-4xl">Não achou? A gente encontra pra você.</h2>
               <p className="mt-3 max-w-md text-[15px] text-white/70">Deixe seu contato e um especialista traz opções que combinam com o que você procura — sem robô, sem enrolação.</p>
             </div>
-            {leadSent ? (
+            {leadSent && enviadoNaPrevia ? (
+              <div role="status" className="rounded-2xl bg-amber-400 p-8 text-center font-semibold text-neutral-900">
+                {TEXTO_ENVIO_NA_PREVIA}
+              </div>
+            ) : leadSent ? (
               <div className="rounded-2xl bg-white/10 p-8 text-center text-white ring-1 ring-white/15">
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full" style={{ background: '#25D366' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>

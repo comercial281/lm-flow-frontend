@@ -10,7 +10,9 @@
 // como se não houvesse token.
 //
 // Na prévia: faixa "Prévia: o site ainda não está publicado.", `noindex`, sem
-// visita e sem nenhum rastreamento (GA4, Pixel, GTM, códigos).
+// visita e sem nenhum rastreamento (GA4, Pixel, GTM, códigos). Formulário
+// enviado na prévia não cria nada no servidor (`{ data: { preview: true } }`):
+// a tela diz isso no lugar do "obrigado" e não conta conversão.
 //
 // Não importa nada: o site no domínio do cliente é um pacote enxuto.
 
@@ -77,6 +79,22 @@ export function cabecalhosDoSite(tenant: string, extra: Record<string, string> =
 /** O site veio como prévia (o servidor aceitou o token). Só `true` conta. */
 export function ehPrevia(site: { preview?: boolean | null } | null | undefined): boolean {
   return site?.preview === true;
+}
+
+/** O que o formulário mostra no lugar do "obrigado" quando o envio foi na prévia. */
+export const TEXTO_ENVIO_NA_PREVIA = 'Prévia: o contato não foi enviado de verdade.';
+
+/**
+ * O servidor respondeu ao envio de um formulário como prévia
+ * (`{ data: { preview: true } }`): nada foi criado. Corpo ilegível = não.
+ */
+export async function envioFoiPrevia(res: { json: () => Promise<unknown> }): Promise<boolean> {
+  try {
+    const j = (await res.json()) as { data?: { preview?: unknown } } | null;
+    return j?.data?.preview === true;
+  } catch {
+    return false;
+  }
 }
 
 /** Só para teste: esquece o token da memória. */

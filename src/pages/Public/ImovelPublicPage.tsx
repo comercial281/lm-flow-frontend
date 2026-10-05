@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useCtxDoSite, useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
-import { cabecalhosDoSite } from '@/features/siteBuilder/public/previa';
+import { TEXTO_ENVIO_NA_PREVIA, cabecalhosDoSite, ehPrevia, envioFoiPrevia } from '@/features/siteBuilder/public/previa';
 import { trackLead } from '@/features/siteBuilder/public/siteTracking';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
@@ -124,6 +124,8 @@ export default function ImovelPublicPage() {
   const [phone, setPhone] = useState('');
   const [phoneErr, setPhoneErr] = useState(false);
   const [sent, setSent] = useState(false);
+  // Envio feito na prévia: o servidor não criou nada, e a tela não finge que criou.
+  const [enviadoNaPrevia, setEnviadoNaPrevia] = useState(false);
   // Imóvel de Venda + Locação: a pessoa escolhe, marcada pela aba da busca de
   // onde veio (?finalidade=locacao). Os outros imóveis decidem sozinhos.
   const [searchParams] = useSearchParams();
@@ -240,9 +242,11 @@ export default function ImovelPublicPage() {
           form_data: { page_url: window.location.href, referrer: document.referrer || null },
         } }),
       });
+      const naPrevia = ehPrevia(site) || (res.ok && (await envioFoiPrevia(res)));
+      setEnviadoNaPrevia(naPrevia);
       setSent(true);
-      // Conversão só conta quando o servidor aceitou o contato.
-      if (res.ok) trackLead();
+      // Conversão só conta quando o servidor aceitou o contato (e nunca na prévia).
+      if (res.ok && !naPrevia) trackLead();
     } catch { /* silencioso */ }
   };
 
@@ -307,7 +311,11 @@ export default function ImovelPublicPage() {
   ].filter(Boolean) as { d: string; label: string }[];
 
   const ContactForm = (
-    sent ? (
+    sent && enviadoNaPrevia ? (
+      <div role="status" className="rounded-2xl bg-amber-400 p-6 text-center font-semibold text-neutral-900">
+        {TEXTO_ENVIO_NA_PREVIA}
+      </div>
+    ) : sent ? (
       <div className="rounded-2xl bg-white p-6 text-center ring-1 ring-black/[0.06]">
         <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full" style={{ background: '#25D366' }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
