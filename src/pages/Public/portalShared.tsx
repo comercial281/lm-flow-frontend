@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from
 import { Link } from 'react-router-dom';
 import { fetchAllPortalProperties } from './portalProperties';
 import { imovelHref } from './finalidade';
-import { menuPagesLinks } from '@/features/siteBuilder/public/portalMenu';
+import { ehAba, itensDoMenu, menuPersonalizado, NOME_DE_FABRICA, type LinkDoMenu } from '@/features/siteBuilder/public/menuConfig';
 import { caminhoDoSite, type CtxDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { cabecalhosDoSite, ehPrevia } from '@/features/siteBuilder/public/previa';
@@ -97,7 +97,10 @@ export interface SiteInfo {
   tracking?: { gtm_id?: string | null; ga4?: string | null; facebook_pixel?: string | null } | null;
   custom_code?: { head?: string | null; body?: string | null } | null;
   translate?: { enabled?: boolean; languages?: string[] } | null;
+  /** Lista ANTIGA das páginas no menu (ativas e no menu). O site no ar lê como lista: não mudar. */
   menu?: { title: string; slug: string }[] | null;
+  /** Menu configurável (settings.menu, C3). Ler sempre por `resolverMenu`/`itensDoMenu`. Não vem em manutenção. */
+  menu_config?: unknown;
   /** Configuração da página inicial (settings.home). Ler sempre por `resolverHome`. */
   home?: unknown;
   /** Página do imóvel (settings.property_page, sem os e-mails). Ler sempre por `resolverFicha`. */
@@ -544,28 +547,10 @@ export function Stat({ n, label }: { n: string; label: string }) {
 }
 
 /* ── Header compartilhado (menu do topo funcional) ───────────────────────── */
-type NavItem =
-  | { label: string; kind: 'tab'; value: PortalTab }
-  | { label: string; kind: 'section'; value: string }
-  | { label: string; kind: 'page'; value: string }
-  | { label: string; kind: 'href'; value: string };
-
-const NAV: NavItem[] = [
-  { label: 'Comprar', kind: 'tab', value: 'sale' },
-  { label: 'Alugar', kind: 'tab', value: 'rent' },
-  { label: 'Lançamentos', kind: 'tab', value: 'launch' },
-  { label: 'Sobre', kind: 'section', value: 'sobre' },
-  { label: 'Contato', kind: 'section', value: 'contato' },
-];
-
-/** "Financiamento" e "Anuncie seu imóvel" só existem no menu quando o gestor
- *  ligou a página no Site Builder — link para uma página desligada é beco. */
-export function extraPages(site: SiteInfo): NavItem[] {
-  const out: NavItem[] = [];
-  if (site.financiamento?.enabled) out.push({ label: 'Financiamento', kind: 'page', value: 'financiamento' });
-  if (site.anuncie?.enabled) out.push({ label: 'Anuncie seu imóvel', kind: 'page', value: 'anuncie' });
-  return out;
-}
+/* Os links do topo (e do rodapé, depois que o cliente mexe no menu) saem de
+   `itensDoMenu` (menuConfig.ts): ordem, nome e liga/desliga da tela Menus, e
+   some sozinho o item sem destino (aba sem imóvel, seção ou página desligada,
+   blog sem artigo). */
 
 /** As redes cadastradas no Site Builder, na ordem em que saem na barra fina. */
 const SOCIAL_ORDER = ['instagram', 'facebook', 'youtube', 'linkedin', 'tiktok'] as const;
@@ -643,8 +628,19 @@ function PortalTopBar({ site, ap }: { site: SiteInfo; ap: Aparencia }) {
   );
 }
 
-/** Abas do menu (Comprar/Alugar/Lançamentos) que a página mostra; sem `abas`, as três. */
-const abaVisivel = (abas?: AbaId[]) => (n: NavItem) => n.kind !== 'tab' || !abas || abas.includes(n.value);
+/** Abas (Comprar/Alugar/Lançamentos) que a página mostra; sem `abas`, as três. */
+const ABAS_DO_RODAPE: AbaId[] = ['sale', 'rent', 'launch'];
+const abaVisivel = (abas?: AbaId[]) => (aba: AbaId) => !abas || abas.includes(aba);
+
+/**
+ * Um link do menu, no topo ou no rodapé: página do site pelo roteador, seção
+ * da home por âncora simples e endereço de fora em outra aba.
+ */
+function LinkDoMenuEl({ l, cls, onClick }: { l: LinkDoMenu; cls?: string; onClick?: () => void }) {
+  if (l.externo) return <a href={l.href} target="_blank" rel="noopener noreferrer" onClick={onClick} className={cls}>{l.rotulo}</a>;
+  if (l.ancora) return <a href={l.href} onClick={onClick} className={cls}>{l.rotulo}</a>;
+  return <Link to={l.href} onClick={onClick} className={cls}>{l.rotulo}</Link>;
+}
 
 interface PropsDaMoldura { site: SiteInfo; tenant: string; onHome?: boolean; abas?: AbaId[] }
 
@@ -806,16 +802,12 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
     return () => window.removeEventListener('scroll', onScroll);
   }, [onHome]);
 
-  // Seções liga/desliga (Site Builder). Ausência da flag = visível (retrocompat).
-  const showStats = site.sections?.stats !== false;
-  const showLeadCapture = site.sections?.lead_capture !== false;
-  const nav = [
-    ...NAV.filter(abaVisivel(abas)).filter(n => (n.value === 'sobre' ? showStats : n.value === 'contato' ? showLeadCapture : true)),
-    ...extraPages(site),
-    ...menuPagesLinks(site, ctx).map((l): NavItem => ({ label: l.label, kind: 'href', value: l.href })),
-  ];
+  // O menu (tela Menus): sem menu_config ou com o de fábrica, os links de
+  // antes do C3, na mesma ordem (abas, Sobre, Contato, Financiamento, Anuncie,
+  // páginas, Blog). Sobre/Contato rolam a home por âncora e, fora dela, voltam
+  // pra home apontando a seção.
+  const nav = itensDoMenu(site, abas, hasBlog, { ctx, onHome });
 
-  const sectionHref = (id: string) => (onHome ? `#${id}` : caminhoDoSite(ctx, `/#${id}`));
   // Menu aberto sobre a capa é sempre sólido — texto branco sobre foto some.
   // Só o topo transparente flutua; na cor principal e no branco ele é sólido.
   const floating = ap.header_style === 'transparent' && onHome && !scrolled && !menuOpen;
@@ -823,19 +815,6 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
   const logo = logoNaSuperficie(site.branding?.logo_url, ap, roupa.superficie, tokensDoSite(site).brand);
   // Sobre a capa, sem logo clara, a normal vira branca (o de sempre).
   const filtroDaLogo = floating && !logo.clara ? 'brightness-0 invert' : '';
-
-  const renderLink = (n: NavItem, onClick?: () => void, cls?: string) => {
-    if (n.kind === 'tab') {
-      return <Link key={n.label} to={caminhoDoSite(ctx, `/imoveis?tab=${n.value}`)} onClick={onClick} className={cls}>{n.label}</Link>;
-    }
-    if (n.kind === 'page') {
-      return <Link key={n.label} to={caminhoDoSite(ctx, `/${n.value}`)} onClick={onClick} className={cls}>{n.label}</Link>;
-    }
-    if (n.kind === 'href') {
-      return <Link key={n.value} to={n.value} onClick={onClick} className={cls}>{n.label}</Link>;
-    }
-    return <a key={n.label} href={sectionHref(n.value)} onClick={onClick} className={cls}>{n.label}</a>;
-  };
 
   const desktopCls = roupa.link;
   const mobileCls = 'block py-2.5 text-[15px] font-medium text-neutral-700';
@@ -879,8 +858,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
             </Link>
 
             <nav className="hidden items-center gap-6 lg:flex">
-              {nav.map(n => renderLink(n, undefined, desktopCls))}
-              {hasBlog && <Link to={caminhoDoSite(ctx, '/blog')} className={desktopCls}>Blog</Link>}
+              {nav.map(l => <LinkDoMenuEl key={l.chave} l={l} cls={desktopCls} />)}
             </nav>
 
             <div className="flex items-center gap-2">
@@ -907,8 +885,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
 
           {menuOpen && (
             <nav className="border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 lg:hidden">
-              {nav.map(n => renderLink(n, () => setMenuOpen(false), mobileCls))}
-              {hasBlog && <Link to={caminhoDoSite(ctx, '/blog')} onClick={() => setMenuOpen(false)} className={mobileCls}>Blog</Link>}
+              {nav.map(l => <LinkDoMenuEl key={l.chave} l={l} cls={mobileCls} onClick={() => setMenuOpen(false)} />)}
               {(site.contact?.phone || site.contact?.email) && (
                 <div className="mt-2 border-t border-black/[0.06] pt-2 text-[13px] text-neutral-500">
                   {site.contact?.phone && (
@@ -938,13 +915,47 @@ function FooterCol({ children, title }: { children: ReactNode; title: string }) 
 }
 const footerLinkCls = 'text-[13px] text-neutral-600 hover:text-[var(--brand)]';
 
-/** Link do rodapé: âncora de seção (`a`) ou página do site (`Link`). */
-interface LinkDoRodape { chave: string; rotulo: string; href: string; ancora?: boolean }
+function LinkDoRodapeEl({ l }: { l: LinkDoMenu }) {
+  return <LinkDoMenuEl l={l} cls={footerLinkCls} />;
+}
 
-function LinkDoRodapeEl({ l }: { l: LinkDoRodape }) {
-  return l.ancora
-    ? <a href={l.href} className={footerLinkCls}>{l.rotulo}</a>
-    : <Link to={l.href} className={footerLinkCls}>{l.rotulo}</Link>;
+/**
+ * Links do rodapé ANTES do C3: Imóveis com as abas e Institucional com uma
+ * lista própria (Sobre nós, Blog, Contato, Anuncie, Financiamento), sem as
+ * páginas criadas. Vale enquanto o menu é o de fábrica (`menuPersonalizado`).
+ */
+function linksDoRodapeDeAntes(site: SiteInfo, abas: AbaId[] | undefined, hasBlog: boolean, ctx: CtxDoSite, onHome: boolean) {
+  const showStats = site.sections?.stats !== false;
+  const showLeadCapture = site.sections?.lead_capture !== false;
+  const sectionHref = (id: string) => (onHome ? `#${id}` : caminhoDoSite(ctx, `/#${id}`));
+  const link = (chave: string, rotulo: string, href: string, ancora = false): LinkDoMenu => ({ chave, rotulo, href, ancora, externo: false });
+  const imoveis = ABAS_DO_RODAPE.filter(abaVisivel(abas))
+    .map(aba => link(aba, NOME_DE_FABRICA[aba], caminhoDoSite(ctx, `/imoveis?tab=${aba}`)));
+  /* "Anuncie" rolava para o formulário de QUEM COMPRA: o proprietário que
+     queria VENDER caía no formulário contrário. Agora ele só existe quando a
+     página de verdade está ligada, e aponta para ela. */
+  const institucional = [
+    showStats && link('sobre', 'Sobre nós', sectionHref('sobre'), true),
+    hasBlog && link('blog', 'Blog', caminhoDoSite(ctx, '/blog')),
+    showLeadCapture && link('contato', 'Contato', sectionHref('contato'), true),
+    site.anuncie?.enabled && link('anuncie', 'Anuncie seu imóvel', caminhoDoSite(ctx, '/anuncie')),
+    site.financiamento?.enabled && link('financiamento', 'Financiamento', caminhoDoSite(ctx, '/financiamento')),
+  ].filter((l): l is LinkDoMenu => !!l);
+  return { imoveis, institucional, todos: [...imoveis, ...institucional] };
+}
+
+/**
+ * Links do rodapé que repetem o menu (depois que o cliente mexe na tela
+ * Menus): as abas do menu em Imóveis e o resto em Institucional (Sobre,
+ * Contato, Financiamento, Anuncie, páginas, Blog e os externos), cada coluna
+ * na ordem do menu. No compacto, o menu inteiro na ordem dele.
+ */
+function linksDoRodapeDoMenu(menu: LinkDoMenu[]) {
+  return {
+    imoveis: menu.filter(l => ehAba(l.chave)),
+    institucional: menu.filter(l => !ehAba(l.chave)),
+    todos: menu,
+  };
 }
 
 /**
@@ -971,27 +982,17 @@ function CreditoDoRodape({ nome }: { nome?: string }) {
 function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
   const wa = site.contact?.whatsapp;
   const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
-  const showStats = site.sections?.stats !== false;
-  const showLeadCapture = site.sections?.lead_capture !== false;
   const hasBlog = usePublishedArticlesExist(tenant);
   const ctx = useCtxDoSite(tenant);
   const ap = resolverAparencia(site.appearance);
   const logo = logoNaSuperficie(site.branding?.logo_url, ap, 'fundo');
   const frase = ap.footer_text ?? TEXTO_RODAPE_FABRICA;
-  const sectionHref = (id: string) => (onHome ? `#${id}` : caminhoDoSite(ctx, `/#${id}`));
-
-  const imoveis: LinkDoRodape[] = NAV.filter(n => n.kind === 'tab').filter(abaVisivel(abas))
-    .map(n => ({ chave: n.value, rotulo: n.label, href: caminhoDoSite(ctx, `/imoveis?tab=${n.value}`) }));
-  /* "Anuncie" rolava para o formulário de QUEM COMPRA: o proprietário que
-     queria VENDER caía no formulário contrário. Agora ele só existe quando a
-     página de verdade está ligada, e aponta para ela. */
-  const institucional: LinkDoRodape[] = [
-    showStats && { chave: 'sobre', rotulo: 'Sobre nós', href: sectionHref('sobre'), ancora: true },
-    hasBlog && { chave: 'blog', rotulo: 'Blog', href: caminhoDoSite(ctx, '/blog') },
-    showLeadCapture && { chave: 'contato', rotulo: 'Contato', href: sectionHref('contato'), ancora: true },
-    site.anuncie?.enabled && { chave: 'anuncie', rotulo: 'Anuncie seu imóvel', href: caminhoDoSite(ctx, '/anuncie') },
-    site.financiamento?.enabled && { chave: 'financiamento', rotulo: 'Financiamento', href: caminhoDoSite(ctx, '/financiamento') },
-  ].filter((l): l is LinkDoRodape => !!l);
+  // O rodapé repete o menu depois que o cliente mexe nele; com o menu de
+  // fábrica (ou servidor velho) fica o rodapé de antes do C3.
+  const personalizado = menuPersonalizado(site);
+  const { imoveis, institucional, todos } = personalizado
+    ? linksDoRodapeDoMenu(itensDoMenu(site, abas, hasBlog, { ctx, onHome }))
+    : linksDoRodapeDeAntes(site, abas, hasBlog, ctx, onHome);
 
   if (ap.footer_layout === 'compact') {
     return (
@@ -1002,7 +1003,7 @@ function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) 
               nomeCls="font-[var(--display)] text-lg font-semibold" />
           </Link>
           <nav aria-label="Links do rodapé" className="flex flex-1 flex-wrap items-center gap-x-5 gap-y-2">
-            {[...imoveis, ...institucional].map(l => <LinkDoRodapeEl key={l.chave} l={l} />)}
+            {todos.map(l => <LinkDoRodapeEl key={l.chave} l={l} />)}
           </nav>
           {waHref && <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold text-white" style={{ background: '#25D366' }}><Ic d={I.wa} s={15} /> WhatsApp</a>}
         </div>
@@ -1030,9 +1031,11 @@ function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) 
             {imoveis.map(l => <li key={l.chave}><LinkDoRodapeEl l={l} /></li>)}
           </FooterCol>
         )}
-        <FooterCol title="Institucional">
-          {institucional.map(l => <li key={l.chave}><LinkDoRodapeEl l={l} /></li>)}
-        </FooterCol>
+        {(institucional.length > 0 || !personalizado) && (
+          <FooterCol title="Institucional">
+            {institucional.map(l => <li key={l.chave}><LinkDoRodapeEl l={l} /></li>)}
+          </FooterCol>
+        )}
         <div>
           <h4 className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-neutral-500">Contato</h4>
           {waHref && <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold text-white" style={{ background: '#25D366' }}><Ic d={I.wa} s={15} /> WhatsApp</a>}
