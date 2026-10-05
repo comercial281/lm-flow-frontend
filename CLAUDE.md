@@ -6056,6 +6056,7 @@ Fase 4, entrega 6 (parte A). Spec: `LM FLOW/specs/2026-10-04-fase-4-imoveis-book
 4. **"Preencher pelo book" também guarda o book:** um envio só preenche os campos e anexa o PDF.
 5. **O book só preenche campo vazio.** Nunca sobrescreve o que o corretor digitou.
 6. **A tela *Books* saiu do menu.** `/books` virou `<Navigate to="/properties" replace />` (sem `PermissionRoute`: quem não vê imóveis cai na regra de `/properties`). `PropertyBooks.tsx` foi apagada; `PropertyBookDialog` ficou (a lista e o cadastro usam).
+   - **Filtro "Só com book"** (aba Empreendimentos, painel de filtros): substitui a lista da antiga tela. `FiltrosEmpreendimento.comBook` → `has_book=1` na API, etiqueta "Com book". Decidido com o Tony em 05/10.
 7. **Captação pelo book no site** (botão *Receber o book no WhatsApp*, gatilho e ação *Enviar o book do imóvel de interesse*) é a **parte C**, junto com as sobras do site. Fora daqui.
 
 **O que o bloco faz:**

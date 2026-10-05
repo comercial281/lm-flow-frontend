@@ -17,6 +17,14 @@ describe('PainelDeFiltros', () => {
     expect(screen.queryByText('Finalidade')).toBeNull();
   });
 
+  it('Empreendimentos: "Só com book" liga o filtro', () => {
+    const aoMudar = vi.fn();
+    render(<PainelDeFiltros kind="development" filtros={FILTROS_VAZIOS.development} facetas={facetas}
+      aoMudar={aoMudar} aoLimpar={vi.fn()} aoRecolher={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Só com book' }));
+    expect(aoMudar).toHaveBeenCalledWith({ ...FILTROS_VAZIOS.development, comBook: true });
+  });
+
   it('Revenda mostra finalidade e captador, sem fase', () => {
     render(<PainelDeFiltros kind="resale" filtros={FILTROS_VAZIOS.resale} facetas={facetas}
       aoMudar={vi.fn()} aoLimpar={vi.fn()} aoRecolher={vi.fn()} />);
