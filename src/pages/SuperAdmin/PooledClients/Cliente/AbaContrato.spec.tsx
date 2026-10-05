@@ -46,11 +46,59 @@ describe('Aba Contrato (limites)', () => {
     render(<AbaContrato cliente={clienteComPacote as any} aoMudar={aoMudar} recarregar={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Voltar ao pacote' }));
     expect(await screen.findByText('liga Bolsão')).toBeInTheDocument();
-    expect(screen.getByText('Os 1 ajustes manuais deste cliente serão desfeitos.')).toBeInTheDocument();
+    expect(screen.getByText('O 1 ajuste manual deste cliente será desfeito.')).toBeInTheDocument();
     expect(apiX.post).toHaveBeenCalledTimes(1);
     await user.click(screen.getAllByRole('button', { name: 'Voltar ao pacote' }).at(-1)!);
     await waitFor(() => expect(apiX.post).toHaveBeenLastCalledWith('/super/pooled_tenants/c1/reset_to_package', { dry_run: false }));
     await waitFor(() => expect(aoMudar).toHaveBeenCalled());
+  });
+
+  it('sem ajustes manuais, o aviso não aparece', async () => {
+    apiX.post.mockResolvedValue({ data: { data: { changes: { features: [{ key: 'bolsao', label: 'Bolsão', tenant: false, package: true }], limits: [] }, undone: 0 } } });
+    const user = userEvent.setup();
+    render(<AbaContrato cliente={clienteComPacote as any} aoMudar={vi.fn()} recarregar={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Voltar ao pacote' }));
+    expect(await screen.findByText('liga Bolsão')).toBeInTheDocument();
+    expect(screen.queryByText(/ajuste/)).not.toBeInTheDocument();
+  });
+
+  it('prévia antiga que chega depois não vence a mais nova', async () => {
+    apiX.get.mockResolvedValue({ data: { data: [{ id: 'p2', name: 'B', clients_count: 0, features_on: 1, limits: {} }, { id: 'p3', name: 'C', clients_count: 0, features_on: 1, limits: {} }] } });
+    let soltaP2!: (v: unknown) => void;
+    apiX.post.mockImplementation((_u: string, body: { package_id: string; dry_run: boolean }) => body.package_id === 'p2'
+      ? new Promise((r) => { soltaP2 = r; })
+      : Promise.resolve({ data: { data: { changes: { features: [{ key: 'x', label: 'Novo', tenant: false, package: true }], limits: [] }, undone: 0 } } }));
+    const user = userEvent.setup();
+    render(<AbaContrato cliente={clienteComPacote as any} aoMudar={vi.fn()} recarregar={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Trocar pacote' }));
+    const lista = await screen.findByLabelText('Novo pacote');
+    await user.selectOptions(lista, 'p2');
+    await user.selectOptions(lista, 'p3');
+    expect(await screen.findByText('liga Novo')).toBeInTheDocument();
+    soltaP2({ data: { data: { changes: { features: [{ key: 'y', label: 'Velho', tenant: true, package: false }], limits: [] }, undone: 0 } } });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByText('desliga Velho')).not.toBeInTheDocument();
+    expect(screen.getByText('liga Novo')).toBeInTheDocument();
+  });
+
+  it('lista de pacotes que falha mostra erro com Tentar de novo', async () => {
+    apiX.get.mockRejectedValueOnce(new Error('x')).mockResolvedValue({ data: { data: [] } });
+    const user = userEvent.setup();
+    render(<AbaContrato cliente={clienteComPacote as any} aoMudar={vi.fn()} recarregar={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Trocar pacote' }));
+    expect(await screen.findByText('Não deu pra carregar os pacotes.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Tentar de novo/ }));
+    await waitFor(() => expect(screen.queryByText('Não deu pra carregar os pacotes.')).not.toBeInTheDocument());
+  });
+
+  it('prévia que falha mostra erro com Tentar de novo', async () => {
+    apiX.post.mockRejectedValueOnce(new Error('x')).mockResolvedValue({ data: { data: { changes: { features: [], limits: [] }, undone: 0 } } });
+    const user = userEvent.setup();
+    render(<AbaContrato cliente={clienteComPacote as any} aoMudar={vi.fn()} recarregar={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Voltar ao pacote' }));
+    expect(await screen.findByText('Não deu pra ver o que muda.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Tentar de novo/ }));
+    expect(await screen.findByText('Nenhuma função ou limite muda.')).toBeInTheDocument();
   });
 
   it('cliente Personalizado não tem Voltar ao pacote', () => {

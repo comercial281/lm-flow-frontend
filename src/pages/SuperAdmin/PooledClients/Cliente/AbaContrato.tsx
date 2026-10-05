@@ -1,6 +1,7 @@
 // src/pages/SuperAdmin/PooledClients/Cliente/AbaContrato.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label } from '@/components/ui/ds';
 import { clientesService } from '@/services/superAdmin/clientesService';
@@ -52,24 +53,34 @@ function BlocoDoPacote({ cliente, aoMudar }: Pick<PropsDaAba, 'cliente' | 'aoMud
 
 function DialogoDoPacote({ modo, cliente, aoMudar, aoFechar }: { modo: 'trocar' | 'voltar'; cliente: ClientePooled; aoMudar: (c: ClientePooled) => void; aoFechar: () => void }) {
   const [pacotes, setPacotes] = useState<PacoteDaLista[]>([]);
+  const [erroDaLista, setErroDaLista] = useState(false);
+  const [erroDaPrevia, setErroDaPrevia] = useState(false);
   const [escolhido, setEscolhido] = useState('');
   const [previa, setPrevia] = useState<Previa | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [aplicando, setAplicando] = useState(false);
+  const seq = useRef(0);
 
+  // seq: resposta de uma prévia antiga (escolher p2 e logo p3) é ignorada.
   const verPrevia = async (pkg?: string) => {
-    setCarregando(true); setPrevia(null);
+    const minha = ++seq.current;
+    setCarregando(true); setPrevia(null); setErroDaPrevia(false);
     try {
       const r = modo === 'trocar' ? await clientesService.trocarPacote(cliente.id, pkg!, true) : await clientesService.voltarAoPacote(cliente.id, true);
-      setPrevia({ changes: r.changes as DiffDoCliente, undone: r.undone });
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'Não deu pra ver o que muda.');
-    } finally { setCarregando(false); }
+      if (minha === seq.current) setPrevia({ changes: r.changes as DiffDoCliente, undone: r.undone });
+    } catch {
+      if (minha === seq.current) setErroDaPrevia(true);
+    } finally { if (minha === seq.current) setCarregando(false); }
+  };
+
+  const carregarPacotes = () => {
+    setErroDaLista(false);
+    pacotesService.listar().then(setPacotes).catch(() => setErroDaLista(true));
   };
 
   useEffect(() => {
     if (modo === 'voltar') { void verPrevia(); return; }
-    pacotesService.listar().then(setPacotes).catch(() => toast.error('Não deu pra carregar os pacotes.'));
+    carregarPacotes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -98,17 +109,19 @@ function DialogoDoPacote({ modo, cliente, aoMudar, aoFechar }: { modo: 'trocar' 
         {modo === 'trocar' && (
           <div>
             <Label htmlFor="novo-pacote">Novo pacote</Label>
-            <Seletor id="novo-pacote" aria-label="Novo pacote" value={escolhido} onChange={(e) => { setEscolhido(e.target.value); if (e.target.value) void verPrevia(e.target.value); else setPrevia(null); }}>
+            <Seletor id="novo-pacote" aria-label="Novo pacote" value={escolhido} onChange={(e) => { setEscolhido(e.target.value); if (e.target.value) void verPrevia(e.target.value); else { seq.current++; setPrevia(null); setErroDaPrevia(false); setCarregando(false); } }}>
               <option value="">Escolher…</option>
               {pacotes.filter((p) => p.id !== cliente.package?.id).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </Seletor>
           </div>
         )}
+        {erroDaLista && <EmptyState tipo="erro" title="Não deu pra carregar os pacotes." aoTentarDeNovo={carregarPacotes} />}
+        {erroDaPrevia && <EmptyState tipo="erro" title="Não deu pra ver o que muda." aoTentarDeNovo={() => void verPrevia(modo === 'trocar' ? escolhido : undefined)} />}
         {carregando && <div aria-busy="true" className="h-12 animate-pulse rounded-lg bg-muted" />}
         {previa && (
           <div className="space-y-2 text-sm">
             {linhas.length > 0 ? <ul className="list-disc pl-5">{linhas.map((l) => <li key={l}>{l}</li>)}</ul> : <p>Nenhuma função ou limite muda.</p>}
-            {previa.undone > 0 && <p>{`Os ${previa.undone} ajustes manuais deste cliente serão desfeitos.`}</p>}
+            {previa.undone > 0 && <p>{previa.undone === 1 ? 'O 1 ajuste manual deste cliente será desfeito.' : `Os ${previa.undone} ajustes manuais deste cliente serão desfeitos.`}</p>}
           </div>
         )}
         <DialogFooter>
@@ -121,8 +134,8 @@ function DialogoDoPacote({ modo, cliente, aoMudar, aoFechar }: { modo: 'trocar' 
 }
 
 function FormularioDeLimites({ cliente, aoMudar }: Pick<PropsDaAba, 'cliente' | 'aoMudar'>) {
-  const diferentes = new Set((cliente.package_diff?.limits ?? []).map((l) => l.key));
-  const marca = (k: string) => diferentes.has(k as never) ? <span className="ml-2 text-xs text-amber-700 dark:text-amber-300">≠ pacote</span> : null;
+  const diferentes = new Set<string>((cliente.package_diff?.limits ?? []).map((l) => l.key));
+  const marca = (k: string) => diferentes.has(k) ? <span className="ml-2 text-xs text-amber-700 dark:text-amber-300">≠ pacote</span> : null;
   const [numeros, setNumeros] = useState(String(cliente.max_whatsapp_channels ?? 5));
   const [franquia, setFranquia] = useState(cliente.ai_leads_included == null ? '' : String(cliente.ai_leads_included));
   const [preco, setPreco] = useState(String(cliente.ai_lead_overage_price_brl ?? 2.49));

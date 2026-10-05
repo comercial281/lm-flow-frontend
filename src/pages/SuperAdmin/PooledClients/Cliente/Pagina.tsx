@@ -45,12 +45,14 @@ export default function Pagina() {
   const [estado, setEstado] = useState<{ tipo: 'carregando' } | { tipo: 'erro' } | { tipo: 'naoEncontrado' } | { tipo: 'pronto'; cliente: ClientePooled }>({ tipo: 'carregando' });
   const seq = useRef(0);
 
-  const carregar = useCallback(async () => {
+  // silencioso: recarga com a página pronta. Se falhar, mantém o cliente que já está na tela.
+  const carregar = useCallback(async (silencioso = false) => {
     const minha = ++seq.current;
     try {
       const c = await clientesService.obter(id);
       if (minha === seq.current) setEstado({ tipo: 'pronto', cliente: c });
     } catch (e: any) {
+      if (silencioso) return;
       if (minha === seq.current) setEstado({ tipo: e?.response?.status === 404 ? 'naoEncontrado' : 'erro' });
     }
   }, [id]);
@@ -63,7 +65,7 @@ export default function Pagina() {
 
   const t = estado.cliente;
   const st = rotuloDaSituacao(t.situation, t.status);
-  const props: PropsDaAba = { cliente: t, aoMudar: (c) => setEstado({ tipo: 'pronto', cliente: c }), recarregar: () => void carregar() };
+  const props: PropsDaAba = { cliente: t, aoMudar: (c) => setEstado({ tipo: 'pronto', cliente: c }), recarregar: () => void carregar(true) };
   const Conteudo = CONTEUDO[aba];
 
   const entrar = async () => {

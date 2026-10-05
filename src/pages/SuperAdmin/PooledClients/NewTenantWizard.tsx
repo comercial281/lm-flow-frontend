@@ -55,6 +55,7 @@ export default function NewTenantWizard({ onClose, onCreated }: { onClose: () =>
     template_ids: [], package_id: '',
   });
   const [pacotes, setPacotes] = useState<PacoteDaLista[]>([]);
+  const [erroPacotes, setErroPacotes] = useState(false);
 
   useEffect(() => {
     api.get('/super/pooled_tenants/provision_data')
@@ -63,7 +64,7 @@ export default function NewTenantWizard({ onClose, onCreated }: { onClose: () =>
       .finally(() => setLoadingData(false));
   }, []);
 
-  useEffect(() => { pacotesService.listar().then(setPacotes).catch(() => {}); }, []);
+  useEffect(() => { pacotesService.listar().then(setPacotes).catch(() => setErroPacotes(true)); }, []);
 
   const set = (k: keyof WizardState, v: any) => setState(s => ({ ...s, [k]: v }));
 
@@ -126,7 +127,7 @@ export default function NewTenantWizard({ onClose, onCreated }: { onClose: () =>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          {step === 0 && <StepDados state={state} set={set} pacotes={pacotes} />}
+          {step === 0 && <StepDados state={state} set={set} pacotes={pacotes} erroPacotes={erroPacotes} />}
           {step === 1 && <StepAcesso state={state} set={set} setState={setState} />}
           {step === 2 && <StepLeads state={state} set={set} groups={provisionData.whatsapp_groups} loading={loadingData} />}
           {step === 3 && <StepTemplates state={state} set={set} templates={provisionData.templates} loading={loadingData} />}
@@ -197,7 +198,7 @@ function GroupSelect({ value, onChange, groups, placeholder, loading }: { value:
   );
 }
 
-function StepDados({ state, set, pacotes }: { state: WizardState; set: (k: keyof WizardState, v: any) => void; pacotes: PacoteDaLista[] }) {
+function StepDados({ state, set, pacotes, erroPacotes }: { state: WizardState; set: (k: keyof WizardState, v: any) => void; pacotes: PacoteDaLista[]; erroPacotes: boolean }) {
   return (
     <div className="space-y-4">
       <Field label="Nome da imobiliaria *">
@@ -218,7 +219,7 @@ function StepDados({ state, set, pacotes }: { state: WizardState; set: (k: keyof
           inputClassName="h-auto py-2 rounded-lg text-foreground placeholder:text-muted-foreground bg-muted border-input focus-visible:ring-ring"
         />
       </Field>
-      <Field label="Pacote" hint="Funções e limites do cliente. Personalizado = sem pacote, você ajusta na página do cliente.">
+      <Field label="Pacote" hint={erroPacotes ? 'Não deu pra carregar os pacotes; o cliente nasce Personalizado.' : 'Funções e limites do cliente. Personalizado = sem pacote, você ajusta na página do cliente.'}>
         <Seletor aria-label="Pacote" value={state.package_id} onChange={e => set('package_id', e.target.value)}
           className="w-full px-3 py-2 rounded-lg text-sm text-foreground outline-none focus:ring-1 focus:ring-ring bg-background border border-input">
           <option value="">Personalizado</option>

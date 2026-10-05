@@ -48,6 +48,22 @@ describe('Página do cliente', () => {
     expect(await screen.findByText('12')).toBeInTheDocument();
   });
 
+  it('recarga que falha com a página pronta mantém o cliente na tela', async () => {
+    responder();
+    api.post.mockResolvedValue({ data: {} });
+    const user = userEvent.setup();
+    montar('/admin/clientes/c1?aba=contrato');
+    await screen.findByRole('heading', { level: 1, name: '016 Imóveis' });
+    api.get.mockRejectedValue(new Error('rede'));
+    await user.click(screen.getByRole('button', { name: 'Mais ações' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Congelar' }));
+    await user.click(screen.getByRole('button', { name: 'Congelar' }));
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith('/super/pooled_tenants/c1'));
+    expect(screen.getByRole('heading', { level: 1, name: '016 Imóveis' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Contrato' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByText('Não deu para carregar o cliente')).not.toBeInTheDocument();
+  });
+
   it('Congelar pede confirmação com o efeito real e só então chama o servidor', async () => {
     responder();
     api.post.mockResolvedValue({ data: {} });
