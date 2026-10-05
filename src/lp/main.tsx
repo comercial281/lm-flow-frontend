@@ -21,24 +21,57 @@
  * tamanho do que sai no build.
  */
 import { createRoot } from 'react-dom/client';
+import { useEffect, useState } from 'react';
 import './lp.css';
-import { parseLandingPath } from '@/features/landing/public/landingLoader';
+import { parseLandingPath, type LandingRoute } from '@/features/landing/public/landingLoader';
 import { LandingPublicView } from '@/features/landing/public/LandingPublicView';
 import { LandingResultView } from '@/features/landing/public/LandingResultView';
+import { dominioDoSite, ehEnderecoDoSistema, rotaDaLandingNoDominio } from '@/features/siteBuilder/public/dominioDoSite';
 
-function LandingApp() {
-  const route = parseLandingPath(window.location.pathname);
-  if (!route) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0F0520] px-6 text-center text-neutral-400">
-        Esta página não está disponível.
-      </div>
-    );
-  }
+function Indisponivel() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#0F0520] px-6 text-center text-neutral-400">
+      Esta página não está disponível.
+    </div>
+  );
+}
+
+function Landing({ route, noDominio = false }: { route: LandingRoute; noDominio?: boolean }) {
   if (route.result) {
     return <LandingResultView tenant={route.tenant} slug={route.slug} result={route.result} />;
   }
-  return <LandingPublicView tenant={route.tenant} slug={route.slug} />;
+  return <LandingPublicView tenant={route.tenant} slug={route.slug} noDominio={noDominio} />;
+}
+
+/**
+ * No domínio do cliente a landing é `/lp/<slug>` e o cliente vem do domínio
+ * (`dominioDoSite`, sem nada do CRM). Domínio sem site ativo: indisponível.
+ */
+function LandingNoDominio() {
+  const [route, setRoute] = useState<LandingRoute | null | undefined>(undefined);
+  useEffect(() => {
+    let vivo = true;
+    const rota = rotaDaLandingNoDominio(window.location.pathname);
+    if (rota && 'redirecionar' in rota) {
+      window.location.replace(`${rota.redirecionar}${window.location.search}`);
+      return;
+    }
+    void dominioDoSite().then(estado => {
+      if (!vivo) return;
+      setRoute(rota && estado.tipo === 'site' ? { tenant: estado.site.tenant, slug: rota.slug, result: rota.result } : null);
+    });
+    return () => { vivo = false; };
+  }, []);
+  if (route === undefined) return null;
+  if (!route) return <Indisponivel />;
+  return <Landing route={route} noDominio />;
+}
+
+function LandingApp() {
+  if (!ehEnderecoDoSistema(window.location.hostname)) return <LandingNoDominio />;
+  const route = parseLandingPath(window.location.pathname);
+  if (!route) return <Indisponivel />;
+  return <Landing route={route} />;
 }
 
 createRoot(document.getElementById('root')!).render(<LandingApp />);

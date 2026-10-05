@@ -1,3 +1,6 @@
+// O app do CRM (endereços do sistema: *.lmflow.com.br, *.vercel.app, localhost).
+// Quem decide se ele sobe é src/main.tsx; no domínio de um cliente sobe só o
+// site (src/mainDoSite.tsx) e nada daqui é baixado.
 import { createRoot } from 'react-dom/client';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — virtual module gerado pelo vite-plugin-pwa em build
