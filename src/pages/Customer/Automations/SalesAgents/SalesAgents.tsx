@@ -1,10 +1,21 @@
+// IA Vendedora — a casca (entrega 1 da refatoração, 05/10/2026).
+//
+// Barra de topo (`IaBarra`) com o seletor da IA, o selo do veredito e os menus
+// Painel ▾ · Configurar · Ensinar · Testar · Diagnóstico, no modelo do Meu site.
+// O endereço diz a IA e a tela (`?ia=<id>&tela=<id>`), com `replace`: o Voltar
+// do navegador sai da página em vez de percorrer as telas. Cada tela mora em
+// `telas/`; a configuração de sempre mora em `configuracao/legado/` até a
+// entrega 2. Spec: LM FLOW/specs/2026-10-05-ia-vendedora-refatoracao-design.md.
+//
+// ⚠️ Nada aqui muda o atendimento: os campos e a gravação (`saveAgent`) são os
+// de antes, linha por linha.
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Input } from '@/components/ui/ds';
+import { Button } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { Bot, Plus, Trash2, Loader2, Copy, AlertTriangle } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import DuplicateAgentDialog from '@/components/salesAgents/DuplicateAgentDialog';
-import { salesAgentsService, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
+import { salesAgentsService, type HealthReport, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import NoAccessState from '@/components/permissions/NoAccessState';
@@ -13,16 +24,29 @@ import { useCan } from '@/hooks/useCan';
 import inboxesService from '@/services/channels/inboxesService';
 import { formIdsDropped } from '@/features/salesAgents/formTrigger';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import {
+  iaDaUrl, iaInicial, paramsDaIa, telaDaUrl, telaInfo, trilhaDe, type TelaId,
+} from '@/features/salesAgents/iaMenu';
+import { situacaoDaIa } from '@/features/salesAgents/situacao';
 import { type InboxOption } from './configuracao/comum';
-import ConfigLegado, { MODE_LABELS } from './configuracao/legado/ConfigLegado';
-import { KnowledgeTab } from './telas/ensinar/BaseDeConhecimento';
-import { LearningTab } from './telas/ensinar/Aprendizado';
-import { TestTab } from './telas/TelaTestar';
+import IaBarra from './IaBarra';
+import TelaVisaoGeral from './telas/TelaVisaoGeral';
 import TelaSugestoes from './telas/TelaSugestoes';
 import TelaRelatorioSemanal from './telas/TelaRelatorioSemanal';
+import TelaConfigurar from './telas/TelaConfigurar';
+import TelaEnsinar from './telas/TelaEnsinar';
+import TelaTestar from './telas/TelaTestar';
 import TelaDiagnostico from './telas/TelaDiagnostico';
-import { ResultsTab } from './telas/TelaVisaoGeral';
-type Tab = 'config' | 'resultados' | 'sugestoes' | 'relatorios' | 'knowledge' | 'learning' | 'test' | 'diagnostico';
+
+// A última IA aberta neste navegador: com várias IAs, `/ia-vendedora` abre nela.
+// Conveniência, não dado: storage bloqueado (aba anônima) só faz abrir a primeira.
+const ULTIMA_IA = 'lmflow:ia-vendedora:ultima';
+const lerUltimaIa = (): string | null => {
+  try { return localStorage.getItem(ULTIMA_IA); } catch { return null; }
+};
+const gravarUltimaIa = (id: string) => {
+  try { localStorage.setItem(ULTIMA_IA, id); } catch { /* storage bloqueado: segue sem lembrar */ }
+};
 
 export default function SalesAgents() {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
@@ -31,22 +55,26 @@ export default function SalesAgents() {
   const [inboxes, setInboxes] = useState<InboxOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<Tab>('config');
   const [duplicating, setDuplicating] = useState<SalesAgent | null>(null);
   const [loadFailure, setLoadFailure] = useState<LoadFailure | null>(null);
+  const [diagnostico, setDiagnostico] = useState<HealthReport | null>(null);
+  const [conferindo, setConferindo] = useState(false);
   const pode = useCan();
   // ⚠️ A chave vai LITERAL aqui. Os dois scanners do catálogo de funcionalidades
   // (sync e audit) leem o código por regex: trocar o literal por uma constante
   // tira a chave do catálogo no deploy seguinte, o painel de Funções deixa de
   // oferecer o botão de liberar, e ninguém é avisado.
-  // `isSuper ||`: a Leal Mídia sempre vê, como a aba de Landings. Sem isso a chave
-  // escondia as abas até de quem libera — o comentário dizia o contrário do código.
+  // `isSuper ||`: a Leal Mídia sempre vê, como a aba de Landings.
   const isSuper = useIsSuperAdmin();
   const insightsToggle = useClientToggle('ia_insights');
   const insightsLiberado = isSuper || insightsToggle;
 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  // Sugestões e Relatório semanal sem a chave caem na Visão geral (`telaDaUrl`):
+  // o gate fica no menu e no endereço, como as Páginas de anúncio do Meu site.
+  const tela = telaDaUrl(searchParams, { insights: insightsLiberado });
+  const iaPedida = iaDaUrl(searchParams);
 
   const loadAgents = useCallback(async () => {
     setLoading(true);
@@ -54,15 +82,7 @@ export default function SalesAgents() {
     try {
       const list = await salesAgentsService.list();
       setAgents(list);
-      // `?agent=<id>` é como o assistente (tela cheia, rota própria) devolve a
-      // pessoa para a IA certa: as abas daqui são estado local, sem endereço.
-      // Lido uma vez e apagado da URL, senão o Voltar do navegador reabre a IA.
-      const wanted = searchParams.get('agent');
-      setSelected((prev) => {
-        if (wanted) return list.find((a) => a.id === wanted) ?? prev ?? null;
-        return prev ? list.find((a) => a.id === prev.id) ?? null : null;
-      });
-      if (wanted) setSearchParams({}, { replace: true });
+      setSelected((prev) => (prev ? list.find((a) => a.id === prev.id) ?? null : null));
     } catch (e) {
       const kind = classifyLoadFailure(e);
       setLoadFailure(kind);
@@ -70,7 +90,6 @@ export default function SalesAgents() {
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- searchParams é lido só no mount
   }, []);
 
   useEffect(() => {
@@ -84,9 +103,49 @@ export default function SalesAgents() {
       .catch(() => setInboxes([]));
   }, [loadAgents]);
 
+  // Endereço → IA aberta. Resolve a IA (a do endereço, a última usada ou a
+  // primeira), reescreve o endereço no formato certo (inclusive o `?agent=` que o
+  // assistente ainda usa pra devolver) e lembra a escolha.
+  useEffect(() => {
+    if (loading) return;
+    const alvo = iaInicial(agents.map((a) => a.id), iaPedida, lerUltimaIa());
+    const certo = paramsDaIa(alvo, tela);
+    if (searchParams.toString() !== new URLSearchParams(certo).toString()) setSearchParams(certo, { replace: true });
+    if (alvo) gravarUltimaIa(alvo);
+    setSelected((prev) => (prev?.id === alvo ? prev : agents.find((a) => a.id === alvo) ?? null));
+  }, [loading, agents, iaPedida, tela, searchParams, setSearchParams]);
+
+  // O Diagnóstico da IA aberta alimenta o selo e as pendências. Relido quando a
+  // IA muda ou é salva (`updated_at`), nunca a cada tecla. Falha não grita: o
+  // selo cai no que a própria configuração diz.
+  const selId = selected?.id;
+  const selUpdatedAt = selected?.updated_at;
+  useEffect(() => {
+    if (!selId) {
+      setDiagnostico(null);
+      return;
+    }
+    let vivo = true;
+    setConferindo(true);
+    salesAgentsService
+      .diagnostics(selId)
+      .then((d) => { if (vivo) setDiagnostico(d); })
+      .catch(() => { if (vivo) setDiagnostico(null); })
+      .finally(() => { if (vivo) setConferindo(false); });
+    return () => { vivo = false; };
+  }, [selId, selUpdatedAt]);
+
+  const irPara = useCallback((t: TelaId) => {
+    setSearchParams(paramsDaIa(selected?.id ?? null, t), { replace: true });
+  }, [selected?.id, setSearchParams]);
+
+  const trocarIa = useCallback((id: string) => {
+    setSearchParams(paramsDaIa(id, tela), { replace: true });
+  }, [tela, setSearchParams]);
+
   // Cria a IA (desligada) e abre o assistente em tela cheia. Quem preferir
   // configurar na mão sai por "Configurar depois" lá dentro e volta para cá com a
-  // IA nova selecionada — a IA existe nos dois caminhos.
+  // IA nova selecionada (`?agent=`) — a IA existe nos dois caminhos.
   const createAgent = async () => {
     try {
       const agent = await salesAgentsService.create({
@@ -275,142 +334,69 @@ export default function SalesAgents() {
   // a permissão criava uma IA duplicada.
   if (loadFailure === 'forbidden') return <NoAccessState />;
 
+  const podeCriar = pode('sales_agents', 'create');
+  const situacao = selected ? situacaoDaIa(selected, diagnostico) : null;
+  const info = telaInfo(tela);
+  const trilha = trilhaDe(tela);
+
   return (
     <>
-    <div className="flex h-full">
-      {/* Lista */}
-      <aside className="w-72 shrink-0 border-r border-sidebar-border p-4 overflow-auto">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="w-1 h-6 rounded-full shrink-0"
-              style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
-            />
-            <h2 className="text-base font-bold flex items-center gap-2">
-              <Bot className="h-4 w-4 text-primary" /> IA Vendedora
-            </h2>
-          </div>
-          {pode('sales_agents', 'create') && (
-            <Button size="sm" onClick={createAgent} aria-label="Criar IA Vendedora" title="Criar IA Vendedora">
-              <Plus className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-        {loading ? (
-          <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-        ) : agents.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma IA criada. Clique em + para começar.</p>
-        ) : (
-          <ul className="space-y-1">
-            {agents.map((a) => (
-              <li key={a.id}>
-                <button
-                  onClick={() => { setSelected(a); setTab('config'); }}
-                  className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                    selected?.id === a.id ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-sidebar-accent'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="truncate">{a.name}</span>
-                    <span className={`ml-2 h-2 w-2 rounded-full shrink-0 ${a.enabled ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  </div>
-                  <span className="text-xs text-muted-foreground">{MODE_LABELS[a.mode]}</span>
-                  {/* Ligada e sem canal = nunca responde. A seleção do agente filtra
-                      por inbox, então agente sem inbox_id não é candidato a nada.
-                      Antes isso era silencioso: a IA parecia configurada e não era. */}
-                  {a.enabled && !a.inbox_id && (
-                    <span className="mt-1 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
-                      <AlertTriangle className="h-3 w-3 shrink-0" /> sem canal
-                    </span>
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </aside>
-
-      {/* Editor */}
-      <main className="flex-1 min-w-0 overflow-auto p-6">
-        {!selected ? (
-          <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-            Selecione ou crie uma IA Vendedora.
-          </div>
-        ) : (
-          <div className="max-w-3xl">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Input
-                  value={selected.name}
-                  onChange={(e) => setSelected({ ...selected, name: e.target.value })}
-                  onBlur={() => saveAgent({ name: selected.name })}
-                  className="text-lg font-semibold w-64"
-                />
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selected.enabled}
-                    onChange={(e) => saveAgent({ enabled: e.target.checked })}
-                  />
-                  {selected.enabled ? 'Ativa' : 'Desativada'}
-                </label>
-              </div>
-              <div className="flex items-center gap-1">
-                {pode('sales_agents', 'create') && (
-                  <Button variant="ghost" size="sm" onClick={() => setDuplicating(selected)} title="Duplicar esta IA">
-                    <Copy className="h-4 w-4 mr-1" /> Duplicar
-                  </Button>
-                )}
-                {pode('sales_agents', 'delete') && (
-                  <Button variant="ghost" size="sm" onClick={() => deleteAgent(selected)} aria-label="Excluir IA Vendedora" title="Excluir IA Vendedora">
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {/* Abas */}
-            <div className="flex gap-1 border-b border-sidebar-border mb-4">
-              {(([
-                ['config', 'Configuração'],
-                ['resultados', 'Resultados'],
-                // As duas abaixo são liberadas imobiliária por imobiliária. O gate
-                // fica na ABA, nunca na rota — quem digitar o endereço chega na
-                // tela, que é o padrão da casa (ver /bolsao e as Landings).
-                ...(insightsLiberado ? ([['sugestoes', 'Sugestões'], ['relatorios', 'Relatórios']] as [Tab, string][]) : []),
-                ['knowledge', 'Base de Conhecimento'],
-                ['learning', 'Aprendizado'],
-                ['test', 'Testar'],
-                ['diagnostico', 'Diagnóstico'],
-              ] as [Tab, string][])).map(
-                ([key, label]) => (
-                  <button
-                    key={key}
-                    onClick={() => setTab(key)}
-                    className={`px-4 py-2 text-sm border-b-2 -mb-px transition-colors ${
-                      tab === key ? 'border-primary text-primary font-medium' : 'border-transparent text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ),
+      <div className="flex min-h-full flex-col">
+        <IaBarra
+          agents={agents}
+          selecionada={selected}
+          situacao={situacao}
+          tela={tela}
+          insights={insightsLiberado}
+          podeCriar={podeCriar}
+          podeExcluir={pode('sales_agents', 'delete')}
+          aoIr={irPara}
+          aoTrocarIa={trocarIa}
+          aoCriar={createAgent}
+          aoDuplicar={() => selected && setDuplicating(selected)}
+          aoExcluir={() => selected && void deleteAgent(selected)}
+        />
+        <div className="w-full space-y-5 px-6 py-6">
+          {loading && agents.length === 0 ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          ) : !selected || !situacao ? (
+            <div className="flex flex-col items-start gap-3 rounded-lg border border-sidebar-border bg-sidebar p-6">
+              <p className="text-sm text-muted-foreground">Nenhuma IA Vendedora criada ainda.</p>
+              {podeCriar && (
+                <Button onClick={createAgent}>
+                  <Plus className="mr-1 h-4 w-4" aria-hidden /> Nova IA
+                </Button>
               )}
             </div>
-
-            {tab === 'config' && (
-              <ConfigLegado agent={selected} inboxes={inboxes} saving={saving} onChange={setSelected} onSave={saveAgent} />
-            )}
-            {tab === 'resultados' && <ResultsTab agent={selected} />}
-            {tab === 'sugestoes' && insightsLiberado && <TelaSugestoes agent={selected} />}
-            {tab === 'relatorios' && insightsLiberado && <TelaRelatorioSemanal />}
-            {tab === 'knowledge' && <KnowledgeTab agent={selected} onCountChange={loadAgents} />}
-            {tab === 'learning' && <LearningTab agent={selected} />}
-            {tab === 'test' && <TestTab agent={selected} />}
-            {tab === 'diagnostico' && <TelaDiagnostico agent={selected} />}
-          </div>
-        )}
-      </main>
-    </div>
+          ) : (
+            <div className={tela === 'visao-geral' ? 'max-w-5xl space-y-5' : 'max-w-3xl space-y-5'}>
+              <div className="space-y-1">
+                {trilha && <p className="text-xs font-medium text-muted-foreground">{trilha}</p>}
+                <h1 className="text-2xl font-semibold">{info.titulo}</h1>
+                <p className="text-sm text-muted-foreground">{info.frase}</p>
+              </div>
+              {tela === 'visao-geral' && (
+                <TelaVisaoGeral
+                  agent={selected}
+                  situacao={situacao}
+                  diagnostico={diagnostico}
+                  conferindo={conferindo}
+                  mostrarSugestoes={insightsLiberado}
+                  aoIr={irPara}
+                />
+              )}
+              {tela === 'sugestoes' && insightsLiberado && <TelaSugestoes agent={selected} />}
+              {tela === 'relatorio-semanal' && insightsLiberado && <TelaRelatorioSemanal />}
+              {tela === 'configurar' && (
+                <TelaConfigurar agent={selected} inboxes={inboxes} saving={saving} onChange={setSelected} onSave={saveAgent} />
+              )}
+              {tela === 'ensinar' && <TelaEnsinar agent={selected} onCountChange={loadAgents} />}
+              {tela === 'testar' && <TelaTestar agent={selected} />}
+              {tela === 'diagnostico' && <TelaDiagnostico agent={selected} />}
+            </div>
+          )}
+        </div>
+      </div>
       {dialogoDeConfirmacao}
       {duplicating && (
         <DuplicateAgentDialog
@@ -418,11 +404,13 @@ export default function SalesAgents() {
           inboxes={inboxes}
           onClose={() => setDuplicating(null)}
           onDuplicated={(copy) => {
-            // A cópia vira a IA selecionada, na aba de configuração: é lá que se
-            // confere antes de ligar. O loadAgents mantém a seleção pelo id.
+            // A cópia vira a IA aberta, em Configurar: é lá que se confere antes
+            // de ligar.
+            // ⚠️ A cópia entra na lista ANTES de o endereço apontar pra ela: sem
+            // isso a resolução do endereço não acha o id e volta pra IA original.
             setDuplicating(null);
-            setSelected(copy);
-            setTab('config');
+            setAgents((prev) => [...prev.filter((a) => a.id !== copy.id), copy]);
+            setSearchParams(paramsDaIa(copy.id, 'configurar'), { replace: true });
             loadAgents();
           }}
         />

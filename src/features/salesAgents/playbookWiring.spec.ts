@@ -78,7 +78,8 @@ describe('assistente de configuração da IA', () => {
   it('o "+" da tela leva para o assistente, e o assistente devolve pela query ?agent=', () => {
     const tela = fonteDaIaVendedora();
     expect(tela).toContain('navigate(`/ia-vendedora/${agent.id}/assistente`)');
-    expect(tela).toContain("searchParams.get('agent')");
+    // Desde a casca nova (entrega 1), o endereço é lido pelo mapa das telas.
+    expect(read('src/features/salesAgents/iaMenu.ts')).toContain("params.get('agent')");
     expect(pagina).toContain('/ia-vendedora?agent=');
   });
 
