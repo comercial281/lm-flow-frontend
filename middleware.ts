@@ -75,8 +75,15 @@ export const config = {
   ],
 };
 
-/** Teto para a API responder. Acima disso a página se vira sozinha. */
+/** Teto para a API da landing e do sitemap responder. Acima disso a página se vira sozinha. */
 const API_TIMEOUT_MS = 2500;
+
+/**
+ * Teto do `head` (páginas do site e `robots.txt`): mais curto, porque ele fica
+ * na frente de TODA página do site. Sem o cache da borda provado, cada visita
+ * pode pagar essa espera; acima dela, o HTML de hoje sai na hora.
+ */
+const HEAD_TIMEOUT_MS = 1200;
 
 /** Navegador: sempre confere. Borda: um minuto, servindo o velho enquanto renova. */
 const CACHE_DA_BORDA = 'public, max-age=0, s-maxage=60, stale-while-revalidate=300';
@@ -91,10 +98,10 @@ function apiBase(): string | null {
   return base ? base.replace(/\/+$/, '') : null;
 }
 
-/** Roda `fn` com um sinal que aborta em `API_TIMEOUT_MS`. */
-async function comPrazo<T>(fn: (signal: AbortSignal) => Promise<T>): Promise<T> {
+/** Roda `fn` com um sinal que aborta em `ms` (padrão `API_TIMEOUT_MS`). */
+async function comPrazo<T>(fn: (signal: AbortSignal) => Promise<T>, ms = API_TIMEOUT_MS): Promise<T> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), ms);
   try {
     return await fn(controller.signal);
   } finally {
@@ -186,7 +193,7 @@ async function landingNoDominio(url: URL, host: string): Promise<Response> {
       if (!dto || !html) return passThrough();
 
       // O site do domínio vai junto: a página não pergunta o `resolve` de novo.
-      const comSite = html.replace(LANDING_DATA_MARKER, `${scriptDoSite(tenant, site?.site_slug ?? null)}\n    ${LANDING_DATA_MARKER}`);
+      const comSite = html.replace(LANDING_DATA_MARKER, () => `${scriptDoSite(tenant, site?.site_slug ?? null)}\n    ${LANDING_DATA_MARKER}`);
       return respostaDaLanding(comSite, tenant, rota.slug, dto);
     });
   } catch {
@@ -224,7 +231,7 @@ async function pagina(url: URL, host: string): Promise<Response> {
           'x-lm-site': 'head',
         },
       });
-    });
+    }, HEAD_TIMEOUT_MS);
   } catch {
     return passThrough();
   }
@@ -248,7 +255,7 @@ async function robots(host: string): Promise<Response> {
         if (res.status === 404) return null;
         if (!res.ok) throw new Error(`head ${res.status}`);
         return dadosDaResposta(await res.json());
-      });
+      }, HEAD_TIMEOUT_MS);
     } catch {
       falhou = true;
     }

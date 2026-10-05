@@ -94,7 +94,7 @@ export function injectLandingIntoHtml(html: string, { tenant, slug, dto }: Landi
   }
   parts.push(`<script>window.__lmLanding=${jsonForScript({ tenant, slug, data: dto })}</script>`);
 
-  let out = html.replace(LANDING_DATA_MARKER, parts.join('\n    '));
-  if (dto.title) out = out.replace(LOADING_TITLE, `<title>${escapeHtml(dto.title)}</title>`);
+  let out = html.replace(LANDING_DATA_MARKER, () => parts.join('\n    '));
+  if (dto.title) out = out.replace(LOADING_TITLE, () => `<title>${escapeHtml(dto.title)}</title>`);
   return out;
 }

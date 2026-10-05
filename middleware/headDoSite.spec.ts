@@ -29,6 +29,8 @@ const DADOS: DadosDoHead = {
   maintenance: false,
 };
 
+/** O escape esperado no HTML (o mesmo do escapeHtml). */
+const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 const doc = (html: string) => new DOMParser().parseFromString(html, 'text/html');
 const meta = (d: Document, sel: string) => d.querySelector(sel)?.getAttribute('content') ?? null;
 
@@ -105,6 +107,61 @@ describe('montarHead', () => {
     const d = doc(html);
     expect(d.title).toBe(titulo);
     expect(meta(d, 'meta[property="og:title"]')).toBe(titulo);
+  });
+
+  /** Uma tag só, no lugar certo: `$` no texto não pode duplicar nem cortar o HTML. */
+  const umHead = (html: string) => {
+    expect(html.split('</head>')).toHaveLength(2);
+    expect(html.split('<title>')).toHaveLength(2);
+    expect(html.indexOf('</head>')).toBeLessThan(html.indexOf('<body>'));
+  };
+
+  it.each([
+    ["título com R$' (o $' do replace colaria o resto do HTML)", "Casa R$' 500 mil"],
+    ['título com $& (o replace colaria a tag trocada)', 'Promo $& oferta'],
+    ['título com $$ (o replace viraria um $ só)', 'Preço $$ 300'],
+  ])('%s', (_n, titulo) => {
+    const html = montarHead(INDEX_HTML, { ...DADOS, title: titulo }, DOMINIO);
+    umHead(html);
+    expect(html).toContain(`<title>${esc(titulo)}</title>`);
+    expect(html).toContain(`<meta property="og:title" content="${esc(titulo)}" />`);
+    const d = doc(html);
+    expect(d.title).toBe(titulo);
+    expect(meta(d, 'meta[property="og:title"]')).toBe(titulo);
+  });
+
+  it('descrição com R$` e $& (o $` colaria o começo do HTML)', () => {
+    const descricao = 'Entrada R$` 50 mil, $& e $$ sem pegadinha';
+    const html = montarHead(INDEX_HTML, { ...DADOS, description: descricao }, DOMINIO);
+    umHead(html);
+    expect(html).toContain(`<meta name="description" content="${esc(descricao)}" />`);
+    const d = doc(html);
+    expect(d.querySelectorAll('meta[name="description"]')).toHaveLength(1);
+    expect(meta(d, 'meta[name="description"]')).toBe(descricao);
+    expect(meta(d, 'meta[property="og:description"]')).toBe(descricao);
+  });
+
+  it('$ na imagem, no canonical e no slug (a injeção antes do </head>) chega inteiro', () => {
+    const html = montarHead(INDEX_HTML, {
+      ...DADOS, image: "https://cdn.test/a$'b.jpg", canonical: 'https://www.imob.com.br/p/$&', site_slug: "s$`$'",
+    }, DOMINIO);
+    umHead(html);
+    const d = doc(html);
+    expect(meta(d, 'meta[property="og:image"]')).toBe("https://cdn.test/a$'b.jpg");
+    expect(d.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('https://www.imob.com.br/p/$&');
+    expect(html).toContain('window.__LMF_SITE__={"tenant":"imob","slug":"s$`$\'"}');
+  });
+
+  it('sem title do servidor, vai o nome do site; nunca sobra "LM Flow"', () => {
+    const html = montarHead(INDEX_HTML, { ...DADOS, title: null, site_name: 'Imob Teste' }, DOMINIO);
+    expect(doc(html).title).toBe('Imob Teste');
+    expect(html).not.toContain('<title>LM Flow</title>');
+  });
+
+  it('sem title nem nome do site: "Imóveis"', () => {
+    const html = montarHead(INDEX_HTML, { tenant: 'imob', title: null }, LMFLOW);
+    expect(doc(html).title).toBe('Imóveis');
+    expect(html).not.toContain('<title>LM Flow</title>');
   });
 
   it('no domínio ativo, põe o window.__LMF_SITE__ com o cliente e o site', () => {
@@ -318,16 +375,37 @@ describe('middleware: páginas do site', () => {
     expect(res.body).toBeNull();
   });
 
+  it('head 200 que não é JSON: devolve o HTML de hoje', async () => {
+    servidor(url => (url.includes('/head') ? new Response('<html>erro do proxy</html>', { status: 200 }) : undefined));
+    const res = await pedir(`https://${DOMINIO}/`);
+    seguiuDireto(res);
+    expect(res.body).toBeNull();
+  });
+
+  it.each([['{}', {}], ['{ data: {} }', { data: {} }], ['{ data: null }', { data: null }]])(
+    'head 200 com %s: devolve o HTML de hoje', async (_n, corpo) => {
+      servidor(url => (url.includes('/head') ? json(corpo) : undefined));
+      seguiuDireto(await pedir(`https://${DOMINIO}/imoveis`));
+    },
+  );
+
+  it('head só com tenant (sem title): página do site sai com "Imóveis", não "LM Flow"', async () => {
+    servidor(url => (url.includes('/head') ? json({ data: { tenant: 'imob', domain: DOMINIO, robots: 'noindex' } }) : undefined));
+    const html = await (await pedir(`https://${DOMINIO}/`)).text();
+    expect(html).toContain('<title>Imóveis</title>');
+    expect(html).not.toContain('<title>LM Flow</title>');
+  });
+
   it('404 do head (domínio sem site ativo): devolve o HTML de hoje', async () => {
     servidor(() => undefined);
     seguiuDireto(await pedir(`https://${DOMINIO}/`));
   });
 
-  it('head que demora mais de 2,5 s: desiste e devolve o HTML de hoje', async () => {
+  it('head que demora mais de 1,2 s: desiste e devolve o HTML de hoje', async () => {
     vi.useFakeTimers();
     servidor((url, init) => (url.includes('/head') ? (pendurado(init) as Promise<Response>) : undefined));
     const pendente = pedir(`https://${DOMINIO}/imoveis`);
-    await vi.advanceTimersByTimeAsync(2499);
+    await vi.advanceTimersByTimeAsync(1199);
     let pronto = false;
     void pendente.then(() => { pronto = true; });
     await Promise.resolve();
@@ -370,11 +448,15 @@ describe('middleware: robots.txt e sitemap.xml', () => {
     expect(res.headers.get('cache-control')).toBe('no-store');
   });
 
-  it('servidor que não responde: Disallow: / depois de 2,5 s', async () => {
+  it('servidor que não responde: Disallow: / depois de 1,2 s', async () => {
     vi.useFakeTimers();
     servidor((url, init) => (url.includes('/head') ? (pendurado(init) as Promise<Response>) : undefined));
     const pendente = pedir(`https://${DOMINIO}/robots.txt`);
-    await vi.advanceTimersByTimeAsync(2500);
+    let pronto = false;
+    void pendente.then(() => { pronto = true; });
+    await vi.advanceTimersByTimeAsync(1199);
+    expect(pronto).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
     expect(await (await pendente).text()).toBe('User-agent: *\nDisallow: /\n');
   });
 
@@ -420,6 +502,19 @@ describe('middleware: landing (/lp/*)', () => {
     const html = await res.text();
     expect(html).toContain('window.__lmLanding={"tenant":"imob","slug":"oferta"');
     expect(html).toContain('<script>window.__LMF_SITE__={"tenant":"imob","slug":"imob-site"}</script>');
+  });
+
+  it('domínio: $ no slug do site e no título da landing não corta o lp.html', async () => {
+    servidor(url => {
+      if (url.includes('/resolve')) return json({ tenant: 'imob', site_slug: "s$'$&", domain: DOMINIO });
+      if (url.includes('/landing/')) return json({ data: { title: "Casa R$' 500 mil $&", content_blocks: [] } });
+      return undefined;
+    });
+    const html = await (await pedir(`https://${DOMINIO}/lp/oferta`)).text();
+    expect(html.split('</head>')).toHaveLength(2);
+    expect(html.split('<title>')).toHaveLength(2);
+    expect(html).toContain('<script>window.__LMF_SITE__={"tenant":"imob","slug":"s$\'$\\u0026"}</script>');
+    expect(html).toContain('<title>Casa R$&#39; 500 mil $&amp;</title>');
   });
 
   it('domínio sem site (resolve 404): segue para o lp.html cru', async () => {

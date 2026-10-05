@@ -31,7 +31,13 @@ export interface DadosDoHead {
   /** `index,follow` só com o Google ligado, site publicado e fora da prévia. */
   robots?: string | null;
   maintenance?: boolean | null;
+  /** Nome do site, quando o servidor manda. Fora do contrato: só usado se vier. */
+  site_name?: string | null;
+  name?: string | null;
 }
+
+/** Título que vai no `<title>` quando o servidor não manda `title`. */
+export const TITULO_PADRAO = 'Imóveis';
 
 export interface UrlDoSitemap {
   loc: string;
@@ -147,17 +153,20 @@ export function montarHead(html: string, dados: DadosDoHead, host: string): stri
   if (!html.includes('</head>')) return html;
   let out = html;
 
-  const titulo = texto(dados.title);
+  // O "LM Flow" do index.html nunca sobra na página do cliente: sem título do
+  // servidor, vai o nome do site, ou "Imóveis".
+  const titulo = texto(dados.title) ?? texto(dados.site_name) ?? texto(dados.name);
+  const tituloDaPagina = titulo ?? TITULO_PADRAO;
   const temTitulo = TITULO.test(out);
-  if (titulo && temTitulo) out = out.replace(TITULO, `<title>${escapeHtml(titulo)}</title>`);
+  if (temTitulo) out = out.replace(TITULO, () => `<title>${escapeHtml(tituloDaPagina)}</title>`);
 
   const descricao = texto(dados.description);
   // A descrição do CRM ("LM Flow — CRM imobiliário…") nunca é a do site.
-  out = out.replace(META_DESCRIPTION, descricao ? `<meta name="description" content="${escapeHtml(descricao)}" />` : '');
+  out = out.replace(META_DESCRIPTION, () => (descricao ? `<meta name="description" content="${escapeHtml(descricao)}" />` : ''));
 
   const robots = robotsSeguro(dados);
   const metaRobots = `<meta name="robots" content="${escapeHtml(robots)}" />`;
-  out = META_ROBOTS.test(out) ? out.replace(META_ROBOTS, metaRobots) : out;
+  out = META_ROBOTS.test(out) ? out.replace(META_ROBOTS, () => metaRobots) : out;
 
   const dominio = noDominioAtivo(host, dados);
   if (dominio) for (const r of TAGS_DO_APP) out = out.replace(r, '');
@@ -166,7 +175,7 @@ export function montarHead(html: string, dados: DadosDoHead, host: string): stri
   const canonical = texto(dados.canonical);
   const url = texto(dados.url) ?? canonical;
   const tags: string[] = [];
-  if (titulo && !temTitulo) tags.push(`<title>${escapeHtml(titulo)}</title>`);
+  if (!temTitulo) tags.push(`<title>${escapeHtml(tituloDaPagina)}</title>`);
   if (!META_ROBOTS.test(out)) tags.push(metaRobots);
   tags.push('<meta property="og:type" content="website" />');
   tags.push('<meta property="og:locale" content="pt_BR" />');
@@ -178,7 +187,7 @@ export function montarHead(html: string, dados: DadosDoHead, host: string): stri
   if (canonical) tags.push(`<link rel="canonical" href="${escapeHtml(canonical)}" />`);
   if (dominio) tags.push(scriptDoSite(texto(dados.tenant)!, texto(dados.site_slug)));
 
-  return out.replace('</head>', `    ${tags.join('\n    ')}\n  </head>`);
+  return out.replace('</head>', () => `    ${tags.join('\n    ')}\n  </head>`);
 }
 
 /* ── robots.txt ───────────────────────────────────────────────────────────── */
