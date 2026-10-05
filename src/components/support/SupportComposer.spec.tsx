@@ -45,6 +45,18 @@ describe('SupportComposer', () => {
     expect(screen.getByRole('textbox')).toHaveValue('não perder');
   });
 
+  // 04/10/2026: o servidor trocava de versão, o envio esperou 15 s e voltou com erro;
+  // o aviso rápido do canto passou despercebido e pareceu que o botão "bugou".
+  it('falha no envio deixa a frase de erro embaixo da caixa até a próxima tentativa', async () => {
+    const onEnviar = vi.fn().mockRejectedValueOnce(new Error('502')).mockResolvedValueOnce(undefined);
+    render(<SupportComposer onEnviar={onEnviar} />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'oi' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    expect(await screen.findByText('Não foi enviado. Confira a internet e tente de novo.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    await waitFor(() => expect(screen.queryByText('Não foi enviado. Confira a internet e tente de novo.')).toBeNull());
+  });
+
   it('trava a caixa enquanto envia', async () => {
     let fim: () => void = () => {};
     const onEnviar = vi.fn(() => new Promise<void>(r => { fim = r; }));
