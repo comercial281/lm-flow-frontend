@@ -29,6 +29,8 @@ export interface ChaveProps {
   genero?: 'o' | 'a';
   /** Em linha de tabela: o rótulo não aparece, mas continua sendo o nome da chave. */
   semRotuloVisivel?: boolean;
+  /** Quem chama já avisa por conta própria (ex.: toast com Desfazer): não mostra o "Ligado". Erro continua avisando. */
+  semAviso?: boolean;
   className?: string;
 }
 
@@ -50,6 +52,7 @@ export default function Chave({
   desabilitada = false,
   genero = 'o',
   semRotuloVisivel = false,
+  semAviso = false,
   className,
 }: ChaveProps) {
   const id = useId();
@@ -73,7 +76,7 @@ export default function Chave({
     try {
       const resposta = await aoMudar(proximo);
       if (resposta === false) setValor(!proximo);
-      else toast.success(estado(proximo));
+      else if (!semAviso) toast.success(estado(proximo));
     } catch (erro) {
       setValor(!proximo);
       toast.error(mensagemDoErro(erro));

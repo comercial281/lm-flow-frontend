@@ -24,7 +24,7 @@ describe('QuadrosDeFuncoes', () => {
     render(<QuadrosDeFuncoes catalog={catalog} ligada={() => false} aoMudar={aoMudar} />);
     fireEvent.click(within(screen.getByRole('region', { name: /Automações/ })).getByRole('button', { name: 'Ligar tudo' }));
     await waitFor(() => expect(aoMudar).toHaveBeenCalledTimes(1));
-    expect(aoMudar).toHaveBeenCalledWith({ disparos: true, disparos_agendados: true }, {});
+    expect(aoMudar).toHaveBeenCalledWith({ disparos: true, disparos_agendados: true }, { tema: 'Automações' });
   });
 
   it('marca ≠ pacote e filtra só o que difere', () => {

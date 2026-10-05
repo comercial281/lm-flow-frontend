@@ -31,23 +31,34 @@ export default function AbaFuncoes({ cliente }: PropsDaAba) {
   const ligada = (k: string) => atual.current[k] !== false;
 
   const gravar = async (patch: Record<string, boolean>) => {
-    const antes = { ...atual.current };
-    atual.current = { ...atual.current, ...patch };
-    setDados((d) => (d ? { ...d, features: atual.current } : d));
+    // Só mexe nas chaves deste pedido: outra troca em andamento não é pisada.
+    const chaves = Object.keys(patch);
+    const antes = Object.fromEntries(chaves.map((k) => [k, ligada(k)]));
+    const aplicar = (parte: Record<string, boolean>) => {
+      atual.current = { ...atual.current, ...parte };
+      setDados((d) => (d ? { ...d, features: atual.current } : d));
+    };
+    aplicar(patch);
     try {
       const novas = await clientesService.mudarFuncoes(cliente.id, patch);
-      atual.current = novas;
-      setDados((d) => (d ? { ...d, features: novas } : d));
+      aplicar(Object.fromEntries(chaves.filter((k) => k in novas).map((k) => [k, novas[k]])));
       return true;
     } catch (e) {
-      atual.current = antes;
-      setDados((d) => (d ? { ...d, features: antes } : d));
+      aplicar(antes);
       throw e;
     }
   };
 
-  const aoMudar = async (patch: Record<string, boolean>, contexto: { menu?: string }) => {
+  const aoMudar = async (patch: Record<string, boolean>, contexto: { menu?: string; tema?: string }) => {
     const chaves = Object.keys(patch);
+    if (contexto.tema && chaves.length > 0 && chaves.every((k) => patch[k] === false)) {
+      const ok = await confirmar({
+        titulo: `Desligar tudo de ${contexto.tema}?`,
+        descricao: `Os menus deste tema somem para as ${cliente.members ?? 0} pessoas de ${cliente.name}.`,
+        rotuloDaAcao: 'Desligar', destrutivo: true,
+      });
+      if (!ok) return false;
+    }
     if (contexto.menu && chaves.length === 1 && patch[chaves[0]] === false) {
       const ok = await confirmar(pedidoDesligarMenu(contexto.menu, cliente.members ?? 0, cliente.name));
       if (!ok) return false;

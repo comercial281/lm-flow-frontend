@@ -1,5 +1,6 @@
 // src/pages/SuperAdmin/PooledClients/QuadrosDeFuncoes.tsx
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import Chave from '@/components/base/Chave';
 import { Button, Input } from '@/components/ui/ds';
 import { groupCatalogByTheme, itemLabel, matchesQuery, type CatalogItem } from '../featureCatalog';
@@ -10,7 +11,7 @@ import { groupCatalogByTheme, itemLabel, matchesQuery, type CatalogItem } from '
 export interface PropsQuadros {
   catalog: CatalogItem[];
   ligada: (key: string) => boolean;
-  aoMudar: (patch: Record<string, boolean>, contexto: { menu?: string }) => Promise<boolean | void>;
+  aoMudar: (patch: Record<string, boolean>, contexto: { menu?: string; tema?: string }) => Promise<boolean | void>;
   diferentes?: Set<string>;
   somenteDiferentes?: boolean;
 }
@@ -24,6 +25,11 @@ export default function QuadrosDeFuncoes({ catalog, ligada, aoMudar, diferentes,
       all: m.all.filter((i) => matchesQuery(i, busca) && (!somenteDiferentes || diferentes?.has(i.key))),
     })).filter((m) => m.all.length > 0),
   })).filter((s) => s.menus.length > 0), [catalog, busca, somenteDiferentes, diferentes]);
+
+  const tudo = (chaves: string[], valor: boolean, tema: string) => {
+    void Promise.resolve(aoMudar(Object.fromEntries(chaves.map((k) => [k, valor])), { tema }))
+      .catch(() => toast.error('Não deu pra salvar.'));
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -44,8 +50,8 @@ export default function QuadrosDeFuncoes({ catalog, ligada, aoMudar, diferentes,
                   <span className="text-xs text-muted-foreground">{ligadas} de {chaves.length} ligadas</span>
                 </div>
                 <div className="mb-2 flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => void aoMudar(Object.fromEntries(chaves.map((k) => [k, true])), {})}>Ligar tudo</Button>
-                  <Button size="sm" variant="outline" onClick={() => void aoMudar(Object.fromEntries(chaves.map((k) => [k, false])), {})}>Desligar tudo</Button>
+                  <Button size="sm" variant="outline" onClick={() => tudo(chaves, true, s.label)}>Ligar tudo</Button>
+                  <Button size="sm" variant="outline" onClick={() => tudo(chaves, false, s.label)}>Desligar tudo</Button>
                 </div>
                 {s.menus.map((m) => {
                   const menuLigado = m.toggle ? ligada(m.toggle.key) : true;
@@ -61,7 +67,7 @@ export default function QuadrosDeFuncoes({ catalog, ligada, aoMudar, diferentes,
                               <span className={`truncate ${!ehMenu && !menuLigado ? 'text-muted-foreground' : ''}`}>{rotulo}</span>
                               {ehMenu && <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">menu inteiro</span>}
                             </span>
-                            <Chave rotulo={rotulo} semRotuloVisivel ligada={ligada(item.key)} genero="a"
+                            <Chave rotulo={rotulo} semRotuloVisivel ligada={ligada(item.key)} genero="a" semAviso
                               desabilitada={!ehMenu && !menuLigado}
                               aoMudar={(proximo) => aoMudar({ [item.key]: proximo }, ehMenu ? { menu: rotulo } : {})} />
                           </div>
