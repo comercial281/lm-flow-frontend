@@ -59,6 +59,8 @@ export default function SalesAgents() {
   const [loadFailure, setLoadFailure] = useState<LoadFailure | null>(null);
   const [diagnostico, setDiagnostico] = useState<{ id: string; report: HealthReport } | null>(null);
   const [conferindo, setConferindo] = useState(false);
+  // Id da IA cuja leitura do Diagnóstico falhou (502, perfil sem a permissão…).
+  const [diagnosticoFalhou, setDiagnosticoFalhou] = useState<string | null>(null);
   const pode = useCan();
   // ⚠️ A chave vai LITERAL aqui. Os dois scanners do catálogo de funcionalidades
   // (sync e audit) leem o código por regex: trocar o literal por uma constante
@@ -127,10 +129,11 @@ export default function SalesAgents() {
     }
     let vivo = true;
     setConferindo(true);
+    setDiagnosticoFalhou(null);
     salesAgentsService
       .diagnostics(selId)
       .then((d) => { if (vivo) setDiagnostico({ id: selId, report: d }); })
-      .catch(() => { if (vivo) setDiagnostico(null); })
+      .catch(() => { if (vivo) { setDiagnostico(null); setDiagnosticoFalhou(selId); } })
       .finally(() => { if (vivo) setConferindo(false); });
     return () => { vivo = false; };
   }, [selId, selUpdatedAt]);
@@ -372,7 +375,11 @@ export default function SalesAgents() {
               )}
             </div>
           ) : (
-            <div className={tela === 'visao-geral' ? 'max-w-5xl space-y-5' : 'max-w-3xl space-y-5'}>
+            // ⚠️ `key` = id da IA: trocar de IA remonta a tela inteira. Sem isso o
+            // Testar levava a conversa da IA anterior (e a próxima mensagem iria
+            // pra nova com o histórico da outra), a Visão geral mostrava os
+            // números dela e Sugestões seguia lendo a análise dela.
+            <div key={selected.id} className={tela === 'visao-geral' ? 'max-w-5xl space-y-5' : 'max-w-3xl space-y-5'}>
               <div className="space-y-1">
                 {trilha && <p className="text-xs font-medium text-muted-foreground">{trilha}</p>}
                 <h1 className="text-2xl font-semibold">{info.titulo}</h1>
@@ -384,6 +391,7 @@ export default function SalesAgents() {
                   situacao={situacao}
                   diagnostico={diagnosticoDaIa}
                   conferindo={conferindo}
+                  falhou={diagnosticoFalhou === selected.id}
                   mostrarSugestoes={insightsLiberado}
                   aoIr={irPara}
                 />

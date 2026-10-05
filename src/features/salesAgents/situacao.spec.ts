@@ -111,7 +111,7 @@ describe('pendenciasDaIa', () => {
     expect(p.filter((x) => x.chave === 'triggers')).toHaveLength(1);
   });
 
-  // IA Panamby, Gabriela Consultora, IA Collina e IA The House (levantamento de 05/10).
+  // Caso real do levantamento de 05/10: follow-up ligado com máximo 0.
   it('follow-up ligado com máximo 0 vira aviso laranja', () => {
     const p = pendenciasDaIa(ia({ followup_enabled: true, followup_max_attempts: 0 }), diag());
     expect(p).toEqual([expect.objectContaining({ chave: 'followup_sem_limite', titulo: 'Follow-up sem limite de tentativas', grave: false })]);

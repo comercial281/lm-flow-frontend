@@ -11,12 +11,12 @@ import IaBarra, { type IaBarraProps } from './IaBarra';
 const ia = (id: string, name: string, extra: Partial<SalesAgent> = {}) =>
   ({ id, name, enabled: true, inbox_id: 'inbox-1', triggers: [], trigger_keyword: null, trigger_match_mode: 'any', ...extra }) as SalesAgent;
 
-const CHEER = ia('ia-1', 'IA da Cheer');
+const VENDAS = ia('ia-1', 'IA de Vendas');
 const DEMO = ia('ia-2', 'IA Demo', { inbox_id: null });
 
 function abrir(extra: Partial<IaBarraProps> = {}) {
   const props: IaBarraProps = {
-    agents: [CHEER, DEMO], selecionada: CHEER, situacao: { tipo: 'atendendo', frase: 'Atendendo' },
+    agents: [VENDAS, DEMO], selecionada: VENDAS, situacao: { tipo: 'atendendo', frase: 'Atendendo' },
     tela: 'visao-geral', insights: true, podeCriar: true, podeExcluir: true,
     aoIr: vi.fn(), aoTrocarIa: vi.fn(), aoCriar: vi.fn(), aoDuplicar: vi.fn(), aoExcluir: vi.fn(),
     ...extra,
@@ -28,13 +28,13 @@ function abrir(extra: Partial<IaBarraProps> = {}) {
 describe('IaBarra', () => {
   it('mostra a IA aberta e o selo com a frase inteira', () => {
     abrir({ situacao: { tipo: 'parada', frase: 'Parada: falta o número' } });
-    expect(screen.getByRole('button', { name: /IA da Cheer/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /IA de Vendas/ })).toBeInTheDocument();
     expect(screen.getByText('Parada: falta o número')).toBeInTheDocument();
   });
 
   it('o seletor troca de IA e mostra o veredito de cada uma', async () => {
     const props = abrir();
-    await userEvent.click(screen.getByRole('button', { name: /IA da Cheer/ }));
+    await userEvent.click(screen.getByRole('button', { name: /IA de Vendas/ }));
     const demo = await screen.findByRole('menuitem', { name: /IA Demo/ });
     expect(within(demo).getByRole('status')).toHaveTextContent('Parada');
     await userEvent.click(demo);
@@ -43,14 +43,14 @@ describe('IaBarra', () => {
 
   it('"Nova IA" fica no seletor, só pra quem pode criar', async () => {
     const props = abrir();
-    await userEvent.click(screen.getByRole('button', { name: /IA da Cheer/ }));
+    await userEvent.click(screen.getByRole('button', { name: /IA de Vendas/ }));
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Nova IA' }));
     expect(props.aoCriar).toHaveBeenCalled();
   });
 
   it('sem permissão de criar, não há "Nova IA"', async () => {
     abrir({ podeCriar: false });
-    await userEvent.click(screen.getByRole('button', { name: /IA da Cheer/ }));
+    await userEvent.click(screen.getByRole('button', { name: /IA de Vendas/ }));
     await screen.findByRole('menuitem', { name: /IA Demo/ });
     expect(screen.queryByRole('menuitem', { name: 'Nova IA' })).toBeNull();
   });

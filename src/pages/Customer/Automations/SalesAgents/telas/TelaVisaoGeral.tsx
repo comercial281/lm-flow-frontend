@@ -176,12 +176,14 @@ export interface TelaVisaoGeralProps {
   diagnostico: HealthReport | null;
   /** O Diagnóstico ainda está sendo lido: não dá pra dizer "nada pendente". */
   conferindo: boolean;
+  /** A leitura do Diagnóstico falhou: "nada pendente" seria afirmar sem ter conferido. */
+  falhou?: boolean;
   /** Mesma chave das telas Sugestões e Relatório semanal (`ia_insights`). */
   mostrarSugestoes: boolean;
   aoIr: (tela: TelaId) => void;
 }
 
-export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferindo, mostrarSugestoes, aoIr }: TelaVisaoGeralProps) {
+export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferindo, falhou = false, mostrarSugestoes, aoIr }: TelaVisaoGeralProps) {
   const pendencias = pendenciasDaIa(agent, diagnostico);
 
   return (
@@ -192,6 +194,8 @@ export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferind
           <p className="flex items-center gap-2 rounded-lg border border-sidebar-border bg-sidebar p-4 text-sm text-muted-foreground">
             {conferindo ? (
               <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Conferindo a situação desta IA…</>
+            ) : falhou ? (
+              <><AlertTriangle className="h-4 w-4 text-amber-500" aria-hidden /> Não consegui conferir a situação desta IA agora.</>
             ) : (
               <><CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden /> Nada pendente: ela tem tudo para atender.</>
             )}

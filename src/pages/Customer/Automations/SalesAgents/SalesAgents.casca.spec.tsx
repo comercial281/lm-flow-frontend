@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -19,12 +20,30 @@ vi.mock('@/contexts/TenantFeaturesContext', () => ({ useClientToggle: () => insi
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const marcador = vi.hoisted(() => (nome: string) => ({ default: ({ agent }: { agent?: { name: string } }) => <p>{`tela ${nome}${agent ? ` · ${agent.name}` : ''}`}</p> }));
-vi.mock('./telas/TelaVisaoGeral', () => marcador('visao-geral'));
+// A Visão geral expõe o que a casca lhe passa sobre o Diagnóstico (o texto de
+// verdade é testado no spec da própria tela).
+vi.mock('./telas/TelaVisaoGeral', () => ({
+  default: ({ agent, falhou }: { agent: { name: string }; falhou?: boolean }) => (
+    <div><p>{`tela visao-geral · ${agent.name}`}</p>{falhou && <p>diagnóstico falhou</p>}</div>
+  ),
+}));
 vi.mock('./telas/TelaSugestoes', () => marcador('sugestoes'));
 vi.mock('./telas/TelaRelatorioSemanal', () => marcador('relatorio-semanal'));
 vi.mock('./telas/TelaConfigurar', () => marcador('configurar'));
 vi.mock('./telas/TelaEnsinar', () => marcador('ensinar'));
-vi.mock('./telas/TelaTestar', () => marcador('testar'));
+// Testar guarda a conversa em estado próprio: o mock imita isso, pra provar que
+// trocar de IA não leva a conversa da anterior junto.
+vi.mock('./telas/TelaTestar', () => ({
+  default: function TelaTestarMock({ agent }: { agent: { name: string } }) {
+    const [texto, setTexto] = useState('');
+    return (
+      <div>
+        <p>{`tela testar · ${agent.name}`}</p>
+        <input aria-label="mensagem de teste" value={texto} onChange={(e) => setTexto(e.target.value)} />
+      </div>
+    );
+  },
+}));
 vi.mock('./telas/TelaDiagnostico', () => marcador('diagnostico'));
 const duplicada = vi.hoisted(() => ({ copia: null as null | Record<string, unknown> }));
 vi.mock('@/components/salesAgents/DuplicateAgentDialog', () => ({
@@ -58,14 +77,14 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   insights.ligado = true;
-  list.mockResolvedValue([ia('ia-1', 'IA da Cheer'), ia('ia-2', 'IA Demo', { inbox_id: null })]);
+  list.mockResolvedValue([ia('ia-1', 'IA de Vendas'), ia('ia-2', 'IA Demo', { inbox_id: null })]);
   diagnostics.mockResolvedValue({ status: 'ok', items: [] });
 });
 
 describe('IA Vendedora · casca', () => {
   it('sem nada no endereço, abre a primeira IA na Visão geral', async () => {
     abrir('/ia-vendedora');
-    expect(await screen.findByText('tela visao-geral · IA da Cheer')).toBeInTheDocument();
+    expect(await screen.findByText('tela visao-geral · IA de Vendas')).toBeInTheDocument();
     await waitFor(() => expect(endereco()).toBe('?ia=ia-1'));
   });
 
@@ -96,13 +115,13 @@ describe('IA Vendedora · casca', () => {
   it('Sugestões sem a chave cai na Visão geral', async () => {
     insights.ligado = false;
     abrir('/ia-vendedora?ia=ia-1&tela=sugestoes');
-    expect(await screen.findByText('tela visao-geral · IA da Cheer')).toBeInTheDocument();
+    expect(await screen.findByText('tela visao-geral · IA de Vendas')).toBeInTheDocument();
     await waitFor(() => expect(endereco()).toBe('?ia=ia-1'));
   });
 
   it('IA que não existe mais no endereço cai na primeira', async () => {
     abrir('/ia-vendedora?ia=excluida&tela=testar');
-    expect(await screen.findByText('tela testar · IA da Cheer')).toBeInTheDocument();
+    expect(await screen.findByText('tela testar · IA de Vendas')).toBeInTheDocument();
   });
 
   it('o menu troca a tela mantendo a IA', async () => {
@@ -114,35 +133,67 @@ describe('IA Vendedora · casca', () => {
   });
 
   it('Duplicar abre a cópia em Configurar, sem voltar pra IA original', async () => {
-    duplicada.copia = ia('ia-3', 'IA da Cheer (cópia)', { enabled: false });
+    duplicada.copia = ia('ia-3', 'IA de Vendas (cópia)', { enabled: false });
     // A recarga da lista fica pendente: a cópia já tem de ser a IA aberta.
     let soltar: (v: unknown) => void = () => {};
-    list.mockResolvedValueOnce([ia('ia-1', 'IA da Cheer'), ia('ia-2', 'IA Demo', { inbox_id: null })])
+    list.mockResolvedValueOnce([ia('ia-1', 'IA de Vendas'), ia('ia-2', 'IA Demo', { inbox_id: null })])
       .mockReturnValueOnce(new Promise((res) => { soltar = res; }))
-      .mockResolvedValue([ia('ia-1', 'IA da Cheer'), ia('ia-2', 'IA Demo', { inbox_id: null }), duplicada.copia]);
+      .mockResolvedValue([ia('ia-1', 'IA de Vendas'), ia('ia-2', 'IA Demo', { inbox_id: null }), duplicada.copia]);
     abrir('/ia-vendedora?ia=ia-1');
-    await screen.findByText('tela visao-geral · IA da Cheer');
+    await screen.findByText('tela visao-geral · IA de Vendas');
     await userEvent.click(screen.getByRole('button', { name: 'Mais ações' }));
     await userEvent.click(await screen.findByRole('menuitem', { name: /Duplicar esta IA/ }));
     await userEvent.click(await screen.findByRole('button', { name: 'confirmar cópia' }));
-    expect(await screen.findByText('tela configurar · IA da Cheer (cópia)')).toBeInTheDocument();
-    soltar([ia('ia-1', 'IA da Cheer'), ia('ia-2', 'IA Demo', { inbox_id: null }), duplicada.copia]);
+    expect(await screen.findByText('tela configurar · IA de Vendas (cópia)')).toBeInTheDocument();
+    soltar([ia('ia-1', 'IA de Vendas'), ia('ia-2', 'IA Demo', { inbox_id: null }), duplicada.copia]);
     await waitFor(() => expect(endereco()).toBe('?ia=ia-3&tela=configurar'));
   });
 
   it('ao trocar de IA, o selo não herda o veredito da anterior enquanto o Diagnóstico novo não chega', async () => {
     const erro = { status: 'error', items: [{ key: 'inbox', label: 'Canal de WhatsApp', status: 'error', detail: 'O canal vinculado não existe mais.' }] };
     // IA B com número: a configuração sozinha não a deixa parada.
-    list.mockResolvedValue([ia('ia-1', 'IA da Cheer'), ia('ia-2', 'IA Demo')]);
+    list.mockResolvedValue([ia('ia-1', 'IA de Vendas'), ia('ia-2', 'IA Demo')]);
     let soltar: (v: unknown) => void = () => {};
     diagnostics.mockResolvedValueOnce(erro).mockReturnValueOnce(new Promise((res) => { soltar = res; }));
     abrir('/ia-vendedora?ia=ia-1');
     expect(await screen.findByText('Parada: o número desta IA não existe mais')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /IA da Cheer/ }));
+    await userEvent.click(screen.getByRole('button', { name: /IA de Vendas/ }));
     await userEvent.click(await screen.findByRole('menuitem', { name: /IA Demo/ }));
     await screen.findByText('tela visao-geral · IA Demo');
     expect(screen.queryByText('Parada: o número desta IA não existe mais')).toBeNull();
     soltar({ status: 'ok', items: [] });
+  });
+
+  // Trocar de IA remonta a tela: a conversa do Testar (e os números/sugestões)
+  // da IA anterior nunca aparecem na nova.
+  it('ao trocar de IA, o Testar começa vazio (sem a conversa da anterior)', async () => {
+    abrir('/ia-vendedora?ia=ia-1&tela=testar');
+    await screen.findByText('tela testar · IA de Vendas');
+    await userEvent.type(screen.getByLabelText('mensagem de teste'), 'oi, tem 2 quartos?');
+    expect(screen.getByLabelText('mensagem de teste')).toHaveValue('oi, tem 2 quartos?');
+    await userEvent.click(screen.getByRole('button', { name: /IA de Vendas/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: /IA Demo/ }));
+    await screen.findByText('tela testar · IA Demo');
+    expect(screen.getByLabelText('mensagem de teste')).toHaveValue('');
+  });
+
+  it('Diagnóstico que falha: a Visão geral não diz "Nada pendente"', async () => {
+    diagnostics.mockRejectedValue({ response: { status: 502 } });
+    abrir('/ia-vendedora?ia=ia-1');
+    await screen.findByText('tela visao-geral · IA de Vendas');
+    await waitFor(() => expect(diagnostics).toHaveBeenCalled());
+    expect(await screen.findByText('diagnóstico falhou')).toBeInTheDocument();
+  });
+
+  it('a falha do Diagnóstico de uma IA não vale pra outra, e some quando o Diagnóstico volta', async () => {
+    list.mockResolvedValue([ia('ia-1', 'IA de Vendas'), ia('ia-2', 'IA Demo')]);
+    diagnostics.mockRejectedValueOnce({ response: { status: 502 } }).mockResolvedValue({ status: 'ok', items: [] });
+    abrir('/ia-vendedora?ia=ia-1');
+    expect(await screen.findByText('diagnóstico falhou')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /IA de Vendas/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: /IA Demo/ }));
+    await screen.findByText('tela visao-geral · IA Demo');
+    await waitFor(() => expect(screen.queryByText('diagnóstico falhou')).toBeNull());
   });
 
   it('sem IA nenhuma: aviso e o botão Nova IA', async () => {

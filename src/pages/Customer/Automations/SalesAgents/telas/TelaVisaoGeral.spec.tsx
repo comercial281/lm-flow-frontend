@@ -13,7 +13,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 import TelaVisaoGeral, { type TelaVisaoGeralProps } from './TelaVisaoGeral';
 import type { SalesAgent, SalesAgentSuggestion } from '@/services/salesAgents/salesAgentsService';
 
-const agente = { id: 'ia-1', name: 'IA da Cheer', enabled: true, inbox_id: 'inbox-1', triggers: [], trigger_keyword: null, trigger_match_mode: 'any' } as unknown as SalesAgent;
+const agente = { id: 'ia-1', name: 'IA de Vendas', enabled: true, inbox_id: 'inbox-1', triggers: [], trigger_keyword: null, trigger_match_mode: 'any' } as unknown as SalesAgent;
 
 const sugestao = (id: string, status: 'pending' | 'applied' = 'pending') => ({
   id, status, target: 'ia', category: 'objecao', category_label: 'Objeção', title: `Sugestão ${id}`, body: null,
@@ -23,7 +23,7 @@ const sugestao = (id: string, status: 'pending' | 'applied' = 'pending') => ({
 function abrir(extra: Partial<TelaVisaoGeralProps> = {}) {
   const props: TelaVisaoGeralProps = {
     agent: agente, situacao: { tipo: 'atendendo', frase: 'Atendendo' }, diagnostico: { status: 'ok', items: [] },
-    conferindo: false, mostrarSugestoes: true, aoIr: vi.fn(), ...extra,
+    conferindo: false, falhou: false, mostrarSugestoes: true, aoIr: vi.fn(), ...extra,
   };
   render(<TelaVisaoGeral {...props} />);
   return props;
@@ -48,6 +48,18 @@ describe('Painel → Visão geral', () => {
   it('sem pendência: "Nada pendente"; enquanto confere, não promete nada', () => {
     abrir();
     expect(screen.getByText(/Nada pendente/)).toBeInTheDocument();
+  });
+
+  it('Diagnóstico que falhou: não afirma "Nada pendente", diz que não conseguiu conferir', () => {
+    abrir({ diagnostico: null, falhou: true });
+    expect(screen.getByText(/Não consegui conferir a situação desta IA agora/)).toBeInTheDocument();
+    expect(screen.queryByText(/Nada pendente/)).toBeNull();
+  });
+
+  it('Diagnóstico que falhou: as pendências da própria configuração continuam aparecendo', () => {
+    abrir({ diagnostico: null, falhou: true, agent: { ...agente, inbox_id: null } as SalesAgent });
+    expect(screen.getByText('Número de WhatsApp')).toBeInTheDocument();
+    expect(screen.queryByText(/Nada pendente/)).toBeNull();
   });
 
   it('enquanto o Diagnóstico não chega, diz que está conferindo', () => {
