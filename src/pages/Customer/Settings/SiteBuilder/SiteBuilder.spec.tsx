@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   getDashboard: vi.fn(),
   listLeads: vi.fn(),
   uploadAsset: vi.fn(),
+  previewLink: vi.fn(),
 }));
 
 vi.mock('@/services/siteBuilder/siteBuilderService', async importOriginal => {
@@ -30,6 +31,7 @@ vi.mock('@/services/siteBuilder/siteBuilderService', async importOriginal => {
       getDashboard: mocks.getDashboard,
       listLeads: mocks.listLeads,
       uploadAsset: mocks.uploadAsset,
+      previewLink: mocks.previewLink,
     },
   };
 });
@@ -307,6 +309,121 @@ describe('SiteBuilder (casca do Meu site)', () => {
 
       await waitFor(() => expect(barra()).toBeNull());
       expect(screen.getByRole('button', { name: 'Linhas largas' })).toHaveAttribute('aria-pressed', 'true');
+    });
+  });
+
+  describe('Ver site, Ver prévia e Aparecer no Google', () => {
+    const barra = () => screen.queryByRole('region', { name: 'Alterações não salvas' });
+
+    it('sem domínio, "Ver site" abre o endereço lmflow (/portal/<cliente>)', async () => {
+      abrir();
+      const link = await screen.findByRole('link', { name: /Ver site/ });
+      expect(link.getAttribute('href')).toBe(`${window.location.origin}/portal/imob`);
+    });
+
+    it('com domínio ativo, "Ver site" abre o domínio e a barra mostra o domínio', async () => {
+      mocks.listSites.mockResolvedValue([{ ...SITE, domain: 'imobteste.com.br', primary_domain: 'imobteste.com.br' }]);
+      abrir();
+      const link = await screen.findByRole('link', { name: /Ver site/ });
+      expect(link.getAttribute('href')).toBe('https://imobteste.com.br');
+      expect(screen.getByText('imobteste.com.br')).toBeTruthy();
+    });
+
+    it('domínio configurado mas ainda pendente (domain null) não é aberto', async () => {
+      mocks.listSites.mockResolvedValue([{ ...SITE, domain: null, primary_domain: 'imobteste.com.br' }]);
+      abrir();
+      const link = await screen.findByRole('link', { name: /Ver site/ });
+      expect(link.getAttribute('href')).toBe(`${window.location.origin}/portal/imob`);
+    });
+
+    it('em manutenção, "Ver prévia" pede o link e abre a URL com ?previa=, com o aviso de 24 horas', async () => {
+      mocks.listSites.mockResolvedValue([{ ...SITE, published: false, domain: 'imobteste.com.br' }]);
+      mocks.previewLink.mockResolvedValue({ token: 'tok+a/b==--9f', expires_at: '2026-10-05T12:00:00Z' });
+      const aba = { opener: {} as unknown, location: { href: '' }, close: vi.fn() };
+      const abrirJanela = vi.spyOn(window, 'open').mockReturnValue(aba as unknown as Window);
+      abrir();
+      expect(screen.queryByRole('link', { name: /Ver site/ })).toBeNull();
+      await userEvent.click(await screen.findByRole('button', { name: /Ver prévia/ }));
+
+      await waitFor(() => expect(aba.location.href).not.toBe(''));
+      expect(mocks.previewLink).toHaveBeenCalledWith('s1');
+      expect(abrirJanela).toHaveBeenCalledTimes(1);
+      const url = new URL(aba.location.href);
+      expect(url.origin).toBe('https://imobteste.com.br');
+      expect(url.searchParams.get('previa')).toBe('tok+a/b==--9f');
+      expect(aba.opener).toBeNull();
+      // Só a frase é anunciada (role status), não o campo e os botões junto.
+      expect(screen.getByRole('status')).toHaveTextContent(/^Esse link vale 24 horas\. Pode mandar pro dono aprovar\.$/);
+      expect((screen.getByLabelText('Link da prévia') as HTMLInputElement).value).toBe(aba.location.href);
+      abrirJanela.mockRestore();
+    });
+
+    it('a prévia sem domínio abre o endereço lmflow com ?previa=', async () => {
+      mocks.listSites.mockResolvedValue([{ ...SITE, active: false }]);
+      mocks.previewLink.mockResolvedValue({ token: 'tok-1', expires_at: '2026-10-05T12:00:00Z' });
+      const aba = { opener: {} as unknown, location: { href: '' }, close: vi.fn() };
+      const abrirJanela = vi.spyOn(window, 'open').mockReturnValue(aba as unknown as Window);
+      abrir();
+      await userEvent.click(await screen.findByRole('button', { name: /Ver prévia/ }));
+      await waitFor(() => expect(aba.location.href).toBe(`${window.location.origin}/portal/imob?previa=tok-1`));
+      abrirJanela.mockRestore();
+    });
+
+    it('falha ao pedir o link fecha a aba e não mostra o aviso', async () => {
+      mocks.listSites.mockResolvedValue([{ ...SITE, published: false }]);
+      mocks.previewLink.mockRejectedValue(new Error('500'));
+      const aba = { opener: {} as unknown, location: { href: '' }, close: vi.fn() };
+      const abrirJanela = vi.spyOn(window, 'open').mockReturnValue(aba as unknown as Window);
+      abrir();
+      await userEvent.click(await screen.findByRole('button', { name: /Ver prévia/ }));
+      await waitFor(() => expect(aba.close).toHaveBeenCalled());
+      expect(screen.queryByText(/vale 24 horas/)).toBeNull();
+      abrirJanela.mockRestore();
+    });
+
+    it('abrir Aparecer no Google sem mexer não mostra o Salvar, e salvar outra coisa não leva google', async () => {
+      mocks.listSites.mockResolvedValue([{ ...SITE, google: { indexable: true } }]);
+      mocks.updateSite.mockResolvedValue(SITE);
+      abrir('/settings/site-builder?tela=google');
+      await screen.findByRole('heading', { name: 'Aparecer no Google' });
+      expect(screen.getByRole('checkbox', { name: 'Aparecer no Google' })).toHaveAttribute('aria-checked', 'true');
+      expect(barra()).toBeNull();
+
+      await userEvent.type(screen.getByLabelText('Título'), 'X');
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+      await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
+      expect(mocks.updateSite.mock.calls[0][1]).not.toHaveProperty('google');
+    });
+
+    it('a caixinha vem desligada de fábrica; ligar marca alterado e o Salvar leva google inteiro', async () => {
+      mocks.updateSite.mockResolvedValue({ ...SITE, google: { indexable: true } });
+      abrir('/settings/site-builder?tela=google');
+      await screen.findByRole('heading', { name: 'Aparecer no Google' });
+      const caixa = screen.getByRole('checkbox', { name: 'Aparecer no Google' });
+      expect(caixa).toHaveAttribute('aria-checked', 'false');
+      // O leitor de tela lê as duas frases junto com a caixinha.
+      expect(caixa).toHaveAccessibleDescription(/Liga quando o site estiver pronto\..*O Google lê o site pelo endereço imob\.lmflow\.com\.br/);
+
+      await userEvent.click(caixa);
+      expect(barra()).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+      await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
+      expect(mocks.updateSite.mock.calls[0][1].google).toEqual({ indexable: true });
+      await waitFor(() => expect(barra()).toBeNull());
+      expect(screen.getByRole('checkbox', { name: 'Aparecer no Google' })).toHaveAttribute('aria-checked', 'true');
+    });
+
+    it('a frase diz onde o Google lê o site: subdomínio do cliente sem domínio, o domínio com ele', async () => {
+      const { unmount } = abrir('/settings/site-builder?tela=google');
+      expect(await screen.findByText('imob.lmflow.com.br')).toBeTruthy();
+      expect(screen.queryByText(/app\.lmflow/)).toBeNull();
+      unmount();
+
+      mocks.listSites.mockResolvedValue([{ ...SITE, domain: 'imobteste.com.br' }]);
+      abrir('/settings/site-builder?tela=google');
+      await screen.findByRole('heading', { name: 'Aparecer no Google' });
+      expect(screen.getAllByText('imobteste.com.br').length).toBeGreaterThan(0);
+      expect(screen.getByText(/pelo seu domínio/)).toBeTruthy();
     });
   });
 });

@@ -5,6 +5,8 @@ import { resolverHome, type RegrasVitrine } from './homeConfig';
 import { atalhosDoSite } from './maisBuscados';
 import { abasVisiveis, itensDaVitrine, vitrinesVisiveis, buscaDaRegra, chamadasVisiveis } from './vitrines';
 
+const LMFLOW = { tenant: 'imob', dominio: false };
+
 const p = (code: string, o: Partial<PortalProperty> = {}): PortalProperty => ({
   id: code, code, title: code, transaction_type: 'sale', property_type: 'apartment', listing_kind: 'resale',
   sale_price_from: 500000, rent_price_from: null, address: { city: 'Campinas', neighborhood: 'Centro' }, ...o,
@@ -148,7 +150,7 @@ describe('home torta do servidor não derruba o site', () => {
     const h = resolverHome({ showcases: [null, { id: 'x', kind: 'custom', title: 'T' }, { id: 'y', kind: 'custom', title: 'Y', rules: { cities: 'x' } }],
       callouts: { custom: [null, 3] }, most_searched: { mode: 'manual', items: [null] } });
     expect(() => vitrinesVisiveis(h, [p('A')])).not.toThrow();
-    expect(() => chamadasVisiveis({ home: h } as SiteInfo, 'imob')).not.toThrow();
+    expect(() => chamadasVisiveis({ home: h } as SiteInfo, LMFLOW)).not.toThrow();
     expect(() => atalhosDoSite(h, [p('A')])).not.toThrow();
     expect(vitrinesVisiveis(h, [p('A')]).map(v => v.vitrine.id)).toEqual(['x', 'y']);
   });
@@ -158,27 +160,35 @@ describe('chamadas', () => {
   it('item nulo no menu do site não derruba a chamada pra página', () => {
     const site = { menu: [null, { title: 'Sobre', slug: 'sobre' }],
       home: { callouts: { custom: [{ title: 'Pg', text: null, button: null, dest_type: 'page', dest_value: 'sobre' }] } } } as unknown as SiteInfo;
-    expect(() => chamadasVisiveis(site, 'imob')).not.toThrow();
-    expect(chamadasVisiveis(site, 'imob').find(x => x.title === 'Pg')?.to).toBe('/portal/imob/p/sobre');
+    expect(() => chamadasVisiveis(site, LMFLOW)).not.toThrow();
+    expect(chamadasVisiveis(site, LMFLOW).find(x => x.title === 'Pg')?.to).toBe('/portal/imob/p/sobre');
   });
 
   const base = (o: Partial<SiteInfo> = {}): SiteInfo => ({ financiamento: { enabled: true }, anuncie: { enabled: true },
     sections: { lead_capture: true }, contact: { whatsapp: '5511999990000' }, menu: [{ title: 'Sobre', slug: 'sobre' }], ...o } as SiteInfo);
   it('padrão com texto de fábrica; destino desligado some', () => {
-    const c = chamadasVisiveis(base({ anuncie: { enabled: false } } as Partial<SiteInfo>), 'imob');
+    const c = chamadasVisiveis(base({ anuncie: { enabled: false } } as Partial<SiteInfo>), LMFLOW);
     expect(c.map(x => x.key)).toEqual(['financing', 'wanted']);
     expect(c[0]).toMatchObject({ title: 'Financiamento', button: 'Faça uma simulação', to: '/portal/imob/financiamento' });
+  });
+  it('no domínio do cliente as chamadas levam aos caminhos limpos', () => {
+    const home = { callouts: { custom: [{ title: 'Pg', text: null, button: null, dest_type: 'page', dest_value: 'sobre' }] } };
+    const c = chamadasVisiveis(base({ home } as Partial<SiteInfo>), { tenant: 'imob', dominio: true });
+    expect(c.find(x => x.key === 'financing')?.to).toBe('/financiamento');
+    expect(c.find(x => x.key === 'listing')?.to).toBe('/anuncie');
+    expect(c.find(x => x.title === 'Pg')?.to).toBe('/p/sobre');
+    expect(c.find(x => x.key === 'wanted')?.to).toBe('#contato');
   });
   it('texto editado vence o de fábrica; padrão desligado some', () => {
     const home = { callouts: { defaults: { financing: { enabled: true, title: 'Crédito', text: null, button: null },
       wanted: { enabled: false } } } };
-    const c = chamadasVisiveis(base({ home } as Partial<SiteInfo>), 'imob');
+    const c = chamadasVisiveis(base({ home } as Partial<SiteInfo>), LMFLOW);
     expect(c.find(x => x.key === 'financing')?.title).toBe('Crédito');
     expect(c.find(x => x.key === 'wanted')).toBeUndefined();
   });
   it('url que não é http(s) não vira cartão', () => {
     const home = { callouts: { custom: [{ title: 'X', text: null, button: null, dest_type: 'url', dest_value: 'javascript:alert(1)' }] } };
-    expect(chamadasVisiveis(base({ home } as Partial<SiteInfo>), 'imob').find(x => x.title === 'X')).toBeUndefined();
+    expect(chamadasVisiveis(base({ home } as Partial<SiteInfo>), LMFLOW).find(x => x.title === 'X')).toBeUndefined();
   });
   it('livres: whatsapp sem número some, página inexistente some, link externo abre fora', () => {
     const home = { callouts: { custom: [
@@ -186,10 +196,10 @@ describe('chamadas', () => {
       { title: 'Pg', text: null, button: null, dest_type: 'page', dest_value: 'apagada' },
       { title: 'Site', text: null, button: 'Ir', dest_type: 'url', dest_value: 'https://x.com' },
     ] } };
-    const semZap = chamadasVisiveis(base({ home, contact: {} } as Partial<SiteInfo>), 'imob');
+    const semZap = chamadasVisiveis(base({ home, contact: {} } as Partial<SiteInfo>), LMFLOW);
     expect(semZap.map(x => x.title)).toEqual(['Financiamento', 'Anuncie seu imóvel', 'Imóvel sob encomenda', 'Site']);
     expect(semZap.find(x => x.title === 'Site')).toMatchObject({ to: 'https://x.com', externo: true });
-    const comZap = chamadasVisiveis(base({ home } as Partial<SiteInfo>), 'imob');
+    const comZap = chamadasVisiveis(base({ home } as Partial<SiteInfo>), LMFLOW);
     expect(comZap.find(x => x.title === 'Zap')?.to).toMatch(/^https:\/\/wa\.me\/5511999990000/);
   });
 });

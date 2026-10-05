@@ -5,6 +5,8 @@ import { opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { CAMPOS_BUSCA, TITULO_CAPA_FABRICA, type AbaId, type CampoBusca, type HomeConfig } from '@/features/siteBuilder/public/homeConfig';
 import { faixasDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
 import { FASES } from '@/features/properties/listingKind';
+import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
+import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Capa da página inicial: foto/vídeo, título, subtítulo e a busca rápida.
@@ -33,6 +35,7 @@ interface Props {
 
 export default function HomeCapa({ site, home, items, tenant, abas, cities, hoods, types, onTab }: Props) {
   const navigate = useNavigate();
+  const ctx = useCtxDoSite(tenant);
   // Sem aba visível (catálogo vazio ou todas desligadas), a busca cai em Comprar.
   const [tab, setTab] = useState<AbaId>(abas[0] ?? 'sale');
   const [valores, setValores] = useState<Partial<Record<CampoBusca, string>>>({});
@@ -65,7 +68,7 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
       }
     }
     const qs = params.toString();
-    navigate(`/portal/${tenant}/imoveis${qs ? `?${qs}` : ''}`);
+    navigate(caminhoDoSite(ctx, `/imoveis${qs ? `?${qs}` : ''}`));
   };
 
   const opcoes: Record<Exclude<CampoBusca, 'code'>, { label: string; options: [string, string][] }> = {

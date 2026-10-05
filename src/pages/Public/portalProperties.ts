@@ -17,6 +17,7 @@
 ──────────────────────────────────────────────────────────────────────────── */
 
 import type { PortalProperty } from './portalShared';
+import { cabecalhosDoSite } from '@/features/siteBuilder/public/previa';
 
 /** Teto do servidor (`per_page` é limitado a 100 lá). */
 export const PORTAL_PAGE_SIZE = 100;
@@ -35,7 +36,7 @@ async function fetchPage(
 ): Promise<PageResult> {
   const qs = new URLSearchParams({ per_page: String(PORTAL_PAGE_SIZE), page: String(page) });
   const res = await fetchImpl(`${api}/api/public/v1/site/properties?${qs.toString()}`, {
-    headers: { 'X-Tenant': tenant },
+    headers: cabecalhosDoSite(tenant),
   });
   if (!res.ok) return { data: [], total: 0 };
   const json = await res.json();

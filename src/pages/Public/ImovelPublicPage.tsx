@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { useCtxDoSite, useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
+import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
+import { TEXTO_ENVIO_NA_PREVIA, cabecalhosDoSite, ehPrevia, envioFoiPrevia } from '@/features/siteBuilder/public/previa';
 import { trackLead } from '@/features/siteBuilder/public/siteTracking';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
@@ -12,7 +15,7 @@ import {
   type PropertyTypology,
 } from '@/features/properties/typologies';
 import {
-  PortalFooter, PortalHeader, PropertyCard, estaEmManutencao,
+  PortalFooter, PortalHeader, PropertyCard, estaEmManutencao, robotsDoSite,
   type PortalProperty, type SiteInfo as PortalSiteInfo,
 } from './portalShared';
 import { resolverHome, type AbaId } from '@/features/siteBuilder/public/homeConfig';
@@ -95,7 +98,9 @@ function Ic({ d, s = 18, cls = '' }: { d: string; s?: number; cls?: string }) {
 }
 
 export default function ImovelPublicPage() {
-  const { tenant, code } = useParams<{ tenant: string; code: string }>();
+  const { code } = useParams<{ code: string }>();
+  const tenant = useTenantDoSite();
+  const ctx = useCtxDoSite(tenant ?? '');
   const [state, setState] = useState<'loading' | 'ok' | 'notfound'>('loading');
   const [site, setSite] = useState<SiteInfo>({});
   const [siteLoaded, setSiteLoaded] = useState(false);
@@ -119,6 +124,8 @@ export default function ImovelPublicPage() {
   const [phone, setPhone] = useState('');
   const [phoneErr, setPhoneErr] = useState(false);
   const [sent, setSent] = useState(false);
+  // Envio feito na prévia: o servidor não criou nada, e a tela não finge que criou.
+  const [enviadoNaPrevia, setEnviadoNaPrevia] = useState(false);
   // Imóvel de Venda + Locação: a pessoa escolhe, marcada pela aba da busca de
   // onde veio (?finalidade=locacao). Os outros imóveis decidem sozinhos.
   const [searchParams] = useSearchParams();
@@ -130,8 +137,8 @@ export default function ImovelPublicPage() {
       if (!tenant || !code) return;
       try {
         const [siteRes, imovelRes] = await Promise.all([
-          fetch(`${API}/api/public/v1/site`, { headers: { 'X-Tenant': tenant } }),
-          fetch(`${API}/api/public/v1/site/properties/${encodeURIComponent(code)}`, { headers: { 'X-Tenant': tenant } }),
+          fetch(`${API}/api/public/v1/site`, { headers: cabecalhosDoSite(tenant) }),
+          fetch(`${API}/api/public/v1/site/properties/${encodeURIComponent(code)}`, { headers: cabecalhosDoSite(tenant) }),
         ]);
         if (!alive) return;
         if (!imovelRes.ok) { setState('notfound'); return; }
@@ -146,7 +153,8 @@ export default function ImovelPublicPage() {
         document.title = `${property.title} · ${siteName}`;
         const desc = (property.description || '').replace(/\s+/g, ' ').trim().slice(0, 160);
         if (desc) setMeta('description', desc);
-        setMeta('robots', 'index,follow');
+        // Mesma regra do resto do site: `index` só com o Google ligado, no ar e fora da prévia.
+        setMeta('robots', robotsDoSite(siteRes.ok ? siteInfo : null));
         setState('ok');
       } catch { if (alive) setState('notfound'); }
     })();
@@ -182,7 +190,7 @@ export default function ImovelPublicPage() {
       const qs = new URLSearchParams({ per_page: '8' });
       if (city) qs.set('city', city);
       try {
-        const res = await fetch(`${API}/api/public/v1/site/properties?${qs.toString()}`, { headers: { 'X-Tenant': tenant } });
+        const res = await fetch(`${API}/api/public/v1/site/properties?${qs.toString()}`, { headers: cabecalhosDoSite(tenant) });
         if (!res.ok) return [];
         return ((await res.json()).data as PortalProperty[]).filter(p => p.code !== code);
       } catch { return []; }
@@ -224,7 +232,7 @@ export default function ImovelPublicPage() {
     const params = new URLSearchParams(window.location.search);
     try {
       const res = await fetch(`${API}/api/public/v1/site/leads`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant },
+        method: 'POST', headers: cabecalhosDoSite(tenant, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ lead: {
           name, phone, source: 'portal', form_type: 'imovel',
           property_code: code, property_id: prop?.id,
@@ -234,9 +242,11 @@ export default function ImovelPublicPage() {
           form_data: { page_url: window.location.href, referrer: document.referrer || null },
         } }),
       });
+      const naPrevia = ehPrevia(site) || (res.ok && (await envioFoiPrevia(res)));
+      setEnviadoNaPrevia(naPrevia);
       setSent(true);
-      // Conversão só conta quando o servidor aceitou o contato.
-      if (res.ok) trackLead();
+      // Conversão só conta quando o servidor aceitou o contato (e nunca na prévia).
+      if (res.ok && !naPrevia) trackLead();
     } catch { /* silencioso */ }
   };
 
@@ -301,7 +311,11 @@ export default function ImovelPublicPage() {
   ].filter(Boolean) as { d: string; label: string }[];
 
   const ContactForm = (
-    sent ? (
+    sent && enviadoNaPrevia ? (
+      <div role="status" className="rounded-2xl bg-amber-400 p-6 text-center font-semibold text-neutral-900">
+        {TEXTO_ENVIO_NA_PREVIA}
+      </div>
+    ) : sent ? (
       <div className="rounded-2xl bg-white p-6 text-center ring-1 ring-black/[0.06]">
         <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full" style={{ background: '#25D366' }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
@@ -342,7 +356,7 @@ export default function ImovelPublicPage() {
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         {!manutencao && (
-          <Link to={`/portal/${tenant}`} className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-neutral-500 hover:text-[var(--brand)]">
+          <Link to={caminhoDoSite(ctx, '/')} className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-neutral-500 hover:text-[var(--brand)]">
             <Ic d={I.back} s={16} /> Voltar aos imóveis
           </Link>
         )}

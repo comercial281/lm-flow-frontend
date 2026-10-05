@@ -14,6 +14,7 @@ import PortalCustomPage from './PortalCustomPage';
 import type { SiteInfo } from './portalShared';
 import { rastreamentoDoSite } from './usePortalTracking';
 import { installSiteTracking } from '@/features/siteBuilder/public/siteTracking';
+import { dominioDoSite, esquecerDominio } from '@/features/siteBuilder/public/dominioDoSite';
 
 vi.mock('@/features/siteBuilder/public/siteVisits', () => ({ sendSiteVisit: vi.fn() }));
 import { sendSiteVisit } from '@/features/siteBuilder/public/siteVisits';
@@ -105,6 +106,7 @@ beforeEach(() => {
   vi.mocked(sendSiteVisit).mockClear();
 });
 afterEach(() => {
+  esquecerDominio();
   // Desmonta antes de limpar o <head>: o React 19 põe lá a folha da fonte.
   cleanup();
   vi.unstubAllGlobals();
@@ -179,6 +181,13 @@ describe('site no ar: nada muda', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'O imóvel certo pra sua próxima fase.' })).toBeInTheDocument();
     expect(screen.queryByText(TEXTO_MANUTENCAO)).toBeNull();
+    // "Aparecer no Google" vem desligado de fábrica: no ar, mas fora do Google.
+    expect(robots()?.content).toBe('noindex');
+  });
+
+  it('com "Aparecer no Google" ligado, a página inicial sai index,follow', async () => {
+    abrir('/portal/imob', { name: 'Imob Teste', maintenance: false, google: { indexable: true } });
+    expect(await screen.findByRole('heading', { level: 1, name: 'O imóvel certo pra sua próxima fase.' })).toBeInTheDocument();
     expect(robots()?.content).toBe('index,follow');
   });
 
@@ -305,7 +314,8 @@ describe('rastreamento em manutenção', () => {
     expect(janela().fbq?.queue).toContainEqual(['track', 'Lead']);
   });
 
-  it('GTM e Códigos avançados nunca rodam em manutenção, nem em domínio próprio', () => {
+  it('GTM e Códigos avançados nunca rodam em manutenção, nem em domínio próprio', async () => {
+    await dominioDoSite({ win: { location: { hostname: 'www.imob.com.br' }, __LMF_SITE__: { tenant: 'imob', slug: 'imob' } } });
     installSiteTracking(rastreamentoDoSite({ ...EM_MANUTENCAO, ...RASTREAMENTO }), { host: 'www.imob.com.br' });
 
     expect(scripts().some(x => x.includes('gtag/js?id=G-AB12'))).toBe(true);
@@ -313,7 +323,8 @@ describe('rastreamento em manutenção', () => {
     expect(document.head.querySelector('meta[name="lmf-codigo"]')).toBeNull();
   });
 
-  it('no ar, em domínio próprio, o GTM continua entrando', () => {
+  it('no ar, em domínio próprio, o GTM continua entrando', async () => {
+    await dominioDoSite({ win: { location: { hostname: 'www.imob.com.br' }, __LMF_SITE__: { tenant: 'imob', slug: 'imob' } } });
     installSiteTracking(rastreamentoDoSite({ name: 'Imob Teste', ...RASTREAMENTO }), { host: 'www.imob.com.br' });
     expect(scripts().some(x => x.includes('gtm.js?id=GTM-XYZ1'))).toBe(true);
   });

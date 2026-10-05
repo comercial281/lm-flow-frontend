@@ -72,3 +72,21 @@ describe('jsonForScript', () => {
     expect(jsonForScript({ a: '<x>&' })).toBe('{"a":"\\u003cx\\u003e\\u0026"}');
   });
 });
+
+describe('injectLandingIntoHtml com $ no texto', () => {
+  // String.replace com texto de troca interpreta $&, $`, $' e $$: o título
+  // "R$' 500 mil" colava o resto do HTML no meio do <title>.
+  it.each([
+    ["R$' 500 mil"],
+    ['Entrada R$` 50 mil'],
+    ['Promo $& oferta'],
+    ['Preço $$ 300'],
+  ])('título %s sai inteiro, com um </head> só', titulo => {
+    const out = injectLandingIntoHtml(html, { tenant: 't', slug: 's', dto: dto({ title: titulo }) });
+    expect(out.split('</head>')).toHaveLength(2);
+    expect(out.split('<title>')).toHaveLength(2);
+    expect(out).toContain(`<title>${titulo.replace(/&/g, '&amp;').replace(/'/g, '&#39;')}</title>`);
+    // O mesmo texto vai no JSON do __lmLanding, também inteiro.
+    expect(out).toContain(`"title":${jsonForScript(titulo)}`);
+  });
+});

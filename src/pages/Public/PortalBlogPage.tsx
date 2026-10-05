@@ -1,5 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import { Link, useParams, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { useCtxDoSite, useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
+import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import {
   Ic, I, PortalFooter, PortalHeader, fetchArticles, usePortalData,
   type PortalArticleSummary,
@@ -25,9 +27,10 @@ function formatDate(iso?: string | null): string {
 }
 
 function ArticleCard({ tenant, a }: { tenant: string; a: PortalArticleSummary }) {
+  const ctx = useCtxDoSite(tenant);
   return (
     <Link
-      to={`/portal/${tenant}/blog/${a.slug}`}
+      to={caminhoDoSite(ctx, `/blog/${a.slug}`)}
       className="group flex flex-col overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_-16px_rgba(0,0,0,0.25)]"
     >
       <div className="relative aspect-[16/9] overflow-hidden bg-neutral-100">
@@ -62,7 +65,7 @@ function ArticleCard({ tenant, a }: { tenant: string; a: PortalArticleSummary })
 }
 
 export default function PortalBlogPage() {
-  const { tenant } = useParams<{ tenant: string }>();
+  const tenant = useTenantDoSite();
   const { state, site, fontHref, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.

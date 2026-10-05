@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Link, useParams, useLocation } from 'react-router-dom';
+import { useCtxDoSite, useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
+import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import {
   Ic, I, PortalFooter, PortalHeader, PropertyCard, fetchArticle, onlyDigits, usePortalData,
   type PortalArticleFull,
@@ -29,7 +31,9 @@ function setMetaDescription(content: string) {
 }
 
 export default function PortalArticlePage() {
-  const { tenant, slug } = useParams<{ tenant: string; slug: string }>();
+  const { slug } = useParams<{ slug: string }>();
+  const tenant = useTenantDoSite();
+  const ctx = useCtxDoSite(tenant ?? '');
   const { state, site, items, fontHref, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
@@ -81,7 +85,7 @@ export default function PortalArticlePage() {
       <PortalHeader site={site} tenant={tenant!} abas={abas} />
 
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
-        <Link to={`/portal/${tenant}/blog`} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-neutral-500 transition-colors hover:text-[var(--brand)]">
+        <Link to={caminhoDoSite(ctx, '/blog')} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-neutral-500 transition-colors hover:text-[var(--brand)]">
           <Ic d={I.arrow} s={15} cls="rotate-180" /> Voltar para o blog
         </Link>
 
@@ -90,7 +94,7 @@ export default function PortalArticlePage() {
         ) : !article ? (
           <div className="flex flex-col items-center justify-center py-24 text-center text-neutral-500">
             <p className="text-[15px]">Artigo não encontrado.</p>
-            <Link to={`/portal/${tenant}/blog`} className="mt-4 text-[14px] font-semibold text-[var(--brand)]">Ver todos os artigos</Link>
+            <Link to={caminhoDoSite(ctx, '/blog')} className="mt-4 text-[14px] font-semibold text-[var(--brand)]">Ver todos os artigos</Link>
           </div>
         ) : (
           <article className="mt-6">
@@ -145,7 +149,7 @@ export default function PortalArticlePage() {
                 <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">Selecionados a dedo</span>
                 <h2 className="mt-1 font-[var(--display)] text-3xl font-semibold sm:text-4xl">Imóveis em destaque</h2>
               </div>
-              <Link to={`/portal/${tenant}/imoveis`} className="hidden shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 sm:inline-flex" style={{ background: 'var(--ink)' }}>
+              <Link to={caminhoDoSite(ctx, '/imoveis')} className="hidden shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 sm:inline-flex" style={{ background: 'var(--ink)' }}>
                 Ver todos os imóveis <Ic d={I.arrow} s={16} />
               </Link>
             </div>
@@ -155,7 +159,7 @@ export default function PortalArticlePage() {
             </div>
 
             <div className="mt-8 text-center sm:hidden">
-              <Link to={`/portal/${tenant}/imoveis`} className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: 'var(--ink)' }}>
+              <Link to={caminhoDoSite(ctx, '/imoveis')} className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: 'var(--ink)' }}>
                 Ver todos os imóveis <Ic d={I.arrow} s={16} />
               </Link>
             </div>

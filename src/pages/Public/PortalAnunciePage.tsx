@@ -1,5 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
+import { TEXTO_ENVIO_NA_PREVIA, cabecalhosDoSite, ehPrevia, envioFoiPrevia } from '@/features/siteBuilder/public/previa';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import {
@@ -62,7 +64,7 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
 }
 
 export default function PortalAnunciePage() {
-  const { tenant } = useParams<{ tenant: string }>();
+  const tenant = useTenantDoSite();
   const { state, site, fontHref, wa, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
@@ -71,6 +73,8 @@ export default function PortalAnunciePage() {
 
   const [step, setStep] = useState<1 | 2>(1);
   const [sent, setSent] = useState(false);
+  // Envio feito na prévia: o servidor não criou nada, e a tela não finge que criou.
+  const [enviadoNaPrevia, setEnviadoNaPrevia] = useState(false);
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -132,7 +136,7 @@ export default function PortalAnunciePage() {
     try {
       const res = await fetch(`${API}/api/public/v1/site/anuncie`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant },
+        headers: cabecalhosDoSite(tenant, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           lead: {
             name: nome.trim(), phone: telefone, email: email.trim() || null,
@@ -154,6 +158,7 @@ export default function PortalAnunciePage() {
         }),
       });
       if (!res.ok) throw new Error('falhou');
+      setEnviadoNaPrevia(ehPrevia(site) || (await envioFoiPrevia(res)));
       setSent(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
@@ -173,7 +178,11 @@ export default function PortalAnunciePage() {
       <PortalHeader site={site} tenant={tenant!} abas={abas} />
 
       <main className="mx-auto max-w-3xl px-4 py-14 sm:px-6 sm:py-16">
-        {sent ? (
+        {sent && enviadoNaPrevia ? (
+          <div role="status" className="rounded-[24px] bg-amber-400 px-6 py-12 text-center text-lg font-semibold text-neutral-900 sm:px-10">
+            {TEXTO_ENVIO_NA_PREVIA}
+          </div>
+        ) : sent ? (
           <div className="rounded-[24px] border border-black/[0.07] bg-white px-6 py-12 text-center sm:px-10">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full" style={{ background: '#25D366' }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>

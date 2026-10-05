@@ -158,9 +158,16 @@ export interface Site {
   slug: string;
   primary_domain?: string | null;
   secondary_domains?: string[];
+  /**
+   * Domínio próprio ATIVO (verificado na Vercel), ou null. É o que o "Ver site"
+   * abre. `primary_domain` é o configurado, que pode estar pendente.
+   */
+  domain?: string | null;
   active: boolean;
   published: boolean;
   branding: SiteBranding;
+  /** "Aparecer no Google" (settings['google']). Servidor velho não manda = desligado. */
+  google?: SiteGoogle | null;
   /** Vídeo do banner da home do portal (armazenado em settings no backend). */
   hero_video_url?: string | null;
   /** Foto do banner da home, já resolvida pelo servidor (settings no backend). */
@@ -197,6 +204,17 @@ export interface Site {
   property_page_template?: BlockInstance[];
   created_at: string;
   updated_at: string;
+}
+
+/** Caixinha "Aparecer no Google". Viaja sempre o bloco inteiro. */
+export interface SiteGoogle {
+  indexable: boolean;
+}
+
+/** Link da prévia antes de publicar (`POST /sites/:id/preview_link`), vale 24 h. */
+export interface SitePreviewLink {
+  token: string;
+  expires_at: string;
 }
 
 export type SiteDomainStatus =
@@ -292,6 +310,8 @@ export interface SiteFormData {
   property_page?: FichaConfigDoAdmin;
   /** Sempre o objeto inteiro. */
   listing?: ListaConfig;
+  /** "Aparecer no Google": sempre o bloco inteiro (permit aninhado no servidor). */
+  google?: SiteGoogle;
   /**
    * As duas páginas extras. Viajam ANINHADAS — declaradas escalares no servidor
    * o Rails descartaria o hash em silêncio, a tela diria *Salvo* e nada mudaria.
@@ -494,6 +514,13 @@ export const siteBuilderService = {
   async removeWatermarkLogo(siteId: string): Promise<Site> {
     const res = await api.delete(`/sites/${siteId}/watermark_logo`);
     return (res.data as { data: Site }).data;
+  },
+
+  /** Link de prévia (24 h) para ver o site em manutenção como se estivesse publicado. */
+  async previewLink(siteId: string): Promise<SitePreviewLink> {
+    const res = await api.post(`/sites/${siteId}/preview_link`);
+    const body = res.data as { data?: SitePreviewLink } & Partial<SitePreviewLink>;
+    return body.data ?? (body as SitePreviewLink);
   },
 
   async disconnectDomain(siteId: string): Promise<SiteDomainState> {

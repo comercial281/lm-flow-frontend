@@ -23,6 +23,7 @@ import { resolverHome } from '@/features/siteBuilder/public/homeConfig';
 import { resolverFichaDoAdmin } from '@/features/siteBuilder/public/fichaConfig';
 import { resolverLista } from '@/features/siteBuilder/public/listaConfig';
 import { telaDaUrl, telaInfo, trilhaDe, type TelaId } from '@/features/siteBuilder/meuSiteMenu';
+import { enderecoDoSite, urlDaPrevia } from '@/features/siteBuilder/enderecoDoSite';
 import { useTenantFeatures, useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useAlteracoesNaoSalvas } from '@/hooks/useAlteracoesNaoSalvas';
@@ -93,6 +94,7 @@ const EMPTY_SITE_FORM: SiteFormData = {
   watermark: { enabled: false, position: 'center', opacity: 60 },
   custom_head_html: '',
   custom_body_html: '',
+  google: { indexable: false },
 };
 
 export default function SiteBuilder() {
@@ -134,6 +136,8 @@ export default function SiteBuilder() {
   // Mesmo molde pra Página do imóvel e Lista de imóveis: cada bloco só viaja se a tela dele mexeu.
   const [fichaAlterada, setFichaAlterada] = useState(false);
   const [listaAlterada, setListaAlterada] = useState(false);
+  // "Aparecer no Google": o bloco só viaja se a caixinha mexeu.
+  const [googleAlterado, setGoogleAlterado] = useState(false);
 
   // Destino do lead por finalidade (venda/locação), com roleta e responsável.
   // Mora fora do siteForm: a venda sai das colunas lead_*, o resto de lead_routing.
@@ -205,10 +209,13 @@ export default function SiteBuilder() {
           },
           custom_head_html: s.custom_code?.head ?? '',
           custom_body_html: s.custom_code?.body ?? '',
+          // Servidor velho não manda `google`: desligado, o padrão de fábrica.
+          google: { indexable: s.google?.indexable === true },
         });
         setHomeAlterado(false);
         setFichaAlterada(false);
         setListaAlterada(false);
+        setGoogleAlterado(false);
         setLeadRouting(siteRoutingFrom(s));
         const fin = financingFrom(s);
         const lst = listingFrom(s);
@@ -254,6 +261,9 @@ export default function SiteBuilder() {
         };
       }
       if (!listaAlterada) delete payload.listing;
+      // `google` vai sempre INTEIRO (permit aninhado no servidor) e só se a caixinha mexeu.
+      if (!googleAlterado) delete payload.google;
+      else payload.google = { indexable: siteForm.google?.indexable === true };
       payload.ga4_measurement_id = normalizarGa4(siteForm.ga4_measurement_id ?? '');
       payload.facebook_pixel_id = normalizarPixel(siteForm.facebook_pixel_id ?? '');
       payload.gtm_id = normalizarGtm(siteForm.gtm_id ?? '');
@@ -276,10 +286,13 @@ export default function SiteBuilder() {
           home: resolverHome(updated.home),
           property_page: resolverFichaDoAdmin(updated.property_page),
           listing: resolverLista(updated.listing),
+          // A caixinha mostra o que ficou gravado; servidor velho sem `google` mantém a tela.
+          google: updated.google ? { indexable: updated.google.indexable === true } : prev.google,
         }));
         setHomeAlterado(false);
         setFichaAlterada(false);
         setListaAlterada(false);
+        setGoogleAlterado(false);
         setLeadRouting(siteRoutingFrom(updated));
         // Salvo: a prévia do banner passa a vir do servidor (site.hero_image).
         setHeroPickPreview(null);
@@ -310,6 +323,7 @@ export default function SiteBuilder() {
     if ('home' in field) setHomeAlterado(true);
     if ('property_page' in field) setFichaAlterada(true);
     if ('listing' in field) setListaAlterada(true);
+    if ('google' in field) setGoogleAlterado(true);
     setSiteFormDirty(true);
   };
 
@@ -335,7 +349,15 @@ export default function SiteBuilder() {
     );
   }
 
-  const portalUrl = `${window.location.origin}/portal/${getTenantSlug() ?? site?.slug ?? ''}`;
+  // Com domínio próprio ativo, "Ver site" abre o domínio; sem ele, o endereço lmflow.
+  const endereco = enderecoDoSite(site ?? {}, { origin: window.location.origin, tenant: getTenantSlug() });
+  const noAr = !!site?.published && !!site?.active;
+  // Em manutenção o site não abre: "Ver prévia" pede um link de 24 h.
+  const pedirPrevia = async () => {
+    if (!site) throw new Error('sem site');
+    const { token } = await siteBuilderService.previewLink(site.id);
+    return urlDaPrevia(endereco.url, token);
+  };
   const info = telaInfo(tela);
   const trilha = trilhaDe(tela);
   const formProps = { site, siteForm, setF };
@@ -346,9 +368,10 @@ export default function SiteBuilder() {
         <MeuSiteBarra
           tela={tela}
           aoIr={irPara}
-          enderecoVisivel={portalUrl.replace(/^https?:\/\//, '')}
-          urlDoSite={portalUrl}
-          noAr={!!site.published && !!site.active}
+          enderecoVisivel={endereco.visivel}
+          urlDoSite={endereco.url}
+          noAr={noAr}
+          aoPedirPrevia={pedirPrevia}
           podeAnuncios={canLandings}
         />
       )}

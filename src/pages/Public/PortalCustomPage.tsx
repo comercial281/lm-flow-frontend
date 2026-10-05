@@ -1,5 +1,8 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
+import { useCtxDoSite, useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
+import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
+import { cabecalhosDoSite } from '@/features/siteBuilder/public/previa';
 import { PortalFooter, PortalHeader, usePortalData } from './portalShared';
 import PaginaManutencao from './PaginaManutencao';
 import { usePortalTracking } from './usePortalTracking';
@@ -13,7 +16,9 @@ const API = import.meta.env.VITE_API_URL as string;
 interface CustomPage { title: string; slug: string; content_html: string }
 
 export default function PortalCustomPage() {
-  const { tenant, slug } = useParams<{ tenant: string; slug: string }>();
+  const { slug } = useParams<{ slug: string }>();
+  const tenant = useTenantDoSite();
+  const ctx = useCtxDoSite(tenant ?? '');
   const { state, site, fontHref, abas, cssVars, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
@@ -28,7 +33,7 @@ export default function PortalCustomPage() {
     if (!tenant || !slug) return;
     setLoading(true);
     setPage(null);
-    fetch(`${API}/api/public/v1/site/pages/${encodeURIComponent(slug)}`, { headers: { 'X-Tenant': tenant } })
+    fetch(`${API}/api/public/v1/site/pages/${encodeURIComponent(slug)}`, { headers: cabecalhosDoSite(tenant) })
       .then(async res => (res.ok ? ((await res.json()).data as CustomPage) : null))
       .catch(() => null)
       .then(p => { if (active) setPage(p || null); })
@@ -61,7 +66,7 @@ export default function PortalCustomPage() {
       ) : !page ? (
         <div className="mx-auto flex max-w-3xl flex-col items-center justify-center px-4 py-24 text-center text-neutral-500">
           <p className="text-[15px]">Página não encontrada.</p>
-          <Link to={`/portal/${tenant}`} className="mt-4 text-[14px] font-semibold text-[var(--brand)]">Voltar para o início</Link>
+          <Link to={caminhoDoSite(ctx, '/')} className="mt-4 text-[14px] font-semibold text-[var(--brand)]">Voltar para o início</Link>
         </div>
       ) : (
         <article className="prose custom-page mx-auto max-w-3xl px-4 py-10">

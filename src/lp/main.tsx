@@ -22,23 +22,6 @@
  */
 import { createRoot } from 'react-dom/client';
 import './lp.css';
-import { parseLandingPath } from '@/features/landing/public/landingLoader';
-import { LandingPublicView } from '@/features/landing/public/LandingPublicView';
-import { LandingResultView } from '@/features/landing/public/LandingResultView';
-
-function LandingApp() {
-  const route = parseLandingPath(window.location.pathname);
-  if (!route) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0F0520] px-6 text-center text-neutral-400">
-        Esta página não está disponível.
-      </div>
-    );
-  }
-  if (route.result) {
-    return <LandingResultView tenant={route.tenant} slug={route.slug} result={route.result} />;
-  }
-  return <LandingPublicView tenant={route.tenant} slug={route.slug} />;
-}
+import { LandingApp } from './LandingApp';
 
 createRoot(document.getElementById('root')!).render(<LandingApp />);

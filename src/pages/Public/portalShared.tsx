@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { fetchAllPortalProperties } from './portalProperties';
 import { imovelHref } from './finalidade';
 import { menuPagesLinks } from '@/features/siteBuilder/public/portalMenu';
+import { caminhoDoSite, type CtxDoSite } from '@/features/siteBuilder/public/dominioDoSite';
+import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
+import { cabecalhosDoSite, ehPrevia } from '@/features/siteBuilder/public/previa';
 import PortalTranslate from './PortalTranslate';
 import { tituloDaAba } from '@/features/siteBuilder/public/tituloDaAba';
 import { filterProperties, opcoesSemRepetir, type PortalFilters, type PortalProperty, type PortalTab } from '@/features/siteBuilder/public/filtros';
@@ -66,6 +69,15 @@ export interface SiteInfo {
    * servidor manda só nome, marca, contato e título; as listas dão 404.
    */
   maintenance?: boolean;
+  /**
+   * Prévia antes de publicar: o servidor aceitou o token do `?previa=`
+   * (`X-Site-Preview`) e mandou o site inteiro. Só `true` conta.
+   */
+  preview?: boolean;
+  /** Domínio próprio ATIVO do site, ou null. */
+  domain?: string | null;
+  /** Caixinha "Aparecer no Google". Ausente (servidor velho) = desligada. */
+  google?: { indexable?: boolean | null } | null;
   name?: string;
   branding?: Branding;
   /** Banner da home: vídeo tem prioridade; sem os dois, a capa do primeiro imóvel. */
@@ -133,9 +145,31 @@ export function Ic({ d, s = 18, cls = '' }: { d: string; s?: number; cls?: strin
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className={cls}><path d={d} /></svg>;
 }
 
-/** Site em manutenção? Só `maintenance === true` (servidor antigo, sem o campo, está no ar). */
+/**
+ * Site em manutenção? Só `maintenance === true` (servidor antigo, sem o campo,
+ * está no ar). Na prévia o dono vê o site como se estivesse publicado.
+ */
 export function estaEmManutencao(site: SiteInfo | null | undefined): boolean {
-  return site?.maintenance === true;
+  return site?.maintenance === true && !ehPrevia(site);
+}
+
+/**
+ * `robots` do site no navegador. `index,follow` só com "Aparecer no Google"
+ * ligado, o site no ar e fora da prévia; o resto, `noindex`. É a mesma regra
+ * que o servidor usa no `<head>` montado pelo middleware: o site nunca troca o
+ * `noindex` dele por `index` depois de carregar.
+ */
+export function robotsDoSite(site: SiteInfo | null | undefined): 'index,follow' | 'noindex' {
+  if (!site || ehPrevia(site) || site.maintenance === true) return 'noindex';
+  return site.google?.indexable === true ? 'index,follow' : 'noindex';
+}
+
+/** Põe o `robots` do site no `<head>` (cria a tag se não houver). */
+export function aplicarRobots(site: SiteInfo | null | undefined, doc: Document = document): void {
+  const meta = doc.head.querySelector<HTMLMetaElement>('meta[name="robots"]') || (() => {
+    const m = doc.createElement('meta'); m.name = 'robots'; doc.head.appendChild(m); return m;
+  })();
+  meta.content = robotsDoSite(site);
 }
 
 /** Cores, fonte e variáveis CSS do site (logo, cores e fonte do Meu site). */
@@ -182,7 +216,7 @@ export function usePortalData(tenant?: string) {
         // a página de manutenção não depende da lista, então nem uma falha dela
         // derruba a página. Fora da manutenção, falha da lista segue sendo erro.
         const [siteRes, propsJson] = await Promise.all([
-          fetch(`${API}/api/public/v1/site`, { headers: { 'X-Tenant': tenant } }),
+          fetch(`${API}/api/public/v1/site`, { headers: cabecalhosDoSite(tenant) }),
           fetchAllPortalProperties(API, tenant).catch(() => null),
         ]);
         if (!active) return;
@@ -191,10 +225,7 @@ export function usePortalData(tenant?: string) {
         setSite(siteJson || {});
         setItems(propsJson || []);
         document.title = tituloDaAba(siteJson?.seo?.title, siteJson?.name);
-        const meta = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]') || (() => {
-          const m = document.createElement('meta'); m.name = 'robots'; document.head.appendChild(m); return m;
-        })();
-        meta.content = 'index,follow';
+        aplicarRobots(siteJson);
         setState('ok');
       } catch {
         if (active) setState('error');
@@ -225,7 +256,7 @@ export async function fetchArticles(
 ): Promise<{ data: PortalArticleSummary[]; total: number }> {
   const res = await fetch(
     `${API}/api/public/v1/site/articles?page=${page}&per_page=${perPage}`,
-    { headers: { 'X-Tenant': tenant } },
+    { headers: cabecalhosDoSite(tenant) },
   );
   if (!res.ok) return { data: [], total: 0 };
   const json = await res.json();
@@ -235,7 +266,7 @@ export async function fetchArticles(
 export async function fetchArticle(tenant: string, slug: string): Promise<PortalArticleFull | null> {
   const res = await fetch(
     `${API}/api/public/v1/site/articles/${encodeURIComponent(slug)}`,
-    { headers: { 'X-Tenant': tenant } },
+    { headers: cabecalhosDoSite(tenant) },
   );
   if (!res.ok) return null;
   const json = await res.json();
@@ -263,7 +294,7 @@ export function usePublishedArticlesExist(tenant?: string): boolean {
 interface PropsDoCartao { tenant: string; p: PortalProperty; wa?: string | null; tab?: PortalTab }
 
 /** O que o cartão e a linha mostram: os dois formatos dizem a mesma coisa. */
-function dadosDoCartao({ tenant, p, wa, tab }: PropsDoCartao) {
+function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
   // Empreendimento mostra a fase (e a entrega) no lugar de "Destaque" e, se for
   // exclusivo, os dois selos. Na revenda Exclusivo vence Destaque.
   const dev = p.listing_kind === 'development';
@@ -278,7 +309,7 @@ function dadosDoCartao({ tenant, p, wa, tab }: PropsDoCartao) {
     typeLabel: rotuloTipo(p.property_type),
     local: [p.address?.neighborhood, p.address?.city].filter(Boolean).join(', '),
     waLink: wa ? `https://wa.me/${onlyDigits(wa)}?text=${encodeURIComponent(`Olá! Tenho interesse no imóvel ${p.code} (${p.title}).`)}` : null,
-    href: imovelHref(tenant, p.code, tab),
+    href: imovelHref(ctx, p.code, tab),
   };
 }
 
@@ -323,7 +354,8 @@ function BotoesDoCartao({ href, waLink, titulo }: { href: string; waLink: string
 
 export function PropertyCard(props: PropsDoCartao) {
   const { p } = props;
-  const { s, selos, typeLabel, local, waLink, href } = dadosDoCartao(props);
+  const ctx = useCtxDoSite(props.tenant);
+  const { s, selos, typeLabel, local, waLink, href } = dadosDoCartao(props, ctx);
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_-16px_rgba(0,0,0,0.25)]">
@@ -379,7 +411,8 @@ export function PropertyCard(props: PropsDoCartao) {
  */
 export function PropertyRow(props: PropsDoCartao) {
   const { p } = props;
-  const { s, selos, typeLabel, local, waLink, href } = dadosDoCartao(props);
+  const ctx = useCtxDoSite(props.tenant);
+  const { s, selos, typeLabel, local, waLink, href } = dadosDoCartao(props, ctx);
 
   return (
     <article className="group grid overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-shadow duration-300 hover:shadow-[0_20px_40px_-16px_rgba(0,0,0,0.25)] sm:grid-cols-[240px_minmax(0,1fr)] lg:grid-cols-[280px_minmax(0,1fr)_220px]">
@@ -585,12 +618,14 @@ function BotaoWhatsApp({ href, rotuloSempre = false }: { href: string; rotuloSem
  * manutenção), e o WhatsApp: sem abas, menu de páginas, blog nem busca.
  */
 function TopoEmManutencao({ site, tenant }: PropsDaMoldura) {
+  const ctx = useCtxDoSite(tenant);
   const waHref = linkDoWhatsApp(site.contact?.whatsapp);
   return (
     <div className="sticky top-0 z-40">
+      <FaixaDePrevia site={site} />
       <header className="border-b border-black/[0.06] bg-[var(--paper)]/90 backdrop-blur-md">
         <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-4 px-4 sm:h-[84px] sm:px-6">
-          <Link to={`/portal/${tenant}`} className="flex items-center gap-2.5">
+          <Link to={caminhoDoSite(ctx, '/')} className="flex items-center gap-2.5">
             <MarcaDoSite site={site} logoCls="h-12 w-auto max-w-[200px] object-contain sm:h-14 sm:max-w-[260px]"
               nomeCls="font-[var(--display)] text-xl font-semibold tracking-tight" />
           </Link>
@@ -603,17 +638,32 @@ function TopoEmManutencao({ site, tenant }: PropsDaMoldura) {
 
 /** Rodapé do site em manutenção: o logo (leva pra raiz) e o WhatsApp. */
 function RodapeEmManutencao({ site, tenant }: PropsDaMoldura) {
+  const ctx = useCtxDoSite(tenant);
   const waHref = linkDoWhatsApp(site.contact?.whatsapp);
   return (
     <footer className="border-t border-black/[0.06] bg-white">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-10 sm:px-6">
-        <Link to={`/portal/${tenant}`}>
+        <Link to={caminhoDoSite(ctx, '/')}>
           <MarcaDoSite site={site} logoCls="h-9 w-auto max-w-[150px] object-contain"
             nomeCls="font-[var(--display)] text-lg font-semibold" />
         </Link>
         {waHref && <BotaoWhatsApp href={waHref} rotuloSempre />}
       </div>
     </footer>
+  );
+}
+
+/**
+ * Faixa da prévia (site aberto pelo link "Ver prévia" do painel). Mora DENTRO
+ * do bloco que gruda no topo: fica sempre à vista sem cobrir o topo do site
+ * nem a barra de contato da ficha, que é fixa embaixo no celular.
+ */
+export function FaixaDePrevia({ site }: { site: SiteInfo }) {
+  if (!ehPrevia(site)) return null;
+  return (
+    <div role="status" className="bg-amber-400 px-4 py-1.5 text-center text-[13px] font-semibold text-neutral-900">
+      Prévia: o site ainda não está publicado.
+    </div>
   );
 }
 
@@ -640,6 +690,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
   const wa = site.contact?.whatsapp;
   const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
   const hasBlog = usePublishedArticlesExist(tenant);
+  const ctx = useCtxDoSite(tenant);
 
   useEffect(() => {
     if (!onHome) { setScrolled(true); return; }
@@ -655,19 +706,19 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
   const nav = [
     ...NAV.filter(abaVisivel(abas)).filter(n => (n.value === 'sobre' ? showStats : n.value === 'contato' ? showLeadCapture : true)),
     ...extraPages(site),
-    ...menuPagesLinks(site, tenant).map((l): NavItem => ({ label: l.label, kind: 'href', value: l.href })),
+    ...menuPagesLinks(site, ctx).map((l): NavItem => ({ label: l.label, kind: 'href', value: l.href })),
   ];
 
-  const sectionHref = (id: string) => (onHome ? `#${id}` : `/portal/${tenant}#${id}`);
+  const sectionHref = (id: string) => (onHome ? `#${id}` : caminhoDoSite(ctx, `/#${id}`));
   // Menu aberto sobre a capa é sempre sólido — texto branco sobre foto some.
   const floating = onHome && !scrolled && !menuOpen;
 
   const renderLink = (n: NavItem, onClick?: () => void, cls?: string) => {
     if (n.kind === 'tab') {
-      return <Link key={n.label} to={`/portal/${tenant}/imoveis?tab=${n.value}`} onClick={onClick} className={cls}>{n.label}</Link>;
+      return <Link key={n.label} to={caminhoDoSite(ctx, `/imoveis?tab=${n.value}`)} onClick={onClick} className={cls}>{n.label}</Link>;
     }
     if (n.kind === 'page') {
-      return <Link key={n.label} to={`/portal/${tenant}/${n.value}`} onClick={onClick} className={cls}>{n.label}</Link>;
+      return <Link key={n.label} to={caminhoDoSite(ctx, `/${n.value}`)} onClick={onClick} className={cls}>{n.label}</Link>;
     }
     if (n.kind === 'href') {
       return <Link key={n.value} to={n.value} onClick={onClick} className={cls}>{n.label}</Link>;
@@ -695,6 +746,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
           fluxo para dentro dele na primeira rolagem, a página inteira saltava
           para baixo a altura do cabeçalho. */}
       <div className={onHome ? 'fixed inset-x-0 top-0 z-40' : 'sticky top-0 z-40'}>
+        <FaixaDePrevia site={site} />
         <header
           className={`border-b transition-colors duration-300 ${
             floating
@@ -709,7 +761,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
               título não desce sozinho. Logo horizontal bate primeiro no max-w,
               por isso a largura sobe na mesma proporção (190 → 260). */}
           <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-4 px-4 sm:h-[84px] sm:px-6">
-            <Link to={`/portal/${tenant}`} className="flex items-center gap-2.5">
+            <Link to={caminhoDoSite(ctx, '/')} className="flex items-center gap-2.5">
               {site.branding?.logo_url ? (
                 <img
                   src={site.branding.logo_url}
@@ -725,7 +777,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
 
             <nav className="hidden items-center gap-6 lg:flex">
               {nav.map(n => renderLink(n, undefined, desktopCls))}
-              {hasBlog && <Link to={`/portal/${tenant}/blog`} className={desktopCls}>Blog</Link>}
+              {hasBlog && <Link to={caminhoDoSite(ctx, '/blog')} className={desktopCls}>Blog</Link>}
             </nav>
 
             <div className="flex items-center gap-2">
@@ -753,7 +805,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
           {menuOpen && (
             <nav className="border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 lg:hidden">
               {nav.map(n => renderLink(n, () => setMenuOpen(false), mobileCls))}
-              {hasBlog && <Link to={`/portal/${tenant}/blog`} onClick={() => setMenuOpen(false)} className={mobileCls}>Blog</Link>}
+              {hasBlog && <Link to={caminhoDoSite(ctx, '/blog')} onClick={() => setMenuOpen(false)} className={mobileCls}>Blog</Link>}
               {(site.contact?.phone || site.contact?.email) && (
                 <div className="mt-2 border-t border-black/[0.06] pt-2 text-[13px] text-neutral-500">
                   {site.contact?.phone && (
@@ -789,7 +841,8 @@ function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) 
   const showStats = site.sections?.stats !== false;
   const showLeadCapture = site.sections?.lead_capture !== false;
   const hasBlog = usePublishedArticlesExist(tenant);
-  const sectionHref = (id: string) => (onHome ? `#${id}` : `/portal/${tenant}#${id}`);
+  const ctx = useCtxDoSite(tenant);
+  const sectionHref = (id: string) => (onHome ? `#${id}` : caminhoDoSite(ctx, `/#${id}`));
   const abasDoRodape = NAV.filter(n => n.kind === 'tab').filter(abaVisivel(abas));
 
   return (
@@ -804,22 +857,22 @@ function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) 
         {abasDoRodape.length > 0 && (
           <FooterCol title="Imóveis">
             {abasDoRodape.map(n => (
-              <li key={n.value}><Link to={`/portal/${tenant}/imoveis?tab=${n.value}`} className={footerLinkCls}>{n.label}</Link></li>
+              <li key={n.value}><Link to={caminhoDoSite(ctx, `/imoveis?tab=${n.value}`)} className={footerLinkCls}>{n.label}</Link></li>
             ))}
           </FooterCol>
         )}
         <FooterCol title="Institucional">
           {showStats && <li><a href={sectionHref('sobre')} className={footerLinkCls}>Sobre nós</a></li>}
-          {hasBlog && <li><Link to={`/portal/${tenant}/blog`} className={footerLinkCls}>Blog</Link></li>}
+          {hasBlog && <li><Link to={caminhoDoSite(ctx, '/blog')} className={footerLinkCls}>Blog</Link></li>}
           {showLeadCapture && <li><a href={sectionHref('contato')} className={footerLinkCls}>Contato</a></li>}
           {/* "Anuncie" rolava para o formulário de QUEM COMPRA: o proprietário
               que queria VENDER caía no formulário contrário. Agora ele só existe
               quando a página de verdade está ligada, e aponta para ela. */}
           {site.anuncie?.enabled && (
-            <li><Link to={`/portal/${tenant}/anuncie`} className={footerLinkCls}>Anuncie seu imóvel</Link></li>
+            <li><Link to={caminhoDoSite(ctx, '/anuncie')} className={footerLinkCls}>Anuncie seu imóvel</Link></li>
           )}
           {site.financiamento?.enabled && (
-            <li><Link to={`/portal/${tenant}/financiamento`} className={footerLinkCls}>Financiamento</Link></li>
+            <li><Link to={caminhoDoSite(ctx, '/financiamento')} className={footerLinkCls}>Financiamento</Link></li>
           )}
         </FooterCol>
         <div>
