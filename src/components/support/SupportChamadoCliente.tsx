@@ -59,12 +59,17 @@ export default function SupportChamadoCliente({ id, recemCriado, aberto, onLido 
   return (
     <div className="flex h-full flex-col">
       <div ref={rolagem} className="flex-1 overflow-y-auto">
-        <SupportThread mensagens={dado.messages} eu="customer" />
-        {recemCriado && (
-          <p className="mx-3 mb-3 w-fit max-w-[85%] rounded-2xl bg-muted px-3 py-2 text-sm">
-            Recebemos! O time responde por aqui e você também recebe por e-mail.
-          </p>
-        )}
+        <SupportThread
+          mensagens={dado.messages}
+          eu="customer"
+          depoisDaPrimeira={
+            recemCriado ? (
+              <p className="w-fit max-w-[85%] rounded-2xl bg-muted px-3 py-2 text-sm">
+                Recebemos! O time responde por aqui e você também recebe por e-mail.
+              </p>
+            ) : undefined
+          }
+        />
         {dado.status === 'resolved' && (
           <div className="mx-3 mb-3 rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm">
             <p className="font-medium">Este chamado foi resolvido.</p>

@@ -22,6 +22,16 @@ describe('SupportThread', () => {
     expect(screen.getByText('Ana')).toBeInTheDocument();
   });
 
+  // 05/10/2026 (print do dono): o "Recebemos!" vinha depois da conversa inteira e,
+  // com as respostas chegando ao vivo, ficava grudado no fim, abaixo delas.
+  it('o que vem depois da primeira mensagem fica logo abaixo dela, antes das respostas', () => {
+    render(<SupportThread mensagens={msgs} eu="customer" depoisDaPrimeira={<p>Recebemos!</p>} />);
+    const recebemos = screen.getByText('Recebemos!');
+    const resposta = screen.getByText('Corrigido');
+    expect(screen.getByText('Não salva').compareDocumentPosition(recebemos) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(recebemos.compareDocumentPosition(resposta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('imagem abre grande em outra aba', () => {
     render(<SupportThread mensagens={msgs} eu="customer" />);
     expect(screen.getByRole('link', { name: 'Abrir imagem 1' })).toHaveAttribute('target', '_blank');
