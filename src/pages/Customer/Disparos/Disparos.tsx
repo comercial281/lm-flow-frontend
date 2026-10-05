@@ -31,8 +31,10 @@ import {
   CloudMetrics,
 } from '@/services/broadcasts/broadcastsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
-import { messageFunnelsService } from '@/services/messageFunnels/messageFunnelsService';
-import type { MessageFunnel } from '@/types/messageFunnels';
+import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
+import type { FlowAutomation } from '@/types/flowAutomations';
+import { FLOW_KIND_COPY } from '@/features/flowAutomations/kind';
+import { funnelMessageCount } from '@/features/flowAutomations/conversationFunnelDraft';
 import type { PipelineStage } from '@/types/analytics';
 import MessageTemplateForm from '@/components/channels/settings/MessageTemplateForm';
 import BulkDispatchModal from '@/components/pipelines/BulkDispatchModal';
@@ -56,7 +58,7 @@ const TABS: { id: Tab; label: string; icon: typeof Megaphone }[] = [
   { id: 'disparos', label: 'Disparos', icon: Megaphone },
   { id: 'templates', label: 'Templates', icon: ShieldCheck },
   { id: 'canais', label: 'Canais oficiais', icon: Layers },
-  { id: 'cadencias', label: 'Cadências', icon: ListOrdered },
+  { id: 'cadencias', label: 'Funis', icon: ListOrdered },
   { id: 'metricas', label: 'Métricas', icon: BarChart3 },
 ];
 
@@ -81,8 +83,8 @@ export default function Disparos() {
   // Aba Templates
   const [tplInboxId, setTplInboxId] = useState('');
 
-  // Aba Cadências
-  const [funnels, setFunnels] = useState<MessageFunnel[]>([]);
+  // Aba Funis (05/10/2026): os funis de conversa de Funis de mensagem.
+  const [funnels, setFunnels] = useState<FlowAutomation[]>([]);
 
   // Aba Métricas
   const [metrics, setMetrics] = useState<CloudMetrics | null>(null);
@@ -121,9 +123,9 @@ export default function Disparos() {
       })
       .catch(() => setPipelines([]));
 
-    messageFunnelsService
-      .list({ activeOnly: true })
-      .then(setFunnels)
+    flowAutomationsService
+      .list({ kind: 'conversation' })
+      .then(list => setFunnels((Array.isArray(list) ? list : []).filter(f => !f.archived_at)))
       .catch(() => setFunnels([]));
   }, []);
 
@@ -450,36 +452,55 @@ export default function Disparos() {
         </div>
       )}
 
-      {/* ===================== CADÊNCIAS ===================== */}
+      {/* ===================== FUNIS ===================== */}
+      {/* Desde 05/10/2026 a biblioteca é a de Funis de mensagem (funis de
+          conversa). No Novo disparo, "Usar funil" carrega um deles na sequência. */}
       {tab === 'cadencias' && (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Cadências são sequências de mensagens (com delay entre passos) que você monta dentro de um disparo (modo
-            sequência) e salva como modelo reutilizável aqui.
+            Os funis ficam em <strong>Funis de mensagem</strong>. No Novo disparo, use <strong>Usar funil</strong> pra
+            carregar um deles na sequência de mensagens.
           </p>
           {funnels.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border p-8 text-center space-y-2">
-              <p className="text-sm text-muted-foreground">Nenhum modelo de cadência salvo ainda.</p>
-              <Button variant="outline" onClick={() => setTab('disparos')}>
-                <Plus className="w-4 h-4 mr-1" /> Montar no Novo disparo
+              <p className="text-sm text-muted-foreground">Nenhum funil ainda.</p>
+              <Button variant="outline" onClick={() => navigate(FLOW_KIND_COPY.conversation.listPath)}>
+                <Plus className="w-4 h-4 mr-1" /> Novo funil
               </Button>
             </div>
           ) : (
             <div className="space-y-2">
-              {funnels.map(f => (
-                <div key={f.id} className="border border-border rounded-xl p-3 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <ListOrdered className="w-4 h-4 text-primary shrink-0" />
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium truncate">{f.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {plural(f.items?.length ?? 0, 'passo', 'passos')}
-                        {f.category ? ` · ${f.category}` : ''}
+              {funnels.map(f => {
+                const count = funnelMessageCount(f);
+                return (
+                  <div key={f.id} className="border border-border rounded-xl p-3 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <ListOrdered className="w-4 h-4 text-primary shrink-0" />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm font-medium truncate">{f.name}</span>
+                          {f.team && <Badge variant="secondary" className="shrink-0">Da equipe</Badge>}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {[
+                            count != null ? plural(count, 'mensagem', 'mensagens') : null,
+                            f.guide_done === false ? 'falta terminar o passo a passo' : f.is_enabled ? null : 'desligado',
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </div>
                       </div>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(`${FLOW_KIND_COPY.conversation.listPath}/${f.id}`)}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 mr-1" /> Abrir em Funis de mensagem
+                    </Button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

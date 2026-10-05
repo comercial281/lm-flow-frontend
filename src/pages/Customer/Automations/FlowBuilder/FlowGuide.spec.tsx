@@ -29,7 +29,7 @@ vi.mock('@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors', asyn
   const original = await importOriginal<typeof import('@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors')>();
   const resources = {
     labels: [], sequences: [], followupFlows: [], users: [], pipelines: [],
-    stagesByPipeline: {}, quickReplies: [], adOrigins: [], formOrigins: [], messageFunnels: [], evolutionInstances: [],
+    stagesByPipeline: {}, quickReplies: [], adOrigins: [], formOrigins: [], messageFunnels: [], conversationFunnels: [], evolutionInstances: [],
     reloadFunnels: () => {}, reloadLabels: () => {}, loading: false,
   };
   return { ...original, useAutomationResources: () => resources };

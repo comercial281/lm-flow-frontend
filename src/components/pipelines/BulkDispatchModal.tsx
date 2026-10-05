@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { apiErrorMessage } from '@/utils/apiHelpers';
 import { plural, numero, telefone } from '@/lib/formato';
 import {
   Dialog,
@@ -32,7 +31,6 @@ import {
   ChevronLeft,
   Send,
   Paperclip,
-  Save,
   ShieldCheck,
   Zap,
 } from 'lucide-react';
@@ -49,11 +47,10 @@ import {
 } from '@/services/broadcasts/broadcastsService';
 import { labelsService } from '@/services/contacts/labelsService';
 import type { Label as LabelType } from '@/types/settings';
-import {
-  messageFunnelsService,
-  tenantTemplateVariablesService,
-} from '@/services/messageFunnels/messageFunnelsService';
-import type { MessageFunnel, MessageFunnelItem, TemplateVariable } from '@/types/messageFunnels';
+import { tenantTemplateVariablesService } from '@/services/messageFunnels/messageFunnelsService';
+import type { TemplateVariable } from '@/types/messageFunnels';
+import { ConversationFunnelSelect } from '@/components/flowAutomations/ConversationFunnelSelect';
+import { FLOW_KIND_COPY } from '@/features/flowAutomations/kind';
 import MessageSequenceEditor, {
   type SequenceDraftItem,
   newSequenceItem,
@@ -126,21 +123,6 @@ function toSequencePayload(items: SequenceDraftItem[]): BroadcastSequenceItem[] 
     });
 }
 
-// Item de funil salvo → item do editor (mesmo mapeamento do agendar/funil).
-function draftFromFunnelItem(it: MessageFunnelItem): SequenceDraftItem {
-  return {
-    uiKey: crypto.randomUUID(),
-    kind: it.kind,
-    text_content: it.text_content,
-    media_url: it.media_url,
-    media_filename: it.media_filename,
-    media_caption: it.media_caption,
-    delay_seconds: it.delay_seconds,
-    config: it.config || {},
-    pendingFile: null,
-  };
-}
-
 export default function BulkDispatchModal({
   open,
   onOpenChange,
@@ -163,7 +145,6 @@ export default function BulkDispatchModal({
   // Mensagem (sequência multi-item — MESMO editor do funil)
   const [items, setItems] = useState<SequenceDraftItem[]>([newSequenceItem()]);
   const [variables, setVariables] = useState<TemplateVariable[]>([]);
-  const [funnelTemplates, setFunnelTemplates] = useState<MessageFunnel[]>([]);
 
   // Canal do disparo: 'evolution' (sessão livre) ou 'whatsapp_cloud' (template oficial).
   const [channelKind, setChannelKind] = useState<BroadcastChannelKind>('evolution');
@@ -267,64 +248,11 @@ export default function BulkDispatchModal({
           { token: 'email', placeholder: '{{email}}', label: 'E-mail', builtin: true },
         ]),
       );
-    messageFunnelsService
-      .list({ activeOnly: true })
-      .then(setFunnelTemplates)
-      .catch(() => setFunnelTemplates([]));
     broadcastsService
       .whatsappCloudOptions()
       .then(setCloudOptions)
       .catch(() => setCloudOptions([]));
   }, [open, refreshList, resetWizard]);
-
-  // Carrega um modelo salvo (funil) na sequência atual.
-  const loadTemplate = async (funnelId: string) => {
-    try {
-      const funnel = await messageFunnelsService.get(funnelId);
-      setItems(funnel.items.length ? funnel.items.map(draftFromFunnelItem) : [newSequenceItem()]);
-      toast.success(`Modelo "${funnel.name}" carregado`);
-    } catch {
-      toast.error('Não consegui carregar o modelo.');
-    }
-  };
-
-  // Salva a sequência atual como modelo reutilizável na biblioteca (funil compartilhado).
-  const saveAsTemplate = async () => {
-    const valid = items.filter(itemIsValid);
-    if (!valid.length) {
-      toast.error('Monte a sequência antes de salvar o modelo.');
-      return;
-    }
-    // Continua sendo a caixinha do navegador de propósito: o substituto
-    // (usePergunta) é um Dialog, e este componente já É o conteúdo de um.
-    //
-    // Dialog dentro de Dialog mexe com armadilha de foco e com empilhamento —
-    // e aqui há um campo de texto que precisa receber o foco pra funcionar,
-    // justamente o que a armadilha do diálogo de fora disputa. Não se confere
-    // lendo código: precisa de navegador.
-    const name = window.prompt('Nome do modelo:')?.trim();
-    if (!name) return;
-    try {
-      await messageFunnelsService.create({
-        name,
-        category: 'geral',
-        active: true,
-        shared: true,
-        items: toSequencePayload(valid).map((it, idx) => ({
-          position: idx,
-          kind: it.kind,
-          text_content: it.text_content,
-          media_caption: it.media_caption,
-          media_filename: it.media_filename,
-          delay_seconds: it.delay_seconds,
-        })),
-      });
-      toast.success('Modelo salvo na biblioteca.');
-      setFunnelTemplates(await messageFunnelsService.list({ activeOnly: true }));
-    } catch (e) {
-      toast.error(apiErrorMessage(e, 'Não consegui salvar o modelo.'));
-    }
-  };
 
   // Conta destinatários quando a audiência muda (só na view de criação).
   const audiencePayload = useMemo(
@@ -769,30 +697,22 @@ export default function BulkDispatchModal({
                         <MessageSquareText className="w-4 h-4" /> Sequência de mensagens
                       </Label>
                       <div className="flex items-center gap-2">
-                        {funnelTemplates.length > 0 && (
-                          <Select value="" onValueChange={loadTemplate}>
-                            <SelectTrigger className="h-7 w-40 text-xs">
-                              <SelectValue placeholder="Usar modelo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {funnelTemplates.map(f => (
-                                <SelectItem key={f.id} value={f.id}>
-                                  {f.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={saveAsTemplate}
-                          className="h-7 text-xs"
-                          title="Salvar a sequência como modelo na biblioteca"
+                        {/* "Usar funil" (05/10/2026): os funis de conversa de Funis de
+                            mensagem. Contato e figurinha não saem no disparo em massa. */}
+                        <ConversationFunnelSelect
+                          enabled={open}
+                          skipKinds={['contact', 'sticker']}
+                          onLoad={loaded => setItems(loaded)}
+                        />
+                        <a
+                          href={FLOW_KIND_COPY.conversation.listPath}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-primary hover:underline"
+                          title="Os funis ficam em Funis de mensagem: monte lá e use aqui"
                         >
-                          <Save className="w-3.5 h-3.5 mr-1" /> Salvar modelo
-                        </Button>
+                          Montar funil
+                        </a>
                       </div>
                     </div>
 
