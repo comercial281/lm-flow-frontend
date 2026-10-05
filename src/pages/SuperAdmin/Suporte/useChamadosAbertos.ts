@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supportAdminService } from '@/services/support/supportAdminService';
+import { useSinalSuporte } from '@/components/support/aoVivo';
 
 const INTERVALO_MS = 2 * 60 * 1000;
 
@@ -9,6 +10,9 @@ const INTERVALO_MS = 2 * 60 * 1000;
  */
 export function useChamadosAbertos(ativo: boolean): number {
   const [n, setN] = useState(0);
+  // Chamado mudou (novo, respondido, situação): recontar na hora pelo sinal ao vivo.
+  const [sinal, setSinal] = useState(0);
+  useSinalSuporte(() => setSinal(s => s + 1));
   useEffect(() => {
     if (!ativo) {
       setN(0);
@@ -22,6 +26,6 @@ export function useChamadosAbertos(ativo: boolean): number {
       if (document.visibilityState === 'visible') atualizar();
     }, INTERVALO_MS);
     return () => window.clearInterval(id);
-  }, [ativo]);
+  }, [ativo, sinal]);
   return n;
 }
