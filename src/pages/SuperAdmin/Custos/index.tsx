@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AdminConteudo from '@/pages/Admin/Area/AdminConteudo';
 import EmptyState from '@/components/base/EmptyState';
@@ -23,7 +24,9 @@ function mesAtual(): string {
 
 export default function Custos() {
   const [month, setMonth] = useState(mesAtual);
-  const [tenant, setTenant] = useState<string | null>(null);
+  const [params] = useSearchParams();
+  const [tenant, setTenant] = useState<string | null>(() => params.get('tenant'));
+  const soErrosNaCarga = params.get('so_erros') === '1';
   const [summary, setSummary] = useState<CostsSummary | null>(null);
   const [lancando, setLancando] = useState(false);
   const [estado, setEstado] = useState<'carregando' | 'pronto' | 'erro'>('carregando');
@@ -92,7 +95,7 @@ export default function Custos() {
             <div data-testid="custos-detalhes" className="flex flex-col gap-6">
               <Recortes summary={summary} />
               {!summary.tenant && <Conferencia reconciliation={summary.reconciliation} aoLancar={() => setLancando(true)} />}
-              <ListaDeChamadas month={month} tenant={tenant} funcoes={summary.by_feature} />
+              <ListaDeChamadas month={month} tenant={tenant} funcoes={summary.by_feature} soErrosNaCarga={soErrosNaCarga} />
             </div>
           </>
         )}

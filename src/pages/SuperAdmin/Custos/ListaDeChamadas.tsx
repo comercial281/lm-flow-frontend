@@ -10,10 +10,10 @@ import type { CostCall, CostCallsPage, CostSlice } from '@/types/admin/costs';
 import { OPCOES_FORNECEDOR, tamanho } from './formatoCustos';
 import DetalheDaChamada from './DetalheDaChamada';
 
-export default function ListaDeChamadas({ month, tenant, funcoes }: { month: string; tenant: string | null; funcoes: CostSlice[] }) {
+export default function ListaDeChamadas({ month, tenant, funcoes, soErrosNaCarga = false }: { month: string; tenant: string | null; funcoes: CostSlice[]; soErrosNaCarga?: boolean }) {
   const [feature, setFeature] = useState('');
   const [provider, setProvider] = useState('');
-  const [onlyErrors, setOnlyErrors] = useState(false);
+  const [onlyErrors, setOnlyErrors] = useState(soErrosNaCarga);
   const [dados, setDados] = useState<(CostCallsPage & { chave: string }) | null>(null);
   const [erro, setErro] = useState(false);
   const [aberta, setAberta] = useState<string | null>(null);
