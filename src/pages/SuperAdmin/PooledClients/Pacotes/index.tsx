@@ -19,20 +19,29 @@ export default function Pacotes() {
   const [nome, setNome] = useState('');
   const [origem, setOrigem] = useState('');
   const [clientes, setClientes] = useState<ClientePooled[]>([]);
+  const [erroClientes, setErroClientes] = useState(false);
+  const [criando, setCriando] = useState(false);
 
   const carregar = useCallback(async () => {
     setErro(false);
     try { setPacotes(await pacotesService.listar()); } catch { setErro(true); }
   }, []);
   useEffect(() => { void carregar(); }, [carregar]);
-  useEffect(() => { if (novo) clientesService.listar(false).then(setClientes).catch(() => setClientes([])); }, [novo]);
+  useEffect(() => {
+    if (!novo) return;
+    setErroClientes(false);
+    clientesService.listar(false).then(setClientes).catch(() => { setClientes([]); setErroClientes(true); });
+  }, [novo]);
 
   const criar = async () => {
+    if (criando) return;
     const [tipo, valor] = origem.split(':');
+    setCriando(true);
     try {
       const p = await pacotesService.criar({ name: nome.trim(), ...(tipo === 'pacote' ? { from_package_id: valor } : {}), ...(tipo === 'cliente' ? { from_tenant_id: valor } : {}) });
       navigate(`/admin/clientes/pacotes/${p.id}`);
     } catch (e: any) { toast.error(e?.response?.data?.error || 'Não deu pra criar.'); }
+    finally { setCriando(false); }
   };
 
   return (
@@ -61,8 +70,9 @@ export default function Pacotes() {
               {(pacotes ?? []).map((p) => <option key={p.id} value={`pacote:${p.id}`}>Pacote {p.name}</option>)}
               {clientes.map((c) => <option key={c.id} value={`cliente:${c.id}`}>Cliente {c.name}</option>)}
             </Seletor>
+            {erroClientes && <p role="alert" className="mt-1 text-xs text-destructive">Não deu pra carregar os clientes.</p>}
           </div>
-          <DialogFooter><Button disabled={!nome.trim()} onClick={() => void criar()}>Criar</Button></DialogFooter>
+          <DialogFooter><Button disabled={!nome.trim() || criando} onClick={() => void criar()}>Criar</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

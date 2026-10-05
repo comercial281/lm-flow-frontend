@@ -43,4 +43,32 @@ describe('Editor de pacote', () => {
     await user.click(await screen.findByRole('button', { name: 'Só salvar o pacote' }));
     await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/super/packages/p1', expect.objectContaining({ apply_to_clients: false })));
   });
+
+  it('limpar Números de WhatsApp mostra erro, desabilita Salvar e não chama a prévia', async () => {
+    const user = userEvent.setup();
+    montar();
+    await user.clear(await screen.findByLabelText('Números de WhatsApp'));
+    expect(screen.getByText('Digite um número inteiro (0 = ilimitado).')).toBeInTheDocument();
+    expect(screen.getByLabelText('Números de WhatsApp')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('button', { name: 'Salvar pacote' })).toBeDisabled();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it('só manda os limites que mudaram', async () => {
+    api.post.mockResolvedValue({ data: { data: { clients_count: 2, changes: { features: [], limits: [] } } } });
+    const user = userEvent.setup();
+    montar();
+    const campo = await screen.findByLabelText('Números de WhatsApp');
+    await user.clear(campo); await user.type(campo, '3');
+    await user.click(screen.getByRole('button', { name: 'Salvar pacote' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/super/packages/p1/preview_update', { name: 'Completo', limits: { max_whatsapp_channels: 3 } }));
+  });
+
+  it('nada mudou: não manda limits', async () => {
+    api.post.mockResolvedValue({ data: { data: { clients_count: 2, changes: { features: [], limits: [] } } } });
+    const user = userEvent.setup();
+    montar();
+    await user.click(await screen.findByRole('button', { name: 'Salvar pacote' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/super/packages/p1/preview_update', { name: 'Completo' }));
+  });
 });

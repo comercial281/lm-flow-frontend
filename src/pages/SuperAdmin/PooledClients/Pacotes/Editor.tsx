@@ -5,8 +5,10 @@ import EmptyState from '@/components/base/EmptyState';
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label } from '@/components/ui/ds';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { pacotesService } from '@/services/superAdmin/pacotesService';
-import type { LimitesDoPacote, MudancasDoPacote, PacoteDetalhe } from '@/types/admin/pacotes';
+import type { EdicaoDoPacote, LimitesDoPacote, MudancasDoPacote, PacoteDetalhe } from '@/types/admin/pacotes';
 import QuadrosDeFuncoes from '../QuadrosDeFuncoes';
+import { validarLimites } from '../limites';
+import { plural } from '@/lib/formato';
 import { resumoDeMudancas } from './resumoDeMudancas';
 
 // Editor de pacote: nome, funções (os mesmos quadros da página do cliente) e
@@ -23,6 +25,7 @@ export default function Editor() {
   const [limites, setLimites] = useState<{ numeros: string; franquia: string; preco: string }>({ numeros: '', franquia: '', preco: '' });
   const [previa, setPrevia] = useState<{ clients_count: number; changes: MudancasDoPacote } | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [pedindo, setPedindo] = useState(false);
 
   const carregar = useCallback(async () => {
     setErro(false);
@@ -35,19 +38,30 @@ export default function Editor() {
 
   useEffect(() => { void carregar(); }, [carregar]);
 
-  const edicao = () => {
+  const { erros, valores } = validarLimites(limites);
+
+  // Só manda o que mudou em relação ao pacote carregado.
+  const edicao = (): EdicaoDoPacote => {
     const mudadas = Object.fromEntries(Object.entries(funcoes).filter(([k, v]) => pacote?.features[k] !== v));
-    const lim: Partial<LimitesDoPacote> = {
-      max_whatsapp_channels: Math.max(0, parseInt(limites.numeros, 10) || 0),
-      ai_leads_included: limites.franquia.trim() === '' ? null : Math.max(0, parseInt(limites.franquia, 10) || 0),
-      ai_lead_overage_price_brl: Math.max(0, parseFloat(limites.preco.replace(',', '.')) || 0),
+    const lim: Partial<LimitesDoPacote> = {};
+    if (pacote && valores) {
+      (Object.keys(valores) as (keyof LimitesDoPacote)[]).forEach((k) => {
+        if (valores[k] !== pacote.limits[k]) (lim as Record<string, number | null>)[k] = valores[k];
+      });
+    }
+    return {
+      name: nome.trim(),
+      ...(Object.keys(mudadas).length ? { features: mudadas } : {}),
+      ...(Object.keys(lim).length ? { limits: lim } : {}),
     };
-    return { name: nome.trim(), ...(Object.keys(mudadas).length ? { features: mudadas } : {}), limits: lim };
   };
 
   const pedirSalvar = async () => {
+    if (!valores || pedindo) return;
+    setPedindo(true);
     try { setPrevia(await pacotesService.previa(id, edicao())); }
     catch (e: any) { toast.error(e?.response?.data?.error || 'Não deu pra calcular a prévia.'); }
+    finally { setPedindo(false); }
   };
 
   const salvar = async (aplicar: boolean) => {
@@ -56,7 +70,7 @@ export default function Editor() {
       const r = await pacotesService.salvar(id, edicao(), aplicar);
       setPrevia(null);
       if (r.result?.failed.length) toast.error(`Não deu pra aplicar em: ${r.result.failed.map((f) => f.name).join(', ')}`);
-      else toast.success(aplicar ? `Pacote salvo e aplicado a ${r.result?.applied ?? 0} clientes.` : 'Pacote salvo.');
+      else toast.success(aplicar ? `Pacote salvo e aplicado a ${plural(r.result?.applied ?? 0, 'cliente', 'clientes')}.` : 'Pacote salvo.');
       void carregar();
     } catch (e: any) {
       toast.error(e?.response?.data?.error || 'Não deu pra salvar.');
@@ -79,18 +93,18 @@ export default function Editor() {
       <Link to="/admin/clientes/pacotes" className="text-sm text-muted-foreground hover:text-foreground">← Pacotes</Link>
       <div className="flex flex-wrap items-end gap-3">
         <div><Label htmlFor="pk-nome">Nome</Label><Input id="pk-nome" value={nome} onChange={(e) => setNome(e.target.value)} className="w-64" /></div>
-        <p className="text-sm text-muted-foreground">{pacote.clients_count} clientes neste pacote</p>
+        <p className="text-sm text-muted-foreground">{plural(pacote.clients_count, 'cliente', 'clientes')} neste pacote</p>
         <div className="ml-auto flex gap-2">
           <Button variant="outline" disabled={pacote.clients_count > 0} title={pacote.clients_count > 0 ? 'Só dá pra apagar pacote sem clientes' : undefined} onClick={() => void apagar()}>Apagar</Button>
-          <Button onClick={() => void pedirSalvar()}>Salvar pacote</Button>
+          <Button disabled={!valores || pedindo} onClick={() => void pedirSalvar()}>Salvar pacote</Button>
         </div>
       </div>
       <section aria-labelledby="pk-limites" className="rounded-lg border p-4">
         <h2 id="pk-limites" className="mb-3 text-sm font-semibold">Limites</h2>
         <div className="grid gap-3 sm:grid-cols-3">
-          <div><Label htmlFor="pk-num">Números de WhatsApp</Label><Input id="pk-num" inputMode="numeric" value={limites.numeros} onChange={(e) => setLimites({ ...limites, numeros: e.target.value })} /></div>
-          <div><Label htmlFor="pk-fr">Franquia de leads da IA</Label><Input id="pk-fr" inputMode="numeric" placeholder="sem franquia" value={limites.franquia} onChange={(e) => setLimites({ ...limites, franquia: e.target.value })} /></div>
-          <div><Label htmlFor="pk-pr">Preço do excedente (R$)</Label><Input id="pk-pr" inputMode="decimal" value={limites.preco} onChange={(e) => setLimites({ ...limites, preco: e.target.value })} /></div>
+          <div><Label htmlFor="pk-num">Números de WhatsApp</Label><Input id="pk-num" aria-invalid={!!erros.numeros} aria-describedby={erros.numeros ? 'pk-num-erro' : undefined} inputMode="numeric" value={limites.numeros} onChange={(e) => setLimites({ ...limites, numeros: e.target.value })} />{erros.numeros && <p id="pk-num-erro" className="mt-1 text-xs text-destructive">{erros.numeros}</p>}</div>
+          <div><Label htmlFor="pk-fr">Franquia de leads da IA</Label><Input id="pk-fr" aria-invalid={!!erros.franquia} aria-describedby={erros.franquia ? 'pk-fr-erro' : undefined} inputMode="numeric" placeholder="sem franquia" value={limites.franquia} onChange={(e) => setLimites({ ...limites, franquia: e.target.value })} />{erros.franquia && <p id="pk-fr-erro" className="mt-1 text-xs text-destructive">{erros.franquia}</p>}</div>
+          <div><Label htmlFor="pk-pr">Preço do excedente (R$)</Label><Input id="pk-pr" aria-invalid={!!erros.preco} aria-describedby={erros.preco ? 'pk-pr-erro' : undefined} inputMode="decimal" value={limites.preco} onChange={(e) => setLimites({ ...limites, preco: e.target.value })} />{erros.preco && <p id="pk-pr-erro" className="mt-1 text-xs text-destructive">{erros.preco}</p>}</div>
         </div>
       </section>
       <QuadrosDeFuncoes catalog={pacote.catalog} ligada={(k) => funcoes[k] !== false}
@@ -100,7 +114,7 @@ export default function Editor() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{previa && previa.clients_count > 0 ? `Aplicar aos ${previa.clients_count} clientes deste pacote?` : 'Salvar o pacote?'}</DialogTitle>
-            <DialogDescription>{linhas.length ? 'O que muda:' : 'Nenhuma função ou limite muda.'} Ajustes manuais de cada cliente são mantidos.</DialogDescription>
+            <DialogDescription>{linhas.length ? 'O que muda:' : 'Nenhuma função ou limite muda.'}{previa && previa.clients_count > 0 ? ' Ajustes manuais de cada cliente são mantidos.' : ''}</DialogDescription>
           </DialogHeader>
           <ul className="list-disc pl-5 text-sm">{linhas.map((l) => <li key={l}>{l}</li>)}</ul>
           <DialogFooter>

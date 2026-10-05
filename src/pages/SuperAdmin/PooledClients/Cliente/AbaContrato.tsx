@@ -4,13 +4,12 @@ import { toast } from 'sonner';
 import { Button, Input, Label } from '@/components/ui/ds';
 import { clientesService } from '@/services/superAdmin/clientesService';
 import { groupJidsFrom, groupsPatch } from '../clientGroups';
+import { validarLimites } from '../limites';
 import type { PropsDaAba } from './Pagina';
 
 // Contrato do cliente. 3A: os três limites (números de WhatsApp, franquia de
 // leads da IA, preço do excedente). O PATCH reenvia os grupos de WhatsApp: o
 // servidor faz compact! nessas chaves e uma omissão apagaria os grupos.
-const INTEIRO = /^\d+$/;
-const DECIMAL = /^\d+([.,]\d+)?$/;
 
 export default function AbaContrato({ cliente, aoMudar }: PropsDaAba) {
   // `key` pelos limites: se o cliente mudar por fora (ex.: troca de pacote), os campos recomeçam dele.
@@ -24,22 +23,19 @@ function FormularioDeLimites({ cliente, aoMudar }: Pick<PropsDaAba, 'cliente' | 
   const [preco, setPreco] = useState(String(cliente.ai_lead_overage_price_brl ?? 2.49));
   const [salvando, setSalvando] = useState(false);
 
-  // Só "0" literal é ilimitado: vazio ou inválido nunca vira 0.
-  const erroNumeros = INTEIRO.test(numeros.trim()) ? null : 'Digite um número inteiro (0 = ilimitado).';
-  const erroFranquia = franquia.trim() === '' || INTEIRO.test(franquia.trim()) ? null : 'Deixe vazio ou digite um número inteiro.';
-  const erroPreco = DECIMAL.test(preco.trim()) ? null : 'Digite um valor, como 2,49.';
-  const invalido = !!(erroNumeros || erroFranquia || erroPreco);
+  const { erros, valores } = validarLimites({ numeros, franquia, preco });
+  const erroNumeros = erros.numeros ?? null;
+  const erroFranquia = erros.franquia ?? null;
+  const erroPreco = erros.preco ?? null;
 
   const salvar = async () => {
-    if (invalido) return;
+    if (!valores) return;
     setSalvando(true);
     try {
       const atualizado = await clientesService.atualizar(cliente.id, {
         name: cliente.name,
         ...groupsPatch(groupJidsFrom(cliente.settings ?? {})),
-        max_whatsapp_channels: parseInt(numeros.trim(), 10),
-        ai_leads_included: franquia.trim() === '' ? null : parseInt(franquia.trim(), 10),
-        ai_lead_overage_price_brl: parseFloat(preco.trim().replace(',', '.')),
+        ...valores,
       });
       aoMudar({ ...cliente, ...atualizado });
       toast.success('Limites salvos.');
@@ -65,7 +61,7 @@ function FormularioDeLimites({ cliente, aoMudar }: Pick<PropsDaAba, 'cliente' | 
           <Input id="lim-pr" inputMode="decimal" aria-invalid={!!erroPreco} aria-describedby={erroPreco ? 'lim-pr-erro' : undefined} value={preco} onChange={(e) => setPreco(e.target.value)} />
           {msg('lim-pr-erro', erroPreco)}</div>
       </div>
-      <Button className="mt-3" disabled={salvando || invalido} onClick={() => void salvar()}>Salvar limites</Button>
+      <Button className="mt-3" disabled={salvando || !valores} onClick={() => void salvar()}>Salvar limites</Button>
     </section>
   );
 }
