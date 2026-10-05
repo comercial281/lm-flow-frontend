@@ -1,5 +1,5 @@
 // Painel → Visão geral: o que a IA precisa (pendências com "Corrigir"), o que ela
-// entregou (os números da antiga aba Resultados) e as sugestões esperando
+// entregou (os números que ficavam em Resultados) e as sugestões esperando
 // resposta. É a primeira tela que abre.
 import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/ds';
@@ -15,7 +15,7 @@ import type { TelaId } from '@/features/salesAgents/iaMenu';
 import { motivoSemAtendimento, pendenciasDaIa, type Situacao } from '@/features/salesAgents/situacao';
 import { SuggestionCard } from './TelaSugestoes';
 
-// Aba Resultados — o que ESTA IA produziu, pro próprio cliente ver.
+// Visão geral, números do período — o que ESTA IA produziu, pro próprio cliente ver.
 //
 // A tela tinha Configuração, Base, Aprendizado, Testar e Diagnóstico: cinco abas
 // sobre como a IA está montada e nenhuma sobre o que ela entregou. Quem liga uma
