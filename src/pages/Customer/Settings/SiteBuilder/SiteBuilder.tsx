@@ -12,6 +12,7 @@ import {
   SiteFormData,
   type SiteFinancingPage,
   type SiteListingPage,
+  type MenuDoPainel,
 } from '@/services/siteBuilder/siteBuilderService';
 import { type HeroImagePick } from '@/features/siteBuilder/HeroImagePicker';
 import { EMPTY_HERO_IMAGE, heroImageChoiceFrom } from '@/features/siteBuilder/heroImage';
@@ -22,6 +23,8 @@ import { erroGa4, erroGtm, erroPixel, normalizarGa4, normalizarGtm, normalizarPi
 import { resolverHome } from '@/features/siteBuilder/public/homeConfig';
 import { resolverFichaDoAdmin } from '@/features/siteBuilder/public/fichaConfig';
 import { resolverLista } from '@/features/siteBuilder/public/listaConfig';
+import { resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
+import { menuComPagina, menuDoPainel, menuParaGravar, menuSemPagina } from '@/features/siteBuilder/menuDoPainel';
 import { telaDaUrl, telaInfo, trilhaDe, type TelaId } from '@/features/siteBuilder/meuSiteMenu';
 import { enderecoDoSite, urlDaPrevia } from '@/features/siteBuilder/enderecoDoSite';
 import { useTenantFeatures, useClientToggle } from '@/contexts/TenantFeaturesContext';
@@ -43,7 +46,8 @@ import TelaEndereco from './telas/TelaEndereco';
 import TelaDados from './telas/TelaDados';
 import TelaDestino from './telas/TelaDestino';
 import TelaGoogle from './telas/TelaGoogle';
-import TelaPaginas from './telas/TelaPaginas';
+import TelaPaginas, { type MudancaDePagina } from './telas/TelaPaginas';
+import TelaMenus from './telas/TelaMenus';
 import TelaBlog from './telas/TelaBlog';
 import TelaContatos from './telas/TelaContatos';
 import TelaAnuncios from './telas/TelaAnuncios';
@@ -138,6 +142,12 @@ export default function SiteBuilder() {
   const [listaAlterada, setListaAlterada] = useState(false);
   // "Aparecer no Google": o bloco só viaja se a caixinha mexeu.
   const [googleAlterado, setGoogleAlterado] = useState(false);
+  // Aparência e Menus (C3), no mesmo molde: cada bloco só viaja se a tela dele mexeu.
+  const [aparenciaAlterada, setAparenciaAlterada] = useState(false);
+  const [menuAlterado, setMenuAlterado] = useState(false);
+  // Salvar o menu grava também o "Exibir no menu" das páginas (no servidor, junto):
+  // as telas que listam páginas (Páginas, Chamadas, Menus) relêem quando muda.
+  const [versaoDasPaginas, setVersaoDasPaginas] = useState(0);
 
   // Destino do lead por finalidade (venda/locação), com roleta e responsável.
   // Mora fora do siteForm: a venda sai das colunas lead_*, o resto de lead_routing.
@@ -188,6 +198,8 @@ export default function SiteBuilder() {
           // Do ADMIN: o único resolvedor que traz os e-mails da cópia (o do site público não traz).
           property_page: resolverFichaDoAdmin(s.property_page),
           listing: resolverLista(s.listing),
+          appearance: resolverAparencia(s.appearance),
+          menu: menuDoPainel(s.menu),
           primary_color: s.branding.primary_color ?? '#7C3AED',
           accent_color: s.branding.accent_color ?? '#9333EA',
           font_family: s.branding.font_family ?? 'Inter',
@@ -216,6 +228,8 @@ export default function SiteBuilder() {
         setFichaAlterada(false);
         setListaAlterada(false);
         setGoogleAlterado(false);
+        setAparenciaAlterada(false);
+        setMenuAlterado(false);
         setLeadRouting(siteRoutingFrom(s));
         const fin = financingFrom(s);
         const lst = listingFrom(s);
@@ -264,6 +278,11 @@ export default function SiteBuilder() {
       // `google` vai sempre INTEIRO (permit aninhado no servidor) e só se a caixinha mexeu.
       if (!googleAlterado) delete payload.google;
       else payload.google = { indexable: siteForm.google?.indexable === true };
+      // Aparência e menu: só se a tela mexeu, e sempre o bloco inteiro. O menu vai
+      // no formato do servidor (página SEMPRE com `enabled`, sem `page_title`).
+      if (!aparenciaAlterada) delete payload.appearance;
+      if (!menuAlterado) delete payload.menu;
+      else payload.menu = menuParaGravar((siteForm.menu as MenuDoPainel | undefined) ?? menuDoPainel(null));
       payload.ga4_measurement_id = normalizarGa4(siteForm.ga4_measurement_id ?? '');
       payload.facebook_pixel_id = normalizarPixel(siteForm.facebook_pixel_id ?? '');
       payload.gtm_id = normalizarGtm(siteForm.gtm_id ?? '');
@@ -288,11 +307,18 @@ export default function SiteBuilder() {
           listing: resolverLista(updated.listing),
           // A caixinha mostra o que ficou gravado; servidor velho sem `google` mantém a tela.
           google: updated.google ? { indexable: updated.google.indexable === true } : prev.google,
+          // Aparência e menu como ficaram gravados (o servidor limpa nome, link e texto).
+          // Servidor velho sem os blocos mantém a tela.
+          appearance: updated.appearance !== undefined ? resolverAparencia(updated.appearance) : prev.appearance,
+          menu: updated.menu !== undefined ? menuDoPainel(updated.menu) : prev.menu,
         }));
+        if (menuAlterado) setVersaoDasPaginas(v => v + 1);
         setHomeAlterado(false);
         setFichaAlterada(false);
         setListaAlterada(false);
         setGoogleAlterado(false);
+        setAparenciaAlterada(false);
+        setMenuAlterado(false);
         setLeadRouting(siteRoutingFrom(updated));
         // Salvo: a prévia do banner passa a vir do servidor (site.hero_image).
         setHeroPickPreview(null);
@@ -324,8 +350,23 @@ export default function SiteBuilder() {
     if ('property_page' in field) setFichaAlterada(true);
     if ('listing' in field) setListaAlterada(true);
     if ('google' in field) setGoogleAlterado(true);
+    if ('appearance' in field) setAparenciaAlterada(true);
+    if ('menu' in field) setMenuAlterado(true);
     setSiteFormDirty(true);
   };
+
+  // Página criada, salva ou excluída na tela Páginas (gravada na hora, fora do
+  // Salvar): o menu da tela Menus acompanha sem virar alteração não salva. O
+  // liga/desliga da página no menu É o "Exibir no menu" dela.
+  const aoMudarPagina = useCallback((m: MudancaDePagina) => {
+    setSiteForm(prev => {
+      const menu = (prev.menu as MenuDoPainel | undefined) ?? menuDoPainel(null);
+      return {
+        ...prev,
+        menu: m.tipo === 'excluida' ? menuSemPagina(menu, m.slug) : menuComPagina(menu, m.pagina, m.slugAntigo),
+      };
+    });
+  }, []);
 
   // Telas que mexem em estado fora do siteForm (financiamento, anuncie, destino)
   // marcam o formulário como alterado por aqui.
@@ -390,7 +431,7 @@ export default function SiteBuilder() {
         )}
         {tela === 'busca' && <TelaBusca {...formProps} />}
         {tela === 'vitrines' && <TelaVitrines {...formProps} />}
-        {tela === 'chamadas' && <TelaChamadas {...formProps} />}
+        {tela === 'chamadas' && <TelaChamadas {...formProps} versaoDasPaginas={versaoDasPaginas} />}
         {tela === 'buscados' && <TelaMaisBuscados {...formProps} />}
         {tela === 'ficha' && <TelaFicha {...formProps} />}
         {tela === 'lista' && <TelaLista {...formProps} />}
@@ -423,7 +464,10 @@ export default function SiteBuilder() {
         {tela === 'redes' && <TelaRedes {...formProps} />}
         {tela === 'traducao' && <TelaTraducao {...formProps} />}
         {tela === 'marca' && <TelaMarcaDagua {...formProps} onLogoAtualizado={setSite} />}
-        {site && tela === 'paginas' && <TelaPaginas site={site} />}
+        {tela === 'menus' && <TelaMenus {...formProps} versaoDasPaginas={versaoDasPaginas} />}
+        {site && tela === 'paginas' && (
+          <TelaPaginas site={site} versaoDasPaginas={versaoDasPaginas} aoMudarPagina={aoMudarPagina} />
+        )}
         {site && tela === 'blog' && <TelaBlog site={site} />}
         {site && tela === 'contatos' && <TelaContatos site={site} />}
         {site && tela === 'anuncios' && canLandings && (

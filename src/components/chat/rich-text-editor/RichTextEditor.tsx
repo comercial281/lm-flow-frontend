@@ -1,26 +1,40 @@
 import { useRef, useEffect, useState, useImperativeHandle, forwardRef } from 'react';
 import { EditorState } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
-import { DOMParser as ProseDOMParser, DOMSerializer } from 'prosemirror-model';
 import { keymap } from 'prosemirror-keymap';
 import { history, undo, redo } from 'prosemirror-history';
-import { baseKeymap } from 'prosemirror-commands';
+import { baseKeymap, lift, setBlockType, wrapIn } from 'prosemirror-commands';
 import { toggleMark } from 'prosemirror-commands';
-import { wrapInList } from 'prosemirror-schema-list';
+import { liftListItem, splitListItem, wrapInList } from 'prosemirror-schema-list';
 import type { Schema } from 'prosemirror-model';
 import { messageSchema } from './schema';
+import { docDoConteudo, htmlDoDoc } from './conteudoDoEditor';
 import { EditorToolbar, TODAS_AS_ACOES, type AcaoDoEditor } from './EditorToolbar';
 import { atalhosDoEditor } from './atalhosDoEditor';
 import { toast } from 'sonner';
 
-const classeDoEditor = (minHeight: string) =>
-  `prosemirror-editor p-3 ${minHeight} max-h-[200px] overflow-y-auto focus:outline-none resize-none text-sm leading-relaxed text-foreground`;
+const classeDoEditor = (minHeight: string, maxHeight: string) =>
+  `prosemirror-editor p-3 ${minHeight} ${maxHeight} overflow-y-auto focus:outline-none resize-none text-sm leading-relaxed text-foreground`;
+
+/** A ação só é oferecida se o esquema tem o que ela precisa (e a imagem, quem a peça). */
+function acaoDisponivel(acao: AcaoDoEditor, schema: Schema, temImagem: boolean): boolean {
+  switch (acao) {
+    case 'heading2': case 'heading3': return !!schema.nodes.heading;
+    case 'orderedList': return !!schema.nodes.ordered_list;
+    case 'quote': return !!schema.nodes.blockquote;
+    case 'image': return !!schema.nodes.image && temImagem;
+    case 'code': return !!schema.marks.code;
+    default: return true;
+  }
+}
 
 export interface RichTextEditorRef {
   focus: () => void;
   getContent: () => string;
   setContent: (content: string) => void;
   insertText: (text: string) => void;
+  /** Põe uma imagem onde está o cursor (o estado é relido na hora: pode vir depois de um envio). */
+  insertImage: (src: string, alt?: string) => void;
   clear: () => void;
 }
 
@@ -38,6 +52,15 @@ interface RichTextEditorProps {
    * uma altura menor pra barra ficar enxuta (estilo WhatsApp).
    */
   editorMinHeightClass?: string;
+  /** Classe da altura máxima da área de digitação (rola dentro dela). Padrão: 200px. */
+  editorMaxHeightClass?: string;
+  /**
+   * Chamado pelo botão Imagem da barra (só existe com esta função e um esquema
+   * com `image`). Quem usa pede o endereço ou o arquivo e chama `insertImage`.
+   */
+  aoPedirImagem?: () => void;
+  /** HTML carregado na montagem (troque a `key` pra recarregar). */
+  conteudoInicial?: string;
   /**
    * Esquema do documento. O padrão é o do compositor do chat — negrito,
    * itálico, código e lista. A seção de Texto da landing passa um esquema com
@@ -63,11 +86,15 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       className = '',
       showToolbar = true,
       editorMinHeightClass = 'min-h-[100px]',
+      editorMaxHeightClass = 'max-h-[200px]',
+      aoPedirImagem,
+      conteudoInicial,
       schema = messageSchema,
-      acoes = TODAS_AS_ACOES,
+      acoes: acoesPedidas = TODAS_AS_ACOES,
     },
     ref,
   ) => {
+    const acoes = acoesPedidas.filter(a => acaoDisponivel(a, schema, !!aoPedirImagem));
     const editorRef = useRef<HTMLDivElement>(null);
     const viewRef = useRef<EditorView | null>(null);
     const [editorState, setEditorState] = useState<EditorState | null>(null);
@@ -83,29 +110,11 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       },
       getContent: () => {
         if (!viewRef.current) return '';
-        const doc = viewRef.current.state.doc;
-        const serializer = DOMSerializer.fromSchema(schema);
-        const fragment = serializer.serializeFragment(doc.content);
-        const div = document.createElement('div');
-        div.appendChild(fragment);
-        return div.innerHTML;
+        return htmlDoDoc(viewRef.current.state.doc, schema);
       },
       setContent: (content: string) => {
         if (!viewRef.current) return;
-        const isHtml = /<[a-z][\s\S]*>/i.test(content);
-        let doc;
-        if (isHtml) {
-          const wrapper = document.createElement('div');
-          wrapper.innerHTML = content;
-          doc = ProseDOMParser.fromSchema(schema).parse(wrapper);
-        } else {
-          doc = schema.nodeFromJSON({
-            type: 'doc',
-            content: content
-              ? [{ type: 'paragraph', content: [{ type: 'text', text: content }] }]
-              : [],
-          });
-        }
+        const doc = docDoConteudo(content, schema);
         const newState = EditorState.create({
           doc,
           plugins: viewRef.current.state.plugins,
@@ -119,6 +128,15 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
         const tr = state.tr.insertText(text);
         dispatch(tr);
         viewRef.current.focus();
+      },
+      insertImage: (src: string, alt = '') => {
+        const view = viewRef.current;
+        const tipo = schema.nodes.image;
+        if (!view || !tipo || !src) return;
+        // Estado lido AGORA (não o de quando o botão foi clicado): entre o clique e
+        // a imagem houve o envio do arquivo ou a digitação do endereço.
+        view.dispatch(view.state.tr.replaceSelectionWith(tipo.create({ src, alt })).scrollIntoView());
+        view.focus();
       },
       clear: () => {
         if (!viewRef.current) return;
@@ -139,7 +157,11 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
     useEffect(() => {
       if (!editorRef.current) return;
 
-      const initialDoc = value
+      // `conteudoInicial` (HTML) vence o `value` (texto): quem abre o editor já
+      // com conteúdo não depende do ref estar pronto no efeito do pai.
+      const initialDoc = conteudoInicial !== undefined
+        ? docDoConteudo(conteudoInicial, schema)
+        : value
         ? schema.nodeFromJSON({
             type: 'doc',
             content: [{ type: 'paragraph', content: [{ type: 'text', text: value }] }],
@@ -164,6 +186,11 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
               return false;
             },
           }),
+          // Nas páginas do site (lista numerada na barra), Enter numa lista abre
+          // o próximo item e Shift+Tab sai da lista. O chat fica como estava.
+          ...(acoes.includes('orderedList') && schema.nodes.list_item
+            ? [keymap({ Enter: splitListItem(schema.nodes.list_item), 'Shift-Tab': liftListItem(schema.nodes.list_item) })]
+            : []),
           keymap(baseKeymap),
         ],
       });
@@ -193,7 +220,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
         editable: () => !disabled,
         attributes: {
           class:
-            classeDoEditor(editorMinHeightClass),
+            classeDoEditor(editorMinHeightClass, editorMaxHeightClass),
           'data-placeholder': placeholder,
         },
       });
@@ -220,11 +247,11 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
     useEffect(() => {
       viewRef.current?.setProps({
         attributes: {
-          class: classeDoEditor(editorMinHeightClass),
+          class: classeDoEditor(editorMinHeightClass, editorMaxHeightClass),
           'data-placeholder': placeholder,
         },
       });
-    }, [placeholder, editorMinHeightClass]);
+    }, [placeholder, editorMinHeightClass, editorMaxHeightClass]);
 
     const handleToolbarAction = (action: string) => {
       if (!viewRef.current || !editorState) return;
@@ -244,6 +271,34 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
         case 'bulletList':
           wrapInList(schema.nodes.bullet_list)(state, dispatch);
           break;
+        case 'orderedList':
+          if (schema.nodes.ordered_list) wrapInList(schema.nodes.ordered_list)(state, dispatch);
+          break;
+        case 'heading2':
+        case 'heading3': {
+          const heading = schema.nodes.heading;
+          if (!heading) break;
+          const level = action === 'heading2' ? 2 : 3;
+          const atual = state.selection.$from.parent;
+          // Clicar de novo no mesmo nível volta a ser parágrafo.
+          if (atual.type === heading && atual.attrs.level === level) setBlockType(schema.nodes.paragraph)(state, dispatch);
+          else setBlockType(heading, { level })(state, dispatch);
+          break;
+        }
+        case 'quote': {
+          const quote = schema.nodes.blockquote;
+          if (!quote) break;
+          // Dentro de uma citação, o botão tira; fora, põe.
+          const { $from } = state.selection;
+          let dentro = false;
+          for (let d = $from.depth; d > 0; d--) if ($from.node(d).type === quote) dentro = true;
+          if (dentro) lift(state, dispatch);
+          else wrapIn(quote)(state, dispatch);
+          break;
+        }
+        case 'image':
+          aoPedirImagem?.();
+          return;
         case 'link': {
           // Só existe quando o esquema recebido tem a marca — o compositor do
           // chat não tem, então nem o botão aparece lá.

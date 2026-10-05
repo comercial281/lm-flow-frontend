@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   listLeads: vi.fn(),
   uploadAsset: vi.fn(),
   previewLink: vi.fn(),
+  updatePage: vi.fn(),
 }));
 
 vi.mock('@/services/siteBuilder/siteBuilderService', async importOriginal => {
@@ -32,6 +33,7 @@ vi.mock('@/services/siteBuilder/siteBuilderService', async importOriginal => {
       listLeads: mocks.listLeads,
       uploadAsset: mocks.uploadAsset,
       previewLink: mocks.previewLink,
+      updatePage: mocks.updatePage,
     },
   };
 });
@@ -424,6 +426,100 @@ describe('SiteBuilder (casca do Meu site)', () => {
       await screen.findByRole('heading', { name: 'Aparecer no Google' });
       expect(screen.getAllByText('imobteste.com.br').length).toBeGreaterThan(0);
       expect(screen.getByText(/pelo seu domínio/)).toBeTruthy();
+    });
+  });
+  describe('Aparência e Menus (C3)', () => {
+    const barra = () => screen.queryByRole('region', { name: 'Alterações não salvas' });
+    const MENU = {
+      items: [
+        { key: 'sale', label: null, enabled: true }, { key: 'rent', label: null, enabled: true },
+        { key: 'launch', label: null, enabled: true }, { key: 'about', label: null, enabled: true },
+        { key: 'contact', label: null, enabled: true }, { key: 'financing', label: null, enabled: true },
+        { key: 'listing', label: null, enabled: true },
+        { key: 'page:quem-somos', label: null, enabled: true, page_title: 'Quem somos' },
+        { key: 'blog', label: null, enabled: true },
+      ],
+      external: [{ label: 'CRECI', url: 'https://creci.org.br/' }],
+      saved: false,
+    };
+    const PAGINA = {
+      id: 'p1', site_id: 's1', title: 'Quem somos', slug: 'quem-somos', page_kind: 'portal_static', content_html: '<p>Oi</p>',
+      active: true, in_menu: true, menu_position: 1, created_at: '2026-10-01T00:00:00Z', updated_at: '2026-10-01T00:00:00Z',
+    };
+
+    beforeEach(() => {
+      mocks.listSites.mockResolvedValue([{ ...SITE, menu: MENU, appearance: { background: 'light' } }]);
+      mocks.listPages.mockResolvedValue([PAGINA]);
+    });
+
+    it('abrir Aparência e Menus sem mexer não mostra o Salvar, e salvar outra coisa não leva appearance nem menu', async () => {
+      mocks.updateSite.mockResolvedValue(SITE);
+      const { unmount } = abrir('/settings/site-builder?tela=aparencia');
+      await screen.findByRole('heading', { name: 'Aparência' });
+      expect(barra()).toBeNull();
+      unmount();
+
+      const menus = abrir('/settings/site-builder?tela=menus');
+      await screen.findByRole('heading', { name: 'Menus' });
+      await waitFor(() => expect(mocks.listPages).toHaveBeenCalled());
+      expect(barra()).toBeNull();
+      menus.unmount();
+
+      abrir('/settings/site-builder?tela=dados');
+      await screen.findByRole('heading', { name: 'Dados de contato' });
+      await userEvent.type(screen.getByLabelText('Telefone'), '11999990000');
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+      await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
+      expect(mocks.updateSite.mock.calls[0][1]).not.toHaveProperty('appearance');
+      expect(mocks.updateSite.mock.calls[0][1]).not.toHaveProperty('menu');
+    });
+
+    it('uma miniatura da Aparência leva a aparência inteira; depois de salvar, a tela relê o gravado', async () => {
+      mocks.updateSite.mockResolvedValue({ ...SITE, appearance: { background: 'dark', hero_overlay: 70 } });
+      abrir('/settings/site-builder?tela=aparencia');
+      await screen.findByRole('heading', { name: 'Aparência' });
+      fireEvent.click(within(screen.getByRole('group', { name: 'Fundo do site' })).getByRole('button', { name: /^Escuro/ }));
+      expect(barra()).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+      await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
+      const enviado = mocks.updateSite.mock.calls[0][1];
+      expect(enviado.appearance).toEqual({
+        background: 'dark', header_style: 'transparent', logo_light_url: null, top_bar: 'two_phones',
+        hero_height: 'half', hero_overlay: 45, footer_layout: 'columns', footer_text: null,
+      });
+      expect(enviado).not.toHaveProperty('menu');
+      await waitFor(() => expect(barra()).toBeNull());
+      expect((screen.getByLabelText('Filtro escuro sobre a foto') as HTMLInputElement).value).toBe('70');
+    });
+
+    it('mexer no menu leva o menu no formato do servidor (página com enabled, sem page_title) e relê as páginas', async () => {
+      mocks.updateSite.mockResolvedValue({ ...SITE, menu: { ...MENU, saved: true } });
+      abrir('/settings/site-builder?tela=menus');
+      await screen.findByRole('heading', { name: 'Menus' });
+      await waitFor(() => expect(mocks.listPages).toHaveBeenCalledTimes(1));
+      await userEvent.click(screen.getByLabelText('Mostrar Quem somos no menu'));
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+      await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
+      const menu = mocks.updateSite.mock.calls[0][1].menu;
+      expect(menu.items.find((i: { key: string }) => i.key === 'page:quem-somos')).toEqual(
+        { key: 'page:quem-somos', label: null, enabled: false });
+      expect(menu.items.every((i: object) => !('page_title' in i))).toBe(true);
+      expect(menu.external).toEqual([{ label: 'CRECI', url: 'https://creci.org.br/' }]);
+      expect(mocks.updateSite.mock.calls[0][1]).not.toHaveProperty('appearance');
+      // O Salvar gravou o "Exibir no menu" das páginas: a lista é lida de novo.
+      await waitFor(() => expect(mocks.listPages).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(barra()).toBeNull());
+    });
+
+    it('salvar uma página na tela Páginas não vira alteração não salva do site', async () => {
+      mocks.updatePage.mockResolvedValue({ ...PAGINA, in_menu: false });
+      abrir('/settings/site-builder?tela=paginas');
+      await userEvent.click(await screen.findByRole('button', { name: 'Editar página' }));
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Exibir no menu' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+      await waitFor(() => expect(mocks.updatePage).toHaveBeenCalled());
+      expect(mocks.updatePage.mock.calls[0][2]).toMatchObject({ in_menu: false });
+      expect(barra()).toBeNull();
     });
   });
 });
