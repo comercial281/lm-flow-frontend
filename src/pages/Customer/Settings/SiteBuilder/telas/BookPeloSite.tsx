@@ -5,7 +5,7 @@ import { Button, Switch, Label as UILabel } from '@/components/ui/ds';
 import SendFromField from '@/components/numbers/SendFromField';
 import { VariableChipBar } from '@/components/flowAutomations/VariableChipBar';
 import { sendFromOf, type SendFromValue } from '@/features/numbers/sendFrom';
-import { siteBuilderService, type BookFlow } from '@/services/siteBuilder/siteBuilderService';
+import { siteBuilderService, type BookFlow, type BookFlowBody } from '@/services/siteBuilder/siteBuilderService';
 import salesAgentsService from '@/services/salesAgents/salesAgentsService';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { Campo, CampoTextoLongo } from '../ui/Campo';
@@ -42,28 +42,30 @@ export default function BookPeloSite({ siteId, ligado, aoMudarChave }: Props) {
     setIaAssume(f.ia_assume);
   };
 
+  const carregar = (vivo: () => boolean = () => true) => {
+    setFalhouLer(false);
+    siteBuilderService.getBookFlow(siteId)
+      .then(f => { if (vivo()) aplicar(f); })
+      .catch(() => { if (vivo()) setFalhouLer(true); });
+  };
+
   useEffect(() => {
     let vivo = true;
-    siteBuilderService.getBookFlow(siteId)
-      .then(f => { if (vivo) { aplicar(f); setFalhouLer(false); } })
-      .catch(() => { if (vivo) setFalhouLer(true); });
+    carregar(() => vivo);
     // Só oferece "a IA assume" se o cliente tem IA Vendedora ligada.
     salesAgentsService.list()
       .then(l => { if (vivo) setTemIa(l.some(a => a.enabled)); })
       .catch(() => { /* sem a lista, esconde a pergunta */ });
     return () => { vivo = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId]);
 
-  const enviar = async (ligar: boolean, sucesso?: string) => {
+  // Chave e "Ligar/Recriar o fluxo" mandam só `ligado` (o servidor mantém o gravado);
+  // só o botão "Salvar o envio do book" manda os campos.
+  const enviar = async (body: BookFlowBody, sucesso?: string) => {
     setOcupado(true);
     try {
-      const f = await siteBuilderService.putBookFlow(siteId, {
-        ligado: ligar,
-        send_from: envio.send_from === 'owner' || envio.send_from === 'number' ? envio.send_from : '',
-        send_from_inbox_id: envio.send_from_inbox_id || null,
-        mensagem,
-        ia_assume: iaAssume,
-      });
+      const f = await siteBuilderService.putBookFlow(siteId, body);
       aplicar(f);
       aoMudarChave(f.ligado);
       if (sucesso) toast.success(sucesso);
@@ -75,13 +77,21 @@ export default function BookPeloSite({ siteId, ligado, aoMudarChave }: Props) {
     }
   };
 
+  const campos = (): BookFlowBody => ({
+    ligado: true,
+    send_from: envio.send_from === 'owner' || envio.send_from === 'number' ? envio.send_from : '',
+    send_from_inbox_id: envio.send_from_inbox_id || null,
+    mensagem,
+    ia_assume: iaAssume,
+  });
+
   const link = fluxo?.fluxo_id ? `${ROTA_CONSTRUTOR}/${fluxo.fluxo_id}` : null;
 
   return (
     <div className="space-y-4">
       <div className="flex items-start gap-3">
         <Switch id="book-ligado" checked={ligado} disabled={ocupado} className="mt-1"
-          aria-describedby="book-ligado-frase" onCheckedChange={v => enviar(v)} />
+          aria-describedby="book-ligado-frase" onCheckedChange={v => enviar({ ligado: v })} />
         <div className="space-y-0.5">
           <UILabel htmlFor="book-ligado" className="cursor-pointer text-base font-normal">Receber o book no WhatsApp</UILabel>
           <p id="book-ligado-frase" className="text-sm text-muted-foreground">
@@ -91,7 +101,17 @@ export default function BookPeloSite({ siteId, ligado, aoMudarChave }: Props) {
       </div>
 
       {falhouLer && (
-        <p className="text-sm text-amber-700 dark:text-amber-400">Não consegui ler o estado do envio do book. Recarregue a página.</p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-amber-700 dark:text-amber-400">Não consegui ler o estado do envio do book.</p>
+          <Button type="button" variant="outline" onClick={() => carregar()}>Tentar de novo</Button>
+        </div>
+      )}
+
+      {ligado && fluxo && !fluxo.existe && (
+        <div className="space-y-2 rounded-md border border-amber-300 p-3 dark:border-amber-700">
+          <p className="text-sm text-amber-700 dark:text-amber-400">O fluxo do book foi apagado no construtor.</p>
+          <Button type="button" variant="outline" disabled={ocupado} onClick={() => enviar({ ligado: true }, 'Fluxo recriado.')}>Recriar o fluxo</Button>
+        </div>
       )}
 
       {ligado && fluxo && fluxo.existe && !fluxo.fluxo_ligado && (
@@ -99,18 +119,18 @@ export default function BookPeloSite({ siteId, ligado, aoMudarChave }: Props) {
           <p className="text-sm text-amber-700 dark:text-amber-400">
             O fluxo está desligado no construtor: o botão aparece, mas o book não é enviado.
           </p>
-          <Button type="button" variant="outline" disabled={ocupado} onClick={() => enviar(true, 'Fluxo ligado.')}>Ligar o fluxo</Button>
+          <Button type="button" variant="outline" disabled={ocupado} onClick={() => enviar({ ligado: true }, 'Fluxo ligado.')}>Ligar o fluxo</Button>
         </div>
       )}
 
-      {ligado && fluxo && fluxo.personalizado && (
+      {ligado && fluxo && fluxo.existe && fluxo.personalizado && (
         <p className="text-sm text-muted-foreground">
           Este fluxo foi personalizado no construtor.{' '}
           {link && <Link to={link} className="underline">Ver no construtor</Link>}
         </p>
       )}
 
-      {ligado && fluxo && !fluxo.personalizado && (
+      {ligado && fluxo && fluxo.existe && !fluxo.personalizado && (
         <div className="space-y-4">
           <SendFromField scope="lead_automation_rules" value={envio} onChange={setEnvio} />
           <div className="space-y-1">
@@ -126,7 +146,7 @@ export default function BookPeloSite({ siteId, ligado, aoMudarChave }: Props) {
             </Campo>
           )}
           <div className="flex items-center gap-3">
-            <Button type="button" disabled={ocupado} onClick={() => enviar(true, 'Envio do book salvo.')}>Salvar o envio do book</Button>
+            <Button type="button" disabled={ocupado} onClick={() => enviar(campos(), 'Envio do book salvo.')}>Salvar o envio do book</Button>
             {link && <Link to={link} className="text-sm underline">Ver no construtor</Link>}
           </div>
         </div>

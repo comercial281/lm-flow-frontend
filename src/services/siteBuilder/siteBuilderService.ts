@@ -451,7 +451,8 @@ export interface BookFlow {
   existe: boolean;
 }
 
-export type BookFlowBody = Pick<BookFlow, 'ligado' | 'send_from' | 'send_from_inbox_id' | 'mensagem' | 'ia_assume'>;
+/** Só `ligado` é obrigatório: campo ausente = o servidor mantém o que já tem gravado. */
+export type BookFlowBody = Pick<BookFlow, 'ligado'> & Partial<Pick<BookFlow, 'send_from' | 'send_from_inbox_id' | 'mensagem' | 'ia_assume'>>;
 
 export const siteBuilderService = {
   async getBookFlow(siteId: string): Promise<BookFlow> {

@@ -328,7 +328,9 @@ export default function SiteBuilder() {
   };
 
   // Gravado no servidor na hora (ex.: chave do book): atualiza a tela sem marcar a ficha, pra não reenviar.
-  const aplicarSemMarcar = (field: Partial<SiteFormData>) => setSiteForm(prev => ({ ...prev, ...field }));
+  // Aceita função pra mesclar no estado ATUAL (edição feita enquanto o servidor respondia não se perde).
+  const aplicarSemMarcar = (field: Partial<SiteFormData> | ((prev: SiteFormData) => Partial<SiteFormData>)) =>
+    setSiteForm(prev => ({ ...prev, ...(typeof field === 'function' ? field(prev) : field) }));
 
   // Telas que mexem em estado fora do siteForm (financiamento, anuncie, destino)
   // marcam o formulário como alterado por aqui.

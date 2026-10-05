@@ -36,7 +36,7 @@ function Montar({ espiao, semMarcar, ficha = FABRICA }: { espiao: ReturnType<typ
     <MemoryRouter>
       <TelaFicha site={{ id: 'site-1' } as Site} siteForm={form}
         setF={f => { espiao(f); setForm(p => ({ ...p, ...f })); }}
-        aplicarSemMarcar={f => { semMarcar(f); setForm(p => ({ ...p, ...f })); }} />
+        aplicarSemMarcar={f => setForm(p => { const r = typeof f === 'function' ? f(p) : f; semMarcar(r); return { ...p, ...r }; })} />
     </MemoryRouter>
   );
 }
@@ -69,7 +69,7 @@ describe('Receber o book no WhatsApp', () => {
 
     await userEvent.click(screen.getByRole('switch', { name: 'Receber o book no WhatsApp' }));
 
-    expect(putBookFlow).toHaveBeenCalledWith('site-1', expect.objectContaining({ ligado: true, mensagem: MSG }));
+    expect(putBookFlow).toHaveBeenCalledWith('site-1', { ligado: true });
     expect(await screen.findByRole('button', { name: 'Salvar o envio do book' })).toBeTruthy();
     expect(screen.getByLabelText('Mensagem')).toHaveValue(MSG);
     expect(espiao).not.toHaveBeenCalled();
@@ -85,7 +85,7 @@ describe('Receber o book no WhatsApp', () => {
 
     await userEvent.click(screen.getByRole('switch', { name: 'Receber o book no WhatsApp' }));
 
-    expect(putBookFlow).toHaveBeenCalledWith('site-1', expect.objectContaining({ ligado: false }));
+    expect(putBookFlow).toHaveBeenCalledWith('site-1', { ligado: false });
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Salvar o envio do book' })).toBeNull());
   });
 
@@ -107,7 +107,7 @@ describe('Receber o book no WhatsApp', () => {
     expect(await screen.findByText(/O fluxo está desligado no construtor: o botão aparece, mas o book não é enviado/)).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: 'Ligar o fluxo' }));
 
-    expect(putBookFlow).toHaveBeenCalledWith('site-1', expect.objectContaining({ ligado: true }));
+    expect(putBookFlow).toHaveBeenCalledWith('site-1', { ligado: true });
     await waitFor(() => expect(screen.queryByText(/O fluxo está desligado/)).toBeNull());
   });
 
@@ -143,12 +143,45 @@ describe('Receber o book no WhatsApp', () => {
     });
   });
 
-  it('sem IA ligada no cliente, a pergunta da IA Vendedora some', async () => {
+  it('sem IA ligada no cliente, a pergunta some e o Salvar ainda manda o ia_assume do GET', async () => {
     listAgentes.mockResolvedValue([{ id: 'a1', enabled: false }]);
+    getBookFlow.mockResolvedValue(flow({ ligado: true, existe: true, fluxo_id: 'f1', fluxo_ligado: true, ia_assume: false }));
+    putBookFlow.mockResolvedValue(flow({ ligado: true, existe: true, fluxo_id: 'f1', fluxo_ligado: true, ia_assume: false }));
+    await abrir(ligada());
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Salvar o envio do book' }));
+    expect(screen.queryByText(/a IA Vendedora assume a conversa/)).toBeNull();
+    expect(putBookFlow).toHaveBeenCalledWith('site-1', expect.objectContaining({ ligado: true, ia_assume: false }));
+  });
+
+  it('"Ligar o fluxo" não leva edição não salva dos campos', async () => {
+    getBookFlow.mockResolvedValue(flow({ ligado: true, existe: true, fluxo_id: 'f1', fluxo_ligado: false }));
+    putBookFlow.mockResolvedValue(flow({ ligado: true, existe: true, fluxo_id: 'f1', fluxo_ligado: true }));
+    await abrir(ligada());
+    await userEvent.type(await screen.findByLabelText('Mensagem'), ' extra');
+    await userEvent.click(screen.getByRole('button', { name: 'Ligar o fluxo' }));
+    expect(putBookFlow).toHaveBeenCalledWith('site-1', { ligado: true });
+  });
+
+  it('chave ligada com o fluxo apagado: aviso, sem campos, e "Recriar o fluxo" manda só ligado:true', async () => {
+    getBookFlow.mockResolvedValue(flow({ ligado: true, existe: false }));
+    putBookFlow.mockResolvedValue(flow({ ligado: true, existe: true, fluxo_id: 'f2', fluxo_ligado: true }));
+    await abrir(ligada());
+
+    expect(await screen.findByText('O fluxo do book foi apagado no construtor.')).toBeTruthy();
+    expect(screen.queryByLabelText('Mensagem')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Recriar o fluxo' }));
+    expect(putBookFlow).toHaveBeenCalledWith('site-1', { ligado: true });
+    expect(await screen.findByLabelText('Mensagem')).toBeTruthy();
+  });
+
+  it('falha ao ler: "Tentar de novo" busca outra vez', async () => {
+    getBookFlow.mockRejectedValueOnce(new Error('x'));
     getBookFlow.mockResolvedValue(flow({ ligado: true, existe: true, fluxo_id: 'f1', fluxo_ligado: true }));
     await abrir(ligada());
 
-    await screen.findByRole('button', { name: 'Salvar o envio do book' });
-    expect(screen.queryByText(/a IA Vendedora assume a conversa/)).toBeNull();
+    await userEvent.click(await screen.findByRole('button', { name: 'Tentar de novo' }));
+    expect(getBookFlow).toHaveBeenCalledTimes(2);
+    expect(await screen.findByRole('button', { name: 'Salvar o envio do book' })).toBeTruthy();
   });
 });

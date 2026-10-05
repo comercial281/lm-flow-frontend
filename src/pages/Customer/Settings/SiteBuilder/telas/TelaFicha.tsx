@@ -115,7 +115,10 @@ export default function TelaFicha({ site, siteForm, setF, aplicarSemMarcar }: Fo
       {tipo === 'development' && site?.id && (
         <Secao titulo="Receber o book no WhatsApp" id="ficha-book">
           <BookPeloSite siteId={site.id} ligado={ficha.development.book_button}
-            aoMudarChave={v => aplicarSemMarcar?.({ property_page: { ...ficha, development: { ...ficha.development, book_button: v } } })} />
+            aoMudarChave={v => aplicarSemMarcar?.(prev => {
+              const atual = prev.property_page ?? FABRICA_DO_ADMIN;
+              return { property_page: { ...atual, development: { ...atual.development, book_button: v } } };
+            })} />
         </Secao>
       )}
 
