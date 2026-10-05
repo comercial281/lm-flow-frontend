@@ -31,7 +31,7 @@ import HomeMaisBuscados from './home/HomeMaisBuscados';
 
 export default function PortalHomePage() {
   const tenant = useTenantDoSite();
-  const { state, site, items, fontHref, wa, cities, hoods, types, home, abas, cssVars, manutencao } = usePortalData(tenant);
+  const { state, site, items, fontHref, wa, cities, hoods, types, home, abas, cssVars, fundo, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
   usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'home', path: pathname });
@@ -82,7 +82,7 @@ export default function PortalHomePage() {
   const showLeadCapture = site.sections?.lead_capture !== false;
 
   return (
-    <div style={cssVars} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
+    <div style={cssVars} data-fundo={fundo} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
       {/* Fonte do site (definida no Site Builder) */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href={fontHref} rel="stylesheet" />
@@ -112,7 +112,7 @@ export default function PortalHomePage() {
       {/* ── Lead capture ──────────────────────────────────────────────── */}
       {showLeadCapture && (
       <section id="contato" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="overflow-hidden rounded-[28px] px-6 py-10 sm:px-12 sm:py-14" style={{ background: 'var(--ink)' }}>
+        <div className="overflow-hidden rounded-[28px] px-6 py-10 sm:px-12 sm:py-14" style={{ background: 'var(--solid)' }}>
           <div className="grid items-center gap-8 md:grid-cols-2">
             <div className="text-white">
               <h2 className="font-[var(--display)] text-3xl font-semibold leading-tight sm:text-4xl">Não achou? A gente encontra pra você.</h2>

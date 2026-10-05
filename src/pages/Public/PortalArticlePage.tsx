@@ -34,7 +34,7 @@ export default function PortalArticlePage() {
   const { slug } = useParams<{ slug: string }>();
   const tenant = useTenantDoSite();
   const ctx = useCtxDoSite(tenant ?? '');
-  const { state, site, items, fontHref, abas, cssVars, manutencao } = usePortalData(tenant);
+  const { state, site, items, fontHref, abas, cssVars, fundo, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
   usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'article', path: pathname, pageSlug: slug });
@@ -78,7 +78,7 @@ export default function PortalArticlePage() {
   }
 
   return (
-    <div style={cssVars as CSSProperties} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
+    <div style={cssVars as CSSProperties} data-fundo={fundo} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href={fontHref} rel="stylesheet" />
 
@@ -149,7 +149,7 @@ export default function PortalArticlePage() {
                 <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">Selecionados a dedo</span>
                 <h2 className="mt-1 font-[var(--display)] text-3xl font-semibold sm:text-4xl">Imóveis em destaque</h2>
               </div>
-              <Link to={caminhoDoSite(ctx, '/imoveis')} className="hidden shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 sm:inline-flex" style={{ background: 'var(--ink)' }}>
+              <Link to={caminhoDoSite(ctx, '/imoveis')} className="hidden shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 sm:inline-flex" style={{ background: 'var(--solid)' }}>
                 Ver todos os imóveis <Ic d={I.arrow} s={16} />
               </Link>
             </div>
@@ -159,7 +159,7 @@ export default function PortalArticlePage() {
             </div>
 
             <div className="mt-8 text-center sm:hidden">
-              <Link to={caminhoDoSite(ctx, '/imoveis')} className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: 'var(--ink)' }}>
+              <Link to={caminhoDoSite(ctx, '/imoveis')} className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: 'var(--solid)' }}>
                 Ver todos os imóveis <Ic d={I.arrow} s={16} />
               </Link>
             </div>
@@ -174,7 +174,7 @@ export default function PortalArticlePage() {
         .article-body h1,.article-body h2,.article-body h3{font-weight:600;line-height:1.3;color:var(--ink);margin:1.6em 0 .6em}
         .article-body h1{font-size:1.6em}.article-body h2{font-size:1.35em}.article-body h3{font-size:1.15em}
         .article-body p{margin:0 0 1.1em}
-        .article-body a{color:var(--brand);text-decoration:underline}
+        .article-body a{color:var(--brand-text);text-decoration:underline}
         .article-body ul,.article-body ol{margin:0 0 1.1em;padding-left:1.4em}
         .article-body ul{list-style:disc}.article-body ol{list-style:decimal}
         .article-body li{margin:.3em 0}

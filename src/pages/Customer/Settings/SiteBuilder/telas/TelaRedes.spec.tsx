@@ -4,9 +4,10 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TelaRedes from './TelaRedes';
 import type { SiteFormData } from '@/services/siteBuilder/siteBuilderService';
+import { APARENCIA_FABRICA } from '@/features/siteBuilder/public/aparenciaConfig';
 
-function Montar({ espiao }: { espiao: (f: Partial<SiteFormData>) => void }) {
-  const [form, setForm] = useState<SiteFormData>({ name: 'Imob', social_links: {} });
+function Montar({ espiao, inicial = {} }: { espiao: (f: Partial<SiteFormData>) => void; inicial?: Partial<SiteFormData> }) {
+  const [form, setForm] = useState<SiteFormData>({ name: 'Imob', social_links: {}, ...inicial });
   const setF = (f: Partial<SiteFormData>) => { espiao(f); setForm(prev => ({ ...prev, ...f })); };
   return <TelaRedes site={null} siteForm={form} setF={setF} />;
 }
@@ -32,5 +33,13 @@ describe('TelaRedes', () => {
     await userEvent.clear(campo);
     fireEvent.blur(campo);
     expect(espiao).toHaveBeenLastCalledWith({ social_links: {} });
+  });
+
+  it('a frase acompanha a Aparência: faixa só com ícones e rodapé compacto', () => {
+    const { unmount } = render(<Montar espiao={vi.fn()} />);
+    expect(screen.getByText(/O nome de cada rede aparece como link no rodapé de todas as páginas e, no computador, na faixa de cima/)).toBeTruthy();
+    unmount();
+    render(<Montar espiao={vi.fn()} inicial={{ appearance: { ...APARENCIA_FABRICA, top_bar: 'icons', footer_layout: 'compact' } }} />);
+    expect(screen.getByText(/a faixa de cima das páginas internas mostra só o ícone de cada rede\. O rodapé compacto não mostra as redes\./)).toBeTruthy();
   });
 });

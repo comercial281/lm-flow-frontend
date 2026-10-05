@@ -30,6 +30,13 @@ const FUNDO_XADREZ = {
   backgroundSize: '16px 16px',
 };
 
+// Xadrez escuro: pra logo clara (branca), que some no xadrez branco.
+const FUNDO_XADREZ_ESCURO = {
+  backgroundColor: '#1f1c18',
+  backgroundImage: 'conic-gradient(#2c2823 25%, transparent 0 50%, #2c2823 0 75%, transparent 0)',
+  backgroundSize: '16px 16px',
+};
+
 interface Props {
   /** Nome do que vai na caixa, como na tela: "Logo do site", "Ícone da aba". */
   rotulo: string;
@@ -40,6 +47,8 @@ interface Props {
   aoRemover: () => void;
   confirmacao: { titulo: string; descricao: string };
   variante?: 'logo' | 'icone';
+  /** Fundo atrás da imagem: xadrez claro (padrão) ou escuro, pra logo clara. */
+  fundo?: 'claro' | 'escuro';
   tamanhoMaximoMb?: number;
 }
 
@@ -48,7 +57,7 @@ function aceita(arquivo: File) {
 }
 
 export default function EnvioDeImagem({
-  rotulo, url, enviar, aoRemover, confirmacao, variante = 'logo', tamanhoMaximoMb = 8,
+  rotulo, url, enviar, aoRemover, confirmacao, variante = 'logo', fundo = 'claro', tamanhoMaximoMb = 8,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [enviando, setEnviando] = useState(false);
@@ -123,7 +132,7 @@ export default function EnvioDeImagem({
       {temImagem ? (
         <div
           className={caixa}
-          style={FUNDO_XADREZ}
+          style={fundo === 'escuro' ? FUNDO_XADREZ_ESCURO : FUNDO_XADREZ}
           onDragOver={arrastarPorCima}
           onDragLeave={() => setArrastando(false)}
           onDrop={soltar}

@@ -664,3 +664,79 @@ button.bg-primary:hover, [data-slot='button'].bg-primary:hover {
   --shadow-lm-lg: 0 8px 24px rgb(0 0 0 / 0.55);
   --shadow-lm-modal: 0 20px 60px rgb(0 0 0 / 0.7);
 }
+
+/* ============================================================================
+   Meu site · fundo escuro (C3, Meu site › Aparência › Fundo do site)
+
+   O site público usa caixas brancas (`bg-white`) e cinzas fixos do Tailwind
+   (`text-neutral-*`, bordas e anéis `black/…`) em ~100 lugares de 15 arquivos.
+   No fundo escuro (`--paper` #14110D, `--ink` #F4EFE7) eles viravam caixa
+   branca com texto claro e cinza-escuro sobre escuro. Em vez de reescrever as
+   classes uma a uma (e mudar o DOM do site claro, que tem de sair idêntico),
+   a raiz da página ganha `data-fundo="escuro"` (só no escuro; no claro o
+   atributo nem existe, ver `tokensDoSite`) e este bloco:
+   - troca a escala `neutral` (as utilities do Tailwind v4 leem
+     `var(--color-neutral-*)`), invertida pra dar contraste no escuro;
+   - põe as caixas brancas em `--site-card` e as bordas/anéis/fundinhos
+     pretos em branco translúcido;
+   - põe a faixa de cima (`bg-[var(--ink)]`) em `--solid`;
+   - põe o texto na cor da marca (`text-[var(--brand)]` e variantes) em
+     `--brand-text`, a marca clareada até 4,5:1 (calculada em `tokensDoSite`);
+   - troca as caixas de aviso claras (`bg-red-50`) e o texto escuro delas.
+   Superfícies de cor fixa (faixa âmbar da prévia e dos avisos) voltam ao
+   cinza-escuro de sempre. O topo "branco" usa cores literais e fica fora.
+   Os seletores usam `:where()` pra empatar com a utility e ganhar só pela
+   ordem: `hover:`/`focus:` continuam vencendo.
+   ============================================================================ */
+[data-fundo='escuro'] {
+  color-scheme: dark;
+  --color-neutral-50: #1a1612;
+  --color-neutral-100: #26211b;
+  --color-neutral-200: #332c25;
+  --color-neutral-300: #4d453c;
+  --color-neutral-400: #948c81;
+  --color-neutral-500: #a39b90;
+  --color-neutral-600: #beb6ab;
+  --color-neutral-700: #d2cbc0;
+  --color-neutral-800: #e3ddd3;
+  --color-neutral-900: #f4efe7;
+  /* Aviso de erro do Anuncie (bg-red-50 + text-red-600). */
+  --color-red-50: #3a1916;
+  --color-red-600: #fca5a5;
+}
+/* Citação do artigo: no claro continua #555 (o color-mix abaixo daria
+   #5B5853 sobre o papel claro, não é o mesmo); no escuro, a tinta a 70%. */
+[data-fundo='escuro'] .article-body blockquote {
+  color: color-mix(in oklab, var(--ink) 70%, transparent);
+}
+[data-fundo='escuro'] .bg-amber-400 {
+  --color-neutral-900: #171717;
+}
+
+@layer utilities {
+  :where([data-fundo='escuro']) .bg-white,
+  :where([data-fundo='escuro']) .hover\:bg-white:hover { background-color: var(--site-card); }
+  :where([data-fundo='escuro']) .bg-white\/95 { background-color: color-mix(in oklab, var(--site-card) 95%, transparent); }
+  :where([data-fundo='escuro']) .bg-white\/85 { background-color: color-mix(in oklab, var(--site-card) 85%, transparent); }
+  :where([data-fundo='escuro']) .bg-\[var\(--ink\)\] { background-color: var(--solid); }
+
+  :where([data-fundo='escuro']) .text-\[var\(--brand\)\],
+  :where([data-fundo='escuro']) .hover\:text-\[var\(--brand\)\]:hover,
+  :where([data-fundo='escuro']) .group:hover .group-hover\:text-\[var\(--brand\)\] { color: var(--brand-text); }
+
+  :where([data-fundo='escuro']) .bg-black\/\[0\.03\],
+  :where([data-fundo='escuro']) .hover\:bg-black\/\[0\.03\]:hover { background-color: rgb(255 255 255 / 0.04); }
+  :where([data-fundo='escuro']) .bg-black\/\[0\.04\],
+  :where([data-fundo='escuro']) .hover\:bg-black\/\[0\.04\]:hover { background-color: rgb(255 255 255 / 0.06); }
+  :where([data-fundo='escuro']) .bg-black\/\[0\.05\] { background-color: rgb(255 255 255 / 0.07); }
+
+  :where([data-fundo='escuro']) .border-black\/\[0\.06\],
+  :where([data-fundo='escuro']) .border-black\/\[0\.07\],
+  :where([data-fundo='escuro']) .border-black\/\[0\.08\] { border-color: rgb(255 255 255 / 0.1); }
+  :where([data-fundo='escuro']) .border-black\/10 { border-color: rgb(255 255 255 / 0.14); }
+  :where([data-fundo='escuro']) .border-black\/20 { border-color: rgb(255 255 255 / 0.24); }
+
+  :where([data-fundo='escuro']) .ring-black\/\[0\.05\],
+  :where([data-fundo='escuro']) .ring-black\/\[0\.06\],
+  :where([data-fundo='escuro']) .ring-black\/\[0\.08\] { --tw-ring-color: rgb(255 255 255 / 0.1); }
+}

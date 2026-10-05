@@ -63,7 +63,7 @@ function BankBadge({ bank }: { bank: PortalBank }) {
 
 export default function PortalFinanciamentoPage() {
   const tenant = useTenantDoSite();
-  const { state, site, fontHref, wa, abas, cssVars, manutencao } = usePortalData(tenant);
+  const { state, site, fontHref, wa, abas, cssVars, fundo, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
   usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'financing', path: pathname });
@@ -85,7 +85,7 @@ export default function PortalFinanciamentoPage() {
     : null;
 
   return (
-    <div style={cssVars} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
+    <div style={cssVars} data-fundo={fundo} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href={fontHref} rel="stylesheet" />
 
@@ -133,7 +133,7 @@ export default function PortalFinanciamentoPage() {
             </div>
 
             {waHref && (
-              <div className="mt-8 overflow-hidden rounded-[24px] px-6 py-8 sm:px-10" style={{ background: 'var(--ink)' }}>
+              <div className="mt-8 overflow-hidden rounded-[24px] px-6 py-8 sm:px-10" style={{ background: 'var(--solid)' }}>
                 <div className="flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-center">
                   <div className="text-white">
                     <h2 className="font-[var(--display)] text-[22px] font-semibold">Ficou com dúvida na simulação?</h2>

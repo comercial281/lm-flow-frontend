@@ -63,4 +63,12 @@ describe('meuSiteMenu', () => {
     expect(trilhaDe('ficha')).toBe('Personalizar');
     expect(trilhaDe('lista')).toBe('Personalizar');
   });
+
+  it('Menus fica no Personalizar, logo antes de Páginas, e abre por ?tela=menus', () => {
+    const ids = itensDoGrupo('personalizar', { podeAnuncios: true }).map(t => t.id);
+    expect(ids.slice(ids.indexOf('menus'), ids.indexOf('menus') + 2)).toEqual(['menus', 'paginas']);
+    expect(telaDaUrl(new URLSearchParams('tela=menus'))).toBe('menus');
+    expect(telaInfo('menus').titulo).toBe('Menus');
+    expect(trilhaDe('menus')).toBe('Personalizar');
+  });
 });
