@@ -16,7 +16,8 @@ export default defineConfig({
     // conferir-caixinhas) e até agora o repositório não conseguia testar os
     // próprios portões — só dava pra conferir à mão, que foi como um deles quase
     // entrou sem nunca ter sido visto reprovando.
-    include: ['src/**/*.spec.ts', 'src/**/*.spec.tsx', 'scripts/**/*.spec.ts'],
+    // `middleware/` é o código da borda da Vercel (middleware.ts, na raiz).
+    include: ['src/**/*.spec.ts', 'src/**/*.spec.tsx', 'scripts/**/*.spec.ts', 'middleware/**/*.spec.ts'],
     setupFiles: ['./src/test/setup.ts'],
   },
 });
