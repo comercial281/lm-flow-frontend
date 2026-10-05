@@ -26,7 +26,8 @@ export default function Custos() {
   const [month, setMonth] = useState(mesAtual);
   const [params] = useSearchParams();
   const [tenant, setTenant] = useState<string | null>(() => params.get('tenant'));
-  const soErrosNaCarga = params.get('so_erros') === '1';
+  // `so_erros` do endereço vale só na primeira carga; depois manda a escolha da pessoa.
+  const [soErros, setSoErros] = useState(() => params.get('so_erros') === '1');
   const [summary, setSummary] = useState<CostsSummary | null>(null);
   const [lancando, setLancando] = useState(false);
   const [estado, setEstado] = useState<'carregando' | 'pronto' | 'erro'>('carregando');
@@ -95,7 +96,7 @@ export default function Custos() {
             <div data-testid="custos-detalhes" className="flex flex-col gap-6">
               <Recortes summary={summary} />
               {!summary.tenant && <Conferencia reconciliation={summary.reconciliation} aoLancar={() => setLancando(true)} />}
-              <ListaDeChamadas month={month} tenant={tenant} funcoes={summary.by_feature} soErrosNaCarga={soErrosNaCarga} />
+              <ListaDeChamadas month={month} tenant={tenant} funcoes={summary.by_feature} soErrosInicial={soErros} aoMudarSoErros={setSoErros} />
             </div>
           </>
         )}

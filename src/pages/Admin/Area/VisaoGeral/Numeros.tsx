@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
 import { Button } from '@/components/ui/ds';
-import { dinheiro, numero, plural } from '@/lib/formato';
+import { dinheiro, numero, plural, VAZIO } from '@/lib/formato';
 import { overviewService } from '@/services/superAdmin/overviewService';
 import type { LinhaCliente, Numeros as DadosNumeros, TotaisNumeros } from '@/types/admin/overview';
 import GraficoDoPeriodo from './GraficoDoPeriodo';
@@ -30,6 +30,7 @@ export default function Numeros() {
   const [dados, setDados] = useState<DadosNumeros | null>(null);
   const [tenants, setTenants] = useState<DadosNumeros['tenants']>([]);
   const [erro, setErro] = useState(false);
+  const [atualizando, setAtualizando] = useState(false);
   const [ordem, setOrdem] = useState<keyof LinhaCliente>('leads');
   const seq = useRef(0);
 
@@ -45,12 +46,15 @@ export default function Numeros() {
   const carregar = useCallback(async (refresh = false) => {
     const minha = ++seq.current;
     setErro(false);
+    setAtualizando(refresh);
     if (!refresh) setDados(null);
     try {
       const r = await overviewService.numeros({ periodo, tenant, refresh });
       if (minha === seq.current) { setDados(r); setTenants(r.tenants); }
     } catch {
       if (minha === seq.current) setErro(true);
+    } finally {
+      if (minha === seq.current) setAtualizando(false);
     }
   }, [periodo, tenant]);
 
@@ -62,6 +66,8 @@ export default function Numeros() {
   }, [dados, ordem]);
 
   const ilegiveis = dados?.clients.filter((c) => !c.readable).length ?? 0;
+  // Nenhum cliente lido: total zerado seria mentira. Só o custo (do public) segue.
+  const nadaLido = !!dados && dados.clients.every((c) => !c.readable);
 
   return (
     <div className="flex flex-col gap-4">
@@ -76,7 +82,9 @@ export default function Numeros() {
         {dados && (
           <span className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
             {atualizadoHa(dados.generated_at)}
-            <Button variant="outline" size="sm" onClick={() => void carregar(true)}>Atualizar</Button>
+            <Button variant="outline" size="sm" disabled={atualizando} onClick={() => void carregar(true)}>
+              {atualizando ? 'Atualizando…' : 'Atualizar'}
+            </Button>
           </span>
         )}
       </div>
@@ -98,8 +106,9 @@ export default function Numeros() {
 
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             {CARTOES.map((c) => {
+              const semLeitura = nadaLido && c.chave !== 'ai_cost_brl';
               const atual = dados.totals[c.chave] as number | null;
-              const v = variacao(atual, dados.previous_totals[c.chave] as number | null);
+              const v = semLeitura ? null : variacao(atual, dados.previous_totals[c.chave] as number | null);
               // Custo subindo não é boa notícia: no cartão de custo a variação fica sempre neutra.
               const neutro = c.chave === 'ai_cost_brl' || v?.sentido === 'igual';
               const corVariacao = neutro
@@ -110,9 +119,9 @@ export default function Numeros() {
               return (
                 <div key={c.chave} className="rounded-lg border bg-card p-4">
                   <p className="text-xs text-muted-foreground">{c.rotulo}</p>
-                  <p className="mt-1 text-2xl font-semibold">{c.dinheiro ? dinheiro(atual) : numero(atual)}</p>
+                  <p className="mt-1 text-2xl font-semibold">{semLeitura ? VAZIO : c.dinheiro ? dinheiro(atual) : numero(atual)}</p>
                   {v && <p className={corVariacao}>{v.texto}</p>}
-                  {c.chave === 'users_active' && dados.totals.users_missing !== undefined && (
+                  {c.chave === 'users_active' && !semLeitura && dados.totals.users_missing !== undefined && (
                     <p className="text-xs text-muted-foreground">{plural(dados.totals.users_missing, 'sumida', 'sumidas')} há 7+ dias</p>
                   )}
                 </div>

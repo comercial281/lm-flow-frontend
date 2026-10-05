@@ -10,10 +10,15 @@ import type { CostCall, CostCallsPage, CostSlice } from '@/types/admin/costs';
 import { OPCOES_FORNECEDOR, tamanho } from './formatoCustos';
 import DetalheDaChamada from './DetalheDaChamada';
 
-export default function ListaDeChamadas({ month, tenant, funcoes, soErrosNaCarga = false }: { month: string; tenant: string | null; funcoes: CostSlice[]; soErrosNaCarga?: boolean }) {
+// `soErrosInicial` + `aoMudarSoErros`: a lista some e volta a cada mês/cliente; quem a
+// usa guarda a escolha do "Só erros" pra ela voltar como a pessoa deixou (e não como o endereço pediu).
+export default function ListaDeChamadas({ month, tenant, funcoes, soErrosInicial = false, aoMudarSoErros }: {
+  month: string; tenant: string | null; funcoes: CostSlice[]; soErrosInicial?: boolean; aoMudarSoErros?: (v: boolean) => void;
+}) {
   const [feature, setFeature] = useState('');
   const [provider, setProvider] = useState('');
-  const [onlyErrors, setOnlyErrors] = useState(soErrosNaCarga);
+  const [onlyErrors, setOnlyErrorsLocal] = useState(soErrosInicial);
+  const setOnlyErrors = (v: boolean) => { setOnlyErrorsLocal(v); aoMudarSoErros?.(v); };
   const [dados, setDados] = useState<(CostCallsPage & { chave: string }) | null>(null);
   const [erro, setErro] = useState(false);
   const [aberta, setAberta] = useState<string | null>(null);

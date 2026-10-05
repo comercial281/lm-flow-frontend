@@ -65,4 +65,8 @@ describe('linhasDoProblema', () => {
       acao: { rotulo: 'Ver clientes', href: '/admin/clientes' },
     });
   });
+  it('tipo de problema desconhecido (servidor mais novo) não quebra a aba', () => {
+    const desconhecido = { kind: 'coisa_nova', severity: 'amarelo' } as unknown as Parameters<typeof linhasDoProblema>[1];
+    expect(linhasDoProblema(cliente, desconhecido, agora)).toEqual([]);
+  });
 });

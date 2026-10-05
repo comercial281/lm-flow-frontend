@@ -56,5 +56,11 @@ export function linhasDoProblema(c: ClienteComProblema, p: Problema, agora: Date
             : { rotulo: 'Ver chamados', href: '/admin/suporte' },
         },
       ];
+    default: {
+      // Servidor mais novo que a tela: tipo que ela não conhece fica de fora em vez de quebrar a aba.
+      const _desconhecido: never = p;
+      void _desconhecido;
+      return [];
+    }
   }
 }

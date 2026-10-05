@@ -74,6 +74,58 @@ describe('Números', () => {
     await waitFor(() => expect(apiGet).toHaveBeenLastCalledWith('/super/overview/numbers', { params: { periodo: '7d', refresh: '1' } }));
   });
 
+  it('Atualizar fica ocupado enquanto lê e volta ao terminar', async () => {
+    let soltar: (v: unknown) => void = () => {};
+    apiGet
+      .mockResolvedValueOnce(resposta())
+      .mockImplementationOnce(() => new Promise((r) => { soltar = r; }));
+    montar();
+    fireEvent.click(await screen.findByRole('button', { name: 'Atualizar' }));
+    const ocupado = await screen.findByRole('button', { name: 'Atualizando…' });
+    expect(ocupado).toBeDisabled();
+    fireEvent.click(ocupado);
+    expect(apiGet).toHaveBeenCalledTimes(2);
+    soltar(resposta());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Atualizar' })).toBeEnabled());
+  });
+
+  it('Atualizar volta a funcionar depois de erro', async () => {
+    apiGet.mockResolvedValueOnce(resposta()).mockRejectedValueOnce(new Error('caiu'));
+    montar();
+    fireEvent.click(await screen.findByRole('button', { name: 'Atualizar' }));
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'Atualizando…' })).not.toBeInTheDocument();
+  });
+
+  it('sem nenhum cliente lido, os cartões mostram "—" (nunca zero) e o custo fica', async () => {
+    apiGet.mockResolvedValue(resposta({
+      totals: { leads: 0, conversations: 0, users_active: 0, ai_attended: 0, ai_visits: 0, ai_cost_brl: 150, users_total: 0, users_missing: 0 },
+      clients: [{ schema: 'tenant_a', name: 'Alfa', readable: false, ai_cost_brl: 100 }],
+      unreadable: [{ name: 'Alfa', message: 'não deu tempo de ler' }],
+    }));
+    montar();
+    const cartao = (rotulo: string) => screen.getAllByText(rotulo).map((el) => el.parentElement as HTMLElement).find((el) => el.className.includes('bg-card')) as HTMLElement;
+    await waitFor(() => expect(cartao('Leads')).toBeTruthy());
+    for (const rotulo of ['Leads', 'Conversas', 'Usuários ativos', 'Atendidos pela IA', 'Visitas pela IA']) {
+      expect(within(cartao(rotulo)).getByText('—')).toBeInTheDocument();
+      expect(within(cartao(rotulo)).queryByText(/%/)).not.toBeInTheDocument();
+    }
+    expect(within(cartao('Usuários ativos')).queryByText(/sumida/)).not.toBeInTheDocument();
+    expect(within(cartao('Custo da IA')).getByText(/150/)).toBeInTheDocument();
+  });
+
+  it('sem nenhum cliente lido e sem custo, o custo também é "—"', async () => {
+    apiGet.mockResolvedValue(resposta({
+      totals: { leads: 0, conversations: 0, users_active: 0, ai_attended: 0, ai_visits: 0, ai_cost_brl: null },
+      clients: [{ schema: 'tenant_a', name: 'Alfa', readable: false, ai_cost_brl: null }],
+      unreadable: [{ name: 'Alfa', message: 'x' }, { name: 'Custo da IA', message: 'y' }],
+    }));
+    montar();
+    const cartao = (rotulo: string) => screen.getAllByText(rotulo).map((el) => el.parentElement as HTMLElement).find((el) => el.className.includes('bg-card')) as HTMLElement;
+    await waitFor(() => expect(cartao('Custo da IA')).toBeTruthy());
+    expect(within(cartao('Custo da IA')).getByText('—')).toBeInTheDocument();
+  });
+
   it('resposta atrasada de período antigo não sobrescreve a nova', async () => {
     let soltarVelha: (v: unknown) => void = () => {};
     apiGet
