@@ -17,6 +17,8 @@ export interface FlowTemplatePreviewStep {
   label?: string;
   text?: string;
   media_kind?: string;
+  /** `property_book`: o arquivo é o book do imóvel de interesse (sem `media_kind`). */
+  media_source?: string;
   seconds?: number;
 }
 
@@ -41,6 +43,7 @@ function previewFrom(raw: unknown): FlowTemplatePreviewStep[] {
     if (str(r.label)) step.label = str(r.label);
     if (str(r.text)) step.text = str(r.text);
     if (str(r.media_kind)) step.media_kind = str(r.media_kind);
+    if (str(r.media_source)) step.media_source = str(r.media_source);
     if (typeof r.seconds === 'number') step.seconds = r.seconds;
     return [step];
   });

@@ -13,7 +13,10 @@ export type FlowNodeKind =
   | 'lead_action'
   // Sprint 3 (03/10/2026): o que o follow-up antigo fazia quando o lead
   // respondia, como bloco. Sem config.
-  | 'followup_recovered';
+  | 'followup_recovered'
+  // Book pelo site (05/10/2026): passam a conversa pra IA Vendedora ou param a IA
+  // pra este lead. Sem config; o servidor trata como `followup_recovered`.
+  | 'hand_to_ai' | 'disable_ai';
 
 /**
  * Sprint 3: o fluxo é uma automação (aba Automações) ou um follow-up (aba Follow-up).
@@ -31,7 +34,7 @@ export type FlowTriggerEvent =
   | 'lead.stage_changed' | 'lead.tag_added'
   | 'lead.visit_scheduled' | 'lead.visit_completed'
   | 'lead.visit_reminder_24h' | 'lead.visit_reminder_1h' | 'lead.visit_reminder_15min'
-  | 'lead.interest_created'
+  | 'lead.interest_created' | 'lead.book_requested'
   | 'flow_called';
 
 /** Mesmo formato das condições das regras: { field, operator, value }. */
@@ -221,6 +224,8 @@ export const FLOW_NODE_DEFS: FlowNodeDef[] = [
   // Nome e grupo de cada ação vêm de features/flowAutomations/leadAction.ts.
   { kind: 'lead_action', label: 'Ação', group: 'contact', canFail: true, defaultConfig: { action_type: '', params: {} } },
   { kind: 'followup_recovered', label: 'Marcar como recuperado pelo follow-up', group: 'contact', canFail: false, defaultConfig: {} },
+  { kind: 'hand_to_ai', label: 'Passar para a IA', group: 'contact', canFail: false, defaultConfig: {} },
+  { kind: 'disable_ai', label: 'Desligar a IA', group: 'contact', canFail: false, defaultConfig: {} },
 ];
 
 export const FLOW_NODE_DEF_BY_KIND: Record<FlowNodeKind, FlowNodeDef> = FLOW_NODE_DEFS.reduce(
@@ -238,4 +243,5 @@ export const FLOW_VISIBLE_NODE_KINDS: FlowNodeKind[] = [
   'add_label', 'remove_label', 'move_stage',
   'lead_action',
   'followup_recovered',
+  'hand_to_ai', 'disable_ai',
 ];

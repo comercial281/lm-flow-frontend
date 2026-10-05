@@ -16,8 +16,12 @@ const mocks = vi.hoisted(() => ({
   listLeads: vi.fn(),
   uploadAsset: vi.fn(),
   previewLink: vi.fn(),
+  getBookFlow: vi.fn(),
+  putBookFlow: vi.fn(),
   updatePage: vi.fn(),
 }));
+vi.mock('@/services/salesAgents/salesAgentsService', () => ({ default: { list: () => Promise.resolve([]) } }));
+vi.mock('@/components/numbers/SendFromField', () => ({ default: () => null }));
 
 vi.mock('@/services/siteBuilder/siteBuilderService', async importOriginal => {
   const real = await importOriginal<typeof import('@/services/siteBuilder/siteBuilderService')>();
@@ -33,6 +37,8 @@ vi.mock('@/services/siteBuilder/siteBuilderService', async importOriginal => {
       listLeads: mocks.listLeads,
       uploadAsset: mocks.uploadAsset,
       previewLink: mocks.previewLink,
+      getBookFlow: mocks.getBookFlow,
+      putBookFlow: mocks.putBookFlow,
       updatePage: mocks.updatePage,
     },
   };
@@ -213,6 +219,48 @@ describe('SiteBuilder (casca do Meu site)', () => {
     };
     const barra = () => screen.queryByRole('region', { name: 'Alterações não salvas' });
 
+    const FLUXO = { ligado: true, fluxo_id: 'f1', personalizado: false, fluxo_ligado: true, send_from: 'owner', send_from_inbox_id: null, mensagem: 'Oi', ia_assume: true, existe: true };
+
+    it('liga o book e edita o e-mail: o Salvar leva book_button:true e os e-mails, e o PUT do book não vai junto', async () => {
+      mocks.listSites.mockResolvedValue([{ ...SITE, property_page: { email_copy: ['dono@imob.com'] } }]);
+      mocks.updateSite.mockResolvedValue(SITE);
+      mocks.getBookFlow.mockResolvedValue({ ...FLUXO, ligado: false, existe: false });
+      mocks.putBookFlow.mockResolvedValue(FLUXO);
+      abrir('/settings/site-builder?tela=ficha');
+      await screen.findByRole('heading', { name: 'Página do imóvel' });
+      await userEvent.click(screen.getByRole('tab', { name: 'Empreendimentos' }));
+      await userEvent.click(await screen.findByRole('switch', { name: 'Receber o book no WhatsApp' }));
+      await waitFor(() => expect(screen.getByRole('switch', { name: 'Receber o book no WhatsApp' })).toHaveAttribute('aria-checked', 'true'));
+      expect(barra()).toBeNull(); // a chave sozinha não suja a ficha
+
+      await userEvent.type(screen.getByLabelText('E-mail 1'), '.br');
+      const payload = await salvar();
+
+      expect(payload.property_page.development.book_button).toBe(true);
+      expect(payload.property_page.email_copy).toEqual(['dono@imob.com.br']);
+    });
+
+    it('edição feita enquanto o PUT do book está pendente sobrevive à resposta e vai no Salvar', async () => {
+      mocks.listSites.mockResolvedValue([{ ...SITE, property_page: { email_copy: ['dono@imob.com'] } }]);
+      mocks.updateSite.mockResolvedValue(SITE);
+      mocks.getBookFlow.mockResolvedValue({ ...FLUXO, ligado: false, existe: false });
+      let resolver!: (v: unknown) => void;
+      mocks.putBookFlow.mockReturnValue(new Promise(r => { resolver = r; }));
+      abrir('/settings/site-builder?tela=ficha');
+      await screen.findByRole('heading', { name: 'Página do imóvel' });
+      await userEvent.click(screen.getByRole('tab', { name: 'Empreendimentos' }));
+      await userEvent.click(await screen.findByRole('switch', { name: 'Receber o book no WhatsApp' }));
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Mapa' })); // edição durante o PUT
+      await userEvent.type(screen.getByLabelText('E-mail 1'), '.br');
+
+      resolver(FLUXO);
+      await waitFor(() => expect(screen.getByRole('switch', { name: 'Receber o book no WhatsApp' })).toHaveAttribute('aria-checked', 'true'));
+      const payload = await salvar();
+
+      expect(payload.property_page.development).toMatchObject({ book_button: true, map: false });
+      expect(payload.property_page.email_copy).toEqual(['dono@imob.com.br']);
+    });
+
     it('abrir as duas telas sem mexer não mostra o Salvar, e salvar outra coisa não leva os blocos', async () => {
       mocks.updateSite.mockResolvedValue(SITE);
       abrir('/settings/site-builder?tela=ficha');
@@ -244,7 +292,7 @@ describe('SiteBuilder (casca do Meu site)', () => {
 
       expect(payload.property_page).toEqual({
         resale: { map: false, popular_badge: true, values: true, similar: false },
-        development: { map: true, popular_badge: true, stage_and_forecast: true, typologies: true, builder: true, similar: true },
+        development: { map: true, popular_badge: true, stage_and_forecast: true, typologies: true, builder: true, similar: true, book_button: false },
         financing_badges: true,
         email_copy: ['dono@imob.com'],
       });

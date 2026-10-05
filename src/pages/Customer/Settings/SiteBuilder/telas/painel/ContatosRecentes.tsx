@@ -7,6 +7,7 @@ import { siteBuilderService, type SiteLead } from '@/services/siteBuilder/siteBu
 // qualquer outra falha mostra o erro com "Tentar de novo" (nunca lista vazia).
 function origem(l: SiteLead): string {
   if (l.form_type === 'anuncie_imovel') return 'Anuncie seu imóvel';
+  if (l.form_type === 'imovel_book') return 'Pediu o book';
   return l.property_id ? 'Pediu contato num imóvel' : 'Pediu contato pelo site';
 }
 

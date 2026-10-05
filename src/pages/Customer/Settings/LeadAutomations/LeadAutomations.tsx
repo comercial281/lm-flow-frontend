@@ -31,6 +31,7 @@ import {
   LeadAutomationAction,
   LeadAutomationCondition,
   TRIGGER_LABELS,
+  FLOW_ONLY_TRIGGERS,
   ACTION_TYPE_LABELS,
   RETIRED_ACTION_TYPES,
   LEGACY_ACTION_TYPES,
@@ -57,7 +58,9 @@ import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { Seletor } from '@/components/base/Seletor';
 
-const TRIGGERS = Object.entries(TRIGGER_LABELS).map(([value, label]) => ({ value, label }));
+const TRIGGERS = Object.entries(TRIGGER_LABELS)
+  .filter(([value]) => !FLOW_ONLY_TRIGGERS.includes(value))
+  .map(([value, label]) => ({ value, label }));
 // "Aguardar (delay)" saiu da lista (Automações · sprint 1, 02/10/2026): o
 // servidor nunca esperou nessa etapa. Regra que já tem a ação continua com ela
 // (ver actionTypesFor), e o cartão avisa que ela não espera.

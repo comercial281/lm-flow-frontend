@@ -355,6 +355,11 @@ export default function SiteBuilder() {
     setSiteFormDirty(true);
   };
 
+  // Gravado no servidor na hora (ex.: chave do book): atualiza a tela sem marcar a ficha, pra não reenviar.
+  // Aceita função pra mesclar no estado ATUAL (edição feita enquanto o servidor respondia não se perde).
+  const aplicarSemMarcar = (field: Partial<SiteFormData> | ((prev: SiteFormData) => Partial<SiteFormData>)) =>
+    setSiteForm(prev => ({ ...prev, ...(typeof field === 'function' ? field(prev) : field) }));
+
   // Página criada, salva ou excluída na tela Páginas (gravada na hora, fora do
   // Salvar): o menu da tela Menus acompanha sem virar alteração não salva. O
   // liga/desliga da página no menu É o "Exibir no menu" dela.
@@ -433,7 +438,7 @@ export default function SiteBuilder() {
         {tela === 'vitrines' && <TelaVitrines {...formProps} />}
         {tela === 'chamadas' && <TelaChamadas {...formProps} versaoDasPaginas={versaoDasPaginas} />}
         {tela === 'buscados' && <TelaMaisBuscados {...formProps} />}
-        {tela === 'ficha' && <TelaFicha {...formProps} />}
+        {tela === 'ficha' && <TelaFicha {...formProps} aplicarSemMarcar={aplicarSemMarcar} />}
         {tela === 'lista' && <TelaLista {...formProps} />}
         {tela === 'financiamento' && (
           <TelaFinanciamento financingPage={financingPage} setFinancingPage={setFinancingPage} marcarAlterado={marcarAlterado} />

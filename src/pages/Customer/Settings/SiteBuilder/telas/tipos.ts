@@ -6,4 +6,6 @@ export interface FormProps {
   site: Site | null;
   siteForm: SiteFormData;
   setF: (field: Partial<SiteFormData>) => void;
+  /** Atualiza o formulário sem marcar o bloco como alterado (o servidor já gravou). */
+  aplicarSemMarcar?: (field: Partial<SiteFormData> | ((prev: SiteFormData) => Partial<SiteFormData>)) => void;
 }

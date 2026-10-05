@@ -9,6 +9,7 @@ import type { FlowAutomation } from '@/types/flowAutomations';
 import type { FlowTemplate, FlowTemplatePreviewStep } from '@/features/flowAutomations/templates';
 import { describeSeconds } from '@/features/flowAutomations/waitTime';
 import { serverMessage } from '@/features/flowAutomations/guide';
+import { BOOK_SOURCE, BOOK_SUMMARY } from '@/features/flowAutomations/book';
 import { cn } from '@/lib/utils';
 
 // "+ Novo funil" (Automações · sprint 4, parte B): o corretor não cria funil do
@@ -39,6 +40,17 @@ export function PreviewStepLine({ step }: { step: FlowTemplatePreviewStep }) {
       <li className="flex items-center gap-2 pl-1 text-xs text-muted-foreground">
         <Zap className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         {step.label}
+      </li>
+    );
+  }
+  if (step.media_source === BOOK_SOURCE) {
+    return (
+      <li className="flex items-start gap-2 rounded-md bg-muted/50 px-2 py-1.5 text-xs">
+        <FileText className="mt-px h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+        <span className="min-w-0 whitespace-pre-line">
+          {step.text && <>{step.text}{'\n'}</>}
+          <strong>{BOOK_SUMMARY}</strong>
+        </span>
       </li>
     );
   }

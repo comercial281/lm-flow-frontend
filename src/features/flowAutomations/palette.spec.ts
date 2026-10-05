@@ -18,6 +18,7 @@ describe('paleta da sprint 2', () => {
       ]],
       ['Lead', [
         'Aplicar etiqueta', 'Tirar etiqueta', 'Mover de etapa', 'Marcar como recuperado pelo follow-up',
+        'Passar para a IA', 'Desligar a IA',
         'Definir corretor', 'Distribuir pela roleta', 'Criar tarefa', 'Iniciar follow-up',
       ]],
       ['Avisos', ['Avisar no grupo', 'Avisar pessoa', 'Avisar corretor', 'Avisar gestor', 'Notificação no celular']],
