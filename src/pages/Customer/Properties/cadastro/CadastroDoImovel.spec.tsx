@@ -3,11 +3,13 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 
-const svc = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn(), update: vi.fn() }));
+const svc = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn(), update: vi.fn(), uploadBook: vi.fn() }));
 vi.mock('@/services/properties/propertiesService', async importOriginal => {
   const real = await importOriginal<typeof import('@/services/properties/propertiesService')>();
   return { ...real, propertiesService: { ...real.propertiesService, ...svc } };
 });
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn(), loading: vi.fn(() => 'toast-book'), dismiss: vi.fn() } }));
+import { toast } from 'sonner';
 // Funções do cliente: todas ligadas, salvo as que o teste desligar.
 const desligadas = vi.hoisted(() => new Set<string>());
 vi.mock('@/contexts/TenantFeaturesContext', () => ({ useFeature: (k: string) => !desligadas.has(k) }));
@@ -49,6 +51,79 @@ beforeEach(() => {
 });
 
 describe('CadastroDoImovel', () => {
+  it('empreendimento com book escolhido: sobe o book depois do create', async () => {
+    svc.create.mockResolvedValue({ id: 'b1', listing_kind: 'development' });
+    svc.uploadBook.mockResolvedValue({ id: 'b1' });
+    abrir('/properties/new?tipo=empreendimento');
+    await userEvent.type(await screen.findByLabelText('Nome do empreendimento'), 'Residencial');
+    const book = new File(['x'], 'book.pdf', { type: 'application/pdf' });
+    fireEvent.change(screen.getByTestId('entrada-do-book'), { target: { files: [book] } });
+    expect(await screen.findByText('book.pdf')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await waitFor(() => expect(svc.uploadBook).toHaveBeenCalledWith('b1', book, expect.any(Function)));
+    expect(svc.create.mock.invocationCallOrder[0]).toBeLessThan(svc.uploadBook.mock.invocationCallOrder[0]);
+  });
+
+  it('book que falha ao subir avisa e a navegação segue', async () => {
+    svc.create.mockResolvedValue({ id: 'b2', listing_kind: 'development' });
+    svc.uploadBook.mockRejectedValue(new Error('falhou'));
+    abrir('/properties/new?tipo=empreendimento');
+    await userEvent.type(await screen.findByLabelText('Nome do empreendimento'), 'Residencial');
+    fireEvent.change(screen.getByTestId('entrada-do-book'), { target: { files: [new File(['x'], 'book.pdf', { type: 'application/pdf' })] } });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await waitFor(() => expect(toast.warning).toHaveBeenCalledWith('Imóvel cadastrado, mas o book não subiu. Suba de novo na edição do imóvel.'));
+    expect(screen.getByTestId('onde')).toHaveTextContent('/properties?aba=empreendimentos');
+  });
+
+  it('andamento do book na criação: um aviso só, atualizado até "Book salvo"', async () => {
+    svc.create.mockResolvedValue({ id: 'b3', listing_kind: 'development' });
+    svc.uploadBook.mockImplementation(async (_i, _f, onProgress) => { onProgress(40); onProgress(100); return { id: 'b3' }; });
+    abrir('/properties/new?tipo=empreendimento');
+    await userEvent.type(await screen.findByLabelText('Nome do empreendimento'), 'Residencial');
+    fireEvent.change(screen.getByTestId('entrada-do-book'), { target: { files: [new File(['x'], 'book.pdf', { type: 'application/pdf' })] } });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Book salvo', { id: 'toast-book' }));
+    expect(toast.loading).toHaveBeenCalledWith('Enviando o book… 0%');
+    expect(toast.loading).toHaveBeenCalledWith('Enviando o book… 40%', { id: 'toast-book' });
+    expect(toast.loading).toHaveBeenCalledWith('Guardando o book…', { id: 'toast-book' });
+  });
+
+  it('erro no book na criação troca o andamento pelo aviso de sempre', async () => {
+    svc.create.mockResolvedValue({ id: 'b4', listing_kind: 'development' });
+    svc.uploadBook.mockRejectedValue(new Error('x'));
+    abrir('/properties/new?tipo=empreendimento');
+    await userEvent.type(await screen.findByLabelText('Nome do empreendimento'), 'Residencial');
+    fireEvent.change(screen.getByTestId('entrada-do-book'), { target: { files: [new File(['x'], 'book.pdf', { type: 'application/pdf' })] } });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await waitFor(() => expect(toast.dismiss).toHaveBeenCalledWith('toast-book'));
+    expect(toast.warning).toHaveBeenCalled();
+  });
+
+  it('segundo Cadastrar depois de um create que falhou sobe o book uma vez só', async () => {
+    svc.create.mockRejectedValueOnce(new Error('x')).mockResolvedValueOnce({ id: 'b5', listing_kind: 'development' });
+    svc.uploadBook.mockResolvedValue({ id: 'b5' });
+    abrir('/properties/new?tipo=empreendimento');
+    await userEvent.type(await screen.findByLabelText('Nome do empreendimento'), 'Residencial');
+    fireEvent.change(screen.getByTestId('entrada-do-book'), { target: { files: [new File(['x'], 'book.pdf', { type: 'application/pdf' })] } });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await waitFor(() => expect(svc.create).toHaveBeenCalledTimes(1));
+    expect(svc.uploadBook).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await waitFor(() => expect(svc.uploadBook).toHaveBeenCalledTimes(1));
+    expect(svc.create).toHaveBeenCalledTimes(2);
+  });
+
+  it('create que falha não sobe o book e o arquivo continua escolhido', async () => {
+    svc.create.mockRejectedValue(new Error('x'));
+    abrir('/properties/new?tipo=empreendimento');
+    await userEvent.type(await screen.findByLabelText('Nome do empreendimento'), 'Residencial');
+    fireEvent.change(screen.getByTestId('entrada-do-book'), { target: { files: [new File(['x'], 'book.pdf', { type: 'application/pdf' })] } });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await waitFor(() => expect(svc.create).toHaveBeenCalled());
+    expect(svc.uploadBook).not.toHaveBeenCalled();
+    expect(screen.getByText('book.pdf')).toBeInTheDocument();
+  });
+
   it('empreendimento novo: título, índice do tipo e botões da criação', async () => {
     abrir('/properties/new?tipo=empreendimento');
     expect(await screen.findByRole('heading', { name: 'Novo empreendimento' })).toBeInTheDocument();

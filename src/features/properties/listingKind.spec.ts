@@ -101,6 +101,14 @@ describe('filtros', () => {
     expect(chips.map(c => c.rotulo)).toEqual(['Fase: Na planta, Em obra', 'Bairro: Taquaral']);
     expect(tirarFiltro('development', emp, 'fases')).toEqual({ ...emp, fases: [] });
   });
+
+  it('Só com book: manda has_book, vira etiqueta e sai pela etiqueta', () => {
+    const emp = { ...FILTROS_VAZIOS.development, comBook: true };
+    expect(paramsDosFiltros('development', emp)).toEqual({ has_book: '1' });
+    expect(filtrosAtivos('development', emp).map(c => c.rotulo)).toEqual(['Com book']);
+    expect(tirarFiltro('development', emp, 'comBook')).toEqual(FILTROS_VAZIOS.development);
+    expect(paramsDosFiltros('development', FILTROS_VAZIOS.development)).toEqual({});
+  });
 });
 
 describe('previsão de entrega em mês e ano', () => {

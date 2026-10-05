@@ -169,12 +169,14 @@ export interface FiltrosEmpreendimento {
   precoMax: string;
   quartos: number[];
   entregaAte: string;
+  /** Só empreendimentos com book (PDF) salvo — o que a antiga tela Books listava. */
+  comBook: boolean;
 }
 
 export type Filtros = FiltrosRevenda | FiltrosEmpreendimento;
 
 export const FILTROS_VAZIOS: { development: FiltrosEmpreendimento; resale: FiltrosRevenda } = {
-  development: { fases: [], bairro: '', situacao: '', precoMin: '', precoMax: '', quartos: [], entregaAte: '' },
+  development: { fases: [], bairro: '', situacao: '', precoMin: '', precoMax: '', quartos: [], entregaAte: '', comBook: false },
   resale: { finalidade: '', tipo: '', bairro: '', situacao: '', precoMin: '', precoMax: '', quartos: [], vagas: [], captador: '' },
 };
 
@@ -190,6 +192,7 @@ export function paramsDosFiltros(kind: ListingKind, f: Filtros): Record<string, 
     const e = f as FiltrosEmpreendimento;
     if (e.fases.length) p['stage[]'] = e.fases;
     if (e.entregaAte) p.delivery_until = e.entregaAte;
+    if (e.comBook) p.has_book = '1';
   } else {
     const r = f as FiltrosRevenda;
     // Imóvel de Venda e locação aparece nos dois filtros, como no site.
@@ -222,6 +225,7 @@ export function filtrosAtivos(
     if (e.precoMin || e.precoMax) out.push({ chave: 'preco', rotulo: `Preço: ${preco(e.precoMin, e.precoMax)}` });
     if (e.quartos.length) out.push({ chave: 'quartos', rotulo: `Dorms: ${quartosTexto(e.quartos)}` });
     if (e.entregaAte) out.push({ chave: 'entregaAte', rotulo: `Entrega até ${e.entregaAte}` });
+    if (e.comBook) out.push({ chave: 'comBook', rotulo: 'Com book' });
     return out;
   }
   const r = f as FiltrosRevenda;

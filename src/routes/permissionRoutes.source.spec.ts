@@ -47,7 +47,6 @@ describe('toda rota do CRM confere o cargo', () => {
     ['/properties/map', 'properties', 'read'],
     ['/properties/new', 'properties', 'create'],
     ['/properties/:id/editar', 'properties', 'update'],
-    ['/books', 'properties', 'read'],
     ['/visits', 'visits', 'read'],
     ['/proposals', 'proposals', 'read'],
     ['/contracts', 'contracts', 'read'],
@@ -136,5 +135,13 @@ describe('permissionRoutes.ts não diverge de index.tsx (mapa único da Fase 1 C
       missing,
       `rota(s) protegida(s) em index.tsx sem entrada em permissionRoutes.ts: ${missing.join(', ') || '(nenhuma)'}`,
     ).toEqual([]);
+  });
+});
+
+describe('endereço antigo da tela Books', () => {
+  it('/books redireciona para /properties, sem PermissionRoute', () => {
+    const t = trecho('/books');
+    expect(t).toContain('<Navigate to="/properties" replace />');
+    expect(t).not.toContain('PermissionRoute');
   });
 });

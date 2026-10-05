@@ -101,6 +101,8 @@ function Cadastro() {
 
   // Mídias escolhidas na criação: sobem logo depois de criar o imóvel.
   const [arquivos, setArquivos] = useState<File[]>([]);
+  // Book (PDF) escolhido na criação: sobe depois de criar, junto das mídias.
+  const [book, setBook] = useState<File | null>(null);
   const [enviandoMidia, setEnviandoMidia] = useState(false);
   const [salvando, setSalvando] = useState(false);
   // Texto colado no "Preencher a partir de um texto"; o "Gerar com IA" também usa.
@@ -117,7 +119,7 @@ function Cadastro() {
     if (Date.now() - erroMarcadoEm.current > ESPERA_DA_ROLAGEM_MS) setSecaoComErro(null);
   }, [visivel]);
 
-  const temAlteracao = pronto && (!mesmoConteudo(form, inicial) || arquivos.length > 0);
+  const temAlteracao = pronto && (!mesmoConteudo(form, inicial) || arquivos.length > 0 || book !== null);
   useAlteracoesNaoSalvas(temAlteracao);
 
   const carregar = useCallback(() => {
@@ -139,6 +141,9 @@ function Cadastro() {
   // página já tem (a contagem de fotos, por exemplo, não volta atrás). O Salvar
   // da página não manda mais essas três marcas.
   const aoMudarImovelDivulgado = (patch: Partial<Property>) => setImovel(prev => prev && { ...prev, ...patch });
+
+  // Book subido/removido na edição: junta o imóvel devolvido ao que a página já tem.
+  const aoMudarImovel = (p: Property) => setImovel(prev => prev && { ...prev, ...p });
 
   const voltarParaLista = () => {
     const aba = ABA_NA_URL[kind];
@@ -175,6 +180,20 @@ function Cadastro() {
         }
       } else {
         toast.success(rascunho ? 'Rascunho salvo' : 'Imóvel cadastrado');
+      }
+      if (book) {
+        // Book grande demora: um aviso com o andamento, no mesmo toast.
+        const idDoAviso = toast.loading('Enviando o book… 0%');
+        try {
+          await propertiesService.uploadBook(criado.id, book, pct => {
+            toast.loading(pct >= 100 ? 'Guardando o book…' : `Enviando o book… ${pct}%`, { id: idDoAviso });
+          });
+          toast.success('Book salvo', { id: idDoAviso });
+        } catch {
+          toast.dismiss(idDoAviso);
+          toast.warning('Imóvel cadastrado, mas o book não subiu. Suba de novo na edição do imóvel.');
+        }
+        setBook(null);
       }
       if (rascunho) navigate(`/properties?aba=${ABA_NA_URL[kind]}`);
       else navigate(`/properties/${criado.id}/editar?passo=divulgar`);
@@ -246,7 +265,8 @@ function Cadastro() {
       case 'detalhesVenda': return <SecaoDetalhesDaVenda {...props} />;
       case 'caracteristicas': return <SecaoCaracteristicas {...props} />;
       case 'midia':
-        return <SecaoMidia {...props} arquivos={arquivos} aoMudarArquivos={setArquivos} enviando={enviandoMidia || salvando} aoFecharFotos={releFotos} />;
+        return <SecaoMidia {...props} arquivos={arquivos} aoMudarArquivos={setArquivos} enviando={enviandoMidia || salvando} aoFecharFotos={releFotos}
+          book={book} aoMudarBook={setBook} aoMudarImovel={aoMudarImovel} />;
       case 'descricao':
         return <SecaoDescricao {...props} podeGerar={canAiDesc} gerando={gerandoDescricao} aoGerar={gerarDescricao} />;
       case 'equipe': return <SecaoEquipe {...props} />;
@@ -290,7 +310,7 @@ function Cadastro() {
                 aoEscolher={secao => { setSecaoComErro(null); rolarAte(secao); }}
               />
               <div className="mt-4 space-y-4 lg:mt-0">
-                {!editandoId && <PreencherPorTexto form={form} setF={setF} texto={texto} aoMudarTexto={setTexto} />}
+                {!editandoId && <PreencherPorTexto form={form} setF={setF} texto={texto} aoMudarTexto={setTexto} temBook={!!book} aoEscolherBook={setBook} />}
                 {secoes.map(s => (
                   <section key={s.id} id={`secao-${s.id}`} aria-labelledby={`titulo-${s.id}`} className="scroll-mt-24 rounded-xl border bg-card p-5">
                     <h2 id={`titulo-${s.id}`} className="text-base font-semibold">{s.titulo}</h2>

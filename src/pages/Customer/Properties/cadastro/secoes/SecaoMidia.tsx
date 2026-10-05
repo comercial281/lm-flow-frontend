@@ -5,6 +5,8 @@ import { ACCEPTED_MIME_TYPES } from '@/services/propertyPhotos/propertyPhotosSer
 import { numero, plural } from '@/lib/formato';
 import PropertyPhotosDialog from '../../PropertyPhotosDialog';
 import { CampoTexto } from './campos';
+import type { Property } from '@/services/properties/propertiesService';
+import BlocoDoBook from './BlocoDoBook';
 import type { PropsDaSecao } from './tipos';
 
 interface Props extends PropsDaSecao {
@@ -14,6 +16,11 @@ interface Props extends PropsDaSecao {
   enviando: boolean;
   /** Edição: o gerenciador de fotos fechou (a página relê a contagem). */
   aoFecharFotos: () => void;
+  /** Criação: book (PDF) escolhido, que sobe depois de criar o imóvel. */
+  book: File | null;
+  aoMudarBook: (f: File | null) => void;
+  /** Edição: o servidor devolveu o imóvel depois de subir/remover o book. */
+  aoMudarImovel: (p: Property) => void;
 }
 
 function Arquivos({ editando, arquivos, aoMudarArquivos, enviando, aoFecharFotos }: Props) {
@@ -117,6 +124,14 @@ export default function SecaoMidia(props: Props) {
           aoMudar={v => setF({ virtual_tour_url: v || null })} />
       </div>
       <Arquivos {...props} />
+      <BlocoDoBook
+        kind={f.listing_kind ?? 'resale'}
+        editando={props.editando}
+        book={props.book}
+        aoMudarBook={props.aoMudarBook}
+        aoMudarImovel={props.aoMudarImovel}
+        desabilitado={props.enviando}
+      />
     </>
   );
 }

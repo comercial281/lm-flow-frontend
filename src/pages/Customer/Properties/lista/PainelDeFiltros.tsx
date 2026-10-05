@@ -134,6 +134,11 @@ export default function PainelDeFiltros({ kind, filtros, facetas, aoMudar, aoLim
           <Seletor className={campo} value={f.entregaAte} onChange={e => set({ entregaAte: e.target.value })}>
             <option value="">Qualquer data</option>{anos.map(a => <option key={a}>{a}</option>)}
           </Seletor></label>
+        <div className="flex flex-col gap-1.5"><span id={`${id}-book`} className={rotulo}>Book</span>
+          <div role="group" aria-labelledby={`${id}-book`} className="flex flex-wrap gap-1.5">
+            <button type="button" aria-pressed={f.comBook} onClick={() => set({ comBook: !f.comBook })}
+              className={`rounded-full border px-3 py-1 text-xs ${f.comBook ? 'border-primary bg-primary text-primary-foreground font-semibold' : 'border-input bg-background'}`}>Só com book</button>
+          </div></div>
       </>
     );
   })() : (() => {
