@@ -15,7 +15,7 @@ import { abasVisiveis } from '@/features/siteBuilder/public/vitrines';
 import { seloDaFase } from '@/features/properties/listingKind';
 import { ORDENS, ROTULO_ORDEM, ehOrdem, type Ordem } from '@/features/siteBuilder/public/listaConfig';
 import {
-  CORES_DO_FUNDO, TEXTO_RODAPE_FABRICA, fonteDoSite, logoNaSuperficie, resolverAparencia, textoSobre,
+  CORES_DO_FUNDO, TEXTO_RODAPE_FABRICA, clarearAte, fonteDoSite, logoNaSuperficie, resolverAparencia, textoSobre,
   type Aparencia, type Superficie,
 } from '@/features/siteBuilder/public/aparenciaConfig';
 
@@ -186,9 +186,12 @@ export function aplicarRobots(site: SiteInfo | null | undefined, doc: Document =
 
 /**
  * Cores, fonte e variáveis CSS do site (logo, cores, fonte e aparência do Meu
- * site). `--ink`/`--paper` seguem o fundo (claro = os de sempre); `--card` é a
- * caixa e `--solid` a faixa ou botão escuro com texto branco. `--accent-ink` e
- * `--brand-ink` são o texto (branco ou escuro) que dá contraste na cor.
+ * site). `--ink`/`--paper` seguem o fundo (claro = os de sempre); `--site-card`
+ * é a caixa e `--solid` a faixa ou botão escuro com texto branco. `--accent-ink`
+ * e `--brand-ink` são o texto (branco ou escuro) que dá contraste NA cor.
+ * `--brand-text` é o texto escrito na cor da marca: no claro, a própria
+ * `--brand`; no escuro, a marca clareada até 4,5:1 sobre a caixa escura (que é
+ * mais clara que o fundo, então vale pros dois).
  *
  * `fundo` vai no `data-fundo` da raiz da página: só sai no fundo escuro (no
  * claro o atributo nem existe) e é ele que liga o bloco "Meu site · fundo
@@ -205,10 +208,11 @@ export function tokensDoSite(site: SiteInfo) {
     ['--accent' as string]: accent,
     ['--ink' as string]: cores.ink,
     ['--paper' as string]: cores.paper,
-    ['--card' as string]: cores.card,
+    ['--site-card' as string]: cores.card,
     ['--solid' as string]: cores.solid,
     ['--accent-ink' as string]: textoSobre(accent),
     ['--brand-ink' as string]: textoSobre(brand),
+    ['--brand-text' as string]: aparencia.background === 'dark' ? clarearAte(brand, cores.card) : brand,
     ['--display' as string]: fontStack,
     fontFamily: fontStack,
   } as CSSProperties;
@@ -324,10 +328,10 @@ function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
   // exclusivo, os dois selos. Na revenda Exclusivo vence Destaque.
   const dev = p.listing_kind === 'development';
   const selos = [
-    dev ? seloDaFase(p.stage ?? 'ready', p.delivery_forecast) : null,
-    p.exclusive ? 'Exclusivo' : null,
-    !dev && !p.exclusive && p.featured ? 'Destaque' : null,
-  ].filter((x): x is string => !!x);
+    dev ? { texto: seloDaFase(p.stage ?? 'ready', p.delivery_forecast), tipo: 'fase' as const } : null,
+    p.exclusive ? { texto: 'Exclusivo', tipo: 'destaque' as const } : null,
+    !dev && !p.exclusive && p.featured ? { texto: 'Destaque', tipo: 'destaque' as const } : null,
+  ].filter((x): x is SeloDoCartao => !!x);
   return {
     s: p.icon_summary ?? {},
     selos,
@@ -338,23 +342,26 @@ function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
   };
 }
 
-/** Selos na cor de destaque (Aparência); o da fase do empreendimento segue na cor principal. */
-const SELOS_NO_DESTAQUE = new Set(['Destaque', 'Exclusivo']);
+/**
+ * Selo na foto do cartão. `destaque` (Destaque, Exclusivo) vai na cor de
+ * destaque da Aparência; `fase` (a do empreendimento) segue na cor principal.
+ */
+interface SeloDoCartao { texto: string; tipo: 'fase' | 'destaque' }
 
 /** Estilo do selo na cor de destaque, com o texto branco ou escuro pelo contraste. */
 export const ESTILO_SELO_DESTAQUE: CSSProperties = { background: 'var(--accent)', color: 'var(--accent-ink)' };
 
-function SelosNaFoto({ selos }: { selos: string[] }) {
+function SelosNaFoto({ selos }: { selos: SeloDoCartao[] }) {
   if (selos.length === 0) return null;
   return (
     <div className="pointer-events-none absolute left-3 right-3 top-3 flex flex-wrap gap-1.5">
-      {selos.map(selo => SELOS_NO_DESTAQUE.has(selo) ? (
-        <span key={selo} className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide" style={ESTILO_SELO_DESTAQUE}>
-          {selo}
+      {selos.map(selo => selo.tipo === 'destaque' ? (
+        <span key={selo.texto} className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide" style={ESTILO_SELO_DESTAQUE}>
+          {selo.texto}
         </span>
       ) : (
-        <span key={selo} className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white" style={{ background: 'var(--brand)' }}>
-          {selo}
+        <span key={selo.texto} className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white" style={{ background: 'var(--brand)' }}>
+          {selo.texto}
         </span>
       ))}
     </div>
@@ -715,7 +722,7 @@ function TopoEmManutencao({ site, tenant }: PropsDaMoldura) {
   const waHref = linkDoWhatsApp(site.contact?.whatsapp);
   const ap = resolverAparencia(site.appearance);
   const roupa = roupaDoTopo(ap, false);
-  const logo = logoNaSuperficie(site.branding?.logo_url, ap, roupa.superficie);
+  const logo = logoNaSuperficie(site.branding?.logo_url, ap, roupa.superficie, tokensDoSite(site).brand);
   return (
     <div className="sticky top-0 z-40">
       <FaixaDePrevia site={site} />
@@ -813,7 +820,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
   // Só o topo transparente flutua; na cor principal e no branco ele é sólido.
   const floating = ap.header_style === 'transparent' && onHome && !scrolled && !menuOpen;
   const roupa = roupaDoTopo(ap, floating);
-  const logo = logoNaSuperficie(site.branding?.logo_url, ap, roupa.superficie);
+  const logo = logoNaSuperficie(site.branding?.logo_url, ap, roupa.superficie, tokensDoSite(site).brand);
   // Sobre a capa, sem logo clara, a normal vira branca (o de sempre).
   const filtroDaLogo = floating && !logo.clara ? 'brightness-0 invert' : '';
 
@@ -1001,7 +1008,7 @@ function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) 
         </div>
         <div className="border-t border-black/[0.06]">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-4 text-[12px] text-neutral-400 sm:px-6">
-            <p className="text-neutral-500">{frase}</p>
+            <p className="whitespace-pre-line text-neutral-500">{frase}</p>
             <p><CreditoDoRodape nome={site.name} /></p>
           </div>
         </div>
@@ -1016,7 +1023,7 @@ function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) 
           {logo.url
             ? <img src={logo.url} alt={site.name || ''} className="h-9 w-auto max-w-[150px] object-contain" />
             : <span className="font-[var(--display)] text-lg font-semibold">{site.name || 'Imóveis'}</span>}
-          <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-neutral-500">{frase}</p>
+          <p className={`mt-3 max-w-xs text-[13px] leading-relaxed text-neutral-500${ap.footer_text ? ' whitespace-pre-line' : ''}`}>{frase}</p>
         </div>
         {imoveis.length > 0 && (
           <FooterCol title="Imóveis">

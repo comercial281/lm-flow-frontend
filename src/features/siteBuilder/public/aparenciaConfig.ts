@@ -99,15 +99,18 @@ export function filtroDaCapa(forca: number): string {
 export const TINTA_ESCURA = '#17140F';
 
 /**
- * Variáveis do fundo. `--card` é a caixa (cartão, formulário, rodapé) e
- * `--solid` a faixa ou botão escuro com texto branco ("Ver detalhes", a faixa
- * de contato). No claro os valores são os de antes do C3; `--solid` = o
- * `--ink` de sempre.
+ * Variáveis do fundo. `--site-card` é a caixa (cartão, formulário, rodapé;
+ * o nome não é `--card` pra não cobrir o token do CRM) e `--solid` a faixa ou
+ * botão escuro com texto branco ("Ver detalhes", a faixa de contato). No claro
+ * os valores são os de antes do C3; `--solid` = o `--ink` de sempre.
  */
 export const CORES_DO_FUNDO: Record<Fundo, { paper: string; ink: string; card: string; solid: string }> = {
   light: { paper: '#FAF7F2', ink: '#17140F', card: '#FFFFFF', solid: '#17140F' },
   dark: { paper: '#14110D', ink: '#F4EFE7', card: '#1E1A15', solid: '#332C25' },
 };
+
+/** Contraste mínimo (WCAG AA, texto normal) do texto na cor da marca. */
+export const CONTRASTE_MINIMO = 4.5;
 
 function rgbDe(cor: string): [number, number, number] | null {
   const h = cor.trim().replace(/^#/, '');
@@ -123,6 +126,31 @@ function luminancia([r, g, b]: [number, number, number]): number {
 }
 
 const contraste = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+
+/** Contraste WCAG entre duas cores hex; `null` se alguma não for hex. */
+export function contrasteEntre(a: string, b: string): number | null {
+  const ra = rgbDe(a); const rb = rgbDe(b);
+  return ra && rb ? contraste(luminancia(ra), luminancia(rb)) : null;
+}
+
+const hex = (rgb: number[]) => `#${rgb.map(v => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+
+/**
+ * A cor clareada (misturada com branco, de 2 em 2%) até dar `minimo` de
+ * contraste sobre `fundo`. Usada no texto na cor da marca do fundo escuro
+ * (`--brand-text`): uma marca azul-marinho ou roxa some sobre o quase preto.
+ * Cor que já dá o contraste volta como está; cor que não é hex vira a tinta
+ * clara do fundo escuro.
+ */
+export function clarearAte(cor: string, fundo: string, minimo = CONTRASTE_MINIMO): string {
+  const rgb = rgbDe(cor);
+  if (!rgb || !rgbDe(fundo)) return CORES_DO_FUNDO.dark.ink;
+  for (let t = 0; t <= 1.0001; t += 0.02) {
+    const c = hex(rgb.map(v => v + (255 - v) * t));
+    if ((contrasteEntre(c, fundo) ?? 0) >= minimo) return t === 0 ? cor : c;
+  }
+  return '#FFFFFF';
+}
 
 /**
  * Cor do texto sobre uma cor de fundo (selo na cor de destaque, topo na cor
@@ -164,15 +192,17 @@ export type Superficie = 'foto' | 'marca' | 'branco' | 'fundo';
 
 /**
  * Qual logo vai numa superfície. A clara entra onde o fundo atrás dela é
- * escuro: o topo transparente sobre a capa, o topo na cor principal e, no
- * fundo escuro, o topo sólido e o rodapé. Sem logo clara, a normal.
- * `clara` diz se a logo clara foi usada (a foto da capa sem logo clara
- * continua deixando a normal branca, como sempre).
+ * escuro: o topo transparente sobre a capa, o topo na cor principal quando
+ * ela é escura (o texto do topo sai branco: `textoSobre(brand)`) e, no fundo
+ * escuro, o topo sólido e o rodapé. Sem logo clara, a normal. `clara` diz se
+ * a logo clara foi usada (a foto da capa sem logo clara continua deixando a
+ * normal branca, como sempre).
  */
 export function logoNaSuperficie(
-  logo: string | null | undefined, ap: Aparencia, superficie: Superficie,
+  logo: string | null | undefined, ap: Aparencia, superficie: Superficie, brand?: string | null,
 ): { url: string | null; clara: boolean } {
-  const pedeClara = superficie === 'foto' || superficie === 'marca' || (superficie === 'fundo' && ap.background === 'dark');
+  const marcaEscura = superficie === 'marca' && textoSobre(brand) === '#FFFFFF';
+  const pedeClara = superficie === 'foto' || marcaEscura || (superficie === 'fundo' && ap.background === 'dark');
   if (pedeClara && ap.logo_light_url) return { url: ap.logo_light_url, clara: true };
   return { url: logo || null, clara: false };
 }

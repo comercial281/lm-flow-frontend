@@ -5,10 +5,11 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PortalFooter, PortalHeader, tokensDoSite, type SiteInfo } from './portalShared';
 import PortalHomePage from './PortalHomePage';
+import PortalCustomPage from './PortalCustomPage';
 import HomeCapa from './home/HomeCapa';
 import SelosDoImovel from './ficha/SelosDoImovel';
 import { resolverHome } from '@/features/siteBuilder/public/homeConfig';
-import { APARENCIA_FABRICA, DEGRADE_DA_CAPA_FABRICA, type Aparencia } from '@/features/siteBuilder/public/aparenciaConfig';
+import { APARENCIA_FABRICA, DEGRADE_DA_CAPA_FABRICA, contrasteEntre, type Aparencia } from '@/features/siteBuilder/public/aparenciaConfig';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Meu site › Aparência no site público (C3): fundo, topo, faixa de cima, capa,
@@ -50,11 +51,11 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
+// O DOM de antes do C3 (fixtures do c72c0c39) é conferido em molduraAntesDoC3.spec.tsx.
 describe('site sem appearance: o de antes', () => {
-  it('topo, rodapé e capa saem iguais com e sem a aparência de fábrica', async () => {
+  it('a aparência de fábrica explícita (o que o servidor novo manda) sai igual a nenhuma', async () => {
     const fabrica = comAp({});
     expect(await html(topo(base))).toBe(await html(topo(fabrica)));
-    expect(await html(topo(base, true))).toBe(await html(topo(fabrica, true)));
     expect(await html(rodape(base))).toBe(await html(rodape(fabrica)));
     expect(await html(capa(base))).toBe(await html(capa(fabrica)));
   });
@@ -93,7 +94,8 @@ describe('site sem appearance: o de antes', () => {
   it('variáveis de sempre: fundo claro, sem data-fundo', () => {
     const t = tokensDoSite(base);
     expect(t.fundo).toBeUndefined();
-    expect(t.cssVars).toMatchObject({ '--ink': '#17140F', '--paper': '#FAF7F2', '--solid': '#17140F', '--card': '#FFFFFF' });
+    expect(t.cssVars).toMatchObject({ '--ink': '#17140F', '--paper': '#FAF7F2', '--solid': '#17140F', '--site-card': '#FFFFFF', '--brand-text': '#0E7C5A' });
+    expect(t.cssVars).not.toHaveProperty('--card');
   });
 });
 
@@ -101,7 +103,7 @@ describe('fundo escuro', () => {
   it('troca --paper/--ink, põe as caixas no --card escuro e marca a raiz da página', async () => {
     const t = tokensDoSite(comAp({ background: 'dark' }));
     expect(t.fundo).toBe('escuro');
-    expect(t.cssVars).toMatchObject({ '--paper': '#14110D', '--ink': '#F4EFE7', '--card': '#1E1A15' });
+    expect(t.cssVars).toMatchObject({ '--paper': '#14110D', '--ink': '#F4EFE7', '--site-card': '#1E1A15' });
     expect(t.cssVars['--solid' as keyof typeof t.cssVars]).not.toBe('#F4EFE7');
 
     vi.stubGlobal('fetch', vi.fn(async (url: string) => ({
@@ -122,23 +124,136 @@ describe('fundo escuro', () => {
     expect(raiz.style.getPropertyValue('--paper')).toBe('#14110D');
   });
 
-  it('o globals.css cobre, no escuro, toda caixa branca e borda/anel/fundinho preto usados no site', () => {
-    const css = readFileSync(join(__dirname, '../../styles/globals.css'), 'utf8');
-    const arquivos = (dir: string): string[] => readdirSync(dir).flatMap(n => {
-      const p = join(dir, n);
-      return statSync(p).isDirectory() ? arquivos(p) : (/\.tsx$/.test(n) && !/\.spec\./.test(n) ? [p] : []);
-    });
-    const classes = new Set<string>();
-    for (const f of arquivos(__dirname)) {
-      const src = readFileSync(f, 'utf8');
-      for (const m of src.matchAll(/(?<![\w:-])((?:hover:)?(?:bg-white(?:\/(?:85|95))?|border-black\/[\w.[\]]+|ring-black\/[\w.[\]]+|bg-black\/\[0\.0\d\]))(?![\w/[])/g)) classes.add(m[1]);
+  it.each(['#1E3A8A', '#7C3AED', '#0E7C5A'])('texto na cor da marca %s fica legível (≥ 4,5:1) no fundo escuro e é a própria marca no claro', brand => {
+    const escuro = tokensDoSite(comAp({ background: 'dark' }, { branding: { primary_color: brand } })).cssVars as Record<string, string>;
+    const texto = escuro['--brand-text'];
+    expect(contrasteEntre(texto, '#14110D')).toBeGreaterThanOrEqual(4.5);
+    expect(contrasteEntre(texto, escuro['--site-card'])).toBeGreaterThanOrEqual(4.5);
+    expect(escuro['--brand']).toBe(brand);
+    const claro = tokensDoSite({ branding: { primary_color: brand } }).cssVars as Record<string, string>;
+    expect(claro['--brand-text']).toBe(brand);
+  });
+
+  it('marca que já é clara não muda no escuro; o texto do artigo e da página usa --brand-text', () => {
+    const t = tokensDoSite(comAp({ background: 'dark' }, { branding: { primary_color: '#FACC15' } })).cssVars as Record<string, string>;
+    expect(t['--brand-text']).toBe('#FACC15');
+    for (const f of ['PortalArticlePage.tsx', 'PortalCustomPage.tsx']) {
+      expect(readFileSync(join(__dirname, f), 'utf8')).toContain('a{color:var(--brand-text)');
     }
-    expect(classes.size).toBeGreaterThan(8);
-    const escapar = (c: string) => c.replace(/([:/[\].])/g, '\\$1');
-    const faltando = [...classes].filter(c => !css.includes(`:where([data-fundo='escuro']) .${escapar(c)}`));
+  });
+
+  it('a citação do artigo continua #555 no claro e vira a tinta a 70% só no escuro', () => {
+    expect(readFileSync(join(__dirname, 'PortalArticlePage.tsx'), 'utf8')).toContain('blockquote{margin:1.2em 0;padding-left:1em;border-left:3px solid var(--brand);color:#555;');
+    const regras = regrasDoEscuro();
+    expect(regras.some(r => /article-body blockquote/.test(r.seletor) && /color-mix\(in oklab,\s*var\(--ink\) 70%, transparent\)/.test(r.corpo))).toBe(true);
+  });
+
+  it('a raiz da página e o "Carregando página…" (site já conhecido) saem com data-fundo', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url.includes('/site/pages/')) return new Promise(() => {}); // a página nunca chega
+      return { ok: true, json: async () => (url.includes('/site/properties') || url.includes('/site/articles')
+        ? { data: [], meta: { total: 0 } } : { data: comAp({ background: 'dark' }) }) };
+    }));
+    render(
+      <MemoryRouter initialEntries={['/portal/imob/p/sobre']}>
+        <Routes><Route path="/portal/:tenant/p/:slug" element={<PortalCustomPage />} /></Routes>
+      </MemoryRouter>,
+    );
+    const carregando = await screen.findByText('Carregando página…');
+    expect(carregando.closest('[data-fundo]')?.getAttribute('data-fundo')).toBe('escuro');
+  });
+
+  it('o globals.css cobre, no escuro, toda cor fixa clara/escura usada no site (com prefixos)', () => {
+    const cobertas = classesCobertas();
+    const faltando = [...classesDoSite()].filter(c => !cobertas.has(c));
     expect(faltando).toEqual([]);
   });
+
+  it('a trava reprova classe nova sem regra (prefixos e caixas de cor inclusive)', () => {
+    const cobertas = classesCobertas();
+    for (const c of ['sm:bg-white', 'group-hover:bg-white', 'bg-white/90', 'bg-emerald-50', 'bg-sky-100', 'text-blue-700', 'md:border-black/[0.09]', 'hover:bg-black/[0.02]']) {
+      expect(alvo(c)).toBe(true);
+      expect(cobertas.has(c)).toBe(false);
+    }
+    expect(alvo('bg-black/45')).toBe(false);
+    expect(alvo('bg-white/15')).toBe(false);
+    expect(cobertas.has('bg-red-50')).toBe(true);
+    expect(cobertas.has('hover:text-neutral-600')).toBe(true);
+    expect(cobertas.has('text-neutral-600')).toBe(true);
+    expect(cobertas.has('hover:text-[var(--brand)]')).toBe(true);
+    expect(cobertas.has('group-hover:text-[var(--brand)]')).toBe(true);
+  });
 });
+
+/* ── Trava do fundo escuro: o que o site usa × o que o globals.css cobre ─────
+   Lê o CSS por regras (seletor + corpo), sem depender de espaço, aspas nem
+   ordem: conta como coberta a classe que é o alvo de um seletor com
+   [data-fundo=escuro] (o último `.classe` do seletor, desescapado) e toda
+   classe de cor cuja variável `--color-<cor>-<tom>` o escuro redefine. */
+const CSS = readFileSync(join(__dirname, '../../styles/globals.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+
+function regrasDoEscuro(): { seletor: string; corpo: string }[] {
+  const out: { seletor: string; corpo: string }[] = [];
+  for (const m of CSS.matchAll(/([^{};]+)\{([^{}]*)\}/g)) {
+    if (/\[data-fundo\s*=\s*['"]?escuro['"]?\s*\]/.test(m[1])) out.push({ seletor: m[1].trim(), corpo: m[2] });
+  }
+  return out;
+}
+
+const desescapar = (c: string) => c.replace(/\\(.)/g, '$1');
+
+function classesCobertas(): Set<string> {
+  const ok = new Set<string>();
+  const coresTrocadas = new Set<string>();
+  for (const { seletor, corpo } of regrasDoEscuro()) {
+    for (const parte of seletor.split(',')) {
+      const classes = [...parte.matchAll(/\.((?:\\.|[\w-])+)/g)].map(m => desescapar(m[1]));
+      if (classes.length) ok.add(classes[classes.length - 1]);
+    }
+    for (const m of corpo.matchAll(/--color-([a-z]+-\d+)\s*:/g)) coresTrocadas.add(m[1]);
+  }
+  // Classe de cor do Tailwind (bg-/text-/border-/ring-<cor>-<tom>), com ou sem
+  // prefixo e opacidade, lê `var(--color-<cor>-<tom>)`: trocada a variável, coberta.
+  for (const c of classesDoSite()) {
+    const m = /^(?:[\w-]+:)*(?:bg|text|border|ring)-([a-z]+-\d+)(?:\/\d+)?$/.exec(c);
+    if (m && coresTrocadas.has(m[1])) ok.add(c);
+  }
+  return ok;
+}
+
+/**
+ * Classes que somem ou mancham no fundo escuro: caixa branca (opaca ou quase),
+ * borda/anel preto, fundinho preto sutil (hover), a cor da marca como texto,
+ * caixas claras de cor e texto escuro de cor. Véu sobre foto (`bg-black/45`,
+ * `bg-white/15` da galeria) não entra: é sobre a foto, não sobre o fundo.
+ */
+function alvo(classe: string): boolean {
+  const base = classe.replace(/^(?:[\w-]+:)+/, '');
+  return /^bg-white(\/([5-9]\d|100))?$/.test(base)
+    || /^(border|ring)-black\/\S+$/.test(base)
+    || /^bg-black\/\[0\.0\d+\]$/.test(base)
+    || base === 'text-[var(--brand)]'
+    || /^bg-(?!white|black)[a-z]+-(50|100|200)$/.test(base)
+    || /^text-(?!white|black)[a-z]+-(600|700|800|900)$/.test(base)
+    || /^bg-\[var\(--ink\)\]$/.test(base);
+}
+
+/** Varre os .tsx do site público (fora a pesquisa de satisfação, a landing e o "Site não encontrado", que não usam as cores do site). */
+function classesDoSite(): Set<string> {
+  const fora = /(^|\/)(Survey\/|Landing|SiteNaoEncontrado)/;
+  const arquivos = (dir: string): string[] => readdirSync(dir).flatMap(n => {
+    const p = join(dir, n);
+    if (statSync(p).isDirectory()) return arquivos(p);
+    return /\.tsx$/.test(n) && !/\.spec\./.test(n) && !fora.test(p.slice(__dirname.length + 1)) ? [p] : [];
+  });
+  const classes = new Set<string>();
+  for (const f of arquivos(__dirname)) {
+    for (const m of readFileSync(f, 'utf8').matchAll(/(?<=^|[\s'"`{])((?:[\w-]+:)*[a-z][\w-]*(?:-\[[^\]\s'"`]+\])?(?:\/(?:\[[\d.]+\]|\d+))?)(?=$|[\s'"`}])/gm)) {
+      if (alvo(m[1])) classes.add(m[1]);
+    }
+  }
+  return classes;
+}
 
 describe('estilo do topo', () => {
   it('na cor principal: sólido mesmo sobre a capa, texto pelo contraste e a logo clara', async () => {
@@ -149,6 +264,12 @@ describe('estilo do topo', () => {
     expect(header.querySelector('img')!.getAttribute('src')).toBe(CLARA);
     expect(header.querySelector('img')!.className).not.toContain('invert');
     expect(within(header).getByRole('button', { name: 'Menu' }).className).toContain('text-[var(--brand-ink)]');
+  });
+
+  it('na cor principal CLARA: texto escuro e a logo normal (a clara sumiria)', async () => {
+    const c = await topo(comAp({ header_style: 'brand', logo_light_url: CLARA }, { branding: { logo_url: LOGO, primary_color: '#FACC15' } }), true);
+    expect(c.querySelector('header img')!.getAttribute('src')).toBe(LOGO);
+    expect(tokensDoSite({ branding: { primary_color: '#FACC15' } }).cssVars).toMatchObject({ '--brand-ink': '#17140F' });
   });
 
   it('branco: sólido e branco desde o topo, com a logo normal', async () => {
@@ -240,6 +361,14 @@ describe('rodapé', () => {
     const c = await rodape(comAp({ footer_text: 'Imóveis em Campinas desde 1990.' }));
     expect(within(c).getByText('Imóveis em Campinas desde 1990.')).toBeInTheDocument();
     expect(within(c).queryByText('Seu portal de imóveis com atendimento de verdade.')).toBeNull();
+  });
+
+  it('texto livre mantém as quebras de linha nos dois layouts', async () => {
+    for (const layout of ['columns', 'compact'] as const) {
+      const c = await rodape(comAp({ footer_layout: layout, footer_text: 'Linha 1\nLinha 2' }));
+      expect(within(c).getByText(/Linha 1/).className).toContain('whitespace-pre-line');
+      cleanup();
+    }
   });
 
   it('compacto: uma faixa com os links, sem as colunas', async () => {

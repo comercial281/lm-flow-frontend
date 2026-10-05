@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   APARENCIA_FABRICA, DEGRADE_DA_CAPA_FABRICA, FONTES_DO_SITE, TINTA_ESCURA,
-  filtroDaCapa, fonteDoSite, logoNaSuperficie, resolverAparencia, textoSobre,
+  clarearAte, contrasteEntre, filtroDaCapa, fonteDoSite, logoNaSuperficie, resolverAparencia, textoSobre,
 } from './aparenciaConfig';
 
 describe('resolverAparencia', () => {
@@ -124,5 +124,25 @@ describe('logoNaSuperficie', () => {
   it('sem logo clara, a normal em todo lugar', () => {
     expect(logoNaSuperficie('https://cdn.x/logo.png', APARENCIA_FABRICA, 'foto')).toEqual({ url: 'https://cdn.x/logo.png', clara: false });
     expect(logoNaSuperficie(null, APARENCIA_FABRICA, 'marca')).toEqual({ url: null, clara: false });
+  });
+});
+
+describe('clarearAte', () => {
+  it.each(['#1E3A8A', '#7C3AED', '#0E7C5A'])('%s clareia até 4,5:1 sobre o fundo escuro', cor => {
+    const c = clarearAte(cor, '#14110D');
+    expect(contrasteEntre(c, '#14110D')).toBeGreaterThanOrEqual(4.5);
+    expect(c).not.toBe(cor);
+  });
+  it('cor que já dá o contraste volta como está; cor que não é hex vira a tinta clara', () => {
+    expect(clarearAte('#FACC15', '#14110D')).toBe('#FACC15');
+    expect(clarearAte('rebeccapurple', '#14110D')).toBe('#F4EFE7');
+  });
+});
+
+describe('logoNaSuperficie na cor principal', () => {
+  const comClara = { ...APARENCIA_FABRICA, logo_light_url: 'https://cdn.x/clara.png' };
+  it('a clara só quando a cor principal é escura (texto branco)', () => {
+    expect(logoNaSuperficie('https://cdn.x/logo.png', comClara, 'marca', '#0E7C5A').clara).toBe(true);
+    expect(logoNaSuperficie('https://cdn.x/logo.png', comClara, 'marca', '#FACC15')).toEqual({ url: 'https://cdn.x/logo.png', clara: false });
   });
 });

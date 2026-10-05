@@ -174,7 +174,7 @@ export default function PortalArticlePage() {
         .article-body h1,.article-body h2,.article-body h3{font-weight:600;line-height:1.3;color:var(--ink);margin:1.6em 0 .6em}
         .article-body h1{font-size:1.6em}.article-body h2{font-size:1.35em}.article-body h3{font-size:1.15em}
         .article-body p{margin:0 0 1.1em}
-        .article-body a{color:var(--brand);text-decoration:underline}
+        .article-body a{color:var(--brand-text);text-decoration:underline}
         .article-body ul,.article-body ol{margin:0 0 1.1em;padding-left:1.4em}
         .article-body ul{list-style:disc}.article-body ol{list-style:decimal}
         .article-body li{margin:.3em 0}

@@ -677,9 +677,12 @@ button.bg-primary:hover, [data-slot='button'].bg-primary:hover {
    atributo nem existe, ver `tokensDoSite`) e este bloco:
    - troca a escala `neutral` (as utilities do Tailwind v4 leem
      `var(--color-neutral-*)`), invertida pra dar contraste no escuro;
-   - põe as caixas brancas em `--card` e as bordas/anéis/fundinhos pretos
-     em branco translúcido;
-   - põe a faixa de cima (`bg-[var(--ink)]`) em `--solid`.
+   - põe as caixas brancas em `--site-card` e as bordas/anéis/fundinhos
+     pretos em branco translúcido;
+   - põe a faixa de cima (`bg-[var(--ink)]`) em `--solid`;
+   - põe o texto na cor da marca (`text-[var(--brand)]` e variantes) em
+     `--brand-text`, a marca clareada até 4,5:1 (calculada em `tokensDoSite`);
+   - troca as caixas de aviso claras (`bg-red-50`) e o texto escuro delas.
    Superfícies de cor fixa (faixa âmbar da prévia e dos avisos) voltam ao
    cinza-escuro de sempre. O topo "branco" usa cores literais e fica fora.
    Os seletores usam `:where()` pra empatar com a utility e ganhar só pela
@@ -697,6 +700,14 @@ button.bg-primary:hover, [data-slot='button'].bg-primary:hover {
   --color-neutral-700: #d2cbc0;
   --color-neutral-800: #e3ddd3;
   --color-neutral-900: #f4efe7;
+  /* Aviso de erro do Anuncie (bg-red-50 + text-red-600). */
+  --color-red-50: #3a1916;
+  --color-red-600: #fca5a5;
+}
+/* Citação do artigo: no claro continua #555 (o color-mix abaixo daria
+   #5B5853 sobre o papel claro, não é o mesmo); no escuro, a tinta a 70%. */
+[data-fundo='escuro'] .article-body blockquote {
+  color: color-mix(in oklab, var(--ink) 70%, transparent);
 }
 [data-fundo='escuro'] .bg-amber-400 {
   --color-neutral-900: #171717;
@@ -704,10 +715,14 @@ button.bg-primary:hover, [data-slot='button'].bg-primary:hover {
 
 @layer utilities {
   :where([data-fundo='escuro']) .bg-white,
-  :where([data-fundo='escuro']) .hover\:bg-white:hover { background-color: var(--card); }
-  :where([data-fundo='escuro']) .bg-white\/95 { background-color: color-mix(in oklab, var(--card) 95%, transparent); }
-  :where([data-fundo='escuro']) .bg-white\/85 { background-color: color-mix(in oklab, var(--card) 85%, transparent); }
+  :where([data-fundo='escuro']) .hover\:bg-white:hover { background-color: var(--site-card); }
+  :where([data-fundo='escuro']) .bg-white\/95 { background-color: color-mix(in oklab, var(--site-card) 95%, transparent); }
+  :where([data-fundo='escuro']) .bg-white\/85 { background-color: color-mix(in oklab, var(--site-card) 85%, transparent); }
   :where([data-fundo='escuro']) .bg-\[var\(--ink\)\] { background-color: var(--solid); }
+
+  :where([data-fundo='escuro']) .text-\[var\(--brand\)\],
+  :where([data-fundo='escuro']) .hover\:text-\[var\(--brand\)\]:hover,
+  :where([data-fundo='escuro']) .group:hover .group-hover\:text-\[var\(--brand\)\] { color: var(--brand-text); }
 
   :where([data-fundo='escuro']) .bg-black\/\[0\.03\],
   :where([data-fundo='escuro']) .hover\:bg-black\/\[0\.03\]:hover { background-color: rgb(255 255 255 / 0.04); }
