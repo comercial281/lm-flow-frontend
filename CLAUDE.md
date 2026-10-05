@@ -6227,3 +6227,31 @@ Armadilhas do admin:
 10. **A nota interna só é preenchida quando o chamado muda.** A busca periódica nunca sobrescreve o que o admin está digitando. Entre dois admins editando a mesma nota, vale a última gravação (sem aviso de conflito, de propósito).
 11. **`page_url` e o texto do cliente são sempre texto puro**, nunca HTML nem link montado a partir do que o cliente mandou.
 12. **A tela antiga "Sugestões e bugs"** (`CustomerFeedbacks.tsx` e `customerFeedbackService.ts`) foi apagada; não recriar.
+
+## Kit de boas-vindas no grupo do cliente (desde 2026-10-04)
+
+Pedido do dono do produto: no onboarding de um cliente, mandar no grupo dele o link, o vídeo de como baixar o aplicativo e as imagens de como conectar o WhatsApp, com o envio disponível depois de o cliente ser criado. Spec: `LM FLOW/specs/2026-10-04-kit-boas-vindas-no-grupo-design.md`.
+
+O que aparece na tela:
+
+- **Área do Admin → Plataforma → aba *Kit de boas-vindas*** (`/admin/plataforma/kit-boas-vindas`): a mensagem (com `{nome}` e `{link}`, e *Voltar ao padrão*), o número que envia (Operacional (LM01) de fábrica), o vídeo (um, MP4 até 16 MB), as imagens (até 6, JPG ou PNG até 5 MB, com legenda e setas de ordem), a prévia com um cliente de exemplo e a barra de *Salvar*. Vale para todo cliente.
+- **Clientes → Funções → bloco *Kit de boas-vindas***, logo abaixo de *Grupos WhatsApp*: o último envio (quando, quem, quantas peças e o motivo de cada falha), *Preparar envio* (para onde vai, com selo *Cadastrado na ficha* / *Reconhecido pelo nome*, e a prévia montada pelo servidor), e *Enviar no grupo (N peças)* com confirmação. Durante o envio, "Enviando 3 de 8…" com uma linha por peça.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **Só em Funções por enquanto.** O assistente *Novo cliente* não ganhou etapa, e não há envio automático.
+- **Um kit para todos**, montado na Plataforma, como os logos dos bancos.
+- **Vai para o grupo oficial do cliente**, sem escolha manual: o cadastrado em *Grupos WhatsApp* vence o reconhecido pelo nome; o de logs nunca. Com dois pelo nome ou nenhum, o botão some e o motivo manda definir o grupo no bloco de cima.
+- **O link é o endereço do CRM, nunca o link de acesso** (pessoal, uso único, 24h).
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, `saas-multitenant`, PR "Kit de boas-vindas no grupo do cliente (servidor)"). Contra o servidor antigo a aba mostra o erro de carga e o bloco o erro de leitura.
+2. **O grupo só é buscado no clique** de *Preparar envio*; ao abrir a janela o bloco lê só o último envio. Buscar o grupo é conversar com o WhatsApp operacional.
+3. **O envio roda no servidor**; a janela acompanha de 3 em 3 s (teto de 10 min) e pode ser fechada. Ao reabrir com envio rodando, o bloco volta a acompanhar sem mandar de novo. 409 = já tem envio rodando: o bloco acompanha esse.
+4. **Texto igual ao padrão é gravado em branco** (vazio = padrão), para não travar o texto no dia em que o padrão da casa mudar.
+5. **As regras moram em `src/pages/SuperAdmin/kitBoasVindasRegras.ts`**, com spec. O nome não é `kitBoasVindas.ts` de propósito: no Mac (sem diferença de maiúscula no nome do arquivo) `./KitBoasVindas` carregaria as regras no lugar da página.
+6. **Não é `featureKey` nem `clientToggleKey`** — é configuração de plataforma. Os scanners do catálogo não entram nesta história.
+7. **Envio interrompido** (o servidor reiniciou no meio): o servidor fecha como `interrupted` e o bloco mostra "Envio interrompido em … · 3 de 8 peças · 5 não saíram", com *Preparar envio* de volta. Peça que nem chegou a sair não conta como falha.
+8. **O envio leva o grupo que a confirmação nomeou** (`expected_jid`). Se o grupo mudou desde a prévia, o servidor recusa e o bloco volta para *Preparar envio*.
+9. **Kit nunca salvo mostra a barra de Salvar sem mexer**: quem só quer o texto padrão precisa conseguir salvar, senão Funções segue dizendo que o kit não foi montado.
