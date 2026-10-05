@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { fonteDaIaVendedora } from '../../test/fonteDaIaVendedora';
+
 // Duas cicatrizes desta tela que só aparecem em PRODUÇÃO, e caladas. Nenhuma das
 // duas quebra tipo, teste de componente ou build — por isso este spec lê o
 // código-fonte, que é onde elas moram.
@@ -16,10 +18,8 @@ import { describe, expect, it } from 'vitest';
 //    ninguém é avisado.
 const read = (p: string) => readFileSync(resolve(__dirname, '../../..', p), 'utf8');
 
-const TELA = 'src/pages/Customer/Automations/SalesAgents/SalesAgents.tsx';
-
 describe('roteiro da IA na tela do cliente', () => {
-  const src = read(TELA);
+  const src = fonteDaIaVendedora();
 
   it('o roteiro entra na lista campo-a-campo do PATCH', () => {
     // ⚠️ O corte vai até o FIM do payload (`setSelected(updated)`), não a um
@@ -76,9 +76,10 @@ describe('assistente de configuração da IA', () => {
   });
 
   it('o "+" da tela leva para o assistente, e o assistente devolve pela query ?agent=', () => {
-    const tela = read(TELA);
+    const tela = fonteDaIaVendedora();
     expect(tela).toContain('navigate(`/ia-vendedora/${agent.id}/assistente`)');
-    expect(tela).toContain("searchParams.get('agent')");
+    // Desde a casca nova (entrega 1), o endereço é lido pelo mapa das telas.
+    expect(read('src/features/salesAgents/iaMenu.ts')).toContain("params.get('agent')");
     expect(pagina).toContain('/ia-vendedora?agent=');
   });
 

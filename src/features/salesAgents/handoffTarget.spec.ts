@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+
+import { fonteDaIaVendedora, lerTelaDaIa } from '../../test/fonteDaIaVendedora';
 
 // PARA QUEM a IA passa o lead.
 //
@@ -15,12 +15,9 @@ import { describe, expect, it } from 'vitest';
 //    roleta deste número" manda `null` para limpar; com `??` o servidor ficaria
 //    com a roleta velha por baixo — a tela mostrando uma coisa e o lead sendo
 //    entregue noutra.
-const read = (p: string) => readFileSync(resolve(__dirname, '../../..', p), 'utf8');
-
-const TELA = 'src/pages/Customer/Automations/SalesAgents/SalesAgents.tsx';
 
 describe('para quem a IA passa o lead', () => {
-  const src = read(TELA);
+  const src = fonteDaIaVendedora();
   // Corte até o FIM do payload, nunca um número fixo de caracteres: a lista
   // cresce a cada campo novo, e janela fixa reprova o campo errado.
   const saveAgent = src.slice(src.indexOf('const saveAgent'), src.indexOf('setSelected(updated)'));
@@ -65,7 +62,7 @@ describe('para quem a IA passa o lead', () => {
   // a IA passar fica sem responsável — em silêncio, que é o defeito que esta
   // leva inteira veio consertar.
   it('avisa quando o modo foi escolhido e o alvo ficou em branco', () => {
-    const secao = src.slice(src.indexOf('function HandoffDestinationSection'), src.indexOf('// A IA move o card'));
+    const secao = lerTelaDaIa('configuracao/legado/HandoffDestinationSection.tsx');
 
     expect(secao).toContain('fica sem responsável');
     expect(secao).toContain('text-amber-600');
@@ -74,7 +71,7 @@ describe('para quem a IA passa o lead', () => {
   // Sumir com a roleta escolhida da lista faria o próximo salvamento apagar a
   // escolha do gestor, calado. Mesma doutrina do Destino do lead da landing.
   it('a roleta já escolhida continua na lista mesmo desativada', () => {
-    const secao = src.slice(src.indexOf('function HandoffDestinationSection'), src.indexOf('// A IA move o card'));
+    const secao = lerTelaDaIa('configuracao/legado/HandoffDestinationSection.tsx');
 
     expect(secao).toContain('r.ativa || r.id === roletaId');
   });
@@ -82,7 +79,7 @@ describe('para quem a IA passa o lead', () => {
   // Cargo sem acesso a roletas ou à equipe só não vê aquele seletor — a seção
   // continua inteira, e nada pinta de vermelho.
   it('a leitura das listas é de fundo e não grita', () => {
-    const secao = src.slice(src.indexOf('function HandoffDestinationSection'), src.indexOf('// A IA move o card'));
+    const secao = lerTelaDaIa('configuracao/legado/HandoffDestinationSection.tsx');
 
     expect(secao).toContain('leitura de fundo não grita');
   });

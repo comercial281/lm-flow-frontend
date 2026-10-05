@@ -6529,3 +6529,32 @@ O que ainda usa o serviço antigo no frontend:
    MessageFunnelEditor`: **código sem rota** (a rota antiga leva pra página
    nova). Dá pra apagar num PR de faxina.
 
+## IA Vendedora · casca nova: barra de topo, Painel primeiro e veredito único (desde 2026-10-05)
+
+> Entrega 1 da refatoração da IA Vendedora. Spec: `LM FLOW/specs/2026-10-05-ia-vendedora-refatoracao-design.md`; plano: `LM FLOW/plans/2026-10-05-ia-vendedora-entrega-1-casca.md`. Só tela: nenhuma IA muda de atendimento.
+
+**O que aparece na tela:** barra de topo própria, no modelo do Meu site: o seletor da IA (nome + ▾, com o veredito de cada IA e *Nova IA* no fim da lista), o selo do veredito da IA aberta e os menus *Painel ▾* (*Visão geral*, *Sugestões*, *Relatório semanal*) · *Configurar* · *Ensinar* · *Testar* · *Diagnóstico*, mais *Mais ações* (⋯) com *Duplicar esta IA* e *Excluir IA*. A lista de IAs à esquerda e as 8 abas saíram.
+
+- *Visão geral* abre primeiro: *O que precisa de atenção* (cada pendência com *Corrigir*), *Números do período* (o painel da antiga aba Resultados; sem números, diz o motivo) e até 3 sugestões esperando resposta, com *Ver todas*.
+- *Configurar* é a página de configuração de sempre, inteira, com o nome e a caixinha *Ativa* em cima (até a entrega 2).
+- *Ensinar* junta *O que ela sabe* (Base de Conhecimento) e *Regras e exemplos* (Aprendizado).
+- *Testar*, *Sugestões*, *Relatório semanal* e *Diagnóstico* são as abas de antes, movidas.
+
+**Decisões (não reabrir sem o dono pedir):**
+1. Endereço `/ia-vendedora?ia=<id>&tela=<id>`, sempre com `replace` (o Voltar sai da página). Sem `tela`, Visão geral. Fonte única das telas: `src/features/salesAgents/iaMenu.ts`.
+2. Com várias IAs, abre a última usada neste navegador (`localStorage` `lmflow:ia-vendedora:ultima`, com `try/catch`); senão, a primeira.
+3. Veredito único (`src/features/salesAgents/situacao.ts`): *Atendendo* · *Parada: <motivo>* · *Atendendo com restrição: só …* · *Desligada* · *Rascunho* (na entrega 1, desligada e sem número). Calculado da IA + `GET /sales_agents/:id/diagnostics`, espelhando o `SalesAgents::TriggerGate` (quem ela atende) e o `SalesAgents::HealthCheck`. Só os itens `inbox`, `mode`, `credentials` e `api_key` do Diagnóstico param a IA; os outros erros viram pendência.
+4. Gatilho que restringe aparece no selo (laranja) e como pendência, mesmo com a linha *Gatilhos* do Diagnóstico verde (o servidor não mudou).
+5. Follow-up ligado com máximo 0 vira a pendência laranja *Follow-up sem limite de tentativas*. As IAs que já estão assim continuam iguais.
+6. Sugestões e Relatório semanal seguem a chave `ia_insights` (a Leal Mídia sempre vê): sem ela somem do Painel, o endereço cai na Visão geral e a Visão geral nem lê as sugestões.
+
+**Armadilhas:**
+1. **O `?agent=<id>` continua valendo**: é como o assistente (`/ia-vendedora/:id/assistente`) devolve. Abre a IA em Configurar e vira `?ia=&tela=configurar`. Quem mexer no assistente antes da entrega 2 não troca esse retorno.
+2. **Duplicar abre a cópia na hora:** põe a cópia na lista, seleciona a cópia (`setSelected(copy)`) e só então aponta o endereço pra ela. Sem a seleção, durante a recarga da lista a tela Configurar mostrava a IA original e um Salvar gravava nela; sem a cópia na lista, a resolução do endereço voltava pra original (`SalesAgents.casca.spec.tsx`).
+3. **Specs que leem o código leem a pasta inteira** (`src/test/fonteDaIaVendedora.ts`: casca primeiro, sem o `assistente/` e sem specs). Campo novo no `saveAgent` continua no `SalesAgents.tsx`; frase nova de uma seção mora no arquivo dela, em `configuracao/legado/`.
+4. **`configuracao/comum.tsx`** (`Toggle`, `CheckRow`, `InboxOption`, `PipelineOpt`, `StageOpt`) fica FORA de `legado/` porque a Base de Conhecimento usa o `CheckRow`: a entrega 2 apaga o legado sem quebrar o Ensinar.
+5. **O Diagnóstico da IA aberta é lido ao abrir a página** (antes, só ao abrir a aba) e relido quando a IA é salva (`updated_at`), nunca a cada tecla. A tela Diagnóstico continua lendo por conta própria.
+6. Nenhuma chave de funcionalidade nova: `useClientToggle('ia_insights')` continua literal no `SalesAgents.tsx` e `useClientToggle('ia_playbook')` no `ConfigLegado.tsx`.
+7. **O Diagnóstico guardado leva o id da IA** (`{ id, report }`) e só vale pra IA aberta: ao trocar de IA, o selo não herda o veredito da anterior enquanto o da nova carrega (`SalesAgents.casca.spec.tsx`).
+8. **Trocar de IA remonta a tela** (`key={selected.id}` no contêiner das telas, `SalesAgents.tsx`): Testar, números da Visão geral e Sugestões nunca carregam da IA anterior (a conversa de teste de A não vai pra B). Quem tirar o `key` traz o vazamento de volta (`SalesAgents.casca.spec.tsx`).
+9. **Diagnóstico que não carrega não vira "tudo certo":** se a leitura falha (502, perfil sem `sales_agents.diagnostics`), a Visão geral diz *"Não consegui conferir a situação desta IA agora."* no lugar de *"Nada pendente"*; as pendências que a própria configuração mostra continuam aparecendo e o selo segue só na configuração.

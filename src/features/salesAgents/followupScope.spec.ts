@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+
+import { fonteDaIaVendedora } from '../../test/fonteDaIaVendedora';
 
 // O recorte por funil do follow-up da IA: ela vai atrás de todo lead calado do
 // número, ou só dos que têm card nos funis escolhidos.
@@ -15,12 +15,9 @@ import { describe, expect, it } from 'vitest';
 // 2. Lista VAZIA significa "todos os leads", não "nenhum". Trocar o `??` por `in`
 //    aqui não quebra nada hoje, mas inverte o sentido do campo no dia em que
 //    alguém mandar `null` para limpar.
-const read = (p: string) => readFileSync(resolve(__dirname, '../../..', p), 'utf8');
-
-const TELA = 'src/pages/Customer/Automations/SalesAgents/SalesAgents.tsx';
 
 describe('de quais leads a IA vai atrás', () => {
-  const src = read(TELA);
+  const src = fonteDaIaVendedora();
 
   it('o recorte entra na lista campo-a-campo do PATCH', () => {
     // Corte até o FIM do payload, nunca um número fixo de caracteres: a lista

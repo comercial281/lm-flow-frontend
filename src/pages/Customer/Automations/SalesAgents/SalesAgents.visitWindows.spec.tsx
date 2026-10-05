@@ -14,7 +14,7 @@ vi.mock('@/services/visits/agendaService', () => ({
 }));
 const LIGADA = { enabled: true, days: [1, 2, 3, 4, 5, 6], start: '08:00', end: '20:00', closed_dates: [], seeded_from: {} };
 
-import { VisitWindows } from './SalesAgents';
+import { VisitWindows } from './configuracao/legado/VisitWindows';
 import { esquecerAgendaLigada } from '@/features/visits/useAgendaLigada';
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 

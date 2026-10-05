@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+
+import { fonteDaIaVendedora } from '../../test/fonteDaIaVendedora';
 
 import { formIdsDropped, formOptions, formTriggerNotice, toggleForm } from './formTrigger';
 
@@ -54,9 +54,7 @@ describe('formTriggerNotice', () => {
 // ⚠️ A lista vai dentro de `triggers`, que já está no PATCH campo a campo do
 // `saveAgent`. Campo solto no agente seria descartado em silêncio.
 describe('ligação na tela', () => {
-  const tela = readFileSync(
-    resolve(__dirname, '../../pages/Customer/Automations/SalesAgents/SalesAgents.tsx'), 'utf8',
-  );
+  const tela = fonteDaIaVendedora();
 
   it('oferece o tipo form e grava form_ids dentro do gatilho', () => {
     expect(tela).toContain("{ value: 'form', label:");

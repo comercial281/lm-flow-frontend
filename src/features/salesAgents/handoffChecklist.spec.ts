@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { fonteDaIaVendedora } from '../../test/fonteDaIaVendedora';
+
 import { checklistItems, checklistNotices, normalizeQuestion, toggleRequired } from './handoffChecklist';
 
 // O cenário "Só depois de arrancar as informações do lead" (21/09/2026).
@@ -154,10 +156,7 @@ describe('checklistNotices', () => {
 // `saveAgent` — a cicatriz dos dois campos do book do imóvel, que a tela mostra e não
 // salva. `transfer_config` já está lá, e é por dentro dele que as obrigatórias viajam.
 describe('a gravação passa pelo saveAgent', () => {
-  const tela = readFileSync(
-    resolve(__dirname, '../../pages/Customer/Automations/SalesAgents/SalesAgents.tsx'),
-    'utf8',
-  );
+  const tela = fonteDaIaVendedora();
 
   it('transfer_config está na lista campo a campo', () => {
     expect(tela).toMatch(/transfer_config:\s*patch\.transfer_config/);
