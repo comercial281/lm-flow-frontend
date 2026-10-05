@@ -47,7 +47,6 @@ describe('toda rota do CRM confere o cargo', () => {
     ['/properties/map', 'properties', 'read'],
     ['/properties/new', 'properties', 'create'],
     ['/properties/:id/editar', 'properties', 'update'],
-    ['/books', 'properties', 'read'],
     ['/visits', 'visits', 'read'],
     ['/proposals', 'proposals', 'read'],
     ['/contracts', 'contracts', 'read'],

@@ -4198,8 +4198,8 @@ O que aparece na tela:
 Decisões do dono (não reabrir sem ele pedir):
 
 - **O menu do corretor sai do cargo, não de um segundo menu.** Com o Corretor de
-  fábrica ele vê Principal, Imóveis (Meus imóveis, Books) e Leads (Contatos,
-  Bolsão). O `menuItems.spec` trava essa lista.
+  fábrica ele vê Principal, Imóveis (Meus imóveis) e Leads (Contatos,
+  Bolsão). *(A tela Books, que aparecia aqui, saiu do menu em 04/10/2026: ver a seção *Book dentro do cadastro*.)* O `menuItems.spec` trava essa lista.
 - **Telas de gestão pedem, no menu, a chave da rota + uma de escrita** (`gestao()`
   em `menuItems.ts`): WhatsApp (`inboxes.update`), Etiquetas (`labels.create`),
   Variáveis (`canned_responses.create`), Meu site (`sites.update`). O Corretor lê
@@ -6043,6 +6043,36 @@ Fase 4, entrega 5. Spec: `LM FLOW/specs/2026-10-03-fase-4-imoveis-mapa-pelo-cep-
 **Pendências conhecidas:** o backend ainda não expõe `metadata.location_precision` no JSON (o aviso de pontos antigos não sabe a precisão real); sem ponto e sem cidade achada, o aviso "Arraste o alfinete" aparece sem alfinete na tela.
 
 **Não reabrir sem o dono pedir:** o alfinete exato só para empreendimento, a revenda só com região, e o ponto manual que não pula.
+
+## Book dentro do cadastro (desde 2026-10-04)
+
+Fase 4, entrega 6 (parte A). Spec: `LM FLOW/specs/2026-10-04-fase-4-imoveis-book-no-cadastro-design.md` (pasta do Tony, fora deste repo). Só frontend, sem mudança no servidor (`propertiesService.uploadBook` / `removeBook` já existiam). Este bloco **substitui** a tela *Books* (aba do menu de Imóveis), que existia desde a importação via book.
+
+**Decisões do dono (não reabrir sem ele pedir):**
+
+1. **A IA Vendedora não lê o book.** O cadastro novo já tem os detalhes; o book é **enviado** no chat, como antes.
+2. **Um book por empreendimento.** Sem vários materiais por imóvel.
+3. **O book entra no cadastro**, na seção *Fotos e vídeos*: subir, ver, trocar e remover (`BlocoDoBook.tsx`, renderizado por `SecaoMidia`).
+4. **"Preencher pelo book" também guarda o book:** um envio só preenche os campos e anexa o PDF.
+5. **O book só preenche campo vazio.** Nunca sobrescreve o que o corretor digitou.
+6. **A tela *Books* saiu do menu.** `/books` virou `<Navigate to="/properties" replace />` (sem `PermissionRoute`: quem não vê imóveis cai na regra de `/properties`). `PropertyBooks.tsx` foi apagada; `PropertyBookDialog` ficou (a lista e o cadastro usam).
+7. **Captação pelo book no site** (botão *Receber o book no WhatsApp*, gatilho e ação *Enviar o book do imóvel de interesse*) é a **parte C**, junto com as sobras do site. Fora daqui.
+
+**O que o bloco faz:**
+
+- **Quando aparece:** em **empreendimento** sempre. Em **revenda** só quando já tem book (`editando?.has_book`), e aí só *Ver book* e *Remover*: não sobe nem troca. Revenda sem book não mostra o bloco.
+- **Criação:** o PDF escolhido fica guardado na página (estado `book`, conta como alteração não salva) e sobe logo depois do `create`. Se o `create` falha, nada sobe e o arquivo continua escolhido (um segundo *Cadastrar* sobe uma vez só). Se o `create` dá certo e o envio falha, o imóvel fica criado, aparece o aviso para subir de novo na edição e a navegação segue.
+- **Edição:** subir, trocar e remover gravam na hora, como *Gerenciar fotos*. Remover pede confirmação (`useConfirmacao`). Durante um envio os botões ficam travados e o estado mostrado vem do imóvel que o servidor devolveu. *Ver book* abre o `PropertyBookDialog`.
+- **Trava do arquivo:** só PDF (`application/pdf` ou `.pdf`), até **200 MB** (a mesma do servidor; há books de 60 a 75 MB, por isso mostra o andamento). Fora disso: aviso e nada sobe (`validarBook`).
+- **Preencher pelo book (só na criação, como antes):** o arquivo **PDF** em cadastro de **empreendimento** também vira o book do imóvel, **se ainda não houver um escolhido**; o aviso diz *Book anexado*. Word, foto e .txt não viram book.
+- **"Só vazio"** (`PreencherPorTexto.tsx`): um campo é preenchido quando está nulo, em branco ou igual ao valor de fábrica do cadastro novo (`{ ...FORMULARIO_VAZIO, ...formularioNovo(kind) }`). Preço ou quartos que o corretor já digitou não mudam. Características e tipologias continuam somando, sem apagar.
+
+**Fica:** o *Ver book* no menu ⋮ de cada imóvel da lista e o *Enviar book* do chat.
+
+Armadilhas:
+
+1. **Não recrie a rota `/books` com `PermissionRoute`:** o redirecionamento não pode barrar quem não tem a permissão antes de chegar em `/properties`. `/books` saiu de `permissionRoutes.ts` e do `menuItems.spec`.
+2. **O book da revenda é exceção só de leitura.** Não abra subir/trocar para revenda sem o dono pedir (decisão 2: o book é do empreendimento).
 
 ## Meu site · Personalizar: página inicial (desde 2026-10-04)
 

@@ -26,7 +26,6 @@ import {
   CadastroDoImovel,
   GestaoDeProprietarios,
   FichaDoProprietario,
-  PropertyBooks,
   Visits,
   Proposals,
   Contracts,
@@ -73,7 +72,7 @@ import SurveyResponse from '@/pages/Public/Survey/SurveyResponse';
 // baixado só quando a rota é acessada. Reduz o bundle inicial (era ~7MB num arquivo).
 // (Dashboard, Contacts, ScheduledActions, Channels, ChatPage, Pipelines, Disparos,
 // TeamAccess, AccountSettings, Labels, CustomAttributes, SiteBuilder,
-// Properties, PropertyBooks, Visits, Proposals, Contracts,
+// Properties, Visits, Proposals, Contracts,
 // PropertyInterests, AutomationsLayout, SalesAgents, PortalsList,
 // DashboardAppPage, Tutorials, Marketplace — importadas de
 // ./lazyPages, ver import acima.)
@@ -1083,14 +1082,9 @@ const AppRouter = () => {
               }
             />
 
-            <Route
-              path="/books"
-              element={
-                <PermissionRoute resource="properties" action="read">
-                  <PropertyBooks />
-                </PermissionRoute>
-              }
-            />
+            {/* A tela Books saiu (o book mora no cadastro do imóvel). Sem
+                PermissionRoute: quem não vê imóveis cai na regra de /properties. */}
+            <Route path="/books" element={<Navigate to="/properties" replace />} />
 
             <Route
               path="/properties/map"

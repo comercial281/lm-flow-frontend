@@ -1,7 +1,7 @@
 // PropertyBookDialog — visualiza e baixa o book (PDF) salvo no imóvel.
 // Read-only: o book é gravado automaticamente na importação via book (backend).
 // Os campos vêm no próprio objeto Property (book_url/book_file_name), sem novo fetch.
-// Compartilhado entre o card de imóveis (Properties) e a aba dedicada "Books".
+// Compartilhado entre a lista de imóveis (Properties) e o cadastro (bloco do book).
 import {
   Button,
   Dialog,

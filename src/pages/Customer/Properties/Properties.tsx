@@ -771,4 +771,4 @@ export default function Properties() {
 
 // PropertyBookDialog — visualiza e baixa o book (PDF) salvo no imóvel.
 // PropertyBookDialog foi extraído para @/components/properties/PropertyBookDialog
-// (compartilhado com a aba dedicada "Books").
+// (compartilhado com o bloco do book no cadastro).

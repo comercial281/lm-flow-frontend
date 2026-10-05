@@ -33,7 +33,6 @@ export const CadastroDoImovel = lazyWithRetry(() => import('@/pages/Customer/Pro
 // Gestão de proprietários (lista + Novas captações) e a ficha de cada um.
 export const GestaoDeProprietarios = lazyWithRetry(() => import('@/pages/Customer/PropertyOwners/GestaoDeProprietarios'));
 export const FichaDoProprietario = lazyWithRetry(() => import('@/pages/Customer/PropertyOwners/FichaDoProprietario'));
-export const PropertyBooks = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.PropertyBooks })));
 export const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then(m => ({ default: m.Visits })));
 export const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));
 export const Contracts = lazyWithRetry(() => import('@/pages/Customer/Contracts').then(m => ({ default: m.Contracts })));
@@ -63,7 +62,6 @@ export const routePrefetchMap: Record<string, () => Promise<unknown>> = {
   '/ia-vendedora': SalesAgents.__preload,
   '/equipe': TeamAccess.__preload,
   '/properties': Properties.__preload,
-  '/books': PropertyBooks.__preload,
   '/property-owners': GestaoDeProprietarios.__preload,
   '/settings/portals': PortalsList.__preload,
   '/visits': Visits.__preload,

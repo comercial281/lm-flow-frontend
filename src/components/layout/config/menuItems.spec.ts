@@ -45,7 +45,6 @@ describe('o menu do CRM confere o cargo', () => {
     ['/disparos', 'broadcasts.read'],
     ['/ia-vendedora', 'sales_agents.read'],
     ['/properties', 'properties.read'],
-    ['/books', 'properties.read'],
     ['/property-owners', 'properties.read'],
     ['/settings/portals', 'portals.read'],
     ['/visits', 'visits.read'],
@@ -107,7 +106,7 @@ describe('menu novo: seções (fase 4)', () => {
     // Gestão de proprietários passa no cargo; quem tira do corretor sem
     // proprietário liberado é o `aplicarProprietariosNoMenu`, no MainLayout.
     expect(vistas.flatMap(s => s.itens.map(i => i.name))).toEqual([
-      'Dashboard', 'Conversas', 'Funil de vendas', 'Visitas', 'Meus imóveis', 'Gestão de proprietários', 'Books', 'Contatos', 'Bolsão',
+      'Dashboard', 'Conversas', 'Funil de vendas', 'Visitas', 'Meus imóveis', 'Gestão de proprietários', 'Contatos', 'Bolsão',
       'Funis de mensagem',
     ]);
   });

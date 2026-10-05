@@ -20,7 +20,6 @@ import {
   Building,
   CalendarClock,
   Globe,
-  FileText,
   Megaphone,
   LifeBuoy,
   Rocket,
@@ -219,8 +218,6 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       { id: 'proprietarios', name: 'Gestão de proprietários', href: '/property-owners', icon: UserRoundCheck, ...permissionFromRoute('/property-owners'), featureKey: 'properties' },
       // Gestão do site: pede `sites.update` além da leitura (ver `gestao`).
       { name: 'Meu site', href: '/settings/site-builder', icon: Globe, ...gestao('/settings/site-builder', 'sites.update'), featureKey: 'site_builder' },
-      // Books (PDF) salvos nos imóveis — visualizar e baixar
-      { name: 'Books', href: '/books', icon: FileText, ...permissionFromRoute('/books'), featureKey: 'properties' },
     ],
   },
   {
