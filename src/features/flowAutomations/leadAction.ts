@@ -140,6 +140,7 @@ const PARAM_NAMES: Record<string, string> = {
 
 function paramName(type: string, key: string): string {
   if (key === 'user_id' && type === 'assign_broker') return 'o corretor';
+  if (key === 'flow_automation_id' && type === 'send_message_funnel') return 'o funil de mensagens';
   return PARAM_NAMES[key] ?? key;
 }
 

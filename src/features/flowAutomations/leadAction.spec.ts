@@ -8,7 +8,7 @@ import { missingActionParams } from '@/services/leadAutomation/leadAutomationSer
 
 const resources: AutomationResources = {
   labels: [], sequences: [], followupFlows: [], users: [{ id: 'u1', name: 'Ana' } as never], pipelines: [], stagesByPipeline: {}, quickReplies: [],
-  adOrigins: [], formOrigins: [], messageFunnels: [], evolutionInstances: [],
+  adOrigins: [], formOrigins: [], messageFunnels: [], conversationFunnels: [], evolutionInstances: [],
   reloadFunnels: () => {}, reloadLabels: () => {}, loading: false,
 };
 

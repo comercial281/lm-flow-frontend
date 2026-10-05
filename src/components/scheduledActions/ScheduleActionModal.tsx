@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { apiErrorMessage } from '@/utils/apiHelpers';
 import { plural, telefone } from '@/lib/formato';
 import {
   Dialog,
@@ -19,18 +18,16 @@ import {
 } from '@/components/ui/ds';
 import { scheduledActionsService } from '@/services/scheduledActions/scheduledActionsService';
 import { followupSequencesService } from '@/services/followupSequences/followupSequencesService';
-import {
-  messageFunnelsService,
-  tenantTemplateVariablesService,
-} from '@/services/messageFunnels/messageFunnelsService';
-import type { MessageFunnel, MessageFunnelItem, TemplateVariable } from '@/types/messageFunnels';
+import { tenantTemplateVariablesService } from '@/services/messageFunnels/messageFunnelsService';
+import type { TemplateVariable } from '@/types/messageFunnels';
+import { ConversationFunnelSelect } from '@/components/flowAutomations/ConversationFunnelSelect';
 import InboxesService from '@/services/channels/inboxesService';
 import { contactsService } from '@/services/contacts';
 import type { ScheduledAction, CreateScheduledAction } from '@/types/automation';
 import type { Inbox } from '@/types/channels/inbox';
 import type { Contact } from '@/types/contacts';
 import { useLanguage } from '@/hooks/useLanguage';
-import { Search, Loader2, Plus, Trash2, Save, CalendarClock } from 'lucide-react';
+import { Search, Loader2, Plus, Trash2, CalendarClock } from 'lucide-react';
 import { toast } from 'sonner';
 import MessageSequenceEditor, {
   type SequenceDraftItem,
@@ -68,7 +65,19 @@ function itemIsValid(it: SequenceDraftItem) {
   return it.kind === 'text' ? (it.text_content ?? '').trim() !== '' : !!it.media_url;
 }
 
-function draftFromFunnelItem(it: MessageFunnelItem): SequenceDraftItem {
+// Item já gravado no agendamento (`payload.funnel_items`, o snapshot da
+// sequência) → item do editor, pra editar o agendamento.
+interface SavedSequenceItem {
+  kind: SequenceDraftItem['kind'];
+  text_content: string | null;
+  media_url: string | null;
+  media_filename: string | null;
+  media_caption: string | null;
+  delay_seconds: number;
+  config?: Record<string, unknown> | null;
+}
+
+function draftFromSavedItem(it: SavedSequenceItem): SequenceDraftItem {
   return {
     uiKey: crypto.randomUUID(),
     kind: it.kind,
@@ -135,7 +144,6 @@ export function ScheduleActionModal({
     { items: [newSequenceItem()], delayValue: 1, delayUnit: 'days' },
   ]);
   const [variables, setVariables] = useState<TemplateVariable[]>([]);
-  const [funnelTemplates, setFunnelTemplates] = useState<MessageFunnel[]>([]);
 
   const isRichChannel = formData.channel !== '' && formData.channel !== 'email';
 
@@ -171,59 +179,7 @@ export function ScheduleActionModal({
           { token: 'email', placeholder: '{{email}}', label: 'E-mail', builtin: true },
         ]),
       );
-    messageFunnelsService
-      .list({ activeOnly: true })
-      .then(setFunnelTemplates)
-      .catch(() => setFunnelTemplates([]));
   }, [open]);
-
-  const loadTemplateIntoBlock = async (blockIdx: number, funnelId: string) => {
-    try {
-      const funnel = await messageFunnelsService.get(funnelId);
-      const items = funnel.items.length ? funnel.items.map(draftFromFunnelItem) : [newSequenceItem()];
-      updateBlock(blockIdx, { items });
-      toast.success(`Modelo "${funnel.name}" carregado`);
-    } catch {
-      toast.error('Não consegui carregar o modelo.');
-    }
-  };
-
-  const saveBlockAsTemplate = async (blockIdx: number) => {
-    const items = blocks[blockIdx]?.items.filter(itemIsValid) ?? [];
-    if (!items.length) {
-      toast.error('Monte a mensagem antes de salvar o modelo.');
-      return;
-    }
-    // Continua sendo a caixinha do navegador de propósito: o substituto
-    // (usePergunta) é um Dialog, e este componente já É o conteúdo de um.
-    //
-    // Dialog dentro de Dialog mexe com armadilha de foco e com empilhamento —
-    // e aqui há um campo de texto que precisa receber o foco pra funcionar,
-    // justamente o que a armadilha do diálogo de fora disputa. Não se confere
-    // lendo código: precisa de navegador.
-    const name = window.prompt('Nome do modelo:')?.trim();
-    if (!name) return;
-    try {
-      await messageFunnelsService.create({
-        name,
-        category: 'geral',
-        active: true,
-        shared: true,
-        items: toSeqPayload(items).map((it, idx) => ({
-          position: idx,
-          kind: it.kind,
-          text_content: it.text_content,
-          media_caption: it.media_caption,
-          media_filename: it.media_filename,
-          delay_seconds: it.delay_seconds,
-        })),
-      });
-      toast.success('Modelo salvo na biblioteca.');
-      setFunnelTemplates(await messageFunnelsService.list({ activeOnly: true }));
-    } catch (e) {
-      toast.error(apiErrorMessage(e, 'Não consegui salvar o modelo.'));
-    }
-  };
 
   const channelOptions = useMemo<ChannelOption[]>(() => buildChannelOptions(availableInboxes, t), [availableInboxes, t]);
 
@@ -352,10 +308,10 @@ export function ScheduleActionModal({
         media_url: sv(action.payload.media_url),
       });
       const fi = Array.isArray(action.payload.funnel_items)
-        ? (action.payload.funnel_items as MessageFunnelItem[])
+        ? (action.payload.funnel_items as SavedSequenceItem[])
         : [];
       if (fi.length) {
-        setBlocks([{ items: fi.map(draftFromFunnelItem), delayValue: 1, delayUnit: 'days' }]);
+        setBlocks([{ items: fi.map(draftFromSavedItem), delayValue: 1, delayUnit: 'days' }]);
       } else if (sv(action.payload.message)) {
         setBlocks([
           {
@@ -702,26 +658,8 @@ export function ScheduleActionModal({
                           <CalendarClock className="h-3.5 w-3.5" /> Bloco {i + 1}
                         </span>
                         <div className="flex items-center gap-2">
-                          {funnelTemplates.length > 0 && (
-                            <Select value="" onValueChange={v => loadTemplateIntoBlock(i, v)}>
-                              <SelectTrigger className="h-7 w-40 text-xs">
-                                <SelectValue placeholder="Usar modelo" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {funnelTemplates.map(f => (
-                                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                          <button
-                            type="button"
-                            title="Salvar como modelo na biblioteca"
-                            onClick={() => saveBlockAsTemplate(i)}
-                            className="text-muted-foreground hover:text-foreground"
-                          >
-                            <Save className="h-3.5 w-3.5" />
-                          </button>
+                          {/* "Usar funil" (05/10/2026): os funis de conversa de Funis de mensagem. */}
+                          <ConversationFunnelSelect enabled={open} onLoad={items => updateBlock(i, { items })} />
                           {blocks.length > 1 && (
                             <button
                               type="button"

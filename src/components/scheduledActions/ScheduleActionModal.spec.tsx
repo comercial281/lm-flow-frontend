@@ -33,8 +33,9 @@ vi.mock('@/services/contacts', () => ({
 
 // ⚠️ ESTE MOCK EXISTE PRA IMPEDIR QUE A SUÍTE VOLTE A CONGELAR.
 //
-// O modal chama messageFunnelsService.list() e tenantTemplateVariablesService.list()
-// ao montar. Sem mock, o axios dispara XHR de verdade — e como a variável de
+// O modal chama flowAutomationsService.list() ("Usar funil", os funis de
+// conversa) e tenantTemplateVariablesService.list() ao montar. Sem mock, o
+// axios dispara XHR de verdade — e como a variável de
 // ambiente da API não existe em teste, a URL sai como `undefined/api/v1/...`,
 // que o jsdom resolve contra http://127.0.0.1:3000.
 //
@@ -45,12 +46,14 @@ vi.mock('@/services/contacts', () => ({
 //
 // Rede em teste unitário é sempre isso: ou está mockada, ou é uma bomba-relógio
 // que depende de como a máquina de quem roda trata uma porta fechada.
-vi.mock('@/services/messageFunnels/messageFunnelsService', () => ({
-  messageFunnelsService: {
+vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
+  flowAutomationsService: {
     list: vi.fn().mockResolvedValue([]),
     get: vi.fn().mockResolvedValue(null),
-    create: vi.fn().mockResolvedValue({}),
   },
+}));
+
+vi.mock('@/services/messageFunnels/messageFunnelsService', () => ({
   tenantTemplateVariablesService: {
     list: vi.fn().mockResolvedValue([]),
   },

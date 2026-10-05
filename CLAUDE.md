@@ -6007,7 +6007,8 @@ Armadilhas:
    do `#388`) precisa rodar junto com este PR. A conversão NÃO desativa o
    funil antigo (decisão de 04/10): Disparos, disparo em massa do Funil de
    vendas, agendamento de envio e a ação "Disparar funil de mensagens" ainda
-   leem os funis antigos — migrar essas telas é passo à parte.
+   leem os funis antigos — migrar essas telas é passo à parte. **Feito em
+   05/10/2026:** ver "Funis novos em tudo" abaixo.
 
 ## Usuários de todos os clientes (03/10/2026)
 
@@ -6429,3 +6430,64 @@ Entrega 6 da Área do Admin (spec `LM FLOW/specs/2026-10-04-admin-visao-geral-en
 - 'Pessoas que não recebem aviso' conta só quem aparece na lista de Usuários (sem equipe Leal Mídia e sem desativados).
 - O tempo de 10 s conta desde o começo da leitura; cada consulta confere o tempo que sobra (cliente que estoura vira "não deu tempo de ler", nunca erro da tela). Sem nenhum cliente lido, os cartões de Números mostram "—" (só o Custo da IA fica, se veio); o "Atualizar" fica "Atualizando…" e travado enquanto lê.
 - Não reabrir sem o dono pedir: o "ninguém usando" é número (aba Números), não alerta (decisão do Tony, 04/10).
+
+## Funis novos em tudo: Disparos, disparo em massa, agendamento e a ação das Automações (05/10/2026)
+
+Fecha a armadilha 8 da seção de 04/10: toda tela que ainda lia os funis antigos
+(`messageFunnelsService`, `/message_funnels`) passou a ler os **funis de
+conversa** (`GET /flow_automations?kind=conversation`, os do usuário + os da
+equipe). Depende do backend `lm-flow` (PR "funis novos em tudo": a ação no
+servidor e o `message_count` da lista) — **o backend entra primeiro**.
+
+- **"Usar funil"** no **disparo em massa** do Funil de vendas
+  (`BulkDispatchModal`) e no **Agendar envio** (`ScheduleActionModal`, por
+  bloco): lista **Meus funis** / **Da equipe**, só os **ligados e com o passo a
+  passo terminado** (mesma régua do "Disparar funil" da conversa), e carrega o
+  escolhido no editor de sempre. Peça única: `ConversationFunnelSelect`
+  (`components/flowAutomations`), que some quando não há funil pronto.
+- **A conversão** (`features/flowAutomations/conversationFunnelDraft.ts`): os
+  blocos a partir do primeiro (caminho principal) viram itens do editor
+  (`SequenceDraftItem`). "Mandar WhatsApp" com arquivo → foto/vídeo/documento/
+  áudio/figurinha (texto vira legenda só em foto, vídeo e documento — como o
+  servidor manda); com contato → contato; só texto → texto; "Ação de lead" de
+  envio também. **"Esperar" vira item "Aguardar" ANTES da mensagem seguinte**
+  (esperas seguidas somam; espera no começo ou no fim cai fora). O editor e o
+  servidor do disparo/agendamento cortam em **600 s**: espera maior entra como
+  10 minutos. Bloco que não é mensagem (etiqueta, etapa, aviso), espera "até a
+  data" e tipo que a tela não manda (o disparo em massa não manda **contato**
+  nem **figurinha**) ficam de fora. Em todos esses casos sai um aviso
+  (`draftNotice`) junto do "Funil carregado".
+- **"Salvar modelo" saiu** dos dois modais: ele criava funil ANTIGO. A
+  biblioteca agora é Funis de mensagem; no disparo em massa ficou o link
+  **Montar funil** (abre Funis de mensagem em outra aba, pra não perder o que
+  está montado). Se o dono quiser "salvar a sequência como funil" de volta, é
+  criar o funil de conversa pelo servidor (só gestor cria do zero) — não
+  reabrir sem ele pedir.
+- **Disparos · aba Funis** (era "Cadências"): os funis de conversa com o número
+  de mensagens (`message_count` da lista; `funnelMessageCount`), selo **Da
+  equipe**, estado ("desligado", "falta terminar o passo a passo") e **Abrir em
+  Funis de mensagem** (`/automations/message-funnels/:id`). Vazio: **Novo
+  funil** leva pra Funis de mensagem.
+- **Ação "Disparar funil de mensagens"** (regras das Automações e o bloco no
+  construtor, o mesmo `ActionEditor`): **Qual funil**, com Meus funis / Da
+  equipe e o estado no nome; grava `params.flow_automation_id` e **tira o
+  `funnel_id`**. Saíram "Criar funil novo"/"Editar funil" (o editor antigo):
+  ficou o link pra Funis de mensagem (outra aba) e **Recarregar a lista**. A
+  ação antiga (`funnel_id`) abre com a faixa **"(formato antigo)"** e o nome do
+  funil antigo, e continua disparando igual até alguém trocar. O resumo do
+  cartão diz "Funil: X" ou "Funil: X (formato antigo)".
+  - Obrigatório: `flow_automation_id`; a ação antiga com só `funnel_id` segue
+    completa (`missingActionParams` tem o caso especial).
+  - `AutomationResources` ganhou `conversationFunnels`; `messageFunnels`
+    (antigos) ficou só pra dar nome à ação no formato antigo.
+
+O que ainda usa o serviço antigo no frontend:
+
+1. `LeadAutomationsEditors` → `messageFunnelsService.list` só pra mostrar o
+   nome na ação "(formato antigo)".
+2. `tenantTemplateVariablesService` (mesmo arquivo do serviço antigo): as
+   **Variáveis de mensagem** — não é funil, fica.
+3. `pages/Customer/Settings/MessageFunnels` e `components/messageFunnels/
+   MessageFunnelEditor`: **código sem rota** (a rota antiga leva pra página
+   nova). Dá pra apagar num PR de faxina.
+

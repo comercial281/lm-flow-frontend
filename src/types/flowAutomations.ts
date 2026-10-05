@@ -156,6 +156,8 @@ export interface FlowAutomation {
   guide_done?: boolean;
   guide_pending?: FlowGuidePending[];
   permissions?: FlowPermissions;
+  /** 05/10/2026: quantas mensagens o funil manda (vem na lista, que não traz os blocos). */
+  message_count?: number;
 }
 
 export interface FlowAutomationFolder {

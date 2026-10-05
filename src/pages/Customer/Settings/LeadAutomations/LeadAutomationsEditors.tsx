@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Input, Label as UILabel, Textarea, Button } from '@/components/ui/ds';
-import { Plus, Pencil } from 'lucide-react';
+import { Input, Label as UILabel, Textarea } from '@/components/ui/ds';
+import { ExternalLink } from 'lucide-react';
 
-import MessageFunnelEditor from '@/components/messageFunnels/MessageFunnelEditor';
 import { messageFunnelsService } from '@/services/messageFunnels/messageFunnelsService';
 import type { MessageFunnel } from '@/types/messageFunnels';
 import { labelsService } from '@/services/contacts/labelsService';
@@ -39,6 +38,7 @@ import {
 } from './acceptedByFilter';
 import { Seletor } from '@/components/base/Seletor';
 import { VariableChipBar } from '@/components/flowAutomations/VariableChipBar';
+import { FLOW_KIND_COPY } from '@/features/flowAutomations/kind';
 
 // ============================================================================
 // Catálogos por gatilho/ação
@@ -77,7 +77,10 @@ export interface AutomationResources {
   quickReplies: QuickReply[];
   adOrigins: AdOrigin[];
   formOrigins: FormOrigin[];
+  /** Funis ANTIGOS (MessageFunnel): só pra mostrar o nome na ação que ainda usa `funnel_id` (formato antigo). */
   messageFunnels: MessageFunnel[];
+  /** Funis de conversa (Funis de mensagem, sprint 4): o que a ação "Disparar funil de mensagens" escolhe desde 05/10/2026. */
+  conversationFunnels: FlowAutomation[];
   evolutionInstances: EvolutionInstance[];
   reloadFunnels: () => void;
   reloadLabels: () => void;
@@ -96,13 +99,15 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
   const [adOrigins, setAdOrigins] = useState<AdOrigin[]>([]);
   const [formOrigins, setFormOrigins] = useState<FormOrigin[]>([]);
   const [messageFunnels, setMessageFunnels] = useState<MessageFunnel[]>([]);
+  const [conversationFunnels, setConversationFunnels] = useState<FlowAutomation[]>([]);
   const [evolutionInstances, setEvolutionInstances] = useState<EvolutionInstance[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Recarrega a lista de funis (usado após criar/editar um funil dentro da automação).
+  // Recarrega a lista de funis de conversa (o "Recarregar" da ação, depois de
+  // montar um funil em Funis de mensagem, noutra aba).
   const reloadFunnels = () => {
-    messageFunnelsService.list({ activeOnly: false })
-      .then(list => setMessageFunnels(list ?? []))
+    flowAutomationsService.list({ kind: 'conversation' })
+      .then(list => setConversationFunnels((list ?? []).filter(f => !f.archived_at)))
       .catch(() => { /* funis são opcionais — não trava a tela */ });
   };
 
@@ -119,7 +124,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     setLoading(true);
 
     (async () => {
-      const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes, adRes, formRes, funnelsRes, evoRes, fuFlowsRes] = await Promise.allSettled([
+      const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes, adRes, formRes, funnelsRes, evoRes, fuFlowsRes, convRes] = await Promise.allSettled([
         labelsService.getLabels(),
         followupSequencesService.getAll(),
         usersService.getUsers(),
@@ -130,6 +135,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
         messageFunnelsService.list({ activeOnly: false }),
         isSuperAdmin ? leadAutomationService.getEvolutionInstances() : Promise.resolve([]),
         flowAutomationsService.list({ kind: 'followup' }),
+        flowAutomationsService.list({ kind: 'conversation' }),
       ]);
 
       if (cancelled) return;
@@ -143,6 +149,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
       if (funnelsRes.status === 'fulfilled') setMessageFunnels(funnelsRes.value ?? []);
       if (evoRes.status === 'fulfilled') setEvolutionInstances(evoRes.value ?? []);
       if (fuFlowsRes.status === 'fulfilled') setFollowupFlows((fuFlowsRes.value ?? []).filter(f => !f.archived_at));
+      if (convRes.status === 'fulfilled') setConversationFunnels((convRes.value ?? []).filter(f => !f.archived_at));
 
       if (pipelinesRes.status === 'fulfilled') {
         const list = pipelinesRes.value.data ?? [];
@@ -165,7 +172,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     return () => { cancelled = true; };
   }, [enabled]);
 
-  return { labels, sequences, followupFlows, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, messageFunnels, evolutionInstances, reloadFunnels, reloadLabels, loading };
+  return { labels, sequences, followupFlows, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, messageFunnels, conversationFunnels, evolutionInstances, reloadFunnels, reloadLabels, loading };
 }
 
 // ============================================================================
@@ -654,10 +661,6 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
   // Por que a lista veio vazia (instância errada, fora do ar, sem grupo). Sem
   // isso o seletor só ficava sem opção, e não dava pra saber o que consertar.
   const [groupsReason, setGroupsReason] = useState<string | null>(null);
-  // Editor de Funil embutido (ação "Disparar funil de mensagens"): reusa o MESMO
-  // componente do chat — subir mídia, gravar áudio, delay por passo, variáveis, reordenar.
-  const [funnelEditorOpen, setFunnelEditorOpen] = useState(false);
-  const [funnelToEdit, setFunnelToEdit] = useState<MessageFunnel | undefined>(undefined);
   const instanceParam = String(params.instance ?? '');
   useEffect(() => {
     if (action.type !== 'notify_group') return;
@@ -683,67 +686,72 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
 
   switch (action.type) {
     // ----- send_message_funnel -----
-    // "Igual ao funil": escolhe um funil pronto OU cria/edita um na hora com o MESMO
-    // editor do chat. O backend (Executor#send_message_funnel) dispara cada passo.
+    // Desde 05/10/2026 escolhe um funil de CONVERSA (Funis de mensagem) e grava
+    // `params.flow_automation_id`; o servidor começa o funil pro lead
+    // (FlowAutomations::Starter), pelo número da conversa dele, mesmo jeito do
+    // "Disparar funil" da conversa. A ação antiga (`funnel_id`, funil do editor
+    // de antes) continua disparando igual e aparece como "formato antigo" até
+    // alguém escolher um funil novo aqui.
     case 'send_message_funnel': {
-      const selectedFunnelId = String(params.funnel_id ?? '');
-      const selectedFunnel = resources.messageFunnels.find(f => f.id === selectedFunnelId);
+      const atual = String(params.flow_automation_id ?? '');
+      const antigoId = String(params.funnel_id ?? '');
+      const antigo = !atual && antigoId ? resources.messageFunnels.find(f => f.id === antigoId) : undefined;
+      const lista = resources.conversationFunnels ?? [];
+      const conhecido = lista.some(f => f.id === atual);
+      const meus = lista.filter(f => !f.team);
+      const daEquipe = lista.filter(f => f.team);
+      const estado = (f: FlowAutomation) =>
+        f.guide_done === false ? ' (falta terminar o passo a passo)' : !f.is_enabled ? ' (desligado)' : '';
+      const escolher = (id: string) => {
+        const { funnel_id: _antigo, ...resto } = params;
+        onChange({ ...action, params: id ? { ...resto, flow_automation_id: id } : { ...params, flow_automation_id: '' } });
+      };
+      const opcao = (f: FlowAutomation) => (
+        <option key={f.id} value={f.id}>{f.name}{estado(f)}</option>
+      );
       return (
-        <>
-          <Field
-            label="Funil de mensagens *"
-            hint="Mesma sequência que o atendente dispara no chat (texto, áudio, imagem, vídeo — com delay por passo)."
+        <Field
+          label="Qual funil *"
+          hint="Os funis ficam em Funis de mensagem. As mensagens saem pelo número da conversa do lead, com as esperas do funil. Desligado ou com o passo a passo pela metade, ele não dispara."
+        >
+          {!atual && antigoId && (
+            <p className="mb-2 rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs text-amber-800 dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-300">
+              Esta ação usa um funil do editor de antes:{' '}
+              <strong>{antigo ? antigo.name : resources.loading ? 'carregando…' : 'funil que não existe mais'}</strong>{' '}
+              (formato antigo). Ele continua disparando igual. Pra usar um funil de Funis de mensagem, escolha abaixo.
+            </p>
+          )}
+          <Seletor
+            value={atual}
+            onChange={e => escolher(e.target.value)}
+            className={baseSelectClass}
+            aria-label="Qual funil"
           >
-            <Seletor
-              value={selectedFunnelId}
-              onChange={e => setParam('funnel_id', e.target.value)}
-              className={baseSelectClass}
+            <option value="">{!atual && antigoId ? 'Trocar por um funil de Funis de mensagem' : 'Escolha o funil'}</option>
+            {atual && !conhecido && <option value={atual}>{resources.loading ? 'Carregando…' : 'Funil que não existe mais'}</option>}
+            {meus.length > 0 && <optgroup label="Meus funis">{meus.map(opcao)}</optgroup>}
+            {daEquipe.length > 0 && <optgroup label="Da equipe">{daEquipe.map(opcao)}</optgroup>}
+          </Seletor>
+          <div className="flex flex-wrap items-center gap-3 mt-2 text-xs">
+            <a
+              href={atual && conhecido ? `${FLOW_KIND_COPY.conversation.listPath}/${atual}` : FLOW_KIND_COPY.conversation.listPath}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-primary hover:underline"
             >
-              <option value="">Selecione um funil</option>
-              {resources.messageFunnels.map(f => (
-                <option key={f.id} value={f.id}>
-                  {f.name}{f.items?.length ? ` · ${f.items.length} passo${f.items.length === 1 ? '' : 's'}` : ''}
-                </option>
-              ))}
-            </Seletor>
-            <div className="flex flex-wrap items-center gap-2 mt-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => { setFunnelToEdit(undefined); setFunnelEditorOpen(true); }}
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" /> Criar funil novo
-              </Button>
-              {selectedFunnel && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => { setFunnelToEdit(selectedFunnel); setFunnelEditorOpen(true); }}
-                >
-                  <Pencil className="h-3.5 w-3.5 mr-1" /> Editar funil
-                </Button>
-              )}
-            </div>
-            {resources.messageFunnels.length === 0 && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Nenhum funil ainda. Clique em <strong>Criar funil novo</strong> pra montar (sobe mídia, grava áudio, delay por passo).
-              </p>
-            )}
-          </Field>
-
-          <MessageFunnelEditor
-            open={funnelEditorOpen}
-            onClose={() => setFunnelEditorOpen(false)}
-            funnel={funnelToEdit}
-            onSaved={saved => {
-              resources.reloadFunnels();
-              setParam('funnel_id', saved.id);
-              setFunnelEditorOpen(false);
-            }}
-          />
-        </>
+              <ExternalLink className="h-3.5 w-3.5" />
+              {atual && conhecido ? 'Abrir em Funis de mensagem' : '+ Novo funil em Funis de mensagem'}
+            </a>
+            <button type="button" className="text-muted-foreground hover:text-foreground underline" onClick={resources.reloadFunnels}>
+              Recarregar a lista
+            </button>
+          </div>
+          {lista.length === 0 && !resources.loading && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Nenhum funil ainda. Monte um em <strong>Funis de mensagem</strong> (a partir de um modelo pronto) e volte aqui.
+            </p>
+          )}
+        </Field>
       );
     }
 
@@ -1428,8 +1436,15 @@ export function formatActionSummary(
     case 'send_sticker':
       return p.media_url ? `Figurinha: ${String(p.media_url).slice(0, 40)}…` : '(sem figurinha)';
     case 'send_message_funnel': {
-      const f = resources.messageFunnels.find(x => x.id === p.funnel_id);
-      return f ? `Funil: ${f.name}` : 'Funil: (não definido)';
+      if (p.flow_automation_id) {
+        const flow = (resources.conversationFunnels ?? []).find(x => x.id === p.flow_automation_id);
+        return flow ? `Funil: ${flow.name}` : 'Funil: (não encontrado)';
+      }
+      if (p.funnel_id) {
+        const f = (resources.messageFunnels ?? []).find(x => x.id === p.funnel_id);
+        return `Funil: ${f ? f.name : '(não encontrado)'} (formato antigo)`;
+      }
+      return 'Funil: (não definido)';
     }
     case 'assign_broker': {
       const u = resources.users.find(x => x.id === p.user_id);
