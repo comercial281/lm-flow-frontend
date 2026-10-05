@@ -26,6 +26,8 @@ describe('menu da Área do Admin', () => {
     ['/admin/numeros', 'Visão Geral', 'Números'],
     ['/admin/leads-ao-vivo', 'Visão Geral', 'Leads ao vivo'],
     ['/admin/clientes', 'Clientes', 'Clientes'],
+    ['/admin/clientes/pacotes', 'Clientes', 'Pacotes'],
+    ['/admin/clientes/pacotes/p1-uuid', 'Clientes', 'Pacotes'],
     ['/admin/clientes/numeros', 'Clientes', 'Números conectados'],
     ['/admin/clientes/custos', 'Clientes', 'Custos'],
     ['/admin/clientes/8f1c-uuid', 'Clientes', 'Clientes'],
@@ -48,6 +50,11 @@ describe('menu da Área do Admin', () => {
     const d = dono(pathname);
     expect(d?.item.name).toBe(item);
     expect(d?.aba?.name).toBe(aba);
+  });
+
+  it('/admin/clientes/pacotes acende Pacotes e não Clientes', () => {
+    expect(dono('/admin/clientes/pacotes')?.aba?.name).not.toBe('Clientes');
+    expect(dono('/admin/clientes/pacotes/p1-uuid')?.aba?.name).not.toBe('Clientes');
   });
 
   it('Equipe não tem abas e casa pelo endereço do item', () => {
