@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/ds';
 import { clientesService } from '@/services/superAdmin/clientesService';
 import type { ClientePooled } from '@/types/admin/clientes';
 import { rotuloDaSituacao } from '../situacao';
+import AbaFuncoes from './AbaFuncoes';
 import AbaResumo from './AbaResumo';
 import MenuDoCliente from './MenuDoCliente';
 
@@ -27,6 +28,7 @@ type ChaveDaAba = (typeof ABAS)[number]['chave'];
 
 const CONTEUDO: Partial<Record<ChaveDaAba, (p: PropsDaAba) => ReactElement>> = {
   resumo: ({ cliente }) => <AbaResumo cliente={cliente} />,
+  funcoes: (p) => <AbaFuncoes {...p} />,
 };
 
 export default function Pagina() {
