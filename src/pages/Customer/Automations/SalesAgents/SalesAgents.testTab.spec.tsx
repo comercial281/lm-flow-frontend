@@ -18,7 +18,7 @@ const toastSuccess = vi.hoisted(() => vi.fn());
 const toastError = vi.hoisted(() => vi.fn());
 vi.mock('sonner', () => ({ toast: { success: toastSuccess, error: toastError } }));
 
-import { TestTab } from './SalesAgents';
+import { TestTab } from './telas/TelaTestar';
 import type { SalesAgent, SalesAgentTestResult } from '@/services/salesAgents/salesAgentsService';
 
 const agent = { id: 'agent-1' } as unknown as SalesAgent;

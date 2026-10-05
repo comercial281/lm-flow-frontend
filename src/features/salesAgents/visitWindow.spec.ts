@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+
+import { fonteDaIaVendedora } from '../../test/fonteDaIaVendedora';
 
 import { antecedenciaResumo } from './visitWindow';
 
@@ -10,9 +10,6 @@ import { antecedenciaResumo } from './visitWindow';
 //
 // A mecânica mora no servidor. Aqui ficam a leitura da antecedência e as duas
 // cicatrizes desta tela, que são CALADAS — nenhuma quebra tipo, render ou build.
-const read = (p: string) => readFileSync(resolve(__dirname, '../../..', p), 'utf8');
-
-const TELA = 'src/pages/Customer/Automations/SalesAgents/SalesAgents.tsx';
 
 describe('a leitura da antecedência mínima', () => {
   it('traduz 24 horas para "amanhã", que é o que o número significa', () => {
@@ -39,7 +36,7 @@ describe('a leitura da antecedência mínima', () => {
 });
 
 describe('a chave da visita no mesmo dia', () => {
-  const tela = read(TELA);
+  const tela = fonteDaIaVendedora();
 
   // Ausente = LIGADA. Lida com `=== true`, todo agente que já existe apareceria
   // DESLIGADO na tela — e o gestor "ligaria" algo que já estava valendo. Mesma

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { fonteDaIaVendedora } from '../../test/fonteDaIaVendedora';
 
 import { speaksAsBroker, toggleVoice } from './handoffVoice';
 
@@ -22,7 +22,7 @@ describe('handoffVoice', () => {
 
   // Campo solto do agente é descartado pela lista campo a campo do saveAgent.
   it('a tela grava por dentro do transfer_config', () => {
-    const tela = readFileSync('src/pages/Customer/Automations/SalesAgents/SalesAgents.tsx', 'utf-8');
+    const tela = fonteDaIaVendedora();
     expect(tela).toContain('toggleVoice(cfg, v)');
     expect(tela).not.toMatch(/\bvoice:\s*['"]first_person['"]/);
   });

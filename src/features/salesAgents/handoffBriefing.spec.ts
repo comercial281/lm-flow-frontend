@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { fonteDaIaVendedora } from '../../test/fonteDaIaVendedora';
 
 import { briefingEnabled, keepBriefing, toggleBriefing } from './handoffBriefing';
 
@@ -63,7 +63,7 @@ describe('handoffBriefing', () => {
   // A tela monta o PATCH campo a campo: campo solto do agente é descartado em
   // silêncio, com o aviso dizendo "Salvo".
   describe('a tela', () => {
-    const tela = readFileSync('src/pages/Customer/Automations/SalesAgents/SalesAgents.tsx', 'utf-8');
+    const tela = fonteDaIaVendedora();
 
     it('grava a chave por dentro do transfer_config, nunca como campo solto', () => {
       expect(tela).toContain('toggleBriefing(cfg, v)');

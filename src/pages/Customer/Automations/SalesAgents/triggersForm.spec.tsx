@@ -10,7 +10,7 @@ vi.mock('@/services/pipelines/pipelinesService', () => ({
   pipelinesService: { getPipelines: vi.fn().mockResolvedValue({ data: [] }), getPipelineStages: vi.fn() },
 }));
 
-import { TriggersSection } from './SalesAgents';
+import { TriggersSection } from './configuracao/legado/TriggersSection';
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 
 function Harness() {
