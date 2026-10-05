@@ -11,6 +11,7 @@ import type { ClientePooled } from '@/types/admin/clientes';
 import { rotuloDaSituacao } from '../situacao';
 import AbaContrato from './AbaContrato';
 import AbaFuncoes from './AbaFuncoes';
+import AbaOperacao from './AbaOperacao';
 import AbaPessoas from './AbaPessoas';
 import AbaResumo from './AbaResumo';
 import MenuDoCliente from './MenuDoCliente';
@@ -33,6 +34,7 @@ const CONTEUDO: Partial<Record<ChaveDaAba, (p: PropsDaAba) => ReactElement>> = {
   contrato: (p) => <AbaContrato {...p} />,
   funcoes: (p) => <AbaFuncoes {...p} />,
   pessoas: (p) => <AbaPessoas {...p} />,
+  operacao: (p) => <AbaOperacao {...p} />,
 };
 
 export default function Pagina() {
