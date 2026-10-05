@@ -242,7 +242,7 @@ describe('SiteBuilder (casca do Meu site)', () => {
 
       expect(payload.property_page).toEqual({
         resale: { map: false, popular_badge: true, values: true, similar: false },
-        development: { map: true, popular_badge: true, stage_and_forecast: true, typologies: true, builder: true, similar: true },
+        development: { map: true, popular_badge: true, stage_and_forecast: true, typologies: true, builder: true, similar: true, book_button: false },
         financing_badges: true,
         email_copy: ['dono@imob.com'],
       });

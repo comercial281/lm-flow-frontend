@@ -13,7 +13,8 @@ export const CHAVES_EMPREENDIMENTO: ChaveEmpreendimento[] = ['map', 'popular_bad
 /** O que o site público recebe. `email_copy` nunca vem no público. */
 export interface FichaConfig {
   resale: Record<ChaveRevenda, boolean>;
-  development: Record<ChaveEmpreendimento, boolean>;
+  /** `book_button` não é caixinha de "o que aparece": é a chave do "Receber o book no WhatsApp". */
+  development: Record<ChaveEmpreendimento, boolean> & { book_button: boolean };
   financing_badges: boolean;
 }
 
@@ -26,7 +27,7 @@ const ligadas = <K extends string>(chaves: K[]) => Object.fromEntries(chaves.map
 
 export const FICHA_FABRICA: FichaConfig = {
   resale: ligadas(CHAVES_REVENDA),
-  development: ligadas(CHAVES_EMPREENDIMENTO),
+  development: { ...ligadas(CHAVES_EMPREENDIMENTO), book_button: false },
   financing_badges: true,
 };
 
@@ -41,7 +42,8 @@ export function resolverFicha(raw: unknown): FichaConfig {
   const r = obj(raw);
   return {
     resale: chaves(CHAVES_REVENDA, r.resale),
-    development: chaves(CHAVES_EMPREENDIMENTO, r.development),
+    // Ao contrário das outras, o book só liga com `true` explícito (padrão desligado).
+    development: { ...chaves(CHAVES_EMPREENDIMENTO, r.development), book_button: obj(r.development).book_button === true },
     financing_badges: r.financing_badges !== false,
   };
 }

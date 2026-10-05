@@ -10,6 +10,7 @@ import {
 import { Secao, Secoes } from '../ui/Secao';
 import { CLASSE_DO_CAMPO, descricaoDoCampo } from '../ui/Campo';
 import type { FormProps } from './tipos';
+import BookPeloSite from './BookPeloSite';
 
 // Página do imóvel (Meu site › Personalizar). O que a tela manda é SEMPRE o
 // `property_page` inteiro: o servidor troca o bloco gravado pelo recebido.
@@ -63,7 +64,7 @@ const ABAS = [
 
 const FABRICA_DO_ADMIN: FichaConfigDoAdmin = { ...FICHA_FABRICA, email_copy: [] };
 
-export default function TelaFicha({ siteForm, setF }: FormProps) {
+export default function TelaFicha({ site, siteForm, setF, aplicarSemMarcar }: FormProps) {
   const ficha: FichaConfigDoAdmin = siteForm.property_page ?? FABRICA_DO_ADMIN;
   const mudar = (parte: Partial<FichaConfigDoAdmin>) => setF({ property_page: { ...ficha, ...parte } });
 
@@ -110,6 +111,13 @@ export default function TelaFicha({ siteForm, setF }: FormProps) {
             ))}
         </div>
       </Secao>
+
+      {tipo === 'development' && site?.id && (
+        <Secao titulo="Receber o book no WhatsApp" id="ficha-book">
+          <BookPeloSite siteId={site.id} ligado={ficha.development.book_button}
+            aoMudarChave={v => aplicarSemMarcar?.({ property_page: { ...ficha, development: { ...ficha.development, book_button: v } } })} />
+        </Secao>
+      )}
 
       <Secao titulo="Selos de financiamento" descricao="Valem para imóveis e empreendimentos.">
         <Caixinha

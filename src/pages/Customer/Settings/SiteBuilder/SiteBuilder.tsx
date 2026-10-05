@@ -327,6 +327,9 @@ export default function SiteBuilder() {
     setSiteFormDirty(true);
   };
 
+  // Gravado no servidor na hora (ex.: chave do book): atualiza a tela sem marcar a ficha, pra não reenviar.
+  const aplicarSemMarcar = (field: Partial<SiteFormData>) => setSiteForm(prev => ({ ...prev, ...field }));
+
   // Telas que mexem em estado fora do siteForm (financiamento, anuncie, destino)
   // marcam o formulário como alterado por aqui.
   const marcarAlterado = useCallback(() => setSiteFormDirty(true), []);
@@ -392,7 +395,7 @@ export default function SiteBuilder() {
         {tela === 'vitrines' && <TelaVitrines {...formProps} />}
         {tela === 'chamadas' && <TelaChamadas {...formProps} />}
         {tela === 'buscados' && <TelaMaisBuscados {...formProps} />}
-        {tela === 'ficha' && <TelaFicha {...formProps} />}
+        {tela === 'ficha' && <TelaFicha {...formProps} aplicarSemMarcar={aplicarSemMarcar} />}
         {tela === 'lista' && <TelaLista {...formProps} />}
         {tela === 'financiamento' && (
           <TelaFinanciamento financingPage={financingPage} setFinancingPage={setFinancingPage} marcarAlterado={marcarAlterado} />

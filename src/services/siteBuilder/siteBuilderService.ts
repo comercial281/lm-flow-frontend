@@ -415,6 +415,12 @@ export interface SiteLead {
   updated_at: string;
 }
 
+// O servidor pode embrulhar em `data`, como o resto da API do site.
+function extractBookFlow(body: unknown): BookFlow {
+  const b = body as { data?: BookFlow } & BookFlow;
+  return b?.data && typeof b.data === 'object' ? b.data : b;
+}
+
 export const SITE_LEAD_STATUS_LABELS: Record<string, string> = {
   received:  'Recebido',
   contacted: 'Contactado',
@@ -431,7 +437,34 @@ export const SITE_LEAD_STATUS_COLORS: Record<string, string> = {
   spam:      'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
 };
 
+/** "Receber o book no WhatsApp": estado do fluxo "Book pelo site" no servidor. */
+export interface BookFlow {
+  ligado: boolean;
+  fluxo_id: string | null;
+  /** O desenho foi mudado no construtor: o PUT nunca mexe nos blocos. */
+  personalizado: boolean;
+  fluxo_ligado: boolean;
+  send_from: 'owner' | 'number' | '';
+  send_from_inbox_id: string | null;
+  mensagem: string;
+  ia_assume: boolean;
+  existe: boolean;
+}
+
+export type BookFlowBody = Pick<BookFlow, 'ligado' | 'send_from' | 'send_from_inbox_id' | 'mensagem' | 'ia_assume'>;
+
 export const siteBuilderService = {
+  async getBookFlow(siteId: string): Promise<BookFlow> {
+    const res = await api.get(`/sites/${siteId}/book_flow`);
+    return extractBookFlow(res.data);
+  },
+
+  /** Cria/religa o fluxo (ligado:true) ou desliga (ligado:false). 422 = sem número disponível. */
+  async putBookFlow(siteId: string, body: BookFlowBody): Promise<BookFlow> {
+    const res = await api.put(`/sites/${siteId}/book_flow`, body);
+    return extractBookFlow(res.data);
+  },
+
   // Sites
   async listSites(): Promise<Site[]> {
     const res = await api.get('/sites');

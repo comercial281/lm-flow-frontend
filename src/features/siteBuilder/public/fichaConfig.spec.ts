@@ -5,9 +5,15 @@ describe('resolverFicha', () => {
   it('fábrica: tudo ligado', () => {
     expect(FICHA_FABRICA).toEqual({
       resale: { map: true, popular_badge: true, values: true, similar: true },
-      development: { map: true, popular_badge: true, stage_and_forecast: true, typologies: true, builder: true, similar: true },
+      development: { map: true, popular_badge: true, stage_and_forecast: true, typologies: true, builder: true, similar: true, book_button: false },
       financing_badges: true,
     });
+  });
+  it('book_button nasce desligado e só liga com true explícito', () => {
+    expect(FICHA_FABRICA.development.book_button).toBe(false);
+    expect(resolverFicha({ development: { book_button: true } }).development.book_button).toBe(true);
+    expect(resolverFicha({ development: { book_button: 'true' } }).development.book_button).toBe(false);
+    expect(resolverFicha({ development: { map: false } }).development.book_button).toBe(false);
   });
   it('ausente (servidor velho) vira fábrica', () => {
     expect(resolverFicha(undefined)).toEqual(FICHA_FABRICA);
