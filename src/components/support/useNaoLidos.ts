@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useSinalSuporte } from './aoVivo';
 import { supportService } from '@/services/support/supportService';
 
 const INTERVALO_MS = 2 * 60 * 1000;
@@ -33,6 +34,9 @@ export function useNaoLidos() {
       document.removeEventListener('visibilitychange', aoVoltar);
     };
   }, [atualizar]);
+
+  // Resposta nova do time chega pelo sinal ao vivo: recontar na hora.
+  useSinalSuporte(() => void atualizar());
 
   return { naoLidos, atualizar };
 }

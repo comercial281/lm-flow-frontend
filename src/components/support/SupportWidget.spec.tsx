@@ -16,6 +16,7 @@ vi.mock('@/services/support/supportService', async orig => ({
 
 import SupportWidget from './SupportWidget';
 import { openSupport } from './openSupport';
+import { avisarSuporte } from './aoVivo';
 import { useAuthStore } from '@/store/authStore';
 
 const detalhe = {
@@ -123,6 +124,24 @@ describe('SupportWidget', () => {
     montar('/dashboard?suporte=t1');
     expect(await screen.findByText('Socorro')).toBeInTheDocument();
     expect(svc.show).toHaveBeenCalledWith('t1');
+  });
+
+  it('sinal ao vivo do mesmo chamado recarrega na hora; de outro chamado, não', async () => {
+    montar('/dashboard?suporte=t1');
+    expect(await screen.findByText('Socorro')).toBeInTheDocument();
+    const antes = svc.show.mock.calls.length;
+    act(() => avisarSuporte('outro'));
+    expect(svc.show.mock.calls.length).toBe(antes);
+    act(() => avisarSuporte('t1'));
+    await waitFor(() => expect(svc.show.mock.calls.length).toBe(antes + 1));
+  });
+
+  it('sinal ao vivo reconta a bolinha', async () => {
+    montar();
+    await waitFor(() => expect(svc.unreadCount).toHaveBeenCalled());
+    const antes = svc.unreadCount.mock.calls.length;
+    act(() => avisarSuporte('t9'));
+    await waitFor(() => expect(svc.unreadCount.mock.calls.length).toBe(antes + 1));
   });
 
   it('chamado resolvido mostra a faixa e deixa escrever de novo', async () => {

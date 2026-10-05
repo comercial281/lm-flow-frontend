@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, Radio, Building2, Smartphone, Wallet, Users, ScrollText, MessageCircle,
   Megaphone, Bell, BellRing, Landmark, GraduationCap, Archive, Globe, LifeBuoy,
-  Bot, Sparkles, Brain, CalendarCheck, UsersRound, Gift,
+  Bot, Sparkles, Brain, CalendarCheck, UsersRound, Gift, TrendingUp,
 } from 'lucide-react';
 import { enderecoCasa } from './menuItems';
 
@@ -42,9 +42,10 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     name: 'Visão Geral',
     href: '/admin',
     icon: LayoutDashboard,
-    description: 'A carteira num relance e os leads chegando agora',
+    description: 'Quem precisa de atenção, os números do período e os leads chegando',
     abas: [
-      { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, exata: true },
+      { name: 'Atenção', href: '/admin', icon: LayoutDashboard, exata: true },
+      { name: 'Números', href: '/admin/numeros', icon: TrendingUp },
       { name: 'Leads ao vivo', href: '/admin/leads-ao-vivo', icon: Radio },
     ],
   },

@@ -30,6 +30,27 @@ describe('Custos', () => {
     expect(screen.getByText('Railway')).toBeInTheDocument();
   });
 
+  it('abre filtrado pelo endereço: cliente e só erros', async () => {
+    apiGet.mockImplementation((url: string) =>
+      Promise.resolve({ data: { success: true, data: url.includes('summary') ? fakeSummary() : { items: [], meta: { total: 0, page: 1, per_page: 50 } } } }));
+    render(<MemoryRouter initialEntries={['/admin/clientes/custos?tenant=tenant_a&so_erros=1']}><Custos /></MemoryRouter>);
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/summary', expect.objectContaining({ params: expect.objectContaining({ tenant: 'tenant_a' }) })));
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/calls', expect.objectContaining({ params: expect.objectContaining({ status: 'error' }) })));
+  });
+
+  it('"só erros" do endereço vale só na primeira carga: desmarcado, trocar o mês não liga de novo', async () => {
+    apiGet.mockImplementation((url: string) =>
+      Promise.resolve({ data: { success: true, data: url.includes('summary') ? fakeSummary() : { items: [], meta: { total: 0, page: 1, per_page: 50 } } } }));
+    render(<MemoryRouter initialEntries={['/admin/clientes/custos?so_erros=1']}><Custos /></MemoryRouter>);
+    const caixa = await screen.findByLabelText('Só erros');
+    await waitFor(() => expect(apiGet).toHaveBeenLastCalledWith('/super/costs/calls', expect.objectContaining({ params: expect.objectContaining({ status: 'error' }) })));
+    fireEvent.click(caixa);
+    await waitFor(() => expect(apiGet).toHaveBeenLastCalledWith('/super/costs/calls', { params: { month: '2026-10', per_page: 20 } }));
+    fireEvent.change(screen.getByLabelText('Mês'), { target: { value: '2026-09' } });
+    await waitFor(() => expect(apiGet).toHaveBeenLastCalledWith('/super/costs/calls', { params: { month: '2026-09', per_page: 20 } }));
+    expect(screen.getByLabelText('Só erros')).not.toBeChecked();
+  });
+
   it('erro aparece como erro, com tentar de novo — nunca como vazio', async () => {
     apiGet.mockRejectedValue(new Error('boom'));
     renderPage();

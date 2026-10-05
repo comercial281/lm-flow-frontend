@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ChatActionCableConnector, type ChatEventHandlers, type ConnectionParams } from '@/services/chat';
+import { avisarSuporte } from '@/components/support/aoVivo';
 
 interface GlobalWebSocketHandlers {
   onMessageCreated?: (data: unknown) => void;
@@ -70,6 +71,8 @@ export const useGlobalWebSocket = (handlers: GlobalWebSocketHandlers) => {
         onNotificationDeleted: (data) => {
           handlersRef.current.onNotificationDeleted?.(data);
         },
+        // Chat de suporte: repassa como evento de janela (card do cliente e tela Suporte do admin).
+        onSupportUpdated: (data) => avisarSuporte(data?.ticket_id),
       };
 
       connectorRef.current = new ChatActionCableConnector(
