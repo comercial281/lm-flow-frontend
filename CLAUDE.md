@@ -6946,8 +6946,9 @@ O que aparece na tela:
   ligar o follow-up nessa situação, e a recusa dele, se vier, aparece no mesmo
   lugar. Desligar o follow-up continua salvando normalmente.
 - **Marcar *Entregar pro follow-up* sem nenhum escolhido já traz o *Follow-up
-  padrão*** do cliente em *Qual follow-up* (o do modelo; sem ele, o de nome exato
-  "Follow-up padrão"; senão, o primeiro ligado; nenhum, fica vazio). Só no clique:
+  padrão*** do cliente em *Qual follow-up* (o marcado como padrão pelo servidor;
+  sem ele, o de nome exato "Follow-up padrão"; senão, o primeiro ligado; nenhum,
+  fica vazio). Só no clique:
   abrir a tela nunca muda nada sozinho. *Entregar pro follow-up* ligado e sem
   follow-up escolhido vira a pendência laranja *O que ela faz quando o lead some*
   (*"Falta escolher o follow-up que recebe o lead."*), passo 7, sem travar o Ligar.
@@ -7025,10 +7026,12 @@ Armadilhas:
    de "A IA escreve" ficaram com o número de tentativas antigo gravado (inclusive
    0, "sem limite"), e o servidor passou a IGNORAR esse teto fora de `'ai'`: não
    é preciso zerar nem corrigir o valor.
-5. **O Follow-up padrão é achado pelo `template_key`** que a lista de fluxos
-   devolve (`followupPadraoId`, em `features/flowAutomations/followupOptions.ts`),
-   com o nome exato como reserva. Renomear o fluxo não quebra; recriar à mão sem
-   o modelo cai na reserva pelo nome.
+5. **O Follow-up padrão é achado pela marca `followup_padrao`** que a lista de
+   fluxos devolve (`state['followup_padrao']` no servidor; `followupPadraoId`, em
+   `features/flowAutomations/followupOptions.ts`), com o nome exato "Follow-up
+   padrão" como reserva. **Nunca pelo `template_key`**: todo "Novo follow-up"
+   nasce com o modelo `follow_up_padrao`, e isso escolheria o "Pós-visita" de
+   alguém. Renomear o padrão não quebra.
 3. **Ordem de publicação:** servidor primeiro (o padrão da coluna vira
    `'sequence'`, e o Follow-up padrão é semeado), depois o rake
    `lm_flow:followup_padrao:aplicar` (simulação, depois `APPLY=1`), e só então

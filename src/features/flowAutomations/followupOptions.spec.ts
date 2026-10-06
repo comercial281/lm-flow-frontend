@@ -67,21 +67,25 @@ describe('faixa do formato antigo', () => {
 
 describe('followupPadraoId (06/10/2026)', () => {
   const f = (id: string, extra: Record<string, unknown> = {}) =>
-    ({ id, name: `Fluxo ${id}`, is_enabled: true, archived_at: null, template_key: null, created_at: '2026-10-01T00:00:00Z', ...extra });
+    ({ id, name: `Fluxo ${id}`, is_enabled: true, archived_at: null, template_key: 'follow_up_padrao', followup_padrao: false, created_at: '2026-10-01T00:00:00Z', ...extra });
 
-  it('prefere o do modelo follow_up_padrao: ligado e o mais antigo', () => {
+  it('prefere o marcado como padrão: ligado e o mais antigo', () => {
     expect(followupPadraoId([
       f('outro'),
-      f('novo', { template_key: 'follow_up_padrao', created_at: '2026-10-06T00:00:00Z' }),
-      f('velho', { template_key: 'follow_up_padrao', created_at: '2026-10-02T00:00:00Z' }),
-      f('desligado', { template_key: 'follow_up_padrao', is_enabled: false, created_at: '2026-09-01T00:00:00Z' }),
+      f('novo', { followup_padrao: true, created_at: '2026-10-06T00:00:00Z' }),
+      f('velho', { followup_padrao: true, created_at: '2026-10-02T00:00:00Z' }),
+      f('desligado', { followup_padrao: true, is_enabled: false, created_at: '2026-09-01T00:00:00Z' }),
     ])).toBe('velho');
   });
 
-  it('sem o modelo, o de nome exato; senão o primeiro ligado; arquivado nunca', () => {
-    expect(followupPadraoId([f('a'), f('b', { name: 'Follow-up padrão' })])).toBe('b');
+  // Todo "Novo follow-up" nasce com o modelo follow_up_padrao: o modelo não diz qual é o padrão.
+  it('o modelo não conta: sem a marca, vale o nome exato', () => {
+    expect(followupPadraoId([f('pos-visita', { name: 'Pós-visita', created_at: '2026-09-01T00:00:00Z' }), f('b', { name: 'Follow-up padrão' })])).toBe('b');
+  });
+
+  it('sem marca nem nome, o primeiro ligado; arquivado nunca', () => {
     expect(followupPadraoId([f('a', { is_enabled: false }), f('b'), f('c')])).toBe('b');
-    expect(followupPadraoId([f('x', { template_key: 'follow_up_padrao', archived_at: '2026-10-05T00:00:00Z' }), f('y')])).toBe('y');
+    expect(followupPadraoId([f('x', { followup_padrao: true, archived_at: '2026-10-05T00:00:00Z' }), f('y')])).toBe('y');
   });
 
   it('nenhum ligado nem padrão: vazio', () => {

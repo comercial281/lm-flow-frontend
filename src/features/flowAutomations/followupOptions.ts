@@ -23,21 +23,21 @@ export function legacySequenceNotice(agent: { followup_flow_id?: string | null; 
   return `Hoje ela entrega pro funil antigo "${agent.followup_sequence_slug}". Se ele já foi convertido, o lead vai pro follow-up novo dele. Escolha aqui o follow-up pra deixar isso claro.`;
 }
 
-/** O modelo do Follow-up padrão de 30 dias (servidor: `Templates`, 06/10/2026). */
-export const FOLLOWUP_PADRAO_TEMPLATE_KEY = 'follow_up_padrao';
 export const FOLLOWUP_PADRAO_NOME = 'Follow-up padrão';
 
 type FluxoParaPadrao = Pick<FlowAutomation, 'id' | 'name' | 'is_enabled' | 'archived_at'>
-  & Partial<Pick<FlowAutomation, 'template_key' | 'created_at'>>;
+  & Partial<Pick<FlowAutomation, 'followup_padrao' | 'created_at'>>;
 
 /**
  * Qual fluxo já vem escolhido quando a pessoa marca "Entregar pro follow-up" sem
  * nenhum escolhido: o Follow-up padrão do cliente.
  *
- * Mesma régua do servidor pra IA nova (o mais antigo ligado com o modelo
- * 'follow_up_padrao'); sem o modelo, o de nome exato "Follow-up padrão" (cliente
- * que recriou à mão); senão, o primeiro ligado. Nenhum: null (a escolha fica vazia).
- * Arquivado nunca entra.
+ * O servidor marca o padrão com `followup_padrao` (o mesmo que ele usa pra IA
+ * nova). ⚠️ NÃO pelo `template_key`: todo "Novo follow-up" nasce com o modelo
+ * 'follow_up_padrao', e isso escolheria o "Pós-visita" de alguém. Sem a marca, o
+ * de nome exato "Follow-up padrão"; senão, o primeiro ligado; nenhum: null (a
+ * escolha fica vazia). Entre vários, o ligado e depois o mais antigo. Arquivado
+ * nunca entra.
  */
 export function followupPadraoId(list: FluxoParaPadrao[]): string | null {
   const vivos = list.filter((f) => !f.archived_at);
@@ -45,8 +45,8 @@ export function followupPadraoId(list: FluxoParaPadrao[]): string | null {
     [...candidatos].sort((a, b) =>
       Number(b.is_enabled) - Number(a.is_enabled) || (a.created_at ?? '').localeCompare(b.created_at ?? ''),
     )[0] ?? null;
-  const porModelo = melhor(vivos.filter((f) => f.template_key === FOLLOWUP_PADRAO_TEMPLATE_KEY));
-  if (porModelo) return porModelo.id;
+  const marcado = melhor(vivos.filter((f) => f.followup_padrao === true));
+  if (marcado) return marcado.id;
   const porNome = melhor(vivos.filter((f) => f.name.trim() === FOLLOWUP_PADRAO_NOME));
   if (porNome) return porNome.id;
   return vivos.find((f) => f.is_enabled)?.id ?? null;

@@ -17,8 +17,8 @@ vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
 import { FollowupActionPicker, FollowupHoursRow } from './FollowupSection';
 
 const FLUXOS = [
-  { id: 'fu-velho', name: 'Follow-up longo', is_enabled: true, archived_at: null, template_key: null, created_at: '2026-06-01T00:00:00Z' },
-  { id: 'fu-padrao', name: 'Follow-up padrão', is_enabled: true, archived_at: null, template_key: 'follow_up_padrao', created_at: '2026-10-06T00:00:00Z' },
+  { id: 'fu-pos-visita', name: 'Pós-visita', is_enabled: true, archived_at: null, template_key: 'follow_up_padrao', followup_padrao: false, created_at: '2026-06-01T00:00:00Z' },
+  { id: 'fu-padrao', name: 'Meu follow-up', is_enabled: true, archived_at: null, template_key: 'follow_up_padrao', followup_padrao: true, created_at: '2026-10-06T00:00:00Z' },
 ];
 
 const AVISO = 'Escolha como o follow-up continua: a IA não escreve mais o follow-up.';
@@ -62,7 +62,7 @@ describe('Quando o lead sumir', () => {
   });
 
   // 06/10/2026: "Entregar pro follow-up" sem nenhum escolhido já vem com o Follow-up padrão.
-  it('entregar pro follow-up sem nenhum escolhido traz o Follow-up padrão (pelo modelo)', async () => {
+  it('entregar pro follow-up sem nenhum escolhido traz o Follow-up padrão (pela marca, mesmo renomeado)', async () => {
     const onSave = vi.fn();
     render(<FollowupActionPicker agent={agenteDeTeste({ followup_action: 'ai', followup_flow_id: null })} onSave={onSave} />);
     await waitFor(() => expect(list).toHaveBeenCalled());
@@ -73,7 +73,7 @@ describe('Quando o lead sumir', () => {
 
   it('com um follow-up já escolhido, não troca', async () => {
     const onSave = vi.fn();
-    render(<FollowupActionPicker agent={agenteDeTeste({ followup_action: 'pipeline', followup_flow_id: 'fu-velho' })} onSave={onSave} />);
+    render(<FollowupActionPicker agent={agenteDeTeste({ followup_action: 'pipeline', followup_flow_id: 'fu-pos-visita' })} onSave={onSave} />);
     await waitFor(() => expect(list).toHaveBeenCalled());
     await new Promise((r) => setTimeout(r, 0));
     await userEvent.click(screen.getByLabelText(/Entregar pro follow-up/));
