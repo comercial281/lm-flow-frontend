@@ -1,16 +1,18 @@
 /**
- * O PATCH de um passo do passo a passo da IA Vendedora (entrega 2).
+ * O PATCH de uma gravação da IA Vendedora (nasceu no passo a passo da entrega 2;
+ * desde a onda 3 quem usa é o `useGravarNaHora` das páginas e o `useRascunho` do
+ * Ensinar).
  *
  * POR QUE EXISTE: o `saveAgent` da tela antiga montava o PATCH campo a campo
  * (campo fora da lista era descartado calado, com a tela dizendo "Salvo") e
- * reenviava o agente inteiro a cada blur. Aqui cada passo diz QUAIS campos são
- * dele (`CAMPOS_DO_PASSO`) e manda só os que mudaram.
+ * reenviava o agente inteiro a cada blur. Aqui quem grava diz QUAIS campos são
+ * dele (`PAGINAS[...].campos`, `CAMPOS_DE_ENSINAR`) e manda só os que mudaram.
  *
- * jsonb dividido entre passos (`transfer_config`: voz no 1, cenário no 2,
- * obrigatórias no 3; `crm_policy`, `ai_limits`, `visit_config`, `playbook`,
- * `usage_limits`) é listado por SUBCHAVE: a raiz viaja inteira (o servidor troca o
- * jsonb todo), montada sobre o ÚLTIMO SALVO, com só as subchaves do passo trocadas.
- * Assim um passo nunca apaga o que é de outro, nem o que saiu da tela
+ * jsonb dividido entre páginas (`transfer_config`: voz na Identidade, cenário no
+ * Objetivo/Critério, obrigatórias na Qualificação; `crm_policy`, `ai_limits`,
+ * `visit_config`, `playbook`, `usage_limits`) é listado por SUBCHAVE: a raiz viaja
+ * inteira (o servidor troca o jsonb todo), montada sobre o ÚLTIMO SALVO, com só as
+ * subchaves da página trocadas. Assim uma página nunca apaga o que é de outra, nem o que saiu da tela
  * (`crm_policy.invalid`, `visit_config.blocked_dates`, os encaixes do roteiro).
  */
 import type { SalesAgent, SalesAgentPayload } from '@/services/salesAgents/salesAgentsService';

@@ -124,16 +124,26 @@ describe('ConfigurarPaginas', () => {
   });
 });
 
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
 
 // Bug (b): nada dentro do meio pode grudar ou rolar sozinho — a rolagem é uma só (a do main).
+// Vale pra TODO .tsx do configurar/ (páginas e peças), menos o ConfigurarPaginas, que é
+// dono do trilho (o único sticky). O Ensinar, que ainda tem Salvar, mora em telas/ensinar.
+function tsxDoConfigurar(dir: string): string[] {
+  return readdirSync(dir).flatMap((nome) => {
+    const cheio = join(dir, nome);
+    if (statSync(cheio).isDirectory()) return tsxDoConfigurar(cheio);
+    return nome.endsWith('.tsx') && !nome.includes('.spec.') ? [cheio] : [];
+  });
+}
+
 describe('rolagem do meio', () => {
   it('nenhuma página e nenhuma peça do Configurar usa sticky, BarraSalvar ou rolagem própria', () => {
-    const pasta = join(__dirname, 'paginas');
-    readdirSync(pasta).filter((f) => f.endsWith('.tsx') && !f.includes('.spec.')).forEach((f) => {
-      const fonte = readFileSync(join(pasta, f), 'utf8');
-      expect(fonte, f).not.toMatch(/\bsticky\b|BarraSalvar|overflow-(y-)?(auto|scroll)/);
+    const arquivos = tsxDoConfigurar(__dirname).filter((a) => !a.endsWith(`${sep}ConfigurarPaginas.tsx`));
+    expect(arquivos.length).toBeGreaterThan(15);
+    arquivos.forEach((a) => {
+      expect(readFileSync(a, 'utf8'), relative(__dirname, a)).not.toMatch(/\bsticky\b|BarraSalvar|overflow-(y-)?(auto|scroll)/);
     });
   });
 });

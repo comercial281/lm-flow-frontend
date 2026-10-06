@@ -1,6 +1,6 @@
 // Ensinar · o que antes ficava no Configurar: instruções, prova social e exemplos de
-// conversa (decisão do dono do produto: um lugar só pra ensinar a IA). Mesmo
-// rascunho dos passos: salva só o que mudou.
+// conversa (decisão do dono do produto: um lugar só pra ensinar a IA). Rascunho com
+// Salvar (exceção consciente da onda 3: o resto da IA grava na hora): salva só o que mudou.
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import BarraSalvar from '@/components/base/BarraSalvar';
@@ -8,7 +8,7 @@ import { Secao, Secoes } from '@/components/base/Secao';
 import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
 import type { SalesAgent, SalesAgentExample } from '@/services/salesAgents/salesAgentsService';
 import { useRascunho } from './useRascunho';
-import { CAMPOS_DE_ENSINAR } from './camposDaIa';
+import { CAMPOS_DE_ENSINAR } from '../../configurar/camposDaIa';
 
 export default function EnsinarTextos({ agent, aoSalvo }: { agent: SalesAgent; aoSalvo: (a: SalesAgent) => void }) {
   const { rascunho, mudar, pendente, salvando, erro, salvar, descartar } = useRascunho(agent, CAMPOS_DE_ENSINAR, aoSalvo);

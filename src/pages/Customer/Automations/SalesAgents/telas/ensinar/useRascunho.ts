@@ -1,8 +1,12 @@
 /**
- * O rascunho de UM passo: a pessoa mexe à vontade, a BarraSalvar aparece quando há
- * alteração, e o Salvar manda só os campos do passo que mudaram
+ * O rascunho de UM bloco com Salvar: a pessoa mexe à vontade, a BarraSalvar aparece
+ * quando há alteração, e o Salvar manda só os campos do bloco que mudaram
  * (features/salesAgents/patchDoPasso.ts), direto no serviço — nunca pelo `saveAgent`
  * campo a campo da tela antiga.
+ *
+ * Onda 3 (06/10/2026): as páginas do Configurar gravam na hora (`useGravarNaHora`);
+ * sobrou só o *Como ela atende* do Ensinar, exceção consciente (Ensinar fora do
+ * escopo), por isso o hook mora aqui e não mais no `configurar/`.
  *
  * O rascunho recomeça do salvo quando a IA muda ou volta do servidor com conteúdo
  * novo (`id` + `updated_at`).

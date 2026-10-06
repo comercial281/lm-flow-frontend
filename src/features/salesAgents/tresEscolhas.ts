@@ -6,9 +6,8 @@
  * vazia o servidor devolve o valor LIDO das antigas (`transfer_config.voice` e
  * `booking_enabled`); a derivação aqui é a rede pra servidor antigo.
  *
- * ⚠️ Gravar uma escolha ESPELHA nas antigas (voz e agendar visita), porque o roteiro
- * de hoje só lê as antigas. O servidor faz o mesmo espelho; aqui é pro rascunho da
- * tela não mentir antes do Salvar.
+ * ⚠️ Gravar a persona ESPELHA na voz antiga (`personaParaPatch`), porque o roteiro
+ * de hoje só lê a antiga. O servidor faz o mesmo espelho.
  *
  * ⚠️ Persona "o próprio corretor" só passa pro DONO DO NÚMERO (decisão do dono do
  * produto, opção "a"): roleta e corretor fixo ficam travados nela.
@@ -43,36 +42,6 @@ export function lerEscolhas(agent: Lido): Escolhas {
   return { persona, alcance, destino: agent.handoff_target ?? 'inbox_roleta' };
 }
 
-type Base = Pick<SalesAgent, 'transfer_config' | 'handoff_roleta_config_id' | 'handoff_user_id'>;
-
-/**
- * Roleta nova (06/10/2026): "a roleta do número" não existe mais — o servidor
- * recusa gravar `inbox_roleta`. O padrão vira "Uma roleta" em branco, e o passo
- * Objetivo pede a escolha.
- */
-export function escolhasParaPatch(escolhas: Escolhas, agent: Base): Partial<SalesAgent> {
-  const comum: Partial<SalesAgent> = {
-    persona_kind: escolhas.persona,
-    reach: escolhas.alcance,
-    booking_enabled: escolhas.alcance === 'visit',
-    transfer_config: toggleVoice(agent.transfer_config, escolhas.persona === 'broker'),
-  };
-  if (escolhas.persona === 'broker') {
-    return { ...comum, handoff_target: 'number_owner', handoff_roleta_config_id: null, handoff_user_id: null };
-  }
-  // Fora da persona corretor, "o dono do número" não vale (o servidor o recusa
-  // em outra persona), e "a roleta do número" (valor antigo) também não: os dois
-  // viram "Uma roleta", em branco quando não havia roleta escolhida.
-  const destino: HandoffTargetMode =
-    escolhas.destino === 'number_owner' || escolhas.destino === 'inbox_roleta' ? 'roleta' : escolhas.destino;
-  return {
-    ...comum,
-    handoff_target: destino,
-    handoff_roleta_config_id: destino === 'roleta' ? agent.handoff_roleta_config_id ?? null : null,
-    handoff_user_id: destino === 'user' ? agent.handoff_user_id ?? null : null,
-  };
-}
-
 /**
  * O modelo de partida da IA nova. As quatro perguntas são o BANT de antes dito em
  * português (ninguém usava o bloco BANT; as perguntas obrigatórias antes de passar
@@ -87,7 +56,7 @@ export const PERGUNTAS_SUGERIDAS = [
 
 /**
  * "Nova IA" cria um RASCUNHO desligado e sem número (é o que a Visão geral chama de
- * rascunho) e abre o passo 1. Substitui o "+" que criava a IA calada e abria o
+ * rascunho) e abre o Configurar. Substitui o "+" que criava a IA calada e abria o
  * assistente. Aviso fora do horário ligado (o lead de madrugada não fica no vácuo).
  * O `followup_max_attempts: 3` é sobra inofensiva: desde 06/10/2026 a IA não
  * escreve o follow-up, só entrega o lead, e o servidor ignora o teto fora de 'ai'.

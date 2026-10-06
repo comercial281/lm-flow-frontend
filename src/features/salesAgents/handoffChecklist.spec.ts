@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { CAMPOS_DO_PASSO } from '../../pages/Customer/Automations/SalesAgents/configurar/camposDaIa';
+import { ORDEM_DAS_PAGINAS, PAGINAS } from '@/pages/Customer/Automations/SalesAgents/configurar/paginas';
 
 import { checklistItems, checklistNotices, normalizeQuestion, toggleRequired } from './handoffChecklist';
 
@@ -155,12 +155,12 @@ describe('checklistNotices', () => {
 // A tela monta o PATCH campo a campo e descarta em silêncio o que não estiver na lista do
 // `saveAgent` — a cicatriz dos dois campos do book do imóvel, que a tela mostra e não
 // salva. `transfer_config` já está lá, e é por dentro dele que as obrigatórias viajam.
-// Desde a entrega 2 cada passo grava os campos DELE (camposDaIa.ts). As
+// Desde a onda 3 cada página grava os campos DELA (paginas.ts). As
 // obrigatórias NÃO podem virar campo solto do agente: viajam como subchave do
-// transfer_config (passo 3), mescladas sobre o último salvo.
+// transfer_config (página Qualificação), mescladas sobre o último salvo.
 describe('a gravação das obrigatórias', () => {
-  it('é subchave do transfer_config no passo 3, nunca campo solto', () => {
-    expect(CAMPOS_DO_PASSO[3]).toContain('transfer_config.required_questions');
-    expect(Object.values(CAMPOS_DO_PASSO).flat()).not.toContain('required_questions');
+  it('é subchave do transfer_config na Qualificação, nunca campo solto', () => {
+    expect(PAGINAS.qualificacao.campos).toContain('transfer_config.required_questions');
+    expect(ORDEM_DAS_PAGINAS.flatMap((p) => [...PAGINAS[p].campos])).not.toContain('required_questions');
   });
 });

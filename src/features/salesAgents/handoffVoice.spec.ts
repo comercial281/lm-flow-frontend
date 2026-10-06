@@ -24,11 +24,11 @@ describe('handoffVoice', () => {
     expect(toggleVoice({ mode: 'duvida', voice: 'first_person' }, false)).toEqual({ mode: 'duvida' });
   });
 
-  // A voz é subchave do transfer_config (nunca campo solto). Desde a entrega 2 ela
-  // vem da persona (passo 1), por `escolhasParaPatch`.
+  // A voz é subchave do transfer_config (nunca campo solto). Desde a onda 3 ela
+  // vem da persona (página Identidade), por `personaParaPatch`.
   it('a tela grava por dentro do transfer_config', () => {
     const tela = fonteDaIaVendedora();
-    expect(read('src/features/salesAgents/tresEscolhas.ts')).toContain("toggleVoice(agent.transfer_config, escolhas.persona === 'broker')");
+    expect(read('src/features/salesAgents/tresEscolhas.ts')).toContain("toggleVoice(agent.transfer_config, persona === 'broker')");
     expect(tela).not.toMatch(/\bvoice:\s*['"]first_person['"]/);
   });
 });

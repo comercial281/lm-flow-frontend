@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { fonteDaIaVendedora } from '../../test/fonteDaIaVendedora';
-import { CAMPOS_DO_PASSO } from '../../pages/Customer/Automations/SalesAgents/configurar/camposDaIa';
+import { PAGINAS } from '@/pages/Customer/Automations/SalesAgents/configurar/paginas';
 
 // O recorte por funil do follow-up da IA: ela vai atrás de todo lead calado do
 // número, ou só dos que têm card nos funis escolhidos.
@@ -20,16 +20,16 @@ import { CAMPOS_DO_PASSO } from '../../pages/Customer/Automations/SalesAgents/co
 describe('de quais leads a IA vai atrás', () => {
   const src = fonteDaIaVendedora();
 
-  // Desde a entrega 2 o recorte é campo do passo 7 (camposDaIa.ts): lista
+  // Desde a onda 3 o recorte é campo da página Follow-up (paginas.ts): lista
   // vazia viaja como lista vazia ("todos os leads que ela atendeu"), e só
   // `undefined` vira null (patchDoPasso.spec.ts).
-  it('o recorte é campo do passo 7', () => {
-    expect(CAMPOS_DO_PASSO[7]).toContain('followup_pipeline_ids');
+  it('o recorte é campo da página Follow-up', () => {
+    expect(PAGINAS.followup.campos).toContain('followup_pipeline_ids');
   });
 
-  it('o bloco aparece no passo Voltar a chamar, mexendo no rascunho do passo', () => {
-    expect(src).toContain('<FollowupPipelinesRow agent={rascunho} onSave={mudar} />');
-    expect(src).toContain('De quais leads ela vai atrás');
+  it('a página Follow-up grava o recorte por funil', () => {
+    expect(src).toContain('gravar({ followup_pipeline_ids: l })');
+    expect(src).toContain('Só os destes funis');
   });
 
   // Sem este aviso, quem escolhe "só destes funis" e não marca nenhum sai da tela
@@ -42,9 +42,9 @@ describe('de quais leads a IA vai atrás', () => {
   // atendeu e que não foi para a roleta — quem aplica é o servidor, e a tela
   // tem que DIZER isso. "Todos os leads deste número" voltaria a prometer o
   // comportamento antigo, que deixou de existir.
-  it('diz que o público é quem a IA atendeu e que não foi para a roleta', () => {
-    expect(src).toContain('Ela só vai atrás de quem ela mesma atendeu e que ainda não foi para a roleta.');
-    expect(src).toContain('Todos os leads que ela atendeu');
+  it('diz que o público é quem a IA atendeu e que não foi pra um corretor', () => {
+    expect(src).toContain('Só quem ela atendeu e que ainda não foi pra um corretor.');
+    expect(src).toContain('ela continua indo atrás de todos os leads que ela atendeu');
     expect(src).not.toContain('Todos os leads deste número');
   });
 

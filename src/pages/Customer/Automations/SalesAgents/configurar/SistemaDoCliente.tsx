@@ -166,7 +166,7 @@ export default function SistemaDoCliente({ agentId, url, urlSalva, chaveGerada, 
           >
             <p className="text-xs font-medium">{fraseDoTeste(teste)}</p>
             {teste.response_excerpt && (
-              <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all text-[11px]">{teste.response_excerpt}</pre>
+              <pre className="mt-1 whitespace-pre-wrap break-all text-[11px]">{teste.response_excerpt}</pre>
             )}
           </div>
         )}
