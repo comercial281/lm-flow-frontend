@@ -414,7 +414,7 @@ export default function SalesAgents() {
               {tela === 'configurar' && (
                 <TelaConfigurar agent={selected} inboxes={inboxes} aoSalvo={aoSalvo} />
               )}
-              {tela === 'ensinar' && <TelaEnsinar agent={selected} onCountChange={loadAgents} />}
+              {tela === 'ensinar' && <TelaEnsinar agent={selected} onCountChange={loadAgents} aoSalvo={aoSalvo} />}
               {tela === 'testar' && <TelaTestar agent={selected} />}
               {tela === 'diagnostico' && <TelaDiagnostico agent={selected} />}
             </div>
