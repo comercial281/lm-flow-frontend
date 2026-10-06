@@ -188,6 +188,8 @@ export default function NumberOwnership() {
   const [rows, setRows] = useState<TenantRow[]>([]);
   const [listFailed, setListFailed] = useState(false);
   const [busy, setBusy] = useState(false);
+  // A lista de clientes já foi lida (com linhas, vazia ou com erro): daí em diante o layout não muda mais de altura por causa dela.
+  const [listaLida, setListaLida] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   // O cliente cujo Ligar/Desligar está no ar (o botão gira nele).
   const [ruleBusyId, setRuleBusyId] = useState<string | null>(null);
@@ -215,6 +217,7 @@ export default function NumberOwnership() {
       if (isStale()) return;
       const tenants = res.data?.data ?? [];
       setRows(tenants.map((tenant): TenantRow => ({ tenant, state: { kind: 'loading' } })));
+      setListaLida(true);
       await loadInBatches(
         tenants.map(t => t.id),
         BATCH_SIZE,
@@ -232,7 +235,10 @@ export default function NumberOwnership() {
         isStale,
       );
     } catch {
-      if (!isStale()) setListFailed(true);
+      if (!isStale()) {
+        setListFailed(true);
+        setListaLida(true);
+      }
     } finally {
       if (!isStale()) setBusy(false);
     }
@@ -275,6 +281,8 @@ export default function NumberOwnership() {
     if (!alvo || alvoResolvido.current) return;
     // O Principal (public) aparece na Atenção, mas os números dele são os da Leal Mídia.
     if (alvo === 'public') {
+      // Espera a lista: a tabela entra acima da seção e a empurraria para baixo.
+      if (!listaLida) return;
       alvoResolvido.current = true;
       document.getElementById('numeros-da-leal-midia')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
       return;
@@ -290,7 +298,7 @@ export default function NumberOwnership() {
     alvoResolvido.current = true;
     if (row.state.kind === 'ready' && row.state.data.verdict !== 'unreadable') setOpenId(row.tenant.id);
     document.getElementById(`cliente-${row.tenant.id}`)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-  }, [alvo, rows, soCaidos]);
+  }, [alvo, rows, soCaidos, listaLida]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-4">

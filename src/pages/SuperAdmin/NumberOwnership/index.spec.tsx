@@ -515,6 +515,21 @@ describe('NumberOwnership — ?cliente= e números da Leal Mídia', () => {
     await waitFor(() => expect(rolados).toContain('numeros-da-leal-midia'));
   });
 
+  it('?cliente=public espera a lista de clientes chegar antes de rolar', async () => {
+    let liberarLista: (v: unknown) => void = () => {};
+    listTenants.mockImplementation(() => new Promise(r => { liberarLista = r; }));
+    diagnose.mockResolvedValue(okResponse(diagnosis('a')));
+
+    montar('/admin/clientes/numeros?cliente=public');
+
+    expect(await screen.findByText('Nenhum número da Leal Mídia no servidor.')).toBeInTheDocument();
+    expect(rolados).not.toContain('numeros-da-leal-midia');
+
+    liberarLista(okResponse([tenant('a', 'Cliente A')]));
+
+    await waitFor(() => expect(rolados).toContain('numeros-da-leal-midia'));
+  });
+
   it('a seção dos números da Leal Mídia aparece e o Atualizar relê', async () => {
     listTenants.mockResolvedValue(okResponse([tenant('a', 'Cliente A')]));
     diagnose.mockResolvedValue(okResponse(diagnosis('a')));

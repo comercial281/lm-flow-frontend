@@ -56,8 +56,8 @@ export default function NumerosDaLealMidia({ recarga }: { recarga: number }) {
           <p className="text-sm text-muted-foreground">Nenhum número da Leal Mídia no servidor.</p>
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {estado.numeros.map(n => (
-              <li key={n.name} className="flex items-start justify-between gap-3 rounded-lg border bg-background p-3">
+            {estado.numeros.map((n, i) => (
+              <li key={`${n.name}-${n.phone ?? i}`} className="flex items-start justify-between gap-3 rounded-lg border bg-background p-3">
                 <div className="min-w-0">
                   <div className="truncate font-medium">{n.name}</div>
                   <div className="text-xs text-muted-foreground">{n.phone ? telefone(n.phone) : 'sem telefone gravado'}</div>
