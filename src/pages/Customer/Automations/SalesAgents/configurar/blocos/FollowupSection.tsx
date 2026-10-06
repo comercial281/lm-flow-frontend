@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { type SalesAgent, type SalesAgentFollowupAction } from '@/services/salesAgents/salesAgentsService';
+import { type SalesAgent, type SalesAgentFollowupChoice } from '@/services/salesAgents/salesAgentsService';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
 import { type ScheduleWindow } from '@/components/schedule/scheduleWindows';
 import { DEFAULT_FOLLOWUP_WINDOW, janelaDoFollowup } from '@/features/salesAgents/followupHours';
@@ -203,7 +203,7 @@ export function FollowupHoursRow({
 // "A IA escreve a mensagem" ('ai') saiu em 06/10/2026 (decisão do dono do produto,
 // spec 2026-10-06-follow-up-padrao): o problema era a qualidade do texto, não o
 // custo. IA que ainda está em 'ai' não tem opção marcada e vê o aviso abaixo.
-const FOLLOWUP_ACTIONS: [Exclude<SalesAgentFollowupAction, 'ai'>, string, string][] = [
+const FOLLOWUP_ACTIONS: [SalesAgentFollowupChoice, string, string][] = [
   ['pipeline', 'Mover o card para uma coluna',
    'A IA leva o card para a coluna que você escolher e sai de cena. Quem manda a mensagem é o follow-up que começa quando o card entra nessa coluna.'],
   ['sequence', 'Entregar pro follow-up',
