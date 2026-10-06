@@ -56,7 +56,7 @@ const RECEITAS: Record<ModeloDoSiteId, Receita> = {
   },
 };
 
-/** Textos do Atendimento para os campos que o cliente ainda não escreveu. */
+/** Textos do Atendimento quando o cliente ainda não escreveu o título (só nos campos vazios). */
 export const ATENDIMENTO_DE_FABRICA = {
   eyebrow: 'Atendimento',
   title: 'Do primeiro contato à escritura, com uma pessoa só.',
@@ -69,9 +69,11 @@ export const ATENDIMENTO_DE_FABRICA = {
 export function aplicarModelo(id: ModeloDoSiteId, atual: EstadoDoVisual): EstadoDoVisual & { font_family: string } {
   const r = RECEITAS[id];
   const { home } = atual;
-  // Campo a campo: só o que está vazio (null ou só espaços) ganha o texto de
-  // fábrica. O que o cliente já escreveu fica, mesmo sem título.
+  // Textos de fábrica só quando o título está vazio, e campo a campo: só o que
+  // está vazio (null ou só espaços) ganha o texto. O que o cliente já escreveu
+  // fica. Com título escrito, o Atendimento só é ligado, sem acrescentar nada.
   const vazio = (v: string | null | undefined) => !v?.trim();
+  const semTitulo = vazio(home.about.title);
   const completarAtendimento = () => {
     const about = { ...home.about, enabled: true };
     (Object.keys(ATENDIMENTO_DE_FABRICA) as (keyof typeof ATENDIMENTO_DE_FABRICA)[]).forEach(k => {
@@ -91,7 +93,9 @@ export function aplicarModelo(id: ModeloDoSiteId, atual: EstadoDoVisual): Estado
         enabled: r.passos,
         items: r.passos && home.steps.items.length === 0 ? PASSOS_MCMV.map(p => ({ ...p })) : home.steps.items,
       },
-      about: r.atendimento ? completarAtendimento() : { ...home.about, enabled: false },
+      about: !r.atendimento
+        ? { ...home.about, enabled: false }
+        : semTitulo ? completarAtendimento() : { ...home.about, enabled: true },
     },
   };
 }

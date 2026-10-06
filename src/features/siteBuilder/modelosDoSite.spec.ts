@@ -54,14 +54,18 @@ describe('modelosDoSite', () => {
     });
   });
 
-  it('Editorial mantém o texto do cliente quando o Atendimento já tem título (e completa só o vazio)', () => {
+  it('Editorial mantém o texto do cliente quando o Atendimento já tem título', () => {
     const e = personalizado();
     e.home.about = { ...e.home.about, title: 'Meu título', text: 'Meu texto', eyebrow: null };
     const r = aplicarModelo('editorial', e);
-    expect(r.home.about).toMatchObject({
-      enabled: true, title: 'Meu título', text: 'Meu texto', eyebrow: 'Atendimento',
-      button_label: 'Agendar uma conversa', button_link: '#contato',
-    });
+    expect(r.home.about).toMatchObject({ enabled: true, title: 'Meu título', text: 'Meu texto', eyebrow: null });
+  });
+
+  it('Editorial com título escrito não acrescenta nada: botão vazio continua vazio', () => {
+    const e = personalizado();
+    e.home.about = { ...e.home.about, title: 'Meu título', button_label: null, button_link: null };
+    const r = aplicarModelo('editorial', e);
+    expect(r.home.about).toEqual({ ...e.home.about, enabled: true });
   });
 
   it('Editorial com título vazio preenche só os campos vazios e não apaga o que o cliente escreveu', () => {
