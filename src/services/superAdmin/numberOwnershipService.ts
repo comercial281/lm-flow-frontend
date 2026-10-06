@@ -141,7 +141,7 @@ export interface OwnershipDiagnosis {
 export interface PlatformNumber {
   name: string;
   phone: string | null;
-  status: 'connected' | 'connecting' | 'disconnected' | 'unknown';
+  status: NumberSituation; // números do public seguem a régua da Atenção (podem vir 'never')
   /** ISO de quando caiu; o servidor pode não mandar. */
   disconnected_at?: string | null;
 }
