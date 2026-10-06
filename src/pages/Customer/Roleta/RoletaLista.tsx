@@ -102,7 +102,7 @@ function ListaDeRoletas({ aoCriar, podeCriar }: { aoCriar: () => void; podeCriar
     );
   }
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {roletas.map(r => <CartaoDaRoleta key={r.id} roleta={r} />)}
     </div>
   );
@@ -155,7 +155,7 @@ export default function RoletaLista() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-        <div className="mx-auto max-w-5xl space-y-6">
+        <div className="mx-auto w-full max-w-[1400px] space-y-6">
           <BaseHeader
             title="Roleta de leads"
             subtitle="Decide qual corretor atende cada lead que chega, um de cada vez, na ordem da fila."
