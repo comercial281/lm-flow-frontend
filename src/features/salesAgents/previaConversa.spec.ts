@@ -17,9 +17,9 @@ describe('previaConversa', () => {
     }
   });
 
-  it('a assistente diz que é assistente virtual', () => {
+  it('a consultora se apresenta em nome da imobiliária, sem se dizer virtual', () => {
     for (const tom of TONS) {
-      expect(daIa(previaConversa({ persona: 'assistant', tom, emoji: 'none', nome: 'Bia', imobiliaria: 'Aurora' }))).toContain('assistente virtual da Aurora');
+      expect(daIa(previaConversa({ persona: 'assistant', tom, emoji: 'none', nome: 'Bia', imobiliaria: 'Aurora' }))).toContain('consultora da Aurora');
     }
   });
 

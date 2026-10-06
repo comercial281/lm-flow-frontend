@@ -78,8 +78,8 @@ describe('Passo 1 · Quem ela é', () => {
   it('a prévia muda com a persona, com o nome e a imobiliária da conta', async () => {
     abrir(agenteDeTeste({ lead_facing_name: 'Bruno' }));
     expect(screen.getByText(/^Oi! Aqui quem fala é Bruno, da Aurora Imóveis/)).toBeTruthy();
-    await userEvent.click(screen.getByLabelText('Assistente da imobiliária'));
-    expect(screen.getByText(/^Oi! Eu sou Bruno, assistente virtual da Aurora Imóveis/)).toBeTruthy();
+    await userEvent.click(screen.getByLabelText('Consultora da imobiliária'));
+    expect(screen.getByText(/^Oi! Eu sou Bruno, consultora da Aurora Imóveis/)).toBeTruthy();
   });
 
   // Tom e emoji: sem controle até a entrega 4 (o v1 tem "não use emoji" fixo).

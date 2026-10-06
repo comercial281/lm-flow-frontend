@@ -6,7 +6,7 @@
  * ⚠️ É ilustração do JEITO de falar, não promessa do texto exato. O que muda de
  * persona pra persona é a apresentação e, principalmente, o REPASSE: o corretor
  * diz que ele mesmo vai voltar com as opções (nunca "vou passar pro colega"), o dono
- * passa pro time dele, a assistente se diz assistente virtual.
+ * passa pro time dele, a consultora fala em nome da imobiliária.
  */
 import type { EmojiDaIa, PersonaDaIa, TomDaIa } from '@/services/salesAgents/salesAgentsService';
 
@@ -35,8 +35,8 @@ export function previaConversa({ persona, tom = 'close', emoji = 'none', nome, i
 
   const apresentacao = persona === 'assistant'
     ? (formal
-      ? `Olá! Eu sou ${quem}, assistente virtual da ${onde}. Sim, ele ainda está disponível.${sorriso}`
-      : `Oi! Eu sou ${quem}, assistente virtual da ${onde}. Tem sim${sorriso}`)
+      ? `Olá! Eu sou ${quem}, consultora da ${onde}. Sim, ele ainda está disponível.${sorriso}`
+      : `Oi! Eu sou ${quem}, consultora da ${onde}. Tem sim${sorriso}`)
     : (formal
       ? `Olá! Aqui quem fala é ${quem}, da ${onde}. Sim, ele ainda está disponível.${sorriso}`
       : `Oi! Aqui quem fala é ${quem}, da ${onde}. Tem sim${sorriso}`);
