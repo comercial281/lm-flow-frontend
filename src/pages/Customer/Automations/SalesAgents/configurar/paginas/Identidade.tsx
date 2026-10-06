@@ -5,7 +5,7 @@
 //
 // ⚠️ Trocar a persona mexe no DESTINO (personaParaPatch): o corretor só passa pro
 // dono do número, e sair dele vai pra roleta do número.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Secao, Secoes } from '@/components/base/Secao';
 import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
 import { useAppDataStore } from '@/store/appDataStore';
@@ -27,13 +27,18 @@ const PERSONAS = [
 export default function Identidade({ agent, gravar }: PropsDaPagina) {
   const imobiliaria = useAppDataStore((s) => s.account)?.name ?? '';
   const persona: PersonaGravavel = lerEscolhas(agent).persona === 'broker' ? 'broker' : 'assistant';
-  const [roletas, setRoletas] = useState<RoletaConfig[]>([]);
   // Leitura de fundo: cargo sem acesso a roletas só não acha a roleta do número.
+  // ⚠️ Guarda a PROMESSA, não só a lista: a persona escolhida antes de a lista chegar
+  // espera por ela. Sem isso, sair de "O corretor" gravava a roleta vazia mesmo com
+  // roleta no número (revisão final da onda 3, M3).
+  const roletas = useRef<Promise<RoletaConfig[]>>(Promise.resolve([]));
   useEffect(() => {
-    let vivo = true;
-    roletaConfigService.getAll().then((r) => { if (vivo) setRoletas(r ?? []); }).catch(() => {});
-    return () => { vivo = false; };
+    roletas.current = roletaConfigService.getAll().then((r) => r ?? []).catch(() => []);
   }, []);
+  const escolherPersona = async (p: PersonaGravavel) => {
+    const lista = await roletas.current;
+    return gravar(personaParaPatch(p, agent, roletaDoNumero(lista, agent.inbox_id)), ['transfer_config.voice']);
+  };
 
   const semDono = persona === 'broker' && !!agent.inbox_id && !agent.number_owner_id;
   const nome = agent.lead_facing_name ?? '';
@@ -43,7 +48,7 @@ export default function Identidade({ agent, gravar }: PropsDaPagina) {
     <Secoes>
       <Secao titulo="Persona" descricao="Em nome de quem ela fala. Muda a apresentação e pra quem o lead vai.">
         <CartoesDeEscolha<PersonaGravavel> rotulo="Persona" valor={persona} opcoes={PERSONAS}
-          aoEscolher={(p) => void gravar(personaParaPatch(p, agent, roletaDoNumero(roletas, agent.inbox_id)), ['transfer_config.voice'])} />
+          aoEscolher={(p) => void escolherPersona(p)} />
         {semDono && <Aviso tom="vermelho">{FRASE_SEM_DONO}</Aviso>}
       </Secao>
       <Secao titulo="Nome" descricao="O nome que ela diz pro lead. O nome interno só aparece aqui no LM Flow.">

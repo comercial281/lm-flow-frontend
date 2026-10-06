@@ -1,19 +1,21 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
 import { gravarDeTeste } from '@/test/salesAgents/gravarDeTeste';
 
-vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
-  flowAutomationsService: { list: vi.fn().mockResolvedValue([
-    { id: 'fu-padrao', name: 'Follow-up padrão', is_enabled: true, archived_at: null, template_key: 'follow_up_padrao', created_at: '2026-10-06T00:00:00Z' },
-  ]) },
-}));
+const FLUXOS = [
+  { id: 'fu-padrao', name: 'Follow-up padrão', is_enabled: true, archived_at: null, template_key: 'follow_up_padrao', created_at: '2026-10-06T00:00:00Z' },
+];
+const listarFluxos = vi.hoisted(() => vi.fn());
+vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({ flowAutomationsService: { list: listarFluxos } }));
 vi.mock('@/services/pipelines/pipelinesService', () => ({
   pipelinesService: { getPipelines: vi.fn().mockResolvedValue({ data: [{ id: 'f1', name: 'Vendas' }] }), getPipelineStages: vi.fn().mockResolvedValue({ data: [] }) },
 }));
 import Followup from './Followup';
+
+beforeEach(() => { listarFluxos.mockReset(); listarFluxos.mockResolvedValue(FLUXOS); });
 
 const abrir = (agent: SalesAgent = agenteDeTeste()) => {
   const gravar = gravarDeTeste('followup');
@@ -41,6 +43,18 @@ describe('Follow-up (linha do tempo)', () => {
     await new Promise((r) => setTimeout(r, 0)); // lista de follow-ups
     await userEvent.click(screen.getByRole('radio', { name: 'Entregar pro follow-up' }));
     expect(gravar).toHaveBeenCalledWith({ followup_action: 'sequence', followup_flow_id: 'fu-padrao' });
+  });
+
+  // Revisão final da onda 3 (M4): o clique antes de a lista de follow-ups chegar
+  // gravava "Entregar" sem follow-up (e a pendência followup_sem_fluxo aparecia).
+  it('"Entregar pro follow-up" antes de a lista chegar espera a lista e grava o Follow-up padrão', async () => {
+    let soltar: (v: unknown) => void = () => {};
+    listarFluxos.mockReturnValue(new Promise((res) => { soltar = res; }));
+    const gravar = abrir(agenteDeTeste({ followup_action: 'pipeline', followup_flow_id: null }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Entregar pro follow-up' }));
+    expect(gravar).not.toHaveBeenCalled();
+    soltar(FLUXOS);
+    await waitFor(() => expect(gravar).toHaveBeenCalledWith({ followup_action: 'sequence', followup_flow_id: 'fu-padrao' }));
   });
 
   it('IA antiga em "A IA escreve": nenhuma opção marcada, aviso, e ligar o follow-up é recusado até escolher', async () => {

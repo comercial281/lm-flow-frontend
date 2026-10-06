@@ -8,7 +8,7 @@
 // aparece com o motivo, mesmo desligado — senão ninguém conseguiria escolher.
 // ⚠️ Público (decisão de 29/09 + onda 1): só quem ela atendeu e que ainda não foi
 // pra um corretor. A frase é fixa; o recorte por funil é por cima disso.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/ds';
 import { Secao, Secoes } from '@/components/base/Secao';
 import { Campo, CLASSE_DO_CAMPO } from '@/components/base/Campo';
@@ -52,8 +52,13 @@ export default function Followup({ agent, gravar, irPara }: PropsDaPagina) {
   const escolhidos = agent.followup_pipeline_ids ?? [];
   const recortado = escolhidos.length > 0 || recortando;
 
+  // ⚠️ A promessa fica guardada: "Entregar pro follow-up" clicado antes de a lista
+  // chegar espera por ela pra aplicar o Follow-up padrão. Sem isso, gravava sem
+  // follow-up e a pendência "sem follow-up" aparecia (revisão final da onda 3, M4).
+  const lendoFluxos = useRef<Promise<FlowAutomation[]>>(Promise.resolve([]));
   useEffect(() => {
-    flowAutomationsService.list({ kind: 'followup' }).then(setFluxos).catch(() => setFluxos([]));
+    lendoFluxos.current = flowAutomationsService.list({ kind: 'followup' }).catch(() => [] as FlowAutomation[]);
+    lendoFluxos.current.then(setFluxos);
     pipelinesService.getPipelines().then((r: unknown) => setFunis(lista<PipelineOpt>(r).map((p) => ({ id: String(p.id), name: p.name })))).catch(() => setFunis([]));
   }, []);
   useEffect(() => {
@@ -65,8 +70,9 @@ export default function Followup({ agent, gravar, irPara }: PropsDaPagina) {
     if (v && motivo) { setPrecisaEscolher(true); return false; }
     return gravar({ followup_enabled: v });
   };
-  const escolherAcao = (valor: SalesAgentFollowupChoice) => {
-    const padrao = valor === 'sequence' && !agent.followup_flow_id ? followupPadraoId(fluxos) : null;
+  const escolherAcao = async (valor: SalesAgentFollowupChoice) => {
+    const precisaDoPadrao = valor === 'sequence' && !agent.followup_flow_id;
+    const padrao = precisaDoPadrao ? followupPadraoId(await lendoFluxos.current) : null;
     setPrecisaEscolher(false);
     return gravar(padrao ? { followup_action: valor, followup_flow_id: padrao } : { followup_action: valor });
   };

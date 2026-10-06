@@ -1,14 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
 import { gravarDeTeste } from '@/test/salesAgents/gravarDeTeste';
 
-vi.mock('@/services/roletaConfig/roletaConfigService', () => ({
-  roletaConfigService: { getAll: vi.fn().mockResolvedValue([{ id: 'r1', inbox_id: 'inbox-1', is_active: true }]) },
-}));
+const getAll = vi.hoisted(() => vi.fn());
+vi.mock('@/services/roletaConfig/roletaConfigService', () => ({ roletaConfigService: { getAll } }));
 vi.mock('@/store/appDataStore', () => ({ useAppDataStore: (f: (s: unknown) => unknown) => f({ account: { name: 'Bloco Imob' } }) }));
 import Identidade from './Identidade';
+
+beforeEach(() => { getAll.mockReset(); getAll.mockResolvedValue([{ id: 'r1', inbox_id: 'inbox-1', is_active: true }]); });
 
 describe('Identidade', () => {
   it('2 personas (O corretor · Consultora da imobiliária); IA "dono" antiga aparece como Consultora', () => {
@@ -28,6 +29,19 @@ describe('Identidade', () => {
       persona_kind: 'assistant', transfer_config: { mode: 'checklist', required_questions: ['Renda'] },
       handoff_target: 'roleta', handoff_roleta_config_id: 'r1', handoff_user_id: null,
     }, ['transfer_config.voice']);
+  });
+
+  // Revisão final da onda 3 (M3): o clique antes de a lista de roletas chegar
+  // gravava a roleta vazia mesmo com roleta no número.
+  it('persona escolhida antes de as roletas chegarem espera a lista e grava a roleta do número', async () => {
+    let soltar: (v: unknown) => void = () => {};
+    getAll.mockReturnValue(new Promise((res) => { soltar = res; }));
+    const gravar = gravarDeTeste('identidade');
+    render(<Identidade agent={agenteDeTeste({ handoff_target: 'number_owner', handoff_user_id: null })} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} />);
+    await userEvent.click(screen.getByRole('radio', { name: 'Consultora da imobiliária' }));
+    expect(gravar).not.toHaveBeenCalled();
+    soltar([{ id: 'r1', inbox_id: 'inbox-1', is_active: true }]);
+    await waitFor(() => expect(gravar).toHaveBeenCalledWith(expect.objectContaining({ handoff_target: 'roleta', handoff_roleta_config_id: 'r1' }), ['transfer_config.voice']));
   });
 
   it('nomes gravam ao sair; o balão usa o nome que o lead vê e a imobiliária', async () => {
