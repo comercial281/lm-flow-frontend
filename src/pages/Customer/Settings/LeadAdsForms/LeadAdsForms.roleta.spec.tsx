@@ -102,6 +102,18 @@ describe('Formulários do Meta · Quem assume o lead', () => {
     expect(svc.update.mock.calls[0][1]).toMatchObject({ roleta_config_id: 'r2' });
   });
 
+  // Gravado com os dois (a tela antiga deixava): a lista mostra o corretor, que é
+  // quem o servidor usa (LeadRouter), e salvar SEM MEXER grava só o corretor — a
+  // roleta, que já era ignorada na entrada do lead, é limpa.
+  it('gravado com corretor e roleta: mostra o corretor e salvar grava só ele', async () => {
+    svc.getAll.mockResolvedValue([cadastro({ default_assignee_id: 'u1', roleta_config_id: 'r1' })]);
+    const dialogo = await abrirEdicao();
+    expect(within(dialogo).getByLabelText('Quem assume o lead')).toHaveValue('corretor:u1');
+    salvar(dialogo);
+    await waitFor(() => expect(svc.update).toHaveBeenCalled());
+    expect(svc.update.mock.calls[0][1]).toMatchObject({ default_assignee_id: 'u1', roleta_config_id: null });
+  });
+
   it('"Ninguém" volta ao vazio e grava os dois campos vazios', async () => {
     svc.getAll.mockResolvedValue([cadastro({ default_assignee_id: 'u1' })]);
     const dialogo = await abrirEdicao();
@@ -149,6 +161,15 @@ describe('Formulários do Meta · formulário pego por regra "nome contém"', ()
     comFormularioNovo();
     render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
     expect(await screen.findByText('Cai na Roleta Zona Sul pela regra "alma"')).toBeInTheDocument();
+  });
+
+  it('com a chave e a regra com corretor fixo: diz pra quem vai, não a roleta (o corretor vence)', async () => {
+    chave.roletaNova = true;
+    comFormularioNovo();
+    svc.getAll.mockResolvedValue([cadastro({ roleta_config_id: 'r1', default_assignee_id: 'u1' })]);
+    render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
+    expect(await screen.findByText('Vai pra Ana Corretora pela regra "alma"')).toBeInTheDocument();
+    expect(screen.queryByText(/Cai na Roleta/)).toBeNull();
   });
 
   it('sem a chave: nada muda', async () => {

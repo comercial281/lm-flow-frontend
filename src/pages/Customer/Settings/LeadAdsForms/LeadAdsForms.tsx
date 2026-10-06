@@ -1252,11 +1252,23 @@ export default function LeadAdsForms() {
                       // Formulário sem cadastro próprio que uma regra "nome contém"
                       // com roleta já pega: o lead dele NÃO fica parado, cai na roleta.
                       const regra = regraQuePega(mf.name ?? '', mf.meta_page_id, configs);
-                      if (!regra?.roleta_config_id) return null;
+                      if (!regra) return null;
+                      const palavra = regra.match_keyword?.trim() || regra.form_name;
+                      // Corretor fixo vence a roleta no servidor (LeadRouter): a
+                      // frase diz pra quem o lead vai de verdade.
+                      if (regra.default_assignee_id) {
+                        const corretor = resources.users.find(u => String(u.id) === regra.default_assignee_id);
+                        return (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Vai pra {corretor?.name ?? 'o corretor escolhido'} pela regra "{palavra}"
+                          </p>
+                        );
+                      }
+                      if (!regra.roleta_config_id) return null;
                       const roleta = roletas?.find(r => r.id === regra.roleta_config_id);
                       return (
                         <p className="text-xs text-muted-foreground mt-1">
-                          Cai na {roleta ? `Roleta ${roletaLabel(roleta)}` : 'roleta'} pela regra "{regra.match_keyword?.trim() || regra.form_name}"
+                          Cai na {roleta ? `Roleta ${roletaLabel(roleta)}` : 'roleta'} pela regra "{palavra}"
                         </p>
                       );
                     })()}

@@ -150,8 +150,10 @@ export default function EditItemModal({
   const [selectedAssigneeId, setSelectedAssigneeId] = useState<string | null>(null);
   const [assigningUser, setAssigningUser] = useState(false);
 
-  // As roletas LIGADAS, para o "⋯ → Mandar pra roleta".
-  const [roletas, setRoletas] = useState<RoletaConfig[]>([]);
+  // As roletas LIGADAS, para o "⋯ → Mandar pra roleta". `null` = leitura recusada
+  // (cargo sem acesso às roletas): o item fica desabilitado, sem mandar a pessoa
+  // pra uma página que ela não abre.
+  const [roletas, setRoletas] = useState<RoletaConfig[] | null>([]);
   const [assigningRoleta, setAssigningRoleta] = useState(false);
 
   // Ofertas EM ABERTO deste lead: só nesse caso há prazo correndo e faz sentido
@@ -222,7 +224,7 @@ export default function EditItemModal({
 
       roletaConfigService.getAll()
         .then(list => { if (!cancelled) setRoletas((list || []).filter(r => r.is_active)); })
-        .catch(() => { if (!cancelled) setRoletas([]); });
+        .catch(() => { if (!cancelled) setRoletas(null); });
 
       // Oferta correndo agora? Falha aqui só esconde o "Tirar da roleta" — quem
       // não pode mexer na roleta recebe 403 e não deve ver o botão mesmo.
@@ -331,7 +333,7 @@ export default function EditItemModal({
         conversation_id: item?.conversation?.id ? String(item.conversation.id) : undefined,
         pipeline_item_id: item?.id ? String(item.id) : undefined,
       });
-      toast.success(textoDaOferta(a?.assigned_user?.name, roletas.find(r => r.id === roletaId)));
+      toast.success(textoDaOferta(a?.assigned_user?.name, roletas?.find(r => r.id === roletaId)));
       loadHistory();
       // A oferta nova aparece no card na hora (e com ela o "Tirar da roleta").
       brokerAssignmentsService.listForLead(String(contactId))
@@ -483,7 +485,7 @@ export default function EditItemModal({
   };
 
   const roletaDoLead = item.roleta
-    ? `${roletaLabel(item.roleta)}${roletas.length > 0 && !roletas.some(r => r.id === item.roleta!.id) ? ' (desativada)' : ''}`
+    ? `${roletaLabel(item.roleta)}${roletas && roletas.length > 0 && !roletas.some(r => r.id === item.roleta!.id) ? ' (desativada)' : ''}`
     : null;
 
   return (

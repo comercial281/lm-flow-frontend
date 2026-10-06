@@ -6755,11 +6755,11 @@ Entrega 3 (F2) da reestruturação da roleta. Spec: `LM FLOW/specs/2026-10-06-ro
 
 O que mudou na tela (✱ = só com a chave `roleta_nova`, ligada cliente a cliente pela Leal Mídia; o resto vale pra todos):
 
-- **Formulários do Meta**: *Quem assume o lead* é uma lista só com as abas **Corretores | Roleta** (`CampoQuemAssume`, em cima do `SeletorComAbas`). A roleta escolhida que foi desligada continua escolhida, com "(desligada)" e aviso. ✱ Some *Mensagem inicial fora do horário* (e o selo 🌙 da lista); o texto gravado nem viaja no salvar. ✱ Formulário sem cadastro próprio que uma regra "nome contém" com roleta já pega mostra *Cai na Roleta X pela regra "…"*.
-- **Landing** (*Destino do lead*): a mesma peça, **só com a aba Roleta**: a landing ainda não lê responsável fixo no servidor. ✱ O texto de fora do horário deixa de falar em número de plantão.
+- **Formulários do Meta**: *Quem assume o lead* é uma lista só com as abas **Corretores | Roleta** (`CampoQuemAssume`, em cima do `SeletorComAbas`). A roleta escolhida que foi desligada continua escolhida, com "(desligada)" e aviso. ✱ Some *Mensagem inicial fora do horário* (e o selo 🌙 da lista); o texto gravado nem viaja no salvar. ✱ Formulário sem cadastro próprio que uma regra "nome contém" com roleta já pega mostra *Cai na Roleta X pela regra "…"*; se a regra tem corretor fixo, mostra *Vai pra {corretor} pela regra "…"* (o corretor vence a roleta no servidor).
+- **Landing** (*Destino do lead*): a mesma peça, com as abas **Corretores | Roleta**. O corretor fixo vai em `routing.default_assignee_id`, ao lado de `routing.roleta_config_id`; como no portal e no site, o corretor vence a roleta. ✱ O texto de fora do horário deixa de falar em número de plantão.
 - **Portal e site** (Venda e Locação): *Roleta* + *Responsável* viraram **um** campo *Quem assume o lead* com as abas. *Mesmo destino da venda* continua.
 - **IA Vendedora** ✱: some *A roleta deste número*; fica *Uma roleta · Um corretor fixo · Sistema do cliente*. IA que estava na roleta do número abre com *Uma roleta* já escolhida (a roleta que atendia o número, `GET /roleta_configs/for_inbox`) e o aviso **Confirme a roleta**; sem roleta no número, em branco pedindo a escolha. Trocar a persona de corretor pra outra e a *Nova IA* vão pra *Uma roleta* em branco.
-- **Card do lead** (menu ⋯): *Trocar roleta* virou **Mandar pra roleta** (roletas ligadas); sem nenhuma, o item leva pra página da roleta. **Tirar da roleta** entra no menu quando há oferta esperando aceite. O aviso diz **"Oferecido a Bruno pela Roleta X"**, ou o motivo que o servidor der. O atalho "Nova roleta" do card morreu (`CreateRoletaModal` apagado).
+- **Card do lead** (menu ⋯): *Trocar roleta* virou **Mandar pra roleta** (roletas ligadas); sem nenhuma, o item leva pra página da roleta; sem acesso às roletas (cargo), o item fica desabilitado com *Sem acesso às roletas*. **Tirar da roleta** entra no menu quando há oferta esperando aceite. O aviso diz **"Oferecido a Bruno pela Roleta X"**, ou o motivo que o servidor der. O atalho "Nova roleta" do card morreu (`CreateRoletaModal` apagado).
 - **Automações** (regra e bloco do construtor, o mesmo editor): *Distribuir pela roleta* escolhe a roleta (`params.roleta_config_id`). ✱ Obrigatório: a regra não salva, o bloco mostra *Falta preencher a roleta* e o fluxo não liga. Sem a chave, vazio = "a roleta do número da conversa", como sempre.
 - **Canais**: a aba *Horário de funcionamento* saiu (todos). ✱ *Atribuição Automática* some em Colaboradores.
 - **Notificações** ✱: os avisos da roleta (lead esperando aceite, lead distribuído, repasse por prazo, corretor aceitou, resumo da manhã) saem da Central, com a frase *Os avisos da roleta ficam em Roleta de leads › Avisos* e o link. *Roleta falhou* fica.
@@ -6768,7 +6768,10 @@ O que mudou na tela (✱ = só com a chave `roleta_nova`, ligada cliente a clien
 Decisões (não reabrir sem o dono pedir):
 
 - **Uma peça só pra "quem assume"**: `components/roleta/CampoQuemAssume` (formulários, landing, portal, site). Regra nova de "corretor ou roleta" entra nela, não numa tela.
-- **Gravado com os dois (o portal deixava), vale o corretor**: é ele que o servidor usa. Sem mexer no campo, nada muda no que viaja.
+- **Gravado com corretor E roleta, a lista mostra o corretor**: é ele que o servidor usa nos três roteadores (formulário, portal/site, landing). O que acontece ao salvar **sem mexer no campo** muda por tela:
+  - **Formulários**: grava só o corretor e limpa a roleta (que o roteador já ignorava). A entrada do lead não muda.
+  - **Portal, site e landing**: os dois viajam como estavam.
+  - Em todas, escolher um na lista limpa o outro.
 - **Lista recusada por cargo só esconde a aba**, menos quando a escolha gravada é dela: aí a aba fica só com a escolha. Nada some calado.
 - **"Lead novo pra você"** (e não "Novo lead pra você", como estava no plano): é a frase do pop-up de aceite; o corretor lê a mesma coisa nos três lugares.
 - **Sem a chave, a ação "Distribuir pela roleta" aceita vazio**: regra antiga continua igual.
@@ -6780,6 +6783,7 @@ Armadilhas:
 2. **`roleta_nova` é `useClientToggle` (padrão desligado)**, nunca `useFeature`. O nome é literal: os scanners do catálogo leem por regex.
 3. **A régua de "falta preencher" recebe a chave**: `missingActionParams`, `leadActionProblem`, `nodeProblem`, `enableProblem` e `validateRule` aceitam `{ roletaObrigatoria }`. Tela nova que valida ação de automação tem que passar a chave, senão a roleta vira opcional calada.
 4. **"Cai na Roleta X" é espelho do roteador do servidor** (`LeadAdsForms/regraPorPalavra.ts` ↔ `MetaLeads::LeadRouter#match_config_by_keyword` + `normalize_form_name`). Mudou lá, muda aqui.
-5. **Landing sem aba Corretores é provisório**: quando o servidor da landing ler o responsável fixo (B2/T4), passar a lista de pessoas ao `CampoQuemAssume` e gravar o campo. Há TODO no `LeadRoutingModal`.
+5. **O corretor fixo da landing (`routing.default_assignee_id`) só vale com o servidor do B2** (`distribute_lead` passando pelo `Leads::Distribution`). Contra o servidor antigo, a tela grava e o lead continua indo pela roleta (ou sem responsável). Sem acesso à equipe, a chave do corretor nem viaja (o gravado atravessa: `defaultAssigneeId` `undefined` no `buildLandingSettings`).
 6. **O `BusinessHoursForm` continua no código** (só saiu da tela) até a limpeza pós-migração dos clientes.
-7. **Perfil → Notificações (silenciar pra mim) ainda lista os avisos da roleta.** Com a chave, o silêncio pessoal deles depende de o servidor (`Roleta::Notices`) respeitar o mute: conferir antes de esconder também lá.
+7. **IA Vendedora com a chave:** a pré-escolha de *Uma roleta* deixa o passo 2 com alteração ao abrir, e *Descartar* pré-preenche de novo. É de propósito (o servidor recusa `inbox_roleta`): o aviso de sair sem salvar aparece até alguém confirmar e salvar.
+8. **Perfil → Notificações (silenciar pra mim) ainda lista os avisos da roleta.** Com a chave, o silêncio pessoal deles depende de o servidor (`Roleta::Notices`) respeitar o mute: conferir antes de esconder também lá.

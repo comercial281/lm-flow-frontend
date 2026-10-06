@@ -34,8 +34,11 @@ import { contatoDoCard, semFunil } from '@/features/cardDoLead/cardDoLead';
 
 interface CardMoreMenuProps {
   item: PipelineItem;
-  /** Só as roletas LIGADAS: é pra onde dá pra mandar o lead agora. */
-  roletas: RoletaConfig[];
+  /**
+   * Só as roletas LIGADAS: é pra onde dá pra mandar o lead agora. `null` = a
+   * leitura foi recusada (cargo sem acesso às roletas).
+   */
+  roletas: RoletaConfig[] | null;
   trocandoRoleta: boolean;
   onTrocarRoleta: (roletaId: string) => Promise<void> | void;
   /** Há oferta esperando aceite: o menu oferece "Tirar da roleta". */
@@ -100,16 +103,28 @@ export default function CardMoreMenu({
             <Link className="h-3.5 w-3.5 mr-2" />
             Copiar link do card
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => {
-              if (roletas.length === 0) { navigate(PAGINA_DA_ROLETA); return; }
-              setRoletaEscolhida('');
-              setRoletaAberta(true);
-            }}
-          >
-            <Shuffle className="h-3.5 w-3.5 mr-2" />
-            Mandar pra roleta
-          </DropdownMenuItem>
+          {roletas === null ? (
+            // Sem acesso às roletas: o item fica, desabilitado e dizendo por quê,
+            // em vez de mandar pra uma página que a pessoa não abre.
+            <DropdownMenuItem disabled>
+              <Shuffle className="h-3.5 w-3.5 mr-2" />
+              <span className="flex flex-col">
+                Mandar pra roleta
+                <span className="text-[11px] text-muted-foreground">Sem acesso às roletas</span>
+              </span>
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem
+              onClick={() => {
+                if (roletas.length === 0) { navigate(PAGINA_DA_ROLETA); return; }
+                setRoletaEscolhida('');
+                setRoletaAberta(true);
+              }}
+            >
+              <Shuffle className="h-3.5 w-3.5 mr-2" />
+              Mandar pra roleta
+            </DropdownMenuItem>
+          )}
           {onTirarDaRoleta && (
             <DropdownMenuItem onClick={onTirarDaRoleta}>
               <CircleSlash className="h-3.5 w-3.5 mr-2" />
@@ -145,7 +160,7 @@ export default function CardMoreMenu({
               <SelectValue placeholder="Escolha a roleta" />
             </SelectTrigger>
             <SelectContent>
-              {roletas.map(r => (
+              {(roletas ?? []).map(r => (
                 <SelectItem key={r.id} value={r.id}>{roletaLabel(r)}</SelectItem>
               ))}
             </SelectContent>

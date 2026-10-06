@@ -160,6 +160,19 @@ describe('PortalSettingsCard', () => {
     expect(screen.getByText(/Esta roleta está desligada/)).toBeInTheDocument();
   });
 
+  // Gravado com os dois (a tela antiga deixava): a lista mostra o corretor, que é
+  // quem o servidor usa, e salvar SEM MEXER no campo manda os dois como estavam.
+  it('gravado com roleta e responsável: mostra o corretor e salvar sem mexer não muda nada', async () => {
+    const usuario = userEvent.setup();
+    montar({ pipeline_id: 'pipe-1', roleta_config_id: 'rol-1', default_assignee_id: 'u-1' });
+    const quem = await screen.findByRole('combobox', { name: 'Quem assume o lead' });
+    await waitFor(() => expect(quem).toHaveValue('corretor:u-1'));
+
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
+    expect(mocks.updateSettings.mock.calls[0][1]).toMatchObject({ roleta_config_id: 'rol-1', default_assignee_id: 'u-1' });
+  });
+
   it('funil gravado que não existe mais continua escolhido, com o rótulo de aviso', async () => {
     montar({ pipeline_id: 'pipe-apagado' });
     const funil = await screen.findByRole('combobox', { name: 'Funil' });

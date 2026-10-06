@@ -14,6 +14,7 @@ vi.mock('sonner', () => ({ toast }));
 
 import PendingOffersBanner from './PendingOffersBanner';
 import AcceptLeadPage from '@/pages/Customer/Roleta/AcceptLeadPage';
+import { dataHora } from '@/lib/formato';
 
 const oferta = (extra: Record<string, unknown> = {}) => ({
   id: 'ba-1', status: 'pending', lead_name: 'Maria Teste', lead_phone: null,
@@ -61,7 +62,8 @@ describe('tela de aceite', () => {
     expect(await screen.findByRole('heading', { name: 'Lead novo pra você' })).toBeInTheDocument();
     expect(screen.getByText(/Ao aceitar, o lead é seu\./)).toBeInTheDocument();
     expect(screen.queryByText(/sai pelo seu número/)).toBeNull();
-    expect(screen.getByText('Chegou em 06/10/2026 às 09:00')).toBeInTheDocument();
+    // Pelo formato da casa, em qualquer fuso da máquina que roda o teste.
+    expect(screen.getByText(`Chegou em ${dataHora('2026-10-06T12:00:00Z')}`)).toBeInTheDocument();
   });
 
   it('aceitar avisa "Lead aceito! Ele é seu."', async () => {

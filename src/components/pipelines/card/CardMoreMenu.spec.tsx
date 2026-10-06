@@ -59,6 +59,16 @@ describe('CardMoreMenu · roleta', () => {
     expect(await screen.findByText('Página da roleta')).toBeInTheDocument();
   });
 
+  it('sem acesso às roletas: o item fica desabilitado e diz por quê (não leva pra página)', async () => {
+    montar({ roletas: null });
+    await abrirMenu();
+    const item = screen.getByRole('menuitem', { name: /Mandar pra roleta/ });
+    expect(item).toHaveAttribute('aria-disabled', 'true');
+    expect(item).toHaveTextContent('Sem acesso às roletas');
+    await userEvent.click(item);
+    expect(screen.queryByText('Página da roleta')).toBeNull();
+  });
+
   it('"Tirar da roleta" só aparece com oferta esperando aceite', async () => {
     const onTirarDaRoleta = vi.fn();
     montar({ onTirarDaRoleta });
