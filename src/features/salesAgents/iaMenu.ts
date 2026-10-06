@@ -63,11 +63,16 @@ export function iaDaUrl(params: URLSearchParams): string | null {
   return params.get('ia') || params.get('agent') || null;
 }
 
-/** O endereço certo pra IA e a tela. A Visão geral é o padrão e não aparece no endereço. */
-export function paramsDaIa(ia: string | null, tela: TelaId): Record<string, string> {
+/**
+ * O endereço certo pra IA e a tela. A Visão geral é o padrão e não aparece no
+ * endereço. `?passo=` (entrega 2) só existe em Configurar: sem ele, a casca
+ * reescreveria o endereço e o passo a passo voltaria sempre pro primeiro.
+ */
+export function paramsDaIa(ia: string | null, tela: TelaId, passo?: string | number | null): Record<string, string> {
   const params: Record<string, string> = {};
   if (ia) params.ia = ia;
   if (tela !== PRIMEIRA) params.tela = tela;
+  if (tela === 'configurar' && passo !== undefined && passo !== null && String(passo) !== '') params.passo = String(passo);
   return params;
 }
 

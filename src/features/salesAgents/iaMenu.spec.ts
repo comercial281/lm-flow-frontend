@@ -52,6 +52,13 @@ describe('iaMenu', () => {
     expect(paramsDaIa(null, 'visao-geral')).toEqual({});
   });
 
+  it('o passo só vai no endereço em Configurar (entrega 2)', () => {
+    expect(paramsDaIa('ia-1', 'configurar', 3)).toEqual({ ia: 'ia-1', tela: 'configurar', passo: '3' });
+    expect(paramsDaIa('ia-1', 'configurar', 'avancado')).toEqual({ ia: 'ia-1', tela: 'configurar', passo: 'avancado' });
+    expect(paramsDaIa('ia-1', 'configurar', null)).toEqual({ ia: 'ia-1', tela: 'configurar' });
+    expect(paramsDaIa('ia-1', 'ensinar', 3)).toEqual({ ia: 'ia-1', tela: 'ensinar' });
+  });
+
   it('abre a IA do endereço, senão a última usada, senão a primeira', () => {
     expect(iaInicial(['a', 'b'], 'b', 'a')).toBe('b');
     expect(iaInicial(['a', 'b'], null, 'b')).toBe('b');

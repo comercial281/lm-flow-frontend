@@ -111,7 +111,8 @@ export default function SalesAgents() {
   useEffect(() => {
     if (loading) return;
     const alvo = iaInicial(agents.map((a) => a.id), iaPedida, lerUltimaIa());
-    const certo = paramsDaIa(alvo, tela);
+    // O passo do passo a passo atravessa a normalização (só vale em Configurar).
+    const certo = paramsDaIa(alvo, tela, searchParams.get('passo'));
     if (searchParams.toString() !== new URLSearchParams(certo).toString()) setSearchParams(certo, { replace: true });
     if (alvo) gravarUltimaIa(alvo);
     setSelected((prev) => (prev?.id === alvo ? prev : agents.find((a) => a.id === alvo) ?? null));
@@ -138,9 +139,15 @@ export default function SalesAgents() {
     return () => { vivo = false; };
   }, [selId, selUpdatedAt]);
 
-  const irPara = useCallback((t: TelaId) => {
-    setSearchParams(paramsDaIa(selected?.id ?? null, t), { replace: true });
+  const irPara = useCallback((t: TelaId, passo?: number) => {
+    setSearchParams(paramsDaIa(selected?.id ?? null, t, passo), { replace: true });
   }, [selected?.id, setSearchParams]);
+
+  // O que um passo (ou o Ensinar) salvou: atualiza a IA aberta E a lista do seletor.
+  const aoSalvo = useCallback((a: SalesAgent) => {
+    setSelected(a);
+    setAgents((prev) => prev.map((x) => (x.id === a.id ? a : x)));
+  }, []);
 
   const trocarIa = useCallback((id: string) => {
     setSearchParams(paramsDaIa(id, tela), { replace: true });
@@ -399,7 +406,7 @@ export default function SalesAgents() {
               {tela === 'sugestoes' && insightsLiberado && <TelaSugestoes agent={selected} />}
               {tela === 'relatorio-semanal' && insightsLiberado && <TelaRelatorioSemanal />}
               {tela === 'configurar' && (
-                <TelaConfigurar agent={selected} inboxes={inboxes} saving={saving} onChange={setSelected} onSave={saveAgent} />
+                <TelaConfigurar agent={selected} inboxes={inboxes} aoSalvo={aoSalvo} />
               )}
               {tela === 'ensinar' && <TelaEnsinar agent={selected} onCountChange={loadAgents} />}
               {tela === 'testar' && <TelaTestar agent={selected} />}
