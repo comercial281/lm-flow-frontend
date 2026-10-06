@@ -18,12 +18,13 @@ import {
 // landing sem a landing usar.
 import { BrPhoneInput } from '@/components/shared/BrPhoneInput';
 import { isValidBrPhone } from '@/lib/brPhone';
-import type { BlockType } from './contract';
+import type { BlockConfig, BlockType } from './contract';
 import {
   type BlockComponentProps,
   type LandingPhoto,
   type LandingProperty,
   STAGE_LABELS,
+  ehLocacao,
   fillTemplate as fill,
   formatBRL,
 } from './render-types';
@@ -146,7 +147,14 @@ function HeroBlock({ config, property }: BlockComponentProps<'hero'>) {
 }
 
 function PriceBandBlock({ config, property }: BlockComponentProps<'price_band'>) {
-  const text = config.text ?? (property?.salePrice ? formatBRL(property.salePrice) : property?.displayPrice);
+  // O texto escrito vence; locação mostra o aluguel; o resto cai no preço de venda.
+  const text =
+    config.text ??
+    (ehLocacao(property) && property?.rentPrice
+      ? `${formatBRL(property.rentPrice)}/mês`
+      : property?.salePrice
+        ? formatBRL(property.salePrice)
+        : property?.displayPrice);
   if (empty(text)) return null;
   return (
     <div
@@ -185,6 +193,18 @@ function techValue(field: string, property?: LandingProperty | null): string | u
       return property.usefulAreaM2 != null ? `${property.usefulAreaM2} m²` : undefined;
     case 'total_area_m2':
       return property.totalAreaM2 != null ? `${property.totalAreaM2} m²` : undefined;
+    case 'delivery': {
+      if (!property.deliveryForecast) return undefined;
+      const d = new Date(property.deliveryForecast);
+      if (Number.isNaN(d.getTime())) return undefined;
+      // "dez/2027": o pt-BR devolve "dez. de 2027" e o ponto do mês sobra.
+      return d
+        .toLocaleDateString('pt-BR', { month: 'short', year: 'numeric', timeZone: 'UTC' })
+        .replace(/\./g, '')
+        .replace(' de ', '/');
+    }
+    case 'units':
+      return property.totalUnits != null ? String(property.totalUnits) : undefined;
     case 'stage':
       return property.stage ? STAGE_LABELS[property.stage] : undefined;
     default:
@@ -630,20 +650,41 @@ function TrackRecordBlock({ config }: BlockComponentProps<'track_record'>) {
   );
 }
 
-function ApartmentTypesBlock({ config }: BlockComponentProps<'apartment_types'>) {
-  if (!config.items.length) return null;
+/** Plantas vindas do cadastro do imóvel, quando o bloco não tem itens escritos. */
+function deTipologias(property?: LandingProperty | null): BlockConfig<'apartment_types'>['items'] {
+  const locacao = ehLocacao(property);
+  return (property?.typologies ?? []).map((t) => {
+    const preco = locacao ? t.rentPrice : t.salePrice;
+    return {
+      name: t.name || (t.bedrooms != null ? `${t.bedrooms} dorms` : 'Planta'),
+      areaM2: t.usefulAreaM2 ?? undefined,
+      price: preco ?? undefined,
+    };
+  });
+}
+
+function ApartmentTypesBlock({ config, property }: BlockComponentProps<'apartment_types'>) {
+  // O que foi escrito à mão vence; sem isso, vale o que o imóvel tem.
+  const itens = config.items.length ? config.items : deTipologias(property);
+  const daImovel = !config.items.length;
+  const locacao = ehLocacao(property);
+  if (!itens.length) return null;
   return (
     <Section>
       <SectionTitle>{config.title}</SectionTitle>
       <div className="space-y-3">
-        {config.items.map((it, i) => (
+        {itens.map((it, i) => (
           <div key={i} className="flex items-center gap-3 rounded-xl p-3" style={{ background: 'var(--lp-card)' }}>
             {it.planUrl && <img src={it.planUrl} alt={it.name} loading="lazy" decoding="async" className="h-16 w-16 rounded object-cover" />}
             <div className="flex-1">
               <div className="text-sm font-semibold">{it.name}</div>
               {it.areaM2 != null && <div className="text-xs opacity-70">{it.areaM2} m²</div>}
             </div>
-            {it.price != null && <div className="text-sm font-bold" style={{ color: 'var(--lp-accent)' }}>{formatBRL(it.price)}</div>}
+            {it.price != null && (
+              <div className="text-sm font-bold" style={{ color: 'var(--lp-accent)' }}>
+                {!daImovel ? formatBRL(it.price) : locacao ? `${formatBRL(it.price)}/mês` : `a partir de ${formatBRL(it.price)}`}
+              </div>
+            )}
           </div>
         ))}
       </div>

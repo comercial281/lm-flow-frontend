@@ -63,6 +63,25 @@ export interface PublicLandingDTO {
     latitude?: number | null;
     longitude?: number | null;
     responsible_name?: string;
+    listing_kind?: 'development' | 'resale' | null;
+    transaction?: 'sale' | 'rent' | 'sale_rent' | 'season';
+    rent_price?: number | null;
+    condo_fee?: number | null;
+    iptu?: number | null;
+    iptu_period?: 'monthly' | 'yearly' | null;
+    mcmv?: boolean | null;
+    accepts_fgts?: boolean | null;
+    delivery_forecast?: string | null;
+    total_units?: number | null;
+    typologies?: Array<{
+      name?: string | null;
+      bedrooms?: number | null;
+      suites?: number | null;
+      useful_area_m2?: number | null;
+      sale_price?: number | null;
+      rent_price?: number | null;
+      units_available?: number | null;
+    }> | null;
     photos?: PublicLandingPhotoDTO[];
   } | null;
 }

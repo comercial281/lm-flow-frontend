@@ -11,6 +11,7 @@ import { loadLanding, type LandingPixel, type PublicLandingDTO } from './landing
 import { installPixel } from './metaPixel';
 import { sendSiteVisit } from '@/features/siteBuilder/public/siteVisits';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
+import { FONTES_DO_SITE, fonteDoSite } from '@/features/siteBuilder/public/aparenciaConfig';
 
 /**
  * A landing de anúncio pública, já com tenant e slug resolvidos. Quem resolve
@@ -45,6 +46,24 @@ function toProperty(p: PublicLandingDTO['property']): LandingProperty | null {
     latitude: p.latitude ?? null,
     longitude: p.longitude ?? null,
     responsibleName: p.responsible_name,
+    // Dados novos: servidor velho não manda, e a ausência vira null.
+    listingKind: p.listing_kind ?? null,
+    transaction: p.transaction ?? undefined,
+    rentPrice: p.rent_price ?? null,
+    condoFee: p.condo_fee ?? null,
+    iptu: p.iptu ?? null,
+    iptuPeriod: p.iptu_period ?? null,
+    mcmv: p.mcmv ?? null,
+    acceptsFgts: p.accepts_fgts ?? null,
+    deliveryForecast: p.delivery_forecast ?? null,
+    totalUnits: p.total_units ?? null,
+    typologies: (p.typologies ?? []).map((t) => ({
+      name: t.name ?? null,
+      bedrooms: t.bedrooms ?? null,
+      usefulAreaM2: t.useful_area_m2 ?? null,
+      salePrice: t.sale_price ?? null,
+      rentPrice: t.rent_price ?? null,
+    })),
     photos: (p.photos ?? []).map((ph) => ({
       url: ph.file_url,
       thumbnailUrl: ph.thumbnail_url ?? undefined,
@@ -240,6 +259,10 @@ export function LandingPublicView({ tenant, slug, noDominio = false }: LandingPu
     );
   }, [state, tenant, slug]);
 
+  // A fonte escolhida só aparece se for carregada: link só para as fontes da lista.
+  const fontePrincipal = (theme.fontFamily ?? '').split(',')[0].trim();
+  const fonteHref = FONTES_DO_SITE.includes(fontePrincipal) ? fonteDoSite(fontePrincipal).fontHref : null;
+
   if (state === 'loading') {
     return <div className="flex min-h-screen items-center justify-center bg-[#0F0520] text-neutral-400">Carregando…</div>;
   }
@@ -257,6 +280,7 @@ export function LandingPublicView({ tenant, slug, noDominio = false }: LandingPu
       style={{ background: theme.bgEnd ?? '#0A0A0B' }}
       onClickCapture={onCtaClick}
     >
+      {fonteHref && <link rel="stylesheet" href={fonteHref} />}
       <div className="relative w-full max-w-[460px] shadow-2xl">
         <BlockRenderer blocks={blocks} property={property} theme={theme} onSubmitLead={onSubmitLead} />
       </div>

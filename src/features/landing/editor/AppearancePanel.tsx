@@ -7,6 +7,7 @@ import {
 } from '@/features/landing/blocks';
 import { useLandingEditorStore } from './landingEditorStore';
 import { Seletor } from '@/components/base/Seletor';
+import { FONTES_DO_SITE } from '@/features/siteBuilder/public/aparenciaConfig';
 
 const COLOR_FIELDS: { key: keyof LandingTheme; label: string }[] = [
   { key: 'primary', label: 'Primária' },
@@ -17,7 +18,7 @@ const COLOR_FIELDS: { key: keyof LandingTheme; label: string }[] = [
   { key: 'text', label: 'Texto' },
 ];
 
-const FONTS = ['Inter', 'Space Grotesk', 'Lato', 'Poppins', 'Montserrat', 'Roboto'];
+const FONTS = FONTES_DO_SITE;
 
 const BRAND_MODES: BrandMode[] = ['client', 'development', 'both'];
 

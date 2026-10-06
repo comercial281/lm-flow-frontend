@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { BlockRenderer } from './BlockRenderer';
-import { createBlock } from './registry';
+import { createBlock, defaultLandingBlocks } from './registry';
 import { parsePageBlocks } from './contract';
 import { BR_PHONE_PLACEHOLDER } from '@/lib/brPhone';
-import type { LandingProperty } from './render-types';
+import { ehLocacao, type LandingProperty } from './render-types';
 
 const property: LandingProperty = {
   code: 'AP-001',
@@ -254,5 +254,102 @@ describe('BlockRenderer', () => {
     render(<BlockRenderer blocks={[createBlock('amenities')]} property={property} />);
     // amenities with no items renders null; no crash
     expect(screen.queryByText('Infraestrutura')).not.toBeInTheDocument();
+  });
+});
+
+// Locação, entrega, unidades e plantas vindas do imóvel (Meu site D).
+describe('BlockRenderer: dados novos do imóvel', () => {
+  const base: LandingProperty = { code: 'X', title: 'Casa' };
+
+  it('faixa de preço: locação mostra o aluguel por mês', () => {
+    const p: LandingProperty = { ...base, transaction: 'rent', rentPrice: 2500 };
+    render(<BlockRenderer blocks={[createBlock('price_band')]} property={p} />);
+    expect(screen.getByText(/R\$\s?2\.500\/mês/)).toBeInTheDocument();
+  });
+
+  it('faixa de preço: o texto escrito vence o aluguel', () => {
+    const p: LandingProperty = { ...base, transaction: 'rent', rentPrice: 2500 };
+    const b = createBlock('price_band');
+    b.config.text = 'Consulte';
+    render(<BlockRenderer blocks={[b]} property={p} />);
+    expect(screen.getByText('Consulte')).toBeInTheDocument();
+  });
+
+  it('faixa de preço: venda e locação com preço de venda usa a venda', () => {
+    const p: LandingProperty = { ...base, transaction: 'sale_rent', salePrice: 900000, rentPrice: 3000 };
+    render(<BlockRenderer blocks={[createBlock('price_band')]} property={p} />);
+    expect(screen.getByText(/R\$\s?900\.000/)).toBeInTheDocument();
+    expect(screen.queryByText(/\/mês/)).toBeNull();
+  });
+
+  it('ehLocacao: só aluguel e temporada', () => {
+    expect(ehLocacao({ ...base, transaction: 'rent' })).toBe(true);
+    expect(ehLocacao({ ...base, transaction: 'season' })).toBe(true);
+    expect(ehLocacao({ ...base, transaction: 'sale' })).toBe(false);
+    expect(ehLocacao({ ...base, transaction: 'sale_rent' })).toBe(false);
+    expect(ehLocacao(null)).toBe(false);
+    expect(ehLocacao(undefined)).toBe(false);
+  });
+
+  function ficha(p: LandingProperty, fields: string[]) {
+    const b = createBlock('tech_sheet');
+    b.config.fields = fields as never;
+    return render(<BlockRenderer blocks={[b]} property={p} />);
+  }
+
+  it('ficha: entrega e unidades aparecem com o dado', () => {
+    ficha({ ...base, deliveryForecast: '2027-12-01', totalUnits: 120 }, ['delivery', 'units']);
+    expect(screen.getByText('dez/2027')).toBeInTheDocument();
+    expect(screen.getByText('120')).toBeInTheDocument();
+  });
+
+  it('ficha: sem dado, o item some', () => {
+    ficha({ ...base, bedrooms: 2 }, ['delivery', 'units', 'bedrooms']);
+    expect(screen.queryByText('Entrega')).toBeNull();
+    expect(screen.queryByText('Unidades')).toBeNull();
+    expect(screen.getByText('Dormitórios')).toBeInTheDocument();
+  });
+
+  const tipologias = [
+    { name: 'Tipo A', bedrooms: 2, usefulAreaM2: 58, salePrice: 350000 },
+    { name: null, bedrooms: 2, usefulAreaM2: 60, rentPrice: 2200 },
+  ];
+
+  it('plantas: sem itens manuais, lista as tipologias do imóvel', () => {
+    const p: LandingProperty = { ...base, typologies: tipologias };
+    render(<BlockRenderer blocks={[createBlock('apartment_types')]} property={p} />);
+    expect(screen.getByText('Tipo A')).toBeInTheDocument();
+    expect(screen.getByText('58 m²')).toBeInTheDocument();
+    expect(screen.getByText(/a partir de R\$\s?350\.000/i)).toBeInTheDocument();
+    expect(screen.getByText('2 dorms')).toBeInTheDocument();
+  });
+
+  it('plantas: na locação o preço é o aluguel por mês', () => {
+    const p: LandingProperty = { ...base, transaction: 'rent', typologies: tipologias };
+    render(<BlockRenderer blocks={[createBlock('apartment_types')]} property={p} />);
+    expect(screen.getByText(/R\$\s?2\.200\/mês/)).toBeInTheDocument();
+    expect(screen.queryByText(/a partir de/i)).toBeNull();
+  });
+
+  it('plantas: itens manuais vencem as tipologias', () => {
+    const p: LandingProperty = { ...base, typologies: tipologias };
+    const b = createBlock('apartment_types');
+    b.config.items = [{ name: 'Manual' }];
+    render(<BlockRenderer blocks={[b]} property={p} />);
+    expect(screen.getByText('Manual')).toBeInTheDocument();
+    expect(screen.queryByText('Tipo A')).toBeNull();
+  });
+
+  it('plantas: sem itens e sem tipologias, o bloco não aparece', () => {
+    const { container } = render(<BlockRenderer blocks={[createBlock('apartment_types')]} property={base} />);
+    expect(container.textContent).toBe('');
+  });
+
+  it('moldura: página padrão de venda mantém faixa e ficha', () => {
+    const p: LandingProperty = { ...property, bathrooms: 2 };
+    render(<BlockRenderer blocks={defaultLandingBlocks()} property={p} />);
+    expect(screen.getAllByText(/R\$\s?800\.000/).length).toBeGreaterThan(0);
+    expect(screen.getByText('Dormitórios')).toBeInTheDocument();
+    expect(screen.queryByText(/\/mês/)).toBeNull();
   });
 });
