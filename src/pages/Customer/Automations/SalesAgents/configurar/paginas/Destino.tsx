@@ -1,6 +1,9 @@
 // Repasse · Destino (onda 3, decisão 9). Roleta (escolhe) · Corretor fixo
 // (escolhe) · Sistema do cliente. "A roleta deste número" saiu (a rotina da onda
 // 2 troca as IAs antigas; a que sobrou mostra o aviso e nenhum cartão marcado).
+// Roleta nova (06/10/2026, vinda da main): a roleta não tem mais número. A IA que
+// sobrou com o valor antigo vê a roleta que atendia o número (GET for_inbox) e
+// confirma com um clique; sem roleta no número, o aviso pede a escolha.
 // Persona "O corretor" TRAVA o destino: o lead fica com o dono do número.
 //
 // ⚠️ GRAVAÇÃO NA HORA SEM DESTINO PELA METADE: trocar o cartão NÃO grava. Roleta e
@@ -45,6 +48,7 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
   const [pessoas, setPessoas] = useState<{ id: string; nome: string }[]>([]);
   const [url, setUrl] = useState(agent.handoff_webhook_url ?? '');
   const [erroUrl, setErroUrl] = useState<string | null>(null);
+  const [roletaQueAtendia, setRoletaQueAtendia] = useState<{ id: string; nome: string } | null>(null);
 
   useEffect(() => { if (persona === 'broker') setEscolhendo(null); }, [persona]);
   useEffect(() => { if (!editandoUrl.current) setUrl(agent.handoff_webhook_url ?? ''); }, [agent.handoff_webhook_url]);
@@ -59,6 +63,18 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
       .catch(() => {});
     return () => { vivo = false; };
   }, []);
+  // Valor antigo "a roleta deste número": leitura de fundo da roleta que atendia o
+  // número. Sem roleta (ou sem acesso), o aviso só pede a escolha.
+  const naRoletaDoNumero = gravado === 'inbox_roleta' && persona !== 'broker' && !!agent.inbox_id;
+  useEffect(() => {
+    setRoletaQueAtendia(null);
+    if (!naRoletaDoNumero || !agent.inbox_id) return;
+    let vivo = true;
+    roletaConfigService.getForInbox(String(agent.inbox_id))
+      .then((r) => { if (vivo && r) setRoletaQueAtendia({ id: String(r.id), nome: r.display_name || r.name || 'Roleta sem nome' }); })
+      .catch(() => {});
+    return () => { vivo = false; };
+  }, [naRoletaDoNumero, agent.inbox_id]);
 
   const doGravado: Escolha | null = gravado === 'roleta' || gravado === 'user' || gravado === 'webhook' ? gravado : null;
   // Com a persona corretor a trava manda, mesmo no primeiro render depois da troca.
@@ -125,7 +141,22 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
         ) : (
           <>
             {gravado === 'inbox_roleta' && !escolhendo && (
-              <Aviso>Hoje o lead vai pra roleta deste número, uma opção que saiu da tela. Escolha abaixo pra onde ele vai.</Aviso>
+              <Aviso>
+                {roletaQueAtendia ? (
+                  <>
+                    <p className="font-medium">Confirme a roleta</p>
+                    <p className="mt-1">
+                      Hoje o lead vai pra roleta deste número, uma opção que saiu da tela: a roleta não tem mais número.
+                      A que atendia este número é a {roletaQueAtendia.nome}.
+                    </p>
+                    <Button type="button" size="sm" variant="outline" className="mt-2" onClick={() => escolherRoleta(roletaQueAtendia.id)}>
+                      Usar a roleta {roletaQueAtendia.nome}
+                    </Button>
+                  </>
+                ) : (
+                  <p>Hoje o lead vai pra roleta deste número, uma opção que saiu da tela. Escolha abaixo pra onde ele vai.</p>
+                )}
+              </Aviso>
             )}
             <CartoesDeEscolha<Escolha> rotulo="Destino" colunas={3} valor={atual} opcoes={DESTINOS} aoEscolher={escolherCartao} />
             {atual === 'roleta' && (
@@ -133,7 +164,7 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
                 <Seletor id="destino-roleta" className={`${CLASSE_DO_CAMPO} w-full`} value={gravado === 'roleta' ? agent.handoff_roleta_config_id ?? '' : ''}
                   onChange={(e) => escolherRoleta(e.target.value)}>
                   <option value="">Escolha a roleta</option>
-                  {roletasVisiveis.map((r) => <option key={r.id} value={r.id}>{r.nome}{r.ativa ? '' : ' (desativada)'}</option>)}
+                  {roletasVisiveis.map((r) => <option key={r.id} value={r.id}>{r.nome}{r.ativa ? '' : ' (desligada)'}</option>)}
                 </Seletor>
               </Campo>
             )}

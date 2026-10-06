@@ -6,7 +6,10 @@ import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
 import { gravarDeTeste } from '@/test/salesAgents/gravarDeTeste';
 
 vi.mock('@/services/roletaConfig/roletaConfigService', () => ({
-  roletaConfigService: { getAll: vi.fn().mockResolvedValue([{ id: 'r1', display_name: 'Roleta Centro', inbox_id: 'inbox-1', is_active: true }]) },
+  roletaConfigService: {
+    getAll: vi.fn().mockResolvedValue([{ id: 'r1', display_name: 'Roleta Centro', inbox_id: 'inbox-1', is_active: true }]),
+    getForInbox: vi.fn().mockResolvedValue(null),
+  },
 }));
 vi.mock('@/services/channels/agentsService', () => ({ default: { getAll: vi.fn().mockResolvedValue([{ id: 'u1', name: 'Ana Paula' }]) } }));
 vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
@@ -66,6 +69,19 @@ describe('Destino', () => {
     await abrir(consultora({ handoff_target: 'inbox_roleta', handoff_roleta_config_id: null }));
     screen.getAllByRole('radio').forEach((r) => expect(r).toHaveAttribute('aria-checked', 'false'));
     expect(screen.getByText(/uma opção que saiu da tela/)).toBeInTheDocument();
+    expect(screen.queryByText('Confirme a roleta')).toBeNull();
+  });
+
+  // Roleta nova (06/10/2026): a roleta não tem número; a que atendia o número vem
+  // pra confirmar com um clique (porte do passo 2 da main).
+  it('"a roleta deste número" (antiga) com roleta no número: confirma a roleta com um clique', async () => {
+    vi.mocked(roletaConfigService.getForInbox).mockResolvedValueOnce({ id: 'r1', display_name: 'Roleta Centro', is_active: true } as never);
+    const { gravar } = await abrir(consultora({ handoff_target: 'inbox_roleta', handoff_roleta_config_id: null }));
+    expect(roletaConfigService.getForInbox).toHaveBeenCalledWith('inbox-1');
+    expect(await screen.findByText('Confirme a roleta')).toBeInTheDocument();
+    expect(gravar).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Usar a roleta Roleta Centro' }));
+    expect(gravar).toHaveBeenCalledWith({ handoff_target: 'roleta', handoff_roleta_config_id: 'r1', handoff_user_id: null });
   });
 
   it('Resumo junto grava por dentro do transfer_config', async () => {
