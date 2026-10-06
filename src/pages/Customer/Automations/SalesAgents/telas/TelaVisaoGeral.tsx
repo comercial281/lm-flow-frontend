@@ -2,6 +2,7 @@
 // entregou (os números que ficavam em Resultados) e as sugestões esperando
 // resposta. É a primeira tela que abre.
 import { useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { AlertTriangle, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
@@ -217,7 +218,10 @@ export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferind
                   <div className="text-sm font-medium">{p.titulo}</div>
                   <div className="text-xs text-muted-foreground">{p.detalhe}</div>
                 </div>
-                {p.corrigir && (
+                {/* Fora da IA (WhatsApp desconectado): link pra configuração do número. */}
+                {p.corrigir?.rota ? (
+                  <Button asChild size="sm" variant="outline"><Link to={p.corrigir.rota}>Corrigir</Link></Button>
+                ) : p.corrigir && (
                   <Button size="sm" variant="outline"
                     onClick={() => (p.corrigir!.pagina ? aoIr(p.corrigir!.tela, p.corrigir!.pagina) : aoIr(p.corrigir!.tela))}>
                     Corrigir

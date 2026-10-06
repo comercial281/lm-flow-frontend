@@ -14,6 +14,7 @@ import type { HealthItem, HealthReport, SalesAgent, SalesAgentTrigger } from '@/
 import type { PaginaId } from '@/pages/Customer/Automations/SalesAgents/configurar/paginas';
 import type { TelaId } from './iaMenu';
 import { pendenciasDasPaginas } from './pendencias';
+import { enderecoConexao } from '@/features/numbers/avisoConversas';
 
 export type TipoSituacao = 'atendendo' | 'parada' | 'restricao' | 'desligada' | 'rascunho';
 
@@ -21,6 +22,12 @@ export interface Corrigir {
   tela: TelaId;
   /** Página do Configurar (onda 3). */
   pagina?: PaginaId;
+  /**
+   * Fora da IA: quando existe, o "Corrigir" leva pra cá (`tela`/`pagina` ficam de
+   * reserva). Hoje só o WhatsApp desconectado, que se religa (QR code) na
+   * configuração do número — o Canal só mostra "Desconectado".
+   */
+  rota?: string;
 }
 
 export interface Situacao {
@@ -52,8 +59,8 @@ const PAGINA = (pagina: PaginaId): Corrigir => ({ tela: 'configurar', pagina });
 const PARADA_POR_ITEM: Record<string, { frase: string; corrigir?: Corrigir }> = {
   inbox: { frase: 'Parada: o número desta IA não existe mais', corrigir: PAGINA('canal') },
   mode: { frase: 'Parada: está em "só follow-up" e não responde quem escreve', corrigir: PAGINA('canal') },
-  // ⚠️ Era a tela Diagnóstico, que saiu do menu (só equipe). O cartão do número, em
-  // Canal, mostra se o WhatsApp está conectado.
+  // ⚠️ Era a tela Diagnóstico, que saiu do menu (só equipe). O "Corrigir" sai de
+  // `corrigirDoItem`: a configuração do número, onde se religa (revisão da onda 3, M6).
   credentials: { frase: 'Parada: o WhatsApp do número está desconectado', corrigir: PAGINA('canal') },
   api_key: { frase: 'Parada: problema na plataforma, avise o suporte' },
 };
@@ -162,7 +169,11 @@ export function situacaoDaIa(agent: AgenteLido, diagnostics?: HealthReport | nul
   if (agent.followup_only) return { tipo: 'parada', ...PARADA_POR_ITEM.mode };
 
   const erro = (diagnostics?.items ?? []).find((i) => i.status === 'error' && PARADA_POR_ITEM[i.key]);
-  if (erro) return { tipo: 'parada', ...PARADA_POR_ITEM[erro.key] };
+  if (erro) {
+    const parada = PARADA_POR_ITEM[erro.key];
+    const corrigir = parada.corrigir ? corrigirDoItem(erro.key, agent) ?? parada.corrigir : undefined;
+    return { tipo: 'parada', frase: parada.frase, ...(corrigir ? { corrigir } : {}) };
+  }
 
   const restricao = restricaoDosGatilhos(agent);
   if (restricao?.parada) return { tipo: 'parada', frase: `Parada: ${restricao.frase}`, corrigir: PAGINA('canal') };
@@ -171,13 +182,24 @@ export function situacaoDaIa(agent: AgenteLido, diagnostics?: HealthReport | nul
   return { tipo: 'atendendo', frase: 'Atendendo' };
 }
 
-function daItem(item: HealthItem): Pendencia {
+/**
+ * O "Corrigir" de um item do Diagnóstico. WhatsApp desconectado leva à configuração
+ * do número (o mesmo destino do aviso de queda, `enderecoConexao`), onde se lê o QR
+ * code de novo; sem número, cai no Canal pra escolher um.
+ */
+function corrigirDoItem(chave: string, agent: Pick<AgenteLido, 'inbox_id'>): Corrigir | undefined {
+  const base = CORRIGIR_DO_ITEM[chave];
+  if (chave === 'credentials' && agent.inbox_id) return { ...base, rota: enderecoConexao(String(agent.inbox_id)) };
+  return base;
+}
+
+function daItem(item: HealthItem, agent: Pick<AgenteLido, 'inbox_id'>): Pendencia {
   return {
     chave: item.key,
     titulo: item.label,
     detalhe: item.detail,
     grave: item.status === 'error',
-    corrigir: CORRIGIR_DO_ITEM[item.key],
+    corrigir: corrigirDoItem(item.key, agent),
   };
 }
 
@@ -202,7 +224,7 @@ const TITULO_NO_PAINEL: Record<string, string> = {
 
 export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | null): Pendencia[] {
   // "IA ligada" desligada já é o veredito; repetir na lista é ruído.
-  const lista = (diagnostics?.items ?? []).filter((i) => i.status !== 'ok' && i.key !== 'enabled').map(daItem);
+  const lista = (diagnostics?.items ?? []).filter((i) => i.status !== 'ok' && i.key !== 'enabled').map((i) => daItem(i, agent));
 
   if (!diagnostics && agent.enabled && !agent.inbox_id) {
     lista.push({ chave: 'inbox', titulo: 'Número de WhatsApp', detalhe: 'Nenhum número escolhido. Sem ele a IA não recebe nem responde ninguém.', grave: true, corrigir: PAGINA('canal') });

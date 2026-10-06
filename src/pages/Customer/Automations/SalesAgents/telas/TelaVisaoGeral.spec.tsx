@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 
 const performance = vi.hoisted(() => vi.fn());
 const listSuggestions = vi.hoisted(() => vi.fn());
@@ -54,6 +55,17 @@ describe('Painel → Visão geral', () => {
     const item = screen.getByText(/Nenhum número escolhido/).closest('li')!;
     await userEvent.click(within(item).getByRole('button', { name: 'Corrigir' }));
     expect(props.aoIr).toHaveBeenCalledWith('configurar', 'canal');
+  });
+
+  it('WhatsApp desconectado: o "Corrigir" abre a configuração do número, onde se religa', () => {
+    const props: TelaVisaoGeralProps = {
+      agent: agente, situacao: { tipo: 'parada', frase: 'Parada: o WhatsApp do número está desconectado' },
+      diagnostico: { status: 'error', items: [{ key: 'credentials', label: 'WhatsApp', status: 'error', detail: 'Desconectado.' }] },
+      conferindo: false, falhou: false, mostrarSugestoes: false, equipe: false, aoIr: vi.fn(),
+    };
+    render(<MemoryRouter><TelaVisaoGeral {...props} /></MemoryRouter>);
+    const item = screen.getByText('Desconectado.').closest('li')!;
+    expect(within(item).getByRole('link', { name: 'Corrigir' })).toHaveAttribute('href', '/channels/inbox-1/settings?tab=configuration');
   });
 
   it('sem pendência: "Nada pendente"; enquanto confere, não promete nada', () => {

@@ -38,9 +38,13 @@ describe('situacaoDaIa', () => {
     expect(situacaoDaIa(ia(), diag(['enabled', 'ok'], ['inbox', 'error'])).frase).toBe('Parada: o número desta IA não existe mais');
   });
 
-  it('WhatsApp desconectado: parada, corrigir em Canal', () => {
+  // Revisão final da onda 3 (M6): o Canal só diz "Desconectado"; religar (QR code) é
+  // na configuração do número, o mesmo destino do aviso de queda.
+  it('WhatsApp desconectado: parada, corrigir na configuração do número (onde se religa)', () => {
     const s = situacaoDaIa(ia(), diag(['credentials', 'error']));
-    expect(s).toEqual({ tipo: 'parada', frase: 'Parada: o WhatsApp do número está desconectado', corrigir: { tela: 'configurar', pagina: 'canal' } });
+    expect(s.tipo).toBe('parada');
+    expect(s.frase).toBe('Parada: o WhatsApp do número está desconectado');
+    expect(s.corrigir?.rota).toBe(`/channels/${ia().inbox_id}/settings?tab=configuration`);
   });
 
   it('"só follow-up" para a resposta ao vivo, mesmo sem Diagnóstico', () => {
@@ -146,7 +150,7 @@ describe('onda 3: Corrigir leva à página certa', () => {
     expect(situacaoDaIa(agenteDeTeste({ enabled: true, inbox_id: null })).corrigir).toEqual({ tela: 'configurar', pagina: 'canal' });
     expect(situacaoDaIa(agenteDeTeste({ enabled: false })).corrigir).toBeUndefined(); // liga na chave da barra
     const comCredencial = pendenciasDaIa(agenteDeTeste(), { items: [{ key: 'credentials', label: 'WhatsApp', status: 'error', detail: 'Desconectado' }] } as never);
-    expect(comCredencial.find((p) => p.chave === 'credentials')?.corrigir).toEqual({ tela: 'configurar', pagina: 'canal' });
+    expect(comCredencial.find((p) => p.chave === 'credentials')?.corrigir?.rota).toBe('/channels/inbox-1/settings?tab=configuration');
   });
 
   it('"Entregar pro follow-up" sem follow-up aparece no Painel, laranja, em Follow-up', () => {
