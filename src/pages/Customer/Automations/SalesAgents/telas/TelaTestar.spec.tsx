@@ -165,6 +165,24 @@ describe('TelaTestar — Testar fiel', () => {
     expect(screen.getByText('Abertura usada: Campanha Vivaz')).toBeInTheDocument();
   });
 
+  // O imóvel do lead real vem junto: com o campo vazio, o turno seguinte mandaria
+  // property_code '' e o servidor apagaria o imóvel do teste.
+  it('carregar traz o imóvel do lead e o turno seguinte manda o mesmo', async () => {
+    const user = userEvent.setup();
+    const carregado: RehearsalState = { ...estado(1), attrs: { sales_agent_property_code: 'AP9' }, messages: [{ id: 'm1', role: 'user', content: 'oi', at: '2026-10-05T13:00:00-03:00', marks: {} }] };
+    rehearsal.mockResolvedValueOnce(resultado({ kind: 'loaded', outcome: outcome() }, carregado));
+    rehearsal.mockResolvedValueOnce(resultado({ messages: [{ content: 'Olá!', pause_ms: 0 }] }, estado(2)));
+
+    render(<TelaTestar agent={agent} />);
+    await user.type(screen.getByPlaceholderText('Telefone com DDD'), '11999998888');
+    await user.click(screen.getByRole('button', { name: 'Carregar' }));
+    await screen.findByText('oi');
+    await user.type(screen.getByPlaceholderText('Mensagem do lead...'), 'tem vaga?{Enter}');
+
+    await screen.findByText('Olá!');
+    expect(rehearsal.mock.calls[1][1]).toMatchObject({ step: 'turn', context: { property_code: 'AP9' } });
+  });
+
   it('diz em que modelo o teste roda e avisa quando a IA atende em outro', () => {
     const sonnet = { id: 'agent-1', model: 'claude-sonnet-4-5', test_model: 'claude-haiku-4-5' } as unknown as SalesAgent;
 

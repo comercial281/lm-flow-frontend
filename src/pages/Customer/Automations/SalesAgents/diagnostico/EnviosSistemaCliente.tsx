@@ -16,6 +16,13 @@ const COR: Record<Tom, string> = {
   erro: 'text-red-700 dark:text-red-400',
 };
 
+// ⚠️ A tela de conversas só abre pelo id longo (UUID). Link com o número curto da
+// conversa cairia na lista vazia: some até o servidor mandar o id certo.
+const UUID = /\/conversations\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function linkQueAbre(path: string | null): boolean {
+  return Boolean(path && UUID.test(path));
+}
+
 export default function EnviosSistemaCliente({ agentId }: { agentId: string }) {
   const [envios, setEnvios] = useState<WebhookDelivery[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -82,8 +89,8 @@ export default function EnviosSistemaCliente({ agentId }: { agentId: string }) {
                       {d.response_excerpt}
                     </pre>
                   )}
-                  {d.conversation_path && (
-                    <Link to={d.conversation_path} className="underline">
+                  {linkQueAbre(d.conversation_path) && (
+                    <Link to={d.conversation_path!} className="underline">
                       Abrir a conversa
                     </Link>
                   )}

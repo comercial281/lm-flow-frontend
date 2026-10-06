@@ -20,7 +20,7 @@ function lado(texto: string, extra = {}) {
 
 beforeEach(() => {
   [listAll, comparisonCandidates, comparisonEvaluate].forEach((f) => f.mockReset());
-  listAll.mockResolvedValue([{ id: 'a1', tenant_slug: 'dezesseis', tenant_name: '016 Imóveis', name: 'IA Panamby' }]);
+  listAll.mockResolvedValue([{ id: 'a1', tenant_slug: 'dezesseis', tenant_name: 'Imobiliária Exemplo', name: 'IA Exemplo' }]);
   comparisonCandidates.mockResolvedValue([{ id: 'c1', contact_name: 'Camila', last_reply_at: '2026-10-04T10:00:00-03:00', points: 2, in_handoff: false, has_visit: false }]);
 });
 

@@ -26,7 +26,7 @@ const base: WebhookDelivery = {
   delivered_at: '2026-10-05T17:32:01Z',
   failed_at: null,
   contact_name: 'Mariana Souza',
-  conversation_path: '/conversations/4821',
+  conversation_path: '/conversations/0b6f2c1e-6a1d-4c3e-9f7a-2d5e8b9c1a00',
 };
 
 const montar = () =>
@@ -63,7 +63,7 @@ describe('EnviosSistemaCliente', () => {
 
     expect(screen.getByText(/O sistema do cliente recebeu \(código 200\) em 0,3 s/)).toBeInTheDocument();
     expect(screen.getByText('{"ok":true}')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Abrir a conversa' })).toHaveAttribute('href', '/conversations/4821');
+    expect(screen.getByRole('link', { name: 'Abrir a conversa' })).toHaveAttribute('href', '/conversations/0b6f2c1e-6a1d-4c3e-9f7a-2d5e8b9c1a00');
   });
 
   it('sem envio ainda, diz como testar', async () => {

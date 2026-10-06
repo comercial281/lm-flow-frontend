@@ -232,7 +232,8 @@ export default function AiUnderstandingPanel({ conversation, embutido = false }:
 
       {resumo && !embutido && <Resumo texto={resumo} cortar={false} />}
 
-      {transferiu && (
+      {/* Repasse pro sistema do cliente tem a linha própria logo abaixo. */}
+      {transferiu && !envioSistema && (
         <div className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400 mt-1">
           <ArrowRightLeft className="h-3 w-3 mt-0.5 flex-shrink-0" />
           <span>

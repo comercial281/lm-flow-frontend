@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Bot, Loader2, RotateCcw, Send, SlidersHorizontal, FastForward, Zap } from 'lucide-react';
 import { Button, Input, Label, Textarea } from '@/components/ui/ds';
 import TestMediaBubble from '../TestMediaBubble';
+import { Seletor } from '@/components/base/Seletor';
 import { usePergunta } from '@/hooks/usePergunta';
 import {
   salesAgentsService,
@@ -93,6 +94,10 @@ export function TelaTestar({ agent }: { agent: SalesAgent }) {
       setItens((prev) => [...prev, ...itensDoTurno(r.turn, codigo)]);
       rolar();
     } catch (e) {
+      // A mensagem não entrou no teste: tira a bolha e devolve o texto pro campo,
+      // senão quem tenta de novo vê duas mensagens e o servidor tem uma.
+      setItens((prev) => prev.slice(0, -1));
+      setMensagem(texto);
       toast.error((e as Error).message);
     } finally {
       setOcupado(false);
@@ -107,6 +112,8 @@ export function TelaTestar({ agent }: { agent: SalesAgent }) {
         step: 'advance', state: ensaio, hours: OPCOES_DE_AVANCO[avanco].horas,
       });
       setEnsaio(r.state);
+      // "O que aconteceria" era do turno anterior: avançar o tempo não o repete.
+      setUltimo(null);
       setItens((prev) => [...prev, ...itensDoTurno(r.turn, imovel.trim())]);
       rolar();
     } catch (e) {
@@ -117,6 +124,8 @@ export function TelaTestar({ agent }: { agent: SalesAgent }) {
   };
 
   const carregar = async () => {
+    // Com um turno no ar, a resposta atrasada misturaria as duas conversas.
+    if (ocupado || carregando) return;
     const fone = telefone.replace(/\D/g, '');
     if (fone.length < 10) {
       toast.error('Digite o telefone com DDD.');
@@ -133,6 +142,9 @@ export function TelaTestar({ agent }: { agent: SalesAgent }) {
       setRespostas(textoDasRespostas(r.state.contact.form_answers ?? {}));
       setOrigem(String(r.state.attrs.source ?? ''));
       setInteresse(String(r.state.attrs.initial_interest ?? ''));
+      // ⚠️ O imóvel do lead vem junto: com o campo vazio, a próxima mensagem mandaria
+      // property_code '' e o teste apagaria o imóvel que o lead real tem.
+      setImovel(String(r.state.attrs.sales_agent_property_code ?? ''));
       toast.success(`Conversa carregada: ${r.state.messages.length} mensagens`);
     } catch (e) {
       toast.error((e as Error).message);
@@ -144,6 +156,7 @@ export function TelaTestar({ agent }: { agent: SalesAgent }) {
   // Aplicar um cenário SUBSTITUI o teste: o histórico decide se a IA abre do zero
   // ou continua de onde parou, e misturar criaria uma conversa que não existe.
   const aplicarCenario = (c: CenarioDeTeste) => {
+    if (ocupado || carregando) return;
     setNome(c.contactName);
     setOrigem(c.source);
     setInteresse(c.interest);
@@ -347,14 +360,16 @@ export function TelaTestar({ agent }: { agent: SalesAgent }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <select
+            <Label htmlFor="ensaio_avanco" className="text-xs">Quanto avançar</Label>
+            <Seletor
+              id="ensaio_avanco"
               aria-label="Quanto avançar"
               className="h-9 rounded-md border border-sidebar-border bg-background px-2 text-sm"
-              value={avanco}
+              value={String(avanco)}
               onChange={(e) => setAvanco(Number(e.target.value))}
             >
               {OPCOES_DE_AVANCO.map((o, i) => <option key={o.rotulo} value={i}>{o.rotulo}</option>)}
-            </select>
+            </Seletor>
             <Button variant="outline" onClick={() => void avancar()} disabled={ocupado || !ensaio}>
               <FastForward className="h-4 w-4 mr-1" /> Avançar o tempo
             </Button>

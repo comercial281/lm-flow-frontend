@@ -10,8 +10,10 @@ import { linhasDoQueAconteceria } from '@/features/salesAgents/ensaio';
 import {
   ITENS_DA_REGUA, ROTEIROS_DISPONIVEIS, corpoDoItem, filaDeAvaliacao, nota, resumo, resumoEmTexto, veredito,
 } from './formatoComparacao';
+import { Seletor } from '@/components/base/Seletor';
 
-const MAX_CONVERSAS = 15;
+// O servidor conta cenário como conversa da rodada (máximo 15 no total).
+const MAX_DA_RODADA = 15;
 
 function Lado({ titulo, lado }: { titulo: string; lado: ComparisonSide }) {
   return (
@@ -45,6 +47,9 @@ export default function ComparacaoIA() {
   const [rodando, setRodando] = useState(false);
   const [soDiscordam, setSoDiscordam] = useState(false);
   const parar = useRef(false);
+  // Sair da tela para a comparação: cada par é uma chamada paga no modelo da IA.
+  useEffect(() => () => { parar.current = true; }, []);
+  const maxConversas = MAX_DA_RODADA - (comCenarios ? CENARIOS_DE_TESTE.length : 0);
 
   useEffect(() => {
     superAgentsService.listAll().then(setAgentes).catch(() => toast.error('Não consegui listar as IAs.'));
@@ -59,7 +64,7 @@ export default function ComparacaoIA() {
       const lista = await superAgentsService.comparisonCandidates(agente.id, agente.tenant_slug,
         { baseline_version: antigo, candidate_version: novo });
       setConversas(lista);
-      setEscolhidas(new Set(lista.slice(0, MAX_CONVERSAS).map((c) => c.id)));
+      setEscolhidas(new Set(lista.slice(0, maxConversas).map((c) => c.id)));
       setPares([]);
     } catch (e) {
       toast.error((e as Error).message);
@@ -69,13 +74,14 @@ export default function ComparacaoIA() {
   const alternar = (id: string) => setEscolhidas((prev) => {
     const prox = new Set(prev);
     if (prox.has(id)) prox.delete(id);
-    else if (prox.size < MAX_CONVERSAS) prox.add(id);
+    else if (prox.size < maxConversas) prox.add(id);
     return prox;
   });
 
   const comparar = async () => {
     if (!agente) return;
-    const fila = filaDeAvaliacao(conversas.filter((c) => escolhidas.has(c.id)), comCenarios ? CENARIOS_DE_TESTE : []);
+    // Ligar os cenários depois de marcar 15 conversas passaria do teto: corta aqui.
+    const fila = filaDeAvaliacao(conversas.filter((c) => escolhidas.has(c.id)).slice(0, maxConversas), comCenarios ? CENARIOS_DE_TESTE : []);
     const runId = globalThis.crypto.randomUUID();
     parar.current = false;
     setRodando(true);
@@ -118,27 +124,27 @@ export default function ComparacaoIA() {
 
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-xs">IA
-          <select aria-label="IA" className="ml-1 h-9 rounded-md border px-2 text-sm" value={agenteId} onChange={(e) => setAgenteId(e.target.value)}>
+          <Seletor id="cmp-ia" aria-label="IA" className="ml-1 h-9 rounded-md border px-2 text-sm" value={agenteId} onChange={(e) => { setAgenteId(e.target.value); setConversas([]); setEscolhidas(new Set()); setPares([]); }}>
             <option value="">Escolha…</option>
             {agentes.map((a) => <option key={`${a.tenant_slug}-${a.id}`} value={a.id}>{a.tenant_name} · {a.name}</option>)}
-          </select>
+          </Seletor>
         </label>
         <label className="text-xs">Antigo
-          <select aria-label="Roteiro antigo" className="ml-1 h-9 rounded-md border px-2 text-sm" value={antigo} onChange={(e) => setAntigo(Number(e.target.value))}>
+          <Seletor id="cmp-antigo" aria-label="Roteiro antigo" className="ml-1 h-9 rounded-md border px-2 text-sm" value={String(antigo)} onChange={(e) => setAntigo(Number(e.target.value))}>
             {ROTEIROS_DISPONIVEIS.map((v) => <option key={v} value={v}>Roteiro {v}</option>)}
-          </select>
+          </Seletor>
         </label>
         <label className="text-xs">Novo
-          <select aria-label="Roteiro novo" className="ml-1 h-9 rounded-md border px-2 text-sm" value={novo} onChange={(e) => setNovo(Number(e.target.value))}>
+          <Seletor id="cmp-novo" aria-label="Roteiro novo" className="ml-1 h-9 rounded-md border px-2 text-sm" value={String(novo)} onChange={(e) => setNovo(Number(e.target.value))}>
             {ROTEIROS_DISPONIVEIS.map((v) => <option key={v} value={v}>Roteiro {v}</option>)}
-          </select>
+          </Seletor>
         </label>
         <Button variant="outline" onClick={() => void buscar()} disabled={!agente || rodando}>Buscar conversas</Button>
       </div>
 
       {conversas.length > 0 && (
         <section className="space-y-2 rounded-md border p-3">
-          <p className="text-xs text-muted-foreground">Até {MAX_CONVERSAS} conversas por comparação. Cada ponto custa 2 respostas + 1 avaliação.</p>
+          <p className="text-xs text-muted-foreground">Até {maxConversas} conversas por comparação{comCenarios ? ', mais os cenários' : ''}. Cada ponto custa 2 respostas + 1 avaliação.</p>
           {conversas.map((c) => (
             <label key={c.id} className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={escolhidas.has(c.id)} onChange={() => alternar(c.id)} />

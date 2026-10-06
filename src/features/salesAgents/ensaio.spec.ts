@@ -49,7 +49,7 @@ describe('ensaio', () => {
       'Motivo pro corretor: pediu corretor',
       'Marcaria visita quinta, 08/10 às 15:00 com Carla',
       'Falta 1 pergunta obrigatória antes de passar',
-      'Ficha: regiao: Mooca',
+      'Ficha: Região: Mooca',
       'Temperatura: Quente',
     ]);
   });
@@ -124,3 +124,14 @@ describe('aviso de IA sem número', () => {
     expect(linha.match(/no atendimento real/gi)).toHaveLength(1);
   });
 });
+
+describe('ajustes da revisão final', () => {
+  it('resposta do formulário com hora não se parte no dois-pontos errado', () => {
+    expect(respostasDoFormulario('Melhor horário: 14:30')).toEqual({ 'Melhor horário': '14:30' });
+  });
+
+  it('repasse pro sistema do cliente tem frase própria', () => {
+    expect(linhasDoQueAconteceria(outcome({ handoff: { kind: 'webhook', destination: null } }))).toContain('Mandaria o lead pro sistema do cliente agora');
+  });
+});
+

@@ -137,9 +137,12 @@ export default function SistemaDoCliente({ agentId, url, urlSalva, chaveGerada, 
             </div>
           )
         ) : (
-          <Button type="button" size="sm" className="mt-2" onClick={gerar} disabled={gerando}>
-            {gerando && <Loader2 className="h-3 w-3 mr-1 animate-spin" />} Gerar chave secreta
-          </Button>
+          <>
+            <p className="mt-2 text-xs text-destructive">Sem a chave, nenhum lead é enviado ao sistema do cliente.</p>
+            <Button type="button" size="sm" className="mt-2" onClick={gerar} disabled={gerando}>
+              {gerando && <Loader2 className="h-3 w-3 mr-1 animate-spin" />} Gerar chave secreta
+            </Button>
+          </>
         )}
       </div>
 

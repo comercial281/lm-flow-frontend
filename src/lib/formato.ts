@@ -93,6 +93,26 @@ export function quandoAcontece(valor: unknown, agora: Date = new Date()): string
   return `${quando} às ${h}`;
 }
 
+/**
+ * 14:32 no fuso PEDIDO (não no do navegador): horário que o servidor gravou no fuso
+ * da imobiliária, mostrado igual pra quem abre de qualquer lugar.
+ */
+export function horaNoFuso(valor: unknown, fuso: string): string {
+  const d = toDate(valor);
+  return d ? new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: fuso }).format(d) : VAZIO;
+}
+
+/** 05/10 no fuso pedido. */
+export function diaMesNoFuso(valor: unknown, fuso: string): string {
+  const d = toDate(valor);
+  return d ? new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', timeZone: fuso }).format(d) : VAZIO;
+}
+
+/** 0,3 s · 1,2 s — milissegundos em segundos, uma casa. */
+export function segundos(ms: number): string {
+  return `${numero(ms / 1000, 1)} s`;
+}
+
 /** 30/09/2026 às 14:32 */
 export function dataHora(valor: unknown): string {
   const d = toDate(valor);

@@ -1,6 +1,7 @@
 import type {
   RehearsalOutcome, RehearsalState, RehearsalTurn, TestMediaItem,
 } from '@/services/salesAgents/salesAgentsService';
+import { segundos } from '@/lib/formato';
 
 /** O que aparece no chat do Testar, na ordem. */
 export type ItemDaConversa =
@@ -58,8 +59,13 @@ export function avisoDoModelo(
 
 export function pausa(ms: number): string {
   if (!ms) return '';
-  return `digitando ${(ms / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} s`;
+  return `digitando ${segundos(ms)}`;
 }
+
+const ROTULOS_DA_FICHA: Array<[string, string]> = [
+  ['motivo', 'Por que está procurando'], ['tipo_imovel', 'Tipo de imóvel'], ['regiao', 'Região'],
+  ['orcamento', 'Orçamento'], ['prazo', 'Prazo'], ['financiamento', 'Financiamento'], ['fgts', 'FGTS'],
+];
 
 export function linhasDoQueAconteceria(o: RehearsalOutcome | null | undefined): string[] {
   if (!o) return [];
@@ -74,6 +80,8 @@ export function linhasDoQueAconteceria(o: RehearsalOutcome | null | undefined): 
   if (o.handoff) {
     if (o.handoff.kind === 'none') {
       linhas.push(`Tentaria passar o lead, mas não tem pra quem: ${o.handoff.problem ?? 'destino não configurado'}`);
+    } else if (o.handoff.kind === 'webhook') {
+      linhas.push('Mandaria o lead pro sistema do cliente agora');
     } else if (o.handoff.kind === 'owner') {
       linhas.push(`Devolveria o lead pro dono dele: ${o.handoff.destination}`);
     } else {
@@ -90,9 +98,11 @@ export function linhasDoQueAconteceria(o: RehearsalOutcome | null | undefined): 
   if (faltam > 0) {
     linhas.push(`${faltam === 1 ? 'Falta 1 pergunta obrigatória' : `Faltam ${faltam} perguntas obrigatórias`} antes de passar`);
   }
-  const ficha = Object.entries(o.collected)
-    .filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== '')
-    .map(([k, v]) => `${k}: ${String(v)}`);
+  // Mesmos rótulos do painel do lead; chave sem rótulo ou valor que não é texto fica de fora.
+  const ficha = ROTULOS_DA_FICHA
+    .map(([k, rotulo]) => [rotulo, o.collected[k]] as const)
+    .filter(([, v]) => (typeof v === 'string' || typeof v === 'number') && String(v).trim() !== '')
+    .map(([rotulo, v]) => `${rotulo}: ${String(v)}`);
   if (ficha.length) linhas.push(`Ficha: ${ficha.join(' · ')}`);
   if (o.temperature) linhas.push(`Temperatura: ${TEMPERATURA[o.temperature] ?? o.temperature}`);
   o.notes.forEach((n) => linhas.push(`Ajuste: ${n.text}`));
@@ -142,7 +152,8 @@ export function itensDoEstado(state: RehearsalState): ItemDaConversa[] {
 export function respostasDoFormulario(texto: string): Record<string, string> {
   const r: Record<string, string> = {};
   texto.split('\n').forEach((linha) => {
-    const i = linha.lastIndexOf(':');
+    // O PRIMEIRO dois-pontos separa: resposta tem hora e link ("14:30", "https:").
+    const i = linha.indexOf(':');
     if (i <= 0) return;
     const pergunta = linha.slice(0, i).trim();
     const resposta = linha.slice(i + 1).trim();

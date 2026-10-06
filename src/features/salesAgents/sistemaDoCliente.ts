@@ -1,4 +1,5 @@
 import type { WebhookDelivery } from '@/services/salesAgents/salesAgentsService';
+import { diaMesNoFuso, horaNoFuso, segundos as segundosDaCasa } from '@/lib/formato';
 
 // Sistema do cliente (05/10/2026): o 4º destino do lead em "Pra onde vai o lead".
 // A IA passa o lead e ele vai, assinado, pro sistema que a imobiliária já usa.
@@ -46,18 +47,16 @@ export function webhookDisponivel(persona: 'broker' | 'owner' | 'assistant'): bo
 
 export function hora(iso: string | null | undefined): string {
   if (!iso) return '';
-  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: FUSO });
+  return horaNoFuso(iso, FUSO);
 }
 
 export function dataHora(iso: string | null | undefined): string {
   if (!iso) return '';
-  const d = new Date(iso);
-  const dia = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: FUSO });
-  return `${dia} ${hora(iso)}`;
+  return `${diaMesNoFuso(iso, FUSO)} ${hora(iso)}`;
 }
 
 export function segundos(ms: number): string {
-  return `${(ms / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} s`;
+  return segundosDaCasa(ms);
 }
 
 /** O que o código da resposta significa, em português, pro gestor repassar a quem cuida do sistema. */

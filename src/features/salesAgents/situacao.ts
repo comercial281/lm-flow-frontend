@@ -40,7 +40,7 @@ export interface Pendencia {
 type AgenteLido = Pick<SalesAgent, 'enabled' | 'inbox_id' | 'triggers' | 'trigger_keyword' | 'trigger_match_mode'>
   & Partial<Pick<SalesAgent, 'followup_only' | 'followup_enabled' | 'followup_max_attempts'
     | 'persona_kind' | 'reach' | 'transfer_config' | 'booking_enabled' | 'handoff_target' | 'handoff_roleta_config_id'
-    | 'handoff_user_id' | 'handoff_webhook_url' | 'lead_facing_name' | 'number_owner_id' | 'qualification_questions'>>;
+    | 'handoff_user_id' | 'handoff_webhook_url' | 'handoff_webhook_secret_state' | 'lead_facing_name' | 'number_owner_id' | 'qualification_questions'>>;
 
 /** O passo do passo a passo que corrige cada coisa (entrega 2). */
 const PASSO = (passo: number): Corrigir => ({ tela: 'configurar', passo });
@@ -71,6 +71,7 @@ const CORRIGIR_DO_ITEM: Record<string, Corrigir> = {
   schedule: PASSO(6),
   triggers: PASSO(6),
   conflict: PASSO(6),
+  client_system: PASSO(2),
 };
 
 /** Os gatilhos que o servidor de fato avalia: a lista + a palavra-chave antiga, se a lista não tiver gatilho de palavra. */
@@ -184,6 +185,7 @@ const TITULO_NO_PAINEL: Record<string, string> = {
   destino_sem_roleta: 'Pra onde vai o lead',
   destino_sem_corretor: 'Pra onde vai o lead',
   destino_sem_endereco: 'Pra onde vai o lead',
+  destino_sem_chave: 'Chave do sistema do cliente',
   perguntas_vazias: 'Perguntas antes de passar',
 };
 

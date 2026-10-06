@@ -25,7 +25,7 @@ export const FRASE_SEM_DONO = 'Este número não tem corretor dono. Escolha o do
 
 type Lido = Partial<Pick<SalesAgent,
   'persona_kind' | 'reach' | 'transfer_config' | 'booking_enabled' | 'handoff_target' | 'handoff_roleta_config_id'
-  | 'handoff_user_id' | 'handoff_webhook_url' | 'lead_facing_name' | 'inbox_id' | 'number_owner_id' | 'qualification_questions'
+  | 'handoff_user_id' | 'handoff_webhook_url' | 'handoff_webhook_secret_state' | 'lead_facing_name' | 'inbox_id' | 'number_owner_id' | 'qualification_questions'
   | 'trigger_keyword' | 'followup_enabled' | 'followup_max_attempts'>>;
 
 export function pendenciasDosPassos(agent: Lido): PendenciaDoPasso[] {
@@ -51,6 +51,16 @@ export function pendenciasDosPassos(agent: Lido): PendenciaDoPasso[] {
   }
   if (agent.handoff_target === 'webhook' && !(agent.handoff_webhook_url ?? '').trim()) {
     lista.push({ chave: 'destino_sem_endereco', passo: 2, frase: 'Falta o endereço do sistema do cliente.', impedeLigar: false });
+  }
+  // ⚠️ Sem chave pronta, todo lead que ela passar fica sem ninguém (o servidor não
+  // envia e só avisa a gestão). Trava o Ligar.
+  if (agent.handoff_target === 'webhook' && agent.handoff_webhook_secret_state !== 'ready') {
+    lista.push({
+      chave: 'destino_sem_chave', passo: 2, impedeLigar: true,
+      frase: agent.handoff_webhook_secret_state === 'unreadable'
+        ? 'A chave secreta do sistema do cliente não abre mais: gere outra.'
+        : 'Falta gerar a chave secreta do sistema do cliente.',
+    });
   }
   if (agent.handoff_target === 'user' && !agent.handoff_user_id) {
     lista.push({ chave: 'destino_sem_corretor', passo: 2, frase: 'Falta escolher o corretor que recebe o lead.', impedeLigar: false });

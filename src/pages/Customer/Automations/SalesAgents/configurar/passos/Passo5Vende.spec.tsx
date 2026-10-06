@@ -20,7 +20,7 @@ beforeEach(() => {
 const salvar = () => userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
 vi.mock('@/services/properties/propertiesService', () => ({
-  propertiesService: { list: vi.fn().mockResolvedValue({ data: [{ id: 'p1', code: 'ALMA', title: 'Alma Panamby' }] }) },
+  propertiesService: { list: vi.fn().mockResolvedValue({ data: [{ id: 'p1', code: 'ALMA', title: 'Residencial Exemplo' }] }) },
 }));
 
 import Passo5Vende from './Passo5Vende';
@@ -40,7 +40,7 @@ describe('Passo 5 · O que ela vende', () => {
 
   it('imóvel padrão escolhido na lista', async () => {
     abrir();
-    await waitFor(() => expect(screen.getByRole('option', { name: 'ALMA · Alma Panamby' })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('option', { name: 'ALMA · Residencial Exemplo' })).toBeTruthy());
     await userEvent.selectOptions(screen.getByLabelText('Imóvel padrão'), 'ALMA');
     await salvar();
     expect(update).toHaveBeenCalledWith('ia-1', { default_property_code: 'ALMA' });

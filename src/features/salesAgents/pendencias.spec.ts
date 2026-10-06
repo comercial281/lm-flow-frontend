@@ -52,7 +52,14 @@ describe('pendenciasDosPassos', () => {
 
   it('sistema do cliente sem endereço: passo 2, sem travar', () => {
     const a = ia({ handoff_target: 'webhook', handoff_webhook_url: null } as Partial<SalesAgent>);
-    expect(pendenciasDosPassos(a)).toEqual([expect.objectContaining({ chave: 'destino_sem_endereco', passo: 2, impedeLigar: false })]);
+    expect(pendenciasDosPassos(a)).toContainEqual(expect.objectContaining({ chave: 'destino_sem_endereco', passo: 2, impedeLigar: false }));
+  });
+
+  it('sistema do cliente sem chave pronta trava o Ligar', () => {
+    const a = ia({ handoff_target: 'webhook', handoff_webhook_url: 'https://crm.exemplo.com.br/x', handoff_webhook_secret_state: 'none' } as Partial<SalesAgent>);
+    expect(pendenciasDosPassos(a)).toEqual([expect.objectContaining({ chave: 'destino_sem_chave', passo: 2, impedeLigar: true })]);
+    expect(podeLigar(a).pode).toBe(false);
+    expect(pendenciasDosPassos({ ...a, handoff_webhook_secret_state: 'ready' })).toEqual([]);
   });
 
   it('em ordem de passo', () => {

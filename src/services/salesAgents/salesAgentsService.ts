@@ -708,7 +708,7 @@ export interface RehearsalReason { reason: string; text: string; detail?: string
 export interface RehearsalOutcome {
   skipped: RehearsalReason | null;
   warnings: RehearsalReason[];
-  handoff: { kind: 'roleta' | 'user' | 'owner' | 'none'; destination: string | null; problem?: string | null; reason?: string | null } | null;
+  handoff: { kind: 'roleta' | 'user' | 'owner' | 'webhook' | 'none'; destination: string | null; problem?: string | null; reason?: string | null } | null;
   handoff_blocked: string | null;
   in_handoff: boolean;
   visit: { date: string; time: string; label: string; realtor: string | null; property_code: string | null; notes: string | null } | null;

@@ -42,8 +42,8 @@ describe('formatoComparacao', () => {
   });
 
   it('resumo em texto pra colar no PR ou na memória', () => {
-    const texto = resumoEmTexto(resumo([par({}, {}, false)]), 'IA Panamby', 1, 1);
-    expect(texto).toContain('IA Panamby — roteiro 1 × roteiro 1 — 1 respostas');
+    const texto = resumoEmTexto(resumo([par({}, {}, false)]), 'IA Exemplo', 1, 1);
+    expect(texto).toContain('IA Exemplo — roteiro 1 × roteiro 1 — 1 respostas');
     expect(texto).toContain('| Quem ela é | 2,0 | 2,0 |');
   });
 });
