@@ -68,13 +68,13 @@ describe('TelaModelo', () => {
     expect(mini.innerHTML.toLowerCase()).toContain('#123456');
   });
 
-  describe('Ver prévia', () => {
+  describe('Ver como fica', () => {
     const novaAba = () => ({ opener: {} as unknown, location: { href: '' }, close: vi.fn() });
 
-    it('cada cartão tem "Ver prévia", inclusive o que está em uso, e a tela explica', () => {
+    it('cada cartão tem "Ver como fica", inclusive o que está em uso, e a tela explica', () => {
       render(<Montar espiao={vi.fn()} previa={{ urlDoSite: 'https://imob.com.br/', noAr: true, aoPedirPrevia: vi.fn() }} />);
       for (const nome of ['Clássico', 'Editorial', 'Popular']) {
-        expect(within(cartao(nome)).getByRole('button', { name: 'Ver prévia' })).toBeTruthy();
+        expect(within(cartao(nome)).getByRole('button', { name: 'Ver como fica' })).toBeTruthy();
       }
       expect(screen.getByText('A prévia abre o seu site com o modelo aplicado, numa aba nova. Nada muda até você usar o modelo e salvar.')).toBeTruthy();
     });
@@ -85,7 +85,7 @@ describe('TelaModelo', () => {
       const aoPedirPrevia = vi.fn();
       const espiao = vi.fn();
       render(<Montar espiao={espiao} previa={{ urlDoSite: 'https://imob.com.br/', noAr: true, aoPedirPrevia }} />);
-      await userEvent.click(within(cartao('Editorial')).getByRole('button', { name: 'Ver prévia' }));
+      await userEvent.click(within(cartao('Editorial')).getByRole('button', { name: 'Ver como fica' }));
       await waitFor(() => expect(aba.location.href).not.toBe(''));
       expect(abrirJanela).toHaveBeenCalledWith('', '_blank');
       const url = new URL(aba.location.href);
@@ -103,7 +103,7 @@ describe('TelaModelo', () => {
       const abrirJanela = vi.spyOn(window, 'open').mockReturnValue(aba as unknown as Window);
       const aoPedirPrevia = vi.fn().mockResolvedValue('https://app.lmflow.com.br/portal/imob?previa=tok%2Ba%2Fb%3D%3D--9f');
       render(<Montar espiao={vi.fn()} previa={{ urlDoSite: 'https://app.lmflow.com.br/portal/imob', noAr: false, aoPedirPrevia }} />);
-      await userEvent.click(within(cartao('Popular')).getByRole('button', { name: 'Ver prévia' }));
+      await userEvent.click(within(cartao('Popular')).getByRole('button', { name: 'Ver como fica' }));
       await waitFor(() => expect(aba.location.href).not.toBe(''));
       expect(aoPedirPrevia).toHaveBeenCalledTimes(1);
       const url = new URL(aba.location.href);
@@ -118,7 +118,7 @@ describe('TelaModelo', () => {
       const abrirJanela = vi.spyOn(window, 'open').mockReturnValue(aba as unknown as Window);
       const aoPedirPrevia = vi.fn().mockRejectedValue(new Error('500'));
       render(<Montar espiao={vi.fn()} previa={{ urlDoSite: 'https://imob.com.br/', noAr: false, aoPedirPrevia }} />);
-      await userEvent.click(within(cartao('Editorial')).getByRole('button', { name: 'Ver prévia' }));
+      await userEvent.click(within(cartao('Editorial')).getByRole('button', { name: 'Ver como fica' }));
       await waitFor(() => expect(aba.close).toHaveBeenCalled());
       expect(aba.location.href).toBe('');
       expect(aviso.error).toHaveBeenCalledWith('Não deu para abrir a prévia. Tente de novo.');

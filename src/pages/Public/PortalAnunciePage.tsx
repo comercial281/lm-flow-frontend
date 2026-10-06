@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { TEXTO_ENVIO_NA_PREVIA, cabecalhosDoSite, ehPrevia, envioFoiPrevia } from '@/features/siteBuilder/public/previa';
+import { ehPreviaDoModelo } from '@/features/siteBuilder/public/previaDoModelo';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import {
@@ -130,6 +131,14 @@ export default function PortalAnunciePage() {
     e.preventDefault();
     if (!tenant || !nome.trim()) return;
     if (!isValidBrPhone(telefone)) { setTelefoneErr(true); return; }
+    // Prévia do modelo: o servidor não sabe dela, então nada é enviado.
+    if (ehPreviaDoModelo(site)) {
+      setFailed(false);
+      setEnviadoNaPrevia(true);
+      setSent(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
     setSending(true);
     setFailed(false);

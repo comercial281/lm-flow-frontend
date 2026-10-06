@@ -1,4 +1,5 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PortalHomePage from './PortalHomePage';
@@ -6,10 +7,16 @@ import ImovelPublicPage from './ImovelPublicPage';
 import { FaixaDePrevia, robotsDoSite, type SiteInfo } from './portalShared';
 import { rastreamentoDoSite } from './usePortalTracking';
 import { CHAVE_DO_MODELO, esquecerModeloDaPrevia } from '@/features/siteBuilder/public/previaDoModelo';
-import { esquecerPrevia } from '@/features/siteBuilder/public/previa';
+import { TEXTO_ENVIO_NA_PREVIA, esquecerPrevia } from '@/features/siteBuilder/public/previa';
+import { BR_PHONE_PLACEHOLDER } from '@/lib/brPhone';
 
 vi.mock('@/features/siteBuilder/public/siteVisits', () => ({ sendSiteVisit: vi.fn() }));
 import { sendSiteVisit } from '@/features/siteBuilder/public/siteVisits';
+vi.mock('@/features/siteBuilder/public/siteTracking', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/features/siteBuilder/public/siteTracking')>()),
+  trackLead: vi.fn(),
+}));
+import { trackLead } from '@/features/siteBuilder/public/siteTracking';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Prévia do modelo (Meu site › Modelo do site › "Ver prévia"). O painel abre
@@ -30,8 +37,15 @@ const SITE: SiteInfo = {
   tracking: { ga4: 'G-AB12', facebook_pixel: '123456', gtm_id: 'GTM-XYZ1' },
 };
 
+let envios: string[] = [];
+
 function abrir(url: string, site: SiteInfo) {
-  vi.stubGlobal('fetch', vi.fn(async (u: string) => {
+  envios = [];
+  vi.stubGlobal('fetch', vi.fn(async (u: string, init?: RequestInit) => {
+    if (init?.method === 'POST') {
+      envios.push(u);
+      return ok({ success: true });
+    }
     if (u.includes('/site/properties/C1')) {
       return ok({ data: { code: 'C1', title: 'Casa no Cambuí', transaction_type: 'sale', address_city: 'Campinas', photos: [] } });
     }
@@ -67,6 +81,7 @@ beforeEach(() => {
   delete (window as W).gtag;
   delete (window as W).fbq;
   vi.mocked(sendSiteVisit).mockClear();
+  vi.mocked(trackLead).mockClear();
 });
 
 afterEach(() => {
@@ -138,5 +153,18 @@ describe('prévia do modelo no site', () => {
     expect(container.querySelector('[data-fundo="escuro"]')).toBeNull();
     await waitFor(() => expect(sendSiteVisit).toHaveBeenCalled());
     expect(robots()).toBe('index,follow');
+  });
+
+  it('contato da página inicial na prévia do modelo: nada é enviado, aviso da prévia e sem conversão', async () => {
+    window.history.replaceState({}, '', '/portal/imob?modelo=editorial');
+    abrir('/portal/imob', SITE);
+    await userEvent.type(await screen.findByPlaceholderText('Como podemos te chamar?'), 'Maria');
+    await userEvent.type(screen.getByPlaceholderText(BR_PHONE_PLACEHOLDER), '11987654321');
+    await userEvent.click(screen.getByRole('button', { name: 'Quero ajuda pra encontrar' }));
+
+    expect(await screen.findByText(TEXTO_ENVIO_NA_PREVIA)).toBeInTheDocument();
+    expect(screen.queryByText('Recebemos seu contato!')).toBeNull();
+    expect(envios.some(u => u.includes('/site/leads'))).toBe(false);
+    expect(trackLead).not.toHaveBeenCalled();
   });
 });

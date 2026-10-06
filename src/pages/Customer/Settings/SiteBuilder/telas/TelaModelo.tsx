@@ -68,7 +68,7 @@ function Miniatura({ id, principal, destaque }: { id: ModeloDoSiteId; principal:
 }
 
 export interface PropsDaPreviaDoModelo {
-  /** Endereço do site (o mesmo do "Ver site" da barra). Sem ele, sem "Ver prévia". */
+  /** Endereço do site (o mesmo do "Ver site" da barra). Sem ele, sem "Ver como fica". */
   urlDoSite?: string;
   /** Site no ar: a prévia abre direto. Fora do ar, pede o link de prévia antes. */
   noAr?: boolean;
@@ -85,7 +85,7 @@ function comModelo(url: string, id: ModeloDoSiteId): string {
 
 // "Modelo do site": três pontos de partida pro visual. Só grava no formulário (o Salvar é que
 // manda pro ar) e só mexe no visual; cores, logo, textos, vitrines, busca e menu ficam como estão.
-// "Ver prévia" abre o site de verdade com o modelo aplicado (`?modelo=`), sem gravar nada.
+// "Ver como fica" abre o site de verdade com o modelo aplicado (`?modelo=`), sem gravar nada.
 export default function TelaModelo({ siteForm, setF, urlDoSite, noAr = false, aoPedirPrevia }: FormProps & PropsDaPreviaDoModelo) {
   const estado: EstadoDoVisual = {
     font_family: siteForm.font_family ?? null,
@@ -147,7 +147,7 @@ export default function TelaModelo({ siteForm, setF, urlDoSite, noAr = false, ao
               <Button type="button" variant="outline" onClick={() => usar(m)}>Usar este modelo</Button>
             )}
             {comPrevia && (
-              <Button type="button" variant="ghost" onClick={() => verPrevia(m)}>Ver prévia</Button>
+              <Button type="button" variant="ghost" onClick={() => verPrevia(m)}>Ver como fica</Button>
             )}
           </div>
         ))}
