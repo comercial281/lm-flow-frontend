@@ -55,7 +55,8 @@ describe('meuSiteMenu', () => {
 
   it('Página do imóvel e Lista de imóveis ficam no Personalizar, logo depois da página inicial', () => {
     const ids = itensDoGrupo('personalizar', { podeAnuncios: true }).map(t => t.id);
-    expect(ids.slice(ids.indexOf('buscados'), ids.indexOf('buscados') + 3)).toEqual(['buscados', 'ficha', 'lista']);
+    expect(ids.slice(ids.indexOf('buscados'), ids.indexOf('buscados') + 4)).toEqual(['buscados', 'secoes', 'ficha', 'lista']);
+    expect(telaInfo('secoes').titulo).toBe('Mais seções');
     expect(telaDaUrl(new URLSearchParams('tela=ficha'))).toBe('ficha');
     expect(telaDaUrl(new URLSearchParams('tela=lista'))).toBe('lista');
     expect(telaInfo('ficha').titulo).toBe('Página do imóvel');

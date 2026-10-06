@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolverHome, HOME_FABRICA } from './homeConfig';
+import { resolverHome, HOME_FABRICA, PASSOS_MCMV } from './homeConfig';
 
 describe('resolverHome', () => {
   it('nada/lixo → fábrica', () => {
@@ -41,5 +41,41 @@ describe('resolverHome', () => {
       { label: 'Centro', transaction: null, property_type: null, city: null, neighborhood: null, price_max: null },
       { label: 'Casas', transaction: 'rent', property_type: 'house', city: 'Campinas', neighborhood: null, price_max: 500000 },
     ]);
+  });
+});
+
+describe('resolverHome: Como funciona e Atendimento', () => {
+  it('sem as chaves (servidor velho): as duas seções saem desligadas', () => {
+    const h = resolverHome({});
+    expect(h.steps).toEqual({ enabled: false, title: 'Como funciona', items: [] });
+    expect(h.about).toEqual({
+      enabled: false, eyebrow: null, title: null, text: null, photo_url: null, button_label: null, button_link: null,
+    });
+    expect(HOME_FABRICA.steps.enabled).toBe(false);
+    expect(HOME_FABRICA.about.enabled).toBe(false);
+  });
+
+  it('passos: máximo 4, sem título é descartado, texto torto vira vazio', () => {
+    const h = resolverHome({ steps: { enabled: true, title: 'Passo a passo', items: [
+      { title: 'A', text: 'a' }, { title: '', text: 'x' }, { title: 'B', text: 5 }, 'lixo',
+      { title: 'C' }, { title: 'D' }, { title: 'E' },
+    ] } });
+    expect(h.steps.enabled).toBe(true);
+    expect(h.steps.title).toBe('Passo a passo');
+    expect(h.steps.items).toEqual([
+      { title: 'A', text: 'a' }, { title: 'B', text: '' }, { title: 'C', text: '' }, { title: 'D', text: '' },
+    ]);
+  });
+
+  it('atendimento: foto e link só http(s); #contato vale; o resto vira null', () => {
+    const a = resolverHome({ about: { enabled: true, title: 'Oi', photo_url: 'javascript:x', button_label: 'Falar', button_link: 'ftp://x' } }).about;
+    expect(a).toMatchObject({ enabled: true, title: 'Oi', photo_url: null, button_link: null, button_label: 'Falar' });
+    const b = resolverHome({ about: { photo_url: 'https://x.com/a.jpg', button_link: '#contato' } }).about;
+    expect(b).toMatchObject({ photo_url: 'https://x.com/a.jpg', button_link: '#contato', enabled: false });
+  });
+
+  it('PASSOS_MCMV: os 4 passos de fábrica do modelo Popular', () => {
+    expect(PASSOS_MCMV.map(p => p.title)).toEqual(['Simule', 'Separe os documentos', 'Aprovação na Caixa', 'Assine e pegue as chaves']);
+    expect(PASSOS_MCMV[0].text).toBe('Descubra a parcela que cabe na sua renda.');
   });
 });

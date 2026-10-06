@@ -3,7 +3,7 @@
 // Spec: LM FLOW/specs/2026-10-03-meu-site-painel-design.md (A1).
 
 export type GrupoId = 'painel' | 'personalizar' | 'marketing' | 'config';
-export type TelaId = 'painel' | 'contatos' | 'aparencia' | 'busca' | 'vitrines' | 'chamadas' | 'buscados' | 'ficha' | 'lista'
+export type TelaId = 'painel' | 'contatos' | 'aparencia' | 'busca' | 'vitrines' | 'chamadas' | 'buscados' | 'secoes' | 'ficha' | 'lista'
   | 'menus' | 'paginas' | 'financiamento' | 'anuncie' | 'traducao'
   | 'blog' | 'anuncios' | 'redes' | 'rastreamento' | 'marca' | 'endereco' | 'dados' | 'destino' | 'google';
 
@@ -32,6 +32,7 @@ export const TELAS: TelaInfo[] = [
   { id: 'vitrines', grupo: 'personalizar', rotulo: 'Página inicial · Vitrines', dica: 'Faixas de imóveis', titulo: 'Vitrines', frase: 'Faixas de imóveis na página inicial. Elas se atualizam sozinhas.', noMenu: true },
   { id: 'chamadas', grupo: 'personalizar', rotulo: 'Página inicial · Chamadas', dica: 'Financiamento, Anuncie e outros', titulo: 'Chamadas', frase: 'Os atalhos da página inicial: financiamento, anunciar imóvel, encomenda e os seus.', noMenu: true },
   { id: 'buscados', grupo: 'personalizar', rotulo: 'Página inicial · Mais buscados', dica: 'Atalhos pra busca', titulo: 'Mais buscados', frase: 'Atalhos que levam direto pra busca, por tipo e bairro.', noMenu: true },
+  { id: 'secoes', grupo: 'personalizar', rotulo: 'Página inicial · Mais seções', dica: 'Como funciona e atendimento', titulo: 'Mais seções', frase: 'Duas seções opcionais da página inicial: o passo a passo de como comprar e quem atende o cliente.', noMenu: true },
   { id: 'ficha', grupo: 'personalizar', rotulo: 'Página do imóvel', dica: 'O que aparece em cada imóvel', titulo: 'Página do imóvel', frase: 'O que aparece na página de cada imóvel e quem recebe cópia dos contatos feitos nela.', noMenu: true },
   { id: 'lista', grupo: 'personalizar', rotulo: 'Lista de imóveis', dica: 'Ordem e visual dos cartões', titulo: 'Lista de imóveis', frase: 'A ordem e o visual dos imóveis na busca do site.', noMenu: true },
   { id: 'menus', grupo: 'personalizar', rotulo: 'Menus', dica: 'Ordem e nomes do menu', titulo: 'Menus', frase: 'Os itens do menu do topo do site: a ordem, o nome de cada um e os links para fora do site.', noMenu: true },

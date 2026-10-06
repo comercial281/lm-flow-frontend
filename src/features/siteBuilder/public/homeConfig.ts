@@ -42,7 +42,35 @@ export interface HomeConfig {
     defaults: Record<ChamadaPadraoId, ChamadaPadrao>; custom: ChamadaLivre[];
   };
   most_searched: { enabled: boolean; mode: 'auto' | 'manual'; items: AtalhoManual[] };
+  /** "Como funciona": passo a passo numerado. Desligado de fábrica. */
+  steps: { enabled: boolean; title: string; items: Passo[] };
+  /** "Atendimento": foto e texto de quem atende. Desligado de fábrica. */
+  about: Atendimento;
 }
+
+export interface Passo { title: string; text: string }
+export interface Atendimento {
+  enabled: boolean; eyebrow: string | null; title: string | null; text: string | null;
+  photo_url: string | null; button_label: string | null; button_link: string | null;
+}
+
+// Limites do servidor (Sites::HomeConfig): passos até 4; título da seção 80,
+// título do passo 60, texto do passo 200; atendimento: selo 40, título 120,
+// texto 600, botão 40.
+export const LIMITES_SECOES = {
+  passos: 4, tituloSecao: 80, tituloPasso: 60, textoPasso: 200,
+  selo: 40, tituloAtendimento: 120, textoAtendimento: 600, botao: 40,
+} as const;
+
+export const TITULO_PASSOS_FABRICA = 'Como funciona';
+
+/** Os 4 passos de fábrica do modelo Popular (Minha Casa Minha Vida). */
+export const PASSOS_MCMV: Passo[] = [
+  { title: 'Simule', text: 'Descubra a parcela que cabe na sua renda.' },
+  { title: 'Separe os documentos', text: 'RG, CPF, comprovante de renda e de residência.' },
+  { title: 'Aprovação na Caixa', text: 'A gente cuida do processo com o banco.' },
+  { title: 'Assine e pegue as chaves', text: 'Use o FGTS e o subsídio na entrada.' },
+];
 
 export const TEXTO_FABRICA: Record<ChamadaPadraoId, { title: string; text: string; button: string }> = {
   financing: {
@@ -85,6 +113,8 @@ export const HOME_FABRICA: HomeConfig = {
     custom: [],
   },
   most_searched: { enabled: true, mode: 'auto', items: [] },
+  steps: { enabled: false, title: TITULO_PASSOS_FABRICA, items: [] },
+  about: { enabled: false, eyebrow: null, title: null, text: null, photo_url: null, button_label: null, button_link: null },
 };
 
 const strOuNull = (v: unknown): string | null => (typeof v === 'string' ? v : null);
@@ -158,6 +188,29 @@ function atalhosManuais(raw: unknown): AtalhoManual[] {
   }).filter((a): a is AtalhoManual => a !== null);
 }
 
+const ENDERECO_HTTP = /^https?:\/\/\S+$/i;
+const httpOuNull = (v: unknown): string | null => (typeof v === 'string' && ENDERECO_HTTP.test(v.trim()) ? v.trim() : null);
+
+// Passo sem título é descartado (como no servidor); texto que não é texto vira vazio.
+function passos(raw: unknown): Passo[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((x): Passo | null => {
+    const o = obj(x);
+    if (typeof o.title !== 'string' || o.title.trim() === '') return null;
+    return { title: o.title, text: typeof o.text === 'string' ? o.text : '' };
+  }).filter((p): p is Passo => p !== null).slice(0, LIMITES_SECOES.passos);
+}
+
+function atendimento(raw: unknown): Atendimento {
+  const o = obj(raw);
+  const link = typeof o.button_link === 'string' && o.button_link.trim() === '#contato' ? '#contato' : httpOuNull(o.button_link);
+  return {
+    enabled: o.enabled === true,
+    eyebrow: strOuNull(o.eyebrow), title: strOuNull(o.title), text: strOuNull(o.text),
+    photo_url: httpOuNull(o.photo_url), button_label: strOuNull(o.button_label), button_link: link,
+  };
+}
+
 export function resolverHome(raw: unknown): HomeConfig {
   const r = obj(raw);
   const s = obj(r.search), c = obj(r.callouts), m = obj(r.most_searched), d = obj(c.defaults);
@@ -183,5 +236,11 @@ export function resolverHome(raw: unknown): HomeConfig {
       mode: m.mode === 'manual' ? 'manual' : 'auto',
       items: atalhosManuais(m.items),
     },
+    steps: {
+      enabled: obj(r.steps).enabled === true,
+      title: typeof obj(r.steps).title === 'string' ? obj(r.steps).title as string : TITULO_PASSOS_FABRICA,
+      items: passos(obj(r.steps).items),
+    },
+    about: atendimento(r.about),
   };
 }
