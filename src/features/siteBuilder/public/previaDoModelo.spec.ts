@@ -1,12 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  CHAVE_DO_MODELO, comModeloDaPrevia, ehPreviaDoModelo, esquecerModeloDaPrevia, modeloDaPrevia,
+  CHAVE_DO_MODELO, comModeloDaPrevia, ehPreviaDoModelo, esquecerModeloDaPrevia, modeloDaPrevia, sairDaPreviaDoModelo,
+  urlSemModelo,
 } from './previaDoModelo';
 import { resolverAparencia } from './aparenciaConfig';
 import { resolverHome } from './homeConfig';
 import { resolverLista } from './listaConfig';
 
 const limpar = () => {
+  vi.restoreAllMocks();
   sessionStorage.clear();
   esquecerModeloDaPrevia();
   window.history.replaceState({}, '', '/');
@@ -37,6 +39,51 @@ describe('prévia do modelo (?modelo= → sessionStorage)', () => {
   it('depois que a URL perde o ?modelo= (navegação interna), segue com o guardado', () => {
     modeloDaPrevia({ search: '?modelo=popular' });
     expect(modeloDaPrevia({ search: '?tab=sale' })).toBe('popular');
+  });
+
+  it('abrir o site sem ?modelo= (navegação nova, ex.: link vazado ou endereço digitado) esquece o guardado', () => {
+    vi.spyOn(performance, 'getEntriesByType').mockReturnValue([{ type: 'navigate' }] as unknown as PerformanceEntryList);
+    sessionStorage.setItem(CHAVE_DO_MODELO, 'popular');
+    expect(modeloDaPrevia({ search: '' })).toBeNull();
+    expect(sessionStorage.getItem(CHAVE_DO_MODELO)).toBeNull();
+  });
+
+  it('sem a informação do tipo de navegação, vale como navegação nova', () => {
+    vi.spyOn(performance, 'getEntriesByType').mockImplementation(() => { throw new Error('sem API'); });
+    sessionStorage.setItem(CHAVE_DO_MODELO, 'popular');
+    expect(modeloDaPrevia({ search: '' })).toBeNull();
+  });
+
+  it('recarregar a página (ou voltar/avançar) mantém o guardado', () => {
+    for (const type of ['reload', 'back_forward']) {
+      esquecerModeloDaPrevia();
+      vi.spyOn(performance, 'getEntriesByType').mockReturnValue([{ type }] as unknown as PerformanceEntryList);
+      sessionStorage.setItem(CHAVE_DO_MODELO, 'popular');
+      expect(modeloDaPrevia({ search: '' })).toBe('popular');
+      expect(modeloDaPrevia({ search: '' })).toBe('popular');
+    }
+  });
+
+  it('só a primeira leitura da página esquece: depois, a navegação interna segue com o guardado', () => {
+    expect(modeloDaPrevia({ search: '?modelo=editorial' })).toBe('editorial');
+    expect(modeloDaPrevia({ search: '' })).toBe('editorial');
+    expect(modeloDaPrevia({ search: '?tab=rent' })).toBe('editorial');
+  });
+
+  it('sairDaPreviaDoModelo esquece o guardado e a memória', () => {
+    modeloDaPrevia({ search: '?modelo=editorial' });
+    sairDaPreviaDoModelo();
+    expect(sessionStorage.getItem(CHAVE_DO_MODELO)).toBeNull();
+    expect(modeloDaPrevia({ search: '' })).toBeNull();
+  });
+
+  it('urlSemModelo tira só o modelo= (prévia e filtros ficam)', () => {
+    const u = new URL(urlSemModelo('https://imob.com.br/busca?previa=tok&modelo=editorial&tab=rent#x'));
+    expect(u.pathname).toBe('/busca');
+    expect(u.searchParams.get('modelo')).toBeNull();
+    expect(u.searchParams.get('previa')).toBe('tok');
+    expect(u.searchParams.get('tab')).toBe('rent');
+    expect(u.hash).toBe('#x');
   });
 
   it('o guardado adulterado vale como nada', () => {

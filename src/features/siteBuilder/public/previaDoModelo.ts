@@ -9,9 +9,14 @@
 // receita do botão "Usar este modelo" (`aplicarModelo`). Nada é gravado e
 // qualquer um pode abrir: é só visual.
 //
-// Na prévia do modelo: faixa "Prévia do modelo X. Nada foi salvo.",
-// `noindex`, sem visita e sem rastreamento. Sem `?modelo=` o site sai
-// idêntico (o mesmo objeto).
+// Na prévia do modelo: faixa "Prévia do modelo X. Nada foi salvo." (com o
+// link "Ver o site normal"), `noindex`, sem visita, sem rastreamento e sem
+// envio de formulário. Sem `?modelo=` o site sai idêntico (o mesmo objeto).
+//
+// O guardado não vale pra sempre: a PRIMEIRA leitura de cada carregamento da
+// página, sem `?modelo=` na URL e numa navegação nova (link, endereço
+// digitado), esquece o modelo. Recarregar e voltar/avançar mantêm; a
+// navegação interna do site não recarrega a página, então também mantém.
 //
 // Só importa `../modelosDoSite` e os `./*Config`: o site no domínio do
 // cliente é um pacote enxuto (ver scripts/conferir-dominio-limpo.mjs).
@@ -25,12 +30,35 @@ export const PARAM_DO_MODELO = 'modelo';
 
 // Storage bloqueado (aba anônima, política do navegador): fica na memória.
 let memoria: ModeloDoSiteId | null = null;
+// A primeira leitura deste carregamento da página já aconteceu? (o módulo
+// nasce de novo a cada carregamento; a navegação interna não o recria).
+let jaLeu = false;
 
 function sessao(): Storage | null {
   try {
     return window.sessionStorage;
   } catch {
     return null;
+  }
+}
+
+/** Navegação nova (não recarga nem voltar/avançar). Sem a informação, nova. */
+function navegacaoNova(): boolean {
+  try {
+    const tipo = (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type;
+    return tipo !== 'reload' && tipo !== 'back_forward';
+  } catch {
+    return true;
+  }
+}
+
+/** Esquece o modelo guardado (sessionStorage e memória). */
+function esquecerGuardado(): void {
+  memoria = null;
+  try {
+    sessao()?.removeItem(CHAVE_DO_MODELO);
+  } catch {
+    /* bloqueado */
   }
 }
 
@@ -49,6 +77,12 @@ export function modeloDaPrevia(loc: { search: string } = window.location): Model
     daUrl = limpo(new URLSearchParams(loc.search).get(PARAM_DO_MODELO));
   } catch {
     daUrl = null;
+  }
+  // Primeira leitura do carregamento: aberto sem `?modelo=` por link ou
+  // endereço digitado, a prévia acabou (link vazado, aba reaproveitada).
+  if (!jaLeu) {
+    jaLeu = true;
+    if (!daUrl && navegacaoNova()) esquecerGuardado();
   }
   if (daUrl) {
     memoria = daUrl;
@@ -110,7 +144,20 @@ export function nomeDoModelo(id: ModeloDoSiteId): string {
   return MODELOS_DO_SITE.find(m => m.id === id)?.nome ?? id;
 }
 
-/** Só para teste: esquece o modelo da memória. */
+/** O mesmo endereço sem o `modelo=` (a prévia de manutenção e os filtros ficam). */
+export function urlSemModelo(href: string): string {
+  const u = new URL(href);
+  u.searchParams.delete(PARAM_DO_MODELO);
+  return u.toString();
+}
+
+/** "Ver o site normal": esquece o modelo guardado (quem chama recarrega sem o `modelo=`). */
+export function sairDaPreviaDoModelo(): void {
+  esquecerGuardado();
+}
+
+/** Só para teste: esquece o modelo da memória e simula um carregamento novo da página. */
 export function esquecerModeloDaPrevia(): void {
   memoria = null;
+  jaLeu = false;
 }

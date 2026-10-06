@@ -1,4 +1,5 @@
-import { Check } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/ds';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -110,8 +111,13 @@ export default function TelaModelo({ siteForm, setF, urlDoSite, noAr = false, ao
   };
 
   const comPrevia = !!urlDoSite && (noAr || !!aoPedirPrevia);
+  // Um link por vez: clique duplo não abre duas abas nem pede dois links.
+  const [gerando, setGerando] = useState<ModeloDoSiteId | null>(null);
+  const ocupado = useRef(false);
   const verPrevia = async (m: ModeloDoSite) => {
-    if (!urlDoSite) return;
+    if (!urlDoSite || ocupado.current) return;
+    ocupado.current = true;
+    setGerando(m.id);
     // A aba abre AGORA, no clique: aberta depois da resposta do servidor, o
     // navegador a trata como janela não pedida e bloqueia (igual à barra).
     const aba = window.open('', '_blank');
@@ -125,6 +131,9 @@ export default function TelaModelo({ siteForm, setF, urlDoSite, noAr = false, ao
     } catch {
       aba?.close();
       toast.error('Não deu para abrir a prévia. Tente de novo.');
+    } finally {
+      ocupado.current = false;
+      setGerando(null);
     }
   };
 
@@ -147,7 +156,10 @@ export default function TelaModelo({ siteForm, setF, urlDoSite, noAr = false, ao
               <Button type="button" variant="outline" onClick={() => usar(m)}>Usar este modelo</Button>
             )}
             {comPrevia && (
-              <Button type="button" variant="ghost" onClick={() => verPrevia(m)}>Ver como fica</Button>
+              <Button type="button" variant="ghost" onClick={() => verPrevia(m)} disabled={gerando !== null}>
+                {gerando === m.id && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden />}
+                Ver como fica
+              </Button>
             )}
           </div>
         ))}

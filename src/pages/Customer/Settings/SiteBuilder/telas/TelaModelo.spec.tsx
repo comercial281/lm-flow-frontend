@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TelaModelo from './TelaModelo';
 import type { SiteFormData } from '@/services/siteBuilder/siteBuilderService';
@@ -110,6 +110,26 @@ describe('TelaModelo', () => {
       expect(url.pathname).toBe('/portal/imob');
       expect(url.searchParams.get('previa')).toBe('tok+a/b==--9f');
       expect(url.searchParams.get('modelo')).toBe('popular');
+      abrirJanela.mockRestore();
+    });
+
+    it('enquanto gera o link, o botão fica ocupado: o segundo clique não abre outra aba', async () => {
+      const aba = novaAba();
+      const abrirJanela = vi.spyOn(window, 'open').mockReturnValue(aba as unknown as Window);
+      let responder: (url: string) => void = () => {};
+      const aoPedirPrevia = vi.fn(() => new Promise<string>(r => { responder = r; }));
+      render(<Montar espiao={vi.fn()} previa={{ urlDoSite: 'https://imob.com.br/', noAr: false, aoPedirPrevia }} />);
+      const botao = within(cartao('Editorial')).getByRole('button', { name: 'Ver como fica' });
+      await userEvent.click(botao);
+      expect(botao).toBeDisabled();
+      expect(within(cartao('Popular')).getByRole('button', { name: 'Ver como fica' })).toBeDisabled();
+      fireEvent.click(botao);
+      fireEvent.click(within(cartao('Popular')).getByRole('button', { name: 'Ver como fica' }));
+      expect(abrirJanela).toHaveBeenCalledTimes(1);
+      expect(aoPedirPrevia).toHaveBeenCalledTimes(1);
+      responder('https://imob.com.br/?previa=tok');
+      await waitFor(() => expect(botao).not.toBeDisabled());
+      expect(new URL(aba.location.href).searchParams.get('modelo')).toBe('editorial');
       abrirJanela.mockRestore();
     });
 

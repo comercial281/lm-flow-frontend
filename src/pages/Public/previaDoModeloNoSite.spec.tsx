@@ -6,7 +6,7 @@ import PortalHomePage from './PortalHomePage';
 import ImovelPublicPage from './ImovelPublicPage';
 import { FaixaDePrevia, robotsDoSite, type SiteInfo } from './portalShared';
 import { rastreamentoDoSite } from './usePortalTracking';
-import { CHAVE_DO_MODELO, esquecerModeloDaPrevia } from '@/features/siteBuilder/public/previaDoModelo';
+import { CHAVE_DO_MODELO, esquecerModeloDaPrevia, modeloDaPrevia } from '@/features/siteBuilder/public/previaDoModelo';
 import { TEXTO_ENVIO_NA_PREVIA, esquecerPrevia } from '@/features/siteBuilder/public/previa';
 import { BR_PHONE_PLACEHOLDER } from '@/lib/brPhone';
 
@@ -93,7 +93,7 @@ afterEach(() => {
 describe('faixa da prévia do modelo', () => {
   it('com modelo: "Prévia do modelo Editorial. Nada foi salvo."', () => {
     render(<FaixaDePrevia site={{ modelo_em_previa: 'editorial' }} />);
-    expect(screen.getByRole('status').textContent).toBe(FAIXA_EDITORIAL);
+    expect(screen.getByRole('status').textContent).toBe(`${FAIXA_EDITORIAL} Ver o site normal`);
   });
 
   it('sem modelo e sem prévia: nada', () => {
@@ -105,7 +105,29 @@ describe('faixa da prévia do modelo', () => {
     render(<FaixaDePrevia site={{ preview: true, modelo_em_previa: 'popular' }} />);
     expect(screen.getAllByRole('status')).toHaveLength(1);
     expect(screen.getByRole('status').textContent)
-      .toBe('Prévia do modelo Popular. Nada foi salvo, e o site ainda não está publicado.');
+      .toBe('Prévia do modelo Popular. Nada foi salvo, e o site ainda não está publicado. Ver o site normal');
+  });
+
+  it('"Ver o site normal" esquece o modelo e leva ao mesmo endereço sem o modelo=', async () => {
+    window.history.replaceState({}, '', '/portal/imob?previa=tok-1&modelo=editorial&tab=rent');
+    modeloDaPrevia();
+    // O jsdom não navega: a ida em si fica de fora, conferimos o destino.
+    const semNavegar = (e: Event) => e.preventDefault();
+    window.addEventListener('click', semNavegar);
+    render(<FaixaDePrevia site={{ modelo_em_previa: 'editorial' }} />);
+    const link = screen.getByRole('link', { name: 'Ver o site normal' });
+    try {
+      await userEvent.click(link);
+    } finally {
+      window.removeEventListener('click', semNavegar);
+    }
+    expect(sessionStorage.getItem(CHAVE_DO_MODELO)).toBeNull();
+    expect(modeloDaPrevia({ search: '' })).toBeNull();
+    const destino = new URL((link as HTMLAnchorElement).href);
+    expect(destino.pathname).toBe('/portal/imob');
+    expect(destino.searchParams.get('modelo')).toBeNull();
+    expect(destino.searchParams.get('previa')).toBe('tok-1');
+    expect(destino.searchParams.get('tab')).toBe('rent');
   });
 
   it('só a prévia de antes de publicar: a frase de sempre', () => {
@@ -139,7 +161,10 @@ describe('prévia do modelo no site', () => {
   });
 
   it('ficha do imóvel, depois da navegação interna (modelo guardado): faixa e noindex', async () => {
-    sessionStorage.setItem(CHAVE_DO_MODELO, 'popular');
+    // A página abriu com ?modelo= (primeira leitura) e a navegação interna perdeu a busca.
+    window.history.replaceState({}, '', '/portal/imob?modelo=popular');
+    modeloDaPrevia();
+    window.history.replaceState({}, '', '/imovel/imob/C1');
     abrir('/imovel/imob/C1', SITE);
     expect(await screen.findByText('Prévia do modelo Popular. Nada foi salvo.')).toBeInTheDocument();
     await waitFor(() => expect(robots()).toBe('noindex'));

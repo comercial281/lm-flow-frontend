@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchAllPortalProperties } from './portalProperties';
 import { imovelHref } from './finalidade';
@@ -6,7 +6,7 @@ import { ehAba, itensDoMenu, menuPersonalizado, NOME_DE_FABRICA, type LinkDoMenu
 import { caminhoDoSite, type CtxDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { cabecalhosDoSite, ehPrevia } from '@/features/siteBuilder/public/previa';
-import { comModeloDaPrevia, ehPreviaDoModelo, nomeDoModelo } from '@/features/siteBuilder/public/previaDoModelo';
+import { comModeloDaPrevia, ehPreviaDoModelo, nomeDoModelo, sairDaPreviaDoModelo, urlSemModelo } from '@/features/siteBuilder/public/previaDoModelo';
 import type { ModeloDoSiteId } from '@/features/siteBuilder/modelosDoSite';
 import PortalTranslate from './PortalTranslate';
 import { tituloDaAba } from '@/features/siteBuilder/public/tituloDaAba';
@@ -783,9 +783,24 @@ export function FaixaDePrevia({ site }: { site: SiteInfo }) {
   const texto = !modelo
     ? 'Prévia: o site ainda não está publicado.'
     : `Prévia do modelo ${modelo}. ${previa ? 'Nada foi salvo, e o site ainda não está publicado.' : 'Nada foi salvo.'}`;
+  // "Ver o site normal": esquece o modelo e recarrega o mesmo endereço sem o
+  // `modelo=` (o `previa=` e os filtros ficam). O endereço é lido no clique: a
+  // navegação interna troca a URL sem redesenhar a faixa.
+  const sair = (e: MouseEvent<HTMLAnchorElement>) => {
+    sairDaPreviaDoModelo();
+    e.currentTarget.href = urlSemModelo(window.location.href);
+  };
   return (
     <div role="status" className="bg-amber-400 px-4 py-1.5 text-center text-[13px] font-semibold text-neutral-900">
       {texto}
+      {modelo && (
+        <>
+          {' '}
+          <a href={urlSemModelo(window.location.href)} onClick={sair} className="underline underline-offset-2">
+            Ver o site normal
+          </a>
+        </>
+      )}
     </div>
   );
 }
