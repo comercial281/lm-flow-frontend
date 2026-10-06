@@ -22,11 +22,12 @@ import type { PropsDaPagina } from '../paginas';
 
 export default function Personalidade({ agent, gravar }: PropsDaPagina) {
   const [vozes, setVozes] = useState<VozDaIa[]>([]);
+  const [carregou, setCarregou] = useState(false);
   const tocando = useRef<HTMLAudioElement | null>(null);
   // Leitura de fundo: sem a lista, só a voz gravada aparece.
   useEffect(() => {
     let vivo = true;
-    salesAgentsService.voices().then((v) => { if (vivo) setVozes(v); }).catch(() => {});
+    salesAgentsService.voices().then((v) => { if (vivo) setVozes(v); }).catch(() => {}).finally(() => { if (vivo) setCarregou(true); });
     return () => { vivo = false; tocando.current?.pause(); };
   }, []);
 
@@ -34,7 +35,7 @@ export default function Personalidade({ agent, gravar }: PropsDaPagina) {
   const vozGravada = agent.audio_voice_id ?? null;
   const opcoesDeVoz = [
     ...vozes.map((v) => ({ valor: v.id, rotulo: v.nome, descricao: v.descricao })),
-    ...(vozGravada && !vozes.some((v) => v.id === vozGravada) ? [{ valor: vozGravada, rotulo: 'Voz própria', descricao: 'Combinada com a equipe.' }] : []),
+    ...(vozGravada && carregou && !vozes.some((v) => v.id === vozGravada) ? [{ valor: vozGravada, rotulo: 'Voz própria', descricao: 'Combinada com a equipe.' }] : []),
   ];
   const ouvir = (url: string) => {
     tocando.current?.pause();

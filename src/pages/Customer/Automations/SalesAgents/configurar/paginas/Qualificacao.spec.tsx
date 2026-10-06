@@ -34,12 +34,31 @@ describe('Qualificação', () => {
     expect(gravar.mock.calls[0][0].qualification_questions).toEqual(['Quartos', 'Renda']);
     await userEvent.type(screen.getByLabelText('Nova pergunta'), 'Vai financiar?');
     await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
-    expect(gravar.mock.calls[1][0].qualification_questions).toEqual(['Renda', 'Quartos', 'Vai financiar?']);
+    expect(gravar.mock.calls[1][0].qualification_questions).toEqual(['Quartos', 'Renda', 'Vai financiar?']);
   });
 
   it('fora do critério das obrigatórias, avisa e leva ao Critério', async () => {
     const { irPara } = abrir(agenteDeTeste({ transfer_config: { mode: 'temperatura' } }));
     await userEvent.click(screen.getByRole('button', { name: 'Abrir Critério' }));
     expect(irPara).toHaveBeenCalledWith('criterio');
+  });
+
+  it('editar uma linha e clicar em "Obrigatória" de outra grava com o texto NOVO', async () => {
+    const { gravar } = abrir();
+    const campo = screen.getByLabelText('Pergunta 1');
+    await userEvent.clear(campo);
+    await userEvent.type(campo, 'Renda familiar');
+    await userEvent.click(screen.getByRole('button', { name: 'Pergunta 2 é obrigatória' }));
+    expect(gravar.mock.calls[0][0].qualification_questions).toEqual(['Renda familiar', 'Quartos']);
+    expect(gravar.mock.calls[1][0].qualification_questions).toEqual(['Renda familiar', 'Quartos']);
+    expect(gravar.mock.calls[1][0].transfer_config.required_questions).toEqual(['Renda familiar', 'Quartos']);
+  });
+
+  it('linha esvaziada volta pro texto salvo ao sair', async () => {
+    const { gravar } = abrir();
+    await userEvent.clear(screen.getByLabelText('Pergunta 1'));
+    await userEvent.click(screen.getByRole('button', { name: 'fora' }));
+    expect(screen.getByLabelText('Pergunta 1')).toHaveValue('Renda');
+    expect(gravar).not.toHaveBeenCalled();
   });
 });

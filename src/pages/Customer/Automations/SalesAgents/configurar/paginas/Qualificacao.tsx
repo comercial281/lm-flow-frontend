@@ -5,7 +5,7 @@
 // em `transfer_config.required_questions` (subchave).
 //
 // ⚠️ Não deixa desmarcar a última obrigatória: vazio no servidor = TODAS.
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, GripVertical, Trash2 } from 'lucide-react';
 import {
   DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent,
@@ -28,6 +28,8 @@ function Linha({ id, indice, total, pergunta, aoTexto, aoObrigatoria, aoMover, a
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
   const { valor, mudar, aoSair } = useTextoNaHora(pergunta.texto, (t) => (t.trim() ? aoTexto(t.trim()) : undefined));
+  // Linha esvaziada volta pro texto salvo: nunca fica em branco calada.
+  const sair = () => { if (!valor.trim()) mudar(pergunta.texto); aoSair(); };
   const n = indice + 1;
   return (
     <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}
@@ -36,7 +38,7 @@ function Linha({ id, indice, total, pergunta, aoTexto, aoObrigatoria, aoMover, a
         <GripVertical className="h-4 w-4" aria-hidden />
       </button>
       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold" aria-hidden>{n}</span>
-      <Input aria-label={`Pergunta ${n}`} value={valor} onChange={(e) => mudar(e.target.value)} onBlur={aoSair}
+      <Input aria-label={`Pergunta ${n}`} value={valor} onChange={(e) => mudar(e.target.value)} onBlur={sair}
         className="h-10 min-w-[12rem] flex-1 text-base md:text-base" />
       <button type="button" aria-pressed={pergunta.obrigatoria} aria-label={`Pergunta ${n} é obrigatória`} onClick={aoObrigatoria}
         className={cn('min-h-9 rounded-full border-[1.5px] px-3 text-sm font-medium',
@@ -56,38 +58,66 @@ function Linha({ id, indice, total, pergunta, aoTexto, aoObrigatoria, aoMover, a
   );
 }
 
+type Item = Pergunta & { id: string };
+
 export default function Qualificacao({ agent, gravar, irPara }: PropsDaPagina) {
-  const perguntas = perguntasDoAgente(agent);
+  // ⚠️ A lista mais recente mora num ref, atualizado de forma síncrona a cada
+  // escrita: o blur do texto grava e o clique seguinte (Obrigatória, Subir, ...)
+  // roda antes do agente voltar do servidor; com a lista da render ele desfaria a
+  // edição. Os ids são estáveis por linha (não dependem do texto nem da posição),
+  // pra edição em andamento não remontar a linha.
+  const contador = useRef(0);
+  const novoId = () => `q${contador.current++}`;
+  const lidas = perguntasDoAgente(agent);
+  const chave = JSON.stringify(lidas);
+  const itensRef = useRef<Item[]>(lidas.map((p) => ({ ...p, id: novoId() })));
+  const lidaRef = useRef(chave);
+  const [, redesenhar] = useState(0);
+  // Só reconstrói quando o que o SERVIDOR devolve muda (outro lugar gravou, ou o eco
+  // da escrita). Comparar com a lista local faria uma render antes do eco desfazer a edição.
+  if (lidaRef.current !== chave) {
+    lidaRef.current = chave;
+    const local = JSON.stringify(itensRef.current.map(({ texto, obrigatoria }) => ({ texto, obrigatoria })));
+    if (local !== chave) itensRef.current = lidas.map((p, i) => ({ ...p, id: itensRef.current[i]?.id ?? novoId() }));
+  }
+  const itens = itensRef.current;
+  const perguntas: Pergunta[] = itens;
+
   const [aviso, setAviso] = useState<string | null>(null);
   const [nova, setNova] = useState('');
   const sensores = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
-  const ids = perguntas.map((p, i) => `${i}:${p.texto}`);
+  const ids = itens.map((p) => p.id);
   const marcadas = perguntas.filter((p) => p.obrigatoria).length;
   const ehUltima = (i: number) => perguntas[i].obrigatoria && marcadas === 1 && perguntas.length > 1;
 
-  const salvar = (lista: Pergunta[]) => gravar(perguntasParaPatch(lista, agent), ['transfer_config.required_questions']);
-  const trocar = (i: number, p: Partial<Pergunta>) => salvar(perguntas.map((x, j) => (j === i ? { ...x, ...p } : x)));
-  const mover = (i: number, d: -1 | 1) => salvar(arrayMove(perguntas, i, i + d));
+  const salvar = (lista: Item[]) => {
+    itensRef.current = lista;
+    redesenhar((n) => n + 1);
+    return gravar(perguntasParaPatch(lista, agent), ['transfer_config.required_questions']);
+  };
+  // Sempre pela lista mais recente e pelo id da linha, não pela posição da render.
+  const trocar = (id: string, p: Partial<Pergunta>) => salvar(itensRef.current.map((x) => (x.id === id ? { ...x, ...p } : x)));
+  const mover = (i: number, d: -1 | 1) => salvar(arrayMove(itensRef.current, i, i + d));
   const marcar = (i: number) => {
     if (ehUltima(i)) { setAviso(ULTIMA); return; }
     setAviso(null);
-    void trocar(i, { obrigatoria: !perguntas[i].obrigatoria });
+    void trocar(itens[i].id, { obrigatoria: !itens[i].obrigatoria });
   };
   const excluir = (i: number) => {
     if (ehUltima(i)) { setAviso(ULTIMA); return; }
     setAviso(null);
-    void salvar(perguntas.filter((_, j) => j !== i));
+    void salvar(itensRef.current.filter((_, j) => j !== i));
   };
   const adicionar = () => {
     const t = nova.trim();
     if (!t) return;
     setNova('');
-    void salvar([...perguntas, { texto: t, obrigatoria: false }]);
+    void salvar([...itensRef.current, { id: novoId(), texto: t, obrigatoria: false }]);
   };
   const soltar = (e: DragEndEvent) => {
     const de = ids.indexOf(String(e.active.id));
     const para = e.over ? ids.indexOf(String(e.over.id)) : -1;
-    if (de >= 0 && para >= 0 && de !== para) void salvar(arrayMove(perguntas, de, para));
+    if (de >= 0 && para >= 0 && de !== para) void salvar(arrayMove(itensRef.current, de, para));
   };
 
   return (
@@ -96,9 +126,9 @@ export default function Qualificacao({ agent, gravar, irPara }: PropsDaPagina) {
         <DndContext sensors={sensores} collisionDetection={closestCenter} onDragEnd={soltar}>
           <SortableContext items={ids} strategy={verticalListSortingStrategy}>
             <ol className="space-y-2">
-              {perguntas.map((p, i) => (
+              {itens.map((p, i) => (
                 <Linha key={ids[i]} id={ids[i]} indice={i} total={perguntas.length} pergunta={p}
-                  aoTexto={(t) => void trocar(i, { texto: t })} aoObrigatoria={() => marcar(i)} aoMover={(d) => void mover(i, d)} aoExcluir={() => excluir(i)} />
+                  aoTexto={(t) => void trocar(p.id, { texto: t })} aoObrigatoria={() => marcar(i)} aoMover={(d) => void mover(i, d)} aoExcluir={() => excluir(i)} />
               ))}
             </ol>
           </SortableContext>
