@@ -151,6 +151,7 @@ const AdminSuporteLista = lazyWithRetry(() => import('@/pages/SuperAdmin/Suporte
 const AdminSuporteChamado = lazyWithRetry(() => import('@/pages/SuperAdmin/Suporte/SuporteChamado'));
 const AdminIaDashboard = lazyWithRetry(() => import('@/pages/SuperAdmin/ResultadosIA'));
 const AdminIaConhecimento = lazyWithRetry(() => import('@/pages/SuperAdmin/IaConhecimento'));
+const AdminComparacaoIA = lazyWithRetry(() => import('@/pages/SuperAdmin/ComparacaoIA'));
 const AdminAvisoDeVisita = lazyWithRetry(() => import('@/pages/SuperAdmin/AiVisitNoticeSection'));
 const AdminEquipe = lazyWithRetry(() => import('@/pages/Admin/Area/Equipe'));
 const AdminAcademia = lazyWithRetry(() => import('@/pages/Admin/Area/Academia'));
@@ -1282,6 +1283,7 @@ const AppRouter = () => {
               <Route path="/admin/agentes/dashboard" element={<AdminIaDashboard />} />
               <Route path="/admin/agentes/conhecimento" element={<AdminIaConhecimento />} />
               <Route path="/admin/agentes/aviso-de-visita" element={<AdminConteudo><AdminAvisoDeVisita /></AdminConteudo>} />
+              <Route path="/admin/agentes/comparacao" element={<AdminComparacaoIA />} />
               {/* Equipe (sem abas: a moldura não desenha nada) */}
               <Route path="/admin/equipe" element={<AdminEquipe />} />
             </Route>
