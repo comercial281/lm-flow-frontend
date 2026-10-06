@@ -7,7 +7,7 @@ vi.mock('@/services/roletaConfig/brokerAssignmentsService', () => ({
   brokerAssignmentsService: { listMine: () => listMine() },
 }));
 
-import { PendingOffersProvider } from './PendingOffersContext';
+import { PendingOffersProvider, usePendingOffers } from './PendingOffersContext';
 
 // O pop-up de aceite precisa abrir em até 15 s em qualquer tela. Por isso a
 // lista de ofertas checa a cada 15 s — mas SÓ com a aba visível: aba escondida
@@ -32,7 +32,8 @@ describe('PendingOffersProvider — checagem das ofertas', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     listMine.mockReset();
-    listMine.mockResolvedValue([]);
+    // Lista NOVA a cada chamada, como a rede devolve.
+    listMine.mockImplementation(async () => []);
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
   });
 
@@ -80,5 +81,28 @@ describe('PendingOffersProvider — checagem das ofertas', () => {
     await montar();
     await act(async () => { mudarVisibilidade('hidden'); });
     expect(listMine).toHaveBeenCalledTimes(1);
+  });
+
+  // A checagem de 15 s não pode redesenhar o app inteiro (a conversa lê esta
+  // lista) quando não há oferta nenhuma, que é o caso de quase todo ciclo.
+  // Com oferta, a lista nova a cada ciclo é o que mantém os minutos do selo,
+  // da faixa e do pop-up andando.
+  it('sem oferta, a checagem não troca a lista (não redesenha quem a lê)', async () => {
+    const listas: unknown[] = [];
+    function Leitor() {
+      listas.push(usePendingOffers().offers);
+      return null;
+    }
+    await act(async () => {
+      render(
+        <PendingOffersProvider>
+          <Leitor />
+        </PendingOffersProvider>,
+      );
+    });
+    const antes = listas.length;
+    await act(async () => { vi.advanceTimersByTime(45_000); });
+    expect(listMine).toHaveBeenCalledTimes(4);
+    expect(listas.length).toBe(antes);
   });
 });

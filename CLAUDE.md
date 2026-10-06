@@ -6774,3 +6774,4 @@ Armadilhas:
 2. **O `OfferAiBriefing` tem texto branco** (foi feito para o fundo escuro da tela de aceite). No pop-up ele vai dentro de uma caixa `bg-[#1A0A2E]`; sem ela, no tema claro, o bloco fica invisível.
 3. **O pop-up tem que ficar DENTRO do `PendingOffersProvider`** no `MainLayout`: fora dele o hook devolve lista vazia e o pop-up nunca abre, sem erro nenhum (`MainLayout.ofertas.spec.ts` trava isso).
 4. **Tela cheia é por classe `max-sm:`** no `DialogContent` (o `max-w-*` sem prefixo seria lido pelo `uncapAt640` do `ds.tsx` como teto).
+5. **Checagem vazia mantém a MESMA lista** (`manterVazia` no contexto): sem isso cada ciclo de 15 s redesenharia a conversa inteira sem nada ter mudado. Com oferta a lista é trocada de propósito a cada ciclo: é o que faz os minutos andarem. Não "otimizar" isso comparando o conteúdo, ou o prazo congela no selo, na faixa e no pop-up.

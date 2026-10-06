@@ -22,6 +22,14 @@ import { offerFor, type OfferLookup } from '@/components/roleta/pendingOffersMat
 // conexão ao vivo for levada para o app inteiro (não reabrir antes disso).
 const REFRESH_MS = 15_000;
 
+// Vazia de novo = a MESMA lista: sem isso cada checagem de 15 s redesenharia
+// tudo o que lê o contexto (a conversa inclusive) sem nada ter mudado — e quase
+// todo ciclo é vazio. Com oferta, a lista nova a cada ciclo é o que faz os
+// minutos do selo, da faixa e do pop-up andarem.
+function manterVazia(prev: BrokerAssignmentDetail[], next: BrokerAssignmentDetail[]): BrokerAssignmentDetail[] {
+  return prev.length === 0 && next.length === 0 ? prev : next;
+}
+
 interface PendingOffersValue {
   offers: BrokerAssignmentDetail[];
   loaded: boolean;
@@ -52,11 +60,11 @@ export function PendingOffersProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       const list = await brokerAssignmentsService.listMine();
-      if (alive.current) setOffers(list);
+      if (alive.current) setOffers(prev => manterVazia(prev, list));
     } catch {
       // Falha aqui não pode atrapalhar o app: some e tenta de novo no próximo
       // ciclo. Leitura de fundo não grita.
-      if (alive.current) setOffers([]);
+      if (alive.current) setOffers(prev => manterVazia(prev, []));
     } finally {
       if (alive.current) setLoaded(true);
     }
