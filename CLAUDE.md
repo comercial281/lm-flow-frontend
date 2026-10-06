@@ -6567,3 +6567,18 @@ Caso real: o Leonardo (Mais que Imóveis) desligou "Rejeitar chamadas" e o clien
 - **Vazia de fábrica**, na criação do canal (antes vinha "I do not accept calls", em inglês) e na tela de configuração (antes "Não aceito chamadas"). Ao abrir a tela, campo vazio continua vazio. Antes o texto de fábrica reaparecia e voltava a ser gravado no próximo salvar.
 - **Rejeição desligada = mensagem vazia na gravação**, aqui e no servidor (`Evolution::CallMessage`, backend). O campo esconder não basta: era exatamente o texto escondido que ia pra Evolution.
 - Não reabrir "voltar com um texto padrão" sem o dono pedir.
+
+## Modelos de página de anúncio (D1) (05/10/2026)
+
+Três modelos prontos no assistente "Criar com assistente" (passo 1, grupo "Modelos prontos"): **Lançamento**, **Revenda** e **Aluguel**.
+
+- **Os modelos vivem no código**, não no banco: `src/features/landing/modelos/modelosDeAnuncio.ts` (blocos, tema e frase) e `perguntas.ts` (perguntas de Revenda e Aluguel). Cada chamada de `blocos()` gera ids novos. Mudar um modelo não mexe em página já criada: a página ganha uma cópia dos blocos e do tema na criação.
+- **Formulário na primeira tela do celular.** Todo modelo começa com a capa com `formInHero` ligado e o `lead_form` logo depois. O formulário aparece dentro da capa, sem rolar.
+- **O cartão do formulário dentro da capa usa a cor de fundo do bloco** (`blockBg` do tema), não a do fundo da página.
+- **`#lp-lead-form` fica só no primeiro formulário visível da página.** Se houver dois, o segundo segue no lugar dele, sem o id.
+- **A página larga no computador só existe com o formulário na capa.** Sem `formInHero`, ou sem formulário visível, a página volta à coluna estreita de 460px, igual a de antes.
+- **A prévia do editor é de celular**, mesmo no computador: a página larga só aparece na página publicada.
+- **Imóvel é obrigatório** para criar por modelo. Cria sempre com `createForProperty` (nunca `getOrCreateForProperty`): **um imóvel pode ter várias páginas de anúncio** (teste A/B). O atalho no cadastro do imóvel continua abrindo a primeira.
+- **O modelo nunca troca sozinho.** Se o imóvel combina mais com outro (`modeloSugerido`: locação ou temporada = Aluguel, empreendimento = Lançamento, o resto = Revenda), aparece uma linha com o botão "Trocar". Quem decide é a pessoa.
+- **Fase da obra nasce escondida no Lançamento**, porque o percentual é manual. As perguntas de Revenda e Aluguel só pesam, não desqualificam.
+- As fontes dos temas são as da lista `FONTES_DO_SITE`; a landing usa a mesma lista do site.

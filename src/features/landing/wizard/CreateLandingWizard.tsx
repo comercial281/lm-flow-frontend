@@ -12,13 +12,21 @@ import { safeParsePageBlocks } from '@/features/landing/blocks';
 // idêntico ao que a página vai receber ao publicar.
 import { slugifyLandingName } from '@/features/landing/manage/landingUrl';
 import { Seletor } from '@/components/base/Seletor';
+import { MODELOS_DE_ANUNCIO, modeloSugerido, type ModeloDeAnuncioId } from '@/features/landing/modelos/modelosDeAnuncio';
 
 interface Opt {
   id: string;
   label: string;
 }
 
-type Base = 'blank' | 'property' | 'template';
+type Base = 'blank' | 'property' | 'template' | 'modelo';
+
+/** O que dizer quando o imóvel escolhido combina mais com outro modelo. */
+const FRASE_SUGESTAO: Record<ModeloDeAnuncioId, string> = {
+  aluguel: 'Este imóvel é de aluguel. O modelo Aluguel combina mais.',
+  lancamento: 'Este imóvel é um empreendimento. O modelo Lançamento combina mais.',
+  revenda: 'Este imóvel é de revenda. O modelo Revenda combina mais.',
+};
 
 /**
  * Campo de lista do passo 3 (pipeline, coluna, tag). Fora do componente do
@@ -71,6 +79,8 @@ export default function CreateLandingWizard({
   const [propResults, setPropResults] = useState<Property[]>([]);
   const [propLoading, setPropLoading] = useState(false);
   const [property, setProperty] = useState<Property | null>(null);
+  // base = modelo
+  const [modeloId, setModeloId] = useState<ModeloDeAnuncioId>('revenda');
   // base = template
   const [templates, setTemplates] = useState<LandingTemplateDTO[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
@@ -92,7 +102,7 @@ export default function CreateLandingWizard({
 
   // Busca de imóveis (debounce simples) quando base = property.
   useEffect(() => {
-    if (base !== 'property') return;
+    if (base !== 'property' && base !== 'modelo') return;
     let active = true;
     setPropLoading(true);
     const t = setTimeout(async () => {
@@ -169,9 +179,11 @@ export default function CreateLandingWizard({
     if (!name.trim()) setName(p.title);
   };
 
+  const sugerido = property ? modeloSugerido(property) : null;
+
   const canNext =
     step === 1
-      ? base === 'blank' || (base === 'property' && !!property) || (base === 'template' && !!templateId)
+      ? base === 'blank' || ((base === 'property' || base === 'modelo') && !!property) || (base === 'template' && !!templateId)
       : step === 2
         ? !!name.trim()
         : true;
@@ -181,7 +193,17 @@ export default function CreateLandingWizard({
     setCreating(true);
     try {
       let lp;
-      if (base === 'property' && property) {
+      const modelo = MODELOS_DE_ANUNCIO.find((m) => m.id === modeloId);
+      if (base === 'modelo' && property && modelo) {
+        // Sempre página nova: um imóvel pode ter mais de uma de anúncio (teste A/B).
+        lp = await landingPageService.createForProperty(siteId, {
+          propertyId: property.id,
+          title: name.trim(),
+          brandMode: 'development',
+          blocks: modelo.blocos(),
+          theme: modelo.tema,
+        });
+      } else if (base === 'property' && property) {
         lp = await landingPageService.getOrCreateForProperty(siteId, {
           propertyId: property.id,
           title: name.trim(),
@@ -240,6 +262,32 @@ export default function CreateLandingWizard({
           {step === 1 && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">Como você quer começar?</p>
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Modelos prontos</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {MODELOS_DE_ANUNCIO.map((m) => {
+                    const ativo = base === 'modelo' && modeloId === m.id;
+                    const cores = [m.tema.bgStart, m.tema.primary, m.tema.accent, m.tema.cardBg];
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        aria-pressed={ativo}
+                        onClick={() => { setBase('modelo'); setModeloId(m.id); }}
+                        className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left ${ativo ? 'border-primary bg-primary/5' : 'border-border'}`}
+                      >
+                        <span className="flex h-2 w-full overflow-hidden rounded-full border border-border">
+                          {cores.map((c, i) => (
+                            <span key={i} className="h-full flex-1" style={{ backgroundColor: c }} />
+                          ))}
+                        </span>
+                        <span className="text-sm font-medium">{m.nome}</span>
+                        <span className="text-xs text-muted-foreground">{m.frase}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <div className="grid grid-cols-3 gap-3">
                 <button
                   type="button"
@@ -299,8 +347,20 @@ export default function CreateLandingWizard({
                 </div>
               )}
 
-              {base === 'property' && (
+              {(base === 'property' || base === 'modelo') && (
                 <div className="space-y-2">
+                  {base === 'modelo' && sugerido && sugerido !== modeloId && (
+                    <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span>{FRASE_SUGESTAO[sugerido]}</span>
+                      <button
+                        type="button"
+                        onClick={() => setModeloId(sugerido)}
+                        className="font-semibold text-primary hover:underline"
+                      >
+                        Trocar
+                      </button>
+                    </p>
+                  )}
                   <div className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2">
                     <Search className="h-4 w-4 flex-none text-muted-foreground" />
                     <input

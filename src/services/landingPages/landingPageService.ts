@@ -70,6 +70,10 @@ export interface CreateLandingForPropertyInput {
   title: string;
   slug?: string;
   brandMode?: 'client' | 'development' | 'both';
+  /** Blocos de partida (um modelo pronto). Sem eles, os blocos padrão. */
+  blocks?: BlockInstance[];
+  /** Tema de partida (o do modelo). Sem ele, o servidor usa o da marca. */
+  theme?: LandingTheme;
 }
 
 export const landingPageService = {
@@ -163,7 +167,8 @@ export const landingPageService = {
         indexable: false,
         in_menu: false,
         active: false, // nasce como rascunho até publicar
-        content_blocks: defaultLandingBlocks(),
+        content_blocks: withDualWrite(input.blocks ?? defaultLandingBlocks()),
+        ...(input.theme ? { theme: input.theme } : {}),
       },
     });
     return toLandingPage(unwrap<LandingPageDTO>(res));
