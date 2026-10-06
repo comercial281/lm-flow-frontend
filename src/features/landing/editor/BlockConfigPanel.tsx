@@ -22,11 +22,13 @@ import { Seletor } from '@/components/base/Seletor';
 import { PhoneInput } from '@/components/shared/PhoneInput';
 
 /* Editor de lista genérico. */
-function Repeater<T>({ items, onChange, empty, addLabel, render }: {
+function Repeater<T>({ items, onChange, empty, addLabel, max, render }: {
   items: T[];
   onChange: (next: T[]) => void;
   empty: T;
   addLabel: string;
+  /** Limite de itens: ao chegar nele o botão de incluir some. */
+  max?: number;
   render: (item: T, update: (patch: Partial<T>) => void) => React.ReactNode;
 }) {
   const patchAt = (i: number, patch: Partial<T>) => onChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
@@ -41,13 +43,15 @@ function Repeater<T>({ items, onChange, empty, addLabel, render }: {
           {render(it, (patch) => patchAt(i, patch))}
         </div>
       ))}
-      <button
-        type="button"
-        onClick={() => onChange([...items, { ...empty }])}
-        className="w-full rounded-lg border border-dashed border-border py-2 text-xs font-medium text-foreground hover:border-primary"
-      >
-        + {addLabel}
-      </button>
+      {(max == null || items.length < max) && (
+        <button
+          type="button"
+          onClick={() => onChange([...items, { ...empty }])}
+          className="w-full rounded-lg border border-dashed border-border py-2 text-xs font-medium text-foreground hover:border-primary"
+        >
+          + {addLabel}
+        </button>
+      )}
     </div>
   );
 }
@@ -225,6 +229,42 @@ function Fields({ block }: { block: BlockInstance }) {
                     <Text value={it.year} onChange={(v) => u({ year: v })} placeholder="2023" />
                   </div>
                   <Upload value={it.imageUrl} onChange={(v) => u({ imageUrl: v })} accept="image/*" />
+                </>
+              )}
+            />
+          </Field>
+        </>
+      );
+    case 'monthly_cost':
+      return (
+        <>
+          <Field label="Título"><Text value={c.title as string} onChange={(v) => set({ title: v })} /></Field>
+          <Field label="Outras linhas" hint="Aluguel, condomínio e IPTU vêm do imóvel. Aqui entra o que o cadastro não tem. Até 4 linhas.">
+            <Repeater<{ label: string; value?: number }>
+              items={arr('extras')} onChange={(v) => set({ extras: v })} empty={{ label: '', value: undefined }} addLabel="linha"
+              max={4}
+              render={(it, u) => (
+                <div className="grid grid-cols-2 gap-2">
+                  <Text value={it.label} onChange={(v) => u({ label: v })} placeholder="Seguro incêndio" />
+                  <Num value={it.value} onChange={(v) => u({ value: v ?? 0 })} placeholder="R$ por mês" />
+                </div>
+              )}
+            />
+          </Field>
+        </>
+      );
+    case 'steps':
+      return (
+        <>
+          <Field label="Título"><Text value={c.title as string} onChange={(v) => set({ title: v })} /></Field>
+          <Field label="Passos" hint="Numerados na ordem em que aparecem aqui. Até 6.">
+            <Repeater<{ title: string; text: string }>
+              items={arr('items')} onChange={(v) => set({ items: v })} empty={{ title: '', text: '' }} addLabel="passo"
+              max={6}
+              render={(it, u) => (
+                <>
+                  <Text value={it.title} onChange={(v) => u({ title: v })} placeholder="Escolha o imóvel" />
+                  <Area value={it.text} rows={2} onChange={(v) => u({ text: v })} />
                 </>
               )}
             />

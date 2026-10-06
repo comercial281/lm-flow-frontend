@@ -353,3 +353,83 @@ describe('BlockRenderer: dados novos do imóvel', () => {
     expect(screen.queryByText(/\/mês/)).toBeNull();
   });
 });
+
+describe('Custo mensal', () => {
+  const locacao: LandingProperty = { ...property, rentPrice: 2500, condoFee: 600, iptu: 1200, iptuPeriod: 'yearly' };
+  const bloco = (cfg: Record<string, unknown>) => {
+    const b = createBlock('monthly_cost');
+    Object.assign(b.config, cfg);
+    return b;
+  };
+  const nbsp = (t: string) => t.replace(/\u00a0/g, ' ');
+
+  it('soma aluguel, condomínio, IPTU mensal e extras', () => {
+    const b = bloco({ extras: [{ label: 'Seguro incêndio', value: 35 }] });
+    const { container } = render(<BlockRenderer blocks={[b]} property={locacao} />);
+    const txt = nbsp(container.textContent ?? '');
+    expect(txt).toContain('Custo mensal');
+    expect(txt).toContain('AluguelR$ 2.500');
+    expect(txt).toContain('CondomínioR$ 600');
+    expect(txt).toContain('IPTUR$ 100');
+    expect(txt).toContain('Seguro incêndioR$ 35');
+    expect(txt).toContain('TotalR$ 3.235');
+  });
+
+  it('IPTU mensal ou sem período entra inteiro', () => {
+    for (const iptuPeriod of ['monthly', null] as const) {
+      const { container, unmount } = render(
+        <BlockRenderer blocks={[bloco({})]} property={{ ...locacao, iptuPeriod }} />,
+      );
+      expect(nbsp(container.textContent ?? '')).toContain('IPTUR$ 1.200');
+      unmount();
+    }
+  });
+
+  it('linha nula ou zero não aparece; uma linha só não tem total', () => {
+    const { container } = render(
+      <BlockRenderer blocks={[bloco({})]} property={{ ...property, rentPrice: 2500, condoFee: 0, iptu: null }} />,
+    );
+    const txt = nbsp(container.textContent ?? '');
+    expect(txt).toContain('AluguelR$ 2.500');
+    expect(txt).not.toContain('Condomínio');
+    expect(txt).not.toContain('IPTU');
+    expect(txt).not.toContain('Total');
+  });
+
+  it('sem nenhuma linha o bloco não aparece', () => {
+    const { container } = render(<BlockRenderer blocks={[bloco({})]} property={property} />);
+    expect(container.textContent).toBe('');
+  });
+
+  it('source manual usa só os extras', () => {
+    const b = bloco({ source: 'manual', extras: [{ label: 'Taxa A', value: 10 }, { label: 'Taxa B', value: 20 }] });
+    const { container } = render(<BlockRenderer blocks={[b]} property={locacao} />);
+    const txt = nbsp(container.textContent ?? '');
+    expect(txt).not.toContain('Aluguel');
+    expect(txt).toContain('Taxa AR$ 10');
+    expect(txt).toContain('TotalR$ 30');
+  });
+});
+
+describe('Passo a passo', () => {
+  it('mostra os passos numerados com título e texto', () => {
+    const b = createBlock('steps');
+    b.config.items = [
+      { title: 'Visita', text: 'Você conhece o imóvel.' },
+      { title: 'Proposta', text: 'Enviamos a proposta.' },
+      { title: 'Contrato', text: 'Assinatura.' },
+    ];
+    const { container } = render(<BlockRenderer blocks={[b]} property={property} />);
+    expect(screen.getByText('Como funciona')).toBeInTheDocument();
+    expect(screen.getByText('Proposta')).toBeInTheDocument();
+    expect(screen.getByText('Enviamos a proposta.')).toBeInTheDocument();
+    const nums = Array.from(container.querySelectorAll('[data-step-number]')).map((n) => n.textContent);
+    expect(nums).toEqual(['1', '2', '3']);
+  });
+
+  it('sem passos o bloco não aparece', () => {
+    const { container } = render(<BlockRenderer blocks={[createBlock('steps')]} property={property} />);
+    expect(container.textContent).toBe('');
+  });
+});
+

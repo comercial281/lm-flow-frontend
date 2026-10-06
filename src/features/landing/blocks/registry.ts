@@ -163,6 +163,22 @@ export const BLOCK_REGISTRY: Record<BlockType, BlockMeta> = {
     category: 'imovel',
     autoFill: false,
   },
+  monthly_cost: {
+    type: 'monthly_cost',
+    label: 'Custo Mensal',
+    description: 'Aluguel, condomínio, IPTU e o total do mês.',
+    icon: 'Receipt',
+    category: 'imovel',
+    autoFill: true,
+  },
+  steps: {
+    type: 'steps',
+    label: 'Passo a Passo',
+    description: 'Etapas numeradas de como funciona.',
+    icon: 'ListOrdered',
+    category: 'conteudo',
+    autoFill: false,
+  },
   lead_form: {
     type: 'lead_form',
     label: 'Formulário de Lead',

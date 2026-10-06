@@ -650,6 +650,69 @@ function TrackRecordBlock({ config }: BlockComponentProps<'track_record'>) {
   );
 }
 
+/** Custo do mês: aluguel + condomínio + IPTU (anual vira 1/12) + extras. */
+function MonthlyCostBlock({ config, property }: BlockComponentProps<'monthly_cost'>) {
+  const linhas: { label: string; value: number }[] = [];
+  if (config.source === 'property' && property) {
+    const iptuMes = property.iptu && property.iptuPeriod === 'yearly' ? property.iptu / 12 : property.iptu;
+    for (const [label, value] of [
+      ['Aluguel', property.rentPrice],
+      ['Condomínio', property.condoFee],
+      ['IPTU', iptuMes],
+    ] as const) {
+      if (value && value > 0) linhas.push({ label, value });
+    }
+  }
+  for (const e of config.extras) if (e.value > 0) linhas.push({ label: e.label, value: e.value });
+  if (!linhas.length) return null;
+  const total = linhas.reduce((acc, l) => acc + l.value, 0);
+  return (
+    <Section>
+      <SectionTitle>{config.title}</SectionTitle>
+      <div className="rounded-xl p-4 text-sm" style={{ background: 'var(--lp-card)' }}>
+        {linhas.map((l, i) => (
+          <div key={i} className="flex justify-between gap-3 py-1">
+            <span>{l.label}</span>
+            <span>{formatBRL(l.value)}</span>
+          </div>
+        ))}
+        {linhas.length > 1 && (
+          <div className="mt-2 flex justify-between gap-3 border-t pt-2 font-bold" style={{ borderColor: 'var(--lp-text)' }}>
+            <span>Total</span>
+            <span>{formatBRL(total)}</span>
+          </div>
+        )}
+      </div>
+    </Section>
+  );
+}
+
+function StepsBlock({ config }: BlockComponentProps<'steps'>) {
+  if (!config.items.length) return null;
+  return (
+    <Section>
+      <SectionTitle>{config.title}</SectionTitle>
+      <ol className="space-y-4">
+        {config.items.map((it, i) => (
+          <li key={i} className="flex items-start gap-3">
+            <span
+              data-step-number
+              className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-sm font-bold text-white"
+              style={{ background: 'var(--lp-primary)' }}
+            >
+              {i + 1}
+            </span>
+            <div>
+              <div className="text-sm font-semibold">{it.title}</div>
+              {it.text && <div className="text-sm opacity-70">{it.text}</div>}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </Section>
+  );
+}
+
 /** Plantas vindas do cadastro do imóvel, quando o bloco não tem itens escritos. */
 function deTipologias(property?: LandingProperty | null): BlockConfig<'apartment_types'>['items'] {
   const locacao = ehLocacao(property);
@@ -995,6 +1058,8 @@ export const BLOCK_COMPONENTS: Record<BlockType, React.ComponentType<BlockCompon
   valuation_history: ValuationHistoryBlock,
   trust_badges: TrustBadgesBlock,
   track_record: TrackRecordBlock,
+  monthly_cost: MonthlyCostBlock,
+  steps: StepsBlock,
   apartment_types: ApartmentTypesBlock,
   lead_form: LeadFormBlock,
   sticky_cta: StickyCtaBlock,
