@@ -39,7 +39,6 @@ export interface SupportReviewTenant {
   schema: string;
   people: SupportReviewPerson[];
   team_accounts: SupportReviewTeamAccount[];
-  plain_passwords: number | null;
   roles_seeded: boolean | null;
   error: string | null;
 }

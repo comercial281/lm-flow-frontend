@@ -7,7 +7,7 @@ const pessoa = (over: Record<string, unknown> = {}) => ({
   deactivated: false, last_sign_in_at: '2026-09-20T13:02:11Z', stays_support: false, ...over,
 });
 const cliente = (over: Partial<SupportReviewTenant> = {}): SupportReviewTenant => ({
-  name: 'Apto Premium', slug: 'apto-premium', schema: 'tenant_apto', people: [], team_accounts: [], plain_passwords: 0,
+  name: 'Apto Premium', slug: 'apto-premium', schema: 'tenant_apto', people: [], team_accounts: [],
   roles_seeded: true, error: null, ...over,
 });
 
@@ -40,11 +40,11 @@ describe('lista dos @lealmidia.com.br fora da Equipe', () => {
 
   it('soma o que a publicação confere', () => {
     const lista = [
-      cliente({ people: [pessoa(), pessoa({ id: 'u2' })], plain_passwords: 3 }),
+      cliente({ people: [pessoa(), pessoa({ id: 'u2' })] }),
       cliente({ roles_seeded: false }),
-      cliente({ error: 'caiu', plain_passwords: null, roles_seeded: null }),
+      cliente({ error: 'caiu', roles_seeded: null }),
     ];
-    expect(reviewTotals(lista)).toEqual({ people: 2, plainPasswords: 3, withoutRoles: 1, failed: 1, teamAccounts: 0 });
+    expect(reviewTotals(lista)).toEqual({ people: 2, withoutRoles: 1, failed: 1, teamAccounts: 0 });
   });
 
   it('soma também as contas de equipe fora do domínio', () => {
@@ -52,6 +52,6 @@ describe('lista dos @lealmidia.com.br fora da Equipe', () => {
       cliente({ team_accounts: [{ ...pessoa(), created_at: null }, { ...pessoa({ id: 'u2' }), created_at: null }] }),
       cliente({ team_accounts: [{ ...pessoa({ id: 'u3' }), created_at: null }] }),
     ];
-    expect(reviewTotals(lista)).toEqual({ people: 0, plainPasswords: 0, withoutRoles: 0, failed: 0, teamAccounts: 3 });
+    expect(reviewTotals(lista)).toEqual({ people: 0, withoutRoles: 0, failed: 0, teamAccounts: 3 });
   });
 });

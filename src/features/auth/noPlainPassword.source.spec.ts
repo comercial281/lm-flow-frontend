@@ -22,4 +22,19 @@ describe('nenhuma tela guarda nem mostra senha legível', () => {
   it('a tela Equipe oferece Copiar link de acesso', () => {
     expect(read('src/pages/Customer/Team/PeopleTab.tsx')).toContain('Copiar link de acesso');
   });
+
+  // 06/10/2026: a coluna saiu do servidor; a Equipe do admin não conta mais "senhas guardadas".
+  it.each(['src/services/superLogs/superLogsService.ts', 'src/pages/Admin/Area/supportReviewRules.ts', 'src/pages/Admin/Area/Equipe.tsx'])(
+    '%s não conta mais senha legível',
+    arquivo => {
+      const src = read(arquivo);
+      expect(src).not.toContain('plain_passwords');
+      expect(src).not.toContain('plainPasswords');
+      expect(src).not.toContain('legível(is)');
+    },
+  );
+
+  it('o resumo da Equipe usa plural de verdade, sem "(s)"', () => {
+    expect(read('src/pages/Admin/Area/Equipe.tsx')).not.toContain('(s)');
+  });
 });
