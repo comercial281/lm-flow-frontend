@@ -6939,7 +6939,18 @@ O que aparece na tela:
 - **IA que ainda estava em "A IA escreve"** abre sem nenhuma opção marcada e com o
   aviso *"Escolha como o follow-up continua: a IA não escreve mais o follow-up."*
   O Painel e o trilho dos passos mostram a pendência laranja *O que ela faz quando
-  o lead some*, que leva ao passo 7. Não trava o Ligar.
+  o lead some*, que leva ao passo 7. Não trava o Ligar. IA sem valor nenhum mostra
+  *"Escolha o que ela faz quando o lead some."* do mesmo jeito.
+- **Com o follow-up ligado e sem escolha, o Salvar do passo 7 não grava**: mostra
+  o motivo (a mesma frase do aviso) embaixo do passo. O servidor também recusa
+  ligar o follow-up nessa situação, e a recusa dele, se vier, aparece no mesmo
+  lugar. Desligar o follow-up continua salvando normalmente.
+- **Marcar *Entregar pro follow-up* sem nenhum escolhido já traz o *Follow-up
+  padrão*** do cliente em *Qual follow-up* (o do modelo; sem ele, o de nome exato
+  "Follow-up padrão"; senão, o primeiro ligado; nenhum, fica vazio). Só no clique:
+  abrir a tela nunca muda nada sozinho. *Entregar pro follow-up* ligado e sem
+  follow-up escolhido vira a pendência laranja *O que ela faz quando o lead some*
+  (*"Falta escolher o follow-up que recebe o lead."*), passo 7, sem travar o Ligar.
 - **Os dias viraram um campo só**: *Entregar o lead depois de (dias sem
   resposta)*, com a ajuda *"Quanto tempo de silêncio até entregar o lead."* Saíram
   *A cada (mínimo de dias)*, *Até (máximo de dias)*, *Máximo de tentativas* e o
@@ -7010,7 +7021,14 @@ Armadilhas:
    'sequence'`). O servidor recusa `'ai'` só quando o valor MUDA, pra IA antiga não
    quebrar ao salvar outro campo. A tela não tem padrão de reserva pra `'ai'`.
 2. **`followup_max_attempts` está em `CAMPOS_ESCONDIDOS`**: saiu da tela e nenhum
-   passo grava. "Nova IA" ainda manda 3 na criação, inofensivo.
+   passo grava. "Nova IA" ainda manda 3 na criação, inofensivo. As IAs migradas
+   de "A IA escreve" ficaram com o número de tentativas antigo gravado (inclusive
+   0, "sem limite"), e o servidor passou a IGNORAR esse teto fora de `'ai'`: não
+   é preciso zerar nem corrigir o valor.
+5. **O Follow-up padrão é achado pelo `template_key`** que a lista de fluxos
+   devolve (`followupPadraoId`, em `features/flowAutomations/followupOptions.ts`),
+   com o nome exato como reserva. Renomear o fluxo não quebra; recriar à mão sem
+   o modelo cai na reserva pelo nome.
 3. **Ordem de publicação:** servidor primeiro (o padrão da coluna vira
    `'sequence'`, e o Follow-up padrão é semeado), depois o rake
    `lm_flow:followup_padrao:aplicar` (simulação, depois `APPLY=1`), e só então
