@@ -20,7 +20,7 @@ function Onde() { const l = useLocation(); return <p data-testid="onde">{l.pathn
 const roleta = {
   id: 'r1', name: 'Team Pinot', display_name: 'Team Pinot', is_active: true, timeout_minutes: 10,
   business_hours_config: { mode: 'custom', windows: [{ start: '08:00', end: '20:00', days: [1, 2, 3, 4, 5, 6] }] },
-  origins_summary: ['Formulários "ZONA SUL", "ZONA OESTE"'],
+  origins_summary: ['Formulário do Meta · "ZONA SUL"', 'Formulário do Meta · "ZONA OESTE"'],
   members: [{ user_id: 'u1', is_active: true }, { user_id: 'u2', is_active: true }],
   pending_count: 2, exhausted_count_7d: 1,
 };
@@ -37,13 +37,14 @@ const abrir = (endereco = '/automations/roleta-config') => render(
 beforeEach(() => { vi.clearAllMocks(); limparPendentes(); svc.getAll.mockResolvedValue([roleta]); });
 
 describe('Roleta de leads (lista)', () => {
-  it('cartão lido como frase, com selo e linha de atenção', async () => {
+  it('cartão com origens contadas, prazo, horário e fila', async () => {
     abrir();
     expect(await screen.findByText('Team Pinot')).toBeInTheDocument();
     expect(screen.getByText('Ligada')).toBeInTheDocument();
-    expect(screen.getByText('Formulários "ZONA SUL", "ZONA OESTE" → 2 corretores na fila')).toBeInTheDocument();
-    expect(screen.getByText('10 min pra aceitar · Seg a Sáb, 8h–20h')).toBeInTheDocument();
-    expect(screen.getByText('2 esperando aceite · 1 ninguém aceitou')).toBeInTheDocument();
+    expect(screen.getByText('2 formulários')).toBeInTheDocument();
+    expect(screen.getByText('10 min')).toBeInTheDocument();
+    expect(screen.getByText('Seg a Sáb, 8h–20h')).toBeInTheDocument();
+    expect(screen.getByText('2 corretores')).toBeInTheDocument();
   });
 
   it('cartão inteiro leva pra página da roleta', async () => {
@@ -52,11 +53,25 @@ describe('Roleta de leads (lista)', () => {
     expect(screen.getByTestId('onde')).toHaveTextContent('/automations/roleta-config/r1');
   });
 
+  it('o triângulo abre o histórico da roleta em "Precisa de atenção"', async () => {
+    abrir();
+    await userEvent.click(await screen.findByRole('link', { name: '2 esperando aceite · 1 ninguém aceitou. Ver no histórico' }));
+    expect(screen.getByTestId('onde')).toHaveTextContent('/automations/roleta-config/r1?aba=historico&filtro=atencao');
+  });
+
+  it('só esperando aceite: o triângulo abre o histórico sem filtro', async () => {
+    svc.getAll.mockResolvedValue([{ ...roleta, exhausted_count_7d: 0 }]);
+    abrir();
+    await userEvent.click(await screen.findByRole('link', { name: '2 esperando aceite. Ver no histórico' }));
+    expect(screen.getByTestId('onde')).toHaveTextContent('/automations/roleta-config/r1?aba=historico');
+    expect(screen.getByTestId('onde')).not.toHaveTextContent('filtro');
+  });
+
   it('sem nada pra olhar, a linha de atenção some; desligada mostra o selo', async () => {
     svc.getAll.mockResolvedValue([{ ...roleta, is_active: false, pending_count: 0, exhausted_count_7d: 0 }]);
     abrir();
     expect(await screen.findByText('Desligada')).toBeInTheDocument();
-    expect(screen.queryByText(/esperando aceite/)).toBeNull();
+    expect(screen.queryByRole('link', { name: /Ver no histórico/ })).toBeNull();
   });
 
   it('estado vazio explica e oferece criar', async () => {

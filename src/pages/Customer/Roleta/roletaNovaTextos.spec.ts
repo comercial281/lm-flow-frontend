@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   atencaoTexto, diasTexto, faltaParaLigar, horaCurta, horarioTexto,
-  numeroDoCorretor, origemTexto, origensEFila, posicaoTexto, prazoFrase, prazoTexto,
+  filaTexto, numeroDoCorretor, origemTexto, origensResumo, posicaoTexto, prazoTexto,
 } from './roletaNovaTextos';
 
 const membro = (is_active: boolean) => ({ user_id: 'u', weight: 10, is_active, position: 0, personal_whatsapp_number: '' });
@@ -13,7 +13,6 @@ describe('textos da roleta nova', () => {
     expect(prazoTexto(90)).toBe('1 h 30 min');
     expect(prazoTexto(0)).toBe('Sem prazo');
     expect(prazoTexto(null)).toBe('Sem prazo');
-    expect(prazoFrase(10)).toBe('10 min pra aceitar');
   });
 
   it('hora curta e dias da semana', () => {
@@ -34,11 +33,20 @@ describe('textos da roleta nova', () => {
     expect(horarioTexto({ mode: 'custom', windows: [] })).toBe('24 horas');
   });
 
-  it('linha do cartão: origens → quem recebe (pausado não conta)', () => {
-    expect(origensEFila({ origins_summary: ['Formulários "ZONA SUL", "ZONA OESTE"'], members: [membro(true), membro(true), membro(false)] }))
-      .toBe('Formulários "ZONA SUL", "ZONA OESTE" → 2 corretores na fila');
-    expect(origensEFila({ origins_summary: [], members: [membro(true)] })).toBe('Sem origem ainda → 1 corretor na fila');
-    expect(origensEFila({ members: [] })).toBe('Sem origem ainda → ninguém na fila');
+  it('origens do cartão contadas por tipo', () => {
+    const forms = ['Formulário do Meta · "ZONA SUL"', 'Formulário do Meta · nome contém "OESTE"'];
+    expect(origensResumo({ origins_summary: forms })).toBe('2 formulários');
+    expect(origensResumo({ origins_summary: [forms[0], 'Landing · Lançamento', 'Portal · ZAP (venda)', 'Portal · OLX (locação)'] }))
+      .toBe('1 formulário · 1 landing · 2 portais');
+    expect(origensResumo({ origins_summary: ['IA Vendedora · Sara', 'algo novo'] })).toBe('1 IA Vendedora · 1 origem');
+    expect(origensResumo({ origins_summary: [] })).toBe('Sem origem ainda');
+    expect(origensResumo({})).toBe('Sem origem ainda');
+  });
+
+  it('quem recebe (pausado não conta)', () => {
+    expect(filaTexto({ members: [membro(true), membro(true), membro(false)] })).toBe('2 corretores');
+    expect(filaTexto({ members: [membro(true)] })).toBe('1 corretor');
+    expect(filaTexto({ members: [] })).toBe('Ninguém');
   });
 
   it('linha de atenção só com algo pra olhar', () => {

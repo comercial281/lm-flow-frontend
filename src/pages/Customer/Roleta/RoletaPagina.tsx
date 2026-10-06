@@ -107,6 +107,8 @@ export default function RoletaPagina() {
   const { podeSair, dialogoDeSaida } = usePodeSair();
   const [params, setParams] = useSearchParams();
   const aba = params.get('aba') === 'historico' ? 'historico' : 'como';
+  // `?filtro=atencao`: o triângulo do cartão da lista abre o Histórico já filtrado.
+  const filtroDoHistorico = params.get('filtro') === 'atencao' ? 'attention' : 'all';
 
   const [roleta, setRoleta] = useState<RoletaConfig | null>(null);
   const [origens, setOrigens] = useState<RoletaOrigin[]>([]);
@@ -136,6 +138,7 @@ export default function RoletaPagina() {
     setParams(antes => {
       const novos = new URLSearchParams(antes);
       if (chave === 'historico') novos.set('aba', 'historico'); else novos.delete('aba');
+      novos.delete('filtro');
       return novos;
     }, { replace: true });
   };
@@ -252,7 +255,7 @@ export default function RoletaPagina() {
           />
 
           {aba === 'historico' ? (
-            <HistoricoLista roletaId={roleta.id} />
+            <HistoricoLista roletaId={roleta.id} filtroInicial={filtroDoHistorico} />
           ) : (
             <Secoes>
               <Secao
