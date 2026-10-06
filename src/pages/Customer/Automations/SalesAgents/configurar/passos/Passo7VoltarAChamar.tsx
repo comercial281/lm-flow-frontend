@@ -16,7 +16,7 @@ import {
 } from '../../reengagementHours';
 import { FollowupActionPicker, FollowupHoursRow, FollowupPipelinesRow } from '../blocos/FollowupSection';
 import { useRascunho } from '../useRascunho';
-import { CAMPOS_DO_PASSO } from '../camposDosPassos';
+import { CAMPOS_DO_PASSO } from '../camposDaIa';
 import { Aviso, Caixa, CascaDoPasso } from '../pecas';
 import type { PropsDoPasso } from '../passos';
 

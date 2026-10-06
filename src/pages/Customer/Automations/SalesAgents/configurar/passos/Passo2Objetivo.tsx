@@ -24,7 +24,7 @@ import { fraseDoObjetivo } from '@/features/salesAgents/resumoDosPassos';
 import { FRASE_SEM_DONO } from '@/features/salesAgents/pendencias';
 import type { PipelineOpt, StageOpt } from '../../configuracao/comum';
 import { useRascunho } from '../useRascunho';
-import { CAMPOS_DO_PASSO } from '../camposDosPassos';
+import { CAMPOS_DO_PASSO } from '../camposDaIa';
 import { Aviso, Caixa, CascaDoPasso, Escolha, type OpcaoDeEscolha } from '../pecas';
 import { MOMENTOS_DO_FUNIL } from '../opcoes';
 import type { PropsDoPasso } from '../passos';

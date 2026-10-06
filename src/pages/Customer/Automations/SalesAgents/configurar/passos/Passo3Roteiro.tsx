@@ -15,7 +15,7 @@ import type { IntentQuestionMode, PlaybookVars, SalesAgent } from '@/services/sa
 import { perguntasDoAgente, perguntasParaPatch, type Pergunta } from '@/features/salesAgents/perguntas';
 import { plural } from '@/lib/formato';
 import { useRascunho } from '../useRascunho';
-import { CAMPOS_DO_PASSO } from '../camposDosPassos';
+import { CAMPOS_DO_PASSO } from '../camposDaIa';
 import { Aviso, Caixa, CascaDoPasso, Escolha, type OpcaoDeEscolha } from '../pecas';
 import { ListaDePerguntas } from '../ListaDePerguntas';
 import { CampoDeMidia } from '../CampoDeMidia';

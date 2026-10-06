@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { fonteDaIaVendedora } from '../../test/fonteDaIaVendedora';
-import { CAMPOS_DO_PASSO } from '../../pages/Customer/Automations/SalesAgents/configurar/camposDosPassos';
+import { CAMPOS_DO_PASSO } from '../../pages/Customer/Automations/SalesAgents/configurar/camposDaIa';
 
 // O recorte por funil do follow-up da IA: ela vai atrás de todo lead calado do
 // número, ou só dos que têm card nos funis escolhidos.
@@ -20,7 +20,7 @@ import { CAMPOS_DO_PASSO } from '../../pages/Customer/Automations/SalesAgents/co
 describe('de quais leads a IA vai atrás', () => {
   const src = fonteDaIaVendedora();
 
-  // Desde a entrega 2 o recorte é campo do passo 7 (camposDosPassos.ts): lista
+  // Desde a entrega 2 o recorte é campo do passo 7 (camposDaIa.ts): lista
   // vazia viaja como lista vazia ("todos os leads que ela atendeu"), e só
   // `undefined` vira null (patchDoPasso.spec.ts).
   it('o recorte é campo do passo 7', () => {

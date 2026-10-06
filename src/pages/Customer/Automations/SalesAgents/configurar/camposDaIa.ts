@@ -3,7 +3,7 @@
  *
  * ⚠️ Campo novo na tela entra AQUI, no passo dele, ou a tela mostra e o Salvar
  * nunca manda — a mesma cicatriz do `saveAgent`, agora com spec
- * (camposDosPassos.spec.ts). jsonb dividido entre passos entra por SUBCHAVE.
+ * (camposDaIa.spec.ts). jsonb dividido entre passos entra por SUBCHAVE.
  *
  * ⚠️ O destino (`handoff_*`) está no passo 1 E no 2: trocar a persona trava ou
  * destrava o dono do número, e o servidor recusa persona corretor sem ele.
@@ -14,7 +14,7 @@ export const CAMPOS_DO_PASSO = {
     'reaction_enabled', 'reaction_emojis', 'reaction_max_per_conversation'],
   2: ['reach', 'booking_enabled', 'persona_kind', 'handoff_target', 'handoff_roleta_config_id', 'handoff_user_id', 'handoff_webhook_url',
     'transfer_config.mode', 'transfer_config.min_temperature', 'transfer_config.briefing_enabled',
-    'pipeline_move_enabled', 'pipeline_id', 'pipeline_stage_map', 'crm_policy.cold', 'crm_policy.capture',
+    'pipeline_move_enabled', 'pipeline_id', 'pipeline_stage_map', 'crm_policy.cold',
     'ask_google_review', 'google_review_link'],
   3: ['greeting', 'intent_question', 'playbook.intent_question_mode', 'default_origin', 'opening_image_url',
     'opening_audio_url', 'openings', 'qualification_questions', 'transfer_config.required_questions',
@@ -27,7 +27,7 @@ export const CAMPOS_DO_PASSO = {
   6: ['inbox_id', 'triggers', 'trigger_match_mode', 'trigger_keyword', 'active_hours', 'out_of_hours_reply',
     'out_of_hours_message', 'message_split_enabled', 'audio_enabled', 'audio_mode', 'audio_voice_id'],
   7: ['followup_enabled', 'followup_only', 'followup_min_days', 'followup_max_days',
-    'followup_action', 'followup_stage_id', 'followup_return_stage_id', 'followup_sequence_slug', 'followup_flow_id',
+    'followup_action', 'followup_stage_id', 'followup_return_stage_id', 'followup_flow_id',
     'followup_pipeline_ids', 'followup_hours', 'reengagement_enabled', 'reengagement_first_hours',
     'reengagement_second_hours'],
   avancado: ['model', 'max_context_tokens', 'priority', 'reply_delay_seconds', 'message_split_max_parts',
@@ -38,19 +38,20 @@ export const CAMPOS_DO_PASSO = {
 /** Ensinar (instruções, prova social, exemplos): saiu do Configurar e mora lá. */
 export const CAMPOS_DE_ENSINAR = ['instructions', 'social_proof', 'example_conversations'] as const;
 
-/** Saíram da tela na entrega 2 e NUNCA podem ser gravados por um passo (ficam no banco). */
+/**
+ * Saíram da tela e NUNCA podem ser gravados por uma página (ficam no banco).
+ *
+ * Mudou em 06/10/2026 (onda 3): `escalate_on_*` voltaram pra tela (Critério →
+ * Passagem imediata) e `playbook.vars.lead_pronto` também (Agendamento → Quando
+ * propor). Entraram `crm_policy.capture` ("captação", morto: o servidor não lê) e
+ * `followup_sequence_slug` (funil antigo; só o aviso do follow-up o mostra).
+ */
 export const CAMPOS_ESCONDIDOS = [
   'mode', 'persona_role', 'persona_goal', 'sales_method', 'bant_config', 'handoff_message', 'temperature',
-  'escalate_on_frustration', 'escalate_on_human_request', 'escalate_on_ai_detected', 'crm_policy.invalid',
-  'visit_config.blocked_dates', 'playbook.vocabulary', 'playbook.vars.proximo_passo',
-  'playbook.vars.perguntas_situacao', 'playbook.vars.dor_tipica', 'playbook.vars.lead_pronto',
+  'crm_policy.invalid', 'crm_policy.capture', 'visit_config.blocked_dates', 'playbook.vocabulary',
+  'playbook.vars.proximo_passo', 'playbook.vars.perguntas_situacao', 'playbook.vars.dor_tipica',
   'playbook.vars.objecoes', 'usage_limits.daily_budget_usd', 'test_model', 'max_output_tokens', 'enabled',
-  // Tom e emoji existem desde a entrega 2, mas o controle só entra no passo 1 na
-  // entrega 4 (no v1 a opção não faria nada). Sair daqui é o primeiro passo de lá.
-  'tone', 'emoji_use',
-  // Saiu do passo 7 em 06/10/2026: a IA não escreve mais o follow-up, só entrega o
-  // lead uma vez por sumiço, e o teto de tentativas deixou de ter o que contar.
-  'followup_max_attempts',
+  'tone', 'emoji_use', 'followup_max_attempts', 'followup_sequence_slug',
 ] as const;
 
 /** jsonb que mais de um passo (ou algo escondido) divide: só entram por subchave. */

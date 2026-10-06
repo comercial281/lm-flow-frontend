@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { fonteDaIaVendedora } from '../../test/fonteDaIaVendedora';
-import { CAMPOS_DO_PASSO } from '../../pages/Customer/Automations/SalesAgents/configurar/camposDosPassos';
+import { CAMPOS_DO_PASSO } from '../../pages/Customer/Automations/SalesAgents/configurar/camposDaIa';
 
 import { antecedenciaResumo } from './visitWindow';
 
@@ -47,7 +47,7 @@ describe('a chave da visita no mesmo dia', () => {
     expect(tela).not.toContain('c.same_day_requires_human === true');
   });
 
-  // Desde a entrega 2 cada passo grava os campos DELE (camposDosPassos.ts): a
+  // Desde a entrega 2 cada passo grava os campos DELE (camposDaIa.ts): a
   // chave é subchave do visit_config no passo 4, mesclada sobre o último salvo.
   it('é campo do passo 4, por dentro do visit_config', () => {
     expect(CAMPOS_DO_PASSO[4]).toContain('visit_config.same_day_requires_human');

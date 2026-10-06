@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { CAMPOS_DO_PASSO } from '../../pages/Customer/Automations/SalesAgents/configurar/camposDosPassos';
+import { CAMPOS_DO_PASSO } from '../../pages/Customer/Automations/SalesAgents/configurar/camposDaIa';
 
 import { checklistItems, checklistNotices, normalizeQuestion, toggleRequired } from './handoffChecklist';
 
@@ -155,7 +155,7 @@ describe('checklistNotices', () => {
 // A tela monta o PATCH campo a campo e descarta em silêncio o que não estiver na lista do
 // `saveAgent` — a cicatriz dos dois campos do book do imóvel, que a tela mostra e não
 // salva. `transfer_config` já está lá, e é por dentro dele que as obrigatórias viajam.
-// Desde a entrega 2 cada passo grava os campos DELE (camposDosPassos.ts). As
+// Desde a entrega 2 cada passo grava os campos DELE (camposDaIa.ts). As
 // obrigatórias NÃO podem virar campo solto do agente: viajam como subchave do
 // transfer_config (passo 3), mescladas sobre o último salvo.
 describe('a gravação das obrigatórias', () => {

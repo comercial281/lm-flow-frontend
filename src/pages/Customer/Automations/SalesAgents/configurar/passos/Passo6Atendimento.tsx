@@ -21,7 +21,7 @@ import { lerEscolhas } from '@/features/salesAgents/tresEscolhas';
 import { resumoDeQuemAtende, resumoDoAtendimento } from '@/features/salesAgents/resumoDosPassos';
 import { TriggersSection } from '../blocos/TriggersSection';
 import { useRascunho } from '../useRascunho';
-import { CAMPOS_DO_PASSO } from '../camposDosPassos';
+import { CAMPOS_DO_PASSO } from '../camposDaIa';
 import { Aviso, Caixa, CascaDoPasso, Escolha, type OpcaoDeEscolha } from '../pecas';
 import type { PropsDoPasso } from '../passos';
 

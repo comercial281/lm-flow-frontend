@@ -14,7 +14,7 @@ import { lerEscolhas } from '@/features/salesAgents/tresEscolhas';
 import { proximosHorarios } from '@/features/salesAgents/resumoDosPassos';
 import { cn } from '@/lib/utils';
 import { useRascunho } from '../useRascunho';
-import { CAMPOS_DO_PASSO } from '../camposDosPassos';
+import { CAMPOS_DO_PASSO } from '../camposDaIa';
 import { Aviso, Caixa, CascaDoPasso, Escolha, type OpcaoDeEscolha } from '../pecas';
 import type { PropsDoPasso } from '../passos';
 

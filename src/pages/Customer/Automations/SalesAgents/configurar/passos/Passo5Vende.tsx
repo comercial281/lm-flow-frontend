@@ -10,7 +10,7 @@ import type { PlaybookVars } from '@/services/salesAgents/salesAgentsService';
 import { propertiesService } from '@/services/properties/propertiesService';
 import { TIPO_DE_VENDA_PADRAO, TIPO_DE_VENDA_ROTULOS } from '@/features/salesAgents/rotulosDaIa';
 import { useRascunho } from '../useRascunho';
-import { CAMPOS_DO_PASSO } from '../camposDosPassos';
+import { CAMPOS_DO_PASSO } from '../camposDaIa';
 import { Caixa, CascaDoPasso } from '../pecas';
 import type { PropsDoPasso } from '../passos';
 import { useConfirmacao } from '@/hooks/useConfirmacao';

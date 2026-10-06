@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CAMPOS_DE_ENSINAR, CAMPOS_DO_PASSO, CAMPOS_ESCONDIDOS, RAIZES_DIVIDIDAS } from './camposDosPassos';
+import { CAMPOS_DE_ENSINAR, CAMPOS_DO_PASSO, CAMPOS_ESCONDIDOS, RAIZES_DIVIDIDAS } from './camposDaIa';
 
 // Cada campo que o passo a passo edita tem UM dono (salvo os do destino, que o
 // passo 1 também grava ao trocar a persona), e o que saiu da tela não é dono de

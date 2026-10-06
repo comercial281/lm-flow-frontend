@@ -3,7 +3,7 @@
 // ⚠️ Trocar a persona mexe no DESTINO: o próprio corretor só passa pro dono do
 // número (o servidor recusa outra coisa), e sair dele com o lead indo pro dono do
 // número volta pra roleta do número (roleta ou corretor escolhidos ficam).
-// Por isso os campos do destino também são deste passo (camposDosPassos.ts).
+// Por isso os campos do destino também são deste passo (camposDaIa.ts).
 //
 // ⚠️ Tom e emoji NÃO aparecem nesta entrega (decisão do índice, 05/10): o roteiro de
 // hoje tem "não use emoji" fixo e a opção não faria nada. As colunas `tone` e
@@ -23,7 +23,7 @@ import { FRASE_SEM_DONO } from '@/features/salesAgents/pendencias';
 import { PERSONA_ROTULOS } from '@/features/salesAgents/rotulosDaIa';
 import { cn } from '@/lib/utils';
 import { useRascunho } from '../useRascunho';
-import { CAMPOS_DO_PASSO } from '../camposDosPassos';
+import { CAMPOS_DO_PASSO } from '../camposDaIa';
 import { Aviso, Caixa, CascaDoPasso, Escolha, type OpcaoDeEscolha } from '../pecas';
 import { BolhasDaPrevia } from '../BolhasDaPrevia';
 import { REACOES_POSSIVEIS } from '../opcoes';

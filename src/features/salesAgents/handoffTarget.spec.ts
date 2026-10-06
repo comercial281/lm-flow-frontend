@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { fonteDaIaVendedora, lerTelaDaIa } from '../../test/fonteDaIaVendedora';
-import { CAMPOS_DO_PASSO } from '../../pages/Customer/Automations/SalesAgents/configurar/camposDosPassos';
+import { CAMPOS_DO_PASSO } from '../../pages/Customer/Automations/SalesAgents/configurar/camposDaIa';
 
 // PARA QUEM a IA passa o lead.
 //

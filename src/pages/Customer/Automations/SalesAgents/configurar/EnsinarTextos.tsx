@@ -8,7 +8,7 @@ import { Secao, Secoes } from '@/components/base/Secao';
 import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
 import type { SalesAgent, SalesAgentExample } from '@/services/salesAgents/salesAgentsService';
 import { useRascunho } from './useRascunho';
-import { CAMPOS_DE_ENSINAR } from './camposDosPassos';
+import { CAMPOS_DE_ENSINAR } from './camposDaIa';
 
 export default function EnsinarTextos({ agent, aoSalvo }: { agent: SalesAgent; aoSalvo: (a: SalesAgent) => void }) {
   const { rascunho, mudar, pendente, salvando, erro, salvar, descartar } = useRascunho(agent, CAMPOS_DE_ENSINAR, aoSalvo);

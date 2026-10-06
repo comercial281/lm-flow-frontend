@@ -22,7 +22,7 @@ import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { salesAgentsService, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { motivoEscrito } from '@/features/salesAgents/erroDoServidor';
 import { useRascunho } from './useRascunho';
-import { CAMPOS_DO_PASSO } from './camposDosPassos';
+import { CAMPOS_DO_PASSO } from './camposDaIa';
 import { Caixa } from './pecas';
 import { MODELOS } from './opcoes';
 import type { PropsDoPasso } from './passos';
