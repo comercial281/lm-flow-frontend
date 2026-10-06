@@ -24,8 +24,11 @@ type Publico = 'todos' | 'alguns';
 
 export default function Canal({ agent, inboxes, gravar, irPara, diagnostico }: PropsDaPagina) {
   const [trocando, setTrocando] = useState(!agent.inbox_id);
-  const [abrindoAlguns, setAbrindoAlguns] = useState(false);
   const temCondicoes = (agent.triggers ?? []).length > 0;
+  // ⚠️ Aberto uma vez, fica aberto até "Todos os leads": tirar a última condição (ou
+  // trocar o tipo dela por um em branco) grava lista vazia, e o bloco sumiria com a
+  // linha que a pessoa está preenchendo (ela só existe na tela, ver TriggersSection).
+  const [abrindoAlguns, setAbrindoAlguns] = useState(temCondicoes);
   const publico: Publico = temCondicoes || abrindoAlguns ? 'alguns' : 'todos';
   const numero = inboxes.find((i) => String(i.id) === String(agent.inbox_id ?? ''))?.name ?? agent.inbox_name ?? null;
   const credencial = diagnostico?.items.find((i) => i.key === 'credentials');

@@ -7,6 +7,7 @@ import { leadAdsFormsService, type LeadAdsFormConfig } from '@/services/leadAds/
 import { formOptions, formTriggerNotice, toggleForm } from '@/features/salesAgents/formTrigger';
 import { Seletor } from '@/components/base/Seletor';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import { emBranco } from '@/features/salesAgents/situacao';
 import { type PipelineOpt, type StageOpt } from '../../configuracao/comum';
 
 // ---------------- Gatilhos de ativação (multi) ----------------
@@ -44,14 +45,38 @@ function newTrigger(type: SalesAgentTriggerType): SalesAgentTrigger {
   }
 }
 
+/** Só as condições completas: a linha em branco não deixa lead NENHUM passar no servidor. */
+const completas = (lista: SalesAgentTrigger[]) => lista.filter((t) => !emBranco(t));
+const mesmas = (a: SalesAgentTrigger[], b: SalesAgentTrigger[]) => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * A lista da tela depois que o servidor mudou: as linhas em branco (que só existem
+ * aqui) ficam onde estavam, se as completas ainda são as do servidor (mesmo número,
+ * mesmos tipos, na ordem). Se não são (Desfazer, outra tela), vale o servidor.
+ */
+function juntarComAsEmBranco(local: SalesAgentTrigger[], salvas: SalesAgentTrigger[]): SalesAgentTrigger[] {
+  const minhas = completas(local);
+  if (minhas.length === local.length) return salvas;
+  if (minhas.length !== salvas.length || minhas.some((t, i) => t.type !== salvas[i]?.type)) return salvas;
+  let j = 0;
+  return local.map((t) => (emBranco(t) ? t : salvas[j++]));
+}
+
 export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
   // ⚠️ Gravação na hora (06/10/2026): `onSave` grava no servidor. Escolha de lista,
   // caixinha de formulário, adicionar e remover gravam no clique; o que se DIGITA
   // (palavra, etiqueta, código) fica neste rascunho e grava ao sair do campo —
   // gravar por tecla mandaria um PATCH por letra.
+  // ⚠️ SÓ CONDIÇÃO COMPLETA VAI PRO SERVIDOR (revisão final da onda 3, I1). Palavra,
+  // etiqueta ou código em branco, formulário sem marcar e coluna sem escolher nunca
+  // batem no SalesAgents::TriggerGate: gravar "Adicionar condição" ou o tipo recém-
+  // trocado numa IA ligada barraria TODO lead novo até a pessoa preencher. A linha
+  // em branco mora só aqui (`lista`) e vai junto quando fica completa.
   const [lista, setLista] = useState<SalesAgentTrigger[]>(agent.triggers ?? []);
   const digitando = useRef(false);
-  useEffect(() => { if (!digitando.current) setLista(agent.triggers ?? []); }, [agent.triggers]);
+  useEffect(() => {
+    if (!digitando.current) setLista((local) => juntarComAsEmBranco(local, agent.triggers ?? []));
+  }, [agent.triggers]);
 
   // ⚠️ O bloco pode SUMIR com uma palavra a meio caminho (trocou de página pelo
   // endereço, o Voltar do navegador): o React não dispara o blur no desmonte, então
@@ -66,7 +91,9 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
   const onSaveAtual = useRef(onSave);
   onSaveAtual.current = onSave;
   useEffect(() => () => {
-    if (digitando.current && salvasNoServidor.current.length > 0) onSaveAtual.current({ triggers: listaAtual.current });
+    if (!digitando.current || salvasNoServidor.current.length === 0) return;
+    const prontas = completas(listaAtual.current);
+    if (!mesmas(prontas, completas(salvasNoServidor.current))) onSaveAtual.current({ triggers: prontas });
   }, []);
   const triggers = lista;
   const [pipelines, setPipelines] = useState<PipelineOpt[]>([]);
@@ -105,7 +132,15 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggers]);
 
-  const commit = (next: SalesAgentTrigger[]) => { digitando.current = false; setLista(next); onSave({ triggers: next }); };
+  // Linha em branco nova (ou com o tipo trocado) não muda as completas: nada grava.
+  const commit = (next: SalesAgentTrigger[]) => {
+    digitando.current = false;
+    setLista(next);
+    const prontas = completas(next);
+    // Comparadas com as completas do servidor: uma condição em branco ANTIGA (gravada
+    // antes desta regra) não some sozinha só porque alguém abriu uma linha nova.
+    if (!mesmas(prontas, completas(agent.triggers ?? []))) onSave({ triggers: prontas });
+  };
   const update = (i: number, patch: Partial<SalesAgentTrigger>) => commit(triggers.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
   const digitar = (i: number, patch: Partial<SalesAgentTrigger>) => {
     digitando.current = true;

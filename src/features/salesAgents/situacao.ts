@@ -85,8 +85,11 @@ function gatilhosEfetivos(agent: AgenteLido): SalesAgentTrigger[] {
   return lista;
 }
 
-/** Gatilho que nunca bate (palavra, etiqueta ou código em branco, formulário ou coluna sem escolha). */
-function emBranco(t: SalesAgentTrigger): boolean {
+/**
+ * Gatilho que nunca bate (palavra, etiqueta ou código em branco, formulário ou coluna sem escolha).
+ * O bloco de condições do Canal usa a mesma régua pra NÃO gravar a linha em branco.
+ */
+export function emBranco(t: SalesAgentTrigger): boolean {
   switch (t.type) {
     case 'keyword':
     case 'tag':
