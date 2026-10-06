@@ -73,4 +73,14 @@ describe('Integrações → CVCRM', () => {
     await waitFor(() => expect(servico.disconnect).toHaveBeenCalled());
     expect(await screen.findByLabelText('Endereço do seu CVCRM')).toHaveValue('habras.cvcrm.com.br');
   });
+
+  it('trocar pra outro CVCRM com IAs usando avisa pra conferir as IAs', async () => {
+    servico.get.mockResolvedValue(conectado);
+    render(<CvcrmConexao />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Trocar token' }));
+    expect(screen.queryByText(/Esse é outro CVCRM/)).not.toBeInTheDocument();
+    digitar('Endereço do seu CVCRM', 'https://outra.cvcrm.com.br/gestor');
+    expect(screen.getByText(/Esse é outro CVCRM/)).toBeInTheDocument();
+  });
 });

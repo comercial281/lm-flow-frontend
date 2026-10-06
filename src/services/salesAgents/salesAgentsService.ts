@@ -985,6 +985,8 @@ export interface WebhookTestResult {
   response_excerpt: string | null;
   duration_ms: number | null;
   error: string | null;
+  /** No CVCRM: o número do lead e quem ficou com ele. */
+  remote_ref?: CvcrmRetorno | null;
 }
 
 /** Um envio ao sistema do cliente, pra lista do Diagnóstico. */

@@ -79,10 +79,18 @@ export default function EnviosSistemaCliente({ agentId }: { agentId: string }) {
               </button>
               {estaAberto && (
                 <div className="mt-1 space-y-1 text-xs">
-                  <p>
-                    {d.system === 'cvcrm' ? 'O CVCRM' : 'O sistema do cliente'} {fraseDaResposta(d.response_code)}
-                    {d.duration_ms != null ? ` em ${segundos(d.duration_ms)}` : ''}.
-                  </p>
+                  {/* CVCRM: a frase do código é do envio genérico (fala de "chave secreta" no
+                      401). Aqui quem fala é o status e o motivo que o servidor escreveu. */}
+                  {d.system === 'cvcrm' ? (
+                    d.status === 'delivered' && (
+                      <p>O CVCRM cadastrou o lead{d.duration_ms != null ? ` em ${segundos(d.duration_ms)}` : ''}.</p>
+                    )
+                  ) : (
+                    <p>
+                      O sistema do cliente {fraseDaResposta(d.response_code)}
+                      {d.duration_ms != null ? ` em ${segundos(d.duration_ms)}` : ''}.
+                    </p>
+                  )}
                   {/* CVCRM: quem ficou com o lead lá dentro (corretor, imobiliária ou gestor). */}
                   {d.remote_ref?.owner && <p>Ficou com {d.remote_ref.owner} no CVCRM.</p>}
                   {d.remote_ref?.existing && <p>O lead já existia no CVCRM: continua com quem já atendia.</p>}

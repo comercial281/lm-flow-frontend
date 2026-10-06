@@ -77,8 +77,19 @@ export default function SistemaDoClienteCvcrm({ agentId, valor, aoMudar, podeTes
     return <p className="mt-2 ml-7 text-sm text-muted-foreground">Lendo o CVCRM do cliente…</p>;
   }
 
+  // Sem as listas, a escolha guardada continua à vista (o envio usa ela do mesmo jeito).
+  const guardada = [
+    valor.empreendimento && `Empreendimento: ${valor.empreendimento.nome ?? `#${valor.empreendimento.id}`}`,
+    valor.fila && `Fila: ${valor.fila.nome ?? `#${valor.fila.id}`}`,
+  ].filter(Boolean).join(' · ');
+
   if (falhaGeral) {
-    return <div className="mt-2 ml-7"><Aviso tom="vermelho">{falhaGeral}</Aviso></div>;
+    return (
+      <div className="mt-2 ml-7 space-y-2">
+        <Aviso tom="vermelho">{falhaGeral}</Aviso>
+        <p className="text-sm text-muted-foreground">{guardada || 'Escolhido: deixar o CVCRM decidir empreendimento e fila.'}</p>
+      </div>
+    );
   }
 
   if (!opcoes?.connected) {
@@ -137,7 +148,9 @@ export default function SistemaDoClienteCvcrm({ agentId, valor, aoMudar, podeTes
           <div role="status"
             className={`mt-2 rounded-md border p-3 ${teste.ok ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20' : 'border-red-300 bg-red-50 dark:bg-red-900/20'}`}>
             <p className="text-xs font-medium">
-              {teste.ok ? `Chegou: o lead de teste foi cadastrado no CVCRM${tempo}` : `Não chegou: ${teste.error ?? 'o CVCRM recusou o envio'}${tempo}`}
+              {teste.ok
+                ? `Chegou: o lead de teste foi cadastrado no CVCRM${teste.remote_ref?.owner ? ` e ficou com ${teste.remote_ref.owner}` : ''}${tempo}`
+                : `Não chegou: ${teste.error ?? 'o CVCRM recusou o envio'}${tempo}`}
             </p>
           </div>
         )}

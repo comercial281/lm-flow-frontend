@@ -23,6 +23,12 @@ const PASSO_A_PASSO = [
   'Cole aqui o endereço do CVCRM (o que aparece no navegador), o e-mail desse usuário e o token.',
 ];
 
+// O subdomínio do que foi colado (mesma leitura do servidor, só pra avisar).
+function subdominioDe(colado: string): string {
+  return colado.trim().toLowerCase().replace(/^https?:\/\//, '').split(/[/?#]/)[0]
+    .replace(/:\d+$/, '').replace(/\.cvcrm\.com\.br$/, '');
+}
+
 export default function CvcrmConexao() {
   const [status, setStatus] = useState<CvcrmStatus | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -88,6 +94,10 @@ export default function CvcrmConexao() {
   const mostrarCampos = !conectado || editando;
   const podeConectar = endereco.trim() && email.trim() && token.trim() && !conectando;
   const usadaPor = status?.agents_using ?? 0;
+  // Trocar de CVCRM com IAs usando: os números de empreendimento e fila gravados
+  // nelas são do CVCRM antigo.
+  const outroCvcrm = conectado && editando && usadaPor > 0 && Boolean(endereco.trim())
+    && subdominioDe(endereco) !== status?.subdomain;
 
   return (
     <div className="mx-auto max-w-4xl p-6">
@@ -130,7 +140,8 @@ export default function CvcrmConexao() {
                 {PASSO_A_PASSO.map((p) => <li key={p}>{p}</li>)}
               </ol>
               <CampoTexto id="cvcrm-endereco" rotulo="Endereço do seu CVCRM" valor={endereco} aoMudar={setEndereco}
-                placeholder="suaempresa.cvcrm.com.br" autoComplete="off" />
+                placeholder="suaempresa.cvcrm.com.br" autoComplete="off"
+                aviso={outroCvcrm ? 'Esse é outro CVCRM. Depois de conectar, confira o empreendimento e a fila em cada IA que usa a conexão.' : undefined} />
               <CampoTexto id="cvcrm-email" rotulo="E-mail do usuário" valor={email} aoMudar={setEmail} type="email"
                 autoComplete="off" />
               <CampoTexto id="cvcrm-token" rotulo="Token" valor={token} aoMudar={setToken} type="password" autoComplete="new-password"

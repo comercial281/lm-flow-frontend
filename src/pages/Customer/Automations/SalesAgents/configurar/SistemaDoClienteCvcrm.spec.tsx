@@ -71,4 +71,21 @@ describe('Sistema do cliente → CVCRM', () => {
     expect(await screen.findByRole('button', { name: /Mandar um lead de teste/ })).toBeDisabled();
     expect(screen.getByText('Salve o passo antes de testar.')).toBeTruthy();
   });
+
+  it('teste que chegou diz pra quem foi', async () => {
+    servico.cvcrmOptions.mockResolvedValue(conectado());
+    servico.testWebhook.mockResolvedValue({ ok: true, response_code: 200, response_excerpt: null, duration_ms: null, error: null,
+      remote_ref: { idlead: '90', owner: 'José da Silva', owner_kind: 'corretor' } });
+    montar();
+
+    await userEvent.click(await screen.findByRole('button', { name: /Mandar um lead de teste/ }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Chegou: o lead de teste foi cadastrado no CVCRM e ficou com José da Silva');
+  });
+
+  it('CVCRM fora do ar: a escolha guardada continua à vista', async () => {
+    servico.cvcrmOptions.mockRejectedValue(new Error('502'));
+    montar({ valor: { empreendimento: { id: 48, nome: 'Jardins' }, fila: null } });
+
+    expect(await screen.findByText('Empreendimento: Jardins')).toBeTruthy();
+  });
 });
