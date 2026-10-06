@@ -6567,3 +6567,34 @@ Caso real: o Leonardo (Mais que Imóveis) desligou "Rejeitar chamadas" e o clien
 - **Vazia de fábrica**, na criação do canal (antes vinha "I do not accept calls", em inglês) e na tela de configuração (antes "Não aceito chamadas"). Ao abrir a tela, campo vazio continua vazio. Antes o texto de fábrica reaparecia e voltava a ser gravado no próximo salvar.
 - **Rejeição desligada = mensagem vazia na gravação**, aqui e no servidor (`Evolution::CallMessage`, backend). O campo esconder não basta: era exatamente o texto escondido que ia pra Evolution.
 - Não reabrir "voltar com um texto padrão" sem o dono pedir.
+
+## IA Vendedora · Configurar virou passo a passo (desde 2026-10-05)
+
+> Entrega 2 da refatoração da IA Vendedora. Spec: `LM FLOW/specs/2026-10-05-ia-vendedora-refatoracao-design.md`. Plano: `LM FLOW/plans/2026-10-05-ia-vendedora-entrega-2-passo-a-passo.md`. Servidor: PR #410 (`comercial281/lm-flow`, migration 303).
+
+**O que aparece na tela:** *IA Vendedora → Configurar* é um passo a passo de 8 passos, o mesmo pra criar e pra editar: 1 Quem ela é · 2 Objetivo · 3 Roteiro · 4 Visita (só quando ela vai até o fim) · 5 O que ela vende · 6 Atendimento · 7 Voltar a chamar · 8 Testar e ligar, mais o **Avançado** (link no rodapé do passo 6). Trilho clicável com a marca de pendência; sem `?passo=`, abre no primeiro passo pendente. Cada passo tem o próprio Salvar e a prévia ao lado. "Nova IA" (no seletor de IA da barra, ou no botão da conta sem IA) cria um rascunho desligado e abre o passo 1. Instruções, prova social e exemplos de conversa foram pro **Ensinar**. O assistente de 6 etapas e o link de anúncio com IA saíram (o Testar manteve só o campo "Imóvel do teste", que morava no bloco do link).
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **Três escolhas.** Persona (O próprio corretor · Dono da imobiliária · Assistente da imobiliária), alcance (Só qualifica e passa · Vai até o fim) e destino. Colunas `persona_kind`/`reach` no servidor; vazias, são LIDAS das antigas (voz em primeira pessoa → corretor; agendar visita → vai até o fim); gravadas, são ESPELHADAS nas antigas (`transfer_config.voice`, `booking_enabled`), que é o que o roteiro de hoje lê.
+2. **O próprio corretor só passa pro dono do número** (`handoff_target = number_owner`). Roleta e corretor fixo somem nessa persona. IA antiga em primeira pessoa com corretor fixo vê o aviso no Objetivo e no Painel, e só muda com o clique "Passar a entregar pro dono do número" (ou o rake, quando o fixo é o dono). Sair da persona corretor: se o lead ia pro dono do número, volta pra roleta do número; roleta ou corretor escolhidos ficam.
+3. **Ligar trava** sem número, sem o nome que o lead vê, e na persona corretor num número sem dono (este o servidor também recusa).
+4. **Nome que o lead vê** (`lead_facing_name`) é separado do nome da IA no LM Flow e o roteiro de hoje já o diz (só quando preenchido). **Tom e emoji não aparecem** até a entrega 4: o roteiro de hoje tem "não use emoji" fixo e a opção não faria nada.
+5. **"Quando passa"** recomenda "Só depois das perguntas obrigatórias". "Ao menor sinal de dúvida" e "Só quando ela não souber responder" aparecem só pra quem já tem, marcadas "(opção antiga)", e continuam valendo. ⚠️ "Sem resposta" no servidor é "ela não sabe responder", não "o lead sumiu".
+6. **Primeira mensagem**: "A IA monta" ou "Com um texto meu de base" (no roteiro de hoje o texto é modelo, não literal). Vale só quando o lead escreve primeiro: lead de formulário recebe a mensagem da automação, e a IA entra continuando a conversa. O "texto exato" foi cortado pelo dono (05/10).
+7. **"Perguntar se é pra morar ou investir"** (Sempre · Só se a IA abrir a conversa · Não, ela deduz pela conversa) fica à vista no Roteiro, sem a chave `ia_playbook`. Grava `playbook.intent_question_mode`.
+8. **Perguntas**: uma lista, cada uma com "obrigatória", reordenável. Grava `qualification_questions` (ordem) + `transfer_config.required_questions` (marcadas, explícitas). Não dá pra desmarcar a última (vazio no servidor = todas).
+9. **Sai da tela e fica no banco, sem ser zerado**: modo antigo, persona/objetivo em texto, método de venda, BANT, CRM sem contato válido, mensagem de repasse, criatividade, palavra-chave antiga (vira aviso), chaves do passar pro humano (sempre ligados), datas bloqueadas, encaixes do roteiro, limite em US$.
+10. **Avançado**: o gestor vê, só a equipe muda. O texto que a IA recebe é só leitura e vem do servidor SEM as diretrizes e lições universais da plataforma pra quem não é da equipe. Reescrever bloco: `useClientToggle('ia_playbook')` literal.
+11. Opção dentro de passo é **caixinha** (espera o Salvar); a única **chave** é o Ligar do passo 8.
+
+**Armadilhas:**
+1. **Campo novo na tela entra no `CAMPOS_DO_PASSO` do passo dele** (`configurar/camposDosPassos.ts`), por SUBCHAVE se for jsonb dividido (`transfer_config`, `crm_policy`, `ai_limits`, `visit_config`, `playbook`, `usage_limits`). Fora da lista, a tela mostra e o Salvar não manda. Há spec.
+2. **Cada passo salva direto no serviço** (`useRascunho` → `montarPatch` → `salesAgentsService.update`), só com o que mudou, mesclando jsonb sobre o ÚLTIMO salvo. O `saveAgent` campo a campo saiu.
+3. **`useRascunho` recomeça só quando a IA muda de fato** (`id` + `updated_at`), não a cada objeto novo: uma releitura apagaria a edição não salva (ou entraria em laço). Salvar ignora clique duplo.
+4. **Trocar a persona mexe no destino** (o passo 1 também grava `handoff_*`). Mudar o alcance NÃO mexe no destino.
+5. **`situacao.ts` tem `pendenciasDaIa` (Painel); `pendencias.ts` tem `pendenciasDosPassos` (trilho e Ligar).** O Painel recebe deste só persona e destino; cada "Corrigir" leva ao passo.
+6. **`?passo=` atravessa a casca** porque `paramsDaIa(ia, tela, passo)` o mantém em Configurar.
+7. **React Router 7 troca o endereço numa transição.** Quem muda a lista de IAs e o endereço juntos (Nova IA) põe a mudança da lista dentro de `startTransition`; senão, na primeira IA da conta, a resolução do endereço vê a IA nova com o endereço vazio e manda pra Visão geral.
+8. **`Secao`/`Campo` moram em `src/components/base`** (o Meu site importa de lá); **`PilulasDias`** em `src/components/schedule` (a janela de horário de visita usa).
+9. Blocos do follow-up e o editor de regras de entrada vêm da tela antiga, em `configurar/blocos/`; ali `onSave` só muda o rascunho.
+10. Escrita do cenário de repasse passa por `keepBriefing` (trava em `handoffBriefing.spec`).
