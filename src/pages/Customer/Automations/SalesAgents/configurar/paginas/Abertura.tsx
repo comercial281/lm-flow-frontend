@@ -4,7 +4,7 @@
 //
 // ⚠️ "Com texto de base": o texto é MODELO, não literal (roteiro de hoje; o "texto
 // exato" foi cortado pelo dono em 05/10). Vale quando o lead escreve primeiro.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import { Secao, Secoes } from '@/components/base/Secao';
@@ -33,10 +33,17 @@ export default function Abertura({ agent, gravar }: PropsDaPagina) {
   const [editando, setEditando] = useState<number | null>(null);
   const variacoes = agent.openings ?? [];
 
-  const escolherModo = (m: Modo) => {
-    setModo(m);
-    if (m === 'auto' && agent.greeting) void gravar({ greeting: null });
-  };
+  // ⚠️ "Automática" SEMPRE grava o null (o gravar não manda nada se já estava
+  // vazio): o texto que acabou de ser digitado pode não ter chegado na IA lida
+  // ainda, e "só limpar se tiver texto" deixava o texto gravado com a tela dizendo
+  // Automática. E grava num efeito, não no clique: o campo do texto some com o
+  // modo e, sem blur, grava o que tinha AO DESMONTAR — a limpeza do desmonte roda
+  // antes dos efeitos novos, então o null vem depois e ganha.
+  const modoAnterior = useRef(modo);
+  useEffect(() => {
+    if (modoAnterior.current === 'base' && modo === 'auto') void gravar({ greeting: null });
+    modoAnterior.current = modo;
+  }, [modo, gravar]);
   const novaVariacao = async () => {
     const nova: SalesAgentOpening = { label: 'Nova campanha', origins: [], form_ids: [], keywords: [] };
     if (await gravar({ openings: [...variacoes, nova] })) setEditando(variacoes.length);
@@ -46,7 +53,7 @@ export default function Abertura({ agent, gravar }: PropsDaPagina) {
     <Secoes>
       <Secao titulo="Primeira mensagem" descricao="Como ela abre a conversa com quem veio do anúncio. Lead de formulário recebe a mensagem da automação.">
         <BotoesDeEscolha<Modo> rotulo="Primeira mensagem" valor={modo}
-          opcoes={[{ valor: 'auto', rotulo: 'Automática' }, { valor: 'base', rotulo: 'Com texto de base' }]} aoEscolher={escolherModo} />
+          opcoes={[{ valor: 'auto', rotulo: 'Automática' }, { valor: 'base', rotulo: 'Com texto de base' }]} aoEscolher={setModo} />
         {modo === 'base' && (
           <TextoNaHora id="abertura-texto" tipo="varias" rows={3} rotulo="Texto de base" salvo={agent.greeting ?? ''}
             ajuda="Ela usa o seu texto como modelo, trocando pelo nome do lead e pelo anúncio."
