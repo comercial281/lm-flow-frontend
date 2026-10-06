@@ -168,3 +168,45 @@ describe('Aba Contrato (limites)', () => {
     expect(screen.getByLabelText('Franquia de leads da IA')).toHaveValue('100');
   });
 });
+
+describe('Aba Contrato (receita)', () => {
+  beforeEach(() => { apiX.get.mockReset(); apiX.post.mockReset(); apiX.patch.mockReset(); });
+
+  const comPreco = { ...clienteComPacote, package: { id: 'p1', name: 'Completo', price_brl: 1500 } };
+
+  it('cota do plano com o preço do pacote; salvar manda tipo e origem com os grupos, sem mexer no valor digitado', async () => {
+    apiX.patch.mockResolvedValue({ data: { data: { ...comPreco, settings: { ...comPreco.settings, client_kind: 'performance', revenue_source: 'package' } } } });
+    const user = userEvent.setup();
+    const aoMudar = vi.fn();
+    render(<AbaContrato cliente={comPreco as any} aoMudar={aoMudar} recarregar={vi.fn()} />);
+    await user.selectOptions(screen.getByLabelText('Tipo'), 'performance');
+    await user.click(screen.getByRole('radio', { name: /Cota do plano: Completo/ }));
+    await user.click(screen.getByRole('button', { name: 'Salvar receita' }));
+    await waitFor(() => expect(apiX.patch).toHaveBeenCalledWith('/super/pooled_tenants/c1', expect.objectContaining({
+      client_kind: 'performance', revenue_source: 'package', whatsapp_reminder_group_jid: '123@g.us' })));
+    expect(apiX.patch.mock.calls[0][1]).not.toHaveProperty('revenue_brl');
+    await waitFor(() => expect(aoMudar).toHaveBeenCalled());
+  });
+
+  it('sem preço no pacote, a cota fica desabilitada com o motivo', () => {
+    render(<AbaContrato cliente={clienteComPacote as any} aoMudar={vi.fn()} recarregar={vi.fn()} />);
+    expect(screen.getByRole('radio', { name: 'Cota do plano' })).toBeDisabled();
+    expect(screen.getByText('O pacote Completo não tem preço do plano.')).toBeInTheDocument();
+  });
+
+  it('valor digitado: texto torto trava o salvar; 1.500,00 vai como número', async () => {
+    apiX.patch.mockResolvedValue({ data: { data: cliente } });
+    const user = userEvent.setup();
+    render(<AbaContrato cliente={cliente as any} aoMudar={vi.fn()} recarregar={vi.fn()} />);
+    expect(screen.getByText('O cliente não tem pacote.')).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'Valor digitado' }));
+    const campo = screen.getByLabelText('Valor por mês (R$)');
+    await user.type(campo, 'abc');
+    expect(screen.getByRole('button', { name: 'Salvar receita' })).toBeDisabled();
+    await user.clear(campo);
+    await user.type(campo, '1.500,00');
+    await user.click(screen.getByRole('button', { name: 'Salvar receita' }));
+    await waitFor(() => expect(apiX.patch).toHaveBeenCalledWith('/super/pooled_tenants/c1', expect.objectContaining({
+      client_kind: null, revenue_source: 'manual', revenue_brl: 1500 })));
+  });
+});

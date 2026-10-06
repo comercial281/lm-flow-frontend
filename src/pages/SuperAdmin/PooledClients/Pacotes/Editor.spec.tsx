@@ -81,4 +81,17 @@ describe('Editor de pacote', () => {
     await user.click(await screen.findByRole('button', { name: 'Salvar pacote' }));
     await waitFor(() => expect(api.post).toHaveBeenCalledWith('/super/packages/p1/preview_update', { name: 'Completo' }));
   });
+
+  it('preço do plano vai junto ao salvar, só quando muda; texto torto trava', async () => {
+    api.post.mockResolvedValue({ data: { data: { clients_count: 2, changes: { features: [], limits: [] } } } });
+    const user = userEvent.setup();
+    montar();
+    const campo = await screen.findByLabelText('Preço do plano (R$/mês)');
+    await user.type(campo, 'abc');
+    expect(screen.getByRole('button', { name: 'Salvar pacote' })).toBeDisabled();
+    await user.clear(campo);
+    await user.type(campo, '1.500,00');
+    await user.click(screen.getByRole('button', { name: 'Salvar pacote' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/super/packages/p1/preview_update', { name: 'Completo', price_brl: 1500 }));
+  });
 });

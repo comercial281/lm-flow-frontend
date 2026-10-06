@@ -3,30 +3,122 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
-import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label } from '@/components/ui/ds';
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, RadioGroup, RadioGroupItem } from '@/components/ui/ds';
 import { clientesService } from '@/services/superAdmin/clientesService';
 import { pacotesService } from '@/services/superAdmin/pacotesService';
-import { plural } from '@/lib/formato';
+import { dinheiro, numero, plural } from '@/lib/formato';
 import type { PacoteDaLista } from '@/types/admin/pacotes';
 import type { ClientePooled } from '@/types/admin/clientes';
 import { resumoDeMudancas, type DiffDoCliente } from '../Pacotes/resumoDeMudancas';
 import { groupJidsFrom, groupsPatch } from '../clientGroups';
 import { validarLimites } from '../limites';
-import { GRADE_CAMPOS, SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
+import { GRADE_CAMPOS, SECAO, SUBTITULO_SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
+import { lerReais } from '../receita';
 import type { PropsDaAba } from './Pagina';
 
-// Contrato do cliente. Pacote (trocar / voltar ao pacote, com prévia) e os três limites (números de WhatsApp, franquia de
+// Contrato do cliente. Pacote (trocar / voltar ao pacote, com prévia), Receita (tipo e valor que conta, para a margem
+// de Custos) e os três limites (números de WhatsApp, franquia de
 // leads da IA, preço do excedente). O PATCH reenvia os grupos de WhatsApp: o
 // servidor faz compact! nessas chaves e uma omissão apagaria os grupos.
 
 export default function AbaContrato({ cliente, aoMudar, recarregar }: PropsDaAba) {
   // `key` pelos limites: se o cliente mudar por fora (ex.: troca de pacote), os campos recomeçam dele.
   const chave = `${cliente.max_whatsapp_channels}|${cliente.ai_leads_included}|${cliente.ai_lead_overage_price_brl}`;
+  const s = cliente.settings ?? {};
+  const chaveDaReceita = `${s.client_kind ?? ''}|${s.revenue_source ?? ''}|${s.revenue_brl ?? ''}|${cliente.package?.price_brl ?? ''}`;
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-      <BlocoDoPacote cliente={cliente} aoMudar={aoMudar} />
+      <div className="flex flex-col gap-4">
+        <BlocoDoPacote cliente={cliente} aoMudar={aoMudar} />
+        <BlocoDeReceita key={chaveDaReceita} cliente={cliente} aoMudar={aoMudar} />
+      </div>
       <FormularioDeLimites key={chave} cliente={cliente} aoMudar={aoMudar} recarregar={recarregar} />
     </div>
+  );
+}
+
+const TIPOS = [{ valor: 'avulso', rotulo: 'Avulso' }, { valor: 'performance', rotulo: 'Performance' }];
+
+// Receita do cliente (06/10/2026): quanto ele vale por mês, para a margem de Custos.
+// "Cota do plano" é o preço do pacote lido na hora (trocar de pacote leva a cota junto);
+// sem pacote com preço, a opção fica desabilitada com o motivo. Voltar à cota não
+// apaga o valor digitado: o servidor guarda, aqui ele só não é reenviado.
+// Zero digitado é receita zero; vazio é "sem receita" (null).
+function BlocoDeReceita({ cliente, aoMudar }: Pick<PropsDaAba, 'cliente' | 'aoMudar'>) {
+  const s = cliente.settings ?? {};
+  const preco = cliente.package?.price_brl ?? null;
+  const [tipo, setTipo] = useState<string>(s.client_kind ?? '');
+  const [fonte, setFonte] = useState<string>(s.revenue_source ?? '');
+  const [valor, setValor] = useState<string>(s.revenue_brl == null ? '' : numero(s.revenue_brl, 2));
+  const [salvando, setSalvando] = useState(false);
+
+  const lido = lerReais(valor);
+  const erroDoValor = fonte === 'manual' && lido === undefined ? 'Digite um valor, como 1.500,00 (vazio = sem receita).' : null;
+  const semCota = preco == null;
+  const motivoSemCota = cliente.package ? `O pacote ${cliente.package.name} não tem preço do plano.` : 'O cliente não tem pacote.';
+
+  const salvar = async () => {
+    if (erroDoValor) return;
+    setSalvando(true);
+    try {
+      const atualizado = await clientesService.atualizar(cliente.id, {
+        name: cliente.name,
+        ...groupsPatch(groupJidsFrom(cliente.settings ?? {})),
+        client_kind: tipo || null,
+        revenue_source: fonte || null,
+        ...(fonte === 'manual' ? { revenue_brl: lido ?? null } : {}),
+      });
+      aoMudar({ ...cliente, ...atualizado });
+      toast.success('Receita salva.');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Não deu pra salvar.');
+    } finally { setSalvando(false); }
+  };
+
+  return (
+    <section aria-labelledby="receita" className={SECAO}>
+      <h2 id="receita" className={TITULO_SECAO}>Receita</h2>
+      <p className={SUBTITULO_SECAO}>Quanto o cliente vale por mês. Entra na margem de Custos.</p>
+      <div className="mt-4 flex flex-col gap-4">
+        <div>
+          <Label htmlFor="rec-tipo">Tipo</Label>
+          <Seletor id="rec-tipo" aria-label="Tipo" value={tipo} onChange={(e) => setTipo(e.target.value)} className="mt-1 w-full">
+            <option value="">Não definido</option>
+            {TIPOS.map((t) => <option key={t.valor} value={t.valor}>{t.rotulo}</option>)}
+          </Seletor>
+        </div>
+        <fieldset>
+          <legend className="text-sm font-medium">Valor que conta</legend>
+          <RadioGroup value={fonte} onValueChange={setFonte} className="mt-2 flex flex-col gap-2">
+            <div className="flex items-start gap-2">
+              <RadioGroupItem id="rec-cota" value="package" disabled={semCota} />
+              <div>
+                <Label htmlFor="rec-cota" className={semCota ? 'text-muted-foreground' : undefined}>
+                  {semCota ? 'Cota do plano' : `Cota do plano: ${cliente.package!.name} — ${dinheiro(preco)}/mês`}
+                </Label>
+                {semCota && <p className="text-xs text-muted-foreground">{motivoSemCota}</p>}
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <RadioGroupItem id="rec-manual" value="manual" />
+              <Label htmlFor="rec-manual">Valor digitado</Label>
+            </div>
+          </RadioGroup>
+          {fonte === 'manual' && (
+            <div className="mt-3">
+              <Label htmlFor="rec-valor">Valor por mês (R$)</Label>
+              <Input id="rec-valor" inputMode="decimal" placeholder="sem receita" value={valor} aria-invalid={!!erroDoValor}
+                aria-describedby={erroDoValor ? 'rec-valor-erro' : undefined} onChange={(e) => setValor(e.target.value)} />
+              {erroDoValor && <p id="rec-valor-erro" className="mt-1 text-xs text-destructive">{erroDoValor}</p>}
+            </div>
+          )}
+          {fonte === 'package' && semCota && (
+            <p className="mt-2 text-xs text-destructive">Sem preço no pacote, o cliente fica sem receita na margem.</p>
+          )}
+        </fieldset>
+      </div>
+      <Button className="mt-5" disabled={salvando || !!erroDoValor} onClick={() => void salvar()}>Salvar receita</Button>
+    </section>
   );
 }
 

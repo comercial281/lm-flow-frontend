@@ -6,7 +6,7 @@ export interface AiUsage {
   franchise_status: 'sem_franquia' | 'ok' | 'atencao' | 'estourado';
 }
 
-export interface PacoteResumo { id: string; name: string }
+export interface PacoteResumo { id: string; name: string; price_brl?: number | null }
 
 export interface DiffDoPacote {
   features: { key: string; label: string; tenant: boolean; package: boolean }[];
