@@ -202,8 +202,9 @@ export default function TestarJanela({ agent, aoFechar }: { agent: SalesAgent; a
             <h3 className={TITULO}>Qualificação</h3>
             {painel.perguntas.length === 0 && <p className="text-[12.5px] text-muted-foreground">Sem perguntas ainda.</p>}
             <ul className="space-y-1">
-              {painel.perguntas.map((p) => (
-                <li key={p.texto} className="flex items-start gap-2 text-[13px] leading-snug">
+              {/* Índice na chave: duas perguntas iguais são permitidas na Qualificação. */}
+              {painel.perguntas.map((p, i) => (
+                <li key={`${i}-${p.texto}`} className="flex items-start gap-2 text-[13px] leading-snug">
                   <span aria-hidden className={cn('flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-[11px] font-bold', p.resposta ? 'bg-emerald-100 text-emerald-800' : 'bg-muted text-muted-foreground')}>{p.resposta ? '✓' : '·'}</span>
                   <span>
                     <span className={p.obrigatoria ? 'font-semibold' : undefined}>{p.texto}</span>
@@ -218,7 +219,7 @@ export default function TestarJanela({ agent, aoFechar }: { agent: SalesAgent; a
           <div className="space-y-1.5">
             <h3 className={TITULO}>O que aconteceria</h3>
             <div className="space-y-1 rounded-xl border border-border p-2.5 text-[13px]">
-              {linhas.length ? linhas.map((l) => <p key={l}>{l}</p>) : <p>{fraseDoObjetivo(agent)}</p>}
+              {linhas.length ? linhas.map((l, i) => <p key={`${i}-${l}`}>{l}</p>) : <p>{fraseDoObjetivo(agent)}</p>}
             </div>
           </div>
           <div className="space-y-1.5">

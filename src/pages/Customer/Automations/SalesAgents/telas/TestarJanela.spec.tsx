@@ -102,6 +102,58 @@ describe('TestarJanela', () => {
     testar.remove();
   });
 
+  // Revisão final da onda 3 (I3): depois de fechada, a janela não fica ouvindo o
+  // teclado nem trava a rolagem da página de trás.
+  it('depois de fechada, o Esc não chama mais nada e a página volta a rolar', () => {
+    document.body.style.overflow = 'scroll';
+    const aoFechar = abrir();
+    expect(document.body.style.overflow).toBe('hidden');
+    aoFechar.r.unmount();
+    expect(document.body.style.overflow).toBe('scroll');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(aoFechar).not.toHaveBeenCalled();
+    document.body.style.overflow = '';
+  });
+
+  it('o erro de um turno que volta depois de a janela fechar não aparece', async () => {
+    let falhar: (e: Error) => void = () => {};
+    rehearsal.mockReturnValueOnce(new Promise((_, rej) => { falhar = rej; }));
+    const aoFechar = abrir();
+    await userEvent.type(screen.getByLabelText('Mensagem do lead'), 'oi{Enter}');
+    aoFechar.r.unmount();
+    falhar(new Error('Tempo esgotado'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it('Recomeçar com um cenário escolhido recomeça O MESMO cenário (a frase não mente)', async () => {
+    rehearsal.mockResolvedValueOnce(resposta('Que bom que voltou!', estado())).mockResolvedValueOnce(resposta('De novo', estado()));
+    abrir();
+    await userEvent.selectOptions(screen.getByLabelText('Cenário'), 'Sumiu e voltou');
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    await screen.findByText('Que bom que voltou!');
+    await userEvent.click(screen.getByRole('button', { name: 'Recomeçar' }));
+    expect(screen.queryByText('Que bom que voltou!')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Cenário')).toHaveValue('sumiu-voltou');
+    expect(screen.getByText('quero saber do apartamento de 2 quartos')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    await screen.findByText('De novo');
+    // O turno de depois do Recomeçar roda o cenário de novo (com a semente), não conversa livre.
+    expect(rehearsal.mock.calls[1][1]).toMatchObject({ step: 'turn', state: null, message: 'oi, desculpa a demora, é pra morar', seed: { hours_ago: 72 } });
+  });
+
+  it('duas perguntas iguais no painel não quebram a lista', async () => {
+    const erro = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const repetida = { pergunta: 'Renda', resposta: null, obrigatoria: true };
+    rehearsal.mockResolvedValueOnce(resposta('Oi!', estado(), outcome({ checklist: [repetida, repetida] })));
+    abrir();
+    await userEvent.type(screen.getByLabelText('Mensagem do lead'), 'oi{Enter}');
+    await screen.findByText('Oi!');
+    expect(screen.getAllByText('Renda')).toHaveLength(2);
+    expect(erro.mock.calls.some((c) => String(c[0]).includes('same key'))).toBe(false);
+    erro.mockRestore();
+  });
+
   it('Fechar fecha; Recomeçar limpa a conversa', async () => {
     rehearsal.mockResolvedValueOnce(resposta('Oi!', estado()));
     const aoFechar = abrir();

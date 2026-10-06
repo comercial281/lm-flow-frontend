@@ -2,13 +2,13 @@
 // mensagem roda o MESMO turno do atendimento no servidor, numa conversa que só
 // existe em memória. O estado vai e volta inteiro a cada passo — a tela não monta
 // histórico (era o que fazia o Testar divergir). Nada sai no WhatsApp.
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { usePergunta } from '@/hooks/usePergunta';
 import {
   salesAgentsService, type RehearsalOutcome, type RehearsalState, type SalesAgent, type TestHistoryItem,
 } from '@/services/salesAgents/salesAgentsService';
-import type { CenarioDeTeste } from '@/features/salesAgents/cenariosDeTeste';
+import { CENARIOS_DE_TESTE, type CenarioDeTeste } from '@/features/salesAgents/cenariosDeTeste';
 import { itensDoEstado, itensDoTurno, respostasDoFormulario, textoDasRespostas, type ItemDaConversa } from '@/features/salesAgents/ensaio';
 
 // Cenários que o próprio usuário salva. localStorage: é ferramenta de bancada, não
@@ -47,6 +47,14 @@ export function useEnsaio(agent: SalesAgent) {
   const [cenario, setCenario] = useState<string>('');
   const fimDoChat = useRef<HTMLDivElement>(null);
   const rolar = () => setTimeout(() => fimDoChat.current?.scrollIntoView?.({ block: 'end' }), 0);
+  // ⚠️ A resposta de um turno pode voltar com a janela já fechada: aí não grita
+  // (toast de erro ou "Conversa carregada" de uma janela que ninguém vê mais).
+  const aberta = useRef(true);
+  useEffect(() => {
+    aberta.current = true;
+    return () => { aberta.current = false; };
+  }, []);
+  const avisarErro = (e: unknown) => { if (aberta.current) toast.error((e as Error).message); };
 
   const enviar = async () => {
     const texto = mensagem.trim();
@@ -71,7 +79,7 @@ export function useEnsaio(agent: SalesAgent) {
       // senão quem tenta de novo vê duas mensagens e o servidor tem uma.
       setItens((prev) => prev.slice(0, -1));
       setMensagem(texto);
-      toast.error((e as Error).message);
+      avisarErro(e);
     } finally {
       setOcupado(false);
     }
@@ -86,7 +94,7 @@ export function useEnsaio(agent: SalesAgent) {
       setItens((prev) => [...prev, ...itensDoTurno(r.turn, imovel.trim())]);
       rolar();
     } catch (e) {
-      toast.error((e as Error).message);
+      avisarErro(e);
     } finally {
       setOcupado(false);
     }
@@ -111,9 +119,9 @@ export function useEnsaio(agent: SalesAgent) {
       setInteresse(String(r.state.attrs.initial_interest ?? ''));
       // ⚠️ O imóvel do lead vem junto: vazio, o próximo turno apagaria o imóvel que o lead real tem.
       setImovel(String(r.state.attrs.sales_agent_property_code ?? ''));
-      toast.success(`Conversa carregada: ${r.state.messages.length} mensagens`);
+      if (aberta.current) toast.success(`Conversa carregada: ${r.state.messages.length} mensagens`);
     } catch (e) {
-      toast.error((e as Error).message);
+      avisarErro(e);
     } finally {
       setCarregando(false);
     }
@@ -135,7 +143,18 @@ export function useEnsaio(agent: SalesAgent) {
     setItens((c.history ?? []).map((m) => (m.role === 'user' ? { tipo: 'lead' as const, texto: m.content } : { tipo: 'ia' as const, texto: m.content, pausa: 0 })));
   };
 
-  const recomecar = () => { setEnsaio(null); setFicha(null); setSemente(null); setItens([]); };
+  // ⚠️ Com um cenário escolhido, Recomeçar recomeça O MESMO cenário (histórico,
+  // semente e primeira mensagem). Só zerar a conversa deixava o nome e a frase do
+  // cenário na tela, e o próximo turno rodava como conversa livre.
+  const recomecar = () => {
+    const atual = [...CENARIOS_DE_TESTE, ...salvos].find((c) => c.id === cenario);
+    if (atual) { aplicarCenario(atual); return; }
+    setCenario('');
+    setEnsaio(null);
+    setFicha(null);
+    setSemente(null);
+    setItens([]);
+  };
 
   const salvarCenario = async () => {
     const label = await perguntar({
@@ -151,7 +170,7 @@ export function useEnsaio(agent: SalesAgent) {
     const lista = [...salvos.filter((s) => s.id !== novo.id), novo];
     setSalvos(lista);
     gravarSalvos(lista);
-    toast.success(`Cenário "${label}" salvo`);
+    if (aberta.current) toast.success(`Cenário "${label}" salvo`);
   };
 
   // Só os salvos pelo usuário (id "custom-…") saem; os prontos ficam.
