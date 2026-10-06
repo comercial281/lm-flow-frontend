@@ -6,9 +6,11 @@ import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
 
 const update = vi.fn();
+const opcoesDoCvcrm = vi.hoisted(() => vi.fn());
 vi.mock('@/services/salesAgents/salesAgentsService', async (orig) => {
   const real = await orig<typeof import('@/services/salesAgents/salesAgentsService')>();
-  return { ...real, salesAgentsService: { ...real.salesAgentsService, update: (...a: unknown[]) => update(...a) } };
+  return { ...real, salesAgentsService: { ...real.salesAgentsService, update: (...a: unknown[]) => update(...a),
+    cvcrmOptions: () => opcoesDoCvcrm() } };
 });
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -134,6 +136,35 @@ describe('Passo 2 · Sistema do cliente', () => {
     await salvar();
     expect(update).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalled();
+  });
+
+  it('IA que já usava o sistema do cliente abre em "Outro sistema", sem mudar nada', () => {
+    abrir(dono({ handoff_target: 'webhook', handoff_webhook_url: 'https://crm.exemplo.com.br/leads' }));
+    expect(screen.getByLabelText('Outro sistema')).toBeChecked();
+    expect(screen.getByLabelText(/endereço do sistema do cliente/i)).toHaveValue('https://crm.exemplo.com.br/leads');
+  });
+
+  it('CVCRM: escolher empreendimento e salvar manda a forma e a escolha inteira, sem endereço', async () => {
+    opcoesDoCvcrm.mockResolvedValue({
+      connected: true, subdomain: 'habras', empreendimentos: [{ id: 48, nome: 'Jardins' }], filas: [{ id: 3, nome: 'Centro' }],
+      errors: { empreendimentos: null, filas: null },
+    });
+    abrir(dono());
+    await userEvent.click(screen.getByLabelText('Sistema do cliente'));
+    await userEvent.click(screen.getByLabelText('CVCRM'));
+    await userEvent.selectOptions(await screen.findByLabelText('Empreendimento'), '48');
+    await salvar();
+    expect(update).toHaveBeenCalledWith('ia-1', {
+      handoff_target: 'webhook', handoff_webhook_system: 'cvcrm',
+      handoff_cvcrm: { empreendimento: { id: 48, nome: 'Jardins' }, fila: null },
+    });
+  });
+
+  it('CVCRM sem conexão: aviso com o caminho pra conectar', async () => {
+    opcoesDoCvcrm.mockResolvedValue({ connected: false, subdomain: null, empreendimentos: [], filas: [], errors: { empreendimentos: null, filas: null } });
+    abrir(dono({ handoff_target: 'webhook', handoff_webhook_system: 'cvcrm' } as Partial<SalesAgent>));
+    expect(await screen.findByText(/ainda não conectou o CVCRM/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Conectar o CVCRM' })).toHaveAttribute('href', '/settings/cvcrm');
   });
 
   it('a prévia diz que o lead vai pro sistema do cliente', () => {

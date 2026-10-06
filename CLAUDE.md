@@ -6731,6 +6731,57 @@ Armadilhas:
 4. O texto pra quem recebe (como conferir a assinatura) está no plano da entrega 5,
    seção "Para quem recebe".
 
+## IA Vendedora · Sistema do cliente → CVCRM (desde 2026-10-06)
+
+Pedido do dono do produto: incorporadora que usa **CVCRM** (Habras foi a primeira)
+quer o lead da IA caindo direto no CVCRM dela. A tela *Webhooks* do CVCRM é o
+contrário disso (o CVCRM avisando outro sistema): lead entra no CVCRM pelo cadastro
+de lead da API deles, com e-mail + token de um usuário. Desenho:
+`LM FLOW/specs/2026-10-06-cvcrm-sistema-do-cliente-design.md`.
+
+O que aparece na tela:
+
+- **Minha imobiliária → Integrações → CVCRM** (aba nova, depois de Portais):
+  *Endereço do seu CVCRM* (aceita colar de qualquer jeito: `habras`,
+  `habras.cvcrm.com.br`, o endereço inteiro do navegador), *E-mail do usuário*,
+  *Token* e **Conectar**, que testa na hora puxando os empreendimentos
+  (*Conectado · 12 empreendimentos encontrados*). Conectado: endereço, e-mail,
+  *Usada por N IAs*, **Trocar token** e **Desconectar** (com confirmação).
+- **IA → Objetivo → Pra onde vai o lead → Sistema do cliente**: abre a escolha
+  **CVCRM** | **Outro sistema** (o de sempre, endereço + chave secreta). No CVCRM:
+  *Empreendimento* e *Fila de distribuição* (listas do CVCRM do cliente, primeira
+  opção *Deixar o CVCRM decidir*) e *Mandar um lead de teste* (cria um lead de
+  verdade, "Teste LM Flow"). Sem conexão: aviso + **Conectar o CVCRM**.
+- **Painel do lead**: *Enviando ao CVCRM…* / *Entregue no CVCRM às 14:32 para José
+  da Silva.* / *O envio ao CVCRM falhou: <motivo>…*
+- **Diagnóstico**: item *Sistema do cliente (CVCRM)*; nos envios, *Ficou com <nome>
+  no CVCRM*.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Uma conexão por cliente**, não por IA: o token é da empresa.
+- **Empreendimento e fila fixos por IA** (opção A). Seguir o imóvel da conversa
+  (opção B) ficou pra depois.
+- **Lead que já existe no CVCRM** é atualizado e **mantém o corretor** que tinha lá
+  (mesma regra do "Lead recadastrado mantém dono").
+- **Quem distribui é o CVCRM**: a IA não escolhe corretor de lá.
+- **Ligar trava** com o CVCRM escolhido e sem conexão (`handoff_cvcrm_connected`
+  vem na ficha da IA).
+- "Token" só aparece na aba de Integrações (é o nome que o CVCRM usa). Na IA, nunca
+  "webhook" nem "token".
+
+Armadilhas:
+
+1. **`handoff_webhook_system` e `handoff_cvcrm` PRECISAM estar em
+   `CAMPOS_DO_PASSO[2]`.** O `handoff_cvcrm` vai sempre INTEIRO (empreendimento e
+   fila): o servidor troca o campo todo.
+2. **IA antiga sem `handoff_webhook_system` = Outro sistema.** Nada muda pra quem já
+   usava o Sistema do cliente.
+3. **O teste usa o que está GRAVADO**: com a troca de sistema por salvar, o botão
+   fica bloqueado (senão testaria o envio antigo).
+4. **Escolha que sumiu da lista do CVCRM** (empreendimento desativado lá) continua
+   aparecendo, com o nome guardado e *(não veio na lista do CVCRM)*.
+
 ## Página do cliente (05/10/2026)
 
 Entrega 3 da Área do Admin (spec `LM FLOW/specs/2026-10-05-admin-clientes-entrega-3-design.md`).

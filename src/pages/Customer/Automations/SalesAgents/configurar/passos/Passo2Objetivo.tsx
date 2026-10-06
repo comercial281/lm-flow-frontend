@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/ds';
 import { Secao } from '@/components/base/Secao';
 import { Campo, CampoTexto, CLASSE_DO_CAMPO } from '@/components/base/Campo';
 import { Seletor } from '@/components/base/Seletor';
-import type { AlcanceDaIa, HandoffMode, SalesAgentHandoffTarget } from '@/services/salesAgents/salesAgentsService';
+import type { AlcanceDaIa, HandoffCvcrm, HandoffMode, SalesAgentHandoffTarget, SistemaDoEnvio } from '@/services/salesAgents/salesAgentsService';
 import { roletaConfigService } from '@/services/roletaConfig/roletaConfigService';
 import agentsService from '@/services/channels/agentsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
@@ -29,6 +29,7 @@ import { Aviso, Caixa, CascaDoPasso, Escolha, type OpcaoDeEscolha } from '../pec
 import { MOMENTOS_DO_FUNIL } from '../opcoes';
 import type { PropsDoPasso } from '../passos';
 import SistemaDoCliente from '../SistemaDoCliente';
+import SistemaDoClienteCvcrm from '../SistemaDoClienteCvcrm';
 import { problemaNoEndereco, webhookDisponivel } from '@/features/salesAgents/sistemaDoCliente';
 
 type Quando = HandoffMode | 'julgar';
@@ -49,6 +50,14 @@ const DESTINOS: OpcaoDeEscolha<Exclude<SalesAgentHandoffTarget, 'number_owner' |
     titulo: 'Sistema do cliente',
     descricao: 'O lead vai pro sistema que a imobiliária já usa (o CRM dela), com o resumo da IA. Ninguém da roleta recebe.',
   },
+];
+
+// Sistema do cliente → CVCRM (06/10/2026): o CVCRM tem ligação pronta (a conexão
+// é do cliente, em Integrações → CVCRM); "Outro sistema" é o envio de sempre, com
+// endereço e chave secreta. IA que já usava o Sistema do cliente abre no Outro.
+const SISTEMAS: OpcaoDeEscolha<SistemaDoEnvio>[] = [
+  { valor: 'cvcrm', titulo: 'CVCRM', descricao: 'O lead é cadastrado direto no CVCRM do cliente, no empreendimento e na fila que você escolher.' },
+  { valor: 'generic', titulo: 'Outro sistema', descricao: 'O lead vai pro endereço que a equipe do sistema da imobiliária passar, com uma chave secreta.' },
 ];
 
 export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
@@ -144,9 +153,16 @@ export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
     ? { ...o, desabilitada: true, motivo: 'Na persona corretor o lead vai sempre pro dono do número.' }
     : o));
 
+  const sistema: SistemaDoEnvio = rascunho.handoff_webhook_system === 'cvcrm' ? 'cvcrm' : 'generic';
+  const escolhaCvcrm: HandoffCvcrm = {
+    empreendimento: rascunho.handoff_cvcrm?.empreendimento ?? null,
+    fila: rascunho.handoff_cvcrm?.fila ?? null,
+  };
+
   // Endereço ruim não sai do passo: o servidor também recusa, mas aqui a frase é a da tela.
+  // No CVCRM não há endereço na IA (é o da conexão do cliente).
   const salvarPasso = () => {
-    if (rascunho.handoff_target === 'webhook') {
+    if (rascunho.handoff_target === 'webhook' && sistema === 'generic') {
       const problema = problemaNoEndereco(rascunho.handoff_webhook_url ?? '');
       if (problema) {
         toast.error(problema);
@@ -220,6 +236,21 @@ export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
               </Campo>
             )}
             {rascunho.handoff_target === 'webhook' && (
+              <div className="mt-2 ml-7">
+                <Escolha nome="sistema" legenda="Qual sistema" opcoes={SISTEMAS} valor={sistema}
+                  aoEscolher={(v) => mudar({ handoff_webhook_system: v })} />
+              </div>
+            )}
+            {rascunho.handoff_target === 'webhook' && sistema === 'cvcrm' && (
+              <SistemaDoClienteCvcrm
+                agentId={agent.id}
+                valor={escolhaCvcrm}
+                // O objeto vai sempre inteiro (empreendimento E fila): o servidor troca o campo todo.
+                aoMudar={(v) => mudar({ handoff_cvcrm: v })}
+                podeTestar={agent.handoff_target === 'webhook' && agent.handoff_webhook_system === 'cvcrm' && !pendente}
+              />
+            )}
+            {rascunho.handoff_target === 'webhook' && sistema === 'generic' && (
               <SistemaDoCliente
                 agentId={agent.id}
                 url={rascunho.handoff_webhook_url ?? ''}

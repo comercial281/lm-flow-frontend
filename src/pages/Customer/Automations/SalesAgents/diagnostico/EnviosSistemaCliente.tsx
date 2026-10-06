@@ -80,9 +80,12 @@ export default function EnviosSistemaCliente({ agentId }: { agentId: string }) {
               {estaAberto && (
                 <div className="mt-1 space-y-1 text-xs">
                   <p>
-                    O sistema do cliente {fraseDaResposta(d.response_code)}
+                    {d.system === 'cvcrm' ? 'O CVCRM' : 'O sistema do cliente'} {fraseDaResposta(d.response_code)}
                     {d.duration_ms != null ? ` em ${segundos(d.duration_ms)}` : ''}.
                   </p>
+                  {/* CVCRM: quem ficou com o lead lá dentro (corretor, imobiliária ou gestor). */}
+                  {d.remote_ref?.owner && <p>Ficou com {d.remote_ref.owner} no CVCRM.</p>}
+                  {d.remote_ref?.existing && <p>O lead já existia no CVCRM: continua com quem já atendia.</p>}
                   {d.last_error && <p className="text-red-600">{d.last_error}</p>}
                   {d.response_excerpt && (
                     <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded bg-muted p-2 text-[11px]">
