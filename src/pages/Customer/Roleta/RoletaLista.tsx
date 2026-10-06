@@ -183,7 +183,7 @@ export default function RoletaLista() {
             <CampoTexto
               id="roleta-nova-nome"
               rotulo="Nome da roleta"
-              placeholder="Ex.: Zona Sul"
+              placeholder="Ex.: roleta da Zona Sul"
               valor={nome}
               aoMudar={setNome}
               autoFocus
