@@ -1,38 +1,50 @@
 // Mapa das telas da IA Vendedora (barra de topo própria, modelo do Meu site).
 // Fonte única: rótulo do menu, dica, título e frase de cada tela, e a leitura do
-// endereço (`?ia=<id>&tela=<id>`).
-// Spec: LM FLOW/specs/2026-10-05-ia-vendedora-refatoracao-design.md (entrega 1).
+// endereço (`?ia=<id>&tela=<id>&pagina=<id>`).
+//
+// Onda 3 (06/10/2026): o menu tem 3 itens (Painel ▾ · Configurar · Ensinar).
+// Testar virou botão da barra (janela por cima da página); Diagnóstico e Motor
+// moram no "⋯", só equipe (o Motor também pra quem tem `ia_playbook`). As duas
+// continuam no mapa, FORA do menu, e o endereço delas sem permissão cai na
+// Visão geral. `?tela=testar` antigo abre a Visão geral com a janela por cima.
+import { paginaDaUrl, type PaginaId } from '@/pages/Customer/Automations/SalesAgents/configurar/paginas';
 
-export type GrupoId = 'painel' | 'configurar' | 'ensinar' | 'testar' | 'diagnostico';
-export type TelaId = 'visao-geral' | 'sugestoes' | 'relatorio-semanal' | 'configurar' | 'ensinar' | 'testar' | 'diagnostico';
+export type GrupoId = 'painel' | 'configurar' | 'ensinar';
+export type TelaId = 'visao-geral' | 'sugestoes' | 'relatorio-semanal' | 'configurar' | 'ensinar' | 'diagnostico' | 'motor';
 
 export interface TelaInfo {
   id: TelaId;
-  grupo: GrupoId;
+  /** Null = fora do menu (Diagnóstico, Motor). */
+  grupo: GrupoId | null;
   rotulo: string;
   dica: string;
   titulo: string;
   frase: string;
-  /** Liberada imobiliária por imobiliária (`ia_insights`); a Leal Mídia sempre vê. */
   soComInsights: boolean;
+}
+
+export interface Permissoes {
+  insights: boolean;
+  /** Equipe da Leal Mídia (`useIsSuperAdmin`). */
+  equipe: boolean;
+  /** Vê o Motor: equipe, ou cliente com `ia_playbook`. */
+  motor: boolean;
 }
 
 export const GRUPOS: { id: GrupoId; rotulo: string }[] = [
   { id: 'painel', rotulo: 'Painel' },
   { id: 'configurar', rotulo: 'Configurar' },
   { id: 'ensinar', rotulo: 'Ensinar' },
-  { id: 'testar', rotulo: 'Testar' },
-  { id: 'diagnostico', rotulo: 'Diagnóstico' },
 ];
 
 export const TELAS: TelaInfo[] = [
-  { id: 'visao-geral', grupo: 'painel', rotulo: 'Visão geral', dica: 'Números, pendências e sugestões', titulo: 'Visão geral', frase: 'O que a IA entregou no período e o que falta para ela atender bem.', soComInsights: false },
+  { id: 'visao-geral', grupo: 'painel', rotulo: 'Visão geral', dica: 'Números, pendências e últimos atendimentos', titulo: 'Visão geral', frase: 'O que a IA entregou no período e o que falta para ela atender bem.', soComInsights: false },
   { id: 'sugestoes', grupo: 'painel', rotulo: 'Sugestões', dica: 'O que mudar no jeito de ela falar', titulo: 'Sugestões', frase: 'A IA relê as conversas e aponta o que se repete. O que você aplica vira lição em Ensinar.', soComInsights: true },
   { id: 'relatorio-semanal', grupo: 'painel', rotulo: 'Relatório semanal', dica: 'O resumo da semana no WhatsApp', titulo: 'Relatório semanal', frase: 'O resumo da semana dos atendimentos, enviado no WhatsApp para os gestores e grupos.', soComInsights: true },
-  { id: 'configurar', grupo: 'configurar', rotulo: 'Configurar', dica: '', titulo: 'Configurar', frase: 'Número, jeito de falar, roteiro, visita, repasse, horários e limites desta IA.', soComInsights: false },
+  { id: 'configurar', grupo: 'configurar', rotulo: 'Configurar', dica: '', titulo: 'Configurar', frase: '', soComInsights: false },
   { id: 'ensinar', grupo: 'ensinar', rotulo: 'Ensinar', dica: '', titulo: 'Ensinar', frase: 'O que ela sabe (arquivos e textos) e as regras e exemplos que você ensinou.', soComInsights: false },
-  { id: 'testar', grupo: 'testar', rotulo: 'Testar', dica: '', titulo: 'Testar', frase: 'Converse com a IA fingindo ser um lead. Nada sai no WhatsApp.', soComInsights: false },
-  { id: 'diagnostico', grupo: 'diagnostico', rotulo: 'Diagnóstico', dica: '', titulo: 'Diagnóstico', frase: 'Os passos para ela atender, verificados agora, e os últimos atendimentos.', soComInsights: false },
+  { id: 'diagnostico', grupo: null, rotulo: 'Diagnóstico', dica: '', titulo: 'Diagnóstico', frase: 'Os passos para ela atender, verificados agora, e os últimos atendimentos.', soComInsights: false },
+  { id: 'motor', grupo: null, rotulo: 'Motor', dica: '', titulo: 'Motor', frase: 'Modelo, ritmo, limites por dia e o texto que a IA recebe.', soComInsights: false },
 ];
 
 const POR_ID = new Map(TELAS.map((t) => [t.id, t]));
@@ -42,45 +54,57 @@ export function telaInfo(id: TelaId): TelaInfo {
   return POR_ID.get(id) ?? POR_ID.get(PRIMEIRA)!;
 }
 
+function permitida(id: TelaId, p: Permissoes): boolean {
+  const info = POR_ID.get(id)!;
+  if (info.soComInsights && !p.insights) return false;
+  if (id === 'diagnostico') return p.equipe;
+  if (id === 'motor') return p.motor;
+  return true;
+}
+
 /**
- * A tela pedida no endereço. Sem `?tela=`, abre a Visão geral. Tela liberada por
- * chave sem a chave cai na Visão geral: o título de uma coisa que o cliente não
- * comprou nunca aparece (mesma regra das Páginas de anúncio no Meu site).
+ * A tela pedida no endereço. Sem `?tela=`, a Visão geral. Sem permissão, a Visão
+ * geral (o título de algo que a pessoa não pode ver nunca aparece).
  *
- * ⚠️ `?agent=<id>` sem `?tela=` é o retorno do assistente (`/ia-vendedora/:id/assistente`):
- * quem volta de lá estava configurando, então cai em Configurar.
+ * ⚠️ `?agent=<id>` sem `?tela=` é o retorno do assistente antigo: cai em Configurar.
+ * ⚠️ `?tela=configurar&passo=avancado` (entrega 2) é o Motor de hoje.
  */
-export function telaDaUrl(params: URLSearchParams, opts: { insights: boolean }): TelaId {
+export function telaDaUrl(params: URLSearchParams, p: Permissoes): TelaId {
   const pedida = params.get('tela');
+  if (pedida === 'configurar' && params.get('passo') === 'avancado') return p.motor ? 'motor' : 'configurar';
   const info = pedida ? POR_ID.get(pedida as TelaId) : undefined;
-  if (info) return info.soComInsights && !opts.insights ? PRIMEIRA : info.id;
+  if (info) return permitida(info.id, p) ? info.id : PRIMEIRA;
   if (!pedida && params.get('agent')) return 'configurar';
   return PRIMEIRA;
 }
 
-/** A IA pedida no endereço: `?ia=`, ou o `?agent=` antigo que o assistente ainda usa pra devolver. */
+/** `?tela=testar` (entrega 1–2): a casca abre a janela do Testar por cima da Visão geral. */
+export function pediuTestar(params: URLSearchParams): boolean {
+  return params.get('tela') === 'testar';
+}
+
 export function iaDaUrl(params: URLSearchParams): string | null {
   return params.get('ia') || params.get('agent') || null;
 }
 
-/**
- * O endereço certo pra IA e a tela. A Visão geral é o padrão e não aparece no
- * endereço. `?passo=` (entrega 2) só existe em Configurar: sem ele, a casca
- * reescreveria o endereço e o passo a passo voltaria sempre pro primeiro.
- */
-export function paramsDaIa(ia: string | null, tela: TelaId, passo?: string | number | null): Record<string, string> {
-  const params: Record<string, string> = {};
-  if (ia) params.ia = ia;
-  if (tela !== PRIMEIRA) params.tela = tela;
-  if (tela === 'configurar' && passo !== undefined && passo !== null && String(passo) !== '') params.passo = String(passo);
-  return params;
+/** A página pedida (ou o `?passo=` antigo traduzido). */
+export function paginaPedida(params: URLSearchParams): PaginaId | null {
+  return paginaDaUrl(params);
 }
 
 /**
- * Qual IA abrir: a do endereço, senão a última usada neste navegador, senão a
- * primeira da lista. Id que não está na lista (excluída, de outra conta) é
- * ignorado.
+ * O endereço certo pra IA e a tela. A Visão geral não aparece no endereço.
+ * `pagina` só existe em Configurar: sem ela, a casca reescreveria o endereço e o
+ * Configurar voltaria sempre pra página inicial.
  */
+export function paramsDaIa(ia: string | null, tela: TelaId, pagina?: PaginaId | null): Record<string, string> {
+  const params: Record<string, string> = {};
+  if (ia) params.ia = ia;
+  if (tela !== PRIMEIRA) params.tela = tela;
+  if (tela === 'configurar' && pagina) params.pagina = pagina;
+  return params;
+}
+
 export function iaInicial(ids: string[], doEndereco: string | null, ultima: string | null): string | null {
   if (doEndereco && ids.includes(doEndereco)) return doEndereco;
   if (ultima && ids.includes(ultima)) return ultima;
@@ -93,6 +117,5 @@ export function itensDoGrupo(grupo: GrupoId, opts: { insights: boolean }): TelaI
 
 /** "Painel" em cima do título das telas de dentro do Painel; vazio nas outras. */
 export function trilhaDe(id: TelaId): string {
-  const t = telaInfo(id);
-  return t.grupo === 'painel' ? 'Painel' : '';
+  return telaInfo(id).grupo === 'painel' ? 'Painel' : '';
 }

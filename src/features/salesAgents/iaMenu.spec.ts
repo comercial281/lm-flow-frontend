@@ -1,80 +1,41 @@
 import { describe, expect, it } from 'vitest';
+import { GRUPOS, itensDoGrupo, paramsDaIa, pediuTestar, telaDaUrl } from './iaMenu';
 
-import { GRUPOS, TELAS, iaDaUrl, iaInicial, itensDoGrupo, paramsDaIa, telaDaUrl, telaInfo, trilhaDe } from './iaMenu';
+const url = (s: string) => new URLSearchParams(s);
+const CLIENTE = { insights: true, equipe: false, motor: false };
+const EQUIPE = { insights: true, equipe: true, motor: true };
 
-const url = (q: string) => new URLSearchParams(q);
-const COM = { insights: true };
-const SEM = { insights: false };
-
-describe('iaMenu', () => {
-  it('ids únicos e todo grupo existe', () => {
-    const ids = TELAS.map((t) => t.id);
-    expect(new Set(ids).size).toBe(ids.length);
-    const grupos = GRUPOS.map((g) => g.id);
-    TELAS.forEach((t) => expect(grupos).toContain(t.grupo));
+describe('iaMenu (onda 3)', () => {
+  it('o menu tem 3 itens: Painel, Configurar, Ensinar', () => {
+    expect(GRUPOS.map((g) => g.rotulo)).toEqual(['Painel', 'Configurar', 'Ensinar']);
+    expect(itensDoGrupo('painel', { insights: false }).map((t) => t.id)).toEqual(['visao-geral']);
   });
 
-  it('a barra tem Painel, Configurar, Ensinar, Testar e Diagnóstico, nesta ordem', () => {
-    expect(GRUPOS.map((g) => g.rotulo)).toEqual(['Painel', 'Configurar', 'Ensinar', 'Testar', 'Diagnóstico']);
+  it('Diagnóstico e Motor ficam fora do menu e, sem permissão, caem na Visão geral', () => {
+    expect(telaDaUrl(url('tela=diagnostico'), CLIENTE)).toBe('visao-geral');
+    expect(telaDaUrl(url('tela=diagnostico'), EQUIPE)).toBe('diagnostico');
+    expect(telaDaUrl(url('tela=motor'), CLIENTE)).toBe('visao-geral');
+    expect(telaDaUrl(url('tela=motor'), { ...CLIENTE, motor: true })).toBe('motor');
   });
 
-  it('sem ?tela= abre a Visão geral; tela desconhecida também', () => {
-    expect(telaDaUrl(url(''), COM)).toBe('visao-geral');
-    expect(telaDaUrl(url('tela=xpto'), COM)).toBe('visao-geral');
-    expect(telaDaUrl(url('tela=ensinar'), COM)).toBe('ensinar');
+  it('?tela=testar antigo abre a Visão geral (a janela abre por cima)', () => {
+    expect(telaDaUrl(url('tela=testar'), CLIENTE)).toBe('visao-geral');
+    expect(pediuTestar(url('ia=1&tela=testar'))).toBe(true);
+    expect(pediuTestar(url('ia=1'))).toBe(false);
   });
 
-  it('?tela= com nome de propriedade do objeto cai na Visão geral', () => {
-    ['constructor', 'toString', '__proto__'].forEach((t) => expect(telaDaUrl(url(`tela=${t}`), COM)).toBe('visao-geral'));
+  it('?passo=avancado antigo abre o Motor (com permissão) ou o Configurar', () => {
+    expect(telaDaUrl(url('tela=configurar&passo=avancado'), EQUIPE)).toBe('motor');
+    expect(telaDaUrl(url('tela=configurar&passo=avancado'), CLIENTE)).toBe('configurar');
   });
 
-  it('Sugestões e Relatório semanal sem a chave caem na Visão geral', () => {
-    expect(telaDaUrl(url('tela=sugestoes'), SEM)).toBe('visao-geral');
-    expect(telaDaUrl(url('tela=relatorio-semanal'), SEM)).toBe('visao-geral');
-    expect(telaDaUrl(url('tela=sugestoes'), COM)).toBe('sugestoes');
-  });
-
-  it('o ?agent= do assistente abre a IA em Configurar', () => {
-    expect(iaDaUrl(url('agent=ia-7'))).toBe('ia-7');
-    expect(telaDaUrl(url('agent=ia-7'), COM)).toBe('configurar');
-    // Com tela explícita, vale a tela.
-    expect(telaDaUrl(url('agent=ia-7&tela=testar'), COM)).toBe('testar');
-  });
-
-  it('?ia= ganha do ?agent=', () => {
-    expect(iaDaUrl(url('ia=ia-1&agent=ia-2'))).toBe('ia-1');
-    expect(iaDaUrl(url(''))).toBeNull();
-  });
-
-  it('o endereço omite a Visão geral e a IA vazia', () => {
+  it('a página só fica no endereço em Configurar', () => {
+    expect(paramsDaIa('ia-1', 'configurar', 'destino')).toEqual({ ia: 'ia-1', tela: 'configurar', pagina: 'destino' });
+    expect(paramsDaIa('ia-1', 'ensinar', 'destino')).toEqual({ ia: 'ia-1', tela: 'ensinar' });
     expect(paramsDaIa('ia-1', 'visao-geral')).toEqual({ ia: 'ia-1' });
-    expect(paramsDaIa('ia-1', 'ensinar')).toEqual({ ia: 'ia-1', tela: 'ensinar' });
-    expect(paramsDaIa(null, 'visao-geral')).toEqual({});
   });
 
-  it('o passo só vai no endereço em Configurar (entrega 2)', () => {
-    expect(paramsDaIa('ia-1', 'configurar', 3)).toEqual({ ia: 'ia-1', tela: 'configurar', passo: '3' });
-    expect(paramsDaIa('ia-1', 'configurar', 'avancado')).toEqual({ ia: 'ia-1', tela: 'configurar', passo: 'avancado' });
-    expect(paramsDaIa('ia-1', 'configurar', null)).toEqual({ ia: 'ia-1', tela: 'configurar' });
-    expect(paramsDaIa('ia-1', 'ensinar', 3)).toEqual({ ia: 'ia-1', tela: 'ensinar' });
-  });
-
-  it('abre a IA do endereço, senão a última usada, senão a primeira', () => {
-    expect(iaInicial(['a', 'b'], 'b', 'a')).toBe('b');
-    expect(iaInicial(['a', 'b'], null, 'b')).toBe('b');
-    expect(iaInicial(['a', 'b'], 'excluida', 'tambem-excluida')).toBe('a');
-    expect(iaInicial([], 'a', 'b')).toBeNull();
-  });
-
-  it('Painel lista Visão geral, Sugestões e Relatório semanal; sem a chave, só a Visão geral', () => {
-    expect(itensDoGrupo('painel', COM).map((t) => t.id)).toEqual(['visao-geral', 'sugestoes', 'relatorio-semanal']);
-    expect(itensDoGrupo('painel', SEM).map((t) => t.id)).toEqual(['visao-geral']);
-    expect(itensDoGrupo('configurar', SEM).map((t) => t.id)).toEqual(['configurar']);
-  });
-
-  it('trilha e textos', () => {
-    expect(trilhaDe('sugestoes')).toBe('Painel');
-    expect(trilhaDe('configurar')).toBe('');
-    expect(telaInfo('relatorio-semanal').titulo).toBe('Relatório semanal');
+  it('o ?agent= de link antigo continua abrindo Configurar', () => {
+    expect(telaDaUrl(url('agent=ia-1'), CLIENTE)).toBe('configurar');
   });
 });

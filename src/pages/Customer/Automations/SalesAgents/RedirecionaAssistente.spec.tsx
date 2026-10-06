@@ -9,7 +9,7 @@ function Destino() {
 }
 
 describe('RedirecionaAssistente', () => {
-  it('o assistente antigo abre o passo 1 da mesma IA', () => {
+  it('o assistente antigo abre a página Identidade da mesma IA', () => {
     render(
       <MemoryRouter initialEntries={['/ia-vendedora/ia-7/assistente']}>
         <Routes>
@@ -18,6 +18,6 @@ describe('RedirecionaAssistente', () => {
         </Routes>
       </MemoryRouter>,
     );
-    expect(screen.getByTestId('destino').textContent).toBe('/ia-vendedora?ia=ia-7&tela=configurar&passo=1');
+    expect(screen.getByTestId('destino').textContent).toBe('/ia-vendedora?ia=ia-7&tela=configurar&pagina=identidade');
   });
 });

@@ -1,94 +1,99 @@
 import { describe, expect, it } from 'vitest';
-import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
-import { FRASE_SEM_DONO, motivoSemEscolhaDoFollowup, passoComPendencia, pendenciasDosPassos, podeLigar } from './pendencias';
+import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
+import { FRASE_SEM_DONO, motivoSemEscolhaDoFollowup, paginasComPendencia, pendenciasDasPaginas, podeLigar } from './pendencias';
 
-const ia = (extra: Partial<SalesAgent> = {}) =>
-  ({
-    persona_kind: 'owner', reach: 'qualify', transfer_config: { mode: 'checklist' }, handoff_target: 'inbox_roleta',
-    handoff_roleta_config_id: null, handoff_user_id: null, lead_facing_name: 'Bia', inbox_id: 'inbox-1',
-    number_owner_id: 'u7', qualification_questions: ['Renda'], trigger_keyword: null,
-    followup_enabled: true, followup_action: 'sequence', followup_flow_id: 'fu-1', ...extra,
-  }) as SalesAgent;
+const chaves = (a: Parameters<typeof pendenciasDasPaginas>[0]) => pendenciasDasPaginas(a).map((p) => `${p.pagina}:${p.chave}`);
 
-describe('pendenciasDosPassos', () => {
-  it('IA completa: nenhuma, e o Ligar está livre', () => {
-    expect(pendenciasDosPassos(ia())).toEqual([]);
-    expect(passoComPendencia(ia())).toBeNull();
-    expect(podeLigar(ia())).toEqual({ pode: true, motivo: null });
+describe('pendenciasDasPaginas', () => {
+  it('sem número trava o Ligar e aponta Canal', () => {
+    const a = agenteDeTeste({ inbox_id: null, lead_facing_name: 'Bia' });
+    expect(chaves(a)).toContain('canal:sem_numero');
+    expect(podeLigar(a)).toEqual({ pode: false, motivo: 'Falta o número de WhatsApp.', pagina: 'canal' });
   });
 
-  it('sem número: passo 6 e trava o Ligar', () => {
-    const a = ia({ inbox_id: null });
-    expect(passoComPendencia(a)).toBe(6);
-    expect(podeLigar(a)).toEqual({ pode: false, motivo: 'Falta o número de WhatsApp.' });
-  });
-
-  it('corretor sem dono trava o Ligar, no passo 1', () => {
-    const a = ia({ persona_kind: 'broker', handoff_target: 'number_owner', number_owner_id: null });
-    expect(pendenciasDosPassos(a)[0]).toMatchObject({ passo: 1, frase: FRASE_SEM_DONO, impedeLigar: true });
-    expect(podeLigar(a).pode).toBe(false);
-  });
-
-  // IA antiga: fala como o corretor e entrega pra um fixo. Revisar, sem travar.
-  it('corretor com destino que não é o dono do número: aviso no passo 2, sem travar', () => {
-    const a = ia({ persona_kind: 'broker', handoff_target: 'user', handoff_user_id: 'u9' });
-    expect(pendenciasDosPassos(a)).toEqual([expect.objectContaining({ chave: 'persona_destino', passo: 2, impedeLigar: false })]);
+  it('nome que o lead vê só avisa, em Identidade', () => {
+    const a = agenteDeTeste({ lead_facing_name: null });
+    expect(chaves(a)).toContain('identidade:nome_visivel');
     expect(podeLigar(a).pode).toBe(true);
   });
 
-  it('sem o nome que o lead vê: passo 1, só aviso (não trava o Ligar)', () => {
-    const a = ia({ lead_facing_name: '  ' });
-    expect(pendenciasDosPassos(a)[0]).toMatchObject({ passo: 1, chave: 'nome_visivel', impedeLigar: false });
-    expect(podeLigar(a)).toEqual({ pode: true, motivo: null });
+  it('corretor sem dono do número trava, em Identidade', () => {
+    const a = agenteDeTeste({ persona_kind: 'broker', number_owner_id: null, handoff_target: 'number_owner', lead_facing_name: 'Bia' });
+    expect(podeLigar(a)).toMatchObject({ pode: false, pagina: 'identidade' });
   });
 
-  it('roleta ou corretor sem escolha, perguntas vazias, palavra antiga e follow-up ainda em "A IA escreve"', () => {
-    expect(passoComPendencia(ia({ handoff_target: 'roleta' }))).toBe(2);
-    expect(passoComPendencia(ia({ handoff_target: 'user' }))).toBe(2);
-    expect(passoComPendencia(ia({ qualification_questions: [' '] }))).toBe(3);
-    expect(pendenciasDosPassos(ia({ trigger_keyword: 'call' }))[0].frase).toContain('"call"');
-    expect(passoComPendencia(ia({ followup_action: 'ai' }))).toBe(7);
-    expect(pendenciasDosPassos(ia({ followup_action: 'ai' }))[0]).toMatchObject({ chave: 'followup_sem_escolha', impedeLigar: false });
-    // O teto de tentativas saiu da tela (06/10/2026): máximo 0 não é mais pendência.
-    expect(pendenciasDosPassos(ia({ followup_max_attempts: 0 }))).toEqual([]);
+  it('destino incompleto e o antigo "roleta deste número" vão pro Destino', () => {
+    expect(chaves(agenteDeTeste({ persona_kind: 'assistant', handoff_target: 'roleta', handoff_roleta_config_id: null }))).toContain('destino:destino_sem_roleta');
+    expect(chaves(agenteDeTeste({ persona_kind: 'assistant', handoff_target: 'inbox_roleta' }))).toContain('destino:destino_antigo');
+    expect(podeLigar(agenteDeTeste({ persona_kind: 'assistant', handoff_target: 'webhook', handoff_webhook_url: 'https://x', handoff_webhook_secret_state: 'none', lead_facing_name: 'Bia' })))
+      .toMatchObject({ pode: false, pagina: 'destino' });
   });
 
-  // 06/10/2026: follow-up ligado precisa de uma saída válida.
-  it('follow-up sem escolha (vazio) e "Entregar pro follow-up" sem follow-up: passo 7, laranja', () => {
-    expect(pendenciasDosPassos(ia({ followup_action: undefined }))).toEqual([
-      expect.objectContaining({ chave: 'followup_sem_escolha', passo: 7, frase: 'Escolha o que ela faz quando o lead some.', impedeLigar: false }),
+  it('perguntas vazias com o critério das obrigatórias vão pra Qualificação', () => {
+    expect(chaves(agenteDeTeste({ qualification_questions: [], transfer_config: { mode: 'checklist' } }))).toContain('qualificacao:perguntas_vazias');
+  });
+
+  it('palavra antiga vai pro Canal; follow-up sem escolha vai pro Follow-up', () => {
+    expect(chaves(agenteDeTeste({ trigger_keyword: 'mcmv' }))).toContain('canal:palavra_antiga');
+    expect(chaves(agenteDeTeste({ followup_enabled: true, followup_action: 'ai' }))).toContain('followup:followup_sem_escolha');
+  });
+
+  it('a lista sai na ordem do trilho e o conjunto marca as páginas', () => {
+    const a = agenteDeTeste({
+      inbox_id: null, lead_facing_name: null, trigger_keyword: 'x',
+      persona_kind: 'assistant', handoff_target: 'roleta', handoff_roleta_config_id: 'r1',
+    });
+    expect(pendenciasDasPaginas(a).map((p) => p.pagina)).toEqual(['canal', 'canal', 'identidade']);
+    expect([...paginasComPendencia(a)]).toEqual(['canal', 'identidade']);
+  });
+});
+
+describe('pendenciasDasPaginas: casos que o passo a passo já cobria', () => {
+  it('IA completa: nenhuma, e o Ligar está livre', () => {
+    const a = agenteDeTeste({ lead_facing_name: 'Bia', persona_kind: 'assistant' });
+    expect(pendenciasDasPaginas(a)).toEqual([]);
+    expect(podeLigar(a)).toEqual({ pode: true, motivo: null, pagina: null });
+  });
+
+  it('corretor sem dono traz a frase da casa', () => {
+    const a = agenteDeTeste({ persona_kind: 'broker', handoff_target: 'number_owner', number_owner_id: null, lead_facing_name: 'Bia' });
+    expect(pendenciasDasPaginas(a)[0]).toMatchObject({ pagina: 'identidade', frase: FRASE_SEM_DONO, impedeLigar: true });
+  });
+
+  it('corretor com destino que não é o dono: aviso no Destino, sem travar', () => {
+    const a = agenteDeTeste({ persona_kind: 'broker', handoff_target: 'user', handoff_user_id: 'u9', lead_facing_name: 'Bia' });
+    expect(pendenciasDasPaginas(a)).toEqual([expect.objectContaining({ chave: 'persona_destino', pagina: 'destino', impedeLigar: false })]);
+    expect(podeLigar(a).pode).toBe(true);
+  });
+
+  it('follow-up: sem escolha, sem follow-up escolhido, funil antigo e desligado', () => {
+    const base = { lead_facing_name: 'Bia', persona_kind: 'assistant' as const };
+    expect(pendenciasDasPaginas(agenteDeTeste({ ...base, followup_action: undefined }))).toEqual([
+      expect.objectContaining({ chave: 'followup_sem_escolha', pagina: 'followup', frase: 'Escolha o que ela faz quando o lead some.' }),
     ]);
-    expect(pendenciasDosPassos(ia({ followup_flow_id: null }))).toEqual([
-      expect.objectContaining({ chave: 'followup_sem_fluxo', passo: 7, frase: 'Falta escolher o follow-up que recebe o lead.', impedeLigar: false }),
+    expect(pendenciasDasPaginas(agenteDeTeste({ ...base, followup_flow_id: null }))).toEqual([
+      expect.objectContaining({ chave: 'followup_sem_fluxo', pagina: 'followup', frase: 'Falta escolher o follow-up que recebe o lead.' }),
     ]);
-    // Funil antigo (só o slug) tem destino: não é pendência aqui.
-    expect(pendenciasDosPassos(ia({ followup_flow_id: null, followup_sequence_slug: 'follow-up-longo' }))).toEqual([]);
-    // Follow-up desligado: nada.
-    expect(pendenciasDosPassos(ia({ followup_enabled: false, followup_flow_id: null }))).toEqual([]);
-    expect(pendenciasDosPassos(ia({ followup_enabled: false, followup_action: 'ai' }))).toEqual([]);
+    expect(pendenciasDasPaginas(agenteDeTeste({ ...base, followup_flow_id: null, followup_sequence_slug: 'follow-up-longo' }))).toEqual([]);
+    expect(pendenciasDasPaginas(agenteDeTeste({ ...base, followup_enabled: false, followup_action: 'ai' }))).toEqual([]);
   });
 
-  it('o motivo que trava o Salvar do passo 7', () => {
+  it('o motivo que trava a página Follow-up', () => {
     expect(motivoSemEscolhaDoFollowup({ followup_enabled: true, followup_action: 'ai' })).toBe('Escolha como o follow-up continua: a IA não escreve mais o follow-up.');
     expect(motivoSemEscolhaDoFollowup({ followup_enabled: true })).toBe('Escolha o que ela faz quando o lead some.');
     expect(motivoSemEscolhaDoFollowup({ followup_enabled: true, followup_action: 'pipeline' })).toBeNull();
     expect(motivoSemEscolhaDoFollowup({ followup_enabled: false, followup_action: 'ai' })).toBeNull();
   });
 
-  it('sistema do cliente sem endereço: passo 2, sem travar', () => {
-    const a = ia({ handoff_target: 'webhook', handoff_webhook_url: null } as Partial<SalesAgent>);
-    expect(pendenciasDosPassos(a)).toContainEqual(expect.objectContaining({ chave: 'destino_sem_endereco', passo: 2, impedeLigar: false }));
+  it('sistema do cliente: sem endereço avisa; sem chave pronta trava', () => {
+    const sem = agenteDeTeste({ persona_kind: 'assistant', handoff_target: 'webhook', handoff_webhook_url: null, lead_facing_name: 'Bia' });
+    expect(pendenciasDasPaginas(sem)).toContainEqual(expect.objectContaining({ chave: 'destino_sem_endereco', pagina: 'destino', impedeLigar: false }));
+    const semChave = { ...sem, handoff_webhook_url: 'https://crm.exemplo.com.br/x', handoff_webhook_secret_state: 'none' } as typeof sem;
+    expect(pendenciasDasPaginas(semChave)).toEqual([expect.objectContaining({ chave: 'destino_sem_chave', impedeLigar: true })]);
+    expect(pendenciasDasPaginas({ ...semChave, handoff_webhook_secret_state: 'ready' })).toEqual([]);
   });
 
-  it('sistema do cliente sem chave pronta trava o Ligar', () => {
-    const a = ia({ handoff_target: 'webhook', handoff_webhook_url: 'https://crm.exemplo.com.br/x', handoff_webhook_secret_state: 'none' } as Partial<SalesAgent>);
-    expect(pendenciasDosPassos(a)).toEqual([expect.objectContaining({ chave: 'destino_sem_chave', passo: 2, impedeLigar: true })]);
-    expect(podeLigar(a).pode).toBe(false);
-    expect(pendenciasDosPassos({ ...a, handoff_webhook_secret_state: 'ready' })).toEqual([]);
-  });
-
-  it('em ordem de passo', () => {
-    const a = ia({ inbox_id: null, lead_facing_name: null, followup_action: 'ai' });
-    expect(pendenciasDosPassos(a).map((p) => p.passo)).toEqual([1, 6, 7]);
+  it('o antigo "roleta deste número" não leva o aviso quando a persona é o corretor', () => {
+    expect(chaves(agenteDeTeste({ persona_kind: 'broker', handoff_target: 'inbox_roleta', lead_facing_name: 'Bia' }))).not.toContain('destino:destino_antigo');
   });
 });
