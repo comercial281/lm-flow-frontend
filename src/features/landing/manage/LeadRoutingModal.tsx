@@ -18,10 +18,12 @@ import {
   roletaConfigService,
   type RoletaConfig,
 } from '@/services/roletaConfig/roletaConfigService';
-import CampoQuemAssume from '@/components/roleta/CampoQuemAssume';
+import CampoQuemAssume, { type PessoaDaLista, type QuemAssume } from '@/components/roleta/CampoQuemAssume';
+import usersService from '@/services/users/usersService';
 import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import {
   buildLandingSettings,
+  readDefaultAssigneeId,
   readDisqualifiedBranch,
   readRoletaConfigId,
 } from './landingRouting';
@@ -102,17 +104,19 @@ export default function LeadRoutingModal({
   const [disqPipelineId, setDisqPipelineId] = useState(disqInit.pipeline_id ?? '');
   const [disqStageId, setDisqStageId] = useState(disqInit.stage_id ?? '');
   const [disqLabelId, setDisqLabelId] = useState(disqInit.label_id ?? '');
-  // Quem assume o lead (opcional). Vazio = ninguém é sorteado e o lead entra sem
+  // Quem assume o lead (opcional): um corretor fixo (`routing.default_assignee_id`)
+  // OU uma roleta (`routing.roleta_config_id`). Vazio = o lead entra sem
   // responsável, que é como toda landing sempre funcionou. TODAS as roletas: a
   // escolhida e desligada continua na lista. `null` = cargo sem acesso.
-  //
-  // TODO(B2/T4): a landing ainda não lê responsável fixo (o servidor distribui
-  // só pela roleta). Quando `distribute_lead` passar a usar Leads::Distribution
-  // com o campo do responsável, passar a lista de pessoas e gravar o campo — aí
-  // a aba Corretores aparece sozinha.
   const [roletas, setRoletas] = useState<RoletaConfig[] | null>(null);
+  const [pessoas, setPessoas] = useState<PessoaDaLista[] | null>(null);
   const roletaNova = useClientToggle('roleta_nova');
-  const [roletaId, setRoletaId] = useState(readRoletaConfigId(storedSettings));
+  const assigneeGravado = readDefaultAssigneeId(storedSettings);
+  const [quem, setQuem] = useState<QuemAssume>({
+    default_assignee_id: assigneeGravado || null,
+    roleta_config_id: readRoletaConfigId(storedSettings) || null,
+  });
+  const roletaId = quem.roleta_config_id ?? '';
   // Rastreio (Pixel Meta) da landing. Os eventos saem pelo navegador do lead E
   // pela API de Conversões, com o mesmo identificador — quem manda pelo servidor
   // é o backend, na captura.
@@ -168,10 +172,18 @@ export default function LeadRoutingModal({
         } catch {
           /* leitura de fundo não grita */
         }
-        // Idem: cargo sem acesso às roletas só não vê a opção de distribuir.
+        // Idem: cargo sem acesso às roletas (ou à equipe) só não vê aquela aba.
         try {
           const rs = await roletaConfigService.getAll();
           if (active) setRoletas(rs || []);
+        } catch {
+          /* leitura de fundo não grita */
+        }
+        try {
+          const us = await usersService.getUsers();
+          if (active) {
+            setPessoas((us.data ?? []).filter((u) => !u.deactivated).map((u) => ({ id: String(u.id), nome: u.name })));
+          }
         } catch {
           /* leitura de fundo não grita */
         }
@@ -213,7 +225,10 @@ export default function LeadRoutingModal({
                 label_id: disqLabelId || null,
               }
             : null,
-          roletaConfigId: roletaId || null,
+          roletaConfigId: quem.roleta_config_id,
+          // Só viaja o que a pessoa pôde ver: sem a lista de pessoas (cargo sem
+          // acesso) e sem corretor gravado, a chave nem é escrita.
+          defaultAssigneeId: pessoas !== null || assigneeGravado ? quem.default_assignee_id : undefined,
         },
         writePixelSettings(pixel),
       );
@@ -303,19 +318,19 @@ export default function LeadRoutingModal({
             <div className="mt-2 border-t border-border pt-3">
               <p className="mb-0.5 text-sm font-medium">Quem assume o lead (opcional)</p>
               <p className="mb-2 text-xs text-muted-foreground">
-                Escolhendo uma roleta, o lead desta landing é oferecido a um corretor assim que
-                chega — ele recebe o aviso no WhatsApp e no app, e vira o responsável quando
-                aceita. Deixando vazio, nada muda: o lead entra no funil sem responsável e a
-                gestão distribui na mão.
+                Escolhendo um corretor, todo lead desta landing vai pra ele. Escolhendo uma
+                roleta, o lead é oferecido a um corretor assim que chega — ele recebe o aviso
+                no WhatsApp e no app, e vira o responsável quando aceita. Deixando vazio, nada
+                muda: o lead entra no funil sem responsável e a gestão distribui na mão.
               </p>
-              <span className="mb-1 block text-xs text-muted-foreground">Roleta</span>
+              <span className="mb-1 block text-xs text-muted-foreground">Corretor ou roleta</span>
               <CampoQuemAssume
-                aria-label="Roleta"
-                value={{ default_assignee_id: null, roleta_config_id: roletaId || null }}
-                onChange={(v) => setRoletaId(v.roleta_config_id ?? '')}
-                pessoas={null}
+                aria-label="Quem assume o lead"
+                value={quem}
+                onChange={setQuem}
+                pessoas={pessoas}
                 roletas={roletas}
-                nenhum="Não distribuir (entra sem responsável)"
+                nenhum="Ninguém (entra sem responsável)"
               />
               {roletaId && (
                 <p className="mt-1 text-[11px] text-muted-foreground">

@@ -25,6 +25,8 @@ const saveRouting = vi.hoisted(() => vi.fn());
 vi.mock('@/services/landingPages/landingPageService', () => ({
   landingPageService: { saveRouting },
 }));
+const usuarios = vi.hoisted(() => vi.fn());
+vi.mock('@/services/users/usersService', () => ({ default: { getUsers: usuarios } }));
 const chave = vi.hoisted(() => ({ roletaNova: false }));
 vi.mock('@/contexts/TenantFeaturesContext', () => ({
   useClientToggle: (k: string) => (k === 'roleta_nova' ? chave.roletaNova : false),
@@ -34,6 +36,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 beforeEach(() => {
   chave.roletaNova = false;
   roletas.mockReset().mockResolvedValue([]);
+  usuarios.mockReset().mockResolvedValue({ data: [{ id: 'u1', name: 'Ana Corretora' }, { id: 'u9', name: 'Saiu', deactivated: true }] });
   saveRouting.mockReset().mockResolvedValue(undefined);
   Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture ?? (() => false);
   Element.prototype.releasePointerCapture = Element.prototype.releasePointerCapture ?? (() => {});
@@ -66,6 +69,13 @@ describe('Roteamento de lead no computador', () => {
 describe('Roteamento de lead · Quem assume o lead', () => {
   const comRoleta = (settings: object = {}) =>
     ({ id: 'lp1', title: 'Lançamento', settings }) as never;
+  const abrirModal = (settings: object = {}) =>
+    render(<LeadRoutingModal siteId="s1" page={comRoleta(settings)} onClose={() => {}} onSaved={() => {}} />);
+  const salvar = async () => {
+    await userEvent.click(screen.getByRole('button', { name: /Salvar/ }));
+    await waitFor(() => expect(saveRouting).toHaveBeenCalled());
+    return saveRouting.mock.calls[0][3].routing as Record<string, unknown>;
+  };
 
   beforeEach(() => {
     roletas.mockResolvedValue([
@@ -74,28 +84,48 @@ describe('Roteamento de lead · Quem assume o lead', () => {
     ]);
   });
 
-  // A landing ainda não lê responsável fixo (B2/T4): só a aba Roleta, sem a
-  // barra de abas. Escolher grava routing.roleta_config_id, mesclando.
-  it('mostra só as roletas ligadas e grava a escolhida', async () => {
-    render(<LeadRoutingModal siteId="s1" page={comRoleta({ routing: { per_answer: { a: 1 } } })} onClose={() => {}} onSaved={() => {}} />);
-    await userEvent.click(await screen.findByRole('button', { name: 'Roleta' }));
-    expect(screen.queryByRole('tab', { name: 'Corretores' })).toBeNull();
-    expect(screen.queryByRole('option', { name: /Antiga/ })).toBeNull();
-    await userEvent.click(screen.getByRole('option', { name: 'Zona Sul' }));
-    await userEvent.click(screen.getByRole('button', { name: /Salvar/ }));
-    await waitFor(() => expect(saveRouting).toHaveBeenCalled());
-    expect(saveRouting.mock.calls[0][3].routing).toMatchObject({ roleta_config_id: 'r1', per_answer: { a: 1 } });
+  // Corretor fixo OU roleta, numa lista com as abas Corretores | Roleta. O
+  // corretor vai em routing.default_assignee_id, ao lado da roleta, mesclando.
+  it('escolher um corretor grava routing.default_assignee_id e limpa a roleta', async () => {
+    abrirModal({ routing: { roleta_config_id: 'r1', per_answer: { a: 1 } } });
+    await userEvent.click(await screen.findByRole('button', { name: 'Quem assume o lead' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Corretores' }));
+    expect(screen.queryByRole('option', { name: 'Saiu' })).toBeNull();
+    await userEvent.click(screen.getByRole('option', { name: 'Ana Corretora' }));
+    expect(await salvar()).toMatchObject({ default_assignee_id: 'u1', roleta_config_id: null, per_answer: { a: 1 } });
   });
 
-  it('a roleta escolhida e desligada continua escolhida, com o aviso', async () => {
-    render(<LeadRoutingModal siteId="s1" page={comRoleta({ routing: { roleta_config_id: 'r2' } })} onClose={() => {}} onSaved={() => {}} />);
-    expect(await screen.findByRole('button', { name: 'Roleta' })).toHaveTextContent('Antiga (desligada)');
+  it('escolher uma roleta grava a roleta e limpa o corretor; só as ligadas são oferecidas', async () => {
+    abrirModal({ routing: { default_assignee_id: 'u1', per_answer: { a: 1 } } });
+    const campo = await screen.findByRole('button', { name: 'Quem assume o lead' });
+    await waitFor(() => expect(campo).toHaveTextContent('Ana Corretora'));
+    await userEvent.click(campo);
+    await userEvent.click(screen.getByRole('tab', { name: 'Roleta' }));
+    expect(screen.queryByRole('option', { name: /Antiga/ })).toBeNull();
+    await userEvent.click(screen.getByRole('option', { name: 'Zona Sul' }));
+    expect(await salvar()).toMatchObject({ default_assignee_id: null, roleta_config_id: 'r1', per_answer: { a: 1 } });
+  });
+
+  it('abre com a roleta gravada; a desligada continua escolhida, com o aviso', async () => {
+    abrirModal({ routing: { roleta_config_id: 'r2' } });
+    expect(await screen.findByRole('button', { name: 'Quem assume o lead' })).toHaveTextContent('Antiga (desligada)');
     expect(screen.getByText(/Esta roleta está desligada/)).toBeInTheDocument();
+  });
+
+  it('sem acesso à equipe: sem aba Corretores, e o campo do corretor nem viaja', async () => {
+    usuarios.mockRejectedValue(new Error('403'));
+    abrirModal({ routing: { roleta_config_id: 'r1' } });
+    await userEvent.click(await screen.findByRole('button', { name: 'Quem assume o lead' }));
+    expect(screen.queryByRole('tab', { name: 'Corretores' })).toBeNull();
+    await userEvent.keyboard('{Escape}');
+    const routing = await salvar();
+    expect(routing).toMatchObject({ roleta_config_id: 'r1' });
+    expect(routing).not.toHaveProperty('default_assignee_id');
   });
 
   it('com a chave roleta_nova, fora do horário o lead espera (não há mais número de plantão)', async () => {
     chave.roletaNova = true;
-    render(<LeadRoutingModal siteId="s1" page={comRoleta({ routing: { roleta_config_id: 'r1' } })} onClose={() => {}} onSaved={() => {}} />);
+    abrirModal({ routing: { roleta_config_id: 'r1' } });
     expect(await screen.findByText(/o lead espera e é oferecido quando ela abrir/)).toBeInTheDocument();
     expect(screen.queryByText(/número de plantão/)).toBeNull();
   });
