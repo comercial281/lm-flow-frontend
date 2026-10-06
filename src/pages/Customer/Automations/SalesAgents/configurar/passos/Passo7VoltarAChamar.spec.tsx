@@ -60,7 +60,7 @@ describe('Passo 7 · Voltar a chamar', () => {
   it('a linha do tempo mostra o que acontece', () => {
     abrir(agenteDeTeste({ reengagement_enabled: true, reengagement_first_hours: 1, reengagement_second_hours: 8 }));
     expect(screen.getByText('1h sem resposta: 1ª retomada')).toBeTruthy();
-    expect(screen.getByText('Follow-up a cada 2 a 3 dias, até 3 vezes')).toBeTruthy();
+    expect(screen.getByText('Entrega o lead ao follow-up depois de 2 dias sem resposta')).toBeTruthy();
   });
 
   it('desligado: some o resto', async () => {
