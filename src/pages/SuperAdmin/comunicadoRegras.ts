@@ -9,6 +9,9 @@ import type {
 
 // De quanto em quanto tempo a tela relê o andamento enquanto o envio roda.
 export const INTERVALO_ANDAMENTO_MS = 2000;
+// Leitura do andamento que falhou: tenta de novo sozinha antes de pedir "Tentar de novo".
+export const ESPERA_NOVA_LEITURA_MS = 1500;
+export const LEITURAS_ANTES_DO_ERRO = 3;
 
 /**
  * A MESMA troca do servidor (Comunicados::Delivery.personalize): {nome} e

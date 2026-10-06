@@ -7,7 +7,7 @@ import Abas from '@/components/base/Abas';
 import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
-import { telefone } from '@/lib/formato';
+import { plural, telefone } from '@/lib/formato';
 import { CORPO_SECAO, ESQUELETO, PAGINA, SECAO, SUBTITULO_SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 import clientInstancesService, { type CentralInstance } from '@/services/clientInstances/clientInstancesService';
 import {
@@ -18,7 +18,9 @@ import {
 } from '@/services/superAdmin/comunicadoService';
 import {
   CLASSE_DO_ITEM,
+  ESPERA_NOVA_LEITURA_MS,
   INTERVALO_ANDAMENTO_MS,
+  LEITURAS_ANTES_DO_ERRO,
   ROTULO_DO_ITEM,
   pedidoDeEnvio,
   personalizar,
@@ -44,6 +46,10 @@ const ABAS = [
   { chave: 'groups', rotulo: 'Grupos' },
 ];
 
+// "Fica de fora" é decidido pelo motivo, não pelo destino: o servidor pode mandar
+// destino junto de um motivo (ex.: "Mesmo destino de X").
+const podeReceber = (a: ComunicadoAlvo) => !!a.destination && !a.reason;
+
 function erroDaApi(e: unknown): { status?: number; error?: string; id?: string } {
   const r = (e as { response?: { status?: number; data?: { error?: string; id?: string } } })?.response;
   return { status: r?.status, error: r?.data?.error, id: r?.data?.id };
@@ -63,14 +69,19 @@ export default function ComunicadoWhatsapp() {
   const [enviando, setEnviando] = useState(false);
   const [acompanhando, setAcompanhando] = useState<string | null>(null);
   const [andamento, setAndamento] = useState<ComunicadoAndamento | null>(null);
-  const [erroAndamento, setErroAndamento] = useState(false);
+  const [erroAndamento, setErroAndamento] = useState<null | 'falha' | 'naoachei'>(null);
+  const [avisoNovos, setAvisoNovos] = useState(0);
   const [tentativa, setTentativa] = useState(0);
 
   // Só vale a resposta da última leitura (troca rápida de aba ou de número).
   const leitura = useRef(0);
   const envioEmCurso = useRef(false);
+  // Sempre o modo/número de AGORA (o envio guarda os do clique).
+  const modoAgora = useRef<ComunicadoModo>('owners');
+  const numeroAgora = useRef('');
+  const alvosAgora = useRef<ComunicadoAlvo[] | null>(null);
 
-  const carregar = useCallback(async (m: ComunicadoModo, n?: string) => {
+  const carregar = useCallback(async (m: ComunicadoModo, n?: string, manter?: { marcados: Set<string>; ids: Set<string> }) => {
     const minha = ++leitura.current;
     setCarregando(true);
     setErro(false);
@@ -78,13 +89,22 @@ export default function ComunicadoWhatsapp() {
     setAlvos(null);
     setSemLeitura(false);
     setMarcados(new Set());
+    setAvisoNovos(0);
     try {
       const r = await comunicadoService.alvos(m, n);
       if (minha !== leitura.current) return;
       setNumero(r.instance);
       setSemLeitura(r.unreadable);
       setAlvos(r.targets);
-      setMarcados(new Set(r.targets.filter(a => a.destination).map(a => a.tenant_id)));
+      const aptos = r.targets.filter(podeReceber);
+      if (manter) {
+        // Depois de "A lista mudou": fica só quem estava marcado e ainda pode receber;
+        // cliente que não estava na lista entra desmarcado.
+        setMarcados(new Set(aptos.filter(a => manter.marcados.has(a.tenant_id)).map(a => a.tenant_id)));
+        setAvisoNovos(aptos.filter(a => !manter.ids.has(a.tenant_id)).length);
+      } else {
+        setMarcados(new Set(aptos.map(a => a.tenant_id)));
+      }
       if (r.running_id) setAcompanhando(r.running_id);
     } catch {
       if (minha !== leitura.current) return;
@@ -109,15 +129,24 @@ export default function ComunicadoWhatsapp() {
     if (!acompanhando) return undefined;
     let vivo = true;
     let espera: ReturnType<typeof setTimeout> | undefined;
+    let falhas = 0;
     const ler = async () => {
       try {
         const a = await comunicadoService.andamento(acompanhando);
         if (!vivo) return;
+        falhas = 0;
         setAndamento(a);
-        setErroAndamento(false);
+        setErroAndamento(null);
         if (a.state === 'running') espera = setTimeout(() => void ler(), INTERVALO_ANDAMENTO_MS);
-      } catch {
-        if (vivo) setErroAndamento(true);
+      } catch (e) {
+        if (!vivo) return;
+        if (erroDaApi(e).status === 404) {
+          setErroAndamento('naoachei');
+          return;
+        }
+        falhas += 1;
+        if (falhas < LEITURAS_ANTES_DO_ERRO) espera = setTimeout(() => void ler(), ESPERA_NOVA_LEITURA_MS);
+        else setErroAndamento('falha');
       }
     };
     void ler();
@@ -127,7 +156,11 @@ export default function ComunicadoWhatsapp() {
     };
   }, [acompanhando, tentativa]);
 
-  const enviaveis = useMemo(() => (alvos ?? []).filter(a => a.destination), [alvos]);
+  modoAgora.current = modo;
+  numeroAgora.current = numero;
+  alvosAgora.current = alvos;
+
+  const enviaveis = useMemo(() => (alvos ?? []).filter(podeReceber), [alvos]);
   const escolhidos = enviaveis.filter(a => marcados.has(a.tenant_id));
   const n = escolhidos.length;
   // Acompanhando um envio que ainda não foi lido também conta como rodando.
@@ -135,7 +168,8 @@ export default function ComunicadoWhatsapp() {
 
   const motivoTravado = (() => {
     if (rodando) return 'Espere o envio em andamento terminar.';
-    if (carregando || erro || semLeitura) return 'Espere a lista de clientes carregar.';
+    if (carregando) return 'Espere a lista de clientes carregar.';
+    if (erro || semLeitura) return 'Escolha outro número ou tente de novo.';
     if (n === 0) return 'Nenhum cliente marcado com destino.';
     if (!numero) return 'Escolha o número que envia.';
     if (!mensagem.trim()) return 'Escreva a mensagem.';
@@ -144,12 +178,13 @@ export default function ComunicadoWhatsapp() {
 
   const trocarModo = (chave: string) => {
     const m = chave as ComunicadoModo;
-    if (m === modo) return;
+    if (m === modo || enviando) return;
     setModo(m);
     void carregar(m, numero || undefined);
   };
 
   const trocarNumero = (novo: string) => {
+    if (enviando) return;
     setNumero(novo);
     // O grupo de cada cliente depende do número que envia; o telefone do dono, não.
     if (modo === 'groups') void carregar('groups', novo);
@@ -168,6 +203,7 @@ export default function ComunicadoWhatsapp() {
     envioEmCurso.current = true;
     // Foto do que foi confirmado: o N e os clientes saem do mesmo lugar.
     const ids = escolhidos.map(a => a.tenant_id);
+    const antes = { marcados: new Set(ids), ids: new Set((alvosAgora.current ?? []).map(a => a.tenant_id)) };
     const quem = { mode: modo, instance: numero, message: mensagem, tenant_ids: ids, expected: ids.length };
     setEnviando(true);
     try {
@@ -177,8 +213,9 @@ export default function ComunicadoWhatsapp() {
         try {
           const id = await comunicadoService.enviar(quem);
           setAndamento(null);
-          setErroAndamento(false);
+          setErroAndamento(null);
           setAcompanhando(id);
+          setMensagem('');
           return;
         } catch (e) {
           const r = erroDaApi(e);
@@ -189,12 +226,12 @@ export default function ComunicadoWhatsapp() {
           toast.error(r.error || 'Não deu pra enviar. Tente de novo.');
           if (r.status === 409 && r.id) {
             setAndamento(null);
-            setErroAndamento(false);
+            setErroAndamento(null);
             setAcompanhando(r.id);
+            setTentativa(t => t + 1); // mesmo id já acompanhado: força nova leitura
           }
           if (r.status === 422 && r.error?.startsWith('A lista mudou')) {
-            toast.error('Os destinos mudaram. Confira a lista e envie de novo.');
-            void carregar(modo, numero);
+            void carregar(modoAgora.current, numeroAgora.current || undefined, antes);
           }
           return;
         }
@@ -248,10 +285,15 @@ export default function ComunicadoWhatsapp() {
             </Button>
           </div>
         </div>
+        {avisoNovos > 0 && (
+          <p role="status" className="mb-2 text-sm text-muted-foreground">
+            {`${plural(avisoNovos, 'cliente novo na lista ficou desmarcado', 'clientes novos na lista ficaram desmarcados')}.`}
+          </p>
+        )}
         <ul className="max-h-96 divide-y overflow-y-auto rounded-lg border">
           {alvos.map(a => {
             const id = `comunicado-alvo-${a.tenant_id}`;
-            const destino = a.destination
+            const destino = podeReceber(a)
               ? modo === 'owners'
                 ? telefone(a.destination)
                 : a.destination
@@ -261,8 +303,8 @@ export default function ComunicadoWhatsapp() {
                 <Checkbox
                   id={id}
                   aria-label={a.name}
-                  checked={!!a.destination && marcados.has(a.tenant_id)}
-                  disabled={!a.destination}
+                  checked={podeReceber(a) && marcados.has(a.tenant_id)}
+                  disabled={!podeReceber(a)}
                   onCheckedChange={v => marcar(a.tenant_id, v === true)}
                 />
                 <label htmlFor={id} className="min-w-0 flex-1 truncate">
@@ -296,7 +338,11 @@ export default function ComunicadoWhatsapp() {
                 <EmptyState
                   tipo="erro"
                   title="Não consegui ler o andamento"
-                  description="O envio continua no servidor. Tente ler de novo."
+                  description={
+                    erroAndamento === 'naoachei'
+                      ? 'Não achei esse envio (pode ter passado de 24 h).'
+                      : 'O envio continua no servidor. Tente ler de novo.'
+                  }
                   aoTentarDeNovo={() => setTentativa(t => t + 1)}
                   className="py-6"
                 />
@@ -328,7 +374,9 @@ export default function ComunicadoWhatsapp() {
 
         <section aria-labelledby="comunicado-para-quem" className={SECAO}>
           <h3 id="comunicado-para-quem" className={TITULO_SECAO}>Para quem</h3>
-          <Abas rotulo="Para quem" abas={ABAS} ativa={modo} aoTrocar={trocarModo} className="mt-3" />
+          <div aria-disabled={enviando || undefined} className={enviando ? 'pointer-events-none opacity-60' : undefined}>
+            <Abas rotulo="Para quem" abas={ABAS} ativa={modo} aoTrocar={trocarModo} className="mt-3" />
+          </div>
           <div className={CORPO_SECAO}>{listaDeClientes()}</div>
         </section>
 
@@ -344,6 +392,7 @@ export default function ComunicadoWhatsapp() {
               id="comunicado-numero"
               aria-label="Número que envia"
               value={numero}
+              disabled={enviando}
               onChange={e => trocarNumero(e.target.value)}
               className="w-full max-w-sm"
             >

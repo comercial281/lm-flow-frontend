@@ -236,4 +236,139 @@ describe('Comunicação → WhatsApp (Comunicado)', () => {
     await waitFor(() => expect(svc.enviar).toHaveBeenCalled());
     expect(svc.enviar).toHaveBeenCalledTimes(1);
   });
+
+  const clicarEnviarEMandar = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByRole('button', { name: 'Enviar' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Mandar' }));
+  };
+
+  it('cliente com motivo fica de fora mesmo com destino preenchido ("Mesmo destino de X")', async () => {
+    svc.alvos.mockImplementation(async () => ({
+      ...donos,
+      targets: [
+        ...donos.targets,
+        { tenant_id: 't4', name: 'Duplicado', destination: '11988887777', reason: 'Mesmo destino de Apto Premium' },
+      ],
+    }));
+    const user = userEvent.setup();
+    montar();
+    expect(await screen.findByText('Mesmo destino de Apto Premium · fica de fora')).toBeInTheDocument();
+    const caixa = screen.getByRole('checkbox', { name: 'Duplicado' });
+    expect(caixa).toBeDisabled();
+    expect(caixa).not.toBeChecked();
+    escrever('Oi');
+    await clicarEnviarEMandar(user);
+    await waitFor(() => expect(svc.enviar).toHaveBeenCalled());
+    const envio = svc.enviar.mock.calls[0][0];
+    expect(envio.tenant_ids).toEqual(['t1', 't2']);
+    expect(envio.expected).toBe(2);
+  });
+
+  it('durante o envio, aba e número ficam travados; o recarregamento do 422 usa o modo e o número atuais', async () => {
+    let falhar: (e: unknown) => void = () => {};
+    svc.enviar.mockImplementationOnce(() => new Promise((_, rej) => { falhar = rej; }));
+    const user = userEvent.setup();
+    montar();
+    await screen.findByText('(11) 98888-7777');
+    escrever('Oi');
+    await clicarEnviarEMandar(user);
+    await waitFor(() => expect(svc.enviar).toHaveBeenCalled());
+    expect(screen.getByLabelText('Número que envia')).toBeDisabled();
+    fireEvent.click(screen.getByRole('tab', { name: 'Grupos' }));
+    expect(svc.alvos).toHaveBeenCalledTimes(1);
+    falhar({ response: { status: 422, data: { error: 'A lista mudou desde a confirmação.' } } });
+    await waitFor(() => expect(svc.alvos).toHaveBeenCalledTimes(2));
+    expect(svc.alvos).toHaveBeenLastCalledWith('owners', NUMERO);
+  });
+
+  it('depois de "A lista mudou": mantém a seleção, cliente novo entra desmarcado e a tela avisa', async () => {
+    svc.enviar.mockRejectedValueOnce({ response: { status: 422, data: { error: 'A lista mudou desde a confirmação.' } } });
+    const user = userEvent.setup();
+    montar();
+    await screen.findByText('(11) 98888-7777');
+    await user.click(screen.getByRole('checkbox', { name: 'Moeda Forte' }));
+    escrever('Oi');
+    svc.alvos.mockImplementation(async () => ({
+      ...donos,
+      targets: [...donos.targets, { tenant_id: 't4', name: 'Novato', destination: '11977776666', reason: null }],
+    }));
+    await clicarEnviarEMandar(user);
+    expect(await screen.findByText('1 cliente novo na lista ficou desmarcado.')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Apto Premium' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Moeda Forte' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Novato' })).not.toBeChecked();
+    expect(toast.error).toHaveBeenCalledTimes(1);
+  });
+
+  it('409 com o mesmo id que já está na tela força nova leitura do andamento', async () => {
+    svc.alvos.mockImplementation(async () => ({ ...donos, running_id: 'c1' }));
+    svc.andamento.mockResolvedValue(andamento('done', { finished_at: '2026-10-06T10:01:00Z' }));
+    svc.enviar.mockRejectedValueOnce({ response: { status: 409, data: { error: 'Já tem um comunicado.', id: 'c1' } } });
+    const user = userEvent.setup();
+    montar();
+    const envio = await screen.findByRole('region', { name: 'Envio' });
+    await within(envio).findByRole('status');
+    const antes = svc.andamento.mock.calls.length;
+    escrever('Oi');
+    await clicarEnviarEMandar(user);
+    await waitFor(() => expect(svc.andamento.mock.calls.length).toBeGreaterThan(antes));
+  });
+
+  it('leitura do andamento que falha tenta de novo sozinha antes de pedir "Tentar de novo"', async () => {
+    svc.alvos.mockImplementation(async () => ({ ...donos, running_id: 'c1' }));
+    svc.andamento.mockRejectedValueOnce(new Error('rede')).mockResolvedValue(andamento('done'));
+    montar();
+    const envio = await screen.findByRole('region', { name: 'Envio' });
+    expect(await within(envio).findByText(/Terminou/, {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(svc.andamento).toHaveBeenCalledTimes(2);
+  });
+
+  it('andamento que sempre falha acaba em erro com "Tentar de novo"', async () => {
+    svc.alvos.mockImplementation(async () => ({ ...donos, running_id: 'c1' }));
+    svc.andamento.mockRejectedValue(new Error('rede'));
+    montar();
+    expect(await screen.findByText('Não consegui ler o andamento', {}, { timeout: 7000 })).toBeInTheDocument();
+    expect(svc.andamento).toHaveBeenCalledTimes(3);
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
+  }, 10000);
+
+  it('andamento 404: diz que não achou o envio', async () => {
+    svc.alvos.mockImplementation(async () => ({ ...donos, running_id: 'c1' }));
+    svc.andamento.mockRejectedValue({ response: { status: 404, data: { error: 'não achei' } } });
+    montar();
+    expect(await screen.findByText('Não achei esse envio (pode ter passado de 24 h).')).toBeInTheDocument();
+    expect(screen.queryByText(/continua no servidor/)).not.toBeInTheDocument();
+  });
+
+  it('lista com erro ou ilegível: Enviar trava com o motivo certo', async () => {
+    svc.alvos.mockImplementation(async (modo: string) => (modo === 'groups' ? { ...grupos, unreadable: true, targets: [] } : donos));
+    const user = userEvent.setup();
+    montar();
+    await screen.findByText('(11) 98888-7777');
+    await user.click(screen.getByRole('tab', { name: 'Grupos' }));
+    await screen.findByText('Não consegui ler os grupos');
+    expect(screen.getByText('Escolha outro número ou tente de novo.')).toBeInTheDocument();
+  });
+
+  it('depois de aceito (202), a mensagem é limpa', async () => {
+    const user = userEvent.setup();
+    montar();
+    await screen.findByText('(11) 98888-7777');
+    escrever('Oi');
+    await clicarEnviarEMandar(user);
+    await waitFor(() => expect(screen.getByLabelText('Mensagem')).toHaveValue(''));
+  });
+
+  it('clique duplo em Enviar abre uma confirmação só e envia uma vez', async () => {
+    montar();
+    await screen.findByText('(11) 98888-7777');
+    escrever('Oi');
+    const botao = screen.getByRole('button', { name: 'Enviar' });
+    fireEvent.click(botao);
+    fireEvent.click(botao);
+    expect(await screen.findAllByRole('dialog')).toHaveLength(1);
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Mandar' }));
+    await waitFor(() => expect(svc.enviar).toHaveBeenCalled());
+    expect(svc.enviar).toHaveBeenCalledTimes(1);
+  });
 });
