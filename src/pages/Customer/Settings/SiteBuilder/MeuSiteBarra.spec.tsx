@@ -51,4 +51,16 @@ describe('MeuSiteBarra', () => {
     await userEvent.click(screen.getByRole('button', { name: /Marketing/ }));
     expect(await screen.findByRole('menuitem', { name: /Páginas de anúncio/ })).toBeTruthy();
   });
+
+  it('as telas da página inicial ficam no submenu Página inicial', async () => {
+    const aoIr = vi.fn();
+    render(<MeuSiteBarra {...base} aoIr={aoIr} />);
+    await userEvent.click(screen.getByRole('button', { name: /Personalizar/ }));
+    expect(await screen.findByRole('menuitem', { name: /Aparência/ })).toBeTruthy();
+    // Na lista de cima, só a entrada "Página inicial", sem as telas soltas.
+    expect(screen.queryByRole('menuitem', { name: /Vitrines/ })).toBeNull();
+    await userEvent.click(screen.getByRole('menuitem', { name: /Página inicial/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Vitrines/ }));
+    expect(aoIr).toHaveBeenCalledWith('vitrines');
+  });
 });
