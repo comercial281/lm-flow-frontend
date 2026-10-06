@@ -57,3 +57,17 @@ describe('gatilho no computador', () => {
     expect(origem.className.split(/\s+/)).toContain('w-64');
   });
 });
+
+// Gravação na hora (06/10): palavra digitada só grava ao sair do campo, não por tecla.
+describe('gatilho de texto grava ao sair', () => {
+  it('digitar não grava; sair do campo grava uma vez', async () => {
+    const onSave = vi.fn();
+    const agent = { id: 'a1', triggers: [{ type: 'keyword', value: '', match_type: 'contains' }], trigger_match_mode: 'any' } as unknown as SalesAgent;
+    render(<TriggersSection agent={agent} onSave={onSave} />);
+    await userEvent.type(screen.getByPlaceholderText('palavra (ex: fluxoimob)'), 'mcmv');
+    expect(onSave).not.toHaveBeenCalled();
+    await userEvent.tab();
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith({ triggers: [{ type: 'keyword', value: 'mcmv', match_type: 'contains' }] });
+  });
+});

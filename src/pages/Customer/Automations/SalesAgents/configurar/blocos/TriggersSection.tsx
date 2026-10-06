@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
-import { Button, Input, Label } from '@/components/ui/ds';
-import { Plus, Trash2, SlidersHorizontal } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Button, Input } from '@/components/ui/ds';
+import { Plus, Trash2 } from 'lucide-react';
 import { type SalesAgent, type SalesAgentTrigger, type SalesAgentTriggerType, type SalesAgentTriggerMatchMode } from '@/services/salesAgents/salesAgentsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { leadAdsFormsService, type LeadAdsFormConfig } from '@/services/leadAds/leadAdsFormsService';
 import { formOptions, formTriggerNotice, toggleForm } from '@/features/salesAgents/formTrigger';
 import { Seletor } from '@/components/base/Seletor';
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import { type PipelineOpt, type StageOpt } from '../../configuracao/comum';
 
 // ---------------- Gatilhos de ativação (multi) ----------------
@@ -23,9 +24,11 @@ const TRIGGER_TYPES: { value: SalesAgentTriggerType; label: string }[] = [
   { value: 'tag', label: 'Tem a etiqueta' },
 ];
 
-const TRIGGER_MATCH_MODE_OPTIONS: [SalesAgentTriggerMatchMode, string, string][] = [
-  ['any', 'Qualquer gatilho ativa (OU)', 'Basta UM dos gatilhos abaixo bater pra IA entrar na conversa.'],
-  ['all', 'Todos os gatilhos juntos (E)', 'Só ativa quando TODOS os gatilhos abaixo baterem ao mesmo tempo — pra combinar mais de uma condição.'],
+// "Todas as condições" (E) ou "Qualquer uma" (OU). A palavra antiga, se houver,
+// tem a frase dela no Canal (fraseDaPalavraAntiga): aqui não se fala dela.
+const MODOS_DE_COMBINAR: { valor: SalesAgentTriggerMatchMode; rotulo: string }[] = [
+  { valor: 'all', rotulo: 'Todas as condições' },
+  { valor: 'any', rotulo: 'Qualquer uma' },
 ];
 
 function newTrigger(type: SalesAgentTriggerType): SalesAgentTrigger {
@@ -42,7 +45,14 @@ function newTrigger(type: SalesAgentTriggerType): SalesAgentTrigger {
 }
 
 export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
-  const triggers = agent.triggers ?? [];
+  // ⚠️ Gravação na hora (06/10/2026): `onSave` grava no servidor. Escolha de lista,
+  // caixinha de formulário, adicionar e remover gravam no clique; o que se DIGITA
+  // (palavra, etiqueta, código) fica neste rascunho e grava ao sair do campo —
+  // gravar por tecla mandaria um PATCH por letra.
+  const [lista, setLista] = useState<SalesAgentTrigger[]>(agent.triggers ?? []);
+  const digitando = useRef(false);
+  useEffect(() => { if (!digitando.current) setLista(agent.triggers ?? []); }, [agent.triggers]);
+  const triggers = lista;
   const [pipelines, setPipelines] = useState<PipelineOpt[]>([]);
   const [stagesByPipeline, setStagesByPipeline] = useState<Record<string, StageOpt[]>>({});
 
@@ -79,8 +89,13 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggers]);
 
-  const commit = (next: SalesAgentTrigger[]) => onSave({ triggers: next });
+  const commit = (next: SalesAgentTrigger[]) => { digitando.current = false; setLista(next); onSave({ triggers: next }); };
   const update = (i: number, patch: Partial<SalesAgentTrigger>) => commit(triggers.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
+  const digitar = (i: number, patch: Partial<SalesAgentTrigger>) => {
+    digitando.current = true;
+    setLista(triggers.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
+  };
+  const sairDoCampo = () => { if (digitando.current) commit(lista); };
   const remove = (i: number) => commit(triggers.filter((_, idx) => idx !== i));
   const add = () => commit([...triggers, newTrigger('keyword')]);
 
@@ -88,28 +103,13 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
 
   return (
     <div className="pt-2 border-t border-sidebar-border">
-      <div className="flex items-center gap-2">
-        <SlidersHorizontal className="h-4 w-4 text-primary" />
-        <Label>Gatilhos de ativação (avançado)</Label>
-      </div>
-      <p className="text-xs text-muted-foreground mt-1 mb-2">
-        Sem nenhum gatilho = atende todo lead do canal (além da palavra-chave acima, que sempre restringe sozinha).
-      </p>
+      <p className="mb-2 text-sm text-muted-foreground">Sem nenhuma condição, ela atende todo lead do número.</p>
 
       {triggers.length > 1 && (
-        <div className="grid grid-cols-1 gap-2 mb-2">
-          {TRIGGER_MATCH_MODE_OPTIONS.map(([m, title, help]) => (
-            <label key={m} className={`flex items-start gap-3 p-2 rounded-md border cursor-pointer text-sm ${
-              matchMode === m ? 'border-primary bg-primary/5' : 'border-sidebar-border'
-            }`}>
-              <input type="radio" name="trigger_match_mode" className="mt-1"
-                checked={matchMode === m} onChange={() => onSave({ trigger_match_mode: m })} />
-              <div>
-                <div className="font-medium">{title}</div>
-                <div className="text-xs text-muted-foreground">{help}</div>
-              </div>
-            </label>
-          ))}
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <span className="text-sm text-muted-foreground">Atender quando</span>
+          <BotoesDeEscolha rotulo="Combinar condições" valor={matchMode} opcoes={MODOS_DE_COMBINAR}
+            aoEscolher={(m) => onSave({ trigger_match_mode: m })} />
         </div>
       )}
 
@@ -132,13 +132,13 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
                   <option value="equals">É exatamente</option>
                 </Seletor>
                 <Input className="flex-1 min-w-40" placeholder="palavra (ex: fluxoimob)" value={t.value ?? ''}
-                  onChange={(e) => update(i, { value: e.target.value })} onBlur={() => commit(triggers)} />
+                  onChange={(e) => digitar(i, { value: e.target.value })} onBlur={sairDoCampo} />
               </>
             )}
 
             {t.type === 'tag' && (
               <Input className="flex-1 min-w-40" placeholder="etiqueta (ex: vip)" value={t.value ?? ''}
-                onChange={(e) => update(i, { value: e.target.value })} onBlur={() => commit(triggers)} />
+                onChange={(e) => digitar(i, { value: e.target.value })} onBlur={sairDoCampo} />
             )}
 
             {t.type === 'origin' && (
@@ -158,7 +158,7 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
                 </Seletor>
                 {t.mode === 'code' && (
                   <Input className="w-32" placeholder="código" value={t.code ?? ''}
-                    onChange={(e) => update(i, { code: e.target.value })} onBlur={() => commit(triggers)} />
+                    onChange={(e) => digitar(i, { code: e.target.value })} onBlur={sairDoCampo} />
                 )}
               </>
             )}
@@ -184,9 +184,9 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
                 </div>
                 {matchMode === 'any' && triggers.some((o) => o.type === 'origin' || o.type === 'pipeline' || o.type === 'property') && (
                   <div className="text-xs text-amber-600">
-                    Atenção: com "Qualquer gatilho ativa (OU)", o gatilho de origem/funil/imóvel desta lista
+                    Atenção: com "Qualquer uma", a condição de origem/funil/imóvel desta lista
                     continua deixando a IA entrar nos leads das outras campanhas. Para valer só estes
-                    formulários, remova aquele gatilho.
+                    formulários, remova aquela condição.
                   </div>
                 )}
                 {formTriggerNotice(t.form_ids, formConfigs.length) && (
@@ -226,7 +226,7 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
               </>
             )}
 
-            <button onClick={() => remove(i)} className="ml-auto text-muted-foreground hover:text-red-500" title="Remover gatilho">
+            <button onClick={() => remove(i)} className="ml-auto text-muted-foreground hover:text-red-500" aria-label="Remover condição" title="Remover condição">
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
@@ -234,7 +234,7 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
       </div>
 
       <Button size="sm" variant="outline" onClick={add} className="mt-2">
-        <Plus className="h-4 w-4 mr-1" /> Adicionar gatilho
+        <Plus className="h-4 w-4 mr-1" /> Adicionar condição
       </Button>
     </div>
   );

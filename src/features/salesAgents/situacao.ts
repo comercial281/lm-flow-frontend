@@ -239,3 +239,21 @@ export function motivoSemAtendimento(situacao: Situacao): string | null {
   if (situacao.tipo === 'rascunho') return 'ela ainda é um rascunho, sem número';
   return null;
 }
+
+/**
+ * O que a palavra antiga (`trigger_keyword`) faz DE VERDADE, pelo modo das
+ * condições — espelha `gatilhosEfetivos` (e o SalesAgents::TriggerGate): ela entra
+ * como mais uma condição quando a lista não tem condição de palavra.
+ *
+ * §6.11 da spec (06/10/2026): a tela dizia "sempre restringe sozinha", e no modo
+ * "qualquer uma" ela não restringe — o lead que bate em outra condição entra.
+ */
+export function fraseDaPalavraAntiga(agent: AgenteLido): string | null {
+  const palavra = (agent.trigger_keyword ?? '').trim();
+  if (!palavra) return null;
+  const lista = (agent.triggers ?? []).filter((t) => t && t.type);
+  if (lista.some((t) => t.type === 'keyword')) return `A palavra antiga "${palavra}" não vale: já existe uma condição de palavra na lista.`;
+  if (lista.length === 0) return `Ela só entra quando o lead escreve "${palavra}".`;
+  if (agent.trigger_match_mode === 'all') return `Além das condições abaixo, o lead também precisa escrever "${palavra}".`;
+  return `"${palavra}" vale como mais uma condição: basta o lead escrever a palavra ou bater em uma das condições abaixo.`;
+}

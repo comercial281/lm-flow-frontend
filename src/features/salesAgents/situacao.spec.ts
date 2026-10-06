@@ -164,3 +164,28 @@ describe('onda 3: Corrigir leva à página certa', () => {
     expect(p[0]).toMatchObject({ chave: 'persona_sem_dono', grave: true, corrigir: { tela: 'configurar', pagina: 'identidade' } });
   });
 });
+
+import { fraseDaPalavraAntiga } from './situacao';
+
+describe('fraseDaPalavraAntiga (§6.11: a tela dizia "sempre restringe")', () => {
+  const ia = (extra: Record<string, unknown>) => ({ enabled: true, inbox_id: 'i', triggers: [], trigger_match_mode: 'any', trigger_keyword: 'mcmv', ...extra }) as never;
+
+  it('sem condições, a palavra é a única porta', () => {
+    expect(fraseDaPalavraAntiga(ia({}))).toBe('Ela só entra quando o lead escreve "mcmv".');
+  });
+  it('"Todas as condições": a palavra soma às condições', () => {
+    expect(fraseDaPalavraAntiga(ia({ trigger_match_mode: 'all', triggers: [{ type: 'tag', value: 'vip' }] })))
+      .toBe('Além das condições abaixo, o lead também precisa escrever "mcmv".');
+  });
+  it('"Qualquer uma": a palavra NÃO restringe, vale como mais uma porta', () => {
+    expect(fraseDaPalavraAntiga(ia({ triggers: [{ type: 'tag', value: 'vip' }] })))
+      .toBe('"mcmv" vale como mais uma condição: basta o lead escrever a palavra ou bater em uma das condições abaixo.');
+  });
+  it('com uma condição de palavra na lista, a antiga é ignorada', () => {
+    expect(fraseDaPalavraAntiga(ia({ triggers: [{ type: 'keyword', value: 'casa' }] })))
+      .toBe('A palavra antiga "mcmv" não vale: já existe uma condição de palavra na lista.');
+  });
+  it('sem palavra, nada', () => {
+    expect(fraseDaPalavraAntiga(ia({ trigger_keyword: null }))).toBeNull();
+  });
+});
