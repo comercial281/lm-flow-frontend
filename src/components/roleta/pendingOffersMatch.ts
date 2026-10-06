@@ -34,7 +34,7 @@ export function offerFor(
 
 // Quanto falta, em minutos, medido no relógio do aparelho contra o prazo do
 // servidor. O servidor manda `minutes_remaining`, mas ele envelhece entre um
-// carregamento e outro (a lista atualiza a cada 60 s).
+// carregamento e outro (a lista atualiza a cada 15 s com a aba visível).
 //
 // `null` = oferta SEM prazo (roleta sem prazo de aceite): não há o que contar,
 // e não é zero — zero é "prazo esgotado", que é outra coisa. Ver offerDeadline.ts.
