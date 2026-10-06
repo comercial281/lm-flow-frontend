@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { RefreshCw, Loader2, Check } from 'lucide-react';
 import { dolar } from '@/lib/formato';
+import EnviosSistemaCliente from '../diagnostico/EnviosSistemaCliente';
 import { salesAgentsService, type SalesAgent, type HealthReport, type SalesAgentRun, type SalesAgentRunTotals, type PromptPreview } from '@/services/salesAgents/salesAgentsService';
 
 // ---------------- Diagnóstico ----------------
@@ -101,6 +102,8 @@ export default function TelaDiagnostico({ agent }: { agent: SalesAgent }) {
           );
         })}
       </div>
+
+      {agent.handoff_target === 'webhook' && <EnviosSistemaCliente agentId={agent.id} />}
 
       {/* Prova de que o cérebro geral chegou neste cliente. Não gasta crédito:
           monta o prompt e não chama o modelo. Existia na API desde sempre e não

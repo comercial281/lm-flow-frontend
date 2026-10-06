@@ -7,6 +7,7 @@ import { chatService } from '@/services/chat/chatService';
 import type { SalesAgentLeadReport } from '@/types/analytics/pipelines';
 import { TEXTOS_DO_PAINEL } from '@/features/conversas/painelDoLead';
 import Secao from './painel/Secao';
+import { linhaNoPainelDoLead } from '@/features/salesAgents/sistemaDoCliente';
 
 /**
  * "O que a IA entendeu" — as leituras da IA Vendedora sobre ESTE lead.
@@ -148,6 +149,10 @@ export default function AiUnderstandingPanel({ conversation, embutido = false }:
   // pedido some: a resposta ao lead já foi enviada quando a decisão acontece, então ele
   // pode estar esperando uma pessoa que a IA prometeu e o corretor não faz ideia.
   const repasseSegurado = transferiu ? '' : texto(attrs.sales_agent_handoff_blocked_reason);
+  // Sistema do cliente (05/10/2026): o lead foi (ou está indo) pro CRM da
+  // imobiliária. Falhou = a gestão foi avisada e o lead NÃO foi pra roleta — a
+  // frase diz isso pra ninguém procurar o lead na roleta.
+  const envioSistema = linhaNoPainelDoLead(attrs);
 
   const coletadoBruto = (attrs.sales_agent_collected ?? {}) as Record<string, unknown>;
   const coletado = COLETADO.map(c => ({ ...c, valor: texto(coletadoBruto[c.chave]) })).filter(c => c.valor);
@@ -170,6 +175,7 @@ export default function AiUnderstandingPanel({ conversation, embutido = false }:
     coletado.length > 0 ||
     transferiu ||
     Boolean(repasseSegurado) ||
+    Boolean(envioSistema) ||
     temLog;
 
   if (!temLeitura) return null;
@@ -233,6 +239,20 @@ export default function AiUnderstandingPanel({ conversation, embutido = false }:
             Passou para um corretor
             {motivoTransferencia ? `: ${motivoTransferencia}` : '.'}
           </span>
+        </div>
+      )}
+      {envioSistema && (
+        <div
+          className={`flex items-start gap-1.5 text-xs mt-1 ${
+            envioSistema.tom === 'erro'
+              ? 'text-red-700 dark:text-red-400'
+              : envioSistema.tom === 'ok'
+                ? 'text-emerald-700 dark:text-emerald-400'
+                : 'text-amber-700 dark:text-amber-400'
+          }`}
+        >
+          <ArrowRightLeft className="h-3 w-3 mt-0.5 flex-shrink-0" />
+          <span>{envioSistema.texto}</span>
         </div>
       )}
 
