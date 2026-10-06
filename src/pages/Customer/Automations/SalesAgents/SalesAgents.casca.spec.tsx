@@ -405,6 +405,31 @@ describe('respostas fora de ordem (último salvo da IA)', () => {
     expect(nome()).toContain('IA Renomeada');
   });
 
+  // Revisão final da onda 3 (I2): o texto pendente da IA anterior grava no desmonte,
+  // DEPOIS da troca. A resposta atualiza a lista, mas não traz a IA anterior de volta.
+  it('gravação atrasada da IA anterior não volta a tela pra ela depois de trocar de IA', async () => {
+    list.mockResolvedValue([ia('ia-1', 'IA de Vendas'), ia('ia-2', 'IA Demo')]);
+    abrir('/ia-vendedora?ia=ia-1&tela=ensinar');
+    await screen.findByText('tela ensinar · IA de Vendas');
+    await userEvent.click(screen.getByRole('button', { name: /IA de Vendas/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: /IA Demo/ }));
+    await screen.findByText('tela ensinar · IA Demo');
+    await userEvent.click(screen.getByRole('button', { name: 'Testar' }));
+    fireEvent.change(await screen.findByLabelText('mensagem de teste'), { target: { value: 'oi' } });
+    ensinar.salvo = ia('ia-1', 'IA de Vendas Renomeada', { updated_at: '2026-10-06T10:01:00Z' });
+    fireEvent.click(screen.getByRole('button', { name: 'simular salvo' }));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.getByText('tela ensinar · IA Demo')).toBeInTheDocument();
+    // Nem uma piscada na IA anterior: o Testar aberto nesta IA continua aberto, com o texto.
+    expect(screen.getByLabelText('mensagem de teste')).toHaveValue('oi');
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+    expect(endereco()).toContain('ia=ia-2');
+    expect(nome()).toContain('IA Demo');
+    // A lista do seletor recebeu a IA anterior salva.
+    await userEvent.click(screen.getByRole('button', { name: /IA Demo/ }));
+    expect(await screen.findByRole('menuitem', { name: /IA de Vendas Renomeada/ })).toBeInTheDocument();
+  });
+
   it('reler a lista não troca a IA aberta por uma cópia mais velha que a última salva', async () => {
     list.mockResolvedValueOnce([ia('ia-1', 'IA de Vendas')])
       .mockResolvedValueOnce([ia('ia-1', 'IA de Vendas')]);

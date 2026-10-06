@@ -176,10 +176,13 @@ export default function SalesAgents() {
   // do useGravarNaHora reconhece a cópia otimista pela identidade do objeto. Uma
   // cópia aqui faria a otimista passar por "salva pelo servidor" e um Desfazer
   // depois montaria o PATCH sobre o que o servidor ainda não confirmou.
+  // ⚠️ Gravação que termina DEPOIS de trocar de IA (texto pendente gravado no
+  // desmonte, chave ainda no ar, Desfazer): atualiza a lista, mas NÃO traz a IA
+  // anterior de volta pra tela (revisão final da onda 3, I2).
   const aoSalvo = useCallback((a: SalesAgent) => {
     registrarSalvo(a);
     const vale = maisNova(a);
-    setSelected(vale);
+    setSelected((prev) => (prev && prev.id !== vale.id ? prev : vale));
     setAgents((prev) => prev.map((x) => (x.id === vale.id ? vale : x)));
   }, []);
 
