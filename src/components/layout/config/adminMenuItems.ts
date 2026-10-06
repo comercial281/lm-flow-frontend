@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, Radio, Building2, Smartphone, Wallet, Users, ScrollText, MessageCircle,
   Megaphone, Bell, BellRing, Landmark, GraduationCap, Archive, Globe, LifeBuoy,
-  Bot, Sparkles, Brain, CalendarCheck, UsersRound, Gift, TrendingUp, Scale,
+  Bot, Sparkles, Brain, CalendarCheck, UsersRound, Gift, TrendingUp, Package, Scale,
 } from 'lucide-react';
 import { enderecoCasa } from './menuItems';
 
@@ -63,7 +63,15 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     icon: Building2,
     description: 'Cada cliente, os números de WhatsApp dele e quanto ele custa',
     abas: [
-      { name: 'Clientes', href: '/admin/clientes', icon: Building2, exata: true },
+      {
+        name: 'Clientes',
+        href: '/admin/clientes',
+        icon: Building2,
+        exata: true,
+        // Página do cliente: /admin/clientes/:id (Números e Custos têm endereço próprio).
+        tambem: [/^\/admin\/clientes\/(?!numeros\/?$|custos\/?$|pacotes\/?$)[^/]+\/?$/],
+      },
+      { name: 'Pacotes', href: '/admin/clientes/pacotes', icon: Package, tambem: [/^\/admin\/clientes\/pacotes\/[^/]+\/?$/] },
       { name: 'Números conectados', href: '/admin/clientes/numeros', icon: Smartphone },
       { name: 'Custos', href: '/admin/clientes/custos', icon: Wallet },
     ],

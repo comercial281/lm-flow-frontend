@@ -6697,3 +6697,16 @@ Armadilhas:
    aparece como *A chave gravada não abre mais. Gere outra…*.
 4. O texto pra quem recebe (como conferir a assinatura) está no plano da entrega 5,
    seção "Para quem recebe".
+
+## Página do cliente (05/10/2026)
+
+Entrega 3 da Área do Admin (spec `LM FLOW/specs/2026-10-05-admin-clientes-entrega-3-design.md`).
+
+- **Lista** (`/admin/clientes`): cartões na largura toda; o cartão abre `/admin/clientes/:id`; **Entrar** é atalho e não abre a página. Ordem: quem tem problema na Atenção primeiro, depois nome. Filtros Todos / Com problema / Arquivados no endereço (`?filtro=`). "Suspenso" virou **"Congelado"**.
+- **Página do cliente**: topo com Entrar e o menu ⋯ (Congelar, Arquivar, Excluir — sempre com confirmação dizendo o efeito); abas Resumo | Contrato | Funções | Pessoas | Operação (`?aba=`).
+- **Congelar não bloqueia login**: o servidor só pausa automações, webhooks de WhatsApp e tarefas agendadas. O texto da confirmação diz isso — não prometer o contrário.
+- **Funções**: quadros por tema, todos abertos (`QuadrosDeFuncoes.tsx`, o mesmo do editor de pacote). Cada interruptor grava na hora com "Desfazer"; desligar o menu inteiro confirma. As regras de 03/09 (tema do servidor, nada some, tema inteiro = uma chamada) continuam.
+- **Pessoas**: sem senha em lugar nenhum. Adicionar pessoa copia (e manda no WhatsApp, se marcado) o link que cria a senha. A rota `set_password` do servidor saiu.
+- **Operação**: os grupos de WhatsApp têm uma fonte de verdade na aba; funil e grupos reenviam as duas chaves (o servidor faz `compact!`).
+- **Pacotes** (Clientes → Pacotes; servidor `public.client_packages`): pacote = funções + limites. Escolher pacote COPIA tudo pro cliente (o app do cliente não muda). Ajuste manual continua livre e aparece "≠ pacote". Editar pacote e aplicar mantém os ajustes manuais; Trocar/Voltar ao pacote desfaz e avisa quantos. Chave nova no catálogo segue o padrão (ligada, menos DEFAULT_OFF) e não acende "≠ pacote". Clientes antigos começam "Personalizado". Novo cliente tem o campo Pacote no passo Dados.
+- **Caixinhas do navegador**: zero no SuperAdmin; o build usa `--teto-super 0`. Confirmação com texto digitado usa `ConfirmarDigitando`.

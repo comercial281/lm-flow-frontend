@@ -131,36 +131,32 @@ export default function ClientFollowupRolloutModal({
 
   const resultFor = (slug: string) => results?.find(x => x.tenant_slug === slug);
   const chosenSequence = sequences.find(s => s.id === sequenceId);
-  const inputStyle = { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(124,58,237,0.2)' };
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
-      <div className="w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col"
-        style={{ background: '#0f0520', border: '1px solid rgba(124,58,237,0.3)', maxHeight: '90vh' }}
+      <div className="w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col bg-card border border-border"
+        style={{ maxHeight: '90vh' }}
         onClick={e => e.stopPropagation()}>
 
-        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'rgba(124,58,237,0.2)' }}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
-            <Workflow className="w-5 h-5 text-violet-400" />
+            <Workflow className="w-5 h-5 text-primary" />
             <div>
-              <h2 className="text-white font-bold text-base">Aplicar funil de follow-up nos clientes</h2>
-              <p className="text-xs text-white/40">Monta uma vez, usa em todo mundo. O funil chega desligado em cada CRM.</p>
+              <h2 className="text-foreground font-bold text-base">Aplicar funil de follow-up nos clientes</h2>
+              <p className="text-xs text-muted-foreground">Monta uma vez, usa em todo mundo. O funil chega desligado em cada CRM.</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-white/40 hover:text-white/80"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           {/* Origem */}
           <div className="space-y-2">
-            <label className="text-xs font-medium text-white/70">De onde vem o funil</label>
+            <label className="text-xs font-medium text-muted-foreground">De onde vem o funil</label>
             <div className="flex gap-2">
               {([['client', 'De um cliente'], ['file', 'De um arquivo']] as const).map(([key, label]) => (
                 <button key={key} onClick={() => setOrigin(key)}
-                  className={`text-xs px-3 py-1.5 rounded-lg ${origin === key ? 'text-white' : 'text-white/50'}`}
-                  style={origin === key
-                    ? { background: 'rgba(124,58,237,0.30)', border: '1px solid rgba(124,58,237,0.6)' }
-                    : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  className={`text-xs px-3 py-1.5 rounded-lg border ${origin === key ? 'bg-primary/20 border-primary text-foreground' : 'bg-muted/50 border-border text-muted-foreground'}`}>
                   {label}
                 </button>
               ))}
@@ -168,9 +164,8 @@ export default function ClientFollowupRolloutModal({
 
             {origin === 'client' ? (
               <div className="grid gap-2 sm:grid-cols-2">
-                <Seletor escuro value={sourceTenantId} onChange={e => setSourceTenantId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none focus:ring-1 focus:ring-violet-500"
-                  style={inputStyle}>
+                <Seletor value={sourceTenantId} onChange={e => setSourceTenantId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg text-sm text-foreground outline-none focus:ring-1 focus:ring-ring bg-background border border-input">
                   <option value="">Cliente de origem...</option>
                   {sourceTenants.map(t => (
                     <option key={t.id} value={t.id}>
@@ -178,9 +173,8 @@ export default function ClientFollowupRolloutModal({
                     </option>
                   ))}
                 </Seletor>
-                <Seletor escuro value={sequenceId} onChange={e => setSequenceId(e.target.value)} disabled={!sourceTenantId || loadingSequences}
-                  className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none focus:ring-1 focus:ring-violet-500 disabled:opacity-50"
-                  style={inputStyle}>
+                <Seletor value={sequenceId} onChange={e => setSequenceId(e.target.value)} disabled={!sourceTenantId || loadingSequences}
+                  className="w-full px-3 py-2 rounded-lg text-sm text-foreground outline-none focus:ring-1 focus:ring-ring disabled:opacity-50">
                   <option value="">
                     {loadingSequences ? 'Carregando...' : 'Funil...'}
                   </option>
@@ -193,14 +187,14 @@ export default function ClientFollowupRolloutModal({
               </div>
             ) : (
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm text-white/70 px-3 py-2 rounded-lg cursor-pointer" style={inputStyle}>
-                  <FileUp className="w-4 h-4 text-violet-400" />
+                <label className="flex items-center gap-2 text-sm text-muted-foreground px-3 py-2 rounded-lg cursor-pointer bg-background border border-input">
+                  <FileUp className="w-4 h-4 text-primary" />
                   {fileName || 'Escolher o arquivo do funil (.json)'}
                   <input type="file" accept="application/json,.json" className="hidden"
                     onChange={e => pickFile(e.target.files?.[0])} />
                 </label>
                 {fileSummary && (
-                  <p className="text-xs text-white/50">
+                  <p className="text-xs text-muted-foreground">
                     {fileSummary.name} — {fileSummary.stepsCount} mensagens
                     {fileSummary.mediaCount > 0 ? `, ${fileSummary.mediaCount} mídia(s)` : ''}
                     {fileSummary.exportedFrom ? ` · de ${fileSummary.exportedFrom}` : ''}
@@ -210,17 +204,17 @@ export default function ClientFollowupRolloutModal({
             )}
 
             {chosenSequence?.description && (
-              <p className="text-xs text-white/40">{chosenSequence.description}</p>
+              <p className="text-xs text-muted-foreground">{chosenSequence.description}</p>
             )}
           </div>
 
           {/* Destinos */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-medium text-white/70 flex items-center gap-1">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                 <Users className="w-3.5 h-3.5" /> Aplicar em ({selectedSlugs.length} de {targets.length})
               </label>
-              <button onClick={toggleAll} className="text-xs text-violet-400 hover:text-violet-300">
+              <button onClick={toggleAll} className="text-xs text-primary hover:text-primary">
                 {allSelected ? 'Desmarcar todos' : 'Marcar todos'}
               </button>
             </div>
@@ -228,15 +222,14 @@ export default function ClientFollowupRolloutModal({
               {targets.map(t => {
                 const res = resultFor(t.slug);
                 return (
-                  <div key={t.id} className="flex items-center gap-2 p-2 rounded-lg"
-                    style={{ background: selected[t.id] ? 'rgba(124,58,237,0.10)' : 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div key={t.id} className={`flex items-center gap-2 p-2 rounded-lg border ${selected[t.id] ? 'bg-primary/10 border-border' : 'bg-muted/30 border-border'}`}>
                     <div onClick={() => setSelected(s => ({ ...s, [t.id]: !s[t.id] }))}
-                      className={`w-4 h-4 rounded flex-shrink-0 flex items-center justify-center cursor-pointer ${selected[t.id] ? 'bg-violet-600' : 'bg-white/10'}`}>
-                      {selected[t.id] && <Check className="w-3 h-3 text-white" />}
+                      className={`w-4 h-4 rounded flex-shrink-0 flex items-center justify-center cursor-pointer ${selected[t.id] ? 'bg-primary' : 'bg-muted'}`}>
+                      {selected[t.id] && <Check className="w-3 h-3 text-primary-foreground" />}
                     </div>
-                    <span className="text-sm text-white/90 flex-1 truncate">{t.name}</span>
+                    <span className="text-sm text-foreground flex-1 truncate">{t.name}</span>
                     {res && (
-                      <span className={`text-[11px] px-1.5 py-0.5 rounded ${res.ok ? 'text-emerald-300' : 'text-red-300'}`}>
+                      <span className={`text-[11px] px-1.5 py-0.5 rounded ${res.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
                         {res.ok
                           ? `✓ criado${res.pendencias?.length ? ` (${res.pendencias.length} pendência(s))` : ''}`
                           : `✗ ${res.error || 'falhou'}`}
@@ -251,12 +244,12 @@ export default function ClientFollowupRolloutModal({
           {/* O que não deu pra traduzir em cada CRM: coluna que não existe lá,
               entrada não recriada. Fica listado, não em silêncio. */}
           {results?.some(r => r.pendencias?.length) && (
-            <div className="rounded-lg p-3 space-y-2" style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.35)' }}>
-              <p className="text-xs font-medium text-amber-300 flex items-center gap-1.5">
+            <div className="rounded-lg p-3 space-y-2 bg-amber-500/10 border border-amber-500/40">
+              <p className="text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5" /> Pendências por cliente
               </p>
               {results.filter(r => r.pendencias?.length).map(r => (
-                <div key={r.tenant_slug} className="text-[11px] text-amber-200/80">
+                <div key={r.tenant_slug} className="text-[11px] text-amber-700 dark:text-amber-200/80">
                   <span className="font-medium">{r.tenant_name}:</span> {r.pendencias!.join(' · ')}
                 </div>
               ))}
@@ -264,21 +257,21 @@ export default function ClientFollowupRolloutModal({
           )}
 
           {results && (
-            <p className="text-sm text-violet-300">
+            <p className="text-sm text-primary">
               {results.filter(r => r.ok).length} cliente(s) de {results.length} receberam o funil.
               Ele está DESLIGADO em todos — ligue em cada CRM depois de conferir.
             </p>
           )}
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
 
-        <div className="flex justify-between items-center px-6 py-4 border-t" style={{ borderColor: 'rgba(124,58,237,0.2)' }}>
-          <button onClick={onClose} className="text-sm px-4 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white">
+        <div className="flex justify-between items-center px-6 py-4 border-t border-border">
+          <button onClick={onClose} className="text-sm px-4 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground">
             Fechar
           </button>
           <button onClick={apply} disabled={applying || !sourceReady || selectedSlugs.length === 0}
-            className="flex items-center gap-1.5 text-sm px-5 py-2 rounded-lg font-semibold text-white disabled:opacity-40"
-            style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)' }}>
+            className="flex items-center gap-1.5 text-sm px-5 py-2 rounded-lg font-semibold bg-primary text-primary-foreground disabled:opacity-40"
+            >
             {applying
               ? <><Loader2 className="w-4 h-4 animate-spin" /> Aplicando...</>
               : <><Send className="w-4 h-4" /> Aplicar em {selectedSlugs.length} cliente(s)</>}
