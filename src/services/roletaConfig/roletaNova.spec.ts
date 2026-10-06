@@ -7,6 +7,7 @@ import {
   roletaConfigService,
   conflitoDaOrigem,
   mensagemDoServidor,
+  MENSAGEM_SEM_PERMISSAO,
 } from './roletaConfigService';
 import { roletaSettingsService, normalizarAvisos, camposGravaveis } from './roletaSettingsService';
 
@@ -48,6 +49,17 @@ describe('roletaConfigService · roleta nova', () => {
     expect(api.post).toHaveBeenLastCalledWith('/roleta_configs/r1/origins', { kind: 'meta_form_keyword', keyword: 'ALMA' });
   });
 
+  it('prévia do "nome contém": GET keyword_preview, com a página quando houver', async () => {
+    const conflito = { form_name: 'Alma Garden', roleta_name: 'Zona Norte' };
+    api.get.mockResolvedValueOnce(envelope({ matches: [{ form_id: 'f1', form_name: '21/08 - ALMA' }], conflict: conflito }));
+    expect(await roletaConfigService.getKeywordPreview('ALMA', 'p1')).toEqual({ matches: [{ form_id: 'f1', form_name: '21/08 - ALMA' }], conflict: conflito });
+    expect(api.get).toHaveBeenCalledWith('/roleta_configs/keyword_preview', { params: { keyword: 'ALMA', meta_page_id: 'p1' } });
+
+    api.get.mockResolvedValueOnce(envelope({}));
+    expect(await roletaConfigService.getKeywordPreview('x')).toEqual({ matches: [], conflict: null });
+    expect(api.get).toHaveBeenLastCalledWith('/roleta_configs/keyword_preview', { params: { keyword: 'x', meta_page_id: undefined } });
+  });
+
   it('tirar origem: DELETE com o corpo { kind, ref_id }', async () => {
     api.delete.mockResolvedValue({ status: 204 });
     await roletaConfigService.removeOrigin('r1', { kind: 'sales_agent', ref_id: 'a1' });
@@ -84,6 +96,15 @@ describe('roletaConfigService · roleta nova', () => {
     expect(conflitoDaOrigem({ response: { data: { error: { message: 'x', details: { conflict: conflito } } } } })).toEqual(conflito);
     expect(conflitoDaOrigem({ response: { data: { error: 'x' } } })).toBeNull();
     expect(conflitoDaOrigem(new Error('rede'))).toBeNull();
+  });
+
+  it('403 vira a frase da casa, nunca o inglês do servidor', () => {
+    expect(mensagemDoServidor({ response: { status: 403, data: { error: 'Forbidden - Insufficient permissions', message: 'Seu cargo não permite esta ação' } } }))
+      .toBe(MENSAGEM_SEM_PERMISSAO);
+  });
+
+  it('com message e error, vale o message (em português)', () => {
+    expect(mensagemDoServidor({ response: { status: 422, data: { error: 'Invalid', message: 'Nome já usado' } } })).toBe('Nome já usado');
   });
 
   it('mensagem do servidor nos dois formatos', () => {

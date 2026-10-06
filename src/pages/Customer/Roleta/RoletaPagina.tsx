@@ -151,13 +151,10 @@ export default function RoletaPagina() {
   const falta = faltaParaLigar(origens.length, ativosNaFila(roleta));
   const travada = !roleta.is_active && !!falta;
 
+  // Erro sobe pra Chave: ela volta sozinha e diz por quê (403 = frase do
+  // cargo; 422 = a frase do servidor, ex.: "Falta: uma origem").
   const ligar = async (proximo: boolean) => {
-    try {
-      setRoleta(await roletaConfigService.update(roleta.id, { is_active: proximo }));
-    } catch (e) {
-      toast.error(mensagemDoServidor(e) ?? 'Não deu pra salvar. Tente de novo.');
-      return false;
-    }
+    setRoleta(await roletaConfigService.update(roleta.id, { is_active: proximo }));
   };
 
   const duplicar = async () => {

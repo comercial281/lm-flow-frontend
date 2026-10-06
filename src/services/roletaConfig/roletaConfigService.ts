@@ -1,4 +1,5 @@
 import api from '@/services/core/api';
+import { isForbiddenError } from '@/services/core/forbidden';
 
 // Um número de WhatsApp dentro da roleta.
 //
@@ -519,6 +520,12 @@ export interface RoletaOriginConflict {
   roleta_name: string;
 }
 
+/** Prévia do "nome contém", calculada pelo servidor com a mesma regra do roteador. */
+export interface RoletaKeywordPreview {
+  matches: RoletaOriginMatch[];
+  conflict: RoletaOriginConflict | null;
+}
+
 export type RoletaHistoryStatus = 'waiting' | 'accepted' | 'exhausted' | 'not_entered' | 'cancelled';
 
 export interface RoletaHistoryStep {
@@ -577,14 +584,23 @@ export function conflitoDaOrigem(erro: unknown): RoletaOriginConflict | null {
   return c && c.form_name ? c : null;
 }
 
-/** A frase de erro do servidor, em qualquer dos dois formatos. */
+/** Recusa por cargo (403): a frase da casa, nunca o texto cru do servidor. */
+export const MENSAGEM_SEM_PERMISSAO = 'Seu cargo não pode fazer isto. Quem libera é o administrador da conta.';
+
+/**
+ * A frase de erro do servidor, em qualquer dos formatos. 403 vira a frase da
+ * casa (o corpo do RBAC traz `error` em inglês e `message` em português).
+ * Ordem: `message` → `error.message` → `error` em texto (o 422 da chave Ligada
+ * vem como `{ error: 'Falta: uma origem' }`).
+ */
 export function mensagemDoServidor(erro: unknown): string | null {
+  if (isForbiddenError(erro)) return MENSAGEM_SEM_PERMISSAO;
   const dados = (erro as { response?: { data?: { error?: unknown; message?: unknown } } })?.response?.data;
   if (!dados) return null;
-  if (typeof dados.error === 'string' && dados.error) return dados.error;
+  if (typeof dados.message === 'string' && dados.message) return dados.message;
   const err = dados.error as { message?: unknown } | undefined;
-  if (err && typeof err.message === 'string' && err.message) return err.message;
-  return typeof dados.message === 'string' && dados.message ? dados.message : null;
+  if (err && typeof err === 'object' && typeof err.message === 'string' && err.message) return err.message;
+  return typeof dados.error === 'string' && dados.error ? dados.error : null;
 }
 
 const BASE = '/roleta_configs';
@@ -751,6 +767,17 @@ export const roletaConfigService = {
   async getOriginOptions(): Promise<RoletaOriginOption[]> {
     const res = await api.get(`${BASE}/origin_options`);
     return miolo<{ options?: RoletaOriginOption[] }>(res).options ?? [];
+  },
+
+  // Prévia do "nome contém": quais formulários da página a palavra pega HOJE e
+  // se outra regra já pega algum deles (D9). Quem calcula é o servidor, com a
+  // regra do roteador (tokens, com acento); a tela não adivinha.
+  async getKeywordPreview(keyword: string, metaPageId?: string | null): Promise<RoletaKeywordPreview> {
+    const res = await api.get(`${BASE}/keyword_preview`, {
+      params: { keyword, meta_page_id: metaPageId || undefined },
+    });
+    const p = miolo<Partial<RoletaKeywordPreview>>(res);
+    return { matches: p.matches ?? [], conflict: p.conflict ?? null };
   },
 
   // Item que já está em outra roleta sai de lá (uma origem, uma roleta). 422 com
