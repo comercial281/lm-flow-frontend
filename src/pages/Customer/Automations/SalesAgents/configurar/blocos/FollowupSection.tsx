@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { type SalesAgent, type SalesAgentFollowupAction } from '@/services/salesAgents/salesAgentsService';
+import { type SalesAgent, type SalesAgentFollowupChoice } from '@/services/salesAgents/salesAgentsService';
+import { type FlowAutomation } from '@/types/flowAutomations';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
 import { type ScheduleWindow } from '@/components/schedule/scheduleWindows';
 import { DEFAULT_FOLLOWUP_WINDOW, janelaDoFollowup } from '@/features/salesAgents/followupHours';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
-import { followupFlowOptions, legacySequenceNotice, type FollowupFlowOption } from '@/features/flowAutomations/followupOptions';
+import { followupFlowOptions, followupPadraoId, legacySequenceNotice, type FollowupFlowOption } from '@/features/flowAutomations/followupOptions';
 import { Seletor } from '@/components/base/Seletor';
 import { type PipelineOpt, type StageOpt } from '../../configuracao/comum';
 
@@ -154,7 +155,6 @@ export function FollowupHoursRow({
   onSave: (patch: Partial<SalesAgent>) => void;
 }) {
   const windows = janelaDoFollowup(agent);
-  const entregaAoFunil = agent.followup_action === 'pipeline' || agent.followup_action === 'sequence';
 
   // `tz` sempre explícito: em branco, servidor e tela discordariam no dia em que
   // o padrão de um dos dois mudasse.
@@ -186,26 +186,29 @@ export function FollowupHoursRow({
           prefixo repetido faz o rótulo de uma focar o campo da outra. */}
       <WeeklyWindowsEditor value={windows} idPrefix="fu_win" onChange={gravar} />
 
-      {entregaAoFunil && (
-        <p className="mt-2 text-xs text-muted-foreground">
-          Neste modo o horário acima decide <strong>quando a IA entrega o lead</strong>. As
-          mensagens dali em diante saem no horário do <em>funil</em>, que tem o relógio dele
-          (a chave <em>Só enviar em horário comercial</em>, em Automações → Follow-up).
-        </p>
-      )}
+      {/* Desde 06/10/2026 a IA só entrega o lead (não escreve mais o follow-up):
+          este horário vale pra retomada e pra entrega, e as mensagens dali em
+          diante seguem o horário do follow-up que recebe o lead. */}
+      <p className="mt-2 text-xs text-muted-foreground">
+        O horário acima decide <strong>quando a IA entrega o lead</strong>. As mensagens dali em
+        diante saem no horário do <em>follow-up</em> que recebe o lead (a caixa <em>Só em horário
+        comercial</em>, nas configurações dele em Automações → Follow-up).
+      </p>
     </div>
   );
 }
 
-// As três saídas do follow-up. As duas de baixo não consomem IA: as mensagens do
-// funil já estão escritas, então cutucar o lead deixa de custar por lead e por vez.
-const FOLLOWUP_ACTIONS: [SalesAgentFollowupAction, string, string][] = [
-  ['ai', 'A IA escreve a mensagem',
-   'Personalizada com base na conversa inteira e no imóvel de interesse. É a que mais converte — e a única que consome IA a cada envio.'],
+// As duas saídas do follow-up. Nas duas a IA só ENTREGA o lead: quem escreve as
+// mensagens é o follow-up, com texto pronto.
+//
+// "A IA escreve a mensagem" ('ai') saiu em 06/10/2026 (decisão do dono do produto,
+// spec 2026-10-06-follow-up-padrao): o problema era a qualidade do texto, não o
+// custo. IA que ainda está em 'ai' não tem opção marcada e vê o aviso abaixo.
+const FOLLOWUP_ACTIONS: [SalesAgentFollowupChoice, string, string][] = [
   ['pipeline', 'Mover o card para uma coluna',
-   'A IA leva o card para a coluna que você escolher e sai de cena. Quem manda a mensagem é o follow-up que começa quando o card entra nessa coluna. Não consome IA.'],
+   'A IA leva o card para a coluna que você escolher e sai de cena. Quem manda a mensagem é o follow-up que começa quando o card entra nessa coluna.'],
   ['sequence', 'Entregar pro follow-up',
-   'A IA coloca o lead no follow-up escolhido, sem mexer no card. Para quem não usa o quadro de funil. Não consome IA.'],
+   'A IA coloca o lead no follow-up escolhido, sem mexer no card. O Follow-up padrão manda 6 mensagens em 30 dias.'],
 ];
 
 export function FollowupActionPicker({
@@ -215,8 +218,10 @@ export function FollowupActionPicker({
   onSave: (patch: Partial<SalesAgent>) => void;
 }) {
   const [stages, setStages] = useState<StageOpt[]>([]);
-  const [followups, setFollowups] = useState<FollowupFlowOption[]>([]);
-  const acao = agent.followup_action ?? 'ai';
+  const [fluxos, setFluxos] = useState<FlowAutomation[]>([]);
+  const followups: FollowupFlowOption[] = followupFlowOptions(fluxos);
+  // Sem padrão de reserva: IA antiga em 'ai' (ou sem valor) fica sem opção marcada.
+  const acao = agent.followup_action ?? null;
   const pipeline = agent.pipeline_id ?? '';
 
   // As colunas são as do funil já escolhido em "Mover o card no funil", logo
@@ -234,18 +239,31 @@ export function FollowupActionPicker({
   }, [acao, pipeline]);
 
   // Sprint 3: a IA entrega pra um FLUXO de follow-up (aba Follow-up), não mais
-  // pra um funil antigo.
+  // pra um funil antigo. Lido logo de cara (não só com "Entregar pro follow-up"
+  // marcada): é desta lista que sai o Follow-up padrão já escolhido no clique.
   useEffect(() => {
-    if (acao !== 'sequence') { setFollowups([]); return; }
     flowAutomationsService.list({ kind: 'followup' })
-      .then((lista) => setFollowups(followupFlowOptions(lista)))
-      .catch(() => setFollowups([]));
-  }, [acao]);
+      .then((lista) => setFluxos(lista))
+      .catch(() => setFluxos([]));
+  }, []);
+
+  // 06/10/2026: marcar "Entregar pro follow-up" sem nenhum escolhido já traz o
+  // Follow-up padrão do cliente (followupPadraoId). Só no clique: abrir a tela
+  // nunca muda nada sozinho (senão a barra de "Alterações não salvas" apareceria
+  // sem a pessoa ter mexido).
+  const escolher = (valor: SalesAgentFollowupChoice) => {
+    const padrao = valor === 'sequence' && !agent.followup_flow_id ? followupPadraoId(fluxos) : null;
+    onSave(padrao ? { followup_action: valor, followup_flow_id: padrao } : { followup_action: valor });
+  };
   const avisoFunilAntigo = legacySequenceNotice(agent);
 
   return (
     <div className="space-y-2">
       <div className="text-xs font-medium">Quando o lead sumir</div>
+      {acao === 'ai' && (
+        <p className="text-xs text-amber-600">Escolha como o follow-up continua: a IA não escreve mais o follow-up.</p>
+      )}
+      {!acao && <p className="text-xs text-amber-600">Escolha o que ela faz quando o lead some.</p>}
       {FOLLOWUP_ACTIONS.map(([valor, titulo, ajuda]) => (
         <label key={valor} className="flex items-start gap-3 cursor-pointer">
           <input
@@ -253,7 +271,7 @@ export function FollowupActionPicker({
             className="mt-1"
             name={`followup_action_${agent.id}`}
             checked={acao === valor}
-            onChange={() => onSave({ followup_action: valor })}
+            onChange={() => escolher(valor)}
           />
           <div>
             <div className="text-sm">{titulo}</div>

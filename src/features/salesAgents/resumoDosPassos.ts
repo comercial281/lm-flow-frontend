@@ -68,8 +68,14 @@ export function resumoDeQuemAtende(triggers: SalesAgentTrigger[]): string[] {
   });
 }
 
+/**
+ * A linha do tempo do passo 7 (e o resumo do passo 8). Desde 06/10/2026 a IA não
+ * escreve mais o follow-up: depois de X dias sem resposta ela ENTREGA o lead (ao
+ * follow-up escolhido ou movendo o card) e sai de cena. Vale o mínimo de dias, que
+ * é o silêncio que o servidor espera antes de entregar.
+ */
 export function linhaDoTempo(agent: Pick<SalesAgent,
-  'followup_enabled' | 'followup_only' | 'followup_min_days' | 'followup_max_days' | 'followup_max_attempts'
+  'followup_enabled' | 'followup_only' | 'followup_min_days' | 'followup_action'
   | 'reengagement_enabled' | 'reengagement_first_hours' | 'reengagement_second_hours'>): string[] {
   if (!agent.followup_enabled) return [];
   const linhas: string[] = [];
@@ -77,11 +83,10 @@ export function linhaDoTempo(agent: Pick<SalesAgent,
     linhas.push(`${agent.reengagement_first_hours ?? 2}h sem resposta: 1ª retomada`);
     linhas.push(`${agent.reengagement_second_hours ?? 8}h depois: 2ª retomada`);
   }
-  const min = agent.followup_min_days ?? 2;
-  const max = agent.followup_max_days ?? 3;
-  const intervalo = min === max ? plural(min, 'dia', 'dias') : `${min} a ${max} dias`;
-  const vezes = agent.followup_max_attempts ? `até ${plural(agent.followup_max_attempts, 'vez', 'vezes')}` : 'sem limite de tentativas';
-  linhas.push(`Follow-up a cada ${intervalo}, ${vezes}`);
+  const dias = plural(agent.followup_min_days ?? 2, 'dia', 'dias');
+  if (agent.followup_action === 'sequence') linhas.push(`Entrega o lead ao follow-up depois de ${dias} sem resposta`);
+  else if (agent.followup_action === 'pipeline') linhas.push(`Move o card para a coluna escolhida depois de ${dias} sem resposta`);
+  else linhas.push(`Depois de ${dias} sem resposta: falta escolher o que ela faz`);
   return linhas;
 }
 

@@ -26,7 +26,7 @@ export const CAMPOS_DO_PASSO = {
     'cross_sell_enabled', 'rich_media_enabled', 'send_property_book_enabled', 'book_send_rule'],
   6: ['inbox_id', 'triggers', 'trigger_match_mode', 'trigger_keyword', 'active_hours', 'out_of_hours_reply',
     'out_of_hours_message', 'message_split_enabled', 'audio_enabled', 'audio_mode', 'audio_voice_id'],
-  7: ['followup_enabled', 'followup_only', 'followup_min_days', 'followup_max_days', 'followup_max_attempts',
+  7: ['followup_enabled', 'followup_only', 'followup_min_days', 'followup_max_days',
     'followup_action', 'followup_stage_id', 'followup_return_stage_id', 'followup_sequence_slug', 'followup_flow_id',
     'followup_pipeline_ids', 'followup_hours', 'reengagement_enabled', 'reengagement_first_hours',
     'reengagement_second_hours'],
@@ -48,6 +48,9 @@ export const CAMPOS_ESCONDIDOS = [
   // Tom e emoji existem desde a entrega 2, mas o controle só entra no passo 1 na
   // entrega 4 (no v1 a opção não faria nada). Sair daqui é o primeiro passo de lá.
   'tone', 'emoji_use',
+  // Saiu do passo 7 em 06/10/2026: a IA não escreve mais o follow-up, só entrega o
+  // lead uma vez por sumiço, e o teto de tentativas deixou de ter o que contar.
+  'followup_max_attempts',
 ] as const;
 
 /** jsonb que mais de um passo (ou algo escondido) divide: só entram por subchave. */

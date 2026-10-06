@@ -85,8 +85,13 @@ export const PERGUNTAS_SUGERIDAS = [
 /**
  * "Nova IA" cria um RASCUNHO desligado e sem número (é o que a Visão geral chama de
  * rascunho) e abre o passo 1. Substitui o "+" que criava a IA calada e abria o
- * assistente. Follow-up com no máximo 3 tentativas (o infinito fica só pra quem já
- * tinha) e aviso fora do horário ligado (o lead de madrugada não fica no vácuo).
+ * assistente. Aviso fora do horário ligado (o lead de madrugada não fica no vácuo).
+ * O `followup_max_attempts: 3` é sobra inofensiva: desde 06/10/2026 a IA não
+ * escreve o follow-up, só entrega o lead, e o servidor ignora o teto fora de 'ai'.
+ *
+ * Sem `followup_action` de propósito (06/10/2026): o servidor dá à IA nova
+ * "Entregar pro follow-up" apontando pro Follow-up padrão do cliente (ou "Mover o
+ * card", se ele não existir). Mandar daqui seria uma segunda verdade.
  */
 export function novaIaRascunho({ roletaNova = false } = {}): SalesAgentPayload {
   return {

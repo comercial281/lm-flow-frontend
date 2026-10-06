@@ -111,10 +111,13 @@ describe('pendenciasDaIa', () => {
     expect(p.filter((x) => x.chave === 'triggers')).toHaveLength(1);
   });
 
-  // Caso real do levantamento de 05/10: follow-up ligado com máximo 0.
-  it('follow-up ligado com máximo 0 vira aviso laranja', () => {
-    const p = pendenciasDaIa(ia({ followup_enabled: true, followup_max_attempts: 0 }), diag());
-    expect(p).toEqual([expect.objectContaining({ chave: 'followup_sem_limite', titulo: 'Follow-up sem limite de tentativas', grave: false })]);
+  // 06/10/2026: a IA não escreve mais o follow-up. A que ficou na opção antiga vira
+  // aviso laranja; o teto de tentativas não é mais pendência (o campo saiu).
+  it('follow-up ligado ainda em "A IA escreve" vira aviso laranja; máximo 0 não', () => {
+    const p = pendenciasDaIa(ia({ followup_enabled: true, followup_action: 'ai' }), diag());
+    expect(p).toEqual([expect.objectContaining({ chave: 'followup_sem_escolha', titulo: 'O que ela faz quando o lead some', grave: false })]);
+    expect(pendenciasDaIa(ia({ followup_enabled: true, followup_action: 'sequence', followup_flow_id: 'fu-1', followup_max_attempts: 0 }), diag())).toEqual([]);
+    expect(pendenciasDaIa(ia({ followup_enabled: false, followup_action: 'ai' }), diag())).toEqual([]);
   });
 
   it('sem o Diagnóstico ainda, falta de número aparece pela própria IA', () => {
@@ -143,9 +146,14 @@ describe('entrega 2: Corrigir leva ao passo certo', () => {
     expect(situacaoDaIa(ia({ enabled: false, inbox_id: null })).corrigir).toEqual({ tela: 'configurar', passo: 1 });
   });
 
-  it('follow-up sem limite → passo 7', () => {
-    const p = pendenciasDaIa(ia({ followup_enabled: true, followup_max_attempts: 0 }));
-    expect(p.find((x) => x.chave === 'followup_sem_limite')?.corrigir).toEqual({ tela: 'configurar', passo: 7 });
+  it('"Entregar pro follow-up" sem follow-up aparece no Painel, laranja, passo 7', () => {
+    const p = pendenciasDaIa(ia({ followup_enabled: true, followup_action: 'sequence', followup_flow_id: null }), diag());
+    expect(p).toEqual([expect.objectContaining({ chave: 'followup_sem_fluxo', titulo: 'O que ela faz quando o lead some', grave: false, corrigir: { tela: 'configurar', passo: 7 } })]);
+  });
+
+  it('follow-up ainda em "A IA escreve" → passo 7', () => {
+    const p = pendenciasDaIa(ia({ followup_enabled: true, followup_action: 'ai' }));
+    expect(p.find((x) => x.chave === 'followup_sem_escolha')?.corrigir).toEqual({ tela: 'configurar', passo: 7 });
   });
 
   // IA antiga: fala como o corretor e entrega pra um corretor fixo.
