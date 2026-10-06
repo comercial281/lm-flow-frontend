@@ -13,11 +13,10 @@
  * produto, opção "a"): roleta e corretor fixo ficam travados nela.
  */
 import type {
-  AlcanceDaIa, PersonaDaIa, SalesAgent, SalesAgentHandoffTarget, SalesAgentPayload,
+  AlcanceDaIa, PersonaDaIa, PersonaGravavel, SalesAgent, SalesAgentHandoffTarget, SalesAgentPayload,
 } from '@/services/salesAgents/salesAgentsService';
-import { speaksAsBroker, toggleVoice } from './handoffVoice';
 import type { RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
-import type { PersonaGravavel } from '@/services/salesAgents/salesAgentsService';
+import { speaksAsBroker, toggleVoice } from './handoffVoice';
 
 export type HandoffTargetMode = SalesAgentHandoffTarget;
 

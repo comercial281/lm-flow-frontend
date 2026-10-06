@@ -24,7 +24,9 @@ const TIPOS = [
 const REGRA_PADRAO_DO_BOOK = 'o lead pedir o book, a apresentação completa, o material ou mais detalhes do empreendimento';
 
 export default function Catalogo({ agent, gravar }: PropsDaPagina) {
-  const [imoveis, setImoveis] = useState<{ code: string; title: string }[]>([]);
+  // null = a lista ainda não chegou (ou falhou): aí não dá pra dizer que o código
+  // salvo está "fora dos ativos" — ele aparece sozinho, sem o aviso.
+  const [imoveis, setImoveis] = useState<{ code: string; title: string }[] | null>(null);
   useEffect(() => {
     let vivo = true;
     propertiesService.list({ status: 'active', per_page: 100 })
@@ -37,7 +39,7 @@ export default function Catalogo({ agent, gravar }: PropsDaPagina) {
   const vars = (playbook.vars ?? {}) as PlaybookVars;
   const tipo = vars.tipo_venda || TIPO_DE_VENDA_PADRAO;
   const codigo = agent.default_property_code ?? '';
-  const foraDaLista = codigo && !imoveis.some((i) => i.code === codigo);
+  const naLista = !!codigo && !!imoveis?.some((i) => i.code === codigo);
 
   const trocarTipo = (v: string) => {
     const proximos: PlaybookVars = { ...vars, tipo_venda: v === TIPO_DE_VENDA_PADRAO ? undefined : v };
@@ -64,8 +66,8 @@ export default function Catalogo({ agent, gravar }: PropsDaPagina) {
           <Seletor id="catalogo-imovel" className={`${CLASSE_DO_CAMPO} w-full`} value={codigo}
             onChange={(e) => void gravar({ default_property_code: e.target.value || null })}>
             <option value="">Nenhum: ela descobre pelo anúncio</option>
-            {foraDaLista && <option value={codigo}>{codigo} (não está entre os ativos)</option>}
-            {imoveis.map((i) => <option key={i.code} value={i.code}>{i.code} · {i.title}</option>)}
+            {codigo && !naLista && <option value={codigo}>{imoveis ? `${codigo} (não está entre os ativos)` : codigo}</option>}
+            {(imoveis ?? []).map((i) => <option key={i.code} value={i.code}>{i.code} · {i.title}</option>)}
           </Seletor>
         </Campo>
       </Secao>
