@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 
 import { useLanguage } from '@/hooks/useLanguage';
 import { useConversations } from '@/hooks/chat/useConversations';
+import { serverRefusalMessageOf } from '@/services/core/forbidden';
 import { contactsService } from '@/services/contacts/contactsService';
 import ContactModal from '@/components/contacts/ContactModal';
 
@@ -58,6 +59,8 @@ export function useEditarContato(contact: Contact | null): { abrir: () => void; 
       setAberto(false);
     } catch (error) {
       console.error('Error saving contact:', error);
+      // Recusa com frase do servidor: o aviso global já a mostrou.
+      if (serverRefusalMessageOf(error)) return;
       toast.error(t('contactSidebar.contactDetails.actions.updateError'));
     }
   };

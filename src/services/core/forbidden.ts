@@ -18,6 +18,21 @@ export function requiredPermissionOf(error: unknown): string | undefined {
   return typeof data?.required_permission === 'string' ? data.required_permission : undefined;
 }
 
+/**
+ * Recusa do servidor que NÃO é de cargo mas traz a própria explicação (ex.: "Aceite o
+ * lead pra editar os dados dele."). Corpo `{ error: { message } }` ou `{ message }`.
+ * Recusa de cargo (com `required_permission`) devolve vazio: essa tem texto próprio.
+ */
+export function serverRefusalMessageOf(error: unknown): string | undefined {
+  if (!isForbiddenError(error) || requiredPermissionOf(error)) return undefined;
+  const data = (error as { response?: { data?: { error?: unknown; message?: unknown } } }).response?.data;
+  const aninhada = (data?.error as { message?: unknown } | null | undefined)?.message;
+  for (const candidata of [aninhada, data?.message]) {
+    if (typeof candidata === 'string' && candidata.trim()) return candidata.trim();
+  }
+  return undefined;
+}
+
 export function classifyLoadFailure(error: unknown): LoadFailure {
   return isForbiddenError(error) ? 'forbidden' : 'failed';
 }

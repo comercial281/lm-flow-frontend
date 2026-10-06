@@ -7104,3 +7104,23 @@ Armadilhas:
 4. **A marca de fim mora no contato** (`followup_ended_at`, gravada pelo bloco
    do fim do Follow-up padrão) e é o servidor que tira o lead das Pendências. Cai
    quando o lead escreve ou quando um follow-up começa de novo pra ele.
+
+## Recusa com mensagem do servidor (07/10/2026)
+
+Quando o servidor recusa uma ESCRITA (403) que não é de cargo e manda a própria
+frase (ex.: "Aceite o lead pra editar os dados dele.", "Aceite o lead pelo botão
+Aceitar." pro corretor que só foi oferecido), o aviso mostra ESSA frase, no lugar
+de "Seu cargo não permite esta ação".
+
+1. **Regra no `api.ts`** (aviso global de 403): recusa de cargo (`required_permission`
+   no corpo, lida por `requiredPermissionOf`) mantém o texto de sempre. Sem isso, e
+   com `error.message` (ou `message`) preenchido, o aviso é a frase do servidor, com
+   id por mensagem (não empilha repetida). Sem frase, cai no texto genérico. Leitura
+   (GET/HEAD/OPTIONS) e `silentForbidden` seguem calados. O leitor é
+   `serverRefusalMessageOf`, em `services/core/forbidden.ts`.
+2. **Quem salva não empilha um segundo erro:** o formulário de campos
+   personalizados (`CustomAttributesForm`) e a edição do contato do painel
+   (`useEditarContato`) calam o aviso genérico deles quando `serverRefusalMessageOf`
+   devolve frase, porque o global já avisou.
+3. **Não reabrir sem o dono pedir.** Tela nova que salva e tem aviso de erro próprio
+   segue a mesma regra de (2).

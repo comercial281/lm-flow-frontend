@@ -103,6 +103,54 @@ describe('cliente de API — recusa por cargo (403)', () => {
     expect(toast.error).not.toHaveBeenCalled();
   });
 
+  describe('recusa que não é de cargo, com mensagem do servidor', () => {
+    const semCargo = (metodo: string, data: unknown) => ({
+      config: { method: metodo, url: '/contacts/7', headers: {} },
+      response: { status: 403, data },
+      message: 'Request failed with status code 403',
+    });
+
+    it('mostra a frase do servidor (corpo aninhado) em vez do texto de cargo', async () => {
+      await esperarRecusa(
+        semCargo('patch', { error: { code: 'FORBIDDEN', message: 'Aceite o lead pra editar os dados dele.' } }),
+      );
+
+      expect(toast.error).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(toast.error).mock.calls[0][0]).toBe('Aceite o lead pra editar os dados dele.');
+      expect(vi.mocked(toast.error).mock.calls[0][1]).toEqual({ id: '403-Aceite o lead pra editar os dados dele.' });
+    });
+
+    it('aceita `message` na raiz do corpo', async () => {
+      await esperarRecusa(semCargo('post', { message: 'Aceite o lead pelo botão Aceitar.' }));
+
+      expect(vi.mocked(toast.error).mock.calls[0][0]).toBe('Aceite o lead pelo botão Aceitar.');
+    });
+
+    it('recusa de cargo mantém o texto de sempre, mesmo com mensagem no corpo', async () => {
+      await esperarRecusa(recusa('post', '/conversations/42/claim'));
+
+      expect(vi.mocked(toast.error).mock.calls[0][0]).toBe('Seu cargo não permite esta ação (dashboard_apps.read)');
+    });
+
+    it('sem mensagem, cai no texto genérico', async () => {
+      await esperarRecusa(semCargo('patch', {}));
+      await esperarRecusa(semCargo('patch', { error: { code: 'FORBIDDEN', message: '  ' } }));
+
+      expect(vi.mocked(toast.error).mock.calls.map(c => c[0])).toEqual([
+        'Seu cargo não permite esta ação',
+        'Seu cargo não permite esta ação',
+      ]);
+    });
+
+    it('leitura e `silentForbidden` continuam calados', async () => {
+      const corpo = { error: { message: 'Aceite o lead pra editar os dados dele.' } };
+      await esperarRecusa(semCargo('get', corpo));
+      await esperarRecusa({ ...semCargo('patch', corpo), config: { method: 'patch', url: '/x', headers: {}, silentForbidden: true } });
+
+      expect(toast.error).not.toHaveBeenCalled();
+    });
+  });
+
   // HEAD/OPTIONS entram na mesma regra do GET: nenhum dos dois é clique de
   // ninguém, e deixá-los de fora reabriria a torneira pela porta dos fundos.
   it.each(['head', 'options'])('%s recusado também fica calado', async metodo => {

@@ -20,6 +20,7 @@ import { Plus, X, Settings, Pencil, Check, Loader2 } from 'lucide-react';
 import { customAttributesService } from '@/services/customAttributes/customAttributesService';
 import { CustomAttributeDefinition, AttributeModel } from '@/types/settings';
 import { toast } from 'sonner';
+import { serverRefusalMessageOf } from '@/services/core/forbidden';
 
 export type CustomAttributesMode = 'form' | 'editable';
 
@@ -195,7 +196,9 @@ export default function CustomAttributesForm({
       if (onUpdateSuccess) {
         onUpdateSuccess();
       }
-    } catch {
+    } catch (error) {
+      // Recusa com frase do servidor: o aviso global já a mostrou.
+      if (serverRefusalMessageOf(error)) return;
       const errorKey = translationKeys.updateError || 'contactSidebar.customAttributes.updateError';
       toast.error(t(errorKey));
     } finally {
@@ -221,7 +224,9 @@ export default function CustomAttributesForm({
       if (onUpdateSuccess) {
         onUpdateSuccess();
       }
-    } catch {
+    } catch (error) {
+      // Recusa com frase do servidor: o aviso global já a mostrou.
+      if (serverRefusalMessageOf(error)) return;
       const errorKey = translationKeys.updateError || 'contactSidebar.customAttributes.updateError';
       toast.error(t(errorKey));
     } finally {

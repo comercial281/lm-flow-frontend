@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/authStore';
 import { requestMonitor } from '@/utils/requestMonitor';
 import apiAuth from '@/services/core/apiAuth';
 import { applySetupInterceptor } from '@/services/core/setupInterceptor';
-import { requiredPermissionOf } from '@/services/core/forbidden';
+import { requiredPermissionOf, serverRefusalMessageOf } from '@/services/core/forbidden';
 
 const api = axios.create({
   baseURL: `${import.meta.env.VITE_API_URL}/api/v1`,
@@ -189,6 +189,14 @@ api.interceptors.response.use(
       // faz nada" e vira chamado de suporte.
       const metodo = (error.config?.method ?? 'get').toLowerCase();
       if (metodo === 'get' || metodo === 'head' || metodo === 'options') {
+        return Promise.reject(error);
+      }
+
+      // Recusa que não é de cargo e vem com a própria explicação (ex.: lead só
+      // oferecido, ainda não aceito): mostra a frase do servidor, não "cargo".
+      const mensagemDoServidor = serverRefusalMessageOf(error);
+      if (mensagemDoServidor) {
+        toast.error(mensagemDoServidor, { id: `403-${mensagemDoServidor}` });
         return Promise.reject(error);
       }
 
