@@ -34,6 +34,16 @@ export interface EscolhaComAbas {
   valor: string;
 }
 
+/**
+ * A opção "nenhum" ("Ninguém (entra sem responsável)", "Não distribuir"): fica
+ * no topo de toda aba e devolve a caixa ao vazio. Sem ela, quem escolheu uma
+ * vez não tinha como voltar atrás.
+ */
+export interface OpcaoNenhum {
+  rotulo: string;
+  aoEscolher: () => void;
+}
+
 interface Props {
   abas: AbaDoSeletor[];
   value: EscolhaComAbas | null;
@@ -44,6 +54,7 @@ interface Props {
   id?: string;
   'aria-label'?: string;
   className?: string;
+  nenhum?: OpcaoNenhum;
 }
 
 // O <select> do celular carrega aba e valor num texto só. ":" não aparece em id
@@ -56,9 +67,11 @@ export function decodificar(texto: string): EscolhaComAbas | null {
 }
 
 export function SeletorComAbas({
-  abas, value, onChange, placeholder = 'Escolha', disabled, invalido, id, className,
-  'aria-label': ariaLabel,
+  abas, value, onChange, placeholder: placeholderPedido = 'Escolha', disabled, invalido, id, className,
+  'aria-label': ariaLabel, nenhum,
 }: Props) {
+  // Com a opção "nenhum", a caixa vazia mostra o nome dela: vazio É uma escolha.
+  const placeholder = nenhum?.rotulo ?? placeholderPedido;
   const toque = usePonteiroDeToque();
   const [aberto, setAberto] = useState(false);
   const [abaVista, setAbaVista] = useState<string>(value?.aba ?? abas[0]?.chave ?? '');
@@ -76,6 +89,7 @@ export function SeletorComAbas({
         disabled={disabled}
         value={value ? codificar(value) : ''}
         onChange={e => {
+          if (e.target.value === '' && nenhum) { nenhum.aoEscolher(); return; }
           const escolha = decodificar(e.target.value);
           if (escolha) onChange(escolha);
         }}
@@ -85,7 +99,7 @@ export function SeletorComAbas({
           className,
         )}
       >
-        <option value="" disabled>{placeholder}</option>
+        <option value="" disabled={!nenhum}>{placeholder}</option>
         {abas.map(aba => (
           <optgroup key={aba.chave} label={aba.rotulo}>
             {aba.opcoes.map(o => (
@@ -155,6 +169,21 @@ export function SeletorComAbas({
           </div>
         )}
         <div role="listbox" aria-label={abaAtual?.rotulo} className="max-h-64 overflow-y-auto">
+          {nenhum && (
+            <button
+              type="button"
+              role="option"
+              aria-selected={!value}
+              onClick={() => {
+                nenhum.aoEscolher();
+                setAberto(false);
+              }}
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+            >
+              <span className="flex-1 truncate">{nenhum.rotulo}</span>
+              {!value && <Check className="h-4 w-4 shrink-0 text-primary" />}
+            </button>
+          )}
           {abaAtual && abaAtual.opcoes.length === 0 && (
             <p className="px-2 py-3 text-center text-xs text-muted-foreground">{abaAtual.vazio ?? 'Nada para escolher aqui.'}</p>
           )}

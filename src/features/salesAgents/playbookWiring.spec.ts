@@ -55,7 +55,7 @@ describe('roteiro da IA na tela do cliente', () => {
 describe('Nova IA', () => {
   it('cria o rascunho pelo serviço, e o ?agent= de link antigo continua abrindo a IA', () => {
     const tela = fonteDaIaVendedora();
-    expect(tela).toContain('salesAgentsService.create(novaIaRascunho())');
+    expect(tela).toContain('salesAgentsService.create(novaIaRascunho({ roletaNova }))');
     expect(read('src/features/salesAgents/iaMenu.ts')).toContain("params.get('agent')");
   });
 });

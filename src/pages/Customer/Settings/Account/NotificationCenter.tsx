@@ -2,7 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BellRing, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { plural } from '@/lib/formato';
+import { Link } from 'react-router-dom';
 import NotificationMatrix from '@/components/notifications/NotificationMatrix';
+import {
+  ENDERECO_AVISOS_DA_ROLETA,
+  politicaSemAvisosDaRoleta,
+  semAvisosDaRoleta,
+} from '@/components/notifications/avisosDaRoleta';
+import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import notificationPreferencesService, {
   type ClientCatalogData,
 } from '@/services/notifications/notificationPreferencesService';
@@ -38,6 +45,11 @@ export default function NotificationCenter() {
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  // Roleta nova (06/10/2026, D7): os avisos da roleta são configurados uma vez,
+  // na aba Avisos da página da roleta, e saem desta lista.
+  const roletaNova = useClientToggle('roleta_nova');
+  const catalogo = useMemo(() => (data && roletaNova ? semAvisosDaRoleta(data) : data), [data, roletaNova]);
+  const politicaVisivel = useMemo(() => (roletaNova ? politicaSemAvisosDaRoleta(policy) : policy), [policy, roletaNova]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -72,8 +84,8 @@ export default function NotificationCenter() {
   };
 
   const activeCount = useMemo(
-    () => Object.values(policy).filter(entry => Object.values(entry.channels).some(c => c.value)).length,
-    [policy],
+    () => Object.values(politicaVisivel).filter(entry => Object.values(entry.channels).some(c => c.value)).length,
+    [politicaVisivel],
   );
 
   return (
@@ -109,7 +121,7 @@ export default function NotificationCenter() {
             </div>
           )}
 
-          {!loading && data && (
+          {!loading && data && catalogo && (
             <>
               <p className="text-xs text-muted-foreground">
                 Isto vale para a equipe toda. Cada pessoa ainda pode calar avisos só para ela em{' '}
@@ -117,8 +129,17 @@ export default function NotificationCenter() {
                 {!data.can_edit && ' Só admin e gerente podem mudar esta lista.'}
               </p>
 
+              {roletaNova && (
+                <p className="text-xs text-muted-foreground">
+                  Os avisos da roleta ficam em Roleta de leads › Avisos.{' '}
+                  <Link to={ENDERECO_AVISOS_DA_ROLETA} className="font-medium text-primary hover:underline">
+                    Abrir os avisos da roleta
+                  </Link>
+                </p>
+              )}
+
               <NotificationMatrix
-                catalog={data}
+                catalog={catalogo}
                 policy={policy}
                 stages={data.pipelines}
                 users={data.users}

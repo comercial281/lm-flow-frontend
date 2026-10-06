@@ -47,6 +47,32 @@ describe('SeletorComAbas', () => {
     expect(onChange).toHaveBeenCalledWith({ aba: 'corretor', valor: 'u1' });
   });
 
+  it('com a opção "nenhum": a caixa vazia mostra o nome dela e escolher volta ao vazio', () => {
+    const aoEscolher = vi.fn();
+    render(
+      <SeletorComAbas aria-label="Quem assume" abas={ABAS} value={{ aba: 'corretor', valor: 'u1' }} onChange={vi.fn()}
+        nenhum={{ rotulo: 'Ninguém (entra sem responsável)', aoEscolher }} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Quem assume' }));
+    // Em toda aba, no topo.
+    fireEvent.click(screen.getByRole('tab', { name: 'Roleta' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Ninguém (entra sem responsável)' }));
+    expect(aoEscolher).toHaveBeenCalledTimes(1);
+  });
+
+  it('com a opção "nenhum" no celular: a primeira linha da lista é escolhível', () => {
+    toque.atual = true;
+    const aoEscolher = vi.fn();
+    const onChange = vi.fn();
+    render(
+      <SeletorComAbas aria-label="Quem assume" abas={ABAS} value={{ aba: 'corretor', valor: 'u1' }} onChange={onChange}
+        nenhum={{ rotulo: 'Ninguém (entra sem responsável)', aoEscolher }} />,
+    );
+    fireEvent.change(screen.getByLabelText('Quem assume'), { target: { value: '' } });
+    expect(aoEscolher).toHaveBeenCalledTimes(1);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('decodificar separa aba e valor pelo primeiro ":"', () => {
     expect(decodificar('roleta:abc-1')).toEqual({ aba: 'roleta', valor: 'abc-1' });
     expect(decodificar('')).toBeNull();

@@ -20,19 +20,20 @@ export default function PendingOffersBanner() {
 
   const primeira = offers[0];
   const restantes = offers.length - 1;
-  // "12 min restantes", "prazo esgotado" ou "sem prazo" — a roleta sem prazo de
+  // "12 min pra aceitar", "prazo esgotado" ou "sem prazo" — a roleta sem prazo de
   // aceite não tem cronômetro, e nulo ali NÃO é esgotado.
   const prazo = deadlineLabel(primeira);
-  const prazoTexto = /^\d+ min$/.test(prazo) ? `${prazo} restantes` : prazo;
+  const prazoTexto = /^\d+ min$/.test(prazo) ? `${prazo} pra aceitar` : prazo;
 
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-2 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800">
       <div className="flex items-center gap-2 text-xs text-amber-800 dark:text-amber-300">
         <Clock className="h-3.5 w-3.5 flex-shrink-0" />
         <span>
-          <strong>{primeira.lead_name}</strong> está esperando seu aceite
-          {` — ${prazoTexto}`}
-          {restantes > 0 && ` (+${restantes} lead${restantes > 1 ? 's' : ''})`}
+          {/* Mesma frase do pop-up de aceite: "Lead novo pra você". */}
+          Lead novo pra você: <strong>{primeira.lead_name}</strong>
+          {` · ${prazoTexto}`}
+          {restantes > 0 && ` · +${restantes} esperando`}
         </span>
       </div>
       <button

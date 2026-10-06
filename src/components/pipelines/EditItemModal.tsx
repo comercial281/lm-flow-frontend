@@ -51,6 +51,7 @@ import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { brokerAssignmentsService, type BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
 import OfferActions from '@/components/roleta/OfferActions';
+import { textoDaOferta } from '@/components/roleta/textosDaRoleta';
 import { isPhoneLikeName } from '@/lib/nomeDoContato';
 import { classeDaOrigem, contatoDoCard, conversaDoCard, origemCurta, podeCorrigirContato, semFunil } from '@/features/cardDoLead/cardDoLead';
 import { useCorretorLogado } from '@/features/contatos/useCorretorLogado';
@@ -63,13 +64,13 @@ import CardMoreMenu from './card/CardMoreMenu';
 import CardOriginTab from './card/CardOriginTab';
 import ColocarNoFunil from './card/ColocarNoFunil';
 import { toast } from 'sonner';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import type { ContactEvent } from '@/types/notifications/contact-events';
 import type { Label as LabelType } from '@/types/settings';
 import { avisarAgendadosMudaram } from '@/features/conversas/agendados';
 
 const CardConversationTab = lazyWithRetry(() => import('./CardConversationTab'));
 const VisitsProposalsTab = lazyWithRetry(() => import('./card/VisitsProposalsTab'));
-const CreateRoletaModal = lazyWithRetry(() => import('./CreateRoletaModal'));
 const RemoveFromRoletaDialog = lazyWithRetry(() => import('@/components/roleta/RemoveFromRoletaDialog'));
 const CorrigirContatoDialog = lazyWithRetry(() => import('./card/CorrigirContatoDialog'));
 const JuntarContato = lazyWithRetry(() => import('./card/JuntarContato'));
@@ -149,15 +150,16 @@ export default function EditItemModal({
   const [selectedAssigneeId, setSelectedAssigneeId] = useState<string | null>(null);
   const [assigningUser, setAssigningUser] = useState(false);
 
-  // Roletas reais cadastradas (por número) para o "⋯ → Trocar roleta".
-  const [roletas, setRoletas] = useState<RoletaConfig[]>([]);
+  // As roletas LIGADAS, para o "⋯ → Mandar pra roleta". `null` = leitura recusada
+  // (cargo sem acesso às roletas): o item fica desabilitado, sem mandar a pessoa
+  // pra uma página que ela não abre.
+  const [roletas, setRoletas] = useState<RoletaConfig[] | null>([]);
   const [assigningRoleta, setAssigningRoleta] = useState(false);
 
   // Ofertas EM ABERTO deste lead: só nesse caso há prazo correndo e faz sentido
   // "Tirar da roleta".
   const [ofertasAbertas, setOfertasAbertas] = useState<BrokerAssignmentDetail[]>([]);
   const [tirandoDaRoleta, setTirandoDaRoleta] = useState(false);
-  const [showCreateRoleta, setShowCreateRoleta] = useState(false);
 
   // Etiquetas
   const [availableLabels, setAvailableLabels] = useState<LabelType[]>([]);
@@ -222,7 +224,7 @@ export default function EditItemModal({
 
       roletaConfigService.getAll()
         .then(list => { if (!cancelled) setRoletas((list || []).filter(r => r.is_active)); })
-        .catch(() => { if (!cancelled) setRoletas([]); });
+        .catch(() => { if (!cancelled) setRoletas(null); });
 
       // Oferta correndo agora? Falha aqui só esconde o "Tirar da roleta" — quem
       // não pode mexer na roleta recebe 403 e não deve ver o botão mesmo.
@@ -331,14 +333,20 @@ export default function EditItemModal({
         conversation_id: item?.conversation?.id ? String(item.conversation.id) : undefined,
         pipeline_item_id: item?.id ? String(item.id) : undefined,
       });
-      toast.success(`Atribuído pela roleta: ${a?.assigned_user?.name ?? 'corretor'}`);
+      toast.success(textoDaOferta(a?.assigned_user?.name, roletas?.find(r => r.id === roletaId)));
       loadHistory();
-    } catch {
-      toast.error('Erro ao atribuir pela roleta (sem membros ativos?)');
+      // A oferta nova aparece no card na hora (e com ela o "Tirar da roleta").
+      brokerAssignmentsService.listForLead(String(contactId))
+        .then(setOfertasAbertas)
+        .catch(() => { /* leitura de fundo não grita */ });
+    } catch (e) {
+      // O servidor diz o motivo real (fora do horário, desligada, ninguém ativo,
+      // já esperando aceite).
+      toast.error(apiErrorMessage(e, 'Não consegui mandar pra roleta.'));
     } finally {
       setAssigningRoleta(false);
     }
-  }, [item, loadHistory]);
+  }, [item, loadHistory, roletas]);
 
   const labelTargetConvId = item?.conversation?.id ? String(item.conversation.id) : null;
   const labelTargetContactId = contatoDoCard(item)?.id ?? null;
@@ -477,7 +485,7 @@ export default function EditItemModal({
   };
 
   const roletaDoLead = item.roleta
-    ? `${roletaLabel(item.roleta)}${roletas.length > 0 && !roletas.some(r => r.id === item.roleta!.id) ? ' (desativada)' : ''}`
+    ? `${roletaLabel(item.roleta)}${roletas && roletas.length > 0 && !roletas.some(r => r.id === item.roleta!.id) ? ' (desativada)' : ''}`
     : null;
 
   return (
@@ -540,7 +548,7 @@ export default function EditItemModal({
                   roletas={roletas}
                   trocandoRoleta={assigningRoleta}
                   onTrocarRoleta={handleAssignViaRoleta}
-                  onCriarRoleta={() => setShowCreateRoleta(true)}
+                  onTirarDaRoleta={ofertasAbertas.length > 0 ? () => setTirandoDaRoleta(true) : undefined}
                   onRemovido={() => onOpenChange(false)}
                   onJuntar={podeJuntar && contato?.id != null ? () => setJuntando(true) : undefined}
                 />
@@ -811,18 +819,6 @@ export default function EditItemModal({
             leadName={contato.name ?? undefined}
             offers={ofertasAbertas}
             onDone={() => setOfertasAbertas([])}
-          />
-        </Suspense>
-      )}
-
-      {/* Criação de roleta direto do card (sem ir pra Configurações) */}
-      {showCreateRoleta && (
-        <Suspense fallback={null}>
-          <CreateRoletaModal
-            open={showCreateRoleta}
-            onOpenChange={setShowCreateRoleta}
-            users={users}
-            onCreated={(roleta) => setRoletas(prev => [...prev, roleta])}
           />
         </Suspense>
       )}

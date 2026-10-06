@@ -43,6 +43,14 @@ describe('escolhasParaPatch', () => {
     });
   });
 
+  // Roleta nova: "a roleta do número" não existe; o servidor recusa gravar.
+  it('com a chave roleta_nova, saindo do corretor vira "Uma roleta" em branco', () => {
+    const agente = ia({ handoff_target: 'number_owner' });
+    expect(escolhasParaPatch({ persona: 'owner', alcance: 'visit', destino: 'number_owner' }, agente, { roletaNova: true })).toMatchObject({
+      handoff_target: 'roleta', handoff_roleta_config_id: null, handoff_user_id: null,
+    });
+  });
+
   it('dono com roleta escolhida mantém a roleta', () => {
     const agente = ia({ handoff_target: 'roleta', handoff_roleta_config_id: 'r1' });
     expect(escolhasParaPatch({ persona: 'owner', alcance: 'qualify', destino: 'roleta' }, agente)).toMatchObject({
@@ -61,5 +69,9 @@ describe('novaIaRascunho', () => {
     });
     expect(p.qualification_questions).toEqual(PERGUNTAS_SUGERIDAS);
     expect(PERGUNTAS_SUGERIDAS).toHaveLength(4);
+  });
+
+  it('com a chave roleta_nova nasce em "Uma roleta" (a roleta do número não existe)', () => {
+    expect(novaIaRascunho({ roletaNova: true }).handoff_target).toBe('roleta');
   });
 });

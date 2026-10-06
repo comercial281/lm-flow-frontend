@@ -268,7 +268,7 @@ export const ACTION_TYPE_LABELS: Record<string, string> = {
   start_followup_sequence: 'Iniciar sequência de follow-up (formato antigo)',
   start_followup_flow:     'Iniciar follow-up',
   assign_broker:           'Atribuir corretor',
-  assign_via_roleta:       'Distribuir via roleta',
+  assign_via_roleta:       'Distribuir pela roleta',
   add_label:               'Adicionar etiqueta',
   remove_label:            'Remover etiqueta',
   move_pipeline_stage:     'Mover no funil',
@@ -322,11 +322,23 @@ export const ACTION_REQUIRED_PARAMS: Record<string, string[]> = {
   notify_broker:           ['message'],
   notify_gestor:           ['message'],
   notify_push:             ['user_ids', 'message'],
-  // assign_via_roleta e wait não têm params obrigatórios
+  // wait não tem params obrigatórios. assign_via_roleta: ver ROLETA_OBRIGATORIA.
 };
 
+/**
+ * "Distribuir pela roleta" com a chave `roleta_nova` (06/10/2026): a roleta não
+ * tem número, então a ação ESCOLHE a roleta (`roleta_config_id`, obrigatório).
+ * Sem a chave, vazio continua valendo como "a roleta do número da conversa".
+ */
+export interface OpcoesDaValidacao {
+  roletaObrigatoria?: boolean;
+}
+
 /** Os params obrigatórios da ação que estão vazios, na ordem do mapa. */
-export function missingActionParams(action: { type: string; params?: Record<string, unknown> | null }): string[] {
+export function missingActionParams(
+  action: { type: string; params?: Record<string, unknown> | null },
+  { roletaObrigatoria = false }: OpcoesDaValidacao = {},
+): string[] {
   const empty = (value: unknown) =>
     value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
   // "Disparar funil de mensagens" no formato antigo (funil do editor de antes):
@@ -334,6 +346,8 @@ export function missingActionParams(action: { type: string; params?: Record<stri
   if (action.type === 'send_message_funnel' && empty(action.params?.flow_automation_id) && !empty(action.params?.funnel_id)) {
     return [];
   }
-  const required = ACTION_REQUIRED_PARAMS[action.type] ?? [];
+  const required = action.type === 'assign_via_roleta'
+    ? (roletaObrigatoria ? ['roleta_config_id'] : [])
+    : ACTION_REQUIRED_PARAMS[action.type] ?? [];
   return required.filter(key => empty(action.params?.[key]));
 }
