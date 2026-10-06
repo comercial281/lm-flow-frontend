@@ -1,43 +1,39 @@
+// src/pages/SuperAdmin/NumberOwnership/index.tsx
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Power, RefreshCw, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
+import EmptyState from '@/components/base/EmptyState';
+import { Button } from '@/components/ui/ds';
 import numberOwnershipService, {
   type OwnershipDiagnosis, type OwnershipSummary,
 } from '@/services/superAdmin/numberOwnershipService';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { loadInBatches } from './loadInBatches';
 import {
-  FAILED_REQUEST_MESSAGE, conflictHint, connectionText, liberatedLine, ownerSourceText, roletaLine, ruleAction,
-  ruleConfirmation, ruleDoneText, ruleErrorMessage, ruleLastLine, ruleStatusText, sortRows, summaryLine,
-  verdictBadge, type RuleActionKind, type TenantRow, type Tone,
+  FAILED_REQUEST_MESSAGE, conflictHint, liberatedLine, ownerSourceText, roletaLine, ruleAction,
+  ruleConfirmation, ruleDoneText, ruleErrorMessage, ruleLastLine, ruleStatusText, summaryLine,
+  verdictBadge, type RuleActionKind, type TenantRow,
 } from './numberOwnershipRules';
+import { Pill } from './Pill';
+import SeloDaSituacao from './SeloDaSituacao';
+import { contadores, filtrarSoCaidos, ordenarComCaidos, ordenarNumeros, seloDoCliente } from './situacao';
 
 /**
- * Aba *Números* do painel raiz (Clientes → Números): de quem é cada número de
- * WhatsApp de cada cliente, quem migra sozinho, e — desde a fase 2b.1 — o
- * botão que LIGA a regra do dono do número naquele cliente. A regra é do
- * servidor (Numbers::OwnershipDiagnosis / Numbers::OwnershipMigration); as
- * palavras, de ./numberOwnershipRules.
+ * Clientes → Números conectados (painel raiz). Duas leituras de cada número de
+ * WhatsApp de cada cliente:
+ * - a SITUAÇÃO (entrega 4, 06/10): conectado, caído desde quando, nunca
+ *   conectado, API oficial ou sem leitura. Cliente com número caído sobe para o
+ *   topo; o resumo de cada cliente vem na lista, lido na hora pelo servidor;
+ * - o DONO (fase 2a/2b.1): quem migra sozinho, quem precisa conferir, e o botão
+ *   que liga a regra do dono do número naquele cliente.
+ * Quem decide é o servidor (Numbers::Situation, Numbers::OwnershipDiagnosis,
+ * Numbers::OwnershipMigration); as palavras, de ./situacao e ./numberOwnershipRules.
  *
  * Ligar/Desligar é escrita em produção: sempre com o Dialog de confirmação da
- * casa (useConfirmacao), nunca com a caixinha do navegador.
+ * casa (useConfirmacao), nunca com a caixinha do navegador. Daqui não se
+ * reconecta número (sem QR code no admin, decisão de 06/10): agir = Entrar no cliente.
  */
 const BATCH_SIZE = 4;
-
-const TONE_CLASS: Record<Tone, string> = {
-  ok: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
-  warn: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
-  error: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30',
-  neutral: 'bg-muted text-muted-foreground border-border',
-};
-
-function Pill({ tone, children }: { tone: Tone; children: ReactNode }) {
-  return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${TONE_CLASS[tone]}`}>
-      {children}
-    </span>
-  );
-}
 
 function Line({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -114,17 +110,18 @@ function TenantDetail({
         <p className="text-sm text-muted-foreground">Este cliente não tem número de WhatsApp.</p>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
-          {data.numbers.map(n => (
+          {ordenarNumeros(data.numbers).map(n => (
             <div
               key={n.inbox_id}
-              className={`rounded-lg border bg-background p-3 space-y-1.5 ${n.conflicts.length ? 'border-amber-500/40' : ''}`}
+              className={`rounded-lg border bg-background p-3 space-y-1.5 ${
+                n.situation === 'disconnected' ? 'border-red-500/40' : n.conflicts.length ? 'border-amber-500/40' : ''
+              }`}
             >
               <div className="flex items-start justify-between gap-2">
-                <div>
+                <div className="space-y-1">
                   <div className="font-medium">{n.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {n.phone ?? 'sem telefone gravado'} · {connectionText(n.connection)}
-                  </div>
+                  <div className="text-xs text-muted-foreground">{n.phone ?? 'sem telefone gravado'}</div>
+                  <SeloDaSituacao situacao={n.situation} desde={n.disconnected_at} />
                 </div>
                 {n.phone_matches && <Pill tone="ok">celular bate</Pill>}
               </div>
@@ -192,6 +189,8 @@ export default function NumberOwnership() {
   const [openId, setOpenId] = useState<string | null>(null);
   // O cliente cujo Ligar/Desligar está no ar (o botão gira nele).
   const [ruleBusyId, setRuleBusyId] = useState<string | null>(null);
+  // "Só caídos" (entrega 4): filtro da tela, pelo resumo de conexão que a lista traz.
+  const [soCaidos, setSoCaidos] = useState(false);
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   // Cada leitura ganha um número; resposta de leitura velha é descartada.
   const runRef = useRef(0);
@@ -261,106 +260,139 @@ export default function NumberOwnership() {
     [confirmar],
   );
 
-  const sorted = sortRows(rows);
+  const visiveis = ordenarComCaidos(filtrarSoCaidos(rows, soCaidos));
 
   return (
     <div className="max-w-6xl mx-auto space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-0.5">
           <h2 className="text-base font-semibold flex items-center gap-2">
-            <Smartphone className="h-4 w-4 text-violet-500" /> Números de WhatsApp de cada cliente
+            <Smartphone className="h-4 w-4 text-primary" /> Números de WhatsApp de cada cliente
           </h2>
-          <p className="text-sm text-muted-foreground">
-            {rows.length ? summaryLine(rows) : busy ? 'Carregando a lista de clientes…' : 'Nenhum cliente ativo.'}
-          </p>
+          {rows.length > 0 ? (
+            <>
+              <p className="text-sm font-medium">{contadores(rows)}</p>
+              <p className="text-sm text-muted-foreground">{summaryLine(rows)}</p>
+            </>
+          ) : busy ? (
+            <p className="text-sm text-muted-foreground">Carregando a lista de clientes…</p>
+          ) : null}
         </div>
-        <button
-          type="button"
-          onClick={() => void load(true)}
-          // Com um Ligar/Desligar no ar, reler agora poderia trazer a foto de
-          // antes da escrita e cobrir a leitura nova que o clique devolve.
-          disabled={busy || ruleBusyId !== null}
-          className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border hover:bg-muted disabled:opacity-50"
-        >
-          <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} /> Atualizar
-        </button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant={soCaidos ? 'default' : 'outline'}
+            aria-pressed={soCaidos}
+            disabled={rows.length === 0}
+            onClick={() => setSoCaidos(v => !v)}
+          >
+            Só caídos
+          </Button>
+          <button
+            type="button"
+            onClick={() => void load(true)}
+            // Com um Ligar/Desligar no ar, reler agora poderia trazer a foto de
+            // antes da escrita e cobrir a leitura nova que o clique devolve.
+            disabled={busy || ruleBusyId !== null}
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border hover:bg-muted disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} /> Atualizar
+          </button>
+        </div>
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Nenhum conflito é corrigido daqui: quem resolve é o gestor, em Canais e na Roleta. O que se liga daqui é a
-        regra do dono do número, cliente a cliente. A leitura de cada cliente fica guardada por 5 minutos; Atualizar
-        lê tudo de novo.
+        A situação de cada número é a gravada pelo próprio WhatsApp e pela conferência automática de 3 em 3 minutos;
+        para reconectar, entre no cliente. Nenhum conflito de dono é corrigido daqui: quem resolve é o gestor, em
+        Canais e na Roleta. O que se liga daqui é a regra do dono do número, cliente a cliente. A conferência de dono
+        de cada cliente fica guardada por 5 minutos; Atualizar lê tudo de novo.
       </p>
 
-      {listFailed && (
-        <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-300">
-          Não consegui carregar a lista de clientes. Tente Atualizar.
-        </div>
-      )}
-
-      <div className="rounded-lg border overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-xs text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 w-8" />
-              <th className="text-left px-3 py-2">Cliente</th>
-              <th className="text-right px-3 py-2">Números</th>
-              <th className="text-right px-3 py-2">Dono claro</th>
-              <th className="text-right px-3 py-2">Compartilhados</th>
-              <th className="text-right px-3 py-2">Precisam conferir</th>
-              <th className="text-left px-3 py-2">Situação</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map(row => {
-              const badge = verdictBadge(row.state);
-              const data = row.state.kind === 'ready' ? row.state.data : null;
-              const canOpen = !!data && data.verdict !== 'unreadable';
-              const isOpen = canOpen && openId === row.tenant.id;
-              return (
-                <Fragment key={row.tenant.id}>
-                  <tr
-                    className={`border-t ${canOpen ? 'cursor-pointer hover:bg-muted/40' : ''}`}
-                    onClick={() => {
-                      if (canOpen) setOpenId(isOpen ? null : row.tenant.id);
-                    }}
-                  >
-                    <td className="px-3 py-2">
-                      {row.state.kind === 'loading' ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                      ) : canOpen ? (
-                        isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-2 font-medium">{row.tenant.name}</td>
-                    <td className="px-3 py-2 text-right">{count(data, 'numbers')}</td>
-                    <td className="px-3 py-2 text-right">{count(data, 'owned')}</td>
-                    <td className="px-3 py-2 text-right">{count(data, 'shared')}</td>
-                    <td className="px-3 py-2 text-right">{count(data, 'needs_review')}</td>
-                    <td className="px-3 py-2">
-                      <Pill tone={badge.tone}>{badge.label}</Pill>
-                      {badge.note && <span className="ml-2 text-xs text-muted-foreground">{badge.note}</span>}
-                      {data?.rule?.enabled && <span className="ml-2"><Pill tone="ok">dono do número ligado</Pill></span>}
-                    </td>
-                  </tr>
-                  {isOpen && data && (
-                    <tr className="border-t bg-muted/20">
-                      <td colSpan={7} className="px-3 py-3">
-                        <TenantDetail
-                          data={data}
-                          ruleBusy={ruleBusyId === row.tenant.id}
-                          ruleLocked={busy || (ruleBusyId !== null && ruleBusyId !== row.tenant.id)}
-                          onRule={kind => void changeRule(row, data, kind)}
-                        />
+      {listFailed ? (
+        <EmptyState tipo="erro" title="Não deu pra carregar os clientes" aoTentarDeNovo={() => void load(false)} />
+      ) : rows.length === 0 ? (
+        busy ? null : (
+          <EmptyState
+            title="Nenhum cliente em uso"
+            description="Quando houver cliente ativo, os números de WhatsApp dele aparecem aqui."
+          />
+        )
+      ) : visiveis.length === 0 ? (
+        <EmptyState
+          tipo="semResultado"
+          title="Nenhum número caído"
+          description="Nenhum cliente está com número caído agora."
+          aoLimparFiltros={() => setSoCaidos(false)}
+        />
+      ) : (
+        <div className="rounded-lg border overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-xs text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2 w-8" />
+                <th className="text-left px-3 py-2">Cliente</th>
+                <th className="text-left px-3 py-2">Conexão</th>
+                <th className="text-right px-3 py-2">Números</th>
+                <th className="text-right px-3 py-2">Dono claro</th>
+                <th className="text-right px-3 py-2">Compartilhados</th>
+                <th className="text-right px-3 py-2">Precisam conferir</th>
+                <th className="text-left px-3 py-2">Situação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visiveis.map(row => {
+                const badge = verdictBadge(row.state);
+                const selo = seloDoCliente(row.tenant.connection_summary);
+                const data = row.state.kind === 'ready' ? row.state.data : null;
+                const canOpen = !!data && data.verdict !== 'unreadable';
+                const isOpen = canOpen && openId === row.tenant.id;
+                return (
+                  <Fragment key={row.tenant.id}>
+                    <tr
+                      id={`cliente-${row.tenant.id}`}
+                      className={`border-t ${canOpen ? 'cursor-pointer hover:bg-muted/40' : ''}`}
+                      onClick={() => {
+                        if (canOpen) setOpenId(isOpen ? null : row.tenant.id);
+                      }}
+                    >
+                      <td className="px-3 py-2">
+                        {row.state.kind === 'loading' ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        ) : canOpen ? (
+                          isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 font-medium">{row.tenant.name}</td>
+                      <td className="px-3 py-2"><Pill tone={selo.tom}>{selo.texto}</Pill></td>
+                      <td className="px-3 py-2 text-right">{count(data, 'numbers')}</td>
+                      <td className="px-3 py-2 text-right">{count(data, 'owned')}</td>
+                      <td className="px-3 py-2 text-right">{count(data, 'shared')}</td>
+                      <td className="px-3 py-2 text-right">{count(data, 'needs_review')}</td>
+                      <td className="px-3 py-2">
+                        <Pill tone={badge.tone}>{badge.label}</Pill>
+                        {badge.note && <span className="ml-2 text-xs text-muted-foreground">{badge.note}</span>}
+                        {data?.rule?.enabled && <span className="ml-2"><Pill tone="ok">dono do número ligado</Pill></span>}
                       </td>
                     </tr>
-                  )}
-                </Fragment>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                    {isOpen && data && (
+                      <tr className="border-t bg-muted/20">
+                        <td colSpan={8} className="px-3 py-3">
+                          <TenantDetail
+                            data={data}
+                            ruleBusy={ruleBusyId === row.tenant.id}
+                            ruleLocked={busy || (ruleBusyId !== null && ruleBusyId !== row.tenant.id)}
+                            onRule={kind => void changeRule(row, data, kind)}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {dialogoDeConfirmacao}
     </div>
