@@ -49,4 +49,24 @@ describe('ComparacaoIA', () => {
     await waitFor(() => expect(screen.queryByText('Morar ou investir?')).not.toBeInTheDocument());
     expect(screen.getByText('Ok.')).toBeInTheDocument();
   });
+  it('erro ao listar as IAs aparece como erro e tenta de novo', async () => {
+    listAll.mockReset();
+    listAll.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce([{ id: 'a1', tenant_slug: 'dezesseis', tenant_name: 'Imobiliária Exemplo', name: 'IA Exemplo' }]);
+    const user = userEvent.setup();
+    render(<ComparacaoIA />);
+    await user.click(await screen.findByRole('button', { name: 'Tentar de novo' }));
+    expect(await screen.findByLabelText('IA')).toBeInTheDocument();
+  });
+
+  it('busca sem conversa mostra vazio; erro na busca mostra erro com o motivo', async () => {
+    const user = userEvent.setup();
+    comparisonCandidates.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error('A IA não tem roteiro 2.'));
+    render(<ComparacaoIA />);
+    await user.selectOptions(await screen.findByLabelText('IA'), 'a1');
+    await user.click(screen.getByRole('button', { name: 'Buscar conversas' }));
+    expect(await screen.findByText('Nenhuma conversa com resposta da IA para comparar')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Buscar conversas' }));
+    expect(await screen.findByText('A IA não tem roteiro 2.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
+  });
 });
