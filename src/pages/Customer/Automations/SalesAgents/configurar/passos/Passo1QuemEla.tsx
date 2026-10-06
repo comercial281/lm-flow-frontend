@@ -87,7 +87,7 @@ export default function Passo1QuemEla({ agent, aoSalvo }: PropsDoPasso) {
           aoMudar={(v) => mudar({ lead_facing_name: v.trim() ? v : null })}
           placeholder={persona === 'broker' ? rascunho.number_owner_name ?? 'Bruno' : 'Bia'}
           ajuda={persona === 'broker' ? 'Na persona do próprio corretor, use o nome do dono do número.' : 'É como ela se apresenta na conversa.'}
-          aviso={nomeVisivel.trim() ? undefined : 'Sem ele, a IA não liga.'} />
+          aviso={nomeVisivel.trim() ? undefined : 'Sem ele, ela se apresenta sem nome.'} />
         <CampoTexto id="p1-nome-interno" rotulo="Nome desta IA no LM Flow" valor={rascunho.name}
           aoMudar={(v) => mudar({ name: v })} ajuda="Só a sua equipe vê. Ajuda a separar uma IA da outra." />
         <Campo id="p1-imobiliaria" rotulo="Imobiliária" ajuda="Vem do cadastro da conta.">

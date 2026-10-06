@@ -8,8 +8,10 @@
  * do Painel, que junta o Diagnóstico do servidor. A Visão geral recebe daqui só o
  * que ela não sabe sozinha (persona e destino) — ver situacao.ts.
  *
- * Trava o Ligar: sem número, sem o nome que o lead vê (decisão do índice, 05/10) e a
- * persona corretor num número sem dono (o servidor também recusa este).
+ * Trava o Ligar: sem número, a persona corretor num número sem dono (o servidor
+ * também recusa este) e o Sistema do cliente sem chave pronta. O nome que o lead vê
+ * só AVISA (decisão do dono do produto, 05/10): sem ele o roteiro sai igual ao de
+ * antes, e as IAs que já atendem não têm esse nome.
  */
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { lerEscolhas } from './tresEscolhas';
@@ -33,9 +35,9 @@ export function pendenciasDosPassos(agent: Lido): PendenciaDoPasso[] {
   const { persona } = lerEscolhas(agent);
 
   if (!(agent.lead_facing_name ?? '').trim()) {
-    // Obrigatório pra LIGAR (decisão do índice, 05/10). Não trava quem já está ligada:
-    // desligar nunca trava, e salvar o resto continua livre.
-    lista.push({ chave: 'nome_visivel', passo: 1, frase: 'Falta o nome que o lead vê.', impedeLigar: true });
+    // Só aviso, não trava o Ligar (decisão do dono do produto, 05/10): vazio, ela se
+    // apresenta sem nome, como sempre fez.
+    lista.push({ chave: 'nome_visivel', passo: 1, frase: 'Falta o nome que o lead vê.', impedeLigar: false });
   }
   if (persona === 'broker' && agent.inbox_id && !agent.number_owner_id) {
     lista.push({ chave: 'persona_sem_dono', passo: 1, frase: FRASE_SEM_DONO, impedeLigar: true });

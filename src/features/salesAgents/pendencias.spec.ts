@@ -36,10 +36,10 @@ describe('pendenciasDosPassos', () => {
     expect(podeLigar(a).pode).toBe(true);
   });
 
-  it('sem o nome que o lead vê: passo 1, e trava o Ligar', () => {
+  it('sem o nome que o lead vê: passo 1, só aviso (não trava o Ligar)', () => {
     const a = ia({ lead_facing_name: '  ' });
-    expect(pendenciasDosPassos(a)[0]).toMatchObject({ passo: 1, chave: 'nome_visivel', impedeLigar: true });
-    expect(podeLigar(a)).toEqual({ pode: false, motivo: 'Falta o nome que o lead vê.' });
+    expect(pendenciasDosPassos(a)[0]).toMatchObject({ passo: 1, chave: 'nome_visivel', impedeLigar: false });
+    expect(podeLigar(a)).toEqual({ pode: true, motivo: null });
   });
 
   it('roleta ou corretor sem escolha, perguntas vazias, palavra antiga e follow-up sem limite', () => {

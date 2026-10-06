@@ -69,7 +69,7 @@ describe('Passo 1 · Quem ela é', () => {
   // Obrigatório pra LIGAR (passo 8), não pra salvar o resto do passo.
   it('sem o nome que o lead vê, avisa e ainda salva o resto', async () => {
     abrir();
-    expect(screen.getByText('Sem ele, a IA não liga.')).toBeTruthy();
+    expect(screen.getByText('Sem ele, ela se apresenta sem nome.')).toBeTruthy();
     await userEvent.click(screen.getByLabelText('Curtir mensagens do lead'));
     await salvar();
     expect(update).toHaveBeenCalledWith('ia-1', { reaction_enabled: true });
