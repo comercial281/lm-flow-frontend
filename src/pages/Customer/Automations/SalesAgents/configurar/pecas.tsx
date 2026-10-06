@@ -89,13 +89,18 @@ export function CascaDoPasso({ numero, previa, pendente, salvando, erro, aoSalva
         <h1 className="text-xl font-semibold">{passo.titulo}</h1>
         <p className="text-sm text-muted-foreground">{passo.frase}</p>
       </header>
-      <div className={previa ? 'grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]' : undefined}>
-        <Secoes>{children}</Secoes>
-        {previa && (
-          <aside aria-label="Prévia" className="h-fit rounded-xl border border-border bg-muted/30 p-4 xl:sticky xl:top-4">
-            {previa}
-          </aside>
-        )}
+      {/* ⚠️ Pela largura DESTA área (contêiner), não da janela: entre o menu lateral e o
+          trilho dos passos sobra bem menos que a janela, e com a prévia ao lado os
+          campos ficavam espremidos e vazavam por cima dela. Ao lado só com folga. */}
+      <div className="@container">
+        <div className={previa ? 'grid gap-6 @5xl:grid-cols-[minmax(0,1fr)_320px]' : undefined}>
+          <Secoes className="min-w-0">{children}</Secoes>
+          {previa && (
+            <aside aria-label="Prévia" className="h-fit rounded-xl border border-border bg-muted/30 p-4 @5xl:sticky @5xl:top-4">
+              {previa}
+            </aside>
+          )}
+        </div>
       </div>
       {erro && <p role="alert" className="text-sm text-destructive">{erro}</p>}
       <BarraSalvar visivel={pendente} salvando={salvando} aoSalvar={aoSalvar} aoDescartar={aoDescartar} />
