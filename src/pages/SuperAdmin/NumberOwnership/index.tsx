@@ -307,7 +307,7 @@ export default function NumberOwnership() {
           <h2 className="text-base font-semibold flex items-center gap-2">
             <Smartphone className="h-4 w-4 text-primary" /> Números de WhatsApp de cada cliente
           </h2>
-          {rows.length > 0 ? (
+          {rows.length > 0 && !listFailed ? (
             <>
               <p className="text-sm font-medium">{contadores(rows)}</p>
               <p className="text-sm text-muted-foreground">{summaryLine(rows)}</p>
@@ -321,7 +321,7 @@ export default function NumberOwnership() {
             size="sm"
             variant={soCaidos ? 'default' : 'outline'}
             aria-pressed={soCaidos}
-            disabled={rows.length === 0}
+            disabled={rows.length === 0 || listFailed}
             onClick={() => setSoCaidos(v => !v)}
           >
             Só caídos

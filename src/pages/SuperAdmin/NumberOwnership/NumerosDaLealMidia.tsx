@@ -62,7 +62,7 @@ export default function NumerosDaLealMidia({ recarga }: { recarga: number }) {
                   <div className="truncate font-medium">{n.name}</div>
                   <div className="text-xs text-muted-foreground">{n.phone ? telefone(n.phone) : 'sem telefone gravado'}</div>
                 </div>
-                <SeloDaSituacao situacao={n.status} />
+                <SeloDaSituacao situacao={n.status} desde={n.disconnected_at} />
               </li>
             ))}
           </ul>

@@ -34,6 +34,22 @@ describe('Números da Leal Mídia', () => {
     expect(screen.getByText('Caído')).toBeInTheDocument();
   });
 
+  it('repassa disconnected_at ao selo quando vem, e segue sem quando não vem', async () => {
+    const desde = new Date(Date.now() - 2 * 3600 * 1000).toISOString();
+    platformNumbers.mockResolvedValue(ok({
+      unreadable: false,
+      numbers: [
+        { name: 'Com data', phone: null, status: 'disconnected', disconnected_at: desde },
+        { name: 'Sem data', phone: null, status: 'disconnected' },
+      ],
+    }));
+
+    render(<NumerosDaLealMidia recarga={0} />);
+
+    expect(await screen.findByText(/^Caiu .*\(desde /)).toBeInTheDocument();
+    expect(screen.getByText('Caído')).toBeInTheDocument();
+  });
+
   it('servidor sem leitura: "Não consegui ler" com "Tentar de novo"', async () => {
     platformNumbers
       .mockResolvedValueOnce(ok({ unreadable: true, numbers: [] }))

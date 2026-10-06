@@ -236,6 +236,24 @@ describe('NumberOwnership', () => {
     await waitFor(() => expect(diagnose).toHaveBeenCalledWith('a', true));
   });
 
+  it('Atualizar que falha depois de uma lista boa: contadores somem e "Só caídos" trava', async () => {
+    listTenants.mockResolvedValueOnce(okResponse([tenant('a', 'Cliente A')]));
+    diagnose.mockResolvedValue(okResponse(diagnosis('a')));
+
+    montar();
+
+    await waitFor(() => expect(screen.getByText(/1 cliente migra sozinho/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: /Atualizar/ })).not.toBeDisabled());
+    expect(screen.getByRole('button', { name: 'Só caídos' })).not.toBeDisabled();
+
+    listTenants.mockRejectedValueOnce(new Error('caiu'));
+    await userEvent.click(screen.getByRole('button', { name: /Atualizar/ }));
+
+    expect(await screen.findByText('Não deu pra carregar os clientes')).toBeInTheDocument();
+    expect(screen.queryByText(/1 cliente migra sozinho/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Só caídos' })).toBeDisabled();
+  });
+
   it('mostra o resumo no topo com as contagens da carteira', async () => {
     listTenants.mockResolvedValue(okResponse([tenant('a', 'Cliente A')]));
     diagnose.mockResolvedValue(okResponse(diagnosis('a')));
