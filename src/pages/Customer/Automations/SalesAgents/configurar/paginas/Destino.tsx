@@ -12,7 +12,7 @@
 // ⚠️ Nunca "webhook" na tela (decisão de 05/10 + conferir-padrao).
 // ⚠️ O resumo grava só a subchave briefing_enabled: o hook monta o jsonb sobre o
 // último salvo, então o critério gravado em outra página não é pisado.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Lock } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import { Secao, Secoes } from '@/components/base/Secao';
@@ -47,7 +47,7 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
   const [erroUrl, setErroUrl] = useState<string | null>(null);
 
   useEffect(() => { if (persona === 'broker') setEscolhendo(null); }, [persona]);
-  useEffect(() => { setUrl(agent.handoff_webhook_url ?? ''); }, [agent.handoff_webhook_url]);
+  useEffect(() => { if (!editandoUrl.current) setUrl(agent.handoff_webhook_url ?? ''); }, [agent.handoff_webhook_url]);
   // Leitura de fundo: cargo sem acesso a roletas ou à equipe só não vê a lista.
   useEffect(() => {
     let vivo = true;
@@ -67,13 +67,28 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
   const escolherCartao = (v: Escolha) => setEscolhendo(v === doGravado ? null : v);
   const escolherRoleta = (id: string) => { if (id) void gravar({ handoff_target: 'roleta', handoff_roleta_config_id: id, handoff_user_id: null }).then(fechar); };
   const escolherCorretor = (id: string) => { if (id) void gravar({ handoff_target: 'user', handoff_user_id: id, handoff_roleta_config_id: null }).then(fechar); };
+  // ⚠️ O endereço grava ao sair do campo E quando a página some com edição pendente
+  // (o React não dispara blur no desmonte). Tudo lido de refs: o desmonte roda
+  // com a closure do primeiro render.
+  const editandoUrl = useRef(false);
+  const ref = useRef({ url, gravar, salvo: agent.handoff_webhook_url ?? '', alvo: gravado });
+  ref.current = { url, gravar, salvo: agent.handoff_webhook_url ?? '', alvo: gravado };
   const salvarUrl = () => {
-    const limpo = url.trim();
-    const problema = limpo ? problemaNoEndereco(limpo) : null;
-    setErroUrl(problema);
-    if (problema || limpo === (agent.handoff_webhook_url ?? '')) return;
-    void gravar({ handoff_webhook_url: limpo || null });
+    editandoUrl.current = false;
+    const { url: digitado, gravar: grava, salvo, alvo } = ref.current;
+    const limpo = digitado.trim();
+    if (limpo === salvo) return;
+    // ⚠️ Com o sistema do cliente JÁ como destino, apagar o endereço deixaria o lead sem pra onde ir.
+    if (!limpo && alvo === 'webhook') {
+      setErroUrl('Informe o endereço do sistema do cliente');
+      setUrl(salvo);
+      return;
+    }
+    if (limpo && problemaNoEndereco(limpo)) return; // o campo já mostra o problema
+    void grava({ handoff_webhook_url: limpo || null });
   };
+  const mudarUrl = (v: string) => { editandoUrl.current = true; setErroUrl(null); setUrl(v); };
+  useEffect(() => () => { if (editandoUrl.current) salvarUrl(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const sistemaPronto = !!agent.handoff_webhook_url && agent.handoff_webhook_secret_state === 'ready';
   const roletasVisiveis = roletas.filter((r) => r.ativa || r.id === agent.handoff_roleta_config_id);
   const cfg = agent.transfer_config ?? {};
@@ -135,7 +150,7 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
               <>
                 <SistemaDoCliente agentId={agent.id} url={url} urlSalva={agent.handoff_webhook_url ?? null}
                   chaveGerada={Boolean(agent.handoff_webhook_secret_set)} chaveIlegivel={agent.handoff_webhook_secret_state === 'unreadable'}
-                  onUrlChange={setUrl} onUrlBlur={salvarUrl}
+                  onUrlChange={mudarUrl} onUrlBlur={salvarUrl}
                   // A chave é gravada pela ação própria (nunca pelo salvar da IA): a casca só fica sabendo.
                   onChaveGerada={() => aoChaveGerada?.()} />
                 {erroUrl && <p className="text-sm text-destructive">{erroUrl}</p>}
