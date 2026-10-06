@@ -16,7 +16,6 @@ import {
   Globe,
   Settings,
   Users,
-  Clock,
   Star,
   MessageSquare,
   Shield,
@@ -42,7 +41,6 @@ import {
   LockToSingleConversationForm,
   DefaultConversationStatusForm,
   CollaboratorsForm,
-  BusinessHoursForm,
   CSATForm,
   PreChatForm,
   WidgetBuilderForm,
@@ -343,6 +341,10 @@ export default function ChannelSettings() {
 
   // Tab configuration based on inbox type
   const tabs = useMemo(() => {
+    // A aba "Horário de funcionamento" saiu em 06/10/2026 (roleta nova, D8): o
+    // horário é da ROLETA, e o do canal não era usado por número nenhum. Endereço
+    // antigo com ?tab=businesshours cai na primeira aba.
+    //
     // Quem só atende no número vê UMA aba: a de conexão. As outras decidem
     // coisas do CRM que são do gestor — quem atende naquele WhatsApp, horário de
     // atendimento, pesquisa de satisfação, modelos de mensagem, o nome e a foto
@@ -352,7 +354,6 @@ export default function ChannelSettings() {
       ? [
           { key: 'inbox_settings', name: t('settings.tabs.inbox_settings'), icon: Settings },
           { key: 'collaborators', name: t('settings.tabs.collaborators'), icon: Users },
-          { key: 'businesshours', name: t('settings.tabs.businesshours'), icon: Clock },
           { key: 'csat', name: t('settings.tabs.csat'), icon: Star },
           { key: 'messageTemplates', name: t('settings.tabs.messageTemplates'), icon: MessageSquare },
         ]
@@ -890,29 +891,6 @@ export default function ChannelSettings() {
                   await InboxesService.update(inboxId, { owner_user_id: ownerUserId });
                   await ownerPrompt.ask({ rule: numberOwnerRule, previousOwner, newOwnerId: ownerUserId });
                   await loadChannelData(); // Refresh data after update (e depois da pergunta, uma vez só)
-                }}
-              />}
-            </TabsContent>
-
-            {/* Business Hours Tab */}
-            <TabsContent value="businesshours">
-              {activeTab === 'businesshours' && <BusinessHoursForm
-                inboxId={inboxId}
-                workingHoursEnabled={inbox?.working_hours_enabled === true}
-                outOfOfficeMessage={inbox?.out_of_office_message || ''}
-                workingHours={Array.isArray(inbox?.working_hours) ? inbox.working_hours : []}
-                timezone={inbox?.timezone || 'UTC'}
-                onUpdate={async data => {
-                  // Update inbox business hours settings
-                  const payload = {
-                    id: inboxId,
-                    working_hours_enabled: data.working_hours_enabled,
-                    out_of_office_message: data.out_of_office_message,
-                    working_hours: data.working_hours,
-                    timezone: data.timezone,
-                  };
-                  await InboxesService.update(inboxId, payload);
-                  await loadChannelData(); // Refresh data after update
                 }}
               />}
             </TabsContent>
