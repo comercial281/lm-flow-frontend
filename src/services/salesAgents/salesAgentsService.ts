@@ -459,10 +459,6 @@ export interface PlaybookObjection {
 }
 
 /**
- * Os PONTOS-CHAVE da venda desta imobiliária — o que preenche os encaixes do
- * alicerce. Chave ausente = exemplo de fábrica.
- */
-/**
  * Um caminho da INTENÇÃO (onda 2, 06/10/2026): a resposta do lead à pergunta de
  * intenção e como ela conduz dali. Grava em `playbook.vars.caminhos_intencao` (até
  * 5; nome até 40, como até 300). Lista vazia/ausente = os 3 de fábrica, que o
@@ -482,6 +478,10 @@ export interface VozDaIa {
   preview_url: string | null;
 }
 
+/**
+ * Os PONTOS-CHAVE da venda desta imobiliária — o que preenche os encaixes do
+ * alicerce. Chave ausente = exemplo de fábrica.
+ */
 export interface PlaybookVars {
   tipo_venda?: string;
   perguntas_situacao?: string[];

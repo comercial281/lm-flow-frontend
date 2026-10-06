@@ -9,15 +9,7 @@
 // motivo no `title`. `aoEscolher` pode gravar na hora: quem chama decide.
 import { useRef, type KeyboardEvent } from 'react';
 import { cn } from '@/lib/utils';
-
-export interface OpcaoDeEscolha<T extends string> {
-  valor: T;
-  rotulo: string;
-  descricao?: string;
-  desabilitada?: boolean;
-  /** Por que está desabilitada (vai no `title` e, nos cartões, no lugar da frase). */
-  motivo?: string;
-}
+import { proximaHabilitada, type OpcaoDeEscolha } from './escolha';
 
 export interface BotoesDeEscolhaProps<T extends string> {
   /** O nome do grupo pro leitor de tela ("Horário", "Modo"). */
@@ -28,15 +20,6 @@ export interface BotoesDeEscolhaProps<T extends string> {
   aoEscolher: (valor: T) => void;
   desabilitado?: boolean;
   className?: string;
-}
-
-/** A próxima opção habilitada na direção `passo`, dando a volta. */
-export function proximaHabilitada<T extends string>(opcoes: OpcaoDeEscolha<T>[], de: number, passo: 1 | -1): number {
-  for (let i = 1; i <= opcoes.length; i += 1) {
-    const j = (de + passo * i + opcoes.length) % opcoes.length;
-    if (!opcoes[j].desabilitada) return j;
-  }
-  return de;
 }
 
 export default function BotoesDeEscolha<T extends string>({

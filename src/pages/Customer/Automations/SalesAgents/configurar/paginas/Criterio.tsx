@@ -11,7 +11,7 @@ import { Secao, Secoes } from '@/components/base/Secao';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
 import LinhaComChave from '@/components/base/LinhaComChave';
-import type { OpcaoDeEscolha } from '@/components/base/BotoesDeEscolha';
+import type { OpcaoDeEscolha } from '@/components/base/escolha';
 import type { HandoffMode } from '@/services/salesAgents/salesAgentsService';
 import { lerEscolhas } from '@/features/salesAgents/tresEscolhas';
 import { keepBriefing } from '@/features/salesAgents/handoffBriefing';

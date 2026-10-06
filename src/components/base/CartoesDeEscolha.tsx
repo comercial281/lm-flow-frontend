@@ -6,7 +6,7 @@
 // acessível do cartão, e na desabilitada o motivo toma o lugar da frase.
 import { useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { proximaHabilitada, type OpcaoDeEscolha } from './BotoesDeEscolha';
+import { proximaHabilitada, type OpcaoDeEscolha } from './escolha';
 
 export interface CartoesDeEscolhaProps<T extends string> {
   rotulo: string;
