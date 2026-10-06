@@ -94,9 +94,9 @@ describe('PortalSettingsCard', () => {
     expect(screen.getByRole('radio', { name: 'Sim' })).toBeChecked();
     expect(screen.getByRole('combobox', { name: 'Funil' })).toHaveValue('');
     expect(screen.queryByRole('combobox', { name: 'Coluna' })).toBeNull();
-    expect(screen.getByRole('combobox', { name: 'Roleta' })).toHaveValue('');
-    expect(screen.getByRole('combobox', { name: 'Responsável' })).toHaveValue('');
-    // A roleta desativada não é oferecida; o corretor desativado tampouco.
+    // Roleta e Responsável são uma lista só, com as abas Corretores | Roleta.
+    expect(screen.getByRole('combobox', { name: 'Quem assume o lead' })).toHaveValue('');
+    // A roleta desligada não é oferecida; o corretor desativado tampouco.
     expect(screen.queryByRole('option', { name: 'Roleta antiga' })).toBeNull();
     expect(screen.queryByRole('option', { name: 'Bruno' })).toBeNull();
     expect(screen.getByText('O portal exige nome e e-mail para importar os anúncios.')).toBeInTheDocument();
@@ -117,8 +117,7 @@ describe('PortalSettingsCard', () => {
 
     await usuario.selectOptions(screen.getByRole('combobox', { name: 'Funil' }), 'pipe-1');
     await usuario.selectOptions(await screen.findByRole('combobox', { name: 'Coluna' }), 'st-2');
-    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Roleta' }), 'rol-1');
-    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Responsável' }), 'u-1');
+    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Quem assume o lead' }), 'roleta:rol-1');
 
     await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
@@ -132,7 +131,7 @@ describe('PortalSettingsCard', () => {
       pipeline_id: 'pipe-1',
       stage_id: 'st-2',
       roleta_config_id: 'rol-1',
-      default_assignee_id: 'u-1',
+      default_assignee_id: null,
     });
     expect(mocks.toastSuccess).toHaveBeenCalledWith('Configuração salva');
     expect(onSaved).toHaveBeenCalledTimes(1);
@@ -148,7 +147,6 @@ describe('PortalSettingsCard', () => {
       pipeline_id: 'pipe-1',
       stage_id: 'st-2',
       roleta_config_id: 'rol-2',
-      default_assignee_id: 'u-1',
     });
     const coluna = await screen.findByRole('combobox', { name: 'Coluna' });
     await waitFor(() => expect(coluna).toHaveValue('st-2'));
@@ -156,10 +154,23 @@ describe('PortalSettingsCard', () => {
     expect(screen.getByLabelText('Nome do contato')).toHaveValue('Nicholas');
     expect(screen.getByRole('radio', { name: /Rua, sem número/ })).toBeChecked();
     expect(screen.getByRole('combobox', { name: 'Funil' })).toHaveValue('pipe-1');
-    // A roleta gravada está desativada: continua escolhida, com o aviso.
-    expect(screen.getByRole('combobox', { name: 'Roleta' })).toHaveValue('rol-2');
-    expect(screen.getByRole('option', { name: 'Roleta escolhida (desativada)' })).toBeInTheDocument();
-    expect(screen.getByText(/Esta roleta está desativada/)).toBeInTheDocument();
+    // A roleta gravada está desligada: continua escolhida, com o aviso.
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Quem assume o lead' })).toHaveValue('roleta:rol-2'));
+    expect(screen.getByRole('option', { name: 'Roleta antiga (desligada)' })).toBeInTheDocument();
+    expect(screen.getByText(/Esta roleta está desligada/)).toBeInTheDocument();
+  });
+
+  // Gravado com os dois (a tela antiga deixava): a lista mostra o corretor, que é
+  // quem o servidor usa, e salvar SEM MEXER no campo manda os dois como estavam.
+  it('gravado com roleta e responsável: mostra o corretor e salvar sem mexer não muda nada', async () => {
+    const usuario = userEvent.setup();
+    montar({ pipeline_id: 'pipe-1', roleta_config_id: 'rol-1', default_assignee_id: 'u-1' });
+    const quem = await screen.findByRole('combobox', { name: 'Quem assume o lead' });
+    await waitFor(() => expect(quem).toHaveValue('corretor:u-1'));
+
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
+    expect(mocks.updateSettings.mock.calls[0][1]).toMatchObject({ roleta_config_id: 'rol-1', default_assignee_id: 'u-1' });
   });
 
   it('funil gravado que não existe mais continua escolhido, com o rótulo de aviso', async () => {
@@ -208,8 +219,11 @@ describe('PortalSettingsCard', () => {
     montar({ roleta_config_id: 'rol-1' });
     await screen.findByRole('combobox', { name: 'Funil' });
 
-    expect(screen.queryByRole('combobox', { name: 'Roleta' })).toBeNull();
-    expect(screen.getByRole('combobox', { name: 'Responsável' })).toBeInTheDocument();
+    // A aba Roleta fica só com a escolhida (sem a lista); Corretores continua.
+    const quem = screen.getByRole('combobox', { name: 'Quem assume o lead' });
+    expect(quem).toHaveValue('roleta:rol-1');
+    expect(screen.queryByRole('option', { name: 'Roleta principal' })).toBeNull();
+    expect(screen.getByRole('option', { name: 'Ana' })).toBeInTheDocument();
     expect(mocks.toastError).not.toHaveBeenCalled();
 
     await usuario.click(screen.getByRole('button', { name: 'Salvar' }));

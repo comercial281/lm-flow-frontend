@@ -10,6 +10,7 @@ import { sendFromOf, sendFromProblem } from '@/features/numbers/sendFrom';
 import { usesBook } from './book';
 import { conditionProblem } from './conditions';
 import { leadActionProblem } from './leadAction';
+import type { OpcoesDaValidacao } from '@/services/leadAutomation/leadAutomationService';
 import { moveStageProblem } from './moveStage';
 import { progressProblem } from './progress';
 import { blockLabel, isVisibleNode } from './palette';
@@ -18,7 +19,7 @@ import { triggerProblem, type FlowTrigger } from './trigger';
 type BlockLike = Pick<FlowAutomationNode, 'kind' | 'config'>;
 
 /** O que falta no bloco, em português, ou null. Bloco escondido não é conferido. */
-export function nodeProblem(node: BlockLike): string | null {
+export function nodeProblem(node: BlockLike, opcoes: OpcoesDaValidacao = {}): string | null {
   if (!isVisibleNode(node)) return null;
   const config = node.config ?? {};
   switch (node.kind) {
@@ -44,7 +45,7 @@ export function nodeProblem(node: BlockLike): string | null {
     case 'wait':
       return config.mode === 'date' && !config.target_at ? 'Escolha a data e a hora.' : null;
     case 'lead_action':
-      return leadActionProblem(config);
+      return leadActionProblem(config, opcoes);
     default:
       return null;
   }
@@ -58,12 +59,13 @@ export function enableProblem(
   trigger: FlowTrigger,
   nodes: Array<BlockLike & { label?: string | null }>,
   kind: FlowAutomationKind = 'automation',
+  opcoes: OpcoesDaValidacao = {},
 ): string | null {
   // O funil de conversa (sprint 4) tem gatilho fixo: começa quando alguém dispara na conversa.
   const issue = kind === 'conversation' ? null : triggerProblem(trigger);
   if (issue) return `Antes de ligar: ${issue.charAt(0).toLowerCase()}${issue.slice(1)}`;
   for (const node of nodes) {
-    const problem = nodeProblem(node);
+    const problem = nodeProblem(node, opcoes);
     if (problem) return `Antes de ligar, complete o bloco "${node.label || blockLabel(node)}": ${problem.charAt(0).toLowerCase()}${problem.slice(1)}`;
   }
   return null;

@@ -781,6 +781,9 @@ Decisões (não reabrir sem o dono pedir):
 
 - **Estreia em "A IA escreve"**, que é como sempre funcionou. Qualquer outro padrão
   mudaria o comportamento de quem já tem follow-up ligado por efeito de deploy.
+  ⚠️ **Revista pelo dono do produto em 06/10/2026:** "A IA escreve a mensagem"
+  saiu da tela e a IA nova nasce em *Entregar pro follow-up → Follow-up padrão*.
+  Ver a seção *Follow-up padrão de 30 dias (06/10/2026)*.
 - **As colunas saem do funil já escolhido em *Mover o card no funil***, logo acima
   no mesmo painel. Um segundo seletor de funil aqui criaria duas verdades sobre
   onde a IA age no quadro, e trocar um sem o outro deixaria o card num funil e a
@@ -6545,7 +6548,7 @@ O que ainda usa o serviço antigo no frontend:
 2. Com várias IAs, abre a última usada neste navegador (`localStorage` `lmflow:ia-vendedora:ultima`, com `try/catch`); senão, a primeira.
 3. Veredito único (`src/features/salesAgents/situacao.ts`): *Atendendo* · *Parada: <motivo>* · *Atendendo com restrição: só …* · *Desligada* · *Rascunho* (na entrega 1, desligada e sem número). Calculado da IA + `GET /sales_agents/:id/diagnostics`, espelhando o `SalesAgents::TriggerGate` (quem ela atende) e o `SalesAgents::HealthCheck`. Só os itens `inbox`, `mode`, `credentials` e `api_key` do Diagnóstico param a IA; os outros erros viram pendência.
 4. Gatilho que restringe aparece no selo (laranja) e como pendência, mesmo com a linha *Gatilhos* do Diagnóstico verde (o servidor não mudou).
-5. Follow-up ligado com máximo 0 vira a pendência laranja *Follow-up sem limite de tentativas*. As IAs que já estão assim continuam iguais.
+5. Follow-up ligado com máximo 0 vira a pendência laranja *Follow-up sem limite de tentativas*. As IAs que já estão assim continuam iguais. ⚠️ Revista em 06/10/2026: o *Máximo de tentativas* saiu da tela e a pendência virou *O que ela faz quando o lead some* (IA ainda em "A IA escreve"). Ver *Follow-up padrão de 30 dias (06/10/2026)*.
 6. Sugestões e Relatório semanal seguem a chave `ia_insights` (a Leal Mídia sempre vê): sem ela somem do Painel, o endereço cai na Visão geral e a Visão geral nem lê as sugestões.
 
 **Armadilhas:**
@@ -6797,3 +6800,307 @@ Onda 4 da spec `LM FLOW/specs/2026-10-06-admin-final-design.md`. Fecha a Fase 4 
 
 - No Personalizar, as 5 telas da página inicial (Busca rápida, Vitrines, Chamadas, Mais buscados, Mais seções) ficam num submenu **"Página inicial ›"**, que abre ao lado. Pedido do dono: a lista suspensa estava comprida e repetia "Página inicial ·" em cada item.
 - Mapa: campo `submenu` em `TELAS` (`meuSiteMenu.ts`) e `SUBMENUS` com o nome e a dica. A barra junta as telas com o mesmo `submenu` numa entrada só, no lugar da primeira delas. A trilha acima do título vira "Personalizar › Página inicial".
+
+## Pop-up de aceite da roleta (06/10/2026)
+
+Parte da reestruturação da Roleta (spec `LM FLOW/specs/2026-10-06-roleta-reestruturacao-design.md`, D10). Até aqui a oferta só aparecia na faixa amarela do topo (fácil de não ver) e no link do WhatsApp: com prazo correndo, o lead passava para o próximo enquanto o corretor estava em outra tela.
+
+O que aparece na tela:
+
+- **Pop-up "Lead novo pra você"** sobre qualquer tela do app quando chega uma oferta que o corretor ainda não viu: prazo (*Aceite em até 12 min*, *Sem prazo de aceite* ou *Prazo esgotado*), nome do lead, origem e roleta (quando o servidor manda), o bloco *O que a IA já descobriu* (quando há), **Recusar** / **Aceitar** e *Ver depois*.
+- **Aceitar** leva à conversa do lead; lead sem conversa (formulário, anúncio) abre o card do lead (`/contacts/:id`). **Recusar** só fecha e passa para o próximo corretor.
+- **Várias ofertas**: uma por vez, a mais antiga primeiro, com *+N esperando* (N = as que ainda vão abrir; as adiadas não contam).
+- **Som curto** ao abrir (o *ding* que já existe em `public/audio/notifications/`). Sem permissão de som do navegador, abre calado.
+- **No celular** (abaixo de 640 px) o pop-up ocupa a tela inteira.
+- **A lista de ofertas checa a cada 15 s com a aba visível** (era 1 min, com a aba escondida ou não), e na volta para a aba checa na hora. Vale para a faixa, o selo e o cartão *Sua vez na fila* também, porque a lista é uma só.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **15 s com a aba visível**, aba escondida não checa. **Sem tempo real** até a conexão ao vivo ir para o app inteiro.
+- **"Ver depois" não reabre.** Ver depois (ou o X, ou o Esc) marca a oferta como vista na memória e no `sessionStorage` (`lmflow:roleta:ofertas-vistas`): ela fica na faixa amarela e só oferta NOVA abre o pop-up. Aba nova começa sem vistas (é por sessão, de propósito).
+- **Uma porta só.** Aceitar/Recusar são as funções do `PendingOffersContext`, as mesmas do selo `OfferActions` e as mesmas chamadas da tela de aceite (`/broker_assignments/:id/accept|refuse`). O motivo do erro mora em `offerReason.ts`, para o selo e o pop-up falarem igual.
+- **Sem chave.** Vale para todo cliente com roleta, nos dois modos (como o selo, desde 03/09).
+- **Não abre na tela de aceite** (`/roleta/aceite/:id`): ela já é a tela de decidir.
+- **Clique fora NÃO fecha** (um clique perdido, tentando alcançar a conversa por trás, adiaria a oferta para sempre). Com Aceitar/Recusar em curso, nem o Esc nem o X fecham.
+- **O foco abre no título, nunca num botão de ação, e Aceitar/Recusar ficam travados por 600 ms** ao abrir e ao trocar de oferta (`TRAVA_MS`). O pop-up abre no meio da digitação do chat: com o foco em *Recusar* (era o primeiro botão), o Enter ou o espaço seguinte recusava o lead sem volta.
+
+Armadilhas:
+
+1. **Origem e roleta dependem do servidor.** `roleta_name` e `origin_label` são opcionais em `BrokerAssignmentDetail`; o serializador do `broker_assignments` ainda não manda. Contra o servidor de hoje o pop-up só não desenha essas duas linhas.
+2. **O `OfferAiBriefing` tem texto branco** (foi feito para o fundo escuro da tela de aceite). No pop-up ele vai dentro de uma caixa `bg-[#1A0A2E]`; sem ela, no tema claro, o bloco fica invisível.
+3. **O pop-up tem que ficar DENTRO do `PendingOffersProvider`** no `MainLayout`: fora dele o hook devolve lista vazia e o pop-up nunca abre, sem erro nenhum (`MainLayout.ofertas.spec.ts` trava isso).
+4. **Tela cheia é por classe `max-sm:`** no `DialogContent` (o `max-w-*` sem prefixo seria lido pelo `uncapAt640` do `ds.tsx` como teto).
+5. **Falha de rede mantém a última lista** (antes zerava): zerar fechava o pop-up no meio da leitura e o reabria 15 s depois.
+6. **O som é tocado uma vez por oferta POR ABA** (`tocadas` no nível do módulo, não num ref): o `MainLayout` existe em dois grupos de rota, e cruzar de um para o outro remonta o pop-up.
+7. **Checagem vazia mantém a MESMA lista** (`manterVazia` no contexto): sem isso cada ciclo de 15 s redesenharia a conversa inteira sem nada ter mudado. Com oferta a lista é trocada de propósito a cada ciclo: é o que faz os minutos andarem. Não "otimizar" isso comparando o conteúdo, ou o prazo congela no selo, na faixa e no pop-up.
+
+## Roleta nova: página por origem (06/10/2026)
+
+Reestruturação da Roleta, PR F1 (só a tela). Spec: `LM FLOW/specs/2026-10-06-roleta-reestruturacao-design.md`;
+plano: `LM FLOW/plans/2026-10-06-roleta-00-indice.md` (pasta do Tony, fora deste repo).
+**Atrás da chave por cliente `roleta_nova`** (desligada de fábrica): sem ela, a tela antiga
+(`Settings/RoletaConfig/RoletaConfig.tsx`) continua intacta. **Depende do PR do servidor (B2).**
+
+O que aparece na tela, com a chave ligada (menu Minha imobiliária › Roleta de leads):
+
+- **Roleta de leads** (`/automations/roleta-config`): *Nova roleta* e abas **Roletas · Histórico ·
+  Avisos** (`?aba=`). Um cartão por roleta, lido como frase: *Team Pinot · Ligada* /
+  *Formulários "ZONA SUL", "ZONA OESTE" → 10 corretores na fila* / *10 min pra aceitar · Seg a
+  Sáb, 8h–20h* / *2 esperando aceite · 1 ninguém aceitou* (essa linha só com algo pra olhar).
+  O cartão inteiro abre a roleta. *Nova roleta* pede só o nome, cria **desligada** e abre a página.
+- **Página da roleta** (`/automations/roleta-config/:id`; sem a chave volta pra lista):
+  ← Roleta de leads · nome editável no lugar (Enter grava, Esc desiste) · chave **Ligada** ·
+  *Duplicar* · ⋯ *Excluir roleta* (com confirmação). Abas **Como funciona · Histórico**.
+  - **De onde vem o lead**: uma origem por linha com o tipo em frase (*Formulário do Meta ·
+    nome contém "ALMA"* com *pega 3 formulários hoje*), botão de tirar. *Adicionar origem* em dois
+    passos (tipo → item); item de outra roleta mostra *Está na roleta X* e pergunta *Trazer pra
+    esta roleta?*; "nome contém" mostra na hora o que a palavra pega e o conflito da barreira D9
+    (prévia do SERVIDOR, `GET /roleta_configs/keyword_preview`; com mais de uma página do Facebook,
+    pergunta a página e manda `meta_page_id`).
+  - **Fila**: posição, foto, *(11) 9…· conectado / desconectado / sem número próprio*, chave de
+    pausa, arrastar pela alça (mouse, dedo, teclado) e setas ↑↓, *+ Adicionar corretor*, *Prazo pra
+    aceitar* (5 min a 2 h, Sem prazo) e *Próximo agora: Bruno*.
+  - **Quando funciona**: *24 horas* / *Só em alguns horários* (o editor de faixas de sempre).
+    Chave *Mandar mensagem pro lead enquanto isso* → número (só os conectados) + texto com
+    *+ Nome do lead*.
+- **Histórico** (geral e por roleta): Lead · Origem · (Roleta) · Situação; *Todos / Precisa de
+  atenção*, corretor, 7/30 dias e, no geral, a roleta. A linha abre o card do lead
+  (`/contacts/:id`); a setinha mostra o caminho com hora sem segundos; *Sortear de novo* quando pode.
+- **Avisos**: Corretor · Gestor · Grupo, uma chave por aviso, todas desligadas de fábrica.
+  Gestores da Equipe (*sem WhatsApp no cadastro: não recebe*), grupo da lista do Operacional,
+  *Personalizar textos* fechado (um texto por aviso, botões *+ Nome do lead, + Corretor, + Prazo,
+  + Link pra aceitar, + Origem, + Roleta*). Tudo sai pelo Operacional (LM01).
+
+Como salva: **lista vale na hora** (origens, fila, pausa, prazo, nome, chave Ligada, chaves e
+gestores e grupo dos avisos); **campo espera o Salvar** (faixas de horário, número e texto da
+mensagem de fora do horário, textos dos avisos), com a `BarraSalvar`.
+
+Decisões do Tony (06/10, não reabrir sem ele pedir), em resumo:
+
+- **D1** a Roleta tem página própria: lista de roletas → página da roleta.
+- **D2** a roleta é disparada por origens; a ligação origem → roleta é um dado só (as outras
+  telas escolhem roleta, nunca criam, e gravam no mesmo lugar que esta página mostra).
+- **D3** origens: formulário do Meta (exato ou "nome contém"), IA Vendedora, landing, portal, site.
+  WhatsApp e anúncio que abre o WhatsApp ficam fora.
+- **D4** um tipo de roleta; quem participa é sempre o usuário (com número, sem número ou com o
+  número caído, o lead é dele).
+- **D5** Fila é o único modo (Rodízio, Leilão, Por disponibilidade e Manual saem).
+- **D6** a roleta não tem número de WhatsApp.
+- **D7** avisos configurados uma vez, na aba Avisos, por quem recebe; tudo pelo Operacional;
+  nascem desligados.
+- **D8** horário é da roleta; fora dele o lead espera e é oferecido quando abrir; mensagem pro
+  lead opcional; o número de plantão morre.
+- **D9** formulário exato vence o "nome contém"; duas regras "nome contém" pegando o mesmo
+  formulário são barradas ao salvar.
+- **D10** pop-up de aceite pro corretor (PR F0).
+- **D11** desenho harmônico, padronizado, espaçoso e intuitivo, com as peças da casa.
+
+Armadilhas:
+
+1. **A metade do servidor (B2) vem PRIMEIRO**, e é ela que põe `roleta_nova` no catálogo. Até lá
+   o `audit-feature-catalog.mjs` do build reprova (chave usada no front sem entrada no catálogo).
+   Ligar a chave num cliente sem o B2 no ar = tela nova chamando rota que não existe.
+2. **`useClientToggle('roleta_nova')` LITERAL** (`ChaveRoletaNova.tsx`): os scanners do catálogo
+   leem por regex. É o único lugar que lê a chave na tela.
+3. **Enquanto as chaves do cliente carregam, o portão espera** (sem isso a tela antiga piscava).
+4. **A posição na fila é o índice no array** no PATCH (`members` com `position: i`), como no modo
+   Fila de 23/09. Não existe campo de posição pra editar.
+5. **Os serviços aceitam a resposta com e sem o envelope `{ data }`** (`miolo`), e o conflito da
+   D9 nos dois formatos de erro (`conflitoDaOrigem`). Não trocar por `res.data.data` direto.
+6. **Avisos gravam numa fila só, a partir do último registro salvo**: o PUT substitui o registro
+   inteiro, então texto em edição não vai junto e duas gravações (texto + chave) não se apagam.
+7. **Os textos da roleta nova moram em `Roleta/roletaNovaTextos.ts`**, com spec. As variáveis
+   `{{origem}}` e `{{roleta}}` dos avisos e `{{nome}}` da mensagem fora do horário são do B2.
+8. **Não é o `featureKey` do menu**: o item *Roleta de leads* continua o mesmo; quem troca a tela
+   é a rota.
+9. **A prévia do "nome contém" é do servidor** (mesma regra do roteador: tokens, com acento). Não
+   calcular na tela: o casamento local sem acento mostrava formulário que o roteador não pega.
+10. **Aba de estado não guarda a saída sozinha**: as abas, o "← Roleta de leads", Duplicar e Nova
+    roleta perguntam com `usePodeSair` (`PEDIDO_SAIR_SEM_SALVAR`) quando há horário ou texto por salvar.
+11. **`/settings/roleta-config` passa pelo mesmo portão** (`ChaveRoletaNova`) que `/automations/roleta-config`.
+
+**Largura (07/10/2026, pedido do dono):** a lista e a página da roleta usam até 1400px, como Meu site e IA Vendedora (`mx-auto w-full max-w-[1400px]`), com até 3 cartões por linha em tela larga. Não voltar pra coluna estreita.
+
+## Roleta nova: as outras telas (06/10/2026)
+
+Entrega 3 (F2) da reestruturação da roleta. Spec: `LM FLOW/specs/2026-10-06-roleta-reestruturacao-design.md` (seção "Fora da página" e as decisões D1–D12); plano: `LM FLOW/plans/2026-10-06-roleta-00-indice.md`. A página nova da roleta é outra entrega (F1); o servidor é B1 (consertos, sem chave) e B2 (chave `roleta_nova`).
+
+**A regra que amarra tudo (D2):** as telas de origem **escolhem** uma roleta que já existe e gravam no mesmo campo que a página da roleta mostra como origem. Nenhuma tela fora da página cria roleta.
+
+O que mudou na tela (✱ = só com a chave `roleta_nova`, ligada cliente a cliente pela Leal Mídia; o resto vale pra todos):
+
+- **Formulários do Meta**: *Quem assume o lead* é uma lista só com as abas **Corretores | Roleta** (`CampoQuemAssume`, em cima do `SeletorComAbas`). A roleta escolhida que foi desligada continua escolhida, com "(desligada)" e aviso. ✱ Some *Mensagem inicial fora do horário* (e o selo 🌙 da lista); o texto gravado nem viaja no salvar. ✱ Formulário sem cadastro próprio que uma regra "nome contém" com roleta já pega mostra *Cai na Roleta X pela regra "…"*; se a regra tem corretor fixo, mostra *Vai pra {corretor} pela regra "…"* (o corretor vence a roleta no servidor).
+- **Landing** (*Destino do lead*): a mesma peça, com as abas **Corretores | Roleta**. O corretor fixo vai em `routing.default_assignee_id`, ao lado de `routing.roleta_config_id`; como no portal e no site, o corretor vence a roleta. ✱ O texto de fora do horário deixa de falar em número de plantão.
+- **Portal e site** (Venda e Locação): *Roleta* + *Responsável* viraram **um** campo *Quem assume o lead* com as abas. *Mesmo destino da venda* continua.
+- **IA Vendedora** ✱: some *A roleta deste número*; fica *Uma roleta · Um corretor fixo · Sistema do cliente*. IA que estava na roleta do número abre com *Uma roleta* já escolhida (a roleta que atendia o número, `GET /roleta_configs/for_inbox`) e o aviso **Confirme a roleta**; sem roleta no número, em branco pedindo a escolha. Trocar a persona de corretor pra outra e a *Nova IA* vão pra *Uma roleta* em branco.
+- **Card do lead** (menu ⋯): *Trocar roleta* virou **Mandar pra roleta** (roletas ligadas); sem nenhuma, o item leva pra página da roleta; sem acesso às roletas (cargo), o item fica desabilitado com *Sem acesso às roletas*. **Tirar da roleta** entra no menu quando há oferta esperando aceite. O aviso diz **"Oferecido a Bruno pela Roleta X"**, ou o motivo que o servidor der. O atalho "Nova roleta" do card morreu (`CreateRoletaModal` apagado).
+- **Automações** (regra e bloco do construtor, o mesmo editor): *Distribuir pela roleta* escolhe a roleta (`params.roleta_config_id`). ✱ Obrigatório: a regra não salva, o bloco mostra *Falta preencher a roleta* e o fluxo não liga. Sem a chave, vazio = "a roleta do número da conversa", como sempre.
+- **Canais**: a aba *Horário de funcionamento* saiu (todos). ✱ *Atribuição Automática* some em Colaboradores.
+- **Notificações** ✱: os avisos da roleta (lead esperando aceite, lead distribuído, repasse por prazo, corretor aceitou, resumo da manhã) saem da Central, com a frase *Os avisos da roleta ficam em Roleta de leads › Avisos* e o link. *Roleta falhou* fica.
+- **Corretor**: tela de aceite e faixa amarela falam **"Lead novo pra você"** (a frase do pop-up de aceite); a faixa diz "· 12 min pra aceitar · +2 esperando"; a tela não promete mais conversa no número dele (corretor sem número recebe os dados).
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Uma peça só pra "quem assume"**: `components/roleta/CampoQuemAssume` (formulários, landing, portal, site). Regra nova de "corretor ou roleta" entra nela, não numa tela.
+- **Gravado com corretor E roleta, a lista mostra o corretor**: é ele que o servidor usa nos três roteadores (formulário, portal/site, landing). O que acontece ao salvar **sem mexer no campo** muda por tela:
+  - **Formulários**: grava só o corretor e limpa a roleta (que o roteador já ignorava). A entrada do lead não muda.
+  - **Portal, site e landing**: os dois viajam como estavam.
+  - Em todas, escolher um na lista limpa o outro.
+- **Lista recusada por cargo só esconde a aba**, menos quando a escolha gravada é dela: aí a aba fica só com a escolha. Nada some calado.
+- **"Lead novo pra você"** (e não "Novo lead pra você", como estava no plano): é a frase do pop-up de aceite; o corretor lê a mesma coisa nos três lugares.
+- **Sem a chave, a ação "Distribuir pela roleta" aceita vazio**: regra antiga continua igual.
+- **"Roleta falhou" fica na Central**: é alerta de operação, não um dos avisos da página da roleta.
+
+Armadilhas:
+
+1. **Servidor primeiro.** O B1 (`roleta_config_id` na ação, motivo real no `assign`) e o B2 (chave `roleta_nova`, `for_inbox`, recusa de `inbox_roleta`) entram antes deste PR. O build roda o `audit-feature-catalog`, que reprova `useClientToggle('roleta_nova')` enquanto a chave não estiver no catálogo de produção.
+2. **`roleta_nova` é `useClientToggle` (padrão desligado)**, nunca `useFeature`. O nome é literal: os scanners do catálogo leem por regex.
+3. **A régua de "falta preencher" recebe a chave**: `missingActionParams`, `leadActionProblem`, `nodeProblem`, `enableProblem` e `validateRule` aceitam `{ roletaObrigatoria }`. Tela nova que valida ação de automação tem que passar a chave, senão a roleta vira opcional calada.
+4. **"Cai na Roleta X" é espelho do roteador do servidor** (`LeadAdsForms/regraPorPalavra.ts` ↔ `MetaLeads::LeadRouter#match_config_by_keyword` + `normalize_form_name`). Mudou lá, muda aqui.
+5. **O corretor fixo da landing (`routing.default_assignee_id`) só vale com o servidor do B2** (`distribute_lead` passando pelo `Leads::Distribution`). Contra o servidor antigo, a tela grava e o lead continua indo pela roleta (ou sem responsável). Sem acesso à equipe, a chave do corretor nem viaja (o gravado atravessa: `defaultAssigneeId` `undefined` no `buildLandingSettings`).
+6. **O `BusinessHoursForm` continua no código** (só saiu da tela) até a limpeza pós-migração dos clientes.
+7. **IA Vendedora com a chave:** a pré-escolha de *Uma roleta* deixa o passo 2 com alteração ao abrir, e *Descartar* pré-preenche de novo. É de propósito (o servidor recusa `inbox_roleta`): o aviso de sair sem salvar aparece até alguém confirmar e salvar.
+8. **Perfil → Notificações (silenciar pra mim) ainda lista os avisos da roleta.** Com a chave, o silêncio pessoal deles depende de o servidor (`Roleta::Notices`) respeitar o mute: conferir antes de esconder também lá.
+
+## Follow-up padrão de 30 dias (06/10/2026)
+
+Decisão do dono do produto em 06/10, depois de ler o que o follow-up fez em
+produção (13 clientes, últimos 120 dias). Spec:
+`LM FLOW/specs/2026-10-06-follow-up-padrao-design.md`. Plano:
+`LM FLOW/plans/2026-10-06-follow-up-padrao.md`. A metade do servidor vem PRIMEIRO
+(`lm-flow`, branch `claude/followup-padrao`, base `saas-multitenant`).
+
+**Por que "A IA escreve a mensagem" saiu.** Não foi custo: cada mensagem escrita
+pela IA custava menos de um centavo de dólar. Foi qualidade. Em 151 envios houve
+22% de resposta, mas metade era só "Bom dia"/"Oi", e as conversas que andaram
+vieram quase todas de 2 leads que já estavam engajadas. No meio disso saíram pro
+lead texto de bastidor ("Não consigo identificar um histórico…"), fato inventado
+("passei por ali ontem", "movimentação no preço"), promessa que ninguém cumpriu
+("vou te mandar as opções", e o lead cobrou 4 vezes), cutucada em conversa com
+parceiro, e até 12 follow-ups pra mesma lead em 4 semanas (a cada 1 a 3 dias, sem
+fim). O texto pronto respondeu menos (10% em 58 envios), mas sem nenhum desses
+estragos, e mostrou o que funciona: pergunta de escolha fácil, pedir licença
+("posso te enviar?") e condição concreta ("entrada baixa?"). "Tudo bem?" sozinho,
+"tá aí??" e "topa visita?" repetido não tiveram resposta.
+
+O que aparece na tela:
+
+- **IA Vendedora → Configurar → passo 7 (Voltar a chamar) → *Quando o lead
+  sumir*** tem só duas opções: **Mover o card para uma coluna** e **Entregar pro
+  follow-up**. A explicação embaixo do título diz *"Mover o card ou entregar pro
+  follow-up. Quem manda as mensagens é o follow-up, com texto pronto."*
+- **IA que ainda estava em "A IA escreve"** abre sem nenhuma opção marcada e com o
+  aviso *"Escolha como o follow-up continua: a IA não escreve mais o follow-up."*
+  O Painel e o trilho dos passos mostram a pendência laranja *O que ela faz quando
+  o lead some*, que leva ao passo 7. Não trava o Ligar. IA sem valor nenhum mostra
+  *"Escolha o que ela faz quando o lead some."* do mesmo jeito.
+- **Com o follow-up ligado e sem escolha, o Salvar do passo 7 não grava**: mostra
+  o motivo (a mesma frase do aviso) embaixo do passo. O servidor também recusa
+  ligar o follow-up nessa situação, e a recusa dele, se vier, aparece no mesmo
+  lugar. Desligar o follow-up continua salvando normalmente.
+- **Marcar *Entregar pro follow-up* sem nenhum escolhido já traz o *Follow-up
+  padrão*** do cliente em *Qual follow-up* (o marcado como padrão pelo servidor;
+  sem ele, o de nome exato "Follow-up padrão"; senão, o primeiro ligado; nenhum,
+  fica vazio). Só no clique:
+  abrir a tela nunca muda nada sozinho. *Entregar pro follow-up* ligado e sem
+  follow-up escolhido vira a pendência laranja *O que ela faz quando o lead some*
+  (*"Falta escolher o follow-up que recebe o lead."*), passo 7, sem travar o Ligar.
+- **Os dias viraram um campo só**: *Entregar o lead depois de (dias sem
+  resposta)*, com a ajuda *"Quanto tempo de silêncio até entregar o lead."* Saíram
+  *A cada (mínimo de dias)*, *Até (máximo de dias)*, *Máximo de tentativas* e o
+  aviso *"Sem limite de tentativas"* (e a pendência *Follow-up sem limite de
+  tentativas*, que não teria mais campo pra corrigir).
+- **A linha do tempo ao lado** diz o que acontece: *"Entrega o lead ao follow-up
+  depois de 2 dias sem resposta"* ou *"Move o card para a coluna escolhida depois
+  de 2 dias sem resposta"*. Sem escolha: *"Depois de 2 dias sem resposta: falta
+  escolher o que ela faz"*. O resumo do passo 8 usa a mesma frase.
+- **Quando o follow-up pode sair** sempre explica que o horário decide quando a
+  IA entrega o lead, e que as mensagens seguem o horário do follow-up que recebe.
+- **Aba Follow-up: todo cliente tem o "Follow-up padrão", ligado.** Cliente novo
+  já nasce com ele, e **Novo follow-up** passa a abrir com este modelo (antes eram
+  4 mensagens em 3 dias). Só em horário comercial, e para quando o lead responde
+  (marca recuperado e a IA volta a atender). Os dias contam da entrega do lead:
+
+  | # | Dia | Mensagem |
+  |---|---|---|
+  | 1 | 0 | Oi {{nome}}! Me diz uma coisa: você ainda quer comprar dando uma entrada baixa? |
+  | 2 | 3 | Oi {{nome}}, posso fazer uma simulação de entrada e parcela pra você ver se cabe no bolso? Só me responde com um sim. |
+  | 3 | 7 | Oi {{nome}}! Prefere que eu te mande as opções por aqui ou que eu te ligue? |
+  | 4 | 13 | Oi {{nome}}, tudo bem? Uma visita leva uns 30 minutos e tira todas as dúvidas. Prefere dia de semana ou fim de semana? |
+  | 5 | 20 | Oi {{nome}}, sua busca ainda está de pé ou ficou pra mais pra frente? |
+  | 6 | 30 | Oi {{nome}}, vou deixar seu atendimento em pausa pra não ficar te chamando. Quando quiser retomar, me manda um oi aqui que eu continuo de onde paramos. |
+
+- **No construtor, o Follow-up padrão termina no bloco *Marcar follow-up
+  encerrado*** (depois da 6ª mensagem). Ele abre com o nome e a frase do que faz,
+  sem campos. Não aparece no painel Blocos nem na lista de ações das regras em
+  Automações: nasce pelo modelo e só existe no construtor.
+- **IA nova** nasce em **Entregar pro follow-up → Follow-up padrão**, com o
+  follow-up dela desligado até o gestor ligar (sem o Follow-up padrão no cliente,
+  nasce em *Mover o card*).
+- **As IAs que usavam "A IA escreve"** passaram a *Entregar pro follow-up →
+  Follow-up padrão* (as 4 com follow-up ligado continuam ligadas; as outras seguem
+  desligadas). Na Apto, na Pinot e na Moeda o follow-up pronto antigo foi
+  desligado e a entrada dele passou pro Follow-up padrão; quem estava no meio do
+  antigo termina o antigo. O "apareceu um fluxo perfeito pra você" do antigo virou
+  "apareceu uma opção perfeita".
+- **Bloco Pendências da Dashboard:** quando o Follow-up padrão termina sem
+  resposta (depois da 6ª mensagem), o lead **sai** do alerta *"Sem contato do
+  corretor há mais de 3 dias"* (na visão do corretor, *"Sem contato seu há mais
+  de 3 dias"*). Se o lead escrever de novo, ele volta a contar.
+  Durante os 30 dias ele continua contando: o corretor segue responsável por cima.
+- **Reengajamento** (as 2 retomadas antes do follow-up) é o único texto que a IA
+  continua escrevendo, agora com travas: não promete mandar material, foto, opção
+  ou valor que não esteja na própria mensagem; não inventa novidade (preço,
+  estoque, visita, condição); e não manda nada quando a conversa não é com um
+  interessado em imóvel (corretor, parceiro, proprietário, fornecedor). Segue
+  ligado só na 016.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **A IA não escreve mais o follow-up.** Revisa a decisão *Estreia em "A IA
+  escreve"* (01/09, seção *O follow-up da IA sem gastar IA*) e a decisão 5 da
+  seção *IA Vendedora · casca nova* (pendência de "sem limite de tentativas").
+- **O texto do Follow-up padrão é o aprovado acima**, e `{{nome}}` vem sempre
+  depois de "Oi" (lead sem nome vira "Oi, …" limpo).
+- **Fim sem resposta tira do alerta; durante, não.** Tirar durante esconderia do
+  corretor o lead que ainda está sendo trabalhado.
+- **Desligar o follow-up antigo não corta quem está dentro.**
+- **Um campo de dias só.** Com a IA só entregando o lead, o que importa é o
+  silêncio até a entrega; o servidor espera o mínimo, e a tela grava o mínimo e o
+  máximo iguais pra não sobrar um número escondido.
+- **Fica pra depois:** lembrete de visita marcada (era o melhor uso do follow-up
+  escrito pela IA), a variável `{{imovel}}` no follow-up, e apagar do servidor o
+  caminho de escrever (depois de 2 semanas sem nenhuma IA em "A IA escreve").
+
+Armadilhas:
+
+1. **`'ai'` continua no tipo `SalesAgentFollowupAction`** como valor antigo de
+   leitura; o que se grava é `SalesAgentFollowupChoice` (`'pipeline' |
+   'sequence'`). O servidor recusa `'ai'` só quando o valor MUDA, pra IA antiga não
+   quebrar ao salvar outro campo. A tela não tem padrão de reserva pra `'ai'`.
+2. **`followup_max_attempts` está em `CAMPOS_ESCONDIDOS`**: saiu da tela e nenhum
+   passo grava. "Nova IA" ainda manda 3 na criação, inofensivo. As IAs migradas
+   de "A IA escreve" ficaram com o número de tentativas antigo gravado (inclusive
+   0, "sem limite"), e o servidor passou a IGNORAR esse teto fora de `'ai'`: não
+   é preciso zerar nem corrigir o valor.
+5. **O Follow-up padrão é achado pela marca `followup_padrao`** que a lista de
+   fluxos devolve (`state['followup_padrao']` no servidor; `followupPadraoId`, em
+   `features/flowAutomations/followupOptions.ts`), com o nome exato "Follow-up
+   padrão" como reserva. **Nunca pelo `template_key`**: todo "Novo follow-up"
+   nasce com o modelo `follow_up_padrao`, e isso escolheria o "Pós-visita" de
+   alguém. Renomear o padrão não quebra.
+6. **"Marcar follow-up encerrado" é `lead_action` com `action_type:
+   'followup_ended'`, sem params**, espelho do `FLOW_ONLY_LEAD_ACTION_TYPES` do
+   servidor (`FLOW_ONLY_LEAD_ACTION_TYPES` em `features/flowAutomations/leadAction.ts`).
+   Fica FORA do `ACTION_TYPE_LABELS` (a lista das regras sai dele) e da paleta. O
+   painel do bloco NÃO usa o editor das regras pra ele: aquele editor não conhece
+   a ação e trocaria o `action_type` por vazio, e o servidor recusaria o fluxo
+   inteiro ("ação de lead desconhecida").
+3. **Ordem de publicação:** servidor primeiro (o padrão da coluna vira
+   `'sequence'`, e o Follow-up padrão é semeado), depois o rake
+   `lm_flow:followup_padrao:aplicar` (simulação, depois `APPLY=1`), e só então
+   esta tela. Ao contrário, as IAs em "A IA escreve" apareceriam com a escolha
+   vazia enquanto ainda escrevem.
+4. **A marca de fim mora no contato** (`followup_ended_at`, gravada pelo bloco
+   do fim do Follow-up padrão) e é o servidor que tira o lead das Pendências. Cai
+   quando o lead escreve ou quando um follow-up começa de novo pra ele.

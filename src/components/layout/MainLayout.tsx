@@ -32,6 +32,7 @@ import { useRoutePrefetch } from '@/hooks/useRoutePrefetch';
 import { injectDashboardAppsIntoMenu } from '@/utils/injectDashboardApps';
 import InstallAppPrompt from './components/InstallAppPrompt';
 import PendingOffersBanner from '@/components/roleta/PendingOffersBanner';
+import OfferPopup from '@/components/roleta/OfferPopup';
 import { PendingOffersProvider } from '@/contexts/PendingOffersContext';
 import { WelcomeTourModal } from '@/components/WelcomeTourModal';
 import GlobalCommandPalette from '@/components/command-palette/GlobalCommandPalette';
@@ -175,6 +176,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
       {/* Ofertas da roleta esperando aceite — só aparece quando há alguma */}
       <PendingOffersBanner />
+
+      {/* Pop-up de aceite: abre sobre qualquer tela com oferta nova (não abre na
+          tela de aceite; "Ver depois" deixa a oferta só na faixa acima) */}
+      <OfferPopup />
 
       {/* Header */}
       <Header

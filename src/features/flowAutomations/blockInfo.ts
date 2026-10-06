@@ -6,7 +6,7 @@
 // o que vai junto dele.
 
 import {
-  ArrowRightLeft, Bell, BellRing, Clock, Eraser, FileText, Filter, GitBranch, Hourglass, Image,
+  ArrowRightLeft, Bell, BellRing, CircleCheck, Clock, Eraser, FileText, Filter, GitBranch, Hourglass, Image,
   ListOrdered, Megaphone, MessageSquare, Mic, Bot, BotOff, Repeat, Send, Shuffle, Smartphone, Sticker, Tag,
   Trophy, User, UserCheck, ClipboardList, Users, Video, Zap, type LucideIcon,
 } from 'lucide-react';
@@ -54,6 +54,7 @@ const ICONS: Record<string, LucideIcon> = {
   'lead_action:notify_broker': Megaphone,
   'lead_action:notify_gestor': BellRing,
   'lead_action:notify_push': Smartphone,
+  'lead_action:followup_ended': CircleCheck,
 };
 
 const DESCRIPTIONS: Record<string, string> = {
@@ -80,7 +81,7 @@ const DESCRIPTIONS: Record<string, string> = {
   'lead_action:remove_label': 'Tira uma etiqueta do lead.',
   'lead_action:move_pipeline_stage': 'Leva o card do lead pra outra etapa do funil.',
   'lead_action:assign_broker': 'Escolhe o corretor responsável pelo lead.',
-  'lead_action:assign_via_roleta': 'Escolhe o corretor pela roleta.',
+  'lead_action:assign_via_roleta': 'Oferece o lead a um corretor pela roleta escolhida.',
   'lead_action:create_task': 'Cria uma tarefa pra alguém da equipe.',
   'lead_action:start_followup_sequence': 'Coloca o lead num follow-up do formato antigo.',
   'lead_action:start_followup_flow': 'Coloca o lead num follow-up.',
@@ -89,6 +90,7 @@ const DESCRIPTIONS: Record<string, string> = {
   'lead_action:notify_broker': 'Avisa o corretor responsável pelo lead.',
   'lead_action:notify_gestor': 'Avisa o gestor.',
   'lead_action:notify_push': 'Manda uma notificação pro celular da equipe.',
+  'lead_action:followup_ended': 'Fim do follow-up sem resposta: o lead sai do alerta "Sem contato do corretor há mais de 3 dias" até escrever de novo.',
 };
 
 /** Ícone do bloco no painel Blocos e no topo do painel lateral. */

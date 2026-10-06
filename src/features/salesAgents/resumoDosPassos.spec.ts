@@ -63,15 +63,26 @@ describe('resumoDeQuemAtende', () => {
 });
 
 describe('linhaDoTempo', () => {
-  it('retomada e follow-up', () => {
-    const a = agenteDeTeste({ followup_enabled: true, followup_only: false, reengagement_enabled: true, reengagement_first_hours: 1, reengagement_second_hours: 8, followup_min_days: 2, followup_max_days: 3, followup_max_attempts: 3 });
-    expect(linhaDoTempo(a)).toEqual(['1h sem resposta: 1ª retomada', '8h depois: 2ª retomada', 'Follow-up a cada 2 a 3 dias, até 3 vezes']);
+  it('retomada e entrega ao follow-up', () => {
+    const a = agenteDeTeste({ followup_enabled: true, followup_only: false, reengagement_enabled: true, reengagement_first_hours: 1, reengagement_second_hours: 8, followup_min_days: 2, followup_max_days: 3, followup_action: 'sequence' });
+    expect(linhaDoTempo(a)).toEqual(['1h sem resposta: 1ª retomada', '8h depois: 2ª retomada', 'Entrega o lead ao follow-up depois de 2 dias sem resposta']);
   });
 
-  it('sem limite e sem retomada; follow-up desligado não tem linha', () => {
-    const a = agenteDeTeste({ followup_enabled: true, reengagement_enabled: false, followup_min_days: 2, followup_max_days: 2, followup_max_attempts: 0 });
-    expect(linhaDoTempo(a)).toEqual(['Follow-up a cada 2 dias, sem limite de tentativas']);
+  it('mover o card, sem retomada; follow-up desligado não tem linha', () => {
+    const a = agenteDeTeste({ followup_enabled: true, reengagement_enabled: false, followup_min_days: 1, followup_max_days: 1, followup_action: 'pipeline' });
+    expect(linhaDoTempo(a)).toEqual(['Move o card para a coluna escolhida depois de 1 dia sem resposta']);
     expect(linhaDoTempo(agenteDeTeste({ followup_enabled: false }))).toEqual([]);
+  });
+
+  // 06/10/2026: "A IA escreve" saiu. Nada de "a cada X dias, até N vezes".
+  it('IA ainda na opção antiga: diz que falta escolher', () => {
+    const a = agenteDeTeste({ followup_enabled: true, reengagement_enabled: false, followup_min_days: 3, followup_action: 'ai', followup_max_attempts: 0 });
+    expect(linhaDoTempo(a)).toEqual(['Depois de 3 dias sem resposta: falta escolher o que ela faz']);
+  });
+
+  it('sem valor nenhum: também diz que falta escolher', () => {
+    const a = agenteDeTeste({ followup_enabled: true, reengagement_enabled: false, followup_min_days: 2, followup_action: undefined as never });
+    expect(linhaDoTempo(a)).toEqual(['Depois de 2 dias sem resposta: falta escolher o que ela faz']);
   });
 });
 

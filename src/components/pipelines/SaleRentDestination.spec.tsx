@@ -72,7 +72,7 @@ describe('SaleRentDestination', () => {
     await usuario.click(screen.getByRole('checkbox', { name: 'Mesmo destino da venda' }));
     await usuario.selectOptions(screen.getByRole('combobox', { name: 'Funil' }), 'pipe-2');
     await usuario.selectOptions(await screen.findByRole('combobox', { name: 'Coluna' }), 'st-9');
-    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Roleta' }), 'rol-1');
+    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Quem assume o lead' }), 'roleta:rol-1');
 
     await waitFor(() => expect(estado().rent).toMatchObject({ pipeline_id: 'pipe-2', stage_id: 'st-9', roleta_config_id: 'rol-1' }));
     expect(estado().same).toBe(false);
@@ -89,6 +89,21 @@ describe('SaleRentDestination', () => {
     await usuario.selectOptions(screen.getByRole('combobox', { name: 'Funil' }), 'pipe-2');
 
     expect(screen.queryByRole('option', { name: 'Novo' })).toBeNull();
+  });
+
+  it('Roleta e Responsável viraram uma lista só: escolher um limpa o outro', async () => {
+    const usuario = userEvent.setup();
+    render(<Harness />);
+    const quem = screen.getByRole('combobox', { name: 'Quem assume o lead' });
+    expect(screen.getByRole('group', { name: 'Corretores' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Roleta' })).toBeInTheDocument();
+
+    await usuario.selectOptions(quem, 'corretor:u-1');
+    expect(estado().sale).toMatchObject({ default_assignee_id: 'u-1', roleta_config_id: '' });
+    await usuario.selectOptions(quem, 'roleta:rol-1');
+    expect(estado().sale).toMatchObject({ default_assignee_id: '', roleta_config_id: 'rol-1' });
+    await usuario.selectOptions(quem, '');
+    expect(estado().sale).toMatchObject({ default_assignee_id: '', roleta_config_id: '' });
   });
 
   it('etiqueta só aparece quando pedida (site)', () => {

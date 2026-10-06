@@ -34,6 +34,9 @@ import { metaPagesService, type MetaPage } from '@/services/integrations/metaPag
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useAutomationResources } from '../LeadAutomations/LeadAutomationsEditors';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
+import CampoQuemAssume, { type QuemAssume } from '@/components/roleta/CampoQuemAssume';
+import { useClientToggle } from '@/contexts/TenantFeaturesContext';
+import { regraQuePega } from './regraPorPalavra';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
 import LabelMultiSelect from '@/components/labels/LabelMultiSelect';
 
@@ -55,8 +58,8 @@ interface FormState {
   pipeline_id: string;
   pipeline_stage_id: string;
   label_ids: string[];
-  // "Quem assume" combinado: '' | 'user:<id>' | 'roleta:<id>'. Derivado no save.
-  assign_to: string;
+  // Quem assume: corretor fixo OU roleta (no máximo um dos dois).
+  quem: QuemAssume;
   property_id: string;
   match_keyword: string;
   // Mensagem inicial que o número de plantão manda quando o lead chega fora do
@@ -84,26 +87,26 @@ const emptyFormState = (form_id = '', form_name = '', meta_page_id = ''): FormSt
   pipeline_id: '',
   pipeline_stage_id: '',
   label_ids: [],
-  assign_to: '',
+  quem: { default_assignee_id: null, roleta_config_id: null },
   property_id: '',
   match_keyword: defaultKeyword(form_name),
   after_hours_message: '',
   is_active: true,
 });
 
-// Decodifica/codifica o "assign_to" combinado em default_assignee_id/roleta_config_id.
-const encodeAssignTo = (cfg: { default_assignee_id?: string | null; roleta_config_id?: string | null }): string =>
-  cfg.roleta_config_id ? `roleta:${cfg.roleta_config_id}` : cfg.default_assignee_id ? `user:${cfg.default_assignee_id}` : '';
-
-const decodeAssignTo = (assignTo: string): { default_assignee_id: string | null; roleta_config_id: string | null } => {
-  if (assignTo.startsWith('user:')) return { default_assignee_id: assignTo.slice(5), roleta_config_id: null };
-  if (assignTo.startsWith('roleta:')) return { default_assignee_id: null, roleta_config_id: assignTo.slice(7) };
-  return { default_assignee_id: null, roleta_config_id: null };
-};
+// O que está gravado → o campo "Quem assume". Gravado com os dois, vale o corretor
+// (é ele que o servidor usa); salvar grava só ele.
+const quemDe = (cfg: { default_assignee_id?: string | null; roleta_config_id?: string | null }): QuemAssume =>
+  cfg.default_assignee_id
+    ? { default_assignee_id: cfg.default_assignee_id, roleta_config_id: null }
+    : { default_assignee_id: null, roleta_config_id: cfg.roleta_config_id ?? null };
 
 export default function LeadAdsForms() {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const resources = useAutomationResources(true);
+  // Roleta nova (06/10/2026): o horário e a mensagem de fora do horário são da
+  // roleta; o formulário só escolhe pra onde vai o lead.
+  const roletaNova = useClientToggle('roleta_nova');
 
   const [configs, setConfigs] = useState<LeadAdsFormConfig[]>([]);
   const [loading, setLoading] = useState(false);
@@ -225,13 +228,16 @@ export default function LeadAdsForms() {
     }
   };
 
-  // Roletas (ativas) e imóveis pra escolher no roteamento de entrada.
-  const [roletas, setRoletas] = useState<RoletaConfig[]>([]);
+  // Roletas e imóveis pra escolher no roteamento de entrada. TODAS as roletas
+  // (não só as ligadas): a escolhida que foi desligada continua na lista, com
+  // "(desligada)" — sem ela a caixa abria em "Ninguém" e salvar apagava a
+  // escolha calado (inventário da roleta §4.7). `null` = cargo sem acesso.
+  const [roletas, setRoletas] = useState<RoletaConfig[] | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   useEffect(() => {
     roletaConfigService.getAll()
-      .then(list => setRoletas((list || []).filter(r => r.is_active)))
-      .catch(() => setRoletas([]));
+      .then(list => setRoletas(list || []))
+      .catch(() => setRoletas(null));
     propertiesService.list({ status: 'active', per_page: 100 })
       .then(res => setProperties(res.data ?? []))
       .catch(() => setProperties([]));
@@ -393,7 +399,7 @@ export default function LeadAdsForms() {
       pipeline_id:       cfg.pipeline_id ?? '',
       pipeline_stage_id: cfg.pipeline_stage_id ?? '',
       label_ids:         cfg.label_ids ?? [],
-      assign_to:         encodeAssignTo(cfg),
+      quem:              quemDe(cfg),
       property_id:       cfg.property_id ?? '',
       match_keyword:     cfg.match_keyword ?? defaultKeyword(cfg.form_name),
       after_hours_message: cfg.after_hours_message ?? '',
@@ -406,7 +412,7 @@ export default function LeadAdsForms() {
     if (!form.pipeline_id) { toast.error('Selecione um funil'); return; }
     if (!form.pipeline_stage_id) { toast.error('Selecione uma etapa'); return; }
 
-    const assign = decodeAssignTo(form.assign_to);
+    const assign = form.quem;
     const payload: LeadAdsFormConfigFormData = {
       form_id:             form.form_id,
       form_name:           form.form_name,
@@ -419,10 +425,14 @@ export default function LeadAdsForms() {
       roleta_config_id:    assign.roleta_config_id,
       property_id:         form.property_id || null,
       match_keyword:       form.match_keyword.trim() || null,
-      // Só vai junto quando o lead entra por roleta: fora dela não existe
-      // horário nem número de plantão, e o campo nem aparece na tela.
-      after_hours_message: assign.roleta_config_id ? (form.after_hours_message.trim() || null) : null,
     };
+    // Só vai junto quando o lead entra por roleta: fora dela não existe
+    // horário nem número de plantão, e o campo nem aparece na tela. Com a roleta
+    // nova o campo some (a mensagem é da roleta) e a chave nem viaja: o texto
+    // gravado fica onde está, que é de onde a migração do cliente o copia.
+    if (!roletaNova) {
+      payload.after_hours_message = assign.roleta_config_id ? (form.after_hours_message.trim() || null) : null;
+    }
 
     setSaving(true);
     try {
@@ -1171,7 +1181,7 @@ export default function LeadAdsForms() {
                           Na lista porque é a diferença entre o lead da noite ser
                           atendido ou passar horas em silêncio — e isso não pode
                           exigir abrir a configuração de cada formulário. */}
-                      {!!cfg.after_hours_message?.trim() && (
+                      {!roletaNova && !!cfg.after_hours_message?.trim() && (
                         <Badge variant="secondary" className="text-xs">
                           🌙 Fala com o lead fora do horário
                         </Badge>
@@ -1238,6 +1248,30 @@ export default function LeadAdsForms() {
                     <p className="text-xs text-muted-foreground mt-1">
                       {mf.leads_count} {mf.leads_count === 1 ? 'lead' : 'leads'}
                     </p>
+                    {roletaNova && (() => {
+                      // Formulário sem cadastro próprio que uma regra "nome contém"
+                      // com roleta já pega: o lead dele NÃO fica parado, cai na roleta.
+                      const regra = regraQuePega(mf.name ?? '', mf.meta_page_id, configs);
+                      if (!regra) return null;
+                      const palavra = regra.match_keyword?.trim() || regra.form_name;
+                      // Corretor fixo vence a roleta no servidor (LeadRouter): a
+                      // frase diz pra quem o lead vai de verdade.
+                      if (regra.default_assignee_id) {
+                        const corretor = resources.users.find(u => String(u.id) === regra.default_assignee_id);
+                        return (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Vai pra {corretor?.name ?? 'o corretor escolhido'} pela regra "{palavra}"
+                          </p>
+                        );
+                      }
+                      if (!regra.roleta_config_id) return null;
+                      const roleta = roletas?.find(r => r.id === regra.roleta_config_id);
+                      return (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Cai na {roleta ? `Roleta ${roletaLabel(roleta)}` : 'roleta'} pela regra "{palavra}"
+                        </p>
+                      );
+                    })()}
                   </div>
                   <Button variant="outline" size="sm" onClick={() => openCreate(mf)}>
                     Configurar destino
@@ -1324,33 +1358,23 @@ export default function LeadAdsForms() {
               </p>
             </div>
 
-            {/* Quem assume o lead na entrada: responsável fixo OU roleta */}
+            {/* Quem assume o lead na entrada: corretor fixo OU roleta, numa lista
+                só com as abas Corretores | Roleta. A tela só ESCOLHE a roleta. */}
             <div>
-              <UILabel htmlFor="assign_to">Quem assume o lead</UILabel>
-              <Seletor
-                id="assign_to"
-                className={baseSelectClass}
-                value={form.assign_to}
-                onChange={e => setForm(f => ({ ...f, assign_to: e.target.value }))}
-              >
-                <option value="">Ninguém (entra sem responsável)</option>
-                {resources.users.length > 0 && (
-                  <optgroup label="Responsável fixo">
-                    {resources.users.map(u => (
-                      <option key={u.id} value={`user:${u.id}`}>{u.name}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {roletas.length > 0 && (
-                  <optgroup label="Roleta">
-                    {roletas.map(r => (
-                      <option key={r.id} value={`roleta:${r.id}`}>{roletaLabel(r)}</option>
-                    ))}
-                  </optgroup>
-                )}
-              </Seletor>
+              <UILabel htmlFor="quem_assume">Quem assume o lead</UILabel>
+              <div className="mt-1">
+                <CampoQuemAssume
+                  id="quem_assume"
+                  aria-label="Quem assume o lead"
+                  value={form.quem}
+                  onChange={quem => setForm(f => ({ ...f, quem }))}
+                  pessoas={resources.users.filter(u => !u.deactivated).map(u => ({ id: String(u.id), nome: u.name }))}
+                  roletas={roletas}
+                  disabled={saving}
+                />
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Fixo manda pro mesmo corretor; roleta distribui automático entre os corretores.
+                O corretor recebe todo lead deste formulário. A roleta oferece cada lead ao próximo da fila.
               </p>
             </div>
 
@@ -1360,7 +1384,7 @@ export default function LeadAdsForms() {
                 sair nem quando sair. Quem preenche formulário nunca manda
                 mensagem, então sem este campo o lead da madrugada fica em
                 silêncio absoluto até a roleta abrir. */}
-            {form.assign_to.startsWith('roleta:') && (
+            {!roletaNova && !!form.quem.roleta_config_id && (
               <div>
                 <UILabel htmlFor="after_hours_message">Mensagem inicial fora do horário</UILabel>
                 <textarea

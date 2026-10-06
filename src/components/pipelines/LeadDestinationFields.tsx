@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Seletor } from '@/components/base/Seletor';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
-import { roletaLabel } from '@/services/roletaConfig/roletaConfigService';
+import CampoQuemAssume from '@/components/roleta/CampoQuemAssume';
 import type { DestinationOpt, LeadDestinationOptions } from './useLeadDestinationOptions';
 
 /** Um destino do lead. String vazia = não escolhido (volta ao padrão). */
@@ -31,8 +31,10 @@ interface Props {
 }
 
 /**
- * Funil, coluna, roleta, responsável (e etiqueta, no site) de UM destino do
- * lead. Saiu da tela Configurar do portal (2026-09-30) quando o site ganhou o
+ * Funil, coluna, quem assume (corretor OU roleta) e etiqueta (no site) de UM
+ * destino do lead. Roleta e Responsável eram dois seletores; desde 06/10/2026 são
+ * um só, com as abas Corretores | Roleta (CampoQuemAssume) — o lead sempre teve
+ * um dono só: com responsável escolhido, a roleta não sorteava. Saiu da tela Configurar do portal (2026-09-30) quando o site ganhou o
  * mesmo bloco, duas vezes (venda e locação).
  *
  * Regras que vieram junto e não se reabrem:
@@ -65,25 +67,10 @@ export default function LeadDestinationFields({ value, onChange, options, showLa
     return pipelines;
   }, [pipelines, value.pipeline_id]);
 
-  const roletaOptions = useMemo<DestinationOpt[]>(() => {
-    if (!roletas) return [];
-    const opts = roletas.filter(r => r.is_active).map(r => ({ id: r.id, label: roletaLabel(r) }));
-    if (value.roleta_config_id && !opts.some(o => o.id === value.roleta_config_id)) {
-      opts.push({ id: value.roleta_config_id, label: 'Roleta escolhida (desativada)' });
-    }
-    return opts;
-  }, [roletas, value.roleta_config_id]);
-  const roletaDesativada =
-    !!value.roleta_config_id && !!roletas && !roletas.some(r => r.id === value.roleta_config_id && r.is_active);
-
-  const userOptions = useMemo<DestinationOpt[]>(() => {
-    if (!users) return [];
-    const opts = users.map(u => ({ id: u.id, label: u.name }));
-    if (value.default_assignee_id && !opts.some(o => o.id === value.default_assignee_id)) {
-      opts.push({ id: value.default_assignee_id, label: 'Responsável escolhido (fora da lista)' });
-    }
-    return opts;
-  }, [users, value.default_assignee_id]);
+  const pessoas = useMemo(
+    () => (users ? users.map(u => ({ id: String(u.id), nome: u.name })) : null),
+    [users],
+  );
 
   const labelOptions = useMemo<DestinationOpt[]>(() => {
     if (!labels) return [];
@@ -123,42 +110,23 @@ export default function LeadDestinationFields({ value, onChange, options, showLa
           )}
         </>
       )}
-      {roletas !== null && (
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium">Roleta</span>
-          <Seletor className="w-full"
-            aria-label="Roleta"
-            value={value.roleta_config_id}
-            onChange={e => onChange({ roleta_config_id: e.target.value })}
-          >
-            <option value="">Não distribuir (entra sem responsável)</option>
-            {roletaOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-          </Seletor>
-          {roletaDesativada && (
-            <span className="block text-[11px] text-amber-600">
-              Esta roleta está desativada: enquanto ela não for religada, o lead continua
-              entrando sem responsável.
-            </span>
-          )}
-        </label>
-      )}
-      {users !== null && (
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium">Responsável</span>
-          <Seletor className="w-full"
-            aria-label="Responsável"
-            value={value.default_assignee_id}
-            onChange={e => onChange({ default_assignee_id: e.target.value })}
-          >
-            <option value="">Ninguém</option>
-            {userOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-          </Seletor>
-          {value.roleta_config_id && value.default_assignee_id && (
-            <span className="block text-[11px] text-muted-foreground">
-              Com responsável escolhido, o lead vai direto para ele — a roleta não sorteia.
-            </span>
-          )}
-        </label>
+      {(roletas !== null || users !== null) && (
+        <div className="block space-y-1.5">
+          <span className="text-sm font-medium">Quem assume o lead</span>
+          <CampoQuemAssume
+            aria-label="Quem assume o lead"
+            value={{
+              default_assignee_id: value.default_assignee_id || null,
+              roleta_config_id: value.roleta_config_id || null,
+            }}
+            onChange={v => onChange({
+              default_assignee_id: v.default_assignee_id ?? '',
+              roleta_config_id: v.roleta_config_id ?? '',
+            })}
+            pessoas={pessoas}
+            roletas={roletas}
+          />
+        </div>
       )}
       {showLabel && labels !== null && (
         <label className="block space-y-1.5">

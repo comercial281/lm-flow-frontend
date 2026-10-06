@@ -83,10 +83,12 @@ export interface SalesAgent {
   followup_min_days: number;
   followup_max_days: number;
   followup_max_attempts: number;
-  /** O que a IA faz quando o lead some. 'ai' = ela escreve a mensagem (o único
-   *  caminho que consome IA); 'pipeline' = move o card pra coluna do silêncio e
-   *  quem manda a mensagem é o funil que aquela coluna dispara; 'sequence' =
-   *  dispara o funil escolhido direto, sem mexer no card. */
+  /** O que a IA faz quando o lead some. 'pipeline' = move o card pra coluna do
+   *  silêncio e quem manda a mensagem é o follow-up que aquela coluna dispara;
+   *  'sequence' = entrega o lead ao follow-up escolhido (`followup_flow_id`), sem
+   *  mexer no card. IA nova nasce em 'sequence' apontando pro Follow-up padrão.
+   *  'ai' (a IA escrevia a mensagem) é só valor ANTIGO de leitura desde 06/10/2026:
+   *  a tela não oferece mais e o servidor recusa gravar. */
   followup_action: SalesAgentFollowupAction;
   followup_stage_id: string | null;
   /** Coluna de volta quando o lead responde. Vazia = a primeira coluna do funil. */
@@ -330,7 +332,17 @@ export interface CrmPolicy {
  * cenário novo não muda o comportamento de quem nunca escolheu nada. `min_temperature`
  * só é lido no cenário da temperatura.
  */
+/**
+ * O que a IA faz quando o lead some.
+ *
+ * ⚠️ 'ai' é LEGADO, só de leitura (06/10/2026, spec 2026-10-06-follow-up-padrao):
+ * "A IA escreve a mensagem" saiu da tela e o servidor recusa gravar 'ai' quando o
+ * valor muda. Continua no tipo porque IA antiga ainda pode vir assim até o rake
+ * `lm_flow:followup_padrao:aplicar` trocar todas; a tela mostra a escolha vazia com
+ * aviso. O que se pode GRAVAR é `SalesAgentFollowupChoice`.
+ */
 export type SalesAgentFollowupAction = 'ai' | 'pipeline' | 'sequence';
+export type SalesAgentFollowupChoice = Exclude<SalesAgentFollowupAction, 'ai'>;
 
 export type HandoffMode = 'duvida' | 'temperatura' | 'checklist' | 'sem_resposta' | 'pos_visita';
 
@@ -520,7 +532,7 @@ export interface SalesAgentPayload {
   followup_min_days?: number;
   followup_max_days?: number;
   followup_max_attempts?: number;
-  followup_action?: SalesAgentFollowupAction;
+  followup_action?: SalesAgentFollowupChoice;
   followup_stage_id?: string | null;
   followup_return_stage_id?: string | null;
   followup_sequence_slug?: string | null;

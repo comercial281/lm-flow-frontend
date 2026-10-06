@@ -43,7 +43,12 @@ export function lerEscolhas(agent: Lido): Escolhas {
 
 type Base = Pick<SalesAgent, 'transfer_config' | 'handoff_roleta_config_id' | 'handoff_user_id'>;
 
-export function escolhasParaPatch(escolhas: Escolhas, agent: Base): Partial<SalesAgent> {
+/**
+ * `roletaNova` (chave `roleta_nova`, 06/10/2026): "a roleta do número" não existe
+ * mais — o servidor recusa gravar `inbox_roleta`. O padrão vira "Uma roleta" em
+ * branco, e o passo Objetivo pede a escolha.
+ */
+export function escolhasParaPatch(escolhas: Escolhas, agent: Base, { roletaNova = false } = {}): Partial<SalesAgent> {
   const comum: Partial<SalesAgent> = {
     persona_kind: escolhas.persona,
     reach: escolhas.alcance,
@@ -55,7 +60,8 @@ export function escolhasParaPatch(escolhas: Escolhas, agent: Base): Partial<Sale
   }
   // Fora da persona corretor, "o dono do número" não vale: volta pra roleta do
   // número, o padrão de sempre (o servidor recusa o dono do número em outra persona).
-  const destino: HandoffTargetMode = escolhas.destino === 'number_owner' ? 'inbox_roleta' : escolhas.destino;
+  const semDono: HandoffTargetMode = escolhas.destino === 'number_owner' ? 'inbox_roleta' : escolhas.destino;
+  const destino: HandoffTargetMode = roletaNova && semDono === 'inbox_roleta' ? 'roleta' : semDono;
   return {
     ...comum,
     handoff_target: destino,
@@ -79,10 +85,15 @@ export const PERGUNTAS_SUGERIDAS = [
 /**
  * "Nova IA" cria um RASCUNHO desligado e sem número (é o que a Visão geral chama de
  * rascunho) e abre o passo 1. Substitui o "+" que criava a IA calada e abria o
- * assistente. Follow-up com no máximo 3 tentativas (o infinito fica só pra quem já
- * tinha) e aviso fora do horário ligado (o lead de madrugada não fica no vácuo).
+ * assistente. Aviso fora do horário ligado (o lead de madrugada não fica no vácuo).
+ * O `followup_max_attempts: 3` é sobra inofensiva: desde 06/10/2026 a IA não
+ * escreve o follow-up, só entrega o lead, e o servidor ignora o teto fora de 'ai'.
+ *
+ * Sem `followup_action` de propósito (06/10/2026): o servidor dá à IA nova
+ * "Entregar pro follow-up" apontando pro Follow-up padrão do cliente (ou "Mover o
+ * card", se ele não existir). Mandar daqui seria uma segunda verdade.
  */
-export function novaIaRascunho(): SalesAgentPayload {
+export function novaIaRascunho({ roletaNova = false } = {}): SalesAgentPayload {
   return {
     name: 'Nova IA',
     enabled: false,
@@ -91,7 +102,7 @@ export function novaIaRascunho(): SalesAgentPayload {
     persona_kind: 'assistant',
     reach: 'qualify',
     booking_enabled: false,
-    handoff_target: 'inbox_roleta',
+    handoff_target: roletaNova ? 'roleta' : 'inbox_roleta',
     qualification_questions: [...PERGUNTAS_SUGERIDAS],
     transfer_config: { mode: 'checklist', required_questions: [...PERGUNTAS_SUGERIDAS] },
     followup_max_attempts: 3,

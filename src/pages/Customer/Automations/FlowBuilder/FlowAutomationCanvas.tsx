@@ -42,6 +42,7 @@ import { FLOW_KIND_COPY, kindOf } from '@/features/flowAutomations/kind';
 import { paletteItems, type PaletteItem } from '@/features/flowAutomations/palette';
 import { readBlocksOpen, saveBlocksOpen } from '@/features/flowAutomations/blocksPanelState';
 import { enableProblem, nodeProblem } from '@/features/flowAutomations/readiness';
+import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import {
   reentryOf, reentrySummary, reentryWarning, serializeReentry, type ReentrySetting,
 } from '@/features/flowAutomations/reentry';
@@ -208,11 +209,16 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
 
   // O que falta em cada bloco (modelo cria com campo em branco) e por que o
   // fluxo ainda não liga. O cartão mostra; a chave recusa.
+  // Roleta nova: "Distribuir pela roleta" sem roleta escolhida é bloco incompleto.
+  const roletaObrigatoria = useClientToggle('roleta_nova');
   const problems = useMemo(
-    () => Object.fromEntries(nodes.map(n => [n.id, nodeProblem(n)])) as Record<string, string | null>,
-    [nodes],
+    () => Object.fromEntries(nodes.map(n => [n.id, nodeProblem(n, { roletaObrigatoria })])) as Record<string, string | null>,
+    [nodes, roletaObrigatoria],
   );
-  const blockingProblem = useMemo(() => enableProblem(trigger, nodes, kind), [trigger, nodes, kind]);
+  const blockingProblem = useMemo(
+    () => enableProblem(trigger, nodes, kind, { roletaObrigatoria }),
+    [trigger, nodes, kind, roletaObrigatoria],
+  );
 
   const positions = useMemo(() => resolvedPositions(nodes, initialNodeId), [nodes, initialNodeId]);
   const graphEdges = useMemo(() => buildEdges(nodes, initialNodeId), [nodes, initialNodeId]);

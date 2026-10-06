@@ -5,6 +5,7 @@ import { Check, X, Clock, User, Phone, Loader2 } from 'lucide-react';
 import { brokerAssignmentsService, BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
 import { hasDeadline } from '@/components/roleta/offerDeadline';
 import OfferAiBriefing from '@/components/roleta/OfferAiBriefing';
+import { dataHora } from '@/lib/formato';
 
 function fmtMMSS(totalSec: number): string {
   const s = Math.max(0, Math.floor(totalSec));
@@ -74,7 +75,9 @@ export default function AcceptLeadPage() {
     setActing('accept');
     try {
       const d = await brokerAssignmentsService.accept(assignmentId);
-      toast.success('Lead aceito! Abrindo a conversa...');
+      // Corretor sem número próprio (roleta nova) não tem conversa pra abrir:
+      // o aviso não promete conversa. Mesma frase do aceite pelo card.
+      toast.success('Lead aceito! Ele é seu.');
       goToConversation(d);
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Não foi possível aceitar.';
@@ -106,7 +109,7 @@ export default function AcceptLeadPage() {
       <div className="w-full max-w-md rounded-2xl border border-[#2a1a45] bg-[#1A0A2E] p-5 shadow-2xl sm:p-6">
         <div className="flex items-center gap-2 mb-4">
           <span className="text-2xl">🔔</span>
-          <h1 className="text-lg font-semibold text-white">Novo lead na sua fila</h1>
+          <h1 className="text-lg font-semibold text-white">Lead novo pra você</h1>
         </div>
 
         {loading ? (
@@ -123,8 +126,9 @@ export default function AcceptLeadPage() {
               {data.status === 'accepted'  ? 'Este lead já foi aceito.' :
                data.status === 'passed'    ? 'Este lead já passou para outro corretor.' :
                // Sem este caso o corretor via "o prazo expirou" — mentira: o prazo
-               // parou porque a gestão atribuiu o lead a outra pessoa.
-               data.status === 'cancelled' ? 'Este lead foi atribuído a outro corretor pela gestão.' :
+               // parou porque a gestão mexeu no lead (deu a outra pessoa ou
+               // tirou da roleta).
+               data.status === 'cancelled' ? 'A gestão mudou o destino deste lead.' :
                'O prazo deste lead expirou.'}
             </p>
             {data.status === 'accepted' && (
@@ -147,10 +151,10 @@ export default function AcceptLeadPage() {
                 </div>
               )}
               <div className="text-white/50 text-xs mt-1">
-                Ao aceitar, você vira o responsável e o atendimento sai pelo seu número.
+                Ao aceitar, o lead é seu.
                 {semPrazo
-                  ? ' O lead é seu até você aceitar ou recusar — ele não passa para outro corretor sozinho.'
-                  : ' Se não aceitar, o lead passa para o próximo.'}
+                  ? ' Ele espera você aceitar ou recusar e não passa pra outro corretor sozinho.'
+                  : ' Se não aceitar a tempo, ele vai pro próximo corretor.'}
               </div>
             </div>
 
@@ -168,7 +172,7 @@ export default function AcceptLeadPage() {
               )}
               <div className="flex items-start gap-2 text-sm text-white/60">
                 <Clock className="mt-0.5 h-4 w-4 shrink-0" />
-                <span className="min-w-0 break-words">Chegou em {new Date(data.assigned_at).toLocaleString('pt-BR')}</span>
+                <span className="min-w-0 break-words">Chegou em {dataHora(data.assigned_at)}</span>
               </div>
             </div>
 

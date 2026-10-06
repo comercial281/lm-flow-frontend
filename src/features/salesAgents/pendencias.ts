@@ -28,7 +28,20 @@ export const FRASE_SEM_DONO = 'Este número não tem corretor dono. Escolha o do
 type Lido = Partial<Pick<SalesAgent,
   'persona_kind' | 'reach' | 'transfer_config' | 'booking_enabled' | 'handoff_target' | 'handoff_roleta_config_id'
   | 'handoff_user_id' | 'handoff_webhook_url' | 'handoff_webhook_secret_state' | 'lead_facing_name' | 'inbox_id' | 'number_owner_id' | 'qualification_questions'
-  | 'trigger_keyword' | 'followup_enabled' | 'followup_max_attempts'>>;
+  | 'trigger_keyword' | 'followup_enabled' | 'followup_action' | 'followup_flow_id' | 'followup_sequence_slug'>>;
+
+/**
+ * Follow-up ligado sem uma saída válida (06/10/2026): ainda em 'ai' (a IA não
+ * escreve mais o follow-up) ou sem valor. O servidor recusa ligar o follow-up
+ * assim, então o Salvar do passo 7 não deixa (com esta frase como motivo) e o
+ * trilho mostra a pendência. Null = está tudo certo.
+ */
+export function motivoSemEscolhaDoFollowup(agent: Pick<Lido, 'followup_enabled' | 'followup_action'>): string | null {
+  if (!agent.followup_enabled) return null;
+  if (agent.followup_action === 'ai') return 'Escolha como o follow-up continua: a IA não escreve mais o follow-up.';
+  if (!agent.followup_action) return 'Escolha o que ela faz quando o lead some.';
+  return null;
+}
 
 export function pendenciasDosPassos(agent: Lido): PendenciaDoPasso[] {
   const lista: PendenciaDoPasso[] = [];
@@ -77,8 +90,18 @@ export function pendenciasDosPassos(agent: Lido): PendenciaDoPasso[] {
   if (palavra) {
     lista.push({ chave: 'palavra_antiga', passo: 6, frase: `Ela só entra quando o lead escreve "${palavra}" (regra antiga).`, impedeLigar: false });
   }
-  if (agent.followup_enabled && agent.followup_max_attempts === 0) {
-    lista.push({ chave: 'followup_sem_limite', passo: 7, frase: 'Follow-up sem limite de tentativas.', impedeLigar: false });
+  // Desde 06/10/2026 a IA não escreve mais o follow-up ('ai' é só valor antigo). O
+  // aviso de "sem limite de tentativas" saiu junto: entregando o lead ela age uma
+  // vez por sumiço, e o campo do teto não existe mais na tela.
+  const semEscolha = motivoSemEscolhaDoFollowup(agent);
+  if (semEscolha) {
+    lista.push({ chave: 'followup_sem_escolha', passo: 7, frase: semEscolha, impedeLigar: false });
+  }
+  // "Entregar pro follow-up" sem follow-up escolhido: o servidor não tem pra onde
+  // entregar. Quem ainda aponta pro funil antigo (só o slug) tem destino e o aviso
+  // amarelo próprio no passo 7, então não conta aqui.
+  if (agent.followup_enabled && agent.followup_action === 'sequence' && !agent.followup_flow_id && !agent.followup_sequence_slug) {
+    lista.push({ chave: 'followup_sem_fluxo', passo: 7, frase: 'Falta escolher o follow-up que recebe o lead.', impedeLigar: false });
   }
 
   return lista.sort((a, b) => a.passo - b.passo);

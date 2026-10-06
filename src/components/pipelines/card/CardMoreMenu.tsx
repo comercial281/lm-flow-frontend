@@ -1,8 +1,12 @@
 // Menu "⋯" do topo do card: as ações que não são do dia a dia — copiar o link,
-// trocar de roleta e tirar o lead do funil. Remover pede confirmação numa janela,
-// nunca no confirm() do navegador.
+// mandar pra roleta / tirar da roleta e tirar o lead do funil. Remover pede
+// confirmação numa janela, nunca no confirm() do navegador.
+//
+// Roleta nova (06/10/2026): o card só ESCOLHE uma roleta que já existe. O atalho
+// "Nova roleta" morreu: sem roleta ligada, o item leva pra página da roleta.
 import { useState } from 'react';
-import { Link, Loader2, Merge, MoreHorizontal, Shuffle, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { CircleSlash, Link, Loader2, Merge, MoreHorizontal, Shuffle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Button,
@@ -24,15 +28,21 @@ import {
 } from '@/components/ui/ds';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
+import { PAGINA_DA_ROLETA } from '@/components/roleta/textosDaRoleta';
 import type { PipelineItem } from '@/types/analytics';
 import { contatoDoCard, semFunil } from '@/features/cardDoLead/cardDoLead';
 
 interface CardMoreMenuProps {
   item: PipelineItem;
-  roletas: RoletaConfig[];
+  /**
+   * Só as roletas LIGADAS: é pra onde dá pra mandar o lead agora. `null` = a
+   * leitura foi recusada (cargo sem acesso às roletas).
+   */
+  roletas: RoletaConfig[] | null;
   trocandoRoleta: boolean;
   onTrocarRoleta: (roletaId: string) => Promise<void> | void;
-  onCriarRoleta: () => void;
+  /** Há oferta esperando aceite: o menu oferece "Tirar da roleta". */
+  onTirarDaRoleta?: () => void;
   onRemovido: () => void;
   /** Gestor: "Juntar com outro contato" (veio da antiga Detalhes do Contato). */
   onJuntar?: () => void;
@@ -43,10 +53,11 @@ export default function CardMoreMenu({
   roletas,
   trocandoRoleta,
   onTrocarRoleta,
-  onCriarRoleta,
+  onTirarDaRoleta,
   onRemovido,
   onJuntar,
 }: CardMoreMenuProps) {
+  const navigate = useNavigate();
   // Card de quem não está em funil (aberto de Contatos): o link é o do contato
   // e não há o que remover do funil.
   const foraDoFunil = semFunil(item);
@@ -92,10 +103,34 @@ export default function CardMoreMenu({
             <Link className="h-3.5 w-3.5 mr-2" />
             Copiar link do card
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => { setRoletaEscolhida(''); setRoletaAberta(true); }}>
-            <Shuffle className="h-3.5 w-3.5 mr-2" />
-            Trocar roleta
-          </DropdownMenuItem>
+          {roletas === null ? (
+            // Sem acesso às roletas: o item fica, desabilitado e dizendo por quê,
+            // em vez de mandar pra uma página que a pessoa não abre.
+            <DropdownMenuItem disabled>
+              <Shuffle className="h-3.5 w-3.5 mr-2" />
+              <span className="flex flex-col">
+                Mandar pra roleta
+                <span className="text-[11px] text-muted-foreground">Sem acesso às roletas</span>
+              </span>
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem
+              onClick={() => {
+                if (roletas.length === 0) { navigate(PAGINA_DA_ROLETA); return; }
+                setRoletaEscolhida('');
+                setRoletaAberta(true);
+              }}
+            >
+              <Shuffle className="h-3.5 w-3.5 mr-2" />
+              Mandar pra roleta
+            </DropdownMenuItem>
+          )}
+          {onTirarDaRoleta && (
+            <DropdownMenuItem onClick={onTirarDaRoleta}>
+              <CircleSlash className="h-3.5 w-3.5 mr-2" />
+              Tirar da roleta
+            </DropdownMenuItem>
+          )}
           {onJuntar && (
             <DropdownMenuItem onClick={onJuntar}>
               <Merge className="h-3.5 w-3.5 mr-2" />
@@ -116,26 +151,20 @@ export default function CardMoreMenu({
 
       <Dialog open={roletaAberta} onOpenChange={setRoletaAberta}>
         <DialogContent className="sm:max-w-sm">
-          <DialogTitle>Trocar roleta</DialogTitle>
+          <DialogTitle>Mandar pra roleta</DialogTitle>
           <DialogDescription>
-            O lead entra no sorteio da roleta escolhida e vai para quem ela sortear.
+            A roleta escolhida oferece o lead a um corretor. Ele vira o responsável quando aceitar.
           </DialogDescription>
-          {roletas.length === 0 ? (
-            <Button type="button" variant="outline" onClick={() => { setRoletaAberta(false); onCriarRoleta(); }}>
-              Nenhuma roleta ativa — criar uma
-            </Button>
-          ) : (
-            <Select value={roletaEscolhida} onValueChange={setRoletaEscolhida}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Escolha a roleta" />
-              </SelectTrigger>
-              <SelectContent>
-                {roletas.map(r => (
-                  <SelectItem key={r.id} value={r.id}>{roletaLabel(r)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+          <Select value={roletaEscolhida} onValueChange={setRoletaEscolhida}>
+            <SelectTrigger className="h-9 text-sm" aria-label="Roleta">
+              <SelectValue placeholder="Escolha a roleta" />
+            </SelectTrigger>
+            <SelectContent>
+              {(roletas ?? []).map(r => (
+                <SelectItem key={r.id} value={r.id}>{roletaLabel(r)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setRoletaAberta(false)}>Cancelar</Button>
             <Button
@@ -144,7 +173,7 @@ export default function CardMoreMenu({
               onClick={async () => { await onTrocarRoleta(roletaEscolhida); setRoletaAberta(false); }}
             >
               {trocandoRoleta && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}
-              Sortear por esta roleta
+              Mandar pra roleta
             </Button>
           </DialogFooter>
         </DialogContent>

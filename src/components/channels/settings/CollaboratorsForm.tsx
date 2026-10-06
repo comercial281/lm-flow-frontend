@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { useNumberOwnerRule } from '@/features/numbers/useNumberOwnerRule';
+import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { OWNER_EXPLANATION, OWNER_TITLE, SHARED_LABEL, lockedOwnerId, withOwner } from '@/features/numbers/numberTexts';
 import type { NumberCardData } from '@/features/numbers/types';
 
@@ -52,6 +53,10 @@ export default function CollaboratorsForm({
   // servidor não o deixa sair). Conta da Leal Mídia ou desativado gravado como
   // dono não é efetivo — pode ser desmarcado como qualquer colaborador.
   const rule = useNumberOwnerRule(numberOwnerRule);
+  // Roleta nova (06/10/2026, D6): a roleta não tem número e é o único jeito de
+  // distribuir lead. A "Atribuição Automática" do canal era um segundo motor
+  // decidindo quem recebe; com a chave ela some (a migração do cliente a desliga).
+  const roletaNova = useClientToggle('roleta_nova');
   const ownerId = lockedOwnerId(ownerUserId, rule, numberCard);
   const [agents, setAgents] = useState<AgentChannel[]>([]);
   const [savingOwner, setSavingOwner] = useState(false);
@@ -456,6 +461,7 @@ export default function CollaboratorsForm({
       </Card>
 
       {/* Auto Assignment */}
+      {!roletaNova && (
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center gap-3 pb-4 border-b border-border">
@@ -508,6 +514,7 @@ export default function CollaboratorsForm({
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

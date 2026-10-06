@@ -27,6 +27,13 @@ export interface RoutingChoice {
    * e a escolha legítima de quem prefere distribuir na mão.
    */
   roletaConfigId: string | null;
+  /**
+   * Corretor fixo (06/10/2026, roleta nova): `routing.default_assignee_id`, ao
+   * lado da roleta. Como no portal e no site, o corretor fixo vence a roleta.
+   * `undefined` = a janela não pôde ver a lista de pessoas: a chave não é
+   * escrita e o que estava gravado atravessa.
+   */
+  defaultAssigneeId?: string | null;
 }
 
 type Settings = Record<string, unknown>;
@@ -38,6 +45,13 @@ const asRecord = (value: unknown): Settings =>
 export function readRoletaConfigId(settings: unknown): string {
   const routing = asRecord(asRecord(settings).routing);
   const id = routing.roleta_config_id;
+  return typeof id === 'string' ? id : '';
+}
+
+/** O corretor fixo escolhido, ou string vazia quando não há nenhum. */
+export function readDefaultAssigneeId(settings: unknown): string {
+  const routing = asRecord(asRecord(settings).routing);
+  const id = routing.default_assignee_id;
   return typeof id === 'string' ? id : '';
 }
 
@@ -65,6 +79,7 @@ export function buildLandingSettings(
       ...routing,
       disqualified: choice.disqualified ?? {},
       roleta_config_id: choice.roletaConfigId,
+      ...(choice.defaultAssigneeId !== undefined ? { default_assignee_id: choice.defaultAssigneeId } : {}),
     },
     pixel,
   };

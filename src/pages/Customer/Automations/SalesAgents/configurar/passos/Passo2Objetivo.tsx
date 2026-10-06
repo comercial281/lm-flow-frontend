@@ -9,6 +9,7 @@
 // (`HandoffPolicy`: "só se ela não souber responder" / "ao menor sinal de dúvida"),
 // não "o lead sumiu". Aparecem só pra quem já os tem, e continuam valendo.
 import { useEffect, useState } from 'react';
+import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/ds';
 import { Secao } from '@/components/base/Secao';
@@ -50,8 +51,20 @@ const DESTINOS: OpcaoDeEscolha<Exclude<SalesAgentHandoffTarget, 'number_owner'>>
   },
 ];
 
+// Roleta nova (06/10/2026): a roleta não tem número, então "A roleta deste número"
+// sai. Fica "Uma roleta", com o mesmo jeito de escolher.
+const DESTINOS_ROLETA_NOVA = DESTINOS
+  .filter((o) => o.valor !== 'inbox_roleta')
+  .map((o) => (o.valor === 'roleta'
+    ? { ...o, titulo: 'Uma roleta', descricao: 'O lead vai pro próximo da fila da roleta escolhida.' }
+    : o));
+
 export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
   const { rascunho, mudar, pendente, salvando, erro, salvar, descartar } = useRascunho(agent, CAMPOS_DO_PASSO[2], aoSalvo);
+  const roletaNova = useClientToggle('roleta_nova');
+  // IA que estava em "A roleta deste número" quando a chave ligou: a tela já
+  // escolhe "Uma roleta" com a roleta que atendia o número e pede a confirmação.
+  const [confirmarRoleta, setConfirmarRoleta] = useState(false);
   const [roletas, setRoletas] = useState<{ id: string; nome: string; ativa: boolean }[]>([]);
   const [pessoas, setPessoas] = useState<{ id: string; nome: string }[]>([]);
   const [funis, setFunis] = useState<PipelineOpt[]>([]);
@@ -76,6 +89,22 @@ export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
       .catch(() => {});
     return () => { vivo = false; };
   }, []);
+
+  const naRoletaDoNumero = roletaNova && rascunho.handoff_target === 'inbox_roleta' && escolhas.persona !== 'broker';
+  useEffect(() => {
+    if (!naRoletaDoNumero) return;
+    let vivo = true;
+    // Leitura de fundo: sem roleta no número (ou sem acesso), a roleta fica em
+    // branco e o aviso pede pra escolher.
+    const inbox = rascunho.inbox_id ? String(rascunho.inbox_id) : null;
+    (inbox ? roletaConfigService.getForInbox(inbox) : Promise.resolve(null))
+      .then((r) => {
+        if (!vivo) return;
+        mudar({ handoff_target: 'roleta', handoff_roleta_config_id: r ? String(r.id) : null, handoff_user_id: null });
+        setConfirmarRoleta(true);
+      });
+    return () => { vivo = false; };
+  }, [naRoletaDoNumero, rascunho.inbox_id, mudar]);
 
   useEffect(() => {
     if (!mover) return;
@@ -120,7 +149,7 @@ export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
     ...(quando === 'sem_resposta' ? [{ valor: 'sem_resposta' as Quando, titulo: 'Só quando ela não souber responder (opção antiga)', descricao: 'Continua valendo até você escolher outra.' }] : []),
   ];
 
-  const destinos = DESTINOS.map((o) => (o.valor === 'webhook' && !webhookDisponivel(escolhas.persona)
+  const destinos = (roletaNova ? DESTINOS_ROLETA_NOVA : DESTINOS).map((o) => (o.valor === 'webhook' && !webhookDisponivel(escolhas.persona)
     ? { ...o, desabilitada: true, motivo: 'Na persona corretor o lead vai sempre pro dono do número.' }
     : o));
 
@@ -180,12 +209,22 @@ export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
           <>
             <Escolha nome="destino" legenda="Pra onde vai o lead" opcoes={destinos} aoEscolher={trocarDestino}
               valor={rascunho.handoff_target === 'number_owner' ? null : rascunho.handoff_target} />
+            {confirmarRoleta && rascunho.handoff_target === 'roleta' && (
+              <Aviso>
+                <p className="font-medium">Confirme a roleta</p>
+                <p className="mt-1">
+                  {rascunho.handoff_roleta_config_id
+                    ? 'Ela passava o lead pra roleta do número em que atende. A roleta não tem mais número, então deixamos escolhida a que atendia este número. Confira e salve.'
+                    : 'Ela passava o lead pra roleta do número em que atende, e a roleta não tem mais número. Escolha a roleta e salve.'}
+                </p>
+              </Aviso>
+            )}
             {rascunho.handoff_target === 'roleta' && (
               <Campo id="p2-roleta" rotulo="Qual roleta">
                 <Seletor id="p2-roleta" className={`${CLASSE_DO_CAMPO} w-full`} value={rascunho.handoff_roleta_config_id ?? ''}
                   onChange={(e) => mudar({ handoff_roleta_config_id: e.target.value || null })}>
                   <option value="">Escolha a roleta</option>
-                  {roletasVisiveis.map((r) => <option key={r.id} value={r.id}>{r.nome}{r.ativa ? '' : ' (desativada)'}</option>)}
+                  {roletasVisiveis.map((r) => <option key={r.id} value={r.id}>{r.nome}{r.ativa ? '' : roletaNova ? ' (desligada)' : ' (desativada)'}</option>)}
                 </Seletor>
               </Campo>
             )}

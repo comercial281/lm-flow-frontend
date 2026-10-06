@@ -14,13 +14,23 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 beforeEach(() => {
   vi.clearAllMocks();
+  chave.roletaNova = false;
+  roletaDoNumero.mockResolvedValue(null);
   update.mockImplementation(async (_id: string, patch: Partial<SalesAgent>) => agenteDeTeste(patch));
 });
 
 const salvar = () => userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
+const roletaDoNumero = vi.hoisted(() => vi.fn());
 vi.mock('@/services/roletaConfig/roletaConfigService', () => ({
-  roletaConfigService: { getAll: vi.fn().mockResolvedValue([{ id: 'r1', name: 'Fila Zona Sul', is_active: true }]) },
+  roletaConfigService: {
+    getAll: vi.fn().mockResolvedValue([{ id: 'r1', name: 'Fila Zona Sul', is_active: true }]),
+    getForInbox: roletaDoNumero,
+  },
+}));
+const chave = vi.hoisted(() => ({ roletaNova: false }));
+vi.mock('@/contexts/TenantFeaturesContext', () => ({
+  useClientToggle: (k: string) => (k === 'roleta_nova' ? chave.roletaNova : false),
 }));
 vi.mock('@/services/channels/agentsService', () => ({ default: { getAll: vi.fn().mockResolvedValue([{ id: 'u1', name: 'Carla' }]) } }));
 vi.mock('@/services/pipelines/pipelinesService', () => ({
@@ -137,3 +147,34 @@ describe('Passo 2 · Sistema do cliente', () => {
   });
 });
 
+
+// Roleta nova (06/10/2026): a roleta não tem número. "A roleta deste número" sai e
+// a IA que estava nela vem com "Uma roleta" escolhida e o pedido de confirmação.
+describe('Passo 2 · Pra onde vai o lead com a chave roleta_nova', () => {
+  it('sem a chave: nada muda', () => {
+    abrir(dono());
+    expect(screen.getByLabelText('A roleta deste número')).toBeChecked();
+    expect(roletaDoNumero).not.toHaveBeenCalled();
+  });
+
+  it('com a chave: "A roleta deste número" some e a roleta do número vem escolhida pra confirmar', async () => {
+    chave.roletaNova = true;
+    roletaDoNumero.mockResolvedValue({ id: 'r1', name: 'Fila Zona Sul', is_active: true });
+    abrir(dono());
+    await waitFor(() => expect(screen.getByLabelText('Uma roleta')).toBeChecked());
+    expect(screen.queryByLabelText('A roleta deste número')).toBeNull();
+    expect(roletaDoNumero).toHaveBeenCalledWith('inbox-1');
+    expect(screen.getByText('Confirme a roleta')).toBeTruthy();
+    await waitFor(() => expect(screen.getByLabelText('Qual roleta')).toHaveValue('r1'));
+    await salvar();
+    expect(update).toHaveBeenCalledWith('ia-1', { handoff_target: 'roleta', handoff_roleta_config_id: 'r1' });
+  });
+
+  it('com a chave e sem roleta no número: "Uma roleta" em branco, pedindo a escolha', async () => {
+    chave.roletaNova = true;
+    abrir(dono());
+    await waitFor(() => expect(screen.getByLabelText('Uma roleta')).toBeChecked());
+    expect(screen.getByText(/Escolha a roleta e salve/)).toBeTruthy();
+    expect(screen.getByLabelText('Qual roleta')).toHaveValue('');
+  });
+});

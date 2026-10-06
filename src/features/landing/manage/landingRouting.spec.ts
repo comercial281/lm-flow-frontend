@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildLandingSettings,
+  readDefaultAssigneeId,
   readDisqualifiedBranch,
   readRoletaConfigId,
 } from './landingRouting';
@@ -54,6 +55,22 @@ describe('roteamento da landing', () => {
 
       expect((out.routing as Record<string, unknown>).roleta_config_id).toBeNull();
       expect(readRoletaConfigId(out)).toBe('');
+    });
+
+    // Roleta nova (06/10/2026): corretor fixo ao lado da roleta.
+    it('grava o corretor fixo ao lado da roleta e lê de volta', () => {
+      const out = buildLandingSettings(
+        { routing: { roleta_config_id: 'rol-1' } },
+        { disqualified: null, roletaConfigId: null, defaultAssigneeId: 'u-1' },
+        {},
+      );
+      expect(readDefaultAssigneeId(out)).toBe('u-1');
+      expect(readRoletaConfigId(out)).toBe('');
+    });
+
+    it('sem a lista de pessoas (undefined), o corretor gravado atravessa', () => {
+      const out = buildLandingSettings({ routing: { default_assignee_id: 'u-1' } }, semRamo, {});
+      expect(readDefaultAssigneeId(out)).toBe('u-1');
     });
 
     it('landing sem roleta lê vazio', () => {

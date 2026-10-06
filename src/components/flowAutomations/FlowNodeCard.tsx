@@ -7,7 +7,7 @@ import {
   type OutputHandle,
 } from '@/lib/flowAutomationGraph';
 import { HIDDEN_BLOCK_NOTICE, blockGroup, blockLabel, isVisibleNode } from '@/features/flowAutomations/palette';
-import { leadActionOf } from '@/features/flowAutomations/leadAction';
+import { isFlowOnlyLeadAction, leadActionOf } from '@/features/flowAutomations/leadAction';
 import type { LeadAutomationAction } from '@/services/leadAutomation/leadAutomationService';
 import { conditionSentence, type ConditionLookups } from '@/features/flowAutomations/conditions';
 import { WAIT_FOR_REPLY_HELP, describeWait, describeWaitForReply } from '@/features/flowAutomations/waitTime';
@@ -137,6 +137,8 @@ export function summaryLine(node: FlowAutomationNode, lookups: FlowLookups = {})
     case 'disable_ai':
       return blockDescription(node);
     case 'lead_action':
+      // Ação só do construtor (Marcar follow-up encerrado): sem campos, a frase do bloco.
+      if (isFlowOnlyLeadAction(cfg.action_type)) return blockDescription(node);
       return lookups.actionSummary?.(leadActionOf(cfg)) ?? '';
     default:
       return node.label || '';

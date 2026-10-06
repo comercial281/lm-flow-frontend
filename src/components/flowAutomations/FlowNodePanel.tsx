@@ -10,8 +10,9 @@ import { blockDescription, blockIcon } from '@/features/flowAutomations/blockInf
 import { nodeColor } from '@/lib/flowAutomationGraph';
 import { cn } from '@/lib/utils';
 import { mesmoConteudo } from '@/hooks/useAlteracoesNaoSalvas';
-import { leadActionConfig, leadActionOf } from '@/features/flowAutomations/leadAction';
+import { isFlowOnlyLeadAction, leadActionConfig, leadActionOf } from '@/features/flowAutomations/leadAction';
 import { nodeProblem } from '@/features/flowAutomations/readiness';
+import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import {
   SECONDS_UNITS, WAIT_FOR_REPLY_HELP, WAIT_UNITS, joinMinutes, joinSeconds, splitMinutes, splitSeconds, waitHasSeconds,
   waitTotalSeconds, type SecondsUnit, type WaitUnit,
@@ -249,6 +250,7 @@ function LabelChecklist({ selected, onChange, resources }: { selected: string[];
 // só aplica em "Salvar". O fluxo inteiro só vai pro servidor no Salvar do topo
 // do canvas.
 export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false }: Props) {
+  const roletaObrigatoria = useClientToggle('roleta_nova');
   const [label, setLabel] = useState(node?.label || '');
   const [config, setConfig] = useState<FlowNodeConfig>(node?.config || {});
   const [problem, setProblem] = useState<string | null>(null);
@@ -580,6 +582,12 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
       // Ação das Automações: o MESMO editor da tela de regras, gravando
       // `{ action_type, params }` (leadAction.ts).
       case 'lead_action':
+        // Ação só do construtor (Marcar follow-up encerrado): sem campos e SEM o
+        // editor das regras, que não conhece a ação e trocaria o `action_type`
+        // por vazio (o servidor recusa o fluxo inteiro). A config volta intacta.
+        if (isFlowOnlyLeadAction(config.action_type)) {
+          return <p className="text-xs text-muted-foreground">Sem configuração adicional.</p>;
+        }
         return (
           <ActionEditor
             action={leadActionOf(config)}
@@ -600,7 +608,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
       : config;
     // Mesma régua do cartão e da chave de ligar (readiness.ts), e o que o passo
     // do guia pede (sprint 4).
-    const issue = nodeProblem({ kind: activeNode.kind, config: finalConfig }) ?? guideRequiredProblem(guide, finalConfig);
+    const issue = nodeProblem({ kind: activeNode.kind, config: finalConfig }, { roletaObrigatoria }) ?? guideRequiredProblem(guide, finalConfig);
     if (issue) {
       setProblem(issue);
       return;

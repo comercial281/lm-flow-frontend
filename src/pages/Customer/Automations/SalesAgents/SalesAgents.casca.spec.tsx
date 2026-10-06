@@ -18,7 +18,7 @@ vi.mock('@/services/channels/inboxesService', () => ({ default: { list: vi.fn().
 vi.mock('@/hooks/useCan', () => ({ useCan: () => () => true }));
 vi.mock('@/hooks/useIsSuperAdmin', () => ({ useIsSuperAdmin: () => false }));
 const insights = vi.hoisted(() => ({ ligado: true }));
-vi.mock('@/contexts/TenantFeaturesContext', () => ({ useClientToggle: () => insights.ligado }));
+vi.mock('@/contexts/TenantFeaturesContext', () => ({ useClientToggle: (k: string) => (k === 'ia_insights' ? insights.ligado : false) }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const marcador = vi.hoisted(() => (nome: string) => ({ default: ({ agent }: { agent?: { name: string } }) => <p>{`tela ${nome}${agent ? ` · ${agent.name}` : ''}`}</p> }));

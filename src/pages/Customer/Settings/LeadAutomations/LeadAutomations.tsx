@@ -53,7 +53,7 @@ import AutomationLibraryModal from './AutomationLibraryModal';
 import AutomationTestDialog from './AutomationTestDialog';
 import AutomationHistoryDialog from './AutomationHistoryDialog';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
-import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
+import { useClientToggle, useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { Seletor } from '@/components/base/Seletor';
@@ -131,6 +131,8 @@ function sortRules(list: LeadAutomationRule[]): LeadAutomationRule[] {
 }
 
 export default function LeadAutomations() {
+  // Roleta nova: "Distribuir pela roleta" escolhe a roleta (obrigatório).
+  const roletaNova = useClientToggle('roleta_nova');
   const isSuperAdmin = useIsSuperAdmin();
   const { features } = useTenantFeatures();
   // Super-admin (Leal Mídia) sempre tem acesso; cliente só com o toggle ligado.
@@ -212,7 +214,7 @@ export default function LeadAutomations() {
     if (!form.name.trim()) { toast.error('Nome é obrigatório'); return; }
     if (form.actions.length === 0) { toast.error('Adicione pelo menos uma ação'); return; }
 
-    const validation = validateRule(form.trigger, form.conditions, form.actions);
+    const validation = validateRule(form.trigger, form.conditions, form.actions, { roletaObrigatoria: roletaNova });
     if (!validation.ok) {
       toast.error(validation.error ?? 'Configuração inválida');
       return;
