@@ -246,7 +246,9 @@ export default function SalesAgents() {
             // Testar levava a conversa da IA anterior (e a próxima mensagem iria
             // pra nova com o histórico da outra), a Visão geral mostrava os
             // números dela e Sugestões seguia lendo a análise dela.
-            <div key={selected.id} className={tela === 'visao-geral' ? 'max-w-5xl space-y-5' : 'max-w-3xl space-y-5'}>
+            // Largura do Meu site (até 1400 px, centralizado) em todas as telas: com 768 px
+            // o passo a passo ficava espremido entre o trilho e a prévia.
+            <div key={selected.id} className="mx-auto w-full max-w-[1400px] space-y-5">
               <div className="space-y-1">
                 {trilha && <p className="text-xs font-medium text-muted-foreground">{trilha}</p>}
                 <h1 className="text-2xl font-semibold">{info.titulo}</h1>
