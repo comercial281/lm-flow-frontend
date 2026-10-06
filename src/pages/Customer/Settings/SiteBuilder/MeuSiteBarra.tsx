@@ -1,12 +1,46 @@
 // Barra de topo própria do Meu site (modelo Kenlo). O menu lateral do LM Flow
 // continua igual: isto é navegação DENTRO da página, na horizontal.
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { toast } from 'sonner';
 import { ChevronDown, Copy, ExternalLink, Globe, Loader2, X } from 'lucide-react';
 import {
-  Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Input,
+  Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent,
+  DropdownMenuSubTrigger, DropdownMenuTrigger, Input,
 } from '@/components/ui/ds';
-import { GRUPOS, itensDoGrupo, telaInfo, type TelaId } from '@/features/siteBuilder/meuSiteMenu';
+import {
+  GRUPOS, SUBMENUS, itensDoGrupo, telaInfo, type SubmenuId, type TelaId, type TelaInfo,
+} from '@/features/siteBuilder/meuSiteMenu';
+
+/** Linha fina entre os itens da lista suspensa (pedido do dono: separar sem pesar). */
+function Divisor() {
+  return <DropdownMenuSeparator className="my-0.5 opacity-40" />;
+}
+
+/** Item com nome em cima e dica embaixo (mesmo visual no menu e no submenu). */
+function NomeEDica({ rotulo, dica }: { rotulo: string; dica: string }) {
+  return (
+    <>
+      <span className="text-sm font-medium">{rotulo}</span>
+      <span className="text-xs text-muted-foreground">{dica}</span>
+    </>
+  );
+}
+
+/**
+ * Telas soltas na ordem do mapa; as que têm `submenu` viram UMA entrada
+ * ("Página inicial ›") no lugar da primeira delas, abrindo as outras ao lado.
+ */
+type Entrada = { tipo: 'tela'; tela: TelaInfo } | { tipo: 'sub'; id: SubmenuId; telas: TelaInfo[] };
+function entradasDoMenu(itens: TelaInfo[]): Entrada[] {
+  const out: Entrada[] = [];
+  for (const t of itens) {
+    if (!t.submenu) { out.push({ tipo: 'tela', tela: t }); continue; }
+    const sub = out.find((e): e is Extract<Entrada, { tipo: 'sub' }> => e.tipo === 'sub' && e.id === t.submenu);
+    if (sub) sub.telas.push(t);
+    else out.push({ tipo: 'sub', id: t.submenu, telas: [t] });
+  }
+  return out;
+}
 
 export interface MeuSiteBarraProps {
   tela: TelaId;
@@ -90,11 +124,33 @@ export default function MeuSiteBarra({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="min-w-[240px]">
-                {itens.map(t => (
-                  <DropdownMenuItem key={t.id} onSelect={() => aoIr(t.id)} className="flex flex-col items-start gap-0.5">
-                    <span className="text-sm font-medium">{t.rotulo}</span>
-                    <span className="text-xs text-muted-foreground">{t.dica}</span>
-                  </DropdownMenuItem>
+                {entradasDoMenu(itens).map((e, i) => (
+                  <Fragment key={e.tipo === 'tela' ? e.tela.id : e.id}>
+                    {i > 0 && <Divisor />}
+                    {e.tipo === 'tela' ? (
+                      <DropdownMenuItem onSelect={() => aoIr(e.tela.id)} className="flex flex-col items-start gap-0.5">
+                        <NomeEDica rotulo={e.tela.rotulo} dica={e.tela.dica} />
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger className="flex items-center justify-between gap-2">
+                          <span className="flex flex-col items-start gap-0.5">
+                            <NomeEDica rotulo={SUBMENUS[e.id].rotulo} dica={SUBMENUS[e.id].dica} />
+                          </span>
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent className="min-w-[220px]">
+                          {e.telas.map((t, j) => (
+                            <Fragment key={t.id}>
+                              {j > 0 && <Divisor />}
+                              <DropdownMenuItem onSelect={() => aoIr(t.id)} className="flex flex-col items-start gap-0.5">
+                                <NomeEDica rotulo={t.rotulo} dica={t.dica} />
+                              </DropdownMenuItem>
+                            </Fragment>
+                          ))}
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                    )}
+                  </Fragment>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>

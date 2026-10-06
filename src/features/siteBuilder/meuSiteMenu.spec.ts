@@ -50,7 +50,7 @@ describe('meuSiteMenu', () => {
     expect(telaDaUrl(new URLSearchParams('tela=vitrines'))).toBe('vitrines');
     expect(telaDaUrl(new URLSearchParams('tela=buscados'))).toBe('buscados');
     expect(telaInfo('busca').titulo).toBe('Busca rápida');
-    expect(trilhaDe('chamadas')).toBe('Personalizar');
+    expect(trilhaDe('chamadas')).toBe('Personalizar › Página inicial');
   });
 
   it('Página do imóvel e Lista de imóveis ficam no Personalizar, logo depois da página inicial', () => {

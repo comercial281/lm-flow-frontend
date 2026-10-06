@@ -1,4 +1,5 @@
-import { Check } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/ds';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -67,9 +68,26 @@ function Miniatura({ id, principal, destaque }: { id: ModeloDoSiteId; principal:
   );
 }
 
+export interface PropsDaPreviaDoModelo {
+  /** Endereço do site (o mesmo do "Ver site" da barra). Sem ele, sem "Ver como fica". */
+  urlDoSite?: string;
+  /** Site no ar: a prévia abre direto. Fora do ar, pede o link de prévia antes. */
+  noAr?: boolean;
+  /** O link de 24 h do site em manutenção (`?previa=`), o mesmo da barra. */
+  aoPedirPrevia?: () => Promise<string>;
+}
+
+/** O endereço com `modelo=<id>` somado aos parâmetros que já tem (ex.: `previa=`). */
+function comModelo(url: string, id: ModeloDoSiteId): string {
+  const u = new URL(url);
+  u.searchParams.set('modelo', id);
+  return u.toString();
+}
+
 // "Modelo do site": três pontos de partida pro visual. Só grava no formulário (o Salvar é que
 // manda pro ar) e só mexe no visual; cores, logo, textos, vitrines, busca e menu ficam como estão.
-export default function TelaModelo({ siteForm, setF }: FormProps) {
+// "Ver como fica" abre o site de verdade com o modelo aplicado (`?modelo=`), sem gravar nada.
+export default function TelaModelo({ siteForm, setF, urlDoSite, noAr = false, aoPedirPrevia }: FormProps & PropsDaPreviaDoModelo) {
   const estado: EstadoDoVisual = {
     font_family: siteForm.font_family ?? null,
     appearance: siteForm.appearance ?? APARENCIA_FABRICA,
@@ -92,6 +110,33 @@ export default function TelaModelo({ siteForm, setF }: FormProps) {
     toast.success('Modelo aplicado. Confira em Ver prévia e clique em Salvar.');
   };
 
+  const comPrevia = !!urlDoSite && (noAr || !!aoPedirPrevia);
+  // Um link por vez: clique duplo não abre duas abas nem pede dois links.
+  const [gerando, setGerando] = useState<ModeloDoSiteId | null>(null);
+  const ocupado = useRef(false);
+  const verPrevia = async (m: ModeloDoSite) => {
+    if (!urlDoSite || ocupado.current) return;
+    ocupado.current = true;
+    setGerando(m.id);
+    // A aba abre AGORA, no clique: aberta depois da resposta do servidor, o
+    // navegador a trata como janela não pedida e bloqueia (igual à barra).
+    const aba = window.open('', '_blank');
+    try {
+      const base = noAr || !aoPedirPrevia ? urlDoSite : await aoPedirPrevia();
+      const url = comModelo(base, m.id);
+      if (aba) {
+        aba.opener = null;
+        aba.location.href = url;
+      }
+    } catch {
+      aba?.close();
+      toast.error('Não deu para abrir a prévia. Tente de novo.');
+    } finally {
+      ocupado.current = false;
+      setGerando(null);
+    }
+  };
+
   return (
     <>
       <div className="grid gap-5 md:grid-cols-3">
@@ -110,9 +155,20 @@ export default function TelaModelo({ siteForm, setF }: FormProps) {
             ) : (
               <Button type="button" variant="outline" onClick={() => usar(m)}>Usar este modelo</Button>
             )}
+            {comPrevia && (
+              <Button type="button" variant="ghost" onClick={() => verPrevia(m)} disabled={gerando !== null}>
+                {gerando === m.id && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden />}
+                Ver como fica
+              </Button>
+            )}
           </div>
         ))}
       </div>
+      {comPrevia && (
+        <p className="mt-3 text-sm text-muted-foreground">
+          A prévia abre o seu site com o modelo aplicado, numa aba nova. Nada muda até você usar o modelo e salvar.
+        </p>
+      )}
       {dialogoDeConfirmacao}
     </>
   );
