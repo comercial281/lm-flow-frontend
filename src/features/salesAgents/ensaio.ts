@@ -2,6 +2,7 @@ import type {
   RehearsalOutcome, RehearsalState, RehearsalTurn, TestMediaItem,
 } from '@/services/salesAgents/salesAgentsService';
 import { segundos } from '@/lib/formato';
+import { MOMENTOS_DO_FUNIL } from '@/pages/Customer/Automations/SalesAgents/configurar/opcoes';
 
 /** O que aparece no chat do Testar, na ordem. */
 export type ItemDaConversa =
@@ -164,4 +165,53 @@ export function respostasDoFormulario(texto: string): Record<string, string> {
 
 export function textoDasRespostas(r: Record<string, string>): string {
   return Object.entries(r).map(([k, v]) => `${k}: ${v}`).join('\n');
+}
+
+/** Os botões de "Avançar o tempo" da janela do Testar (spec §5 + "até ela agir"). */
+export const AVANCOS_DA_JANELA: ReadonlyArray<{ rotulo: string; horas: number | null }> = [
+  { rotulo: 'Até ela agir sozinha', horas: null },
+  { rotulo: '1 h', horas: 1 },
+  { rotulo: '+8 h', horas: 8 },
+  { rotulo: '1 dia', horas: 24 },
+  { rotulo: '3 dias', horas: 72 },
+];
+
+const NIVEL: Record<string, 0 | 1 | 2 | 3> = { unknown: 0, cold: 1, warm: 2, hot: 3 };
+
+export interface PainelDoEnsaio {
+  /** O caminho da intenção que ela escolheu (onda 2). */
+  caminho: string | null;
+  temperatura: { rotulo: string; nivel: 0 | 1 | 2 | 3 } | null;
+  perguntas: { texto: string; resposta: string | null; obrigatoria: boolean }[];
+}
+
+/**
+ * O painel "O que ela está fazendo" do Testar: lido do estado e do último turno com ficha.
+ * ⚠️ Antes da onda 2 no ar o estado vem SEM `caminho`: sai null e a tela diz "Ainda não escolheu".
+ */
+export function painelDoEnsaio(state: RehearsalState | null, o: RehearsalOutcome | null | undefined): PainelDoEnsaio {
+  const t = o?.temperature ?? null;
+  return {
+    caminho: state?.caminho ?? null,
+    temperatura: t ? { rotulo: TEMPERATURA[t] ?? t, nivel: NIVEL[t] ?? 0 } : null,
+    perguntas: (o?.checklist ?? []).map((c) => ({
+      texto: c.pergunta,
+      resposta: String(c.resposta ?? '').trim() ? c.resposta : null,
+      obrigatoria: c.obrigatoria,
+    })),
+  };
+}
+
+/**
+ * "Card: vai pra coluna de …" no O que aconteceria. O servidor manda o MOMENTO da
+ * conversa (descobrindo, qualificando…) e se a IA tem "Mover o card no funil"
+ * ligado; a coluna de verdade é o mapa que o gestor montou, então a tela fala do
+ * momento com o nome que ele vê no Configurar.
+ */
+export function linhaDoCard(o: RehearsalOutcome | null | undefined): string | null {
+  const stage = o?.card?.stage;
+  if (!o?.card || !stage) return null;
+  if (!o.card.moves) return 'Card: fica onde está (Mover o card no funil está desligado)';
+  const rotulo = MOMENTOS_DO_FUNIL.find(([k]) => k === stage)?.[1] ?? stage;
+  return `Card: vai pra coluna de "${rotulo}"`;
 }
