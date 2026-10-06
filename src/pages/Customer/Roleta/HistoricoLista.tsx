@@ -41,15 +41,17 @@ const PRECISA_DE_ATENCAO: RoletaHistoryStatus[] = ['exhausted', 'not_entered'];
 interface Props {
   /** Sem roleta = o histórico de todas. */
   roletaId?: string;
+  /** Abre já filtrado (o triângulo do cartão cai em "Precisa de atenção"). */
+  filtroInicial?: 'all' | 'attention';
 }
 
-export default function HistoricoLista({ roletaId }: Props) {
+export default function HistoricoLista({ roletaId, filtroInicial = 'all' }: Props) {
   const navigate = useNavigate();
   const can = useCan();
   const podeSortear = can('roleta_configs', 'assign');
   const geral = !roletaId;
 
-  const [filtro, setFiltro] = useState<'all' | 'attention'>('all');
+  const [filtro, setFiltro] = useState<'all' | 'attention'>(filtroInicial);
   const [corretor, setCorretor] = useState('');
   const [dias, setDias] = useState<7 | 30>(7);
   const [roletaDoFiltro, setRoletaDoFiltro] = useState('');

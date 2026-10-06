@@ -7,9 +7,8 @@ import type {
   RoletaPhoneStatus,
 } from '@/services/roletaConfig/roletaConfigService';
 
-// Os textos da roleta nova, num lugar só e com spec. A página lê a roleta como
-// FRASE ("Formulários "ZONA SUL" → 10 corretores na fila"), e as mesmas frases
-// aparecem no cartão da lista e na página da roleta.
+// Os textos da roleta nova, num lugar só e com spec: o cartão da lista e a
+// página da roleta falam com as mesmas palavras.
 
 /** Prazo pra aceitar, nas opções da tela. Zero = sem prazo (a oferta não expira). */
 export const PRAZOS_EM_MINUTOS = [5, 10, 15, 30, 60, 120, 0] as const;
@@ -22,11 +21,6 @@ export function prazoTexto(minutos: number | null | undefined): string {
   const h = Math.floor(m / 60);
   const resto = m % 60;
   return resto ? `${h} h ${resto} min` : `${h} h`;
-}
-
-/** "10 min pra aceitar" · "Sem prazo pra aceitar". */
-export function prazoFrase(minutos: number | null | undefined): string {
-  return `${prazoTexto(minutos)} pra aceitar`;
 }
 
 /** "08:00" → "8h" · "08:30" → "8h30". */
@@ -58,16 +52,44 @@ export function ativosNaFila(r: Pick<RoletaConfig, 'members'>): number {
   return (r.members ?? []).filter(m => m.is_active).length;
 }
 
-/** Linha do meio do cartão: de onde vem → quantos recebem. */
-export function origensEFila(r: Pick<RoletaConfig, 'members' | 'origins_summary'>): string {
+/** Como cada tipo de origem se conta no cartão ("4 formulários"). */
+const ORIGEM_NO_CARTAO: Record<string, [string, string]> = {
+  'Formulário do Meta': ['formulário', 'formulários'],
+  'IA Vendedora': ['IA Vendedora', 'IAs Vendedoras'],
+  Landing: ['landing', 'landings'],
+  Portal: ['portal', 'portais'],
+  Site: ['site', 'sites'],
+};
+
+/**
+ * As origens do cartão, contadas por tipo: "4 formulários" · "2 formulários · 1 landing".
+ * O servidor manda cada origem em frase ("Formulário do Meta · "ZONA SUL""); o
+ * tipo é o que vem antes do " · ". A lista inteira fica na dica do cartão.
+ */
+export function origensResumo(r: Pick<RoletaConfig, 'origins_summary'>): string {
   const origens = (r.origins_summary ?? []).filter(Boolean);
-  const de = origens.length ? origens.join(', ') : 'Sem origem ainda';
-  const ativos = ativosNaFila(r);
-  const fila = ativos ? plural(ativos, 'corretor na fila', 'corretores na fila') : 'ninguém na fila';
-  return `${de} → ${fila}`;
+  if (!origens.length) return 'Sem origem ainda';
+  const contagem = new Map<string, number>();
+  for (const o of origens) {
+    const tipo = o.split(' · ')[0];
+    const chave = ORIGEM_NO_CARTAO[tipo] ? tipo : '';
+    contagem.set(chave, (contagem.get(chave) ?? 0) + 1);
+  }
+  return [...contagem]
+    .map(([tipo, n]) => {
+      const [um, varios] = ORIGEM_NO_CARTAO[tipo] ?? ['origem', 'origens'];
+      return plural(n, um, varios);
+    })
+    .join(' · ');
 }
 
-/** A linha de atenção do cartão. Vazia quando não há nada (e aí ela some). */
+/** Quem recebe: "10 corretores" · "1 corretor" · "Ninguém". */
+export function filaTexto(r: Pick<RoletaConfig, 'members'>): string {
+  const ativos = ativosNaFila(r);
+  return ativos ? plural(ativos, 'corretor', 'corretores') : 'Ninguém';
+}
+
+/** O aviso do triângulo do cartão. Vazio quando não há nada (e aí ele some). */
 export function atencaoTexto(r: Pick<RoletaConfig, 'pending_count' | 'exhausted_count_7d'>): string {
   const partes: string[] = [];
   const esperando = r.pending_count ?? 0;
