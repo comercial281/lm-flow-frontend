@@ -87,6 +87,18 @@ describe('SistemaDoCliente', () => {
     expect(screen.getByText('{"recebido":true}')).toBeInTheDocument();
   });
 
+  // Revisão final da onda 3 (P1): a resposta pode ser uma página HTML inteira. O
+  // trecho é cortado no texto (nada de rolagem própria no Configurar).
+  it('resposta longa do sistema do cliente aparece cortada, sem caixa com rolagem', async () => {
+    servico.testWebhook.mockResolvedValue({ ok: false, response_code: 500, response_excerpt: 'x'.repeat(2000), duration_ms: 90, error: null });
+    const user = userEvent.setup();
+    montar({ chaveGerada: true });
+    await user.click(screen.getByRole('button', { name: /mandar um lead de teste/i }));
+    const trecho = await screen.findByText(/^x+…$/);
+    expect(trecho.textContent).toHaveLength(601);
+    expect(trecho.className).not.toMatch(/overflow/);
+  });
+
   it('teste recusado mostra o motivo', async () => {
     servico.testWebhook.mockResolvedValue({
       ok: false,

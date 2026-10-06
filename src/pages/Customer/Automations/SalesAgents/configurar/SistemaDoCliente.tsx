@@ -6,6 +6,12 @@ import { salesAgentsService, type WebhookTestResult } from '@/services/salesAgen
 import { fraseDaResposta, problemaNoEndereco, segundos } from '@/features/salesAgents/sistemaDoCliente';
 import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
 
+// ⚠️ A resposta do sistema do cliente pode ser uma página HTML inteira. Corta no
+// TEXTO, sem caixa com rolagem nem altura máxima: o Configurar não rola no meio
+// (trava do ConfigurarPaginas.spec).
+const TRECHO_MAX = 600;
+const cortarTrecho = (t: string) => (t.length > TRECHO_MAX ? `${t.slice(0, TRECHO_MAX)}…` : t);
+
 // Sistema do cliente (05/10/2026): o bloco que aparece quando o destino do lead é o
 // sistema que a imobiliária já usa. Três coisas, nesta ordem: o endereço (grava
 // ao sair do campo, na página Destino), a chave secreta (gerada pelo LM Flow e
@@ -166,7 +172,7 @@ export default function SistemaDoCliente({ agentId, url, urlSalva, chaveGerada, 
           >
             <p className="text-xs font-medium">{fraseDoTeste(teste)}</p>
             {teste.response_excerpt && (
-              <pre className="mt-1 whitespace-pre-wrap break-all text-[11px]">{teste.response_excerpt}</pre>
+              <pre className="mt-1 whitespace-pre-wrap break-all text-[11px]">{cortarTrecho(teste.response_excerpt)}</pre>
             )}
           </div>
         )}
