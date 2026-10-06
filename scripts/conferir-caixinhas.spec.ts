@@ -106,7 +106,13 @@ describe('conferir-caixinhas', () => {
     const comFlag = rodar(['--tudo']).saida;
 
     expect(semFlag).not.toContain('na tela do SuperAdmin');
-    expect(comFlag).toContain('na tela do SuperAdmin');
-    expect(comFlag).toContain('SuperAdmin/');
+    // Com o SuperAdmin zerado (a meta, desde a página do cliente em 05/10/2026)
+    // não há o que listar; o --tudo não pode inventar cabeçalho vazio.
+    if (contarSuper(semFlag) > 0) {
+      expect(comFlag).toContain('na tela do SuperAdmin');
+      expect(comFlag).toContain('SuperAdmin/');
+    } else {
+      expect(comFlag).not.toContain('na tela do SuperAdmin');
+    }
   });
 });
