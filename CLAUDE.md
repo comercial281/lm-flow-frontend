@@ -6865,6 +6865,8 @@ Armadilhas:
     roleta perguntam com `usePodeSair` (`PEDIDO_SAIR_SEM_SALVAR`) quando há horário ou texto por salvar.
 11. **`/settings/roleta-config` passa pelo mesmo portão** (`ChaveRoletaNova`) que `/automations/roleta-config`.
 
+**Largura (07/10/2026, pedido do dono):** a lista e a página da roleta usam até 1400px, como Meu site e IA Vendedora (`mx-auto w-full max-w-[1400px]`), com até 3 cartões por linha em tela larga. Não voltar pra coluna estreita.
+
 ## Roleta nova: as outras telas (06/10/2026)
 
 Entrega 3 (F2) da reestruturação da roleta. Spec: `LM FLOW/specs/2026-10-06-roleta-reestruturacao-design.md` (seção "Fora da página" e as decisões D1–D12); plano: `LM FLOW/plans/2026-10-06-roleta-00-indice.md`. A página nova da roleta é outra entrega (F1); o servidor é B1 (consertos, sem chave) e B2 (chave `roleta_nova`).
