@@ -29,8 +29,9 @@ function origem(r: MarginRow): string {
   return r.revenue_source === 'package' ? `Cota do plano ${r.package_name ?? ''}`.trim() : 'Valor digitado';
 }
 
-export default function Margem({ month, recarga = 0, aoLancar }: { month: string; recarga?: number; aoLancar: () => void }) {
-  const [kind, setKind] = useState('todos');
+export default function Margem({ month, kind, aoMudarKind, recarga = 0, aoLancar }: {
+  month: string; kind: string; aoMudarKind: (k: string) => void; recarga?: number; aoLancar: () => void;
+}) {
   const [dados, setDados] = useState<MarginsReport | null>(null);
   const [estado, setEstado] = useState<'carregando' | 'pronto' | 'erro'>('carregando');
   // Só a última busca vale: trocar Avulso → Performance rápido não deixa a do meio por cima.
@@ -62,7 +63,7 @@ export default function Margem({ month, recarga = 0, aoLancar }: { month: string
             metade pelas mensagens do mês, metade pelo espaço que o cliente ocupa no banco.
           </p>
         </div>
-        <Abas rotulo="Tipo de cliente" abas={FILTROS} ativa={kind} aoTrocar={setKind} />
+        <Abas rotulo="Tipo de cliente" abas={FILTROS} ativa={kind} aoTrocar={aoMudarKind} />
       </div>
       <div className={`${CORPO_SECAO} flex flex-col gap-4`}>
         {estado === 'erro' && <EmptyState tipo="erro" title="Não deu pra carregar a margem" aoTentarDeNovo={() => void carregar()} />}
@@ -75,6 +76,8 @@ export default function Margem({ month, recarga = 0, aoLancar }: { month: string
 
 function Conteudo({ dados, aoLancar }: { dados: MarginsReport; aoLancar: () => void }) {
   const t = dados.totals;
+  // Ninguém com receita no filtro: totais zerados do servidor seriam um "R$ 0,00" falso.
+  const semReceita = t.clients === 0;
   return (
     <>
       {dados.partial && (
@@ -95,14 +98,19 @@ function Conteudo({ dados, aoLancar }: { dados: MarginsReport; aoLancar: () => v
         />
       ) : (
         <>
+          {semReceita && (
+            <div role="status" className={AVISO}>
+              Nenhum cliente com receita neste filtro. Marque a receita na aba Contrato de cada cliente.
+            </div>
+          )}
           <BaseStatsGrid
             columns={3}
             cards={[
-              { title: 'Receita', value: reais(t.revenue_brl), icon: Wallet, valueFormat: 'custom' },
-              { title: 'Custo', value: reais(t.cost_brl), icon: Coins, valueFormat: 'custom' },
+              { title: 'Receita', value: semReceita ? '—' : reais(t.revenue_brl), icon: Wallet, valueFormat: 'custom' },
+              { title: 'Custo', value: semReceita ? '—' : reais(t.cost_brl), icon: Coins, valueFormat: 'custom' },
               {
                 title: 'Margem', icon: TrendingUp, valueFormat: 'custom',
-                value: `${reais(t.margin_brl)}${t.margin_pct == null ? '' : ` · ${porcentagem(t.margin_pct)}`}`,
+                value: semReceita ? '—' : `${reais(t.margin_brl)}${t.margin_pct == null ? '' : ` · ${porcentagem(t.margin_pct)}`}`,
               },
             ]}
           />

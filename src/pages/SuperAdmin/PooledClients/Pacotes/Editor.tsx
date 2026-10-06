@@ -98,7 +98,7 @@ export default function Editor() {
   if (!pacote) return <div aria-busy="true" className={`h-60 ${ESQUELETO}`} />;
   const linhasDeFuncoes = previa ? resumoDeMudancas(previa.changes) : [];
   const precoMudou = !!previa && preco !== undefined && preco !== (pacote.price_brl ?? null);
-  const textoDePreco = (v: number | null) => (v == null ? 'sem preço' : dinheiro(v));
+  const textoDePreco = (v: number | null) => (v == null ? '(sem preço)' : dinheiro(v));
   const linhas = precoMudou
     ? [...linhasDeFuncoes, `Preço do plano: de ${textoDePreco(pacote.price_brl ?? null)} para ${textoDePreco(preco as number | null)} (muda a receita dos clientes na cota do plano)`]
     : linhasDeFuncoes;

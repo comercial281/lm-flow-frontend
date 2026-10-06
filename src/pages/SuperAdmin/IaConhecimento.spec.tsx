@@ -72,6 +72,66 @@ describe('IA Vendedora → Conhecimento', () => {
     await waitFor(() => expect(api.post).toHaveBeenCalledWith('/super/sdr_proposals/g1/approve'));
   });
 
+  it('ensinar uma lição global confirma e só grava no ok', async () => {
+    api.post.mockResolvedValue({ data: { success: true, data: { id: 'l1', kind: 'rule', content: 'Sempre proponha a visita.' } } });
+    const user = userEvent.setup();
+    render(<IaConhecimento />);
+    await user.type(await screen.findByLabelText('A regra que ela deve seguir'), 'Sempre proponha a visita.');
+    await user.click(screen.getByRole('button', { name: 'Ensinar' }));
+    expect(await screen.findByText('Esta lição passa a valer para todas as IAs de todos os clientes.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(api.post).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Ensinar' }));
+    await user.click(await screen.findByRole('button', { name: 'Ensinar para todos' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/super/global_sales_lessons', expect.objectContaining({ content: 'Sempre proponha a visita.' })));
+  });
+
+  it('adicionar texto e subir arquivo na base confirmam; cancelar não grava', async () => {
+    api.post.mockResolvedValue({ data: { success: true, data: { id: 'd1' } } });
+    const user = userEvent.setup();
+    render(<IaConhecimento />);
+    await user.type(await screen.findByLabelText('Título'), 'Argumentário');
+    await user.type(screen.getByLabelText('Conteúdo (cole o texto)'), 'Valorização de 10% ao ano.');
+    await user.click(screen.getByRole('button', { name: 'Adicionar texto' }));
+    expect(await screen.findByText(/Vale para as IAs de todos os clientes\./)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(api.post).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Adicionar texto' }));
+    await user.click(await screen.findByRole('button', { name: 'Adicionar para todos' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+
+    api.post.mockClear();
+    const arquivo = new File(['oi'], 'regras.txt', { type: 'text/plain' });
+    await user.upload(screen.getByLabelText('Arquivo para a base de conhecimento'), arquivo);
+    await user.click(await screen.findByRole('button', { name: 'Cancelar' }));
+    expect(api.post).not.toHaveBeenCalled();
+    await user.upload(screen.getByLabelText('Arquivo para a base de conhecimento'), arquivo);
+    await user.click(await screen.findByRole('button', { name: 'Subir para todos' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+  });
+
+  it('desligar documento global confirma; ligar não', async () => {
+    const doc = (enabled: boolean) => ({ id: 'd1', title: 'Argumentário', category: null, enabled, status: 'ready', char_count: 10, content_text: 'x', has_file: false });
+    responder({ '/super/global_knowledge_documents': () => Promise.resolve({ data: { success: true, data: [doc(true)] } }) });
+    api.put.mockResolvedValue({ data: { success: true, data: doc(false) } });
+    const user = userEvent.setup();
+    render(<IaConhecimento />);
+    await user.click(await screen.findByRole('switch', { name: 'Usar Argumentário nas IAs' }));
+    expect(await screen.findByText(/deixa de valer para as IAs de todos os clientes/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(api.put).not.toHaveBeenCalled();
+    expect(screen.getByRole('switch', { name: 'Usar Argumentário nas IAs' })).toBeChecked();
+
+    await user.click(screen.getByRole('switch', { name: 'Usar Argumentário nas IAs' }));
+    await user.click(await screen.findByRole('button', { name: 'Desligar' }));
+    await waitFor(() => expect(api.put).toHaveBeenCalledTimes(1));
+    // ligar de volta: grava direto, sem pergunta
+    await user.click(await screen.findByRole('switch', { name: 'Usar Argumentário nas IAs' }));
+    await waitFor(() => expect(api.put).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole('button', { name: 'Desligar' })).not.toBeInTheDocument();
+  });
+
   it('erro numa seção aparece como erro com tentar de novo; as outras seguem', async () => {
     let falhar = true;
     responder({

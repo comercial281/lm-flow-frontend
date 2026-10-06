@@ -32,6 +32,8 @@ export default function Custos() {
   // IA do cliente filtrado; trocar de cliente limpa (a IA é de um cliente só).
   const [agent, setAgent] = useState<string | null>(null);
   // Soma 1 quando o câmbio das contas muda: lista (e margem) buscam de novo.
+  // Filtro Avulso/Performance da Margem: mora aqui para sobreviver à troca de mês/cliente.
+  const [kindDaMargem, setKindDaMargem] = useState('todos');
   const [recarga, setRecarga] = useState(0);
   // `so_erros` do endereço vale só na primeira carga; depois manda a escolha da pessoa.
   const [soErros, setSoErros] = useState(() => params.get('so_erros') === '1');
@@ -116,7 +118,7 @@ export default function Custos() {
           <>
             <CartoesDoMes summary={summary} />
             {/* Margem é da carteira: só em "Todos os clientes" (com cliente filtrado a estrutura não é dividida). */}
-            {!summary.tenant && <Margem month={month} recarga={recarga} aoLancar={() => setLancando(true)} />}
+            {!summary.tenant && <Margem month={month} kind={kindDaMargem} aoMudarKind={setKindDaMargem} recarga={recarga} aoLancar={() => setLancando(true)} />}
             <div data-testid="custos-detalhes" className="flex flex-col gap-6">
               <Recortes summary={summary} />
               {!summary.tenant && <Conferencia reconciliation={summary.reconciliation} aoLancar={() => setLancando(true)} />}

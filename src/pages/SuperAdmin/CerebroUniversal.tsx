@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button, Input, Label, Textarea } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { Plus, Trash2, Upload } from 'lucide-react';
@@ -44,6 +44,8 @@ export function BaseDeConhecimento() {
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('');
   const [saving, setSaving] = useState(false);
+  const confirmarParaTodos = (titulo: string, descricao: ReactNode, rotuloDaAcao: string) =>
+    confirmar({ titulo, descricao: <>{descricao} Vale para as IAs de todos os clientes.</>, rotuloDaAcao });
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -65,6 +67,7 @@ export function BaseDeConhecimento() {
       toast.error('Preencha título e conteúdo.');
       return;
     }
+    if (!(await confirmarParaTodos('Adicionar à base de conhecimento?', 'Este texto entra no conhecimento das IAs de todos os clientes.', 'Adicionar para todos'))) return;
     setSaving(true);
     try {
       await globalBrainService.createTextDoc({ title: title.trim(), content_text: content.trim(), category: category.trim() || undefined });
@@ -81,6 +84,10 @@ export function BaseDeConhecimento() {
   };
 
   const addFile = async (file: File) => {
+    if (!(await confirmarParaTodos('Subir para a base de conhecimento?', 'Este arquivo entra no conhecimento das IAs de todos os clientes.', 'Subir para todos'))) {
+      if (fileRef.current) fileRef.current.value = '';
+      return;
+    }
     setSaving(true);
     try {
       await globalBrainService.createFileDoc({ title: title.trim() || file.name, category: category.trim() || undefined, file });
@@ -97,7 +104,9 @@ export function BaseDeConhecimento() {
   };
 
   // Chave: vira na hora, volta sozinha se o servidor recusar e avisa.
+  // Desligar tira o documento das IAs de todos os clientes: confirma. Ligar não.
   const alternar = async (doc: GlobalKnowledgeDoc, ligar: boolean) => {
+    if (!ligar && !(await confirmarParaTodos('Desligar este documento?', <>O documento <strong>{doc.title}</strong> deixa de valer para as IAs de todos os clientes.</>, 'Desligar'))) return false;
     await globalBrainService.updateDoc(doc.id, { enabled: ligar });
     setDocs(prev => prev.map(d => (d.id === doc.id ? { ...d, enabled: ligar } : d)));
   };
@@ -247,6 +256,7 @@ export function EscolaDeVendas() {
       toast.error('Escreva a lição.');
       return;
     }
+    if (!(await confirmar({ titulo: 'Ensinar para todas as IAs?', descricao: 'Esta lição passa a valer para todas as IAs de todos os clientes.', rotuloDaAcao: 'Ensinar para todos' }))) return;
     setSaving(true);
     try {
       await globalBrainService.createLesson({ kind, content: content.trim(), context: context.trim() || undefined });

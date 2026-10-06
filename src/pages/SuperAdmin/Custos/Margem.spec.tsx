@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -22,8 +23,12 @@ const relatorio = (over = {}) => ({
   unreadable: [], ...over,
 });
 const ok = (data: unknown) => Promise.resolve({ data: { success: true, data } });
-const montar = (aoLancar = vi.fn()) =>
-  render(<MemoryRouter><Margem month="2026-10" recarga={0} aoLancar={aoLancar} /></MemoryRouter>);
+// Como em Custos: o filtro mora no pai, para sobreviver à troca de mês/cliente.
+function Pai({ aoLancar, mes = '2026-10' }: { aoLancar: () => void; mes?: string }) {
+  const [kind, setKind] = useState('todos');
+  return <Margem month={mes} kind={kind} aoMudarKind={setKind} recarga={0} aoLancar={aoLancar} />;
+}
+const montar = (aoLancar = vi.fn()) => render(<MemoryRouter><Pai aoLancar={aoLancar} /></MemoryRouter>);
 
 describe('Custos → Margem', () => {
   beforeEach(() => apiGet.mockReset());
@@ -59,6 +64,18 @@ describe('Custos → Margem', () => {
     await user.click(screen.getByRole('tab', { name: 'Avulso' }));
     await waitFor(() => expect(apiGet).toHaveBeenLastCalledWith('/super/costs/margins', { params: { month: '2026-10', kind: 'avulso' } }));
     expect(await screen.findByText('Nenhum cliente Avulso')).toBeInTheDocument();
+  });
+
+  it('nenhum cliente com receita: cartões em "—" e aviso, nunca R$ 0,00', async () => {
+    apiGet.mockImplementation(() => ok(relatorio({
+      totals: { revenue_brl: 0, ai_brl: 0, structure_brl: 0, cost_brl: 0, margin_brl: 0, margin_pct: null, clients: 0 },
+      without_revenue: 2,
+      clients: [linha({ revenue_brl: null, margin_brl: null, margin_pct: null, revenue_source: null })],
+    })));
+    montar();
+    expect(await screen.findByText('Nenhum cliente com receita neste filtro. Marque a receita na aba Contrato de cada cliente.')).toBeInTheDocument();
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3);
+    expect(screen.queryByText(/R\$\s0,00/)).not.toBeInTheDocument();
   });
 
   it('erro aparece como erro com tentar de novo, nunca como vazio', async () => {

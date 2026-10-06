@@ -156,20 +156,20 @@ export default function ComparacaoIA() {
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">IA</span>
-            <Seletor id="cmp-ia" aria-label="IA" className="w-72" value={agenteId} onChange={(e) => { setAgenteId(e.target.value); recomecar(); }}>
+            <Seletor id="cmp-ia" disabled={rodando} aria-label="IA" className="w-72" value={agenteId} onChange={(e) => { setAgenteId(e.target.value); recomecar(); }}>
               <option value="">Escolha…</option>
               {agentes.map((a) => <option key={`${a.tenant_slug}-${a.id}`} value={a.id}>{a.tenant_name} · {a.name}</option>)}
             </Seletor>
           </label>
           <label className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Antigo</span>
-            <Seletor id="cmp-antigo" aria-label="Roteiro antigo" className="w-36" value={String(antigo)} onChange={(e) => { setAntigo(Number(e.target.value)); recomecar(); }}>
+            <Seletor id="cmp-antigo" disabled={rodando} aria-label="Roteiro antigo" className="w-36" value={String(antigo)} onChange={(e) => { setAntigo(Number(e.target.value)); recomecar(); }}>
               {ROTEIROS_DISPONIVEIS.map((v) => <option key={v} value={v}>Roteiro {v}</option>)}
             </Seletor>
           </label>
           <label className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Novo</span>
-            <Seletor id="cmp-novo" aria-label="Roteiro novo" className="w-36" value={String(novo)} onChange={(e) => { setNovo(Number(e.target.value)); recomecar(); }}>
+            <Seletor id="cmp-novo" disabled={rodando} aria-label="Roteiro novo" className="w-36" value={String(novo)} onChange={(e) => { setNovo(Number(e.target.value)); recomecar(); }}>
               {ROTEIROS_DISPONIVEIS.map((v) => <option key={v} value={v}>Roteiro {v}</option>)}
             </Seletor>
           </label>

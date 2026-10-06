@@ -12,6 +12,6 @@ const base: AiUsage = {
 describe('AiUsageLine', () => {
   it.each(['accounting', 'default'] as const)('origem %s explica o câmbio das contas', (source) => {
     render(<AiUsageLine u={{ ...base, usd_brl_source: source }} />);
-    expect(screen.getByText(/custo R\$/)).toHaveAttribute('title', 'US$ 2,00 · dólar a R$ 5,46 (câmbio das contas)'.replace('US$ 2,00', 'US$ 2.00'));
+    expect(screen.getByText(/custo da IA Vendedora R\$/)).toHaveAttribute('title', expect.stringContaining('US$ 2.00 · dólar a R$ 5,46 (câmbio das contas)'));
   });
 });

@@ -10,7 +10,10 @@ vi.mock('./CambioDasContas', () => ({
   default: ({ aoMudar }: { aoMudar: () => void }) => <button onClick={aoMudar}>mudou-cambio</button>,
 }));
 vi.mock('./Margem', () => ({
-  default: ({ recarga }: { recarga: number }) => { margemRecarga(recarga); return <p>margem-aqui</p>; },
+  default: ({ recarga, kind, aoMudarKind }: { recarga: number; kind: string; aoMudarKind: (k: string) => void }) => {
+    margemRecarga(recarga);
+    return <div><p>margem-aqui</p><span>{kind}</span><button onClick={() => aoMudarKind('avulso')}>so-avulso</button></div>;
+  },
 }));
 
 import Custos from './index';
@@ -44,6 +47,17 @@ describe('Custos', () => {
     render(<MemoryRouter initialEntries={['/admin/clientes/custos?tenant=tenant_a&so_erros=1']}><Custos /></MemoryRouter>);
     await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/summary', expect.objectContaining({ params: expect.objectContaining({ tenant: 'tenant_a' }) })));
     await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/calls', expect.objectContaining({ params: expect.objectContaining({ status: 'error' }) })));
+  });
+
+  it('o filtro Avulso/Performance da Margem sobrevive à troca de mês', async () => {
+    apiGet.mockImplementation((url: string) =>
+      Promise.resolve({ data: { success: true, data: url.includes('summary') ? fakeSummary() : { items: [], meta: { total: 0, page: 1, per_page: 50 } } } }));
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'so-avulso' }));
+    expect(screen.getByText('avulso')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Mês'), { target: { value: '2026-09' } });
+    await screen.findByText('margem-aqui');
+    expect(screen.getByText('avulso')).toBeInTheDocument();
   });
 
   it('"só erros" do endereço vale só na primeira carga: desmarcado, trocar o mês não liga de novo', async () => {

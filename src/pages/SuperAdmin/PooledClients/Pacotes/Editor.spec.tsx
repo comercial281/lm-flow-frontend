@@ -118,7 +118,7 @@ describe('Editor de pacote', () => {
     montar();
     await user.type(await screen.findByLabelText('Preço do plano (R$/mês)'), '900');
     await user.click(screen.getByRole('button', { name: 'Salvar pacote' }));
-    expect(await screen.findByText(/Preço do plano: de sem preço para R\$\s900,00/)).toBeInTheDocument();
+    expect(await screen.findByText(/Preço do plano: de \(sem preço\) para R\$\s900,00/)).toBeInTheDocument();
     expect(screen.getByText(/Ajustes manuais de cada cliente são mantidos/)).toBeInTheDocument();
   });
 
