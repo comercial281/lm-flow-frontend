@@ -121,6 +121,12 @@ export interface SalesAgent {
    *  de outro número (é o caso "a IA atende no principal, os corretores atendem
    *  cada um no seu"). `user` entrega a um corretor fixo, sem roleta nenhuma. */
   handoff_target: SalesAgentHandoffTarget;
+  /** Sistema do cliente: o endereço que recebe o lead (só vale com `handoff_target = 'webhook'`). */
+  handoff_webhook_url?: string | null;
+  /** Se a chave secreta já foi gerada. A chave em si nunca vem do servidor. */
+  handoff_webhook_secret_set?: boolean;
+  /** Estado da chave: 'unreadable' = a chave gravada não abre mais (gere outra). */
+  handoff_webhook_secret_state?: 'none' | 'ready' | 'unreadable';
   handoff_roleta_config_id: string | null;
   handoff_user_id: string | null;
   /** Quem ela é. Sempre resolvido pelo servidor. */
@@ -338,7 +344,7 @@ export type HandoffMode = 'duvida' | 'temperatura' | 'checklist' | 'sem_resposta
  *
  * `number_owner` é o dono do número da conversa: o único destino da persona "o próprio corretor".
  */
-export type SalesAgentHandoffTarget = 'inbox_roleta' | 'roleta' | 'user' | 'number_owner';
+export type SalesAgentHandoffTarget = 'inbox_roleta' | 'roleta' | 'user' | 'number_owner' | 'webhook';
 
 export interface TransferConfig {
   mode?: HandoffMode;
@@ -529,6 +535,7 @@ export interface SalesAgentPayload {
   reengagement_first_hours?: number;
   reengagement_second_hours?: number;
   handoff_target?: SalesAgentHandoffTarget;
+  handoff_webhook_url?: string | null;
   handoff_roleta_config_id?: string | null;
   handoff_user_id?: string | null;
   persona_kind?: PersonaDaIa;
@@ -918,6 +925,35 @@ export interface WeeklyReportDiagnostico {
   checking: boolean;
 }
 
+/** A resposta do "Mandar um lead de teste": o que o sistema do cliente respondeu. */
+export interface WebhookTestResult {
+  ok: boolean;
+  delivery_id?: string | null;
+  response_code: number | null;
+  response_excerpt: string | null;
+  duration_ms: number | null;
+  error: string | null;
+}
+
+/** Um envio ao sistema do cliente, pra lista do Diagnóstico. */
+export interface WebhookDelivery {
+  id: string;
+  created_at: string;
+  mode: 'real' | 'test';
+  status: 'pending' | 'delivered' | 'failed';
+  attempts: number;
+  max_attempts: number;
+  next_attempt_at: string | null;
+  response_code: number | null;
+  response_excerpt: string | null;
+  last_error: string | null;
+  duration_ms: number | null;
+  delivered_at: string | null;
+  failed_at: string | null;
+  contact_name: string | null;
+  conversation_path: string | null;
+}
+
 const BASE = '/sales_agents';
 
 /** O que a duplicação devolve: a IA nova + o que foi copiado junto. */
@@ -1038,6 +1074,27 @@ export const salesAgentsService = {
   async diagnostics(id: string): Promise<HealthReport> {
     const res = await api.get(`${BASE}/${id}/diagnostics`);
     return (res.data as { data: HealthReport }).data;
+  },
+
+  /**
+   * Gera uma chave NOVA do sistema do cliente. Ela volta UMA vez, aqui.
+   * ⚠️ Com chave já gerada, o servidor exige `confirm: true` ("Sim, gerar outra"):
+   * a anterior para de funcionar no sistema do cliente.
+   */
+  async generateWebhookSecret(id: string, opts: { confirm?: boolean } = {}): Promise<string> {
+    const res = await api.post(`${BASE}/${id}/handoff_webhook_secret`, opts.confirm ? { confirm: true } : {});
+    return (res.data as { data: { secret: string } }).data.secret;
+  },
+
+  /** "Mandar um lead de teste": usa o endereço e a chave GRAVADOS. */
+  async testWebhook(id: string): Promise<WebhookTestResult> {
+    const res = await api.post(`${BASE}/${id}/handoff_webhook_test`);
+    return (res.data as { data: WebhookTestResult }).data;
+  },
+
+  async webhookDeliveries(id: string): Promise<WebhookDelivery[]> {
+    const res = await api.get(`${BASE}/${id}/handoff_webhook_deliveries`);
+    return (res.data as { data: { items: WebhookDelivery[] } }).data.items ?? [];
   },
 
   // Últimos turnos: o que respondeu, o que pulou (com o motivo) e o que falhou
