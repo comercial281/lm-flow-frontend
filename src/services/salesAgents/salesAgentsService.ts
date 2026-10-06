@@ -3,6 +3,19 @@ import type { AgentPerformance } from '@/types/aiResults';
 
 export type SalesAgentMode = 'seller' | 'sdr' | 'assistant';
 
+/**
+ * As TRÊS ESCOLHAS da IA (refatoração, entrega 2). O servidor devolve persona e
+ * alcance sempre RESOLVIDOS (coluna, senão lido das antigas: voz em primeira pessoa
+ * → corretor; agendar visita → vai até o fim). Ver features/salesAgents/tresEscolhas.ts.
+ *
+ * ⚠️ `assistant` aqui é a "assistente da imobiliária", NÃO o `mode = 'assistant'`
+ * (o corretor conduz e a IA só sugere).
+ */
+export type PersonaDaIa = 'broker' | 'owner' | 'assistant';
+export type AlcanceDaIa = 'qualify' | 'visit';
+export type TomDaIa = 'close' | 'formal';
+export type EmojiDaIa = 'none' | 'light';
+
 export type ActiveHoursMode = 'always' | 'outside_business' | 'custom';
 export interface ActiveHoursWindow {
   start: string; // "HH:MM"
@@ -108,6 +121,18 @@ export interface SalesAgent {
   handoff_target: SalesAgentHandoffTarget;
   handoff_roleta_config_id: string | null;
   handoff_user_id: string | null;
+  /** Quem ela é. Sempre resolvido pelo servidor. */
+  persona_kind: PersonaDaIa;
+  /** Até onde ela vai. Sempre resolvido pelo servidor (espelha `booking_enabled`). */
+  reach: AlcanceDaIa;
+  /** Nome que o lead vê (o roteiro de hoje já o diz). Separado do `name`, que é o nome da IA no LM Flow. */
+  lead_facing_name: string | null;
+  /** Tom e emoji: gravados desde a entrega 2, sem controle na tela até a entrega 4 (roteiro novo). */
+  tone?: TomDaIa | null;
+  emoji_use?: EmojiDaIa | null;
+  /** Dono EFETIVO do número dela (ativo, fora da equipe da Leal Mídia). Ausente = servidor antigo. */
+  number_owner_id?: string | null;
+  number_owner_name?: string | null;
   audio_enabled: boolean;
   audio_mode: 'mirror' | 'always' | 'never';
   audio_voice_id: string | null;
@@ -308,8 +333,10 @@ export type HandoffMode = 'duvida' | 'temperatura' | 'checklist' | 'sem_resposta
  * vale em toda imobiliária que já existe. Até esta escolha existir, era a ÚNICA
  * saída: número sem roleta (ou com duas e nenhuma marcada como "atende quem
  * escreve direto") deixava o lead sem dono e sem ninguém avisado.
+ *
+ * `number_owner` é o dono do número da conversa: o único destino da persona "o próprio corretor".
  */
-export type SalesAgentHandoffTarget = 'inbox_roleta' | 'roleta' | 'user';
+export type SalesAgentHandoffTarget = 'inbox_roleta' | 'roleta' | 'user' | 'number_owner';
 
 export interface TransferConfig {
   mode?: HandoffMode;
@@ -502,6 +529,11 @@ export interface SalesAgentPayload {
   handoff_target?: SalesAgentHandoffTarget;
   handoff_roleta_config_id?: string | null;
   handoff_user_id?: string | null;
+  persona_kind?: PersonaDaIa;
+  reach?: AlcanceDaIa;
+  lead_facing_name?: string | null;
+  tone?: TomDaIa | null;
+  emoji_use?: EmojiDaIa | null;
   audio_enabled?: boolean;
   audio_mode?: 'mirror' | 'always' | 'never';
   audio_voice_id?: string | null;
