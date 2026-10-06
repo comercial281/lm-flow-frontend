@@ -29,6 +29,11 @@ export function agenteDeTeste(extra: Partial<SalesAgent> = {}): SalesAgent {
     ask_google_review: false, google_review_link: null, cross_sell_enabled: true, rich_media_enabled: true,
     visit_config: { days: [1, 2, 3, 4, 5], start: '09:00', end: '18:00', min_advance_hours: 24, max_advance_days: 30, blocked_dates: [], avoid_double_booking: true, same_day_requires_human: true },
     default_property_code: null, default_origin: null, intent_question: null, opening_image_url: null,
+    intent_paths_default: [
+      { nome: 'Moradia', como: 'Descubra pra quem é, quartos, região e prazo.' },
+      { nome: 'Investimento', como: 'Foque em valorização, renda e entrada.' },
+      { nome: 'Sondando', como: 'Sem pressão: entenda o momento e deixe a porta aberta.' },
+    ],
     opening_audio_url: null, openings: [], playbook: { vars: { perguntas_situacao: ['Mora de aluguel?'] } }, priority: 0,
     followup_hours: { mode: 'custom', tz: 'America/Sao_Paulo', windows: [{ start: '09:00', end: '17:00', days: [1, 2, 3, 4, 5, 6] }] },
     out_of_hours_reply: false, out_of_hours_message: null, catalog_search_enabled: true,
