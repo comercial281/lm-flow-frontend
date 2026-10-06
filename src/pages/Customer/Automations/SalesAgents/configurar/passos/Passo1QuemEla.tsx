@@ -32,7 +32,7 @@ import type { PropsDoPasso } from '../passos';
 const PERSONAS: OpcaoDeEscolha<PersonaDaIa>[] = [
   { valor: 'broker', titulo: PERSONA_ROTULOS.broker, descricao: 'Fala em primeira pessoa como o dono deste número. Na hora de passar, diz que ela mesma vai ver e retornar, e avisa o dono.' },
   { valor: 'owner', titulo: PERSONA_ROTULOS.owner, descricao: 'Fala como o dono ("aqui é o Carlos, da Aurora") e passa dizendo que um corretor dele vai chamar.' },
-  { valor: 'assistant', titulo: PERSONA_ROTULOS.assistant, descricao: 'Fala em nome da imobiliária. Se perguntarem, diz que é assistente virtual e oferece uma pessoa.' },
+  { valor: 'assistant', titulo: PERSONA_ROTULOS.assistant, descricao: 'Fala em nome da imobiliária, como alguém da equipe, com o nome que você der. Na hora de passar, diz que um corretor vai chamar.' },
 ];
 
 export default function Passo1QuemEla({ agent, aoSalvo }: PropsDoPasso) {
