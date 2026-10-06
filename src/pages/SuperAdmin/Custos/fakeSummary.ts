@@ -3,9 +3,9 @@ import type { CostsSummary } from '@/types/admin/costs';
 
 export function fakeSummary(over: Partial<CostsSummary> = {}): CostsSummary {
   return {
-    month: '2026-10', tenant: null, months: ['2026-10', '2026-09'],
+    month: '2026-10', tenant: null, agent: null, agents: [], months: ['2026-10', '2026-09'],
     tenants: [{ schema: 'public', name: 'Leal Mídia (principal)' }, { schema: 'tenant_a', name: 'Alfa' }],
-    rate: { value: 5, source: 'api' },
+    rate: { value: 5, source: 'accounting' },
     totals: { ai_brl: 540, ai_usd: 108, structure_brl: 760, total_brl: 1300, calls: 900, errors: 3, unpriced: 0 },
     structure: [
       { provider: 'railway', label: 'Railway', usd: 86, brl: 430, launched: true },

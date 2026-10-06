@@ -23,6 +23,8 @@ function rateNote(u: AiUsage): string {
   const dec = { minimumFractionDigits: 2, maximumFractionDigits: 4 };
   const rate = u.usd_brl_rate.toLocaleString('pt-BR', dec);
   const base = `US$ ${u.cost_usd.toLocaleString('en-US', dec)} · dólar a R$ ${rate}`;
+  // Desde 06/10/2026 as contas do admin usam o câmbio fixo (Clientes → Custos).
+  if (u.usd_brl_source === 'accounting' || u.usd_brl_source === 'default') return `${base} (câmbio das contas)`;
   if (u.usd_brl_source === 'fallback') return `${base} (cotação indisponível, valor de referência)`;
   if (u.usd_brl_source === 'config') return `${base} (cotação fixada na configuração)`;
   const at = u.usd_brl_at ? new Date(u.usd_brl_at).toLocaleString('pt-BR') : null;

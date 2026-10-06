@@ -12,8 +12,10 @@ import DetalheDaChamada from './DetalheDaChamada';
 
 // `soErrosInicial` + `aoMudarSoErros`: a lista some e volta a cada mês/cliente; quem a
 // usa guarda a escolha do "Só erros" pra ela voltar como a pessoa deixou (e não como o endereço pediu).
-export default function ListaDeChamadas({ month, tenant, funcoes, soErrosInicial = false, aoMudarSoErros }: {
-  month: string; tenant: string | null; funcoes: CostSlice[]; soErrosInicial?: boolean; aoMudarSoErros?: (v: boolean) => void;
+// `recarga`: mudou (ex.: câmbio das contas novo), busca de novo sem perder filtro nem página.
+export default function ListaDeChamadas({ month, tenant, agent = null, recarga = 0, funcoes, soErrosInicial = false, aoMudarSoErros }: {
+  month: string; tenant: string | null; agent?: string | null; recarga?: number; funcoes: CostSlice[];
+  soErrosInicial?: boolean; aoMudarSoErros?: (v: boolean) => void;
 }) {
   const [feature, setFeature] = useState('');
   const [provider, setProvider] = useState('');
@@ -25,7 +27,7 @@ export default function ListaDeChamadas({ month, tenant, funcoes, soErrosInicial
 
   // A página vale só pro conjunto de filtros em que foi escolhida. Mudou o filtro, a
   // página efetiva volta pra 1 na mesma renderização: nenhuma busca da página velha.
-  const chave = `${month}|${tenant ?? ''}|${feature}|${provider}|${onlyErrors}`;
+  const chave = `${month}|${tenant ?? ''}|${agent ?? ''}|${feature}|${provider}|${onlyErrors}`;
   const [escolha, setEscolha] = useState({ chave, page: 1 });
   const page = escolha.chave === chave ? escolha.page : 1;
   const irPara = (p: number) => setEscolha({ chave, page: p });
@@ -37,7 +39,7 @@ export default function ListaDeChamadas({ month, tenant, funcoes, soErrosInicial
     const minha = ++seq.current;
     setErro(false);
     try {
-      const r = await costsService.calls({ month, tenant, feature, provider, onlyErrors, page });
+      const r = await costsService.calls({ month, tenant, agent, feature, provider, onlyErrors, page });
       if (minha !== seq.current) return;
       setDados({ ...r, chave });
     } catch {
@@ -45,9 +47,9 @@ export default function ListaDeChamadas({ month, tenant, funcoes, soErrosInicial
       setDados(null);
       setErro(true);
     }
-  }, [month, tenant, feature, provider, onlyErrors, page, chave]);
+  }, [month, tenant, agent, feature, provider, onlyErrors, page, chave]);
 
-  useEffect(() => { void carregar(); }, [carregar]);
+  useEffect(() => { void carregar(); }, [carregar, recarga]);
 
   // Dados de outro conjunto de filtros contam como "carregando": nada de linha velha sob filtro novo.
   // Só troca de página mantém as linhas antigas até a próxima chegar.

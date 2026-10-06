@@ -6,10 +6,17 @@ export interface TenantSlice { schema: string; name: string; brl: number; usd: n
 export interface StructureCard { provider: 'railway' | 'vercel' | 'evolution'; label: string; usd: number; brl: number; launched: boolean }
 export interface Reconciliation { provider: string; label: string; recorded_usd: number; invoice_usd: number | null; diff_pct: number | null }
 export interface TenantOption { schema: string; name: string }
+export interface AgentOption { id: string; name: string }
+/** Câmbio das contas (fixo, editável, padrão 5,46): vale em Custos, Margem, Visão Geral e Clientes. */
+export interface AccountingRate { value: number; source: 'accounting' | 'default'; default_value: number }
 
 export interface CostsSummary {
   month: string;
   tenant: string | null;
+  /** IA filtrada (só com cliente). */
+  agent: string | null;
+  /** As IAs do cliente filtrado, para o Seletor "IA" (vazio sem cliente). */
+  agents: AgentOption[];
   months: string[];
   tenants: TenantOption[];
   rate: { value: number; source: string | null };
@@ -65,6 +72,7 @@ export interface InvoiceInput { provider: string; amount_usd: string; note: stri
 export interface CallFilters {
   month: string;
   tenant: string | null;
+  agent?: string | null;
   feature: string;
   provider: string;
   onlyErrors: boolean;

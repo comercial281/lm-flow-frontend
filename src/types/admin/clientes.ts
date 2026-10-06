@@ -1,7 +1,7 @@
 // Clientes do admin (lista, página do cliente e pacotes) — formato do servidor.
 export interface AiUsage {
   period: string; ai_leads: number; replied: number; runs: number; cost_usd: number; cost_brl: number; usd_brl_rate: number;
-  usd_brl_source: 'api' | 'config' | 'fallback'; usd_brl_at: string | null; ai_leads_included: number | null; overage_leads: number;
+  usd_brl_source: 'api' | 'config' | 'fallback' | 'accounting' | 'default'; usd_brl_at: string | null; ai_leads_included: number | null; overage_leads: number;
   overage_price_brl: number; overage_amount_brl: number; usage_pct: number | null;
   franchise_status: 'sem_franquia' | 'ok' | 'atencao' | 'estourado';
 }

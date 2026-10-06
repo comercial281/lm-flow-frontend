@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router-dom';
 
 const apiGet = vi.hoisted(() => vi.fn());
 vi.mock('@/services/core/api', () => ({ default: { get: apiGet, put: vi.fn() } }));
+// O câmbio e a margem têm testes próprios; aqui só o resumo e a lista.
+vi.mock('./CambioDasContas', () => ({ default: () => null }));
 
 import Custos from './index';
 import { fakeSummary } from './fakeSummary';
@@ -111,5 +113,58 @@ describe('Custos', () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(screen.queryByText(/99,00/)).not.toBeInTheDocument();
     expect(screen.getAllByText(/22,00/).length).toBeGreaterThan(0);
+  });
+
+  it('com cliente escolhido aparece o filtro IA, e ele vai junto no resumo e na lista', async () => {
+    apiGet.mockImplementation((url: string, cfg?: { params?: Record<string, string> }) => {
+      if (url.includes('/calls')) return Promise.resolve({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } });
+      const t = cfg?.params?.tenant ?? null;
+      return Promise.resolve({ data: { success: true, data: fakeSummary(t ? { tenant: t, agents: [{ id: 'ag1', name: 'Sara' }] } : {}) } });
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Total do mês')).toBeInTheDocument());
+    expect(screen.queryByLabelText('IA')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Cliente'), { target: { value: 'tenant_a' } });
+    fireEvent.change(await screen.findByLabelText('IA'), { target: { value: 'ag1' } });
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/summary', { params: { month: '2026-10', tenant: 'tenant_a', agent: 'ag1' } }));
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/calls', { params: { month: '2026-10', per_page: 20, tenant: 'tenant_a', agent: 'ag1' } }));
+  });
+
+  it('trocar de cliente limpa a IA escolhida', async () => {
+    apiGet.mockImplementation((url: string, cfg?: { params?: Record<string, string> }) => {
+      if (url.includes('/calls')) return Promise.resolve({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } });
+      const t = cfg?.params?.tenant ?? null;
+      return Promise.resolve({ data: { success: true, data: fakeSummary(t ? { tenant: t, agents: [{ id: 'ag1', name: 'Sara' }] } : {}) } });
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Total do mês')).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('Cliente'), { target: { value: 'tenant_a' } });
+    fireEvent.change(await screen.findByLabelText('IA'), { target: { value: 'ag1' } });
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/summary', { params: { month: '2026-10', tenant: 'tenant_a', agent: 'ag1' } }));
+    fireEvent.change(screen.getByLabelText('Cliente'), { target: { value: 'public' } });
+    await waitFor(() => expect(apiGet).toHaveBeenLastCalledWith('/super/costs/calls', { params: { month: '2026-10', per_page: 20, tenant: 'public' } }));
+  });
+
+  it('IA escolhida que não está mais nas opções do cliente volta para Todas as IAs', async () => {
+    apiGet.mockImplementation((url: string, cfg?: { params?: Record<string, string> }) => {
+      if (url.includes('/calls')) return Promise.resolve({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } });
+      const t = cfg?.params?.tenant ?? null;
+      const a = cfg?.params?.agent ?? null;
+      // Servidor ecoa o id pedido em `agent`, mesmo sem ele estar em `agents` (IA apagada).
+      return Promise.resolve({ data: { success: true, data: fakeSummary(t ? { tenant: t, agent: a, agents: [{ id: 'ag1', name: 'Sara' }, { id: 'ag2', name: 'Beto' }] } : {}) } });
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Total do mês')).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('Cliente'), { target: { value: 'tenant_a' } });
+    const seletor = await screen.findByLabelText('IA');
+    // Simula a IA ter sido apagada: o mock devolve só ag1 daqui pra frente.
+    apiGet.mockImplementation((url: string, cfg?: { params?: Record<string, string> }) => {
+      if (url.includes('/calls')) return Promise.resolve({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } });
+      return Promise.resolve({ data: { success: true, data: fakeSummary({ tenant: cfg?.params?.tenant ?? null, agent: cfg?.params?.agent ?? null, agents: [{ id: 'ag1', name: 'Sara' }] }) } });
+    });
+    fireEvent.change(seletor, { target: { value: 'ag2' } });
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/summary', { params: { month: '2026-10', tenant: 'tenant_a', agent: 'ag2' } }));
+    await waitFor(() => expect((screen.getByLabelText('IA') as HTMLSelectElement).value).toBe('__todas__'));
+    await waitFor(() => expect(apiGet).toHaveBeenLastCalledWith('/super/costs/calls', { params: { month: '2026-10', per_page: 20, tenant: 'tenant_a' } }));
   });
 });
