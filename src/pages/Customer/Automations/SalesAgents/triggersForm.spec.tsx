@@ -71,3 +71,48 @@ describe('gatilho de texto grava ao sair', () => {
     expect(onSave).toHaveBeenCalledWith({ triggers: [{ type: 'keyword', value: 'mcmv', match_type: 'contains' }] });
   });
 });
+
+// Achado da revisão (3.7): a palavra digitada se perdia quando o bloco sumia sem
+// o campo perder o foco (trocou de página pelo endereço, o Voltar do navegador) —
+// o React não dispara o blur no desmonte. Mesma regra do TextoNaHora.
+describe('palavra digitada e o bloco some', () => {
+  const comPalavra = (triggers: unknown[]) => ({ id: 'a1', triggers, trigger_match_mode: 'any' } as unknown as SalesAgent);
+
+  it('grava a palavra ao desmontar sem blur', () => {
+    const onSave = vi.fn();
+    const { unmount } = render(<TriggersSection agent={comPalavra([{ type: 'keyword', value: '', match_type: 'contains' }])} onSave={onSave} />);
+    fireEvent.change(screen.getByPlaceholderText('palavra (ex: fluxoimob)'), { target: { value: 'fluxoimob' } });
+    expect(onSave).not.toHaveBeenCalled();
+    unmount();
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith({ triggers: [{ type: 'keyword', value: 'fluxoimob', match_type: 'contains' }] });
+  });
+
+  it('sem nada digitado, desmontar não grava', () => {
+    const onSave = vi.fn();
+    const { unmount } = render(<TriggersSection agent={comPalavra([{ type: 'keyword', value: 'x', match_type: 'contains' }])} onSave={onSave} />);
+    unmount();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('já gravou no blur: desmontar não grava de novo', () => {
+    const onSave = vi.fn();
+    const { unmount } = render(<TriggersSection agent={comPalavra([{ type: 'keyword', value: '', match_type: 'contains' }])} onSave={onSave} />);
+    const campo = screen.getByPlaceholderText('palavra (ex: fluxoimob)');
+    fireEvent.change(campo, { target: { value: 'fluxoimob' } });
+    fireEvent.blur(campo);
+    unmount();
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  // "Todos os leads" zera as condições e o bloco some: a palavra a meio caminho
+  // não pode ressuscitar as condições que a pessoa acabou de tirar.
+  it('as condições foram zeradas (Todos os leads): desmontar não traz de volta', () => {
+    const onSave = vi.fn();
+    const { rerender, unmount } = render(<TriggersSection agent={comPalavra([{ type: 'keyword', value: '', match_type: 'contains' }])} onSave={onSave} />);
+    fireEvent.change(screen.getByPlaceholderText('palavra (ex: fluxoimob)'), { target: { value: 'fluxoimob' } });
+    rerender(<TriggersSection agent={comPalavra([])} onSave={onSave} />);
+    unmount();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+});

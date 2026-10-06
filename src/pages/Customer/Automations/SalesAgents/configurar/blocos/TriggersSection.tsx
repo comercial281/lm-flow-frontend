@@ -52,6 +52,22 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
   const [lista, setLista] = useState<SalesAgentTrigger[]>(agent.triggers ?? []);
   const digitando = useRef(false);
   useEffect(() => { if (!digitando.current) setLista(agent.triggers ?? []); }, [agent.triggers]);
+
+  // ⚠️ O bloco pode SUMIR com uma palavra a meio caminho (trocou de página pelo
+  // endereço, o Voltar do navegador): o React não dispara o blur no desmonte, então
+  // grava aqui — a mesma regra do TextoNaHora. Refs porque a limpeza roda uma vez só,
+  // com o que estava valendo no último render.
+  // ⚠️ Condições já zeradas no servidor ("Todos os leads", que é o que desmonta o
+  // bloco) não voltam: a palavra pendente ressuscitaria o que a pessoa acabou de tirar.
+  const listaAtual = useRef(lista);
+  listaAtual.current = lista;
+  const salvasNoServidor = useRef(agent.triggers ?? []);
+  salvasNoServidor.current = agent.triggers ?? [];
+  const onSaveAtual = useRef(onSave);
+  onSaveAtual.current = onSave;
+  useEffect(() => () => {
+    if (digitando.current && salvasNoServidor.current.length > 0) onSaveAtual.current({ triggers: listaAtual.current });
+  }, []);
   const triggers = lista;
   const [pipelines, setPipelines] = useState<PipelineOpt[]>([]);
   const [stagesByPipeline, setStagesByPipeline] = useState<Record<string, StageOpt[]>>({});
