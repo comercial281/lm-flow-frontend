@@ -67,7 +67,10 @@ export function linhasDoQueAconteceria(o: RehearsalOutcome | null | undefined): 
   if (o.error) linhas.push(`Deu erro neste turno: ${o.error}`);
   if (o.delay_s && !o.skipped) linhas.push(`Responderia uns ${o.delay_s} s depois da mensagem do lead`);
   if (o.skipped) linhas.push(`Ela ficaria calada: ${o.skipped.text}`);
-  o.warnings.forEach((w) => linhas.push(`No atendimento real: ${w.text}. O teste respondeu mesmo assim.`));
+  // ⚠️ O texto de "sem número" do servidor já diz "no atendimento real": não prefixar de novo.
+  o.warnings.forEach((w) => linhas.push(w.reason === 'no_number'
+    ? `${w.text}. O teste respondeu mesmo assim.`
+    : `No atendimento real: ${w.text}. O teste respondeu mesmo assim.`));
   if (o.handoff) {
     if (o.handoff.kind === 'none') {
       linhas.push(`Tentaria passar o lead, mas não tem pra quem: ${o.handoff.problem ?? 'destino não configurado'}`);

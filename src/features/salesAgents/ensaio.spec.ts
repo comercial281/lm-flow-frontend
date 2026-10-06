@@ -114,3 +114,13 @@ describe('ensaio', () => {
     expect(textoDasRespostas(r)).toBe('Renda: 8 mil\nPra quando?: 3 meses');
   });
 });
+
+describe('aviso de IA sem número', () => {
+  it('não repete "no atendimento real" (o texto do servidor já diz)', () => {
+    const texto = 'A IA está sem número: no atendimento real nenhuma mensagem sairia';
+    const linhas = linhasDoQueAconteceria(outcome({ warnings: [{ reason: 'no_number', text: texto }] }));
+    const linha = linhas.find((l) => l.includes('sem número')) ?? '';
+    expect(linha).toBe(`${texto}. O teste respondeu mesmo assim.`);
+    expect(linha.match(/no atendimento real/gi)).toHaveLength(1);
+  });
+});

@@ -1,593 +1,381 @@
-import { useState } from 'react';
-import { Button, Input, Label } from '@/components/ui/ds';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Bot, Plus, Send, Loader2, SlidersHorizontal, Zap } from 'lucide-react';
+import { Bot, Loader2, RotateCcw, Send, SlidersHorizontal, FastForward, Zap } from 'lucide-react';
+import { Button, Input, Label, Textarea } from '@/components/ui/ds';
 import TestMediaBubble from '../TestMediaBubble';
-import { salesAgentsService, type SalesAgent, type SalesAgentTestResult, type TestHistoryItem, type TestMediaItem } from '@/services/salesAgents/salesAgentsService';
 import { usePergunta } from '@/hooks/usePergunta';
+import {
+  salesAgentsService,
+  type RehearsalState,
+  type RehearsalTurn,
+  type SalesAgent,
+  type TestHistoryItem,
+} from '@/services/salesAgents/salesAgentsService';
+import { CENARIOS_DE_TESTE, type CenarioDeTeste } from '@/features/salesAgents/cenariosDeTeste';
+import {
+  OPCOES_DE_AVANCO, avisoDoModelo, itensDoEstado, itensDoTurno, linhasDoQueAconteceria, pausa,
+  respostasDoFormulario, textoDasRespostas, type ItemDaConversa,
+} from '@/features/salesAgents/ensaio';
 
-const TEMP_LABEL: Record<string, string> = {
-  hot: 'Quente', warm: 'Morno', cold: 'Frio', unknown: 'Indefinido',
-};
-
-// Par chave/valor do formulário do Meta. Estado local pra os dois campos não
-// remontarem a lista inteira a cada tecla.
-function FormAnswerAdder({ onAdd }: { onAdd: (key: string, value: string) => void }) {
-  const [key, setKey] = useState('');
-  const [value, setValue] = useState('');
-
-  const add = () => {
-    if (!key.trim() || !value.trim()) return;
-    onAdd(key.trim(), value.trim());
-    setKey('');
-    setValue('');
-  };
-
-  return (
-    <div className="flex gap-2">
-      <Input placeholder="Pergunta (ex: Quando pretende comprar?)" value={key} onChange={(e) => setKey(e.target.value)} />
-      <Input
-        placeholder="Resposta (ex: Nos próximos 3 meses)"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter') add(); }}
-      />
-      <Button variant="outline" size="sm" onClick={add} disabled={!key.trim() || !value.trim()} aria-label="Adicionar pergunta" title="Adicionar pergunta">
-        <Plus className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-}
-
-// ---------------- Test ----------------
-
-// Turno da conversa de teste. `media` é só de exibição — a API recebe apenas
-// role/content, igual antes. `propertyCode` viaja junto da mídia: é o código
-// que estava no campo QUANDO esta bolha foi gerada — não o do campo agora.
-// Sem isto, "Mandar pra mim" numa bolha antiga reenviaria com o código ATUAL
-// do campo, e como o token das FOTOS só faz sentido dentro do imóvel que o
-// gerou, o teste sairia com as fotos de OUTRO imóvel.
-type TestTurn = TestHistoryItem & { media?: TestMediaItem[]; propertyCode?: string };
-
-// Cenário de teste: o contexto do lead + a primeira mensagem dele.
-//
-// Preencher nome, origem, interesse e formulário na mão a cada teste dá
-// preguiça, e a preguiça leva a testar sempre o mesmo caso fácil — justamente
-// o que não revela problema. Um clique monta o cenário inteiro.
-interface TestScenario {
-  id: string;
-  label: string;
-  hint: string;
-  contactName: string;
-  source: string;
-  interest: string;
-  formAnswers: Record<string, string>;
-  /**
-   * Conversa que JÁ aconteceu antes deste turno. Vazio = primeiro contato.
-   *
-   * Muda o comportamento na raiz, não só o clima: o prompt escolhe entre três
-   * aberturas conforme o histórico. Com mensagem da IA no histórico ele entra em
-   * CONTINUIDADE ("você JÁ conversou com este lead, NÃO recomece"); sem nada, roda
-   * o roteiro de abertura inteiro, terminando na pergunta de intenção. Testar
-   * "lead que já visitou" digitando uma frase num chat vazio testa o caso errado.
-   */
-  history?: TestHistoryItem[];
-  /** Próxima mensagem do lead, já no campo — é só apertar enviar. */
-  firstMessage: string;
-}
-
-// Os casos que separam uma IA que funciona de uma que parece funcionar. Cada um
-// checa um comportamento específico, descrito no `hint`.
-//
-// Metade tem conversa já semeada, e não é enfeite: o prompt escolhe a abertura
-// pelo histórico. Um lead "que já visitou" digitado num chat VAZIO é, pro
-// sistema, um primeiro contato — ele roda o roteiro de abertura e a pergunta de
-// intenção, e o teste acaba medindo o caso errado.
-const TEST_SCENARIOS: TestScenario[] = [
-  {
-    id: 'ctwa',
-    label: 'Veio do anúncio',
-    hint: 'O caso mais comum. Confere se ela abre citando o empreendimento e faz a pergunta de intenção — sem despejar preço.',
-    contactName: 'Camila',
-    source: 'Anúncio Instagram — clique para WhatsApp',
-    interest: '',
-    formAnswers: {},
-    firstMessage: 'oi, vi o anúncio',
-  },
-  {
-    id: 'form',
-    label: 'Formulário do Meta',
-    hint: 'O lead já respondeu no anúncio. Ela NÃO pode perguntar de novo o que está aqui embaixo.',
-    contactName: 'Rodrigo',
-    source: 'Formulário Meta Lead Ads',
-    interest: '',
-    formAnswers: {
-      'Quando pretende comprar?': 'Nos próximos 3 meses',
-      'Faixa de investimento': 'Até 450 mil',
-      'É para morar ou investir?': 'Morar',
-    },
-    firstMessage: 'oi',
-  },
-  {
-    id: 'visitou-primeiro-contato',
-    label: 'Visitou, 1º contato',
-    hint: 'Visitou o plantão no fim de semana e manda a PRIMEIRA mensagem. Sem histórico, o prompt roda o roteiro de abertura — confira se ela insiste na pergunta de intenção mesmo o lead já tendo visitado.',
-    contactName: 'Patrícia',
-    source: 'Anúncio Instagram',
-    interest: 'Já visitou o decorado',
-    formAnswers: {},
-    firstMessage: 'eu já visitei semana passada, queria as plantas e o lazer',
-  },
-  {
-    id: 'conversa-andando',
-    label: 'Conversa em andamento',
-    hint: 'A IA já falou antes. Tem que CONTINUAR de onde parou: nada de se reapresentar, repetir a saudação ou refazer a pergunta de intenção.',
-    contactName: 'Patrícia',
-    source: 'Anúncio Instagram',
-    interest: '',
-    formAnswers: {},
-    history: [
-      { role: 'user', content: 'oi, vi o anúncio' },
-      {
-        role: 'assistant',
-        content:
-          'Patrícia, olá, tudo bem? Sou o Eduardo, consultor imobiliário. Vi que você se cadastrou agorinha no nosso anúncio. Queria entender de fato o que você está buscando: seu foco é moradia, investimento, ou ainda não sabe e tá só sondando?',
-      },
-      { role: 'user', content: 'é pra morar, eu e meu marido' },
-      {
-        role: 'assistant',
-        content: 'Que bom, Patrícia. Vocês estão pensando em quantos quartos? E tem alguma região que faz mais sentido pro dia a dia de vocês?',
-      },
-      { role: 'user', content: '2 quartos, de preferência perto do metrô' },
-    ],
-    firstMessage: 'consegue me mandar as plantas?',
-  },
-  {
-    id: 'voltou',
-    label: 'Sumiu e voltou',
-    hint: 'Conversa parada há dias e o lead reaparece. Ela tem que retomar o assunto, não abrir de novo como se fosse um lead novo.',
-    contactName: 'Thiago',
-    source: 'Anúncio Facebook',
-    interest: '',
-    formAnswers: {},
-    history: [
-      { role: 'user', content: 'quanto tá o de 2 quartos?' },
-      {
-        role: 'assistant',
-        content:
-          'Thiago, tudo bem? Sou o Eduardo. Antes de falar de valor, queria entender: é pra morar ou pra investir?',
-      },
-      { role: 'user', content: 'investir' },
-      {
-        role: 'assistant',
-        content: 'Show. Qual faixa de investimento você tá confortável pra esse tipo de projeto?',
-      },
-    ],
-    firstMessage: 'desculpa a demora, sumi aqui. ainda dá pra ver esse apê?',
-  },
-  {
-    id: 'fora-do-perfil',
-    label: 'Fora do perfil',
-    hint: 'Pede algo que o imóvel do anúncio não é. Confere se ela oferece alternativa REAL do catálogo, com preço, em vez de empurrar pro corretor.',
-    contactName: 'Marcos',
-    source: 'Anúncio Facebook',
-    interest: '',
-    formAnswers: {},
-    firstMessage: 'esse é muito pequeno, tem de 3 quartos em outro bairro?',
-  },
-  {
-    id: 'sondando',
-    label: 'Só sondando',
-    hint: 'Sem intenção definida. Ela tem que nutrir com leveza, sem pressão e sem insistir na pergunta de intenção.',
-    contactName: 'Bruno',
-    source: 'Anúncio Instagram',
-    interest: '',
-    formAnswers: {},
-    firstMessage: 'to só dando uma olhada por enquanto',
-  },
-];
-
-// Cenários que o próprio usuário salva. localStorage e não banco: é ferramenta
-// de bancada, some se trocar de navegador, e não vale poluir a config do agente
-// (que é dado de produção) com material de teste.
+// Cenários que o próprio usuário salva. localStorage: é ferramenta de bancada,
+// não dado de produção. Mesma chave do Testar antigo (os salvos continuam).
 const SCENARIOS_KEY = 'lmflow:sales-agent-test-scenarios';
 
-function loadSavedScenarios(): TestScenario[] {
+function lerSalvos(): CenarioDeTeste[] {
   try {
     const raw = localStorage.getItem(SCENARIOS_KEY);
-    return raw ? (JSON.parse(raw) as TestScenario[]) : [];
+    const lista = raw ? (JSON.parse(raw) as Array<CenarioDeTeste & { hint?: string }>) : [];
+    return lista.map((c) => ({ ...c, subtitulo: c.subtitulo ?? c.hint ?? 'Cenário salvo por você.' }));
   } catch {
     return [];
   }
 }
 
-function persistScenarios(list: TestScenario[]) {
+function gravarSalvos(lista: CenarioDeTeste[]) {
   try {
-    localStorage.setItem(SCENARIOS_KEY, JSON.stringify(list));
+    localStorage.setItem(SCENARIOS_KEY, JSON.stringify(lista));
   } catch {
-    // Cota cheia ou storage bloqueado: o cenário se perde, mas o teste continua.
+    // Cota cheia ou storage bloqueado: o cenário se perde, o teste continua.
   }
 }
 
-// Exportado só pra teste (mesmo padrão de TriggersSection): renderizar a tela
-// inteira pra testar uma bolha do painel Testar exigiria simular login,
-// tenant e dezenas de outras chamadas sem relação com o bug em questão.
-export function TestTab({ agent }: { agent: SalesAgent }) {
+/**
+ * Testar fiel (entrega 3). Cada mensagem roda o MESMO turno do atendimento no
+ * servidor, numa conversa que só existe em memória: nada sai no WhatsApp e nada
+ * é gravado. O estado do teste mora aqui e vai e volta inteiro a cada passo.
+ */
+export function TelaTestar({ agent }: { agent: SalesAgent }) {
   const { perguntar, dialogoDePergunta } = usePergunta();
-  const [history, setHistory] = useState<TestTurn[]>([]);
-  const [message, setMessage] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [last, setLast] = useState<SalesAgentTestResult | null>(null);
-  const [propertyCode, setPropertyCode] = useState('');
-  // O runner real manda a mídia UMA vez por imóvel, não a cada mensagem. Sem isto
-  // o teste repetiria a foto em todo turno e daria uma impressão errada.
-  const [mediaShownFor, setMediaShownFor] = useState<string | null>(null);
+  const [ensaio, setEnsaio] = useState<RehearsalState | null>(null);
+  const [itens, setItens] = useState<ItemDaConversa[]>([]);
+  const [ultimo, setUltimo] = useState<RehearsalTurn | null>(null);
+  const [mensagem, setMensagem] = useState('');
+  const [ocupado, setOcupado] = useState(false);
+  const [avanco, setAvanco] = useState(0);
+  const [semente, setSemente] = useState<{ history: TestHistoryItem[]; hours_ago?: number } | null>(null);
+  const [nome, setNome] = useState('Lead Teste');
+  const [origem, setOrigem] = useState('');
+  const [interesse, setInteresse] = useState('');
+  const [respostas, setRespostas] = useState('');
+  const [imovel, setImovel] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [carregando, setCarregando] = useState(false);
+  const [salvos, setSalvos] = useState<CenarioDeTeste[]>(() => lerSalvos());
+  const [ajustarAberto, setAjustarAberto] = useState(false);
+  const fimDoChat = useRef<HTMLDivElement>(null);
 
-  // Contexto do lead. O nome era chumbado como "Lead Teste" e origem, interesse e
-  // respostas do formulário nunca eram enviados — o backend sempre aceitou os
-  // quatro. Sem eles a IA não sabe que o lead veio de um anúncio nem o que ele já
-  // respondeu, e a conversa de teste sai mais fria e mais genérica que a real.
-  const [contactName, setContactName] = useState('Lead Teste');
-  const [source, setSource] = useState('');
-  const [interest, setInterest] = useState('');
-  const [formAnswers, setFormAnswers] = useState<Record<string, string>>({});
-  const [loadRef, setLoadRef] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [savedScenarios, setSavedScenarios] = useState<TestScenario[]>(() => loadSavedScenarios());
+  const rolar = () => setTimeout(() => fimDoChat.current?.scrollIntoView?.({ block: 'end' }), 0);
 
-  // Aplicar um cenário SUBSTITUI a conversa pela do cenário (vazia, quando ele
-  // não tem histórico). Mesclar com o que estava na tela criaria uma conversa que
-  // não existe em lugar nenhum — e o histórico é justamente o que decide se o
-  // prompt abre do zero ou continua de onde parou.
-  const applyScenario = (s: TestScenario) => {
-    setContactName(s.contactName);
-    setSource(s.source);
-    setInterest(s.interest);
-    setFormAnswers({ ...s.formAnswers });
-    setMessage(s.firstMessage);
-    setHistory((s.history ?? []).map((m) => ({ ...m })));
-    setLast(null);
-    setMediaShownFor(null);
+  const enviar = async () => {
+    const texto = mensagem.trim();
+    if (!texto || ocupado) return;
+    const codigo = imovel.trim();
+    setMensagem('');
+    setOcupado(true);
+    setItens((prev) => [...prev, { tipo: 'lead', texto }]);
+    try {
+      const r = await salesAgentsService.rehearsal(agent.id, {
+        step: 'turn',
+        state: ensaio,
+        message: texto,
+        context: {
+          contact_name: nome.trim() || 'Lead Teste',
+          source: origem.trim(),
+          interest: interesse.trim(),
+          form_answers: respostasDoFormulario(respostas),
+          property_code: codigo,
+        },
+        ...(!ensaio && semente ? { seed: semente } : {}),
+      });
+      setEnsaio(r.state);
+      setUltimo(r.turn);
+      setSemente(null);
+      setItens((prev) => [...prev, ...itensDoTurno(r.turn, codigo)]);
+      rolar();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setOcupado(false);
+    }
   };
 
-  const saveCurrentScenario = async () => {
+  const avancar = async () => {
+    if (!ensaio || ocupado) return;
+    setOcupado(true);
+    try {
+      const r = await salesAgentsService.rehearsal(agent.id, {
+        step: 'advance', state: ensaio, hours: OPCOES_DE_AVANCO[avanco].horas,
+      });
+      setEnsaio(r.state);
+      setItens((prev) => [...prev, ...itensDoTurno(r.turn, imovel.trim())]);
+      rolar();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  const carregar = async () => {
+    const fone = telefone.replace(/\D/g, '');
+    if (fone.length < 10) {
+      toast.error('Digite o telefone com DDD.');
+      return;
+    }
+    setCarregando(true);
+    try {
+      const r = await salesAgentsService.rehearsal(agent.id, { step: 'load', phone: fone });
+      setEnsaio(r.state);
+      setUltimo(r.turn);
+      setSemente(null);
+      setItens(itensDoEstado(r.state));
+      setNome(r.state.contact.name ?? 'Lead Teste');
+      setRespostas(textoDasRespostas(r.state.contact.form_answers ?? {}));
+      setOrigem(String(r.state.attrs.source ?? ''));
+      setInteresse(String(r.state.attrs.initial_interest ?? ''));
+      toast.success(`Conversa carregada: ${r.state.messages.length} mensagens`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  // Aplicar um cenário SUBSTITUI o teste: o histórico decide se a IA abre do zero
+  // ou continua de onde parou, e misturar criaria uma conversa que não existe.
+  const aplicarCenario = (c: CenarioDeTeste) => {
+    setNome(c.contactName);
+    setOrigem(c.source);
+    setInteresse(c.interest);
+    setRespostas(textoDasRespostas(c.formAnswers));
+    setMensagem(c.firstMessage);
+    setEnsaio(null);
+    setUltimo(null);
+    setSemente(c.history?.length ? { history: c.history, hours_ago: c.historyHoursAgo } : null);
+    setItens((c.history ?? []).map((m) => (
+      m.role === 'user' ? { tipo: 'lead' as const, texto: m.content } : { tipo: 'ia' as const, texto: m.content, pausa: 0 }
+    )));
+  };
+
+  const recomecar = () => {
+    setEnsaio(null);
+    setUltimo(null);
+    setSemente(null);
+    setItens([]);
+  };
+
+  const salvarCenario = async () => {
     const label = await perguntar({
-      titulo: 'Salvar cenário',
-      descricao: 'A conversa da tela vira o histórico do cenário, pra você poder repetir este caso depois.',
+      titulo: 'Salvar este cenário',
+      descricao: 'A conversa da tela vira o histórico do cenário, pra você repetir este caso depois.',
       rotuloDoCampo: 'Nome do cenário',
       placeholder: 'Ex.: lead frio que some no meio',
       rotuloDaAcao: 'Salvar cenário',
     });
     if (!label) return;
-
-    const scenario: TestScenario = {
+    const historia: TestHistoryItem[] = ensaio
+      ? ensaio.messages.map(({ role, content }) => ({ role, content }))
+      : (semente?.history ?? []);
+    const novo: CenarioDeTeste = {
       id: `custom-${label.toLowerCase().replace(/\s+/g, '-')}`,
       label,
-      hint: 'Cenário salvo por você.',
-      contactName,
-      source,
-      interest,
-      formAnswers: { ...formAnswers },
-      // A conversa da tela vira o histórico do cenário — inclusive a que você
-      // acabou de rodar. É assim que se guarda "aquele caso que deu errado" pra
-      // conferir depois se a mudança no prompt resolveu.
-      history: history.map(({ role, content }) => ({ role, content })),
-      firstMessage: message.trim(),
+      subtitulo: 'Cenário salvo por você.',
+      contactName: nome,
+      source: origem,
+      interest: interesse,
+      formAnswers: respostasDoFormulario(respostas),
+      history: historia,
+      firstMessage: mensagem.trim(),
     };
-    // Mesmo nome sobrescreve, em vez de duplicar na lista.
-    const next = [...savedScenarios.filter((s) => s.id !== scenario.id), scenario];
-    setSavedScenarios(next);
-    persistScenarios(next);
+    const lista = [...salvos.filter((s) => s.id !== novo.id), novo];
+    setSalvos(lista);
+    gravarSalvos(lista);
     toast.success(`Cenário "${label}" salvo`);
   };
 
-  const removeScenario = (id: string) => {
-    const next = savedScenarios.filter((s) => s.id !== id);
-    setSavedScenarios(next);
-    persistScenarios(next);
+  const removerCenario = (id: string) => {
+    const lista = salvos.filter((s) => s.id !== id);
+    setSalvos(lista);
+    gravarSalvos(lista);
   };
 
-  const send = async () => {
-    if (!message.trim()) return;
-    const userMsg = message.trim();
-    const code = propertyCode.trim();
-    setMessage('');
-    setBusy(true);
-    const apiHistory: TestHistoryItem[] = history.map(({ role, content }) => ({ role, content }));
-    const newHistory: TestTurn[] = [...history, { role: 'user', content: userMsg }];
-    setHistory(newHistory);
-    try {
-      const result = await salesAgentsService.testRun(agent.id, userMsg, apiHistory, {
-        contactName: contactName.trim() || 'Lead Teste',
-        source: source.trim(),
-        interest: interest.trim(),
-        formAnswers,
-        propertyCode: code,
-      });
-      const firstTimeForThisProperty = mediaShownFor !== code;
-      const media = firstTimeForThisProperty ? result.media ?? [] : [];
-      if (media.length > 0) setMediaShownFor(code);
-      // Uma bolha por MENSAGEM, não por turno: é assim que o lead recebe quando a
-      // quebra está ligada. Mostrar uma bolha só faria quem liga a chave e testa
-      // aqui concluir que ela não funciona. A mídia fica pendurada na última,
-      // porque no atendimento real ela sai depois de todo o texto.
-      const parts = result.reply_parts?.length ? result.reply_parts : [result.reply];
-      setHistory([
-        ...newHistory,
-        ...parts.map((content, i) => ({
-          role: 'assistant' as const,
-          content,
-          media: i === parts.length - 1 ? media : [],
-          // O código DESTE turno, não o que estiver no campo quando o dono
-          // clicar em "Mandar pra mim" depois.
-          propertyCode: code,
-        })),
-      ]);
-      setLast(result);
-    } catch {
-      toast.error('Erro no teste (verifique se a chave da IA está configurada)');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const loadRealConversation = async () => {
-    const ref = loadRef.trim();
-    if (!ref) return;
-    setLoading(true);
-    try {
-      // Aceita ID de conversa ou telefone: quem está testando quase sempre tem o
-      // telefone à mão, não o UUID.
-      const isPhone = /^[\d\s()+-]+$/.test(ref);
-      const ctx = await salesAgentsService.conversationContext(
-        agent.id,
-        isPhone ? { phone: ref } : { conversationId: ref },
-      );
-      setHistory(ctx.history);
-      setContactName(ctx.contact_name ?? 'Lead Teste');
-      setSource(ctx.source ?? '');
-      setInterest(ctx.interest ?? '');
-      setFormAnswers(ctx.form_answers ?? {});
-      if (ctx.property_code) setPropertyCode(ctx.property_code);
-      setMediaShownFor(null);
-      setLast(null);
-      toast.success(`Conversa carregada — ${ctx.history.length} mensagens`);
-    } catch {
-      toast.error('Não achei essa conversa (tente o telefone com DDD ou o ID).');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const clearAll = () => {
-    setHistory([]);
-    setLast(null);
-    setMediaShownFor(null);
-    setFormAnswers({});
-    setSource('');
-    setInterest('');
-    setContactName('Lead Teste');
-  };
-
-  const formAnswerEntries = Object.entries(formAnswers);
+  const linhas = linhasDoQueAconteceria(ultimo?.outcome);
+  const modelo = avisoDoModelo(ultimo?.outcome?.test_model ?? agent.test_model, agent.model);
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Converse como se fosse o lead. Não envia nada no WhatsApp — é só teste.</p>
-
-      {/* Carregar conversa real: o teste digitado à mão não reproduz o que o lead
-          traz (nome, campanha, formulário, imóvel resolvido), e é justamente isso
-          que faz a IA saber do que está falando. Só leitura — nada é enviado. */}
-      <div className="border border-sidebar-border rounded-md p-3 space-y-2">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <Bot className="h-4 w-4" /> Carregar uma conversa real
-        </div>
-        <div className="flex gap-2">
-          <Input
-            placeholder="Telefone com DDD ou ID da conversa"
-            value={loadRef}
-            onChange={(e) => setLoadRef(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') void loadRealConversation(); }}
-          />
-          <Button variant="outline" onClick={() => void loadRealConversation()} disabled={loading || !loadRef.trim()}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Carregar'}
-          </Button>
-          {history.length > 0 && (
-            <Button variant="ghost" onClick={clearAll}>Limpar</Button>
-          )}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Traz o histórico e o contexto de um lead de verdade pra você continuar a conversa daqui.
-          Não envia mensagem nem grava nada — pode apontar pra um lead ativo.
+    <div className="space-y-3">
+      <div>
+        <h2 className="text-lg font-semibold">Testar</h2>
+        <p className="text-sm text-muted-foreground">
+          Converse como se fosse o lead. Nada é enviado no WhatsApp e nada é gravado.
         </p>
+        {modelo.selo && (
+          <p className="mt-1 text-xs">
+            <span className="rounded-full border border-sidebar-border px-2 py-0.5">{modelo.selo}</span>
+            {modelo.nota && <span className="ml-2 text-muted-foreground">{modelo.nota}</span>}
+          </p>
+        )}
       </div>
 
-      {/* Cenários prontos. Cada um monta o contexto inteiro e já deixa a primeira
-          mensagem no campo — é só apertar enviar. Sem isto, digitar tudo de novo
-          a cada teste leva a testar sempre o mesmo caso fácil, que é o que menos
-          revela problema. */}
-      <div className="border border-sidebar-border rounded-md p-3 space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Zap className="h-4 w-4" /> Cenários
-          </div>
-          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => void saveCurrentScenario()}>
-            Salvar o atual
-          </Button>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {TEST_SCENARIOS.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              title={s.hint}
-              onClick={() => applyScenario(s)}
-              className="inline-flex items-center gap-1 rounded-md border border-sidebar-border px-2.5 py-1 text-xs hover:bg-muted transition-colors"
-            >
-              {s.label}
-              {/* Marca quem já vem com conversa: é a diferença entre testar a
-                  abertura e testar a continuidade, e não dá pra adivinhar pelo nome. */}
-              {(s.history?.length ?? 0) > 0 && (
-                <span className="text-[10px] text-muted-foreground" title="Já vem com conversa">
-                  💬
-                </span>
-              )}
-            </button>
-          ))}
-          {savedScenarios.map((s) => (
-            <span
-              key={s.id}
-              className="inline-flex items-center rounded-md border border-primary/40 bg-primary/5 text-xs"
-            >
-              <button
-                type="button"
-                title={s.hint}
-                onClick={() => applyScenario(s)}
-                className="px-2.5 py-1 hover:bg-primary/10 rounded-l-md transition-colors"
-              >
-                {s.label}
-              </button>
-              <button
-                type="button"
-                title="Remover cenário"
-                onClick={() => removeScenario(s.id)}
-                className="px-1.5 py-1 text-muted-foreground hover:text-red-500"
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Passe o mouse pra ver o que cada um testa. Os marcados com 💬 já vêm com uma conversa
-          anterior — e isso muda a resposta: sem histórico ela abre do zero, com histórico ela
-          continua de onde parou. Aplicar um cenário substitui a conversa da tela.
-          Ao salvar o seu, a conversa atual vai junto.
-        </p>
-      </div>
-
-      {/* Contexto do lead. O backend sempre aceitou estes campos; a tela mandava
-          só o nome, chumbado como "Lead Teste". */}
-      <div className="border border-sidebar-border rounded-md p-3 space-y-3">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <SlidersHorizontal className="h-4 w-4" /> Contexto do lead
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <div>
-            <Label htmlFor="test_name" className="text-xs">Nome</Label>
-            <Input id="test_name" value={contactName} onChange={(e) => setContactName(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="test_source" className="text-xs">Origem</Label>
-            <Input
-              id="test_source"
-              placeholder="Anúncio Instagram — Vivaz Mooca"
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="test_interest" className="text-xs">Interesse inicial</Label>
-            <Input
-              id="test_interest"
-              placeholder="2 quartos até 400 mil"
-              value={interest}
-              onChange={(e) => setInterest(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div>
-          <Label className="text-xs">Respostas do formulário do Meta</Label>
-          {formAnswerEntries.length > 0 && (
-            <div className="space-y-1 mt-1 mb-2">
-              {formAnswerEntries.map(([k, v]) => (
-                <div key={k} className="flex items-center gap-2 text-xs">
-                  <span className="font-medium">{k}:</span>
-                  <span className="flex-1 truncate text-muted-foreground">{v}</span>
+      <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+        <aside className="space-y-3">
+          <section className="border border-sidebar-border rounded-md p-3 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium"><Zap className="h-4 w-4" /> Cenários</div>
+            <div className="space-y-1.5">
+              {[...CENARIOS_DE_TESTE, ...salvos].map((c) => (
+                <div key={c.id} className="flex items-start gap-1">
                   <button
                     type="button"
-                    className="text-red-500 hover:underline"
-                    onClick={() => setFormAnswers((prev) => {
-                      const next = { ...prev };
-                      delete next[k];
-                      return next;
-                    })}
+                    onClick={() => aplicarCenario(c)}
+                    className="flex-1 text-left rounded-md border border-sidebar-border px-2.5 py-1.5 hover:bg-muted transition-colors"
                   >
-                    remover
+                    <span className="block text-xs font-medium">{c.label}</span>
+                    <span className="block text-[11px] text-muted-foreground">{c.subtitulo}</span>
                   </button>
+                  {c.id.startsWith('custom-') && (
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => removerCenario(c.id)}>
+                      Remover
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
-          )}
-          <FormAnswerAdder onAdd={(k, v) => setFormAnswers((prev) => ({ ...prev, [k]: v }))} />
-          <p className="text-xs text-muted-foreground mt-1">
-            A IA usa pra não perguntar de novo o que o lead já respondeu no anúncio.
-          </p>
-        </div>
-      </div>
+            <Button variant="outline" size="sm" className="w-full" onClick={() => void salvarCenario()}>
+              Salvar este cenário
+            </Button>
+          </section>
 
-      {/* O "Link de anúncio com IA" saiu (entrega 2), mas o código do imóvel morava
-          nele: o campo fica, pra testar a IA falando de um imóvel. */}
-      <div className="space-y-1">
-        <Label htmlFor="testar-imovel">Imóvel do teste</Label>
-        <Input id="testar-imovel" placeholder="Código do imóvel (ex: AP123)" value={propertyCode}
-          onChange={(e) => setPropertyCode(e.target.value)} />
-        <p className="text-xs text-muted-foreground">Opcional. A IA conversa como se o lead tivesse vindo desse imóvel.</p>
-      </div>
-
-      <div className="border border-sidebar-border rounded-md p-3 h-72 overflow-auto space-y-2 bg-muted/20">
-        {history.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Mande uma mensagem pra ver a IA responder.</p>
-        ) : (
-          history.map((h, i) => (
-            <div key={i} className="space-y-1">
-              <div className={`flex ${h.role === 'user' ? 'justify-start' : 'justify-end'}`}>
-                <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${h.role === 'user' ? 'bg-background border' : 'bg-primary/10 text-foreground'}`}>
-                  {h.content}
+          <section className="border border-sidebar-border rounded-md p-3 space-y-2">
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 text-sm font-medium"
+              onClick={() => setAjustarAberto((v) => !v)}
+              aria-expanded={ajustarAberto}
+            >
+              <SlidersHorizontal className="h-4 w-4" /> Ajustar o teste
+            </button>
+            {ajustarAberto && (
+              <div className="space-y-2">
+                <div>
+                  <Label htmlFor="ensaio_nome" className="text-xs">Nome do lead</Label>
+                  <Input id="ensaio_nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="ensaio_origem" className="text-xs">De onde veio</Label>
+                  <Input id="ensaio_origem" placeholder="Anúncio Instagram — Vivaz Mooca" value={origem} onChange={(e) => setOrigem(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="ensaio_interesse" className="text-xs">Interesse inicial</Label>
+                  <Input id="ensaio_interesse" placeholder="2 quartos até 400 mil" value={interesse} onChange={(e) => setInteresse(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="ensaio_respostas" className="text-xs">Respostas do formulário (uma por linha)</Label>
+                  <Textarea id="ensaio_respostas" rows={3} placeholder="Faixa de investimento: até 450 mil" value={respostas} onChange={(e) => setRespostas(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="ensaio_imovel" className="text-xs">Imóvel</Label>
+                  <Input id="ensaio_imovel" placeholder="Código do imóvel (ex: AP123)" value={imovel} onChange={(e) => setImovel(e.target.value)} />
                 </div>
               </div>
-              {(h.media ?? []).map((m, j) => (
-                <div key={j} className="flex justify-end">
-                  <TestMediaBubble
-                    item={m}
-                    onSendToMe={(item, phone) => salesAgentsService.testSend(agent.id, {
-                      // O código do TURNO que gerou esta bolha, não o do campo
-                      // agora — o campo pode ter mudado de imóvel desde então.
-                      phone, token: item.token, property_code: h.propertyCode || undefined,
-                    }).then((r) => r.message)}
-                  />
-                </div>
-              ))}
+            )}
+          </section>
+
+          <section className="border border-sidebar-border rounded-md p-3 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium"><Bot className="h-4 w-4" /> Carregar uma conversa real</div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Telefone com DDD"
+                value={telefone}
+                onChange={(e) => setTelefone(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void carregar(); }}
+              />
+              <Button variant="outline" onClick={() => void carregar()} disabled={carregando || !telefone.trim()}>
+                {carregando ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Carregar'}
+              </Button>
             </div>
-          ))
-        )}
-        {busy && <div className="flex justify-end"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>}
-      </div>
+            <p className="text-xs text-muted-foreground">Traz a conversa, a ficha e a abertura. Só lê: pode ser um lead ativo.</p>
+          </section>
+        </aside>
 
-      <div className="flex gap-2">
-        <Input
-          placeholder="Mensagem do lead..."
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') send(); }}
-        />
-        <Button onClick={send} disabled={busy || !message.trim()} aria-label="Enviar" title="Enviar"><Send className="h-4 w-4" /></Button>
-      </div>
+        <main className="space-y-3">
+          <div className="border border-sidebar-border rounded-md p-3 h-[28rem] overflow-auto space-y-2 bg-muted/20">
+            {itens.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Mande uma mensagem pra ver a IA responder.</p>
+            ) : (
+              itens.map((it, i) => {
+                if (it.tipo === 'sistema') {
+                  return <p key={i} className="text-center text-[11px] text-muted-foreground">{it.texto}</p>;
+                }
+                if (it.tipo === 'midia') {
+                  return (
+                    <div key={i} className="flex justify-end">
+                      <TestMediaBubble
+                        item={it.item}
+                        onSendToMe={(item, phone) => salesAgentsService.testSend(agent.id, {
+                          // O imóvel do TURNO que gerou esta bolha, não o do campo agora.
+                          phone, token: item.token, property_code: it.propertyCode || undefined,
+                        }).then((r) => r.message)}
+                      />
+                    </div>
+                  );
+                }
+                const lead = it.tipo === 'lead';
+                return (
+                  <div key={i} className={`flex flex-col ${lead ? 'items-start' : 'items-end'}`}>
+                    {!lead && it.pausa > 0 && <span className="text-[10px] text-muted-foreground">{pausa(it.pausa)}</span>}
+                    <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${lead ? 'bg-background border' : 'bg-primary/10 text-foreground'}`}>
+                      {!lead && it.audio ? '🎤 áudio: ' : ''}{it.texto}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            {ocupado && <div className="flex justify-end"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>}
+            <div ref={fimDoChat} />
+          </div>
 
-      {last && (
-        <div className="text-xs text-muted-foreground border border-sidebar-border rounded-md p-3 space-y-1">
-          <div>Temperatura: <strong>{TEMP_LABEL[last.temperature] ?? last.temperature}</strong></div>
-          {last.should_transfer && <div className="text-amber-600">Transferiria pro corretor: {last.transfer_reason}</div>}
-          {last.lead_summary && <div>Resumo: {last.lead_summary}</div>}
-        </div>
-      )}
+          <div className="flex gap-2">
+            <Input
+              placeholder="Mensagem do lead..."
+              value={mensagem}
+              onChange={(e) => setMensagem(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void enviar(); }}
+            />
+            <Button onClick={() => void enviar()} disabled={ocupado || !mensagem.trim()}>
+              <Send className="h-4 w-4 mr-1" /> Enviar
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              aria-label="Quanto avançar"
+              className="h-9 rounded-md border border-sidebar-border bg-background px-2 text-sm"
+              value={avanco}
+              onChange={(e) => setAvanco(Number(e.target.value))}
+            >
+              {OPCOES_DE_AVANCO.map((o, i) => <option key={o.rotulo} value={i}>{o.rotulo}</option>)}
+            </select>
+            <Button variant="outline" onClick={() => void avancar()} disabled={ocupado || !ensaio}>
+              <FastForward className="h-4 w-4 mr-1" /> Avançar o tempo
+            </Button>
+            <Button variant="ghost" onClick={recomecar} disabled={ocupado}>
+              <RotateCcw className="h-4 w-4 mr-1" /> Recomeçar
+            </Button>
+          </div>
+
+          {linhas.length > 0 && (
+            <section className="border border-sidebar-border rounded-md p-3 space-y-1">
+              <h3 className="text-sm font-medium">O que aconteceria</h3>
+              <ul className="text-xs text-muted-foreground space-y-0.5">
+                {linhas.map((l) => <li key={l}>{l}</li>)}
+              </ul>
+            </section>
+          )}
+        </main>
+      </div>
 
       {dialogoDePergunta}
     </div>
   );
 }
-
-export default function TelaTestar({ agent }: { agent: SalesAgent }) {
-  return <TestTab agent={agent} />;
-}
+export default TelaTestar;

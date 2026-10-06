@@ -667,56 +667,9 @@ export interface TestMediaItem {
   token?: string;
 }
 
-export interface SalesAgentTestResult {
-  /** O texto inteiro da resposta. Continua existindo pra tudo que lê "a resposta". */
-  reply: string;
-  /**
-   * As mensagens na ordem em que o lead as receberia, quando a quebra está ligada.
-   * Sem isto o painel Testar mostraria UMA bolha mesmo com a chave ligada, e quem
-   * testasse concluiria que a funcionalidade não funciona.
-   */
-  reply_parts?: string[];
-  media?: TestMediaItem[];
-  temperature: 'hot' | 'warm' | 'cold' | 'unknown';
-  should_transfer: boolean;
-  transfer_reason: string | null;
-  collected: Record<string, unknown>;
-  lead_summary: string;
-  stage?: string | null;
-  book_visit?: { should_book: boolean; date: string | null; time: string | null; notes: string | null } | null;
-  bant?: { budget?: string | null; authority?: string | null; need?: string | null; timeline?: string | null };
-  qualified?: boolean | null;
-}
-
 export interface TestHistoryItem {
   role: 'user' | 'assistant';
   content: string;
-}
-
-/**
- * O que o lead real traz junto da primeira mensagem e o teste digitado à mão não
- * tem como reproduzir.
- */
-export interface TestLeadContext {
-  contactName?: string;
-  /** De onde veio: campanha, anúncio, plataforma. */
-  source?: string;
-  /** Interesse inicial declarado (ex.: veio de um formulário perguntando isso). */
-  interest?: string;
-  /** Respostas do formulário do Meta — a IA usa pra não perguntar de novo. */
-  formAnswers?: Record<string, string>;
-  propertyCode?: string;
-}
-
-/** Contexto lido de uma conversa real, pra carregar no painel de teste. */
-export interface LoadedConversationContext {
-  conversation_id: string;
-  history: TestHistoryItem[];
-  contact_name: string | null;
-  source: string | null;
-  interest: string | null;
-  form_answers: Record<string, string>;
-  property_code: string | null;
 }
 
 // ---------------- Testar fiel (ensaio) ----------------
@@ -1017,30 +970,6 @@ export const salesAgentsService = {
   },
 
   /**
-   * O `context` é o que separa o teste da conversa real: o lead de verdade chega
-   * com nome, origem de campanha e respostas do formulário do Meta, e é isso que
-   * faz a IA saber do que está falando em vez de perguntar de novo. O backend
-   * sempre aceitou esses campos — a tela é que mandava só o nome, chumbado.
-   */
-  async testRun(
-    id: string,
-    message: string,
-    history: TestHistoryItem[] = [],
-    context: TestLeadContext = {},
-  ): Promise<SalesAgentTestResult> {
-    const res = await api.post(`${BASE}/${id}/test_run`, {
-      message,
-      history,
-      contact_name: context.contactName || undefined,
-      source: context.source || undefined,
-      interest: context.interest || undefined,
-      form_answers: Object.keys(context.formAnswers ?? {}).length ? context.formAnswers : undefined,
-      property_code: context.propertyCode || undefined,
-    });
-    return (res.data as { data: SalesAgentTestResult }).data;
-  },
-
-  /**
    * Testar fiel: o MESMO turno do atendimento, em memória (nada sai no WhatsApp,
    * nada é gravado). O estado vai e volta inteiro a cada passo. Em erro, joga a
    * frase do servidor (teto da hora, conversa não achada, teste interrompido).
@@ -1076,21 +1005,6 @@ export const salesAgentsService = {
       const message = axiosErr.response?.data?.error?.message;
       throw new Error(message || 'Não consegui mandar o teste agora.');
     }
-  },
-
-  /**
-   * Carrega uma conversa REAL no painel de teste (histórico + contexto do lead).
-   * Só leitura: não chama o Claude, não grava e não envia mensagem, então dá pra
-   * apontar pra um lead ativo sem risco.
-   */
-  async conversationContext(
-    id: string,
-    opts: { conversationId?: string; phone?: string },
-  ): Promise<LoadedConversationContext> {
-    const res = await api.get(`${BASE}/${id}/conversation_context`, {
-      params: { conversation_id: opts.conversationId || undefined, phone: opts.phone || undefined },
-    });
-    return (res.data as { data: LoadedConversationContext }).data;
   },
 
   // Ativa a IA pra atender um lead escolhido (proativo): inicia OU continua a
