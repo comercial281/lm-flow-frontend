@@ -67,7 +67,16 @@ export interface RoletaMember {
   // só `inbox_id` importa (é o que ele usa para amarrar a instância).
   roleta_instance_id?: string | null;
   inbox_id?: string | null;
+  // Roleta nova (chave `roleta_nova`, PR do servidor B2): o nome de quem está
+  // na fila e a situação do número DELE (a roleta não tem número próprio).
+  // Ausentes no servidor antigo.
+  name?: string | null;
+  phone_display?: string | null;
+  phone_status?: RoletaPhoneStatus | null;
 }
+
+/** Situação do número próprio do corretor na fila: conectado, caído ou sem número. */
+export type RoletaPhoneStatus = 'connected' | 'disconnected' | 'none';
 
 /**
  * Os PADRÕES DA CASA — respondidos uma vez, herdados por toda roleta NOVA.
@@ -181,6 +190,18 @@ export interface RoletaConfig {
   members: RoletaMember[];
   created_at: string;
   updated_at: string;
+  // ── Roleta nova (chave `roleta_nova`, servidor B2). Ausentes no servidor antigo.
+  /** As origens já em frase curta pro cartão da lista ("Formulário "ZONA SUL""). */
+  origins_summary?: string[];
+  /** Ofertas esperando o aceite agora. */
+  pending_count?: number;
+  /** Leads que passaram por todos e ninguém aceitou, nos últimos 7 dias. */
+  exhausted_count_7d?: number;
+  /** Fora do horário, manda uma mensagem pro lead enquanto ele espera. */
+  after_hours_message_enabled?: boolean;
+  after_hours_message?: string | null;
+  /** Número que manda a mensagem de fora do horário. */
+  after_hours_inbox_id?: string | null;
 }
 
 export interface RoletaConfigPayload {
@@ -209,6 +230,10 @@ export interface RoletaConfigPayload {
   // tela recebia o campo no GET e o descartava no save. Opcional porque roleta
   // sem horário (24h) não manda nada — que é o estado de todas elas hoje.
   business_hours_config?: RoletaBusinessHours;
+  // Roleta nova (servidor B2): a mensagem pro lead que chega fora do horário.
+  after_hours_message_enabled?: boolean;
+  after_hours_message?: string | null;
+  after_hours_inbox_id?: string | null;
   // Sincronizadas DENTRO de create/update, não numa rota própria: o RBAC deriva
   // a permissão pelo nome da action, então uma action nova exigiria uma
   // permissão que nenhum cargo tem e a tela tomaria 403 sem pista nenhuma.
@@ -440,6 +465,127 @@ export function roletaLabel(
   return r?.display_name?.trim() || r?.name?.trim() || r?.inbox_name?.trim() || 'Roleta';
 }
 
+// ── ROLETA NOVA: ORIGENS, HISTÓRICO, PRÓXIMO DA VEZ (chave `roleta_nova`) ────
+//
+// Contrato do PR do servidor B2 (plano `2026-10-06-roleta-00-indice.md`, seção
+// "Nomes compartilhados"). A roleta é disparada por ORIGENS: formulário do Meta
+// (exato ou "nome contém"), IA Vendedora, landing, portal e site. A ligação
+// origem → roleta é um dado só: esta tela e as telas das origens gravam no
+// mesmo lugar.
+
+export type RoletaOriginKind =
+  | 'meta_form'
+  | 'meta_form_keyword'
+  | 'sales_agent'
+  | 'landing'
+  | 'portal_sale'
+  | 'portal_rent'
+  | 'site_sale'
+  | 'site_rent';
+
+/** Um formulário do Meta que a regra "nome contém" pega hoje. */
+export interface RoletaOriginMatch {
+  form_id: string;
+  form_name: string;
+}
+
+/** Uma origem ligada à roleta. Em `meta_form_keyword`, `label` é a palavra. */
+export interface RoletaOrigin {
+  kind: RoletaOriginKind;
+  ref_id: string;
+  label: string;
+  detail?: string | null;
+  matches?: RoletaOriginMatch[];
+}
+
+/** Tudo que pode virar origem no cliente, com a roleta que já usa (ou nula). */
+export interface RoletaOriginOption {
+  kind: RoletaOriginKind;
+  ref_id: string;
+  label: string;
+  detail?: string | null;
+  roleta_config_id: string | null;
+  roleta_name: string | null;
+}
+
+export type NovaOrigem =
+  | { kind: Exclude<RoletaOriginKind, 'meta_form_keyword'>; ref_id: string }
+  | { kind: 'meta_form_keyword'; keyword: string; meta_page_id?: string };
+
+/** A barreira D9: duas regras "nome contém" pegando o mesmo formulário. */
+export interface RoletaOriginConflict {
+  form_name: string;
+  roleta_name: string;
+}
+
+export type RoletaHistoryStatus = 'waiting' | 'accepted' | 'exhausted' | 'not_entered' | 'cancelled';
+
+export interface RoletaHistoryStep {
+  at: string;
+  label: string;
+}
+
+export interface RoletaHistoryItem {
+  contact_id: string;
+  contact_name: string | null;
+  pipeline_item_id: string | null;
+  conversation_id: string | null;
+  origin_label: string | null;
+  status: RoletaHistoryStatus;
+  status_label: string | null;
+  user_name: string | null;
+  at: string;
+  steps: RoletaHistoryStep[];
+  can_redistribute: boolean;
+  /** Só no histórico geral (todas as roletas). */
+  roleta_name?: string | null;
+}
+
+export interface RoletaHistoryFilters {
+  /** Sem roleta = o histórico de todas. */
+  roletaId?: string | null;
+  filter?: 'all' | 'attention';
+  userId?: string | null;
+  days?: 7 | 30;
+}
+
+/** Quem receberia o próximo lead agora, sem mandar nada a ninguém. */
+export interface RoletaNextUp {
+  user_id: string | null;
+  user_name?: string | null;
+  reason?: string | null;
+}
+
+// O servidor responde no envelope da casa (`{ success, data }`); o contrato
+// descreve o miolo. Aceita os dois, pra tela não quebrar se um lado mudar.
+function miolo<T>(res: { data?: unknown }): T {
+  const corpo = res?.data as { data?: unknown } | undefined;
+  return ((corpo && typeof corpo === 'object' && 'data' in corpo ? corpo.data : corpo) ?? {}) as T;
+}
+
+/**
+ * O conflito da barreira D9 (422), venha ele solto (`{ error, conflict }`) ou no
+ * envelope de erro da casa (`{ error: { message, details: { conflict } } }`).
+ */
+export function conflitoDaOrigem(erro: unknown): RoletaOriginConflict | null {
+  const dados = (erro as { response?: { data?: Record<string, unknown> } })?.response?.data;
+  if (!dados) return null;
+  const solto = dados.conflict as RoletaOriginConflict | undefined;
+  const err = dados.error as { details?: { conflict?: RoletaOriginConflict } } | undefined;
+  const c = solto ?? (typeof err === 'object' ? err?.details?.conflict : undefined);
+  return c && c.form_name ? c : null;
+}
+
+/** A frase de erro do servidor, em qualquer dos dois formatos. */
+export function mensagemDoServidor(erro: unknown): string | null {
+  const dados = (erro as { response?: { data?: { error?: unknown; message?: unknown } } })?.response?.data;
+  if (!dados) return null;
+  if (typeof dados.error === 'string' && dados.error) return dados.error;
+  const err = dados.error as { message?: unknown } | undefined;
+  if (err && typeof err.message === 'string' && err.message) return err.message;
+  return typeof dados.message === 'string' && dados.message ? dados.message : null;
+}
+
 const BASE = '/roleta_configs';
 
 export const roletaConfigService = {
@@ -575,6 +721,70 @@ export const roletaConfigService = {
     const res = await api.get(`${BASE}/central_instances`);
     const body = res.data as { data?: CentralInstance[]; meta?: { reason?: string | null } };
     return { instances: body.data ?? [], reason: body.meta?.reason ?? null };
+  },
+  // ── Roleta nova (chave `roleta_nova`) ───────────────────────────────────────
+
+  async get(id: string): Promise<RoletaConfig> {
+    const res = await api.get(`${BASE}/${id}`);
+    return miolo<RoletaConfig>(res);
+  },
+
+  // "Nova roleta": nasce DESLIGADA, só com o nome, no modo Fila (o único da
+  // roleta nova). Sem número: a roleta nova não tem número (D6).
+  async createDraft(name: string): Promise<RoletaConfig> {
+    const res = await api.post(BASE, {
+      name,
+      is_active: false,
+      distribution_mode: 'fila',
+      timeout_minutes: 10,
+      members: [],
+    });
+    return miolo<RoletaConfig>(res);
+  },
+
+  async getOrigins(id: string): Promise<RoletaOrigin[]> {
+    const res = await api.get(`${BASE}/${id}/origins`);
+    return miolo<{ origins?: RoletaOrigin[] }>(res).origins ?? [];
+  },
+
+  async getOriginOptions(): Promise<RoletaOriginOption[]> {
+    const res = await api.get(`${BASE}/origin_options`);
+    return miolo<{ options?: RoletaOriginOption[] }>(res).options ?? [];
+  },
+
+  // Item que já está em outra roleta sai de lá (uma origem, uma roleta). 422 com
+  // `conflict` = a barreira D9 (ver `conflitoDaOrigem`).
+  async addOrigin(id: string, origem: NovaOrigem): Promise<RoletaOrigin> {
+    const res = await api.post(`${BASE}/${id}/origins`, origem);
+    return miolo<{ origin: RoletaOrigin }>(res).origin;
+  },
+
+  // Limpa o campo da origem. Não apaga o cadastro do formulário.
+  async removeOrigin(id: string, origem: { kind: RoletaOriginKind; ref_id: string }): Promise<void> {
+    await api.delete(`${BASE}/${id}/origins`, { data: origem });
+  },
+
+  async getHistory(f: RoletaHistoryFilters = {}): Promise<RoletaHistoryItem[]> {
+    const url = f.roletaId ? `${BASE}/${f.roletaId}/history` : `${BASE}/history`;
+    const res = await api.get(url, {
+      params: {
+        filter: f.filter ?? 'all',
+        user_id: f.userId || undefined,
+        days: f.days ?? 7,
+      },
+    });
+    return miolo<{ items?: RoletaHistoryItem[] }>(res).items ?? [];
+  },
+
+  async getNextUp(id: string): Promise<RoletaNextUp> {
+    const res = await api.get(`${BASE}/${id}/next_up`);
+    return miolo<RoletaNextUp>(res);
+  },
+
+  // "Cópia de X": desligada, mesmos corretores, prazo e horário, SEM origens.
+  async duplicate(id: string): Promise<RoletaConfig> {
+    const res = await api.post(`${BASE}/${id}/duplicate`);
+    return miolo<RoletaConfig>(res);
   },
 };
 
