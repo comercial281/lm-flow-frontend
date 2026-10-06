@@ -7,8 +7,8 @@ import { fraseDaResposta, problemaNoEndereco, segundos } from '@/features/salesA
 import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
 
 // Sistema do cliente (05/10/2026): o bloco que aparece quando o destino do lead é o
-// sistema que a imobiliária já usa. Três coisas, nesta ordem: o endereço (rascunho
-// do passo, salvo pelo Salvar do passo), a chave secreta (gerada pelo LM Flow e
+// sistema que a imobiliária já usa. Três coisas, nesta ordem: o endereço (grava
+// ao sair do campo, na página Destino), a chave secreta (gerada pelo LM Flow e
 // mostrada UMA vez) e o lead de teste (usa o endereço e a chave GRAVADOS — por isso
 // fica bloqueado com o endereço por salvar).
 
@@ -22,10 +22,12 @@ interface Props {
   /** A chave gravada não abre mais no servidor (`handoff_webhook_secret_state = 'unreadable'`). */
   chaveIlegivel?: boolean;
   onUrlChange: (url: string) => void;
+  /** Saiu do campo do endereço (a página grava ali, não por tecla). */
+  onUrlBlur?: () => void;
   onChaveGerada: () => void;
 }
 
-export default function SistemaDoCliente({ agentId, url, urlSalva, chaveGerada, chaveIlegivel = false, onUrlChange, onChaveGerada }: Props) {
+export default function SistemaDoCliente({ agentId, url, urlSalva, chaveGerada, chaveIlegivel = false, onUrlChange, onUrlBlur, onChaveGerada }: Props) {
   const [chaveNova, setChaveNova] = useState<string | null>(null);
   const [confirmandoOutra, setConfirmandoOutra] = useState(false);
   const [gerando, setGerando] = useState(false);
@@ -91,6 +93,7 @@ export default function SistemaDoCliente({ agentId, url, urlSalva, chaveGerada, 
           placeholder="https://"
           value={url}
           onChange={(e) => onUrlChange(e.target.value)}
+          onBlur={onUrlBlur}
           className="mt-1"
         />
         <p className="text-xs text-muted-foreground mt-1">

@@ -1,0 +1,72 @@
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
+import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
+import { gravarDeTeste } from '@/test/salesAgents/gravarDeTeste';
+
+vi.mock('@/services/roletaConfig/roletaConfigService', () => ({
+  roletaConfigService: { getAll: vi.fn().mockResolvedValue([{ id: 'r1', display_name: 'Roleta Centro', inbox_id: 'inbox-1', is_active: true }]) },
+}));
+vi.mock('@/services/channels/agentsService', () => ({ default: { getAll: vi.fn().mockResolvedValue([{ id: 'u1', name: 'Ana Paula' }]) } }));
+vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
+import Destino from './Destino';
+
+const consultora = (extra: Partial<SalesAgent> = {}) => agenteDeTeste({ persona_kind: 'assistant', transfer_config: { mode: 'checklist' }, handoff_target: 'roleta', handoff_roleta_config_id: 'r1', handoff_user_id: null, ...extra });
+
+function abrir(agent: SalesAgent, irPara = vi.fn()) {
+  const gravar = gravarDeTeste('destino');
+  const r = render(<Destino agent={agent} inboxes={[]} gravar={gravar} irPara={irPara} diagnostico={null} />);
+  return { gravar, irPara, ...r };
+}
+
+describe('Destino', () => {
+  it('trocar o cartão NÃO grava: o corretor fixo só vale quando a pessoa é escolhida', async () => {
+    const { gravar } = abrir(consultora());
+    await userEvent.click(screen.getByRole('radio', { name: 'Corretor fixo' }));
+    expect(gravar).not.toHaveBeenCalled();
+    await screen.findByRole('option', { name: 'Ana Paula' });
+    await userEvent.selectOptions(screen.getByLabelText('Qual corretor'), 'u1');
+    expect(gravar).toHaveBeenCalledWith({ handoff_target: 'user', handoff_user_id: 'u1', handoff_roleta_config_id: null });
+  });
+
+  it('Sistema do cliente só vira destino com endereço salvo e chave pronta', async () => {
+    const { gravar, rerender } = abrir(consultora());
+    await userEvent.click(screen.getByRole('radio', { name: 'Sistema do cliente' }));
+    expect(screen.getByRole('button', { name: 'Usar o sistema do cliente' })).toBeDisabled();
+    const pronto = consultora({ handoff_webhook_url: 'https://crm.exemplo.com/leads', handoff_webhook_secret_set: true, handoff_webhook_secret_state: 'ready' });
+    rerender(<Destino agent={pronto} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Usar o sistema do cliente' }));
+    expect(gravar).toHaveBeenCalledWith({ handoff_target: 'webhook', handoff_roleta_config_id: null, handoff_user_id: null });
+  });
+
+  // Review Focus 5: a persona virou corretor com a página aberta.
+  it('persona virou O corretor com a página aberta: trava, e a escolha pela metade some sem gravar', async () => {
+    const { gravar, rerender, irPara } = abrir(consultora());
+    await userEvent.click(screen.getByRole('radio', { name: 'Corretor fixo' }));
+    rerender(<Destino agent={agenteDeTeste({ handoff_target: 'number_owner', handoff_user_id: null })} inboxes={[]} gravar={gravar} irPara={irPara} diagnostico={null} />);
+    expect(screen.getByText('Fica com o dono do número')).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'Corretor fixo' })).toBeNull();
+    expect(gravar).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Mudar persona' }));
+    expect(irPara).toHaveBeenCalledWith('identidade');
+  });
+
+  it('IA antiga de corretor com corretor fixo: aviso e conversão explícita', async () => {
+    const { gravar } = abrir(agenteDeTeste()); // broker + handoff user
+    await userEvent.click(screen.getByRole('button', { name: 'Passar a entregar pro dono do número' }));
+    expect(gravar).toHaveBeenCalledWith({ persona_kind: 'broker', handoff_target: 'number_owner', handoff_user_id: null, handoff_roleta_config_id: null });
+  });
+
+  it('"a roleta deste número" (antiga): nenhum cartão marcado e o aviso', () => {
+    abrir(consultora({ handoff_target: 'inbox_roleta', handoff_roleta_config_id: null }));
+    screen.getAllByRole('radio').forEach((r) => expect(r).toHaveAttribute('aria-checked', 'false'));
+    expect(screen.getByText(/uma opção que saiu da tela/)).toBeInTheDocument();
+  });
+
+  it('Resumo junto grava por dentro do transfer_config', async () => {
+    const { gravar } = abrir(consultora());
+    await userEvent.click(screen.getByRole('switch', { name: 'Mandar o resumo da conversa' }));
+    expect(gravar).toHaveBeenCalledWith({ transfer_config: { mode: 'checklist', briefing_enabled: false } }, ['transfer_config.briefing_enabled']);
+  });
+});
