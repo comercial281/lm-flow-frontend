@@ -75,9 +75,9 @@ describe('assistente de configuração da IA', () => {
     expect(mapeamento).toContain('playbookDasRespostas(a, agent.playbook)');
   });
 
-  it('o "+" da tela leva para o assistente, e o assistente devolve pela query ?agent=', () => {
+  it('a Nova IA cria o rascunho pelo serviço, e o ?agent= antigo continua abrindo a IA', () => {
     const tela = fonteDaIaVendedora();
-    expect(tela).toContain('navigate(`/ia-vendedora/${agent.id}/assistente`)');
+    expect(tela).toContain('salesAgentsService.create(novaIaRascunho())');
     // Desde a casca nova (entrega 1), o endereço é lido pelo mapa das telas.
     expect(read('src/features/salesAgents/iaMenu.ts')).toContain("params.get('agent')");
     expect(pagina).toContain('/ia-vendedora?agent=');

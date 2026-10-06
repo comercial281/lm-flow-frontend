@@ -9,8 +9,8 @@
 //
 // ⚠️ Nada aqui muda o atendimento: os campos e a gravação (`saveAgent`) são os
 // de antes, linha por linha.
-import { useEffect, useState, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { startTransition, useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { Loader2, Plus } from 'lucide-react';
@@ -28,6 +28,7 @@ import {
   iaDaUrl, iaInicial, paramsDaIa, telaDaUrl, telaInfo, trilhaDe, type TelaId,
 } from '@/features/salesAgents/iaMenu';
 import { situacaoDaIa } from '@/features/salesAgents/situacao';
+import { novaIaRascunho } from '@/features/salesAgents/tresEscolhas';
 import { type InboxOption } from './configuracao/comum';
 import IaBarra from './IaBarra';
 import TelaVisaoGeral from './telas/TelaVisaoGeral';
@@ -71,7 +72,6 @@ export default function SalesAgents() {
   const insightsToggle = useClientToggle('ia_insights');
   const insightsLiberado = isSuper || insightsToggle;
 
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   // Sugestões e Relatório semanal sem a chave caem na Visão geral (`telaDaUrl`):
   // o gate fica no menu e no endereço, como as Páginas de anúncio do Meu site.
@@ -156,17 +156,23 @@ export default function SalesAgents() {
   // Cria a IA (desligada) e abre o assistente em tela cheia. Quem preferir
   // configurar na mão sai por "Configurar depois" lá dentro e volta para cá com a
   // IA nova selecionada (`?agent=`) — a IA existe nos dois caminhos.
+  // Nova IA (entrega 2): cria um RASCUNHO desligado e sem número (modelo de partida
+  // em `novaIaRascunho`) e abre o passo 1 do passo a passo. Substitui o "+" que
+  // criava a IA e abria o assistente: o rascunho aparece no seletor como "Rascunho".
   const createAgent = async () => {
     try {
-      const agent = await salesAgentsService.create({
-        name: 'Nova IA Vendedora',
-        mode: 'seller',
-        enabled: false,
-        qualification_questions: ['Orçamento', 'Prazo de compra', 'Região de interesse', 'Precisa de financiamento'],
+      const nova = await salesAgentsService.create(novaIaRascunho());
+      // ⚠️ O React Router 7 troca o endereço dentro de uma transição. Se a lista
+      // mudasse antes, a resolução do endereço veria a IA nova com o endereço velho
+      // (vazio, na primeira IA da conta) e mandaria pra Visão geral. As duas
+      // mudanças vão na MESMA transição.
+      setSearchParams(paramsDaIa(nova.id, 'configurar', 1), { replace: true });
+      startTransition(() => {
+        setAgents((prev) => [nova, ...prev]);
+        setSelected(nova);
       });
-      navigate(`/ia-vendedora/${agent.id}/assistente`);
     } catch {
-      toast.error('Erro ao criar o agente');
+      toast.error('Não deu pra criar a IA. Tente de novo.');
     }
   };
 

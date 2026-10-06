@@ -12,6 +12,7 @@
 // checklist do Diagnóstico). Mudou lá, muda aqui, com o caso no spec.
 import type { HealthItem, HealthReport, SalesAgent, SalesAgentTrigger } from '@/services/salesAgents/salesAgentsService';
 import type { TelaId } from './iaMenu';
+import { pendenciasDosPassos } from './pendencias';
 
 export type TipoSituacao = 'atendendo' | 'parada' | 'restricao' | 'desligada' | 'rascunho';
 
@@ -37,16 +38,19 @@ export interface Pendencia {
 }
 
 type AgenteLido = Pick<SalesAgent, 'enabled' | 'inbox_id' | 'triggers' | 'trigger_keyword' | 'trigger_match_mode'>
-  & Partial<Pick<SalesAgent, 'followup_only' | 'followup_enabled' | 'followup_max_attempts'>>;
+  & Partial<Pick<SalesAgent, 'followup_only' | 'followup_enabled' | 'followup_max_attempts'
+    | 'persona_kind' | 'reach' | 'transfer_config' | 'booking_enabled' | 'handoff_target' | 'handoff_roleta_config_id'
+    | 'handoff_user_id' | 'lead_facing_name' | 'number_owner_id' | 'qualification_questions'>>;
 
-const CONFIGURAR: Corrigir = { tela: 'configurar' };
+/** O passo do passo a passo que corrige cada coisa (entrega 2). */
+const PASSO = (passo: number): Corrigir => ({ tela: 'configurar', passo });
 
 // Item do Diagnóstico com erro que PARA a IA, e a frase do selo. Os outros erros
 // (base de conhecimento, imóvel padrão) viram pendência, não veredito: ela
 // continua respondendo, só pior.
 const PARADA_POR_ITEM: Record<string, { frase: string; corrigir?: Corrigir }> = {
-  inbox: { frase: 'Parada: o número desta IA não existe mais', corrigir: CONFIGURAR },
-  mode: { frase: 'Parada: está em "só follow-up" e não responde quem escreve', corrigir: CONFIGURAR },
+  inbox: { frase: 'Parada: o número desta IA não existe mais', corrigir: PASSO(6) },
+  mode: { frase: 'Parada: está em "só follow-up" e não responde quem escreve', corrigir: PASSO(7) },
   credentials: { frase: 'Parada: o WhatsApp do número está desconectado', corrigir: { tela: 'diagnostico' } },
   api_key: { frase: 'Parada: problema na plataforma, avise o suporte' },
 };
@@ -54,19 +58,19 @@ const PARADA_POR_ITEM: Record<string, { frase: string; corrigir?: Corrigir }> = 
 // Onde se corrige cada item do Diagnóstico. Sem entrada = não tem botão (ex.: a
 // chave da IA no servidor, que o gestor não controla).
 const CORRIGIR_DO_ITEM: Record<string, Corrigir> = {
-  enabled: CONFIGURAR,
-  mode: CONFIGURAR,
-  inbox: CONFIGURAR,
-  traffic: CONFIGURAR,
+  enabled: PASSO(8),
+  mode: PASSO(7),
+  inbox: PASSO(6),
+  traffic: PASSO(6),
   activity: { tela: 'diagnostico' },
   credentials: { tela: 'diagnostico' },
   knowledge: { tela: 'ensinar' },
   files: { tela: 'ensinar' },
-  handoff: CONFIGURAR,
-  default_property: CONFIGURAR,
-  schedule: CONFIGURAR,
-  triggers: CONFIGURAR,
-  conflict: CONFIGURAR,
+  handoff: PASSO(2),
+  default_property: PASSO(5),
+  schedule: PASSO(6),
+  triggers: PASSO(6),
+  conflict: PASSO(6),
 };
 
 /** Os gatilhos que o servidor de fato avalia: a lista + a palavra-chave antiga, se a lista não tiver gatilho de palavra. */
@@ -144,17 +148,17 @@ export function restricaoDosGatilhos(agent: AgenteLido): { frase: string; parada
 }
 
 export function situacaoDaIa(agent: AgenteLido, diagnostics?: HealthReport | null): Situacao {
-  if (!agent.enabled && !agent.inbox_id) return { tipo: 'rascunho', frase: 'Rascunho: falta escolher o número', corrigir: CONFIGURAR };
-  if (!agent.enabled) return { tipo: 'desligada', frase: 'Desligada', corrigir: CONFIGURAR };
-  if (!agent.inbox_id) return { tipo: 'parada', frase: 'Parada: falta o número', corrigir: CONFIGURAR };
+  if (!agent.enabled && !agent.inbox_id) return { tipo: 'rascunho', frase: 'Rascunho: falta escolher o número', corrigir: PASSO(1) };
+  if (!agent.enabled) return { tipo: 'desligada', frase: 'Desligada', corrigir: PASSO(8) };
+  if (!agent.inbox_id) return { tipo: 'parada', frase: 'Parada: falta o número', corrigir: PASSO(6) };
   if (agent.followup_only) return { tipo: 'parada', ...PARADA_POR_ITEM.mode };
 
   const erro = (diagnostics?.items ?? []).find((i) => i.status === 'error' && PARADA_POR_ITEM[i.key]);
   if (erro) return { tipo: 'parada', ...PARADA_POR_ITEM[erro.key] };
 
   const restricao = restricaoDosGatilhos(agent);
-  if (restricao?.parada) return { tipo: 'parada', frase: `Parada: ${restricao.frase}`, corrigir: CONFIGURAR };
-  if (restricao) return { tipo: 'restricao', frase: `Atendendo com restrição: ${restricao.frase}`, corrigir: CONFIGURAR };
+  if (restricao?.parada) return { tipo: 'parada', frase: `Parada: ${restricao.frase}`, corrigir: PASSO(6) };
+  if (restricao) return { tipo: 'restricao', frase: `Atendendo com restrição: ${restricao.frase}`, corrigir: PASSO(6) };
 
   return { tipo: 'atendendo', frase: 'Atendendo' };
 }
@@ -174,12 +178,20 @@ function daItem(item: HealthItem): Pendencia {
  * (sem os itens em dia) mais o que a tela sabe sozinha: gatilho restringindo
  * (o servidor marca verde) e follow-up sem limite de tentativas.
  */
+const TITULO_NO_PAINEL: Record<string, string> = {
+  persona_sem_dono: 'Dono do número',
+  persona_destino: 'Pra onde vai o lead',
+  destino_sem_roleta: 'Pra onde vai o lead',
+  destino_sem_corretor: 'Pra onde vai o lead',
+  perguntas_vazias: 'Perguntas antes de passar',
+};
+
 export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | null): Pendencia[] {
   // "IA ligada" desligada já é o veredito; repetir na lista é ruído.
   const lista = (diagnostics?.items ?? []).filter((i) => i.status !== 'ok' && i.key !== 'enabled').map(daItem);
 
   if (!diagnostics && agent.enabled && !agent.inbox_id) {
-    lista.push({ chave: 'inbox', titulo: 'Número de WhatsApp', detalhe: 'Nenhum número escolhido. Sem ele a IA não recebe nem responde ninguém.', grave: true, corrigir: CONFIGURAR });
+    lista.push({ chave: 'inbox', titulo: 'Número de WhatsApp', detalhe: 'Nenhum número escolhido. Sem ele a IA não recebe nem responde ninguém.', grave: true, corrigir: PASSO(6) });
   }
 
   const restricao = restricaoDosGatilhos(agent);
@@ -189,7 +201,7 @@ export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | n
       titulo: 'Quem ela atende',
       detalhe: `${restricao.frase.charAt(0).toUpperCase()}${restricao.frase.slice(1)}.`,
       grave: restricao.parada,
-      corrigir: CONFIGURAR,
+      corrigir: PASSO(6),
     });
   }
 
@@ -197,10 +209,20 @@ export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | n
     lista.push({
       chave: 'followup_sem_limite',
       titulo: 'Follow-up sem limite de tentativas',
-      detalhe: 'Ela volta a chamar quem sumiu sem parar. Defina um máximo de tentativas no Follow-up automático.',
+      detalhe: 'Ela volta a chamar quem sumiu sem parar. Defina um máximo de tentativas no passo Voltar a chamar.',
       grave: false,
-      corrigir: CONFIGURAR,
+      corrigir: PASSO(7),
     });
+  }
+
+  // Entrega 2: o que só a configuração sabe (persona e destino), com o passo que
+  // corrige. É aqui que aparece a IA antiga que fala como o corretor e entrega pra
+  // um corretor fixo que não é o dono do número. O nome que o lead vê não entra no
+  // Painel (é pendência do passo 1 e trava o Ligar, mas não para quem já atende).
+  for (const p of pendenciasDosPassos(agent)) {
+    const titulo = TITULO_NO_PAINEL[p.chave];
+    if (!titulo || lista.some((x) => x.chave === p.chave)) continue;
+    lista.push({ chave: p.chave, titulo, detalhe: p.frase, grave: p.impedeLigar, corrigir: PASSO(p.passo) });
   }
 
   return [...lista.filter((p) => p.grave), ...lista.filter((p) => !p.grave)];
