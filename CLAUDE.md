@@ -6598,3 +6598,58 @@ Caso real: o Leonardo (Mais que Imóveis) desligou "Rejeitar chamadas" e o clien
 8. **`Secao`/`Campo` moram em `src/components/base`** (o Meu site importa de lá); **`PilulasDias`** em `src/components/schedule` (a janela de horário de visita usa).
 9. Blocos do follow-up e o editor de regras de entrada vêm da tela antiga, em `configurar/blocos/`; ali `onSave` só muda o rascunho.
 10. Escrita do cenário de repasse passa por `keepBriefing` (trava em `handoffBriefing.spec`).
+
+## Testar fiel e comparação de roteiros (desde 2026-10-05, entrega 3 da IA Vendedora)
+
+Pedido do dono do produto: o Testar mentia. Rodava em outro modelo, sem as regras
+de repasse, sem a ficha, sem a abertura por campanha e sem a agenda.
+
+O que aparece na tela, em *IA Vendedora → Testar*:
+
+- **Chat em destaque**; à esquerda, *Cenários* (cada um com subtítulo, sem
+  depender de passar o mouse), *Ajustar o teste* (nome, de onde veio, interesse,
+  respostas do formulário, imóvel) e *Carregar uma conversa real* (só telefone).
+- Cada mensagem roda **o mesmo atendimento do lead real** (no Haiku, ver
+  decisões): a resposta sai quebrada como a rajada sairia ("digitando 1,2 s"), com curtida,
+  áudio ("🎤 áudio"), fotos e arquivos.
+- **O que aconteceria**: pra quem passaria o lead (roleta, corretor, dono), a
+  visita que marcaria (dia, hora, corretor), a ficha, o que falta perguntar, a
+  abertura usada e as travas ("No atendimento real: fora do horário. O teste
+  respondeu mesmo assim.").
+- **Avançar o tempo** (*Até a IA agir sozinha · 1 hora · … · 3 dias*): mostra a
+  retomada e o follow-up quando sairiam, no horário do follow-up.
+- *Carregar uma conversa real* traz o histórico, a ficha, a abertura e o dono.
+
+No admin, *IA Vendedora → Comparação*: escolhe a IA, as conversas recentes e os
+cenários, e cada resposta real é refeita com o roteiro antigo e o novo; uma IA
+avaliadora dá nota (obrigatórias antes de passar, hora e destino do repasse, quem
+ela é, configuração, terminou puxando conversa, regra de segurança). Antigo |
+novo | nota, filtro "Só onde discordam", veredito e "Copiar resumo".
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Nada sai e nada é gravado.** O teste é uma conversa em memória; a trava do
+  servidor aborta o teste se algo tentar sair. O estado do teste mora na tela e
+  volta inteiro a cada mensagem — recarregar a página zera o teste.
+- **O Testar roda no Haiku** (modelo de teste, como sempre). Decisão de 05/10: a
+  meta é toda IA no Haiku. A tela mostra "Teste no Haiku" e, se a IA atende em
+  outro modelo, "Esta IA atende no Sonnet; o teste usa o Haiku". 60 testes por
+  hora por IA.
+- **A comparação roda no modelo da própria IA** (é ela que decide ligar o roteiro
+  novo). O modelo da avaliadora ainda vai ser decidido pelo dono do produto.
+- **Travas de configuração só avisam** (desligada, fora do horário, limite do
+  dia, sem número): testar antes de ligar é o uso principal. **Travas da
+  conversa calam** como no atendimento (repasse feito, gatilho, pausada).
+- *Link de anúncio com IA* saiu, sem ir pra outro lugar (o código do imóvel do teste ficou em *Ajustar o teste*).
+- A comparação só existe pro super-admin; até a entrega 4 só há o roteiro 1
+  (roteiro 1 × roteiro 1 mede o ruído da própria avaliadora).
+
+Armadilhas:
+
+1. **O estado do teste é do servidor, não da tela**: a tela só devolve o que
+   recebeu. Não montar histórico aqui (era o que fazia o Testar divergir).
+2. **"Mandar pra mim" usa o imóvel do TURNO** da bolha, não o do campo.
+3. A hora vem no fuso da imobiliária e é lida do próprio texto
+   (`horaDoEnsaio`); não converter pelo fuso do navegador.
+4. **Aviso de "sem número"**: o texto do servidor já diz "no atendimento real";
+   a tela não prefixa de novo (`linhasDoQueAconteceria`).
