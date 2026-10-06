@@ -19,7 +19,7 @@ import type { ActiveHours, ActiveHoursMode } from '@/services/salesAgents/salesA
 import { formIdsDropped } from '@/features/salesAgents/formTrigger';
 import { lerEscolhas } from '@/features/salesAgents/tresEscolhas';
 import { resumoDeQuemAtende, resumoDoAtendimento } from '@/features/salesAgents/resumoDosPassos';
-import { TriggersSection } from '../../configuracao/legado/TriggersSection';
+import { TriggersSection } from '../blocos/TriggersSection';
 import { useRascunho } from '../useRascunho';
 import { CAMPOS_DO_PASSO } from '../camposDosPassos';
 import { Aviso, Caixa, CascaDoPasso, Escolha, type OpcaoDeEscolha } from '../pecas';

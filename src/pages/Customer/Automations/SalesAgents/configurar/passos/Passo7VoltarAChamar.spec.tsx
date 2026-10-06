@@ -19,7 +19,7 @@ beforeEach(() => {
 
 const salvar = () => userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
-vi.mock('../../configuracao/legado/FollowupSection', () => ({
+vi.mock('../blocos/FollowupSection', () => ({
   FollowupPipelinesRow: () => <p>quais leads</p>,
   FollowupHoursRow: () => <p>quando pode sair</p>,
   FollowupActionPicker: () => <p>o que ela faz</p>,

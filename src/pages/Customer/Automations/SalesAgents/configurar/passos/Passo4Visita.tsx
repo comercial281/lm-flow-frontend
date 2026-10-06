@@ -85,7 +85,7 @@ export default function Passo4Visita({ agent, aoSalvo, irParaPasso }: PropsDoPas
 
       <Secao titulo="Regras" descricao="O que ela confere antes de marcar.">
         <Caixa id="p4-mesmo-dia" rotulo="Visita para hoje só com o corretor confirmando"
-          descricao="Pra hoje ela não confirma sozinha: passa pro corretor." marcada={c.same_day_requires_human !== false}
+          descricao="Pra hoje ela não confirma sozinha e nunca afirma que alguém estará no local: quem confirma presença é o corretor." marcada={c.same_day_requires_human !== false}
           aoMudar={(v) => set({ same_day_requires_human: v })} />
         <Caixa id="p4-dois-leads" rotulo="Evitar dois leads no mesmo horário" marcada={c.avoid_double_booking !== false}
           aoMudar={(v) => set({ avoid_double_booking: v })} />

@@ -9,7 +9,7 @@ import { linhaDoTempo } from '@/features/salesAgents/resumoDosPassos';
 import {
   clampReengagementHours, REENGAGEMENT_DEFAULT_FIRST_HOURS, REENGAGEMENT_DEFAULT_SECOND_HOURS,
 } from '../../reengagementHours';
-import { FollowupActionPicker, FollowupHoursRow, FollowupPipelinesRow } from '../../configuracao/legado/FollowupSection';
+import { FollowupActionPicker, FollowupHoursRow, FollowupPipelinesRow } from '../blocos/FollowupSection';
 import { useRascunho } from '../useRascunho';
 import { CAMPOS_DO_PASSO } from '../camposDosPassos';
 import { Aviso, Caixa, CascaDoPasso } from '../pecas';

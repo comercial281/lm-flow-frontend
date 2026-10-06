@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { fonteDaIaVendedora } from '../../test/fonteDaIaVendedora';
+import { CAMPOS_DO_PASSO } from '../../pages/Customer/Automations/SalesAgents/configurar/camposDosPassos';
 
 import { checklistItems, checklistNotices, normalizeQuestion, toggleRequired } from './handoffChecklist';
 
@@ -155,25 +155,12 @@ describe('checklistNotices', () => {
 // A tela monta o PATCH campo a campo e descarta em silêncio o que não estiver na lista do
 // `saveAgent` — a cicatriz dos dois campos do book do imóvel, que a tela mostra e não
 // salva. `transfer_config` já está lá, e é por dentro dele que as obrigatórias viajam.
-describe('a gravação passa pelo saveAgent', () => {
-  const tela = fonteDaIaVendedora();
-
-  it('transfer_config está na lista campo a campo', () => {
-    expect(tela).toMatch(/transfer_config:\s*patch\.transfer_config/);
-  });
-
-  // As obrigatórias NÃO podem virar um campo solto do agente: fora do transfer_config
-  // elas precisariam de uma linha própria no saveAgent e nos dois controllers do servidor.
-  it('as obrigatórias viajam dentro do transfer_config, não como campo solto', () => {
-    expect(tela).toContain('required_questions: proximas');
-
-    // Toda GRAVAÇÃO das obrigatórias sai por dentro do transfer_config. Como campo solto
-    // do agente, elas precisariam de linha própria no saveAgent e nos dois controllers do
-    // servidor — e sem isso seriam descartadas em silêncio, com a tela dizendo *Salvo*.
-    const gravacoes = tela
-      .split('\n')
-      .filter((linha) => linha.includes('onSave') && linha.includes('required_questions'));
-    expect(gravacoes.length).toBeGreaterThan(0);
-    gravacoes.forEach((linha) => expect(linha).toContain('transfer_config'));
+// Desde a entrega 2 cada passo grava os campos DELE (camposDosPassos.ts). As
+// obrigatórias NÃO podem virar campo solto do agente: viajam como subchave do
+// transfer_config (passo 3), mescladas sobre o último salvo.
+describe('a gravação das obrigatórias', () => {
+  it('é subchave do transfer_config no passo 3, nunca campo solto', () => {
+    expect(CAMPOS_DO_PASSO[3]).toContain('transfer_config.required_questions');
+    expect(Object.values(CAMPOS_DO_PASSO).flat()).not.toContain('required_questions');
   });
 });

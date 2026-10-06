@@ -19,7 +19,7 @@ beforeEach(() => {
 
 const salvar = () => userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
-vi.mock('../../configuracao/legado/TriggersSection', () => ({ TriggersSection: () => <p>regras de entrada</p> }));
+vi.mock('../blocos/TriggersSection', () => ({ TriggersSection: () => <p>regras de entrada</p> }));
 
 import Passo6Atendimento from './Passo6Atendimento';
 

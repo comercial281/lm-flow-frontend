@@ -6,7 +6,7 @@ import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { leadAdsFormsService, type LeadAdsFormConfig } from '@/services/leadAds/leadAdsFormsService';
 import { formOptions, formTriggerNotice, toggleForm } from '@/features/salesAgents/formTrigger';
 import { Seletor } from '@/components/base/Seletor';
-import { type PipelineOpt, type StageOpt } from '../comum';
+import { type PipelineOpt, type StageOpt } from '../../configuracao/comum';
 
 // ---------------- Gatilhos de ativação (multi) ----------------
 

@@ -75,7 +75,9 @@ describe('handoffBriefing', () => {
     it('preserva a escolha em TODA escrita do cenário', () => {
       const escritas = tela.split('\n').filter((l) => l.includes('transfer_config:'));
       const doCenario = escritas.filter((l) => l.includes('mode:') || l.includes('transfer_config: keepBriefing'));
-      expect(doCenario.length).toBeGreaterThanOrEqual(4);
+      // Desde a entrega 2 o cenário só é escrito no passo 2 (escolher "quando passa"
+      // e o ajuste ao trocar o alcance): duas escritas.
+      expect(doCenario.length).toBeGreaterThanOrEqual(2);
       doCenario.forEach((linha) => expect(linha).toContain('keepBriefing'));
     });
   });

@@ -21,21 +21,11 @@ const read = (p: string) => readFileSync(resolve(__dirname, '../../..', p), 'utf
 describe('roteiro da IA na tela do cliente', () => {
   const src = fonteDaIaVendedora();
 
-  it('o roteiro entra na lista campo-a-campo do PATCH', () => {
-    // ⚠️ O corte vai até o FIM do payload (`setSelected(updated)`), não a um
-    // número fixo de caracteres: a lista cresce a cada campo novo, e com a janela
-    // fixa de 6000 este spec passou a reprovar quando o recorte por funil do
-    // follow-up entrou ANTES do roteiro — sem nada de errado com o roteiro.
-    const saveAgent = src.slice(src.indexOf('const saveAgent'), src.indexOf('setSelected(updated)'));
-
-    expect(saveAgent).toContain('playbook:');
-  });
-
-  // Com `??`, limpar o roteiro inteiro (voltar tudo ao padrão de fábrica) seria
-  // trocado de volta pelo valor antigo: a tela mostraria "no padrão", o aviso
-  // diria "Salvo", e o servidor continuaria com o texto reescrito.
-  it('e entra com `in`, não com `??` — objeto vazio é escolha legítima', () => {
-    expect(src).toContain("playbook: 'playbook' in patch ? patch.playbook : selected.playbook");
+  // Desde a entrega 2 o roteiro (reescrita de blocos) mora no Avançado e grava
+  // direto, só o `playbook` INTEIRO que a seção monta (objeto vazio = tudo de
+  // fábrica): nada de `??` trocando a limpeza pelo valor antigo.
+  it('o Avançado grava só o playbook, direto', () => {
+    expect(src).toContain('salesAgentsService.update(agent.id, { playbook: patch.playbook })');
   });
 
   it('a chave do gate vai LITERAL, para os scanners do catálogo a enxergarem', () => {
@@ -45,7 +35,7 @@ describe('roteiro da IA na tela do cliente', () => {
   // O comentário dizia "a Leal Mídia sempre vê" e o código não fazia isso: a seção
   // ficava escondida até de quem libera a chave. A aba de Landings é a régua.
   it('e a Leal Mídia sempre vê, como a aba de Landings', () => {
-    expect(src).toContain('isSuper || roteiroToggle');
+    expect(src).toContain('equipe || roteiroToggle');
     expect(src).toContain('isSuper || insightsToggle');
   });
 
