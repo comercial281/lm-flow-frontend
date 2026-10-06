@@ -3,7 +3,8 @@
 import type { PersonaDaIa } from '@/services/salesAgents/salesAgentsService';
 
 export const PERSONA_ROTULOS: Record<PersonaDaIa, string> = {
-  broker: 'O próprio corretor',
+  // 06/10/2026 (onda 3): "Dono da imobiliária" (owner) não é mais oferecido; IA antiga "dono" é lida como Consultora.
+  broker: 'O corretor',
   owner: 'Dono da imobiliária',
   // Era "Assistente da imobiliária" (que admitia ser virtual). Decisão do dono, 06/10:
   // o caso mais comum é uma consultora com nome de gente, da equipe da imobiliária.
