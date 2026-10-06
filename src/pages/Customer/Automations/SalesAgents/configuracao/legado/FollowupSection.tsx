@@ -187,7 +187,7 @@ function ReengagementRow({
  * âmbar quando a pessoa escolhe "só destes funis" e não marca nenhum: sem ele,
  * ela sai da tela achando que recortou e a IA vai atrás de todo mundo, calada.
  */
-function FollowupPipelinesRow({
+export function FollowupPipelinesRow({
   agent, onSave,
 }: {
   agent: SalesAgent;
@@ -311,7 +311,7 @@ function FollowupPipelinesRow({
  * que esta tela veio matar — antes o horário era fixo no servidor, ninguém
  * escolhia e ninguém via.
  */
-function FollowupHoursRow({
+export function FollowupHoursRow({
   agent, onSave,
 }: {
   agent: SalesAgent;
@@ -448,7 +448,7 @@ const FOLLOWUP_ACTIONS: [SalesAgentFollowupAction, string, string][] = [
    'A IA coloca o lead no follow-up escolhido, sem mexer no card. Para quem não usa o quadro de funil. Não consome IA.'],
 ];
 
-function FollowupActionPicker({
+export function FollowupActionPicker({
   agent, onSave,
 }: {
   agent: SalesAgent;
