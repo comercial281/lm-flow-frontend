@@ -310,6 +310,7 @@ export default function SalesAgents() {
                   conferindo={conferindo}
                   falhou={diagnosticoFalhou === selected.id}
                   mostrarSugestoes={insightsLiberado}
+                  equipe={isSuper}
                   aoIr={irPara}
                 />
               )}

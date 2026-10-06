@@ -15,6 +15,7 @@ import type { TelaId } from '@/features/salesAgents/iaMenu';
 import type { PaginaId } from '../configurar/paginas';
 import { motivoSemAtendimento, pendenciasDaIa, type Situacao } from '@/features/salesAgents/situacao';
 import { SuggestionCard } from './TelaSugestoes';
+import UltimosAtendimentos from './UltimosAtendimentos';
 
 // Visão geral, números do período — o que ESTA IA produziu, pro próprio cliente ver.
 //
@@ -181,11 +182,13 @@ export interface TelaVisaoGeralProps {
   falhou?: boolean;
   /** Mesma chave das telas Sugestões e Relatório semanal (`ia_insights`). */
   mostrarSugestoes: boolean;
+  /** Equipe da Leal Mídia: vê o custo e o erro técnico nos últimos atendimentos. */
+  equipe: boolean;
   /** `pagina`: a página do Configurar que corrige a pendência (onda 3). */
   aoIr: (tela: TelaId, pagina?: PaginaId) => void;
 }
 
-export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferindo, falhou = false, mostrarSugestoes, aoIr }: TelaVisaoGeralProps) {
+export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferindo, falhou = false, mostrarSugestoes, equipe, aoIr }: TelaVisaoGeralProps) {
   const pendencias = pendenciasDaIa(agent, diagnostico);
 
   return (
@@ -230,6 +233,8 @@ export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferind
         <h2 id="vg-numeros" className="text-sm font-medium">Números do período</h2>
         <ResultsTab agent={agent} motivo={motivoSemAtendimento(situacao)} />
       </section>
+
+      <UltimosAtendimentos agentId={agent.id} completo={equipe} />
 
       {mostrarSugestoes && <SugestoesPendentes agent={agent} aoIr={aoIr} />}
     </div>

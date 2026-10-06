@@ -5,8 +5,9 @@ import userEvent from '@testing-library/user-event';
 const performance = vi.hoisted(() => vi.fn());
 const listSuggestions = vi.hoisted(() => vi.fn());
 const applySuggestion = vi.hoisted(() => vi.fn());
+const runs = vi.hoisted(() => vi.fn().mockResolvedValue({ runs: [], totals: {} }));
 vi.mock('@/services/salesAgents/salesAgentsService', () => ({
-  salesAgentsService: { performance, listSuggestions, applySuggestion, dismissSuggestion: vi.fn() },
+  salesAgentsService: { performance, listSuggestions, applySuggestion, runs, dismissSuggestion: vi.fn() },
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -23,7 +24,7 @@ const sugestao = (id: string, status: 'pending' | 'applied' = 'pending') => ({
 function abrir(extra: Partial<TelaVisaoGeralProps> = {}) {
   const props: TelaVisaoGeralProps = {
     agent: agente, situacao: { tipo: 'atendendo', frase: 'Atendendo' }, diagnostico: { status: 'ok', items: [] },
-    conferindo: false, falhou: false, mostrarSugestoes: true, aoIr: vi.fn(), ...extra,
+    conferindo: false, falhou: false, mostrarSugestoes: true, equipe: false, aoIr: vi.fn(), ...extra,
   };
   render(<TelaVisaoGeral {...props} />);
   return props;
