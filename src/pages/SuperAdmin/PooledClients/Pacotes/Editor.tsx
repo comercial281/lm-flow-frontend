@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import EmptyState from '@/components/base/EmptyState';
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label } from '@/components/ui/ds';
@@ -10,6 +11,7 @@ import QuadrosDeFuncoes from '../QuadrosDeFuncoes';
 import { validarLimites } from '../limites';
 import { plural } from '@/lib/formato';
 import { resumoDeMudancas } from './resumoDeMudancas';
+import { ESQUELETO, GRADE_CAMPOS, PAGINA, SECAO, TITULO_SECAO } from '../estilo';
 
 // Editor de pacote: nome, funções (os mesmos quadros da página do cliente) e
 // limites. Salvar mostra a prévia e pergunta se aplica aos clientes do pacote;
@@ -85,13 +87,13 @@ export default function Editor() {
   };
 
   if (erro) return <EmptyState tipo="erro" title="Não deu para carregar o pacote" aoTentarDeNovo={() => void carregar()} />;
-  if (!pacote) return <div aria-busy="true" className="h-60 animate-pulse rounded-lg bg-muted" />;
+  if (!pacote) return <div aria-busy="true" className={`h-60 ${ESQUELETO}`} />;
   const linhas = previa ? resumoDeMudancas(previa.changes) : [];
 
   return (
-    <div className="flex flex-col gap-4">
-      <Link to="/admin/clientes/pacotes" className="text-sm text-muted-foreground hover:text-foreground">← Pacotes</Link>
-      <div className="flex flex-wrap items-end gap-3">
+    <div className={PAGINA}>
+      <Link to="/admin/clientes/pacotes" className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Pacotes</Link>
+      <div className="flex flex-wrap items-end gap-4">
         <div><Label htmlFor="pk-nome">Nome</Label><Input id="pk-nome" value={nome} onChange={(e) => setNome(e.target.value)} className="w-64" /></div>
         <p className="text-sm text-muted-foreground">{plural(pacote.clients_count, 'cliente', 'clientes')} neste pacote</p>
         <div className="ml-auto flex gap-2">
@@ -99,9 +101,9 @@ export default function Editor() {
           <Button disabled={!valores || pedindo} onClick={() => void pedirSalvar()}>Salvar pacote</Button>
         </div>
       </div>
-      <section aria-labelledby="pk-limites" className="rounded-lg border p-4">
-        <h2 id="pk-limites" className="mb-3 text-sm font-semibold">Limites</h2>
-        <div className="grid gap-3 sm:grid-cols-3">
+      <section aria-labelledby="pk-limites" className={SECAO}>
+        <h2 id="pk-limites" className={TITULO_SECAO}>Limites</h2>
+        <div className={`mt-4 ${GRADE_CAMPOS}`}>
           <div><Label htmlFor="pk-num">Números de WhatsApp</Label><Input id="pk-num" aria-invalid={!!erros.numeros} aria-describedby={erros.numeros ? 'pk-num-erro' : undefined} inputMode="numeric" value={limites.numeros} onChange={(e) => setLimites({ ...limites, numeros: e.target.value })} />{erros.numeros && <p id="pk-num-erro" className="mt-1 text-xs text-destructive">{erros.numeros}</p>}</div>
           <div><Label htmlFor="pk-fr">Franquia de leads da IA</Label><Input id="pk-fr" aria-invalid={!!erros.franquia} aria-describedby={erros.franquia ? 'pk-fr-erro' : undefined} inputMode="numeric" placeholder="sem franquia" value={limites.franquia} onChange={(e) => setLimites({ ...limites, franquia: e.target.value })} />{erros.franquia && <p id="pk-fr-erro" className="mt-1 text-xs text-destructive">{erros.franquia}</p>}</div>
           <div><Label htmlFor="pk-pr">Preço do excedente (R$)</Label><Input id="pk-pr" aria-invalid={!!erros.preco} aria-describedby={erros.preco ? 'pk-pr-erro' : undefined} inputMode="decimal" value={limites.preco} onChange={(e) => setLimites({ ...limites, preco: e.target.value })} />{erros.preco && <p id="pk-pr-erro" className="mt-1 text-xs text-destructive">{erros.preco}</p>}</div>

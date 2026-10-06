@@ -13,6 +13,7 @@ import type { Pessoa } from '@/types/admin/clientes';
 import { copyText } from '@/utils/clipboard';
 import { pedidoRemoverPessoa } from '../confirmacoes';
 import type { PropsDaAba } from './Pagina';
+import { ESQUELETO, SECAO, TITULO_SECAO } from '../estilo';
 import { EQUIPE } from '../lista';
 
 // Pessoas do cliente (antiga janela Membros). Acesso SÓ por link: não existe
@@ -96,48 +97,50 @@ export default function AbaPessoas({ cliente }: PropsDaAba) {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      {erro ? (
-        <EmptyState tipo="erro" title="Não deu para carregar as pessoas" aoTentarDeNovo={() => void carregar()} />
-      ) : pessoas === null ? (
-        <div aria-busy="true" className="h-40 animate-pulse rounded-lg bg-muted" />
-      ) : pessoas.length === 0 ? (
-        <EmptyState tipo="vazio" title="Nenhuma pessoa ainda" description="Adicione a primeira pessoa abaixo." />
-      ) : (
-        <ul className="divide-y rounded-lg border">
-          {pessoas.map((p) => (
-            <li key={p.id} className="flex flex-wrap items-center gap-3 px-3 py-2">
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{p.name || p.email}</p>
-                <p className="truncate text-xs text-muted-foreground">{p.email}{p.role ? ' · ' : ''}{p.role && <span>{p.role}</span>}</p>
-              </div>
-              <span className="text-xs text-muted-foreground">{p.last_seen_at ? `visto ${tempoDesde(p.last_seen_at)}` : 'nunca entrou'}</span>
-              <Button size="sm" variant="outline" aria-label={`Copiar link de ${p.email}`} onClick={() => void copiarLink(p)}><Link2 className="h-4 w-4" /></Button>
-              <Button size="sm" variant="outline" aria-label={`Enviar link a ${p.email}`} disabled={!p.whatsapp_number} onClick={() => void enviarLink(p)}><Send className="h-4 w-4" /></Button>
-              {!EQUIPE.test(p.email) && (
-                <Button size="sm" variant="outline" aria-label={`Remover ${p.email}`} onClick={() => void remover(p)}><Trash2 className="h-4 w-4" /></Button>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="flex min-w-0 flex-col gap-4">
+        {erro ? (
+          <EmptyState tipo="erro" title="Não deu para carregar as pessoas" aoTentarDeNovo={() => void carregar()} />
+        ) : pessoas === null ? (
+          <div aria-busy="true" className={`h-40 ${ESQUELETO}`} />
+        ) : pessoas.length === 0 ? (
+          <EmptyState tipo="vazio" title="Nenhuma pessoa ainda" description="Adicione a primeira pessoa abaixo." />
+        ) : (
+          <ul className="divide-y rounded-xl border bg-card">
+            {pessoas.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{p.name || p.email}</p>
+                  <p className="truncate text-xs text-muted-foreground">{p.email}{p.role ? ' · ' : ''}{p.role && <span>{p.role}</span>}</p>
+                </div>
+                <span className="text-xs text-muted-foreground">{p.last_seen_at ? `visto ${tempoDesde(p.last_seen_at)}` : 'nunca entrou'}</span>
+                <Button size="sm" variant="outline" aria-label={`Copiar link de ${p.email}`} onClick={() => void copiarLink(p)}><Link2 className="h-4 w-4" /></Button>
+                <Button size="sm" variant="outline" aria-label={`Enviar link a ${p.email}`} disabled={!p.whatsapp_number} onClick={() => void enviarLink(p)}><Send className="h-4 w-4" /></Button>
+                {!EQUIPE.test(p.email) && (
+                  <Button size="sm" variant="outline" aria-label={`Remover ${p.email}`} onClick={() => void remover(p)}><Trash2 className="h-4 w-4" /></Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
 
-      {linkManual && (
-        <div role="status" className="rounded-lg border p-3">
-          <Label htmlFor="link-manual">Não deu pra copiar. Copie o link de acesso de {linkManual.quem}:</Label>
-          <Input id="link-manual" readOnly value={linkManual.url} onFocus={(e) => e.currentTarget.select()} />
-        </div>
-      )}
+        {linkManual && (
+          <div role="status" className={`${SECAO} flex flex-col gap-2`}>
+            <Label htmlFor="link-manual">Não deu pra copiar. Copie o link de acesso de {linkManual.quem}:</Label>
+            <Input id="link-manual" readOnly value={linkManual.url} onFocus={(e) => e.currentTarget.select()} />
+          </div>
+        )}
+      </div>
 
-      <section aria-labelledby="nova-pessoa" className="rounded-lg border p-4">
-        <h2 id="nova-pessoa" className="mb-3 text-sm font-semibold">Adicionar pessoa</h2>
-        <div className="grid gap-3 sm:grid-cols-3">
+      <section aria-labelledby="nova-pessoa" className={SECAO}>
+        <h2 id="nova-pessoa" className={TITULO_SECAO}>Adicionar pessoa</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3 xl:grid-cols-1">
           <div><Label htmlFor="np-email">E-mail</Label><Input id="np-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
           <div><Label htmlFor="np-nome">Nome</Label><Input id="np-nome" value={nome} onChange={(e) => setNome(e.target.value)} /></div>
           <div><Label htmlFor="np-tel">WhatsApp</Label><Input id="np-tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} /></div>
         </div>
         {telefone.trim() && (
-          <div className="mt-3 flex flex-wrap items-center gap-3">
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 text-sm"><Checkbox checked={enviarWa} onCheckedChange={(v) => setEnviarWa(v === true)} /> Enviar o link no WhatsApp</label>
             {enviarWa && (
               <Seletor aria-label="Número que envia" value={instancia} onChange={(e) => setInstancia(e.target.value)} className="w-56">
@@ -146,8 +149,8 @@ export default function AbaPessoas({ cliente }: PropsDaAba) {
             )}
           </div>
         )}
-        <p className="mt-3 text-xs text-muted-foreground">A pessoa cria a própria senha pelo link (vale 24 h). O link também é copiado pra você.</p>
-        <Button className="mt-3" disabled={!email.trim() || salvando} onClick={() => void adicionar()}>Adicionar pessoa</Button>
+        <p className="mt-4 text-xs text-muted-foreground">A pessoa cria a própria senha pelo link (vale 24 h). O link também é copiado pra você.</p>
+        <Button className="mt-4" disabled={!email.trim() || salvando} onClick={() => void adicionar()}>Adicionar pessoa</Button>
       </section>
       {dialogoDeConfirmacao}
     </div>
