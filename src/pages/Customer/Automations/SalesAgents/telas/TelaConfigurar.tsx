@@ -1,16 +1,16 @@
-// Configurar: o passo a passo (entrega 2), o mesmo pra criar e pra editar. O nome
-// da IA e o Ligar, que ficavam no cabeçalho da página antiga, moram nos passos 1 e
-// 8. Cada passo salva só o que é dele (configurar/useRascunho.ts).
-import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
+// Configurar: as páginas pela ordem da conversa (onda 3, 06/10/2026). Cada página
+// grava na hora (configurar/useGravarNaHora.ts), devolvendo a IA por `aoSalvo`.
+import type { HealthReport, SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import type { InboxOption } from '../configuracao/comum';
-import PassoAPasso from '../configurar/PassoAPasso';
+import ConfigurarPaginas from '../configurar/ConfigurarPaginas';
 
 export interface TelaConfigurarProps {
   agent: SalesAgent;
   inboxes: InboxOption[];
   aoSalvo: (a: SalesAgent) => void;
+  diagnostico: HealthReport | null;
 }
 
-export default function TelaConfigurar({ agent, inboxes, aoSalvo }: TelaConfigurarProps) {
-  return <PassoAPasso agent={agent} inboxes={inboxes} aoSalvo={aoSalvo} />;
+export default function TelaConfigurar(props: TelaConfigurarProps) {
+  return <ConfigurarPaginas {...props} />;
 }
