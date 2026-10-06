@@ -25,7 +25,7 @@ export default function AbaContrato({ cliente, aoMudar, recarregar }: PropsDaAba
   // `key` pelos limites: se o cliente mudar por fora (ex.: troca de pacote), os campos recomeçam dele.
   const chave = `${cliente.max_whatsapp_channels}|${cliente.ai_leads_included}|${cliente.ai_lead_overage_price_brl}`;
   const s = cliente.settings ?? {};
-  const chaveDaReceita = `${s.client_kind ?? ''}|${s.revenue_source ?? ''}|${s.revenue_brl ?? ''}|${cliente.package?.price_brl ?? ''}`;
+  const chaveDaReceita = `${s.client_kind ?? ''}|${s.revenue_source ?? ''}|${s.revenue_brl ?? ''}`;
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
       <div className="flex flex-col gap-4">
@@ -91,12 +91,12 @@ function BlocoDeReceita({ cliente, aoMudar }: Pick<PropsDaAba, 'cliente' | 'aoMu
           <legend className="text-sm font-medium">Valor que conta</legend>
           <RadioGroup value={fonte} onValueChange={setFonte} className="mt-2 flex flex-col gap-2">
             <div className="flex items-start gap-2">
-              <RadioGroupItem id="rec-cota" value="package" disabled={semCota} />
+              <RadioGroupItem id="rec-cota" value="package" disabled={semCota} aria-describedby={semCota ? 'rec-cota-motivo' : undefined} />
               <div>
                 <Label htmlFor="rec-cota" className={semCota ? 'text-muted-foreground' : undefined}>
                   {semCota ? 'Cota do plano' : `Cota do plano: ${cliente.package!.name} — ${dinheiro(preco)}/mês`}
                 </Label>
-                {semCota && <p className="text-xs text-muted-foreground">{motivoSemCota}</p>}
+                {semCota && <p id="rec-cota-motivo" className="text-xs text-muted-foreground">{motivoSemCota}</p>}
               </div>
             </div>
             <div className="flex items-start gap-2">

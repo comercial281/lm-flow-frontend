@@ -9,7 +9,7 @@ import { pacotesService } from '@/services/superAdmin/pacotesService';
 import type { EdicaoDoPacote, LimitesDoPacote, MudancasDoPacote, PacoteDetalhe } from '@/types/admin/pacotes';
 import QuadrosDeFuncoes from '../QuadrosDeFuncoes';
 import { validarLimites } from '../limites';
-import { plural } from '@/lib/formato';
+import { dinheiro, plural } from '@/lib/formato';
 import { lerReais } from '../receita';
 import { resumoDeMudancas } from './resumoDeMudancas';
 import { ESQUELETO, GRADE_CAMPOS, PAGINA, SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
@@ -96,7 +96,12 @@ export default function Editor() {
 
   if (erro) return <EmptyState tipo="erro" title="Não deu para carregar o pacote" aoTentarDeNovo={() => void carregar()} />;
   if (!pacote) return <div aria-busy="true" className={`h-60 ${ESQUELETO}`} />;
-  const linhas = previa ? resumoDeMudancas(previa.changes) : [];
+  const linhasDeFuncoes = previa ? resumoDeMudancas(previa.changes) : [];
+  const precoMudou = !!previa && preco !== undefined && preco !== (pacote.price_brl ?? null);
+  const textoDePreco = (v: number | null) => (v == null ? 'sem preço' : dinheiro(v));
+  const linhas = precoMudou
+    ? [...linhasDeFuncoes, `Preço do plano: de ${textoDePreco(pacote.price_brl ?? null)} para ${textoDePreco(preco as number | null)} (muda a receita dos clientes na cota do plano)`]
+    : linhasDeFuncoes;
 
   return (
     <div className={PAGINA}>
@@ -131,7 +136,7 @@ export default function Editor() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{previa && previa.clients_count > 0 ? `Aplicar ${previa.clients_count === 1 ? 'ao' : 'aos'} ${plural(previa.clients_count, 'cliente', 'clientes')} deste pacote?` : 'Salvar o pacote?'}</DialogTitle>
-            <DialogDescription>{linhas.length ? 'O que muda:' : 'Nenhuma função ou limite muda.'}{previa && previa.clients_count > 0 ? ' Ajustes manuais de cada cliente são mantidos.' : ''}</DialogDescription>
+            <DialogDescription>{linhas.length ? 'O que muda:' : 'Nenhuma função ou limite muda.'}{precoMudou && linhasDeFuncoes.length === 0 ? ' Funções e limites não mudam.' : ''}{previa && previa.clients_count > 0 && linhasDeFuncoes.length > 0 ? ' Ajustes manuais de cada cliente são mantidos.' : ''}</DialogDescription>
           </DialogHeader>
           <ul className="list-disc pl-5 text-sm">{linhas.map((l) => <li key={l}>{l}</li>)}</ul>
           <DialogFooter>
