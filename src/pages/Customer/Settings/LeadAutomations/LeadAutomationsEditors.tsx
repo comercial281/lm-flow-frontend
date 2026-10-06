@@ -37,6 +37,9 @@ import {
   toggleAcceptedBy,
 } from './acceptedByFilter';
 import { Seletor } from '@/components/base/Seletor';
+import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
+import { useClientToggle } from '@/contexts/TenantFeaturesContext';
+import type { OpcoesDaValidacao } from '@/services/leadAutomation/leadAutomationService';
 import { VariableChipBar } from '@/components/flowAutomations/VariableChipBar';
 import { FLOW_KIND_COPY } from '@/features/flowAutomations/kind';
 
@@ -82,6 +85,8 @@ export interface AutomationResources {
   /** Funis de conversa (Funis de mensagem, sprint 4): o que a ação "Disparar funil de mensagens" escolhe desde 05/10/2026. */
   conversationFunnels: FlowAutomation[];
   evolutionInstances: EvolutionInstance[];
+  /** Todas as roletas (a ação "Distribuir pela roleta" oferece as ligadas + a escolhida). */
+  roletas?: RoletaConfig[];
   reloadFunnels: () => void;
   reloadLabels: () => void;
   loading: boolean;
@@ -101,6 +106,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
   const [messageFunnels, setMessageFunnels] = useState<MessageFunnel[]>([]);
   const [conversationFunnels, setConversationFunnels] = useState<FlowAutomation[]>([]);
   const [evolutionInstances, setEvolutionInstances] = useState<EvolutionInstance[]>([]);
+  const [roletas, setRoletas] = useState<RoletaConfig[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Recarrega a lista de funis de conversa (o "Recarregar" da ação, depois de
@@ -124,7 +130,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     setLoading(true);
 
     (async () => {
-      const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes, adRes, formRes, funnelsRes, evoRes, fuFlowsRes, convRes] = await Promise.allSettled([
+      const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes, adRes, formRes, funnelsRes, evoRes, fuFlowsRes, convRes, roletasRes] = await Promise.allSettled([
         labelsService.getLabels(),
         followupSequencesService.getAll(),
         usersService.getUsers(),
@@ -136,6 +142,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
         isSuperAdmin ? leadAutomationService.getEvolutionInstances() : Promise.resolve([]),
         flowAutomationsService.list({ kind: 'followup' }),
         flowAutomationsService.list({ kind: 'conversation' }),
+        roletaConfigService.getAll(),
       ]);
 
       if (cancelled) return;
@@ -150,6 +157,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
       if (evoRes.status === 'fulfilled') setEvolutionInstances(evoRes.value ?? []);
       if (fuFlowsRes.status === 'fulfilled') setFollowupFlows((fuFlowsRes.value ?? []).filter(f => !f.archived_at));
       if (convRes.status === 'fulfilled') setConversationFunnels((convRes.value ?? []).filter(f => !f.archived_at));
+      if (roletasRes.status === 'fulfilled') setRoletas(roletasRes.value ?? []);
 
       if (pipelinesRes.status === 'fulfilled') {
         const list = pipelinesRes.value.data ?? [];
@@ -172,7 +180,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     return () => { cancelled = true; };
   }, [enabled]);
 
-  return { labels, sequences, followupFlows, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, messageFunnels, conversationFunnels, evolutionInstances, reloadFunnels, reloadLabels, loading };
+  return { labels, sequences, followupFlows, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, messageFunnels, conversationFunnels, evolutionInstances, roletas, reloadFunnels, reloadLabels, loading };
 }
 
 // ============================================================================
@@ -648,6 +656,7 @@ function VariableChips({ onInsert }: { onInsert: (token: string) => void }) {
 }
 
 export function ActionEditor({ action, onChange, resources }: ActionEditorProps) {
+  const roletaNova = useClientToggle('roleta_nova');
   const params = (action.params ?? {}) as Record<string, string | number>;
   const setParam = (key: string, value: string | number) =>
     onChange({ ...action, params: { ...params, [key]: value } });
@@ -1167,12 +1176,41 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
       );
 
     // ----- assign_via_roleta -----
-    case 'assign_via_roleta':
+    // Roleta nova (06/10/2026): a ação escolhe a roleta. Com a chave
+    // `roleta_nova` é obrigatório (a roleta não tem número); sem ela, vazio
+    // continua sendo "a roleta do número da conversa", como sempre foi.
+    case 'assign_via_roleta': {
+      const escolhida = String(params.roleta_config_id ?? '');
+      const lista = (resources.roletas ?? []).filter(r => r.is_active || r.id === escolhida);
       return (
-        <p className="text-sm text-muted-foreground mt-1">
-          Atribui o lead ao próximo corretor disponível conforme a roleta configurada para o canal.
-        </p>
+        <Field
+          label={roletaNova ? 'Roleta *' : 'Roleta'}
+          hint={roletaNova
+            ? 'Oferece o lead ao próximo da fila da roleta escolhida. Funciona com lead sem conversa.'
+            : 'Oferece o lead a um corretor pela roleta escolhida. Sem roleta escolhida, vale a roleta do número da conversa.'}
+        >
+          <Seletor
+            aria-label="Roleta"
+            value={escolhida}
+            onChange={e => {
+              const next = { ...params };
+              if (e.target.value) next.roleta_config_id = e.target.value;
+              else delete next.roleta_config_id;
+              onChange({ ...action, params: next });
+            }}
+            className={baseSelectClass}
+          >
+            <option value="">{roletaNova ? 'Escolha a roleta' : 'A roleta do número da conversa'}</option>
+            {lista.map(r => (
+              <option key={r.id} value={r.id}>{roletaLabel(r)}{r.is_active ? '' : ' (desligada)'}</option>
+            ))}
+            {escolhida && !lista.some(r => r.id === escolhida) && (
+              <option value={escolhida}>Roleta escolhida (não existe mais)</option>
+            )}
+          </Seletor>
+        </Field>
       );
+    }
 
     // ----- wait -----
     case 'wait':
@@ -1310,6 +1348,7 @@ export function validateRule(
   trigger: string,
   conditions: LeadAutomationCondition[],
   actions: LeadAutomationAction[],
+  opcoes: OpcoesDaValidacao = {},
 ): ValidationResult {
   if (triggerNeedsCondition(trigger)) {
     // Condição opcional: message_received (keyword vazia = qualquer msg) e
@@ -1337,7 +1376,10 @@ export function validateRule(
   }
 
   for (const action of actions) {
-    const [key] = missingActionParams(action);
+    const [key] = missingActionParams(action, opcoes);
+    if (key === 'roleta_config_id') {
+      return { ok: false, error: 'Escolha a roleta na ação "Distribuir pela roleta".' };
+    }
     if (key) {
       return {
         ok: false,
@@ -1474,8 +1516,11 @@ export function formatActionSummary(
     }
     case 'send_document':
       return p.filename ? `Documento: ${p.filename}` : p.media_url ? `Documento: ${String(p.media_url).slice(0, 40)}...` : '(sem documento)';
-    case 'assign_via_roleta':
-      return 'Distribui via roleta';
+    case 'assign_via_roleta': {
+      if (!p.roleta_config_id) return 'Roleta do número da conversa';
+      const r = (resources.roletas ?? []).find(x => x.id === p.roleta_config_id);
+      return r ? `Roleta: ${roletaLabel(r)}` : 'Roleta: (não encontrada)';
+    }
     case 'wait':
       return WAIT_ACTION_NOTICE;
     case 'notify_broker':

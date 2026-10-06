@@ -80,7 +80,7 @@ const DESCRIPTIONS: Record<string, string> = {
   'lead_action:remove_label': 'Tira uma etiqueta do lead.',
   'lead_action:move_pipeline_stage': 'Leva o card do lead pra outra etapa do funil.',
   'lead_action:assign_broker': 'Escolhe o corretor responsável pelo lead.',
-  'lead_action:assign_via_roleta': 'Escolhe o corretor pela roleta.',
+  'lead_action:assign_via_roleta': 'Oferece o lead a um corretor pela roleta escolhida.',
   'lead_action:create_task': 'Cria uma tarefa pra alguém da equipe.',
   'lead_action:start_followup_sequence': 'Coloca o lead num follow-up do formato antigo.',
   'lead_action:start_followup_flow': 'Coloca o lead num follow-up.',

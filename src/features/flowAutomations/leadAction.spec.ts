@@ -54,7 +54,7 @@ describe('bloco "ação das Automações" (lead_action)', () => {
   it('o cartão no canvas mostra a frase da lista de regras', () => {
     const actionSummary = (a: Parameters<typeof formatActionSummary>[0]) => formatActionSummary(a, resources);
     expect(summaryLine(block({ action_type: 'assign_broker', params: { user_id: 'u1' } }), { actionSummary })).toBe('Corretor: Ana');
-    expect(summaryLine(block({ action_type: 'assign_via_roleta', params: {} }), { actionSummary })).toBe('Distribui via roleta');
+    expect(summaryLine(block({ action_type: 'assign_via_roleta', params: {} }), { actionSummary })).toBe('Roleta do número da conversa');
     expect(summaryLine(block({ action_type: 'create_task', params: {} }), { actionSummary })).toBe('(tarefa sem título)');
   });
 });
