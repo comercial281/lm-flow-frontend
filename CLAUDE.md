@@ -6919,7 +6919,7 @@ Armadilhas:
     roleta perguntam com `usePodeSair` (`PEDIDO_SAIR_SEM_SALVAR`) quando há horário ou texto por salvar.
 11. **`/settings/roleta-config` passa pelo mesmo portão** (`ChaveRoletaNova`) que `/automations/roleta-config`.
 
-**Largura (07/10/2026, pedido do dono):** a lista e a página da roleta usam até 1400px, como Meu site e IA Vendedora (`mx-auto w-full max-w-[1400px]`), com até 3 cartões por linha em tela larga. Não voltar pra coluna estreita.
+**Largura (06/10/2026, pedido do dono):** a lista e a página da roleta usam até 1400px, como Meu site e IA Vendedora (`mx-auto w-full max-w-[1400px]`), com até 3 cartões por linha em tela larga. Não voltar pra coluna estreita.
 
 ## Roleta nova: as outras telas (06/10/2026)
 
@@ -7104,3 +7104,27 @@ Armadilhas:
 4. **A marca de fim mora no contato** (`followup_ended_at`, gravada pelo bloco
    do fim do Follow-up padrão) e é o servidor que tira o lead das Pendências. Cai
    quando o lead escreve ou quando um follow-up começa de novo pra ele.
+
+## Recusa com mensagem do servidor (06/10/2026)
+
+Quando o servidor recusa uma ESCRITA (403) com o código `OFFER_LOCKED` (corretor
+que só foi oferecido o lead, ainda não aceitou), o aviso mostra a frase que o
+servidor mandou ("Aceite o lead pra editar os dados dele.", "Aceite o lead pelo
+botão Aceitar.") no lugar de "Seu cargo não permite esta ação".
+
+1. **Lista fechada de códigos** (`USER_FACING_CODES` em `services/core/forbidden.ts`,
+   hoje só `OFFER_LOCKED`). Qualquer outro 403 (Pundit com frase em inglês,
+   `FORBIDDEN` com frase qualquer) mantém o de sempre: texto de cargo ou o
+   genérico em português. Código novo entra na lista só se o servidor garante a
+   frase em português pra quem usa. O leitor é `serverRefusalMessageOf`.
+2. **Aviso global** (`api.ts`): recusa de cargo (`required_permission`) mantém o
+   texto de sempre; leitura (GET/HEAD/OPTIONS) e `silentForbidden` seguem calados.
+   O id do aviso é `refusalToastId(frase)`, igual em qualquer lugar que mostre a
+   mesma frase (o sonner junta).
+3. **Quem salva não empilha um segundo erro:** `CustomAttributesForm` (cobre
+   "Outras informações"), `useEditarContato`, o responsável do `EditItemModal`, as
+   etiquetas (`ContactTagsManager`) e o salvar de Contatos saem cedo quando
+   `serverRefusalMessageOf` devolve frase. Tela nova que salva contato segue igual.
+   As telas que usam `apiErrorMessage` não foram mexidas.
+4. **Depende do servidor** mandar o código `OFFER_LOCKED` (B3); antes disso nada muda.
+5. **Não reabrir sem o dono pedir.**

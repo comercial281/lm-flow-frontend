@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
+import { serverRefusalMessageOf } from '@/services/core/forbidden';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -723,6 +724,7 @@ export default function Contacts() {
       }
     } catch (error) {
       console.error('Error saving contact:', error);
+      if (serverRefusalMessageOf(error)) return; // o aviso global já mostrou a frase
 
       // Telefone/e-mail já cadastrado é o erro mais comum de quem cadastra
       // cliente de carteira — a pessoa já está na base, mas fora do recorte de
