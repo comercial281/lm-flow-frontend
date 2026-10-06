@@ -6344,7 +6344,7 @@ Decisões do dono (não reabrir sem ele pedir):
 Armadilhas:
 
 1. **O roteiro é dado:** `src/components/support/roteiro.ts`. O `roteiro.spec.ts` trava opção apontando pra passo que não existe, passo inalcançável e fim sem "Isso resolveu?". Texto puro, nome de tela como aparece na tela (conferidos com as telas reais: Reconectar / Dispositivos conectados → Conectar dispositivo; Imóveis → Meu site; "Preencher a partir de um texto"; o botão Plantão).
-2. **A bolinha some em Conversas e nas telas de montar** (`escondeBolinha`, em `SupportWidget.tsx`): `/conversations` (`/conversations-old` não conta) e os canvas de `flow-builder`, `follow-ups` e `message-funnels/:id`. Regra herdada do FeedbackWidget antigo: a bolinha cobria o "Salvar". O acesso nessas telas é o menu do avatar (`openSupport`).
+2. **A bolinha some em Conversas e nas telas de montar** (`escondeBolinha`, em `SupportWidget.tsx`): `/conversations` (`/conversations-old` não conta) e os canvas de `flow-builder`, `follow-ups` e `message-funnels/:id`, e o cadastro de imóvel (`/properties/new` e `/properties/:id/editar`, desde 05/10/2026, pedido do dono; lista e mapa mantêm a bolinha). Regra herdada do FeedbackWidget antigo: a bolinha cobria o "Salvar". O acesso nessas telas é o menu do avatar (`openSupport`).
 3. **Card fechado = `hidden` + `inert` + `aria-hidden`.** Nada nele recebe foco nem é lido por leitor de tela, e a busca de um chamado aberto **pausa** enquanto o card está fechado.
 4. **No celular o card respeita áreas seguras e `--keyboard-inset`** (mesma fórmula do `MainLayout`): o teclado não cobre a caixa de texto.
 5. **`useChamado` exige `carregar` memoizado por chamado** (`useCallback([id])`): função nova a cada render dispara a busca em loop. Só a requisição mais recente grava estado (resposta atrasada é descartada) e a caixa de texto fica travada enquanto envia.
@@ -6596,6 +6596,136 @@ Nova tela **Modelo do site** (primeira de "Personalizar"): três cartões, **Cl�
 - **Vitrine "Minha Casa Minha Vida":** o modelo Popular não cria vitrine (isso é conteúdo). A regra `mcmv` tem caixa própria em Vitrines ("Só Minha Casa Minha Vida", ao lado de "Só destaques e exclusivos", no editor de regra de cada vitrine).
 - **Só mudam trocando de modelo:** fonte dos títulos, estilo do menu (maiúsculas), capa dividida e cartões grandes ainda não têm controle próprio em Aparência. Por enquanto, o cliente só chega neles escolhendo um modelo. Por isso a frase da tela diz que "cores, logo e textos" continuam editáveis, e não "tudo".
 
+## IA Vendedora · Configurar virou passo a passo (desde 2026-10-05)
+
+> Entrega 2 da refatoração da IA Vendedora. Spec: `LM FLOW/specs/2026-10-05-ia-vendedora-refatoracao-design.md`. Plano: `LM FLOW/plans/2026-10-05-ia-vendedora-entrega-2-passo-a-passo.md`. Servidor: PR #410 (`comercial281/lm-flow`, migration 303).
+
+**O que aparece na tela:** *IA Vendedora → Configurar* é um passo a passo de 8 passos, o mesmo pra criar e pra editar: 1 Quem ela é · 2 Objetivo · 3 Roteiro · 4 Visita (só quando ela vai até o fim) · 5 O que ela vende · 6 Atendimento · 7 Voltar a chamar · 8 Testar e ligar, mais o **Avançado** (link no rodapé do passo 6). Trilho clicável com a marca de pendência; sem `?passo=`, abre no primeiro passo pendente. Cada passo tem o próprio Salvar e a prévia ao lado. "Nova IA" (no seletor de IA da barra, ou no botão da conta sem IA) cria um rascunho desligado e abre o passo 1. Instruções, prova social e exemplos de conversa foram pro **Ensinar**. O assistente de 6 etapas e o link de anúncio com IA saíram (o Testar manteve só o campo "Imóvel do teste", que morava no bloco do link).
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **Três escolhas.** Persona (O próprio corretor · Dono da imobiliária · Assistente da imobiliária), alcance (Só qualifica e passa · Vai até o fim) e destino. Colunas `persona_kind`/`reach` no servidor; vazias, são LIDAS das antigas (voz em primeira pessoa → corretor; agendar visita → vai até o fim); gravadas, são ESPELHADAS nas antigas (`transfer_config.voice`, `booking_enabled`), que é o que o roteiro de hoje lê.
+2. **O próprio corretor só passa pro dono do número** (`handoff_target = number_owner`). Roleta e corretor fixo somem nessa persona. IA antiga em primeira pessoa com corretor fixo vê o aviso no Objetivo e no Painel, e só muda com o clique "Passar a entregar pro dono do número" (ou o rake, quando o fixo é o dono). Sair da persona corretor: se o lead ia pro dono do número, volta pra roleta do número; roleta ou corretor escolhidos ficam.
+3. **Ligar trava** sem número, na persona corretor num número sem dono (este o servidor também recusa) e no Sistema do cliente sem chave pronta. O **nome que o lead vê** só avisa (decisão do dono, 05/10): as IAs que já atendem não têm esse nome e o roteiro sai igual sem ele.
+4. **Nome que o lead vê** (`lead_facing_name`) é separado do nome da IA no LM Flow e o roteiro de hoje já o diz (só quando preenchido). **Tom e emoji não aparecem** até a entrega 4: o roteiro de hoje tem "não use emoji" fixo e a opção não faria nada.
+5. **"Quando passa"** recomenda "Só depois das perguntas obrigatórias". "Ao menor sinal de dúvida" e "Só quando ela não souber responder" aparecem só pra quem já tem, marcadas "(opção antiga)", e continuam valendo. ⚠️ "Sem resposta" no servidor é "ela não sabe responder", não "o lead sumiu".
+6. **Primeira mensagem**: "A IA monta" ou "Com um texto meu de base" (no roteiro de hoje o texto é modelo, não literal). Vale só quando o lead escreve primeiro: lead de formulário recebe a mensagem da automação, e a IA entra continuando a conversa. O "texto exato" foi cortado pelo dono (05/10).
+7. **"Perguntar se é pra morar ou investir"** (Sempre · Só se a IA abrir a conversa · Não, ela deduz pela conversa) fica à vista no Roteiro, sem a chave `ia_playbook`. Grava `playbook.intent_question_mode`.
+8. **Perguntas**: uma lista, cada uma com "obrigatória", reordenável. Grava `qualification_questions` (ordem) + `transfer_config.required_questions` (marcadas, explícitas). Não dá pra desmarcar a última (vazio no servidor = todas).
+9. **Sai da tela e fica no banco, sem ser zerado**: modo antigo, persona/objetivo em texto, método de venda, BANT, CRM sem contato válido, mensagem de repasse, criatividade, palavra-chave antiga (vira aviso), chaves do passar pro humano (sempre ligados), datas bloqueadas, encaixes do roteiro, limite em US$.
+10. **Avançado**: o gestor vê, só a equipe muda. O texto que a IA recebe é só leitura e vem do servidor SEM as diretrizes e lições universais da plataforma pra quem não é da equipe. Reescrever bloco: `useClientToggle('ia_playbook')` literal.
+11. Opção dentro de passo é **caixinha** (espera o Salvar); a única **chave** é o Ligar do passo 8.
+
+**Armadilhas:**
+1. **Campo novo na tela entra no `CAMPOS_DO_PASSO` do passo dele** (`configurar/camposDosPassos.ts`), por SUBCHAVE se for jsonb dividido (`transfer_config`, `crm_policy`, `ai_limits`, `visit_config`, `playbook`, `usage_limits`). Fora da lista, a tela mostra e o Salvar não manda. Há spec.
+2. **Cada passo salva direto no serviço** (`useRascunho` → `montarPatch` → `salesAgentsService.update`), só com o que mudou, mesclando jsonb sobre o ÚLTIMO salvo. O `saveAgent` campo a campo saiu.
+3. **`useRascunho` recomeça só quando a IA muda de fato** (`id` + `updated_at`), não a cada objeto novo: uma releitura apagaria a edição não salva (ou entraria em laço). Salvar ignora clique duplo.
+4. **Trocar a persona mexe no destino** (o passo 1 também grava `handoff_*`). Mudar o alcance NÃO mexe no destino.
+5. **`situacao.ts` tem `pendenciasDaIa` (Painel); `pendencias.ts` tem `pendenciasDosPassos` (trilho e Ligar).** O Painel recebe deste só persona e destino; cada "Corrigir" leva ao passo.
+6. **`?passo=` atravessa a casca** porque `paramsDaIa(ia, tela, passo)` o mantém em Configurar.
+7. **React Router 7 troca o endereço numa transição.** Quem muda a lista de IAs e o endereço juntos (Nova IA) põe a mudança da lista dentro de `startTransition`; senão, na primeira IA da conta, a resolução do endereço vê a IA nova com o endereço vazio e manda pra Visão geral.
+8. **`Secao`/`Campo` moram em `src/components/base`** (o Meu site importa de lá); **`PilulasDias`** em `src/components/schedule` (a janela de horário de visita usa).
+9. Blocos do follow-up e o editor de regras de entrada vêm da tela antiga, em `configurar/blocos/`; ali `onSave` só muda o rascunho.
+10. Escrita do cenário de repasse passa por `keepBriefing` (trava em `handoffBriefing.spec`).
+
+## Testar fiel e comparação de roteiros (desde 2026-10-05, entrega 3 da IA Vendedora)
+
+Pedido do dono do produto: o Testar mentia. Rodava em outro modelo, sem as regras
+de repasse, sem a ficha, sem a abertura por campanha e sem a agenda.
+
+O que aparece na tela, em *IA Vendedora → Testar*:
+
+- **Chat em destaque**; à esquerda, *Cenários* (cada um com subtítulo, sem
+  depender de passar o mouse), *Ajustar o teste* (nome, de onde veio, interesse,
+  respostas do formulário, imóvel) e *Carregar uma conversa real* (só telefone).
+- Cada mensagem roda **o mesmo atendimento do lead real** (no Haiku, ver
+  decisões): a resposta sai quebrada como a rajada sairia ("digitando 1,2 s"), com curtida,
+  áudio ("🎤 áudio"), fotos e arquivos.
+- **O que aconteceria**: pra quem passaria o lead (roleta, corretor, dono), a
+  visita que marcaria (dia, hora, corretor), a ficha, o que falta perguntar, a
+  abertura usada e as travas ("No atendimento real: fora do horário. O teste
+  respondeu mesmo assim.").
+- **Avançar o tempo** (*Até a IA agir sozinha · 1 hora · … · 3 dias*): mostra a
+  retomada e o follow-up quando sairiam, no horário do follow-up.
+- *Carregar uma conversa real* traz o histórico, a ficha, a abertura e o dono.
+
+No admin, *IA Vendedora → Comparação*: escolhe a IA, as conversas recentes e os
+cenários, e cada resposta real é refeita com o roteiro antigo e o novo; uma IA
+avaliadora dá nota (obrigatórias antes de passar, hora e destino do repasse, quem
+ela é, configuração, terminou puxando conversa, regra de segurança). Antigo |
+novo | nota, filtro "Só onde discordam", veredito e "Copiar resumo".
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Nada sai e nada é gravado.** O teste é uma conversa em memória; a trava do
+  servidor aborta o teste se algo tentar sair. O estado do teste mora na tela e
+  volta inteiro a cada mensagem — recarregar a página zera o teste.
+- **O Testar roda no Haiku** (modelo de teste, como sempre). Decisão de 05/10: a
+  meta é toda IA no Haiku. A tela mostra "Teste no Haiku" e, se a IA atende em
+  outro modelo, "Esta IA atende no Sonnet; o teste usa o Haiku". 60 testes por
+  hora por IA.
+- **A comparação roda no modelo da própria IA** (é ela que decide ligar o roteiro
+  novo). O modelo da avaliadora ainda vai ser decidido pelo dono do produto.
+- **Travas de configuração só avisam** (desligada, fora do horário, limite do
+  dia, sem número): testar antes de ligar é o uso principal. **Travas da
+  conversa calam** como no atendimento (repasse feito, gatilho, pausada).
+- *Link de anúncio com IA* saiu, sem ir pra outro lugar (o código do imóvel do teste ficou em *Ajustar o teste*).
+- A comparação só existe pro super-admin; até a entrega 4 só há o roteiro 1
+  (roteiro 1 × roteiro 1 mede o ruído da própria avaliadora).
+
+Armadilhas:
+
+1. **O estado do teste é do servidor, não da tela**: a tela só devolve o que
+   recebeu. Não montar histórico aqui (era o que fazia o Testar divergir).
+2. **"Mandar pra mim" usa o imóvel do TURNO** da bolha, não o do campo.
+3. A hora vem no fuso da imobiliária e é lida do próprio texto
+   (`horaDoEnsaio`); não converter pelo fuso do navegador.
+4. **Aviso de "sem número"**: o texto do servidor já diz "no atendimento real";
+   a tela não prefixa de novo (`linhasDoQueAconteceria`).
+
+## IA Vendedora · Sistema do cliente como destino do lead (desde 2026-10-05)
+
+Pedido do dono do produto: cliente que já tem CRM próprio quer usar só a nossa IA.
+A IA qualifica e, quando passa o lead, ele vai pro sistema da imobiliária em vez da
+roleta. Entrega 5 da refatoração da IA (spec `2026-10-05-ia-vendedora-refatoracao-design.md`).
+
+O que aparece na tela:
+
+- **Configurar → Objetivo → Pra onde vai o lead**: 4º cartão *Sistema do cliente*.
+  Travado na persona corretor (*Na persona corretor o lead vai sempre pro dono do número.*).
+  Escolhido, abre *Endereço do sistema do cliente* (só https), *Chave secreta*
+  (*Gerar chave secreta*, mostrada UMA vez com *Copiar*; depois *Gerar outra chave*
+  com confirmação) e *Mandar um lead de teste* (mostra o que o sistema respondeu).
+- **Diagnóstico**: item *Sistema do cliente* (*Último envio ok às 14:32 · 2 falhas
+  hoje*) e o bloco *Últimos envios ao sistema do cliente*, cada envio abre a frase
+  em português, o trecho da resposta e *Abrir a conversa*.
+- **Painel do lead**: *Enviando ao sistema do cliente…* / *Enviado … às 14:32.* /
+  *O envio … falhou: <motivo>. A gestão foi avisada; o lead não foi pra roleta.*
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Não cai na roleta.** Esgotou as 5 tentativas (1, 5, 15, 60 min): aviso pros
+  gestores pelo Operacional, etiqueta `sistema-do-cliente-falhou` no card, e o lead
+  fica no LM Flow pra alguém agir.
+- **Deu certo = aceito.** A IA não reassume por cima do corretor do cliente. Durante
+  as tentativas ela fica calada nesse lead.
+- **Lead com dono** vai do mesmo jeito, e o dono é avisado como hoje.
+- **A chave é do LM Flow**: gerada, mostrada uma vez, nunca volta do servidor.
+  Duplicar a IA não leva a chave. Trocar de destino não apaga endereço nem chave.
+- **Sem jargão**: na tela é *Sistema do cliente*, *endereço*, *chave secreta*,
+  *código da resposta*. Nunca "webhook".
+
+Armadilhas:
+
+1. **`handoff_webhook_url` PRECISA estar em `CAMPOS_DO_PASSO[2]`.** Fora da lista a
+   tela diz *Salvo* e o servidor nunca recebe (o `Passo2Objetivo.spec` trava isso).
+2. **O teste usa o endereço GRAVADO**: o botão fica bloqueado com endereço por salvar.
+3. **A chave nunca entra pelo salvar da IA** (fora do permit). Só pela ação própria.
+   Com chave já gerada, *Sim, gerar outra* manda `confirm: true` (o servidor exige).
+   Chave que não abre mais no servidor (`handoff_webhook_secret_state = unreadable`)
+   aparece como *A chave gravada não abre mais. Gere outra…*.
+4. O texto pra quem recebe (como conferir a assinatura) está no plano da entrega 5,
+   seção "Para quem recebe".
+
 ## Página do cliente (05/10/2026)
 
 Entrega 3 da Área do Admin (spec `LM FLOW/specs/2026-10-05-admin-clientes-entrega-3-design.md`).
@@ -6608,3 +6738,4 @@ Entrega 3 da Área do Admin (spec `LM FLOW/specs/2026-10-05-admin-clientes-entre
 - **Operação**: os grupos de WhatsApp têm uma fonte de verdade na aba; funil e grupos reenviam as duas chaves (o servidor faz `compact!`).
 - **Pacotes** (Clientes → Pacotes; servidor `public.client_packages`): pacote = funções + limites. Escolher pacote COPIA tudo pro cliente (o app do cliente não muda). Ajuste manual continua livre e aparece "≠ pacote". Editar pacote e aplicar mantém os ajustes manuais; Trocar/Voltar ao pacote desfaz e avisa quantos. Chave nova no catálogo segue o padrão (ligada, menos DEFAULT_OFF) e não acende "≠ pacote". Clientes antigos começam "Personalizado". Novo cliente tem o campo Pacote no passo Dados.
 - **Caixinhas do navegador**: zero no SuperAdmin; o build usa `--teto-super 0`. Confirmação com texto digitado usa `ConfirmarDigitando`.
+- **Respiro e padrão (05/10, pedido do dono: "tá tudo juntinho demais")**: a lista entra no `AdminConteudo` como as outras telas do admin (antes colava nas bordas). Quadro, título de seção, espaço entre blocos e grades vêm de `PooledClients/estilo.ts` (quadro `rounded-xl p-5`, blocos `gap-6`, grades `gap-4`), usado em todas as abas e em Pacotes. Em tela larga Contrato, Pessoas e Operação usam duas colunas em vez de uma coluna estreita. **Entrar** (cartão e topo da página) é o `BotaoEntrar`: o degradê com brilho do botão do login (`.lmf-btn-shimmer`). Não voltar ao botão contornado sem o dono pedir.

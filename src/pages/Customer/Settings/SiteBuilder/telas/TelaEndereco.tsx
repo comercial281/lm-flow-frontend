@@ -1,7 +1,7 @@
 import { Button, Checkbox, Label as UILabel } from '@/components/ui/ds';
 import DomainSettings from '../DomainSettings';
-import { Secao, Secoes } from '../ui/Secao';
-import { CampoTexto } from '../ui/Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { CampoTexto } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
 
 interface Props extends FormProps {

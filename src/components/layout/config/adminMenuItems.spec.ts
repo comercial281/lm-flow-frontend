@@ -46,6 +46,7 @@ describe('menu da Área do Admin', () => {
     ['/admin/agentes/dashboard', 'IA Vendedora', 'Dashboard'],
     ['/admin/agentes/conhecimento', 'IA Vendedora', 'Conhecimento'],
     ['/admin/agentes/aviso-de-visita', 'IA Vendedora', 'Aviso de visita'],
+    ['/admin/agentes/comparacao', 'IA Vendedora', 'Comparação'],
   ])('%s é da aba %s → %s', (pathname, item, aba) => {
     const d = dono(pathname);
     expect(d?.item.name).toBe(item);

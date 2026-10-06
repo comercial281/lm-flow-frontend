@@ -22,7 +22,7 @@ describe('TelaSecoes', () => {
   it('ligar Como funciona e escrever 2 passos grava home.steps inteiro', async () => {
     const espiao = vi.fn();
     render(<Montar espiao={espiao} />);
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Mostrar Como funciona' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Mostrar a seção Como funciona' }));
     expect(ultimoHome(espiao).steps.enabled).toBe(true);
     await userEvent.click(screen.getByRole('button', { name: /Novo passo/ }));
     await userEvent.type(screen.getByLabelText('Título do passo 1'), 'Simule');

@@ -14,6 +14,7 @@ import {
   type ClientGroupJids, type ClientGroupKind, type WaGroup,
 } from '../clientGroups';
 import { pedidoLigarDemo, pedidoSemearDemo } from '../confirmacoes';
+import { SECAO, TITULO_SECAO } from '../estilo';
 import type { PropsDaAba } from './Pagina';
 
 // Operação do cliente (fora do pacote): o que entra no funil, grupos de
@@ -31,7 +32,6 @@ const PIPE_SOURCES = [
 ] as const;
 const PIPE_SOURCE_KEYS: string[] = PIPE_SOURCES.map((p) => p.key);
 
-const CARTAO = 'rounded-lg border bg-card p-4';
 const CAMPO = 'w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm';
 
 type Auditoria = { saude?: string; painel?: { vazios?: string[] }; entidades_sem_exemplo?: string[] };
@@ -180,10 +180,10 @@ export default function AbaOperacao({ cliente, aoMudar }: PropsDaAba) {
   };
 
   return (
-    <div className="flex max-w-3xl flex-col gap-4">
-      <section aria-labelledby="funil" className={CARTAO}>
-        <h2 id="funil" className="text-sm font-semibold">O que entra no funil (padrão do cliente)</h2>
-        <p className="mb-3 text-xs text-muted-foreground">
+    <div className="grid items-start gap-4 xl:grid-cols-2">
+      <section aria-labelledby="funil" className={SECAO}>
+        <h2 id="funil" className={TITULO_SECAO}>O que entra no funil (padrão do cliente)</h2>
+        <p className="mb-4 mt-1 text-xs text-muted-foreground">
           Padrão herdado pelas pipelines que não têm regra própria. Cada pipeline pode sobrescrever isso em Pipelines &gt; editar &gt; Entrada de leads.
         </p>
         <div className="flex flex-col gap-3">
@@ -193,9 +193,9 @@ export default function AbaOperacao({ cliente, aoMudar }: PropsDaAba) {
         </div>
       </section>
 
-      <section aria-labelledby="grupos" className={CARTAO}>
-        <h2 id="grupos" className="flex items-center gap-2 text-sm font-semibold"><MessageCircle className="h-3.5 w-3.5" /> Grupos WhatsApp</h2>
-        <p className="mb-3 mt-0.5 text-xs text-muted-foreground">
+      <section aria-labelledby="grupos" className={SECAO}>
+        <h2 id="grupos" className={`flex items-center gap-2 ${TITULO_SECAO}`}><MessageCircle className="h-4 w-4" /> Grupos WhatsApp</h2>
+        <p className="mb-4 mt-1 text-xs text-muted-foreground">
           {nameRuleHint(cliente.name)} Cadastrar aqui só é preciso quando o nome do grupo foge desse padrão — e o cadastro vence o nome.
         </p>
         <div className="flex flex-col gap-2">
@@ -254,8 +254,8 @@ export default function AbaOperacao({ cliente, aoMudar }: PropsDaAba) {
 
       <KitBoasVindasBloco tenantId={cliente.id} />
 
-      <section aria-labelledby="atendimento" className={`${CARTAO} flex flex-col gap-3`}>
-        <h2 id="atendimento" className="text-sm font-semibold">Atendimento</h2>
+      <section aria-labelledby="atendimento" className={`${SECAO} flex flex-col gap-4`}>
+        <h2 id="atendimento" className={TITULO_SECAO}>Atendimento</h2>
         <Chave rotulo="Isolamento por corretor"
           descricao="Cada corretor só vê os leads dele na caixa e em Contatos, mesmo dividindo um número. Gerente e admin continuam vendo tudo. Desligue só se o time atende a caixa em conjunto de propósito."
           ligada={cliente.broker_isolation ?? (s.broker_isolation !== false)}
@@ -266,8 +266,8 @@ export default function AbaOperacao({ cliente, aoMudar }: PropsDaAba) {
           aoMudar={async (v) => { await patch({ campaign_only_inbox: v }); }} />
       </section>
 
-      <section aria-labelledby="demo" className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
-        <h2 id="demo" className="mb-2 text-sm font-semibold">Demonstração</h2>
+      <section aria-labelledby="demo" className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-5 xl:col-span-2">
+        <h2 id="demo" className={`mb-3 ${TITULO_SECAO}`}>Demonstração</h2>
         <Chave rotulo="Modo demonstração"
           descricao="Só para o CRM que usamos em call de venda. Com a chave ligada, este cliente só manda WhatsApp para quem escreveu para o número dele primeiro, e não manda e-mail nenhum — assim os leads fictícios da demonstração nunca recebem follow-up, funil ou aviso de gestor. Na tela nada muda: a mensagem aparece como enviada na conversa."
           ligada={demo} aoMudar={mudarDemo} />

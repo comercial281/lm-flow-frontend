@@ -2,8 +2,8 @@ import { Checkbox, Label as UILabel } from '@/components/ui/ds';
 import {
   CAMPOS_BUSCA, HOME_FABRICA, TITULO_CAPA_FABRICA, type AbaId, type CampoBusca, type HomeConfig,
 } from '@/features/siteBuilder/public/homeConfig';
-import { Secao, Secoes } from '../ui/Secao';
-import { CampoTexto } from '../ui/Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { CampoTexto } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
 
 const ABAS: { id: AbaId; rotulo: string }[] = [

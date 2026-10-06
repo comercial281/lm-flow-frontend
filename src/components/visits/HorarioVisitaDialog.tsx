@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import IconActionButton from '@/components/base/IconActionButton';
-import { PilulasDias } from '@/pages/Customer/Automations/SalesAgents/assistente/steps/Campos';
+import { PilulasDias } from '@/components/schedule/PilulasDias';
 import { agendaService } from '@/services/visits/agendaService';
 import { esquecerAgendaLigada } from '@/features/visits/useAgendaLigada';
 import { avisoSemente, opcoesDeHora, type SeededFrom } from '@/features/visits/agenda';

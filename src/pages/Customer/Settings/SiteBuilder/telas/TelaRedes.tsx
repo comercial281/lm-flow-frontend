@@ -1,7 +1,7 @@
 import { REDES, linkDaRede, type RedeSocial } from '@/features/siteBuilder/socialLinks';
 import { ondeAparecemRedes } from '@/features/siteBuilder/ondeApareceNoSite';
-import { Secao, Secoes } from '../ui/Secao';
-import { CampoTexto } from '../ui/Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { CampoTexto } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
 
 export default function TelaRedes({ siteForm, setF }: FormProps) {

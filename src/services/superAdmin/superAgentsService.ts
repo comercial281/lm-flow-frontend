@@ -1,5 +1,6 @@
 import api from '@/services/core/api';
 import type { PerformanceReport } from '@/types/aiResults';
+import type { RehearsalTurn, TestHistoryItem } from '@/services/salesAgents/salesAgentsService';
 
 // Épico B — super-admin gerencia os agentes de IA de TODOS os tenants sem SSO.
 // Backend: /api/v1/super/sales_agents (?tenant=<slug>; raiz Leal Mídia = slug vazio).
@@ -59,6 +60,52 @@ export type SuperAgentPatch = Partial<
   | 'model' | 'test_model' | 'max_output_tokens'>
 >;
 
+// Comparação antigo × novo (entrega 3 da IA Vendedora). Só super-admin.
+export interface ComparisonCandidate {
+  id: string;
+  contact_name: string | null;
+  last_reply_at: string | null;
+  points: number;
+  in_handoff: boolean;
+  has_visit: boolean;
+}
+
+export type ComparisonItem = 'obrigatorias' | 'repasse' | 'persona' | 'configuracao' | 'puxou_conversa' | 'seguranca';
+export type ComparisonScores = Record<ComparisonItem, number | null>;
+
+export interface ComparisonSide {
+  version: number;
+  turn: RehearsalTurn;
+  scores: ComparisonScores;
+  comment: string | null;
+}
+
+export interface ComparisonResult {
+  conversation_id?: string;
+  point_index?: number;
+  scenario_id?: string;
+  history_tail: string;
+  real_reply: string | null;
+  baseline: ComparisonSide;
+  candidate: ComparisonSide;
+  judge_model: string | null;
+  disagreement: boolean;
+}
+
+export type ComparisonEvaluateBody = {
+  run_id: string;
+  baseline_version: number;
+  candidate_version: number;
+} & (
+  | { conversation_id: string; point_index: number }
+  | { scenario: { id: string; message: string; history: TestHistoryItem[] } }
+);
+
+function erroDaComparacao(err: unknown): Error {
+  const e = err as { response?: { data?: { error?: string } } };
+  return new Error(e.response?.data?.error || 'A comparação falhou.');
+}
+
 export const superAgentsService = {
   async listAll(): Promise<SuperAgent[]> {
     const res = await api.get('/super/sales_agents');
@@ -91,6 +138,29 @@ export const superAgentsService = {
   async performance(days = 30): Promise<PerformanceReport> {
     const res = await api.get('/super/sales_agents/performance', { params: { days } });
     return (res.data as Envelope<PerformanceReport>).data;
+  },
+
+  async comparisonCandidates(
+    id: string, tenantSlug: string | null, versoes: { baseline_version: number; candidate_version: number },
+  ): Promise<ComparisonCandidate[]> {
+    try {
+      const res = await api.post(`/super/sales_agents/${id}/prompt_comparison`, { mode: 'candidates', ...versoes },
+        { params: { tenant: tenantSlug ?? '' } });
+      return (res.data as Envelope<{ conversations: ComparisonCandidate[] }>).data.conversations;
+    } catch (err) {
+      throw erroDaComparacao(err);
+    }
+  },
+
+  // UM par por chamada (10–40 s cada): a tela mostra o progresso e pode parar.
+  async comparisonEvaluate(id: string, tenantSlug: string | null, body: ComparisonEvaluateBody): Promise<ComparisonResult> {
+    try {
+      const res = await api.post(`/super/sales_agents/${id}/prompt_comparison`, { mode: 'evaluate', ...body },
+        { params: { tenant: tenantSlug ?? '' }, timeout: 120_000 });
+      return (res.data as Envelope<ComparisonResult>).data;
+    } catch (err) {
+      throw erroDaComparacao(err);
+    }
   },
 };
 

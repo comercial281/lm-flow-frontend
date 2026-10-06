@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, Radio, Building2, Smartphone, Wallet, Users, ScrollText, MessageCircle,
   Megaphone, Bell, BellRing, Landmark, GraduationCap, Archive, Globe, LifeBuoy,
-  Bot, Sparkles, Brain, CalendarCheck, UsersRound, Gift, TrendingUp, Package,
+  Bot, Sparkles, Brain, CalendarCheck, UsersRound, Gift, TrendingUp, Package, Scale,
 } from 'lucide-react';
 import { enderecoCasa } from './menuItems';
 
@@ -127,6 +127,7 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
       { name: 'Dashboard', href: '/admin/agentes/dashboard', icon: Sparkles },
       { name: 'Conhecimento', href: '/admin/agentes/conhecimento', icon: Brain },
       { name: 'Aviso de visita', href: '/admin/agentes/aviso-de-visita', icon: CalendarCheck },
+      { name: 'Comparação', href: '/admin/agentes/comparacao', icon: Scale },
     ],
   },
   {

@@ -6,8 +6,8 @@ import {
   type Aparencia, type AlturaDaCapa, type EstiloDoTopo, type FaixaDeCima, type Fundo, type LayoutDoRodape,
 } from '@/features/siteBuilder/public/aparenciaConfig';
 import { cn } from '@/lib/utils';
-import { Secao } from '../ui/Secao';
-import { CampoTextoLongo } from '../ui/Campo';
+import { Secao } from '@/components/base/Secao';
+import { CampoTextoLongo } from '@/components/base/Campo';
 import EnvioDeImagem from '../ui/EnvioDeImagem';
 
 // Os blocos da Aparência que mexem no visual do site (C3): fundo, topo, faixa

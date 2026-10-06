@@ -6,7 +6,7 @@ import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { estiloDaMarca } from '@/features/siteBuilder/watermarkPreview';
 import { siteBuilderService, type Site, type SiteWatermark } from '@/services/siteBuilder/siteBuilderService';
 import { propertiesService } from '@/services/properties/propertiesService';
-import { Secao, Secoes } from '../ui/Secao';
+import { Secao, Secoes } from '@/components/base/Secao';
 import type { FormProps } from './tipos';
 
 type Posicao = SiteWatermark['position'];

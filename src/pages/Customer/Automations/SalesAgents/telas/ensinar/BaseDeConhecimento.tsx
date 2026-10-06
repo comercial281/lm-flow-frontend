@@ -299,7 +299,7 @@ function FileConfigDialog({
           <div>
             <Label htmlFor="doc_title">Nome do arquivo</Label>
             <Input id="doc_title" value={title} onChange={(e) => setTitle(e.target.value)}
-                   placeholder="Ex: Planta do 2 dormitórios - Alma Panamby" />
+                   placeholder="Ex: Planta do 2 dormitórios - Residencial Exemplo" />
             <p className="text-xs text-muted-foreground mt-1">É por este nome que ela se refere ao arquivo.</p>
           </div>
 

@@ -1,7 +1,11 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { fonteDaIaVendedora } from '../../test/fonteDaIaVendedora';
 
 import { speaksAsBroker, toggleVoice } from './handoffVoice';
+
+const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf8');
 
 // No WhatsApp de uma corretora, a IA dizia "vou passar pro meu colega do time".
 // A chave faz ela falar como a própria corretora — e a escolha não pode sumir.
@@ -20,10 +24,11 @@ describe('handoffVoice', () => {
     expect(toggleVoice({ mode: 'duvida', voice: 'first_person' }, false)).toEqual({ mode: 'duvida' });
   });
 
-  // Campo solto do agente é descartado pela lista campo a campo do saveAgent.
+  // A voz é subchave do transfer_config (nunca campo solto). Desde a entrega 2 ela
+  // vem da persona (passo 1), por `escolhasParaPatch`.
   it('a tela grava por dentro do transfer_config', () => {
     const tela = fonteDaIaVendedora();
-    expect(tela).toContain('toggleVoice(cfg, v)');
+    expect(read('src/features/salesAgents/tresEscolhas.ts')).toContain("toggleVoice(agent.transfer_config, escolhas.persona === 'broker')");
     expect(tela).not.toMatch(/\bvoice:\s*['"]first_person['"]/);
   });
 });

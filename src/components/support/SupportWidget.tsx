@@ -19,9 +19,12 @@ const CHAT_ROUTE = /^\/conversations(\/|$)/;
 // tem o "Salvar" no canto inferior direito, onde a bolinha cobria (04/10/2026).
 // Herdado do FeedbackWidget. As listas continuam com a bolinha.
 const BUILDER_CANVAS_ROUTE = /^\/automations\/(flow-builder|follow-ups|message-funnels)\/[^/]+/;
+// ⚠️ Cadastro de imóvel (novo e editar): a bolinha cobria o "Salvar" do rodapé (05/10/2026).
+// A lista e o mapa continuam com a bolinha.
+const PROPERTY_FORM_ROUTE = /^\/properties\/(new|[^/]+\/editar)\/?$/;
 
 export const escondeBolinha = (pathname: string): boolean =>
-  CHAT_ROUTE.test(pathname) || BUILDER_CANVAS_ROUTE.test(pathname);
+  CHAT_ROUTE.test(pathname) || BUILDER_CANVAS_ROUTE.test(pathname) || PROPERTY_FORM_ROUTE.test(pathname);
 
 /** Mesmo tempo do `duration-200` do card (e do menu lateral). */
 const DURACAO_ANIMACAO_MS = 200;

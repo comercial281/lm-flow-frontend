@@ -8,7 +8,7 @@ import { sendFromOf, type SendFromValue } from '@/features/numbers/sendFrom';
 import { siteBuilderService, type BookFlow, type BookFlowBody } from '@/services/siteBuilder/siteBuilderService';
 import salesAgentsService from '@/services/salesAgents/salesAgentsService';
 import { apiErrorMessage } from '@/utils/apiHelpers';
-import { Campo, CampoTextoLongo } from '../ui/Campo';
+import { Campo, CampoTextoLongo } from '@/components/base/Campo';
 
 // "Receber o book no WhatsApp" (Meu site › Página do imóvel › Empreendimentos).
 // A chave NÃO espera o Salvar da página: ligar cria/religa o fluxo "Book pelo

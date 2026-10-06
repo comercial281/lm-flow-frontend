@@ -6,8 +6,8 @@ import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { HOME_FABRICA, type HomeConfig, type RegrasVitrine, type Vitrine } from '@/features/siteBuilder/public/homeConfig';
 import { ROTULO_TIPO, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { FASES } from '@/features/properties/listingKind';
-import { Secao, Secoes } from '../ui/Secao';
-import { CLASSE_DO_CAMPO, CampoTexto } from '../ui/Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { CLASSE_DO_CAMPO, CampoTexto } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
 
 // Teto do servidor (Sites::HomeConfig::MAX_SHOWCASES), contando as 2 de fábrica.

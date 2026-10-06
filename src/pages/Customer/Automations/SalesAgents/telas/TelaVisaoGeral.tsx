@@ -180,7 +180,7 @@ export interface TelaVisaoGeralProps {
   falhou?: boolean;
   /** Mesma chave das telas Sugestões e Relatório semanal (`ia_insights`). */
   mostrarSugestoes: boolean;
-  aoIr: (tela: TelaId) => void;
+  aoIr: (tela: TelaId, passo?: number) => void;
 }
 
 export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferindo, falhou = false, mostrarSugestoes, aoIr }: TelaVisaoGeralProps) {
@@ -213,7 +213,10 @@ export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferind
                   <div className="text-xs text-muted-foreground">{p.detalhe}</div>
                 </div>
                 {p.corrigir && (
-                  <Button size="sm" variant="outline" onClick={() => aoIr(p.corrigir!.tela)}>Corrigir</Button>
+                  <Button size="sm" variant="outline"
+                    onClick={() => (p.corrigir!.passo !== undefined ? aoIr(p.corrigir!.tela, p.corrigir!.passo) : aoIr(p.corrigir!.tela))}>
+                    Corrigir
+                  </Button>
                 )}
               </li>
             ))}

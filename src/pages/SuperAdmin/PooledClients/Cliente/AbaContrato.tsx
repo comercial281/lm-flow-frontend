@@ -12,6 +12,7 @@ import type { ClientePooled } from '@/types/admin/clientes';
 import { resumoDeMudancas, type DiffDoCliente } from '../Pacotes/resumoDeMudancas';
 import { groupJidsFrom, groupsPatch } from '../clientGroups';
 import { validarLimites } from '../limites';
+import { GRADE_CAMPOS, SECAO, TITULO_SECAO } from '../estilo';
 import type { PropsDaAba } from './Pagina';
 
 // Contrato do cliente. Pacote (trocar / voltar ao pacote, com prévia) e os três limites (números de WhatsApp, franquia de
@@ -22,7 +23,7 @@ export default function AbaContrato({ cliente, aoMudar, recarregar }: PropsDaAba
   // `key` pelos limites: se o cliente mudar por fora (ex.: troca de pacote), os campos recomeçam dele.
   const chave = `${cliente.max_whatsapp_channels}|${cliente.ai_leads_included}|${cliente.ai_lead_overage_price_brl}`;
   return (
-    <div className="space-y-4">
+    <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
       <BlocoDoPacote cliente={cliente} aoMudar={aoMudar} />
       <FormularioDeLimites key={chave} cliente={cliente} aoMudar={aoMudar} recarregar={recarregar} />
     </div>
@@ -36,13 +37,13 @@ function BlocoDoPacote({ cliente, aoMudar }: Pick<PropsDaAba, 'cliente' | 'aoMud
   const [modo, setModo] = useState<'trocar' | 'voltar' | null>(null);
   const diferencas = cliente.package_diff_count ?? 0;
   return (
-    <section aria-labelledby="pacote" className="max-w-xl rounded-lg border p-4">
-      <h2 id="pacote" className="mb-1 text-sm font-semibold">Pacote</h2>
-      <p className="text-sm">
+    <section aria-labelledby="pacote" className={SECAO}>
+      <h2 id="pacote" className={TITULO_SECAO}>Pacote</h2>
+      <p className="mt-3 text-sm">
         {cliente.package ? cliente.package.name : 'Personalizado'}
         {cliente.package && diferencas > 0 && <span className="ml-2 text-xs text-amber-700 dark:text-amber-300">{plural(diferencas, 'diferença', 'diferenças')} do pacote</span>}
       </p>
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         <Button variant="outline" onClick={() => setModo('trocar')}>Trocar pacote</Button>
         {cliente.package && diferencas > 0 && <Button variant="outline" onClick={() => setModo('voltar')}>Voltar ao pacote</Button>}
       </div>
@@ -167,9 +168,9 @@ function FormularioDeLimites({ cliente, aoMudar, recarregar }: Pick<PropsDaAba, 
   const msg = (id: string, t: string | null) => t ? <p id={id} className="mt-1 text-xs text-destructive">{t}</p> : null;
 
   return (
-    <section aria-labelledby="limites" className="max-w-xl rounded-lg border p-4">
-      <h2 id="limites" className="mb-3 text-sm font-semibold">Limites</h2>
-      <div className="grid gap-3 sm:grid-cols-3">
+    <section aria-labelledby="limites" className={SECAO}>
+      <h2 id="limites" className={TITULO_SECAO}>Limites</h2>
+      <div className={`mt-4 ${GRADE_CAMPOS}`}>
         <div><Label htmlFor="lim-num">Números de WhatsApp</Label>{marca('max_whatsapp_channels')}
           <Input id="lim-num" inputMode="numeric" aria-invalid={!!erroNumeros} aria-describedby={erroNumeros ? 'lim-num-erro' : undefined} value={numeros} onChange={(e) => setNumeros(e.target.value)} />
           {msg('lim-num-erro', erroNumeros)}
@@ -181,7 +182,7 @@ function FormularioDeLimites({ cliente, aoMudar, recarregar }: Pick<PropsDaAba, 
           <Input id="lim-pr" inputMode="decimal" aria-invalid={!!erroPreco} aria-describedby={erroPreco ? 'lim-pr-erro' : undefined} value={preco} onChange={(e) => setPreco(e.target.value)} />
           {msg('lim-pr-erro', erroPreco)}</div>
       </div>
-      <Button className="mt-3" disabled={salvando || !valores} onClick={() => void salvar()}>Salvar limites</Button>
+      <Button className="mt-5" disabled={salvando || !valores} onClick={() => void salvar()}>Salvar limites</Button>
     </section>
   );
 }

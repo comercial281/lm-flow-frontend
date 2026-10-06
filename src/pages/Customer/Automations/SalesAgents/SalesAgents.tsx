@@ -4,13 +4,11 @@
 // Painel ▾ · Configurar · Ensinar · Testar · Diagnóstico, no modelo do Meu site.
 // O endereço diz a IA e a tela (`?ia=<id>&tela=<id>`), com `replace`: o Voltar
 // do navegador sai da página em vez de percorrer as telas. Cada tela mora em
-// `telas/`; a configuração de sempre mora em `configuracao/legado/` até a
-// entrega 2. Spec: LM FLOW/specs/2026-10-05-ia-vendedora-refatoracao-design.md.
-//
-// ⚠️ Nada aqui muda o atendimento: os campos e a gravação (`saveAgent`) são os
-// de antes, linha por linha.
-import { useEffect, useState, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+// `telas/`; o Configurar é o passo a passo de `configurar/` (entrega 2), e cada
+// passo grava só o que é dele (`configurar/useRascunho.ts`), devolvendo a IA salva
+// por `aoSalvo`. Spec: LM FLOW/specs/2026-10-05-ia-vendedora-refatoracao-design.md.
+import { startTransition, useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { Loader2, Plus } from 'lucide-react';
@@ -22,12 +20,13 @@ import NoAccessState from '@/components/permissions/NoAccessState';
 import { classifyLoadFailure, type LoadFailure } from '@/services/core/forbidden';
 import { useCan } from '@/hooks/useCan';
 import inboxesService from '@/services/channels/inboxesService';
-import { formIdsDropped } from '@/features/salesAgents/formTrigger';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { PEDIDO_SAIR_SEM_SALVAR, limparPendentes, temAlteracaoPendente } from '@/hooks/useAlteracoesNaoSalvas';
 import {
   iaDaUrl, iaInicial, paramsDaIa, telaDaUrl, telaInfo, trilhaDe, type TelaId,
 } from '@/features/salesAgents/iaMenu';
 import { situacaoDaIa } from '@/features/salesAgents/situacao';
+import { novaIaRascunho } from '@/features/salesAgents/tresEscolhas';
 import { type InboxOption } from './configuracao/comum';
 import IaBarra from './IaBarra';
 import TelaVisaoGeral from './telas/TelaVisaoGeral';
@@ -54,7 +53,6 @@ export default function SalesAgents() {
   const [selected, setSelected] = useState<SalesAgent | null>(null);
   const [inboxes, setInboxes] = useState<InboxOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [duplicating, setDuplicating] = useState<SalesAgent | null>(null);
   const [loadFailure, setLoadFailure] = useState<LoadFailure | null>(null);
   const [diagnostico, setDiagnostico] = useState<{ id: string; report: HealthReport } | null>(null);
@@ -71,7 +69,6 @@ export default function SalesAgents() {
   const insightsToggle = useClientToggle('ia_insights');
   const insightsLiberado = isSuper || insightsToggle;
 
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   // Sugestões e Relatório semanal sem a chave caem na Visão geral (`telaDaUrl`):
   // o gate fica no menu e no endereço, como as Páginas de anúncio do Meu site.
@@ -111,7 +108,8 @@ export default function SalesAgents() {
   useEffect(() => {
     if (loading) return;
     const alvo = iaInicial(agents.map((a) => a.id), iaPedida, lerUltimaIa());
-    const certo = paramsDaIa(alvo, tela);
+    // O passo do passo a passo atravessa a normalização (só vale em Configurar).
+    const certo = paramsDaIa(alvo, tela, searchParams.get('passo'));
     if (searchParams.toString() !== new URLSearchParams(certo).toString()) setSearchParams(certo, { replace: true });
     if (alvo) gravarUltimaIa(alvo);
     setSelected((prev) => (prev?.id === alvo ? prev : agents.find((a) => a.id === alvo) ?? null));
@@ -138,9 +136,25 @@ export default function SalesAgents() {
     return () => { vivo = false; };
   }, [selId, selUpdatedAt]);
 
-  const irPara = useCallback((t: TelaId) => {
-    setSearchParams(paramsDaIa(selected?.id ?? null, t), { replace: true });
+  const irPara = useCallback((t: TelaId, passo?: number) => {
+    setSearchParams(paramsDaIa(selected?.id ?? null, t, passo), { replace: true });
   }, [selected?.id, setSearchParams]);
+
+  // O que um passo (ou o Ensinar) salvou: atualiza a IA aberta E a lista do seletor.
+  const aoSalvo = useCallback((a: SalesAgent) => {
+    setSelected(a);
+    setAgents((prev) => prev.map((x) => (x.id === a.id ? a : x)));
+  }, []);
+
+  // ⚠️ Cada passo do Configurar tem o próprio Salvar (a tela antiga gravava no blur).
+  // Trocar de IA, de tela, criar ou duplicar com um passo pela metade pergunta antes;
+  // senão a edição some calada. Os botões da barra não são links, e a guarda do menu
+  // lateral (useGuardaDeSaida) não os pega.
+  const guardar = useCallback(async (acao: () => void) => {
+    if (temAlteracaoPendente() && !(await confirmar(PEDIDO_SAIR_SEM_SALVAR))) return;
+    limparPendentes();
+    acao();
+  }, [confirmar]);
 
   const trocarIa = useCallback((id: string) => {
     setSearchParams(paramsDaIa(id, tela), { replace: true });
@@ -149,170 +163,23 @@ export default function SalesAgents() {
   // Cria a IA (desligada) e abre o assistente em tela cheia. Quem preferir
   // configurar na mão sai por "Configurar depois" lá dentro e volta para cá com a
   // IA nova selecionada (`?agent=`) — a IA existe nos dois caminhos.
+  // Nova IA (entrega 2): cria um RASCUNHO desligado e sem número (modelo de partida
+  // em `novaIaRascunho`) e abre o passo 1 do passo a passo. Substitui o "+" que
+  // criava a IA e abria o assistente: o rascunho aparece no seletor como "Rascunho".
   const createAgent = async () => {
     try {
-      const agent = await salesAgentsService.create({
-        name: 'Nova IA Vendedora',
-        mode: 'seller',
-        enabled: false,
-        qualification_questions: ['Orçamento', 'Prazo de compra', 'Região de interesse', 'Precisa de financiamento'],
+      const nova = await salesAgentsService.create(novaIaRascunho());
+      // ⚠️ O React Router 7 troca o endereço dentro de uma transição. Se a lista
+      // mudasse antes, a resolução do endereço veria a IA nova com o endereço velho
+      // (vazio, na primeira IA da conta) e mandaria pra Visão geral. As duas
+      // mudanças vão na MESMA transição.
+      setSearchParams(paramsDaIa(nova.id, 'configurar', 1), { replace: true });
+      startTransition(() => {
+        setAgents((prev) => [nova, ...prev]);
+        setSelected(nova);
       });
-      navigate(`/ia-vendedora/${agent.id}/assistente`);
     } catch {
-      toast.error('Erro ao criar o agente');
-    }
-  };
-
-  const saveAgent = async (patch: Partial<SalesAgent>) => {
-    if (!selected) return;
-    setSaving(true);
-    try {
-      const updated = await salesAgentsService.update(selected.id, {
-        name: patch.name ?? selected.name,
-        enabled: patch.enabled ?? selected.enabled,
-        mode: patch.mode ?? selected.mode,
-        persona_role: patch.persona_role ?? selected.persona_role,
-        persona_goal: patch.persona_goal ?? selected.persona_goal,
-        instructions: patch.instructions ?? selected.instructions,
-        greeting: patch.greeting ?? selected.greeting,
-        handoff_message: patch.handoff_message ?? selected.handoff_message,
-        qualification_questions: patch.qualification_questions ?? selected.qualification_questions,
-        inbox_id: patch.inbox_id ?? selected.inbox_id,
-        trigger_keyword: patch.trigger_keyword ?? selected.trigger_keyword,
-        triggers: patch.triggers ?? selected.triggers,
-        trigger_match_mode: patch.trigger_match_mode ?? selected.trigger_match_mode,
-        bant_config: patch.bant_config ?? selected.bant_config,
-        usage_limits: patch.usage_limits ?? selected.usage_limits,
-        model: patch.model ?? selected.model,
-        temperature: patch.temperature ?? selected.temperature,
-        max_context_tokens: patch.max_context_tokens ?? selected.max_context_tokens,
-        active_hours: patch.active_hours ?? selected.active_hours,
-        followup_enabled: patch.followup_enabled ?? selected.followup_enabled,
-        followup_only: patch.followup_only ?? selected.followup_only,
-        followup_min_days: patch.followup_min_days ?? selected.followup_min_days,
-        followup_max_days: patch.followup_max_days ?? selected.followup_max_days,
-        followup_max_attempts: patch.followup_max_attempts ?? selected.followup_max_attempts,
-        // As colunas e o funil entram com `in`, e não com `??`: limpar a escolha
-        // manda `null`, e o `??` trocaria o null pelo valor antigo — a tela
-        // mostraria "não escolhido" e o servidor continuaria com a coluna velha.
-        followup_action: patch.followup_action ?? selected.followup_action,
-        followup_stage_id: 'followup_stage_id' in patch ? patch.followup_stage_id : selected.followup_stage_id,
-        followup_return_stage_id:
-          'followup_return_stage_id' in patch ? patch.followup_return_stage_id : selected.followup_return_stage_id,
-        followup_sequence_slug:
-          'followup_sequence_slug' in patch ? patch.followup_sequence_slug : selected.followup_sequence_slug,
-        // Sprint 3: o fluxo de follow-up. `in` pelo mesmo motivo (limpar manda null).
-        followup_flow_id: 'followup_flow_id' in patch ? patch.followup_flow_id : selected.followup_flow_id,
-        followup_drip_enabled: patch.followup_drip_enabled ?? selected.followup_drip_enabled,
-        followup_drip_min_leads: patch.followup_drip_min_leads ?? selected.followup_drip_min_leads,
-        followup_drip_max_leads: patch.followup_drip_max_leads ?? selected.followup_drip_max_leads,
-        followup_drip_min_minutes: patch.followup_drip_min_minutes ?? selected.followup_drip_min_minutes,
-        followup_drip_max_minutes: patch.followup_drip_max_minutes ?? selected.followup_drip_max_minutes,
-        // DE QUAIS leads ela vai atrás. Entra com `??` e não com `in`: lista vazia
-        // não é null — é a escolha "todos os leads que ela atendeu", que o `??`
-        // preserva. (Diferente das colunas do bloco de cima, onde `null` significa
-        // "não escolhi coluna nenhuma".)
-        followup_pipeline_ids: patch.followup_pipeline_ids ?? selected.followup_pipeline_ids,
-        // Reengajamento. Com `??`: nenhum dos três é limpável (a chave é booleana e
-        // as horas voltam sempre resolvidas do servidor). Fora desta lista, a tela
-        // diria "Salvo" e o servidor nunca receberia — armadilha nº 1 do follow-up.
-        reengagement_enabled: patch.reengagement_enabled ?? selected.reengagement_enabled,
-        reengagement_first_hours: patch.reengagement_first_hours ?? selected.reengagement_first_hours,
-        reengagement_second_hours: patch.reengagement_second_hours ?? selected.reengagement_second_hours,
-        // PARA ONDE ela entrega o lead. O modo entra com `??` (ele nunca é
-        // limpável — o servidor devolve sempre um dos três); os dois ALVOS
-        // entram com `in`, porque `null` ali é escolha legítima: voltar para "a
-        // roleta do número" limpa o alvo do modo anterior, e o `??` devolveria a
-        // roleta velha por baixo — a tela mostrando uma coisa e o servidor
-        // entregando o lead noutra.
-        handoff_target: patch.handoff_target ?? selected.handoff_target,
-        handoff_roleta_config_id:
-          'handoff_roleta_config_id' in patch ? patch.handoff_roleta_config_id : selected.handoff_roleta_config_id,
-        handoff_user_id: 'handoff_user_id' in patch ? patch.handoff_user_id : selected.handoff_user_id,
-        // O horário próprio do follow-up. Entra com `??` e não com `in`: ele nunca
-        // é limpável — o servidor devolve sempre resolvido e o editor garante ao
-        // menos uma janela. Vazio aqui não é escolha, é o padrão de fábrica.
-        followup_hours: patch.followup_hours ?? selected.followup_hours,
-        audio_enabled: patch.audio_enabled ?? selected.audio_enabled,
-        audio_mode: patch.audio_mode ?? selected.audio_mode,
-        audio_voice_id: patch.audio_voice_id ?? selected.audio_voice_id,
-        sales_method: patch.sales_method ?? selected.sales_method,
-        social_proof: patch.social_proof ?? selected.social_proof,
-        booking_enabled: patch.booking_enabled ?? selected.booking_enabled,
-        visit_duration_minutes: patch.visit_duration_minutes ?? selected.visit_duration_minutes,
-        example_conversations: patch.example_conversations ?? selected.example_conversations,
-        locacao_enabled: patch.locacao_enabled ?? selected.locacao_enabled,
-        escalate_on_frustration: patch.escalate_on_frustration ?? selected.escalate_on_frustration,
-        escalate_on_human_request: patch.escalate_on_human_request ?? selected.escalate_on_human_request,
-        escalate_on_ai_detected: patch.escalate_on_ai_detected ?? selected.escalate_on_ai_detected,
-        ai_limits: patch.ai_limits ?? selected.ai_limits,
-        crm_policy: patch.crm_policy ?? selected.crm_policy,
-        transfer_config: patch.transfer_config ?? selected.transfer_config,
-        ask_google_review: patch.ask_google_review ?? selected.ask_google_review,
-        google_review_link: patch.google_review_link ?? selected.google_review_link,
-        cross_sell_enabled: patch.cross_sell_enabled ?? selected.cross_sell_enabled,
-        rich_media_enabled: patch.rich_media_enabled ?? selected.rich_media_enabled,
-        visit_config: patch.visit_config ?? selected.visit_config,
-        default_property_code: patch.default_property_code ?? selected.default_property_code,
-        reply_delay_seconds: patch.reply_delay_seconds ?? selected.reply_delay_seconds,
-        default_origin: patch.default_origin ?? selected.default_origin,
-        intent_question: patch.intent_question ?? selected.intent_question,
-        // ⚠️ Entra com `in`, NÃO com `??`: apagar um bloco do roteiro manda `{}`
-        // (ou o objeto sem aquela chave), e o `??` só troca `null`/`undefined` —
-        // mas um objeto vazio é escolha LEGÍTIMA aqui: significa "voltei tudo pro
-        // padrão de fábrica". Com `??` funcionaria por acaso hoje e quebraria no
-        // dia em que alguém mandasse `null` pra limpar. Mesmo cuidado do
-        // `pipeline_stage_map` e das colunas do follow-up.
-        playbook: 'playbook' in patch ? patch.playbook : selected.playbook,
-        opening_image_url: patch.opening_image_url ?? selected.opening_image_url,
-        opening_audio_url: patch.opening_audio_url ?? selected.opening_audio_url,
-        openings: patch.openings ?? selected.openings,
-        priority: patch.priority ?? selected.priority,
-        out_of_hours_reply: patch.out_of_hours_reply ?? selected.out_of_hours_reply,
-        catalog_search_enabled: patch.catalog_search_enabled ?? selected.catalog_search_enabled,
-        // ⚠️ Campo novo PRECISA entrar nesta lista. Ela monta o PATCH campo a
-        // campo, e o que não estiver aqui é descartado sem erro nenhum: a tela
-        // mostra o valor, o toast diz "Salvo", e nada foi salvo.
-        message_split_enabled: patch.message_split_enabled ?? selected.message_split_enabled,
-        message_split_max_parts: patch.message_split_max_parts ?? selected.message_split_max_parts,
-        pipeline_move_enabled: patch.pipeline_move_enabled ?? selected.pipeline_move_enabled,
-        pipeline_id: patch.pipeline_id ?? selected.pipeline_id,
-        // A curtida ESTREOU sem estas três linhas, e foi exatamente o defeito que o
-        // aviso acima descreve: a chave ficava imóvel na tela e o toast dizia "Salvo".
-        // `??` serve para as três — lista vazia e zero não são nulos, então
-        // "desmarquei todos os emojis" e "teto zero" chegam ao servidor como escolha.
-        reaction_enabled: patch.reaction_enabled ?? selected.reaction_enabled,
-        reaction_emojis: patch.reaction_emojis ?? selected.reaction_emojis,
-        reaction_max_per_conversation: patch.reaction_max_per_conversation ?? selected.reaction_max_per_conversation,
-        // `in` e não `??`: o mapa vazio ({}) é uma escolha legítima ("tirei todas
-        // as colunas"), e `??` só trata null/undefined — mas a etapa REMOVIDA some
-        // do objeto, então mandar o mapa antigo aqui ressuscitaria a coluna que o
-        // gestor acabou de tirar.
-        pipeline_stage_map: 'pipeline_stage_map' in patch ? patch.pipeline_stage_map : selected.pipeline_stage_map,
-        // `in` e não `??`: aqui null quer dizer "apagar o texto e voltar pro
-        // automático", e `??` trataria isso como "não mexeu", tornando o campo
-        // impossível de limpar depois de preenchido uma vez.
-        out_of_hours_message: 'out_of_hours_message' in patch ? patch.out_of_hours_message : selected.out_of_hours_message,
-      });
-      setSelected(updated);
-      setAgents((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
-      if (patch.triggers && formIdsDropped(patch.triggers, updated.triggers)) {
-        toast.error('O servidor não guardou os formulários marcados — ele ainda está numa versão sem este gatilho. Avise o suporte.');
-        return;
-      }
-      toast.success('Salvo');
-    } catch (e) {
-      // O servidor sabe explicar (ex.: bloco do roteiro com marcador que ele não
-      // recebe). Os dois formatos de erro da API, e o de validação do modelo.
-      const r = (e as { response?: { data?: { error?: unknown; message?: string; errors?: unknown } } }).response?.data;
-      const detalhe =
-        (typeof r?.error === 'object' && (r.error as { message?: string })?.message) ||
-        (typeof r?.error === 'string' ? r.error : null) ||
-        (Array.isArray(r?.errors) ? (r.errors as unknown[]).map(String).join(' ') : null) ||
-        r?.message;
-      toast.error(detalhe ? `Não salvou: ${detalhe}` : 'Erro ao salvar');
-    } finally {
-      setSaving(false);
+      toast.error('Não deu pra criar a IA. Tente de novo.');
     }
   };
 
@@ -356,10 +223,10 @@ export default function SalesAgents() {
           insights={insightsLiberado}
           podeCriar={podeCriar}
           podeExcluir={pode('sales_agents', 'delete')}
-          aoIr={irPara}
-          aoTrocarIa={trocarIa}
-          aoCriar={createAgent}
-          aoDuplicar={() => selected && setDuplicating(selected)}
+          aoIr={(t) => void guardar(() => irPara(t))}
+          aoTrocarIa={(id) => void guardar(() => trocarIa(id))}
+          aoCriar={() => void guardar(() => void createAgent())}
+          aoDuplicar={() => void guardar(() => { if (selected) setDuplicating(selected); })}
           aoExcluir={() => selected && void deleteAgent(selected)}
         />
         <div className="w-full space-y-5 px-6 py-6">
@@ -379,7 +246,9 @@ export default function SalesAgents() {
             // Testar levava a conversa da IA anterior (e a próxima mensagem iria
             // pra nova com o histórico da outra), a Visão geral mostrava os
             // números dela e Sugestões seguia lendo a análise dela.
-            <div key={selected.id} className={tela === 'visao-geral' ? 'max-w-5xl space-y-5' : 'max-w-3xl space-y-5'}>
+            // Largura do Meu site (até 1400 px, centralizado) em todas as telas: com 768 px
+            // o passo a passo ficava espremido entre o trilho e a prévia.
+            <div key={selected.id} className="mx-auto w-full max-w-[1400px] space-y-5">
               <div className="space-y-1">
                 {trilha && <p className="text-xs font-medium text-muted-foreground">{trilha}</p>}
                 <h1 className="text-2xl font-semibold">{info.titulo}</h1>
@@ -399,9 +268,9 @@ export default function SalesAgents() {
               {tela === 'sugestoes' && insightsLiberado && <TelaSugestoes agent={selected} />}
               {tela === 'relatorio-semanal' && insightsLiberado && <TelaRelatorioSemanal />}
               {tela === 'configurar' && (
-                <TelaConfigurar agent={selected} inboxes={inboxes} saving={saving} onChange={setSelected} onSave={saveAgent} />
+                <TelaConfigurar agent={selected} inboxes={inboxes} aoSalvo={aoSalvo} />
               )}
-              {tela === 'ensinar' && <TelaEnsinar agent={selected} onCountChange={loadAgents} />}
+              {tela === 'ensinar' && <TelaEnsinar agent={selected} onCountChange={loadAgents} aoSalvo={aoSalvo} />}
               {tela === 'testar' && <TelaTestar agent={selected} />}
               {tela === 'diagnostico' && <TelaDiagnostico agent={selected} />}
             </div>

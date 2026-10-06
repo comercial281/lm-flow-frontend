@@ -32,12 +32,12 @@ import {
   PropertyInterests,
   AutomationsLayout,
   SalesAgents,
-  AssistenteIA,
   PortalsList,
   DashboardAppPage,
   Tutorials,
   Marketplace,
 } from './lazyPages';
+import RedirecionaAssistente from '@/pages/Customer/Automations/SalesAgents/RedirecionaAssistente';
 import PrivateRoute from './PrivateRoute';
 import AcademiaRoute from './AcademiaRoute';
 import PublicRoute from './PublicRoute';
@@ -154,6 +154,7 @@ const AdminSuporteLista = lazyWithRetry(() => import('@/pages/SuperAdmin/Suporte
 const AdminSuporteChamado = lazyWithRetry(() => import('@/pages/SuperAdmin/Suporte/SuporteChamado'));
 const AdminIaDashboard = lazyWithRetry(() => import('@/pages/SuperAdmin/ResultadosIA'));
 const AdminIaConhecimento = lazyWithRetry(() => import('@/pages/SuperAdmin/IaConhecimento'));
+const AdminComparacaoIA = lazyWithRetry(() => import('@/pages/SuperAdmin/ComparacaoIA'));
 const AdminAvisoDeVisita = lazyWithRetry(() => import('@/pages/SuperAdmin/AiVisitNoticeSection'));
 const AdminEquipe = lazyWithRetry(() => import('@/pages/Admin/Area/Equipe'));
 const AdminAcademia = lazyWithRetry(() => import('@/pages/Admin/Area/Academia'));
@@ -1258,7 +1259,7 @@ const AppRouter = () => {
               <Route path="/admin/suporte" element={<AdminConteudo><AdminSuporteLista /></AdminConteudo>} />
               <Route path="/admin/suporte/:id" element={<AdminConteudo><AdminSuporteChamado /></AdminConteudo>} />
               {/* Clientes */}
-              <Route path="/admin/clientes" element={<ComAbaAntiga base="/admin/clientes"><PooledClients /></ComAbaAntiga>} />
+              <Route path="/admin/clientes" element={<ComAbaAntiga base="/admin/clientes"><AdminConteudo><PooledClients /></AdminConteudo></ComAbaAntiga>} />
               <Route path="/admin/clientes/numeros" element={<AdminConteudo><AdminNumeros /></AdminConteudo>} />
               {/* Custos: IA exata (registro de chamadas) + estrutura (Railway, Vercel,
                   Evolution) lançada à mão, numa tela só. */}
@@ -1290,6 +1291,7 @@ const AppRouter = () => {
               <Route path="/admin/agentes/dashboard" element={<AdminIaDashboard />} />
               <Route path="/admin/agentes/conhecimento" element={<AdminIaConhecimento />} />
               <Route path="/admin/agentes/aviso-de-visita" element={<AdminConteudo><AdminAvisoDeVisita /></AdminConteudo>} />
+              <Route path="/admin/agentes/comparacao" element={<AdminComparacaoIA />} />
               {/* Equipe (sem abas: a moldura não desenha nada) */}
               <Route path="/admin/equipe" element={<AdminEquipe />} />
             </Route>
@@ -1395,20 +1397,14 @@ const AppRouter = () => {
             }
           />
 
-          {/* Assistente de configuração da IA Vendedora: tela cheia, por etapas,
-              sem o menu lateral — o mesmo padrão dos editores de landing. Grava
-              direto nos campos da IA; quem quer configurar na mão sai pelo
-              "Configurar depois" e cai na tela de sempre. */}
+          {/* O assistente da IA saiu na entrega 2 (o passo a passo do Configurar é
+              o mesmo pra criar e editar). Endereço antigo cai no passo 1. */}
           <Route
             path="/ia-vendedora/:id/assistente"
             element={
               <PrivateRoute>
                 <CustomerRoute>
-                  <PermissionRoute resource="sales_agents" action="update">
-                    <Suspense fallback={outletSuspenseFallback}>
-                      <AssistenteIA />
-                    </Suspense>
-                  </PermissionRoute>
+                  <RedirecionaAssistente />
                 </CustomerRoute>
               </PrivateRoute>
             }

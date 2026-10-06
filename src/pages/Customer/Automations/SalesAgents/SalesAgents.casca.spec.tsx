@@ -3,14 +3,16 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { limparPendentes, marcarPendente } from '@/hooks/useAlteracoesNaoSalvas';
 
 // A casca da IA Vendedora (entrega 1): qual IA e qual tela abrem pelo endereço.
 // As telas são trocadas por marcadores — cada uma tem o próprio spec; aqui só
 // importa QUAL abre e com QUAL IA.
 const list = vi.hoisted(() => vi.fn());
 const diagnostics = vi.hoisted(() => vi.fn());
+const create = vi.hoisted(() => vi.fn());
 vi.mock('@/services/salesAgents/salesAgentsService', () => ({
-  salesAgentsService: { list, diagnostics, create: vi.fn(), update: vi.fn(), destroy: vi.fn() },
+  salesAgentsService: { list, diagnostics, create, update: vi.fn(), destroy: vi.fn() },
 }));
 vi.mock('@/services/channels/inboxesService', () => ({ default: { list: vi.fn().mockResolvedValue({ data: [] }) } }));
 vi.mock('@/hooks/useCan', () => ({ useCan: () => () => true }));
@@ -201,6 +203,37 @@ describe('IA Vendedora · casca', () => {
     abrir('/ia-vendedora');
     expect(await screen.findByText('Nenhuma IA Vendedora criada ainda.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Nova IA' })).toBeInTheDocument();
+  });
+
+  it('Nova IA cria o rascunho e abre o passo 1 do Configurar', async () => {
+    list.mockResolvedValue([]);
+    create.mockResolvedValue(ia('ia-nova', 'Nova IA', { enabled: false, inbox_id: null }));
+    abrir('/ia-vendedora');
+    await userEvent.click(await screen.findByRole('button', { name: 'Nova IA' }));
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ enabled: false, inbox_id: null, persona_kind: 'assistant', reach: 'qualify' }));
+    await waitFor(() => expect(endereco()).toBe('?ia=ia-nova&tela=configurar&passo=1'));
+  });
+
+  it('Nova IA pela barra, com outras IAs na conta, também abre o passo 1 dela', async () => {
+    create.mockResolvedValue(ia('ia-nova', 'Nova IA', { enabled: false, inbox_id: null }));
+    abrir('/ia-vendedora?ia=ia-1');
+    await screen.findByText('tela visao-geral · IA de Vendas');
+    // "Nova IA" mora no seletor de IA (o botão com o nome da IA aberta).
+    await userEvent.click(screen.getByRole('button', { name: /IA de Vendas/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Nova IA/ }));
+    await waitFor(() => expect(endereco()).toBe('?ia=ia-nova&tela=configurar&passo=1'));
+    expect(await screen.findByText('tela configurar · Nova IA')).toBeInTheDocument();
+  });
+
+  it('com um passo pela metade, trocar de IA pergunta antes e não troca sem o ok', async () => {
+    abrir('/ia-vendedora?ia=ia-1');
+    await screen.findByText('tela visao-geral · IA de Vendas');
+    marcarPendente('passo-em-edicao', true);
+    await userEvent.click(screen.getByRole('button', { name: /IA de Vendas/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: /IA Demo/ }));
+    expect(await screen.findByText('Sair sem salvar?')).toBeInTheDocument();
+    expect(endereco()).toBe('?ia=ia-1');
+    limparPendentes();
   });
 
   it('recusa do servidor vira o aviso de acesso, não "nenhuma IA"', async () => {

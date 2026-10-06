@@ -2,8 +2,8 @@ import { Seletor } from '@/components/base/Seletor';
 import {
   LISTA_FABRICA, ORDENS, ROTULO_ORDEM, ehOrdem, type LayoutDosCartoes, type ListaConfig,
 } from '@/features/siteBuilder/public/listaConfig';
-import { Secao, Secoes } from '../ui/Secao';
-import { CLASSE_DO_CAMPO, Campo } from '../ui/Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { CLASSE_DO_CAMPO, Campo } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
 
 // Lista de imóveis (Meu site › Personalizar): a ordem com que a busca do site

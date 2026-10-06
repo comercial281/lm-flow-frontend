@@ -6,8 +6,8 @@ import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { siteBuilderService, type MenuDoPainel, type SitePage } from '@/services/siteBuilder/siteBuilderService';
 import { ROTULO_MAX, ehPagina } from '@/features/siteBuilder/public/menuConfig';
 import { EXTERNOS_MAX, avisosDoExterno, menuDeFabrica, nomeDeFabrica } from '@/features/siteBuilder/menuDoPainel';
-import { Secao, Secoes } from '../ui/Secao';
-import { CLASSE_DO_CAMPO, CampoTexto } from '../ui/Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { CLASSE_DO_CAMPO, CampoTexto } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
 
 type Item = MenuDoPainel['items'][number];

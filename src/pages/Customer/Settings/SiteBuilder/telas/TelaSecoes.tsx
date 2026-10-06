@@ -7,8 +7,8 @@ import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
 import {
   HOME_FABRICA, LIMITES_SECOES, TITULO_PASSOS_FABRICA, type Atendimento, type HomeConfig, type Passo,
 } from '@/features/siteBuilder/public/homeConfig';
-import { Secao, Secoes } from '../ui/Secao';
-import { CLASSE_DO_CAMPO, CampoTexto, CampoTextoLongo } from '../ui/Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { CLASSE_DO_CAMPO, CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
 import EnvioDeImagem from '../ui/EnvioDeImagem';
 import type { FormProps } from './tipos';
 
@@ -58,7 +58,7 @@ export default function TelaSecoes({ siteForm, setF }: FormProps) {
       >
         <div className="flex items-center gap-3">
           <Checkbox id="passos-ativo" checked={passos.enabled} onCheckedChange={v => mudarPassos({ enabled: v === true })} />
-          <UILabel htmlFor="passos-ativo" className="cursor-pointer text-base font-normal">Mostrar Como funciona</UILabel>
+          <UILabel htmlFor="passos-ativo" className="cursor-pointer text-base font-normal">Mostrar a seção Como funciona</UILabel>
         </div>
         {(
           <>
@@ -92,7 +92,7 @@ export default function TelaSecoes({ siteForm, setF }: FormProps) {
       >
         <div className="flex items-center gap-3">
           <Checkbox id="atendimento-ativo" checked={a.enabled} onCheckedChange={v => mudarAtendimento({ enabled: v === true })} />
-          <UILabel htmlFor="atendimento-ativo" className="cursor-pointer text-base font-normal">Mostrar Atendimento</UILabel>
+          <UILabel htmlFor="atendimento-ativo" className="cursor-pointer text-base font-normal">Mostrar a seção Atendimento</UILabel>
         </div>
         {(
           <>

@@ -21,21 +21,11 @@ const read = (p: string) => readFileSync(resolve(__dirname, '../../..', p), 'utf
 describe('roteiro da IA na tela do cliente', () => {
   const src = fonteDaIaVendedora();
 
-  it('o roteiro entra na lista campo-a-campo do PATCH', () => {
-    // ⚠️ O corte vai até o FIM do payload (`setSelected(updated)`), não a um
-    // número fixo de caracteres: a lista cresce a cada campo novo, e com a janela
-    // fixa de 6000 este spec passou a reprovar quando o recorte por funil do
-    // follow-up entrou ANTES do roteiro — sem nada de errado com o roteiro.
-    const saveAgent = src.slice(src.indexOf('const saveAgent'), src.indexOf('setSelected(updated)'));
-
-    expect(saveAgent).toContain('playbook:');
-  });
-
-  // Com `??`, limpar o roteiro inteiro (voltar tudo ao padrão de fábrica) seria
-  // trocado de volta pelo valor antigo: a tela mostraria "no padrão", o aviso
-  // diria "Salvo", e o servidor continuaria com o texto reescrito.
-  it('e entra com `in`, não com `??` — objeto vazio é escolha legítima', () => {
-    expect(src).toContain("playbook: 'playbook' in patch ? patch.playbook : selected.playbook");
+  // Desde a entrega 2 o roteiro (reescrita de blocos) mora no Avançado e grava
+  // direto, só o `playbook` INTEIRO que a seção monta (objeto vazio = tudo de
+  // fábrica): nada de `??` trocando a limpeza pelo valor antigo.
+  it('o Avançado grava só o playbook, direto', () => {
+    expect(src).toContain('salesAgentsService.update(agent.id, { playbook: patch.playbook })');
   });
 
   it('a chave do gate vai LITERAL, para os scanners do catálogo a enxergarem', () => {
@@ -45,7 +35,7 @@ describe('roteiro da IA na tela do cliente', () => {
   // O comentário dizia "a Leal Mídia sempre vê" e o código não fazia isso: a seção
   // ficava escondida até de quem libera a chave. A aba de Landings é a régua.
   it('e a Leal Mídia sempre vê, como a aba de Landings', () => {
-    expect(src).toContain('isSuper || roteiroToggle');
+    expect(src).toContain('equipe || roteiroToggle');
     expect(src).toContain('isSuper || insightsToggle');
   });
 
@@ -58,36 +48,14 @@ describe('roteiro da IA na tela do cliente', () => {
   });
 });
 
-// O assistente em tela cheia grava por conta própria, num PATCH só. Ele NÃO pode
-// passar pelo `saveAgent` da tela (que descarta campo fora da lista) e precisa
-// mandar o `playbook` INTEIRO — só `vars` apagaria os blocos reescritos.
-describe('assistente de configuração da IA', () => {
-  const pagina = read('src/pages/Customer/Automations/SalesAgents/assistente/AssistenteIA.tsx');
-  const mapeamento = read('src/pages/Customer/Automations/SalesAgents/assistente/assistenteMapping.ts');
-
-  it('grava direto no serviço, num PATCH só', () => {
-    expect(pagina).toContain('salesAgentsService.update(agent.id, payload)');
-    expect(pagina).not.toContain('saveAgent(');
-  });
-
-  it('o playbook é mesclado por cima do que a IA já tem, nunca substituído', () => {
-    expect(mapeamento).toContain("const next: AgentPlaybookConfig = { ...(atual ?? {}) };");
-    expect(mapeamento).toContain('playbookDasRespostas(a, agent.playbook)');
-  });
-
-  it('o "+" da tela leva para o assistente, e o assistente devolve pela query ?agent=', () => {
+// O assistente em tela cheia saiu na entrega 2 (o passo a passo do Configurar é o
+// mesmo pra criar e editar). O que os testes dele protegiam (PATCH só do que
+// mudou, jsonb mesclado sobre o salvo) mora em patchDoPasso.spec.ts e
+// camposDosPassos.spec.ts.
+describe('Nova IA', () => {
+  it('cria o rascunho pelo serviço, e o ?agent= de link antigo continua abrindo a IA', () => {
     const tela = fonteDaIaVendedora();
-    expect(tela).toContain('navigate(`/ia-vendedora/${agent.id}/assistente`)');
-    // Desde a casca nova (entrega 1), o endereço é lido pelo mapa das telas.
+    expect(tela).toContain('salesAgentsService.create(novaIaRascunho())');
     expect(read('src/features/salesAgents/iaMenu.ts')).toContain("params.get('agent')");
-    expect(pagina).toContain('/ia-vendedora?agent=');
-  });
-
-  // Dois editores de janela na mesma etapa (atuação e follow-up): prefixo
-  // repetido faz o rótulo "Das" de um focar o campo do outro.
-  it('os dois editores de horário têm prefixos próprios', () => {
-    const operacao = read('src/pages/Customer/Automations/SalesAgents/assistente/steps/EtapaOperacao.tsx');
-    expect(operacao).toContain('idPrefix="as_win"');
-    expect(operacao).toContain('idPrefix="as_fu_win"');
   });
 });
