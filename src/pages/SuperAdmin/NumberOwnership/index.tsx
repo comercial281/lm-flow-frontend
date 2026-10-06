@@ -1,6 +1,7 @@
 // src/pages/SuperAdmin/NumberOwnership/index.tsx
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Power, RefreshCw, Smartphone } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import EmptyState from '@/components/base/EmptyState';
 import { Button } from '@/components/ui/ds';
@@ -14,6 +15,7 @@ import {
   ruleConfirmation, ruleDoneText, ruleErrorMessage, ruleLastLine, ruleStatusText, summaryLine,
   verdictBadge, type RuleActionKind, type TenantRow,
 } from './numberOwnershipRules';
+import NumerosDaLealMidia from './NumerosDaLealMidia';
 import { Pill } from './Pill';
 import SeloDaSituacao from './SeloDaSituacao';
 import { contadores, filtrarSoCaidos, ordenarComCaidos, ordenarNumeros, seloDoCliente } from './situacao';
@@ -191,6 +193,13 @@ export default function NumberOwnership() {
   const [ruleBusyId, setRuleBusyId] = useState<string | null>(null);
   // "Só caídos" (entrega 4): filtro da tela, pelo resumo de conexão que a lista traz.
   const [soCaidos, setSoCaidos] = useState(false);
+  // Sobe a cada Atualizar: a seção dos números da Leal Mídia relê junto.
+  const [recarga, setRecarga] = useState(0);
+  // ?cliente=<schema> (botão "Ver números" da Atenção): rola até o cliente e
+  // abre o detalhe UMA vez, quando a leitura dele chega.
+  const [params] = useSearchParams();
+  const alvo = params.get('cliente');
+  const alvoResolvido = useRef(false);
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   // Cada leitura ganha um número; resposta de leitura velha é descartada.
   const runRef = useRef(0);
@@ -262,6 +271,27 @@ export default function NumberOwnership() {
 
   const visiveis = ordenarComCaidos(filtrarSoCaidos(rows, soCaidos));
 
+  useEffect(() => {
+    if (!alvo || alvoResolvido.current) return;
+    // O Principal (public) aparece na Atenção, mas os números dele são os da Leal Mídia.
+    if (alvo === 'public') {
+      alvoResolvido.current = true;
+      document.getElementById('numeros-da-leal-midia')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    const row = rows.find(r => r.tenant.schema === alvo);
+    if (!row || row.state.kind === 'loading') return;
+    // "Só caídos" esconderia o cliente do link: desliga o filtro e deixa o
+    // efeito rodar de novo (o `soCaidos` está nas dependências) com a linha na tela.
+    if (soCaidos && (row.tenant.connection_summary?.down ?? 0) === 0) {
+      setSoCaidos(false);
+      return;
+    }
+    alvoResolvido.current = true;
+    if (row.state.kind === 'ready' && row.state.data.verdict !== 'unreadable') setOpenId(row.tenant.id);
+    document.getElementById(`cliente-${row.tenant.id}`)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  }, [alvo, rows, soCaidos]);
+
   return (
     <div className="max-w-6xl mx-auto space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -290,7 +320,10 @@ export default function NumberOwnership() {
           </Button>
           <button
             type="button"
-            onClick={() => void load(true)}
+            onClick={() => {
+              setRecarga(n => n + 1);
+              void load(true);
+            }}
             // Com um Ligar/Desligar no ar, reler agora poderia trazer a foto de
             // antes da escrita e cobrir a leitura nova que o clique devolve.
             disabled={busy || ruleBusyId !== null}
@@ -393,6 +426,8 @@ export default function NumberOwnership() {
           </table>
         </div>
       )}
+
+      <NumerosDaLealMidia recarga={recarga} />
 
       {dialogoDeConfirmacao}
     </div>

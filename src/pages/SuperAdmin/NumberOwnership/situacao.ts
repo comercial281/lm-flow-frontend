@@ -49,6 +49,10 @@ export function seloDoCliente(resumo: ConnectionSummary | null | undefined): Sel
   if (resumo.down > 0) return { texto: plural(resumo.down, 'caído', 'caídos'), tom: 'error' };
   if (resumo.unknown > 0) return { texto: 'Sem leitura', tom: 'neutral' };
   if (resumo.total === 0) return { texto: 'Nenhum número', tom: 'neutral' };
+  // Só API oficial: não há conexão a vigiar, então "Tudo conectado" (verde) seria falso.
+  if (resumo.connected + resumo.connecting === 0 && resumo.never === 0 && resumo.official > 0) {
+    return { texto: 'Sem conexão a vigiar', tom: 'neutral' };
+  }
   const pendentes = [
     resumo.connecting > 0 ? `${numero(resumo.connecting)} conectando` : '',
     resumo.never > 0 ? plural(resumo.never, 'nunca conectado', 'nunca conectados') : '',

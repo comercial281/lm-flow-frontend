@@ -75,6 +75,13 @@ describe('selo do cliente', () => {
     expect(seloDoCliente(resumo({ connected: 1, official: 1, total: 2 }))).toEqual({ texto: 'Tudo conectado', tom: 'ok' });
   });
 
+  it('só API oficial: nada a vigiar, selo neutro e não "Tudo conectado"', () => {
+    expect(seloDoCliente(resumo({ official: 2, total: 2 }))).toEqual({ texto: 'Sem conexão a vigiar', tom: 'neutral' });
+    // Caído e sem leitura continuam mandando.
+    expect(seloDoCliente(resumo({ official: 1, down: 1, total: 2 }))).toEqual({ texto: '1 caído', tom: 'error' });
+    expect(seloDoCliente(resumo({ official: 1, unknown: 1, total: 2 }))).toEqual({ texto: 'Sem leitura', tom: 'neutral' });
+  });
+
   it('pareando e nunca conectado dizem o que é, sem "Tudo conectado"', () => {
     expect(seloDoCliente(resumo({ connected: 1, never: 1, total: 2 }))).toEqual({ texto: '1 nunca conectado', tom: 'neutral' });
     expect(seloDoCliente(resumo({ connecting: 1, never: 2, total: 3 })))

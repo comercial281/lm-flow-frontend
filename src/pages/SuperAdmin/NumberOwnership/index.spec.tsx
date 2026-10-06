@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -476,5 +476,81 @@ describe('NumberOwnership — Números conectados', () => {
 
     expect(await screen.findByText('Nenhum cliente em uso')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+// Entrega 4 — "Ver números" da Atenção chega com ?cliente=<schema>.
+describe('NumberOwnership — ?cliente= e números da Leal Mídia', () => {
+  const original = Element.prototype.scrollIntoView;
+  let rolados: string[] = [];
+
+  beforeEach(() => {
+    rolados = [];
+    Element.prototype.scrollIntoView = function rolar(this: Element) {
+      rolados.push(this.id);
+    };
+  });
+
+  afterEach(() => {
+    Element.prototype.scrollIntoView = original;
+  });
+
+  it('?cliente=<schema> rola até o cliente e abre o detalhe sem clicar', async () => {
+    listTenants.mockResolvedValue(okResponse([tenant('a', 'Cliente A'), tenant('b', 'Cliente B')]));
+    diagnose.mockImplementation((id: string) => Promise.resolve(okResponse(diagnosis(id))));
+
+    montar('/admin/clientes/numeros?cliente=tenant_b');
+
+    expect(await screen.findByText('Pessoa por pessoa')).toBeInTheDocument();
+    expect(screen.getAllByText('Pessoa por pessoa')).toHaveLength(1);
+    expect(rolados).toContain('cliente-b');
+  });
+
+  it('?cliente=public rola até os números da Leal Mídia', async () => {
+    listTenants.mockResolvedValue(okResponse([tenant('a', 'Cliente A')]));
+    diagnose.mockResolvedValue(okResponse(diagnosis('a')));
+
+    montar('/admin/clientes/numeros?cliente=public');
+
+    await waitFor(() => expect(rolados).toContain('numeros-da-leal-midia'));
+  });
+
+  it('a seção dos números da Leal Mídia aparece e o Atualizar relê', async () => {
+    listTenants.mockResolvedValue(okResponse([tenant('a', 'Cliente A')]));
+    diagnose.mockResolvedValue(okResponse(diagnosis('a')));
+    platformNumbers.mockResolvedValue(okResponse({
+      unreadable: false, numbers: [{ name: 'Operacional (LM01)', phone: null, status: 'connected' }],
+    }));
+
+    montar();
+
+    expect(await screen.findByText('Operacional (LM01)')).toBeInTheDocument();
+    // Atualizar fica travado enquanto a lista lê; espera destravar.
+    await waitFor(() => expect(screen.getByRole('button', { name: /Atualizar/ })).not.toBeDisabled());
+    await userEvent.click(screen.getByRole('button', { name: /Atualizar/ }));
+    await waitFor(() => expect(platformNumbers).toHaveBeenCalledTimes(2));
+  });
+
+  it('"Só caídos" ligado escondendo o cliente do ?cliente=: desliga o filtro e rola até ele', async () => {
+    listTenants.mockResolvedValue(okResponse([
+      tenant('a', 'Cliente A', resumo({ down: 1, connected: 0 })),
+      tenant('b', 'Cliente B'),
+    ]));
+    let liberarB: (v: unknown) => void = () => {};
+    diagnose.mockImplementation((id: string) =>
+      id === 'b' ? new Promise(r => { liberarB = r; }) : Promise.resolve(okResponse(diagnosis(id))));
+
+    montar('/admin/clientes/numeros?cliente=tenant_b');
+
+    // Liga o filtro enquanto a leitura do B não chegou: o B some da lista.
+    await userEvent.click(await screen.findByRole('button', { name: 'Só caídos' }));
+    expect(screen.queryByText('Cliente B')).not.toBeInTheDocument();
+
+    liberarB(okResponse(diagnosis('b')));
+
+    expect(await screen.findByText('Pessoa por pessoa')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Só caídos' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText('Cliente B')).toBeInTheDocument();
+    await waitFor(() => expect(rolados).toContain('cliente-b'));
   });
 });

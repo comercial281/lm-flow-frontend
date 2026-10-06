@@ -23,7 +23,7 @@ describe('linhasDoProblema', () => {
       'Número (11) 91234-1234 (Plantão) caiu há 3 h',
       'Número Vendas está desconectado',
     ]);
-    expect(l[0].acao).toEqual({ rotulo: 'Ver números', href: '/admin/clientes/numeros' });
+    expect(l[0].acao).toEqual({ rotulo: 'Ver números', href: '/admin/clientes/numeros?cliente=tenant_alfa' });
   });
 
   it('IA falhando leva pra Custos filtrado em só erros', () => {
