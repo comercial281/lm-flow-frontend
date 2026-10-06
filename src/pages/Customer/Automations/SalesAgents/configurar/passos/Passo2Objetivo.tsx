@@ -9,6 +9,7 @@
 // (`HandoffPolicy`: "só se ela não souber responder" / "ao menor sinal de dúvida"),
 // não "o lead sumiu". Aparecem só pra quem já os tem, e continuam valendo.
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/ds';
 import { Secao } from '@/components/base/Secao';
 import { Campo, CampoTexto, CLASSE_DO_CAMPO } from '@/components/base/Campo';
@@ -26,6 +27,8 @@ import { CAMPOS_DO_PASSO } from '../camposDosPassos';
 import { Aviso, Caixa, CascaDoPasso, Escolha, type OpcaoDeEscolha } from '../pecas';
 import { MOMENTOS_DO_FUNIL } from '../opcoes';
 import type { PropsDoPasso } from '../passos';
+import SistemaDoCliente from '../SistemaDoCliente';
+import { problemaNoEndereco, webhookDisponivel } from '@/features/salesAgents/sistemaDoCliente';
 
 type Quando = HandoffMode | 'julgar';
 
@@ -34,11 +37,16 @@ const ALCANCES: OpcaoDeEscolha<AlcanceDaIa>[] = [
   { valor: 'visit', titulo: 'Vai até o fim', descricao: 'Além de qualificar, marca a visita na agenda e passa a confirmação.' },
 ];
 
-// Entrega 5: "Sistema do cliente" entra nesta lista (não na persona do próprio corretor).
+// "Sistema do cliente" (entrega 5): não vale na persona do próprio corretor.
 const DESTINOS: OpcaoDeEscolha<Exclude<SalesAgentHandoffTarget, 'number_owner'>>[] = [
   { valor: 'inbox_roleta', titulo: 'A roleta deste número', descricao: 'Vale a roleta do WhatsApp em que ela atende.' },
   { valor: 'roleta', titulo: 'Uma roleta escolhida', descricao: 'Pra quando ela atende num número e os corretores atendem em outros.' },
   { valor: 'user', titulo: 'Um corretor fixo', descricao: 'O lead vai sempre pra mesma pessoa, com o botão de aceitar.' },
+  {
+    valor: 'webhook',
+    titulo: 'Sistema do cliente',
+    descricao: 'O lead vai pro sistema que a imobiliária já usa (o CRM dela), com o resumo da IA. Ninguém da roleta recebe.',
+  },
 ];
 
 export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
@@ -111,6 +119,22 @@ export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
     ...(quando === 'sem_resposta' ? [{ valor: 'sem_resposta' as Quando, titulo: 'Só quando ela não souber responder (opção antiga)', descricao: 'Continua valendo até você escolher outra.' }] : []),
   ];
 
+  const destinos = DESTINOS.map((o) => (o.valor === 'webhook' && !webhookDisponivel(escolhas.persona)
+    ? { ...o, desabilitada: true, motivo: 'Na persona corretor o lead vai sempre pro dono do número.' }
+    : o));
+
+  // Endereço ruim não sai do passo: o servidor também recusa, mas aqui a frase é a da tela.
+  const salvarPasso = () => {
+    if (rascunho.handoff_target === 'webhook') {
+      const problema = problemaNoEndereco(rascunho.handoff_webhook_url ?? '');
+      if (problema) {
+        toast.error(problema);
+        return;
+      }
+    }
+    void salvar();
+  };
+
   const nomeDaRoleta = roletas.find((r) => r.id === rascunho.handoff_roleta_config_id)?.nome ?? null;
   const nomeDoCorretor = pessoas.find((p) => p.id === rascunho.handoff_user_id)?.nome ?? null;
   const roletasVisiveis = roletas.filter((r) => r.ativa || r.id === rascunho.handoff_roleta_config_id);
@@ -123,7 +147,7 @@ export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
   );
 
   return (
-    <CascaDoPasso numero={2} previa={previa} pendente={pendente} salvando={salvando} erro={erro} aoSalvar={() => void salvar()} aoDescartar={descartar}>
+    <CascaDoPasso numero={2} previa={previa} pendente={pendente} salvando={salvando} erro={erro} aoSalvar={salvarPasso} aoDescartar={descartar}>
       <Secao titulo="Até onde ela vai" descricao="Se ela só prepara o lead ou se também marca a visita.">
         <Escolha nome="alcance" legenda="Até onde ela vai" valor={escolhas.alcance} opcoes={ALCANCES} aoEscolher={escolherAlcance} />
       </Secao>
@@ -146,7 +170,7 @@ export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
           </>
         ) : (
           <>
-            <Escolha nome="destino" legenda="Pra onde vai o lead" opcoes={DESTINOS} aoEscolher={trocarDestino}
+            <Escolha nome="destino" legenda="Pra onde vai o lead" opcoes={destinos} aoEscolher={trocarDestino}
               valor={rascunho.handoff_target === 'number_owner' ? null : rascunho.handoff_target} />
             {rascunho.handoff_target === 'roleta' && (
               <Campo id="p2-roleta" rotulo="Qual roleta">
@@ -156,6 +180,19 @@ export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
                   {roletasVisiveis.map((r) => <option key={r.id} value={r.id}>{r.nome}{r.ativa ? '' : ' (desativada)'}</option>)}
                 </Seletor>
               </Campo>
+            )}
+            {rascunho.handoff_target === 'webhook' && (
+              <SistemaDoCliente
+                agentId={agent.id}
+                url={rascunho.handoff_webhook_url ?? ''}
+                urlSalva={agent.handoff_webhook_url ?? null}
+                chaveGerada={Boolean(agent.handoff_webhook_secret_set)}
+                chaveIlegivel={agent.handoff_webhook_secret_state === 'unreadable'}
+                onUrlChange={(v) => mudar({ handoff_webhook_url: v.trim() ? v.trim() : null })}
+                // A chave é gravada na hora (não espera o Salvar): a casca fica sabendo,
+                // sem mexer no rascunho do passo (o updated_at não muda).
+                onChaveGerada={() => aoSalvo({ ...agent, handoff_webhook_secret_set: true, handoff_webhook_secret_state: 'ready' })}
+              />
             )}
             {rascunho.handoff_target === 'user' && (
               <Campo id="p2-corretor" rotulo="Qual corretor">

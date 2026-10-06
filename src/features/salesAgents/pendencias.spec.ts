@@ -50,6 +50,11 @@ describe('pendenciasDosPassos', () => {
     expect(passoComPendencia(ia({ followup_max_attempts: 0 }))).toBe(7);
   });
 
+  it('sistema do cliente sem endereço: passo 2, sem travar', () => {
+    const a = ia({ handoff_target: 'webhook', handoff_webhook_url: null } as Partial<SalesAgent>);
+    expect(pendenciasDosPassos(a)).toEqual([expect.objectContaining({ chave: 'destino_sem_endereco', passo: 2, impedeLigar: false })]);
+  });
+
   it('em ordem de passo', () => {
     const a = ia({ inbox_id: null, lead_facing_name: null, followup_max_attempts: 0 });
     expect(pendenciasDosPassos(a).map((p) => p.passo)).toEqual([1, 6, 7]);

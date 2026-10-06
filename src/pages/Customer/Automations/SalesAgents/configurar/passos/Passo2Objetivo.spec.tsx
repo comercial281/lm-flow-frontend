@@ -27,6 +27,7 @@ vi.mock('@/services/pipelines/pipelinesService', () => ({
   pipelinesService: { getPipelines: vi.fn().mockResolvedValue({ data: [] }), getPipelineStages: vi.fn().mockResolvedValue({ data: [] }) },
 }));
 
+import { toast } from 'sonner';
 import Passo2Objetivo from './Passo2Objetivo';
 
 const abrir = (agent: SalesAgent = agenteDeTeste()) =>
@@ -95,3 +96,29 @@ describe('Passo 2 · Objetivo', () => {
     expect(screen.getByText('Ela qualifica, marca a visita e entrega pra roleta do número.')).toBeTruthy();
   });
 });
+
+// Entrega 5: o lead vai pro sistema que a imobiliária já usa.
+describe('Passo 2 · Sistema do cliente', () => {
+  it('escolher, dar o endereço e salvar manda só o destino e o endereço', async () => {
+    abrir(dono());
+    await userEvent.click(screen.getByLabelText('Sistema do cliente'));
+    await userEvent.type(screen.getByLabelText(/endereço/i), 'https://crm.exemplo.com.br/leads');
+    await salvar();
+    expect(update).toHaveBeenCalledWith('ia-1', { handoff_target: 'webhook', handoff_webhook_url: 'https://crm.exemplo.com.br/leads' });
+  });
+
+  it('endereço ruim não sai do passo', async () => {
+    abrir(dono());
+    await userEvent.click(screen.getByLabelText('Sistema do cliente'));
+    await userEvent.type(screen.getByLabelText(/endereço/i), 'http://localhost/x');
+    await salvar();
+    expect(update).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it('a prévia diz que o lead vai pro sistema do cliente', () => {
+    abrir(dono({ handoff_target: 'webhook', handoff_webhook_url: 'https://crm.exemplo.com.br/leads' }));
+    expect(screen.getByText('Ela qualifica, marca a visita e entrega pro sistema do cliente.')).toBeTruthy();
+  });
+});
+
