@@ -40,7 +40,8 @@ export interface Pendencia {
 type AgenteLido = Pick<SalesAgent, 'enabled' | 'inbox_id' | 'triggers' | 'trigger_keyword' | 'trigger_match_mode'>
   & Partial<Pick<SalesAgent, 'followup_only' | 'followup_enabled' | 'followup_action' | 'followup_flow_id' | 'followup_sequence_slug'
     | 'persona_kind' | 'reach' | 'transfer_config' | 'booking_enabled' | 'handoff_target' | 'handoff_roleta_config_id'
-    | 'handoff_user_id' | 'handoff_webhook_url' | 'handoff_webhook_secret_state' | 'lead_facing_name' | 'number_owner_id' | 'qualification_questions'>>;
+    | 'handoff_user_id' | 'handoff_webhook_url' | 'handoff_webhook_secret_state' | 'handoff_webhook_system' | 'handoff_cvcrm_connected'
+    | 'lead_facing_name' | 'number_owner_id' | 'qualification_questions'>>;
 
 /** O passo do passo a passo que corrige cada coisa (entrega 2). */
 const PASSO = (passo: number): Corrigir => ({ tela: 'configurar', passo });
@@ -187,6 +188,7 @@ const TITULO_NO_PAINEL: Record<string, string> = {
   destino_sem_corretor: 'Pra onde vai o lead',
   destino_sem_endereco: 'Pra onde vai o lead',
   destino_sem_chave: 'Chave do sistema do cliente',
+  destino_cvcrm_desconectado: 'Conexão com o CVCRM',
   perguntas_vazias: 'Perguntas antes de passar',
   followup_sem_escolha: 'O que ela faz quando o lead some',
   followup_sem_fluxo: 'O que ela faz quando o lead some',

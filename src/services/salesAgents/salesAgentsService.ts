@@ -129,6 +129,14 @@ export interface SalesAgent {
   handoff_webhook_secret_set?: boolean;
   /** Estado da chave: 'unreadable' = a chave gravada não abre mais (gere outra). */
   handoff_webhook_secret_state?: 'none' | 'ready' | 'unreadable';
+  /** Sistema do cliente: a FORMA do envio. 'generic' = endereço + chave secreta
+   *  (o de sempre); 'cvcrm' = cadastro do lead no CVCRM do cliente, pela conexão de
+   *  Integrações → CVCRM (desde 06/10/2026). */
+  handoff_webhook_system?: SistemaDoEnvio;
+  /** No CVCRM: empreendimento e fila escolhidos (null = "Deixar o CVCRM decidir"). */
+  handoff_cvcrm?: HandoffCvcrm | null;
+  /** Só no CVCRM (null nos outros): se a conexão do cliente está pronta. Trava o Ligar. */
+  handoff_cvcrm_connected?: boolean | null;
   handoff_roleta_config_id: string | null;
   handoff_user_id: string | null;
   /** Quem ela é. Sempre resolvido pelo servidor. */
@@ -547,6 +555,8 @@ export interface SalesAgentPayload {
   reengagement_second_hours?: number;
   handoff_target?: SalesAgentHandoffTarget;
   handoff_webhook_url?: string | null;
+  handoff_webhook_system?: SistemaDoEnvio;
+  handoff_cvcrm?: HandoffCvcrm | null;
   handoff_roleta_config_id?: string | null;
   handoff_user_id?: string | null;
   persona_kind?: PersonaDaIa;
@@ -936,6 +946,37 @@ export interface WeeklyReportDiagnostico {
   checking: boolean;
 }
 
+/** A forma do envio ao sistema do cliente. */
+export type SistemaDoEnvio = 'generic' | 'cvcrm';
+
+/** Um empreendimento ou uma fila do CVCRM (o nome fica guardado junto). */
+export interface CvcrmEscolha {
+  id: number;
+  nome: string | null;
+}
+
+export interface HandoffCvcrm {
+  empreendimento: CvcrmEscolha | null;
+  fila: CvcrmEscolha | null;
+}
+
+/** As listas do CVCRM do cliente, pra escolher na IA. Uma lista que falha vem com a frase. */
+export interface CvcrmOpcoes {
+  connected: boolean;
+  subdomain: string | null;
+  empreendimentos: CvcrmEscolha[];
+  filas: CvcrmEscolha[];
+  errors: { empreendimentos: string | null; filas: string | null };
+}
+
+/** O que o CVCRM devolveu num envio: o número do lead e quem ficou com ele. */
+export interface CvcrmRetorno {
+  idlead?: string;
+  owner?: string;
+  owner_kind?: 'corretor' | 'imobiliaria' | 'gestor';
+  existing?: boolean;
+}
+
 /** A resposta do "Mandar um lead de teste": o que o sistema do cliente respondeu. */
 export interface WebhookTestResult {
   ok: boolean;
@@ -963,6 +1004,8 @@ export interface WebhookDelivery {
   failed_at: string | null;
   contact_name: string | null;
   conversation_path: string | null;
+  system?: SistemaDoEnvio;
+  remote_ref?: CvcrmRetorno | null;
 }
 
 const BASE = '/sales_agents';
@@ -1101,6 +1144,12 @@ export const salesAgentsService = {
   async testWebhook(id: string): Promise<WebhookTestResult> {
     const res = await api.post(`${BASE}/${id}/handoff_webhook_test`);
     return (res.data as { data: WebhookTestResult }).data;
+  },
+
+  /** As listas de empreendimentos e filas do CVCRM do cliente (e se ele está conectado). */
+  async cvcrmOptions(): Promise<CvcrmOpcoes> {
+    const res = await api.get(`${BASE}/cvcrm_options`);
+    return (res.data as { data: CvcrmOpcoes }).data;
   },
 
   async webhookDeliveries(id: string): Promise<WebhookDelivery[]> {

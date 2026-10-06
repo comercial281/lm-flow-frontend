@@ -92,6 +92,17 @@ describe('situacaoDoEnvio', () => {
 });
 
 describe('linhaNoPainelDoLead', () => {
+
+  it('no CVCRM diz CVCRM e, entregue, pra quem foi', () => {
+    const cv = (extra: Record<string, unknown>) => ({ sales_agent_handoff_webhook: { system: 'cvcrm', at: '2026-10-06T17:32:00Z', ...extra } });
+    expect(linhaNoPainelDoLead(cv({ status: 'pending' }))).toEqual({ tom: 'alerta', texto: 'Enviando ao CVCRM…' });
+    expect(linhaNoPainelDoLead(cv({ status: 'delivered', owner: 'José da Silva' })))
+      .toEqual({ tom: 'ok', texto: 'Entregue no CVCRM às 14:32 para José da Silva.' });
+    expect(linhaNoPainelDoLead(cv({ status: 'delivered' })))
+      .toEqual({ tom: 'ok', texto: 'Entregue no CVCRM às 14:32, na distribuição do CVCRM.' });
+    expect(linhaNoPainelDoLead(cv({ status: 'failed', error: 'O CVCRM recusou o e-mail ou o token.' }))?.texto)
+      .toBe('O envio ao CVCRM falhou: O CVCRM recusou o e-mail ou o token. A gestão foi avisada; o lead não foi pra roleta.');
+  });
   it('lê o espelho do envio gravado na conversa', () => {
     expect(linhaNoPainelDoLead({})).toBeNull();
     expect(linhaNoPainelDoLead({ sales_agent_handoff_webhook: { status: 'pending' } })).toEqual({
