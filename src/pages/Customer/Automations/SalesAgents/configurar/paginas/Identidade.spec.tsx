@@ -12,11 +12,11 @@ import Identidade from './Identidade';
 beforeEach(() => { getAll.mockReset(); getAll.mockResolvedValue([{ id: 'r1', inbox_id: 'inbox-1', is_active: true }]); });
 
 describe('Identidade', () => {
-  it('2 personas (O corretor · Consultora da imobiliária); IA "dono" antiga aparece como Consultora', () => {
+  it('3 personas (O corretor · Dono da imobiliária · Consultora da imobiliária); IA "dono" aparece como Dono', () => {
     render(<Identidade agent={agenteDeTeste({ persona_kind: 'owner' })} inboxes={[]} gravar={gravarDeTeste('identidade')} irPara={vi.fn()} diagnostico={null} />);
-    expect(screen.getAllByRole('radio')).toHaveLength(2);
-    expect(screen.getByRole('radio', { name: 'Consultora da imobiliária' })).toHaveAttribute('aria-checked', 'true');
-    expect(screen.queryByText(/Dono da imobiliária/)).toBeNull();
+    expect(screen.getAllByRole('radio')).toHaveLength(3);
+    expect(screen.getByRole('radio', { name: 'Dono da imobiliária' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Consultora da imobiliária' })).toHaveAttribute('aria-checked', 'false');
   });
 
   it('trocar pra Consultora grava a persona, tira a voz de corretor e leva o lead pra roleta do número', async () => {

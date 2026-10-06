@@ -93,11 +93,9 @@ export function aplicarGravacao(base: SalesAgent, g: Gravacao): SalesAgent {
 // ⚠️ Valores ANTIGOS que a onda 2 recusa em gravação nova (contratos 4 e 6): continuam
 // sendo lidos, mas o Desfazer volta pro equivalente de hoje — senão o Desfazer de
 // uma IA antiga falharia com a recusa do servidor. `inbox_roleta` vira a roleta
-// (sem roleta escolhida, a pendência leva ao Destino); `owner` aparece como a
-// Consultora (Identidade.tsx) e volta como ela.
+// (sem roleta escolhida, a pendência leva ao Destino).
 const EQUIVALENTE_DE_HOJE: Record<string, Record<string, unknown>> = {
   handoff_target: { inbox_roleta: 'roleta' },
-  persona_kind: { owner: 'assistant' },
 };
 
 /** A gravação que volta ao que estava em `antes` nos mesmos campos. */

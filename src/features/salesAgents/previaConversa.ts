@@ -33,7 +33,11 @@ export function previaConversa({ persona, tom = 'close', emoji = 'none', nome, i
   const palmas = emoji === 'light' ? ' 🙌' : '';
   const formal = tom === 'formal';
 
-  const apresentacao = persona === 'assistant'
+  const apresentacao = persona === 'owner'
+    ? (formal
+      ? `Olá! Aqui é ${quem}, dono da ${onde}. Sim, ele ainda está disponível.${sorriso}`
+      : `Oi! Aqui é o ${quem}, dono da ${onde}. Tem sim${sorriso}`)
+    : persona === 'assistant'
     ? (formal
       ? `Olá! Eu sou ${quem}, consultora da ${onde}. Sim, ele ainda está disponível.${sorriso}`
       : `Oi! Eu sou ${quem}, consultora da ${onde}. Tem sim${sorriso}`)

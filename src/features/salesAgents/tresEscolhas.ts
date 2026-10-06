@@ -108,7 +108,7 @@ export function personaParaPatch(
     return { persona_kind: 'broker', transfer_config, handoff_target: 'number_owner', handoff_roleta_config_id: null, handoff_user_id: null };
   }
   if (agent.handoff_target === 'number_owner' || agent.handoff_target === 'inbox_roleta') {
-    return { persona_kind: 'assistant', transfer_config, handoff_target: 'roleta', handoff_roleta_config_id: roletaNoNumero, handoff_user_id: null };
+    return { persona_kind: persona, transfer_config, handoff_target: 'roleta', handoff_roleta_config_id: roletaNoNumero, handoff_user_id: null };
   }
-  return { persona_kind: 'assistant', transfer_config };
+  return { persona_kind: persona, transfer_config };
 }

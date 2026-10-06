@@ -126,16 +126,17 @@ describe('useGravarNaHora', () => {
     });
   });
 
-  // Revisão final da onda 3 (M5): a onda 2 recusa gravação NOVA de `inbox_roleta` e
-  // `owner`. O Desfazer de uma IA antiga volta pro equivalente de hoje.
-  it('Desfazer numa IA antiga não regrava inbox_roleta nem a persona owner', async () => {
+  // Revisão final da onda 3 (M5): a onda 2 recusa gravação NOVA de `inbox_roleta`. O
+  // Desfazer de uma IA antiga volta pro equivalente de hoje; a persona "dono" volta
+  // como dono (ela tem voz própria desde 06/10).
+  it('Desfazer numa IA antiga não regrava inbox_roleta e devolve o dono', async () => {
     const { result, agent } = montar(agenteDeTeste({ handoff_target: 'inbox_roleta', persona_kind: 'owner', handoff_user_id: null }));
     update.mockImplementationOnce(async (_id: string, patch: Partial<SalesAgent>) => salvo(agent, patch, '2026-10-06T10:00:01Z'));
     await act(async () => { await result.current.gravar({ persona_kind: 'broker', handoff_target: 'number_owner' }); });
     const desfazer = toast.mock.calls.find((c) => c[0] === 'Salvo')![1].action.onClick as () => void;
     update.mockImplementationOnce(async (_id: string, patch: Partial<SalesAgent>) => salvo(agent, patch, '2026-10-06T10:00:02Z'));
     await act(async () => { desfazer(); await new Promise((r) => setTimeout(r, 0)); });
-    expect(update).toHaveBeenLastCalledWith('ia-1', { persona_kind: 'assistant', handoff_target: 'roleta' });
+    expect(update).toHaveBeenLastCalledWith('ia-1', { persona_kind: 'owner', handoff_target: 'roleta' });
   });
 
   it('o registro guarda o mais novo e ignora a cópia otimista', async () => {

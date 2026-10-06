@@ -1,7 +1,7 @@
-// Introdução · Identidade (onda 3). Persona em 2 cartões (O corretor · Consultora
-// da imobiliária — a #473 tirou o "assistente virtual"), nome que o lead vê, nome
-// interno e o balão de prévia. "Dono da imobiliária" (owner) saiu: falava igual à
-// Consultora (inventário 06/10); IA antiga "dono" aparece como Consultora.
+// Introdução · Identidade (onda 3). Persona em 3 cartões, nome que o lead vê, nome
+// interno e o balão de prévia. Decisão do dono do produto (06/10): o corretor fala em
+// primeira pessoa e nunca fala de time; o dono fala em primeira pessoa e pode falar do
+// time dele; a consultora é o pré-atendimento de quem não tem CRECI.
 //
 // ⚠️ Trocar a persona mexe no DESTINO (personaParaPatch): o corretor só passa pro
 // dono do número, e sair dele vai pra roleta do número.
@@ -20,13 +20,14 @@ import { Aviso } from '../Aviso';
 import type { PropsDaPagina } from '../paginas';
 
 const PERSONAS = [
-  { valor: 'broker' as const, rotulo: PERSONA_ROTULOS.broker, descricao: 'Fala em primeira pessoa como o dono do número. O lead fica com ele.' },
-  { valor: 'assistant' as const, rotulo: PERSONA_ROTULOS.assistant, descricao: 'Fala em nome da imobiliária, como alguém da equipe, com o nome que você der. Na hora de passar, diz que um corretor vai chamar.' },
+  { valor: 'broker' as const, rotulo: PERSONA_ROTULOS.broker, descricao: 'Fala em primeira pessoa como o corretor dono do número. Não fala de equipe: o lead fica com ele.' },
+  { valor: 'owner' as const, rotulo: PERSONA_ROTULOS.owner, descricao: 'Fala em primeira pessoa como o dono. Pode dizer que vai ver com o time ou pedir pra um corretor chamar.' },
+  { valor: 'assistant' as const, rotulo: PERSONA_ROTULOS.assistant, descricao: 'Pré-atendimento de quem não é corretor. Fala em nome da imobiliária e diz que um corretor vai chamar.' },
 ];
 
 export default function Identidade({ agent, gravar }: PropsDaPagina) {
   const imobiliaria = useAppDataStore((s) => s.account)?.name ?? '';
-  const persona: PersonaGravavel = lerEscolhas(agent).persona === 'broker' ? 'broker' : 'assistant';
+  const persona: PersonaGravavel = lerEscolhas(agent).persona;
   // Leitura de fundo: cargo sem acesso a roletas só não acha a roleta do número.
   // ⚠️ Guarda a PROMESSA, não só a lista: a persona escolhida antes de a lista chegar
   // espera por ela. Sem isso, sair de "O corretor" gravava a roleta vazia mesmo com
@@ -54,7 +55,7 @@ export default function Identidade({ agent, gravar }: PropsDaPagina) {
       <Secao titulo="Nome" descricao="O nome que ela diz pro lead. O nome interno só aparece aqui no LM Flow.">
         <div className="grid gap-4 md:grid-cols-2">
           <TextoNaHora id="identidade-nome-lead" rotulo="Nome que o lead vê" salvo={nome} maxLength={60}
-            placeholder={persona === 'broker' ? agent.number_owner_name ?? 'Bruno' : 'Bia'}
+            placeholder={persona === 'broker' ? agent.number_owner_name ?? 'Bruno' : persona === 'owner' ? 'Carlos' : 'Bia'}
             aviso={nome.trim() ? undefined : 'Sem ele, ela se apresenta sem nome.'}
             aoGravar={(v) => gravar({ lead_facing_name: v.trim() ? v.trim() : null })} />
           <TextoNaHora id="identidade-nome-interno" rotulo="Nome interno" salvo={agent.name}

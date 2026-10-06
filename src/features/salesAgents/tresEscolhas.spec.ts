@@ -55,6 +55,15 @@ describe('personaParaPatch (onda 3)', () => {
     expect(personaParaPatch('assistant', base, 'r1')).toEqual({ persona_kind: 'assistant', transfer_config: { mode: 'checklist' } });
   });
 
+  it('Dono: grava dono, sem voz de corretor, e escolhe o destino como a consultora', () => {
+    const corretor = { ...base, transfer_config: { mode: 'checklist' as const, voice: 'first_person' as const }, handoff_target: 'number_owner' as const, handoff_roleta_config_id: null };
+    expect(personaParaPatch('owner', corretor, 'r1')).toEqual({
+      persona_kind: 'owner', transfer_config: { mode: 'checklist' },
+      handoff_target: 'roleta', handoff_roleta_config_id: 'r1', handoff_user_id: null,
+    });
+    expect(personaParaPatch('owner', base, 'r1')).toEqual({ persona_kind: 'owner', transfer_config: { mode: 'checklist' } });
+  });
+
   it('roletaDoNumero: a roleta ativa ligada ao número', () => {
     const roletas = [{ id: 'r1', inbox_id: 'i1', is_active: false }, { id: 'r2', inbox_id: 'i1', is_active: true }, { id: 'r3', inbox_id: 'i2', is_active: true }];
     expect(roletaDoNumero(roletas, 'i1')).toBe('r2');

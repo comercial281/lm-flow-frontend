@@ -30,6 +30,10 @@ describe('previaConversa', () => {
     }
   });
 
+  it('o dono se apresenta como dono', () => {
+    expect(daIa(previaConversa({ persona: 'owner', tom: 'close', emoji: 'none', nome: 'Carlos', imobiliaria: 'Aurora' }))).toContain('Carlos, dono da Aurora');
+  });
+
   it('o dono passa pro time dele', () => {
     expect(daIa(previaConversa({ persona: 'owner', tom: 'close', emoji: 'none', nome: 'Carlos', imobiliaria: 'Aurora' }))).toContain('corretor do meu time');
     expect(daIa(previaConversa({ persona: 'owner', tom: 'formal', emoji: 'none', nome: 'Carlos', imobiliaria: 'Aurora' }))).toContain('minha equipe');

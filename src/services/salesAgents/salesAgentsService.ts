@@ -366,8 +366,8 @@ export type SalesAgentHandoffTarget = 'inbox_roleta' | 'roleta' | 'user' | 'numb
  */
 export type SalesAgentHandoffChoice = Exclude<SalesAgentHandoffTarget, 'inbox_roleta'>;
 
-/** Persona que se GRAVA: `owner` (Dono da imobiliária) saiu (onda 2); lido como Consultora. */
-export type PersonaGravavel = Exclude<PersonaDaIa, 'owner'>;
+/** Persona que se GRAVA. As três (o Dono saiu e voltou no mesmo dia, 06/10: tem voz própria). */
+export type PersonaGravavel = PersonaDaIa;
 
 export interface TransferConfig {
   mode?: HandoffMode;
