@@ -5,7 +5,7 @@
 // (SalesAgents::TriggerGate), e numa IA ligada isso perde lead.
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
@@ -162,5 +162,40 @@ describe('Canal · a condição antiga vale até a nova ficar completa', () => {
     expect(gravar).toHaveBeenLastCalledWith({ triggers: [] });
     expect(screen.getByRole('radio', { name: 'Só alguns' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByText(SEM_CONDICAO).closest('[class*="amber"]')).not.toBeNull();
+  });
+
+  // Clique de verdade: o campo perde o foco ANTES do clique, e a palavra pendente
+  // grava. A escolha "Todos os leads" tem que ganhar mesmo assim.
+  it('"Todos os leads" com a primeira condição pendente (clique de verdade) fica em Todos e grava []', async () => {
+    const gravar = abrir(agenteDeTeste({ triggers: [] }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Só alguns' }));
+    await userEvent.click(screen.getByRole('button', { name: /Adicionar condição/ }));
+    await userEvent.type(palavras()[0], 'casa');
+    await userEvent.click(screen.getByRole('radio', { name: 'Todos os leads' }));
+    expect(gravar).toHaveBeenLastCalledWith({ triggers: [] });
+    expect(screen.getByRole('radio', { name: 'Todos os leads' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByRole('button', { name: /Adicionar condição/ })).not.toBeInTheDocument();
+  });
+
+  it('"Todos os leads" → Desfazer: a palavra digitada depois grava ao sair da página sem sair do campo', async () => {
+    const gravar = gravarDeTeste('canal');
+    let desfazer = () => {};
+    function Casca() {
+      const [agent, setAgent] = useState(agenteDeTeste({ triggers: [{ type: 'tag', value: 'vip' }] }));
+      desfazer = () => setAgent((a) => ({ ...a, triggers: [{ type: 'tag', value: 'vip' }] }));
+      const gravarEAplicar = async (...args: Parameters<typeof gravar>) => {
+        const ok = await gravar(...args);
+        if (ok) setAgent((a) => ({ ...a, ...args[0] }));
+        return ok;
+      };
+      return <Canal agent={agent} inboxes={[]} gravar={gravarEAplicar} irPara={vi.fn()} diagnostico={null} />;
+    }
+    const { unmount } = render(<Casca />);
+    await userEvent.click(screen.getByRole('radio', { name: 'Todos os leads' }));
+    expect(gravar).toHaveBeenLastCalledWith({ triggers: [] });
+    await act(async () => { desfazer(); });
+    fireEvent.change(screen.getByPlaceholderText('etiqueta (ex: vip)'), { target: { value: 'vip2' } });
+    unmount();
+    expect(gravar).toHaveBeenLastCalledWith({ triggers: [{ type: 'tag', value: 'vip2' }] });
   });
 });

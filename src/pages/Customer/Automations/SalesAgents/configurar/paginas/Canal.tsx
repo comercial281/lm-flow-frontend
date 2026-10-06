@@ -6,7 +6,7 @@
 // vazia é "todos" pro servidor, e a tela ficaria dizendo "só alguns".
 // ⚠️ A palavra antiga (`trigger_keyword`) não tem campo: aparece com a frase do que
 // ela faz de verdade (§6.11) e "Tirar essa regra".
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/ds';
 import { Secao, Secoes } from '@/components/base/Secao';
 import { Campo, CLASSE_DO_CAMPO } from '@/components/base/Campo';
@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { TriggersSection } from '../blocos/TriggersSection';
 import { Aviso } from '../Aviso';
 import type { PropsDaPagina } from '../paginas';
+import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 
 type Modo = 'vivo' | 'so_followup';
 type Publico = 'todos' | 'alguns';
@@ -33,7 +34,16 @@ export default function Canal({ agent, inboxes, gravar, irPara, diagnostico }: P
   // "Todos os leads" desmonta as condições: a palavra pendente não pode gravar no
   // desmonte (ressuscitaria o que a pessoa tirou). Qualquer outro desmonte grava.
   const escolheuTodos = useRef(false);
+  // ⚠️ As condições que o bloco acabou de mandar gravar. No clique de verdade em
+  // "Todos os leads", o campo perde o foco ANTES do clique e grava a palavra
+  // pendente; o `temCondicoes` deste render ainda é o de antes. Sem isto o "Todos"
+  // não gravava [] e o "Só alguns" voltava com a condição.
+  const condicoesEnviadas = useRef<SalesAgent['triggers'] | null>(null);
   const publico: Publico = temCondicoes || abrindoAlguns ? 'alguns' : 'todos';
+  // O bloco voltou (Desfazer do "Todos", gravação recusada): a palavra pendente volta
+  // a gravar no desmonte. O desmonte do filho roda antes deste efeito, então o
+  // desmonte causado pelo "Todos" ainda vê a trava ligada.
+  useEffect(() => { if (publico === 'alguns') escolheuTodos.current = false; }, [publico]);
   const numero = inboxes.find((i) => String(i.id) === String(agent.inbox_id ?? ''))?.name ?? agent.inbox_name ?? null;
   const credencial = diagnostico?.items.find((i) => i.key === 'credentials');
   const situacao = !agent.inbox_id || !credencial ? null : credencial.status === 'ok' ? 'Conectado' : 'Desconectado';
@@ -44,7 +54,9 @@ export default function Canal({ agent, inboxes, gravar, irPara, diagnostico }: P
     escolheuTodos.current = p === 'todos';
     if (p === 'alguns') { setAbrindoAlguns(true); return; }
     setAbrindoAlguns(false);
-    if (temCondicoes) await gravar({ triggers: [] });
+    const pendentes = (condicoesEnviadas.current ?? []).length > 0;
+    condicoesEnviadas.current = null;
+    if (temCondicoes || pendentes) await gravar({ triggers: [] });
   };
 
   return (
@@ -97,7 +109,8 @@ export default function Canal({ agent, inboxes, gravar, irPara, diagnostico }: P
         <BotoesDeEscolha<Publico> rotulo="Público" valor={publico}
           opcoes={[{ valor: 'todos', rotulo: 'Todos os leads' }, { valor: 'alguns', rotulo: 'Só alguns' }]}
           aoEscolher={(p) => void escolherPublico(p)} />
-        {publico === 'alguns' && <TriggersSection agent={agent} onSave={(p) => void gravar(p)} escolheuTodos={escolheuTodos} />}
+        {publico === 'alguns' && <TriggersSection agent={agent} escolheuTodos={escolheuTodos}
+          onSave={(p) => { if (p.triggers) condicoesEnviadas.current = p.triggers; void gravar(p); }} />}
       </Secao>
     </Secoes>
   );
