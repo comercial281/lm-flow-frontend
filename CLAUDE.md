@@ -6767,7 +6767,9 @@ O que aparece na tela, com a chave ligada (menu Minha imobiliária › Roleta de
   - **De onde vem o lead**: uma origem por linha com o tipo em frase (*Formulário do Meta ·
     nome contém "ALMA"* com *pega 3 formulários hoje*), botão de tirar. *Adicionar origem* em dois
     passos (tipo → item); item de outra roleta mostra *Está na roleta X* e pergunta *Trazer pra
-    esta roleta?*; "nome contém" mostra na hora o que a palavra pega e o conflito da barreira D9.
+    esta roleta?*; "nome contém" mostra na hora o que a palavra pega e o conflito da barreira D9
+    (prévia do SERVIDOR, `GET /roleta_configs/keyword_preview`; com mais de uma página do Facebook,
+    pergunta a página e manda `meta_page_id`).
   - **Fila**: posição, foto, *(11) 9…· conectado / desconectado / sem número próprio*, chave de
     pausa, arrastar pela alça (mouse, dedo, teclado) e setas ↑↓, *+ Adicionar corretor*, *Prazo pra
     aceitar* (5 min a 2 h, Sem prazo) e *Próximo agora: Bruno*.
@@ -6818,8 +6820,13 @@ Armadilhas:
    Fila de 23/09. Não existe campo de posição pra editar.
 5. **Os serviços aceitam a resposta com e sem o envelope `{ data }`** (`miolo`), e o conflito da
    D9 nos dois formatos de erro (`conflitoDaOrigem`). Não trocar por `res.data.data` direto.
-6. **Chave de aviso grava a partir do que JÁ está salvo**: texto em edição não vai junto (o PUT
-   substitui o registro inteiro).
+6. **Avisos gravam numa fila só, a partir do último registro salvo**: o PUT substitui o registro
+   inteiro, então texto em edição não vai junto e duas gravações (texto + chave) não se apagam.
+9. **A prévia do "nome contém" é do servidor** (mesma regra do roteador: tokens, com acento). Não
+   calcular na tela: o casamento local sem acento mostrava formulário que o roteador não pega.
+10. **Aba de estado não guarda a saída sozinha**: as abas, o "← Roleta de leads", Duplicar e Nova
+    roleta perguntam com `usePodeSair` (`PEDIDO_SAIR_SEM_SALVAR`) quando há horário ou texto por salvar.
+11. **`/settings/roleta-config` passa pelo mesmo portão** (`ChaveRoletaNova`) que `/automations/roleta-config`.
 7. **Os textos da roleta nova moram em `Roleta/roletaNovaTextos.ts`**, com spec. As variáveis
    `{{origem}}` e `{{roleta}}` dos avisos e `{{nome}}` da mensagem fora do horário são do B2.
 8. **Não é o `featureKey` do menu**: o item *Roleta de leads* continua o mesmo; quem troca a tela
