@@ -16,9 +16,10 @@ import {
 } from '@/services/capi/capiConfigService';
 import {
   roletaConfigService,
-  roletaLabel,
   type RoletaConfig,
 } from '@/services/roletaConfig/roletaConfigService';
+import CampoQuemAssume from '@/components/roleta/CampoQuemAssume';
+import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import {
   buildLandingSettings,
   readDisqualifiedBranch,
@@ -102,8 +103,15 @@ export default function LeadRoutingModal({
   const [disqStageId, setDisqStageId] = useState(disqInit.stage_id ?? '');
   const [disqLabelId, setDisqLabelId] = useState(disqInit.label_id ?? '');
   // Quem assume o lead (opcional). Vazio = ninguém é sorteado e o lead entra sem
-  // responsável, que é como toda landing sempre funcionou.
-  const [roletas, setRoletas] = useState<RoletaConfig[]>([]);
+  // responsável, que é como toda landing sempre funcionou. TODAS as roletas: a
+  // escolhida e desligada continua na lista. `null` = cargo sem acesso.
+  //
+  // TODO(B2/T4): a landing ainda não lê responsável fixo (o servidor distribui
+  // só pela roleta). Quando `distribute_lead` passar a usar Leads::Distribution
+  // com o campo do responsável, passar a lista de pessoas e gravar o campo — aí
+  // a aba Corretores aparece sozinha.
+  const [roletas, setRoletas] = useState<RoletaConfig[] | null>(null);
+  const roletaNova = useClientToggle('roleta_nova');
   const [roletaId, setRoletaId] = useState(readRoletaConfigId(storedSettings));
   // Rastreio (Pixel Meta) da landing. Os eventos saem pelo navegador do lead E
   // pela API de Conversões, com o mesmo identificador — quem manda pelo servidor
@@ -163,7 +171,7 @@ export default function LeadRoutingModal({
         // Idem: cargo sem acesso às roletas só não vê a opção de distribuir.
         try {
           const rs = await roletaConfigService.getAll();
-          if (active) setRoletas((rs || []).filter((r) => r.is_active));
+          if (active) setRoletas(rs || []);
         } catch {
           /* leitura de fundo não grita */
         }
@@ -227,16 +235,6 @@ export default function LeadRoutingModal({
       setSaving(false);
     }
   };
-
-  // A roleta já escolhida continua na lista mesmo desativada: sem ela o campo
-  // abriria em "ninguém" e salvar trocaria a escolha do gestor sem ele ver.
-  const roletaOptions: Opt[] = (() => {
-    const opts = roletas.map((r) => ({ id: r.id, label: roletaLabel(r) }));
-    if (roletaId && !opts.some((o) => o.id === roletaId)) {
-      opts.push({ id: roletaId, label: 'Roleta escolhida (desativada)' });
-    }
-    return opts;
-  })();
 
   // O pixel que vai ser usado de verdade — é ele que o teste pergunta à Meta.
   const crmPixelId = crmCapi?.pixel_id ?? null;
@@ -310,23 +308,22 @@ export default function LeadRoutingModal({
                 aceita. Deixando vazio, nada muda: o lead entra no funil sem responsável e a
                 gestão distribui na mão.
               </p>
-              <Field
-                label="Roleta"
-                value={roletaId}
-                onChange={setRoletaId}
-                options={roletaOptions}
-                placeholder="Não distribuir (entra sem responsável)"
+              <span className="mb-1 block text-xs text-muted-foreground">Roleta</span>
+              <CampoQuemAssume
+                aria-label="Roleta"
+                value={{ default_assignee_id: null, roleta_config_id: roletaId || null }}
+                onChange={(v) => setRoletaId(v.roleta_config_id ?? '')}
+                pessoas={null}
+                roletas={roletas}
+                nenhum="Não distribuir (entra sem responsável)"
               />
               {roletaId && (
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   Lead que já tem responsável não volta para o sorteio — continua com quem já o
-                  atende. Fora do horário da roleta, quem recebe é o número de plantão dela.
-                </p>
-              )}
-              {roletaId && roletaOptions.some((o) => o.id === roletaId && o.label.includes('desativada')) && (
-                <p className="mt-1 text-[11px] text-amber-600">
-                  Esta roleta está desativada: enquanto ela não for religada, o lead continua
-                  entrando sem responsável.
+                  atende.{' '}
+                  {roletaNova
+                    ? 'Fora do horário da roleta, o lead espera e é oferecido quando ela abrir.'
+                    : 'Fora do horário da roleta, quem recebe é o número de plantão dela.'}
                 </p>
               )}
             </div>
