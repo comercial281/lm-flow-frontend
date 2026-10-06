@@ -6746,3 +6746,31 @@ Entrega 3 da Área do Admin (spec `LM FLOW/specs/2026-10-05-admin-clientes-entre
 
 - No Personalizar, as 5 telas da página inicial (Busca rápida, Vitrines, Chamadas, Mais buscados, Mais seções) ficam num submenu **"Página inicial ›"**, que abre ao lado. Pedido do dono: a lista suspensa estava comprida e repetia "Página inicial ·" em cada item.
 - Mapa: campo `submenu` em `TELAS` (`meuSiteMenu.ts`) e `SUBMENUS` com o nome e a dica. A barra junta as telas com o mesmo `submenu` numa entrada só, no lugar da primeira delas. A trilha acima do título vira "Personalizar › Página inicial".
+
+## Pop-up de aceite da roleta (06/10/2026)
+
+Parte da reestruturação da Roleta (spec `LM FLOW/specs/2026-10-06-roleta-reestruturacao-design.md`, D10). Até aqui a oferta só aparecia na faixa amarela do topo (fácil de não ver) e no link do WhatsApp: com prazo correndo, o lead passava para o próximo enquanto o corretor estava em outra tela.
+
+O que aparece na tela:
+
+- **Pop-up "Lead novo pra você"** sobre qualquer tela do app quando chega uma oferta que o corretor ainda não viu: prazo (*Aceite em até 12 min*, *Sem prazo de aceite* ou *Prazo esgotado*), nome do lead, origem e roleta (quando o servidor manda), o bloco *O que a IA já descobriu* (quando há), **Recusar** / **Aceitar** e *Ver depois*.
+- **Aceitar** leva à conversa do lead; lead sem conversa (formulário, anúncio) abre o card do lead (`/contacts/:id`). **Recusar** só fecha e passa para o próximo corretor.
+- **Várias ofertas**: uma por vez, a mais antiga primeiro, com *+N esperando* (N = as que ainda vão abrir; as adiadas não contam).
+- **Som curto** ao abrir (o *ding* que já existe em `public/audio/notifications/`). Sem permissão de som do navegador, abre calado.
+- **No celular** (abaixo de 640 px) o pop-up ocupa a tela inteira.
+- **A lista de ofertas checa a cada 15 s com a aba visível** (era 1 min, com a aba escondida ou não), e na volta para a aba checa na hora. Vale para a faixa, o selo e o cartão *Sua vez na fila* também, porque a lista é uma só.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **15 s com a aba visível**, aba escondida não checa. **Sem tempo real** até a conexão ao vivo ir para o app inteiro.
+- **"Ver depois" não reabre.** Ver depois (ou fechar no X / Esc / fora) marca a oferta como vista na memória e no `sessionStorage` (`lmflow:roleta:ofertas-vistas`): ela fica na faixa amarela e só oferta NOVA abre o pop-up. Aba nova começa sem vistas (é por sessão, de propósito).
+- **Uma porta só.** Aceitar/Recusar são as funções do `PendingOffersContext`, as mesmas do selo `OfferActions` e as mesmas chamadas da tela de aceite (`/broker_assignments/:id/accept|refuse`). O motivo do erro mora em `offerReason.ts`, para o selo e o pop-up falarem igual.
+- **Sem chave.** Vale para todo cliente com roleta, nos dois modos (como o selo, desde 03/09).
+- **Não abre na tela de aceite** (`/roleta/aceite/:id`): ela já é a tela de decidir.
+
+Armadilhas:
+
+1. **Origem e roleta dependem do servidor.** `roleta_name` e `origin_label` são opcionais em `BrokerAssignmentDetail`; o serializador do `broker_assignments` ainda não manda. Contra o servidor de hoje o pop-up só não desenha essas duas linhas.
+2. **O `OfferAiBriefing` tem texto branco** (foi feito para o fundo escuro da tela de aceite). No pop-up ele vai dentro de uma caixa `bg-[#1A0A2E]`; sem ela, no tema claro, o bloco fica invisível.
+3. **O pop-up tem que ficar DENTRO do `PendingOffersProvider`** no `MainLayout`: fora dele o hook devolve lista vazia e o pop-up nunca abre, sem erro nenhum (`MainLayout.ofertas.spec.ts` trava isso).
+4. **Tela cheia é por classe `max-sm:`** no `DialogContent` (o `max-w-*` sem prefixo seria lido pelo `uncapAt640` do `ds.tsx` como teto).
