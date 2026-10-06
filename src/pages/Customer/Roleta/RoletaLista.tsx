@@ -17,6 +17,7 @@ import BaseStatusBadge from '@/components/base/BaseStatusBadge';
 import EmptyState from '@/components/base/EmptyState';
 import { CampoTexto } from '@/components/base/Campo';
 import { useCan } from '@/hooks/useCan';
+import { usePodeSair } from './usePodeSair';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   roletaConfigService,
@@ -115,18 +116,26 @@ export default function RoletaLista() {
   const pedida = params.get('aba') as Aba | null;
   const aba: Aba = pedida && ABAS.includes(pedida) ? pedida : 'roletas';
 
+  // Textos dos Avisos por salvar não somem calados ao trocar de aba ou criar.
+  const { podeSair, dialogoDeSaida } = usePodeSair();
   const [criando, setCriando] = useState(false);
   const [nome, setNome] = useState('');
   const [salvando, setSalvando] = useState(false);
 
-  const trocarAba = (chave: string) =>
+  const trocarAba = async (chave: string) => {
+    if (chave === aba || !(await podeSair())) return;
     setParams(antes => {
       const novos = new URLSearchParams(antes);
       if (chave === 'roletas') novos.delete('aba'); else novos.set('aba', chave);
       return novos;
     }, { replace: true });
+  };
 
-  const abrirCriacao = () => { setNome(''); setCriando(true); };
+  const abrirCriacao = async () => {
+    if (!(await podeSair())) return;
+    setNome('');
+    setCriando(true);
+  };
 
   const criar = async () => {
     const limpo = nome.trim();
@@ -150,12 +159,12 @@ export default function RoletaLista() {
           <BaseHeader
             title="Roleta de leads"
             subtitle="Decide qual corretor atende cada lead que chega, um de cada vez, na ordem da fila."
-            primaryAction={podeCriar ? { label: 'Nova roleta', icon: <Plus className="h-4 w-4" />, onClick: abrirCriacao } : undefined}
+            primaryAction={podeCriar ? { label: 'Nova roleta', icon: <Plus className="h-4 w-4" />, onClick: () => void abrirCriacao() } : undefined}
           />
           <Abas
             rotulo="Roleta de leads"
             ativa={aba}
-            aoTrocar={trocarAba}
+            aoTrocar={c => void trocarAba(c)}
             abas={[
               { chave: 'roletas', rotulo: 'Roletas' },
               { chave: 'historico', rotulo: 'Histórico' },
@@ -163,7 +172,7 @@ export default function RoletaLista() {
             ]}
           />
           <div className="pt-2">
-            {aba === 'roletas' && <ListaDeRoletas aoCriar={abrirCriacao} podeCriar={podeCriar} />}
+            {aba === 'roletas' && <ListaDeRoletas aoCriar={() => void abrirCriacao()} podeCriar={podeCriar} />}
             {aba === 'historico' && <HistoricoLista />}
             {aba === 'avisos' && <AvisosAba />}
           </div>
@@ -195,6 +204,7 @@ export default function RoletaLista() {
           </form>
         </DialogContent>
       </Dialog>
+      {dialogoDeSaida}
     </div>
   );
 }

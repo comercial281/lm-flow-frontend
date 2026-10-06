@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 
@@ -13,6 +13,7 @@ vi.mock('@/services/roletaConfig/roletaConfigService', async importOriginal => {
 vi.mock('./HistoricoLista', () => ({ default: () => <p>histórico geral</p> }));
 vi.mock('./AvisosAba', () => ({ default: () => <p>aba de avisos</p> }));
 import RoletaLista from './RoletaLista';
+import { limparPendentes, marcarPendente } from '@/hooks/useAlteracoesNaoSalvas';
 
 function Onde() { const l = useLocation(); return <p data-testid="onde">{l.pathname}{l.search}</p>; }
 
@@ -33,7 +34,7 @@ const abrir = (endereco = '/automations/roleta-config') => render(
   </MemoryRouter>,
 );
 
-beforeEach(() => { vi.clearAllMocks(); svc.getAll.mockResolvedValue([roleta]); });
+beforeEach(() => { vi.clearAllMocks(); limparPendentes(); svc.getAll.mockResolvedValue([roleta]); });
 
 describe('Roleta de leads (lista)', () => {
   it('cartão lido como frase, com selo e linha de atenção', async () => {
@@ -84,6 +85,16 @@ describe('Roleta de leads (lista)', () => {
     await userEvent.click(criar);
     await waitFor(() => expect(screen.getByTestId('onde')).toHaveTextContent('/automations/roleta-config/r9'));
     expect(svc.createDraft).toHaveBeenCalledWith('Zona Sul');
+  });
+
+  it('texto dos avisos por salvar: trocar de aba pergunta antes', async () => {
+    abrir('/automations/roleta-config?aba=avisos');
+    marcarPendente('avisos-teste', true);
+    await userEvent.click(screen.getByRole('tab', { name: 'Roletas' }));
+    const dialogo = await screen.findByRole('dialog');
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Continuar editando' }));
+    expect(screen.getByText('aba de avisos')).toBeInTheDocument();
+    expect(svc.getAll).not.toHaveBeenCalled();
   });
 
   it('as abas moram no endereço', async () => {

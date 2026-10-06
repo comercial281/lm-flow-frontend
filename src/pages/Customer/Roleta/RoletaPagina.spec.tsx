@@ -15,6 +15,7 @@ vi.mock('./blocos/FilaBloco', () => ({ default: () => <p>bloco da fila</p> }));
 vi.mock('./blocos/HorarioBloco', () => ({ default: () => <p>bloco do horário</p> }));
 vi.mock('./HistoricoLista', () => ({ default: ({ roletaId }: { roletaId?: string }) => <p>histórico da roleta {roletaId}</p> }));
 import RoletaPagina from './RoletaPagina';
+import { limparPendentes, marcarPendente } from '@/hooks/useAlteracoesNaoSalvas';
 
 function Onde() { const l = useLocation(); return <p data-testid="onde">{l.pathname}{l.search}</p>; }
 
@@ -41,6 +42,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  limparPendentes();
   svc.get.mockResolvedValue(roleta());
   svc.getOrigins.mockResolvedValue([origem]);
 });
@@ -140,6 +142,33 @@ describe('página da roleta', () => {
     expect(await screen.findByText('histórico da roleta r1')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('tab', { name: 'Como funciona' }));
     expect(screen.getByText('bloco da fila')).toBeInTheDocument();
+  });
+
+  it('com horário por salvar, trocar de aba pergunta antes', async () => {
+    abrir();
+    await screen.findByText('bloco da fila');
+    marcarPendente('horario-teste', true);
+    await userEvent.click(screen.getByRole('tab', { name: 'Histórico' }));
+    const dialogo = await screen.findByRole('dialog');
+    expect(within(dialogo).getByText('Sair sem salvar?')).toBeInTheDocument();
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Continuar editando' }));
+    expect(screen.getByText('bloco da fila')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'Histórico' }));
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Sair sem salvar' }));
+    expect(await screen.findByText('histórico da roleta r1')).toBeInTheDocument();
+  });
+
+  it('com horário por salvar, voltar e Duplicar perguntam antes', async () => {
+    abrir();
+    await screen.findByText('bloco da fila');
+    marcarPendente('horario-teste', true);
+    await userEvent.click(screen.getByRole('link', { name: 'Roleta de leads' }));
+    expect(within(await screen.findByRole('dialog')).getByText('Sair sem salvar?')).toBeInTheDocument();
+    expect(screen.getByTestId('onde')).toHaveTextContent('/automations/roleta-config/r1');
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar editando' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Duplicar' }));
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Continuar editando' }));
+    expect(svc.duplicate).not.toHaveBeenCalled();
   });
 
   it('erro ao carregar oferece tentar de novo', async () => {

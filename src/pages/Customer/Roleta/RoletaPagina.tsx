@@ -17,6 +17,8 @@ import IconActionButton from '@/components/base/IconActionButton';
 import { Secao, Secoes } from '@/components/base/Secao';
 import { useCan } from '@/hooks/useCan';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { useGuardaDeSaida } from '@/hooks/useAlteracoesNaoSalvas';
+import { usePodeSair } from './usePodeSair';
 import {
   mensagemDoServidor,
   roletaConfigService,
@@ -100,6 +102,9 @@ export default function RoletaPagina() {
   const navigate = useNavigate();
   const can = useCan();
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+  // Rascunho do horário não some calado: aba, voltar e Duplicar perguntam antes.
+  const { aoClicar: guardaDoLink, dialogoDeConfirmacao: dialogoDaGuarda } = useGuardaDeSaida();
+  const { podeSair, dialogoDeSaida } = usePodeSair();
   const [params, setParams] = useSearchParams();
   const aba = params.get('aba') === 'historico' ? 'historico' : 'como';
 
@@ -126,12 +131,14 @@ export default function RoletaPagina() {
     setOrigens(await roletaConfigService.getOrigins(id));
   }, [id]);
 
-  const trocarAba = (chave: string) =>
+  const trocarAba = async (chave: string) => {
+    if (chave === aba || !(await podeSair())) return;
     setParams(antes => {
       const novos = new URLSearchParams(antes);
       if (chave === 'historico') novos.set('aba', 'historico'); else novos.delete('aba');
       return novos;
     }, { replace: true });
+  };
 
   if (erro) {
     return (
@@ -158,7 +165,7 @@ export default function RoletaPagina() {
   };
 
   const duplicar = async () => {
-    if (duplicando) return;
+    if (duplicando || !(await podeSair())) return;
     setDuplicando(true);
     try {
       const copia = await roletaConfigService.duplicate(roleta.id);
@@ -192,7 +199,7 @@ export default function RoletaPagina() {
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
         <div className="mx-auto max-w-5xl space-y-6">
-          <Link to={ENDERECO_DA_LISTA} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+          <Link to={ENDERECO_DA_LISTA} onClickCapture={guardaDoLink} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Roleta de leads
           </Link>
 
@@ -237,7 +244,7 @@ export default function RoletaPagina() {
           <Abas
             rotulo={`Abas da roleta ${roletaLabel(roleta)}`}
             ativa={aba}
-            aoTrocar={trocarAba}
+            aoTrocar={c => void trocarAba(c)}
             abas={[
               { chave: 'como', rotulo: 'Como funciona' },
               { chave: 'historico', rotulo: 'Histórico' },
@@ -271,6 +278,8 @@ export default function RoletaPagina() {
         </div>
       </div>
       {dialogoDeConfirmacao}
+      {dialogoDaGuarda}
+      {dialogoDeSaida}
     </div>
   );
 }
