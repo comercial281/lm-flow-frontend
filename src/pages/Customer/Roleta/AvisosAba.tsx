@@ -81,7 +81,13 @@ function CampoDeTexto({ chave, rotulo, valor, aoMudar }: { chave: RoletaTemplate
 export default function AvisosAba() {
   const [avisos, setAvisos] = useState<RoletaSettings | null>(null);
   const [erro, setErro] = useState(false);
-  const [ocupado, setOcupado] = useState(false);
+  // Toda gravação passa por UMA fila e parte do último registro salvo: o PUT
+  // substitui o registro inteiro, e duas gravações soltas (texto + chave) se
+  // apagavam uma à outra.
+  const [pendentes, setPendentes] = useState(0);
+  const ocupado = pendentes > 0;
+  const salvoRef = useRef<RoletaSettings | null>(null);
+  const fila = useRef<Promise<unknown>>(Promise.resolve());
   const [equipe, setEquipe] = useState<User[]>([]);
   const [grupos, setGrupos] = useState<WaGroup[] | null>(null);
   const [personalizando, setPersonalizando] = useState(false);
@@ -93,6 +99,7 @@ export default function AvisosAba() {
     setAvisos(null);
     try {
       const s = await roletaSettingsService.get();
+      salvoRef.current = s;
       setAvisos(s);
       setTextos(textosDe(s));
     } catch {
@@ -125,20 +132,32 @@ export default function AvisosAba() {
     );
   }
 
-  /** Grava na hora, a partir do que JÁ está salvo (texto em edição não vai junto). */
-  const gravar = async (mudanca: Partial<RoletaSettings>, aviso?: string): Promise<boolean> => {
-    if (ocupado) return false;
-    setOcupado(true);
-    try {
-      const salvo = await roletaSettingsService.update(camposGravaveis({ ...avisos, ...mudanca }));
+  type Mudanca = Partial<RoletaSettings> | ((salvo: RoletaSettings) => Partial<RoletaSettings>);
+
+  /** Põe a gravação na fila; ela parte do último registro SALVO (texto em edição não vai junto). */
+  const enfileirar = (mudanca: Mudanca): Promise<RoletaSettings> => {
+    setPendentes(n => n + 1);
+    const vez = fila.current.then(async () => {
+      const base = salvoRef.current ?? avisos;
+      const parte = typeof mudanca === 'function' ? mudanca(base) : mudanca;
+      const salvo = await roletaSettingsService.update(camposGravaveis({ ...base, ...parte }));
+      salvoRef.current = salvo;
       setAvisos(salvo);
+      return salvo;
+    });
+    fila.current = vez.catch(() => undefined);
+    return vez.finally(() => setPendentes(n => n - 1));
+  };
+
+  /** Grava na hora (chave, gestor, grupo). */
+  const gravar = async (mudanca: Mudanca, aviso?: string): Promise<boolean> => {
+    try {
+      await enfileirar(mudanca);
       if (aviso) toast.success(aviso);
       return true;
     } catch (e) {
       toast.error(mensagemDoServidor(e) ?? 'Não deu pra salvar. Tente de novo.');
       return false;
-    } finally {
-      setOcupado(false);
     }
   };
 
@@ -167,8 +186,7 @@ export default function AvisosAba() {
     setSalvandoTextos(true);
     try {
       const limpos = Object.fromEntries(TEXTOS.map(t => [t.chave, textos[t.chave].trim() || null]));
-      const salvo = await roletaSettingsService.update(camposGravaveis({ ...avisos, ...limpos }));
-      setAvisos(salvo);
+      const salvo = await enfileirar(limpos);
       setTextos(textosDe(salvo));
       toast.success('Textos salvos');
     } catch (e) {
@@ -210,7 +228,7 @@ export default function AvisosAba() {
                       label={`Tirar ${nomeDaPessoa(id)} dos gestores`}
                       variant="ghost"
                       disabled={ocupado}
-                      onClick={() => void gravar({ gestor_user_ids: avisos.gestor_user_ids.filter(x => x !== id) }, 'Gestor tirado')}
+                      onClick={() => void gravar(b => ({ gestor_user_ids: b.gestor_user_ids.filter(x => x !== id) }), 'Gestor tirado')}
                       icon={<X className="h-4 w-4" />}
                     />
                   </li>
@@ -221,7 +239,10 @@ export default function AvisosAba() {
               aria-label="Adicionar gestor"
               value=""
               disabled={ocupado || paraAdicionar.length === 0}
-              onChange={e => { if (e.target.value) void gravar({ gestor_user_ids: [...avisos.gestor_user_ids, e.target.value] }, 'Gestor adicionado'); }}
+              onChange={e => {
+                const id = e.target.value;
+                if (id) void gravar(b => ({ gestor_user_ids: b.gestor_user_ids.includes(id) ? b.gestor_user_ids : [...b.gestor_user_ids, id] }), 'Gestor adicionado');
+              }}
               className="w-64"
             >
               <option value="">+ Adicionar gestor</option>
@@ -242,7 +263,13 @@ export default function AvisosAba() {
               onChange={e => {
                 const jid = e.target.value;
                 const g = listaDeGrupos.find(x => x.id === jid);
-                void gravar({ group_jid: jid || null, group_name: jid ? g?.name ?? avisos.group_name : null }, jid ? 'Grupo escolhido' : 'Sem grupo');
+                // Sem grupo, os avisos do grupo desligam junto (nada sairia).
+                void gravar(
+                  jid
+                    ? { group_jid: jid, group_name: g?.name ?? avisos.group_name }
+                    : { group_jid: null, group_name: null, notify_group_offer: false, notify_group_repass: false },
+                  jid ? 'Grupo escolhido' : 'Sem grupo: os avisos do grupo foram desligados',
+                );
               }}
               className="w-full sm:w-80"
             >

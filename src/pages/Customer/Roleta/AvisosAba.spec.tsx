@@ -105,6 +105,32 @@ describe('Avisos da roleta', () => {
     expect(screen.getByLabelText('Corretor: "O lead é seu"')).toHaveValue('rascunho');
   });
 
+  it('texto salvando + chave virada: as gravações vão em fila e uma não apaga a outra', async () => {
+    let soltar: () => void = () => {};
+    settings.update.mockImplementationOnce((campos: object) => new Promise(ok => {
+      soltar = () => ok(normalizarAvisos({ ...campos, gestores: [] }));
+    }));
+    render(<AvisosAba />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Personalizar textos' }));
+    await userEvent.type(screen.getByLabelText('Gestor: corretor aceitou'), 'Texto novo');
+    await userEvent.click(within(screen.getByRole('region', { name: 'Alterações não salvas' })).getByRole('button', { name: 'Salvar' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Resumo da manhã' }));
+    // a chave espera a gravação do texto terminar
+    expect(settings.update).toHaveBeenCalledTimes(1);
+    soltar();
+    await waitFor(() => expect(settings.update).toHaveBeenCalledTimes(2));
+    expect(enviado()).toMatchObject({ notify_gestor_morning: true, template_gestor_accepted: 'Texto novo' });
+  });
+
+  it('tirar o grupo desliga junto os avisos do grupo', async () => {
+    settings.get.mockResolvedValue(normalizarAvisos({ group_jid: 'g1@g.us', group_name: 'Grupo', notify_group_offer: true }));
+    render(<AvisosAba />);
+    const grupo = await screen.findByLabelText('Grupo que recebe');
+    await waitFor(() => expect(grupo).toBeEnabled());
+    await userEvent.selectOptions(grupo, '');
+    await waitFor(() => expect(enviado()).toMatchObject({ group_jid: null, notify_group_offer: false, notify_group_repass: false }));
+  });
+
   it('erro ao carregar oferece tentar de novo', async () => {
     settings.get.mockRejectedValueOnce(new Error('rede'));
     render(<AvisosAba />);
