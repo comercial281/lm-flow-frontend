@@ -43,7 +43,25 @@ export const LEAD_ACTION_BLOCK_LABELS: Record<string, string> = {
   notify_broker: 'Avisar corretor',
   notify_gestor: 'Avisar gestor',
   notify_push: 'Notificação no celular',
+  followup_ended: 'Marcar follow-up encerrado',
 };
+
+/**
+ * Ações que só existem no construtor (06/10/2026), espelho do
+ * `FlowAutomationNode::FLOW_ONLY_LEAD_ACTION_TYPES` do servidor. Ficam FORA do
+ * `ACTION_TYPE_LABELS` (é dele que a tela das regras monta a lista, e numa regra
+ * solta não há follow-up pra encerrar) e fora da paleta: o bloco nasce pelo
+ * modelo do Follow-up padrão. Aqui só pra abrir com nome, sem campos, e salvar
+ * sem perder o `action_type` (vazio, o servidor recusa o fluxo inteiro).
+ *
+ * `followup_ended` = "Marcar follow-up encerrado": o fim do Follow-up padrão; o
+ * lead sai do alerta "Sem contato do corretor há mais de 3 dias".
+ */
+export const FLOW_ONLY_LEAD_ACTION_TYPES: ReadonlySet<string> = new Set(['followup_ended']);
+
+export function isFlowOnlyLeadAction(type: unknown): boolean {
+  return typeof type === 'string' && FLOW_ONLY_LEAD_ACTION_TYPES.has(type);
+}
 
 /** Em que grupo da paleta (e com que cor) cada ação aparece. */
 export const LEAD_ACTION_GROUP: Record<string, FlowNodeGroup> = {
@@ -68,6 +86,7 @@ export const LEAD_ACTION_GROUP: Record<string, FlowNodeGroup> = {
   notify_broker: 'notify',
   notify_gestor: 'notify',
   notify_push: 'notify',
+  followup_ended: 'contact',
 };
 
 /**
@@ -89,8 +108,9 @@ export const PALETTE_LEAD_ACTIONS: string[] = [
   'notify_group', 'notify_user', 'notify_broker', 'notify_gestor', 'notify_push',
 ];
 
-/** Ação que o bloco aceita: qualquer uma das Automações, menos as aposentadas. */
+/** Ação que o bloco aceita: qualquer uma das Automações, menos as aposentadas, mais as só do construtor. */
 export function isLeadActionType(type: unknown): type is string {
+  if (isFlowOnlyLeadAction(type)) return true;
   return typeof type === 'string' && type in ACTION_TYPE_LABELS && !RETIRED_ACTION_TYPES.has(type);
 }
 

@@ -111,6 +111,19 @@ describe('janela do bloco', () => {
     })));
   });
 
+  // 06/10/2026: o fim do Follow-up padrão. Sem o editor das regras (que não conhece a
+  // ação e trocaria o action_type por vazio), e o Salvar devolve a config intacta.
+  it('Marcar follow-up encerrado: abre com o nome, sem campos, e salva sem perder a ação', async () => {
+    const onSave = vi.fn();
+    render(<FlowNodePanel node={node({ kind: 'lead_action', config: { action_type: 'followup_ended', params: {} } })} resources={resources} onClose={() => {}} onSave={onSave} />);
+    expect(screen.getByRole('heading', { name: 'Marcar follow-up encerrado' })).toBeTruthy();
+    expect(screen.getByText('Sem configuração adicional.')).toBeTruthy();
+    fireEvent.click(screen.getByText('Salvar'));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith('n1', expect.objectContaining({
+      config: { action_type: 'followup_ended', params: {} },
+    })));
+  });
+
   it('bloco escondido abre com o aviso e sem Salvar', () => {
     render(<FlowNodePanel node={node({ kind: 'http_call', config: { url: 'x' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
     expect(screen.getByText(/Este bloco volta na próxima versão/)).toBeTruthy();

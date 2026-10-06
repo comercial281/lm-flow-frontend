@@ -6977,6 +6977,10 @@ O que aparece na tela:
   | 5 | 20 | Oi {{nome}}, sua busca ainda está de pé ou ficou pra mais pra frente? |
   | 6 | 30 | Oi {{nome}}, vou deixar seu atendimento em pausa pra não ficar te chamando. Quando quiser retomar, me manda um oi aqui que eu continuo de onde paramos. |
 
+- **No construtor, o Follow-up padrão termina no bloco *Marcar follow-up
+  encerrado*** (depois da 6ª mensagem). Ele abre com o nome e a frase do que faz,
+  sem campos. Não aparece no painel Blocos nem na lista de ações das regras em
+  Automações: nasce pelo modelo e só existe no construtor.
 - **IA nova** nasce em **Entregar pro follow-up → Follow-up padrão**, com o
   follow-up dela desligado até o gestor ligar (sem o Follow-up padrão no cliente,
   nasce em *Mover o card*).
@@ -7032,6 +7036,13 @@ Armadilhas:
    padrão" como reserva. **Nunca pelo `template_key`**: todo "Novo follow-up"
    nasce com o modelo `follow_up_padrao`, e isso escolheria o "Pós-visita" de
    alguém. Renomear o padrão não quebra.
+6. **"Marcar follow-up encerrado" é `lead_action` com `action_type:
+   'followup_ended'`, sem params**, espelho do `FLOW_ONLY_LEAD_ACTION_TYPES` do
+   servidor (`FLOW_ONLY_LEAD_ACTION_TYPES` em `features/flowAutomations/leadAction.ts`).
+   Fica FORA do `ACTION_TYPE_LABELS` (a lista das regras sai dele) e da paleta. O
+   painel do bloco NÃO usa o editor das regras pra ele: aquele editor não conhece
+   a ação e trocaria o `action_type` por vazio, e o servidor recusaria o fluxo
+   inteiro ("ação de lead desconhecida").
 3. **Ordem de publicação:** servidor primeiro (o padrão da coluna vira
    `'sequence'`, e o Follow-up padrão é semeado), depois o rake
    `lm_flow:followup_padrao:aplicar` (simulação, depois `APPLY=1`), e só então

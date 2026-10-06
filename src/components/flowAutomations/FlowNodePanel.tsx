@@ -10,7 +10,7 @@ import { blockDescription, blockIcon } from '@/features/flowAutomations/blockInf
 import { nodeColor } from '@/lib/flowAutomationGraph';
 import { cn } from '@/lib/utils';
 import { mesmoConteudo } from '@/hooks/useAlteracoesNaoSalvas';
-import { leadActionConfig, leadActionOf } from '@/features/flowAutomations/leadAction';
+import { isFlowOnlyLeadAction, leadActionConfig, leadActionOf } from '@/features/flowAutomations/leadAction';
 import { nodeProblem } from '@/features/flowAutomations/readiness';
 import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import {
@@ -582,6 +582,12 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
       // Ação das Automações: o MESMO editor da tela de regras, gravando
       // `{ action_type, params }` (leadAction.ts).
       case 'lead_action':
+        // Ação só do construtor (Marcar follow-up encerrado): sem campos e SEM o
+        // editor das regras, que não conhece a ação e trocaria o `action_type`
+        // por vazio (o servidor recusa o fluxo inteiro). A config volta intacta.
+        if (isFlowOnlyLeadAction(config.action_type)) {
+          return <p className="text-xs text-muted-foreground">Sem configuração adicional.</p>;
+        }
         return (
           <ActionEditor
             action={leadActionOf(config)}

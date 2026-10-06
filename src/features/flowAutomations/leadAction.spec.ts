@@ -4,7 +4,10 @@ import {
 } from './leadAction';
 import { summaryLine } from '@/components/flowAutomations/FlowNodeCard';
 import { formatActionSummary, type AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
-import { missingActionParams } from '@/services/leadAutomation/leadAutomationService';
+import { ACTION_TYPE_LABELS, missingActionParams } from '@/services/leadAutomation/leadAutomationService';
+import { blockIcon, blockKey } from './blockInfo';
+import { blockLabel, isVisibleNode, paletteItems } from './palette';
+import { buildSaveFlowPayload } from '@/lib/flowAutomationGraph';
 
 const resources: AutomationResources = {
   labels: [], sequences: [], followupFlows: [], users: [{ id: 'u1', name: 'Ana' } as never], pipelines: [], stagesByPipeline: {}, quickReplies: [],
@@ -56,5 +59,33 @@ describe('bloco "ação das Automações" (lead_action)', () => {
     expect(summaryLine(block({ action_type: 'assign_broker', params: { user_id: 'u1' } }), { actionSummary })).toBe('Corretor: Ana');
     expect(summaryLine(block({ action_type: 'assign_via_roleta', params: {} }), { actionSummary })).toBe('Roleta do número da conversa');
     expect(summaryLine(block({ action_type: 'create_task', params: {} }), { actionSummary })).toBe('(tarefa sem título)');
+  });
+});
+
+// 06/10/2026: o fim do Follow-up padrão. Só existe no construtor (o servidor recusa
+// em regra), nasce pelo modelo e precisa abrir, mostrar o nome e salvar intacto.
+describe('Marcar follow-up encerrado (followup_ended)', () => {
+  const fim = () => block({ action_type: 'followup_ended', params: {} });
+
+  it('abre com o nome, sem campos a preencher e com a frase do bloco', () => {
+    expect(isLeadActionType('followup_ended')).toBe(true);
+    expect(isVisibleNode(fim())).toBe(true);
+    expect(blockLabel(fim())).toBe('Marcar follow-up encerrado');
+    expect(leadActionLabel('followup_ended')).toBe('Marcar follow-up encerrado');
+    expect(blockKey(fim())).toBe('lead_action:followup_ended');
+    expect(blockIcon(fim())).toBeTruthy();
+    expect(leadActionProblem(fim().config)).toBeNull();
+    expect(summaryLine(fim(), { actionSummary: () => 'não devia ser chamado' })).toContain('Sem contato do corretor há mais de 3 dias');
+  });
+
+  it('não é oferecido: nem na paleta, nem na lista das regras', () => {
+    expect(paletteItems().some((i) => i.config.action_type === 'followup_ended')).toBe(false);
+    expect('followup_ended' in ACTION_TYPE_LABELS).toBe(false);
+  });
+
+  it('salvar o fluxo devolve o action_type intacto', () => {
+    const payload = buildSaveFlowPayload([fim()], 'b1');
+    expect(payload.nodes[0]).toMatchObject({ kind: 'lead_action', config: { action_type: 'followup_ended', params: {} } });
+    expect(leadActionConfig(leadActionOf(fim().config))).toEqual({ action_type: 'followup_ended', params: {} });
   });
 });
