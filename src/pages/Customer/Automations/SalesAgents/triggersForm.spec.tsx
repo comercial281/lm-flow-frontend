@@ -107,11 +107,14 @@ describe('palavra digitada e o bloco some', () => {
 
   // "Todos os leads" zera as condições e o bloco some: a palavra a meio caminho
   // não pode ressuscitar as condições que a pessoa acabou de tirar.
+  // O Canal liga `escolheuTodos` antes de desmontar o bloco.
   it('as condições foram zeradas (Todos os leads): desmontar não traz de volta', () => {
     const onSave = vi.fn();
-    const { rerender, unmount } = render(<TriggersSection agent={comPalavra([{ type: 'keyword', value: '', match_type: 'contains' }])} onSave={onSave} />);
+    const escolheuTodos = { current: false };
+    const { rerender, unmount } = render(<TriggersSection agent={comPalavra([{ type: 'keyword', value: '', match_type: 'contains' }])} onSave={onSave} escolheuTodos={escolheuTodos} />);
     fireEvent.change(screen.getByPlaceholderText('palavra (ex: fluxoimob)'), { target: { value: 'fluxoimob' } });
-    rerender(<TriggersSection agent={comPalavra([])} onSave={onSave} />);
+    escolheuTodos.current = true;
+    rerender(<TriggersSection agent={comPalavra([])} onSave={onSave} escolheuTodos={escolheuTodos} />);
     unmount();
     expect(onSave).not.toHaveBeenCalled();
   });

@@ -6,7 +6,7 @@
 // vazia é "todos" pro servidor, e a tela ficaria dizendo "só alguns".
 // ⚠️ A palavra antiga (`trigger_keyword`) não tem campo: aparece com a frase do que
 // ela faz de verdade (§6.11) e "Tirar essa regra".
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/ds';
 import { Secao, Secoes } from '@/components/base/Secao';
 import { Campo, CLASSE_DO_CAMPO } from '@/components/base/Campo';
@@ -25,10 +25,14 @@ type Publico = 'todos' | 'alguns';
 export default function Canal({ agent, inboxes, gravar, irPara, diagnostico }: PropsDaPagina) {
   const [trocando, setTrocando] = useState(!agent.inbox_id);
   const temCondicoes = (agent.triggers ?? []).length > 0;
-  // ⚠️ Aberto uma vez, fica aberto até "Todos os leads": tirar a última condição (ou
-  // trocar o tipo dela por um em branco) grava lista vazia, e o bloco sumiria com a
-  // linha que a pessoa está preenchendo (ela só existe na tela, ver TriggersSection).
+  // ⚠️ Aberto uma vez, fica aberto até "Todos os leads": tirar a última condição na
+  // lixeira grava lista vazia, e o bloco sumiria com a linha que a pessoa está
+  // preenchendo (ela só existe na tela, ver TriggersSection). Trocar o tipo da
+  // condição NÃO grava lista vazia: a antiga vale até a nova ficar completa.
   const [abrindoAlguns, setAbrindoAlguns] = useState(temCondicoes);
+  // "Todos os leads" desmonta as condições: a palavra pendente não pode gravar no
+  // desmonte (ressuscitaria o que a pessoa tirou). Qualquer outro desmonte grava.
+  const escolheuTodos = useRef(false);
   const publico: Publico = temCondicoes || abrindoAlguns ? 'alguns' : 'todos';
   const numero = inboxes.find((i) => String(i.id) === String(agent.inbox_id ?? ''))?.name ?? agent.inbox_name ?? null;
   const credencial = diagnostico?.items.find((i) => i.key === 'credentials');
@@ -37,6 +41,7 @@ export default function Canal({ agent, inboxes, gravar, irPara, diagnostico }: P
   const frasePalavra = fraseDaPalavraAntiga(agent);
 
   const escolherPublico = async (p: Publico) => {
+    escolheuTodos.current = p === 'todos';
     if (p === 'alguns') { setAbrindoAlguns(true); return; }
     setAbrindoAlguns(false);
     if (temCondicoes) await gravar({ triggers: [] });
@@ -92,7 +97,7 @@ export default function Canal({ agent, inboxes, gravar, irPara, diagnostico }: P
         <BotoesDeEscolha<Publico> rotulo="Público" valor={publico}
           opcoes={[{ valor: 'todos', rotulo: 'Todos os leads' }, { valor: 'alguns', rotulo: 'Só alguns' }]}
           aoEscolher={(p) => void escolherPublico(p)} />
-        {publico === 'alguns' && <TriggersSection agent={agent} onSave={(p) => void gravar(p)} />}
+        {publico === 'alguns' && <TriggersSection agent={agent} onSave={(p) => void gravar(p)} escolheuTodos={escolheuTodos} />}
       </Secao>
     </Secoes>
   );

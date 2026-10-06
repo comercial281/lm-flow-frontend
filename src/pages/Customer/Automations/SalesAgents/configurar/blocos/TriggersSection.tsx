@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Input } from '@/components/ui/ds';
 import { Plus, Trash2 } from 'lucide-react';
 import { type SalesAgent, type SalesAgentTrigger, type SalesAgentTriggerType, type SalesAgentTriggerMatchMode } from '@/services/salesAgents/salesAgentsService';
@@ -9,6 +9,7 @@ import { Seletor } from '@/components/base/Seletor';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import { emBranco } from '@/features/salesAgents/situacao';
 import { type PipelineOpt, type StageOpt } from '../../configuracao/comum';
+import { Aviso } from '../Aviso';
 
 // ---------------- Gatilhos de ativação (multi) ----------------
 
@@ -50,19 +51,43 @@ const completas = (lista: SalesAgentTrigger[]) => lista.filter((t) => !emBranco(
 const mesmas = (a: SalesAgentTrigger[], b: SalesAgentTrigger[]) => JSON.stringify(a) === JSON.stringify(b);
 
 /**
- * A lista da tela depois que o servidor mudou: as linhas em branco (que só existem
- * aqui) ficam onde estavam, se as completas ainda são as do servidor (mesmo número,
- * mesmos tipos, na ordem). Se não são (Desfazer, outra tela), vale o servidor.
+ * Uma linha da tela. `salva` é a condição que ESTA linha mantém no servidor: a
+ * própria, quando completa; a condição completa que ela substituiu, enquanto a nova
+ * está pela metade (tipo trocado, palavra apagada, formulário desmarcado); nada,
+ * na linha nova em branco.
  */
-function juntarComAsEmBranco(local: SalesAgentTrigger[], salvas: SalesAgentTrigger[]): SalesAgentTrigger[] {
-  const minhas = completas(local);
-  if (minhas.length === local.length) return salvas;
-  if (minhas.length !== salvas.length || minhas.some((t, i) => t.type !== salvas[i]?.type)) return salvas;
+type Linha = { t: SalesAgentTrigger; salva: SalesAgentTrigger | null };
+
+const linhasDoServidor = (salvas: SalesAgentTrigger[]): Linha[] => salvas.map((t) => ({ t, salva: emBranco(t) ? null : t }));
+
+/** O que cada linha manda pro servidor: ela, se completa; senão a que ela substituiu. */
+const contribuicao = (l: Linha) => (emBranco(l.t) ? l.salva : l.t);
+const paraOServidor = (linhas: Linha[]) => linhas.map(contribuicao).filter((t): t is SalesAgentTrigger => t !== null);
+
+/**
+ * A lista da tela depois que o servidor mudou: as linhas que mandam algo pro
+ * servidor recebem a versão dele (a completa vira a do servidor; a pela metade
+ * guarda a do servidor como a que ela substitui); a linha nova em branco fica onde
+ * estava. Só se o servidor ainda tem as condições destas linhas (mesmo número,
+ * mesmos tipos, na ordem). Se não tem (Desfazer, outra tela), vale o servidor.
+ */
+function juntarComAsLocais(local: Linha[], salvas: SalesAgentTrigger[]): Linha[] {
+  const presas = local.filter((l) => l.salva);
+  if (presas.length !== salvas.length || presas.some((l, i) => l.salva!.type !== salvas[i].type)) return linhasDoServidor(salvas);
   let j = 0;
-  return local.map((t) => (emBranco(t) ? t : salvas[j++]));
+  return local.map((l) => {
+    if (!l.salva) return l;
+    const s = salvas[j++];
+    return emBranco(l.t) ? { t: l.t, salva: s } : { t: s, salva: s };
+  });
 }
 
-export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
+export function TriggersSection({ agent, onSave, escolheuTodos }: {
+  agent: SalesAgent;
+  onSave: (patch: Partial<SalesAgent>) => void;
+  /** Ligado pelo Canal quando a pessoa escolhe "Todos os leads" (o que desmonta o bloco). */
+  escolheuTodos?: { readonly current: boolean };
+}) {
   // ⚠️ Gravação na hora (06/10/2026): `onSave` grava no servidor. Escolha de lista,
   // caixinha de formulário, adicionar e remover gravam no clique; o que se DIGITA
   // (palavra, etiqueta, código) fica neste rascunho e grava ao sair do campo —
@@ -72,18 +97,26 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
   // batem no SalesAgents::TriggerGate: gravar "Adicionar condição" ou o tipo recém-
   // trocado numa IA ligada barraria TODO lead novo até a pessoa preencher. A linha
   // em branco mora só aqui (`lista`) e vai junto quando fica completa.
-  const [lista, setLista] = useState<SalesAgentTrigger[]>(agent.triggers ?? []);
+  // ⚠️ A CONDIÇÃO ANTIGA VALE ATÉ A NOVA FICAR COMPLETA (decisão do Tony, 07/10).
+  // Trocar o tipo de uma condição completa (ou apagar a palavra dela) NÃO tira a
+  // antiga do servidor: a linha guarda a que substituiu (`salva`) e o servidor
+  // continua com ela até a nova ficar completa. Sem isso, a IA ligada com uma
+  // condição só passava a atender TODO lead (lista vazia = todos), e no "Qualquer
+  // uma" deixava de atender quem batia na condição trocada. Na tela nada muda.
+  // A lixeira tira de verdade (é a pessoa pedindo), inclusive a antiga.
+  const [lista, setLista] = useState<Linha[]>(() => linhasDoServidor(agent.triggers ?? []));
   const digitando = useRef(false);
   useEffect(() => {
-    if (!digitando.current) setLista((local) => juntarComAsEmBranco(local, agent.triggers ?? []));
+    if (!digitando.current) setLista((local) => juntarComAsLocais(local, agent.triggers ?? []));
   }, [agent.triggers]);
 
   // ⚠️ O bloco pode SUMIR com uma palavra a meio caminho (trocou de página pelo
   // endereço, o Voltar do navegador): o React não dispara o blur no desmonte, então
   // grava aqui — a mesma regra do TextoNaHora. Refs porque a limpeza roda uma vez só,
-  // com o que estava valendo no último render.
-  // ⚠️ Condições já zeradas no servidor ("Todos os leads", que é o que desmonta o
-  // bloco) não voltam: a palavra pendente ressuscitaria o que a pessoa acabou de tirar.
+  // com o que estava valendo no último render. Vale também pra PRIMEIRA condição
+  // (servidor ainda sem nenhuma).
+  // ⚠️ Desmontou porque a pessoa escolheu "Todos os leads": a palavra pendente não
+  // grava, senão ressuscitaria a condição que ela acabou de tirar.
   const listaAtual = useRef(lista);
   listaAtual.current = lista;
   const salvasNoServidor = useRef(agent.triggers ?? []);
@@ -91,11 +124,12 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
   const onSaveAtual = useRef(onSave);
   onSaveAtual.current = onSave;
   useEffect(() => () => {
-    if (!digitando.current || salvasNoServidor.current.length === 0) return;
-    const prontas = completas(listaAtual.current);
-    if (!mesmas(prontas, completas(salvasNoServidor.current))) onSaveAtual.current({ triggers: prontas });
+    if (!digitando.current || escolheuTodos?.current) return;
+    const enviar = paraOServidor(listaAtual.current);
+    if (!mesmas(enviar, completas(salvasNoServidor.current))) onSaveAtual.current({ triggers: enviar });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const triggers = lista;
+  const triggers = useMemo(() => lista.map((l) => l.t), [lista]);
   const [pipelines, setPipelines] = useState<PipelineOpt[]>([]);
   const [stagesByPipeline, setStagesByPipeline] = useState<Record<string, StageOpt[]>>({});
 
@@ -132,29 +166,38 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggers]);
 
-  // Linha em branco nova (ou com o tipo trocado) não muda as completas: nada grava.
-  const commit = (next: SalesAgentTrigger[]) => {
+  // Linha em branco nova não muda o que vai pro servidor, e a linha pela metade
+  // manda a que ela substituiu: nesses casos nada grava.
+  const commit = (proximas: Linha[]) => {
     digitando.current = false;
-    setLista(next);
-    const prontas = completas(next);
+    const enviar = paraOServidor(proximas);
+    setLista(proximas.map((l) => ({ t: l.t, salva: contribuicao(l) })));
     // Comparadas com as completas do servidor: uma condição em branco ANTIGA (gravada
     // antes desta regra) não some sozinha só porque alguém abriu uma linha nova.
-    if (!mesmas(prontas, completas(agent.triggers ?? []))) onSave({ triggers: prontas });
+    if (!mesmas(enviar, completas(agent.triggers ?? []))) onSave({ triggers: enviar });
   };
-  const update = (i: number, patch: Partial<SalesAgentTrigger>) => commit(triggers.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
+  const trocar = (i: number, t: SalesAgentTrigger) => lista.map((l, idx) => (idx === i ? { ...l, t } : l));
+  const update = (i: number, patch: Partial<SalesAgentTrigger>) => commit(trocar(i, { ...triggers[i], ...patch }));
   const digitar = (i: number, patch: Partial<SalesAgentTrigger>) => {
     digitando.current = true;
-    setLista(triggers.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
+    setLista(trocar(i, { ...triggers[i], ...patch }));
   };
   const sairDoCampo = () => { if (digitando.current) commit(lista); };
-  const remove = (i: number) => commit(triggers.filter((_, idx) => idx !== i));
-  const add = () => commit([...triggers, newTrigger('keyword')]);
+  const remove = (i: number) => commit(lista.filter((_, idx) => idx !== i));
+  const add = () => commit([...lista, { t: newTrigger('keyword'), salva: null }]);
+  const semCondicaoNoServidor = completas(agent.triggers ?? []).length === 0;
 
   const matchMode = agent.trigger_match_mode ?? 'any';
 
   return (
     <div className="pt-2 border-t border-sidebar-border">
-      <p className="mb-2 text-sm text-muted-foreground">Sem nenhuma condição, ela atende todo lead do número.</p>
+      {/* ⚠️ "Só alguns" aberto sem condição completa no servidor: ela AINDA atende
+          todo lead. Em destaque, pra tela não parecer que já está filtrando. */}
+      {semCondicaoNoServidor ? (
+        <div className="mb-2"><Aviso><p>Sem nenhuma condição, ela atende todo lead do número.</p></Aviso></div>
+      ) : (
+        <p className="mb-2 text-sm text-muted-foreground">Sem nenhuma condição, ela atende todo lead do número.</p>
+      )}
 
       {triggers.length > 1 && (
         <div className="mb-3 flex flex-wrap items-center gap-3">
@@ -169,7 +212,7 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
           <div key={i} className="flex flex-wrap items-center gap-2 p-2 rounded-md border border-sidebar-border">
             <Seletor
               value={t.type}
-              onChange={(e) => commit(triggers.map((tr, idx) => (idx === i ? newTrigger(e.target.value as SalesAgentTriggerType) : tr)))}
+              onChange={(e) => commit(trocar(i, newTrigger(e.target.value as SalesAgentTriggerType)))}
               className="w-72 max-w-full rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
             >
               {TRIGGER_TYPES.map((tt) => <option key={tt.value} value={tt.value}>{tt.label}</option>)}
