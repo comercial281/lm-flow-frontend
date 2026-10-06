@@ -13,6 +13,7 @@ import ListaDeChamadas from './ListaDeChamadas';
 import Recortes from './Recortes';
 import { rotuloMes } from './formatoCustos';
 import CambioDasContas from './CambioDasContas';
+import Margem from './Margem';
 
 // Clientes → Custos. Uma régua só pro dinheiro do LM Flow: IA exata (registro de
 // chamadas) + estrutura lançada à mão. Spec: LM FLOW/specs/2026-10-03-admin-registro-custos-usuarios-design.md
@@ -114,6 +115,8 @@ export default function Custos() {
         {estado === 'pronto' && summary && (
           <>
             <CartoesDoMes summary={summary} />
+            {/* Margem é da carteira: só em "Todos os clientes" (com cliente filtrado a estrutura não é dividida). */}
+            {!summary.tenant && <Margem month={month} recarga={recarga} aoLancar={() => setLancando(true)} />}
             <div data-testid="custos-detalhes" className="flex flex-col gap-6">
               <Recortes summary={summary} />
               {!summary.tenant && <Conferencia reconciliation={summary.reconciliation} aoLancar={() => setLancando(true)} />}
@@ -122,7 +125,7 @@ export default function Custos() {
           </>
         )}
       </div>
-      <LancarFaturas month={month} aberta={lancando} aoFechar={() => setLancando(false)} aoSalvar={() => void carregar(true)} />
+      <LancarFaturas month={month} aberta={lancando} aoFechar={() => setLancando(false)} aoSalvar={() => { void carregar(true); setRecarga((n) => n + 1); }} />
     </AdminConteudo>
   );
 }

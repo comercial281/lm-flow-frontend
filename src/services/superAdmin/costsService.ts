@@ -1,5 +1,5 @@
 import api from '@/services/core/api';
-import type { AccountingRate, CallFilters, CostCallDetail, CostCallsPage, CostsSummary, Invoice, InvoiceInput } from '@/types/admin/costs';
+import type { AccountingRate, CallFilters, CostCallDetail, CostCallsPage, CostsSummary, Invoice, InvoiceInput, MarginsReport } from '@/types/admin/costs';
 
 interface Envelope<T> { success: boolean; data: T }
 
@@ -52,5 +52,12 @@ export const costsService = {
   async salvarCambio(valor: string): Promise<AccountingRate> {
     const res = await api.put('/super/costs/rate', { value: valor });
     return (res.data as Envelope<AccountingRate>).data;
+  },
+
+  async margens({ month, kind }: { month: string; kind: string }): Promise<MarginsReport> {
+    const params: Record<string, string> = { month };
+    if (kind !== 'todos') params.kind = kind;
+    const res = await api.get('/super/costs/margins', { params });
+    return (res.data as Envelope<MarginsReport>).data;
   },
 };

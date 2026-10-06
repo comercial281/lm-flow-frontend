@@ -78,3 +78,36 @@ export interface CallFilters {
   onlyErrors: boolean;
   page: number;
 }
+
+// Margem (06/10/2026): receita − IA − parte da estrutura, por cliente e da carteira.
+export interface MarginRow {
+  schema: string;
+  name: string;
+  kind: 'avulso' | 'performance' | null;
+  revenue_source: 'package' | 'manual' | null;
+  package_name: string | null;
+  /** null = sem receita (fica fora dos totais). */
+  revenue_brl: number | null;
+  ai_brl: number;
+  /** null = cliente não lido no tempo (a parte dele não é inventada). */
+  structure_brl: number | null;
+  cost_brl: number | null;
+  margin_brl: number | null;
+  margin_pct: number | null;
+  share: number | null;
+  readable: boolean;
+}
+
+export interface MarginsReport {
+  month: string;
+  kind: 'todos' | 'avulso' | 'performance';
+  rate: { value: number };
+  structure_brl: number;
+  /** Faltou fatura de Railway, Vercel ou Evolution no mês. */
+  partial: boolean;
+  missing_invoices: string[];
+  totals: { revenue_brl: number; ai_brl: number; structure_brl: number; cost_brl: number; margin_brl: number; margin_pct: number | null; clients: number };
+  without_revenue: number;
+  clients: MarginRow[];
+  unreadable: { name: string; message: string }[];
+}

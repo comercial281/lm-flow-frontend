@@ -5,8 +5,12 @@ import { MemoryRouter } from 'react-router-dom';
 const apiGet = vi.hoisted(() => vi.fn());
 vi.mock('@/services/core/api', () => ({ default: { get: apiGet, put: vi.fn() } }));
 // O câmbio e a margem têm testes próprios; aqui só o resumo e a lista.
+const margemRecarga = vi.hoisted(() => vi.fn());
 vi.mock('./CambioDasContas', () => ({
   default: ({ aoMudar }: { aoMudar: () => void }) => <button onClick={aoMudar}>mudou-cambio</button>,
+}));
+vi.mock('./Margem', () => ({
+  default: ({ recarga }: { recarga: number }) => { margemRecarga(recarga); return <p>margem-aqui</p>; },
 }));
 
 import Custos from './index';
@@ -191,5 +195,29 @@ describe('Custos', () => {
     await waitFor(() => expect(conta(sumario)).toBeGreaterThan(antesResumo));
     await waitFor(() => expect(conta(lista)).toBeGreaterThan(antesLista));
     expect((screen.getByLabelText('IA') as HTMLSelectElement).value).toBe('ag1');
+  });
+
+  it('a margem aparece em "Todos os clientes" e some com cliente filtrado', async () => {
+    apiGet.mockImplementation((url: string, cfg?: { params?: Record<string, string> }) => {
+      if (url.includes('/calls')) return Promise.resolve({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } });
+      const t = cfg?.params?.tenant ?? null;
+      return Promise.resolve({ data: { success: true, data: fakeSummary(t ? { tenant: t } : {}) } });
+    });
+    renderPage();
+    expect(await screen.findByText('margem-aqui')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Cliente'), { target: { value: 'tenant_a' } });
+    await waitFor(() => expect(screen.queryByText('margem-aqui')).not.toBeInTheDocument());
+  });
+
+  it('mudar o câmbio recarrega a margem (recarga sobe)', async () => {
+    apiGet.mockImplementation((url: string) => {
+      if (url.includes('/calls')) return Promise.resolve({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } });
+      return Promise.resolve({ data: { success: true, data: fakeSummary() } });
+    });
+    margemRecarga.mockClear();
+    renderPage();
+    await screen.findByText('margem-aqui');
+    fireEvent.click(screen.getByText('mudou-cambio'));
+    await waitFor(() => expect(margemRecarga).toHaveBeenCalledWith(1));
   });
 });
