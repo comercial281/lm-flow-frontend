@@ -727,13 +727,6 @@ export interface SalesAgentLesson {
   created_at: string;
 }
 
-export interface SalesAgentPropertyLink {
-  link: string;
-  message: string;
-  number: string;
-  property: { id: string; code: string; title: string } | null;
-}
-
 // --- sugestões da IA e relatório semanal ---
 
 export type SuggestionStatus = 'pending' | 'applied' | 'dismissed';
@@ -1005,14 +998,6 @@ export const salesAgentsService = {
       fresh: opts.fresh || undefined,
     });
     return (res.data as { data: { conversation_id: string } }).data;
-  },
-
-  // Gera o link wa.me pra colar no anúncio (código do imóvel + palavra-gatilho).
-  async propertyLink(id: string, propertyCode?: string): Promise<SalesAgentPropertyLink> {
-    const res = await api.get(`${BASE}/${id}/property_link`, {
-      params: { property_code: propertyCode || undefined },
-    });
-    return (res.data as { data: SalesAgentPropertyLink }).data;
   },
 
   // --- diagnóstico e caixa-preta ---

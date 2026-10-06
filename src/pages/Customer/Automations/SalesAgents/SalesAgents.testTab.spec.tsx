@@ -11,7 +11,7 @@ import userEvent from '@testing-library/user-event';
 const testRun = vi.hoisted(() => vi.fn());
 const testSend = vi.hoisted(() => vi.fn());
 vi.mock('@/services/salesAgents/salesAgentsService', () => ({
-  salesAgentsService: { testRun, testSend, propertyLink: vi.fn() },
+  salesAgentsService: { testRun, testSend },
 }));
 
 const toastSuccess = vi.hoisted(() => vi.fn());

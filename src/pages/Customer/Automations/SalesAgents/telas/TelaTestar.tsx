@@ -1,89 +1,14 @@
 import { useState } from 'react';
 import { Button, Input, Label } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { Bot, Plus, Send, Loader2, Link2, Copy, Check, SlidersHorizontal, Zap } from 'lucide-react';
+import { Bot, Plus, Send, Loader2, SlidersHorizontal, Zap } from 'lucide-react';
 import TestMediaBubble from '../TestMediaBubble';
-import { salesAgentsService, type SalesAgent, type SalesAgentTestResult, type SalesAgentPropertyLink, type TestHistoryItem, type TestMediaItem } from '@/services/salesAgents/salesAgentsService';
+import { salesAgentsService, type SalesAgent, type SalesAgentTestResult, type TestHistoryItem, type TestMediaItem } from '@/services/salesAgents/salesAgentsService';
 import { usePergunta } from '@/hooks/usePergunta';
 
 const TEMP_LABEL: Record<string, string> = {
   hot: 'Quente', warm: 'Morno', cold: 'Frio', unknown: 'Indefinido',
 };
-
-// ---------------- Link de anúncio (por imóvel) ----------------
-
-function PropertyLinkBox({
-  agent, propertyCode, onCodeChange,
-}: {
-  agent: SalesAgent;
-  propertyCode: string;
-  onCodeChange: (v: string) => void;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<SalesAgentPropertyLink | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  const generate = async () => {
-    setBusy(true);
-    try {
-      const r = await salesAgentsService.propertyLink(agent.id, propertyCode.trim() || undefined);
-      setResult(r);
-    } catch {
-      toast.error('Não foi possível gerar o link. Confira se o canal de WhatsApp está conectado no agente.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const copy = async () => {
-    if (!result?.link) return;
-    try {
-      await navigator.clipboard.writeText(result.link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-      toast.success('Link copiado');
-    } catch {
-      toast.error('Erro ao copiar');
-    }
-  };
-
-  return (
-    <div className="border border-sidebar-border rounded-md p-4 space-y-3 bg-muted/10">
-      <div className="flex items-center gap-2 text-sm font-medium"><Link2 className="h-4 w-4" /> Link de anúncio com IA</div>
-      <p className="text-xs text-muted-foreground">
-        Cole este link no anúncio (Facebook, Google, YouTube) ou na landing do imóvel. O lead clica, cai no WhatsApp com
-        a mensagem pronta e a IA já sabe de qual imóvel ele veio.
-      </p>
-      <div className="flex gap-2">
-        <Input
-          placeholder="Código do imóvel (ex: AP123)"
-          value={propertyCode}
-          onChange={(e) => onCodeChange(e.target.value)}
-        />
-        <Button size="sm" onClick={generate} disabled={busy}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar link'}
-        </Button>
-      </div>
-      {result?.link && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Input readOnly value={result.link} className="text-xs" />
-            <Button size="sm" variant="outline" onClick={copy} aria-label="Copiar link" title="Copiar link">
-              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Mensagem pré-pronta: <span className="italic">"{result.message}"</span>
-            {result.property && <> — imóvel <strong>{result.property.code}</strong> ({result.property.title})</>}
-          </p>
-        </div>
-      )}
-      <p className="text-xs text-muted-foreground">
-        O mesmo código digitado aqui também é usado no teste abaixo, pra você ver a IA falando desse imóvel.
-      </p>
-    </div>
-  );
-}
 
 // Par chave/valor do formulário do Meta. Estado local pra os dois campos não
 // remontarem a lista inteira a cada tecla.
@@ -602,7 +527,14 @@ export function TestTab({ agent }: { agent: SalesAgent }) {
         </div>
       </div>
 
-      <PropertyLinkBox agent={agent} propertyCode={propertyCode} onCodeChange={setPropertyCode} />
+      {/* O "Link de anúncio com IA" saiu (entrega 2), mas o código do imóvel morava
+          nele: o campo fica, pra testar a IA falando de um imóvel. */}
+      <div className="space-y-1">
+        <Label htmlFor="testar-imovel">Imóvel do teste</Label>
+        <Input id="testar-imovel" placeholder="Código do imóvel (ex: AP123)" value={propertyCode}
+          onChange={(e) => setPropertyCode(e.target.value)} />
+        <p className="text-xs text-muted-foreground">Opcional. A IA conversa como se o lead tivesse vindo desse imóvel.</p>
+      </div>
 
       <div className="border border-sidebar-border rounded-md p-3 h-72 overflow-auto space-y-2 bg-muted/20">
         {history.length === 0 ? (
