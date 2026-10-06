@@ -87,6 +87,18 @@ describe('pendenciasDosPassos', () => {
     expect(pendenciasDosPassos({ ...a, handoff_webhook_secret_state: 'ready' })).toEqual([]);
   });
 
+  it('CVCRM: sem pedir endereço nem chave; sem conexão trava o Ligar', () => {
+    const a = ia({ handoff_target: 'webhook', handoff_webhook_system: 'cvcrm', handoff_webhook_url: null,
+      handoff_webhook_secret_state: 'none', handoff_cvcrm_connected: true } as Partial<SalesAgent>);
+    expect(pendenciasDosPassos(a)).toEqual([]);
+
+    const desconectado = { ...a, handoff_cvcrm_connected: false };
+    expect(pendenciasDosPassos(desconectado)).toEqual([
+      expect.objectContaining({ chave: 'destino_cvcrm_desconectado', passo: 2, impedeLigar: true }),
+    ]);
+    expect(podeLigar(desconectado)).toEqual({ pode: false, motivo: expect.stringContaining('Integrações → CVCRM') });
+  });
+
   it('em ordem de passo', () => {
     const a = ia({ inbox_id: null, lead_facing_name: null, followup_action: 'ai' });
     expect(pendenciasDosPassos(a).map((p) => p.passo)).toEqual([1, 6, 7]);

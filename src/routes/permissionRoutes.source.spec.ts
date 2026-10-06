@@ -71,6 +71,7 @@ describe('toda rota do CRM confere o cargo', () => {
     ['/settings/portals', 'portals', 'read'],
     ['/settings/portals/:portalKey', 'portals', 'read'],
     ['/settings/facebook', 'lead_ads_form_configs', 'read'],
+    ['/settings/cvcrm', 'integrations', 'read'],
     ['message-funnels', 'message_funnels', 'read'],
     // Sprint 4 das Automações: o canvas do funil de conversa abre pra quem lê os funis (o corretor).
     ['message-funnels/:id', 'message_funnels', 'read'],

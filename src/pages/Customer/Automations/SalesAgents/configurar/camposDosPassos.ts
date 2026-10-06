@@ -13,6 +13,7 @@ export const CAMPOS_DO_PASSO = {
     'handoff_target', 'handoff_roleta_config_id', 'handoff_user_id',
     'reaction_enabled', 'reaction_emojis', 'reaction_max_per_conversation'],
   2: ['reach', 'booking_enabled', 'persona_kind', 'handoff_target', 'handoff_roleta_config_id', 'handoff_user_id', 'handoff_webhook_url',
+    'handoff_webhook_system', 'handoff_cvcrm',
     'transfer_config.mode', 'transfer_config.min_temperature', 'transfer_config.briefing_enabled',
     'pipeline_move_enabled', 'pipeline_id', 'pipeline_stage_map', 'crm_policy.cold', 'crm_policy.capture',
     'ask_google_review', 'google_review_link'],

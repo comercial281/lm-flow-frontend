@@ -167,6 +167,7 @@ const RoletaPagina = lazyWithRetry(() => import('@/pages/Customer/Roleta/RoletaP
 const AssignmentSettingsPage = lazyWithRetry(() => import('@/pages/Customer/Settings/AssignmentSettings/AssignmentSettings'));
 const PixelCapiConfig = lazyWithRetry(() => import('@/pages/Customer/Automations/PixelCapi/PixelCapiConfig'));
 const FacebookPages = lazyWithRetry(() => import('@/pages/Customer/Settings/FacebookPages'));
+const CvcrmConexao = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/Cvcrm/CvcrmConexao'));
 const Macros = lazyWithRetry(() => import('@/pages/Customer/Settings/Macros').then(m => ({ default: m.Macros })));
 const WhatsappReminders = lazyWithRetry(() => import('@/pages/Customer/Settings/WhatsappReminders'));
 const EmailTemplateEditor = lazyWithRetry(() => import('@/pages/Customer/Settings/EmailTemplateEditor'));
@@ -951,6 +952,15 @@ const AppRouter = () => {
                 element={
                   <PermissionRoute resource="portals" action="read">
                     <PortalsList />
+                  </PermissionRoute>
+                }
+              />
+              {/* CVCRM (06/10/2026): a conexão que a IA usa pra cadastrar o lead no CVCRM do cliente. */}
+              <Route
+                path="/settings/cvcrm"
+                element={
+                  <PermissionRoute resource="integrations" action="read">
+                    <CvcrmConexao />
                   </PermissionRoute>
                 }
               />

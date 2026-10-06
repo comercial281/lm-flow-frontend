@@ -91,7 +91,20 @@ export function situacaoDoEnvio(d: WebhookDelivery): { tom: Tom; texto: string }
 export function linhaNoPainelDoLead(attrs: Record<string, unknown>): { tom: Tom; texto: string } | null {
   const info = attrs.sales_agent_handoff_webhook;
   if (!info || typeof info !== 'object') return null;
-  const { status, at, error } = info as { status?: string; at?: string; error?: string };
+  const { status, at, error, system, owner } = info as { status?: string; at?: string; error?: string; system?: string; owner?: string };
+  // CVCRM (06/10/2026): o servidor grava `system: 'cvcrm'` e, entregue, pra quem foi.
+  if (system === 'cvcrm') {
+    if (status === 'pending') return { tom: 'alerta', texto: 'Enviando ao CVCRM…' };
+    if (status === 'delivered') {
+      return { tom: 'ok', texto: `Entregue no CVCRM às ${hora(at)}${owner ? ` para ${owner}` : ', na distribuição do CVCRM'}.` };
+    }
+    if (status === 'failed') {
+      // As frases do CVCRM terminam em ponto: sem ele aqui, sairia "token.. A gestão".
+      const motivo = (error ?? '').trim().replace(/\.+$/, '');
+      return { tom: 'erro', texto: `O envio ao CVCRM falhou${motivo ? `: ${motivo}` : ''}. A gestão foi avisada; o lead não foi pra roleta.` };
+    }
+    return null;
+  }
   if (status === 'pending') return { tom: 'alerta', texto: 'Enviando ao sistema do cliente…' };
   if (status === 'delivered') return { tom: 'ok', texto: `Enviado ao sistema do cliente às ${hora(at)}.` };
   if (status === 'failed') {
