@@ -1,10 +1,9 @@
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ChevronDown, ChevronUp, History, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import EmptyState from '@/components/base/EmptyState';
-import IconActionButton from '@/components/base/IconActionButton';
 import { Seletor } from '@/components/base/Seletor';
 import { useCan } from '@/hooks/useCan';
 import { hora, quandoAcontece } from '@/lib/formato';
@@ -62,18 +61,22 @@ export default function HistoricoLista({ roletaId }: Props) {
   const [equipe, setEquipe] = useState<User[]>([]);
   const [roletas, setRoletas] = useState<RoletaConfig[]>([]);
 
+  // Filtro trocado rápido: só a resposta do ÚLTIMO pedido vale.
+  const pedido = useRef(0);
   const carregar = useCallback(async () => {
+    const meu = ++pedido.current;
     setErro(false);
     setItens(null);
     try {
-      setItens(await roletaConfigService.getHistory({
+      const lista = await roletaConfigService.getHistory({
         roletaId: roletaId ?? (roletaDoFiltro || null),
         filter: filtro,
         userId: corretor || null,
         days: dias,
-      }));
+      });
+      if (meu === pedido.current) setItens(lista);
     } catch {
-      setErro(true);
+      if (meu === pedido.current) setErro(true);
     }
   }, [roletaId, roletaDoFiltro, filtro, corretor, dias]);
 
@@ -158,7 +161,10 @@ export default function HistoricoLista({ roletaId }: Props) {
         />
       );
     }
-    const colunas = geral ? 5 : 4;
+    // Filtrado por uma roleta, a coluna Roleta sairia toda igual (e o histórico
+    // de uma roleta nem manda o nome): some.
+    const comColunaRoleta = geral && !roletaDoFiltro;
+    const colunas = comColunaRoleta ? 5 : 4;
     return (
       <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full text-sm">
@@ -166,7 +172,7 @@ export default function HistoricoLista({ roletaId }: Props) {
             <tr>
               <th className="px-4 py-3 font-medium">Lead</th>
               <th className="px-4 py-3 font-medium">Origem</th>
-              {geral && <th className="px-4 py-3 font-medium">Roleta</th>}
+              {comColunaRoleta && <th className="px-4 py-3 font-medium">Roleta</th>}
               <th className="px-4 py-3 font-medium">Situação</th>
               <th className="w-12 px-2 py-3"><span className="sr-only">Caminho</span></th>
             </tr>
@@ -195,7 +201,7 @@ export default function HistoricoLista({ roletaId }: Props) {
                       <p className="mt-0.5 text-muted-foreground">{quandoAcontece(item.at)}</p>
                     </td>
                     <td className="px-4 py-3 align-top text-muted-foreground">{item.origin_label || '—'}</td>
-                    {geral && <td className="px-4 py-3 align-top text-muted-foreground">{item.roleta_name || '—'}</td>}
+                    {comColunaRoleta && <td className="px-4 py-3 align-top text-muted-foreground">{item.roleta_name || '—'}</td>}
                     <td className="px-4 py-3 align-top">
                       <span className={cn(atencao && 'font-medium text-amber-700 dark:text-amber-400')}>{situacao}</span>
                       {item.status === 'exhausted' && item.can_redistribute && podeSortear && (
@@ -213,12 +219,17 @@ export default function HistoricoLista({ roletaId }: Props) {
                     </td>
                     <td className="px-2 py-2 align-top" onClick={e => e.stopPropagation()}>
                       {item.steps?.length > 0 && (
-                        <IconActionButton
-                          label={aberto ? `Esconder o caminho de ${nome}` : `Ver o caminho de ${nome}`}
+                        <Button
+                          type="button"
+                          size="icon"
                           variant="ghost"
+                          aria-expanded={aberto}
+                          aria-label={`Caminho de ${nome}`}
+                          title={aberto ? `Esconder o caminho de ${nome}` : `Ver o caminho de ${nome}`}
                           onClick={() => alternar(chave)}
-                          icon={aberto ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                        />
+                        >
+                          {aberto ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
                       )}
                     </td>
                   </tr>

@@ -40,6 +40,14 @@ describe('endereço antigo do assistente da IA', () => {
   });
 });
 
+describe('roleta nova (chave roleta_nova)', () => {
+  it('as duas montagens da Roleta passam pelo mesmo portão', () => {
+    expect(trecho('roleta-config')).toContain('<ChaveRoletaNova ligada={<RoletaLista />} desligada={<RoletaConfigPage />} />');
+    expect(trecho('/settings/roleta-config')).toContain('<ChaveRoletaNova ligada={<RoletaLista />} desligada={<RoletaConfigPage />} />');
+    expect(trecho('roleta-config/:id')).toContain('<ChaveRoletaNova ligada={<RoletaPagina />}');
+  });
+});
+
 describe('toda rota do CRM confere o cargo', () => {
   it.each([
     ['/ia-vendedora', 'sales_agents', 'read'],

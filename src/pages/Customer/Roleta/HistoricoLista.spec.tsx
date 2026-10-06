@@ -65,6 +65,9 @@ describe('Histórico da roleta', () => {
     await waitFor(() => expect(within(roleta).getAllByRole('option')).toHaveLength(3));
     await userEvent.selectOptions(roleta, 'r2');
     await waitFor(() => expect(svc.getHistory).toHaveBeenLastCalledWith({ roletaId: 'r2', filter: 'all', userId: null, days: 7 }));
+    // filtrado por uma roleta, a coluna Roleta some (não mostra "—" em tudo)
+    await screen.findByText('Maria Silva');
+    expect(screen.queryByRole('columnheader', { name: 'Roleta' })).toBeNull();
   });
 
   it('filtros: precisa de atenção, corretor e período', async () => {
@@ -78,6 +81,19 @@ describe('Histórico da roleta', () => {
     await waitFor(() => expect(svc.getHistory).toHaveBeenLastCalledWith({ roletaId: 'r1', filter: 'attention', userId: 'u1', days: 30 }));
   });
 
+  it('resposta velha de um filtro anterior não sobrescreve a nova', async () => {
+    let soltarVelha: (v: unknown) => void = () => {};
+    svc.getHistory
+      .mockImplementationOnce(() => new Promise(ok => { soltarVelha = ok; }))
+      .mockResolvedValue([item({ contact_name: 'Resposta nova' })]);
+    abrir('r1');
+    await userEvent.click(screen.getByRole('radio', { name: 'Precisa de atenção' }));
+    expect(await screen.findByText('Resposta nova')).toBeInTheDocument();
+    soltarVelha([item({ contact_name: 'Resposta velha' })]);
+    await new Promise(r => setTimeout(r, 20));
+    expect(screen.queryByText('Resposta velha')).toBeNull();
+  });
+
   it('a linha abre o card do lead', async () => {
     abrir('r1');
     await userEvent.click(await screen.findByText('Form. ZONA SUL'));
@@ -86,7 +102,10 @@ describe('Histórico da roleta', () => {
 
   it('a setinha mostra o caminho, sem abrir o card', async () => {
     abrir('r1');
-    await userEvent.click(await screen.findByRole('button', { name: 'Ver o caminho de Maria Silva' }));
+    const seta = await screen.findByRole('button', { name: 'Caminho de Maria Silva' });
+    expect(seta).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(seta);
+    expect(seta).toHaveAttribute('aria-expanded', 'true');
     const caminho = screen.getByRole('list', { name: 'Caminho de Maria Silva' });
     expect(within(caminho).getByText('Ofertado a Bruno')).toBeInTheDocument();
     expect(within(caminho).getAllByText(/^\d{2}:\d{2}$/)).toHaveLength(2);

@@ -1214,7 +1214,10 @@ const AppRouter = () => {
               path="/settings/roleta-config"
               element={
                 <PermissionRoute resource="roleta_configs" action="read">
-                  <RoletaConfigPage />
+                  {/* Mesmo portão da roleta nova: com `roleta_nova`, a lista nova. */}
+                  <Suspense fallback={outletSuspenseFallback}>
+                    <ChaveRoletaNova ligada={<RoletaLista />} desligada={<RoletaConfigPage />} />
+                  </Suspense>
                 </PermissionRoute>
               }
             />
