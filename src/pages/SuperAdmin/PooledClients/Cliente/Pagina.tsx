@@ -8,7 +8,7 @@ import EmptyState from '@/components/base/EmptyState';
 import { clientesService } from '@/services/superAdmin/clientesService';
 import type { ClientePooled } from '@/types/admin/clientes';
 import BotaoEntrar from '../BotaoEntrar';
-import { ESQUELETO, PAGINA, SELO } from '../estilo';
+import { ESQUELETO, PAGINA, SELO } from '@/pages/Admin/Area/estilo';
 import { rotuloDaSituacao } from '../situacao';
 import AbaContrato from './AbaContrato';
 import AbaFuncoes from './AbaFuncoes';

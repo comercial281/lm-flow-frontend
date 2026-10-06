@@ -11,7 +11,7 @@ import QuadrosDeFuncoes from '../QuadrosDeFuncoes';
 import { validarLimites } from '../limites';
 import { plural } from '@/lib/formato';
 import { resumoDeMudancas } from './resumoDeMudancas';
-import { ESQUELETO, GRADE_CAMPOS, PAGINA, SECAO, TITULO_SECAO } from '../estilo';
+import { ESQUELETO, GRADE_CAMPOS, PAGINA, SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 
 // Editor de pacote: nome, funções (os mesmos quadros da página do cliente) e
 // limites. Salvar mostra a prévia e pergunta se aplica aos clientes do pacote;

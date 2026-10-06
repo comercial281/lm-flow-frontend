@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import Chave from '@/components/base/Chave';
 import { Button, Input } from '@/components/ui/ds';
 import { groupCatalogByTheme, itemLabel, matchesQuery, type CatalogItem } from '../featureCatalog';
-import { SECAO, TITULO_SECAO } from './estilo';
+import { SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 
 // Funções por tema, em quadros lado a lado, TODOS abertos (entrega 3). Mesmas
 // regras de 03/09: tema decidido pelo servidor, nada some, tema inteiro = uma

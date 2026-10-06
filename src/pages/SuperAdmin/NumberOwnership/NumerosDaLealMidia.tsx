@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import EmptyState from '@/components/base/EmptyState';
 import { telefone } from '@/lib/formato';
 import numberOwnershipService, { type PlatformNumber } from '@/services/superAdmin/numberOwnershipService';
-import { CORPO_SECAO, SECAO, SUBTITULO_SECAO, TITULO_SECAO } from '@/pages/SuperAdmin/PooledClients/estilo';
+import { CORPO_SECAO, SECAO, SUBTITULO_SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 import SeloDaSituacao from './SeloDaSituacao';
 
 // "Números da Leal Mídia" (entrega 4): os números da plataforma (Operacional

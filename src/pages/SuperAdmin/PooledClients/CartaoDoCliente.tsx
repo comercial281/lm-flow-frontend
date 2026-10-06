@@ -4,7 +4,7 @@ import type { ClientePooled } from '@/types/admin/clientes';
 import type { ClienteComProblema } from '@/types/admin/overview';
 import AiUsageLine from './AiUsageLine';
 import BotaoEntrar from './BotaoEntrar';
-import { SELO } from './estilo';
+import { SELO } from '@/pages/Admin/Area/estilo';
 import { seloDeProblema } from './lista';
 import { rotuloDaSituacao } from './situacao';
 

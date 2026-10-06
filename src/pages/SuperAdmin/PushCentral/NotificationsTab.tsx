@@ -1,16 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Loader2, Users } from 'lucide-react';
+import { Loader2, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Label,
-} from '@/components/ui/ds';
+import { Button, Label } from '@/components/ui/ds';
+import EmptyState from '@/components/base/EmptyState';
+import { Seletor } from '@/components/base/Seletor';
 import NotificationMatrix from '@/components/notifications/NotificationMatrix';
+import { useConfirmacao, type PedidoDeConfirmacao } from '@/hooks/useConfirmacao';
+import { numero, plural } from '@/lib/formato';
+import { PAGINA } from '@/pages/Admin/Area/estilo';
 import notificationPolicyService, {
   type CatalogData,
   type NotificationChannel,
@@ -19,46 +16,68 @@ import notificationPolicyService, {
   type PolicyUser,
   type ResolvedPolicy,
 } from '@/services/notifications/notificationPolicyService';
-import { Seletor } from '@/components/base/Seletor';
 
 /**
- * Aba "Notificações" da Central de Push.
+ * Comunicação → Avisos na tela: o que CADA CLIENTE recebe.
  *
- * A Central responde "que push EU, super-admin, quero receber". Esta aba responde
- * outra coisa: "o que CADA CLIENTE recebe". Por isso convivem na mesma tela mas
- * não se misturam.
+ * O push que chega para a Leal Mídia mora em Push. Aqui é outra pergunta: o que
+ * a equipe de cada cliente recebe dentro do CRM dela.
  *
  * A lista em si é o NotificationMatrix, o MESMO componente que o cliente vê em
- * Configurações → Conta. As duas telas gravam a mesma configuração no servidor:
- * o que o super-admin muda aqui aparece lá, e vice-versa. Elas serem o mesmo
- * componente é o que impede de voltarem a divergir.
+ * Configurações → Conta (decisão de 25/08: uma lista só, nas duas telas). As
+ * duas gravam a mesma configuração no servidor: o que o super-admin muda aqui
+ * aparece lá, e vice-versa.
+ *
+ * Erro de leitura é erro na tela, com "Tentar de novo", nunca tela em branco.
  */
 
+// "Aplicar a todos" troca a configuração de todos os OUTROS clientes ativos pela
+// deste. O servidor aplica em Tenant.usable menos o de origem, que é a mesma
+// lista que o catálogo traz: por isso o N é o tamanho da lista menos um.
+function pedidoAplicarATodos(outros: number): PedidoDeConfirmacao {
+  return {
+    titulo: outros === 1 ? 'Aplicar este padrão ao outro cliente?' : `Aplicar este padrão aos ${numero(outros)} clientes?`,
+    descricao: 'A configuração de cada um é substituída.',
+    rotuloDaAcao: 'Aplicar',
+    destrutivo: true,
+  };
+}
+
 export default function NotificationsTab() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [catalog, setCatalog] = useState<CatalogData | null>(null);
+  const [erroCatalogo, setErroCatalogo] = useState(false);
   const [tenantId, setTenantId] = useState<string>('');
-  const [policy, setPolicy] = useState<ResolvedPolicy>({});
+  const [policy, setPolicy] = useState<ResolvedPolicy | null>(null);
+  const [erroPolicy, setErroPolicy] = useState(false);
   const [stages, setStages] = useState<PipelineStages[]>([]);
   const [users, setUsers] = useState<PolicyUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [confirmAll, setConfirmAll] = useState(false);
+
+  const carregarCatalogo = useCallback(async () => {
+    setLoading(true);
+    setErroCatalogo(false);
+    try {
+      const data = await notificationPolicyService.catalog();
+      setCatalog(data);
+      setTenantId(atual => atual || data.tenants[0]?.id || '');
+    } catch {
+      setErroCatalogo(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    notificationPolicyService
-      .catalog()
-      .then(data => {
-        setCatalog(data);
-        if (data.tenants.length) setTenantId(data.tenants[0].id);
-      })
-      .catch(() => toast.error('Não consegui carregar o catálogo de notificações'))
-      .finally(() => setLoading(false));
-  }, []);
+    void carregarCatalogo();
+  }, [carregarCatalogo]);
 
   const loadPolicy = useCallback(async (id: string) => {
     if (!id) return;
     setLoading(true);
+    setErroPolicy(false);
     try {
       const { policy: resolved } = await notificationPolicyService.show(id);
       setPolicy(resolved);
@@ -75,14 +94,15 @@ export default function NotificationsTab() {
           setUsers([]);
         });
     } catch {
-      toast.error('Não consegui carregar a configuração deste cliente');
+      setPolicy(null);
+      setErroPolicy(true);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (tenantId) loadPolicy(tenantId);
+    if (tenantId) void loadPolicy(tenantId);
   }, [tenantId, loadPolicy]);
 
   const save = async (patch: PolicyPatch) => {
@@ -92,7 +112,7 @@ export default function NotificationsTab() {
       setPolicy(updated);
     } catch {
       toast.error('Não consegui salvar');
-      loadPolicy(tenantId);
+      void loadPolicy(tenantId);
     } finally {
       setSaving(false);
     }
@@ -117,14 +137,17 @@ export default function NotificationsTab() {
     }
   };
 
+  const outros = Math.max((catalog?.tenants.length ?? 0) - 1, 0);
+
   const applyToAll = async () => {
-    setConfirmAll(false);
+    if (!tenantId || outros === 0) return;
+    if (!(await confirmar(pedidoAplicarATodos(outros)))) return;
     setSaving(true);
     try {
       const { applied, failed } = await notificationPolicyService.applyToAll(tenantId);
       toast.success(
-        `Aplicado em ${applied.length} cliente(s)` +
-          (failed.length ? ` — ${failed.length} falharam` : ''),
+        `Aplicado em ${plural(applied.length, 'cliente', 'clientes')}` +
+          (failed.length ? ` · ${plural(failed.length, 'falhou', 'falharam')}` : ''),
       );
     } catch {
       toast.error('Não consegui aplicar a todos');
@@ -136,7 +159,7 @@ export default function NotificationsTab() {
   const activeCount = useMemo(() => {
     let on = 0;
     let total = 0;
-    Object.values(policy).forEach(entry => {
+    Object.values(policy ?? {}).forEach(entry => {
       const values = Object.values(entry.channels);
       total += 1;
       if (values.some(c => c.value)) on += 1;
@@ -144,9 +167,7 @@ export default function NotificationsTab() {
     return { on, total };
   }, [policy]);
 
-  const tenant = catalog?.tenants.find(t => t.id === tenantId);
-
-  if (loading && !catalog) {
+  if (loading && !catalog && !erroCatalogo) {
     return (
       <div className="flex justify-center py-10">
         <Loader2 className="w-6 h-6 animate-spin" />
@@ -154,8 +175,21 @@ export default function NotificationsTab() {
     );
   }
 
+  if (erroCatalogo || !catalog) {
+    return <EmptyState tipo="erro" aoTentarDeNovo={() => void carregarCatalogo()} />;
+  }
+
+  if (catalog.tenants.length === 0) {
+    return (
+      <EmptyState
+        title="Nenhum cliente ativo"
+        description="Os avisos de cada cliente aparecem aqui quando houver cliente ativo."
+      />
+    );
+  }
+
   return (
-    <div className="max-w-5xl space-y-4">
+    <div className={`${PAGINA} max-w-5xl`}>
       {/* ── Cliente + resumo ── */}
       <div className="flex flex-wrap items-end gap-3 justify-between">
         <div className="min-w-[240px]">
@@ -166,7 +200,7 @@ export default function NotificationsTab() {
             onChange={e => setTenantId(e.target.value)}
             className="mt-1 w-full h-9 rounded-md border bg-background px-3 text-sm"
           >
-            {catalog?.tenants.map(t => (
+            {catalog.tenants.map(t => (
               <option key={t.id} value={t.id}>
                 {t.name}
               </option>
@@ -175,10 +209,17 @@ export default function NotificationsTab() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">
-            {activeCount.on} de {activeCount.total} avisos ativos
-          </span>
-          <Button variant="outline" size="sm" onClick={() => setConfirmAll(true)} disabled={!tenantId}>
+          {policy && (
+            <span className="text-sm text-muted-foreground">
+              {activeCount.on} de {activeCount.total} avisos ativos
+            </span>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void applyToAll()}
+            disabled={!tenantId || outros === 0 || saving || !policy}
+          >
             <Users className="w-4 h-4 mr-2" />
             Aplicar a todos os clientes
           </Button>
@@ -188,43 +229,28 @@ export default function NotificationsTab() {
 
       <p className="text-sm text-muted-foreground">
         Isto controla o que a equipe <strong>do cliente</strong> recebe. O push que chega para você
-        continua na aba "Regras".
+        fica em Push.
       </p>
 
-      {catalog && (
-        <NotificationMatrix
-          catalog={catalog}
-          policy={policy}
-          stages={stages}
-          users={users}
-          expanded={expanded}
-          onExpand={setExpanded}
-          onToggleChannel={toggleChannel}
-          onSetParam={setParam}
-          onReset={resetEvent}
-        />
+      {erroPolicy ? (
+        <EmptyState tipo="erro" aoTentarDeNovo={() => void loadPolicy(tenantId)} />
+      ) : (
+        policy && (
+          <NotificationMatrix
+            catalog={catalog}
+            policy={policy}
+            stages={stages}
+            users={users}
+            expanded={expanded}
+            onExpand={setExpanded}
+            onToggleChannel={toggleChannel}
+            onSetParam={setParam}
+            onReset={resetEvent}
+          />
+        )
       )}
 
-      <Dialog open={confirmAll} onOpenChange={setConfirmAll}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Aplicar a todos os clientes?</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            A configuração de <strong>{tenant?.name}</strong> vai substituir a de todos os outros
-            clientes ativos. O que cada um tiver personalizado será perdido.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmAll(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={applyToAll}>
-              <Check className="w-4 h-4 mr-2" />
-              Aplicar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {dialogoDeConfirmacao}
     </div>
   );
 }

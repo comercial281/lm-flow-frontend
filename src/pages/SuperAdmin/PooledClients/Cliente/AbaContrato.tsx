@@ -12,7 +12,7 @@ import type { ClientePooled } from '@/types/admin/clientes';
 import { resumoDeMudancas, type DiffDoCliente } from '../Pacotes/resumoDeMudancas';
 import { groupJidsFrom, groupsPatch } from '../clientGroups';
 import { validarLimites } from '../limites';
-import { GRADE_CAMPOS, SECAO, TITULO_SECAO } from '../estilo';
+import { GRADE_CAMPOS, SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 import type { PropsDaAba } from './Pagina';
 
 // Contrato do cliente. Pacote (trocar / voltar ao pacote, com prévia) e os três limites (números de WhatsApp, franquia de

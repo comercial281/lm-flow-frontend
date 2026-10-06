@@ -9,7 +9,7 @@ import { pacotesService } from '@/services/superAdmin/pacotesService';
 import type { ClientePooled } from '@/types/admin/clientes';
 import type { PacoteDaLista } from '@/types/admin/pacotes';
 import { plural } from '@/lib/formato';
-import { ESQUELETO, GRADE_CARTOES, PAGINA } from '../estilo';
+import { ESQUELETO, GRADE_CARTOES, PAGINA } from '@/pages/Admin/Area/estilo';
 
 // Clientes → Pacotes: lista e "Novo pacote" (do zero, de um pacote ou de um cliente).
 export default function Pacotes() {

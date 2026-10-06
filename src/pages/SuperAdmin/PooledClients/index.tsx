@@ -12,7 +12,7 @@ import CartaoDoCliente from './CartaoDoCliente';
 import ClientFollowupRolloutModal from './ClientFollowupRolloutModal';
 import NewTenantWizard from './NewTenantWizard';
 import { chaveDoCliente, filtrarCartoes, filtroValido, ordenarCartoes, problemasPorCliente, type FiltroLista } from './lista';
-import { ESQUELETO, GRADE_CARTOES, PAGINA } from './estilo';
+import { ESQUELETO, GRADE_CARTOES, PAGINA } from '@/pages/Admin/Area/estilo';
 import { rotuloDaSituacao } from './situacao';
 
 // Clientes → Clientes. Cartões na largura toda; o cartão abre a página do

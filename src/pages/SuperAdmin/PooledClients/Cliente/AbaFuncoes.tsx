@@ -8,7 +8,7 @@ import { clientesService } from '@/services/superAdmin/clientesService';
 import { itemLabel, type CatalogItem } from '../../featureCatalog';
 import QuadrosDeFuncoes from '../QuadrosDeFuncoes';
 import { pedidoDesligarMenu } from '../confirmacoes';
-import { ESQUELETO } from '../estilo';
+import { ESQUELETO } from '@/pages/Admin/Area/estilo';
 import type { PropsDaAba } from './Pagina';
 
 // Funções do cliente: cada interruptor grava na hora (otimista, volta no erro),
