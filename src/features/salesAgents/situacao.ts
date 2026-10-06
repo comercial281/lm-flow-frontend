@@ -38,7 +38,7 @@ export interface Pendencia {
 }
 
 type AgenteLido = Pick<SalesAgent, 'enabled' | 'inbox_id' | 'triggers' | 'trigger_keyword' | 'trigger_match_mode'>
-  & Partial<Pick<SalesAgent, 'followup_only' | 'followup_enabled' | 'followup_max_attempts'
+  & Partial<Pick<SalesAgent, 'followup_only' | 'followup_enabled' | 'followup_action'
     | 'persona_kind' | 'reach' | 'transfer_config' | 'booking_enabled' | 'handoff_target' | 'handoff_roleta_config_id'
     | 'handoff_user_id' | 'handoff_webhook_url' | 'handoff_webhook_secret_state' | 'lead_facing_name' | 'number_owner_id' | 'qualification_questions'>>;
 
@@ -177,7 +177,7 @@ function daItem(item: HealthItem): Pendencia {
 /**
  * O que falta, na ordem de gravidade, pra Visão geral. Vem do Diagnóstico
  * (sem os itens em dia) mais o que a tela sabe sozinha: gatilho restringindo
- * (o servidor marca verde) e follow-up sem limite de tentativas.
+ * (o servidor marca verde) e o follow-up ainda na opção antiga "A IA escreve".
  */
 const TITULO_NO_PAINEL: Record<string, string> = {
   persona_sem_dono: 'Dono do número',
@@ -187,6 +187,7 @@ const TITULO_NO_PAINEL: Record<string, string> = {
   destino_sem_endereco: 'Pra onde vai o lead',
   destino_sem_chave: 'Chave do sistema do cliente',
   perguntas_vazias: 'Perguntas antes de passar',
+  followup_sem_escolha: 'O que ela faz quando o lead some',
 };
 
 export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | null): Pendencia[] {
@@ -205,16 +206,6 @@ export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | n
       detalhe: `${restricao.frase.charAt(0).toUpperCase()}${restricao.frase.slice(1)}.`,
       grave: restricao.parada,
       corrigir: PASSO(6),
-    });
-  }
-
-  if (agent.followup_enabled && agent.followup_max_attempts === 0) {
-    lista.push({
-      chave: 'followup_sem_limite',
-      titulo: 'Follow-up sem limite de tentativas',
-      detalhe: 'Ela volta a chamar quem sumiu sem parar. Defina um máximo de tentativas no passo Voltar a chamar.',
-      grave: false,
-      corrigir: PASSO(7),
     });
   }
 

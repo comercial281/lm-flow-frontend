@@ -154,7 +154,6 @@ export function FollowupHoursRow({
   onSave: (patch: Partial<SalesAgent>) => void;
 }) {
   const windows = janelaDoFollowup(agent);
-  const entregaAoFunil = agent.followup_action === 'pipeline' || agent.followup_action === 'sequence';
 
   // `tz` sempre explícito: em branco, servidor e tela discordariam no dia em que
   // o padrão de um dos dois mudasse.
@@ -186,26 +185,29 @@ export function FollowupHoursRow({
           prefixo repetido faz o rótulo de uma focar o campo da outra. */}
       <WeeklyWindowsEditor value={windows} idPrefix="fu_win" onChange={gravar} />
 
-      {entregaAoFunil && (
-        <p className="mt-2 text-xs text-muted-foreground">
-          Neste modo o horário acima decide <strong>quando a IA entrega o lead</strong>. As
-          mensagens dali em diante saem no horário do <em>funil</em>, que tem o relógio dele
-          (a chave <em>Só enviar em horário comercial</em>, em Automações → Follow-up).
-        </p>
-      )}
+      {/* Desde 06/10/2026 a IA só entrega o lead (não escreve mais o follow-up):
+          este horário vale pra retomada e pra entrega, e as mensagens dali em
+          diante seguem o horário do follow-up que recebe o lead. */}
+      <p className="mt-2 text-xs text-muted-foreground">
+        O horário acima decide <strong>quando a IA entrega o lead</strong>. As mensagens dali em
+        diante saem no horário do <em>follow-up</em> que recebe o lead (a caixa <em>Só em horário
+        comercial</em>, nas configurações dele em Automações → Follow-up).
+      </p>
     </div>
   );
 }
 
-// As três saídas do follow-up. As duas de baixo não consomem IA: as mensagens do
-// funil já estão escritas, então cutucar o lead deixa de custar por lead e por vez.
-const FOLLOWUP_ACTIONS: [SalesAgentFollowupAction, string, string][] = [
-  ['ai', 'A IA escreve a mensagem',
-   'Personalizada com base na conversa inteira e no imóvel de interesse. É a que mais converte — e a única que consome IA a cada envio.'],
+// As duas saídas do follow-up. Nas duas a IA só ENTREGA o lead: quem escreve as
+// mensagens é o follow-up, com texto pronto.
+//
+// "A IA escreve a mensagem" ('ai') saiu em 06/10/2026 (decisão do dono do produto,
+// spec 2026-10-06-follow-up-padrao): o problema era a qualidade do texto, não o
+// custo. IA que ainda está em 'ai' não tem opção marcada e vê o aviso abaixo.
+const FOLLOWUP_ACTIONS: [Exclude<SalesAgentFollowupAction, 'ai'>, string, string][] = [
   ['pipeline', 'Mover o card para uma coluna',
-   'A IA leva o card para a coluna que você escolher e sai de cena. Quem manda a mensagem é o follow-up que começa quando o card entra nessa coluna. Não consome IA.'],
+   'A IA leva o card para a coluna que você escolher e sai de cena. Quem manda a mensagem é o follow-up que começa quando o card entra nessa coluna.'],
   ['sequence', 'Entregar pro follow-up',
-   'A IA coloca o lead no follow-up escolhido, sem mexer no card. Para quem não usa o quadro de funil. Não consome IA.'],
+   'A IA coloca o lead no follow-up escolhido, sem mexer no card. Todo cliente já tem o Follow-up padrão: 6 mensagens em 30 dias.'],
 ];
 
 export function FollowupActionPicker({
@@ -216,7 +218,8 @@ export function FollowupActionPicker({
 }) {
   const [stages, setStages] = useState<StageOpt[]>([]);
   const [followups, setFollowups] = useState<FollowupFlowOption[]>([]);
-  const acao = agent.followup_action ?? 'ai';
+  // Sem padrão de reserva: IA antiga em 'ai' (ou sem valor) fica sem opção marcada.
+  const acao = agent.followup_action ?? null;
   const pipeline = agent.pipeline_id ?? '';
 
   // As colunas são as do funil já escolhido em "Mover o card no funil", logo
@@ -246,6 +249,9 @@ export function FollowupActionPicker({
   return (
     <div className="space-y-2">
       <div className="text-xs font-medium">Quando o lead sumir</div>
+      {acao === 'ai' && (
+        <p className="text-xs text-amber-600">Escolha como o follow-up continua: a IA não escreve mais o follow-up.</p>
+      )}
       {FOLLOWUP_ACTIONS.map(([valor, titulo, ajuda]) => (
         <label key={valor} className="flex items-start gap-3 cursor-pointer">
           <input

@@ -28,7 +28,7 @@ export const FRASE_SEM_DONO = 'Este número não tem corretor dono. Escolha o do
 type Lido = Partial<Pick<SalesAgent,
   'persona_kind' | 'reach' | 'transfer_config' | 'booking_enabled' | 'handoff_target' | 'handoff_roleta_config_id'
   | 'handoff_user_id' | 'handoff_webhook_url' | 'handoff_webhook_secret_state' | 'lead_facing_name' | 'inbox_id' | 'number_owner_id' | 'qualification_questions'
-  | 'trigger_keyword' | 'followup_enabled' | 'followup_max_attempts'>>;
+  | 'trigger_keyword' | 'followup_enabled' | 'followup_action'>>;
 
 export function pendenciasDosPassos(agent: Lido): PendenciaDoPasso[] {
   const lista: PendenciaDoPasso[] = [];
@@ -77,8 +77,11 @@ export function pendenciasDosPassos(agent: Lido): PendenciaDoPasso[] {
   if (palavra) {
     lista.push({ chave: 'palavra_antiga', passo: 6, frase: `Ela só entra quando o lead escreve "${palavra}" (regra antiga).`, impedeLigar: false });
   }
-  if (agent.followup_enabled && agent.followup_max_attempts === 0) {
-    lista.push({ chave: 'followup_sem_limite', passo: 7, frase: 'Follow-up sem limite de tentativas.', impedeLigar: false });
+  // Desde 06/10/2026 a IA não escreve mais o follow-up ('ai' é só valor antigo). O
+  // aviso de "sem limite de tentativas" saiu junto: entregando o lead ela age uma
+  // vez por sumiço, e o campo do teto não existe mais na tela.
+  if (agent.followup_enabled && agent.followup_action === 'ai') {
+    lista.push({ chave: 'followup_sem_escolha', passo: 7, frase: 'Escolha como o follow-up continua: a IA não escreve mais o follow-up.', impedeLigar: false });
   }
 
   return lista.sort((a, b) => a.passo - b.passo);

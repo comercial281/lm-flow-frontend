@@ -1,6 +1,8 @@
 // Passo 7 · Voltar a chamar. Retomada (as 2 cutucadas quando o lead para no meio)
-// + follow-up (quando ele some). O limite de 3 tentativas vale pra IA nova; quem
-// já tinha follow-up infinito continua assim, com o aviso.
+// + follow-up (quando ele some). Desde 06/10/2026 a IA não escreve mais o
+// follow-up: depois de X dias sem resposta ela ENTREGA o lead (move o card ou põe
+// no follow-up escolhido) e sai de cena. Por isso só um campo de dias (o mínimo;
+// o máximo acompanha) e nenhum "Máximo de tentativas": ela age uma vez por sumiço.
 //
 // ⚠️ "Ir aos poucos" (gotejamento) foi pro Avançado.
 import { Secao } from '@/components/base/Secao';
@@ -54,13 +56,15 @@ export default function Passo7VoltarAChamar({ agent, aoSalvo }: PropsDoPasso) {
         <Caixa id="p7-followup" rotulo="Ir atrás de quem sumiu" marcada={ligado} aoMudar={(v) => mudar({ followup_enabled: v })} />
         {ligado && (
           <>
-            <CampoTexto id="p7-min" type="number" min={1} max={365} rotulo="A cada (mínimo de dias)" valor={String(rascunho.followup_min_days ?? 2)}
-              aoMudar={(v) => mudar({ followup_min_days: Math.min(365, Math.max(1, Number(v) || 1)) })} />
-            <CampoTexto id="p7-max" type="number" min={1} max={365} rotulo="Até (máximo de dias)" valor={String(rascunho.followup_max_days ?? 3)}
-              aoMudar={(v) => mudar({ followup_max_days: Math.min(365, Math.max(1, Number(v) || 1)) })} />
-            <CampoTexto id="p7-tentativas" type="number" min={0} rotulo="Máximo de tentativas" valor={String(rascunho.followup_max_attempts ?? 3)}
-              ajuda="0 = sem limite." aoMudar={(v) => mudar({ followup_max_attempts: Math.max(0, Number(v) || 0) })} />
-            {rascunho.followup_max_attempts === 0 && <Aviso>Sem limite de tentativas: ela continua indo atrás pra sempre.</Aviso>}
+            {/* O servidor entrega quando o silêncio passa do MÍNIMO; o máximo só
+                espaça a nova tentativa quando a entrega falha. Gravar os dois
+                iguais deixa um número só pra entender. */}
+            <CampoTexto id="p7-dias" type="number" min={1} max={365} rotulo="Entregar o lead depois de (dias sem resposta)"
+              ajuda="Quanto tempo de silêncio até entregar o lead." valor={String(rascunho.followup_min_days ?? 2)}
+              aoMudar={(v) => {
+                const dias = Math.min(365, Math.max(1, Number(v) || 1));
+                mudar({ followup_min_days: dias, followup_max_days: dias });
+              }} />
             <Caixa id="p7-so-followup" rotulo="Só follow-up (ela não responde ao vivo)" marcada={!!rascunho.followup_only}
               aoMudar={(v) => mudar({ followup_only: v })} />
           </>
@@ -72,10 +76,10 @@ export default function Passo7VoltarAChamar({ agent, aoSalvo }: PropsDoPasso) {
           <Secao titulo="Quais leads" descricao="De quais funis ela vai atrás.">
             <FollowupPipelinesRow agent={rascunho} onSave={mudar} />
           </Secao>
-          <Secao titulo="Quando pode sair" descricao="O horário em que ela pode mandar a retomada e o follow-up.">
+          <Secao titulo="Quando pode sair" descricao="O horário em que ela pode mandar a retomada e entregar o lead.">
             <FollowupHoursRow agent={rascunho} onSave={mudar} />
           </Secao>
-          <Secao titulo="O que ela faz quando o lead some" descricao="Escrever a mensagem, mover o card ou entregar pro follow-up.">
+          <Secao titulo="O que ela faz quando o lead some" descricao="Mover o card ou entregar pro follow-up. Quem manda as mensagens é o follow-up, com texto pronto.">
             <FollowupActionPicker agent={rascunho} onSave={mudar} />
           </Secao>
         </>

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
@@ -38,9 +38,23 @@ describe('Passo 7 · Voltar a chamar', () => {
     expect(update).toHaveBeenCalledWith('ia-1', { reengagement_enabled: true });
   });
 
-  it('follow-up sem limite de tentativas avisa', () => {
+  // 06/10/2026: a IA só entrega o lead. Um campo de dias (o silêncio até entregar),
+  // sem "Máximo de tentativas" e sem o aviso de "sem limite".
+  it('um campo de dias, sem teto de tentativas', () => {
     abrir(agenteDeTeste({ followup_max_attempts: 0 }));
-    expect(screen.getByText(/Sem limite de tentativas/)).toBeTruthy();
+    expect(screen.getByLabelText('Entregar o lead depois de (dias sem resposta)')).toBeTruthy();
+    expect(screen.getByText('Quanto tempo de silêncio até entregar o lead.')).toBeTruthy();
+    expect(screen.queryByLabelText('Máximo de tentativas')).toBeNull();
+    expect(screen.queryByText(/Sem limite de tentativas/)).toBeNull();
+    expect(screen.queryByText(/Escrever a mensagem/)).toBeNull();
+  });
+
+  it('mudar os dias grava o mínimo e o máximo iguais', async () => {
+    abrir(agenteDeTeste({ followup_min_days: 2, followup_max_days: 3 }));
+    const campo = screen.getByLabelText('Entregar o lead depois de (dias sem resposta)');
+    fireEvent.change(campo, { target: { value: '4' } });
+    await salvar();
+    expect(update).toHaveBeenCalledWith('ia-1', { followup_min_days: 4, followup_max_days: 4 });
   });
 
   it('a linha do tempo mostra o que acontece', () => {

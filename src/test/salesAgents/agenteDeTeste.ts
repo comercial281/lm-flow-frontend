@@ -16,7 +16,7 @@ export function agenteDeTeste(extra: Partial<SalesAgent> = {}): SalesAgent {
     reply_delay_seconds: 10, inbox_id: 'inbox-1', inbox_name: 'Número de teste', pipeline_id: null, stage_id: null,
     active_hours: { mode: 'always', tz: 'America/Sao_Paulo' }, triggers: [], trigger_match_mode: 'any',
     bant_config: { enabled: false }, usage_limits: {}, followup_enabled: true, followup_only: false,
-    followup_min_days: 2, followup_max_days: 3, followup_max_attempts: 3, followup_action: 'ai',
+    followup_min_days: 2, followup_max_days: 3, followup_max_attempts: 3, followup_action: 'sequence',
     followup_stage_id: null, followup_return_stage_id: null, followup_sequence_slug: null, followup_flow_id: null,
     followup_drip_enabled: true, followup_drip_min_leads: 2, followup_drip_max_leads: 3,
     followup_drip_min_minutes: 3, followup_drip_max_minutes: 5, followup_pipeline_ids: [],

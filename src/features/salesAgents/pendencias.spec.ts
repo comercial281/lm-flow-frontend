@@ -7,7 +7,7 @@ const ia = (extra: Partial<SalesAgent> = {}) =>
     persona_kind: 'owner', reach: 'qualify', transfer_config: { mode: 'checklist' }, handoff_target: 'inbox_roleta',
     handoff_roleta_config_id: null, handoff_user_id: null, lead_facing_name: 'Bia', inbox_id: 'inbox-1',
     number_owner_id: 'u7', qualification_questions: ['Renda'], trigger_keyword: null,
-    followup_enabled: true, followup_max_attempts: 3, ...extra,
+    followup_enabled: true, followup_action: 'sequence', ...extra,
   }) as SalesAgent;
 
 describe('pendenciasDosPassos', () => {
@@ -42,12 +42,15 @@ describe('pendenciasDosPassos', () => {
     expect(podeLigar(a)).toEqual({ pode: true, motivo: null });
   });
 
-  it('roleta ou corretor sem escolha, perguntas vazias, palavra antiga e follow-up sem limite', () => {
+  it('roleta ou corretor sem escolha, perguntas vazias, palavra antiga e follow-up ainda em "A IA escreve"', () => {
     expect(passoComPendencia(ia({ handoff_target: 'roleta' }))).toBe(2);
     expect(passoComPendencia(ia({ handoff_target: 'user' }))).toBe(2);
     expect(passoComPendencia(ia({ qualification_questions: [' '] }))).toBe(3);
     expect(pendenciasDosPassos(ia({ trigger_keyword: 'call' }))[0].frase).toContain('"call"');
-    expect(passoComPendencia(ia({ followup_max_attempts: 0 }))).toBe(7);
+    expect(passoComPendencia(ia({ followup_action: 'ai' }))).toBe(7);
+    expect(pendenciasDosPassos(ia({ followup_action: 'ai' }))[0]).toMatchObject({ chave: 'followup_sem_escolha', impedeLigar: false });
+    // O teto de tentativas saiu da tela (06/10/2026): máximo 0 não é mais pendência.
+    expect(pendenciasDosPassos(ia({ followup_max_attempts: 0 }))).toEqual([]);
   });
 
   it('sistema do cliente sem endereço: passo 2, sem travar', () => {
@@ -63,7 +66,7 @@ describe('pendenciasDosPassos', () => {
   });
 
   it('em ordem de passo', () => {
-    const a = ia({ inbox_id: null, lead_facing_name: null, followup_max_attempts: 0 });
+    const a = ia({ inbox_id: null, lead_facing_name: null, followup_action: 'ai' });
     expect(pendenciasDosPassos(a).map((p) => p.passo)).toEqual([1, 6, 7]);
   });
 });
