@@ -18,6 +18,11 @@ describe('iaMenu (onda 3)', () => {
     expect(telaDaUrl(url('tela=motor'), { ...CLIENTE, motor: true })).toBe('motor');
   });
 
+  it('tela do protótipo (constructor, __proto__) cai na Visão geral', () => {
+    expect(telaDaUrl(url('tela=constructor'), EQUIPE)).toBe('visao-geral');
+    expect(telaDaUrl(url('tela=__proto__'), EQUIPE)).toBe('visao-geral');
+  });
+
   it('?tela=testar antigo abre a Visão geral (a janela abre por cima)', () => {
     expect(telaDaUrl(url('tela=testar'), CLIENTE)).toBe('visao-geral');
     expect(pediuTestar(url('ia=1&tela=testar'))).toBe(true);

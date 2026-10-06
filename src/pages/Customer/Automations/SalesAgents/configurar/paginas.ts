@@ -87,9 +87,10 @@ export const PASSO_PARA_PAGINA: Record<string, PaginaId> = {
 
 export function paginaDaUrl(params: URLSearchParams): PaginaId | null {
   const pedida = params.get('pagina');
-  if (pedida && pedida in PAGINAS) return pedida as PaginaId;
+  if (pedida && Object.hasOwn(PAGINAS, pedida)) return pedida as PaginaId;
   const passo = params.get('passo');
-  return passo && PASSO_PARA_PAGINA[passo] ? PASSO_PARA_PAGINA[passo] : null;
+  // ⚠️ hasOwn: `?passo=constructor` não pode achar nada na cadeia do protótipo.
+  return passo && Object.hasOwn(PASSO_PARA_PAGINA, passo) ? PASSO_PARA_PAGINA[passo] : null;
 }
 
 type Lido = Parameters<typeof pendenciasDasPaginas>[0];

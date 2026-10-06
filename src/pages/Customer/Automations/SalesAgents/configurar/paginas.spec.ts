@@ -56,6 +56,9 @@ describe('paginas', () => {
     expect(paginaDaUrl(new URLSearchParams('passo=7'))).toBe('followup');
     expect(paginaDaUrl(new URLSearchParams('pagina=xyz'))).toBeNull();
     expect(paginaDaUrl(new URLSearchParams(''))).toBeNull();
+    for (const q of ['pagina=constructor', 'pagina=__proto__', 'pagina=toString', 'passo=constructor', 'passo=__proto__']) {
+      expect(paginaDaUrl(new URLSearchParams(q))).toBeNull();
+    }
   });
 
   it('abre na primeira página com pendência, senão em Canal', () => {
