@@ -6919,7 +6919,7 @@ Armadilhas:
     roleta perguntam com `usePodeSair` (`PEDIDO_SAIR_SEM_SALVAR`) quando há horário ou texto por salvar.
 11. **`/settings/roleta-config` passa pelo mesmo portão** (`ChaveRoletaNova`) que `/automations/roleta-config`.
 
-**Largura (07/10/2026, pedido do dono):** a lista e a página da roleta usam até 1400px, como Meu site e IA Vendedora (`mx-auto w-full max-w-[1400px]`), com até 3 cartões por linha em tela larga. Não voltar pra coluna estreita.
+**Largura (06/10/2026, pedido do dono):** a lista e a página da roleta usam até 1400px, como Meu site e IA Vendedora (`mx-auto w-full max-w-[1400px]`), com até 3 cartões por linha em tela larga. Não voltar pra coluna estreita.
 
 ## Roleta nova: as outras telas (06/10/2026)
 
