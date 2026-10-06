@@ -5,7 +5,9 @@ import { MemoryRouter } from 'react-router-dom';
 const apiGet = vi.hoisted(() => vi.fn());
 vi.mock('@/services/core/api', () => ({ default: { get: apiGet, put: vi.fn() } }));
 // O câmbio e a margem têm testes próprios; aqui só o resumo e a lista.
-vi.mock('./CambioDasContas', () => ({ default: () => null }));
+vi.mock('./CambioDasContas', () => ({
+  default: ({ aoMudar }: { aoMudar: () => void }) => <button onClick={aoMudar}>mudou-cambio</button>,
+}));
 
 import Custos from './index';
 import { fakeSummary } from './fakeSummary';
@@ -166,5 +168,28 @@ describe('Custos', () => {
     await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/summary', { params: { month: '2026-10', tenant: 'tenant_a', agent: 'ag2' } }));
     await waitFor(() => expect((screen.getByLabelText('IA') as HTMLSelectElement).value).toBe('__todas__'));
     await waitFor(() => expect(apiGet).toHaveBeenLastCalledWith('/super/costs/calls', { params: { month: '2026-10', per_page: 20, tenant: 'tenant_a' } }));
+  });
+
+  it('mudar o câmbio recarrega o resumo e a lista, com os mesmos filtros', async () => {
+    apiGet.mockImplementation((url: string, cfg?: { params?: Record<string, string> }) => {
+      if (url.includes('/calls')) return Promise.resolve({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } });
+      const t = cfg?.params?.tenant ?? null;
+      return Promise.resolve({ data: { success: true, data: fakeSummary(t ? { tenant: t, agent: cfg?.params?.agent ?? null, agents: [{ id: 'ag1', name: 'Sara' }] } : {}) } });
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Total do mês')).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('Cliente'), { target: { value: 'tenant_a' } });
+    fireEvent.change(await screen.findByLabelText('IA'), { target: { value: 'ag1' } });
+    const sumario = ['/super/costs/summary', { params: { month: '2026-10', tenant: 'tenant_a', agent: 'ag1' } }];
+    const lista = ['/super/costs/calls', { params: { month: '2026-10', per_page: 20, tenant: 'tenant_a', agent: 'ag1' } }];
+    await waitFor(() => expect(apiGet.mock.calls.filter((c) => JSON.stringify(c) === JSON.stringify(lista))).toHaveLength(1));
+    const conta = (alvo: unknown) => apiGet.mock.calls.filter((c) => JSON.stringify(c) === JSON.stringify(alvo)).length;
+    await new Promise((r) => setTimeout(r, 50)); // deixa assentar as buscas da escolha da IA
+    const antesResumo = conta(sumario);
+    const antesLista = conta(lista);
+    fireEvent.click(screen.getByText('mudou-cambio'));
+    await waitFor(() => expect(conta(sumario)).toBeGreaterThan(antesResumo));
+    await waitFor(() => expect(conta(lista)).toBeGreaterThan(antesLista));
+    expect((screen.getByLabelText('IA') as HTMLSelectElement).value).toBe('ag1');
   });
 });
