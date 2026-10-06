@@ -29,7 +29,7 @@ import { ENDERECO_DA_ROLETA } from './enderecos';
 import HistoricoLista from './HistoricoLista';
 import AvisosAba from './AvisosAba';
 
-// ── ROLETA DE LEADS (roleta nova, chave `roleta_nova`) ──────────────────────
+// ── ROLETA DE LEADS (a roleta nova, a única desde 06/10/2026) ───────────────
 //
 // Página com três abas (D1): Roletas (um cartão por roleta, lido como frase),
 // Histórico (de todas as roletas) e Avisos (valem pra todas, D7). A aba mora no

@@ -1,14 +1,13 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  Card, CardContent, Button, Switch,
+  Card, CardContent, Button,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/ds';
-import { Check, Users, Settings, Info, Sparkles, UserCircle, Loader2 } from 'lucide-react';
+import { Check, Users, Sparkles, UserCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { useNumberOwnerRule } from '@/features/numbers/useNumberOwnerRule';
-import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { OWNER_EXPLANATION, OWNER_TITLE, SHARED_LABEL, lockedOwnerId, withOwner } from '@/features/numbers/numberTexts';
 import type { NumberCardData } from '@/features/numbers/types';
 
@@ -19,9 +18,6 @@ import type { AgentChannel } from '@/types/channels/inbox';
 
 interface CollaboratorsFormProps {
   inboxId: string;
-  enableAutoAssignment?: boolean;
-  maxAssignmentLimit?: number | null;
-  onAutoAssignmentChange?: (enabled: boolean, limit?: number | null) => void;
   // DONO DO NÚMERO (ex-"Responsável da instância"). Sem a regra da fase 2b.1,
   // só troca o avatar de responsável no CRM; com ela, é quem recebe o lead que
   // escreve neste número.
@@ -40,9 +36,6 @@ interface CollaboratorsFormProps {
 
 export default function CollaboratorsForm({
   inboxId,
-  enableAutoAssignment: initialAutoAssignment = false,
-  maxAssignmentLimit: initialMaxLimit = null,
-  onAutoAssignmentChange,
   ownerUserId = null,
   onOwnerChange,
   numberOwnerRule = null,
@@ -55,8 +48,7 @@ export default function CollaboratorsForm({
   const rule = useNumberOwnerRule(numberOwnerRule);
   // Roleta nova (06/10/2026, D6): a roleta não tem número e é o único jeito de
   // distribuir lead. A "Atribuição Automática" do canal era um segundo motor
-  // decidindo quem recebe; com a chave ela some (a migração do cliente a desliga).
-  const roletaNova = useClientToggle('roleta_nova');
+  // decidindo quem recebe, e saiu da tela (a migração dos clientes a desligou).
   const ownerId = lockedOwnerId(ownerUserId, rule, numberCard);
   const [agents, setAgents] = useState<AgentChannel[]>([]);
   const [savingOwner, setSavingOwner] = useState(false);
@@ -64,9 +56,6 @@ export default function CollaboratorsForm({
   const [autoGrantedIds, setAutoGrantedIds] = useState<Set<string>>(new Set());
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
   const [isUpdatingAgents, setIsUpdatingAgents] = useState(false);
-  const [enableAutoAssignment, setEnableAutoAssignment] = useState(initialAutoAssignment);
-  const [maxAssignmentLimit, setMaxAssignmentLimit] = useState<number | null>(initialMaxLimit);
-  const [isUpdatingAssignment, setIsUpdatingAssignment] = useState(false);
 
   // Load all agents and current inbox members
   const loadData = useCallback(async () => {
@@ -120,26 +109,6 @@ export default function CollaboratorsForm({
     loadData();
   }, [loadData]);
 
-  // Update state when props change (e.g., when inbox data loads)
-  // Use a ref to track previous values to ensure we update even when value is null
-  const prevMaxLimitRef = useRef<number | null | undefined>(initialMaxLimit);
-  const prevAutoAssignmentRef = useRef<boolean>(initialAutoAssignment);
-
-  useEffect(() => {
-    // Only update if values actually changed
-    if (prevAutoAssignmentRef.current !== initialAutoAssignment) {
-      setEnableAutoAssignment(initialAutoAssignment);
-      prevAutoAssignmentRef.current = initialAutoAssignment;
-    }
-
-    // Normalize undefined to null for comparison
-    const normalizedMaxLimit = initialMaxLimit !== undefined ? initialMaxLimit : null;
-    if (prevMaxLimitRef.current !== normalizedMaxLimit) {
-      setMaxAssignmentLimit(normalizedMaxLimit);
-      prevMaxLimitRef.current = normalizedMaxLimit;
-    }
-  }, [initialAutoAssignment, initialMaxLimit]);
-
   const handleAgentToggle = (agent: AgentChannel) => {
     // O dono não se desmarca aqui: quem tira o dono é o campo Dono do número.
     if (ownerId && String(agent.id) === ownerId) return;
@@ -170,25 +139,6 @@ export default function CollaboratorsForm({
       toast.error(t('settings.collaborators.errors.updateError'));
     } finally {
       setIsUpdatingAgents(false);
-    }
-  };
-
-  const handleAutoAssignmentToggle = async (checked: boolean) => {
-    setEnableAutoAssignment(checked);
-    setIsUpdatingAssignment(true);
-
-    try {
-      // Call parent callback or API to update auto assignment
-      if (onAutoAssignmentChange) {
-        await onAutoAssignmentChange(checked, maxAssignmentLimit);
-      }
-      toast.success(t('settings.collaborators.autoAssignment.success.updated'));
-    } catch (error) {
-      console.error('Error updating auto assignment:', error);
-      toast.error(t('settings.collaborators.autoAssignment.errors.updateError'));
-      setEnableAutoAssignment(!checked); // Revert on error
-    } finally {
-      setIsUpdatingAssignment(false);
     }
   };
 
@@ -460,61 +410,6 @@ export default function CollaboratorsForm({
         </CardContent>
       </Card>
 
-      {/* Auto Assignment */}
-      {!roletaNova && (
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-border">
-            <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-950/20">
-              <Settings className="w-5 h-5 text-orange-700 dark:text-orange-400" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-foreground">
-                {t('settings.collaborators.autoAssignment.title')}
-              </h4>
-              <p className="text-sm text-muted-foreground">
-                {t('settings.collaborators.autoAssignment.description')}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-6 mt-4">
-            {/* Auto assignment toggle */}
-            <div className="flex items-center justify-between p-4 border border-border rounded-lg">
-              <div>
-                <label className="text-sm font-medium text-foreground">
-                  {t('settings.collaborators.autoAssignment.enable.label')}
-                </label>
-                <p className="text-xs text-muted-foreground">
-                  {t('settings.collaborators.autoAssignment.enable.description')}
-                </p>
-              </div>
-              <Switch
-                checked={enableAutoAssignment}
-                onCheckedChange={handleAutoAssignmentToggle}
-                disabled={isUpdatingAssignment}
-              />
-            </div>
-
-            {/* Info box */}
-            <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <Info className="w-5 h-5 text-blue-700 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-              <div className="text-sm">
-                <h6 className="font-medium text-blue-700 dark:text-blue-300 mb-1">
-                  {t('settings.collaborators.autoAssignment.info.title')}
-                </h6>
-                <div className="text-blue-600 dark:text-blue-400 space-y-1">
-                  <p>• {t('settings.collaborators.autoAssignment.info.point1')}</p>
-                  <p>• {t('settings.collaborators.autoAssignment.info.point2')}</p>
-                  <p>• {t('settings.collaborators.autoAssignment.info.point3')}</p>
-                  <p>• {t('settings.collaborators.autoAssignment.info.point4')}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      )}
     </div>
   );
 }

@@ -67,7 +67,6 @@ export default function SalesAgents() {
   // `isSuper ||`: a Leal Mídia sempre vê, como a aba de Landings.
   const isSuper = useIsSuperAdmin();
   const insightsToggle = useClientToggle('ia_insights');
-  const roletaNova = useClientToggle('roleta_nova');
   const insightsLiberado = isSuper || insightsToggle;
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -169,7 +168,7 @@ export default function SalesAgents() {
   // criava a IA e abria o assistente: o rascunho aparece no seletor como "Rascunho".
   const createAgent = async () => {
     try {
-      const nova = await salesAgentsService.create(novaIaRascunho({ roletaNova }));
+      const nova = await salesAgentsService.create(novaIaRascunho());
       // ⚠️ O React Router 7 troca o endereço dentro de uma transição. Se a lista
       // mudasse antes, a resolução do endereço veria a IA nova com o endereço velho
       // (vazio, na primeira IA da conta) e mandaria pra Visão geral. As duas

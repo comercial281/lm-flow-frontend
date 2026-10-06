@@ -118,10 +118,10 @@ export interface SalesAgent {
   reengagement_second_hours: number;
   /** PARA ONDE ela entrega o lead quando passa pro corretor.
    *
-   *  `inbox_roleta` é a roleta do NÚMERO da conversa — o padrão e o
-   *  comportamento de sempre. `roleta` entrega numa roleta escolhida, inclusive
-   *  de outro número (é o caso "a IA atende no principal, os corretores atendem
-   *  cada um no seu"). `user` entrega a um corretor fixo, sem roleta nenhuma. */
+   *  `roleta` entrega numa roleta escolhida. `user` entrega a um corretor fixo,
+   *  sem roleta nenhuma. `inbox_roleta` (a roleta do NÚMERO da conversa) é valor
+   *  antigo, só de leitura: desde a roleta nova (06/10/2026) a roleta não tem
+   *  número e o servidor recusa gravá-lo. */
   handoff_target: SalesAgentHandoffTarget;
   /** Sistema do cliente: o endereço que recebe o lead (só vale com `handoff_target = 'webhook'`). */
   handoff_webhook_url?: string | null;
@@ -349,10 +349,9 @@ export type HandoffMode = 'duvida' | 'temperatura' | 'checklist' | 'sem_resposta
 /**
  * PARA ONDE a IA entrega o lead ao transferir.
  *
- * `inbox_roleta` é a roleta do número da conversa — o padrão de fábrica e o que
- * vale em toda imobiliária que já existe. Até esta escolha existir, era a ÚNICA
- * saída: número sem roleta (ou com duas e nenhuma marcada como "atende quem
- * escreve direto") deixava o lead sem dono e sem ninguém avisado.
+ * `inbox_roleta` era a roleta do número da conversa. Desde a roleta nova
+ * (06/10/2026) é valor antigo, só de leitura: a tela mostra "Uma roleta" com a
+ * roleta que atendia o número (passo 2) e o servidor recusa gravá-lo.
  *
  * `number_owner` é o dono do número da conversa: o único destino da persona "o próprio corretor".
  */

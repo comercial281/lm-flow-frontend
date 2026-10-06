@@ -12,7 +12,6 @@ import { LegacyFollowupStrip } from '@/components/flowAutomations/LegacyFollowup
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { enableProblem } from '@/features/flowAutomations/readiness';
-import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { serverMessage } from '@/features/flowAutomations/guide';
 import { FlowTemplateList, FlowTemplatesDialog } from '@/components/flowAutomations/FlowTemplates';
 
@@ -27,7 +26,6 @@ import { usePergunta } from '@/hooks/usePergunta';
 // lá não há "Modelos" nem pastas; no topo fica a faixa dos funis antigos que
 // ainda têm fila.
 export default function FlowAutomationsList({ kind = 'automation' }: { kind?: FlowAutomationKind }) {
-  const roletaObrigatoria = useClientToggle('roleta_nova');
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const { perguntar, dialogoDePergunta } = usePergunta();
   const navigate = useNavigate();
@@ -83,7 +81,7 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
       // Ligar confere o fluxo salvo: bloco de modelo com campo em branco não liga.
       if (!a.is_enabled) {
         const full = await flowAutomationsService.get(a.id);
-        const problem = enableProblem(normalizeTrigger(full.trigger), full.nodes ?? [], undefined, { roletaObrigatoria });
+        const problem = enableProblem(normalizeTrigger(full.trigger), full.nodes ?? []);
         if (problem) {
           toast.error(problem);
           return;

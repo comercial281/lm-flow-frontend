@@ -38,8 +38,6 @@ import {
 } from './acceptedByFilter';
 import { Seletor } from '@/components/base/Seletor';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
-import { useClientToggle } from '@/contexts/TenantFeaturesContext';
-import type { OpcoesDaValidacao } from '@/services/leadAutomation/leadAutomationService';
 import { VariableChipBar } from '@/components/flowAutomations/VariableChipBar';
 import { FLOW_KIND_COPY } from '@/features/flowAutomations/kind';
 
@@ -656,7 +654,6 @@ function VariableChips({ onInsert }: { onInsert: (token: string) => void }) {
 }
 
 export function ActionEditor({ action, onChange, resources }: ActionEditorProps) {
-  const roletaNova = useClientToggle('roleta_nova');
   const params = (action.params ?? {}) as Record<string, string | number>;
   const setParam = (key: string, value: string | number) =>
     onChange({ ...action, params: { ...params, [key]: value } });
@@ -1176,18 +1173,15 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
       );
 
     // ----- assign_via_roleta -----
-    // Roleta nova (06/10/2026): a ação escolhe a roleta. Com a chave
-    // `roleta_nova` é obrigatório (a roleta não tem número); sem ela, vazio
-    // continua sendo "a roleta do número da conversa", como sempre foi.
+    // Roleta nova (06/10/2026): a ação escolhe a roleta, obrigatória (a roleta
+    // não tem número).
     case 'assign_via_roleta': {
       const escolhida = String(params.roleta_config_id ?? '');
       const lista = (resources.roletas ?? []).filter(r => r.is_active || r.id === escolhida);
       return (
         <Field
-          label={roletaNova ? 'Roleta *' : 'Roleta'}
-          hint={roletaNova
-            ? 'Oferece o lead ao próximo da fila da roleta escolhida. Funciona com lead sem conversa.'
-            : 'Oferece o lead a um corretor pela roleta escolhida. Sem roleta escolhida, vale a roleta do número da conversa.'}
+          label="Roleta *"
+          hint="Oferece o lead ao próximo da fila da roleta escolhida. Funciona com lead sem conversa."
         >
           <Seletor
             aria-label="Roleta"
@@ -1200,7 +1194,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
             }}
             className={baseSelectClass}
           >
-            <option value="">{roletaNova ? 'Escolha a roleta' : 'A roleta do número da conversa'}</option>
+            <option value="">Escolha a roleta</option>
             {lista.map(r => (
               <option key={r.id} value={r.id}>{roletaLabel(r)}{r.is_active ? '' : ' (desligada)'}</option>
             ))}
@@ -1348,7 +1342,6 @@ export function validateRule(
   trigger: string,
   conditions: LeadAutomationCondition[],
   actions: LeadAutomationAction[],
-  opcoes: OpcoesDaValidacao = {},
 ): ValidationResult {
   if (triggerNeedsCondition(trigger)) {
     // Condição opcional: message_received (keyword vazia = qualquer msg) e
@@ -1376,7 +1369,7 @@ export function validateRule(
   }
 
   for (const action of actions) {
-    const [key] = missingActionParams(action, opcoes);
+    const [key] = missingActionParams(action);
     if (key === 'roleta_config_id') {
       return { ok: false, error: 'Escolha a roleta na ação "Distribuir pela roleta".' };
     }

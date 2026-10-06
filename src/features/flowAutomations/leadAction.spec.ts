@@ -50,7 +50,7 @@ describe('bloco "ação das Automações" (lead_action)', () => {
     expect(leadActionProblem({ action_type: 'notify_group', params: {} })).toBe('Falta preencher o destino do aviso e a mensagem.');
     expect(leadActionProblem({ action_type: 'assign_broker', params: {} })).toBe('Falta preencher o corretor.');
     expect(leadActionProblem({ action_type: 'notify_push', params: { user_ids: [], message: 'Oi' } })).toBe('Falta preencher quem recebe a notificação.');
-    expect(leadActionProblem({ action_type: 'assign_via_roleta', params: {} })).toBeNull();
+    expect(leadActionProblem({ action_type: 'assign_via_roleta', params: {} })).toBe('Falta preencher a roleta.');
     expect(leadActionProblem({ action_type: 'create_task', params: { title: 'Ligar' } })).toBeNull();
   });
 

@@ -35,7 +35,7 @@ import {
   type RoletaMember,
   type RoletaNextUp,
 } from '@/services/roletaConfig/roletaConfigService';
-import { moveMember } from '@/pages/Customer/Settings/RoletaConfig/roletaQueueOrder';
+import { moveMember } from '@/pages/Customer/Roleta/roletaQueueOrder';
 import { numeroDoCorretor, posicaoTexto, PRAZOS_EM_MINUTOS, prazoTexto } from '../roletaNovaTextos';
 
 // ── FILA (roleta nova, D4/D5) ───────────────────────────────────────────────

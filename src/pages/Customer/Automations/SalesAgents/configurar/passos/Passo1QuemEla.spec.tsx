@@ -48,14 +48,15 @@ describe('Passo 1 · Quem ela é', () => {
     });
   });
 
-  it('saindo do corretor que entregava pro dono do número: o destino volta pra roleta do número', async () => {
+  // Roleta nova: a roleta do número não existe; vira "Uma roleta" em branco.
+  it('saindo do corretor que entregava pro dono do número: o destino vira "Uma roleta"', async () => {
     abrir(agenteDeTeste({ handoff_target: 'number_owner', handoff_user_id: null, lead_facing_name: 'Bruno' }));
     await userEvent.click(screen.getByLabelText('Dono da imobiliária'));
     await salvar();
     expect(update).toHaveBeenCalledWith('ia-1', {
       persona_kind: 'owner',
       transfer_config: { mode: 'checklist', required_questions: ['Renda'] },
-      handoff_target: 'inbox_roleta',
+      handoff_target: 'roleta',
     });
   });
 

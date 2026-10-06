@@ -27,14 +27,9 @@ vi.mock('@/services/landingPages/landingPageService', () => ({
 }));
 const usuarios = vi.hoisted(() => vi.fn());
 vi.mock('@/services/users/usersService', () => ({ default: { getUsers: usuarios } }));
-const chave = vi.hoisted(() => ({ roletaNova: false }));
-vi.mock('@/contexts/TenantFeaturesContext', () => ({
-  useClientToggle: (k: string) => (k === 'roleta_nova' ? chave.roletaNova : false),
-}));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 beforeEach(() => {
-  chave.roletaNova = false;
   roletas.mockReset().mockResolvedValue([]);
   usuarios.mockReset().mockResolvedValue({ data: [{ id: 'u1', name: 'Ana Corretora' }, { id: 'u9', name: 'Saiu', deactivated: true }] });
   saveRouting.mockReset().mockResolvedValue(undefined);
@@ -123,8 +118,7 @@ describe('Roteamento de lead · Quem assume o lead', () => {
     expect(routing).not.toHaveProperty('default_assignee_id');
   });
 
-  it('com a chave roleta_nova, fora do horário o lead espera (não há mais número de plantão)', async () => {
-    chave.roletaNova = true;
+  it('fora do horário o lead espera (não há mais número de plantão)', async () => {
     abrirModal({ routing: { roleta_config_id: 'r1' } });
     expect(await screen.findByText(/o lead espera e é oferecido quando ela abrir/)).toBeInTheDocument();
     expect(screen.queryByText(/número de plantão/)).toBeNull();

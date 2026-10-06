@@ -44,11 +44,11 @@ export function lerEscolhas(agent: Lido): Escolhas {
 type Base = Pick<SalesAgent, 'transfer_config' | 'handoff_roleta_config_id' | 'handoff_user_id'>;
 
 /**
- * `roletaNova` (chave `roleta_nova`, 06/10/2026): "a roleta do número" não existe
- * mais — o servidor recusa gravar `inbox_roleta`. O padrão vira "Uma roleta" em
- * branco, e o passo Objetivo pede a escolha.
+ * Roleta nova (06/10/2026): "a roleta do número" não existe mais — o servidor
+ * recusa gravar `inbox_roleta`. O padrão vira "Uma roleta" em branco, e o passo
+ * Objetivo pede a escolha.
  */
-export function escolhasParaPatch(escolhas: Escolhas, agent: Base, { roletaNova = false } = {}): Partial<SalesAgent> {
+export function escolhasParaPatch(escolhas: Escolhas, agent: Base): Partial<SalesAgent> {
   const comum: Partial<SalesAgent> = {
     persona_kind: escolhas.persona,
     reach: escolhas.alcance,
@@ -58,10 +58,11 @@ export function escolhasParaPatch(escolhas: Escolhas, agent: Base, { roletaNova 
   if (escolhas.persona === 'broker') {
     return { ...comum, handoff_target: 'number_owner', handoff_roleta_config_id: null, handoff_user_id: null };
   }
-  // Fora da persona corretor, "o dono do número" não vale: volta pra roleta do
-  // número, o padrão de sempre (o servidor recusa o dono do número em outra persona).
-  const semDono: HandoffTargetMode = escolhas.destino === 'number_owner' ? 'inbox_roleta' : escolhas.destino;
-  const destino: HandoffTargetMode = roletaNova && semDono === 'inbox_roleta' ? 'roleta' : semDono;
+  // Fora da persona corretor, "o dono do número" não vale (o servidor o recusa
+  // em outra persona), e "a roleta do número" (valor antigo) também não: os dois
+  // viram "Uma roleta", em branco quando não havia roleta escolhida.
+  const destino: HandoffTargetMode =
+    escolhas.destino === 'number_owner' || escolhas.destino === 'inbox_roleta' ? 'roleta' : escolhas.destino;
   return {
     ...comum,
     handoff_target: destino,
@@ -93,7 +94,7 @@ export const PERGUNTAS_SUGERIDAS = [
  * "Entregar pro follow-up" apontando pro Follow-up padrão do cliente (ou "Mover o
  * card", se ele não existir). Mandar daqui seria uma segunda verdade.
  */
-export function novaIaRascunho({ roletaNova = false } = {}): SalesAgentPayload {
+export function novaIaRascunho(): SalesAgentPayload {
   return {
     name: 'Nova IA',
     enabled: false,
@@ -102,7 +103,7 @@ export function novaIaRascunho({ roletaNova = false } = {}): SalesAgentPayload {
     persona_kind: 'assistant',
     reach: 'qualify',
     booking_enabled: false,
-    handoff_target: roletaNova ? 'roleta' : 'inbox_roleta',
+    handoff_target: 'roleta',
     qualification_questions: [...PERGUNTAS_SUGERIDAS],
     transfer_config: { mode: 'checklist', required_questions: [...PERGUNTAS_SUGERIDAS] },
     followup_max_attempts: 3,

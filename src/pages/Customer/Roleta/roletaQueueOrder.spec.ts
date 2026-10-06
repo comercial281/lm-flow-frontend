@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { moveMember, queueOrdinal } from './roletaQueueOrder';
+import { moveMember } from './roletaQueueOrder';
 
 describe('moveMember (ordem da Fila)', () => {
   it('sobe e desce uma casa', () => {
@@ -18,12 +18,5 @@ describe('moveMember (ordem da Fila)', () => {
     const lista = ['a', 'b'];
     moveMember(lista, 0, 1);
     expect(lista).toEqual(['a', 'b']);
-  });
-});
-
-describe('queueOrdinal', () => {
-  it('numera a partir de 1', () => {
-    expect(queueOrdinal(0)).toBe('1º');
-    expect(queueOrdinal(2)).toBe('3º');
   });
 });

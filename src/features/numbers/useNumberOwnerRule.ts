@@ -38,14 +38,6 @@ export function resolveOwnerRule(serverEcho: boolean | null | undefined, toggle:
   return typeof serverEcho === 'boolean' ? serverEcho : toggle;
 }
 
-/** O primeiro eco booleano de uma lista de respostas (ex.: as roletas). */
-export function ownerRuleFromList(
-  list: ReadonlyArray<{ number_owner_rule?: boolean | null }> | null | undefined,
-): boolean | null {
-  const achado = (list ?? []).find(item => typeof item.number_owner_rule === 'boolean');
-  return achado ? (achado.number_owner_rule as boolean) : null;
-}
-
 export function useNumberOwnerRule(serverEcho?: boolean | null): boolean {
   const toggle = useClientToggle('numero_dono_unico');
   return resolveOwnerRule(serverEcho, toggle);

@@ -24,7 +24,7 @@ describe('o fluxo pode ser ligado?', () => {
 
   it('tudo preenchido liga', () => {
     expect(enableProblem(gatilho, [
-      b('lead_action', { action_type: 'assign_via_roleta', params: {} }),
+      b('lead_action', { action_type: 'assign_via_roleta', params: { roleta_config_id: 'r1' } }),
       b('add_label', { labels: ['tráfego pago'] }),
       b('wait_for_reply', { minutes: 30, indefinite: false }),
     ])).toBeNull();

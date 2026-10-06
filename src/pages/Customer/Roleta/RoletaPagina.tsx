@@ -33,7 +33,7 @@ import FilaBloco from './blocos/FilaBloco';
 import HorarioBloco from './blocos/HorarioBloco';
 import HistoricoLista from './HistoricoLista';
 
-// ── PÁGINA DA ROLETA (roleta nova, chave `roleta_nova`) ─────────────────────
+// ── PÁGINA DA ROLETA (a roleta nova, a única desde 06/10/2026) ──────────────
 //
 // Cabeçalho: ← Roleta de leads · nome (editável no lugar) · chave Ligada ·
 // Duplicar · ⋯ Excluir. Abas Como funciona · Histórico (`?aba=historico`).

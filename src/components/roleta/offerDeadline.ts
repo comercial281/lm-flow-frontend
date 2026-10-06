@@ -30,9 +30,3 @@ export function deadlineLabel(offer: BrokerAssignmentDetail, now: number = Date.
   if (left === null) return SEM_PRAZO;
   return left > 0 ? `${left} min` : 'prazo esgotado';
 }
-
-/** "30 min" | "sem prazo" — como o prazo aparece nos resumos da configuração. */
-export function timeoutLabel(timeoutMinutes: number | null | undefined): string | null {
-  if (timeoutMinutes == null) return null;
-  return isNoDeadline(timeoutMinutes) ? SEM_PRAZO : `${timeoutMinutes} min`;
-}

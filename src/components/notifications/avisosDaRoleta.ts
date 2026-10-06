@@ -1,4 +1,4 @@
-// Os avisos da roleta que, com a chave `roleta_nova` (06/10/2026, D7), deixam de
+// Os avisos da roleta que, desde a roleta nova (06/10/2026, D7), deixam de
 // ser configurados na Central de Notificações: eles passam a sair pela porta única
 // da roleta (Roleta::Notices no servidor), configurados uma vez na aba Avisos da
 // página "Roleta de leads". Mostrar a chave aqui seria a tela mentindo: ligar ou
@@ -16,7 +16,7 @@ export const AVISOS_DA_ROLETA_NA_PAGINA = [
   'roleta.resumo_plantao', // resumo da manhã (gestor)
 ] as const;
 
-/** Onde os avisos da roleta vivem com a chave ligada (aba Avisos da página). */
+/** Onde os avisos da roleta vivem (aba Avisos da página). */
 export const ENDERECO_AVISOS_DA_ROLETA = '/automations/roleta-config?aba=avisos';
 
 const daPagina = new Set<string>(AVISOS_DA_ROLETA_NA_PAGINA);

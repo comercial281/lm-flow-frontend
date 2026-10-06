@@ -59,7 +59,7 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: 'follow-ups/:id', resource: 'followup_sequences', action: 'read', automationsChild: true },
   { path: 'whatsapp-reminders', resource: 'whatsapp_reminders', action: 'read', automationsChild: true },
   { path: 'roleta-config', resource: 'roleta_configs', action: 'read', automationsChild: true },
-  // Roleta nova (chave `roleta_nova`): a página de uma roleta.
+  // A página de uma roleta.
   { path: 'roleta-config/:id', resource: 'roleta_configs', action: 'read', automationsChild: true },
 
   { path: '/settings/account', resource: 'accounts', action: 'read' },

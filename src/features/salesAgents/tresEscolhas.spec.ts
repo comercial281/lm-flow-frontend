@@ -33,21 +33,19 @@ describe('escolhasParaPatch', () => {
     });
   });
 
-  it('saindo do corretor: tira a voz e o dono do número vira a roleta do número', () => {
+  // Roleta nova: "a roleta do número" não existe; o servidor recusa gravar.
+  it('saindo do corretor: tira a voz e vira "Uma roleta" em branco', () => {
     const agente = ia({ transfer_config: { voice: 'first_person', mode: 'checklist' }, handoff_target: 'number_owner' });
     expect(escolhasParaPatch({ persona: 'owner', alcance: 'visit', destino: 'number_owner' }, agente)).toMatchObject({
       persona_kind: 'owner',
       transfer_config: { mode: 'checklist' },
-      handoff_target: 'inbox_roleta',
-      handoff_user_id: null,
+      handoff_target: 'roleta', handoff_roleta_config_id: null, handoff_user_id: null,
     });
   });
 
-  // Roleta nova: "a roleta do número" não existe; o servidor recusa gravar.
-  it('com a chave roleta_nova, saindo do corretor vira "Uma roleta" em branco', () => {
-    const agente = ia({ handoff_target: 'number_owner' });
-    expect(escolhasParaPatch({ persona: 'owner', alcance: 'visit', destino: 'number_owner' }, agente, { roletaNova: true })).toMatchObject({
-      handoff_target: 'roleta', handoff_roleta_config_id: null, handoff_user_id: null,
+  it('valor antigo "a roleta do número" nunca é gravado: vira "Uma roleta"', () => {
+    expect(escolhasParaPatch({ persona: 'assistant', alcance: 'qualify', destino: 'inbox_roleta' }, ia())).toMatchObject({
+      handoff_target: 'roleta', handoff_roleta_config_id: null,
     });
   });
 
@@ -60,18 +58,15 @@ describe('escolhasParaPatch', () => {
 });
 
 describe('novaIaRascunho', () => {
-  it('nasce desligada, sem número, assistente, só qualifica, com as 4 perguntas obrigatórias e follow-up de 3', () => {
+  // A roleta do número não existe: nasce em "Uma roleta".
+  it('nasce desligada, sem número, assistente, só qualifica, em "Uma roleta", com as 4 perguntas obrigatórias e follow-up de 3', () => {
     const p = novaIaRascunho();
     expect(p).toMatchObject({
       enabled: false, inbox_id: null, persona_kind: 'assistant', reach: 'qualify', booking_enabled: false,
-      handoff_target: 'inbox_roleta', followup_max_attempts: 3, out_of_hours_reply: true,
+      handoff_target: 'roleta', followup_max_attempts: 3, out_of_hours_reply: true,
       transfer_config: { mode: 'checklist', required_questions: PERGUNTAS_SUGERIDAS },
     });
     expect(p.qualification_questions).toEqual(PERGUNTAS_SUGERIDAS);
     expect(PERGUNTAS_SUGERIDAS).toHaveLength(4);
-  });
-
-  it('com a chave roleta_nova nasce em "Uma roleta" (a roleta do número não existe)', () => {
-    expect(novaIaRascunho({ roletaNova: true }).handoff_target).toBe('roleta');
   });
 });

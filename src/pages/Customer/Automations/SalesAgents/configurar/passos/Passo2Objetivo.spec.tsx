@@ -14,7 +14,6 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 beforeEach(() => {
   vi.clearAllMocks();
-  chave.roletaNova = false;
   roletaDoNumero.mockResolvedValue(null);
   update.mockImplementation(async (_id: string, patch: Partial<SalesAgent>) => agenteDeTeste(patch));
 });
@@ -28,10 +27,6 @@ vi.mock('@/services/roletaConfig/roletaConfigService', () => ({
     getForInbox: roletaDoNumero,
   },
 }));
-const chave = vi.hoisted(() => ({ roletaNova: false }));
-vi.mock('@/contexts/TenantFeaturesContext', () => ({
-  useClientToggle: (k: string) => (k === 'roleta_nova' ? chave.roletaNova : false),
-}));
 vi.mock('@/services/channels/agentsService', () => ({ default: { getAll: vi.fn().mockResolvedValue([{ id: 'u1', name: 'Carla' }]) } }));
 vi.mock('@/services/pipelines/pipelinesService', () => ({
   pipelinesService: { getPipelines: vi.fn().mockResolvedValue({ data: [] }), getPipelineStages: vi.fn().mockResolvedValue({ data: [] }) },
@@ -44,7 +39,7 @@ const abrir = (agent: SalesAgent = agenteDeTeste()) =>
   render(<MemoryRouter><Passo2Objetivo agent={agent} inboxes={[]} aoSalvo={vi.fn()} irParaPasso={vi.fn()} /></MemoryRouter>);
 
 const dono = (extra: Partial<SalesAgent> = {}) => agenteDeTeste({
-  persona_kind: 'owner', handoff_target: 'inbox_roleta', handoff_user_id: null,
+  persona_kind: 'owner', handoff_target: 'roleta', handoff_roleta_config_id: null, handoff_user_id: null,
   transfer_config: { mode: 'checklist', required_questions: ['Renda'], briefing_enabled: false }, ...extra,
 });
 
@@ -91,12 +86,12 @@ describe('Passo 2 · Objetivo', () => {
   });
 
   it('roleta escolhida', async () => {
-    abrir(dono());
-    await userEvent.click(screen.getByLabelText('Uma roleta escolhida'));
+    abrir(dono({ handoff_target: 'user', handoff_user_id: 'u1' }));
+    await userEvent.click(screen.getByLabelText('Uma roleta'));
     await waitFor(() => expect(screen.getByRole('option', { name: 'Fila Zona Sul' })).toBeTruthy());
     await userEvent.selectOptions(screen.getByLabelText('Qual roleta'), 'r1');
     await salvar();
-    expect(update).toHaveBeenCalledWith('ia-1', { handoff_target: 'roleta', handoff_roleta_config_id: 'r1' });
+    expect(update).toHaveBeenCalledWith('ia-1', { handoff_target: 'roleta', handoff_roleta_config_id: 'r1', handoff_user_id: null });
   });
 
   it('depois da visita fica travado quando ela só qualifica', () => {
@@ -116,9 +111,9 @@ describe('Passo 2 · Objetivo', () => {
     expect(update).toHaveBeenCalledWith('ia-1', { crm_policy: { cold: true, capture: false, invalid: true } });
   });
 
-  it('a prévia diz o que acontece', () => {
-    abrir(dono());
-    expect(screen.getByText('Ela qualifica, marca a visita e entrega pra roleta do número.')).toBeTruthy();
+  it('a prévia diz o que acontece', async () => {
+    abrir(dono({ handoff_roleta_config_id: 'r1' }));
+    expect(await screen.findByText('Ela qualifica, marca a visita e entrega pra roleta Fila Zona Sul.')).toBeTruthy();
   });
 });
 
@@ -148,19 +143,20 @@ describe('Passo 2 · Sistema do cliente', () => {
 });
 
 
-// Roleta nova (06/10/2026): a roleta não tem número. "A roleta deste número" sai e
-// a IA que estava nela vem com "Uma roleta" escolhida e o pedido de confirmação.
-describe('Passo 2 · Pra onde vai o lead com a chave roleta_nova', () => {
-  it('sem a chave: nada muda', () => {
+// Roleta nova (06/10/2026): a roleta não tem número. "A roleta deste número" saiu
+// e a IA que ainda tem esse valor gravado vem com "Uma roleta" escolhida e o
+// pedido de confirmação.
+describe('Passo 2 · Pra onde vai o lead (roleta nova)', () => {
+  it('IA em "Uma roleta" não consulta a roleta do número', () => {
     abrir(dono());
-    expect(screen.getByLabelText('A roleta deste número')).toBeChecked();
+    expect(screen.getByLabelText('Uma roleta')).toBeChecked();
+    expect(screen.queryByLabelText('A roleta deste número')).toBeNull();
     expect(roletaDoNumero).not.toHaveBeenCalled();
   });
 
-  it('com a chave: "A roleta deste número" some e a roleta do número vem escolhida pra confirmar', async () => {
-    chave.roletaNova = true;
+  it('valor antigo: "A roleta deste número" não aparece e a roleta do número vem escolhida pra confirmar', async () => {
     roletaDoNumero.mockResolvedValue({ id: 'r1', name: 'Fila Zona Sul', is_active: true });
-    abrir(dono());
+    abrir(dono({ handoff_target: 'inbox_roleta' }));
     await waitFor(() => expect(screen.getByLabelText('Uma roleta')).toBeChecked());
     expect(screen.queryByLabelText('A roleta deste número')).toBeNull();
     expect(roletaDoNumero).toHaveBeenCalledWith('inbox-1');
@@ -170,9 +166,8 @@ describe('Passo 2 · Pra onde vai o lead com a chave roleta_nova', () => {
     expect(update).toHaveBeenCalledWith('ia-1', { handoff_target: 'roleta', handoff_roleta_config_id: 'r1' });
   });
 
-  it('com a chave e sem roleta no número: "Uma roleta" em branco, pedindo a escolha', async () => {
-    chave.roletaNova = true;
-    abrir(dono());
+  it('valor antigo sem roleta no número: "Uma roleta" em branco, pedindo a escolha', async () => {
+    abrir(dono({ handoff_target: 'inbox_roleta' }));
     await waitFor(() => expect(screen.getByLabelText('Uma roleta')).toBeChecked());
     expect(screen.getByText(/Escolha a roleta e salve/)).toBeTruthy();
     expect(screen.getByLabelText('Qual roleta')).toHaveValue('');

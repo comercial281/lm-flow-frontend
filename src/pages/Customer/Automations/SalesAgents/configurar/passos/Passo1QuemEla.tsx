@@ -12,7 +12,6 @@
 //
 // O nome que o lead vê é obrigatório pra LIGAR (pendencias.ts), não pra salvar.
 import { useMemo } from 'react';
-import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { Input } from '@/components/ui/ds';
 import { Secao } from '@/components/base/Secao';
 import { Campo, CampoTexto, CLASSE_DO_CAMPO } from '@/components/base/Campo';
@@ -38,7 +37,6 @@ const PERSONAS: OpcaoDeEscolha<PersonaDaIa>[] = [
 
 export default function Passo1QuemEla({ agent, aoSalvo }: PropsDoPasso) {
   const { rascunho, mudar, pendente, salvando, erro, salvar, descartar } = useRascunho(agent, CAMPOS_DO_PASSO[1], aoSalvo);
-  const roletaNova = useClientToggle('roleta_nova');
   const imobiliaria = useAppDataStore((s) => s.account)?.name ?? '';
   const escolhas = lerEscolhas(rascunho);
   const persona = escolhas.persona;
@@ -65,7 +63,7 @@ export default function Passo1QuemEla({ agent, aoSalvo }: PropsDoPasso) {
       });
       return;
     }
-    mudar(escolhasParaPatch({ ...salvo, alcance: escolhas.alcance, persona: p }, agent, { roletaNova }));
+    mudar(escolhasParaPatch({ ...salvo, alcance: escolhas.alcance, persona: p }, agent));
   };
 
   const alternarReacao = (e: string) =>

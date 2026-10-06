@@ -68,9 +68,8 @@ export interface RoletaMember {
   // só `inbox_id` importa (é o que ele usa para amarrar a instância).
   roleta_instance_id?: string | null;
   inbox_id?: string | null;
-  // Roleta nova (chave `roleta_nova`, PR do servidor B2): o nome de quem está
-  // na fila e a situação do número DELE (a roleta não tem número próprio).
-  // Ausentes no servidor antigo.
+  // Roleta nova (servidor B2): o nome de quem está na fila e a situação do
+  // número DELE (a roleta não tem número próprio).
   name?: string | null;
   phone_display?: string | null;
   phone_status?: RoletaPhoneStatus | null;
@@ -78,31 +77,6 @@ export interface RoletaMember {
 
 /** Situação do número próprio do corretor na fila: conectado, caído ou sem número. */
 export type RoletaPhoneStatus = 'connected' | 'disconnected' | 'none';
-
-/**
- * Os PADRÕES DA CASA — respondidos uma vez, herdados por toda roleta NOVA.
- *
- * ⚠️ Herdar é SEMEAR: o valor vira dado da roleta no momento em que ela nasce.
- * Roleta que já existe não muda nada, nem hoje nem quando o padrão for editado.
- * Foi decisão do dono do produto, e é o que garante que as imobiliárias que já
- * rodam não sentem nada.
- */
-export interface RoletaDefaults {
-  gestor_whatsapp_number?: string | null;
-  gestor_group_jid?: string | null;
-  gestor_group_instance?: string | null;
-  notification_inbox_id?: string | null;
-  timeout_minutes?: number | null;
-  business_hours_config?: RoletaBusinessHours | null;
-  msg_corretor_template?: string | null;
-  msg_gestor_template?: string | null;
-  msg_grupo_template?: string | null;
-  msg_grupo_repasse_template?: string | null;
-  msg_corretor_enabled?: boolean;
-  msg_gestor_enabled?: boolean;
-  msg_grupo_enabled?: boolean;
-  msg_grupo_repasse_enabled?: boolean;
-}
 
 // Modo de distribuição. A RoletaConfig é a FONTE ÚNICA: modo + quem + prazo + gestor.
 // Os nomes aqui são os mesmos que aparecem na tela, de propósito.
@@ -191,7 +165,7 @@ export interface RoletaConfig {
   members: RoletaMember[];
   created_at: string;
   updated_at: string;
-  // ── Roleta nova (chave `roleta_nova`, servidor B2). Ausentes no servidor antigo.
+  // ── Roleta nova (servidor B2).
   /** As origens já em frase curta pro cartão da lista ("Formulário "ZONA SUL""). */
   origins_summary?: string[];
   /** Ofertas esperando o aceite agora. */
@@ -267,67 +241,6 @@ export interface BrokerAssignment {
   round: number;
 }
 
-// Uma tentativa de distribuição, com o veredito em português. Alimenta o painel
-// "Por que este lead não entrou na roleta?" — que existe porque cada portão do
-// caminho formulário → roleta falhava calado num log do servidor.
-// Espelha RoletaEvent::OUTCOMES no backend. Estava desatualizado: faltavam seis
-// vereditos que o backend já gravava, e um deles chegando aqui caía no `default`
-// da tela como se fosse desconhecido.
-export type RoletaOutcome =
-  | 'sem_config'
-  | 'config_sem_roleta'
-  | 'roleta_inexistente'
-  | 'roleta_inativa'
-  | 'modo_manual'
-  // Chegou com a roleta fechada: ninguém foi sorteado e quem atende é o número
-  // de plantão. E o par dele, quando o horário reabre e o lead entra no sorteio.
-  | 'fora_do_horario'
-  | 'distribuido_na_abertura'
-  | 'sem_membros'
-  | 'sem_acesso_ao_inbox'
-  | 'roleta_esgotada'
-  | 'dono_gravado'
-  // Não houve sorteio porque não havia o que sortear: a pessoa escreveu direto
-  // para um número atendido por um corretor só, e já escolheu o corretor.
-  | 'atendimento_direto'
-  | 'corretor_sem_whatsapp'
-  | 'oferta_cancelada'
-  // O mesmo lead chegou de novo (portal reenviou, ou veio por dois caminhos)
-  // enquanto a oferta anterior ainda esperava resposta: não houve sorteio novo
-  // nem aviso repetido, a oferta em aberto continua valendo.
-  | 'oferta_ja_pendente'
-  // Lead que já tem corretor não volta para o sorteio: continua com quem já
-  // cuidava dele.
-  | 'lead_ja_tem_dono'
-  // O lead TEM dono; o que falhou foi abrir o atendimento no número sorteado.
-  | 'canal_nao_aberto'
-  | 'instancia_divergente'
-  // A gestão trocou o responsável na mão e o atendimento foi levado para o
-  // número do novo corretor — as próximas mensagens saem por ele.
-  | 'instancia_movida'
-  | 'dono_falhou'
-  | 'erro';
-
-export interface RoletaDiagnostic {
-  id: string;
-  created_at: string;
-  outcome: RoletaOutcome;
-  ok: boolean;
-  explicacao: string;
-  // De QUAL roleta é esta linha. Com uma roleta por cliente a pergunta não
-  // existia; com várias, "o lead não entrou" sem dizer onde não é diagnóstico.
-  roleta: string | null;
-  formulario: string | null;
-  lead: string | null;
-  contact_id: string | null;
-  corretor: string | null;
-  // Dono do contato AGORA — diferencia "ficou órfão" de "ficou órfão e alguém
-  // já resolveu na mão".
-  dono_atual: string | null;
-  // Só vem pro super-admin: a exceção crua que o rescue mudo escondia.
-  erro_tecnico?: string | null;
-}
-
 // A FILA da roleta, vista por quem gerencia: as ofertas em aberto AGORA, de todo
 // mundo. Não confundir com a fila pessoal (brokerAssignmentsService.listMine),
 // que é sempre a de quem pergunta — inclusive para admin.
@@ -393,63 +306,6 @@ export interface RoletaQueue {
   roletas: RoletaQueueConfig[];
 }
 
-// Lead que passou por todos os corretores da roleta, ninguém assumiu, e desde
-// então ninguém sorteou de novo nem atribuiu na mão.
-export interface RoletaExhaustedLead {
-  contact_id: string;
-  lead: string;
-  lead_telefone: string | null;
-  roleta_id: string | null;
-  roleta: string | null;
-  esgotou_em: string;
-  /** Quem recebeu o lead no ciclo que esgotou, na ordem. */
-  passou_por: string[];
-  conversation_id: string | null;
-  conversation_display_id: number | null;
-  pipeline_item_id: string | null;
-  /** Falso quando a roleta está fechada, desativada ou em modo Manual. */
-  pode_sortear: boolean;
-  bloqueio: string | null;
-}
-
-export interface RepairOwnersResult {
-  dry_run: boolean;
-  total: number;
-  corrigidos: number;
-  falharam: number;
-  leads: {
-    contact_id: string;
-    lead: string | null;
-    corretor: string | null;
-    assigned_at: string;
-    acao: string;
-    motivo?: string | null;
-  }[];
-}
-
-// Acesso do corretor à INSTÂNCIA do lead dele — as duas pontas na mesma chamada:
-// `corretores` é quem precisa ganhar acesso, `revogacoes` é quem carrega vínculo
-// automático que já não se justifica (o dono antigo de um lead repassado, que
-// aparecia na tela da Instância como atendente do número do colega).
-export interface RepairInboxAccessRow {
-  user_id: string;
-  corretor: string | null;
-  instancias: string[];
-  total_instancias: number;
-  acao: string;
-  motivo?: string | null;
-}
-
-export interface RepairInboxAccessResult {
-  dry_run: boolean;
-  total: number;
-  liberados: number;
-  falharam: number;
-  corretores: RepairInboxAccessRow[];
-  total_revogar: number;
-  revogacoes: RepairInboxAccessRow[];
-}
-
 /**
  * O nome da roleta como ela deve aparecer em QUALQUER tela.
  *
@@ -467,7 +323,7 @@ export function roletaLabel(
   return r?.display_name?.trim() || r?.name?.trim() || r?.inbox_name?.trim() || 'Roleta';
 }
 
-// ── ROLETA NOVA: ORIGENS, HISTÓRICO, PRÓXIMO DA VEZ (chave `roleta_nova`) ────
+// ── ROLETA NOVA: ORIGENS, HISTÓRICO, PRÓXIMO DA VEZ ─────────────────────────
 //
 // Contrato do PR do servidor B2 (plano `2026-10-06-roleta-00-indice.md`, seção
 // "Nomes compartilhados"). A roleta é disparada por ORIGENS: formulário do Meta
@@ -620,11 +476,6 @@ export const roletaConfigService = {
     }
   },
 
-  async create(payload: RoletaConfigPayload): Promise<RoletaConfig> {
-    const res = await api.post(BASE, payload);
-    return (res.data as { data: RoletaConfig }).data;
-  },
-
   async update(id: string, payload: Partial<RoletaConfigPayload>): Promise<RoletaConfig> {
     const res = await api.patch(`${BASE}/${id}`, payload);
     return (res.data as { data: RoletaConfig }).data;
@@ -643,60 +494,11 @@ export const roletaConfigService = {
     return (res.data as { data: BrokerAssignment }).data;
   },
 
-  // "Por que este lead não entrou na roleta?" — últimas tentativas de
-  // distribuição com o veredito de cada portão do caminho.
-  async getDiagnostics(opts: { limit?: number; onlyFailures?: boolean } = {}): Promise<RoletaDiagnostic[]> {
-    const res = await api.get(`${BASE}/diagnostics`, {
-      params: { limit: opts.limit ?? 50, only_failures: opts.onlyFailures ? 'true' : undefined },
-    });
-    return (res.data as { data: RoletaDiagnostic[] }).data ?? [];
-  },
-
-  // Conserta os leads que a roleta sorteou mas ficaram sem responsável no card.
-  // dryRun=true (padrão do backend) só lista — e já traz o motivo de cada falha.
-  async repairOwners(dryRun: boolean): Promise<RepairOwnersResult> {
-    const res = await api.post(`${BASE}/repair_owners`, { dry_run: dryRun });
-    return (res.data as { data: RepairOwnersResult }).data;
-  },
-
-  // Libera quem precisa e RETIRA o vínculo automático de quem não tem mais lead
-  // no número. dryRun=true (padrão do backend) só lista as duas listas.
-  async repairInboxAccess(dryRun: boolean): Promise<RepairInboxAccessResult> {
-    const res = await api.post(`${BASE}/repair_inbox_access`, { dry_run: dryRun });
-    return (res.data as { data: RepairInboxAccessResult }).data;
-  },
-
   // Fila ao vivo (gestão): ofertas em aberto de todos + quem está na roleta.
   // Cargo `roleta_configs.queue` — Gerente e Administrador têm; Corretor não.
   async getQueue(): Promise<RoletaQueue> {
     const res = await api.get(`${BASE}/queue`);
     return (res.data as { data: RoletaQueue }).data;
-  },
-
-  // Os padrões da casa: o que toda roleta NOVA já vem preenchida.
-  async getDefaults(): Promise<RoletaDefaults> {
-    const res = await api.get(`${BASE}/defaults`);
-    return (res.data as { data: RoletaDefaults }).data ?? {};
-  },
-
-  // ⚠️ Campo em branco APAGA o padrão daquele campo — é a única forma de o
-  // gestor desfazer um padrão que não quer mais. Quem não quiser mexer num
-  // campo não deve mandá-lo no payload.
-  async saveDefaults(payload: RoletaDefaults): Promise<RoletaDefaults> {
-    const res = await api.put(`${BASE}/defaults`, payload);
-    return (res.data as { data: RoletaDefaults }).data ?? {};
-  },
-
-  async getAssignments(status?: string): Promise<BrokerAssignment[]> {
-    const params = status ? { status } : {};
-    const res = await api.get(`${BASE}/assignments`, { params });
-    return (res.data as { data: BrokerAssignment[] }).data ?? [];
-  },
-
-  // Leads que esgotaram a roleta e continuam sem responsável.
-  async getExhausted(): Promise<RoletaExhaustedLead[]> {
-    const res = await api.get(`${BASE}/exhausted`);
-    return (res.data as { data: RoletaExhaustedLead[] }).data ?? [];
   },
 
   // "Sortear de novo": o lead volta para a mesma roleta, do zero. Devolve o nome
@@ -706,40 +508,8 @@ export const roletaConfigService = {
     return (res.data as { data: { corretor: string } }).data;
   },
 
-  // Dispara um aviso de TESTE (corretor/gestor/grupo) com dados fictícios,
-  // usando os valores atuais do formulário — não precisa salvar antes.
-  async testNotification(payload: {
-    target: 'corretor' | 'gestor' | 'grupo';
-    inbox_id: string;
-    notification_inbox_id?: string | null;
-    notification_instance_name?: string | null;
-    gestor_whatsapp_number?: string | null;
-    gestor_group_jid?: string | null;
-    gestor_group_instance?: string | null;
-    timeout_minutes?: number;
-    template?: string | null;
-  }): Promise<{ sent_to: string }> {
-    const res = await api.post(`${BASE}/test_notification`, payload);
-    return (res.data as { data: { sent_to: string } }).data;
-  },
 
-  // As instâncias SOLTAS do servidor Evolution compartilhado (as que não são
-  // canal de cliente nenhum), para o campo "Número que envia os avisos". Só a
-  // Leal Mídia alcança — para o resto o servidor responde 403, e a tela nem
-  // pergunta.
-  async getCentralInstances(): Promise<CentralInstance[]> {
-    return (await this.getCentralInstancesReport()).instances;
-  },
-
-  // A lista MAIS o porquê dela estar vazia (`meta.reason`, em português, só
-  // preenchido quando não sobrou instância). Sem o motivo, a seção vazia na
-  // tela é indistinguível de defeito — foi o que aconteceu na estreia.
-  async getCentralInstancesReport(): Promise<CentralInstancesReport> {
-    const res = await api.get(`${BASE}/central_instances`);
-    const body = res.data as { data?: CentralInstance[]; meta?: { reason?: string | null } };
-    return { instances: body.data ?? [], reason: body.meta?.reason ?? null };
-  },
-  // ── Roleta nova (chave `roleta_nova`) ───────────────────────────────────────
+  // ── Roleta nova: página por roleta ──────────────────────────────────────────
 
   async get(id: string): Promise<RoletaConfig> {
     const res = await api.get(`${BASE}/${id}`);
@@ -815,18 +585,6 @@ export const roletaConfigService = {
     return miolo<RoletaConfig>(res);
   },
 };
-
-// Uma instância do servidor compartilhado, como o servidor a descreve.
-export interface CentralInstance {
-  name: string;
-  connected: boolean;
-}
-
-export interface CentralInstancesReport {
-  instances: CentralInstance[];
-  /** Por que a lista está vazia, em português. Nulo quando há instância. */
-  reason: string | null;
-}
 
 // Modo Leilão: o corretor assume o lead. Primeiro que assumir leva.
 // 409 = outro corretor assumiu primeiro (trava anti-empate no banco).

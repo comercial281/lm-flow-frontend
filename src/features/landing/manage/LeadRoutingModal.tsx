@@ -20,7 +20,6 @@ import {
 } from '@/services/roletaConfig/roletaConfigService';
 import CampoQuemAssume, { type PessoaDaLista, type QuemAssume } from '@/components/roleta/CampoQuemAssume';
 import usersService from '@/services/users/usersService';
-import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import {
   buildLandingSettings,
   readDefaultAssigneeId,
@@ -110,7 +109,6 @@ export default function LeadRoutingModal({
   // escolhida e desligada continua na lista. `null` = cargo sem acesso.
   const [roletas, setRoletas] = useState<RoletaConfig[] | null>(null);
   const [pessoas, setPessoas] = useState<PessoaDaLista[] | null>(null);
-  const roletaNova = useClientToggle('roleta_nova');
   const assigneeGravado = readDefaultAssigneeId(storedSettings);
   const [quem, setQuem] = useState<QuemAssume>({
     default_assignee_id: assigneeGravado || null,
@@ -336,9 +334,7 @@ export default function LeadRoutingModal({
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   Lead que já tem responsável não volta para o sorteio — continua com quem já o
                   atende.{' '}
-                  {roletaNova
-                    ? 'Fora do horário da roleta, o lead espera e é oferecido quando ela abrir.'
-                    : 'Fora do horário da roleta, quem recebe é o número de plantão dela.'}
+                  Fora do horário da roleta, o lead espera e é oferecido quando ela abrir.
                 </p>
               )}
             </div>

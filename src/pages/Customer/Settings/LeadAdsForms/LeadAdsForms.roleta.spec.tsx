@@ -1,16 +1,11 @@
 // Formulários do Meta × roleta nova (06/10/2026): "Quem assume o lead" vira a
 // lista com abas Corretores | Roleta; a roleta escolhida e desligada continua na
-// lista; com a chave `roleta_nova` a mensagem de fora do horário sai do formulário
-// (é da roleta) e o formulário pego por regra "nome contém" mostra a roleta.
+// lista; a mensagem de fora do horário saiu do formulário (é da roleta) e o
+// formulário pego por regra "nome contém" mostra a roleta.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { LeadAdsFormConfig } from '@/services/leadAds/leadAdsFormsService';
-
-const chave = vi.hoisted(() => ({ roletaNova: false }));
-vi.mock('@/contexts/TenantFeaturesContext', () => ({
-  useClientToggle: (k: string) => (k === 'roleta_nova' ? chave.roletaNova : false),
-}));
 
 const svc = vi.hoisted(() => ({
   getAll: vi.fn(),
@@ -48,7 +43,6 @@ const cadastro = (extra: Partial<LeadAdsFormConfig> = {}): LeadAdsFormConfig => 
 });
 
 beforeEach(() => {
-  chave.roletaNova = false;
   svc.getAll.mockReset().mockResolvedValue([]);
   svc.syncMetaForms.mockReset().mockResolvedValue({ data: [], errors: [], ignored_leads: [] });
   svc.update.mockReset().mockImplementation(async (_id: string, d: object) => ({ ...cadastro(), ...d }));
@@ -126,17 +120,7 @@ describe('Formulários do Meta · Quem assume o lead', () => {
 });
 
 describe('Formulários do Meta · fora do horário', () => {
-  it('sem a chave: o campo da mensagem aparece na roleta e viaja no salvar (como hoje)', async () => {
-    svc.getAll.mockResolvedValue([cadastro({ roleta_config_id: 'r1', after_hours_message: 'Oi {{nome}}' })]);
-    const dialogo = await abrirEdicao();
-    expect(within(dialogo).getByLabelText('Mensagem inicial fora do horário')).toBeInTheDocument();
-    salvar(dialogo);
-    await waitFor(() => expect(svc.update).toHaveBeenCalled());
-    expect(svc.update.mock.calls[0][1]).toMatchObject({ after_hours_message: 'Oi {{nome}}' });
-  });
-
-  it('com a chave: o campo some e a mensagem gravada nem viaja (fica pra migração)', async () => {
-    chave.roletaNova = true;
+  it('o campo não existe e a mensagem gravada nem viaja', async () => {
     svc.getAll.mockResolvedValue([cadastro({ roleta_config_id: 'r1', after_hours_message: 'Oi {{nome}}' })]);
     const dialogo = await abrirEdicao();
     expect(within(dialogo).queryByLabelText('Mensagem inicial fora do horário')).toBeNull();
@@ -156,26 +140,17 @@ describe('Formulários do Meta · formulário pego por regra "nome contém"', ()
     });
   };
 
-  it('com a chave: mostra em qual roleta cai e por qual regra', async () => {
-    chave.roletaNova = true;
+  it('mostra em qual roleta cai e por qual regra', async () => {
     comFormularioNovo();
     render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
     expect(await screen.findByText('Cai na Roleta Zona Sul pela regra "alma"')).toBeInTheDocument();
   });
 
-  it('com a chave e a regra com corretor fixo: diz pra quem vai, não a roleta (o corretor vence)', async () => {
-    chave.roletaNova = true;
+  it('a regra com corretor fixo: diz pra quem vai, não a roleta (o corretor vence)', async () => {
     comFormularioNovo();
     svc.getAll.mockResolvedValue([cadastro({ roleta_config_id: 'r1', default_assignee_id: 'u1' })]);
     render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
     expect(await screen.findByText('Vai pra Ana Corretora pela regra "alma"')).toBeInTheDocument();
-    expect(screen.queryByText(/Cai na Roleta/)).toBeNull();
-  });
-
-  it('sem a chave: nada muda', async () => {
-    comFormularioNovo();
-    render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
-    expect(await screen.findByText('05/10 - ALMA 2.0')).toBeInTheDocument();
     expect(screen.queryByText(/Cai na Roleta/)).toBeNull();
   });
 });

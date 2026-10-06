@@ -9,7 +9,6 @@ import {
   politicaSemAvisosDaRoleta,
   semAvisosDaRoleta,
 } from '@/components/notifications/avisosDaRoleta';
-import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import notificationPreferencesService, {
   type ClientCatalogData,
 } from '@/services/notifications/notificationPreferencesService';
@@ -47,9 +46,8 @@ export default function NotificationCenter() {
   const [open, setOpen] = useState(false);
   // Roleta nova (06/10/2026, D7): os avisos da roleta são configurados uma vez,
   // na aba Avisos da página da roleta, e saem desta lista.
-  const roletaNova = useClientToggle('roleta_nova');
-  const catalogo = useMemo(() => (data && roletaNova ? semAvisosDaRoleta(data) : data), [data, roletaNova]);
-  const politicaVisivel = useMemo(() => (roletaNova ? politicaSemAvisosDaRoleta(policy) : policy), [policy, roletaNova]);
+  const catalogo = useMemo(() => (data ? semAvisosDaRoleta(data) : data), [data]);
+  const politicaVisivel = useMemo(() => politicaSemAvisosDaRoleta(policy), [policy]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -129,14 +127,12 @@ export default function NotificationCenter() {
                 {!data.can_edit && ' Só admin e gerente podem mudar esta lista.'}
               </p>
 
-              {roletaNova && (
-                <p className="text-xs text-muted-foreground">
-                  Os avisos da roleta ficam em Roleta de leads › Avisos.{' '}
-                  <Link to={ENDERECO_AVISOS_DA_ROLETA} className="font-medium text-primary hover:underline">
-                    Abrir os avisos da roleta
-                  </Link>
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Os avisos da roleta ficam em Roleta de leads › Avisos.{' '}
+                <Link to={ENDERECO_AVISOS_DA_ROLETA} className="font-medium text-primary hover:underline">
+                  Abrir os avisos da roleta
+                </Link>
+              </p>
 
               <NotificationMatrix
                 catalog={catalogo}
