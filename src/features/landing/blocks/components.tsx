@@ -705,7 +705,8 @@ function MonthlyCostBlock({ config, property }: BlockComponentProps<'monthly_cos
       if (value && value > 0) linhas.push({ label, value });
     }
   }
-  for (const e of config.extras) if (e.value > 0) linhas.push({ label: e.label, value: e.value });
+  // Linha extra sem rótulo (acabou de ser criada, ainda vazia) não aparece.
+  for (const e of config.extras) if (e.value > 0 && e.label.trim()) linhas.push({ label: e.label, value: e.value });
   if (!linhas.length) return null;
   const total = linhas.reduce((acc, l) => acc + l.value, 0);
   return (
@@ -755,16 +756,20 @@ function StepsBlock({ config }: BlockComponentProps<'steps'>) {
   );
 }
 
-/** Plantas vindas do cadastro do imóvel, quando o bloco não tem itens escritos. */
+/** Plantas vindas do cadastro do imóvel, quando o bloco não tem itens escritos.
+ *  Preço e área 0 contam como "sem dado" (nada de "R$ 0"); tipologia sem nome,
+ *  dormitórios, área nem preço não vira linha. */
 function deTipologias(property?: LandingProperty | null): BlockConfig<'apartment_types'>['items'] {
   const locacao = ehLocacao(property);
-  return (property?.typologies ?? []).map((t) => {
-    const preco = locacao ? t.rentPrice : t.salePrice;
-    return {
+  return (property?.typologies ?? []).flatMap((t) => {
+    const preco = (locacao ? t.rentPrice : t.salePrice) || undefined;
+    const area = t.usefulAreaM2 || undefined;
+    if (!t.name && t.bedrooms == null && area == null && preco == null) return [];
+    return [{
       name: t.name || (t.bedrooms != null ? `${t.bedrooms} dorms` : 'Planta'),
-      areaM2: t.usefulAreaM2 ?? undefined,
-      price: preco ?? undefined,
-    };
+      areaM2: area,
+      price: preco,
+    }];
   });
 }
 

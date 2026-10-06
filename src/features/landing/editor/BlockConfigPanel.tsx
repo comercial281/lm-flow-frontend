@@ -56,20 +56,25 @@ function Repeater<T>({ items, onChange, empty, addLabel, max, render }: {
   );
 }
 
-/** Caixa "Formulário dentro da capa". O aviso diz por que ela ainda não faz
- *  nada — sem ele, a pessoa marca, olha a prévia e não vê mudança nenhuma. */
+/** Caixa "Formulário dentro da capa". Com a caixa ligada, o aviso diz por que
+ *  ela ainda não faz nada — sem ele, a pessoa marca, olha a prévia e não vê
+ *  mudança nenhuma. Desligada, não há o que avisar. */
 function FormularioNaCapa({ block }: { block: BlockInstance }) {
   const update = useLandingEditorStore((s) => s.updateConfig);
   const blocks = useLandingEditorStore((s) => s.blocks);
   const ligado = (block.config as { formInHero?: boolean }).formInHero === true;
   const forms = blocks.filter((b) => b.type === 'lead_form');
-  const aviso = !forms.length
-    ? 'Adicione a seção Formulário de Lead para isto funcionar.'
-    : !forms.some((b) => b.visible)
-      ? 'Mostre a seção Formulário de Lead para isto funcionar.'
-      : blocks.find((b) => b.visible)?.id !== block.id
-        ? 'Só funciona com a capa no topo da página.'
-        : null;
+  const aviso = !ligado
+    ? null
+    : !block.visible
+      ? 'Mostre a capa para isto funcionar.'
+      : !forms.length
+        ? 'Adicione a seção Formulário de Lead para isto funcionar.'
+        : !forms.some((b) => b.visible)
+          ? 'Mostre a seção Formulário de Lead para isto funcionar.'
+          : blocks.find((b) => b.visible)?.id !== block.id
+            ? 'Só funciona com a capa no topo da página.'
+            : null;
   return (
     <div className="space-y-1">
       <Check checked={ligado} onChange={(v) => update(block.id, { formInHero: v })} label="Formulário dentro da capa" />
@@ -268,7 +273,7 @@ function Fields({ block }: { block: BlockInstance }) {
           <Field label="Título"><Text value={c.title as string} onChange={(v) => set({ title: v })} /></Field>
           <Field label="Outras linhas" hint="Aluguel, condomínio e IPTU vêm do imóvel. Aqui entra o que o cadastro não tem. Até 4 linhas.">
             <Repeater<{ label: string; value?: number }>
-              items={arr('extras')} onChange={(v) => set({ extras: v })} empty={{ label: '', value: undefined }} addLabel="linha"
+              items={arr('extras')} onChange={(v) => set({ extras: v })} empty={{ label: '', value: 0 }} addLabel="linha"
               max={4}
               render={(it, u) => (
                 <div className="grid grid-cols-2 gap-2">

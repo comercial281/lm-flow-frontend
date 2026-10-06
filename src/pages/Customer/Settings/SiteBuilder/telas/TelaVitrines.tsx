@@ -225,9 +225,15 @@ function EditorDeRegra({ idBase, regras, mudar }: { idBase: string; regras: Regr
         </fieldset>
       )}
 
-      <div className="flex items-center gap-2">
-        <Checkbox id={`${idBase}-destaque`} checked={regras.featured_only} onCheckedChange={c => mudar({ featured_only: c === true })} />
-        <UILabel htmlFor={`${idBase}-destaque`} className="cursor-pointer">Só destaques e exclusivos</UILabel>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="flex items-center gap-2">
+          <Checkbox id={`${idBase}-destaque`} checked={regras.featured_only} onCheckedChange={c => mudar({ featured_only: c === true })} />
+          <UILabel htmlFor={`${idBase}-destaque`} className="cursor-pointer">Só destaques e exclusivos</UILabel>
+        </div>
+        <div className="flex items-center gap-2">
+          <Checkbox id={`${idBase}-mcmv`} checked={regras.mcmv} onCheckedChange={c => mudar({ mcmv: c === true })} />
+          <UILabel htmlFor={`${idBase}-mcmv`} className="cursor-pointer">Só Minha Casa Minha Vida</UILabel>
+        </div>
       </div>
     </div>
   );

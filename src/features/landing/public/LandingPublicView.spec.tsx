@@ -53,11 +53,14 @@ describe('LandingPublicView: largura', () => {
     return b;
   };
 
-  it('formulário na capa: página larga, sem a coluna de 460px', async () => {
+  it('formulário na capa: larga só no computador (lg); no celular segue a coluna de 460px', async () => {
     const band = faixa();
     const { container } = await abrir(dto({ content_blocks: [capa(true), band, createBlock('lead_form')] }));
-    expect(container.querySelector('.max-w-\\[460px\\]')).toBeNull();
-    expect(container.querySelector('.max-w-\\[1200px\\]')).not.toBeNull();
+    const coluna = container.querySelector('.lg\\:max-w-\\[1200px\\]') as HTMLElement;
+    expect(coluna).not.toBeNull();
+    // Abaixo de lg é igual ao celular: a mesma coluna da fábrica.
+    expect(coluna.classList.contains('max-w-[460px]')).toBe(true);
+    expect(container.querySelector('.max-w-\\[1200px\\]')).toBeNull();
     // O BlockRenderer recebeu `wide`: as seções fora da capa ficam em 720px.
     expect((container.querySelector(`[data-block-id="${band.id}"]`) as HTMLElement).style.maxWidth).toBe('720px');
   });
@@ -66,9 +69,11 @@ describe('LandingPublicView: largura', () => {
     const r1 = await abrir(dto({ content_blocks: [capa(false), faixa(), createBlock('lead_form')] }));
     expect(r1.container.querySelector('.max-w-\\[460px\\]')).not.toBeNull();
     expect(r1.container.querySelector('.max-w-\\[1200px\\]')).toBeNull();
+    expect(r1.container.querySelector('.lg\\:max-w-\\[1200px\\]')).toBeNull();
     r1.unmount();
 
     const r2 = await abrir(dto({ content_blocks: [capa(true), faixa()] }));
     expect(r2.container.querySelector('.max-w-\\[460px\\]')).not.toBeNull();
+    expect(r2.container.querySelector('.lg\\:max-w-\\[1200px\\]')).toBeNull();
   });
 });

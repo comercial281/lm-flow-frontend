@@ -333,6 +333,23 @@ describe('BlockRenderer: dados novos do imóvel', () => {
     expect(screen.queryByText(/a partir de/i)).toBeNull();
   });
 
+  it('plantas: preço e área 0 não viram "R$ 0" nem "0 m²"; tipologia vazia não vira linha', () => {
+    const p: LandingProperty = {
+      ...base,
+      typologies: [
+        { name: 'Tipo Z', bedrooms: 2, usefulAreaM2: 0, salePrice: 0 },
+        { name: null, bedrooms: null, usefulAreaM2: null, salePrice: null },
+        { name: '', bedrooms: null, usefulAreaM2: 0, salePrice: 0 },
+      ],
+    };
+    const { container } = render(<BlockRenderer blocks={[createBlock('apartment_types')]} property={p} />);
+    expect(screen.getByText('Tipo Z')).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/R\$\s?0/);
+    expect(container.textContent).not.toContain('0 m²');
+    expect(screen.queryByText('Planta')).toBeNull();
+    expect(container.querySelectorAll('.rounded-xl')).toHaveLength(1);
+  });
+
   it('plantas: itens manuais vencem as tipologias', () => {
     const p: LandingProperty = { ...base, typologies: tipologias };
     const b = createBlock('apartment_types');
@@ -401,6 +418,15 @@ describe('Custo mensal', () => {
   it('sem nenhuma linha o bloco não aparece', () => {
     const { container } = render(<BlockRenderer blocks={[bloco({})]} property={property} />);
     expect(container.textContent).toBe('');
+  });
+
+  it('linha extra sem rótulo não aparece (nem entra no total)', () => {
+    const b = bloco({ source: 'manual', extras: [{ label: '  ', value: 50 }, { label: 'Taxa A', value: 10 }] });
+    const { container } = render(<BlockRenderer blocks={[b]} property={locacao} />);
+    const txt = nbsp(container.textContent ?? '');
+    expect(txt).toContain('Taxa AR$ 10');
+    expect(txt).not.toContain('R$ 50');
+    expect(txt).not.toContain('Total');
   });
 
   it('source manual usa só os extras', () => {

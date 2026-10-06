@@ -84,7 +84,7 @@ export default function TelaModelo({ siteForm, setF }: FormProps) {
   const usar = async (m: ModeloDoSite) => {
     const ok = await confirmar({
       titulo: `Usar o modelo ${m.nome}?`,
-      descricao: 'Muda a fonte, o fundo, o topo, a capa, o menu e os cartões. Suas cores, logo, textos, vitrines e menu continuam iguais. Nada vai pro ar antes de você clicar em Salvar.',
+      descricao: 'Muda a fonte, o fundo, o topo, a capa, o estilo do menu e os cartões. Suas cores, logo, textos, vitrines e os itens do menu continuam iguais. Nada vai pro ar antes de você clicar em Salvar.',
       rotuloDaAcao: 'Usar este modelo',
     });
     if (!ok) return;

@@ -264,8 +264,9 @@ export function LandingPublicView({ tenant, slug, noDominio = false }: LandingPu
   const fontePrincipal = (theme.fontFamily ?? '').split(',')[0].trim();
   const fonteHref = FONTES_DO_SITE.includes(fontePrincipal) ? fonteDoSite(fontePrincipal).fontHref : null;
 
-  // Formulário na capa: no computador a página fica larga (foto e formulário
-  // lado a lado). Sem o par, a coluna estreita de sempre.
+  // Formulário na capa: no computador (lg) a página fica larga (foto e
+  // formulário lado a lado); abaixo de lg, a mesma coluna de 460px do celular.
+  // Sem o par, a coluna estreita de sempre.
   const largo = !!formularioDaCapa(blocks);
 
   if (state === 'loading') {
@@ -286,7 +287,7 @@ export function LandingPublicView({ tenant, slug, noDominio = false }: LandingPu
       onClickCapture={onCtaClick}
     >
       {fonteHref && <link rel="stylesheet" href={fonteHref} />}
-      <div className={`relative w-full ${largo ? 'max-w-[1200px]' : 'max-w-[460px]'} shadow-2xl`}>
+      <div className={`relative w-full ${largo ? 'max-w-[460px] lg:max-w-[1200px]' : 'max-w-[460px]'} shadow-2xl`}>
         <BlockRenderer blocks={blocks} property={property} theme={theme} onSubmitLead={onSubmitLead} wide={largo} />
       </div>
     </div>

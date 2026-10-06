@@ -65,6 +65,12 @@ describe('meuSiteMenu', () => {
     expect(trilhaDe('lista')).toBe('Personalizar');
   });
 
+  it('a frase do Modelo do site diz o que continua editável depois', () => {
+    expect(telaInfo('modelo').frase).toBe(
+      'Um ponto de partida para o visual do site. Depois, cores, logo e textos continuam editáveis em Aparência e na Página inicial.',
+    );
+  });
+
   it('Menus fica no Personalizar, logo antes de Páginas, e abre por ?tela=menus', () => {
     const ids = itensDoGrupo('personalizar', { podeAnuncios: true }).map(t => t.id);
     expect(ids.slice(ids.indexOf('menus'), ids.indexOf('menus') + 2)).toEqual(['menus', 'paginas']);

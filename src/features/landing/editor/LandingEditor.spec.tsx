@@ -97,6 +97,8 @@ describe('LandingEditor (integração UI)', () => {
     expect(cfg().title).toBe('Custo mensal');
     fireEvent.click(screen.getByText('+ linha'));
     expect(cfg().extras).toHaveLength(1);
+    // Nasce com valor 0: o contrato pede número, e sem valor a página não salvava.
+    expect(cfg().extras[0]).toEqual({ label: '', value: 0 });
     fireEvent.change(screen.getByPlaceholderText('Seguro incêndio'), { target: { value: 'Taxa' } });
     expect(cfg().extras[0].label).toBe('Taxa');
     fireEvent.click(screen.getByText('excluir'));
@@ -124,14 +126,25 @@ describe('LandingEditor (integração UI)', () => {
 describe('LandingEditor: formulário dentro da capa', () => {
   beforeEach(() => useLandingEditorStore.getState().load([]));
 
-  it('a capa ganha a caixa, com aviso quando a página não tem formulário', () => {
+  it('a capa ganha a caixa; o aviso de "sem formulário" só aparece com a caixa ligada', () => {
     const hero = createBlock('hero');
     render(<LandingEditor initialBlocks={[hero]} property={property} onSave={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /Hero \/ Capa/ }));
     const caixa = screen.getByLabelText('Formulário dentro da capa');
-    expect(screen.getByText('Adicione a seção Formulário de Lead para isto funcionar.')).toBeInTheDocument();
+    expect(screen.queryByText('Adicione a seção Formulário de Lead para isto funcionar.')).toBeNull();
     fireEvent.click(caixa);
     expect((useLandingEditorStore.getState().blocks[0].config as { formInHero?: boolean }).formInHero).toBe(true);
+    expect(screen.getByText('Adicione a seção Formulário de Lead para isto funcionar.')).toBeInTheDocument();
+  });
+
+  it('com a capa escondida e a caixa ligada, o aviso pede para mostrar a capa', () => {
+    const hero = createBlock('hero');
+    hero.visible = false;
+    (hero.config as { formInHero?: boolean }).formInHero = true;
+    render(<LandingEditor initialBlocks={[hero, createBlock('lead_form')]} property={property} onSave={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Hero \/ Capa/ }));
+    expect(screen.getByText('Mostre a capa para isto funcionar.')).toBeInTheDocument();
+    expect(screen.queryByText('Só funciona com a capa no topo da página.')).toBeNull();
   });
 
   it('com o par valendo, a linha do formulário mostra "dentro da capa" e selecioná-la não quebra', () => {

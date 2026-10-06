@@ -38,7 +38,7 @@ describe('TelaModelo', () => {
     render(<Montar espiao={espiao} />);
     await userEvent.click(within(cartao('Editorial')).getByRole('button', { name: 'Usar este modelo' }));
     expect(await screen.findByText('Usar o modelo Editorial?')).toBeTruthy();
-    expect(screen.getByText(/Muda a fonte, o fundo, o topo, a capa, o menu e os cartões\. Suas cores, logo, textos, vitrines e menu continuam iguais\. Nada vai pro ar antes de você clicar em Salvar\./)).toBeTruthy();
+    expect(screen.getByText(/Muda a fonte, o fundo, o topo, a capa, o estilo do menu e os cartões\. Suas cores, logo, textos, vitrines e os itens do menu continuam iguais\. Nada vai pro ar antes de você clicar em Salvar\./)).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: 'Usar este modelo' }));
     expect(espiao).toHaveBeenCalledTimes(1);
     const patch = espiao.mock.calls[0][0];
