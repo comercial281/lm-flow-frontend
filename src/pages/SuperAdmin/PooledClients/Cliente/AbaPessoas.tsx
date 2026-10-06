@@ -13,10 +13,10 @@ import type { Pessoa } from '@/types/admin/clientes';
 import { copyText } from '@/utils/clipboard';
 import { pedidoRemoverPessoa } from '../confirmacoes';
 import type { PropsDaAba } from './Pagina';
+import { EQUIPE } from '../lista';
 
 // Pessoas do cliente (antiga janela Membros). Acesso SÓ por link: não existe
 // senha em lugar nenhum desta tela (entrega 3).
-const EQUIPE = /@lealmidia\.com\.br$/i;
 
 export default function AbaPessoas({ cliente }: PropsDaAba) {
   const [pessoas, setPessoas] = useState<Pessoa[] | null>(null);

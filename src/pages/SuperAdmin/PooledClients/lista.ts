@@ -3,6 +3,9 @@ import type { Atencao, ClienteComProblema, Problema } from '@/types/admin/overvi
 
 // Regras da lista de Clientes: ordem, filtros e o selo de problema que vem da
 // Atenção da Visão Geral. Ficam aqui, puras, pra teste.
+// Gente da Leal Mídia dentro do cliente (suporte/entrar como): não conta como "do cliente".
+export const EQUIPE = /@lealmidia\.com\.br$/i;
+
 export type FiltroLista = 'todos' | 'com_problema' | 'arquivados';
 const FILTROS: FiltroLista[] = ['todos', 'com_problema', 'arquivados'];
 

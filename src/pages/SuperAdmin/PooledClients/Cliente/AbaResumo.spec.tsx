@@ -61,6 +61,7 @@ describe('Aba Resumo', () => {
       { id: 'u1', email: 'ana@x.com', name: 'Ana', last_seen_at: new Date(agora - 3 * 86_400_000).toISOString() },
       { id: 'u2', email: 'beto@x.com', name: 'Beto', last_seen_at: new Date(agora - 2 * 3_600_000).toISOString() },
       { id: 'u3', email: 'cris@x.com', last_seen_at: null },
+      { id: 'u4', email: 'suporte@lealmidia.com.br', name: 'Suporte LM', last_seen_at: new Date(agora - 60_000).toISOString() },
     ] });
     montar();
     expect(await screen.findByText('Último acesso: há 2 h (Beto)')).toBeInTheDocument();

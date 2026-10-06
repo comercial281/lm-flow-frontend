@@ -8,16 +8,18 @@ import type { ClientePooled, Pessoa } from '@/types/admin/clientes';
 import type { ClienteComProblema, Numeros } from '@/types/admin/overview';
 import { linhasDoProblema } from '@/pages/Admin/Area/VisaoGeral/formatoAtencao';
 import AiUsageLine from '../AiUsageLine';
-import { chaveDoCliente } from '../lista';
+import { EQUIPE, chaveDoCliente } from '../lista';
 
 // Resumo do cliente: problemas da Atenção e números do mês, das MESMAS contas
 // da Visão Geral (batem com ela). Cada parte carrega sozinha e falha sozinha.
 type Leitura<T> = { tipo: 'carregando' } | { tipo: 'erro' } | { tipo: 'pronto'; valor: T };
 
-// Último acesso de alguém do cliente: o mais recente entre as pessoas.
+// Último acesso de alguém do cliente: o mais recente entre as pessoas, sem a
+// equipe da Leal Mídia (o "Entrar" do admin esconderia que o cliente sumiu).
 function ultimoAcesso(pessoas: Pessoa[]): { quando: string; quem: string } | null {
   let melhor: { quando: string; quem: string; ms: number } | null = null;
   for (const p of pessoas) {
+    if (EQUIPE.test(p.email)) continue;
     const ms = toDate(p.last_seen_at)?.getTime();
     if (ms !== undefined && !Number.isNaN(ms) && (!melhor || ms > melhor.ms)) melhor = { quando: p.last_seen_at as string, quem: p.name || p.email, ms };
   }
