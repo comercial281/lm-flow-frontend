@@ -219,7 +219,7 @@ export default function ImovelPublicPage() {
 
   // Mesmas cores, fonte e fundo do resto do site (antes a ficha montava as
   // dela à mão, sem a cor de destaque, que pinta o selo Muito procurado).
-  const { fontHref, cssVars, fundo } = useMemo(() => tokensDoSite(site), [site]);
+  const { fontHrefs, cssVars, fundo } = useMemo(() => tokensDoSite(site), [site]);
   const wa = site.contact?.whatsapp;
   // Abas do topo e do rodapé: só o liga/desliga do Personalizar. A ficha não
   // carrega o catálogo inteiro, então não esconde aba sem imóvel como a home.
@@ -372,7 +372,7 @@ export default function ImovelPublicPage() {
   return (
     <div style={cssVars} data-fundo={fundo} className="min-h-screen bg-[var(--paper)] pb-24 text-[var(--ink)] antialiased lg:pb-0">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link href={fontHref} rel="stylesheet" />
+      {fontHrefs.map(h => <link key={h} href={h} rel="stylesheet" />)}
 
       {/* Cabeçalho COMPARTILHADO com o resto do portal. Esta página é onde o
           anúncio pago joga o visitante, e ela era a única sem menu nenhum: quem

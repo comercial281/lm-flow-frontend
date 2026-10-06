@@ -34,6 +34,8 @@ export const BLOCK_TYPES = [
   'trust_badges',
   'track_record',
   'apartment_types',
+  'monthly_cost',
+  'steps',
   'lead_form',
   'sticky_cta',
 ] as const;
@@ -54,6 +56,11 @@ const heroConfig = z.object({
   subheadline: z.string().max(200).optional(),
   imageUrl: z.string().url().optional(),
   ctaLabel: z.string().max(40).optional(),
+  /** Leva o primeiro formulário visível para dentro da capa (primeira tela do
+   *  celular) e alarga a página no computador. Só vale com a capa no topo e um
+   *  formulário visível — ver `formularioDaCapa`. Landing antiga não tem a
+   *  chave e sai como sempre. */
+  formInHero: z.boolean().default(false),
 });
 
 const priceBandConfig = z.object({
@@ -454,6 +461,20 @@ export function withLegacyQualificationMaps(config: BlockConfig<'lead_form'>): B
   return { ...config, answerWeights, disqualifyingAnswers };
 }
 
+/** Quanto custa morar por mês (locação). Puxa aluguel, condomínio e IPTU do
+ *  imóvel; `extras` são as linhas que o cadastro não tem (ex.: seguro incêndio). */
+const monthlyCostConfig = z.object({
+  source: sourceEnum,
+  title: z.string().max(80).default('Custo mensal'),
+  extras: z.array(z.object({ label: z.string().max(40), value: z.number().min(0) })).max(4).default([]),
+});
+
+/** Passo a passo numerado (ex.: como funciona a locação). */
+const stepsConfig = z.object({
+  title: z.string().max(80).default('Como funciona'),
+  items: z.array(z.object({ title: z.string().max(60), text: z.string().max(200).default('') })).max(6).default([]),
+});
+
 const stickyCtaConfig = z.object({
   label: z.string().max(40).default('Falar com Especialista'),
   action: z.enum(['open_form', 'whatsapp']).default('open_form'),
@@ -479,6 +500,8 @@ export const BLOCK_CONFIG_SCHEMAS = {
   trust_badges: trustBadgesConfig,
   track_record: trackRecordConfig,
   apartment_types: apartmentTypesConfig,
+  monthly_cost: monthlyCostConfig,
+  steps: stepsConfig,
   lead_form: leadFormConfig,
   sticky_cta: stickyCtaConfig,
 } satisfies Record<BlockType, z.ZodTypeAny>;

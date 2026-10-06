@@ -49,7 +49,7 @@ const RESULTS_PAGE_SIZE = 30;
 export default function PortalSearchPage() {
   const tenant = useTenantDoSite();
   const [params, setParams] = useSearchParams();
-  const { state, site, items, fontHref, wa, cities, hoods, types, abas, cssVars, fundo, manutencao } = usePortalData(tenant);
+  const { state, site, items, fontHrefs, wa, cities, hoods, types, abas, cssVars, fundo, manutencao } = usePortalData(tenant);
   const { pathname, search } = useLocation();
 
   // Uma visita por carga da página, levando os filtros (pathname + query) de quando a URL
@@ -145,7 +145,7 @@ export default function PortalSearchPage() {
   return (
     <div style={cssVars as CSSProperties} data-fundo={fundo} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link href={fontHref} rel="stylesheet" />
+      {fontHrefs.map(h => <link key={h} href={h} rel="stylesheet" />)}
 
       <PortalHeader site={site} tenant={tenant!} abas={abas} />
 

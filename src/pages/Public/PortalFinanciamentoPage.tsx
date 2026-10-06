@@ -63,7 +63,7 @@ function BankBadge({ bank }: { bank: PortalBank }) {
 
 export default function PortalFinanciamentoPage() {
   const tenant = useTenantDoSite();
-  const { state, site, fontHref, wa, abas, cssVars, fundo, manutencao } = usePortalData(tenant);
+  const { state, site, fontHrefs, wa, abas, cssVars, fundo, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
   usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'financing', path: pathname });
@@ -87,7 +87,7 @@ export default function PortalFinanciamentoPage() {
   return (
     <div style={cssVars} data-fundo={fundo} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link href={fontHref} rel="stylesheet" />
+      {fontHrefs.map(h => <link key={h} href={h} rel="stylesheet" />)}
 
       <PortalHeader site={site} tenant={tenant!} abas={abas} />
 

@@ -12,12 +12,18 @@ export type EstiloDoTopo = 'transparent' | 'brand' | 'white';
 export type FaixaDeCima = 'two_phones' | 'one_phone' | 'icons' | 'hidden';
 export type AlturaDaCapa = 'full' | 'half';
 export type LayoutDoRodape = 'columns' | 'compact';
+export type EstiloDoMenu = 'normal' | 'caps';
+export type LayoutDaCapa = 'photo' | 'split';
+export type EstiloDoCartao = 'standard' | 'large';
 
 export const FUNDOS: Fundo[] = ['light', 'dark'];
 export const ESTILOS_DO_TOPO: EstiloDoTopo[] = ['transparent', 'brand', 'white'];
 export const FAIXAS_DE_CIMA: FaixaDeCima[] = ['two_phones', 'one_phone', 'icons', 'hidden'];
 export const ALTURAS_DA_CAPA: AlturaDaCapa[] = ['full', 'half'];
 export const LAYOUTS_DO_RODAPE: LayoutDoRodape[] = ['columns', 'compact'];
+export const ESTILOS_DO_MENU: EstiloDoMenu[] = ['normal', 'caps'];
+export const LAYOUTS_DA_CAPA: LayoutDaCapa[] = ['photo', 'split'];
+export const ESTILOS_DO_CARTAO: EstiloDoCartao[] = ['standard', 'large'];
 
 export interface Aparencia {
   background: Fundo;
@@ -31,6 +37,14 @@ export interface Aparencia {
   footer_layout: LayoutDoRodape;
   /** Frase do rodapé (até 200). Nulo = a frase de fábrica. */
   footer_text: string | null;
+  /** Fonte dos títulos (uma de `FONTES_DO_SITE`). Nulo = a mesma do corpo. */
+  heading_font: string | null;
+  /** Links do menu do topo: `caps` = em maiúsculas, espaçados e menores. */
+  menu_style: EstiloDoMenu;
+  /** Capa: `photo` = texto e busca sobre a foto; `split` = texto e busca de um lado, a foto do outro. */
+  hero_layout: LayoutDaCapa;
+  /** Cartões das vitrines: `large` = duas colunas, foto maior e título maior. */
+  card_style: EstiloDoCartao;
 }
 
 export const FILTRO_FABRICA = 45;
@@ -55,6 +69,10 @@ export const APARENCIA_FABRICA: Aparencia = {
   hero_overlay: FILTRO_FABRICA,
   footer_layout: 'columns',
   footer_text: null,
+  heading_font: null,
+  menu_style: 'normal',
+  hero_layout: 'photo',
+  card_style: 'standard',
 };
 
 const umDe = <T extends string>(lista: T[], v: unknown, padrao: T): T =>
@@ -77,6 +95,10 @@ export function resolverAparencia(raw: unknown): Aparencia {
     hero_overlay: filtro,
     footer_layout: umDe(LAYOUTS_DO_RODAPE, r.footer_layout, APARENCIA_FABRICA.footer_layout),
     footer_text: texto || null,
+    heading_font: typeof r.heading_font === 'string' && FONTES_DO_SITE.includes(r.heading_font) ? r.heading_font : null,
+    menu_style: umDe(ESTILOS_DO_MENU, r.menu_style, APARENCIA_FABRICA.menu_style),
+    hero_layout: umDe(LAYOUTS_DA_CAPA, r.hero_layout, APARENCIA_FABRICA.hero_layout),
+    card_style: umDe(ESTILOS_DO_CARTAO, r.card_style, APARENCIA_FABRICA.card_style),
   };
 }
 
@@ -191,6 +213,19 @@ export function fonteDoSite(fontFamily?: string | null): { font: string; fontSta
   const fontStack = font.includes(',') ? font : `${font}, ${reserva}`;
   const fontHref = `https://fonts.googleapis.com/css2?family=${principal.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`;
   return { font, fontStack, fontHref };
+}
+
+/**
+ * Fonte do corpo e fonte dos títulos (`appearance.heading_font`). `displayStack`
+ * vai no `--display`; `hrefs` são os `<link>` do Google Fonts, o do corpo
+ * primeiro. Sem fonte dos títulos, ou com a mesma do corpo, é exatamente o
+ * `fonteDoSite` de sempre: um endereço só e os títulos na fonte do corpo.
+ */
+export function fontesDoSite(corpo?: string | null, titulos?: string | null): { fontStack: string; displayStack: string; hrefs: string[] } {
+  const c = fonteDoSite(corpo);
+  if (!titulos) return { fontStack: c.fontStack, displayStack: c.fontStack, hrefs: [c.fontHref] };
+  const t = fonteDoSite(titulos);
+  return { fontStack: c.fontStack, displayStack: t.fontStack, hrefs: t.fontHref === c.fontHref ? [c.fontHref] : [c.fontHref, t.fontHref] };
 }
 
 /* ── Logo ──────────────────────────────────────────────────────────────────── */

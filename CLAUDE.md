@@ -6568,6 +6568,34 @@ Caso real: o Leonardo (Mais que Imóveis) desligou "Rejeitar chamadas" e o clien
 - **Rejeição desligada = mensagem vazia na gravação**, aqui e no servidor (`Evolution::CallMessage`, backend). O campo esconder não basta: era exatamente o texto escondido que ia pra Evolution.
 - Não reabrir "voltar com um texto padrão" sem o dono pedir.
 
+## Modelos de página de anúncio (D1) (05/10/2026)
+
+Três modelos prontos no assistente "Criar com assistente" (passo 1, grupo "Modelos prontos"): **Lançamento**, **Revenda** e **Aluguel**.
+
+- **Os modelos vivem no código**, não no banco: `src/features/landing/modelos/modelosDeAnuncio.ts` (blocos, tema e frase) e `perguntas.ts` (perguntas de Revenda e Aluguel). Cada chamada de `blocos()` gera ids novos. Mudar um modelo não mexe em página já criada: a página ganha uma cópia dos blocos e do tema na criação.
+- **Formulário na primeira tela do celular.** Todo modelo começa com a capa com `formInHero` ligado e o `lead_form` logo depois. O formulário aparece dentro da capa, sem rolar.
+- **O cartão do formulário dentro da capa usa a cor de fundo do bloco** (`blockBg` do tema), não a do fundo da página.
+- **`#lp-lead-form` fica só no primeiro formulário visível da página.** Se houver dois, o segundo segue no lugar dele, sem o id.
+- **A página larga no computador só existe com o formulário na capa**, e só a partir de `lg` (1024px); abaixo disso, a mesma coluna de 460px do celular. Sem `formInHero`, ou sem formulário visível, a página volta à coluna estreita de 460px, igual a de antes. No editor, o aviso âmbar da caixa "Formulário dentro da capa" só aparece com a caixa ligada (capa escondida: "Mostre a capa para isto funcionar.").
+- **A prévia do editor é de celular**, mesmo no computador: a página larga só aparece na página publicada.
+- **Imóvel é obrigatório** para criar por modelo. Cria sempre com `createForProperty` (nunca `getOrCreateForProperty`): **um imóvel pode ter várias páginas de anúncio** (teste A/B). O atalho no cadastro do imóvel continua abrindo a primeira.
+- **O modelo nunca troca sozinho.** Se o imóvel combina mais com outro (`modeloSugerido`: locação ou temporada = Aluguel, empreendimento = Lançamento, o resto = Revenda), aparece uma linha com o botão "Trocar". Quem decide é a pessoa.
+- **Fase da obra nasce escondida no Lançamento**, porque o percentual é manual. As perguntas de Revenda e Aluguel só pesam, não desqualificam.
+- As fontes dos temas são as da lista `FONTES_DO_SITE`; a landing usa a mesma lista do site.
+
+## Modelo do site (D2) (05/10/2026)
+
+Nova tela **Modelo do site** (primeira de "Personalizar"): três cartões, **Clássico**, **Editorial** e **Popular**, cada um com uma miniatura em HTML/CSS pintada com as cores do próprio cliente.
+
+- **O modelo muda só o visual.** Grava fonte, `appearance` (fonte dos títulos, fundo, topo, faixa de cima, capa, menu, cartões e rodapé), `listing.card_layout`, `home.callouts.layout` e o liga/desliga de "Como funciona" e "Atendimento". Os modelos vivem no código (`src/features/siteBuilder/modelosDoSite.ts`).
+- **Preserva sempre:** cores, logo, `logo_light_url`, a frase do rodapé, o filtro da capa, a busca, as vitrines, as chamadas próprias, os mais buscados, o menu e os textos já escritos. O Popular só preenche os 4 passos de fábrica (`PASSOS_MCMV`) se a lista estiver vazia; o Editorial só usa os textos de fábrica do Atendimento quando o **título** está em branco (nada escrito ou só espaços), e aí preenche campo a campo só o que está vazio (selo, título, texto, botão e link), sem apagar o que o cliente já escreveu. Com título escrito, o Editorial só liga o Atendimento e não acrescenta nada (selo ou botão vazios continuam vazios).
+- **Nada vai pro ar antes do Salvar.** O botão "Usar este modelo" pede confirmação, chama `setF` uma vez e avisa "Modelo aplicado. Confira em Ver prévia e clique em Salvar."
+- **Editorial e Popular usam a capa dividida** (texto e busca de um lado, foto do outro). Com ela, o topo da home fica sólido em vez de transparente.
+- **"Em uso" só quando bate tudo.** `modeloAtual` compara só as chaves da tabela do modelo (não cores nem textos; em passos e Atendimento, só o liga/desliga). Se o cliente mexer em uma, nenhum cartão fica "Em uso".
+- **Vindas das tarefas anteriores:** a fonte dos títulos carrega como um segundo link do Google Fonts; a classe `font-[var(--display)]` ganhou uma regra global de `font-family`, porque no Tailwind 4 ela compilava para `font-weight`; o menu em maiúsculas vale só no computador; as seções novas "Como funciona" e "Atendimento" ficam na tela "Página inicial · Mais seções".
+- **Vitrine "Minha Casa Minha Vida":** o modelo Popular não cria vitrine (isso é conteúdo). A regra `mcmv` tem caixa própria em Vitrines ("Só Minha Casa Minha Vida", ao lado de "Só destaques e exclusivos", no editor de regra de cada vitrine).
+- **Só mudam trocando de modelo:** fonte dos títulos, estilo do menu (maiúsculas), capa dividida e cartões grandes ainda não têm controle próprio em Aparência. Por enquanto, o cliente só chega neles escolhendo um modelo. Por isso a frase da tela diz que "cores, logo e textos" continuam editáveis, e não "tudo".
+
 ## IA Vendedora · Configurar virou passo a passo (desde 2026-10-05)
 
 > Entrega 2 da refatoração da IA Vendedora. Spec: `LM FLOW/specs/2026-10-05-ia-vendedora-refatoracao-design.md`. Plano: `LM FLOW/plans/2026-10-05-ia-vendedora-entrega-2-passo-a-passo.md`. Servidor: PR #410 (`comercial281/lm-flow`, migration 303).

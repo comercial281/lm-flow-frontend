@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Reorder } from 'framer-motion';
 import { ChevronDown, ChevronRight, Eye, EyeOff, GripVertical, Plus, Trash2 } from 'lucide-react';
-import { BLOCK_REGISTRY, type BlockConfig, type BlockInstance } from '@/features/landing/blocks';
+import { BLOCK_REGISTRY, formularioDaCapa, type BlockConfig, type BlockInstance } from '@/features/landing/blocks';
 import { useLandingEditorStore } from './landingEditorStore';
 
 /**
@@ -29,6 +29,10 @@ export function SectionList() {
     }
     prevCount.current = blocks.length;
   }, [blocks.length, selection]);
+
+  // O formulário que foi para dentro da capa continua na lista, no lugar dele,
+  // mas a linha avisa que na página ele aparece na capa.
+  const naCapa = formularioDaCapa(blocks)?.formId;
 
   if (!blocks.length) {
     return <p className="px-1 py-4 text-sm text-muted-foreground">Nenhuma seção ainda.</p>;
@@ -70,6 +74,9 @@ export function SectionList() {
                     <ChevronRight className="h-3.5 w-3.5 flex-none text-muted-foreground" />
                   ))}
                 <span className="truncate">{meta.label}</span>
+                {block.id === naCapa && (
+                  <span className="flex-none text-[11px] text-muted-foreground">dentro da capa</span>
+                )}
               </button>
               <button
                 type="button"

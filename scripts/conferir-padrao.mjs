@@ -136,7 +136,7 @@ export const SEM_ACENTO = palavra(
 const NOMES_PROPRIOS = new Set([
   'WhatsApp', 'LM', 'Flow', 'IA', 'Vendedora', 'Meta', 'Google', 'Facebook', 'Instagram', 'Pixel', 'CAPI',
   'Leal', 'Mídia', 'Kenlo', 'Zap', 'OLX', 'Viva', 'Real', 'Chaves', 'Na', 'Mão', 'Ads', 'Business', 'API',
-  'Canva', 'Notion', 'YouTube', 'TikTok', 'LinkedIn', 'Gmail', 'Outlook', 'Sheets', 'Calendar', 'Drive',
+  'Caixa', 'Minha', 'Casa', 'Vida', 'Canva', 'Notion', 'YouTube', 'TikTok', 'LinkedIn', 'Gmail', 'Outlook', 'Sheets', 'Calendar', 'Drive',
 ]);
 export function emTitleCase(texto) {
   const palavras = texto.trim().split(/\s+/);

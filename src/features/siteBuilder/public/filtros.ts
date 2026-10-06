@@ -26,6 +26,8 @@ export interface PortalProperty {
   rent_price_from?: number | null;
   /** iso8601, para "Mais recentes". Servidor velho não manda. */
   created_at?: string | null;
+  /** Minha Casa Minha Vida: só `true` conta (selo no cartão, regra da vitrine). Servidor velho não manda. */
+  mcmv?: boolean | null;
 }
 
 /* Filtros aplicados na busca (dirigidos pela URL na página de busca). */

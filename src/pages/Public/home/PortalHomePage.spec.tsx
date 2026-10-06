@@ -256,4 +256,72 @@ describe('PortalHomePage · rodapé', () => {
     await abrirHome({ name: 'Imob XYZ' }, [imovel('R1')]);
     expect(document.title).toBe('Imob XYZ — Encontre seu imóvel');
   });
+
+  describe('Como funciona e Atendimento', () => {
+    const passos = (n: number) => Array.from({ length: n }, (_, k) => ({ title: `Passo ${k + 1}`, text: `Texto ${k + 1}` }));
+
+    it('sem as chaves ou desligadas: nenhuma das duas aparece', async () => {
+      await abrirHome({ home: { steps: { enabled: false, items: passos(4) }, about: { enabled: false, title: 'Oi' } } } as SiteInfo, [imovel('R1')]);
+      expect(screen.queryByRole('heading', { name: 'Como funciona' })).toBeNull();
+      expect(screen.queryByText('Oi')).toBeNull();
+      expect(document.getElementById('como-funciona')).toBeNull();
+      expect(document.getElementById('atendimento')).toBeNull();
+    });
+
+    it('Como funciona: 4 passos numerados na ordem, entre as vitrines e as chamadas', async () => {
+      await abrirHome({ home: { steps: { enabled: true, title: 'Como comprar', items: passos(4) } } } as SiteInfo, [imovel('R1')]);
+      const sec = screen.getByRole('heading', { level: 2, name: 'Como comprar' }).closest('section')!;
+      const itens = within(sec).getAllByRole('listitem');
+      expect(itens.map(li => li.textContent)).toEqual(['1Passo 1Texto 1', '2Passo 2Texto 2', '3Passo 3Texto 3', '4Passo 4Texto 4']);
+      expect(within(itens[0]).getByText('1').className).toContain('text-[var(--brand)]');
+    });
+
+    it('Como funciona ligado sem nenhum passo: não aparece', async () => {
+      await abrirHome({ home: { steps: { enabled: true, items: [] } } } as SiteInfo, [imovel('R1')]);
+      expect(screen.queryByRole('heading', { name: 'Como funciona' })).toBeNull();
+    });
+
+    it('Atendimento com foto: foto, texto e botão que leva ao link', async () => {
+      await abrirHome({ home: { about: { enabled: true, eyebrow: 'Quem atende', title: 'Fale com a Ana', text: 'Corretora há 10 anos.',
+        photo_url: 'https://x.com/ana.jpg', button_label: 'Ver o Instagram', button_link: 'https://insta.com/ana' } } } as SiteInfo, [imovel('R1')]);
+      const sec = screen.getByRole('heading', { level: 2, name: 'Fale com a Ana' }).closest('section')!;
+      expect(within(sec).getByText('Quem atende')).toBeInTheDocument();
+      expect(within(sec).getByText('Corretora há 10 anos.')).toBeInTheDocument();
+      expect(within(sec).getByRole('img').getAttribute('src')).toBe('https://x.com/ana.jpg');
+      const botao = within(sec).getByRole('link', { name: 'Ver o Instagram' });
+      expect(botao.getAttribute('href')).toBe('https://insta.com/ana');
+      expect(botao.getAttribute('target')).toBe('_blank');
+    });
+
+    it('Atendimento: #contato rola até o formulário de contato (mesma aba)', async () => {
+      await abrirHome({ home: { about: { enabled: true, title: 'Oi', button_label: 'Falar', button_link: '#contato' } } } as SiteInfo, [imovel('R1')]);
+      const botao = screen.getByRole('link', { name: 'Falar' });
+      expect(botao.getAttribute('href')).toBe('#contato');
+      expect(botao.getAttribute('target')).toBeNull();
+      expect(document.getElementById('contato')).not.toBeNull();
+    });
+
+    it('Atendimento sem foto: só o texto, centralizado', async () => {
+      await abrirHome({ home: { about: { enabled: true, title: 'Oi', text: 'Texto' } } } as SiteInfo, [imovel('R1')]);
+      const sec = screen.getByRole('heading', { level: 2, name: 'Oi' }).closest('section')!;
+      expect(within(sec).queryByRole('img')).toBeNull();
+      expect(sec.className).toContain('text-center');
+    });
+
+    it('Atendimento sem título e sem texto: não aparece', async () => {
+      await abrirHome({ home: { about: { enabled: true, eyebrow: 'Só o selo', button_label: 'X', button_link: '#contato' } } } as SiteInfo, [imovel('R1')]);
+      expect(document.getElementById('atendimento')).toBeNull();
+    });
+
+    it('ordem: vitrines, Como funciona, chamadas, Atendimento, mais buscados', async () => {
+      await abrirHome({
+        anuncie: { enabled: true }, financiamento: { enabled: true },
+        home: { steps: { enabled: true, items: passos(2) }, about: { enabled: true, title: 'Oi' } },
+      } as SiteInfo, [imovel('R1', { featured: true })]);
+      const ordem = ['Imóveis em destaque', 'Como funciona', 'Financiamento', 'Oi'].map(n => screen.getByRole('heading', { name: n }));
+      for (let k = 0; k < ordem.length - 1; k++) {
+        expect(ordem[k].compareDocumentPosition(ordem[k + 1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      }
+    });
+  });
 });

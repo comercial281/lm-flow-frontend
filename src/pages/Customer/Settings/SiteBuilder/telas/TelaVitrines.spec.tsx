@@ -129,4 +129,16 @@ describe('TelaVitrines', () => {
     await userEvent.click(screen.getByLabelText('Só destaques e exclusivos'));
     expect(ultimoHome(espiao).showcases[2].rules?.featured_only).toBe(true);
   });
+
+  it('a caixinha "Só Minha Casa Minha Vida" grava rules.mcmv', async () => {
+    const espiao = vi.fn();
+    const home = { ...HOME_FABRICA, showcases: [...HOME_FABRICA.showcases, livre('x')] };
+    render(<Montar espiao={espiao} home={home} />);
+    await userEvent.click(screen.getByRole('button', { name: /Editar regra/ }));
+    const caixa = screen.getByLabelText('Só Minha Casa Minha Vida');
+    await userEvent.click(caixa);
+    expect(ultimoHome(espiao).showcases[2].rules?.mcmv).toBe(true);
+    await userEvent.click(caixa);
+    expect(ultimoHome(espiao).showcases[2].rules?.mcmv).toBe(false);
+  });
 });

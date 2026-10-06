@@ -18,12 +18,13 @@ import {
 // landing sem a landing usar.
 import { BrPhoneInput } from '@/components/shared/BrPhoneInput';
 import { isValidBrPhone } from '@/lib/brPhone';
-import type { BlockType } from './contract';
+import type { BlockConfig, BlockType } from './contract';
 import {
   type BlockComponentProps,
   type LandingPhoto,
   type LandingProperty,
   STAGE_LABELS,
+  ehLocacao,
   fillTemplate as fill,
   formatBRL,
 } from './render-types';
@@ -73,7 +74,7 @@ const empty = (v: unknown) => v == null || v === '';
 /* Blocks                                                             */
 /* ------------------------------------------------------------------ */
 
-function HeroBlock({ config, property }: BlockComponentProps<'hero'>) {
+function HeroBlock({ config, property, slot, wide = false }: BlockComponentProps<'hero'>) {
   const cover = property?.photos?.find((p) => p.isCover) ?? property?.photos?.[0];
   // A capa redimensionada vence a original: a original é a foto do celular.
   const img = config.imageUrl ?? cover?.heroUrl ?? cover?.url;
@@ -85,19 +86,11 @@ function HeroBlock({ config, property }: BlockComponentProps<'hero'>) {
     property?.fullAddress ??
     [property?.neighborhood, property?.city, property?.state].filter(Boolean).join(' · ');
 
-  return (
-    // A capa é sangrada de ponta a ponta, então o espaçamento escolhido para
-    // ela vira MARGEM (e não recuo interno, como nas outras seções): recuo aqui
-    // deixaria uma faixa de fundo por cima da foto. Sem escolha, zero — que é
-    // exatamente como a capa sempre foi.
-    <div
-      className="relative w-full overflow-hidden"
-      style={{
-        minHeight: 260,
-        marginTop: 'var(--lp-pad-top, 0px)',
-        marginBottom: 'var(--lp-pad-bottom, 0px)',
-      }}
-    >
+  // Foto, degradê e textos. Sem formulário embutido, a capa é só isto — e sai
+  // idêntica à de sempre (260px). Com formulário, a foto encolhe para 200px
+  // no celular: o formulário tem que caber na primeira tela, sem rolar.
+  const foto = (textoCls: string) => (
+    <>
       {img ? (
         // A capa é o maior elemento da primeira tela (o LCP do PageSpeed): pede
         // prioridade alta e nunca é preguiçosa — o resto das imagens é.
@@ -112,7 +105,7 @@ function HeroBlock({ config, property }: BlockComponentProps<'hero'>) {
         <div className="absolute inset-0" style={{ background: 'var(--lp-bg-end)' }} />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
-      <div className="relative flex h-full min-h-[260px] flex-col justify-end p-5">
+      <div className={textoCls}>
         {badge && (
           <span
             className="mb-2 w-fit rounded-full px-3 py-1 text-[11px] font-bold tracking-wide text-white"
@@ -141,12 +134,69 @@ function HeroBlock({ config, property }: BlockComponentProps<'hero'>) {
           </button>
         )}
       </div>
+    </>
+  );
+
+  if (slot) {
+    // Formulário na capa. Celular (e a prévia do editor, que é celular): foto
+    // em cima, formulário logo abaixo num cartão que "sobe" 24px na foto.
+    // Computador (só na página larga): foto e textos à esquerda, formulário à
+    // direita centrado na vertical — o desenho da capa do editor da Kenlo.
+    return (
+      <div
+        className={wide ? 'w-full lg:grid lg:grid-cols-[1.25fr_1fr] lg:items-center lg:gap-8 lg:p-8' : 'w-full'}
+        style={{
+          marginTop: 'var(--lp-pad-top, 0px)',
+          marginBottom: 'var(--lp-pad-bottom, 0px)',
+        }}
+      >
+        <div
+          className={wide ? 'relative w-full overflow-hidden lg:rounded-2xl' : 'relative w-full overflow-hidden'}
+          style={{ minHeight: 200 }}
+        >
+          {foto(
+            wide
+              ? 'relative flex h-full min-h-[200px] flex-col justify-end p-5 pb-11 lg:min-h-[520px] lg:p-8'
+              : 'relative flex h-full min-h-[200px] flex-col justify-end p-5 pb-11',
+          )}
+        </div>
+        <div
+          className={wide ? 'relative -mt-6 overflow-hidden rounded-t-3xl lg:mt-0 lg:rounded-2xl' : 'relative -mt-6 overflow-hidden rounded-t-3xl'}
+          style={{ background: 'var(--lp-block-bg)' }}
+        >
+          {slot}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    // A capa é sangrada de ponta a ponta, então o espaçamento escolhido para
+    // ela vira MARGEM (e não recuo interno, como nas outras seções): recuo aqui
+    // deixaria uma faixa de fundo por cima da foto. Sem escolha, zero — que é
+    // exatamente como a capa sempre foi.
+    <div
+      className="relative w-full overflow-hidden"
+      style={{
+        minHeight: 260,
+        marginTop: 'var(--lp-pad-top, 0px)',
+        marginBottom: 'var(--lp-pad-bottom, 0px)',
+      }}
+    >
+      {foto('relative flex h-full min-h-[260px] flex-col justify-end p-5')}
     </div>
   );
 }
 
 function PriceBandBlock({ config, property }: BlockComponentProps<'price_band'>) {
-  const text = config.text ?? (property?.salePrice ? formatBRL(property.salePrice) : property?.displayPrice);
+  // O texto escrito vence; locação mostra o aluguel; o resto cai no preço de venda.
+  const text =
+    config.text ??
+    (ehLocacao(property) && property?.rentPrice
+      ? `${formatBRL(property.rentPrice)}/mês`
+      : property?.salePrice
+        ? formatBRL(property.salePrice)
+        : property?.displayPrice);
   if (empty(text)) return null;
   return (
     <div
@@ -185,6 +235,18 @@ function techValue(field: string, property?: LandingProperty | null): string | u
       return property.usefulAreaM2 != null ? `${property.usefulAreaM2} m²` : undefined;
     case 'total_area_m2':
       return property.totalAreaM2 != null ? `${property.totalAreaM2} m²` : undefined;
+    case 'delivery': {
+      if (!property.deliveryForecast) return undefined;
+      const d = new Date(property.deliveryForecast);
+      if (Number.isNaN(d.getTime())) return undefined;
+      // "dez/2027": o pt-BR devolve "dez. de 2027" e o ponto do mês sobra.
+      return d
+        .toLocaleDateString('pt-BR', { month: 'short', year: 'numeric', timeZone: 'UTC' })
+        .replace(/\./g, '')
+        .replace(' de ', '/');
+    }
+    case 'units':
+      return property.totalUnits != null ? String(property.totalUnits) : undefined;
     case 'stage':
       return property.stage ? STAGE_LABELS[property.stage] : undefined;
     default:
@@ -630,20 +692,109 @@ function TrackRecordBlock({ config }: BlockComponentProps<'track_record'>) {
   );
 }
 
-function ApartmentTypesBlock({ config }: BlockComponentProps<'apartment_types'>) {
+/** Custo do mês: aluguel + condomínio + IPTU (anual vira 1/12) + extras. */
+function MonthlyCostBlock({ config, property }: BlockComponentProps<'monthly_cost'>) {
+  const linhas: { label: string; value: number }[] = [];
+  if (config.source === 'property' && property) {
+    const iptuMes = property.iptu && property.iptuPeriod === 'yearly' ? property.iptu / 12 : property.iptu;
+    for (const [label, value] of [
+      ['Aluguel', property.rentPrice],
+      ['Condomínio', property.condoFee],
+      ['IPTU', iptuMes],
+    ] as const) {
+      if (value && value > 0) linhas.push({ label, value });
+    }
+  }
+  // Linha extra sem rótulo (acabou de ser criada, ainda vazia) não aparece.
+  for (const e of config.extras) if (e.value > 0 && e.label.trim()) linhas.push({ label: e.label, value: e.value });
+  if (!linhas.length) return null;
+  const total = linhas.reduce((acc, l) => acc + l.value, 0);
+  return (
+    <Section>
+      <SectionTitle>{config.title}</SectionTitle>
+      <div className="rounded-xl p-4 text-sm" style={{ background: 'var(--lp-card)' }}>
+        {linhas.map((l, i) => (
+          <div key={i} className="flex justify-between gap-3 py-1">
+            <span>{l.label}</span>
+            <span>{formatBRL(l.value)}</span>
+          </div>
+        ))}
+        {linhas.length > 1 && (
+          <div className="mt-2 flex justify-between gap-3 border-t pt-2 font-bold" style={{ borderColor: 'var(--lp-text)' }}>
+            <span>Total</span>
+            <span>{formatBRL(total)}</span>
+          </div>
+        )}
+      </div>
+    </Section>
+  );
+}
+
+function StepsBlock({ config }: BlockComponentProps<'steps'>) {
   if (!config.items.length) return null;
   return (
     <Section>
       <SectionTitle>{config.title}</SectionTitle>
-      <div className="space-y-3">
+      <ol className="space-y-4">
         {config.items.map((it, i) => (
+          <li key={i} className="flex items-start gap-3">
+            <span
+              data-step-number
+              className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-sm font-bold text-white"
+              style={{ background: 'var(--lp-primary)' }}
+            >
+              {i + 1}
+            </span>
+            <div>
+              <div className="text-sm font-semibold">{it.title}</div>
+              {it.text && <div className="text-sm opacity-70">{it.text}</div>}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </Section>
+  );
+}
+
+/** Plantas vindas do cadastro do imóvel, quando o bloco não tem itens escritos.
+ *  Preço e área 0 contam como "sem dado" (nada de "R$ 0"); tipologia sem nome,
+ *  dormitórios, área nem preço não vira linha. */
+function deTipologias(property?: LandingProperty | null): BlockConfig<'apartment_types'>['items'] {
+  const locacao = ehLocacao(property);
+  return (property?.typologies ?? []).flatMap((t) => {
+    const preco = (locacao ? t.rentPrice : t.salePrice) || undefined;
+    const area = t.usefulAreaM2 || undefined;
+    if (!t.name && t.bedrooms == null && area == null && preco == null) return [];
+    return [{
+      name: t.name || (t.bedrooms != null ? `${t.bedrooms} dorms` : 'Planta'),
+      areaM2: area,
+      price: preco,
+    }];
+  });
+}
+
+function ApartmentTypesBlock({ config, property }: BlockComponentProps<'apartment_types'>) {
+  // O que foi escrito à mão vence; sem isso, vale o que o imóvel tem.
+  const itens = config.items.length ? config.items : deTipologias(property);
+  const daImovel = !config.items.length;
+  const locacao = ehLocacao(property);
+  if (!itens.length) return null;
+  return (
+    <Section>
+      <SectionTitle>{config.title}</SectionTitle>
+      <div className="space-y-3">
+        {itens.map((it, i) => (
           <div key={i} className="flex items-center gap-3 rounded-xl p-3" style={{ background: 'var(--lp-card)' }}>
             {it.planUrl && <img src={it.planUrl} alt={it.name} loading="lazy" decoding="async" className="h-16 w-16 rounded object-cover" />}
             <div className="flex-1">
               <div className="text-sm font-semibold">{it.name}</div>
               {it.areaM2 != null && <div className="text-xs opacity-70">{it.areaM2} m²</div>}
             </div>
-            {it.price != null && <div className="text-sm font-bold" style={{ color: 'var(--lp-accent)' }}>{formatBRL(it.price)}</div>}
+            {it.price != null && (
+              <div className="text-sm font-bold" style={{ color: 'var(--lp-accent)' }}>
+                {!daImovel ? formatBRL(it.price) : locacao ? `${formatBRL(it.price)}/mês` : `a partir de ${formatBRL(it.price)}`}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -676,7 +827,15 @@ function Confetti() {
   );
 }
 
-function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'lead_form'>) {
+/** `anchor` = este é O formulário da página, o que leva `id="lp-lead-form"` (o
+ *  destino do "Receber" do botão fixo e do botão da capa). Um formulário por
+ *  página: o segundo, se houver, sai sem a âncora para o id nunca duplicar. */
+export function LeadFormBlock({
+  config,
+  property,
+  onSubmitLead,
+  anchor = true,
+}: BlockComponentProps<'lead_form'> & { anchor?: boolean }) {
   const specialist = config.specialistName || property?.responsibleName || 'nosso especialista';
   const steps = config.steps;
   // `path` é o caminho REALMENTE percorrido (índices das perguntas), não um
@@ -777,7 +936,7 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
 
   return (
     <Section>
-      <div id="lp-lead-form" className="scroll-mt-4 rounded-2xl border p-5"
+      <div id={anchor ? 'lp-lead-form' : undefined} className="scroll-mt-4 rounded-2xl border p-5"
         style={{ background: 'var(--lp-block-bg)', borderColor: 'var(--lp-border)', boxShadow: '0 10px 30px rgba(0,0,0,0.06)' }}>
         {done ? (
           <div className="relative py-2 text-center">
@@ -954,6 +1113,8 @@ export const BLOCK_COMPONENTS: Record<BlockType, React.ComponentType<BlockCompon
   valuation_history: ValuationHistoryBlock,
   trust_badges: TrustBadgesBlock,
   track_record: TrackRecordBlock,
+  monthly_cost: MonthlyCostBlock,
+  steps: StepsBlock,
   apartment_types: ApartmentTypesBlock,
   lead_form: LeadFormBlock,
   sticky_cta: StickyCtaBlock,

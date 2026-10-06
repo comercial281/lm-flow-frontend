@@ -88,4 +88,73 @@ describe('LandingEditor (integração UI)', () => {
       .steps;
     expect(steps[1].options.map((o) => o.text)).toContain('Vou pagar à vista ');
   });
+
+  it('Custo Mensal entra pela biblioteca com o título padrão e aceita linha extra', () => {
+    render(<LandingEditor initialBlocks={[]} property={property} onSave={vi.fn()} />);
+    addSection('Custo Mensal');
+    fireEvent.click(screen.getByRole('button', { name: /Custo Mensal/ }));
+    const cfg = () => useLandingEditorStore.getState().blocks[0].config as { title: string; extras: { label: string; value: number }[] };
+    expect(cfg().title).toBe('Custo mensal');
+    fireEvent.click(screen.getByText('+ linha'));
+    expect(cfg().extras).toHaveLength(1);
+    // Nasce com valor 0: o contrato pede número, e sem valor a página não salvava.
+    expect(cfg().extras[0]).toEqual({ label: '', value: 0 });
+    fireEvent.change(screen.getByPlaceholderText('Seguro incêndio'), { target: { value: 'Taxa' } });
+    expect(cfg().extras[0].label).toBe('Taxa');
+    fireEvent.click(screen.getByText('excluir'));
+    expect(cfg().extras).toHaveLength(0);
+  });
+
+  it('Passo a Passo permite incluir, editar e remover, até 6', () => {
+    render(<LandingEditor initialBlocks={[]} property={property} onSave={vi.fn()} />);
+    addSection('Passo a Passo');
+    fireEvent.click(screen.getByRole('button', { name: /Passo a Passo/ }));
+    const cfg = () => useLandingEditorStore.getState().blocks[0].config as { items: { title: string; text: string }[] };
+    for (let i = 0; i < 7; i++) {
+      const add = screen.queryByText('+ passo');
+      if (add) fireEvent.click(add);
+    }
+    expect(cfg().items).toHaveLength(6);
+    expect(screen.queryByText('+ passo')).toBeNull();
+    fireEvent.change(screen.getAllByPlaceholderText('Escolha o imóvel')[0], { target: { value: 'Visita' } });
+    expect(cfg().items[0].title).toBe('Visita');
+    fireEvent.click(screen.getAllByText('excluir')[0]);
+    expect(cfg().items).toHaveLength(5);
+  });
+});
+
+describe('LandingEditor: formulário dentro da capa', () => {
+  beforeEach(() => useLandingEditorStore.getState().load([]));
+
+  it('a capa ganha a caixa; o aviso de "sem formulário" só aparece com a caixa ligada', () => {
+    const hero = createBlock('hero');
+    render(<LandingEditor initialBlocks={[hero]} property={property} onSave={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Hero \/ Capa/ }));
+    const caixa = screen.getByLabelText('Formulário dentro da capa');
+    expect(screen.queryByText('Adicione a seção Formulário de Lead para isto funcionar.')).toBeNull();
+    fireEvent.click(caixa);
+    expect((useLandingEditorStore.getState().blocks[0].config as { formInHero?: boolean }).formInHero).toBe(true);
+    expect(screen.getByText('Adicione a seção Formulário de Lead para isto funcionar.')).toBeInTheDocument();
+  });
+
+  it('com a capa escondida e a caixa ligada, o aviso pede para mostrar a capa', () => {
+    const hero = createBlock('hero');
+    hero.visible = false;
+    (hero.config as { formInHero?: boolean }).formInHero = true;
+    render(<LandingEditor initialBlocks={[hero, createBlock('lead_form')]} property={property} onSave={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Hero \/ Capa/ }));
+    expect(screen.getByText('Mostre a capa para isto funcionar.')).toBeInTheDocument();
+    expect(screen.queryByText('Só funciona com a capa no topo da página.')).toBeNull();
+  });
+
+  it('com o par valendo, a linha do formulário mostra "dentro da capa" e selecioná-la não quebra', () => {
+    const hero = createBlock('hero');
+    (hero.config as { formInHero?: boolean }).formInHero = true;
+    const form = createBlock('lead_form');
+    render(<LandingEditor initialBlocks={[hero, form]} property={property} onSave={vi.fn()} />);
+    expect(screen.getByText('dentro da capa')).toBeInTheDocument();
+    expect(screen.queryByText('Adicione a seção Formulário de Lead para isto funcionar.')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Formulário de Lead/ }));
+    expect(screen.getByRole('button', { name: /Quando você pretende comprar/ })).toBeInTheDocument();
+  });
 });

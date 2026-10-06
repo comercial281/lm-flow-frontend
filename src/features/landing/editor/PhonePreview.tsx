@@ -12,6 +12,9 @@ import { useLandingEditorStore } from './landingEditorStore';
  * A landing é uma coluna estreita por natureza (é feita pra celular, e o
  * endereço público serve a mesma largura no computador), então não existe
  * alternar entre celular e computador: o que se vê aqui é o que o lead vê.
+ * Exceção: com o formulário dentro da capa, o endereço público fica largo no
+ * computador. A prévia continua celular de propósito (sem `wide`); o
+ * computador se confere no link público.
  */
 export function PhonePreview({ property }: { property?: LandingProperty | null }) {
   const blocks = useLandingEditorStore((s) => s.blocks);

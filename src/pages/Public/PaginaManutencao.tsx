@@ -50,7 +50,7 @@ function useAbaEmManutencao(titulo: string) {
 }
 
 export default function PaginaManutencao({ site }: { site: SiteInfo }) {
-  const { fontHref, cssVars, fundo, aparencia } = tokensDoSite(site);
+  const { fontHrefs, cssVars, fundo, aparencia } = tokensDoSite(site);
   useAbaEmManutencao(tituloEmManutencao(site.name));
 
   const waHref = linkDoWhatsApp(site.contact?.whatsapp);
@@ -63,7 +63,7 @@ export default function PaginaManutencao({ site }: { site: SiteInfo }) {
   return (
     <div style={cssVars} data-fundo={fundo} className="flex min-h-screen flex-col items-center justify-center bg-[var(--paper)] px-4 py-16 text-[var(--ink)] antialiased">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link href={fontHref} rel="stylesheet" />
+      {fontHrefs.map(h => <link key={h} href={h} rel="stylesheet" />)}
 
       <main className="w-full max-w-xl rounded-[28px] bg-white px-6 py-12 text-center shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-black/[0.06] sm:px-12">
         {logo ? (

@@ -22,11 +22,13 @@ import { Seletor } from '@/components/base/Seletor';
 import { PhoneInput } from '@/components/shared/PhoneInput';
 
 /* Editor de lista genérico. */
-function Repeater<T>({ items, onChange, empty, addLabel, render }: {
+function Repeater<T>({ items, onChange, empty, addLabel, max, render }: {
   items: T[];
   onChange: (next: T[]) => void;
   empty: T;
   addLabel: string;
+  /** Limite de itens: ao chegar nele o botão de incluir some. */
+  max?: number;
   render: (item: T, update: (patch: Partial<T>) => void) => React.ReactNode;
 }) {
   const patchAt = (i: number, patch: Partial<T>) => onChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
@@ -41,13 +43,46 @@ function Repeater<T>({ items, onChange, empty, addLabel, render }: {
           {render(it, (patch) => patchAt(i, patch))}
         </div>
       ))}
-      <button
-        type="button"
-        onClick={() => onChange([...items, { ...empty }])}
-        className="w-full rounded-lg border border-dashed border-border py-2 text-xs font-medium text-foreground hover:border-primary"
-      >
-        + {addLabel}
-      </button>
+      {(max == null || items.length < max) && (
+        <button
+          type="button"
+          onClick={() => onChange([...items, { ...empty }])}
+          className="w-full rounded-lg border border-dashed border-border py-2 text-xs font-medium text-foreground hover:border-primary"
+        >
+          + {addLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Caixa "Formulário dentro da capa". Com a caixa ligada, o aviso diz por que
+ *  ela ainda não faz nada — sem ele, a pessoa marca, olha a prévia e não vê
+ *  mudança nenhuma. Desligada, não há o que avisar. */
+function FormularioNaCapa({ block }: { block: BlockInstance }) {
+  const update = useLandingEditorStore((s) => s.updateConfig);
+  const blocks = useLandingEditorStore((s) => s.blocks);
+  const ligado = (block.config as { formInHero?: boolean }).formInHero === true;
+  const forms = blocks.filter((b) => b.type === 'lead_form');
+  const aviso = !ligado
+    ? null
+    : !block.visible
+      ? 'Mostre a capa para isto funcionar.'
+      : !forms.length
+        ? 'Adicione a seção Formulário de Lead para isto funcionar.'
+        : !forms.some((b) => b.visible)
+          ? 'Mostre a seção Formulário de Lead para isto funcionar.'
+          : blocks.find((b) => b.visible)?.id !== block.id
+            ? 'Só funciona com a capa no topo da página.'
+            : null;
+  return (
+    <div className="space-y-1">
+      <Check checked={ligado} onChange={(v) => update(block.id, { formInHero: v })} label="Formulário dentro da capa" />
+      <p className="text-[11px] leading-snug text-muted-foreground">
+        O formulário sai do lugar dele e aparece na capa, já na primeira tela do celular. No computador, a página fica
+        larga, com o formulário ao lado da foto.
+      </p>
+      {aviso && <p className="text-[11px] leading-snug text-amber-600">{aviso}</p>}
     </div>
   );
 }
@@ -70,6 +105,7 @@ function Fields({ block }: { block: BlockInstance }) {
           <Field label="Botão sobre a capa" hint="Vazio = sem botão. Preenchido, ele leva o lead direto para o formulário.">
             <Text value={c.ctaLabel as string} onChange={(v) => set({ ctaLabel: v })} placeholder="Quero saber mais" />
           </Field>
+          <FormularioNaCapa block={block} />
         </>
       );
     case 'price_band':
@@ -225,6 +261,42 @@ function Fields({ block }: { block: BlockInstance }) {
                     <Text value={it.year} onChange={(v) => u({ year: v })} placeholder="2023" />
                   </div>
                   <Upload value={it.imageUrl} onChange={(v) => u({ imageUrl: v })} accept="image/*" />
+                </>
+              )}
+            />
+          </Field>
+        </>
+      );
+    case 'monthly_cost':
+      return (
+        <>
+          <Field label="Título"><Text value={c.title as string} onChange={(v) => set({ title: v })} /></Field>
+          <Field label="Outras linhas" hint="Aluguel, condomínio e IPTU vêm do imóvel. Aqui entra o que o cadastro não tem. Até 4 linhas.">
+            <Repeater<{ label: string; value?: number }>
+              items={arr('extras')} onChange={(v) => set({ extras: v })} empty={{ label: '', value: 0 }} addLabel="linha"
+              max={4}
+              render={(it, u) => (
+                <div className="grid grid-cols-2 gap-2">
+                  <Text value={it.label} onChange={(v) => u({ label: v })} placeholder="Seguro incêndio" />
+                  <Num value={it.value} onChange={(v) => u({ value: v ?? 0 })} placeholder="R$ por mês" />
+                </div>
+              )}
+            />
+          </Field>
+        </>
+      );
+    case 'steps':
+      return (
+        <>
+          <Field label="Título"><Text value={c.title as string} onChange={(v) => set({ title: v })} /></Field>
+          <Field label="Passos" hint="Numerados na ordem em que aparecem aqui. Até 6.">
+            <Repeater<{ title: string; text: string }>
+              items={arr('items')} onChange={(v) => set({ items: v })} empty={{ title: '', text: '' }} addLabel="passo"
+              max={6}
+              render={(it, u) => (
+                <>
+                  <Text value={it.title} onChange={(v) => u({ title: v })} placeholder="Escolha o imóvel" />
+                  <Area value={it.text} rows={2} onChange={(v) => u({ text: v })} />
                 </>
               )}
             />

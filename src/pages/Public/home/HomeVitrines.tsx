@@ -26,9 +26,13 @@ function buscaDaVitrine(v: Vitrine): string | null {
   return v.rules ? buscaDaRegra(v.rules) : null;
 }
 
-interface Props { home: HomeConfig; items: PortalProperty[]; tenant: string; wa?: string | null; abas: AbaId[] }
+interface Props {
+  home: HomeConfig; items: PortalProperty[]; tenant: string; wa?: string | null; abas: AbaId[];
+  /** Aparência › cartões grandes: duas colunas a partir do md e o cartão grande. */
+  cartoesGrandes?: boolean;
+}
 
-export default function HomeVitrines({ home, items, tenant, wa, abas }: Props) {
+export default function HomeVitrines({ home, items, tenant, wa, abas, cartoesGrandes = false }: Props) {
   const ctx = useCtxDoSite(tenant);
   const lista = vitrinesVisiveis(home, items);
   if (lista.length === 0) return null;
@@ -58,8 +62,8 @@ export default function HomeVitrines({ home, items, tenant, wa, abas }: Props) {
               </Link>}
             </div>
 
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {itens.map(p => <PropertyCard key={p.id} tenant={tenant} p={p} wa={wa} tab={tab} />)}
+            <div className={cartoesGrandes ? 'grid grid-cols-1 gap-5 md:grid-cols-2' : 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3'}>
+              {itens.map(p => <PropertyCard key={p.id} tenant={tenant} p={p} wa={wa} tab={tab} grande={cartoesGrandes} />)}
             </div>
             {temLink && <div className="mt-8 text-center sm:hidden">
               <Link to={verTodos} className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: 'var(--solid)' }}>

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { BlockConfig, BlockType } from './contract';
 
 /**
@@ -41,6 +42,30 @@ export interface LandingProperty {
   longitude?: number | null;
   photos?: LandingPhoto[];
   responsibleName?: string;
+  /** Empreendimento (lançamento) ou revenda; o servidor velho não manda. */
+  listingKind?: 'development' | 'resale' | null;
+  transaction?: 'sale' | 'rent' | 'sale_rent' | 'season';
+  rentPrice?: number | null;
+  condoFee?: number | null;
+  iptu?: number | null;
+  iptuPeriod?: 'monthly' | 'yearly' | null;
+  mcmv?: boolean | null;
+  acceptsFgts?: boolean | null;
+  /** Previsão de entrega, ISO (`AAAA-MM-DD`). */
+  deliveryForecast?: string | null;
+  totalUnits?: number | null;
+  typologies?: Array<{
+    name?: string | null;
+    bedrooms?: number | null;
+    usefulAreaM2?: number | null;
+    salePrice?: number | null;
+    rentPrice?: number | null;
+  }>;
+}
+
+/** Locação de verdade: aluguel ou temporada. "Venda e locação" segue como venda. */
+export function ehLocacao(p?: LandingProperty | null): boolean {
+  return p?.transaction === 'rent' || p?.transaction === 'season';
 }
 
 /** Branding source for a landing's theme. */
@@ -205,6 +230,12 @@ export interface BlockComponentProps<T extends BlockType = BlockType> {
   theme: LandingTheme;
   /** Fornecido pelo render público — o bloco de formulário usa pra gravar o lead. */
   onSubmitLead?: (payload: LeadSubmitPayload) => Promise<LeadSubmitResult | void> | LeadSubmitResult | void;
+  /** Conteúdo embutido no bloco. Só a capa usa: é onde entra o formulário
+   *  quando `formInHero` vale (ver `formularioDaCapa`). */
+  slot?: ReactNode;
+  /** Página larga no computador (página pública com formulário na capa). A
+   *  prévia do editor nunca passa: lá é sempre celular. */
+  wide?: boolean;
 }
 
 /** Troca os marcadores de um texto configurável — `{especialista}`, `{atual}`,

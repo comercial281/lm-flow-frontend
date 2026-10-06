@@ -13,7 +13,9 @@ import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 import { trackLead } from '@/features/siteBuilder/public/siteTracking';
 import HomeCapa from './home/HomeCapa';
 import HomeVitrines from './home/HomeVitrines';
+import HomeComoFunciona from './home/HomeComoFunciona';
 import HomeChamadas from './home/HomeChamadas';
+import HomeAtendimento from './home/HomeAtendimento';
 import HomeMaisBuscados from './home/HomeMaisBuscados';
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -23,7 +25,8 @@ import HomeMaisBuscados from './home/HomeMaisBuscados';
    WhatsApp), vindos do registro do Site. Zero marca hardcoded.
 
    A página é montada por BLOCOS configurados no Personalizar (settings.home),
-   nesta ordem: capa com busca · vitrines · chamadas · mais buscados · números
+   nesta ordem: capa com busca · vitrines · como funciona · chamadas · atendimento
+   · mais buscados · números
    · captura de contato · rodapé. Cada bloco some sozinho quando não tem o que
    mostrar. A busca da capa é só a ENTRADA: leva à página dedicada de
    busca/filtros (`/portal/:tenant/imoveis`), como os botões do menu do topo.
@@ -31,7 +34,7 @@ import HomeMaisBuscados from './home/HomeMaisBuscados';
 
 export default function PortalHomePage() {
   const tenant = useTenantDoSite();
-  const { state, site, items, fontHref, wa, cities, hoods, types, home, abas, cssVars, fundo, manutencao } = usePortalData(tenant);
+  const { state, site, items, fontHrefs, wa, cities, hoods, types, home, abas, cssVars, fundo, aparencia, manutencao } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
   usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'home', path: pathname });
@@ -85,7 +88,7 @@ export default function PortalHomePage() {
     <div style={cssVars} data-fundo={fundo} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
       {/* Fonte do site (definida no Site Builder) */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link href={fontHref} rel="stylesheet" />
+      {fontHrefs.map(h => <link key={h} href={h} rel="stylesheet" />)}
 
       <PortalHeader site={site} tenant={tenant!} onHome abas={abas} />
 
@@ -94,8 +97,10 @@ export default function PortalHomePage() {
         cities={cities} hoods={hoods} types={types}
         onTab={k => { if (k !== 'launch') setEscolhaFinalidade(finalidadeInicial(k)); }}
       />
-      <HomeVitrines home={home} items={items} tenant={tenant!} wa={wa} abas={abas} />
+      <HomeVitrines home={home} items={items} tenant={tenant!} wa={wa} abas={abas} cartoesGrandes={aparencia.card_style === 'large'} />
+      <HomeComoFunciona home={home} />
       <HomeChamadas site={site} tenant={tenant!} home={home} />
+      <HomeAtendimento home={home} />
       <HomeMaisBuscados home={home} items={items} tenant={tenant!} abas={abas} />
 
       {/* ── Trust band ────────────────────────────────────────────────── */}

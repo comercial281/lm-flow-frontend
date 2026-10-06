@@ -112,8 +112,8 @@ describe('TelaAparencia · visual do site (C3)', () => {
     const enviado = espiao.mock.calls.at(-1)![0].appearance;
     expect(enviado).toMatchObject(esperado);
     // O objeto inteiro: as outras chaves continuam na fábrica.
-    expect(Object.keys(enviado).sort()).toEqual(['background', 'footer_layout', 'footer_text', 'header_style',
-      'hero_height', 'hero_overlay', 'logo_light_url', 'top_bar']);
+    expect(Object.keys(enviado).sort()).toEqual(['background', 'card_style', 'footer_layout', 'footer_text', 'header_style',
+      'heading_font', 'hero_height', 'hero_layout', 'hero_overlay', 'logo_light_url', 'menu_style', 'top_bar']);
     expect(botao.getAttribute('aria-pressed')).toBe('true');
   });
 

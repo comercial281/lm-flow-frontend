@@ -15,7 +15,7 @@ const MAX_VITRINES = 6;
 const OPCOES_TIPO = opcoesDeTipo(Object.keys(ROTULO_TIPO));
 const REGRA_VAZIA: RegrasVitrine = {
   transaction: null, listing_kind: null, property_types: [], cities: [], neighborhoods: [],
-  price_min: null, price_max: null, stages: [], featured_only: false,
+  price_min: null, price_max: null, stages: [], featured_only: false, mcmv: false,
 };
 const TITULO_FABRICA: Record<string, string> = Object.fromEntries(HOME_FABRICA.showcases.map(v => [v.id, v.title]));
 const DICA_FABRICA: Record<Vitrine['kind'], string> = {
@@ -225,9 +225,15 @@ function EditorDeRegra({ idBase, regras, mudar }: { idBase: string; regras: Regr
         </fieldset>
       )}
 
-      <div className="flex items-center gap-2">
-        <Checkbox id={`${idBase}-destaque`} checked={regras.featured_only} onCheckedChange={c => mudar({ featured_only: c === true })} />
-        <UILabel htmlFor={`${idBase}-destaque`} className="cursor-pointer">Só destaques e exclusivos</UILabel>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="flex items-center gap-2">
+          <Checkbox id={`${idBase}-destaque`} checked={regras.featured_only} onCheckedChange={c => mudar({ featured_only: c === true })} />
+          <UILabel htmlFor={`${idBase}-destaque`} className="cursor-pointer">Só destaques e exclusivos</UILabel>
+        </div>
+        <div className="flex items-center gap-2">
+          <Checkbox id={`${idBase}-mcmv`} checked={regras.mcmv} onCheckedChange={c => mudar({ mcmv: c === true })} />
+          <UILabel htmlFor={`${idBase}-mcmv`} className="cursor-pointer">Só Minha Casa Minha Vida</UILabel>
+        </div>
       </div>
     </div>
   );
