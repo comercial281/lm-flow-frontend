@@ -853,24 +853,6 @@ export default function ChannelSettings() {
             <TabsContent value="collaborators">
               {activeTab === 'collaborators' && <CollaboratorsForm
                 inboxId={inboxId}
-                enableAutoAssignment={inbox?.enable_auto_assignment === true}
-                maxAssignmentLimit={
-                  inbox?.auto_assignment_config?.max_assignment_limit !== undefined
-                    ? inbox.auto_assignment_config.max_assignment_limit
-                    : null
-                }
-                onAutoAssignmentChange={async (enabled, limit) => {
-                  // Update inbox auto assignment settings
-                  const payload = {
-                    id: inboxId,
-                    enable_auto_assignment: enabled,
-                    auto_assignment_config: {
-                      max_assignment_limit: limit,
-                    },
-                  };
-                  await InboxesService.update(inboxId, payload);
-                  await loadChannelData(); // Refresh data after update
-                }}
                 ownerUserId={inbox?.owner_user_id ?? null}
                 numberOwnerRule={ownerRuleForChannel(inboxHook.isAWhatsAppChannel, numberCard)}
                 numberCard={numberCard}

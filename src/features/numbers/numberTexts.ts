@@ -104,15 +104,6 @@ export function numberRuleLine(owner: NumberOwnerRef | null): string {
   return `Número de ${owner.name}: quem escreve nele vai direto pra ${owner.name}`;
 }
 
-/**
- * Embaixo do número travado, na Roleta — e também na lista de "por que não
- * salva": é a MESMA frase da recusa do servidor (Ruling A8-1/E20), sem o nome
- * do número.
- */
-export function ownerLockText(ownerName: string): string {
-  return `Este número é de ${ownerName}. Pra dividir, tire o dono em Canais.`;
-}
-
 export function ownedNumberLine(n: OwnedNumber): string {
   const rotulo = formatPhone(n.phone) || n.name;
   return n.principal ? `${rotulo} · ${PRINCIPAL}` : rotulo;

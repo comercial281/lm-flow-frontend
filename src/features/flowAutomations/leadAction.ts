@@ -13,7 +13,6 @@ import {
   RETIRED_ACTION_TYPES,
   missingActionParams,
   type LeadAutomationAction,
-  type OpcoesDaValidacao,
 } from '@/services/leadAutomation/leadAutomationService';
 import type { FlowNodeConfig, FlowNodeGroup } from '@/types/flowAutomations';
 
@@ -167,10 +166,10 @@ function paramName(type: string, key: string): string {
 }
 
 /** O que falta preencher no bloco, em português, ou null se está pronto. */
-export function leadActionProblem(config: FlowNodeConfig | null | undefined, opcoes: OpcoesDaValidacao = {}): string | null {
+export function leadActionProblem(config: FlowNodeConfig | null | undefined): string | null {
   const action = leadActionOf(config);
   if (!isLeadActionType(action.type)) return null;
-  const missing = missingActionParams(action, opcoes);
+  const missing = missingActionParams(action);
   if (missing.length === 0) return null;
   const names = missing.map(key => paramName(action.type, key));
   const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`;

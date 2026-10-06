@@ -33,10 +33,12 @@ describe('para quem a IA passa o lead', () => {
     expect(passo2).toContain("handoff_user_id: v === 'user' ? rascunho.handoff_user_id ?? null : null");
   });
 
-  it('o padrão é a roleta do número — e é o primeiro cartão', () => {
+  // Roleta nova (06/10/2026): a roleta não tem número, e "A roleta deste número"
+  // saiu da lista. "Uma roleta" é o primeiro cartão.
+  it('"Uma roleta" é o primeiro cartão; a roleta do número não é oferecida', () => {
     const lista = passo2.slice(passo2.indexOf('const DESTINOS'), passo2.indexOf('export default function Passo2Objetivo'));
-    expect(lista.indexOf("valor: 'inbox_roleta'")).toBeGreaterThan(-1);
-    expect(lista.indexOf("valor: 'inbox_roleta'")).toBeLessThan(lista.indexOf("valor: 'roleta'"));
+    expect(lista.indexOf("valor: 'inbox_roleta'")).toBe(-1);
+    expect(lista.indexOf("valor: 'roleta'")).toBeGreaterThan(-1);
     expect(lista.indexOf("valor: 'roleta'")).toBeLessThan(lista.indexOf("valor: 'user'"));
   });
 

@@ -9,7 +9,6 @@
 // (`HandoffPolicy`: "só se ela não souber responder" / "ao menor sinal de dúvida"),
 // não "o lead sumiu". Aparecem só pra quem já os tem, e continuam valendo.
 import { useEffect, useState } from 'react';
-import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/ds';
 import { Secao } from '@/components/base/Secao';
@@ -40,9 +39,10 @@ const ALCANCES: OpcaoDeEscolha<AlcanceDaIa>[] = [
 ];
 
 // "Sistema do cliente" (entrega 5): não vale na persona do próprio corretor.
-const DESTINOS: OpcaoDeEscolha<Exclude<SalesAgentHandoffTarget, 'number_owner'>>[] = [
-  { valor: 'inbox_roleta', titulo: 'A roleta deste número', descricao: 'Vale a roleta do WhatsApp em que ela atende.' },
-  { valor: 'roleta', titulo: 'Uma roleta escolhida', descricao: 'Pra quando ela atende num número e os corretores atendem em outros.' },
+// Roleta nova (06/10/2026): a roleta não tem número, então "A roleta deste
+// número" saiu; fica "Uma roleta".
+const DESTINOS: OpcaoDeEscolha<Exclude<SalesAgentHandoffTarget, 'number_owner' | 'inbox_roleta'>>[] = [
+  { valor: 'roleta', titulo: 'Uma roleta', descricao: 'O lead vai pro próximo da fila da roleta escolhida.' },
   { valor: 'user', titulo: 'Um corretor fixo', descricao: 'O lead vai sempre pra mesma pessoa, com o botão de aceitar.' },
   {
     valor: 'webhook',
@@ -51,18 +51,9 @@ const DESTINOS: OpcaoDeEscolha<Exclude<SalesAgentHandoffTarget, 'number_owner'>>
   },
 ];
 
-// Roleta nova (06/10/2026): a roleta não tem número, então "A roleta deste número"
-// sai. Fica "Uma roleta", com o mesmo jeito de escolher.
-const DESTINOS_ROLETA_NOVA = DESTINOS
-  .filter((o) => o.valor !== 'inbox_roleta')
-  .map((o) => (o.valor === 'roleta'
-    ? { ...o, titulo: 'Uma roleta', descricao: 'O lead vai pro próximo da fila da roleta escolhida.' }
-    : o));
-
 export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
   const { rascunho, mudar, pendente, salvando, erro, salvar, descartar } = useRascunho(agent, CAMPOS_DO_PASSO[2], aoSalvo);
-  const roletaNova = useClientToggle('roleta_nova');
-  // IA que estava em "A roleta deste número" quando a chave ligou: a tela já
+  // IA que ainda tem gravado "A roleta deste número" (valor antigo): a tela já
   // escolhe "Uma roleta" com a roleta que atendia o número e pede a confirmação.
   const [confirmarRoleta, setConfirmarRoleta] = useState(false);
   const [roletas, setRoletas] = useState<{ id: string; nome: string; ativa: boolean }[]>([]);
@@ -90,7 +81,7 @@ export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
     return () => { vivo = false; };
   }, []);
 
-  const naRoletaDoNumero = roletaNova && rascunho.handoff_target === 'inbox_roleta' && escolhas.persona !== 'broker';
+  const naRoletaDoNumero = rascunho.handoff_target === 'inbox_roleta' && escolhas.persona !== 'broker';
   useEffect(() => {
     if (!naRoletaDoNumero) return;
     let vivo = true;
@@ -149,7 +140,7 @@ export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
     ...(quando === 'sem_resposta' ? [{ valor: 'sem_resposta' as Quando, titulo: 'Só quando ela não souber responder (opção antiga)', descricao: 'Continua valendo até você escolher outra.' }] : []),
   ];
 
-  const destinos = (roletaNova ? DESTINOS_ROLETA_NOVA : DESTINOS).map((o) => (o.valor === 'webhook' && !webhookDisponivel(escolhas.persona)
+  const destinos = DESTINOS.map((o) => (o.valor === 'webhook' && !webhookDisponivel(escolhas.persona)
     ? { ...o, desabilitada: true, motivo: 'Na persona corretor o lead vai sempre pro dono do número.' }
     : o));
 
@@ -224,7 +215,7 @@ export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
                 <Seletor id="p2-roleta" className={`${CLASSE_DO_CAMPO} w-full`} value={rascunho.handoff_roleta_config_id ?? ''}
                   onChange={(e) => mudar({ handoff_roleta_config_id: e.target.value || null })}>
                   <option value="">Escolha a roleta</option>
-                  {roletasVisiveis.map((r) => <option key={r.id} value={r.id}>{r.nome}{r.ativa ? '' : roletaNova ? ' (desligada)' : ' (desativada)'}</option>)}
+                  {roletasVisiveis.map((r) => <option key={r.id} value={r.id}>{r.nome}{r.ativa ? '' : ' (desligada)'}</option>)}
                 </Seletor>
               </Campo>
             )}

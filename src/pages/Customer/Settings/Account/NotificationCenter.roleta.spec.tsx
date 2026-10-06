@@ -2,13 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
-// Central de Notificações × roleta nova (06/10/2026, D7): com a chave
-// `roleta_nova`, os avisos da roleta saem da lista (vivem na aba Avisos da página
-// "Roleta de leads") e a tela diz onde estão.
-const chave = vi.hoisted(() => ({ roletaNova: false }));
-vi.mock('@/contexts/TenantFeaturesContext', () => ({
-  useClientToggle: (k: string) => (k === 'roleta_nova' ? chave.roletaNova : false),
-}));
+// Central de Notificações × roleta nova (06/10/2026, D7): os avisos da roleta
+// saem da lista (vivem na aba Avisos da página "Roleta de leads") e a tela diz
+// onde estão.
 const policy = vi.hoisted(() => vi.fn());
 vi.mock('@/services/notifications/notificationPreferencesService', () => ({
   default: { policy, updatePolicy: vi.fn() },
@@ -26,7 +22,6 @@ const evento = (key: string, label: string, group: string) => ({ key, label, gro
 const ligado = { channels: { whatsapp: { value: true } } };
 
 beforeEach(() => {
-  chave.roletaNova = false;
   policy.mockReset().mockResolvedValue({
     groups: [{ key: 'lead', label: 'Lead' }, { key: 'roleta', label: 'Roleta' }],
     channels: [], origin_groups: [], users: [], pipelines: [], can_edit: true,
@@ -47,15 +42,7 @@ const abrir = async () => {
 };
 
 describe('Central de Notificações × roleta nova', () => {
-  it('sem a chave: a lista é a de sempre', async () => {
-    await abrir();
-    expect(await screen.findByText('Você foi sorteado para um lead')).toBeInTheDocument();
-    expect(screen.getByText('3 avisos ligados.', { exact: false })).toBeInTheDocument();
-    expect(screen.queryByText(/Os avisos da roleta ficam em/)).toBeNull();
-  });
-
-  it('com a chave: oferta, aceito e repasse saem da lista, com a frase e o link', async () => {
-    chave.roletaNova = true;
+  it('oferta, aceito e repasse saem da lista, com a frase e o link', async () => {
     await abrir();
     expect(await screen.findByText('Lead novo de anúncio')).toBeInTheDocument();
     expect(screen.queryByText('Você foi sorteado para um lead')).toBeNull();

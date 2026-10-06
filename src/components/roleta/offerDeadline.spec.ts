@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deadlineLabel, hasDeadline, isNoDeadline, timeoutLabel } from './offerDeadline';
+import { deadlineLabel, hasDeadline, isNoDeadline } from './offerDeadline';
 import type { BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
 
 // A roleta sem prazo: `deadline` nulo NÃO é "prazo esgotado". Antes desta
@@ -52,10 +52,3 @@ describe('deadlineLabel', () => {
   });
 });
 
-describe('timeoutLabel', () => {
-  it('traduz o prazo gravado para o resumo', () => {
-    expect(timeoutLabel(30)).toBe('30 min');
-    expect(timeoutLabel(0)).toBe('sem prazo');
-    expect(timeoutLabel(null)).toBeNull();
-  });
-});

@@ -471,42 +471,6 @@
         "role": "Função",
         "status": "Status"
       },
-      "autoAssignment": {
-        "title": "Atribuição Automática",
-        "description": "Configure como as conversas são atribuídas automaticamente aos agentes",
-        "enable": {
-          "label": "Habilitar atribuição automática",
-          "description": "As novas conversas serão automaticamente atribuídas aos agentes disponíveis"
-        },
-        "maxLimit": {
-          "title": "Limite Máximo de Conversas",
-          "label": "Máximo de conversas por agente",
-          "placeholder": "Digite o número máximo",
-          "help": "Número máximo de conversas que um agente pode ter simultaneamente"
-        },
-        "buttons": {
-          "updateLimit": "Atualizar Limite",
-          "updating": "Atualizando..."
-        },
-        "info": {
-          "title": "Informações Importantes:",
-          "point1": "A atribuição automática distribui conversas entre agentes disponíveis",
-          "point2": "Considera a carga de trabalho atual de cada agente",
-          "point3": "Agentes offline não recebem novas conversas automaticamente",
-          "point4": "Você pode definir limite máximo de conversas por agente"
-        },
-        "success": {
-          "updated": "Atribuição automática atualizada com sucesso!",
-          "limitUpdated": "Limite de conversas atualizado com sucesso!"
-        },
-        "errors": {
-          "updateError": "Erro ao atualizar atribuição automática",
-          "limitUpdateError": "Erro ao atualizar limite de conversas"
-        },
-        "validation": {
-          "limitPositive": "O limite deve ser um número positivo"
-        }
-      },
       "errors": {
         "loadError": "Erro ao carregar dados dos colaboradores",
         "updateError": "Erro ao atualizar agentes"

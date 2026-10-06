@@ -12,8 +12,3 @@ export function moveMember<T>(list: T[], index: number, delta: -1 | 1): T[] {
   [next[index], next[alvo]] = [next[alvo], next[index]];
   return next;
 }
-
-/** "1º", "2º"... — como a posição aparece na tela. */
-export function queueOrdinal(index: number): string {
-  return `${index + 1}º`;
-}

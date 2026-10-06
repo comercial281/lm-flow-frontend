@@ -4,7 +4,7 @@ import {
   NO_OWNED_NUMBERS_OTHER, NO_OWNED_NUMBERS_SELF, NO_PHONE, NO_ROLETA, NUMBERS_COLUMN, NUMBERS_TITLE, OWNER_EXPLANATION,
   OWNER_TITLE, PREVIOUS_OWNER_KEEP, PREVIOUS_OWNER_REMOVE, PRIMARY_DONE, PRIMARY_FAILED, PRIMARY_HINT_OTHER,
   PRIMARY_HINT_SELF, PRINCIPAL, SHARED_LABEL, connectionLabel, formatPhone, liberatedSummary, lockedOwnerId,
-  numberRuleLine, numbersColumnText, ownedNumberLine, ownerLine, ownerLockText, previousOwnerPrompt, withOwner,
+  numberRuleLine, numbersColumnText, ownedNumberLine, ownerLine, previousOwnerPrompt, withOwner,
 } from './numberTexts';
 import type { OwnedNumber } from './types';
 
@@ -97,17 +97,10 @@ describe('ownerLine — de quem é o número, no cartão de Canais', () => {
   });
 });
 
-describe('numberRuleLine e a trava da roleta (neutro de gênero, E10)', () => {
+describe('numberRuleLine (neutro de gênero, E10)', () => {
   it('número de alguém e número da imobiliária', () => {
     expect(numberRuleLine({ id: 'u1', name: 'Fulano' })).toBe('Número de Fulano: quem escreve nele vai direto pra Fulano');
     expect(numberRuleLine(null)).toBe('Número da imobiliária: quem escreve entra na roleta');
-  });
-
-  // Ruling A8-1/E20: a mesma frase serve embaixo do número travado e na lista
-  // de "por que não salva" — sem o nome do número, exatamente como o servidor
-  // recusa (RoletaConfigsController#owner_conflict_error).
-  it('a trava diz o caminho, e é a MESMA frase da recusa do servidor', () => {
-    expect(ownerLockText('Fulano')).toBe('Este número é de Fulano. Pra dividir, tire o dono em Canais.');
   });
 });
 
@@ -183,7 +176,7 @@ describe('linguagem da tela', () => {
       MAKE_PRIMARY, CHANGE_IN_CHANNELS, NOTICE_PHONE_LABEL, PRIMARY_HINT_SELF, PRIMARY_HINT_OTHER,
       NO_OWNED_NUMBERS_SELF, NO_OWNED_NUMBERS_OTHER, MY_NUMBERS_DESCRIPTION, PRIMARY_DONE, PRIMARY_FAILED, NO_PHONE,
       NO_ROLETA, NO_AI, CONNECTION_NOTE, PREVIOUS_OWNER_REMOVE, PREVIOUS_OWNER_KEEP, previousOwnerPrompt('X'),
-      numberRuleLine(null), numberRuleLine({ id: 'u', name: 'X' }), ownerLockText('X'),
+      numberRuleLine(null), numberRuleLine({ id: 'u', name: 'X' }),
       ownerLine({ number_owner_rule: true, owner: null, shared: true }),
       liberatedSummary({ sees_all_inboxes: false, granted_inbox_ids: [], auto_inbox_ids: [] }),
       ...(['connected', 'connecting', 'disconnected', 'unknown'] as const).map(connectionLabel),

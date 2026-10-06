@@ -21,7 +21,7 @@ import {
 // ── QUANDO FUNCIONA (roleta nova, D8) ───────────────────────────────────────
 //
 // O horário é DA ROLETA. Fora dele o lead espera e é oferecido quando abrir
-// (sempre, com a chave ligada: não existe mais "número de plantão"). Opcional:
+// (sempre: não existe mais "número de plantão"). Opcional:
 // mandar uma mensagem pro lead enquanto ele espera, escolhendo o número e o texto.
 //
 // Regra da casa: a chave da mensagem vale na hora; o horário, o número e o
@@ -138,7 +138,7 @@ export default function HorarioBloco({ roleta, aoMudar }: Props) {
           <WeeklyWindowsEditor
             value={d.janelas}
             onChange={janelas => mudar({ janelas })}
-            idPrefix="roleta_nova_win"
+            idPrefix="roleta_win"
             addLabel="+ Adicionar outra faixa (ex.: fechar no almoço)"
           />
 

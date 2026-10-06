@@ -322,22 +322,15 @@ export const ACTION_REQUIRED_PARAMS: Record<string, string[]> = {
   notify_broker:           ['message'],
   notify_gestor:           ['message'],
   notify_push:             ['user_ids', 'message'],
-  // wait não tem params obrigatórios. assign_via_roleta: ver ROLETA_OBRIGATORIA.
+  // "Distribuir pela roleta" (roleta nova, 06/10/2026): a roleta não tem número,
+  // então a ação ESCOLHE a roleta.
+  assign_via_roleta:       ['roleta_config_id'],
+  // wait não tem params obrigatórios.
 };
-
-/**
- * "Distribuir pela roleta" com a chave `roleta_nova` (06/10/2026): a roleta não
- * tem número, então a ação ESCOLHE a roleta (`roleta_config_id`, obrigatório).
- * Sem a chave, vazio continua valendo como "a roleta do número da conversa".
- */
-export interface OpcoesDaValidacao {
-  roletaObrigatoria?: boolean;
-}
 
 /** Os params obrigatórios da ação que estão vazios, na ordem do mapa. */
 export function missingActionParams(
   action: { type: string; params?: Record<string, unknown> | null },
-  { roletaObrigatoria = false }: OpcoesDaValidacao = {},
 ): string[] {
   const empty = (value: unknown) =>
     value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
@@ -346,8 +339,6 @@ export function missingActionParams(
   if (action.type === 'send_message_funnel' && empty(action.params?.flow_automation_id) && !empty(action.params?.funnel_id)) {
     return [];
   }
-  const required = action.type === 'assign_via_roleta'
-    ? (roletaObrigatoria ? ['roleta_config_id'] : [])
-    : ACTION_REQUIRED_PARAMS[action.type] ?? [];
+  const required = ACTION_REQUIRED_PARAMS[action.type] ?? [];
   return required.filter(key => empty(action.params?.[key]));
 }

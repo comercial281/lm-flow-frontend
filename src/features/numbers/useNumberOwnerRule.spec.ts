@@ -11,7 +11,7 @@ vi.mock('@/contexts/TenantFeaturesContext', () => ({
   useClientToggle: (key: string) => toggles.value[key] === true,
 }));
 
-import { ownerRuleForChannel, ownerRuleFromList, resolveOwnerRule, useNumberOwnerRule } from './useNumberOwnerRule';
+import { ownerRuleForChannel, resolveOwnerRule, useNumberOwnerRule } from './useNumberOwnerRule';
 
 const CHAVE = ['numero', 'dono', 'unico'].join('_');
 
@@ -28,15 +28,6 @@ describe('resolveOwnerRule', () => {
   it('sem eco, vale a chave do cliente', () => {
     expect(resolveOwnerRule(null, true)).toBe(true);
     expect(resolveOwnerRule(undefined, false)).toBe(false);
-  });
-});
-
-describe('ownerRuleFromList', () => {
-  it('pega o primeiro eco booleano da lista; sem nenhum, nulo', () => {
-    expect(ownerRuleFromList([{}, { number_owner_rule: true }])).toBe(true);
-    expect(ownerRuleFromList([{ number_owner_rule: false }])).toBe(false);
-    expect(ownerRuleFromList([{}, { number_owner_rule: null }])).toBeNull();
-    expect(ownerRuleFromList(null)).toBeNull();
   });
 });
 

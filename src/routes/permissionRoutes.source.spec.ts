@@ -40,11 +40,12 @@ describe('endereço antigo do assistente da IA', () => {
   });
 });
 
-describe('roleta nova (chave roleta_nova)', () => {
-  it('as duas montagens da Roleta passam pelo mesmo portão', () => {
-    expect(trecho('roleta-config')).toContain('<ChaveRoletaNova ligada={<RoletaLista />} desligada={<RoletaConfigPage />} />');
-    expect(trecho('/settings/roleta-config')).toContain('<ChaveRoletaNova ligada={<RoletaLista />} desligada={<RoletaConfigPage />} />');
-    expect(trecho('roleta-config/:id')).toContain('<ChaveRoletaNova ligada={<RoletaPagina />}');
+describe('roleta (a nova é a única desde 06/10/2026)', () => {
+  it('as duas montagens da Roleta abrem a lista nova; a página da roleta sem portão', () => {
+    expect(trecho('roleta-config')).toContain('<RoletaLista />');
+    expect(trecho('/settings/roleta-config')).toContain('<RoletaLista />');
+    expect(trecho('roleta-config/:id')).toContain('<RoletaPagina />');
+    expect(trecho('roleta-config')).not.toContain('ChaveRoletaNova');
   });
 });
 
@@ -76,7 +77,7 @@ describe('toda rota do CRM confere o cargo', () => {
     ['origem', 'lead_ads_form_configs', 'read'],
     ['flow-builder', 'flow_automations', 'read'],
     ['flow-builder/:id', 'flow_automations', 'read'],
-    // Roleta nova: a lista e a página da roleta pedem o mesmo cargo da tela antiga.
+    // Roleta: a lista e a página da roleta pedem roleta_configs.read.
     ['roleta-config', 'roleta_configs', 'read'],
     ['roleta-config/:id', 'roleta_configs', 'read'],
     // Rulings do controlador (X36/G5, 2026-09-26) — além da tabela do brief;
