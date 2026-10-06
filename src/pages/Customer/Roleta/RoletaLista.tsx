@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { AlertTriangle, Loader2, Plus, Shuffle } from 'lucide-react';
+import { AlertTriangle, CalendarClock, FileText, Loader2, Plus, Shuffle, Timer, Users, type LucideIcon } from 'lucide-react';
 import {
   Button,
   Dialog,
@@ -24,14 +24,15 @@ import {
   roletaLabel,
   type RoletaConfig,
 } from '@/services/roletaConfig/roletaConfigService';
-import { atencaoTexto, horarioTexto, origensEFila, prazoFrase } from './roletaNovaTextos';
+import { atencaoTexto, filaTexto, horarioTexto, origensResumo, prazoTexto } from './roletaNovaTextos';
 import { ENDERECO_DA_ROLETA } from './enderecos';
 import HistoricoLista from './HistoricoLista';
 import AvisosAba from './AvisosAba';
 
 // ── ROLETA DE LEADS (a roleta nova, a única desde 06/10/2026) ───────────────
 //
-// Página com três abas (D1): Roletas (um cartão por roleta, lido como frase),
+// Página com três abas (D1): Roletas (um cartão por roleta: origens, prazo,
+// horário e fila, com o triângulo de atenção que abre o que resolver),
 // Histórico (de todas as roletas) e Avisos (valem pra todas, D7). A aba mora no
 // endereço (`?aba=historico|avisos`), então dá pra mandar o link.
 // Spec: LM FLOW/specs/2026-10-06-roleta-reestruturacao-design.md.
@@ -39,30 +40,62 @@ import AvisosAba from './AvisosAba';
 type Aba = 'roletas' | 'historico' | 'avisos';
 const ABAS: Aba[] = ['roletas', 'historico', 'avisos'];
 
+/** Um dado do cartão: ícone, rótulo pequeno e o valor. */
+function DadoDoCartao({ icone: Icone, rotulo, valor, dica }: { icone: LucideIcon; rotulo: string; valor: string; dica?: string }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2.5" title={dica}>
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+        <Icone className="h-4 w-4" aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground">{rotulo}</p>
+        <p className="text-sm font-medium leading-snug">{valor}</p>
+      </div>
+    </div>
+  );
+}
+
+// O cartão inteiro abre a roleta (o link do nome se estica por cima dele); o
+// triângulo é outro link, por cima, que cai direto no que precisa resolver.
 function CartaoDaRoleta({ roleta }: { roleta: RoletaConfig }) {
   const atencao = atencaoTexto(roleta);
   const nome = roletaLabel(roleta);
+  const resolver = (roleta.exhausted_count_7d ?? 0) > 0
+    ? `${ENDERECO_DA_ROLETA(roleta.id)}?aba=historico&filtro=atencao`
+    : `${ENDERECO_DA_ROLETA(roleta.id)}?aba=historico`;
   return (
-    <Link
-      to={ENDERECO_DA_ROLETA(roleta.id)}
-      aria-label={`Abrir a roleta ${nome}`}
-      className="block rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/50 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
+    <div className="relative rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/50 hover:bg-muted/30">
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-base font-semibold leading-snug">{nome}</h2>
-        <BaseStatusBadge status={roleta.is_active ? 'active' : 'inactive'} text={roleta.is_active ? 'Ligada' : 'Desligada'} />
+        <h2 className="text-base font-semibold leading-snug">
+          <Link
+            to={ENDERECO_DA_ROLETA(roleta.id)}
+            aria-label={`Abrir a roleta ${nome}`}
+            className="after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
+          >
+            {nome}
+          </Link>
+        </h2>
+        <div className="flex shrink-0 items-center gap-2">
+          {atencao && (
+            <Link
+              to={resolver}
+              title={atencao}
+              aria-label={`${atencao}. Ver no histórico`}
+              className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full text-amber-600 transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-400 dark:hover:bg-amber-500/15"
+            >
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          )}
+          <BaseStatusBadge status={roleta.is_active ? 'active' : 'inactive'} text={roleta.is_active ? 'Ligada' : 'Desligada'} />
+        </div>
       </div>
-      <p className="mt-3 text-sm text-foreground">{origensEFila(roleta)}</p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {prazoFrase(roleta.timeout_minutes)} · {horarioTexto(roleta.business_hours_config)}
-      </p>
-      {atencao && (
-        <p className="mt-3 flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-400">
-          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
-          {atencao}
-        </p>
-      )}
-    </Link>
+      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-border pt-4">
+        <DadoDoCartao icone={FileText} rotulo="Origens" valor={origensResumo(roleta)} dica={(roleta.origins_summary ?? []).join('\n') || undefined} />
+        <DadoDoCartao icone={Timer} rotulo="Pra aceitar" valor={prazoTexto(roleta.timeout_minutes)} />
+        <DadoDoCartao icone={CalendarClock} rotulo="Horário" valor={horarioTexto(roleta.business_hours_config)} />
+        <DadoDoCartao icone={Users} rotulo="Na fila" valor={filaTexto(roleta)} />
+      </div>
+    </div>
   );
 }
 

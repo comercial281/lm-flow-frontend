@@ -30,10 +30,10 @@ const item = (extra = {}) => ({
   ...extra,
 });
 
-const abrir = (roletaId?: string) => render(
+const abrir = (roletaId?: string, filtroInicial?: 'all' | 'attention') => render(
   <MemoryRouter initialEntries={['/automations/roleta-config']}>
     <Routes>
-      <Route path="/automations/roleta-config" element={<HistoricoLista roletaId={roletaId} />} />
+      <Route path="/automations/roleta-config" element={<HistoricoLista roletaId={roletaId} filtroInicial={filtroInicial} />} />
       <Route path="*" element={<Onde />} />
     </Routes>
   </MemoryRouter>,
@@ -55,6 +55,13 @@ describe('Histórico da roleta', () => {
     expect(screen.queryByRole('columnheader', { name: 'Roleta' })).toBeNull();
     expect(svc.getHistory).toHaveBeenCalledWith({ roletaId: 'r1', filter: 'all', userId: null, days: 7 });
     expect(screen.queryByRole('combobox', { name: 'Roleta' })).toBeNull();
+  });
+
+  it('pode abrir já em "Precisa de atenção"', async () => {
+    abrir('r1', 'attention');
+    expect(await screen.findByText('Maria Silva')).toBeInTheDocument();
+    expect(svc.getHistory).toHaveBeenCalledWith({ roletaId: 'r1', filter: 'attention', userId: null, days: 7 });
+    expect(screen.getByRole('radio', { name: 'Precisa de atenção' })).toHaveAttribute('aria-checked', 'true');
   });
 
   it('geral: coluna e filtro da roleta (escolher uma usa o histórico dela)', async () => {

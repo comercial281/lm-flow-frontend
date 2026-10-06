@@ -7159,3 +7159,24 @@ botão Aceitar.") no lugar de "Seu cargo não permite esta ação".
    As telas que usam `apiErrorMessage` não foram mexidas.
 4. **Depende do servidor** mandar o código `OFFER_LOCKED` (B3); antes disso nada muda.
 5. **Não reabrir sem o dono pedir.**
+
+## Roleta: cartão da lista em blocos e triângulo de atenção (06/10/2026)
+
+Pedido do dono: o cartão da roleta lido como frase ("Formulário do Meta · "…", "…" → 10 corretores
+na fila / 10 min pra aceitar · Todos os dias, 8h–21h / ⚠ 5 ninguém aceitou") estava cru e longo.
+Agora (substitui a "frase" da seção *Roleta nova: página por origem*):
+
+- **Quatro dados em grade 2×2**, cada um com ícone, rótulo pequeno e valor, abaixo de um traço:
+  *Origens* (contadas por tipo: "4 formulários", "2 formulários · 1 landing"; a lista inteira
+  fica na dica ao parar o mouse), *Pra aceitar* ("10 min"), *Horário* ("Todos os dias, 8h–21h")
+  e *Na fila* ("10 corretores", "Ninguém").
+- **Atenção vira só um triângulo** ao lado do selo Ligada/Desligada; a frase ("5 ninguém
+  aceitou", "2 esperando aceite") fica na dica. **Clicar no triângulo abre o Histórico da roleta
+  já em *Precisa de atenção*** (`?aba=historico&filtro=atencao`), onde se faz o *Sortear de
+  novo*. Só com "esperando aceite" (nada pra resolver), abre o Histórico sem filtro.
+- O cartão continua abrindo a roleta inteiro: o link do nome se estica por cima do cartão e o
+  triângulo é outro link por cima dele (link dentro de link não vale em HTML).
+
+Armadilha: a contagem por tipo lê o que vem antes do " · " na frase que o servidor manda em
+`origins_summary` (`Roleta::Origins.sentence`). Mudou o nome do tipo lá, muda o
+`ORIGEM_NO_CARTAO` em `roletaNovaTextos.ts` (tipo desconhecido conta como "origem").

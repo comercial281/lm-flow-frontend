@@ -13,7 +13,9 @@ vi.mock('@/services/roletaConfig/roletaConfigService', async importOriginal => {
 vi.mock('./blocos/OrigensBloco', () => ({ default: ({ origens }: { origens: unknown[] }) => <p>origens: {origens.length}</p> }));
 vi.mock('./blocos/FilaBloco', () => ({ default: () => <p>bloco da fila</p> }));
 vi.mock('./blocos/HorarioBloco', () => ({ default: () => <p>bloco do horário</p> }));
-vi.mock('./HistoricoLista', () => ({ default: ({ roletaId }: { roletaId?: string }) => <p>histórico da roleta {roletaId}</p> }));
+vi.mock('./HistoricoLista', () => ({
+  default: ({ roletaId, filtroInicial }: { roletaId?: string; filtroInicial?: string }) => <p>histórico da roleta {roletaId} ({filtroInicial})</p>,
+}));
 import RoletaPagina from './RoletaPagina';
 import { limparPendentes, marcarPendente } from '@/hooks/useAlteracoesNaoSalvas';
 
@@ -139,9 +141,14 @@ describe('página da roleta', () => {
 
   it('aba Histórico mora no endereço', async () => {
     abrir('/automations/roleta-config/r1?aba=historico');
-    expect(await screen.findByText('histórico da roleta r1')).toBeInTheDocument();
+    expect(await screen.findByText('histórico da roleta r1 (all)')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('tab', { name: 'Como funciona' }));
     expect(screen.getByText('bloco da fila')).toBeInTheDocument();
+  });
+
+  it('vindo do triângulo da lista, o Histórico abre em "Precisa de atenção"', async () => {
+    abrir('/automations/roleta-config/r1?aba=historico&filtro=atencao');
+    expect(await screen.findByText('histórico da roleta r1 (attention)')).toBeInTheDocument();
   });
 
   it('com horário por salvar, trocar de aba pergunta antes', async () => {
@@ -155,7 +162,7 @@ describe('página da roleta', () => {
     expect(screen.getByText('bloco da fila')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('tab', { name: 'Histórico' }));
     await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Sair sem salvar' }));
-    expect(await screen.findByText('histórico da roleta r1')).toBeInTheDocument();
+    expect(await screen.findByText('histórico da roleta r1 (all)')).toBeInTheDocument();
   });
 
   it('com horário por salvar, voltar e Duplicar perguntam antes', async () => {
