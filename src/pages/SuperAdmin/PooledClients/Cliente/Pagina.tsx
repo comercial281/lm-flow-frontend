@@ -1,13 +1,14 @@
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ExternalLink, LogIn } from 'lucide-react';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import Abas from '@/components/base/Abas';
 import EmptyState from '@/components/base/EmptyState';
-import { Button } from '@/components/ui/ds';
 import { clientesService } from '@/services/superAdmin/clientesService';
 import type { ClientePooled } from '@/types/admin/clientes';
+import BotaoEntrar from '../BotaoEntrar';
+import { ESQUELETO, PAGINA, SELO } from '../estilo';
 import { rotuloDaSituacao } from '../situacao';
 import AbaContrato from './AbaContrato';
 import AbaFuncoes from './AbaFuncoes';
@@ -59,7 +60,7 @@ export default function Pagina() {
 
   useEffect(() => { setEstado({ tipo: 'carregando' }); void carregar(); }, [carregar]);
 
-  if (estado.tipo === 'carregando') return <div aria-busy="true" className="h-40 animate-pulse rounded-lg bg-muted" />;
+  if (estado.tipo === 'carregando') return <div aria-busy="true" className={`h-40 ${ESQUELETO}`} />;
   if (estado.tipo === 'naoEncontrado') return <EmptyState tipo="vazio" title="Cliente não encontrado" description="Ele pode ter sido excluído." />;
   if (estado.tipo === 'erro') return <EmptyState tipo="erro" title="Não deu para carregar o cliente" aoTentarDeNovo={() => void carregar()} />;
 
@@ -73,20 +74,28 @@ export default function Pagina() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <Link to="/admin/clientes" className="text-sm text-muted-foreground hover:text-foreground">← Clientes</Link>
-      <header className="flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-semibold">{t.name}</h1>
-        <span className={`rounded-full border px-2 py-0.5 text-xs ${st.cls}`}>{st.label}</span>
-        {t.package !== undefined && (
-          <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">{t.package?.name ?? 'Personalizado'}</span>
-        )}
-        <a href={`https://${t.slug}.lmflow.com.br`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          {t.slug}.lmflow.com.br <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-        <div className="ml-auto flex gap-2">
-          <Button size="sm" disabled={st.provisionando} onClick={() => void entrar()}><LogIn className="mr-1.5 h-4 w-4" /> Entrar</Button>
-          <MenuDoCliente cliente={t} recarregar={props.recarregar} />
+    <div className={PAGINA}>
+      <header className="flex flex-col gap-3">
+        <Link to="/admin/clientes" className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" /> Clientes
+        </Link>
+        <div className="flex flex-wrap items-start gap-4">
+          <div className="flex min-w-0 flex-col gap-2">
+            <h1 className="truncate text-2xl font-semibold">{t.name}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`${SELO} ${st.cls}`}>{st.label}</span>
+              {t.package !== undefined && (
+                <span className={`${SELO} text-muted-foreground`}>{t.package?.name ?? 'Personalizado'}</span>
+              )}
+              <a href={`https://${t.slug}.lmflow.com.br`} target="_blank" rel="noreferrer" className="ml-1 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+                {t.slug}.lmflow.com.br <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <BotaoEntrar desabilitado={st.provisionando} aoClicar={() => void entrar()} />
+            <MenuDoCliente cliente={t} recarregar={props.recarregar} />
+          </div>
         </div>
       </header>
       <Abas rotulo="Seções do cliente" abas={ABAS.map((a) => ({ chave: a.chave, rotulo: a.rotulo }))} ativa={aba}

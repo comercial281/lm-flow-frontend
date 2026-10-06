@@ -12,6 +12,7 @@ import CartaoDoCliente from './CartaoDoCliente';
 import ClientFollowupRolloutModal from './ClientFollowupRolloutModal';
 import NewTenantWizard from './NewTenantWizard';
 import { chaveDoCliente, filtrarCartoes, filtroValido, ordenarCartoes, problemasPorCliente, type FiltroLista } from './lista';
+import { ESQUELETO, GRADE_CARTOES, PAGINA } from './estilo';
 import { rotuloDaSituacao } from './situacao';
 
 // Clientes → Clientes. Cartões na largura toda; o cartão abre a página do
@@ -78,10 +79,10 @@ export default function PooledClients() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className={PAGINA}>
+      <div className="flex flex-wrap items-center gap-3">
         <Input aria-label="Buscar cliente" placeholder="Buscar cliente…" value={busca} onChange={(e) => mudarUrl('q', e.target.value || null)} className="w-full sm:w-64" />
-        <div className="flex gap-1" role="group" aria-label="Filtro">
+        <div className="flex gap-1.5" role="group" aria-label="Filtro">
           {FILTROS.map((f) => (
             <Button key={f.valor} size="sm" variant={filtro === f.valor ? 'default' : 'outline'}
               aria-pressed={filtro === f.valor} onClick={() => mudarUrl('filtro', f.valor === 'todos' ? null : f.valor)}>
@@ -100,8 +101,8 @@ export default function PooledClients() {
       {erro ? (
         <EmptyState tipo="erro" title="Não deu para carregar os clientes" aoTentarDeNovo={() => void carregar()} />
       ) : clientes === null ? (
-        <div aria-busy="true" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-xl bg-muted" />)}
+        <div aria-busy="true" className={GRADE_CARTOES}>
+          {Array.from({ length: 8 }).map((_, i) => <div key={i} className={`h-52 ${ESQUELETO}`} />)}
         </div>
       ) : erroAtencao && filtro === 'com_problema' ? (
         // Sem a leitura da Atenção a lista de "com problema" ficaria vazia: erro não é "ninguém tem problema".
@@ -111,7 +112,7 @@ export default function PooledClients() {
           title={filtro === 'arquivados' ? 'Nenhum cliente arquivado' : 'Nenhum cliente encontrado'}
           aoLimparFiltros={busca || filtro !== 'todos' ? () => setParams({}, { replace: true }) : undefined} />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+        <div className={GRADE_CARTOES}>
           {visiveis.map((t) => (
             <CartaoDoCliente key={t.id} cliente={t} problema={problemas.get(chaveDoCliente(t))}
               aoEntrar={entrar} entrando={entrando === t.id} />

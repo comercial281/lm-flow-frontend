@@ -9,6 +9,7 @@ import { pacotesService } from '@/services/superAdmin/pacotesService';
 import type { ClientePooled } from '@/types/admin/clientes';
 import type { PacoteDaLista } from '@/types/admin/pacotes';
 import { plural } from '@/lib/formato';
+import { ESQUELETO, GRADE_CARTOES, PAGINA } from '../estilo';
 
 // Clientes → Pacotes: lista e "Novo pacote" (do zero, de um pacote ou de um cliente).
 export default function Pacotes() {
@@ -45,16 +46,16 @@ export default function Pacotes() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className={PAGINA}>
       <div className="flex"><Button className="ml-auto" onClick={() => setNovo(true)}>Novo pacote</Button></div>
       {erro ? <EmptyState tipo="erro" title="Não deu para carregar os pacotes" aoTentarDeNovo={() => void carregar()} />
-        : pacotes === null ? <div aria-busy="true" className="h-40 animate-pulse rounded-lg bg-muted" />
+        : pacotes === null ? <div aria-busy="true" className={`h-40 ${ESQUELETO}`} />
         : pacotes.length === 0 ? <EmptyState tipo="vazio" title="Nenhum pacote ainda" description="Crie o primeiro a partir de um cliente que já está do jeito certo." />
         : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className={GRADE_CARTOES}>
             {pacotes.map((p) => (
-              <Link key={p.id} to={`/admin/clientes/pacotes/${p.id}`} className="rounded-xl border bg-card p-4 hover:border-primary/50">
-                <h3 className="font-semibold">{p.name}</h3>
+              <Link key={p.id} to={`/admin/clientes/pacotes/${p.id}`} className="flex flex-col gap-2 rounded-xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md">
+                <h3 className="text-base font-semibold">{p.name}</h3>
                 <p className="text-sm text-muted-foreground">{plural(p.clients_count, 'cliente', 'clientes')} · {plural(p.features_on, 'função ligada', 'funções ligadas')}</p>
               </Link>
             ))}

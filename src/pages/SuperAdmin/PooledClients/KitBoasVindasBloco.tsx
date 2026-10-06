@@ -9,6 +9,7 @@ import {
 import {
   INTERVALO_MS, esperaEstourou, motivo, rotuloDoBotao, textoAndamento, textoUltimoEnvio,
 } from '../kitBoasVindasRegras';
+import { SECAO, TITULO_SECAO } from './estilo';
 
 /**
  * Clientes → Funções → Kit de boas-vindas: manda no grupo oficial do cliente o
@@ -132,9 +133,9 @@ export default function KitBoasVindasBloco({ tenantId }: { tenantId: string }) {
   const configurado = estado?.configured ?? false;
 
   return (
-    <section aria-label="Kit de boas-vindas" className="rounded-lg border bg-card p-4">
-      <div className="flex items-center gap-2 text-sm text-foreground"><Gift className="w-3.5 h-3.5" /> Kit de boas-vindas</div>
-      <div className="text-xs text-muted-foreground mb-2 mt-0.5">
+    <section aria-label="Kit de boas-vindas" className={SECAO}>
+      <div className={`flex items-center gap-2 ${TITULO_SECAO}`}><Gift className="h-4 w-4" /> Kit de boas-vindas</div>
+      <div className="mb-4 mt-1 text-xs text-muted-foreground">
         O endereço do CRM, o vídeo de como instalar o aplicativo e as imagens de como conectar o WhatsApp,
         no grupo do cliente, pelo número operacional.
       </div>

@@ -8,6 +8,7 @@ import { clientesService } from '@/services/superAdmin/clientesService';
 import { itemLabel, type CatalogItem } from '../../featureCatalog';
 import QuadrosDeFuncoes from '../QuadrosDeFuncoes';
 import { pedidoDesligarMenu } from '../confirmacoes';
+import { ESQUELETO } from '../estilo';
 import type { PropsDaAba } from './Pagina';
 
 // Funções do cliente: cada interruptor grava na hora (otimista, volta no erro),
@@ -80,11 +81,11 @@ export default function AbaFuncoes({ cliente, recarregar }: PropsDaAba) {
   };
 
   if (erro) return <EmptyState tipo="erro" title="Não deu para carregar as funções" aoTentarDeNovo={() => void carregar()} />;
-  if (!dados) return <div aria-busy="true" className="h-60 animate-pulse rounded-lg bg-muted" />;
+  if (!dados) return <div aria-busy="true" className={`h-60 ${ESQUELETO}`} />;
   return (
     <>
       {cliente.package && (
-        <div className="mb-3 flex items-center gap-2">
+        <div className="mb-4 flex items-center gap-2">
           <Checkbox id="so-difere" checked={somenteDiferentes} onCheckedChange={(v) => setSomenteDiferentes(v === true)} aria-label="Só o que difere do pacote" />
           <Label htmlFor="so-difere" className="text-sm">Só o que difere do pacote</Label>
         </div>
