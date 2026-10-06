@@ -20,7 +20,7 @@ describe('situacaoDaIa', () => {
 
   // "IA Vendedora LM Flow - Demo": ligada sem número. Era a bolinha verde.
   it('ligada sem número: parada, falta o número, corrigir em Configurar', () => {
-    expect(situacaoDaIa(ia({ inbox_id: null }))).toEqual({ tipo: 'parada', frase: 'Parada: falta o número', corrigir: { tela: 'configurar' } });
+    expect(situacaoDaIa(ia({ inbox_id: null }))).toEqual({ tipo: 'parada', frase: 'Parada: falta o número', corrigir: { tela: 'configurar', passo: 6 } });
   });
 
   // As duas "Nova IA Vendedora" vazias e as IAs de fábrica nunca configuradas.
@@ -53,7 +53,7 @@ describe('situacaoDaIa', () => {
   // Checklist §6: o gatilho de teste "call" esquecido, que o Diagnóstico mostrava verde.
   it('gatilho de palavra: atendendo com restrição, com a palavra escrita', () => {
     const s = situacaoDaIa(ia({ triggers: [{ type: 'keyword', value: 'call', match_type: 'contains' }] }));
-    expect(s).toEqual({ tipo: 'restricao', frase: 'Atendendo com restrição: só quem escrever "call"', corrigir: { tela: 'configurar' } });
+    expect(s).toEqual({ tipo: 'restricao', frase: 'Atendendo com restrição: só quem escrever "call"', corrigir: { tela: 'configurar', passo: 6 } });
   });
 
   it('a palavra-chave antiga também restringe', () => {
@@ -84,7 +84,7 @@ describe('restricaoDosGatilhos (espelho do TriggerGate)', () => {
 
   it('com E, um gatilho em branco trava todo mundo e o veredito vira parada', () => {
     const agente = ia({ trigger_match_mode: 'all', triggers: [{ type: 'origin', mode: 'ads' }, { type: 'tag', value: ' ' }] });
-    expect(situacaoDaIa(agente)).toEqual({ tipo: 'parada', frase: 'Parada: um gatilho está em branco e não deixa ninguém passar', corrigir: { tela: 'configurar' } });
+    expect(situacaoDaIa(agente)).toEqual({ tipo: 'parada', frase: 'Parada: um gatilho está em branco e não deixa ninguém passar', corrigir: { tela: 'configurar', passo: 6 } });
   });
 });
 
@@ -92,7 +92,7 @@ describe('pendenciasDaIa', () => {
   it('itens do Diagnóstico fora do ok, graves primeiro, cada um com onde corrigir', () => {
     const p = pendenciasDaIa(ia(), diag(['enabled', 'ok'], ['knowledge', 'warning', 'Nenhum documento pronto.'], ['inbox', 'error', 'O canal vinculado não existe mais.'], ['api_key', 'error']));
     expect(p.map((x) => x.chave)).toEqual(['inbox', 'api_key', 'knowledge']);
-    expect(p[0]).toMatchObject({ grave: true, corrigir: { tela: 'configurar' }, detalhe: 'O canal vinculado não existe mais.' });
+    expect(p[0]).toMatchObject({ grave: true, corrigir: { tela: 'configurar', passo: 6 }, detalhe: 'O canal vinculado não existe mais.' });
     expect(p[1].corrigir).toBeUndefined();
     expect(p[2]).toMatchObject({ grave: false, corrigir: { tela: 'ensinar' } });
   });
@@ -103,7 +103,7 @@ describe('pendenciasDaIa', () => {
 
   it('gatilho restringindo vira pendência laranja mesmo com o servidor dizendo ok', () => {
     const p = pendenciasDaIa(ia({ triggers: [{ type: 'keyword', value: 'call' }] }), diag(['triggers', 'ok']));
-    expect(p).toEqual([{ chave: 'triggers', titulo: 'Quem ela atende', detalhe: 'Só quem escrever "call".', grave: false, corrigir: { tela: 'configurar' } }]);
+    expect(p).toEqual([{ chave: 'triggers', titulo: 'Quem ela atende', detalhe: 'Só quem escrever "call".', grave: false, corrigir: { tela: 'configurar', passo: 6 } }]);
   });
 
   it('aviso do servidor sobre o gatilho não se repete', () => {
@@ -133,5 +133,29 @@ describe('motivoSemAtendimento', () => {
     expect(motivoSemAtendimento({ tipo: 'rascunho', frase: 'Rascunho: falta escolher o número' })).toBe('ela ainda é um rascunho, sem número');
     expect(motivoSemAtendimento({ tipo: 'atendendo', frase: 'Atendendo' })).toBeNull();
     expect(motivoSemAtendimento({ tipo: 'restricao', frase: 'x' })).toBeNull();
+  });
+});
+
+describe('entrega 2: Corrigir leva ao passo certo', () => {
+  it('sem número → passo 6; desligada → passo 8; rascunho → passo 1', () => {
+    expect(situacaoDaIa(ia({ inbox_id: null })).corrigir).toEqual({ tela: 'configurar', passo: 6 });
+    expect(situacaoDaIa(ia({ enabled: false })).corrigir).toEqual({ tela: 'configurar', passo: 8 });
+    expect(situacaoDaIa(ia({ enabled: false, inbox_id: null })).corrigir).toEqual({ tela: 'configurar', passo: 1 });
+  });
+
+  it('follow-up sem limite → passo 7', () => {
+    const p = pendenciasDaIa(ia({ followup_enabled: true, followup_max_attempts: 0 }));
+    expect(p.find((x) => x.chave === 'followup_sem_limite')?.corrigir).toEqual({ tela: 'configurar', passo: 7 });
+  });
+
+  // IA antiga: fala como o corretor e entrega pra um corretor fixo.
+  it('corretor com destino que não é o dono do número aparece no Painel, laranja, passo 2', () => {
+    const p = pendenciasDaIa(ia({ persona_kind: 'broker', handoff_target: 'user', handoff_user_id: 'u9', number_owner_id: 'u7', lead_facing_name: 'Bruno' } as Partial<SalesAgent>));
+    expect(p).toContainEqual(expect.objectContaining({ chave: 'persona_destino', grave: false, corrigir: { tela: 'configurar', passo: 2 } }));
+  });
+
+  it('corretor num número sem dono aparece vermelho, passo 1', () => {
+    const p = pendenciasDaIa(ia({ persona_kind: 'broker', handoff_target: 'number_owner', number_owner_id: null, lead_facing_name: 'Bruno' } as Partial<SalesAgent>));
+    expect(p[0]).toMatchObject({ chave: 'persona_sem_dono', grave: true, corrigir: { tela: 'configurar', passo: 1 } });
   });
 });

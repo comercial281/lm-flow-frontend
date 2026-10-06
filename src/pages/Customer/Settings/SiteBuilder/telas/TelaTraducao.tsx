@@ -1,5 +1,5 @@
 import { Checkbox, Label as UILabel } from '@/components/ui/ds';
-import { Secao, Secoes } from '../ui/Secao';
+import { Secao, Secoes } from '@/components/base/Secao';
 import type { FormProps } from './tipos';
 
 const IDIOMAS = [

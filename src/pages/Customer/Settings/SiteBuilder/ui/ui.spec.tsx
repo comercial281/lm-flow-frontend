@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Secao, Secoes } from './Secao';
-import { Campo, CampoTexto, CampoTextoLongo } from './Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { Campo, CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
 import EnvioDeImagem from './EnvioDeImagem';
 
 describe('Secao', () => {

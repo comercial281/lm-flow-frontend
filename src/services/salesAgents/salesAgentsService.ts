@@ -3,6 +3,19 @@ import type { AgentPerformance } from '@/types/aiResults';
 
 export type SalesAgentMode = 'seller' | 'sdr' | 'assistant';
 
+/**
+ * As TRÊS ESCOLHAS da IA (refatoração, entrega 2). O servidor devolve persona e
+ * alcance sempre RESOLVIDOS (coluna, senão lido das antigas: voz em primeira pessoa
+ * → corretor; agendar visita → vai até o fim). Ver features/salesAgents/tresEscolhas.ts.
+ *
+ * ⚠️ `assistant` aqui é a "assistente da imobiliária", NÃO o `mode = 'assistant'`
+ * (o corretor conduz e a IA só sugere).
+ */
+export type PersonaDaIa = 'broker' | 'owner' | 'assistant';
+export type AlcanceDaIa = 'qualify' | 'visit';
+export type TomDaIa = 'close' | 'formal';
+export type EmojiDaIa = 'none' | 'light';
+
 export type ActiveHoursMode = 'always' | 'outside_business' | 'custom';
 export interface ActiveHoursWindow {
   start: string; // "HH:MM"
@@ -51,6 +64,8 @@ export interface SalesAgent {
   transfer_config: TransferConfig;
   handoff_message: string | null;
   model: string;
+  /** Modelo do Testar (Haiku por padrão). Vem do servidor (`resolved_test_model`). */
+  test_model?: string | null;
   temperature: number;
   max_context_tokens: number;
   reply_delay_seconds: number;
@@ -106,8 +121,26 @@ export interface SalesAgent {
    *  de outro número (é o caso "a IA atende no principal, os corretores atendem
    *  cada um no seu"). `user` entrega a um corretor fixo, sem roleta nenhuma. */
   handoff_target: SalesAgentHandoffTarget;
+  /** Sistema do cliente: o endereço que recebe o lead (só vale com `handoff_target = 'webhook'`). */
+  handoff_webhook_url?: string | null;
+  /** Se a chave secreta já foi gerada. A chave em si nunca vem do servidor. */
+  handoff_webhook_secret_set?: boolean;
+  /** Estado da chave: 'unreadable' = a chave gravada não abre mais (gere outra). */
+  handoff_webhook_secret_state?: 'none' | 'ready' | 'unreadable';
   handoff_roleta_config_id: string | null;
   handoff_user_id: string | null;
+  /** Quem ela é. Sempre resolvido pelo servidor. */
+  persona_kind: PersonaDaIa;
+  /** Até onde ela vai. Sempre resolvido pelo servidor (espelha `booking_enabled`). */
+  reach: AlcanceDaIa;
+  /** Nome que o lead vê (o roteiro de hoje já o diz). Separado do `name`, que é o nome da IA no LM Flow. */
+  lead_facing_name: string | null;
+  /** Tom e emoji: gravados desde a entrega 2, sem controle na tela até a entrega 4 (roteiro novo). */
+  tone?: TomDaIa | null;
+  emoji_use?: EmojiDaIa | null;
+  /** Dono EFETIVO do número dela (ativo, fora da equipe da Leal Mídia). Ausente = servidor antigo. */
+  number_owner_id?: string | null;
+  number_owner_name?: string | null;
   audio_enabled: boolean;
   audio_mode: 'mirror' | 'always' | 'never';
   audio_voice_id: string | null;
@@ -308,8 +341,10 @@ export type HandoffMode = 'duvida' | 'temperatura' | 'checklist' | 'sem_resposta
  * vale em toda imobiliária que já existe. Até esta escolha existir, era a ÚNICA
  * saída: número sem roleta (ou com duas e nenhuma marcada como "atende quem
  * escreve direto") deixava o lead sem dono e sem ninguém avisado.
+ *
+ * `number_owner` é o dono do número da conversa: o único destino da persona "o próprio corretor".
  */
-export type SalesAgentHandoffTarget = 'inbox_roleta' | 'roleta' | 'user';
+export type SalesAgentHandoffTarget = 'inbox_roleta' | 'roleta' | 'user' | 'number_owner' | 'webhook';
 
 export interface TransferConfig {
   mode?: HandoffMode;
@@ -500,8 +535,14 @@ export interface SalesAgentPayload {
   reengagement_first_hours?: number;
   reengagement_second_hours?: number;
   handoff_target?: SalesAgentHandoffTarget;
+  handoff_webhook_url?: string | null;
   handoff_roleta_config_id?: string | null;
   handoff_user_id?: string | null;
+  persona_kind?: PersonaDaIa;
+  reach?: AlcanceDaIa;
+  lead_facing_name?: string | null;
+  tone?: TomDaIa | null;
+  emoji_use?: EmojiDaIa | null;
   audio_enabled?: boolean;
   audio_mode?: 'mirror' | 'always' | 'never';
   audio_voice_id?: string | null;
@@ -633,57 +674,101 @@ export interface TestMediaItem {
   token?: string;
 }
 
-export interface SalesAgentTestResult {
-  /** O texto inteiro da resposta. Continua existindo pra tudo que lê "a resposta". */
-  reply: string;
-  /**
-   * As mensagens na ordem em que o lead as receberia, quando a quebra está ligada.
-   * Sem isto o painel Testar mostraria UMA bolha mesmo com a chave ligada, e quem
-   * testasse concluiria que a funcionalidade não funciona.
-   */
-  reply_parts?: string[];
-  media?: TestMediaItem[];
-  temperature: 'hot' | 'warm' | 'cold' | 'unknown';
-  should_transfer: boolean;
-  transfer_reason: string | null;
-  collected: Record<string, unknown>;
-  lead_summary: string;
-  stage?: string | null;
-  book_visit?: { should_book: boolean; date: string | null; time: string | null; notes: string | null } | null;
-  bant?: { budget?: string | null; authority?: string | null; need?: string | null; timeline?: string | null };
-  qualified?: boolean | null;
-}
-
 export interface TestHistoryItem {
   role: 'user' | 'assistant';
   content: string;
 }
 
-/**
- * O que o lead real traz junto da primeira mensagem e o teste digitado à mão não
- * tem como reproduzir.
- */
-export interface TestLeadContext {
-  contactName?: string;
-  /** De onde veio: campanha, anúncio, plataforma. */
-  source?: string;
-  /** Interesse inicial declarado (ex.: veio de um formulário perguntando isso). */
-  interest?: string;
-  /** Respostas do formulário do Meta — a IA usa pra não perguntar de novo. */
-  formAnswers?: Record<string, string>;
-  propertyCode?: string;
+// ---------------- Testar fiel (ensaio) ----------------
+// O estado do ensaio mora AQUI, no navegador: o servidor devolve o estado novo a
+// cada passo e recebe de volta no próximo. Nada é gravado no servidor.
+
+export interface RehearsalMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  at: string;
+  marks: Record<string, boolean>;
 }
 
-/** Contexto lido de uma conversa real, pra carregar no painel de teste. */
-export interface LoadedConversationContext {
-  conversation_id: string;
-  history: TestHistoryItem[];
-  contact_name: string | null;
-  source: string | null;
-  interest: string | null;
-  form_answers: Record<string, string>;
-  property_code: string | null;
+export interface RehearsalState {
+  v: 1;
+  now: string;
+  contact: { name?: string | null; form_answers?: Record<string, string>; ad_referral?: Record<string, unknown> };
+  attrs: Record<string, unknown>;
+  labels: string[];
+  messages: RehearsalMessage[];
+  lead_owner: string | null;
+  source_conversation_id: string | null;
 }
+
+export interface RehearsalBubble { content: string; pause_ms: number; audio?: boolean }
+export interface RehearsalReason { reason: string; text: string; detail?: string | null }
+
+export interface RehearsalOutcome {
+  skipped: RehearsalReason | null;
+  warnings: RehearsalReason[];
+  handoff: { kind: 'roleta' | 'user' | 'owner' | 'webhook' | 'none'; destination: string | null; problem?: string | null; reason?: string | null } | null;
+  handoff_blocked: string | null;
+  in_handoff: boolean;
+  visit: { date: string; time: string; label: string; realtor: string | null; property_code: string | null; notes: string | null } | null;
+  collected: Record<string, unknown>;
+  checklist: Array<{ pergunta: string; resposta: string | null; obrigatoria: boolean }>;
+  temperature: 'hot' | 'warm' | 'cold' | 'unknown' | null;
+  stage: string | null;
+  summary: string | null;
+  labels: string[];
+  card: { stage: string | null; moves: boolean } | null;
+  purpose: string | null;
+  out_of_hours_notice: boolean;
+  opening: string | null;
+  /** O modelo que respondeu de fato. */
+  model: string | null;
+  /** O modelo do teste (Haiku, como hoje); null na comparação, que roda no da IA. */
+  test_model: string | null;
+  /** O modelo em que esta IA atende o lead de verdade. */
+  agent_model: string | null;
+  delay_s: number | null;
+  notes: RehearsalReason[];
+  error: string | null;
+  lead_owner: string | null;
+}
+
+export interface RehearsalEvent {
+  kind: 'reengagement' | 'followup' | 'followup_delegated';
+  at: string;
+  attempt: number;
+  messages: RehearsalBubble[];
+  blank: boolean;
+}
+
+export interface RehearsalTurn {
+  kind: 'reply' | 'silent' | 'error' | 'advance' | 'loaded';
+  at: string;
+  messages: RehearsalBubble[];
+  reaction: string | null;
+  note: string | null;
+  media: TestMediaItem[];
+  outcome: RehearsalOutcome | null;
+  events?: RehearsalEvent[];
+  idle?: string | null;
+  notes?: RehearsalReason[];
+}
+
+export interface RehearsalResult { state: RehearsalState; turn: RehearsalTurn }
+
+export interface RehearsalContext {
+  contact_name?: string;
+  source?: string;
+  interest?: string;
+  form_answers?: Record<string, string>;
+  property_code?: string;
+}
+
+export type RehearsalRequest =
+  | { step: 'turn'; state: RehearsalState | null; message: string; context?: RehearsalContext; seed?: { history: TestHistoryItem[]; hours_ago?: number } }
+  | { step: 'advance'; state: RehearsalState; hours: number | null }
+  | { step: 'load'; phone: string };
 
 export type SalesAgentLessonKind = 'rule' | 'good_example' | 'bad_example';
 export interface SalesAgentLesson {
@@ -693,13 +778,6 @@ export interface SalesAgentLesson {
   context: string | null;
   enabled: boolean;
   created_at: string;
-}
-
-export interface SalesAgentPropertyLink {
-  link: string;
-  message: string;
-  number: string;
-  property: { id: string; code: string; title: string } | null;
 }
 
 // --- sugestões da IA e relatório semanal ---
@@ -847,6 +925,35 @@ export interface WeeklyReportDiagnostico {
   checking: boolean;
 }
 
+/** A resposta do "Mandar um lead de teste": o que o sistema do cliente respondeu. */
+export interface WebhookTestResult {
+  ok: boolean;
+  delivery_id?: string | null;
+  response_code: number | null;
+  response_excerpt: string | null;
+  duration_ms: number | null;
+  error: string | null;
+}
+
+/** Um envio ao sistema do cliente, pra lista do Diagnóstico. */
+export interface WebhookDelivery {
+  id: string;
+  created_at: string;
+  mode: 'real' | 'test';
+  status: 'pending' | 'delivered' | 'failed';
+  attempts: number;
+  max_attempts: number;
+  next_attempt_at: string | null;
+  response_code: number | null;
+  response_excerpt: string | null;
+  last_error: string | null;
+  duration_ms: number | null;
+  delivered_at: string | null;
+  failed_at: string | null;
+  contact_name: string | null;
+  conversation_path: string | null;
+}
+
 const BASE = '/sales_agents';
 
 /** O que a duplicação devolve: a IA nova + o que foi copiado junto. */
@@ -899,27 +1006,18 @@ export const salesAgentsService = {
   },
 
   /**
-   * O `context` é o que separa o teste da conversa real: o lead de verdade chega
-   * com nome, origem de campanha e respostas do formulário do Meta, e é isso que
-   * faz a IA saber do que está falando em vez de perguntar de novo. O backend
-   * sempre aceitou esses campos — a tela é que mandava só o nome, chumbado.
+   * Testar fiel: o MESMO turno do atendimento, em memória (nada sai no WhatsApp,
+   * nada é gravado). O estado vai e volta inteiro a cada passo. Em erro, joga a
+   * frase do servidor (teto da hora, conversa não achada, teste interrompido).
    */
-  async testRun(
-    id: string,
-    message: string,
-    history: TestHistoryItem[] = [],
-    context: TestLeadContext = {},
-  ): Promise<SalesAgentTestResult> {
-    const res = await api.post(`${BASE}/${id}/test_run`, {
-      message,
-      history,
-      contact_name: context.contactName || undefined,
-      source: context.source || undefined,
-      interest: context.interest || undefined,
-      form_answers: Object.keys(context.formAnswers ?? {}).length ? context.formAnswers : undefined,
-      property_code: context.propertyCode || undefined,
-    });
-    return (res.data as { data: SalesAgentTestResult }).data;
+  async rehearsal(id: string, body: RehearsalRequest): Promise<RehearsalResult> {
+    try {
+      const res = await api.post(`${BASE}/${id}/rehearsal`, body);
+      return (res.data as { data: RehearsalResult }).data;
+    } catch (err) {
+      const axiosErr = err as { response?: { data?: { error?: { message?: string } } } };
+      throw new Error(axiosErr.response?.data?.error?.message || 'Não consegui rodar o teste agora.');
+    }
   },
 
   /**
@@ -945,21 +1043,6 @@ export const salesAgentsService = {
     }
   },
 
-  /**
-   * Carrega uma conversa REAL no painel de teste (histórico + contexto do lead).
-   * Só leitura: não chama o Claude, não grava e não envia mensagem, então dá pra
-   * apontar pra um lead ativo sem risco.
-   */
-  async conversationContext(
-    id: string,
-    opts: { conversationId?: string; phone?: string },
-  ): Promise<LoadedConversationContext> {
-    const res = await api.get(`${BASE}/${id}/conversation_context`, {
-      params: { conversation_id: opts.conversationId || undefined, phone: opts.phone || undefined },
-    });
-    return (res.data as { data: LoadedConversationContext }).data;
-  },
-
   // Ativa a IA pra atender um lead escolhido (proativo): inicia OU continua a
   // conversa lendo todo o histórico. fresh=true reinicia do zero (abertura).
   async engage(
@@ -973,14 +1056,6 @@ export const salesAgentsService = {
       fresh: opts.fresh || undefined,
     });
     return (res.data as { data: { conversation_id: string } }).data;
-  },
-
-  // Gera o link wa.me pra colar no anúncio (código do imóvel + palavra-gatilho).
-  async propertyLink(id: string, propertyCode?: string): Promise<SalesAgentPropertyLink> {
-    const res = await api.get(`${BASE}/${id}/property_link`, {
-      params: { property_code: propertyCode || undefined },
-    });
-    return (res.data as { data: SalesAgentPropertyLink }).data;
   },
 
   // --- diagnóstico e caixa-preta ---
@@ -999,6 +1074,27 @@ export const salesAgentsService = {
   async diagnostics(id: string): Promise<HealthReport> {
     const res = await api.get(`${BASE}/${id}/diagnostics`);
     return (res.data as { data: HealthReport }).data;
+  },
+
+  /**
+   * Gera uma chave NOVA do sistema do cliente. Ela volta UMA vez, aqui.
+   * ⚠️ Com chave já gerada, o servidor exige `confirm: true` ("Sim, gerar outra"):
+   * a anterior para de funcionar no sistema do cliente.
+   */
+  async generateWebhookSecret(id: string, opts: { confirm?: boolean } = {}): Promise<string> {
+    const res = await api.post(`${BASE}/${id}/handoff_webhook_secret`, opts.confirm ? { confirm: true } : {});
+    return (res.data as { data: { secret: string } }).data.secret;
+  },
+
+  /** "Mandar um lead de teste": usa o endereço e a chave GRAVADOS. */
+  async testWebhook(id: string): Promise<WebhookTestResult> {
+    const res = await api.post(`${BASE}/${id}/handoff_webhook_test`);
+    return (res.data as { data: WebhookTestResult }).data;
+  },
+
+  async webhookDeliveries(id: string): Promise<WebhookDelivery[]> {
+    const res = await api.get(`${BASE}/${id}/handoff_webhook_deliveries`);
+    return (res.data as { data: { items: WebhookDelivery[] } }).data.items ?? [];
   },
 
   // Últimos turnos: o que respondeu, o que pulou (com o motivo) e o que falhou

@@ -7,14 +7,15 @@ import { fonteDaIaVendedora, lerTelaDaIa } from './fonteDaIaVendedora';
 describe('fonteDaIaVendedora', () => {
   const fonte = fonteDaIaVendedora();
 
-  it('lê a casca, as telas e a configuração antiga', () => {
+  it('lê a casca, as telas e o passo a passo', () => {
     expect(fonte).toContain('export default function SalesAgents');
-    expect(fonte).toContain('export function HandoffPolicySection');
+    expect(fonte).toContain('export default function PassoAPasso');
+    expect(fonte).toContain('export function TriggersSection');
     expect(fonte).toContain('export default function TelaDiagnostico');
     expect(fonte).toContain('export function KnowledgeTab');
   });
 
-  it('a casca vem primeiro (os cortes do saveAgent dependem disso)', () => {
+  it('a casca vem primeiro', () => {
     expect(fonte.startsWith(lerTelaDaIa('SalesAgents.tsx'))).toBe(true);
   });
 

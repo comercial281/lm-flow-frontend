@@ -41,7 +41,6 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/bolsao', resource: 'bolsao_leads', action: 'read' },
   { path: '/equipe', resource: 'users', action: 'update' },
   { path: '/ia-vendedora', resource: 'sales_agents', action: 'read' },
-  { path: '/ia-vendedora/:id/assistente', resource: 'sales_agents', action: 'update' },
   { path: '/disparos', resource: 'broadcasts', action: 'read' },
   { path: '/conversations', resource: 'conversations', action: 'read' },
   { path: '/conversations/:conversationId', resource: 'conversations', action: 'read' },

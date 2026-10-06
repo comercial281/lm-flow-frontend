@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { fonteDaIaVendedora } from '../../test/fonteDaIaVendedora';
+import { CAMPOS_DO_PASSO } from '../../pages/Customer/Automations/SalesAgents/configurar/camposDosPassos';
 
 // O recorte por funil do follow-up da IA: ela vai atrás de todo lead calado do
 // número, ou só dos que têm card nos funis escolhidos.
@@ -19,23 +20,15 @@ import { fonteDaIaVendedora } from '../../test/fonteDaIaVendedora';
 describe('de quais leads a IA vai atrás', () => {
   const src = fonteDaIaVendedora();
 
-  it('o recorte entra na lista campo-a-campo do PATCH', () => {
-    // Corte até o FIM do payload, nunca um número fixo de caracteres: a lista
-    // cresce a cada campo novo, e janela fixa reprova o campo errado.
-    const saveAgent = src.slice(src.indexOf('const saveAgent'), src.indexOf('setSelected(updated)'));
-
-    expect(saveAgent).toContain('followup_pipeline_ids:');
+  // Desde a entrega 2 o recorte é campo do passo 7 (camposDosPassos.ts): lista
+  // vazia viaja como lista vazia ("todos os leads que ela atendeu"), e só
+  // `undefined` vira null (patchDoPasso.spec.ts).
+  it('o recorte é campo do passo 7', () => {
+    expect(CAMPOS_DO_PASSO[7]).toContain('followup_pipeline_ids');
   });
 
-  // Lista vazia NÃO é null: é a escolha "todos os leads deste número", e o `??`
-  // a preserva. Com `in`, um `null` vindo de qualquer lugar viraria "lista
-  // apagada" — que no servidor é a mesma coisa, mas por acaso, não por desenho.
-  it('e entra com `??`, porque lista vazia é escolha legítima', () => {
-    expect(src).toContain('followup_pipeline_ids: patch.followup_pipeline_ids ?? selected.followup_pipeline_ids');
-  });
-
-  it('o bloco aparece dentro do Follow-up automático', () => {
-    expect(src).toContain('<FollowupPipelinesRow agent={agent} onSave={onSave} />');
+  it('o bloco aparece no passo Voltar a chamar, mexendo no rascunho do passo', () => {
+    expect(src).toContain('<FollowupPipelinesRow agent={rascunho} onSave={mudar} />');
     expect(src).toContain('De quais leads ela vai atrás');
   });
 

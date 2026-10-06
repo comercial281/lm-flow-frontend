@@ -11,8 +11,8 @@ describe('TestMediaBubble', () => {
       <TestMediaBubble
         item={{
           type: 'photos',
-          title: 'Fotos do imóvel Alma Panamby - AP123 (7 fotos, 0 já enviadas)',
-          caption: 'Alma Panamby — R$ 450.000',
+          title: 'Fotos do imóvel Residencial Exemplo - AP123 (7 fotos, 0 já enviadas)',
+          caption: 'Residencial Exemplo — R$ 450.000',
           reason: 'apresentou o imóvel',
           urls: ['https://cdn.exemplo/1.jpg', 'https://cdn.exemplo/2.jpg', 'https://cdn.exemplo/3.jpg'],
         }}
@@ -23,16 +23,16 @@ describe('TestMediaBubble', () => {
     expect(fotos).toHaveLength(3);
     expect(fotos[0]).toHaveAttribute('src', 'https://cdn.exemplo/1.jpg');
     expect(screen.getByText('3 fotos enviadas no WhatsApp')).toBeInTheDocument();
-    expect(screen.getByText('Alma Panamby — R$ 450.000')).toBeInTheDocument();
+    expect(screen.getByText('Residencial Exemplo — R$ 450.000')).toBeInTheDocument();
     expect(screen.getByText(/apresentou o imóvel/)).toBeInTheDocument();
     expect(screen.queryByRole('link')).toBeNull();
   });
 
   it('mostra o vídeo como vídeo, não como arquivo', () => {
-    render(<TestMediaBubble item={{ type: 'file', kind: 'video', title: 'Vídeo do imóvel Alma Panamby' }} />);
+    render(<TestMediaBubble item={{ type: 'file', kind: 'video', title: 'Vídeo do imóvel Residencial Exemplo' }} />);
 
     expect(screen.getByText('Vídeo enviado no WhatsApp')).toBeInTheDocument();
-    expect(screen.getByText('Vídeo do imóvel Alma Panamby')).toBeInTheDocument();
+    expect(screen.getByText('Vídeo do imóvel Residencial Exemplo')).toBeInTheDocument();
   });
 
   it('arquivo comum continua como arquivo', () => {

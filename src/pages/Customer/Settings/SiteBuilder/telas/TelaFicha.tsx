@@ -7,8 +7,8 @@ import {
   CHAVES_EMPREENDIMENTO, CHAVES_REVENDA, FICHA_FABRICA,
   type ChaveEmpreendimento, type ChaveRevenda, type FichaConfigDoAdmin,
 } from '@/features/siteBuilder/public/fichaConfig';
-import { Secao, Secoes } from '../ui/Secao';
-import { CLASSE_DO_CAMPO, descricaoDoCampo } from '../ui/Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { CLASSE_DO_CAMPO, descricaoDoCampo } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
 import BookPeloSite from './BookPeloSite';
 

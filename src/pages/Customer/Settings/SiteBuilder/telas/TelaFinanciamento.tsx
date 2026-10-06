@@ -4,8 +4,8 @@ import { Button, Input, Label as UILabel, Switch } from '@/components/ui/ds';
 import { AlertTriangle, Loader2, Trash2, Upload } from 'lucide-react';
 import { siteBuilderService, type SiteFinancingPage } from '@/services/siteBuilder/siteBuilderService';
 import { bankLogoSource, financingWarning } from '@/features/siteBuilder/portalPages';
-import { Secao, Secoes } from '../ui/Secao';
-import { CLASSE_DO_CAMPO, CampoTexto } from '../ui/Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { CLASSE_DO_CAMPO, CampoTexto } from '@/components/base/Campo';
 
 interface Props {
   financingPage: SiteFinancingPage;

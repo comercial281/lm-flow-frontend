@@ -32,10 +32,17 @@ describe('endereço antigo da Captação', () => {
   });
 });
 
+describe('endereço antigo do assistente da IA', () => {
+  it('/ia-vendedora/:id/assistente leva ao passo 1 do Configurar, sem PermissionRoute (o destino confere o cargo)', () => {
+    const t = trecho('/ia-vendedora/:id/assistente');
+    expect(t).toContain('<RedirecionaAssistente />');
+    expect(t).not.toContain('<PermissionRoute');
+  });
+});
+
 describe('toda rota do CRM confere o cargo', () => {
   it.each([
     ['/ia-vendedora', 'sales_agents', 'read'],
-    ['/ia-vendedora/:id/assistente', 'sales_agents', 'update'],
     ['/disparos', 'broadcasts', 'read'],
     ['/settings/lead-automations', 'lead_automation_rules', 'read'],
     ['lead-automations', 'lead_automation_rules', 'read'],
