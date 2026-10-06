@@ -4,6 +4,7 @@ import { Check, Clock, X, Loader2 } from 'lucide-react';
 import { usePendingOffers } from '@/contexts/PendingOffersContext';
 import { type OfferLookup } from './pendingOffersMatch';
 import { deadlineLabel } from './offerDeadline';
+import { reasonOf } from './offerReason';
 import type { BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
 
 // O selo "Aguardando seu aceite" com Aceitar/Recusar, onde o lead aparece.
@@ -25,20 +26,6 @@ interface OfferActionsProps extends OfferLookup {
   className?: string;
   onAccepted?: (offer: BrokerAssignmentDetail) => void;
   onRefused?: (offer: BrokerAssignmentDetail) => void;
-}
-
-// A API tem DOIS formatos de erro: `error.message` (padrão) e a recusa por
-// cargo, que devolve `error` como texto e a explicação em `message`. Ler só o
-// primeiro mostra a frase genérica no lugar de "seu cargo não permite".
-function reasonOf(e: unknown, fallback: string): string {
-  const data = (e as { response?: { data?: { error?: unknown; message?: unknown } } })?.response?.data;
-  const err = data?.error;
-  if (err && typeof err === 'object' && typeof (err as { message?: unknown }).message === 'string') {
-    return (err as { message: string }).message;
-  }
-  if (typeof data?.message === 'string') return data.message;
-  if (typeof err === 'string') return err;
-  return fallback;
 }
 
 export default function OfferActions({

@@ -44,6 +44,10 @@ export interface BrokerAssignmentDetail {
   pipeline_item_id?: string | null;
   roleta_instance_id?: string | null;
   instance_name?: string | null;
+  // Nome da roleta e de onde o lead veio, para o pop-up de aceite. Opcionais:
+  // contra o servidor que ainda não manda, o pop-up só não desenha a linha.
+  roleta_name?: string | null;
+  origin_label?: string | null;
   // Opcional de propósito: contra o servidor antigo a tela simplesmente não
   // desenha a ficha, e nada mais muda.
   ia_briefing?: OfferAiBriefing | null;
