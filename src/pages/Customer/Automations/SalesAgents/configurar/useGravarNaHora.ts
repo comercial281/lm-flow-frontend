@@ -90,11 +90,25 @@ export function aplicarGravacao(base: SalesAgent, g: Gravacao): SalesAgent {
   return { ...base, ...(patch as Partial<SalesAgent>) };
 }
 
+// ⚠️ Valores ANTIGOS que a onda 2 recusa em gravação nova (contratos 4 e 6): continuam
+// sendo lidos, mas o Desfazer volta pro equivalente de hoje — senão o Desfazer de
+// uma IA antiga falharia com a recusa do servidor. `inbox_roleta` vira a roleta
+// (sem roleta escolhida, a pendência leva ao Destino); `owner` aparece como a
+// Consultora (Identidade.tsx) e volta como ela.
+const EQUIVALENTE_DE_HOJE: Record<string, Record<string, unknown>> = {
+  handoff_target: { inbox_roleta: 'roleta' },
+  persona_kind: { owner: 'assistant' },
+};
+
 /** A gravação que volta ao que estava em `antes` nos mesmos campos. */
 function inversa(antes: SalesAgent, g: Gravacao): Gravacao {
   const lido = antes as unknown as Record<string, unknown>;
   const mudanca: Record<string, unknown> = {};
-  new Set(g.campos.map(raizDe)).forEach((raiz) => { mudanca[raiz] = lido[raiz] ?? null; });
+  new Set(g.campos.map(raizDe)).forEach((raiz) => {
+    const valor = lido[raiz] ?? null;
+    const hoje = EQUIVALENTE_DE_HOJE[raiz];
+    mudanca[raiz] = hoje && typeof valor === 'string' && Object.prototype.hasOwnProperty.call(hoje, valor) ? hoje[valor] : valor;
+  });
   return { mudanca: mudanca as Partial<SalesAgent>, campos: g.campos };
 }
 
