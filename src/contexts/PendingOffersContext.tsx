@@ -15,7 +15,20 @@ import { offerFor, type OfferLookup } from '@/components/roleta/pendingOffersMat
 //
 // Sem provider (testes, telas fora do layout), o hook devolve lista vazia e
 // nada é desenhado — a UI de oferta é opcional por construção.
-const REFRESH_MS = 60_000;
+//
+// 15 s (era 1 min) porque o pop-up de aceite promete abrir em até 15 s em
+// qualquer tela. Em troca, SÓ com a aba visível: aba escondida não checa, e na
+// volta para a aba checa na hora. Tempo real de verdade fica para quando a
+// conexão ao vivo for levada para o app inteiro (não reabrir antes disso).
+const REFRESH_MS = 15_000;
+
+// Vazia de novo = a MESMA lista: sem isso cada checagem de 15 s redesenharia
+// tudo o que lê o contexto (a conversa inclusive) sem nada ter mudado — e quase
+// todo ciclo é vazio. Com oferta, a lista nova a cada ciclo é o que faz os
+// minutos do selo, da faixa e do pop-up andarem.
+function manterVazia(prev: BrokerAssignmentDetail[], next: BrokerAssignmentDetail[]): BrokerAssignmentDetail[] {
+  return prev.length === 0 && next.length === 0 ? prev : next;
+}
 
 interface PendingOffersValue {
   offers: BrokerAssignmentDetail[];
@@ -47,11 +60,11 @@ export function PendingOffersProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       const list = await brokerAssignmentsService.listMine();
-      if (alive.current) setOffers(list);
+      if (alive.current) setOffers(prev => manterVazia(prev, list));
     } catch {
-      // Falha aqui não pode atrapalhar o app: some e tenta de novo no próximo
-      // ciclo. Leitura de fundo não grita.
-      if (alive.current) setOffers([]);
+      // Falha aqui não pode atrapalhar o app: mantém a última lista e tenta de
+      // novo no próximo ciclo. Leitura de fundo não grita. (Zerar a lista numa
+      // falha passageira fechava o pop-up de aceite no meio da leitura.)
     } finally {
       if (alive.current) setLoaded(true);
     }
@@ -59,16 +72,25 @@ export function PendingOffersProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     alive.current = true;
+    // A primeira leitura sai sempre (o app acabou de abrir).
     refresh();
-    const id = setInterval(refresh, REFRESH_MS);
+    const visivel = () => document.visibilityState === 'visible';
+    const id = setInterval(() => {
+      if (visivel()) void refresh();
+    }, REFRESH_MS);
+    const aoVoltar = () => {
+      if (visivel()) void refresh();
+    };
+    document.addEventListener('visibilitychange', aoVoltar);
     return () => {
       alive.current = false;
       clearInterval(id);
+      document.removeEventListener('visibilitychange', aoVoltar);
     };
   }, [refresh]);
 
   // Depois de aceitar/recusar a lista muda na hora: esperar o próximo ciclo
-  // deixaria o selo "Aguardando seu aceite" um minuto no ar sobre um lead que
+  // deixaria o selo "Aguardando seu aceite" no ar até a próxima checagem sobre um lead que
   // já é do corretor.
   const accept = useCallback(async (id: string) => {
     const result = await brokerAssignmentsService.accept(id);
