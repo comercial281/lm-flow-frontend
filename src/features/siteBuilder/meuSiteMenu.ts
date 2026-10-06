@@ -15,7 +15,16 @@ export interface TelaInfo {
   titulo: string;
   frase: string;
   noMenu: boolean;
+  /** Fica dentro de um submenu do grupo (ex.: Personalizar › Página inicial). */
+  submenu?: SubmenuId;
 }
+
+export type SubmenuId = 'inicio';
+
+/** Submenus da barra: abrem ao lado, com as telas que têm o mesmo `submenu`. */
+export const SUBMENUS: Record<SubmenuId, { rotulo: string; dica: string }> = {
+  inicio: { rotulo: 'Página inicial', dica: 'Busca, vitrines, chamadas e mais' },
+};
 
 export const GRUPOS: { id: GrupoId; rotulo: string }[] = [
   { id: 'painel', rotulo: 'Painel' },
@@ -29,11 +38,11 @@ export const TELAS: TelaInfo[] = [
   { id: 'contatos', grupo: 'painel', rotulo: 'Contatos do site', dica: '', titulo: 'Contatos do site', frase: 'Quem pediu contato pelo site.', noMenu: false },
   { id: 'modelo', grupo: 'personalizar', rotulo: 'Modelo do site', dica: 'Clássico, Editorial ou Popular', titulo: 'Modelo do site', frase: 'Um ponto de partida para o visual do site. Depois, cores, logo e textos continuam editáveis em Aparência e na Página inicial.', noMenu: true },
   { id: 'aparencia', grupo: 'personalizar', rotulo: 'Aparência', dica: 'Logo, cores, topo e rodapé', titulo: 'Aparência', frase: 'Logo, cores, fonte, fundo, topo, capa e rodapé do site.', noMenu: true },
-  { id: 'busca', grupo: 'personalizar', rotulo: 'Página inicial · Busca rápida', dica: 'Título e filtros da entrada', titulo: 'Busca rápida', frase: 'O título da capa e os filtros que o visitante vê ao entrar no site.', noMenu: true },
-  { id: 'vitrines', grupo: 'personalizar', rotulo: 'Página inicial · Vitrines', dica: 'Faixas de imóveis', titulo: 'Vitrines', frase: 'Faixas de imóveis na página inicial. Elas se atualizam sozinhas.', noMenu: true },
-  { id: 'chamadas', grupo: 'personalizar', rotulo: 'Página inicial · Chamadas', dica: 'Financiamento, Anuncie e outros', titulo: 'Chamadas', frase: 'Os atalhos da página inicial: financiamento, anunciar imóvel, encomenda e os seus.', noMenu: true },
-  { id: 'buscados', grupo: 'personalizar', rotulo: 'Página inicial · Mais buscados', dica: 'Atalhos pra busca', titulo: 'Mais buscados', frase: 'Atalhos que levam direto pra busca, por tipo e bairro.', noMenu: true },
-  { id: 'secoes', grupo: 'personalizar', rotulo: 'Página inicial · Mais seções', dica: 'Como funciona e atendimento', titulo: 'Mais seções', frase: 'Duas seções opcionais da página inicial: o passo a passo de como comprar e quem atende o cliente.', noMenu: true },
+  { id: 'busca', grupo: 'personalizar', rotulo: 'Busca rápida', dica: 'Título e filtros da entrada', titulo: 'Busca rápida', frase: 'O título da capa e os filtros que o visitante vê ao entrar no site.', noMenu: true, submenu: 'inicio' },
+  { id: 'vitrines', grupo: 'personalizar', rotulo: 'Vitrines', dica: 'Faixas de imóveis', titulo: 'Vitrines', frase: 'Faixas de imóveis na página inicial. Elas se atualizam sozinhas.', noMenu: true, submenu: 'inicio' },
+  { id: 'chamadas', grupo: 'personalizar', rotulo: 'Chamadas', dica: 'Financiamento, Anuncie e outros', titulo: 'Chamadas', frase: 'Os atalhos da página inicial: financiamento, anunciar imóvel, encomenda e os seus.', noMenu: true, submenu: 'inicio' },
+  { id: 'buscados', grupo: 'personalizar', rotulo: 'Mais buscados', dica: 'Atalhos pra busca', titulo: 'Mais buscados', frase: 'Atalhos que levam direto pra busca, por tipo e bairro.', noMenu: true, submenu: 'inicio' },
+  { id: 'secoes', grupo: 'personalizar', rotulo: 'Mais seções', dica: 'Como funciona e atendimento', titulo: 'Mais seções', frase: 'Duas seções opcionais da página inicial: o passo a passo de como comprar e quem atende o cliente.', noMenu: true, submenu: 'inicio' },
   { id: 'ficha', grupo: 'personalizar', rotulo: 'Página do imóvel', dica: 'O que aparece em cada imóvel', titulo: 'Página do imóvel', frase: 'O que aparece na página de cada imóvel e quem recebe cópia dos contatos feitos nela.', noMenu: true },
   { id: 'lista', grupo: 'personalizar', rotulo: 'Lista de imóveis', dica: 'Ordem e visual dos cartões', titulo: 'Lista de imóveis', frase: 'A ordem e o visual dos imóveis na busca do site.', noMenu: true },
   { id: 'menus', grupo: 'personalizar', rotulo: 'Menus', dica: 'Ordem e nomes do menu', titulo: 'Menus', frase: 'Os itens do menu do topo do site: a ordem, o nome de cada um e os links para fora do site.', noMenu: true },
@@ -78,5 +87,6 @@ export function itensDoGrupo(grupo: GrupoId, opts: { podeAnuncios: boolean }): T
 export function trilhaDe(id: TelaId): string {
   const t = telaInfo(id);
   if (t.grupo === 'painel') return '';
-  return GRUPOS.find(g => g.id === t.grupo)?.rotulo ?? '';
+  const grupo = GRUPOS.find(g => g.id === t.grupo)?.rotulo ?? '';
+  return t.submenu ? `${grupo} › ${SUBMENUS[t.submenu].rotulo}` : grupo;
 }
