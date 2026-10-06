@@ -63,4 +63,11 @@ describe('MeuSiteBarra', () => {
     await userEvent.click(await screen.findByRole('menuitem', { name: /Vitrines/ }));
     expect(aoIr).toHaveBeenCalledWith('vitrines');
   });
+
+  it('tem uma linha fina entre cada item da lista', async () => {
+    render(<MeuSiteBarra {...base} aoIr={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: /Configurações/ }));
+    const itens = await screen.findAllByRole('menuitem');
+    expect(screen.getAllByRole('separator')).toHaveLength(itens.length - 1);
+  });
 });

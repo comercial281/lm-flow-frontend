@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchAllPortalProperties } from './portalProperties';
 import { imovelHref } from './finalidade';
@@ -6,6 +6,8 @@ import { ehAba, itensDoMenu, menuPersonalizado, NOME_DE_FABRICA, type LinkDoMenu
 import { caminhoDoSite, type CtxDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { cabecalhosDoSite, ehPrevia } from '@/features/siteBuilder/public/previa';
+import { comModeloDaPrevia, ehPreviaDoModelo, nomeDoModelo, sairDaPreviaDoModelo, urlSemModelo } from '@/features/siteBuilder/public/previaDoModelo';
+import type { ModeloDoSiteId } from '@/features/siteBuilder/modelosDoSite';
 import PortalTranslate from './PortalTranslate';
 import { tituloDaAba } from '@/features/siteBuilder/public/tituloDaAba';
 import { filterProperties, opcoesSemRepetir, type PortalFilters, type PortalProperty, type PortalTab } from '@/features/siteBuilder/public/filtros';
@@ -78,6 +80,11 @@ export interface SiteInfo {
    * (`X-Site-Preview`) e mandou o site inteiro. Só `true` conta.
    */
   preview?: boolean;
+  /**
+   * Prévia do modelo (`?modelo=`, Meu site › Modelo do site): NÃO vem do
+   * servidor. `comModeloDaPrevia` põe ao aplicar o modelo no navegador.
+   */
+  modelo_em_previa?: ModeloDoSiteId;
   /** Domínio próprio ATIVO do site, ou null. */
   domain?: string | null;
   /** Caixinha "Aparecer no Google". Ausente (servidor velho) = desligada. */
@@ -170,12 +177,13 @@ export function estaEmManutencao(site: SiteInfo | null | undefined): boolean {
 
 /**
  * `robots` do site no navegador. `index,follow` só com "Aparecer no Google"
- * ligado, o site no ar e fora da prévia; o resto, `noindex`. É a mesma regra
- * que o servidor usa no `<head>` montado pelo middleware: o site nunca troca o
- * `noindex` dele por `index` depois de carregar.
+ * ligado, o site no ar e fora das prévias (a de antes de publicar e a do
+ * modelo); o resto, `noindex`. É a mesma regra que o servidor usa no `<head>`
+ * montado pelo middleware: o site nunca troca o `noindex` dele por `index`
+ * depois de carregar.
  */
 export function robotsDoSite(site: SiteInfo | null | undefined): 'index,follow' | 'noindex' {
-  if (!site || ehPrevia(site) || site.maintenance === true) return 'noindex';
+  if (!site || ehPrevia(site) || ehPreviaDoModelo(site) || site.maintenance === true) return 'noindex';
   return site.google?.indexable === true ? 'index,follow' : 'noindex';
 }
 
@@ -254,7 +262,8 @@ export function usePortalData(tenant?: string) {
           fetchAllPortalProperties(API, tenant).catch(() => null),
         ]);
         if (!active) return;
-        const siteJson = siteRes.ok ? ((await siteRes.json()).data as SiteInfo) : {};
+        // `?modelo=` (prévia do modelo): o visual trocado só no navegador.
+        const siteJson = siteRes.ok ? comModeloDaPrevia((await siteRes.json()).data as SiteInfo) : {};
         if (propsJson === null && !estaEmManutencao(siteJson)) throw new Error('catálogo indisponível');
         setSite(siteJson || {});
         setItems(propsJson || []);
@@ -762,15 +771,36 @@ function RodapeEmManutencao({ site, tenant }: PropsDaMoldura) {
 }
 
 /**
- * Faixa da prévia (site aberto pelo link "Ver prévia" do painel). Mora DENTRO
- * do bloco que gruda no topo: fica sempre à vista sem cobrir o topo do site
- * nem a barra de contato da ficha, que é fixa embaixo no celular.
+ * Faixa da prévia (site aberto pelo link "Ver prévia" do painel ou pelo "Ver
+ * prévia" de um modelo). Mora DENTRO do bloco que gruda no topo: fica sempre
+ * à vista sem cobrir o topo do site nem a barra de contato da ficha, que é
+ * fixa embaixo no celular. As duas prévias juntas: uma faixa só.
  */
 export function FaixaDePrevia({ site }: { site: SiteInfo }) {
-  if (!ehPrevia(site)) return null;
+  const previa = ehPrevia(site);
+  const modelo = ehPreviaDoModelo(site) && site.modelo_em_previa ? nomeDoModelo(site.modelo_em_previa) : null;
+  if (!previa && !modelo) return null;
+  const texto = !modelo
+    ? 'Prévia: o site ainda não está publicado.'
+    : `Prévia do modelo ${modelo}. ${previa ? 'Nada foi salvo, e o site ainda não está publicado.' : 'Nada foi salvo.'}`;
+  // "Ver o site normal": esquece o modelo e recarrega o mesmo endereço sem o
+  // `modelo=` (o `previa=` e os filtros ficam). O endereço é lido no clique: a
+  // navegação interna troca a URL sem redesenhar a faixa.
+  const sair = (e: MouseEvent<HTMLAnchorElement>) => {
+    sairDaPreviaDoModelo();
+    e.currentTarget.href = urlSemModelo(window.location.href);
+  };
   return (
     <div role="status" className="bg-amber-400 px-4 py-1.5 text-center text-[13px] font-semibold text-neutral-900">
-      Prévia: o site ainda não está publicado.
+      {texto}
+      {modelo && (
+        <>
+          {' '}
+          <a href={urlSemModelo(window.location.href)} onClick={sair} className="underline underline-offset-2">
+            Ver o site normal
+          </a>
+        </>
+      )}
     </div>
   );
 }

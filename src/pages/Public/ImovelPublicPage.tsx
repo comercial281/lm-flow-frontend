@@ -3,6 +3,7 @@ import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { useCtxDoSite, useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { TEXTO_ENVIO_NA_PREVIA, cabecalhosDoSite, ehPrevia, envioFoiPrevia } from '@/features/siteBuilder/public/previa';
+import { comModeloDaPrevia, ehPreviaDoModelo } from '@/features/siteBuilder/public/previaDoModelo';
 import { trackLead } from '@/features/siteBuilder/public/siteTracking';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
@@ -153,7 +154,8 @@ export default function ImovelPublicPage() {
         if (!imovelRes.ok) { setState('notfound'); return; }
         // O back-end serializa o imóvel direto em `data` (objeto plano).
         const property = (await imovelRes.json()).data as PropertyDTO;
-        const siteInfo = siteRes.ok ? ((await siteRes.json()).data as SiteInfo) : {};
+        // `?modelo=` (prévia do modelo): o visual trocado só no navegador.
+        const siteInfo = siteRes.ok ? comModeloDaPrevia((await siteRes.json()).data as SiteInfo) : {};
         setSite(siteInfo);
         setSiteLoaded(siteRes.ok);
         setProp(property);
@@ -239,6 +241,8 @@ export default function ImovelPublicPage() {
     e.preventDefault();
     if (!tenant || !code || !name.trim()) return;
     if (!isValidBrPhone(phone)) { setPhoneErr(true); return; }
+    // Prévia do modelo: o servidor não sabe dela, então nada é enviado.
+    if (ehPreviaDoModelo(site)) { setFalhouEnvio(false); setEnviadoNaPrevia(true); setSent(true); return; }
     if (enviandoRef.current) return;
     enviandoRef.current = true;
     setEnviando(true);

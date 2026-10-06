@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { TEXTO_ENVIO_NA_PREVIA, cabecalhosDoSite, ehPrevia, envioFoiPrevia } from '@/features/siteBuilder/public/previa';
+import { ehPreviaDoModelo } from '@/features/siteBuilder/public/previaDoModelo';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import { API, PortalFooter, PortalHeader, Stat, usePortalData } from './portalShared';
@@ -57,6 +58,8 @@ export default function PortalHomePage() {
     e.preventDefault();
     if (!tenant || !leadName.trim()) return;
     if (!isValidBrPhone(leadPhone)) { setLeadPhoneErr(true); return; }
+    // Prévia do modelo: o servidor não sabe dela, então nada é enviado.
+    if (ehPreviaDoModelo(site)) { setEnviadoNaPrevia(true); setLeadSent(true); return; }
     try {
       const res = await fetch(`${API}/api/public/v1/site/leads`, {
         method: 'POST',

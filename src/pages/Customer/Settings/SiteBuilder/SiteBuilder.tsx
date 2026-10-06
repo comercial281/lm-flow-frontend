@@ -436,7 +436,7 @@ export default function SiteBuilder() {
         {tela === 'aparencia' && (
           <TelaAparencia {...formProps} heroPickPreview={heroPickPreview} setHeroPickPreview={setHeroPickPreview} />
         )}
-        {tela === 'modelo' && <TelaModelo {...formProps} />}
+        {tela === 'modelo' && <TelaModelo {...formProps} urlDoSite={site ? endereco.url : undefined} noAr={noAr} aoPedirPrevia={pedirPrevia} />}
         {tela === 'busca' && <TelaBusca {...formProps} />}
         {tela === 'vitrines' && <TelaVitrines {...formProps} />}
         {tela === 'chamadas' && <TelaChamadas {...formProps} versaoDasPaginas={versaoDasPaginas} />}
