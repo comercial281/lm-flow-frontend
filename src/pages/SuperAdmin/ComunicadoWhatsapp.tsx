@@ -9,7 +9,8 @@ import { Seletor } from '@/components/base/Seletor';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { plural, telefone } from '@/lib/formato';
 import { CORPO_SECAO, ESQUELETO, PAGINA, SECAO, SUBTITULO_SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
-import clientInstancesService, { type CentralInstance } from '@/services/clientInstances/clientInstancesService';
+import numberOwnershipService, { type PlatformNumber } from '@/services/superAdmin/numberOwnershipService';
+import { textoDaSituacao } from './NumberOwnership/situacao';
 import {
   comunicadoService,
   type ComunicadoAlvo,
@@ -59,7 +60,10 @@ export default function ComunicadoWhatsapp() {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [modo, setModo] = useState<ComunicadoModo>('owners');
   const [numero, setNumero] = useState('');
-  const [numeros, setNumeros] = useState<CentralInstance[]>([]);
+  const [numeros, setNumeros] = useState<PlatformNumber[]>([]);
+  const [carregandoNumeros, setCarregandoNumeros] = useState(true);
+  const [erroNumeros, setErroNumeros] = useState(false);
+  const [textoDoErro, setTextoDoErro] = useState('');
   const [alvos, setAlvos] = useState<ComunicadoAlvo[] | null>(null);
   const [semLeitura, setSemLeitura] = useState(false);
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
@@ -85,6 +89,7 @@ export default function ComunicadoWhatsapp() {
     const minha = ++leitura.current;
     setCarregando(true);
     setErro(false);
+    setTextoDoErro('');
     // A lista velha sai já: o N do envio nunca vem de outra aba ou de outro número.
     setAlvos(null);
     setSemLeitura(false);
@@ -106,23 +111,48 @@ export default function ComunicadoWhatsapp() {
         setMarcados(new Set(aptos.map(a => a.tenant_id)));
       }
       if (r.running_id) setAcompanhando(r.running_id);
-    } catch {
+    } catch (e) {
       if (minha !== leitura.current) return;
       setAlvos(null);
+      // O servidor recusa número que não é da Leal Mídia (422): mostra o texto dele.
+      const r = erroDaApi(e);
+      setTextoDoErro(r.status === 422 && r.error ? r.error : '');
       setErro(true);
     } finally {
       if (minha === leitura.current) setCarregando(false);
     }
   }, []);
 
+  // Só números da Leal Mídia: o aviso nunca sai do número de um cliente. Ilegível ou
+  // falha = seletor vazio com erro (nunca uma lista que parece completa).
+  const leituraNumeros = useRef(0);
+  const carregarNumeros = useCallback(async () => {
+    const minha = ++leituraNumeros.current;
+    setCarregandoNumeros(true);
+    setErroNumeros(false);
+    try {
+      const r = await numberOwnershipService.platformNumbers();
+      if (minha !== leituraNumeros.current) return;
+      const dados = r.data?.data;
+      if (!dados || dados.unreadable) {
+        setNumeros([]);
+        setErroNumeros(true);
+      } else {
+        setNumeros(dados.numbers ?? []);
+      }
+    } catch {
+      if (minha !== leituraNumeros.current) return;
+      setNumeros([]);
+      setErroNumeros(true);
+    } finally {
+      if (minha === leituraNumeros.current) setCarregandoNumeros(false);
+    }
+  }, []);
+
   useEffect(() => {
     void carregar('owners');
-    // Falha da lista de números não derruba a tela: o seletor mostra o número em uso.
-    clientInstancesService
-      .centralInstances()
-      .then(r => setNumeros(r.data?.data ?? []))
-      .catch(() => setNumeros([]));
-  }, [carregar]);
+    void carregarNumeros();
+  }, [carregar, carregarNumeros]);
 
   // Acompanha o envio até o fim. Se a tela sumir, o envio segue no servidor.
   useEffect(() => {
@@ -157,8 +187,11 @@ export default function ComunicadoWhatsapp() {
   }, [acompanhando, tentativa]);
 
   modoAgora.current = modo;
-  numeroAgora.current = numero;
   alvosAgora.current = alvos;
+
+  // O número padrão do servidor só vale se está entre os da Leal Mídia.
+  const numeroValido = numeros.some(i => i.name === numero) ? numero : '';
+  numeroAgora.current = numeroValido;
 
   const enviaveis = useMemo(() => (alvos ?? []).filter(podeReceber), [alvos]);
   const escolhidos = enviaveis.filter(a => marcados.has(a.tenant_id));
@@ -169,9 +202,11 @@ export default function ComunicadoWhatsapp() {
   const motivoTravado = (() => {
     if (rodando) return 'Espere o envio em andamento terminar.';
     if (carregando) return 'Espere a lista de clientes carregar.';
+    if (carregandoNumeros) return 'Espere a lista de números carregar.';
+    if (erroNumeros) return 'Não consegui ler os números da Leal Mídia. Tente de novo.';
     if (erro || semLeitura) return 'Escolha outro número ou tente de novo.';
     if (n === 0) return 'Nenhum cliente marcado com destino.';
-    if (!numero) return 'Escolha o número que envia.';
+    if (!numeroValido) return 'Escolha o número que envia.';
     if (!mensagem.trim()) return 'Escreva a mensagem.';
     return '';
   })();
@@ -180,7 +215,7 @@ export default function ComunicadoWhatsapp() {
     const m = chave as ComunicadoModo;
     if (m === modo || enviando) return;
     setModo(m);
-    void carregar(m, numero || undefined);
+    void carregar(m, numeroValido || undefined);
   };
 
   const trocarNumero = (novo: string) => {
@@ -204,12 +239,12 @@ export default function ComunicadoWhatsapp() {
     // Foto do que foi confirmado: o N e os clientes saem do mesmo lugar.
     const ids = escolhidos.map(a => a.tenant_id);
     const antes = { marcados: new Set(ids), ids: new Set((alvosAgora.current ?? []).map(a => a.tenant_id)) };
-    const quem = { mode: modo, instance: numero, message: mensagem, tenant_ids: ids, expected: ids.length };
+    const quem = { mode: modo, instance: numeroValido, message: mensagem, tenant_ids: ids, expected: ids.length };
     setEnviando(true);
     try {
       // Segunda volta só quando o servidor pede a confirmação de novo.
       for (let volta = 0; volta < 2; volta += 1) {
-        if (!(await confirmar(pedidoDeEnvio(modo, ids.length, numero)))) return;
+        if (!(await confirmar(pedidoDeEnvio(modo, ids.length, numeroValido)))) return;
         try {
           const id = await comunicadoService.enviar(quem);
           setAndamento(null);
@@ -245,7 +280,7 @@ export default function ComunicadoWhatsapp() {
   const listaDeClientes = () => {
     if (carregando) return <div className={`${ESQUELETO} h-40`} />;
     if (erro) {
-      return <EmptyState tipo="erro" aoTentarDeNovo={() => void carregar(modo, numero || undefined)} className="py-8" />;
+      return <EmptyState tipo="erro" {...(textoDoErro ? { description: textoDoErro } : {})} aoTentarDeNovo={() => void carregar(modo, numeroValido || undefined)} className="py-8" />;
     }
     if (semLeitura) {
       return (
@@ -253,7 +288,7 @@ export default function ComunicadoWhatsapp() {
           tipo="erro"
           title="Não consegui ler os grupos"
           description={`O número ${numero} não devolveu a lista de grupos. Confira se ele está conectado ou escolha outro número abaixo.`}
-          aoTentarDeNovo={() => void carregar(modo, numero)}
+          aoTentarDeNovo={() => void carregar(modo, numeroValido || undefined)}
           className="py-8"
         />
       );
@@ -388,23 +423,30 @@ export default function ComunicadoWhatsapp() {
             O número da Leal Mídia de onde sai o comunicado. Em Grupos, ele precisa estar nos grupos dos clientes.
           </p>
           <div className={CORPO_SECAO}>
-            <Seletor
-              id="comunicado-numero"
-              aria-label="Número que envia"
-              value={numero}
-              disabled={enviando}
-              onChange={e => trocarNumero(e.target.value)}
-              className="w-full max-w-sm"
-            >
-              {!numero && <option value="">Escolha o número</option>}
-              {numero && !numeros.some(i => i.name === numero) && <option value={numero}>{numero}</option>}
-              {numeros.map(i => (
-                <option key={i.name} value={i.name}>
-                  {i.name}
-                  {i.connected ? '' : ' (desconectado)'}
-                </option>
-              ))}
-            </Seletor>
+            {erroNumeros ? (
+              <EmptyState
+                tipo="erro"
+                title="Não consegui ler os números da Leal Mídia"
+                aoTentarDeNovo={() => void carregarNumeros()}
+                className="py-6"
+              />
+            ) : (
+              <Seletor
+                id="comunicado-numero"
+                aria-label="Número que envia"
+                value={numeroValido}
+                disabled={enviando || carregandoNumeros}
+                onChange={e => trocarNumero(e.target.value)}
+                className="w-full max-w-sm"
+              >
+                {!numeroValido && <option value="">Escolha o número</option>}
+                {numeros.map(i => (
+                  <option key={i.name} value={i.name}>
+                    {`${i.name} · ${textoDaSituacao(i.status, i.disconnected_at)}`}
+                  </option>
+                ))}
+              </Seletor>
+            )}
           </div>
         </section>
 

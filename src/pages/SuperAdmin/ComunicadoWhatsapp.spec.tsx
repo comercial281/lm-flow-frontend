@@ -6,8 +6,8 @@ import { MemoryRouter } from 'react-router-dom';
 
 const svc = vi.hoisted(() => ({ alvos: vi.fn(), enviar: vi.fn(), andamento: vi.fn() }));
 vi.mock('@/services/superAdmin/comunicadoService', () => ({ comunicadoService: svc }));
-const inst = vi.hoisted(() => ({ centralInstances: vi.fn() }));
-vi.mock('@/services/clientInstances/clientInstancesService', () => ({ default: inst }));
+const inst = vi.hoisted(() => ({ platformNumbers: vi.fn() }));
+vi.mock('@/services/superAdmin/numberOwnershipService', () => ({ default: inst }));
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('sonner', () => ({ toast }));
 
@@ -49,7 +49,10 @@ describe('Comunicação → WhatsApp (Comunicado)', () => {
     svc.alvos.mockImplementation(async (modo: string) => (modo === 'groups' ? grupos : donos));
     svc.enviar.mockResolvedValue('c1');
     svc.andamento.mockResolvedValue(andamento('running'));
-    inst.centralInstances.mockResolvedValue({ data: { data: [{ name: NUMERO, connected: true }, { name: 'Sara', connected: false }] } });
+    inst.platformNumbers.mockResolvedValue({ data: { data: { unreadable: false, numbers: [
+      { name: NUMERO, phone: null, status: 'connected' },
+      { name: 'Sara', phone: null, status: 'never' },
+    ] } } });
   });
 
   it('abre em Donos: quem tem telefone vem marcado; quem não tem fica de fora, com o motivo', async () => {
@@ -189,6 +192,67 @@ describe('Comunicação → WhatsApp (Comunicado)', () => {
     await user.click(within(outra).getByRole('button', { name: 'Mandar' }));
     await waitFor(() => expect(svc.enviar).toHaveBeenCalledTimes(2));
     expect(svc.enviar.mock.calls[1][0].expected).toBe(2);
+  });
+
+  it('o seletor lista só os números da Leal Mídia, com a situação ao lado do nome', async () => {
+    montar();
+    await screen.findByText('(11) 98888-7777');
+    const seletor = screen.getByLabelText('Número que envia');
+    await waitFor(() => expect(within(seletor).getAllByRole('option')).toHaveLength(2));
+    expect(within(seletor).getByRole('option', { name: `${NUMERO} · Conectado` })).toBeInTheDocument();
+    expect(within(seletor).getByRole('option', { name: 'Sara · Nunca conectado' })).toBeInTheDocument();
+    expect(seletor).toHaveValue(NUMERO);
+  });
+
+  it('número padrão que não é da Leal Mídia não fica escolhido: seletor sem valor e Enviar travado', async () => {
+    svc.alvos.mockImplementation(async () => ({ ...donos, instance: 'Moeda Forte – Corretor X' }));
+    montar();
+    await screen.findByText('(11) 98888-7777');
+    escrever('Oi');
+    await waitFor(() => expect(screen.getByLabelText('Número que envia')).toHaveValue(''));
+    expect(screen.queryByRole('option', { name: /Moeda Forte – Corretor X/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Enviar' })).toBeDisabled();
+    expect(screen.getByText('Escolha o número que envia.')).toBeInTheDocument();
+  });
+
+  it('números ilegíveis: seletor vazio com erro e "Tentar de novo"; Enviar travado com o motivo', async () => {
+    inst.platformNumbers.mockResolvedValueOnce({ data: { data: { unreadable: true, numbers: [] } } });
+    const user = userEvent.setup();
+    montar();
+    await screen.findByText('(11) 98888-7777');
+    escrever('Oi');
+    expect(await screen.findByText('Não consegui ler os números da Leal Mídia')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Número que envia')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Enviar' })).toBeDisabled();
+    expect(screen.getByText('Não consegui ler os números da Leal Mídia. Tente de novo.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    await waitFor(() => expect(screen.getByLabelText('Número que envia')).toHaveValue(NUMERO));
+    expect(screen.getByRole('button', { name: 'Enviar' })).toBeEnabled();
+    expect(inst.platformNumbers).toHaveBeenCalledTimes(2);
+  });
+
+  it('falha ao ler os números também deixa o seletor vazio com erro', async () => {
+    inst.platformNumbers.mockRejectedValueOnce(new Error('rede'));
+    montar();
+    expect(await screen.findByText('Não consegui ler os números da Leal Mídia')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Número que envia')).not.toBeInTheDocument();
+  });
+
+  it('servidor recusa o número (422): mostra o texto do servidor no envio', async () => {
+    svc.enviar.mockRejectedValueOnce({ response: { status: 422, data: { error: 'Este número não é da Leal Mídia.' } } });
+    const user = userEvent.setup();
+    montar();
+    await screen.findByText('(11) 98888-7777');
+    escrever('Oi');
+    await user.click(screen.getByRole('button', { name: 'Enviar' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Mandar' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Este número não é da Leal Mídia.'));
+  });
+
+  it('servidor recusa o número ao carregar a lista (422): mostra o texto dele, não o erro genérico', async () => {
+    svc.alvos.mockRejectedValueOnce({ response: { status: 422, data: { error: 'Não consegui conferir o número que envia.' } } });
+    montar();
+    expect(await screen.findByText('Não consegui conferir o número que envia.')).toBeInTheDocument();
   });
 
   it('sem número padrão (instance vazio): sem escolha e Enviar travado com o motivo', async () => {

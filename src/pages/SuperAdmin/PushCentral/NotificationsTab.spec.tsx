@@ -1,12 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 const svc = vi.hoisted(() => ({
   catalog: vi.fn(), show: vi.fn(), tenantContext: vi.fn(), update: vi.fn(), resetEvent: vi.fn(), applyToAll: vi.fn(),
 }));
 vi.mock('@/services/notifications/notificationPolicyService', () => ({ default: svc }));
-vi.mock('@/components/notifications/NotificationMatrix', () => ({ default: () => <div>matriz de avisos</div> }));
+vi.mock('@/components/notifications/NotificationMatrix', () => ({
+  default: (p: { policy: unknown; onToggleChannel: (e: string, c: string, v: boolean) => void; onReset: (e: string) => void }) => (
+    <div>
+      matriz de avisos
+      <output aria-label="política na tela">{JSON.stringify(p.policy)}</output>
+      <button onClick={() => p.onToggleChannel('novo_lead', 'push', true)}>ligar aviso</button>
+      <button onClick={() => p.onReset('novo_lead')}>restaurar aviso</button>
+    </div>
+  ),
+}));
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('sonner', () => ({ toast }));
 
@@ -104,6 +113,37 @@ describe('Comunicação → Avisos na tela', () => {
     soltarB({ tenant: tenants[1], policy: {} });
     expect(await screen.findByText('matriz de avisos')).toBeInTheDocument();
     expect(svc.tenantContext).toHaveBeenCalledWith('b');
+  });
+
+  const trocarParaBComPedidoEmVoo = async (clicar: string, servico: 'update' | 'resetEvent') => {
+    let soltarA!: (v: unknown) => void;
+    svc[servico].mockImplementationOnce(() => new Promise(r => { soltarA = r; }));
+    svc.show.mockImplementation(async (id: string) => ({
+      tenant: id === 'a' ? tenants[0] : tenants[1],
+      policy: { [`dono_${id}`]: { channels: {} } },
+    }));
+    const user = userEvent.setup();
+    render(<NotificationsTab />);
+    await waitFor(() => expect(screen.getByLabelText('política na tela')).toHaveTextContent('dono_a'));
+    await user.click(screen.getByRole('button', { name: clicar }));
+    await waitFor(() => expect(svc[servico]).toHaveBeenCalledWith('a', expect.anything()));
+    await user.selectOptions(screen.getByLabelText('Cliente'), 'b');
+    await waitFor(() => expect(screen.getByLabelText('política na tela')).toHaveTextContent('dono_b'));
+    await act(async () => {
+      soltarA({ policy: { dono_a: { channels: {} } } });
+      await new Promise(r => setTimeout(r, 20));
+    });
+    expect(screen.getByLabelText('política na tela')).toHaveTextContent('dono_b');
+    expect(screen.getByLabelText('política na tela')).not.toHaveTextContent('dono_a');
+  };
+
+  it('salvar em A e trocar para B antes da resposta: a matriz de B não muda', async () => {
+    await trocarParaBComPedidoEmVoo('ligar aviso', 'update');
+  });
+
+  it('restaurar o padrão em A e trocar para B antes da resposta: a matriz de B não muda e sem aviso de sucesso', async () => {
+    await trocarParaBComPedidoEmVoo('restaurar aviso', 'resetEvent');
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it('aplicar a todos rejeitado mostra erro', async () => {

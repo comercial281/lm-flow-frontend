@@ -129,11 +129,15 @@ export default function NotificationsTab() {
   }, [tenantId, loadPolicy]);
 
   const save = async (patch: PolicyPatch) => {
+    // Só vale a resposta se o cliente ainda é o mesmo de quando a pessoa clicou.
+    const meu = pedido.current;
     setSaving(true);
     try {
       const { policy: updated } = await notificationPolicyService.update(tenantId, patch);
+      if (meu !== pedido.current) return;
       setPolicy(updated);
     } catch {
+      if (meu !== pedido.current) return;
       toast.error('Não consegui salvar');
       void loadPolicy(tenantId);
     } finally {
@@ -148,12 +152,15 @@ export default function NotificationsTab() {
     save({ [event]: { params: { [key]: value } } });
 
   const resetEvent = async (event: string) => {
+    const meu = pedido.current;
     setSaving(true);
     try {
       const { policy: updated } = await notificationPolicyService.resetEvent(tenantId, event);
+      if (meu !== pedido.current) return;
       setPolicy(updated);
       toast.success('Voltou ao padrão');
     } catch {
+      if (meu !== pedido.current) return;
       toast.error('Não consegui restaurar o padrão');
     } finally {
       setSaving(false);
