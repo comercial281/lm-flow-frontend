@@ -7231,3 +7231,21 @@ Agora (substitui a "frase" da seção *Roleta nova: página por origem*):
 Armadilha: a contagem por tipo lê o que vem antes do " · " na frase que o servidor manda em
 `origins_summary` (`Roleta::Origins.sentence`). Mudou o nome do tipo lá, muda o
 `ORIGEM_NO_CARTAO` em `roletaNovaTextos.ts` (tipo desconhecido conta como "origem").
+
+## Ordem das fotos do imóvel: a primeira é a capa (06/10/2026)
+
+Pedido do dono: ajustar a ordem em que as fotos aparecem. Decisão dele: **a primeira foto é
+sempre a capa.**
+
+- Em **Fotos e vídeos** (o mesmo gerenciador da lista de Imóveis e do cadastro), cada foto tem
+  uma alça de arrastar no canto, sempre visível (no celular não existe passar o mouse). Também
+  dá pelo teclado (espaço + setas). A ordem vale para a galeria do site, a landing, os portais
+  e o pacote de fotos que a IA Vendedora manda.
+- **Arrastou, salvou**: a primeira imagem da nova ordem vira a capa. **"Definir como capa"**
+  leva a foto para o primeiro lugar, e a capa antiga vira a segunda.
+- **Vídeo e áudio nunca são capa**: se um vídeo for arrastado para a frente, a primeira imagem
+  passa na frente dele quando a ordem volta do servidor. O botão da coroa não aparece em vídeo.
+- O servidor ordena com a capa marcada na frente (`PropertyPhoto.ordered`), então os imóveis
+  antigos com capa fora do primeiro lugar já aparecem certos, sem migração. Sem capa marcada,
+  vale a primeira imagem da ordem (`Property#cover_photo`); a tela calcula o selo "Capa" pela
+  mesma regra (`ordemDasFotos.ts`).

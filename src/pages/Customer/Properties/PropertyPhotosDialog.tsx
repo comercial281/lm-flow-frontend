@@ -1,8 +1,22 @@
 // Gerenciador de fotos e vídeos de um imóvel (subir, por URL, capa, ocultar,
 // remover). Mora aqui para a lista de Imóveis (ação "Fotos e vídeos") e o
 // cadastro (seção Fotos e vídeos, na edição) abrirem o mesmo.
+// Arrastar muda a ordem do site, dos portais e da IA; a primeira foto é a capa.
 import { useState, useEffect, useCallback, useRef, DragEvent } from 'react';
 import { toast } from 'sonner';
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type Announcements,
+  type DragEndEvent,
+  type ScreenReaderInstructions,
+} from '@dnd-kit/core';
+import { SortableContext, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   Button,
   Input,
@@ -14,7 +28,7 @@ import {
   DialogTitle,
   Label as UILabel,
 } from '@/components/ui/ds';
-import { Plus, Loader2, Image, X, Crown, Eye, EyeOff, Upload, Link as LinkIcon, Film } from 'lucide-react';
+import { Plus, Loader2, Image, X, Crown, Eye, EyeOff, Upload, Link as LinkIcon, Film, GripVertical } from 'lucide-react';
 import type { Property } from '@/services/properties/propertiesService';
 import {
   propertyPhotosService,
@@ -24,6 +38,132 @@ import {
   MAX_UPLOAD_BYTES,
 } from '@/services/propertyPhotos/propertyPhotosService';
 import { Seletor } from '@/components/base/Seletor';
+import { cn } from '@/lib/utils';
+import { ehVideoOuAudio, idDaCapa, moverParaCapa, posicoes } from './ordemDasFotos';
+
+// O leitor de tela fala português (o dnd-kit vem com as frases em inglês).
+const INSTRUCOES_DE_ARRASTAR: ScreenReaderInstructions = {
+  draggable: 'Pra mudar a ordem, aperte espaço, use as setas e aperte espaço de novo pra soltar. Esc cancela. A primeira foto é a capa.',
+};
+
+function anunciosDasFotos(photos: PropertyPhoto[]): Announcements {
+  const posicao = (id: unknown) => `${Math.max(0, photos.findIndex(p => p.id === id)) + 1}ª`;
+  return {
+    onDragStart: ({ active }) => `Foto pega, na posição ${posicao(active.id)}.`,
+    onDragOver: ({ over }) => (over ? `Sobre a posição ${posicao(over.id)}.` : 'Fora da lista.'),
+    onDragEnd: ({ over }) => (over ? `Foto solta na posição ${posicao(over.id)}.` : 'Foto solta. A ordem não mudou.'),
+    onDragCancel: ({ active }) => `Cancelado. A foto voltou pra posição ${posicao(active.id)}.`,
+  };
+}
+
+interface CartaoProps {
+  photo: PropertyPhoto;
+  indice: number;
+  ehCapa: boolean;
+  ocupado: boolean;
+  aoDefinirCapa: () => void;
+  aoAlternarVisivel: () => void;
+  aoRemover: () => void;
+}
+
+function CartaoDaFoto({ photo, indice, ehCapa, ocupado, aoDefinirCapa, aoAlternarVisivel, aoRemover }: CartaoProps) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id: photo.id, disabled: ocupado, attributes: { roleDescription: 'foto do imóvel' } });
+  const isVideo = ehVideoOuAudio(photo);
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(
+        'group relative rounded-lg overflow-hidden border border-border bg-muted aspect-video',
+        isDragging && 'z-10 shadow-lg ring-2 ring-primary',
+      )}
+    >
+      {isVideo ? (
+        <video
+          src={photo.file_url}
+          className="w-full h-full object-cover"
+          muted
+          playsInline
+          preload="metadata"
+          controls
+        />
+      ) : (
+        <img
+          src={photo.thumbnail_url || photo.file_url}
+          alt={photo.alt_text ?? photo.caption ?? ''}
+          className="w-full h-full object-cover"
+          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        />
+      )}
+
+      {/* Badges */}
+      <div className="absolute top-1.5 left-1.5 flex gap-1">
+        {ehCapa && (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500 text-white font-medium flex items-center gap-0.5">
+            <Crown className="h-2.5 w-2.5" />
+            Capa
+          </span>
+        )}
+        {!photo.published && (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-slate-600 text-white font-medium">
+            Oculta
+          </span>
+        )}
+      </div>
+
+      {/* Type label */}
+      <div className="absolute bottom-1.5 left-1.5">
+        <span className="text-xs px-1.5 py-0.5 rounded bg-black/60 text-white">
+          {PHOTO_TYPE_LABELS[photo.photo_type] ?? photo.photo_type}
+        </span>
+      </div>
+
+      {/* Hover actions */}
+      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+        {!ehCapa && !isVideo && (
+          <button
+            onClick={aoDefinirCapa}
+            className="p-1.5 rounded bg-orange-500 text-white hover:bg-orange-600"
+            title="Definir como capa (vai para o primeiro lugar)"
+          >
+            <Crown className="h-3.5 w-3.5" />
+          </button>
+        )}
+        <button
+          onClick={aoAlternarVisivel}
+          className="p-1.5 rounded bg-slate-600 text-white hover:bg-slate-700"
+          title={photo.published ? 'Ocultar' : 'Publicar'}
+        >
+          {photo.published
+            ? <EyeOff className="h-3.5 w-3.5" />
+            : <Eye className="h-3.5 w-3.5" />
+          }
+        </button>
+        <button
+          onClick={aoRemover}
+          className="p-1.5 rounded bg-red-600 text-white hover:bg-red-700"
+          title="Remover"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Alça de arrastar: sempre visível (no celular não existe passar o mouse) */}
+      <button
+        type="button"
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+        aria-label={`Arrastar a ${indice + 1}ª foto`}
+        title="Arraste para mudar a ordem"
+        className="absolute top-1.5 right-1.5 z-10 cursor-grab touch-none rounded bg-black/60 p-1 text-white hover:bg-black/80 active:cursor-grabbing disabled:cursor-not-allowed"
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
 
 export default function PropertyPhotosDialog({
   property,
@@ -42,6 +182,7 @@ export default function PropertyPhotosDialog({
   const [newType, setNewType] = useState('main');
   const [newCaption, setNewCaption] = useState('');
   const [addingUrl, setAddingUrl] = useState(false);
+  const [salvandoOrdem, setSalvandoOrdem] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadPhotos = useCallback(async () => {
@@ -131,15 +272,43 @@ export default function PropertyPhotosDialog({
     }
   };
 
+  // A capa vai para o primeiro lugar (a primeira foto é sempre a capa).
   const handleSetCover = async (photo: PropertyPhoto) => {
     try {
       await propertyPhotosService.setAsCover(property.id, photo.id);
-      setPhotos(prev => prev.map(p => ({ ...p, is_cover: p.id === photo.id })));
+      setPhotos(prev => moverParaCapa(prev, photo.id));
       toast.success('Capa atualizada');
     } catch {
       toast.error('Erro ao definir capa');
     }
   };
+
+  const sensores = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  // Mostra a nova ordem na hora e fica com a que o servidor devolve: se um vídeo
+  // foi parar na frente, a primeira imagem vira a capa e passa na frente dele.
+  const aoSoltar = async ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const de = photos.findIndex(p => p.id === active.id);
+    const para = photos.findIndex(p => p.id === over.id);
+    if (de < 0 || para < 0) return;
+    const nova = arrayMove(photos, de, para);
+    setPhotos(nova);
+    setSalvandoOrdem(true);
+    try {
+      setPhotos(await propertyPhotosService.reorder(property.id, posicoes(nova)));
+    } catch {
+      toast.error('Erro ao salvar a ordem das fotos');
+      void loadPhotos();
+    } finally {
+      setSalvandoOrdem(false);
+    }
+  };
+
+  const capaId = idDaCapa(photos);
 
   const handleTogglePublished = async (photo: PropertyPhoto) => {
     try {
@@ -170,6 +339,7 @@ export default function PropertyPhotosDialog({
           </DialogTitle>
           <DialogDescription>
             {photos.length} foto{photos.length !== 1 ? 's' : ''} cadastrada{photos.length !== 1 ? 's' : ''}
+            {photos.length > 1 && ' · Arraste para mudar a ordem. A primeira foto é a capa.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -272,84 +442,29 @@ export default function PropertyPhotosDialog({
             <p className="text-sm">Nenhuma foto cadastrada</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {photos.map(photo => {
-              const isVideo = photo.content_type?.startsWith('video/') || photo.photo_type === 'video';
-              return (
-              <div key={photo.id} className="group relative rounded-lg overflow-hidden border border-border bg-muted aspect-video">
-                {isVideo ? (
-                  <video
-                    src={photo.file_url}
-                    className="w-full h-full object-cover"
-                    muted
-                    playsInline
-                    preload="metadata"
-                    controls
+          <DndContext
+            sensors={sensores}
+            collisionDetection={closestCenter}
+            onDragEnd={aoSoltar}
+            accessibility={{ screenReaderInstructions: INSTRUCOES_DE_ARRASTAR, announcements: anunciosDasFotos(photos) }}
+          >
+            <SortableContext items={photos.map(p => p.id)} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {photos.map((photo, indice) => (
+                  <CartaoDaFoto
+                    key={photo.id}
+                    photo={photo}
+                    indice={indice}
+                    ehCapa={photo.id === capaId}
+                    ocupado={salvandoOrdem}
+                    aoDefinirCapa={() => handleSetCover(photo)}
+                    aoAlternarVisivel={() => handleTogglePublished(photo)}
+                    aoRemover={() => handleDelete(photo)}
                   />
-                ) : (
-                  <img
-                    src={photo.thumbnail_url || photo.file_url}
-                    alt={photo.alt_text ?? photo.caption ?? ''}
-                    className="w-full h-full object-cover"
-                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
-                )}
-
-                {/* Badges */}
-                <div className="absolute top-1.5 left-1.5 flex gap-1">
-                  {photo.is_cover && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500 text-white font-medium flex items-center gap-0.5">
-                      <Crown className="h-2.5 w-2.5" />
-                      Capa
-                    </span>
-                  )}
-                  {!photo.published && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-slate-600 text-white font-medium">
-                      Oculta
-                    </span>
-                  )}
-                </div>
-
-                {/* Type label */}
-                <div className="absolute bottom-1.5 left-1.5">
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-black/60 text-white">
-                    {PHOTO_TYPE_LABELS[photo.photo_type] ?? photo.photo_type}
-                  </span>
-                </div>
-
-                {/* Hover actions */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                  {!photo.is_cover && (
-                    <button
-                      onClick={() => handleSetCover(photo)}
-                      className="p-1.5 rounded bg-orange-500 text-white hover:bg-orange-600"
-                      title="Definir como capa"
-                    >
-                      <Crown className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleTogglePublished(photo)}
-                    className="p-1.5 rounded bg-slate-600 text-white hover:bg-slate-700"
-                    title={photo.published ? 'Ocultar' : 'Publicar'}
-                  >
-                    {photo.published
-                      ? <EyeOff className="h-3.5 w-3.5" />
-                      : <Eye className="h-3.5 w-3.5" />
-                    }
-                  </button>
-                  <button
-                    onClick={() => handleDelete(photo)}
-                    className="p-1.5 rounded bg-red-600 text-white hover:bg-red-700"
-                    title="Remover"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                ))}
               </div>
-              );
-            })}
-          </div>
+            </SortableContext>
+          </DndContext>
         )}
 
         <DialogFooter>
