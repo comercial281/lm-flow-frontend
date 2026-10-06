@@ -20,7 +20,7 @@ vi.mock('@/services/customAttributes/customAttributesService', () => ({
 }));
 
 const recusaComMensagem = {
-  response: { status: 403, data: { error: { code: 'FORBIDDEN', message: 'Aceite o lead pra editar os dados dele.' } } },
+  response: { status: 403, data: { error: { code: 'OFFER_LOCKED', message: 'Aceite o lead pra editar os dados dele.' } } },
 };
 
 afterEach(() => {
@@ -38,13 +38,19 @@ const alternar = async (erro: unknown) => {
 describe('CustomAttributesForm — recusa do servidor', () => {
   it('403 com mensagem do servidor não empilha o aviso genérico de erro', async () => {
     await alternar(recusaComMensagem);
-    await new Promise(r => setTimeout(r, 0));
+    await waitFor(() => expect(screen.getByRole('switch')).not.toBeDisabled());
 
     expect(toast.error).not.toHaveBeenCalled();
   });
 
   it('outro erro continua mostrando o aviso de erro da tela', async () => {
     await alternar({ response: { status: 500, data: {} } });
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
+  });
+
+  it('403 FORBIDDEN (ex.: Pundit) também mantém o aviso da tela', async () => {
+    await alternar({ response: { status: 403, data: { error: { code: 'FORBIDDEN', message: 'You are not authorized' } } } });
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
   });

@@ -6,6 +6,7 @@ vi.mock('sonner', () => ({
 }));
 
 import api from '@/services/core/api';
+import { refusalToastId } from '@/services/core/forbidden';
 
 /**
  * O que este spec protege: o corretor não pode levar aviso vermelho de permissão
@@ -103,30 +104,45 @@ describe('cliente de API — recusa por cargo (403)', () => {
     expect(toast.error).not.toHaveBeenCalled();
   });
 
-  describe('recusa que não é de cargo, com mensagem do servidor', () => {
+  describe('recusa com código de frase pra quem usa (OFFER_LOCKED)', () => {
     const semCargo = (metodo: string, data: unknown) => ({
       config: { method: metodo, url: '/contacts/7', headers: {} },
       response: { status: 403, data },
       message: 'Request failed with status code 403',
     });
+    const FRASE = 'Aceite o lead pra editar os dados dele.';
+    const travado = { error: { code: 'OFFER_LOCKED', message: FRASE } };
 
-    it('mostra a frase do servidor (corpo aninhado) em vez do texto de cargo', async () => {
-      await esperarRecusa(
-        semCargo('patch', { error: { code: 'FORBIDDEN', message: 'Aceite o lead pra editar os dados dele.' } }),
-      );
+    it('mostra a frase do servidor, com id por mensagem', async () => {
+      await esperarRecusa(semCargo('patch', travado));
 
       expect(toast.error).toHaveBeenCalledTimes(1);
-      expect(vi.mocked(toast.error).mock.calls[0][0]).toBe('Aceite o lead pra editar os dados dele.');
-      expect(vi.mocked(toast.error).mock.calls[0][1]).toEqual({ id: '403-Aceite o lead pra editar os dados dele.' });
+      expect(vi.mocked(toast.error).mock.calls[0][0]).toBe(FRASE);
+      expect(vi.mocked(toast.error).mock.calls[0][1]).toEqual({ id: refusalToastId(FRASE) });
     });
 
-    it('aceita `message` na raiz do corpo', async () => {
-      await esperarRecusa(semCargo('post', { message: 'Aceite o lead pelo botão Aceitar.' }));
+    it('corpo real do Pundit (inglês) NÃO aparece: texto genérico em português', async () => {
+      await esperarRecusa(
+        semCargo('post', {
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: 'You are not authorized to perform this action',
+            details: { action: null, record: 'NilClass' },
+          },
+        }),
+      );
 
-      expect(vi.mocked(toast.error).mock.calls[0][0]).toBe('Aceite o lead pelo botão Aceitar.');
+      expect(vi.mocked(toast.error).mock.calls[0][0]).toBe('Seu cargo não permite esta ação');
     });
 
-    it('recusa de cargo mantém o texto de sempre, mesmo com mensagem no corpo', async () => {
+    it('código FORBIDDEN com frase em português também não é mostrado', async () => {
+      await esperarRecusa(semCargo('patch', { error: { code: 'FORBIDDEN', message: 'Frase qualquer em português.' } }));
+
+      expect(vi.mocked(toast.error).mock.calls[0][0]).toBe('Seu cargo não permite esta ação');
+    });
+
+    it('recusa de cargo mantém o texto de sempre', async () => {
       await esperarRecusa(recusa('post', '/conversations/42/claim'));
 
       expect(vi.mocked(toast.error).mock.calls[0][0]).toBe('Seu cargo não permite esta ação (dashboard_apps.read)');
@@ -134,7 +150,7 @@ describe('cliente de API — recusa por cargo (403)', () => {
 
     it('sem mensagem, cai no texto genérico', async () => {
       await esperarRecusa(semCargo('patch', {}));
-      await esperarRecusa(semCargo('patch', { error: { code: 'FORBIDDEN', message: '  ' } }));
+      await esperarRecusa(semCargo('patch', { error: { code: 'OFFER_LOCKED', message: '  ' } }));
 
       expect(vi.mocked(toast.error).mock.calls.map(c => c[0])).toEqual([
         'Seu cargo não permite esta ação',
@@ -143,9 +159,8 @@ describe('cliente de API — recusa por cargo (403)', () => {
     });
 
     it('leitura e `silentForbidden` continuam calados', async () => {
-      const corpo = { error: { message: 'Aceite o lead pra editar os dados dele.' } };
-      await esperarRecusa(semCargo('get', corpo));
-      await esperarRecusa({ ...semCargo('patch', corpo), config: { method: 'patch', url: '/x', headers: {}, silentForbidden: true } });
+      await esperarRecusa(semCargo('get', travado));
+      await esperarRecusa({ ...semCargo('patch', travado), config: { method: 'patch', url: '/x', headers: {}, silentForbidden: true } });
 
       expect(toast.error).not.toHaveBeenCalled();
     });

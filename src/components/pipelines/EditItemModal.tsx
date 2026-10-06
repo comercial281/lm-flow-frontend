@@ -64,6 +64,7 @@ import CardMoreMenu from './card/CardMoreMenu';
 import CardOriginTab from './card/CardOriginTab';
 import ColocarNoFunil from './card/ColocarNoFunil';
 import { toast } from 'sonner';
+import { serverRefusalMessageOf } from '@/services/core/forbidden';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import type { ContactEvent } from '@/types/notifications/contact-events';
 import type { Label as LabelType } from '@/types/settings';
@@ -316,7 +317,8 @@ export default function EditItemModal({
       } else {
         await contactsService.updateContact(String(contactId), { default_assignee_id: nextId });
       }
-    } catch {
+    } catch (error) {
+      if (serverRefusalMessageOf(error)) return; // o aviso global já mostrou a frase
       toast.error('Erro ao definir o responsável');
     } finally {
       setAssigningUser(false);

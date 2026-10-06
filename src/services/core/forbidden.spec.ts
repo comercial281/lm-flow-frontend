@@ -25,17 +25,18 @@ describe('leitor único da recusa por cargo', () => {
 describe('serverRefusalMessageOf', () => {
   const erro = (status: number, data: unknown) => ({ response: { status, data } });
 
-  it('lê a mensagem aninhada e a da raiz', () => {
-    expect(serverRefusalMessageOf(erro(403, { error: { message: 'Aceite o lead pelo botão Aceitar.' } }))).toBe(
-      'Aceite o lead pelo botão Aceitar.',
-    );
-    expect(serverRefusalMessageOf(erro(403, { message: 'Oi' }))).toBe('Oi');
+  it('lê a frase só quando o código é da lista de frases pra quem usa', () => {
+    expect(
+      serverRefusalMessageOf(erro(403, { error: { code: 'OFFER_LOCKED', message: 'Aceite o lead pelo botão Aceitar.' } })),
+    ).toBe('Aceite o lead pelo botão Aceitar.');
   });
 
-  it('vazio para recusa de cargo, outro status, sem mensagem ou erro sem resposta', () => {
-    expect(serverRefusalMessageOf(erro(403, { message: 'x', required_permission: 'a.b' }))).toBeUndefined();
-    expect(serverRefusalMessageOf(erro(500, { message: 'x' }))).toBeUndefined();
-    expect(serverRefusalMessageOf(erro(403, { error: 'Forbidden' }))).toBeUndefined();
+  it('vazio para outros códigos, cargo, outro status, sem frase ou erro sem resposta', () => {
+    expect(serverRefusalMessageOf(erro(403, { error: { code: 'FORBIDDEN', message: 'You are not authorized' } }))).toBeUndefined();
+    expect(serverRefusalMessageOf(erro(403, { message: 'Oi' }))).toBeUndefined();
+    expect(serverRefusalMessageOf(erro(403, { error: { code: 'OFFER_LOCKED', message: 'x' }, required_permission: 'a.b' }))).toBeUndefined();
+    expect(serverRefusalMessageOf(erro(500, { error: { code: 'OFFER_LOCKED', message: 'x' } }))).toBeUndefined();
+    expect(serverRefusalMessageOf(erro(403, { error: { code: 'OFFER_LOCKED' } }))).toBeUndefined();
     expect(serverRefusalMessageOf(new Error('rede'))).toBeUndefined();
     expect(serverRefusalMessageOf(null)).toBeUndefined();
   });

@@ -53,9 +53,15 @@ afterEach(() => {
 
 describe('useEditarContato — recusa do servidor', () => {
   it('403 com mensagem do servidor não empilha o aviso genérico', async () => {
-    await salvarComErro({ response: { status: 403, data: { error: { message: 'Aceite o lead pra editar os dados dele.' } } } });
+    await salvarComErro({ response: { status: 403, data: { error: { code: 'OFFER_LOCKED', message: 'Aceite o lead pra editar os dados dele.' } } } });
 
     expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it('403 FORBIDDEN (ex.: Pundit) mantém o aviso da tela', async () => {
+    await salvarComErro({ response: { status: 403, data: { error: { code: 'FORBIDDEN', message: 'You are not authorized' } } } });
+
+    expect(toast.error).toHaveBeenCalledTimes(1);
   });
 
   it('outro erro mantém o aviso da tela', async () => {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { serverRefusalMessageOf } from '@/services/core/forbidden';
 import { contactsService } from '@/services/contacts/contactsService';
 import { labelsService } from '@/services/contacts/labelsService';
 import { useAppDataStore } from '@/store/appDataStore';
@@ -100,6 +101,7 @@ export default function ContactTagsManager({
       onUpdated?.();
     } catch (e) {
       setTags(prev);
+      if (serverRefusalMessageOf(e)) return; // o aviso global já mostrou a frase
       toast.error(apiErrorMessage(e, 'Erro ao salvar a etiqueta'));
     } finally {
       setSaving(false);

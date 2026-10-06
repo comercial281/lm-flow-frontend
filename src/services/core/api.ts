@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/authStore';
 import { requestMonitor } from '@/utils/requestMonitor';
 import apiAuth from '@/services/core/apiAuth';
 import { applySetupInterceptor } from '@/services/core/setupInterceptor';
-import { requiredPermissionOf, serverRefusalMessageOf } from '@/services/core/forbidden';
+import { requiredPermissionOf, serverRefusalMessageOf, refusalToastId } from '@/services/core/forbidden';
 
 const api = axios.create({
   baseURL: `${import.meta.env.VITE_API_URL}/api/v1`,
@@ -192,11 +192,11 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      // Recusa que não é de cargo e vem com a própria explicação (ex.: lead só
+      // Recusa com código de frase pra quem usa (OFFER_LOCKED: lead só
       // oferecido, ainda não aceito): mostra a frase do servidor, não "cargo".
       const mensagemDoServidor = serverRefusalMessageOf(error);
       if (mensagemDoServidor) {
-        toast.error(mensagemDoServidor, { id: `403-${mensagemDoServidor}` });
+        toast.error(mensagemDoServidor, { id: refusalToastId(mensagemDoServidor) });
         return Promise.reject(error);
       }
 

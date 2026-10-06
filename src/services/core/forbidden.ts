@@ -19,18 +19,27 @@ export function requiredPermissionOf(error: unknown): string | undefined {
 }
 
 /**
- * Recusa do servidor que NÃO é de cargo mas traz a própria explicação (ex.: "Aceite o
- * lead pra editar os dados dele."). Corpo `{ error: { message } }` ou `{ message }`.
- * Recusa de cargo (com `required_permission`) devolve vazio: essa tem texto próprio.
+ * Códigos de recusa (`error.code`) cuja frase o servidor escreve PRA QUEM USA, em
+ * português. Lista fechada de propósito: outros 403 (Pundit, etc.) trazem frase
+ * técnica em inglês e nunca podem chegar na tela.
+ */
+export const USER_FACING_CODES = ['OFFER_LOCKED'] as const;
+
+/** Id do aviso da recusa com frase: global e telas usam o mesmo, e o sonner junta. */
+export function refusalToastId(message: string): string {
+  return `403-${message}`;
+}
+
+/**
+ * Frase do servidor para uma recusa 403 com código da lista `USER_FACING_CODES`
+ * (corpo `{ error: { code, message } }`). Qualquer outra recusa devolve vazio.
  */
 export function serverRefusalMessageOf(error: unknown): string | undefined {
   if (!isForbiddenError(error) || requiredPermissionOf(error)) return undefined;
-  const data = (error as { response?: { data?: { error?: unknown; message?: unknown } } }).response?.data;
-  const aninhada = (data?.error as { message?: unknown } | null | undefined)?.message;
-  for (const candidata of [aninhada, data?.message]) {
-    if (typeof candidata === 'string' && candidata.trim()) return candidata.trim();
-  }
-  return undefined;
+  const data = (error as { response?: { data?: { error?: unknown } } }).response?.data;
+  const e = data?.error as { code?: unknown; message?: unknown } | null | undefined;
+  if (typeof e?.code !== 'string' || !(USER_FACING_CODES as readonly string[]).includes(e.code)) return undefined;
+  return typeof e.message === 'string' && e.message.trim() ? e.message.trim() : undefined;
 }
 
 export function classifyLoadFailure(error: unknown): LoadFailure {
