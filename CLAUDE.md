@@ -6779,3 +6779,88 @@ Armadilhas:
 5. **Falha de rede mantém a última lista** (antes zerava): zerar fechava o pop-up no meio da leitura e o reabria 15 s depois.
 6. **O som é tocado uma vez por oferta POR ABA** (`tocadas` no nível do módulo, não num ref): o `MainLayout` existe em dois grupos de rota, e cruzar de um para o outro remonta o pop-up.
 7. **Checagem vazia mantém a MESMA lista** (`manterVazia` no contexto): sem isso cada ciclo de 15 s redesenharia a conversa inteira sem nada ter mudado. Com oferta a lista é trocada de propósito a cada ciclo: é o que faz os minutos andarem. Não "otimizar" isso comparando o conteúdo, ou o prazo congela no selo, na faixa e no pop-up.
+
+## Roleta nova: página por origem (06/10/2026)
+
+Reestruturação da Roleta, PR F1 (só a tela). Spec: `LM FLOW/specs/2026-10-06-roleta-reestruturacao-design.md`;
+plano: `LM FLOW/plans/2026-10-06-roleta-00-indice.md` (pasta do Tony, fora deste repo).
+**Atrás da chave por cliente `roleta_nova`** (desligada de fábrica): sem ela, a tela antiga
+(`Settings/RoletaConfig/RoletaConfig.tsx`) continua intacta. **Depende do PR do servidor (B2).**
+
+O que aparece na tela, com a chave ligada (menu Minha imobiliária › Roleta de leads):
+
+- **Roleta de leads** (`/automations/roleta-config`): *Nova roleta* e abas **Roletas · Histórico ·
+  Avisos** (`?aba=`). Um cartão por roleta, lido como frase: *Team Pinot · Ligada* /
+  *Formulários "ZONA SUL", "ZONA OESTE" → 10 corretores na fila* / *10 min pra aceitar · Seg a
+  Sáb, 8h–20h* / *2 esperando aceite · 1 ninguém aceitou* (essa linha só com algo pra olhar).
+  O cartão inteiro abre a roleta. *Nova roleta* pede só o nome, cria **desligada** e abre a página.
+- **Página da roleta** (`/automations/roleta-config/:id`; sem a chave volta pra lista):
+  ← Roleta de leads · nome editável no lugar (Enter grava, Esc desiste) · chave **Ligada** ·
+  *Duplicar* · ⋯ *Excluir roleta* (com confirmação). Abas **Como funciona · Histórico**.
+  - **De onde vem o lead**: uma origem por linha com o tipo em frase (*Formulário do Meta ·
+    nome contém "ALMA"* com *pega 3 formulários hoje*), botão de tirar. *Adicionar origem* em dois
+    passos (tipo → item); item de outra roleta mostra *Está na roleta X* e pergunta *Trazer pra
+    esta roleta?*; "nome contém" mostra na hora o que a palavra pega e o conflito da barreira D9
+    (prévia do SERVIDOR, `GET /roleta_configs/keyword_preview`; com mais de uma página do Facebook,
+    pergunta a página e manda `meta_page_id`).
+  - **Fila**: posição, foto, *(11) 9…· conectado / desconectado / sem número próprio*, chave de
+    pausa, arrastar pela alça (mouse, dedo, teclado) e setas ↑↓, *+ Adicionar corretor*, *Prazo pra
+    aceitar* (5 min a 2 h, Sem prazo) e *Próximo agora: Bruno*.
+  - **Quando funciona**: *24 horas* / *Só em alguns horários* (o editor de faixas de sempre).
+    Chave *Mandar mensagem pro lead enquanto isso* → número (só os conectados) + texto com
+    *+ Nome do lead*.
+- **Histórico** (geral e por roleta): Lead · Origem · (Roleta) · Situação; *Todos / Precisa de
+  atenção*, corretor, 7/30 dias e, no geral, a roleta. A linha abre o card do lead
+  (`/contacts/:id`); a setinha mostra o caminho com hora sem segundos; *Sortear de novo* quando pode.
+- **Avisos**: Corretor · Gestor · Grupo, uma chave por aviso, todas desligadas de fábrica.
+  Gestores da Equipe (*sem WhatsApp no cadastro: não recebe*), grupo da lista do Operacional,
+  *Personalizar textos* fechado (um texto por aviso, botões *+ Nome do lead, + Corretor, + Prazo,
+  + Link pra aceitar, + Origem, + Roleta*). Tudo sai pelo Operacional (LM01).
+
+Como salva: **lista vale na hora** (origens, fila, pausa, prazo, nome, chave Ligada, chaves e
+gestores e grupo dos avisos); **campo espera o Salvar** (faixas de horário, número e texto da
+mensagem de fora do horário, textos dos avisos), com a `BarraSalvar`.
+
+Decisões do Tony (06/10, não reabrir sem ele pedir), em resumo:
+
+- **D1** a Roleta tem página própria: lista de roletas → página da roleta.
+- **D2** a roleta é disparada por origens; a ligação origem → roleta é um dado só (as outras
+  telas escolhem roleta, nunca criam, e gravam no mesmo lugar que esta página mostra).
+- **D3** origens: formulário do Meta (exato ou "nome contém"), IA Vendedora, landing, portal, site.
+  WhatsApp e anúncio que abre o WhatsApp ficam fora.
+- **D4** um tipo de roleta; quem participa é sempre o usuário (com número, sem número ou com o
+  número caído, o lead é dele).
+- **D5** Fila é o único modo (Rodízio, Leilão, Por disponibilidade e Manual saem).
+- **D6** a roleta não tem número de WhatsApp.
+- **D7** avisos configurados uma vez, na aba Avisos, por quem recebe; tudo pelo Operacional;
+  nascem desligados.
+- **D8** horário é da roleta; fora dele o lead espera e é oferecido quando abrir; mensagem pro
+  lead opcional; o número de plantão morre.
+- **D9** formulário exato vence o "nome contém"; duas regras "nome contém" pegando o mesmo
+  formulário são barradas ao salvar.
+- **D10** pop-up de aceite pro corretor (PR F0).
+- **D11** desenho harmônico, padronizado, espaçoso e intuitivo, com as peças da casa.
+
+Armadilhas:
+
+1. **A metade do servidor (B2) vem PRIMEIRO**, e é ela que põe `roleta_nova` no catálogo. Até lá
+   o `audit-feature-catalog.mjs` do build reprova (chave usada no front sem entrada no catálogo).
+   Ligar a chave num cliente sem o B2 no ar = tela nova chamando rota que não existe.
+2. **`useClientToggle('roleta_nova')` LITERAL** (`ChaveRoletaNova.tsx`): os scanners do catálogo
+   leem por regex. É o único lugar que lê a chave na tela.
+3. **Enquanto as chaves do cliente carregam, o portão espera** (sem isso a tela antiga piscava).
+4. **A posição na fila é o índice no array** no PATCH (`members` com `position: i`), como no modo
+   Fila de 23/09. Não existe campo de posição pra editar.
+5. **Os serviços aceitam a resposta com e sem o envelope `{ data }`** (`miolo`), e o conflito da
+   D9 nos dois formatos de erro (`conflitoDaOrigem`). Não trocar por `res.data.data` direto.
+6. **Avisos gravam numa fila só, a partir do último registro salvo**: o PUT substitui o registro
+   inteiro, então texto em edição não vai junto e duas gravações (texto + chave) não se apagam.
+7. **Os textos da roleta nova moram em `Roleta/roletaNovaTextos.ts`**, com spec. As variáveis
+   `{{origem}}` e `{{roleta}}` dos avisos e `{{nome}}` da mensagem fora do horário são do B2.
+8. **Não é o `featureKey` do menu**: o item *Roleta de leads* continua o mesmo; quem troca a tela
+   é a rota.
+9. **A prévia do "nome contém" é do servidor** (mesma regra do roteador: tokens, com acento). Não
+   calcular na tela: o casamento local sem acento mostrava formulário que o roteador não pega.
+10. **Aba de estado não guarda a saída sozinha**: as abas, o "← Roleta de leads", Duplicar e Nova
+    roleta perguntam com `usePodeSair` (`PEDIDO_SAIR_SEM_SALVAR`) quando há horário ou texto por salvar.
+11. **`/settings/roleta-config` passa pelo mesmo portão** (`ChaveRoletaNova`) que `/automations/roleta-config`.

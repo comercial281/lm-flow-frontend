@@ -40,6 +40,14 @@ describe('endereço antigo do assistente da IA', () => {
   });
 });
 
+describe('roleta nova (chave roleta_nova)', () => {
+  it('as duas montagens da Roleta passam pelo mesmo portão', () => {
+    expect(trecho('roleta-config')).toContain('<ChaveRoletaNova ligada={<RoletaLista />} desligada={<RoletaConfigPage />} />');
+    expect(trecho('/settings/roleta-config')).toContain('<ChaveRoletaNova ligada={<RoletaLista />} desligada={<RoletaConfigPage />} />');
+    expect(trecho('roleta-config/:id')).toContain('<ChaveRoletaNova ligada={<RoletaPagina />}');
+  });
+});
+
 describe('toda rota do CRM confere o cargo', () => {
   it.each([
     ['/ia-vendedora', 'sales_agents', 'read'],
@@ -68,6 +76,9 @@ describe('toda rota do CRM confere o cargo', () => {
     ['origem', 'lead_ads_form_configs', 'read'],
     ['flow-builder', 'flow_automations', 'read'],
     ['flow-builder/:id', 'flow_automations', 'read'],
+    // Roleta nova: a lista e a página da roleta pedem o mesmo cargo da tela antiga.
+    ['roleta-config', 'roleta_configs', 'read'],
+    ['roleta-config/:id', 'roleta_configs', 'read'],
     // Rulings do controlador (X36/G5, 2026-09-26) — além da tabela do brief;
     // chave confirmada no backend via PermissionRegistry.
     ['whatsapp-reminders', 'whatsapp_reminders', 'read'],
