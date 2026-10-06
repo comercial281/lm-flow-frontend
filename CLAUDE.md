@@ -6653,3 +6653,47 @@ Armadilhas:
    (`horaDoEnsaio`); não converter pelo fuso do navegador.
 4. **Aviso de "sem número"**: o texto do servidor já diz "no atendimento real";
    a tela não prefixa de novo (`linhasDoQueAconteceria`).
+
+## IA Vendedora · Sistema do cliente como destino do lead (desde 2026-10-05)
+
+Pedido do dono do produto: cliente que já tem CRM próprio quer usar só a nossa IA.
+A IA qualifica e, quando passa o lead, ele vai pro sistema da imobiliária em vez da
+roleta. Entrega 5 da refatoração da IA (spec `2026-10-05-ia-vendedora-refatoracao-design.md`).
+
+O que aparece na tela:
+
+- **Configurar → Objetivo → Pra onde vai o lead**: 4º cartão *Sistema do cliente*.
+  Travado na persona corretor (*Na persona corretor o lead vai sempre pro dono do número.*).
+  Escolhido, abre *Endereço do sistema do cliente* (só https), *Chave secreta*
+  (*Gerar chave secreta*, mostrada UMA vez com *Copiar*; depois *Gerar outra chave*
+  com confirmação) e *Mandar um lead de teste* (mostra o que o sistema respondeu).
+- **Diagnóstico**: item *Sistema do cliente* (*Último envio ok às 14:32 · 2 falhas
+  hoje*) e o bloco *Últimos envios ao sistema do cliente*, cada envio abre a frase
+  em português, o trecho da resposta e *Abrir a conversa*.
+- **Painel do lead**: *Enviando ao sistema do cliente…* / *Enviado … às 14:32.* /
+  *O envio … falhou: <motivo>. A gestão foi avisada; o lead não foi pra roleta.*
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Não cai na roleta.** Esgotou as 5 tentativas (1, 5, 15, 60 min): aviso pros
+  gestores pelo Operacional, etiqueta `sistema-do-cliente-falhou` no card, e o lead
+  fica no LM Flow pra alguém agir.
+- **Deu certo = aceito.** A IA não reassume por cima do corretor do cliente. Durante
+  as tentativas ela fica calada nesse lead.
+- **Lead com dono** vai do mesmo jeito, e o dono é avisado como hoje.
+- **A chave é do LM Flow**: gerada, mostrada uma vez, nunca volta do servidor.
+  Duplicar a IA não leva a chave. Trocar de destino não apaga endereço nem chave.
+- **Sem jargão**: na tela é *Sistema do cliente*, *endereço*, *chave secreta*,
+  *código da resposta*. Nunca "webhook".
+
+Armadilhas:
+
+1. **`handoff_webhook_url` PRECISA estar em `CAMPOS_DO_PASSO[2]`.** Fora da lista a
+   tela diz *Salvo* e o servidor nunca recebe (o `Passo2Objetivo.spec` trava isso).
+2. **O teste usa o endereço GRAVADO**: o botão fica bloqueado com endereço por salvar.
+3. **A chave nunca entra pelo salvar da IA** (fora do permit). Só pela ação própria.
+   Com chave já gerada, *Sim, gerar outra* manda `confirm: true` (o servidor exige).
+   Chave que não abre mais no servidor (`handoff_webhook_secret_state = unreadable`)
+   aparece como *A chave gravada não abre mais. Gere outra…*.
+4. O texto pra quem recebe (como conferir a assinatura) está no plano da entrega 5,
+   seção "Para quem recebe".
