@@ -31,7 +31,7 @@ import {
 import { situacaoDaIa } from '@/features/salesAgents/situacao';
 import { novaIaRascunho } from '@/features/salesAgents/tresEscolhas';
 import { type InboxOption } from './configuracao/comum';
-import { registrarSalvo } from './configurar/useGravarNaHora';
+import { registrarSalvo, ultimoSalvoDa } from './configurar/useGravarNaHora';
 import type { PaginaId } from './configurar/paginas';
 import IaBarra from './IaBarra';
 import TelaVisaoGeral from './telas/TelaVisaoGeral';
@@ -51,6 +51,16 @@ const lerUltimaIa = (): string | null => {
 };
 const gravarUltimaIa = (id: string) => {
   try { localStorage.setItem(ULTIMA_IA, id); } catch { /* storage bloqueado: segue sem lembrar */ }
+};
+
+// ⚠️ Respostas fora de ordem: a da chave Ligada (ou a lista relida) pode chegar
+// DEPOIS da resposta mais nova de uma página. A IA que entra na tela é a mais nova
+// entre `a` e o "último salvo" do registro, e sempre um objeto que já existe
+// (nunca uma cópia: o registro reconhece a otimista pela identidade).
+// Estritamente mais nova: a cópia otimista tem o `updated_at` da confirmada e fica.
+const maisNova = (a: SalesAgent): SalesAgent => {
+  const salvo = ultimoSalvoDa(a.id);
+  return salvo && (salvo.updated_at ?? '') > (a.updated_at ?? '') ? salvo : a;
 };
 
 export default function SalesAgents() {
@@ -78,7 +88,9 @@ export default function SalesAgents() {
   // liberado vê o Motor (só a reescrita e o texto que a IA recebe).
   const roteiroToggle = useClientToggle('ia_playbook');
   const verMotor = isSuper || roteiroToggle;
-  const [testando, setTestando] = useState(false);
+  // A IA em que o Testar foi aberto. Trocar de IA FECHA a janela (ruling F6): ela só
+  // aparece enquanto este id é o da IA aberta.
+  const [testandoIa, setTestandoIa] = useState<string | null>(null);
 
   const [searchParams, setSearchParams] = useSearchParams();
   // Sugestões e Relatório semanal sem a chave caem na Visão geral (`telaDaUrl`):
@@ -91,7 +103,8 @@ export default function SalesAgents() {
     setLoading(true);
     setLoadFailure(null);
     try {
-      const list = await salesAgentsService.list();
+      // A lista relida nunca volta uma IA pra trás do último salvo dela.
+      const list = (await salesAgentsService.list()).map(maisNova);
       setAgents(list);
       setSelected((prev) => (prev ? list.find((a) => a.id === prev.id) ?? null : null));
     } catch (e) {
@@ -121,8 +134,9 @@ export default function SalesAgents() {
     if (loading) return;
     const alvo = iaInicial(agents.map((a) => a.id), iaPedida, lerUltimaIa());
     // `?tela=testar` antigo: abre a janela por cima da Visão geral (telaDaUrl já
-    // devolveu a Visão geral) e o endereço perde o `tela=testar`.
-    if (pediuTestar(searchParams)) setTestando(true);
+    // devolveu a Visão geral) e o endereço perde o `tela=testar`. Sem IA (`alvo`
+    // null), nada fica armado pra uma IA criada depois.
+    if (pediuTestar(searchParams)) setTestandoIa(alvo);
     // A página do Configurar (e o `?passo=` antigo, traduzido) atravessa a normalização.
     const certo = paramsDaIa(alvo, tela, paginaPedida(searchParams));
     if (searchParams.toString() !== new URLSearchParams(certo).toString()) setSearchParams(certo, { replace: true });
@@ -164,8 +178,9 @@ export default function SalesAgents() {
   // depois montaria o PATCH sobre o que o servidor ainda não confirmou.
   const aoSalvo = useCallback((a: SalesAgent) => {
     registrarSalvo(a);
-    setSelected(a);
-    setAgents((prev) => prev.map((x) => (x.id === a.id ? a : x)));
+    const vale = maisNova(a);
+    setSelected(vale);
+    setAgents((prev) => prev.map((x) => (x.id === vale.id ? vale : x)));
   }, []);
 
   // A chave Ligada (era do passo 8). A Chave lê `response.data.message`; a recusa
@@ -269,7 +284,7 @@ export default function SalesAgents() {
           aoCriar={() => void guardar(() => void createAgent())}
           aoDuplicar={() => void guardar(() => { if (selected) setDuplicating(selected); })}
           aoExcluir={() => selected && void deleteAgent(selected)}
-          aoTestar={() => setTestando(true)}
+          aoTestar={() => setTestandoIa(selected?.id ?? null)}
           aoLigar={ligar}
           travaDoLigar={travaDoLigar}
           aoCorrigirLigar={(p) => void guardar(() => irPara('configurar', p))}
@@ -323,8 +338,8 @@ export default function SalesAgents() {
               {tela === 'motor' && <TelaMotor agent={selected} aoSalvo={aoSalvo} />}
               {/* `telaDaUrl` já barra quem não é da equipe. */}
               {tela === 'diagnostico' && <TelaDiagnostico agent={selected} />}
-              {/* Dentro do `key={selected.id}`: trocar de IA remonta a janela, sem a conversa da anterior. */}
-              {testando && <TestarJanela agent={selected} aoFechar={() => setTestando(false)} />}
+              {/* Trocar de IA fecha a janela (o id não bate); reaberta, ela nasce vazia. */}
+              {testandoIa === selected.id && <TestarJanela agent={selected} aoFechar={() => setTestandoIa(null)} />}
             </div>
           )}
         </div>

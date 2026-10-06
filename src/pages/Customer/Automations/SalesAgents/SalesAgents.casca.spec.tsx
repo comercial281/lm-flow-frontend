@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { limparPendentes, marcarPendente } from '@/hooks/useAlteracoesNaoSalvas';
+import { esquecerSalvos } from './configurar/useGravarNaHora';
 
 // A casca da IA Vendedora (entrega 1): qual IA e qual tela abrem pelo endereço.
 // As telas são trocadas por marcadores — cada uma tem o próprio spec; aqui só
@@ -37,7 +38,18 @@ vi.mock('./telas/TelaVisaoGeral', () => ({
 vi.mock('./telas/TelaSugestoes', () => marcador('sugestoes'));
 vi.mock('./telas/TelaRelatorioSemanal', () => marcador('relatorio-semanal'));
 vi.mock('./telas/TelaConfigurar', () => marcador('configurar'));
-vi.mock('./telas/TelaEnsinar', () => marcador('ensinar'));
+// O Ensinar do mock grava (`aoSalvo`) e relê a lista (`onCountChange`) quando o
+// teste manda: é por ele que os testes de respostas fora de ordem entram na casca.
+const ensinar = vi.hoisted(() => ({ salvo: null as null | Record<string, unknown> }));
+vi.mock('./telas/TelaEnsinar', () => ({
+  default: ({ agent, aoSalvo, onCountChange }: { agent: { name: string }; aoSalvo: (a: unknown) => void; onCountChange: () => void }) => (
+    <div>
+      <p>{`tela ensinar · ${agent.name}`}</p>
+      <button type="button" onClick={() => aoSalvo(ensinar.salvo)}>simular salvo</button>
+      <button type="button" onClick={() => onCountChange()}>recarregar lista</button>
+    </div>
+  ),
+}));
 // Testar guarda a conversa em estado próprio: o mock imita isso, pra provar que
 // trocar de IA não leva a conversa da anterior junto.
 vi.mock('./telas/TestarJanela', () => ({
@@ -88,6 +100,8 @@ beforeEach(() => {
   insights.ligado = true;
   insights.roteiro = false;
   equipe.sim = false;
+  // O "último salvo" é por módulo: sem limpar, a IA de um teste vazaria pro próximo.
+  esquecerSalvos();
   list.mockResolvedValue([ia('ia-1', 'IA de Vendas'), ia('ia-2', 'IA Demo', { inbox_id: null })]);
   diagnostics.mockResolvedValue({ status: 'ok', items: [] });
 });
@@ -177,7 +191,8 @@ describe('IA Vendedora · casca', () => {
 
   // Trocar de IA remonta a tela: a conversa do Testar (e os números/sugestões)
   // da IA anterior nunca aparecem na nova.
-  it('ao trocar de IA, o Testar começa vazio (sem a conversa da anterior)', async () => {
+  // Ruling F6: trocar de IA FECHA o Testar; reaberto, começa vazio.
+  it('ao trocar de IA, o Testar fecha e, reaberto, começa vazio (sem a conversa da anterior)', async () => {
     abrir('/ia-vendedora?ia=ia-1');
     await screen.findByText('tela visao-geral · IA de Vendas');
     await userEvent.click(screen.getByRole('button', { name: 'Testar' }));
@@ -188,8 +203,20 @@ describe('IA Vendedora · casca', () => {
     expect(screen.getByLabelText('mensagem de teste')).toHaveValue('oi, tem 2 quartos?');
     await userEvent.click(screen.getByRole('button', { name: /IA de Vendas/ }));
     await userEvent.click(await screen.findByRole('menuitem', { name: /IA Demo/ }));
+    await screen.findByText('tela visao-geral · IA Demo');
+    expect(screen.queryByText(/janela testar/)).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Testar' }));
     await screen.findByText('janela testar · IA Demo');
     expect(screen.getByLabelText('mensagem de teste')).toHaveValue('');
+  });
+
+  it('?tela=testar sem IA nenhuma não deixa a janela armada pra IA criada depois', async () => {
+    list.mockResolvedValue([]);
+    create.mockResolvedValue(ia('ia-nova', 'Nova IA', { enabled: false, inbox_id: null }));
+    abrir('/ia-vendedora?tela=testar');
+    await userEvent.click(await screen.findByRole('button', { name: 'Nova IA' }));
+    expect(await screen.findByText('tela configurar · Nova IA')).toBeInTheDocument();
+    expect(screen.queryByText(/janela testar/)).toBeNull();
   });
 
   it('Testar abre a janela por cima da tela, e Fechar some com ela sem mudar o endereço', async () => {
@@ -354,5 +381,42 @@ describe('chave Ligada da barra (onda 3)', () => {
     await userEvent.click(screen.getByRole('switch', { name: 'Ligar ou desligar a IA' }));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('O número está desconectado.'));
     expect(screen.getByRole('switch', { name: 'Ligar ou desligar a IA' })).not.toBeChecked();
+  });
+});
+
+describe('respostas fora de ordem (último salvo da IA)', () => {
+  const nome = () => screen.getByRole('button', { name: /^IA / }).textContent;
+
+  it('a resposta mais velha da chave Ligada não desfaz a gravação mais nova de uma página', async () => {
+    list.mockResolvedValue([ia('ia-1', 'IA de Vendas', { enabled: false })]);
+    let soltarLigar: (v: unknown) => void = () => {};
+    update.mockReturnValue(new Promise((res) => { soltarLigar = res; }));
+    abrir('/ia-vendedora?ia=ia-1&tela=ensinar');
+    await screen.findByText('tela ensinar · IA de Vendas');
+    await userEvent.click(screen.getByRole('switch', { name: 'Ligar ou desligar a IA' }));
+    // A página grava DEPOIS no servidor (resposta mais nova) e chega ANTES.
+    ensinar.salvo = ia('ia-1', 'IA Renomeada', { enabled: true, updated_at: '2026-10-06T10:01:00Z' });
+    await userEvent.click(screen.getByRole('button', { name: 'simular salvo' }));
+    await screen.findByText('tela ensinar · IA Renomeada');
+    soltarLigar(ia('ia-1', 'IA de Vendas', { enabled: true, updated_at: '2026-10-06T10:00:00Z' }));
+    await waitFor(() => expect(update).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.getByText('tela ensinar · IA Renomeada')).toBeInTheDocument();
+    expect(nome()).toContain('IA Renomeada');
+  });
+
+  it('reler a lista não troca a IA aberta por uma cópia mais velha que a última salva', async () => {
+    list.mockResolvedValueOnce([ia('ia-1', 'IA de Vendas')])
+      .mockResolvedValueOnce([ia('ia-1', 'IA de Vendas')]);
+    abrir('/ia-vendedora?ia=ia-1&tela=ensinar');
+    await screen.findByText('tela ensinar · IA de Vendas');
+    ensinar.salvo = ia('ia-1', 'IA Renomeada', { updated_at: '2026-10-06T10:01:00Z' });
+    await userEvent.click(screen.getByRole('button', { name: 'simular salvo' }));
+    await screen.findByText('tela ensinar · IA Renomeada');
+    await userEvent.click(screen.getByRole('button', { name: 'recarregar lista' }));
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(await screen.findByText('tela ensinar · IA Renomeada')).toBeInTheDocument();
+    expect(nome()).toContain('IA Renomeada');
   });
 });
