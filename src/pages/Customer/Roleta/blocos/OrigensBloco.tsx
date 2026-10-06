@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Bot, Building2, ChevronDown, ChevronUp, FileText, Globe, LayoutTemplate, Loader2, Plus, X,
@@ -24,9 +24,13 @@ import {
   type NovaOrigem,
   type RoletaOrigin,
   type RoletaOriginKind,
+  type RoletaKeywordPreview,
   type RoletaOriginOption,
 } from '@/services/roletaConfig/roletaConfigService';
-import { formulariosQuePega, origemTexto } from '../roletaNovaTextos';
+import { metaPagesService } from '@/services/integrations/metaPagesService';
+import { Seletor } from '@/components/base/Seletor';
+import { Campo } from '@/components/base/Campo';
+import { origemTexto } from '../roletaNovaTextos';
 
 // ── DE ONDE VEM O LEAD (roleta nova, D2/D3/D9) ──────────────────────────────
 //
@@ -117,8 +121,17 @@ interface DialogoProps {
   aoFechar: () => void;
   roletaId: string;
   origens: RoletaOrigin[];
+  /** Recarrega a lista (não lança: a falha é avisada por quem passa). */
   aoAdicionar: () => Promise<void> | void;
 }
+
+/** A frase do conflito da barreira D9 (na prévia e na recusa ao salvar). */
+function fraseDoConflito(c: { form_name: string; roleta_name: string }): string {
+  return `O formulário "${c.form_name}" já é pego por outra regra "nome contém", na roleta ${c.roleta_name}. Use uma palavra que não pegue ele, ou escolha o formulário exato.`;
+}
+
+/** Espera de digitação antes de pedir a prévia ao servidor. */
+const ESPERA_DA_PREVIA_MS = 400;
 
 // Declarado no escopo do módulo (armadilha 9 do Seletor: componente declarado
 // dentro do render é outro a cada redesenho e desmonta o que está aberto).
@@ -131,6 +144,46 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
   const [trazer, setTrazer] = useState<RoletaOriginOption | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
+  // Páginas do Facebook do cliente: com mais de uma, a regra "nome contém" diz
+  // de qual página (sem isso o servidor usa a principal e o gestor nem sabe).
+  const [paginas, setPaginas] = useState<{ id: string; nome: string }[]>([]);
+  const [pagina, setPagina] = useState('');
+  const [previa, setPrevia] = useState<RoletaKeywordPreview | null>(null);
+  const [conferindo, setConferindo] = useState(false);
+  const [previaFalhou, setPreviaFalhou] = useState(false);
+  const pedidoDaPrevia = useRef(0);
+
+  useEffect(() => {
+    if (!aberto) return;
+    let vivo = true;
+    metaPagesService.getAll()
+      .then(lista => {
+        if (!vivo) return;
+        const ativas = lista.filter(p => p.is_active).map(p => ({ id: p.id, nome: p.page_name || p.page_id || 'Página' }));
+        setPaginas(ativas);
+        setPagina(atual => atual || ativas[0]?.id || '');
+      })
+      .catch(() => { if (vivo) setPaginas([]); });
+    return () => { vivo = false; };
+  }, [aberto]);
+
+  // Prévia do servidor (mesma regra do roteador), com espera de digitação.
+  // Resposta velha (de uma palavra anterior) é descartada pelo contador.
+  const palavraLimpa = palavra.trim();
+  const paginaEnviada = paginas.length > 1 ? pagina : '';
+  useEffect(() => {
+    const pedido = ++pedidoDaPrevia.current;
+    setPreviaFalhou(false);
+    if (!pelaPalavra || !palavraLimpa) { setPrevia(null); setConferindo(false); return; }
+    setConferindo(true);
+    const t = setTimeout(() => {
+      roletaConfigService.getKeywordPreview(palavraLimpa, paginaEnviada || null)
+        .then(p => { if (pedido === pedidoDaPrevia.current) setPrevia(p); })
+        .catch(() => { if (pedido === pedidoDaPrevia.current) { setPrevia(null); setPreviaFalhou(true); } })
+        .finally(() => { if (pedido === pedidoDaPrevia.current) setConferindo(false); });
+    }, ESPERA_DA_PREVIA_MS);
+    return () => clearTimeout(t);
+  }, [pelaPalavra, palavraLimpa, paginaEnviada]);
 
   useEffect(() => {
     if (!aberto) return;
@@ -149,8 +202,6 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
     () => (definicao ? (opcoes ?? []).filter(o => definicao.kinds.includes(o.kind)) : []),
     [definicao, opcoes],
   );
-  const formularios = useMemo(() => (opcoes ?? []).filter(o => o.kind === 'meta_form'), [opcoes]);
-  const pegaHoje = useMemo(() => formulariosQuePega(palavra, formularios), [palavra, formularios]);
 
   const adicionar = async (origem: NovaOrigem) => {
     if (salvando) return;
@@ -158,19 +209,18 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
     setErro('');
     try {
       await roletaConfigService.addOrigin(roletaId, origem);
-      toast.success('Origem adicionada');
-      await aoAdicionar();
-      aoFechar();
     } catch (e) {
       const conflito = conflitoDaOrigem(e);
-      setErro(
-        conflito
-          ? `O formulário "${conflito.form_name}" já é pego por outra regra "nome contém", na roleta ${conflito.roleta_name}. Use uma palavra que não pegue ele, ou escolha o formulário exato.`
-          : mensagemDoServidor(e) ?? 'Não deu pra adicionar a origem. Tente de novo.',
-      );
-    } finally {
+      setErro(conflito ? fraseDoConflito(conflito) : mensagemDoServidor(e) ?? 'Não deu pra adicionar a origem. Tente de novo.');
       setSalvando(false);
+      return;
     }
+    // Gravou: fecha e avisa, mesmo que a lista não volte (a falha da recarga é
+    // avisada à parte, com "Tentar de novo"; não é "não deu pra adicionar").
+    setSalvando(false);
+    toast.success('Origem adicionada');
+    aoFechar();
+    await aoAdicionar();
   };
 
   const escolher = (op: RoletaOriginOption) => {
@@ -223,8 +273,19 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
         {pelaPalavra ? (
           <form
             className="space-y-4"
-            onSubmit={e => { e.preventDefault(); if (palavra.trim()) void adicionar({ kind: 'meta_form_keyword', keyword: palavra.trim() }); }}
+            onSubmit={e => {
+              e.preventDefault();
+              if (!palavraLimpa || previa?.conflict) return;
+              void adicionar({ kind: 'meta_form_keyword', keyword: palavraLimpa, ...(paginaEnviada ? { meta_page_id: paginaEnviada } : {}) });
+            }}
           >
+            {paginas.length > 1 && (
+              <Campo id="origem-pagina" rotulo="Página do Facebook">
+                <Seletor id="origem-pagina" value={pagina} onChange={e => { setPagina(e.target.value); setErro(''); }} className="w-full sm:w-80">
+                  {paginas.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                </Seletor>
+              </Campo>
+            )}
             <CampoTexto
               id="origem-palavra"
               rotulo="O nome do formulário contém"
@@ -233,21 +294,30 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
               aoMudar={v => { setPalavra(v); setErro(''); }}
               ajuda="Formulário novo com essa palavra no nome entra sozinho. O formulário escolhido pelo nome exato vence esta regra."
             />
-            {palavra.trim() && (
-              <div className="rounded-lg bg-muted/40 p-3 text-sm" aria-live="polite">
-                {pegaHoje.length === 0 ? (
+            {palavraLimpa && (
+              <div className="space-y-2 rounded-lg bg-muted/40 p-3 text-sm" aria-live="polite">
+                {conferindo ? (
+                  <p className="text-muted-foreground">Conferindo quais formulários ela pega…</p>
+                ) : previaFalhou ? (
+                  <p className="text-muted-foreground">Não deu pra conferir agora. Ao adicionar, a regra é conferida de novo.</p>
+                ) : previa && previa.matches.length === 0 ? (
                   <p className="text-muted-foreground">Não pega nenhum formulário hoje.</p>
-                ) : (
+                ) : previa ? (
                   <>
-                    <p className="font-medium">Pega {plural(pegaHoje.length, 'formulário', 'formulários')} hoje:</p>
-                    <ul className="mt-1 space-y-0.5 text-muted-foreground">
-                      {pegaHoje.map(f => <li key={f.ref_id}>{f.label}</li>)}
+                    <p className="font-medium">Pega {plural(previa.matches.length, 'formulário', 'formulários')} hoje:</p>
+                    <ul className="space-y-0.5 text-muted-foreground">
+                      {previa.matches.map(f => <li key={f.form_id}>{f.form_name}</li>)}
                     </ul>
                   </>
+                ) : null}
+                {!conferindo && previa?.conflict && (
+                  <p className="font-medium text-destructive">{fraseDoConflito(previa.conflict)}</p>
                 )}
               </div>
             )}
-            <Button type="submit" disabled={!palavra.trim() || salvando}>{salvando ? 'Adicionando…' : 'Adicionar'}</Button>
+            <Button type="submit" disabled={!palavraLimpa || salvando || conferindo || !!previa?.conflict}>
+              {salvando ? 'Adicionando…' : 'Adicionar'}
+            </Button>
           </form>
         ) : itens.length === 0 ? (
           <p className="text-sm text-muted-foreground">{definicao.vazio}</p>
@@ -332,22 +402,37 @@ interface Props {
   recarregar: () => Promise<void>;
 }
 
+const AVISO_LISTA_DESATUALIZADA = 'Salvo, mas não deu pra atualizar a lista.';
+
 export default function OrigensBloco({ roletaId, origens, recarregar }: Props) {
   const [adicionando, setAdicionando] = useState(false);
   const [tirando, setTirando] = useState<string | null>(null);
+
+  // A gravação já deu certo: se só a recarga falhar, avisa à parte e oferece
+  // tentar de novo (nunca "não deu pra adicionar/tirar" em cima de um sucesso).
+  const recarregarComAviso = async (): Promise<void> => {
+    try {
+      await recarregar();
+    } catch {
+      toast.error(AVISO_LISTA_DESATUALIZADA, {
+        action: { label: 'Tentar de novo', onClick: () => void recarregarComAviso() },
+      });
+    }
+  };
 
   const tirar = async (o: RoletaOrigin) => {
     if (tirando) return;
     setTirando(`${o.kind}:${o.ref_id}`);
     try {
       await roletaConfigService.removeOrigin(roletaId, { kind: o.kind, ref_id: o.ref_id });
-      toast.success('Origem tirada da roleta');
-      await recarregar();
     } catch (e) {
       toast.error(mensagemDoServidor(e) ?? 'Não deu pra tirar a origem. Tente de novo.');
-    } finally {
       setTirando(null);
+      return;
     }
+    toast.success('Origem tirada da roleta');
+    await recarregarComAviso();
+    setTirando(null);
   };
 
   return (
@@ -376,7 +461,7 @@ export default function OrigensBloco({ roletaId, origens, recarregar }: Props) {
         aoFechar={() => setAdicionando(false)}
         roletaId={roletaId}
         origens={origens}
-        aoAdicionar={recarregar}
+        aoAdicionar={recarregarComAviso}
       />
     </div>
   );

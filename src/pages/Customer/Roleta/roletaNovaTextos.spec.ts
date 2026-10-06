@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  atencaoTexto, diasTexto, faltaParaLigar, formulariosQuePega, horaCurta, horarioTexto,
+  atencaoTexto, diasTexto, faltaParaLigar, horaCurta, horarioTexto,
   numeroDoCorretor, origemTexto, origensEFila, posicaoTexto, prazoFrase, prazoTexto,
 } from './roletaNovaTextos';
 
@@ -66,9 +66,4 @@ describe('textos da roleta nova', () => {
     expect(origemTexto({ kind: 'site_rent', label: 'Site da imobiliária' })).toBe('Site · Site da imobiliária (locação)');
   });
 
-  it('prévia do "nome contém": sem acento e sem caixa', () => {
-    const forms = [{ label: '21/08 - Álma' }, { label: 'ZONA SUL' }, { label: 'alma 2' }];
-    expect(formulariosQuePega('ALMA', forms).map(f => f.label)).toEqual(['21/08 - Álma', 'alma 2']);
-    expect(formulariosQuePega('  ', forms)).toEqual([]);
-  });
 });

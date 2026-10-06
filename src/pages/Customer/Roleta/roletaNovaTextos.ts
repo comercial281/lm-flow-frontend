@@ -120,15 +120,3 @@ export function origemTexto(o: { kind: RoletaOriginKind; label: string }): strin
   if (o.kind === 'portal_rent' || o.kind === 'site_rent') return `${tipo} · ${o.label} (locação)`;
   return `${tipo} · ${o.label}`;
 }
-
-/** Sem acento e em minúsculas, pra comparar a palavra do "nome contém" com o nome do formulário. */
-export function semAcento(texto: string): string {
-  return (texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-}
-
-/** Os formulários que a palavra pega (prévia; quem decide de verdade é o servidor). */
-export function formulariosQuePega<T extends { label: string }>(palavra: string, formularios: T[]): T[] {
-  const p = semAcento(palavra);
-  if (!p) return [];
-  return formularios.filter(f => semAcento(f.label).includes(p));
-}

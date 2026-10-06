@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-const svc = vi.hoisted(() => ({ getOriginOptions: vi.fn(), addOrigin: vi.fn(), removeOrigin: vi.fn() }));
+const svc = vi.hoisted(() => ({ getOriginOptions: vi.fn(), addOrigin: vi.fn(), removeOrigin: vi.fn(), getKeywordPreview: vi.fn() }));
+const paginas = vi.hoisted(() => ({ getAll: vi.fn() }));
+vi.mock('@/services/integrations/metaPagesService', () => ({ metaPagesService: paginas }));
 const toasts = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('sonner', () => ({ toast: toasts }));
 vi.mock('@/services/roletaConfig/roletaConfigService', async importOriginal => {
@@ -39,7 +41,15 @@ beforeEach(() => {
   svc.getOriginOptions.mockResolvedValue(opcoes);
   svc.addOrigin.mockResolvedValue({});
   svc.removeOrigin.mockResolvedValue(undefined);
+  svc.getKeywordPreview.mockResolvedValue({ matches: [{ form_id: 'f2', form_name: 'Alma Garden' }, { form_id: 'f9', form_name: '21/08 - ALMA' }], conflict: null });
+  paginas.getAll.mockResolvedValue([{ id: 'pg1', page_name: 'Página Exemplo', page_id: '111', is_active: true }]);
 });
+
+const abrirPalavra = async () => {
+  await userEvent.click(screen.getByRole('button', { name: 'Adicionar origem' }));
+  await userEvent.click(await screen.findByRole('button', { name: /Formulário do Meta/ }));
+  await userEvent.click(screen.getByRole('radio', { name: 'Pelo nome do formulário' }));
+};
 
 describe('De onde vem o lead', () => {
   it('uma origem por linha, com o tipo em frase', () => {
@@ -92,27 +102,76 @@ describe('De onde vem o lead', () => {
     await waitFor(() => expect(svc.addOrigin).toHaveBeenCalledWith('r1', { kind: 'landing', ref_id: 'l1' }));
   });
 
-  it('"nome contém" mostra na hora o que a palavra pega', async () => {
+  it('"nome contém": a prévia vem do servidor (mesma regra do roteador)', async () => {
     abrir();
-    await userEvent.click(screen.getByRole('button', { name: 'Adicionar origem' }));
-    await userEvent.click(await screen.findByRole('button', { name: /Formulário do Meta/ }));
-    await userEvent.click(screen.getByRole('radio', { name: 'Pelo nome do formulário' }));
+    await abrirPalavra();
     await userEvent.type(screen.getByLabelText('O nome do formulário contém'), 'alma');
-    expect(screen.getByText('Pega 2 formulários hoje:')).toBeInTheDocument();
-    expect(screen.getByText('Alma Garden')).toBeInTheDocument();
+    expect(await screen.findByText('Pega 2 formulários hoje:')).toBeInTheDocument();
+    expect(screen.getByText('21/08 - ALMA')).toBeInTheDocument();
+    // uma página só: não pergunta a página nem manda meta_page_id
+    expect(svc.getKeywordPreview).toHaveBeenLastCalledWith('alma', null);
+    expect(screen.queryByLabelText('Página do Facebook')).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
     await waitFor(() => expect(svc.addOrigin).toHaveBeenCalledWith('r1', { kind: 'meta_form_keyword', keyword: 'alma' }));
   });
 
-  it('barreira D9: o conflito do servidor aparece na janela e ela não fecha', async () => {
+  it('prévia com conflito (D9) avisa antes de salvar e trava o Adicionar', async () => {
+    svc.getKeywordPreview.mockResolvedValue({ matches: [{ form_id: 'f2', form_name: 'Alma Garden' }], conflict: { form_name: 'Alma Garden', roleta_name: 'Zona Norte' } });
+    abrir();
+    await abrirPalavra();
+    await userEvent.type(screen.getByLabelText('O nome do formulário contém'), 'alma');
+    expect(await screen.findByText(/já é pego por outra regra "nome contém", na roleta Zona Norte/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Adicionar' })).toBeDisabled();
+  });
+
+  it('com mais de uma página do Facebook, pergunta a página e manda meta_page_id', async () => {
+    paginas.getAll.mockResolvedValue([
+      { id: 'pg1', page_name: 'Página A', is_active: true },
+      { id: 'pg2', page_name: 'Página B', is_active: true },
+      { id: 'pg3', page_name: 'Desligada', is_active: false },
+    ]);
+    abrir();
+    await abrirPalavra();
+    const pagina = await screen.findByLabelText('Página do Facebook');
+    expect(within(pagina).getAllByRole('option')).toHaveLength(2);
+    await userEvent.selectOptions(pagina, 'pg2');
+    await userEvent.type(screen.getByLabelText('O nome do formulário contém'), 'alma');
+    await waitFor(() => expect(svc.getKeywordPreview).toHaveBeenLastCalledWith('alma', 'pg2'));
+    await userEvent.click(await screen.findByRole('button', { name: 'Adicionar' }));
+    await waitFor(() => expect(svc.addOrigin).toHaveBeenCalledWith('r1', { kind: 'meta_form_keyword', keyword: 'alma', meta_page_id: 'pg2' }));
+  });
+
+  it('gravou mas a lista não voltou: sucesso + aviso à parte, e a janela fecha', async () => {
+    recarregar.mockRejectedValue(new Error('rede'));
+    abrir();
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar origem' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Formulário do Meta/ }));
+    await userEvent.click(screen.getByRole('button', { name: /Alma Garden/ }));
+    await waitFor(() => expect(toasts.error).toHaveBeenCalledWith('Salvo, mas não deu pra atualizar a lista.', expect.objectContaining({ action: expect.objectContaining({ label: 'Tentar de novo' }) })));
+    expect(toasts.success).toHaveBeenCalledWith('Origem adicionada');
+    expect(toasts.error).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('tirou mas a lista não voltou: não diz "não deu pra tirar"', async () => {
+    recarregar.mockRejectedValue(new Error('rede'));
+    abrir();
+    await userEvent.click(screen.getByRole('button', { name: 'Tirar a origem IA Vendedora · Sofia' }));
+    await waitFor(() => expect(toasts.error).toHaveBeenCalledWith('Salvo, mas não deu pra atualizar a lista.', expect.anything()));
+    expect(toasts.success).toHaveBeenCalledWith('Origem tirada da roleta');
+    expect(toasts.error).toHaveBeenCalledTimes(1);
+  });
+
+  it('barreira D9: o conflito na recusa ao salvar também aparece na janela', async () => {
+    svc.getKeywordPreview.mockRejectedValue(new Error('rede'));
     svc.addOrigin.mockRejectedValue({
       response: { status: 422, data: { error: 'Conflito', conflict: { form_name: 'Alma Garden', roleta_name: 'Zona Norte' } } },
     });
     abrir();
-    await userEvent.click(screen.getByRole('button', { name: 'Adicionar origem' }));
-    await userEvent.click(await screen.findByRole('button', { name: /Formulário do Meta/ }));
-    await userEvent.click(screen.getByRole('radio', { name: 'Pelo nome do formulário' }));
-    await userEvent.type(screen.getByLabelText('O nome do formulário contém'), 'alma{Enter}');
+    await abrirPalavra();
+    await userEvent.type(screen.getByLabelText('O nome do formulário contém'), 'alma');
+    expect(await screen.findByText('Não deu pra conferir agora. Ao adicionar, a regra é conferida de novo.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('O formulário "Alma Garden" já é pego por outra regra "nome contém", na roleta Zona Norte.');
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(recarregar).not.toHaveBeenCalled();
