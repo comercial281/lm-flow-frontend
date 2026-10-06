@@ -3,7 +3,7 @@
 // Spec: LM FLOW/specs/2026-10-03-meu-site-painel-design.md (A1).
 
 export type GrupoId = 'painel' | 'personalizar' | 'marketing' | 'config';
-export type TelaId = 'painel' | 'contatos' | 'aparencia' | 'busca' | 'vitrines' | 'chamadas' | 'buscados' | 'secoes' | 'ficha' | 'lista'
+export type TelaId = 'painel' | 'contatos' | 'modelo' | 'aparencia' | 'busca' | 'vitrines' | 'chamadas' | 'buscados' | 'secoes' | 'ficha' | 'lista'
   | 'menus' | 'paginas' | 'financiamento' | 'anuncie' | 'traducao'
   | 'blog' | 'anuncios' | 'redes' | 'rastreamento' | 'marca' | 'endereco' | 'dados' | 'destino' | 'google';
 
@@ -27,6 +27,7 @@ export const GRUPOS: { id: GrupoId; rotulo: string }[] = [
 export const TELAS: TelaInfo[] = [
   { id: 'painel', grupo: 'painel', rotulo: 'Painel', dica: '', titulo: 'Painel', frase: 'Como o seu site está indo.', noMenu: false },
   { id: 'contatos', grupo: 'painel', rotulo: 'Contatos do site', dica: '', titulo: 'Contatos do site', frase: 'Quem pediu contato pelo site.', noMenu: false },
+  { id: 'modelo', grupo: 'personalizar', rotulo: 'Modelo do site', dica: 'Clássico, Editorial ou Popular', titulo: 'Modelo do site', frase: 'Um ponto de partida para o visual do site. Depois, tudo continua editável em Aparência e na Página inicial.', noMenu: true },
   { id: 'aparencia', grupo: 'personalizar', rotulo: 'Aparência', dica: 'Logo, cores, topo e rodapé', titulo: 'Aparência', frase: 'Logo, cores, fonte, fundo, topo, capa e rodapé do site.', noMenu: true },
   { id: 'busca', grupo: 'personalizar', rotulo: 'Página inicial · Busca rápida', dica: 'Título e filtros da entrada', titulo: 'Busca rápida', frase: 'O título da capa e os filtros que o visitante vê ao entrar no site.', noMenu: true },
   { id: 'vitrines', grupo: 'personalizar', rotulo: 'Página inicial · Vitrines', dica: 'Faixas de imóveis', titulo: 'Vitrines', frase: 'Faixas de imóveis na página inicial. Elas se atualizam sozinhas.', noMenu: true },

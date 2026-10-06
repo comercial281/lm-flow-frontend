@@ -6582,3 +6582,15 @@ Três modelos prontos no assistente "Criar com assistente" (passo 1, grupo "Mode
 - **O modelo nunca troca sozinho.** Se o imóvel combina mais com outro (`modeloSugerido`: locação ou temporada = Aluguel, empreendimento = Lançamento, o resto = Revenda), aparece uma linha com o botão "Trocar". Quem decide é a pessoa.
 - **Fase da obra nasce escondida no Lançamento**, porque o percentual é manual. As perguntas de Revenda e Aluguel só pesam, não desqualificam.
 - As fontes dos temas são as da lista `FONTES_DO_SITE`; a landing usa a mesma lista do site.
+
+## Modelo do site (D2) (05/10/2026)
+
+Nova tela **Modelo do site** (primeira de "Personalizar"): três cartões, **Clássico**, **Editorial** e **Popular**, cada um com uma miniatura em HTML/CSS pintada com as cores do próprio cliente.
+
+- **O modelo muda só o visual.** Grava fonte, `appearance` (fonte dos títulos, fundo, topo, faixa de cima, capa, menu, cartões e rodapé), `listing.card_layout`, `home.callouts.layout` e o liga/desliga de "Como funciona" e "Atendimento". Os modelos vivem no código (`src/features/siteBuilder/modelosDoSite.ts`).
+- **Preserva sempre:** cores, logo, `logo_light_url`, a frase do rodapé, o filtro da capa, a busca, as vitrines, as chamadas próprias, os mais buscados, o menu e os textos já escritos. O Popular só preenche os 4 passos de fábrica (`PASSOS_MCMV`) se a lista estiver vazia; o Editorial só usa os textos de fábrica do Atendimento se o título estiver em branco.
+- **Nada vai pro ar antes do Salvar.** O botão "Usar este modelo" pede confirmação, chama `setF` uma vez e avisa "Modelo aplicado. Confira em Ver prévia e clique em Salvar."
+- **Editorial e Popular usam a capa dividida** (texto e busca de um lado, foto do outro). Com ela, o topo da home fica sólido em vez de transparente.
+- **"Em uso" só quando bate tudo.** `modeloAtual` compara só as chaves da tabela do modelo (não cores nem textos; em passos e Atendimento, só o liga/desliga). Se o cliente mexer em uma, nenhum cartão fica "Em uso".
+- **Vindas das tarefas anteriores:** a fonte dos títulos carrega como um segundo link do Google Fonts; a classe `font-[var(--display)]` ganhou uma regra global de `font-family`, porque no Tailwind 4 ela compilava para `font-weight`; o menu em maiúsculas vale só no computador; as seções novas "Como funciona" e "Atendimento" ficam na tela "Página inicial · Mais seções".
+- **Vitrine "Minha Casa Minha Vida":** o modelo Popular não cria vitrine (isso é conteúdo). A regra `mcmv` está disponível em Vitrines.
