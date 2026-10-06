@@ -282,7 +282,7 @@ export default function PushCentral() {
 
         {data && !data.push_ready && (
           <p className={AVISO}>
-            As chaves VAPID não estão configuradas no servidor. Nada será entregue até isso ser resolvido.
+            O envio de push não está configurado no servidor. Nada será entregue até isso ser resolvido.
           </p>
         )}
 
@@ -448,7 +448,7 @@ export default function PushCentral() {
                   />
                 </div>
 
-                {conta && <p className="text-sm">{textoDoPublico(manual.audience, conta, nomeCliente)}</p>}
+                {conta && conta.devices > 0 && <p className="text-sm">{textoDoPublico(manual.audience, conta, nomeCliente)}</p>}
                 {erroConta && (
                   <p className="flex flex-wrap items-center gap-2 text-sm text-destructive">
                     Não consegui contar os aparelhos.

@@ -73,11 +73,11 @@ describe('Comunicação → Push', () => {
   it('disparo manual confirma com o público e a quantidade antes de enviar', async () => {
     const user = userEvent.setup();
     render(<PushCentral />);
-    expect(await screen.findByText('Vai para você (2 aparelhos).')).toBeInTheDocument();
+    expect(await screen.findByText('Vai para 1 pessoa da Leal Mídia (2 aparelhos).')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Mensagem'), { target: { value: 'Sistema volta às 14h' } });
     await user.click(screen.getByRole('button', { name: 'Enviar' }));
     const dialogo = await screen.findByRole('dialog');
-    expect(dialogo).toHaveTextContent('Enviar para você (2 aparelhos)?');
+    expect(dialogo).toHaveTextContent('Enviar para 1 pessoa da Leal Mídia (2 aparelhos)?');
     expect(svc.sendNow).not.toHaveBeenCalled();
     await user.click(within(dialogo).getByRole('button', { name: 'Enviar' }));
     await waitFor(() => expect(svc.sendNow).toHaveBeenCalledWith(
@@ -87,7 +87,7 @@ describe('Comunicação → Push', () => {
 
   it('para um cliente diz quantas pessoas e aparelhos e de qual cliente', async () => {
     render(<PushCentral />);
-    await screen.findByText('Vai para você (2 aparelhos).');
+    await screen.findByText('Vai para 1 pessoa da Leal Mídia (2 aparelhos).');
     fireEvent.change(screen.getByLabelText('Para quem'), { target: { value: 'client' } });
     fireEvent.change(await screen.findByLabelText('Cliente'), { target: { value: 'moeda' } });
     expect(await screen.findByText('Vai para 12 pessoas (17 aparelhos) de Moeda Forte.')).toBeInTheDocument();
@@ -108,7 +108,7 @@ describe('Comunicação → Push', () => {
         ? Promise.reject({ response: { status: 422, data: { error: 'Este cliente ainda não tem o CRM montado' } } })
         : ok({ people: 1, devices: 2 }));
     render(<PushCentral />);
-    await screen.findByText('Vai para você (2 aparelhos).');
+    await screen.findByText('Vai para 1 pessoa da Leal Mídia (2 aparelhos).');
     fireEvent.change(screen.getByLabelText('Para quem'), { target: { value: 'client' } });
     fireEvent.change(await screen.findByLabelText('Cliente'), { target: { value: 'moeda' } });
     expect(await screen.findByText('Este cliente ainda não tem o CRM montado')).toBeInTheDocument();
@@ -125,6 +125,88 @@ describe('Comunicação → Push', () => {
     fireEvent.change(screen.getByLabelText('Mensagem'), { target: { value: 'Oi' } });
     expect(screen.getByRole('button', { name: 'Enviar' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Tentar de novo' }));
-    expect(await screen.findByText('Vai para você (2 aparelhos).')).toBeInTheDocument();
+    expect(await screen.findByText('Vai para 1 pessoa da Leal Mídia (2 aparelhos).')).toBeInTheDocument();
+  });
+
+  const escreverEEnviar = async (user: ReturnType<typeof userEvent.setup>) => {
+    fireEvent.change(screen.getByLabelText('Mensagem'), { target: { value: 'Oi' } });
+    await user.click(screen.getByRole('button', { name: 'Enviar' }));
+  };
+
+  it('recontagem no clique: o diálogo mostra o número novo', async () => {
+    svc.audienceCount.mockReset();
+    svc.audienceCount
+      .mockImplementationOnce(() => ok({ people: 1, devices: 2 }))
+      .mockImplementationOnce(() => ok({ people: 3, devices: 5 }));
+    const user = userEvent.setup();
+    render(<PushCentral />);
+    await screen.findByText('Vai para 1 pessoa da Leal Mídia (2 aparelhos).');
+    await escreverEEnviar(user);
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Enviar para 3 pessoas da Leal Mídia (5 aparelhos)?');
+    expect(svc.audienceCount).toHaveBeenCalledTimes(2);
+    expect(svc.sendNow).not.toHaveBeenCalled();
+  });
+
+  it('recontagem no clique com 0 aparelhos: não abre o diálogo nem envia, some o "Vai para"', async () => {
+    svc.audienceCount.mockReset();
+    svc.audienceCount
+      .mockImplementationOnce(() => ok({ people: 1, devices: 2 }))
+      .mockImplementationOnce(() => ok({ people: 0, devices: 0 }));
+    const user = userEvent.setup();
+    render(<PushCentral />);
+    await screen.findByText('Vai para 1 pessoa da Leal Mídia (2 aparelhos).');
+    await escreverEEnviar(user);
+    expect(await screen.findByText(/Ninguém neste público está com o push ligado/)).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Vai para/)).not.toBeInTheDocument();
+    expect(svc.sendNow).not.toHaveBeenCalled();
+  });
+
+  it('recontagem no clique com 422: não abre o diálogo nem envia', async () => {
+    svc.audienceCount.mockReset();
+    svc.audienceCount
+      .mockImplementationOnce(() => ok({ people: 1, devices: 2 }))
+      .mockImplementationOnce(() => Promise.reject({ response: { status: 422, data: { error: 'Este cliente ainda não tem o CRM montado' } } }));
+    const user = userEvent.setup();
+    render(<PushCentral />);
+    await screen.findByText('Vai para 1 pessoa da Leal Mídia (2 aparelhos).');
+    await escreverEEnviar(user);
+    expect(await screen.findByText('Este cliente ainda não tem o CRM montado')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(svc.sendNow).not.toHaveBeenCalled();
+  });
+
+  it('sendNow para a Leal Mídia vai sem tenant_slug', async () => {
+    const user = userEvent.setup();
+    render(<PushCentral />);
+    await screen.findByText('Vai para 1 pessoa da Leal Mídia (2 aparelhos).');
+    await escreverEEnviar(user);
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enviar' }));
+    await waitFor(() => expect(svc.sendNow).toHaveBeenCalled());
+    expect(svc.sendNow.mock.calls[0][0].tenant_slug).toBeUndefined();
+  });
+
+  it('sendNow para cliente leva o tenant_slug', async () => {
+    const user = userEvent.setup();
+    render(<PushCentral />);
+    await screen.findByText('Vai para 1 pessoa da Leal Mídia (2 aparelhos).');
+    fireEvent.change(screen.getByLabelText('Para quem'), { target: { value: 'client' } });
+    fireEvent.change(await screen.findByLabelText('Cliente'), { target: { value: 'moeda' } });
+    await screen.findByText('Vai para 12 pessoas (17 aparelhos) de Moeda Forte.');
+    await escreverEEnviar(user);
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enviar' }));
+    await waitFor(() => expect(svc.sendNow).toHaveBeenCalledWith(
+      expect.objectContaining({ audience: 'client', tenant_slug: 'moeda' }),
+    ));
+  });
+
+  it('falha do sendNow avisa o erro', async () => {
+    svc.sendNow.mockRejectedValueOnce({ response: { data: { error: 'Servidor caiu' } } });
+    const user = userEvent.setup();
+    render(<PushCentral />);
+    await screen.findByText('Vai para 1 pessoa da Leal Mídia (2 aparelhos).');
+    await escreverEEnviar(user);
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enviar' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Servidor caiu'));
   });
 });

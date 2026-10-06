@@ -12,13 +12,11 @@ export const STATUS_CLASS: Record<PushLog['status'], string> = {
 };
 
 // Para quem vai, em português de gente. "Para mim" do servidor é TODO aparelho
-// da Leal Mídia (o public): com mais de uma pessoa, dizer "você" seria mentir.
+// da Leal Mídia (o public): o público é a Leal Mídia toda, então nunca dizemos "você".
 function quem(publico: PushAudience, conta: AudienceCount, cliente: string): string {
   const aparelhos = plural(conta.devices, 'aparelho', 'aparelhos');
   if (publico === 'admin') {
-    return conta.people <= 1
-      ? `você (${aparelhos})`
-      : `${plural(conta.people, 'pessoa', 'pessoas')} da Leal Mídia (${aparelhos})`;
+    return `${plural(conta.people, 'pessoa', 'pessoas')} da Leal Mídia (${aparelhos})`;
   }
   return `${plural(conta.people, 'pessoa', 'pessoas')} (${aparelhos}) de ${cliente}`;
 }
