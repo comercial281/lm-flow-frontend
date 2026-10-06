@@ -56,6 +56,21 @@ describe('Passo 2 · Objetivo', () => {
     expect(update).toHaveBeenCalledWith('ia-1', { handoff_target: 'number_owner', handoff_user_id: null });
   });
 
+  // IA antiga: persona só derivada da voz (coluna vazia). A conversão grava a coluna,
+  // e aí o servidor passa a valer a trava do número sem dono.
+  it('converter uma IA antiga grava a persona junto', async () => {
+    abrir(agenteDeTeste({ persona_kind: null }));
+    await userEvent.click(screen.getByRole('button', { name: 'Passar a entregar pro dono do número' }));
+    await salvar();
+    expect(update).toHaveBeenCalledWith('ia-1', { persona_kind: 'broker', handoff_target: 'number_owner', handoff_user_id: null });
+  });
+
+  it('corretor antigo com fixo num número sem dono: não converte, avisa', () => {
+    abrir(agenteDeTeste({ number_owner_id: null }));
+    expect(screen.queryByRole('button', { name: 'Passar a entregar pro dono do número' })).toBeNull();
+    expect(screen.getByText(/não tem corretor dono/)).toBeTruthy();
+  });
+
   it('temperatura preserva as obrigatórias e o resumo desligado', async () => {
     abrir(dono());
     await userEvent.click(screen.getByLabelText('Quando o lead estiver quente'));

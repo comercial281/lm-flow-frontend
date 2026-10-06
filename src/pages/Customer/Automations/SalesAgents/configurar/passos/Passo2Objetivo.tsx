@@ -21,6 +21,7 @@ import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { lerEscolhas } from '@/features/salesAgents/tresEscolhas';
 import { briefingEnabled, keepBriefing, toggleBriefing } from '@/features/salesAgents/handoffBriefing';
 import { fraseDoObjetivo } from '@/features/salesAgents/resumoDosPassos';
+import { FRASE_SEM_DONO } from '@/features/salesAgents/pendencias';
 import type { PipelineOpt, StageOpt } from '../../configuracao/comum';
 import { useRascunho } from '../useRascunho';
 import { CAMPOS_DO_PASSO } from '../camposDosPassos';
@@ -161,10 +162,17 @@ export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
             {rascunho.handoff_target !== 'number_owner' && (
               <Aviso>
                 <p>Hoje o lead vai para outro destino, e não para o dono do número.</p>
-                <Button type="button" size="sm" variant="outline" className="mt-2"
-                  onClick={() => mudar({ handoff_target: 'number_owner', handoff_user_id: null, handoff_roleta_config_id: null })}>
-                  Passar a entregar pro dono do número
-                </Button>
+                {/* ⚠️ Sem dono, converter mandaria o lead pra ninguém. E a conversão grava
+                    a persona na coluna: IA antiga tem a persona só DERIVADA da voz, e a
+                    trava do servidor (número sem dono) só olha a coluna. */}
+                {rascunho.inbox_id && !rascunho.number_owner_id ? (
+                  <p className="mt-2 text-destructive">{FRASE_SEM_DONO}</p>
+                ) : (
+                  <Button type="button" size="sm" variant="outline" className="mt-2"
+                    onClick={() => mudar({ persona_kind: 'broker', handoff_target: 'number_owner', handoff_user_id: null, handoff_roleta_config_id: null })}>
+                    Passar a entregar pro dono do número
+                  </Button>
+                )}
               </Aviso>
             )}
           </>

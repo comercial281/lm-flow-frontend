@@ -31,7 +31,7 @@ import type { PropsDoPasso } from '../passos';
 
 const PERSONAS: OpcaoDeEscolha<PersonaDaIa>[] = [
   { valor: 'broker', titulo: PERSONA_ROTULOS.broker, descricao: 'Fala em primeira pessoa como o dono deste número. Na hora de passar, diz que ela mesma vai ver e retornar, e avisa o dono.' },
-  { valor: 'owner', titulo: PERSONA_ROTULOS.owner, descricao: 'Fala como o dono ("aqui é o Tony, da Aurora") e passa dizendo que um corretor dele vai chamar.' },
+  { valor: 'owner', titulo: PERSONA_ROTULOS.owner, descricao: 'Fala como o dono ("aqui é o Carlos, da Aurora") e passa dizendo que um corretor dele vai chamar.' },
   { valor: 'assistant', titulo: PERSONA_ROTULOS.assistant, descricao: 'Fala em nome da imobiliária. Se perguntarem, diz que é assistente virtual e oferece uma pessoa.' },
 ];
 
@@ -50,8 +50,20 @@ export default function Passo1QuemEla({ agent, aoSalvo }: PropsDoPasso) {
     [persona, nomeVisivel, imobiliaria],
   );
 
+  // ⚠️ Calcula sobre o SALVO, não sobre o rascunho: ir e voltar (corretor → dono →
+  // corretor) não pode apagar calado o corretor fixo de uma IA antiga. Voltar pra
+  // persona salva devolve tudo como estava.
   const trocarPersona = (p: PersonaDaIa) => {
-    if (p !== persona) mudar(escolhasParaPatch({ ...escolhas, persona: p }, rascunho));
+    if (p === persona) return;
+    const salvo = lerEscolhas(agent);
+    if (p === salvo.persona) {
+      mudar({
+        persona_kind: agent.persona_kind, transfer_config: agent.transfer_config, handoff_target: agent.handoff_target,
+        handoff_roleta_config_id: agent.handoff_roleta_config_id, handoff_user_id: agent.handoff_user_id,
+      });
+      return;
+    }
+    mudar(escolhasParaPatch({ ...salvo, alcance: escolhas.alcance, persona: p }, agent));
   };
 
   const alternarReacao = (e: string) =>

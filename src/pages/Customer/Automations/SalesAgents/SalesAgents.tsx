@@ -21,6 +21,7 @@ import { classifyLoadFailure, type LoadFailure } from '@/services/core/forbidden
 import { useCan } from '@/hooks/useCan';
 import inboxesService from '@/services/channels/inboxesService';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { PEDIDO_SAIR_SEM_SALVAR, limparPendentes, temAlteracaoPendente } from '@/hooks/useAlteracoesNaoSalvas';
 import {
   iaDaUrl, iaInicial, paramsDaIa, telaDaUrl, telaInfo, trilhaDe, type TelaId,
 } from '@/features/salesAgents/iaMenu';
@@ -145,6 +146,16 @@ export default function SalesAgents() {
     setAgents((prev) => prev.map((x) => (x.id === a.id ? a : x)));
   }, []);
 
+  // ⚠️ Cada passo do Configurar tem o próprio Salvar (a tela antiga gravava no blur).
+  // Trocar de IA, de tela, criar ou duplicar com um passo pela metade pergunta antes;
+  // senão a edição some calada. Os botões da barra não são links, e a guarda do menu
+  // lateral (useGuardaDeSaida) não os pega.
+  const guardar = useCallback(async (acao: () => void) => {
+    if (temAlteracaoPendente() && !(await confirmar(PEDIDO_SAIR_SEM_SALVAR))) return;
+    limparPendentes();
+    acao();
+  }, [confirmar]);
+
   const trocarIa = useCallback((id: string) => {
     setSearchParams(paramsDaIa(id, tela), { replace: true });
   }, [tela, setSearchParams]);
@@ -212,10 +223,10 @@ export default function SalesAgents() {
           insights={insightsLiberado}
           podeCriar={podeCriar}
           podeExcluir={pode('sales_agents', 'delete')}
-          aoIr={irPara}
-          aoTrocarIa={trocarIa}
-          aoCriar={createAgent}
-          aoDuplicar={() => selected && setDuplicating(selected)}
+          aoIr={(t) => void guardar(() => irPara(t))}
+          aoTrocarIa={(id) => void guardar(() => trocarIa(id))}
+          aoCriar={() => void guardar(() => void createAgent())}
+          aoDuplicar={() => void guardar(() => { if (selected) setDuplicating(selected); })}
           aoExcluir={() => selected && void deleteAgent(selected)}
         />
         <div className="w-full space-y-5 px-6 py-6">

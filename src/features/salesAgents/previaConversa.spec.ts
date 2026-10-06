@@ -31,13 +31,13 @@ describe('previaConversa', () => {
   });
 
   it('o dono passa pro time dele', () => {
-    expect(daIa(previaConversa({ persona: 'owner', tom: 'close', emoji: 'none', nome: 'Tony', imobiliaria: 'Aurora' }))).toContain('corretor do meu time');
-    expect(daIa(previaConversa({ persona: 'owner', tom: 'formal', emoji: 'none', nome: 'Tony', imobiliaria: 'Aurora' }))).toContain('minha equipe');
+    expect(daIa(previaConversa({ persona: 'owner', tom: 'close', emoji: 'none', nome: 'Carlos', imobiliaria: 'Aurora' }))).toContain('corretor do meu time');
+    expect(daIa(previaConversa({ persona: 'owner', tom: 'formal', emoji: 'none', nome: 'Carlos', imobiliaria: 'Aurora' }))).toContain('minha equipe');
   });
 
   it('sem emoji não tem emoji; com emoji tem', () => {
-    expect(daIa(previaConversa({ persona: 'owner', tom: 'close', emoji: 'none', nome: 'Tony', imobiliaria: 'Aurora' }))).not.toMatch(EMOJI);
-    expect(daIa(previaConversa({ persona: 'owner', tom: 'close', emoji: 'light', nome: 'Tony', imobiliaria: 'Aurora' }))).toMatch(EMOJI);
+    expect(daIa(previaConversa({ persona: 'owner', tom: 'close', emoji: 'none', nome: 'Carlos', imobiliaria: 'Aurora' }))).not.toMatch(EMOJI);
+    expect(daIa(previaConversa({ persona: 'owner', tom: 'close', emoji: 'light', nome: 'Carlos', imobiliaria: 'Aurora' }))).toMatch(EMOJI);
   });
 
   it('formal não usa "Oi!"; próximo usa', () => {
@@ -46,7 +46,7 @@ describe('previaConversa', () => {
   });
 
   it('sem tom e emoji, usa o padrão (próximo, sem emoji)', () => {
-    const m = previaConversa({ persona: 'owner', nome: 'Tony', imobiliaria: 'Aurora' });
+    const m = previaConversa({ persona: 'owner', nome: 'Carlos', imobiliaria: 'Aurora' });
     expect(m[1].texto).toMatch(/^Oi!/);
     expect(daIa(m)).not.toMatch(EMOJI);
   });

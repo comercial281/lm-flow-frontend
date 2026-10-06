@@ -96,10 +96,10 @@ describe('proximosHorarios', () => {
 
 describe('resumoDosPassos', () => {
   it('uma linha por passo, de 1 a 7', () => {
-    const a = agenteDeTeste({ persona_kind: 'owner', lead_facing_name: 'Tony', reach: 'qualify', handoff_target: 'inbox_roleta', transfer_config: {}, greeting: null, followup_enabled: false });
+    const a = agenteDeTeste({ persona_kind: 'owner', lead_facing_name: 'Carlos', reach: 'qualify', handoff_target: 'inbox_roleta', transfer_config: {}, greeting: null, followup_enabled: false });
     const linhas = resumoDosPassos(a as SalesAgent, { numero: 'Dono Exemplo' });
     expect(linhas.map((l) => l.passo)).toEqual([1, 2, 3, 4, 5, 6, 7]);
-    expect(linhas[0].linha).toBe('Dono da imobiliária · Tony');
+    expect(linhas[0].linha).toBe('Dono da imobiliária · Carlos');
     expect(linhas[2].linha).toBe('2 perguntas, 2 obrigatórias · primeira mensagem escrita pela IA');
     expect(linhas[3].linha).toBe('Não marca visita: só qualifica e passa');
     expect(linhas[6].linha).toBe('Não volta a chamar quem sumiu');

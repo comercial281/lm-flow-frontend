@@ -39,11 +39,11 @@ describe('Passo 1 · Quem ela é', () => {
   it('trocar pra dono da imobiliária e dar o nome: a voz sai e o corretor fixo fica', async () => {
     abrir();
     await userEvent.click(screen.getByLabelText('Dono da imobiliária'));
-    await userEvent.type(screen.getByLabelText('Nome que o lead vê'), 'Tony');
+    await userEvent.type(screen.getByLabelText('Nome que o lead vê'), 'Carlos');
     await salvar();
     expect(update).toHaveBeenCalledWith('ia-1', {
       persona_kind: 'owner',
-      lead_facing_name: 'Tony',
+      lead_facing_name: 'Carlos',
       transfer_config: { mode: 'checklist', required_questions: ['Renda'] },
     });
   });
@@ -57,6 +57,13 @@ describe('Passo 1 · Quem ela é', () => {
       transfer_config: { mode: 'checklist', required_questions: ['Renda'] },
       handoff_target: 'inbox_roleta',
     });
+  });
+
+  it('ir e voltar na persona não mexe em nada', async () => {
+    abrir(agenteDeTeste({ lead_facing_name: 'Bruno' }));
+    await userEvent.click(screen.getByLabelText('Dono da imobiliária'));
+    await userEvent.click(screen.getByLabelText('O próprio corretor'));
+    expect(screen.queryByRole('button', { name: 'Salvar' })).toBeNull();
   });
 
   // Obrigatório pra LIGAR (passo 8), não pra salvar o resto do passo.

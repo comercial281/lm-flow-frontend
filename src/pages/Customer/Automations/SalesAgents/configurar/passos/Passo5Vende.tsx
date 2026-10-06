@@ -13,6 +13,8 @@ import { useRascunho } from '../useRascunho';
 import { CAMPOS_DO_PASSO } from '../camposDosPassos';
 import { Caixa, CascaDoPasso } from '../pecas';
 import type { PropsDoPasso } from '../passos';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { PEDIDO_SAIR_SEM_SALVAR, temAlteracaoPendente } from '@/hooks/useAlteracoesNaoSalvas';
 
 const REGRA_PADRAO_DO_BOOK = 'o lead pedir o book, a apresentação completa, o material ou mais detalhes do empreendimento';
 
@@ -43,12 +45,17 @@ export default function Passo5Vende({ agent, aoSalvo }: PropsDoPasso) {
     mudar({ playbook: { ...playbook, vars: proximos } });
   };
 
-  const abrirEnsinar = () => setParams((p) => {
-    const n = new URLSearchParams(p);
-    n.set('tela', 'ensinar');
-    n.delete('passo');
-    return n;
-  });
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+  // Sair pro Ensinar com o passo pela metade pergunta antes, como a troca de passo.
+  const abrirEnsinar = async () => {
+    if (temAlteracaoPendente() && !(await confirmar(PEDIDO_SAIR_SEM_SALVAR))) return;
+    setParams((p) => {
+      const n = new URLSearchParams(p);
+      n.set('tela', 'ensinar');
+      n.delete('passo');
+      return n;
+    });
+  };
 
   return (
     <CascaDoPasso numero={5} pendente={pendente} salvando={salvando} erro={erro} aoSalvar={() => void salvar()} aoDescartar={descartar}>
@@ -93,8 +100,9 @@ export default function Passo5Vende({ agent, aoSalvo }: PropsDoPasso) {
       </Secao>
 
       <Secao titulo="O que ela sabe" descricao="Arquivos, textos e regras que ela consulta pra responder ficam em Ensinar.">
-        <Button type="button" variant="outline" onClick={abrirEnsinar}>Abrir Ensinar</Button>
+        <Button type="button" variant="outline" onClick={() => void abrirEnsinar()}>Abrir Ensinar</Button>
       </Secao>
+      {dialogoDeConfirmacao}
     </CascaDoPasso>
   );
 }

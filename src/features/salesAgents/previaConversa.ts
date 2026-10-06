@@ -24,7 +24,7 @@ export interface DadosDaPrevia {
   imobiliaria: string;
 }
 
-const NOME_DE_EXEMPLO: Record<PersonaDaIa, string> = { broker: 'Bruno', owner: 'Tony', assistant: 'Bia' };
+const NOME_DE_EXEMPLO: Record<PersonaDaIa, string> = { broker: 'Bruno', owner: 'Carlos', assistant: 'Bia' };
 
 export function previaConversa({ persona, tom = 'close', emoji = 'none', nome, imobiliaria }: DadosDaPrevia): Mensagem[] {
   const quem = nome.trim() || NOME_DE_EXEMPLO[persona];

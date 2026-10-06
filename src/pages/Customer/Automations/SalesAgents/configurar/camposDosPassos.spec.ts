@@ -37,10 +37,11 @@ describe('campos de cada passo', () => {
     for (const [, campo] of todos) expect(RAIZES_DIVIDIDAS).not.toContain(campo);
   });
 
-  it('só o destino é dividido entre dois passos (1 e 2)', () => {
+  // A persona também: o passo 2 a grava na conversão explícita pro dono do número.
+  it('só o destino e a persona são divididos entre dois passos (1 e 2)', () => {
     const contagem = new Map<string, Set<string>>();
     for (const [passo, campo] of todos) contagem.set(campo, new Set([...(contagem.get(campo) ?? []), passo]));
     const repetidos = [...contagem].filter(([, ps]) => ps.size > 1).map(([c]) => c).sort();
-    expect(repetidos).toEqual(['handoff_roleta_config_id', 'handoff_target', 'handoff_user_id']);
+    expect(repetidos).toEqual(['handoff_roleta_config_id', 'handoff_target', 'handoff_user_id', 'persona_kind']);
   });
 });
