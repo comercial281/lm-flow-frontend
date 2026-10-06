@@ -6567,3 +6567,16 @@ Caso real: o Leonardo (Mais que Imóveis) desligou "Rejeitar chamadas" e o clien
 - **Vazia de fábrica**, na criação do canal (antes vinha "I do not accept calls", em inglês) e na tela de configuração (antes "Não aceito chamadas"). Ao abrir a tela, campo vazio continua vazio. Antes o texto de fábrica reaparecia e voltava a ser gravado no próximo salvar.
 - **Rejeição desligada = mensagem vazia na gravação**, aqui e no servidor (`Evolution::CallMessage`, backend). O campo esconder não basta: era exatamente o texto escondido que ia pra Evolution.
 - Não reabrir "voltar com um texto padrão" sem o dono pedir.
+
+## Página do cliente (05/10/2026)
+
+Entrega 3 da Área do Admin (spec `LM FLOW/specs/2026-10-05-admin-clientes-entrega-3-design.md`).
+
+- **Lista** (`/admin/clientes`): cartões na largura toda; o cartão abre `/admin/clientes/:id`; **Entrar** é atalho e não abre a página. Ordem: quem tem problema na Atenção primeiro, depois nome. Filtros Todos / Com problema / Arquivados no endereço (`?filtro=`). "Suspenso" virou **"Congelado"**.
+- **Página do cliente**: topo com Entrar e o menu ⋯ (Congelar, Arquivar, Excluir — sempre com confirmação dizendo o efeito); abas Resumo | Contrato | Funções | Pessoas | Operação (`?aba=`).
+- **Congelar não bloqueia login**: o servidor só pausa automações, webhooks de WhatsApp e tarefas agendadas. O texto da confirmação diz isso — não prometer o contrário.
+- **Funções**: quadros por tema, todos abertos (`QuadrosDeFuncoes.tsx`, o mesmo do editor de pacote). Cada interruptor grava na hora com "Desfazer"; desligar o menu inteiro confirma. As regras de 03/09 (tema do servidor, nada some, tema inteiro = uma chamada) continuam.
+- **Pessoas**: sem senha em lugar nenhum. Adicionar pessoa copia (e manda no WhatsApp, se marcado) o link que cria a senha. A rota `set_password` do servidor saiu.
+- **Operação**: os grupos de WhatsApp têm uma fonte de verdade na aba; funil e grupos reenviam as duas chaves (o servidor faz `compact!`).
+- **Pacotes** (Clientes → Pacotes; servidor `public.client_packages`): pacote = funções + limites. Escolher pacote COPIA tudo pro cliente (o app do cliente não muda). Ajuste manual continua livre e aparece "≠ pacote". Editar pacote e aplicar mantém os ajustes manuais; Trocar/Voltar ao pacote desfaz e avisa quantos. Chave nova no catálogo segue o padrão (ligada, menos DEFAULT_OFF) e não acende "≠ pacote". Clientes antigos começam "Personalizado". Novo cliente tem o campo Pacote no passo Dados.
+- **Caixinhas do navegador**: zero no SuperAdmin; o build usa `--teto-super 0`. Confirmação com texto digitado usa `ConfirmarDigitando`.

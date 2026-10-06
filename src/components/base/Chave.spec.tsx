@@ -28,6 +28,16 @@ describe('Chave: efeito na hora', () => {
     expect(screen.getByText('Ligado')).toBeInTheDocument();
   });
 
+  it('semAviso: salva sem o "Ligado", mas erro ainda avisa', async () => {
+    const aoMudar = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('x'));
+    render(<Chave rotulo="Mandar lembrete no WhatsApp" ligada={false} aoMudar={aoMudar} semAviso />);
+    await userEvent.click(chave());
+    await waitFor(() => expect(aoMudar).toHaveBeenCalledTimes(1));
+    expect(toastMock.success).not.toHaveBeenCalled();
+    await userEvent.click(chave());
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalled());
+  });
+
   it('servidor recusou: volta sozinha e diz o que o servidor disse', async () => {
     const aoMudar = vi.fn().mockRejectedValue({ response: { status: 422, data: { message: 'Escolha um número antes' } } });
     render(<Chave rotulo="Mandar lembrete no WhatsApp" ligada={false} aoMudar={aoMudar} />);
