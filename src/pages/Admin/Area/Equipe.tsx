@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { UsersRound, Loader2, Plus, Trash2, ShieldCheck, EyeOff, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import superLogsService, { TeamMember, SupportReview, SupportReviewPerson } from '@/services/superLogs/superLogsService';
+import { plural } from '@/lib/formato';
 import { criterionLabel, tenantsToShow, personDetail, reviewTotals, accountCreatedLabel } from './supportReviewRules';
 
 /**
@@ -243,8 +244,9 @@ export default function AdminEquipe() {
             const t = reviewTotals(review.tenants);
             return (
               <p className="text-xs text-muted-foreground">
-                {t.people} pessoa(s) para decidir · {t.plainPasswords} senha(s) legível(is) guardada(s) ·{' '}
-                {t.withoutRoles} cliente(s) sem cargos gravados · {t.failed} cliente(s) sem leitura
+                {plural(t.people, 'pessoa para decidir', 'pessoas para decidir')} ·{' '}
+                {plural(t.withoutRoles, 'cliente sem cargos gravados', 'clientes sem cargos gravados')} ·{' '}
+                {plural(t.failed, 'cliente sem leitura', 'clientes sem leitura')}
               </p>
             );
           })()}

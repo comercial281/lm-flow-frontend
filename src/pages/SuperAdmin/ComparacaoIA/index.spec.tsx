@@ -49,4 +49,39 @@ describe('ComparacaoIA', () => {
     await waitFor(() => expect(screen.queryByText('Morar ou investir?')).not.toBeInTheDocument());
     expect(screen.getByText('Ok.')).toBeInTheDocument();
   });
+  it('durante a rodada os três seletores ficam travados', async () => {
+    const user = userEvent.setup();
+    let liberar: (v: unknown) => void = () => {};
+    comparisonEvaluate.mockReturnValue(new Promise((r) => { liberar = r; }));
+    render(<ComparacaoIA />);
+    await user.selectOptions(await screen.findByLabelText('IA'), 'a1');
+    await user.click(screen.getByRole('button', { name: 'Buscar conversas' }));
+    await screen.findByText(/Camila/);
+    await user.click(screen.getByLabelText('Incluir os cenários do Testar'));
+    await user.click(screen.getByRole('button', { name: 'Comparar' }));
+    for (const nome of ['IA', 'Roteiro antigo', 'Roteiro novo']) expect(await screen.findByLabelText(nome)).toBeDisabled();
+    liberar({ conversation_id: 'c1', point_index: 0, history_tail: '', real_reply: null, baseline: lado('a'), candidate: lado('b'), judge_model: 'm', disagreement: false });
+    await waitFor(() => expect(screen.getByLabelText('IA')).toBeEnabled());
+  });
+
+  it('erro ao listar as IAs aparece como erro e tenta de novo', async () => {
+    listAll.mockReset();
+    listAll.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce([{ id: 'a1', tenant_slug: 'dezesseis', tenant_name: 'Imobiliária Exemplo', name: 'IA Exemplo' }]);
+    const user = userEvent.setup();
+    render(<ComparacaoIA />);
+    await user.click(await screen.findByRole('button', { name: 'Tentar de novo' }));
+    expect(await screen.findByLabelText('IA')).toBeInTheDocument();
+  });
+
+  it('busca sem conversa mostra vazio; erro na busca mostra erro com o motivo', async () => {
+    const user = userEvent.setup();
+    comparisonCandidates.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error('A IA não tem roteiro 2.'));
+    render(<ComparacaoIA />);
+    await user.selectOptions(await screen.findByLabelText('IA'), 'a1');
+    await user.click(screen.getByRole('button', { name: 'Buscar conversas' }));
+    expect(await screen.findByText('Nenhuma conversa com resposta da IA para comparar')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Buscar conversas' }));
+    expect(await screen.findByText('A IA não tem roteiro 2.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
+  });
 });

@@ -9,9 +9,10 @@ import { pacotesService } from '@/services/superAdmin/pacotesService';
 import type { EdicaoDoPacote, LimitesDoPacote, MudancasDoPacote, PacoteDetalhe } from '@/types/admin/pacotes';
 import QuadrosDeFuncoes from '../QuadrosDeFuncoes';
 import { validarLimites } from '../limites';
-import { plural } from '@/lib/formato';
+import { dinheiro, plural } from '@/lib/formato';
+import { lerReais } from '../receita';
 import { resumoDeMudancas } from './resumoDeMudancas';
-import { ESQUELETO, GRADE_CAMPOS, PAGINA, SECAO, TITULO_SECAO } from '../estilo';
+import { ESQUELETO, GRADE_CAMPOS, PAGINA, SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 
 // Editor de pacote: nome, funções (os mesmos quadros da página do cliente) e
 // limites. Salvar mostra a prévia e pergunta se aplica aos clientes do pacote;
@@ -25,6 +26,8 @@ export default function Editor() {
   const [nome, setNome] = useState('');
   const [funcoes, setFuncoes] = useState<Record<string, boolean>>({});
   const [limites, setLimites] = useState<{ numeros: string; franquia: string; preco: string }>({ numeros: '', franquia: '', preco: '' });
+  // Preço do plano (R$/mês): a cota que vira receita do cliente na margem. Não é limite (não entra na prévia de limites).
+  const [precoDoPlano, setPrecoDoPlano] = useState('');
   const [previa, setPrevia] = useState<{ clients_count: number; changes: MudancasDoPacote } | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [pedindo, setPedindo] = useState(false);
@@ -34,6 +37,7 @@ export default function Editor() {
     try {
       const p = await pacotesService.obter(id);
       setPacote(p); setNome(p.name); setFuncoes(p.features);
+      setPrecoDoPlano(p.price_brl == null ? '' : String(p.price_brl).replace('.', ','));
       setLimites({ numeros: String(p.limits.max_whatsapp_channels), franquia: p.limits.ai_leads_included == null ? '' : String(p.limits.ai_leads_included), preco: String(p.limits.ai_lead_overage_price_brl) });
     } catch { setErro(true); }
   }, [id]);
@@ -41,6 +45,8 @@ export default function Editor() {
   useEffect(() => { void carregar(); }, [carregar]);
 
   const { erros, valores } = validarLimites(limites);
+  const preco = lerReais(precoDoPlano);
+  const erroDoPreco = preco === undefined ? 'Deixe vazio ou digite um valor, como 1.500,00.' : null;
 
   // Só manda o que mudou em relação ao pacote carregado.
   const edicao = (): EdicaoDoPacote => {
@@ -51,15 +57,17 @@ export default function Editor() {
         if (valores[k] !== pacote.limits[k]) (lim as Record<string, number | null>)[k] = valores[k];
       });
     }
+    const precoMudou = !!pacote && preco !== undefined && preco !== (pacote.price_brl ?? null);
     return {
       name: nome.trim(),
       ...(Object.keys(mudadas).length ? { features: mudadas } : {}),
       ...(Object.keys(lim).length ? { limits: lim } : {}),
+      ...(precoMudou ? { price_brl: preco } : {}),
     };
   };
 
   const pedirSalvar = async () => {
-    if (!valores || pedindo) return;
+    if (!valores || erroDoPreco || pedindo) return;
     setPedindo(true);
     try { setPrevia(await pacotesService.previa(id, edicao())); }
     catch (e: any) { toast.error(e?.response?.data?.error || 'Não deu pra calcular a prévia.'); }
@@ -88,17 +96,29 @@ export default function Editor() {
 
   if (erro) return <EmptyState tipo="erro" title="Não deu para carregar o pacote" aoTentarDeNovo={() => void carregar()} />;
   if (!pacote) return <div aria-busy="true" className={`h-60 ${ESQUELETO}`} />;
-  const linhas = previa ? resumoDeMudancas(previa.changes) : [];
+  const linhasDeFuncoes = previa ? resumoDeMudancas(previa.changes) : [];
+  const precoMudou = !!previa && preco !== undefined && preco !== (pacote.price_brl ?? null);
+  const textoDePreco = (v: number | null) => (v == null ? '(sem preço)' : dinheiro(v));
+  const linhas = precoMudou
+    ? [...linhasDeFuncoes, `Preço do plano: de ${textoDePreco(pacote.price_brl ?? null)} para ${textoDePreco(preco as number | null)} (muda a receita dos clientes na cota do plano)`]
+    : linhasDeFuncoes;
 
   return (
     <div className={PAGINA}>
       <Link to="/admin/clientes/pacotes" className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Pacotes</Link>
       <div className="flex flex-wrap items-end gap-4">
         <div><Label htmlFor="pk-nome">Nome</Label><Input id="pk-nome" value={nome} onChange={(e) => setNome(e.target.value)} className="w-64" /></div>
+        <div>
+          <Label htmlFor="pk-preco-plano">Preço do plano (R$/mês)</Label>
+          <Input id="pk-preco-plano" inputMode="decimal" placeholder="sem preço" className="w-48" value={precoDoPlano}
+            aria-invalid={!!erroDoPreco} aria-describedby={erroDoPreco ? 'pk-preco-plano-erro' : undefined}
+            onChange={(e) => setPrecoDoPlano(e.target.value)} />
+          {erroDoPreco && <p id="pk-preco-plano-erro" className="mt-1 text-xs text-destructive">{erroDoPreco}</p>}
+        </div>
         <p className="text-sm text-muted-foreground">{plural(pacote.clients_count, 'cliente', 'clientes')} neste pacote</p>
         <div className="ml-auto flex gap-2">
           <Button variant="outline" disabled={pacote.clients_count > 0} title={pacote.clients_count > 0 ? 'Só dá pra apagar pacote sem clientes' : undefined} onClick={() => void apagar()}>Apagar</Button>
-          <Button disabled={!valores || pedindo} onClick={() => void pedirSalvar()}>Salvar pacote</Button>
+          <Button disabled={!valores || !!erroDoPreco || pedindo} onClick={() => void pedirSalvar()}>Salvar pacote</Button>
         </div>
       </div>
       <section aria-labelledby="pk-limites" className={SECAO}>
@@ -116,7 +136,7 @@ export default function Editor() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{previa && previa.clients_count > 0 ? `Aplicar ${previa.clients_count === 1 ? 'ao' : 'aos'} ${plural(previa.clients_count, 'cliente', 'clientes')} deste pacote?` : 'Salvar o pacote?'}</DialogTitle>
-            <DialogDescription>{linhas.length ? 'O que muda:' : 'Nenhuma função ou limite muda.'}{previa && previa.clients_count > 0 ? ' Ajustes manuais de cada cliente são mantidos.' : ''}</DialogDescription>
+            <DialogDescription>{linhas.length ? 'O que muda:' : 'Nenhuma função ou limite muda.'}{precoMudou && linhasDeFuncoes.length === 0 ? ' Funções e limites não mudam.' : ''}{previa && previa.clients_count > 0 && linhasDeFuncoes.length > 0 ? ' Ajustes manuais de cada cliente são mantidos.' : ''}</DialogDescription>
           </DialogHeader>
           <ul className="list-disc pl-5 text-sm">{linhas.map((l) => <li key={l}>{l}</li>)}</ul>
           <DialogFooter>

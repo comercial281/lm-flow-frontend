@@ -23,6 +23,8 @@ function rateNote(u: AiUsage): string {
   const dec = { minimumFractionDigits: 2, maximumFractionDigits: 4 };
   const rate = u.usd_brl_rate.toLocaleString('pt-BR', dec);
   const base = `US$ ${u.cost_usd.toLocaleString('en-US', dec)} · dólar a R$ ${rate}`;
+  // Desde 06/10/2026 as contas do admin usam o câmbio fixo (Clientes → Custos).
+  if (u.usd_brl_source === 'accounting' || u.usd_brl_source === 'default') return `${base} (câmbio das contas)`;
   if (u.usd_brl_source === 'fallback') return `${base} (cotação indisponível, valor de referência)`;
   if (u.usd_brl_source === 'config') return `${base} (cotação fixada na configuração)`;
   const at = u.usd_brl_at ? new Date(u.usd_brl_at).toLocaleString('pt-BR') : null;
@@ -46,8 +48,8 @@ export default function AiUsageLine({ u }: { u?: AiUsage }) {
           {u.ai_leads_included ? ` de ${u.ai_leads_included}` : ''}
         </span>
         {!u.ai_leads_included && <span className="opacity-60">sem franquia</span>}
-        <span className="opacity-60 cursor-help" title={rateNote(u)}>
-          custo R$ {brl(u.cost_brl)}
+        <span className="opacity-60 cursor-help" title={`Só os atendimentos da IA Vendedora; o total de IA do cliente está em Custos. ${rateNote(u)}`}>
+          custo da IA Vendedora R$ {brl(u.cost_brl)}
           {u.usd_brl_source === 'fallback' && '*'}
         </span>
         {u.overage_leads > 0 && (

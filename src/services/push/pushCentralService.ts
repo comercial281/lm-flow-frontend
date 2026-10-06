@@ -96,6 +96,12 @@ export interface PushRulePayload {
   is_active?: boolean;
 }
 
+/** Quantos o disparo manual alcança AGORA. É a mesma conta que o envio registra no histórico. */
+export interface AudienceCount {
+  people: number;
+  devices: number;
+}
+
 export interface SendNowPayload {
   audience: PushAudience;
   title: string;
@@ -121,6 +127,9 @@ const pushCentralService = {
 
   sendNow: (payload: SendNowPayload) =>
     apiClient.post<{ success: boolean; data: PushLog }>('/super/push_rules/send_now', payload),
+
+  audienceCount: (params: { audience: PushAudience; tenant_slug?: string }) =>
+    apiClient.get<{ success: boolean; data: AudienceCount }>('/super/push_rules/audience_count', { params }),
 
   logs: (params?: { status?: string; tenant_slug?: string; limit?: number }) =>
     apiClient.get<{ success: boolean; data: PushLog[] }>('/super/push_logs', { params }),

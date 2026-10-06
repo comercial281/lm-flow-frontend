@@ -4,6 +4,17 @@ import { MemoryRouter } from 'react-router-dom';
 
 const apiGet = vi.hoisted(() => vi.fn());
 vi.mock('@/services/core/api', () => ({ default: { get: apiGet, put: vi.fn() } }));
+// O câmbio e a margem têm testes próprios; aqui só o resumo e a lista.
+const margemRecarga = vi.hoisted(() => vi.fn());
+vi.mock('./CambioDasContas', () => ({
+  default: ({ aoMudar }: { aoMudar: () => void }) => <button onClick={aoMudar}>mudou-cambio</button>,
+}));
+vi.mock('./Margem', () => ({
+  default: ({ recarga, kind, aoMudarKind }: { recarga: number; kind: string; aoMudarKind: (k: string) => void }) => {
+    margemRecarga(recarga);
+    return <div><p>margem-aqui</p><span>{kind}</span><button onClick={() => aoMudarKind('avulso')}>so-avulso</button></div>;
+  },
+}));
 
 import Custos from './index';
 import { fakeSummary } from './fakeSummary';
@@ -36,6 +47,17 @@ describe('Custos', () => {
     render(<MemoryRouter initialEntries={['/admin/clientes/custos?tenant=tenant_a&so_erros=1']}><Custos /></MemoryRouter>);
     await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/summary', expect.objectContaining({ params: expect.objectContaining({ tenant: 'tenant_a' }) })));
     await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/calls', expect.objectContaining({ params: expect.objectContaining({ status: 'error' }) })));
+  });
+
+  it('o filtro Avulso/Performance da Margem sobrevive à troca de mês', async () => {
+    apiGet.mockImplementation((url: string) =>
+      Promise.resolve({ data: { success: true, data: url.includes('summary') ? fakeSummary() : { items: [], meta: { total: 0, page: 1, per_page: 50 } } } }));
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'so-avulso' }));
+    expect(screen.getByText('avulso')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Mês'), { target: { value: '2026-09' } });
+    await screen.findByText('margem-aqui');
+    expect(screen.getByText('avulso')).toBeInTheDocument();
   });
 
   it('"só erros" do endereço vale só na primeira carga: desmarcado, trocar o mês não liga de novo', async () => {
@@ -111,5 +133,105 @@ describe('Custos', () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(screen.queryByText(/99,00/)).not.toBeInTheDocument();
     expect(screen.getAllByText(/22,00/).length).toBeGreaterThan(0);
+  });
+
+  it('com cliente escolhido aparece o filtro IA, e ele vai junto no resumo e na lista', async () => {
+    apiGet.mockImplementation((url: string, cfg?: { params?: Record<string, string> }) => {
+      if (url.includes('/calls')) return Promise.resolve({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } });
+      const t = cfg?.params?.tenant ?? null;
+      return Promise.resolve({ data: { success: true, data: fakeSummary(t ? { tenant: t, agents: [{ id: 'ag1', name: 'Sara' }] } : {}) } });
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Total do mês')).toBeInTheDocument());
+    expect(screen.queryByLabelText('IA')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Cliente'), { target: { value: 'tenant_a' } });
+    fireEvent.change(await screen.findByLabelText('IA'), { target: { value: 'ag1' } });
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/summary', { params: { month: '2026-10', tenant: 'tenant_a', agent: 'ag1' } }));
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/calls', { params: { month: '2026-10', per_page: 20, tenant: 'tenant_a', agent: 'ag1' } }));
+  });
+
+  it('trocar de cliente limpa a IA escolhida', async () => {
+    apiGet.mockImplementation((url: string, cfg?: { params?: Record<string, string> }) => {
+      if (url.includes('/calls')) return Promise.resolve({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } });
+      const t = cfg?.params?.tenant ?? null;
+      return Promise.resolve({ data: { success: true, data: fakeSummary(t ? { tenant: t, agents: [{ id: 'ag1', name: 'Sara' }] } : {}) } });
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Total do mês')).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('Cliente'), { target: { value: 'tenant_a' } });
+    fireEvent.change(await screen.findByLabelText('IA'), { target: { value: 'ag1' } });
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/summary', { params: { month: '2026-10', tenant: 'tenant_a', agent: 'ag1' } }));
+    fireEvent.change(screen.getByLabelText('Cliente'), { target: { value: 'public' } });
+    await waitFor(() => expect(apiGet).toHaveBeenLastCalledWith('/super/costs/calls', { params: { month: '2026-10', per_page: 20, tenant: 'public' } }));
+  });
+
+  it('IA escolhida que não está mais nas opções do cliente volta para Todas as IAs', async () => {
+    apiGet.mockImplementation((url: string, cfg?: { params?: Record<string, string> }) => {
+      if (url.includes('/calls')) return Promise.resolve({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } });
+      const t = cfg?.params?.tenant ?? null;
+      const a = cfg?.params?.agent ?? null;
+      // Servidor ecoa o id pedido em `agent`, mesmo sem ele estar em `agents` (IA apagada).
+      return Promise.resolve({ data: { success: true, data: fakeSummary(t ? { tenant: t, agent: a, agents: [{ id: 'ag1', name: 'Sara' }, { id: 'ag2', name: 'Beto' }] } : {}) } });
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Total do mês')).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('Cliente'), { target: { value: 'tenant_a' } });
+    const seletor = await screen.findByLabelText('IA');
+    // Simula a IA ter sido apagada: o mock devolve só ag1 daqui pra frente.
+    apiGet.mockImplementation((url: string, cfg?: { params?: Record<string, string> }) => {
+      if (url.includes('/calls')) return Promise.resolve({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } });
+      return Promise.resolve({ data: { success: true, data: fakeSummary({ tenant: cfg?.params?.tenant ?? null, agent: cfg?.params?.agent ?? null, agents: [{ id: 'ag1', name: 'Sara' }] }) } });
+    });
+    fireEvent.change(seletor, { target: { value: 'ag2' } });
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/summary', { params: { month: '2026-10', tenant: 'tenant_a', agent: 'ag2' } }));
+    await waitFor(() => expect((screen.getByLabelText('IA') as HTMLSelectElement).value).toBe('__todas__'));
+    await waitFor(() => expect(apiGet).toHaveBeenLastCalledWith('/super/costs/calls', { params: { month: '2026-10', per_page: 20, tenant: 'tenant_a' } }));
+  });
+
+  it('mudar o câmbio recarrega o resumo e a lista, com os mesmos filtros', async () => {
+    apiGet.mockImplementation((url: string, cfg?: { params?: Record<string, string> }) => {
+      if (url.includes('/calls')) return Promise.resolve({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } });
+      const t = cfg?.params?.tenant ?? null;
+      return Promise.resolve({ data: { success: true, data: fakeSummary(t ? { tenant: t, agent: cfg?.params?.agent ?? null, agents: [{ id: 'ag1', name: 'Sara' }] } : {}) } });
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Total do mês')).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('Cliente'), { target: { value: 'tenant_a' } });
+    fireEvent.change(await screen.findByLabelText('IA'), { target: { value: 'ag1' } });
+    const sumario = ['/super/costs/summary', { params: { month: '2026-10', tenant: 'tenant_a', agent: 'ag1' } }];
+    const lista = ['/super/costs/calls', { params: { month: '2026-10', per_page: 20, tenant: 'tenant_a', agent: 'ag1' } }];
+    await waitFor(() => expect(apiGet.mock.calls.filter((c) => JSON.stringify(c) === JSON.stringify(lista))).toHaveLength(1));
+    const conta = (alvo: unknown) => apiGet.mock.calls.filter((c) => JSON.stringify(c) === JSON.stringify(alvo)).length;
+    await new Promise((r) => setTimeout(r, 50)); // deixa assentar as buscas da escolha da IA
+    const antesResumo = conta(sumario);
+    const antesLista = conta(lista);
+    fireEvent.click(screen.getByText('mudou-cambio'));
+    await waitFor(() => expect(conta(sumario)).toBeGreaterThan(antesResumo));
+    await waitFor(() => expect(conta(lista)).toBeGreaterThan(antesLista));
+    expect((screen.getByLabelText('IA') as HTMLSelectElement).value).toBe('ag1');
+  });
+
+  it('a margem aparece em "Todos os clientes" e some com cliente filtrado', async () => {
+    apiGet.mockImplementation((url: string, cfg?: { params?: Record<string, string> }) => {
+      if (url.includes('/calls')) return Promise.resolve({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } });
+      const t = cfg?.params?.tenant ?? null;
+      return Promise.resolve({ data: { success: true, data: fakeSummary(t ? { tenant: t } : {}) } });
+    });
+    renderPage();
+    expect(await screen.findByText('margem-aqui')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Cliente'), { target: { value: 'tenant_a' } });
+    await waitFor(() => expect(screen.queryByText('margem-aqui')).not.toBeInTheDocument());
+  });
+
+  it('mudar o câmbio recarrega a margem (recarga sobe)', async () => {
+    apiGet.mockImplementation((url: string) => {
+      if (url.includes('/calls')) return Promise.resolve({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } });
+      return Promise.resolve({ data: { success: true, data: fakeSummary() } });
+    });
+    margemRecarga.mockClear();
+    renderPage();
+    await screen.findByText('margem-aqui');
+    fireEvent.click(screen.getByText('mudou-cambio'));
+    await waitFor(() => expect(margemRecarga).toHaveBeenCalledWith(1));
   });
 });

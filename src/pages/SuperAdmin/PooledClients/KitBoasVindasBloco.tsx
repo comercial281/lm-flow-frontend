@@ -9,7 +9,7 @@ import {
 import {
   INTERVALO_MS, esperaEstourou, motivo, rotuloDoBotao, textoAndamento, textoUltimoEnvio,
 } from '../kitBoasVindasRegras';
-import { SECAO, TITULO_SECAO } from './estilo';
+import { SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 
 /**
  * Clientes → Funções → Kit de boas-vindas: manda no grupo oficial do cliente o

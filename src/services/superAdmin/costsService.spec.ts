@@ -32,4 +32,23 @@ describe('costsService', () => {
       month: '2026-10', invoices: [{ provider: 'railway', amount_usd: '80', note: '' }],
     });
   });
+
+  it('IA só vai junto do cliente, no resumo e na lista', async () => {
+    apiGet.mockResolvedValue({ data: { success: true, data: { month: '2026-10', items: [], meta: {} } } });
+    await costsService.summary({ month: '2026-10', tenant: null, agent: 'ag1' });
+    expect(apiGet).toHaveBeenLastCalledWith('/super/costs/summary', { params: { month: '2026-10' } });
+    await costsService.summary({ month: '2026-10', tenant: 'tenant_a', agent: 'ag1' });
+    expect(apiGet).toHaveBeenLastCalledWith('/super/costs/summary', { params: { month: '2026-10', tenant: 'tenant_a', agent: 'ag1' } });
+    await costsService.calls({ month: '2026-10', tenant: 'tenant_a', agent: 'ag1', feature: '', provider: '', onlyErrors: false, page: 1 });
+    expect(apiGet).toHaveBeenLastCalledWith('/super/costs/calls', { params: { month: '2026-10', per_page: 20, tenant: 'tenant_a', agent: 'ag1' } });
+  });
+
+  it('câmbio das contas: lê e grava', async () => {
+    apiGet.mockResolvedValue({ data: { success: true, data: { value: 5.46, source: 'default', default_value: 5.46 } } });
+    apiPut.mockResolvedValue({ data: { success: true, data: { value: 5.3, source: 'accounting', default_value: 5.46 } } });
+    expect((await costsService.cambio()).value).toBe(5.46);
+    expect(apiGet).toHaveBeenLastCalledWith('/super/costs/rate');
+    expect((await costsService.salvarCambio('5,30')).value).toBe(5.3);
+    expect(apiPut).toHaveBeenLastCalledWith('/super/costs/rate', { value: '5,30' });
+  });
 });

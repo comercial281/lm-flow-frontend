@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Label, Textarea } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { Sparkles, Check, X, Wand2, BookOpenCheck } from 'lucide-react';
+import { BookOpenCheck, Sparkles, Wand2 } from 'lucide-react';
+import EmptyState from '@/components/base/EmptyState';
+import { Seletor } from '@/components/base/Seletor';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 import {
   sdrProposalsService,
   AiUnavailableError,
@@ -9,7 +12,7 @@ import {
   type SdrProposal,
 } from '@/services/superAdmin/sdrProposalsService';
 import { superAgentsService, type SuperAgent } from '@/services/superAdmin/superAgentsService';
-import { Seletor } from '@/components/base/Seletor';
+import { CORPO_SECAO, ESQUELETO, SECAO, SELO, SUBTITULO_SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 
 /**
  * Épicos C+D — Aperfeiçoamento do Cérebro SDR.
@@ -18,22 +21,25 @@ import { Seletor } from '@/components/base/Seletor';
  * C: curadoria das conversas passadas de um cliente; a IA propõe lições, você aprova.
  * Nada entra sem sua aprovação. (A redação por IA depende de crédito Anthropic; o
  * fluxo de aprovar/rejeitar funciona sempre.)
+ *
+ * 06/10/2026: aprovar lição GLOBAL confirma — ela entra no prompt de TODA IA de
+ * TODO cliente. Aprovar lição de um cliente e rejeitar não confirmam.
  */
 export default function SdrRefinement() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [proposals, setProposals] = useState<SdrProposal[]>([]);
   const [agents, setAgents] = useState<SuperAgent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [estado, setEstado] = useState<'carregando' | 'pronto' | 'erro'>('carregando');
 
   const load = useCallback(async () => {
-    setLoading(true);
+    setEstado('carregando');
     try {
       const [p, a] = await Promise.all([sdrProposalsService.list('pending'), superAgentsService.listAll()]);
       setProposals(p);
       setAgents(a);
+      setEstado('pronto');
     } catch {
-      toast.error('Não consegui carregar.');
-    } finally {
-      setLoading(false);
+      setEstado('erro');
     }
   }, []);
 
@@ -47,10 +53,19 @@ export default function SdrRefinement() {
   };
 
   const approve = async (p: SdrProposal) => {
+    if (
+      p.scope === 'global' &&
+      !(await confirmar({
+        titulo: 'Aprovar para todos os clientes?',
+        descricao: 'Esta lição passa a valer para todas as IAs de todos os clientes.',
+        rotuloDaAcao: 'Aprovar para todos',
+      }))
+    )
+      return;
     try {
       await sdrProposalsService.approve(p.id);
       setProposals(prev => prev.filter(x => x.id !== p.id));
-      toast.success(p.scope === 'global' ? 'Aprovado no cérebro universal.' : 'Aprovado no agente.');
+      toast.success(p.scope === 'global' ? 'Aprovado para todas as IAs.' : 'Aprovado na IA do cliente.');
     } catch {
       toast.error('Não consegui aprovar.');
     }
@@ -66,46 +81,43 @@ export default function SdrRefinement() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6">
-      <header className="mb-5">
-        <h2 className="text-xl font-semibold text-foreground">Aperfeiçoamento</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Ensine a IA descrevendo o que quer, ou deixe ela aprender com as conversas passadas. Você aprova cada sugestão.
-        </p>
-      </header>
+    <section aria-labelledby="aperfeicoamento" className={SECAO}>
+      <h2 id="aperfeicoamento" className={TITULO_SECAO}>Aperfeiçoamento</h2>
+      <p className={SUBTITULO_SECAO}>
+        Ensine a IA descrevendo o que quer, ou deixe ela aprender com as conversas passadas. Você aprova cada sugestão.
+      </p>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className={`${CORPO_SECAO} grid gap-6 md:grid-cols-2`}>
         <RefineBox agents={agents} onNew={onNew} />
         <CurateBox agents={agents} onNew={onNew} />
       </div>
 
-      <div className="mt-8">
-        <h2 className="mb-3 text-sm font-medium text-foreground">Propostas pendentes ({proposals.length})</h2>
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Carregando...</p>
-        ) : proposals.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            Nenhuma proposta pendente.
-          </p>
-        ) : (
-          <ul className="space-y-2">
+      <div className="mt-6 flex flex-col gap-3">
+        <h3 className="text-sm font-medium text-foreground">Propostas pendentes {estado === 'pronto' ? `(${proposals.length})` : ''}</h3>
+        {estado === 'carregando' && <div aria-busy="true" className={`h-24 ${ESQUELETO}`} />}
+        {estado === 'erro' && <EmptyState tipo="erro" title="Não deu pra carregar as propostas" aoTentarDeNovo={() => void load()} />}
+        {estado === 'pronto' && proposals.length === 0 && (
+          <EmptyState title="Nenhuma proposta pendente" description="As sugestões aparecem aqui para você aprovar." />
+        )}
+        {estado === 'pronto' && proposals.length > 0 && (
+          <ul className="flex flex-col gap-2">
             {proposals.map(p => (
-              <li key={p.id} className="rounded-lg border border-border bg-card p-3">
+              <li key={p.id} className="rounded-lg border border-border p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[11px] text-primary">
-                        {p.scope === 'global' ? 'Universal' : `Individual: ${p.agent_name ?? ''}`}
+                      <span className={`${SELO} ${p.scope === 'global' ? 'border-primary/30 bg-primary/10 text-primary' : 'text-muted-foreground'}`}>
+                        {p.scope === 'global' ? 'Todos os clientes' : `Só a IA ${p.agent_name ?? ''}`.trim()}
                       </span>
-                      <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">{KIND_LABELS[p.kind]}</span>
-                      <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">{sourceLabel(p.source)}</span>
+                      <span className={`${SELO} text-muted-foreground`}>{KIND_LABELS[p.kind]}</span>
+                      <span className={`${SELO} text-muted-foreground`}>{sourceLabel(p.source)}</span>
                     </div>
                     {p.context && <p className="mt-1 text-xs text-muted-foreground">Lead: {p.context}</p>}
                     <p className="mt-1 text-sm text-foreground">{p.content}</p>
                   </div>
                   <div className="flex flex-shrink-0 gap-1">
-                    <button onClick={() => approve(p)} title="Aprovar" className="rounded p-1.5 text-emerald-600 hover:bg-accent"><Check className="h-4 w-4" /></button>
-                    <button onClick={() => reject(p)} title="Rejeitar" className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-red-600"><X className="h-4 w-4" /></button>
+                    <Button size="sm" variant="outline" onClick={() => void approve(p)}>Aprovar</Button>
+                    <Button size="sm" variant="ghost" onClick={() => void reject(p)}>Rejeitar</Button>
                   </div>
                 </div>
               </li>
@@ -113,29 +125,30 @@ export default function SdrRefinement() {
           </ul>
         )}
       </div>
-    </div>
+      {dialogoDeConfirmacao}
+    </section>
   );
 }
 
 function ScopePicker({
-  scope, setScope, agentId, setAgentId, agents,
+  scope, setScope, agentId, setAgentId, agents, id,
 }: {
   scope: string; setScope: (s: string) => void;
   agentId: string; setAgentId: (s: string) => void;
-  agents: SuperAgent[];
+  agents: SuperAgent[]; id: string;
 }) {
   return (
-    <div className="space-y-2">
-      <div className="flex gap-1">
-        {(['global', 'individual'] as const).map(s => (
-          <button key={s} onClick={() => setScope(s)} className={`rounded-md border px-3 py-1.5 text-xs transition-colors ${scope === s ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-accent'}`}>
-            {s === 'global' ? 'Universal (todos)' : 'Individual'}
-          </button>
-        ))}
+    <div className="flex flex-col gap-2">
+      <div>
+        <Label htmlFor={`${id}-escopo`}>Vale para</Label>
+        <Seletor id={`${id}-escopo`} value={scope} onChange={e => setScope(e.target.value)} className="mt-1 w-full">
+          <option value="global">Todos os clientes</option>
+          <option value="individual">Uma IA só</option>
+        </Seletor>
       </div>
       {scope === 'individual' && (
-        <Seletor value={agentId} onChange={e => setAgentId(e.target.value)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
-          <option value="">Escolha o agente...</option>
+        <Seletor aria-label="IA" value={agentId} onChange={e => setAgentId(e.target.value)} className="w-full">
+          <option value="">Escolha a IA...</option>
           {agents.map(a => <option key={a.id} value={a.id}>{a.tenant_name} — {a.name}</option>)}
         </Seletor>
       )}
@@ -171,16 +184,14 @@ function RefineBox({ agents, onNew }: { agents: SuperAgent[]; onNew: (p: SdrProp
   };
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <h2 className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground"><Wand2 className="h-4 w-4" /> Ensinar por descrição</h2>
-      <div className="space-y-3">
-        <ScopePicker scope={scope} setScope={setScope} agentId={agentId} setAgentId={setAgentId} agents={agents} />
-        <div>
-          <Label htmlFor="refine-msg">O que você quer ajustar?</Label>
-          <Textarea id="refine-msg" value={message} onChange={e => setMessage(e.target.value)} rows={4} placeholder="Ex: não gostei que ela ficou repetindo o nome do lead toda hora. Quero que use só de vez em quando." />
-        </div>
-        <Button onClick={submit} disabled={busy}><Sparkles className="mr-1 h-4 w-4" /> {busy ? 'Pensando...' : 'Propor ajuste'}</Button>
+    <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+      <h3 className="flex items-center gap-2 text-sm font-medium text-foreground"><Wand2 className="h-4 w-4" aria-hidden="true" /> Ensinar por descrição</h3>
+      <ScopePicker id="refine" scope={scope} setScope={setScope} agentId={agentId} setAgentId={setAgentId} agents={agents} />
+      <div>
+        <Label htmlFor="refine-msg">O que você quer ajustar?</Label>
+        <Textarea id="refine-msg" value={message} onChange={e => setMessage(e.target.value)} rows={4} placeholder="Ex: não gostei que ela ficou repetindo o nome do lead toda hora. Quero que use só de vez em quando." />
       </div>
+      <Button onClick={submit} disabled={busy} className="w-fit"><Sparkles className="mr-1 h-4 w-4" /> {busy ? 'Pensando...' : 'Propor ajuste'}</Button>
     </div>
   );
 }
@@ -192,14 +203,14 @@ function CurateBox({ agents, onNew }: { agents: SuperAgent[]; onNew: (p: SdrProp
   const run = async () => {
     const agent = agents.find(a => a.id === agentId);
     if (!agent) {
-      toast.error('Escolha o agente do cliente.');
+      toast.error('Escolha a IA do cliente.');
       return;
     }
     setBusy(true);
     try {
       const proposals = await sdrProposalsService.curate({ tenant: agent.tenant_slug ?? '', agent_id: agentId });
       onNew(proposals);
-      toast.success(`${proposals.length} lições propostas. Revise abaixo.`);
+      toast.success(`${proposals.length} ${proposals.length === 1 ? 'lição proposta' : 'lições propostas'}. Revise abaixo.`);
     } catch (e) {
       if (e instanceof AiUnavailableError) toast.error(e.message, { duration: 6000 });
       else toast.error((e as Error).message);
@@ -209,18 +220,16 @@ function CurateBox({ agents, onNew }: { agents: SuperAgent[]; onNew: (p: SdrProp
   };
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <h2 className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground"><BookOpenCheck className="h-4 w-4" /> Aprender com o histórico</h2>
-      <p className="mb-3 text-xs text-muted-foreground">
+    <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+      <h3 className="flex items-center gap-2 text-sm font-medium text-foreground"><BookOpenCheck className="h-4 w-4" aria-hidden="true" /> Aprender com o histórico</h3>
+      <p className="text-xs text-muted-foreground">
         A IA lê as conversas passadas do cliente, separa o que é de anúncio e capta o tom de voz, e propõe lições pra você aprovar.
       </p>
-      <div className="space-y-3">
-        <Seletor value={agentId} onChange={e => setAgentId(e.target.value)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
-          <option value="">Escolha o agente do cliente...</option>
-          {agents.map(a => <option key={a.id} value={a.id}>{a.tenant_name} — {a.name}</option>)}
-        </Seletor>
-        <Button onClick={run} disabled={busy} variant="outline"><BookOpenCheck className="mr-1 h-4 w-4" /> {busy ? 'Analisando...' : 'Aprender com histórico'}</Button>
-      </div>
+      <Seletor aria-label="IA do cliente" value={agentId} onChange={e => setAgentId(e.target.value)} className="w-full">
+        <option value="">Escolha a IA do cliente...</option>
+        {agents.map(a => <option key={a.id} value={a.id}>{a.tenant_name} — {a.name}</option>)}
+      </Seletor>
+      <Button onClick={run} disabled={busy} variant="outline" className="w-fit"><BookOpenCheck className="mr-1 h-4 w-4" /> {busy ? 'Analisando...' : 'Aprender com histórico'}</Button>
     </div>
   );
 }

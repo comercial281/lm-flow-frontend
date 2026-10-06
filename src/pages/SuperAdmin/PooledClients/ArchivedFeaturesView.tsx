@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Archive, AlertCircle, Loader2 } from 'lucide-react';
-import { Switch, Label } from '@/components/ui/ds';
+import { Archive } from 'lucide-react';
+import Chave from '@/components/base/Chave';
+import EmptyState from '@/components/base/EmptyState';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 import api from '@/services/core/api';
+import { CORPO_SECAO, ESQUELETO, SECAO, SELO, SUBTITULO_SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 
 interface CatalogItem {
   key: string;
@@ -16,114 +19,108 @@ function menuLevelItems(catalog: CatalogItem[]): CatalogItem[] {
   return catalog.filter(item => item.key === item.group);
 }
 
-function pickError(e: any): string {
-  const d = e?.response?.data;
-  return d?.error ?? d?.message ?? e?.message ?? 'Erro inesperado';
-}
-
+/**
+ * Plataforma → Menus arquivados.
+ *
+ * Um menu arquivado some do CRM para TODO MUNDO (clientes, equipe e o próprio
+ * super-admin) até ser desarquivado aqui. Por isso arquivar confirma (06/10);
+ * desarquivar devolve o menu e não pergunta.
+ */
 export default function ArchivedFeaturesView() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [archivedKeys, setArchivedKeys] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [savingKey, setSavingKey] = useState<string | null>(null);
-  const [error, setError] = useState('');
+  const [erro, setErro] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true); setError('');
+    setLoading(true);
+    setErro(false);
     try {
       const res = await api.get('/super/pooled_tenants/archived_features');
       setCatalog(res.data?.data?.catalog ?? []);
       setArchivedKeys(res.data?.data?.keys ?? []);
-    } catch (e) {
-      setError(pickError(e));
+    } catch {
+      setErro(true);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  const toggle = async (key: string, archived: boolean) => {
-    setSavingKey(key); setError('');
-    const prev = archivedKeys;
-    // Otimista: some/aparece na hora, reverte se o backend recusar.
-    setArchivedKeys(archived ? [...prev, key] : prev.filter(k => k !== key));
-    try {
-      const res = await api.patch('/super/pooled_tenants/update_archived_features', { key, archived });
-      setArchivedKeys(res.data?.data?.keys ?? prev);
-    } catch (e) {
-      setArchivedKeys(prev);
-      setError(pickError(e));
-    } finally {
-      setSavingKey(null);
+  // A Chave vira na hora; `false` desiste (volta sem aviso) e erro do servidor a
+  // faz voltar com o motivo.
+  const mudar = async (item: CatalogItem, arquivar: boolean): Promise<boolean> => {
+    if (
+      arquivar &&
+      !(await confirmar({
+        titulo: `Esconder ${item.label} de todos os clientes?`,
+        descricao: 'Some também para você e para a equipe.',
+        rotuloDaAcao: 'Arquivar',
+        destrutivo: true,
+      }))
+    ) {
+      return false;
     }
+    const res = await api.patch('/super/pooled_tenants/update_archived_features', { key: item.key, archived: arquivar });
+    setArchivedKeys(
+      res.data?.data?.keys ?? (arquivar ? [...archivedKeys, item.key] : archivedKeys.filter(k => k !== item.key)),
+    );
+    return true;
   };
 
   const items = menuLevelItems(catalog);
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex items-start gap-3 mb-4">
-        <Archive className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">Menus arquivados</h3>
-          <p className="text-xs text-muted-foreground mt-1">
-            Um menu arquivado some do CRM pra TODO MUNDO — cliente e você (super-admin) —
-            até você desarquivar aqui. É pra tirar do ar telas ainda em desenvolvimento sem
-            precisar mexer em código nem fazer deploy. Diferente do toggle de Funções por
-            cliente: aquele liga/desliga por cliente com o recurso pronto; este tira do
-            sistema inteiro enquanto não está pronto.
-          </p>
+    <div className="mx-auto max-w-2xl">
+      <section aria-labelledby="menus-arquivados" className={SECAO}>
+        <div className="flex items-start gap-3">
+          <Archive className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+          <div>
+            <h3 id="menus-arquivados" className={TITULO_SECAO}>Menus arquivados</h3>
+            <p className={SUBTITULO_SECAO}>
+              Um menu arquivado some do CRM para todo mundo (os clientes, a equipe e você) até ser
+              desarquivado aqui. Serve para tirar do ar uma tela em construção sem mexer em código. É
+              diferente das Funções de cada cliente: lá se liga e desliga por cliente; aqui sai do sistema
+              inteiro.
+            </p>
+          </div>
         </div>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-16 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando...
+        <div className={CORPO_SECAO}>
+          {loading ? (
+            <div className={`${ESQUELETO} h-48`} />
+          ) : erro ? (
+            <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} className="py-8" />
+          ) : items.length === 0 ? (
+            <EmptyState
+              title="Nenhum menu no catálogo"
+              description="O catálogo de funções do servidor não devolveu nenhum menu."
+              className="py-8"
+            />
+          ) : (
+            <ul className="divide-y rounded-lg border">
+              {items.map(item => {
+                const arquivado = archivedKeys.includes(item.key);
+                return (
+                  <li key={item.key} className="flex items-center gap-3 px-3 py-2.5">
+                    <Chave
+                      className="flex-1"
+                      rotulo={`Arquivar ${item.label}`}
+                      ligada={arquivado}
+                      aoMudar={v => mudar(item, v)}
+                    />
+                    {arquivado && <span className={`${SELO} text-muted-foreground`}>Fora do ar</span>}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
-      ) : (
-        <>
-        <p className="text-[11px] text-muted-foreground mb-2">Interruptor ligado = arquivado (menu fora do ar).</p>
-        <div className="space-y-1 rounded-md border bg-card">
-          {items.map((item, idx) => {
-            const archived = archivedKeys.includes(item.key);
-            const id = `archive-${item.key}`;
-            return (
-              <div
-                key={item.key}
-                className={`flex items-center justify-between px-3 py-2.5 ${idx > 0 ? 'border-t' : ''}`}
-              >
-                <Label htmlFor={id} className="cursor-pointer flex-1 text-sm">
-                  {item.label}
-                  <span className="ml-2 text-[10px] text-muted-foreground font-mono">{item.key}</span>
-                  {archived && (
-                    <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-amber-600">
-                      arquivado
-                    </span>
-                  )}
-                </Label>
-                {savingKey === item.key ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                ) : (
-                  <Switch
-                    id={id}
-                    checked={archived}
-                    onCheckedChange={(v: boolean) => toggle(item.key, v)}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-        </>
-      )}
-
-      {error && (
-        <div className="flex items-center gap-2 text-sm text-destructive bg-red-50 dark:bg-red-900/20 rounded p-2 mt-3">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          {error}
-        </div>
-      )}
+      </section>
+      {dialogoDeConfirmacao}
     </div>
   );
 }

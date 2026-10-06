@@ -4734,8 +4734,8 @@ O que aparece na tela, no menu da Área do Admin:
 - **Conhecimento** junta Cérebro Universal, Princípios e Aperfeiçoamento, um embaixo do outro.
 - **Aviso de visita** saiu de Plataforma e foi para IA Vendedora → Aviso de visita, sem mudar comportamento (decisões de 21/09 mantidas).
 - **Mensagem de acesso** saiu da janela e virou aba; a variável `{senha}` saiu da lista (a senha é criada pela pessoa, pelo link, desde a fase 1).
-- **WhatsApp** é o Comunicado. Neste passo a escrita continua na janela de sempre, com todos os clientes marcados (decisão). Confirmação e tela própria entram no PR de Comunicação.
-- **Push** ainda tem três abas por dentro (Regras, Disparo manual, Histórico): viram seções no PR de Comunicação. É a única exceção ao "sem terceiro nível", e é temporária.
+- **WhatsApp** é o Comunicado, em tela própria desde 06/10 (ver "Comunicação e Plataforma no padrão da casa").
+- **Push** tem três seções na mesma página (Regras, Disparo manual, Histórico) desde 06/10: acabou a exceção ao "sem terceiro nível".
 - **Custos** é a tela nova de 03/10 (ver seção "Custos do admin").
 - **Banner** ainda não tem aba: entra com a spec própria.
 
@@ -5804,14 +5804,14 @@ Armadilhas:
 Clientes → Custos (`/admin/clientes/custos`, `src/pages/SuperAdmin/Custos/`). Spec: `LM FLOW/specs/2026-10-03-admin-registro-custos-usuarios-design.md`.
 
 - **Uma régua só pro dinheiro, em R$ por mês.** IA exata (registro de chamadas do backend, `public.ai_calls`) + Railway, Vercel e Evolution lançados à mão em US$ no botão *Lançar faturas do mês*. A conferência com a fatura fica em US$ e os fornecedores aparecem com nome de gente (Anthropic, OpenAI, ElevenLabs).
-- **Filtro por cliente:** só a IA dele; a estrutura mostra "não é dividida por cliente" e sai do total; somem o recorte por cliente e a conferência. Margem e divisão da estrutura ficam pra quando o "quanto o cliente paga" existir (decisão do Tony, 03/10). Não reabrir sem ele pedir.
+- **Filtro por cliente:** só a IA dele; a estrutura mostra "não é dividida por cliente" e sai do total; somem o recorte por cliente e a conferência. Margem e divisão da estrutura: ver "IA Vendedora, Custos e Margem no admin (06/10/2026)".
 - **Trocou o filtro, a tela recarrega do zero:** durante a carga aparece o esqueleto, nunca os números do filtro anterior; resposta que chega fora de ordem é ignorada; na lista de chamadas as linhas antigas somem até chegarem as novas.
 - **Mês sem chamada:** o gráfico dia a dia vira "Nenhuma chamada de IA neste mês" e a conferência diz "Fatura ainda não lançada". Nunca erro, nunca divisão por zero.
 - **Sem a palavra token na tela:** a coluna se chama *Tamanho*.
 - **Lista de chamadas: 20 por página** (`CHAMADAS_POR_PAGINA` no `costsService`; o servidor aceita até 200 e o padrão dele é 50). A lista fica no fim da tela, embaixo dos cartões e recortes (Tony, 03/10). Se a lista ganhar uso diário, a evolução combinada é virar aba própria (Clientes → Custos | Chamadas).
 - **Erro nunca vira vazio** em nenhuma das três cargas (resumo, chamadas, detalhe).
 - Conteúdo da chamada só aparece no prazo (7 dias, 30 se falhou); fora dele o painel diz "Conteúdo apagado depois de N dias".
-- O endpoint antigo `/super/sales_agents/costs` sai num PR do backend depois que esta tela estiver no ar. A tela antiga (`CustoIA.tsx`) e `superAgentsService.costs()` já foram removidas.
+- O endpoint antigo `/super/sales_agents/costs` saiu do servidor (onda 4, 06/10/2026). A tela antiga (`CustoIA.tsx`) e `superAgentsService.costs()` já foram removidas.
 
 ## Meu site virou painel com barra de topo (desde 2026-10-03)
 
@@ -6743,7 +6743,58 @@ Entrega 3 da Área do Admin (spec `LM FLOW/specs/2026-10-05-admin-clientes-entre
 - **Operação**: os grupos de WhatsApp têm uma fonte de verdade na aba; funil e grupos reenviam as duas chaves (o servidor faz `compact!`).
 - **Pacotes** (Clientes → Pacotes; servidor `public.client_packages`): pacote = funções + limites. Escolher pacote COPIA tudo pro cliente (o app do cliente não muda). Ajuste manual continua livre e aparece "≠ pacote". Editar pacote e aplicar mantém os ajustes manuais; Trocar/Voltar ao pacote desfaz e avisa quantos. Chave nova no catálogo segue o padrão (ligada, menos DEFAULT_OFF) e não acende "≠ pacote". Clientes antigos começam "Personalizado". Novo cliente tem o campo Pacote no passo Dados.
 - **Caixinhas do navegador**: zero no SuperAdmin; o build usa `--teto-super 0`. Confirmação com texto digitado usa `ConfirmarDigitando`.
-- **Respiro e padrão (05/10, pedido do dono: "tá tudo juntinho demais")**: a lista entra no `AdminConteudo` como as outras telas do admin (antes colava nas bordas). Quadro, título de seção, espaço entre blocos e grades vêm de `PooledClients/estilo.ts` (quadro `rounded-xl p-5`, blocos `gap-6`, grades `gap-4`), usado em todas as abas e em Pacotes. Em tela larga Contrato, Pessoas e Operação usam duas colunas em vez de uma coluna estreita. **Entrar** (cartão e topo da página) é o `BotaoEntrar`: o degradê com brilho do botão do login (`.lmf-btn-shimmer`). Não voltar ao botão contornado sem o dono pedir.
+- **Respiro e padrão (05/10, pedido do dono: "tá tudo juntinho demais")**: a lista entra no `AdminConteudo` como as outras telas do admin (antes colava nas bordas). Quadro, título de seção, espaço entre blocos e grades vêm de `src/pages/Admin/Area/estilo.ts` (era `PooledClients/estilo.ts` até 06/10) (quadro `rounded-xl p-5`, blocos `gap-6`, grades `gap-4`), usado em todas as abas e em Pacotes. Em tela larga Contrato, Pessoas e Operação usam duas colunas em vez de uma coluna estreita. **Entrar** (cartão e topo da página) é o `BotaoEntrar`: o degradê com brilho do botão do login (`.lmf-btn-shimmer`). Não voltar ao botão contornado sem o dono pedir.
+
+## Números conectados (06/10/2026)
+
+Entrega 4 da Área do Admin (spec `LM FLOW/specs/2026-10-06-admin-final-design.md`, onda 1). A tela Clientes → Números conectados (`/admin/clientes/numeros`) continua sendo a conferência de dono do número e ganhou a situação de cada número.
+
+- **A situação é do servidor** (`Numbers::Situation`): `connected` | `connecting` | `disconnected` | `never` | `official` | `unknown`. A tela não deduz nada do estado cru. Textos (em `NumberOwnership/situacao.ts`, selo `SeloDaSituacao`): Conectado · Conectando… · Caiu há 2 h (desde 06/10 14:03) · Caído (sem a hora da queda) · Nunca conectado · API oficial · sem conexão a vigiar · Não consegui ler.
+- **Régua única de "caído"**: `Numbers::Situation.down?` é a mesma da Atenção (`Overview::DownNumbers`). API oficial e número que nunca pareou não contam como caído em lugar nenhum. "Nunca pareou" = sem o carimbo `connected_at` e criado depois de 05/08/2026 (o carimbo existe desde 04/08); número mais velho sem carimbo conta como caído.
+- **Lista** (`GET /super/number_ownership`): cada cliente traz `schema` e `connection_summary` `{connected, connecting, down, never, official, unknown, total}`, lido na hora com o orçamento do `Overview::TenantLoop`; `null` = "Sem leitura". Topo: "N números · X conectados · Y caídos · Z sem leitura" (+ "K clientes sem leitura"), botão **Só caídos** e Atualizar. Selo por cliente: "Tudo conectado" / "N caídos" / "Sem leitura" (e "Nenhum número", "N conectando", "N nunca conectados", e "Sem conexão a vigiar" em neutro quando todos os números são API oficial: verde seria falso). Cliente com caído sobe para o topo; no detalhe, caído primeiro.
+- **Detalhe**: a situação de cada número é relida na hora por cima da conferência de dono guardada (5 min, chave `super:number_ownership:v3:<schema>`): o selo do número bate com o da linha.
+- **Números da Leal Mídia** (`GET /super/number_ownership/platform_numbers`): instâncias do servidor Evolution que não são número de cliente nenhum (o `public` conta como da casa). Uma chamada, teto de 5 s, guardada 60 s; falha = "Não consegui ler" com "Tentar de novo" (falha não fica guardada). Só nome, telefone e situação: **nunca token**.
+- **Atenção → "Ver números"** abre `/admin/clientes/numeros?cliente=<schema>`: a tela rola até o cliente e abre o detalhe; `?cliente=public` rola até "Números da Leal Mídia". Se "Só caídos" estiver ligado e esconder o cliente do link, o filtro é desligado antes de rolar.
+- **Erro ≠ vazio**: lista que não carrega é `EmptyState` de erro com "Tentar de novo" (antes era um aviso vermelho e "Nenhum cliente ativo.").
+- Não reabrir sem o dono pedir: **sem "verificar agora" e sem QR code no admin** (ler QR de outro cliente abre risco de sequestro do pareamento). Agir = Entrar no cliente. Continuam: um cliente por pedido em lotes de 4, Atualizar = `?refresh=1`, o servidor decide.
+
+## Comunicação e Plataforma no padrão da casa (06/10/2026)
+
+Entrega 8 da Área do Admin, onda 2 da spec `LM FLOW/specs/2026-10-06-admin-final-design.md`.
+
+- **Estilo do admin**: o padrão de quadro e respiro mora em `src/pages/Admin/Area/estilo.ts` (saiu de `PooledClients/estilo.ts`). Tela nova ou mexida do admin importa de lá.
+- **Avisos na tela** (`/admin/comunicacao`): a matriz é a mesma do cliente (decisão de 25/08). Erro de carga é `EmptyState` com "Tentar de novo", nunca tela em branco. "Aplicar a todos os clientes" confirma dizendo quantos ("Aplicar este padrão aos 31 clientes?"): N = clientes ativos menos o de origem, a mesma lista em que o servidor aplica.
+- **Push** (`/admin/push`): Regras, Disparo manual e Histórico são três seções na mesma página. O liga/desliga da regra é `Chave`; as listas do formulário usam `Checkbox`, e "Regra ligada" é caixinha porque espera o Salvar. **O disparo manual confirma com o público e a quantidade** ("Enviar para 12 pessoas (17 aparelhos) de Moeda Forte?"), contados pelo servidor (`GET /super/push_rules/audience_count`, a mesma conta que o envio grava no histórico) e recontados no clique. Zero aparelhos trava o Enviar com o motivo. "Para mim" com mais de uma pessoa diz "N pessoas da Leal Mídia", não "você".
+- **Comunicado** (`/admin/comunicacao/whatsapp`): tela própria, sem janela.
+  - Abas Donos | Grupos. Os clientes com destino vêm marcados; quem não tem telefone ou grupo aparece com o motivo, com a caixa travada, e fica de fora. O grupo segue a mesma regra do Kit de boas-vindas.
+  - A confirmação diz "Mandar para N donos/grupos?" com o N que sai de fato, e o servidor recusa se a conta dele mudou.
+  - O envio roda no servidor, um por vez na plataforma (trava), com 2 s entre clientes. A tela acompanha ("Enviando 12 de 28…") e no fim mostra quem recebeu, quem falhou e por quê. Fechar a tela não para o envio, e ao voltar ela retoma o acompanhamento.
+  - `{nome}` = primeiro nome do cliente; a quebra de linha da mensagem é mantida.
+  - A `ClientBroadcastModal` saiu. A rota antiga `/super/pooled_tenants/broadcast` sai na onda 4.
+- **Menus arquivados**: `Chave` por menu. **Arquivar confirma** ("Esconder {menu} de todos os clientes? Some também para você e para a equipe."); desarquivar não. A conferência catálogo × menu de 01/10 está em `LM FLOW/specs/registros/2026-10-06-menus-arquivados-divergencia.md`. O catálogo não foi mexido.
+- **Site** (logos dos bancos): "Tirar" confirma ("Tirar o logo do {banco} dos sites de todas as imobiliárias?"); o erro tem "Tentar de novo". A cor de marca do banco continua em `style`, porque é dado.
+
+## IA Vendedora, Custos e Margem no admin (06/10/2026)
+
+Onda 3 da reta final do admin. Spec: `LM FLOW/specs/2026-10-06-admin-final-design.md` (seção "Onda 3"). Decisões do dono (não reabrir sem ele pedir):
+
+- **IA Vendedora no padrão da casa** (`/admin/agentes/*`). **Agentes:** liga/desliga é `Chave`; **desligar confirma** ("A IA de {cliente} para de responder os leads."), ligar não; busca por cliente ou IA; "Instância" virou "Número de WhatsApp". **Dashboard:** período em `Abas` (7/30/90 dias); continua **sem custo, dólar ou token** (custo mora em Custos); o `AiResultsPanel` é o mesmo da tela do cliente e não é mexido daqui. **Conhecimento:** quatro seções com o quadro padrão (Base de conhecimento · Escola de vendas · Princípios · Aperfeiçoamento), nenhuma aba dentro de aba. **Salvar um Princípio confirma** ("Vale para as IAs de todos os clientes."), inclusive "Voltar ao padrão"; o Princípio não grava mais ao sair do campo, só no botão Salvar. **Aprovar lição global confirma** ("Esta lição passa a valer para todas as IAs de todos os clientes."); lição de um cliente e rejeitar não. Documento da base liga/desliga com `Chave`, sem confirmação. **Aviso de visita:** `Chave` por imobiliária; regras de 21/09 intactas (nasce desligado, lista sem grupo, ligar relê o destino, teste respeita a chave, grava só a imobiliária que mudou). **Comparação:** 5ª aba, padrão da casa; nenhuma regra mudou. Em todas: erro ≠ vazio, cores só por token (positivo = primary, problema = destructive).
+- **Câmbio das contas fixo** (`ACCOUNTING_USD_BRL` no servidor, padrão R$ 5,46 = dólar 5,20 + 5%), editável em Custos ("Câmbio das contas: R$ 5,46 · Mudar"). Vale em Custos, Margem, Visão Geral (Números e Atenção) e no uso de IA da lista e da página de Clientes, para as telas baterem entre si. A cotação do dia continua gravada em cada chamada, mas não entra nas contas. Mudar o câmbio recarrega resumo, lista de chamadas e margem; a Visão Geral muda na hora (o câmbio está na chave do cache dela).
+- **Filtro IA em Custos:** só aparece com um cliente escolhido; resumo e lista de chamadas filtram pelas chamadas daquela IA (`sales_agent_runs.ai_call_id`). Trocar de cliente limpa a IA. Chamada sem turno de IA (Testar antigo) só aparece sem o filtro.
+- **Receita do cliente** (Contrato → quadro Receita): Tipo Avulso | Performance e "Valor que conta": cota do plano (preço do pacote, lido na hora: trocar de pacote leva a cota junto) ou valor digitado. Sem pacote com preço, a cota fica desabilitada com o motivo. Voltar à cota não apaga o valor digitado. Vazio = sem receita; zero digitado é receita zero. O cartão da lista não muda.
+- **Pacote ganha "Preço do plano (R$/mês)"**, opcional. Não é limite: não entra na prévia, no "≠ pacote" nem no aplicar.
+- O custo de IA em Clientes é só o da IA Vendedora; Custos e Margem somam todas as funções de IA. A linha em Clientes diz "custo da IA Vendedora".
+- **Margem** (seção em Custos, só em "Todos os clientes"; não é aba para não criar terceiro nível): receita − IA − parte da estrutura, por cliente e da carteira, filtro Todos | Avulso | Performance. Rateio da estrutura (faturas lançadas de Railway + Vercel + Evolution × câmbio): ½ pelas mensagens do mês + ½ pelo disco do schema, só entre clientes ativos (sem o Principal e sem arquivados); sem mensagem no mês vale só o disco; a tela diz "Rateio aproximado, pela carteira e pelo disco de hoje." (o disco é o de agora, não o do mês pedido), também no diário. Cliente sem receita entra no rateio, aparece, mas fica fora dos totais ("N clientes sem receita (fora da conta)"). Mês sem fatura lançada mostra "Margem parcial: faltam as faturas de …" (nomes vindos do servidor) com o botão Lançar faturas; salvar faturas ou mudar o câmbio recarrega a Margem. Cliente que não coube no tempo de leitura vira aviso ("a parte deles foi dividida entre os outros nesta leitura": o servidor redistribui; ele não entra nos totais e não mostra número inventado). `margin_pct` só existe com receita > 0. O servidor guarda só mensagens e disco por 10 min; dinheiro é recalculado a cada pedido.
+
+## Área do Admin: faxina e fim da Fase 4 (06/10/2026)
+
+Onda 4 da spec `LM FLOW/specs/2026-10-06-admin-final-design.md`. Fecha a Fase 4 · Área do Admin (spec `LM FLOW/specs/2026-10-01-fase-4-area-do-admin-design.md`): com as quatro ondas desta spec, as nove entregas ficam fechadas, exceto o que está listado abaixo como fora, mais câmbio fixo, receita e margem.
+
+- **Saiu do servidor (nenhuma tela chamava):** `/super/activity`, `/super/log_clients` e `/super/user_metrics` (as telas antigas de Atividade e Uso por cliente, do tempo em que cada cliente tinha servidor próprio), `/super/sales_agents/costs` e `/super/pooled_tenants/broadcast`. Não recriar: Logs = `/super/logs`; custo da IA = `/super/costs/*` (Clientes → Custos, filtro por IA); Comunicado = `/super/comunicado*` (onda 2). Trava: `src/pages/Admin/Area/rotasVelhas.source.spec.ts` falha se alguma tela voltar a chamar essas rotas.
+- **Senha legível acabou de vez:** a coluna saiu do banco em todos os clientes (conferido zero em produção antes). A Equipe do admin não conta mais "senhas guardadas"; o `noPlainPassword.source.spec.ts` trava a volta. Acesso continua só por link.
+- **Cotação do dia:** nenhuma conta do admin usa mais. Todas convertem pelo câmbio das contas (onda 3); a cotação só aparece no texto de apoio das chamadas antigas, ao passar o mouse. No servidor ela sobra no registro de chamadas de IA (lê o que já está guardado) e num processo de métricas, que agora desiste em até 4 s em vez de travar.
+- **Subida do servidor:** parou de tentar criar um número de WhatsApp fixo no código (o erro falso que aparecia em toda subida).
+- **Ficou fora da Fase 4** (cada um com spec própria ou decisão do dono): Banner; indicadores novos no Dashboard da IA; cobrança, nota fiscal, trava por plano e período do plano; mexer no catálogo de funções; QR code e reconexão de número pelo admin; troca de modelo de IA (consultar o dono); regra de acesso única da Equipe.
 
 ## Meu site: submenu "Página inicial" (06/10/2026)
 

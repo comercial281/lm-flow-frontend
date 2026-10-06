@@ -14,7 +14,7 @@ import {
   type ClientGroupJids, type ClientGroupKind, type WaGroup,
 } from '../clientGroups';
 import { pedidoLigarDemo, pedidoSemearDemo } from '../confirmacoes';
-import { SECAO, TITULO_SECAO } from '../estilo';
+import { SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 import type { PropsDaAba } from './Pagina';
 
 // Operação do cliente (fora do pacote): o que entra no funil, grupos de

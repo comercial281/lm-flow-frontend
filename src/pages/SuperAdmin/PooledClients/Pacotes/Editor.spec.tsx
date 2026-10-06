@@ -6,6 +6,9 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
 vi.mock('@/services/core/api', () => ({ default: api }));
 
+const toastX = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+vi.mock('sonner', () => ({ toast: toastX }));
+
 import Editor from './Editor';
 
 const pacote = { id: 'p1', name: 'Completo', clients_count: 2, features_on: 1,
@@ -17,7 +20,7 @@ const montar = () => render(<MemoryRouter initialEntries={['/admin/clientes/paco
   <Routes><Route path="/admin/clientes/pacotes/:id" element={<Editor />} /></Routes></MemoryRouter>);
 
 describe('Editor de pacote', () => {
-  beforeEach(() => { Object.values(api).forEach((f) => f.mockReset()); api.get.mockResolvedValue({ data: { data: pacote } }); });
+  beforeEach(() => { Object.values(api).forEach((f) => f.mockReset()); toastX.error.mockReset(); toastX.success.mockReset(); api.get.mockResolvedValue({ data: { data: pacote } }); });
 
   it('salvar mostra a prévia e aplica aos clientes', async () => {
     api.post.mockResolvedValue({ data: { data: { clients_count: 2, changes: { features: [{ key: 'disparos', label: 'Disparos', from: false, to: true }], limits: [] } } } });
@@ -80,5 +83,68 @@ describe('Editor de pacote', () => {
     montar();
     await user.click(await screen.findByRole('button', { name: 'Salvar pacote' }));
     await waitFor(() => expect(api.post).toHaveBeenCalledWith('/super/packages/p1/preview_update', { name: 'Completo' }));
+  });
+
+  it('preço do plano vai junto ao salvar, só quando muda; texto torto trava', async () => {
+    api.post.mockResolvedValue({ data: { data: { clients_count: 2, changes: { features: [], limits: [] } } } });
+    const user = userEvent.setup();
+    montar();
+    const campo = await screen.findByLabelText('Preço do plano (R$/mês)');
+    await user.type(campo, 'abc');
+    expect(screen.getByRole('button', { name: 'Salvar pacote' })).toBeDisabled();
+    await user.clear(campo);
+    await user.type(campo, '1.500,00');
+    await user.click(screen.getByRole('button', { name: 'Salvar pacote' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/super/packages/p1/preview_update', { name: 'Completo', price_brl: 1500 }));
+  });
+
+  it('prévia mostra a linha do preço (de/para) e, só com preço mudando, não engana sobre funções', async () => {
+    api.get.mockResolvedValue({ data: { data: { ...pacote, price_brl: 1000 } } });
+    api.post.mockResolvedValue({ data: { data: { clients_count: 2, changes: { features: [], limits: [] } } } });
+    const user = userEvent.setup();
+    montar();
+    const campo = await screen.findByLabelText('Preço do plano (R$/mês)');
+    await user.clear(campo); await user.type(campo, '1.500,00');
+    await user.click(screen.getByRole('button', { name: 'Salvar pacote' }));
+    expect(await screen.findByText(/Preço do plano: de R\$\s1\.000,00 para R\$\s1\.500,00 \(muda a receita dos clientes na cota do plano\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Funções e limites não mudam\./)).toBeInTheDocument();
+    expect(screen.queryByText(/Ajustes manuais de cada cliente são mantidos/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nenhuma função ou limite muda/)).not.toBeInTheDocument();
+  });
+
+  it('sem preço antes: a linha diz "sem preço"', async () => {
+    api.post.mockResolvedValue({ data: { data: { clients_count: 2, changes: { features: [{ key: 'disparos', label: 'Disparos', from: false, to: true }], limits: [] } } } });
+    const user = userEvent.setup();
+    montar();
+    await user.type(await screen.findByLabelText('Preço do plano (R$/mês)'), '900');
+    await user.click(screen.getByRole('button', { name: 'Salvar pacote' }));
+    expect(await screen.findByText(/Preço do plano: de \(sem preço\) para R\$\s900,00/)).toBeInTheDocument();
+    expect(screen.getByText(/Ajustes manuais de cada cliente são mantidos/)).toBeInTheDocument();
+  });
+
+  it('PATCH leva price_brl novo; limpar manda null', async () => {
+    api.get.mockResolvedValue({ data: { data: { ...pacote, price_brl: 1000 } } });
+    api.post.mockResolvedValue({ data: { data: { clients_count: 2, changes: { features: [], limits: [] } } } });
+    api.patch.mockResolvedValue({ data: { data: pacote, result: null } });
+    const user = userEvent.setup();
+    montar();
+    const campo = await screen.findByLabelText('Preço do plano (R$/mês)');
+    await user.clear(campo); await user.type(campo, '1500,5');
+    await user.click(screen.getByRole('button', { name: 'Salvar pacote' }));
+    await user.click(await screen.findByRole('button', { name: 'Só salvar o pacote' }));
+    await waitFor(() => expect(api.patch).toHaveBeenLastCalledWith('/super/packages/p1', { name: 'Completo', price_brl: 1500.5, apply_to_clients: false }));
+    await user.clear(campo);
+    await user.click(screen.getByRole('button', { name: 'Salvar pacote' }));
+    await user.click(await screen.findByRole('button', { name: 'Só salvar o pacote' }));
+    await waitFor(() => expect(api.patch).toHaveBeenLastCalledWith('/super/packages/p1', { name: 'Completo', price_brl: null, apply_to_clients: false }));
+  });
+
+  it('422 do preço aparece como toast com a mensagem do servidor', async () => {
+    api.post.mockRejectedValue({ response: { data: { error: 'Preço do plano: deixe vazio ou informe um valor (0 ou mais).' } } });
+    const user = userEvent.setup();
+    montar();
+    await user.type(await screen.findByLabelText('Preço do plano (R$/mês)'), '10');
+    await user.click(screen.getByRole('button', { name: 'Salvar pacote' }));
+    await waitFor(() => expect(toastX.error).toHaveBeenCalledWith('Preço do plano: deixe vazio ou informe um valor (0 ou mais).'));
   });
 });

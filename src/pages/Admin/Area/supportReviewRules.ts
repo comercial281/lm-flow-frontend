@@ -33,7 +33,6 @@ export function accountCreatedLabel(createdAt: string | null): string | null {
 export function reviewTotals(tenants: SupportReviewTenant[]) {
   return {
     people: tenants.reduce((n, t) => n + t.people.length, 0),
-    plainPasswords: tenants.reduce((n, t) => n + (t.plain_passwords ?? 0), 0),
     withoutRoles: tenants.filter(t => t.roles_seeded === false).length,
     failed: tenants.filter(t => !!t.error).length,
     teamAccounts: tenants.reduce((n, t) => n + t.team_accounts.length, 0),

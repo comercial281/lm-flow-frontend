@@ -13,7 +13,7 @@ import type { Pessoa } from '@/types/admin/clientes';
 import { copyText } from '@/utils/clipboard';
 import { pedidoRemoverPessoa } from '../confirmacoes';
 import type { PropsDaAba } from './Pagina';
-import { ESQUELETO, SECAO, TITULO_SECAO } from '../estilo';
+import { ESQUELETO, SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 import { EQUIPE } from '../lista';
 
 // Pessoas do cliente (antiga janela Membros). Acesso SÓ por link: não existe

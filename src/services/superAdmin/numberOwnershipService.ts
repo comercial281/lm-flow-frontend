@@ -14,10 +14,32 @@ export type OwnershipVerdict = 'migrates' | 'needs_review' | 'unreadable';
 export type OwnershipSource = 'responsible' | 'roleta' | 'liberated' | 'shared';
 export type NumberConnection = 'connected' | 'connecting' | 'disconnected' | 'unknown';
 
+/**
+ * Entrega 4 (Números conectados): a situação do número, decidida pelo servidor
+ * (Numbers::Situation). A tela nunca deduz isto do estado cru da conexão.
+ */
+export type NumberSituation = 'connected' | 'connecting' | 'disconnected' | 'never' | 'official' | 'unknown';
+
+/** Entrega 4: quantos números de cada situação o cliente tem (lido na hora pela lista). */
+export interface ConnectionSummary {
+  connected: number;
+  connecting: number;
+  /** Caídos: a mesma régua da Atenção. */
+  down: number;
+  never: number;
+  official: number;
+  unknown: number;
+  total: number;
+}
+
 export interface OwnershipTenant {
   id: string;
   name: string;
   slug: string;
+  /** Só na lista (entrega 4): o schema, que o ?cliente= da Atenção usa. */
+  schema?: string;
+  /** Só na lista (entrega 4). null = não deu para ler a conexão deste cliente. */
+  connection_summary?: ConnectionSummary | null;
 }
 
 export interface OwnershipPersonRef {
@@ -48,6 +70,10 @@ export interface OwnershipNumber {
   name: string;
   phone: string | null;
   connection: NumberConnection;
+  /** Entrega 4: lida na hora pelo servidor, por cima da conferência guardada. */
+  situation: NumberSituation;
+  /** ISO de quando caiu; só no `disconnected`. */
+  disconnected_at: string | null;
   responsible: OwnershipPersonRef | null;
   roletas: OwnershipRoleta[];
   liberated: OwnershipLiberated[];
@@ -111,6 +137,21 @@ export interface OwnershipDiagnosis {
   rule?: OwnershipRule | null;
 }
 
+/** Entrega 4: um número da Leal Mídia (instância da plataforma). Nunca vem token. */
+export interface PlatformNumber {
+  name: string;
+  phone: string | null;
+  status: NumberSituation; // números do public seguem a régua da Atenção (podem vir 'never')
+  /** ISO de quando caiu; o servidor pode não mandar. */
+  disconnected_at?: string | null;
+}
+
+export interface PlatformNumbers {
+  /** true = o servidor não conseguiu ler a Evolution agora. */
+  unreadable: boolean;
+  numbers: PlatformNumber[];
+}
+
 const numberOwnershipService = {
   listTenants: () => api.get<{ data: OwnershipTenant[] }>('/super/number_ownership'),
   diagnose: (tenantId: string, refresh = false) =>
@@ -123,6 +164,8 @@ const numberOwnershipService = {
   /** Desligar dono do número: só desliga a regra (os donos ficam gravados). */
   disableRule: (tenantId: string) =>
     api.post<{ data: OwnershipDiagnosis }>(`/super/number_ownership/${tenantId}/disable`),
+  /** Entrega 4: os números da Leal Mídia (guardado 60 s no servidor). */
+  platformNumbers: () => api.get<{ data: PlatformNumbers }>('/super/number_ownership/platform_numbers'),
 };
 
 export default numberOwnershipService;

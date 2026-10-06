@@ -1,6 +1,7 @@
-// Padrão visual de Clientes (lista, página do cliente e Pacotes). Um lugar só:
-// quadro, título de seção, respiro entre blocos e grades. Mudou aqui, muda em
-// todas as abas — antes cada aba tinha o seu (p-3 × p-4, lg × xl, gap-3 × 4).
+// Padrão visual da Área do Admin (Clientes, Pacotes, Comunicação, Plataforma e o
+// que vier). Um lugar só: quadro, título de seção, respiro entre blocos e grades.
+// Mudou aqui, muda em todas as telas. Nasceu em Clientes (05/10) e subiu para
+// cá na onda 2 (06/10), quando a primeira tela fora de Clientes precisou dele.
 export const PAGINA = 'flex flex-col gap-6';
 export const SECAO = 'rounded-xl border bg-card p-5';
 export const TITULO_SECAO = 'text-base font-semibold';

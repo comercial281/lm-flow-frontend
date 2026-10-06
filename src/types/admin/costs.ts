@@ -6,10 +6,17 @@ export interface TenantSlice { schema: string; name: string; brl: number; usd: n
 export interface StructureCard { provider: 'railway' | 'vercel' | 'evolution'; label: string; usd: number; brl: number; launched: boolean }
 export interface Reconciliation { provider: string; label: string; recorded_usd: number; invoice_usd: number | null; diff_pct: number | null }
 export interface TenantOption { schema: string; name: string }
+export interface AgentOption { id: string; name: string }
+/** Câmbio das contas (fixo, editável, padrão 5,46): vale em Custos, Margem, Visão Geral e Clientes. */
+export interface AccountingRate { value: number; source: 'accounting' | 'default'; default_value: number }
 
 export interface CostsSummary {
   month: string;
   tenant: string | null;
+  /** IA filtrada (só com cliente). */
+  agent: string | null;
+  /** As IAs do cliente filtrado, para o Seletor "IA" (vazio sem cliente). */
+  agents: AgentOption[];
   months: string[];
   tenants: TenantOption[];
   rate: { value: number; source: string | null };
@@ -65,8 +72,42 @@ export interface InvoiceInput { provider: string; amount_usd: string; note: stri
 export interface CallFilters {
   month: string;
   tenant: string | null;
+  agent?: string | null;
   feature: string;
   provider: string;
   onlyErrors: boolean;
   page: number;
+}
+
+// Margem (06/10/2026): receita − IA − parte da estrutura, por cliente e da carteira.
+export interface MarginRow {
+  schema: string;
+  name: string;
+  kind: 'avulso' | 'performance' | null;
+  revenue_source: 'package' | 'manual' | null;
+  package_name: string | null;
+  /** null = sem receita (fica fora dos totais). */
+  revenue_brl: number | null;
+  ai_brl: number;
+  /** null = cliente não lido no tempo (a parte dele não é inventada). */
+  structure_brl: number | null;
+  cost_brl: number | null;
+  margin_brl: number | null;
+  margin_pct: number | null;
+  share: number | null;
+  readable: boolean;
+}
+
+export interface MarginsReport {
+  month: string;
+  kind: 'todos' | 'avulso' | 'performance';
+  rate: { value: number };
+  structure_brl: number;
+  /** Faltou fatura de Railway, Vercel ou Evolution no mês. */
+  partial: boolean;
+  missing_invoices: string[];
+  totals: { revenue_brl: number; ai_brl: number; structure_brl: number; cost_brl: number; margin_brl: number; margin_pct: number | null; clients: number };
+  without_revenue: number;
+  clients: MarginRow[];
+  unreadable: { name: string; message: string }[];
 }

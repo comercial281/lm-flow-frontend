@@ -15,7 +15,11 @@ export const CONTADORES: { chave: Situacao; rotulo: string }[] = [
   { chave: 'com_erro', rotulo: 'Com erro' },
 ];
 
-const NUMEROS = { rotulo: 'Ver números', href: '/admin/clientes/numeros' };
+// Entrega 4: abre a tela de Números já rolada e aberta no cliente.
+const numerosDo = (c: ClienteComProblema) => ({
+  rotulo: 'Ver números',
+  href: `/admin/clientes/numeros?cliente=${encodeURIComponent(c.schema)}`,
+});
 
 export function linhasDoProblema(c: ClienteComProblema, p: Problema, agora: Date = new Date()): LinhaDeProblema[] {
   const custos = `/admin/clientes/custos?tenant=${encodeURIComponent(c.schema)}`;
@@ -25,7 +29,7 @@ export function linhasDoProblema(c: ClienteComProblema, p: Problema, agora: Date
         const fone = telefone(n.phone);
         const quem = fone ? `${fone} (${n.name})` : n.name;
         const texto = n.since ? `Número ${quem} caiu ${tempoDesde(n.since, agora)}` : `Número ${quem} está desconectado`;
-        return { texto, acao: NUMEROS };
+        return { texto, acao: numerosDo(c) };
       });
     case 'erro_criacao':
       return [{ texto: 'Deu erro ao criar o cliente', acao: { rotulo: 'Ver clientes', href: '/admin/clientes' } }];

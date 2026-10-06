@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button, Input, Label, Textarea } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { BookOpen, GraduationCap, Trash2, Upload, Plus, Power } from 'lucide-react';
+import { Plus, Trash2, Upload } from 'lucide-react';
+import Chave from '@/components/base/Chave';
+import EmptyState from '@/components/base/EmptyState';
+import { Seletor } from '@/components/base/Seletor';
 import {
   globalBrainService,
   KIND_LABELS,
@@ -9,89 +12,49 @@ import {
   type GlobalLesson,
 } from '@/services/superAdmin/globalBrainService';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { CORPO_SECAO, ESQUELETO, SECAO, SELO, SUBTITULO_SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 
-type Tab = 'conhecimento' | 'escola';
+type Estado = 'carregando' | 'pronto' | 'erro';
 
 /**
- * Cérebro Universal SDR (Épico A) — Área do Admin.
+ * Cérebro Universal SDR (Épico A) — Área do Admin → IA Vendedora → Conhecimento.
  *
  * A base de conhecimento e as lições aqui são GLOBAIS: injetadas no prompt de TODO
  * agente de IA de pré-atendimento de todos os clientes. É o que faz um cliente novo
  * nascer educado, sem aprender do zero. Cada agente ainda complementa com a própria
  * base/lições individuais (que prevalecem no conflito).
+ *
+ * Eram duas sub-abas feitas à mão; desde 06/10/2026 são duas seções da página
+ * Conhecimento (Base de conhecimento · Escola de vendas).
  */
-export default function CerebroUniversal() {
-  const [tab, setTab] = useState<Tab>('conhecimento');
 
-  return (
-    <div className="mx-auto max-w-5xl px-4 py-6">
-      <header className="mb-5">
-        <h2 className="text-xl font-semibold text-foreground">Cérebro Universal</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Conhecimento e lições que todo agente de IA herda. Vale pra todos os clientes; cada agente refina com o que é dele.
-        </p>
-      </header>
+const COR_DO_TIPO: Record<GlobalLesson['kind'], string> = {
+  rule: 'border-primary/30 bg-primary/10 text-primary',
+  good_example: 'bg-muted text-foreground',
+  bad_example: 'border-destructive/40 text-destructive',
+};
 
-      <div className="mb-5 flex gap-1 border-b border-border">
-        <TabButton active={tab === 'conhecimento'} onClick={() => setTab('conhecimento')} icon={BookOpen}>
-          Base de Conhecimento
-        </TabButton>
-        <TabButton active={tab === 'escola'} onClick={() => setTab('escola')} icon={GraduationCap}>
-          Escola de Vendas
-        </TabButton>
-      </div>
+// ─────────────────────────── Base de conhecimento ───────────────────────────
 
-      {tab === 'conhecimento' ? <KnowledgeTab /> : <LessonsTab />}
-    </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  icon: Icon,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: typeof BookOpen;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm transition-colors ${
-        active
-          ? 'border-primary text-primary font-medium'
-          : 'border-transparent text-muted-foreground hover:text-foreground'
-      }`}
-    >
-      <Icon className="h-4 w-4" />
-      {children}
-    </button>
-  );
-}
-
-// ─────────────────────────── Base de Conhecimento ───────────────────────────
-
-function KnowledgeTab() {
+export function BaseDeConhecimento() {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [docs, setDocs] = useState<GlobalKnowledgeDoc[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [estado, setEstado] = useState<Estado>('carregando');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('');
   const [saving, setSaving] = useState(false);
+  const confirmarParaTodos = (titulo: string, descricao: ReactNode, rotuloDaAcao: string) =>
+    confirmar({ titulo, descricao: <>{descricao} Vale para as IAs de todos os clientes.</>, rotuloDaAcao });
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    setEstado('carregando');
     try {
       setDocs(await globalBrainService.listDocs());
+      setEstado('pronto');
     } catch {
-      toast.error('Não consegui carregar a base de conhecimento.');
-    } finally {
-      setLoading(false);
+      setEstado('erro');
     }
   }, []);
 
@@ -104,13 +67,14 @@ function KnowledgeTab() {
       toast.error('Preencha título e conteúdo.');
       return;
     }
+    if (!(await confirmarParaTodos('Adicionar à base de conhecimento?', 'Este texto entra no conhecimento das IAs de todos os clientes.', 'Adicionar para todos'))) return;
     setSaving(true);
     try {
       await globalBrainService.createTextDoc({ title: title.trim(), content_text: content.trim(), category: category.trim() || undefined });
       setTitle('');
       setContent('');
       setCategory('');
-      toast.success('Adicionado ao cérebro universal.');
+      toast.success('Adicionado à base de conhecimento.');
       await load();
     } catch {
       toast.error('Não consegui salvar.');
@@ -120,6 +84,10 @@ function KnowledgeTab() {
   };
 
   const addFile = async (file: File) => {
+    if (!(await confirmarParaTodos('Subir para a base de conhecimento?', 'Este arquivo entra no conhecimento das IAs de todos os clientes.', 'Subir para todos'))) {
+      if (fileRef.current) fileRef.current.value = '';
+      return;
+    }
     setSaving(true);
     try {
       await globalBrainService.createFileDoc({ title: title.trim() || file.name, category: category.trim() || undefined, file });
@@ -135,20 +103,19 @@ function KnowledgeTab() {
     }
   };
 
-  const toggle = async (doc: GlobalKnowledgeDoc) => {
-    try {
-      await globalBrainService.updateDoc(doc.id, { enabled: !doc.enabled });
-      setDocs(prev => prev.map(d => (d.id === doc.id ? { ...d, enabled: !d.enabled } : d)));
-    } catch {
-      toast.error('Não consegui atualizar.');
-    }
+  // Chave: vira na hora, volta sozinha se o servidor recusar e avisa.
+  // Desligar tira o documento das IAs de todos os clientes: confirma. Ligar não.
+  const alternar = async (doc: GlobalKnowledgeDoc, ligar: boolean) => {
+    if (!ligar && !(await confirmarParaTodos('Desligar este documento?', <>O documento <strong>{doc.title}</strong> deixa de valer para as IAs de todos os clientes.</>, 'Desligar'))) return false;
+    await globalBrainService.updateDoc(doc.id, { enabled: ligar });
+    setDocs(prev => prev.map(d => (d.id === doc.id ? { ...d, enabled: ligar } : d)));
   };
 
   const remove = async (doc: GlobalKnowledgeDoc) => {
     if (
       !(await confirmar({
-        titulo: 'Remover do cérebro universal?',
-        descricao: <>O documento <strong>{doc.title}</strong> sai do cérebro de todos os CRMs.</>,
+        titulo: 'Remover da base de conhecimento?',
+        descricao: <>O documento <strong>{doc.title}</strong> sai do conhecimento das IAs de todos os clientes.</>,
         rotuloDaAcao: 'Remover',
         destrutivo: true,
       }))
@@ -164,11 +131,14 @@ function KnowledgeTab() {
   };
 
   return (
-    <div className="grid gap-6 md:grid-cols-[1fr_1.1fr]">
-      {/* Formulário */}
-      <div className="rounded-lg border border-border bg-card p-4">
-        <h2 className="mb-3 text-sm font-medium text-foreground">Adicionar conhecimento</h2>
-        <div className="space-y-3">
+    <section aria-labelledby="base-de-conhecimento" className={SECAO}>
+      <h2 id="base-de-conhecimento" className={TITULO_SECAO}>Base de conhecimento</h2>
+      <p className={SUBTITULO_SECAO}>
+        Documentos que toda IA de todos os clientes herda. Cada IA ainda complementa com a base dela, que prevalece no conflito.
+      </p>
+      <div className={`${CORPO_SECAO} grid gap-6 md:grid-cols-[1fr_1.1fr]`}>
+        <div className="flex flex-col gap-3">
+          <h3 className="text-sm font-medium text-foreground">Adicionar conhecimento</h3>
           <div>
             <Label htmlFor="k-title">Título</Label>
             <Input id="k-title" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Argumentário de valorização" />
@@ -179,7 +149,7 @@ function KnowledgeTab() {
           </div>
           <div>
             <Label htmlFor="k-content">Conteúdo (cole o texto)</Label>
-            <Textarea id="k-content" value={content} onChange={e => setContent(e.target.value)} rows={6} placeholder="Diretrizes de vendas, como operar, objetivo do agente..." />
+            <Textarea id="k-content" value={content} onChange={e => setContent(e.target.value)} rows={6} placeholder="Diretrizes de vendas, como operar, objetivo da IA..." />
           </div>
           <div className="flex flex-wrap gap-2">
             <Button onClick={addText} disabled={saving}>
@@ -190,6 +160,7 @@ function KnowledgeTab() {
               type="file"
               accept=".txt,.md,.csv,.docx,.xlsx"
               className="hidden"
+              aria-label="Arquivo para a base de conhecimento"
               onChange={e => {
                 const f = e.target.files?.[0];
                 if (f) void addFile(f);
@@ -201,77 +172,78 @@ function KnowledgeTab() {
           </div>
           <p className="text-xs text-muted-foreground">Arquivo: TXT, CSV, MD, DOCX ou XLSX. Para PDF, cole o texto.</p>
         </div>
-      </div>
 
-      {/* Lista */}
-      <div>
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-foreground">Na base ({docs.length})</h2>
-        </div>
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Carregando...</p>
-        ) : docs.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            Nada ainda. Adicione as diretrizes que todo agente deve seguir.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {docs.map(doc => (
-              <li key={doc.id} className="rounded-lg border border-border bg-card p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium text-foreground">{doc.title}</span>
-                      {doc.category && (
-                        <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">{doc.category}</span>
-                      )}
-                      {!doc.enabled && <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">desativado</span>}
-                      {doc.status === 'failed' && <span className="rounded bg-red-100 px-1.5 py-0.5 text-[11px] text-red-700 dark:bg-red-900/30 dark:text-red-400">falhou</span>}
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-medium text-foreground">Na base {estado === 'pronto' ? `(${docs.length})` : ''}</h3>
+          {estado === 'carregando' && <div aria-busy="true" className={`h-24 ${ESQUELETO}`} />}
+          {estado === 'erro' && (
+            <EmptyState tipo="erro" title="Não deu pra carregar a base de conhecimento" aoTentarDeNovo={() => void load()} />
+          )}
+          {estado === 'pronto' && docs.length === 0 && (
+            <EmptyState title="Nada na base ainda" description="Adicione as diretrizes que toda IA deve seguir." />
+          )}
+          {estado === 'pronto' && docs.length > 0 && (
+            <ul className="flex flex-col gap-2">
+              {docs.map(doc => (
+                <li key={doc.id} className="rounded-lg border border-border p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="truncate text-sm font-medium text-foreground">{doc.title}</span>
+                        {doc.category && <span className={`${SELO} text-muted-foreground`}>{doc.category}</span>}
+                        {doc.status === 'failed' && <span className={`${SELO} border-destructive/40 text-destructive`}>falhou</span>}
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                        {doc.content_text || doc.error_message || (doc.has_file ? doc.filename : '')}
+                      </p>
+                      <p className="mt-1 text-[11px] text-muted-foreground">{doc.char_count.toLocaleString('pt-BR')} caracteres</p>
                     </div>
-                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                      {doc.content_text || doc.error_message || (doc.has_file ? doc.filename : '')}
-                    </p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{doc.char_count.toLocaleString('pt-BR')} caracteres</p>
+                    <div className="flex flex-shrink-0 items-center gap-1">
+                      <Chave
+                        rotulo={`Usar ${doc.title} nas IAs`}
+                        semRotuloVisivel
+                        ligada={doc.enabled}
+                        aoMudar={v => alternar(doc, v)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void remove(doc)}
+                        aria-label={`Remover ${doc.title}`}
+                        className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex flex-shrink-0 gap-1">
-                    <button onClick={() => toggle(doc)} title={doc.enabled ? 'Desativar' : 'Ativar'} className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground">
-                      <Power className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => remove(doc)} title="Remover" className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-red-600">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
-
       {dialogoDeConfirmacao}
-    </div>
+    </section>
   );
 }
 
-// ─────────────────────────── Escola de Vendas ───────────────────────────
+// ─────────────────────────── Escola de vendas ───────────────────────────
 
-function LessonsTab() {
+export function EscolaDeVendas() {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [lessons, setLessons] = useState<GlobalLesson[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [estado, setEstado] = useState<Estado>('carregando');
   const [kind, setKind] = useState<GlobalLesson['kind']>('rule');
   const [content, setContent] = useState('');
   const [context, setContext] = useState('');
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    setEstado('carregando');
     try {
       setLessons(await globalBrainService.listLessons());
+      setEstado('pronto');
     } catch {
-      toast.error('Não consegui carregar as lições.');
-    } finally {
-      setLoading(false);
+      setEstado('erro');
     }
   }, []);
 
@@ -284,12 +256,13 @@ function LessonsTab() {
       toast.error('Escreva a lição.');
       return;
     }
+    if (!(await confirmar({ titulo: 'Ensinar para todas as IAs?', descricao: 'Esta lição passa a valer para todas as IAs de todos os clientes.', rotuloDaAcao: 'Ensinar para todos' }))) return;
     setSaving(true);
     try {
       await globalBrainService.createLesson({ kind, content: content.trim(), context: context.trim() || undefined });
       setContent('');
       setContext('');
-      toast.success('Lição adicionada ao cérebro universal.');
+      toast.success('Lição adicionada à escola de vendas.');
       await load();
     } catch {
       toast.error('Não consegui salvar.');
@@ -302,7 +275,7 @@ function LessonsTab() {
     if (
       !(await confirmar({
         titulo: 'Remover esta lição?',
-        descricao: 'Ela sai da escola de vendas de todos os CRMs.',
+        descricao: 'Ela sai da escola de vendas das IAs de todos os clientes.',
         rotuloDaAcao: 'Remover',
         destrutivo: true,
       }))
@@ -320,25 +293,19 @@ function LessonsTab() {
   const needsContext = kind !== 'rule';
 
   return (
-    <div className="grid gap-6 md:grid-cols-[1fr_1.1fr]">
-      <div className="rounded-lg border border-border bg-card p-4">
-        <h2 className="mb-3 text-sm font-medium text-foreground">Ensinar a IA</h2>
-        <div className="space-y-3">
+    <section aria-labelledby="escola-de-vendas" className={SECAO}>
+      <h2 id="escola-de-vendas" className={TITULO_SECAO}>Escola de vendas</h2>
+      <p className={SUBTITULO_SECAO}>Regras e exemplos que toda IA de todos os clientes segue.</p>
+      <div className={`${CORPO_SECAO} grid gap-6 md:grid-cols-[1fr_1.1fr]`}>
+        <div className="flex flex-col gap-3">
+          <h3 className="text-sm font-medium text-foreground">Ensinar a IA</h3>
           <div>
-            <Label>Tipo</Label>
-            <div className="mt-1 flex gap-1">
+            <Label htmlFor="l-kind">Tipo</Label>
+            <Seletor id="l-kind" aria-label="Tipo da lição" value={kind} onChange={e => setKind(e.target.value as GlobalLesson['kind'])} className="mt-1 w-full">
               {(['rule', 'good_example', 'bad_example'] as const).map(k => (
-                <button
-                  key={k}
-                  onClick={() => setKind(k)}
-                  className={`rounded-md border px-3 py-1.5 text-xs transition-colors ${
-                    kind === k ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-accent'
-                  }`}
-                >
-                  {KIND_LABELS[k]}
-                </button>
+                <option key={k} value={k}>{KIND_LABELS[k]}</option>
               ))}
-            </div>
+            </Seletor>
           </div>
           {needsContext && (
             <div>
@@ -352,47 +319,44 @@ function LessonsTab() {
             </Label>
             <Textarea id="l-content" value={content} onChange={e => setContent(e.target.value)} rows={5} placeholder={kind === 'rule' ? 'Ex: Sempre proponha a visita como próximo passo sem compromisso.' : 'Escreva a resposta...'} />
           </div>
-          <Button onClick={add} disabled={saving}>
+          <Button onClick={add} disabled={saving} className="w-fit">
             <Plus className="mr-1 h-4 w-4" /> Ensinar
           </Button>
         </div>
-      </div>
 
-      <div>
-        <h2 className="mb-2 text-sm font-medium text-foreground">Lições ({lessons.length})</h2>
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Carregando...</p>
-        ) : lessons.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            Nenhuma lição universal ainda.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {lessons.map(l => (
-              <li key={l.id} className="rounded-lg border border-border bg-card p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <span className={`inline-block rounded px-1.5 py-0.5 text-[11px] ${
-                      l.kind === 'rule' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                        : l.kind === 'good_example' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                    }`}>
-                      {KIND_LABELS[l.kind]}
-                    </span>
-                    {l.context && <p className="mt-1 text-xs text-muted-foreground">Lead: {l.context}</p>}
-                    <p className="mt-1 text-sm text-foreground">{l.content}</p>
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-medium text-foreground">Lições {estado === 'pronto' ? `(${lessons.length})` : ''}</h3>
+          {estado === 'carregando' && <div aria-busy="true" className={`h-24 ${ESQUELETO}`} />}
+          {estado === 'erro' && <EmptyState tipo="erro" title="Não deu pra carregar as lições" aoTentarDeNovo={() => void load()} />}
+          {estado === 'pronto' && lessons.length === 0 && (
+            <EmptyState title="Nenhuma lição universal ainda" description="Ensine uma regra ou um exemplo e todas as IAs passam a seguir." />
+          )}
+          {estado === 'pronto' && lessons.length > 0 && (
+            <ul className="flex flex-col gap-2">
+              {lessons.map(l => (
+                <li key={l.id} className="rounded-lg border border-border p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <span className={`${SELO} ${COR_DO_TIPO[l.kind]}`}>{KIND_LABELS[l.kind]}</span>
+                      {l.context && <p className="mt-1 text-xs text-muted-foreground">Lead: {l.context}</p>}
+                      <p className="mt-1 text-sm text-foreground">{l.content}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void remove(l)}
+                      aria-label="Remover lição"
+                      className="flex-shrink-0 rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
                   </div>
-                  <button onClick={() => remove(l)} title="Remover" className="flex-shrink-0 rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-red-600">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
-
       {dialogoDeConfirmacao}
-    </div>
+    </section>
   );
 }

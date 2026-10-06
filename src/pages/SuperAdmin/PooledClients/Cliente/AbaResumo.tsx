@@ -8,7 +8,7 @@ import type { ClientePooled, Pessoa } from '@/types/admin/clientes';
 import type { ClienteComProblema, Numeros } from '@/types/admin/overview';
 import { linhasDoProblema } from '@/pages/Admin/Area/VisaoGeral/formatoAtencao';
 import AiUsageLine from '../AiUsageLine';
-import { AVISO, PAGINA, SECAO, TITULO_SECAO } from '../estilo';
+import { AVISO, PAGINA, SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 import { EQUIPE, chaveDoCliente } from '../lista';
 
 // Resumo do cliente: problemas da Atenção e números do mês, das MESMAS contas
