@@ -18,6 +18,8 @@ export interface RegrasVitrine {
   price_max: number | null;
   stages: string[];
   featured_only: boolean;
+  /** Só imóveis marcados como Minha Casa Minha Vida. Servidor velho não manda: false. */
+  mcmv: boolean;
 }
 export interface Vitrine { id: string; kind: 'launches' | 'featured' | 'custom'; enabled: boolean; title: string; rules?: RegrasVitrine }
 
@@ -96,7 +98,7 @@ function regras(raw: unknown): RegrasVitrine {
     listing_kind: r.listing_kind === 'resale' || r.listing_kind === 'development' ? r.listing_kind : null,
     property_types: strs(r.property_types), cities: strs(r.cities), neighborhoods: strs(r.neighborhoods),
     price_min: numOuNull(r.price_min), price_max: numOuNull(r.price_max),
-    stages: strs(r.stages), featured_only: r.featured_only === true,
+    stages: strs(r.stages), featured_only: r.featured_only === true, mcmv: r.mcmv === true,
   };
 }
 

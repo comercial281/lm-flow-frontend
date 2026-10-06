@@ -92,24 +92,91 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
   const ap = resolverAparencia(site.appearance);
   const telaCheia = ap.hero_height === 'full';
 
+  // Foto ou vídeo do banner e a busca: os mesmos nas duas capas.
+  const midia = site.hero?.video_url ? (
+    <video
+      src={site.hero.video_url}
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="auto"
+      className="h-full w-full object-cover"
+    />
+  ) : (
+    // Foto escolhida no Site Builder (de um imóvel ou enviada); sem ela,
+    // a capa do primeiro imóvel da lista, como sempre foi.
+    <img src={site.hero?.image_url || items[0]?.cover_url || CAPA_PADRAO} alt="" className="h-full w-full object-cover" />
+  );
+
+  // Busca (entrada → página dedicada de filtros)
+  const busca = (
+    <form onSubmit={runSearch} className="mt-8 rounded-[24px] bg-white/95 p-3 shadow-[0_30px_60px_-25px_rgba(0,0,0,0.5)] backdrop-blur sm:p-4">
+      {/* Uma aba só não é escolha: a fileira some. */}
+      {abas.length > 1 && (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {abas.map(k => (
+            <button key={k} type="button" onClick={() => trocarAba(k)}
+              className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${tab === k ? 'text-white' : 'text-neutral-600 hover:bg-black/[0.04]'}`}
+              style={tab === k ? { background: 'var(--brand)' } : undefined}>
+              {ROTULO_ABA[k]}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {selects.length > 0 && (
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          {selects.map(c => {
+            const o = opcoes[c as Exclude<CampoBusca, 'code'>];
+            return <Select key={c} value={valores[c] ?? ''} onChange={set(c)} label={o.label} options={o.options} />;
+          })}
+        </div>
+      )}
+
+      <div className={`flex flex-col gap-2 sm:flex-row ${selects.length > 0 ? 'mt-2' : ''}`}>
+        {temCodigo && (
+          <div className="relative flex-1">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"><Ic d={I.search} s={17} /></span>
+            <input value={valores.code ?? ''} onChange={e => set('code')(e.target.value)} placeholder="Buscar por código do imóvel"
+              className="w-full rounded-xl border border-black/[0.08] bg-white py-3 pl-10 pr-3 text-[14px] outline-none focus:border-[var(--brand)]" />
+          </div>
+        )}
+        <button type="submit" className={`inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 ${temCodigo ? '' : 'sm:ml-auto'}`} style={{ background: 'var(--brand)' }}>
+          <Ic d={I.search} s={17} /> Buscar
+        </button>
+      </div>
+    </form>
+  );
+
+  // Capa dividida (Aparência): texto e busca de um lado e a foto num quadro
+  // arredondado do outro. No celular o texto e a busca vêm primeiro e a foto
+  // depois, com 240px. Sem filtro escuro: o texto não fica sobre a foto. O
+  // topo aqui é sólido (portalShared), então o respiro de cima continua.
+  if (ap.hero_layout === 'split') {
+    return (
+      <section id="topo" className={telaCheia ? 'relative flex min-h-[100svh] flex-col justify-center' : 'relative'}>
+        <div className={`relative mx-auto grid max-w-6xl gap-8 px-4 pb-10 pt-28 sm:px-6 sm:pt-32 md:grid-cols-2 md:items-center md:gap-10 md:pb-16 md:pt-36${telaCheia ? ' w-full' : ''}`}>
+          <div className="min-w-0">
+            <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-neutral-500">{site.name || 'Portal Imobiliário'}</p>
+            <h1 className="mt-3 font-[var(--display)] text-4xl font-semibold leading-[1.05] text-[var(--ink)] sm:text-5xl">
+              {titulo}
+            </h1>
+            <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-neutral-600 sm:text-base">{subtitulo}</p>
+            {busca}
+          </div>
+          <div className="relative h-[240px] overflow-hidden rounded-[28px] md:h-full md:min-h-[440px]" style={{ background: '#17140f' }}>
+            <div className="absolute inset-0">{midia}</div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section id="topo" className={telaCheia ? 'relative flex min-h-[100svh] flex-col justify-center overflow-hidden' : 'relative overflow-hidden'}>
       <div className="absolute inset-0" style={{ background: '#17140f' }}>
-        {site.hero?.video_url ? (
-          <video
-            src={site.hero.video_url}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          // Foto escolhida no Site Builder (de um imóvel ou enviada); sem ela,
-          // a capa do primeiro imóvel da lista, como sempre foi.
-          <img src={site.hero?.image_url || items[0]?.cover_url || CAPA_PADRAO} alt="" className="h-full w-full object-cover" />
-        )}
+        {midia}
         <div className="absolute inset-0" style={{ background: filtroDaCapa(ap.hero_overlay) }} />
       </div>
 
@@ -122,43 +189,7 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
         </h1>
         <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-white/85 sm:text-base">{subtitulo}</p>
 
-        {/* Busca (entrada → página dedicada de filtros) */}
-        <form onSubmit={runSearch} className="mt-8 rounded-[24px] bg-white/95 p-3 shadow-[0_30px_60px_-25px_rgba(0,0,0,0.5)] backdrop-blur sm:p-4">
-          {/* Uma aba só não é escolha: a fileira some. */}
-          {abas.length > 1 && (
-            <div className="mb-3 flex flex-wrap gap-1.5">
-              {abas.map(k => (
-                <button key={k} type="button" onClick={() => trocarAba(k)}
-                  className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${tab === k ? 'text-white' : 'text-neutral-600 hover:bg-black/[0.04]'}`}
-                  style={tab === k ? { background: 'var(--brand)' } : undefined}>
-                  {ROTULO_ABA[k]}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {selects.length > 0 && (
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              {selects.map(c => {
-                const o = opcoes[c as Exclude<CampoBusca, 'code'>];
-                return <Select key={c} value={valores[c] ?? ''} onChange={set(c)} label={o.label} options={o.options} />;
-              })}
-            </div>
-          )}
-
-          <div className={`flex flex-col gap-2 sm:flex-row ${selects.length > 0 ? 'mt-2' : ''}`}>
-            {temCodigo && (
-              <div className="relative flex-1">
-                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"><Ic d={I.search} s={17} /></span>
-                <input value={valores.code ?? ''} onChange={e => set('code')(e.target.value)} placeholder="Buscar por código do imóvel"
-                  className="w-full rounded-xl border border-black/[0.08] bg-white py-3 pl-10 pr-3 text-[14px] outline-none focus:border-[var(--brand)]" />
-              </div>
-            )}
-            <button type="submit" className={`inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 ${temCodigo ? '' : 'sm:ml-auto'}`} style={{ background: 'var(--brand)' }}>
-              <Ic d={I.search} s={17} /> Buscar
-            </button>
-          </div>
-        </form>
+        {busca}
       </div>
     </section>
   );

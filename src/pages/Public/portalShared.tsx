@@ -15,7 +15,7 @@ import { abasVisiveis } from '@/features/siteBuilder/public/vitrines';
 import { seloDaFase } from '@/features/properties/listingKind';
 import { ORDENS, ROTULO_ORDEM, ehOrdem, type Ordem } from '@/features/siteBuilder/public/listaConfig';
 import {
-  CORES_DO_FUNDO, TEXTO_RODAPE_FABRICA, clarearAte, fonteDoSite, logoNaSuperficie, resolverAparencia, textoSobre,
+  CORES_DO_FUNDO, TEXTO_RODAPE_FABRICA, clarearAte, fontesDoSite, logoNaSuperficie, resolverAparencia, textoSobre,
   type Aparencia, type Superficie,
 } from '@/features/siteBuilder/public/aparenciaConfig';
 
@@ -204,7 +204,9 @@ export function tokensDoSite(site: SiteInfo) {
   const aparencia = resolverAparencia(site.appearance);
   const brand = site.branding?.primary_color || '#0E7C5A';
   const accent = site.branding?.accent_color || brand;
-  const { font, fontStack, fontHref } = fonteDoSite(site.branding?.font_family);
+  // Fonte dos títulos (Aparência): sem ela, `--display` = a fonte do corpo e
+  // um `<link>` só, como sempre. Cada página põe um `<link>` por endereço.
+  const { fontStack, displayStack, hrefs: fontHrefs } = fontesDoSite(site.branding?.font_family, aparencia.heading_font);
   const cores = CORES_DO_FUNDO[aparencia.background];
   const cssVars = {
     ['--brand' as string]: brand,
@@ -216,11 +218,11 @@ export function tokensDoSite(site: SiteInfo) {
     ['--accent-ink' as string]: textoSobre(accent),
     ['--brand-ink' as string]: textoSobre(brand),
     ['--brand-text' as string]: aparencia.background === 'dark' ? clarearAte(brand, cores.card) : brand,
-    ['--display' as string]: fontStack,
+    ['--display' as string]: displayStack,
     fontFamily: fontStack,
   } as CSSProperties;
   const fundo = aparencia.background === 'dark' ? 'escuro' as const : undefined;
-  return { brand, accent, font, fontStack, fontHref, cssVars, fundo, aparencia };
+  return { brand, accent, fontStack, fontHrefs, cssVars, fundo, aparencia };
 }
 
 /** Link do botão verde do WhatsApp (o número vem gravado só com dígitos e o 55). */
@@ -266,7 +268,7 @@ export function usePortalData(tenant?: string) {
     return () => { active = false; };
   }, [tenant]);
 
-  const { brand, accent, font, fontStack, fontHref, cssVars, fundo } = useMemo(() => tokensDoSite(site), [site]);
+  const { brand, accent, fontStack, fontHrefs, cssVars, fundo, aparencia } = useMemo(() => tokensDoSite(site), [site]);
   const wa = site.contact?.whatsapp;
   const manutencao = estaEmManutencao(site);
 
@@ -279,7 +281,7 @@ export function usePortalData(tenant?: string) {
   const home = useMemo(() => resolverHome(site.home), [site]);
   const abas = useMemo(() => abasVisiveis(home, items), [home, items]);
 
-  return { state, site, items, brand, accent, font, fontStack, fontHref, wa, cities, hoods, types, home, abas, cssVars, fundo, manutencao };
+  return { state, site, items, brand, accent, fontStack, fontHrefs, wa, cities, hoods, types, home, abas, cssVars, fundo, aparencia, manutencao };
 }
 
 /* ── Blog: fetch de artigos (mesmo padrão público, header X-Tenant) ───────── */
@@ -323,7 +325,11 @@ export function usePublishedArticlesExist(tenant?: string): boolean {
 }
 
 /* ── Card de imóvel ──────────────────────────────────────────────────────── */
-interface PropsDoCartao { tenant: string; p: PortalProperty; wa?: string | null; tab?: PortalTab }
+interface PropsDoCartao {
+  tenant: string; p: PortalProperty; wa?: string | null; tab?: PortalTab;
+  /** Cartão grande (Aparência › cartões grandes, só nas vitrines): foto 3:2 maior e título de 24px. */
+  grande?: boolean;
+}
 
 /** O que o cartão e a linha mostram: os dois formatos dizem a mesma coisa. */
 function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
@@ -332,6 +338,8 @@ function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
   const dev = p.listing_kind === 'development';
   const selos = [
     dev ? { texto: seloDaFase(p.stage ?? 'ready', p.delivery_forecast), tipo: 'fase' as const } : null,
+    // Minha Casa Minha Vida: logo depois da fase, na cor principal. Só `true` conta.
+    p.mcmv === true ? { texto: 'MCMV', tipo: 'fase' as const } : null,
     p.exclusive ? { texto: 'Exclusivo', tipo: 'destaque' as const } : null,
     !dev && !p.exclusive && p.featured ? { texto: 'Destaque', tipo: 'destaque' as const } : null,
   ].filter((x): x is SeloDoCartao => !!x);
@@ -409,7 +417,7 @@ export function PropertyCard(props: PropsDoCartao) {
           da foto, FORA do link escondido, pra continuarem sendo lidos; o clique neles
           passa pro link (pointer-events-none). */}
       <div className="relative">
-        <Link to={href} tabIndex={-1} aria-hidden className="relative block aspect-[4/3] overflow-hidden bg-neutral-100">
+        <Link to={href} tabIndex={-1} aria-hidden className={`relative block ${props.grande ? 'aspect-[3/2] min-h-[300px]' : 'aspect-[4/3]'} overflow-hidden bg-neutral-100`}>
           {p.cover_url ? (
             <img src={p.cover_url} alt={p.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.06]" />
           ) : (
@@ -430,7 +438,7 @@ export function PropertyCard(props: PropsDoCartao) {
       <div className="flex flex-1 flex-col p-4">
         <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand)]">{typeLabel}</span>
         <Link to={href} className="mt-1">
-          <h3 className="font-[var(--display)] text-[17px] leading-snug text-[var(--ink)] line-clamp-2 transition-colors group-hover:text-[var(--brand)]">{p.title}</h3>
+          <h3 className={`font-[var(--display)] ${props.grande ? 'text-[24px]' : 'text-[17px]'} leading-snug text-[var(--ink)] line-clamp-2 transition-colors group-hover:text-[var(--brand)]`}>{p.title}</h3>
         </Link>
         {local && (
           <p className="mt-1 flex items-center gap-1 text-[13px] text-neutral-500">
@@ -822,13 +830,16 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
 
   // Menu aberto sobre a capa é sempre sólido — texto branco sobre foto some.
   // Só o topo transparente flutua; na cor principal e no branco ele é sólido.
-  const floating = ap.header_style === 'transparent' && onHome && !scrolled && !menuOpen;
+  // Na capa dividida o topo da home é o fundo do site, não a foto: nada de
+  // texto branco flutuando sobre ele.
+  const floating = ap.header_style === 'transparent' && ap.hero_layout !== 'split' && onHome && !scrolled && !menuOpen;
   const roupa = roupaDoTopo(ap, floating);
   const logo = logoNaSuperficie(site.branding?.logo_url, ap, roupa.superficie, tokensDoSite(site).brand);
   // Sobre a capa, sem logo clara, a normal vira branca (o de sempre).
   const filtroDaLogo = floating && !logo.clara ? 'brightness-0 invert' : '';
 
-  const desktopCls = roupa.link;
+  // Menu em maiúsculas (Aparência): caixa alta, espaçado e 13px no lugar dos 14px.
+  const desktopCls = ap.menu_style === 'caps' ? roupa.link.replace('text-[14px]', 'text-[13px] uppercase tracking-[0.14em]') : roupa.link;
   const mobileCls = 'block py-2.5 text-[15px] font-medium text-neutral-700';
 
   return (

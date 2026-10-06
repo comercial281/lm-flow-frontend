@@ -740,3 +740,15 @@ button.bg-primary:hover, [data-slot='button'].bg-primary:hover {
   :where([data-fundo='escuro']) .ring-black\/\[0\.06\],
   :where([data-fundo='escuro']) .ring-black\/\[0\.08\] { --tw-ring-color: rgb(255 255 255 / 0.1); }
 }
+
+/* ============================================================================
+   Meu site · fonte dos títulos (D2, Meu site › Aparência)
+
+   Os títulos do site público usam `font-[var(--display)]`, e `--display` é a
+   fonte dos títulos (`tokensDoSite`). No Tailwind 4 essa classe sozinha vira
+   PESO (`font-weight: var(--display)`), não família: os títulos herdavam a
+   fonte do corpo, o que não aparecia porque até aqui as duas eram a mesma.
+   Esta regra dá a família. Sem fonte dos títulos, `--display` = a do corpo e
+   nada muda. Só o site público usa `--display`.
+   ============================================================================ */
+.font-\[var\(--display\)\] { font-family: var(--display); }

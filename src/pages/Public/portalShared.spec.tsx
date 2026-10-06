@@ -1,4 +1,4 @@
-import { render, within } from '@testing-library/react';
+import { cleanup, render, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { PropertyCard, PropertyRow, type PortalProperty } from './portalShared';
@@ -117,5 +117,56 @@ describe.each([['PropertyCard', PropertyCard], ['PropertyRow', PropertyRow]] as 
 
     expect(within(article).getByText('Exclusivo').closest('[aria-hidden]')).toBeNull();
     expect(within(article).getAllByText('R$ 3.500/mês').every(e => e.closest('[aria-hidden]') === null)).toBe(true);
+  });
+});
+
+describe('selo MCMV', () => {
+  const selos = (article: HTMLElement) => [...article.querySelectorAll('div.pointer-events-none.top-3 > span')].map(s => s.textContent);
+
+  it.each([['PropertyCard', PropertyCard], ['PropertyRow', PropertyRow]] as const)('%s: imóvel MCMV ganha o selo na foto, depois do selo da fase', (_, Comp) => {
+    const { article } = desenhar(Comp, { ...IMOVEL, listing_kind: 'development', stage: 'launch', exclusive: true, mcmv: true });
+
+    expect(selos(article)).toEqual(['Na planta', 'MCMV', 'Exclusivo']);
+    expect(within(article).getByText('MCMV')).toHaveStyle({ background: 'var(--brand)' });
+    expect(within(article).getByText('MCMV').closest('[aria-hidden]')).toBeNull();
+  });
+
+  it('revenda MCMV: o selo sozinho (ou ao lado de Exclusivo)', () => {
+    const { article } = desenhar(PropertyCard, { ...IMOVEL, exclusive: false, mcmv: true });
+    expect(selos(article)).toEqual(['MCMV']);
+  });
+
+  it('sem mcmv (servidor velho), false ou null: nada de selo', () => {
+    for (const mcmv of [undefined, false, null]) {
+      const { article, unmount } = desenhar(PropertyCard, { ...IMOVEL, mcmv });
+      expect(within(article).queryByText('MCMV')).toBeNull();
+      unmount();
+    }
+  });
+});
+
+describe('cartão grande (Aparência › cartões grandes)', () => {
+  const desenharCartao = (grande?: boolean) => render(
+    <MemoryRouter><PropertyCard tenant="imob" p={IMOVEL} wa={null} tab="rent" grande={grande} /></MemoryRouter>,
+  ).container.querySelector('article')!;
+
+  it('foto 3:2 com pelo menos 300px e título na fonte dos títulos, 24px', () => {
+    const article = desenharCartao(true);
+    const fotoLink = article.querySelector('img')!.closest('a')!;
+    expect(fotoLink).toHaveClass('aspect-[3/2]', 'min-h-[300px]');
+    expect(fotoLink).not.toHaveClass('aspect-[4/3]');
+    const titulo = within(article).getByRole('heading', { level: 3 });
+    expect(titulo).toHaveClass('font-[var(--display)]', 'text-[24px]');
+    expect(titulo).not.toHaveClass('text-[17px]');
+  });
+
+  it('padrão: o cartão de sempre (4:3, título de 17px)', () => {
+    const padrao = desenharCartao(undefined);
+    expect(padrao.querySelector('img')!.closest('a')).toHaveClass('aspect-[4/3]');
+    expect(padrao.querySelector('img')!.closest('a')).not.toHaveClass('min-h-[300px]');
+    expect(within(padrao).getByRole('heading', { level: 3 })).toHaveClass('text-[17px]');
+    const html = padrao.outerHTML;
+    cleanup();
+    expect(desenharCartao(false).outerHTML).toBe(html);
   });
 });

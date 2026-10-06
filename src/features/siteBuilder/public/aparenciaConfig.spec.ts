@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   APARENCIA_FABRICA, DEGRADE_DA_CAPA_FABRICA, FONTES_DO_SITE, TINTA_ESCURA,
-  clarearAte, contrasteEntre, filtroDaCapa, fonteDoSite, logoNaSuperficie, resolverAparencia, textoSobre,
+  clarearAte, contrasteEntre, filtroDaCapa, fonteDoSite, fontesDoSite, logoNaSuperficie, resolverAparencia, textoSobre,
 } from './aparenciaConfig';
 
 describe('resolverAparencia', () => {
@@ -12,22 +12,28 @@ describe('resolverAparencia', () => {
     expect(APARENCIA_FABRICA).toEqual({
       background: 'light', header_style: 'transparent', logo_light_url: null, top_bar: 'two_phones',
       hero_height: 'half', hero_overlay: 45, footer_layout: 'columns', footer_text: null,
+      heading_font: null, menu_style: 'normal', hero_layout: 'photo', card_style: 'standard',
     });
   });
 
   it('valor fora da lista cai no de fábrica, campo a campo', () => {
     expect(resolverAparencia({ background: 'roxo', header_style: 'dark', top_bar: 'three', hero_height: 'tall', footer_layout: 'grid', header_extra: 1 }))
       .toEqual(APARENCIA_FABRICA);
+    expect(resolverAparencia({ heading_font: 'Comic Sans', menu_style: 'small', hero_layout: 'video', card_style: 'huge' }))
+      .toEqual(APARENCIA_FABRICA);
+    expect(resolverAparencia({ heading_font: 42 }).heading_font).toBeNull();
   });
 
   it('aceita cada opção válida', () => {
     const ap = resolverAparencia({
       background: 'dark', header_style: 'brand', logo_light_url: ' https://cdn.x/clara.png ', top_bar: 'icons',
       hero_height: 'full', hero_overlay: 60, footer_layout: 'compact', footer_text: '  Imóveis em Campinas desde 1990.  ',
+      heading_font: 'Playfair Display', menu_style: 'caps', hero_layout: 'split', card_style: 'large',
     });
     expect(ap).toEqual({
       background: 'dark', header_style: 'brand', logo_light_url: 'https://cdn.x/clara.png', top_bar: 'icons',
       hero_height: 'full', hero_overlay: 60, footer_layout: 'compact', footer_text: 'Imóveis em Campinas desde 1990.',
+      heading_font: 'Playfair Display', menu_style: 'caps', hero_layout: 'split', card_style: 'large',
     });
   });
 
@@ -104,6 +110,32 @@ describe('fonteDoSite', () => {
     });
     expect(fonteDoSite('Playfair Display').fontStack).toBe('Playfair Display, Georgia, serif');
     expect(fonteDoSite('Raleway').fontStack).toBe('Raleway, system-ui, sans-serif');
+  });
+});
+
+describe('fontesDoSite (fonte dos títulos)', () => {
+  const href = (f: string) => fonteDoSite(f).fontHref;
+
+  it('sem fonte dos títulos: o mesmo que fonteDoSite, um endereço e os títulos na fonte do corpo', () => {
+    for (const titulos of [null, undefined, '']) {
+      expect(fontesDoSite('Montserrat', titulos)).toEqual({
+        fontStack: 'Montserrat, system-ui, sans-serif', displayStack: 'Montserrat, system-ui, sans-serif', hrefs: [href('Montserrat')],
+      });
+    }
+    expect(fontesDoSite(null, null)).toEqual({ fontStack: fonteDoSite(null).fontStack, displayStack: fonteDoSite(null).fontStack, hrefs: [href('Inter')] });
+  });
+
+  it('fonte dos títulos diferente: dois endereços (corpo primeiro) e os títulos com a reserva certa', () => {
+    expect(fontesDoSite('DM Sans', 'Playfair Display')).toEqual({
+      fontStack: 'DM Sans, system-ui, sans-serif', displayStack: 'Playfair Display, Georgia, serif',
+      hrefs: [href('DM Sans'), href('Playfair Display')],
+    });
+  });
+
+  it('a mesma fonte nos dois: um endereço só', () => {
+    expect(fontesDoSite('Raleway', 'Raleway').hrefs).toEqual([href('Raleway')]);
+    // Sem fonte do corpo, o corpo é Inter: título Inter também é um endereço só.
+    expect(fontesDoSite(null, 'Inter').hrefs).toEqual([href('Inter')]);
   });
 });
 

@@ -24,6 +24,7 @@ function casaRegra(p: PortalProperty, r: RegrasVitrine): boolean {
   if (bairros.length && !bairros.includes(normalizarTexto(p.address?.neighborhood))) return false;
   if (r.stages.length && !(p.listing_kind === 'development' && r.stages.includes(p.stage ?? ''))) return false;
   if (r.featured_only && !(p.featured || p.exclusive)) return false;
+  if (r.mcmv && p.mcmv !== true) return false;
   if (r.price_min != null || r.price_max != null) {
     const price = r.transaction === 'rent' ? p.rent_price_from : p.sale_price_from;
     if (price == null) return false;
@@ -61,12 +62,13 @@ function abaDaRegra(r: RegrasVitrine): AbaId | null {
 /**
  * Query string do "Ver todos" de uma vitrine livre, ou null quando a regra não
  * cabe inteira na URL da busca (mais de um tipo/cidade/bairro/fase, só
- * destaques, finalidade "Qualquer", revenda de compra). Na dúvida, sem o link:
+ * destaques, só MCMV, finalidade "Qualquer", revenda de compra). Na dúvida, sem o link:
  * um "Ver todos" que mostra outra coisa engana o visitante.
  */
 export function buscaDaRegra(r: RegrasVitrine): string | null {
   const umSo = (l: string[], chave: (x: string) => string) => new Set(l.map(chave)).size <= 1;
-  if (r.featured_only || r.stages.length > 1) return null;
+  // A busca não tem filtro de MCMV: o "Ver todos" mostraria imóvel de fora.
+  if (r.featured_only || r.mcmv || r.stages.length > 1) return null;
   if (!umSo(r.property_types, rotuloTipo) || !umSo(r.cities, normalizarTexto) || !umSo(r.neighborhoods, normalizarTexto)) return null;
   const tab = abaDaRegra(r);
   if (!tab || (tab === 'rent' && r.stages.length)) return null;

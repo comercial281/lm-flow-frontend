@@ -534,6 +534,7 @@ describe('SiteBuilder (casca do Meu site)', () => {
       expect(enviado.appearance).toEqual({
         background: 'dark', header_style: 'transparent', logo_light_url: null, top_bar: 'two_phones',
         hero_height: 'half', hero_overlay: 45, footer_layout: 'columns', footer_text: null,
+        heading_font: null, menu_style: 'normal', hero_layout: 'photo', card_style: 'standard',
       });
       expect(enviado).not.toHaveProperty('menu');
       await waitFor(() => expect(barra()).toBeNull());

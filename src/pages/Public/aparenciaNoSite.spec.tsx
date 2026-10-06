@@ -3,13 +3,13 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PortalFooter, PortalHeader, tokensDoSite, type SiteInfo } from './portalShared';
+import { PortalFooter, PortalHeader, tokensDoSite, type PortalProperty, type SiteInfo } from './portalShared';
 import PortalHomePage from './PortalHomePage';
 import PortalCustomPage from './PortalCustomPage';
 import HomeCapa from './home/HomeCapa';
 import SelosDoImovel from './ficha/SelosDoImovel';
 import { resolverHome } from '@/features/siteBuilder/public/homeConfig';
-import { APARENCIA_FABRICA, DEGRADE_DA_CAPA_FABRICA, contrasteEntre, type Aparencia } from '@/features/siteBuilder/public/aparenciaConfig';
+import { APARENCIA_FABRICA, DEGRADE_DA_CAPA_FABRICA, contrasteEntre, fonteDoSite, type Aparencia } from '@/features/siteBuilder/public/aparenciaConfig';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Meu site › Aparência no site público (C3): fundo, topo, faixa de cima, capa,
@@ -400,5 +400,148 @@ describe('cor de destaque', () => {
     render(<SelosDoImovel selos={[{ texto: 'Muito procurado', destaque: true }, { texto: 'Aceita FGTS', destaque: false }]} />);
     expect(screen.getByText('Muito procurado')).toHaveStyle({ background: 'var(--accent)', color: 'var(--accent-ink)' });
     expect(screen.getByText('Aceita FGTS').getAttribute('style')).toBeNull();
+  });
+});
+
+/* ── Modelo do site (D2): fonte dos títulos, menu, capa dividida, cartões ── */
+
+const resp = (body: unknown) => ({ ok: true, json: async () => body });
+async function abrirHome(site: SiteInfo, items: PortalProperty[] = []) {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url.includes('/site/properties')) return resp({ data: items, meta: { total: items.length } });
+    if (url.includes('/site/articles')) return resp({ data: [], meta: { total: 0 } });
+    return resp({ data: site });
+  }));
+  const out = render(
+    <MemoryRouter initialEntries={['/portal/imob']}>
+      <Routes><Route path="/portal/:tenant" element={<PortalHomePage />} /></Routes>
+    </MemoryRouter>,
+  );
+  const h1 = await screen.findByRole('heading', { level: 1 });
+  return { container: out.container, raiz: h1.closest('[data-fundo], [style]') as HTMLElement };
+}
+const linksDeFonte = (c: HTMLElement) => [...c.querySelectorAll('link[rel="stylesheet"]')].map(l => l.getAttribute('href'));
+const href = (f: string) => fonteDoSite(f).fontHref;
+
+describe('fonte dos títulos', () => {
+  it('Playfair nos títulos com DM Sans no corpo: dois <link> de fonte, --display na Playfair e o corpo em DM Sans', async () => {
+    const { container, raiz } = await abrirHome(comAp({ heading_font: 'Playfair Display' }, { branding: { ...base.branding, font_family: 'DM Sans' } }));
+    expect(linksDeFonte(container)).toEqual([href('DM Sans'), href('Playfair Display')]);
+    expect(raiz.style.getPropertyValue('--display')).toBe('Playfair Display, Georgia, serif');
+    expect(raiz.style.fontFamily).toMatch(/^"?DM Sans"?, system-ui, sans-serif$/);
+  });
+
+  it('sem fonte dos títulos (servidor velho ou nulo): um <link> só e --display igual ao corpo, como hoje', async () => {
+    for (const site of [{ ...base, branding: { ...base.branding, font_family: 'Montserrat' } }, comAp({ heading_font: null }, { branding: { ...base.branding, font_family: 'Montserrat' } })]) {
+      const { container, raiz } = await abrirHome(site);
+      expect(linksDeFonte(container)).toEqual([href('Montserrat')]);
+      expect(raiz.style.getPropertyValue('--display')).toBe('Montserrat, system-ui, sans-serif');
+      cleanup();
+    }
+  });
+
+  it('tokensDoSite entrega os endereços e o --display; nenhuma página monta mais o <link> com um endereço só', () => {
+    const t = tokensDoSite(comAp({ heading_font: 'Playfair Display' }, { branding: { font_family: 'DM Sans' } }));
+    expect(t.fontHrefs).toEqual([href('DM Sans'), href('Playfair Display')]);
+    expect(t.cssVars).toMatchObject({ '--display': 'Playfair Display, Georgia, serif', fontFamily: 'DM Sans, system-ui, sans-serif' });
+    const paginas = readdirSync(__dirname).filter(n => /\.tsx$/.test(n) && !/\.spec\./.test(n) && !/^Landing/.test(n));
+    const comFonte = paginas.filter(n => readFileSync(join(__dirname, n), 'utf8').includes('fontHrefs'));
+    expect(comFonte.sort()).toEqual(['ImovelPublicPage.tsx', 'PaginaManutencao.tsx', 'PortalAnunciePage.tsx', 'PortalArticlePage.tsx',
+      'PortalBlogPage.tsx', 'PortalCustomPage.tsx', 'PortalFinanciamentoPage.tsx', 'PortalHomePage.tsx', 'PortalSearchPage.tsx', 'portalShared.tsx']);
+    for (const n of paginas) expect(readFileSync(join(__dirname, n), 'utf8'), n).not.toMatch(/href=\{fontHref\}/);
+  });
+
+  it('a classe font-[var(--display)] troca a FAMÍLIA (no Tailwind 4 ela sozinha vira peso): regra no globals.css', () => {
+    expect(CSS).toMatch(/\.font-\\\[var\\\(--display\\\)\\\]\s*\{\s*font-family:\s*var\(--display\);?\s*\}/);
+  });
+});
+
+describe('menu do topo', () => {
+  const linksDoMenu = (c: HTMLElement) => within(c.querySelector('header nav') as HTMLElement).getAllByRole('link');
+
+  it('maiúsculas: os links do topo em caixa alta, espaçados e com 13px', async () => {
+    const c = await topo(comAp({ menu_style: 'caps' }));
+    const links = linksDoMenu(c);
+    expect(links.length).toBeGreaterThan(0);
+    for (const l of links) {
+      expect(l).toHaveClass('uppercase', 'tracking-[0.14em]', 'text-[13px]');
+      expect(l).not.toHaveClass('text-[14px]');
+    }
+  });
+
+  it.each(['transparent', 'brand', 'white'] as const)('normal: os links de sempre (%s)', async header_style => {
+    const normal = await html(topo(comAp({ header_style, menu_style: 'normal' }), true));
+    expect(normal).toBe(await html(topo(comAp({ header_style }), true)));
+    const c = await topo(comAp({ header_style }), true);
+    for (const l of linksDoMenu(c)) {
+      expect(l).toHaveClass('text-[14px]');
+      expect(l).not.toHaveClass('uppercase');
+    }
+  });
+});
+
+describe('capa dividida', () => {
+  it('duas colunas a partir do md: texto e busca de um lado, a foto num quadro arredondado do outro', async () => {
+    const s = (await capa(comAp({ hero_layout: 'split' }, { hero: { image_url: 'https://cdn.x/capa.jpg' } }))).querySelector('section')!;
+    const grade = s.querySelector('.md\\:grid-cols-2') as HTMLElement;
+    expect(grade).not.toBeNull();
+    const [texto, quadro] = [...grade.children] as HTMLElement[];
+    // Celular: texto e busca primeiro, a foto depois, com 240px.
+    expect(within(texto).getByRole('heading', { level: 1 })).toHaveTextContent('O imóvel certo pra sua próxima fase.');
+    expect(texto.querySelector('form')).not.toBeNull();
+    expect(within(texto).getByRole('button', { name: /Buscar/ })).toBeInTheDocument();
+    expect(quadro.querySelector('img')!.getAttribute('src')).toBe('https://cdn.x/capa.jpg');
+    expect(quadro).toHaveClass('h-[240px]', 'overflow-hidden');
+    expect(quadro.className).toMatch(/\brounded-\[/);
+    expect(quadro.querySelector('form')).toBeNull();
+    // Sem o filtro escuro: o texto não fica sobre a foto.
+    expect([...s.querySelectorAll<HTMLElement>('div')].some(d => d.style.background.includes('gradient'))).toBe(false);
+    // Texto na tinta do site, não branco.
+    expect(within(texto).getByRole('heading', { level: 1 }).className).not.toMatch(/text-white/);
+  });
+
+  it('vídeo do banner vai no quadro', async () => {
+    const s = (await capa(comAp({ hero_layout: 'split' }, { hero: { video_url: 'https://cdn.x/capa.mp4' } }))).querySelector('section')!;
+    const quadro = s.querySelector('.md\\:grid-cols-2')!.children[1] as HTMLElement;
+    expect(quadro.querySelector('video')!.getAttribute('src')).toBe('https://cdn.x/capa.mp4');
+  });
+
+  it('a busca é a mesma da capa de foto (mesmo formulário, mesmas classes)', async () => {
+    const dividida = (await capa(comAp({ hero_layout: 'split' }))).querySelector('form')!.outerHTML;
+    cleanup();
+    expect((await capa(comAp({ hero_layout: 'photo' }))).querySelector('form')!.outerHTML).toBe(dividida);
+  });
+
+  it('foto (padrão): a capa de sempre', async () => {
+    expect(await html(capa(comAp({ hero_layout: 'photo' })))).toBe(await html(capa(base)));
+  });
+
+  it('o topo transparente não flutua em branco sobre a capa dividida (o fundo ali é o do site)', async () => {
+    const c = await topo(comAp({ hero_layout: 'split' }), true);
+    expect(c.querySelector('header')!.className).toBe('border-b transition-colors duration-300 border-black/[0.06] bg-[var(--paper)]/90 backdrop-blur-md');
+    expect(c.querySelector('header img')!.className).not.toContain('invert');
+  });
+});
+
+describe('cartões grandes nas vitrines', () => {
+  const imovel = (code: string, o: Partial<PortalProperty> = {}): PortalProperty => ({
+    id: code, code, title: `Imóvel ${code}`, transaction_type: 'sale', property_type: 'apartment', listing_kind: 'resale',
+    featured: true, cover_url: `https://cdn.x/${code}.jpg`, address: { city: 'Campinas' }, ...o,
+  });
+  const grade = (c: HTMLElement) => c.querySelector('#resultados .grid') as HTMLElement;
+
+  it('grandes: duas colunas a partir do md, foto 3:2 e título de 24px na fonte dos títulos', async () => {
+    const { container } = await abrirHome(comAp({ card_style: 'large' }), [imovel('A'), imovel('B')]);
+    const g = grade(container);
+    expect(g.className).toBe('grid grid-cols-1 gap-5 md:grid-cols-2');
+    const art = g.querySelector('article')!;
+    expect(art.querySelector('img')!.closest('a')).toHaveClass('aspect-[3/2]', 'min-h-[300px]');
+    expect(within(art).getByRole('heading', { level: 3 })).toHaveClass('font-[var(--display)]', 'text-[24px]');
+  });
+
+  it('padrão: a grade e o cartão de sempre', async () => {
+    const { container } = await abrirHome(comAp({ card_style: 'standard' }), [imovel('A')]);
+    expect(grade(container).className).toBe('grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3');
+    expect(grade(container).querySelector('img')!.closest('a')).toHaveClass('aspect-[4/3]');
   });
 });

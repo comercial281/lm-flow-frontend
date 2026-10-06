@@ -61,20 +61,20 @@ describe('vitrines', () => {
   it('regra do cliente e limite', () => {
     const v = { id: 'x', kind: 'custom' as const, enabled: true, title: 'Cambuí',
       rules: { transaction: 'sale' as const, listing_kind: null, property_types: ['apartment'], cities: [], neighborhoods: ['Cambuí'],
-               price_min: null, price_max: 500000, stages: [], featured_only: false } };
+               price_min: null, price_max: 500000, stages: [], featured_only: false, mcmv: false } };
     expect(itensDaVitrine(items, v).map(x => x.code)).toEqual(['D']);
     expect(itensDaVitrine(Array.from({ length: 9 }, (_, i) => p(`Z${i}`, { featured: true })), resolverHome(null).showcases[1]).length).toBe(6);
   });
   it('regra de tipo casa pelo nome: cobertura = penthouse', () => {
     const v = { id: 'c', kind: 'custom' as const, enabled: true, title: 'Coberturas',
       rules: { transaction: null, listing_kind: null, property_types: ['cobertura'], cities: [], neighborhoods: [],
-               price_min: null, price_max: null, stages: [], featured_only: false } };
+               price_min: null, price_max: null, stages: [], featured_only: false, mcmv: false } };
     const lista = [p('C1', { property_type: 'cobertura' }), p('C2', { property_type: 'penthouse' }), p('A1')];
     expect(itensDaVitrine(lista, v).map(x => x.code)).toEqual(['C1', 'C2']);
   });
   it('vitrine com preço mínimo e o "Ver todos" concordam num imóvel exatamente no mínimo', () => {
     const rules = { transaction: 'sale' as const, listing_kind: null, property_types: [], cities: [], neighborhoods: [],
-      price_min: 500000, price_max: null, stages: [], featured_only: false };
+      price_min: 500000, price_max: null, stages: [], featured_only: false, mcmv: false };
     const v = { id: 'm', kind: 'custom' as const, enabled: true, title: 'A partir de 500 mil', rules };
     const lista = [p('NA_DIVISA', { sale_price_from: 500000 }), p('ABAIXO', { sale_price_from: 499999 })];
     const q = new URLSearchParams(buscaDaRegra(rules) ?? '');
@@ -89,15 +89,15 @@ describe('vitrines', () => {
   });
   it('"Ver todos" vira busca', () => {
     expect(buscaDaRegra({ transaction: 'rent', listing_kind: null, property_types: ['house'], cities: ['Campinas'], neighborhoods: [],
-      price_min: null, price_max: 4000, stages: [], featured_only: false })).toBe('tab=rent&type=house&city=Campinas&price_max=4000');
+      price_min: null, price_max: 4000, stages: [], featured_only: false, mcmv: false })).toBe('tab=rent&type=house&city=Campinas&price_max=4000');
     expect(buscaDaRegra({ transaction: null, listing_kind: 'development', property_types: [], cities: [], neighborhoods: [],
-      price_min: null, price_max: null, stages: ['ready'], featured_only: false })).toBe('tab=launch&stage=ready');
+      price_min: null, price_max: null, stages: ['ready'], featured_only: false, mcmv: false })).toBe('tab=launch&stage=ready');
   });
 });
 
 describe('cidade e bairro sem diferença de maiúscula, acento e espaço (D5)', () => {
   const regra = (o: Partial<RegrasVitrine>): RegrasVitrine => ({ transaction: 'sale', listing_kind: null, property_types: [], cities: [],
-    neighborhoods: [], price_min: null, price_max: null, stages: [], featured_only: false, ...o });
+    neighborhoods: [], price_min: null, price_max: null, stages: [], featured_only: false, mcmv: false, ...o });
   const lista = [p('A', { address: { city: 'Campinas', neighborhood: 'Cambuí' } }), p('B', { address: { city: 'Santos', neighborhood: 'Gonzaga' } })];
   it('normalizarTexto', () => {
     expect(['campinas', 'Campinas', 'CAMPÍNAS ', '  campinas'].map(normalizarTexto)).toEqual(Array(4).fill('campinas'));
@@ -121,13 +121,14 @@ describe('cidade e bairro sem diferença de maiúscula, acento e espaço (D5)', 
 
 describe('"Ver todos" da vitrine livre só quando a regra cabe na busca (D2)', () => {
   const regra = (o: Partial<RegrasVitrine>): RegrasVitrine => ({ transaction: 'sale', listing_kind: null, property_types: [], cities: [],
-    neighborhoods: [], price_min: null, price_max: null, stages: [], featured_only: false, ...o });
+    neighborhoods: [], price_min: null, price_max: null, stages: [], featured_only: false, mcmv: false, ...o });
   it.each([
     ['dois tipos de nome diferente', { property_types: ['house', 'apartment'] }],
     ['duas cidades', { cities: ['Campinas', 'Santos'] }],
     ['dois bairros', { neighborhoods: ['Cambuí', 'Centro'] }],
     ['duas fases', { listing_kind: 'development' as const, stages: ['ready', 'launch'] }],
     ['só destaques e exclusivos', { featured_only: true }],
+    ['só Minha Casa Minha Vida (a busca não tem esse filtro)', { mcmv: true }],
     ['finalidade Qualquer', { transaction: null }],
     ['revenda de compra (Comprar inclui empreendimento)', { listing_kind: 'resale' as const }],
     ['empreendimento de aluguel', { listing_kind: 'development' as const, transaction: 'rent' as const }],
@@ -142,6 +143,28 @@ describe('"Ver todos" da vitrine livre só quando a regra cabe na busca (D2)', (
   it('mostra: revenda de aluguel vai pra Alugar; empreendimento vai pra Lançamentos', () => {
     expect(buscaDaRegra(regra({ listing_kind: 'resale', transaction: 'rent' }))).toBe('tab=rent');
     expect(buscaDaRegra(regra({ listing_kind: 'development', transaction: 'sale', stages: ['ready'] }))).toBe('tab=launch&stage=ready');
+  });
+});
+
+describe('vitrine só de Minha Casa Minha Vida (regra mcmv)', () => {
+  const regra = (o: Partial<RegrasVitrine>): RegrasVitrine => ({ transaction: null, listing_kind: null, property_types: [], cities: [],
+    neighborhoods: [], price_min: null, price_max: null, stages: [], featured_only: false, mcmv: false, ...o });
+  const lista = [p('M1', { mcmv: true }), p('N1', { mcmv: false }), p('S1'), p('X1', { mcmv: null })];
+  it('mcmv: true traz só os imóveis marcados como MCMV', () => {
+    const v = { id: 'm', kind: 'custom' as const, enabled: true, title: 'MCMV', rules: regra({ mcmv: true }) };
+    expect(itensDaVitrine(lista, v).map(x => x.code)).toEqual(['M1']);
+  });
+  it('sem a regra (ou mcmv: false) a vitrine não filtra por MCMV', () => {
+    const v = { id: 't', kind: 'custom' as const, enabled: true, title: 'Todos', rules: regra({}) };
+    expect(itensDaVitrine(lista, v).map(x => x.code)).toEqual(['M1', 'N1', 'S1', 'X1']);
+  });
+  it('servidor velho (regra sem mcmv) ou lixo: mcmv vira false', () => {
+    const h = resolverHome({ showcases: [
+      { id: 'a', kind: 'custom', title: 'A', rules: {} },
+      { id: 'b', kind: 'custom', title: 'B', rules: { mcmv: 'sim' } },
+      { id: 'c', kind: 'custom', title: 'C', rules: { mcmv: true } },
+    ] });
+    expect(h.showcases.map(v => v.rules?.mcmv)).toEqual([false, false, true]);
   });
 });
 

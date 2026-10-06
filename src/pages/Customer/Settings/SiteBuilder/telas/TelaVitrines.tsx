@@ -15,7 +15,7 @@ const MAX_VITRINES = 6;
 const OPCOES_TIPO = opcoesDeTipo(Object.keys(ROTULO_TIPO));
 const REGRA_VAZIA: RegrasVitrine = {
   transaction: null, listing_kind: null, property_types: [], cities: [], neighborhoods: [],
-  price_min: null, price_max: null, stages: [], featured_only: false,
+  price_min: null, price_max: null, stages: [], featured_only: false, mcmv: false,
 };
 const TITULO_FABRICA: Record<string, string> = Object.fromEntries(HOME_FABRICA.showcases.map(v => [v.id, v.title]));
 const DICA_FABRICA: Record<Vitrine['kind'], string> = {
