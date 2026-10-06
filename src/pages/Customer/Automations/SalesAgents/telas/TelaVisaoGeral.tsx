@@ -12,6 +12,7 @@ import {
 } from '@/services/salesAgents/salesAgentsService';
 import { plural } from '@/lib/formato';
 import type { TelaId } from '@/features/salesAgents/iaMenu';
+import type { PaginaId } from '../configurar/paginas';
 import { motivoSemAtendimento, pendenciasDaIa, type Situacao } from '@/features/salesAgents/situacao';
 import { SuggestionCard } from './TelaSugestoes';
 
@@ -180,7 +181,8 @@ export interface TelaVisaoGeralProps {
   falhou?: boolean;
   /** Mesma chave das telas Sugestões e Relatório semanal (`ia_insights`). */
   mostrarSugestoes: boolean;
-  aoIr: (tela: TelaId, passo?: number) => void;
+  /** `pagina`: a página do Configurar que corrige a pendência (onda 3). */
+  aoIr: (tela: TelaId, pagina?: PaginaId) => void;
 }
 
 export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferindo, falhou = false, mostrarSugestoes, aoIr }: TelaVisaoGeralProps) {
@@ -214,7 +216,7 @@ export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferind
                 </div>
                 {p.corrigir && (
                   <Button size="sm" variant="outline"
-                    onClick={() => (p.corrigir!.passo !== undefined ? aoIr(p.corrigir!.tela, p.corrigir!.passo) : aoIr(p.corrigir!.tela))}>
+                    onClick={() => (p.corrigir!.pagina ? aoIr(p.corrigir!.tela, p.corrigir!.pagina) : aoIr(p.corrigir!.tela))}>
                     Corrigir
                   </Button>
                 )}

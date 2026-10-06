@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 const performance = vi.hoisted(() => vi.fn());
@@ -43,6 +43,16 @@ describe('Painel → Visão geral', () => {
     expect(screen.getByText('Nenhum documento pronto.')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Corrigir' }));
     expect(props.aoIr).toHaveBeenCalledWith('ensinar');
+  });
+
+  it('o "Corrigir" de uma página do Configurar leva à página (onda 3)', async () => {
+    const props = abrir({
+      agent: { ...agente, inbox_id: null, lead_facing_name: 'Ana' } as unknown as SalesAgent,
+      situacao: { tipo: 'parada', frase: 'Parada: falta o número' }, diagnostico: null,
+    });
+    const item = screen.getByText(/Nenhum número escolhido/).closest('li')!;
+    await userEvent.click(within(item).getByRole('button', { name: 'Corrigir' }));
+    expect(props.aoIr).toHaveBeenCalledWith('configurar', 'canal');
   });
 
   it('sem pendência: "Nada pendente"; enquanto confere, não promete nada', () => {

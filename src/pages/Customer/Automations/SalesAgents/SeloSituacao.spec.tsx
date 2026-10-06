@@ -24,4 +24,11 @@ describe('SeloSituacao', () => {
     rerender(<SeloSituacao situacao={{ tipo: 'atendendo', frase: 'Atendendo' }} />);
     expect(screen.getByRole('status').className).toContain('text-emerald-700');
   });
+
+  it('soPonto: só a bolinha, frase no title e escondida pro olho', () => {
+    render(<SeloSituacao soPonto situacao={{ tipo: 'restricao', frase: 'Atendendo com restrição: só lead de anúncio' }} />);
+    const selo = screen.getByRole('status');
+    expect(selo).toHaveAttribute('title', 'Atendendo com restrição: só lead de anúncio');
+    expect(screen.getByText('Atendendo com restrição: só lead de anúncio')).toHaveClass('sr-only');
+  });
 });

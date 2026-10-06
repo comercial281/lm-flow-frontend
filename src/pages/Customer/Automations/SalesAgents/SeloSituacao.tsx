@@ -1,5 +1,6 @@
 // Selo do veredito da IA (cor + frase). Na barra vai a frase inteira ("Parada:
 // falta o número"); no seletor de IAs, só a palavra, com a frase no title.
+// Onda 3: na barra, só a bolinha (soPonto); no seletor de IAs, a palavra (compacto).
 import type { Situacao, TipoSituacao } from '@/features/salesAgents/situacao';
 
 const COR: Record<TipoSituacao, { ponto: string; texto: string; fundo: string }> = {
@@ -18,8 +19,18 @@ const CURTA: Record<TipoSituacao, string> = {
   rascunho: 'Rascunho',
 };
 
-export default function SeloSituacao({ situacao, compacto = false }: { situacao: Situacao; compacto?: boolean }) {
+export default function SeloSituacao({ situacao, compacto = false, soPonto = false }: { situacao: Situacao; compacto?: boolean; soPonto?: boolean }) {
   const cor = COR[situacao.tipo];
+  // Barra de cima (onda 3, decisão 4): só a bolinha. A frase vai no `title` (passar
+  // o mouse) e no texto escondido (leitor de tela) — some o texto do alerta da barra.
+  if (soPonto) {
+    return (
+      <span role="status" title={situacao.frase} data-tipo={situacao.tipo} className="inline-flex items-center p-1">
+        <span className={`h-2.5 w-2.5 rounded-full ring-[3px] ring-black/5 ${cor.ponto}`} aria-hidden />
+        <span className="sr-only">{situacao.frase}</span>
+      </span>
+    );
+  }
   return (
     <span
       role="status"
