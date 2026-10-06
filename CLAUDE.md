@@ -781,6 +781,9 @@ Decisões (não reabrir sem o dono pedir):
 
 - **Estreia em "A IA escreve"**, que é como sempre funcionou. Qualquer outro padrão
   mudaria o comportamento de quem já tem follow-up ligado por efeito de deploy.
+  ⚠️ **Revista pelo dono do produto em 06/10/2026:** "A IA escreve a mensagem"
+  saiu da tela e a IA nova nasce em *Entregar pro follow-up → Follow-up padrão*.
+  Ver a seção *Follow-up padrão de 30 dias (06/10/2026)*.
 - **As colunas saem do funil já escolhido em *Mover o card no funil***, logo acima
   no mesmo painel. Um segundo seletor de funil aqui criaria duas verdades sobre
   onde a IA age no quadro, e trocar um sem o outro deixaria o card num funil e a
@@ -6545,7 +6548,7 @@ O que ainda usa o serviço antigo no frontend:
 2. Com várias IAs, abre a última usada neste navegador (`localStorage` `lmflow:ia-vendedora:ultima`, com `try/catch`); senão, a primeira.
 3. Veredito único (`src/features/salesAgents/situacao.ts`): *Atendendo* · *Parada: <motivo>* · *Atendendo com restrição: só …* · *Desligada* · *Rascunho* (na entrega 1, desligada e sem número). Calculado da IA + `GET /sales_agents/:id/diagnostics`, espelhando o `SalesAgents::TriggerGate` (quem ela atende) e o `SalesAgents::HealthCheck`. Só os itens `inbox`, `mode`, `credentials` e `api_key` do Diagnóstico param a IA; os outros erros viram pendência.
 4. Gatilho que restringe aparece no selo (laranja) e como pendência, mesmo com a linha *Gatilhos* do Diagnóstico verde (o servidor não mudou).
-5. Follow-up ligado com máximo 0 vira a pendência laranja *Follow-up sem limite de tentativas*. As IAs que já estão assim continuam iguais.
+5. Follow-up ligado com máximo 0 vira a pendência laranja *Follow-up sem limite de tentativas*. As IAs que já estão assim continuam iguais. ⚠️ Revista em 06/10/2026: o *Máximo de tentativas* saiu da tela e a pendência virou *O que ela faz quando o lead some* (IA ainda em "A IA escreve"). Ver *Follow-up padrão de 30 dias (06/10/2026)*.
 6. Sugestões e Relatório semanal seguem a chave `ia_insights` (a Leal Mídia sempre vê): sem ela somem do Painel, o endereço cai na Visão geral e a Visão geral nem lê as sugestões.
 
 **Armadilhas:**
@@ -6905,3 +6908,114 @@ Armadilhas:
 6. **O `BusinessHoursForm` continua no código** (só saiu da tela) até a limpeza pós-migração dos clientes.
 7. **IA Vendedora com a chave:** a pré-escolha de *Uma roleta* deixa o passo 2 com alteração ao abrir, e *Descartar* pré-preenche de novo. É de propósito (o servidor recusa `inbox_roleta`): o aviso de sair sem salvar aparece até alguém confirmar e salvar.
 8. **Perfil → Notificações (silenciar pra mim) ainda lista os avisos da roleta.** Com a chave, o silêncio pessoal deles depende de o servidor (`Roleta::Notices`) respeitar o mute: conferir antes de esconder também lá.
+
+## Follow-up padrão de 30 dias (06/10/2026)
+
+Decisão do dono do produto em 06/10, depois de ler o que o follow-up fez em
+produção (13 clientes, últimos 120 dias). Spec:
+`LM FLOW/specs/2026-10-06-follow-up-padrao-design.md`. Plano:
+`LM FLOW/plans/2026-10-06-follow-up-padrao.md`. A metade do servidor vem PRIMEIRO
+(`lm-flow`, branch `claude/followup-padrao`, base `saas-multitenant`).
+
+**Por que "A IA escreve a mensagem" saiu.** Não foi custo: cada mensagem escrita
+pela IA custava menos de um centavo de dólar. Foi qualidade. Em 151 envios houve
+22% de resposta, mas metade era só "Bom dia"/"Oi", e as conversas que andaram
+vieram quase todas de 2 leads que já estavam engajadas. No meio disso saíram pro
+lead texto de bastidor ("Não consigo identificar um histórico…"), fato inventado
+("passei por ali ontem", "movimentação no preço"), promessa que ninguém cumpriu
+("vou te mandar as opções", e o lead cobrou 4 vezes), cutucada em conversa com
+parceiro, e até 12 follow-ups pra mesma lead em 4 semanas (a cada 1 a 3 dias, sem
+fim). O texto pronto respondeu menos (10% em 58 envios), mas sem nenhum desses
+estragos, e mostrou o que funciona: pergunta de escolha fácil, pedir licença
+("posso te enviar?") e condição concreta ("entrada baixa?"). "Tudo bem?" sozinho,
+"tá aí??" e "topa visita?" repetido não tiveram resposta.
+
+O que aparece na tela:
+
+- **IA Vendedora → Configurar → passo 7 (Voltar a chamar) → *Quando o lead
+  sumir*** tem só duas opções: **Mover o card para uma coluna** e **Entregar pro
+  follow-up**. A explicação embaixo do título diz *"Mover o card ou entregar pro
+  follow-up. Quem manda as mensagens é o follow-up, com texto pronto."*
+- **IA que ainda estava em "A IA escreve"** abre sem nenhuma opção marcada e com o
+  aviso *"Escolha como o follow-up continua: a IA não escreve mais o follow-up."*
+  O Painel e o trilho dos passos mostram a pendência laranja *O que ela faz quando
+  o lead some*, que leva ao passo 7. Não trava o Ligar.
+- **Os dias viraram um campo só**: *Entregar o lead depois de (dias sem
+  resposta)*, com a ajuda *"Quanto tempo de silêncio até entregar o lead."* Saíram
+  *A cada (mínimo de dias)*, *Até (máximo de dias)*, *Máximo de tentativas* e o
+  aviso *"Sem limite de tentativas"* (e a pendência *Follow-up sem limite de
+  tentativas*, que não teria mais campo pra corrigir).
+- **A linha do tempo ao lado** diz o que acontece: *"Entrega o lead ao follow-up
+  depois de 2 dias sem resposta"* ou *"Move o card para a coluna escolhida depois
+  de 2 dias sem resposta"*. Sem escolha: *"Depois de 2 dias sem resposta: falta
+  escolher o que ela faz"*. O resumo do passo 8 usa a mesma frase.
+- **Quando o follow-up pode sair** sempre explica que o horário decide quando a
+  IA entrega o lead, e que as mensagens seguem o horário do follow-up que recebe.
+- **Aba Follow-up: todo cliente tem o "Follow-up padrão", ligado.** Cliente novo
+  já nasce com ele, e **Novo follow-up** passa a abrir com este modelo (antes eram
+  4 mensagens em 3 dias). Só em horário comercial, e para quando o lead responde
+  (marca recuperado e a IA volta a atender). Os dias contam da entrega do lead:
+
+  | # | Dia | Mensagem |
+  |---|---|---|
+  | 1 | 0 | Oi {{nome}}! Me diz uma coisa: você ainda quer comprar dando uma entrada baixa? |
+  | 2 | 3 | Oi {{nome}}, posso fazer uma simulação de entrada e parcela pra você ver se cabe no bolso? Só me responde com um sim. |
+  | 3 | 7 | Oi {{nome}}! Prefere que eu te mande as opções por aqui ou que eu te ligue? |
+  | 4 | 13 | Oi {{nome}}, tudo bem? Uma visita leva uns 30 minutos e tira todas as dúvidas. Prefere dia de semana ou fim de semana? |
+  | 5 | 20 | Oi {{nome}}, sua busca ainda está de pé ou ficou pra mais pra frente? |
+  | 6 | 30 | Oi {{nome}}, vou deixar seu atendimento em pausa pra não ficar te chamando. Quando quiser retomar, me manda um oi aqui que eu continuo de onde paramos. |
+
+- **IA nova** nasce em **Entregar pro follow-up → Follow-up padrão**, com o
+  follow-up dela desligado até o gestor ligar (sem o Follow-up padrão no cliente,
+  nasce em *Mover o card*).
+- **As IAs que usavam "A IA escreve"** passaram a *Entregar pro follow-up →
+  Follow-up padrão* (as 4 com follow-up ligado continuam ligadas; as outras seguem
+  desligadas). Na Apto, na Pinot e na Moeda o follow-up pronto antigo foi
+  desligado e a entrada dele passou pro Follow-up padrão; quem estava no meio do
+  antigo termina o antigo. O "apareceu um fluxo perfeito pra você" do antigo virou
+  "apareceu uma opção perfeita".
+- **Bloco Pendências da Dashboard:** quando o Follow-up padrão termina sem
+  resposta (depois da 6ª mensagem), o lead **sai** do alerta *"Sem contato do
+  corretor há mais de 3 dias"* (na visão do corretor, *"Sem contato seu há mais
+  de 3 dias"*). Se o lead escrever de novo, ele volta a contar.
+  Durante os 30 dias ele continua contando: o corretor segue responsável por cima.
+- **Reengajamento** (as 2 retomadas antes do follow-up) é o único texto que a IA
+  continua escrevendo, agora com travas: não promete mandar material, foto, opção
+  ou valor que não esteja na própria mensagem; não inventa novidade (preço,
+  estoque, visita, condição); e não manda nada quando a conversa não é com um
+  interessado em imóvel (corretor, parceiro, proprietário, fornecedor). Segue
+  ligado só na 016.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **A IA não escreve mais o follow-up.** Revisa a decisão *Estreia em "A IA
+  escreve"* (01/09, seção *O follow-up da IA sem gastar IA*) e a decisão 5 da
+  seção *IA Vendedora · casca nova* (pendência de "sem limite de tentativas").
+- **O texto do Follow-up padrão é o aprovado acima**, e `{{nome}}` vem sempre
+  depois de "Oi" (lead sem nome vira "Oi, …" limpo).
+- **Fim sem resposta tira do alerta; durante, não.** Tirar durante esconderia do
+  corretor o lead que ainda está sendo trabalhado.
+- **Desligar o follow-up antigo não corta quem está dentro.**
+- **Um campo de dias só.** Com a IA só entregando o lead, o que importa é o
+  silêncio até a entrega; o servidor espera o mínimo, e a tela grava o mínimo e o
+  máximo iguais pra não sobrar um número escondido.
+- **Fica pra depois:** lembrete de visita marcada (era o melhor uso do follow-up
+  escrito pela IA), a variável `{{imovel}}` no follow-up, e apagar do servidor o
+  caminho de escrever (depois de 2 semanas sem nenhuma IA em "A IA escreve").
+
+Armadilhas:
+
+1. **`'ai'` continua no tipo `SalesAgentFollowupAction`** como valor antigo de
+   leitura; o que se grava é `SalesAgentFollowupChoice` (`'pipeline' |
+   'sequence'`). O servidor recusa `'ai'` só quando o valor MUDA, pra IA antiga não
+   quebrar ao salvar outro campo. A tela não tem padrão de reserva pra `'ai'`.
+2. **`followup_max_attempts` está em `CAMPOS_ESCONDIDOS`**: saiu da tela e nenhum
+   passo grava. "Nova IA" ainda manda 3 na criação, inofensivo.
+3. **Ordem de publicação:** servidor primeiro (o padrão da coluna vira
+   `'sequence'`, e o Follow-up padrão é semeado), depois o rake
+   `lm_flow:followup_padrao:aplicar` (simulação, depois `APPLY=1`), e só então
+   esta tela. Ao contrário, as IAs em "A IA escreve" apareceriam com a escolha
+   vazia enquanto ainda escrevem.
+4. **A marca de fim mora no contato** (`followup_ended_at`, gravada pelo bloco
+   do fim do Follow-up padrão) e é o servidor que tira o lead das Pendências. Cai
+   quando o lead escreve ou quando um follow-up começa de novo pra ele.
