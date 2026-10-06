@@ -18,7 +18,7 @@ import { roletaConfigService } from '@/services/roletaConfig/roletaConfigService
 import agentsService from '@/services/channels/agentsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { lerEscolhas } from '@/features/salesAgents/tresEscolhas';
-import { briefingEnabled, toggleBriefing } from '@/features/salesAgents/handoffBriefing';
+import { briefingEnabled, keepBriefing, toggleBriefing } from '@/features/salesAgents/handoffBriefing';
 import { fraseDoObjetivo } from '@/features/salesAgents/resumoDosPassos';
 import type { PipelineOpt, StageOpt } from '../../configuracao/comum';
 import { useRascunho } from '../useRascunho';
@@ -89,12 +89,12 @@ export default function Passo2Objetivo({ agent, aoSalvo }: PropsDoPasso) {
   }, [mover, funil]);
 
   const escolherAlcance = (a: AlcanceDaIa) => {
-    const corrigeCenario = a === 'qualify' && cfg.mode === 'pos_visita' ? { transfer_config: { ...cfg, mode: 'checklist' as HandoffMode } } : {};
+    const corrigeCenario = a === 'qualify' && cfg.mode === 'pos_visita' ? { transfer_config: keepBriefing(cfg, { ...cfg, mode: 'checklist' as HandoffMode }) } : {};
     mudar({ reach: a, booking_enabled: a === 'visit', ...corrigeCenario });
   };
 
   const escolherQuando = (v: Quando) =>
-    mudar({ transfer_config: { ...cfg, mode: v === 'julgar' ? undefined : v, min_temperature: v === 'temperatura' ? cfg.min_temperature ?? 'hot' : undefined } });
+    mudar({ transfer_config: keepBriefing(cfg, { ...cfg, mode: v === 'julgar' ? undefined : v, min_temperature: v === 'temperatura' ? cfg.min_temperature ?? 'hot' : undefined }) });
 
   const trocarDestino = (v: SalesAgentHandoffTarget) => mudar({
     handoff_target: v,

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
@@ -34,7 +34,7 @@ describe('Passo 1 · Quem ela é', () => {
     expect(screen.getByLabelText('O próprio corretor')).toBeChecked();
   });
 
-  // Corretor fixo escolhido (caso Pinot & Cheer) continua: trocar a persona não apaga
+  // Corretor fixo escolhido (IA antiga) continua: trocar a persona não apaga
   // calado o corretor que alguém escolheu. Só o "dono do número" volta pra roleta.
   it('trocar pra dono da imobiliária e dar o nome: a voz sai e o corretor fixo fica', async () => {
     abrir();

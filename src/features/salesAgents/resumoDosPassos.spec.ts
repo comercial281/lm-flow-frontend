@@ -18,8 +18,8 @@ describe('fraseDoObjetivo', () => {
   });
 
   it('o próprio corretor avisa o dono do número', () => {
-    const a = agenteDeTeste({ persona_kind: 'broker', reach: 'qualify', handoff_target: 'number_owner', number_owner_name: 'Cheer', transfer_config: {} });
-    expect(fraseDoObjetivo(a)).toBe('Ela qualifica e avisa o dono do número (Cheer) com o resumo.');
+    const a = agenteDeTeste({ persona_kind: 'broker', reach: 'qualify', handoff_target: 'number_owner', number_owner_name: 'Dono Exemplo', transfer_config: {} });
+    expect(fraseDoObjetivo(a)).toBe('Ela qualifica e avisa o dono do número (Dono Exemplo) com o resumo.');
   });
 });
 
@@ -31,13 +31,13 @@ describe('resumoDoAtendimento', () => {
 
   it('só fora do horário comercial, com aviso', () => {
     const a = agenteDeTeste({ triggers: [], active_hours: { mode: 'outside_business' }, out_of_hours_reply: true });
-    expect(resumoDoAtendimento(a, 'Cheer')).toBe('Atende todos os leads do Cheer, só fora do horário comercial (18:00 às 07:00), e avisa quem escrever fora do horário.');
+    expect(resumoDoAtendimento(a, 'Dono Exemplo')).toBe('Atende todos os leads do Dono Exemplo, só fora do horário comercial (18:00 às 07:00), e avisa quem escrever fora do horário.');
   });
 
   it('horário escolhido usa a mesma frase do follow-up; sem número, diz que não atende', () => {
     const janelas = [{ start: '08:00', end: '18:00', days: [1, 2, 3, 4, 5] }];
     const a = agenteDeTeste({ triggers: [{ type: 'keyword', value: 'call' }], active_hours: { mode: 'custom', windows: janelas } });
-    expect(resumoDoAtendimento(a, 'Cheer')).toBe(`Atende só alguns leads do Cheer, ${resumoDaJanela(janelas)}.`);
+    expect(resumoDoAtendimento(a, 'Dono Exemplo')).toBe(`Atende só alguns leads do Dono Exemplo, ${resumoDaJanela(janelas)}.`);
     expect(resumoDoAtendimento(a, null)).toBe('Ainda sem número: ela não atende ninguém.');
   });
 });
@@ -97,7 +97,7 @@ describe('proximosHorarios', () => {
 describe('resumoDosPassos', () => {
   it('uma linha por passo, de 1 a 7', () => {
     const a = agenteDeTeste({ persona_kind: 'owner', lead_facing_name: 'Tony', reach: 'qualify', handoff_target: 'inbox_roleta', transfer_config: {}, greeting: null, followup_enabled: false });
-    const linhas = resumoDosPassos(a as SalesAgent, { numero: 'Cheer' });
+    const linhas = resumoDosPassos(a as SalesAgent, { numero: 'Dono Exemplo' });
     expect(linhas.map((l) => l.passo)).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect(linhas[0].linha).toBe('Dono da imobiliária · Tony');
     expect(linhas[2].linha).toBe('2 perguntas, 2 obrigatórias · primeira mensagem escrita pela IA');

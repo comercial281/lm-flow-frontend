@@ -39,8 +39,8 @@ export default function Passo4Visita({ agent, aoSalvo, irParaPasso }: PropsDoPas
   const set = (p: Partial<typeof c>) => mudar({ visit_config: { ...c, ...p } });
   const dias = c.days ?? COMERCIAL.days;
   const horarios = useMemo(
-    () => proximosHorarios(c, new Date(), rascunho.visit_duration_minutes ?? 60),
-    [c, rascunho.visit_duration_minutes],
+    () => proximosHorarios(rascunho.visit_config ?? {}, new Date(), rascunho.visit_duration_minutes ?? 60),
+    [rascunho.visit_config, rascunho.visit_duration_minutes],
   );
 
   if (lerEscolhas(agent).alcance !== 'visit') {

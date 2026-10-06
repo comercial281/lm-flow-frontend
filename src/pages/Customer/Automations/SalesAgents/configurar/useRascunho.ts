@@ -4,10 +4,14 @@
  * (features/salesAgents/patchDoPasso.ts), direto no serviço — nunca pelo `saveAgent`
  * campo a campo da tela antiga.
  *
- * O rascunho recomeça do salvo quando a IA muda ou volta do servidor (o agente que
- * a casca guarda troca de objeto).
+ * O rascunho recomeça do salvo quando a IA muda ou volta do servidor com conteúdo
+ * novo (`id` + `updated_at`).
+ *
+ * ⚠️ Não recomeçar só porque o OBJETO do agente trocou: uma releitura da casca (ou
+ * um pai que remonta o agente a cada render) apagaria a edição não salva sem aviso,
+ * ou entraria em laço.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { salesAgentsService, type SalesAgent, type SalesAgentPayload } from '@/services/salesAgents/salesAgentsService';
 import { useAlteracoesNaoSalvas } from '@/hooks/useAlteracoesNaoSalvas';
@@ -19,10 +23,13 @@ export function useRascunho(agent: SalesAgent, campos: readonly string[], aoSalv
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
+  const ultimo = useRef(agent);
+  ultimo.current = agent;
+  const versao = `${agent.id}|${agent.updated_at ?? ''}`;
   useEffect(() => {
-    setRascunho(agent);
+    setRascunho(ultimo.current);
     setErro(null);
-  }, [agent]);
+  }, [versao]);
 
   const patch = useMemo(() => montarPatch(agent, rascunho, campos), [agent, rascunho, campos]);
   const pendente = Object.keys(patch).length > 0;
@@ -36,7 +43,8 @@ export function useRascunho(agent: SalesAgent, campos: readonly string[], aoSalv
   }, [agent]);
 
   const salvar = useCallback(async (): Promise<{ atualizado: SalesAgent; patch: Partial<SalesAgentPayload> } | null> => {
-    if (!pendente) return null;
+    // Clique duplo no Salvar mandaria dois PATCH.
+    if (!pendente || salvando) return null;
     setSalvando(true);
     setErro(null);
     try {
@@ -52,7 +60,7 @@ export function useRascunho(agent: SalesAgent, campos: readonly string[], aoSalv
     } finally {
       setSalvando(false);
     }
-  }, [agent.id, patch, pendente, aoSalvo]);
+  }, [agent.id, patch, pendente, salvando, aoSalvo]);
 
   return { rascunho, mudar, pendente, salvando, erro, salvar, descartar, patch };
 }

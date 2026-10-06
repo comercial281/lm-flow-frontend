@@ -29,7 +29,7 @@ describe('pendenciasDosPassos', () => {
     expect(podeLigar(a).pode).toBe(false);
   });
 
-  // Pinot & Cheer: fala como o corretor e entrega pra um fixo. Revisar, sem travar.
+  // IA antiga: fala como o corretor e entrega pra um fixo. Revisar, sem travar.
   it('corretor com destino que não é o dono do número: aviso no passo 2, sem travar', () => {
     const a = ia({ persona_kind: 'broker', handoff_target: 'user', handoff_user_id: 'u9' });
     expect(pendenciasDosPassos(a)).toEqual([expect.objectContaining({ chave: 'persona_destino', passo: 2, impedeLigar: false })]);
