@@ -38,6 +38,7 @@ import {
   Marketplace,
 } from './lazyPages';
 import RedirecionaAssistente from '@/pages/Customer/Automations/SalesAgents/RedirecionaAssistente';
+import ChaveRoletaNova from '@/pages/Customer/Roleta/ChaveRoletaNova';
 import PrivateRoute from './PrivateRoute';
 import AcademiaRoute from './AcademiaRoute';
 import PublicRoute from './PublicRoute';
@@ -162,6 +163,9 @@ const AdminPlataforma = lazyWithRetry(() => import('@/pages/SuperAdmin/Plataform
 const AdminKitBoasVindas = lazyWithRetry(() => import('@/pages/SuperAdmin/KitBoasVindas'));
 const RoletaConfigPage = lazyWithRetry(() => import('@/pages/Customer/Settings/RoletaConfig/RoletaConfig'));
 const AcceptLeadPage = lazyWithRetry(() => import('@/pages/Customer/Roleta/AcceptLeadPage'));
+// Roleta nova (chave `roleta_nova`): lista de roletas → página por roleta.
+const RoletaLista = lazyWithRetry(() => import('@/pages/Customer/Roleta/RoletaLista'));
+const RoletaPagina = lazyWithRetry(() => import('@/pages/Customer/Roleta/RoletaPagina'));
 const AssignmentSettingsPage = lazyWithRetry(() => import('@/pages/Customer/Settings/AssignmentSettings/AssignmentSettings'));
 const PixelCapiConfig = lazyWithRetry(() => import('@/pages/Customer/Automations/PixelCapi/PixelCapiConfig'));
 const FacebookPages = lazyWithRetry(() => import('@/pages/Customer/Settings/FacebookPages'));
@@ -761,12 +765,25 @@ const AppRouter = () => {
                   permissão por convenção). Sem o guard aqui o corretor abre a tela
                   e toma 403 em cada chamada, o que parece bug em vez de acesso
                   negado. */}
+              {/* Com a chave `roleta_nova` ligada, a lista nova (RoletaLista);
+                  desligada, a tela antiga, intacta. A página da roleta só existe
+                  com a chave: sem ela, volta pra lista. */}
               <Route
                 path="roleta-config"
                 element={
                   <PermissionRoute resource="roleta_configs" action="read">
                     <Suspense fallback={outletSuspenseFallback}>
-                      <RoletaConfigPage />
+                      <ChaveRoletaNova ligada={<RoletaLista />} desligada={<RoletaConfigPage />} />
+                    </Suspense>
+                  </PermissionRoute>
+                }
+              />
+              <Route
+                path="roleta-config/:id"
+                element={
+                  <PermissionRoute resource="roleta_configs" action="read">
+                    <Suspense fallback={outletSuspenseFallback}>
+                      <ChaveRoletaNova ligada={<RoletaPagina />} desligada={<Navigate to="/automations/roleta-config" replace />} />
                     </Suspense>
                   </PermissionRoute>
                 }
@@ -1197,7 +1214,10 @@ const AppRouter = () => {
               path="/settings/roleta-config"
               element={
                 <PermissionRoute resource="roleta_configs" action="read">
-                  <RoletaConfigPage />
+                  {/* Mesmo portão da roleta nova: com `roleta_nova`, a lista nova. */}
+                  <Suspense fallback={outletSuspenseFallback}>
+                    <ChaveRoletaNova ligada={<RoletaLista />} desligada={<RoletaConfigPage />} />
+                  </Suspense>
                 </PermissionRoute>
               }
             />
