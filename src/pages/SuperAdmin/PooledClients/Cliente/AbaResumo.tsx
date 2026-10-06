@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/ds';
-import { dinheiro, numero } from '@/lib/formato';
+import { dinheiro, numero, tempoDesde, toDate } from '@/lib/formato';
+import { clientesService } from '@/services/superAdmin/clientesService';
 import { overviewService } from '@/services/superAdmin/overviewService';
-import type { ClientePooled } from '@/types/admin/clientes';
+import type { ClientePooled, Pessoa } from '@/types/admin/clientes';
 import type { ClienteComProblema, Numeros } from '@/types/admin/overview';
 import { linhasDoProblema } from '@/pages/Admin/Area/VisaoGeral/formatoAtencao';
 import AiUsageLine from '../AiUsageLine';
@@ -13,10 +14,23 @@ import { chaveDoCliente } from '../lista';
 // da Visão Geral (batem com ela). Cada parte carrega sozinha e falha sozinha.
 type Leitura<T> = { tipo: 'carregando' } | { tipo: 'erro' } | { tipo: 'pronto'; valor: T };
 
+// Último acesso de alguém do cliente: o mais recente entre as pessoas.
+function ultimoAcesso(pessoas: Pessoa[]): { quando: string; quem: string } | null {
+  let melhor: { quando: string; quem: string; ms: number } | null = null;
+  for (const p of pessoas) {
+    const ms = toDate(p.last_seen_at)?.getTime();
+    if (ms !== undefined && !Number.isNaN(ms) && (!melhor || ms > melhor.ms)) melhor = { quando: p.last_seen_at as string, quem: p.name || p.email, ms };
+  }
+  return melhor;
+}
+
 export default function AbaResumo({ cliente: t }: { cliente: ClientePooled }) {
   const [problema, setProblema] = useState<Leitura<ClienteComProblema | null>>({ tipo: 'carregando' });
   const [numeros, setNumeros] = useState<Leitura<Numeros>>({ tipo: 'carregando' });
+  const [acesso, setAcesso] = useState<Leitura<{ quando: string; quem: string } | null>>({ tipo: 'carregando' });
   const [tentativa, setTentativa] = useState(0);
+  const [tentativaNumeros, setTentativaNumeros] = useState(0);
+  const [tentativaAcesso, setTentativaAcesso] = useState(0);
   const chave = chaveDoCliente(t);
 
   useEffect(() => {
@@ -35,9 +49,22 @@ export default function AbaResumo({ cliente: t }: { cliente: ClientePooled }) {
       .then((n) => { if (!ignore) setNumeros({ tipo: 'pronto', valor: n }); })
       .catch(() => { if (!ignore) setNumeros({ tipo: 'erro' }); });
     return () => { ignore = true; };
-  }, [t.id, t.schema_name]);
+  }, [t.id, t.schema_name, tentativaNumeros]);
 
-  const totais = numeros.tipo === 'pronto' ? numeros.valor.totals : undefined;
+  useEffect(() => {
+    let ignore = false;
+    setAcesso({ tipo: 'carregando' });
+    clientesService.pessoas(t.id)
+      .then((p) => { if (!ignore) setAcesso({ tipo: 'pronto', valor: ultimoAcesso(p) }); })
+      .catch(() => { if (!ignore) setAcesso({ tipo: 'erro' }); });
+    return () => { ignore = true; };
+  }, [t.id, tentativaAcesso]);
+
+  // Cliente congelado/arquivado/sem schema fica fora da conta da Visão Geral e a resposta cai nas contas da agência
+  // inteira: só vale se veio exatamente deste cliente.
+  const dadosSaoDele = numeros.tipo === 'pronto' && numeros.valor.clients.length === 1 && numeros.valor.clients[0].schema === t.schema_name;
+  const semNumeros = numeros.tipo === 'pronto' && !dadosSaoDele;
+  const totais = dadosSaoDele && numeros.tipo === 'pronto' ? numeros.valor.totals : undefined;
   const cartoes = [
     { rotulo: 'Leads no mês', carrega: true, valor: totais && numero(totais.leads) },
     { rotulo: 'Conversas no mês', carrega: true, valor: totais && numero(totais.conversations) },
@@ -76,7 +103,25 @@ export default function AbaResumo({ cliente: t }: { cliente: ClientePooled }) {
           </div>
         ))}
       </div>
-      {numeros.tipo === 'erro' && <p role="status" className="text-sm text-muted-foreground">Não deu pra ler os números do mês agora.</p>}
+      {numeros.tipo === 'erro' && (
+        <div role="status" className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+          <span>Não deu pra ler os números do mês agora.</span>
+          <Button size="sm" variant="outline" onClick={() => setTentativaNumeros((n) => n + 1)}>Tentar de novo</Button>
+        </div>
+      )}
+      {semNumeros && <p role="status" className="text-sm text-muted-foreground">Sem números deste cliente no mês.</p>}
+      <div className="rounded-lg border bg-card p-4 text-sm">
+        {acesso.tipo === 'carregando' && <span className="text-muted-foreground">Último acesso: …</span>}
+        {acesso.tipo === 'erro' && (
+          <span role="status" className="flex flex-wrap items-center gap-3 text-muted-foreground">
+            Não deu pra ver o último acesso.
+            <Button size="sm" variant="outline" onClick={() => setTentativaAcesso((n) => n + 1)}>Tentar de novo</Button>
+          </span>
+        )}
+        {acesso.tipo === 'pronto' && (acesso.valor
+          ? <span>Último acesso: {tempoDesde(acesso.valor.quando)} ({acesso.valor.quem})</span>
+          : <span className="text-muted-foreground">Ninguém entrou ainda</span>)}
+      </div>
       <div className="rounded-lg border bg-card p-4"><AiUsageLine u={t.ai_usage} /></div>
     </div>
   );

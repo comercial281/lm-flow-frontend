@@ -113,7 +113,7 @@ export default function Editor() {
       <Dialog open={!!previa} onOpenChange={(v) => { if (!v) setPrevia(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{previa && previa.clients_count > 0 ? `Aplicar aos ${previa.clients_count} clientes deste pacote?` : 'Salvar o pacote?'}</DialogTitle>
+            <DialogTitle>{previa && previa.clients_count > 0 ? `Aplicar ${previa.clients_count === 1 ? 'ao' : 'aos'} ${plural(previa.clients_count, 'cliente', 'clientes')} deste pacote?` : 'Salvar o pacote?'}</DialogTitle>
             <DialogDescription>{linhas.length ? 'O que muda:' : 'Nenhuma função ou limite muda.'}{previa && previa.clients_count > 0 ? ' Ajustes manuais de cada cliente são mantidos.' : ''}</DialogDescription>
           </DialogHeader>
           <ul className="list-disc pl-5 text-sm">{linhas.map((l) => <li key={l}>{l}</li>)}</ul>

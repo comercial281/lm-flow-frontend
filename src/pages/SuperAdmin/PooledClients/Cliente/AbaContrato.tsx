@@ -18,13 +18,13 @@ import type { PropsDaAba } from './Pagina';
 // leads da IA, preço do excedente). O PATCH reenvia os grupos de WhatsApp: o
 // servidor faz compact! nessas chaves e uma omissão apagaria os grupos.
 
-export default function AbaContrato({ cliente, aoMudar }: PropsDaAba) {
+export default function AbaContrato({ cliente, aoMudar, recarregar }: PropsDaAba) {
   // `key` pelos limites: se o cliente mudar por fora (ex.: troca de pacote), os campos recomeçam dele.
   const chave = `${cliente.max_whatsapp_channels}|${cliente.ai_leads_included}|${cliente.ai_lead_overage_price_brl}`;
   return (
     <div className="space-y-4">
       <BlocoDoPacote cliente={cliente} aoMudar={aoMudar} />
-      <FormularioDeLimites key={chave} cliente={cliente} aoMudar={aoMudar} />
+      <FormularioDeLimites key={chave} cliente={cliente} aoMudar={aoMudar} recarregar={recarregar} />
     </div>
   );
 }
@@ -133,7 +133,7 @@ function DialogoDoPacote({ modo, cliente, aoMudar, aoFechar }: { modo: 'trocar' 
   );
 }
 
-function FormularioDeLimites({ cliente, aoMudar }: Pick<PropsDaAba, 'cliente' | 'aoMudar'>) {
+function FormularioDeLimites({ cliente, aoMudar, recarregar }: Pick<PropsDaAba, 'cliente' | 'aoMudar' | 'recarregar'>) {
   const diferentes = new Set<string>((cliente.package_diff?.limits ?? []).map((l) => l.key));
   const marca = (k: string) => diferentes.has(k) ? <span className="ml-2 text-xs text-amber-700 dark:text-amber-300">≠ pacote</span> : null;
   const [numeros, setNumeros] = useState(String(cliente.max_whatsapp_channels ?? 5));
@@ -157,6 +157,8 @@ function FormularioDeLimites({ cliente, aoMudar }: Pick<PropsDaAba, 'cliente' | 
       });
       aoMudar({ ...cliente, ...atualizado });
       toast.success('Limites salvos.');
+      // O PATCH não devolve o diff do pacote: recarrega (silencioso) pra "≠ pacote" e o contador acompanharem.
+      void recarregar();
     } catch (e: any) {
       toast.error(e?.response?.data?.error || 'Não deu pra salvar.');
     } finally { setSalvando(false); }

@@ -86,4 +86,31 @@ describe('Aba Pessoas', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar pessoa' }));
     await waitFor(() => expect(aviso.error).toHaveBeenCalledWith('Não enviou: instância desconectada'));
   });
+
+  it('link manual diz de quem é e some quando uma cópia seguinte dá certo', async () => {
+    copyText.mockResolvedValueOnce(false);
+    api.get.mockResolvedValue({ data: { data: [{ id: 'u1', email: 'ana@x.com', name: 'Ana' }, { id: 'u2', email: 'beto@x.com', name: 'Beto' }] } });
+    api.post.mockResolvedValueOnce({ data: { data: { url: 'https://x/acesso/ana' } } }).mockResolvedValueOnce({ data: { data: { url: 'https://x/acesso/beto' } } });
+    const user = userEvent.setup();
+    render(<AbaPessoas cliente={cliente as any} aoMudar={vi.fn()} recarregar={vi.fn()} />);
+    await user.click(await screen.findByRole('button', { name: 'Copiar link de ana@x.com' }));
+    expect(await screen.findByDisplayValue('https://x/acesso/ana')).toBeInTheDocument();
+    expect(screen.getByText(/link de acesso de ana@x\.com/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Copiar link de beto@x.com' }));
+    await waitFor(() => expect(screen.queryByDisplayValue('https://x/acesso/ana')).not.toBeInTheDocument());
+  });
+
+  it('link manual de uma pessoa é trocado pelo da outra quando a segunda cópia também falha', async () => {
+    copyText.mockResolvedValue(false);
+    api.get.mockResolvedValue({ data: { data: [{ id: 'u1', email: 'ana@x.com', name: 'Ana' }, { id: 'u2', email: 'beto@x.com', name: 'Beto' }] } });
+    api.post.mockResolvedValueOnce({ data: { data: { url: 'https://x/acesso/ana' } } }).mockResolvedValueOnce({ data: { data: { url: 'https://x/acesso/beto' } } });
+    const user = userEvent.setup();
+    render(<AbaPessoas cliente={cliente as any} aoMudar={vi.fn()} recarregar={vi.fn()} />);
+    await user.click(await screen.findByRole('button', { name: 'Copiar link de ana@x.com' }));
+    await screen.findByDisplayValue('https://x/acesso/ana');
+    await user.click(screen.getByRole('button', { name: 'Copiar link de beto@x.com' }));
+    expect(await screen.findByDisplayValue('https://x/acesso/beto')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('https://x/acesso/ana')).not.toBeInTheDocument();
+    expect(screen.getByText(/link de acesso de beto@x\.com/)).toBeInTheDocument();
+  });
 });

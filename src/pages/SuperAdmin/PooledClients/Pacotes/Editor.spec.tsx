@@ -32,6 +32,16 @@ describe('Editor de pacote', () => {
     await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/super/packages/p1', expect.objectContaining({ apply_to_clients: true, features: { disparos: true } })));
   });
 
+  it('com 1 cliente o título da prévia fica no singular', async () => {
+    api.get.mockResolvedValue({ data: { data: { ...pacote, clients_count: 1, clients: [{ id: 'c1', name: 'A' }] } } });
+    api.post.mockResolvedValue({ data: { data: { clients_count: 1, changes: { features: [{ key: 'disparos', label: 'Disparos', from: false, to: true }], limits: [] } } } });
+    const user = userEvent.setup();
+    montar();
+    await user.click(await screen.findByRole('switch', { name: 'Disparos' }));
+    await user.click(screen.getByRole('button', { name: 'Salvar pacote' }));
+    expect(await screen.findByText('Aplicar ao 1 cliente deste pacote?')).toBeInTheDocument();
+  });
+
   it('salvar sem aplicar', async () => {
     api.post.mockResolvedValue({ data: { data: { clients_count: 2, changes: { features: [], limits: [{ key: 'max_whatsapp_channels', from: 5, to: 3 }] } } } });
     api.patch.mockResolvedValue({ data: { data: pacote, result: null } });

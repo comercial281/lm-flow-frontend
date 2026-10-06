@@ -126,6 +126,25 @@ describe('Aba Contrato (limites)', () => {
     await waitFor(() => expect(aoMudar).toHaveBeenCalled());
   });
 
+  it('depois de salvar os limites recarrega a página (≠ pacote e contador acompanham)', async () => {
+    api.patch.mockResolvedValue({ data: { data: { ...cliente, max_whatsapp_channels: 2 } } });
+    const recarregar = vi.fn();
+    render(<AbaContrato cliente={cliente as any} aoMudar={vi.fn()} recarregar={recarregar} />);
+    fireEvent.change(screen.getByLabelText('Números de WhatsApp'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar limites' }));
+    await waitFor(() => expect(recarregar).toHaveBeenCalledTimes(1));
+  });
+
+  it('salvar que falha não recarrega', async () => {
+    api.patch.mockRejectedValue({ response: { data: { error: 'não' } } });
+    const recarregar = vi.fn();
+    render(<AbaContrato cliente={cliente as any} aoMudar={vi.fn()} recarregar={recarregar} />);
+    fireEvent.change(screen.getByLabelText('Números de WhatsApp'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar limites' }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalled());
+    expect(recarregar).not.toHaveBeenCalled();
+  });
+
   it('campo de números vazio ou inválido desabilita Salvar e não chama o servidor', () => {
     render(<AbaContrato cliente={cliente as any} aoMudar={vi.fn()} recarregar={vi.fn()} />);
     const salvar = screen.getByRole('button', { name: 'Salvar limites' });

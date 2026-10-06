@@ -6,7 +6,7 @@ describe('rotuloDaSituacao', () => {
     expect(rotuloDaSituacao('ativo', 'trial').label).toBe('Ativo');
     expect(rotuloDaSituacao('provisionando', 'trial')).toMatchObject({ label: 'Provisionando', provisionando: true });
     expect(rotuloDaSituacao('congelado', 'suspended').label).toBe('Congelado');
-    expect(rotuloDaSituacao('com_erro', 'error').label).toBe('Erro');
+    expect(rotuloDaSituacao('com_erro', 'error').label).toBe('Com erro');
     expect(rotuloDaSituacao('arquivado', 'suspended').label).toBe('Arquivado');
   });
 

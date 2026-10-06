@@ -82,6 +82,16 @@ describe('Lista de clientes', () => {
     expect(screen.queryByText(/nenhum cliente/i)).not.toBeInTheDocument();
   });
 
+  it('filtro Com problema com a Atenção fora do ar mostra erro (não lista vazia) e Tentar de novo refaz a leitura', async () => {
+    responder({ atencao: false });
+    montar('/admin/clientes?filtro=com_problema');
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText(/nenhum cliente/i)).not.toBeInTheDocument();
+    const antes = apiGet.mock.calls.filter(([u]) => u === '/super/overview/attention').length;
+    fireEvent.click(screen.getByRole('button', { name: /tentar de novo/i }));
+    await waitFor(() => expect(apiGet.mock.calls.filter(([u]) => u === '/super/overview/attention').length).toBe(antes + 1));
+  });
+
   it('recarga do provisionamento não pisca: mantém os cartões', async () => {
     responder({ lista: [cliente('alfa', 'Alfa', { situation: 'provisionando' })] });
     const base = apiGet.getMockImplementation()!;

@@ -29,7 +29,8 @@ export default function AbaPessoas({ cliente }: PropsDaAba) {
   const [instancia, setInstancia] = useState('');
   const [salvando, setSalvando] = useState(false);
   // Link que não deu pra copiar (área de transferência bloqueada): fica na tela pra copiar à mão.
-  const [linkManual, setLinkManual] = useState<string | null>(null);
+  // Guarda de quem é: o link cria a senha, então não pode ir pra pessoa errada.
+  const [linkManual, setLinkManual] = useState<{ quem: string; url: string } | null>(null);
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   const carregar = useCallback(async () => {
@@ -37,7 +38,7 @@ export default function AbaPessoas({ cliente }: PropsDaAba) {
     try { setPessoas(await clientesService.pessoas(cliente.id)); } catch { setErro(true); }
   }, [cliente.id]);
 
-  useEffect(() => { void carregar(); }, [carregar]);
+  useEffect(() => { void carregar(); setLinkManual(null); }, [carregar]);
   useEffect(() => {
     // Mesma escolha da janela Membros antiga: Operacional conectada, senão a primeira conectada.
     clientInstancesService.centralInstances().then((r) => {
@@ -57,7 +58,7 @@ export default function AbaPessoas({ cliente }: PropsDaAba) {
         send_whatsapp: telefone.trim() ? enviarWa : false, instance: instancia || undefined,
       });
       const copiou = r.access_url ? await copyText(r.access_url) : false;
-      if (r.access_url && !copiou) setLinkManual(r.access_url);
+      setLinkManual(r.access_url && !copiou ? { quem: email.trim(), url: r.access_url } : null);
       const enviou = !!r.whatsapp?.sent;
       if (!r.access_url) toast.success('Pessoa adicionada.');
       else if (copiou) toast.success(`Link de acesso copiado${enviou ? ' e enviado no WhatsApp' : ''}.`);
@@ -73,8 +74,8 @@ export default function AbaPessoas({ cliente }: PropsDaAba) {
   const copiarLink = async (p: Pessoa) => {
     let url: string;
     try { url = await clientesService.linkDeAcesso(cliente.id, p.id); } catch { toast.error('Não deu pra gerar o link.'); return; }
-    if (await copyText(url)) toast.success('Link de acesso copiado (vale 24 h).');
-    else { setLinkManual(url); toast.error('Não deu pra copiar o link. Ele está na tela.'); }
+    if (await copyText(url)) { setLinkManual(null); toast.success('Link de acesso copiado (vale 24 h).'); }
+    else { setLinkManual({ quem: p.email, url }); toast.error('Não deu pra copiar o link. Ele está na tela.'); }
   };
 
   const enviarLink = async (p: Pessoa) => {
@@ -90,7 +91,7 @@ export default function AbaPessoas({ cliente }: PropsDaAba) {
 
   const remover = async (p: Pessoa) => {
     if (!(await confirmar(pedidoRemoverPessoa(p.email)))) return;
-    try { await clientesService.removerPessoa(cliente.id, p.id); void carregar(); }
+    try { await clientesService.removerPessoa(cliente.id, p.id); setLinkManual((l) => (l?.quem === p.email ? null : l)); void carregar(); }
     catch (e: any) { toast.error(e?.response?.data?.error || 'Não deu pra remover.'); }
   };
 
@@ -123,8 +124,8 @@ export default function AbaPessoas({ cliente }: PropsDaAba) {
 
       {linkManual && (
         <div role="status" className="rounded-lg border p-3">
-          <Label htmlFor="link-manual">Não deu pra copiar. Copie o link:</Label>
-          <Input id="link-manual" readOnly value={linkManual} onFocus={(e) => e.currentTarget.select()} />
+          <Label htmlFor="link-manual">Não deu pra copiar. Copie o link de acesso de {linkManual.quem}:</Label>
+          <Input id="link-manual" readOnly value={linkManual.url} onFocus={(e) => e.currentTarget.select()} />
         </div>
       )}
 

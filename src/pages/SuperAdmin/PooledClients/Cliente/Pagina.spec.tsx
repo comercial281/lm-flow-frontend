@@ -22,7 +22,8 @@ function responder(extra: Record<string, unknown> = {}) {
     if (url === '/super/overview/attention') return Promise.resolve({ data: { success: true, data: { counts: {}, clients: [], ok_count: 0, generated_at: '', unreadable: [] } } });
     if (url === '/super/overview/numbers') return Promise.resolve({ data: { success: true, data: {
       generated_at: '', period: { key: 'mes_atual', bucket: 'day' }, tenants: [], series: [], structure: null, unreadable: [],
-      totals: { leads: 12, conversations: 8, users_active: 4, ai_attended: 3, ai_visits: 1, ai_cost_brl: 20 }, previous_totals: {}, clients: [] } } });
+      totals: { leads: 12, conversations: 8, users_active: 4, ai_attended: 3, ai_visits: 1, ai_cost_brl: 20 }, previous_totals: {}, clients: [{ schema: 'tenant_016', name: '016 Imóveis', readable: true, ai_cost_brl: 20 }] } } });
+    if (url === '/super/pooled_tenants/c1/members') return Promise.resolve({ data: { data: [] } });
     return Promise.reject(new Error(`sem mock ${url}`));
   });
 }

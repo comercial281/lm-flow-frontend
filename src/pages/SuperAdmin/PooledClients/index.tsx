@@ -27,6 +27,7 @@ export default function PooledClients() {
   const [clientes, setClientes] = useState<ClientePooled[] | null>(null);
   const [erro, setErro] = useState(false);
   const [atencao, setAtencao] = useState<Atencao | null>(null);
+  const [erroAtencao, setErroAtencao] = useState(false);
   const [entrando, setEntrando] = useState<string | null>(null);
   const [mostrarNovo, setMostrarNovo] = useState(false);
   const [mostrarFunil, setMostrarFunil] = useState(false);
@@ -46,7 +47,11 @@ export default function PooledClients() {
 
   useEffect(() => { void carregar(); }, [carregar]);
   // Selos de problema: em paralelo e sem segurar a lista; se falhar, os cartões ficam sem selo.
-  useEffect(() => { overviewService.atencao().then(setAtencao).catch(() => setAtencao(null)); }, []);
+  const lerAtencao = useCallback(() => {
+    setErroAtencao(false);
+    overviewService.atencao().then(setAtencao).catch(() => { setAtencao(null); setErroAtencao(true); });
+  }, []);
+  useEffect(() => { lerAtencao(); }, [lerAtencao]);
 
   // Cliente sendo criado: recarrega até sair de "Provisionando".
   useEffect(() => {
@@ -98,6 +103,9 @@ export default function PooledClients() {
         <div aria-busy="true" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-xl bg-muted" />)}
         </div>
+      ) : erroAtencao && filtro === 'com_problema' ? (
+        // Sem a leitura da Atenção a lista de "com problema" ficaria vazia: erro não é "ninguém tem problema".
+        <EmptyState tipo="erro" title="Não deu para conferir quem tem problema" aoTentarDeNovo={lerAtencao} />
       ) : visiveis.length === 0 ? (
         <EmptyState tipo={busca || filtro !== 'todos' ? 'semResultado' : 'vazio'}
           title={filtro === 'arquivados' ? 'Nenhum cliente arquivado' : 'Nenhum cliente encontrado'}

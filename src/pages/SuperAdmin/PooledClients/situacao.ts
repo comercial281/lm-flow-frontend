@@ -11,7 +11,7 @@ const CLASSES = {
 } as const;
 
 const ROTULOS: Record<keyof typeof CLASSES, string> = {
-  ativo: 'Ativo', provisionando: 'Provisionando', com_erro: 'Erro', congelado: 'Congelado', arquivado: 'Arquivado',
+  ativo: 'Ativo', provisionando: 'Provisionando', com_erro: 'Com erro', congelado: 'Congelado', arquivado: 'Arquivado',
 };
 
 const DO_STATUS: Record<string, keyof typeof CLASSES> = { active: 'ativo', trial: 'ativo', suspended: 'congelado', error: 'com_erro' };
