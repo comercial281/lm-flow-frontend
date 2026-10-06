@@ -56,6 +56,32 @@ function Repeater<T>({ items, onChange, empty, addLabel, max, render }: {
   );
 }
 
+/** Caixa "Formulário dentro da capa". O aviso diz por que ela ainda não faz
+ *  nada — sem ele, a pessoa marca, olha a prévia e não vê mudança nenhuma. */
+function FormularioNaCapa({ block }: { block: BlockInstance }) {
+  const update = useLandingEditorStore((s) => s.updateConfig);
+  const blocks = useLandingEditorStore((s) => s.blocks);
+  const ligado = (block.config as { formInHero?: boolean }).formInHero === true;
+  const forms = blocks.filter((b) => b.type === 'lead_form');
+  const aviso = !forms.length
+    ? 'Adicione a seção Formulário de Lead para isto funcionar.'
+    : !forms.some((b) => b.visible)
+      ? 'Mostre a seção Formulário de Lead para isto funcionar.'
+      : blocks.find((b) => b.visible)?.id !== block.id
+        ? 'Só funciona com a capa no topo da página.'
+        : null;
+  return (
+    <div className="space-y-1">
+      <Check checked={ligado} onChange={(v) => update(block.id, { formInHero: v })} label="Formulário dentro da capa" />
+      <p className="text-[11px] leading-snug text-muted-foreground">
+        O formulário sai do lugar dele e aparece na capa, já na primeira tela do celular. No computador, a página fica
+        larga, com o formulário ao lado da foto.
+      </p>
+      {aviso && <p className="text-[11px] leading-snug text-amber-600">{aviso}</p>}
+    </div>
+  );
+}
+
 /* ── por bloco ──────────────────────────────────────────────────────── */
 function Fields({ block }: { block: BlockInstance }) {
   const update = useLandingEditorStore((s) => s.updateConfig);
@@ -74,6 +100,7 @@ function Fields({ block }: { block: BlockInstance }) {
           <Field label="Botão sobre a capa" hint="Vazio = sem botão. Preenchido, ele leva o lead direto para o formulário.">
             <Text value={c.ctaLabel as string} onChange={(v) => set({ ctaLabel: v })} placeholder="Quero saber mais" />
           </Field>
+          <FormularioNaCapa block={block} />
         </>
       );
     case 'price_band':

@@ -120,3 +120,28 @@ describe('LandingEditor (integração UI)', () => {
     expect(cfg().items).toHaveLength(5);
   });
 });
+
+describe('LandingEditor: formulário dentro da capa', () => {
+  beforeEach(() => useLandingEditorStore.getState().load([]));
+
+  it('a capa ganha a caixa, com aviso quando a página não tem formulário', () => {
+    const hero = createBlock('hero');
+    render(<LandingEditor initialBlocks={[hero]} property={property} onSave={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Hero \/ Capa/ }));
+    const caixa = screen.getByLabelText('Formulário dentro da capa');
+    expect(screen.getByText('Adicione a seção Formulário de Lead para isto funcionar.')).toBeInTheDocument();
+    fireEvent.click(caixa);
+    expect((useLandingEditorStore.getState().blocks[0].config as { formInHero?: boolean }).formInHero).toBe(true);
+  });
+
+  it('com o par valendo, a linha do formulário mostra "dentro da capa" e selecioná-la não quebra', () => {
+    const hero = createBlock('hero');
+    (hero.config as { formInHero?: boolean }).formInHero = true;
+    const form = createBlock('lead_form');
+    render(<LandingEditor initialBlocks={[hero, form]} property={property} onSave={vi.fn()} />);
+    expect(screen.getByText('dentro da capa')).toBeInTheDocument();
+    expect(screen.queryByText('Adicione a seção Formulário de Lead para isto funcionar.')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Formulário de Lead/ }));
+    expect(screen.getByRole('button', { name: /Quando você pretende comprar/ })).toBeInTheDocument();
+  });
+});

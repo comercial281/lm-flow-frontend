@@ -1,6 +1,7 @@
 import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import {
   BlockRenderer,
+  formularioDaCapa,
   safeParsePageBlocks,
   type BlockInstance,
   type LandingProperty,
@@ -263,6 +264,10 @@ export function LandingPublicView({ tenant, slug, noDominio = false }: LandingPu
   const fontePrincipal = (theme.fontFamily ?? '').split(',')[0].trim();
   const fonteHref = FONTES_DO_SITE.includes(fontePrincipal) ? fonteDoSite(fontePrincipal).fontHref : null;
 
+  // Formulário na capa: no computador a página fica larga (foto e formulário
+  // lado a lado). Sem o par, a coluna estreita de sempre.
+  const largo = !!formularioDaCapa(blocks);
+
   if (state === 'loading') {
     return <div className="flex min-h-screen items-center justify-center bg-[#0F0520] text-neutral-400">Carregando…</div>;
   }
@@ -281,8 +286,8 @@ export function LandingPublicView({ tenant, slug, noDominio = false }: LandingPu
       onClickCapture={onCtaClick}
     >
       {fonteHref && <link rel="stylesheet" href={fonteHref} />}
-      <div className="relative w-full max-w-[460px] shadow-2xl">
-        <BlockRenderer blocks={blocks} property={property} theme={theme} onSubmitLead={onSubmitLead} />
+      <div className={`relative w-full ${largo ? 'max-w-[1200px]' : 'max-w-[460px]'} shadow-2xl`}>
+        <BlockRenderer blocks={blocks} property={property} theme={theme} onSubmitLead={onSubmitLead} wide={largo} />
       </div>
     </div>
   );

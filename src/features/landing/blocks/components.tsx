@@ -74,7 +74,7 @@ const empty = (v: unknown) => v == null || v === '';
 /* Blocks                                                             */
 /* ------------------------------------------------------------------ */
 
-function HeroBlock({ config, property }: BlockComponentProps<'hero'>) {
+function HeroBlock({ config, property, slot, wide = false }: BlockComponentProps<'hero'>) {
   const cover = property?.photos?.find((p) => p.isCover) ?? property?.photos?.[0];
   // A capa redimensionada vence a original: a original é a foto do celular.
   const img = config.imageUrl ?? cover?.heroUrl ?? cover?.url;
@@ -86,19 +86,11 @@ function HeroBlock({ config, property }: BlockComponentProps<'hero'>) {
     property?.fullAddress ??
     [property?.neighborhood, property?.city, property?.state].filter(Boolean).join(' · ');
 
-  return (
-    // A capa é sangrada de ponta a ponta, então o espaçamento escolhido para
-    // ela vira MARGEM (e não recuo interno, como nas outras seções): recuo aqui
-    // deixaria uma faixa de fundo por cima da foto. Sem escolha, zero — que é
-    // exatamente como a capa sempre foi.
-    <div
-      className="relative w-full overflow-hidden"
-      style={{
-        minHeight: 260,
-        marginTop: 'var(--lp-pad-top, 0px)',
-        marginBottom: 'var(--lp-pad-bottom, 0px)',
-      }}
-    >
+  // Foto, degradê e textos. Sem formulário embutido, a capa é só isto — e sai
+  // idêntica à de sempre (260px). Com formulário, a foto encolhe para 200px
+  // no celular: o formulário tem que caber na primeira tela, sem rolar.
+  const foto = (textoCls: string) => (
+    <>
       {img ? (
         // A capa é o maior elemento da primeira tela (o LCP do PageSpeed): pede
         // prioridade alta e nunca é preguiçosa — o resto das imagens é.
@@ -113,7 +105,7 @@ function HeroBlock({ config, property }: BlockComponentProps<'hero'>) {
         <div className="absolute inset-0" style={{ background: 'var(--lp-bg-end)' }} />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
-      <div className="relative flex h-full min-h-[260px] flex-col justify-end p-5">
+      <div className={textoCls}>
         {badge && (
           <span
             className="mb-2 w-fit rounded-full px-3 py-1 text-[11px] font-bold tracking-wide text-white"
@@ -142,6 +134,56 @@ function HeroBlock({ config, property }: BlockComponentProps<'hero'>) {
           </button>
         )}
       </div>
+    </>
+  );
+
+  if (slot) {
+    // Formulário na capa. Celular (e a prévia do editor, que é celular): foto
+    // em cima, formulário logo abaixo num cartão que "sobe" 24px na foto.
+    // Computador (só na página larga): foto e textos à esquerda, formulário à
+    // direita centrado na vertical — o desenho da capa do editor da Kenlo.
+    return (
+      <div
+        className={wide ? 'w-full lg:grid lg:grid-cols-[1.25fr_1fr] lg:items-center lg:gap-8 lg:p-8' : 'w-full'}
+        style={{
+          marginTop: 'var(--lp-pad-top, 0px)',
+          marginBottom: 'var(--lp-pad-bottom, 0px)',
+        }}
+      >
+        <div
+          className={wide ? 'relative w-full overflow-hidden lg:rounded-2xl' : 'relative w-full overflow-hidden'}
+          style={{ minHeight: 200 }}
+        >
+          {foto(
+            wide
+              ? 'relative flex h-full min-h-[200px] flex-col justify-end p-5 pb-11 lg:min-h-[520px] lg:p-8'
+              : 'relative flex h-full min-h-[200px] flex-col justify-end p-5 pb-11',
+          )}
+        </div>
+        <div
+          className={wide ? 'relative -mt-6 overflow-hidden rounded-t-3xl lg:mt-0 lg:rounded-2xl' : 'relative -mt-6 overflow-hidden rounded-t-3xl'}
+          style={{ background: 'var(--lp-block-bg)' }}
+        >
+          {slot}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    // A capa é sangrada de ponta a ponta, então o espaçamento escolhido para
+    // ela vira MARGEM (e não recuo interno, como nas outras seções): recuo aqui
+    // deixaria uma faixa de fundo por cima da foto. Sem escolha, zero — que é
+    // exatamente como a capa sempre foi.
+    <div
+      className="relative w-full overflow-hidden"
+      style={{
+        minHeight: 260,
+        marginTop: 'var(--lp-pad-top, 0px)',
+        marginBottom: 'var(--lp-pad-bottom, 0px)',
+      }}
+    >
+      {foto('relative flex h-full min-h-[260px] flex-col justify-end p-5')}
     </div>
   );
 }
@@ -780,7 +822,15 @@ function Confetti() {
   );
 }
 
-function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'lead_form'>) {
+/** `anchor` = este é O formulário da página, o que leva `id="lp-lead-form"` (o
+ *  destino do "Receber" do botão fixo e do botão da capa). Um formulário por
+ *  página: o segundo, se houver, sai sem a âncora para o id nunca duplicar. */
+export function LeadFormBlock({
+  config,
+  property,
+  onSubmitLead,
+  anchor = true,
+}: BlockComponentProps<'lead_form'> & { anchor?: boolean }) {
   const specialist = config.specialistName || property?.responsibleName || 'nosso especialista';
   const steps = config.steps;
   // `path` é o caminho REALMENTE percorrido (índices das perguntas), não um
@@ -881,7 +931,7 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
 
   return (
     <Section>
-      <div id="lp-lead-form" className="scroll-mt-4 rounded-2xl border p-5"
+      <div id={anchor ? 'lp-lead-form' : undefined} className="scroll-mt-4 rounded-2xl border p-5"
         style={{ background: 'var(--lp-block-bg)', borderColor: 'var(--lp-border)', boxShadow: '0 10px 30px rgba(0,0,0,0.06)' }}>
         {done ? (
           <div className="relative py-2 text-center">

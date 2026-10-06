@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { BlockConfig, BlockType } from './contract';
 
 /**
@@ -229,6 +230,12 @@ export interface BlockComponentProps<T extends BlockType = BlockType> {
   theme: LandingTheme;
   /** Fornecido pelo render público — o bloco de formulário usa pra gravar o lead. */
   onSubmitLead?: (payload: LeadSubmitPayload) => Promise<LeadSubmitResult | void> | LeadSubmitResult | void;
+  /** Conteúdo embutido no bloco. Só a capa usa: é onde entra o formulário
+   *  quando `formInHero` vale (ver `formularioDaCapa`). */
+  slot?: ReactNode;
+  /** Página larga no computador (página pública com formulário na capa). A
+   *  prévia do editor nunca passa: lá é sempre celular. */
+  wide?: boolean;
 }
 
 /** Troca os marcadores de um texto configurável — `{especialista}`, `{atual}`,

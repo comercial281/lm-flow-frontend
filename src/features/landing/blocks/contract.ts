@@ -56,6 +56,11 @@ const heroConfig = z.object({
   subheadline: z.string().max(200).optional(),
   imageUrl: z.string().url().optional(),
   ctaLabel: z.string().max(40).optional(),
+  /** Leva o primeiro formulário visível para dentro da capa (primeira tela do
+   *  celular) e alarga a página no computador. Só vale com a capa no topo e um
+   *  formulário visível — ver `formularioDaCapa`. Landing antiga não tem a
+   *  chave e sai como sempre. */
+  formInHero: z.boolean().default(false),
 });
 
 const priceBandConfig = z.object({

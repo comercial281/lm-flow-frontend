@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { BlockRenderer } from './BlockRenderer';
 import { createBlock, defaultLandingBlocks } from './registry';
+import { formularioDaCapa } from './formularioDaCapa';
+import type { BlockInstance } from './contract';
 import { parsePageBlocks } from './contract';
 import { BR_PHONE_PLACEHOLDER } from '@/lib/brPhone';
 import { ehLocacao, type LandingProperty } from './render-types';
@@ -433,3 +435,115 @@ describe('Passo a passo', () => {
   });
 });
 
+
+describe('Formulário dentro da capa', () => {
+  const capa = (formInHero = true): BlockInstance => {
+    const b = createBlock('hero');
+    (b.config as { formInHero?: boolean }).formInHero = formInHero;
+    return b;
+  };
+  const faixa = () => {
+    const b = createBlock('price_band');
+    b.config.text = 'Entrada facilitada';
+    return b;
+  };
+  const oculto = (b: BlockInstance) => ({ ...b, visible: false });
+  const antes = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+  it('formularioDaCapa: capa no topo com a opção ligada e um formulário visível', () => {
+    const hero = capa();
+    const form = createBlock('lead_form');
+    expect(formularioDaCapa([hero, faixa(), form])).toEqual({ heroId: hero.id, formId: form.id });
+    // Seção oculta antes da capa não conta: a capa continua sendo a primeira visível.
+    expect(formularioDaCapa([oculto(faixa()), hero, form])).toEqual({ heroId: hero.id, formId: form.id });
+  });
+
+  it('formularioDaCapa: null sem a opção, sem formulário, com formulário oculto ou capa fora do topo', () => {
+    const form = createBlock('lead_form');
+    expect(formularioDaCapa([capa(false), form])).toBeNull();
+    expect(formularioDaCapa([createBlock('hero'), form])).toBeNull();
+    expect(formularioDaCapa([capa()])).toBeNull();
+    expect(formularioDaCapa([capa(), oculto(form)])).toBeNull();
+    expect(formularioDaCapa([faixa(), capa(), form])).toBeNull();
+    expect(formularioDaCapa([oculto(capa()), form])).toBeNull();
+    expect(formularioDaCapa([])).toBeNull();
+  });
+
+  it('o formulário aparece dentro da capa e não de novo depois da faixa de preço', () => {
+    const hero = capa();
+    const band = faixa();
+    const form = createBlock('lead_form');
+    const { container } = render(<BlockRenderer blocks={[hero, band, form]} property={property} />);
+    const anchors = container.querySelectorAll('#lp-lead-form');
+    expect(anchors).toHaveLength(1);
+    const heroEl = container.querySelector(`[data-block-id="${hero.id}"]`)!;
+    expect(heroEl.contains(anchors[0])).toBe(true);
+    const bandEl = screen.getByText('Entrada facilitada');
+    expect(antes(anchors[0], bandEl)).toBe(true);
+    expect(screen.getAllByText('Quando você pretende comprar?')).toHaveLength(1);
+  });
+
+  it('opção ligada sem formulário (ou com ele oculto): a capa sai igual à de hoje', () => {
+    const ligada = capa(true);
+    const desligada = { ...ligada, config: { ...ligada.config, formInHero: false } };
+    const a = render(<BlockRenderer blocks={[ligada]} property={property} />);
+    const b = render(<BlockRenderer blocks={[desligada]} property={property} />);
+    expect(a.container.innerHTML).toBe(b.container.innerHTML);
+
+    const form = oculto(createBlock('lead_form'));
+    const c = render(<BlockRenderer blocks={[ligada, form]} property={property} />);
+    const d = render(<BlockRenderer blocks={[desligada, form]} property={property} />);
+    expect(c.container.innerHTML).toBe(d.container.innerHTML);
+  });
+
+  it('capa fora do topo: tudo segue na ordem, formulário no lugar dele', () => {
+    const band = faixa();
+    const hero = capa();
+    const form = createBlock('lead_form');
+    const { container } = render(<BlockRenderer blocks={[band, hero, form]} property={property} />);
+    const heroEl = container.querySelector(`[data-block-id="${hero.id}"]`)!;
+    const anchor = container.querySelector('#lp-lead-form')!;
+    expect(heroEl.contains(anchor)).toBe(false);
+    expect(antes(heroEl, anchor)).toBe(true);
+  });
+
+  it('dois formulários: só o primeiro vai para a capa, o segundo fica no lugar sem a âncora', () => {
+    const hero = capa();
+    const band = faixa();
+    const f1 = createBlock('lead_form');
+    const f2 = createBlock('lead_form');
+    const { container } = render(<BlockRenderer blocks={[hero, band, f1, f2]} property={property} />);
+    const anchors = container.querySelectorAll('#lp-lead-form');
+    expect(anchors).toHaveLength(1);
+    expect(container.querySelector(`[data-block-id="${hero.id}"]`)!.contains(anchors[0])).toBe(true);
+    const f2El = container.querySelector(`[data-block-id="${f2.id}"]`)!;
+    expect(f2El.textContent).toContain('Quando você pretende comprar?');
+    expect(antes(screen.getByText('Entrada facilitada'), f2El)).toBe(true);
+  });
+
+  it('dois formulários sem a opção: a âncora fica só no primeiro', () => {
+    const f1 = createBlock('lead_form');
+    const f2 = createBlock('lead_form');
+    const { container } = render(<BlockRenderer blocks={[createBlock('hero'), f1, f2]} property={property} />);
+    const anchors = container.querySelectorAll('#lp-lead-form');
+    expect(anchors).toHaveLength(1);
+    expect(container.querySelector(`[data-block-id="${f1.id}"]`)!.contains(anchors[0])).toBe(true);
+  });
+
+  it('página larga: as seções fora da capa ficam em 720px, a capa ocupa a largura toda', () => {
+    const hero = capa();
+    const band = faixa();
+    const form = createBlock('lead_form');
+    const { container, rerender } = render(<BlockRenderer blocks={[hero, band, form]} property={property} wide />);
+    const bandBox = () => container.querySelector(`[data-block-id="${band.id}"]`) as HTMLElement;
+    const heroBox = () => container.querySelector(`[data-block-id="${hero.id}"]`) as HTMLElement;
+    expect(bandBox().style.maxWidth).toBe('720px');
+    expect(heroBox().style.maxWidth).toBe('');
+    expect(heroBox().innerHTML).toContain('lg:grid-cols-[1.25fr_1fr]');
+
+    // Sem `wide` (a prévia do editor), nada disso: celular.
+    rerender(<BlockRenderer blocks={[hero, band, form]} property={property} />);
+    expect(bandBox().style.maxWidth).toBe('');
+    expect(heroBox().innerHTML).not.toContain('lg:grid-cols-[1.25fr_1fr]');
+  });
+});
