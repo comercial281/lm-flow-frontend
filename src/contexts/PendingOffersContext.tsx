@@ -62,9 +62,9 @@ export function PendingOffersProvider({ children }: { children: ReactNode }) {
       const list = await brokerAssignmentsService.listMine();
       if (alive.current) setOffers(prev => manterVazia(prev, list));
     } catch {
-      // Falha aqui não pode atrapalhar o app: some e tenta de novo no próximo
-      // ciclo. Leitura de fundo não grita.
-      if (alive.current) setOffers(prev => manterVazia(prev, []));
+      // Falha aqui não pode atrapalhar o app: mantém a última lista e tenta de
+      // novo no próximo ciclo. Leitura de fundo não grita. (Zerar a lista numa
+      // falha passageira fechava o pop-up de aceite no meio da leitura.)
     } finally {
       if (alive.current) setLoaded(true);
     }

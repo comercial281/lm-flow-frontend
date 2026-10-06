@@ -105,4 +105,41 @@ describe('PendingOffersProvider — checagem das ofertas', () => {
     expect(listMine).toHaveBeenCalledTimes(4);
     expect(listas.length).toBe(antes);
   });
+
+  it('depois de desmontar, nem o intervalo nem a volta para a aba checam', async () => {
+    let desmontar!: () => void;
+    await act(async () => {
+      ({ unmount: desmontar } = render(
+        <PendingOffersProvider>
+          <div />
+        </PendingOffersProvider>,
+      ));
+    });
+    expect(listMine).toHaveBeenCalledTimes(1);
+    desmontar();
+    await act(async () => { vi.advanceTimersByTime(60_000); });
+    await act(async () => { mudarVisibilidade('visible'); });
+    expect(listMine).toHaveBeenCalledTimes(1);
+  });
+
+  it('falha passageira de rede mantém a última lista', async () => {
+    const listas: { id: string }[][] = [];
+    function Leitor() {
+      listas.push(usePendingOffers().offers);
+      return null;
+    }
+    listMine.mockImplementationOnce(async () => [{ id: 'o1' }]);
+    await act(async () => {
+      render(
+        <PendingOffersProvider>
+          <Leitor />
+        </PendingOffersProvider>,
+      );
+    });
+    expect(listas.at(-1)?.map(o => o.id)).toEqual(['o1']);
+    listMine.mockImplementationOnce(async () => { throw new Error('rede'); });
+    await act(async () => { vi.advanceTimersByTime(15_000); });
+    expect(listMine).toHaveBeenCalledTimes(2);
+    expect(listas.at(-1)?.map(o => o.id)).toEqual(['o1']);
+  });
 });

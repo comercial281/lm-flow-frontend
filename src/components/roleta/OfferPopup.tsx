@@ -6,7 +6,6 @@ import {
   Button,
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -34,6 +33,19 @@ import { destinoDoLead, gravarVistas, lerVistas, ofertasNaoVistas } from './offe
 //   amarela e não reabre aqui. Só oferta nova abre.
 // - Várias ofertas: uma por vez, a mais antiga primeiro, com "+N esperando".
 // - Não abre na própria tela de aceite (`/roleta/aceite/:id`).
+// - O foco NUNCA abre num botão de ação, e Aceitar/Recusar ficam travados por
+//   um instante ao abrir e ao trocar de oferta: o pop-up abre no meio da
+//   digitação do chat, e o Enter/espaço seguinte recusaria o lead sem volta.
+// - Clique fora não fecha (um clique perdido adiaria a oferta para sempre). Esc
+//   e o X valem como *Ver depois*, e nada fecha com Aceitar/Recusar em curso.
+
+// Quanto tempo Aceitar/Recusar ficam travados ao abrir ou trocar de oferta.
+export const TRAVA_MS = 600;
+
+// As ofertas que já tocaram som nesta aba. Fica fora do componente porque o
+// MainLayout existe em dois grupos de rota: cruzar de um para o outro remonta o
+// pop-up, e um ref voltaria vazio — o mesmo "ding" tocaria de novo.
+const tocadas = new Set<string>();
 
 const SOM_DA_OFERTA = '/audio/notifications/ding.mp3';
 
@@ -61,17 +73,27 @@ export default function OfferPopup() {
   const { pathname } = useLocation();
   const [vistas, setVistas] = useState<Set<string>>(() => lerVistas());
   const [acting, setActing] = useState<null | 'accept' | 'refuse'>(null);
-  const tocadas = useRef<Set<string>>(new Set());
+  const tituloRef = useRef<HTMLHeadingElement>(null);
 
   const fila = ofertasNaoVistas(offers, vistas);
   const atual = fila[0];
   const naTelaDeAceite = pathname.startsWith('/roleta/aceite/');
   const aberto = !!atual && !naTelaDeAceite;
 
+  // Trava curta ao abrir e a cada troca de oferta (ver o topo do arquivo).
+  const [travado, setTravado] = useState(true);
+  const idAtual = aberto ? atual?.id : undefined;
+  useEffect(() => {
+    if (!idAtual) return;
+    setTravado(true);
+    const t = setTimeout(() => setTravado(false), TRAVA_MS);
+    return () => clearTimeout(t);
+  }, [idAtual]);
+
   // Som curto uma vez por oferta, quando ela aparece no pop-up.
   useEffect(() => {
-    if (!aberto || !atual || tocadas.current.has(atual.id)) return;
-    tocadas.current.add(atual.id);
+    if (!aberto || !atual || tocadas.has(atual.id)) return;
+    tocadas.add(atual.id);
     tocarSom();
   }, [aberto, atual]);
 
@@ -118,14 +140,24 @@ export default function OfferPopup() {
   const prazo = deadlineLabel(atual);
 
   return (
-    <Dialog open={aberto} onOpenChange={abrir => { if (!abrir) verDepois(); }}>
+    <Dialog open={aberto} onOpenChange={abrir => { if (!abrir && !acting) verDepois(); }}>
       {/* No celular (abaixo de 640 px) o pop-up ocupa a tela inteira. */}
-      <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-md max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none max-sm:rounded-none max-sm:border-0">
+      <DialogContent
+        className="max-h-[92dvh] overflow-y-auto sm:max-w-md max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none max-sm:rounded-none max-sm:border-0 max-sm:content-start max-sm:pt-[max(1.5rem,env(safe-area-inset-top))]"
+        aria-describedby="oferta-popup-descricao"
+        onOpenAutoFocus={e => {
+          e.preventDefault();
+          tituloRef.current?.focus();
+        }}
+        onInteractOutside={e => e.preventDefault()}
+      >
         <DialogHeader>
-          <DialogTitle>Lead novo pra você</DialogTitle>
-          <DialogDescription>
+          <DialogTitle ref={tituloRef} tabIndex={-1} className="outline-none">Lead novo pra você</DialogTitle>
+          {/* <p> e não DialogDescription: o DialogContent do ds já injeta uma
+              descrição escondida, e as duas dividiriam o mesmo id. */}
+          <p id="oferta-popup-descricao" className="text-sm text-muted-foreground">
             {esperando > 0 ? `+${esperando} esperando` : 'A roleta ofertou este lead a você.'}
-          </DialogDescription>
+          </p>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -163,11 +195,11 @@ export default function OfferPopup() {
 
         <DialogFooter className="flex-col gap-2 sm:flex-col">
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" onClick={onRefuse} disabled={!!acting} className="gap-1.5">
+            <Button variant="outline" onClick={onRefuse} disabled={!!acting || travado} className="gap-1.5">
               {acting === 'refuse' ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
               Recusar
             </Button>
-            <Button onClick={onAccept} disabled={!!acting} className="gap-1.5">
+            <Button onClick={onAccept} disabled={!!acting || travado} className="gap-1.5">
               {acting === 'accept' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               Aceitar
             </Button>

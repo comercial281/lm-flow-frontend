@@ -6763,10 +6763,12 @@ O que aparece na tela:
 Decisões (não reabrir sem o dono pedir):
 
 - **15 s com a aba visível**, aba escondida não checa. **Sem tempo real** até a conexão ao vivo ir para o app inteiro.
-- **"Ver depois" não reabre.** Ver depois (ou fechar no X / Esc / fora) marca a oferta como vista na memória e no `sessionStorage` (`lmflow:roleta:ofertas-vistas`): ela fica na faixa amarela e só oferta NOVA abre o pop-up. Aba nova começa sem vistas (é por sessão, de propósito).
+- **"Ver depois" não reabre.** Ver depois (ou o X, ou o Esc) marca a oferta como vista na memória e no `sessionStorage` (`lmflow:roleta:ofertas-vistas`): ela fica na faixa amarela e só oferta NOVA abre o pop-up. Aba nova começa sem vistas (é por sessão, de propósito).
 - **Uma porta só.** Aceitar/Recusar são as funções do `PendingOffersContext`, as mesmas do selo `OfferActions` e as mesmas chamadas da tela de aceite (`/broker_assignments/:id/accept|refuse`). O motivo do erro mora em `offerReason.ts`, para o selo e o pop-up falarem igual.
 - **Sem chave.** Vale para todo cliente com roleta, nos dois modos (como o selo, desde 03/09).
 - **Não abre na tela de aceite** (`/roleta/aceite/:id`): ela já é a tela de decidir.
+- **Clique fora NÃO fecha** (um clique perdido, tentando alcançar a conversa por trás, adiaria a oferta para sempre). Com Aceitar/Recusar em curso, nem o Esc nem o X fecham.
+- **O foco abre no título, nunca num botão de ação, e Aceitar/Recusar ficam travados por 600 ms** ao abrir e ao trocar de oferta (`TRAVA_MS`). O pop-up abre no meio da digitação do chat: com o foco em *Recusar* (era o primeiro botão), o Enter ou o espaço seguinte recusava o lead sem volta.
 
 Armadilhas:
 
@@ -6774,4 +6776,6 @@ Armadilhas:
 2. **O `OfferAiBriefing` tem texto branco** (foi feito para o fundo escuro da tela de aceite). No pop-up ele vai dentro de uma caixa `bg-[#1A0A2E]`; sem ela, no tema claro, o bloco fica invisível.
 3. **O pop-up tem que ficar DENTRO do `PendingOffersProvider`** no `MainLayout`: fora dele o hook devolve lista vazia e o pop-up nunca abre, sem erro nenhum (`MainLayout.ofertas.spec.ts` trava isso).
 4. **Tela cheia é por classe `max-sm:`** no `DialogContent` (o `max-w-*` sem prefixo seria lido pelo `uncapAt640` do `ds.tsx` como teto).
-5. **Checagem vazia mantém a MESMA lista** (`manterVazia` no contexto): sem isso cada ciclo de 15 s redesenharia a conversa inteira sem nada ter mudado. Com oferta a lista é trocada de propósito a cada ciclo: é o que faz os minutos andarem. Não "otimizar" isso comparando o conteúdo, ou o prazo congela no selo, na faixa e no pop-up.
+5. **Falha de rede mantém a última lista** (antes zerava): zerar fechava o pop-up no meio da leitura e o reabria 15 s depois.
+6. **O som é tocado uma vez por oferta POR ABA** (`tocadas` no nível do módulo, não num ref): o `MainLayout` existe em dois grupos de rota, e cruzar de um para o outro remonta o pop-up.
+7. **Checagem vazia mantém a MESMA lista** (`manterVazia` no contexto): sem isso cada ciclo de 15 s redesenharia a conversa inteira sem nada ter mudado. Com oferta a lista é trocada de propósito a cada ciclo: é o que faz os minutos andarem. Não "otimizar" isso comparando o conteúdo, ou o prazo congela no selo, na faixa e no pop-up.
