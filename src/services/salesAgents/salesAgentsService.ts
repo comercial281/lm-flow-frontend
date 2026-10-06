@@ -64,6 +64,8 @@ export interface SalesAgent {
   transfer_config: TransferConfig;
   handoff_message: string | null;
   model: string;
+  /** Modelo do Testar (Haiku por padrão). Vem do servidor (`resolved_test_model`). */
+  test_model?: string | null;
   temperature: number;
   max_context_tokens: number;
   reply_delay_seconds: number;
@@ -717,6 +719,97 @@ export interface LoadedConversationContext {
   property_code: string | null;
 }
 
+// ---------------- Testar fiel (ensaio) ----------------
+// O estado do ensaio mora AQUI, no navegador: o servidor devolve o estado novo a
+// cada passo e recebe de volta no próximo. Nada é gravado no servidor.
+
+export interface RehearsalMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  at: string;
+  marks: Record<string, boolean>;
+}
+
+export interface RehearsalState {
+  v: 1;
+  now: string;
+  contact: { name?: string | null; form_answers?: Record<string, string>; ad_referral?: Record<string, unknown> };
+  attrs: Record<string, unknown>;
+  labels: string[];
+  messages: RehearsalMessage[];
+  lead_owner: string | null;
+  source_conversation_id: string | null;
+}
+
+export interface RehearsalBubble { content: string; pause_ms: number; audio?: boolean }
+export interface RehearsalReason { reason: string; text: string; detail?: string | null }
+
+export interface RehearsalOutcome {
+  skipped: RehearsalReason | null;
+  warnings: RehearsalReason[];
+  handoff: { kind: 'roleta' | 'user' | 'owner' | 'none'; destination: string | null; problem?: string | null; reason?: string | null } | null;
+  handoff_blocked: string | null;
+  in_handoff: boolean;
+  visit: { date: string; time: string; label: string; realtor: string | null; property_code: string | null; notes: string | null } | null;
+  collected: Record<string, unknown>;
+  checklist: Array<{ pergunta: string; resposta: string | null; obrigatoria: boolean }>;
+  temperature: 'hot' | 'warm' | 'cold' | 'unknown' | null;
+  stage: string | null;
+  summary: string | null;
+  labels: string[];
+  card: { stage: string | null; moves: boolean } | null;
+  purpose: string | null;
+  out_of_hours_notice: boolean;
+  opening: string | null;
+  /** O modelo que respondeu de fato. */
+  model: string | null;
+  /** O modelo do teste (Haiku, como hoje); null na comparação, que roda no da IA. */
+  test_model: string | null;
+  /** O modelo em que esta IA atende o lead de verdade. */
+  agent_model: string | null;
+  delay_s: number | null;
+  notes: RehearsalReason[];
+  error: string | null;
+  lead_owner: string | null;
+}
+
+export interface RehearsalEvent {
+  kind: 'reengagement' | 'followup' | 'followup_delegated';
+  at: string;
+  attempt: number;
+  messages: RehearsalBubble[];
+  blank: boolean;
+}
+
+export interface RehearsalTurn {
+  kind: 'reply' | 'silent' | 'error' | 'advance' | 'loaded';
+  at: string;
+  messages: RehearsalBubble[];
+  reaction: string | null;
+  note: string | null;
+  media: TestMediaItem[];
+  outcome: RehearsalOutcome | null;
+  events?: RehearsalEvent[];
+  idle?: string | null;
+  notes?: RehearsalReason[];
+}
+
+export interface RehearsalResult { state: RehearsalState; turn: RehearsalTurn }
+
+export interface RehearsalContext {
+  contact_name?: string;
+  source?: string;
+  interest?: string;
+  form_answers?: Record<string, string>;
+  property_code?: string;
+}
+
+export type RehearsalRequest =
+  | { step: 'turn'; state: RehearsalState | null; message: string; context?: RehearsalContext; seed?: { history: TestHistoryItem[]; hours_ago?: number } }
+  | { step: 'advance'; state: RehearsalState; hours: number | null }
+  | { step: 'load'; phone: string };
+
 export type SalesAgentLessonKind = 'rule' | 'good_example' | 'bad_example';
 export interface SalesAgentLesson {
   id: string;
@@ -945,6 +1038,21 @@ export const salesAgentsService = {
       property_code: context.propertyCode || undefined,
     });
     return (res.data as { data: SalesAgentTestResult }).data;
+  },
+
+  /**
+   * Testar fiel: o MESMO turno do atendimento, em memória (nada sai no WhatsApp,
+   * nada é gravado). O estado vai e volta inteiro a cada passo. Em erro, joga a
+   * frase do servidor (teto da hora, conversa não achada, teste interrompido).
+   */
+  async rehearsal(id: string, body: RehearsalRequest): Promise<RehearsalResult> {
+    try {
+      const res = await api.post(`${BASE}/${id}/rehearsal`, body);
+      return (res.data as { data: RehearsalResult }).data;
+    } catch (err) {
+      const axiosErr = err as { response?: { data?: { error?: { message?: string } } } };
+      throw new Error(axiosErr.response?.data?.error?.message || 'Não consegui rodar o teste agora.');
+    }
   },
 
   /**
