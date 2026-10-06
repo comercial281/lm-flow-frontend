@@ -32,12 +32,12 @@ import {
   PropertyInterests,
   AutomationsLayout,
   SalesAgents,
-  AssistenteIA,
   PortalsList,
   DashboardAppPage,
   Tutorials,
   Marketplace,
 } from './lazyPages';
+import RedirecionaAssistente from '@/pages/Customer/Automations/SalesAgents/RedirecionaAssistente';
 import PrivateRoute from './PrivateRoute';
 import AcademiaRoute from './AcademiaRoute';
 import PublicRoute from './PublicRoute';
@@ -1387,20 +1387,14 @@ const AppRouter = () => {
             }
           />
 
-          {/* Assistente de configuração da IA Vendedora: tela cheia, por etapas,
-              sem o menu lateral — o mesmo padrão dos editores de landing. Grava
-              direto nos campos da IA; quem quer configurar na mão sai pelo
-              "Configurar depois" e cai na tela de sempre. */}
+          {/* O assistente da IA saiu na entrega 2 (o passo a passo do Configurar é
+              o mesmo pra criar e editar). Endereço antigo cai no passo 1. */}
           <Route
             path="/ia-vendedora/:id/assistente"
             element={
               <PrivateRoute>
                 <CustomerRoute>
-                  <PermissionRoute resource="sales_agents" action="update">
-                    <Suspense fallback={outletSuspenseFallback}>
-                      <AssistenteIA />
-                    </Suspense>
-                  </PermissionRoute>
+                  <RedirecionaAssistente />
                 </CustomerRoute>
               </PrivateRoute>
             }

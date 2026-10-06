@@ -58,36 +58,14 @@ describe('roteiro da IA na tela do cliente', () => {
   });
 });
 
-// O assistente em tela cheia grava por conta própria, num PATCH só. Ele NÃO pode
-// passar pelo `saveAgent` da tela (que descarta campo fora da lista) e precisa
-// mandar o `playbook` INTEIRO — só `vars` apagaria os blocos reescritos.
-describe('assistente de configuração da IA', () => {
-  const pagina = read('src/pages/Customer/Automations/SalesAgents/assistente/AssistenteIA.tsx');
-  const mapeamento = read('src/pages/Customer/Automations/SalesAgents/assistente/assistenteMapping.ts');
-
-  it('grava direto no serviço, num PATCH só', () => {
-    expect(pagina).toContain('salesAgentsService.update(agent.id, payload)');
-    expect(pagina).not.toContain('saveAgent(');
-  });
-
-  it('o playbook é mesclado por cima do que a IA já tem, nunca substituído', () => {
-    expect(mapeamento).toContain("const next: AgentPlaybookConfig = { ...(atual ?? {}) };");
-    expect(mapeamento).toContain('playbookDasRespostas(a, agent.playbook)');
-  });
-
-  it('a Nova IA cria o rascunho pelo serviço, e o ?agent= antigo continua abrindo a IA', () => {
+// O assistente em tela cheia saiu na entrega 2 (o passo a passo do Configurar é o
+// mesmo pra criar e editar). O que os testes dele protegiam (PATCH só do que
+// mudou, jsonb mesclado sobre o salvo) mora em patchDoPasso.spec.ts e
+// camposDosPassos.spec.ts.
+describe('Nova IA', () => {
+  it('cria o rascunho pelo serviço, e o ?agent= de link antigo continua abrindo a IA', () => {
     const tela = fonteDaIaVendedora();
     expect(tela).toContain('salesAgentsService.create(novaIaRascunho())');
-    // Desde a casca nova (entrega 1), o endereço é lido pelo mapa das telas.
     expect(read('src/features/salesAgents/iaMenu.ts')).toContain("params.get('agent')");
-    expect(pagina).toContain('/ia-vendedora?agent=');
-  });
-
-  // Dois editores de janela na mesma etapa (atuação e follow-up): prefixo
-  // repetido faz o rótulo "Das" de um focar o campo do outro.
-  it('os dois editores de horário têm prefixos próprios', () => {
-    const operacao = read('src/pages/Customer/Automations/SalesAgents/assistente/steps/EtapaOperacao.tsx');
-    expect(operacao).toContain('idPrefix="as_win"');
-    expect(operacao).toContain('idPrefix="as_fu_win"');
   });
 });
