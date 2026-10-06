@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CalendarCheck, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
-import { toast } from 'sonner';
-import { CalendarCheck, Loader2, RefreshCw, Sparkles } from 'lucide-react';
-
+import Abas from '@/components/base/Abas';
+import EmptyState from '@/components/base/EmptyState';
+import { Seletor } from '@/components/base/Seletor';
 import AiResultsPanel from '@/components/salesAgents/AiResultsPanel';
-import { COLOR_VISITS, int, pct } from '@/components/salesAgents/aiResultsFormat';
+import { int, pct } from '@/components/salesAgents/aiResultsFormat';
 import { superAgentsService } from '@/services/superAdmin/superAgentsService';
 import type {
   PerformanceCounts, PerformancePoint, PerformanceReport, PerformanceTenant,
 } from '@/types/aiResults';
-import { Seletor } from '@/components/base/Seletor';
+import { ESQUELETO, PAGINA, SECAO, SELO, SUBTITULO_SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 
 // Resultados da IA — a tela que o dono abre NA FRENTE do cliente.
 //
@@ -20,31 +21,37 @@ import { Seletor } from '@/components/base/Seletor';
 //
 // O painel em si é compartilhado com a aba Resultados que o cliente vê dentro do
 // CRM dele: mesma medição no servidor e mesma apresentação aqui, pra não existir
-// um número na tela dele e outro na nossa. O que esta tela acrescenta é o que só
-// faz sentido pra quem olha vários clientes: o seletor e a lista por cliente.
+// um número na tela dele e outro na nossa. Ele NÃO é mexido daqui (a tela do
+// cliente usa o mesmo). O que esta tela acrescenta é o que só faz sentido pra
+// quem olha vários clientes: o seletor e a lista por cliente.
 
 const ALL = '__todos__';
 
-const PERIODS: [number, string][] = [
-  [7, '7 dias'],
-  [30, '30 dias'],
-  [90, '90 dias'],
+const PERIODOS = [
+  { chave: '7', rotulo: '7 dias' },
+  { chave: '30', rotulo: '30 dias' },
+  { chave: '90', rotulo: '90 dias' },
 ];
 
 export default function ResultadosIA() {
   const [report, setReport] = useState<PerformanceReport | null>(null);
   const [days, setDays] = useState(30);
   const [client, setClient] = useState<string>(ALL);
-  const [loading, setLoading] = useState(true);
+  const [estado, setEstado] = useState<'carregando' | 'pronto' | 'erro'>('carregando');
+  // Só a última carga vale: trocar 7 → 90 → 30 rápido não deixa a do meio por cima.
+  const seq = useRef(0);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    const minha = ++seq.current;
+    setEstado('carregando');
     try {
-      setReport(await superAgentsService.performance(days));
+      const r = await superAgentsService.performance(days);
+      if (minha !== seq.current) return;
+      setReport(r);
+      setEstado('pronto');
     } catch {
-      toast.error('Não consegui carregar os resultados da IA.');
-    } finally {
-      setLoading(false);
+      if (minha !== seq.current) return;
+      setEstado('erro');
     }
   }, [days]);
 
@@ -59,14 +66,13 @@ export default function ResultadosIA() {
   // tela mostraria o total da plataforma ao lado do nome de um cliente só.
   const counts: PerformanceCounts | null = selected ?? report?.totals ?? null;
   const series: PerformancePoint[] = selected?.series ?? report?.series ?? [];
+  const carregando = estado === 'carregando';
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-6 border-l-4 border-primary pl-3">
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <Sparkles className="h-5 w-5" /> Resultados da IA
-        </h2>
-        <p className="text-sm text-muted-foreground">
+    <div className={`mx-auto max-w-6xl p-6 ${PAGINA}`}>
+      <div>
+        <h2 className={TITULO_SECAO}>Resultados da IA</h2>
+        <p className={SUBTITULO_SECAO}>
           O que a IA Vendedora produziu no período: quem ela atendeu, quantos responderam e quantas
           visitas ela marcou sozinha. Feita para mostrar ao cliente.
         </p>
@@ -75,30 +81,11 @@ export default function ResultadosIA() {
       {/* Uma linha de filtros acima de tudo que eles recortam — e não um filtro
           dentro de cada cartão, que faria dois blocos vizinhos mostrarem períodos
           diferentes sem avisar. */}
-      <div className="flex flex-wrap items-center gap-2 mb-6">
-        <div className="flex gap-1">
-          {PERIODS.map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setDays(value)}
-              className={`px-3 py-1.5 rounded-md text-sm border transition-colors ${
-                days === value
-                  ? 'bg-primary/10 text-primary border-primary/40 font-medium'
-                  : 'border-sidebar-border text-muted-foreground hover:bg-accent'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Abas rotulo="Período" abas={PERIODOS} ativa={String(days)} aoTrocar={(c) => setDays(Number(c))} />
 
         {report && report.tenants.length > 0 && (
-          <Seletor
-            value={client}
-            onChange={(e) => setClient(e.target.value)}
-            className="h-auto w-64 px-3 py-1.5 rounded-md text-sm border border-sidebar-border bg-background max-w-[16rem]"
-          >
+          <Seletor aria-label="Cliente" value={client} onChange={(e) => setClient(e.target.value)} className="w-64">
             <option value={ALL}>Todos os clientes ({report.tenants.length})</option>
             {report.tenants.map((t) => (
               <option key={tenantKey(t)} value={tenantKey(t)}>{t.tenant_name}</option>
@@ -106,24 +93,29 @@ export default function ResultadosIA() {
           </Seletor>
         )}
 
-        <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading} className="ml-auto">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+        <Button variant="outline" size="sm" aria-label="Recarregar" onClick={() => void load()} disabled={carregando} className="ml-auto">
+          {carregando ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
         </Button>
       </div>
 
-      {loading && !report ? (
-        <p className="text-sm text-muted-foreground flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
-        </p>
-      ) : !report || !counts || report.tenants.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Nenhuma IA com movimento no período. Os números aparecem conforme as IAs atendem.
-        </p>
-      ) : (
+      {estado === 'erro' && (
+        <EmptyState tipo="erro" title="Não deu pra carregar os resultados da IA" aoTentarDeNovo={() => void load()} />
+      )}
+
+      {carregando && !report && <div aria-busy="true" className={`h-64 ${ESQUELETO}`} />}
+
+      {estado !== 'erro' && report && report.tenants.length === 0 && (
+        <EmptyState
+          title="Nenhuma IA com movimento no período"
+          description="Os números aparecem conforme as IAs atendem."
+        />
+      )}
+
+      {estado !== 'erro' && report && counts && report.tenants.length > 0 && (
         // Recarregar segura o desenho anterior mais apagado em vez de piscar um
         // esqueleto: trocar de período na frente do cliente não pode fazer a tela
         // sumir e voltar.
-        <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+        <div className={`flex flex-col gap-6 transition-opacity ${carregando ? 'opacity-60' : ''}`}>
           <AiResultsPanel
             counts={counts}
             series={series}
@@ -132,21 +124,21 @@ export default function ResultadosIA() {
           />
 
           {!selected && (
-            <section className="mt-8">
-              <h2 className="text-sm font-semibold mb-3">Por cliente</h2>
-              <div className="space-y-1">
+            <section aria-labelledby="por-cliente" className={SECAO}>
+              <h3 id="por-cliente" className={TITULO_SECAO}>Por cliente</h3>
+              <div className="mt-4 flex flex-col gap-1">
                 {report.tenants.map((tenant) => (
                   <button
                     key={tenantKey(tenant)}
                     type="button"
                     onClick={() => setClient(tenantKey(tenant))}
-                    className="w-full flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-left rounded-md border border-sidebar-border hover:bg-muted/40"
+                    className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border px-3 py-2.5 text-left hover:bg-muted/40"
                   >
-                    <span className="text-sm font-medium flex-1 min-w-[8rem] truncate">{tenant.tenant_name}</span>
-                    <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                    <span className="min-w-[8rem] flex-1 truncate text-sm font-medium">{tenant.tenant_name}</span>
+                    <span className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
                       {int(tenant.ai_leads)} atendidos
                     </span>
-                    <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap w-24 text-right">
+                    <span className="w-24 whitespace-nowrap text-right text-xs tabular-nums text-muted-foreground">
                       {pct(tenant.reply_rate)} resposta
                     </span>
                     {/* O selo que o dono pediu: a visita marcada pela IA é o que
@@ -154,11 +146,8 @@ export default function ResultadosIA() {
                         quando é zero — selo zerado num cliente novo tira o
                         destaque justamente de quem tem o número pra mostrar. */}
                     {tenant.visits > 0 && (
-                      <span
-                        className="text-xs font-medium rounded-full px-2 py-0.5 whitespace-nowrap flex items-center gap-1"
-                        style={{ color: COLOR_VISITS, backgroundColor: `${COLOR_VISITS}1a` }}
-                      >
-                        <CalendarCheck className="h-3 w-3" />
+                      <span className={`${SELO} flex items-center gap-1 whitespace-nowrap border-primary/30 bg-primary/10 font-medium text-primary`}>
+                        <CalendarCheck className="h-3 w-3" aria-hidden="true" />
                         {tenant.visits} {tenant.visits === 1 ? 'visita pela IA' : 'visitas pela IA'}
                       </span>
                     )}
@@ -168,7 +157,7 @@ export default function ResultadosIA() {
             </section>
           )}
 
-          <p className="text-xs text-muted-foreground mt-6">
+          <p className="text-xs text-muted-foreground">
             Período: últimos {report.days} dias. Uma visita conta como “da IA” quando foi a própria IA
             que a marcou dentro da conversa.
           </p>
