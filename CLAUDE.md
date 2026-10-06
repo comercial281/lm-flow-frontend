@@ -4731,8 +4731,8 @@ O que aparece na tela, no menu da Área do Admin:
 - **Conhecimento** junta Cérebro Universal, Princípios e Aperfeiçoamento, um embaixo do outro.
 - **Aviso de visita** saiu de Plataforma e foi para IA Vendedora → Aviso de visita, sem mudar comportamento (decisões de 21/09 mantidas).
 - **Mensagem de acesso** saiu da janela e virou aba; a variável `{senha}` saiu da lista (a senha é criada pela pessoa, pelo link, desde a fase 1).
-- **WhatsApp** é o Comunicado. Neste passo a escrita continua na janela de sempre, com todos os clientes marcados (decisão). Confirmação e tela própria entram no PR de Comunicação.
-- **Push** ainda tem três abas por dentro (Regras, Disparo manual, Histórico): viram seções no PR de Comunicação. É a única exceção ao "sem terceiro nível", e é temporária.
+- **WhatsApp** é o Comunicado, em tela própria desde 06/10 (ver "Comunicação e Plataforma no padrão da casa").
+- **Push** tem três seções na mesma página (Regras, Disparo manual, Histórico) desde 06/10: acabou a exceção ao "sem terceiro nível".
 - **Custos** é a tela nova de 03/10 (ver seção "Custos do admin").
 - **Banner** ainda não tem aba: entra com a spec própria.
 
@@ -6738,7 +6738,7 @@ Entrega 3 da Área do Admin (spec `LM FLOW/specs/2026-10-05-admin-clientes-entre
 - **Operação**: os grupos de WhatsApp têm uma fonte de verdade na aba; funil e grupos reenviam as duas chaves (o servidor faz `compact!`).
 - **Pacotes** (Clientes → Pacotes; servidor `public.client_packages`): pacote = funções + limites. Escolher pacote COPIA tudo pro cliente (o app do cliente não muda). Ajuste manual continua livre e aparece "≠ pacote". Editar pacote e aplicar mantém os ajustes manuais; Trocar/Voltar ao pacote desfaz e avisa quantos. Chave nova no catálogo segue o padrão (ligada, menos DEFAULT_OFF) e não acende "≠ pacote". Clientes antigos começam "Personalizado". Novo cliente tem o campo Pacote no passo Dados.
 - **Caixinhas do navegador**: zero no SuperAdmin; o build usa `--teto-super 0`. Confirmação com texto digitado usa `ConfirmarDigitando`.
-- **Respiro e padrão (05/10, pedido do dono: "tá tudo juntinho demais")**: a lista entra no `AdminConteudo` como as outras telas do admin (antes colava nas bordas). Quadro, título de seção, espaço entre blocos e grades vêm de `PooledClients/estilo.ts` (quadro `rounded-xl p-5`, blocos `gap-6`, grades `gap-4`), usado em todas as abas e em Pacotes. Em tela larga Contrato, Pessoas e Operação usam duas colunas em vez de uma coluna estreita. **Entrar** (cartão e topo da página) é o `BotaoEntrar`: o degradê com brilho do botão do login (`.lmf-btn-shimmer`). Não voltar ao botão contornado sem o dono pedir.
+- **Respiro e padrão (05/10, pedido do dono: "tá tudo juntinho demais")**: a lista entra no `AdminConteudo` como as outras telas do admin (antes colava nas bordas). Quadro, título de seção, espaço entre blocos e grades vêm de `src/pages/Admin/Area/estilo.ts` (era `PooledClients/estilo.ts` até 06/10) (quadro `rounded-xl p-5`, blocos `gap-6`, grades `gap-4`), usado em todas as abas e em Pacotes. Em tela larga Contrato, Pessoas e Operação usam duas colunas em vez de uma coluna estreita. **Entrar** (cartão e topo da página) é o `BotaoEntrar`: o degradê com brilho do botão do login (`.lmf-btn-shimmer`). Não voltar ao botão contornado sem o dono pedir.
 
 ## Números conectados (06/10/2026)
 
@@ -6752,3 +6752,19 @@ Entrega 4 da Área do Admin (spec `LM FLOW/specs/2026-10-06-admin-final-design.m
 - **Atenção → "Ver números"** abre `/admin/clientes/numeros?cliente=<schema>`: a tela rola até o cliente e abre o detalhe; `?cliente=public` rola até "Números da Leal Mídia". Se "Só caídos" estiver ligado e esconder o cliente do link, o filtro é desligado antes de rolar.
 - **Erro ≠ vazio**: lista que não carrega é `EmptyState` de erro com "Tentar de novo" (antes era um aviso vermelho e "Nenhum cliente ativo.").
 - Não reabrir sem o dono pedir: **sem "verificar agora" e sem QR code no admin** (ler QR de outro cliente abre risco de sequestro do pareamento). Agir = Entrar no cliente. Continuam: um cliente por pedido em lotes de 4, Atualizar = `?refresh=1`, o servidor decide.
+
+## Comunicação e Plataforma no padrão da casa (06/10/2026)
+
+Entrega 8 da Área do Admin, onda 2 da spec `LM FLOW/specs/2026-10-06-admin-final-design.md`.
+
+- **Estilo do admin**: o padrão de quadro e respiro mora em `src/pages/Admin/Area/estilo.ts` (saiu de `PooledClients/estilo.ts`). Tela nova ou mexida do admin importa de lá.
+- **Avisos na tela** (`/admin/comunicacao`): a matriz é a mesma do cliente (decisão de 25/08). Erro de carga é `EmptyState` com "Tentar de novo", nunca tela em branco. "Aplicar a todos os clientes" confirma dizendo quantos ("Aplicar este padrão aos 31 clientes?"): N = clientes ativos menos o de origem, a mesma lista em que o servidor aplica.
+- **Push** (`/admin/push`): Regras, Disparo manual e Histórico são três seções na mesma página. O liga/desliga da regra é `Chave`; as listas do formulário usam `Checkbox`, e "Regra ligada" é caixinha porque espera o Salvar. **O disparo manual confirma com o público e a quantidade** ("Enviar para 12 pessoas (17 aparelhos) de Moeda Forte?"), contados pelo servidor (`GET /super/push_rules/audience_count`, a mesma conta que o envio grava no histórico) e recontados no clique. Zero aparelhos trava o Enviar com o motivo. "Para mim" com mais de uma pessoa diz "N pessoas da Leal Mídia", não "você".
+- **Comunicado** (`/admin/comunicacao/whatsapp`): tela própria, sem janela.
+  - Abas Donos | Grupos. Os clientes com destino vêm marcados; quem não tem telefone ou grupo aparece com o motivo, com a caixa travada, e fica de fora. O grupo segue a mesma regra do Kit de boas-vindas.
+  - A confirmação diz "Mandar para N donos/grupos?" com o N que sai de fato, e o servidor recusa se a conta dele mudou.
+  - O envio roda no servidor, um por vez na plataforma (trava), com 2 s entre clientes. A tela acompanha ("Enviando 12 de 28…") e no fim mostra quem recebeu, quem falhou e por quê. Fechar a tela não para o envio, e ao voltar ela retoma o acompanhamento.
+  - `{nome}` = primeiro nome do cliente; a quebra de linha da mensagem é mantida.
+  - A `ClientBroadcastModal` saiu. A rota antiga `/super/pooled_tenants/broadcast` sai na onda 4.
+- **Menus arquivados**: `Chave` por menu. **Arquivar confirma** ("Esconder {menu} de todos os clientes? Some também para você e para a equipe."); desarquivar não. A conferência catálogo × menu de 01/10 está em `LM FLOW/specs/registros/2026-10-06-menus-arquivados-divergencia.md`. O catálogo não foi mexido.
+- **Site** (logos dos bancos): "Tirar" confirma ("Tirar o logo do {banco} dos sites de todas as imobiliárias?"); o erro tem "Tentar de novo". A cor de marca do banco continua em `style`, porque é dado.
