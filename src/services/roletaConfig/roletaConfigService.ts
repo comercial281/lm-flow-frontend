@@ -248,6 +248,7 @@ export interface RoletaConfigPayload {
   members: (Omit<RoletaMember,
     'id' | 'user_name' | 'user_avatar' | 'roleta_instance_id'
     | 'personal_whatsapp_number' | 'whatsapp_from_profile' | 'whatsapp_effective' | 'whatsapp_reason'
+    | 'name' | 'phone_display' | 'phone_status'
   > & { personal_whatsapp_number: string | null })[];
 }
 
