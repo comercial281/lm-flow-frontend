@@ -59,7 +59,7 @@ describe('Comunicação → Avisos na tela', () => {
     await screen.findByText('matriz de avisos');
     await user.click(screen.getByRole('button', { name: /Aplicar a todos os clientes/ }));
     const dialogo = await screen.findByRole('dialog');
-    expect(dialogo).toHaveTextContent('Aplicar este padrão aos 2 clientes?');
+    expect(dialogo).toHaveTextContent('Aplicar a configuração de Apto Premium aos 2 clientes?');
     expect(dialogo).toHaveTextContent('A configuração de cada um é substituída.');
     expect(svc.applyToAll).not.toHaveBeenCalled();
     await user.click(within(dialogo).getByRole('button', { name: 'Aplicar' }));
@@ -74,5 +74,66 @@ describe('Comunicação → Avisos na tela', () => {
     await user.click(screen.getByRole('button', { name: /Aplicar a todos os clientes/ }));
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancelar' }));
     expect(svc.applyToAll).not.toHaveBeenCalled();
+  });
+
+  it('falha das etapas e pessoas avisa e permite tentar de novo', async () => {
+    svc.tenantContext.mockRejectedValueOnce(new Error('rede'));
+    const user = userEvent.setup();
+    render(<NotificationsTab />);
+    expect(await screen.findByText(/Não deu pra carregar as etapas e as pessoas/)).toBeInTheDocument();
+    expect(screen.getByText('matriz de avisos')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    await waitFor(() => expect(screen.queryByText(/etapas e as pessoas/)).not.toBeInTheDocument());
+    expect(svc.tenantContext).toHaveBeenCalledTimes(2);
+  });
+
+  it('troca rápida de cliente descarta a resposta velha e esconde a matriz enquanto carrega', async () => {
+    let soltarA!: (v: unknown) => void;
+    svc.show.mockImplementationOnce(() => new Promise(r => { soltarA = r; }));
+    let soltarB!: (v: unknown) => void;
+    svc.show.mockImplementationOnce(() => new Promise(r => { soltarB = r; }));
+    const user = userEvent.setup();
+    render(<NotificationsTab />);
+    await waitFor(() => expect(svc.show).toHaveBeenCalledWith('a'));
+    await user.selectOptions(screen.getByLabelText('Cliente'), 'b');
+    await waitFor(() => expect(svc.show).toHaveBeenCalledWith('b'));
+    soltarA({ tenant: tenants[0], policy: {} });
+    await new Promise(r => setTimeout(r, 20));
+    expect(screen.queryByText('matriz de avisos')).not.toBeInTheDocument();
+    expect(svc.tenantContext).not.toHaveBeenCalledWith('a');
+    soltarB({ tenant: tenants[1], policy: {} });
+    expect(await screen.findByText('matriz de avisos')).toBeInTheDocument();
+    expect(svc.tenantContext).toHaveBeenCalledWith('b');
+  });
+
+  it('aplicar a todos rejeitado mostra erro', async () => {
+    svc.applyToAll.mockRejectedValueOnce(new Error('x'));
+    const user = userEvent.setup();
+    render(<NotificationsTab />);
+    await screen.findByText('matriz de avisos');
+    await user.click(screen.getByRole('button', { name: /Aplicar a todos os clientes/ }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Aplicar' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Não consegui aplicar a todos'));
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('falha parcial vira erro e lista os nomes dos clientes que falharam', async () => {
+    svc.applyToAll.mockResolvedValueOnce({ applied: ['moeda'], failed: [{ slug: 'domus', error: 'x' }] });
+    const user = userEvent.setup();
+    render(<NotificationsTab />);
+    await screen.findByText('matriz de avisos');
+    await user.click(screen.getByRole('button', { name: /Aplicar a todos os clientes/ }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Aplicar' }));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('Aplicado em 1 cliente, mas não em: Domus'),
+    );
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('com um cliente só o botão de aplicar a todos fica desabilitado', async () => {
+    svc.catalog.mockResolvedValueOnce({ tenants: [tenants[0]] });
+    render(<NotificationsTab />);
+    await screen.findByText('matriz de avisos');
+    expect(screen.getByRole('button', { name: /Aplicar a todos os clientes/ })).toBeDisabled();
   });
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Label } from '@/components/ui/ds';
@@ -34,9 +34,12 @@ import notificationPolicyService, {
 // "Aplicar a todos" troca a configuração de todos os OUTROS clientes ativos pela
 // deste. O servidor aplica em Tenant.usable menos o de origem, que é a mesma
 // lista que o catálogo traz: por isso o N é o tamanho da lista menos um.
-function pedidoAplicarATodos(outros: number): PedidoDeConfirmacao {
+function pedidoAplicarATodos(origem: string, outros: number): PedidoDeConfirmacao {
   return {
-    titulo: outros === 1 ? 'Aplicar este padrão ao outro cliente?' : `Aplicar este padrão aos ${numero(outros)} clientes?`,
+    titulo:
+      outros === 1
+        ? `Aplicar a configuração de ${origem} ao outro cliente?`
+        : `Aplicar a configuração de ${origem} aos ${numero(outros)} clientes?`,
     descricao: 'A configuração de cada um é substituída.',
     rotuloDaAcao: 'Aplicar',
     destrutivo: true,
@@ -52,6 +55,10 @@ export default function NotificationsTab() {
   const [erroPolicy, setErroPolicy] = useState(false);
   const [stages, setStages] = useState<PipelineStages[]>([]);
   const [users, setUsers] = useState<PolicyUser[]>([]);
+  const [erroContexto, setErroContexto] = useState(false);
+  // Conta os pedidos de leitura: a resposta lenta do cliente anterior não pode
+  // sobrescrever a do cliente atual.
+  const pedido = useRef(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -74,32 +81,48 @@ export default function NotificationsTab() {
     void carregarCatalogo();
   }, [carregarCatalogo]);
 
-  const loadPolicy = useCallback(async (id: string) => {
-    if (!id) return;
-    setLoading(true);
-    setErroPolicy(false);
+  const carregarContexto = useCallback(async (id: string, meu: number) => {
+    setErroContexto(false);
     try {
-      const { policy: resolved } = await notificationPolicyService.show(id);
-      setPolicy(resolved);
-      // Etapas e pessoas só alimentam os ajustes de alguns avisos; falha aqui não
-      // pode derrubar a tela inteira.
-      notificationPolicyService
-        .tenantContext(id)
-        .then(ctx => {
-          setStages(ctx.pipelines);
-          setUsers(ctx.users);
-        })
-        .catch(() => {
-          setStages([]);
-          setUsers([]);
-        });
+      const ctx = await notificationPolicyService.tenantContext(id);
+      if (meu !== pedido.current) return;
+      setStages(ctx.pipelines);
+      setUsers(ctx.users);
     } catch {
-      setPolicy(null);
-      setErroPolicy(true);
-    } finally {
-      setLoading(false);
+      if (meu !== pedido.current) return;
+      setStages([]);
+      setUsers([]);
+      setErroContexto(true);
     }
   }, []);
+
+  const loadPolicy = useCallback(
+    async (id: string) => {
+      if (!id) return;
+      const meu = ++pedido.current;
+      // Some a configuração do cliente anterior: um toggle clicado enquanto o novo
+      // não chega gravaria no cliente errado.
+      setPolicy(null);
+      setStages([]);
+      setUsers([]);
+      setLoading(true);
+      setErroPolicy(false);
+      try {
+        const { policy: resolved } = await notificationPolicyService.show(id);
+        if (meu !== pedido.current) return;
+        setPolicy(resolved);
+        // Etapas e pessoas só alimentam os ajustes de alguns avisos; falha aqui não
+        // derruba a tela, mas avisa.
+        void carregarContexto(id, meu);
+      } catch {
+        if (meu !== pedido.current) return;
+        setErroPolicy(true);
+      } finally {
+        if (meu === pedido.current) setLoading(false);
+      }
+    },
+    [carregarContexto],
+  );
 
   useEffect(() => {
     if (tenantId) void loadPolicy(tenantId);
@@ -141,14 +164,19 @@ export default function NotificationsTab() {
 
   const applyToAll = async () => {
     if (!tenantId || outros === 0) return;
-    if (!(await confirmar(pedidoAplicarATodos(outros)))) return;
+    const origem = catalog?.tenants.find(t => t.id === tenantId)?.name ?? 'este cliente';
+    if (!(await confirmar(pedidoAplicarATodos(origem, outros)))) return;
     setSaving(true);
     try {
       const { applied, failed } = await notificationPolicyService.applyToAll(tenantId);
-      toast.success(
-        `Aplicado em ${plural(applied.length, 'cliente', 'clientes')}` +
-          (failed.length ? ` · ${plural(failed.length, 'falhou', 'falharam')}` : ''),
-      );
+      if (failed.length) {
+        const nomes = failed.map(f => catalog?.tenants.find(t => t.slug === f.slug)?.name ?? f.slug);
+        toast.error(
+          `Aplicado em ${plural(applied.length, 'cliente', 'clientes')}, mas não em: ${nomes.join(', ')}`,
+        );
+      } else {
+        toast.success(`Aplicado em ${plural(applied.length, 'cliente', 'clientes')}`);
+      }
     } catch {
       toast.error('Não consegui aplicar a todos');
     } finally {
@@ -232,8 +260,25 @@ export default function NotificationsTab() {
         fica em Push.
       </p>
 
+      {erroContexto && policy && (
+        <div role="status" className="flex items-center justify-between gap-3 rounded-md border bg-card px-3 py-2 text-sm text-muted-foreground">
+          <span>Não deu pra carregar as etapas e as pessoas deste cliente. Alguns ajustes ficam sem opções.</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void carregarContexto(tenantId, pedido.current)}
+          >
+            Tentar de novo
+          </Button>
+        </div>
+      )}
+
       {erroPolicy ? (
         <EmptyState tipo="erro" aoTentarDeNovo={() => void loadPolicy(tenantId)} />
+      ) : !policy ? (
+        <div className="flex justify-center py-10">
+          <Loader2 className="w-6 h-6 animate-spin" />
+        </div>
       ) : (
         policy && (
           <NotificationMatrix
