@@ -6,7 +6,8 @@ import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
 
 const update = vi.hoisted(() => vi.fn());
-vi.mock('@/services/salesAgents/salesAgentsService', () => ({ salesAgentsService: { update } }));
+const get = vi.hoisted(() => vi.fn());
+vi.mock('@/services/salesAgents/salesAgentsService', () => ({ salesAgentsService: { update, get } }));
 vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 
 // ⚠️ vi.hoisted: os vi.mock sobem pro topo do arquivo, então o marcador precisa subir junto
@@ -14,8 +15,9 @@ vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), err
 const marcador = vi.hoisted(() => async (nome: string) => {
   const { createElement: h } = await import('react');
   return {
-    default: ({ gravar }: { gravar: (m: Record<string, unknown>) => Promise<boolean> }) => h('div', null,
+    default: ({ gravar, aoChaveGerada }: { gravar: (m: Record<string, unknown>) => Promise<boolean>; aoChaveGerada?: () => void }) => h('div', null,
       h('p', null, `página ${nome}`),
+      h('button', { type: 'button', onClick: () => aoChaveGerada?.() }, 'chave gerada'),
       h('button', {
         type: 'button',
         onClick: () => void gravar({ greeting: 'Oi' }).catch((e: Error) => { (window as unknown as { erro: string }).erro = e.message; }),
@@ -50,11 +52,11 @@ const completa = (extra: Partial<SalesAgent> = {}) => agenteDeTeste({
   lead_facing_name: 'Bia', persona_kind: 'assistant', handoff_target: 'roleta', handoff_roleta_config_id: 'r1', ...extra,
 });
 
-function abrir(agent: SalesAgent, url = '/ia-vendedora?ia=ia-1&tela=configurar') {
+function abrir(agent: SalesAgent, url = '/ia-vendedora?ia=ia-1&tela=configurar', aoSalvo = vi.fn()) {
   render(
     <MemoryRouter initialEntries={[url]}>
       <Routes>
-        <Route path="/ia-vendedora" element={<><ConfigurarPaginas agent={agent} inboxes={[]} aoSalvo={vi.fn()} diagnostico={null} /><Endereco /></>} />
+        <Route path="/ia-vendedora" element={<><ConfigurarPaginas agent={agent} inboxes={[]} aoSalvo={aoSalvo} diagnostico={null} /><Endereco /></>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -62,7 +64,7 @@ function abrir(agent: SalesAgent, url = '/ia-vendedora?ia=ia-1&tela=configurar')
 
 const endereco = () => screen.getByLabelText('endereço').textContent;
 
-beforeEach(() => { update.mockReset(); esquecerSalvos(); });
+beforeEach(() => { update.mockReset(); get.mockReset(); esquecerSalvos(); });
 
 describe('ConfigurarPaginas', () => {
   it('trilho com os 5 grupos e as 15 páginas; o grupo é um grupo nomeado', () => {
@@ -76,6 +78,34 @@ describe('ConfigurarPaginas', () => {
     abrir(completa({ inbox_id: null }));
     expect(screen.getByText('página canal')).toBeInTheDocument();
     expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=canal');
+  });
+
+  // Revisão final da onda 3 (M1): o RR7 troca o endereço em transição, então o
+  // Configurar pode renderizar com o endereço velho, antes da casca traduzir.
+  it('?passo=3 antigo abre a Abertura e não é trocado pela página inicial', () => {
+    abrir(completa({ inbox_id: null }), '/ia-vendedora?ia=ia-1&tela=configurar&passo=3');
+    expect(screen.getByText('página abertura')).toBeInTheDocument();
+    expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=abertura');
+  });
+
+  it('?pagina= com nome da cadeia do objeto (constructor) não quebra: abre a página inicial', () => {
+    abrir(completa({ inbox_id: null }), '/ia-vendedora?ia=ia-1&tela=configurar&pagina=constructor');
+    expect(screen.getByText('página canal')).toBeInTheDocument();
+    expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=canal');
+  });
+
+  // Revisão final da onda 3 (M2): o registro do "último salvo" reconhece a cópia
+  // otimista pela identidade. Chave gerada entra pela IA relida do servidor, nunca
+  // por uma cópia montada aqui.
+  it('chave do sistema do cliente gerada: a IA que sobe é a relida do servidor, não uma cópia', async () => {
+    const relida = completa({ handoff_webhook_secret_set: true, handoff_webhook_secret_state: 'ready', updated_at: '2026-10-06T12:00:00Z' });
+    get.mockResolvedValue(relida);
+    const aoSalvo = vi.fn();
+    abrir(completa(), '/ia-vendedora?ia=ia-1&tela=configurar&pagina=destino', aoSalvo);
+    await userEvent.click(screen.getByRole('button', { name: 'chave gerada' }));
+    expect(get).toHaveBeenCalledWith('ia-1');
+    expect(aoSalvo).toHaveBeenCalledTimes(1);
+    expect(aoSalvo.mock.calls[0][0]).toBe(relida);
   });
 
   it('cabeçalho único: grupo, título e frase da página (sem "Passo N de 8")', () => {

@@ -11,15 +11,20 @@
 // ⚠️ Sem `?pagina=`: abre na primeira página com pendência e grava no endereço
 // (replace: o Voltar sai da IA). Trocar de página empurra no histórico (o Voltar
 // volta pra página anterior, como no passo a passo).
+// ⚠️ A página sai do endereço por `paginaDaUrl` (o MESMO da casca): traduz o
+// `?passo=N` antigo e não acha `constructor`/`toString` na cadeia do objeto. O RR7
+// troca o endereço em transição, então este componente pode renderizar ANTES da
+// casca reescrever o `?passo=`: lendo só `pagina`, escrevia a página inicial por
+// cima da tradução.
 import { useCallback, useEffect, useMemo, type ComponentType } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { HealthReport, SalesAgent } from '@/services/salesAgents/salesAgentsService';
+import { salesAgentsService, type HealthReport, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { paginasComPendencia } from '@/features/salesAgents/pendencias';
 import type { InboxOption } from '../configuracao/comum';
 import {
-  GRUPOS_DE_PAGINAS, PAGINAS, agendamentoTravado, conferirCamposDaPagina, paginaInicial, rotuloDoGrupo,
+  GRUPOS_DE_PAGINAS, PAGINAS, agendamentoTravado, conferirCamposDaPagina, paginaDaUrl, paginaInicial, rotuloDoGrupo,
   type PaginaId, type PropsDaPagina,
 } from './paginas';
 import { camposDaMudanca, useGravarNaHora, type Gravar } from './useGravarNaHora';
@@ -55,7 +60,7 @@ export interface ConfigurarPaginasProps {
 export default function ConfigurarPaginas({ agent, inboxes, aoSalvo, diagnostico }: ConfigurarPaginasProps) {
   const [params, setParams] = useSearchParams();
   const pedida = params.get('pagina');
-  const daUrl = pedida && pedida in PAGINAS ? (pedida as PaginaId) : null;
+  const daUrl = paginaDaUrl(params);
   const atual: PaginaId = daUrl ?? paginaInicial(agent);
   const pendentes = useMemo(() => paginasComPendencia(agent), [agent]);
   const travado = agendamentoTravado(agent);
@@ -68,10 +73,12 @@ export default function ConfigurarPaginas({ agent, inboxes, aoSalvo, diagnostico
     return n;
   }, { replace }), [setParams]);
 
+  // Endereço sem página, com página que não existe ou com o `?passo=` antigo: grava a
+  // página aberta (replace), a mesma que a casca escreveria.
   useEffect(() => {
-    if (daUrl === null) escrever(atual, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- só quando o endereço chega sem página
-  }, [daUrl]);
+    if (pedida !== atual) escrever(atual, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só quando o endereço muda
+  }, [daUrl, pedida]);
 
   const irPara = useCallback((p: PaginaId) => { if (p !== atual) escrever(p, false); }, [atual, escrever]);
 
@@ -81,6 +88,15 @@ export default function ConfigurarPaginas({ agent, inboxes, aoSalvo, diagnostico
     conferirCamposDaPagina(atual, camposDaMudanca(mudanca, subchaves));
     return gravar(mudanca, subchaves);
   }, [atual, gravar]);
+
+  // A chave do Sistema do cliente foi gerada (fora do PATCH da IA): relê a IA.
+  // ⚠️ Nunca uma cópia (`{ ...agent, handoff_webhook_secret_state: 'ready' }`) pro
+  // aoSalvo: o registro do "último salvo" reconhece a cópia otimista pela identidade,
+  // e uma cópia montada aqui com outra gravação na fila passaria por "salva".
+  // Falha na leitura: a tela fica como estava até a próxima leitura da IA.
+  const aoChaveGerada = useCallback(() => {
+    salesAgentsService.get(agent.id).then(aoSalvo).catch(() => undefined);
+  }, [agent.id, aoSalvo]);
 
   const Pagina = COMPONENTES[atual];
   const info = PAGINAS[atual];
@@ -121,7 +137,7 @@ export default function ConfigurarPaginas({ agent, inboxes, aoSalvo, diagnostico
           <p className="text-sm text-muted-foreground">{info.frase}</p>
         </header>
         <Pagina key={atual} agent={agent} inboxes={inboxes} gravar={gravarNaPagina} irPara={irPara} diagnostico={diagnostico}
-          aoChaveGerada={() => aoSalvo({ ...agent, handoff_webhook_secret_set: true, handoff_webhook_secret_state: 'ready' })} />
+          aoChaveGerada={aoChaveGerada} />
       </div>
     </div>
   );
