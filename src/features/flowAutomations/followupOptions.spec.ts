@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { followupFlowOptions, legacySequenceNotice } from './followupOptions';
+import { followupFlowOptions, followupPadraoId, legacySequenceNotice } from './followupOptions';
 import { FLOW_KIND_COPY, flowPath, kindOf } from './kind';
 import { businessHoursOnlyOf, waitUsesBusinessHours, withWaitBusinessHours } from './businessHours';
 import { cleanProgressPrefix, withProgress } from './progress';
@@ -62,5 +62,30 @@ describe('faixa do formato antigo', () => {
     expect(filas.map(f => f.id)).toEqual(['3', '1']);
     expect(legacyQueueLine(filas[0])).toBe('Follow-up longo — 87 mensagens programadas');
     expect(legacyQueueLine({ id: 'x', name: 'Um', pending: 1 })).toBe('Um — 1 mensagem programada');
+  });
+});
+
+describe('followupPadraoId (06/10/2026)', () => {
+  const f = (id: string, extra: Record<string, unknown> = {}) =>
+    ({ id, name: `Fluxo ${id}`, is_enabled: true, archived_at: null, template_key: null, created_at: '2026-10-01T00:00:00Z', ...extra });
+
+  it('prefere o do modelo follow_up_padrao: ligado e o mais antigo', () => {
+    expect(followupPadraoId([
+      f('outro'),
+      f('novo', { template_key: 'follow_up_padrao', created_at: '2026-10-06T00:00:00Z' }),
+      f('velho', { template_key: 'follow_up_padrao', created_at: '2026-10-02T00:00:00Z' }),
+      f('desligado', { template_key: 'follow_up_padrao', is_enabled: false, created_at: '2026-09-01T00:00:00Z' }),
+    ])).toBe('velho');
+  });
+
+  it('sem o modelo, o de nome exato; senão o primeiro ligado; arquivado nunca', () => {
+    expect(followupPadraoId([f('a'), f('b', { name: 'Follow-up padrão' })])).toBe('b');
+    expect(followupPadraoId([f('a', { is_enabled: false }), f('b'), f('c')])).toBe('b');
+    expect(followupPadraoId([f('x', { template_key: 'follow_up_padrao', archived_at: '2026-10-05T00:00:00Z' }), f('y')])).toBe('y');
+  });
+
+  it('nenhum ligado nem padrão: vazio', () => {
+    expect(followupPadraoId([f('a', { is_enabled: false })])).toBeNull();
+    expect(followupPadraoId([])).toBeNull();
   });
 });

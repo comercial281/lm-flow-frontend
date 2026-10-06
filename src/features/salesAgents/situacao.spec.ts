@@ -116,7 +116,7 @@ describe('pendenciasDaIa', () => {
   it('follow-up ligado ainda em "A IA escreve" vira aviso laranja; máximo 0 não', () => {
     const p = pendenciasDaIa(ia({ followup_enabled: true, followup_action: 'ai' }), diag());
     expect(p).toEqual([expect.objectContaining({ chave: 'followup_sem_escolha', titulo: 'O que ela faz quando o lead some', grave: false })]);
-    expect(pendenciasDaIa(ia({ followup_enabled: true, followup_action: 'sequence', followup_max_attempts: 0 }), diag())).toEqual([]);
+    expect(pendenciasDaIa(ia({ followup_enabled: true, followup_action: 'sequence', followup_flow_id: 'fu-1', followup_max_attempts: 0 }), diag())).toEqual([]);
     expect(pendenciasDaIa(ia({ followup_enabled: false, followup_action: 'ai' }), diag())).toEqual([]);
   });
 
@@ -144,6 +144,11 @@ describe('entrega 2: Corrigir leva ao passo certo', () => {
     expect(situacaoDaIa(ia({ inbox_id: null })).corrigir).toEqual({ tela: 'configurar', passo: 6 });
     expect(situacaoDaIa(ia({ enabled: false })).corrigir).toEqual({ tela: 'configurar', passo: 8 });
     expect(situacaoDaIa(ia({ enabled: false, inbox_id: null })).corrigir).toEqual({ tela: 'configurar', passo: 1 });
+  });
+
+  it('"Entregar pro follow-up" sem follow-up aparece no Painel, laranja, passo 7', () => {
+    const p = pendenciasDaIa(ia({ followup_enabled: true, followup_action: 'sequence', followup_flow_id: null }), diag());
+    expect(p).toEqual([expect.objectContaining({ chave: 'followup_sem_fluxo', titulo: 'O que ela faz quando o lead some', grave: false, corrigir: { tela: 'configurar', passo: 7 } })]);
   });
 
   it('follow-up ainda em "A IA escreve" → passo 7', () => {

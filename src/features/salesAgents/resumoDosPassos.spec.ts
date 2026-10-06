@@ -79,6 +79,11 @@ describe('linhaDoTempo', () => {
     const a = agenteDeTeste({ followup_enabled: true, reengagement_enabled: false, followup_min_days: 3, followup_action: 'ai', followup_max_attempts: 0 });
     expect(linhaDoTempo(a)).toEqual(['Depois de 3 dias sem resposta: falta escolher o que ela faz']);
   });
+
+  it('sem valor nenhum: também diz que falta escolher', () => {
+    const a = agenteDeTeste({ followup_enabled: true, reengagement_enabled: false, followup_min_days: 2, followup_action: undefined as never });
+    expect(linhaDoTempo(a)).toEqual(['Depois de 2 dias sem resposta: falta escolher o que ela faz']);
+  });
 });
 
 describe('proximosHorarios', () => {

@@ -144,6 +144,9 @@ export interface FlowAutomation {
   /** "Só em horário comercial" (sprint 3): nenhuma mensagem do fluxo sai fora da janela. Também em `state`. */
   business_hours_only?: boolean;
   state?: { once_per_lead?: boolean; business_hours_only?: boolean; kind?: FlowAutomationKind; [key: string]: unknown } | null;
+  /** O modelo de onde o fluxo nasceu (`state.template_key` no servidor), ex.:
+   *  'follow_up_padrao' = o Follow-up padrão de 30 dias que todo cliente ganha. */
+  template_key?: string | null;
   max_depth: number;
   archived_at: string | null;
   created_at: string;

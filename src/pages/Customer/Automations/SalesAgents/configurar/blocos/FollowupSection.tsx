@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { type SalesAgent, type SalesAgentFollowupChoice } from '@/services/salesAgents/salesAgentsService';
+import { type FlowAutomation } from '@/types/flowAutomations';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
 import { type ScheduleWindow } from '@/components/schedule/scheduleWindows';
 import { DEFAULT_FOLLOWUP_WINDOW, janelaDoFollowup } from '@/features/salesAgents/followupHours';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
-import { followupFlowOptions, legacySequenceNotice, type FollowupFlowOption } from '@/features/flowAutomations/followupOptions';
+import { followupFlowOptions, followupPadraoId, legacySequenceNotice, type FollowupFlowOption } from '@/features/flowAutomations/followupOptions';
 import { Seletor } from '@/components/base/Seletor';
 import { type PipelineOpt, type StageOpt } from '../../configuracao/comum';
 
@@ -207,7 +208,7 @@ const FOLLOWUP_ACTIONS: [SalesAgentFollowupChoice, string, string][] = [
   ['pipeline', 'Mover o card para uma coluna',
    'A IA leva o card para a coluna que você escolher e sai de cena. Quem manda a mensagem é o follow-up que começa quando o card entra nessa coluna.'],
   ['sequence', 'Entregar pro follow-up',
-   'A IA coloca o lead no follow-up escolhido, sem mexer no card. Todo cliente já tem o Follow-up padrão: 6 mensagens em 30 dias.'],
+   'A IA coloca o lead no follow-up escolhido, sem mexer no card. O Follow-up padrão manda 6 mensagens em 30 dias.'],
 ];
 
 export function FollowupActionPicker({
@@ -217,7 +218,8 @@ export function FollowupActionPicker({
   onSave: (patch: Partial<SalesAgent>) => void;
 }) {
   const [stages, setStages] = useState<StageOpt[]>([]);
-  const [followups, setFollowups] = useState<FollowupFlowOption[]>([]);
+  const [fluxos, setFluxos] = useState<FlowAutomation[]>([]);
+  const followups: FollowupFlowOption[] = followupFlowOptions(fluxos);
   // Sem padrão de reserva: IA antiga em 'ai' (ou sem valor) fica sem opção marcada.
   const acao = agent.followup_action ?? null;
   const pipeline = agent.pipeline_id ?? '';
@@ -237,13 +239,22 @@ export function FollowupActionPicker({
   }, [acao, pipeline]);
 
   // Sprint 3: a IA entrega pra um FLUXO de follow-up (aba Follow-up), não mais
-  // pra um funil antigo.
+  // pra um funil antigo. Lido logo de cara (não só com "Entregar pro follow-up"
+  // marcada): é desta lista que sai o Follow-up padrão já escolhido no clique.
   useEffect(() => {
-    if (acao !== 'sequence') { setFollowups([]); return; }
     flowAutomationsService.list({ kind: 'followup' })
-      .then((lista) => setFollowups(followupFlowOptions(lista)))
-      .catch(() => setFollowups([]));
-  }, [acao]);
+      .then((lista) => setFluxos(lista))
+      .catch(() => setFluxos([]));
+  }, []);
+
+  // 06/10/2026: marcar "Entregar pro follow-up" sem nenhum escolhido já traz o
+  // Follow-up padrão do cliente (followupPadraoId). Só no clique: abrir a tela
+  // nunca muda nada sozinho (senão a barra de "Alterações não salvas" apareceria
+  // sem a pessoa ter mexido).
+  const escolher = (valor: SalesAgentFollowupChoice) => {
+    const padrao = valor === 'sequence' && !agent.followup_flow_id ? followupPadraoId(fluxos) : null;
+    onSave(padrao ? { followup_action: valor, followup_flow_id: padrao } : { followup_action: valor });
+  };
   const avisoFunilAntigo = legacySequenceNotice(agent);
 
   return (
@@ -252,6 +263,7 @@ export function FollowupActionPicker({
       {acao === 'ai' && (
         <p className="text-xs text-amber-600">Escolha como o follow-up continua: a IA não escreve mais o follow-up.</p>
       )}
+      {!acao && <p className="text-xs text-amber-600">Escolha o que ela faz quando o lead some.</p>}
       {FOLLOWUP_ACTIONS.map(([valor, titulo, ajuda]) => (
         <label key={valor} className="flex items-start gap-3 cursor-pointer">
           <input
@@ -259,7 +271,7 @@ export function FollowupActionPicker({
             className="mt-1"
             name={`followup_action_${agent.id}`}
             checked={acao === valor}
-            onChange={() => onSave({ followup_action: valor })}
+            onChange={() => escolher(valor)}
           />
           <div>
             <div className="text-sm">{titulo}</div>

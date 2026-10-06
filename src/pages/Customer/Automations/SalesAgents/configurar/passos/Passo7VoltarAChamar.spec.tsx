@@ -63,6 +63,39 @@ describe('Passo 7 · Voltar a chamar', () => {
     expect(screen.getByText('Entrega o lead ao follow-up depois de 2 dias sem resposta')).toBeTruthy();
   });
 
+  // 06/10/2026: o servidor recusa ligar o follow-up com a IA ainda em "A IA escreve".
+  it('ligar o follow-up numa IA ainda em "A IA escreve": o Salvar não manda e diz por quê', async () => {
+    abrir(agenteDeTeste({ followup_enabled: false, followup_action: 'ai' }));
+    await userEvent.click(screen.getByLabelText('Ir atrás de quem sumiu'));
+    await salvar();
+    expect(update).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toBe('Escolha como o follow-up continua: a IA não escreve mais o follow-up.');
+  });
+
+  it('IA sem escolha nenhuma também não salva com o follow-up ligado', async () => {
+    abrir(agenteDeTeste({ followup_enabled: true, followup_action: undefined as never, reengagement_enabled: false }));
+    await userEvent.click(screen.getByLabelText('Retomar a pergunta antes do follow-up'));
+    await salvar();
+    expect(update).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toBe('Escolha o que ela faz quando o lead some.');
+  });
+
+  it('desligar o follow-up de uma IA em "A IA escreve" salva normalmente', async () => {
+    abrir(agenteDeTeste({ followup_enabled: true, followup_action: 'ai' }));
+    await userEvent.click(screen.getByLabelText('Ir atrás de quem sumiu'));
+    await salvar();
+    expect(update).toHaveBeenCalledWith('ia-1', { followup_enabled: false });
+  });
+
+  it('a recusa do servidor aparece no passo', async () => {
+    update.mockRejectedValueOnce({ response: { status: 422, data: { error: { message: 'Escolha como o follow-up continua.' } } } });
+    abrir(agenteDeTeste({ followup_enabled: false }));
+    await userEvent.click(screen.getByLabelText('Ir atrás de quem sumiu'));
+    await salvar();
+    expect(update).toHaveBeenCalledWith('ia-1', { followup_enabled: true });
+    expect((await screen.findByRole('alert')).textContent).toBe('Escolha como o follow-up continua.');
+  });
+
   it('desligado: some o resto', async () => {
     abrir();
     await userEvent.click(screen.getByLabelText('Ir atrás de quem sumiu'));

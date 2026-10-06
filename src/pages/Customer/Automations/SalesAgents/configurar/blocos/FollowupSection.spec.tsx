@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
 
@@ -9,17 +9,24 @@ vi.mock('@/services/pipelines/pipelinesService', () => ({
     getPipelineStages: vi.fn(async () => ({ data: [] })),
   },
 }));
+const list = vi.fn();
 vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
-  flowAutomationsService: {
-    list: vi.fn(async () => [{ id: 'fu-1', name: 'Follow-up padrão', is_enabled: true, archived_at: null }]),
-  },
+  flowAutomationsService: { list: (...a: unknown[]) => list(...a) },
 }));
 
 import { FollowupActionPicker, FollowupHoursRow } from './FollowupSection';
 
+const FLUXOS = [
+  { id: 'fu-velho', name: 'Follow-up longo', is_enabled: true, archived_at: null, template_key: null, created_at: '2026-06-01T00:00:00Z' },
+  { id: 'fu-padrao', name: 'Follow-up padrão', is_enabled: true, archived_at: null, template_key: 'follow_up_padrao', created_at: '2026-10-06T00:00:00Z' },
+];
+
 const AVISO = 'Escolha como o follow-up continua: a IA não escreve mais o follow-up.';
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  list.mockResolvedValue(FLUXOS);
+});
 
 // 06/10/2026: "A IA escreve a mensagem" saiu. Sobram duas saídas, e a IA que ficou
 // na antiga não tem nenhuma marcada até alguém escolher.
@@ -40,9 +47,45 @@ describe('Quando o lead sumir', () => {
     expect(screen.getByText(AVISO)).toBeTruthy();
   });
 
-  it('escolher uma opção grava a escolha', async () => {
+  it('IA sem valor nenhum: nenhuma marcada e pede a escolha', () => {
+    render(<FollowupActionPicker agent={agenteDeTeste({ followup_action: undefined as never })} onSave={vi.fn()} />);
+    for (const r of screen.getAllByRole('radio')) expect((r as HTMLInputElement).checked).toBe(false);
+    expect(screen.getByText('Escolha o que ela faz quando o lead some.')).toBeTruthy();
+  });
+
+  it('mover o card grava só a escolha', async () => {
     const onSave = vi.fn();
     render(<FollowupActionPicker agent={agenteDeTeste({ followup_action: 'ai' })} onSave={onSave} />);
+    await waitFor(() => expect(list).toHaveBeenCalledWith({ kind: 'followup' }));
+    await userEvent.click(screen.getByLabelText(/Mover o card para uma coluna/));
+    expect(onSave).toHaveBeenCalledWith({ followup_action: 'pipeline' });
+  });
+
+  // 06/10/2026: "Entregar pro follow-up" sem nenhum escolhido já vem com o Follow-up padrão.
+  it('entregar pro follow-up sem nenhum escolhido traz o Follow-up padrão (pelo modelo)', async () => {
+    const onSave = vi.fn();
+    render(<FollowupActionPicker agent={agenteDeTeste({ followup_action: 'ai', followup_flow_id: null })} onSave={onSave} />);
+    await waitFor(() => expect(list).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 0));
+    await userEvent.click(screen.getByLabelText(/Entregar pro follow-up/));
+    expect(onSave).toHaveBeenCalledWith({ followup_action: 'sequence', followup_flow_id: 'fu-padrao' });
+  });
+
+  it('com um follow-up já escolhido, não troca', async () => {
+    const onSave = vi.fn();
+    render(<FollowupActionPicker agent={agenteDeTeste({ followup_action: 'pipeline', followup_flow_id: 'fu-velho' })} onSave={onSave} />);
+    await waitFor(() => expect(list).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 0));
+    await userEvent.click(screen.getByLabelText(/Entregar pro follow-up/));
+    expect(onSave).toHaveBeenCalledWith({ followup_action: 'sequence' });
+  });
+
+  it('sem nenhum follow-up ligado no cliente, fica vazio', async () => {
+    list.mockResolvedValue([{ ...FLUXOS[0], is_enabled: false }]);
+    const onSave = vi.fn();
+    render(<FollowupActionPicker agent={agenteDeTeste({ followup_action: 'ai', followup_flow_id: null })} onSave={onSave} />);
+    await waitFor(() => expect(list).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 0));
     await userEvent.click(screen.getByLabelText(/Entregar pro follow-up/));
     expect(onSave).toHaveBeenCalledWith({ followup_action: 'sequence' });
   });
