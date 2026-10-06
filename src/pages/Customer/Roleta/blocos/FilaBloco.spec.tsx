@@ -66,6 +66,22 @@ describe('Fila', () => {
     expect(aoMudar).toHaveBeenCalled();
   });
 
+  it('depois da seta, o foco fica na seta da linha que andou (não cai no body)', async () => {
+    abrir();
+    await userEvent.click(screen.getByRole('button', { name: 'Descer Renê na fila' }));
+    await waitFor(() => expect(svc.update).toHaveBeenCalled());
+    // Renê virou o último: a seta ↓ dele trava e o foco vai pra ↑ dele.
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Subir Renê na fila' })));
+  });
+
+  it('o leitor de tela fala português no arrastar', () => {
+    abrir();
+    const alca = screen.getByRole('button', { name: 'Arrastar Bruno na fila' });
+    expect(alca).toHaveAttribute('aria-roledescription', 'corretor na fila');
+    expect(document.body.textContent).toContain('Pra mudar a ordem, aperte espaço');
+    expect(document.body.textContent).not.toContain('To pick up a draggable item');
+  });
+
   it('a primeira não sobe e a última não desce', () => {
     abrir();
     expect(screen.getByRole('button', { name: 'Subir Bruno na fila' })).toBeDisabled();

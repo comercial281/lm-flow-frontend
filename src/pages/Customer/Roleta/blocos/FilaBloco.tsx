@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ArrowDown, ArrowUp, GripVertical, X } from 'lucide-react';
 import {
@@ -8,7 +8,9 @@ import {
   closestCenter,
   useSensor,
   useSensors,
+  type Announcements,
   type DragEndEvent,
+  type ScreenReaderInstructions,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -72,6 +74,22 @@ function membrosParaGravar(linhas: Linha[]): RoletaConfigPayload['members'] {
   }));
 }
 
+// O leitor de tela fala português (o dnd-kit vem com as frases em inglês).
+const INSTRUCOES_DE_ARRASTAR: ScreenReaderInstructions = {
+  draggable: 'Pra mudar a ordem, aperte espaço, use as setas pra cima e pra baixo e aperte espaço de novo pra soltar. Esc cancela.',
+};
+
+function anunciosDaFila(linhas: Linha[]): Announcements {
+  const nome = (id: unknown) => linhas.find(l => l.user_id === id)?.nome ?? 'Corretor';
+  const posicao = (id: unknown) => posicaoTexto(Math.max(0, linhas.findIndex(l => l.user_id === id)));
+  return {
+    onDragStart: ({ active }) => `${nome(active.id)} pego, na posição ${posicao(active.id)}.`,
+    onDragOver: ({ active, over }) => (over ? `${nome(active.id)} sobre a posição ${posicao(over.id)}.` : `${nome(active.id)} fora da fila.`),
+    onDragEnd: ({ active, over }) => (over ? `${nome(active.id)} solto na posição ${posicao(over.id)}.` : `${nome(active.id)} solto. A ordem não mudou.`),
+    onDragCancel: ({ active }) => `Cancelado. ${nome(active.id)} voltou pra posição ${posicao(active.id)}.`,
+  };
+}
+
 function Inicial({ nome, foto }: { nome: string; foto?: string | null }) {
   if (foto) return <img src={foto} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />;
   return (
@@ -94,7 +112,7 @@ interface LinhaProps {
 
 function LinhaDaFila({ linha, indice, total, ocupado, aoMover, aoPausar, aoTirar, proximo }: LinhaProps) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
-    useSortable({ id: linha.user_id, disabled: ocupado });
+    useSortable({ id: linha.user_id, disabled: ocupado, attributes: { roleDescription: 'corretor na fila' } });
   const estilo = { transform: CSS.Transform.toString(transform), transition };
   return (
     <li
@@ -129,8 +147,8 @@ function LinhaDaFila({ linha, indice, total, ocupado, aoMover, aoPausar, aoTirar
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        <IconActionButton label={`Subir ${linha.nome} na fila`} variant="ghost" disabled={ocupado || indice === 0} onClick={() => aoMover(-1)} icon={<ArrowUp className="h-4 w-4" />} />
-        <IconActionButton label={`Descer ${linha.nome} na fila`} variant="ghost" disabled={ocupado || indice === total - 1} onClick={() => aoMover(1)} icon={<ArrowDown className="h-4 w-4" />} />
+        <IconActionButton label={`Subir ${linha.nome} na fila`} variant="ghost" disabled={indice === 0} onClick={() => aoMover(-1)} icon={<ArrowUp className="h-4 w-4" />} />
+        <IconActionButton label={`Descer ${linha.nome} na fila`} variant="ghost" disabled={indice === total - 1} onClick={() => aoMover(1)} icon={<ArrowDown className="h-4 w-4" />} />
         <Chave rotulo={`${linha.nome} recebe leads`} semRotuloVisivel semAviso ligada={linha.is_active} aoMudar={aoPausar} desabilitada={ocupado} className="mx-1" />
         <IconActionButton label={`Tirar ${linha.nome} da fila`} variant="ghost" disabled={ocupado} onClick={aoTirar} icon={<X className="h-4 w-4" />} />
       </div>
@@ -148,6 +166,10 @@ export default function FilaBloco({ roleta, aoMudar }: Props) {
   const [ocupado, setOcupado] = useState(false);
   const [equipe, setEquipe] = useState<User[]>([]);
   const [proximo, setProximo] = useState<RoletaNextUp | null>(null);
+  // Depois de mover pelas setas, o foco volta pra seta da linha que andou
+  // (a seta da ponta fica desabilitada e o foco cairia no <body>).
+  const lista = useRef<HTMLOListElement>(null);
+  const focoDepois = useRef<{ userId: string; delta: -1 | 1 } | null>(null);
 
   useEffect(() => { setLinhas(linhasDa(roleta)); }, [roleta]);
 
@@ -193,7 +215,25 @@ export default function FilaBloco({ roleta, aoMudar }: Props) {
     }
   };
 
-  const mover = (indice: number, delta: -1 | 1) => void gravar(moveMember(linhas, indice, delta));
+  const mover = (indice: number, delta: -1 | 1) => {
+    if (ocupado) return;
+    focoDepois.current = { userId: linhas[indice].user_id, delta };
+    void gravar(moveMember(linhas, indice, delta));
+  };
+
+  useEffect(() => {
+    const alvo = focoDepois.current;
+    if (!alvo || !lista.current) return;
+    const linha = linhas.find(l => l.user_id === alvo.userId);
+    if (!linha) return;
+    const botoes = Array.from(lista.current.querySelectorAll('button'));
+    const achar = (rotulo: string) => botoes.find(b => b.getAttribute('aria-label') === rotulo && !b.disabled);
+    const mesma = `${alvo.delta < 0 ? 'Subir' : 'Descer'} ${linha.nome} na fila`;
+    const outra = `${alvo.delta < 0 ? 'Descer' : 'Subir'} ${linha.nome} na fila`;
+    (achar(mesma) ?? achar(outra))?.focus();
+    // Gravou (ou voltou): o pedido de foco acabou; outra mudança não puxa o foco.
+    if (!ocupado) focoDepois.current = null;
+  }, [linhas, ocupado]);
 
   const aoSoltar = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return;
@@ -263,9 +303,14 @@ export default function FilaBloco({ roleta, aoMudar }: Props) {
           Ninguém na fila ainda. Adicione os corretores que vão receber os leads desta roleta.
         </p>
       ) : (
-        <DndContext sensors={sensores} collisionDetection={closestCenter} onDragEnd={aoSoltar}>
+        <DndContext
+          sensors={sensores}
+          collisionDetection={closestCenter}
+          onDragEnd={aoSoltar}
+          accessibility={{ screenReaderInstructions: INSTRUCOES_DE_ARRASTAR, announcements: anunciosDaFila(linhas) }}
+        >
           <SortableContext items={linhas.map(l => l.user_id)} strategy={verticalListSortingStrategy}>
-            <ol className="space-y-2" aria-label="Fila da roleta">
+            <ol ref={lista} className="space-y-2" aria-label="Fila da roleta">
               {linhas.map((l, i) => (
                 <LinhaDaFila
                   key={l.user_id}
