@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import SaleRentDestination from '@/components/pipelines/SaleRentDestination';
 import type { LeadDestinationOptions } from '@/components/pipelines/useLeadDestinationOptions';
 import type { SiteRoutingState } from '../siteLeadRouting';
-import { Secao, Secoes } from '../ui/Secao';
+import { Secao, Secoes } from '@/components/base/Secao';
 
 interface Props {
   leadRouting: SiteRoutingState;

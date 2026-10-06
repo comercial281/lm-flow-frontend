@@ -9,8 +9,8 @@ import { EMPTY_HERO_IMAGE, HERO_IMAGE_MODE_LABELS, heroImageChoiceFrom, heroImag
 import { Seletor } from '@/components/base/Seletor';
 import { tituloDaAba } from '@/features/siteBuilder/public/tituloDaAba';
 import { APARENCIA_FABRICA, FONTES_DO_SITE, type Aparencia } from '@/features/siteBuilder/public/aparenciaConfig';
-import { Secao, Secoes } from '../ui/Secao';
-import { CLASSE_DO_CAMPO, Campo } from '../ui/Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { CLASSE_DO_CAMPO, Campo } from '@/components/base/Campo';
 import EnvioDeImagem from '../ui/EnvioDeImagem';
 import { BlocoCapa, BlocoFaixaDeCima, BlocoFundo, BlocoRodape, BlocoTopo } from './BlocosDoVisual';
 import type { FormProps } from './tipos';

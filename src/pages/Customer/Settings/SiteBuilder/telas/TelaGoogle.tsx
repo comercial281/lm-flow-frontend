@@ -1,8 +1,8 @@
 import { Checkbox, Label as UILabel } from '@/components/ui/ds';
 import { getTenantSlug } from '@/services/core/tenant';
 import { enderecoNoGoogle } from '@/features/siteBuilder/enderecoDoSite';
-import { Secao, Secoes } from '../ui/Secao';
-import { CampoTexto, CampoTextoLongo } from '../ui/Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
 
 export default function TelaGoogle({ site, siteForm, setF }: FormProps) {

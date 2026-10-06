@@ -1,8 +1,8 @@
 import { Badge } from '@/components/ui/ds';
 import { erroGa4, erroGtm, erroPixel } from '@/features/siteBuilder/trackingIds';
 import type { TelaId } from '@/features/siteBuilder/meuSiteMenu';
-import { Secao, Secoes } from '../ui/Secao';
-import { CampoTexto, CampoTextoLongo } from '../ui/Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
 
 interface Props extends FormProps {

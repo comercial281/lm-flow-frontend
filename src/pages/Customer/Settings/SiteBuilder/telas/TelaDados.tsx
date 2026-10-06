@@ -3,8 +3,8 @@ import { BrPhoneInput } from '@/components/shared/BrPhoneInput';
 import { PhoneInput } from '@/components/shared/PhoneInput';
 import { cn } from '@/lib/utils';
 import { ondeApareceContato, ondeApareceEndereco } from '@/features/siteBuilder/ondeApareceNoSite';
-import { Secao, Secoes } from '../ui/Secao';
-import { CLASSE_DO_CAMPO, Campo, CampoTexto, CampoTextoLongo, descricaoDoCampo } from '../ui/Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { CLASSE_DO_CAMPO, Campo, CampoTexto, CampoTextoLongo, descricaoDoCampo } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
 
 // Formatos gravados (não mudam com a máscara — o site público lê estes valores):

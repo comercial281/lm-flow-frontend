@@ -15,7 +15,7 @@ import '@/components/chat/rich-text-editor/RichTextEditor.css';
 import {
   siteBuilderService, type ModeloDePagina, type PageFormData, type Site, type SitePage,
 } from '@/services/siteBuilder/siteBuilderService';
-import { CampoTexto } from '../ui/Campo';
+import { CampoTexto } from '@/components/base/Campo';
 
 /** O que a tela Páginas avisa ao pai: o menu da tela Menus acompanha as páginas. */
 export type MudancaDePagina =

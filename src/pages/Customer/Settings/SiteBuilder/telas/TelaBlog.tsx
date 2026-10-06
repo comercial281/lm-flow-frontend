@@ -13,7 +13,7 @@ import {
   siteBuilderService, ARTICLE_STATUS_COLORS, ARTICLE_STATUS_LABELS,
   type ArticleFormData, type Site, type SiteArticle,
 } from '@/services/siteBuilder/siteBuilderService';
-import { CampoTexto, CampoTextoLongo } from '../ui/Campo';
+import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
 
 const EMPTY_ARTICLE_FORM: ArticleFormData = {
   title: '',

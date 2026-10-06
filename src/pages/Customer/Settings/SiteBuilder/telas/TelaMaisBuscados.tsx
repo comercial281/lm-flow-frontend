@@ -4,8 +4,8 @@ import { Seletor } from '@/components/base/Seletor';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { HOME_FABRICA, type AtalhoManual, type HomeConfig } from '@/features/siteBuilder/public/homeConfig';
 import { ROTULO_TIPO, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
-import { Secao, Secoes } from '../ui/Secao';
-import { CLASSE_DO_CAMPO, CampoTexto } from '../ui/Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { CLASSE_DO_CAMPO, CampoTexto } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
 
 const MAX_ATALHOS = 8;

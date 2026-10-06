@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-// Layout "explicação ao lado" do Meu site (decisão L1, 04/10/2026).
+// Layout "explicação ao lado" (decisão L1 do Meu site, 04/10/2026). Desde a
+// entrega 2 da IA Vendedora (05/10) é peça da casa: o Meu site e o passo a passo
+// da IA usam a mesma faixa (título + frase à esquerda, campos à direita).
 //
 // Cada bloco de configuração é uma FAIXA da largura toda: à esquerda (≈ 1/3, de
 // `lg` pra cima) o título e uma frase dizendo pra que serve e onde aparece no

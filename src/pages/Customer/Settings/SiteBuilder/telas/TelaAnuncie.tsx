@@ -5,8 +5,8 @@ import { Loader2, Mail } from 'lucide-react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { siteBuilderService, type Site, type SiteListingPage } from '@/services/siteBuilder/siteBuilderService';
 import { listingWarning, parseEmails } from '@/features/siteBuilder/portalPages';
-import { Secao, Secoes } from '../ui/Secao';
-import { CampoTexto, CampoTextoLongo } from '../ui/Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
 
 interface Props {
   site: Site | null;

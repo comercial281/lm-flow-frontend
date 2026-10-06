@@ -8,8 +8,8 @@ import { siteBuilderService, type SitePage } from '@/services/siteBuilder/siteBu
 import {
   HOME_FABRICA, TEXTO_FABRICA, type ChamadaLivre, type ChamadaPadrao, type ChamadaPadraoId, type HomeConfig,
 } from '@/features/siteBuilder/public/homeConfig';
-import { Secao, Secoes } from '../ui/Secao';
-import { CLASSE_DO_CAMPO, CampoTexto } from '../ui/Campo';
+import { Secao, Secoes } from '@/components/base/Secao';
+import { CLASSE_DO_CAMPO, CampoTexto } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
 
 // Teto do servidor (Sites::HomeConfig::MAX_CUSTOM_CALLOUTS).
