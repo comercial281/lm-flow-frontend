@@ -2,12 +2,12 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import CvcrmConexao from './CvcrmConexao';
 
-const servico = vi.hoisted(() => ({ get: vi.fn(), connect: vi.fn(), disconnect: vi.fn() }));
+const servico = vi.hoisted(() => ({ get: vi.fn(), connect: vi.fn(), disconnect: vi.fn(), setMidia: vi.fn() }));
 vi.mock('@/services/cvcrm/cvcrmService', () => ({ cvcrmService: servico, default: servico }));
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 const desconectado = { connected: false, subdomain: null, email: null, token_state: 'none', connected_at: null, agents_using: 0 };
-const conectado = { connected: true, subdomain: 'habras', email: 'gestor@habras.com.br', token_state: 'ready', connected_at: '2026-10-06T17:00:00Z', agents_using: 2 };
+const conectado = { connected: true, subdomain: 'habras', email: 'gestor@habras.com.br', token_state: 'ready', connected_at: '2026-10-06T17:00:00Z', midia: null, agents_using: 2 };
 
 const digitar = (rotulo: string, valor: string) => fireEvent.change(screen.getByLabelText(rotulo), { target: { value: valor } });
 
@@ -82,5 +82,28 @@ describe('Integrações → CVCRM', () => {
     expect(screen.queryByText(/Esse é outro CVCRM/)).not.toBeInTheDocument();
     digitar('Endereço do seu CVCRM', 'https://outra.cvcrm.com.br/gestor');
     expect(screen.getByText(/Esse é outro CVCRM/)).toBeInTheDocument();
+  });
+
+  it('conectado: salva a mídia sem pedir o token', async () => {
+    servico.get.mockResolvedValue(conectado);
+    servico.setMidia.mockResolvedValue({ ...conectado, midia: '474' });
+    render(<CvcrmConexao />);
+
+    const botao = await screen.findByRole('button', { name: /Salvar mídia/ });
+    expect(botao).toBeDisabled();
+    digitar('Número da mídia', '474');
+    fireEvent.click(botao);
+
+    await waitFor(() => expect(servico.setMidia).toHaveBeenCalledWith('474'));
+    expect(screen.queryByLabelText('Token')).not.toBeInTheDocument();
+  });
+
+  it('mídia pelo nome avisa pra conferir a escrita', async () => {
+    servico.get.mockResolvedValue(conectado);
+    render(<CvcrmConexao />);
+
+    await screen.findByLabelText('Número da mídia');
+    digitar('Número da mídia', 'Leal Mídia');
+    expect(screen.getByText(/escrito exatamente igual/)).toBeInTheDocument();
   });
 });

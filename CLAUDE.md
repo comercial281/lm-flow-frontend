@@ -6758,6 +6758,15 @@ O que aparece na tela:
   da Silva.* / *O envio ao CVCRM falhou: <motivo>…*
 - **Diagnóstico**: item *Sistema do cliente (CVCRM)*; nos envios, *Ficou com <nome>
   no CVCRM*.
+- **Mídia no CVCRM** (07/10, pedido do Luciano/Habras): seção na aba CVCRM,
+  conectado. O número da mídia (ex.: 474 "Leal Mídia") vai em todo lead como
+  `idmidia`; é por ela que o cliente filtra os leads do LM Flow. Aceita o nome
+  (`midia`), com aviso: nome diferente do CVCRM cria mídia nova lá.
+- **Origem** continua o código do canal (WhatsApp, Facebook, Instagram, Google…):
+  é lista fechada no CVCRM, não dá pra escrever "LM Flow". Quem diz "veio do LM
+  Flow" é a mídia e a conversão *LM Flow*.
+- **Lead de teste**: e-mail único e telefone fictício único com DDD 20 (não
+  existe). Com dados fixos, o CVCRM casava o teste com um lead antigo.
 
 Decisões (não reabrir sem o dono pedir):
 
