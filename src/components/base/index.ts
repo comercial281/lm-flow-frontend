@@ -1,5 +1,7 @@
 export { default as BaseTable } from './BaseTable';
 export { default as BaseHeader } from './BaseHeader';
+export { default as Pagina, ExtrasDaMolduraContext, useExtrasDaMoldura } from './Pagina';
+export type { PaginaProps, ExtrasDaMoldura } from './Pagina';
 export { default as BasePagination } from './BasePagination';
 export { default as BaseForm } from './BaseForm';
 export { default as BaseFilter } from './BaseFilter';
