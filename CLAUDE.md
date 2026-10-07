@@ -4167,10 +4167,10 @@ O que aparece na tela:
   Imóveis, Leads, Vendas e automação e Minha imobiliária. A seção da página
   atual abre sozinha. Seção sem item que o cargo veja não aparece.
 - **Todo item leva direto a uma página.** O terceiro nível virou **abas no topo
-  da página** (Integrações: WhatsApp, Facebook, Pixel, Portais · Bolsão: Pegar leads,
+  da página** (Bolsão: Pegar leads,
   Listas e regras · Fluxos de mensagem: Editor de funis, FlowBuilder ·
   Automações: Regras de lead, Lembretes · Campos personalizados: Atributos,
-  Variáveis). A segunda coluna ao lado do menu acabou.
+  Variáveis). A segunda coluna ao lado do menu acabou. Integrações deixou de ter abas em 07/10/2026: ver "Integrações em cartões".
 - **Automações deixou de ser uma página de 7 abas**, sem mudar endereço:
   Follow-up, Roleta de leads e Formulários são páginas sozinhas. `/automations` puro
   manda pra primeira tela que a pessoa vê.
@@ -4221,7 +4221,7 @@ Decisões do dono (não reabrir sem ele pedir):
   endereço `/automations/origem`. Os links que mandavam revisar a conexão da
   página (aviso de erro dos Formulários e o Marketplace) apontam para a aba nova.
   Ela tem as mesmas travas da antiga Origem: `hideOnRoot` (não aparece no painel
-  raiz nem na prévia da Vercel) e `client_manage_automations`.
+  raiz nem na prévia da Vercel) e `client_manage_automations`. Desde 07/10/2026 ela divide a tela com o Pixel (ver "Integrações em cartões").
 
 Como funciona por dentro:
 
@@ -7318,3 +7318,52 @@ do lead mostrava a visita sem deixar fazer nada com ela.
   visita vira Cancelada na hora, sem recarregar.
 - O resumo usa o `VisitCard` sem o id `visita-<id>` (`ancorada={false}`): a pílula já tem
   esse id, e o destaque do link rola até ele.
+
+## Integrações em cartões (desde 2026-10-07)
+
+Pedido do dono: Integrações tinha cinco abas (WhatsApp, Facebook, Pixel, Portais,
+CVCRM) e cada integração nova virava mais uma. Spec:
+`LM FLOW/specs/2026-10-07-integracoes-cartoes-design.md`.
+
+O que aparece na tela:
+
+- **Minha imobiliária → Integrações** abre uma página de entrada
+  (`/settings/integrations`) com quatro cartões, logo + nome + frase: **WhatsApp**,
+  **Facebook** (Página e Pixel), **Portais** e **Sistemas** (peças se encaixando).
+  Cartão sem nenhuma tela visível pro cargo não aparece.
+- **Telas de dentro** com a barra "← Integrações" + o cartão; a tela em si é a de
+  antes. No CVCRM o voltar é "← Sistemas".
+- **Facebook**: a Página (Lead Ads) em cima e o Pixel embaixo, numa rolagem.
+  `/settings/facebook` e `/settings/pixel-capi` abrem a mesma tela; o do Pixel
+  abre rolado até ele.
+- **Sistemas** (`/settings/integrations/sistemas`): um cartão por sistema (hoje só
+  o CVCRM, com o estado da conexão) e "Usa outro sistema? Fale com o suporte".
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **Cartão com frase**, não só ícone: o gestor novo entende sem clicar.
+- **Sem cartão "em breve" com nome de sistema** em Sistemas: vira promessa.
+- **Ícone de Sistemas é `Puzzle`**, não o robô (o robô é a IA Vendedora).
+- **Estado embaixo dos cartões da entrada** ("2 números") ficou pra depois: uma
+  consulta a mais por cartão.
+
+Como funciona por dentro:
+
+- **Uma fonte só.** As cinco telas continuam na lista `abas` do item Integrações
+  em `menuItems.ts`, cada uma com `cartao`; o item tem `entrada`. O filtro de
+  sempre decide o que sobra; entrada, Facebook, Sistemas e a barra leem essa lista
+  pelo `MenuContext` (`cartoes.ts`: `itemDeIntegracoes`, `cartoesVisiveis`,
+  `barraDoEndereco`). Nenhum deles confere permissão sozinho.
+- **O cartão Facebook leva à primeira tela que sobrou**: quem só vê o Pixel
+  (painel raiz, cliente sem a função de automações) cai em `/settings/pixel-capi`,
+  nunca na trava da Página.
+- **Bloco do Facebook** aparece se a tela sobrou no menu OU se é o endereço aberto
+  (a rota já conferiu a permissão).
+- **A barra só aparece pra quem vê Integrações**: o corretor em "Meus números"
+  (`/channels`) vê a tela sem voltar.
+- `MolduraDeIntegracao` substituiu a `PaginaComAbas` nessas rotas. A entrada e
+  Sistemas não têm `PermissionRoute` (o `permissionRoutes.source.spec` confere).
+- Sistema novo = mais uma tela no item com `cartao: 'sistemas'`; a página Sistemas
+  não muda (só o estado, se o sistema tiver).
+- O `SettingsIntegrationsTour` cita `/settings/integrations` mas não está montado
+  em tela nenhuma; a entrada não o monta.
