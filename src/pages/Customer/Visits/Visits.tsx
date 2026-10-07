@@ -476,6 +476,11 @@ export default function Visits() {
   const [feedback, setFeedback]       = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  // Visita cujo resumo (Confirmar / Realizada / Cancelar) está aberto pelo
+  // clique no calendário. Guarda o id: o card lê a versão de `visits`, então
+  // Confirmar atualiza o resumo sem fechar.
+  const [resumoId, setResumoId] = useState<string | null>(null);
+  const visitaDoResumo = resumoId ? visits.find(v => v.id === resumoId) ?? null : null;
 
   // Abre um diálogo de ação. "Dar retorno" já vem com a nota e o comentário que
   // a visita tem; os outros começam vazios.
@@ -488,7 +493,8 @@ export default function Visits() {
 
   const handleVisitClick = (visit: Visit) => {
     const acao = acaoDaVisita(visit, 'clique');
-    if (acao) abrirAcao(visit, acao);
+    if (acao === 'resumo') setResumoId(visit.id);
+    else if (acao) abrirAcao(visit, acao);
     else toast.info(`Visita ${VISIT_STATUS_LABELS[visit.status] ?? visit.status}`);
   };
 
@@ -903,6 +909,29 @@ export default function Visits() {
         </>
       )}
 
+      {/* Resumo da visita clicada no calendário: o mesmo card da Lista */}
+      <Dialog open={!!visitaDoResumo} onOpenChange={aberto => { if (!aberto) setResumoId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="capitalize">
+              {visitaDoResumo && new Date(visitaDoResumo.scheduled_at).toLocaleDateString('pt-BR', {
+                weekday: 'long', day: 'numeric', month: 'long',
+              })}
+            </DialogTitle>
+          </DialogHeader>
+          {visitaDoResumo && (
+            <VisitCard
+              visit={visitaDoResumo}
+              ancorada={false}
+              onConfirm={handleConfirm}
+              onComplete={v => { setResumoId(null); abrirAcao(v, 'complete'); }}
+              onCancel={v => { setResumoId(null); abrirAcao(v, 'cancel'); }}
+              onRetorno={v => { setResumoId(null); abrirAcao(v, 'retorno'); }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Complete / Retorno / Cancel action modal */}
       <Dialog open={!!actionModal} onOpenChange={() => setActionModal(null)}>
         <DialogContent>
@@ -971,6 +1000,7 @@ export default function Visits() {
 function VisitCard({
   visit,
   destacada = false,
+  ancorada = true,
   onConfirm,
   onComplete,
   onCancel,
@@ -979,6 +1009,8 @@ function VisitCard({
   visit: Visit;
   /** Visita que veio pelo link: ganha contorno. */
   destacada?: boolean;
+  /** Leva o id `visita-<id>` (alvo do destaque). O resumo do calendário não leva: a pílula já tem. */
+  ancorada?: boolean;
   onConfirm: (v: Visit) => void;
   onComplete: (v: Visit) => void;
   onCancel: (v: Visit) => void;
@@ -989,7 +1021,7 @@ function VisitCard({
   const isActive = ['scheduled', 'confirmed', 'in_progress'].includes(visit.status);
 
   return (
-    <div id={`visita-${visit.id}`} className={`flex gap-4 p-4 rounded-xl border border-border bg-card transition-shadow ${
+    <div id={ancorada ? `visita-${visit.id}` : undefined} className={`flex gap-4 p-4 rounded-xl border border-border bg-card transition-shadow ${
       isPastVisit && isActive ? 'border-orange-300 dark:border-orange-700' : ''
     } ${destacada ? 'ring-2 ring-primary' : ''}`}>
       {/* Time column */}

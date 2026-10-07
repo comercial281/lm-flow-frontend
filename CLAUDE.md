@@ -7288,3 +7288,24 @@ sempre a capa.**
   antigos com capa fora do primeiro lugar já aparecem certos, sem migração. Sem capa marcada,
   vale a primeira imagem da ordem (`Property#cover_photo`); a tela calcula o selo "Capa" pela
   mesma regra (`ordemDasFotos.ts`).
+
+## Cancelar visita pelo calendário e pelo card do lead (07/10/2026)
+
+Pedido do dono: *"preciso ter como cancelar a visita"*. O cancelamento já existia, mas só
+na Agenda em **Lista**. No **Calendário**, que é como a maioria usa, clicar numa visita
+Agendada/Confirmada abria direto "Marcar visita como realizada", e não havia Cancelar. O card
+do lead mostrava a visita sem deixar fazer nada com ela.
+
+- **Calendário: clicar numa visita Agendada, Confirmada ou Em andamento abre o resumo**, com
+  o mesmo card da Lista (Confirmar / Realizada / Cancelar). O título é o dia ("quarta-feira,
+  7 de outubro"). Realizada e Cancelar fecham o resumo e abrem as mesmas janelas de antes
+  (nota e feedback / motivo opcional). Confirmar atualiza o resumo sem fechar. Regra em
+  `acaoDaVisita` (`'resumo'`). Custo assumido pelo dono: marcar como realizada pelo
+  calendário passou de 1 para 2 cliques.
+- Fica igual: Realizada abre *Dar retorno*; o link `?visita=` da Dashboard; Cancelada, Não
+  compareceu e Reagendada só mostram o aviso.
+- **Card do lead → Visitas e propostas: visita ativa ganha "Cancelar visita"**, com a mesma
+  janela de motivo opcional. Só aparece com a permissão `visits.cancel` (o corretor tem). A
+  visita vira Cancelada na hora, sem recarregar.
+- O resumo usa o `VisitCard` sem o id `visita-<id>` (`ancorada={false}`): a pílula já tem
+  esse id, e o destaque do link rola até ele.

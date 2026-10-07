@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -11,6 +11,7 @@ vi.mock('@/contexts/TenantFeaturesContext', async (orig) => {
 });
 
 const list = vi.fn();
+const cancel = vi.fn();
 vi.mock('@/services/visits/visitsService', async (orig) => {
   const real = await orig<typeof import('@/services/visits/visitsService')>();
   return {
@@ -18,6 +19,7 @@ vi.mock('@/services/visits/visitsService', async (orig) => {
     visitsService: {
       ...real.visitsService,
       list: (...a: unknown[]) => list(...a),
+      cancel: (...a: unknown[]) => cancel(...a),
       realtors: vi.fn().mockResolvedValue([]),
       leadPickerPage: vi.fn().mockResolvedValue({ data: [], meta: {} }),
     },
@@ -129,5 +131,33 @@ describe('Agenda de Visitas: Semana e Dia', () => {
 
     abrir();
     expect(await screen.findByRole('button', { name: 'Dia' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+describe('Agenda de Visitas: clique na visita do calendário', () => {
+  beforeEach(() => {
+    try { localStorage.removeItem('lm-visitas-visao'); } catch { /* sem armazenamento */ }
+  });
+
+  it('visita agendada abre o resumo com Confirmar / Realizada / Cancelar, e dá para cancelar', async () => {
+    const hoje = new Date();
+    const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
+    const visita = { id: 'v1', status: 'scheduled', scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Thyago' } };
+    list.mockResolvedValue({ data: [visita], meta: { total: 1, active_total: 1, only_mine: false } });
+    cancel.mockResolvedValue({ ...visita, status: 'cancelled' });
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Semana' }));
+    await user.click(await screen.findByRole('button', { name: /15:00–16:00 · Thyago/ }));
+
+    const resumo = await screen.findByRole('dialog');
+    expect(within(resumo).getByRole('button', { name: /Confirmar/ })).toBeInTheDocument();
+    expect(within(resumo).getByRole('button', { name: /Realizada/ })).toBeInTheDocument();
+    await user.click(within(resumo).getByRole('button', { name: /Cancelar/ }));
+
+    const dialogo = await screen.findByRole('dialog');
+    expect(within(dialogo).getByText('Motivo do cancelamento')).toBeInTheDocument();
+    await user.click(within(dialogo).getByRole('button', { name: 'Cancelar visita' }));
+    expect(cancel).toHaveBeenCalledWith('v1', undefined);
   });
 });
