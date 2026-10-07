@@ -465,6 +465,7 @@
     "title": "Funil de vendas",
     "subtitle": "Os funis por onde seus leads andam até a venda. · {{count}} funil",
     "subtitle_other": "Os funis por onde seus leads andam até a venda. · {{count}} funis",
+    "subtitle_zero": "Os funis por onde seus leads andam até a venda. · {{count}} funis",
     "organize": "Os funis por onde seus leads andam até a venda.",
     "searchPlaceholder": "Buscar funis...",
     "newPipeline": "Novo funil"
