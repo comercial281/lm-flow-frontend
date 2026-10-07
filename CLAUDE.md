@@ -7386,3 +7386,47 @@ Como funciona por dentro:
   sistema com estado próprio precisa ensinar essa leitura.
 - O `SettingsIntegrationsTour` cita `/settings/integrations` mas não está montado
   em tela nenhuma; a entrada não o monta.
+
+## Painel do lead: fileira de atalhos (07/10/2026)
+
+Pedido do dono, com um print do CRM do LM Hub: botões redondos de atalho logo abaixo do
+nome no painel do lead (a ficha à direita da conversa), pra agendar mensagem e mexer na
+IA sem abrir menu.
+
+O que aparece na tela:
+
+- **Uma fileira de botões redondos, só ícone** (o nome aparece ao passar o mouse), entre
+  o nome/telefone e a faixa de selos, nesta ordem:
+  - **Agendar mensagem** (calendário com relógio): a MESMA janela do "⋮" da conversa e do
+    "Agendar envio" do card. Mesma chave `card_schedule_action`; ao fechar, a seção
+    Agendados relê (`avisarAgendadosMudaram`).
+  - **IA** (robô): liga e desliga a IA neste lead. Roxo com fundo quando atendendo, azul
+    (pessoa com ✓) quando a IA passou o lead pra um corretor, cinza quando desligada. Só
+    existe quando o número tem IA. Mesmas cores e textos do robô do topo da conversa.
+  - **Agendar visita** (alfinete): a janela de visita do card, já com o lead e, no funil, o
+    responsável do card como corretor. Ao criar, põe a etiqueta `visita-agendada` (igual
+    ao card).
+- **Na oferta da roleta só o robô fica**: as janelas de agendar e de visita mostram o
+  telefone. Sem nenhum botão, a fileira não existe.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **Sem atalho "Abrir card do lead"**: o card já abre pela seção Funil, logo abaixo.
+- **O robô fica nos dois lugares** (topo da conversa e painel): com o painel fechado
+  (tela menor), o do topo é o único.
+- **Sem Histórico nem Notas na fileira**: o Histórico é só do card (decisão de 02/10) e
+  as Notas já estão à vista no painel.
+- **Topo continua com a foto à esquerda**, não centralizado como no Hub: centralizado
+  gastaria ~3 linhas da primeira dobra num painel mais estreito.
+
+Armadilhas:
+
+1. **Os dois robôs andam juntos pelo `useIaDaConversa`**
+   (`src/features/conversas/useIaDaConversa.ts`): quem troca avisa pelo `window`
+   (`lmflow:ia-mudou`, `avisarIaMudou`) e o outro atualiza na hora. Robô novo nessa tela
+   usa o hook, não um estado próprio. Cada um ainda pergunta o estado ao abrir a conversa
+   (dois GET `sales_agent_status`, pequenos).
+2. **"Ligada" = `active` ou `idle`** (régua do topo da conversa, em `iaLigada`). O card do
+   lead (`LeadQuickActions`) usa outra (`active` só) e não foi mexido.
+3. Regras puras e textos em `src/features/conversas/atalhosDoLead.ts` (com spec); a
+   fileira em `painel/AtalhosDoLead.tsx`.
