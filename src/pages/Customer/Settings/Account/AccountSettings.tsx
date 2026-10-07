@@ -22,6 +22,7 @@ import NotificationCenter from './NotificationCenter';
 import { toast } from 'sonner';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import BaseHeader from '@/components/base/BaseHeader';
+import { Pagina } from '@/components/base';
 import BarraSalvar from '@/components/base/BarraSalvar';
 import Chave from '@/components/base/Chave';
 import IconActionButton from '@/components/base/IconActionButton';
@@ -382,14 +383,18 @@ export default function AccountSettings() {
   }
 
   return (
-    <div className="h-full flex flex-col p-4">
+    <Pagina
+      rolagem="conteudo"
+      cabecalho={
+        <div data-tour="settings-header">
+          <BaseHeader title={t('title')} subtitle={t('subtitle')} />
+        </div>
+      }
+    >
       <SettingsTour />
-      <div data-tour="settings-header">
-        <BaseHeader title={t('title')} subtitle={t('subtitle')} />
-      </div>
 
       <div className="flex-1 overflow-auto">
-        <div className="max-w-5xl w-full mx-auto">
+        <div className="w-full max-w-5xl">
           {/* Configurações Gerais */}
           <div data-tour="settings-general">
           <SectionLayout
@@ -690,6 +695,6 @@ export default function AccountSettings() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Pagina>
   );
 }

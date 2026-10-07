@@ -30,5 +30,6 @@
   {"arquivo": "src/pages/Unauthorized.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "página de erro, fora do app"},
   {"arquivo": "src/components/layout/AdminPaginaComAbas.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "moldura do painel da Leal Mídia (raiz), não é tela do cliente"},
   {"arquivo": "src/pages/Customer/Roleta/AcceptLeadPage.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "aceite da roleta: tela cheia aberta pelo link do WhatsApp, sem menu"},
-  {"arquivo": "src/components/base/BaseFlowEditor.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "editor de tela cheia (ferramenta, não página)"}
+  {"arquivo": "src/components/base/BaseFlowEditor.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "editor de tela cheia (ferramenta, não página)"},
+  { "arquivo": "src/pages/Customer/Settings/Teams/Teams.tsx", "categoria": "foraDaMoldura", "trecho": "<TeamsHeader", "motivo": "aba Times dentro de Equipe (a moldura é a da Equipe); sem título próprio" }
 ]

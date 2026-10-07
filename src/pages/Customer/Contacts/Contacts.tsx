@@ -13,6 +13,7 @@ import {
   Button,
 } from '@/components/ui/ds';
 import { Users } from 'lucide-react';
+import { Pagina } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
 
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -789,8 +790,9 @@ export default function Contacts() {
   };
 
   return (
-    <div className="h-full flex flex-col p-4">
-      <ContactsTour />
+    <Pagina
+      rolagem="conteudo"
+      cabecalho={
       <div data-tour="contacts-header">
       <ContactsHeader
         totalCount={state.meta.pagination.total}
@@ -816,9 +818,12 @@ export default function Contacts() {
         }
       />
       </div>
+      }
+    >
+      <ContactsTour />
 
       {/* Content */}
-      <div className="mt-4 flex-1 overflow-auto" data-tour="contacts-list">
+      <div className="flex-1 overflow-auto" data-tour="contacts-list">
         {state.loading.list ? (
           <div className="flex items-center justify-center py-16">
             <div className="text-muted-foreground">{t('loading.contacts')}</div>
@@ -1020,6 +1025,6 @@ export default function Contacts() {
         loading={state.loading.bulk}
       />
 
-    </div>
+    </Pagina>
   );
 }

@@ -1,5 +1,5 @@
 {
-  "title": "Atributos Personalizados",
+  "title": "Campos personalizados",
   "loading": "Carregando atributos personalizados...",
   "sections": {
     "defined": "Atributos Personalizados Definidos",
@@ -50,10 +50,10 @@
     }
   },
   "header": {
-    "title": "Atributos Personalizados",
-    "subtitle": "{{count}} atributo {{tabName}} no total",
-    "subtitle_other": "{{count}} atributos {{tabName}} no total",
-    "subtitle_zero": "{{count}} atributos {{tabName}} no total",
+    "title": "Campos personalizados",
+    "subtitle": "Informações a mais que você guarda em cada contato ou conversa. · {{count}} campo {{tabName}}",
+    "subtitle_other": "Informações a mais que você guarda em cada contato ou conversa. · {{count}} campos {{tabName}}",
+    "subtitle_zero": "Informações a mais que você guarda em cada contato ou conversa. · {{count}} campos {{tabName}}",
     "searchPlaceholder": "Buscar atributos personalizados...",
     "newAttribute": "Novo Atributo",
     "bulkDelete": "Excluir",

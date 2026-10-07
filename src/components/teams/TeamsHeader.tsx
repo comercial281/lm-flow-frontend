@@ -21,6 +21,8 @@ interface TeamsHeaderProps {
   onClearSelection: () => void;
   activeFilters?: HeaderFilter[];
   showFilters?: boolean;
+  /** Dentro da aba Times de Equipe: sem título próprio (a moldura é a da Equipe). */
+  embutido?: boolean;
 }
 
 export default function TeamsHeader({
@@ -36,6 +38,7 @@ export default function TeamsHeader({
   onClearSelection,
   activeFilters = [],
   showFilters = true,
+  embutido = false,
 }: TeamsHeaderProps) {
   const { can } = useUserPermissions();
   const { t } = useLanguage('teams');
@@ -74,8 +77,8 @@ export default function TeamsHeader({
 
   return (
     <BaseHeader
-      title={t('title')}
-      subtitle={t('subtitle')}
+      title={embutido ? undefined : t('title')}
+      subtitle={embutido ? undefined : t('subtitle')}
       totalCount={totalCount}
       selectedCount={selectedCount}
       searchValue={searchValue}

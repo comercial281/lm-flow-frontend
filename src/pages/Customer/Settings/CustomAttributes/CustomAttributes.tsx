@@ -16,6 +16,7 @@ import {
   TabsTrigger,
 } from '@/components/ui/ds';
 import { Settings } from 'lucide-react';
+import { Pagina } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
 
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -300,8 +301,10 @@ export default function CustomAttributes() {
   };
 
   return (
-    <div className="h-full flex flex-col p-4" data-tour="settings-custom-attributes-page">
-      <SettingsCustomAttributesTour />
+    <Pagina
+      rolagem="conteudo"
+      dataTour="settings-custom-attributes-page"
+      cabecalho={
       <div data-tour="settings-custom-attributes-header">
         <CustomAttributesHeader
           totalCount={searchFilteredAttributes.length}
@@ -315,10 +318,13 @@ export default function CustomAttributes() {
           activeTab={state.activeTab}
         />
       </div>
+      }
+    >
+      <SettingsCustomAttributesTour />
 
       {/* Tabs */}
-      <div data-tour="settings-custom-attributes-tabs">
-      <Tabs value={state.activeTab} onValueChange={handleTabChange} className="mt-6">
+      <div className="flex min-h-0 flex-1 flex-col" data-tour="settings-custom-attributes-tabs">
+      <Tabs value={state.activeTab} onValueChange={handleTabChange} className="flex min-h-0 flex-1 flex-col">
         <TabsList className="mb-4">
           {ATTRIBUTE_TABS.map(tab => (
             <TabsTrigger key={tab.key} value={tab.key}>
@@ -469,6 +475,6 @@ export default function CustomAttributes() {
         onSubmit={handleAttributeFormSubmit}
         defaultAttributeModel={state.activeTab}
       />
-    </div>
+    </Pagina>
   );
 }

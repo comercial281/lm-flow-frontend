@@ -3,9 +3,9 @@
   "loading": "Carregando etiquetas...",
   "header": {
     "title": "Etiquetas",
-    "subtitle": "{{count}} etiqueta no total",
-    "subtitle_other": "{{count}} etiquetas no total",
-    "subtitle_zero": "{{count}} etiquetas no total",
+    "subtitle": "Marcadores pra separar e achar contatos e conversas. · {{count}} etiqueta",
+    "subtitle_other": "Marcadores pra separar e achar contatos e conversas. · {{count}} etiquetas",
+    "subtitle_zero": "Marcadores pra separar e achar contatos e conversas. · {{count}} etiquetas",
     "searchPlaceholder": "Buscar etiquetas...",
     "newLabel": "Nova Etiqueta",
     "bulkDelete": "Excluir",
