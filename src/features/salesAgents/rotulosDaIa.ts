@@ -3,7 +3,7 @@
 import type { PersonaDaIa } from '@/services/salesAgents/salesAgentsService';
 
 export const PERSONA_ROTULOS: Record<PersonaDaIa, string> = {
-  broker: 'O próprio corretor',
+  broker: 'O corretor',
   owner: 'Dono da imobiliária',
   // Era "Assistente da imobiliária" (que admitia ser virtual). Decisão do dono, 06/10:
   // o caso mais comum é uma consultora com nome de gente, da equipe da imobiliária.

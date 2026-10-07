@@ -69,7 +69,7 @@ describe('Sistema do cliente → CVCRM', () => {
     montar({ podeTestar: false });
 
     expect(await screen.findByRole('button', { name: /Mandar um lead de teste/ })).toBeDisabled();
-    expect(screen.getByText('Salve o passo antes de testar.')).toBeTruthy();
+    expect(screen.getByText('Use o CVCRM como destino antes de testar.')).toBeTruthy();
   });
 
   it('teste que chegou diz pra quem foi', async () => {

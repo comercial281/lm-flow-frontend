@@ -51,7 +51,7 @@ describe('roteiro da IA na tela do cliente', () => {
 // O assistente em tela cheia saiu na entrega 2 (o passo a passo do Configurar é o
 // mesmo pra criar e editar). O que os testes dele protegiam (PATCH só do que
 // mudou, jsonb mesclado sobre o salvo) mora em patchDoPasso.spec.ts e
-// camposDosPassos.spec.ts.
+// camposDaIa.spec.ts.
 describe('Nova IA', () => {
   it('cria o rascunho pelo serviço, e o ?agent= de link antigo continua abrindo a IA', () => {
     const tela = fonteDaIaVendedora();

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { fonteDaIaVendedora, lerTelaDaIa } from '../../test/fonteDaIaVendedora';
-import { CAMPOS_DO_PASSO } from '../../pages/Customer/Automations/SalesAgents/configurar/camposDosPassos';
+import { PAGINAS } from '@/pages/Customer/Automations/SalesAgents/configurar/paginas';
 
 // PARA QUEM a IA passa o lead.
 //
@@ -17,39 +17,34 @@ import { CAMPOS_DO_PASSO } from '../../pages/Customer/Automations/SalesAgents/co
 //    com a roleta velha por baixo — a tela mostrando uma coisa e o lead sendo
 //    entregue noutra.
 
-describe('para quem a IA passa o lead', () => {
+describe('para quem a IA passa o lead (onda 3: página Destino)', () => {
   const src = fonteDaIaVendedora();
-  const passo2 = lerTelaDaIa('configurar/passos/Passo2Objetivo.tsx');
+  const destino = lerTelaDaIa('configurar/paginas/Destino.tsx');
 
-  // Desde a entrega 2 o destino é campo do passo 2 (e do 1, que o muda junto da
-  // persona): o patch do passo manda o que mudou, e `null` limpa o alvo
+  // Desde a onda 3 o destino é campo da página Destino (e da Identidade, que o
+  // muda junto da persona): a gravação manda o que mudou, e `null` limpa o alvo
   // (patchDoPasso.spec.ts) — a cicatriz do `??` com a roleta velha por baixo.
-  it('os três campos são do passo 2', () => {
-    expect(CAMPOS_DO_PASSO[2]).toEqual(expect.arrayContaining(['handoff_target', 'handoff_roleta_config_id', 'handoff_user_id']));
+  it('os três campos são da página Destino', () => {
+    expect(PAGINAS.destino.campos).toEqual(expect.arrayContaining(['handoff_target', 'handoff_roleta_config_id', 'handoff_user_id']));
   });
 
-  it('trocar o destino limpa o alvo que não vale mais', () => {
-    expect(passo2).toContain("handoff_roleta_config_id: v === 'roleta' ? rascunho.handoff_roleta_config_id ?? null : null");
-    expect(passo2).toContain("handoff_user_id: v === 'user' ? rascunho.handoff_user_id ?? null : null");
+  it('escolher o destino limpa o alvo que não vale mais', () => {
+    expect(destino).toContain("handoff_target: 'roleta', handoff_roleta_config_id: id, handoff_user_id: null");
+    expect(destino).toContain("handoff_target: 'user', handoff_user_id: id, handoff_roleta_config_id: null");
   });
 
-  // Roleta nova (06/10/2026): a roleta não tem número, e "A roleta deste número"
-  // saiu da lista. "Uma roleta" é o primeiro cartão.
-  it('"Uma roleta" é o primeiro cartão; a roleta do número não é oferecida', () => {
-    const lista = passo2.slice(passo2.indexOf('const DESTINOS'), passo2.indexOf('export default function Passo2Objetivo'));
-    expect(lista.indexOf("valor: 'inbox_roleta'")).toBe(-1);
-    expect(lista.indexOf("valor: 'roleta'")).toBeGreaterThan(-1);
+  it('"a roleta deste número" saiu: a Roleta é o primeiro cartão', () => {
+    expect(destino).not.toContain("valor: 'inbox_roleta'");
+    const lista = destino.slice(destino.indexOf('const DESTINOS'), destino.indexOf('export default function Destino'));
     expect(lista.indexOf("valor: 'roleta'")).toBeLessThan(lista.indexOf("valor: 'user'"));
   });
 
-  // O aviso de alvo em branco virou pendência do passo (pendencias.spec.ts):
-  // aparece no trilho, no passo 8 e no Painel.
   it('a roleta já escolhida continua na lista mesmo desativada', () => {
-    expect(passo2).toContain('r.ativa || r.id === rascunho.handoff_roleta_config_id');
+    expect(destino).toContain('r.ativa || r.id === agent.handoff_roleta_config_id');
   });
 
   it('a leitura das listas é de fundo e não grita', () => {
-    expect(passo2).toContain('Leitura de fundo');
+    expect(destino).toContain('Leitura de fundo');
     expect(src).toContain('.catch(() => {});');
   });
 
@@ -62,7 +57,6 @@ describe('para quem a IA passa o lead', () => {
   // literal, o auditor lê a chave como "usada no front", não a acha no catálogo
   // do servidor e QUEBRA O BUILD.
   const chamada = (hook: string, chave: string) => `${hook}('${chave}`;
-
   it('não vira chave de funcionalidade', () => {
     expect(src).not.toContain(chamada('useClientToggle', 'handoff_target'));
     expect(src).not.toContain(chamada('useFeature', 'handoff_target'));

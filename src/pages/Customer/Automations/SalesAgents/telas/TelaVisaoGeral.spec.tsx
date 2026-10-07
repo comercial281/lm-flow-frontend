@@ -1,12 +1,14 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 
 const performance = vi.hoisted(() => vi.fn());
 const listSuggestions = vi.hoisted(() => vi.fn());
 const applySuggestion = vi.hoisted(() => vi.fn());
+const runs = vi.hoisted(() => vi.fn().mockResolvedValue({ runs: [], totals: {} }));
 vi.mock('@/services/salesAgents/salesAgentsService', () => ({
-  salesAgentsService: { performance, listSuggestions, applySuggestion, dismissSuggestion: vi.fn() },
+  salesAgentsService: { performance, listSuggestions, applySuggestion, runs, dismissSuggestion: vi.fn() },
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -23,7 +25,7 @@ const sugestao = (id: string, status: 'pending' | 'applied' = 'pending') => ({
 function abrir(extra: Partial<TelaVisaoGeralProps> = {}) {
   const props: TelaVisaoGeralProps = {
     agent: agente, situacao: { tipo: 'atendendo', frase: 'Atendendo' }, diagnostico: { status: 'ok', items: [] },
-    conferindo: false, falhou: false, mostrarSugestoes: true, aoIr: vi.fn(), ...extra,
+    conferindo: false, falhou: false, mostrarSugestoes: true, equipe: false, aoIr: vi.fn(), ...extra,
   };
   render(<TelaVisaoGeral {...props} />);
   return props;
@@ -43,6 +45,27 @@ describe('Painel → Visão geral', () => {
     expect(screen.getByText('Nenhum documento pronto.')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Corrigir' }));
     expect(props.aoIr).toHaveBeenCalledWith('ensinar');
+  });
+
+  it('o "Corrigir" de uma página do Configurar leva à página (onda 3)', async () => {
+    const props = abrir({
+      agent: { ...agente, inbox_id: null, lead_facing_name: 'Ana' } as unknown as SalesAgent,
+      situacao: { tipo: 'parada', frase: 'Parada: falta o número' }, diagnostico: null,
+    });
+    const item = screen.getByText(/Nenhum número escolhido/).closest('li')!;
+    await userEvent.click(within(item).getByRole('button', { name: 'Corrigir' }));
+    expect(props.aoIr).toHaveBeenCalledWith('configurar', 'canal');
+  });
+
+  it('WhatsApp desconectado: o "Corrigir" abre a configuração do número, onde se religa', () => {
+    const props: TelaVisaoGeralProps = {
+      agent: agente, situacao: { tipo: 'parada', frase: 'Parada: o WhatsApp do número está desconectado' },
+      diagnostico: { status: 'error', items: [{ key: 'credentials', label: 'WhatsApp', status: 'error', detail: 'Desconectado.' }] },
+      conferindo: false, falhou: false, mostrarSugestoes: false, equipe: false, aoIr: vi.fn(),
+    };
+    render(<MemoryRouter><TelaVisaoGeral {...props} /></MemoryRouter>);
+    const item = screen.getByText('Desconectado.').closest('li')!;
+    expect(within(item).getByRole('link', { name: 'Corrigir' })).toHaveAttribute('href', '/channels/inbox-1/settings?tab=configuration');
   });
 
   it('sem pendência: "Nada pendente"; enquanto confere, não promete nada', () => {

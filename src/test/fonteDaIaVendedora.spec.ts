@@ -7,9 +7,11 @@ import { fonteDaIaVendedora, lerTelaDaIa } from './fonteDaIaVendedora';
 describe('fonteDaIaVendedora', () => {
   const fonte = fonteDaIaVendedora();
 
-  it('lê a casca, as telas e o passo a passo', () => {
+  it('lê a casca, as telas, as páginas do Configurar e o Ensinar', () => {
     expect(fonte).toContain('export default function SalesAgents');
-    expect(fonte).toContain('export default function PassoAPasso');
+    expect(fonte).toContain('export default function ConfigurarPaginas');
+    expect(fonte).toContain('export default function Destino');
+    expect(fonte).toContain('export default function EnsinarTextos');
     expect(fonte).toContain('export function TriggersSection');
     expect(fonte).toContain('export default function TelaDiagnostico');
     expect(fonte).toContain('export function KnowledgeTab');

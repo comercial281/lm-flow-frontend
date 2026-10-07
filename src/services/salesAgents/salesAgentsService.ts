@@ -173,6 +173,8 @@ export interface SalesAgent {
   default_property_code: string | null;
   default_origin: string | null;
   intent_question: string | null;
+  /** Os 3 caminhos de fábrica (Moradia, Investimento, Sondando), pra tela mostrar quando a lista gravada está vazia. */
+  intent_paths_default?: CaminhoDaIntencao[];
   opening_image_url: string | null;
   opening_audio_url: string | null;
   openings: SalesAgentOpening[];
@@ -365,6 +367,16 @@ export type HandoffMode = 'duvida' | 'temperatura' | 'checklist' | 'sem_resposta
  */
 export type SalesAgentHandoffTarget = 'inbox_roleta' | 'roleta' | 'user' | 'number_owner' | 'webhook';
 
+/**
+ * O que se GRAVA no destino (onda 2, 06/10/2026). `inbox_roleta` ("a roleta deste
+ * número") saiu da tela: o servidor ainda LÊ, mas recusa em gravação nova, e a
+ * rotina `ia:destino_sem_inbox_roleta` troca as IAs antigas pela roleta do número.
+ */
+export type SalesAgentHandoffChoice = Exclude<SalesAgentHandoffTarget, 'inbox_roleta'>;
+
+/** Persona que se GRAVA. As três (o Dono saiu e voltou no mesmo dia, 06/10: tem voz própria). */
+export type PersonaGravavel = PersonaDaIa;
+
 export interface TransferConfig {
   mode?: HandoffMode;
   min_temperature?: 'hot' | 'warm';
@@ -455,6 +467,26 @@ export interface PlaybookObjection {
 }
 
 /**
+ * Um caminho da INTENÇÃO (onda 2, 06/10/2026): a resposta do lead à pergunta de
+ * intenção e como ela conduz dali. Grava em `playbook.vars.caminhos_intencao` (até
+ * 5; nome até 40, como até 300). Lista vazia/ausente = os 3 de fábrica, que o
+ * servidor devolve em `intent_paths_default` — nenhuma IA muda sozinha.
+ */
+export interface CaminhoDaIntencao {
+  nome: string;
+  como: string;
+}
+
+/** Uma voz do catálogo (ElevenLabs). `preview_url` é a amostra da própria ElevenLabs: ouvir não gasta nada. */
+export interface VozDaIa {
+  id: string;
+  nome: string;
+  descricao: string;
+  genero: 'feminina' | 'masculina';
+  preview_url: string | null;
+}
+
+/**
  * Os PONTOS-CHAVE da venda desta imobiliária — o que preenche os encaixes do
  * alicerce. Chave ausente = exemplo de fábrica.
  */
@@ -465,6 +497,8 @@ export interface PlaybookVars {
   lead_pronto?: string;
   proximo_passo?: string;
   objecoes?: PlaybookObjection[];
+  /** Onda 2 (06/10/2026): os caminhos da intenção. Ver `CaminhoDaIntencao`. */
+  caminhos_intencao?: CaminhoDaIntencao[];
 }
 
 /**
@@ -553,13 +587,13 @@ export interface SalesAgentPayload {
   reengagement_enabled?: boolean;
   reengagement_first_hours?: number;
   reengagement_second_hours?: number;
-  handoff_target?: SalesAgentHandoffTarget;
+  handoff_target?: SalesAgentHandoffChoice;
   handoff_webhook_url?: string | null;
   handoff_webhook_system?: SistemaDoEnvio;
   handoff_cvcrm?: HandoffCvcrm | null;
   handoff_roleta_config_id?: string | null;
   handoff_user_id?: string | null;
-  persona_kind?: PersonaDaIa;
+  persona_kind?: PersonaGravavel;
   reach?: AlcanceDaIa;
   lead_facing_name?: string | null;
   tone?: TomDaIa | null;
@@ -721,6 +755,8 @@ export interface RehearsalState {
   messages: RehearsalMessage[];
   lead_owner: string | null;
   source_conversation_id: string | null;
+  /** O caminho da intenção que ela escolheu (onda 2). Null = ainda não escolheu. */
+  caminho?: string | null;
 }
 
 export interface RehearsalBubble { content: string; pause_ms: number; audio?: boolean }
@@ -1185,6 +1221,14 @@ export const salesAgentsService = {
   async playbook(id: string): Promise<AgentPlaybook> {
     const res = await api.get(`${BASE}/${id}/playbook`);
     return (res.data as { data: AgentPlaybook }).data;
+  },
+
+  // As vozes do catálogo (onda 2): a lista curada no servidor, com a amostra da
+  // ElevenLabs guardada por 24 h. Leitura de fundo: quem chama trata a falha.
+  async voices(): Promise<VozDaIa[]> {
+    const res = await api.get(`${BASE}/voices`);
+    const corpo = res.data as { voices?: VozDaIa[]; data?: { voices?: VozDaIa[] } };
+    return corpo.voices ?? corpo.data?.voices ?? [];
   },
 
   // --- base de conhecimento ---

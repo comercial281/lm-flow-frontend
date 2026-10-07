@@ -57,3 +57,65 @@ describe('gatilho no computador', () => {
     expect(origem.className.split(/\s+/)).toContain('w-64');
   });
 });
+
+// Gravação na hora (06/10): palavra digitada só grava ao sair do campo, não por tecla.
+describe('gatilho de texto grava ao sair', () => {
+  it('digitar não grava; sair do campo grava uma vez', async () => {
+    const onSave = vi.fn();
+    const agent = { id: 'a1', triggers: [{ type: 'keyword', value: '', match_type: 'contains' }], trigger_match_mode: 'any' } as unknown as SalesAgent;
+    render(<TriggersSection agent={agent} onSave={onSave} />);
+    await userEvent.type(screen.getByPlaceholderText('palavra (ex: fluxoimob)'), 'mcmv');
+    expect(onSave).not.toHaveBeenCalled();
+    await userEvent.tab();
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith({ triggers: [{ type: 'keyword', value: 'mcmv', match_type: 'contains' }] });
+  });
+});
+
+// Achado da revisão (3.7): a palavra digitada se perdia quando o bloco sumia sem
+// o campo perder o foco (trocou de página pelo endereço, o Voltar do navegador) —
+// o React não dispara o blur no desmonte. Mesma regra do TextoNaHora.
+describe('palavra digitada e o bloco some', () => {
+  const comPalavra = (triggers: unknown[]) => ({ id: 'a1', triggers, trigger_match_mode: 'any' } as unknown as SalesAgent);
+
+  it('grava a palavra ao desmontar sem blur', () => {
+    const onSave = vi.fn();
+    const { unmount } = render(<TriggersSection agent={comPalavra([{ type: 'keyword', value: '', match_type: 'contains' }])} onSave={onSave} />);
+    fireEvent.change(screen.getByPlaceholderText('palavra (ex: fluxoimob)'), { target: { value: 'fluxoimob' } });
+    expect(onSave).not.toHaveBeenCalled();
+    unmount();
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith({ triggers: [{ type: 'keyword', value: 'fluxoimob', match_type: 'contains' }] });
+  });
+
+  it('sem nada digitado, desmontar não grava', () => {
+    const onSave = vi.fn();
+    const { unmount } = render(<TriggersSection agent={comPalavra([{ type: 'keyword', value: 'x', match_type: 'contains' }])} onSave={onSave} />);
+    unmount();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('já gravou no blur: desmontar não grava de novo', () => {
+    const onSave = vi.fn();
+    const { unmount } = render(<TriggersSection agent={comPalavra([{ type: 'keyword', value: '', match_type: 'contains' }])} onSave={onSave} />);
+    const campo = screen.getByPlaceholderText('palavra (ex: fluxoimob)');
+    fireEvent.change(campo, { target: { value: 'fluxoimob' } });
+    fireEvent.blur(campo);
+    unmount();
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  // "Todos os leads" zera as condições e o bloco some: a palavra a meio caminho
+  // não pode ressuscitar as condições que a pessoa acabou de tirar.
+  // O Canal liga `escolheuTodos` antes de desmontar o bloco.
+  it('as condições foram zeradas (Todos os leads): desmontar não traz de volta', () => {
+    const onSave = vi.fn();
+    const escolheuTodos = { current: false };
+    const { rerender, unmount } = render(<TriggersSection agent={comPalavra([{ type: 'keyword', value: '', match_type: 'contains' }])} onSave={onSave} escolheuTodos={escolheuTodos} />);
+    fireEvent.change(screen.getByPlaceholderText('palavra (ex: fluxoimob)'), { target: { value: 'fluxoimob' } });
+    escolheuTodos.current = true;
+    rerender(<TriggersSection agent={comPalavra([])} onSave={onSave} escolheuTodos={escolheuTodos} />);
+    unmount();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+});

@@ -11,15 +11,23 @@
 // `SalesAgents::TriggerGate` (quem ela atende) e `SalesAgents::HealthCheck` (o
 // checklist do Diagnóstico). Mudou lá, muda aqui, com o caso no spec.
 import type { HealthItem, HealthReport, SalesAgent, SalesAgentTrigger } from '@/services/salesAgents/salesAgentsService';
+import type { PaginaId } from '@/pages/Customer/Automations/SalesAgents/configurar/paginas';
 import type { TelaId } from './iaMenu';
-import { pendenciasDosPassos } from './pendencias';
+import { pendenciasDasPaginas } from './pendencias';
+import { enderecoConexao } from '@/features/numbers/avisoConversas';
 
 export type TipoSituacao = 'atendendo' | 'parada' | 'restricao' | 'desligada' | 'rascunho';
 
 export interface Corrigir {
   tela: TelaId;
-  /** Passo do passo a passo (entrega 2). Na entrega 1, Configurar é a página antiga inteira. */
-  passo?: number;
+  /** Página do Configurar (onda 3). */
+  pagina?: PaginaId;
+  /**
+   * Fora da IA: quando existe, o "Corrigir" leva pra cá (`tela`/`pagina` ficam de
+   * reserva). Hoje só o WhatsApp desconectado, que se religa (QR code) na
+   * configuração do número — o Canal só mostra "Desconectado".
+   */
+  rota?: string;
 }
 
 export interface Situacao {
@@ -43,36 +51,38 @@ type AgenteLido = Pick<SalesAgent, 'enabled' | 'inbox_id' | 'triggers' | 'trigge
     | 'handoff_user_id' | 'handoff_webhook_url' | 'handoff_webhook_secret_state' | 'handoff_webhook_system' | 'handoff_cvcrm_connected'
     | 'lead_facing_name' | 'number_owner_id' | 'qualification_questions'>>;
 
-/** O passo do passo a passo que corrige cada coisa (entrega 2). */
-const PASSO = (passo: number): Corrigir => ({ tela: 'configurar', passo });
+/** A página do Configurar que corrige cada coisa (onda 3). */
+const PAGINA = (pagina: PaginaId): Corrigir => ({ tela: 'configurar', pagina });
 
 // Item do Diagnóstico com erro que PARA a IA, e a frase do selo. Os outros erros
 // (base de conhecimento, imóvel padrão) viram pendência, não veredito: ela
 // continua respondendo, só pior.
 const PARADA_POR_ITEM: Record<string, { frase: string; corrigir?: Corrigir }> = {
-  inbox: { frase: 'Parada: o número desta IA não existe mais', corrigir: PASSO(6) },
-  mode: { frase: 'Parada: está em "só follow-up" e não responde quem escreve', corrigir: PASSO(7) },
-  credentials: { frase: 'Parada: o WhatsApp do número está desconectado', corrigir: { tela: 'diagnostico' } },
+  inbox: { frase: 'Parada: o número desta IA não existe mais', corrigir: PAGINA('canal') },
+  mode: { frase: 'Parada: está em "só follow-up" e não responde quem escreve', corrigir: PAGINA('canal') },
+  // ⚠️ Era a tela Diagnóstico, que saiu do menu (só equipe). O "Corrigir" sai de
+  // `corrigirDoItem`: a configuração do número, onde se religa (revisão da onda 3, M6).
+  credentials: { frase: 'Parada: o WhatsApp do número está desconectado', corrigir: PAGINA('canal') },
   api_key: { frase: 'Parada: problema na plataforma, avise o suporte' },
 };
 
 // Onde se corrige cada item do Diagnóstico. Sem entrada = não tem botão (ex.: a
-// chave da IA no servidor, que o gestor não controla).
+// chave da IA no servidor, que o gestor não controla; e "IA ligada", que liga na
+// chave da barra).
 const CORRIGIR_DO_ITEM: Record<string, Corrigir> = {
-  enabled: PASSO(8),
-  mode: PASSO(7),
-  inbox: PASSO(6),
-  traffic: PASSO(6),
-  activity: { tela: 'diagnostico' },
-  credentials: { tela: 'diagnostico' },
+  mode: PAGINA('canal'),
+  inbox: PAGINA('canal'),
+  traffic: PAGINA('canal'),
+  activity: PAGINA('canal'),
+  credentials: PAGINA('canal'),
   knowledge: { tela: 'ensinar' },
   files: { tela: 'ensinar' },
-  handoff: PASSO(2),
-  default_property: PASSO(5),
-  schedule: PASSO(6),
-  triggers: PASSO(6),
-  conflict: PASSO(6),
-  client_system: PASSO(2),
+  handoff: PAGINA('destino'),
+  default_property: PAGINA('catalogo'),
+  schedule: PAGINA('horario'),
+  triggers: PAGINA('canal'),
+  conflict: PAGINA('canal'),
+  client_system: PAGINA('destino'),
 };
 
 /** Os gatilhos que o servidor de fato avalia: a lista + a palavra-chave antiga, se a lista não tiver gatilho de palavra. */
@@ -83,8 +93,11 @@ function gatilhosEfetivos(agent: AgenteLido): SalesAgentTrigger[] {
   return lista;
 }
 
-/** Gatilho que nunca bate (palavra, etiqueta ou código em branco, formulário ou coluna sem escolha). */
-function emBranco(t: SalesAgentTrigger): boolean {
+/**
+ * Gatilho que nunca bate (palavra, etiqueta ou código em branco, formulário ou coluna sem escolha).
+ * O bloco de condições do Canal usa a mesma régua pra NÃO gravar a linha em branco.
+ */
+export function emBranco(t: SalesAgentTrigger): boolean {
   switch (t.type) {
     case 'keyword':
     case 'tag':
@@ -150,28 +163,44 @@ export function restricaoDosGatilhos(agent: AgenteLido): { frase: string; parada
 }
 
 export function situacaoDaIa(agent: AgenteLido, diagnostics?: HealthReport | null): Situacao {
-  if (!agent.enabled && !agent.inbox_id) return { tipo: 'rascunho', frase: 'Rascunho: falta escolher o número', corrigir: PASSO(1) };
-  if (!agent.enabled) return { tipo: 'desligada', frase: 'Desligada', corrigir: PASSO(8) };
-  if (!agent.inbox_id) return { tipo: 'parada', frase: 'Parada: falta o número', corrigir: PASSO(6) };
+  if (!agent.enabled && !agent.inbox_id) return { tipo: 'rascunho', frase: 'Rascunho: falta escolher o número', corrigir: PAGINA('canal') };
+  // Desligada: sem botão, liga na chave da barra.
+  if (!agent.enabled) return { tipo: 'desligada', frase: 'Desligada' };
+  if (!agent.inbox_id) return { tipo: 'parada', frase: 'Parada: falta o número', corrigir: PAGINA('canal') };
   if (agent.followup_only) return { tipo: 'parada', ...PARADA_POR_ITEM.mode };
 
   const erro = (diagnostics?.items ?? []).find((i) => i.status === 'error' && PARADA_POR_ITEM[i.key]);
-  if (erro) return { tipo: 'parada', ...PARADA_POR_ITEM[erro.key] };
+  if (erro) {
+    const parada = PARADA_POR_ITEM[erro.key];
+    const corrigir = parada.corrigir ? corrigirDoItem(erro.key, agent) ?? parada.corrigir : undefined;
+    return { tipo: 'parada', frase: parada.frase, ...(corrigir ? { corrigir } : {}) };
+  }
 
   const restricao = restricaoDosGatilhos(agent);
-  if (restricao?.parada) return { tipo: 'parada', frase: `Parada: ${restricao.frase}`, corrigir: PASSO(6) };
-  if (restricao) return { tipo: 'restricao', frase: `Atendendo com restrição: ${restricao.frase}`, corrigir: PASSO(6) };
+  if (restricao?.parada) return { tipo: 'parada', frase: `Parada: ${restricao.frase}`, corrigir: PAGINA('canal') };
+  if (restricao) return { tipo: 'restricao', frase: `Atendendo com restrição: ${restricao.frase}`, corrigir: PAGINA('canal') };
 
   return { tipo: 'atendendo', frase: 'Atendendo' };
 }
 
-function daItem(item: HealthItem): Pendencia {
+/**
+ * O "Corrigir" de um item do Diagnóstico. WhatsApp desconectado leva à configuração
+ * do número (o mesmo destino do aviso de queda, `enderecoConexao`), onde se lê o QR
+ * code de novo; sem número, cai no Canal pra escolher um.
+ */
+function corrigirDoItem(chave: string, agent: Pick<AgenteLido, 'inbox_id'>): Corrigir | undefined {
+  const base = CORRIGIR_DO_ITEM[chave];
+  if (chave === 'credentials' && agent.inbox_id) return { ...base, rota: enderecoConexao(String(agent.inbox_id)) };
+  return base;
+}
+
+function daItem(item: HealthItem, agent: Pick<AgenteLido, 'inbox_id'>): Pendencia {
   return {
     chave: item.key,
     titulo: item.label,
     detalhe: item.detail,
     grave: item.status === 'error',
-    corrigir: CORRIGIR_DO_ITEM[item.key],
+    corrigir: corrigirDoItem(item.key, agent),
   };
 }
 
@@ -184,6 +213,7 @@ function daItem(item: HealthItem): Pendencia {
 const TITULO_NO_PAINEL: Record<string, string> = {
   persona_sem_dono: 'Dono do número',
   persona_destino: 'Pra onde vai o lead',
+  destino_antigo: 'Pra onde vai o lead',
   destino_sem_roleta: 'Pra onde vai o lead',
   destino_sem_corretor: 'Pra onde vai o lead',
   destino_sem_endereco: 'Pra onde vai o lead',
@@ -196,10 +226,10 @@ const TITULO_NO_PAINEL: Record<string, string> = {
 
 export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | null): Pendencia[] {
   // "IA ligada" desligada já é o veredito; repetir na lista é ruído.
-  const lista = (diagnostics?.items ?? []).filter((i) => i.status !== 'ok' && i.key !== 'enabled').map(daItem);
+  const lista = (diagnostics?.items ?? []).filter((i) => i.status !== 'ok' && i.key !== 'enabled').map((i) => daItem(i, agent));
 
   if (!diagnostics && agent.enabled && !agent.inbox_id) {
-    lista.push({ chave: 'inbox', titulo: 'Número de WhatsApp', detalhe: 'Nenhum número escolhido. Sem ele a IA não recebe nem responde ninguém.', grave: true, corrigir: PASSO(6) });
+    lista.push({ chave: 'inbox', titulo: 'Número de WhatsApp', detalhe: 'Nenhum número escolhido. Sem ele a IA não recebe nem responde ninguém.', grave: true, corrigir: PAGINA('canal') });
   }
 
   const restricao = restricaoDosGatilhos(agent);
@@ -209,18 +239,18 @@ export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | n
       titulo: 'Quem ela atende',
       detalhe: `${restricao.frase.charAt(0).toUpperCase()}${restricao.frase.slice(1)}.`,
       grave: restricao.parada,
-      corrigir: PASSO(6),
+      corrigir: PAGINA('canal'),
     });
   }
 
-  // Entrega 2: o que só a configuração sabe (persona e destino), com o passo que
+  // Entrega 2: o que só a configuração sabe (persona e destino), com a página que
   // corrige. É aqui que aparece a IA antiga que fala como o corretor e entrega pra
   // um corretor fixo que não é o dono do número. O nome que o lead vê não entra no
-  // Painel (é pendência do passo 1 e trava o Ligar, mas não para quem já atende).
-  for (const p of pendenciasDosPassos(agent)) {
+  // Painel (é pendência de Identidade e trava o Ligar, mas não para quem já atende).
+  for (const p of pendenciasDasPaginas(agent)) {
     const titulo = TITULO_NO_PAINEL[p.chave];
     if (!titulo || lista.some((x) => x.chave === p.chave)) continue;
-    lista.push({ chave: p.chave, titulo, detalhe: p.frase, grave: p.impedeLigar, corrigir: PASSO(p.passo) });
+    lista.push({ chave: p.chave, titulo, detalhe: p.frase, grave: p.impedeLigar, corrigir: PAGINA(p.pagina) });
   }
 
   return [...lista.filter((p) => p.grave), ...lista.filter((p) => !p.grave)];
@@ -235,4 +265,22 @@ export function motivoSemAtendimento(situacao: Situacao): string | null {
   if (situacao.tipo === 'desligada') return 'ela está desligada';
   if (situacao.tipo === 'rascunho') return 'ela ainda é um rascunho, sem número';
   return null;
+}
+
+/**
+ * O que a palavra antiga (`trigger_keyword`) faz DE VERDADE, pelo modo das
+ * condições — espelha `gatilhosEfetivos` (e o SalesAgents::TriggerGate): ela entra
+ * como mais uma condição quando a lista não tem condição de palavra.
+ *
+ * §6.11 da spec (06/10/2026): a tela dizia "sempre restringe sozinha", e no modo
+ * "qualquer uma" ela não restringe — o lead que bate em outra condição entra.
+ */
+export function fraseDaPalavraAntiga(agent: AgenteLido): string | null {
+  const palavra = (agent.trigger_keyword ?? '').trim();
+  if (!palavra) return null;
+  const lista = (agent.triggers ?? []).filter((t) => t && t.type);
+  if (lista.some((t) => t.type === 'keyword')) return `A palavra antiga "${palavra}" não vale: já existe uma condição de palavra na lista.`;
+  if (lista.length === 0) return `Ela só entra quando o lead escreve "${palavra}".`;
+  if (agent.trigger_match_mode === 'all') return `Além das condições abaixo, o lead também precisa escrever "${palavra}".`;
+  return `"${palavra}" vale como mais uma condição: basta o lead escrever a palavra ou bater em uma das condições abaixo.`;
 }

@@ -5,7 +5,6 @@ import {
   salesAgentsService,
   type AgentPlaybook,
   type AgentPlaybookConfig,
-  type IntentQuestionMode,
   type PlaybookBlock,
   type PlaybookObjection,
   type PlaybookVars,
@@ -16,9 +15,8 @@ import { Seletor } from '@/components/base/Seletor';
 //
 // Duas metades, nesta ordem de propósito:
 //
-// 1. PONTOS-CHAVE DA VENDA — o que a imobiliária preenche: tipo de venda, as
-//    perguntas que os corretores dela fazem, o que dói no cliente-tipo, quando o
-//    lead está pronto, qual o próximo passo, as objeções e as respostas. É o
+// 1. PONTOS-CHAVE DA VENDA — o que a imobiliária preenche: o próximo passo, o
+//    que dói no cliente-tipo, as objeções e as respostas. É o
 //    caminho NORMAL de personalizar a IA. Cada ponto entra num encaixe do alicerce
 //    (o método de venda da casa); vazio = exemplo de fábrica.
 //
@@ -31,21 +29,6 @@ import { Seletor } from '@/components/base/Seletor';
 // mão — inclusive "tá procurando pra morar ou investir?" — e o que a imobiliária
 // preenchia entrava em OUTRO lugar do comando, numa segunda lista. O modelo
 // recebia os dois e escolhia. Agora as perguntas dela entram DENTRO do método.
-
-const MODE_LABELS: Record<IntentQuestionMode, { label: string; hint: string }> = {
-  always: {
-    label: 'Sempre',
-    hint: 'Ela abre a conversa com a pergunta e conduz a partir da resposta (moradia / investimento / sondando). É como sempre funcionou.',
-  },
-  opening_only: {
-    label: 'Só na abertura',
-    hint: 'Ela pergunta na primeira mensagem, mas não volta a cobrar no meio da conversa: deduz pelo que o lead falar.',
-  },
-  never: {
-    label: 'Nunca',
-    hint: 'Ela não pergunta em momento nenhum. Abre com uma pergunta aberta e deduz a intenção pelo que o lead conta.',
-  },
-};
 
 const RELOAD_DELAY_MS = 400;
 
@@ -113,30 +96,21 @@ export default function PlaybookSection({
     window.setTimeout(() => { void load(); }, RELOAD_DELAY_MS);
   };
 
-  const setMode = (mode: IntentQuestionMode) => {
-    // O modo muda o TEXTO DE FÁBRICA de blocos inteiros. Sem recarregar, a tela
-    // seguiria mostrando o roteiro do modo anterior como se fosse o que a IA
-    // recebe — e é exatamente essa divergência que a seção veio acabar.
-    setData({ ...data, intent_question_mode: mode });
-    setDraft({});
-    write({ ...current, intent_question_mode: mode });
-  };
-
   // --- pontos-chave -------------------------------------------------------
 
   // Vazio = HERDA o exemplo de fábrica: a chave sai do hash em vez de ir em branco.
+  // ⚠️ Onda 3 (06/10/2026): começa do que JÁ está gravado e só mexe nas chaves
+  // desta seção (próximo passo, dor, objeções). As outras chaves de `vars` têm dono
+  // em outra tela — `caminhos_intencao` (Intenção), `tipo_venda` (Catálogo),
+  // `lead_pronto` (Agendamento) — e reescrever a partir de uma lista fixa as apagava.
   const commitVars = (next: PlaybookVars) => {
-    const cleaned: PlaybookVars = {};
-    if (next.tipo_venda && next.tipo_venda !== 'lancamento') cleaned.tipo_venda = next.tipo_venda;
-    if (next.proximo_passo && next.proximo_passo !== 'visita') cleaned.proximo_passo = next.proximo_passo;
-    const qs = (next.perguntas_situacao ?? []).map((q) => q.trim()).filter(Boolean);
-    if (qs.length) cleaned.perguntas_situacao = qs;
-    if (next.dor_tipica?.trim()) cleaned.dor_tipica = next.dor_tipica.trim();
-    if (next.lead_pronto?.trim()) cleaned.lead_pronto = next.lead_pronto.trim();
+    const cleaned: PlaybookVars = { ...currentVars };
+    if (next.proximo_passo && next.proximo_passo !== 'visita') cleaned.proximo_passo = next.proximo_passo; else delete cleaned.proximo_passo;
+    if (next.dor_tipica?.trim()) cleaned.dor_tipica = next.dor_tipica.trim(); else delete cleaned.dor_tipica;
     const objs = (next.objecoes ?? [])
       .map((o) => ({ objecao: o.objecao.trim(), resposta: o.resposta.trim() }))
       .filter((o) => o.objecao && o.resposta);
-    if (objs.length) cleaned.objecoes = objs;
+    if (objs.length) cleaned.objecoes = objs; else delete cleaned.objecoes;
 
     if (JSON.stringify(cleaned) === JSON.stringify(currentVars)) return;
 
@@ -199,30 +173,6 @@ export default function PlaybookSection({
         </p>
       </div>
 
-      {/* O seletor vem primeiro: é a decisão que a maioria vem tomar aqui. */}
-      <div className="rounded-md border border-border bg-muted/30 p-3">
-        <Label className="text-sm">Perguntar se é moradia ou investimento</Label>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {data.intent_question_modes.map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => setMode(mode)}
-              className={`rounded-md border px-3 py-1.5 text-xs transition ${
-                data.intent_question_mode === mode
-                  ? 'border-primary bg-primary/10 text-foreground'
-                  : 'border-border text-muted-foreground hover:bg-accent'
-              }`}
-            >
-              {MODE_LABELS[mode]?.label ?? mode}
-            </button>
-          ))}
-        </div>
-        <p className="mt-2 text-[11px] text-muted-foreground">
-          {MODE_LABELS[data.intent_question_mode]?.hint}
-        </p>
-      </div>
-
       {/* ---------------- Pontos-chave da venda ---------------- */}
       <div className="rounded-md border border-border p-3 space-y-4">
         <div>
@@ -233,26 +183,7 @@ export default function PlaybookSection({
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="pv-tipo" className="text-xs">{label('tipo_venda')}</Label>
-            <Seletor
-              id="pv-tipo"
-              className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-              value={vars.tipo_venda ?? 'lancamento'}
-              onChange={(e) => {
-                const v = { ...vars, tipo_venda: e.target.value };
-                setVars(v);
-                commitVars(v);
-              }}
-            >
-              {data.sale_types.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </Seletor>
-            <p className="text-[11px] text-muted-foreground mt-1">{hint('tipo_venda')}</p>
-          </div>
-
+        <div className="grid gap-3">
           <div>
             <Label htmlFor="pv-passo" className="text-xs">{label('proximo_passo')}</Label>
             <Seletor
@@ -274,24 +205,6 @@ export default function PlaybookSection({
         </div>
 
         <div>
-          <Label htmlFor="pv-situacao" className="text-xs">{label('perguntas_situacao')}</Label>
-          <Textarea
-            id="pv-situacao"
-            rows={4}
-            placeholder={'Ex:\nVocê já conhece a região?\nÉ pra mudar logo ou tá só começando a olhar?'}
-            value={(vars.perguntas_situacao ?? []).join('\n')}
-            onChange={(e) => setVars({ ...vars, perguntas_situacao: e.target.value.split('\n') })}
-            onBlur={() => commitVars(vars)}
-          />
-          <p className="text-[11px] text-muted-foreground mt-1">
-            {hint('perguntas_situacao')}
-            {!(vars.perguntas_situacao ?? []).some((q) => q.trim()) && (
-              <> <span className="italic">De fábrica: {data.slot_defaults.perguntas_situacao.replace(/\s+/g, ' ')}</span></>
-            )}
-          </p>
-        </div>
-
-        <div>
           <Label htmlFor="pv-dor" className="text-xs">{label('dor_tipica')}</Label>
           <Textarea
             id="pv-dor"
@@ -302,19 +215,6 @@ export default function PlaybookSection({
             onBlur={() => commitVars(vars)}
           />
           <p className="text-[11px] text-muted-foreground mt-1">{hint('dor_tipica')}</p>
-        </div>
-
-        <div>
-          <Label htmlFor="pv-pronto" className="text-xs">{label('lead_pronto')}</Label>
-          <Textarea
-            id="pv-pronto"
-            rows={2}
-            placeholder={data.slot_defaults.lead_pronto}
-            value={vars.lead_pronto ?? ''}
-            onChange={(e) => setVars({ ...vars, lead_pronto: e.target.value })}
-            onBlur={() => commitVars(vars)}
-          />
-          <p className="text-[11px] text-muted-foreground mt-1">{hint('lead_pronto')}</p>
         </div>
 
         <div>

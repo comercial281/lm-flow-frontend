@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
-import { Button, Input, Label } from '@/components/ui/ds';
-import { Plus, Trash2, SlidersHorizontal } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Input } from '@/components/ui/ds';
+import { Plus, Trash2 } from 'lucide-react';
 import { type SalesAgent, type SalesAgentTrigger, type SalesAgentTriggerType, type SalesAgentTriggerMatchMode } from '@/services/salesAgents/salesAgentsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { leadAdsFormsService, type LeadAdsFormConfig } from '@/services/leadAds/leadAdsFormsService';
 import { formOptions, formTriggerNotice, toggleForm } from '@/features/salesAgents/formTrigger';
 import { Seletor } from '@/components/base/Seletor';
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import { emBranco } from '@/features/salesAgents/situacao';
 import { type PipelineOpt, type StageOpt } from '../../configuracao/comum';
+import { Aviso } from '../Aviso';
 
 // ---------------- Gatilhos de ativação (multi) ----------------
 
@@ -23,9 +26,11 @@ const TRIGGER_TYPES: { value: SalesAgentTriggerType; label: string }[] = [
   { value: 'tag', label: 'Tem a etiqueta' },
 ];
 
-const TRIGGER_MATCH_MODE_OPTIONS: [SalesAgentTriggerMatchMode, string, string][] = [
-  ['any', 'Qualquer gatilho ativa (OU)', 'Basta UM dos gatilhos abaixo bater pra IA entrar na conversa.'],
-  ['all', 'Todos os gatilhos juntos (E)', 'Só ativa quando TODOS os gatilhos abaixo baterem ao mesmo tempo — pra combinar mais de uma condição.'],
+// "Todas as condições" (E) ou "Qualquer uma" (OU). A palavra antiga, se houver,
+// tem a frase dela no Canal (fraseDaPalavraAntiga): aqui não se fala dela.
+const MODOS_DE_COMBINAR: { valor: SalesAgentTriggerMatchMode; rotulo: string }[] = [
+  { valor: 'all', rotulo: 'Todas as condições' },
+  { valor: 'any', rotulo: 'Qualquer uma' },
 ];
 
 function newTrigger(type: SalesAgentTriggerType): SalesAgentTrigger {
@@ -41,8 +46,90 @@ function newTrigger(type: SalesAgentTriggerType): SalesAgentTrigger {
   }
 }
 
-export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
-  const triggers = agent.triggers ?? [];
+/** Só as condições completas: a linha em branco não deixa lead NENHUM passar no servidor. */
+const completas = (lista: SalesAgentTrigger[]) => lista.filter((t) => !emBranco(t));
+const mesmas = (a: SalesAgentTrigger[], b: SalesAgentTrigger[]) => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * Uma linha da tela. `salva` é a condição que ESTA linha mantém no servidor: a
+ * própria, quando completa; a condição completa que ela substituiu, enquanto a nova
+ * está pela metade (tipo trocado, palavra apagada, formulário desmarcado); nada,
+ * na linha nova em branco.
+ */
+type Linha = { t: SalesAgentTrigger; salva: SalesAgentTrigger | null };
+
+const linhasDoServidor = (salvas: SalesAgentTrigger[]): Linha[] => salvas.map((t) => ({ t, salva: emBranco(t) ? null : t }));
+
+/** O que cada linha manda pro servidor: ela, se completa; senão a que ela substituiu. */
+const contribuicao = (l: Linha) => (emBranco(l.t) ? l.salva : l.t);
+const paraOServidor = (linhas: Linha[]) => linhas.map(contribuicao).filter((t): t is SalesAgentTrigger => t !== null);
+
+/**
+ * A lista da tela depois que o servidor mudou: as linhas que mandam algo pro
+ * servidor recebem a versão dele (a completa vira a do servidor; a pela metade
+ * guarda a do servidor como a que ela substitui); a linha nova em branco fica onde
+ * estava. Só se o servidor ainda tem as condições destas linhas (mesmo número,
+ * mesmos tipos, na ordem). Se não tem (Desfazer, outra tela), vale o servidor.
+ */
+function juntarComAsLocais(local: Linha[], salvas: SalesAgentTrigger[]): Linha[] {
+  const presas = local.filter((l) => l.salva);
+  if (presas.length !== salvas.length || presas.some((l, i) => l.salva!.type !== salvas[i].type)) return linhasDoServidor(salvas);
+  let j = 0;
+  return local.map((l) => {
+    if (!l.salva) return l;
+    const s = salvas[j++];
+    return emBranco(l.t) ? { t: l.t, salva: s } : { t: s, salva: s };
+  });
+}
+
+export function TriggersSection({ agent, onSave, escolheuTodos }: {
+  agent: SalesAgent;
+  onSave: (patch: Partial<SalesAgent>) => void;
+  /** Ligado pelo Canal quando a pessoa escolhe "Todos os leads" (o que desmonta o bloco). */
+  escolheuTodos?: { readonly current: boolean };
+}) {
+  // ⚠️ Gravação na hora (06/10/2026): `onSave` grava no servidor. Escolha de lista,
+  // caixinha de formulário, adicionar e remover gravam no clique; o que se DIGITA
+  // (palavra, etiqueta, código) fica neste rascunho e grava ao sair do campo —
+  // gravar por tecla mandaria um PATCH por letra.
+  // ⚠️ SÓ CONDIÇÃO COMPLETA VAI PRO SERVIDOR (revisão final da onda 3, I1). Palavra,
+  // etiqueta ou código em branco, formulário sem marcar e coluna sem escolher nunca
+  // batem no SalesAgents::TriggerGate: gravar "Adicionar condição" ou o tipo recém-
+  // trocado numa IA ligada barraria TODO lead novo até a pessoa preencher. A linha
+  // em branco mora só aqui (`lista`) e vai junto quando fica completa.
+  // ⚠️ A CONDIÇÃO ANTIGA VALE ATÉ A NOVA FICAR COMPLETA (decisão do Tony, 07/10).
+  // Trocar o tipo de uma condição completa (ou apagar a palavra dela) NÃO tira a
+  // antiga do servidor: a linha guarda a que substituiu (`salva`) e o servidor
+  // continua com ela até a nova ficar completa. Sem isso, a IA ligada com uma
+  // condição só passava a atender TODO lead (lista vazia = todos), e no "Qualquer
+  // uma" deixava de atender quem batia na condição trocada. Na tela nada muda.
+  // A lixeira tira de verdade (é a pessoa pedindo), inclusive a antiga.
+  const [lista, setLista] = useState<Linha[]>(() => linhasDoServidor(agent.triggers ?? []));
+  const digitando = useRef(false);
+  useEffect(() => {
+    if (!digitando.current) setLista((local) => juntarComAsLocais(local, agent.triggers ?? []));
+  }, [agent.triggers]);
+
+  // ⚠️ O bloco pode SUMIR com uma palavra a meio caminho (trocou de página pelo
+  // endereço, o Voltar do navegador): o React não dispara o blur no desmonte, então
+  // grava aqui — a mesma regra do TextoNaHora. Refs porque a limpeza roda uma vez só,
+  // com o que estava valendo no último render. Vale também pra PRIMEIRA condição
+  // (servidor ainda sem nenhuma).
+  // ⚠️ Desmontou porque a pessoa escolheu "Todos os leads": a palavra pendente não
+  // grava, senão ressuscitaria a condição que ela acabou de tirar.
+  const listaAtual = useRef(lista);
+  listaAtual.current = lista;
+  const salvasNoServidor = useRef(agent.triggers ?? []);
+  salvasNoServidor.current = agent.triggers ?? [];
+  const onSaveAtual = useRef(onSave);
+  onSaveAtual.current = onSave;
+  useEffect(() => () => {
+    if (!digitando.current || escolheuTodos?.current) return;
+    const enviar = paraOServidor(listaAtual.current);
+    if (!mesmas(enviar, completas(salvasNoServidor.current))) onSaveAtual.current({ triggers: enviar });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const triggers = useMemo(() => lista.map((l) => l.t), [lista]);
   const [pipelines, setPipelines] = useState<PipelineOpt[]>([]);
   const [stagesByPipeline, setStagesByPipeline] = useState<Record<string, StageOpt[]>>({});
 
@@ -79,37 +166,44 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggers]);
 
-  const commit = (next: SalesAgentTrigger[]) => onSave({ triggers: next });
-  const update = (i: number, patch: Partial<SalesAgentTrigger>) => commit(triggers.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
-  const remove = (i: number) => commit(triggers.filter((_, idx) => idx !== i));
-  const add = () => commit([...triggers, newTrigger('keyword')]);
+  // Linha em branco nova não muda o que vai pro servidor, e a linha pela metade
+  // manda a que ela substituiu: nesses casos nada grava.
+  const commit = (proximas: Linha[]) => {
+    digitando.current = false;
+    const enviar = paraOServidor(proximas);
+    setLista(proximas.map((l) => ({ t: l.t, salva: contribuicao(l) })));
+    // Comparadas com as completas do servidor: uma condição em branco ANTIGA (gravada
+    // antes desta regra) não some sozinha só porque alguém abriu uma linha nova.
+    if (!mesmas(enviar, completas(agent.triggers ?? []))) onSave({ triggers: enviar });
+  };
+  const trocar = (i: number, t: SalesAgentTrigger) => lista.map((l, idx) => (idx === i ? { ...l, t } : l));
+  const update = (i: number, patch: Partial<SalesAgentTrigger>) => commit(trocar(i, { ...triggers[i], ...patch }));
+  const digitar = (i: number, patch: Partial<SalesAgentTrigger>) => {
+    digitando.current = true;
+    setLista(trocar(i, { ...triggers[i], ...patch }));
+  };
+  const sairDoCampo = () => { if (digitando.current) commit(lista); };
+  const remove = (i: number) => commit(lista.filter((_, idx) => idx !== i));
+  const add = () => commit([...lista, { t: newTrigger('keyword'), salva: null }]);
+  const semCondicaoNoServidor = completas(agent.triggers ?? []).length === 0;
 
   const matchMode = agent.trigger_match_mode ?? 'any';
 
   return (
     <div className="pt-2 border-t border-sidebar-border">
-      <div className="flex items-center gap-2">
-        <SlidersHorizontal className="h-4 w-4 text-primary" />
-        <Label>Gatilhos de ativação (avançado)</Label>
-      </div>
-      <p className="text-xs text-muted-foreground mt-1 mb-2">
-        Sem nenhum gatilho = atende todo lead do canal (além da palavra-chave acima, que sempre restringe sozinha).
-      </p>
+      {/* ⚠️ "Só alguns" aberto sem condição completa no servidor: ela AINDA atende
+          todo lead. Em destaque, pra tela não parecer que já está filtrando. */}
+      {semCondicaoNoServidor ? (
+        <div className="mb-2"><Aviso><p>Sem nenhuma condição, ela atende todo lead do número.</p></Aviso></div>
+      ) : (
+        <p className="mb-2 text-sm text-muted-foreground">Sem nenhuma condição, ela atende todo lead do número.</p>
+      )}
 
       {triggers.length > 1 && (
-        <div className="grid grid-cols-1 gap-2 mb-2">
-          {TRIGGER_MATCH_MODE_OPTIONS.map(([m, title, help]) => (
-            <label key={m} className={`flex items-start gap-3 p-2 rounded-md border cursor-pointer text-sm ${
-              matchMode === m ? 'border-primary bg-primary/5' : 'border-sidebar-border'
-            }`}>
-              <input type="radio" name="trigger_match_mode" className="mt-1"
-                checked={matchMode === m} onChange={() => onSave({ trigger_match_mode: m })} />
-              <div>
-                <div className="font-medium">{title}</div>
-                <div className="text-xs text-muted-foreground">{help}</div>
-              </div>
-            </label>
-          ))}
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <span className="text-sm text-muted-foreground">Atender quando</span>
+          <BotoesDeEscolha rotulo="Combinar condições" valor={matchMode} opcoes={MODOS_DE_COMBINAR}
+            aoEscolher={(m) => onSave({ trigger_match_mode: m })} />
         </div>
       )}
 
@@ -118,7 +212,7 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
           <div key={i} className="flex flex-wrap items-center gap-2 p-2 rounded-md border border-sidebar-border">
             <Seletor
               value={t.type}
-              onChange={(e) => commit(triggers.map((tr, idx) => (idx === i ? newTrigger(e.target.value as SalesAgentTriggerType) : tr)))}
+              onChange={(e) => commit(trocar(i, newTrigger(e.target.value as SalesAgentTriggerType)))}
               className="w-72 max-w-full rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
             >
               {TRIGGER_TYPES.map((tt) => <option key={tt.value} value={tt.value}>{tt.label}</option>)}
@@ -132,13 +226,13 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
                   <option value="equals">É exatamente</option>
                 </Seletor>
                 <Input className="flex-1 min-w-40" placeholder="palavra (ex: fluxoimob)" value={t.value ?? ''}
-                  onChange={(e) => update(i, { value: e.target.value })} onBlur={() => commit(triggers)} />
+                  onChange={(e) => digitar(i, { value: e.target.value })} onBlur={sairDoCampo} />
               </>
             )}
 
             {t.type === 'tag' && (
               <Input className="flex-1 min-w-40" placeholder="etiqueta (ex: vip)" value={t.value ?? ''}
-                onChange={(e) => update(i, { value: e.target.value })} onBlur={() => commit(triggers)} />
+                onChange={(e) => digitar(i, { value: e.target.value })} onBlur={sairDoCampo} />
             )}
 
             {t.type === 'origin' && (
@@ -158,7 +252,7 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
                 </Seletor>
                 {t.mode === 'code' && (
                   <Input className="w-32" placeholder="código" value={t.code ?? ''}
-                    onChange={(e) => update(i, { code: e.target.value })} onBlur={() => commit(triggers)} />
+                    onChange={(e) => digitar(i, { code: e.target.value })} onBlur={sairDoCampo} />
                 )}
               </>
             )}
@@ -184,9 +278,9 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
                 </div>
                 {matchMode === 'any' && triggers.some((o) => o.type === 'origin' || o.type === 'pipeline' || o.type === 'property') && (
                   <div className="text-xs text-amber-600">
-                    Atenção: com "Qualquer gatilho ativa (OU)", o gatilho de origem/funil/imóvel desta lista
+                    Atenção: com "Qualquer uma", a condição de origem/funil/imóvel desta lista
                     continua deixando a IA entrar nos leads das outras campanhas. Para valer só estes
-                    formulários, remova aquele gatilho.
+                    formulários, remova aquela condição.
                   </div>
                 )}
                 {formTriggerNotice(t.form_ids, formConfigs.length) && (
@@ -226,7 +320,7 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
               </>
             )}
 
-            <button onClick={() => remove(i)} className="ml-auto text-muted-foreground hover:text-red-500" title="Remover gatilho">
+            <button onClick={() => remove(i)} className="ml-auto text-muted-foreground hover:text-red-500" aria-label="Remover condição" title="Remover condição">
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
@@ -234,7 +328,7 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
       </div>
 
       <Button size="sm" variant="outline" onClick={add} className="mt-2">
-        <Plus className="h-4 w-4 mr-1" /> Adicionar gatilho
+        <Plus className="h-4 w-4 mr-1" /> Adicionar condição
       </Button>
     </div>
   );

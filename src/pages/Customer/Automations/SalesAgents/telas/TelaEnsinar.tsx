@@ -5,7 +5,7 @@
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { KnowledgeTab } from './ensinar/BaseDeConhecimento';
 import { LearningTab } from './ensinar/Aprendizado';
-import EnsinarTextos from '../configurar/EnsinarTextos';
+import EnsinarTextos from './ensinar/EnsinarTextos';
 
 export default function TelaEnsinar({ agent, onCountChange, aoSalvo }: { agent: SalesAgent; onCountChange: () => void; aoSalvo: (a: SalesAgent) => void }) {
   return (

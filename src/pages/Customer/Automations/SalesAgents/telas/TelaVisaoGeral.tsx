@@ -2,6 +2,7 @@
 // entregou (os números que ficavam em Resultados) e as sugestões esperando
 // resposta. É a primeira tela que abre.
 import { useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { AlertTriangle, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
@@ -12,8 +13,10 @@ import {
 } from '@/services/salesAgents/salesAgentsService';
 import { plural } from '@/lib/formato';
 import type { TelaId } from '@/features/salesAgents/iaMenu';
+import type { PaginaId } from '../configurar/paginas';
 import { motivoSemAtendimento, pendenciasDaIa, type Situacao } from '@/features/salesAgents/situacao';
 import { SuggestionCard } from './TelaSugestoes';
+import UltimosAtendimentos from './UltimosAtendimentos';
 
 // Visão geral, números do período — o que ESTA IA produziu, pro próprio cliente ver.
 //
@@ -180,10 +183,13 @@ export interface TelaVisaoGeralProps {
   falhou?: boolean;
   /** Mesma chave das telas Sugestões e Relatório semanal (`ia_insights`). */
   mostrarSugestoes: boolean;
-  aoIr: (tela: TelaId, passo?: number) => void;
+  /** Equipe da Leal Mídia: vê o custo e o erro técnico nos últimos atendimentos. */
+  equipe: boolean;
+  /** `pagina`: a página do Configurar que corrige a pendência (onda 3). */
+  aoIr: (tela: TelaId, pagina?: PaginaId) => void;
 }
 
-export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferindo, falhou = false, mostrarSugestoes, aoIr }: TelaVisaoGeralProps) {
+export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferindo, falhou = false, mostrarSugestoes, equipe, aoIr }: TelaVisaoGeralProps) {
   const pendencias = pendenciasDaIa(agent, diagnostico);
 
   return (
@@ -212,9 +218,12 @@ export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferind
                   <div className="text-sm font-medium">{p.titulo}</div>
                   <div className="text-xs text-muted-foreground">{p.detalhe}</div>
                 </div>
-                {p.corrigir && (
+                {/* Fora da IA (WhatsApp desconectado): link pra configuração do número. */}
+                {p.corrigir?.rota ? (
+                  <Button asChild size="sm" variant="outline"><Link to={p.corrigir.rota}>Corrigir</Link></Button>
+                ) : p.corrigir && (
                   <Button size="sm" variant="outline"
-                    onClick={() => (p.corrigir!.passo !== undefined ? aoIr(p.corrigir!.tela, p.corrigir!.passo) : aoIr(p.corrigir!.tela))}>
+                    onClick={() => (p.corrigir!.pagina ? aoIr(p.corrigir!.tela, p.corrigir!.pagina) : aoIr(p.corrigir!.tela))}>
                     Corrigir
                   </Button>
                 )}
@@ -228,6 +237,8 @@ export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferind
         <h2 id="vg-numeros" className="text-sm font-medium">Números do período</h2>
         <ResultsTab agent={agent} motivo={motivoSemAtendimento(situacao)} />
       </section>
+
+      <UltimosAtendimentos agentId={agent.id} completo={equipe} />
 
       {mostrarSugestoes && <SugestoesPendentes agent={agent} aoIr={aoIr} />}
     </div>

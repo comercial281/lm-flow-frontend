@@ -14,7 +14,7 @@ import {
 } from '@/services/salesAgents/salesAgentsService';
 import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
 import { segundos } from '@/features/salesAgents/sistemaDoCliente';
-import { Aviso } from './pecas';
+import { Aviso } from './Aviso';
 
 // Sistema do cliente → CVCRM (06/10/2026). O lead é cadastrado direto no CVCRM do
 // cliente, pela conexão de Integrações → CVCRM (uma por cliente). Aqui a IA só
@@ -74,7 +74,7 @@ export default function SistemaDoClienteCvcrm({ agentId, valor, aoMudar, podeTes
   };
 
   if (carregando) {
-    return <p className="mt-2 ml-7 text-sm text-muted-foreground">Lendo o CVCRM do cliente…</p>;
+    return <p className="mt-2 text-sm text-muted-foreground">Lendo o CVCRM do cliente…</p>;
   }
 
   // Sem as listas, a escolha guardada continua à vista (o envio usa ela do mesmo jeito).
@@ -85,7 +85,7 @@ export default function SistemaDoClienteCvcrm({ agentId, valor, aoMudar, podeTes
 
   if (falhaGeral) {
     return (
-      <div className="mt-2 ml-7 space-y-2">
+      <div className="mt-2 space-y-2">
         <Aviso tom="vermelho">{falhaGeral}</Aviso>
         <p className="text-sm text-muted-foreground">{guardada || 'Escolhido: deixar o CVCRM decidir empreendimento e fila.'}</p>
       </div>
@@ -94,7 +94,7 @@ export default function SistemaDoClienteCvcrm({ agentId, valor, aoMudar, podeTes
 
   if (!opcoes?.connected) {
     return (
-      <div className="mt-2 ml-7">
+      <div className="mt-2">
         <Aviso>
           <p>Este cliente ainda não conectou o CVCRM. Sem a conexão, a IA não liga com este destino.</p>
           <Button asChild size="sm" variant="outline" className="mt-2">
@@ -110,7 +110,7 @@ export default function SistemaDoClienteCvcrm({ agentId, valor, aoMudar, podeTes
   const tempo = teste?.duration_ms != null ? ` · ${segundos(teste.duration_ms)}` : '';
 
   return (
-    <div className="mt-2 ml-7 space-y-4">
+    <div className="mt-2 space-y-4">
       <p className="text-sm text-muted-foreground">
         O lead entra no CVCRM <span className="font-medium text-foreground">{opcoes.subdomain}.cvcrm.com.br</span> com o resumo da IA, e o CVCRM distribui pela regra dele.
       </p>
@@ -142,7 +142,7 @@ export default function SistemaDoClienteCvcrm({ agentId, valor, aoMudar, podeTes
         <p className="text-xs text-muted-foreground mt-1">
           {podeTestar
             ? 'O teste cria um lead de verdade no CVCRM do cliente, com o nome "Teste LM Flow". Exclua por lá depois.'
-            : 'Salve o passo antes de testar.'}
+            : 'Use o CVCRM como destino antes de testar.'}
         </p>
         {teste && (
           <div role="status"

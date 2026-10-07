@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { RefreshCw, Loader2, Check } from 'lucide-react';
 import { dolar } from '@/lib/formato';
+import UltimosAtendimentos from './UltimosAtendimentos';
 import EnviosSistemaCliente from '../diagnostico/EnviosSistemaCliente';
-import { salesAgentsService, type SalesAgent, type HealthReport, type SalesAgentRun, type SalesAgentRunTotals, type PromptPreview } from '@/services/salesAgents/salesAgentsService';
+import { salesAgentsService, type SalesAgent, type HealthReport, type SalesAgentRunTotals, type PromptPreview } from '@/services/salesAgents/salesAgentsService';
 
 // ---------------- Diagnóstico ----------------
 //
@@ -20,23 +21,8 @@ const HEALTH_STYLE: Record<string, { dot: string; text: string }> = {
   error: { dot: 'bg-red-500', text: 'text-red-600' },
 };
 
-const RUN_STATUS_LABEL: Record<string, string> = {
-  replied: 'Respondeu',
-  skipped: 'Não respondeu',
-  failed: 'Falhou',
-};
-
-const RUN_KIND_LABEL: Record<string, string> = {
-  live: 'Conversa',
-  followup: 'Follow-up',
-  reengage: 'Reengajamento',
-  engage: 'Acionada pelo corretor',
-  test: 'Teste',
-};
-
 export default function TelaDiagnostico({ agent }: { agent: SalesAgent }) {
   const [health, setHealth] = useState<HealthReport | null>(null);
-  const [runs, setRuns] = useState<SalesAgentRun[]>([]);
   const [totals, setTotals] = useState<SalesAgentRunTotals | null>(null);
   const [loading, setLoading] = useState(true);
   const [prompt, setPrompt] = useState<PromptPreview | null>(null);
@@ -50,7 +36,6 @@ export default function TelaDiagnostico({ agent }: { agent: SalesAgent }) {
         salesAgentsService.runs(agent.id, { days: 30, limit: 50 }),
       ]);
       setHealth(h);
-      setRuns(r.runs);
       setTotals(r.totals);
     } catch {
       toast.error('Não consegui carregar o diagnóstico.');
@@ -141,51 +126,7 @@ export default function TelaDiagnostico({ agent }: { agent: SalesAgent }) {
         </div>
       )}
 
-      <div>
-        <h3 className="text-sm font-medium mb-2">Últimos atendimentos</h3>
-        {runs.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            Nenhum registro ainda. Cada mensagem que chegar vai aparecer aqui, inclusive as que a IA decidir não responder.
-          </p>
-        ) : (
-          <div className="space-y-1">
-            {runs.map((run) => (
-              <div key={run.id} className="flex items-start gap-3 rounded-md border border-sidebar-border px-3 py-2 text-xs">
-                <span className={`mt-1 h-2 w-2 flex-shrink-0 rounded-full ${
-                  run.status === 'replied' ? 'bg-emerald-500' : run.status === 'failed' ? 'bg-red-500' : 'bg-amber-500'
-                }`} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-x-2">
-                    <span className="font-medium">{RUN_STATUS_LABEL[run.status] ?? run.status}</span>
-                    <span className="text-muted-foreground">· {RUN_KIND_LABEL[run.kind] ?? run.kind}</span>
-                    <span className="text-muted-foreground">· {new Date(run.created_at).toLocaleString('pt-BR')}</span>
-                  </div>
-                  {/* Respondeu mas NÃO enviou também tem motivo quando foi de propósito
-                      (o lead voltou a falar no meio da retomada, resposta vazia): sem
-                      ele a linha fica verde, "Respondeu", e ninguém entende o custo. */}
-                  {run.reason_label && (run.status !== 'replied' || (run.delivered === false && run.skip_reason)) && (
-                    <div className="text-muted-foreground">{run.reason_label}</div>
-                  )}
-                  {/* Turno PULADO carrega o detalhe concreto do bloqueio (qual mensagem
-                      barrou, de quando) — é informação, não falha, então vai em cinza.
-                      Vermelho fica reservado pra erro de verdade. */}
-                  {run.error_message && (
-                    <div className={`break-words ${run.status === 'failed' ? 'text-red-600' : 'text-muted-foreground'}`}>
-                      {run.error_class === 'Detalhe' ? run.error_message : `${run.error_class}: ${run.error_message}`}
-                    </div>
-                  )}
-                  {run.status === 'replied' && !run.delivered && !run.skip_reason && (
-                    <div className="text-amber-600">A resposta foi gerada mas o WhatsApp não aceitou o envio.</div>
-                  )}
-                </div>
-                {run.cost_usd > 0 && (
-                  <span className="text-muted-foreground whitespace-nowrap">{dolar(run.cost_usd, 4)}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <UltimosAtendimentos agentId={agent.id} completo />
     </div>
   );
 }

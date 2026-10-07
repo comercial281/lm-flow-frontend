@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   horaDoEnsaio, pausa, linhasDoQueAconteceria, itensDoTurno, respostasDoFormulario, textoDasRespostas,
-  avisoDoModelo, nomeDoModelo,
+  avisoDoModelo, nomeDoModelo, AVANCOS_DA_JANELA, painelDoEnsaio, linhaDoCard,
 } from './ensaio';
 import type { RehearsalOutcome, RehearsalTurn } from '@/services/salesAgents/salesAgentsService';
 
@@ -135,3 +135,50 @@ describe('ajustes da revisão final', () => {
   });
 });
 
+
+describe('painelDoEnsaio (Testar novo)', () => {
+  it('caminho do estado, temperatura com nível e as perguntas com o que falta', () => {
+    const p = painelDoEnsaio(
+      { caminho: 'Sair do aluguel' } as never,
+      { temperature: 'warm', checklist: [{ pergunta: 'Renda', resposta: 'até 6 mil', obrigatoria: true }, { pergunta: 'Quartos', resposta: ' ', obrigatoria: false }] } as never,
+    );
+    expect(p.caminho).toBe('Sair do aluguel');
+    expect(p.temperatura).toEqual({ rotulo: 'Morna', nivel: 2 });
+    expect(p.perguntas).toEqual([
+      { texto: 'Renda', resposta: 'até 6 mil', obrigatoria: true },
+      { texto: 'Quartos', resposta: null, obrigatoria: false },
+    ]);
+  });
+
+  it('sem nada ainda: tudo vazio', () => {
+    expect(painelDoEnsaio(null, null)).toEqual({ caminho: null, temperatura: null, perguntas: [] });
+  });
+
+  // Onda 2 ainda não no ar: o estado vem sem `caminho` e o painel diz "ainda não escolheu".
+  it('estado sem o campo caminho (servidor antigo): caminho nulo', () => {
+    expect(painelDoEnsaio({ v: 1 } as never, null).caminho).toBeNull();
+  });
+
+  it('avanços da janela: até ela agir, 1 h, +8 h, 1 dia, 3 dias', () => {
+    expect(AVANCOS_DA_JANELA.map((a) => [a.rotulo, a.horas])).toEqual([
+      ['Até ela agir sozinha', null], ['1 h', 1], ['+8 h', 8], ['1 dia', 24], ['3 dias', 72],
+    ]);
+  });
+});
+
+describe('linhaDoCard', () => {
+  it('com "Mover o card" ligado diz a coluna do momento, em português', () => {
+    expect(linhaDoCard(outcome({ card: { stage: 'qualificando', moves: true } }))).toBe('Card: vai pra coluna de "Qualificando"');
+  });
+  it('desligado: o card fica onde está', () => {
+    expect(linhaDoCard(outcome({ card: { stage: 'agendado', moves: false } }))).toBe('Card: fica onde está (Mover o card no funil está desligado)');
+  });
+  it('sem card ou sem momento: nada', () => {
+    expect(linhaDoCard(outcome())).toBeNull();
+    expect(linhaDoCard(outcome({ card: { stage: null, moves: true } }))).toBeNull();
+    expect(linhaDoCard(null)).toBeNull();
+  });
+  it('momento desconhecido sai como veio', () => {
+    expect(linhaDoCard(outcome({ card: { stage: 'novo_momento', moves: true } }))).toBe('Card: vai pra coluna de "novo_momento"');
+  });
+});
