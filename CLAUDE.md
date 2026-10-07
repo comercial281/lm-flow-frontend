@@ -7333,6 +7333,11 @@ O que aparece na tela:
   (`/settings/integrations`) com quatro cartões, logo (ou ícone) + nome + frase: **WhatsApp**,
   **Facebook** (Página e Pixel), **Portais** e **Sistemas** (peças se encaixando).
   Cartão sem nenhuma tela visível pro cargo não aparece.
+- **No padrão das páginas da casa** (pedido do dono, 07/10): a entrada e Sistemas
+  usam o cabeçalho de Canais (`BaseHeader`: título grande com a barrinha roxa e
+  a frase embaixo), o conteúdo alinhado à esquerda na largura da página, e os
+  cartões no visual dos cartões de Canais (`CartaoDeLink`: fundo e borda do menu,
+  sobe e brilha roxo no hover). Página nova de Integrações segue o mesmo.
 - **Telas de dentro** com a barra "← Integrações" + o cartão; a tela em si é a de
   antes. No CVCRM o voltar é "← Sistemas".
 - **Facebook**: a Página (Lead Ads) em cima e o Pixel embaixo, numa rolagem.
