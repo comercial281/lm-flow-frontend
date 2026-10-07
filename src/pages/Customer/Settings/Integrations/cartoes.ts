@@ -1,7 +1,8 @@
 import type { LucideIcon } from 'lucide-react';
 import { Puzzle, Share2 } from 'lucide-react';
 import whatsappLogo from '@/assets/channels/whatsapp.png';
-import facebookLogo from '@/assets/channels/facebook.png';
+// O facebook.png dos canais é o ícone do Messenger; aqui vai o "f" do Facebook.
+import facebookLogo from '@/assets/integrations/facebook.svg';
 import {
   ENTRADA_INTEGRACOES, SISTEMAS_INTEGRACOES, donoDoEndereco, enderecoCasa, getCustomerMenuSections,
   type CartaoDeIntegracao, type MenuItem, type MenuSection, type SubMenuItem,
