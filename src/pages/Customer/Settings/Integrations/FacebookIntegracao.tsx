@@ -1,5 +1,6 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { BaseHeader } from '@/components/base';
 import MetaPagesPanel from '@/pages/Customer/Automations/Origem/MetaPagesPanel';
 import PixelCapiConfig from '@/pages/Customer/Automations/PixelCapi/PixelCapiConfig';
 import { useMenuSecoes } from '@/contexts/MenuContext';
@@ -68,19 +69,30 @@ export default function FacebookIntegracao() {
     if (pathname === PAGINA) raizRef.current?.scrollTo?.(0, 0);
   }, [pathname]);
 
-  // Os dois blocos usam o título que já têm (Páginas conectadas; Pixel / Conversões).
+  // Padrão das páginas da casa (Canais): cabeçalho padrão e os dois blocos na
+  // largura da página, cada um com o título dele (Página do Facebook; Pixel / Conversões).
   return (
     <div ref={raizRef} className="h-full overflow-y-auto">
-      {pagina && (
-        <section ref={paginaRef} aria-label="Página do Facebook">
-          <MetaPagesPanel onGoToForms={() => navigate('/automations/origem')} />
-        </section>
-      )}
-      {pixel && (
-        <section ref={pixelRef} aria-label="Pixel" className={pagina ? 'border-t border-border' : undefined}>
-          <PixelCapiConfig />
-        </section>
-      )}
+      <div className="flex flex-col gap-6 p-4">
+        <BaseHeader
+          title="Facebook"
+          subtitle="A página dos anúncios, de onde chegam os leads, e o Pixel, que conta pro Meta quem virou cliente."
+        />
+        {pagina && (
+          <section ref={paginaRef} aria-label="Página do Facebook">
+            <MetaPagesPanel onGoToForms={() => navigate('/automations/origem')} />
+          </section>
+        )}
+        {pixel && (
+          <section
+            ref={pixelRef}
+            aria-label="Pixel"
+            className={pagina ? 'border-t border-sidebar-border pt-6' : undefined}
+          >
+            <PixelCapiConfig />
+          </section>
+        )}
+      </div>
     </div>
   );
 }

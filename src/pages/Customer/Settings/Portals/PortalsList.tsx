@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { BaseHeader } from '@/components/base';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Home, Star, Clock, ChevronRight } from 'lucide-react';
@@ -41,16 +42,14 @@ export default function PortalsList() {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="border-b bg-background/95 backdrop-blur p-6">
-        <h1 className="text-2xl font-bold">Portais imobiliários</h1>
-        <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-          Publique seus imóveis automaticamente nos portais e receba os leads direto no funil.
-          Cada portal lê o feed do LM Flow algumas vezes por dia.
-        </p>
-      </div>
+    // Padrão das páginas da casa (Canais): cabeçalho padrão e a lista na largura da página.
+    <div className="flex h-full flex-col gap-6 p-4">
+      <BaseHeader
+        title="Portais imobiliários"
+        subtitle="Publique seus imóveis automaticamente nos portais e receba os leads direto no funil. Cada portal lê o feed do LM Flow algumas vezes por dia."
+      />
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto">
         {recusado ? (
           <NoAccessState />
         ) : loading ? (
@@ -58,12 +57,12 @@ export default function PortalsList() {
             Carregando...
           </div>
         ) : (
-          <div className="space-y-3 max-w-5xl">
+          <div className="space-y-3">
             {portals.map(portal => (
               <button
                 key={portal.portal_key}
                 onClick={() => navigate(`/settings/portals/${portal.portal_key}`)}
-                className="w-full rounded-xl border bg-card p-5 text-left hover:border-primary/40 hover:shadow-sm transition-all"
+                className="w-full rounded-xl border border-sidebar-border bg-sidebar p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
                 {/* Linha 1: quem é o portal e em que estado está. O nome tem prioridade
                     de largura — os contadores moram na linha de baixo, senão com seis
