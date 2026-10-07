@@ -1,6 +1,7 @@
 {
-  "title": "Canais",
-  "subtitle": "Gerencie seus canais de comunicação",
+  "title": "WhatsApp",
+  "titleMeusNumeros": "Meus números",
+  "subtitle": "Os números de WhatsApp que atendem pelo LM Flow.",
   "common": {
     "channel": "Canal",
     "notAvailable": "N/A"

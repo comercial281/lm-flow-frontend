@@ -127,7 +127,7 @@ describe('PortalsList', () => {
   it('erro ao carregar a lista avisa — é a tela inteira que não abre', async () => {
     mocks.list.mockRejectedValue(new Error('boom'));
     montar();
-    await screen.findByText('Portais imobiliários');
+    await screen.findByText('Portais');
     await vi.waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Erro ao carregar portais'));
   });
 

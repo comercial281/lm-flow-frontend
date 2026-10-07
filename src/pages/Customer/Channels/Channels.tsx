@@ -25,6 +25,7 @@ import {
   ChannelCard,
 } from '@/components/channels';
 import EmptyState from '@/components/base/EmptyState';
+import { Pagina, useExtrasDaMoldura } from '@/components/base';
 // table types imported where needed in ChannelsTable
 import { useNavigate } from 'react-router-dom';
 import { ChannelsTour } from '@/tours';
@@ -41,6 +42,10 @@ export default function Channels() {
   const semNumeroProprio = permissionsReady && !can('inboxes', 'update');
   const { t } = useLanguage('channels');
   const canConnect = useFeature('channels_connect');
+  // Quem entra por Integrações tem o "← Integrações" acima do título e a tela se chama
+  // WhatsApp; o corretor que chega por "Meus números" (avatar) não tem a moldura.
+  const { acima } = useExtrasDaMoldura();
+  const titulo = acima ? t('title') : t('titleMeusNumeros');
 
   const { inboxes, isLoadingInboxes, fetchInboxes, removeInbox } = useAppDataStore();
   const [query, setQuery] = useState('');
@@ -221,21 +226,26 @@ export default function Channels() {
   // Columns moved to ChannelsTable
 
   return (
-    <div className="h-full flex flex-col p-4">
+    <Pagina
+      rolagem="conteudo"
+      cabecalho={
+        <div data-tour="channels-header">
+          <ChannelsHeader
+            title={titulo}
+            totalCount={totalCount}
+            selectedCount={0}
+            searchValue={query}
+            onSearchChange={setQuery}
+            onNewChannel={handleNewChannel}
+            canCreate={canConnect && permissionsReady && can('channels', 'create')}
+            onClearSelection={() => {}}
+          />
+        </div>
+      }
+    >
       <ChannelsTour />
-      <div data-tour="channels-header">
-        <ChannelsHeader
-          totalCount={totalCount}
-          selectedCount={0}
-          searchValue={query}
-          onSearchChange={setQuery}
-          onNewChannel={handleNewChannel}
-          canCreate={canConnect && permissionsReady && can('channels', 'create')}
-          onClearSelection={() => {}}
-        />
-      </div>
 
-      <div className="flex items-center justify-end mb-3" data-tour="channels-view-toggle">
+      <div className="flex items-center justify-end" data-tour="channels-view-toggle">
         <div className="flex items-center border rounded-lg">
           <Button
             variant={viewMode === 'cards' ? 'default' : 'ghost'}
@@ -377,6 +387,6 @@ export default function Channels() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Pagina>
   );
 }

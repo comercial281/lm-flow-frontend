@@ -4,6 +4,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 
 interface ChannelsHeaderProps {
+  title: string;
   totalCount: number;
   selectedCount: number;
   searchValue: string;
@@ -14,6 +15,7 @@ interface ChannelsHeaderProps {
 }
 
 export default function ChannelsHeader({
+  title,
   totalCount,
   selectedCount,
   searchValue,
@@ -34,7 +36,7 @@ export default function ChannelsHeader({
 
   return (
     <BaseHeader
-      title={t('title')}
+      title={title}
       subtitle={t('subtitle')}
       totalCount={totalCount}
       selectedCount={selectedCount}
@@ -44,7 +46,6 @@ export default function ChannelsHeader({
       primaryAction={primaryAction}
       onClearSelection={onClearSelection}
       showFilters={false}
-      className="mb-4"
     />
   );
 }

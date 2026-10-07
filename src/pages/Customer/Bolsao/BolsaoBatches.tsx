@@ -33,11 +33,11 @@ import {
   ChevronRight,
   Loader2,
   AlertTriangle,
-  Inbox,
   Users,
   Eraser,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
+import { BaseHeader, Pagina } from '@/components/base';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import bolsaoService, { BolsaoBatch, BolsaoClaimRow } from '@/services/bolsao/bolsaoService';
 import BolsaoImportWizard from './BolsaoImportWizard';
@@ -176,36 +176,28 @@ export default function BolsaoBatches() {
   const hasTestBatch = batches.some(b => b.is_test);
 
   return (
-    <div className="p-4 sm:p-6 space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Inbox className="h-6 w-6" /> Bolsão de Leads
-          </h1>
-          <p className="text-muted-foreground">
-            Suba a lista e ela fica disponível para os corretores se servirem.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setTestOpen(true)}>
-            <FlaskConical className="h-4 w-4 mr-2" /> Criar lead de teste
-          </Button>
-          {hasTestBatch && (
-            <Button variant="ghost" onClick={cleanupTest} disabled={cleaning}>
-              {cleaning ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Eraser className="h-4 w-4 mr-2" />
+    <Pagina
+      cabecalho={
+        <BaseHeader
+          title="Bolsão"
+          subtitle="Suba a lista e ela fica disponível para os corretores se servirem."
+          aDireita={
+            <>
+              <Button variant="outline" onClick={() => setTestOpen(true)}>
+                <FlaskConical className="h-4 w-4 mr-2" /> Criar lead de teste
+              </Button>
+              {hasTestBatch && (
+                <Button variant="ghost" onClick={cleanupTest} disabled={cleaning}>
+                  {cleaning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Eraser className="h-4 w-4 mr-2" />}
+                  Limpar leads de teste
+                </Button>
               )}
-              Limpar leads de teste
-            </Button>
-          )}
-          <Button onClick={() => setWizardOpen(true)}>
-            <Upload className="h-4 w-4 mr-2" /> Subir planilha
-          </Button>
-        </div>
-      </div>
-
+            </>
+          }
+          primaryAction={{ label: 'Subir planilha', icon: <Upload className="h-4 w-4" />, onClick: () => setWizardOpen(true) }}
+        />
+      }
+    >
       <Tabs defaultValue="listas">
         <TabsList>
           <TabsTrigger value="listas">Listas</TabsTrigger>
@@ -312,7 +304,7 @@ export default function BolsaoBatches() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </Pagina>
   );
 }
 

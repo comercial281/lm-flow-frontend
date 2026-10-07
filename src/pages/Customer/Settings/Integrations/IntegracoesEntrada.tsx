@@ -1,4 +1,4 @@
-import { BaseHeader } from '@/components/base';
+import { BaseHeader, Pagina } from '@/components/base';
 import { useMenuSecoes } from '@/contexts/MenuContext';
 import { cartoesVisiveis, itemDeIntegracoes, NENHUMA_INTEGRACAO } from './cartoes';
 import SeloDoCartao from './SeloDoCartao';
@@ -10,10 +10,8 @@ export default function IntegracoesEntrada() {
   const cartoes = cartoesVisiveis(itemDeIntegracoes(useMenuSecoes()));
 
   return (
-    // Mesmo esqueleto das páginas da casa (Canais): cabeçalho padrão e cartões.
-    <div className="flex h-full flex-col gap-6 p-4">
-      <BaseHeader title="Integrações" subtitle="Conecte o LM Flow às ferramentas que sua imobiliária já usa." />
-
+    // Moldura e cabeçalho da casa (padrão de telas).
+    <Pagina cabecalho={<BaseHeader title="Integrações" subtitle="Conecte o LM Flow às ferramentas que sua imobiliária já usa." />}>
       {cartoes.length === 0 ? (
         <p className="text-sm text-sidebar-foreground/70">{NENHUMA_INTEGRACAO}</p>
       ) : (
@@ -29,6 +27,6 @@ export default function IntegracoesEntrada() {
           ))}
         </ul>
       )}
-    </div>
+    </Pagina>
   );
 }
