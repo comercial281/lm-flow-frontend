@@ -4216,8 +4216,8 @@ Decisões do dono (não reabrir sem ele pedir):
 - **Saiu o "Personalizar menu"** (esconder, favoritar, reordenar): com seções
   fixas ele quebrava os rótulos. O que estava salvo no navegador é ignorado.
 - **A Página do Facebook é integração** (desde 01/10/2026, a pedido do dono):
-  Integrações → Facebook, em `/settings/facebook` (`FacebookPages`, que embrulha o
-  `MetaPagesPanel`). A antiga tela Origem virou só **Formulários**, no mesmo
+  Integrações → Facebook, em `/settings/facebook` (`FacebookIntegracao`, que junta o
+  `MetaPagesPanel` e o Pixel). A antiga tela Origem virou só **Formulários**, no mesmo
   endereço `/automations/origem`. Os links que mandavam revisar a conexão da
   página (aviso de erro dos Formulários e o Marketplace) apontam para a aba nova.
   Ela tem as mesmas travas da antiga Origem: `hideOnRoot` (não aparece no painel
@@ -4228,13 +4228,15 @@ Como funciona por dentro:
 - `getCustomerMenuSections()` devolve as seções; `filterMenuSections` aplica o
   filtro de sempre (cargo, função do cliente, arquivamento) seção a seção.
 - **Item com abas** (`abas`): aparece se alguma aba sobrevive ao filtro, e o
-  `href` dele vira o da primeira que sobreviveu.
+  `href` dele vira o da primeira que sobreviveu (ou a `entrada`, quando o item tem
+  uma — Integrações).
 - **`MenuContext`**: o `MainLayout` entrega o menu já filtrado. A
   **`PaginaComAbas`** (rota-moldura sem endereço em `routes/index.tsx`) acha o
   item dono do endereço (`donoDoEndereco`, casamento mais longo) e desenha título
   + `Abas` a partir dele. Menu e abas leem a MESMA lista e não têm como discordar.
   Com menos de duas abas visíveis ela não desenha nada (a tela de dentro já tem
-  título): é o corretor no Bolsão e em Meus números.
+  título): é o corretor no Bolsão. Integrações não usa a `PaginaComAbas`: usa a
+  `MolduraDeIntegracao` (ver "Integrações em cartões").
 - O `AutomationsLayout` virou: redirecionamento de `/automations` + `PaginaComAbas`.
   O "vazio pelo plano × vazio pelo cargo" continua igual.
 - `hideOnRoot` saiu da aba de Automações para o item do menu (Formulários e a
@@ -7328,7 +7330,7 @@ CVCRM) e cada integração nova virava mais uma. Spec:
 O que aparece na tela:
 
 - **Minha imobiliária → Integrações** abre uma página de entrada
-  (`/settings/integrations`) com quatro cartões, logo + nome + frase: **WhatsApp**,
+  (`/settings/integrations`) com quatro cartões, logo (ou ícone) + nome + frase: **WhatsApp**,
   **Facebook** (Página e Pixel), **Portais** e **Sistemas** (peças se encaixando).
   Cartão sem nenhuma tela visível pro cargo não aparece.
 - **Telas de dentro** com a barra "← Integrações" + o cartão; a tela em si é a de
@@ -7362,8 +7364,16 @@ Como funciona por dentro:
 - **A barra só aparece pra quem vê Integrações**: o corretor em "Meus números"
   (`/channels`) vê a tela sem voltar.
 - `MolduraDeIntegracao` substituiu a `PaginaComAbas` nessas rotas. A entrada e
-  Sistemas não têm `PermissionRoute` (o `permissionRoutes.source.spec` confere).
-- Sistema novo = mais uma tela no item com `cartao: 'sistemas'`; a página Sistemas
-  não muda (só o estado, se o sistema tiver).
+  Sistemas não exigem permissão, mas passam pelo `<PermissionRoute>` SEM
+  `resource`/`action` (o `permissionRoutes.source.spec` confere): é o portão da casa,
+  que espera as permissões chegarem (carregando) e, se a leitura cair, mostra
+  "Tentar de novo" em vez de "Nenhuma integração disponível pro seu acesso."
+  Sem resource o portão libera qualquer autenticado depois de carregar, mas com
+  `loadFailure === 'failed'` ele mostra o tentar de novo. Limite conhecido: o
+  super-admin passa antes de as permissões carregarem e pode ver o aviso vazio um instante.
+- Sistema novo = mais uma tela no item com `cartao: 'sistemas'`, com a rota dentro
+  de `<Route element={<MolduraDeIntegracao />}>`; a página Sistemas não muda. O
+  estado do cartão (`useEstado` em `IntegracoesSistemas`) só sabe ler o CVCRM hoje:
+  sistema com estado próprio precisa ensinar essa leitura.
 - O `SettingsIntegrationsTour` cita `/settings/integrations` mas não está montado
   em tela nenhuma; a entrada não o monta.
