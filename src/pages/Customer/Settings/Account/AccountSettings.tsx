@@ -370,15 +370,14 @@ export default function AccountSettings() {
 
   if (loading && !carregado) {
     return (
-      <div className="h-full flex flex-col p-4">
-        <BaseHeader title={t('title')} subtitle={t('subtitle')} />
+      <Pagina rolagem="conteudo" cabecalho={<BaseHeader title={t('title')} subtitle={t('subtitle')} />}>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
             <p className="text-sidebar-foreground/60">{t('loading')}</p>
           </div>
         </div>
-      </div>
+      </Pagina>
     );
   }
 
