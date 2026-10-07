@@ -24,6 +24,12 @@ const base = { email: null, connected_at: null, agents_using: 0 };
 describe('Integrações → Sistemas', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('tem o título da página (só para leitor de tela)', () => {
+    servico.get.mockResolvedValue({ ...base, connected: false, subdomain: null, token_state: 'none' });
+    abrir(secoes(['/settings/cvcrm']));
+    expect(screen.getByRole('heading', { level: 1, name: 'Sistemas' })).toBeInTheDocument();
+  });
+
   it('estadoDoCvcrm: conectado, token que não abre e desconectado', () => {
     expect(estadoDoCvcrm({ ...base, connected: true, subdomain: 'habras', token_state: 'ready' })).toBe('Conectado · habras.cvcrm.com.br');
     expect(estadoDoCvcrm({ ...base, connected: true, subdomain: 'habras', token_state: 'unreadable' })).toBe('Precisa de um token novo');

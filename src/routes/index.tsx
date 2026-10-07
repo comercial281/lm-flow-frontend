@@ -12,6 +12,7 @@ import {
   Contacts,
   ScheduledActions,
   Channels,
+  IntegracoesEntrada,
   ChatPage,
   Pipelines,
   Bolsao,
@@ -166,7 +167,6 @@ const RoletaLista = lazyWithRetry(() => import('@/pages/Customer/Roleta/RoletaLi
 const RoletaPagina = lazyWithRetry(() => import('@/pages/Customer/Roleta/RoletaPagina'));
 const AssignmentSettingsPage = lazyWithRetry(() => import('@/pages/Customer/Settings/AssignmentSettings/AssignmentSettings'));
 const FacebookIntegracao = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/FacebookIntegracao'));
-const IntegracoesEntrada = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/IntegracoesEntrada'));
 const IntegracoesSistemas = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/IntegracoesSistemas'));
 const CvcrmConexao = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/Cvcrm/CvcrmConexao'));
 const Macros = lazyWithRetry(() => import('@/pages/Customer/Settings/Macros').then(m => ({ default: m.Macros })));

@@ -8,7 +8,7 @@ import { permissionForPath } from '@/routes/permissionRoutes';
 
 const secoes = getCustomerMenuSections();
 const todos: (MenuItem | SubMenuItem)[] = itensDoMenu(secoes, getFooterMenuItems());
-// O pai de um item com abas herda o href da primeira aba; quem confere cargo é a aba.
+// O pai de um item com abas herda o href da primeira aba (ou a `entrada`, quando houver); quem confere cargo é a aba.
 const folhas = todos.filter(i => !('abas' in i && i.abas?.length));
 const achar = (href: string) => folhas.find(i => i.href === href)!;
 const semCargo = (i: MenuItem | SubMenuItem) => !(i.resource && i.action) && !(i.permissions && i.permissions.length > 0);

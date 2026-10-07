@@ -54,7 +54,7 @@ export interface MenuItem {
    * item; as abas aparecem no topo da página, pela `PaginaComAbas`, lidas
    * DESTA lista — menu e abas não têm como discordar. Cada aba confere o
    * cargo sozinha; o item some quando nenhuma aba sobrevive, e o `href` dele
-   * vira o da primeira aba visível.
+   * vira o da primeira aba visível (ou a `entrada`, quando o item tem uma).
    */
   abas?: SubMenuItem[];
   /**
@@ -553,7 +553,7 @@ export const filterMenuItemsByPermissions = (
     .map((item): MenuItem | null => {
       if (item.abas && item.abas.length > 0) {
         // Item com abas: vale a regra de cada aba. Ele aparece se alguma
-        // sobrevive, e leva para a primeira que sobreviveu.
+        // sobrevive, e leva para a primeira que sobreviveu (ou para a `entrada`, quando houver).
         if (!mostra({ ...item, resource: undefined, action: undefined, permissions: undefined })) return null;
         const abas = item.abas.filter(mostra).map(aba => ({ ...aba, hiddenFromClient: mark(aba) }));
         if (abas.length === 0) return null;

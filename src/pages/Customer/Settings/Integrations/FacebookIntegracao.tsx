@@ -59,19 +59,25 @@ export default function FacebookIntegracao() {
   const { pagina, pixel } = blocosDoFacebook(itemDeIntegracoes(useMenuSecoes()), pathname);
   const paginaRef = useRef<HTMLElement>(null);
   const pixelRef = useRef<HTMLElement>(null);
+  const raizRef = useRef<HTMLDivElement>(null);
 
   useRolarAte(pathname === PIXEL && pagina && pixel, paginaRef, pixelRef);
 
+  // Do Pixel para a Página com esta mesma tela montada: a Página abre no topo.
+  useEffect(() => {
+    if (pathname === PAGINA) raizRef.current?.scrollTo?.(0, 0);
+  }, [pathname]);
+
   // Os dois blocos usam o título que já têm (Páginas conectadas; Pixel / Conversões).
   return (
-    <div className="h-full overflow-y-auto">
+    <div ref={raizRef} className="h-full overflow-y-auto">
       {pagina && (
         <section ref={paginaRef} aria-label="Página do Facebook">
           <MetaPagesPanel onGoToForms={() => navigate('/automations/origem')} />
         </section>
       )}
       {pixel && (
-        <section ref={pixelRef} aria-label="Pixel" className={pagina ? 'scroll-mt-0 border-t border-border' : undefined}>
+        <section ref={pixelRef} aria-label="Pixel" className={pagina ? 'border-t border-border' : undefined}>
           <PixelCapiConfig />
         </section>
       )}

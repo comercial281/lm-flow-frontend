@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { act, render, screen } from '@testing-library/react';
+import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { MenuProvider } from '@/contexts/MenuContext';
 import { getCustomerMenuSections, type MenuSection, type MenuItem } from '@/components/layout/config/menuItems';
 import FacebookIntegracao, { blocosDoFacebook } from './FacebookIntegracao';
@@ -49,5 +49,20 @@ describe('Integrações → Facebook', () => {
     expect(screen.queryByText('painel da página')).toBeNull();
     expect(screen.getByText('configuração do pixel')).toBeInTheDocument();
     expect(rolar).not.toHaveBeenCalled();
+  });
+
+  it('do Pixel para a Página, com a mesma tela montada, volta ao topo', () => {
+    const topo = vi.fn();
+    Element.prototype.scrollTo = topo as unknown as typeof Element.prototype.scrollTo;
+    let ir: (to: string) => void = () => {};
+    const Ponte = () => { ir = useNavigate(); return null; };
+    render(
+      <MemoryRouter initialEntries={['/settings/pixel-capi']}>
+        <MenuProvider value={secoes(['/settings/facebook', '/settings/pixel-capi'])}><Ponte /><FacebookIntegracao /></MenuProvider>
+      </MemoryRouter>,
+    );
+    expect(topo).not.toHaveBeenCalled();
+    act(() => ir('/settings/facebook'));
+    expect(topo).toHaveBeenCalledWith(0, 0);
   });
 });
