@@ -42,7 +42,7 @@ import { lerRecorteImoveis, type FiltroDoLink } from '@/features/dashboard/links
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
 import { getTenantSlug } from '@/services/core/tenant';
 import Abas from '@/components/base/Abas';
-import { EmptyState } from '@/components/base';
+import { BaseHeader, EmptyState, Pagina } from '@/components/base';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import {
   ABA_NA_URL,
@@ -500,42 +500,30 @@ export default function Properties() {
     );
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
-        {/* Topo */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold leading-tight">Imóveis</h1>
-            {/* Com recorte da Dashboard a soma seria do recorte; o chip já diz o que está filtrado. */}
-            {contagem && !recorte && (
-              <p className="text-sm text-muted-foreground mt-0.5">
-                {plural(contagem.development + contagem.resale, 'cadastro na imobiliária', 'cadastros na imobiliária')}
-              </p>
-            )}
-          </div>
-          {kind && (
-            <div className="flex flex-wrap items-center gap-2">
-              {canAiBatch && (
-                <Button variant="outline" onClick={() => { setBatchSelected(new Set()); setBatchResults(null); setBatchModalOpen(true); }}>
-                  <Wand2 className="h-4 w-4 mr-2" />
-                  Gerar descrições com IA
-                </Button>
-              )}
-              {canCreate && (
-                <Button onClick={() => setImportOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  {kind === 'development' ? 'Novo empreendimento' : 'Novo imóvel'}
-                </Button>
-              )}
-            </div>
+    <Pagina
+      cabecalho={
+        <BaseHeader
+          title="Meus imóveis"
+          // Com recorte da Dashboard a soma seria do recorte; o chip já diz o que está filtrado.
+          subtitle={contagem && !recorte
+            ? `Empreendimentos e imóveis de revenda da imobiliária. · ${plural(contagem.development + contagem.resale, 'cadastro', 'cadastros')}`
+            : 'Empreendimentos e imóveis de revenda da imobiliária.'}
+          aDireita={kind && canAiBatch && (
+            <Button variant="outline" onClick={() => { setBatchSelected(new Set()); setBatchResults(null); setBatchModalOpen(true); }}>
+              <Wand2 className="h-4 w-4 mr-2" />
+              Gerar descrições com IA
+            </Button>
           )}
-        </div>
-
+          primaryAction={kind && canCreate
+            ? { label: kind === 'development' ? 'Novo empreendimento' : 'Novo imóvel', icon: <Plus className="h-4 w-4" />, onClick: () => setImportOpen(true) }
+            : undefined}
+        />
+      }
+    >
         {/* Abas e lista só depois de saber a aba (a padrão é a com mais cadastros). */}
         {!kind ? esqueleto : (
           <>
             <Abas
-              className="mt-4"
               rotulo="Tipo de cadastro"
               ativa={kind}
               aoTrocar={k => trocarAba(k as ListingKind)}
@@ -624,7 +612,6 @@ export default function Properties() {
             <div className="mt-3">{conteudo}</div>
           </>
         )}
-      </div>
 
       {/* Delete dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -765,7 +752,7 @@ export default function Properties() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </Pagina>
   );
 }
 

@@ -5,6 +5,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { Button } from '@/components/ui/ds';
 import { Grid3X3, List, GitBranch } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
+import { Pagina } from '@/components/base';
 
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { pipelinesService } from '@/services/pipelines';
@@ -328,20 +329,24 @@ export default function Pipelines() {
   const hasRealEstatePipelines = state.pipelines.some(p => REAL_ESTATE_TYPES.includes(p.pipeline_type));
 
   return (
-    <div className="h-full flex flex-col p-4">
+    <Pagina
+      rolagem="conteudo"
+      cabecalho={
+        <div data-tour="pipelines-header">
+          <PipelinesHeader
+            totalCount={state.meta.pagination.total}
+            searchValue={state.searchQuery}
+            onSearchChange={handleSearchChange}
+            onNewPipeline={handleCreatePipeline}
+          />
+        </div>
+      }
+    >
       <PipelinesTour />
-      <div data-tour="pipelines-header">
-        <PipelinesHeader
-          totalCount={state.meta.pagination.total}
-          searchValue={state.searchQuery}
-          onSearchChange={handleSearchChange}
-          onNewPipeline={handleCreatePipeline}
-        />
-      </div>
 
       {/* Type Tabs — only shown when real-estate pipelines exist */}
       {hasRealEstatePipelines && (
-        <div className="flex gap-1 border-b border-border mb-4 mt-2">
+        <div className="flex gap-1 border-b border-border mb-4">
           {TYPE_TABS.map(tab => (
             <button
               key={tab.key}
@@ -507,7 +512,6 @@ export default function Pipelines() {
           loading={state.loading.duplicate}
         />
       )}
-
-    </div>
+    </Pagina>
   );
 }

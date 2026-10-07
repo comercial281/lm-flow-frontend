@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Button, Input, Badge } from '@/components/ui/ds';
-import { Zap, Plus, Search, Folder, FolderPlus, Pencil, Play, Pause, Copy, Archive, Trash2, LayoutTemplate, Repeat } from 'lucide-react';
+import { Button, Badge } from '@/components/ui/ds';
+import { Zap, Plus, Folder, FolderPlus, Pencil, Play, Pause, Copy, Archive, Trash2, LayoutTemplate, Repeat } from 'lucide-react';
+import { BaseHeader, Pagina } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
 import { flowAutomationsService, flowAutomationFoldersService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation, FlowAutomationFolder, FlowAutomationKind } from '@/types/flowAutomations';
@@ -181,29 +182,25 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
 
   if (recusado) return <NoAccessState />;
 
-  const TitleIcon = isFollowup ? Repeat : Zap;
-
   return (
     <>
-    <div className="h-full flex flex-col p-4">
-      <div className="flex items-center gap-2 mb-2">
-        <TitleIcon className="h-5 w-5 text-primary" aria-hidden="true" />
-        <h1 className="text-xl font-bold">{copy.title}</h1>
-      </div>
-      <p className="text-sm text-muted-foreground mb-4">{copy.description}</p>
-
+    <Pagina
+      rolagem="conteudo"
+      cabecalho={
+        <BaseHeader
+          title={copy.title}
+          subtitle={copy.description}
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder={copy.searchPlaceholder}
+          aDireita={!isFollowup && (
+            <Button variant="outline" onClick={() => setTemplatesOpen(true)}><LayoutTemplate className="h-4 w-4 mr-1" /> Modelos</Button>
+          )}
+          primaryAction={{ label: copy.newButton, icon: <Plus className="h-4 w-4" />, onClick: handleCreate }}
+        />
+      }
+    >
       {isFollowup && <LegacyFollowupStrip />}
-
-      <div className="flex items-center gap-2 mb-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input className="pl-8" placeholder={copy.searchPlaceholder} value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-        {!isFollowup && (
-          <Button variant="outline" onClick={() => setTemplatesOpen(true)}><LayoutTemplate className="h-4 w-4 mr-1" /> Modelos</Button>
-        )}
-        <Button onClick={handleCreate}><Plus className="h-4 w-4 mr-1" /> {copy.newButton}</Button>
-      </div>
 
       {!isFollowup && folderId === undefined && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
@@ -298,7 +295,7 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
           </div>
         ))}
       </div>
-    </div>
+    </Pagina>
       {!isFollowup && <FlowTemplatesDialog open={templatesOpen} onClose={() => setTemplatesOpen(false)} onApplied={openFlow} />}
       {dialogoDeConfirmacao}
       {dialogoDePergunta}
