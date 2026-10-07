@@ -24,7 +24,7 @@
 
 import ts from 'typescript';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, dirname, relative, sep } from 'node:path';
+import { join, dirname, relative, sep, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const RAIZ = process.env.CONFERIR_PADRAO_RAIZ || join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -323,6 +323,29 @@ function ehImagemComAlt(abertura) {
   );
 }
 
+// ── Moldura e cabeçalho (padrão de telas, 07/10/2026) ─────────────────────
+// Toda tela usa a moldura única (Pagina) e o cabeçalho da casa (BaseHeader,
+// que é quem desenha o <h1> e a barrinha roxa). Título feito à mão, barrinha
+// copiada e cabeçalho fora da moldura fazem a tela "pular" de lugar entre uma
+// página e outra. Teto zero; ferramenta de tela cheia vai pras exceções.
+export const CABECALHO_DA_CASA = 'src/components/base/BaseHeader.tsx';
+export const MOLDURA_DA_CASA = 'src/components/base/Pagina.tsx';
+const BARRA_A_MAO = /#7c3aed,\s*#9333ea/;
+
+export function tagsJsx(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const achados = [];
+  const visitar = no => {
+    if (ts.isJsxOpeningElement(no) || ts.isJsxSelfClosingElement(no)) {
+      const { line } = fonte.getLineAndCharacterOfPosition(no.getStart(fonte));
+      achados.push({ tag: no.tagName.getText(fonte), linha: line + 1 });
+    }
+    ts.forEachChild(no, visitar);
+  };
+  visitar(fonte);
+  return achados;
+}
+
 export function botoesSemNome(codigo, arquivo = 'x.tsx') {
   const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
   const achados = [];
@@ -402,7 +425,20 @@ export function varrer() {
     if (emTitleCase(texto)) anotar('maiusculas', rel, linha, 'Maiúscula Em Toda Palavra', texto);
   };
 
-  for (const arquivo of andar(join(RAIZ, 'src'))) {
+  const arquivos = andar(join(RAIZ, 'src'));
+  // Passada 1: os XxxHeader que só embrulham o BaseHeader (ContactsHeader…).
+  const cabecalhos = new Set(['BaseHeader']);
+  const embrulhos = new Set();
+  for (const arquivo of arquivos) {
+    const rel = relative(RAIZ, arquivo).split(sep).join('/');
+    if (!noEscopo(rel) || !/Header\.tsx$/.test(rel) || rel === CABECALHO_DA_CASA) continue;
+    if (tagsJsx(readFileSync(arquivo, 'utf8'), rel).some(t => t.tag === 'BaseHeader')) {
+      cabecalhos.add(basename(rel, '.tsx'));
+      embrulhos.add(rel);
+    }
+  }
+
+  for (const arquivo of arquivos) {
     const rel = relative(RAIZ, arquivo).split(sep).join('/');
     const escopo = noEscopo(rel);
     const lista = contaSelectNativo(rel);
@@ -413,12 +449,24 @@ export function varrer() {
     }
     if (escopo && rel.endsWith('.tsx')) {
       for (const { linha, texto } of botoesSemNome(codigo, rel)) anotar('iconeSemNome', rel, linha, texto, texto);
+      const linhas = codigo.split('\n');
+      const tags = tagsJsx(codigo, rel);
+      if (rel !== CABECALHO_DA_CASA) {
+        for (const t of tags.filter(x => x.tag === 'h1')) anotar('tituloAMao', rel, t.linha, 'título feito à mão', linhas[t.linha - 1].trim());
+      }
+      if (!embrulhos.has(rel) && rel !== CABECALHO_DA_CASA && rel !== MOLDURA_DA_CASA) {
+        const cab = tags.find(x => cabecalhos.has(x.tag));
+        if (cab && !tags.some(x => x.tag === 'Pagina')) {
+          anotar('foraDaMoldura', rel, cab.linha, 'cabeçalho fora da moldura', linhas[cab.linha - 1].trim());
+        }
+      }
     }
     codigo.split('\n').forEach((l, i) => {
       const limpa = l.trimStart();
       if (limpa.startsWith('//') || limpa.startsWith('*')) return;
       if (escopo && !MODULOS_DE_FORMATO.includes(rel) && FORMATO.some(re => re.test(l))) anotar('formato', rel, i + 1, 'formatação fora do módulo', l.trim());
       if (escopo && rel !== CHAVE_DA_CASA && CHAVE_A_MAO.test(l)) anotar('chaveMao', rel, i + 1, 'role="switch" feito à mão', l.trim());
+      if (escopo && rel !== CABECALHO_DA_CASA && BARRA_A_MAO.test(l)) anotar('barraAMao', rel, i + 1, 'barrinha roxa copiada', l.trim());
       // selectNativo (app inteiro): pula linhas que começam com comentário ou têm */ após a tag
       if (lista && SELECT_NATIVO.test(l) && !COMECO_DE_COMENTARIO.test(limpa)) {
         const match = SELECT_NATIVO.exec(l);
@@ -449,6 +497,9 @@ export const CATEGORIAS = {
   chaveMao: 'chave feita à mão',
   iconeSemNome: 'botão só-ícone sem nome',
   selectNativo: 'lista de escolha nativa (app inteiro)',
+  tituloAMao: 'título de página feito à mão',
+  barraAMao: 'barrinha roxa copiada',
+  foraDaMoldura: 'cabeçalho fora da moldura',
 };
 
 function principal() {

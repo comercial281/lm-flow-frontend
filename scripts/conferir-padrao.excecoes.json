@@ -21,5 +21,14 @@
   { "arquivo": "src/types/core/filters.ts", "categoria": "glossario", "trecho": "DELETE", "motivo": "verbo HTTP (GET/POST/PUT/DELETE/PATCH/HEAD/OPTIONS) da lista de métodos do filtro \"Método HTTP\", não a ação de excluir" },
   { "arquivo": "src/i18n/locales/pt-BR/whatsapp.json", "categoria": "tecnico", "trecho": "Aparece no painel da Z-API, na instância que você criou", "motivo": "nome do campo no painel da Z-API: lá o número conectado se chama \"instância\" (tela de conexão)" },
   { "arquivo": "src/components/channels/settings/ConfigurationForm.tsx", "categoria": "tecnico", "trecho": "Instance ID não encontrado", "motivo": "nome do campo no painel da Z-API (Instance ID); \"Número não encontrado\" mudava o sentido (tela de conexão)" },
-  { "arquivo": "src/pages/Customer/Properties/cadastro/OndeDivulgar.tsx", "categoria": "maiusculas", "trecho": "Conecte em Integrações", "motivo": "início de frase + nome da tela Integrações (menu)" }
+  { "arquivo": "src/pages/Customer/Properties/cadastro/OndeDivulgar.tsx", "categoria": "maiusculas", "trecho": "Conecte em Integrações", "motivo": "início de frase + nome da tela Integrações (menu)" },
+  {"arquivo": "src/pages/Auth/Auth.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "tela de entrar, fora do app (sem menu)"},
+  {"arquivo": "src/pages/Auth/SaasSignup.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "cadastro, fora do app (sem menu)"},
+  {"arquivo": "src/pages/ChangePassword/ChangePassword.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "troca de senha, fora do app (sem menu)"},
+  {"arquivo": "src/pages/Setup/Setup.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "configuração inicial, fora do app"},
+  {"arquivo": "src/pages/NotFound/NotFound.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "página de erro, fora do app"},
+  {"arquivo": "src/pages/Unauthorized.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "página de erro, fora do app"},
+  {"arquivo": "src/components/layout/AdminPaginaComAbas.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "moldura do painel da Leal Mídia (raiz), não é tela do cliente"},
+  {"arquivo": "src/pages/Customer/Roleta/AcceptLeadPage.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "aceite da roleta: tela cheia aberta pelo link do WhatsApp, sem menu"},
+  {"arquivo": "src/components/base/BaseFlowEditor.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "editor de tela cheia (ferramenta, não página)"}
 ]
