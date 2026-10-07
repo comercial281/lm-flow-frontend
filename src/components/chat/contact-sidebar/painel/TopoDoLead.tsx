@@ -20,18 +20,20 @@ interface TopoDoLeadProps {
    * nome é o telefone), sem e-mail, sem copiar, sem editar.
    */
   emOferta: boolean;
-  /** A faixa de selos (etapa, temperatura, origem, espera), logo abaixo do nome. */
+  /** A fileira de atalhos (Agendar mensagem · IA · Agendar visita), logo abaixo do nome. */
+  atalhos?: ReactNode;
+  /** A faixa de selos (etapa, temperatura, origem, espera), logo abaixo dos atalhos. */
   selos?: ReactNode;
   outra: { id: string; numero: string; mais: number } | null;
   onClose: () => void;
 }
 
 /**
- * Topo do painel do lead: quem é, a faixa de selos (em que etapa está, a
+ * Topo do painel do lead: quem é, os atalhos, a faixa de selos (em que etapa está, a
  * temperatura, de onde veio, há quanto espera) e se já conversou por outro
  * número. Sem o "Online" (era fixo no código e aparecia para todo lead).
  */
-export default function TopoDoLead({ contact, emOferta, selos, outra, onClose }: TopoDoLeadProps) {
+export default function TopoDoLead({ contact, emOferta, atalhos, selos, outra, onClose }: TopoDoLeadProps) {
   const navigate = useNavigate();
   const { abrir: editar, modal } = useEditarContato(contact);
 
@@ -94,6 +96,8 @@ export default function TopoDoLead({ contact, emOferta, selos, outra, onClose }:
           />
         </div>
       </div>
+
+      {atalhos}
 
       {selos}
 

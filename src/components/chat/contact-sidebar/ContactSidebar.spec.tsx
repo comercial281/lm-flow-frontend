@@ -321,6 +321,15 @@ describe('ContactSidebar — painel do lead em seções', () => {
     expect(segue(etiquetas, notas)).toBe(true);
   });
 
+  it('atalhos (07/10): logo abaixo do nome, antes da faixa de selos', async () => {
+    renderPainel();
+    const atalhos = await screen.findByRole('group', { name: 'Atalhos do lead' });
+    expect(within(atalhos).getByRole('button', { name: 'Agendar mensagem' })).toBeTruthy();
+    expect(within(atalhos).getByRole('button', { name: 'Agendar visita' })).toBeTruthy();
+    expect(segue(screen.getByRole('heading', { name: 'Lead Fictício' }), atalhos)).toBe(true);
+    expect(segue(atalhos, screen.getByRole('group', { name: 'Resumo do lead' }))).toBe(true);
+  });
+
   it('lead fora de funil, sem IA e sem espera: só o selo da origem', async () => {
     renderPainel();
     const selos = await screen.findByRole('group', { name: 'Resumo do lead' });
