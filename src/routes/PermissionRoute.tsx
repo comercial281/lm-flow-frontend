@@ -76,8 +76,11 @@ const PermissionRoute: React.FC<PermissionRouteProps> = ({
         // Usar resource.action
         hasPermission = can(resource, action);
       } else {
-        // Se não há permissões específicas, permitir acesso para usuários autenticados
-        hasPermission = true;
+        // Se não há permissões específicas, permitir acesso para usuários autenticados —
+        // menos quando a LEITURA das permissões caiu: aí vale o "tentar de novo"
+        // (o conteúdo costuma depender do que o cargo enxerga, e sem a lista ele
+        // mostraria um vazio falso).
+        hasPermission = loadFailure !== 'failed';
       }
     }
 

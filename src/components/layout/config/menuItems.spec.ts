@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import {
   getCustomerMenuSections, getFooterMenuItems, shouldShowMenuItem, filterMenuSections,
-  itensDoMenu, donoDoEndereco, MENU_FREE_BY_DESIGN,
+  itensDoMenu, donoDoEndereco, itemAtivo, MENU_FREE_BY_DESIGN, ENTRADA_INTEGRACOES, SISTEMAS_INTEGRACOES,
   type MenuItem, type SubMenuItem,
 } from './menuItems';
 import { permissionForPath } from '@/routes/permissionRoutes';
 
 const secoes = getCustomerMenuSections();
 const todos: (MenuItem | SubMenuItem)[] = itensDoMenu(secoes, getFooterMenuItems());
-// O pai de um item com abas herda o href da primeira aba; quem confere cargo é a aba.
+// O pai de um item com abas herda o href da primeira aba (ou a `entrada`, quando houver); quem confere cargo é a aba.
 const folhas = todos.filter(i => !('abas' in i && i.abas?.length));
 const achar = (href: string) => folhas.find(i => i.href === href)!;
 const semCargo = (i: MenuItem | SubMenuItem) => !(i.resource && i.action) && !(i.permissions && i.permissions.length > 0);
@@ -125,10 +125,10 @@ describe('menu novo: seções (fase 4)', () => {
     expect(bolsao.href).toBe('/bolsao');
   });
 
-  it('item com abas leva para a primeira aba que sobreviveu ao cargo', () => {
+  it('Integrações leva sempre à página de entrada, mesmo com uma tela só', () => {
     const soPortais = new Set(['portals.read']);
     const integracoes = comCargo(soPortais).flatMap(s => s.itens).find(i => i.name === 'Integrações')!;
-    expect(integracoes.href).toBe('/settings/portals');
+    expect(integracoes.href).toBe(ENTRADA_INTEGRACOES);
     expect(integracoes.abas?.map(a => a.name)).toEqual(['Portais']);
   });
 
@@ -214,5 +214,49 @@ describe('Automações · sprint 2 (03/10/2026)', () => {
     expect(todos.map(i => i.name)).not.toContain('FlowBuilder');
     expect(todos.map(i => i.name)).not.toContain('Fluxos de mensagem');
     expect(donoDoEndereco(secoes, '/automations/lead-automations')).toBeNull();
+  });
+});
+
+describe('Integrações em cartões (07/10/2026)', () => {
+  const integracoes = secoes.find(s => s.id === 'imobiliaria')!.itens.find(i => i.name === 'Integrações')!;
+
+  it('o item aponta pra entrada e cada tela diz em que cartão mora', () => {
+    expect(integracoes.entrada).toBe('/settings/integrations');
+    expect(integracoes.href).toBe('/settings/integrations');
+    expect(integracoes.abas?.map(a => [a.href, a.cartao])).toEqual([
+      ['/channels', 'whatsapp'],
+      ['/settings/facebook', 'facebook'],
+      ['/settings/pixel-capi', 'facebook'],
+      ['/settings/portals', 'portais'],
+      ['/settings/cvcrm', 'sistemas'],
+    ]);
+    expect(SISTEMAS_INTEGRACOES).toBe('/settings/integrations/sistemas');
+  });
+
+  it('no painel raiz (jsdom = localhost) o gestor do Facebook fica só com o Pixel', () => {
+    const gestorFacebook = new Set(['lead_ads_form_configs.read', 'capi_configs.read']);
+    const item = comCargo(gestorFacebook).flatMap(s => s.itens).find(i => i.name === 'Integrações')!;
+    expect(item.abas?.map(a => a.href)).toEqual(['/settings/pixel-capi']);
+    expect(item.href).toBe(ENTRADA_INTEGRACOES);
+  });
+
+  it('Integrações fica aceso na entrada, em Sistemas e nas telas internas', () => {
+    for (const endereco of ['/settings/integrations', '/settings/integrations/sistemas', '/settings/portals/zap', '/settings/cvcrm', '/channels/new']) {
+      expect(itemAtivo(integracoes, endereco), endereco).toBe(true);
+    }
+    expect(itemAtivo(integracoes, '/settings/labels')).toBe(false);
+  });
+
+  it('o dono de Sistemas e da entrada é Integrações, sem aba; o de uma tela é a aba dela', () => {
+    expect(donoDoEndereco(secoes, '/settings/integrations/sistemas')?.item.name).toBe('Integrações');
+    expect(donoDoEndereco(secoes, '/settings/integrations/sistemas')?.aba).toBeUndefined();
+    expect(donoDoEndereco(secoes, '/settings/integrations')?.aba).toBeUndefined();
+    expect(donoDoEndereco(secoes, '/settings/portals/zap')?.aba?.name).toBe('Portais');
+    expect(donoDoEndereco(secoes, '/settings/pixel-capi')?.aba?.cartao).toBe('facebook');
+  });
+
+  it('a busca do menu continua achando cada tela', () => {
+    const nomes = itensDoMenu(secoes).map(i => i.name);
+    for (const n of ['Integrações', 'WhatsApp', 'Facebook', 'Pixel', 'Portais', 'CVCRM']) expect(nomes).toContain(n);
   });
 });

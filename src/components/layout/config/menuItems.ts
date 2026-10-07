@@ -37,6 +37,13 @@ import {
 } from 'lucide-react';
 import { openSupport } from '@/components/support/openSupport';
 
+/** Página de entrada de Integrações e a página Sistemas (07/10/2026). */
+export const ENTRADA_INTEGRACOES = '/settings/integrations';
+export const SISTEMAS_INTEGRACOES = '/settings/integrations/sistemas';
+
+/** O cartão da página de Integrações em que a tela mora. */
+export type CartaoDeIntegracao = 'whatsapp' | 'facebook' | 'portais' | 'sistemas';
+
 export interface MenuItem {
   id?: string;
   name: string;
@@ -47,9 +54,15 @@ export interface MenuItem {
    * item; as abas aparecem no topo da página, pela `PaginaComAbas`, lidas
    * DESTA lista — menu e abas não têm como discordar. Cada aba confere o
    * cargo sozinha; o item some quando nenhuma aba sobrevive, e o `href` dele
-   * vira o da primeira aba visível.
+   * vira o da primeira aba visível (ou a `entrada`, quando o item tem uma).
    */
   abas?: SubMenuItem[];
+  /**
+   * Endereço da página de entrada do item (Integrações, desde 07/10/2026). Com
+   * ela, as `abas` viram os cartões dessa página: o item leva sempre à entrada
+   * (não à primeira aba) e fica aceso nela e no que começa com ela.
+   */
+  entrada?: string;
   resource?: string;
   action?: string;
   permissions?: string[];
@@ -106,6 +119,8 @@ export interface SubMenuItem {
    * de outra aba da mesma página (/bolsao e /bolsao/listas).
    */
   exata?: boolean;
+  /** Cartão da página de Integrações em que esta tela aparece (ver `entrada`). */
+  cartao?: CartaoDeIntegracao;
 }
 
 /**
@@ -190,7 +205,7 @@ function gestao(href: string, escrita: string): { permissions: string[]; require
 
 /** Item com abas: aparece para quem vê qualquer uma delas (o filtro confere aba a aba). */
 function itemComAbas(item: Omit<MenuItem, 'href' | 'abas'>, abas: SubMenuItem[]): MenuItem {
-  return { ...item, href: abas[0].href, abas };
+  return { ...item, href: item.entrada ?? abas[0].href, abas };
 }
 
 export const getCustomerMenuSections = (): MenuSection[] => [
@@ -279,24 +294,27 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       { name: 'Conta', href: '/settings/account', icon: User, ...permissionFromRoute('/settings/account') },
       // Usuários, Times e Cargos e Permissões são abas da tela Equipe (rotas antigas redirecionam).
       { name: 'Equipe', href: '/equipe', icon: Users2, ...permissionFromRoute('/equipe') },
-      itemComAbas({ name: 'Integrações', icon: Plug }, [
+      // Integrações em cartões (07/10/2026): o item abre a página de entrada e as
+      // telas abaixo são os cartões dela (`cartao`). As travas continuam aqui,
+      // tela a tela: a entrada, o Facebook e Sistemas leem ESTA lista já filtrada.
+      itemComAbas({ name: 'Integrações', icon: Plug, entrada: ENTRADA_INTEGRACOES }, [
         // A aba pede `inboxes.update` além da chave da rota: o Corretor tem
         // `channels.read` (religa o número em que ELE atende, desde 04/09/2026)
         // e, sem isto, ganharia a seção Minha Imobiliária inteira só por causa
         // dela. Ele chega na mesma tela por "Meus números", no avatar.
         // `inboxes.update` é o "vejo qualquer número", que o Gerente tem pelo
         // piso de reparos e o Corretor não.
-        { name: 'WhatsApp', href: '/channels', icon: Smartphone, ...gestao('/channels', 'inboxes.update'), featureKey: 'channels' },
+        { name: 'WhatsApp', href: '/channels', icon: Smartphone, ...gestao('/channels', 'inboxes.update'), featureKey: 'channels', cartao: 'whatsapp' },
         // Páginas do Facebook/Instagram dos Lead Ads (era a aba de Origem). Mesmas
         // travas da antiga Origem: some no painel raiz, e o cliente só vê com a
         // função de automações liberada pela Leal Mídia.
-        { name: 'Facebook', href: '/settings/facebook', icon: Facebook, ...permissionFromRoute('/settings/facebook'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations', hideOnRoot: true },
-        { name: 'Pixel', href: '/settings/pixel-capi', icon: Target, ...permissionFromRoute('/settings/pixel-capi'), featureKey: 'lead_automations' },
+        { name: 'Facebook', href: '/settings/facebook', icon: Facebook, ...permissionFromRoute('/settings/facebook'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations', hideOnRoot: true, cartao: 'facebook' },
+        { name: 'Pixel', href: '/settings/pixel-capi', icon: Target, ...permissionFromRoute('/settings/pixel-capi'), featureKey: 'lead_automations', cartao: 'facebook' },
         // Portais imobiliários (ZAP, Imóvel Web…) — feed + leads
-        { name: 'Portais', href: '/settings/portals', icon: Share2, ...permissionFromRoute('/settings/portals'), featureKey: 'properties' },
+        { name: 'Portais', href: '/settings/portals', icon: Share2, ...permissionFromRoute('/settings/portals'), featureKey: 'properties', cartao: 'portais' },
         // A conexão com o CVCRM do cliente (06/10/2026), usada pela IA no "Sistema
         // do cliente". Mesma liberação das automações de lead (Facebook, Pixel).
-        { name: 'CVCRM', href: '/settings/cvcrm', icon: Building2, ...permissionFromRoute('/settings/cvcrm'), featureKey: 'lead_automations' },
+        { name: 'CVCRM', href: '/settings/cvcrm', icon: Building2, ...permissionFromRoute('/settings/cvcrm'), featureKey: 'lead_automations', cartao: 'sistemas' },
       ]),
       // Tela única de distribuição: modo + quem participa + prazo + gestor.
       { name: 'Roleta de leads', href: '/automations/roleta-config', icon: Shuffle, ...permissionFromRoute('/automations/roleta-config'), featureKey: 'lead_automations' },
@@ -332,8 +350,9 @@ export function enderecoCasa(pathname: string, href: string, exata = false): boo
   return !exata && pathname.startsWith(href + '/');
 }
 
-/** Item ativo: o endereço é dele ou de qualquer aba dele. */
+/** Item ativo: o endereço é dele, da página de entrada dele ou de qualquer aba dele. */
 export function itemAtivo(item: MenuItem, pathname: string): boolean {
+  if (item.entrada && enderecoCasa(pathname, item.entrada)) return true;
   if (item.abas?.length) return item.abas.some(aba => enderecoCasa(pathname, aba.href, aba.exata));
   return enderecoCasa(pathname, item.href);
 }
@@ -350,7 +369,11 @@ export function donoDoEndereco(
   for (const secao of secoes) {
     for (const item of secao.itens) {
       const candidatos: { href: string; exata?: boolean; aba?: SubMenuItem }[] = item.abas?.length
-        ? item.abas.map(aba => ({ href: aba.href, exata: aba.exata, aba }))
+        ? [
+          ...item.abas.map(aba => ({ href: aba.href, exata: aba.exata, aba })),
+          // A entrada (e Sistemas, que começa com ela) é do item, sem aba.
+          ...(item.entrada ? [{ href: item.entrada }] : []),
+        ]
         : [{ href: item.href }];
       for (const c of candidatos) {
         if (enderecoCasa(pathname, c.href, c.exata) && (!melhor || c.href.length > melhor.tamanho)) {
@@ -530,11 +553,11 @@ export const filterMenuItemsByPermissions = (
     .map((item): MenuItem | null => {
       if (item.abas && item.abas.length > 0) {
         // Item com abas: vale a regra de cada aba. Ele aparece se alguma
-        // sobrevive, e leva para a primeira que sobreviveu.
+        // sobrevive, e leva para a primeira que sobreviveu (ou para a `entrada`, quando houver).
         if (!mostra({ ...item, resource: undefined, action: undefined, permissions: undefined })) return null;
         const abas = item.abas.filter(mostra).map(aba => ({ ...aba, hiddenFromClient: mark(aba) }));
         if (abas.length === 0) return null;
-        return { ...item, href: abas[0].href, abas, hiddenFromClient: mark(item) };
+        return { ...item, href: item.entrada ?? abas[0].href, abas, hiddenFromClient: mark(item) };
       }
       return mostra(item) ? { ...item, hiddenFromClient: mark(item) } : null;
     })

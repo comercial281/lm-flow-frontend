@@ -4167,10 +4167,10 @@ O que aparece na tela:
   Imóveis, Leads, Vendas e automação e Minha imobiliária. A seção da página
   atual abre sozinha. Seção sem item que o cargo veja não aparece.
 - **Todo item leva direto a uma página.** O terceiro nível virou **abas no topo
-  da página** (Integrações: WhatsApp, Facebook, Pixel, Portais · Bolsão: Pegar leads,
+  da página** (Bolsão: Pegar leads,
   Listas e regras · Fluxos de mensagem: Editor de funis, FlowBuilder ·
   Automações: Regras de lead, Lembretes · Campos personalizados: Atributos,
-  Variáveis). A segunda coluna ao lado do menu acabou.
+  Variáveis). A segunda coluna ao lado do menu acabou. Integrações deixou de ter abas em 07/10/2026: ver "Integrações em cartões".
 - **Automações deixou de ser uma página de 7 abas**, sem mudar endereço:
   Follow-up, Roleta de leads e Formulários são páginas sozinhas. `/automations` puro
   manda pra primeira tela que a pessoa vê.
@@ -4216,25 +4216,27 @@ Decisões do dono (não reabrir sem ele pedir):
 - **Saiu o "Personalizar menu"** (esconder, favoritar, reordenar): com seções
   fixas ele quebrava os rótulos. O que estava salvo no navegador é ignorado.
 - **A Página do Facebook é integração** (desde 01/10/2026, a pedido do dono):
-  Integrações → Facebook, em `/settings/facebook` (`FacebookPages`, que embrulha o
-  `MetaPagesPanel`). A antiga tela Origem virou só **Formulários**, no mesmo
+  Integrações → Facebook, em `/settings/facebook` (`FacebookIntegracao`, que junta o
+  `MetaPagesPanel` e o Pixel). A antiga tela Origem virou só **Formulários**, no mesmo
   endereço `/automations/origem`. Os links que mandavam revisar a conexão da
   página (aviso de erro dos Formulários e o Marketplace) apontam para a aba nova.
   Ela tem as mesmas travas da antiga Origem: `hideOnRoot` (não aparece no painel
-  raiz nem na prévia da Vercel) e `client_manage_automations`.
+  raiz nem na prévia da Vercel) e `client_manage_automations`. Desde 07/10/2026 ela divide a tela com o Pixel (ver "Integrações em cartões").
 
 Como funciona por dentro:
 
 - `getCustomerMenuSections()` devolve as seções; `filterMenuSections` aplica o
   filtro de sempre (cargo, função do cliente, arquivamento) seção a seção.
 - **Item com abas** (`abas`): aparece se alguma aba sobrevive ao filtro, e o
-  `href` dele vira o da primeira que sobreviveu.
+  `href` dele vira o da primeira que sobreviveu (ou a `entrada`, quando o item tem
+  uma — Integrações).
 - **`MenuContext`**: o `MainLayout` entrega o menu já filtrado. A
   **`PaginaComAbas`** (rota-moldura sem endereço em `routes/index.tsx`) acha o
   item dono do endereço (`donoDoEndereco`, casamento mais longo) e desenha título
   + `Abas` a partir dele. Menu e abas leem a MESMA lista e não têm como discordar.
   Com menos de duas abas visíveis ela não desenha nada (a tela de dentro já tem
-  título): é o corretor no Bolsão e em Meus números.
+  título): é o corretor no Bolsão. Integrações não usa a `PaginaComAbas`: usa a
+  `MolduraDeIntegracao` (ver "Integrações em cartões").
 - O `AutomationsLayout` virou: redirecionamento de `/automations` + `PaginaComAbas`.
   O "vazio pelo plano × vazio pelo cargo" continua igual.
 - `hideOnRoot` saiu da aba de Automações para o item do menu (Formulários e a
@@ -7318,3 +7320,69 @@ do lead mostrava a visita sem deixar fazer nada com ela.
   visita vira Cancelada na hora, sem recarregar.
 - O resumo usa o `VisitCard` sem o id `visita-<id>` (`ancorada={false}`): a pílula já tem
   esse id, e o destaque do link rola até ele.
+
+## Integrações em cartões (desde 2026-10-07)
+
+Pedido do dono: Integrações tinha cinco abas (WhatsApp, Facebook, Pixel, Portais,
+CVCRM) e cada integração nova virava mais uma. Spec:
+`LM FLOW/specs/2026-10-07-integracoes-cartoes-design.md`.
+
+O que aparece na tela:
+
+- **Minha imobiliária → Integrações** abre uma página de entrada
+  (`/settings/integrations`) com quatro cartões, logo (ou ícone) + nome + frase: **WhatsApp**,
+  **Facebook** (Página e Pixel), **Portais** e **Sistemas** (peças se encaixando).
+  Cartão sem nenhuma tela visível pro cargo não aparece.
+- **No padrão das páginas da casa** (pedido do dono, 07/10): a entrada, Sistemas,
+  Portais e Facebook usam o cabeçalho de Canais (`BaseHeader`: título grande com a barrinha roxa e
+  a frase embaixo), o conteúdo alinhado à esquerda na largura da página, e os
+  cartões no visual dos cartões de Canais (`CartaoDeLink`: fundo e borda do menu,
+  sobe e brilha roxo no hover; os cartões de Portais têm o mesmo visual). No
+  Facebook, o cabeçalho "Facebook" e os dois blocos (Páginas conectadas; Pixel /
+  Conversões) na largura da página, separados por uma linha. Página nova de
+  Integrações segue o mesmo. O levantamento das outras telas fora do padrão está no
+  `_MELHORIAS` da pasta do Tony.
+- **Telas de dentro** com a barra "← Integrações" + o cartão; a tela em si é a de
+  antes. No CVCRM o voltar é "← Sistemas".
+- **Facebook**: a Página (Lead Ads) em cima e o Pixel embaixo, numa rolagem.
+  `/settings/facebook` e `/settings/pixel-capi` abrem a mesma tela; o do Pixel
+  abre rolado até ele.
+- **Sistemas** (`/settings/integrations/sistemas`): um cartão por sistema (hoje só
+  o CVCRM, com o estado da conexão) e "Usa outro sistema? Fale com o suporte".
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **Cartão com frase**, não só ícone: o gestor novo entende sem clicar.
+- **Sem cartão "em breve" com nome de sistema** em Sistemas: vira promessa.
+- **Ícone de Sistemas é `Puzzle`**, não o robô (o robô é a IA Vendedora).
+- **Estado embaixo dos cartões da entrada** ("2 números") ficou pra depois: uma
+  consulta a mais por cartão.
+
+Como funciona por dentro:
+
+- **Uma fonte só.** As cinco telas continuam na lista `abas` do item Integrações
+  em `menuItems.ts`, cada uma com `cartao`; o item tem `entrada`. O filtro de
+  sempre decide o que sobra; entrada, Facebook, Sistemas e a barra leem essa lista
+  pelo `MenuContext` (`cartoes.ts`: `itemDeIntegracoes`, `cartoesVisiveis`,
+  `barraDoEndereco`). Nenhum deles confere permissão sozinho.
+- **O cartão Facebook leva à primeira tela que sobrou**: quem só vê o Pixel
+  (painel raiz, cliente sem a função de automações) cai em `/settings/pixel-capi`,
+  nunca na trava da Página.
+- **Bloco do Facebook** aparece se a tela sobrou no menu OU se é o endereço aberto
+  (a rota já conferiu a permissão).
+- **A barra só aparece pra quem vê Integrações**: o corretor em "Meus números"
+  (`/channels`) vê a tela sem voltar.
+- `MolduraDeIntegracao` substituiu a `PaginaComAbas` nessas rotas. A entrada e
+  Sistemas não exigem permissão, mas passam pelo `<PermissionRoute>` SEM
+  `resource`/`action` (o `permissionRoutes.source.spec` confere): é o portão da casa,
+  que espera as permissões chegarem (carregando) e, se a leitura cair, mostra
+  "Tentar de novo" em vez de "Nenhuma integração disponível pro seu acesso."
+  Sem resource o portão libera qualquer autenticado depois de carregar, mas com
+  `loadFailure === 'failed'` ele mostra o tentar de novo. Limite conhecido: o
+  super-admin passa antes de as permissões carregarem e pode ver o aviso vazio um instante.
+- Sistema novo = mais uma tela no item com `cartao: 'sistemas'`, com a rota dentro
+  de `<Route element={<MolduraDeIntegracao />}>`; a página Sistemas não muda. O
+  estado do cartão (`useEstado` em `IntegracoesSistemas`) só sabe ler o CVCRM hoje:
+  sistema com estado próprio precisa ensinar essa leitura.
+- O `SettingsIntegrationsTour` cita `/settings/integrations` mas não está montado
+  em tela nenhuma; a entrada não o monta.

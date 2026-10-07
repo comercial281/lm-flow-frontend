@@ -48,7 +48,8 @@ export function injectDashboardAppsIntoMenu(
     campaigns: '/campaigns',
     automation: '/automation',
     agents: '/agents',
-    channels: '/channels',
+    // Integrações (antigo item /channels) abre em /settings/integrations desde 07/10/2026.
+    channels: '/settings/integrations',
     reports: '/reports',
     settings: '#', // Settings is a parent with subitems
   };

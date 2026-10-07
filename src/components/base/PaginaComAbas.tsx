@@ -6,16 +6,15 @@ import { donoDoEndereco } from '@/components/layout/config/menuItems';
 
 // ── PÁGINA COM ABAS (fase 4) ─────────────────────────────────────────────────
 //
-// Moldura das páginas que juntam várias telas sob um assunto (Integrações,
-// Bolsão, Campos personalizados). Entra como
+// Moldura das páginas que juntam várias telas sob um assunto (Bolsão,
+// Campos personalizados; Integrações usa a MolduraDeIntegracao). Entra como
 // rota-moldura SEM endereço próprio: as telas de dentro mantêm o endereço que
 // já tinham, então link salvo e link com filtro continuam valendo.
 //
 // Título e abas vêm do item do menu dono do endereço, na lista JÁ filtrada pelo
 // cargo (MenuContext). Aba que a pessoa não pode abrir não aparece. Com uma aba
 // só, a moldura não desenha nada: a tela de dentro já tem o próprio título, e
-// uma fileira com uma aba é ruído. É o caso do corretor no Bolsão, e dele em
-// "Meus números" (a aba WhatsApp de Integrações é de gestor).
+// uma fileira com uma aba é ruído. É o caso do corretor no Bolsão.
 export default function PaginaComAbas() {
   const secoes = useMenuSecoes();
   const { pathname } = useLocation();

@@ -132,7 +132,7 @@ export default function PixelCapiConfig() {
   }
 
   if (loading) {
-    return <div className="p-6 text-sm text-muted-foreground">Carregando…</div>;
+    return <div className="text-sm text-muted-foreground">Carregando…</div>;
   }
 
   const inputCls =
@@ -140,9 +140,9 @@ export default function PixelCapiConfig() {
   const labelCls = 'text-sm font-medium text-foreground';
 
   return (
-    <div className="mx-auto max-w-4xl p-6 space-y-8">
+    <div className="space-y-6">
       <header>
-        <h1 className="text-lg font-semibold text-foreground">Pixel / Conversões (CAPI)</h1>
+        <h2 className="text-lg font-semibold text-sidebar-foreground">Pixel / Conversões (CAPI)</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Conecte o pixel deste cliente e escolha qual coluna do CRM dispara qual evento para o Meta.
         </p>
