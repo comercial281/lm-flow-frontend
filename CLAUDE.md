@@ -6733,6 +6733,57 @@ Armadilhas:
 4. O texto pra quem recebe (como conferir a assinatura) está no plano da entrega 5,
    seção "Para quem recebe".
 
+## IA Vendedora · Sistema do cliente → CVCRM (desde 2026-10-06)
+
+Pedido do dono do produto: incorporadora que usa **CVCRM** (Habras foi a primeira)
+quer o lead da IA caindo direto no CVCRM dela. A tela *Webhooks* do CVCRM é o
+contrário disso (o CVCRM avisando outro sistema): lead entra no CVCRM pelo cadastro
+de lead da API deles, com e-mail + token de um usuário. Desenho:
+`LM FLOW/specs/2026-10-06-cvcrm-sistema-do-cliente-design.md`.
+
+O que aparece na tela:
+
+- **Minha imobiliária → Integrações → CVCRM** (aba nova, depois de Portais):
+  *Endereço do seu CVCRM* (aceita colar de qualquer jeito: `habras`,
+  `habras.cvcrm.com.br`, o endereço inteiro do navegador), *E-mail do usuário*,
+  *Token* e **Conectar**, que testa na hora puxando os empreendimentos
+  (*Conectado · 12 empreendimentos encontrados*). Conectado: endereço, e-mail,
+  *Usada por N IAs*, **Trocar token** e **Desconectar** (com confirmação).
+- **IA → Objetivo → Pra onde vai o lead → Sistema do cliente**: abre a escolha
+  **CVCRM** | **Outro sistema** (o de sempre, endereço + chave secreta). No CVCRM:
+  *Empreendimento* e *Fila de distribuição* (listas do CVCRM do cliente, primeira
+  opção *Deixar o CVCRM decidir*) e *Mandar um lead de teste* (cria um lead de
+  verdade, "Teste LM Flow"). Sem conexão: aviso + **Conectar o CVCRM**.
+- **Painel do lead**: *Enviando ao CVCRM…* / *Entregue no CVCRM às 14:32 para José
+  da Silva.* / *O envio ao CVCRM falhou: <motivo>…*
+- **Diagnóstico**: item *Sistema do cliente (CVCRM)*; nos envios, *Ficou com <nome>
+  no CVCRM*.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Uma conexão por cliente**, não por IA: o token é da empresa.
+- **Empreendimento e fila fixos por IA** (opção A). Seguir o imóvel da conversa
+  (opção B) ficou pra depois.
+- **Lead que já existe no CVCRM** é atualizado e **mantém o corretor** que tinha lá
+  (mesma regra do "Lead recadastrado mantém dono").
+- **Quem distribui é o CVCRM**: a IA não escolhe corretor de lá.
+- **Ligar trava** com o CVCRM escolhido e sem conexão (`handoff_cvcrm_connected`
+  vem na ficha da IA).
+- "Token" só aparece na aba de Integrações (é o nome que o CVCRM usa). Na IA, nunca
+  "webhook" nem "token".
+
+Armadilhas:
+
+1. **`handoff_webhook_system` e `handoff_cvcrm` PRECISAM estar em
+   `CAMPOS_DO_PASSO[2]`.** O `handoff_cvcrm` vai sempre INTEIRO (empreendimento e
+   fila): o servidor troca o campo todo.
+2. **IA antiga sem `handoff_webhook_system` = Outro sistema.** Nada muda pra quem já
+   usava o Sistema do cliente.
+3. **O teste usa o que está GRAVADO**: com a troca de sistema por salvar, o botão
+   fica bloqueado (senão testaria o envio antigo).
+4. **Escolha que sumiu da lista do CVCRM** (empreendimento desativado lá) continua
+   aparecendo, com o nome guardado e *(não veio na lista do CVCRM)*.
+
 ## Página do cliente (05/10/2026)
 
 Entrega 3 da Área do Admin (spec `LM FLOW/specs/2026-10-05-admin-clientes-entrega-3-design.md`).
@@ -7197,6 +7248,7 @@ botão Aceitar.") no lugar de "Seu cargo não permite esta ação".
 12. **Gravação que termina depois de trocar de IA** (texto gravado no desmonte, Desfazer) atualiza a lista, mas não troca a IA aberta: o `aoSalvo` da casca só substitui a IA da tela se for a mesma.
 13. **O Desfazer não regrava valor antigo recusado** (`inbox_roleta` → roleta; a persona `owner` volta como dono), em `useGravarNaHora#inversa`.
 14. **WhatsApp desconectado:** o *Corrigir* leva à configuração do número (`enderecoConexao`, onde se lê o QR code), não ao Canal, que só mostra *Desconectado*.
+15. **CVCRM na página Destino** (06/10, vindo do #485 que entrou no passo 2 antigo): dentro de *Sistema do cliente*, os cartões *CVCRM* · *Outro sistema*. Trocar o cartão não grava; *Usar o CVCRM* só acende com a conexão de Integrações → CVCRM (`handoff_cvcrm_connected`); empreendimento e fila gravam na hora. A pendência `destino_cvcrm_desconectado` aponta pra página Destino.
 
 ## Roleta: cartão da lista em blocos e triângulo de atenção (06/10/2026)
 
@@ -7218,3 +7270,21 @@ Agora (substitui a "frase" da seção *Roleta nova: página por origem*):
 Armadilha: a contagem por tipo lê o que vem antes do " · " na frase que o servidor manda em
 `origins_summary` (`Roleta::Origins.sentence`). Mudou o nome do tipo lá, muda o
 `ORIGEM_NO_CARTAO` em `roletaNovaTextos.ts` (tipo desconhecido conta como "origem").
+
+## Ordem das fotos do imóvel: a primeira é a capa (06/10/2026)
+
+Pedido do dono: ajustar a ordem em que as fotos aparecem. Decisão dele: **a primeira foto é
+sempre a capa.**
+
+- Em **Fotos e vídeos** (o mesmo gerenciador da lista de Imóveis e do cadastro), cada foto tem
+  uma alça de arrastar no canto, sempre visível (no celular não existe passar o mouse). Também
+  dá pelo teclado (espaço + setas). A ordem vale para a galeria do site, a landing, os portais
+  e o pacote de fotos que a IA Vendedora manda.
+- **Arrastou, salvou**: a primeira imagem da nova ordem vira a capa. **"Definir como capa"**
+  leva a foto para o primeiro lugar, e a capa antiga vira a segunda.
+- **Vídeo e áudio nunca são capa**: se um vídeo for arrastado para a frente, a primeira imagem
+  passa na frente dele quando a ordem volta do servidor. O botão da coroa não aparece em vídeo.
+- O servidor ordena com a capa marcada na frente (`PropertyPhoto.ordered`), então os imóveis
+  antigos com capa fora do primeiro lugar já aparecem certos, sem migração. Sem capa marcada,
+  vale a primeira imagem da ordem (`Property#cover_photo`); a tela calcula o selo "Capa" pela
+  mesma regra (`ordemDasFotos.ts`).

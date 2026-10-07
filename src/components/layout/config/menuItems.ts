@@ -294,6 +294,9 @@ export const getCustomerMenuSections = (): MenuSection[] => [
         { name: 'Pixel', href: '/settings/pixel-capi', icon: Target, ...permissionFromRoute('/settings/pixel-capi'), featureKey: 'lead_automations' },
         // Portais imobiliários (ZAP, Imóvel Web…) — feed + leads
         { name: 'Portais', href: '/settings/portals', icon: Share2, ...permissionFromRoute('/settings/portals'), featureKey: 'properties' },
+        // A conexão com o CVCRM do cliente (06/10/2026), usada pela IA no "Sistema
+        // do cliente". Mesma liberação das automações de lead (Facebook, Pixel).
+        { name: 'CVCRM', href: '/settings/cvcrm', icon: Building2, ...permissionFromRoute('/settings/cvcrm'), featureKey: 'lead_automations' },
       ]),
       // Tela única de distribuição: modo + quem participa + prazo + gestor.
       { name: 'Roleta de leads', href: '/automations/roleta-config', icon: Shuffle, ...permissionFromRoute('/automations/roleta-config'), featureKey: 'lead_automations' },

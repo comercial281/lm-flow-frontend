@@ -20,6 +20,7 @@ export function fraseDoObjetivo(agent: SalesAgent, nomes: Omit<ContextoDoResumo,
   const pra = destino === 'roleta'
     ? `pra roleta ${nomes.roleta ?? 'escolhida'}`
     : destino === 'user' ? `pra ${nomes.corretor ?? 'o corretor escolhido'}`
-      : destino === 'webhook' ? 'pro sistema do cliente' : 'pra roleta do número';
+      : destino === 'webhook' ? (agent.handoff_webhook_system === 'cvcrm' ? 'pro CVCRM do cliente' : 'pro sistema do cliente')
+        : 'pra roleta do número';
   return `Ela ${faz} e entrega ${pra}${resumo}.`;
 }

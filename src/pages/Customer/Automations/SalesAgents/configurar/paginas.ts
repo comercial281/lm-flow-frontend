@@ -63,7 +63,8 @@ export const PAGINAS: Record<PaginaId, PaginaInfo> = {
       'escalate_on_frustration', 'escalate_on_human_request', 'escalate_on_ai_detected'] },
   destino: { id: 'destino', grupo: 'repasse', titulo: 'Destino', frase: 'Pra quem o lead vai e o que vai junto.',
     // `persona_kind`: o "Passar a entregar pro dono do número" da IA antiga (persona só DERIVADA da voz) grava a persona junto.
-    campos: ['handoff_target', 'handoff_roleta_config_id', 'handoff_user_id', 'handoff_webhook_url', 'transfer_config.briefing_enabled', 'persona_kind'] },
+    campos: ['handoff_target', 'handoff_roleta_config_id', 'handoff_user_id', 'handoff_webhook_url', 'handoff_webhook_system', 'handoff_cvcrm',
+      'transfer_config.briefing_enabled', 'persona_kind'] },
   funil: { id: 'funil', grupo: 'repasse', titulo: 'Funil', frase: 'Onde o card fica em cada momento da conversa.',
     campos: ['pipeline_move_enabled', 'pipeline_id', 'pipeline_stage_map'] },
   agendamento: { id: 'agendamento', grupo: 'repasse', titulo: 'Agendamento', frase: 'Como ela marca a visita.',

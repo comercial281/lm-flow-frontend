@@ -9,7 +9,7 @@
  * que ela não sabe sozinha (persona e destino) — ver situacao.ts.
  *
  * Trava o Ligar: sem número, a persona corretor num número sem dono (o servidor
- * também recusa este) e o Sistema do cliente sem chave pronta. O nome que o lead vê
+ * também recusa este), o Sistema do cliente sem chave pronta e o CVCRM sem conexão. O nome que o lead vê
  * só AVISA (decisão do dono do produto, 05/10): sem ele o roteiro sai igual ao de
  * antes, e as IAs que já atendem não têm esse nome.
  */
@@ -28,7 +28,8 @@ export const FRASE_SEM_DONO = 'Este número não tem corretor dono. Escolha o do
 
 type Lido = Partial<Pick<SalesAgent,
   'persona_kind' | 'reach' | 'transfer_config' | 'booking_enabled' | 'handoff_target' | 'handoff_roleta_config_id'
-  | 'handoff_user_id' | 'handoff_webhook_url' | 'handoff_webhook_secret_state' | 'lead_facing_name' | 'inbox_id' | 'number_owner_id' | 'qualification_questions'
+  | 'handoff_user_id' | 'handoff_webhook_url' | 'handoff_webhook_secret_state' | 'handoff_webhook_system'
+  | 'handoff_cvcrm_connected' | 'lead_facing_name' | 'inbox_id' | 'number_owner_id' | 'qualification_questions'
   | 'trigger_keyword' | 'followup_enabled' | 'followup_action' | 'followup_flow_id' | 'followup_sequence_slug'>>;
 
 /**
@@ -65,12 +66,21 @@ export function pendenciasDasPaginas(agent: Lido): PendenciaDaPagina[] {
   if (agent.handoff_target === 'roleta' && !agent.handoff_roleta_config_id) {
     lista.push({ chave: 'destino_sem_roleta', pagina: 'destino', frase: 'Falta escolher a roleta que recebe o lead.', impedeLigar: false });
   }
-  if (agent.handoff_target === 'webhook' && !(agent.handoff_webhook_url ?? '').trim()) {
+  const noCvcrm = agent.handoff_target === 'webhook' && agent.handoff_webhook_system === 'cvcrm';
+  // CVCRM: endereço e token são da conexão do cliente (Integrações → CVCRM). Sem
+  // ela, todo lead que ela passar fica sem ninguém: trava o Ligar.
+  if (noCvcrm && agent.handoff_cvcrm_connected === false) {
+    lista.push({
+      chave: 'destino_cvcrm_desconectado', pagina: 'destino', impedeLigar: true,
+      frase: 'O CVCRM deste cliente não está conectado: conecte em Integrações → CVCRM.',
+    });
+  }
+  if (agent.handoff_target === 'webhook' && !noCvcrm && !(agent.handoff_webhook_url ?? '').trim()) {
     lista.push({ chave: 'destino_sem_endereco', pagina: 'destino', frase: 'Falta o endereço do sistema do cliente.', impedeLigar: false });
   }
   // ⚠️ Sem chave pronta, todo lead que ela passar fica sem ninguém (o servidor não
   // envia e só avisa a gestão). Trava o Ligar.
-  if (agent.handoff_target === 'webhook' && agent.handoff_webhook_secret_state !== 'ready') {
+  if (agent.handoff_target === 'webhook' && !noCvcrm && agent.handoff_webhook_secret_state !== 'ready') {
     lista.push({
       chave: 'destino_sem_chave', pagina: 'destino', impedeLigar: true,
       frase: agent.handoff_webhook_secret_state === 'unreadable'

@@ -96,4 +96,16 @@ describe('pendenciasDasPaginas: casos que o passo a passo já cobria', () => {
   it('o antigo "roleta deste número" não leva o aviso quando a persona é o corretor', () => {
     expect(chaves(agenteDeTeste({ persona_kind: 'broker', handoff_target: 'inbox_roleta', lead_facing_name: 'Bia' }))).not.toContain('destino:destino_antigo');
   });
+
+  it('CVCRM: sem pedir endereço nem chave; sem conexão trava o Ligar', () => {
+    const a = agenteDeTeste({ persona_kind: 'assistant', handoff_target: 'webhook', handoff_webhook_system: 'cvcrm', handoff_webhook_url: null,
+      handoff_webhook_secret_state: 'none', handoff_cvcrm_connected: true, lead_facing_name: 'Bia' });
+    expect(pendenciasDasPaginas(a)).toEqual([]);
+
+    const desconectado = { ...a, handoff_cvcrm_connected: false };
+    expect(pendenciasDasPaginas(desconectado)).toEqual([
+      expect.objectContaining({ chave: 'destino_cvcrm_desconectado', pagina: 'destino', impedeLigar: true }),
+    ]);
+    expect(podeLigar(desconectado)).toMatchObject({ pode: false, motivo: expect.stringContaining('Integrações → CVCRM'), pagina: 'destino' });
+  });
 });

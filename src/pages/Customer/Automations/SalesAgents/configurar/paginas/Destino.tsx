@@ -13,6 +13,11 @@
 // ⚠️ A escolha pela metade some se a persona virar corretor com a página aberta
 // (Desfazer, outra aba): a trava manda.
 // ⚠️ Nunca "webhook" na tela (decisão de 05/10 + conferir-padrao).
+// Sistema do cliente → CVCRM (06/10/2026, #485 trazido do passo a passo antigo):
+// "Qual sistema" escolhe entre o CVCRM (conexão do cliente em Integrações → CVCRM,
+// sem endereço nem chave na IA) e o Outro sistema de sempre. Mesma regra da casa:
+// trocar o sistema não grava; o botão "Usar" só acende com o sistema pronto.
+// Empreendimento e fila gravam na hora (não mudam o destino sozinhos).
 // ⚠️ O resumo grava só a subchave briefing_enabled: o hook monta o jsonb sobre o
 // último salvo, então o critério gravado em outra página não é pisado.
 import { useEffect, useRef, useState } from 'react';
@@ -30,6 +35,8 @@ import { briefingEnabled, toggleBriefing } from '@/features/salesAgents/handoffB
 import { problemaNoEndereco } from '@/features/salesAgents/sistemaDoCliente';
 import { FRASE_SEM_DONO } from '@/features/salesAgents/pendencias';
 import SistemaDoCliente from '../SistemaDoCliente';
+import SistemaDoClienteCvcrm from '../SistemaDoClienteCvcrm';
+import type { HandoffCvcrm, SistemaDoEnvio } from '@/services/salesAgents/salesAgentsService';
 import { Aviso } from '../Aviso';
 import type { PropsDaPagina } from '../paginas';
 
@@ -38,6 +45,10 @@ const DESTINOS = [
   { valor: 'roleta' as const, rotulo: 'Roleta', descricao: 'Distribui entre os corretores da roleta escolhida.' },
   { valor: 'user' as const, rotulo: 'Corretor fixo', descricao: 'Sempre a mesma pessoa, com o botão de aceitar.' },
   { valor: 'webhook' as const, rotulo: 'Sistema do cliente', descricao: 'Manda pro sistema que a imobiliária já usa, com o resumo. Ninguém da roleta recebe.' },
+];
+const SISTEMAS = [
+  { valor: 'cvcrm' as const, rotulo: 'CVCRM', descricao: 'O lead é cadastrado direto no CVCRM do cliente, no empreendimento e na fila que você escolher.' },
+  { valor: 'generic' as const, rotulo: 'Outro sistema', descricao: 'O lead vai pro endereço que a equipe do sistema da imobiliária passar, com uma chave secreta.' },
 ];
 
 export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsDaPagina) {
@@ -49,6 +60,8 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
   const [url, setUrl] = useState(agent.handoff_webhook_url ?? '');
   const [erroUrl, setErroUrl] = useState<string | null>(null);
   const [roletaQueAtendia, setRoletaQueAtendia] = useState<{ id: string; nome: string } | null>(null);
+  const sistemaGravado: SistemaDoEnvio = agent.handoff_webhook_system === 'cvcrm' ? 'cvcrm' : 'generic';
+  const [sistemaEscolhido, setSistemaEscolhido] = useState<SistemaDoEnvio | null>(null);
 
   useEffect(() => { if (persona === 'broker') setEscolhendo(null); }, [persona]);
   useEffect(() => { if (!editandoUrl.current) setUrl(agent.handoff_webhook_url ?? ''); }, [agent.handoff_webhook_url]);
@@ -105,7 +118,15 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
   };
   const mudarUrl = (v: string) => { editandoUrl.current = true; setErroUrl(null); setUrl(v); };
   useEffect(() => () => { if (editandoUrl.current) salvarUrl(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const sistemaPronto = !!agent.handoff_webhook_url && agent.handoff_webhook_secret_state === 'ready';
+  const sistema: SistemaDoEnvio = sistemaEscolhido ?? sistemaGravado;
+  const genericoPronto = !!agent.handoff_webhook_url && agent.handoff_webhook_secret_state === 'ready';
+  // `handoff_cvcrm_connected` vem do servidor; ausente (servidor antigo) não trava aqui, o Ligar é quem confere.
+  const cvcrmPronto = agent.handoff_cvcrm_connected !== false;
+  const sistemaPronto = sistema === 'cvcrm' ? cvcrmPronto : genericoPronto;
+  const usandoEste = gravado === 'webhook' && sistemaGravado === sistema;
+  const escolhaCvcrm: HandoffCvcrm = { empreendimento: agent.handoff_cvcrm?.empreendimento ?? null, fila: agent.handoff_cvcrm?.fila ?? null };
+  const usarSistema = () => void gravar({ handoff_target: 'webhook', handoff_webhook_system: sistema, handoff_roleta_config_id: null, handoff_user_id: null })
+    .then((ok) => { if (ok) { setSistemaEscolhido(null); fechar(ok); } });
   const roletasVisiveis = roletas.filter((r) => r.ativa || r.id === agent.handoff_roleta_config_id);
   const cfg = agent.transfer_config ?? {};
 
@@ -179,19 +200,33 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
             )}
             {atual === 'webhook' && (
               <>
-                <SistemaDoCliente agentId={agent.id} url={url} urlSalva={agent.handoff_webhook_url ?? null}
-                  chaveGerada={Boolean(agent.handoff_webhook_secret_set)} chaveIlegivel={agent.handoff_webhook_secret_state === 'unreadable'}
-                  onUrlChange={mudarUrl} onUrlBlur={salvarUrl}
-                  // A chave é gravada pela ação própria (nunca pelo salvar da IA): a casca só fica sabendo.
-                  onChaveGerada={() => aoChaveGerada?.()} />
-                {erroUrl && <p className="text-sm text-destructive">{erroUrl}</p>}
-                {gravado !== 'webhook' && (
+                <CartoesDeEscolha<SistemaDoEnvio> rotulo="Qual sistema" colunas={2} valor={sistema} opcoes={SISTEMAS}
+                  aoEscolher={(v) => setSistemaEscolhido(v === sistemaGravado ? null : v)} />
+                {sistema === 'cvcrm' ? (
+                  <SistemaDoClienteCvcrm agentId={agent.id} valor={escolhaCvcrm}
+                    // O objeto vai sempre inteiro (empreendimento E fila): o servidor troca o campo todo.
+                    aoMudar={(v) => void gravar({ handoff_cvcrm: v })}
+                    podeTestar={gravado === 'webhook' && sistemaGravado === 'cvcrm'} />
+                ) : (
+                  <>
+                    <SistemaDoCliente agentId={agent.id} url={url} urlSalva={agent.handoff_webhook_url ?? null}
+                      chaveGerada={Boolean(agent.handoff_webhook_secret_set)} chaveIlegivel={agent.handoff_webhook_secret_state === 'unreadable'}
+                      onUrlChange={mudarUrl} onUrlBlur={salvarUrl}
+                      // A chave é gravada pela ação própria (nunca pelo salvar da IA): a casca só fica sabendo.
+                      onChaveGerada={() => aoChaveGerada?.()} />
+                    {erroUrl && <p className="text-sm text-destructive">{erroUrl}</p>}
+                  </>
+                )}
+                {!usandoEste && (
                   <div className="flex flex-wrap items-center gap-3">
-                    <Button type="button" disabled={!sistemaPronto}
-                      onClick={() => void gravar({ handoff_target: 'webhook', handoff_roleta_config_id: null, handoff_user_id: null }).then(fechar)}>
-                      Usar o sistema do cliente
+                    <Button type="button" disabled={!sistemaPronto} onClick={usarSistema}>
+                      {sistema === 'cvcrm' ? 'Usar o CVCRM' : 'Usar o sistema do cliente'}
                     </Button>
-                    {!sistemaPronto && <span className="text-sm text-muted-foreground">Salve o endereço e gere a chave antes.</span>}
+                    {!sistemaPronto && (
+                      <span className="text-sm text-muted-foreground">
+                        {sistema === 'cvcrm' ? 'Conecte o CVCRM em Integrações antes.' : 'Salve o endereço e gere a chave antes.'}
+                      </span>
+                    )}
                   </div>
                 )}
               </>

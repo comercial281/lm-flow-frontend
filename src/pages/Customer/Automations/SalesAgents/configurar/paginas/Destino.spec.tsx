@@ -13,6 +13,18 @@ vi.mock('@/services/roletaConfig/roletaConfigService', () => ({
 }));
 vi.mock('@/services/channels/agentsService', () => ({ default: { getAll: vi.fn().mockResolvedValue([{ id: 'u1', name: 'Ana Paula' }]) } }));
 vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
+vi.mock('@/services/salesAgents/salesAgentsService', async (original) => {
+  const real = await original<typeof import('@/services/salesAgents/salesAgentsService')>();
+  return {
+    ...real,
+    salesAgentsService: {
+      ...real.salesAgentsService,
+      cvcrmOptions: vi.fn().mockResolvedValue({
+        connected: true, subdomain: 'aurora', empreendimentos: [{ id: 7, nome: 'Residencial Aurora' }], filas: [], errors: {},
+      }),
+    },
+  };
+});
 import Destino from './Destino';
 import { roletaConfigService } from '@/services/roletaConfig/roletaConfigService';
 
@@ -43,8 +55,29 @@ describe('Destino', () => {
     expect(screen.getByRole('button', { name: 'Usar o sistema do cliente' })).toBeDisabled();
     const pronto = consultora({ handoff_webhook_url: 'https://crm.exemplo.com/leads', handoff_webhook_secret_set: true, handoff_webhook_secret_state: 'ready' });
     rerender(<Destino agent={pronto} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} />);
+    expect(screen.getByRole('radio', { name: 'Outro sistema' })).toHaveAttribute('aria-checked', 'true');
     await userEvent.click(screen.getByRole('button', { name: 'Usar o sistema do cliente' }));
-    expect(gravar).toHaveBeenCalledWith({ handoff_target: 'webhook', handoff_roleta_config_id: null, handoff_user_id: null });
+    expect(gravar).toHaveBeenCalledWith({ handoff_target: 'webhook', handoff_webhook_system: 'generic', handoff_roleta_config_id: null, handoff_user_id: null });
+  });
+
+  it('CVCRM: escolher o sistema não grava; "Usar o CVCRM" só com a conexão; empreendimento grava na hora', async () => {
+    const { gravar, rerender } = await abrir(consultora({ handoff_cvcrm_connected: false }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Sistema do cliente' }));
+    await userEvent.click(screen.getByRole('radio', { name: 'CVCRM' }));
+    expect(gravar).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Usar o CVCRM' })).toBeDisabled();
+
+    rerender(<Destino agent={consultora({ handoff_cvcrm_connected: true })} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} />);
+    await userEvent.selectOptions(await screen.findByLabelText('Empreendimento'), '7');
+    expect(gravar).toHaveBeenCalledWith({ handoff_cvcrm: { empreendimento: { id: 7, nome: 'Residencial Aurora' }, fila: null } });
+    await userEvent.click(screen.getByRole('button', { name: 'Usar o CVCRM' }));
+    expect(gravar).toHaveBeenLastCalledWith({ handoff_target: 'webhook', handoff_webhook_system: 'cvcrm', handoff_roleta_config_id: null, handoff_user_id: null });
+  });
+
+  it('IA já no CVCRM abre nele, sem o botão de usar', async () => {
+    await abrir(consultora({ handoff_target: 'webhook', handoff_webhook_system: 'cvcrm', handoff_cvcrm_connected: true, handoff_roleta_config_id: null }));
+    expect(screen.getByRole('radio', { name: 'CVCRM' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByRole('button', { name: 'Usar o CVCRM' })).toBeNull();
   });
 
   // Review Focus 5: a persona virou corretor com a página aberta.
