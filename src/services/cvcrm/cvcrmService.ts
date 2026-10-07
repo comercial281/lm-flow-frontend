@@ -10,6 +10,8 @@ export interface CvcrmStatus {
   /** 'unreadable' = o token guardado não abre mais: troque. */
   token_state: 'none' | 'ready' | 'unreadable';
   connected_at: string | null;
+  /** A mídia do CVCRM em que caem os leads do LM Flow: número (o certo) ou nome. */
+  midia: string | null;
   agents_using: number;
 }
 
@@ -31,6 +33,12 @@ export const cvcrmService = {
   async connect(dados: CvcrmConexaoNova): Promise<CvcrmStatus & { empreendimentos_count: number }> {
     const res = await api.put(BASE, dados);
     return (res.data as { data: CvcrmStatus & { empreendimentos_count: number } }).data;
+  },
+
+  /** Grava só a mídia (sem pedir o token de novo). Vazio tira a mídia. */
+  async setMidia(midia: string): Promise<CvcrmStatus> {
+    const res = await api.put(BASE, { midia });
+    return (res.data as { data: CvcrmStatus }).data;
   },
 
   async disconnect(): Promise<CvcrmStatus> {

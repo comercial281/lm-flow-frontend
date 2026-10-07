@@ -38,6 +38,8 @@ export default function CvcrmConexao() {
   const [token, setToken] = useState('');
   const [conectando, setConectando] = useState(false);
   const [resultado, setResultado] = useState<{ ok: boolean; texto: string } | null>(null);
+  const [midia, setMidia] = useState('');
+  const [salvandoMidia, setSalvandoMidia] = useState(false);
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export default function CvcrmConexao() {
         setStatus(s);
         setEndereco(s.subdomain ? `${s.subdomain}.cvcrm.com.br` : '');
         setEmail(s.email ?? '');
+        setMidia(s.midia ?? '');
       })
       .catch((e) => { if (vivo) toast.error(apiErrorMessage(e, 'Não consegui abrir a conexão com o CVCRM.')); })
       .finally(() => { if (vivo) setCarregando(false); });
@@ -68,6 +71,20 @@ export default function CvcrmConexao() {
       setResultado({ ok: false, texto: apiErrorMessage(e, 'Não consegui conectar o CVCRM agora.') });
     } finally {
       setConectando(false);
+    }
+  };
+
+  const salvarMidia = async () => {
+    setSalvandoMidia(true);
+    try {
+      const novo = await cvcrmService.setMidia(midia.trim());
+      setStatus(novo);
+      setMidia(novo.midia ?? '');
+      toast.success(novo.midia ? 'Mídia salva' : 'Mídia removida');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Não consegui salvar a mídia agora.'));
+    } finally {
+      setSalvandoMidia(false);
     }
   };
 
@@ -168,6 +185,22 @@ export default function CvcrmConexao() {
             </div>
           )}
         </Secao>
+
+        {conectado && (
+          <Secao
+            titulo="Mídia no CVCRM"
+            descricao="A mídia em que caem todos os leads que o LM Flow mandar. É por ela que o cliente filtra, no CVCRM, os leads que vieram daqui."
+          >
+            <CampoTexto id="cvcrm-midia" rotulo="Número da mídia" valor={midia} aoMudar={setMidia} inputMode="numeric"
+              placeholder="Ex.: 474" autoComplete="off"
+              ajuda="Crie a mídia no CVCRM e copie o número dela. Também aceita o nome, mas ele precisa ser idêntico: escrito diferente, o CVCRM cria uma mídia nova."
+              aviso={midia.trim() && !/^\d+$/.test(midia.trim()) ? 'Pelo nome, confira que está escrito exatamente igual ao do CVCRM.' : undefined} />
+            <Button type="button" variant="outline" onClick={salvarMidia}
+              disabled={salvandoMidia || midia.trim() === (status?.midia ?? '')}>
+              {salvandoMidia && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} Salvar mídia
+            </Button>
+          </Secao>
+        )}
       </Secoes>
       {dialogoDeConfirmacao}
     </div>
