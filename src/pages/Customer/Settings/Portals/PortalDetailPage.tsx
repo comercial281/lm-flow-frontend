@@ -245,22 +245,24 @@ export default function PortalDetailPage() {
               ) : null}
             </span>
           }
-          aDireita={<>
-          {portal.connected ? (
-            <Button
-              variant="outline"
-              onClick={handleDisconnect}
-              disabled={saving}
-              className="text-sm text-destructive border-destructive/30 hover:bg-destructive/10"
-            >
-              {saving ? 'Desconectando...' : 'Desconectar'}
-            </Button>
-          ) : (
-            <Button onClick={handleConnect} disabled={saving} className="text-sm">
-              {saving ? 'Conectando...' : 'Conectar portal'}
-            </Button>
-          )}
-          </>}
+          aDireita={
+            <>
+              {portal.connected ? (
+                <Button
+                  variant="outline"
+                  onClick={handleDisconnect}
+                  disabled={saving}
+                  className="text-sm text-destructive border-destructive/30 hover:bg-destructive/10"
+                >
+                  {saving ? 'Desconectando...' : 'Desconectar'}
+                </Button>
+              ) : (
+                <Button onClick={handleConnect} disabled={saving} className="text-sm">
+                  {saving ? 'Conectando...' : 'Conectar portal'}
+                </Button>
+              )}
+            </>
+          }
         />
       }
     >

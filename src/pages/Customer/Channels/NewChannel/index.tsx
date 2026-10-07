@@ -353,38 +353,38 @@ export default function NewChannel() {
   if (!selectedProvider && selectedChannel.providers) {
     return (
       <>
-            <ProviderSelectionTour channelType={selectedChannel.type} />
-            <ProviderSelection
-              channelName={selectedChannel?.name || ''}
-              channelType={selectedChannel?.type || 'whatsapp'}
-              providers={selectedChannel?.providers || []}
-              isDisabled={providerId => {
-                if (selectedChannel?.type === 'whatsapp') {
-                  if (providerId === 'whatsapp_cloud') return !canWpCloud;
-                  if (providerId === 'evolution') return !hasEvolutionConfig;
-                  if (providerId === 'evolution_go') return !hasEvolutionGoConfig;
-                }
-                if (selectedChannel?.type === 'email') {
-                  if (providerId === 'google') return !canEmailGoogle;
-                  if (providerId === 'microsoft') return !canEmailMicrosoft;
-                }
-                return false;
-              }}
-              disabledTooltip={providerId => {
-                const gated =
-                  (selectedChannel?.type === 'whatsapp' &&
-                    ((providerId === 'whatsapp_cloud' && !canWpCloud) ||
-                      (providerId === 'evolution' && !hasEvolutionConfig) ||
-                      (providerId === 'evolution_go' && !hasEvolutionGoConfig))) ||
-                  (selectedChannel?.type === 'email' &&
-                    ((providerId === 'google' && !canEmailGoogle) ||
-                      (providerId === 'microsoft' && !canEmailMicrosoft)));
-                return gated ? t('newChannel.channelGrid.notConfiguredTooltip') : undefined;
-              }}
-              onProviderSelect={handleProviderSelectWithValidation}
-              onBack={handleGoBack}
-              onChannelListClick={() => navigate('/channels')}
-            />
+        <ProviderSelectionTour channelType={selectedChannel.type} />
+        <ProviderSelection
+          channelName={selectedChannel?.name || ''}
+          channelType={selectedChannel?.type || 'whatsapp'}
+          providers={selectedChannel?.providers || []}
+          isDisabled={providerId => {
+            if (selectedChannel?.type === 'whatsapp') {
+              if (providerId === 'whatsapp_cloud') return !canWpCloud;
+              if (providerId === 'evolution') return !hasEvolutionConfig;
+              if (providerId === 'evolution_go') return !hasEvolutionGoConfig;
+            }
+            if (selectedChannel?.type === 'email') {
+              if (providerId === 'google') return !canEmailGoogle;
+              if (providerId === 'microsoft') return !canEmailMicrosoft;
+            }
+            return false;
+          }}
+          disabledTooltip={providerId => {
+            const gated =
+              (selectedChannel?.type === 'whatsapp' &&
+                ((providerId === 'whatsapp_cloud' && !canWpCloud) ||
+                  (providerId === 'evolution' && !hasEvolutionConfig) ||
+                  (providerId === 'evolution_go' && !hasEvolutionGoConfig))) ||
+              (selectedChannel?.type === 'email' &&
+                ((providerId === 'google' && !canEmailGoogle) ||
+                  (providerId === 'microsoft' && !canEmailMicrosoft)));
+            return gated ? t('newChannel.channelGrid.notConfiguredTooltip') : undefined;
+          }}
+          onProviderSelect={handleProviderSelectWithValidation}
+          onBack={handleGoBack}
+          onChannelListClick={() => navigate('/channels')}
+        />
       </>
     );
   }
@@ -396,49 +396,49 @@ export default function NewChannel() {
       acima={<ChannelBreadcrumb className="py-0" items={getBreadcrumbs()} onBack={handleGoBack} />}
       cabecalho={<BaseHeader title={t('newChannel.configureTitle')} subtitle={t('newChannel.description')} />}
     >
-                {renderChannelTour()}
-                <FormContainer
-                  selectedChannel={selectedChannel}
-                  selectedProvider={selectedProvider}
-                  footer={
-                    shouldShowFooter() ? (
-                      <FormFooter
-                        onCancel={handleGoBack}
-                        onSubmit={handleSubmitCreate}
-                        onTest={shouldShowTestConnection() ? handleTestConnection : undefined}
-                        isSubmitting={isSubmitting}
-                        isTesting={isTesting}
-                        showTestConnection={shouldShowTestConnection()}
-                        healthCheckPassed={healthCheckPassed}
-                        isDisabled={
-                          (selectedChannel?.type === 'web_widget' &&
-                            (!form.name || !form.website_url)) ||
-                          (selectedProvider?.id === 'whatsapp_cloud' &&
-                            (!form.name ||
-                              !form.phone_number ||
-                              !form.api_key ||
-                              !form.phone_number_id ||
-                              !form.business_account_id ||
-                              !form.waba_id)) ||
-                          // Desabilita salvar se for Evolution ou Evolution Go e o health check não passou
-                          ((selectedProvider?.id === 'evolution' ||
-                            selectedProvider?.id === 'evolution_go') &&
-                            healthCheckPassed !== true)
-                        }
-                      />
-                    ) : undefined
-                  }
-                >
-                  <Suspense
-                    fallback={
-                      <div className="flex justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                      </div>
-                    }
-                  >
-                    {renderForm()}
-                  </Suspense>
-                </FormContainer>
+      {renderChannelTour()}
+      <FormContainer
+        selectedChannel={selectedChannel}
+        selectedProvider={selectedProvider}
+        footer={
+          shouldShowFooter() ? (
+            <FormFooter
+              onCancel={handleGoBack}
+              onSubmit={handleSubmitCreate}
+              onTest={shouldShowTestConnection() ? handleTestConnection : undefined}
+              isSubmitting={isSubmitting}
+              isTesting={isTesting}
+              showTestConnection={shouldShowTestConnection()}
+              healthCheckPassed={healthCheckPassed}
+              isDisabled={
+                (selectedChannel?.type === 'web_widget' &&
+                  (!form.name || !form.website_url)) ||
+                (selectedProvider?.id === 'whatsapp_cloud' &&
+                  (!form.name ||
+                    !form.phone_number ||
+                    !form.api_key ||
+                    !form.phone_number_id ||
+                    !form.business_account_id ||
+                    !form.waba_id)) ||
+                // Desabilita salvar se for Evolution ou Evolution Go e o health check não passou
+                ((selectedProvider?.id === 'evolution' ||
+                  selectedProvider?.id === 'evolution_go') &&
+                  healthCheckPassed !== true)
+              }
+            />
+          ) : undefined
+        }
+      >
+        <Suspense
+          fallback={
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          }
+        >
+          {renderForm()}
+        </Suspense>
+      </FormContainer>
     </Pagina>
   );
 }

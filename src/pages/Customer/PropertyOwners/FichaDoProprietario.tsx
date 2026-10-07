@@ -205,26 +205,26 @@ export default function FichaDoProprietario() {
         <BaseHeader
           title={<span className="inline-flex flex-wrap items-center gap-3">{dono.name}<PilulaDeStatus id={dono.id} status={dono.status} aoMudar={aplicar} /></span>}
           aDireita={
-<div className="flex items-center gap-2">
-          {digitos && (
-            <Button asChild variant="outline">
-              <a href={`https://wa.me/${digitos}`} target="_blank" rel="noreferrer">
-                <MessageCircle className="mr-2 h-4 w-4" aria-hidden="true" />WhatsApp
-              </a>
-            </Button>
-          )}
-          {gestor && <Button variant="outline" onClick={() => setEditando(true)}>Editar dados</Button>}
-          {gestor && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Mais ações"><MoreHorizontal className="h-4 w-4" /></Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem className="text-destructive" onClick={() => void excluir()}>Excluir proprietário</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
+            <div className="flex items-center gap-2">
+              {digitos && (
+                <Button asChild variant="outline">
+                  <a href={`https://wa.me/${digitos}`} target="_blank" rel="noreferrer">
+                    <MessageCircle className="mr-2 h-4 w-4" aria-hidden="true" />WhatsApp
+                  </a>
+                </Button>
+              )}
+              {gestor && <Button variant="outline" onClick={() => setEditando(true)}>Editar dados</Button>}
+              {gestor && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label="Mais ações"><MoreHorizontal className="h-4 w-4" /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem className="text-destructive" onClick={() => void excluir()}>Excluir proprietário</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           }
         />
       }

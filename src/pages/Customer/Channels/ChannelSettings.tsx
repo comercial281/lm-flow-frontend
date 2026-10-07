@@ -620,34 +620,34 @@ export default function ChannelSettings() {
     <>
       <Pagina
         barraDoTopo={
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate('/channels')}
-              className="flex items-center text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              <span className="text-sm font-medium">{t('settings.breadcrumb.channels')}</span>
-            </button>
-            <span className="text-muted-foreground">/</span>
-            <span className="text-sm font-medium text-primary">
-              {t('settings.breadcrumb.settings')}
-            </span>
-          </div>
-  
-          {/* Save Button */}
-          {activeTab === 'inbox_settings' ? (
-            <Button onClick={handleSave} disabled={isSaving} className="min-w-40">
-              <Save className="h-4 w-4 mr-2" />
-              {isSaving ? t('settings.saving') : t('settings.save')}
-            </Button>
-          ) : (
-            <div className="text-xs text-muted-foreground">
-              {t('settings.info.tabSpecificSave')}
+          <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-border bg-card">
+            {/* Breadcrumb */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate('/channels')}
+                className="flex items-center text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                <span className="text-sm font-medium">{t('settings.breadcrumb.channels')}</span>
+              </button>
+              <span className="text-muted-foreground">/</span>
+              <span className="text-sm font-medium text-primary">
+                {t('settings.breadcrumb.settings')}
+              </span>
             </div>
-          )}
-        </div>
+  
+            {/* Save Button */}
+            {activeTab === 'inbox_settings' ? (
+              <Button onClick={handleSave} disabled={isSaving} className="min-w-40">
+                <Save className="h-4 w-4 mr-2" />
+                {isSaving ? t('settings.saving') : t('settings.save')}
+              </Button>
+            ) : (
+              <div className="text-xs text-muted-foreground">
+                {t('settings.info.tabSpecificSave')}
+              </div>
+            )}
+          </div>
         }
         cabecalho={<BaseHeader title={inboxName} subtitle={t('settings.description')} />}
       >
