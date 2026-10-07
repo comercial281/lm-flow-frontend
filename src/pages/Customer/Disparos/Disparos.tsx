@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Pagina, BaseHeader } from '@/components/base';
 import {
   Megaphone,
   ShieldCheck,
@@ -177,23 +178,14 @@ export default function Disparos() {
 
   return (
     <>
-    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5">
-      <div className="flex items-start gap-3">
-        <div
-          className="w-1 h-9 rounded-full shrink-0"
-          style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
+    <Pagina
+      cabecalho={
+        <BaseHeader
+          title="Disparos"
+          subtitle="Disparo em massa por WhatsApp — por QR code ou número oficial, templates e cadências."
         />
-        <div className="flex items-start gap-2">
-          <Megaphone className="h-6 w-6 text-primary shrink-0 mt-0.5" />
-          <div>
-            <h1 className="text-2xl font-bold leading-tight">Disparos</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Disparo em massa por WhatsApp — por QR code ou número oficial, templates e cadências.
-            </p>
-          </div>
-        </div>
-      </div>
-
+      }
+    >
       {/* Abas */}
       <div className="flex items-center gap-1 border-b border-border">
         {TABS.map(tItem => {
@@ -671,7 +663,7 @@ export default function Disparos() {
           )}
         </div>
       )}
-    </div>
+    </Pagina>
       {dialogoDeConfirmacao}
     </>
   );

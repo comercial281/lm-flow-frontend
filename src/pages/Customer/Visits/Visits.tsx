@@ -1,5 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Pagina, BaseHeader } from '@/components/base';
 import { toast } from 'sonner';
 import {
   Button,
@@ -714,39 +715,22 @@ export default function Visits() {
 
   if (recusado) return <NoAccessState />;
 
+  const comPeriodo = servidorNovo && viewMode === 'calendar' && !temFiltroNoLink;
+  const contador = rotuloContador(total, {
+    soMinhas,
+    mes: comPeriodo && visaoCal === 'mes' ? calDate : undefined,
+    periodo: comPeriodo && visaoCal !== 'mes' ? periodoDoContador(visaoCal, calDate) : undefined,
+  });
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur px-6 py-4">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <div className="flex items-start gap-3">
-            <div
-              className="w-1 h-9 rounded-full shrink-0"
-              style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
-            />
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2 leading-tight">
-                <CalendarClock className="h-6 w-6 text-primary" />
-                Agenda de Visitas
-              </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                {(() => {
-                  const comPeriodo = servidorNovo && viewMode === 'calendar' && !temFiltroNoLink;
-                  return rotuloContador(total, {
-                    soMinhas,
-                    mes: comPeriodo && visaoCal === 'mes' ? calDate : undefined,
-                    periodo: comPeriodo && visaoCal !== 'mes' ? periodoDoContador(visaoCal, calDate) : undefined,
-                  });
-                })()}
-              </p>
-              {filtroLink?.rotulo && (
-                <div className="mt-1.5">
-                  <ChipDaDashboard rotulo={filtroLink.rotulo} onTirar={tirarFiltroLink} />
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
+    <>
+      <Pagina
+        cabecalho={
+          <BaseHeader
+            title="Visitas"
+            subtitle={`Visitas marcadas com os leads, no calendário ou em lista. · ${contador}`}
+            aDireita={
+              <>
             {/* View toggle */}
             <div className="inline-flex rounded-md border border-border bg-background p-0.5">
               <button
@@ -785,16 +769,13 @@ export default function Visits() {
                 {soMinhas ? 'Minhas folgas' : 'Folgas'}
               </Button>
             )}
-            {canCreate && (
-              <Button onClick={() => openScheduleModal()}>
-                <Plus className="h-4 w-4 mr-2" />
-                Agendar visita
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Filtros — só na lista */}
+              </>
+            }
+            primaryAction={canCreate
+              ? { label: 'Agendar visita', icon: <Plus className="h-4 w-4" />, onClick: () => openScheduleModal() }
+              : undefined}
+          >
+            {filtroLink?.rotulo && <ChipDaDashboard rotulo={filtroLink.rotulo} onTirar={tirarFiltroLink} />}
         {viewMode === 'list' && (
           <div className="flex gap-1 flex-wrap">
             {FILTER_TABS.map(tab => (
@@ -812,10 +793,9 @@ export default function Visits() {
             ))}
           </div>
         )}
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+          </BaseHeader>
+        }
+      >
         {viewMode === 'calendar' ? (
           <div className="rounded-xl border bg-card p-4">
             <BarraDoCalendario visao={visaoCal} date={calDate} onVisao={trocarVisao} onNavigate={setCalDate} />
@@ -858,7 +838,7 @@ export default function Visits() {
             )}
           </div>
         ) : (
-          <div className="space-y-6 max-w-3xl mx-auto">
+          <div className="space-y-6 max-w-3xl">
             {Array.from(grouped.entries()).map(([date, dayVisits]) => (
               <div key={date}>
                 <div className="flex items-center gap-3 mb-3">
@@ -890,7 +870,7 @@ export default function Visits() {
             ))}
           </div>
         )}
-      </div>
+      </Pagina>
 
       <ScheduleVisitDialog
         open={modalOpen}
@@ -993,7 +973,7 @@ export default function Visits() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
 

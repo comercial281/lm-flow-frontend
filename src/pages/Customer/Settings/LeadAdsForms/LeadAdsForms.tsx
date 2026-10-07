@@ -14,10 +14,11 @@ import {
   Badge,
 } from '@/components/ui/ds';
 import {
-  FileInput, RefreshCw, Edit, ToggleLeft, ToggleRight, AlertTriangle, ArrowRight, Download,
+  RefreshCw, Edit, ToggleLeft, ToggleRight, AlertTriangle, ArrowRight, Download,
   Stethoscope, Check, X, Copy, Eye, EyeOff, Trash2, Loader2, Ban,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Pagina, BaseHeader } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
 import IconActionButton from '@/components/base/IconActionButton';
 import {
@@ -544,25 +545,14 @@ export default function LeadAdsForms() {
 
   return (
     <>
-    <div className="p-6 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-        <div className="flex items-start gap-3">
-          <div
-            className="w-1 h-9 rounded-full shrink-0"
-            style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
-          />
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2 leading-tight">
-              <FileInput className="h-6 w-6 text-primary" />
-              Formulários (Meta)
-            </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Defina pra onde cada formulário de Lead Ads envia os leads no CRM
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <Pagina
+      estreita
+      cabecalho={
+        <BaseHeader
+          title="Formulários"
+          subtitle="Pra onde cada formulário dos anúncios do Facebook manda os leads."
+          aDireita={
+            <>
           <IconActionButton
             label="Diagnosticar conexão"
             icon={<Stethoscope className="h-4 w-4" />}
@@ -579,13 +569,17 @@ export default function LeadAdsForms() {
             onClick={handleCleanupLabels}
             disabled={cleanupBusy}
           />
-          <Button onClick={() => handleSync()} disabled={syncing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? 'Sincronizando...' : 'Sincronizar formulários'}
-          </Button>
-        </div>
-      </div>
-
+            </>
+          }
+          primaryAction={{
+            label: syncing ? 'Sincronizando...' : 'Sincronizar formulários',
+            icon: <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />,
+            onClick: () => handleSync(),
+            disabled: syncing,
+          }}
+        />
+      }
+    >
       {/* Modal: importar leads recentes (backfill) */}
       <Dialog open={backfillOpen} onOpenChange={setBackfillOpen}>
         <DialogContent className="max-w-md">
@@ -1392,7 +1386,7 @@ export default function LeadAdsForms() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Pagina>
       {dialogoDeConfirmacao}
     </>
   );
