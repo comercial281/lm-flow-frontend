@@ -85,6 +85,9 @@ interface FormState {
   autoResolveLabel: string;
   audioTranscriptions: boolean;
   autoResolveEnabled: boolean;
+  staleAfterDays: number;
+  // Só a tela: a lista mostra "Personalizado" e abre o campo de dias.
+  staleCustom: boolean;
 }
 
 const FORM_VAZIO: FormState = {
@@ -98,6 +101,8 @@ const FORM_VAZIO: FormState = {
   autoResolveLabel: 'none',
   audioTranscriptions: false,
   autoResolveEnabled: false,
+  staleAfterDays: 60,
+  staleCustom: false,
 };
 
 // O que a BarraSalvar cuida. As duas chaves (Transcrição e Resolução ligada)
@@ -109,6 +114,14 @@ const camposResolucao = (f: FormState) => ({
   autoResolveIgnoreWaiting: f.autoResolveIgnoreWaiting,
   autoResolveLabel: f.autoResolveLabel,
 });
+
+// Prazo do "Desatualizado" dos imóveis. A faixa é a mesma do servidor
+// (Property::STALE_AFTER_DAYS_RANGE); o padrão (60) vem dele no GET.
+const PRAZOS_COMUNS = [15, 30, 45, 60, 90, 120, 180];
+const PRAZO_MINIMO = 7;
+const PRAZO_MAXIMO = 365;
+const PRAZO_PADRAO = 60;
+const PERSONALIZADO = 'custom';
 
 const TEMPO_MINIMO = 10;
 const TEMPO_SUGERIDO = 1440; // 24 horas
@@ -150,9 +163,11 @@ export default function AccountSettings() {
   const [mensagemAoLigar, setMensagemAoLigar] = useState('');
   const pedidoAberto = useRef<PedidoLigarResolucao | null>(null);
 
+  const prazoMudou = !!carregado && formData.staleAfterDays !== carregado.staleAfterDays;
   const temAlteracao =
     !!carregado &&
     (!mesmoConteudo(camposGerais(formData), camposGerais(carregado)) ||
+      prazoMudou ||
       (formData.autoResolveEnabled && !mesmoConteudo(camposResolucao(formData), camposResolucao(carregado))));
   useAlteracoesNaoSalvas(temAlteracao);
 
@@ -193,6 +208,7 @@ export default function AccountSettings() {
       setGlobalConfig(configRes);
 
       const settings = accountData.settings || {};
+      const prazo = settings.properties_stale_after_days || PRAZO_PADRAO;
       const novo: FormState = {
         name: accountData.name || '',
         locale: normalizeAccountLocale(accountData.locale || 'pt-BR'),
@@ -204,6 +220,8 @@ export default function AccountSettings() {
         autoResolveLabel: settings.auto_resolve_label || 'none',
         audioTranscriptions: settings.audio_transcriptions || false,
         autoResolveEnabled: !!settings.auto_resolve_after,
+        staleAfterDays: prazo,
+        staleCustom: !PRAZOS_COMUNS.includes(prazo),
       };
       setFormData(novo);
       setCarregado(novo);
@@ -242,6 +260,10 @@ export default function AccountSettings() {
       newErrors.locale = t('validation.localeRequired');
     }
 
+    if (formData.staleAfterDays < PRAZO_MINIMO || formData.staleAfterDays > PRAZO_MAXIMO) {
+      newErrors.staleAfterDays = `Escolha de ${PRAZO_MINIMO} a ${PRAZO_MAXIMO} dias.`;
+    }
+
     if (formData.autoResolveEnabled && formData.autoResolveAfter < TEMPO_MINIMO) {
       newErrors.autoResolveAfter = t('validation.minAutoResolveTime');
     }
@@ -273,6 +295,9 @@ export default function AccountSettings() {
       payload.domain = formData.domain;
       payload.support_email = formData.supportEmail;
     }
+    if (prazoMudou) {
+      payload.properties_stale_after_days = formData.staleAfterDays;
+    }
     if (formData.autoResolveEnabled && !mesmoConteudo(camposResolucao(formData), camposResolucao(carregado))) {
       payload.auto_resolve_after = formData.autoResolveAfter;
       payload.auto_resolve_message = formData.autoResolveMessage;
@@ -291,6 +316,20 @@ export default function AccountSettings() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const escolherPrazo = (valor: string) => {
+    if (valor === PERSONALIZADO) {
+      // Abre o campo com o prazo atual: escolher "Personalizado" sozinho não é alteração.
+      handleFieldChange('staleCustom', true);
+      return;
+    }
+    setFormData(prev => ({ ...prev, staleAfterDays: Number(valor), staleCustom: false }));
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors.staleAfterDays;
+      return newErrors;
+    });
   };
 
   const descartar = () => {
@@ -471,6 +510,54 @@ export default function AccountSettings() {
             </div>
           </SectionLayout>
           </div>
+
+          {/* Atualização dos imóveis: o prazo do "Desatualizado" (Painel e
+              lista de Imóveis). Antes eram 60 dias fixos no servidor. */}
+          <SectionLayout
+            title="Atualização dos imóveis"
+            description="Imóvel ativo que fica esse tempo sem nenhuma alteração aparece como Desatualizado no Painel e na lista de Imóveis."
+            withBorder
+          >
+            <div className="space-y-2">
+              <Label htmlFor="staleAfter">Marcar como desatualizado depois de</Label>
+              <div className="flex flex-wrap gap-2 items-center">
+                <Select
+                  value={formData.staleCustom ? PERSONALIZADO : String(formData.staleAfterDays)}
+                  onValueChange={escolherPrazo}
+                >
+                  <SelectTrigger id="staleAfter" className="w-44 bg-sidebar border-sidebar-border text-sidebar-foreground">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRAZOS_COMUNS.map(dias => (
+                      <SelectItem key={dias} value={String(dias)}>
+                        {dias} dias
+                      </SelectItem>
+                    ))}
+                    <SelectItem value={PERSONALIZADO}>Personalizado</SelectItem>
+                  </SelectContent>
+                </Select>
+                {formData.staleCustom && (
+                  <>
+                    <Input
+                      type="number"
+                      aria-label="Quantidade de dias"
+                      min={PRAZO_MINIMO}
+                      max={PRAZO_MAXIMO}
+                      value={formData.staleAfterDays || ''}
+                      onChange={e => handleFieldChange('staleAfterDays', parseInt(e.target.value) || 0)}
+                      className={`w-24 bg-sidebar border-sidebar-border text-sidebar-foreground ${
+                        errors.staleAfterDays ? 'border-red-500' : ''
+                      }`}
+                      disabled={saving}
+                    />
+                    <span className="text-sm text-sidebar-foreground/60">dias (de {PRAZO_MINIMO} a {PRAZO_MAXIMO})</span>
+                  </>
+                )}
+              </div>
+              {errors.staleAfterDays && <p className="text-sm text-red-500">{errors.staleAfterDays}</p>}
+            </div>
+          </SectionLayout>
 
           {/* Resolução automática */}
           <div data-tour="settings-auto-resolve">

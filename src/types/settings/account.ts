@@ -70,6 +70,8 @@ export interface Account {
     auto_resolve_ignore_waiting?: boolean;
     auto_resolve_label?: string;
     audio_transcriptions?: boolean;
+    /** Dias sem alteração até o imóvel ativo virar "Desatualizado" (7 a 365; o servidor manda o que vale). */
+    properties_stale_after_days?: number;
   };
   custom_attributes?: {
     marked_for_deletion_at?: string;
@@ -111,6 +113,7 @@ export interface UpdateAccount {
   auto_resolve_ignore_waiting?: boolean;
   auto_resolve_label?: string | null;
   audio_transcriptions?: boolean;
+  properties_stale_after_days?: number;
 }
 
 // Form data options for account forms

@@ -190,3 +190,62 @@ describe('Conta na base da Fase 3', () => {
     expect(mocks.getAccount).toHaveBeenCalledTimes(1);
   });
 });
+
+// Prazo do "Desatualizado" (07/10/2026): lista com os prazos comuns e um
+// "Personalizado" que abre o campo de dias. Espera a BarraSalvar como os
+// outros campos.
+describe('Atualização dos imóveis', () => {
+  const lista = () => screen.findByRole('combobox', { name: 'Marcar como desatualizado depois de' });
+
+  it('abre com o prazo que vale (60) e trocar por 90 dias grava só o prazo', async () => {
+    mocks.getAccount.mockResolvedValue(CONTA({ properties_stale_after_days: 60 }));
+    montar();
+    expect(await lista()).toHaveTextContent('60 dias');
+    expect(screen.queryByRole('region', { name: 'Alterações não salvas' })).toBeNull();
+
+    await userEvent.click(await lista());
+    await userEvent.click(screen.getByRole('option', { name: '90 dias' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(mocks.updateAccount).toHaveBeenCalledWith({ properties_stale_after_days: 90 }));
+  });
+
+  it('prazo fora da lista abre como Personalizado, com os dias no campo', async () => {
+    mocks.getAccount.mockResolvedValue(CONTA({ properties_stale_after_days: 21 }));
+    montar();
+    expect(await lista()).toHaveTextContent('Personalizado');
+    expect(screen.getByLabelText('Quantidade de dias')).toHaveValue(21);
+  });
+
+  it('Personalizado grava os dias digitados', async () => {
+    mocks.getAccount.mockResolvedValue(CONTA({ properties_stale_after_days: 60 }));
+    montar();
+    await userEvent.click(await lista());
+    await userEvent.click(screen.getByRole('option', { name: 'Personalizado' }));
+    const dias = screen.getByLabelText('Quantidade de dias');
+    expect(dias).toHaveValue(60);
+    await userEvent.clear(dias);
+    await userEvent.type(dias, '25');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(mocks.updateAccount).toHaveBeenCalledWith({ properties_stale_after_days: 25 }));
+  });
+
+  it('dias fora de 7 a 365 não gravam e explicam o porquê', async () => {
+    mocks.getAccount.mockResolvedValue(CONTA({ properties_stale_after_days: 21 }));
+    montar();
+    const dias = await screen.findByLabelText('Quantidade de dias');
+    await userEvent.clear(dias);
+    await userEvent.type(dias, '5');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(await screen.findByText('Escolha de 7 a 365 dias.')).toBeInTheDocument();
+    expect(mocks.updateAccount).not.toHaveBeenCalled();
+  });
+
+  it('conta antiga sem o prazo mostra 60 dias', async () => {
+    mocks.getAccount.mockResolvedValue(CONTA());
+    montar();
+    expect(await lista()).toHaveTextContent('60 dias');
+  });
+});
