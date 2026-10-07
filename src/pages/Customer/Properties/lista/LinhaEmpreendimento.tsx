@@ -5,7 +5,7 @@ import { dinheiro, tempoDesde } from '@/lib/formato';
 import { linhaDasTipologias, rotuloDaSituacao, seloDaFase, textoDasUnidades, tomDaSituacao } from '@/features/properties/listingKind';
 import FotoDoImovel from './FotoDoImovel';
 import Selo, { TOM_DA_FASE } from './SeloSituacao';
-import MenuDoImovel, { type AcoesDoImovel, type Permissoes } from './MenuDoImovel';
+import MenuDoImovel, { estaNoSite, type AcoesDoImovel, type Permissoes } from './MenuDoImovel';
 import TituloDoImovel from './TituloDoImovel';
 
 export function faixaDePreco(p: Property): { de: number | null; ate: number | null } {
@@ -32,7 +32,8 @@ export default function LinhaEmpreendimento({ p, acoes, permissoes, forca }: {
           <Selo tom={TOM_DA_FASE[p.stage] ?? 'neutro'}>{seloDaFase(p.stage, p.delivery_forecast)}</Selo>
           {p.status !== 'active' && <Selo tom={tomDaSituacao('development', p.status)}>{rotuloDaSituacao('development', p.status)}</Selo>}
         </div>
-        <TituloDoImovel texto={p.title} podeEditar={permissoes.editar} aoAbrir={() => acoes.editar(p)} className="font-semibold text-[15px] sm:text-base" />
+        <TituloDoImovel texto={p.title} podeEditar={permissoes.editar} aoAbrir={() => acoes.editar(p)}
+          aoAbrirNoSite={estaNoSite(p) ? () => acoes.site(p) : undefined} className="font-semibold text-[15px] sm:text-base" />
         {lugar && <p className="truncate text-xs text-muted-foreground">{lugar}</p>}
         {tipologias && <p className="text-[13px]">{tipologias}</p>}
         {unidades && <p className="text-[13px] font-medium">{unidades}</p>}
