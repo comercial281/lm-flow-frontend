@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { PipelineItem } from '@/types/analytics';
 
 const listVisitas = vi.fn();
+const cancelarVisita = vi.fn();
 const listPropostas = vi.fn();
 let podeCriar = true;
 let featureCriar = true;
@@ -12,12 +13,20 @@ const dialogo = vi.fn();
 
 vi.mock('@/services/visits/visitsService', async (orig) => {
   const real = await orig<typeof import('@/services/visits/visitsService')>();
-  return { ...real, visitsService: { ...real.visitsService, list: (...a: unknown[]) => listVisitas(...a) } };
+  return {
+    ...real,
+    visitsService: {
+      ...real.visitsService,
+      list: (...a: unknown[]) => listVisitas(...a),
+      cancel: (...a: unknown[]) => cancelarVisita(...a),
+    },
+  };
 });
 vi.mock('@/services/proposals/proposalsService', async (orig) => {
   const real = await orig<typeof import('@/services/proposals/proposalsService')>();
   return { ...real, proposalsService: { ...real.proposalsService, list: (...a: unknown[]) => listPropostas(...a) } };
 });
+vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock('@/hooks/useCan', () => ({ useCan: () => () => podeCriar }));
 vi.mock('@/contexts/TenantFeaturesContext', () => ({ useFeature: () => featureCriar }));
 vi.mock('@/components/proposals/ProposalFormDialog', () => ({
@@ -114,5 +123,41 @@ describe('Aba Visitas e propostas do card', () => {
 
     expect(await screen.findByText('Amou a varanda')).toBeInTheDocument();
     expect(screen.queryByText('Propostas')).not.toBeInTheDocument();
+  });
+
+  it('visita agendada tem Cancelar visita: pede o motivo e a visita passa a Cancelada', async () => {
+    listVisitas.mockResolvedValue({
+      data: [
+        { id: 'v1', status: 'completed', scheduled_at: '2026-09-01T15:00:00Z', rating: 5, feedback_notes: 'Ok' },
+        { id: 'v3', status: 'scheduled', scheduled_at: '2026-10-20T15:00:00Z', property: { id: 'im1', title: 'Apto Lapa', code: 'AP0001' } },
+      ],
+      meta: { total: 2 },
+    });
+    cancelarVisita.mockResolvedValue({ id: 'v3', status: 'cancelled', scheduled_at: '2026-10-20T15:00:00Z' });
+    abrir();
+
+    // Só a ativa ganha o botão; a realizada não.
+    const botoes = await screen.findAllByRole('button', { name: /Cancelar visita/ });
+    expect(botoes).toHaveLength(1);
+    await userEvent.click(botoes[0]);
+    await userEvent.type(screen.getByPlaceholderText('Opcional'), 'Cliente desistiu');
+    const confirmar = screen.getAllByRole('button', { name: 'Cancelar visita' }).at(-1)!;
+    await userEvent.click(confirmar);
+
+    expect(cancelarVisita).toHaveBeenCalledWith('v3', 'Cliente desistiu');
+    expect(await screen.findByText('Cancelada')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Cancelar visita/ })).not.toBeInTheDocument();
+  });
+
+  it('sem permissão de cancelar, a visita agendada não tem o botão', async () => {
+    podeCriar = false; // o mock do useCan responde o mesmo para toda permissão
+    listVisitas.mockResolvedValue({
+      data: [{ id: 'v3', status: 'scheduled', scheduled_at: '2026-10-20T15:00:00Z' }],
+      meta: { total: 1 },
+    });
+    abrir();
+
+    await screen.findByText('Agendada');
+    expect(screen.queryByRole('button', { name: /Cancelar visita/ })).not.toBeInTheDocument();
   });
 });

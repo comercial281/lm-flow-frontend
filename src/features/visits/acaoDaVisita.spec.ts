@@ -14,10 +14,10 @@ describe('acaoDaVisita: clique na Agenda', () => {
     expect(acaoDaVisita(visita('completed'), 'clique', AGORA)).toBe('retorno');
   });
 
-  it('Agendada, Confirmada e Em andamento abrem o diálogo de realizada, passada ou futura', () => {
+  it('Agendada, Confirmada e Em andamento abrem o resumo (Confirmar / Realizada / Cancelar), passada ou futura', () => {
     for (const s of ['scheduled', 'confirmed', 'in_progress']) {
-      expect(acaoDaVisita(visita(s, ONTEM), 'clique', AGORA)).toBe('complete');
-      expect(acaoDaVisita(visita(s, AMANHA), 'clique', AGORA)).toBe('complete');
+      expect(acaoDaVisita(visita(s, ONTEM), 'clique', AGORA)).toBe('resumo');
+      expect(acaoDaVisita(visita(s, AMANHA), 'clique', AGORA)).toBe('resumo');
     }
   });
 
