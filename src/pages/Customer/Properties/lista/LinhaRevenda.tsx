@@ -6,7 +6,7 @@ import { dinheiro, numero, tempoDesde } from '@/lib/formato';
 import { rotuloDaSituacao, tomDaSituacao } from '@/features/properties/listingKind';
 import FotoDoImovel from './FotoDoImovel';
 import Selo from './SeloSituacao';
-import MenuDoImovel, { type AcoesDoImovel, type Permissoes } from './MenuDoImovel';
+import MenuDoImovel, { estaNoSite, type AcoesDoImovel, type Permissoes } from './MenuDoImovel';
 import TituloDoImovel from './TituloDoImovel';
 
 const FINALIDADE: Record<string, string> = { sale: 'Venda', rent: 'Locação', sale_rent: 'Venda e locação', season: 'Temporada' };
@@ -34,7 +34,8 @@ export default function LinhaRevenda({ p, acoes, permissoes, forca }: {
           <Selo tom={tomDaSituacao('resale', p.status)}>{rotuloDaSituacao('resale', p.status)}</Selo>
           <Selo tom="neutro">{FINALIDADE[p.transaction_type] ?? p.transaction_type}</Selo>
         </div>
-        <TituloDoImovel texto={titulo || tipo} podeEditar={permissoes.editar} aoAbrir={() => acoes.editar(p)} className="font-semibold text-[15px] sm:text-base" />
+        <TituloDoImovel texto={titulo || tipo} podeEditar={permissoes.editar} aoAbrir={() => acoes.editar(p)}
+          aoAbrirNoSite={estaNoSite(p) ? () => acoes.site(p) : undefined} className="font-semibold text-[15px] sm:text-base" />
         {endereco && <p className="truncate text-xs text-muted-foreground">{endereco}</p>}
         <p className="flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
           {p.bedrooms ? <span><b className="text-base">{p.bedrooms}</b> dorm{p.bedrooms > 1 ? 's' : ''}</span> : null}

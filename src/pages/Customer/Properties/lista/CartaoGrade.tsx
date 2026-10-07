@@ -5,7 +5,7 @@ import { dinheiro } from '@/lib/formato';
 import { linhaDasTipologias, rotuloDaSituacao, seloDaFase, tipoDoImovel, tomDaSituacao } from '@/features/properties/listingKind';
 import FotoDoImovel from './FotoDoImovel';
 import Selo, { TOM_DA_FASE } from './SeloSituacao';
-import MenuDoImovel, { type AcoesDoImovel, type Permissoes } from './MenuDoImovel';
+import MenuDoImovel, { estaNoSite, type AcoesDoImovel, type Permissoes } from './MenuDoImovel';
 import { faixaDePreco } from './LinhaEmpreendimento';
 import TituloDoImovel from './TituloDoImovel';
 
@@ -30,7 +30,8 @@ export default function CartaoGrade({ p, acoes, permissoes, forca }: {
             </>
           ) : <Selo tom={tomDaSituacao('resale', p.status)}>{rotuloDaSituacao('resale', p.status)}</Selo>}
         </div>
-        <TituloDoImovel texto={titulo || p.title} podeEditar={permissoes.editar} aoAbrir={() => acoes.editar(p)} className="text-[15px] font-semibold" />
+        <TituloDoImovel texto={titulo || p.title} podeEditar={permissoes.editar} aoAbrir={() => acoes.editar(p)}
+          aoAbrirNoSite={estaNoSite(p) ? () => acoes.site(p) : undefined} className="text-[15px] font-semibold" />
         {emp && linhaDasTipologias(p.typologies) && <p className="text-xs text-muted-foreground">{linhaDasTipologias(p.typologies)}</p>}
         <div className="flex items-center justify-between gap-2">
           <span className="font-bold text-primary">{preco ?? 'Sem preço'}</span>

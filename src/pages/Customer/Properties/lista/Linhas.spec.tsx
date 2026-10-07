@@ -94,4 +94,14 @@ describe('detalhes da lista', () => {
     expect(await screen.findByText('Fotos e vídeos')).toBeInTheDocument();
     expect(screen.queryByText('Ver página no site')).toBeNull();
   });
+
+  it('setinha ao lado do nome abre o site, só para quem está no site', () => {
+    const site = vi.fn();
+    const { unmount } = render(<LinhaRevenda p={{ ...base, published_on_site: true }} acoes={{ ...acoes, site }} permissoes={pode} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir no site' }));
+    expect(site).toHaveBeenCalled();
+    unmount();
+    render(<CartaoGrade p={{ ...base, published_on_site: false }} acoes={acoes} permissoes={pode} />);
+    expect(screen.queryByRole('button', { name: 'Abrir no site' })).toBeNull();
+  });
 });

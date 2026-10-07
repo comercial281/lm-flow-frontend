@@ -18,12 +18,15 @@ export interface AcoesDoImovel {
 
 export interface Permissoes { editar: boolean; excluir: boolean }
 
+// Fora do site (desmarcado, vendido, rascunho...) a página pública não existe.
+export const estaNoSite = (p: Property) =>
+  p.published_on_site !== false && (p.status === 'active' || p.status === 'reserved');
+
 export default function MenuDoImovel({ p, acoes, permissoes, forca }: {
   p: Property; acoes: AcoesDoImovel; permissoes: Permissoes; forca?: number;
 }) {
   const emp = tipoDoImovel(p) === 'development';
-  // Fora do site (desmarcado, vendido, rascunho...) a página pública não existe.
-  const noSite = p.published_on_site !== false && (p.status === 'active' || p.status === 'reserved');
+  const noSite = estaNoSite(p);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
