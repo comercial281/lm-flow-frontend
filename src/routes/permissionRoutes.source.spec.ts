@@ -165,3 +165,27 @@ describe('endereço antigo da tela Books', () => {
     expect(t).not.toContain('PermissionRoute');
   });
 });
+
+describe('Integrações em cartões (07/10/2026)', () => {
+  it('a entrada e Sistemas não têm trava própria: mostram o que sobrou no menu filtrado', () => {
+    for (const path of ['/settings/integrations', '/settings/integrations/sistemas']) {
+      expect(trecho(path)).not.toContain('PermissionRoute');
+    }
+    expect(trecho('/settings/integrations')).toContain('<IntegracoesEntrada />');
+    expect(trecho('/settings/integrations/sistemas')).toContain('<IntegracoesSistemas />');
+  });
+
+  it('Página e Pixel abrem a mesma tela, cada endereço com a trava de antes', () => {
+    expect(trecho('/settings/facebook')).toContain('<FacebookIntegracao />');
+    expect(trecho('/settings/pixel-capi')).toContain('<FacebookIntegracao />');
+  });
+
+  it('as telas de Integrações estão na moldura nova, não na PaginaComAbas', () => {
+    const i = src.indexOf('<Route element={<MolduraDeIntegracao />}>');
+    expect(i).toBeGreaterThan(-1);
+    const bloco = src.slice(i, src.indexOf('</Route>\n', src.indexOf('path="/channels"', i)));
+    for (const path of ['/settings/integrations', '/settings/integrations/sistemas', '/settings/facebook', '/settings/pixel-capi', '/settings/portals', '/settings/cvcrm', '/channels']) {
+      expect(bloco, path).toContain(`path="${path}"`);
+    }
+  });
+});

@@ -165,8 +165,9 @@ const AcceptLeadPage = lazyWithRetry(() => import('@/pages/Customer/Roleta/Accep
 const RoletaLista = lazyWithRetry(() => import('@/pages/Customer/Roleta/RoletaLista'));
 const RoletaPagina = lazyWithRetry(() => import('@/pages/Customer/Roleta/RoletaPagina'));
 const AssignmentSettingsPage = lazyWithRetry(() => import('@/pages/Customer/Settings/AssignmentSettings/AssignmentSettings'));
-const PixelCapiConfig = lazyWithRetry(() => import('@/pages/Customer/Automations/PixelCapi/PixelCapiConfig'));
-const FacebookPages = lazyWithRetry(() => import('@/pages/Customer/Settings/FacebookPages'));
+const FacebookIntegracao = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/FacebookIntegracao'));
+const IntegracoesEntrada = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/IntegracoesEntrada'));
+const IntegracoesSistemas = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/IntegracoesSistemas'));
 const CvcrmConexao = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/Cvcrm/CvcrmConexao'));
 const Macros = lazyWithRetry(() => import('@/pages/Customer/Settings/Macros').then(m => ({ default: m.Macros })));
 const WhatsappReminders = lazyWithRetry(() => import('@/pages/Customer/Settings/WhatsappReminders'));
@@ -190,6 +191,7 @@ import OnboardingPage from '@/pages/Setup/OnboardingPage';
 import NotFound from '@/pages/NotFound';
 import Unauthorized from '@/pages/Unauthorized';
 import PaginaComAbas from '@/components/base/PaginaComAbas';
+import MolduraDeIntegracao from '@/pages/Customer/Settings/Integrations/MolduraDeIntegracao';
 // Widget é lazy: rota pública de embed em iframe que a esmagadora maioria das
 // visitas nunca acessa — não faz sentido pesar o bundle inicial com ela. Já
 // cai dentro do <Suspense> global do AppRouter.
@@ -919,23 +921,25 @@ const AppRouter = () => {
               }
             />
 
-            {/* Pixel/CAPI mora agora em Configurações, não em Automações — não usa mais
-                o layout com submenu de setores. Filha simples de Grupo A: já herda
-                PrivateRoute+CustomerRoute+MainLayout do pai, sem guards próprios. */}
-            {/* WhatsApp (/channels), Facebook, Pixel e Portais são as abas da página
-                Integrações (fase 4) — moldura sem endereço, ver PaginaComAbas.
-                As telas internas (portal aberto, número novo, ajustes do
-                número) ficam fora: têm título e "voltar" próprios.
+            {/* Integrações em cartões (07/10/2026): a entrada tem um cartão por assunto
+                (WhatsApp, Facebook, Portais, Sistemas) e as telas de dentro ficam na
+                MolduraDeIntegracao (barra "← Integrações"), que substituiu as abas. Os
+                endereços de antes continuam, cada um com a trava dele; a Página e o
+                Pixel abrem a mesma tela (FacebookIntegracao). A entrada e Sistemas não
+                têm trava própria: mostram o que sobrou no menu filtrado pelo cargo.
+                As telas internas (portal aberto, número novo, ajustes do número)
+                ficam fora: têm título e "voltar" próprios.
                 A chave de Portais é `portals`, não `integrations` (backend A5,
                 Fase 1 Cargos): integrations.* segue sendo repassada a quem já a
                 tinha, mas a chave nova e específica é portals.read/update. */}
-            <Route element={<PaginaComAbas />}>
-              {/* Páginas do Facebook (Lead Ads): era a aba de Automações → Origem. */}
+            <Route element={<MolduraDeIntegracao />}>
+              <Route path="/settings/integrations" element={<IntegracoesEntrada />} />
+              <Route path="/settings/integrations/sistemas" element={<IntegracoesSistemas />} />
               <Route
                 path="/settings/facebook"
                 element={
                   <PermissionRoute resource="lead_ads_form_configs" action="read">
-                    <FacebookPages />
+                    <FacebookIntegracao />
                   </PermissionRoute>
                 }
               />
@@ -943,7 +947,7 @@ const AppRouter = () => {
                 path="/settings/pixel-capi"
                 element={
                   <PermissionRoute resource="capi_configs" action="read">
-                    <PixelCapiConfig />
+                    <FacebookIntegracao />
                   </PermissionRoute>
                 }
               />
