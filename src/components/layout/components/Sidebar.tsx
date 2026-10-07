@@ -11,9 +11,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useMenuRecolhidoAtrasado } from '../menuRecolhidoAtrasado';
 import { itemAtivo, type MenuItem as MenuItemType, type MenuSection } from '../config/menuItems';
 
-// WhatsApp de suporte da Leal Mídia (o mesmo "Preciso de suporte" de antes).
+// WhatsApp de suporte da Leal Mídia: chip "Tony Operacional". Antes apontava pro
+// número do Evolution (31 9621-9989), herdado do fork.
 export const SUPORTE_WHATSAPP_URL =
-  'https://api.whatsapp.com/send/?phone=553196219989&text=Ol%C3%A1%21+Preciso+de+suporte.&type=phone_number&app_absent=0';
+  'https://api.whatsapp.com/send/?phone=5511959247348&text=Ol%C3%A1%21+Preciso+de+suporte.&type=phone_number&app_absent=0';
 
 /**
  * Cartão da conta no topo do menu (como a Lais): o nome da imobiliária e o
