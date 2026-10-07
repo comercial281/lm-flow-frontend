@@ -167,9 +167,12 @@ describe('endereço antigo da tela Books', () => {
 });
 
 describe('Integrações em cartões (07/10/2026)', () => {
-  it('a entrada e Sistemas não têm trava própria: mostram o que sobrou no menu filtrado', () => {
+  it('a entrada e Sistemas passam pelo portão sem resource/action: esperam as permissões, sem trava de cargo', () => {
     for (const path of ['/settings/integrations', '/settings/integrations/sistemas']) {
-      expect(trecho(path)).not.toContain('PermissionRoute');
+      const t = trecho(path);
+      expect(t, path).toContain('<PermissionRoute>');
+      expect(t, path).not.toContain('resource=');
+      expect(t, path).not.toContain('action=');
     }
     expect(trecho('/settings/integrations')).toContain('<IntegracoesEntrada />');
     expect(trecho('/settings/integrations/sistemas')).toContain('<IntegracoesSistemas />');

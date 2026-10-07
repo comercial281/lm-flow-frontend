@@ -126,4 +126,35 @@ describe('PermissionRoute', () => {
     expect(container.querySelector('.animate-spin')).toBeInTheDocument();
     expect(screen.queryByText(PERMISSIONS_LOAD_FAILED_MESSAGE)).not.toBeInTheDocument();
   });
+  describe('sem resource/action (entrada e Sistemas de Integrações)', () => {
+    const montarLivre = () =>
+      render(
+        <MemoryRouter initialEntries={['/livre']}>
+          <Routes>
+            <Route path="/livre" element={<PermissionRoute><p>tela livre</p></PermissionRoute>} />
+          </Routes>
+        </MemoryRouter>,
+      );
+
+    it('carregando: nem a tela nem o aviso', () => {
+      mocks.loading = true;
+      mocks.isReady = false;
+      const { container } = montarLivre();
+      expect(container.querySelector('.animate-spin')).toBeInTheDocument();
+      expect(screen.queryByText('tela livre')).not.toBeInTheDocument();
+    });
+
+    it('leitura caiu: tentar de novo', () => {
+      mocks.loadFailure = 'failed';
+      montarLivre();
+      expect(screen.getByText(PERMISSIONS_LOAD_FAILED_MESSAGE)).toBeInTheDocument();
+      expect(screen.queryByText('tela livre')).not.toBeInTheDocument();
+    });
+
+    it('permissões prontas: abre para qualquer usuário autenticado', () => {
+      mocks.allowed = false;
+      montarLivre();
+      expect(screen.getByText('tela livre')).toBeInTheDocument();
+    });
+  });
 });

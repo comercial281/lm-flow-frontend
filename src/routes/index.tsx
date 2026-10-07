@@ -926,15 +926,31 @@ const AppRouter = () => {
                 MolduraDeIntegracao (barra "← Integrações"), que substituiu as abas. Os
                 endereços de antes continuam, cada um com a trava dele; a Página e o
                 Pixel abrem a mesma tela (FacebookIntegracao). A entrada e Sistemas não
-                têm trava própria: mostram o que sobrou no menu filtrado pelo cargo.
+                exigem permissão (mostram o que sobrou no menu filtrado pelo cargo), mas
+                passam pelo <PermissionRoute> sem resource: espera as permissões chegarem
+                e, se a leitura cair, mostra "Tentar de novo" em vez do aviso de vazio.
                 As telas internas (portal aberto, número novo, ajustes do número)
                 ficam fora: têm título e "voltar" próprios.
                 A chave de Portais é `portals`, não `integrations` (backend A5,
                 Fase 1 Cargos): integrations.* segue sendo repassada a quem já a
                 tinha, mas a chave nova e específica é portals.read/update. */}
             <Route element={<MolduraDeIntegracao />}>
-              <Route path="/settings/integrations" element={<IntegracoesEntrada />} />
-              <Route path="/settings/integrations/sistemas" element={<IntegracoesSistemas />} />
+              <Route
+                path="/settings/integrations"
+                element={
+                  <PermissionRoute>
+                    <IntegracoesEntrada />
+                  </PermissionRoute>
+                }
+              />
+              <Route
+                path="/settings/integrations/sistemas"
+                element={
+                  <PermissionRoute>
+                    <IntegracoesSistemas />
+                  </PermissionRoute>
+                }
+              />
               <Route
                 path="/settings/facebook"
                 element={
