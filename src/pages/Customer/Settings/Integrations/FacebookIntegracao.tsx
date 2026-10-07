@@ -29,7 +29,7 @@ export function blocosDoFacebook(item: MenuItem | null, pathname: string): { pag
 
 // A Página, em cima, carrega depois e empurra o Pixel pra baixo. Por 3 s, cada
 // mudança de altura dela rola de novo, até a pessoa rolar sozinha.
-function useRolarAte(ativo: boolean, acimaRef: RefObject<HTMLElement>, alvoRef: RefObject<HTMLElement>) {
+function useRolarAte(ativo: boolean, acimaRef: RefObject<HTMLElement | null>, alvoRef: RefObject<HTMLElement | null>) {
   useEffect(() => {
     const alvo = alvoRef.current;
     if (!ativo || !alvo) return;
