@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { Button } from '@evoapi/design-system/button';
 import {
   Tooltip,
@@ -43,9 +43,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@evoapi/design-system/dropdown-menu';
-import { toast } from 'sonner';
 import { Conversation } from '@/types/chat/api';
-import type { SalesAgentCardState } from '@/types/analytics/pipelines';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
 import ActivateAiDialog from '@/components/chat/conversation/ActivateAiDialog';
 import { isPendingStatus } from '@/utils/chat/conversationStatus';
@@ -53,11 +51,11 @@ import { linhaDoTopo } from '@/features/conversas/topoDaConversa';
 import { nomeNaTela } from '@/features/conversas/painelDoLead';
 import { useNumerosDaConversa } from '@/features/numbers/useNumerosDaConversa';
 import { useLanguage } from '@/hooks/useLanguage';
-import { apiErrorMessage } from '@/utils/apiHelpers';
-import { chatService } from '@/services/chat/chatService';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import { avisarAgendadosMudaram } from '@/features/conversas/agendados';
+import { dicaDaIa, iaNoNumero, nomeDaAcaoIa } from '@/features/conversas/atalhosDoLead';
+import { useIaDaConversa } from '@/features/conversas/useIaDaConversa';
 
 // A mesma janela de agendamento do card do lead, carregada só quando abre.
 const ScheduleActionModal = lazyWithRetry(() =>
@@ -125,38 +123,14 @@ const ChatHeader = ({
   const [aiOpen, setAiOpen] = useState(false);
   const [agendando, setAgendando] = useState(false);
   const canScheduleAction = useFeature('card_schedule_action');
-  // Liga/desliga a IA NESTA conversa (pedido do Giovani, 19/08). Usa o mesmo
-  // endpoint que o card do Kanban já lê pra pintar o robozinho — POST
-  // /conversations/:id/sales_agent — em vez de escrever additional_attributes
-  // na mão: esse endpoint também limpa sales_agent_handoff ao religar, senão
-  // uma conversa que a IA passou pra um corretor ficaria travada mentindo que
-  // ainda está em transferência (ver SalesAgents::ConversationState).
-  const [aiState, setAiState] = useState<SalesAgentCardState | null>(null);
-  const [togglingAi, setTogglingAi] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    chatService
-      .getSalesAgentStatus(conversation.id)
-      .then(r => { if (alive) setAiState(r.state); })
-      .catch(() => { if (alive) setAiState(null); });
-    return () => { alive = false; };
-  }, [conversation.id]);
-
-  const aiEnabled = aiState?.status === 'active' || aiState?.status === 'idle';
-
-  const handleToggleAi = async () => {
-    const next = !aiEnabled;
-    setTogglingAi(true);
-    try {
-      const state = await chatService.toggleSalesAgent(conversation.id, next);
-      setAiState(state);
-      toast.success(next ? 'IA reativada nesta conversa' : 'IA desativada nesta conversa');
-    } catch (e) {
-      toast.error(apiErrorMessage(e, 'Não consegui mudar o status da IA'));
-    } finally {
-      setTogglingAi(false);
-    }
-  };
+  // Liga/desliga a IA NESTA conversa. O mesmo robô está nos atalhos do painel
+  // do lead: o hook avisa um ao outro quando troca.
+  const {
+    estado: aiState,
+    ligada: aiEnabled,
+    trocando: togglingAi,
+    trocar: handleToggleAi,
+  } = useIaDaConversa(conversation.id);
 
   const currentStatus = conversation.status;
   const hasUnreadMessages = unreadCount > 0;
@@ -472,7 +446,7 @@ const ChatHeader = ({
           {/* Ativar/desligar IA nesta conversa — só aparece quando existe
               alguma IA Vendedora configurada neste canal (status !== 'none'),
               senão o botão liga/desliga algo que não existe. */}
-          {aiState && aiState.status !== 'none' && (
+          {iaNoNumero(aiState) && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -481,20 +455,8 @@ const ChatHeader = ({
                     size="sm"
                     disabled={togglingAi}
                     onClick={handleToggleAi}
-                    aria-label={
-                      aiState.status === 'handoff'
-                        ? 'Religar IA Vendedora'
-                        : aiEnabled
-                          ? 'Desligar IA Vendedora'
-                          : 'Ligar IA Vendedora'
-                    }
-                    title={
-                      aiState.status === 'handoff'
-                        ? 'Religar IA Vendedora'
-                        : aiEnabled
-                          ? 'Desligar IA Vendedora'
-                          : 'Ligar IA Vendedora'
-                    }
+                    aria-label={nomeDaAcaoIa(aiState)}
+                    title={nomeDaAcaoIa(aiState)}
                     className={`h-8 w-8 p-0 ${
                       aiState.status === 'active'
                         ? 'text-violet-600 hover:text-violet-700 dark:text-violet-400'
@@ -513,13 +475,7 @@ const ChatHeader = ({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>
-                    {aiState.status === 'handoff'
-                      ? 'A IA passou este lead pra um corretor — clique para religar'
-                      : aiEnabled
-                        ? `${aiState.label} — clique para desativar`
-                        : `${aiState.label} — clique para reativar`}
-                  </p>
+                  <p>{dicaDaIa(aiState)}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

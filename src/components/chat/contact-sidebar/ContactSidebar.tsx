@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import { pipelinesService } from '@/services/pipelines';
 import { contactsService } from '@/services/contacts/contactsService';
-import { origemDoLead, outraConversa } from '@/features/conversas/painelDoLead';
+import { TEXTOS_DO_PAINEL, nomeNaTela, origemDoLead, outraConversa } from '@/features/conversas/painelDoLead';
 import { useNumerosDaConversa } from '@/features/numbers/useNumerosDaConversa';
 import type { Pipeline } from '@/types/analytics';
 import type { ContactConversation } from '@/types/contacts';
@@ -11,6 +11,7 @@ import type { Contact, Conversation } from '@/types/chat/api';
 
 import AiUnderstandingPanel from './AiUnderstandingPanel';
 import TopoDoLead from './painel/TopoDoLead';
+import AtalhosDoLead from './painel/AtalhosDoLead';
 import FaixaDeSelos from './painel/FaixaDeSelos';
 import SecaoFunil from './painel/SecaoFunil';
 import SecaoEtiquetas from './painel/SecaoEtiquetas';
@@ -38,7 +39,7 @@ const anuncioDe = (attrs: unknown): Objeto | null => {
 /**
  * O painel do lead ao lado da conversa (Proposta B, 02/10): o resumo no topo e
  * seções simples, uma embaixo da outra, com o conteúdo à vista. Topo (com a
- * faixa de selos) → Conversão Meta (uma linha) → Funil → Agendados (só com
+ * fileira de atalhos e a faixa de selos) → Conversão Meta (uma linha) → Funil → Agendados (só com
  * mensagem agendada) → O que a IA entendeu → Etiquetas → Notas → Respostas do
  * formulário.
  */
@@ -200,6 +201,16 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
           <TopoDoLead
             contact={contact}
             emOferta={emOferta}
+            atalhos={
+              <AtalhosDoLead
+                key={`atalhos-${conversaId ?? contatoId}`}
+                contact={contact}
+                conversation={conversation}
+                pipelines={conversationPipelines}
+                nome={nomeNaTela(contact?.name, emOferta) || TEXTOS_DO_PAINEL.semNome}
+                emOferta={emOferta}
+              />
+            }
             selos={
               <FaixaDeSelos
                 pipelines={conversationPipelines}
