@@ -167,7 +167,7 @@ const DashboardNova: React.FC = () => {
         )}
 
         {/* Espaço do banner de campanhas da Leal Mídia (spec própria). Vazio. */}
-        <div data-slot="banner" />
+        <div data-slot="banner" className="empty:hidden" />
 
         {/* Filtro novo pedido e a resposta ainda não chegou: os blocos são da última
             resposta, então a área avisa que está ocupada e fica esmaecida. */}

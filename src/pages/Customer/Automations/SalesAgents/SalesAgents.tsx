@@ -299,8 +299,13 @@ export default function SalesAgents() {
         acima={selected && situacao && tela !== 'configurar' && trilha
           ? <p className="text-xs font-medium text-muted-foreground">{trilha}</p> : undefined}
         // Em Configurar o título mora em ConfigurarPaginas (grupo, título, frase ao lado do trilho).
-        cabecalho={selected && situacao && tela !== 'configurar'
-          ? <BaseHeader title={info.titulo} subtitle={info.frase} /> : undefined}
+        cabecalho={tela === 'configurar' && selected && situacao
+          ? undefined
+          : selected && situacao
+            ? <BaseHeader title={info.titulo} subtitle={info.frase} />
+            : loading && agents.length === 0
+              ? <BaseHeader title={info.titulo} subtitle={info.frase} />
+              : <BaseHeader title="IA Vendedora" subtitle="Crie a primeira IA pra atender seus leads no WhatsApp." />}
       >
         {loading && agents.length === 0 ? (
           <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>

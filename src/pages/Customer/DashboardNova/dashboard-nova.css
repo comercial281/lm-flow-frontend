@@ -6,6 +6,7 @@
 .dark .lmfn { --lmfn-neutro: rgba(148, 163, 184, 0.14); }
 /* Dentro da moldura da casa (Pagina): a folga é a da moldura, não a do .lmf. */
 .lmf.lmfn { padding: 0; }
+/* O ritmo vertical é o space-y-6 da Pagina: aviso e filtros não somam margem própria. */
 .lmfn-controles { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .lmfn-seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; border: 1px solid var(--lmf-border); background: var(--lmf-accent-soft); }
 .lmfn-seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 500; color: var(--lmf-muted); cursor: pointer; }
@@ -14,13 +15,13 @@
 /* Painel de filtros: a mesma superfície dos cartões (lmf-glass), os campos numa
  * linha que quebra, todos com a caixa de 40 px (.lmf-campo), e "Limpar filtros"
  * na ponta direita, alinhado com as caixas. */
-.lmfn-filtros { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 16px; padding: 16px 20px; margin-bottom: 16px; }
+.lmfn-filtros { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 16px; padding: 16px 20px; }
 .lmfn-filtros .lmf-campo { flex: 1 1 200px; max-width: 280px; }
 @media (max-width: 640px) { .lmfn-filtros .lmf-campo { flex-basis: 100%; max-width: none; } }
 .lmfn-filtros-rodape { margin-left: auto; height: 40px; display: flex; align-items: center; }
 .lmfn-filtros-rodape button { border: 0; background: transparent; color: var(--lmf-accent); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px 2px; border-radius: 6px; }
 .lmfn-filtros-rodape button:focus-visible { outline: 2px solid var(--lmf-accent); outline-offset: 2px; }
-.lmfn-aviso { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--lmf-accent-soft); font-size: 13px; margin-bottom: 16px; }
+.lmfn-aviso { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--lmf-accent-soft); font-size: 13px; }
 .lmfn-aviso button { margin-left: auto; border: 0; background: transparent; color: var(--lmf-accent); font: inherit; font-weight: 600; cursor: pointer; }
 .lmfn-aviso-erro { background: color-mix(in srgb, var(--lmf-warn) 12%, transparent); color: var(--lmf-text); }
 .lmfn-aviso-erro button { color: var(--lmf-warn); }
@@ -104,3 +105,4 @@ button.lmfn-numero:focus-visible { outline: 2px solid var(--lmf-accent); outline
 .lmfn-vez-numero span { font-size: 13px; color: var(--lmf-muted); margin-top: 4px; }
 .lmfn-vez-texto { font-size: 13.5px; margin: 0; }
 .lmfn-vez .lmfn-carrossel { padding-top: 14px; justify-content: center; }
+.lmfn-blocos > :first-child { margin-top: 0; }
