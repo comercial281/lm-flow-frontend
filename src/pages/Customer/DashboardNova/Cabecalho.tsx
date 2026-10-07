@@ -8,6 +8,7 @@ import { CampoFiltro } from './base/CampoFiltro';
 import type { PeriodPreset, ScopeMode } from './base/types';
 import { usersService } from '@/services/users';
 import { Seletor } from '@/components/base/Seletor';
+import { BaseHeader } from '@/components/base';
 import type { FiltrosDashboard, ScopeInfoNova } from './types';
 import type { Visao } from './catalogo';
 import { deQuemSaoOsNumeros } from './visao';
@@ -86,35 +87,35 @@ export const Cabecalho: React.FC<Props> = ({ nome, visao, scope, carregando, fil
 
   return (
     <>
-      <header className="lmfn-cabecalho">
-        <div>
-          <h1>{nome}</h1>
-          {subtitulo && <p className="lmf-card-sub">{subtitulo}</p>}
-        </div>
-        <div className="lmfn-controles">
-          {mostraVisao && (
-            <div className="lmfn-seg" role="group" aria-label="De quem são os números">
-              {modos.map(m => (
-                <button key={m} type="button" aria-pressed={scope?.mode === m}
-                  onClick={() => onFiltros({ ...filtros, scope: m })}>
-                  {ROTULO_VISAO[m]}
-                </button>
-              ))}
+      <BaseHeader
+        title={nome}
+        subtitle={subtitulo || undefined}
+        aDireita={(
+            <div className="lmfn-controles">
+              {mostraVisao && (
+                <div className="lmfn-seg" role="group" aria-label="De quem são os números">
+                  {modos.map(m => (
+                    <button key={m} type="button" aria-pressed={scope?.mode === m}
+                      onClick={() => onFiltros({ ...filtros, scope: m })}>
+                      {ROTULO_VISAO[m]}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* w-40: no computador a caixa não muda de largura a cada período ("Últimos 30 dias" é o maior). */}
+              <Seletor bare className="lmf-select w-40" aria-label="Período" value={filtros.preset}
+                onChange={e => onFiltros({ ...filtros, preset: e.target.value as PeriodPreset })}>
+                {PERIODOS.map(p => <option key={p.valor} value={p.valor}>{p.rotulo}</option>)}
+              </Seletor>
+              <button type="button" className="lmf-select flex items-center gap-2" aria-expanded={aberto}
+                aria-controls={idPainel} onClick={() => setAberto(a => !a)}>
+                <SlidersHorizontal size={14} aria-hidden />
+                Filtros
+                {ativos > 0 && <span className="lmfn-contador">{ativos}</span>}
+              </button>
             </div>
-          )}
-          {/* w-40: no computador a caixa não muda de largura a cada período ("Últimos 30 dias" é o maior). */}
-          <Seletor bare className="lmf-select w-40" aria-label="Período" value={filtros.preset}
-            onChange={e => onFiltros({ ...filtros, preset: e.target.value as PeriodPreset })}>
-            {PERIODOS.map(p => <option key={p.valor} value={p.valor}>{p.rotulo}</option>)}
-          </Seletor>
-          <button type="button" className="lmf-select flex items-center gap-2" aria-expanded={aberto}
-            aria-controls={idPainel} onClick={() => setAberto(a => !a)}>
-            <SlidersHorizontal size={14} aria-hidden />
-            Filtros
-            {ativos > 0 && <span className="lmfn-contador">{ativos}</span>}
-          </button>
-        </div>
-      </header>
+        )}
+      />
 
       {aberto && (
         <div id={idPainel} className="lmf-glass lmfn-filtros" role="region" aria-label="Filtros">

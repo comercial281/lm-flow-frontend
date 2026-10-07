@@ -97,12 +97,13 @@ export default function MeuSiteBarra({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b bg-card px-6 py-2">
-      <div className="flex min-w-0 items-center gap-2 py-2">
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b bg-card px-4 py-2 sm:px-6">
+      {/* Endereço com limite: sem ele, endereço comprido empurrava o menu e o Ver site pra baixo. */}
+      <div className="flex min-w-0 basis-full items-center gap-2 py-2 sm:basis-auto sm:max-w-xs">
         <Globe className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-        <span className="truncate text-sm font-semibold">{enderecoVisivel}</span>
+        <span className="min-w-0 truncate text-sm font-semibold" title={enderecoVisivel}>{enderecoVisivel}</span>
         {/* Fora do ar (Ativo ou Publicado desmarcado) o site mostra a página Em manutenção. */}
-        <Badge variant={noAr ? 'default' : 'secondary'}>{noAr ? 'No ar' : 'Em manutenção'}</Badge>
+        <Badge className="shrink-0" variant={noAr ? 'default' : 'secondary'}>{noAr ? 'No ar' : 'Em manutenção'}</Badge>
       </div>
       <nav aria-label="Menu do Meu site" className="flex flex-1 flex-wrap items-center gap-1">
         {GRUPOS.map(g => {

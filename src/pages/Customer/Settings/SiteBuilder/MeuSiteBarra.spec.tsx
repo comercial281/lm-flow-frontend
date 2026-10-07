@@ -17,6 +17,17 @@ describe('MeuSiteBarra', () => {
     expect(screen.getByRole('link', { name: /Ver site/ }).getAttribute('href')).toBe(base.urlDoSite);
   });
 
+  it('endereço comprido: ocupa a linha toda no celular, tem limite no computador e encurta com reticências', () => {
+    render(<MeuSiteBarra {...base} enderecoVisivel="imobiliaria-com-nome-bem-comprido.lmflow.com.br/portal/imobiliaria-com-nome-bem-comprido" aoIr={vi.fn()} />);
+    const endereco = screen.getByText(/imobiliaria-com-nome-bem-comprido/);
+    expect(endereco.className).toContain('truncate');
+    const grupo = endereco.parentElement!;
+    expect(grupo.className).toContain('basis-full');
+    expect(grupo.className).toContain('sm:basis-auto');
+    expect(grupo.className).toContain('sm:max-w-xs');
+    expect(grupo.className).toContain('min-w-0');
+  });
+
   it('Ativo ou Publicado desmarcado mostra o selo Em manutenção', () => {
     render(<MeuSiteBarra {...base} noAr={false} aoIr={vi.fn()} />);
     expect(screen.getByText('Em manutenção')).toBeTruthy();

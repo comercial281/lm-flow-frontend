@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCan } from '@/hooks/useCan';
 import EmptyState from '@/components/base/EmptyState';
+import { Pagina } from '@/components/base';
 import { GlassCard, Skeleton } from './base/primitives';
 import './base/lmf.css';
 import './dashboard-nova.css';
@@ -133,53 +134,57 @@ const DashboardNova: React.FC = () => {
   }
 
   return (
-    <div className="lmf lmfn">
-      <Cabecalho
-        nome={`${saudacao()}${primeiroNome ? `, ${primeiroNome}` : ''}`}
-        visao={visao}
-        scope={scope}
-        carregando={pendente}
-        filtros={filtros}
-        onFiltros={setFiltros}
-      />
+    <div className="lmf lmfn h-full">
+      <Pagina
+        cabecalho={(
+          <Cabecalho
+            nome={`${saudacao()}${primeiroNome ? `, ${primeiroNome}` : ''}`}
+            visao={visao}
+            scope={scope}
+            carregando={pendente}
+            filtros={filtros}
+            onFiltros={setFiltros}
+          />
+        )}
+      >
+        {comoCorretor && (
+          <div className="lmfn-aviso">
+            <span>Você está vendo a Dashboard como um corretor vê: só os seus leads, visitas e imóveis.</span>
+            {volta && (
+              <button type="button" onClick={() => setFiltros(f => ({ ...f, scope: volta }))}>
+                {rotuloDaVolta(volta)}
+              </button>
+            )}
+          </div>
+        )}
 
-      {comoCorretor && (
-        <div className="lmfn-aviso">
-          <span>Você está vendo a Dashboard como um corretor vê: só os seus leads, visitas e imóveis.</span>
-          {volta && (
-            <button type="button" onClick={() => setFiltros(f => ({ ...f, scope: volta }))}>
-              {rotuloDaVolta(volta)}
-            </button>
-          )}
+        {/* Erro com resposta antiga na mão: nunca mostrar número velho calado. */}
+        {dados && erro && (
+          <div className="lmfn-aviso lmfn-aviso-erro" role="alert">
+            <span>Não deu para atualizar. Os números abaixo são da última vez.</span>
+            <button type="button" onClick={tentarDeNovo}>Tentar de novo</button>
+          </div>
+        )}
+
+        {/* Espaço do banner de campanhas da Leal Mídia (spec própria). Vazio. */}
+        <div data-slot="banner" />
+
+        {/* Filtro novo pedido e a resposta ainda não chegou: os blocos são da última
+            resposta, então a área avisa que está ocupada e fica esmaecida. */}
+        <div className={`lmfn-blocos${pendente && dados ? ' lmfn-blocos-pendente' : ''}`} aria-busy={pendente || undefined}>
+          {corpo}
         </div>
-      )}
 
-      {/* Erro com resposta antiga na mão: nunca mostrar número velho calado. */}
-      {dados && erro && (
-        <div className="lmfn-aviso lmfn-aviso-erro" role="alert">
-          <span>Não deu para atualizar. Os números abaixo são da última vez.</span>
-          <button type="button" onClick={tentarDeNovo}>Tentar de novo</button>
-        </div>
-      )}
-
-      {/* Espaço do banner de campanhas da Leal Mídia (spec própria). Vazio. */}
-      <div data-slot="banner" />
-
-      {/* Filtro novo pedido e a resposta ainda não chegou: os blocos são da última
-          resposta, então a área avisa que está ocupada e fica esmaecida. */}
-      <div className={`lmfn-blocos${pendente && dados ? ' lmfn-blocos-pendente' : ''}`} aria-busy={pendente || undefined}>
-        {corpo}
-      </div>
-
-      <ListaRapida
-        aberta={listaAberta}
-        kind={lista?.kind ?? null}
-        titulo={lista?.titulo ?? ''}
-        filtros={filtros}
-        pode={pode}
-        limitado={lista?.limitado}
-        onFechar={() => setListaAberta(false)}
-      />
+        <ListaRapida
+          aberta={listaAberta}
+          kind={lista?.kind ?? null}
+          titulo={lista?.titulo ?? ''}
+          filtros={filtros}
+          pode={pode}
+          limitado={lista?.limitado}
+          onFechar={() => setListaAberta(false)}
+        />
+      </Pagina>
     </div>
   );
 };

@@ -52,9 +52,9 @@ function CopyButton({ value }: { value: string }) {
 
 function RecordRow({ label, type, name, value }: { label: string; type: string; name: string; value: string }) {
   return (
-    <div className="rounded-lg border border-border bg-background p-3">
+    <div className="min-w-0 rounded-lg border border-border bg-background p-3">
       <p className="mb-2 text-xs font-medium text-muted-foreground">{label}</p>
-      <dl className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5 text-sm">
+      <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 text-sm">
         <dt className="text-muted-foreground">Tipo</dt>
         <dd className="font-mono">{type}</dd>
         <dt className="text-muted-foreground">Nome</dt>
@@ -221,7 +221,7 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
       {state?.configured && status !== 'none' && (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-sm font-medium">{state.domain}</span>
+            <span className="min-w-0 break-all font-mono text-sm font-medium">{state.domain}</span>
             {status === 'active' && (
               <a
                 href={`https://${state.domain}`}
@@ -237,8 +237,8 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
           {status === 'active' && (
             <div className="flex gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm dark:border-emerald-900/40 dark:bg-emerald-900/10">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-              <div className="text-emerald-900 dark:text-emerald-300">
-                <p className="font-medium">Ativo: o site abre em {state.domain}.</p>
+              <div className="min-w-0 break-words text-emerald-900 dark:text-emerald-300">
+                <p className="break-all font-medium">Ativo: o site abre em {state.domain}.</p>
                 <p className="mt-1">
                   Nesse endereço aparece só o site, com um endereço curto para cada página. O endereço
                   de hoje continua funcionando, e os links de

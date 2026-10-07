@@ -3,7 +3,7 @@
 // cabeçalho (grupo, título, frase). Cada página grava na hora (useGravarNaHora):
 // sem Salvar, sem "Sair sem salvar?".
 //
-// ⚠️ ROLAGEM: quem rola é o <main> do MainLayout. O trilho é o ÚNICO `sticky` e
+// ⚠️ ROLAGEM: quem rola é a Pagina da IA Vendedora (o contêiner `overflow-y-auto` dela). O trilho é o ÚNICO `sticky` e
 // precisa de `self-start` (item de flex esticado não gruda). Nada no meio pode
 // grudar ou ter rolagem própria — era o "objeto solto" do passo a passo (a prévia
 // `sticky` e a BarraSalvar). Há spec que confere.
@@ -18,6 +18,7 @@
 // cima da tradução.
 import { useCallback, useEffect, useMemo, type ComponentType } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { BaseHeader } from '@/components/base';
 import { Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { salesAgentsService, type HealthReport, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
@@ -133,8 +134,7 @@ export default function ConfigurarPaginas({ agent, inboxes, aoSalvo, diagnostico
       <div className="flex min-w-0 flex-1 flex-col gap-5">
         <header className="space-y-1">
           <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">{rotuloDoGrupo(atual)}</p>
-          <h1 className="text-2xl font-bold">{info.titulo}</h1>
-          <p className="text-sm text-muted-foreground">{info.frase}</p>
+          <BaseHeader title={info.titulo} subtitle={info.frase} />
         </header>
         <Pagina key={atual} agent={agent} inboxes={inboxes} gravar={gravarNaPagina} irPara={irPara} diagnostico={diagnostico}
           aoChaveGerada={aoChaveGerada} />

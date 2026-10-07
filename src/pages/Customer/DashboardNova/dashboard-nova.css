@@ -4,8 +4,8 @@
  * (os --lmf-* puxam todos para o roxo): --lmfn-neutro, com claro e escuro. */
 .lmfn { --lmfn-neutro: rgba(100, 116, 139, 0.18); }
 .dark .lmfn { --lmfn-neutro: rgba(148, 163, 184, 0.14); }
-.lmfn-cabecalho { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 16px; margin-bottom: 16px; }
-.lmfn-cabecalho h1 { font-size: 26px; font-weight: 650; letter-spacing: -0.03em; margin: 0; }
+/* Dentro da moldura da casa (Pagina): a folga é a da moldura, não a do .lmf. */
+.lmf.lmfn { padding: 0; }
 .lmfn-controles { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .lmfn-seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; border: 1px solid var(--lmf-border); background: var(--lmf-accent-soft); }
 .lmfn-seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 500; color: var(--lmf-muted); cursor: pointer; }

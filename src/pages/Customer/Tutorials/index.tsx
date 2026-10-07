@@ -5,7 +5,8 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BookOpen, FileText, GraduationCap, AlertTriangle } from 'lucide-react';
+import { FileText, GraduationCap, AlertTriangle } from 'lucide-react';
+import { BaseHeader } from '@/components/base';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useCategories } from '@/hooks/useKnowledge';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
@@ -55,11 +56,8 @@ const Tutorials = () => {
   if (!LMHUB_CONFIGURED) {
     return (
       <div className="flex flex-col h-full">
-        <div className="px-6 py-4 border-b border-border">
-          <div className="flex items-center gap-3">
-            <BookOpen size={22} className="text-primary" />
-            <h1 className="text-xl font-bold">{t('title')}</h1>
-          </div>
+        <div className="border-b border-border px-4 py-6 sm:px-6">
+          <BaseHeader title={t('title')} />
         </div>
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="max-w-md bg-card border border-orange-500/40 rounded-xl p-6 flex items-start gap-3">
@@ -81,14 +79,10 @@ const Tutorials = () => {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-border">
-        <div className="flex items-center gap-3 mb-2">
-          <BookOpen size={22} className="text-primary" />
-          <h1 className="text-xl font-bold">{t('title')}</h1>
-        </div>
-        <p className="text-xs text-muted-foreground">{t('description')}</p>
+      <div className="border-b border-border px-4 py-6 sm:px-6">
+        <BaseHeader title={t('title')} subtitle={t('description')} />
         {/* Tabs */}
-        <div className="flex items-center gap-1 mt-4">
+        <div className="mt-4 flex items-center gap-1">
           {TABS.map((x) => {
             const Icon = x.icon;
             const active = tab === x.key;

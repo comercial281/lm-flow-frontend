@@ -148,10 +148,10 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
             </div>
           ) : (
             <article className="prose prose-sm max-w-none dark:prose-invert">
-              <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">
+              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
                 {selected.pinned && <Pin size={16} className="text-primary" />}
                 {selected.titulo}
-              </h1>
+              </h2>
               <div className="text-sm leading-relaxed">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {selected.content_md || '_Sem conteúdo._'}

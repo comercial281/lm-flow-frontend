@@ -31,5 +31,8 @@
   {"arquivo": "src/components/layout/AdminPaginaComAbas.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "moldura do painel da Leal Mídia (raiz), não é tela do cliente"},
   {"arquivo": "src/pages/Customer/Roleta/AcceptLeadPage.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "aceite da roleta: tela cheia aberta pelo link do WhatsApp, sem menu"},
   {"arquivo": "src/components/base/BaseFlowEditor.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "editor de tela cheia (ferramenta, não página)"},
-  { "arquivo": "src/pages/Customer/Settings/Teams/Teams.tsx", "categoria": "foraDaMoldura", "trecho": "<TeamsHeader", "motivo": "aba Times dentro de Equipe (a moldura é a da Equipe); sem título próprio" }
+  { "arquivo": "src/pages/Customer/Settings/Teams/Teams.tsx", "categoria": "foraDaMoldura", "trecho": "<TeamsHeader", "motivo": "aba Times dentro de Equipe (a moldura é a da Equipe); sem título próprio" },
+  { "arquivo": "src/pages/Customer/Automations/SalesAgents/configurar/ConfigurarPaginas.tsx", "categoria": "foraDaMoldura", "trecho": "<BaseHeader", "motivo": "Configurar da IA: o título fica à direita do trilho, dentro da Pagina da IA Vendedora" },
+  { "arquivo": "src/pages/Customer/Tutorials/index.tsx", "categoria": "foraDaMoldura", "trecho": "<BaseHeader", "motivo": "Guia: tela cheia própria (MembersLayout), fora do menu principal" },
+  { "arquivo": "src/pages/Customer/DashboardNova/Cabecalho.tsx", "categoria": "foraDaMoldura", "trecho": "<BaseHeader", "motivo": "Painel inicial: o Cabecalho é entregue à Pagina do index.tsx (cabecalho=), a moldura fica no index.tsx, ao lado" }
 ]
