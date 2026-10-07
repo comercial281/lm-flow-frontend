@@ -6,14 +6,14 @@ import {
   Button, Dialog, DialogContent, DialogHeader, DialogTitle, DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuTrigger, Label, Textarea,
 } from '@/components/ui/ds';
-import { EmptyState } from '@/components/base';
+import { BaseHeader, EmptyState, Pagina } from '@/components/base';
 import { useCan } from '@/hooks/useCan';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { cn } from '@/lib/utils';
 import { dataCurta, dataHora, dinheiro, telefone } from '@/lib/formato';
 import { propertyOwnersService, type ImovelDoProprietario, type ProprietarioCompleto } from '@/services/propertyOwners/propertyOwnersService';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
-import { iniciais, rotuloDoStatus } from '@/features/properties/proprietarios/statusDoProprietario';
+import { rotuloDoStatus } from '@/features/properties/proprietarios/statusDoProprietario';
 import { TONS, rotuloDaSituacao, tipoDoImovel, tomDaSituacao } from '@/features/properties/listingKind';
 import PilulaDeStatus from './PilulaDeStatus';
 import JanelaDoProprietario from './JanelaDoProprietario';
@@ -142,20 +142,26 @@ export default function FichaDoProprietario() {
   }, [id, tentativa]);
   const carregar = () => setTentativa(t => t + 1);
 
+  const voltar = (
+    <Link to="/property-owners" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <ArrowLeft className="h-4 w-4" aria-hidden="true" />Gestão de proprietários
+    </Link>
+  );
   if (erro) {
     return (
-      <div className="space-y-4 p-4">
-        <Link to="/property-owners" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />Gestão de proprietários
-        </Link>
+      <Pagina estreita acima={voltar} cabecalho={<BaseHeader title="Proprietário" />}>
         {erro === 'sem-acesso'
           ? <EmptyState tipo="erro" description="Proprietário não encontrado ou sem acesso." aoTentarDeNovo={() => navigate('/property-owners')} />
           : <EmptyState tipo="erro" aoTentarDeNovo={carregar} />}
-      </div>
+      </Pagina>
     );
   }
   if (!dono) {
-    return <div role="status" className="p-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-label="Carregando" /></div>;
+    return (
+      <Pagina estreita acima={voltar} cabecalho={<BaseHeader title="Proprietário" />}>
+        <div role="status"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-label="Carregando" /></div>
+      </Pagina>
+    );
   }
 
   const digitos = digitosParaWhatsapp(dono.phone);
@@ -192,18 +198,14 @@ export default function FichaDoProprietario() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-4">
-      <Link to="/property-owners" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />Gestão de proprietários
-      </Link>
-
-      <header className="flex flex-wrap items-center gap-3">
-        <span aria-hidden className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
-          {iniciais(dono.name)}
-        </span>
-        <h1 className="text-xl font-semibold">{dono.name}</h1>
-        <PilulaDeStatus id={dono.id} status={dono.status} aoMudar={aplicar} />
-        <div className="ml-auto flex items-center gap-2">
+    <Pagina
+      estreita
+      acima={voltar}
+      cabecalho={
+        <BaseHeader
+          title={<span className="inline-flex flex-wrap items-center gap-3">{dono.name}<PilulaDeStatus id={dono.id} status={dono.status} aoMudar={aplicar} /></span>}
+          aDireita={
+<div className="flex items-center gap-2">
           {digitos && (
             <Button asChild variant="outline">
               <a href={`https://wa.me/${digitos}`} target="_blank" rel="noreferrer">
@@ -223,7 +225,10 @@ export default function FichaDoProprietario() {
             </DropdownMenu>
           )}
         </div>
-      </header>
+          }
+        />
+      }
+    >
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-2">
@@ -306,6 +311,6 @@ export default function FichaDoProprietario() {
       )}
       <JanelaDadosInternos imovel={imovelAberto} aoFechar={() => setImovelAberto(null)} />
       {dialogoDeConfirmacao}
-    </div>
+    </Pagina>
   );
 }

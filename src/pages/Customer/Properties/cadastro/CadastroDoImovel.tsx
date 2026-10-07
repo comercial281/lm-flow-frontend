@@ -14,7 +14,7 @@ import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useCan } from '@/hooks/useCan';
 import { useAlteracoesNaoSalvas, mesmoConteudo, PEDIDO_SAIR_SEM_SALVAR } from '@/hooks/useAlteracoesNaoSalvas';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
-import { EmptyState } from '@/components/base';
+import { BaseHeader, EmptyState, Pagina } from '@/components/base';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { plural } from '@/lib/formato';
@@ -288,7 +288,13 @@ function Cadastro() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+      <div className="min-h-0 flex-1">
+      <Pagina
+        cabecalho={<BaseHeader
+          title={soDivulgar ? 'Onde divulgar' : titulo}
+          subtitle={soDivulgar && imovel ? imovel.title : undefined}
+        />}
+      >
         {!pronto ? (
           erroDeCarga ? <EmptyState tipo="erro" aoTentarDeNovo={carregar} /> : (
             <div role="status" className="flex flex-col gap-3">
@@ -297,13 +303,12 @@ function Cadastro() {
             </div>
           )
         ) : soDivulgar && imovel ? (
-          <div className="mx-auto max-w-2xl">
+          <div className="max-w-2xl">
             <OndeDivulgar imovel={imovel} modo="passo" aoMudarImovel={aoMudarImovelDivulgado} />
           </div>
         ) : (
-          <div className="mx-auto max-w-6xl">
-            <h1 className="text-2xl font-bold leading-tight">{titulo}</h1>
-            <div className="mt-4 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8">
+          <div className="max-w-6xl">
+            <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8">
               <IndiceDoCadastro
                 secoes={secoes}
                 ativa={ativa}
@@ -321,6 +326,7 @@ function Cadastro() {
             </div>
           </div>
         )}
+      </Pagina>
       </div>
 
       {pronto && !soDivulgar && (

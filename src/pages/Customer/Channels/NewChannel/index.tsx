@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 import ProviderSelection from '@/components/channels/ProviderSelection';
+import { BaseHeader, Pagina } from '@/components/base';
 import ChannelBreadcrumb, { BreadcrumbItem } from '@/components/channels/ChannelBreadcrumb';
 
 // Import hooks
@@ -190,9 +191,7 @@ export default function NewChannel() {
     return breadcrumbs;
   };
 
-  const pageContainer = 'mx-auto w-full max-w-6xl px-4 md:px-6';
-
-  const renderForm = () => {
+    const renderForm = () => {
     if (!selectedChannel) return null;
 
     switch (selectedChannel.type) {
@@ -335,26 +334,25 @@ export default function NewChannel() {
   };
 
   // Se não houver um canal selecionado, mostrar o grid de canais
-  return (
-    <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-auto pb-8">
-        {!selectedChannel ? (
-          <>
-            <NewChannelTour />
-            <div className={pageContainer}>
-              <ChannelBreadcrumb items={getBreadcrumbs()} onBack={handleGoBack} />
-            </div>
-            <ChannelGrid
-              channels={channelTypes}
-              onChannelSelect={handleChannelSelectWithValidation}
-              canFB={canFB}
-              canIG={canIG}
-            />
-          </>
+  if (!selectedChannel) {
+    return (
+      <>
+        <NewChannelTour />
+        <ChannelGrid
+          acima={<ChannelBreadcrumb className="py-0" items={getBreadcrumbs()} onBack={handleGoBack} />}
+          channels={channelTypes}
+          onChannelSelect={handleChannelSelectWithValidation}
+          canFB={canFB}
+          canIG={canIG}
+        />
+      </>
+    );
+  }
 
-          // Se houver um canal selecionado, mas não houver um provider selecionado, mostrar o grid de providers
-        ) : !selectedProvider && selectedChannel.providers ? (
-          <>
+  // Canal escolhido, ainda sem provedor: grid de provedores
+  if (!selectedProvider && selectedChannel.providers) {
+    return (
+      <>
             <ProviderSelectionTour channelType={selectedChannel.type} />
             <ProviderSelection
               channelName={selectedChannel?.name || ''}
@@ -387,23 +385,17 @@ export default function NewChannel() {
               onBack={handleGoBack}
               onChannelListClick={() => navigate('/channels')}
             />
-          </>
+      </>
+    );
+  }
 
-          // Se houver um canal selecionado e um provider selecionado, mostrar o formulário de configuração
-        ) : (
-          <>
-            <div className={pageContainer} >
-              <ChannelBreadcrumb items={getBreadcrumbs()} onBack={handleGoBack} />
-            </div>
-            <div className={pageContainer}>
-              <div className="max-w-4xl mx-auto">
-                <div className="mb-6 md:mb-8">
-                  <h1 className="text-2xl font-bold tracking-tight text-sidebar-foreground mb-2">
-                    {t('newChannel.configureTitle')}
-                  </h1>
-                  <p className="text-sidebar-foreground/70">{t('newChannel.description')}</p>
-                </div>
-
+  // Canal e provedor escolhidos: formulário de configuração
+  return (
+    <Pagina
+      estreita
+      acima={<ChannelBreadcrumb className="py-0" items={getBreadcrumbs()} onBack={handleGoBack} />}
+      cabecalho={<BaseHeader title={t('newChannel.configureTitle')} subtitle={t('newChannel.description')} />}
+    >
                 {renderChannelTour()}
                 <FormContainer
                   selectedChannel={selectedChannel}
@@ -447,11 +439,6 @@ export default function NewChannel() {
                     {renderForm()}
                   </Suspense>
                 </FormContainer>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+    </Pagina>
   );
 }

@@ -22,6 +22,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { BaseHeader, Pagina } from '@/components/base';
 import { useLanguage } from '@/hooks/useLanguage';
 import { usePermissions } from '@/contexts/PermissionsContext';
 
@@ -616,57 +617,49 @@ export default function ChannelSettings() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
+    <>
+      <Pagina
+        barraDoTopo={
       <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate('/channels')}
-            className="flex items-center text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            <span className="text-sm font-medium">{t('settings.breadcrumb.channels')}</span>
-          </button>
-          <span className="text-muted-foreground">/</span>
-          <span className="text-sm font-medium text-primary">
-            {t('settings.breadcrumb.settings')}
-          </span>
-        </div>
-
-        {/* Save Button */}
-        {activeTab === 'inbox_settings' ? (
-          <Button onClick={handleSave} disabled={isSaving} className="min-w-40">
-            <Save className="h-4 w-4 mr-2" />
-            {isSaving ? t('settings.saving') : t('settings.save')}
-          </Button>
-        ) : (
-          <div className="text-xs text-muted-foreground">
-            {t('settings.info.tabSpecificSave')}
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/channels')}
+              className="flex items-center text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              <span className="text-sm font-medium">{t('settings.breadcrumb.channels')}</span>
+            </button>
+            <span className="text-muted-foreground">/</span>
+            <span className="text-sm font-medium text-primary">
+              {t('settings.breadcrumb.settings')}
+            </span>
           </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-6xl mx-auto p-6">
-          {/* Inbox Header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-4 mb-6">
-              {formData.avatar_url && (
-                <img
-                  src={formData.avatar_url}
-                  alt="Foto do canal"
-                  className="w-16 h-16 rounded-full object-cover border-2 border-border"
-                />
-              )}
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">{inboxName}</h1>
-                <p className="text-muted-foreground mt-1">{t('settings.description')}</p>
-              </div>
+  
+          {/* Save Button */}
+          {activeTab === 'inbox_settings' ? (
+            <Button onClick={handleSave} disabled={isSaving} className="min-w-40">
+              <Save className="h-4 w-4 mr-2" />
+              {isSaving ? t('settings.saving') : t('settings.save')}
+            </Button>
+          ) : (
+            <div className="text-xs text-muted-foreground">
+              {t('settings.info.tabSpecificSave')}
             </div>
+          )}
+        </div>
+        }
+        cabecalho={<BaseHeader title={inboxName} subtitle={t('settings.description')} />}
+      >
+          {formData.avatar_url && (
+            <img
+              src={formData.avatar_url}
+              alt="Foto do canal"
+              className="w-16 h-16 rounded-full object-cover border-2 border-border"
+            />
+          )}
 
-            {/* Authorization banners */}
+          {/* Authorization banners */}
             <AuthorizationBanners
               inbox={inbox}
               onReauthorize={provider => {
@@ -679,7 +672,6 @@ export default function ChannelSettings() {
                 <NumberCard card={numberCard} />
               </div>
             )}
-          </div>
 
           {/*
             Canal sem nada para esta pessoa: acontece com quem só atende no
@@ -981,10 +973,9 @@ export default function ChannelSettings() {
               {activeTab === 'moderation' && <ModerationDashboard />}
             </TabsContent>
           </Tabs>
-        </div>
-      </div>
+      </Pagina>
 
       {ownerPrompt.dialog}
-    </div>
+    </>
   );
 }
