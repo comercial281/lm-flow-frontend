@@ -576,3 +576,16 @@ export interface PipelineItemDetail {
   stage_durations: StageDuration[];
   pipeline: { id: string; name: string; stages: PipelineStage[] };
 }
+/**
+ * Um card ABERTO do lead (`GET /pipelines/open_cards_by_contact/:id`): a tela
+ * Propostas pergunta "De qual atendimento é esta proposta?" quando há mais de um
+ * (ajuste de 08/10/2026).
+ */
+export interface OpenCardOfContact {
+  id: string;
+  pipeline_id: string;
+  pipeline_name: string | null;
+  stage_id: string;
+  stage_name: string | null;
+  created_at: string | null;
+}

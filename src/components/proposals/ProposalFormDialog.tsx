@@ -23,6 +23,9 @@ import {
 import { proposalsService, type Proposal, type ProposalFormData } from '@/services/proposals/proposalsService';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
 import { LeadCombobox } from '@/components/visits/LeadCombobox';
+import { Seletor } from '@/components/base/Seletor';
+import { pipelinesService } from '@/services/pipelines/pipelinesService';
+import type { OpenCardOfContact } from '@/types/analytics';
 import type { LeadPickerItem } from '@/services/visits/visitsService';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 
@@ -86,6 +89,13 @@ export default function ProposalFormDialog({
 
   const [selectedLead, setSelectedLead] = useState<LeadPickerItem | null>(null);
 
+  // Pela tela Propostas (sem o card), a proposta também fica ligada a um card
+  // (ajuste de 08/10): com mais de um card aberto, pergunta qual; com um, liga
+  // sozinho. null = não se aplica (editando, ou registrada pelo card).
+  const [cardsAbertos, setCardsAbertos] = useState<OpenCardOfContact[] | null>(null);
+  const [cardEscolhido, setCardEscolhido] = useState('');
+  const perguntaAtendimento = (cardsAbertos?.length ?? 0) > 1;
+
   // Valores iniciais lidos só no instante em que abre: o pai recria esses
   // objetos a cada render, e o formulário não pode recomeçar no meio da digitação.
   const iniciais = useRef({ proposta, leadInicial, imovelInicial });
@@ -117,6 +127,20 @@ export default function ProposalFormDialog({
     setPropertyResults([]);
     setShowPropertyDropdown(false);
   }, [open]);
+
+  useEffect(() => {
+    setCardEscolhido('');
+    if (!open || proposta || pipelineItemId || !form.contact_id) {
+      setCardsAbertos(null);
+      return;
+    }
+    let vivo = true;
+    pipelinesService.getOpenCardsOfContact(form.contact_id)
+      .then(lista => { if (vivo) setCardsAbertos(lista); })
+      // Sem a lista, a proposta vai sem ligação (o servidor usa o card aberto mais recente).
+      .catch(() => { if (vivo) setCardsAbertos(null); });
+    return () => { vivo = false; };
+  }, [open, proposta, pipelineItemId, form.contact_id]);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -155,6 +179,13 @@ export default function ProposalFormDialog({
     setForm(f => ({ ...f, contact_id: lead.id }));
   };
 
+  // O card da proposta: o de onde ela foi registrada; senão o único aberto do
+  // lead; senão o escolhido na pergunta. Editar não mexe na ligação.
+  const cardDaProposta = pipelineItemId
+    || (cardsAbertos?.length === 1 ? cardsAbertos[0].id : null)
+    || cardEscolhido
+    || null;
+
   const handleSave = async () => {
     if (!form.property_id) { toast.error('Selecione um imóvel'); return; }
     if (!form.contact_id) { toast.error('Selecione um lead'); return; }
@@ -172,7 +203,7 @@ export default function ProposalFormDialog({
         ...(form.conditions && { conditions: form.conditions }),
         // Registrada pelo card: vai ligada a ele (aceita, marca ESTE card como Ganho).
         // Editar não mexe na ligação (o update do servidor troca o metadata inteiro).
-        ...(!proposta && pipelineItemId ? { metadata: { pipeline_item_id: pipelineItemId } } : {}),
+        ...(!proposta && cardDaProposta ? { metadata: { pipeline_item_id: cardDaProposta } } : {}),
       };
       if (proposta) {
         await proposalsService.update(proposta.id, data);
@@ -245,6 +276,28 @@ export default function ProposalFormDialog({
             placeholder="Buscar lead ou contato por nome/telefone..."
           />
 
+          {perguntaAtendimento && cardsAbertos && (
+            <div className="grid gap-1.5">
+              <Label htmlFor="atendimento-da-proposta">De qual atendimento é esta proposta?</Label>
+              <Seletor
+                id="atendimento-da-proposta"
+                value={cardEscolhido}
+                onChange={e => setCardEscolhido(e.target.value)}
+                className="w-full"
+              >
+                <option value="" disabled>Escolha o atendimento</option>
+                {cardsAbertos.map(c => (
+                  <option key={c.id} value={c.id}>{[c.pipeline_name, c.stage_name].filter(Boolean).join(' · ')}</option>
+                ))}
+              </Seletor>
+            </div>
+          )}
+          {cardsAbertos?.length === 1 && (
+            <p className="text-xs text-muted-foreground">
+              Atendimento: {[cardsAbertos[0].pipeline_name, cardsAbertos[0].stage_name].filter(Boolean).join(' · ')}
+            </p>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Tipo *</Label>
@@ -314,7 +367,7 @@ export default function ProposalFormDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={saving || !form.property_id || !form.contact_id || !form.offered_value}>
+          <Button onClick={handleSave} disabled={saving || !form.property_id || !form.contact_id || !form.offered_value || (!proposta && perguntaAtendimento && !cardEscolhido)}>
             {saving ? 'Salvando...' : proposta ? 'Salvar' : 'Criar Rascunho'}
           </Button>
         </DialogFooter>

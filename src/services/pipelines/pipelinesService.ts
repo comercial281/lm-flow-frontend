@@ -21,6 +21,7 @@ import type {
   ConversationForModal,
   PipelineBoardStatus,
   PipelineItemDetail,
+  OpenCardOfContact,
 } from '@/types/analytics';
 import { Contact } from '@/types';
 
@@ -45,6 +46,13 @@ class PipelinesService {
   async getPipelinesByContact(contactId: string): Promise<Pipeline[]> {
     const response = await api.get(`/pipelines/by_contact/${contactId}`);
     return extractData<Pipeline[]>(response);
+  }
+
+  // Os cards ABERTOS do lead (todos os funis), o mais novo primeiro: a tela
+  // Propostas pergunta de qual atendimento é a proposta (ajuste de 08/10).
+  async getOpenCardsOfContact(contactId: string): Promise<OpenCardOfContact[]> {
+    const response = await api.get(`/pipelines/open_cards_by_contact/${contactId}`);
+    return extractData<OpenCardOfContact[]>(response);
   }
 
   // Get all pipelines filtered by conversation (optimized - single request)
