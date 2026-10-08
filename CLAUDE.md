@@ -7948,4 +7948,5 @@ O Grupo Habitar escreveu a pergunta dele ("Você já mora na região do Castelo?
 - **Primeiro imóvel** fala de compor renda do casal (pedido do dono: casal entra muito nesse caminho).
 - **Lead que não cabe em nenhum caminho:** Passar pro destino (padrão quando a imobiliária mexeu nos caminhos) · Atender mesmo assim · Encerrar com educação.
 - **Padrão pelo tipo de venda** (revenda: Moradia + Trocar de imóvel; locação: Moradia; resto: Moradia + Investimento) entra sozinho quando o tipo de venda muda e ninguém mexeu nos caminhos; "Voltar ao padrão" grava o do tipo.
+- **Chips (08/10, pedido do dono).** Os caminhos aparecem como chips; o clique marca/desmarca e o lápis abre a janela de edição (Como reconhecer em cima, Como ela conduz embaixo, gravação única no Salvar). Caminho novo só entra na lista depois de escrito (nome e Como ela conduz obrigatórios; some o texto inicial). Máximo 5 marcados e 8 guardados, sempre no fim da lista.
 - Fora daqui: primeira mensagem literal (entrega seguinte).
