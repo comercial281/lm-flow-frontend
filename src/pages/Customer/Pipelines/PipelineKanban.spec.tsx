@@ -22,12 +22,23 @@ vi.mock('@/hooks/useLanguage', () => ({
 vi.mock('@/utils/chunkReload', () => ({
   lazyWithRetry: () => (p: { item?: Record<string, unknown>; onItemStatusChanged?: (i: unknown) => void }) =>
     p.onItemStatusChanged && p.item ? (
-      <button
-        type="button"
-        onClick={() => p.onItemStatusChanged?.({ ...p.item, status: 'won', won_at: '2026-10-07T12:00:00Z' })}
-      >
-        Marcar ganho (janela falsa)
-      </button>
+      <>
+        <button
+          type="button"
+          onClick={() => p.onItemStatusChanged?.({ ...p.item, status: 'won', won_at: '2026-10-07T12:00:00Z' })}
+        >
+          Marcar ganho (janela falsa)
+        </button>
+        {/* O servidor leva o card ganho para Concluído (ajuste de 08/10). */}
+        <button
+          type="button"
+          onClick={() =>
+            p.onItemStatusChanged?.({ ...p.item, status: 'won', stage_id: 's9', pipeline_stage_id: 's9' })
+          }
+        >
+          Ganho em Concluído (janela falsa)
+        </button>
+      </>
     ) : null,
 }));
 vi.mock('@/contexts/TenantFeaturesContext', () => ({ useFeature: () => true }));
@@ -53,6 +64,7 @@ vi.mock('@/services/pipelines', () => ({
     reorderItem: vi.fn(),
     archiveItem: vi.fn(),
     unarchiveItem: vi.fn(),
+    setItemStatus: vi.fn(),
   },
 }));
 
@@ -106,7 +118,12 @@ const FUNIL = (status: string = 'open'): Pipeline => {
     created_at: '2026-10-01',
     updated_at: '2026-10-01',
     status_counts: { open: 2, won: 1, lost: 1, all: 4, archived: 1 },
-    stages: [etapa('s1', 'Novo', da.filter(c => c.stage_id === 's1')), etapa('s2', 'Proposta', da.filter(c => c.stage_id === 's2'))],
+    stages: [
+      etapa('s1', 'Novo', da.filter(c => c.stage_id === 's1')),
+      etapa('s2', 'Proposta', da.filter(c => c.stage_id === 's2')),
+      // A coluna do Ganho (ajuste de 08/10): tipo Concluída.
+      { ...etapa('s9', 'Concluído', da.filter(c => c.stage_id === 's9')), position: 9, stage_type: 'completed' } as PipelineStage,
+    ],
   } as unknown as Pipeline;
 };
 
@@ -146,6 +163,7 @@ beforeEach(() => {
   vi.mocked(pipelinesService.getPipelines).mockResolvedValue({ data: [] } as never);
   vi.mocked(pipelinesService.getPipeline).mockImplementation(async (_id, opts) => FUNIL(opts?.status));
   vi.mocked(pipelinesService.reorderItem).mockResolvedValue({ success: true, message: '' });
+  vi.mocked(pipelinesService.setItemStatus).mockImplementation(async (_p, id) => ({ ...MARIA, id, status: 'won', stage_id: 's9', pipeline_stage_id: 's9' }) as PipelineItem);
   vi.mocked(pipelinesService.archiveItem).mockImplementation(async (_p, id) => { arquivadosAgora.add(String(id)); return {} as PipelineItem; });
   vi.mocked(pipelinesService.unarchiveItem).mockImplementation(async (_p, id) => { desarquivadosAgora.add(String(id)); return {} as PipelineItem; });
 });
@@ -474,5 +492,70 @@ describe('quadro do funil · abas', () => {
     await waitFor(() => expect(within(document.getElementById('etapa-s1')!).queryByText('Maria Souza')).toBeNull());
     expect(screen.queryByText('Este lead não está nesta aba.')).toBeNull();
     expect(endereco().get('card')).toBe('i1');
+  });
+});
+
+describe('quadro do funil · soltar em Concluído é Ganho (ajuste de 08/10)', () => {
+  it('em Abertos: chama a rota da situação (não o reorder), o card sai da aba e os números se refazem', async () => {
+    // Depois de gravar, o servidor já não manda a Maria em Abertos.
+    vi.mocked(pipelinesService.getPipeline).mockImplementation(async (_id, opts) => {
+      const funil = FUNIL(opts?.status);
+      if ((opts?.status ?? 'open') !== 'open') return funil;
+      return { ...funil, stages: funil.stages.map(st => ({ ...st, items: (st.items || []).filter(i => i.id !== 'i1') })) };
+    });
+    vi.mocked(pipelinesService.getPipeline).mockImplementationOnce(async () => FUNIL('open'));
+    montar();
+    await screen.findByText('Maria Souza');
+
+    fireEvent.dragStart(cardDe('Maria Souza'));
+    fireEvent.dragOver(colunaDe('s9'));
+    fireEvent.drop(colunaDe('s9'));
+
+    await waitFor(() => expect(pipelinesService.setItemStatus).toHaveBeenCalledWith('p1', 'i1', { status: 'won' }));
+    expect(pipelinesService.reorderItem).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByText('Maria Souza')).toBeNull());
+    await waitFor(() => expect(pipelinesService.getPipeline).toHaveBeenCalledTimes(2));
+  });
+
+  it('recusa do servidor: o card volta para a coluna dele e a frase aparece', async () => {
+    const { toast } = await import('sonner');
+    vi.mocked(pipelinesService.setItemStatus).mockRejectedValue({
+      response: { status: 422, data: { success: false, error: { code: 'VALIDATION_ERROR', message: 'Este card está arquivado. Desarquive antes de mudar a situação.' } } },
+    });
+    montar();
+    await screen.findByText('Maria Souza');
+
+    fireEvent.dragStart(cardDe('Maria Souza'));
+    fireEvent.dragOver(colunaDe('s9'));
+    fireEvent.drop(colunaDe('s9'));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('Este card está arquivado. Desarquive antes de mudar a situação.'),
+    );
+    expect(within(document.getElementById('etapa-s1')!).getByText('Maria Souza')).toBeInTheDocument();
+  });
+
+  it('em Todos: o Ganho pela janela que trouxe o card para Concluído troca a coluna dele no quadro', async () => {
+    // Depois de gravar, o servidor manda a Maria ganha em Concluído (o recarregamento em silêncio).
+    vi.mocked(pipelinesService.getPipeline).mockImplementation(async (_id, opts) => {
+      const funil = FUNIL(opts?.status);
+      const ganha = { ...MARIA, status: 'won', stage_id: 's9', pipeline_stage_id: 's9' } as PipelineItem;
+      return {
+        ...funil,
+        stages: funil.stages.map(st => ({
+          ...st,
+          items: st.id === 's9' ? [ganha] : (st.items || []).filter(i => i.id !== 'i1'),
+        })),
+      };
+    });
+    vi.mocked(pipelinesService.getPipeline).mockImplementationOnce(async (_id, opts) => FUNIL(opts?.status));
+    montar('/pipelines/p1?aba=todos&card=i1');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Ganho em Concluído (janela falsa)' }));
+
+    await waitFor(() =>
+      expect(within(document.getElementById('etapa-s9')!).getByText('Maria Souza')).toBeInTheDocument(),
+    );
+    expect(within(document.getElementById('etapa-s1')!).queryByText('Maria Souza')).toBeNull();
   });
 });

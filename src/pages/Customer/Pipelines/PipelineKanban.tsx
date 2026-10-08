@@ -74,6 +74,11 @@ export default function PipelineKanban() {
   // A aba decide se o card arrasta (Ganhos, Perdidos e Arquivados não).
   const podeArrastarCard = useCallback((item: PipelineItem) => podeArrastarNaAba(aba, item), [aba]);
 
+  // Soltar em Concluído marcou Ganho: o card segue o mesmo caminho do Ganho pela
+  // janela (handleItemStatusChanged, declarado mais abaixo — por isso a ref).
+  const aoGanharRef = useRef<(item: PipelineItem) => void>(() => {});
+  const aoGanharNoQuadro = useCallback((item: PipelineItem) => aoGanharRef.current(item), []);
+
   // Arraste do card, rolar o fundo e a roda do mouse (quadro/useBoardDrag).
   const {
     boardScrollRef, isDraggingRef, suppressClickUntilRef,
@@ -81,6 +86,7 @@ export default function PipelineKanban() {
     handleDragStart, handleDragOver, handleDrop, handleCardDragOver, handleCardDrop, handleDragEnd,
   } = useBoardDrag({
     pipelineId, stages, setStages, mensagemDeErro: t('kanban.messages.itemMoveError'), podeArrastar: podeArrastarCard,
+    aoGanhar: aoGanharNoQuadro,
   });
 
   // Modal states
@@ -556,6 +562,7 @@ export default function PipelineKanban() {
     setItemToEdit(prev => (prev && String(prev.id) === String(novo.id) ? { ...prev, ...novo } : prev));
     void loadPipelineData(true);
   }, [aba, loadPipelineData]);
+  aoGanharRef.current = handleItemStatusChanged;
 
   const handleUpdateItem = async (data: {
     notes: string;

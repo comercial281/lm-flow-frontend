@@ -9,6 +9,7 @@ import {
 import { toast } from 'sonner';
 import { pipelinesService } from '@/services/pipelines';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
+import { ehColunaDeGanho, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
 import { itemPos } from '../pipelineItemHelpers';
 
 interface OpcoesDoArraste {
@@ -19,9 +20,14 @@ interface OpcoesDoArraste {
   mensagemDeErro: string;
   /** A aba decide (podeArrastarNaAba): Ganhos, Perdidos e Arquivados não arrastam. */
   podeArrastar: (item: PipelineItem) => boolean;
+  /**
+   * Soltar em Concluído marcou Ganho (ajuste de 08/10): o quadro recebe o card
+   * que o servidor devolveu (sai de Abertos, os números se refazem).
+   */
+  aoGanhar?: (item: PipelineItem) => void;
 }
 
-export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, podeArrastar }: OpcoesDoArraste) {
+export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, podeArrastar, aoGanhar }: OpcoesDoArraste) {
   const [draggedItem, setDraggedItem] = useState<PipelineItem | null>(null);
   const isDraggingRef = useRef(false);
   const suppressClickUntilRef = useRef(0);
@@ -158,12 +164,44 @@ export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, po
   // Onde o cursor está sobre o card alvo (metade de cima = acima, baixo = abaixo).
   const dragOverPosRef = useRef<'above' | 'below'>('above');
 
+  // Concluído é a coluna do Ganho (ajuste de 08/10): soltar o card nela marca
+  // Ganho pela mesma rota do botão. O card vai na hora para Concluído, já ganho;
+  // o servidor confirma (e roda os efeitos) ou recusa com a frase pronta.
+  const ganhar = useCallback(async (targetStageId: string) => {
+    if (!draggedItem || !pipelineId) {
+      finishDrag();
+      return;
+    }
+    const previousStages = stages;
+    const ganho = {
+      ...draggedItem, stage_id: targetStageId, pipeline_stage_id: targetStageId, status: 'won',
+    } as PipelineItem;
+    setStages(stages.map(stage => {
+      const items = (stage.items || []).filter(i => i.id !== draggedItem.id);
+      return stage.id === targetStageId ? { ...stage, items: [ganho, ...items] } : { ...stage, items };
+    }));
+    try {
+      const resposta = await pipelinesService.setItemStatus(pipelineId, draggedItem.id, { status: 'won' });
+      toast.success('Lead marcado como ganho.');
+      aoGanhar?.({ ...ganho, ...resposta } as PipelineItem);
+    } catch (erro) {
+      setStages(previousStages);
+      toast.error(mensagemDaRecusa(erro, 'Não consegui marcar o lead como ganho.'));
+    } finally {
+      finishDrag();
+    }
+  }, [draggedItem, pipelineId, stages, setStages, finishDrag, aoGanhar]);
+
   // Move/reordena o card arrastado para targetStageId na position newPos,
   // inserindo no índice insertIdx (no array já SEM o card arrastado).
   // Atualização otimista + persistência via /reorder.
   const commitReorder = useCallback(async (targetStageId: string, newPos: number, insertIdx: number) => {
     if (!draggedItem || !pipelineId) {
       finishDrag();
+      return;
+    }
+    if (draggedItem.stage_id !== targetStageId && ehColunaDeGanho(stages.find(s => s.id === targetStageId))) {
+      void ganhar(targetStageId);
       return;
     }
     const fromStageId = draggedItem.stage_id;
@@ -197,7 +235,7 @@ export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, po
     } finally {
       finishDrag();
     }
-  }, [draggedItem, pipelineId, stages, setStages, mensagemDeErro, finishDrag]);
+  }, [draggedItem, pipelineId, stages, setStages, mensagemDeErro, finishDrag, ganhar]);
 
   // Drop na área da coluna (fora de um card):
   // - outra coluna: lead vai pro TOPO da coluna destino.
