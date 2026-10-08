@@ -4104,7 +4104,7 @@ Como ficou:
 Spec: `LM FLOW/specs/2026-10-07-frente-2-tarefas-e-atividades-design.md`. Plano: `LM FLOW/plans/2026-10-07-frente-2-tarefas-e-atividades.md`.
 
 - **Tarefa mora no card do funil.** Lead sem card (cliente que não deixa WhatsApp orgânico virar card) ganha "Colocar no funil" na seção Tarefas da Conversa, que coloca pela conversa (origem certa) e já abre a tarefa nova.
-- **Três lugares, um bloco:** aba Tarefas do card, seção Tarefas da Conversa e (futuro) página do card completo usam `features/tarefas/TarefasDoLead`. Tela Tarefas (`/tarefas`) lista só tarefas.
+- **Três lugares, um bloco:** aba Tarefas do card, seção Tarefas da Conversa e página do card completo (bloco Próximas tarefas da Ficha) usam `features/tarefas/TarefasDoLead`. Tela Tarefas (`/tarefas`) lista só tarefas.
 - **Menu:** seção Atividades (abre e fecha, uma por vez) com Tarefas (`/tarefas`, só tarefas) e Visitas (`/visits`). `/atividades` redireciona pra `/tarefas`. Decisão do dono em 08/10/2026.
 - **Lista do servidor:** `GET /api/v1/activities` (tarefas + visitas por prazo, contagem por aba, régua de quem vê do funil). CRUD em `/api/v1/tasks`.
 - **Categorias:** até as Listas da casa, os quatro nomes fixos (`CATEGORIAS_INICIAIS`); na troca, a janela lê `task_categories`.
@@ -7698,3 +7698,85 @@ Armadilhas:
    pela janela), que troca a coluna e tira o card da aba que não é a dele.
 10. O quadro fica fora da `Pagina` (exceção documentada de tela cheia), com respiro lateral
     de 16/24px.
+
+## Card completo: a página do lead (desde 2026-10-07)
+
+Pedido do dono (call com a Nova 27, 07/10): o card só existia como janela, e quem quer ler
+com calma ou mandar o lead pra alguém precisa de uma página. Spec:
+`LM FLOW/specs/2026-10-07-funil-situacao-e-card-completo-design.md` §5.
+
+O que aparece na tela:
+
+- **Página `/pipelines/:pipelineId/card/:itemId`, com o menu lateral.** Abre pela setinha ↗
+  ao lado do ⋯ da janela ("Ver card completo", sempre em outra guia), pela setinha do card
+  do quadro e por qualquer link colado. O F5 mantém.
+- **Cabeçalho de tela de detalhe:** moldura `Pagina` com `acima` (← Funil) e `BaseHeader`
+  com `aoLadoDoTitulo` (selo da situação) e `aDireita` (ações). O nome do lead é o título,
+  com a barrinha da casa; à direita, Responsável com foto, Ganho | Perdido (ou Reabrir) e o
+  ⋯ (Copiar link — o da página —, Mandar pra roleta, Arquivar/Desarquivar, Remover do funil).
+- **Faixa de etapas** com os dias em cada uma: idas e voltas somam; a atual conta até agora;
+  card Ganho/Perdido para o relógio no dia em que fechou. Clicar numa etapa pergunta "Mover
+  <nome> para <etapa>?". Card fechado: a faixa só informa.
+- **Abas** Ficha · Conversa · Visitas e propostas · Origem (a aba vai no endereço, `?aba=`).
+  A página não tem aba Tarefas: as tarefas são um bloco da Ficha.
+- **Ficha:** à esquerda Ações rápidas, Próximas tarefas (o `TarefasDoLead` da sessão de
+  Tarefas, o mesmo da aba Tarefas da janela), Dados da pessoa, Sobre o negócio, Etiquetas,
+  Follow-up e Meta, o que a IA entendeu, Imóveis de interesse, Respostas do formulário,
+  Outras informações; à direita Histórico e Observações, separados como na janela.
+- **Sobre o negócio** (só na página): Preço estimado e Data de fechamento esperada, editados
+  na hora, sem Salvar. O preço estimado é o valor da Compra que vai para a Meta no Ganho.
+  Regras do campo: Esc desfaz; a data salva ao sair do campo ou no Enter, com ano entre 1900
+  e 2100; centavos colados são descartados; teto de 12 dígitos; valor negativo é recusado.
+  Card fechado ou arquivado mantém "Sobre o negócio" editável e as tarefas.
+- **Arquivado abre**, com o aviso e Desarquivar. Sem acesso (outro corretor, card apagado ou
+  de outro funil): "Você não tem acesso a este lead", com "Voltar ao funil".
+- **Quadro:** o link `?card=` de um card que não está na aba carregada (`foraDaAba` do
+  `useCardNoEndereco`) busca o card pelo id (`buscarCardPeloId`) e abre a janela. O "Este
+  lead não está nesta aba." do E0 (`AvisoCardForaDaAba`) virou `AvisoDoCardForaDoQuadro`: só
+  aparece sem acesso ou com erro (com "Tentar de novo").
+- **Exportar** do funil ganha `preco_estimado` (cru) e `fechamento_esperado`.
+- **Proposta registrada pelo card** (aba Visitas e propostas, na janela e na página) vai ligada a
+  ele (`metadata.pipeline_item_id`): aceita, marca esse card como Ganho.
+- **Proposta pela tela Propostas** (ajuste de 08/10): lead com mais de um card aberto, a janela
+  pergunta "De qual atendimento é esta proposta?" (com bloco de carregando e, se falhar, aviso
+  com Tentar de novo); com um card só, liga sozinho (e mostra qual). A lista vem de
+  `GET /pipelines/open_cards_by_contact/:contact_id`.
+- **Concluído é Ganho** (ajuste de 08/10): clicar em Concluído na faixa pergunta "Marcar <nome>
+  como Ganho?"; escolher Concluído na Etapa da janela marca Ganho; a coluna Concluído não soma
+  dias (o relógio para no Ganho).
+
+Decisões do dono (não reabrir sem ele pedir): a janela não muda de cara (ganha só a
+setinha); preço e data só na página (depois viram filtro); mover pela faixa pede
+confirmação; a página abre com o menu lateral.
+
+Armadilhas:
+
+1. **O estado do card mora em `src/features/cardDoLead/useCardDoLead.ts`** e o desenho em
+   `src/features/cardDoLead/blocos/`. A janela (`EditItemModal`) e a página
+   (`pages/Customer/Pipelines/CardCompleto/CardCompletoPage.tsx`) são cascas. Bloco novo do
+   card nasce em `blocos/`; na janela, a coluna esquerda continua cabendo em 1366×768. A rede
+   da janela é o `EditItemModal.caracterizacao.spec.tsx`. A janela tem as abas Detalhes ·
+   Conversa · Tarefas · Visitas e propostas · Origem (a aba Tarefas é da sessão de Tarefas,
+   com o número e o marcador de atrasada); a página não tem aba Tarefas (as tarefas são um
+   bloco da Ficha).
+2. **O card inicializa por `item.id`** (o `key` dos cards sem funil continua valendo).
+3. **O GET de um card (`GET …/pipeline_items/:id`) responde 404 para outro dono, card apagado
+   ou de outro funil** (a tela lê 404 como "sem acesso") — nunca 401 (401 encerra a sessão na
+   tela). Não troque o `show` do servidor para o `set_pipeline_item`, que levanta Pundit (401).
+4. **O PATCH do card responde sem a conversa:** "Sobre o negócio" copia só os dois campos.
+5. **Encaixes:** o bloco de Tarefas da Ficha é o `TarefasDoLead`, ligado em
+   `features/cardDoLead/pagina/encaixes.tsx`; o Histórico novo (Parte 5) entra em
+   `features/cardDoLead/pagina/ColunaDoHistorico.tsx`.
+6. **Os dias por etapa vêm prontos do servidor** (`PipelineItems::StageDurations`); a tela só
+   escreve (`textoDosDias`).
+7. **Endereço do card completo: só por `linkDoCardCompleto`/`linkAbsolutoDoCard`** (`features/pipelines/linkDoCard.ts`, da E3).
+8. **A situação do card mora no `useCardDoLead`** (grupo `situacao`): a janela chama `card.situacao.aoMudar`
+   e avisa o quadro (`onItemStatusChanged`); a Etapa trava no card fechado (`EtapaDoCard`). A rede da
+   situação na janela é o `EditItemModal.situacao.source.spec.ts`.
+9. **Concluído = Ganho pela rota da situação**, nos três lugares: Etapa (`useCardDoLead.moverEtapa`),
+   faixa (`FaixaDeEtapas` → `aoGanhar` da página) e quadro (`useBoardDrag`, Parte 3). Nunca pelo
+   `moveItem`: a rota da situação devolve o card já ganho e a frase de recusa pronta.
+10. **Além do plano (E4):** o `useCardDoLead` carrega `rodapeSalvando` (trava cruzada do
+    P3-T5) e recarrega o Histórico em `situacao.aoMudar`. Janela e página fecham dentro de
+    um único `startTransition` (transição do react-router 7: corrige o refetch e a reabertura
+    do card). O painel da Meta é chaveado pela situação, na janela e na Ficha.
