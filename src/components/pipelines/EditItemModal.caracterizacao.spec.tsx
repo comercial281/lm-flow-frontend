@@ -21,6 +21,8 @@ const s = vi.hoisted(() => ({
   getAll: vi.fn(),
   assign: vi.fn(),
   listForLead: vi.fn(),
+  cancelForLead: vi.fn(),
+  removeItem: vi.fn(),
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
 }));
@@ -47,14 +49,14 @@ vi.mock('@/services/contacts/labelsService', () => ({
 }));
 vi.mock('@/services/contacts/contactsService', () => ({ contactsService: { updateContact: s.updateContact } }));
 vi.mock('@/services/pipelines/pipelinesService', () => ({
-  pipelinesService: { moveItem: s.moveItem, removeItemFromPipeline: vi.fn(), archiveItem: vi.fn(), unarchiveItem: vi.fn() },
+  pipelinesService: { moveItem: s.moveItem, removeItemFromPipeline: s.removeItem, archiveItem: vi.fn(), unarchiveItem: vi.fn() },
 }));
 vi.mock('@/services/roletaConfig/roletaConfigService', () => ({
   roletaConfigService: { getAll: s.getAll, assign: s.assign },
   roletaLabel: (r?: { display_name?: string | null; name?: string | null } | null) => r?.display_name || r?.name || 'Roleta',
 }));
 vi.mock('@/services/roletaConfig/brokerAssignmentsService', () => ({
-  brokerAssignmentsService: { listForLead: s.listForLead },
+  brokerAssignmentsService: { listForLead: s.listForLead, cancelForLead: s.cancelForLead },
 }));
 vi.mock('@/components/roleta/OfferActions', () => ({ default: () => null }));
 vi.mock('@/components/capi/CapiConversionPanel', () => ({
@@ -97,7 +99,16 @@ vi.mock('@/components/chat/contact-sidebar/AiUnderstandingPanel', () => ({ defau
 vi.mock('@/components/pipelines/CardNotesTab', () => ({ default: () => <div data-testid="observacoes" /> }));
 vi.mock('@/components/pipelines/CardPropertyInterests', () => ({ default: () => <div data-testid="imoveis" /> }));
 vi.mock('@/components/pipelines/card/OutrasInformacoes', () => ({ default: () => null }));
-vi.mock('@/components/pipelines/CardConversationTab', () => ({ default: () => <div data-testid="aba-conversa" /> }));
+vi.mock('@/components/pipelines/CardConversationTab', () => ({
+  default: (p: { item: { id: string; conversation?: { id: number } } }) => (
+    <div data-testid="aba-conversa" data-item={p.item.id} data-conversa={p.item.conversation?.id ?? ''} />
+  ),
+}));
+vi.mock('@/components/pipelines/card/JuntarContato', () => ({
+  default: (p: { contato: { id: string }; onFechar: () => void }) => (
+    <div data-testid="juntar" data-contato={p.contato.id} />
+  ),
+}));
 vi.mock('@/components/pipelines/card/VisitsProposalsTab', () => ({ default: () => <div data-testid="aba-visitas" /> }));
 vi.mock('@/components/pipelines/card/CardOriginTab', () => ({
   default: (p: { manualOrigin: string }) => <div data-testid="aba-origem">{p.manualOrigin}</div>,
@@ -336,6 +347,105 @@ describe('janela do card · caracterização (E4)', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Tarefas' }));
     expect(await screen.findByText('Pra criar tarefa, coloque o lead no funil.')).toBeInTheDocument();
     expect(screen.queryByTestId('aba-tarefas')).toBeNull();
+  });
+
+  it('aba Conversa recebe o card, com a conversa dele', async () => {
+    abrir({ item: deConversa });
+    await userEvent.click(screen.getByRole('tab', { name: 'Conversa' }));
+
+    const aba = await screen.findByTestId('aba-conversa');
+    expect(aba).toHaveAttribute('data-item', 'i2');
+    expect(aba).toHaveAttribute('data-conversa', '77');
+  });
+
+  describe('menu "Mais ações do card"', () => {
+    const abrirMenu = async () => userEvent.click(screen.getByRole('button', { name: 'Mais ações do card' }));
+
+    it('lista as ações de hoje: copiar link, mandar pra roleta, juntar e remover do funil', async () => {
+      abrir();
+      await abrirMenu();
+
+      expect(await screen.findByRole('menuitem', { name: /Copiar link do card/ })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: /Mandar pra roleta/ })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: /Juntar com outro contato/ })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: /Remover do funil/ })).toBeInTheDocument();
+      expect(screen.queryByRole('menuitem', { name: /Tirar da roleta/ })).toBeNull();
+    });
+
+    it('Remover do funil confirma, chama o serviço com funil e card e fecha a janela', async () => {
+      s.removeItem.mockResolvedValue(undefined);
+      const onOpenChange = vi.fn();
+      abrir({ onOpenChange });
+      await abrirMenu();
+      await userEvent.click(await screen.findByRole('menuitem', { name: /Remover do funil/ }));
+
+      const confirmacao = await screen.findByRole('dialog', { name: 'Remover do funil?' });
+      expect(s.removeItem).not.toHaveBeenCalled();
+      await userEvent.click(within(confirmacao).getByRole('button', { name: 'Remover do funil' }));
+
+      await waitFor(() => expect(s.removeItem).toHaveBeenCalledWith('p1', 'i1'));
+      await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    });
+
+    it('Mandar pra roleta escolhe a roleta ligada e manda o lead', async () => {
+      s.getAll.mockResolvedValue([{ id: 'r1', name: 'Roleta Norte', is_active: true }]);
+      s.assign.mockResolvedValue({ assigned_user: { name: 'Bruno' } });
+      abrir();
+      await waitFor(() => expect(s.getAll).toHaveBeenCalled());
+      await abrirMenu();
+      await userEvent.click(await screen.findByRole('menuitem', { name: /Mandar pra roleta/ }));
+
+      const dialogo = await screen.findByRole('dialog', { name: 'Mandar pra roleta' });
+      await userEvent.click(within(dialogo).getByRole('combobox', { name: 'Roleta' }));
+      await userEvent.click(await screen.findByRole('option', { name: 'Roleta Norte' }));
+      await userEvent.click(within(dialogo).getByRole('button', { name: 'Mandar pra roleta' }));
+
+      await waitFor(() => expect(s.assign).toHaveBeenCalledTimes(1));
+      expect(s.assign.mock.calls[0][0]).toBe('r1');
+    });
+
+    it('Juntar com outro contato abre a junção com o contato do card', async () => {
+      abrir();
+      await abrirMenu();
+      await userEvent.click(await screen.findByRole('menuitem', { name: /Juntar com outro contato/ }));
+
+      expect(await screen.findByTestId('juntar')).toHaveAttribute('data-contato', 'c1');
+    });
+  });
+
+  describe('roleta no card', () => {
+    const daRoleta = {
+      ...(deFormulario as object),
+      roleta: { id: 'r1', name: 'Roleta Norte' },
+    } as never;
+    const oferta = { id: 'o1', status: 'pending', corretor: 'Carlos', lead_name: 'Maria Souza' };
+
+    it('lead que veio pela roleta mostra de qual roleta', async () => {
+      abrir({ item: daRoleta });
+      expect(await screen.findByText(/veio pela Roleta Norte/)).toBeInTheDocument();
+    });
+
+    it('oferta correndo: avisa quem decide e "Tirar da roleta" cancela a oferta (menu e bloco)', async () => {
+      s.listForLead.mockResolvedValue([oferta]);
+      s.cancelForLead.mockResolvedValue({ cancelled: 1, owner_id: null });
+      abrir({ item: daRoleta });
+
+      expect(await screen.findByText(/No sorteio agora, esperando o aceite de/)).toBeInTheDocument();
+      expect(s.listForLead).toHaveBeenCalledWith('c1');
+      expect(screen.getByText('Carlos')).toBeInTheDocument();
+
+      // também aparece no menu "Mais ações"
+      await userEvent.click(screen.getByRole('button', { name: 'Mais ações do card' }));
+      expect(await screen.findByRole('menuitem', { name: /Tirar da roleta/ })).toBeInTheDocument();
+      await userEvent.keyboard('{Escape}');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Tirar da roleta' }));
+      const dialogo = await screen.findByRole('dialog', { name: 'Tirar da roleta' });
+      await userEvent.click(within(dialogo).getByRole('button', { name: 'Tirar da roleta' }));
+
+      await waitFor(() => expect(s.cancelForLead).toHaveBeenCalledWith('c1', null));
+      await waitFor(() => expect(screen.queryByText(/No sorteio agora/)).toBeNull());
+    });
   });
 
   it('card no funil: Meta compacta e Ganho | Perdido no rodapé', () => {
