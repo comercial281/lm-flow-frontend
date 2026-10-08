@@ -67,6 +67,10 @@ export interface HistoricoDoLeadProps {
 
 type Estado = 'carregando' | 'pronto' | 'erro';
 
+// Compacto: se a página só trouxe observações (que aqui não aparecem), busca a
+// próxima sozinho — no máximo estas vezes por carga, depois fica o "Carregar mais".
+const MAX_PULOS_SO_DE_NOTAS = 3;
+
 export default function HistoricoDoLead({
   contactId,
   modo,
@@ -88,12 +92,17 @@ export default function HistoricoDoLead({
   const [postando, setPostando] = useState(false);
   // Resposta velha (trocou de filtro no meio) não pinta por cima da nova.
   const pedido = useRef(0);
+  const pulos = useRef(0);
 
   const carregar = useCallback(async () => {
     if (!contactId) return;
     const meu = ++pedido.current;
+    pulos.current = 0;
     setEstado('carregando');
     setFalhouMais(false);
+    // Um "Carregar mais" atropelado por esta carga não desliga sozinho (o finally
+    // dele ignora resposta velha): sem isto o botão da lista nova nasce travado.
+    setCarregandoMais(false);
     try {
       const pagina = await leadTimelineService.list(contactId, { category: categoria });
       if (meu !== pedido.current) return;
@@ -132,9 +141,21 @@ export default function HistoricoDoLead({
     }
   }, [contactId, categoria, proximo]);
 
+  // Na janela a nota mora na caixa Observações, ao lado: aqui ela sairia em dobro.
+  const visiveis = completo ? eventos : eventos.filter(e => e.kind !== 'note_added');
+  const paginaSoDeNotas = !completo && visiveis.length === 0;
+
+  useEffect(() => {
+    if (!paginaSoDeNotas || estado !== 'pronto' || !proximo || carregandoMais || falhouMais) return;
+    if (pulos.current >= MAX_PULOS_SO_DE_NOTAS) return;
+    pulos.current += 1;
+    void carregarMais();
+  }, [paginaSoDeNotas, estado, proximo, carregandoMais, falhouMais, carregarMais]);
+
   const postar = useCallback(async () => {
     const conteudo = texto.trim();
-    if (!conteudo || !contactId) return;
+    // O Ctrl+Enter não passa pelo botão desabilitado: sem isto, duas teclas = duas notas.
+    if (!conteudo || !contactId || postando) return;
     setPostando(true);
     try {
       await notesService.create(contactId, { content: conteudo });
@@ -145,7 +166,7 @@ export default function HistoricoDoLead({
     } finally {
       setPostando(false);
     }
-  }, [texto, contactId, carregar]);
+  }, [texto, contactId, postando, carregar]);
 
   if (!contactId) {
     return (
@@ -154,9 +175,6 @@ export default function HistoricoDoLead({
       </p>
     );
   }
-
-  // Na janela a nota mora na caixa Observações, ao lado: aqui ela sairia em dobro.
-  const visiveis = completo ? eventos : eventos.filter(e => e.kind !== 'note_added');
 
   return (
     <section aria-label="Histórico do lead" className="flex min-h-0 flex-1 flex-col gap-3">
@@ -206,7 +224,7 @@ export default function HistoricoDoLead({
             className="resize-none text-sm"
           />
           <div className="flex items-center justify-between">
-            <span className="text-[10px] text-muted-foreground">Ctrl + Enter para postar</span>
+            <span className="text-xs text-muted-foreground">Ctrl + Enter para postar</span>
             <Button size="sm" className="h-7 gap-1.5 text-xs" onClick={() => void postar()} disabled={postando || !texto.trim()}>
               {postando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
               Postar

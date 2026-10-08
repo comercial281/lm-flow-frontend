@@ -1,5 +1,5 @@
 // src/features/cardDoLead/historico/useVersaoDoHistorico.spec.ts
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { EVENTO_TAREFAS_MUDARAM } from '@/features/tarefas/tarefasService';
 import { useVersaoDoHistorico } from './useVersaoDoHistorico';
@@ -33,14 +33,26 @@ describe('useVersaoDoHistorico', () => {
 
   it('muda quando a sessão de Tarefas avisa que uma tarefa mudou (criar, concluir, reabrir)', () => {
     const item = { stage_id: 's1', status: 'open', assignee: { id: 'u1', name: 'Ana' } } as never;
-    const { result, unmount } = renderHook(() => useVersaoDoHistorico(item));
+    const { result } = renderHook(() => useVersaoDoHistorico(item));
     const v0 = result.current.versaoHistorico;
 
     act(() => {
       window.dispatchEvent(new CustomEvent(EVENTO_TAREFAS_MUDARAM));
     });
     expect(result.current.versaoHistorico).not.toBe(v0);
+  });
+
+  it('tira o ouvinte das Tarefas ao desmontar', () => {
+    const tirar = vi.spyOn(window, 'removeEventListener');
+    const item = { stage_id: 's1', status: 'open', assignee: null } as never;
+    const { result, unmount } = renderHook(() => useVersaoDoHistorico(item));
+    const v0 = result.current.versaoHistorico;
 
     unmount();
+
+    expect(tirar).toHaveBeenCalledWith(EVENTO_TAREFAS_MUDARAM, expect.any(Function));
+    expect(() => window.dispatchEvent(new CustomEvent(EVENTO_TAREFAS_MUDARAM))).not.toThrow();
+    expect(result.current.versaoHistorico).toBe(v0);
+    tirar.mockRestore();
   });
 });

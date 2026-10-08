@@ -196,3 +196,65 @@ describe('HistoricoDoLead completo (página do card)', () => {
     expect(nomesDosFiltros()).toEqual(['Tudo', 'Atividades', 'Rodízios', 'Alterações']);
   });
 });
+
+describe('HistoricoDoLead — correções da revisão', () => {
+  it('recarga no meio do "Carregar mais" não deixa o botão da lista nova travado', async () => {
+    list
+      .mockResolvedValueOnce(pagina([ev({ id: 'a', title: 'Primeiro' })], 'cursor-1'))
+      .mockReturnValueOnce(new Promise(() => {}))
+      .mockResolvedValueOnce(pagina([ev({ id: 'r', title: 'Rodízio novo' })], 'cursor-2'));
+    render(<HistoricoDoLead contactId="c1" modo="compacto" />);
+    await screen.findByText('Primeiro');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Carregar mais' }));
+    expect(screen.getByRole('button', { name: 'Carregar mais' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Rodízios' }));
+
+    expect(await screen.findByText('Rodízio novo')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Carregar mais' })).toBeEnabled();
+  });
+
+  it('compacto: página só de observações busca a próxima sozinho', async () => {
+    const nota = (id: string) =>
+      ev({ id, kind: 'note_added', category: 'observacao', title: 'Observação adicionada', detail: 'Ligar às 18h' });
+    list
+      .mockResolvedValueOnce(pagina([nota('n1'), nota('n2')], 'cursor-1'))
+      .mockResolvedValueOnce(pagina([ev({ id: 'b', title: 'Segundo' })], null));
+    render(<HistoricoDoLead contactId="c1" modo="compacto" />);
+
+    expect(await screen.findByText('Segundo')).toBeInTheDocument();
+    expect(list).toHaveBeenLastCalledWith('c1', { category: 'resumo', before: 'cursor-1' });
+    expect(screen.queryByRole('button', { name: 'Carregar mais' })).not.toBeInTheDocument();
+  });
+
+  it('compacto: o pulo sozinho tem limite e depois sobra o "Carregar mais"', async () => {
+    let n = 0;
+    list.mockImplementation(async () => {
+      n += 1;
+      return pagina(
+        [ev({ id: `n${n}`, kind: 'note_added', category: 'observacao', title: 'Observação adicionada' })],
+        `cursor-${n}`,
+      );
+    });
+    render(<HistoricoDoLead contactId="c1" modo="compacto" />);
+
+    expect(await screen.findByRole('button', { name: 'Carregar mais' })).toBeEnabled();
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(4));
+    await new Promise(r => setTimeout(r, 50));
+    expect(list).toHaveBeenCalledTimes(4); // 1 carga + 3 pulos
+  });
+
+  it('Ctrl+Enter com a observação ainda salvando não posta em dobro', async () => {
+    list.mockResolvedValue(pagina([]));
+    criarNota.mockReturnValue(new Promise(() => {}));
+    render(<HistoricoDoLead contactId="c1" modo="completo" />);
+    await screen.findByText('Nada registrado ainda');
+
+    const caixa = screen.getByRole('textbox', { name: 'Escrever observação' });
+    await userEvent.type(caixa, 'Texto');
+    await userEvent.type(caixa, '{Control>}{Enter}{/Control}');
+    await userEvent.type(caixa, '{Control>}{Enter}{/Control}');
+
+    expect(criarNota).toHaveBeenCalledTimes(1);
+  });
+});
