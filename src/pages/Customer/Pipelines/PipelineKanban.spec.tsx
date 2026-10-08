@@ -207,6 +207,9 @@ describe('quadro do funil · o que continua igual', () => {
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Arquivar' }));
     await waitFor(() => expect(pipelinesService.archiveItem).toHaveBeenCalledWith('p1', 'i1'));
     expect(screen.queryByText('Maria Souza')).toBeNull();
+    // Os números das abas se refazem em silêncio, pedindo a aba que está aberta.
+    await waitFor(() => expect(pipelinesService.getPipeline).toHaveBeenCalledTimes(2));
+    expect(pipelinesService.getPipeline).toHaveBeenLastCalledWith('p1', { status: 'open' });
   });
 
   it('o filtro de Tarefas (Filtros > Tarefas) esconde os cards sem tarefa que vence hoje / atrasada', async () => {
@@ -420,6 +423,26 @@ describe('quadro do funil · abas', () => {
     expect(screen.getByText('Paula Reis')).toBeInTheDocument();
   });
 
+  it('aba que não carregou: erro com "Tentar de novo", nunca os cards da aba anterior', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(pipelinesService.getPipeline).mockImplementation(async (_id, opts) => {
+      if (opts?.status === 'lost') throw new Error('falhou');
+      return FUNIL(opts?.status);
+    });
+    montar();
+    await screen.findByText('Maria Souza');
+    await userEvent.click(screen.getByRole('tab', { name: 'Perdidos 1' }));
+    const tentar = await screen.findByRole('button', { name: 'Tentar de novo' });
+    expect(screen.queryByText('Maria Souza')).toBeNull();
+    expect(toast.error).toHaveBeenCalledWith('kanban.messages.loadDataError');
+
+    vi.mocked(pipelinesService.getPipeline).mockImplementation(async (_id, opts) => FUNIL(opts?.status));
+    await userEvent.click(tentar);
+    expect(await screen.findByText('Rui Alves')).toBeInTheDocument();
+    expect(pipelinesService.getPipeline).toHaveBeenLastCalledWith('p1', { status: 'lost' });
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).toBeNull();
+  });
+
   it('"Adicionar etapa" só aparece em Abertos', async () => {
     montar('/pipelines/p1?aba=ganhos');
     await screen.findByText('Paula Reis');
@@ -438,7 +461,15 @@ describe('quadro do funil · abas', () => {
     vi.mocked(pipelinesService.getPipeline).mockImplementationOnce(async () => FUNIL('open'));
     montar('/pipelines/p1?card=i1');
     // A janela abre pelo ?card= e o botão falso aparece.
-    await userEvent.click(await screen.findByRole('button', { name: 'Marcar ganho (janela falsa)' }));
+    const botao = await screen.findByRole('button', { name: 'Marcar ganho (janela falsa)' });
+    // Segura a resposta do recarregamento: a saída do card tem que ser local e imediata.
+    let soltar: (p: Pipeline) => void = () => {};
+    vi.mocked(pipelinesService.getPipeline).mockImplementationOnce(() => new Promise<Pipeline>(r => { soltar = r; }));
+    await userEvent.click(botao);
+    expect(within(document.getElementById('etapa-s1')!).queryByText('Maria Souza')).toBeNull();
+    expect(pipelinesService.getPipeline).toHaveBeenCalledTimes(2);
+    expect(pipelinesService.getPipeline).toHaveBeenLastCalledWith('p1', { status: 'open' });
+    soltar(FUNIL('open'));
 
     await waitFor(() => expect(within(document.getElementById('etapa-s1')!).queryByText('Maria Souza')).toBeNull());
     expect(screen.queryByText('Este lead não está nesta aba.')).toBeNull();

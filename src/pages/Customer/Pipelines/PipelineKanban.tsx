@@ -18,6 +18,7 @@ import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useCan } from '@/hooks/useCan';
 import { boardHeaderActions } from './boardActions';
 import BoardTopBar, { type ModoDoQuadro } from './quadro/BoardTopBar';
+import EmptyState from '@/components/base/EmptyState';
 import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { lazyWithRetry } from '@/utils/chunkReload';
@@ -135,6 +136,8 @@ export default function PipelineKanban() {
   const pipelineRef = useRef<Pipeline | null>(null);
   pipelineRef.current = pipeline;
   const [carregandoQuadro, setCarregandoQuadro] = useState(false);
+  // A aba pedida não carregou: o quadro mostra o erro (nunca os cards da aba anterior).
+  const [erroDaAba, setErroDaAba] = useState(false);
   const loadPipelineData = useCallback(async (silent = false) => {
     if (!pipelineId) return;
     const meu = ++pedidoRef.current;
@@ -144,7 +147,9 @@ export default function PipelineKanban() {
       setPipeline(cached);
       setStages(cached.stages || []);
       setLoading(false);
+      setCarregandoQuadro(false);
     }
+    if (!silent) setErroDaAba(false);
     if (mostrarEspera) {
       // Primeira carga: a tela inteira espera. Troca de aba: só o quadro.
       if (pipelineRef.current) setCarregandoQuadro(true);
@@ -156,9 +161,17 @@ export default function PipelineKanban() {
       if (statusDaAba === 'open') setCachedPipeline(pipelineId, pipelineData);
       setPipeline(pipelineData);
       setStages(pipelineData.stages || []);
+      setErroDaAba(false);
     } catch (error) {
       console.error('Error loading pipeline data:', error);
-      if (mostrarEspera && meu === pedidoRef.current) toast.error(t('kanban.messages.loadDataError'));
+      if (mostrarEspera && meu === pedidoRef.current) {
+        toast.error(t('kanban.messages.loadDataError'));
+        // Troca de aba que falhou: some o quadro da aba anterior e mostra o erro.
+        if (pipelineRef.current) {
+          setStages([]);
+          setErroDaAba(true);
+        }
+      }
     } finally {
       if (meu === pedidoRef.current) {
         setLoading(false);
@@ -717,10 +730,13 @@ export default function PipelineKanban() {
         {cardForaDaAba && <AvisoCardForaDaAba aoFechar={fecharCardNoEndereco} />}
 
         {/* Kanban Board */}
+        {(viewMode === 'board' || viewMode === 'list') && erroDaAba && !carregandoQuadro && (
+          <EmptyState tipo="erro" aoTentarDeNovo={() => { void loadPipelineData(); }} />
+        )}
         {viewMode === 'board' && carregandoQuadro && (
           <div className="flex flex-1 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label="Carregando a aba" /></div>
         )}
-        {viewMode === 'board' && !carregandoQuadro && (
+        {viewMode === 'board' && !carregandoQuadro && !erroDaAba && (
         <div className="flex-1 overflow-hidden relative">
           <div
             ref={boardScrollRef}
@@ -797,7 +813,7 @@ export default function PipelineKanban() {
         {viewMode === 'list' && carregandoQuadro && (
           <div className="flex flex-1 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label="Carregando a aba" /></div>
         )}
-        {viewMode === 'list' && !carregandoQuadro && (
+        {viewMode === 'list' && !carregandoQuadro && !erroDaAba && (
           <PipelineListView
             stages={filteredStages}
             ordem={listSortOrder}
