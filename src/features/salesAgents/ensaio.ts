@@ -4,10 +4,13 @@ import type {
 import { segundos } from '@/lib/formato';
 import { MOMENTOS_DO_FUNIL } from '@/pages/Customer/Automations/SalesAgents/configurar/opcoes';
 
-/** O que aparece no chat do Testar, na ordem. */
+/**
+ * O que aparece no chat do Testar, na ordem. `hora` = "14:02" do relógio do
+ * teste; `lida` = os dois tiques azuis (ela respondeu).
+ */
 export type ItemDaConversa =
-  | { tipo: 'lead'; texto: string }
-  | { tipo: 'ia'; texto: string; pausa: number; audio?: boolean }
+  | { tipo: 'lead'; texto: string; hora?: string; lida?: boolean }
+  | { tipo: 'ia'; texto: string; pausa: number; audio?: boolean; hora?: string }
   | { tipo: 'midia'; item: TestMediaItem; propertyCode: string }
   | { tipo: 'sistema'; texto: string };
 
@@ -33,6 +36,29 @@ export function horaDoEnsaio(iso: string): string {
   const [, ano, mes, dia, h, min] = m;
   const semana = DIAS[new Date(Date.UTC(Number(ano), Number(mes) - 1, Number(dia))).getUTCDay()];
   return `${semana}, ${dia}/${mes} ${h}:${min}`;
+}
+
+/** "14:02", lido do próprio texto (mesmo motivo do horaDoEnsaio). */
+export function horaCurta(iso: string | null | undefined): string | undefined {
+  const m = /T(\d{2}):(\d{2})/.exec(iso ?? '');
+  return m ? `${m[1]}:${m[2]}` : undefined;
+}
+
+/**
+ * Quanto tempo os três pontinhos ficam antes de cada bolha dela. A pausa de
+ * verdade (a rajada espera uns segundos entre uma mensagem e outra) fica bem mais
+ * curta no teste, senão ele arrasta; texto maior demora um pouco mais.
+ */
+export function tempoDeDigitacao(texto: string, pausaMs: number): number {
+  const pelaPausa = pausaMs * 0.25;
+  const peloTexto = 400 + texto.length * 12;
+  return Math.round(Math.min(1800, Math.max(700, pelaPausa, peloTexto)));
+}
+
+/** "faixa_de_investimento" → "Faixa de investimento" (a chave do Meta vem assim). */
+export function rotuloDaPergunta(chave: string): string {
+  const t = chave.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : chave;
 }
 
 /** "Haiku", "Sonnet"… a partir do id do modelo; id desconhecido sai como veio. */
@@ -75,9 +101,11 @@ export function linhasDoQueAconteceria(o: RehearsalOutcome | null | undefined): 
   if (o.delay_s && !o.skipped) linhas.push(`Responderia uns ${o.delay_s} s depois da mensagem do lead`);
   if (o.skipped) linhas.push(`Ela ficaria calada: ${o.skipped.text}`);
   // ⚠️ O texto de "sem número" do servidor já diz "no atendimento real": não prefixar de novo.
-  o.warnings.forEach((w) => linhas.push(w.reason === 'no_number'
-    ? `${w.text}. O teste respondeu mesmo assim.`
-    : `No atendimento real: ${w.text}. O teste respondeu mesmo assim.`));
+  o.warnings.forEach((w) => linhas.push(
+    w.reason === 'no_number' ? `${w.text}. O teste respondeu mesmo assim.`
+      : w.reason === GATILHO ? AVISO_DO_GATILHO
+        : `No atendimento real: ${w.text}. O teste respondeu mesmo assim.`,
+  ));
   if (o.handoff) {
     if (o.handoff.kind === 'none') {
       linhas.push(`Tentaria passar o lead, mas não tem pra quem: ${o.handoff.problem ?? 'destino não configurado'}`);
@@ -110,6 +138,10 @@ export function linhasDoQueAconteceria(o: RehearsalOutcome | null | undefined): 
   return linhas;
 }
 
+/** O motivo do gatilho que não bateu (SalesAgentRun::MOTIVOS_PT['trigger_no_match']). */
+export const GATILHO = 'trigger_no_match';
+export const AVISO_DO_GATILHO = 'No atendimento real ela não entraria aqui: nenhum gatilho bateu. O teste respondeu mesmo assim.';
+
 function rotuloDoEvento(kind: string, attempt: number): string {
   if (kind === 'reengagement') return `Retomada ${attempt} de 2`;
   if (kind === 'followup') return `Follow-up ${attempt}`;
@@ -122,7 +154,7 @@ export function itensDoTurno(turn: RehearsalTurn, propertyCode: string): ItemDaC
   if (turn.kind === 'advance') {
     (turn.events ?? []).forEach((e) => {
       itens.push({ tipo: 'sistema', texto: `⏩ ${horaDoEnsaio(e.at)} · ${rotuloDoEvento(e.kind, e.attempt)}` });
-      e.messages.forEach((m) => itens.push({ tipo: 'ia', texto: m.content, pausa: 0 }));
+      e.messages.forEach((m) => itens.push({ tipo: 'ia', texto: m.content, pausa: 0, hora: horaCurta(e.at) }));
       if (e.blank) itens.push({ tipo: 'sistema', texto: 'A IA devolveu resposta vazia.' });
     });
     if (turn.idle) itens.push({ tipo: 'sistema', texto: `⏩ ${horaDoEnsaio(turn.at)} · ${turn.idle}` });
@@ -131,11 +163,13 @@ export function itensDoTurno(turn: RehearsalTurn, propertyCode: string): ItemDaC
   }
   if (turn.kind === 'error') return [{ tipo: 'sistema', texto: `Deu erro: ${turn.outcome?.error ?? 'sem detalhe'}` }];
   if (turn.kind === 'silent' && turn.outcome?.skipped) {
-    return [{ tipo: 'sistema', texto: `Ela ficaria calada: ${turn.outcome.skipped.text}` }];
+    const dica = turn.outcome.skipped.reason === GATILHO ? '. Desligue "Respeitar o gatilho" pra ver como ela responderia.' : '';
+    return [{ tipo: 'sistema', texto: `Ela ficaria calada: ${turn.outcome.skipped.text}${dica}` }];
   }
   if (turn.reaction) itens.push({ tipo: 'sistema', texto: `Curtiria a mensagem do lead com ${turn.reaction}` });
   if (turn.note) itens.push({ tipo: 'sistema', texto: `Sugestão pro corretor (não vai pro lead): ${turn.note}` });
-  turn.messages.forEach((m) => itens.push({ tipo: 'ia', texto: m.content, pausa: m.pause_ms, ...(m.audio ? { audio: true } : {}) }));
+  const hora = horaCurta(turn.at);
+  turn.messages.forEach((m) => itens.push({ tipo: 'ia', texto: m.content, pausa: m.pause_ms, hora, ...(m.audio ? { audio: true } : {}) }));
   turn.media.forEach((item) => itens.push({ tipo: 'midia', item, propertyCode }));
   return itens;
 }
@@ -143,7 +177,9 @@ export function itensDoTurno(turn: RehearsalTurn, propertyCode: string): ItemDaC
 /** Conversa real carregada: o histórico vira bolhas, e uma linha separa o real do teste. */
 export function itensDoEstado(state: RehearsalState): ItemDaConversa[] {
   const itens: ItemDaConversa[] = state.messages.map((m) => (
-    m.role === 'user' ? { tipo: 'lead' as const, texto: m.content } : { tipo: 'ia' as const, texto: m.content, pausa: 0 }
+    m.role === 'user'
+      ? { tipo: 'lead' as const, texto: m.content, hora: horaCurta(m.at), lida: true }
+      : { tipo: 'ia' as const, texto: m.content, pausa: 0, hora: horaCurta(m.at) }
   ));
   itens.push({ tipo: 'sistema', texto: 'Até aqui é a conversa real. Daqui pra frente é teste.' });
   return itens;

@@ -4,10 +4,13 @@ import userEvent from '@testing-library/user-event';
 import type { RehearsalOutcome, RehearsalResult, RehearsalState, RehearsalTurn, SalesAgent } from '@/services/salesAgents/salesAgentsService';
 
 const rehearsal = vi.hoisted(() => vi.fn());
+const rehearsalForms = vi.hoisted(() => vi.fn());
 const testSend = vi.hoisted(() => vi.fn());
-vi.mock('@/services/salesAgents/salesAgentsService', () => ({ salesAgentsService: { rehearsal, testSend } }));
+vi.mock('@/services/salesAgents/salesAgentsService', () => ({ salesAgentsService: { rehearsal, rehearsalForms, testSend } }));
 const toastError = vi.hoisted(() => vi.fn());
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: toastError } }));
+import { useAuthStore } from '@/store/authStore';
+import type { UserResponse } from '@/types/auth/auth';
 import TestarJanela from './TestarJanela';
 
 const agent = { id: 'ia-1', name: 'Sara · Lançamentos', lead_facing_name: 'Sara', model: 'claude-haiku-4-5-20251001', persona_kind: 'assistant', handoff_target: 'roleta', transfer_config: {} } as unknown as SalesAgent;
@@ -23,13 +26,19 @@ const resposta = (texto: string, s: RehearsalState, o = outcome()): RehearsalRes
 const resultado = (turn: Partial<RehearsalTurn>, s: RehearsalState): RehearsalResult =>
   ({ state: s, turn: { kind: 'reply', at: s.now, messages: [], reaction: null, note: null, media: [], outcome: outcome(), ...turn } });
 
-beforeEach(() => { rehearsal.mockReset(); testSend.mockReset(); toastError.mockReset(); localStorage.clear(); });
+beforeEach(() => {
+  rehearsal.mockReset(); rehearsalForms.mockReset(); testSend.mockReset(); toastError.mockReset(); localStorage.clear();
+  useAuthStore.setState({ currentUser: { id: 'u1', email: 'tony@x.com', name: 'Tony Marques' } as UserResponse });
+});
 
+// ritmo 0: as bolhas chegam na mesma ordem, sem as esperas da animação.
 function abrir(a: SalesAgent = agent) {
   const aoFechar = vi.fn();
-  const r = render(<><button>Testar</button><TestarJanela agent={a} aoFechar={aoFechar} /></>);
+  const r = render(<><button>Testar</button><TestarJanela agent={a} aoFechar={aoFechar} ritmo={0} /></>);
   return Object.assign(aoFechar, { r });
 }
+
+const cenario = (nome: string) => userEvent.click(screen.getByRole('radio', { name: new RegExp(`^${nome}`) }));
 
 describe('TestarJanela', () => {
   it('é uma janela com nome, o celular com o nome que o lead vê e o selo TESTE', () => {
@@ -129,12 +138,12 @@ describe('TestarJanela', () => {
   it('Recomeçar com um cenário escolhido recomeça O MESMO cenário (a frase não mente)', async () => {
     rehearsal.mockResolvedValueOnce(resposta('Que bom que voltou!', estado())).mockResolvedValueOnce(resposta('De novo', estado()));
     abrir();
-    await userEvent.selectOptions(screen.getByLabelText('Cenário'), 'Sumiu e voltou');
+    await cenario('Sumiu e voltou');
     await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
     await screen.findByText('Que bom que voltou!');
     await userEvent.click(screen.getByRole('button', { name: 'Recomeçar' }));
     expect(screen.queryByText('Que bom que voltou!')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Cenário')).toHaveValue('sumiu-voltou');
+    expect(screen.getByRole('radio', { name: /^Sumiu e voltou/ })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByText('quero saber do apartamento de 2 quartos')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
     await screen.findByText('De novo');
@@ -173,7 +182,7 @@ describe('TestarJanela', () => {
     expect(screen.getByText('Ainda não escolheu.')).toBeInTheDocument();
   });
 
-  it('uma bolha por mensagem da rajada, com o "digitando", e o que aconteceria com o card', async () => {
+  it('uma bolha por mensagem da rajada, e o que aconteceria com o card', async () => {
     rehearsal.mockResolvedValueOnce(resultado({
       messages: [{ content: 'Oi Camila!', pause_ms: 0 }, { content: 'Já te passo pro time.', pause_ms: 1200 }],
       outcome: outcome({
@@ -185,8 +194,7 @@ describe('TestarJanela', () => {
     abrir();
     await userEvent.type(screen.getByLabelText('Mensagem do lead'), 'quero falar com alguém{Enter}');
     await screen.findByText('Oi Camila!');
-    expect(screen.getByText('Já te passo pro time.')).toBeInTheDocument();
-    expect(screen.getByText('digitando 1,2 s')).toBeInTheDocument();
+    expect(await screen.findByText('Já te passo pro time.')).toBeInTheDocument();
     const painel = screen.getByRole('complementary', { name: 'O que ela está fazendo' });
     expect(within(painel).getByText('Passaria pra Roleta Zona Sul agora')).toBeInTheDocument();
     expect(within(painel).getByText('Motivo pro corretor: Pediu uma pessoa')).toBeInTheDocument();
@@ -208,7 +216,7 @@ describe('TestarJanela', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Até ela agir sozinha' }));
     await screen.findByText('E aí, conseguiu ver?');
     expect(screen.getByText(/Retomada 1 de 2/)).toBeInTheDocument();
-    expect(rehearsal.mock.calls[1][1]).toEqual({ step: 'advance', state: a, hours: null });
+    expect(rehearsal.mock.calls[1][1]).toEqual({ step: 'advance', state: a, hours: null, honor_triggers: false });
     expect(screen.getByText('Morna')).toBeInTheDocument();
   });
 
@@ -238,16 +246,14 @@ describe('TestarJanela', () => {
     await waitFor(() => expect(testSend).toHaveBeenCalledWith('ia-1', { phone: '11999998888', token: 'tok-ap1', property_code: 'AP1' }));
   });
 
-  it('os 6 cenários prontos; escolher um mostra a frase dele e manda o histórico como semente', async () => {
+  it('os cartões de cenário; escolher um mostra a frase dele e manda o histórico como semente', async () => {
     rehearsal.mockResolvedValueOnce(resposta('Que bom que voltou!', estado()));
     abrir();
-    const seletor = screen.getByLabelText('Cenário');
-    for (const nome of ['Veio do anúncio', 'Formulário do Meta', 'Já visitou', 'Conversa em andamento', 'Sumiu e voltou', 'Pede uma pessoa']) {
-      expect(within(seletor).getByRole('option', { name: nome })).toBeInTheDocument();
-    }
-    await userEvent.selectOptions(seletor, 'Sumiu e voltou');
-    expect(screen.getByText('Parou de responder 3 dias atrás e voltou: retoma sem recomeçar.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Nome do lead')).toHaveValue('Juliana');
+    const cartoes = screen.getAllByRole('radio').map((r) => r.querySelector('span')?.textContent);
+    expect(cartoes).toEqual(['Conversa livre', 'Chegou pelo anúncio', 'Preencheu o formulário', 'Sumiu e voltou', 'Pede um corretor']);
+    expect(screen.getByRole('radio', { name: /^Conversa livre/ })).toHaveAttribute('aria-checked', 'true');
+    await cenario('Sumiu e voltou');
+    expect(screen.getByText('Parou de responder há 3 dias e voltou. Ela retoma de onde parou, sem se reapresentar.')).toBeInTheDocument();
     expect(screen.getByText('quero saber do apartamento de 2 quartos')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
     await screen.findByText('Que bom que voltou!');
@@ -257,47 +263,35 @@ describe('TestarJanela', () => {
     });
   });
 
+  // Pedido do dono do produto (07/10): escolher um nome é um passo a mais que faz desistir de testar.
+  it('o lead do teste é quem está testando: sem campo de nome, vai o primeiro nome', async () => {
+    rehearsal.mockResolvedValueOnce(resposta('Oi Tony!', estado()));
+    abrir();
+    expect(screen.queryByLabelText('Nome do lead')).not.toBeInTheDocument();
+    expect(screen.getByText('Tony')).toBeInTheDocument();
+    await cenario('Chegou pelo anúncio');
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    await screen.findByText('Oi Tony!');
+    expect(rehearsal.mock.calls[0][1]).toMatchObject({ context: { contact_name: 'Tony', source: 'Anúncio Instagram — clique para WhatsApp' } });
+  });
+
+  it('não tem mais "Salvar este cenário" nem campos de origem e formulário', () => {
+    abrir();
+    expect(screen.queryByRole('button', { name: 'Salvar este cenário' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('De onde veio')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Respostas do formulário')).not.toBeInTheDocument();
+  });
+
   it('cenário SUBSTITUI o teste: a conversa anterior some e o próximo turno começa do zero', async () => {
     rehearsal.mockResolvedValueOnce(resposta('Oi!', estado())).mockResolvedValueOnce(resposta('Olá Camila', estado()));
     abrir();
     await userEvent.type(screen.getByLabelText('Mensagem do lead'), 'oi{Enter}');
     await screen.findByText('Oi!');
-    await userEvent.selectOptions(screen.getByLabelText('Cenário'), 'Veio do anúncio');
+    await cenario('Chegou pelo anúncio');
     expect(screen.queryByText('Oi!')).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
     await screen.findByText('Olá Camila');
     expect(rehearsal.mock.calls[1][1]).toMatchObject({ step: 'turn', state: null, message: 'oi, vi o anúncio' });
-  });
-
-  it('salvar o cenário pede um nome, guarda no navegador e ele aparece na lista; remover tira', async () => {
-    abrir();
-    await userEvent.type(screen.getByLabelText('Nome do lead'), ' Silva');
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar este cenário' }));
-    await userEvent.type(await screen.findByLabelText('Nome do cenário'), 'Lead frio');
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar cenário' }));
-    const seletor = screen.getByLabelText('Cenário');
-    await waitFor(() => expect(within(seletor).getByRole('option', { name: 'Lead frio' })).toBeInTheDocument());
-    expect(JSON.parse(localStorage.getItem('lmflow:sales-agent-test-scenarios') ?? '[]')).toMatchObject([{ id: 'custom-lead-frio', contactName: 'Lead Teste Silva' }]);
-
-    await userEvent.selectOptions(seletor, 'Lead frio');
-    await userEvent.click(screen.getByRole('button', { name: 'Remover este cenário' }));
-    expect(within(seletor).queryByRole('option', { name: 'Lead frio' })).not.toBeInTheDocument();
-    expect(JSON.parse(localStorage.getItem('lmflow:sales-agent-test-scenarios') ?? '[]')).toEqual([]);
-  });
-
-  it('os cenários prontos não têm "Remover"', async () => {
-    abrir();
-    await userEvent.selectOptions(screen.getByLabelText('Cenário'), 'Veio do anúncio');
-    expect(screen.queryByRole('button', { name: 'Remover este cenário' })).not.toBeInTheDocument();
-  });
-
-  it('Esc com a pergunta do "Salvar este cenário" aberta fecha só a pergunta', async () => {
-    const aoFechar = abrir();
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar este cenário' }));
-    await screen.findByLabelText('Nome do cenário');
-    await userEvent.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByLabelText('Nome do cenário')).not.toBeInTheDocument());
-    expect(aoFechar).not.toHaveBeenCalled();
   });
 
   it('usar a conversa de um lead real só pede o telefone e só lê', async () => {
@@ -305,7 +299,7 @@ describe('TestarJanela', () => {
     rehearsal.mockResolvedValueOnce(resultado({ kind: 'loaded', outcome: outcome({ opening: 'Campanha Vivaz' }) }, carregado));
     abrir();
     expect(screen.queryByLabelText('Telefone com DDD')).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Usar a conversa de um lead real' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Mais opções' }));
     await userEvent.type(screen.getByLabelText('Telefone com DDD'), '(11) 99999-8888');
     await userEvent.click(screen.getByRole('button', { name: 'Carregar' }));
     await screen.findByText('oi, é do anúncio?');
@@ -320,7 +314,7 @@ describe('TestarJanela', () => {
     rehearsal.mockResolvedValueOnce(resultado({ kind: 'loaded', outcome: outcome() }, carregado))
       .mockResolvedValueOnce(resposta('Olá!', estado()));
     abrir();
-    await userEvent.click(screen.getByRole('button', { name: 'Usar a conversa de um lead real' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Mais opções' }));
     await userEvent.type(screen.getByLabelText('Telefone com DDD'), '11999998888');
     await userEvent.click(screen.getByRole('button', { name: 'Carregar' }));
     await screen.findByText('oi');
@@ -347,5 +341,117 @@ describe('TestarJanela', () => {
   it('o nome do celular cai pro nome da IA quando não há nome pro lead', () => {
     abrir({ ...agent, lead_facing_name: null } as unknown as SalesAgent);
     expect(screen.getByText('Sara · Lançamentos')).toBeInTheDocument();
+  });
+  // ── 07/10/2026: celular com cara de WhatsApp, gatilho e formulário de verdade ──
+
+  it('esperando a resposta: os três pontinhos e o "digitando…" no topo; depois, tiques azuis', async () => {
+    let responder: (r: RehearsalResult) => void = () => {};
+    rehearsal.mockReturnValueOnce(new Promise((ok) => { responder = ok; }));
+    abrir();
+    await userEvent.type(screen.getByLabelText('Mensagem do lead'), 'oi{Enter}');
+    expect(screen.getByLabelText('enviada')).toBeInTheDocument();
+    expect(await screen.findByTestId('digitando')).toBeInTheDocument();
+    expect(screen.getByText('digitando…')).toBeInTheDocument();
+    responder(resposta('Oi!', estado({ messages: [{ id: 'm1', role: 'user', content: 'oi', at: '2026-10-06T14:01:00-03:00', marks: {} }] })));
+    await screen.findByText('Oi!');
+    await waitFor(() => expect(screen.queryByTestId('digitando')).not.toBeInTheDocument());
+    expect(screen.getByLabelText('lida')).toBeInTheDocument();
+    expect(screen.getByText('14:01')).toBeInTheDocument();
+    expect(screen.getByText('online')).toBeInTheDocument();
+  });
+
+  it('ela calada: os tiques ficam cinza', async () => {
+    rehearsal.mockResolvedValueOnce(resultado({ kind: 'silent', outcome: outcome({ skipped: { reason: 'paused_by_human', text: 'A IA está pausada' } }) }, estado()));
+    abrir();
+    await userEvent.type(screen.getByLabelText('Mensagem do lead'), 'oi{Enter}');
+    await within(screen.getByTestId('celular-do-testar')).findByText('Ela ficaria calada: A IA está pausada');
+    expect(screen.getByLabelText('entregue')).toBeInTheDocument();
+  });
+
+  describe('Respeitar o gatilho', () => {
+    const comGatilho = { ...agent, triggers: [{ type: 'keyword', value: 'fluxoimob' }] } as unknown as SalesAgent;
+
+    it('IA sem gatilho: o interruptor não aparece', () => {
+      abrir();
+      expect(screen.queryByRole('switch', { name: 'Respeitar o gatilho' })).not.toBeInTheDocument();
+    });
+
+    it('começa desligado: ela responde, e o aviso aparece uma vez só', async () => {
+      const aviso = { reason: 'trigger_no_match', text: 'Nenhum gatilho de ativação bateu com esta conversa' };
+      rehearsal.mockResolvedValueOnce(resposta('Oi!', estado(), outcome({ warnings: [aviso] })))
+        .mockResolvedValueOnce(resposta('Pra morar?', estado(), outcome({ warnings: [aviso] })));
+      abrir(comGatilho);
+      expect(screen.getByRole('switch', { name: 'Respeitar o gatilho' })).not.toBeChecked();
+      await userEvent.type(screen.getByLabelText('Mensagem do lead'), 'oi{Enter}');
+      await screen.findByText('Oi!');
+      await userEvent.type(screen.getByLabelText('Mensagem do lead'), 'quero ver{Enter}');
+      await screen.findByText('Pra morar?');
+      const celular = screen.getByTestId('celular-do-testar');
+      expect(within(celular).getAllByText(/No atendimento real ela não entraria aqui/)).toHaveLength(1);
+      expect(rehearsal.mock.calls[0][1]).toMatchObject({ step: 'turn', honor_triggers: false });
+    });
+
+    it('ligado: manda respeitar, e quando ela cala a linha ensina a desligar', async () => {
+      rehearsal.mockResolvedValueOnce(resultado({
+        kind: 'silent', outcome: outcome({ skipped: { reason: 'trigger_no_match', text: 'Nenhum gatilho de ativação bateu com esta conversa' } }),
+      }, estado()));
+      abrir(comGatilho);
+      await userEvent.click(screen.getByRole('switch', { name: 'Respeitar o gatilho' }));
+      await userEvent.type(screen.getByLabelText('Mensagem do lead'), 'oi{Enter}');
+      expect(await screen.findByText(/Desligue "Respeitar o gatilho" pra ver como ela responderia/)).toBeInTheDocument();
+      expect(rehearsal.mock.calls[0][1]).toMatchObject({ honor_triggers: true });
+    });
+  });
+
+  describe('Preencheu o formulário', () => {
+    const comFormulario = { ...agent, triggers: [{ type: 'form', form_ids: ['F1', 'F2'] }] } as unknown as SalesAgent;
+    const forms = [
+      { form_id: 'F1', name: 'Residencial Aurora', answers: { faixa_de_investimento: 'até 300 mil' }, origin: 'lead', last_lead_at: '2026-10-01T10:00:00-03:00', ad_referral: { form_id: 'F1', form_name: 'Aurora' } },
+      { form_id: 'F2', name: 'Torre Sul', answers: { 'número_de_quartos': '3' }, origin: 'lead', last_lead_at: '2026-10-06T10:00:00-03:00', ad_referral: { form_id: 'F2', form_name: 'Torre Sul' } },
+    ];
+
+    it('IA sem gatilho de formulário: respostas de exemplo, sem ler formulário', async () => {
+      abrir();
+      await cenario('Preencheu o formulário');
+      expect(rehearsalForms).not.toHaveBeenCalled();
+      expect(screen.getByText('Faixa de investimento')).toBeInTheDocument();
+      expect(screen.getByText('Até 450 mil')).toBeInTheDocument();
+    });
+
+    it('com gatilho: abre no formulário que recebeu lead por último e o lead do teste leva ele', async () => {
+      rehearsalForms.mockResolvedValueOnce(forms);
+      rehearsal.mockResolvedValueOnce(resposta('Oi! Vi que você quer 3 quartos', estado()));
+      abrir(comFormulario);
+      await cenario('Preencheu o formulário');
+      const seletor = await screen.findByLabelText('Formulário');
+      expect(seletor).toHaveValue('F2');
+      expect(screen.getByText('Número de quartos')).toBeInTheDocument();
+      expect(screen.getByText(/Respostas do último lead que chegou por este formulário/)).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+      await screen.findByText('Oi! Vi que você quer 3 quartos');
+      expect(rehearsal.mock.calls[0][1]).toMatchObject({
+        context: { form_answers: { 'número_de_quartos': '3' }, ad_referral: { form_id: 'F2', form_name: 'Torre Sul' } },
+      });
+    });
+
+    it('trocar de formulário recomeça o teste com as respostas dele', async () => {
+      rehearsalForms.mockResolvedValueOnce(forms);
+      abrir(comFormulario);
+      await cenario('Preencheu o formulário');
+      await userEvent.selectOptions(await screen.findByLabelText('Formulário'), 'F1');
+      expect(screen.getByText('até 300 mil')).toBeInTheDocument();
+      expect(screen.queryByText('Número de quartos')).not.toBeInTheDocument();
+      expect(rehearsalForms).toHaveBeenCalledTimes(1);
+    });
+
+    it('formulário sem lead ainda: respostas de exemplo e o aviso', async () => {
+      rehearsalForms.mockResolvedValueOnce([{ form_id: 'F1', name: 'Residencial Aurora', answers: {}, origin: 'none', last_lead_at: null, ad_referral: { form_id: 'F1' } }]);
+      abrir(comFormulario);
+      await cenario('Preencheu o formulário');
+      expect(await screen.findByText('Residencial Aurora')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Formulário')).not.toBeInTheDocument();
+      expect(screen.getByText('Até 450 mil')).toBeInTheDocument();
+      expect(screen.getByText('Ainda não chegou lead por este formulário: usando respostas de exemplo.')).toBeInTheDocument();
+    });
   });
 });

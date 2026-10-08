@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  horaDoEnsaio, pausa, linhasDoQueAconteceria, itensDoTurno, respostasDoFormulario, textoDasRespostas,
+  horaDoEnsaio, pausa, linhasDoQueAconteceria, horaCurta, tempoDeDigitacao, rotuloDaPergunta, AVISO_DO_GATILHO, itensDoTurno, respostasDoFormulario, textoDasRespostas,
   avisoDoModelo, nomeDoModelo, AVANCOS_DA_JANELA, painelDoEnsaio, linhaDoCard,
 } from './ensaio';
 import type { RehearsalOutcome, RehearsalTurn } from '@/services/salesAgents/salesAgentsService';
@@ -78,8 +78,8 @@ describe('ensaio', () => {
 
     expect(itens).toEqual([
       { tipo: 'sistema', texto: 'Curtiria a mensagem do lead com 👍' },
-      { tipo: 'ia', texto: 'Oi!', pausa: 0 },
-      { tipo: 'ia', texto: 'Pra morar?', pausa: 1200 },
+      { tipo: 'ia', texto: 'Oi!', pausa: 0, hora: '14:00' },
+      { tipo: 'ia', texto: 'Pra morar?', pausa: 1200, hora: '14:00' },
       { tipo: 'midia', item: { type: 'photos', token: 'tok', urls: ['u'] }, propertyCode: 'AP1' },
     ]);
   });
@@ -93,7 +93,7 @@ describe('ensaio', () => {
 
     expect(itens).toEqual([
       { tipo: 'sistema', texto: '⏩ seg, 05/10 16:00 · Retomada 1 de 2' },
-      { tipo: 'ia', texto: 'E aí?', pausa: 0 },
+      { tipo: 'ia', texto: 'E aí?', pausa: 0, hora: '16:00' },
     ]);
   });
 
@@ -112,6 +112,33 @@ describe('ensaio', () => {
     const r = respostasDoFormulario('Renda: 8 mil\n\nPra quando?: 3 meses\nlixo');
     expect(r).toEqual({ Renda: '8 mil', 'Pra quando?': '3 meses' });
     expect(textoDasRespostas(r)).toBe('Renda: 8 mil\nPra quando?: 3 meses');
+  });
+});
+
+describe('Testar com cara de WhatsApp (07/10/2026)', () => {
+  it('hora curta lida do texto, sem converter fuso', () => {
+    expect(horaCurta('2026-10-05T23:59:10-03:00')).toBe('23:59');
+    expect(horaCurta(null)).toBeUndefined();
+  });
+
+  it('os pontinhos: nunca menos de 0,7 s nem mais de 1,8 s', () => {
+    expect(tempoDeDigitacao('ok', 0)).toBe(700);
+    expect(tempoDeDigitacao('x'.repeat(500), 0)).toBe(1800);
+    expect(tempoDeDigitacao('ok', 4000)).toBe(1000);
+  });
+
+  it('a pergunta do formulário do Meta vira texto de gente', () => {
+    expect(rotuloDaPergunta('faixa_de_investimento')).toBe('Faixa de investimento');
+    expect(rotuloDaPergunta('é_para_morar_ou_investir?')).toBe('É para morar ou investir?');
+  });
+
+  it('gatilho: o aviso tem frase própria, e o turno calado ensina a desligar', () => {
+    const aviso = { reason: 'trigger_no_match', text: 'Nenhum gatilho de ativação bateu com esta conversa' };
+    expect(linhasDoQueAconteceria(outcome({ warnings: [aviso] }))).toContain(AVISO_DO_GATILHO);
+    expect(itensDoTurno(turno({ kind: 'silent', outcome: outcome({ skipped: aviso }) }), '')).toEqual([{
+      tipo: 'sistema',
+      texto: 'Ela ficaria calada: Nenhum gatilho de ativação bateu com esta conversa. Desligue "Respeitar o gatilho" pra ver como ela responderia.',
+    }]);
   });
 });
 

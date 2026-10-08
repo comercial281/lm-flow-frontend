@@ -820,12 +820,31 @@ export interface RehearsalContext {
   interest?: string;
   form_answers?: Record<string, string>;
   property_code?: string;
+  /** O formulário de onde o lead do teste "veio" (é o que o gatilho de formulário lê). */
+  ad_referral?: Record<string, string>;
 }
 
+/**
+ * `honor_triggers`: interruptor "Respeitar o gatilho". Falso = ela responde mesmo
+ * sem o gatilho bater, e o turno avisa (`trigger_no_match`). Sem o campo, o
+ * servidor respeita.
+ */
 export type RehearsalRequest =
-  | { step: 'turn'; state: RehearsalState | null; message: string; context?: RehearsalContext; seed?: { history: TestHistoryItem[]; hours_ago?: number } }
-  | { step: 'advance'; state: RehearsalState; hours: number | null }
+  | { step: 'turn'; state: RehearsalState | null; message: string; context?: RehearsalContext; seed?: { history: TestHistoryItem[]; hours_ago?: number }; honor_triggers?: boolean }
+  | { step: 'advance'; state: RehearsalState; hours: number | null; honor_triggers?: boolean }
   | { step: 'load'; phone: string };
+
+/** Um formulário do gatilho da IA, pro cenário "Preencheu o formulário". */
+export interface RehearsalForm {
+  form_id: string;
+  name: string;
+  /** Sem nome, telefone e e-mail. */
+  answers: Record<string, string>;
+  /** lead = do último lead que chegou por ele; questions = perguntas do Meta; none = nada ainda. */
+  origin: 'lead' | 'questions' | 'none';
+  last_lead_at: string | null;
+  ad_referral: Record<string, string>;
+}
 
 export type SalesAgentLessonKind = 'rule' | 'good_example' | 'bad_example';
 export interface SalesAgentLesson {
@@ -1109,6 +1128,17 @@ export const salesAgentsService = {
     } catch (err) {
       const axiosErr = err as { response?: { data?: { error?: { message?: string } } } };
       throw new Error(axiosErr.response?.data?.error?.message || 'Não consegui rodar o teste agora.');
+    }
+  },
+
+  /** Os formulários do gatilho da IA com as respostas do último lead de cada um. Só lê. */
+  async rehearsalForms(id: string): Promise<RehearsalForm[]> {
+    try {
+      const res = await api.post(`${BASE}/${id}/rehearsal`, { step: 'forms' });
+      return ((res.data as { data: { forms?: RehearsalForm[] } }).data.forms) ?? [];
+    } catch (err) {
+      const axiosErr = err as { response?: { data?: { error?: { message?: string } } } };
+      throw new Error(axiosErr.response?.data?.error?.message || 'Não consegui ler os formulários desta IA.');
     }
   },
 
