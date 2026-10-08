@@ -79,6 +79,7 @@ import {
   getContactColor,
   formatArrivalDate,
 } from './pipelineItemHelpers';
+import { situacaoDe } from '@/features/pipelines/situacao/situacao';
 import { useAppDataStore } from '@/store/appDataStore';
 import { roletaLabel } from '@/services/roletaConfig/roletaConfigService';
 
@@ -475,6 +476,8 @@ export default function PipelineKanban() {
   // memoizado — sem isso, cada render do board recriava a função e quebrava o
   // memo (card inteiro re-renderizava mesmo sem o item mudar).
   const handleDragStart = useCallback((item: PipelineItem) => {
+    // Card ganho/perdido não muda de etapa: reabre antes (spec funil §3.5).
+    if (situacaoDe(item) !== 'open') return;
     setDraggedItem(item);
     isDraggingRef.current = true;
     suppressClickUntilRef.current = Date.now() + 200;
@@ -833,6 +836,27 @@ export default function PipelineKanban() {
         ? ({ ...prev, stage_id: toStageId, pipeline_stage_id: toStageId } as PipelineItem)
         : prev,
     );
+  }, []);
+
+  // Ganho/Perdido/Reabrir pela janela: o card do quadro pega a situação nova na
+  // hora (selo), sem esperar o próximo refresh. Se a situação mudou a coluna
+  // (Ganho → Concluído; Reabrir volta, ajuste de 08/10), o card troca de coluna.
+  const handleItemStatusChanged = useCallback((novo: PipelineItem) => {
+    setStages(prev => {
+      const antigo = prev.flatMap(stage => stage.items || []).find(i => String(i.id) === String(novo.id));
+      if (!antigo) return prev;
+      const junto = { ...antigo, ...novo } as PipelineItem;
+      const destino = String(junto.stage_id);
+      return prev.map(stage => {
+        const itens = stage.items || [];
+        const estava = itens.some(i => String(i.id) === String(novo.id));
+        if (String(stage.id) === destino) {
+          return { ...stage, items: estava ? itens.map(i => (String(i.id) === String(novo.id) ? junto : i)) : [junto, ...itens] };
+        }
+        return estava ? { ...stage, items: itens.filter(i => String(i.id) !== String(novo.id)) } : stage;
+      });
+    });
+    setItemToEdit(prev => (prev && String(prev.id) === String(novo.id) ? { ...prev, ...novo } : prev));
   }, []);
 
   const handleUpdateItem = async (data: {
@@ -1760,6 +1784,7 @@ export default function PipelineKanban() {
             pipeline={pipeline}
             onSubmit={handleUpdateItem}
             onItemStageMoved={moveItemToStageLocal}
+            onItemStatusChanged={handleItemStatusChanged}
             // Tag grava na hora: recarrega em silêncio pro selo do card refletir a
             // mudança mesmo que a pessoa feche o card sem salvar.
             onLabelsChanged={() => { void loadPipelineData(true); }}

@@ -30,6 +30,8 @@ import {
   Home,
 } from 'lucide-react';
 import { PipelineItem } from '@/types/analytics';
+import SeloSituacao from '@/features/pipelines/situacao/SeloSituacao';
+import { detalheDaSituacao, situacaoDe } from '@/features/pipelines/situacao/situacao';
 import {
   resolveItemName,
   resolveItemAvatar,
@@ -130,7 +132,7 @@ function PipelineItemCardComponent({
   return (
     <div
       className="group bg-background rounded-xl p-4 border border-border shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200 cursor-pointer select-none relative"
-      draggable
+      draggable={situacaoDe(item) === 'open'}
       onDragStart={() => onDragStart(item)}
       onDragEnd={onDragEnd}
       onDragOver={onCardDragOver}
@@ -211,6 +213,7 @@ function PipelineItemCardComponent({
         <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-2 mb-1">
             <h4 className="text-sm font-semibold text-foreground truncate">{name}</h4>
+            <SeloSituacao status={situacaoDe(item)} detalhe={detalheDaSituacao(item)} className="shrink-0" />
             <span
               title={`#${resolveItemRef(item)}`}
               className="shrink-0 text-[10px] text-muted-foreground/60 font-medium"

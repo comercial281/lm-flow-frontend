@@ -103,8 +103,6 @@ export interface PipelineStage {
   position: number;
   pipeline_id?: string;
   stage_type?: string;
-  /** Etapa que encerra o lead, pela regra do servidor. null = não é final. */
-  final?: 'won' | 'lost' | null;
   automation_rules?: {
     description?: string;
   };

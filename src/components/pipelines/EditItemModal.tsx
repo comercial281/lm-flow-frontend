@@ -56,6 +56,10 @@ import type { Contact } from '@/types/contacts';
 import LeadQuickActions from './card/LeadQuickActions';
 import LeadDetailsTab from './card/LeadDetailsTab';
 import CardResultFooter from './card/CardResultFooter';
+import SeloSituacao from '@/features/pipelines/situacao/SeloSituacao';
+import {
+  ETAPA_TRAVADA, cardFechado, detalheDaSituacao, ehColunaDeGanho, mensagemDaRecusa, situacaoDe,
+} from '@/features/pipelines/situacao/situacao';
 import CardMoreMenu from './card/CardMoreMenu';
 import CardOriginTab from './card/CardOriginTab';
 import ColocarNoFunil from './card/ColocarNoFunil';
@@ -90,6 +94,8 @@ interface EditItemModalProps {
   onSubmit?: (data: never) => void;
   // Move otimista no board (sem reload) quando a etapa muda pelo card.
   onItemStageMoved?: (itemId: string, toStageId: string) => void;
+  /** Ganho, Perdido ou Reabrir gravados: o quadro atualiza (ou tira) o card. */
+  onItemStatusChanged?: (item: PipelineItem) => void;
   // Tag aplicada/removida grava na hora: avisa o quadro para o selo do card
   // refletir sem esperar o próximo reload.
   onLabelsChanged?: () => void;
@@ -112,6 +118,7 @@ export default function EditItemModal({
   item,
   stages,
   onItemStageMoved,
+  onItemStatusChanged,
   onLabelsChanged,
   cabecalho,
   onColocadoNoFunil,
@@ -140,6 +147,14 @@ export default function EditItemModal({
   // Etapa: muda na hora (mesmo movimento do quadro), não espera Salvar.
   const [etapaId, setEtapaId] = useState<string | null>(null);
   const [movendoEtapa, setMovendoEtapa] = useState(false);
+
+  // Situação do card (Ganho · Perdido · Reabrir), separada da etapa. Quem grava
+  // é o rodapé (CardResultFooter); a janela acompanha para o selo e a Etapa.
+  const [itemDaSituacao, setItemDaSituacao] = useState<PipelineItem | null>(item);
+  useEffect(() => {
+    setItemDaSituacao(item);
+  }, [item?.id, item?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  const fechado = cardFechado(itemDaSituacao);
 
   // Telefone/e-mail exibidos: começam do contato e mudam depois de uma correção.
   const [telefoneDoLead, setTelefoneDoLead] = useState('');
@@ -197,6 +212,14 @@ export default function EditItemModal({
       setHistoryLoading(false);
     }
   }, [item]);
+
+  const aoMudarSituacao = useCallback((novo: PipelineItem) => {
+    setItemDaSituacao(novo);
+    // Ganho leva o card para Concluído e Reabrir o devolve (ajuste de 08/10): a Etapa acompanha.
+    if (novo.stage_id) setEtapaId(String(novo.stage_id));
+    onItemStatusChanged?.(novo);
+    loadHistory();
+  }, [onItemStatusChanged, loadHistory]);
 
   // Inicializa quando o card abre.
   useEffect(() => {
@@ -280,26 +303,35 @@ export default function EditItemModal({
   }, [open, item?.id]);
 
   const moverEtapa = useCallback(async (toStageId: string) => {
-    if (!item || !etapaId || toStageId === etapaId) return;
+    if (!item || !etapaId || toStageId === etapaId || fechado) return;
     const anterior = etapaId;
     setEtapaId(toStageId);
     setMovendoEtapa(true);
     try {
-      await pipelinesService.moveItem({
-        item_id: item.id,
-        pipeline_id: item.pipeline_id,
-        from_stage_id: anterior,
-        to_stage_id: toStageId,
-      });
-      onItemStageMoved?.(item.id, toStageId);
-      loadHistory();
-    } catch {
+      // Concluído é a coluna do Ganho (ajuste de 08/10): escolher ela na Etapa
+      // marca Ganho pela mesma rota do botão — o servidor leva o card para lá e
+      // roda os efeitos (follow-up, IA, Meta).
+      if (ehColunaDeGanho(stages.find(s => String(s.id) === String(toStageId)))) {
+        const ganho = await pipelinesService.setItemStatus(item.pipeline_id, item.id, { status: 'won' });
+        aoMudarSituacao({ ...(itemDaSituacao ?? item), ...ganho } as PipelineItem);
+        toast.success('Lead marcado como ganho.');
+      } else {
+        await pipelinesService.moveItem({
+          item_id: item.id,
+          pipeline_id: item.pipeline_id,
+          from_stage_id: anterior,
+          to_stage_id: toStageId,
+        });
+        onItemStageMoved?.(item.id, toStageId);
+        loadHistory();
+      }
+    } catch (erro) {
       setEtapaId(anterior);
-      toast.error('Não consegui mudar a etapa');
+      toast.error(mensagemDaRecusa(erro, 'Não consegui mudar a etapa'));
     } finally {
       setMovendoEtapa(false);
     }
-  }, [item, etapaId, onItemStageMoved, loadHistory]);
+  }, [item, etapaId, onItemStageMoved, loadHistory, fechado, stages, itemDaSituacao, aoMudarSituacao]);
 
   // Responsável sem depender de conversa: lead de formulário/anúncio entra sem
   // conversa e precisa de dono. Com conversa, atribui a conversa (o backend
@@ -508,7 +540,10 @@ export default function EditItemModal({
                 <ContactAvatar contact={avatarContact} size="md" showColoredFallback className="shrink-0" />
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xl font-semibold leading-tight lm-redact" title={nomeExibido}>{nomeExibido}</p>
+                <div className="flex min-w-0 items-center gap-2">
+                  <p className="truncate text-xl font-semibold leading-tight lm-redact" title={nomeExibido}>{nomeExibido}</p>
+                  <SeloSituacao status={situacaoDe(itemDaSituacao)} detalhe={detalheDaSituacao(itemDaSituacao)} className="shrink-0" />
+                </div>
                 {telefoneDoLead && (
                   <p className="mt-1 text-sm text-muted-foreground flex items-center gap-1.5">
                     <Phone className="h-3.5 w-3.5" /> {telefone(telefoneDoLead)}
@@ -565,7 +600,12 @@ export default function EditItemModal({
                   <ColocarNoFunil contactId={String(contato.id)} conversationId={conversaDoCard(item)} onColocado={onColocadoNoFunil} />
                 ) : <div />
               ) : (
-              <CampoEtapa stages={stages} etapaId={etapaId} onMover={moverEtapa} disabled={movendoEtapa} />
+              <div className="grid min-w-0 gap-1">
+                <CampoEtapa stages={stages} etapaId={etapaId} onMover={moverEtapa} disabled={movendoEtapa || fechado} />
+                {fechado && (
+                  <span className="text-[11px] leading-tight text-muted-foreground">{ETAPA_TRAVADA}</span>
+                )}
+              </div>
               )}
 
               {/* Responsável — sem gate de conversa: lead de formulário/anúncio
@@ -676,11 +716,11 @@ export default function EditItemModal({
 
             {!foraDoFunil && (
               <>
-                <CapiConversionPanel contactId={contato?.id ?? null} pipelineItemId={item.id} variante="compacto" />
+                <CapiConversionPanel key={situacaoDe(itemDaSituacao)} contactId={contato?.id ?? null} pipelineItemId={item.id} variante="compacto" />
 
                 {/* Rodapé fixo da coluna */}
                 <div className="mt-auto pt-2 border-t border-border">
-                  <CardResultFooter stages={stages} etapaAtualId={etapaId} movendo={movendoEtapa} onMover={moverEtapa} />
+                  <CardResultFooter item={itemDaSituacao ?? item} onMudou={aoMudarSituacao} />
                 </div>
               </>
             )}
