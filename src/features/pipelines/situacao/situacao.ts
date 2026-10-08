@@ -22,6 +22,42 @@ export function cardFechado(item: Partial<Pick<PipelineItem, 'status'>> | null |
   return situacaoDe(item) !== 'open';
 }
 
+/**
+ * O que Ganho · Perdido · Reabrir muda no card. A resposta da rota de situação
+ * é serializada sem os dados do quadro (Roleta, Origem, última mensagem vêm
+ * nulos), então só estes campos passam da resposta para o card da tela.
+ */
+const CAMPOS_DA_SITUACAO = [
+  'status',
+  'status_changed_at',
+  'won_at',
+  'lost_at',
+  'lost_reason',
+  'lost_note',
+  'stage_id',
+  'pipeline_stage_id',
+  'archived_at',
+  'completed_at',
+  'days_in_pipeline',
+  'days_in_current_stage',
+  'updated_at',
+] as const satisfies readonly (keyof PipelineItem)[];
+
+/** Só os campos da situação que vieram na resposta (campo ausente não apaga o do card). */
+export function camposDaSituacao(resposta: Partial<PipelineItem> | null | undefined): Partial<PipelineItem> {
+  const campos: Record<string, unknown> = {};
+  if (!resposta) return campos as Partial<PipelineItem>;
+  for (const campo of CAMPOS_DA_SITUACAO) {
+    if (Object.prototype.hasOwnProperty.call(resposta, campo)) campos[campo] = resposta[campo];
+  }
+  return campos as Partial<PipelineItem>;
+}
+
+/** O card da tela com a situação nova da resposta por cima. */
+export function comSituacaoNova<T extends Partial<PipelineItem>>(card: T, resposta: Partial<PipelineItem> | null | undefined): T {
+  return { ...card, ...camposDaSituacao(resposta) };
+}
+
 /** Por que a Etapa não muda num card fechado (decisão: reabrir antes). */
 export const ETAPA_TRAVADA = 'Lead fechado não muda de etapa. Reabra para mexer.';
 

@@ -28,6 +28,32 @@ describe('useSituacaoDoCard', () => {
     expect(toast.success).toHaveBeenCalledWith('Lead marcado como ganho.');
   });
 
+  it('Ganho mantém a Roleta, a Origem e a última mensagem do card (a resposta vem sem elas)', async () => {
+    const doQuadro = {
+      ...aberto,
+      roleta: { id: 'r1', display_name: 'Roleta Centro' },
+      lead_origin: { source: 'meta_lead_ad', campaign_name: 'Lançamento' },
+      last_message: { content: 'Oi, tenho interesse', created_at: '2026-10-07T10:00:00Z' },
+    } as unknown as PipelineItem;
+    vi.mocked(pipelinesService.setItemStatus).mockResolvedValue({
+      ...aberto, status: 'won', won_at: '2026-10-07T12:00:00Z', stage_id: 's9', pipeline_stage_id: 's9',
+      roleta: null, lead_origin: null, last_message: undefined,
+    } as unknown as PipelineItem);
+    const onMudou = vi.fn();
+    const { result } = renderHook(() => useSituacaoDoCard(doQuadro, { onMudou }));
+
+    await act(async () => { await result.current.marcarGanho(); });
+
+    const esperado = expect.objectContaining({
+      status: 'won', won_at: '2026-10-07T12:00:00Z', stage_id: 's9', pipeline_stage_id: 's9',
+      roleta: { id: 'r1', display_name: 'Roleta Centro' },
+      lead_origin: { source: 'meta_lead_ad', campaign_name: 'Lançamento' },
+      last_message: expect.objectContaining({ content: 'Oi, tenho interesse' }),
+    });
+    expect(result.current.item).toEqual(esperado);
+    expect(onMudou).toHaveBeenCalledWith(esperado);
+  });
+
   it('clique duplo: a segunda ação, com a primeira no ar, não sai', async () => {
     let soltar: (v: PipelineItem) => void = () => {};
     vi.mocked(pipelinesService.setItemStatus).mockReturnValue(new Promise(r => { soltar = r; }));

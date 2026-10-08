@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import type { PipelineItem, PipelineItemStatus, SetItemStatusData } from '@/types/analytics';
-import { mensagemDaRecusa, situacaoDe } from './situacao';
+import { comSituacaoNova, mensagemDaRecusa, situacaoDe } from './situacao';
 
 const AVISO_DE_SUCESSO: Record<PipelineItemStatus, string> = {
   won: 'Lead marcado como ganho.',
@@ -16,7 +16,7 @@ const AVISO_DE_SUCESSO: Record<PipelineItemStatus, string> = {
 };
 
 export interface SituacaoDoCard {
-  /** O card com a situação mais recente (a resposta do servidor por cima do que veio). */
+  /** O card com a situação mais recente (os campos da situação da resposta por cima do que veio). */
   item: PipelineItem | null;
   situacao: PipelineItemStatus;
   fechado: boolean;
@@ -68,7 +68,7 @@ export function useSituacaoDoCard(item: PipelineItem | null, { onMudou }: Opcoes
       let novo: PipelineItem;
       try {
         const resposta = await pipelinesService.setItemStatus(atual.pipeline_id, atual.id, dados);
-        novo = { ...atual, ...resposta } as PipelineItem;
+        novo = comSituacaoNova(atual, resposta);
       } catch (erro) {
         if (minha === geracao.current) {
           emVoo.current = false;

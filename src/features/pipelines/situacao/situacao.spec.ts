@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { cardFechado, detalheDaSituacao, ehColunaDeGanho, mensagemDaRecusa, situacaoDe } from './situacao';
+import {
+  camposDaSituacao, cardFechado, comSituacaoNova, detalheDaSituacao, ehColunaDeGanho, mensagemDaRecusa, situacaoDe,
+} from './situacao';
+import type { PipelineItem } from '@/types/analytics';
 
 describe('situação do card', () => {
   // Ajuste de 08/10: a coluna Concluído é a de tipo "Concluída" — o nome não conta.
@@ -36,5 +39,22 @@ describe('situação do card', () => {
       .toBe('Card arquivado não muda de situação.');
     expect(mensagemDaRecusa(new Error('Network Error'), 'Não consegui mudar a situação do lead.'))
       .toBe('Não consegui mudar a situação do lead.');
+  });
+
+  it('camposDaSituacao copia só a situação e a etapa, e campo ausente não apaga', () => {
+    const resposta = {
+      id: 'i1', status: 'lost', lost_at: '2026-10-07T12:00:00Z', lost_reason: { id: 'm1', label: 'Sem crédito' },
+      lost_note: null, stage_id: 's2', roleta: null, lead_origin: null, conversation: null,
+    } as unknown as PipelineItem;
+    expect(camposDaSituacao(resposta)).toEqual({
+      status: 'lost', lost_at: '2026-10-07T12:00:00Z', lost_reason: { id: 'm1', label: 'Sem crédito' },
+      lost_note: null, stage_id: 's2',
+    });
+    expect(camposDaSituacao(null)).toEqual({});
+
+    const card = { id: 'i1', status: 'open', roleta: { id: 'r1' }, lead_origin: { source: 'form' } } as unknown as PipelineItem;
+    expect(comSituacaoNova(card, resposta)).toEqual(expect.objectContaining({
+      status: 'lost', roleta: { id: 'r1' }, lead_origin: { source: 'form' },
+    }));
   });
 });

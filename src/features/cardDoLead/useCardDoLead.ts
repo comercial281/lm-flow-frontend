@@ -30,7 +30,7 @@ import { serverRefusalMessageOf } from '@/services/core/forbidden';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import type { Label as LabelType } from '@/types/settings';
-import { cardFechado, ehColunaDeGanho, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
+import { cardFechado, comSituacaoNova, ehColunaDeGanho, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
 import { contatoDoCard, origemCurta, podeCorrigirContato, semFunil } from './cardDoLead';
 import { useVersaoDoHistorico } from './historico/useVersaoDoHistorico';
 
@@ -213,7 +213,7 @@ export function useCardDoLead(
       // Etapa marca Ganho pela mesma rota do botão.
       if (ehColunaDeGanho(stages.find(s => String(s.id) === String(toStageId)))) {
         const ganho = await pipelinesService.setItemStatus(item.pipeline_id, item.id, { status: 'won' });
-        const junto = { ...(itemDaSituacao ?? item), ...ganho } as PipelineItem;
+        const junto = comSituacaoNova(itemDaSituacao ?? item, ganho);
         aoMudarSituacao(junto);
         onItemStatusChanged?.(junto);
         toast.success('Lead marcado como ganho.');

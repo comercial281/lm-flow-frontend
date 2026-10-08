@@ -9,7 +9,7 @@ import {
 import { toast } from 'sonner';
 import { pipelinesService } from '@/services/pipelines';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
-import { ehColunaDeGanho, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
+import { comSituacaoNova, ehColunaDeGanho, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
 import { itemPos } from '../pipelineItemHelpers';
 
 interface OpcoesDoArraste {
@@ -183,7 +183,7 @@ export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, po
     try {
       const resposta = await pipelinesService.setItemStatus(pipelineId, draggedItem.id, { status: 'won' });
       toast.success('Lead marcado como ganho.');
-      aoGanhar?.({ ...ganho, ...resposta } as PipelineItem);
+      aoGanhar?.(comSituacaoNova(ganho, resposta));
     } catch (erro) {
       setStages(previousStages);
       toast.error(mensagemDaRecusa(erro, 'Não consegui marcar o lead como ganho.'));

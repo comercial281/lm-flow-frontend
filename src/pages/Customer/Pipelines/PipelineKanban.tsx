@@ -27,6 +27,7 @@ import { useCardForaDoQuadro } from '@/features/cardDoLead/useCardForaDoQuadro';
 import AvisoDoCardForaDoQuadro from '@/features/cardDoLead/AvisoDoCardForaDoQuadro';
 import { useCardNoEndereco } from './useCardNoEndereco';
 import { STATUS_DA_ABA, pertenceAAba, podeArrastarNaAba } from './quadro/enderecoDoQuadro';
+import { comSituacaoNova } from '@/features/pipelines/situacao/situacao';
 import { useBoardDrag } from './quadro/useBoardDrag';
 import { usePipelineFilters } from './quadro/usePipelineFilters';
 import PainelDeFiltrosDoFunil from './quadro/PainelDeFiltrosDoFunil';
@@ -570,7 +571,7 @@ export default function PipelineKanban() {
     setStages(prev => {
       const antigo = prev.flatMap(stage => stage.items || []).find(i => String(i.id) === String(novo.id));
       if (!antigo) return prev;
-      const junto = { ...antigo, ...novo } as PipelineItem;
+      const junto = comSituacaoNova(antigo, novo);
       const fica = pertenceAAba(aba, junto);
       const destino = String(junto.stage_id);
       return prev.map(stage => {
@@ -582,7 +583,7 @@ export default function PipelineKanban() {
         return estava ? { ...stage, items: itens.filter(i => String(i.id) !== String(novo.id)) } : stage;
       });
     });
-    setItemToEdit(prev => (prev && String(prev.id) === String(novo.id) ? { ...prev, ...novo } : prev));
+    setItemToEdit(prev => (prev && String(prev.id) === String(novo.id) ? comSituacaoNova(prev, novo) : prev));
     void loadPipelineData(true);
   }, [aba, loadPipelineData]);
   aoGanharRef.current = handleItemStatusChanged;
