@@ -1,7 +1,7 @@
 // A aba e os filtros do quadro moram no ENDEREÇO (spec funil §4.3): o F5
 // mantém, e dá pra mandar o link do funil filtrado. Os links que já existem
 // (?card=, ?etapa=) passam intactos. Os nomes dos parâmetros são do contrato do
-// plano (índice do funil); `tarefas` (atrasada|hoje) também é do contrato do índice.
+// plano (índice do funil); `tarefas` (atrasada|hoje|amanha) e `categ` (ids de categoria de tarefa) também é do contrato do índice.
 import { situacaoDe } from '@/features/pipelines/situacao/situacao';
 import type { PipelineBoardStatus, PipelineItem } from '@/types/analytics';
 
@@ -18,7 +18,7 @@ export const STATUS_DA_ABA: Record<AbaDoQuadro, PipelineBoardStatus> = {
   arquivados: 'archived',
 };
 
-export type TarefaDoFiltro = 'atrasada' | 'hoje';
+export type TarefaDoFiltro = 'atrasada' | 'hoje' | 'amanha';
 
 export interface FiltrosDoFunil {
   /** Criado em, de/até (AAAA-MM-DD, dia do calendário local). '' = sem limite. */
@@ -38,18 +38,20 @@ export interface FiltrosDoFunil {
   /** Etapas VISÍVEIS; vazio = todas. */
   colunas: string[];
   tarefas: TarefaDoFiltro[];
+  /** id da opção da categoria da tarefa (`task_categories`); vazio = qualquer. */
+  categ: string[];
 }
 
 export const FILTROS_VAZIOS: FiltrosDoFunil = {
-  de: '', ate: '', etapas: [], origens: [], resp: [], etiq: [], motivos: [], largados: null, colunas: [], tarefas: [],
+  de: '', ate: '', etapas: [], origens: [], resp: [], etiq: [], motivos: [], largados: null, colunas: [], tarefas: [], categ: [],
 };
 
 export const SEM_RESPONSAVEL = 'nenhum';
 
-const LISTAS = ['etapas', 'origens', 'resp', 'etiq', 'motivos', 'colunas', 'tarefas'] as const;
+const LISTAS = ['etapas', 'origens', 'resp', 'etiq', 'motivos', 'colunas', 'tarefas', 'categ'] as const;
 const CHAVES = ['aba', 'de', 'ate', 'largados', ...LISTAS] as const;
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
-const TAREFAS: readonly TarefaDoFiltro[] = ['atrasada', 'hoje'];
+const TAREFAS: readonly TarefaDoFiltro[] = ['atrasada', 'hoje', 'amanha'];
 
 export function lerAba(params: URLSearchParams): AbaDoQuadro {
   const aba = params.get('aba');
@@ -74,6 +76,7 @@ export function lerFiltros(params: URLSearchParams): FiltrosDoFunil {
     largados: Number.isFinite(dias) && dias > 0 ? dias : null,
     colunas: lista('colunas'),
     tarefas: lista('tarefas').filter((t): t is TarefaDoFiltro => TAREFAS.includes(t as TarefaDoFiltro)),
+    categ: lista('categ'),
   };
 }
 

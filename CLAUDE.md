@@ -4112,6 +4112,7 @@ Spec: `LM FLOW/specs/2026-10-07-frente-2-tarefas-e-atividades-design.md`. Plano:
 - **Responsável:** só o gestor (`conversations.read_all`) escolhe na janela; corretor cria só pra si.
 - **Excluir:** gestor qualquer uma; corretor só a que criou (sem permissão nova: cargo editado não recebe chave nova).
 - **Avisos de tarefa (vence em 1h / venceu):** o mecanismo do servidor está em decisão do dono (07/10) — ver o PR do servidor. O atrasado na tela é sempre calculado pelo prazo.
+- **Filtro do Funil (08/10/2026):** o grupo Tarefas do painel ganha "Vence amanhã" e abaixo vem "Categoria da tarefa" (só as ativas; `categ=` no endereço). Prazo e categoria valem na MESMA tarefa aberta (`tasks_info.open_tasks`); sem `open_tasks` (servidor antigo) usa as contagens e a categoria deixa passar (`features/tarefas/filtroDoFunil.ts`).
 - **Tela Tarefas:** clicar na tarefa abre o card no Funil (`/pipelines/<id>?card=<item>`); a janela da próxima tarefa já vem com a próxima hora cheia sugerida.
 
 Não reabrir sem o dono pedir.

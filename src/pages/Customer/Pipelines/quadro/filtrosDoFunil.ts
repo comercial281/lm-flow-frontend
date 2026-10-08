@@ -2,7 +2,7 @@
 // os cards da aba carregada. Regras puras.
 import { SOURCE_META } from '@/features/leadOrigin/origem';
 import { contatoDoCard } from '@/features/cardDoLead/cardDoLead';
-import { passaNoFiltroDeTarefas, type FiltroDeTarefas } from '@/features/tarefas/filtroDoFunil';
+import { passaNoFiltroDeTarefasDoFunil, type FiltroDeTarefas } from '@/features/tarefas/filtroDoFunil';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import { itemArrivalMs, itemTagNames, lastContactMs } from '../pipelineItemHelpers';
 import { SEM_RESPONSAVEL, type AbaDoQuadro, type FiltrosDoFunil, type TarefaDoFiltro } from './enderecoDoQuadro';
@@ -15,7 +15,7 @@ export interface OpcaoDeFiltro {
 const DIA_MS = 86_400_000;
 
 // O endereço fala `atrasada`; a regra da sessão de Tarefas fala `atrasadas`.
-const FILTRO_DA_TAREFA: Record<TarefaDoFiltro, FiltroDeTarefas> = { atrasada: 'atrasadas', hoje: 'hoje' };
+const FILTRO_DA_TAREFA: Record<TarefaDoFiltro, FiltroDeTarefas> = { atrasada: 'atrasadas', hoje: 'hoje', amanha: 'amanha' };
 
 export const origemDoItem = (item: PipelineItem): string => {
   const source = item.lead_origin?.source;
@@ -45,6 +45,7 @@ export function contarFiltros(f: FiltrosDoFunil, aba: AbaDoQuadro): number {
     motivoNaAba(aba) && f.motivos.length > 0,
     f.largados != null,
     f.tarefas.length > 0,
+    f.categ.length > 0,
     f.colunas.length > 0,
   ].filter(Boolean).length;
 }
@@ -63,7 +64,7 @@ export function filtrarEtapas(
   const motivos = motivoNaAba(aba) ? f.motivos : [];
   const semFiltro =
     !q && desde == null && ate == null && !f.etapas.length && !f.origens.length && !f.resp.length &&
-    !f.etiq.length && !motivos.length && f.largados == null && !f.tarefas.length;
+    !f.etiq.length && !motivos.length && f.largados == null && !f.tarefas.length && !f.categ.length;
   if (semFiltro) return visiveis;
 
   const passa = (item: PipelineItem, stageId: string): boolean => {
@@ -89,7 +90,8 @@ export function filtrarEtapas(
       const ms = lastContactMs(item);
       if (ms == null || Math.floor((agora - ms) / DIA_MS) < f.largados) return false;
     }
-    if (f.tarefas.length && !f.tarefas.some(t => passaNoFiltroDeTarefas(item, FILTRO_DA_TAREFA[t]))) return false;
+    // Prazo e categoria valem para a MESMA tarefa aberta.
+    if (!passaNoFiltroDeTarefasDoFunil(item, f.tarefas.map(t => FILTRO_DA_TAREFA[t]), f.categ, agora)) return false;
     return true;
   };
 

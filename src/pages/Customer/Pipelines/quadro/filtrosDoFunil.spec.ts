@@ -75,6 +75,23 @@ describe('filtros do funil', () => {
     expect(filtrar({ tarefas: ['atrasada', 'hoje'] })).toEqual(['c', 'd']);
   });
 
+  it('Tarefas por categoria e prazo valem na MESMA tarefa aberta; cartão sem open_tasks ignora a categoria', () => {
+    const hojeIso = new Date(2026, 9, 7, 15).toISOString();
+    const ontemIso = new Date(2026, 9, 6, 15).toISOString();
+    const comAbertas = (open_tasks: { category_option_id: string | null; due_at: string | null }[]) =>
+      ({ tasks_info: { overdue_count: 0, open_tasks } });
+    const S = [{ id: 's1', name: 'Novo', items: [
+      card('x', comAbertas([{ category_option_id: 'k1', due_at: hojeIso }, { category_option_id: 'k2', due_at: ontemIso }])),
+      card('y', comAbertas([{ category_option_id: 'k1', due_at: ontemIso }])),
+      card('z', { tasks_info: { overdue_count: 1, due_tomorrow_count: 0 } }),
+    ] }] as unknown as PipelineStage[];
+    const f = (p: Partial<typeof FILTROS_VAZIOS>) => ids(filtrarEtapas(S, { ...FILTROS_VAZIOS, ...p }, '', 'todos', AGORA));
+    expect(f({ categ: ['k1'] })).toEqual(['x', 'y', 'z']);
+    expect(f({ tarefas: ['atrasada'], categ: ['k1'] })).toEqual(['y', 'z']);
+    expect(f({ tarefas: ['atrasada'], categ: ['k2'] })).toEqual(['x', 'z']);
+    expect(f({ tarefas: ['hoje'], categ: ['k2'] })).toEqual([]);
+  });
+
   it('Colunas visíveis esconde a etapa inteira', () => {
     const r = filtrarEtapas(STAGES, { ...FILTROS_VAZIOS, colunas: ['s2'] }, '', 'todos', AGORA);
     expect(r.map(s => s.id)).toEqual(['s2']);
@@ -83,6 +100,7 @@ describe('filtros do funil', () => {
   it('conta um por grupo usado; motivo fora de Perdidos/Todos não conta', () => {
     expect(contarFiltros(FILTROS_VAZIOS, 'abertos')).toBe(0);
     expect(contarFiltros({ ...FILTROS_VAZIOS, de: '2026-10-01', ate: '2026-10-31', etapas: ['s1', 's2'], largados: 7 }, 'abertos')).toBe(3);
+    expect(contarFiltros({ ...FILTROS_VAZIOS, tarefas: ['amanha'], categ: ['k1'] }, 'abertos')).toBe(2);
     expect(contarFiltros({ ...FILTROS_VAZIOS, motivos: ['m1'] }, 'abertos')).toBe(0);
     expect(contarFiltros({ ...FILTROS_VAZIOS, motivos: ['m1'] }, 'perdidos')).toBe(1);
   });

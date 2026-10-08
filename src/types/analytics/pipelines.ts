@@ -352,6 +352,9 @@ export interface PipelineItem {
     pending_count: number;
     overdue_count: number;
     due_today_count?: number;
+    due_tomorrow_count?: number;
+    /** Tarefas raiz ABERTAS do cartão (servidor novo); ausente = servidor antigo. */
+    open_tasks?: { category_option_id: string | null; due_at: string | null }[];
     due_soon_count: number;
     completed_count: number;
     total_count: number;
