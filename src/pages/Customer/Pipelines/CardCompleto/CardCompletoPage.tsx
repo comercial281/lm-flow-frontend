@@ -25,7 +25,7 @@ import CardResultFooter from '@/components/pipelines/card/CardResultFooter';
 import CardMoreMenu from '@/components/pipelines/card/CardMoreMenu';
 import CardOriginTab from '@/components/pipelines/card/CardOriginTab';
 import SeloSituacao from '@/features/pipelines/situacao/SeloSituacao';
-import { detalheDaSituacao, mensagemDaRecusa, situacaoDe } from '@/features/pipelines/situacao/situacao';
+import { comSituacaoNova, detalheDaSituacao, mensagemDaRecusa, situacaoDe } from '@/features/pipelines/situacao/situacao';
 import { linkDoCardCompleto } from '@/features/pipelines/linkDoCard';
 import { useCardDoLead } from '@/features/cardDoLead/useCardDoLead';
 import { useCardCompleto } from '@/features/cardDoLead/pagina/useCardCompleto';
@@ -179,7 +179,7 @@ function ConteudoDoCard({ dados, recarregar, atualizarItem }: {
     try {
       const ganho = await pipelinesService.setItemStatus(item.pipeline_id, item.id, { status: 'won' });
       toast.success('Lead marcado como ganho.');
-      aoMudarSituacao({ ...(card.situacao.item ?? item), ...ganho } as PipelineItem);
+      aoMudarSituacao(comSituacaoNova(card.situacao.item ?? item, ganho));
     } catch (erro) {
       toast.error(mensagemDaRecusa(erro, 'Não consegui marcar o lead como ganho.'));
     } finally {
