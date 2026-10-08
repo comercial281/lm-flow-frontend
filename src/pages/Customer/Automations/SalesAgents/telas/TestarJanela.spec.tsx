@@ -199,7 +199,9 @@ describe('TestarJanela', () => {
     expect(within(painel).getByText('Passaria pra Roleta Zona Sul agora')).toBeInTheDocument();
     expect(within(painel).getByText('Motivo pro corretor: Pediu uma pessoa')).toBeInTheDocument();
     expect(within(painel).getByText('Card: vai pra coluna de "Passou pro corretor"')).toBeInTheDocument();
-    expect(within(painel).getByText(/No atendimento real: Fora do horário/)).toBeInTheDocument();
+    expect(within(painel).getByText('No atendimento real ela não responderia')).toBeInTheDocument();
+    expect(within(painel).getByText('Fora do horário de atendimento')).toBeInTheDocument();
+    expect(within(painel).getAllByText(/respondeu mesmo assim/)).toHaveLength(1);
   });
 
   it('avançar o tempo mostra a retomada e mantém o painel do último turno', async () => {

@@ -7560,6 +7560,23 @@ Armadilhas:
 3. **`honor_triggers` vai em todo turno e avanço.** Sem o campo o servidor respeita o
    gatilho (comportamento antigo), então tela nova com servidor velho se comporta como antes.
 
+### "O que aconteceria" do Testar sem repetição (08/10/2026)
+
+Print do dono: com a IA sem número, desligada e sem gatilho, o painel dizia "Responderia
+uns 10 s depois" e logo abaixo três frases longas, cada uma terminando em "O teste
+respondeu mesmo assim", mais Temperatura e "Faltam 3 perguntas obrigatórias", que já têm
+seção própria no mesmo painel.
+
+- **As travas viram um bloco âmbar só**, em cima: "No atendimento real ela não
+  responderia", a lista curta (Está sem número · Está desligada · Nenhum gatilho bateu ·
+  Fora do horário de atendimento · Está em "só follow-up" · Limite do dia atingido) e
+  UMA vez "O teste respondeu mesmo assim, pra você ver como ela fala."
+- **Com trava, some o "Responderia uns N s"** (ela não responderia).
+- **Temperatura e perguntas obrigatórias saem do bloco** (seções Temperatura e Qualificação).
+- Regra em `oQueAconteceria` (`features/salesAgents/ensaio.ts`, com spec). A Comparação do
+  admin continua com `linhasDoQueAconteceria`, sem mudança. Trava nova do servidor sem
+  frase curta sai com o texto dele (`TRAVA_CURTA`).
+
 ## Funil: F5 mantém o card e nomes longos cortam (07/10/2026)
 
 E0 do plano do funil (`LM FLOW/plans/2026-10-07-funil-01-consertos-e-listas.md`), itens da call com um cliente (07/10).
