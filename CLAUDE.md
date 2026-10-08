@@ -7560,3 +7560,26 @@ Armadilhas:
 1. **O quadro recarrega a cada 60 s e ao vivo.** O hook guarda o card que já abriu pelo endereço; sem isso o card seria reaberto a cada volta (e reabriria depois de fechado, se o `?card=` não saísse).
 2. **`abrirNoEndereco`/`fecharNoEndereco` são estáveis de propósito**: entram no `handleEditItem`, que vai pro `PipelineItemCard` memoizado. O `setSearchParams` do roteador muda a cada mudança do endereço, por isso fica num ref.
 3. **O gatilho do Select do design system é `flex whitespace-nowrap`**: sem `min-w-0 overflow-hidden` no gatilho e `truncate` no texto, nome comprido passa da caixa. Campo novo de escolha na janela do card segue o `CamposDaSituacao`.
+
+## Listas da casa: motivos de perda e categorias de tarefa (07/10/2026)
+
+E1 do plano do funil (`LM Flow/plans/2026-10-07-funil-01-consertos-e-listas.md`); servidor no backend (`list_options`, migration 315). Pedido da call com a Nova 27: o motivo de perda é "dado de suma importância", e as categorias de tarefa são do cliente.
+
+O que aparece na tela: **Minha imobiliária › Listas** (`/settings/listas`), logo depois de Etiquetas. Abas **Motivos de perda | Categorias de tarefa** (aba no endereço: `?aba=categorias`). Cada linha: alça de arrastar, nome editável na própria linha (grava ao sair do campo ou no Enter; Esc desiste), setas ↑↓ e Arquivar (com confirmação). Nos motivos, a chave **"Avisar a Meta como lead ruim"** por motivo (de fábrica, só "Sem perfil ou sem crédito"). Embaixo, o campo de nova opção e o bloco **Arquivadas**, com Desarquivar.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Opção não se exclui, só se arquiva.** Quem usa guarda o id: o card perdido e a tarefa continuam mostrando o nome. Renomear muda o nome em todo registro antigo.
+- **Quem muda é quem tem `pipelines.update`** (Gerente e administrador). A rota abre pra quem lê o funil (`pipelines.read`), mas o menu pede as duas (`gestao()`), como Etiquetas. Pra quem não pode, a tela só lê (sem campo, sem setas, sem Arquivadas) e diz "Só o gestor muda esta lista."
+- **A última opção ativa não arquiva** (o servidor recusa com a frase): sem nenhuma, a janela de Perdido não teria motivo.
+
+Armadilhas:
+
+1. **Leitura é livre no servidor** (`PermissionRegistry::FREE_ACTIONS`). Quem usar as listas em outra tela (janela de Perdido, tarefas) chama `listOptionsService.list(key)` sem `includeInactive`: só as ativas, na ordem.
+2. **Moldura da casa** (`Pagina` + `BaseHeader`, como a `RoletaLista`): a trava `foraDaMoldura` (teto 0) reprova cabeçalho fora dela.
+3. **Texto da tela é literal, não chave de i18n**, como as outras telas novas: o `conferir-padrao` só lê texto literal.
+4. **Ordem**: a tela manda só as ativas na ordem nova (`reorder`); o servidor põe as arquivadas depois e devolve a lista inteira, que substitui a da tela. Erro volta como estava.
+
+Pendente conhecido:
+
+- **Categorias de tarefa**: a tela Tarefas ainda guarda a categoria pelo nome; até ela ler as Listas da casa, editar essa lista não muda as tarefas.
