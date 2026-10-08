@@ -6,6 +6,7 @@ import {
   type CapiConfig,
   type CapiConnectionTest,
   type CapiStageRule,
+  type CapiStatusKey,
 } from '@/services/capi/capiConfigService';
 import { Seletor } from '@/components/base/Seletor';
 
@@ -13,6 +14,91 @@ const VALUE_EVENTS = ['Purchase', 'UltraQualificado'];
 
 function emptyRule(): CapiStageRule {
   return { event_name: '', enabled: false, to_client: true, intent: 'none' };
+}
+
+// Situação do card: os dois momentos que avisam a Meta (spec do funil §3.4).
+const SITUACOES: { chave: CapiStatusKey; rotulo: string; dica: string }[] = [
+  { chave: 'won', rotulo: 'Ao marcar Ganho', dica: 'A Compra leva o preço estimado do card (Sobre o negócio).' },
+  {
+    chave: 'lost',
+    rotulo: 'Ao marcar Perdido',
+    dica: 'Perdido só avisa a Meta quando o motivo da perda está marcado para isso em Minha imobiliária › Listas (ex.: Sem perfil ou sem crédito).',
+  },
+];
+
+interface LinhaDaRegraProps {
+  rotulo: string;
+  regra: CapiStageRule;
+  aoMudar: (patch: Partial<CapiStageRule>) => void;
+  eventos: string[];
+  intencoes: string[];
+  inputCls: string;
+  /** Etapa: "Automático" (desligado, só conta pelo botão no card). Situação: "Ligado". */
+  rotuloDoLigado: string;
+  dicaDoLigado: string;
+  dica?: string;
+}
+
+function LinhaDaRegra({
+  rotulo, regra: r, aoMudar, eventos, intencoes, inputCls, rotuloDoLigado, dicaDoLigado, dica,
+}: LinhaDaRegraProps) {
+  const showValue = VALUE_EVENTS.includes(r.event_name);
+  return (
+    <div className="px-4 py-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="w-40 shrink-0 truncate text-sm text-foreground">{rotulo}</span>
+
+        <Seletor
+          className={inputCls}
+          aria-label={`Evento: ${rotulo}`}
+          value={r.event_name}
+          onChange={(e) => aoMudar({ event_name: e.target.value, enabled: !!e.target.value })}
+        >
+          <option value="">Não disparar</option>
+          {eventos.map((ev) => (
+            <option key={ev} value={ev}>
+              {CAPI_EVENT_LABELS[ev] ?? ev}
+            </option>
+          ))}
+        </Seletor>
+
+        {r.event_name && (
+          <>
+            <label className="flex items-center gap-1 text-xs text-muted-foreground" title={dicaDoLigado}>
+              <input type="checkbox" checked={r.enabled} onChange={(e) => aoMudar({ enabled: e.target.checked })} />
+              {rotuloDoLigado}
+            </label>
+            <label className="flex items-center gap-1 text-xs text-muted-foreground">
+              <input type="checkbox" checked={r.to_client} onChange={(e) => aoMudar({ to_client: e.target.checked })} />
+              Cliente
+            </label>
+            <Seletor
+              className={inputCls}
+              aria-label={`Público: ${rotulo}`}
+              value={r.intent ?? 'none'}
+              onChange={(e) => aoMudar({ intent: e.target.value as CapiStageRule['intent'] })}
+            >
+              {intencoes.map((it) => (
+                <option key={it} value={it}>
+                  {CAPI_INTENT_LABELS[it] ?? it}
+                </option>
+              ))}
+            </Seletor>
+
+            {showValue && (
+              <input
+                className={`${inputCls} w-40`}
+                value={r.value_field ?? ''}
+                onChange={(e) => aoMudar({ value_field: e.target.value || null })}
+                placeholder="Valor: card_value"
+              />
+            )}
+          </>
+        )}
+      </div>
+      {dica && <p className="mt-1 text-xs text-muted-foreground">{dica}</p>}
+    </div>
+  );
 }
 
 export default function PixelCapiConfig() {
@@ -29,6 +115,7 @@ export default function PixelCapiConfig() {
   const [testEventCode, setTestEventCode] = useState('');
   const [currency, setCurrency] = useState('BRL');
   const [stageMap, setStageMap] = useState<Record<string, CapiStageRule>>({});
+  const [statusMap, setStatusMap] = useState<Partial<Record<CapiStatusKey, CapiStageRule>>>({});
 
   // Resultado do "Testar conexão".
   const [testing, setTesting] = useState(false);
@@ -46,6 +133,7 @@ export default function PixelCapiConfig() {
         setTestEventCode(c.test_event_code ?? '');
         setCurrency(c.default_currency || 'BRL');
         setStageMap(c.stage_map || {});
+        setStatusMap(c.status_map || {});
       })
       .catch(() => alive && setError('Não foi possível carregar a configuração.'))
       .finally(() => alive && setLoading(false));
@@ -68,6 +156,10 @@ export default function PixelCapiConfig() {
     });
   }
 
+  function patchStatusRule(chave: CapiStatusKey, patch: Partial<CapiStageRule>) {
+    setStatusMap((prev) => ({ ...prev, [chave]: { ...(prev[chave] ?? emptyRule()), ...patch } }));
+  }
+
   async function handleSave() {
     setSaving(true);
     setError(null);
@@ -78,6 +170,12 @@ export default function PixelCapiConfig() {
       Object.entries(stageMap).forEach(([id, r]) => {
         if (r.event_name) cleanMap[id] = r;
       });
+      // A situação vai só com evento escolhido; "Não disparar" tira a chave.
+      const cleanStatus: Partial<Record<CapiStatusKey, CapiStageRule>> = {};
+      SITUACOES.forEach(({ chave }) => {
+        const r = statusMap[chave];
+        if (r?.event_name) cleanStatus[chave] = r;
+      });
       const updated = await capiConfigService.update({
         is_enabled: isEnabled,
         pixel_id: pixelId.trim() || null,
@@ -85,9 +183,11 @@ export default function PixelCapiConfig() {
         test_event_code: testEventCode.trim() || null,
         default_currency: currency,
         stage_map: cleanMap,
+        status_map: cleanStatus,
       });
       setConfig(updated);
       setStageMap(updated.stage_map || {});
+      setStatusMap(updated.status_map || {});
       setAccessToken('');
       setSaved(true);
     } catch {
@@ -144,7 +244,7 @@ export default function PixelCapiConfig() {
       <header>
         <h2 className="text-lg font-semibold text-sidebar-foreground">Pixel / Conversões (CAPI)</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Conecte o pixel deste cliente e escolha qual coluna do CRM dispara qual evento para o Meta.
+          Conecte o pixel deste cliente e escolha o que avisa a Meta: marcar Ganho ou Perdido no card, e o card entrar em cada etapa do funil.
         </p>
       </header>
 
@@ -259,6 +359,32 @@ export default function PixelCapiConfig() {
         </div>
       </section>
 
+      {/* Situação do card -> evento (07/10/2026): substitui as etapas finais (Concluída/Cancelada). */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Ao marcar no card → eventos</h2>
+          <p className="text-xs text-muted-foreground">
+            O evento sai na hora em que alguém marca Ganho ou Perdido no card do lead. Reabrir não avisa a Meta.
+          </p>
+        </div>
+        <div className="divide-y divide-border rounded-lg border border-border">
+          {SITUACOES.map(({ chave, rotulo, dica }) => (
+            <LinhaDaRegra
+              key={chave}
+              rotulo={rotulo}
+              regra={statusMap[chave] ?? emptyRule()}
+              aoMudar={(patch) => patchStatusRule(chave, patch)}
+              eventos={eventOptions}
+              intencoes={intentOptions}
+              inputCls={inputCls}
+              rotuloDoLigado="Ligado"
+              dicaDoLigado="Desligado: marcar no card não avisa a Meta."
+              dica={dica}
+            />
+          ))}
+        </div>
+      </section>
+
       {/* Mapa coluna -> evento */}
       <section className="space-y-4">
         <div>
@@ -278,67 +404,21 @@ export default function PixelCapiConfig() {
               {pipeline.name || 'Funil'}
             </div>
             <div className="divide-y divide-border">
-              {pipeline.stages.map((stage) => {
-                const r = rule(stage.id);
-                const showValue = VALUE_EVENTS.includes(r.event_name);
-                return (
-                  <div key={stage.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                    <span className="w-40 shrink-0 truncate text-sm text-foreground">{stage.name || '—'}</span>
-
-                    <Seletor
-                      className={inputCls}
-                      value={r.event_name}
-                      onChange={(e) => patchRule(stage.id, { event_name: e.target.value, enabled: !!e.target.value })}
-                    >
-                      <option value="">Não disparar</option>
-                      {eventOptions.map((ev) => (
-                        <option key={ev} value={ev}>
-                          {CAPI_EVENT_LABELS[ev] ?? ev}
-                        </option>
-                      ))}
-                    </Seletor>
-
-                    {r.event_name && (
-                      <>
-                        {/* Liga/desliga o "metrificar por coluna". Desligado, a coluna
-                            continua mapeada mas só conta pelo botão dentro do card. */}
-                        <label
-                          className="flex items-center gap-1 text-xs text-muted-foreground"
-                          title="Ligado: envia sozinho quando o card entra nesta coluna. Desligado: só envia pelo botão Conversão Meta dentro do card."
-                        >
-                          <input type="checkbox" checked={r.enabled} onChange={(e) => patchRule(stage.id, { enabled: e.target.checked })} />
-                          Automático
-                        </label>
-                        <label className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <input type="checkbox" checked={r.to_client} onChange={(e) => patchRule(stage.id, { to_client: e.target.checked })} />
-                          Cliente
-                        </label>
-                        <Seletor
-                          className={inputCls}
-                          value={r.intent ?? 'none'}
-                          onChange={(e) => patchRule(stage.id, { intent: e.target.value as CapiStageRule['intent'] })}
-                        >
-                          {intentOptions.map((it) => (
-                            <option key={it} value={it}>
-                              {CAPI_INTENT_LABELS[it] ?? it}
-                            </option>
-                          ))}
-                        </Seletor>
-
-                        {showValue && (
-                          <input
-                            className={`${inputCls} w-40`}
-                            value={r.value_field ?? ''}
-                            onChange={(e) => patchRule(stage.id, { value_field: e.target.value || null })}
-                            placeholder="Valor: card_value"
-                          />
-                        )}
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-              {pipeline.stages.length === 0 && (
+              {/* Etapa final pelo tipo (Concluída/Cancelada) não entra: a Meta é avisada ao marcar a situação. */}
+              {pipeline.stages.filter((stage) => !stage.final).map((stage) => (
+                <LinhaDaRegra
+                  key={stage.id}
+                  rotulo={stage.name || '—'}
+                  regra={rule(stage.id)}
+                  aoMudar={(patch) => patchRule(stage.id, patch)}
+                  eventos={eventOptions}
+                  intencoes={intentOptions}
+                  inputCls={inputCls}
+                  rotuloDoLigado="Automático"
+                  dicaDoLigado="Ligado: envia sozinho quando o card entra nesta coluna. Desligado: só envia pelo botão Conversão Meta dentro do card."
+                />
+              ))}
+              {pipeline.stages.filter((stage) => !stage.final).length === 0 && (
                 <div className="px-4 py-3 text-xs text-muted-foreground">Sem colunas neste funil.</div>
               )}
             </div>

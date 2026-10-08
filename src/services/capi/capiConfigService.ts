@@ -13,6 +13,12 @@ export interface CapiPipelineStage {
   id: string;
   name: string | null;
   position: number | null;
+  /**
+   * Etapa final pelo tipo (Concluída/Cancelada) segundo o servidor: `closing_kind`
+   * (P2-T4) manda, o nome não conta. Sai do mapa por etapa: desde 07/10/2026 a
+   * Meta é avisada ao MARCAR a situação do card (status_map), não ao entrar na coluna.
+   */
+  final?: 'won' | 'lost' | null;
 }
 
 export interface CapiPipeline {
@@ -20,6 +26,9 @@ export interface CapiPipeline {
   name: string | null;
   stages: CapiPipelineStage[];
 }
+
+// As duas situações do card que avisam a Meta (Reabrir nunca avisa).
+export type CapiStatusKey = 'won' | 'lost';
 
 export interface CapiConfig {
   id: string;
@@ -29,6 +38,8 @@ export interface CapiConfig {
   test_event_code: string | null;
   default_currency: string;
   stage_map: Record<string, CapiStageRule>;
+  /** "Ao marcar Ganho" / "Ao marcar Perdido" — regra no mesmo formato do stage_map. */
+  status_map?: Partial<Record<CapiStatusKey, CapiStageRule>>;
   known_events: string[];
   intents: string[];
   pipelines: CapiPipeline[];
@@ -42,6 +53,8 @@ export interface CapiConfigUpdate {
   test_event_code?: string | null;
   default_currency?: string;
   stage_map?: Record<string, CapiStageRule>;
+  /** "Ao marcar Ganho" / "Ao marcar Perdido" — regra no mesmo formato do stage_map. */
+  status_map?: Partial<Record<CapiStatusKey, CapiStageRule>>;
 }
 
 // Resultado do "Testar conexão": diagnóstico, não erro de API — por isso vem
