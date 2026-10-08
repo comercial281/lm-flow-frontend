@@ -19,6 +19,7 @@ import type {
   AvailableContactsResponse,
   PipelineItemResponse,
   ConversationForModal,
+  PipelineBoardStatus,
 } from '@/types/analytics';
 import { Contact } from '@/types';
 
@@ -31,9 +32,11 @@ class PipelinesService {
     return extractResponse<Pipeline>(response) as PipelinesResponse;
   }
 
-  // Get single pipeline
-  async getPipeline(pipelineId: string): Promise<Pipeline> {
-    const response = await api.get(`/pipelines/${pipelineId}`);
+  // Get single pipeline. `status` = a aba do quadro (Abertos, Ganhos, Perdidos,
+  // Todos, Arquivados); sem ele o servidor devolve os abertos.
+  async getPipeline(pipelineId: string, opts: { status?: PipelineBoardStatus } = {}): Promise<Pipeline> {
+    const url = `/pipelines/${pipelineId}`;
+    const response = opts.status ? await api.get(url, { params: { status: opts.status } }) : await api.get(url);
     return extractData<Pipeline>(response);
   }
 
