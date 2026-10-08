@@ -64,6 +64,8 @@ import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { lazyWithRetry } from '@/utils/chunkReload';
 // Card do board, sempre visível de cara — import estático de propósito.
 import PipelineItemCard from './PipelineItemCard';
+import AvisoCardForaDaAba from './AvisoCardForaDaAba';
+import { useCardNoEndereco } from './useCardNoEndereco';
 import OfferActions from '@/components/roleta/OfferActions';
 import {
   itemPos,
@@ -425,18 +427,23 @@ export default function PipelineKanban() {
     };
   }, [loadPipelineData, loadUpcomingVisits]);
 
-  // Auto-open card from ?card= URL param
-  useEffect(() => {
-    const cardId = searchParams.get('card');
-    if (!cardId || loading) return;
-    const allItems = stages.flatMap(s => s.items ?? []);
-    const found = allItems.find(i => i.id === cardId);
-    if (found) {
-      setItemToEdit(found);
-      setShowEditItemModal(true);
-      setSearchParams({}, { replace: true });
-    }
-  }, [searchParams, stages, loading, setSearchParams]);
+  // Card aberto no endereço (?card=): F5 e link colado abrem o card, e ele
+  // continua no endereço enquanto estiver aberto. Fechar tira só o ?card=.
+  // Card que não está no quadro carregado mostra o aviso (E0, 07/10/2026).
+  const abrirCard = useCallback((item: PipelineItem) => {
+    setItemToEdit(item);
+    setShowEditItemModal(true);
+  }, []);
+  const itensDoQuadro = useMemo(() => stages.flatMap(s => s.items ?? []), [stages]);
+  const {
+    foraDaAba: cardForaDaAba,
+    abrirNoEndereco: abrirCardNoEndereco,
+    fecharNoEndereco: fecharCardNoEndereco,
+  } = useCardNoEndereco({ itens: itensDoQuadro, carregando: loading, aoAbrir: abrirCard });
+  const fecharCard = useCallback((aberto: boolean) => {
+    setShowEditItemModal(aberto);
+    if (!aberto) fecharCardNoEndereco();
+  }, [fecharCardNoEndereco]);
 
   // ?etapa= (link da Dashboard): rola até a coluna e destaca por 2 segundos.
   const [etapaDestacada, setEtapaDestacada] = useState<string | null>(null);
@@ -773,10 +780,12 @@ export default function PipelineKanban() {
     }
   };
 
+  // Clique no card: abre e grava o ?card= (F5 e "copiar o endereço" funcionam).
+  // As duas funções são estáveis: o PipelineItemCard continua memoizado.
   const handleEditItem = useCallback((item: PipelineItem) => {
-    setItemToEdit(item);
-    setShowEditItemModal(true);
-  }, []);
+    abrirCard(item);
+    abrirCardNoEndereco(String(item.id));
+  }, [abrirCard, abrirCardNoEndereco]);
 
   // Ações do menu do card (extraídas do JSX inline pra referência estável — useCallback).
   const handleOpenScheduleAction = useCallback((item: PipelineItem) => {
@@ -853,6 +862,7 @@ export default function PipelineKanban() {
       toast.success(t('kanban.messages.itemUpdated'));
       setShowEditItemModal(false);
       setItemToEdit(null);
+      fecharCardNoEndereco();
       // Move otimista na hora + refresh silencioso (sem o spinner de tela cheia
       // que dava a sensação de "recarregar a página").
       if (stageChanged) moveItemToStageLocal(movedId, data.stage_id);
@@ -1310,6 +1320,8 @@ export default function PipelineKanban() {
           </div>
         </div>
 
+        {cardForaDaAba && <AvisoCardForaDaAba aoFechar={fecharCardNoEndereco} />}
+
         {/* Kanban Board */}
         {viewMode === 'board' && (
         <div className="flex-1 overflow-hidden relative">
@@ -1742,7 +1754,7 @@ export default function PipelineKanban() {
         <Suspense fallback={null}>
           <EditItemModal
             open={showEditItemModal}
-            onOpenChange={setShowEditItemModal}
+            onOpenChange={fecharCard}
             item={itemToEdit}
             stages={stages}
             pipeline={pipeline}
