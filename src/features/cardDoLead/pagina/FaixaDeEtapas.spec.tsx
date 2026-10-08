@@ -49,6 +49,24 @@ describe('FaixaDeEtapas', () => {
     expect(screen.getByRole('button', { name: 'Marcar como Ganho (Concluído)' })).toBeInTheDocument();
   });
 
+  // 08/10: etapa que o lead só atravessou (ex.: saiu do Follow-up Automático no
+  // mesmo dia porque respondeu) fica só pintada, sem "menos de 1 dia".
+  it('etapa já passada com menos de 1 dia: só pintada, sem texto de dias', () => {
+    montar({
+      etapaAtualId: 's3',
+      duracoes: [
+        { stage_id: 's1', days: 2, current: false },
+        { stage_id: 's2', days: 0, current: false },
+        { stage_id: 's3', days: 0, current: true },
+      ],
+    });
+    const passada = screen.getByText('1º contato').closest('li')!;
+    expect(passada).not.toHaveTextContent('menos de 1 dia');
+    expect(screen.getByRole('button', { name: 'Mover para 1º contato' })).toHaveClass('bg-primary/10');
+    // Na etapa atual continua dizendo que ele entrou hoje.
+    expect(screen.getByText('menos de 1 dia · atual')).toBeInTheDocument();
+  });
+
   it('clicar numa etapa pergunta antes e só move no "Mover"', async () => {
     const { aoMover } = montar();
     await userEvent.click(screen.getByRole('button', { name: /^Mover para Proposta( ·|$)/ }));

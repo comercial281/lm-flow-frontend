@@ -7733,6 +7733,8 @@ O que aparece na tela:
 - **Faixa de etapas** com os dias em cada uma: idas e voltas somam; a atual conta até agora;
   card Ganho/Perdido para o relógio no dia em que fechou. Clicar numa etapa pergunta "Mover
   <nome> para <etapa>?". Card fechado: a faixa só informa.
+  Etapa já passada em que o lead ficou menos de 1 dia (ex.: respondeu no mesmo dia e saiu do
+  Follow-up Automático) fica só pintada, sem "menos de 1 dia" (Tony, 08/10). Na atual continua.
 - **Abas** Ficha · Conversa · Visitas e propostas · Origem (a aba vai no endereço, `?aba=`).
   A página não tem aba Tarefas: as tarefas são um bloco da Ficha.
 - **Ficha:** à esquerda Ações rápidas, Próximas tarefas (o `TarefasDoLead` da sessão de
