@@ -37,6 +37,8 @@ describe('janela do card × situação (spec funil §3.8)', () => {
     expect(hook).toContain('if (ehColunaDeGanho(stages.find(s => String(s.id) === String(toStageId)))) {');
     expect(hook).toContain("await pipelinesService.setItemStatus(item.pipeline_id, item.id, { status: 'won' });");
     expect(janela).toContain('onLabelsChanged, onItemStatusChanged });');
+    // O painel da Meta recomeça quando a situação muda (Ganho/Perdido/Reabrir).
+    expect(janela).toContain('key={situacaoDe(card.situacao.item)}');
   });
 
   // Sessão de Tarefas (08/10): a casca mantém a aba Tarefas, e o "Colocar no

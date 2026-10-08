@@ -10,12 +10,13 @@
 // etiquetas, follow-up, Meta, Ganho | Perdido); DIREITA com as abas Detalhes ·
 // Conversa · Tarefas · Visitas e propostas · Origem. Tudo grava na hora.
 import { Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
-import { CalendarCheck, ClipboardList, ListTodo, Megaphone, MessageSquare } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/ds';
+import { ArrowUpRight, CalendarCheck, ClipboardList, ListTodo, Megaphone, MessageSquare } from 'lucide-react';
+import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/ds';
 import Abas from '@/components/base/Abas';
 import type { Pipeline, PipelineItem, PipelineStage } from '@/types/analytics';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import { rotuloDaAbaTarefas } from '@/features/tarefas/abaDoCard';
+import { linkDoCardCompleto } from '@/features/pipelines/linkDoCard';
 import { situacaoDe } from '@/features/pipelines/situacao/situacao';
 import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import { useCardDoLead } from '@/features/cardDoLead/useCardDoLead';
@@ -110,15 +111,31 @@ export default function EditItemModal({
             <BlocoIdentidade
               card={card}
               acoes={
-                <CardMoreMenu
-                  item={item}
-                  roletas={card.roleta.ligadas}
-                  trocandoRoleta={card.roleta.mandando}
-                  onTrocarRoleta={card.roleta.mandar}
-                  onTirarDaRoleta={card.roleta.ofertasAbertas.length > 0 ? () => card.roleta.setTirando(true) : undefined}
-                  onRemovido={() => onOpenChange(false)}
-                  onJuntar={card.juntar.pode && contato?.id != null ? () => card.juntar.setJuntando(true) : undefined}
-                />
+                <>
+                  {/* E4: a página do card, sempre em outra guia (a janela não muda de cara: só a setinha). */}
+                  {!card.foraDoFunil && (
+                    <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <a
+                        href={linkDoCardCompleto(item.pipeline_id, item.id)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Ver card completo"
+                        title="Ver card completo"
+                      >
+                        <ArrowUpRight className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  )}
+                  <CardMoreMenu
+                    item={item}
+                    roletas={card.roleta.ligadas}
+                    trocandoRoleta={card.roleta.mandando}
+                    onTrocarRoleta={card.roleta.mandar}
+                    onTirarDaRoleta={card.roleta.ofertasAbertas.length > 0 ? () => card.roleta.setTirando(true) : undefined}
+                    onRemovido={() => onOpenChange(false)}
+                    onJuntar={card.juntar.pode && contato?.id != null ? () => card.juntar.setJuntando(true) : undefined}
+                  />
+                </>
               }
             />
 

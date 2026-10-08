@@ -504,4 +504,18 @@ describe('janela do card · caracterização (E4)', () => {
     await waitFor(() => expect(s.getContactEvents).toHaveBeenCalledTimes(2));
     expect(s.getContactEvents).toHaveBeenLastCalledWith('c1', { limit: 100 });
   });
+
+  it('"Ver card completo" ao lado do ⋯ abre a página do card em outra guia', () => {
+    abrir();
+    const link = screen.getByRole('link', { name: 'Ver card completo' });
+
+    expect(link).toHaveAttribute('href', '/pipelines/p1/card/i1');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  it('card sem funil não tem página: sem "Ver card completo"', () => {
+    abrir({ item: semFunil, stages: [] as never, onColocadoNoFunil: vi.fn() });
+    expect(screen.queryByRole('link', { name: 'Ver card completo' })).toBeNull();
+  });
 });
