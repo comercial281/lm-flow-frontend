@@ -7648,6 +7648,11 @@ O que aparece na tela:
   Editar funil, Reordenar etapas, Copiar ID, Excluir funil). (2) Abas **Abertos · Ganhos ·
   Perdidos · Todos** com os números, e **Arquivados** numa caixinha com o número. (3) Busca,
   quantos leads a aba mostra, **Quadro | Lista** e **Filtros · N**.
+- **Topo em duas faixas** (ajuste de 08/10, pedido do dono, junta a 2ª e a 3ª faixa): as abas
+  e a caixinha **Arquivados** ficam à esquerda; à direita, na mesma linha, quantos leads a aba
+  mostra (some no celular), a busca **mais curta**, **Quadro | Lista** só com ícone (o nome vai
+  no `title`) e **Filtros** só com ícone, com a quantidade numa bolinha. Na tela estreita a
+  parte da direita desce pra linha de baixo.
 - **Saíram do topo:** a contagem de etapas, o total de leads (virou o contador da aba), o valor
   total (cada coluna mostra o dela) e o **Importar** (o Bolsão continua com o dele).
 - **Cada aba busca só os cards dela no servidor** (`GET /pipelines/:id?status=`). Ganhos e
@@ -7686,7 +7691,7 @@ O que aparece na tela:
 
 Decisões do dono (não reabrir sem ele pedir):
 
-- Topo em três faixas; Importar sai do funil; Exportar no ⋯.
+- Topo em duas faixas (era três até 08/10); Importar sai do funil; Exportar no ⋯.
 - Filtros num painel grande à direita, como o "Filtrar atendimentos" do Praedium.
 - O card do quadro é mínimo: sem etiquetas, temperatura nem imóvel.
 
