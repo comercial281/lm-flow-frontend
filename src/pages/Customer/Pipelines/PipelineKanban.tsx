@@ -1,37 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { formatDateBR } from '@/utils/dateUtils';
-import { dinheiro } from '@/lib/formato';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
-import {
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  Badge,
-  Input,
-} from '@/components/ui/ds';
-import {
-  ArrowLeft,
-  Plus,
-  MoreVertical,
-  Edit,
-  Trash2,
-  Copy,
-  ArrowUpDown,
-  Search,
-  X,
-  Download,
-  Upload,
-  Megaphone,
-  Archive,
-  LayoutGrid,
-  List as ListIcon,
-  SlidersHorizontal,
-} from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 import { pipelinesService } from '@/services/pipelines';
 import { visitsService } from '@/services/visits/visitsService';
@@ -42,18 +14,16 @@ import {
   UpdatePipelineData,
   CreateStageData,
 } from '@/types/analytics';
-// PipelineSwitcher fica no topo, sempre visível — import estático de propósito.
-import PipelineSwitcher from '@/components/pipelines/PipelineSwitcher';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useCan } from '@/hooks/useCan';
 import { boardHeaderActions } from './boardActions';
+import BoardTopBar, { type ModoDoQuadro } from './quadro/BoardTopBar';
 import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import AvisoCardForaDaAba from './AvisoCardForaDaAba';
 import { useCardNoEndereco } from './useCardNoEndereco';
 import {
-  calculateStageTotal,
 } from './pipelineItemHelpers';
 import { useBoardDrag } from './quadro/useBoardDrag';
 import { usePipelineFilters } from './quadro/usePipelineFilters';
@@ -67,7 +37,6 @@ import { useAppDataStore } from '@/store/appDataStore';
 const EditPipelineModal = lazyWithRetry(() => import('@/components/pipelines/EditPipelineModal'));
 const CreateStageModal = lazyWithRetry(() => import('@/components/pipelines/CreateStageModal'));
 const AddItemModal = lazyWithRetry(() => import('@/components/pipelines/AddItemModal'));
-const ImportLeadsModal = lazyWithRetry(() => import('@/components/pipelines/ImportLeadsModal'));
 const BulkDispatchModal = lazyWithRetry(() => import('@/components/pipelines/BulkDispatchModal'));
 const RemoveItemModal = lazyWithRetry(() => import('@/components/pipelines/RemoveItemModal'));
 const EditItemModal = lazyWithRetry(() => import('@/components/pipelines/EditItemModal'));
@@ -81,7 +50,6 @@ const ScheduleActionModal = lazyWithRetry(() =>
 const NotesHistoryModal = lazyWithRetry(() =>
   import('@/components/pipelines/NotesHistoryModal').then(m => ({ default: m.NotesHistoryModal })),
 );
-const ArchivedLeadsModal = lazyWithRetry(() => import('@/components/pipelines/ArchivedLeadsModal'));
 
 export default function PipelineKanban() {
   const { t } = useLanguage('pipelines');
@@ -113,7 +81,7 @@ export default function PipelineKanban() {
   } = useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro: t('kanban.messages.itemMoveError') });
 
   // Aba e filtros no endereço; busca na tela (quadro/usePipelineFilters).
-  const { aba, filtros, aplicar, busca, setBusca, filteredStages, quantosFiltros } = usePipelineFilters(stages);
+  const { aba, setAba, filtros, aplicar, busca, setBusca, filteredStages, totalVisivel, quantosFiltros } = usePipelineFilters(stages);
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
 
   // Modal states
@@ -153,14 +121,12 @@ export default function PipelineKanban() {
     name?: string;
   } | null>(null);
 
-  const [importModalOpen, setImportModalOpen] = useState(false);
   const [disparoModalOpen, setDisparoModalOpen] = useState(false);
-  const [archivedModalOpen, setArchivedModalOpen] = useState(false);
 
   // Modo de visualização do funil: quadro (Kanban) ou lista (todos os leads,
   // por ordem de chegada, com foto/tags/coluna/data — mais rápido pra escanear
   // o funil inteiro sem ficar rolando colunas).
-  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
+  const [viewMode, setViewMode] = useState<ModoDoQuadro>('board');
   const [listSortOrder, setListSortOrder] = useState<'desc' | 'asc'>('desc');
 
   // Função do cliente (super-admin liga/desliga) E cargo. Os literais do
@@ -168,13 +134,11 @@ export default function PipelineKanban() {
   const pode = useCan();
   const acoesDoQuadro = boardHeaderActions(
     {
-      import: useFeature('pipeline_import'),
       export: useFeature('pipeline_export'),
       bulkDispatch: useFeature('bulk_campaigns'),
     },
     pode,
   );
-  const canImport = acoesDoQuadro.import;
   const canExport = acoesDoQuadro.export;
   const canBulkDispatch = acoesDoQuadro.bulkDispatch;
   const canAddItem = useFeature('pipeline_add_item');
@@ -337,13 +301,6 @@ export default function PipelineKanban() {
     }
   };
 
-  // Calculate pipeline total value
-  const calculatePipelineTotal = () => {
-    return stages.reduce((total, stage) => {
-      return total + calculateStageTotal(stage.items);
-    }, 0);
-  };
-
   // Todas as etiquetas da conta (catálogo completo — não só as que já aparecem
   // em algum card carregado neste pipeline; ver comentário acima em accountLabels).
   const allTags = useMemo(() => {
@@ -377,6 +334,12 @@ export default function PipelineKanban() {
 
   const handleDeletePipeline = () => {
     setShowDeletePipelineModal(true);
+  };
+
+  const handleCopyPipelineId = async () => {
+    if (!pipeline?.id) return;
+    await navigator.clipboard.writeText(String(pipeline.id));
+    toast.success(t('kanban.idCopied'));
   };
 
   const handleConfirmDeletePipeline = async () => {
@@ -720,231 +683,31 @@ export default function PipelineKanban() {
   return (
     <div className="flex w-full h-full min-w-0 overflow-hidden">
       <div className="flex-1 h-full flex flex-col bg-muted/30 min-w-0">
-        {/* Header */}
-        <div className="flex-shrink-0 bg-background border-b border-border shadow-sm">
-          <div className="px-4 sm:px-6">
-            <div className="flex flex-col gap-3 py-3 lg:min-h-16 lg:flex-row lg:items-center lg:justify-between lg:py-2">
-              {/* Navigation and Pipeline Info */}
-              <div className="flex items-center gap-3 min-w-0">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/pipelines')}
-                  aria-label="Voltar"
-                  title="Voltar"
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-
-                <div className="flex-1 min-w-0 max-w-full lg:max-w-2xl">
-                  {/* Pipeline Selector */}
-                  <PipelineSwitcher
-                    pipelines={allPipelines}
-                    selectedPipeline={pipeline}
-                    onSwitchPipeline={handlePipelineChange}
-                  />
-                </div>
-              </div>
-
-              {/* Quick Stats and Actions */}
-              <div className="flex w-full flex-wrap items-center justify-end gap-1.5 sm:gap-2 lg:gap-3 text-xs sm:text-sm lg:w-auto xl:flex-nowrap">
-                {pipeline?.pipeline_type === 'sale' && (
-                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 border-0">
-                    Venda
-                  </Badge>
-                )}
-                {pipeline?.pipeline_type === 'rental' && (
-                  <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400 border-0">
-                    Locação
-                  </Badge>
-                )}
-                <div className="text-center">
-                  <div className="font-semibold text-foreground leading-tight">
-                    {pipeline?.item_count || pipeline?.conversations_count || 0}
-                  </div>
-                  <div className="hidden sm:block text-muted-foreground">{t('kanban.header.conversations')}</div>
-                </div>
-                <div className="text-center">
-                  <div className="font-semibold text-foreground leading-tight">{stages.length}</div>
-                  <div className="hidden sm:block text-muted-foreground">{t('kanban.header.stages')}</div>
-                </div>
-                {calculatePipelineTotal() > 0 && (
-                  <div className="hidden md:block text-center">
-                    <div className="font-semibold text-green-600 dark:text-green-400 whitespace-nowrap leading-tight">
-                      {dinheiro(calculatePipelineTotal())}
-                    </div>
-                    <div className="text-muted-foreground">{t('kanban.header.totalValue')}</div>
-                  </div>
-                )}
-                {/* Botões secundários: só em telas largas (xl). Abaixo disso vão pro menu. */}
-                {canImport && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setImportModalOpen(true)}
-                    className="hidden xl:inline-flex whitespace-nowrap"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Importar
-                  </Button>
-                )}
-
-                {canExport && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExportCSV}
-                    className="hidden xl:inline-flex whitespace-nowrap"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Exportar
-                  </Button>
-                )}
-
-                {canBulkDispatch && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setDisparoModalOpen(true)}
-                    className="hidden xl:inline-flex whitespace-nowrap"
-                  >
-                    <Megaphone className="w-4 h-4 mr-2" />
-                    Disparo em massa
-                  </Button>
-                )}
-
-                {canAddItem && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => handleAddItem()}
-                    className="whitespace-nowrap"
-                  >
-                    <Plus className="w-4 h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">{t('kanban.header.addItem')}</span>
-                  </Button>
-                )}
-
-                {/* Pipeline Options Menu */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" aria-label="Mais ações" title="Mais ações">
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {/* Ações que somem da barra em telas < xl ficam acessíveis aqui */}
-                    {canImport && (
-                      <DropdownMenuItem className="xl:hidden" onClick={() => setImportModalOpen(true)}>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Importar
-                      </DropdownMenuItem>
-                    )}
-                    {canExport && (
-                      <DropdownMenuItem className="xl:hidden" onClick={handleExportCSV}>
-                        <Download className="h-4 w-4 mr-2" />
-                        Exportar
-                      </DropdownMenuItem>
-                    )}
-                    {canBulkDispatch && (
-                      <DropdownMenuItem className="xl:hidden" onClick={() => setDisparoModalOpen(true)}>
-                        <Megaphone className="h-4 w-4 mr-2" />
-                        Disparo em massa
-                      </DropdownMenuItem>
-                    )}
-                    {(canImport || canExport || canBulkDispatch) && <DropdownMenuSeparator className="xl:hidden" />}
-                    <DropdownMenuItem onClick={handleEditPipeline}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      {t('kanban.header.editPipeline')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={async () => {
-                        if (!pipeline?.id) return;
-                        await navigator.clipboard.writeText(String(pipeline.id));
-                        toast.success(t('kanban.idCopied'));
-                      }}
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      {t('kanban.copyId')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleReorderStages}>
-                      <ArrowUpDown className="h-4 w-4 mr-2" />
-                      {t('kanban.header.reorderStages')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setArchivedModalOpen(true)}>
-                      <Archive className="h-4 w-4 mr-2" />
-                      Leads arquivados
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive" onClick={handleDeletePipeline}>
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      {t('kanban.header.deletePipeline')}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-
-            {/* Search & date filter bar */}
-            <div className="flex flex-wrap items-center gap-2 pb-3">
-              <div className="relative flex-1 min-w-[200px] max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  value={busca}
-                  onChange={e => setBusca(e.target.value)}
-                  placeholder="Buscar por nome, email ou telefone"
-                  className="pl-9 pr-8 h-9"
-                />
-                {busca && (
-                  <button
-                    onClick={() => setBusca('')}
-                    aria-label="Limpar busca"
-                    title="Limpar busca"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-
-              <Button
-                type="button"
-                variant={quantosFiltros > 0 ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFiltrosAbertos(true)}
-                className="gap-1.5 whitespace-nowrap"
-              >
-                <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-                {quantosFiltros > 0 ? `Filtros · ${quantosFiltros}` : 'Filtros'}
-              </Button>
-
-              {/* Alternar visualização: Quadro (Kanban) ou Lista (todos os leads) */}
-              <div className="ml-auto flex items-center border rounded-lg">
-                <Button
-                  variant={viewMode === 'board' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('board')}
-                  className="border-0 rounded-r-none whitespace-nowrap"
-                  title="Visualização em quadro"
-                >
-                  <LayoutGrid className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Quadro</span>
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="border-0 rounded-l-none whitespace-nowrap"
-                  title="Visualização em lista"
-                >
-                  <ListIcon className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Lista</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <BoardTopBar
+          pipeline={pipeline}
+          pipelines={allPipelines}
+          onTrocarFunil={handlePipelineChange}
+          onVoltar={() => navigate('/pipelines')}
+          aba={aba}
+          onTrocarAba={setAba}
+          contagens={pipeline?.status_counts}
+          busca={busca}
+          onBusca={setBusca}
+          totalVisivel={totalVisivel}
+          modo={viewMode}
+          onModo={setViewMode}
+          quantosFiltros={quantosFiltros}
+          onAbrirFiltros={() => setFiltrosAbertos(true)}
+          podeAdicionar={canAddItem}
+          onAdicionar={() => handleAddItem()}
+          acoes={{ exportar: canExport, disparo: canBulkDispatch }}
+          onExportar={handleExportCSV}
+          onDisparo={() => setDisparoModalOpen(true)}
+          onEditarFunil={handleEditPipeline}
+          onReordenarEtapas={handleReorderStages}
+          onCopiarId={() => { void handleCopyPipelineId(); }}
+          onExcluirFunil={handleDeletePipeline}
+        />
 
         {cardForaDaAba && <AvisoCardForaDaAba aoFechar={fecharCardNoEndereco} />}
 
@@ -953,7 +716,7 @@ export default function PipelineKanban() {
         <div className="flex-1 overflow-hidden relative">
           <div
             ref={boardScrollRef}
-            className="h-full overflow-x-auto overflow-y-hidden px-4 sm:px-6 lg:px-8 py-6 cursor-grab"
+            className="h-full overflow-x-auto overflow-y-hidden px-4 sm:px-6 py-6 cursor-grab"
             onDragOver={handleBoardDragOver}
             onMouseDown={handleBoardMouseDown}
             onWheel={handleBoardWheel}
@@ -1077,20 +840,6 @@ export default function PipelineKanban() {
         </Suspense>
       )}
 
-      {/* Import Leads Modal */}
-      {pipeline && (
-        <Suspense fallback={null}>
-          <ImportLeadsModal
-            open={importModalOpen}
-            onOpenChange={setImportModalOpen}
-            pipelineId={pipeline.id}
-            pipelineName={pipeline.name}
-            stages={stages}
-            onImported={loadPipelineData}
-          />
-        </Suspense>
-      )}
-
       {/* Disparo em Massa Modal */}
       {pipeline && (
         <Suspense fallback={null}>
@@ -1100,18 +849,6 @@ export default function PipelineKanban() {
             pipelineId={pipeline.id}
             pipelineName={pipeline.name}
             stages={stages}
-          />
-        </Suspense>
-      )}
-
-      {/* Leads Arquivados Modal */}
-      {pipeline && (
-        <Suspense fallback={null}>
-          <ArchivedLeadsModal
-            open={archivedModalOpen}
-            onClose={() => setArchivedModalOpen(false)}
-            pipelineId={pipeline.id}
-            onUnarchived={() => loadPipelineData(true)}
           />
         </Suspense>
       )}

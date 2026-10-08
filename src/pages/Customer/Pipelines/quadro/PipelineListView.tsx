@@ -33,7 +33,7 @@ export default function PipelineListView({ stages, ordem, aoTrocarOrdem, onOpenI
   }, [stages, ordem]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
       {linhas.length === 0 ? (
         <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
           {t('kanban.stage.noConversations')}

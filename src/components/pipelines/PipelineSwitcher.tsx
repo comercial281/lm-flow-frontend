@@ -141,46 +141,30 @@ export default function PipelineSwitcher({
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
+        {/* Selo pequeno, só com o nome (spec funil §4.1): o subtítulo deixava o
+            topo alto. Venda/Locação continuam como grupos da lista que abre. */}
         <button
+          type="button"
+          title="Trocar de funil"
           className={cn(
-            'bg-background border border-sidebar-border hover:bg-sidebar-accent text-foreground transition-colors',
-            'flex items-center gap-3 px-4 py-3 text-sm font-medium shadow-sm w-full max-w-full sm:max-w-md',
-            isOpen ? 'rounded-t-lg rounded-b-none' : 'rounded-lg',
-            className
+            'inline-flex min-w-0 max-w-[min(22rem,60vw)] items-center gap-2 rounded-full border border-border bg-background',
+            'px-3 py-1.5 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-muted',
+            className,
           )}
         >
-          {/* Pipeline Icon */}
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-sm flex-shrink-0"
-            style={{ backgroundColor: selectedPipeline ? getPipelineColor(selectedPipeline) : '#6B7280' }}
-          >
-            <GitBranch className="w-4 h-4" />
-          </div>
-
-          {/* Pipeline Info */}
-          <div className="flex-1 min-w-0 text-left">
-            <div className="font-semibold text-foreground truncate">
-              {selectedPipeline?.name || t('pipelineSwitcher.loading')}
-            </div>
-            {selectedPipeline?.description ? (
-              <div className="text-xs text-muted-foreground truncate">
-                {selectedPipeline.description.slice(0, 40)}
-                {selectedPipeline.description.length > 40 ? '...' : ''}
-              </div>
-            ) : (
-              <div className="text-xs text-muted-foreground">
-                {selectedPipeline ? t('pipelineSwitcher.noDescription') : t('pipelineSwitcher.waiting')}
-              </div>
-            )}
-          </div>
-
-          <ChevronDown className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+          <span
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ backgroundColor: selectedPipeline ? getPipelineColor(selectedPipeline) : undefined }}
+            aria-hidden="true"
+          />
+          <span className="truncate">{selectedPipeline?.name || t('pipelineSwitcher.loading')}</span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
-        className="min-w-[min(400px,calc(100vw-2rem))] p-0 bg-sidebar border border-sidebar-border shadow-lg rounded-t-none rounded-b-lg"
-        sideOffset={0}
+        className="min-w-[min(400px,calc(100vw-2rem))] p-0 bg-sidebar border border-sidebar-border shadow-lg rounded-lg"
+        sideOffset={4}
       >
         <div className="flex flex-col">
           {/* Search Bar */}

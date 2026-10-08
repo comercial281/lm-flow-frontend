@@ -85,7 +85,7 @@ const FUNIL = (s1: PipelineItem[] = [card('i1', 'Maria Souza', 's1')], s2: Pipel
     stages: [etapa('s1', 'Novo', s1), etapa('s2', 'Proposta', s2)],
   }) as unknown as Pipeline;
 
-const BUSCA = 'Buscar por nome, email ou telefone';
+const BUSCA = 'Buscar lead';
 
 function Endereco() {
   const { search } = useLocation();
@@ -167,7 +167,7 @@ describe('quadro do funil · o que continua igual', () => {
   it('a Lista mostra os leads sem as colunas do quadro', async () => {
     montar();
     await screen.findByText('Maria Souza');
-    await userEvent.click(screen.getByTitle('Visualização em lista'));
+    await userEvent.click(screen.getByRole('radio', { name: 'Lista' }));
     expect(document.getElementById('etapa-s1')).toBeNull();
     expect(screen.getByText('Maria Souza')).toBeInTheDocument();
     expect(screen.getAllByText('Proposta').length).toBeGreaterThan(0);
@@ -278,5 +278,33 @@ describe('quadro do funil · filtros', () => {
     expect(endereco().getAll('etapas')).toEqual(['s1']);
     expect(screen.queryByText('João Lima')).toBeNull();
     expect(screen.getByRole('button', { name: /^Filtros · 1/ })).toBeInTheDocument();
+  });
+});
+
+describe('quadro do funil · topo', () => {
+  it('três faixas, sem contagem de etapas, valor total nem Importar', async () => {
+    montar();
+    await screen.findByText('Maria Souza');
+    expect(screen.getByRole('button', { name: 'Leads (Marketing)' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Abertos 2' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'Arquivados' })).toHaveTextContent('1');
+    expect(screen.getByText('3 leads')).toBeInTheDocument();
+    expect(screen.queryByText('kanban.header.stages')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Importar/ })).toBeNull();
+  });
+
+  it('a caixa de Arquivados vai para a aba (no endereço)', async () => {
+    montar();
+    await screen.findByText('Maria Souza');
+    await userEvent.click(screen.getByRole('button', { name: 'Arquivados' }));
+    expect(endereco().get('aba')).toBe('arquivados');
+  });
+
+  it('trocar de aba muda o endereço e mantém o ?card=', async () => {
+    montar('/pipelines/p1?card=i1');
+    await screen.findByText('Maria Souza');
+    await userEvent.click(screen.getByRole('tab', { name: 'Ganhos 1' }));
+    expect(endereco().get('aba')).toBe('ganhos');
+    expect(endereco().get('card')).toBe('i1');
   });
 });
