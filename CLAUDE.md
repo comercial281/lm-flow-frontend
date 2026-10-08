@@ -6602,6 +6602,7 @@ Caso real: o Leonardo (Mais que Imóveis) desligou "Rejeitar chamadas" e o clien
 - **Vazia de fábrica**, na criação do canal (antes vinha "I do not accept calls", em inglês) e na tela de configuração (antes "Não aceito chamadas"). Ao abrir a tela, campo vazio continua vazio. Antes o texto de fábrica reaparecia e voltava a ser gravado no próximo salvar.
 - **Rejeição desligada = mensagem vazia na gravação**, aqui e no servidor (`Evolution::CallMessage`, backend). O campo esconder não basta: era exatamente o texto escondido que ia pra Evolution.
 - Não reabrir "voltar com um texto padrão" sem o dono pedir.
+- **Desde 08/10/2026 o campo saiu da tela** junto com as outras Configurações do número (seção "Configurações do número escondidas").
 
 ## Modelos de página de anúncio (D1) (05/10/2026)
 
@@ -7984,3 +7985,13 @@ O Grupo Habitar escreveu a pergunta dele ("Você já mora na região do Castelo?
 - **Padrão pelo tipo de venda** (revenda: Moradia + Trocar de imóvel; locação: Moradia; resto: Moradia + Investimento) entra sozinho quando o tipo de venda muda e ninguém mexeu nos caminhos; "Voltar ao padrão" grava o do tipo.
 - **Chips (08/10, pedido do dono).** Os caminhos aparecem como chips; o clique marca/desmarca e o lápis abre a janela de edição (Como reconhecer em cima, Como ela conduz embaixo, gravação única no Salvar). Caminho novo só entra na lista depois de escrito (nome e Como ela conduz obrigatórios; some o texto inicial). Máximo 5 marcados e 8 guardados, sempre no fim da lista.
 - Fora daqui: primeira mensagem literal (entrega seguinte).
+
+## Configurações do número escondidas (desde 2026-10-08)
+
+Pedido do dono: "eu já não mexo nisso e o cliente também não pode mexer, senão dá ruim".
+
+- **Saíram da criação do canal Evolution** (`EvolutionForm.tsx`) os cartões **Configuração de Proxy** e **Configurações do número** (Rejeitar Chamadas, Sempre Online, Marcar Mensagens como Lidas, Ler Status, Ignorar Grupos, Importar a agenda do celular, Sincronizar Histórico Completo e Mensagem para quem ligar).
+- **Saiu da configuração do canal conectado** (`ConfigurationForm.tsx`, `EvolutionWhatsAppConfig`) o cartão de configurações da instância, com o botão de salvar. A tela não lê nem grava mais essas opções na Evolution.
+- **Os valores continuam os de fábrica do `useChannelForm`** e seguem no envio da criação, sem mudança: proxy desligado, Rejeitar Chamadas ligado, Sempre Online ligado, mensagem vazia, o resto desligado.
+- Ficaram: Privacidade, Perfil, Status/QR e Desconectar. Evolution Go, Z-API e os outros provedores não mudaram.
+- Não reabrir sem o dono pedir. Ajuste num número específico é feito por nós, direto na Evolution.

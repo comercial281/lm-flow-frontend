@@ -580,20 +580,9 @@ const EvolutionPrivacySettings: React.FC<{
 const EvolutionWhatsAppConfig: React.FC<{
   inbox: any;
   onUpdate: (data: any) => void;
-}> = ({ inbox, onUpdate }) => {
+}> = ({ inbox }) => {
   const { t } = useLanguage('channels');
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
-  const [instanceSettings, setInstanceSettings] = useState({
-    rejectCall: true,
-    // Vazio de fábrica: a Evolution manda este texto pra TODO mundo que liga
-    // (ver Evolution::CallMessage no backend). Só vai se o gestor escrever.
-    msgCall: '',
-    groupsIgnore: false,
-    alwaysOnline: true,
-    readMessages: false,
-    syncFullHistory: false,
-    readStatus: false,
-  });
   const [profileSettings, setProfileSettings] = useState({
     profileName: '',
     profileStatus: '',
@@ -639,56 +628,7 @@ const EvolutionWhatsAppConfig: React.FC<{
     );
   };
 
-  // Load instance settings on mount
   useEffect(() => {
-    const loadInstanceSettings = async () => {
-      try {
-        const provider = inbox.provider;
-        const isEvolutionGo = provider === 'evolution_go';
-        const identifier = getIdentifier();
-
-        if (!identifier) return;
-
-        const response = await EvolutionApiService.getSettings(identifier, provider);
-
-        // Extract settings from nested data structure (similar to Vue components)
-        const settings = response?.data?.data || response?.data || response;
-
-        if (settings) {
-          if (isEvolutionGo) {
-            // Evolution Go settings mapping
-            // Note: ignoreStatus true means ignore status (don't read), so readStatus is the opposite
-            const ignoreStatus = settings.ignoreStatus ?? settings.ignore_status ?? true;
-            setInstanceSettings({
-              rejectCall: settings.rejectCall ?? settings.reject_call ?? true,
-              msgCall: settings.msgCall ?? settings.msg_call ?? '',
-              groupsIgnore: settings.ignoreGroups ?? settings.ignore_groups ?? false, // Evolution Go uses ignoreGroups
-              alwaysOnline: settings.alwaysOnline ?? settings.always_online ?? true,
-              readMessages: settings.readMessages ?? settings.read_messages ?? true,
-              syncFullHistory: false, // Evolution Go doesn't have this
-              readStatus: !ignoreStatus, // Invert ignoreStatus to readStatus
-            });
-          } else {
-            // Evolution (normal) settings mapping
-            setInstanceSettings({
-              rejectCall: settings.rejectCall ?? true,
-              msgCall: settings.msgCall ?? '',
-              groupsIgnore: settings.groupsIgnore ?? false,
-              alwaysOnline: settings.alwaysOnline ?? true,
-              readMessages: settings.readMessages ?? false,
-              syncFullHistory: settings.syncFullHistory ?? false,
-              readStatus: settings.readStatus ?? false,
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao carregar configurações da instância:', error);
-        // Keep default values on error
-      }
-    };
-
-    loadInstanceSettings();
-
     // Load profile settings for Evolution Go
     const loadProfileSettings = async () => {
       try {
@@ -890,65 +830,6 @@ const EvolutionWhatsAppConfig: React.FC<{
     void handleGenerateQR();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
-
-  const handleUpdateInstanceSettings = async () => {
-    setIsLoading(true);
-    try {
-      const provider = inbox.provider;
-      const isEvolutionGo = provider === 'evolution_go';
-      const identifier = getIdentifier();
-
-      if (!identifier) {
-        toast.error(t('settings.configuration.whatsapp.instance.errors.nameNotFound'));
-        return;
-      }
-
-      // Prepare settings payload based on provider
-      let settingsPayload: any;
-      if (isEvolutionGo) {
-        // Evolution Go: convert readStatus to ignoreStatus (invert) and groupsIgnore to ignoreGroups
-        settingsPayload = {
-          rejectCall: instanceSettings.rejectCall,
-          msgCall: instanceSettings.rejectCall ? instanceSettings.msgCall.trim() : '',
-          ignoreGroups: instanceSettings.groupsIgnore, // Convert groupsIgnore to ignoreGroups
-          alwaysOnline: instanceSettings.alwaysOnline,
-          readMessages: instanceSettings.readMessages,
-          ignoreStatus: !instanceSettings.readStatus, // Convert readStatus to ignoreStatus (invert)
-        };
-      } else {
-        // Evolution (normal): use settings as-is
-        settingsPayload = {
-          rejectCall: instanceSettings.rejectCall,
-          msgCall: instanceSettings.rejectCall ? instanceSettings.msgCall.trim() : '',
-          groupsIgnore: instanceSettings.groupsIgnore,
-          alwaysOnline: instanceSettings.alwaysOnline,
-          readMessages: instanceSettings.readMessages,
-          syncFullHistory: instanceSettings.syncFullHistory,
-          readStatus: instanceSettings.readStatus,
-        };
-      }
-
-      // Update via Evolution API (support both evolution and evolution_go)
-      await EvolutionApiService.updateSettings(identifier, settingsPayload as any, provider);
-
-      // Also update the inbox configuration
-      await onUpdate({
-        channel: {
-          provider_config: {
-            ...inbox.provider_config,
-            instance_settings: instanceSettings,
-          },
-        },
-      });
-
-      toast.success(t('settings.configuration.whatsapp.instance.success.updated'));
-    } catch (error) {
-      console.error('Erro ao atualizar configurações da instância:', error);
-      toast.error(t('settings.configuration.whatsapp.instance.errors.updateError'));
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Profile management functions
   const handleUpdateProfileName = async () => {
@@ -1449,137 +1330,10 @@ const EvolutionWhatsAppConfig: React.FC<{
         </Card>
       )}
 
-      {/* Instance Settings - Only show when connected */}
-      {instanceStatus === 'open' && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <Settings className="w-5 h-5 text-blue-600 mt-1" />
-              <div className="flex-1">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-                  {t('settings.configuration.whatsapp.instance.settingsTitle')}
-                </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                  {t('settings.configuration.whatsapp.instance.settingsDescription')}
-                </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">
-                      {t('settings.configuration.whatsapp.instance.rejectCall')}
-                    </label>
-                    <Switch
-                      checked={instanceSettings.rejectCall}
-                      onCheckedChange={checked =>
-                        setInstanceSettings(prev => ({ ...prev, rejectCall: checked }))
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">
-                      {t('settings.configuration.whatsapp.instance.alwaysOnline')}
-                    </label>
-                    <Switch
-                      checked={instanceSettings.alwaysOnline}
-                      onCheckedChange={checked =>
-                        setInstanceSettings(prev => ({ ...prev, alwaysOnline: checked }))
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">
-                      {t('settings.configuration.whatsapp.instance.readMessages')}
-                    </label>
-                    <Switch
-                      checked={instanceSettings.readMessages}
-                      onCheckedChange={checked =>
-                        setInstanceSettings(prev => ({ ...prev, readMessages: checked }))
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">
-                      {t('settings.configuration.whatsapp.instance.ignoreGroups')}
-                    </label>
-                    <Switch
-                      checked={instanceSettings.groupsIgnore}
-                      onCheckedChange={checked =>
-                        setInstanceSettings(prev => ({ ...prev, groupsIgnore: checked }))
-                      }
-                    />
-                  </div>
-
-                  {/* Only show syncFullHistory for Evolution (not Evolution Go) */}
-                  {inbox.provider !== 'evolution_go' && (
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">
-                        {t('settings.configuration.whatsapp.instance.syncFullHistory')}
-                      </label>
-                      <Switch
-                        checked={instanceSettings.syncFullHistory}
-                        onCheckedChange={checked =>
-                          setInstanceSettings(prev => ({ ...prev, syncFullHistory: checked }))
-                        }
-                      />
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">
-                      {inbox.provider === 'evolution_go'
-                        ? t('settings.configuration.whatsapp.instance.ignoreStatus')
-                        : t('settings.configuration.whatsapp.instance.readStatus')}
-                    </label>
-                    <Switch
-                      checked={
-                        inbox.provider === 'evolution_go'
-                          ? !instanceSettings.readStatus
-                          : instanceSettings.readStatus
-                      }
-                      onCheckedChange={checked => {
-                        if (inbox.provider === 'evolution_go') {
-                          // For Evolution Go, invert the value (ignoreStatus is opposite of readStatus)
-                          setInstanceSettings(prev => ({ ...prev, readStatus: !checked }));
-                        } else {
-                          setInstanceSettings(prev => ({ ...prev, readStatus: checked }));
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {instanceSettings.rejectCall && (
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium mb-2">
-                      {t('settings.configuration.whatsapp.instance.callRejectionMessage')}
-                    </label>
-                    <Input
-                      value={instanceSettings.msgCall}
-                      onChange={e =>
-                        setInstanceSettings(prev => ({ ...prev, msgCall: e.target.value }))
-                      }
-                      placeholder={t(
-                        'settings.configuration.whatsapp.instance.callRejectionPlaceholder',
-                      )}
-                    />
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      {t('settings.configuration.whatsapp.instance.callRejectionHint')}
-                    </p>
-                  </div>
-                )}
-
-                <Button onClick={handleUpdateInstanceSettings} loading={isLoading} className="mt-6">
-                  {t('settings.configuration.whatsapp.instance.saveSettings')}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
+      {/* Configurações do número (rejeitar chamadas, sempre online, ler
+          mensagens etc.) saíram da tela em 08/10/26: ficam como vêm de
+          fábrica e ninguém mexe. Mexer nisso deu problema (ver a seção
+          "Configurações do número escondidas" no CLAUDE.md). */}
       {/* Instance Actions */}
       <Card>
         <CardContent className="p-6">

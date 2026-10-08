@@ -1,11 +1,8 @@
 import { useLanguage } from '@/hooks/useLanguage';
 import { FormField } from '../../shared/FormField';
-import { FormCheckbox } from '../../shared/FormCheckbox';
-import { FormSection } from '../../shared/FormSection';
 import { FormData } from '@/hooks/channels/useChannelForm';
 import  { sanitizeInboxName } from '@/utils/sanitizeName';
 import { PhoneInput } from '@/components/shared/PhoneInput';
-import { Seletor } from '@/components/base/Seletor';
 
 interface EvolutionFormProps {
   form: FormData;
@@ -80,125 +77,9 @@ export const EvolutionForm = ({ form, onFormChange, hasEvolutionConfig }: Evolut
         />
       </div>
 
-      {/* Proxy Configuration */}
-      <FormSection
-        title={t('evolutionForm.sections.proxy.title')}
-        className="bg-gray-50/10 border-gray-200/20"
-      >
-        <div className="mb-4">
-          <FormCheckbox
-            label={t('evolutionForm.sections.proxy.enableProxy')}
-            checked={!!form.proxy_enabled}
-            onChange={checked => onFormChange('proxy_enabled', checked)}
-          />
-        </div>
-
-        {form.proxy_enabled && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              label={t('evolutionForm.sections.proxy.host.label')}
-              value={getStr('proxy_host')}
-              onChange={value => onFormChange('proxy_host', value)}
-              placeholder={t('evolutionForm.sections.proxy.host.placeholder')}
-            />
-            <FormField
-              label={t('evolutionForm.sections.proxy.port.label')}
-              value={getStr('proxy_port')}
-              onChange={value => onFormChange('proxy_port', value)}
-              placeholder={t('evolutionForm.sections.proxy.port.placeholder')}
-            />
-            <div>
-              <label className="text-sm font-medium text-sidebar-foreground/80">
-                {t('evolutionForm.sections.proxy.protocol')}
-              </label>
-              <Seletor
-                value={getStr('proxy_protocol', 'http')}
-                onChange={e => onFormChange('proxy_protocol', e.target.value)}
-                className="mt-1 w-full"
-              >
-                <option value="http">HTTP</option>
-                <option value="https">HTTPS</option>
-                <option value="socks4">SOCKS4</option>
-                <option value="socks5">SOCKS5</option>
-              </Seletor>
-            </div>
-            <FormField
-              label={t('evolutionForm.sections.proxy.username.label')}
-              value={getStr('proxy_username')}
-              onChange={value => onFormChange('proxy_username', value)}
-              placeholder={t('evolutionForm.sections.proxy.username.placeholder')}
-            />
-            <div className="md:col-span-2">
-              <FormField
-                label={t('evolutionForm.sections.proxy.password.label')}
-                value={getStr('proxy_password')}
-                onChange={value => onFormChange('proxy_password', value)}
-                placeholder={t('evolutionForm.sections.proxy.password.placeholder')}
-                type="password"
-              />
-            </div>
-          </div>
-        )}
-      </FormSection>
-
-      {/* Instance Settings */}
-      <FormSection
-        title={t('evolutionForm.sections.instance.title')}
-        className="bg-gray-50/10 border-gray-200/20"
-        data-tour="whatsapp-help"
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormCheckbox
-            label={t('evolutionForm.sections.instance.rejectCalls')}
-            checked={!!form.rejectCall}
-            onChange={checked => onFormChange('rejectCall', checked)}
-          />
-          <FormCheckbox
-            label={t('evolutionForm.sections.instance.alwaysOnline')}
-            checked={!!form.alwaysOnline}
-            onChange={checked => onFormChange('alwaysOnline', checked)}
-          />
-          <FormCheckbox
-            label={t('evolutionForm.sections.instance.readMessages')}
-            checked={!!form.readMessages}
-            onChange={checked => onFormChange('readMessages', checked)}
-          />
-          <FormCheckbox
-            label={t('evolutionForm.sections.instance.readStatus')}
-            checked={!!form.readStatus}
-            onChange={checked => onFormChange('readStatus', checked)}
-          />
-          <FormCheckbox
-            label={t('evolutionForm.sections.instance.groupsIgnore')}
-            checked={!!form.groupsIgnore}
-            onChange={checked => onFormChange('groupsIgnore', checked)}
-          />
-          <FormCheckbox
-            label={t('evolutionForm.sections.instance.enableSyncFeatures')}
-            checked={!!form.enable_sync_features}
-            onChange={checked => onFormChange('enable_sync_features', checked)}
-          />
-          <FormCheckbox
-            label={t('evolutionForm.sections.instance.syncFullHistory')}
-            checked={!!form.syncFullHistory}
-            onChange={checked => onFormChange('syncFullHistory', checked)}
-          />
-        </div>
-
-        {/* Só com a rejeição ligada: a Evolution manda este texto pra todo
-            mundo que liga, e em branco não manda nada. */}
-        {!!form.rejectCall && (
-          <div className="mt-4">
-            <FormField
-              label={t('evolutionForm.sections.instance.msgCall.label')}
-              value={getStr('msgCall')}
-              onChange={value => onFormChange('msgCall', value)}
-              placeholder={t('evolutionForm.sections.instance.msgCall.placeholder')}
-              helpText={t('evolutionForm.sections.instance.msgCall.helpText')}
-            />
-          </div>
-        )}
-      </FormSection>
+      {/* Proxy e Configurações do número saíram da tela em 08/10/26: o canal
+          nasce com os valores de fábrica do useChannelForm e ninguém mexe.
+          Ver "Configurações do número escondidas" no CLAUDE.md. */}
     </div>
   );
 };
