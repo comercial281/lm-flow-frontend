@@ -114,13 +114,11 @@ export default function EditItemModal({
                 <>
                   {/* E4: a página do card, sempre em outra guia (a janela não muda de cara: só a setinha). */}
                   {!card.foraDoFunil && (
-                    <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Ver card completo" title="Ver card completo">
                       <a
                         href={linkDoCardCompleto(item.pipeline_id, item.id)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        aria-label="Ver card completo"
-                        title="Ver card completo"
                       >
                         <ArrowUpRight className="h-4 w-4" />
                       </a>
