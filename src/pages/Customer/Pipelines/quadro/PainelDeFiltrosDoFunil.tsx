@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react';
 import { Button, Input, Label, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/ds';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import EtiquetasDeEscolha from '@/components/base/EtiquetasDeEscolha';
+import EscolhaComBusca from '@/components/base/EscolhaComBusca';
 import EmptyState from '@/components/base/EmptyState';
 import { listOptionsService, type ListOption } from '@/services/listOptions/listOptionsService';
 import { ROTULOS_DO_FILTRO_DE_TAREFAS } from '@/features/tarefas/filtroDoFunil';
@@ -167,7 +168,8 @@ export default function PainelDeFiltrosDoFunil({
           <Secao id="filtro-etiq" titulo="Etiquetas">
             {etiquetas.length === 0
               ? <p className="text-sm text-muted-foreground">Nenhuma etiqueta cadastrada.</p>
-              : <EtiquetasDeEscolha rotulo="Etiquetas" opcoes={etiquetas.map(e => ({ valor: e.name, rotulo: e.name }))}
+              : <EscolhaComBusca rotulo="Etiquetas" placeholder="Buscar etiqueta"
+                  opcoes={etiquetas.map(e => ({ valor: e.name, rotulo: e.name }))}
                   escolhidas={rascunho.etiq} aoMudar={v => mudar('etiq', v)} />}
           </Secao>
 

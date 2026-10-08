@@ -7655,6 +7655,11 @@ O que aparece na tela:
 - **Filtros num painel à direita**, com rolagem, nesta ordem: Criado em, Etapas, Origem,
   Responsável, Etiquetas, Motivo da perda (só em Perdidos e Todos), Largados, Tarefas
   (atrasada / vence hoje), Colunas visíveis. **Filtrar** e **Limpar filtros** fixos embaixo.
+- **Etiquetas com busca** (08/10, o Tony vetou a parede de etiquetas): até 5 etiquetas na
+  conta, mostra todas como as outras seções. Acima disso, as escolhidas ficam em cima com ✕
+  e as demais só aparecem digitando no *Buscar etiqueta* (sem acento nem caixa, no máximo 5,
+  "Mais N" avisa o resto; Enter escolhe a primeira). Peça reusável: `EscolhaComBusca` em
+  `components/base`, para qualquer lista que cresce sem limite.
 - **Aba e filtros no endereço** (`?aba=perdidos&etapas=…&largados=14`): F5 mantém e dá pra
   mandar o link. `?card=` e `?etapa=` continuam valendo.
 - **Soltar o card na coluna Concluído marca Ganho** (ajuste de 08/10), pela mesma rota do
