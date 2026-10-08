@@ -59,6 +59,8 @@ interface ProposalFormDialogProps {
   leadInicial?: LeadPickerItem | null;
   /** Imóvel sugerido ao criar (o primeiro imóvel de interesse do lead). */
   imovelInicial?: ImovelDaProposta | null;
+  /** Card do funil de onde a proposta foi registrada (card do lead). Só vale ao criar. */
+  pipelineItemId?: string | null;
   onSaved: () => void;
 }
 
@@ -68,6 +70,7 @@ export default function ProposalFormDialog({
   proposta,
   leadInicial,
   imovelInicial,
+  pipelineItemId,
   onSaved,
 }: ProposalFormDialogProps) {
   const [form, setForm] = useState<ProposalFormState>(EMPTY_FORM);
@@ -167,6 +170,9 @@ export default function ProposalFormDialog({
         ...(form.installments && { installments: parseInt(form.installments) }),
         ...(form.payment_method && { payment_method: form.payment_method }),
         ...(form.conditions && { conditions: form.conditions }),
+        // Registrada pelo card: vai ligada a ele (aceita, marca ESTE card como Ganho).
+        // Editar não mexe na ligação (o update do servidor troca o metadata inteiro).
+        ...(!proposta && pipelineItemId ? { metadata: { pipeline_item_id: pipelineItemId } } : {}),
       };
       if (proposta) {
         await proposalsService.update(proposta.id, data);

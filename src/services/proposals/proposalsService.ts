@@ -38,6 +38,8 @@ export interface ProposalFormData {
   conditions?: string;
   property_interest_id?: string;
   realtor_id?: string;
+  /** Card do funil ligado à proposta (E4): aceita, ela marca ESTE card como Ganho. */
+  metadata?: { pipeline_item_id?: string };
 }
 
 const BASE = '/proposals';

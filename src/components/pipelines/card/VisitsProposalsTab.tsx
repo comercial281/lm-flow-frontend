@@ -257,6 +257,7 @@ export default function VisitsProposalsTab({ item, nomeExibido }: VisitsProposal
         onOpenChange={setRegistrando}
         leadInicial={leadParaVisita(item, nomeExibido)}
         imovelInicial={imovelSugerido}
+        pipelineItemId={item.id || null}
         onSaved={() => { void carregarPropostas(); }}
       />
     </div>
