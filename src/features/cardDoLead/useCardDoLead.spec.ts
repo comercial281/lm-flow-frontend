@@ -264,6 +264,25 @@ describe('useCardDoLead', () => {
     expect(new Set(versoes).size).toBe(2);
   });
 
+  // Troca de card: a chave do Histórico não pode passar por um render com a
+  // etapa/responsável do card anterior (uma busca à toa com a chave velha).
+  it('trocar de card não passa por um render com a chave do card anterior', () => {
+    const outro = { ...(completo as object), id: 'i2', stage_id: 's2', assignee: { id: 'u2', name: 'Bruno' } } as never;
+    const versoes: string[] = [];
+    const { rerender } = renderHook(({ i }) => {
+      const card = useCardDoLead(i, { aberto: true, stages: etapas });
+      versoes.push(card.historico.versao);
+      return card;
+    }, { initialProps: { i: completo } });
+    const aposTroca = versoes.length;
+
+    rerender({ i: outro });
+
+    const rendersDaTroca = versoes.slice(aposTroca);
+    expect(rendersDaTroca.length).toBeGreaterThan(0);
+    for (const v of rendersDaTroca) expect(v).toContain('s2|');
+  });
+
   it('mover etapa muda a chave do Histórico (ele recarrega)', async () => {
     const { result } = renderHook(() => useCardDoLead(completo, { aberto: true, stages: etapas }));
     const antes = result.current.historico.versao;

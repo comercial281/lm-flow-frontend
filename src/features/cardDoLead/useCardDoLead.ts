@@ -125,7 +125,11 @@ export function useCardDoLead(
   // resposta velha). Aqui só a chave que o manda recarregar: muda com o pedido
   // (roleta, oferta aceita, visita, correção de contato, etapa, responsável) e
   // quando etapa, situação ou responsável do card mudam.
-  const { versaoHistorico, recarregarHistorico } = useVersaoDoHistorico(itemDaSituacao);
+  // Ao trocar de card, `itemDaSituacao` ainda é o anterior por um render (o
+  // effect o alinha depois): usa o `item` novo para a chave não passar por ele.
+  const { versaoHistorico, recarregarHistorico } = useVersaoDoHistorico(
+    itemDaSituacao?.id === item?.id ? itemDaSituacao : item,
+  );
 
   // Ganho leva o card para Concluído e Reabrir o devolve (ajuste de 08/10): a
   // Etapa acompanha o `stage_id` que a situação trouxe. O Histórico recarrega

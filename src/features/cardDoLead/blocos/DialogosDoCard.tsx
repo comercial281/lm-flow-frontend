@@ -59,7 +59,11 @@ export default function DialogosDoCard({ card, onJuntado }: {
             contactId={String(contato.id)}
             leadName={contato.name ?? undefined}
             offers={roleta.ofertasAbertas}
-            onDone={() => roleta.setOfertasAbertas([])}
+            onDone={() => {
+              roleta.setOfertasAbertas([]);
+              // O passo da roleta (Rodízios) entra no Histórico.
+              card.historico.recarregar();
+            }}
           />
         </Suspense>
       )}

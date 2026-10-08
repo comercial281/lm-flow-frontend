@@ -37,7 +37,13 @@ describe('o Histórico novo no card', () => {
   });
 
   it('a chave de recarga sai do useVersaoDoHistorico, no card da situação', () => {
-    expect(read(HOOK)).toContain('useVersaoDoHistorico(itemDaSituacao)');
+    expect(read(HOOK)).toContain('useVersaoDoHistorico(');
+    expect(read(HOOK)).toContain('itemDaSituacao?.id === item?.id');
+  });
+
+  it('Tirar da roleta recarrega o Histórico ao terminar (os passos da roleta moram em Rodízios)', () => {
+    const src = read('src/features/cardDoLead/blocos/DialogosDoCard.tsx');
+    expect(src).toMatch(/onDone=\{\(\) => \{[^}]*card\.historico\.recarregar\(\)/);
   });
 
   it('arquivar/desarquivar na página recarrega o Histórico (o item volta com o mesmo id e situação)', () => {
