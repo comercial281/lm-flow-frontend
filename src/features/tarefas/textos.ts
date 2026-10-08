@@ -1,10 +1,5 @@
 import type { Balde } from './tipos';
 
-// Até as Listas da casa (`task_categories`) entrarem no ar: os mesmos quatro
-// nomes do contrato com a sessão do funil. Na troca, esta lista sai e a janela
-// lê `GET /api/v1/list_options?list=task_categories`.
-export const CATEGORIAS_INICIAIS = ['Follow-up', 'Oferta ativa', 'Atualização de imóvel', 'Outro'];
-
 export const BALDES: { chave: Balde; rotulo: string }[] = [
   { chave: 'para_fazer', rotulo: 'Para fazer' },
   { chave: 'hoje', rotulo: 'Vence hoje' },
@@ -20,6 +15,7 @@ export const TEXTOS_DE_TAREFAS = {
   novaTarefa: 'Nova tarefa',
   editarTarefa: 'Editar tarefa',
   categoria: 'Categoria',
+  semCategoria: 'Sem categoria',
   tituloDoCampo: 'O que fazer',
   exemploDeTitulo: 'Ex.: ligar pra confirmar a visita',
   data: 'Data',

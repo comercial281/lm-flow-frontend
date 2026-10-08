@@ -9,13 +9,16 @@ vi.mock('./tarefasService', async () => {
   return { ...real, tarefasService: { listar: (...a: unknown[]) => listar(...a), concluir: (...a: unknown[]) => concluir(...a), criar: (...a: unknown[]) => criar(...a) } };
 });
 vi.mock('@/services/visits/visitsService', () => ({ visitsService: { realtors: async () => [], leadPickerPage: async () => ({ data: [], meta: {} }) } }));
+vi.mock('@/services/listOptions/listOptionsService', () => ({
+  listOptionsService: { list: async () => [{ id: 'cat-fu', list_key: 'task_categories', label: 'Follow-up', position: 0, active: true, meta_exclusion: false }, { id: 'cat-of', list_key: 'task_categories', label: 'Oferta ativa', position: 1, active: true, meta_exclusion: false }] },
+}));
 vi.mock('./useEhGestor', () => ({ useEhGestor: () => false }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import TarefasDoLead from './TarefasDoLead';
 
 const tarefa = (id: string, extra: Record<string, unknown> = {}) => ({
-  kind: 'task', id, title: `Tarefa ${id}`, category: 'Follow-up', due_at: new Date().toISOString(), status: 'pending',
+  kind: 'task', id, title: `Tarefa ${id}`, category: 'Oferta ativa', category_option_id: 'cat-of', due_at: new Date().toISOString(), status: 'pending',
   overdue: false, pipeline_item_id: 'c1', pipeline_id: 'p1', contact: { id: 'ct', name: 'Carla' }, assignee: { id: 'u', name: 'Ana' },
   created_by_id: 'u', can_edit: true, can_delete: true, ...extra,
 });
@@ -49,7 +52,7 @@ describe('TarefasDoLead', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Nova tarefa' })).not.toBeInTheDocument());
   });
 
-  it('a próxima tarefa nasce no card da tarefa concluída, não no criarNoCard', async () => {
+  it('a próxima tarefa nasce no card e na categoria (por id) da tarefa concluída', async () => {
     listar.mockImplementation(async (p: { bucket: string }) => (p.bucket === 'para_fazer' ? resposta([tarefa('a', { pipeline_item_id: 'outro-card' })]) : resposta([])));
     concluir.mockResolvedValue(tarefa('a', { status: 'completed' }));
     criar.mockResolvedValue(tarefa('n'));
@@ -57,10 +60,11 @@ describe('TarefasDoLead', () => {
     fireEvent.click(await screen.findByRole('checkbox', { name: /concluir tarefa a/i }));
     await screen.findByText('Criar a próxima tarefa deste lead?');
     fireEvent.click(await screen.findByRole('button', { name: 'Nova tarefa' }));
+    await screen.findByRole('option', { name: 'Oferta ativa' });
     fireEvent.change(await screen.findByLabelText('O que fazer'), { target: { value: 'Seguir' } });
     fireEvent.click(screen.getByRole('button', { name: 'Criar tarefa' }));
     await waitFor(() => expect(criar).toHaveBeenCalled());
-    expect(criar.mock.calls[0][0]).toMatchObject({ pipeline_item_id: 'outro-card', category: 'Follow-up' });
+    expect(criar.mock.calls[0][0]).toMatchObject({ pipeline_item_id: 'outro-card', category_option_id: 'cat-of' });
   });
 
   it('"Concluídas (N)" usa o total do servidor, não o tamanho da página', async () => {

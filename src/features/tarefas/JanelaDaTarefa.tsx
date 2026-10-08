@@ -4,7 +4,8 @@ import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 import { Seletor } from '@/components/base/Seletor';
 import { visitsService, type LeadPickerItem, type PersonRef } from '@/services/visits/visitsService';
 import { apiErrorMessage } from '@/utils/apiHelpers';
-import { CATEGORIAS_INICIAIS, TEXTOS_DE_TAREFAS as T } from './textos';
+import { TEXTOS_DE_TAREFAS as T } from './textos';
+import { useCategoriasDeTarefa } from './useCategoriasDeTarefa';
 import { juntarDataEHora, proximaHoraCheia, separarDataEHora } from './prazos';
 import { motivoDoErro, tarefasService } from './tarefasService';
 import { useEhGestor } from './useEhGestor';
@@ -20,8 +21,12 @@ interface Props {
   pipelineItemId?: string | null;
   /** Atividades: escolher o lead antes (o servidor acha o card dele). */
   escolherLead?: boolean;
+  /** Id da categoria da lista (a da tarefa concluída, na "próxima tarefa"). */
   categoriaInicial?: string;
 }
+
+// Tarefa antiga que só guarda o nome (sem id): não dá pra mandar id, então fica como está.
+const SO_NOME = '__so_nome__';
 
 /**
  * Criar ou editar tarefa (Frente 2, 07/10/2026). Data e hora livres, no passado
@@ -32,7 +37,9 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
   const ehGestor = useEhGestor();
   const sugestao = proximaHoraCheia();
   const [titulo, setTitulo] = useState('');
-  const [categoria, setCategoria] = useState(categoriaInicial ?? CATEGORIAS_INICIAIS[0]);
+  const { ativas, todas, carregando } = useCategoriasDeTarefa();
+  // null = a pessoa ainda não mexeu: criar usa a padrão; editar mantém a atual (e não manda nada).
+  const [escolha, setEscolha] = useState<string | null>(null);
   const [data, setData] = useState(sugestao.data);
   const [hora, setHora] = useState(sugestao.hora);
   const [responsavel, setResponsavel] = useState('');
@@ -48,7 +55,7 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
     if (!aberta) return;
     const base = tarefa?.due_at ? separarDataEHora(tarefa.due_at) : proximaHoraCheia();
     setTitulo(tarefa?.title ?? '');
-    setCategoria(tarefa?.category ?? categoriaInicial ?? CATEGORIAS_INICIAIS[0]);
+    setEscolha(null);
     setData(base.data);
     setHora(base.hora);
     setResponsavel('');
@@ -67,6 +74,15 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
     return () => window.clearTimeout(id);
   }, [aberta, escolherLead, busca, lead]);
 
+  const idDaTarefa = tarefa?.category_option_id ?? (tarefa?.category ? SO_NOME : '');
+  const padrao = ativas.find(o => o.id === categoriaInicial)?.id ?? ativas[0]?.id ?? '';
+  const categoria = escolha ?? (tarefa ? idDaTarefa : padrao);
+  // Categoria da tarefa que não está entre as ativas continua aparecendo, pra não sumir.
+  const atual = tarefa && idDaTarefa && !ativas.some(o => o.id === idDaTarefa)
+    ? { valor: idDaTarefa, rotulo: `${todas.find(o => o.id === idDaTarefa)?.label ?? tarefa.category ?? ''}${todas.find(o => o.id === idDaTarefa)?.active === false ? ' (arquivada)' : ''}` }
+    : null;
+  const mostrarSemCategoria = categoria === '' || ativas.length === 0;
+
   const salvar = async () => {
     if (!titulo.trim()) return setErro(T.faltaTitulo);
     if (!data) return setErro(T.faltaData);
@@ -76,7 +92,8 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
     setSalvando(true);
     const dados = {
       title: titulo.trim(),
-      category: categoria,
+      // Criar: a escolhida/padrão (vazio = sem categoria). Editar: só se a pessoa mexeu ('' limpa).
+      ...(tarefa ? (escolha !== null ? { category_option_id: escolha } : {}) : (categoria ? { category_option_id: categoria } : {})),
       due_date: juntarDataEHora(data, hora),
       // Editar com o campo vazio manda '' pro servidor limpar; criar só omite.
       description: descricao.trim() || (tarefa ? '' : undefined),
@@ -130,8 +147,10 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
           )}
           <div className="grid gap-1">
             <Label htmlFor="tarefa-categoria">{T.categoria}</Label>
-            <Seletor id="tarefa-categoria" value={categoria} onChange={e => setCategoria(e.target.value)}>
-              {CATEGORIAS_INICIAIS.map(c => <option key={c} value={c}>{c}</option>)}
+            <Seletor id="tarefa-categoria" value={categoria} onChange={e => setEscolha(e.target.value === SO_NOME ? null : e.target.value)}>
+              {mostrarSemCategoria && <option value="">{T.semCategoria}</option>}
+              {atual && <option value={atual.valor}>{atual.rotulo}</option>}
+              {ativas.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
             </Seletor>
           </div>
           <div className="grid gap-1">
@@ -165,7 +184,7 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={aoFechar} disabled={salvando}>{T.cancelar}</Button>
-          <Button onClick={salvar} disabled={salvando}>{tarefa ? T.salvar : T.criar}</Button>
+          <Button onClick={salvar} disabled={salvando || carregando}>{tarefa ? T.salvar : T.criar}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

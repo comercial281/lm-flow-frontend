@@ -4107,7 +4107,7 @@ Spec: `LM FLOW/specs/2026-10-07-frente-2-tarefas-e-atividades-design.md`. Plano:
 - **Três lugares, um bloco:** aba Tarefas do card, seção Tarefas da Conversa e página do card completo (bloco Próximas tarefas da Ficha) usam `features/tarefas/TarefasDoLead`. Tela Tarefas (`/tarefas`) lista só tarefas.
 - **Menu:** seção Atividades (abre e fecha, uma por vez) com Tarefas (`/tarefas`, só tarefas) e Visitas (`/visits`). `/atividades` redireciona pra `/tarefas`. Decisão do dono em 08/10/2026.
 - **Lista do servidor:** `GET /api/v1/activities` (tarefas + visitas por prazo, contagem por aba, régua de quem vê do funil). CRUD em `/api/v1/tasks`.
-- **Categorias:** até as Listas da casa, os quatro nomes fixos (`CATEGORIAS_INICIAIS`); na troca, a janela lê `task_categories`.
+- **Categorias:** lista editável em Minha imobiliária › Listas (`task_categories`); a tarefa guarda o id e o nome; na janela só entram as ativas, e a tarefa com categoria arquivada continua mostrando o nome.
 - **Concluir puxa a próxima:** pergunta "Criar a próxima tarefa deste lead?". Vale na tela Tarefas e no card; a próxima nasce no card da tarefa concluída (`concluirEPerguntar`).
 - **Responsável:** só o gestor (`conversations.read_all`) escolhe na janela; corretor cria só pra si.
 - **Excluir:** gestor qualquer uma; corretor só a que criou (sem permissão nova: cargo editado não recebe chave nova).
@@ -7580,7 +7580,7 @@ Armadilhas:
 
 Pendente conhecido:
 
-- **Categorias de tarefa**: a tela Tarefas ainda guarda a categoria pelo nome; até ela ler as Listas da casa, editar essa lista não muda as tarefas. **Por isso a aba está escondida** (08/10, revisão final): a tela mostra só Motivos de perda, sem abas, e `?aba=categorias` cai em motivos. A chave é uma só, `CATEGORIAS_DE_TAREFA_NA_TELA` em `Settings/Listas/abasDasListas.ts`: ligar no mesmo PR em que Tarefas passar a ler `task_categories`. O código e os testes da aba continuam (os testes ligam a chave).
+- **Categorias de tarefa**: a janela de tarefa e o filtro da tela Tarefas leem esta lista (hook `useCategoriasDeTarefa`); a aba está ligada (`CATEGORIAS_DE_TAREFA_NA_TELA = true` em `Settings/Listas/abasDasListas.ts`, chave mantida só pra poder esconder de novo).
 
 ## Situação do card: Ganho, Perdido e Reabrir (07/10/2026)
 
@@ -7891,7 +7891,7 @@ Regras de produto decididas na revisão final do funil. Não reabrir sem o dono 
 3. **Ganho, Perdido e Reabrir copiam da resposta só os campos da situação**
    (`comSituacaoNova`), nunca o card inteiro. Copiar o card inteiro sobrescreveria edição
    feita em paralelo.
-4. **A aba "Categorias de tarefa" em Minha imobiliária › Listas está escondida**
-   (`CATEGORIAS_DE_TAREFA_NA_TELA`) até as tarefas passarem a ler a lista.
+4. **(Resolvido na Tarefa 6)** A aba "Categorias de tarefa" em Listas está ligada: as tarefas
+   leem `task_categories`.
 5. **Coluna Concluída com a regra antiga de Compra por etapa:** a Compra respeita o
    "um por lead" (não dispara de novo para o mesmo lead).

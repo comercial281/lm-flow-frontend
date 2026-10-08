@@ -10,6 +10,9 @@ vi.mock('@/features/tarefas/JanelaDaTarefa', () => ({
   default: (p: { aberta: boolean; pipelineItemId?: string | null; categoriaInicial?: string; escolherLead?: boolean }) =>
     p.aberta ? <div data-testid="janela">{`card=${p.pipelineItemId ?? ''};cat=${p.categoriaInicial ?? ''};lead=${String(!!p.escolherLead)}`}</div> : null,
 }));
+vi.mock('@/services/listOptions/listOptionsService', () => ({
+  listOptionsService: { list: async () => [{ id: 'cat-fu', list_key: 'task_categories', label: 'Follow-up', position: 0, active: true, meta_exclusion: false }, { id: 'cat-of', list_key: 'task_categories', label: 'Oferta ativa', position: 1, active: true, meta_exclusion: false }, { id: 'cat-v', list_key: 'task_categories', label: 'Velha', position: 2, active: false, meta_exclusion: false }] },
+}));
 vi.mock('@/features/tarefas/tarefasService', async () => {
   const real = await vi.importActual<typeof import('@/features/tarefas/tarefasService')>('@/features/tarefas/tarefasService');
   return { ...real, tarefasService: { listar: (...a: unknown[]) => listar(...a), concluir: (...a: unknown[]) => concluir(...a) } };
@@ -87,14 +90,24 @@ describe('Tarefas', () => {
   it('concluir pergunta pela próxima e abre a janela no card da tarefa concluída', async () => {
     concluir.mockResolvedValue({});
     listar.mockResolvedValue(resposta([
-      { kind: 'task', id: 't1', title: 'Ligar', category: 'Oferta ativa', due_at: new Date().toISOString(), status: 'pending', overdue: false, pipeline_item_id: 'card-9', pipeline_id: 'p1', contact: { id: 'x', name: 'Carla' }, assignee: null, created_by_id: 'u1', can_edit: true, can_delete: true },
+      { kind: 'task', id: 't1', title: 'Ligar', category: 'Oferta ativa', category_option_id: 'cat-of', due_at: new Date().toISOString(), status: 'pending', overdue: false, pipeline_item_id: 'card-9', pipeline_id: 'p1', contact: { id: 'x', name: 'Carla' }, assignee: null, created_by_id: 'u1', can_edit: true, can_delete: true },
     ]));
     render(<MemoryRouter><Tarefas /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('checkbox', { name: /concluir ligar/i }));
     await waitFor(() => expect(concluir).toHaveBeenCalledWith('t1'));
     await screen.findByText('Criar a próxima tarefa deste lead?');
     fireEvent.click(await screen.findByRole('button', { name: 'Nova tarefa' }));
-    expect(await screen.findByTestId('janela')).toHaveTextContent('card=card-9;cat=Oferta ativa;lead=false');
+    expect(await screen.findByTestId('janela')).toHaveTextContent('card=card-9;cat=cat-of;lead=false');
+  });
+
+  it('o filtro de categoria lista só as ativas e manda category_option_id', async () => {
+    listar.mockResolvedValue(resposta([]));
+    render(<MemoryRouter><Tarefas /></MemoryRouter>);
+    await screen.findByRole('option', { name: 'Oferta ativa' });
+    expect(screen.queryByRole('option', { name: 'Velha' })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: 'cat-of' } });
+    await waitFor(() => expect(listar).toHaveBeenLastCalledWith(expect.objectContaining({ category_option_id: 'cat-of' })));
+    expect(listar.mock.calls.at(-1)?.[0]).not.toHaveProperty('category');
   });
 
   it('"Agora não" na pergunta da próxima não abre janela', async () => {
