@@ -7546,3 +7546,17 @@ Armadilhas:
    passam 0. Sem ele, cada teste esperaria os pontinhos de verdade.
 3. **`honor_triggers` vai em todo turno e avanço.** Sem o campo o servidor respeita o
    gatilho (comportamento antigo), então tela nova com servidor velho se comporta como antes.
+
+## Funil: F5 mantém o card e nomes longos cortam (07/10/2026)
+
+E0 do plano do funil (`LM FLOW/plans/2026-10-07-funil-01-consertos-e-listas.md`), itens da call com a Nova 27.
+
+- **O card aberto mora no endereço (`?card=`).** Abrir pelo link ou pelo clique deixa o `?card=`; fechar tira só ele (os outros parâmetros ficam). F5 reabre o mesmo card, e "copiar o endereço" manda o card. Lógica em `src/pages/Customer/Pipelines/useCardNoEndereco.ts` (com spec).
+- **Card que não está no quadro** (arquivado, de outra aba, tirado do funil): faixa "Este lead não está nesta aba." no topo do quadro, com X que tira o `?card=`. A busca do card por id (que abre mesmo assim) é da Parte 4.
+- **Etapa e Responsável na janela do card** cortam com reticências e mostram o nome inteiro ao passar o mouse. Moram em `components/pipelines/card/CamposDaSituacao.tsx`.
+
+Armadilhas:
+
+1. **O quadro recarrega a cada 60 s e ao vivo.** O hook guarda o card que já abriu pelo endereço; sem isso o card seria reaberto a cada volta (e reabriria depois de fechado, se o `?card=` não saísse).
+2. **`abrirNoEndereco`/`fecharNoEndereco` são estáveis de propósito**: entram no `handleEditItem`, que vai pro `PipelineItemCard` memoizado. O `setSearchParams` do roteador muda a cada mudança do endereço, por isso fica num ref.
+3. **O gatilho do Select do design system é `flex whitespace-nowrap`**: sem `min-w-0 overflow-hidden` no gatilho e `truncate` no texto, nome comprido passa da caixa. Campo novo de escolha na janela do card segue o `CamposDaSituacao`.
