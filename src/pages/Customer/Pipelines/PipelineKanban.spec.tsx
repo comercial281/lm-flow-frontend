@@ -238,7 +238,7 @@ describe('quadro do funil · o que continua igual', () => {
   it('a Lista mostra os leads sem as colunas do quadro', async () => {
     montar();
     await screen.findByText('Maria Souza');
-    await userEvent.click(screen.getByRole('radio', { name: 'Lista' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Lista' }));
     expect(document.getElementById('etapa-s1')).toBeNull();
     expect(screen.getByText('Maria Souza')).toBeInTheDocument();
     expect(screen.getAllByText('Proposta').length).toBeGreaterThan(0);

@@ -32,7 +32,7 @@ function montar(extra: Partial<Parameters<typeof BoardTopBar>[0]> = {}) {
   return acoes;
 }
 
-describe('topo do funil em três faixas', () => {
+describe('topo do funil em duas faixas', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture ?? (() => false);
@@ -69,16 +69,28 @@ describe('topo do funil em três faixas', () => {
     expect(screen.getByRole('button', { name: /^Arquivados/ })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('faixa 3: busca, contador, Quadro|Lista e Filtros com a contagem', async () => {
+  it('na mesma faixa das abas: contador, busca, Quadro|Lista e Filtros só com ícone', async () => {
     const { onModo, onAbrirFiltros, onBusca } = montar();
     expect(screen.getByText('312 leads')).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'Quadro' })).toHaveAttribute('aria-checked', 'true');
-    await userEvent.click(screen.getByRole('radio', { name: 'Lista' }));
+    const quadro = screen.getByRole('button', { name: 'Quadro' });
+    expect(quadro).toHaveAttribute('aria-pressed', 'true');
+    expect(quadro).toHaveAttribute('title', 'Quadro');
+    expect(quadro).not.toHaveTextContent('Quadro');
+    await userEvent.click(screen.getByRole('button', { name: 'Lista' }));
     expect(onModo).toHaveBeenCalledWith('list');
-    await userEvent.click(screen.getByRole('button', { name: 'Filtros · 3' }));
+    // Filtros é só o ícone; a quantidade vai numa bolinha e no nome pro leitor de tela.
+    const filtros = screen.getByRole('button', { name: 'Filtros · 3' });
+    expect(filtros).toHaveAttribute('title', 'Filtros');
+    expect(filtros).toHaveTextContent(/^3$/);
+    await userEvent.click(filtros);
     expect(onAbrirFiltros).toHaveBeenCalled();
     await userEvent.type(screen.getByRole('textbox', { name: 'Buscar lead' }), 'M');
     expect(onBusca).toHaveBeenCalledWith('M');
+  });
+
+  it('sem filtro ligado, Filtros é o ícone sem bolinha', () => {
+    montar({ quantosFiltros: 0 });
+    expect(screen.getByRole('button', { name: 'Filtros' })).toHaveTextContent(/^$/);
   });
 
   it('sem contagem de etapas, total de leads no topo, valor total nem Importar', () => {

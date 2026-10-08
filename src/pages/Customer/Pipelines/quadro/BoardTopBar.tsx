@@ -1,16 +1,19 @@
 // src/pages/Customer/Pipelines/quadro/BoardTopBar.tsx
-// Topo do quadro do funil em três faixas (spec funil §4.1, decisão 10 do Tony):
+// Topo do quadro do funil em duas faixas (spec funil §4.1; ajuste do dono em 08/10,
+// que juntou a 2ª e a 3ª faixa das três de antes):
 //   1. ← e o selo do funil · Lead e ⋯
-//   2. Abertos · Ganhos · Perdidos · Todos (com os números) e a caixa Arquivados
-//   3. busca · contador da aba · Quadro|Lista · Filtros
+//   2. Abertos · Ganhos · Perdidos · Todos (com os números) e a caixa Arquivados ·
+//      à direita: contador da aba, busca curta, Quadro|Lista e Filtros só com ícone
 // O quadro é ferramenta de tela cheia (exceção do padrão de telas): só a folga
 // lateral alinha (16/24px).
-import { Archive, ArrowLeft, ArrowUpDown, Copy, Download, Edit, Megaphone, MoreVertical, Plus, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
+import {
+  Archive, ArrowLeft, ArrowUpDown, Copy, Download, Edit, SquareKanban, List, Megaphone, MoreVertical, Plus, Search,
+  SlidersHorizontal, Trash2, X, type LucideIcon,
+} from 'lucide-react';
 import {
   Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, Input,
 } from '@/components/ui/ds';
 import Abas from '@/components/base/Abas';
-import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import PipelineSwitcher from '@/components/pipelines/PipelineSwitcher';
 import { numero, plural } from '@/lib/formato';
 import { cn } from '@/lib/utils';
@@ -26,9 +29,9 @@ const ABAS_COM_SITUACAO: { chave: Exclude<AbaDoQuadro, 'arquivados'>; rotulo: st
   { chave: 'todos', rotulo: 'Todos', conta: 'all' },
 ];
 
-const MODOS: { valor: ModoDoQuadro; rotulo: string }[] = [
-  { valor: 'board', rotulo: 'Quadro' },
-  { valor: 'list', rotulo: 'Lista' },
+const MODOS: { valor: ModoDoQuadro; rotulo: string; icone: LucideIcon }[] = [
+  { valor: 'board', rotulo: 'Quadro', icone: SquareKanban },
+  { valor: 'list', rotulo: 'Lista', icone: List },
 ];
 
 export interface BoardTopBarProps {
@@ -124,14 +127,14 @@ export default function BoardTopBar({
         </div>
       </div>
 
-      {/* Faixa 2: situação */}
-      <div className="flex items-center gap-2">
+      {/* Faixa 2: situação e Arquivados à esquerda; busca, contador, visualização e filtros à direita */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pb-2">
         <Abas
           rotulo="Situação dos leads"
           abas={ABAS_COM_SITUACAO.map(a => ({ chave: a.chave, rotulo: a.rotulo, contagem: contagens?.[a.conta] }))}
           ativa={emArquivados ? undefined : aba}
           aoTrocar={chave => onTrocarAba(chave as AbaDoQuadro)}
-          className="min-w-0 flex-1 border-b-0"
+          className="min-w-0 border-b-0"
         />
         <button
           type="button"
@@ -140,7 +143,7 @@ export default function BoardTopBar({
           aria-label={contagens ? `Arquivados ${numero(contagens.archived)}` : 'Arquivados'}
           title="Arquivados"
           className={cn(
-            'inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1.5 text-sm font-medium tabular-nums transition-colors',
+            'inline-flex h-9 shrink-0 items-center gap-1 rounded-md px-2 text-sm font-medium tabular-nums transition-colors',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             emArquivados ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
           )}
@@ -148,33 +151,58 @@ export default function BoardTopBar({
           <Archive className="h-4 w-4" aria-hidden="true" />
           {contagens && <span>{numero(contagens.archived)}</span>}
         </button>
-      </div>
 
-      {/* Faixa 3: busca, contador, visualização e filtros */}
-      <div className="flex flex-wrap items-center gap-2 py-3">
-        <div className="relative min-w-[200px] max-w-md flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-          <Input
-            value={busca}
-            onChange={e => onBusca(e.target.value)}
-            placeholder="Buscar lead"
-            aria-label="Buscar lead"
-            className="h-9 pl-9 pr-8"
-          />
-          {busca && (
-            <button type="button" onClick={() => onBusca('')} aria-label="Limpar busca" title="Limpar busca"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-              <X className="h-4 w-4" />
-            </button>
-          )}
+        <div className="ml-auto flex items-center gap-2">
+          <span className="hidden whitespace-nowrap text-sm tabular-nums text-muted-foreground md:inline">
+            {plural(totalVisivel, 'lead', 'leads')}
+          </span>
+          <div className="relative w-44 sm:w-56">
+            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Input
+              value={busca}
+              onChange={e => onBusca(e.target.value)}
+              placeholder="Buscar lead"
+              aria-label="Buscar lead"
+              className="h-9 pl-8 pr-8"
+            />
+            {busca && (
+              <button type="button" onClick={() => onBusca('')} aria-label="Limpar busca" title="Limpar busca"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div role="group" aria-label="Visualização" className="inline-flex h-9 shrink-0 items-center rounded-md border border-input p-0.5">
+            {MODOS.map(({ valor, rotulo, icone: Icone }) => (
+              <button
+                key={valor}
+                type="button"
+                aria-pressed={modo === valor}
+                aria-label={rotulo}
+                title={rotulo}
+                onClick={() => onModo(valor)}
+                className={cn(
+                  'inline-flex h-full w-8 items-center justify-center rounded transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  modo === valor ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <Icone className="h-4 w-4" aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+          <Button type="button" variant={quantosFiltros > 0 ? 'default' : 'outline'} size="sm" onClick={onAbrirFiltros}
+            aria-label={quantosFiltros > 0 ? `Filtros · ${quantosFiltros}` : 'Filtros'} title="Filtros"
+            className="relative h-9 w-9 shrink-0 p-0">
+            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+            {quantosFiltros > 0 && (
+              <span aria-hidden="true"
+                className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-background px-1 text-[10px] font-semibold tabular-nums text-primary ring-1 ring-primary">
+                {quantosFiltros}
+              </span>
+            )}
+          </Button>
         </div>
-        <span className="ml-auto text-sm tabular-nums text-muted-foreground">{plural(totalVisivel, 'lead', 'leads')}</span>
-        <BotoesDeEscolha rotulo="Visualização" valor={modo} opcoes={MODOS} aoEscolher={onModo} />
-        <Button type="button" variant={quantosFiltros > 0 ? 'default' : 'outline'} size="sm" onClick={onAbrirFiltros}
-          className="gap-1.5 whitespace-nowrap">
-          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-          {quantosFiltros > 0 ? `Filtros · ${quantosFiltros}` : 'Filtros'}
-        </Button>
       </div>
     </header>
   );
