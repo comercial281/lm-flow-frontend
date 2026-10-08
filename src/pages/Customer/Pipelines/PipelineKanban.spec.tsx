@@ -10,7 +10,7 @@ import { pipelinesService } from '@/services/pipelines';
 import type { Pipeline, PipelineItem, PipelineStage } from '@/types/analytics';
 import PipelineKanban from './PipelineKanban';
 
-const mocks = vi.hoisted(() => ({ abrirConversa: vi.fn(), fetchLabels: vi.fn() }));
+const mocks = vi.hoisted(() => ({ abrirConversa: vi.fn(), fetchLabels: vi.fn(), getPipelineItem: vi.fn() }));
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), message: vi.fn() } }));
 vi.mock('@/hooks/useLanguage', () => ({
@@ -57,6 +57,7 @@ vi.mock('@/pages/Customer/Pipelines/pipelinePayloadCache', () => ({
   prefetchPipeline: vi.fn(),
 }));
 vi.mock('@/services/listOptions/listOptionsService', () => ({ listOptionsService: { list: vi.fn().mockResolvedValue([]) } }));
+vi.mock('@/services/pipelines/pipelinesService', () => ({ pipelinesService: { getPipelineItem: mocks.getPipelineItem } }));
 vi.mock('@/services/pipelines', () => ({
   pipelinesService: {
     getPipeline: vi.fn(),
@@ -153,6 +154,7 @@ const endereco = () => new URLSearchParams(screen.getByTestId('endereco').textCo
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.getPipelineItem.mockReset().mockRejectedValue(Object.assign(new Error('404'), { response: { status: 404 } }));
   arquivadosAgora.clear();
   desarquivadosAgora.clear();
   Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture ?? (() => false);
@@ -418,10 +420,29 @@ describe('quadro do funil · abas', () => {
     expect(screen.queryByText('Este lead não está nesta aba.')).toBeNull();
   });
 
-  it('link de card que não está nesta aba: avisa, e o quadro aparece normal', async () => {
+  it('link de card que não está nesta aba: busca o card pelo id e abre, sem aviso', async () => {
+    mocks.getPipelineItem.mockResolvedValue({
+      item: MARIA,
+      stage_durations: [],
+      pipeline: { id: 'p1', name: 'Leads (Marketing)', stages: [] },
+    });
     montar('/pipelines/p1?aba=ganhos&card=i1');
-    expect(await screen.findByText('Este lead não está nesta aba.')).toBeInTheDocument();
-    expect(screen.getByText('Paula Reis')).toBeInTheDocument();
+
+    expect(await screen.findByText('Paula Reis')).toBeInTheDocument();
+    await waitFor(() => expect(mocks.getPipelineItem).toHaveBeenCalledWith('p1', 'i1'));
+    expect(endereco().get('card')).toBe('i1');
+    expect(screen.queryByText('Você não tem acesso a este lead')).toBeNull();
+    expect(screen.queryByText('Este lead não está nesta aba.')).toBeNull();
+  });
+
+  it('link de card sem acesso (outro corretor, apagado): avisa, e o X tira o card do endereço', async () => {
+    montar('/pipelines/p1?card=zz');
+
+    expect(await screen.findByText('Você não tem acesso a este lead')).toBeInTheDocument();
+    expect(screen.getByText('Maria Souza')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar aviso' }));
+    expect(endereco().get('card')).toBeNull();
+    expect(screen.queryByText('Você não tem acesso a este lead')).toBeNull();
   });
 
   it('resposta atrasada de outra aba não toma o lugar da aba aberta', async () => {
@@ -492,6 +513,7 @@ describe('quadro do funil · abas', () => {
     await waitFor(() => expect(within(document.getElementById('etapa-s1')!).queryByText('Maria Souza')).toBeNull());
     expect(screen.queryByText('Este lead não está nesta aba.')).toBeNull();
     expect(endereco().get('card')).toBe('i1');
+    expect(mocks.getPipelineItem).not.toHaveBeenCalled();
   });
 });
 

@@ -40,4 +40,13 @@ describe('ResponsavelComFoto', () => {
     render(<ResponsavelComFoto card={card('')} />);
     expect(screen.getByTestId('foto')).toHaveAttribute('data-url', '');
   });
+
+  it('responsável atual fora da lista de usuários: cai na foto do assignee do card', () => {
+    const c = card('u1') as unknown as { responsavel: { usuarios: unknown[] } };
+    c.responsavel.usuarios = [{ id: 'u2', name: 'Bruno', avatar_url: 'bruno.png' }];
+    render(<ResponsavelComFoto card={c as never} />);
+    const foto = screen.getByTestId('foto');
+    expect(foto).toHaveAttribute('data-nome', 'Ana');
+    expect(foto).toHaveAttribute('data-url', 'ana.png');
+  });
 });

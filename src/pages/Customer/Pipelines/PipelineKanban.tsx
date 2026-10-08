@@ -23,7 +23,8 @@ import EmptyState from '@/components/base/EmptyState';
 import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { lazyWithRetry } from '@/utils/chunkReload';
-import AvisoCardForaDaAba from './AvisoCardForaDaAba';
+import { useCardForaDoQuadro } from '@/features/cardDoLead/useCardForaDoQuadro';
+import AvisoDoCardForaDoQuadro from '@/features/cardDoLead/AvisoDoCardForaDoQuadro';
 import { useCardNoEndereco } from './useCardNoEndereco';
 import { STATUS_DA_ABA, pertenceAAba, podeArrastarNaAba } from './quadro/enderecoDoQuadro';
 import { useBoardDrag } from './quadro/useBoardDrag';
@@ -289,10 +290,20 @@ export default function PipelineKanban() {
     return [...doQuadro, itemToEdit];
   }, [stages, showEditItemModal, itemToEdit]);
   const {
+    cardId: cardDoEndereco,
     foraDaAba: cardForaDaAba,
     abrirNoEndereco: abrirCardNoEndereco,
     fecharNoEndereco: fecharCardNoEndereco,
   } = useCardNoEndereco({ itens: itensDoQuadro, carregando: loading, aoAbrir: abrirCard });
+
+  // E4: o card do endereço que não está nos cards da aba (arquivado, de outra
+  // aba, F5 noutra aba) é buscado pelo id e abre na janela. 404/403 = sem
+  // acesso. Com a janela aberta, `itensDoQuadro` já conta o card (P3-T17):
+  // `foraDaAba` fica false e nada é buscado.
+  const cardForaDoQuadro = useCardForaDoQuadro(pipelineId, cardForaDaAba ? cardDoEndereco : null);
+  useEffect(() => {
+    if (cardForaDoQuadro.estado === 'achou') abrirCard(cardForaDoQuadro.item);
+  }, [cardForaDoQuadro, abrirCard]);
   const fecharCard = useCallback((aberto: boolean) => {
     setShowEditItemModal(aberto);
     if (!aberto) fecharCardNoEndereco();
@@ -728,7 +739,11 @@ export default function PipelineKanban() {
           onExcluirFunil={handleDeletePipeline}
         />
 
-        {cardForaDaAba && <AvisoCardForaDaAba aoFechar={fecharCardNoEndereco} />}
+        <AvisoDoCardForaDoQuadro
+          estado={cardForaDoQuadro}
+          aoFechar={fecharCardNoEndereco}
+          className="mx-4 mt-3 sm:mx-6"
+        />
 
         {/* Kanban Board */}
         {(viewMode === 'board' || viewMode === 'list') && erroDaAba && !carregandoQuadro && (

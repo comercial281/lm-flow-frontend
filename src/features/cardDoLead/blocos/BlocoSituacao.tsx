@@ -50,14 +50,17 @@ export function ResponsavelDoCard({ card }: { card: CardDoLead }) {
 
 /** Cabeçalho da página do card: a foto do responsável ao lado do campo. */
 export function ResponsavelComFoto({ card }: { card: CardDoLead }) {
-  const { responsavel } = card;
+  const { responsavel, item } = card;
   // A foto é a do responsável ATUAL (após "Trocar" e a foto acompanha o nome).
   const atual = responsavel.usuarios.find(u => String(u.id) === responsavel.id);
-  const nome = atual?.name ?? 'Sem responsável';
+  // Responsável que não está na lista de usuários (desligado, fora do cargo):
+  // cai na foto do assignee do card, se for o mesmo id.
+  const doCard = item?.assignee && String(item.assignee.id) === responsavel.id ? item.assignee : null;
+  const nome = atual?.name ?? doCard?.name ?? 'Sem responsável';
   return (
     <div className="flex min-w-0 items-end gap-2">
       <ContactAvatar
-        contact={{ name: nome, avatar_url: atual?.avatar_url ?? atual?.thumbnail ?? null }}
+        contact={{ name: nome, avatar_url: atual?.avatar_url ?? atual?.thumbnail ?? doCard?.avatar_url ?? null }}
         size="sm"
         showColoredFallback
         className="mb-1 shrink-0"
