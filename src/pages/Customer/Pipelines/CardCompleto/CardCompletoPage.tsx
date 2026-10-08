@@ -51,7 +51,7 @@ const ABAS = [
 const CHAVES_DAS_ABAS = new Set(ABAS.map(a => a.chave));
 
 // O quadro do funil (o "← Funil <nome>" e o "Voltar ao funil").
-const enderecoDoFunil = (pipelineId: string): string => `/pipelines/${pipelineId}`;
+const enderecoDoFunil = (pipelineId: string): string => `/pipelines/${encodeURIComponent(pipelineId)}`;
 
 function Carregando() {
   return (
@@ -99,8 +99,18 @@ export default function CardCompletoPage() {
     );
   }
 
+  // Erro: além do "Tentar de novo", a volta ao funil (o sem-acesso tem a dele no meio).
+  const voltaNoErro = estado.estado === 'erro' && pipelineId ? (
+    <Link
+      to={enderecoDoFunil(pipelineId)}
+      className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+    >
+      <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Voltar ao funil
+    </Link>
+  ) : undefined;
+
   return (
-    <Pagina>
+    <Pagina acima={voltaNoErro}>
       {estado.estado === 'carregando' && <Carregando />}
       {estado.estado === 'sem-acesso' && <SemAcesso pipelineId={pipelineId} />}
       {estado.estado === 'erro' && <EmptyState tipo="erro" aoTentarDeNovo={() => void tentarDeNovo()} />}

@@ -17,6 +17,9 @@ const s = vi.hoisted(() => ({
   toastSuccess: vi.fn(),
   mover: vi.fn(),
   aoMudar: vi.fn(),
+  setRodapeSalvando: vi.fn(),
+  rodape: vi.fn(),
+  ficha: vi.fn(),
   menu: vi.fn(),
 }));
 
@@ -43,7 +46,7 @@ vi.mock('@/features/cardDoLead/useCardDoLead', () => ({
       id: item.stage_id,
       movendo: false,
       mover: async (id: string) => {
-        s.mover(id);
+        await s.mover(id);
         opcoes.onItemStageMoved?.(item.id, id);
       },
     },
@@ -52,7 +55,7 @@ vi.mock('@/features/cardDoLead/useCardDoLead', () => ({
       fechado: item.status === 'won' || item.status === 'lost',
       aoMudar: s.aoMudar,
       rodapeSalvando: false,
-      setRodapeSalvando: vi.fn(),
+      setRodapeSalvando: s.setRodapeSalvando,
     },
     historico: { eventos: [], carregando: false, recarregar: vi.fn() },
     roleta: { ligadas: [], mandando: false, mandar: vi.fn(), ofertasAbertas: [], setOfertasAbertas: vi.fn(), tirando: false, setTirando: vi.fn() },
@@ -62,11 +65,21 @@ vi.mock('@/features/cardDoLead/useCardDoLead', () => ({
     envio: { agendando: null, setAgendando: vi.fn() },
   }),
 }));
-vi.mock('@/features/cardDoLead/pagina/FichaDoCard', () => ({ default: () => <div data-testid="ficha" /> }));
+vi.mock('@/features/cardDoLead/pagina/FichaDoCard', () => ({
+  default: (p: Record<string, unknown>) => {
+    s.ficha(p);
+    return <div data-testid="ficha" />;
+  },
+}));
 vi.mock('@/features/cardDoLead/blocos/DialogosDoCard', () => ({ default: () => null }));
 vi.mock('@/features/cardDoLead/blocos/BlocoSituacao', () => ({ ResponsavelComFoto: () => <div data-testid="responsavel" /> }));
 // As peças de situação são da Parte 3 (com a bateria delas).
-vi.mock('@/components/pipelines/card/CardResultFooter', () => ({ default: () => <div data-testid="ganho-perdido" /> }));
+vi.mock('@/components/pipelines/card/CardResultFooter', () => ({
+  default: (p: Record<string, unknown>) => {
+    s.rodape(p);
+    return <div data-testid="ganho-perdido" />;
+  },
+}));
 vi.mock('@/features/pipelines/situacao/SeloSituacao', () => ({
   default: ({ status }: { status: string }) => (status === 'open' ? null : <span>{status === 'lost' ? 'PERDIDO' : 'GANHO'}</span>),
 }));
@@ -140,6 +153,16 @@ describe('CardCompletoPage', () => {
     expect(screen.getByTestId('ficha')).toBeInTheDocument();
   });
 
+  it('Ganho | Perdido recebe a trava cruzada com a Etapa (P3-T5)', async () => {
+    abrirPagina();
+    await screen.findByRole('heading', { level: 1, name: 'Maria Souza' });
+
+    const props = s.rodape.mock.calls.at(-1)![0] as { bloqueado: boolean; onSalvando: unknown; onMudou: unknown };
+    expect(props.bloqueado).toBe(false);
+    expect(props.onSalvando).toBe(s.setRodapeSalvando);
+    expect(typeof props.onMudou).toBe('function');
+  });
+
   it('enquanto carrega, o esqueleto', () => {
     s.getPipelineItem.mockReturnValue(new Promise(() => {}));
     abrirPagina();
@@ -162,7 +185,8 @@ describe('CardCompletoPage', () => {
     s.getPipelineItem.mockRejectedValueOnce(erroHttp(500)).mockResolvedValueOnce(detalhe());
     abrirPagina();
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Tentar de novo' }));
+    expect(await screen.findByRole('link', { name: 'Voltar ao funil' })).toHaveAttribute('href', '/pipelines/p1');
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Maria Souza' })).toBeInTheDocument();
     expect(s.getPipelineItem).toHaveBeenCalledTimes(2);
@@ -181,6 +205,26 @@ describe('CardCompletoPage', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Mover' }));
 
     await waitFor(() => expect(s.mover).toHaveBeenCalledWith('s3'));
+    await waitFor(() => expect(s.getPipelineItem).toHaveBeenCalledTimes(2));
+  });
+
+  it('faixa: com uma mudança no ar, a segunda não sai (trinco contra clique duplo)', async () => {
+    let soltar!: () => void;
+    s.mover.mockReturnValueOnce(new Promise<void>(r => { soltar = r; }));
+    abrirPagina();
+    await screen.findByRole('heading', { level: 1, name: 'Maria Souza' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Mover para Proposta' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Mover' }));
+    await waitFor(() => expect(s.mover).toHaveBeenCalledTimes(1));
+
+    // O falso não liga o "movendo": só o trinco da página segura o segundo pedido.
+    await userEvent.click(screen.getByRole('button', { name: 'Mover para Novo' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Mover' }));
+    expect(s.mover).toHaveBeenCalledTimes(1);
+    expect(s.mover).toHaveBeenCalledWith('s3');
+
+    await act(async () => { soltar(); });
     await waitFor(() => expect(s.getPipelineItem).toHaveBeenCalledTimes(2));
   });
 
@@ -208,6 +252,12 @@ describe('CardCompletoPage', () => {
     expect(await screen.findByText('PERDIDO')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Mover para/ })).toBeNull();
     expect(screen.getByText('Lead fechado não muda de etapa. Reabra para mexer.')).toBeInTheDocument();
+    // Fechado não trava o dado do negócio (checklist f3-06): a Ficha segue com
+    // "Sobre o negócio" gravando e o bloco de tarefas padrão.
+    expect(screen.getByTestId('ficha')).toBeInTheDocument();
+    const ficha = s.ficha.mock.calls.at(-1)![0] as { aoMudarNegocio: unknown; blocoDeTarefas?: unknown };
+    expect(typeof ficha.aoMudarNegocio).toBe('function');
+    expect(ficha.blocoDeTarefas).toBeUndefined();
   });
 
   it('card arquivado abre, com o aviso e Desarquivar', async () => {

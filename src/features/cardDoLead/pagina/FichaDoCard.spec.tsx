@@ -6,9 +6,16 @@ import FichaDoCard from './FichaDoCard';
 
 vi.mock('@/components/pipelines/card/LeadQuickActions', () => ({ default: () => <div data-testid="atalhos" /> }));
 vi.mock('@/components/pipelines/FollowupTimeline', () => ({ default: () => <div data-testid="followup" /> }));
-vi.mock('@/components/capi/CapiConversionPanel', () => ({
-  default: (p: { variante?: string }) => <div data-testid="meta" data-variante={p.variante ?? 'completo'} />,
-}));
+const montagensDaMeta = vi.hoisted(() => ({ n: 0 }));
+vi.mock('@/components/capi/CapiConversionPanel', async () => {
+  const { useEffect } = await import('react');
+  // Conta as montagens: o painel real lê o estado da Meta só ao montar.
+  function PainelDaMeta(p: { variante?: string }) {
+    useEffect(() => { montagensDaMeta.n += 1; }, []);
+    return <div data-testid="meta" data-variante={p.variante ?? 'completo'} />;
+  }
+  return { default: PainelDaMeta };
+});
 vi.mock('@/components/pipelines/card/OutrasInformacoes', () => ({ default: () => <div data-testid="outras" /> }));
 vi.mock('@/features/tarefas/TarefasDoLead', () => ({
   default: (p: { pipelineItemIds: string[]; criarNoCard: string | null }) => (
@@ -25,10 +32,11 @@ vi.mock('../blocos/BlocoRespostasDoFormulario', () => ({ default: () => <div dat
 vi.mock('./ColunaDoHistorico', () => ({ default: () => <div data-testid="coluna-historico" /> }));
 
 const item = { id: 'i1', pipeline_id: 'p1', estimated_value: null, expected_close_on: null } as never;
-const cardFalso = (recursos = { imoveis: true, notas: true, agendarEnvio: true }) => ({
+const cardFalso = (recursos = { imoveis: true, notas: true, agendarEnvio: true }, situacao: string | null = null) => ({
   contato: { id: 'c1', name: 'Maria Souza' },
   nomeExibido: 'Maria Souza',
   item,
+  situacao: { item: situacao ? { ...(item as object), status: situacao } : null },
   conversa: { abrir: vi.fn(), abrindo: false },
   historico: { recarregar: vi.fn() },
   recursos,
@@ -66,5 +74,21 @@ describe('FichaDoCard', () => {
   it('imóveis de interesse só com o recurso ligado', () => {
     render(<FichaDoCard card={cardFalso({ imoveis: false, notas: true, agendarEnvio: true })} item={item} aoMudarNegocio={vi.fn()} blocoDeTarefas={null} />);
     expect(screen.queryByTestId('imoveis')).toBeNull();
+  });
+
+  it('Ganho/Perdido na página remonta o painel da Meta (ele relê e mostra "enviado")', () => {
+    montagensDaMeta.n = 0;
+    const { rerender } = render(<FichaDoCard card={cardFalso(undefined, 'open')} item={item} aoMudarNegocio={vi.fn()} blocoDeTarefas={null} />);
+    expect(montagensDaMeta.n).toBe(1);
+
+    // Mesma situação (outra renderização qualquer): não remonta.
+    rerender(<FichaDoCard card={cardFalso(undefined, 'open')} item={item} aoMudarNegocio={vi.fn()} blocoDeTarefas={null} />);
+    expect(montagensDaMeta.n).toBe(1);
+
+    rerender(<FichaDoCard card={cardFalso(undefined, 'won')} item={item} aoMudarNegocio={vi.fn()} blocoDeTarefas={null} />);
+    expect(montagensDaMeta.n).toBe(2);
+
+    rerender(<FichaDoCard card={cardFalso(undefined, 'lost')} item={item} aoMudarNegocio={vi.fn()} blocoDeTarefas={null} />);
+    expect(montagensDaMeta.n).toBe(3);
   });
 });

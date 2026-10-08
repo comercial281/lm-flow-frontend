@@ -10,6 +10,7 @@ import LeadQuickActions from '@/components/pipelines/card/LeadQuickActions';
 import FollowupTimeline from '@/components/pipelines/FollowupTimeline';
 import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import OutrasInformacoes from '@/components/pipelines/card/OutrasInformacoes';
+import { situacaoDe } from '@/features/pipelines/situacao/situacao';
 import type { PipelineItem } from '@/types/analytics';
 import { conversaDoCard } from '../cardDoLead';
 import type { CardDoLead } from '../useCardDoLead';
@@ -84,7 +85,13 @@ export default function FichaDoCard({
             conversationId={conversaDoCard(item)}
             leadName={contato?.name ?? null}
           />
-          <CapiConversionPanel contactId={contato?.id ?? null} pipelineItemId={item.id} />
+          {/* Ganho/Perdido mandam Compra/Desqualificado à Meta no servidor: a chave
+              pela situação remonta o painel, que relê e mostra "enviado" (como a janela). */}
+          <CapiConversionPanel
+            key={situacaoDe(card.situacao.item ?? item)}
+            contactId={contato?.id ?? null}
+            pipelineItemId={item.id}
+          />
         </CaixaDoCard>
 
         <BlocoOQueAIAEntendeu item={item} />
