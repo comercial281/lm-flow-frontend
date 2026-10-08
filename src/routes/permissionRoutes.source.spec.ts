@@ -89,6 +89,8 @@ describe('toda rota do CRM confere o cargo', () => {
     ['/settings/lead-ads-forms', 'lead_ads_form_configs', 'read'],
     // Listas da casa (E1 do funil): abre pra quem lê o funil; mudar é pipelines.update no servidor.
     ['/settings/listas', 'pipelines', 'read'],
+    // Card completo (E4): a página do lead pede o mesmo que o quadro.
+    ['/pipelines/:pipelineId/card/:itemId', 'pipelines', 'read'],
   ])('%s exige %s.%s', (path, resource, action) => {
     expect(trecho(path)).toContain(`<PermissionRoute resource="${resource}" action="${action}">`);
   });
@@ -192,5 +194,13 @@ describe('Integrações em cartões (07/10/2026)', () => {
     for (const path of ['/settings/integrations', '/settings/integrations/sistemas', '/settings/facebook', '/settings/pixel-capi', '/settings/portals', '/settings/cvcrm', '/channels']) {
       expect(bloco, path).toContain(`path="${path}"`);
     }
+  });
+});
+
+describe('card completo (E4, 07/10/2026)', () => {
+  it('/pipelines/:pipelineId/card/:itemId abre a página do card, com o menu e a trava do funil', () => {
+    const t = trecho('/pipelines/:pipelineId/card/:itemId');
+    expect(t).toContain('<CardCompletoPage />');
+    expect(t).toContain('<PermissionRoute resource="pipelines" action="read">');
   });
 });

@@ -83,6 +83,8 @@ const ChannelSettings = lazyWithRetry(() => import('@/pages/Customer/Channels').
 const NewChannel = lazyWithRetry(() => import('@/pages/Customer/Channels').then(m => ({ default: m.NewChannel })));
 
 const PipelineKanban = lazyWithRetry(() => import('@/pages/Customer/Pipelines/PipelineKanban'));
+// Card completo (E4): a página do lead, em outra guia, com o menu lateral.
+const CardCompletoPage = lazyWithRetry(() => import('@/pages/Customer/Pipelines/CardCompleto/CardCompletoPage'));
 // Times e Cargos não têm mais rota própria: viraram abas da tela de Equipe, que
 // os carrega junto. Só a sub-tela de adicionar gente a um Time continua com rota
 // (é navegação interna da lista de Times).
@@ -617,6 +619,17 @@ const AppRouter = () => {
               element={
                 <PermissionRoute resource="pipelines" action="read">
                   <PipelineKanban />
+                </PermissionRoute>
+              }
+            />
+
+            {/* Card completo (E4): página do lead com endereço próprio. Mesma
+                trava do quadro; quem não vê o card recebe o aviso da página. */}
+            <Route
+              path="/pipelines/:pipelineId/card/:itemId"
+              element={
+                <PermissionRoute resource="pipelines" action="read">
+                  <CardCompletoPage />
                 </PermissionRoute>
               }
             />
