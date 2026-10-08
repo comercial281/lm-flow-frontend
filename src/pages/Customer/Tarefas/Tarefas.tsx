@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/ds';
 import BaseHeader from '@/components/base/BaseHeader';
 import Pagina from '@/components/base/Pagina';
 import { Seletor } from '@/components/base/Seletor';
@@ -98,7 +100,6 @@ export default function Tarefas() {
           searchValue={busca}
           onSearchChange={setBusca}
           searchPlaceholder="Buscar por tarefa ou lead"
-          primaryAction={{ label: T.novaTarefa, onClick: () => setJanela({ tarefa: null }) }}
         >
           <div role="group" aria-label="Prazo" className="flex gap-1 overflow-x-auto whitespace-nowrap border-b border-border">
             {BALDES.map(b => (
@@ -125,6 +126,11 @@ export default function Tarefas() {
                 {pessoas.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </Seletor>
             )}
+            {/* Na linha dos filtros, não no topo (pedido do dono, 08/10/2026). */}
+            <Button className="ml-auto" onClick={() => setJanela({ tarefa: null })}>
+              <Plus className="mr-1 h-4 w-4" />
+              {T.novaTarefa}
+            </Button>
           </div>
         </BaseHeader>
       }
