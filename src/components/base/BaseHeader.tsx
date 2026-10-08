@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import PrimaryActionButton from './PrimaryActionButton';
 import IconActionButton from './IconActionButton';
+import { useCabecalhoNaAba } from '@/components/layout/nomeDaAba';
 
 export interface HeaderAction {
   label: string;
@@ -97,6 +98,8 @@ export default function BaseHeader({
   children,
 }: BaseHeaderProps) {
   const { t } = useLanguage('common');
+  // Tela fora do menu: o título (quando é texto) vira o nome da página na aba do navegador.
+  useCabecalhoNaAba(title);
   const placeholder = searchPlaceholder || t('base.header.searchPlaceholder');
   const hasSelection = selectedCount > 0;
   const visibleSecondaryActions = secondaryActions.filter(action => action.show !== false);

@@ -12,6 +12,7 @@ import type { UserEntry, UserProfile } from '@/types/admin/users';
 import AcoesDeAcesso from './AcoesDeAcesso';
 import NotificacoesDaPessoa from './NotificacoesDaPessoa';
 import { duracao, rotuloSituacao, statusDaSituacao } from './formatoUsuarios';
+import { useNomeDaAba } from '@/components/layout/nomeDaAba';
 
 // Ficha de uma pessoa (Clientes → Usuários → clique no nome). A chave é cliente + id.
 type Estado =
@@ -24,6 +25,7 @@ export default function FichaDoUsuario() {
   const { tenant = '', userId = '' } = useParams();
   const { search } = useLocation();
   const [estado, setEstado] = useState<Estado>({ tipo: 'carregando' });
+  useNomeDaAba(estado.tipo === 'pronto' ? estado.perfil.person.name : null);
   // Só a última busca vale: ficha de outra URL não é sobrescrita por resposta atrasada.
   const seq = useRef(0);
 

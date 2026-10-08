@@ -35,6 +35,7 @@ import FichaDoCard from '@/features/cardDoLead/pagina/FichaDoCard';
 import { ResponsavelComFoto } from '@/features/cardDoLead/blocos/BlocoSituacao';
 import DialogosDoCard from '@/features/cardDoLead/blocos/DialogosDoCard';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
+import { useNomeDaAba } from '@/components/layout/nomeDaAba';
 import type { PipelineItem, PipelineItemDetail } from '@/types/analytics';
 
 const CardConversationTab = lazyWithRetry(() => import('@/components/pipelines/CardConversationTab'));
@@ -148,6 +149,7 @@ function ConteudoDoCard({ dados, recarregar, atualizarItem }: {
     // A Etapa escolhida foi Concluído e marcou Ganho (08/10): a página vem de novo.
     onItemStatusChanged: () => { void recarregar(); },
   });
+  useNomeDaAba(card.nomeExibido);
 
   // Ganho/Perdido/Reabrir gravado (rodapé ou faixa): o card acompanha pelo hook
   // (selo, Etapa, Histórico — o hook já recarrega o Histórico) e a página vem de

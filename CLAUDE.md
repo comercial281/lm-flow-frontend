@@ -7995,3 +7995,19 @@ Pedido do dono: "eu já não mexo nisso e o cliente também não pode mexer, sen
 - **Os valores continuam os de fábrica do `useChannelForm`** e seguem no envio da criação, sem mudança: proxy desligado, Rejeitar Chamadas ligado, Sempre Online ligado, mensagem vazia, o resto desligado.
 - Ficaram: Privacidade, Perfil, Status/QR e Desconectar. Evolution Go, Z-API e os outros provedores não mudaram.
 - Não reabrir sem o dono pedir. Ajuste num número específico é feito por nós, direto na Evolution.
+
+## Nome da aba do navegador (desde 2026-10-08)
+
+Com várias abas abertas, todas se chamavam "LM Flow" e não dava pra achar o cliente, o card ou a página. Decisão do Tony: um padrão só, do mais específico pro mais geral (o Chrome corta o fim quando a aba encolhe).
+
+- **Formato:** `<item> · <página> · <cliente>`. Ex.: "João Silva · Funil de vendas · Moeda Forte", "Contatos · Moeda Forte", "Moeda Forte · Clientes · Admin". **Sem "LM Flow" no fim**: o ícone da aba já diz isso. Não reabrir sem o dono pedir.
+- **Página** = o item do menu dono do endereço (`donoDoEndereco`, o mesmo que acende no menu), ou a aba dele quando a página tem abas. Tela fora do menu usa o título do `BaseHeader` quando é texto. Na Área do Admin, o menu do admin.
+- **Cliente** = nome da conta. Na Área do Admin, "Admin".
+- **Item** = só nas telas de UM registro, que chamam `useNomeDaAba(nome)`: card completo do lead, quadro do funil (nome do funil), conversa aberta (nome do contato), cadastro do imóvel (referência), ficha do proprietário, roleta, e no admin a página do cliente e a ficha do usuário. Enquanto carrega, passa `null`.
+- Mesma palavra não repete (Contatos · Contatos). Fora das molduras (login, páginas públicas) a aba volta a "LM Flow". Sites públicos dos clientes seguem com a regra deles (`tituloDaAba`).
+- Código: `components/layout/nomeDaAba.tsx`; a moldura `NomeDaAba` está no `MainLayout` e no `AdminLayout`.
+
+Armadilhas:
+
+1. **O título do cabeçalho NÃO é o item.** Em várias telas ele é genérico ("Proprietário", "Roleta") ou um campo editável; por isso o item é avisado de propósito, com o gancho.
+2. **Tela de detalhe nova** (ficha de algo) → chamar `useNomeDaAba` antes de qualquer `return` antecipado (regra dos hooks).

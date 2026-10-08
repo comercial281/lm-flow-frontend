@@ -16,6 +16,7 @@ import AbaOperacao from './AbaOperacao';
 import AbaPessoas from './AbaPessoas';
 import AbaResumo from './AbaResumo';
 import MenuDoCliente from './MenuDoCliente';
+import { useNomeDaAba } from '@/components/layout/nomeDaAba';
 
 // Página do cliente (/admin/clientes/:id). Abas no endereço (?aba=). Cada aba
 // carrega e falha sozinha; o topo fica de pé mesmo se uma aba quebrar.
@@ -45,6 +46,7 @@ export default function Pagina() {
   const aba: ChaveDaAba = ABAS.some((a) => a.chave === abaUrl) ? (abaUrl as ChaveDaAba) : 'resumo';
   const [estado, setEstado] = useState<{ tipo: 'carregando' } | { tipo: 'erro' } | { tipo: 'naoEncontrado' } | { tipo: 'pronto'; cliente: ClientePooled }>({ tipo: 'carregando' });
   const seq = useRef(0);
+  useNomeDaAba(estado.tipo === 'pronto' ? estado.cliente.name : null);
 
   // silencioso: recarga com a página pronta. Se falhar, mantém o cliente que já está na tela.
   const carregar = useCallback(async (silencioso = false) => {

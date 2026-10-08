@@ -51,6 +51,7 @@ import SecaoConstrutora from './secoes/SecaoConstrutora';
 import SecaoComissao from './secoes/SecaoComissao';
 import SecaoProprietario from './secoes/SecaoProprietario';
 import OndeDivulgar from './OndeDivulgar';
+import { useNomeDaAba } from '@/components/layout/nomeDaAba';
 
 // A mensagem real do servidor (ex.: "Valor de venda é obrigatório..."), não um genérico.
 function mensagemDoErro(e: unknown, reserva: string): string {
@@ -84,6 +85,8 @@ function Cadastro() {
 
   const editandoId = id ?? null;
   const [imovel, setImovel] = useState<Property | null>(null);
+  // Na aba: a referência do imóvel (AP0566); no cadastro novo, só a página.
+  useNomeDaAba(imovel ? (imovel.code || imovel.title) : null);
   const [erroDeCarga, setErroDeCarga] = useState(false);
   const [recusado, setRecusado] = useState(false);
   const kind: ListingKind = imovel ? tipoDoImovel(imovel) : (tipoDaUrl(sp.get('tipo')) ?? 'resale');

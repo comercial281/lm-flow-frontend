@@ -34,6 +34,7 @@ import PainelDeFiltrosDoFunil from './quadro/PainelDeFiltrosDoFunil';
 import StageColumn from './quadro/StageColumn';
 import PipelineListView from './quadro/PipelineListView';
 import { useAppDataStore } from '@/store/appDataStore';
+import { useNomeDaAba } from '@/components/layout/nomeDaAba';
 
 // Os modais abaixo só aparecem quando o usuário clica em algo pra abrir —
 // código deles não precisa estar no bundle inicial da página de Pipelines.
@@ -68,6 +69,7 @@ export default function PipelineKanban() {
 
   const [loading, setLoading] = useState(true);
   const [pipeline, setPipeline] = useState<Pipeline | null>(null);
+  useNomeDaAba(pipeline?.name);
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [allPipelines, setAllPipelines] = useState<Pipeline[]>([]);
   // Aba e filtros no endereço; busca na tela (quadro/usePipelineFilters).
