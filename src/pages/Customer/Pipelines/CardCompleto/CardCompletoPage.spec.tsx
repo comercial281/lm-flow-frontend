@@ -21,6 +21,7 @@ const s = vi.hoisted(() => ({
   rodape: vi.fn(),
   ficha: vi.fn(),
   menu: vi.fn(),
+  recarregarHistorico: vi.fn(),
 }));
 
 vi.mock('sonner', () => ({ toast: { error: s.toastError, success: s.toastSuccess } }));
@@ -57,7 +58,7 @@ vi.mock('@/features/cardDoLead/useCardDoLead', () => ({
       rodapeSalvando: false,
       setRodapeSalvando: s.setRodapeSalvando,
     },
-    historico: { eventos: [], carregando: false, recarregar: vi.fn() },
+    historico: { versao: '0', recarregar: s.recarregarHistorico },
     roleta: { ligadas: [], mandando: false, mandar: vi.fn(), ofertasAbertas: [], setOfertasAbertas: vi.fn(), tirando: false, setTirando: vi.fn() },
     juntar: { pode: false, juntando: false, setJuntando: vi.fn() },
     recursos: { notas: true, imoveis: true, agendarEnvio: false },
@@ -269,6 +270,8 @@ describe('CardCompletoPage', () => {
 
     await waitFor(() => expect(s.unarchiveItem).toHaveBeenCalledWith('p1', 'i1'));
     await waitFor(() => expect(s.getPipelineItem).toHaveBeenCalledTimes(2));
+    // Mesmo id e mesma situação: o Histórico é recarregado à mão (linha "Desarquivado").
+    await waitFor(() => expect(s.recarregarHistorico).toHaveBeenCalledTimes(1));
   });
 
   it('abas: Ficha é a padrão; a aba vai no endereço e volta no F5', async () => {
@@ -295,6 +298,7 @@ describe('CardCompletoPage', () => {
     expect(props.onDesarquivar).toBeUndefined();
     await act(async () => { props.onArquivar?.(); });
     await waitFor(() => expect(s.archiveItem).toHaveBeenCalledWith('p1', 'i1'));
+    await waitFor(() => expect(s.recarregarHistorico).toHaveBeenCalledTimes(1));
 
     act(() => props.onRemovido());
     expect(await screen.findByText('Quadro do funil')).toBeInTheDocument();

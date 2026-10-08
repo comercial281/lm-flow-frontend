@@ -14,7 +14,7 @@ const s = vi.hoisted(() => ({
   assignConversation: vi.fn(),
   addLabels: vi.fn(),
   removeLabels: vi.fn(),
-  getContactEvents: vi.fn(),
+  timeline: vi.fn(),
   getLabels: vi.fn(),
   createLabel: vi.fn(),
   updateContact: vi.fn(),
@@ -41,9 +41,7 @@ vi.mock('@/components/chat/contact/ContactAvatar', () => ({ default: () => <div 
 vi.mock('@/services/conversations/conversationService', () => ({
   conversationAPI: { assignConversation: s.assignConversation, addLabels: s.addLabels, removeLabels: s.removeLabels },
 }));
-vi.mock('@/services/contacts/contactEventsService', () => ({
-  contactEventsService: { getContactEvents: s.getContactEvents },
-}));
+vi.mock('@/services/contacts/leadTimelineService', () => ({ leadTimelineService: { list: s.timeline } }));
 vi.mock('@/services/contacts/labelsService', () => ({
   labelsService: { getLabels: s.getLabels, createLabel: s.createLabel },
 }));
@@ -201,8 +199,12 @@ beforeAll(() => {
 
 beforeEach(() => {
   Object.values(s).forEach(f => f.mockReset());
-  s.getContactEvents.mockResolvedValue({
-    data: [{ id: 'ev1', eventName: 'Entrou no funil', occurredAt: '2026-10-01T10:00:00Z', properties: {} }],
+  s.timeline.mockResolvedValue({
+    events: [{
+      id: 'mov-1', category: 'alteracao', kind: 'pipeline_entered', title: 'Entrou no funil', detail: null,
+      actor: null, occurred_at: '2026-10-01T10:00:00.000000Z', pipeline_name: null, tone: 'neutral',
+    }],
+    next_before: null,
   });
   s.getLabels.mockResolvedValue({
     data: [
@@ -232,7 +234,7 @@ describe('janela do card · caracterização (E4)', () => {
 
   it('etapa muda na hora, avisa o quadro e recarrega o histórico', async () => {
     const { onItemStageMoved } = abrir();
-    await waitFor(() => expect(s.getContactEvents).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(s.timeline).toHaveBeenCalledTimes(1));
 
     await userEvent.click(campo('Etapa'));
     await userEvent.click(await screen.findByRole('option', { name: 'Agendou visita' }));
@@ -241,7 +243,7 @@ describe('janela do card · caracterização (E4)', () => {
       expect(s.moveItem).toHaveBeenCalledWith({ item_id: 'i1', pipeline_id: 'p1', from_stage_id: 's1', to_stage_id: 's2' }),
     );
     expect(onItemStageMoved).toHaveBeenCalledWith('i1', 's2');
-    await waitFor(() => expect(s.getContactEvents).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(s.timeline).toHaveBeenCalledTimes(2));
   });
 
   it('etapa que falha volta para a anterior e avisa', async () => {
@@ -294,11 +296,11 @@ describe('janela do card · caracterização (E4)', () => {
     await waitFor(() => expect(s.updateContact).toHaveBeenCalledWith('c1', { labels: [] }));
   });
 
-  it('histórico: até 100 eventos do contato, em Detalhes', async () => {
+  it('histórico: o Histórico novo, compacto, em Detalhes; Observações e imóveis ao lado', async () => {
     abrir();
 
     expect(await screen.findByText('Entrou no funil')).toBeInTheDocument();
-    expect(s.getContactEvents).toHaveBeenCalledWith('c1', { limit: 100 });
+    expect(s.timeline).toHaveBeenCalledWith('c1', { category: 'resumo' });
     expect(screen.getByTestId('observacoes')).toBeInTheDocument();
     expect(screen.getByTestId('imoveis')).toBeInTheDocument();
   });
@@ -470,7 +472,7 @@ describe('janela do card · caracterização (E4)', () => {
         <EditItemModal open={false} onOpenChange={vi.fn()} item={deFormulario} stages={etapas} />
       </MemoryRouter>,
     );
-    expect(s.getContactEvents).not.toHaveBeenCalled();
+    expect(s.timeline).not.toHaveBeenCalled();
     expect(s.getAll).not.toHaveBeenCalled();
   });
 
@@ -497,12 +499,12 @@ describe('janela do card · caracterização (E4)', () => {
 
   it('o rodapé gravou a situação: o Histórico recarrega', async () => {
     abrir();
-    await waitFor(() => expect(s.getContactEvents).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(s.timeline).toHaveBeenCalledTimes(1));
 
     await userEvent.click(screen.getByTestId('ganho-perdido'));
 
-    await waitFor(() => expect(s.getContactEvents).toHaveBeenCalledTimes(2));
-    expect(s.getContactEvents).toHaveBeenLastCalledWith('c1', { limit: 100 });
+    await waitFor(() => expect(s.timeline).toHaveBeenCalledTimes(2));
+    expect(s.timeline).toHaveBeenLastCalledWith('c1', { category: 'resumo' });
   });
 
   it('"Ver card completo" ao lado do ⋯ abre a página do card em outra guia', () => {

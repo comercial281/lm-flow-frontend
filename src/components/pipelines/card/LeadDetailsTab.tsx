@@ -2,37 +2,40 @@
 //   1. "O que sabemos do lead": o que a IA entendeu + respostas do formulário;
 //   2. Imóveis de interesse;
 //   3. Histórico | Observações, lado a lado, cada um com a sua rolagem.
-// Histórico e Observações NÃO se juntam (decisão do dono, 02/10).
-// Desde a E4 os pedaços são blocos de features/cardDoLead/blocos (a página
-// "card completo" usa os mesmos).
+// Histórico e Observações NÃO se juntam na janela: um o sistema escreve sozinho,
+// o outro é o comentário que o corretor escolheu deixar (decisão do dono, 02/10).
+// O Histórico é o novo (E5 do funil, 07/10), em modo compacto: sem o filtro
+// Observações e sem linha de nota. Na página do card completo ele vem inteiro
+// (features/cardDoLead/pagina/ColunaDoHistorico). Os pedaços são os blocos de
+// features/cardDoLead/blocos (E4).
 import type { PipelineItem } from '@/types/analytics';
-import type { ContactEvent } from '@/types/notifications/contact-events';
 import { contatoDoCard } from '@/features/cardDoLead/cardDoLead';
 import BlocoOQueAIAEntendeu from '@/features/cardDoLead/blocos/BlocoOQueAIAEntendeu';
 import BlocoRespostasDoFormulario from '@/features/cardDoLead/blocos/BlocoRespostasDoFormulario';
 import BlocoImoveisDeInteresse from '@/features/cardDoLead/blocos/BlocoImoveisDeInteresse';
-import BlocoHistorico from '@/features/cardDoLead/blocos/BlocoHistorico';
 import BlocoObservacoes from '@/features/cardDoLead/blocos/BlocoObservacoes';
+import HistoricoDoLead from '@/features/cardDoLead/historico/HistoricoDoLead';
 import OutrasInformacoes from './OutrasInformacoes';
 
 interface LeadDetailsTabProps {
   item: PipelineItem;
   mostrarImoveis: boolean;
   mostrarObservacoes: boolean;
-  historico: ContactEvent[];
-  carregandoHistorico: boolean;
-  onRecarregarHistorico: () => void;
+  /** `card.historico.versao` (useCardDoLead): muda quando o card muda e o Histórico recarrega. */
+  versaoHistorico: string;
+  /** Nome do funil do card: evento de outro funil do lead diz de qual veio. */
+  funilAtual?: string | null;
 }
 
 export default function LeadDetailsTab({
   item,
   mostrarImoveis,
   mostrarObservacoes,
-  historico,
-  carregandoHistorico,
-  onRecarregarHistorico,
+  versaoHistorico,
+  funilAtual = null,
 }: LeadDetailsTabProps) {
   const contato = contatoDoCard(item);
+  const contactId = contato?.id != null ? String(contato.id) : null;
 
   return (
     <div className="grid h-full min-h-0 gap-4 lg:grid-cols-2">
@@ -41,18 +44,20 @@ export default function LeadDetailsTab({
         <BlocoOQueAIAEntendeu item={item} />
         <BlocoRespostasDoFormulario item={item} />
         {mostrarImoveis && <BlocoImoveisDeInteresse item={item} />}
-        {contato?.id != null && (
+        {contactId != null && (
           <OutrasInformacoes
-            contactId={String(contato.id)}
-            atributos={contato.custom_attributes as Record<string, unknown> | null | undefined}
+            contactId={contactId}
+            atributos={contato?.custom_attributes as Record<string, unknown> | null | undefined}
           />
         )}
       </div>
 
       {/* Direita: Histórico em cima, Observações embaixo — separados de propósito. */}
       <div className="flex flex-col gap-4 min-h-[480px] lg:min-h-0">
-        <BlocoHistorico eventos={historico} carregando={carregandoHistorico} aoRecarregar={onRecarregarHistorico} />
-        {mostrarObservacoes && <BlocoObservacoes contactId={contato?.id != null ? String(contato.id) : null} />}
+        <div className="flex flex-col min-h-0 flex-1 rounded-xl border border-border p-4">
+          <HistoricoDoLead modo="compacto" contactId={contactId} funilAtual={funilAtual} versao={versaoHistorico} />
+        </div>
+        {mostrarObservacoes && <BlocoObservacoes contactId={contactId} />}
       </div>
     </div>
   );

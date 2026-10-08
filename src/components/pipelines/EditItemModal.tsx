@@ -66,6 +66,7 @@ export default function EditItemModal({
   onOpenChange,
   item,
   stages,
+  pipeline,
   onItemStageMoved,
   onLabelsChanged,
   cabecalho,
@@ -185,9 +186,8 @@ export default function EditItemModal({
                   item={item}
                   mostrarImoveis={card.recursos.imoveis}
                   mostrarObservacoes={card.recursos.notas}
-                  historico={card.historico.eventos}
-                  carregandoHistorico={card.historico.carregando}
-                  onRecarregarHistorico={card.historico.recarregar}
+                  versaoHistorico={card.historico.versao}
+                  funilAtual={pipeline?.name ?? null}
                 />
               )}
 

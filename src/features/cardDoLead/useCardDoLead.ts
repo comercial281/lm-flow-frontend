@@ -9,7 +9,7 @@
 // janela sempre fez. Quem troca de card sem trocar de id (card sem funil tem id
 // '') precisa de `key` no componente (diário: "card do lead abre de Contatos").
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAccountUsers } from '@/hooks/useAccountUsers';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
@@ -20,7 +20,6 @@ import { readManualOrigin } from '@/constants/manualLeadOrigin';
 import { telefone } from '@/lib/formato';
 import { isPhoneLikeName } from '@/lib/nomeDoContato';
 import { conversationAPI } from '@/services/conversations/conversationService';
-import { contactEventsService } from '@/services/contacts/contactEventsService';
 import { labelsService } from '@/services/contacts/labelsService';
 import { contactsService } from '@/services/contacts/contactsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
@@ -30,10 +29,10 @@ import { textoDaOferta } from '@/components/roleta/textosDaRoleta';
 import { serverRefusalMessageOf } from '@/services/core/forbidden';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
-import type { ContactEvent } from '@/types/notifications/contact-events';
 import type { Label as LabelType } from '@/types/settings';
 import { cardFechado, ehColunaDeGanho, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
 import { contatoDoCard, origemCurta, podeCorrigirContato, semFunil } from './cardDoLead';
+import { useVersaoDoHistorico } from './historico/useVersaoDoHistorico';
 
 // Do contato vêm {name}, da conversa {title}.
 const nomesDasEtiquetas = (raw: unknown): string[] =>
@@ -42,10 +41,6 @@ const nomesDasEtiquetas = (raw: unknown): string[] =>
         .map(l => (typeof l === 'string' ? l : (l?.title ?? l?.name ?? '')))
         .filter(Boolean)
     : [];
-
-// Qual card está na tela: o id do card e o do contato (card sem funil tem id '').
-const chaveDoCard = (item: PipelineItem | null | undefined): string =>
-  `${item?.id ?? ''}|${contatoDoCard(item)?.id ?? ''}`;
 
 export interface OpcoesDoCard {
   /** A janela está aberta (a página passa sempre true). */
@@ -118,9 +113,6 @@ export function useCardDoLead(
   const [savingLabel, setSavingLabel] = useState(false);
   const [creatingLabel, setCreatingLabel] = useState(false);
 
-  const [historyEvents, setHistoryEvents] = useState<ContactEvent[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-
   // Origem escrita à mão ("Indicação"): o ÚNICO campo da aba Origem que se corrige.
   const [manualOrigin, setManualOrigin] = useState('');
   const [savedManualOrigin, setSavedManualOrigin] = useState('');
@@ -129,30 +121,11 @@ export function useCardDoLead(
   // Agendar envio (a partir da caixa da conversa). null = fechado.
   const [agendandoEnvio, setAgendandoEnvio] = useState<string | null>(null);
 
-  // Resposta velha não pinta o card errado: só vale a leitura mais nova, e só
-  // se o card na tela ainda é o mesmo de quando ela saiu.
-  const cardNaTela = useRef(chaveDoCard(item));
-  cardNaTela.current = chaveDoCard(item);
-  const leituraDoHistorico = useRef(0);
-
-  const loadHistory = useCallback(async (target?: PipelineItem | null) => {
-    const alvo = target ?? item;
-    const contato = contatoDoCard(alvo);
-    if (!contato?.id) return;
-    const chave = chaveDoCard(alvo);
-    const leitura = ++leituraDoHistorico.current;
-    const valeAinda = () => leitura === leituraDoHistorico.current && cardNaTela.current === chave;
-    setHistoryLoading(true);
-    try {
-      // Sem paginação neste painel: um lead de roleta gasta duas linhas por oferta.
-      const res = await contactEventsService.getContactEvents(String(contato.id), { limit: 100 });
-      if (valeAinda()) setHistoryEvents(Array.isArray(res.data) ? res.data : []);
-    } catch {
-      if (valeAinda()) setHistoryEvents([]);
-    } finally {
-      if (leitura === leituraDoHistorico.current) setHistoryLoading(false);
-    }
-  }, [item]);
+  // Histórico novo (E5): quem busca é o HistoricoDoLead (com a própria trava de
+  // resposta velha). Aqui só a chave que o manda recarregar: muda com o pedido
+  // (roleta, oferta aceita, visita, correção de contato, etapa, responsável) e
+  // quando etapa, situação ou responsável do card mudam.
+  const { versaoHistorico, recarregarHistorico } = useVersaoDoHistorico(itemDaSituacao);
 
   // Ganho leva o card para Concluído e Reabrir o devolve (ajuste de 08/10): a
   // Etapa acompanha o `stage_id` que a situação trouxe. O Histórico recarrega
@@ -160,8 +133,8 @@ export function useCardDoLead(
   const aoMudarSituacao = useCallback((novo: PipelineItem) => {
     setItemDaSituacao(novo);
     if (novo.stage_id) setEtapaId(String(novo.stage_id));
-    void loadHistory();
-  }, [loadHistory]);
+    recarregarHistorico();
+  }, [recarregarHistorico]);
 
   // Inicializa quando o card abre.
   useEffect(() => {
@@ -207,8 +180,6 @@ export function useCardDoLead(
         })
         .catch(() => { if (!cancelled) setAvailableLabels([]); });
 
-      loadHistory(item);
-
       // Etiqueta "meta" automática para lead de Facebook/Meta.
       const convId = item.conversation?.id ? String(item.conversation.id) : null;
       const existingLabels = nomesDasEtiquetas((item.conversation as any)?.labels);
@@ -250,7 +221,7 @@ export function useCardDoLead(
           to_stage_id: toStageId,
         });
         onItemStageMoved?.(item.id, toStageId);
-        loadHistory();
+        recarregarHistorico();
       }
     } catch (erro) {
       setEtapaId(anterior);
@@ -258,7 +229,7 @@ export function useCardDoLead(
     } finally {
       setMovendoEtapa(false);
     }
-  }, [item, etapaId, onItemStageMoved, loadHistory, fechado, rodapeSalvando, stages, itemDaSituacao, aoMudarSituacao, onItemStatusChanged]);
+  }, [item, etapaId, onItemStageMoved, recarregarHistorico, fechado, rodapeSalvando, stages, itemDaSituacao, aoMudarSituacao, onItemStatusChanged]);
 
   // Com conversa, atribui a conversa (o servidor espelha no contato); sem, grava no contato.
   const handleAssigneeChange = useCallback(async (userId: string) => {
@@ -274,13 +245,16 @@ export function useCardDoLead(
       } else {
         await contactsService.updateContact(String(contactId), { default_assignee_id: nextId });
       }
+      // O `assignee` do card não muda aqui (só o escolhido): a chave do Histórico
+      // não mudaria sozinha, e "Responsável trocado" (Alterações) ficaria pra trás.
+      recarregarHistorico();
     } catch (error) {
       if (serverRefusalMessageOf(error)) return; // o aviso global já mostrou a frase
       toast.error('Erro ao definir o responsável');
     } finally {
       setAssigningUser(false);
     }
-  }, [item]);
+  }, [item, recarregarHistorico]);
 
   const handleAssignViaRoleta = useCallback(async (roletaId: string) => {
     const contactId = contatoDoCard(item)?.id;
@@ -293,7 +267,7 @@ export function useCardDoLead(
         pipeline_item_id: item?.id ? String(item.id) : undefined,
       });
       toast.success(textoDaOferta(a?.assigned_user?.name, roletas?.find(r => r.id === roletaId)));
-      loadHistory();
+      recarregarHistorico();
       brokerAssignmentsService.listForLead(String(contactId))
         .then(setOfertasAbertas)
         .catch(() => { /* leitura de fundo não grita */ });
@@ -302,7 +276,7 @@ export function useCardDoLead(
     } finally {
       setAssigningRoleta(false);
     }
-  }, [item, loadHistory, roletas]);
+  }, [item, recarregarHistorico, roletas]);
 
   const labelTargetConvId = item?.conversation?.id ? String(item.conversation.id) : null;
   const labelTargetContactId = contatoDoCard(item)?.id ?? null;
@@ -441,8 +415,6 @@ export function useCardDoLead(
     ? `${roletaLabel(item.roleta)}${roletas && roletas.length > 0 && !roletas.some(r => r.id === item.roleta!.id) ? ' (desativada)' : ''}`
     : null;
 
-  const recarregarHistorico = () => { void loadHistory(); };
-
   return {
     item,
     contato,
@@ -492,7 +464,7 @@ export function useCardDoLead(
       estilo: labelStyle,
       podeEtiquetar: !!(labelTargetConvId || labelTargetContactId),
     },
-    historico: { eventos: historyEvents, carregando: historyLoading, recarregar: recarregarHistorico },
+    historico: { versao: versaoHistorico, recarregar: recarregarHistorico },
     origemManual: {
       texto: manualOrigin,
       setTexto: setManualOrigin,

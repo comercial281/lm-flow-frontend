@@ -204,6 +204,9 @@ function ConteudoDoCard({ dados, recarregar, atualizarItem }: {
         toast.success('Lead arquivado');
       }
       await recarregar();
+      // O card volta com o mesmo id e a mesma situação: a chave do Histórico não
+      // mudaria sozinha, e a linha "Arquivado/Desarquivado" só viria com F5.
+      card.historico.recarregar();
     } catch {
       toast.error(arquivado ? 'Não consegui desarquivar o lead.' : 'Não consegui arquivar o lead.');
     } finally {

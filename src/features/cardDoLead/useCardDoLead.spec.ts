@@ -11,7 +11,6 @@ const s = vi.hoisted(() => ({
   assignConversation: vi.fn(),
   addLabels: vi.fn(),
   removeLabels: vi.fn(),
-  getContactEvents: vi.fn(),
   getLabels: vi.fn(),
   createLabel: vi.fn(),
   updateContact: vi.fn(),
@@ -32,9 +31,6 @@ vi.mock('@/features/contatos/useCorretorLogado', () => ({ useCorretorLogado: () 
 vi.mock('@/hooks/useUserPermissions', () => ({ useUserPermissions: () => ({ can: () => true, isReady: true }) }));
 vi.mock('@/services/conversations/conversationService', () => ({
   conversationAPI: { assignConversation: s.assignConversation, addLabels: s.addLabels, removeLabels: s.removeLabels },
-}));
-vi.mock('@/services/contacts/contactEventsService', () => ({
-  contactEventsService: { getContactEvents: s.getContactEvents },
 }));
 vi.mock('@/services/contacts/labelsService', () => ({
   labelsService: { getLabels: s.getLabels, createLabel: s.createLabel },
@@ -85,7 +81,6 @@ const soContato = {
 
 beforeEach(() => {
   Object.values(s).forEach(f => f.mockReset());
-  s.getContactEvents.mockResolvedValue({ data: [] });
   s.getLabels.mockResolvedValue({ data: [] });
   s.getAll.mockResolvedValue([]);
   s.listForLead.mockResolvedValue([]);
@@ -97,7 +92,8 @@ describe('useCardDoLead', () => {
   it('inicializa do card: etapa, telefone, e-mail, responsável, etiquetas do contato e da conversa, origem escrita', async () => {
     const { result } = renderHook(() => useCardDoLead(completo, { aberto: true, stages: etapas }));
 
-    await waitFor(() => expect(s.getContactEvents).toHaveBeenCalledWith('c1', { limit: 100 }));
+    await waitFor(() => expect(s.getLabels).toHaveBeenCalled());
+    expect(result.current.historico.versao).toEqual(expect.any(String));
     expect(result.current.etapa.id).toBe('s1');
     expect(result.current.etapa.atual?.name).toBe('Novo');
     expect(result.current.identidade.telefone).toBe('5511988887734');
@@ -116,7 +112,6 @@ describe('useCardDoLead', () => {
 
   it('fechado (aberto=false) não busca nada', () => {
     renderHook(() => useCardDoLead(completo, { aberto: false, stages: etapas }));
-    expect(s.getContactEvents).not.toHaveBeenCalled();
     expect(s.getAll).not.toHaveBeenCalled();
     expect(s.getLabels).not.toHaveBeenCalled();
   });
@@ -125,7 +120,7 @@ describe('useCardDoLead', () => {
     const { result } = renderHook(() => useCardDoLead(null, { aberto: true, stages: etapas }));
     expect(result.current.contato).toBeNull();
     expect(result.current.nomeExibido).toBe('Lead sem nome');
-    expect(s.getContactEvents).not.toHaveBeenCalled();
+    expect(s.getLabels).not.toHaveBeenCalled();
   });
 
   it('mover etapa: otimista, grava e avisa quem abriu', async () => {
@@ -240,49 +235,61 @@ describe('useCardDoLead', () => {
   });
 
   // Fix 1 da revisão: o rodapé gravando recarrega o Histórico (como a janela fazia).
-  it('o rodapé gravou (situacao.aoMudar): o Histórico recarrega', async () => {
+  // E5: quem busca é o HistoricoDoLead; o hook só muda a chave (versao).
+  it('o rodapé gravou (situacao.aoMudar): a chave do Histórico muda (ele recarrega)', () => {
     const { result } = renderHook(() => useCardDoLead(completo, { aberto: true, stages: etapas }));
-    await waitFor(() => expect(s.getContactEvents).toHaveBeenCalledTimes(1));
+    const antes = result.current.historico.versao;
 
     act(() => result.current.situacao.aoMudar({ ...(completo as object), status: 'lost' } as never));
 
-    await waitFor(() => expect(s.getContactEvents).toHaveBeenCalledTimes(2));
-    expect(s.getContactEvents).toHaveBeenLastCalledWith('c1', { limit: 100 });
+    expect(result.current.historico.versao).not.toBe(antes);
   });
 
-  it('Concluído na Etapa recarrega o Histórico uma vez só', async () => {
+  it('Concluído na Etapa muda a chave do Histórico uma vez só', async () => {
     s.setItemStatus.mockResolvedValue({ id: 'i1', status: 'won', stage_id: 's9' });
-    const { result } = renderHook(() => useCardDoLead(completo, { aberto: true, stages: etapas }));
-    await waitFor(() => expect(s.getContactEvents).toHaveBeenCalledTimes(1));
+    const versoes: string[] = [];
+    const { result } = renderHook(() => {
+      const card = useCardDoLead(completo, { aberto: true, stages: etapas });
+      versoes.push(card.historico.versao);
+      return card;
+    });
+    const antes = result.current.historico.versao;
 
     await act(async () => {
       await result.current.etapa.mover('s9');
     });
 
-    await waitFor(() => expect(result.current.historico.carregando).toBe(false));
-    expect(s.getContactEvents).toHaveBeenCalledTimes(2);
+    expect(result.current.historico.versao).not.toBe(antes);
+    // Uma troca de chave = uma busca do HistoricoDoLead.
+    expect(new Set(versoes).size).toBe(2);
   });
 
-  it('Histórico de outro card que chega atrasado não aparece no card novo', async () => {
-    let soltarA: (v: unknown) => void = () => {};
-    s.getContactEvents
-      .mockImplementationOnce(() => new Promise(r => { soltarA = r; }))
-      .mockResolvedValueOnce({ data: [{ id: 'evB' }] });
-    const outro = { ...(soContato as object), id: 'i4', contact: { id: 'c4', name: 'João' } } as never;
-    const { result, rerender } = renderHook(
-      ({ card }) => useCardDoLead(card, { aberto: true, stages: etapas }),
-      { initialProps: { card: completo } },
-    );
-    await waitFor(() => expect(s.getContactEvents).toHaveBeenCalledWith('c1', { limit: 100 }));
-
-    rerender({ card: outro });
-    await waitFor(() => expect(result.current.historico.eventos).toEqual([{ id: 'evB' }]));
+  it('mover etapa muda a chave do Histórico (ele recarrega)', async () => {
+    const { result } = renderHook(() => useCardDoLead(completo, { aberto: true, stages: etapas }));
+    const antes = result.current.historico.versao;
 
     await act(async () => {
-      soltarA({ data: [{ id: 'evA' }] });
+      await result.current.etapa.mover('s2');
     });
 
-    expect(result.current.historico.eventos).toEqual([{ id: 'evB' }]);
-    expect(result.current.historico.carregando).toBe(false);
+    expect(result.current.historico.versao).not.toBe(antes);
+  });
+
+  // Achado 6 do preflight da Parte 5: o `assignee` do card não muda dentro do card,
+  // então quem troca o responsável pede a recarga (filtro Alterações).
+  it('trocar o responsável muda a chave do Histórico; recusado, não muda', async () => {
+    const { result } = renderHook(() => useCardDoLead(soContato, { aberto: true, stages: etapas }));
+    const antes = result.current.historico.versao;
+
+    s.updateContact.mockRejectedValueOnce(new Error('fora'));
+    await act(async () => {
+      await result.current.responsavel.trocar('u1');
+    });
+    expect(result.current.historico.versao).toBe(antes);
+
+    await act(async () => {
+      await result.current.responsavel.trocar('u1');
+    });
+    expect(result.current.historico.versao).not.toBe(antes);
   });
 });

@@ -1,25 +1,40 @@
-import { describe, expect, it, vi } from 'vitest';
+// src/features/cardDoLead/pagina/ColunaDoHistorico.spec.tsx
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import ColunaDoHistorico from './ColunaDoHistorico';
 
-vi.mock('../blocos/BlocoHistorico', () => ({ default: () => <div data-testid="historico" /> }));
-vi.mock('../blocos/BlocoObservacoes', () => ({ default: (p: { contactId: string | null }) => <div data-testid="observacoes">{p.contactId}</div> }));
+const historico = vi.hoisted(() => vi.fn());
+vi.mock('../historico/HistoricoDoLead', () => ({
+  default: (p: Record<string, unknown>) => {
+    historico(p);
+    return <div data-testid="historico" />;
+  },
+}));
 
 const card = (notas: boolean) => ({
   contato: { id: 'c1' },
-  historico: { eventos: [], carregando: false, recarregar: vi.fn() },
+  historico: { versao: '0|s1|open|u1', recarregar: vi.fn() },
   recursos: { notas, imoveis: true, agendarEnvio: true },
 }) as never;
 
-describe('ColunaDoHistorico (até a Parte 5)', () => {
-  it('Histórico e Observações separados, como na janela', () => {
-    render(<ColunaDoHistorico card={card(true)} />);
+beforeEach(() => historico.mockReset());
+
+describe('ColunaDoHistorico (página do card, E5)', () => {
+  it('o Histórico inteiro: modo completo, do contato, com o funil e a chave de recarga', () => {
+    render(<ColunaDoHistorico card={card(true)} funilAtual="Leads (Marketing)" />);
+
     expect(screen.getByTestId('historico')).toBeInTheDocument();
-    expect(screen.getByTestId('observacoes')).toHaveTextContent('c1');
+    expect(historico).toHaveBeenLastCalledWith(expect.objectContaining({
+      modo: 'completo',
+      contactId: 'c1',
+      funilAtual: 'Leads (Marketing)',
+      versao: '0|s1|open|u1',
+      comObservacoes: true,
+    }));
   });
 
-  it('sem o recurso de notas, só o Histórico', () => {
+  it('sem o recurso de notas: sem a caixa de escrever e sem o filtro Observações', () => {
     render(<ColunaDoHistorico card={card(false)} />);
-    expect(screen.queryByTestId('observacoes')).toBeNull();
+    expect(historico).toHaveBeenLastCalledWith(expect.objectContaining({ comObservacoes: false, funilAtual: null }));
   });
 });

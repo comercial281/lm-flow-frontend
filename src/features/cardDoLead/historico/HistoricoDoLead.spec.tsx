@@ -1,6 +1,6 @@
 // src/features/cardDoLead/historico/HistoricoDoLead.spec.tsx
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import HistoricoDoLead from './HistoricoDoLead';
 import { quandoAcontece } from '@/lib/formato';
@@ -138,6 +138,26 @@ describe('HistoricoDoLead compacto (janela do card)', () => {
     rerender(<HistoricoDoLead contactId="c1" modo="compacto" versao="0|s2" />);
 
     await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
+  });
+
+  // Veio do useCardDoLead (P4-T5): desde a E5 quem busca o Histórico é este componente.
+  it('resposta atrasada do card anterior não aparece no card novo', async () => {
+    let soltarA: (v: unknown) => void = () => {};
+    list
+      .mockImplementationOnce(() => new Promise(r => { soltarA = r; }))
+      .mockResolvedValueOnce(pagina([ev({ id: 'evB', title: 'Do card novo' })]));
+    const { rerender } = render(<HistoricoDoLead contactId="c1" modo="compacto" />);
+    await waitFor(() => expect(list).toHaveBeenCalledWith('c1', { category: 'resumo' }));
+
+    rerender(<HistoricoDoLead contactId="c4" modo="compacto" />);
+    expect(await screen.findByText('Do card novo')).toBeInTheDocument();
+
+    await act(async () => {
+      soltarA(pagina([ev({ id: 'evA', title: 'Do card velho' })]));
+    });
+
+    expect(screen.queryByText('Do card velho')).not.toBeInTheDocument();
+    expect(screen.getByText('Do card novo')).toBeInTheDocument();
   });
 
   it('sem contato não pede nada', () => {

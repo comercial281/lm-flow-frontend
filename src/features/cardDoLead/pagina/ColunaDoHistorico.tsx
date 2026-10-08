@@ -1,29 +1,27 @@
-// Coluna da direita da Ficha da página do card.
-//
-// ENCAIXE PARTE 5: o Histórico novo (features/cardDoLead/historico/
-// HistoricoDoLead, com os filtros e a caixa de escrever observação no topo)
-// entra AQUI, no lugar dos dois blocos. Até lá, Histórico e Observações
-// separados, como na janela (decisão de 02/10).
-import BlocoHistorico from '../blocos/BlocoHistorico';
-import BlocoObservacoes from '../blocos/BlocoObservacoes';
+// Coluna da direita da Ficha da página do card: o Histórico inteiro (E5) —
+// caixa de escrever observação no topo e Observações como filtro (modelo
+// "Comentários" do Praedium). Na janela, Histórico e Observações continuam
+// separados (decisão de 02/10); aqui é a página.
+import HistoricoDoLead from '../historico/HistoricoDoLead';
 import type { CardDoLead } from '../useCardDoLead';
 
 interface ColunaDoHistoricoProps {
   card: CardDoLead;
-  /** Nome do funil do card: o Histórico novo (Parte 5) diz de qual funil veio cada evento. */
+  /** Nome do funil do card: evento de outro funil do lead diz de qual veio. */
   funilAtual?: string | null;
 }
 
-export default function ColunaDoHistorico({ card }: ColunaDoHistoricoProps) {
+export default function ColunaDoHistorico({ card, funilAtual = null }: ColunaDoHistoricoProps) {
   const contactId = card.contato?.id != null ? String(card.contato.id) : null;
   return (
-    <div className="flex min-h-[480px] min-w-0 flex-col gap-4">
-      <BlocoHistorico
-        eventos={card.historico.eventos}
-        carregando={card.historico.carregando}
-        aoRecarregar={card.historico.recarregar}
+    <div className="flex min-h-[560px] min-w-0 flex-col rounded-xl border border-border p-4">
+      <HistoricoDoLead
+        modo="completo"
+        contactId={contactId}
+        funilAtual={funilAtual}
+        versao={card.historico.versao}
+        comObservacoes={card.recursos.notas}
       />
-      {card.recursos.notas && <BlocoObservacoes contactId={contactId} />}
     </div>
   );
 }
