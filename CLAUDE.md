@@ -7661,9 +7661,13 @@ O que aparece na tela:
   botão: em Abertos ele sai do quadro e vai para Ganhos; em Todos fica em Concluído com o
   selo. Ganho pela janela também leva o card para Concluído, e Reabrir devolve.
 - **Card do quadro mínimo:** selo (fechado), nome com a setinha ↗ (card completo em outra guia),
-  **um** sinal (tarefa atrasada > vence hoje > visita hoje/amanhã > "Nd sem contato"), foto do
+  **um** sinal (tarefa atrasada > vence hoje > visita hoje/amanhã > "Nd sem contato"), o
   responsável e o WhatsApp. ⋯: Abrir, Abrir em nova guia, Copiar link, Arquivar, Remover do funil.
   A Lista tem o mesmo enxugamento.
+- **Foto do lead ao lado do nome; embaixo só o nome do responsável** (ajuste de 08/10, pedido do
+  dono): a foto do WhatsApp do lead (sem foto, a inicial dele) fica à esquerda do selo e do nome.
+  O responsável perdeu a foto e mostra o nome inteiro com o ícone de pessoa (o nome dele fica no
+  `title` "Responsável: …").
 - **Exportar** leva situação e motivo da perda, de todas as situações (não só a aba).
 - **Pixel/CAPI:** "Ao marcar Ganho" e "Ao marcar Perdido" (`capi_configs.status_map`), com os
   mesmos campos da linha de etapa; no Ganho o valor enviado é o "Preço estimado" do card
