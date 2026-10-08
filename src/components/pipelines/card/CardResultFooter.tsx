@@ -4,6 +4,7 @@
 // perdido fica na etapa onde parou. Com a coluna Concluído, o servidor leva o
 // card ganho para lá (ajuste de 08/10) e o card devolvido já vem nela. Perdido
 // pergunta o motivo antes.
+import { useEffect } from 'react';
 import { Loader2, RotateCcw, Trophy, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import SeloSituacao from '@/features/pipelines/situacao/SeloSituacao';
@@ -17,12 +18,20 @@ interface CardResultFooterProps {
   item: PipelineItem;
   /** Gravou: quem abriu o card (quadro, página) atualiza com o card novo. */
   onMudou?: (item: PipelineItem) => void;
+  /** Outra gravação no ar (ex.: Etapa → Concluído na janela): trava os botões. */
+  bloqueado?: boolean;
+  /** Avisa quando este rodapé começa/termina de gravar, para a Etapa travar junto. */
+  onSalvando?: (salvando: boolean) => void;
 }
 
-export default function CardResultFooter({ item, onMudou }: CardResultFooterProps) {
+export default function CardResultFooter({ item, onMudou, bloqueado = false, onSalvando }: CardResultFooterProps) {
   const s = useSituacaoDoCard(item, { onMudou });
   const atual = s.item ?? item;
-  const ocupado = s.salvando !== null;
+  const ocupado = s.salvando !== null || bloqueado;
+  const gravando = s.salvando !== null;
+  useEffect(() => {
+    onSalvando?.(gravando);
+  }, [gravando]); // eslint-disable-line react-hooks/exhaustive-deps
   const nome = contatoDoCard(atual)?.name?.trim() || 'Este lead';
 
   return (

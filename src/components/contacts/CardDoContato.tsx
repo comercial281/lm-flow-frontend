@@ -146,6 +146,15 @@ export default function CardDoContato({ contactId, onOpenChange, onMudou }: Prop
             : c,
         );
       }}
+      // Ganho/Perdido/Reabrir: a lista guarda o card com a situação nova.
+      onItemStatusChanged={novo => {
+        setMudou(true);
+        setCarregado(c =>
+          c?.tipo === 'atendimentos'
+            ? { ...c, lista: c.lista.map(a => (a.item.id === novo.id ? { ...a, item: { ...a.item, ...novo } } : a)) }
+            : c,
+        );
+      }}
     />
   );
 }

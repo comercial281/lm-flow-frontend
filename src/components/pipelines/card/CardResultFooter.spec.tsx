@@ -70,4 +70,16 @@ describe('rodapé Ganho | Perdido do card', () => {
     expect(screen.getByRole('button', { name: 'Perdido' })).toBeDisabled();
     expect(pipelinesService.setItemStatus).toHaveBeenCalledTimes(1);
   });
+
+  it('bloqueado por fora (Etapa gravando): botões travados, e avisa quando ele mesmo grava', async () => {
+    const { rerender } = render(<CardResultFooter item={card()} bloqueado />);
+    expect(screen.getByRole('button', { name: 'Ganho' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Perdido' })).toBeDisabled();
+
+    vi.mocked(pipelinesService.setItemStatus).mockReturnValue(new Promise(() => {}));
+    const onSalvando = vi.fn();
+    rerender(<CardResultFooter item={card()} onSalvando={onSalvando} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Ganho' }));
+    expect(onSalvando).toHaveBeenLastCalledWith(true);
+  });
 });

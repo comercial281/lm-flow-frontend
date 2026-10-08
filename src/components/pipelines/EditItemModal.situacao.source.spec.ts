@@ -9,7 +9,7 @@ const src = readFileSync(resolve(__dirname, 'EditItemModal.tsx'), 'utf8');
 
 describe('janela do card × situação (spec funil §3.8)', () => {
   it('Ganho/Perdido/Reabrir vêm da situação do card, não da coluna', () => {
-    expect(src).toContain('<CardResultFooter item={itemDaSituacao ?? item} onMudou={aoMudarSituacao} />');
+    expect(src).toContain('<CardResultFooter item={itemDaSituacao ?? item} onMudou={aoMudarSituacao} bloqueado={movendoEtapa} onSalvando={setRodapeSalvando} />');
     expect(src).toContain('onItemStatusChanged?.(novo)');
     expect(src).not.toContain('etapaFinal');
     expect(src).not.toMatch(/<CardResultFooter[^>]*stages=/);
@@ -17,9 +17,9 @@ describe('janela do card × situação (spec funil §3.8)', () => {
 
   it('card fechado: selo junto do nome e Etapa travada (reabrir antes)', () => {
     expect(src).toContain('<SeloSituacao status={situacaoDe(itemDaSituacao)}');
-    expect(src).toMatch(/<CampoEtapa[^>]*disabled=\{movendoEtapa \|\| fechado\}/);
+    expect(src).toMatch(/<CampoEtapa[^>]*disabled=\{movendoEtapa \|\| fechado \|\| rodapeSalvando\}/);
     expect(src).toContain('{ETAPA_TRAVADA}');
-    expect(src).toMatch(/if \(!item \|\| !etapaId \|\| toStageId === etapaId \|\| fechado\) return;/);
+    expect(src).toMatch(/if \(!item \|\| !etapaId \|\| toStageId === etapaId \|\| fechado \|\| rodapeSalvando\) return;/);
   });
 
   // Ajuste de 08/10: Ganho leva o card para Concluído, e Concluído na Etapa é Ganho.

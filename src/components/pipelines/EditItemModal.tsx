@@ -155,6 +155,8 @@ export default function EditItemModal({
     setItemDaSituacao(item);
   }, [item?.id, item?.status]); // eslint-disable-line react-hooks/exhaustive-deps
   const fechado = cardFechado(itemDaSituacao);
+  // O rodapé está gravando Ganho/Perdido/Reabrir: a Etapa espera (e vice-versa).
+  const [rodapeSalvando, setRodapeSalvando] = useState(false);
 
   // Telefone/e-mail exibidos: começam do contato e mudam depois de uma correção.
   const [telefoneDoLead, setTelefoneDoLead] = useState('');
@@ -303,7 +305,7 @@ export default function EditItemModal({
   }, [open, item?.id]);
 
   const moverEtapa = useCallback(async (toStageId: string) => {
-    if (!item || !etapaId || toStageId === etapaId || fechado) return;
+    if (!item || !etapaId || toStageId === etapaId || fechado || rodapeSalvando) return;
     const anterior = etapaId;
     setEtapaId(toStageId);
     setMovendoEtapa(true);
@@ -331,7 +333,7 @@ export default function EditItemModal({
     } finally {
       setMovendoEtapa(false);
     }
-  }, [item, etapaId, onItemStageMoved, loadHistory, fechado, stages, itemDaSituacao, aoMudarSituacao]);
+  }, [item, etapaId, onItemStageMoved, loadHistory, fechado, rodapeSalvando, stages, itemDaSituacao, aoMudarSituacao]);
 
   // Responsável sem depender de conversa: lead de formulário/anúncio entra sem
   // conversa e precisa de dono. Com conversa, atribui a conversa (o backend
@@ -601,7 +603,7 @@ export default function EditItemModal({
                 ) : <div />
               ) : (
               <div className="grid min-w-0 gap-1">
-                <CampoEtapa stages={stages} etapaId={etapaId} onMover={moverEtapa} disabled={movendoEtapa || fechado} />
+                <CampoEtapa stages={stages} etapaId={etapaId} onMover={moverEtapa} disabled={movendoEtapa || fechado || rodapeSalvando} />
                 {fechado && (
                   <span className="text-[11px] leading-tight text-muted-foreground">{ETAPA_TRAVADA}</span>
                 )}
@@ -720,7 +722,7 @@ export default function EditItemModal({
 
                 {/* Rodapé fixo da coluna */}
                 <div className="mt-auto pt-2 border-t border-border">
-                  <CardResultFooter item={itemDaSituacao ?? item} onMudou={aoMudarSituacao} />
+                  <CardResultFooter item={itemDaSituacao ?? item} onMudou={aoMudarSituacao} bloqueado={movendoEtapa} onSalvando={setRodapeSalvando} />
                 </div>
               </>
             )}
