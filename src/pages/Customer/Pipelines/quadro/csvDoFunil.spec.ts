@@ -19,13 +19,23 @@ describe('CSV do funil', () => {
     const { csv, linhas } = csvDoFunil(STAGES);
     const [cabecalho, ...resto] = csv.split('\n');
     expect(linhas).toBe(3);
-    expect(cabecalho).toBe('nome,email,telefone,etapa,situacao,motivo_da_perda,valor,entrada');
-    expect(resto[0]).toBe('"Maria ""Mari"" Souza","maria@exemplo.com.br","+5511999990000","Novo","Aberto","","1500","06/10/2026"');
-    expect(resto[1]).toBe('"João Lima","","+5511988887777","Proposta","Perdido","Adiou a compra","","01/10/2026"');
-    expect(resto[2]).toBe('"Paula Reis","","","Proposta","Ganho","","","01/10/2026"');
+    expect(cabecalho).toBe('nome,email,telefone,etapa,situacao,motivo_da_perda,valor,entrada,preco_estimado,fechamento_esperado');
+    expect(resto[0]).toBe('"Maria ""Mari"" Souza","maria@exemplo.com.br","+5511999990000","Novo","Aberto","","1500","06/10/2026","",""');
+    expect(resto[1]).toBe('"João Lima","","+5511988887777","Proposta","Perdido","Adiou a compra","","01/10/2026","",""');
+    expect(resto[2]).toBe('"Paula Reis","","","Proposta","Ganho","","","01/10/2026","",""');
   });
 
   it('funil vazio: zero linhas', () => {
     expect(csvDoFunil([{ id: 's1', name: 'Novo', items: [] }] as unknown as PipelineStage[]).linhas).toBe(0);
+  });
+
+  it('preço estimado (cru) e data de fechamento (dia/mês/ano) do card', () => {
+    const { csv } = csvDoFunil([
+      { id: 's1', name: 'Novo', items: [
+        { id: 'i9', status: 'open', created_at: 1_790_866_800, estimated_value: '450000.0', expected_close_on: '2026-12-20',
+          contact: { name: 'Rita' } },
+      ] },
+    ] as unknown as PipelineStage[]);
+    expect(csv.split('\n')[1]).toBe('"Rita","","","Novo","Aberto","","","01/10/2026","450000.0","20/12/2026"');
   });
 });

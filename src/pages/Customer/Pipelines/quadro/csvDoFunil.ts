@@ -1,11 +1,15 @@
 // CSV do funil. Desde a situação do card (07/10/2026) leva a situação e o motivo
-// da perda; a Parte 4 acrescenta preço estimado e data de fechamento esperada.
+// da perda; desde a E4 (card completo) leva também o preço estimado e a data de fechamento esperada.
 import { contatoDoCard } from '@/features/cardDoLead/cardDoLead';
+import { COLUNAS_DO_NEGOCIO_NO_CSV, camposDoNegocioNoCsv } from '@/features/cardDoLead/sobreONegocio';
 import { NOME_DA_SITUACAO, situacaoDe } from '@/features/pipelines/situacao/situacao';
 import { formatDateBR } from '@/utils/dateUtils';
 import type { PipelineStage } from '@/types/analytics';
 
-const CABECALHO = ['nome', 'email', 'telefone', 'etapa', 'situacao', 'motivo_da_perda', 'valor', 'entrada'] as const;
+const CABECALHO = [
+  'nome', 'email', 'telefone', 'etapa', 'situacao', 'motivo_da_perda', 'valor', 'entrada',
+  ...COLUNAS_DO_NEGOCIO_NO_CSV,
+] as const;
 type Linha = Record<(typeof CABECALHO)[number], string>;
 
 const celula = (valor: string) => `"${valor.replace(/"/g, '""')}"`;
@@ -24,6 +28,7 @@ export function csvDoFunil(stages: PipelineStage[]): { csv: string; linhas: numb
         motivo_da_perda: situacao === 'lost' ? item.lost_reason?.label ?? '' : '',
         valor: item.value != null ? String(item.value) : '',
         entrada: item.entered_at ? formatDateBR(item.entered_at * 1000) : formatDateBR(item.created_at),
+        ...camposDoNegocioNoCsv(item),
       };
     }),
   );
