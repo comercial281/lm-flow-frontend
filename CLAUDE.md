@@ -7873,3 +7873,21 @@ Armadilhas:
 9. **Arquivar, IA ligada/desligada e troca de responsável pela ficha moram no log de ações**
    (12 meses de retenção): essas linhas somem do Histórico depois de um ano. Etapa, situação,
    nota, tarefa, visita, proposta e roleta ficam para sempre.
+
+## Funil: ajustes da revisão final (08/10/2026)
+
+Regras de produto decididas na revisão final do funil. Não reabrir sem o dono pedir.
+
+1. **Card criado direto numa coluna Concluída nasce Ganho**, sem avisar a Meta e sem mexer
+   em follow-up nem IA. A Meta só recebe o aviso quando um card que já existia muda de
+   situação.
+2. **Histórico do lead: 404, não 401, para quem não pode ver o lead** (mesma regra do
+   `/events`). Para quem vê o lead, o Histórico mostra os eventos de todos os cards dele,
+   de qualquer funil e de qualquer dono.
+3. **Ganho, Perdido e Reabrir copiam da resposta só os campos da situação**
+   (`comSituacaoNova`), nunca o card inteiro. Copiar o card inteiro sobrescreveria edição
+   feita em paralelo.
+4. **A aba "Categorias de tarefa" em Minha imobiliária › Listas está escondida**
+   (`CATEGORIAS_DE_TAREFA_NA_TELA`) até as tarefas passarem a ler a lista.
+5. **Coluna Concluída com a regra antiga de Compra por etapa:** a Compra respeita o
+   "um por lead" (não dispara de novo para o mesmo lead).
