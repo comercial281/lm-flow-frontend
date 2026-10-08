@@ -26,6 +26,10 @@ describe('MeuSiteBarra', () => {
     expect(grupo.className).toContain('sm:basis-auto');
     expect(grupo.className).toContain('sm:max-w-xs');
     expect(grupo.className).toContain('min-w-0');
+    // 2ª linha no celular: uma fila só, rolando de lado (o menu abre em portal, não é cortado)
+    const nav = screen.getByRole('navigation', { name: 'Menu do Meu site' });
+    expect(nav.className).toContain('flex-nowrap');
+    expect(nav.className).toContain('overflow-x-auto');
   });
 
   it('Ativo ou Publicado desmarcado mostra o selo Em manutenção', () => {

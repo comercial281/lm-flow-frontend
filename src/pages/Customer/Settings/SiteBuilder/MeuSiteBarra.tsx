@@ -105,7 +105,7 @@ export default function MeuSiteBarra({
         {/* Fora do ar (Ativo ou Publicado desmarcado) o site mostra a página Em manutenção. */}
         <Badge className="shrink-0" variant={noAr ? 'default' : 'secondary'}>{noAr ? 'No ar' : 'Em manutenção'}</Badge>
       </div>
-      <nav aria-label="Menu do Meu site" className="flex flex-1 flex-wrap items-center gap-1">
+      <nav aria-label="Menu do Meu site" className="flex min-w-0 flex-1 flex-nowrap items-center gap-1 overflow-x-auto sm:flex-wrap sm:overflow-visible">
         {GRUPOS.map(g => {
           const ativo = grupoAtual === g.id;
           const cls = ativo ? 'bg-accent text-accent-foreground' : '';
@@ -159,12 +159,12 @@ export default function MeuSiteBarra({
         })}
       </nav>
       {comPrevia ? (
-        <Button onClick={verPrevia} disabled={gerando}>
+        <Button className="shrink-0" onClick={verPrevia} disabled={gerando}>
           {gerando && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden />}
           Ver prévia <ExternalLink className="ml-1.5 h-4 w-4" aria-hidden />
         </Button>
       ) : (
-        <Button asChild>
+        <Button asChild className="shrink-0">
           <a href={urlDoSite} target="_blank" rel="noreferrer">
             Ver site <ExternalLink className="ml-1.5 h-4 w-4" aria-hidden />
           </a>

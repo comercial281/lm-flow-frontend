@@ -793,31 +793,31 @@ export default function Contacts() {
     <Pagina
       rolagem="conteudo"
       cabecalho={
-      <div data-tour="contacts-header">
-      <ContactsHeader
-        totalCount={state.meta.pagination.total}
-        selectedCount={state.selectedContactIds.length}
-        searchValue={state.searchQuery}
-        onSearchChange={handleSearchChange}
-        onNewContact={handleCreateContact}
-        onExport={handleExportContacts}
-        onBulkDelete={handleBulkDelete}
-        onMergeContacts={handleMergeContacts}
-        onClearSelection={clearSelection}
-        allMatchingSelected={selectAllMatching}
-        onSelectAllMatching={() => setSelectAllMatching(true)}
-        filtros={
-          <ContactsFiltros
-            pilula={pilula}
-            onPilula={p => aplicarFiltros(p, filtrosPopover)}
-            filtros={filtrosPopover}
-            onFiltros={f => aplicarFiltros(pilula, f)}
-            daEquipe={!corretor}
-            users={equipe}
-          />
-        }
-      />
-      </div>
+        <div data-tour="contacts-header">
+        <ContactsHeader
+          totalCount={state.meta.pagination.total}
+          selectedCount={state.selectedContactIds.length}
+          searchValue={state.searchQuery}
+          onSearchChange={handleSearchChange}
+          onNewContact={handleCreateContact}
+          onExport={handleExportContacts}
+          onBulkDelete={handleBulkDelete}
+          onMergeContacts={handleMergeContacts}
+          onClearSelection={clearSelection}
+          allMatchingSelected={selectAllMatching}
+          onSelectAllMatching={() => setSelectAllMatching(true)}
+          filtros={
+            <ContactsFiltros
+              pilula={pilula}
+              onPilula={p => aplicarFiltros(p, filtrosPopover)}
+              filtros={filtrosPopover}
+              onFiltros={f => aplicarFiltros(pilula, f)}
+              daEquipe={!corretor}
+              users={equipe}
+            />
+          }
+        />
+        </div>
       }
     >
       <ContactsTour />

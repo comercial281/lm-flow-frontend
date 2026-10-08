@@ -106,7 +106,21 @@ export default function CvcrmConexao() {
     }
   };
 
-  if (carregando) return <div className="p-6 text-sm text-muted-foreground">Carregando…</div>;
+  if (carregando) {
+    return (
+      <Pagina
+        estreita
+        cabecalho={
+          <BaseHeader
+            title="CVCRM"
+            subtitle="Conecte o CVCRM deste cliente para a IA cadastrar o lead direto nele, no empreendimento e na fila que você escolher na IA."
+          />
+        }
+      >
+        <p className="text-sm text-muted-foreground">Carregando…</p>
+      </Pagina>
+    );
+  }
 
   const conectado = status?.connected === true;
   const mostrarCampos = !conectado || editando;

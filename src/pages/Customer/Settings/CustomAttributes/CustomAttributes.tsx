@@ -305,19 +305,19 @@ export default function CustomAttributes() {
       rolagem="conteudo"
       dataTour="settings-custom-attributes-page"
       cabecalho={
-      <div data-tour="settings-custom-attributes-header">
-        <CustomAttributesHeader
-          totalCount={searchFilteredAttributes.length}
-          selectedCount={state.selectedAttributeIds.length}
-          searchValue={state.searchQuery}
-          onSearchChange={handleSearchChange}
-          onNewAttribute={handleCreateAttribute}
-          onBulkDelete={handleBulkDelete}
-          onClearSelection={() => setState(prev => ({ ...prev, selectedAttributeIds: [] }))}
-          showBulkActions={state.selectedAttributeIds.length > 0}
-          activeTab={state.activeTab}
-        />
-      </div>
+        <div data-tour="settings-custom-attributes-header">
+          <CustomAttributesHeader
+            totalCount={searchFilteredAttributes.length}
+            selectedCount={state.selectedAttributeIds.length}
+            searchValue={state.searchQuery}
+            onSearchChange={handleSearchChange}
+            onNewAttribute={handleCreateAttribute}
+            onBulkDelete={handleBulkDelete}
+            onClearSelection={() => setState(prev => ({ ...prev, selectedAttributeIds: [] }))}
+            showBulkActions={state.selectedAttributeIds.length > 0}
+            activeTab={state.activeTab}
+          />
+        </div>
       }
     >
       <SettingsCustomAttributesTour />
@@ -334,7 +334,7 @@ export default function CustomAttributes() {
         </TabsList>
 
         {ATTRIBUTE_TABS.map(tab => (
-          <TabsContent key={tab.key} value={tab.key} className="mt-6 flex flex-col flex-1">
+          <TabsContent key={tab.key} value={tab.key} className="flex min-h-0 flex-1 flex-col">
             {/* Content */}
             <div className="flex-1 overflow-auto">
               {state.loading.list ? (

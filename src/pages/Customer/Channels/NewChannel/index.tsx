@@ -191,7 +191,7 @@ export default function NewChannel() {
     return breadcrumbs;
   };
 
-    const renderForm = () => {
+  const renderForm = () => {
     if (!selectedChannel) return null;
 
     switch (selectedChannel.type) {

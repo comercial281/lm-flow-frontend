@@ -316,18 +316,18 @@ export default function Labels() {
       rolagem="conteudo"
       dataTour="settings-labels-page"
       cabecalho={
-      <div data-tour="settings-labels-header">
-        <LabelsHeader
-          totalCount={state.meta.pagination.total}
-          selectedCount={state.selectedLabelIds.length}
-          searchValue={state.searchQuery}
-          onSearchChange={handleSearchChange}
-          onNewLabel={handleCreateLabel}
-          onBulkDelete={handleBulkDelete}
-          onClearSelection={() => setState(prev => ({ ...prev, selectedLabelIds: [] }))}
-          showBulkActions={state.selectedLabelIds.length > 0}
-        />
-      </div>
+        <div data-tour="settings-labels-header">
+          <LabelsHeader
+            totalCount={state.meta.pagination.total}
+            selectedCount={state.selectedLabelIds.length}
+            searchValue={state.searchQuery}
+            onSearchChange={handleSearchChange}
+            onNewLabel={handleCreateLabel}
+            onBulkDelete={handleBulkDelete}
+            onClearSelection={() => setState(prev => ({ ...prev, selectedLabelIds: [] }))}
+            showBulkActions={state.selectedLabelIds.length > 0}
+          />
+        </div>
       }
     >
       <SettingsLabelsTour />
