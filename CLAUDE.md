@@ -7725,8 +7725,9 @@ O que aparece na tela:
   Outras informações; à direita Histórico e Observações, separados como na janela.
 - **Sobre o negócio** (só na página): Preço estimado e Data de fechamento esperada, editados
   na hora, sem Salvar. O preço estimado é o valor da Compra que vai para a Meta no Ganho.
-  Regras do campo: Esc desfaz; a data salva ao sair do campo ou no Enter, com ano entre 1900
-  e 2100; centavos colados são descartados; teto de 12 dígitos; valor negativo é recusado.
+  Regras do campo: Esc sai da edição (no preço, desfaz o que foi digitado; na data, só fecha
+  o campo, sem salvar); Enter confirma (sai do campo e salva); a data só grava ao sair do
+  campo ou no Enter, com ano entre 1900 e 2100 (fora disso: "Data inválida"); centavos colados são descartados; teto de 12 dígitos; valor negativo é recusado.
   Card fechado ou arquivado mantém "Sobre o negócio" editável e as tarefas.
 - **Arquivado abre**, com o aviso e Desarquivar. Sem acesso (outro corretor, card apagado ou
   de outro funil): "Você não tem acesso a este lead", com "Voltar ao funil".
@@ -7777,6 +7778,6 @@ Armadilhas:
    faixa (`FaixaDeEtapas` → `aoGanhar` da página) e quadro (`useBoardDrag`, Parte 3). Nunca pelo
    `moveItem`: a rota da situação devolve o card já ganho e a frase de recusa pronta.
 10. **Além do plano (E4):** o `useCardDoLead` carrega `rodapeSalvando` (trava cruzada do
-    P3-T5) e recarrega o Histórico em `situacao.aoMudar`. Janela e página fecham dentro de
-    um único `startTransition` (transição do react-router 7: corrige o refetch e a reabertura
-    do card). O painel da Meta é chaveado pela situação, na janela e na Ficha.
+    P3-T5) e recarrega o Histórico em `situacao.aoMudar`. A janela do card no quadro fecha
+    dentro de um `startTransition` (`fecharJanelaDoCard` em `PipelineKanban.tsx`; transição
+    do react-router 7: corrige o refetch e a reabertura do card). O painel da Meta é chaveado pela situação, na janela e na Ficha.
