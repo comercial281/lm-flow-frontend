@@ -238,4 +238,51 @@ describe('useCardDoLead', () => {
     expect(s.moveItem).not.toHaveBeenCalled();
     expect(result.current.etapa.id).toBe('s1');
   });
+
+  // Fix 1 da revisão: o rodapé gravando recarrega o Histórico (como a janela fazia).
+  it('o rodapé gravou (situacao.aoMudar): o Histórico recarrega', async () => {
+    const { result } = renderHook(() => useCardDoLead(completo, { aberto: true, stages: etapas }));
+    await waitFor(() => expect(s.getContactEvents).toHaveBeenCalledTimes(1));
+
+    act(() => result.current.situacao.aoMudar({ ...(completo as object), status: 'lost' } as never));
+
+    await waitFor(() => expect(s.getContactEvents).toHaveBeenCalledTimes(2));
+    expect(s.getContactEvents).toHaveBeenLastCalledWith('c1', { limit: 100 });
+  });
+
+  it('Concluído na Etapa recarrega o Histórico uma vez só', async () => {
+    s.setItemStatus.mockResolvedValue({ id: 'i1', status: 'won', stage_id: 's9' });
+    const { result } = renderHook(() => useCardDoLead(completo, { aberto: true, stages: etapas }));
+    await waitFor(() => expect(s.getContactEvents).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      await result.current.etapa.mover('s9');
+    });
+
+    await waitFor(() => expect(result.current.historico.carregando).toBe(false));
+    expect(s.getContactEvents).toHaveBeenCalledTimes(2);
+  });
+
+  it('Histórico de outro card que chega atrasado não aparece no card novo', async () => {
+    let soltarA: (v: unknown) => void = () => {};
+    s.getContactEvents
+      .mockImplementationOnce(() => new Promise(r => { soltarA = r; }))
+      .mockResolvedValueOnce({ data: [{ id: 'evB' }] });
+    const outro = { ...(soContato as object), id: 'i4', contact: { id: 'c4', name: 'João' } } as never;
+    const { result, rerender } = renderHook(
+      ({ card }) => useCardDoLead(card, { aberto: true, stages: etapas }),
+      { initialProps: { card: completo } },
+    );
+    await waitFor(() => expect(s.getContactEvents).toHaveBeenCalledWith('c1', { limit: 100 }));
+
+    rerender({ card: outro });
+    await waitFor(() => expect(result.current.historico.eventos).toEqual([{ id: 'evB' }]));
+
+    await act(async () => {
+      soltarA({ data: [{ id: 'evA' }] });
+    });
+
+    expect(result.current.historico.eventos).toEqual([{ id: 'evB' }]);
+    expect(result.current.historico.carregando).toBe(false);
+  });
 });

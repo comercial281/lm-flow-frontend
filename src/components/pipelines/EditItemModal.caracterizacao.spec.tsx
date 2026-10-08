@@ -494,4 +494,14 @@ describe('janela do card · caracterização (E4)', () => {
     expect(onItemStatusChanged).toHaveBeenCalledWith(expect.objectContaining({ id: 'i1', status: 'won' }));
     expect(campo('Etapa')).toBeDisabled();
   });
+
+  it('o rodapé gravou a situação: o Histórico recarrega', async () => {
+    abrir();
+    await waitFor(() => expect(s.getContactEvents).toHaveBeenCalledTimes(1));
+
+    await userEvent.click(screen.getByTestId('ganho-perdido'));
+
+    await waitFor(() => expect(s.getContactEvents).toHaveBeenCalledTimes(2));
+    expect(s.getContactEvents).toHaveBeenLastCalledWith('c1', { limit: 100 });
+  });
 });

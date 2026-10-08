@@ -9,7 +9,7 @@
 // janela sempre fez. Quem troca de card sem trocar de id (card sem funil tem id
 // '') precisa de `key` no componente (diário: "card do lead abre de Contatos").
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useAccountUsers } from '@/hooks/useAccountUsers';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
@@ -43,6 +43,10 @@ const nomesDasEtiquetas = (raw: unknown): string[] =>
         .filter(Boolean)
     : [];
 
+// Qual card está na tela: o id do card e o do contato (card sem funil tem id '').
+const chaveDoCard = (item: PipelineItem | null | undefined): string =>
+  `${item?.id ?? ''}|${contatoDoCard(item)?.id ?? ''}`;
+
 export interface OpcoesDoCard {
   /** A janela está aberta (a página passa sempre true). */
   aberto: boolean;
@@ -54,6 +58,7 @@ export interface OpcoesDoCard {
   /**
    * A Etapa escolhida foi a coluna Concluído e marcou Ganho (ajuste de 08/10):
    * quem abriu o card (quadro, página) atualiza com o card ganho.
+   * O `situacao.aoMudar` (rodapé) NÃO chama isto: quem liga o rodapé avisa.
    */
   onItemStatusChanged?: (item: PipelineItem) => void;
 }
@@ -87,12 +92,6 @@ export function useCardDoLead(
     setItemDaSituacao(item);
   }, [item?.id, item?.status]); // eslint-disable-line react-hooks/exhaustive-deps
   const fechado = cardFechado(itemDaSituacao);
-  // Ganho leva o card para Concluído e Reabrir o devolve (ajuste de 08/10): a
-  // Etapa acompanha o `stage_id` que a situação trouxe.
-  const aoMudarSituacao = useCallback((novo: PipelineItem) => {
-    setItemDaSituacao(novo);
-    if (novo.stage_id) setEtapaId(String(novo.stage_id));
-  }, []);
   // O rodapé está gravando Ganho/Perdido/Reabrir: a Etapa espera (e vice-versa).
   const [rodapeSalvando, setRodapeSalvando] = useState(false);
 
@@ -130,20 +129,39 @@ export function useCardDoLead(
   // Agendar envio (a partir da caixa da conversa). null = fechado.
   const [agendandoEnvio, setAgendandoEnvio] = useState<string | null>(null);
 
+  // Resposta velha não pinta o card errado: só vale a leitura mais nova, e só
+  // se o card na tela ainda é o mesmo de quando ela saiu.
+  const cardNaTela = useRef(chaveDoCard(item));
+  cardNaTela.current = chaveDoCard(item);
+  const leituraDoHistorico = useRef(0);
+
   const loadHistory = useCallback(async (target?: PipelineItem | null) => {
-    const contato = contatoDoCard(target ?? item);
+    const alvo = target ?? item;
+    const contato = contatoDoCard(alvo);
     if (!contato?.id) return;
+    const chave = chaveDoCard(alvo);
+    const leitura = ++leituraDoHistorico.current;
+    const valeAinda = () => leitura === leituraDoHistorico.current && cardNaTela.current === chave;
     setHistoryLoading(true);
     try {
       // Sem paginação neste painel: um lead de roleta gasta duas linhas por oferta.
       const res = await contactEventsService.getContactEvents(String(contato.id), { limit: 100 });
-      setHistoryEvents(Array.isArray(res.data) ? res.data : []);
+      if (valeAinda()) setHistoryEvents(Array.isArray(res.data) ? res.data : []);
     } catch {
-      setHistoryEvents([]);
+      if (valeAinda()) setHistoryEvents([]);
     } finally {
-      setHistoryLoading(false);
+      if (leitura === leituraDoHistorico.current) setHistoryLoading(false);
     }
   }, [item]);
+
+  // Ganho leva o card para Concluído e Reabrir o devolve (ajuste de 08/10): a
+  // Etapa acompanha o `stage_id` que a situação trouxe. O Histórico recarrega
+  // (como a janela sempre fez quando o rodapé grava).
+  const aoMudarSituacao = useCallback((novo: PipelineItem) => {
+    setItemDaSituacao(novo);
+    if (novo.stage_id) setEtapaId(String(novo.stage_id));
+    void loadHistory();
+  }, [loadHistory]);
 
   // Inicializa quando o card abre.
   useEffect(() => {
@@ -232,8 +250,8 @@ export function useCardDoLead(
           to_stage_id: toStageId,
         });
         onItemStageMoved?.(item.id, toStageId);
+        loadHistory();
       }
-      loadHistory();
     } catch (erro) {
       setEtapaId(anterior);
       toast.error(mensagemDaRecusa(erro, 'Não consegui mudar a etapa'));
