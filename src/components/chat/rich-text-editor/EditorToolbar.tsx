@@ -26,6 +26,8 @@ interface EditorToolbarProps {
   acoes?: AcaoDoEditor[];
   onAction: (action: string) => void;
   disabled?: boolean;
+  /** Vai na ponta direita da barra (o chat põe aqui Resposta, assinatura e IA). */
+  extra?: React.ReactNode;
 }
 
 export const EditorToolbar: React.FC<EditorToolbarProps> = ({
@@ -33,6 +35,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   onAction,
   disabled = false,
   acoes = TODAS_AS_ACOES,
+  extra,
 }) => {
   const { t } = useLanguage('chat');
 
@@ -183,6 +186,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           <Redo className="h-4 w-4" />
         </Button>
       )}
+      {extra && <div className="ml-auto flex items-center gap-1.5">{extra}</div>}
     </div>
   );
 };

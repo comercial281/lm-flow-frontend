@@ -9,8 +9,6 @@ import { useComposerPanel } from './composerPanel';
 describe('um painel por vez', () => {
   it('abrir um fecha o outro; clicar no aberto fecha', () => {
     const { result } = renderHook(() => useComposerPanel());
-    act(() => result.current.toggle('book'));
-    expect(result.current.open).toBe('book');
     act(() => result.current.toggle('funnel'));
     expect(result.current.open).toBe('funnel');
     act(() => result.current.toggle('emoji'));

@@ -17,12 +17,27 @@ describe('MessageInput → campo enxuto', () => {
     expect(codigo).not.toContain('altKey');
   });
 
-  it('os três botões só-ícone têm tooltip de verdade', () => {
+  it('os botões só-ícone têm tooltip de verdade', () => {
     expect(codigo).not.toContain('title="Funis de Mensagem"');
-    expect(codigo).not.toContain('title="Enviar book de imóvel"');
     expect(codigo).toContain('label="Funis de mensagem"');
-    expect(codigo).toContain('label="Enviar book"');
     expect(codigo).toContain('label="Modelos de mensagem"');
+  });
+
+  // 08/10/2026: Enviar book saiu do campo; Modelos só com algum modelo no número.
+  it('não tem mais Enviar book', () => {
+    expect(codigo).not.toContain('Enviar book');
+    expect(codigo).not.toContain('PropertyBookPopover');
+  });
+
+  it('Modelos de mensagem depende de existir modelo no número', () => {
+    expect(codigo).toContain('useTemModelos(inboxId, canMessageTemplate)');
+    expect(codigo).toContain('{temModelos && (');
+  });
+
+  it('Resposta, assinatura e IA vão na barra do editor, sem linha própria', () => {
+    expect(codigo).toContain('barraExtra={barraDoEditor}');
+    expect(codigo.match(/<ReplyModeToggle/g)).toHaveLength(1);
+    expect(codigo.match(/<AIAssistanceButton/g)).toHaveLength(1);
   });
 
   it('usa a frase que o ChatArea manda', () => {

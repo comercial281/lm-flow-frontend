@@ -19,7 +19,6 @@ import {
   Reply,
   PenLine,
   Rocket,
-  Building2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -38,7 +37,7 @@ import AudioRecorder from '../audio';
 import { AIAssistanceButton } from '../ai-assistance';
 import { DispararFunilPanel } from '../message-funnels';
 import { useComposerPanel } from './composerPanel';
-import { PropertyBookPopover } from '../property-book';
+import { useTemModelos } from './useTemModelos';
 import { IconActionButton } from '@/components/base';
 import { RichTextEditor, RichTextEditorRef } from '../rich-text-editor';
 
@@ -123,20 +122,19 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const richEditorRef = useRef<RichTextEditorRef>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Emoji, Disparar funil e Enviar book: UM PAINEL POR VEZ (sprint 4).
+  // Emoji e Disparar funil: UM PAINEL POR VEZ (sprint 4).
   const composerPanel = useComposerPanel();
   const showEmojiPicker = composerPanel.open === 'emoji';
   const showFunnels = composerPanel.open === 'funnel';
-  const showBookPicker = composerPanel.open === 'book';
+
+  // Modelos de mensagem: o botão só aparece se o número tem algum modelo.
+  const temModelos = useTemModelos(inboxId, canMessageTemplate);
 
   // 🎯 MESSAGE SIGNATURE: Hook para gerenciar assinatura
   const { isSignatureEnabled, toggleSignature, hasSignature, appendSignatureIfEnabled } =
     useMessageSignature();
 
   const [currentEditorMessage, setCurrentEditorMessage] = useState('');
-
-  // 🏠 ENVIO DE BOOK DE IMÓVEL: buscar imóvel do acervo e mandar o PDF do book.
-  const isWhatsApp = channelType === 'Channel::Whatsapp';
 
   // Forçar modo de nota privada quando a conversa está pendente
   useEffect(() => {
@@ -409,6 +407,49 @@ const MessageInput: React.FC<MessageInputProps> = ({
     return 'Enviar (Enter)';
   }, [user?.ui_settings?.editor_message_key]);
 
+  // Ponta direita da barra do editor (antes era uma linha própria acima do campo).
+  // A assinatura usa IconActionButton porque a dica dele sai por portal: a caixa
+  // do editor corta o que passa da borda (overflow-hidden).
+  const barraDoEditor = (
+    <>
+      <ReplyModeToggle
+        currentMode={isPendingConversation ? ReplyMode.NOTE : replyMode}
+        onModeChange={isPendingConversation ? () => {} : setReplyMode}
+        disabled={isDisabled || isSending || isPendingConversation}
+        forcedMode={isPendingConversation ? ReplyMode.NOTE : undefined}
+      />
+
+      {hasSignature && replyMode === ReplyMode.REPLY && !isPendingConversation && (
+        <IconActionButton
+          label={isSignatureEnabled ? t('messageInput.signature.disable') : t('messageInput.signature.enable')}
+          icon={
+            <PenLine
+              className={`h-4 w-4 ${isSignatureEnabled ? 'text-green-600 dark:text-green-400' : ''}`}
+            />
+          }
+          variant="outline"
+          disabled={isDisabled || isSending}
+          className={`h-8 w-8 flex-shrink-0 border-input hover:bg-accent hover:border-accent-foreground/20 disabled:opacity-50 transition-colors ${
+            isSignatureEnabled ? 'bg-green-50 border-green-500 dark:bg-green-950/30 dark:border-green-500' : ''
+          }`}
+          onClick={toggleSignature}
+          side="top"
+        />
+      )}
+
+      <AIAssistanceButton
+        currentMessage={currentEditorMessage}
+        onApplyText={text => {
+          richEditorRef.current?.setContent(text);
+          setCurrentEditorMessage(text);
+        }}
+        disabled={isDisabled || isSending || isPendingConversation}
+        conversationId={conversationId?.toString()}
+        sizeClass="h-8 w-8"
+      />
+    </>
+  );
+
   const cardClassNames = `
     wa-input-bar w-full border-t border-x-0 border-b-0 rounded-none shadow-lg py-0 gap-0 transition-all duration-200 bg-background
   `;
@@ -498,76 +539,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
             />
           )}
 
-          {/* 🏠 BOOK DE IMÓVEL: buscar no acervo e enviar o PDF direto na conversa */}
-          {isWhatsApp && canSendAttachment && (
-            <PropertyBookPopover
-              isOpen={showBookPicker}
-              onClose={() => closePanel('book')}
-              conversationId={conversationId}
-            />
-          )}
-
-          {/* Primeira linha: Reply Mode Toggle + Botões de ação rápida.
-              mt-1.5 pedido pelo Giovani (19/08): a barra ficava colada no topo
-              do card, sem respiro em relação à borda de cima. */}
-          <div className="flex items-center justify-between mt-1.5 mb-2 gap-2 md:gap-3">
-            {/* Reply Mode Toggle */}
-            <ReplyModeToggle
-              currentMode={isPendingConversation ? ReplyMode.NOTE : replyMode}
-              onModeChange={isPendingConversation ? () => {} : setReplyMode}
-              disabled={isDisabled || isSending || isPendingConversation}
-              forcedMode={isPendingConversation ? ReplyMode.NOTE : undefined}
-            />
-
-            {/* Botões de ação rápida - à direita */}
-            <div className="flex-shrink-0 flex items-center gap-1.5">
-              {/* Message Signature Button */}
-              {hasSignature && replyMode === ReplyMode.REPLY && !isPendingConversation && (
-                <div className="relative group">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    disabled={isDisabled || isSending}
-                    className={`h-9 w-9 flex-shrink-0 border-input hover:bg-accent hover:border-accent-foreground/20 disabled:opacity-50 transition-colors ${
-                      isSignatureEnabled
-                        ? 'bg-green-50 border-green-500 dark:bg-green-950/30 dark:border-green-500'
-                        : ''
-                    }`}
-                    onClick={toggleSignature}
-                    aria-label={isSignatureEnabled ? t('messageInput.signature.disable') : t('messageInput.signature.enable')}
-                    title={isSignatureEnabled ? t('messageInput.signature.disable') : t('messageInput.signature.enable')}
-                  >
-                    <PenLine
-                      className={`h-4 w-4 ${
-                        isSignatureEnabled ? 'text-green-600 dark:text-green-400' : ''
-                      }`}
-                    />
-                  </Button>
-                  <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                    {isSignatureEnabled
-                      ? t('messageInput.signature.disable')
-                      : t('messageInput.signature.enable')}
-                    <div className="absolute top-full right-3 -mt-1">
-                      <div className="border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* AI Assistance Button */}
-              <AIAssistanceButton
-                currentMessage={currentEditorMessage}
-                onApplyText={text => {
-                  richEditorRef.current?.setContent(text);
-                  setCurrentEditorMessage(text);
-                }}
-                disabled={isDisabled || isSending || isPendingConversation}
-                conversationId={conversationId?.toString()}
-              />
-            </div>
-          </div>
-
-          {/* Segunda linha: Botões de formatação + Input + Botões de envio.
+          {/* Botões de formatação + Input + Botões de envio. Resposta, assinatura
+              e IA moram na barra do editor (`barraExtra`), ao lado do negrito e
+              itálico: eram uma linha só pra eles (08/10/2026, pedido do Tony pra
+              deixar o campo mais baixo).
               No celular isso vira DUAS linhas: o campo de digitar sozinho em cima
               (w-full + order-1) e os dois grupos de ícones embaixo (order-2/3, com
               ml-auto jogando microfone+enviar pra direita). Sem isso o campo, único
@@ -622,21 +597,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 />
               )}
 
-              {/* 🏠 Enviar book de imóvel */}
-              {isWhatsApp && canSendAttachment && (
-                <IconActionButton
-                  label="Enviar book"
-                  icon={<Building2 className="h-4 w-4" />}
-                  variant={showBookPicker ? 'default' : 'ghost'}
-                  disabled={isDisabled || isSending || isPendingConversation}
-                  className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
-                  onClick={() => togglePanel('book')}
-                  side="top"
-                />
-              )}
-
-              {/* Template Button */}
-              {canMessageTemplate && (
+              {/* Modelos de mensagem: só com algum modelo no número (useTemModelos) */}
+              {temModelos && (
                 <IconActionButton
                   label="Modelos de mensagem"
                   icon={<FileText className="h-4 w-4" />}
@@ -693,6 +655,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 className="min-h-[44px]"
                 editorMinHeightClass="min-h-[44px]"
                 showToolbar={!isPendingConversation}
+                barraExtra={barraDoEditor}
               />
             </div>
 

@@ -30,14 +30,14 @@ export const ReplyModeToggle = ({
 
   return (
     <div className="flex items-center justify-start shrink-0">
-      <div className="flex items-center gap-1 p-1 bg-muted rounded-lg border w-fit">
+      <div className="flex items-center gap-1 p-0.5 bg-muted rounded-lg border w-fit">
         <Button
           variant={isReplyMode ? 'default' : 'ghost'}
           size="sm"
           onClick={() => onModeChange(ReplyMode.REPLY)}
           disabled={disabled || (forcedMode && forcedMode !== ReplyMode.REPLY)}
           className={`
-            h-7 px-3 text-xs font-medium transition-all duration-200 flex items-center gap-1.5
+            h-6 px-3 text-xs font-medium transition-all duration-200 flex items-center gap-1.5
             ${
               isReplyMode
                 ? 'bg-primary text-primary-foreground shadow-sm'

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useImperativeHandle, forwardRef } from 'react';
+import { useRef, useEffect, useState, useImperativeHandle, forwardRef, type ReactNode } from 'react';
 import { EditorState } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { keymap } from 'prosemirror-keymap';
@@ -73,6 +73,12 @@ interface RichTextEditorProps {
    * landings e o Site Builder usam. O chat passa só negrito e itálico.
    */
   acoes?: AcaoDoEditor[];
+  /**
+   * Conteúdo na ponta direita da barra. Aparece mesmo com `showToolbar` falso
+   * (aí a barra fica só com ele): o chat esconde negrito/itálico na conversa
+   * pendente, mas o aviso do Resposta continua.
+   */
+  barraExtra?: ReactNode;
 }
 
 export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
@@ -91,6 +97,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       conteudoInicial,
       schema = messageSchema,
       acoes: acoesPedidas = TODAS_AS_ACOES,
+      barraExtra,
     },
     ref,
   ) => {
@@ -344,12 +351,13 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
 
     return (
       <div className={`border border-border rounded-lg overflow-hidden bg-background ${className}`}>
-        {showToolbar && (
+        {(showToolbar || barraExtra) && (
           <EditorToolbar
             editorState={editorState}
             onAction={handleToolbarAction}
-            acoes={acoes}
+            acoes={showToolbar ? acoes : []}
             disabled={disabled}
+            extra={barraExtra}
           />
         )}
         <div ref={editorRef} className={`relative ${disabled ? 'opacity-50' : ''}`} />

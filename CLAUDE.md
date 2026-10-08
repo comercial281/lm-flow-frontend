@@ -4998,7 +4998,8 @@ O que aparece na tela:
   de 24 h fechada -> "Faz mais de 24 h que o lead não escreve. Envie um modelo
   de mensagem para retomar."; sem bloqueio, o campo mostra "Escreva uma
   mensagem..." (`chatArea.messageInput.defaultPlaceholder`, do `ChatArea`). Dicas dos ícones: **Funis de mensagem**, **Enviar
-  book**, **Modelos de mensagem**.
+  book**, **Modelos de mensagem**. (Enviar book saiu e Modelos ficou condicional
+  em 08/10/2026: ver "Campo de mensagem mais baixo".)
 - **Histórico:** etiquetas citadas ("adicionou visita-agendada, demo-0001")
   aparecem como etiquetas coloridas, e o nome sai do texto.
 
@@ -5982,8 +5983,8 @@ O que aparece na tela:
   andamento** com Parar ("Enviar e parar o funil" na pergunta ao enviar). Funil
   com o guia pela metade aparece com **Termine de montar** (leva pro canvas);
   desligado aparece apagado. Sem funil próprio e com da equipe, abre na equipe.
-- **Um painel por vez** no campo de mensagem: emoji, Disparar funil e Enviar
-  book; abrir um fecha o outro.
+- **Um painel por vez** no campo de mensagem: emoji e Disparar funil (o Enviar
+  book saiu em 08/10/2026); abrir um fecha o outro.
 - **Menu:** **Variáveis de mensagem** virou item de Minha imobiliária (era aba
   de Campos personalizados, que ficou só com os atributos; a tela se chama
   "Variáveis de mensagem"). O Corretor de fábrica vê **Funis de mensagem** em
@@ -6071,7 +6072,7 @@ Fase 4, entrega 6 (parte A). Spec: `LM FLOW/specs/2026-10-04-fase-4-imoveis-book
 
 **Decisões do dono (não reabrir sem ele pedir):**
 
-1. **A IA Vendedora não lê o book.** O cadastro novo já tem os detalhes; o book é **enviado** no chat, como antes.
+1. **A IA Vendedora não lê o book.** O cadastro novo já tem os detalhes; o book é **enviado** no chat, como antes. (Desde 08/10/2026 o botão *Enviar book* não está mais no campo de mensagem: ver "Campo de mensagem mais baixo".)
 2. **Um book por empreendimento.** Sem vários materiais por imóvel.
 3. **O book entra no cadastro**, na seção *Fotos e vídeos*: subir, ver, trocar e remover (`BlocoDoBook.tsx`, renderizado por `SecaoMidia`).
 4. **"Preencher pelo book" também guarda o book:** um envio só preenche os campos e anexa o PDF.
@@ -7897,3 +7898,36 @@ Regras de produto decididas na revisão final do funil. Não reabrir sem o dono 
    leem `task_categories`.
 5. **Coluna Concluída com a regra antiga de Compra por etapa:** a Compra respeita o
    "um por lead" (não dispara de novo para o mesmo lead).
+
+## Campo de mensagem mais baixo (desde 2026-10-08)
+
+Pedido do Tony: *"esse enviar book não está tão útil, vamos tirar"*, *"modelos de
+mensagem só tem que aparecer se a pessoa tem algum"* e *"deixar mais estreita,
+porque o Resposta tá lá em cima"*.
+
+O que aparece na tela (Conversas, campo de mensagem):
+
+- **Sem o botão Enviar book** (ícone de prédio). O `PropertyBookPopover` e o
+  `chatService.sendPropertyBook` saíram do frontend. O servidor continua com o
+  `send_book`; o book segue no cadastro do imóvel e vai como anexo comum.
+- **Modelos de mensagem só aparece quando o número da conversa tem ao menos um
+  modelo** (`useTemModelos`: `GET /inboxes/:id/message_templates?per_page=1`, uma
+  vez por número enquanto a página vive; se falha, esconde e tenta de novo na
+  próxima conversa). Continua dependendo do recurso `chat_message_template`.
+- **Resposta, assinatura e IA subiram pra barra do negrito/itálico**, na ponta
+  direita (`RichTextEditor.barraExtra` → `EditorToolbar.extra`). Antes eram uma
+  linha só pra eles, acima do campo. Na conversa pendente a barra aparece só
+  com o Resposta travado e a explicação (negrito/itálico continuam escondidos).
+- O Resposta ficou um pouco menor (`h-6`, `p-0.5`) e a IA usa `sizeClass="h-8 w-8"`
+  pra não engordar a barra.
+- **Funis de mensagem fica onde está.** O Tony quer repensar a disposição dele
+  depois, numa entrega própria.
+
+Armadilhas:
+
+1. **A caixa do editor tem `overflow-hidden`.** Dica de botão posta ali dentro
+   precisa sair por portal (`IconActionButton`); a dica antiga da assinatura, em
+   CSS com `absolute bottom-full`, seria cortada.
+2. **`barraExtra` aparece mesmo com `showToolbar={false}`** (aí sem formatação).
+   Landings e Site Builder não passam `barraExtra` e não mudam.
+
