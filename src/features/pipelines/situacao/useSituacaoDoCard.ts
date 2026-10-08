@@ -40,6 +40,9 @@ export function useSituacaoDoCard(item: PipelineItem | null, { onMudou }: Opcoes
   const [salvando, setSalvando] = useState<PipelineItemStatus | null>(null);
   const [perdidoAberto, setPerdidoAberto] = useState(false);
   const emVoo = useRef(false);
+  // Troca de card solta o trinco; a geração impede que a ação velha o mexa depois.
+  const geracao = useRef(0);
+  const idAtual = useRef<string | undefined>(item?.id);
 
   // Outro card na mesma janela, ou o quadro trouxe a situação nova: acompanha.
   useEffect(() => {
@@ -48,6 +51,10 @@ export function useSituacaoDoCard(item: PipelineItem | null, { onMudou }: Opcoes
 
   useEffect(() => {
     setPerdidoAberto(false);
+    idAtual.current = item?.id;
+    geracao.current += 1;
+    emVoo.current = false;
+    setSalvando(null);
   }, [item?.id]);
 
   const mudar = useCallback(
@@ -55,21 +62,33 @@ export function useSituacaoDoCard(item: PipelineItem | null, { onMudou }: Opcoes
       if (!atual || emVoo.current) return false;
       if (situacaoDe(atual) === dados.status) return true;
       emVoo.current = true;
+      const minha = geracao.current;
+      const idSalvo = atual.id;
       setSalvando(dados.status);
+      let novo: PipelineItem;
       try {
         const resposta = await pipelinesService.setItemStatus(atual.pipeline_id, atual.id, dados);
-        const novo = { ...atual, ...resposta } as PipelineItem;
-        setAtual(novo);
-        onMudou?.(novo);
-        toast.success(AVISO_DE_SUCESSO[dados.status]);
-        return true;
+        novo = { ...atual, ...resposta } as PipelineItem;
       } catch (erro) {
+        if (minha === geracao.current) {
+          emVoo.current = false;
+          setSalvando(null);
+        }
         toast.error(mensagemDaRecusa(erro, 'Não consegui mudar a situação do lead.'));
         return false;
-      } finally {
+      }
+      if (minha === geracao.current) {
         emVoo.current = false;
         setSalvando(null);
       }
+      if (idAtual.current === idSalvo) setAtual(novo);
+      try {
+        onMudou?.(novo);
+      } catch {
+        // o quadro falhou ao se atualizar; a gravação deu certo
+      }
+      toast.success(AVISO_DE_SUCESSO[dados.status]);
+      return true;
     },
     [atual, onMudou],
   );

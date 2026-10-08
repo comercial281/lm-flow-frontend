@@ -108,4 +108,44 @@ describe('useSituacaoDoCard', () => {
     expect(result.current.item?.id).toBe('i2');
     expect(result.current.situacao).toBe('lost');
   });
+
+  it('troca de card com ação no ar: a resposta velha não cobre o novo e o novo pode agir', async () => {
+    let soltar: (v: PipelineItem) => void = () => {};
+    vi.mocked(pipelinesService.setItemStatus).mockReturnValueOnce(new Promise(r => { soltar = r; }));
+    const onMudou = vi.fn();
+    const { result, rerender } = renderHook(({ item }) => useSituacaoDoCard(item, { onMudou }), { initialProps: { item: aberto } });
+
+    let primeira: Promise<boolean> = Promise.resolve(false);
+    act(() => { primeira = result.current.marcarGanho(); });
+    rerender({ item: { ...aberto, id: 'i2' } as PipelineItem });
+    expect(result.current.salvando).toBeNull();
+
+    await act(async () => { soltar({ ...aberto, status: 'won' }); await primeira; });
+    expect(result.current.item?.id).toBe('i2');
+    expect(result.current.situacao).toBe('open');
+    expect(onMudou).toHaveBeenCalledWith(expect.objectContaining({ id: 'i1', status: 'won' }));
+
+    vi.mocked(pipelinesService.setItemStatus).mockResolvedValueOnce({ ...aberto, id: 'i2', status: 'won' });
+    await act(async () => { expect(await result.current.marcarGanho()).toBe(true); });
+    expect(pipelinesService.setItemStatus).toHaveBeenLastCalledWith('p1', 'i2', { status: 'won' });
+  });
+
+  it('onMudou que estoura não vira falha', async () => {
+    vi.mocked(pipelinesService.setItemStatus).mockResolvedValue({ ...aberto, status: 'won' });
+    const { result } = renderHook(() => useSituacaoDoCard(aberto, { onMudou: () => { throw new Error('quadro'); } }));
+    await act(async () => { expect(await result.current.marcarGanho()).toBe(true); });
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(result.current.situacao).toBe('won');
+  });
+
+  it('erro solta o trinco: a próxima ação chega ao servidor', async () => {
+    vi.mocked(pipelinesService.setItemStatus)
+      .mockRejectedValueOnce(new Error('rede'))
+      .mockResolvedValueOnce({ ...aberto, status: 'won' });
+    const { result } = renderHook(() => useSituacaoDoCard(aberto));
+    await act(async () => { expect(await result.current.marcarGanho()).toBe(false); });
+    await act(async () => { expect(await result.current.marcarGanho()).toBe(true); });
+    expect(pipelinesService.setItemStatus).toHaveBeenCalledTimes(2);
+    expect(result.current.salvando).toBeNull();
+  });
 });
