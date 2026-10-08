@@ -31,7 +31,7 @@ export interface PaginaProps {
   cabecalho?: ReactNode;
   /** Acima do título: "← volta" de tela de detalhe, trilha do Meu site/IA. */
   acima?: ReactNode;
-  /** Barra própria encostada no topo (Meu site, IA Vendedora). Rola junto. */
+  /** Barra própria encostada no topo (Meu site, IA Vendedora). Rola junto; se a barra tiver ação que precisa ficar à vista (Salvar), a tela põe `sticky top-0 z-10` nela, como em ChannelSettings. */
   barraDoTopo?: ReactNode;
   rolagem?: 'pagina' | 'conteudo';
   estreita?: boolean;
