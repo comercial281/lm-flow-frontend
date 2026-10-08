@@ -2,9 +2,10 @@
 // Quadro do funil montado de verdade, com os serviços falsos. Começou (P3-T10)
 // como caracterização: o que a divisão do PipelineKanban não pode mudar.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { toast } from 'sonner';
 import { pipelinesService } from '@/services/pipelines';
 import type { Pipeline, PipelineItem, PipelineStage } from '@/types/analytics';
 import PipelineKanban from './PipelineKanban';
@@ -99,6 +100,9 @@ const montar = (endereco = '/pipelines/p1') =>
     </MemoryRouter>,
   );
 
+// Deixa terminar o que o quadro faz depois do evento, antes de afirmar que NADA aconteceu.
+const esvaziar = () => act(async () => { await new Promise(r => setTimeout(r, 0)); });
+
 const cardDe = (nome: string) => screen.getByText(nome).closest('[draggable]') as HTMLElement;
 const colunaDe = (stageId: string) =>
   document.getElementById(`etapa-${stageId}`)!.querySelector('[data-col-scroll]') as HTMLElement;
@@ -153,7 +157,10 @@ describe('quadro do funil · o que continua igual', () => {
     fireEvent.dragStart(cardDe('Paula Reis'));
     fireEvent.dragOver(colunaDe('s1'));
     fireEvent.drop(colunaDe('s1'));
+    await esvaziar();
     expect(pipelinesService.reorderItem).not.toHaveBeenCalled();
+    expect(within(document.getElementById('etapa-s2')!).getByText('Paula Reis')).toBeInTheDocument();
+    expect(within(document.getElementById('etapa-s1')!).queryByText('Paula Reis')).toBeNull();
   });
 
   it('a Lista mostra os leads sem as colunas do quadro', async () => {
@@ -208,5 +215,45 @@ describe('quadro do funil · o que continua igual', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Todas' }));
     expect(screen.getByText('Maria Souza')).toBeInTheDocument();
     expect(screen.getByText('João Lima')).toBeInTheDocument();
+  });
+
+  it('na visão padrão o card ganho aparece na sua coluna', async () => {
+    montar();
+    expect(await screen.findByText('Paula Reis')).toBeInTheDocument();
+    expect(within(document.getElementById('etapa-s2')!).getByText('Paula Reis')).toBeInTheDocument();
+  });
+
+  it('a busca também acha pelo email', async () => {
+    montar();
+    await screen.findByText('Maria Souza');
+    await userEvent.type(screen.getByPlaceholderText(BUSCA), 'i1@exemplo');
+    expect(screen.getByText('Maria Souza')).toBeInTheDocument();
+    expect(screen.queryByText('João Lima')).toBeNull();
+  });
+
+  it('o botão WhatsApp do card abre a conversa daquele lead', async () => {
+    montar();
+    await screen.findByText('Maria Souza');
+    await userEvent.click(within(cardDe('Maria Souza')).getByRole('button', { name: 'WhatsApp' }));
+    expect(mocks.abrirConversa).toHaveBeenCalledTimes(1);
+    expect(mocks.abrirConversa).toHaveBeenCalledWith(expect.objectContaining({ id: 'i1' }));
+  });
+
+  it('se o funil não carrega: avisa com a mensagem de erro, sem cards e sem botão de tentar de novo', async () => {
+    vi.mocked(pipelinesService.getPipeline).mockRejectedValue(new Error('falhou'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    montar();
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('kanban.messages.loadDataError'));
+    await esvaziar();
+    expect(screen.queryByText('Maria Souza')).toBeNull();
+    expect(screen.queryByRole('button', { name: /tentar de novo|recarregar/i })).toBeNull();
+  });
+
+  it('a busca digitada não mexe no endereço (o endereço continua só com o que já tinha)', async () => {
+    montar('/pipelines/p1?etapa=s2');
+    await screen.findByText('Maria Souza');
+    await userEvent.type(screen.getByPlaceholderText(BUSCA), 'maria');
+    expect(screen.getByTestId('endereco').textContent).not.toContain('maria');
+    expect(endereco().has('maria')).toBe(false);
   });
 });
