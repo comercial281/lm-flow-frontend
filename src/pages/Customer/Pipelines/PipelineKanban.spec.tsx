@@ -559,3 +559,22 @@ describe('quadro do funil · soltar em Concluído é Ganho (ajuste de 08/10)', (
     expect(within(document.getElementById('etapa-s1')!).queryByText('Maria Souza')).toBeNull();
   });
 });
+
+describe('quadro do funil · exportar', () => {
+  it('Exportar busca todas as situações (não só a aba) e baixa o CSV', async () => {
+    const baixar = vi.fn(() => 'blob:csv');
+    URL.createObjectURL = baixar as unknown as typeof URL.createObjectURL;
+    URL.revokeObjectURL = vi.fn();
+    const clique = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    montar();
+    await screen.findByText('Maria Souza');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Mais ações do funil' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Exportar' }));
+
+    await waitFor(() => expect(pipelinesService.getPipeline).toHaveBeenLastCalledWith('p1', { status: 'all' }));
+    await waitFor(() => expect(baixar).toHaveBeenCalledWith(expect.any(Blob)));
+    expect(clique).toHaveBeenCalled();
+    clique.mockRestore();
+  });
+});

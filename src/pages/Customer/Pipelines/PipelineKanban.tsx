@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
-import { formatDateBR } from '@/utils/dateUtils';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 import { Plus } from 'lucide-react';
+import { plural } from '@/lib/formato';
 
 import { pipelinesService } from '@/services/pipelines';
 import { visitsService } from '@/services/visits/visitsService';
@@ -18,6 +18,7 @@ import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useCan } from '@/hooks/useCan';
 import { boardHeaderActions } from './boardActions';
 import BoardTopBar, { type ModoDoQuadro } from './quadro/BoardTopBar';
+import { csvDoFunil } from './quadro/csvDoFunil';
 import EmptyState from '@/components/base/EmptyState';
 import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
@@ -666,35 +667,28 @@ export default function PipelineKanban() {
     }
   };
 
-  // Export leads as CSV
-  const handleExportCSV = () => {
-    const allItems = stages.flatMap(stage =>
-      (stage.items || []).map(item => ({
-        nome: item.contact?.name || '',
-        email: item.contact?.email || '',
-        telefone: item.contact?.phone_number || '',
-        etapa: stage.name,
-        valor: item.value || '',
-        entrada: item.entered_at
-          ? formatDateBR(item.entered_at * 1000)
-          : formatDateBR(item.created_at),
-      })),
-    );
-    if (allItems.length === 0) {
-      toast.error('Nenhum lead para exportar.');
-      return;
+  // Exportar: todas as situações do funil (Abertos, Ganhos e Perdidos; sem os
+  // arquivados), buscadas na hora — não só a aba aberta.
+  const handleExportCSV = async () => {
+    if (!pipelineId) return;
+    try {
+      const todos = await pipelinesService.getPipeline(pipelineId, { status: 'all' });
+      const { csv, linhas } = csvDoFunil(todos.stages || []);
+      if (linhas === 0) {
+        toast.error('Nenhum lead para exportar.');
+        return;
+      }
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `leads-${pipeline?.name || 'funil'}-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${plural(linhas, 'lead exportado', 'leads exportados')}.`);
+    } catch {
+      toast.error('Não consegui exportar os leads.');
     }
-    const headers = ['nome', 'email', 'telefone', 'etapa', 'valor', 'entrada'];
-    const rows = allItems.map(r => headers.map(h => `"${String((r as any)[h]).replace(/"/g, '""')}"`).join(','));
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `leads-${pipeline?.name || 'pipeline'}-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(`${allItems.length} leads exportados.`);
   };
 
   if (loading) {
@@ -726,7 +720,7 @@ export default function PipelineKanban() {
           podeAdicionar={canAddItem}
           onAdicionar={() => handleAddItem()}
           acoes={{ exportar: canExport, disparo: canBulkDispatch }}
-          onExportar={handleExportCSV}
+          onExportar={() => { void handleExportCSV(); }}
           onDisparo={() => setDisparoModalOpen(true)}
           onEditarFunil={handleEditPipeline}
           onReordenarEtapas={handleReorderStages}
