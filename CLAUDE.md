@@ -7937,3 +7937,15 @@ Armadilhas:
 2. **`barraExtra` aparece mesmo com `showToolbar={false}`** (aí sem formatação).
    Landings e Site Builder não passam `barraExtra` e não mudam.
 
+## Caminhos da intenção em caixinhas (desde 2026-10-08)
+
+O Grupo Habitar escreveu a pergunta dele ("Você já mora na região do Castelo?"), tirou Investimento e a IA seguia puxando "morar ou investir": a pergunta não chegava ao lead que fala primeiro e oito linhas fixas do comando citavam os dois.
+
+- **Caminhos são caixinhas.** Catálogo fixo (Moradia, Investimento, Primeiro imóvel, Trocar de imóvel) + até 4 próprios; até 5 marcados. O do catálogo não se apaga, só se desmarca.
+- **Todo texto de intenção sai dos marcados.** "Morar ou investir" só chega à IA com Moradia E Investimento marcados. Dois ou mais = ela pergunta e deduz; um só = conduz direto e não pergunta; nenhum = qualifica o concreto.
+- **Sondando não é caixinha** (é o "ainda não sabe", sempre ligado). Não reabrir sem o dono pedir.
+- **A pergunta escrita chega em todas as entradas**, inclusive no lead que fala primeiro, e sai ao pé da letra.
+- **Primeiro imóvel** fala de compor renda do casal (pedido do dono: casal entra muito nesse caminho).
+- **Lead que não cabe em nenhum caminho:** Atender mesmo assim (padrão) · Passar pro corretor · Encerrar com educação.
+- **Padrão pelo tipo de venda** (revenda: Moradia + Trocar de imóvel; locação: Moradia; resto: Moradia + Investimento) entra sozinho enquanto ninguém mexeu nos caminhos; "Voltar ao padrão" grava o do tipo.
+- Fora daqui: primeira mensagem literal (entrega seguinte).
