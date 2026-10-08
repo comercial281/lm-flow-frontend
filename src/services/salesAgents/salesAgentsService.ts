@@ -175,6 +175,12 @@ export interface SalesAgent {
   intent_question: string | null;
   /** Os 3 caminhos de fábrica (Moradia, Investimento, Sondando), pra tela mostrar quando a lista gravada está vazia. */
   intent_paths_default?: CaminhoDaIntencao[];
+  /** A lista que a página Intenção mostra (catálogo inteiro + próprios), já resolvida pelo servidor. */
+  intent_paths?: CaminhoDaIntencao[];
+  /** O padrão do tipo de venda: o que "Voltar ao padrão" grava. */
+  intent_paths_padrao?: CaminhoDaIntencao[];
+  /** A pergunta gerada pelos caminhos marcados (null com menos de dois). */
+  intent_question_default?: string | null;
   opening_image_url: string | null;
   opening_audio_url: string | null;
   openings: SalesAgentOpening[];
@@ -467,15 +473,24 @@ export interface PlaybookObjection {
 }
 
 /**
- * Um caminho da INTENÇÃO (onda 2, 06/10/2026): a resposta do lead à pergunta de
- * intenção e como ela conduz dali. Grava em `playbook.vars.caminhos_intencao` (até
- * 5; nome até 40, como até 300). Lista vazia/ausente = os 3 de fábrica, que o
- * servidor devolve em `intent_paths_default` — nenhuma IA muda sozinha.
+ * Um caminho da INTENÇÃO. Desde 08/10/2026 são caixinhas: o catálogo (moradia,
+ * investimento, primeiro_imovel, troca) vem sempre na lista e a imobiliária marca o
+ * que vale; os próprios não têm `chave`. O servidor monta todo texto de intenção só
+ * com os marcados. Até 8 guardados e 5 marcados; nome até 40, sinais até 300, como
+ * até 700. Lista ausente = padrão, que o servidor devolve em `intent_paths`.
  */
 export interface CaminhoDaIntencao {
+  chave?: string;
   nome: string;
+  /** Como reconhecer: as pistas que fazem a IA deduzir este caminho. */
+  sinais?: string;
   como: string;
+  /** Marcado. Ausente = marcado (lista gravada antes das caixinhas). */
+  ativo?: boolean;
 }
+
+/** Lead que não cabe em nenhum caminho. Ausente = 'atender'. */
+export type ForaDosCaminhos = 'atender' | 'passar' | 'encerrar';
 
 /** Uma voz do catálogo (ElevenLabs). `preview_url` é a amostra da própria ElevenLabs: ouvir não gasta nada. */
 export interface VozDaIa {
@@ -499,6 +514,8 @@ export interface PlaybookVars {
   objecoes?: PlaybookObjection[];
   /** Onda 2 (06/10/2026): os caminhos da intenção. Ver `CaminhoDaIntencao`. */
   caminhos_intencao?: CaminhoDaIntencao[];
+  /** O que ela faz com o lead que não cabe em nenhum caminho. Ausente = atender. */
+  fora_dos_caminhos?: ForaDosCaminhos;
 }
 
 /**

@@ -46,7 +46,7 @@ export const PAGINAS: Record<PaginaId, PaginaInfo> = {
   abertura: { id: 'abertura', grupo: 'introducao', titulo: 'Abertura', frase: 'A primeira mensagem e as variações por campanha.',
     campos: ['greeting', 'default_origin', 'opening_image_url', 'opening_audio_url', 'openings'] },
   intencao: { id: 'intencao', grupo: 'introducao', titulo: 'Intenção', frase: 'A pergunta que separa os leads e o caminho de cada resposta.',
-    campos: ['intent_question', 'playbook.intent_question_mode', 'playbook.vars.caminhos_intencao'] },
+    campos: ['intent_question', 'playbook.intent_question_mode', 'playbook.vars.caminhos_intencao', 'playbook.vars.fora_dos_caminhos'] },
   personalidade: { id: 'personalidade', grupo: 'conversa', titulo: 'Personalidade', frase: 'O formato das respostas: mensagens, áudio e curtidas.',
     campos: ['message_split_enabled', 'audio_enabled', 'audio_mode', 'audio_voice_id', 'reaction_enabled', 'reaction_emojis', 'reaction_max_per_conversation'] },
   qualificacao: { id: 'qualificacao', grupo: 'conversa', titulo: 'Qualificação', frase: 'As perguntas que ela faz pra entender o lead.',
