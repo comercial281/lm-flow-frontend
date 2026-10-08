@@ -26,6 +26,7 @@ import { LeadCombobox } from '@/components/visits/LeadCombobox';
 import { Seletor } from '@/components/base/Seletor';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import type { OpenCardOfContact } from '@/types/analytics';
+import { formatDateBR } from '@/utils/dateUtils';
 import type { LeadPickerItem } from '@/services/visits/visitsService';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 
@@ -94,6 +95,9 @@ export default function ProposalFormDialog({
   // sozinho. null = não se aplica (editando, ou registrada pelo card).
   const [cardsAbertos, setCardsAbertos] = useState<OpenCardOfContact[] | null>(null);
   const [cardEscolhido, setCardEscolhido] = useState('');
+  const [carregandoCards, setCarregandoCards] = useState(false);
+  const [erroCards, setErroCards] = useState(false);
+  const [tentativa, setTentativa] = useState(0);
   const perguntaAtendimento = (cardsAbertos?.length ?? 0) > 1;
 
   // Valores iniciais lidos só no instante em que abre: o pai recria esses
@@ -129,18 +133,23 @@ export default function ProposalFormDialog({
   }, [open]);
 
   useEffect(() => {
+    // Zera tudo antes de buscar: a lista do lead anterior nunca vale para o novo.
     setCardEscolhido('');
+    setCardsAbertos(null);
+    setErroCards(false);
     if (!open || proposta || pipelineItemId || !form.contact_id) {
-      setCardsAbertos(null);
+      setCarregandoCards(false);
       return;
     }
     let vivo = true;
+    setCarregandoCards(true);
     pipelinesService.getOpenCardsOfContact(form.contact_id)
       .then(lista => { if (vivo) setCardsAbertos(lista); })
-      // Sem a lista, a proposta vai sem ligação (o servidor usa o card aberto mais recente).
-      .catch(() => { if (vivo) setCardsAbertos(null); });
+      // Sem a lista, avisa e deixa salvar (o servidor usa o card aberto mais recente).
+      .catch(() => { if (vivo) setErroCards(true); })
+      .finally(() => { if (vivo) setCarregandoCards(false); });
     return () => { vivo = false; };
-  }, [open, proposta, pipelineItemId, form.contact_id]);
+  }, [open, proposta, pipelineItemId, form.contact_id, tentativa]);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -287,14 +296,20 @@ export default function ProposalFormDialog({
               >
                 <option value="" disabled>Escolha o atendimento</option>
                 {cardsAbertos.map(c => (
-                  <option key={c.id} value={c.id}>{[c.pipeline_name, c.stage_name].filter(Boolean).join(' · ')}</option>
+                  <option key={c.id} value={c.id}>{[c.pipeline_name, c.stage_name, c.created_at ? formatDateBR(c.created_at) : null].filter(Boolean).join(' · ') || 'Atendimento aberto'}</option>
                 ))}
               </Seletor>
             </div>
           )}
           {cardsAbertos?.length === 1 && (
             <p className="text-xs text-muted-foreground">
-              Atendimento: {[cardsAbertos[0].pipeline_name, cardsAbertos[0].stage_name].filter(Boolean).join(' · ')}
+              {[cardsAbertos[0].pipeline_name, cardsAbertos[0].stage_name].filter(Boolean).join(' · ') ? `Atendimento: ${[cardsAbertos[0].pipeline_name, cardsAbertos[0].stage_name].filter(Boolean).join(' · ')}` : 'Atendimento aberto'}
+            </p>
+          )}
+          {erroCards && (
+            <p className="text-xs text-destructive">
+              Não consegui carregar os atendimentos deste lead. Se salvar assim, a proposta fica com o atendimento mais recente.{' '}
+              <button type="button" className="underline" onClick={() => setTentativa(n => n + 1)}>Tentar de novo</button>
             </p>
           )}
 
@@ -367,7 +382,7 @@ export default function ProposalFormDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={saving || !form.property_id || !form.contact_id || !form.offered_value || (!proposta && perguntaAtendimento && !cardEscolhido)}>
+          <Button onClick={handleSave} disabled={saving || !form.property_id || !form.contact_id || !form.offered_value || (!proposta && (carregandoCards || (perguntaAtendimento && !cardEscolhido)))}>
             {saving ? 'Salvando...' : proposta ? 'Salvar' : 'Criar Rascunho'}
           </Button>
         </DialogFooter>

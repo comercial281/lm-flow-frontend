@@ -14,7 +14,11 @@ vi.mock('@/services/pipelines/pipelinesService', () => ({
 vi.mock('@/services/properties/propertiesService', () => ({
   propertiesService: { list: vi.fn().mockResolvedValue({ data: [] }) },
 }));
-vi.mock('@/components/visits/LeadCombobox', () => ({ LeadCombobox: () => <div data-testid="lead" /> }));
+vi.mock('@/components/visits/LeadCombobox', () => ({
+  LeadCombobox: (p: { onChange: (l: unknown) => void }) => (
+    <button type="button" onClick={() => p.onChange({ id: 'c2', name: 'Bia Teste', in_pipeline: true })}>trocar lead</button>
+  ),
+}));
 
 const lead = { id: 'c1', name: 'Ana Teste', in_pipeline: true };
 const imovel = { id: 'im1', title: 'Apto Lapa', code: 'AP0001' };
@@ -109,5 +113,48 @@ describe('ProposalFormDialog · tela Propostas pergunta o atendimento', () => {
 
     await waitFor(() => expect(s.create).toHaveBeenCalledTimes(1));
     expect(s.cards).not.toHaveBeenCalled();
+  });
+});
+
+describe('ProposalFormDialog · lista de atendimentos (correções)', () => {
+  const card = (id: string) => ({ id, pipeline_id: 'p', pipeline_name: 'Vendas', stage_id: 's', stage_name: 'Proposta', created_at: '2026-10-03T12:00:00Z' });
+
+  it('trocar o lead: bloqueia salvar até a lista do novo lead chegar e usa o card dele', async () => {
+    let resolveB: (v: unknown) => void = () => {};
+    s.cards.mockImplementation((id: string) => (id === 'c1'
+      ? Promise.resolve([card('iA')])
+      : new Promise(r => { resolveB = r; })));
+    abrir();
+    expect(await screen.findByText(/Atendimento: Vendas · Proposta/)).toBeInTheDocument();
+    await userEvent.type(screen.getAllByPlaceholderText('0,00')[0], '500000');
+
+    await userEvent.click(screen.getByRole('button', { name: 'trocar lead' }));
+    expect(screen.queryByText(/Atendimento: Vendas/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Criar Rascunho' })).toBeDisabled();
+
+    resolveB([card('iB')]);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Criar Rascunho' })).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', { name: 'Criar Rascunho' }));
+    await waitFor(() => expect(s.create).toHaveBeenCalledTimes(1));
+    expect(s.create.mock.calls[0][0]).toMatchObject({ contact_id: 'c2', metadata: { pipeline_item_id: 'iB' } });
+  });
+
+  it('falha na lista: avisa, deixa salvar sem ligação e permite tentar de novo', async () => {
+    s.cards.mockRejectedValueOnce(new Error('x')).mockResolvedValueOnce([card('i1'), { ...card('i2'), stage_name: 'Visita' }]);
+    abrir();
+    expect(await screen.findByText(/Não consegui carregar os atendimentos deste lead/)).toBeInTheDocument();
+    await userEvent.type(screen.getAllByPlaceholderText('0,00')[0], '500000');
+    expect(screen.getByRole('button', { name: 'Criar Rascunho' })).toBeEnabled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    expect(await screen.findByRole('combobox', { name: 'De qual atendimento é esta proposta?' })).toBeInTheDocument();
+    expect(screen.queryByText(/Não consegui carregar/)).toBeNull();
+    expect(screen.getByRole('option', { name: 'Vendas · Visita · 03/10/2026' })).toBeInTheDocument();
+  });
+
+  it('um card com nomes vazios: texto de reserva', async () => {
+    s.cards.mockResolvedValue([{ ...card('i1'), pipeline_name: null, stage_name: null }]);
+    abrir();
+    expect(await screen.findByText('Atendimento aberto')).toBeInTheDocument();
   });
 });
