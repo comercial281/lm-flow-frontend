@@ -1,7 +1,7 @@
 // Card do quadro do funil, MÍNIMO (spec funil §4.4, decisão 12 do Tony): o
-// selo quando fechado, o nome com a setinha ↗ (card completo em outra guia),
-// UM sinal de urgência, a foto do responsável e o WhatsApp. O resto mora no
-// card (janela ou página).
+// selo quando fechado, a foto do lead ao lado do nome com a setinha ↗ (card
+// completo em outra guia), UM sinal de urgência, o nome do responsável e o
+// WhatsApp. O resto mora no card (janela ou página).
 //
 // memo() com comparação SHALLOW padrão: toda prop de função/ref chega
 // estabilizada (useCallback) do quadro, e `podeArrastar`/`arquivado` são
@@ -11,7 +11,7 @@ import { memo, type DragEvent, type MouseEvent, type MutableRefObject, type Synt
 import { toast } from 'sonner';
 import {
   AlarmClock, Archive, ArchiveRestore, ArrowUpRight, CalendarClock, Clock, ExternalLink, Link2, Maximize2,
-  MessageCircle, MoreVertical, Trash2,
+  MessageCircle, MoreVertical, Trash2, UserRound,
 } from 'lucide-react';
 import {
   Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -81,8 +81,10 @@ function PipelineItemCardComponent({
   // `item.assignee` (topo) já vem do servidor com o dono certo — da conversa ou
   // o default_assignee do contato —, com a foto do WhatsApp dele quando há.
   const dono = item.assignee ?? item.conversation?.assignee;
+  const contato = contatoDoCard(item);
+  const fotoDoLead = item.contact?.avatar_url || item.conversation?.contact?.avatar_url || undefined;
   const link = linkDoCardCompleto(item.pipeline_id, item.id);
-  const temWhatsApp = Boolean(contatoDoCard(item)?.phone_number || conversaDoCard(item));
+  const temWhatsApp = Boolean(contato?.phone_number || conversaDoCard(item));
 
   const copiarLink = async () => {
     try {
@@ -106,7 +108,19 @@ function PipelineItemCardComponent({
       }}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className="shrink-0">
+          {fotoDoLead ? (
+            <img src={fotoDoLead} alt="" className="h-9 w-9 rounded-full bg-muted object-cover lm-redact" onError={fotoQuebrada} />
+          ) : null}
+          <span
+            className="h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white"
+            style={{ backgroundColor: getContactColor(nome), display: fotoDoLead ? 'none' : 'flex' }}
+            aria-hidden="true"
+          >
+            {nome?.[0]?.toUpperCase() || '?'}
+          </span>
+        </div>
+        <div className="flex min-h-9 min-w-0 flex-1 flex-col justify-center space-y-1">
           <SeloSituacao status={situacaoDe(item)} detalhe={detalheDaSituacao(item)} />
           <div className="flex min-w-0 items-center gap-1">
             <h4 className="truncate text-sm font-semibold text-foreground lm-redact" title={nome}>{nome}</h4>
@@ -178,18 +192,9 @@ function PipelineItemCardComponent({
 
       <div className="mt-2 flex items-center justify-between gap-2">
         {dono ? (
-          <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground" title={`Responsável: ${dono.name}`}>
-            {dono.avatar_url ? (
-              <img src={dono.avatar_url} alt="" className="h-6 w-6 shrink-0 rounded-full bg-muted object-cover" onError={fotoQuebrada} />
-            ) : null}
-            <span
-              className="h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-              style={{ backgroundColor: getContactColor(dono.name), display: dono.avatar_url ? 'none' : 'flex' }}
-              aria-hidden="true"
-            >
-              {dono.name?.[0]?.toUpperCase() || '?'}
-            </span>
-            <span className="max-w-24 truncate">{dono.name?.split(' ')[0]}</span>
+          <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground" title={`Responsável: ${dono.name}`}>
+            <UserRound className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">{dono.name}</span>
           </span>
         ) : (
           <span className="text-xs text-muted-foreground">Sem responsável</span>

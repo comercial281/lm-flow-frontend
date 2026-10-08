@@ -73,9 +73,22 @@ describe('card do quadro mínimo (spec funil §4.4)', () => {
     expect(screen.getByText('Perdido')).toHaveAttribute('data-situacao', 'lost');
   });
 
-  it('responsável pela foto/inicial com o nome no title; WhatsApp abre a conversa sem abrir o card', async () => {
-    const { onOpenConversation, onOpenItem } = montar();
-    expect(screen.getByTitle('Responsável: Ana Paula')).toBeInTheDocument();
+  it('foto do lead ao lado do nome', () => {
+    montar({ item: item({ contact: { id: 'c1', name: 'Maria Souza', avatar_url: 'https://exemplo.com.br/maria.jpg' } }) });
+    expect(document.querySelector('img[src="https://exemplo.com.br/maria.jpg"]')).not.toBeNull();
+  });
+
+  it('sem foto do lead, aparece a inicial do nome dele', () => {
+    montar();
+    expect(screen.getByText('M')).toBeInTheDocument();
+  });
+
+  it('embaixo só o nome do responsável, sem a foto dele; WhatsApp abre a conversa sem abrir o card', async () => {
+    const { onOpenConversation, onOpenItem } = montar({
+      item: item({ assignee: { id: 'u1', name: 'Ana Paula', avatar_url: 'https://exemplo.com.br/ana.jpg' } }),
+    });
+    expect(screen.getByTitle('Responsável: Ana Paula')).toHaveTextContent('Ana Paula');
+    expect(document.querySelector('img[src="https://exemplo.com.br/ana.jpg"]')).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Abrir conversa no WhatsApp' }));
     expect(onOpenConversation).toHaveBeenCalledWith(expect.objectContaining({ id: 'i1' }));
     expect(onOpenItem).not.toHaveBeenCalled();
