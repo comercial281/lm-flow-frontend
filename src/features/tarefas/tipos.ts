@@ -8,6 +8,15 @@ export interface Pessoa {
   name: string;
 }
 
+export type Prioridade = 'low' | 'medium' | 'high' | 'urgent';
+
+/** Imóvel ligado à tarefa (janela "Agendar tarefa", 08/10/2026). */
+export interface ImovelDaTarefa {
+  id: string;
+  title: string;
+  code: string;
+}
+
 export interface TarefaAtividade {
   kind: 'task';
   id: string;
@@ -17,6 +26,9 @@ export interface TarefaAtividade {
   /** Id da opção da lista `task_categories`; null em tarefa antiga que só tem o nome. */
   category_option_id?: string | null;
   due_at: string | null;
+  duration_minutes?: number | null;
+  priority?: Prioridade;
+  property?: ImovelDaTarefa | null;
   status: 'pending' | 'completed' | 'cancelled' | 'overdue';
   overdue: boolean;
   completed_at?: string | null;
@@ -28,6 +40,25 @@ export interface TarefaAtividade {
   created_by_id: string;
   can_edit: boolean;
   can_delete: boolean;
+}
+
+/** Linha da agenda do dia (`?day=`): tarefa ou visita, aberta ou feita. */
+export interface ItemDaAgenda {
+  kind: 'task' | 'visit';
+  id: string;
+  title: string;
+  due_at: string | null;
+  duration_minutes?: number | null;
+  status: string;
+  contact: Pessoa | null;
+}
+
+/** `GET /tasks/context`: o que a janela mostra antes de salvar. */
+export interface ContextoDaTarefa {
+  pipeline_item_id: string;
+  pipeline_name: string | null;
+  contact: Pessoa | null;
+  owner: Pessoa | null;
 }
 
 export interface RespostaDeAtividades {
@@ -42,6 +73,8 @@ export interface ParametrosDaLista {
   category_option_id?: string;
   q?: string;
   pipeline_item_ids?: string[];
+  /** AAAA-MM-DD: tudo daquele dia, aberto e feito (troca o balde). */
+  day?: string;
   page?: number;
   per_page?: number;
 }
@@ -55,4 +88,10 @@ export interface DadosDaTarefa {
   /** Id da categoria; '' limpa. Omitir mantém. */
   category_option_id?: string;
   assigned_to_id?: string;
+  priority?: Prioridade;
+  duration_minutes?: number;
+  /** Id do imóvel; '' tira. Omitir mantém. */
+  property_id?: string;
+  /** Só no criar: nasce concluída. */
+  completed?: boolean;
 }

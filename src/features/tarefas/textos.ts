@@ -13,7 +13,32 @@ export const BALDES: { chave: Balde; rotulo: string }[] = [
 export const TEXTOS_DE_TAREFAS = {
   titulo: 'Tarefas',
   novaTarefa: 'Nova tarefa',
+  agendarTarefa: 'Agendar tarefa',
   editarTarefa: 'Editar tarefa',
+  tipoDeTarefa: 'Tipo de tarefa',
+  tituloDaTarefa: 'Título da tarefa',
+  prioridade: 'Prioridade',
+  duracao: 'Duração',
+  corretorResponsavel: 'Corretor responsável',
+  vincular: 'Vincular a tarefa',
+  contato: 'Contato',
+  imovel: 'Imóvel',
+  atendimento: 'Atendimento',
+  tirarImovel: 'Tirar o imóvel',
+  trocarImovel: 'Trocar imóvel',
+  prioridadeAlta: 'Prioridade alta',
+  buscarImovel: 'Buscar por título ou código',
+  nenhumImovel: 'Nenhum imóvel encontrado.',
+  observacao: 'Observação',
+  observacaoDica: 'Só a equipe vê. Nunca vai para o lead.',
+  marcarConcluida: 'Marcar como concluída',
+  semTarefasNoDia: 'Sem tarefas para o dia',
+  agendaDe: 'Agenda de',
+  agendaDaEquipe: 'Agenda da equipe',
+  diaAnterior: 'Dia anterior',
+  proximoDia: 'Próximo dia',
+  visita: 'Visita',
+  semCategoriasCadastradas: 'Nenhuma categoria. Cadastre em Minha imobiliária › Listas.',
   categoria: 'Categoria',
   semCategoria: 'Sem categoria',
   tituloDoCampo: 'O que fazer',
@@ -54,3 +79,12 @@ export const TEXTOS_DE_TAREFAS = {
   lead: 'Lead',
   buscarLead: 'Buscar por nome ou telefone',
 } as const;
+
+export const PRIORIDADES: { valor: 'low' | 'medium' | 'high'; rotulo: string }[] = [
+  { valor: 'low', rotulo: 'Baixa' },
+  { valor: 'medium', rotulo: 'Média' },
+  { valor: 'high', rotulo: 'Alta' },
+];
+
+/** Duração da tarefa, em minutos (o servidor aceita de 15 a 480). */
+export const DURACOES_DA_TAREFA = [15, 30, 45, 60, 90, 120, 180, 240] as const;

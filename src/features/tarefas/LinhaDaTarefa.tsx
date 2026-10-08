@@ -38,6 +38,8 @@ export default function LinhaDaTarefa({ tarefa, aoConcluir, aoReabrir, aoEditar,
           {[
             tarefa.category,
             tarefa.due_at ? quandoAcontece(tarefa.due_at) : null,
+            tarefa.priority === 'high' || tarefa.priority === 'urgent' ? T.prioridadeAlta : null,
+            tarefa.property?.code,
             mostrarLead ? tarefa.contact?.name : null,
             tarefa.assignee?.name,
           ].filter(Boolean).join(' · ')}

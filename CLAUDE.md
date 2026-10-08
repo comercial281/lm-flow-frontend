@@ -4116,6 +4116,19 @@ Spec: `LM FLOW/specs/2026-10-07-frente-2-tarefas-e-atividades-design.md`. Plano:
 
 Não reabrir sem o dono pedir.
 
+### Janela "Agendar tarefa" (08/10/2026 — modelo pedido pelo dono, a partir do sistema que a Nova 27 usava)
+
+Spec: `LM FLOW/specs/2026-10-08-janela-da-tarefa-design.md`. Arquivos: `features/tarefas/JanelaDaTarefa.tsx`, `AgendaDoDia.tsx`, `iconeDaCategoria.ts`.
+
+- **Uma janela, larga, em duas colunas** (no celular, uma coluna e a agenda some). Título "Agendar tarefa" ao criar, "Editar tarefa" ao editar. Botão **Salvar** nos dois.
+- **Tipo de tarefa em botões com ícone**, um por categoria ativa. O ícone sai do NOME (a lista não guarda ícone): follow/retorno → pessoa, oferta → megafone, visita → calendário, imóvel/atualiza → casa, liga → telefone, resto → etiqueta. Ao criar, o título nasce com o nome do tipo padrão; trocar o tipo troca o título só enquanto ele ainda é o nome automático.
+- **Prioridade** Baixa/Média/Alta (coluna `priority` que já existia); **Hora** de 15 em 15 min; **Duração** de 15 min a 4 h (padrão 1 h, em `metadata.duration_minutes`).
+- **Corretor responsável:** gestor escolhe na lista, já vindo com o responsável do lead (`GET /tasks/context`); só vai pro servidor se mudar. Corretor vê o próprio nome, travado.
+- **Vincular:** lead e atendimento (card + nome do funil) vêm do card; pela tela Tarefas, busca o lead e avisa na hora se ele não está no funil. **Um** imóvel por tarefa (`metadata.property_id`), buscado por título ou código; a lixeira tira. A linha da tarefa mostra o código do imóvel e "Prioridade alta".
+- **Agenda do dia (coluna direita):** tarefas e visitas do responsável no dia (`GET /activities?day=`), abertas e feitas, por horário. Mudar a data leva a agenda junto; as setas só mudam o dia que se vê.
+- **Marcar como concluída:** ao criar, nasce concluída (`completed: true`); ao editar, salva e conclui.
+- **Fora, de propósito (decisão do dono):** colaboradores (mexe em quem vê e em quem recebe aviso) e vários contatos/atendimentos por tarefa (tarefa continua presa a um card).
+
 ## Base de design e linguagem (desde 30/09/2026, Fase 3) — não reabrir sem o dono pedir
 
 Spec e plano: `LM FLOW/specs/2026-09-29-fase-3-base-de-design-e-linguagem-design.md` e `LM FLOW/plans/2026-09-30-fase-3-base-de-design.md` (pasta do Tony, fora deste repo).
