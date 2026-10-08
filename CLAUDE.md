@@ -7781,3 +7781,80 @@ Armadilhas:
     P3-T5) e recarrega o Histórico em `situacao.aoMudar`. A janela do card no quadro fecha
     dentro de um `startTransition` (`fecharJanelaDoCard` em `PipelineKanban.tsx`; transição
     do react-router 7: corrige o refetch e a reabertura do card). O painel da Meta é chaveado pela situação, na janela e na Ficha.
+
+## Histórico novo do lead (07/10/2026)
+
+Entrega 5 do funil (spec `LM FLOW/specs/2026-10-07-funil-situacao-e-card-completo-design.md` §6).
+Servidor: `GET /api/v1/contacts/:id/timeline` (lm-flow, `Leads::Timeline`; envelope da casa,
+`data: { events, next_before }`). Texto da tela em pt-BR literal, sem chave de i18n. Tela:
+`src/features/cardDoLead/historico/HistoricoDoLead.tsx` + `useVersaoDoHistorico.ts`,
+serviço `src/services/contacts/leadTimelineService.ts`.
+
+O que aparece na tela:
+
+- **Cada linha é um bloquinho**: título, linha de detalhe e "por Fulano · Hoje às 14:32"
+  (`quandoAcontece`). O texto vem pronto do servidor, em português, sem "chave: valor".
+- **Perdido em vermelho, Ganho em verde**, aviso (repasse e prazo da roleta, visita
+  cancelada, proposta recusada) com o ponto âmbar. Só tokens (`destructive`, `lm-success`,
+  `lm-star`); o colorido pelo prefixo do id (`corDoEvento`) morreu.
+- **Filtros em botões** (`EtiquetasDeEscolha`): Tudo · Atividades · Observações · Rodízios ·
+  Alterações. Os passos da roleta saíram do Tudo, ficam só em Rodízios — no Tudo, uma linha:
+  "Ana assumiu o lead · Roleta X". **As mensagens saíram do Histórico** (estão inteiras na
+  aba Conversa).
+- **O Histórico é do lead, não do card**: junta todos os funis; evento de outro funil termina
+  com "funil <nome>".
+- **"Carregar mais"** no fim (antes cortava em 100). Erro mostra "Não deu pra carregar" com
+  Tentar de novo; vazio fala do filtro escolhido.
+- **Janela do card**: Histórico compacto, sem o filtro Observações e sem linha de nota; as
+  Observações continuam na caixa ao lado. O modo compacto pula sozinho até 3 páginas que só
+  tenham nota, para não ficar vazio.
+- **Página do card completo**: caixa de escrever observação no topo do Histórico e Observações
+  como filtro (o modelo "Comentários" do Praedium).
+- **Novas linhas**: troca de etapa do card que chegou pelo WhatsApp (antes não aparecia),
+  Ganho/Perdido/Reaberto com motivo e comentário, Arquivado/Desarquivado, IA ligada/desligada,
+  troca de responsável pela ficha, tarefa concluída, proposta enviada/aceita/recusada,
+  "Follow-up parado" (o título vem do servidor).
+- **Tarefa criada por automação** mostra "por <criador da regra>".
+
+Abas (achado 16): a **página** tem Ficha · Conversa · Visitas e propostas · Origem (sem aba
+Tarefas: tarefas são um bloco da Ficha). A **janela** tem Detalhes · Conversa · Tarefas ·
+Visitas e propostas · Origem.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **Na janela, Histórico e Observações continuam separados** (decisão de 02/10). **Na página,
+  as Observações aparecem também como filtro do Histórico**, com a caixa de escrever no topo.
+- **Mensagens não entram no Histórico.**
+- **Os passos da roleta moram em Rodízios**; no Tudo, só o desfecho.
+- **Ganho por Concluído mostra duas linhas no Tudo**: "Mudou de etapa · X → Concluído" e
+  "Ganho". Mantido de propósito (a etapa mudou e a situação mudou).
+
+Armadilhas:
+
+1. **Os filtros não são abas.** Um nível de abas por tela, e a página já tem as dela.
+2. **`EtiquetasDeEscolha` é de várias escolhas**; aqui vira escolha única no `aoMudar`
+   (clicar no ligado volta pro Tudo).
+3. **O `category` de cada evento é a família dele**, e o Tudo (`resumo`) junta famílias:
+   "Mudou de etapa" vem com `alteracao` e aparece no Tudo. A tela pede o filtro ao servidor;
+   nunca filtrar pelo `category` do evento.
+4. **Recarga**: a chave é `card.historico.versao` do `useCardDoLead` (`useVersaoDoHistorico`):
+   muda com etapa, situação e responsável do card e com `card.historico.recarregar()` (roleta,
+   Tirar da roleta, oferta aceita, visita, correção de contato, mover etapa). O hook usa o
+   `item` novo enquanto `itemDaSituacao` ainda é o card anterior (evita um render com a chave
+   velha ao trocar de card). Quem mexe no card de outro jeito e quer o Histórico em dia chama
+   o recarregar. Janela: `LeadDetailsTab` (compacto); página:
+   `features/cardDoLead/pagina/ColunaDoHistorico.tsx` (completo).
+5. **Elo Tarefas → Histórico**: `useVersaoDoHistorico` escuta `EVENTO_TAREFAS_MUDARAM`, então
+   criar/concluir/reabrir tarefa recarrega o Histórico. Arquivar/desarquivar na página e
+   trocar o responsável também recarregam (o item volta com o mesmo id e situação, e o
+   `assignee` do card não muda por dentro).
+6. **Reabrir tarefa faz "Tarefa concluída" sumir**: a fonte lê o estado atual da tarefa, e
+   não existe linha "Tarefa reaberta". Não é bug.
+7. **`next_before` vem em UTC com "Z" e microssegundos**: passar cru no próximo `before` (um
+   "+" de fuso viraria espaço no endereço).
+8. **O `/contacts/:id/events` antigo e o `contactEventsService.getContactEvents` ficaram sem
+   uso no card.** O `contactEventsService` só sobrevive no `src/hooks/useContactEvents.ts`
+   (código morto, fica para uma limpeza própria); o servidor mantém o endpoint até lá.
+9. **Arquivar, IA ligada/desligada e troca de responsável pela ficha moram no log de ações**
+   (12 meses de retenção): essas linhas somem do Histórico depois de um ano. Etapa, situação,
+   nota, tarefa, visita, proposta e roleta ficam para sempre.
