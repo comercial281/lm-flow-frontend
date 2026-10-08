@@ -60,7 +60,7 @@ export default function MarcarPerdidoDialog({ aberto, nomeDoLead, salvando, aoFe
           </div>
         ) : motivos.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Nenhum motivo de perda ativo. Um gestor cadastra em Configurações › Listas.
+            Nenhum motivo de perda ativo. Um gestor cadastra em Minha imobiliária › Listas.
           </p>
         ) : (
           <div className="space-y-4">

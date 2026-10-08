@@ -57,6 +57,7 @@ describe('MarcarPerdidoDialog', () => {
     vi.mocked(listOptionsService.list).mockResolvedValue([motivo('m3', 'Arquivado', false)] as never);
     abrir();
     expect(await screen.findByText(/Nenhum motivo de perda ativo/)).toBeInTheDocument();
+    expect(screen.getByText(/Minha imobiliária › Listas/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Marcar como perdido' })).toBeDisabled();
   });
 

@@ -4403,10 +4403,7 @@ destino passaram a ler o filtro do endereço.
 - **Imóveis: escolher um Status no menu tira o filtro do link** (o link manda
   o próprio status; os dois juntos mostrariam "Vendido" no menu e ativos na
   lista).
-- **Ganho/Perdido seguem o `final` que o servidor manda em cada etapa**
-  (`etapaFinal.ts`). O nome só vale com servidor antigo, e nome ambíguo
-  ("Venda perdida") vira perda, como no servidor. A etapa marcada como
-  Concluída/Cancelada (`stage_type`) vem antes de uma que só bate pelo nome.
+- Ganho/Perdido viraram a situação do card (ver "## Situação do card: Ganho, Perdido e Reabrir (07/10/2026)", no fim); o `etapaFinal.ts` saiu.
 
 Armadilha: **`stage_type` é palavra na API desde 2026-09-30** (era número). Tipo
 novo que o descreva usa `string`.
@@ -7583,3 +7580,51 @@ Armadilhas:
 Pendente conhecido:
 
 - **Categorias de tarefa**: a tela Tarefas ainda guarda a categoria pelo nome; até ela ler as Listas da casa, editar essa lista não muda as tarefas.
+
+## Situação do card: Ganho, Perdido e Reabrir (07/10/2026)
+
+Pedido da call com a Nova 27 (Cleverson e Natália, 07/10): no funil deles, que vai de
+Lead a Proposta, os botões Ganho e Perdido ficavam apagados, porque Ganho e Perdido
+eram COLUNAS. Spec: `LM FLOW/specs/2026-10-07-funil-situacao-e-card-completo-design.md` §3.
+
+O que aparece na tela:
+
+- **Rodapé do card:** card aberto mostra **Ganho | Perdido** sempre (não depende mais de
+  coluna Venda/Desqualificado). Card fechado mostra o selo **GANHO** ou **PERDIDO** e
+  **Reabrir**.
+- **Perdido abre "Por que este lead foi perdido?"**: motivo obrigatório da lista viva
+  (Minha imobiliária › Listas › Motivos de perda, só os ativos) e um comentário livre. O
+  servidor manda os dois para Observações e Histórico.
+- **Selo junto do nome** na janela e no card do quadro; ao passar o mouse, a data e o motivo.
+- **Card fechado não muda de etapa:** a Etapa da janela trava com a frase "Lead fechado não
+  muda de etapa. Reabra para mexer." e o card não arrasta no quadro.
+- **Ganho leva o card para a coluna Concluído** (a de tipo "Concluída"), e escolher Concluído
+  na Etapa marca Ganho. Reabrir um Ganho devolve o card para a coluna de antes. Perdido fica
+  na coluna. Funil sem Concluído: o card fica onde está. A Etapa e o quadro acompanham.
+- **Botões da Meta** (janela do card e lateral da conversa) continuam; Venda e Desqualificado
+  vão uma vez só por lead (pelo botão ou pela situação): já enviados, travam com "enviado".
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- Aberto, Ganho e Perdido são a situação do card, separada da etapa (como no Praedium).
+- Perdido pede motivo (obrigatório, da lista) e comentário (livre). Ganho não pergunta nada.
+- Reabrir volta para Abertos na mesma etapa — e, se era Ganho, para a coluna de antes de
+  Concluído (ajuste de 08/10).
+- Ganho ↔ Concluído e a Meta uma vez por lead: ajustes do dono de 08/10 (topo da spec).
+
+Armadilhas:
+
+1. Regras e peças em `src/features/pipelines/situacao/` (`situacao.ts`, `SeloSituacao({ status })`,
+   `MarcarPerdidoDialog`, `useSituacaoDoCard`) e o rodapé `CardResultFooter({ item, onMudou })`,
+   que grava sozinho e abre a janela do motivo. A Parte 4 (página do card) usa os mesmos.
+2. **Uma ação no ar ignora a próxima** (`useSituacaoDoCard`): clique duplo não grava duas
+   linhas de histórico nem manda dois eventos à Meta.
+3. A recusa da rota de situação chega no envelope da casa (`error.message`, frase pronta);
+   `mensagemDaRecusa` mostra a frase dela no aviso.
+4. `status` é opcional no tipo: o quadro pinta primeiro o payload guardado no navegador,
+   que pode ser de antes desta entrega. Sem o campo, o card conta como aberto (`situacaoDe`).
+5. `etapaFinal.ts` saiu, e o `final` da etapa saiu do tipo. Nada mais decide Ganho/Perdido
+   pelo nome da coluna: a coluna Concluído é a de `stage_type === 'completed'` (`ehColunaDeGanho`).
+6. O card que a rota de situação devolve já vem na coluna nova: quem recebe (`aoMudarSituacao`,
+   `handleItemStatusChanged`) troca a Etapa e a coluna pelo `stage_id` dele.
+7. O "enviado" dos botões da Meta vem do servidor (`events[].once` + `sent_at`, `Capi::OncePerLead`).
