@@ -21,8 +21,8 @@ const MODOS: { valor: IntentQuestionMode; rotulo: string }[] = [
   { valor: 'never', rotulo: 'Não pergunta, deduz' },
 ];
 const FORA: { valor: ForaDosCaminhos; rotulo: string }[] = [
+  { valor: 'passar', rotulo: 'Passar pro destino (roleta ou corretor)' },
   { valor: 'atender', rotulo: 'Atender mesmo assim' },
-  { valor: 'passar', rotulo: 'Passar pro corretor' },
   { valor: 'encerrar', rotulo: 'Encerrar com educação' },
 ];
 const SEM_PERGUNTA = 'Com um caminho só ela não pergunta. Escreva aqui se quiser que ela abra com uma pergunta.';
@@ -53,7 +53,7 @@ export default function Intencao({ agent, gravar }: PropsDaPagina) {
   const caminhos: CaminhoDaIntencao[] = vars.caminhos_intencao?.length ? vars.caminhos_intencao : (agent.intent_paths ?? []);
   const marcados = caminhos.filter((c) => c.ativo !== false).length;
   const jaNoPadrao = !!agent.intent_paths_padrao && iguais(caminhos, agent.intent_paths_padrao);
-  const fora = vars.fora_dos_caminhos ?? 'atender';
+  const fora = vars.fora_dos_caminhos ?? agent.fora_dos_caminhos_padrao ?? 'passar';
 
   const gravarCaminhos = (lista: CaminhoDaIntencao[] | undefined) =>
     gravar({ playbook: { ...playbook, vars: { ...vars, caminhos_intencao: lista } } }, ['playbook.vars.caminhos_intencao']);
@@ -114,9 +114,9 @@ export default function Intencao({ agent, gravar }: PropsDaPagina) {
       </Secao>
 
       {marcados > 0 && (
-      <Secao titulo="Lead que não cabe em nenhum caminho" descricao="Quando ele deixa claro que busca outra coisa. Ex.: a incorporadora só quer quem vai morar e chega um investidor.">
+      <Secao titulo="Lead que não cabe em nenhum caminho" descricao="Quando ele deixa claro que busca outra coisa. Ex.: a incorporadora só quer quem vai morar e chega um investidor. O padrão é passar pro destino da IA (roleta ou corretor).">
         <BotoesDeEscolha rotulo="O que ela faz" valor={fora} opcoes={FORA}
-          aoEscolher={(v) => void gravar({ playbook: { ...playbook, vars: { ...vars, fora_dos_caminhos: v === 'atender' ? undefined : v } } }, ['playbook.vars.fora_dos_caminhos'])} />
+          aoEscolher={(v) => void gravar({ playbook: { ...playbook, vars: { ...vars, fora_dos_caminhos: v } } }, ['playbook.vars.fora_dos_caminhos'])} />
       </Secao>
       )}
     </Secoes>

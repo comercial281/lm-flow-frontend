@@ -107,10 +107,16 @@ describe('Intenção', () => {
     expect(gravar.mock.calls[0][0]).toEqual({ playbook: { vars: { caminhos_intencao: padrao } } });
   });
 
-  it('lead fora dos caminhos grava a subchave; "Atender mesmo assim" apaga', async () => {
+  it('lead fora dos caminhos grava a subchave; "Atender mesmo assim" também grava explícito', async () => {
     const gravar = abrir(agente({ playbook: { vars: { fora_dos_caminhos: 'encerrar' } } }));
     await userEvent.click(screen.getByRole('radio', { name: 'Atender mesmo assim' }));
-    expect(gravar).toHaveBeenCalledWith({ playbook: { vars: { fora_dos_caminhos: undefined } } }, ['playbook.vars.fora_dos_caminhos']);
+    expect(gravar).toHaveBeenCalledWith({ playbook: { vars: { fora_dos_caminhos: 'atender' } } }, ['playbook.vars.fora_dos_caminhos']);
+  });
+
+  it('sem nada gravado, abre com a opção que o servidor diz ser o padrão', () => {
+    abrir(agente({ fora_dos_caminhos_padrao: 'passar' }));
+    expect(screen.getByRole('radio', { name: 'Passar pro destino (roleta ou corretor)' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Atender mesmo assim' })).not.toBeChecked();
   });
 
   it('caminho novo com o texto inicial não pode ser marcado até escrever', () => {

@@ -181,6 +181,8 @@ export interface SalesAgent {
   intent_paths_padrao?: CaminhoDaIntencao[];
   /** A pergunta gerada pelos caminhos marcados (null com menos de dois). */
   intent_question_default?: string | null;
+  /** O que vale em "lead que não cabe em nenhum caminho" quando nada foi gravado: 'atender' na lista de fábrica, 'passar' na que a imobiliária mexeu. */
+  fora_dos_caminhos_padrao?: ForaDosCaminhos;
   opening_image_url: string | null;
   opening_audio_url: string | null;
   openings: SalesAgentOpening[];

@@ -7946,6 +7946,6 @@ O Grupo Habitar escreveu a pergunta dele ("Você já mora na região do Castelo?
 - **Sondando não é caixinha** (é o "ainda não sabe", sempre ligado). Não reabrir sem o dono pedir.
 - **A pergunta escrita chega em todas as entradas**, inclusive no lead que fala primeiro, e sai ao pé da letra.
 - **Primeiro imóvel** fala de compor renda do casal (pedido do dono: casal entra muito nesse caminho).
-- **Lead que não cabe em nenhum caminho:** Atender mesmo assim (padrão) · Passar pro corretor · Encerrar com educação.
+- **Lead que não cabe em nenhum caminho:** Passar pro destino (padrão quando a imobiliária mexeu nos caminhos) · Atender mesmo assim · Encerrar com educação.
 - **Padrão pelo tipo de venda** (revenda: Moradia + Trocar de imóvel; locação: Moradia; resto: Moradia + Investimento) entra sozinho quando o tipo de venda muda e ninguém mexeu nos caminhos; "Voltar ao padrão" grava o do tipo.
 - Fora daqui: primeira mensagem literal (entrega seguinte).
