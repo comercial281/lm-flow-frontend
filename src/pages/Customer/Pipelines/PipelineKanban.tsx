@@ -23,8 +23,7 @@ import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import AvisoCardForaDaAba from './AvisoCardForaDaAba';
 import { useCardNoEndereco } from './useCardNoEndereco';
-import {
-} from './pipelineItemHelpers';
+import { podeArrastarNaAba } from './quadro/enderecoDoQuadro';
 import { useBoardDrag } from './quadro/useBoardDrag';
 import { usePipelineFilters } from './quadro/usePipelineFilters';
 import PainelDeFiltrosDoFunil from './quadro/PainelDeFiltrosDoFunil';
@@ -44,12 +43,6 @@ const EditStageModal = lazyWithRetry(() => import('@/components/pipelines/EditSt
 const DeleteStageModal = lazyWithRetry(() => import('@/components/pipelines/DeleteStageModal'));
 const DeletePipelineModal = lazyWithRetry(() => import('@/components/pipelines/DeletePipelineModal'));
 const ReorderStagesModal = lazyWithRetry(() => import('@/components/pipelines/ReorderStagesModal'));
-const ScheduleActionModal = lazyWithRetry(() =>
-  import('@/components/scheduledActions').then(m => ({ default: m.ScheduleActionModal })),
-);
-const NotesHistoryModal = lazyWithRetry(() =>
-  import('@/components/pipelines/NotesHistoryModal').then(m => ({ default: m.NotesHistoryModal })),
-);
 
 export default function PipelineKanban() {
   const { t } = useLanguage('pipelines');
@@ -107,20 +100,6 @@ export default function PipelineKanban() {
   const [showReorderStagesModal, setShowReorderStagesModal] = useState(false);
   const [isDeletingPipeline, setIsDeletingPipeline] = useState(false);
   const [isReorderingStages, setIsReorderingStages] = useState(false);
-  const [scheduleActionOpen, setScheduleActionOpen] = useState(false);
-  const [selectedConversationForSchedule, setSelectedConversationForSchedule] =
-    useState<PipelineItem | null>(null);
-  const scheduleActionContactId =
-    selectedConversationForSchedule?.conversation?.contact?.id ??
-    selectedConversationForSchedule?.contact?.id;
-
-  // Notes modal state
-  const [notesModalOpen, setNotesModalOpen] = useState(false);
-  const [selectedContactForNotes, setSelectedContactForNotes] = useState<{
-    id: string;
-    name?: string;
-  } | null>(null);
-
   const [disparoModalOpen, setDisparoModalOpen] = useState(false);
 
   // Modo de visualização do funil: quadro (Kanban) ou lista (todos os leads,
@@ -444,6 +423,23 @@ export default function PipelineKanban() {
     }
   }, [pipelineId, removeItemFromBoardLocal, loadPipelineData]);
 
+  // A aba decide se o card arrasta (Ganhos, Perdidos e Arquivados não).
+  const podeArrastarCard = useCallback((item: PipelineItem) => podeArrastarNaAba(aba, item), [aba]);
+
+  // Aba Arquivados: Desarquivar devolve o card ao quadro (some desta aba).
+  const handleUnarchiveItem = useCallback(async (item: PipelineItem) => {
+    if (!pipelineId) return;
+    removeItemFromBoardLocal(item.id);
+    try {
+      await pipelinesService.unarchiveItem(pipelineId, item.id);
+      toast.success('Lead desarquivado');
+    } catch {
+      toast.error('Erro ao desarquivar');
+    } finally {
+      void loadPipelineData(true);
+    }
+  }, [pipelineId, removeItemFromBoardLocal, loadPipelineData]);
+
   const handleConfirmRemoveItem = async () => {
     if (!itemToRemove || !pipelineId) return;
 
@@ -469,21 +465,6 @@ export default function PipelineKanban() {
     abrirCard(item);
     abrirCardNoEndereco(String(item.id));
   }, [abrirCard, abrirCardNoEndereco]);
-
-  // Ações do menu do card (extraídas do JSX inline pra referência estável — useCallback).
-  const handleOpenScheduleAction = useCallback((item: PipelineItem) => {
-    setSelectedConversationForSchedule(item);
-    setScheduleActionOpen(true);
-  }, []);
-
-  const handleOpenNotesForItem = useCallback((item: PipelineItem) => {
-    const contactId = item.contact?.id ?? item.conversation?.contact?.id;
-    const contactName = item.contact?.name ?? item.conversation?.contact?.name;
-    if (contactId) {
-      setSelectedContactForNotes({ id: contactId, name: contactName });
-      setNotesModalOpen(true);
-    }
-  }, []);
 
   // Move otimista do card pra outra etapa, SEM reload (fluido igual o arrastar).
   // Usado pelas ações do card no modal ("Mover para coluna", "Ganho/Perdido")
@@ -744,8 +725,9 @@ export default function PipelineKanban() {
                   onOpenItem={handleEditItem}
                   onArchive={handleArchiveItem}
                   onRemove={handleRemoveItem}
-                  onScheduleAction={handleOpenScheduleAction}
-                  onNotesClick={handleOpenNotesForItem}
+                  podeArrastar={podeArrastarCard}
+                  arquivado={aba === 'arquivados'}
+                  onUnarchive={handleUnarchiveItem}
                   onOpenConversation={openLeadConversation}
                   openingConversation={openingConversation}
                   onEditStage={handleEditStage}
@@ -933,35 +915,6 @@ export default function PipelineKanban() {
           loading={isReorderingStages}
         />
       </Suspense>
-
-      {/* Schedule Action Modal */}
-      {selectedConversationForSchedule && scheduleActionContactId && (
-        <Suspense fallback={null}>
-          <ScheduleActionModal
-            open={scheduleActionOpen}
-            onClose={() => {
-              setScheduleActionOpen(false);
-              setSelectedConversationForSchedule(null);
-            }}
-            contactId={scheduleActionContactId}
-          />
-        </Suspense>
-      )}
-
-      {/* Notes History Modal */}
-      {selectedContactForNotes && (
-        <Suspense fallback={null}>
-          <NotesHistoryModal
-            isOpen={notesModalOpen}
-            contactId={selectedContactForNotes.id}
-            contactName={selectedContactForNotes.name}
-            onClose={() => {
-              setNotesModalOpen(false);
-              setSelectedContactForNotes(null);
-            }}
-          />
-        </Suspense>
-      )}
     </div>
   );
 }

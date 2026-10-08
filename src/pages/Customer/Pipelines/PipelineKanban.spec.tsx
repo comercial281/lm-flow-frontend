@@ -237,7 +237,7 @@ describe('quadro do funil · o que continua igual', () => {
   it('o botão WhatsApp do card abre a conversa daquele lead', async () => {
     montar();
     await screen.findByText('Maria Souza');
-    await userEvent.click(within(cardDe('Maria Souza')).getByRole('button', { name: 'WhatsApp' }));
+    await userEvent.click(within(cardDe('Maria Souza')).getByRole('button', { name: 'Abrir conversa no WhatsApp' }));
     expect(mocks.abrirConversa).toHaveBeenCalledTimes(1);
     expect(mocks.abrirConversa).toHaveBeenCalledWith(expect.objectContaining({ id: 'i1' }));
   });

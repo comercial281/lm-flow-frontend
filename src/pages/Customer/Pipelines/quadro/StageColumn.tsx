@@ -30,8 +30,10 @@ export interface StageColumnProps {
   onOpenItem: (item: PipelineItem) => void;
   onArchive: (item: PipelineItem) => void;
   onRemove: (item: PipelineItem) => void;
-  onScheduleAction: (item: PipelineItem) => void;
-  onNotesClick: (item: PipelineItem) => void;
+  /** A aba decide se o card arrasta (podeArrastarNaAba). Referência estável. */
+  podeArrastar: (item: PipelineItem) => boolean;
+  arquivado: boolean;
+  onUnarchive: (item: PipelineItem) => void;
   onOpenConversation: (item: PipelineItem) => void;
   openingConversation: boolean;
   onEditStage: (stage: PipelineStage) => void;
@@ -41,7 +43,7 @@ export interface StageColumnProps {
 export default function StageColumn({
   stage, destacada, visitsByContact, isDraggingRef, suppressClickUntilRef, onDragOver, onDrop,
   onCardDragStart, onCardDragEnd, onCardDragOver, onCardDrop, onOpenItem, onArchive, onRemove,
-  onScheduleAction, onNotesClick, onOpenConversation, openingConversation, onEditStage, onDeleteStage,
+  podeArrastar, arquivado, onUnarchive, onOpenConversation, openingConversation, onEditStage, onDeleteStage,
 }: StageColumnProps) {
   const { t } = useLanguage('pipelines');
   const total = calculateStageTotal(stage.items);
@@ -126,11 +128,11 @@ export default function StageColumn({
               onCardDragOver={onCardDragOver}
               onCardDrop={onCardDrop}
               onOpenItem={onOpenItem}
-              onEdit={onOpenItem}
               onArchive={onArchive}
               onRemove={onRemove}
-              onScheduleAction={onScheduleAction}
-              onNotesClick={onNotesClick}
+              podeArrastar={podeArrastar(item)}
+              arquivado={arquivado}
+              onUnarchive={onUnarchive}
               onOpenConversation={onOpenConversation}
               openingConversation={openingConversation}
             />
