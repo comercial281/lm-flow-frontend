@@ -95,6 +95,7 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/property-owners', resource: 'properties', action: 'read' },
   { path: '/property-owners/:id', resource: 'properties', action: 'read' },
   { path: '/visits', resource: 'visits', action: 'read' },
+  { path: '/atividades', resource: 'pipelines', action: 'read' },
   { path: '/proposals', resource: 'proposals', action: 'read' },
   { path: '/contracts', resource: 'contracts', action: 'read' },
   { path: '/property-capture-requests', resource: 'property_capture_requests', action: 'read' },

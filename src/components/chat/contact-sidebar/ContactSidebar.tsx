@@ -18,6 +18,7 @@ import SecaoEtiquetas from './painel/SecaoEtiquetas';
 import SecaoNotas from './painel/SecaoNotas';
 import SecaoRespostas from './painel/SecaoRespostas';
 import SecaoAgendados from './painel/SecaoAgendados';
+import SecaoTarefas from './painel/SecaoTarefas';
 
 interface ContactSidebarProps {
   isOpen: boolean;
@@ -252,6 +253,16 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
               key={`agendados-${contact.id}`}
               contactId={String(contact.id)}
               atualizarQuando={conversation?.last_activity_at}
+            />
+          )}
+
+          {conversation && isOpen && !emOferta && (
+            <SecaoTarefas
+              key={`tarefas-${conversation.id}`}
+              conversationId={String(conversation.id)}
+              pipelines={conversationPipelines}
+              carregando={isLoadingPipelines}
+              onAtualizado={handlePipelineUpdated}
             />
           )}
 

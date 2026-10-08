@@ -6,6 +6,8 @@ import { pipelinesService } from '@/services/pipelines/pipelinesService';
 
 interface Props {
   contactId: string;
+  /** Conversa do lead, se tiver: colocar por ela grava a origem certa (anúncio / WhatsApp orgânico). */
+  conversationId?: string | null;
   /** Entrou no funil: quem abriu o card recarrega e mostra o card de verdade. */
   onColocado: () => void;
 }
@@ -13,7 +15,9 @@ interface Props {
 // No lugar da Etapa, no card de quem não está em funil nenhum (card aberto de
 // Contatos, spec 2026-10-02-fase-4-card-do-contato). Escolheu o funil, o
 // contato entra na primeira coluna — o mesmo serviço do "Novo lead" do quadro.
-export default function ColocarNoFunil({ contactId, onColocado }: Props) {
+// Com conversa, coloca pela conversa: pelo contato, lead de WhatsApp orgânico
+// ficava gravado como Cadastro manual (achado da Frente 2, 07/10/2026).
+export default function ColocarNoFunil({ contactId, conversationId, onColocado }: Props) {
   const [funis, setFunis] = useState<Array<{ id: string; name: string }> | null>(null);
   const [colocando, setColocando] = useState(false);
 
@@ -37,8 +41,8 @@ export default function ColocarNoFunil({ contactId, onColocado }: Props) {
         return;
       }
       await pipelinesService.addItemToPipeline(pipelineId, {
-        item_id: contactId,
-        type: 'contact',
+        item_id: conversationId ?? contactId,
+        type: conversationId ? 'conversation' : 'contact',
         pipeline_stage_id: String(primeira.id),
       });
       toast.success('Contato colocado no funil.');

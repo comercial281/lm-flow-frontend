@@ -28,6 +28,7 @@ import {
   GestaoDeProprietarios,
   FichaDoProprietario,
   Visits,
+  Atividades,
   Proposals,
   Contracts,
   PropertyInterests,
@@ -1188,14 +1189,27 @@ const AppRouter = () => {
                 como redirect pra não quebrar link salvo. */}
             <Route path="/landings" element={<Navigate to="/settings/site-builder?tab=landings" replace />} />
 
-            <Route
-              path="/visits"
-              element={
-                <PermissionRoute resource="visits" action="read">
-                  <Visits />
-                </PermissionRoute>
-              }
-            />
+            {/* Atividades (Frente 2, 07/10/2026): Lista (tarefas + visitas por
+                prazo) e Agenda (o calendário de visitas, endereço antigo
+                mantido) como abas da mesma página — ver PaginaComAbas. */}
+            <Route element={<PaginaComAbas />}>
+              <Route
+                path="/atividades"
+                element={
+                  <PermissionRoute resource="pipelines" action="read">
+                    <Atividades />
+                  </PermissionRoute>
+                }
+              />
+              <Route
+                path="/visits"
+                element={
+                  <PermissionRoute resource="visits" action="read">
+                    <Visits />
+                  </PermissionRoute>
+                }
+              />
+            </Route>
 
             <Route
               path="/proposals"

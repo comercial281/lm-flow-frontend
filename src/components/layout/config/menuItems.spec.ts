@@ -106,7 +106,7 @@ describe('menu novo: seções (fase 4)', () => {
     // Gestão de proprietários passa no cargo; quem tira do corretor sem
     // proprietário liberado é o `aplicarProprietariosNoMenu`, no MainLayout.
     expect(vistas.flatMap(s => s.itens.map(i => i.name))).toEqual([
-      'Dashboard', 'Conversas', 'Funil de vendas', 'Visitas', 'Meus imóveis', 'Gestão de proprietários', 'Contatos', 'Bolsão',
+      'Dashboard', 'Conversas', 'Funil de vendas', 'Atividades', 'Meus imóveis', 'Gestão de proprietários', 'Contatos', 'Bolsão',
       'Funis de mensagem',
     ]);
   });
@@ -123,6 +123,15 @@ describe('menu novo: seções (fase 4)', () => {
     const bolsao = comCargo(CORRETOR).flatMap(s => s.itens).find(i => i.name === 'Bolsão')!;
     expect(bolsao.abas?.map(a => a.name)).toEqual(['Pegar leads']);
     expect(bolsao.href).toBe('/bolsao');
+  });
+
+  it('Atividades leva à primeira aba que o cargo enxerga (só visitas cai na Agenda)', () => {
+    const soVisitas = comCargo(new Set(['visits.read']));
+    const item = soVisitas.flatMap(s => s.itens).find(i => i.name === 'Atividades')!;
+    expect(item.abas?.map(a => a.name)).toEqual(['Agenda']);
+    expect(item.href).toBe('/visits');
+    const comTudo = comCargo(new Set(['visits.read', 'pipelines.read'])).flatMap(s => s.itens).find(i => i.name === 'Atividades')!;
+    expect(comTudo.href).toBe('/atividades');
   });
 
   it('Integrações leva sempre à página de entrada, mesmo com uma tela só', () => {

@@ -58,6 +58,7 @@ import PipelineFiltersPopover, {
   type TimePreset,
   type AbandonedPreset,
 } from '@/components/pipelines/PipelineFiltersPopover';
+import { passaNoFiltroDeTarefas, type FiltroDeTarefas } from '@/features/tarefas/filtroDoFunil';
 import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { lazyWithRetry } from '@/utils/chunkReload';
@@ -278,6 +279,7 @@ export default function PipelineKanban() {
   // #13 Detector de lead largado: limiar de dias sem contato escolhível (era
   // fixo em 7 dias) — pedido do Giovani (20/08).
   const [abandonedPreset, setAbandonedPreset] = useState<AbandonedPreset>('off');
+  const [filtroDeTarefas, setFiltroDeTarefas] = useState<FiltroDeTarefas>('nenhum');
   const [abandonedCustomDays, setAbandonedCustomDays] = useState('');
   // Filtro por colunas: ids de etapas ocultas (vazio = todas visíveis).
   const [hiddenStages, setHiddenStages] = useState<string[]>([]);
@@ -963,7 +965,8 @@ export default function PipelineKanban() {
     (timePreset !== 'all' ? 1 : 0) +
     (selectedTags.length ? 1 : 0) +
     (abandonedThresholdDays != null ? 1 : 0) +
-    (hiddenStages.length ? 1 : 0);
+    (hiddenStages.length ? 1 : 0) +
+    (filtroDeTarefas !== 'nenhum' ? 1 : 0);
   const clearAllFilters = () => {
     setSearchQuery('');
     setTimePreset('all');
@@ -973,6 +976,7 @@ export default function PipelineKanban() {
     setAbandonedPreset('off');
     setAbandonedCustomDays('');
     setHiddenStages([]);
+    setFiltroDeTarefas('nenhum');
   };
 
   // Filtra etapas por colunas ocultas e itens por busca + tempo + tags.
@@ -980,7 +984,7 @@ export default function PipelineKanban() {
     const visible = stages.filter(s => !hiddenStages.includes(s.id));
     const q = searchQuery.toLowerCase();
     const { from, to } = timeRange;
-    if (!q && !from && !to && selectedTags.length === 0 && abandonedThresholdDays == null) return visible;
+    if (!q && !from && !to && selectedTags.length === 0 && abandonedThresholdDays == null && filtroDeTarefas === 'nenhum') return visible;
     return visible.map(stage => ({
       ...stage,
       items: (stage.items || []).filter(item => {
@@ -1001,10 +1005,10 @@ export default function PipelineKanban() {
         // Largado = sem contato há N+ dias (limiar escolhido no filtro).
         const d = lastContactDays(item);
         const matchesAbandoned = abandonedThresholdDays == null || (d != null && d >= abandonedThresholdDays);
-        return matchesSearch && matchesFrom && matchesTo && matchesTags && matchesAbandoned;
+        return matchesSearch && matchesFrom && matchesTo && matchesTags && matchesAbandoned && passaNoFiltroDeTarefas(item, filtroDeTarefas);
       }),
     }));
-  }, [stages, searchQuery, timeRange, selectedTags, hiddenStages, abandonedThresholdDays]);
+  }, [stages, searchQuery, timeRange, selectedTags, hiddenStages, abandonedThresholdDays, filtroDeTarefas]);
 
   // Visão em Lista: todos os leads do funil (respeitando os mesmos filtros do
   // Kanban acima) numa lista única, por ordem de chegada, com a coluna atual
@@ -1270,6 +1274,8 @@ export default function PipelineKanban() {
                 onAbandonedPresetChange={setAbandonedPreset}
                 abandonedCustomDays={abandonedCustomDays}
                 onAbandonedCustomDaysChange={setAbandonedCustomDays}
+                filtroDeTarefas={filtroDeTarefas}
+                onFiltroDeTarefasChange={setFiltroDeTarefas}
                 stages={stages.map(s => ({ id: s.id, name: s.name, color: s.color }))}
                 hiddenStages={hiddenStages}
                 onHiddenStagesChange={setHiddenStages}

@@ -309,6 +309,7 @@ export interface PipelineItem {
   tasks_info: {
     pending_count: number;
     overdue_count: number;
+    due_today_count?: number;
     due_soon_count: number;
     completed_count: number;
     total_count: number;

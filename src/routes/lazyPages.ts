@@ -35,6 +35,7 @@ export const CadastroDoImovel = lazyWithRetry(() => import('@/pages/Customer/Pro
 export const GestaoDeProprietarios = lazyWithRetry(() => import('@/pages/Customer/PropertyOwners/GestaoDeProprietarios'));
 export const FichaDoProprietario = lazyWithRetry(() => import('@/pages/Customer/PropertyOwners/FichaDoProprietario'));
 export const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then(m => ({ default: m.Visits })));
+export const Atividades = lazyWithRetry(() => import('@/pages/Customer/Atividades/Atividades'));
 export const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));
 export const Contracts = lazyWithRetry(() => import('@/pages/Customer/Contracts').then(m => ({ default: m.Contracts })));
 export const PropertyInterests = lazyWithRetry(() => import('@/pages/Customer/PropertyInterests').then(m => ({ default: m.PropertyInterests })));
@@ -65,6 +66,7 @@ export const routePrefetchMap: Record<string, () => Promise<unknown>> = {
   '/property-owners': GestaoDeProprietarios.__preload,
   '/settings/portals': PortalsList.__preload,
   '/visits': Visits.__preload,
+  '/atividades': Atividades.__preload,
   '/proposals': Proposals.__preload,
   '/contracts': Contracts.__preload,
   '/property-interests': PropertyInterests.__preload,

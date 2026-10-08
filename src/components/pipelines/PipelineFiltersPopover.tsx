@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
+import { ROTULOS_DO_FILTRO_DE_TAREFAS, type FiltroDeTarefas } from '@/features/tarefas/filtroDoFunil';
 
 /**
  * Popup único de filtros do Pipeline (Quadro e Lista): unifica Tempo, Tags,
@@ -41,6 +42,8 @@ interface PipelineFiltersPopoverProps {
   onAbandonedPresetChange: (preset: AbandonedPreset) => void;
   abandonedCustomDays: string;
   onAbandonedCustomDaysChange: (value: string) => void;
+  filtroDeTarefas: FiltroDeTarefas;
+  onFiltroDeTarefasChange: (f: FiltroDeTarefas) => void;
 
   stages: StageOption[];
   hiddenStages: string[];
@@ -74,6 +77,8 @@ export default function PipelineFiltersPopover({
   onAbandonedPresetChange,
   abandonedCustomDays,
   onAbandonedCustomDaysChange,
+  filtroDeTarefas,
+  onFiltroDeTarefasChange,
   stages,
   hiddenStages,
   onHiddenStagesChange,
@@ -258,6 +263,27 @@ export default function PipelineFiltersPopover({
                 <span className="text-xs text-muted-foreground">dias sem contato</span>
               </div>
             )}
+          </section>
+
+          {/* TAREFAS — vence hoje / atrasadas (Frente 2) */}
+          <section className="mt-2.5 border-t pt-2.5">
+            <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Tarefas</p>
+            <div className="flex flex-wrap gap-1.5">
+              {(Object.keys(ROTULOS_DO_FILTRO_DE_TAREFAS) as FiltroDeTarefas[]).map(f => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => onFiltroDeTarefasChange(f)}
+                  className={`rounded border px-2 py-1 text-xs transition cursor-pointer ${
+                    filtroDeTarefas === f
+                      ? 'border-primary bg-primary/10 font-semibold text-primary'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >
+                  {ROTULOS_DO_FILTRO_DE_TAREFAS[f]}
+                </button>
+              ))}
+            </div>
           </section>
 
           {/* COLUNAS (etapas visíveis no Quadro/Lista) */}

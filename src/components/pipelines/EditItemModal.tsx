@@ -32,10 +32,11 @@ import {
   PopoverTrigger,
   Badge,
 } from '@/components/ui/ds';
-import { Plus, Check, Loader2, X, Pencil, Phone, Mail, Shuffle, ClipboardList, MessageSquare, Megaphone, CalendarCheck } from 'lucide-react';
+import { Plus, Check, Loader2, X, Pencil, Phone, Mail, Shuffle, ClipboardList, MessageSquare, Megaphone, CalendarCheck, ListTodo } from 'lucide-react';
 import Abas from '@/components/base/Abas';
 import { PipelineItem, PipelineStage, Pipeline } from '@/types/analytics';
 import { lazyWithRetry } from '@/utils/chunkReload';
+import { rotuloDaAbaTarefas } from '@/features/tarefas/abaDoCard';
 import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import FollowupTimeline from './FollowupTimeline';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
@@ -71,6 +72,7 @@ import type { Label as LabelType } from '@/types/settings';
 import { avisarAgendadosMudaram } from '@/features/conversas/agendados';
 
 const CardConversationTab = lazyWithRetry(() => import('./CardConversationTab'));
+const TarefasDoLead = lazyWithRetry(() => import('@/features/tarefas/TarefasDoLead'));
 const VisitsProposalsTab = lazyWithRetry(() => import('./card/VisitsProposalsTab'));
 const RemoveFromRoletaDialog = lazyWithRetry(() => import('@/components/roleta/RemoveFromRoletaDialog'));
 const CorrigirContatoDialog = lazyWithRetry(() => import('./card/CorrigirContatoDialog'));
@@ -137,6 +139,7 @@ export default function EditItemModal({
   const canScheduleAction = useFeature('card_schedule_action');
 
   const [activeTab, setActiveTab] = useState('overview');
+  const [resumoTarefas, setResumoTarefas] = useState<{ abertas: number; atrasadas: number } | null>(null);
 
   // Etapa: muda na hora (mesmo movimento do quadro), não espera Salvar.
   const [etapaId, setEtapaId] = useState<string | null>(null);
@@ -205,6 +208,7 @@ export default function EditItemModal({
     if (open && item) {
       setEtapaId(item.stage_id);
       setActiveTab('overview');
+      setResumoTarefas(null);
 
       const c = contatoDoCard(item);
       setTelefoneDoLead(c?.phone_number || '');
@@ -563,7 +567,7 @@ export default function EditItemModal({
               <div className="grid grid-cols-2 gap-3">
               {foraDoFunil ? (
                 contato?.id != null && onColocadoNoFunil ? (
-                  <ColocarNoFunil contactId={String(contato.id)} onColocado={onColocadoNoFunil} />
+                  <ColocarNoFunil contactId={String(contato.id)} conversationId={conversaDoCard(item)} onColocado={onColocadoNoFunil} />
                 ) : <div />
               ) : (
               <div className="grid gap-1 min-w-0">
@@ -729,6 +733,7 @@ export default function EditItemModal({
               abas={[
                 { chave: 'overview', rotulo: 'Detalhes', icone: ClipboardList },
                 { chave: 'conversation', rotulo: 'Conversa', icone: MessageSquare },
+                { chave: 'tasks', icone: ListTodo, ...rotuloDaAbaTarefas(resumoTarefas, item.tasks_info) },
                 { chave: 'visits', rotulo: 'Visitas e propostas', icone: CalendarCheck },
                 { chave: 'origin', rotulo: 'Origem', icone: Megaphone },
               ]}
@@ -756,6 +761,16 @@ export default function EditItemModal({
                     onAgendarEnvio={canScheduleAction && contato?.id != null ? texto => setAgendandoEnvio(texto) : undefined}
                   />
                 </Suspense>
+              )}
+
+              {activeTab === 'tasks' && (
+                foraDoFunil ? (
+                  <p className="text-sm text-muted-foreground">Pra criar tarefa, coloque o lead no funil.</p>
+                ) : (
+                  <Suspense fallback={null}>
+                    <TarefasDoLead pipelineItemIds={[String(item.id)]} criarNoCard={String(item.id)} aoContar={setResumoTarefas} />
+                  </Suspense>
+                )
               )}
 
               {activeTab === 'visits' && (
