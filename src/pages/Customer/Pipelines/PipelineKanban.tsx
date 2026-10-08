@@ -30,6 +30,7 @@ import {
   Archive,
   LayoutGrid,
   List as ListIcon,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 import { pipelinesService } from '@/services/pipelines';
@@ -41,29 +42,22 @@ import {
   UpdatePipelineData,
   CreateStageData,
 } from '@/types/analytics';
-// PipelineSwitcher e PipelineFiltersPopover ficam no header/toolbar, sempre
-// visíveis de cara (não são modais) — seguem import estático de propósito
-// (lazy aqui só adicionaria uma requisição inútil).
+// PipelineSwitcher fica no topo, sempre visível — import estático de propósito.
 import PipelineSwitcher from '@/components/pipelines/PipelineSwitcher';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useCan } from '@/hooks/useCan';
 import { boardHeaderActions } from './boardActions';
-import PipelineFiltersPopover, {
-  type TimePreset,
-  type AbandonedPreset,
-} from '@/components/pipelines/PipelineFiltersPopover';
-import { passaNoFiltroDeTarefas, type FiltroDeTarefas } from '@/features/tarefas/filtroDoFunil';
 import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import AvisoCardForaDaAba from './AvisoCardForaDaAba';
 import { useCardNoEndereco } from './useCardNoEndereco';
 import {
-  itemTagNames,
   calculateStageTotal,
-  lastContactDays,
 } from './pipelineItemHelpers';
 import { useBoardDrag } from './quadro/useBoardDrag';
+import { usePipelineFilters } from './quadro/usePipelineFilters';
+import PainelDeFiltrosDoFunil from './quadro/PainelDeFiltrosDoFunil';
 import StageColumn from './quadro/StageColumn';
 import PipelineListView from './quadro/PipelineListView';
 import { useAppDataStore } from '@/store/appDataStore';
@@ -118,6 +112,10 @@ export default function PipelineKanban() {
     handleDragStart, handleDragOver, handleDrop, handleCardDragOver, handleCardDrop, handleDragEnd,
   } = useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro: t('kanban.messages.itemMoveError') });
 
+  // Aba e filtros no endereço; busca na tela (quadro/usePipelineFilters).
+  const { aba, filtros, aplicar, busca, setBusca, filteredStages, quantosFiltros } = usePipelineFilters(stages);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
+
   // Modal states
   const [showEditPipelineModal, setShowEditPipelineModal] = useState(false);
   const [isUpdatingPipeline, setIsUpdatingPipeline] = useState(false);
@@ -155,21 +153,6 @@ export default function PipelineKanban() {
     name?: string;
   } | null>(null);
 
-  // Search & filter state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  // Filtro por tempo (entrada do lead): atalhos rápidos + faixa personalizada.
-  const [timePreset, setTimePreset] = useState<TimePreset>('all');
-  // Filtro por tags: nomes selecionados (vazio = todas).
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  // #13 Detector de lead largado: limiar de dias sem contato escolhível (era
-  // fixo em 7 dias) — pedido do Giovani (20/08).
-  const [abandonedPreset, setAbandonedPreset] = useState<AbandonedPreset>('off');
-  const [filtroDeTarefas, setFiltroDeTarefas] = useState<FiltroDeTarefas>('nenhum');
-  const [abandonedCustomDays, setAbandonedCustomDays] = useState('');
-  // Filtro por colunas: ids de etapas ocultas (vazio = todas visíveis).
-  const [hiddenStages, setHiddenStages] = useState<string[]>([]);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [disparoModalOpen, setDisparoModalOpen] = useState(false);
   const [archivedModalOpen, setArchivedModalOpen] = useState(false);
@@ -695,89 +678,6 @@ export default function PipelineKanban() {
     }
   };
 
-  // Faixa de tempo (entrada do lead) derivada do atalho escolhido.
-  const timeRange = useMemo(() => {
-    const now = Date.now();
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    switch (timePreset) {
-      case 'today':
-        return { from: startOfToday.getTime(), to: null as number | null };
-      case '7d':
-        return { from: now - 7 * 86_400_000, to: null as number | null };
-      case '30d':
-        return { from: now - 30 * 86_400_000, to: null as number | null };
-      case 'custom':
-        return {
-          from: dateFrom ? new Date(dateFrom).getTime() : null,
-          to: dateTo ? new Date(dateTo + 'T23:59:59').getTime() : null,
-        };
-      default:
-        return { from: null as number | null, to: null as number | null };
-    }
-  }, [timePreset, dateFrom, dateTo]);
-
-  // Limiar de dias sem contato pro filtro "Largados" — null = filtro desligado.
-  const abandonedThresholdDays = useMemo(() => {
-    if (abandonedPreset === 'off') return null;
-    if (abandonedPreset === 'custom') {
-      const n = parseInt(abandonedCustomDays, 10);
-      return Number.isFinite(n) && n > 0 ? n : 7;
-    }
-    return parseInt(abandonedPreset, 10);
-  }, [abandonedPreset, abandonedCustomDays]);
-
-  // Quantos filtros estão ativos (pro botão "Limpar" e badges).
-  const activeFilterCount =
-    (searchQuery ? 1 : 0) +
-    (timePreset !== 'all' ? 1 : 0) +
-    (selectedTags.length ? 1 : 0) +
-    (abandonedThresholdDays != null ? 1 : 0) +
-    (hiddenStages.length ? 1 : 0) +
-    (filtroDeTarefas !== 'nenhum' ? 1 : 0);
-  const clearAllFilters = () => {
-    setSearchQuery('');
-    setTimePreset('all');
-    setDateFrom('');
-    setDateTo('');
-    setSelectedTags([]);
-    setAbandonedPreset('off');
-    setAbandonedCustomDays('');
-    setHiddenStages([]);
-    setFiltroDeTarefas('nenhum');
-  };
-
-  // Filtra etapas por colunas ocultas e itens por busca + tempo + tags.
-  const filteredStages = useMemo(() => {
-    const visible = stages.filter(s => !hiddenStages.includes(s.id));
-    const q = searchQuery.toLowerCase();
-    const { from, to } = timeRange;
-    if (!q && !from && !to && selectedTags.length === 0 && abandonedThresholdDays == null && filtroDeTarefas === 'nenhum') return visible;
-    return visible.map(stage => ({
-      ...stage,
-      items: (stage.items || []).filter(item => {
-        const matchesSearch =
-          !q ||
-          (item.contact?.name || '').toLowerCase().includes(q) ||
-          (item.contact?.email || '').toLowerCase().includes(q) ||
-          (item.contact?.phone_number || '').toLowerCase().includes(q);
-        const enteredMs =
-          typeof item.entered_at === 'number'
-            ? item.entered_at * 1000
-            : new Date(item.created_at).getTime();
-        const matchesFrom = !from || enteredMs >= from;
-        const matchesTo = !to || enteredMs <= to;
-        const tags = itemTagNames(item);
-        const matchesTags =
-          selectedTags.length === 0 || selectedTags.some(t => tags.includes(t));
-        // Largado = sem contato há N+ dias (limiar escolhido no filtro).
-        const d = lastContactDays(item);
-        const matchesAbandoned = abandonedThresholdDays == null || (d != null && d >= abandonedThresholdDays);
-        return matchesSearch && matchesFrom && matchesTo && matchesTags && matchesAbandoned && passaNoFiltroDeTarefas(item, filtroDeTarefas);
-      }),
-    }));
-  }, [stages, searchQuery, timeRange, selectedTags, hiddenStages, abandonedThresholdDays, filtroDeTarefas]);
-
   // Export leads as CSV
   const handleExportCSV = () => {
     const allItems = stages.flatMap(stage =>
@@ -991,14 +891,14 @@ export default function PipelineKanban() {
               <div className="relative flex-1 min-w-[200px] max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
+                  value={busca}
+                  onChange={e => setBusca(e.target.value)}
                   placeholder="Buscar por nome, email ou telefone"
                   className="pl-9 pr-8 h-9"
                 />
-                {searchQuery && (
+                {busca && (
                   <button
-                    onClick={() => setSearchQuery('')}
+                    onClick={() => setBusca('')}
                     aria-label="Limpar busca"
                     title="Limpar busca"
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
@@ -1008,31 +908,16 @@ export default function PipelineKanban() {
                 )}
               </div>
 
-              {/* Filtros unificados: Tempo, Tags, Largados (limiar escolhível) e
-                  Colunas num só popup — antes eram 4 botões brigando por
-                  espaço na barra (pedido do Giovani, 20/08). */}
-              <PipelineFiltersPopover
-                timePreset={timePreset}
-                onTimePresetChange={setTimePreset}
-                dateFrom={dateFrom}
-                dateTo={dateTo}
-                onDateFromChange={setDateFrom}
-                onDateToChange={setDateTo}
-                allTags={allTags}
-                selectedTags={selectedTags}
-                onSelectedTagsChange={setSelectedTags}
-                abandonedPreset={abandonedPreset}
-                onAbandonedPresetChange={setAbandonedPreset}
-                abandonedCustomDays={abandonedCustomDays}
-                onAbandonedCustomDaysChange={setAbandonedCustomDays}
-                filtroDeTarefas={filtroDeTarefas}
-                onFiltroDeTarefasChange={setFiltroDeTarefas}
-                stages={stages.map(s => ({ id: s.id, name: s.name, color: s.color }))}
-                hiddenStages={hiddenStages}
-                onHiddenStagesChange={setHiddenStages}
-                activeFilterCount={activeFilterCount}
-                onClearAll={clearAllFilters}
-              />
+              <Button
+                type="button"
+                variant={quantosFiltros > 0 ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFiltrosAbertos(true)}
+                className="gap-1.5 whitespace-nowrap"
+              >
+                <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                {quantosFiltros > 0 ? `Filtros · ${quantosFiltros}` : 'Filtros'}
+              </Button>
 
               {/* Alternar visualização: Quadro (Kanban) ou Lista (todos os leads) */}
               <div className="ml-auto flex items-center border rounded-lg">
@@ -1144,6 +1029,16 @@ export default function PipelineKanban() {
           />
         )}
       </div>
+
+      <PainelDeFiltrosDoFunil
+        aberto={filtrosAbertos}
+        aoFechar={() => setFiltrosAbertos(false)}
+        aba={aba}
+        filtros={filtros}
+        aoFiltrar={aplicar}
+        stages={stages}
+        etiquetas={allTags}
+      />
 
       {/* Edit Pipeline Modal */}
       {pipeline && (

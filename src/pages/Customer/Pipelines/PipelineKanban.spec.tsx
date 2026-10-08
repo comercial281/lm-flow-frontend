@@ -33,6 +33,7 @@ vi.mock('@/pages/Customer/Pipelines/pipelinePayloadCache', () => ({
   setCachedPipeline: vi.fn(),
   prefetchPipeline: vi.fn(),
 }));
+vi.mock('@/services/listOptions/listOptionsService', () => ({ listOptionsService: { list: vi.fn().mockResolvedValue([]) } }));
 vi.mock('@/services/pipelines', () => ({
   pipelinesService: {
     getPipeline: vi.fn(),
@@ -195,24 +196,26 @@ describe('quadro do funil · o que continua igual', () => {
     await screen.findByText('Maria Souza');
     expect(screen.getByText('João Lima')).toBeInTheDocument();
 
-    const abrirFiltros = async () => {
-      if (!screen.queryByRole('button', { name: 'Vence hoje' })) {
-        await userEvent.click(screen.getByRole('button', { name: /^Filtros/ }));
+    const filtrarCom = async (...nomes: string[]) => {
+      await userEvent.click(screen.getByRole('button', { name: /^Filtros/ }));
+      const painel = await screen.findByRole('dialog', { name: 'Filtros do funil' });
+      for (const nome of nomes) {
+        await userEvent.click(within(within(painel).getByRole('group', { name: 'Tarefas' })).getByRole('button', { name: nome }));
       }
+      await userEvent.click(within(painel).getByRole('button', { name: 'Filtrar' }));
     };
 
-    await abrirFiltros();
-    await userEvent.click(screen.getByRole('button', { name: 'Vence hoje' }));
+    await filtrarCom('Vence hoje');
     expect(screen.getByText('Maria Souza')).toBeInTheDocument();
     expect(screen.queryByText('João Lima')).toBeNull();
 
-    await abrirFiltros();
-    await userEvent.click(screen.getByRole('button', { name: 'Atrasadas' }));
+    // O painel começa do que está valendo: desliga "Vence hoje" e liga "Atrasadas".
+    await filtrarCom('Vence hoje', 'Atrasadas');
     expect(screen.getByText('João Lima')).toBeInTheDocument();
     expect(screen.queryByText('Maria Souza')).toBeNull();
 
-    await abrirFiltros();
-    await userEvent.click(screen.getByRole('button', { name: 'Todas' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Filtros/ }));
+    await userEvent.click(within(await screen.findByRole('dialog', { name: 'Filtros do funil' })).getByRole('button', { name: 'Limpar filtros' }));
     expect(screen.getByText('Maria Souza')).toBeInTheDocument();
     expect(screen.getByText('João Lima')).toBeInTheDocument();
   });
@@ -255,5 +258,25 @@ describe('quadro do funil · o que continua igual', () => {
     await userEvent.type(screen.getByPlaceholderText(BUSCA), 'maria');
     expect(screen.getByTestId('endereco').textContent).not.toContain('maria');
     expect(endereco().has('maria')).toBe(false);
+  });
+});
+
+describe('quadro do funil · filtros', () => {
+  it('filtro no endereço (F5 ou link mandado) já abre filtrado', async () => {
+    montar('/pipelines/p1?etapas=s2');
+    expect(await screen.findByText('João Lima')).toBeInTheDocument();
+    expect(screen.queryByText('Maria Souza')).toBeNull();
+  });
+
+  it('Filtros abre o painel à direita, e Filtrar grava no endereço', async () => {
+    montar();
+    await screen.findByText('Maria Souza');
+    await userEvent.click(screen.getByRole('button', { name: /^Filtros/ }));
+    const painel = await screen.findByRole('dialog', { name: 'Filtros do funil' });
+    await userEvent.click(within(within(painel).getByRole('group', { name: 'Etapas' })).getByRole('button', { name: 'Novo' }));
+    await userEvent.click(within(painel).getByRole('button', { name: 'Filtrar' }));
+    expect(endereco().getAll('etapas')).toEqual(['s1']);
+    expect(screen.queryByText('João Lima')).toBeNull();
+    expect(screen.getByRole('button', { name: /^Filtros · 1/ })).toBeInTheDocument();
   });
 });
