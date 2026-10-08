@@ -114,7 +114,7 @@ export default function Intencao({ agent, gravar }: PropsDaPagina) {
       </Secao>
 
       {marcados > 0 && (
-      <Secao titulo="Lead que não cabe em nenhum caminho" descricao="Quando ele deixa claro que busca outra coisa. Ex.: a incorporadora só quer quem vai morar e chega um investidor. O padrão é passar pro destino da IA (roleta ou corretor).">
+      <Secao titulo="Lead que não cabe em nenhum caminho" descricao="Quando ele deixa claro que busca outra coisa. Ex.: a incorporadora só quer quem vai morar e chega um investidor. Sem escolha, ela passa pro destino quando você mexe nos caminhos.">
         <BotoesDeEscolha rotulo="O que ela faz" valor={fora} opcoes={FORA}
           aoEscolher={(v) => void gravar({ playbook: { ...playbook, vars: { ...vars, fora_dos_caminhos: v } } }, ['playbook.vars.fora_dos_caminhos'])} />
       </Secao>

@@ -119,6 +119,16 @@ describe('Intenção', () => {
     expect(screen.getByRole('radio', { name: 'Atender mesmo assim' })).not.toBeChecked();
   });
 
+  it('padrão atender: abre com Atender marcado', () => {
+    abrir(agente({ fora_dos_caminhos_padrao: 'atender' }));
+    expect(screen.getByRole('radio', { name: 'Atender mesmo assim' })).toBeChecked();
+  });
+
+  it('sem padrão do servidor: abre em Passar', () => {
+    abrir();
+    expect(screen.getByRole('radio', { name: 'Passar pro destino (roleta ou corretor)' })).toBeChecked();
+  });
+
   it('caminho novo com o texto inicial não pode ser marcado até escrever', () => {
     const novo: CaminhoDaIntencao = { nome: 'Novo caminho', sinais: '', como: 'Escreva como ela conduz quem segue este caminho.', ativo: false };
     abrir(agente({ playbook: { vars: { caminhos_intencao: [...catalogo(['moradia']), novo, { ...novo, nome: 'Escrito', como: 'Pergunte as salas.' }] } } }));
