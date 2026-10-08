@@ -39,7 +39,6 @@ export interface ParametrosDaLista {
   bucket?: Balde;
   kind?: TipoDeAtividade;
   assigned_to_id?: string;
-  category?: string;
   category_option_id?: string;
   q?: string;
   pipeline_item_ids?: string[];

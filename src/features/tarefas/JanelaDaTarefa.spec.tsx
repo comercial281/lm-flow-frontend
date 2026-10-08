@@ -188,5 +188,11 @@ describe('JanelaDaTarefa', () => {
       await waitFor(() => expect(editar).toHaveBeenCalled());
       expect(editar.mock.calls[0][1].category_option_id).toBe('cat-of');
     });
+
+    it('enquanto as categorias carregam, o botão fica desligado; depois liga', async () => {
+      render(<JanelaDaTarefa aberta aoFechar={() => {}} aoSalvar={() => {}} pipelineItemId="c1" />);
+      expect(screen.getByRole('button', { name: 'Criar tarefa' })).toBeDisabled();
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Criar tarefa' })).toBeEnabled());
+    });
   });
 });

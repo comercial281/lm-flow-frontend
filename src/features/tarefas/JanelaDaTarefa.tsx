@@ -37,7 +37,7 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
   const ehGestor = useEhGestor();
   const sugestao = proximaHoraCheia();
   const [titulo, setTitulo] = useState('');
-  const { ativas, todas } = useCategoriasDeTarefa();
+  const { ativas, todas, carregando } = useCategoriasDeTarefa();
   // null = a pessoa ainda não mexeu: criar usa a padrão; editar mantém a atual (e não manda nada).
   const [escolha, setEscolha] = useState<string | null>(null);
   const [data, setData] = useState(sugestao.data);
@@ -184,7 +184,7 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={aoFechar} disabled={salvando}>{T.cancelar}</Button>
-          <Button onClick={salvar} disabled={salvando}>{tarefa ? T.salvar : T.criar}</Button>
+          <Button onClick={salvar} disabled={salvando || carregando}>{tarefa ? T.salvar : T.criar}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
