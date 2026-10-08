@@ -178,8 +178,9 @@ Armadilhas:
 3. **A rota `/bolsao` é gateada só por cargo**, como `/ia-vendedora`: quem digitar
    a URL alcança a tela (vazia). É o padrão da casa — não é esquecimento.
 4. **O arquivo enviado vai para o servidor**, não é lido no navegador como o
-   importador antigo do funil (`ImportLeadsModal`). Aquele faz uma requisição por
-   linha e cria os contatos na hora — no Bolsão o lead só vira contato quando
+   importador que existia no funil (`ImportLeadsModal`, apagado em 07/10/2026: o Importar
+   saiu do funil e o Bolsão guarda o próprio). Aquele fazia uma requisição por
+   linha e criava os contatos na hora — no Bolsão o lead só vira contato quando
    alguém puxa.
 
 ### Depois de puxar: o card, o histórico e a saída da lista (desde 2026-08-25)
@@ -7628,3 +7629,72 @@ Armadilhas:
 6. O card que a rota de situação devolve já vem na coluna nova: quem recebe (`aoMudarSituacao`,
    `handleItemStatusChanged`) troca a Etapa e a coluna pelo `stage_id` dele.
 7. O "enviado" dos botões da Meta vem do servidor (`events[].once` + `sent_at`, `Capi::OncePerLead`).
+
+## Funil: topo em três faixas, abas por situação, painel de filtros e card mínimo (07/10/2026)
+
+Pedido da call com a Nova 27 (07/10). Spec: `LM FLOW/specs/2026-10-07-funil-situacao-e-card-completo-design.md` §4.
+
+O que aparece na tela:
+
+- **Topo em três faixas.** (1) ← e o funil como um selo só com o nome (Venda/Locação
+  continuam como grupos da lista que abre) · **Lead** e ⋯ (Exportar, Disparo em massa,
+  Editar funil, Reordenar etapas, Copiar ID, Excluir funil). (2) Abas **Abertos · Ganhos ·
+  Perdidos · Todos** com os números, e **Arquivados** numa caixinha com o número. (3) Busca,
+  quantos leads a aba mostra, **Quadro | Lista** e **Filtros · N**.
+- **Saíram do topo:** a contagem de etapas, o total de leads (virou o contador da aba), o valor
+  total (cada coluna mostra o dela) e o **Importar** (o Bolsão continua com o dele).
+- **Cada aba busca só os cards dela no servidor** (`GET /pipelines/:id?status=`). Ganhos e
+  Perdidos mostram as mesmas colunas, com o card na etapa onde parou e o selo, e **não
+  arrastam**. Todos junta os três; ali só o card aberto arrasta. **Arquivados** mostra o card
+  na coluna dele com **Desarquivar** (substitui a janelinha "Leads arquivados").
+- **Filtros num painel à direita**, com rolagem, nesta ordem: Criado em, Etapas, Origem,
+  Responsável, Etiquetas, Motivo da perda (só em Perdidos e Todos), Largados, Tarefas
+  (atrasada / vence hoje), Colunas visíveis. **Filtrar** e **Limpar filtros** fixos embaixo.
+- **Aba e filtros no endereço** (`?aba=perdidos&etapas=…&largados=14`): F5 mantém e dá pra
+  mandar o link. `?card=` e `?etapa=` continuam valendo.
+- **Soltar o card na coluna Concluído marca Ganho** (ajuste de 08/10), pela mesma rota do
+  botão: em Abertos ele sai do quadro e vai para Ganhos; em Todos fica em Concluído com o
+  selo. Ganho pela janela também leva o card para Concluído, e Reabrir devolve.
+- **Card do quadro mínimo:** selo (fechado), nome com a setinha ↗ (card completo em outra guia),
+  **um** sinal (tarefa atrasada > vence hoje > visita hoje/amanhã > "Nd sem contato"), foto do
+  responsável e o WhatsApp. ⋯: Abrir, Abrir em nova guia, Copiar link, Arquivar, Remover do funil.
+  A Lista tem o mesmo enxugamento.
+- **Exportar** leva situação e motivo da perda, de todas as situações (não só a aba).
+- **Pixel/CAPI:** "Ao marcar Ganho" e "Ao marcar Perdido" (`capi_configs.status_map`), com os
+  mesmos campos da linha de etapa; no Ganho o valor enviado é o "Preço estimado" do card
+  (a linha mostra isso, sem campo de valor). O mapa por etapa não oferece mais as etapas
+  finais (pelo tipo: a coluna Concluído); a regra que a Venda/Desqualificado tinham fica
+  guardada até a passagem dos clientes convertê-la.
+- **Painel:** o bloco do funil não conta mais as colunas finais e mostra **Ganhos no período** e
+  **Perdidos no período** (`outcomes`, por `won_at`/`lost_at`), sem link.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- Topo em três faixas; Importar sai do funil; Exportar no ⋯.
+- Filtros num painel grande à direita, como o "Filtrar atendimentos" do Praedium.
+- O card do quadro é mínimo: sem etiquetas, temperatura nem imóvel.
+
+Armadilhas:
+
+1. Peças em `src/pages/Customer/Pipelines/quadro/`: `BoardTopBar`, `usePipelineFilters`
+   (+ `enderecoDoQuadro`, `filtrosDoFunil`), `useBoardDrag`, `StageColumn`, `PipelineListView`,
+   `PainelDeFiltrosDoFunil`, `sinalDoCard`, `csvDoFunil`. O `PipelineKanban.tsx` só costura.
+2. **Card fechado não arrasta em dois lugares**: o `draggable` do card E a guarda do
+   `useBoardDrag` (`podeArrastarNaAba`). O `dragstart` dispara mesmo com `draggable="false"`.
+3. **Resposta de outra aba é jogada fora** (`pedidoRef` no `loadPipelineData`): sem isso,
+   trocar de aba rápido deixava o quadro com os cards da aba anterior.
+4. Só Abertos usa o payload guardado no navegador (`pipelinePayloadCache`, chave = id do funil).
+5. Os filtros rodam no navegador sobre os cards da aba carregada. `colunas` no endereço são as
+   etapas VISÍVEIS (vazio = todas). `tarefas` (atrasada/hoje) usa `passaNoFiltroDeTarefas`
+   (`src/features/tarefas/filtroDoFunil.ts`, `atrasada`→`'atrasadas'`) — a seção Tarefas do
+   popover antigo veio para o painel (escolha múltipla).
+6. A chave `pipeline_import` deixou de ser usada no código: o `sync-feature-catalog` tira do
+   catálogo no próximo deploy. Ninguém mais a usava.
+7. A setinha ↗ e o "Copiar link" apontam para `/pipelines/:pipelineId/card/:itemId`, a página
+   da E4 (`src/features/pipelines/linkDoCard.ts`).
+8. "Agendar ação" e "Ver notas" saíram do ⋯ do card do quadro: moram dentro do card.
+9. Soltar em Concluído chama `setItemStatus` no `useBoardDrag` (não o `reorder`); o quadro
+   recebe o card ganho pelo `aoGanhar` → `handleItemStatusChanged` (a mesma porta do Ganho
+   pela janela), que troca a coluna e tira o card da aba que não é a dele.
+10. O quadro fica fora da `Pagina` (exceção documentada de tela cheia), com respiro lateral
+    de 16/24px.

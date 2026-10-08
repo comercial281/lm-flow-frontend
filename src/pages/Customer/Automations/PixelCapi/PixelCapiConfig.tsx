@@ -17,8 +17,8 @@ function emptyRule(): CapiStageRule {
 }
 
 // Situação do card: os dois momentos que avisam a Meta (spec do funil §3.4).
-const SITUACOES: { chave: CapiStatusKey; rotulo: string; dica: string }[] = [
-  { chave: 'won', rotulo: 'Ao marcar Ganho', dica: 'A Compra leva o preço estimado do card (Sobre o negócio).' },
+const SITUACOES: { chave: CapiStatusKey; rotulo: string; dica: string; valorFixo?: string }[] = [
+  { chave: 'won', rotulo: 'Ao marcar Ganho', dica: 'A Compra leva o preço estimado do card (Sobre o negócio).', valorFixo: 'Valor enviado: Preço estimado do card' },
   {
     chave: 'lost',
     rotulo: 'Ao marcar Perdido',
@@ -37,10 +37,12 @@ interface LinhaDaRegraProps {
   rotuloDoLigado: string;
   dicaDoLigado: string;
   dica?: string;
+  /** Texto no lugar do campo de valor: o valor enviado é fixo (Ganho leva o preço estimado do card). */
+  valorFixo?: string;
 }
 
 function LinhaDaRegra({
-  rotulo, regra: r, aoMudar, eventos, intencoes, inputCls, rotuloDoLigado, dicaDoLigado, dica,
+  rotulo, regra: r, aoMudar, eventos, intencoes, inputCls, rotuloDoLigado, dicaDoLigado, dica, valorFixo,
 }: LinhaDaRegraProps) {
   const showValue = VALUE_EVENTS.includes(r.event_name);
   return (
@@ -85,7 +87,10 @@ function LinhaDaRegra({
               ))}
             </Seletor>
 
-            {showValue && (
+            {showValue && valorFixo && (
+              <span className="text-xs text-muted-foreground">{valorFixo}</span>
+            )}
+            {showValue && !valorFixo && (
               <input
                 className={`${inputCls} w-40`}
                 value={r.value_field ?? ''}
@@ -368,7 +373,7 @@ export default function PixelCapiConfig() {
           </p>
         </div>
         <div className="divide-y divide-border rounded-lg border border-border">
-          {SITUACOES.map(({ chave, rotulo, dica }) => (
+          {SITUACOES.map(({ chave, rotulo, dica, valorFixo }) => (
             <LinhaDaRegra
               key={chave}
               rotulo={rotulo}
@@ -380,6 +385,7 @@ export default function PixelCapiConfig() {
               rotuloDoLigado="Ligado"
               dicaDoLigado="Desligado: marcar no card não avisa a Meta."
               dica={dica}
+              valorFixo={valorFixo}
             />
           ))}
         </div>
