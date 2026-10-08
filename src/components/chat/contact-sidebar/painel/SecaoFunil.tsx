@@ -10,6 +10,7 @@ import { pipelinesService } from '@/services/pipelines';
 import EditItemModal from '@/components/pipelines/EditItemModal';
 import PipelineManagement from '../PipelineManagement';
 import { TEXTOS_DO_PAINEL as T } from '@/features/conversas/painelDoLead';
+import { ETAPA_TRAVADA, cardFechado, comSituacaoNova, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
 import Secao from './Secao';
 
 import type { Pipeline, PipelineItem, PipelineStage } from '@/types/analytics';
@@ -63,7 +64,8 @@ export default function SecaoFunil({
 
   const mudarEtapa = async (linha: LinhaDoFunil, novaEtapaId: string) => {
     const atual = escolhida[linha.item.id] ?? linha.etapaId;
-    if (novaEtapaId === atual) return;
+    // Card Ganho/Perdido não muda de etapa: reabre antes (o seletor já vem travado).
+    if (novaEtapaId === atual || cardFechado(linha.item)) return;
 
     setEscolhida(e => ({ ...e, [linha.item.id]: novaEtapaId }));
     setMovendo(linha.item.id);
@@ -77,7 +79,7 @@ export default function SecaoFunil({
       onAtualizado();
     } catch (error) {
       console.error('Error moving pipeline item:', error);
-      toast.error(T.erroAoMudarEtapa);
+      toast.error(mensagemDaRecusa(error, T.erroAoMudarEtapa));
       setEscolhida(e => ({ ...e, [linha.item.id]: atual }));
     } finally {
       setMovendo(null);
@@ -121,39 +123,43 @@ export default function SecaoFunil({
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
       ) : linhas.length > 0 ? (
         <div className="space-y-3">
-          {linhas.map(linha => (
-            <div key={linha.item.id} className="space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm min-w-0 truncate">
-                  {linha.pipeline.name} · {T.etapa}
-                </span>
-                <Select
-                  value={escolhida[linha.item.id] ?? linha.etapaId}
-                  onValueChange={valor => mudarEtapa(linha, valor)}
-                  disabled={movendo === linha.item.id}
-                >
-                  <SelectTrigger
-                    className="h-8 w-40 flex-shrink-0 text-xs"
-                    aria-label={`${T.etapa} em ${linha.pipeline.name}`}
+          {linhas.map(linha => {
+            const fechado = cardFechado(linha.item);
+            return (
+              <div key={linha.item.id} className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm min-w-0 truncate">
+                    {linha.pipeline.name} · {T.etapa}
+                  </span>
+                  <Select
+                    value={escolhida[linha.item.id] ?? linha.etapaId}
+                    onValueChange={valor => mudarEtapa(linha, valor)}
+                    disabled={fechado || movendo === linha.item.id}
                   >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[...(linha.pipeline.stages ?? [])].sort(porPosicao).map(stage => (
-                      <SelectItem key={stage.id} value={String(stage.id)}>
-                        {stage.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    <SelectTrigger
+                      className="h-8 w-40 flex-shrink-0 text-xs"
+                      aria-label={`${T.etapa} em ${linha.pipeline.name}`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[...(linha.pipeline.stages ?? [])].sort(porPosicao).map(stage => (
+                        <SelectItem key={stage.id} value={String(stage.id)}>
+                          {stage.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {fechado && <p className="text-xs text-muted-foreground">{ETAPA_TRAVADA}</p>}
+                {!emOferta && (
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setCardAberto(linha)}>
+                    {T.abrirCard}
+                  </Button>
+                )}
               </div>
-              {!emOferta && (
-                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setCardAberto(linha)}>
-                  {T.abrirCard}
-                </Button>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : colocando ? (
         <PipelineManagement conversationId={conversationId} pipelines={pipelines} onPipelineUpdated={onAtualizado} />
@@ -172,6 +178,14 @@ export default function SecaoFunil({
           stages={cardAberto.pipeline.stages ?? []}
           onSubmit={salvarCard}
           loading={salvandoCard}
+          // Ganho/Perdido/Reabrir e etapa mudada na janela: o card aberto guarda a
+          // situação nova e a lateral recarrega (senão mostra a etapa velha e reabre
+          // o card como Aberto).
+          onItemStatusChanged={novo => {
+            setCardAberto(c => (c && String(c.item.id) === String(novo.id) ? { ...c, item: comSituacaoNova(c.item, novo) } : c));
+            onAtualizado();
+          }}
+          onItemStageMoved={() => onAtualizado()}
         />
       )}
     </Secao>

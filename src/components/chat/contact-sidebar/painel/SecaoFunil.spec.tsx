@@ -30,8 +30,8 @@ vi.mock('@evoapi/design-system/button', () => ({
 
 // O seletor vira um <select> nativo: o que importa aqui é o valor escolhido.
 vi.mock('@evoapi/design-system/select', () => ({
-  Select: ({ value, onValueChange, children }: { value: string; onValueChange: (v: string) => void; children: ReactNode }) => (
-    <select aria-label="etapa" value={value} onChange={e => onValueChange(e.target.value)}>{children}</select>
+  Select: ({ value, onValueChange, disabled, children }: { value: string; onValueChange: (v: string) => void; disabled?: boolean; children: ReactNode }) => (
+    <select aria-label="etapa" value={value} disabled={disabled} onChange={e => onValueChange(e.target.value)}>{children}</select>
   ),
   SelectTrigger: () => null,
   SelectValue: () => null,
@@ -39,8 +39,22 @@ vi.mock('@evoapi/design-system/select', () => ({
   SelectItem: ({ value, children }: { value: string; children: ReactNode }) => <option value={value}>{children}</option>,
 }));
 
+// A janela falsa expõe o item que recebeu e os avisos de situação/etapa.
 vi.mock('@/components/pipelines/EditItemModal', () => ({
-  default: () => <div>card-do-lead</div>,
+  default: ({ item, onItemStatusChanged, onItemStageMoved }: {
+    item: { id: string; status?: string };
+    onItemStatusChanged?: (novo: unknown) => void;
+    onItemStageMoved?: (id: string, etapa: string) => void;
+  }) => (
+    <div>
+      <span>card-do-lead</span>
+      <span>situacao-na-janela:{item.status ?? 'open'}</span>
+      <button type="button" onClick={() => onItemStatusChanged?.({ id: item.id, status: 'won', stage_id: 'etapa-visita', roleta: null })}>
+        marcar-ganho
+      </button>
+      <button type="button" onClick={() => onItemStageMoved?.(item.id, 'etapa-visita')}>mover-na-janela</button>
+    </div>
+  ),
 }));
 
 vi.mock('../PipelineManagement', () => ({
@@ -121,6 +135,41 @@ describe('SecaoFunil', () => {
 
     fireEvent.click(screen.getByText('Colocar no funil'));
     expect(screen.getByText('escolher-funil-e-etapa')).toBeTruthy();
+  });
+
+  it('erro 422 de card fechado: mostra a frase do servidor', async () => {
+    moveItem.mockRejectedValue({
+      response: { data: { success: false, error: { code: 'BUSINESS_RULE_VIOLATION', message: 'Lead fechado não muda de etapa. Reabra para mexer.' } } },
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(<SecaoFunil conversationId="conv-1" pipelines={[funil()]} carregando={false} onAtualizado={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('etapa'), { target: { value: 'etapa-visita' } });
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Lead fechado não muda de etapa. Reabra para mexer.'));
+  });
+
+  it('card Ganho ou Perdido: a Etapa fica travada e explica por quê', () => {
+    const fechado = funil();
+    (fechado.stages[1].items as unknown as Array<Record<string, unknown>>)[0].status = 'lost';
+    render(<SecaoFunil conversationId="conv-1" pipelines={[fechado]} carregando={false} onAtualizado={vi.fn()} />);
+
+    expect((screen.getByLabelText('etapa') as HTMLSelectElement).disabled).toBe(true);
+    expect(screen.getByText('Lead fechado não muda de etapa. Reabra para mexer.')).toBeTruthy();
+  });
+
+  it('Ganho e etapa mudada pela janela: a lateral recarrega e a janela guarda a situação nova', () => {
+    const onAtualizado = vi.fn();
+    render(<SecaoFunil conversationId="conv-1" pipelines={[funil()]} carregando={false} onAtualizado={onAtualizado} />);
+    fireEvent.click(screen.getByText('Abrir card do lead'));
+    expect(screen.getByText('situacao-na-janela:open')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('marcar-ganho'));
+    expect(onAtualizado).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('situacao-na-janela:won')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('mover-na-janela'));
+    expect(onAtualizado).toHaveBeenCalledTimes(2);
   });
 
   it('oferta da roleta aberta: o seletor fica, "Abrir card do lead" some', () => {
