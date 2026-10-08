@@ -153,6 +153,8 @@ export interface Pipeline {
     avatar_url?: string;
   };
   team_ids?: string[];
+  /** Números das abas do quadro; só vem no `GET /pipelines/:id`. */
+  status_counts?: PipelineStatusCounts;
 }
 
 export interface PipelineStats {
@@ -227,6 +229,31 @@ export interface PipelineStats {
   active_pipelines: number;
 }
 
+/**
+ * Situação do card, separada da etapa (spec funil §3): o card perdido na
+ * Proposta continua na coluna Proposta, com o selo PERDIDO.
+ */
+export type PipelineItemStatus = 'open' | 'won' | 'lost';
+
+/** O que o quadro pede ao servidor por aba (`GET /pipelines/:id?status=`). */
+export type PipelineBoardStatus = PipelineItemStatus | 'all' | 'archived';
+
+/** Números das abas do quadro. `all` = abertos + ganhos + perdidos, sem os arquivados. */
+export interface PipelineStatusCounts {
+  open: number;
+  won: number;
+  lost: number;
+  all: number;
+  archived: number;
+}
+
+/** Corpo do PATCH de situação. Perdido exige o motivo (opção ativa de `loss_reasons`). */
+export interface SetItemStatusData {
+  status: PipelineItemStatus;
+  reason_option_id?: string;
+  note?: string;
+}
+
 export interface PipelineItem {
   id: string;
   item_id: string; // conversation_id or contact_id
@@ -297,6 +324,19 @@ export interface PipelineItem {
   position?: number; // ordem manual no kanban (epoch da chegada por padrão)
   entered_at?: number;
   completed_at?: number | null;
+  /**
+   * Situação do card. Opcional só porque o quadro pinta primeiro o payload
+   * guardado no navegador (pipelinePayloadCache), que pode ser de antes desta
+   * entrega: sem o campo, o card conta como aberto (`situacaoDe`).
+   */
+  status?: PipelineItemStatus;
+  status_changed_at?: string | null;
+  won_at?: string | null;
+  lost_at?: string | null;
+  lost_reason?: { id: string; label: string } | null;
+  lost_note?: string | null;
+  /** Preenchido só nos cards arquivados (aba Arquivados). */
+  archived_at?: string | null;
   days_in_pipeline?: number;
   days_in_current_stage?: number;
   services_info?: {

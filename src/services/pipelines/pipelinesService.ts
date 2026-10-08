@@ -8,6 +8,7 @@ import type {
   UpdatePipelineData,
   CreateStageData,
   PipelineItem,
+  SetItemStatusData,
   MovePipelineItemData,
   PipelineStage,
   PipelineStats,
@@ -255,6 +256,14 @@ class PipelinesService {
 
   async unarchiveItem(pipelineId: string, itemId: string): Promise<PipelineItem> {
     const response = await api.patch(`/pipelines/${pipelineId}/pipeline_items/${itemId}/unarchive`);
+    return extractData<PipelineItem>(response);
+  }
+
+  // Situação do card: Ganho, Perdido (com motivo e comentário) e Reabrir.
+  // O servidor recusa com 422 e a frase pronta (motivo arquivado, card
+  // arquivado, Reabrir de card aberto) — quem chama mostra a frase.
+  async setItemStatus(pipelineId: string, itemId: string, data: SetItemStatusData): Promise<PipelineItem> {
+    const response = await api.patch(`/pipelines/${pipelineId}/pipeline_items/${itemId}/status`, data);
     return extractData<PipelineItem>(response);
   }
 
