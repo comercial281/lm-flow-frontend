@@ -40,12 +40,19 @@ const nomeLivre = (lista: CaminhoDaIntencao[]) => {
   return `Novo caminho ${n}`;
 };
 
+const iguais = (a: CaminhoDaIntencao[], b: CaminhoDaIntencao[]) =>
+  a.length === b.length && a.every((c, i) => {
+    const o = b[i];
+    return c.chave === o.chave && c.nome === o.nome && (c.sinais ?? '') === (o.sinais ?? '') && c.como === o.como && (c.ativo !== false) === (o.ativo !== false);
+  });
+
 export default function Intencao({ agent, gravar }: PropsDaPagina) {
   const playbook = agent.playbook ?? {};
   const vars = (playbook.vars ?? {}) as PlaybookVars;
   const modo = (playbook.intent_question_mode as IntentQuestionMode | undefined) ?? 'always';
   const caminhos: CaminhoDaIntencao[] = vars.caminhos_intencao?.length ? vars.caminhos_intencao : (agent.intent_paths ?? []);
   const marcados = caminhos.filter((c) => c.ativo !== false).length;
+  const jaNoPadrao = !!agent.intent_paths_padrao && iguais(caminhos, agent.intent_paths_padrao);
   const fora = vars.fora_dos_caminhos ?? 'atender';
 
   const gravarCaminhos = (lista: CaminhoDaIntencao[] | undefined) =>
@@ -68,11 +75,14 @@ export default function Intencao({ agent, gravar }: PropsDaPagina) {
         <ol className="divide-y divide-border rounded-xl border border-border bg-background">
           {caminhos.map((c, i) => {
             const marcado = c.ativo !== false;
+            // O texto inicial iria literal pro comando da IA: só marca depois de escrever.
+            const semTexto = !marcado && c.como.trim() === COMO_INICIAL;
             return (
               <li key={c.chave ?? `proprio-${i}`} className="flex flex-wrap items-start gap-3 p-3.5">
                 <Checkbox id={`caminho-${i}-marcado`} aria-label={`Marcar o caminho ${c.nome}`} className="mt-8" checked={marcado}
-                  disabled={!marcado && marcados >= MAXIMO_MARCADOS}
+                  disabled={(!marcado && marcados >= MAXIMO_MARCADOS) || semTexto}
                   onCheckedChange={(v) => void trocar(i, { ativo: v === true })} />
+                {semTexto && <span className="mt-8 text-xs text-muted-foreground">Escreva como ela conduz antes de marcar</span>}
                 <TextoNaHora id={`caminho-${i}-nome`} rotulo="Caminho" salvo={c.nome} maxLength={40} className="w-44"
                   aoGravar={(v) => (v.trim() ? trocar(i, { nome: v.trim() }) : undefined)} />
                 <TextoNaHora id={`caminho-${i}-sinais`} tipo="varias" rows={3} rotulo={`Como reconhecer o caminho ${c.nome}`}
@@ -97,16 +107,18 @@ export default function Intencao({ agent, gravar }: PropsDaPagina) {
             <Plus className="mr-1 h-4 w-4" aria-hidden /> Novo caminho
           </Button>
           <span className="text-xs text-muted-foreground">Até {MAXIMO_MARCADOS} marcados</span>
-          {!!vars.caminhos_intencao?.length && (
+          {!!vars.caminhos_intencao?.length && !jaNoPadrao && (
             <Button type="button" variant="ghost" size="sm" className="ml-auto" onClick={() => void gravarCaminhos(agent.intent_paths_padrao)}>Voltar ao padrão</Button>
           )}
         </div>
       </Secao>
 
+      {marcados > 0 && (
       <Secao titulo="Lead que não cabe em nenhum caminho" descricao="Quando ele deixa claro que busca outra coisa. Ex.: a incorporadora só quer quem vai morar e chega um investidor.">
         <BotoesDeEscolha rotulo="O que ela faz" valor={fora} opcoes={FORA}
           aoEscolher={(v) => void gravar({ playbook: { ...playbook, vars: { ...vars, fora_dos_caminhos: v === 'atender' ? undefined : v } } }, ['playbook.vars.fora_dos_caminhos'])} />
       </Secao>
+      )}
     </Secoes>
   );
 }

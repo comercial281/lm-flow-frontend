@@ -112,4 +112,22 @@ describe('Intenção', () => {
     await userEvent.click(screen.getByRole('radio', { name: 'Atender mesmo assim' }));
     expect(gravar).toHaveBeenCalledWith({ playbook: { vars: { fora_dos_caminhos: undefined } } }, ['playbook.vars.fora_dos_caminhos']);
   });
+
+  it('caminho novo com o texto inicial não pode ser marcado até escrever', () => {
+    const novo: CaminhoDaIntencao = { nome: 'Novo caminho', sinais: '', como: 'Escreva como ela conduz quem segue este caminho.', ativo: false };
+    abrir(agente({ playbook: { vars: { caminhos_intencao: [...catalogo(['moradia']), novo, { ...novo, nome: 'Escrito', como: 'Pergunte as salas.' }] } } }));
+    expect(screen.getByRole('checkbox', { name: 'Marcar o caminho Novo caminho' })).toBeDisabled();
+    expect(screen.getByText('Escreva como ela conduz antes de marcar')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Marcar o caminho Escrito' })).not.toBeDisabled();
+  });
+
+  it('"Voltar ao padrão" some quando a lista já é o padrão', () => {
+    abrir(agente({ playbook: { vars: { caminhos_intencao: catalogo(['moradia', 'investimento']) } } }));
+    expect(screen.queryByRole('button', { name: 'Voltar ao padrão' })).toBeNull();
+  });
+
+  it('sem nenhum caminho marcado a seção "Lead que não cabe" some', () => {
+    abrir(agente({ playbook: { vars: { caminhos_intencao: catalogo([]) } } }));
+    expect(screen.queryByText('Lead que não cabe em nenhum caminho')).toBeNull();
+  });
 });
