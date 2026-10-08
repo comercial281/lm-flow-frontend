@@ -7461,3 +7461,49 @@ Armadilhas:
 2. **"Alteração" do imóvel = `updated_at`**: qualquer salvamento renova o prazo. Serviço
    que mexe em imóvel em lote sem ser alteração de verdade usa `update_columns` pra não
    esconder imóvel parado (ver `owner_migrator` e `listing_kind_classifier` no backend).
+
+## Testar da IA: celular com cara de WhatsApp, cenários em cartões e gatilho (07/10/2026)
+
+Pedido do Tony, depois de usar o Testar: as respostas caíam todas de uma vez, sem cara
+de WhatsApp; os cenários eram muitos e confusos pra quem é leigo ("Formulário do Meta",
+"Já visitou"); e a IA com gatilho ficava calada no teste (a de formulário era
+impossível de testar, porque o lead do teste nunca preencheu formulário nenhum).
+
+**O que aparece na tela (janela do Testar):**
+
+- **Celular:** a mensagem do lead sai com ✓; os três pontinhos aparecem dentro da
+  conversa (e "digitando…" no topo) enquanto ela pensa; as mensagens dela chegam uma
+  por vez, com os pontinhos entre elas; cada bolha tem a hora do relógio do teste. Os
+  tiques do lead ficam azuis quando ela responde e cinza quando ela fica calada.
+- **Cenários em cartões:** Conversa livre (abre nela) · Chegou pelo anúncio ·
+  Preencheu o formulário · Sumiu e voltou · Pede um corretor. A frase do cenário aparece
+  no cartão escolhido. Sem campo de nome, origem nem respostas: **o lead do teste é quem
+  está testando** (primeiro nome do usuário logado). Sobrou só o código do imóvel,
+  opcional, em todos os cenários.
+- **Preencheu o formulário:** com gatilho de formulário, usa o formulário de verdade
+  (backend lm-flow#439, passo `forms`): as respostas do último lead que chegou por ele,
+  sem nome, telefone e e-mail, e o lead do teste "vem" daquele formulário (o gatilho bate
+  como no atendimento). Mais de um formulário no gatilho: lista *Formulário*, aberta no
+  que recebeu lead por último; trocar recomeça o teste. Sem lead ainda: perguntas do
+  Meta com a primeira opção, ou as respostas de exemplo, com o aviso.
+- **Respeitar o gatilho** (só aparece se a IA tem gatilho), **começa desligado**: ela
+  responde qualquer mensagem, e a conversa avisa uma vez "No atendimento real ela não
+  entraria aqui". Ligado, é o atendimento: sem o gatilho bater ela cala, e a linha
+  ensina a desligar.
+- **Mais opções** guarda o "Usar a conversa de um lead real".
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **Menos cenários, mais bem feitos.** Caso muito diferente vai na Conversa livre. Saíram
+  "Já visitou" e "Conversa em andamento". A comparação de roteiros do admin continua com
+  os 6 antigos (`CENARIOS_DE_TESTE`); o Testar usa `CENARIOS_DO_TESTAR`.
+- **Sem nome pra escolher**: é um passo a mais que faz desistir de testar.
+- **Salvar cenário saiu** (ficava só no navegador de quem salvou).
+
+Armadilhas:
+
+1. **Fala de cenário não tem nome do lead** ("Oi Marcos!"): o lead do teste é quem testa.
+2. **`ritmo` do `useEnsaio`/`TestarJanela`** multiplica as esperas da animação; os testes
+   passam 0. Sem ele, cada teste esperaria os pontinhos de verdade.
+3. **`honor_triggers` vai em todo turno e avanço.** Sem o campo o servidor respeita o
+   gatilho (comportamento antigo), então tela nova com servidor velho se comporta como antes.

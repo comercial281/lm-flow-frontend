@@ -73,3 +73,50 @@ export const CENARIOS_DE_TESTE: CenarioDeTeste[] = [
     firstMessage: 'prefiro falar com um corretor, pode ser?',
   },
 ];
+
+/**
+ * Os cenários do Testar do cliente (07/10/2026). Pedido do dono do produto: menos
+ * cenários, mais bem feitos. O cliente leigo escolhe um cartão e testa, sem campo
+ * pra preencher; quem quer um caso muito diferente vai na Conversa livre. Saíram
+ * "Já visitou" (confuso) e "Conversa em andamento" ("Sumiu e voltou" cobre).
+ * A comparação de roteiros do admin continua com os 6 de cima.
+ *
+ * ⚠️ Sem nome do lead nas falas: o lead do teste usa o primeiro nome de quem está
+ * testando, e "Oi Marcos!" no histórico contradiria isso.
+ */
+export const CENARIOS_DO_TESTAR: CenarioDeTeste[] = [
+  {
+    id: 'ctwa', label: 'Chegou pelo anúncio',
+    subtitulo: 'Primeiro contato de quem clicou no anúncio. Ela puxa a conversa sem despejar preço.',
+    contactName: '', source: 'Anúncio Instagram — clique para WhatsApp', interest: '', formAnswers: {},
+    firstMessage: 'oi, vi o anúncio',
+  },
+  {
+    id: 'form', label: 'Preencheu o formulário',
+    subtitulo: 'O lead respondeu o formulário do anúncio. Ela não pode perguntar de novo o que ele já respondeu.',
+    contactName: '', source: 'Formulário Meta Lead Ads', interest: '',
+    formAnswers: { 'Quando pretende comprar?': 'Nos próximos 3 meses', 'Faixa de investimento': 'Até 450 mil', 'É para morar ou investir?': 'Morar' },
+    firstMessage: 'oi',
+  },
+  {
+    id: 'sumiu-voltou', label: 'Sumiu e voltou',
+    subtitulo: 'Parou de responder há 3 dias e voltou. Ela retoma de onde parou, sem se reapresentar.',
+    contactName: '', source: 'Anúncio Instagram', interest: '', formAnswers: {},
+    history: [
+      { role: 'user', content: 'quero saber do apartamento de 2 quartos' },
+      { role: 'assistant', content: 'Boa! É pra morar ou investir?' },
+    ],
+    historyHoursAgo: 72,
+    firstMessage: 'oi, desculpa a demora, é pra morar',
+  },
+  {
+    id: 'pede-pessoa', label: 'Pede um corretor',
+    subtitulo: 'No meio da conversa pede pra falar com uma pessoa. Ela tem que passar na hora, pro destino certo.',
+    contactName: '', source: 'Anúncio Instagram', interest: '', formAnswers: {},
+    history: [
+      { role: 'user', content: 'oi, vi o anúncio' },
+      { role: 'assistant', content: 'Oi! Tudo bem? É pra morar ou pra investir?' },
+    ],
+    firstMessage: 'prefiro falar com um corretor, pode ser?',
+  },
+];
