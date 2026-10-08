@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   horaDoEnsaio, pausa, linhasDoQueAconteceria, horaCurta, tempoDeDigitacao, rotuloDaPergunta, AVISO_DO_GATILHO, itensDoTurno, respostasDoFormulario, textoDasRespostas,
-  avisoDoModelo, nomeDoModelo, AVANCOS_DA_JANELA, painelDoEnsaio, linhaDoCard, oQueAconteceria,
+  avisoDoModelo, nomeDoModelo, AVANCOS_DA_JANELA, painelDoEnsaio, linhaDoCard, oQueAconteceria, juntarTravas,
 } from './ensaio';
 import type { RehearsalOutcome, RehearsalTurn } from '@/services/salesAgents/salesAgentsService';
 
@@ -222,7 +222,8 @@ describe('oQueAconteceria (painel do Testar)', () => {
       checklist: [{ pergunta: 'Renda?', resposta: null, obrigatoria: true }],
       temperature: 'warm',
     }));
-    expect(r.travas).toEqual(['Está sem número', 'Está desligada', 'Nenhum gatilho bateu']);
+    expect(r.travas).toEqual(['sem número', 'desligada', 'nenhum gatilho bateu']);
+    expect(juntarTravas(r.travas)).toBe('sem número, desligada e nenhum gatilho bateu');
     expect(r.linhas).toEqual([]);
   });
 

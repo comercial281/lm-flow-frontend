@@ -19,7 +19,7 @@ import { Seletor } from '@/components/base/Seletor';
 import { salesAgentsService, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { CENARIOS_DO_TESTAR } from '@/features/salesAgents/cenariosDeTeste';
 import {
-  AVANCOS_DA_JANELA, avisoDoModelo, linhaDoCard, oQueAconteceria, painelDoEnsaio, rotuloDaPergunta,
+  AVANCOS_DA_JANELA, avisoDoModelo, juntarTravas, linhaDoCard, oQueAconteceria, painelDoEnsaio, rotuloDaPergunta,
 } from '@/features/salesAgents/ensaio';
 import { fraseDoObjetivo } from '@/features/salesAgents/resumoDosPassos';
 import { cn } from '@/lib/utils';
@@ -302,13 +302,9 @@ export default function TestarJanela({ agent, aoFechar, ritmo = 1 }: { agent: Sa
           <div className="space-y-1.5">
             <h3 className={TITULO}>O que aconteceria</h3>
             {travas.length > 0 && (
-              <div className="space-y-1 rounded-xl border border-amber-500/40 bg-amber-500/10 p-2.5 text-[13px] text-amber-800 dark:text-amber-300">
-                <p className="font-semibold">No atendimento real ela não responderia</p>
-                <ul className="list-disc space-y-0.5 pl-4">
-                  {travas.map((t) => <li key={t}>{t}</li>)}
-                </ul>
-                <p className="text-xs">O teste respondeu mesmo assim, pra você ver como ela fala.</p>
-              </div>
+              <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-2.5 text-[13px] leading-snug text-amber-800 dark:text-amber-300">
+                <span className="font-semibold">No atendimento real ela ficaria calada:</span> {juntarTravas(travas)}. O teste respondeu mesmo assim.
+              </p>
             )}
             {(linhas.length > 0 || travas.length === 0) && (
               <div className="space-y-1 rounded-xl border border-border p-2.5 text-[13px]">

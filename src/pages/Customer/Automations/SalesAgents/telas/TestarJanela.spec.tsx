@@ -199,8 +199,8 @@ describe('TestarJanela', () => {
     expect(within(painel).getByText('Passaria pra Roleta Zona Sul agora')).toBeInTheDocument();
     expect(within(painel).getByText('Motivo pro corretor: Pediu uma pessoa')).toBeInTheDocument();
     expect(within(painel).getByText('Card: vai pra coluna de "Passou pro corretor"')).toBeInTheDocument();
-    expect(within(painel).getByText('No atendimento real ela não responderia')).toBeInTheDocument();
-    expect(within(painel).getByText('Fora do horário de atendimento')).toBeInTheDocument();
+    expect(within(painel).getByText('No atendimento real ela ficaria calada:')).toBeInTheDocument();
+    expect(within(painel).getByText(/fora do horário\. O teste respondeu mesmo assim\./)).toBeInTheDocument();
     expect(within(painel).getAllByText(/respondeu mesmo assim/)).toHaveLength(1);
   });
 

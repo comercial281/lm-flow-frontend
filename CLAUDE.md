@@ -7567,10 +7567,9 @@ uns 10 s depois" e logo abaixo três frases longas, cada uma terminando em "O te
 respondeu mesmo assim", mais Temperatura e "Faltam 3 perguntas obrigatórias", que já têm
 seção própria no mesmo painel.
 
-- **As travas viram um bloco âmbar só**, em cima: "No atendimento real ela não
-  responderia", a lista curta (Está sem número · Está desligada · Nenhum gatilho bateu ·
-  Fora do horário de atendimento · Está em "só follow-up" · Limite do dia atingido) e
-  UMA vez "O teste respondeu mesmo assim, pra você ver como ela fala."
+- **As travas viram uma frase âmbar só**, em cima: "**No atendimento real ela ficaria
+  calada:** sem número, desligada e nenhum gatilho bateu. O teste respondeu mesmo assim."
+  (Pedido do dono: em lista ainda ficava grande.)
 - **Com trava, some o "Responderia uns N s"** (ela não responderia).
 - **Temperatura e perguntas obrigatórias saem do bloco** (seções Temperatura e Qualificação).
 - Regra em `oQueAconteceria` (`features/salesAgents/ensaio.ts`, com spec). A Comparação do
