@@ -138,6 +138,37 @@ export function linhasDoQueAconteceria(o: RehearsalOutcome | null | undefined): 
   return linhas;
 }
 
+/** Cada trava do atendimento real em poucas palavras (a frase do servidor é a do Diagnóstico, longa). */
+const TRAVA_CURTA: Record<string, string> = {
+  no_number: 'sem número',
+  agent_disabled: 'desligada',
+  followup_only: 'em "só follow-up"',
+  schedule_closed: 'fora do horário',
+  daily_limit_reached: 'limite do dia atingido',
+  trigger_no_match: 'nenhum gatilho bateu',
+};
+
+/** "sem número, desligada e nenhum gatilho bateu". */
+export function juntarTravas(travas: string[]): string {
+  if (travas.length <= 1) return travas[0] ?? '';
+  return `${travas.slice(0, -1).join(', ')} e ${travas[travas.length - 1]}`;
+}
+
+/**
+ * O "O que aconteceria" do Testar (pedido do dono do produto, 08/10/2026): as
+ * travas juntas num bloco só, com um "o teste respondeu mesmo assim" só, e
+ * embaixo o que ela faria. Com trava, não diz em quantos segundos responderia
+ * (não responderia). Temperatura e perguntas obrigatórias ficam de fora: já têm
+ * seção própria no painel. A Comparação do admin segue com linhasDoQueAconteceria.
+ */
+export function oQueAconteceria(o: RehearsalOutcome | null | undefined): { travas: string[]; linhas: string[] } {
+  if (!o) return { travas: [], linhas: [] };
+  const travas = o.warnings.map((w) => TRAVA_CURTA[w.reason] ?? w.text);
+  const linhas = linhasDoQueAconteceria({ ...o, warnings: [], temperature: null, checklist: [] })
+    .filter((l) => !(travas.length && l.startsWith('Responderia uns ')));
+  return { travas, linhas };
+}
+
 /** O motivo do gatilho que não bateu (SalesAgentRun::MOTIVOS_PT['trigger_no_match']). */
 export const GATILHO = 'trigger_no_match';
 export const AVISO_DO_GATILHO = 'No atendimento real ela não entraria aqui: nenhum gatilho bateu. O teste respondeu mesmo assim.';

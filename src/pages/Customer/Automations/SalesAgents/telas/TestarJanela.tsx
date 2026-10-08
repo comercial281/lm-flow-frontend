@@ -19,7 +19,7 @@ import { Seletor } from '@/components/base/Seletor';
 import { salesAgentsService, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { CENARIOS_DO_TESTAR } from '@/features/salesAgents/cenariosDeTeste';
 import {
-  AVANCOS_DA_JANELA, avisoDoModelo, linhaDoCard, linhasDoQueAconteceria, painelDoEnsaio, rotuloDaPergunta,
+  AVANCOS_DA_JANELA, avisoDoModelo, juntarTravas, linhaDoCard, oQueAconteceria, painelDoEnsaio, rotuloDaPergunta,
 } from '@/features/salesAgents/ensaio';
 import { fraseDoObjetivo } from '@/features/salesAgents/resumoDosPassos';
 import { cn } from '@/lib/utils';
@@ -46,7 +46,8 @@ export default function TestarJanela({ agent, aoFechar, ritmo = 1 }: { agent: Sa
   const [maisOpcoes, setMaisOpcoes] = useState(false);
   const painel = painelDoEnsaio(e.ensaio, e.ficha);
   const card = linhaDoCard(e.ficha);
-  const linhas = [...linhasDoQueAconteceria(e.ficha), ...(card ? [card] : [])];
+  const { travas, linhas: acoes } = oQueAconteceria(e.ficha);
+  const linhas = [...acoes, ...(card ? [card] : [])];
   const modelo = avisoDoModelo(e.ficha?.test_model ?? agent.test_model, agent.model);
   const nomeVisto = (agent.lead_facing_name ?? '').trim() || agent.name;
   const cartoes = [LIVRE, ...CENARIOS_DO_TESTAR];
@@ -300,9 +301,16 @@ export default function TestarJanela({ agent, aoFechar, ritmo = 1 }: { agent: Sa
           </div>
           <div className="space-y-1.5">
             <h3 className={TITULO}>O que aconteceria</h3>
-            <div className="space-y-1 rounded-xl border border-border p-2.5 text-[13px]">
-              {linhas.length ? linhas.map((l, i) => <p key={`${i}-${l}`}>{l}</p>) : <p>{fraseDoObjetivo(agent)}</p>}
-            </div>
+            {travas.length > 0 && (
+              <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-2.5 text-[13px] leading-snug text-amber-800 dark:text-amber-300">
+                <span className="font-semibold">No atendimento real ela ficaria calada:</span> {juntarTravas(travas)}. O teste respondeu mesmo assim.
+              </p>
+            )}
+            {(linhas.length > 0 || travas.length === 0) && (
+              <div className="space-y-1 rounded-xl border border-border p-2.5 text-[13px]">
+                {linhas.length ? linhas.map((l, i) => <p key={`${i}-${l}`}>{l}</p>) : <p>{fraseDoObjetivo(agent)}</p>}
+              </div>
+            )}
           </div>
           <div className="space-y-1.5">
             <h3 className={TITULO}>Avançar o tempo</h3>

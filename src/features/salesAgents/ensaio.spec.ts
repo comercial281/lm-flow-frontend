@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   horaDoEnsaio, pausa, linhasDoQueAconteceria, horaCurta, tempoDeDigitacao, rotuloDaPergunta, AVISO_DO_GATILHO, itensDoTurno, respostasDoFormulario, textoDasRespostas,
-  avisoDoModelo, nomeDoModelo, AVANCOS_DA_JANELA, painelDoEnsaio, linhaDoCard,
+  avisoDoModelo, nomeDoModelo, AVANCOS_DA_JANELA, painelDoEnsaio, linhaDoCard, oQueAconteceria, juntarTravas,
 } from './ensaio';
 import type { RehearsalOutcome, RehearsalTurn } from '@/services/salesAgents/salesAgentsService';
 
@@ -207,5 +207,38 @@ describe('linhaDoCard', () => {
   });
   it('momento desconhecido sai como veio', () => {
     expect(linhaDoCard(outcome({ card: { stage: 'novo_momento', moves: true } }))).toBe('Card: vai pra coluna de "novo_momento"');
+  });
+});
+
+describe('oQueAconteceria (painel do Testar)', () => {
+  it('junta as travas num bloco só, curtas, e não promete o tempo de resposta', () => {
+    const r = oQueAconteceria(outcome({
+      delay_s: 10,
+      warnings: [
+        { reason: 'no_number', text: 'A IA está sem número: no atendimento real nenhuma mensagem sairia' },
+        { reason: 'agent_disabled', text: 'A IA está desligada' },
+        { reason: 'trigger_no_match', text: 'Nenhum gatilho de ativação bateu com esta conversa' },
+      ],
+      checklist: [{ pergunta: 'Renda?', resposta: null, obrigatoria: true }],
+      temperature: 'warm',
+    }));
+    expect(r.travas).toEqual(['sem número', 'desligada', 'nenhum gatilho bateu']);
+    expect(juntarTravas(r.travas)).toBe('sem número, desligada e nenhum gatilho bateu');
+    expect(r.linhas).toEqual([]);
+  });
+
+  it('sem trava, diz quando responderia; temperatura e obrigatórias ficam nas seções próprias', () => {
+    const r = oQueAconteceria(outcome({
+      delay_s: 10,
+      handoff: { kind: 'roleta', destination: 'Roleta Zona Sul' },
+      checklist: [{ pergunta: 'Renda?', resposta: null, obrigatoria: true }],
+      temperature: 'hot',
+    }));
+    expect(r.travas).toEqual([]);
+    expect(r.linhas).toEqual(['Responderia uns 10 s depois da mensagem do lead', 'Passaria pra Roleta Zona Sul agora']);
+  });
+
+  it('trava desconhecida sai com o texto do servidor', () => {
+    expect(oQueAconteceria(outcome({ warnings: [{ reason: 'novo', text: 'Algo novo' }] })).travas).toEqual(['Algo novo']);
   });
 });
