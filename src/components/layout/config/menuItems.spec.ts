@@ -100,13 +100,13 @@ describe('o menu do CRM confere o cargo', () => {
 });
 
 describe('menu novo: seções (fase 4)', () => {
-  it('o Corretor de fábrica vê Principal, Imóveis, Leads e, em Vendas e automação, só Funis de mensagem', () => {
+  it('o Corretor de fábrica vê Principal, Atividades, Imóveis, Leads e, em Vendas e automação, só Funis de mensagem', () => {
     const vistas = comCargo(CORRETOR);
-    expect(vistas.map(s => s.id)).toEqual(['principal', 'imoveis', 'leads', 'vendas']);
+    expect(vistas.map(s => s.id)).toEqual(['principal', 'atividades', 'imoveis', 'leads', 'vendas']);
     // Gestão de proprietários passa no cargo; quem tira do corretor sem
     // proprietário liberado é o `aplicarProprietariosNoMenu`, no MainLayout.
     expect(vistas.flatMap(s => s.itens.map(i => i.name))).toEqual([
-      'Dashboard', 'Conversas', 'Funil de vendas', 'Atividades', 'Meus imóveis', 'Gestão de proprietários', 'Contatos', 'Bolsão',
+      'Dashboard', 'Conversas', 'Funil de vendas', 'Tarefas', 'Visitas', 'Meus imóveis', 'Gestão de proprietários', 'Contatos', 'Bolsão',
       'Funis de mensagem',
     ]);
   });
@@ -125,13 +125,14 @@ describe('menu novo: seções (fase 4)', () => {
     expect(bolsao.href).toBe('/bolsao');
   });
 
-  it('Atividades leva à primeira aba que o cargo enxerga (só visitas cai na Agenda)', () => {
-    const soVisitas = comCargo(new Set(['visits.read']));
-    const item = soVisitas.flatMap(s => s.itens).find(i => i.name === 'Atividades')!;
-    expect(item.abas?.map(a => a.name)).toEqual(['Agenda']);
-    expect(item.href).toBe('/visits');
-    const comTudo = comCargo(new Set(['visits.read', 'pipelines.read'])).flatMap(s => s.itens).find(i => i.name === 'Atividades')!;
-    expect(comTudo.href).toBe('/atividades');
+  it('Atividades é uma seção (depois de Principal) com Tarefas e Visitas; cada item some sem o cargo', () => {
+    const ordem = secoes.map(x => x.id);
+    expect(ordem.indexOf('atividades')).toBe(ordem.indexOf('principal') + 1);
+    const nomes = (c: Set<string>) => comCargo(c).find(x => x.id === 'atividades')?.itens.map(i => [i.name, i.href]);
+    expect(nomes(new Set(['visits.read', 'pipelines.read']))).toEqual([['Tarefas', '/tarefas'], ['Visitas', '/visits']]);
+    expect(nomes(new Set(['visits.read']))).toEqual([['Visitas', '/visits']]);
+    expect(nomes(new Set(['pipelines.read']))).toEqual([['Tarefas', '/tarefas']]);
+    expect(nomes(new Set())).toBeUndefined();
   });
 
   it('Integrações leva sempre à página de entrada, mesmo com uma tela só', () => {

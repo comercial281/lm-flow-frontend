@@ -28,22 +28,8 @@ export interface TarefaAtividade {
   can_delete: boolean;
 }
 
-export interface VisitaAtividade {
-  kind: 'visit';
-  id: string;
-  title: string;
-  due_at: string;
-  status: string;
-  overdue: boolean;
-  contact: Pessoa | null;
-  assignee: Pessoa | null;
-  property_title?: string | null;
-}
-
-export type Atividade = TarefaAtividade | VisitaAtividade;
-
 export interface RespostaDeAtividades {
-  data: Atividade[];
+  data: TarefaAtividade[];
   meta: { counts: Partial<Record<Balde, number>>; total: number; page: number; per_page: number; only_mine: boolean };
 }
 
