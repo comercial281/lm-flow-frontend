@@ -65,6 +65,7 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/settings/account', resource: 'accounts', action: 'read' },
   { path: '/settings/teams/:teamId/add-users', resource: 'teams', action: 'create' },
   { path: '/settings/labels', resource: 'labels', action: 'read' },
+  { path: '/settings/listas', resource: 'pipelines', action: 'read' },
   { path: '/settings/attributes', resource: 'custom_attribute_definitions', action: 'read' },
   { path: '/settings/template-variables', resource: 'canned_responses', action: 'read' },
   { path: '/settings/lead-automations', resource: 'lead_automation_rules', action: 'read' },

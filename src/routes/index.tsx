@@ -88,6 +88,7 @@ const PipelineKanban = lazyWithRetry(() => import('@/pages/Customer/Pipelines/Pi
 // (é navegação interna da lista de Times).
 const AddUsers = lazyWithRetry(() => import('@/pages/Customer/Settings/Teams').then(m => ({ default: m.AddUsers })));
 const TemplateVariables = lazyWithRetry(() => import('@/pages/Customer/Settings/TemplateVariables').then(m => ({ default: m.TemplateVariables })));
+const ListasDaCasa = lazyWithRetry(() => import('@/pages/Customer/Settings/Listas/Listas'));
 const ConversationFunnels = lazyWithRetry(() => import('@/pages/Customer/Automations/MessageFunnels/ConversationFunnels'));
 const FlowAutomationsList = lazyWithRetry(() => import('@/pages/Customer/Automations/FlowBuilder/FlowAutomationsList'));
 const FlowAutomationCanvas = lazyWithRetry(() => import('@/pages/Customer/Automations/FlowBuilder/FlowAutomationCanvas'));
@@ -839,6 +840,18 @@ const AppRouter = () => {
               element={
                 <PermissionRoute resource="labels" action="read">
                   <Labels />
+                </PermissionRoute>
+              }
+            />
+
+            {/* Listas da casa (E1 do funil, 07/10/2026): motivos de perda e
+                categorias de tarefa. Abre pra quem lê o funil; quem muda é o
+                servidor (pipelines.update), e a tela fica só de leitura pro resto. */}
+            <Route
+              path="/settings/listas"
+              element={
+                <PermissionRoute resource="pipelines" action="read">
+                  <ListasDaCasa />
                 </PermissionRoute>
               }
             />

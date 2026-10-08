@@ -87,6 +87,8 @@ describe('toda rota do CRM confere o cargo', () => {
     ['/settings/whatsapp-reminders', 'whatsapp_reminders', 'read'],
     ['lead-ads-forms', 'lead_ads_form_configs', 'read'],
     ['/settings/lead-ads-forms', 'lead_ads_form_configs', 'read'],
+    // Listas da casa (E1 do funil): abre pra quem lê o funil; mudar é pipelines.update no servidor.
+    ['/settings/listas', 'pipelines', 'read'],
   ])('%s exige %s.%s', (path, resource, action) => {
     expect(trecho(path)).toContain(`<PermissionRoute resource="${resource}" action="${action}">`);
   });
