@@ -12,9 +12,14 @@ import type { ListKey, ListOption } from '@/services/listOptions/listOptionsServ
 const svc = vi.hoisted(() => ({ list: vi.fn(), create: vi.fn(), update: vi.fn(), reorder: vi.fn() }));
 const toasts = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 const perm = vi.hoisted(() => ({ podeMudar: true }));
+// A aba Categorias de tarefa nasce escondida (abasDasListas.ts); os testes dela ligam a chave.
+const chave = vi.hoisted(() => ({ categorias: false }));
 
 vi.mock('@/services/listOptions/listOptionsService', () => ({ listOptionsService: svc }));
 vi.mock('sonner', () => ({ toast: toasts }));
+vi.mock('./abasDasListas', () => ({
+  get CATEGORIAS_DE_TAREFA_NA_TELA() { return chave.categorias; },
+}));
 vi.mock('@/hooks/useCan', () => ({
   useCan: () => (r: string, a: string) => (`${r}.${a}` === 'pipelines.update' ? perm.podeMudar : true),
 }));
@@ -55,16 +60,17 @@ const linhas = () => within(screen.getByRole('list', { name: 'Motivos de perda' 
 beforeEach(() => {
   vi.clearAllMocks();
   perm.podeMudar = true;
+  chave.categorias = false;
   svc.list.mockImplementation(async (key: ListKey) => (key === 'loss_reasons' ? MOTIVOS : CATEGORIAS));
 });
 
 describe('Listas', () => {
-  it('cabeçalho da casa e abas; motivos na ordem gravada, com as arquivadas à parte', async () => {
+  it('cabeçalho da casa, só Motivos de perda (Categorias escondida); ordem gravada, arquivadas à parte', async () => {
     abrir();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Listas' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Motivos de perda' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', { name: 'Categorias de tarefa' })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+    expect(screen.queryByText(/categoria de uma tarefa/)).not.toBeInTheDocument();
 
     await screen.findByRole('list', { name: 'Motivos de perda' });
     expect(svc.list).toHaveBeenCalledWith('loss_reasons', { includeInactive: true });
@@ -199,7 +205,21 @@ describe('Listas', () => {
     expect(svc.update).toHaveBeenCalledWith('m2', { meta_exclusion: true });
   });
 
-  it('aba Categorias de tarefa: vai pro endereço, carrega a outra lista e não tem a chave da Meta', async () => {
+  it('Categorias escondida: ?aba=categorias cai nos motivos de perda', async () => {
+    abrir('/settings/listas?aba=categorias');
+    expect(await screen.findByRole('list', { name: 'Motivos de perda' })).toBeInTheDocument();
+    expect(svc.list).not.toHaveBeenCalledWith('task_categories', expect.anything());
+  });
+
+  it('com a aba ligada: as duas abas, Motivos de perda escolhida', () => {
+    chave.categorias = true;
+    abrir();
+    expect(screen.getByRole('tab', { name: 'Motivos de perda' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Categorias de tarefa' })).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('aba Categorias de tarefa (ligada): vai pro endereço, carrega a outra lista e não tem a chave da Meta', async () => {
+    chave.categorias = true;
     abrir();
     await screen.findByRole('list', { name: 'Motivos de perda' });
 
@@ -212,7 +232,8 @@ describe('Listas', () => {
     expect(screen.getByRole('textbox', { name: 'Nova categoria' })).toBeInTheDocument();
   });
 
-  it('o endereço ?aba=categorias abre direto na aba', async () => {
+  it('o endereço ?aba=categorias abre direto na aba (ligada)', async () => {
+    chave.categorias = true;
     abrir('/settings/listas?aba=categorias');
     expect(await screen.findByRole('list', { name: 'Categorias de tarefa' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Categorias de tarefa' })).toHaveAttribute('aria-selected', 'true');

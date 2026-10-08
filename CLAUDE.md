@@ -7580,7 +7580,7 @@ Armadilhas:
 
 Pendente conhecido:
 
-- **Categorias de tarefa**: a tela Tarefas ainda guarda a categoria pelo nome; até ela ler as Listas da casa, editar essa lista não muda as tarefas.
+- **Categorias de tarefa**: a tela Tarefas ainda guarda a categoria pelo nome; até ela ler as Listas da casa, editar essa lista não muda as tarefas. **Por isso a aba está escondida** (08/10, revisão final): a tela mostra só Motivos de perda, sem abas, e `?aba=categorias` cai em motivos. A chave é uma só, `CATEGORIAS_DE_TAREFA_NA_TELA` em `Settings/Listas/abasDasListas.ts`: ligar no mesmo PR em que Tarefas passar a ler `task_categories`. O código e os testes da aba continuam (os testes ligam a chave).
 
 ## Situação do card: Ganho, Perdido e Reabrir (07/10/2026)
 
