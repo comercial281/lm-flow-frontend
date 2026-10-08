@@ -826,6 +826,7 @@ export default function PipelineKanban() {
             ordem={listSortOrder}
             aoTrocarOrdem={() => setListSortOrder(o => (o === 'asc' ? 'desc' : 'asc'))}
             onOpenItem={handleEditItem}
+            visitsByContact={visitsByContact}
           />
         )}
       </div>
