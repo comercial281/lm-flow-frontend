@@ -15,11 +15,11 @@ describe('endereço do quadro', () => {
   });
 
   it('lê os filtros (listas repetidas, datas e dias válidos)', () => {
-    const f = lerFiltros(p('de=2026-10-01&ate=2026-10-31&etapas=s1&etapas=s2&etiq=Tráfego%20pago&etiq=Meta&resp=nenhum&largados=14&tarefas=atrasada&tarefas=xyz&colunas=s2'));
+    const f = lerFiltros(p('de=2026-10-01&ate=2026-10-31&etapas=s1&etapas=s2&etiq=Tráfego%20pago&etiq=Meta&resp=nenhum&largados=14&tarefas=atrasada&tarefas=amanha&tarefas=xyz&categ=k1&categ=k2&colunas=s2'));
     expect(f).toEqual({
       ...FILTROS_VAZIOS,
       de: '2026-10-01', ate: '2026-10-31', etapas: ['s1', 's2'], etiq: ['Tráfego pago', 'Meta'],
-      resp: ['nenhum'], largados: 14, tarefas: ['atrasada'], colunas: ['s2'],
+      resp: ['nenhum'], largados: 14, tarefas: ['atrasada', 'amanha'], categ: ['k1', 'k2'], colunas: ['s2'],
     });
     expect(lerFiltros(p('de=ontem&largados=-3')).de).toBe('');
     expect(lerFiltros(p('largados=0')).largados).toBeNull();
@@ -37,7 +37,7 @@ describe('endereço do quadro', () => {
   });
 
   it('ler(escrever(x)) devolve x', () => {
-    const f = { ...FILTROS_VAZIOS, de: '2026-10-01', origens: ['meta_lead_ads'], motivos: ['m1', 'm2'], tarefas: ['hoje' as const] };
+    const f = { ...FILTROS_VAZIOS, de: '2026-10-01', origens: ['meta_lead_ads'], motivos: ['m1', 'm2'], tarefas: ['hoje' as const, 'amanha' as const], categ: ['k1', 'k2'] };
     expect(lerFiltros(escreverNoEndereco(p(''), 'perdidos', f))).toEqual(f);
   });
 

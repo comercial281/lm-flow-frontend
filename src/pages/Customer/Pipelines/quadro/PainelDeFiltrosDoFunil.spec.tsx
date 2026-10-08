@@ -24,28 +24,57 @@ function abrir(aba: AbaDoQuadro = 'abertos', filtros: FiltrosDoFunil = FILTROS_V
   return { aoFiltrar, aoFechar, painel: screen.getByRole('dialog', { name: 'Filtros do funil' }) };
 }
 
-const SECOES = ['Criado em', 'Etapas', 'Origem', 'Responsável', 'Etiquetas', 'Motivo da perda', 'Largados', 'Tarefas', 'Colunas visíveis'];
+const SECOES = ['Criado em', 'Etapas', 'Origem', 'Responsável', 'Etiquetas', 'Motivo da perda', 'Largados', 'Tarefas', 'Categoria da tarefa', 'Colunas visíveis'];
 
 describe('PainelDeFiltrosDoFunil', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(listOptionsService.list).mockResolvedValue([
-      { id: 'm1', list_key: 'loss_reasons', label: 'Adiou a compra', position: 1, active: true, meta_exclusion: false },
-      { id: 'm9', list_key: 'loss_reasons', label: 'Preço', position: 2, active: false, meta_exclusion: false },
-    ] as never);
+    vi.mocked(listOptionsService.list).mockImplementation((async (chave: string) =>
+      chave === 'task_categories'
+        ? [
+            { id: 'k1', list_key: 'task_categories', label: 'Follow-up', position: 1, active: true, meta_exclusion: false },
+            { id: 'k2', list_key: 'task_categories', label: 'Antiga', position: 2, active: false, meta_exclusion: false },
+          ]
+        : [
+            { id: 'm1', list_key: 'loss_reasons', label: 'Adiou a compra', position: 1, active: true, meta_exclusion: false },
+            { id: 'm9', list_key: 'loss_reasons', label: 'Preço', position: 2, active: false, meta_exclusion: false },
+          ]) as never);
   });
 
-  it('as nove seções, na ordem da spec; Motivo da perda só em Perdidos e Todos', async () => {
+  it('as dez seções, na ordem da spec; Motivo da perda só em Perdidos e Todos', async () => {
     const { painel } = abrir('perdidos');
+    await within(painel).findByRole('button', { name: 'Follow-up' });
     expect(within(painel).getAllByRole('heading', { level: 3 }).map(h => h.textContent)).toEqual(SECOES);
     expect(listOptionsService.list).toHaveBeenCalledWith('loss_reasons', { includeInactive: true });
     expect(await within(painel).findByRole('button', { name: 'Preço (arquivado)' })).toBeInTheDocument();
   });
 
-  it('em Abertos não tem Motivo da perda nem pede a lista', () => {
+  it('em Abertos não tem Motivo da perda nem pede a lista', async () => {
     const { painel } = abrir('abertos');
+    await within(painel).findByRole('button', { name: 'Follow-up' });
     expect(within(painel).getAllByRole('heading', { level: 3 }).map(h => h.textContent)).toEqual(SECOES.filter(s => s !== 'Motivo da perda'));
-    expect(listOptionsService.list).not.toHaveBeenCalled();
+    expect(listOptionsService.list).not.toHaveBeenCalledWith('loss_reasons', expect.anything());
+  });
+
+  it('Tarefas tem Vence amanhã; Categoria da tarefa lista só as ativas e vai no Filtrar', async () => {
+    const { painel, aoFiltrar } = abrir('abertos');
+    const tarefas = within(painel).getByRole('group', { name: 'Tarefas' });
+    expect(within(tarefas).getAllByRole('button').map(b => b.textContent)).toEqual(['Vence hoje', 'Vence amanhã', 'Atrasadas']);
+    await userEvent.click(within(tarefas).getByRole('button', { name: 'Vence amanhã' }));
+    const categoria = within(painel).getByRole('group', { name: 'Categoria da tarefa' });
+    expect(await within(categoria).findByRole('button', { name: 'Follow-up' })).toBeInTheDocument();
+    expect(within(categoria).queryByRole('button', { name: 'Antiga' })).not.toBeInTheDocument();
+    await userEvent.click(within(categoria).getByRole('button', { name: 'Follow-up' }));
+    await userEvent.click(within(painel).getByRole('button', { name: 'Filtrar' }));
+    expect(aoFiltrar).toHaveBeenCalledWith({ ...FILTROS_VAZIOS, tarefas: ['amanha'], categ: ['k1'] });
+  });
+
+  it('sem categoria ativa, o grupo Categoria da tarefa não aparece; Limpar zera', async () => {
+    vi.mocked(listOptionsService.list).mockResolvedValue([] as never);
+    const { painel, aoFiltrar } = abrir('abertos', { ...FILTROS_VAZIOS, categ: ['k1'], tarefas: ['amanha'] });
+    await userEvent.click(within(painel).getByRole('button', { name: 'Limpar filtros' }));
+    expect(aoFiltrar).toHaveBeenCalledWith(FILTROS_VAZIOS);
+    expect(within(painel).queryByRole('group', { name: 'Categoria da tarefa' })).not.toBeInTheDocument();
   });
 
   it('escolhe e só aplica no Filtrar (e fecha)', async () => {

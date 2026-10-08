@@ -10,6 +10,7 @@ import EtiquetasDeEscolha from '@/components/base/EtiquetasDeEscolha';
 import EmptyState from '@/components/base/EmptyState';
 import { listOptionsService, type ListOption } from '@/services/listOptions/listOptionsService';
 import { ROTULOS_DO_FILTRO_DE_TAREFAS } from '@/features/tarefas/filtroDoFunil';
+import { useCategoriasDeTarefa } from '@/features/tarefas/useCategoriasDeTarefa';
 import type { PipelineStage } from '@/types/analytics';
 import { FILTROS_VAZIOS, type AbaDoQuadro, type FiltrosDoFunil, type TarefaDoFiltro } from './enderecoDoQuadro';
 import { motivoNaAba, opcoesDeOrigem, opcoesDeResponsavel } from './filtrosDoFunil';
@@ -27,6 +28,7 @@ const OPCOES_DE_LARGADOS: { valor: EscolhaDeLargados; rotulo: string }[] = [
 // Rótulos da regra publicada pela sessão de Tarefas (uma só fonte).
 const OPCOES_DE_TAREFA: { valor: TarefaDoFiltro; rotulo: string }[] = [
   { valor: 'hoje', rotulo: ROTULOS_DO_FILTRO_DE_TAREFAS.hoje },
+  { valor: 'amanha', rotulo: ROTULOS_DO_FILTRO_DE_TAREFAS.amanha },
   { valor: 'atrasada', rotulo: ROTULOS_DO_FILTRO_DE_TAREFAS.atrasadas },
 ];
 
@@ -88,6 +90,8 @@ export default function PainelDeFiltrosDoFunil({
   useEffect(() => {
     if (aberto && comMotivo && motivos === null && !erroMotivos) void carregarMotivos();
   }, [aberto, comMotivo, motivos, erroMotivos, carregarMotivos]);
+
+  const { ativas: categoriasDeTarefa } = useCategoriasDeTarefa();
 
   const mudar = <K extends keyof FiltrosDoFunil>(chave: K, valor: FiltrosDoFunil[K]) =>
     setRascunho(r => ({ ...r, [chave]: valor }));
@@ -203,6 +207,14 @@ export default function PainelDeFiltrosDoFunil({
             <EtiquetasDeEscolha rotulo="Tarefas" opcoes={OPCOES_DE_TAREFA} escolhidas={rascunho.tarefas}
               aoMudar={v => mudar('tarefas', v as TarefaDoFiltro[])} />
           </Secao>
+
+          {categoriasDeTarefa.length > 0 && (
+            <Secao id="filtro-categoria-tarefa" titulo="Categoria da tarefa">
+              <EtiquetasDeEscolha rotulo="Categoria da tarefa"
+                opcoes={categoriasDeTarefa.map(c => ({ valor: c.id, rotulo: c.label }))}
+                escolhidas={rascunho.categ} aoMudar={v => mudar('categ', v)} />
+            </Secao>
+          )}
 
           <Secao id="filtro-colunas" titulo="Colunas visíveis">
             <EtiquetasDeEscolha
