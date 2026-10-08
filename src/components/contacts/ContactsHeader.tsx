@@ -125,6 +125,7 @@ export default function ContactsHeader({
   return (
     <BaseHeader
       title="Contatos"
+      subtitle="Todas as pessoas que já falaram com você, com o histórico e as etiquetas."
       totalCount={totalCount}
       // No modo "todos", o número que importa é o do conjunto inteiro — mostrar
       // os 20 da página faria o usuário achar que o delete só pega a página.

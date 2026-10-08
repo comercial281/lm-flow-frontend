@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { BaseHeader, Pagina } from '@/components/base';
 import { Input } from '@/components/ui/ds';
 import { Search } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -10,9 +11,11 @@ interface ChannelGridProps {
   onChannelSelect: (channel: ChannelType) => void;
   canFB: boolean;
   canIG: boolean;
+  /** Trilha "← voltar" acima do título. */
+  acima?: ReactNode;
 }
 
-export const ChannelGrid = ({ channels, onChannelSelect, canFB, canIG }: ChannelGridProps) => {
+export const ChannelGrid = ({ channels, onChannelSelect, canFB, canIG, acima }: ChannelGridProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const { t } = useLanguage('channels');
 
@@ -26,23 +29,17 @@ export const ChannelGrid = ({ channels, onChannelSelect, canFB, canIG }: Channel
     [searchQuery, channels],
   );
 
-  const pageContainer = 'mx-auto w-full max-w-6xl px-4 md:px-6';
-
-  const renderHeader = (title: string, subtitle?: string) => (
-    <div className="mb-6 md:mb-8">
-      <h1 className="text-2xl font-bold tracking-tight text-sidebar-foreground mb-2">{title}</h1>
-      {subtitle && <p className="text-sidebar-foreground/70">{subtitle}</p>}
-    </div>
-  );
-
   return (
-    <div className={pageContainer}>
-      <div data-tour="channel-grid-header">
-        {renderHeader(t('newChannel.channelGrid.title'), t('newChannel.channelGrid.subtitle'))}
-      </div>
-
+    <Pagina
+      acima={acima}
+      cabecalho={
+        <div data-tour="channel-grid-header">
+          <BaseHeader title={t('newChannel.channelGrid.title')} subtitle={t('newChannel.channelGrid.subtitle')} />
+        </div>
+      }
+    >
       {/* Search */}
-      <div className="mb-8" data-tour="channel-grid-search">
+      <div data-tour="channel-grid-search">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sidebar-foreground/60 h-5 w-5" />
           <Input
@@ -79,6 +76,6 @@ export const ChannelGrid = ({ channels, onChannelSelect, canFB, canIG }: Channel
           );
         })}
       </div>
-    </div>
+    </Pagina>
   );
 };

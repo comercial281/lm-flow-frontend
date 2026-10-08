@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BaseHeader } from '@/components/base';
+import { BaseHeader, Pagina } from '@/components/base';
 import { useMenuSecoes } from '@/contexts/MenuContext';
 import { openSupport } from '@/components/support/openSupport';
 import { cvcrmService, type CvcrmStatus } from '@/services/cvcrm/cvcrmService';
@@ -48,9 +48,7 @@ export default function IntegracoesSistemas() {
   const sistemas = (itemDeIntegracoes(useMenuSecoes())?.abas ?? []).filter(t => t.cartao === 'sistemas');
 
   return (
-    <div className="flex h-full flex-col gap-6 p-4">
-      <BaseHeader title="Sistemas" subtitle="Leve os leads direto pro sistema que sua imobiliária já usa." />
-
+    <Pagina cabecalho={<BaseHeader title="Sistemas" subtitle="Leve os leads direto pro sistema que sua imobiliária já usa." />}>
       {sistemas.length === 0 ? (
         <p className="text-sm text-sidebar-foreground/70">{NENHUMA_INTEGRACAO}</p>
       ) : (
@@ -65,6 +63,6 @@ export default function IntegracoesSistemas() {
           Fale com o suporte
         </button>
       </p>
-    </div>
+    </Pagina>
   );
 }

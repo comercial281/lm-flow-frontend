@@ -46,6 +46,7 @@ import { getAudioSettings, playNotificationSoundPreview } from '@/utils/audioNot
 import { getModifierKey } from '@/utils/platform';
 import { normalizeAvatarUrl } from '@/utils/avatarUrl';
 import { ProfilePhotoUploader, TwoFactorSetup } from '@/components/shared/profile';
+import { BaseHeader, Pagina } from '@/components/base';
 import { PhoneInput } from '@/components/shared/PhoneInput';
 
 const Profile = () => {
@@ -948,12 +949,7 @@ const Profile = () => {
   const isDeleteConfirmValid = deleteConfirmEmail === user.email;
 
   return (
-    <div className="container max-w-4xl mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
-        <p className="text-muted-foreground mt-2">{t('subtitle')}</p>
-      </div>
-
+    <Pagina estreita cabecalho={<BaseHeader title={t('title')} subtitle={t('subtitle')} />}>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-8">
           <TabsTrigger value="dados">{t('tabs.personalData')}</TabsTrigger>
@@ -1045,7 +1041,7 @@ const Profile = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Pagina>
   );
 };
 

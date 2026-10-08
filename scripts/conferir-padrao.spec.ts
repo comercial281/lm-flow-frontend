@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, textosDoJson, noEscopo, contaSelectNativo, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -178,6 +178,17 @@ describe('contaSelectNativo: a lista nativa vale para o app inteiro', () => {
   });
 });
 
+describe('tagsJsx', () => {
+  it('lista as tags JSX com a linha', () => {
+    const tags = tagsJsx('const a = (\n<div>\n<h1>{x}</h1>\n<BaseHeader title="t" />\n</div>);', 'x.tsx');
+    expect(tags).toEqual([
+      { tag: 'div', linha: 2 },
+      { tag: 'h1', linha: 3 },
+      { tag: 'BaseHeader', linha: 4 },
+    ]);
+  });
+});
+
 describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
   let raiz: string;
 
@@ -209,6 +220,29 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     );
     mkdirSync(join(raiz, 'src/components/base'), { recursive: true });
     writeFileSync(join(raiz, 'src/components/base/Seletor.tsx'), 'const s = <select />;');
+    // Padrão de telas: título e barra à mão, cabeçalho fora da moldura.
+    writeFileSync(
+      join(raiz, 'src/components/base/BaseHeader.tsx'),
+      `export default function BaseHeader({ title }) {
+        return <div><div style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }} /><h1>{title}</h1></div>;
+      }`,
+    );
+    mkdirSync(join(raiz, 'src/components/coisas'), { recursive: true });
+    writeFileSync(join(raiz, 'src/components/coisas/CoisasHeader.tsx'), 'export const CoisasHeader = () => <BaseHeader title={nome} />;');
+    writeFileSync(
+      join(raiz, 'src/pages/Customer/TituloAMao.tsx'),
+      `export const T = () => (
+        <div>
+          <div style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }} />
+          <h1>{nome}</h1>
+        </div>
+      );`,
+    );
+    writeFileSync(join(raiz, 'src/pages/Customer/ComMoldura.tsx'), "import { Pagina } from '@/components/base';\nexport const C = () => <Pagina cabecalho={<CoisasHeader />} />;");
+    // Pagina local (const Pagina = X), sem o import da casa: NÃO é a moldura
+    writeFileSync(join(raiz, 'src/pages/Customer/PaginaLocal.tsx'), 'const Pagina = COMPONENTES[atual];\nexport const L = () => <Pagina><BaseHeader title={nome} /></Pagina>;');
+    writeFileSync(join(raiz, 'src/pages/Customer/SemMoldura.tsx'), 'export const S = () => <div><CoisasHeader /></div>;');
+    writeFileSync(join(raiz, 'src/pages/Customer/DiretoSemMoldura.tsx'), 'export const D = () => <BaseHeader title={nome} />;');
     // A lista nativa conta no app inteiro: painel raiz e sobra contam; o widget,
     // o portal público e os testes, não.
     writeFileSync(join(raiz, 'src/pages/SuperAdmin/Filtro.tsx'), 'const f = <select value="x"><option value="x">Todos</option></select>;');
@@ -264,12 +298,15 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     expect(contagem(saida, 'maiusculas')).toBe(1); // "Novo Cargo"
     expect(contagem(saida, 'chaveMao')).toBe(1);
     expect(contagem(saida, 'iconeSemNome')).toBe(1);
+    expect(contagem(saida, 'tituloAMao')).toBe(1); // TituloAMao.tsx (o do BaseHeader não conta)
+    expect(contagem(saida, 'barraAMao')).toBe(1); // TituloAMao.tsx (a do BaseHeader não conta)
+    expect(contagem(saida, 'foraDaMoldura')).toBe(3); // SemMoldura + DiretoSemMoldura + PaginaLocal (wrapper e ComMoldura, que importa a Pagina da casa, não contam)
     // <select> e <NativeSelect> de Lista.tsx + painel raiz (Filtro.tsx) + sobra (Herdado.tsx)
     expect(contagem(saida, 'selectNativo')).toBe(4);
   });
 
   it('PASSA no teto exato e REPROVA um abaixo', () => {
-    const exato = { tecnico: 1, glossario: 1, plural: 1, acento: 1, maiusculas: 1, formato: 1, chaveMao: 1, iconeSemNome: 1, selectNativo: 4 };
+    const exato = { tecnico: 1, glossario: 1, plural: 1, acento: 1, maiusculas: 1, formato: 1, chaveMao: 1, iconeSemNome: 1, selectNativo: 4, tituloAMao: 1, barraAMao: 1, foraDaMoldura: 3 };
     expect(rodar(['--tetos', tetos(exato)]).codigo).toBe(0);
     const { saida, codigo } = rodar(['--tetos', tetos({ ...exato, glossario: 0 })]);
     expect(codigo).toBe(1);

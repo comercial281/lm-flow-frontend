@@ -11,6 +11,7 @@
 import { startTransition, useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/ds';
+import { BaseHeader, Pagina } from '@/components/base';
 import { toast } from 'sonner';
 import { Loader2, Plus } from 'lucide-react';
 import DuplicateAgentDialog from '@/components/salesAgents/DuplicateAgentDialog';
@@ -271,82 +272,84 @@ export default function SalesAgents() {
 
   return (
     <>
-      <div className="flex min-h-full flex-col">
-        <IaBarra
-          agents={agents}
-          selecionada={selected}
-          situacao={situacao}
-          tela={tela}
-          insights={insightsLiberado}
-          podeCriar={podeCriar}
-          podeExcluir={pode('sales_agents', 'delete')}
-          equipe={isSuper}
-          verMotor={verMotor}
-          aoIr={(t) => void guardar(() => irPara(t))}
-          aoTrocarIa={(id) => void guardar(() => trocarIa(id))}
-          aoCriar={() => void guardar(() => void createAgent())}
-          aoDuplicar={() => void guardar(() => { if (selected) setDuplicating(selected); })}
-          aoExcluir={() => selected && void deleteAgent(selected)}
-          aoTestar={() => setTestandoIa(selected?.id ?? null)}
-          aoLigar={ligar}
-          travaDoLigar={travaDoLigar}
-          aoCorrigirLigar={(p) => void guardar(() => irPara('configurar', p))}
-        />
-        <div className="w-full space-y-5 px-6 py-6">
-          {loading && agents.length === 0 ? (
-            <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-          ) : !selected || !situacao ? (
-            <div className="flex flex-col items-start gap-3 rounded-lg border border-sidebar-border bg-sidebar p-6">
-              <p className="text-sm text-muted-foreground">Nenhuma IA Vendedora criada ainda.</p>
-              {podeCriar && (
-                <Button onClick={createAgent}>
-                  <Plus className="mr-1 h-4 w-4" aria-hidden /> Nova IA
-                </Button>
-              )}
-            </div>
-          ) : (
-            // ⚠️ `key` = id da IA: trocar de IA remonta a tela inteira. Sem isso o
-            // Testar levava a conversa da IA anterior (e a próxima mensagem iria
-            // pra nova com o histórico da outra), a Visão geral mostrava os
-            // números dela e Sugestões seguia lendo a análise dela.
-            // Largura do Meu site (até 1400 px, centralizado) em todas as telas: com 768 px
-            // o passo a passo ficava espremido entre o trilho e a prévia.
-            <div key={selected.id} className="mx-auto w-full max-w-[1400px] space-y-5">
-              {/* Em Configurar o cabeçalho é o da página (Canal, Horário…): o da casca duplicaria o título. */}
-              {tela !== 'configurar' && (
-                <div className="space-y-1">
-                  {trilha && <p className="text-xs font-medium text-muted-foreground">{trilha}</p>}
-                  <h1 className="text-2xl font-semibold">{info.titulo}</h1>
-                  <p className="text-sm text-muted-foreground">{info.frase}</p>
-                </div>
-              )}
-              {tela === 'visao-geral' && (
-                <TelaVisaoGeral
-                  agent={selected}
-                  situacao={situacao}
-                  diagnostico={diagnosticoDaIa}
-                  conferindo={conferindo}
-                  falhou={diagnosticoFalhou === selected.id}
-                  mostrarSugestoes={insightsLiberado}
-                  equipe={isSuper}
-                  aoIr={irPara}
-                />
-              )}
-              {tela === 'sugestoes' && insightsLiberado && <TelaSugestoes agent={selected} />}
-              {tela === 'relatorio-semanal' && insightsLiberado && <TelaRelatorioSemanal />}
-              {tela === 'configurar' && (
-                <TelaConfigurar agent={selected} inboxes={inboxes} aoSalvo={aoSalvo} diagnostico={diagnosticoDaIa} />
-              )}
-              {tela === 'ensinar' && <TelaEnsinar agent={selected} onCountChange={loadAgents} aoSalvo={aoSalvo} />}
-              {tela === 'motor' && <TelaMotor agent={selected} aoSalvo={aoSalvo} />}
-              {/* `telaDaUrl` já barra quem não é da equipe. */}
-              {tela === 'diagnostico' && <TelaDiagnostico agent={selected} />}
-              {/* Trocar de IA fecha a janela (o id não bate); reaberta, ela nasce vazia. */}
-              {testandoIa === selected.id && <TestarJanela agent={selected} aoFechar={() => setTestandoIa(null)} />}
-            </div>
-          )}
-        </div>
-      </div>
+      <Pagina
+        className="space-y-5"
+        barraDoTopo={(
+          <IaBarra
+            agents={agents}
+            selecionada={selected}
+            situacao={situacao}
+            tela={tela}
+            insights={insightsLiberado}
+            podeCriar={podeCriar}
+            podeExcluir={pode('sales_agents', 'delete')}
+            equipe={isSuper}
+            verMotor={verMotor}
+            aoIr={(t) => void guardar(() => irPara(t))}
+            aoTrocarIa={(id) => void guardar(() => trocarIa(id))}
+            aoCriar={() => void guardar(() => void createAgent())}
+            aoDuplicar={() => void guardar(() => { if (selected) setDuplicating(selected); })}
+            aoExcluir={() => selected && void deleteAgent(selected)}
+            aoTestar={() => setTestandoIa(selected?.id ?? null)}
+            aoLigar={ligar}
+            travaDoLigar={travaDoLigar}
+            aoCorrigirLigar={(p) => void guardar(() => irPara('configurar', p))}
+          />
+        )}
+        acima={selected && situacao && tela !== 'configurar' && trilha
+          ? <p className="text-xs font-medium text-muted-foreground">{trilha}</p> : undefined}
+        // Em Configurar o título mora em ConfigurarPaginas (grupo, título, frase ao lado do trilho).
+        cabecalho={tela === 'configurar' && selected && situacao
+          ? undefined
+          : selected && situacao
+            ? <BaseHeader title={info.titulo} subtitle={info.frase} />
+            : loading && agents.length === 0
+              ? <BaseHeader title={info.titulo} subtitle={info.frase} />
+              : <BaseHeader title="IA Vendedora" subtitle="Crie a primeira IA pra atender seus leads no WhatsApp." />}
+      >
+        {loading && agents.length === 0 ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : !selected || !situacao ? (
+          <div className="flex flex-col items-start gap-3 rounded-lg border border-sidebar-border bg-sidebar p-6">
+            <p className="text-sm text-muted-foreground">Nenhuma IA Vendedora criada ainda.</p>
+            {podeCriar && (
+              <Button onClick={createAgent}>
+                <Plus className="mr-1 h-4 w-4" aria-hidden /> Nova IA
+              </Button>
+            )}
+          </div>
+        ) : (
+          // ⚠️ `key` = id da IA: trocar de IA remonta a tela inteira. Sem isso o
+          // Testar levava a conversa da IA anterior (e a próxima mensagem iria
+          // pra nova com o histórico da outra), a Visão geral mostrava os
+          // números dela e Sugestões seguia lendo a análise dela.
+          <div key={selected.id} className="w-full space-y-5">
+            {tela === 'visao-geral' && (
+              <TelaVisaoGeral
+                agent={selected}
+                situacao={situacao}
+                diagnostico={diagnosticoDaIa}
+                conferindo={conferindo}
+                falhou={diagnosticoFalhou === selected.id}
+                mostrarSugestoes={insightsLiberado}
+                equipe={isSuper}
+                aoIr={irPara}
+              />
+            )}
+            {tela === 'sugestoes' && insightsLiberado && <TelaSugestoes agent={selected} />}
+            {tela === 'relatorio-semanal' && insightsLiberado && <TelaRelatorioSemanal />}
+            {tela === 'configurar' && (
+              <TelaConfigurar agent={selected} inboxes={inboxes} aoSalvo={aoSalvo} diagnostico={diagnosticoDaIa} />
+            )}
+            {tela === 'ensinar' && <TelaEnsinar agent={selected} onCountChange={loadAgents} aoSalvo={aoSalvo} />}
+            {tela === 'motor' && <TelaMotor agent={selected} aoSalvo={aoSalvo} />}
+            {/* `telaDaUrl` já barra quem não é da equipe. */}
+            {tela === 'diagnostico' && <TelaDiagnostico agent={selected} />}
+            {/* Trocar de IA fecha a janela (o id não bate); reaberta, ela nasce vazia. */}
+            {testandoIa === selected.id && <TestarJanela agent={selected} aoFechar={() => setTestandoIa(null)} />}
+          </div>
+        )}
+      </Pagina>
       {dialogoDeConfirmacao}
       {duplicating && (
         <DuplicateAgentDialog

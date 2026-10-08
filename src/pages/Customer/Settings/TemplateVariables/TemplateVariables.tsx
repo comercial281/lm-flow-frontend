@@ -15,6 +15,8 @@ import { Code, Lock, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { tenantTemplateVariablesService } from '@/services/messageFunnels/messageFunnelsService';
 import type { TemplateVariable, TenantTemplateVariable } from '@/types/messageFunnels';
+import { BaseHeader, Pagina } from '@/components/base';
+import { plural } from '@/lib/formato';
 import { Seletor } from '@/components/base/Seletor';
 
 // ── Presets de value_source pro UI guiado ────────────────────────────────────
@@ -221,30 +223,15 @@ export default function TemplateVariables() {
   }
 
   return (
-    <div className="h-full flex flex-col p-4">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Code size={20} className="text-primary" />
-            <h1 className="text-2xl font-bold">
-              Variáveis de mensagem{' '}
-              <span className="text-base font-normal text-muted-foreground">
-                ({custom.length} customizadas)
-              </span>
-            </h1>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Variáveis que você insere nas mensagens dos funis e das automações (como {'{{nome}}'}) e que
-            viram texto real no momento do envio, lido do lead da conversa.
-          </p>
-        </div>
-        <Button onClick={openCreate}>
-          <Plus size={16} className="mr-2" />
-          Nova Variável
-        </Button>
-      </div>
-
+    <Pagina
+      cabecalho={
+        <BaseHeader
+          title="Variáveis de mensagem"
+          subtitle={`Variáveis que você insere nas mensagens dos funis e das automações (como {{nome}}) e que viram texto real no momento do envio, lido do lead da conversa. · ${plural(custom.length, 'criada por você', 'criadas por você')}`}
+          primaryAction={{ label: 'Nova variável', icon: <Plus className="h-4 w-4" />, onClick: openCreate }}
+        />
+      }
+    >
       {/* Built-in section */}
       <section className="mb-6">
         <div className="flex items-center gap-2 mb-2">
@@ -504,6 +491,6 @@ export default function TemplateVariables() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Pagina>
   );
 }

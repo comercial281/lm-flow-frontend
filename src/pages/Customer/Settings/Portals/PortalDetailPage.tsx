@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/ds';
+import { BaseHeader, Pagina } from '@/components/base';
 import {
   ArrowLeft, CheckCircle2, Copy, RefreshCw, Home, Star, Clock, Mail, Webhook,
   ExternalLink, ChevronDown, ChevronRight, History,
@@ -202,31 +203,35 @@ export default function PortalDetailPage() {
     }
   };
 
+  const voltar = (
+    <button
+      onClick={() => navigate('/settings/portals')}
+      className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+    >
+      <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+      Voltar aos Portais
+    </button>
+  );
+
   if (loading || !portal) {
     return (
-      <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-        Carregando...
-      </div>
+      <Pagina acima={voltar} cabecalho={<BaseHeader title="Portal" />}>
+        <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
+          Carregando...
+        </div>
+      </Pagina>
     );
   }
 
   return (
     <>
-    <div className="flex flex-col h-full">
-      <div className="border-b bg-background/95 backdrop-blur p-6">
-        <button
-          onClick={() => navigate('/settings/portals')}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Voltar aos Portais
-        </button>
-
-        <div className="flex items-center gap-4">
-          <PortalLogo portalKey={portal.portal_key} className="w-14 h-14" />
-          <div className="flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold">{portal.name}</h1>
+    <Pagina
+      acima={voltar}
+      cabecalho={
+        <BaseHeader
+          title={
+            <span className="inline-flex flex-wrap items-center gap-2">
+              {portal.name}
               <PortalStatusBadge portal={portal} />
               {portal.active ? (
                 <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
@@ -238,7 +243,32 @@ export default function PortalDetailPage() {
                   Aguardando o portal baixar o feed
                 </span>
               ) : null}
-            </div>
+            </span>
+          }
+          aDireita={
+            <>
+              {portal.connected ? (
+                <Button
+                  variant="outline"
+                  onClick={handleDisconnect}
+                  disabled={saving}
+                  className="text-sm text-destructive border-destructive/30 hover:bg-destructive/10"
+                >
+                  {saving ? 'Desconectando...' : 'Desconectar'}
+                </Button>
+              ) : (
+                <Button onClick={handleConnect} disabled={saving} className="text-sm">
+                  {saving ? 'Conectando...' : 'Conectar portal'}
+                </Button>
+              )}
+            </>
+          }
+        />
+      }
+    >
+      <div className="flex items-center gap-4">
+        <PortalLogo portalKey={portal.portal_key} className="w-14 h-14" />
+        <div className="flex-1">
             {portal.integration_status === 'adapted' && portal.status_note && (
               <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">{portal.status_note}</p>
             )}
@@ -261,25 +291,9 @@ export default function PortalDetailPage() {
                 </span>
               )}
             </div>
-          </div>
-          {portal.connected ? (
-            <Button
-              variant="outline"
-              onClick={handleDisconnect}
-              disabled={saving}
-              className="text-sm text-destructive border-destructive/30 hover:bg-destructive/10"
-            >
-              {saving ? 'Desconectando...' : 'Desconectar'}
-            </Button>
-          ) : (
-            <Button onClick={handleConnect} disabled={saving} className="text-sm">
-              {saving ? 'Conectando...' : 'Conectar portal'}
-            </Button>
-          )}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {portal.connected && (
           <div className="rounded-xl border bg-card p-6 space-y-5 max-w-3xl">
             <div className="flex items-center justify-between">
@@ -357,8 +371,7 @@ export default function PortalDetailPage() {
         {portal.connected && (
           <FeedAccessHistory log={portal.feed_access_log ?? []} />
         )}
-      </div>
-    </div>
+    </Pagina>
       {dialogoDeConfirmacao}
     </>
   );

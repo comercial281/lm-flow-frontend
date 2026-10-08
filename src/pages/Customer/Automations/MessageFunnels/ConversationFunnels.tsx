@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Copy, Plus, Rocket, Search, Trash2, Users } from 'lucide-react';
-import { Badge, Button, Input } from '@/components/ui/ds';
+import { Copy, Plus, Rocket, Trash2, Users } from 'lucide-react';
+import { Badge, Button } from '@/components/ui/ds';
+import { BaseHeader, Pagina } from '@/components/base';
 import Abas from '@/components/base/Abas';
 import Chave from '@/components/base/Chave';
 import EmptyState from '@/components/base/EmptyState';
@@ -147,23 +148,19 @@ export default function ConversationFunnels() {
   if (recusado) return <NoAccessState />;
 
   return (
-    <div className="h-full flex flex-col p-4 min-h-0">
-      <div className="flex items-center gap-2 mb-2">
-        <Rocket className="h-5 w-5 text-primary" aria-hidden="true" />
-        <h1 className="text-xl font-bold">{COPY.title}</h1>
-      </div>
-      <p className="text-sm text-muted-foreground mb-4 max-w-3xl">{COPY.description}</p>
-
-      <div className="flex flex-wrap items-center gap-2 mb-3">
-        <div className="relative flex-1 min-w-[12rem] max-w-sm">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          <Input className="pl-8" placeholder={COPY.searchPlaceholder} value={search} onChange={e => setSearch(e.target.value)} aria-label="Buscar funil" />
-        </div>
-        <Button onClick={() => setPickerOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" aria-hidden="true" /> {COPY.newButton}
-        </Button>
-      </div>
-
+    <Pagina
+      rolagem="conteudo"
+      cabecalho={
+        <BaseHeader
+          title={COPY.title}
+          subtitle={COPY.description}
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder={COPY.searchPlaceholder}
+          primaryAction={{ label: COPY.newButton, icon: <Plus className="h-4 w-4" />, onClick: () => setPickerOpen(true) }}
+        />
+      }
+    >
       <Abas
         rotulo="Funis"
         ativa={aba}
@@ -172,7 +169,6 @@ export default function ConversationFunnels() {
           { chave: 'meus', rotulo: `Meus funis (${mine.length})` },
           { chave: 'equipe', rotulo: `Da equipe (${team.length})`, icone: Users },
         ]}
-        className="mb-3"
       />
 
       {failed && !loading && <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />}
@@ -271,6 +267,6 @@ export default function ConversationFunnels() {
         }}
       />
       {dialogoDeConfirmacao}
-    </div>
+    </Pagina>
   );
 }

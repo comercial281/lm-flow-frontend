@@ -43,7 +43,7 @@ export interface HeaderFilter {
 }
 
 export interface BaseHeaderProps {
-  title: string;
+  title?: ReactNode;
   subtitle?: string;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
@@ -62,6 +62,8 @@ export interface BaseHeaderProps {
   /** Conteúdo extra dentro da barra de seleção (ex.: "selecionar todos os N"). */
   selectionExtra?: ReactNode;
   bulkActions?: HeaderAction[];
+  /** Controles livres na linha do título, à direita (alternar Calendário/Lista, Chave da roleta…). */
+  aDireita?: ReactNode;
   /** Na linha da busca, logo depois dela (pílulas e "Filtros" de Contatos). */
   aoLadoDaBusca?: ReactNode;
   className?: string;
@@ -87,6 +89,7 @@ export default function BaseHeader({
   selectionExtra,
   bulkActions = [],
   aoLadoDaBusca,
+  aDireita,
   className = '',
   children,
 }: BaseHeaderProps) {
@@ -96,200 +99,212 @@ export default function BaseHeader({
   const visibleSecondaryActions = secondaryActions.filter(action => action.show !== false);
   const visibleMoreActions = moreActions.filter(action => action.show !== false);
 
+  const temLinhaDaBusca = Boolean(
+    onSearchChange || (showFilters && onFilterClick) || aoLadoDaBusca ||
+    visibleSecondaryActions.length > 0 || visibleMoreActions.length > 0,
+  );
+
   return (
     <div className={`space-y-6 ${className}`}>
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        {/* Title Section */}
-        <div className="flex-1">
-          <div className="flex items-start gap-3">
-            <div
-              className="w-1 h-8 rounded-full shrink-0 mt-0.5"
-              style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
-            />
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight leading-8 text-sidebar-foreground">{title}</h1>
-              {subtitle && (
-                <p className="text-sm leading-5 text-sidebar-foreground/70 mt-1">{subtitle}</p>
-              )}
+      <div data-linha-do-titulo className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        {title !== undefined && (
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start gap-3">
+              <div
+                className="w-1 h-8 rounded-full shrink-0 mt-0.5"
+                style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
+              />
+              <div className="min-w-0">
+                <h1 className="break-words text-2xl font-bold tracking-tight leading-8 text-sidebar-foreground">{title}</h1>
+                {subtitle && (
+                  <p className="text-sm leading-5 text-sidebar-foreground/70 mt-1">{subtitle}</p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Primary Action */}
-        {primaryAction && primaryAction.show !== false && (
-          <div className="flex-shrink-0" data-tour={primaryAction.dataTour}>
-            <PrimaryActionButton
-              label={primaryAction.label}
-              icon={primaryAction.icon}
-              onClick={primaryAction.onClick}
-              size="sm"
-              variant={primaryAction.variant || 'default'}
-              className={primaryAction.className}
-              disabled={primaryAction.disabled}
-              tooltip={primaryAction.tooltip}
-            />
+        {(aDireita || (primaryAction && primaryAction.show !== false)) && (
+          <div className="flex flex-shrink-0 flex-wrap items-center gap-2 md:ml-auto">
+            {aDireita}
+            {primaryAction && primaryAction.show !== false && (
+              <div data-tour={primaryAction.dataTour}>
+                <PrimaryActionButton
+                  label={primaryAction.label}
+                  icon={primaryAction.icon}
+                  onClick={primaryAction.onClick}
+                  size="sm"
+                  variant={primaryAction.variant || 'default'}
+                  className={primaryAction.className}
+                  disabled={primaryAction.disabled}
+                  tooltip={primaryAction.tooltip}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Search and Filter Row */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className={`flex items-center gap-3 flex-1 ${aoLadoDaBusca ? 'flex-wrap' : ''}`}>
-          {/* Search */}
-          {onSearchChange && (
-            <div className={`relative flex-1 max-w-md ${aoLadoDaBusca ? 'min-w-[14rem]' : ''}`} data-tour={searchDataTour}>
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sidebar-foreground/60" />
-              <Input
-                type="search"
-                placeholder={placeholder}
-                value={searchValue}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-9 bg-sidebar border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus:border-sidebar-border"
-              />
-            </div>
-          )}
+      {temLinhaDaBusca && (
+        <div data-linha-da-busca className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className={`flex items-center gap-3 flex-1 ${aoLadoDaBusca ? 'flex-wrap' : ''}`}>
+            {/* Search */}
+            {onSearchChange && (
+              <div className={`relative flex-1 max-w-md ${aoLadoDaBusca ? 'min-w-[14rem]' : ''}`} data-tour={searchDataTour}>
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sidebar-foreground/60" />
+                <Input
+                  type="search"
+                  placeholder={placeholder}
+                  value={searchValue}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  className="pl-9 bg-sidebar border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus:border-sidebar-border"
+                />
+              </div>
+            )}
 
-          {/* Filter Button */}
-          {showFilters && onFilterClick && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onFilterClick}
-              className="bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent whitespace-nowrap"
-              data-tour={filterButtonDataTour}
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              {t('base.header.filters')}
-              {filters.length > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="ml-2 h-5 px-1.5 text-xs bg-sidebar-accent"
-                >
-                  {filters.length}
-                </Badge>
-              )}
-            </Button>
-          )}
+            {/* Filter Button */}
+            {showFilters && onFilterClick && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onFilterClick}
+                className="bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent whitespace-nowrap"
+                data-tour={filterButtonDataTour}
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                {t('base.header.filters')}
+                {filters.length > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="ml-2 h-5 px-1.5 text-xs bg-sidebar-accent"
+                  >
+                    {filters.length}
+                  </Badge>
+                )}
+              </Button>
+            )}
 
-          {aoLadoDaBusca}
-        </div>
+            {aoLadoDaBusca}
+          </div>
 
-        {/* Secondary Actions */}
-        <div className="flex items-center gap-2">
-          {visibleSecondaryActions.map((action, index) => {
-            const renderIcon = (withMargin = true) => {
-              if (!action.icon) return null;
-              const marginClass = withMargin ? 'mr-2' : '';
-              // Check if it's a React component (function or object with $$typeof)
-              if (typeof action.icon === 'function') {
-                const IconComponent = action.icon as React.ComponentType<{ className?: string }>;
-                return <IconComponent className={`h-4 w-4 ${marginClass}`.trim()} />;
-              }
-              // If it's already a React element, render it directly
-              if (React.isValidElement(action.icon)) {
+          {/* Secondary Actions */}
+          <div className="flex items-center gap-2">
+            {visibleSecondaryActions.map((action, index) => {
+              const renderIcon = (withMargin = true) => {
+                if (!action.icon) return null;
+                const marginClass = withMargin ? 'mr-2' : '';
+                // Check if it's a React component (function or object with $$typeof)
+                if (typeof action.icon === 'function') {
+                  const IconComponent = action.icon as React.ComponentType<{ className?: string }>;
+                  return <IconComponent className={`h-4 w-4 ${marginClass}`.trim()} />;
+                }
+                // If it's already a React element, render it directly
+                if (React.isValidElement(action.icon)) {
+                  return <span className={marginClass}>{action.icon}</span>;
+                }
+                // Otherwise render as is
                 return <span className={marginClass}>{action.icon}</span>;
-              }
-              // Otherwise render as is
-              return <span className={marginClass}>{action.icon}</span>;
-            };
+              };
 
-            if (action.iconOnly) {
-              return (
-                <IconActionButton
-                  key={index}
-                  label={action.tooltip || action.label}
-                  icon={renderIcon(false)}
+              if (action.iconOnly) {
+                return (
+                  <IconActionButton
+                    key={index}
+                    label={action.tooltip || action.label}
+                    icon={renderIcon(false)}
+                    onClick={action.onClick}
+                    disabled={action.disabled}
+                    variant={action.variant || 'outline'}
+                    className={`bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent h-9 w-9 ${action.className || ''}`.trim()}
+                    dataTour={action.dataTour}
+                  />
+                );
+              }
+
+              const textButton = (
+                <Button
+                  variant={action.variant || 'outline'}
+                  size="sm"
                   onClick={action.onClick}
                   disabled={action.disabled}
-                  variant={action.variant || 'outline'}
-                  className={`bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent h-9 w-9 ${action.className || ''}`.trim()}
-                  dataTour={action.dataTour}
-                />
-              );
-            }
-
-            const textButton = (
-              <Button
-                variant={action.variant || 'outline'}
-                size="sm"
-                onClick={action.onClick}
-                disabled={action.disabled}
-                className="bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
-                data-tour={action.dataTour}
-              >
-                {renderIcon()}
-                {action.label}
-              </Button>
-            );
-
-            if (action.tooltip) {
-              return (
-                <TooltipProvider key={index} delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      {action.disabled ? <span tabIndex={0} className="inline-flex">{textButton}</span> : textButton}
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>{action.tooltip}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              );
-            }
-
-            return <React.Fragment key={index}>{textButton}</React.Fragment>;
-          })}
-
-          {/* More Actions Dropdown */}
-          {visibleMoreActions.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  aria-label="Mais ações"
-                  title="Mais ações"
                   className="bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
+                  data-tour={action.dataTour}
                 >
-                  <MoreVertical className="h-4 w-4" />
+                  {renderIcon()}
+                  {action.label}
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="bg-sidebar border-sidebar-border text-sidebar-foreground"
-              >
-                {visibleMoreActions.map((action, index) => {
-                  const renderIcon = () => {
-                    if (!action.icon) return null;
-                    // Check if it's a React component (function)
-                    if (typeof action.icon === 'function') {
-                      const IconComponent = action.icon as React.ComponentType<{ className?: string }>;
-                      return <IconComponent className="h-4 w-4 mr-2" />;
-                    }
-                    // If it's already a React element, render it directly
-                    if (React.isValidElement(action.icon)) {
-                      return <span className="mr-2">{action.icon}</span>;
-                    }
-                    // Otherwise render as is
-                    return <span className="mr-2">{action.icon}</span>;
-                  };
+              );
 
-                  return (
-                    <DropdownMenuItem
-                      key={index}
-                      onClick={action.onClick}
-                      className={`hover:bg-sidebar-accent ${action.variant === 'destructive' ? 'text-red-400' : ''}`}
-                    >
-                      {renderIcon()}
-                      {action.label}
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+              if (action.tooltip) {
+                return (
+                  <TooltipProvider key={index} delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        {action.disabled ? <span tabIndex={0} className="inline-flex">{textButton}</span> : textButton}
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>{action.tooltip}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              }
+
+              return <React.Fragment key={index}>{textButton}</React.Fragment>;
+            })}
+
+            {/* More Actions Dropdown */}
+            {visibleMoreActions.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    aria-label="Mais ações"
+                    title="Mais ações"
+                    className="bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="bg-sidebar border-sidebar-border text-sidebar-foreground"
+                >
+                  {visibleMoreActions.map((action, index) => {
+                    const renderIcon = () => {
+                      if (!action.icon) return null;
+                      // Check if it's a React component (function)
+                      if (typeof action.icon === 'function') {
+                        const IconComponent = action.icon as React.ComponentType<{ className?: string }>;
+                        return <IconComponent className="h-4 w-4 mr-2" />;
+                      }
+                      // If it's already a React element, render it directly
+                      if (React.isValidElement(action.icon)) {
+                        return <span className="mr-2">{action.icon}</span>;
+                      }
+                      // Otherwise render as is
+                      return <span className="mr-2">{action.icon}</span>;
+                    };
+
+                    return (
+                      <DropdownMenuItem
+                        key={index}
+                        onClick={action.onClick}
+                        className={`hover:bg-sidebar-accent ${action.variant === 'destructive' ? 'text-red-400' : ''}`}
+                      >
+                        {renderIcon()}
+                        {action.label}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Selection Bar */}
       {hasSelection && (

@@ -1,5 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Plus } from 'lucide-react';
+import { BaseHeader, Pagina } from '@/components/base';
 import Abas from '@/components/base/Abas';
 import { useCan } from '@/hooks/useCan';
 import { useCaptacoesNovas } from '@/features/properties/proprietarios/useCaptacoesNovas';
@@ -18,6 +20,9 @@ export default function GestaoDeProprietarios() {
   const veCaptacoes = can('property_capture_requests', 'read');
   const [params, setParams] = useSearchParams();
   const aba: Aba = veCaptacoes && params.get('aba') === ABA_DE_CAPTACOES ? 'captacoes' : 'proprietarios';
+  // Mesma regra da lista: quem edita imóveis cria proprietário.
+  const podeGerir = can('properties', 'update');
+  const [novoAberto, setNovoAberto] = useState(false);
   const { tem, marcarComoVistas } = useCaptacoesNovas(veCaptacoes);
 
   // Abrir a aba (clicando ou pelo link ?aba=captacoes) apaga a bolinha. Com a
@@ -38,23 +43,31 @@ export default function GestaoDeProprietarios() {
     }, { replace: true });
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
-        <h1 className="text-2xl font-bold leading-tight">Gestão de proprietários</h1>
-        {veCaptacoes && (
-          <Abas
-            className="mt-4"
-            rotulo="Gestão de proprietários"
-            ativa={aba}
-            aoTrocar={trocarAba}
-            abas={[
-              { chave: 'proprietarios', rotulo: 'Proprietários' },
-              { chave: 'captacoes', rotulo: 'Novas captações', marcador: tem },
-            ]}
-          />
-        )}
-        {aba === 'captacoes' ? <NovasCaptacoes /> : <ListaDeProprietarios />}
-      </div>
-    </div>
+    <Pagina
+      cabecalho={
+        <BaseHeader
+          title="Gestão de proprietários"
+          subtitle="Os donos dos imóveis da carteira, com o contato e os imóveis de cada um."
+          primaryAction={aba === 'proprietarios' && podeGerir
+            ? { label: 'Novo proprietário', icon: <Plus className="h-4 w-4" />, onClick: () => setNovoAberto(true) }
+            : undefined}
+        />
+      }
+    >
+      {veCaptacoes && (
+        <Abas
+          rotulo="Gestão de proprietários"
+          ativa={aba}
+          aoTrocar={trocarAba}
+          abas={[
+            { chave: 'proprietarios', rotulo: 'Proprietários' },
+            { chave: 'captacoes', rotulo: 'Novas captações', marcador: tem },
+          ]}
+        />
+      )}
+      {aba === 'captacoes'
+        ? <NovasCaptacoes />
+        : <ListaDeProprietarios novoAberto={novoAberto} aoFecharNovo={() => setNovoAberto(false)} aoAbrirNovo={() => setNovoAberto(true)} />}
+    </Pagina>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { BaseHeader } from '@/components/base';
+import { BaseHeader, Pagina } from '@/components/base';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Home, Star, Clock, ChevronRight } from 'lucide-react';
@@ -42,14 +42,16 @@ export default function PortalsList() {
   useEffect(() => { load(); }, [load]);
 
   return (
-    // Padrão das páginas da casa (Canais): cabeçalho padrão e a lista na largura da página.
-    <div className="flex h-full flex-col gap-6 p-4">
-      <BaseHeader
-        title="Portais imobiliários"
-        subtitle="Publique seus imóveis automaticamente nos portais e receba os leads direto no funil. Cada portal lê o feed do LM Flow algumas vezes por dia."
-      />
-
-      <div className="flex-1 overflow-y-auto">
+    // Moldura e cabeçalho da casa: a Pagina rola, a lista não precisa rolar sozinha.
+    <Pagina
+      cabecalho={
+        <BaseHeader
+          title="Portais"
+          subtitle="Publique seus imóveis automaticamente nos portais e receba os leads direto no funil. Cada portal lê o feed do LM Flow algumas vezes por dia."
+        />
+      }
+    >
+      <div>
         {recusado ? (
           <NoAccessState />
         ) : loading ? (
@@ -129,6 +131,6 @@ export default function PortalsList() {
           </div>
         )}
       </div>
-    </div>
+    </Pagina>
   );
 }

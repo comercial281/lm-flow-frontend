@@ -12,6 +12,7 @@ import {
   Button,
 } from '@/components/ui/ds';
 import { Tags, AlertTriangle } from 'lucide-react';
+import { Pagina } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
 
 import { labelsService } from '@/services/contacts/labelsService';
@@ -311,23 +312,28 @@ export default function Labels() {
   };
 
   return (
-    <div className="h-full flex flex-col p-4" data-tour="settings-labels-page">
+    <Pagina
+      rolagem="conteudo"
+      dataTour="settings-labels-page"
+      cabecalho={
+        <div data-tour="settings-labels-header">
+          <LabelsHeader
+            totalCount={state.meta.pagination.total}
+            selectedCount={state.selectedLabelIds.length}
+            searchValue={state.searchQuery}
+            onSearchChange={handleSearchChange}
+            onNewLabel={handleCreateLabel}
+            onBulkDelete={handleBulkDelete}
+            onClearSelection={() => setState(prev => ({ ...prev, selectedLabelIds: [] }))}
+            showBulkActions={state.selectedLabelIds.length > 0}
+          />
+        </div>
+      }
+    >
       <SettingsLabelsTour />
-      <div data-tour="settings-labels-header">
-        <LabelsHeader
-          totalCount={state.meta.pagination.total}
-          selectedCount={state.selectedLabelIds.length}
-          searchValue={state.searchQuery}
-          onSearchChange={handleSearchChange}
-          onNewLabel={handleCreateLabel}
-          onBulkDelete={handleBulkDelete}
-          onClearSelection={() => setState(prev => ({ ...prev, selectedLabelIds: [] }))}
-          showBulkActions={state.selectedLabelIds.length > 0}
-        />
-      </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto mt-6" data-tour="settings-labels-content">
+      <div className="flex-1 overflow-auto" data-tour="settings-labels-content">
         {state.loading.list ? (
           <div className="flex items-center justify-center py-16">
             <div className="text-muted-foreground">{t('loading')}</div>
@@ -457,6 +463,6 @@ export default function Labels() {
         loading={state.loading.create || state.loading.update}
         onSubmit={handleLabelFormSubmit}
       />
-    </div>
+    </Pagina>
   );
 }

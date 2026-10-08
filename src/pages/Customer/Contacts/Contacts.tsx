@@ -13,6 +13,7 @@ import {
   Button,
 } from '@/components/ui/ds';
 import { Users } from 'lucide-react';
+import { Pagina } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
 
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -789,36 +790,40 @@ export default function Contacts() {
   };
 
   return (
-    <div className="h-full flex flex-col p-4">
+    <Pagina
+      rolagem="conteudo"
+      cabecalho={
+        <div data-tour="contacts-header">
+        <ContactsHeader
+          totalCount={state.meta.pagination.total}
+          selectedCount={state.selectedContactIds.length}
+          searchValue={state.searchQuery}
+          onSearchChange={handleSearchChange}
+          onNewContact={handleCreateContact}
+          onExport={handleExportContacts}
+          onBulkDelete={handleBulkDelete}
+          onMergeContacts={handleMergeContacts}
+          onClearSelection={clearSelection}
+          allMatchingSelected={selectAllMatching}
+          onSelectAllMatching={() => setSelectAllMatching(true)}
+          filtros={
+            <ContactsFiltros
+              pilula={pilula}
+              onPilula={p => aplicarFiltros(p, filtrosPopover)}
+              filtros={filtrosPopover}
+              onFiltros={f => aplicarFiltros(pilula, f)}
+              daEquipe={!corretor}
+              users={equipe}
+            />
+          }
+        />
+        </div>
+      }
+    >
       <ContactsTour />
-      <div data-tour="contacts-header">
-      <ContactsHeader
-        totalCount={state.meta.pagination.total}
-        selectedCount={state.selectedContactIds.length}
-        searchValue={state.searchQuery}
-        onSearchChange={handleSearchChange}
-        onNewContact={handleCreateContact}
-        onExport={handleExportContacts}
-        onBulkDelete={handleBulkDelete}
-        onMergeContacts={handleMergeContacts}
-        onClearSelection={clearSelection}
-        allMatchingSelected={selectAllMatching}
-        onSelectAllMatching={() => setSelectAllMatching(true)}
-        filtros={
-          <ContactsFiltros
-            pilula={pilula}
-            onPilula={p => aplicarFiltros(p, filtrosPopover)}
-            filtros={filtrosPopover}
-            onFiltros={f => aplicarFiltros(pilula, f)}
-            daEquipe={!corretor}
-            users={equipe}
-          />
-        }
-      />
-      </div>
 
       {/* Content */}
-      <div className="mt-4 flex-1 overflow-auto" data-tour="contacts-list">
+      <div className="flex-1 overflow-auto" data-tour="contacts-list">
         {state.loading.list ? (
           <div className="flex items-center justify-center py-16">
             <div className="text-muted-foreground">{t('loading.contacts')}</div>
@@ -1020,6 +1025,6 @@ export default function Contacts() {
         loading={state.loading.bulk}
       />
 
-    </div>
+    </Pagina>
   );
 }

@@ -52,7 +52,7 @@ export default function IaBarra({
   const temMais = podeCriar || podeExcluir || verMotor || equipe;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b bg-card px-6 py-2">
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b bg-card px-4 py-2 sm:px-6">
       <div className="flex min-w-0 items-center gap-2 py-1">
         <Bot className="h-4 w-4 shrink-0 text-primary" aria-hidden />
         <DropdownMenu>

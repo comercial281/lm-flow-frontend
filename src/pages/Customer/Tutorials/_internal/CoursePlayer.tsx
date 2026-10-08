@@ -219,7 +219,7 @@ export default function CoursePlayer({ module: m, onBack, canEdit }: Props) {
               </div>
             </div>
 
-            <h1 className="text-2xl font-bold mb-1">{selected.titulo}</h1>
+            <h2 className="text-2xl font-bold mb-1">{selected.titulo}</h2>
             {selected.duracao_min ? (
               <p className="text-xs text-muted-foreground mb-4 flex items-center gap-1">
                 <Clock size={11} /> {formatDuration(selected.duracao_min)}

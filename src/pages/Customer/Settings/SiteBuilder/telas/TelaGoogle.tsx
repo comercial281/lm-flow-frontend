@@ -28,10 +28,10 @@ export default function TelaGoogle({ site, siteForm, setF }: FormProps) {
           <UILabel htmlFor="google-aparecer" className="cursor-pointer text-base font-normal">Aparecer no Google</UILabel>
         </div>
         {endereco && (
-          <p id="google-endereco" className="pl-7 text-sm text-muted-foreground">
+          <p id="google-endereco" className="break-words pl-7 text-sm text-muted-foreground">
             {site?.domain
-              ? <>O Google lê o site pelo seu domínio, <strong>{endereco}</strong>.</>
-              : <>O Google lê o site pelo endereço <strong>{endereco}</strong>. Se você ligar um domínio próprio, ele passa a ler pelo domínio.</>}
+              ? <>O Google lê o site pelo seu domínio, <strong className="break-all">{endereco}</strong>.</>
+              : <>O Google lê o site pelo endereço <strong className="break-all">{endereco}</strong>. Se você ligar um domínio próprio, ele passa a ler pelo domínio.</>}
           </p>
         )}
         {avisoDeManutencao && (

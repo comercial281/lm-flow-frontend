@@ -21,6 +21,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
+import { BaseHeader, Pagina } from '@/components/base';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import bolsaoService, { BolsaoLead, BolsaoQuota } from '@/services/bolsao/bolsaoService';
 import { useBolsaoQuota } from './useBolsaoQuota';
@@ -128,16 +129,11 @@ export default function Bolsao() {
   };
 
   return (
-    <div className="p-4 sm:p-6 space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-          <Inbox className="h-6 w-6" /> Bolsão de Leads
-        </h1>
-        <p className="text-muted-foreground">
-          Leads sem responsável esperando alguém. Escolha um e ele passa a ser seu.
-        </p>
-      </div>
-
+    <Pagina
+      cabecalho={
+        <BaseHeader title="Bolsão" subtitle="Leads sem responsável esperando alguém. Escolha um e ele passa a ser seu." />
+      }
+    >
       <QuotaBanner quota={quota} blocked={blocked} countdown={countdown} onRefresh={() => load()} />
 
       {/* Só aparece quando o lead NÃO virou card (cliente sem funil configurado):
@@ -194,7 +190,7 @@ export default function Bolsao() {
           ))}
         </div>
       )}
-    </div>
+    </Pagina>
   );
 }
 

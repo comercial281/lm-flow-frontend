@@ -223,13 +223,7 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
   ];
 
   return (
-    <div className="mt-4 space-y-4">
-      {modo === 'passo' && (
-        <div>
-          <h1 className="text-2xl font-bold leading-tight">Onde divulgar</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{imovel.title}</p>
-        </div>
-      )}
+    <div className="space-y-4">
       {rascunho && (
         <p role="status" className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-500">
           Este imóvel está em rascunho: nada sai no site, nos portais nem na IA até a situação mudar para Disponível.

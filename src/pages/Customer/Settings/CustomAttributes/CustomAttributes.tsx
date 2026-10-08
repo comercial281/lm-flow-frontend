@@ -16,6 +16,7 @@ import {
   TabsTrigger,
 } from '@/components/ui/ds';
 import { Settings } from 'lucide-react';
+import { Pagina } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
 
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -300,25 +301,30 @@ export default function CustomAttributes() {
   };
 
   return (
-    <div className="h-full flex flex-col p-4" data-tour="settings-custom-attributes-page">
+    <Pagina
+      rolagem="conteudo"
+      dataTour="settings-custom-attributes-page"
+      cabecalho={
+        <div data-tour="settings-custom-attributes-header">
+          <CustomAttributesHeader
+            totalCount={searchFilteredAttributes.length}
+            selectedCount={state.selectedAttributeIds.length}
+            searchValue={state.searchQuery}
+            onSearchChange={handleSearchChange}
+            onNewAttribute={handleCreateAttribute}
+            onBulkDelete={handleBulkDelete}
+            onClearSelection={() => setState(prev => ({ ...prev, selectedAttributeIds: [] }))}
+            showBulkActions={state.selectedAttributeIds.length > 0}
+            activeTab={state.activeTab}
+          />
+        </div>
+      }
+    >
       <SettingsCustomAttributesTour />
-      <div data-tour="settings-custom-attributes-header">
-        <CustomAttributesHeader
-          totalCount={searchFilteredAttributes.length}
-          selectedCount={state.selectedAttributeIds.length}
-          searchValue={state.searchQuery}
-          onSearchChange={handleSearchChange}
-          onNewAttribute={handleCreateAttribute}
-          onBulkDelete={handleBulkDelete}
-          onClearSelection={() => setState(prev => ({ ...prev, selectedAttributeIds: [] }))}
-          showBulkActions={state.selectedAttributeIds.length > 0}
-          activeTab={state.activeTab}
-        />
-      </div>
 
       {/* Tabs */}
-      <div data-tour="settings-custom-attributes-tabs">
-      <Tabs value={state.activeTab} onValueChange={handleTabChange} className="mt-6">
+      <div className="flex min-h-0 flex-1 flex-col" data-tour="settings-custom-attributes-tabs">
+      <Tabs value={state.activeTab} onValueChange={handleTabChange} className="flex min-h-0 flex-1 flex-col">
         <TabsList className="mb-4">
           {ATTRIBUTE_TABS.map(tab => (
             <TabsTrigger key={tab.key} value={tab.key}>
@@ -328,7 +334,7 @@ export default function CustomAttributes() {
         </TabsList>
 
         {ATTRIBUTE_TABS.map(tab => (
-          <TabsContent key={tab.key} value={tab.key} className="mt-6 flex flex-col flex-1">
+          <TabsContent key={tab.key} value={tab.key} className="flex min-h-0 flex-1 flex-col">
             {/* Content */}
             <div className="flex-1 overflow-auto">
               {state.loading.list ? (
@@ -469,6 +475,6 @@ export default function CustomAttributes() {
         onSubmit={handleAttributeFormSubmit}
         defaultAttributeModel={state.activeTab}
       />
-    </div>
+    </Pagina>
   );
 }

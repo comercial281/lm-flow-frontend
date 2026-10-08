@@ -114,7 +114,7 @@ describe('Agenda de Visitas: Semana e Dia', () => {
     const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ since: iso(domingo), until: iso(sabado) })));
     expect(await screen.findByRole('button', { name: /15:00–16:00 · Thyago/ })).toBeInTheDocument();
-    expect(screen.getByText('1 visita nesta semana')).toBeInTheDocument();
+    expect(screen.getByText(/1 visita nesta semana/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Semana' })).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -126,7 +126,7 @@ describe('Agenda de Visitas: Semana e Dia', () => {
     const hoje = new Date();
     await user.click(screen.getByRole('button', { name: `Ver o dia ${hoje.getDate()}` }));
     expect(screen.getByRole('button', { name: 'Dia' })).toHaveAttribute('aria-pressed', 'true');
-    await waitFor(() => expect(screen.getByText('0 visitas hoje')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/0 visitas hoje/)).toBeInTheDocument());
     unmount();
 
     abrir();

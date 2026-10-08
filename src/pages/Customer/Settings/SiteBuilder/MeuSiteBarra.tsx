@@ -97,14 +97,15 @@ export default function MeuSiteBarra({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b bg-card px-6 py-2">
-      <div className="flex min-w-0 items-center gap-2 py-2">
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b bg-card px-4 py-2 sm:px-6">
+      {/* Endereço com limite: sem ele, endereço comprido empurrava o menu e o Ver site pra baixo. */}
+      <div className="flex min-w-0 basis-full items-center gap-2 py-2 sm:basis-auto sm:max-w-xs">
         <Globe className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-        <span className="truncate text-sm font-semibold">{enderecoVisivel}</span>
+        <span className="min-w-0 truncate text-sm font-semibold" title={enderecoVisivel}>{enderecoVisivel}</span>
         {/* Fora do ar (Ativo ou Publicado desmarcado) o site mostra a página Em manutenção. */}
-        <Badge variant={noAr ? 'default' : 'secondary'}>{noAr ? 'No ar' : 'Em manutenção'}</Badge>
+        <Badge className="shrink-0" variant={noAr ? 'default' : 'secondary'}>{noAr ? 'No ar' : 'Em manutenção'}</Badge>
       </div>
-      <nav aria-label="Menu do Meu site" className="flex flex-1 flex-wrap items-center gap-1">
+      <nav aria-label="Menu do Meu site" className="flex min-w-0 flex-1 flex-nowrap items-center gap-1 overflow-x-auto sm:flex-wrap sm:overflow-visible">
         {GRUPOS.map(g => {
           const ativo = grupoAtual === g.id;
           const cls = ativo ? 'bg-accent text-accent-foreground' : '';
@@ -158,12 +159,12 @@ export default function MeuSiteBarra({
         })}
       </nav>
       {comPrevia ? (
-        <Button onClick={verPrevia} disabled={gerando}>
+        <Button className="shrink-0" onClick={verPrevia} disabled={gerando}>
           {gerando && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden />}
           Ver prévia <ExternalLink className="ml-1.5 h-4 w-4" aria-hidden />
         </Button>
       ) : (
-        <Button asChild>
+        <Button asChild className="shrink-0">
           <a href={urlDoSite} target="_blank" rel="noreferrer">
             Ver site <ExternalLink className="ml-1.5 h-4 w-4" aria-hidden />
           </a>

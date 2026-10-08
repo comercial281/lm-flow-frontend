@@ -31,6 +31,7 @@ import { useTenantFeatures, useClientToggle } from '@/contexts/TenantFeaturesCon
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useAlteracoesNaoSalvas } from '@/hooks/useAlteracoesNaoSalvas';
 import BarraSalvar from '@/components/base/BarraSalvar';
+import { BaseHeader, Pagina } from '@/components/base';
 import MeuSiteBarra from './MeuSiteBarra';
 import TelaPainel from './telas/TelaPainel';
 import TelaAparencia from './telas/TelaAparencia';
@@ -390,10 +391,12 @@ export default function SiteBuilder() {
 
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center text-muted-foreground">
-        <RefreshCw className="h-5 w-5 animate-spin mr-2" />
-        Carregando site...
-      </div>
+      <Pagina cabecalho={<BaseHeader title={telaInfo(tela).titulo} />}>
+        <div className="flex items-center justify-center p-6 text-muted-foreground">
+          <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
+          Carregando site...
+        </div>
+      </Pagina>
     );
   }
 
@@ -411,8 +414,9 @@ export default function SiteBuilder() {
   const formProps = { site, siteForm, setF };
 
   return (
-    <div className="flex min-h-full flex-col">
-      {site && (
+    <Pagina
+      className="space-y-5"
+      barraDoTopo={site && (
         <MeuSiteBarra
           tela={tela}
           aoIr={irPara}
@@ -423,68 +427,66 @@ export default function SiteBuilder() {
           podeAnuncios={canLandings}
         />
       )}
-      <div className="mx-auto w-full max-w-[1400px] space-y-5 px-6 py-6">
-        <div className="space-y-1">
-          {trilha && <p className="text-xs font-medium text-muted-foreground">{trilha}</p>}
-          <h1 className="text-2xl font-semibold">{site ? info.titulo : 'Criar o site'}</h1>
-          <p className="text-sm text-muted-foreground">
-            {site ? info.frase : 'Dê um nome e um endereço para o site da imobiliária.'}
-          </p>
-        </div>
+      acima={site && trilha ? <p className="text-xs font-medium text-muted-foreground">{trilha}</p> : undefined}
+      cabecalho={
+        <BaseHeader
+          title={site ? info.titulo : 'Criar o site'}
+          subtitle={site ? info.frase : 'Dê um nome e um endereço para o site da imobiliária.'}
+        />
+      }
+    >
+      {site && tela === 'painel' && <TelaPainel site={site} irPara={irPara} setF={setF} podeAnuncios={canLandings} />}
+      {tela === 'aparencia' && (
+        <TelaAparencia {...formProps} heroPickPreview={heroPickPreview} setHeroPickPreview={setHeroPickPreview} />
+      )}
+      {tela === 'modelo' && <TelaModelo {...formProps} urlDoSite={site ? endereco.url : undefined} noAr={noAr} aoPedirPrevia={pedirPrevia} />}
+      {tela === 'busca' && <TelaBusca {...formProps} />}
+      {tela === 'vitrines' && <TelaVitrines {...formProps} />}
+      {tela === 'chamadas' && <TelaChamadas {...formProps} versaoDasPaginas={versaoDasPaginas} />}
+      {tela === 'buscados' && <TelaMaisBuscados {...formProps} />}
+      {tela === 'secoes' && <TelaSecoes {...formProps} />}
+      {tela === 'ficha' && <TelaFicha {...formProps} aplicarSemMarcar={aplicarSemMarcar} />}
+      {tela === 'lista' && <TelaLista {...formProps} />}
+      {tela === 'financiamento' && (
+        <TelaFinanciamento financingPage={financingPage} setFinancingPage={setFinancingPage} marcarAlterado={marcarAlterado} />
+      )}
+      {tela === 'anuncie' && (
+        <TelaAnuncie
+          site={site}
+          listingPage={listingPage}
+          setListingPage={setListingPage}
+          emailsText={emailsText}
+          setEmailsText={setEmailsText}
+          alterado={siteFormDirty}
+          marcarAlterado={marcarAlterado}
+        />
+      )}
+      {tela === 'endereco' && <TelaEndereco {...formProps} aoCriar={handleSaveSite} salvando={saving} />}
+      {tela === 'dados' && <TelaDados {...formProps} />}
+      {tela === 'destino' && (
+        <TelaDestino
+          leadRouting={leadRouting}
+          setLeadRouting={setLeadRouting}
+          routingOptions={routingOptions}
+          marcarAlterado={marcarAlterado}
+        />
+      )}
+      {tela === 'google' && <TelaGoogle {...formProps} />}
+      {tela === 'rastreamento' && <TelaRastreamento {...formProps} irPara={irPara} />}
+      {tela === 'redes' && <TelaRedes {...formProps} />}
+      {tela === 'traducao' && <TelaTraducao {...formProps} />}
+      {tela === 'marca' && <TelaMarcaDagua {...formProps} onLogoAtualizado={setSite} />}
+      {tela === 'menus' && <TelaMenus {...formProps} versaoDasPaginas={versaoDasPaginas} />}
+      {site && tela === 'paginas' && (
+        <TelaPaginas site={site} versaoDasPaginas={versaoDasPaginas} aoMudarPagina={aoMudarPagina} />
+      )}
+      {site && tela === 'blog' && <TelaBlog site={site} />}
+      {site && tela === 'contatos' && <TelaContatos site={site} />}
+      {site && tela === 'anuncios' && canLandings && (
+        <TelaAnuncios site={site} landingsHiddenFromClient={landingsHiddenFromClient} />
+      )}
 
-        {site && tela === 'painel' && <TelaPainel site={site} irPara={irPara} setF={setF} podeAnuncios={canLandings} />}
-        {tela === 'aparencia' && (
-          <TelaAparencia {...formProps} heroPickPreview={heroPickPreview} setHeroPickPreview={setHeroPickPreview} />
-        )}
-        {tela === 'modelo' && <TelaModelo {...formProps} urlDoSite={site ? endereco.url : undefined} noAr={noAr} aoPedirPrevia={pedirPrevia} />}
-        {tela === 'busca' && <TelaBusca {...formProps} />}
-        {tela === 'vitrines' && <TelaVitrines {...formProps} />}
-        {tela === 'chamadas' && <TelaChamadas {...formProps} versaoDasPaginas={versaoDasPaginas} />}
-        {tela === 'buscados' && <TelaMaisBuscados {...formProps} />}
-        {tela === 'secoes' && <TelaSecoes {...formProps} />}
-        {tela === 'ficha' && <TelaFicha {...formProps} aplicarSemMarcar={aplicarSemMarcar} />}
-        {tela === 'lista' && <TelaLista {...formProps} />}
-        {tela === 'financiamento' && (
-          <TelaFinanciamento financingPage={financingPage} setFinancingPage={setFinancingPage} marcarAlterado={marcarAlterado} />
-        )}
-        {tela === 'anuncie' && (
-          <TelaAnuncie
-            site={site}
-            listingPage={listingPage}
-            setListingPage={setListingPage}
-            emailsText={emailsText}
-            setEmailsText={setEmailsText}
-            alterado={siteFormDirty}
-            marcarAlterado={marcarAlterado}
-          />
-        )}
-        {tela === 'endereco' && <TelaEndereco {...formProps} aoCriar={handleSaveSite} salvando={saving} />}
-        {tela === 'dados' && <TelaDados {...formProps} />}
-        {tela === 'destino' && (
-          <TelaDestino
-            leadRouting={leadRouting}
-            setLeadRouting={setLeadRouting}
-            routingOptions={routingOptions}
-            marcarAlterado={marcarAlterado}
-          />
-        )}
-        {tela === 'google' && <TelaGoogle {...formProps} />}
-        {tela === 'rastreamento' && <TelaRastreamento {...formProps} irPara={irPara} />}
-        {tela === 'redes' && <TelaRedes {...formProps} />}
-        {tela === 'traducao' && <TelaTraducao {...formProps} />}
-        {tela === 'marca' && <TelaMarcaDagua {...formProps} onLogoAtualizado={setSite} />}
-        {tela === 'menus' && <TelaMenus {...formProps} versaoDasPaginas={versaoDasPaginas} />}
-        {site && tela === 'paginas' && (
-          <TelaPaginas site={site} versaoDasPaginas={versaoDasPaginas} aoMudarPagina={aoMudarPagina} />
-        )}
-        {site && tela === 'blog' && <TelaBlog site={site} />}
-        {site && tela === 'contatos' && <TelaContatos site={site} />}
-        {site && tela === 'anuncios' && canLandings && (
-          <TelaAnuncios site={site} landingsHiddenFromClient={landingsHiddenFromClient} />
-        )}
-
-        <BarraSalvar visivel={!!site && siteFormDirty} salvando={saving} aoSalvar={handleSaveSite} aoDescartar={descartar} />
-      </div>
-    </div>
+      <BarraSalvar visivel={!!site && siteFormDirty} salvando={saving} aoSalvar={handleSaveSite} aoDescartar={descartar} />
+    </Pagina>
   );
 }

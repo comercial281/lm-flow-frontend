@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
+import { BaseHeader, Pagina } from '@/components/base';
 import { Secao, Secoes } from '@/components/base/Secao';
 import { CampoTexto } from '@/components/base/Campo';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -105,7 +106,21 @@ export default function CvcrmConexao() {
     }
   };
 
-  if (carregando) return <div className="p-6 text-sm text-muted-foreground">Carregando…</div>;
+  if (carregando) {
+    return (
+      <Pagina
+        estreita
+        cabecalho={
+          <BaseHeader
+            title="CVCRM"
+            subtitle="Conecte o CVCRM deste cliente para a IA cadastrar o lead direto nele, no empreendimento e na fila que você escolher na IA."
+          />
+        }
+      >
+        <p className="text-sm text-muted-foreground">Carregando…</p>
+      </Pagina>
+    );
+  }
 
   const conectado = status?.connected === true;
   const mostrarCampos = !conectado || editando;
@@ -117,14 +132,15 @@ export default function CvcrmConexao() {
     && subdominioDe(endereco) !== status?.subdomain;
 
   return (
-    <div className="mx-auto max-w-4xl p-6">
-      <header>
-        <h1 className="text-lg font-semibold text-foreground">CVCRM</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Conecte o CVCRM deste cliente para a IA cadastrar o lead direto nele, no empreendimento e na fila que você escolher na IA.
-        </p>
-      </header>
-
+    <Pagina
+      estreita
+      cabecalho={
+        <BaseHeader
+          title="CVCRM"
+          subtitle="Conecte o CVCRM deste cliente para a IA cadastrar o lead direto nele, no empreendimento e na fila que você escolher na IA."
+        />
+      }
+    >
       <Secoes>
         <Secao
           titulo="Conexão"
@@ -203,6 +219,6 @@ export default function CvcrmConexao() {
         )}
       </Secoes>
       {dialogoDeConfirmacao}
-    </div>
+    </Pagina>
   );
 }

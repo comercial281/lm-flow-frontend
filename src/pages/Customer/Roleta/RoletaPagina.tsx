@@ -11,6 +11,8 @@ import {
   Input,
 } from '@/components/ui/ds';
 import Abas from '@/components/base/Abas';
+import BaseHeader from '@/components/base/BaseHeader';
+import Pagina from '@/components/base/Pagina';
 import Chave from '@/components/base/Chave';
 import EmptyState from '@/components/base/EmptyState';
 import IconActionButton from '@/components/base/IconActionButton';
@@ -74,10 +76,10 @@ function NomeEditavel({ roleta, aoMudar }: { roleta: RoletaConfig; aoMudar: (r: 
 
   if (!editando) {
     return (
-      <div className="flex min-w-0 items-center gap-1">
-        <h1 className="truncate text-2xl font-bold tracking-tight">{nome}</h1>
+      <span className="inline-flex min-w-0 max-w-full items-center gap-1">
+        <span className="truncate">{nome}</span>
         <IconActionButton label="Mudar o nome" variant="ghost" onClick={abrir} icon={<Pencil className="h-4 w-4" />} />
-      </div>
+      </span>
     );
   }
   return (
@@ -143,18 +145,25 @@ export default function RoletaPagina() {
     }, { replace: true });
   };
 
+  const voltar = (
+    <Link to={ENDERECO_DA_LISTA} onClickCapture={guardaDoLink} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+      <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Roleta de leads
+    </Link>
+  );
   if (erro) {
     return (
-      <div className="px-4 py-6 sm:px-6">
+      <Pagina acima={voltar} cabecalho={<BaseHeader title="Roleta" />}>
         <EmptyState tipo="erro" aoTentarDeNovo={carregar} />
-      </div>
+      </Pagina>
     );
   }
   if (!roleta) {
     return (
-      <div className="flex justify-center py-16 text-muted-foreground" role="status" aria-label="Carregando a roleta">
-        <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
-      </div>
+      <Pagina acima={voltar} cabecalho={<BaseHeader title="Roleta" />}>
+        <div className="flex justify-center py-16 text-muted-foreground" role="status" aria-label="Carregando a roleta">
+          <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
+        </div>
+      </Pagina>
     );
   }
 
@@ -199,18 +208,14 @@ export default function RoletaPagina() {
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-        <div className="mx-auto w-full max-w-[1400px] space-y-6">
-          <Link to={ENDERECO_DA_LISTA} onClickCapture={guardaDoLink} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Roleta de leads
-          </Link>
-
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div className="min-w-0 flex-1">
-              <NomeEditavel roleta={roleta} aoMudar={setRoleta} />
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
+    <>
+      <Pagina
+        acima={voltar}
+        cabecalho={
+          <BaseHeader
+            title={<NomeEditavel roleta={roleta} aoMudar={setRoleta} />}
+            aDireita={
+              <div className="flex flex-wrap items-center gap-3">
               <div className="flex flex-col items-end">
                 <Chave
                   rotulo="Ligar a roleta"
@@ -242,8 +247,10 @@ export default function RoletaPagina() {
                 </DropdownMenu>
               )}
             </div>
-          </div>
-
+            }
+          />
+        }
+      >
           <Abas
             rotulo={`Abas da roleta ${roletaLabel(roleta)}`}
             ativa={aba}
@@ -278,11 +285,10 @@ export default function RoletaPagina() {
               </Secao>
             </Secoes>
           )}
-        </div>
-      </div>
+      </Pagina>
       {dialogoDeConfirmacao}
       {dialogoDaGuarda}
       {dialogoDeSaida}
-    </div>
+    </>
   );
 }

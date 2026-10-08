@@ -1067,7 +1067,7 @@ export default function PipelineKanban() {
       <div className="flex-1 h-full flex flex-col bg-muted/30 min-w-0">
         {/* Header */}
         <div className="flex-shrink-0 bg-background border-b border-border shadow-sm">
-          <div className="px-4 sm:px-6 lg:px-8">
+          <div className="px-4 sm:px-6">
             <div className="flex flex-col gap-3 py-3 lg:min-h-16 lg:flex-row lg:items-center lg:justify-between lg:py-2">
               {/* Navigation and Pipeline Info */}
               <div className="flex items-center gap-3 min-w-0">

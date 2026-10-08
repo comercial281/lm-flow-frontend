@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2, Plus, Search, UserRoundCheck } from 'lucide-react';
+import { Loader2, Search, UserRoundCheck } from 'lucide-react';
 import { Button, Input } from '@/components/ui/ds';
 import { EmptyState } from '@/components/base';
 import { useCan } from '@/hooks/useCan';
@@ -64,7 +64,15 @@ function Linha({ o, aoAbrir, aoMudarStatus }: {
   );
 }
 
-export default function ListaDeProprietarios() {
+interface ListaDeProprietariosProps {
+  /** A janela "Novo proprietário" é aberta pelo botão do cabeçalho da página. */
+  novoAberto: boolean;
+  aoFecharNovo: () => void;
+  /** Só pro botão da tela vazia (o do cabeçalho já abre pelo pai). */
+  aoAbrirNovo?: () => void;
+}
+
+export default function ListaDeProprietarios({ novoAberto, aoFecharNovo, aoAbrirNovo }: ListaDeProprietariosProps) {
   const can = useCan();
   const podeGerir = can('properties', 'update');
   const navigate = useNavigate();
@@ -78,7 +86,6 @@ export default function ListaDeProprietarios() {
   const [carregando, setCarregando] = useState(true);
   const [carregandoMais, setCarregandoMais] = useState(false);
   const [erro, setErro] = useState(false);
-  const [janelaAberta, setJanelaAberta] = useState(false);
   // Só a resposta do último pedido vale (busca digitada rápido, filtro trocado).
   const pedido = useRef(0);
 
@@ -112,7 +119,6 @@ export default function ListaDeProprietarios() {
       : o)));
 
   const limparFiltros = () => { setBusca(''); setQ(''); setStatus(''); };
-  const abrirNovo = () => setJanelaAberta(true);
   const temFiltro = !!q || !!status;
 
   const conteudo = erro ? (
@@ -128,7 +134,7 @@ export default function ListaDeProprietarios() {
         icon={UserRoundCheck}
         title="Nenhum proprietário ainda"
         description="Aqui ficam os donos dos imóveis de revenda: contato, status e os imóveis de cada um."
-        action={{ label: 'Novo proprietário', onClick: abrirNovo }}
+        action={aoAbrirNovo ? { label: 'Novo proprietário', onClick: aoAbrirNovo } : undefined}
       />
     ) : (
       <EmptyState
@@ -158,19 +164,13 @@ export default function ListaDeProprietarios() {
   );
 
   return (
-    <div className="mt-4 space-y-4">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-48 max-w-md flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <Input aria-label="Buscar proprietário" placeholder="Buscar por nome ou telefone" value={busca}
             onChange={e => setBusca(e.target.value)} className="pl-9" />
         </div>
-        {podeGerir && (
-          <Button onClick={abrirNovo} className="ml-auto">
-            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-            Novo proprietário
-          </Button>
-        )}
       </div>
       <div role="group" aria-label="Filtrar por status" className="flex flex-wrap gap-2">
         {[{ valor: '' as const, rotulo: 'Todos' }, ...STATUS_DO_PROPRIETARIO].map(s => (
@@ -183,9 +183,9 @@ export default function ListaDeProprietarios() {
       </div>
       {conteudo}
       <JanelaDoProprietario
-        aberta={janelaAberta}
-        aoFechar={() => setJanelaAberta(false)}
-        aoSalvar={criado => { setJanelaAberta(false); navigate(`/property-owners/${criado.id}`); }}
+        aberta={novoAberto}
+        aoFechar={aoFecharNovo}
+        aoSalvar={criado => { aoFecharNovo(); navigate(`/property-owners/${criado.id}`); }}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BaseHeader } from '@/components/base';
+import { BaseHeader, Pagina } from '@/components/base';
 import MetaPagesPanel from '@/pages/Customer/Automations/Origem/MetaPagesPanel';
 import PixelCapiConfig from '@/pages/Customer/Automations/PixelCapi/PixelCapiConfig';
 import { useMenuSecoes } from '@/contexts/MenuContext';
@@ -69,15 +69,18 @@ export default function FacebookIntegracao() {
     if (pathname === PAGINA) raizRef.current?.scrollTo?.(0, 0);
   }, [pathname]);
 
-  // Padrão das páginas da casa (Canais): cabeçalho padrão e os dois blocos na
+  // Moldura e cabeçalho da casa: cabeçalho padrão e os dois blocos na
   // largura da página, cada um com o título dele (Página do Facebook; Pixel / Conversões).
   return (
-    <div ref={raizRef} className="h-full overflow-y-auto">
-      <div className="flex flex-col gap-6 p-4">
+    <Pagina
+      rolagemRef={raizRef}
+      cabecalho={
         <BaseHeader
           title="Facebook"
           subtitle="A página dos anúncios, de onde chegam os leads, e o Pixel, que conta pro Meta quem virou cliente."
         />
+      }
+    >
         {pagina && (
           <section ref={paginaRef} aria-label="Página do Facebook">
             <MetaPagesPanel onGoToForms={() => navigate('/automations/origem')} />
@@ -92,7 +95,6 @@ export default function FacebookIntegracao() {
             <PixelCapiConfig />
           </section>
         )}
-      </div>
-    </div>
+    </Pagina>
   );
 }

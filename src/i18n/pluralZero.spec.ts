@@ -62,16 +62,16 @@ describe('zero no plural (pt-BR)', () => {
     const i18n = await carregar({ customAttributes });
     const total = (count: number) =>
       i18n.t('customAttributes:header.subtitle', { count, tabName: 'de contato' });
-    expect(total(0)).toBe('0 atributos de contato no total');
-    expect(total(1)).toBe('1 atributo de contato no total');
-    expect(total(2)).toBe('2 atributos de contato no total');
+    expect(total(0)).toBe('Informações a mais que você guarda em cada contato ou conversa. · 0 campos de contato');
+    expect(total(1)).toBe('Informações a mais que você guarda em cada contato ou conversa. · 1 campo de contato');
+    expect(total(2)).toBe('Informações a mais que você guarda em cada contato ou conversa. · 2 campos de contato');
   });
 
   it('etiquetas: 0 etiquetas, 1 etiqueta, 2 etiquetas', async () => {
     const i18n = await carregar({ labels });
-    expect(i18n.t('labels:header.subtitle', { count: 0 })).toBe('0 etiquetas no total');
-    expect(i18n.t('labels:header.subtitle', { count: 1 })).toBe('1 etiqueta no total');
-    expect(i18n.t('labels:header.subtitle', { count: 2 })).toBe('2 etiquetas no total');
+    expect(i18n.t('labels:header.subtitle', { count: 0 })).toBe('Marcadores pra separar e achar contatos e conversas. · 0 etiquetas');
+    expect(i18n.t('labels:header.subtitle', { count: 1 })).toBe('Marcadores pra separar e achar contatos e conversas. · 1 etiqueta');
+    expect(i18n.t('labels:header.subtitle', { count: 2 })).toBe('Marcadores pra separar e achar contatos e conversas. · 2 etiquetas');
   });
 
   it('macros: 0 macros, 1 macro, 2 macros', async () => {

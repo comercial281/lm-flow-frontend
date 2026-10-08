@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Users2, Shield, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/ds';
+import { BaseHeader, Pagina } from '@/components/base';
 import PeopleTab from './PeopleTab';
 import RolesPage from '@/pages/Customer/Settings/Roles';
 import Teams from '@/pages/Customer/Settings/Teams/Teams';
@@ -45,20 +46,7 @@ export default function TeamAccessPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl p-6">
-      <div className="mb-5 flex items-start gap-3">
-        <div
-          className="w-1 h-9 rounded-full shrink-0"
-          style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
-        />
-        <div>
-          <h1 className="text-2xl font-bold text-foreground leading-tight">Equipe</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Quem é quem, o que cada cargo pode fazer e por onde cada um atende
-          </p>
-        </div>
-      </div>
-
+    <Pagina cabecalho={<BaseHeader title="Equipe" subtitle="Quem é quem, o que cada cargo pode fazer e por onde cada um atende" />}>
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="flex flex-wrap justify-start gap-1 bg-transparent p-0 h-auto">
           {TABS.map(tab => {
@@ -80,9 +68,9 @@ export default function TeamAccessPage() {
           <RolesPage embedded />
         </TabsContent>
         <TabsContent value="times">
-          <Teams />
+          <Teams embutido />
         </TabsContent>
       </Tabs>
-    </div>
+    </Pagina>
   );
 }

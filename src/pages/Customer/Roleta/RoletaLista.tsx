@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/ds';
 import Abas from '@/components/base/Abas';
+import Pagina from '@/components/base/Pagina';
 import BaseHeader from '@/components/base/BaseHeader';
 import BaseStatusBadge from '@/components/base/BaseStatusBadge';
 import EmptyState from '@/components/base/EmptyState';
@@ -186,31 +187,32 @@ export default function RoletaLista() {
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-        <div className="mx-auto w-full max-w-[1400px] space-y-6">
+    <>
+      <Pagina
+        cabecalho={(
           <BaseHeader
             title="Roleta de leads"
             subtitle="Decide qual corretor atende cada lead que chega, um de cada vez, na ordem da fila."
             primaryAction={podeCriar ? { label: 'Nova roleta', icon: <Plus className="h-4 w-4" />, onClick: () => void abrirCriacao() } : undefined}
           />
-          <Abas
-            rotulo="Roleta de leads"
-            ativa={aba}
-            aoTrocar={c => void trocarAba(c)}
-            abas={[
-              { chave: 'roletas', rotulo: 'Roletas' },
-              { chave: 'historico', rotulo: 'Histórico' },
-              { chave: 'avisos', rotulo: 'Avisos' },
-            ]}
-          />
-          <div className="pt-2">
-            {aba === 'roletas' && <ListaDeRoletas aoCriar={() => void abrirCriacao()} podeCriar={podeCriar} />}
-            {aba === 'historico' && <HistoricoLista />}
-            {aba === 'avisos' && <AvisosAba />}
-          </div>
+        )}
+      >
+        <Abas
+          rotulo="Roleta de leads"
+          ativa={aba}
+          aoTrocar={c => void trocarAba(c)}
+          abas={[
+            { chave: 'roletas', rotulo: 'Roletas' },
+            { chave: 'historico', rotulo: 'Histórico' },
+            { chave: 'avisos', rotulo: 'Avisos' },
+          ]}
+        />
+        <div className="pt-2">
+          {aba === 'roletas' && <ListaDeRoletas aoCriar={() => void abrirCriacao()} podeCriar={podeCriar} />}
+          {aba === 'historico' && <HistoricoLista />}
+          {aba === 'avisos' && <AvisosAba />}
         </div>
-      </div>
+      </Pagina>
 
       <Dialog open={criando} onOpenChange={aberto => { if (!salvando) setCriando(aberto); }}>
         <DialogContent className="max-w-md">
@@ -238,6 +240,6 @@ export default function RoletaLista() {
         </DialogContent>
       </Dialog>
       {dialogoDeSaida}
-    </div>
+    </>
   );
 }

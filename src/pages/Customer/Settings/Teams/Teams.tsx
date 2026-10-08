@@ -51,7 +51,7 @@ const INITIAL_STATE: TeamsState = {
   sortOrder: 'asc',
 };
 
-export default function Teams() {
+export default function Teams({ embutido = false }: { embutido?: boolean }) {
   const { t } = useLanguage('teams');
   const { can, isReady: permissionsReady } = useUserPermissions();
   const navigate = useNavigate();
@@ -329,7 +329,7 @@ export default function Teams() {
   };
 
   return (
-    <div className="h-full flex flex-col p-4" data-tour="settings-teams-page">
+    <div className={embutido ? 'flex flex-col gap-6' : 'h-full flex flex-col p-4'} data-tour="settings-teams-page">
       <SettingsTeamsTour />
       <div data-tour="settings-teams-header">
         <TeamsHeader
@@ -345,6 +345,7 @@ export default function Teams() {
           onClearSelection={() => setState(prev => ({ ...prev, selectedTeamIds: [] }))}
           activeFilters={[]}
           showFilters={false}
+          embutido={embutido}
         />
       </div>
 

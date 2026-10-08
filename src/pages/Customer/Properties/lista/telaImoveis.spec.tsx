@@ -77,7 +77,7 @@ describe('Tela de Imóveis', () => {
     abrir();
     expect(await screen.findByRole('tab', { name: 'Revenda (38)' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Empreendimentos (12)' })).toHaveAttribute('aria-selected', 'false');
-    expect(screen.getByText('50 cadastros na imobiliária')).toBeInTheDocument();
+    expect(screen.getByText('Empreendimentos e imóveis de revenda da imobiliária. · 50 cadastros')).toBeInTheDocument();
     await waitFor(() => expect(svc.list).toHaveBeenCalledWith(expect.objectContaining({ listing_kind: 'resale', page: 1 })));
     expect(svc.list).not.toHaveBeenCalledWith(expect.objectContaining({ listing_kind: 'development' }));
     expect(await screen.findByText('38 imóveis de revenda')).toBeInTheDocument();
