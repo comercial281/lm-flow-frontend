@@ -106,7 +106,7 @@ describe('menu novo: seções (fase 4)', () => {
     // Gestão de proprietários passa no cargo; quem tira do corretor sem
     // proprietário liberado é o `aplicarProprietariosNoMenu`, no MainLayout.
     expect(vistas.flatMap(s => s.itens.map(i => i.name))).toEqual([
-      'Dashboard', 'Conversas', 'Funil de vendas', 'Visitas', 'Meus imóveis', 'Gestão de proprietários', 'Contatos', 'Bolsão',
+      'Dashboard', 'Conversas', 'Funil de vendas', 'Atividades', 'Meus imóveis', 'Gestão de proprietários', 'Contatos', 'Bolsão',
       'Funis de mensagem',
     ]);
   });
