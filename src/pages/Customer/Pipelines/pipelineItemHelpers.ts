@@ -59,6 +59,14 @@ export const formatArrivalDate = (item: PipelineItem): string | null => {
   });
 };
 
+// Chegada do lead em epoch ms — pra ordenar a Lista por ordem de chegada real
+// (não confundir com `position`, a ordem manual de arraste dentro da coluna).
+export const itemArrivalMs = (item: PipelineItem): number => {
+  if (typeof item.entered_at === 'number') return item.entered_at * 1000;
+  if (typeof item.created_at === 'number') return item.created_at * 1000;
+  return item.created_at ? new Date(item.created_at).getTime() : 0;
+};
+
 // Último contato com o lead medido pela CONVERSA da instância WhatsApp.
 // last_non_activity_message = última mensagem real (entrada OU saída), incluindo
 // mensagens que o corretor mandou pelo celular (persistidas via webhook Evolution).

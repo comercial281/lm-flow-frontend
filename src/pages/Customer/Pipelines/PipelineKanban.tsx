@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { formatDateBR } from '@/utils/dateUtils';
-import { dinheiro, telefone } from '@/lib/formato';
+import { dinheiro } from '@/lib/formato';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -22,8 +22,6 @@ import {
   Trash2,
   Copy,
   ArrowUpDown,
-  Phone,
-  User,
   Search,
   X,
   Download,
@@ -32,10 +30,6 @@ import {
   Archive,
   LayoutGrid,
   List as ListIcon,
-  ChevronRight,
-  ArrowDown,
-  ArrowUp,
-  Shuffle,
 } from 'lucide-react';
 
 import { pipelinesService } from '@/services/pipelines';
@@ -62,26 +56,17 @@ import { passaNoFiltroDeTarefas, type FiltroDeTarefas } from '@/features/tarefas
 import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { lazyWithRetry } from '@/utils/chunkReload';
-// Card do board, sempre visível de cara — import estático de propósito.
-import PipelineItemCard from './PipelineItemCard';
 import AvisoCardForaDaAba from './AvisoCardForaDaAba';
 import { useCardNoEndereco } from './useCardNoEndereco';
-import OfferActions from '@/components/roleta/OfferActions';
 import {
-  itemPos,
-  itemTagInfos,
   itemTagNames,
   calculateStageTotal,
   lastContactDays,
-  resolveItemName,
-  resolveItemAvatar,
-  resolveItemRef,
-  getContactColor,
-  formatArrivalDate,
 } from './pipelineItemHelpers';
-import { situacaoDe } from '@/features/pipelines/situacao/situacao';
+import { useBoardDrag } from './quadro/useBoardDrag';
+import StageColumn from './quadro/StageColumn';
+import PipelineListView from './quadro/PipelineListView';
 import { useAppDataStore } from '@/store/appDataStore';
-import { roletaLabel } from '@/services/roletaConfig/roletaConfigService';
 
 // Os modais abaixo só aparecem quando o usuário clica em algo pra abrir —
 // código deles não precisa estar no bundle inicial da página de Pipelines.
@@ -126,113 +111,12 @@ export default function PipelineKanban() {
   const [pipeline, setPipeline] = useState<Pipeline | null>(null);
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [allPipelines, setAllPipelines] = useState<Pipeline[]>([]);
-  const [draggedItem, setDraggedItem] = useState<PipelineItem | null>(null);
-  const isDraggingRef = useRef(false);
-  const suppressClickUntilRef = useRef(0);
-
-  // Scroll horizontal do board — feito por arrastar-pra-rolar e roda do mouse
-  // (ver handlers abaixo). O scroll nativo é pouco descobrível no desktop.
-  const boardScrollRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll enquanto arrasta um card: chegar perto da borda do board rola
-  // na horizontal (pra alcançar coluna escondida); perto do topo/fundo de uma
-  // coluna rola a lista de cards dela. Usa setInterval (não rAF) pra rodar
-  // independente de a aba estar visível ou não. dragPointer guarda a última
-  // posição do cursor capturada no onDragOver.
-  const dragPointerRef = useRef({ x: 0, y: 0, active: false });
-  const autoScrollRef = useRef<number | null>(null);
-  const stopAutoScroll = useCallback(() => {
-    if (autoScrollRef.current != null) {
-      clearInterval(autoScrollRef.current);
-      autoScrollRef.current = null;
-    }
-    dragPointerRef.current = { x: 0, y: 0, active: false };
-  }, []);
-  const startAutoScroll = useCallback(() => {
-    if (autoScrollRef.current != null) return;
-    const EDGE = 90; // zona de borda (px) que ativa o scroll
-    const SPEED = 14; // px por tick
-    autoScrollRef.current = window.setInterval(() => {
-      const board = boardScrollRef.current;
-      const p = dragPointerRef.current;
-      if (!board || !p.active) return;
-      const r = board.getBoundingClientRect();
-      // horizontal
-      if (p.x < r.left + EDGE) board.scrollLeft -= SPEED;
-      else if (p.x > r.right - EDGE) board.scrollLeft += SPEED;
-      // vertical: a lista de cards da coluna sob o cursor
-      const col = (document.elementFromPoint(p.x, p.y) as HTMLElement | null)?.closest(
-        '[data-col-scroll]',
-      ) as HTMLElement | null;
-      if (col) {
-        const cr = col.getBoundingClientRect();
-        if (p.y < cr.top + EDGE) col.scrollTop -= SPEED;
-        else if (p.y > cr.bottom - EDGE) col.scrollTop += SPEED;
-      }
-    }, 16);
-  }, []);
-  // Captura a posição do cursor durante o arraste (dragover do board inteiro).
-  const handleBoardDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    dragPointerRef.current = { x: e.clientX, y: e.clientY, active: true };
-  };
-
-  // Arrastar-pra-rolar (pan): clicar no fundo do board e arrastar move na
-  // horizontal — scroll lateral natural no desktop, sem depender de seta nem da
-  // barrinha. Não inicia se o clique foi num card/botão/input (deixa o drag do
-  // card e os cliques funcionarem normal).
-  const panRef = useRef({ active: false, startX: 0, startScroll: 0, moved: false });
-  const handleBoardMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    const el = boardScrollRef.current;
-    if (!el) return;
-    if (
-      (e.target as HTMLElement).closest(
-        '[draggable="true"], button, a, input, textarea, select, [role="button"], [data-no-pan]',
-      )
-    ) {
-      return;
-    }
-    panRef.current = { active: true, startX: e.clientX, startScroll: el.scrollLeft, moved: false };
-    el.style.cursor = 'grabbing';
-  };
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      const p = panRef.current;
-      if (!p.active) return;
-      const el = boardScrollRef.current;
-      if (!el) return;
-      const dx = e.clientX - p.startX;
-      if (Math.abs(dx) > 3) p.moved = true;
-      el.scrollLeft = p.startScroll - dx;
-    };
-    const onUp = () => {
-      const p = panRef.current;
-      if (!p.active) return;
-      p.active = false;
-      const el = boardScrollRef.current;
-      if (el) el.style.cursor = '';
-      // bloqueia o clique fantasma logo após um arraste real
-      if (p.moved) suppressClickUntilRef.current = Date.now() + 200;
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-    };
-  }, []);
-
-  // Roda do mouse vertical vira scroll horizontal quando o cursor está sobre o
-  // board mas fora de uma lista de cards (colunas têm scroll vertical próprio).
-  const handleBoardWheel = (e: React.WheelEvent) => {
-    if (e.deltaY === 0 || e.shiftKey) return;
-    const overColumnList = (e.target as HTMLElement).closest('[data-col-scroll]');
-    if (overColumnList) return; // deixa a roda rolar os cards da coluna
-    const el = boardScrollRef.current;
-    if (!el) return;
-    el.scrollLeft += e.deltaY;
-  };
+  // Arraste do card, rolar o fundo e a roda do mouse (quadro/useBoardDrag).
+  const {
+    boardScrollRef, isDraggingRef, suppressClickUntilRef,
+    handleBoardDragOver, handleBoardMouseDown, handleBoardWheel,
+    handleDragStart, handleDragOver, handleDrop, handleCardDragOver, handleCardDrop, handleDragEnd,
+  } = useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro: t('kanban.messages.itemMoveError') });
 
   // Modal states
   const [showEditPipelineModal, setShowEditPipelineModal] = useState(false);
@@ -404,7 +288,7 @@ export default function PipelineKanban() {
       document.removeEventListener('visibilitychange', onVisibility);
       clearInterval(interval);
     };
-  }, [loadPipelineData, loadUpcomingVisits]);
+  }, [loadPipelineData, loadUpcomingVisits, isDraggingRef]);
 
   // AO VIVO (websocket): lead/mensagem nova chega pelo evento global 'lmflow:realtime'
   // (re-emitido pela conexão WS do app em useGlobalWebSocket). Refresh silencioso
@@ -426,7 +310,7 @@ export default function PipelineKanban() {
       window.removeEventListener('lmflow:realtime', onRealtime);
       clearTimeout(timer);
     };
-  }, [loadPipelineData, loadUpcomingVisits]);
+  }, [loadPipelineData, loadUpcomingVisits, isDraggingRef]);
 
   // Card aberto no endereço (?card=): F5 e link colado abrem o card, e ele
   // continua no endereço enquanto estiver aberto. Fechar tira só o ?card=.
@@ -470,161 +354,11 @@ export default function PipelineKanban() {
     }
   };
 
-  // Drag and drop handlers.
-  // Viram useCallback (referência estável) porque handleDragStart/handleCardDragOver/
-  // handleCardDrop/handleDragEnd são passados como prop pro PipelineItemCard
-  // memoizado — sem isso, cada render do board recriava a função e quebrava o
-  // memo (card inteiro re-renderizava mesmo sem o item mudar).
-  const handleDragStart = useCallback((item: PipelineItem) => {
-    // Card ganho/perdido não muda de etapa: reabre antes (spec funil §3.5).
-    if (situacaoDe(item) !== 'open') return;
-    setDraggedItem(item);
-    isDraggingRef.current = true;
-    suppressClickUntilRef.current = Date.now() + 200;
-    startAutoScroll();
-  }, [startAutoScroll]);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-  }, []);
-
-  // Limpa o estado de arraste (reuso entre drop em coluna e em card).
-  const finishDrag = useCallback(() => {
-    setDraggedItem(null);
-    isDraggingRef.current = false;
-    suppressClickUntilRef.current = Date.now() + 200;
-    stopAutoScroll();
-  }, [stopAutoScroll]);
-
-  // Onde o cursor está sobre o card alvo (metade de cima = acima, baixo = abaixo).
-  const dragOverPosRef = useRef<'above' | 'below'>('above');
-
-  // Move/reordena o card arrastado para targetStageId na position newPos,
-  // inserindo no índice insertIdx (no array já SEM o card arrastado).
-  // Atualização otimista + persistência via /reorder.
-  const commitReorder = useCallback(async (targetStageId: string, newPos: number, insertIdx: number) => {
-    if (!draggedItem || !pipelineId) {
-      finishDrag();
-      return;
-    }
-    const fromStageId = draggedItem.stage_id;
-    const previousStages = stages;
-    const moved = {
-      ...draggedItem,
-      stage_id: targetStageId,
-      pipeline_stage_id: targetStageId,
-      position: newPos,
-    };
-    const next = stages.map(stage => {
-      let items = (stage.items || []).filter(i => i.id !== draggedItem.id);
-      if (stage.id === targetStageId) {
-        items = [...items];
-        const idx = Math.max(0, Math.min(insertIdx, items.length));
-        items.splice(idx, 0, moved);
-      }
-      return { ...stage, items };
-    });
-    setStages(next);
-
-    try {
-      await pipelinesService.reorderItem(pipelineId, draggedItem.id, {
-        position: newPos,
-        ...(fromStageId !== targetStageId ? { new_stage_id: targetStageId } : {}),
-      });
-    } catch (error) {
-      console.error('Error reordering item:', error);
-      setStages(previousStages);
-      toast.error(t('kanban.messages.itemMoveError'));
-    } finally {
-      finishDrag();
-    }
-  }, [draggedItem, pipelineId, stages, t, finishDrag]);
-
-  // Drop na área da coluna (fora de um card):
-  // - outra coluna: lead vai pro TOPO da coluna destino.
-  // - mesma coluna (área vazia abaixo dos cards): manda o card pro FUNDO.
-  //   Sem isso, arrastar pro espaço vazio embaixo não fazia nada e dava a
-  //   impressão de que o card "não desce".
-  const handleDrop = useCallback((e: React.DragEvent, targetStageId: string) => {
-    e.preventDefault();
-    if (!draggedItem) return;
-    const targetStage = stages.find(s => s.id === targetStageId);
-    const items = (targetStage?.items || []).filter(i => i.id !== draggedItem.id);
-    if (draggedItem.stage_id === targetStageId) {
-      // mesma coluna: já está sozinho na coluna → nada a fazer
-      if (!items.length) {
-        finishDrag();
-        return;
-      }
-      // fundo da coluna: position menor que a do último card
-      const newPos = itemPos(items[items.length - 1]) - 1;
-      void commitReorder(targetStageId, newPos, items.length);
-      return;
-    }
-    const newPos = items.length ? itemPos(items[0]) + 1 : Date.now() / 1000;
-    void commitReorder(targetStageId, newPos, 0);
-  }, [draggedItem, stages, commitReorder, finishDrag]);
-
-  // Marca acima/abaixo conforme a metade do card sob o cursor.
-  const handleCardDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    dragOverPosRef.current = e.clientY < rect.top + rect.height / 2 ? 'above' : 'below';
-  }, []);
-
-  // Drop em cima de um card: insere acima/abaixo dele e grava a position no
-  // ponto médio entre os vizinhos (ou topo+1 / fundo-1 nas pontas).
-  const handleCardDrop = useCallback((e: React.DragEvent, targetItem: PipelineItem, targetStageId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!draggedItem || draggedItem.id === targetItem.id) {
-      finishDrag();
-      return;
-    }
-    const where = dragOverPosRef.current;
-    const targetStage = stages.find(s => s.id === targetStageId);
-    if (!targetStage) {
-      finishDrag();
-      return;
-    }
-    const arr = (targetStage.items || []).filter(i => i.id !== draggedItem.id);
-    const at = arr.findIndex(i => i.id === targetItem.id);
-    if (at < 0) {
-      finishDrag();
-      return;
-    }
-    const insertIdx = where === 'above' ? at : at + 1;
-    const above = arr[insertIdx - 1];
-    const below = arr[insertIdx];
-    let newPos: number;
-    if (!above) newPos = itemPos(below) + 1;
-    else if (!below) newPos = itemPos(above) - 1;
-    else newPos = (itemPos(above) + itemPos(below)) / 2;
-    void commitReorder(targetStageId, newPos, insertIdx);
-  }, [draggedItem, stages, commitReorder, finishDrag]);
-
-  const handleDragEnd = useCallback(() => {
-    isDraggingRef.current = false;
-    suppressClickUntilRef.current = Date.now() + 200;
-    stopAutoScroll();
-  }, [stopAutoScroll]);
-
   // Calculate pipeline total value
   const calculatePipelineTotal = () => {
     return stages.reduce((total, stage) => {
       return total + calculateStageTotal(stage.items);
     }, 0);
-  };
-
-  // Mesma data de chegada de formatArrivalDate, mas em epoch ms — pra ordenar
-  // a Lista por ordem de chegada real (não confundir com `position`, que é a
-  // ordem manual de arraste dentro da coluna do Kanban). Fica local: não é
-  // usada pelo card extraído.
-  const itemArrivalMs = (item: PipelineItem): number => {
-    if (typeof item.entered_at === 'number') return item.entered_at * 1000;
-    if (typeof item.created_at === 'number') return item.created_at * 1000;
-    return item.created_at ? new Date(item.created_at).getTime() : 0;
   };
 
   // Todas as etiquetas da conta (catálogo completo — não só as que já aparecem
@@ -1044,23 +778,6 @@ export default function PipelineKanban() {
     }));
   }, [stages, searchQuery, timeRange, selectedTags, hiddenStages, abandonedThresholdDays, filtroDeTarefas]);
 
-  // Visão em Lista: todos os leads do funil (respeitando os mesmos filtros do
-  // Kanban acima) numa lista única, por ordem de chegada, com a coluna atual
-  // de cada um.
-  const allListItems = useMemo(() => {
-    const rows = filteredStages.flatMap(stage =>
-      (stage.items || []).map(item => ({ item, stage })),
-    );
-    rows.sort((a, b) => {
-      const diff = itemArrivalMs(a.item) - itemArrivalMs(b.item);
-      return listSortOrder === 'asc' ? diff : -diff;
-    });
-    return rows;
-  }, [filteredStages, listSortOrder]);
-
-  // Garante que o auto-scroll do drag pare se o componente desmontar no meio.
-  useEffect(() => stopAutoScroll, [stopAutoScroll]);
-
   // Export leads as CSV
   const handleExportCSV = () => {
     const allItems = stages.flatMap(stage =>
@@ -1363,116 +1080,29 @@ export default function PipelineKanban() {
             >
               {/* Stage Columns */}
               {filteredStages.map((stage: PipelineStage) => (
-                <div
+                <StageColumn
                   key={stage.id}
-                  id={`etapa-${stage.id}`}
-                  className={`w-80 flex-shrink-0 rounded-xl transition-shadow ${etapaDestacada === stage.id ? 'ring-2 ring-primary' : ''}`}
-                >
-                  <div className="bg-muted/40 rounded-xl shadow-sm border border-border h-full flex flex-col">
-                    {/* Stage Header */}
-                    <div
-                      className="flex-shrink-0 px-4 py-3 border-b border-border rounded-t-xl border-t-4"
-                      style={{
-                        borderTopColor: stage.color,
-                        backgroundColor: stage.color?.startsWith('#')
-                          ? `${stage.color}1f`
-                          : undefined,
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: stage.color }}
-                          />
-                          <h3 className="text-sm font-medium text-foreground">{stage.name}</h3>
-                          <span className="bg-muted text-muted-foreground text-xs px-2 py-1 rounded-full">
-                            {stage.items?.length || stage.item_count || 0}
-                          </span>
-                          {/* Stage Total Value */}
-                          {calculateStageTotal(stage.items) > 0 && (
-                            <span className="bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs px-2 py-1 rounded-full font-medium">
-                              {t('kanban.stage.totalValue', {
-                                value: dinheiro(calculateStageTotal(stage.items)),
-                              })}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Stage Options */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-auto p-1" aria-label="Mais ações" title="Mais ações">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditStage(stage)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              {t('kanban.stage.editStage')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={async () => {
-                                await navigator.clipboard.writeText(String(stage.id));
-                                toast.success(t('kanban.idCopied'));
-                              }}
-                            >
-                              <Copy className="h-4 w-4 mr-2" />
-                              {t('kanban.copyId')}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => handleDeleteStage(stage)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              {t('kanban.stage.deleteStage')}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-
-                    {/* Items Drop Zone */}
-                    <div
-                      data-col-scroll
-                      className="flex-1 overflow-y-auto p-4 space-y-3"
-                      onDragOver={handleDragOver}
-                      onDrop={e => handleDrop(e, stage.id)}
-                    >
-                      {/* Items */}
-                      {(stage.items || []).map(item => (
-                        <PipelineItemCard
-                          key={item.id}
-                          item={item}
-                          stageId={stage.id}
-                          visitsByContact={visitsByContact}
-                          isDraggingRef={isDraggingRef}
-                          suppressClickUntilRef={suppressClickUntilRef}
-                          onDragStart={handleDragStart}
-                          onDragEnd={handleDragEnd}
-                          onCardDragOver={handleCardDragOver}
-                          onCardDrop={handleCardDrop}
-                          onOpenItem={handleEditItem}
-                          onEdit={handleEditItem}
-                          onArchive={handleArchiveItem}
-                          onRemove={handleRemoveItem}
-                          onScheduleAction={handleOpenScheduleAction}
-                          onNotesClick={handleOpenNotesForItem}
-                          onOpenConversation={openLeadConversation}
-                          openingConversation={openingConversation}
-                        />
-                      ))}
-
-                      {/* Empty state */}
-                      {(!stage.items || stage.items.length === 0) && (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <div className="text-sm">{t('kanban.stage.noConversations')}</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  stage={stage}
+                  destacada={etapaDestacada === stage.id}
+                  visitsByContact={visitsByContact}
+                  isDraggingRef={isDraggingRef}
+                  suppressClickUntilRef={suppressClickUntilRef}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  onCardDragStart={handleDragStart}
+                  onCardDragEnd={handleDragEnd}
+                  onCardDragOver={handleCardDragOver}
+                  onCardDrop={handleCardDrop}
+                  onOpenItem={handleEditItem}
+                  onArchive={handleArchiveItem}
+                  onRemove={handleRemoveItem}
+                  onScheduleAction={handleOpenScheduleAction}
+                  onNotesClick={handleOpenNotesForItem}
+                  onOpenConversation={openLeadConversation}
+                  openingConversation={openingConversation}
+                  onEditStage={handleEditStage}
+                  onDeleteStage={handleDeleteStage}
+                />
               ))}
 
               {/* Add Stage Column */}
@@ -1506,183 +1136,12 @@ export default function PipelineKanban() {
 
         {/* Lista: todos os leads do funil, por ordem de chegada */}
         {viewMode === 'list' && (
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6">
-            {allListItems.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                {t('kanban.stage.noConversations')}
-              </div>
-            ) : (
-              <div className="bg-background rounded-xl border border-border overflow-hidden">
-                {/* Header da lista */}
-                <div className="flex items-center gap-4 px-4 py-2.5 border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground">
-                  <div className="flex-1 min-w-0">Lead</div>
-                  <div className="hidden md:block w-40 shrink-0">Coluna</div>
-                  <div className="hidden xl:block w-44 shrink-0">Responsável</div>
-                  <div className="hidden lg:flex w-48 shrink-0 flex-wrap gap-1">Etiquetas</div>
-                  <button
-                    type="button"
-                    onClick={() => setListSortOrder(o => (o === 'asc' ? 'desc' : 'asc'))}
-                    className="w-24 shrink-0 flex items-center gap-1 text-right justify-end hover:text-foreground"
-                    title="Ordenar por data de chegada"
-                  >
-                    Chegou
-                    {listSortOrder === 'asc' ? (
-                      <ArrowUp className="w-3 h-3" />
-                    ) : (
-                      <ArrowDown className="w-3 h-3" />
-                    )}
-                  </button>
-                  <div className="w-4 shrink-0" />
-                </div>
-
-                {/* Linhas */}
-                <div className="divide-y divide-border">
-                  {allListItems.map(({ item, stage }) => (
-                    <div
-                      key={item.id}
-                      onClick={() => handleEditItem(item)}
-                      className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/40 transition-colors"
-                    >
-                      {/* Foto + nome + telefone */}
-                      <div className="flex-1 min-w-0 flex items-center gap-3">
-                        <div className="relative shrink-0">
-                          {resolveItemAvatar(item) ? (
-                            <img
-                              src={resolveItemAvatar(item)}
-                              alt={resolveItemName(item, t)}
-                              className="w-9 h-9 rounded-full object-cover shadow-sm bg-muted"
-                              onError={e => {
-                                (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                const fb = e.currentTarget
-                                  .nextElementSibling as HTMLElement | null;
-                                if (fb) fb.style.display = 'flex';
-                              }}
-                            />
-                          ) : null}
-                          <div
-                            className="w-9 h-9 rounded-full items-center justify-center text-white text-xs font-bold shadow-sm"
-                            style={{
-                              backgroundColor: getContactColor(resolveItemName(item, t)),
-                              display: resolveItemAvatar(item) ? 'none' : 'flex',
-                            }}
-                          >
-                            {resolveItemName(item, t)?.[0]?.toUpperCase() || 'U'}
-                          </div>
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-foreground truncate">
-                              {resolveItemName(item, t)}
-                            </span>
-                            <span className="shrink-0 text-[10px] text-muted-foreground/60 font-medium">
-                              #{resolveItemRef(item).slice(0, 6)}
-                            </span>
-                          </div>
-                          {item.contact?.phone_number && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Phone className="w-3 h-3 shrink-0" />
-                              <span className="truncate">{telefone(item.contact.phone_number)}</span>
-                            </div>
-                          )}
-                          {/* Coluna — visível só no mobile (colunas escondem a partir de md) */}
-                          <div className="md:hidden mt-1">
-                            <span
-                              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
-                              style={{ backgroundColor: `${stage.color}22`, color: stage.color }}
-                            >
-                              <span
-                                className="w-1.5 h-1.5 rounded-full"
-                                style={{ backgroundColor: stage.color }}
-                              />
-                              {stage.name}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Coluna atual */}
-                      <div className="hidden md:block w-40 shrink-0">
-                        <span
-                          className="inline-flex items-center gap-1.5 max-w-full rounded-full px-2 py-1 text-xs font-medium"
-                          style={{ backgroundColor: `${stage.color}22`, color: stage.color }}
-                        >
-                          <span
-                            className="w-2 h-2 rounded-full shrink-0"
-                            style={{ backgroundColor: stage.color }}
-                          />
-                          <span className="truncate">{stage.name}</span>
-                        </span>
-                      </div>
-
-                      {/* Responsável + roleta de origem */}
-                      <div className="hidden xl:block w-44 shrink-0 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1.5">
-                          {(item.assignee ?? item.conversation?.assignee) ? (
-                            <>
-                              {(item.assignee ?? item.conversation?.assignee)?.avatar_url ? (
-                                <img
-                                  src={(item.assignee ?? item.conversation?.assignee)?.avatar_url}
-                                  alt=""
-                                  className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
-                                />
-                              ) : (
-                                <User className="w-3 h-3 shrink-0" />
-                              )}
-                              <span className="truncate">
-                                {(item.assignee ?? item.conversation?.assignee)?.name}
-                              </span>
-                            </>
-                          ) : (
-                            // Sem responsável — mas se a roleta ofertou o lead a MIM, a
-                            // linha diz isso e deixa aceitar daqui.
-                            <OfferActions
-                              contactId={item.contact?.id ?? item.conversation?.contact?.id}
-                              conversationId={item.conversation?.id}
-                              compact
-                              fallback={<span className="text-muted-foreground/50">Sem responsável</span>}
-                            />
-                          )}
-                        </div>
-                        {item.roleta && (
-                          <div className="flex items-center gap-1.5 text-muted-foreground/70 mt-0.5">
-                            <Shuffle className="w-3 h-3 shrink-0" />
-                            <span className="truncate" title={`Veio da roleta: ${roletaLabel(item.roleta)}`}>
-                              {roletaLabel(item.roleta)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Tags */}
-                      <div className="hidden lg:flex w-48 shrink-0 flex-wrap gap-1">
-                        {itemTagInfos(item).slice(0, 3).map(tag => (
-                          <span
-                            key={tag.name}
-                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
-                            style={{ backgroundColor: `${tag.color}22`, color: tag.color }}
-                          >
-                            {tag.name}
-                          </span>
-                        ))}
-                        {itemTagInfos(item).length > 3 && (
-                          <span className="text-[10px] text-muted-foreground">
-                            +{itemTagInfos(item).length - 3}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Data de chegada */}
-                      <div className="w-24 shrink-0 text-right text-xs text-muted-foreground">
-                        {formatArrivalDate(item) || '-'}
-                      </div>
-
-                      <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/50" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <PipelineListView
+            stages={filteredStages}
+            ordem={listSortOrder}
+            aoTrocarOrdem={() => setListSortOrder(o => (o === 'asc' ? 'desc' : 'asc'))}
+            onOpenItem={handleEditItem}
+          />
         )}
       </div>
 
