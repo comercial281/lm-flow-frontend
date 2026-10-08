@@ -20,7 +20,7 @@ const ev = (over: Partial<LeadTimelineEvent> = {}): LeadTimelineEvent => ({
   kind: 'stage_changed',
   title: 'Mudou de etapa',
   detail: 'Novo → 1º contato',
-  actor: 'Natália Lopes',
+  actor: 'Ana Corretora',
   occurred_at: QUANDO,
   pipeline_name: 'Leads (Marketing)',
   tone: 'neutral',
@@ -43,7 +43,7 @@ describe('HistoricoDoLead compacto (janela do card)', () => {
 
     expect(await screen.findByText('Mudou de etapa')).toBeInTheDocument();
     expect(screen.getByText('Novo → 1º contato')).toBeInTheDocument();
-    expect(screen.getByText(`por Natália Lopes · ${quandoAcontece(QUANDO)}`)).toBeInTheDocument();
+    expect(screen.getByText(`por Ana Corretora · ${quandoAcontece(QUANDO)}`)).toBeInTheDocument();
     expect(list).toHaveBeenCalledWith('c1', { category: 'resumo' });
   });
 

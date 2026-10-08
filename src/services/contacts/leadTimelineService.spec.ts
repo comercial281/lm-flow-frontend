@@ -11,7 +11,7 @@ const evento = {
   kind: 'stage_changed',
   title: 'Mudou de etapa',
   detail: 'Novo → 1º contato',
-  actor: 'Natália Lopes',
+  actor: 'Ana Corretora',
   occurred_at: '2026-10-07T12:00:00.000000Z',
   pipeline_name: 'Leads (Marketing)',
   tone: 'neutral',

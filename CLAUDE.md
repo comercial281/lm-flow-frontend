@@ -7547,7 +7547,7 @@ Armadilhas:
 
 ## Funil: F5 mantém o card e nomes longos cortam (07/10/2026)
 
-E0 do plano do funil (`LM FLOW/plans/2026-10-07-funil-01-consertos-e-listas.md`), itens da call com a Nova 27.
+E0 do plano do funil (`LM FLOW/plans/2026-10-07-funil-01-consertos-e-listas.md`), itens da call com um cliente (07/10).
 
 - **O card aberto mora no endereço (`?card=`).** Abrir pelo link ou pelo clique deixa o `?card=`; fechar tira só ele (os outros parâmetros ficam). F5 reabre o mesmo card, e "copiar o endereço" manda o card. Lógica em `src/pages/Customer/Pipelines/useCardNoEndereco.ts` (com spec).
 - **Card que não está no quadro** (arquivado, de outra aba, tirado do funil): faixa "Este lead não está nesta aba." no topo do quadro, com X que tira o `?card=`. A busca do card por id (que abre mesmo assim) é da Parte 4.
@@ -7561,7 +7561,7 @@ Armadilhas:
 
 ## Listas da casa: motivos de perda e categorias de tarefa (07/10/2026)
 
-E1 do plano do funil (`LM Flow/plans/2026-10-07-funil-01-consertos-e-listas.md`); servidor no backend (`list_options`, migration 315). Pedido da call com a Nova 27: o motivo de perda é "dado de suma importância", e as categorias de tarefa são do cliente.
+E1 do plano do funil (`LM FLOW/plans/2026-10-07-funil-01-consertos-e-listas.md`); servidor no backend (`list_options`, migration 315). Pedido da call com um cliente (07/10): o motivo de perda é "dado de suma importância", e as categorias de tarefa são do cliente.
 
 O que aparece na tela: **Minha imobiliária › Listas** (`/settings/listas`), logo depois de Etiquetas. Abas **Motivos de perda | Categorias de tarefa** (aba no endereço: `?aba=categorias`). Cada linha: alça de arrastar, nome editável na própria linha (grava ao sair do campo ou no Enter; Esc desiste), setas ↑↓ e Arquivar (com confirmação). Nos motivos, a chave **"Avisar a Meta como lead ruim"** por motivo (de fábrica, só "Sem perfil ou sem crédito"). Embaixo, o campo de nova opção e o bloco **Arquivadas**, com Desarquivar.
 
@@ -7584,7 +7584,7 @@ Pendente conhecido:
 
 ## Situação do card: Ganho, Perdido e Reabrir (07/10/2026)
 
-Pedido da call com a Nova 27 (Cleverson e Natália, 07/10): no funil deles, que vai de
+Pedido da call com um cliente (07/10): no funil deles, que vai de
 Lead a Proposta, os botões Ganho e Perdido ficavam apagados, porque Ganho e Perdido
 eram COLUNAS. Spec: `LM FLOW/specs/2026-10-07-funil-situacao-e-card-completo-design.md` §3.
 
@@ -7632,7 +7632,7 @@ Armadilhas:
 
 ## Funil: topo em três faixas, abas por situação, painel de filtros e card mínimo (07/10/2026)
 
-Pedido da call com a Nova 27 (07/10). Spec: `LM FLOW/specs/2026-10-07-funil-situacao-e-card-completo-design.md` §4.
+Pedido da call com um cliente (07/10). Spec: `LM FLOW/specs/2026-10-07-funil-situacao-e-card-completo-design.md` §4.
 
 O que aparece na tela:
 
@@ -7701,7 +7701,7 @@ Armadilhas:
 
 ## Card completo: a página do lead (desde 2026-10-07)
 
-Pedido do dono (call com a Nova 27, 07/10): o card só existia como janela, e quem quer ler
+Pedido do dono (call com um cliente, 07/10): o card só existia como janela, e quem quer ler
 com calma ou mandar o lead pra alguém precisa de uma página. Spec:
 `LM FLOW/specs/2026-10-07-funil-situacao-e-card-completo-design.md` §5.
 

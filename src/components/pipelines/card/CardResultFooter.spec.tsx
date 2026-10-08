@@ -22,7 +22,7 @@ describe('rodapé Ganho | Perdido do card', () => {
     ] as never);
   });
 
-  // A Nova 27 caiu nisso na call: funil sem coluna Venda/Desqualificado deixava
+  // Um cliente caiu nisso na call: funil sem coluna Venda/Desqualificado deixava
   // os botões apagados. Agora a situação é do card — não depende de etapa.
   it('Ganho grava pela situação do card e devolve o card atualizado', async () => {
     vi.mocked(pipelinesService.setItemStatus).mockResolvedValue(card({ status: 'won' }));

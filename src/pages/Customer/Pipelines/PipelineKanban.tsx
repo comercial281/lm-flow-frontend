@@ -137,7 +137,7 @@ export default function PipelineKanban() {
   const canBulkDispatch = acoesDoQuadro.bulkDispatch;
   const canAddItem = useFeature('pipeline_add_item');
 
-  // Carrega a ABA aberta (?status= no servidor: o Mais que Imóveis tem 2.800
+  // Carrega a ABA aberta (?status= no servidor: há funil com milhares de
   // cards). silent=true: refresh por trás (foco, poll de 60 s, tempo real), sem
   // espera na tela. Só Abertos usa o payload guardado (é o que o seletor de
   // funis pré-carrega). Resposta de uma aba que já não está aberta é jogada fora.
