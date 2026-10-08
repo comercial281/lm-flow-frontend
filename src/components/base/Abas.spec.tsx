@@ -89,3 +89,28 @@ describe('bolinha de novidade', () => {
     expect(screen.getByRole('link', { name: /Lembretes/ })).toContainElement(screen.getByLabelText('Novidade'));
   });
 });
+
+describe('Abas com contagem', () => {
+  it('o número aparece ao lado do nome, no formato brasileiro, e entra no nome da aba', async () => {
+    const aoTrocar = vi.fn();
+    render(
+      <MemoryRouter>
+        <Abas
+          rotulo="Situação dos leads"
+          ativa="abertos"
+          aoTrocar={aoTrocar}
+          abas={[
+            { chave: 'abertos', rotulo: 'Abertos', contagem: 2800 },
+            { chave: 'ganhos', rotulo: 'Ganhos', contagem: 0 },
+            { chave: 'todos', rotulo: 'Todos' },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('tab', { name: 'Abertos 2.800' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Ganhos 0' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Todos' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'Ganhos 0' }));
+    expect(aoTrocar).toHaveBeenCalledWith('ganhos');
+  });
+});
