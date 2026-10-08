@@ -335,6 +335,10 @@ export interface PipelineItem {
   lost_note?: string | null;
   /** Preenchido só nos cards arquivados (aba Arquivados). */
   archived_at?: string | null;
+  /** Preço estimado do negócio, decimal em texto ("450000.0"). Só a página do card edita (E4). */
+  estimated_value: string | null;
+  /** Data de fechamento esperada, dia de calendário "AAAA-MM-DD" (E4). */
+  expected_close_on: string | null;
   days_in_pipeline?: number;
   days_in_current_stage?: number;
   services_info?: {
@@ -556,3 +560,19 @@ export interface UpdateServiceDefinitionData {
 }
 
 export interface ServiceDefinitionsResponse extends StandardResponse<PipelineServiceDefinition[]> {}
+
+/** Dias que o card passou numa etapa (GET de um card, E4). Só vem etapa visitada. */
+export interface StageDuration {
+  stage_id: string;
+  /** Dias completos, somando idas e voltas. */
+  days: number;
+  /** A etapa onde o card está (conta até agora; no card fechado, até o fechamento). */
+  current: boolean;
+}
+
+/** GET /pipelines/:pipeline_id/pipeline_items/:id — a página "card completo". */
+export interface PipelineItemDetail {
+  item: PipelineItem;
+  stage_durations: StageDuration[];
+  pipeline: { id: string; name: string; stages: PipelineStage[] };
+}

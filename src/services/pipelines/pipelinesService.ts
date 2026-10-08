@@ -20,6 +20,7 @@ import type {
   PipelineItemResponse,
   ConversationForModal,
   PipelineBoardStatus,
+  PipelineItemDetail,
 } from '@/types/analytics';
 import { Contact } from '@/types';
 
@@ -161,6 +162,26 @@ class PipelinesService {
       params,
     });
     return extractResponse<PipelineItem>(response) as ItemsResponse;
+  }
+
+  // Card completo (E4): um card só, com os dias por etapa e o funil (nome e
+  // etapas). Sem acesso, apagado ou de outro funil = 404 (a página avisa).
+  async getPipelineItem(pipelineId: string, itemId: string): Promise<PipelineItemDetail> {
+    const response = await api.get(`/pipelines/${pipelineId}/pipeline_items/${itemId}`);
+    return extractData<PipelineItemDetail>(response);
+  }
+
+  // "Sobre o negócio" da página do card. A resposta vem SEM a conversa (o
+  // update não preloada): quem chama copia só os dois campos, nunca o card todo.
+  async updateItemBusiness(
+    pipelineId: string,
+    itemId: string,
+    data: { estimated_value?: number | null; expected_close_on?: string | null },
+  ): Promise<PipelineItem> {
+    const response = await api.patch(`/pipelines/${pipelineId}/pipeline_items/${itemId}`, {
+      pipeline_item: data,
+    });
+    return extractData<PipelineItem>(response);
   }
 
   // Move item to different stage
