@@ -1,5 +1,5 @@
 import api from '@/services/core/api';
-import type { DadosDaTarefa, ParametrosDaLista, RespostaDeAtividades, TarefaAtividade } from './tipos';
+import type { ContextoDaTarefa, DadosDaTarefa, ItemDaAgenda, ParametrosDaLista, RespostaDeAtividades, TarefaAtividade } from './tipos';
 
 // Card, Conversa e Atividades se escutam: mexeu numa, as outras releem.
 export const EVENTO_TAREFAS_MUDARAM = 'lmflow:tarefas-mudaram';
@@ -25,6 +25,16 @@ export const tarefasService = {
     const query = pipeline_item_ids ? { ...resto, pipeline_item_ids: pipeline_item_ids.join(',') } : resto;
     const res = await api.get('/activities', { params: query });
     return res.data as RespostaDeAtividades;
+  },
+  /** Tudo do dia (tarefas e visitas, abertas e feitas) de um responsável, por horário. */
+  async agendaDoDia(dia: string, responsavelId?: string): Promise<ItemDaAgenda[]> {
+    const res = await api.get('/activities', { params: { day: dia, per_page: 50, ...(responsavelId ? { assigned_to_id: responsavelId } : {}) } });
+    return (res.data as { data: ItemDaAgenda[] }).data ?? [];
+  },
+  /** Lead, atendimento e responsável do card (pelo card ou pelo contato). */
+  async contexto(alvo: { pipeline_item_id: string } | { contact_id: string }): Promise<ContextoDaTarefa> {
+    const res = await api.get('/tasks/context', { params: alvo });
+    return (res.data as { data: ContextoDaTarefa }).data;
   },
   criar: (dados: DadosDaTarefa) => mudou<TarefaAtividade>(api.post('/tasks', { task: dados })),
   editar: (id: string, dados: DadosDaTarefa) => mudou<TarefaAtividade>(api.patch(`/tasks/${id}`, { task: dados })),

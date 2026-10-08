@@ -6,7 +6,7 @@ const concluir = vi.fn();
 const criar = vi.fn();
 vi.mock('./tarefasService', async () => {
   const real = await vi.importActual<typeof import('./tarefasService')>('./tarefasService');
-  return { ...real, tarefasService: { listar: (...a: unknown[]) => listar(...a), concluir: (...a: unknown[]) => concluir(...a), criar: (...a: unknown[]) => criar(...a) } };
+  return { ...real, tarefasService: { listar: (...a: unknown[]) => listar(...a), concluir: (...a: unknown[]) => concluir(...a), criar: (...a: unknown[]) => criar(...a), contexto: async () => ({ pipeline_item_id: 'outro-card', pipeline_name: 'Funil', contact: null, owner: null }), agendaDoDia: async () => [] } };
 });
 vi.mock('@/services/visits/visitsService', () => ({ visitsService: { realtors: async () => [], leadPickerPage: async () => ({ data: [], meta: {} }) } }));
 vi.mock('@/services/listOptions/listOptionsService', () => ({
@@ -60,9 +60,11 @@ describe('TarefasDoLead', () => {
     fireEvent.click(await screen.findByRole('checkbox', { name: /concluir tarefa a/i }));
     await screen.findByText('Criar a próxima tarefa deste lead?');
     fireEvent.click(await screen.findByRole('button', { name: 'Nova tarefa' }));
-    await screen.findByRole('option', { name: 'Oferta ativa' });
-    fireEvent.change(await screen.findByLabelText('O que fazer'), { target: { value: 'Seguir' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Criar tarefa' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Oferta ativa' })).toHaveAttribute('aria-pressed', 'true'));
+    fireEvent.change(await screen.findByLabelText('Título da tarefa'), { target: { value: 'Seguir' } });
+    const salvar = screen.getByRole('button', { name: 'Salvar' });
+    await waitFor(() => expect(salvar).toBeEnabled());
+    fireEvent.click(salvar);
     await waitFor(() => expect(criar).toHaveBeenCalled());
     expect(criar.mock.calls[0][0]).toMatchObject({ pipeline_item_id: 'outro-card', category_option_id: 'cat-of' });
   });
