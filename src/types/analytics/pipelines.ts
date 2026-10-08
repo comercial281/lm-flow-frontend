@@ -336,9 +336,9 @@ export interface PipelineItem {
   /** Preenchido só nos cards arquivados (aba Arquivados). */
   archived_at?: string | null;
   /** Preço estimado do negócio, decimal em texto ("450000.0"). Só a página do card edita (E4). */
-  estimated_value: string | null;
+  estimated_value?: string | null;
   /** Data de fechamento esperada, dia de calendário "AAAA-MM-DD" (E4). */
-  expected_close_on: string | null;
+  expected_close_on?: string | null;
   days_in_pipeline?: number;
   days_in_current_stage?: number;
   services_info?: {
