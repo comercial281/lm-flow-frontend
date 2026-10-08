@@ -27,6 +27,10 @@ interface CapiConversionPanelProps {
 
 const ROTULO_CURTO: Record<string, string> = { Purchase: 'Venda' };
 
+// Compra e Desqualificado já enviados para este lead (pelo botão ou pela
+// situação do card): o botão trava e diz "enviado". Qualificado nunca trava.
+const enviadoDeVez = (event: CapiManualEvent) => Boolean(event.once && event.sent_at);
+
 // A explicação do bloco: inteira no completo, no balão do ⓘ no compacto.
 const EXPLICACAO =
   'Isso alimenta os anúncios, não substitui o CRM. Marque como o lead terminou para o Meta aprender quem vale a pena buscar.';
@@ -103,8 +107,11 @@ export default function CapiConversionPanel({
     const pedido = alvo;
     try {
       const updated = await capiEventsService.send({ contactId, pipelineItemId }, event.event_name);
-      if (pedido === alvoAtual.current) setStatus(updated);
-      toast.success(`${CAPI_MANUAL_LABELS[event.event_name] ?? event.event_name} enviado ao Meta.`);
+      const { message, ...novoStatus } = updated;
+      if (pedido === alvoAtual.current) setStatus(novoStatus);
+      // 200 sem enviar (já tinha ido): mostra o que o servidor disse, não "enviado".
+      if (message) toast.info(message);
+      else toast.success(`${CAPI_MANUAL_LABELS[event.event_name] ?? event.event_name} enviado ao Meta.`);
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { error?: { message?: string }; message?: string } } })?.response
@@ -140,6 +147,7 @@ export default function CapiConversionPanel({
           </span>
           {status.events.map(event => {
             const sent = Boolean(event.sent_at);
+            const travado = enviadoDeVez(event);
             const isSending = sending === event.event_name;
             const rotulo = CAPI_MANUAL_LABELS[event.event_name] ?? event.event_name;
             // Na linha compacta "Venda realizada" vira "Venda" (cabe numa linha só).
@@ -154,7 +162,7 @@ export default function CapiConversionPanel({
                 type="button"
                 size="sm"
                 variant={sent ? 'default' : 'outline'}
-                disabled={Boolean(sending)}
+                disabled={Boolean(sending) || travado}
                 onClick={() => handleSend(event)}
                 title={dica}
                 className="h-7 gap-1 px-2 text-xs"
@@ -165,6 +173,7 @@ export default function CapiConversionPanel({
                   <Check className="h-3 w-3" />
                 ) : null}
                 {curto}
+                {travado && <span className="font-normal opacity-80">{' · enviado'}</span>}
               </Button>
             );
           })}
@@ -201,6 +210,7 @@ export default function CapiConversionPanel({
       <div className="flex flex-wrap gap-2">
         {status.events.map((event) => {
           const sent = Boolean(event.sent_at);
+          const travado = enviadoDeVez(event);
           const isSending = sending === event.event_name;
           return (
             <Button
@@ -208,7 +218,7 @@ export default function CapiConversionPanel({
               type="button"
               size="sm"
               variant={sent ? 'default' : 'outline'}
-              disabled={Boolean(sending)}
+              disabled={Boolean(sending) || travado}
               onClick={() => handleSend(event)}
               title={CAPI_MANUAL_HINTS[event.event_name] ?? ''}
               className="gap-1.5"
@@ -219,6 +229,7 @@ export default function CapiConversionPanel({
                 <Check className="h-3.5 w-3.5" />
               ) : null}
               {CAPI_MANUAL_LABELS[event.event_name] ?? event.event_name}
+              {travado && <span className="font-normal opacity-80">{' · enviado'}</span>}
             </Button>
           );
         })}
