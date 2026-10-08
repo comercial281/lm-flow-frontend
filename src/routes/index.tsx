@@ -83,11 +83,14 @@ const ChannelSettings = lazyWithRetry(() => import('@/pages/Customer/Channels').
 const NewChannel = lazyWithRetry(() => import('@/pages/Customer/Channels').then(m => ({ default: m.NewChannel })));
 
 const PipelineKanban = lazyWithRetry(() => import('@/pages/Customer/Pipelines/PipelineKanban'));
+// Card completo (E4): a página do lead, em outra guia, com o menu lateral.
+const CardCompletoPage = lazyWithRetry(() => import('@/pages/Customer/Pipelines/CardCompleto/CardCompletoPage'));
 // Times e Cargos não têm mais rota própria: viraram abas da tela de Equipe, que
 // os carrega junto. Só a sub-tela de adicionar gente a um Time continua com rota
 // (é navegação interna da lista de Times).
 const AddUsers = lazyWithRetry(() => import('@/pages/Customer/Settings/Teams').then(m => ({ default: m.AddUsers })));
 const TemplateVariables = lazyWithRetry(() => import('@/pages/Customer/Settings/TemplateVariables').then(m => ({ default: m.TemplateVariables })));
+const ListasDaCasa = lazyWithRetry(() => import('@/pages/Customer/Settings/Listas/Listas'));
 const ConversationFunnels = lazyWithRetry(() => import('@/pages/Customer/Automations/MessageFunnels/ConversationFunnels'));
 const FlowAutomationsList = lazyWithRetry(() => import('@/pages/Customer/Automations/FlowBuilder/FlowAutomationsList'));
 const FlowAutomationCanvas = lazyWithRetry(() => import('@/pages/Customer/Automations/FlowBuilder/FlowAutomationCanvas'));
@@ -620,6 +623,17 @@ const AppRouter = () => {
               }
             />
 
+            {/* Card completo (E4): página do lead com endereço próprio. Mesma
+                trava do quadro; quem não vê o card recebe o aviso da página. */}
+            <Route
+              path="/pipelines/:pipelineId/card/:itemId"
+              element={
+                <PermissionRoute resource="pipelines" action="read">
+                  <CardCompletoPage />
+                </PermissionRoute>
+              }
+            />
+
             <Route
               path="/disparos"
               element={
@@ -839,6 +853,18 @@ const AppRouter = () => {
               element={
                 <PermissionRoute resource="labels" action="read">
                   <Labels />
+                </PermissionRoute>
+              }
+            />
+
+            {/* Listas da casa (E1 do funil, 07/10/2026): motivos de perda e
+                categorias de tarefa. Abre pra quem lê o funil; quem muda é o
+                servidor (pipelines.update), e a tela fica só de leitura pro resto. */}
+            <Route
+              path="/settings/listas"
+              element={
+                <PermissionRoute resource="pipelines" action="read">
+                  <ListasDaCasa />
                 </PermissionRoute>
               }
             />

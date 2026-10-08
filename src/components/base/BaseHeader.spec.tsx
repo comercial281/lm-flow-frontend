@@ -43,3 +43,11 @@ describe('BaseHeader', () => {
     expect(screen.getByRole('button', { name: 'Novo time' })).toBeInTheDocument();
   });
 });
+
+describe('BaseHeader - aoLadoDoTitulo', () => {
+  it('o selo fica ao lado do título, fora do nome do título', () => {
+    render(<BaseHeader title="Maria Souza" aoLadoDoTitulo={<span>PERDIDO</span>} />);
+    const h1 = screen.getByRole('heading', { level: 1, name: 'Maria Souza' });
+    expect(h1.parentElement).toHaveTextContent('PERDIDO');
+  });
+});

@@ -19,10 +19,13 @@ vi.mock('@/services/contacts/contactsService', () => ({
 }));
 // O card de verdade tem a própria bateria; aqui interessa o que ele recebe.
 vi.mock('@/components/pipelines/EditItemModal', () => ({
-  default: (p: { item: { id: string; whatsapp_conversation_id?: string }; cabecalho?: React.ReactNode; onColocadoNoFunil?: () => void }) => (
+  default: (p: { item: { id: string; status?: string; whatsapp_conversation_id?: string }; cabecalho?: React.ReactNode; onColocadoNoFunil?: () => void; onItemStatusChanged?: (i: unknown) => void; onOpenChange?: (o: boolean) => void }) => (
     <div>
+      {p.onItemStatusChanged && <button onClick={() => p.onItemStatusChanged?.({ id: p.item.id, status: 'won' })}>ganhou</button>}
+      <button onClick={() => p.onOpenChange?.(false)}>fechar</button>
       {p.cabecalho}
       <span data-testid="card">{p.item.id || 'sem-funil'}</span>
+      <span data-testid="status">{p.item.status ?? 'open'}</span>
       {p.item.whatsapp_conversation_id && <span data-testid="conversa">{p.item.whatsapp_conversation_id}</span>}
       {p.onColocadoNoFunil && <span>colocar no funil</span>}
     </div>
@@ -55,6 +58,17 @@ describe('CardDoContato', () => {
     expect(await screen.findByTestId('card')).toHaveTextContent('i2');
     fireEvent.click(screen.getByRole('tab', { name: /Venda/ }));
     expect(screen.getByTestId('card')).toHaveTextContent('i1');
+  });
+
+  it('Ganho dado na janela: avisa que mudou e a lista guarda o card fechado', async () => {
+    servicos.porContato.mockResolvedValue([funil('p1', 'Venda', 'i1', 1)]);
+    const onMudou = vi.fn();
+    render(<CardDoContato contactId="c1" onOpenChange={vi.fn()} onMudou={onMudou} />);
+    await screen.findByTestId('card');
+    fireEvent.click(screen.getByText('ganhou'));
+    expect(screen.getByTestId('status')).toHaveTextContent('won');
+    fireEvent.click(screen.getByText('fechar'));
+    expect(onMudou).toHaveBeenCalledTimes(1);
   });
 
   it('sem funil: card do próprio contato, com a última conversa e o "Colocar no funil"', async () => {

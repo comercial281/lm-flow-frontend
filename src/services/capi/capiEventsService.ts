@@ -4,6 +4,11 @@ import api from '@/services/core/api';
 export interface CapiManualEvent {
   event_name: string;
   intent: string | null;
+  /**
+   * Compra e Desqualificado vão uma vez só por lead (botão ou situação do card,
+   * 08/10/2026): enviado, o botão trava. Opcional: servidor antigo não manda.
+   */
+  once?: boolean;
   sent_at: string | null;
   sent_by: string | null;
 }
@@ -35,10 +40,16 @@ export const capiEventsService = {
     return (res.data as { data: CapiManualStatus }).data;
   },
 
-  // Dispara a conversão na hora e devolve o estado já atualizado.
-  async send(target: CapiTarget, eventName: string): Promise<CapiManualStatus> {
+  // Dispara a conversão na hora e devolve o estado já atualizado. Quando o
+  // servidor responde 200 sem enviar (evento de uma vez só já enviado), vem
+  // também o `message` do envelope: a tela mostra isso em vez de "enviado".
+  async send(
+    target: CapiTarget,
+    eventName: string,
+  ): Promise<CapiManualStatus & { message?: string }> {
     const res = await api.post(BASE, { ...toParams(target), event_name: eventName });
-    return (res.data as { data: CapiManualStatus }).data;
+    const body = res.data as { data: CapiManualStatus; message?: string };
+    return body.message ? { ...body.data, message: body.message } : body.data;
   },
 };
 

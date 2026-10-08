@@ -6,7 +6,7 @@ import type { Pipeline } from '@/types/analytics';
 // Persistido em sessionStorage pra sobreviver ao F5; cap de entradas pra não
 // estourar a cota (~5MB) com boards grandes.
 
-const STORAGE_KEY = 'lmflow:pipeline-payloads:v1';
+const STORAGE_KEY = 'lmflow:pipeline-payloads:v2';
 const MAX_ENTRIES = 5;
 const PREFETCH_TTL = 60_000; // hover repetido no mesmo card não re-busca por 60s
 

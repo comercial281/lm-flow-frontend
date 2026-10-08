@@ -97,6 +97,12 @@ export interface PipelineBlock {
     /** gasto do período / quantos entraram na etapa; null quando não há base */
     cost_per_entry?: number | null;
   }[];
+  /**
+   * Ganhos e Perdidos do período (situação do card, desde 07/10/2026): leads cuja
+   * situação atual é Ganho/Perdido, marcada dentro do período. Ausente em
+   * servidor de antes da entrega.
+   */
+  outcomes?: { won: number; lost: number };
 }
 
 export interface AgentBlock {

@@ -2,6 +2,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGuardaDeSaida } from '@/hooks/useAlteracoesNaoSalvas';
+import { numero } from '@/lib/formato';
 
 // ── ABAS DA CASA ─────────────────────────────────────────────────────────────
 //
@@ -29,6 +30,8 @@ export interface Aba {
   tambem?: RegExp[];
   /** Bolinha vermelha de novidade ao lado do nome (ex.: captação nova chegou). */
   marcador?: boolean;
+  /** Quantos itens a aba tem ("Abertos 312"). Sem o campo, só o nome. */
+  contagem?: number;
 }
 
 export interface AbasProps {
@@ -42,6 +45,14 @@ export interface AbasProps {
 
 const Marcador = () => (
   <span role="img" aria-label="Novidade" data-marcador className="ml-1.5 inline-block h-2 w-2 rounded-full bg-destructive" />
+);
+
+// O espaço fica DENTRO do número: o nome da aba pro leitor de tela vira
+// "Abertos 312", e não "Abertos312".
+const Contagem = ({ valor }: { valor: number }) => (
+  <span className="ml-0.5 rounded-full bg-muted px-1.5 text-xs font-medium tabular-nums text-muted-foreground">
+    {` ${numero(valor)}`}
+  </span>
 );
 
 const classeDaAba = (ativa: boolean) =>
@@ -58,11 +69,12 @@ export default function Abas({ abas, rotulo, ativa, aoTrocar, className }: AbasP
   if (saoLinks) {
     return (
       <nav aria-label={rotulo} onClickCapture={aoClicar} className={cn('flex items-center gap-1 overflow-x-auto', className)}>
-        {abas.map(({ chave, rotulo: nome, icone: Icone, para, exata, tambem, marcador }) => {
+        {abas.map(({ chave, rotulo: nome, icone: Icone, para, exata, tambem, marcador, contagem }) => {
           const conteudo = (
             <>
               {Icone && <Icone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
               {nome}
+              {contagem != null && <Contagem valor={contagem} />}
               {marcador && <Marcador />}
             </>
           );
@@ -87,7 +99,7 @@ export default function Abas({ abas, rotulo, ativa, aoTrocar, className }: AbasP
 
   return (
     <div role="tablist" aria-label={rotulo} className={cn('flex items-center gap-1 overflow-x-auto border-b border-border', className)}>
-      {abas.map(({ chave, rotulo: nome, icone: Icone, marcador }) => (
+      {abas.map(({ chave, rotulo: nome, icone: Icone, marcador, contagem }) => (
         <button
           key={chave}
           type="button"
@@ -98,6 +110,7 @@ export default function Abas({ abas, rotulo, ativa, aoTrocar, className }: AbasP
         >
           {Icone && <Icone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
           {nome}
+          {contagem != null && <Contagem valor={contagem} />}
           {marcador && <Marcador />}
         </button>
       ))}

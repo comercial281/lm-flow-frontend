@@ -30,7 +30,7 @@ vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock('@/hooks/useCan', () => ({ useCan: () => () => podeCriar }));
 vi.mock('@/contexts/TenantFeaturesContext', () => ({ useFeature: () => featureCriar }));
 vi.mock('@/components/proposals/ProposalFormDialog', () => ({
-  default: (props: { open: boolean; leadInicial?: { id: string } | null; imovelInicial?: { id: string } | null }) => {
+  default: (props: { open: boolean; leadInicial?: { id: string } | null; imovelInicial?: { id: string } | null; pipelineItemId?: string | null }) => {
     dialogo(props);
     return props.open ? <div>janela de proposta</div> : null;
   },
@@ -106,6 +106,7 @@ describe('Aba Visitas e propostas do card', () => {
       open: true,
       leadInicial: expect.objectContaining({ id: 'c1' }),
       imovelInicial: expect.objectContaining({ id: 'im1' }),
+      pipelineItemId: 'i1',
     }));
   });
 

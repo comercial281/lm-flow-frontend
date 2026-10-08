@@ -6,7 +6,7 @@
 // "Nova roleta" morreu: sem roleta ligada, o item leva pra página da roleta.
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CircleSlash, Link, Loader2, Merge, MoreHorizontal, Shuffle, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, CircleSlash, Link, Loader2, Merge, MoreHorizontal, Shuffle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Button,
@@ -46,6 +46,11 @@ interface CardMoreMenuProps {
   onRemovido: () => void;
   /** Gestor: "Juntar com outro contato" (veio da antiga Detalhes do Contato). */
   onJuntar?: () => void;
+  /** Caminho que "Copiar link do card" copia. A página do card completo passa o dela. */
+  linkDoCard?: string;
+  /** Página do card (spec §5.3): Arquivar / Desarquivar no ⋯. */
+  onArquivar?: () => void;
+  onDesarquivar?: () => void;
 }
 
 export default function CardMoreMenu({
@@ -56,6 +61,9 @@ export default function CardMoreMenu({
   onTirarDaRoleta,
   onRemovido,
   onJuntar,
+  linkDoCard,
+  onArquivar,
+  onDesarquivar,
 }: CardMoreMenuProps) {
   const navigate = useNavigate();
   // Card de quem não está em funil (aberto de Contatos): o link é o do contato
@@ -68,10 +76,9 @@ export default function CardMoreMenu({
   const [removendo, setRemovendo] = useState(false);
 
   const copiarLink = () => {
-    const url = foraDoFunil
-      ? `${window.location.origin}/contacts/${contatoId}`
-      : `${window.location.origin}/pipelines/${item.pipeline_id}?card=${item.id}`;
-    navigator.clipboard.writeText(url)
+    const caminho = linkDoCard
+      ?? (foraDoFunil ? `/contacts/${contatoId}` : `/pipelines/${item.pipeline_id}?card=${item.id}`);
+    navigator.clipboard.writeText(`${window.location.origin}${caminho}`)
       .then(() => toast.success('Link do card copiado'))
       .catch(() => toast.error('Não consegui copiar o link'));
   };
@@ -135,6 +142,18 @@ export default function CardMoreMenu({
             <DropdownMenuItem onClick={onJuntar}>
               <Merge className="h-3.5 w-3.5 mr-2" />
               Juntar com outro contato
+            </DropdownMenuItem>
+          )}
+          {onArquivar && (
+            <DropdownMenuItem onClick={onArquivar}>
+              <Archive className="h-3.5 w-3.5 mr-2" />
+              Arquivar
+            </DropdownMenuItem>
+          )}
+          {onDesarquivar && (
+            <DropdownMenuItem onClick={onDesarquivar}>
+              <ArchiveRestore className="h-3.5 w-3.5 mr-2" />
+              Desarquivar
             </DropdownMenuItem>
           )}
           {!foraDoFunil && (

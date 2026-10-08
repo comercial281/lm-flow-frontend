@@ -79,6 +79,19 @@ export const Funil: React.FC<ContextoBloco> = ({ dados, visao, pode, filtros, fu
             <div key={s.id} className="lmfn-item">{corpo}</div>
           );
         })}
+        {/* Ganho e Perdido não são etapa (situação do card): à parte, no período do painel. */}
+        {bloco.outcomes && (
+          <>
+            <div className="lmfn-item">
+              <span className="lmfn-item-texto" style={{ flex: 1 }}>Ganhos no período</span>
+              <span style={{ width: 40, textAlign: 'right', fontWeight: 600 }}>{numero(bloco.outcomes.won)}</span>
+            </div>
+            <div className="lmfn-item">
+              <span className="lmfn-item-texto" style={{ flex: 1 }}>Perdidos no período</span>
+              <span style={{ width: 40, textAlign: 'right', fontWeight: 600 }}>{numero(bloco.outcomes.lost)}</span>
+            </div>
+          </>
+        )}
       </GlassCard>
     </div>
   );

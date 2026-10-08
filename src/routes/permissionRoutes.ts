@@ -37,6 +37,8 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/contacts/scheduled-actions', resource: 'contacts', action: 'read' },
   { path: '/pipelines', resource: 'pipelines', action: 'read' },
   { path: '/pipelines/:pipelineId', resource: 'pipelines', action: 'read' },
+  // Card completo (E4): a página do lead.
+  { path: '/pipelines/:pipelineId/card/:itemId', resource: 'pipelines', action: 'read' },
   { path: '/bolsao/listas', resource: 'bolsao_batches', action: 'read' },
   { path: '/bolsao', resource: 'bolsao_leads', action: 'read' },
   { path: '/equipe', resource: 'users', action: 'update' },
@@ -65,6 +67,7 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/settings/account', resource: 'accounts', action: 'read' },
   { path: '/settings/teams/:teamId/add-users', resource: 'teams', action: 'create' },
   { path: '/settings/labels', resource: 'labels', action: 'read' },
+  { path: '/settings/listas', resource: 'pipelines', action: 'read' },
   { path: '/settings/attributes', resource: 'custom_attribute_definitions', action: 'read' },
   { path: '/settings/template-variables', resource: 'canned_responses', action: 'read' },
   { path: '/settings/lead-automations', resource: 'lead_automation_rules', action: 'read' },

@@ -178,8 +178,9 @@ Armadilhas:
 3. **A rota `/bolsao` é gateada só por cargo**, como `/ia-vendedora`: quem digitar
    a URL alcança a tela (vazia). É o padrão da casa — não é esquecimento.
 4. **O arquivo enviado vai para o servidor**, não é lido no navegador como o
-   importador antigo do funil (`ImportLeadsModal`). Aquele faz uma requisição por
-   linha e cria os contatos na hora — no Bolsão o lead só vira contato quando
+   importador que existia no funil (`ImportLeadsModal`, apagado em 07/10/2026: o Importar
+   saiu do funil e o Bolsão guarda o próprio). Aquele fazia uma requisição por
+   linha e criava os contatos na hora — no Bolsão o lead só vira contato quando
    alguém puxa.
 
 ### Depois de puxar: o card, o histórico e a saída da lista (desde 2026-08-25)
@@ -4103,7 +4104,7 @@ Como ficou:
 Spec: `LM FLOW/specs/2026-10-07-frente-2-tarefas-e-atividades-design.md`. Plano: `LM FLOW/plans/2026-10-07-frente-2-tarefas-e-atividades.md`.
 
 - **Tarefa mora no card do funil.** Lead sem card (cliente que não deixa WhatsApp orgânico virar card) ganha "Colocar no funil" na seção Tarefas da Conversa, que coloca pela conversa (origem certa) e já abre a tarefa nova.
-- **Três lugares, um bloco:** aba Tarefas do card, seção Tarefas da Conversa e (futuro) página do card completo usam `features/tarefas/TarefasDoLead`. Tela Tarefas (`/tarefas`) lista só tarefas.
+- **Três lugares, um bloco:** aba Tarefas do card, seção Tarefas da Conversa e página do card completo (bloco Próximas tarefas da Ficha) usam `features/tarefas/TarefasDoLead`. Tela Tarefas (`/tarefas`) lista só tarefas.
 - **Menu:** seção Atividades (abre e fecha, uma por vez) com Tarefas (`/tarefas`, só tarefas) e Visitas (`/visits`). `/atividades` redireciona pra `/tarefas`. Decisão do dono em 08/10/2026.
 - **Lista do servidor:** `GET /api/v1/activities` (tarefas + visitas por prazo, contagem por aba, régua de quem vê do funil). CRUD em `/api/v1/tasks`.
 - **Categorias:** até as Listas da casa, os quatro nomes fixos (`CATEGORIAS_INICIAIS`); na troca, a janela lê `task_categories`.
@@ -4403,10 +4404,7 @@ destino passaram a ler o filtro do endereço.
 - **Imóveis: escolher um Status no menu tira o filtro do link** (o link manda
   o próprio status; os dois juntos mostrariam "Vendido" no menu e ativos na
   lista).
-- **Ganho/Perdido seguem o `final` que o servidor manda em cada etapa**
-  (`etapaFinal.ts`). O nome só vale com servidor antigo, e nome ambíguo
-  ("Venda perdida") vira perda, como no servidor. A etapa marcada como
-  Concluída/Cancelada (`stage_type`) vem antes de uma que só bate pelo nome.
+- Ganho/Perdido viraram a situação do card (ver "## Situação do card: Ganho, Perdido e Reabrir (07/10/2026)", no fim); o `etapaFinal.ts` saiu.
 
 Armadilha: **`stage_type` é palavra na API desde 2026-09-30** (era número). Tipo
 novo que o descreva usa `string`.
@@ -7546,3 +7544,350 @@ Armadilhas:
    passam 0. Sem ele, cada teste esperaria os pontinhos de verdade.
 3. **`honor_triggers` vai em todo turno e avanço.** Sem o campo o servidor respeita o
    gatilho (comportamento antigo), então tela nova com servidor velho se comporta como antes.
+
+## Funil: F5 mantém o card e nomes longos cortam (07/10/2026)
+
+E0 do plano do funil (`LM FLOW/plans/2026-10-07-funil-01-consertos-e-listas.md`), itens da call com um cliente (07/10).
+
+- **O card aberto mora no endereço (`?card=`).** Abrir pelo link ou pelo clique deixa o `?card=`; fechar tira só ele (os outros parâmetros ficam). F5 reabre o mesmo card, e "copiar o endereço" manda o card. Lógica em `src/pages/Customer/Pipelines/useCardNoEndereco.ts` (com spec).
+- **Card que não está no quadro** (arquivado, de outra aba, tirado do funil): faixa "Este lead não está nesta aba." no topo do quadro, com X que tira o `?card=`. A busca do card por id (que abre mesmo assim) é da Parte 4.
+- **Etapa e Responsável na janela do card** cortam com reticências e mostram o nome inteiro ao passar o mouse. Moram em `components/pipelines/card/CamposDaSituacao.tsx`.
+
+Armadilhas:
+
+1. **O quadro recarrega a cada 60 s e ao vivo.** O hook guarda o card que já abriu pelo endereço; sem isso o card seria reaberto a cada volta (e reabriria depois de fechado, se o `?card=` não saísse).
+2. **`abrirNoEndereco`/`fecharNoEndereco` são estáveis de propósito**: entram no `handleEditItem`, que vai pro `PipelineItemCard` memoizado. O `setSearchParams` do roteador muda a cada mudança do endereço, por isso fica num ref.
+3. **O gatilho do Select do design system é `flex whitespace-nowrap`**: sem `min-w-0 overflow-hidden` no gatilho e `truncate` no texto, nome comprido passa da caixa. Campo novo de escolha na janela do card segue o `CamposDaSituacao`.
+
+## Listas da casa: motivos de perda e categorias de tarefa (07/10/2026)
+
+E1 do plano do funil (`LM FLOW/plans/2026-10-07-funil-01-consertos-e-listas.md`); servidor no backend (`list_options`, migration 315). Pedido da call com um cliente (07/10): o motivo de perda é "dado de suma importância", e as categorias de tarefa são do cliente.
+
+O que aparece na tela: **Minha imobiliária › Listas** (`/settings/listas`), logo depois de Etiquetas. Abas **Motivos de perda | Categorias de tarefa** (aba no endereço: `?aba=categorias`). Cada linha: alça de arrastar, nome editável na própria linha (grava ao sair do campo ou no Enter; Esc desiste), setas ↑↓ e Arquivar (com confirmação). Nos motivos, a chave **"Avisar a Meta como lead ruim"** por motivo (de fábrica, só "Sem perfil ou sem crédito"). Embaixo, o campo de nova opção e o bloco **Arquivadas**, com Desarquivar.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Opção não se exclui, só se arquiva.** Quem usa guarda o id: o card perdido e a tarefa continuam mostrando o nome. Renomear muda o nome em todo registro antigo.
+- **Quem muda é quem tem `pipelines.update`** (Gerente e administrador). A rota abre pra quem lê o funil (`pipelines.read`), mas o menu pede as duas (`gestao()`), como Etiquetas. Pra quem não pode, a tela só lê (sem campo, sem setas, sem Arquivadas) e diz "Só o gestor muda esta lista."
+- **A última opção ativa não arquiva** (o servidor recusa com a frase): sem nenhuma, a janela de Perdido não teria motivo.
+
+Armadilhas:
+
+1. **Leitura é livre no servidor** (`PermissionRegistry::FREE_ACTIONS`). Quem usar as listas em outra tela (janela de Perdido, tarefas) chama `listOptionsService.list(key)` sem `includeInactive`: só as ativas, na ordem.
+2. **Moldura da casa** (`Pagina` + `BaseHeader`, como a `RoletaLista`): a trava `foraDaMoldura` (teto 0) reprova cabeçalho fora dela.
+3. **Texto da tela é literal, não chave de i18n**, como as outras telas novas: o `conferir-padrao` só lê texto literal.
+4. **Ordem**: a tela manda só as ativas na ordem nova (`reorder`); o servidor põe as arquivadas depois e devolve a lista inteira, que substitui a da tela. Erro volta como estava.
+
+Pendente conhecido:
+
+- **Categorias de tarefa**: a tela Tarefas ainda guarda a categoria pelo nome; até ela ler as Listas da casa, editar essa lista não muda as tarefas. **Por isso a aba está escondida** (08/10, revisão final): a tela mostra só Motivos de perda, sem abas, e `?aba=categorias` cai em motivos. A chave é uma só, `CATEGORIAS_DE_TAREFA_NA_TELA` em `Settings/Listas/abasDasListas.ts`: ligar no mesmo PR em que Tarefas passar a ler `task_categories`. O código e os testes da aba continuam (os testes ligam a chave).
+
+## Situação do card: Ganho, Perdido e Reabrir (07/10/2026)
+
+Pedido da call com um cliente (07/10): no funil deles, que vai de
+Lead a Proposta, os botões Ganho e Perdido ficavam apagados, porque Ganho e Perdido
+eram COLUNAS. Spec: `LM FLOW/specs/2026-10-07-funil-situacao-e-card-completo-design.md` §3.
+
+O que aparece na tela:
+
+- **Rodapé do card:** card aberto mostra **Ganho | Perdido** sempre (não depende mais de
+  coluna Venda/Desqualificado). Card fechado mostra o selo **GANHO** ou **PERDIDO** e
+  **Reabrir**.
+- **Perdido abre "Por que este lead foi perdido?"**: motivo obrigatório da lista viva
+  (Minha imobiliária › Listas › Motivos de perda, só os ativos) e um comentário livre. O
+  servidor manda os dois para Observações e Histórico.
+- **Selo junto do nome** na janela e no card do quadro; ao passar o mouse, a data e o motivo.
+- **Card fechado não muda de etapa:** a Etapa da janela trava com a frase "Lead fechado não
+  muda de etapa. Reabra para mexer." e o card não arrasta no quadro.
+- **Ganho leva o card para a coluna Concluído** (a de tipo "Concluída"), e escolher Concluído
+  na Etapa marca Ganho. Reabrir um Ganho devolve o card para a coluna de antes. Perdido fica
+  na coluna. Funil sem Concluído: o card fica onde está. A Etapa e o quadro acompanham.
+- **Botões da Meta** (janela do card e lateral da conversa) continuam; Venda e Desqualificado
+  vão uma vez só por lead (pelo botão ou pela situação): já enviados, travam com "enviado".
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- Aberto, Ganho e Perdido são a situação do card, separada da etapa (como no Praedium).
+- Perdido pede motivo (obrigatório, da lista) e comentário (livre). Ganho não pergunta nada.
+- Reabrir volta para Abertos na mesma etapa — e, se era Ganho, para a coluna de antes de
+  Concluído (ajuste de 08/10).
+- Ganho ↔ Concluído e a Meta uma vez por lead: ajustes do dono de 08/10 (topo da spec).
+
+Armadilhas:
+
+1. Regras e peças em `src/features/pipelines/situacao/` (`situacao.ts`, `SeloSituacao({ status })`,
+   `MarcarPerdidoDialog`, `useSituacaoDoCard`) e o rodapé `CardResultFooter({ item, onMudou })`,
+   que grava sozinho e abre a janela do motivo. A Parte 4 (página do card) usa os mesmos.
+2. **Uma ação no ar ignora a próxima** (`useSituacaoDoCard`): clique duplo não grava duas
+   linhas de histórico nem manda dois eventos à Meta.
+3. A recusa da rota de situação chega no envelope da casa (`error.message`, frase pronta);
+   `mensagemDaRecusa` mostra a frase dela no aviso.
+4. `status` é opcional no tipo: o quadro pinta primeiro o payload guardado no navegador,
+   que pode ser de antes desta entrega. Sem o campo, o card conta como aberto (`situacaoDe`).
+5. `etapaFinal.ts` saiu, e o `final` da etapa saiu do tipo. Nada mais decide Ganho/Perdido
+   pelo nome da coluna: a coluna Concluído é a de `stage_type === 'completed'` (`ehColunaDeGanho`).
+6. O card que a rota de situação devolve já vem na coluna nova: quem recebe (`aoMudarSituacao`,
+   `handleItemStatusChanged`) troca a Etapa e a coluna pelo `stage_id` dele.
+7. O "enviado" dos botões da Meta vem do servidor (`events[].once` + `sent_at`, `Capi::OncePerLead`).
+8. **A resposta da rota de situação não é o card do quadro** (vem sem Roleta, Origem e última
+   mensagem). Nunca espalhar a resposta inteira por cima do card: usar `comSituacaoNova(card,
+   resposta)` / `camposDaSituacao` (`situacao.ts`), que copiam só situação, etapa e datas. Vale
+   para a janela, a página, o quadro, Contatos e a lateral da conversa (`SecaoFunil`, que também
+   trava a Etapa do card fechado e recarrega quando a janela muda a situação).
+
+## Funil: topo em três faixas, abas por situação, painel de filtros e card mínimo (07/10/2026)
+
+Pedido da call com um cliente (07/10). Spec: `LM FLOW/specs/2026-10-07-funil-situacao-e-card-completo-design.md` §4.
+
+O que aparece na tela:
+
+- **Topo em três faixas.** (1) ← e o funil como um selo só com o nome (Venda/Locação
+  continuam como grupos da lista que abre) · **Lead** e ⋯ (Exportar, Disparo em massa,
+  Editar funil, Reordenar etapas, Copiar ID, Excluir funil). (2) Abas **Abertos · Ganhos ·
+  Perdidos · Todos** com os números, e **Arquivados** numa caixinha com o número. (3) Busca,
+  quantos leads a aba mostra, **Quadro | Lista** e **Filtros · N**.
+- **Saíram do topo:** a contagem de etapas, o total de leads (virou o contador da aba), o valor
+  total (cada coluna mostra o dela) e o **Importar** (o Bolsão continua com o dele).
+- **Cada aba busca só os cards dela no servidor** (`GET /pipelines/:id?status=`). Ganhos e
+  Perdidos mostram as mesmas colunas, com o card na etapa onde parou e o selo, e **não
+  arrastam**. Todos junta os três; ali só o card aberto arrasta. **Arquivados** mostra o card
+  na coluna dele com **Desarquivar** (substitui a janelinha "Leads arquivados").
+- **Filtros num painel à direita**, com rolagem, nesta ordem: Criado em, Etapas, Origem,
+  Responsável, Etiquetas, Motivo da perda (só em Perdidos e Todos), Largados, Tarefas
+  (atrasada / vence hoje), Colunas visíveis. **Filtrar** e **Limpar filtros** fixos embaixo.
+- **Aba e filtros no endereço** (`?aba=perdidos&etapas=…&largados=14`): F5 mantém e dá pra
+  mandar o link. `?card=` e `?etapa=` continuam valendo.
+- **Soltar o card na coluna Concluído marca Ganho** (ajuste de 08/10), pela mesma rota do
+  botão: em Abertos ele sai do quadro e vai para Ganhos; em Todos fica em Concluído com o
+  selo. Ganho pela janela também leva o card para Concluído, e Reabrir devolve.
+- **Card do quadro mínimo:** selo (fechado), nome com a setinha ↗ (card completo em outra guia),
+  **um** sinal (tarefa atrasada > vence hoje > visita hoje/amanhã > "Nd sem contato"), foto do
+  responsável e o WhatsApp. ⋯: Abrir, Abrir em nova guia, Copiar link, Arquivar, Remover do funil.
+  A Lista tem o mesmo enxugamento.
+- **Exportar** leva situação e motivo da perda, de todas as situações (não só a aba).
+- **Pixel/CAPI:** "Ao marcar Ganho" e "Ao marcar Perdido" (`capi_configs.status_map`), com os
+  mesmos campos da linha de etapa; no Ganho o valor enviado é o "Preço estimado" do card
+  (a linha mostra isso, sem campo de valor). O mapa por etapa não oferece mais as etapas
+  finais (pelo tipo: a coluna Concluído); a regra que a Venda/Desqualificado tinham fica
+  guardada até a passagem dos clientes convertê-la.
+- **Painel:** o bloco do funil não conta mais as colunas finais e mostra **Ganhos no período** e
+  **Perdidos no período** (`outcomes`, por `won_at`/`lost_at`), sem link.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- Topo em três faixas; Importar sai do funil; Exportar no ⋯.
+- Filtros num painel grande à direita, como o "Filtrar atendimentos" do Praedium.
+- O card do quadro é mínimo: sem etiquetas, temperatura nem imóvel.
+
+Armadilhas:
+
+1. Peças em `src/pages/Customer/Pipelines/quadro/`: `BoardTopBar`, `usePipelineFilters`
+   (+ `enderecoDoQuadro`, `filtrosDoFunil`), `useBoardDrag`, `StageColumn`, `PipelineListView`,
+   `PainelDeFiltrosDoFunil`, `sinalDoCard`, `csvDoFunil`. O `PipelineKanban.tsx` só costura.
+2. **Card fechado não arrasta em dois lugares**: o `draggable` do card E a guarda do
+   `useBoardDrag` (`podeArrastarNaAba`). O `dragstart` dispara mesmo com `draggable="false"`.
+3. **Resposta de outra aba é jogada fora** (`pedidoRef` no `loadPipelineData`): sem isso,
+   trocar de aba rápido deixava o quadro com os cards da aba anterior.
+4. Só Abertos usa o payload guardado no navegador (`pipelinePayloadCache`, chave = id do funil).
+   A chave do armazenamento subiu para `lmflow:pipeline-payloads:v2`: o payload de antes da
+   entrega (todos os cards, sem situação) não pinta a aba Abertos depois da publicação.
+5. Os filtros rodam no navegador sobre os cards da aba carregada. `colunas` no endereço são as
+   etapas VISÍVEIS (vazio = todas). `tarefas` (atrasada/hoje) usa `passaNoFiltroDeTarefas`
+   (`src/features/tarefas/filtroDoFunil.ts`, `atrasada`→`'atrasadas'`) — a seção Tarefas do
+   popover antigo veio para o painel (escolha múltipla).
+6. Duas chaves de Funções deixaram de ser usadas no código e o `sync-feature-catalog` tira as
+   duas do catálogo no próximo deploy: `pipeline_import` (o Importar saiu do quadro) e
+   `card_remove_from_pipeline` (só o `components/pipelines/PipelineItemCard.tsx`, órfão e
+   apagado, usava; em produção o "Remover do funil" nunca passou por ela). O token do sync
+   (`LM_FLOW_SYNC_TOKEN`) tem que estar só no ambiente Production da Vercel: numa prévia, o
+   sync tiraria `pipeline_import` enquanto a `main` ainda usa a chave (chave ausente = ligada,
+   o Importar voltaria pra quem desligou).
+7. A setinha ↗ e o "Copiar link" apontam para `/pipelines/:pipelineId/card/:itemId`, a página
+   da E4 (`src/features/pipelines/linkDoCard.ts`).
+8. "Agendar ação" e "Ver notas" saíram do ⋯ do card do quadro: moram dentro do card.
+9. Soltar em Concluído chama `setItemStatus` no `useBoardDrag` (não o `reorder`); o quadro
+   recebe o card ganho pelo `aoGanhar` → `handleItemStatusChanged` (a mesma porta do Ganho
+   pela janela), que troca a coluna e tira o card da aba que não é a dele.
+10. O quadro fica fora da `Pagina` (exceção documentada de tela cheia), com respiro lateral
+    de 16/24px.
+
+## Card completo: a página do lead (desde 2026-10-07)
+
+Pedido do dono (call com um cliente, 07/10): o card só existia como janela, e quem quer ler
+com calma ou mandar o lead pra alguém precisa de uma página. Spec:
+`LM FLOW/specs/2026-10-07-funil-situacao-e-card-completo-design.md` §5.
+
+O que aparece na tela:
+
+- **Página `/pipelines/:pipelineId/card/:itemId`, com o menu lateral.** Abre pela setinha ↗
+  ao lado do ⋯ da janela ("Ver card completo", sempre em outra guia), pela setinha do card
+  do quadro e por qualquer link colado. O F5 mantém.
+- **Cabeçalho de tela de detalhe:** moldura `Pagina` com `acima` (← Funil) e `BaseHeader`
+  com `aoLadoDoTitulo` (selo da situação) e `aDireita` (ações). O nome do lead é o título,
+  com a barrinha da casa; à direita, Responsável com foto, Ganho | Perdido (ou Reabrir) e o
+  ⋯ (Copiar link — o da página —, Mandar pra roleta, Arquivar/Desarquivar, Remover do funil).
+- **Faixa de etapas** com os dias em cada uma: idas e voltas somam; a atual conta até agora;
+  card Ganho/Perdido para o relógio no dia em que fechou. Clicar numa etapa pergunta "Mover
+  <nome> para <etapa>?". Card fechado: a faixa só informa.
+- **Abas** Ficha · Conversa · Visitas e propostas · Origem (a aba vai no endereço, `?aba=`).
+  A página não tem aba Tarefas: as tarefas são um bloco da Ficha.
+- **Ficha:** à esquerda Ações rápidas, Próximas tarefas (o `TarefasDoLead` da sessão de
+  Tarefas, o mesmo da aba Tarefas da janela), Dados da pessoa, Sobre o negócio, Etiquetas,
+  Follow-up e Meta, o que a IA entendeu, Imóveis de interesse, Respostas do formulário,
+  Outras informações; à direita Histórico e Observações, separados como na janela.
+- **Sobre o negócio** (só na página): Preço estimado e Data de fechamento esperada, editados
+  na hora, sem Salvar. O preço estimado é o valor da Compra que vai para a Meta no Ganho.
+  Regras do campo: Esc sai da edição (no preço, desfaz o que foi digitado; na data, só fecha
+  o campo, sem salvar); Enter confirma (sai do campo e salva); a data só grava ao sair do
+  campo ou no Enter, com ano entre 1900 e 2100 (fora disso: "Data inválida"); centavos colados são descartados; teto de 12 dígitos; valor negativo é recusado.
+  Card fechado ou arquivado mantém "Sobre o negócio" editável e as tarefas.
+- **Arquivado abre**, com o aviso e Desarquivar. Sem acesso (outro corretor, card apagado ou
+  de outro funil): "Você não tem acesso a este lead", com "Voltar ao funil".
+- **Quadro:** o link `?card=` de um card que não está na aba carregada (`foraDaAba` do
+  `useCardNoEndereco`) busca o card pelo id (`buscarCardPeloId`) e abre a janela. O "Este
+  lead não está nesta aba." do E0 (`AvisoCardForaDaAba`) virou `AvisoDoCardForaDoQuadro`: só
+  aparece sem acesso ou com erro (com "Tentar de novo").
+- **Exportar** do funil ganha `preco_estimado` (cru) e `fechamento_esperado`.
+- **Proposta registrada pelo card** (aba Visitas e propostas, na janela e na página) vai ligada a
+  ele (`metadata.pipeline_item_id`): aceita, marca esse card como Ganho.
+- **Proposta pela tela Propostas** (ajuste de 08/10): lead com mais de um card aberto, a janela
+  pergunta "De qual atendimento é esta proposta?" (com bloco de carregando e, se falhar, aviso
+  com Tentar de novo); com um card só, liga sozinho (e mostra qual). A lista vem de
+  `GET /pipelines/open_cards_by_contact/:contact_id`.
+- **Concluído é Ganho** (ajuste de 08/10): clicar em Concluído na faixa pergunta "Marcar <nome>
+  como Ganho?"; escolher Concluído na Etapa da janela marca Ganho; a coluna Concluído não soma
+  dias (o relógio para no Ganho).
+
+Decisões do dono (não reabrir sem ele pedir): a janela não muda de cara (ganha só a
+setinha); preço e data só na página (depois viram filtro); mover pela faixa pede
+confirmação; a página abre com o menu lateral.
+
+Armadilhas:
+
+1. **O estado do card mora em `src/features/cardDoLead/useCardDoLead.ts`** e o desenho em
+   `src/features/cardDoLead/blocos/`. A janela (`EditItemModal`) e a página
+   (`pages/Customer/Pipelines/CardCompleto/CardCompletoPage.tsx`) são cascas. Bloco novo do
+   card nasce em `blocos/`; na janela, a coluna esquerda continua cabendo em 1366×768. A rede
+   da janela é o `EditItemModal.caracterizacao.spec.tsx`. A janela tem as abas Detalhes ·
+   Conversa · Tarefas · Visitas e propostas · Origem (a aba Tarefas é da sessão de Tarefas,
+   com o número e o marcador de atrasada); a página não tem aba Tarefas (as tarefas são um
+   bloco da Ficha).
+2. **O card inicializa por `item.id`** (o `key` dos cards sem funil continua valendo).
+3. **O GET de um card (`GET …/pipeline_items/:id`) responde 404 para outro dono, card apagado
+   ou de outro funil** (a tela lê 404 como "sem acesso") — nunca 401 (401 encerra a sessão na
+   tela). Não troque o `show` do servidor para o `set_pipeline_item`, que levanta Pundit (401).
+4. **O PATCH do card responde sem a conversa:** "Sobre o negócio" copia só os dois campos.
+5. **Encaixes:** o bloco de Tarefas da Ficha é o `TarefasDoLead`, ligado em
+   `features/cardDoLead/pagina/encaixes.tsx`; o Histórico novo (Parte 5) entra em
+   `features/cardDoLead/pagina/ColunaDoHistorico.tsx`.
+6. **Os dias por etapa vêm prontos do servidor** (`PipelineItems::StageDurations`); a tela só
+   escreve (`textoDosDias`).
+7. **Endereço do card completo: só por `linkDoCardCompleto`/`linkAbsolutoDoCard`** (`features/pipelines/linkDoCard.ts`, da E3).
+8. **A situação do card mora no `useCardDoLead`** (grupo `situacao`): a janela chama `card.situacao.aoMudar`
+   e avisa o quadro (`onItemStatusChanged`); a Etapa trava no card fechado (`EtapaDoCard`). A rede da
+   situação na janela é o `EditItemModal.situacao.source.spec.ts`.
+9. **Concluído = Ganho pela rota da situação**, nos três lugares: Etapa (`useCardDoLead.moverEtapa`),
+   faixa (`FaixaDeEtapas` → `aoGanhar` da página) e quadro (`useBoardDrag`, Parte 3). Nunca pelo
+   `moveItem`: a rota da situação devolve o card já ganho e a frase de recusa pronta.
+10. **Além do plano (E4):** o `useCardDoLead` carrega `rodapeSalvando` (trava cruzada do
+    P3-T5) e recarrega o Histórico em `situacao.aoMudar`. A janela do card no quadro fecha
+    dentro de um `startTransition` (`fecharJanelaDoCard` em `PipelineKanban.tsx`; transição
+    do react-router 7: corrige o refetch e a reabertura do card). O painel da Meta é chaveado pela situação, na janela e na Ficha.
+11. **Duas guias:** a página recarrega em silêncio quando a guia volta a ficar visível
+    (`useCardCompleto`, sem aviso se falhar). No quadro, o refresh silencioso atualiza a janela
+    aberta só quando a situação ou a etapa do card mudou (senão a janela se refaria a cada 60 s).
+
+## Histórico novo do lead (07/10/2026)
+
+Entrega 5 do funil (spec `LM FLOW/specs/2026-10-07-funil-situacao-e-card-completo-design.md` §6).
+Servidor: `GET /api/v1/contacts/:id/timeline` (lm-flow, `Leads::Timeline`; envelope da casa,
+`data: { events, next_before }`). Texto da tela em pt-BR literal, sem chave de i18n. Tela:
+`src/features/cardDoLead/historico/HistoricoDoLead.tsx` + `useVersaoDoHistorico.ts`,
+serviço `src/services/contacts/leadTimelineService.ts`.
+
+O que aparece na tela:
+
+- **Cada linha é um bloquinho**: título, linha de detalhe e "por Fulano · Hoje às 14:32"
+  (`quandoAcontece`). O texto vem pronto do servidor, em português, sem "chave: valor".
+- **Perdido em vermelho, Ganho em verde**, aviso (repasse e prazo da roleta, visita
+  cancelada, proposta recusada) com o ponto âmbar. Só tokens (`destructive`, `lm-success`,
+  `lm-star`); o colorido pelo prefixo do id (`corDoEvento`) morreu.
+- **Filtros em botões** (`EtiquetasDeEscolha`): Tudo · Atividades · Observações · Rodízios ·
+  Alterações. Os passos da roleta saíram do Tudo, ficam só em Rodízios — no Tudo, uma linha:
+  "Ana assumiu o lead · Roleta X". **As mensagens saíram do Histórico** (estão inteiras na
+  aba Conversa).
+- **O Histórico é do lead, não do card**: junta todos os funis; evento de outro funil termina
+  com "funil <nome>".
+- **"Carregar mais"** no fim (antes cortava em 100). Erro mostra "Não deu pra carregar" com
+  Tentar de novo; vazio fala do filtro escolhido.
+- **Janela do card**: Histórico compacto, sem o filtro Observações e sem linha de nota; as
+  Observações continuam na caixa ao lado. O modo compacto pula sozinho até 3 páginas que só
+  tenham nota, para não ficar vazio.
+- **Página do card completo**: caixa de escrever observação no topo do Histórico e Observações
+  como filtro (o modelo "Comentários" do Praedium).
+- **Novas linhas**: troca de etapa do card que chegou pelo WhatsApp (antes não aparecia),
+  Ganho/Perdido/Reaberto com motivo e comentário, Arquivado/Desarquivado, IA ligada/desligada,
+  troca de responsável pela ficha, tarefa concluída, proposta enviada/aceita/recusada,
+  "Follow-up parado" (o título vem do servidor).
+- **Tarefa criada por automação** mostra "por <criador da regra>".
+
+Abas (achado 16): a **página** tem Ficha · Conversa · Visitas e propostas · Origem (sem aba
+Tarefas: tarefas são um bloco da Ficha). A **janela** tem Detalhes · Conversa · Tarefas ·
+Visitas e propostas · Origem.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **Na janela, Histórico e Observações continuam separados** (decisão de 02/10). **Na página,
+  as Observações aparecem também como filtro do Histórico**, com a caixa de escrever no topo.
+- **Mensagens não entram no Histórico.**
+- **Os passos da roleta moram em Rodízios**; no Tudo, só o desfecho.
+- **Ganho por Concluído mostra duas linhas no Tudo**: "Mudou de etapa · X → Concluído" e
+  "Ganho". Mantido de propósito (a etapa mudou e a situação mudou).
+
+Armadilhas:
+
+1. **Os filtros não são abas.** Um nível de abas por tela, e a página já tem as dela.
+2. **`EtiquetasDeEscolha` é de várias escolhas**; aqui vira escolha única no `aoMudar`
+   (clicar no ligado volta pro Tudo).
+3. **O `category` de cada evento é a família dele**, e o Tudo (`resumo`) junta famílias:
+   "Mudou de etapa" vem com `alteracao` e aparece no Tudo. A tela pede o filtro ao servidor;
+   nunca filtrar pelo `category` do evento.
+4. **Recarga**: a chave é `card.historico.versao` do `useCardDoLead` (`useVersaoDoHistorico`):
+   muda com etapa, situação e responsável do card e com `card.historico.recarregar()` (roleta,
+   Tirar da roleta, oferta aceita, visita, correção de contato, mover etapa). O hook usa o
+   `item` novo enquanto `itemDaSituacao` ainda é o card anterior (evita um render com a chave
+   velha ao trocar de card). Quem mexe no card de outro jeito e quer o Histórico em dia chama
+   o recarregar. Janela: `LeadDetailsTab` (compacto); página:
+   `features/cardDoLead/pagina/ColunaDoHistorico.tsx` (completo).
+5. **Elo Tarefas → Histórico**: `useVersaoDoHistorico` escuta `EVENTO_TAREFAS_MUDARAM`, então
+   criar/concluir/reabrir tarefa recarrega o Histórico. Arquivar/desarquivar na página e
+   trocar o responsável também recarregam (o item volta com o mesmo id e situação, e o
+   `assignee` do card não muda por dentro).
+6. **Reabrir tarefa faz "Tarefa concluída" sumir**: a fonte lê o estado atual da tarefa, e
+   não existe linha "Tarefa reaberta". Não é bug.
+7. **`next_before` vem em UTC com "Z" e microssegundos**: passar cru no próximo `before` (um
+   "+" de fuso viraria espaço no endereço).
+8. **O `/contacts/:id/events` antigo e o `contactEventsService.getContactEvents` ficaram sem
+   uso no card.** O `contactEventsService` só sobrevive no `src/hooks/useContactEvents.ts`
+   (código morto, fica para uma limpeza própria); o servidor mantém o endpoint até lá.
+9. **Arquivar, IA ligada/desligada e troca de responsável pela ficha moram no log de ações**
+   (12 meses de retenção): essas linhas somem do Histórico depois de um ano. Etapa, situação,
+   nota, tarefa, visita, proposta e roleta ficam para sempre.
+
+## Funil: ajustes da revisão final (08/10/2026)
+
+Regras de produto decididas na revisão final do funil. Não reabrir sem o dono pedir.
+
+1. **Card criado direto numa coluna Concluída nasce Ganho**, sem avisar a Meta e sem mexer
+   em follow-up nem IA. A Meta só recebe o aviso quando um card que já existia muda de
+   situação.
+2. **Histórico do lead: 404, não 401, para quem não pode ver o lead** (mesma regra do
+   `/events`). Para quem vê o lead, o Histórico mostra os eventos de todos os cards dele,
+   de qualquer funil e de qualquer dono.
+3. **Ganho, Perdido e Reabrir copiam da resposta só os campos da situação**
+   (`comSituacaoNova`), nunca o card inteiro. Copiar o card inteiro sobrescreveria edição
+   feita em paralelo.
+4. **A aba "Categorias de tarefa" em Minha imobiliária › Listas está escondida**
+   (`CATEGORIAS_DE_TAREFA_NA_TELA`) até as tarefas passarem a ler a lista.
+5. **Coluna Concluída com a regra antiga de Compra por etapa:** a Compra respeita o
+   "um por lead" (não dispara de novo para o mesmo lead).

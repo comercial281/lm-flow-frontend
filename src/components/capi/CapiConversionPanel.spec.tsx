@@ -1,14 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+const toastInfo = vi.fn();
+const toastSuccess = vi.fn();
+vi.mock('sonner', () => ({
+  toast: { info: (...a: unknown[]) => toastInfo(...a), success: (...a: unknown[]) => toastSuccess(...a), error: vi.fn() },
+}));
 import CapiConversionPanel from './CapiConversionPanel';
 
 // Conversão Meta: o completo é o do card do lead; o compacto (Proposta B, 02/10)
 // é a linha logo abaixo dos selos no painel do lead em Conversas.
 
 const status = vi.fn();
+const send = vi.fn();
 vi.mock('@/services/capi/capiEventsService', async importOriginal => {
   const real = await importOriginal<typeof import('@/services/capi/capiEventsService')>();
-  return { ...real, capiEventsService: { status: (...a: unknown[]) => status(...a), send: vi.fn() } };
+  return { ...real, capiEventsService: { status: (...a: unknown[]) => status(...a), send: (...a: unknown[]) => send(...a) } };
 });
 
 const pronto = {
@@ -24,7 +30,12 @@ const pronto = {
 const EXPLICACAO = /Isso alimenta os anúncios, não substitui o CRM/;
 
 describe('CapiConversionPanel', () => {
-  beforeEach(() => status.mockReset());
+  beforeEach(() => {
+    status.mockReset();
+    send.mockReset();
+    toastInfo.mockReset();
+    toastSuccess.mockReset();
+  });
 
   it('compacto: "Meta" e os 3 botões numa linha; a explicação vai pro ⓘ', async () => {
     status.mockResolvedValue(pronto);
@@ -99,5 +110,46 @@ describe('CapiConversionPanel', () => {
     await act(async () => { c1.resolver({ ...pronto, can_send: false }); });
     expect(screen.getByRole('button', { name: 'Qualificado' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Qualificado' }).getAttribute('title')).toMatch(/enviado em/);
+  });
+
+  // Ajuste de 08/10: Compra e Desqualificado vão uma vez só por lead (botão ou
+  // situação do card). Já foi: o botão trava e diz "enviado". Qualificado não.
+  const jaEnviados = {
+    ...pronto,
+    events: [
+      { event_name: 'Qualificado', intent: null, once: false, sent_at: '2026-10-08T12:00:00Z', sent_by: 'Ana' },
+      { event_name: 'Desqualificado', intent: null, once: true, sent_at: null, sent_by: null },
+      { event_name: 'Purchase', intent: null, once: true, sent_at: '2026-10-08T12:00:00Z', sent_by: null },
+    ],
+  };
+
+  it('compacto: Venda já enviada trava com "enviado"; Desqualificado e Qualificado seguem clicáveis', async () => {
+    status.mockResolvedValue(jaEnviados);
+    render(<CapiConversionPanel contactId="c1" variante="compacto" />);
+
+    expect(await screen.findByRole('button', { name: 'Venda · enviado' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Desqualificado' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Qualificado' })).toBeEnabled();
+  });
+
+  it('completo (card do lead): "Venda realizada · enviado" travado', async () => {
+    status.mockResolvedValue(jaEnviados);
+    render(<CapiConversionPanel contactId="c1" />);
+
+    expect(await screen.findByRole('button', { name: 'Venda realizada · enviado' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Qualificado' })).toBeEnabled();
+  });
+
+  // D-4: estado velho na tela; o servidor responde 200 "já enviado" sem enviar.
+  it('POST de evento já enviado: mostra a mensagem do servidor, não "enviado ao Meta", e atualiza o botão', async () => {
+    status.mockResolvedValue(pronto);
+    send.mockResolvedValue({ ...jaEnviados, message: 'Este evento já foi enviado para este lead.' });
+    render(<CapiConversionPanel contactId="c1" variante="compacto" />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Venda' }));
+
+    await vi.waitFor(() => expect(toastInfo).toHaveBeenCalledWith('Este evento já foi enviado para este lead.'));
+    expect(toastSuccess).not.toHaveBeenCalled();
+    expect(await screen.findByRole('button', { name: 'Venda · enviado' })).toBeDisabled();
   });
 });

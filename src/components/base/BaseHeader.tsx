@@ -66,6 +66,8 @@ export interface BaseHeaderProps {
   aDireita?: ReactNode;
   /** Na linha da busca, logo depois dela (pílulas e "Filtros" de Contatos). */
   aoLadoDaBusca?: ReactNode;
+  /** Na linha do título, logo depois dele (tela de detalhe: o selo da situação). */
+  aoLadoDoTitulo?: ReactNode;
   className?: string;
   children?: ReactNode;
 }
@@ -89,6 +91,7 @@ export default function BaseHeader({
   selectionExtra,
   bulkActions = [],
   aoLadoDaBusca,
+  aoLadoDoTitulo,
   aDireita,
   className = '',
   children,
@@ -115,7 +118,14 @@ export default function BaseHeader({
                 style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
               />
               <div className="min-w-0">
-                <h1 className="break-words text-2xl font-bold tracking-tight leading-8 text-sidebar-foreground">{title}</h1>
+                {aoLadoDoTitulo ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="break-words text-2xl font-bold tracking-tight leading-8 text-sidebar-foreground">{title}</h1>
+                    {aoLadoDoTitulo}
+                  </div>
+                ) : (
+                  <h1 className="break-words text-2xl font-bold tracking-tight leading-8 text-sidebar-foreground">{title}</h1>
+                )}
                 {subtitle && (
                   <p className="text-sm leading-5 text-sidebar-foreground/70 mt-1">{subtitle}</p>
                 )}

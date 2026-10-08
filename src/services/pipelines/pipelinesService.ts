@@ -8,6 +8,7 @@ import type {
   UpdatePipelineData,
   CreateStageData,
   PipelineItem,
+  SetItemStatusData,
   MovePipelineItemData,
   PipelineStage,
   PipelineStats,
@@ -18,6 +19,9 @@ import type {
   AvailableContactsResponse,
   PipelineItemResponse,
   ConversationForModal,
+  PipelineBoardStatus,
+  PipelineItemDetail,
+  OpenCardOfContact,
 } from '@/types/analytics';
 import { Contact } from '@/types';
 
@@ -30,9 +34,11 @@ class PipelinesService {
     return extractResponse<Pipeline>(response) as PipelinesResponse;
   }
 
-  // Get single pipeline
-  async getPipeline(pipelineId: string): Promise<Pipeline> {
-    const response = await api.get(`/pipelines/${pipelineId}`);
+  // Get single pipeline. `status` = a aba do quadro (Abertos, Ganhos, Perdidos,
+  // Todos, Arquivados); sem ele o servidor devolve os abertos.
+  async getPipeline(pipelineId: string, opts: { status?: PipelineBoardStatus } = {}): Promise<Pipeline> {
+    const url = `/pipelines/${pipelineId}`;
+    const response = opts.status ? await api.get(url, { params: { status: opts.status } }) : await api.get(url);
     return extractData<Pipeline>(response);
   }
 
@@ -40,6 +46,13 @@ class PipelinesService {
   async getPipelinesByContact(contactId: string): Promise<Pipeline[]> {
     const response = await api.get(`/pipelines/by_contact/${contactId}`);
     return extractData<Pipeline[]>(response);
+  }
+
+  // Os cards ABERTOS do lead (todos os funis), o mais novo primeiro: a tela
+  // Propostas pergunta de qual atendimento é a proposta (ajuste de 08/10).
+  async getOpenCardsOfContact(contactId: string): Promise<OpenCardOfContact[]> {
+    const response = await api.get(`/pipelines/open_cards_by_contact/${contactId}`);
+    return extractData<OpenCardOfContact[]>(response);
   }
 
   // Get all pipelines filtered by conversation (optimized - single request)
@@ -159,6 +172,26 @@ class PipelinesService {
     return extractResponse<PipelineItem>(response) as ItemsResponse;
   }
 
+  // Card completo (E4): um card só, com os dias por etapa e o funil (nome e
+  // etapas). Sem acesso, apagado ou de outro funil = 404 (a página avisa).
+  async getPipelineItem(pipelineId: string, itemId: string): Promise<PipelineItemDetail> {
+    const response = await api.get(`/pipelines/${pipelineId}/pipeline_items/${itemId}`);
+    return extractData<PipelineItemDetail>(response);
+  }
+
+  // "Sobre o negócio" da página do card. A resposta vem SEM a conversa (o
+  // update não preloada): quem chama copia só os dois campos, nunca o card todo.
+  async updateItemBusiness(
+    pipelineId: string,
+    itemId: string,
+    data: { estimated_value?: number | null; expected_close_on?: string | null },
+  ): Promise<PipelineItem> {
+    const response = await api.patch(`/pipelines/${pipelineId}/pipeline_items/${itemId}`, {
+      pipeline_item: data,
+    });
+    return extractData<PipelineItem>(response);
+  }
+
   // Move item to different stage
   async moveItem(data: MovePipelineItemData): Promise<{ success: boolean; message: string }> {
     const response = await api.patch(
@@ -255,6 +288,14 @@ class PipelinesService {
 
   async unarchiveItem(pipelineId: string, itemId: string): Promise<PipelineItem> {
     const response = await api.patch(`/pipelines/${pipelineId}/pipeline_items/${itemId}/unarchive`);
+    return extractData<PipelineItem>(response);
+  }
+
+  // Situação do card: Ganho, Perdido (com motivo e comentário) e Reabrir.
+  // O servidor recusa com 422 e a frase pronta (motivo arquivado, card
+  // arquivado, Reabrir de card aberto) — quem chama mostra a frase.
+  async setItemStatus(pipelineId: string, itemId: string, data: SetItemStatusData): Promise<PipelineItem> {
+    const response = await api.patch(`/pipelines/${pipelineId}/pipeline_items/${itemId}/status`, data);
     return extractData<PipelineItem>(response);
   }
 

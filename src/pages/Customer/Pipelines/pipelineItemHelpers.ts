@@ -6,8 +6,7 @@
 // entre renders — mais forte que useCallback (sem array de dependências pra errar) e
 // suficiente pra não quebrar a memoização do card extraído.
 //
-// As duas exceções (resolveItemName precisa de `t`, itemVisitLabel precisa do mapa
-// visitsByContact) recebem esses dados como argumento explícito, continuando puras.
+// A exceção (resolveItemName precisa de `t`) recebe esse dado como argumento explícito, continuando pura.
 
 import { PipelineItem } from '@/types/analytics';
 import { isPhoneLikeName } from '@/lib/nomeDoContato';
@@ -30,18 +29,6 @@ export const resolveItemName = (
   return phone || t('kanban.conversation.unknownUser');
 };
 
-export const resolveItemAvatar = (item: PipelineItem): string | undefined => {
-  return item.contact?.avatar_url || item.conversation?.contact?.avatar_url || undefined;
-};
-
-// ID único do lead pro card. Usa o id do contato (a pessoa), não o número da
-// conversa: lead importado sem WhatsApp não tem conversa, então display_id caía
-// tudo no mesmo número. Contato é único por lead e estável.
-export const resolveItemRef = (item: PipelineItem): string => {
-  const id = item.contact?.id || item.conversation?.contact?.id || item.item_id || item.id;
-  return String(id).padStart(4, '0');
-};
-
 // Data de chegada do lead no pipeline (quando o card entrou).
 export const formatArrivalDate = (item: PipelineItem): string | null => {
   const raw = item.entered_at
@@ -57,6 +44,14 @@ export const formatArrivalDate = (item: PipelineItem): string | null => {
     month: '2-digit',
     year: '2-digit',
   });
+};
+
+// Chegada do lead em epoch ms — pra ordenar a Lista por ordem de chegada real
+// (não confundir com `position`, a ordem manual de arraste dentro da coluna).
+export const itemArrivalMs = (item: PipelineItem): number => {
+  if (typeof item.entered_at === 'number') return item.entered_at * 1000;
+  if (typeof item.created_at === 'number') return item.created_at * 1000;
+  return item.created_at ? new Date(item.created_at).getTime() : 0;
 };
 
 // Último contato com o lead medido pela CONVERSA da instância WhatsApp.
@@ -76,12 +71,6 @@ export const lastContactMs = (item: PipelineItem): number | null => {
   return null;
 };
 
-export const lastContactDays = (item: PipelineItem): number | null => {
-  const ms = lastContactMs(item);
-  if (!ms) return null;
-  return Math.floor((Date.now() - ms) / 86_400_000);
-};
-
 // Labels da conversa (vêm como string[] ou {title}[]).
 export const itemLabels = (item: PipelineItem): string[] => {
   const raw = (item.conversation as any)?.labels ?? [];
@@ -89,9 +78,6 @@ export const itemLabels = (item: PipelineItem): string[] => {
     ? raw.map((l: any) => (typeof l === 'string' ? l : l?.title ?? '')).filter(Boolean)
     : [];
 };
-
-export const hasVisitScheduled = (item: PipelineItem): boolean =>
-  itemLabels(item).includes('visita-agendada');
 
 // Tags do lead pro filtro: une as etiquetas do contato (as que aparecem no card,
 // ex "tráfego pago") com as labels da conversa. Retorna {name,color} sem repetir.
@@ -114,22 +100,6 @@ export const itemTagInfos = (item: PipelineItem): Array<{ name: string; color: s
 
 export const itemTagNames = (item: PipelineItem): string[] =>
   itemTagInfos(item).map(t => t.name);
-
-// Dia/hora da próxima visita do lead (do mapa carregado de /visits).
-export const itemVisitLabel = (
-  item: PipelineItem,
-  visitsByContact: Record<string, string>,
-): string | null => {
-  const cid = item.contact?.id || item.conversation?.contact?.id;
-  const when = cid ? visitsByContact[cid] : undefined;
-  if (!when) return null;
-  return new Date(when).toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
 
 export const getContactColor = (name?: string): string => {
   if (!name) return '#6B7280';

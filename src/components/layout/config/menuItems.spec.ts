@@ -62,6 +62,7 @@ describe('o menu do CRM confere o cargo', () => {
     ['/settings/labels', ['labels.read', 'labels.create']],
     ['/settings/template-variables', ['canned_responses.read', 'canned_responses.create']],
     ['/settings/site-builder', ['sites.read', 'sites.update']],
+    ['/settings/listas', ['pipelines.read', 'pipelines.update']],
   ])('tela de gestão %s pede a chave da rota E uma de escrita', (href, chaves) => {
     const item = achar(href);
     expect(item.permissions).toEqual(chaves);
@@ -268,5 +269,27 @@ describe('Integrações em cartões (07/10/2026)', () => {
   it('a busca do menu continua achando cada tela', () => {
     const nomes = itensDoMenu(secoes).map(i => i.name);
     for (const n of ['Integrações', 'WhatsApp', 'Facebook', 'Pixel', 'Portais', 'CVCRM']) expect(nomes).toContain(n);
+  });
+});
+
+describe('Listas da casa (E1 do funil, 07/10/2026)', () => {
+  const imobiliaria = secoes.find(s => s.id === 'imobiliaria')!;
+
+  it('Listas fica em Minha imobiliária, logo depois de Etiquetas', () => {
+    const nomes = imobiliaria.itens.map(i => i.name);
+    expect(nomes[nomes.indexOf('Etiquetas') + 1]).toBe('Listas');
+    const listas = imobiliaria.itens.find(i => i.name === 'Listas')!;
+    expect(listas.href).toBe('/settings/listas');
+    expect(listas.abas ?? []).toEqual([]);
+    expect(donoDoEndereco(secoes, '/settings/listas')?.item.name).toBe('Listas');
+  });
+
+  it('o Corretor de fábrica não ganha Minha imobiliária por causa das Listas (só lê)', () => {
+    expect(comCargo(new Set([...CORRETOR, 'pipelines.read'])).map(s => s.id)).not.toContain('imobiliaria');
+  });
+
+  it('o Gerente (pipelines.update) vê Listas', () => {
+    const itens = comCargo(new Set(['pipelines.read', 'pipelines.update'])).flatMap(s => s.itens).map(i => i.name);
+    expect(itens).toContain('Listas');
   });
 });

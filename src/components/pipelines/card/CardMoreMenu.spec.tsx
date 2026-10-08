@@ -83,3 +83,38 @@ describe('CardMoreMenu · roleta', () => {
     expect(screen.queryByRole('menuitem', { name: 'Tirar da roleta' })).toBeNull();
   });
 });
+
+describe('CardMoreMenu · página do card completo (E4)', () => {
+  it('"Copiar link do card" copia o caminho que a página passa', async () => {
+    const user = userEvent.setup();
+    const escrever = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: escrever }, configurable: true });
+    montar({ linkDoCard: '/pipelines/p1/card/pi-1' });
+
+    await user.click(screen.getByRole('button', { name: 'Mais ações do card' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Copiar link do card' }));
+
+    expect(escrever).toHaveBeenCalledWith(`${window.location.origin}/pipelines/p1/card/pi-1`);
+  });
+
+  it('sem linkDoCard continua copiando o link do quadro', async () => {
+    const user = userEvent.setup();
+    const escrever = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: escrever }, configurable: true });
+    montar();
+
+    await user.click(screen.getByRole('button', { name: 'Mais ações do card' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Copiar link do card' }));
+
+    expect(escrever).toHaveBeenCalledWith(`${window.location.origin}/pipelines/p1?card=pi-1`);
+  });
+
+  it('Arquivar e Desarquivar só aparecem quando a página pede', async () => {
+    const onArquivar = vi.fn();
+    montar({ onArquivar });
+    await abrirMenu();
+    expect(screen.queryByRole('menuitem', { name: 'Desarquivar' })).toBeNull();
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Arquivar' }));
+    expect(onArquivar).toHaveBeenCalled();
+  });
+});

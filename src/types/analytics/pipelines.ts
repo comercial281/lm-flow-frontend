@@ -103,8 +103,6 @@ export interface PipelineStage {
   position: number;
   pipeline_id?: string;
   stage_type?: string;
-  /** Etapa que encerra o lead, pela regra do servidor. null = não é final. */
-  final?: 'won' | 'lost' | null;
   automation_rules?: {
     description?: string;
   };
@@ -153,6 +151,8 @@ export interface Pipeline {
     avatar_url?: string;
   };
   team_ids?: string[];
+  /** Números das abas do quadro; só vem no `GET /pipelines/:id`. */
+  status_counts?: PipelineStatusCounts;
 }
 
 export interface PipelineStats {
@@ -227,6 +227,31 @@ export interface PipelineStats {
   active_pipelines: number;
 }
 
+/**
+ * Situação do card, separada da etapa (spec funil §3): o card perdido na
+ * Proposta continua na coluna Proposta, com o selo PERDIDO.
+ */
+export type PipelineItemStatus = 'open' | 'won' | 'lost';
+
+/** O que o quadro pede ao servidor por aba (`GET /pipelines/:id?status=`). */
+export type PipelineBoardStatus = PipelineItemStatus | 'all' | 'archived';
+
+/** Números das abas do quadro. `all` = abertos + ganhos + perdidos, sem os arquivados. */
+export interface PipelineStatusCounts {
+  open: number;
+  won: number;
+  lost: number;
+  all: number;
+  archived: number;
+}
+
+/** Corpo do PATCH de situação. Perdido exige o motivo (opção ativa de `loss_reasons`). */
+export interface SetItemStatusData {
+  status: PipelineItemStatus;
+  reason_option_id?: string;
+  note?: string;
+}
+
 export interface PipelineItem {
   id: string;
   item_id: string; // conversation_id or contact_id
@@ -297,6 +322,23 @@ export interface PipelineItem {
   position?: number; // ordem manual no kanban (epoch da chegada por padrão)
   entered_at?: number;
   completed_at?: number | null;
+  /**
+   * Situação do card. Opcional só porque o quadro pinta primeiro o payload
+   * guardado no navegador (pipelinePayloadCache), que pode ser de antes desta
+   * entrega: sem o campo, o card conta como aberto (`situacaoDe`).
+   */
+  status?: PipelineItemStatus;
+  status_changed_at?: string | null;
+  won_at?: string | null;
+  lost_at?: string | null;
+  lost_reason?: { id: string; label: string } | null;
+  lost_note?: string | null;
+  /** Preenchido só nos cards arquivados (aba Arquivados). */
+  archived_at?: string | null;
+  /** Preço estimado do negócio, decimal em texto ("450000.0"). Só a página do card edita (E4). */
+  estimated_value?: string | null;
+  /** Data de fechamento esperada, dia de calendário "AAAA-MM-DD" (E4). */
+  expected_close_on?: string | null;
   days_in_pipeline?: number;
   days_in_current_stage?: number;
   services_info?: {
@@ -518,3 +560,32 @@ export interface UpdateServiceDefinitionData {
 }
 
 export interface ServiceDefinitionsResponse extends StandardResponse<PipelineServiceDefinition[]> {}
+
+/** Dias que o card passou numa etapa (GET de um card, E4). Só vem etapa visitada. */
+export interface StageDuration {
+  stage_id: string;
+  /** Dias completos, somando idas e voltas. */
+  days: number;
+  /** A etapa onde o card está (conta até agora; no card fechado, até o fechamento). */
+  current: boolean;
+}
+
+/** GET /pipelines/:pipeline_id/pipeline_items/:id — a página "card completo". */
+export interface PipelineItemDetail {
+  item: PipelineItem;
+  stage_durations: StageDuration[];
+  pipeline: { id: string; name: string; stages: PipelineStage[] };
+}
+/**
+ * Um card ABERTO do lead (`GET /pipelines/open_cards_by_contact/:id`): a tela
+ * Propostas pergunta "De qual atendimento é esta proposta?" quando há mais de um
+ * (ajuste de 08/10/2026).
+ */
+export interface OpenCardOfContact {
+  id: string;
+  pipeline_id: string;
+  pipeline_name: string | null;
+  stage_id: string;
+  stage_name: string | null;
+  created_at: string | null;
+}

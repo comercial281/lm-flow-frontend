@@ -11,6 +11,7 @@ import {
   type Atendimento,
 } from '@/features/cardDoLead/cardDoLead';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
+import { comSituacaoNova } from '@/features/pipelines/situacao/situacao';
 
 interface Props {
   contactId: string | null;
@@ -143,6 +144,15 @@ export default function CardDoContato({ contactId, onOpenChange, onMudou }: Prop
         setCarregado(c =>
           c?.tipo === 'atendimentos'
             ? { ...c, lista: c.lista.map(a => (a.item.id === itemId ? { ...a, item: { ...a.item, stage_id: etapaId } } : a)) }
+            : c,
+        );
+      }}
+      // Ganho/Perdido/Reabrir: a lista guarda o card com a situação nova.
+      onItemStatusChanged={novo => {
+        setMudou(true);
+        setCarregado(c =>
+          c?.tipo === 'atendimentos'
+            ? { ...c, lista: c.lista.map(a => (a.item.id === novo.id ? { ...a, item: comSituacaoNova(a.item, novo) } : a)) }
             : c,
         );
       }}
