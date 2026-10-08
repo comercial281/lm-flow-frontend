@@ -63,8 +63,11 @@ export default function FaixaDeEtapas({
         {etapas.map((etapa, i) => {
           const atual = i === indiceAtual;
           const pintada = indiceAtual >= 0 && i <= indiceAtual;
+          const duracao = porEtapa.get(String(etapa.id));
           // Concluído não soma dias (o relógio para no Ganho, P4-T1): ali só "atual".
-          const dias = ehColunaDeGanho(etapa) ? '' : textoDosDias(porEtapa.get(String(etapa.id)));
+          // Etapa já passada com menos de 1 dia (o lead só atravessou) fica só pintada (08/10).
+          const soAtravessou = !atual && !!duracao && duracao.days < 1;
+          const dias = ehColunaDeGanho(etapa) || soAtravessou ? '' : textoDosDias(duracao);
           const classe = cn(
             'w-full min-w-[120px] rounded-lg border px-3 py-2 text-left',
             atual
