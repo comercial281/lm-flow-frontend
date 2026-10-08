@@ -103,7 +103,7 @@ describe('Intenção', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Editar o caminho Moradia' }));
     await userEvent.clear(screen.getByLabelText('Como ela conduz'));
     expect(salvar()).toBeDisabled();
-    expect(screen.getByText('Escreva como ela conduz quem segue este caminho.')).toBeInTheDocument();
+    expect(screen.getByText(/Escreva como ela conduz quem segue este caminho/)).toBeInTheDocument();
   });
 
   it('caminho do catálogo não se remove; o próprio sim', async () => {
@@ -143,6 +143,43 @@ describe('Intenção', () => {
     const lista = [...catalogo(['moradia']), proprio('A'), proprio('B'), proprio('C'), proprio('D')];
     abrir(agente({ playbook: { vars: { caminhos_intencao: lista } } }));
     expect(screen.getByRole('button', { name: /Novo caminho/ })).toBeDisabled();
+  });
+
+  it('se o servidor recusar, a janela fica aberta com o texto digitado', async () => {
+    const gravar = abrir();
+    await userEvent.click(screen.getByRole('button', { name: 'Editar o caminho Moradia' }));
+    await userEvent.type(screen.getByLabelText('Como ela conduz'), ' Texto novo.');
+    gravar.falhar();
+    await userEvent.click(salvar());
+    expect(gravar).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByLabelText('Como ela conduz')).toHaveValue('Descubra pra quem é. Texto novo.');
+  });
+
+  it('caminho com o texto inicial antigo: o chip abre a janela e o texto conta como vazio', async () => {
+    const gravar = abrir(agente({ playbook: { vars: { caminhos_intencao: [...catalogo(['moradia']), { nome: 'Velho', sinais: '', como: 'Escreva como ela conduz quem segue este caminho.', ativo: false }] } } }));
+    await userEvent.click(screen.getByRole('button', { name: 'Marcar o caminho Velho' }));
+    expect(gravar).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Como ela conduz')).toHaveValue('');
+    expect(salvar()).toBeDisabled();
+  });
+
+  it('nome "Sondando" é bloqueado; nome repetido com espaços sobrando também', async () => {
+    abrir();
+    await userEvent.click(screen.getByRole('button', { name: /Novo caminho/ }));
+    await userEvent.type(screen.getByLabelText('Como ela conduz'), 'x');
+    await userEvent.type(screen.getByLabelText('Nome do caminho'), 'Sondando mais');
+    expect(screen.getByText(/Sondando já é fixo/)).toBeInTheDocument();
+    expect(salvar()).toBeDisabled();
+    await userEvent.clear(screen.getByLabelText('Nome do caminho'));
+    await userEvent.type(screen.getByLabelText('Nome do caminho'), ' Primeiro   imóvel ');
+    expect(screen.getByText('Já existe um caminho com esse nome.')).toBeInTheDocument();
+    expect(salvar()).toBeDisabled();
+  });
+
+  it('o resumo considera o modo "Não pergunta"', () => {
+    abrir(agente({ playbook: { intent_question_mode: 'never' } }));
+    expect(screen.getByText('Com dois ou mais marcados, ela descobre o caminho pelo que o lead fala.')).toBeInTheDocument();
   });
 
   it('"Voltar ao padrão" grava o padrão do tipo de venda', async () => {

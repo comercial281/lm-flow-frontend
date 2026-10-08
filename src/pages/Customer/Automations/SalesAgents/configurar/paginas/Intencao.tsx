@@ -33,6 +33,13 @@ const FORA: { valor: ForaDosCaminhos; rotulo: string }[] = [
 ];
 const SEM_PERGUNTA = 'Com um caminho só ela não pergunta. Escreva aqui se quiser que ela abra com uma pergunta.';
 const MAXIMO_GUARDADOS = 8;
+// Texto inicial de uma versão anterior (o caminho novo nascia com ele). Caminho velho
+// ainda pode tê-lo: conta como vazio, e o chip abre a janela em vez de marcar.
+const COMO_LEGADO = 'Escreva como ela conduz quem segue este caminho.';
+const NOMES_DO_CATALOGO = ['Moradia', 'Investimento', 'Primeiro imóvel', 'Trocar de imóvel'];
+// O servidor compara nome sem caixa e sem espaço sobrando: igual a isto, descarta em silêncio.
+const normalizar = (n: string) => n.trim().replace(/\s+/g, ' ').toLowerCase();
+const comoEscrito = (c: string) => (c.trim() === COMO_LEGADO ? '' : c);
 const MAXIMO_MARCADOS = 5;
 const iguais = (a: CaminhoDaIntencao[], b: CaminhoDaIntencao[]) =>
   a.length === b.length && a.every((c, i) => {
@@ -41,23 +48,36 @@ const iguais = (a: CaminhoDaIntencao[], b: CaminhoDaIntencao[]) =>
   });
 
 // Janela de edição (ou de criação, com `inicial` nulo). Estado local: nada grava até o Salvar.
-function JanelaDoCaminho({ inicial, outrosNomes, podeMarcar, aoSalvar, aoRemover, aoFechar }: {
+function JanelaDoCaminho({ inicial, outrosNomes, nomesDoCatalogo, podeMarcar, aoSalvar, aoRemover, aoFechar }: {
   inicial: CaminhoDaIntencao | null;
   outrosNomes: string[];
+  nomesDoCatalogo: string[];
   podeMarcar: boolean;
-  aoSalvar: (c: CaminhoDaIntencao) => void;
-  aoRemover?: () => void;
+  aoSalvar: (c: CaminhoDaIntencao) => Promise<boolean>;
+  aoRemover?: () => Promise<boolean>;
   aoFechar: () => void;
 }) {
   const [nome, setNome] = useState(inicial?.nome ?? '');
   const [sinais, setSinais] = useState(inicial?.sinais ?? '');
-  const [como, setComo] = useState(inicial?.como ?? '');
+  const [como, setComo] = useState(comoEscrito(inicial?.como ?? ''));
   const [ativo, setAtivo] = useState(inicial ? inicial.ativo !== false : false);
-  const repetido = outrosNomes.includes(nome.trim().toLowerCase());
-  const valido = !!nome.trim() && !!como.trim() && !repetido;
+  const [gravando, setGravando] = useState(false);
+  const chave = normalizar(nome);
+  const repetido = outrosNomes.includes(chave);
+  const sondando = chave.startsWith('sondando');
+  // Próprio não pode ter nome de catálogo (o servidor descarta); o do catálogo mantém o seu.
+  const doCatalogo = !inicial?.chave && nomesDoCatalogo.includes(chave);
+  const erroDoNome = sondando ? 'Sondando já é fixo: ela sempre atende quem ainda não sabe.'
+    : repetido || doCatalogo ? 'Já existe um caminho com esse nome.' : undefined;
+  const valido = !!nome.trim() && !!como.trim() && !erroDoNome;
+  // Só fecha depois que o servidor aceitou: se falhar, o que foi escrito continua na janela.
+  const terminar = async (acao: () => Promise<boolean>) => {
+    setGravando(true);
+    try { if (await acao()) aoFechar(); } finally { setGravando(false); }
+  };
   const salvar = () => {
     if (!valido) return;
-    aoSalvar({ ...inicial, nome: nome.trim(), sinais: sinais.trim(), como: como.trim(), ativo });
+    void terminar(() => aoSalvar({ ...inicial, nome: nome.trim(), sinais: sinais.trim(), como: como.trim(), ativo }));
   };
   return (
     <Dialog open onOpenChange={(aberto) => { if (!aberto) aoFechar(); }}>
@@ -65,11 +85,11 @@ function JanelaDoCaminho({ inicial, outrosNomes, podeMarcar, aoSalvar, aoRemover
         <DialogHeader><DialogTitle>{inicial ? 'Editar caminho' : 'Novo caminho'}</DialogTitle></DialogHeader>
         <div className="flex flex-col gap-4">
           <CampoTexto id="caminho-nome" rotulo="Nome do caminho" valor={nome} aoMudar={setNome} maxLength={40}
-            erro={repetido ? 'Já existe um caminho com esse nome.' : undefined} />
+            erro={erroDoNome} />
           <CampoTextoLongo id="caminho-sinais" rotulo="Como reconhecer" valor={sinais} aoMudar={setSinais} rows={3} maxLength={300}
             ajuda="Pistas na fala do lead que mostram este caminho." />
-          <CampoTextoLongo id="caminho-como" rotulo="Como ela conduz" valor={como} aoMudar={setComo} rows={7} maxLength={700}
-            ajuda={!como.trim() ? 'Escreva como ela conduz quem segue este caminho.' : undefined} />
+          <CampoTextoLongo id="caminho-como" rotulo="Como ela conduz" valor={como} aoMudar={setComo} rows={6} maxLength={700}
+            ajuda={!como.trim() ? 'Escreva como ela conduz quem segue este caminho. Escreva corrido, num parágrafo só.' : 'Escreva corrido, num parágrafo só.'} />
           <div className="flex items-center gap-2">
             <Checkbox id="caminho-marcado" checked={ativo} disabled={!ativo && !podeMarcar} onCheckedChange={(v) => setAtivo(v === true)} />
             <label htmlFor="caminho-marcado" className="text-sm">Marcado</label>
@@ -78,11 +98,11 @@ function JanelaDoCaminho({ inicial, outrosNomes, podeMarcar, aoSalvar, aoRemover
         </div>
         <DialogFooter className="gap-2 sm:justify-between">
           <div>
-            {aoRemover && <Button type="button" variant="outline" className="text-destructive" onClick={aoRemover}>Remover caminho</Button>}
+            {aoRemover && <Button type="button" variant="outline" className="text-destructive" onClick={() => void terminar(aoRemover)} disabled={gravando}>Remover caminho</Button>}
           </div>
           <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={aoFechar}>Cancelar</Button>
-            <Button type="button" disabled={!valido} onClick={salvar}>Salvar</Button>
+            <Button type="button" variant="outline" disabled={gravando} onClick={aoFechar}>Cancelar</Button>
+            <Button type="button" disabled={!valido || gravando} onClick={salvar}>Salvar</Button>
           </div>
         </DialogFooter>
       </DialogContent>
@@ -106,15 +126,16 @@ export default function Intencao({ agent, gravar }: PropsDaPagina) {
   const [janela, setJanela] = useState<number | 'novo' | null>(null);
   const emEdicao = typeof janela === 'number' ? caminhos[janela] : undefined;
   const fechar = () => setJanela(null);
-  const salvarJanela = (c: CaminhoDaIntencao) => {
-    // Edita no lugar; o novo vai ao fim (a ordem do catálogo nunca muda).
-    void gravarCaminhos(typeof janela === 'number' ? caminhos.map((x, j) => (j === janela ? c : x)) : [...caminhos, c]);
-    fechar();
-  };
+  // Edita no lugar; o novo vai ao fim (a ordem do catálogo nunca muda).
+  const salvarJanela = (c: CaminhoDaIntencao) =>
+    gravarCaminhos(typeof janela === 'number' ? caminhos.map((x, j) => (j === janela ? c : x)) : [...caminhos, c]);
   const marcadosFora = caminhos.filter((c, j) => c.ativo !== false && j !== janela).length;
-  const nomesFora = caminhos.filter((_, j) => j !== janela).map((c) => c.nome.trim().toLowerCase());
-  const resumo = marcados >= 2 ? 'Com dois ou mais marcados, ela pergunta e descobre o caminho.'
-    : marcados === 1 ? `Com um marcado, ela conduz direto por ${caminhos.find((c) => c.ativo !== false)?.nome}.`
+  const nomesFora = caminhos.filter((_, j) => j !== janela).map((c) => normalizar(c.nome));
+  const nomesDoCatalogo = [...NOMES_DO_CATALOGO, ...caminhos.filter((c) => c.chave).map((c) => c.nome)].map(normalizar);
+  const primeiro = caminhos.find((c) => c.ativo !== false)?.nome;
+  const perguntaPropria = !!agent.intent_question?.trim() && modo !== 'never';
+  const resumo = marcados >= 2 ? (modo === 'never' ? 'Com dois ou mais marcados, ela descobre o caminho pelo que o lead fala.' : 'Com dois ou mais marcados, ela pergunta e descobre o caminho.')
+    : marcados === 1 ? `Com um caminho só, ela conduz direto por ${primeiro}${perguntaPropria ? ', depois de fazer a sua pergunta.' : '.'}`
     : 'Nenhum marcado: ela qualifica pelo que o lead falar.';
 
   return (
@@ -134,30 +155,31 @@ export default function Intencao({ agent, gravar }: PropsDaPagina) {
           {caminhos.map((c, i) => {
             const marcado = c.ativo !== false;
             const cheio = !marcado && marcados >= MAXIMO_MARCADOS;
+            const legado = !marcado && c.como.trim() === COMO_LEGADO;
             return (
               <li key={c.chave ?? `proprio-${i}`}
                 className={`flex items-center rounded-full border text-sm ${marcado ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background'}`}>
                 <button type="button" aria-pressed={marcado} aria-label={`Marcar o caminho ${c.nome}`} disabled={cheio}
-                  title={cheio ? `Até ${MAXIMO_MARCADOS} marcados: desmarque outro antes` : undefined}
-                  className="flex items-center gap-1.5 rounded-l-full py-1.5 pl-3 pr-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={() => void trocar(i, { ativo: !marcado })}>
+                  title={cheio ? `Até ${MAXIMO_MARCADOS} marcados: desmarque outro antes` : legado ? 'Escreva como ela conduz antes de marcar' : undefined}
+                  className="flex items-center gap-1.5 rounded-l-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring py-1.5 pl-3 pr-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => (legado ? setJanela(i) : void trocar(i, { ativo: !marcado }))}>
                   {marcado && <Check className="h-4 w-4" aria-hidden />}
                   {c.nome}
                 </button>
-                <button type="button" aria-label={`Editar o caminho ${c.nome}`} className="rounded-r-full py-1.5 pl-1 pr-2.5 opacity-80 hover:opacity-100"
+                <button type="button" aria-label={`Editar o caminho ${c.nome}`} className="rounded-r-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring py-1.5 pl-1 pr-2.5 opacity-80 hover:opacity-100"
                   onClick={() => setJanela(i)}>
                   <Pencil className="h-3.5 w-3.5" aria-hidden />
                 </button>
               </li>
             );
           })}
-          <li>
-            <Button type="button" variant="outline" className="h-auto rounded-full border-dashed px-3 py-1.5 text-primary" disabled={caminhos.length >= MAXIMO_GUARDADOS}
-              onClick={() => setJanela('novo')}>
-              <Plus className="mr-1 h-4 w-4" aria-hidden /> Novo caminho
-            </Button>
-          </li>
         </ul>
+        <div>
+          <Button type="button" variant="outline" className="h-auto rounded-full border-dashed px-3 py-1.5 text-primary" disabled={caminhos.length >= MAXIMO_GUARDADOS}
+            onClick={() => setJanela('novo')}>
+            <Plus className="mr-1 h-4 w-4" aria-hidden /> Novo caminho
+          </Button>
+        </div>
         <p className="text-sm text-muted-foreground">{resumo}</p>
         <p className="text-sm text-muted-foreground">Quem ainda não sabe o que quer, ela sempre atende sem pressão. Não precisa marcar.</p>
         <div className="flex flex-wrap items-center gap-3">
@@ -169,9 +191,9 @@ export default function Intencao({ agent, gravar }: PropsDaPagina) {
       </Secao>
 
       {janela !== null && (
-        <JanelaDoCaminho key={String(janela)} inicial={emEdicao ?? null} outrosNomes={nomesFora} podeMarcar={marcadosFora < MAXIMO_MARCADOS}
+        <JanelaDoCaminho key={String(janela)} inicial={emEdicao ?? null} outrosNomes={nomesFora} nomesDoCatalogo={nomesDoCatalogo} podeMarcar={marcadosFora < MAXIMO_MARCADOS}
           aoSalvar={salvarJanela} aoFechar={fechar}
-          aoRemover={emEdicao && !emEdicao.chave ? () => { void gravarCaminhos(caminhos.filter((_, j) => j !== janela)); fechar(); } : undefined} />
+          aoRemover={emEdicao && !emEdicao.chave ? () => gravarCaminhos(caminhos.filter((_, j) => j !== janela)) : undefined} />
       )}
 
       {marcados > 0 && (
