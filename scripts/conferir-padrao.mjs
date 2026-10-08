@@ -24,7 +24,7 @@
 
 import ts from 'typescript';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, dirname, relative, sep, basename } from 'node:path';
+import { join, dirname, relative, sep, basename, posix } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const RAIZ = process.env.CONFERIR_PADRAO_RAIZ || join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -346,6 +346,27 @@ export function tagsJsx(codigo, arquivo = 'x.tsx') {
   return achados;
 }
 
+// A tela usa a moldura da casa só se IMPORTA a Pagina de lá (um `const Pagina = X`
+// local não vale). Aceita '@/components/base' (nomeado), '@/components/base/Pagina'
+// (default ou nomeado) e caminho relativo que resolva pra src/components/base/Pagina.
+export function importaPaginaDaCasa(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const dir = posix.dirname(arquivo);
+  return fonte.statements.some(no => {
+    if (!ts.isImportDeclaration(no) || !ts.isStringLiteral(no.moduleSpecifier)) return false;
+    const clausula = no.importClause;
+    if (!clausula) return false;
+    let mod = no.moduleSpecifier.text;
+    if (mod.startsWith('.')) mod = posix.normalize(posix.join(dir, mod));
+    else if (mod.startsWith('@/')) mod = 'src/' + mod.slice(2);
+    const nomeados = clausula.namedBindings && ts.isNamedImports(clausula.namedBindings) ? clausula.namedBindings.elements : [];
+    const nomeadoPagina = nomeados.some(e => (e.propertyName ?? e.name).text === 'Pagina' && e.name.text === 'Pagina');
+    if (['src/components/base', 'src/components/base/index'].includes(mod)) return nomeadoPagina;
+    if (mod === 'src/components/base/Pagina') return nomeadoPagina || clausula.name?.text === 'Pagina';
+    return false;
+  });
+}
+
 export function botoesSemNome(codigo, arquivo = 'x.tsx') {
   const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
   const achados = [];
@@ -456,7 +477,7 @@ export function varrer() {
       }
       if (!embrulhos.has(rel) && rel !== CABECALHO_DA_CASA && rel !== MOLDURA_DA_CASA) {
         const cab = tags.find(x => cabecalhos.has(x.tag));
-        if (cab && !tags.some(x => x.tag === 'Pagina')) {
+        if (cab && !(tags.some(x => x.tag === 'Pagina') && importaPaginaDaCasa(codigo, rel))) {
           anotar('foraDaMoldura', rel, cab.linha, 'cabeçalho fora da moldura', linhas[cab.linha - 1].trim());
         }
       }

@@ -238,7 +238,9 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
         </div>
       );`,
     );
-    writeFileSync(join(raiz, 'src/pages/Customer/ComMoldura.tsx'), 'export const C = () => <Pagina cabecalho={<CoisasHeader />} />;');
+    writeFileSync(join(raiz, 'src/pages/Customer/ComMoldura.tsx'), "import { Pagina } from '@/components/base';\nexport const C = () => <Pagina cabecalho={<CoisasHeader />} />;");
+    // Pagina local (const Pagina = X), sem o import da casa: NÃO é a moldura
+    writeFileSync(join(raiz, 'src/pages/Customer/PaginaLocal.tsx'), 'const Pagina = COMPONENTES[atual];\nexport const L = () => <Pagina><BaseHeader title={nome} /></Pagina>;');
     writeFileSync(join(raiz, 'src/pages/Customer/SemMoldura.tsx'), 'export const S = () => <div><CoisasHeader /></div>;');
     writeFileSync(join(raiz, 'src/pages/Customer/DiretoSemMoldura.tsx'), 'export const D = () => <BaseHeader title={nome} />;');
     // A lista nativa conta no app inteiro: painel raiz e sobra contam; o widget,
@@ -298,13 +300,13 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     expect(contagem(saida, 'iconeSemNome')).toBe(1);
     expect(contagem(saida, 'tituloAMao')).toBe(1); // TituloAMao.tsx (o do BaseHeader não conta)
     expect(contagem(saida, 'barraAMao')).toBe(1); // TituloAMao.tsx (a do BaseHeader não conta)
-    expect(contagem(saida, 'foraDaMoldura')).toBe(2); // SemMoldura + DiretoSemMoldura (wrapper e ComMoldura não contam)
+    expect(contagem(saida, 'foraDaMoldura')).toBe(3); // SemMoldura + DiretoSemMoldura + PaginaLocal (wrapper e ComMoldura, que importa a Pagina da casa, não contam)
     // <select> e <NativeSelect> de Lista.tsx + painel raiz (Filtro.tsx) + sobra (Herdado.tsx)
     expect(contagem(saida, 'selectNativo')).toBe(4);
   });
 
   it('PASSA no teto exato e REPROVA um abaixo', () => {
-    const exato = { tecnico: 1, glossario: 1, plural: 1, acento: 1, maiusculas: 1, formato: 1, chaveMao: 1, iconeSemNome: 1, selectNativo: 4, tituloAMao: 1, barraAMao: 1, foraDaMoldura: 2 };
+    const exato = { tecnico: 1, glossario: 1, plural: 1, acento: 1, maiusculas: 1, formato: 1, chaveMao: 1, iconeSemNome: 1, selectNativo: 4, tituloAMao: 1, barraAMao: 1, foraDaMoldura: 3 };
     expect(rodar(['--tetos', tetos(exato)]).codigo).toBe(0);
     const { saida, codigo } = rodar(['--tetos', tetos({ ...exato, glossario: 0 })]);
     expect(codigo).toBe(1);
