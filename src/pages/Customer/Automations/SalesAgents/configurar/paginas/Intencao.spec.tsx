@@ -45,59 +45,104 @@ describe('Intenção', () => {
     expect(screen.getByLabelText('Pergunta')).toHaveAttribute('placeholder', 'Pergunta gerada?');
   });
 
-  it('mostra o catálogo com caixinhas; desmarcar grava a lista inteira', async () => {
+  const proprio = (nome: string, ativo = false): CaminhoDaIntencao => ({ nome, sinais: '', como: 'x', ativo });
+  const salvar = () => screen.getByRole('button', { name: 'Salvar' });
+
+  it('mostra o catálogo em chips; clicar desmarca e grava a lista inteira na mesma ordem', async () => {
     const gravar = abrir();
-    expect(screen.getByRole('checkbox', { name: 'Marcar o caminho Moradia' })).toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'Marcar o caminho Primeiro imóvel' })).not.toBeChecked();
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Marcar o caminho Investimento' }));
+    expect(screen.getByRole('button', { name: 'Marcar o caminho Moradia' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Marcar o caminho Primeiro imóvel' })).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(screen.getByRole('button', { name: 'Marcar o caminho Investimento' }));
     expect(gravar.mock.calls[0][1]).toEqual(['playbook.vars.caminhos_intencao']);
     const lista = listaGravada(gravar);
-    expect(lista).toHaveLength(4);
+    expect(lista.map((c) => c.chave)).toEqual(['moradia', 'investimento', 'primeiro_imovel', 'troca']);
     expect(lista.filter((c) => c.ativo).map((c) => c.chave)).toEqual(['moradia']);
   });
 
-  it('editar "Como reconhecer" grava as pistas do caminho', async () => {
-    const gravar = abrir();
-    const campo = screen.getByLabelText('Como reconhecer o caminho Moradia');
-    await userEvent.clear(campo);
-    await userEvent.type(campo, 'filhos');
-    await userEvent.click(screen.getByText('fora'));
-    expect(listaGravada(gravar)[0].sinais).toBe('filhos');
-  });
-
-  it('caminho do catálogo não se remove; o próprio sim', () => {
-    abrir(agente({ playbook: { vars: { caminhos_intencao: [...catalogo(['moradia']), { nome: 'Já mora no Castelo', sinais: '', como: 'x', ativo: true }] } } }));
-    expect(screen.queryByRole('button', { name: 'Remover o caminho Moradia' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Remover o caminho Já mora no Castelo' })).toBeInTheDocument();
-  });
-
-  it('no máximo 5 marcados: a caixinha desmarcada trava', () => {
-    const lista = [...catalogo(['moradia', 'investimento', 'primeiro_imovel', 'troca']),
-      { nome: 'P1', como: 'x', ativo: true }, { nome: 'P2', como: 'x', ativo: false }];
+  it('no máximo 5 marcados: o chip desmarcado trava', () => {
+    const lista = [...catalogo(['moradia', 'investimento', 'primeiro_imovel', 'troca']), proprio('P1', true), proprio('P2')];
     abrir(agente({ playbook: { vars: { caminhos_intencao: lista } } }));
-    expect(screen.getByRole('checkbox', { name: 'Marcar o caminho P2' })).toBeDisabled();
-    expect(screen.getByRole('checkbox', { name: 'Marcar o caminho P1' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Marcar o caminho P2' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Marcar o caminho P1' })).not.toBeDisabled();
   });
 
-  it('"Novo caminho" entra desmarcado; até 8 guardados', async () => {
+  it('o resumo diz o que ela faz conforme os marcados', () => {
+    abrir();
+    expect(screen.getByText(/ela pergunta e descobre o caminho/)).toBeInTheDocument();
+  });
+
+  it('o lápis abre a janela com os valores; editar e Salvar grava a lista uma vez', async () => {
     const gravar = abrir();
-    await userEvent.click(screen.getByRole('button', { name: 'Novo caminho' }));
-    expect(listaGravada(gravar).at(-1)).toEqual({
-      nome: 'Novo caminho', sinais: '', como: 'Escreva como ela conduz quem segue este caminho.', ativo: false,
-    });
+    await userEvent.click(screen.getByRole('button', { name: 'Editar o caminho Moradia' }));
+    expect(screen.getByLabelText('Nome do caminho')).toHaveValue('Moradia');
+    expect(screen.getByLabelText('Como reconhecer')).toHaveValue('família');
+    expect(screen.getByLabelText('Como ela conduz')).toHaveValue('Descubra pra quem é.');
+    await userEvent.clear(screen.getByLabelText('Como reconhecer'));
+    await userEvent.type(screen.getByLabelText('Como reconhecer'), 'filhos');
+    await userEvent.clear(screen.getByLabelText('Como ela conduz'));
+    await userEvent.type(screen.getByLabelText('Como ela conduz'), 'Pergunte as salas.');
+    expect(gravar).not.toHaveBeenCalled();
+    await userEvent.click(salvar());
+    expect(gravar).toHaveBeenCalledTimes(1);
+    const lista = listaGravada(gravar);
+    expect(lista[0]).toMatchObject({ chave: 'moradia', nome: 'Moradia', sinais: 'filhos', como: 'Pergunte as salas.', ativo: true });
+    expect(lista.map((c) => c.chave)).toEqual(['moradia', 'investimento', 'primeiro_imovel', 'troca']);
   });
 
-  it('cada "Novo caminho" ganha nome livre (sem repetir, sem diferença de caixa)', async () => {
-    const proprio = (nome: string): CaminhoDaIntencao => ({ nome, sinais: '', como: 'x', ativo: false });
-    const gravar = abrir(agente({ playbook: { vars: { caminhos_intencao: [...catalogo(['moradia']), proprio('Novo caminho'), proprio('novo caminho 2')] } } }));
-    await userEvent.click(screen.getByRole('button', { name: 'Novo caminho' }));
-    expect(listaGravada(gravar).at(-1)?.nome).toBe('Novo caminho 3');
+  it('Cancelar não grava', async () => {
+    const gravar = abrir();
+    await userEvent.click(screen.getByRole('button', { name: 'Editar o caminho Moradia' }));
+    await userEvent.type(screen.getByLabelText('Como reconhecer'), ' mais');
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(gravar).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('o primeiro "Novo caminho" com a lista já tendo um ganha o 2', async () => {
-    const gravar = abrir(agente({ playbook: { vars: { caminhos_intencao: [...catalogo(['moradia']), { nome: 'Novo caminho', sinais: '', como: 'x', ativo: false }] } } }));
-    await userEvent.click(screen.getByRole('button', { name: 'Novo caminho' }));
-    expect(listaGravada(gravar).at(-1)?.nome).toBe('Novo caminho 2');
+  it('Salvar fica travado com "Como ela conduz" vazio', async () => {
+    abrir();
+    await userEvent.click(screen.getByRole('button', { name: 'Editar o caminho Moradia' }));
+    await userEvent.clear(screen.getByLabelText('Como ela conduz'));
+    expect(salvar()).toBeDisabled();
+    expect(screen.getByText('Escreva como ela conduz quem segue este caminho.')).toBeInTheDocument();
+  });
+
+  it('caminho do catálogo não se remove; o próprio sim', async () => {
+    const gravar = abrir(agente({ playbook: { vars: { caminhos_intencao: [...catalogo(['moradia']), proprio('Já mora no Castelo', true)] } } }));
+    await userEvent.click(screen.getByRole('button', { name: 'Editar o caminho Moradia' }));
+    expect(screen.queryByRole('button', { name: 'Remover caminho' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Editar o caminho Já mora no Castelo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remover caminho' }));
+    expect(listaGravada(gravar).map((c) => c.nome)).toEqual(['Moradia', 'Investimento', 'Primeiro imóvel', 'Trocar de imóvel']);
+  });
+
+  it('"Novo caminho" abre vazio e Salvar entra no fim, desmarcado', async () => {
+    const gravar = abrir();
+    await userEvent.click(screen.getByRole('button', { name: /Novo caminho/ }));
+    expect(salvar()).toBeDisabled();
+    await userEvent.type(screen.getByLabelText('Nome do caminho'), 'Já mora no Castelo');
+    expect(salvar()).toBeDisabled();
+    await userEvent.type(screen.getByLabelText('Como ela conduz'), 'Pergunte as salas.');
+    await userEvent.click(salvar());
+    const lista = listaGravada(gravar);
+    expect(lista).toHaveLength(5);
+    expect(lista.at(-1)).toEqual({ nome: 'Já mora no Castelo', sinais: '', como: 'Pergunte as salas.', ativo: false });
+  });
+
+  it('nome repetido (sem diferença de caixa) bloqueia o Salvar', async () => {
+    const gravar = abrir();
+    await userEvent.click(screen.getByRole('button', { name: /Novo caminho/ }));
+    await userEvent.type(screen.getByLabelText('Nome do caminho'), 'moradia');
+    await userEvent.type(screen.getByLabelText('Como ela conduz'), 'x');
+    expect(screen.getByText('Já existe um caminho com esse nome.')).toBeInTheDocument();
+    expect(salvar()).toBeDisabled();
+    expect(gravar).not.toHaveBeenCalled();
+  });
+
+  it('com 8 guardados o "Novo caminho" trava', () => {
+    const lista = [...catalogo(['moradia']), proprio('A'), proprio('B'), proprio('C'), proprio('D')];
+    abrir(agente({ playbook: { vars: { caminhos_intencao: lista } } }));
+    expect(screen.getByRole('button', { name: /Novo caminho/ })).toBeDisabled();
   });
 
   it('"Voltar ao padrão" grava o padrão do tipo de venda', async () => {
@@ -127,14 +172,6 @@ describe('Intenção', () => {
   it('sem padrão do servidor: abre em Passar', () => {
     abrir();
     expect(screen.getByRole('radio', { name: 'Passar pro destino (roleta ou corretor)' })).toBeChecked();
-  });
-
-  it('caminho novo com o texto inicial não pode ser marcado até escrever', () => {
-    const novo: CaminhoDaIntencao = { nome: 'Novo caminho', sinais: '', como: 'Escreva como ela conduz quem segue este caminho.', ativo: false };
-    abrir(agente({ playbook: { vars: { caminhos_intencao: [...catalogo(['moradia']), novo, { ...novo, nome: 'Escrito', como: 'Pergunte as salas.' }] } } }));
-    expect(screen.getByRole('checkbox', { name: 'Marcar o caminho Novo caminho' })).toBeDisabled();
-    expect(screen.getByText('Escreva como ela conduz antes de marcar')).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: 'Marcar o caminho Escrito' })).not.toBeDisabled();
   });
 
   it('"Voltar ao padrão" some quando a lista já é o padrão', () => {
