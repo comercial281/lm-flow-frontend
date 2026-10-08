@@ -1,54 +1,42 @@
-// src/pages/Customer/Atividades/Atividades.tsx
+// src/pages/Customer/Tarefas/Tarefas.tsx
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import BaseHeader from '@/components/base/BaseHeader';
 import Pagina from '@/components/base/Pagina';
 import { Seletor } from '@/components/base/Seletor';
-import { ScheduleVisitDialog } from '@/components/visits/ScheduleVisitDialog';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
-import { useUserPermissions } from '@/hooks/useUserPermissions';
-import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { visitsService, type PersonRef } from '@/services/visits/visitsService';
 import JanelaDaTarefa from '@/features/tarefas/JanelaDaTarefa';
 import LinhaDaTarefa from '@/features/tarefas/LinhaDaTarefa';
-import LinhaDaVisita from '@/features/tarefas/LinhaDaVisita';
 import { BALDES, CATEGORIAS_INICIAIS, TEXTOS_DE_TAREFAS as T } from '@/features/tarefas/textos';
 import { EVENTO_TAREFAS_MUDARAM, tarefasService } from '@/features/tarefas/tarefasService';
 import { concluirEPerguntar } from '@/features/tarefas/concluirEPerguntar';
-import type { Atividade, Balde, RespostaDeAtividades, TarefaAtividade, TipoDeAtividade } from '@/features/tarefas/tipos';
+import type { Balde, RespostaDeAtividades, TarefaAtividade } from '@/features/tarefas/tipos';
 
 const POR_PAGINA = 30;
 
 /**
- * Atividades › Lista (Frente 2, 07/10/2026): tarefas e visitas por prazo, no
- * modelo da tela Atividades do Praedium. A Agenda (calendário de visitas) é a
- * outra aba, na mesma moldura. Tarefa abre o card do lead; visita abre o
- * resumo dela na Agenda.
+ * Atividades › Tarefas (08/10/2026): só tarefas por prazo, no modelo da tela
+ * Atividades do Praedium. Visita não aparece aqui: mora em Atividades › Visitas.
+ * Clicar na tarefa abre o card do lead no Funil.
  */
-export default function Atividades() {
+export default function Tarefas() {
   const navigate = useNavigate();
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   // Filtros e página num só estado: mudar filtro volta à página 1 na MESMA
   // atualização, então uma mudança = um pedido.
-  const [f, setF] = useState<{ balde: Balde; tipo: TipoDeAtividade; pessoa: string; categoria: string; buscaFirme: string; pagina: number }>(
-    { balde: 'hoje', tipo: 'all', pessoa: '', categoria: '', buscaFirme: '', pagina: 1 },
+  const [f, setF] = useState<{ balde: Balde; pessoa: string; categoria: string; buscaFirme: string; pagina: number }>(
+    { balde: 'hoje', pessoa: '', categoria: '', buscaFirme: '', pagina: 1 },
   );
-  const { balde, tipo, pessoa, categoria, buscaFirme, pagina } = f;
+  const { balde, pessoa, categoria, buscaFirme, pagina } = f;
   const mudarFiltro = (parte: Partial<typeof f>) => setF(a => ({ ...a, ...parte, pagina: 1 }));
   const [busca, setBusca] = useState('');
   const ultimoPedido = useRef(0);
   const [resposta, setResposta] = useState<RespostaDeAtividades | null>(null);
   const [pessoas, setPessoas] = useState<PersonRef[]>([]);
   const [janela, setJanela] = useState<{ tarefa: TarefaAtividade | null; cardId?: string; categoria?: string } | null>(null);
-  // Visita só pra quem tem a função ligada no cliente e o cargo permite.
-  const { can } = useUserPermissions();
-  const visitasLigadas = useFeature('visits');
-  const podeVerVisitas = visitasLigadas && can('visits', 'read');
-  const criarVisitaLigado = useFeature('visits_create');
-  const podeAgendarVisita = podeVerVisitas && criarVisitaLigado && can('visits', 'create');
-  const [agendandoVisita, setAgendandoVisita] = useState(false);
 
   useEffect(() => {
     const id = window.setTimeout(() => setF(a => (a.buscaFirme === busca.trim() ? a : { ...a, buscaFirme: busca.trim(), pagina: 1 })), 300);
@@ -60,7 +48,7 @@ export default function Atividades() {
     const meu = ++ultimoPedido.current;
     try {
       const nova = await tarefasService.listar({
-        bucket: balde, kind: tipo, page: pagina, per_page: POR_PAGINA,
+        bucket: balde, kind: 'task', page: pagina, per_page: POR_PAGINA,
         ...(pessoa ? { assigned_to_id: pessoa } : {}),
         ...(categoria ? { category: categoria } : {}),
         ...(buscaFirme ? { q: buscaFirme } : {}),
@@ -70,7 +58,7 @@ export default function Atividades() {
     } catch (e) {
       if (meu === ultimoPedido.current) toast.error(apiErrorMessage(e, T.erro));
     }
-  }, [balde, tipo, pessoa, categoria, buscaFirme, pagina]);
+  }, [balde, pessoa, categoria, buscaFirme, pagina]);
 
   useEffect(() => { void carregar(); }, [carregar]);
   useEffect(() => {
@@ -101,22 +89,16 @@ export default function Atividades() {
     aoAbrir: (t: TarefaAtividade) => t.pipeline_id && navigate(`/pipelines/${t.pipeline_id}?card=${t.pipeline_item_id}`),
   };
 
-  const linha = (a: Atividade) =>
-    a.kind === 'task'
-      ? <LinhaDaTarefa key={`t-${a.id}`} tarefa={a} mostrarLead {...acoes} />
-      : <LinhaDaVisita key={`v-${a.id}`} visita={a} aoAbrir={v => navigate(`/visits?visita=${v.id}`)} />;
-
   return (
     <Pagina
       cabecalho={
         <BaseHeader
-          title="Atividades"
-          subtitle="Tarefas e visitas por prazo."
+          title="Tarefas"
+          subtitle="Suas tarefas por prazo."
           searchValue={busca}
           onSearchChange={setBusca}
           searchPlaceholder="Buscar por tarefa ou lead"
           primaryAction={{ label: T.novaTarefa, onClick: () => setJanela({ tarefa: null }) }}
-          secondaryActions={podeAgendarVisita ? [{ label: 'Agendar visita', variant: 'outline', onClick: () => setAgendandoVisita(true) }] : []}
         >
           <div role="group" aria-label="Prazo" className="flex gap-1 overflow-x-auto whitespace-nowrap border-b border-border">
             {BALDES.map(b => (
@@ -133,13 +115,6 @@ export default function Atividades() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {podeVerVisitas && (
-              <Seletor aria-label="Tipo" value={tipo} onChange={e => mudarFiltro({ tipo: e.target.value as TipoDeAtividade })} className="w-40">
-                <option value="all">Tarefas e visitas</option>
-                <option value="task">Só tarefas</option>
-                <option value="visit">Só visitas</option>
-              </Seletor>
-            )}
             <Seletor aria-label="Categoria" value={categoria} onChange={e => mudarFiltro({ categoria: e.target.value })} className="w-48">
               <option value="">Todas as categorias</option>
               {CATEGORIAS_INICIAIS.map(c => <option key={c} value={c}>{c}</option>)}
@@ -158,7 +133,7 @@ export default function Atividades() {
         {resposta && itens.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">{balde === 'hoje' ? 'Nada pra hoje.' : 'Nada por aqui.'}</p>
         ) : (
-          <ul className="divide-y divide-border/60">{itens.map(linha)}</ul>
+          <ul className="divide-y divide-border/60">{itens.map(t => <LinhaDaTarefa key={t.id} tarefa={t} mostrarLead {...acoes} />)}</ul>
         )}
       </div>
 
@@ -179,7 +154,6 @@ export default function Atividades() {
         categoriaInicial={janela?.categoria}
         escolherLead={!janela?.tarefa && !janela?.cardId}
       />
-      {podeAgendarVisita && <ScheduleVisitDialog open={agendandoVisita} onOpenChange={setAgendandoVisita} onCreated={() => void carregar()} />}
       {dialogoDeConfirmacao}
     </Pagina>
   );

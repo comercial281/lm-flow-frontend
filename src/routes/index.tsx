@@ -28,7 +28,7 @@ import {
   GestaoDeProprietarios,
   FichaDoProprietario,
   Visits,
-  Atividades,
+  Tarefas,
   Proposals,
   Contracts,
   PropertyInterests,
@@ -1189,27 +1189,26 @@ const AppRouter = () => {
                 como redirect pra não quebrar link salvo. */}
             <Route path="/landings" element={<Navigate to="/settings/site-builder?tab=landings" replace />} />
 
-            {/* Atividades (Frente 2, 07/10/2026): Lista (tarefas + visitas por
-                prazo) e Agenda (o calendário de visitas, endereço antigo
-                mantido) como abas da mesma página — ver PaginaComAbas. */}
-            <Route element={<PaginaComAbas />}>
-              <Route
-                path="/atividades"
-                element={
-                  <PermissionRoute resource="pipelines" action="read">
-                    <Atividades />
-                  </PermissionRoute>
-                }
-              />
-              <Route
-                path="/visits"
-                element={
-                  <PermissionRoute resource="visits" action="read">
-                    <Visits />
-                  </PermissionRoute>
-                }
-              />
-            </Route>
+            {/* Atividades virou seção do menu (08/10/2026): Tarefas (só tarefas) e
+                Visitas. /atividades fica como redirect pra não quebrar link
+                salvo nem o aviso que o servidor manda. */}
+            <Route path="/atividades" element={<Navigate to="/tarefas" replace />} />
+            <Route
+              path="/tarefas"
+              element={
+                <PermissionRoute resource="pipelines" action="read">
+                  <Tarefas />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/visits"
+              element={
+                <PermissionRoute resource="visits" action="read">
+                  <Visits />
+                </PermissionRoute>
+              }
+            />
 
             <Route
               path="/proposals"

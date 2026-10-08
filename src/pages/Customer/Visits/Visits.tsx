@@ -727,7 +727,7 @@ export default function Visits() {
       <Pagina
         cabecalho={
           <BaseHeader
-            title="Atividades"
+            title="Visitas"
             subtitle={`Visitas marcadas com os leads, no calendário ou em lista. · ${contador}`}
             aDireita={
               <>

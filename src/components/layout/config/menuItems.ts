@@ -218,12 +218,18 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       { name: 'Dashboard', href: '/dashboard', icon: PieChart, ...permissionFromRoute('/dashboard'), featureKey: 'dashboard' },
       { name: 'Conversas', href: '/conversations', icon: MessageSquare, ...permissionFromRoute('/conversations'), featureKey: 'conversations' },
       { name: 'Funil de vendas', href: '/pipelines', icon: SquareKanban, ...permissionFromRoute('/pipelines'), featureKey: 'pipelines' },
-      // Atividades (Frente 2, 07/10/2026): ocupa o lugar de Visitas. Lista
-      // (tarefas + visitas por prazo) e Agenda (o calendário de visitas).
-      itemComAbas({ id: 'customer-atividades', name: 'Atividades', icon: ListTodo }, [
-        { name: 'Lista', href: '/atividades', icon: ListTodo, ...permissionFromRoute('/atividades'), featureKey: 'pipelines' },
-        { name: 'Agenda', href: '/visits', icon: CalendarClock, ...permissionFromRoute('/visits'), featureKey: 'visits' },
-      ]),
+    ],
+  },
+  {
+    // Decisão do dono (08/10/2026): Atividades deixa de ser um item com abas
+    // Lista/Agenda e vira seção (abre e fecha) com Tarefas e Visitas. A tela
+    // Tarefas mostra só tarefas; visita mora só em Visitas.
+    id: 'atividades',
+    rotulo: 'Atividades',
+    icone: ListTodo,
+    itens: [
+      { name: 'Tarefas', href: '/tarefas', icon: ListTodo, ...permissionFromRoute('/tarefas'), featureKey: 'pipelines' },
+      { name: 'Visitas', href: '/visits', icon: CalendarClock, ...permissionFromRoute('/visits'), featureKey: 'visits' },
     ],
   },
   {
