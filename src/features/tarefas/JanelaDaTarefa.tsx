@@ -7,6 +7,7 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import { CATEGORIAS_INICIAIS, TEXTOS_DE_TAREFAS as T } from './textos';
 import { juntarDataEHora, proximaHoraCheia, separarDataEHora } from './prazos';
 import { motivoDoErro, tarefasService } from './tarefasService';
+import { useEhGestor } from './useEhGestor';
 import type { TarefaAtividade } from './tipos';
 
 interface Props {
@@ -24,10 +25,11 @@ interface Props {
 
 /**
  * Criar ou editar tarefa (Frente 2, 07/10/2026). Data e hora livres, no passado
- * ou no futuro. Responsável vazio = o responsável do lead (o servidor decide);
- * a lista de pessoas é a mesma da Agenda, então o corretor isolado só vê ele.
+ * ou no futuro. Só o gestor escolhe o responsável (o servidor só aceita dele);
+ * vazio = o responsável do lead ao criar, e "manter o atual" ao editar.
  */
 export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pipelineItemId, escolherLead, categoriaInicial }: Props) {
+  const ehGestor = useEhGestor();
   const sugestao = proximaHoraCheia();
   const [titulo, setTitulo] = useState('');
   const [categoria, setCategoria] = useState(categoriaInicial ?? CATEGORIAS_INICIAIS[0]);
@@ -49,7 +51,7 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
     setCategoria(tarefa?.category ?? categoriaInicial ?? CATEGORIAS_INICIAIS[0]);
     setData(base.data);
     setHora(base.hora);
-    setResponsavel(tarefa?.assignee?.id ?? '');
+    setResponsavel('');
     setDescricao(tarefa?.description ?? '');
     setLead(null);
     setBusca('');
@@ -68,6 +70,7 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
   const salvar = async () => {
     if (!titulo.trim()) return setErro(T.faltaTitulo);
     if (!data) return setErro(T.faltaData);
+    if (!hora) return setErro(T.faltaHora);
     if (escolherLead && !lead && !tarefa) return setErro(T.faltaLead);
     setErro(null);
     setSalvando(true);
@@ -75,8 +78,9 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
       title: titulo.trim(),
       category: categoria,
       due_date: juntarDataEHora(data, hora),
-      description: descricao.trim() || undefined,
-      ...(responsavel ? { assigned_to_id: responsavel } : {}),
+      // Editar com o campo vazio manda '' pro servidor limpar; criar só omite.
+      description: descricao.trim() || (tarefa ? '' : undefined),
+      ...(ehGestor && responsavel ? { assigned_to_id: responsavel } : {}),
     };
     try {
       const salva = tarefa
@@ -105,7 +109,7 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
               {lead ? (
                 <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
                   <span className="truncate">{lead.name}</span>
-                  <button type="button" className="text-xs text-primary" onClick={() => setLead(null)}>{T.editar}</button>
+                  <button type="button" className="text-xs text-primary" onClick={() => setLead(null)}>{T.trocar}</button>
                 </div>
               ) : (
                 <>
@@ -115,6 +119,7 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
                       <li key={l.id}>
                         <button type="button" className="w-full rounded px-2 py-1.5 text-left text-sm hover:bg-muted" onClick={() => setLead(l)}>
                           {l.name}
+                          {l.phone_number && <span className="ml-2 text-xs text-muted-foreground">{l.phone_number}</span>}
                         </button>
                       </li>
                     ))}
@@ -143,11 +148,11 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
               <Input id="tarefa-hora" type="time" value={hora} onChange={e => setHora(e.target.value)} />
             </div>
           </div>
-          {pessoas.length > 1 && (
+          {ehGestor && pessoas.length > 1 && (
             <div className="grid gap-1">
               <Label htmlFor="tarefa-responsavel">{T.responsavel}</Label>
               <Seletor id="tarefa-responsavel" value={responsavel} onChange={e => setResponsavel(e.target.value)}>
-                <option value="">{T.responsavelDoLead}</option>
+                <option value="">{tarefa ? `${T.manterResponsavel}${tarefa.assignee ? ` (${tarefa.assignee.name})` : ''}` : T.responsavelDoLead}</option>
                 {pessoas.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </Seletor>
             </div>

@@ -17,8 +17,8 @@ interface Props {
 }
 
 /**
- * Tarefas do lead na Conversa (Frente 2, 07/10/2026). É aqui que o corretor da
- * Moeda Forte, onde WhatsApp orgânico não vira card sozinho, cria tarefa: sem
+ * Tarefas do lead na Conversa (Frente 2, 07/10/2026). É aqui que o corretor de
+ * cliente em que WhatsApp orgânico não vira card sozinho cria tarefa: sem
  * card, a seção oferece "Colocar no funil" (pela conversa, então a origem do
  * lead sai certa) e abre a tarefa nova assim que o card nasce.
  * A tarefa nova vai pro card do primeiro funil da seção Funil.

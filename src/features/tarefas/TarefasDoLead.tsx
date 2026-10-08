@@ -8,6 +8,7 @@ import JanelaDaTarefa from './JanelaDaTarefa';
 import LinhaDaTarefa from './LinhaDaTarefa';
 import { TEXTOS_DE_TAREFAS as T } from './textos';
 import { EVENTO_TAREFAS_MUDARAM, tarefasService } from './tarefasService';
+import { concluirEPerguntar } from './concluirEPerguntar';
 import type { TarefaAtividade } from './tipos';
 
 interface Props {
@@ -22,7 +23,7 @@ interface Props {
   aoAbrirNova?: () => void;
 }
 
-type Janela = { modo: 'nova'; categoria?: string } | { modo: 'editar'; tarefa: TarefaAtividade } | null;
+type Janela = { modo: 'nova'; categoria?: string; cardId?: string } | { modo: 'editar'; tarefa: TarefaAtividade } | null;
 
 const atrasadaPrimeiro = (a: TarefaAtividade, b: TarefaAtividade) =>
   Number(b.overdue) - Number(a.overdue) || (a.due_at ?? '').localeCompare(b.due_at ?? '');
@@ -35,6 +36,7 @@ export default function TarefasDoLead({ pipelineItemIds, criarNoCard, aoContar, 
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [abertas, setAbertas] = useState<TarefaAtividade[]>([]);
   const [feitas, setFeitas] = useState<TarefaAtividade[]>([]);
+  const [totalFeitas, setTotalFeitas] = useState(0);
   const [verFeitas, setVerFeitas] = useState(false);
   const [janela, setJanela] = useState<Janela>(null);
   const chave = pipelineItemIds.join(',');
@@ -45,6 +47,7 @@ export default function TarefasDoLead({ pipelineItemIds, criarNoCard, aoContar, 
     if (!chave) {
       setAbertas([]);
       setFeitas([]);
+      setTotalFeitas(0);
       contar.current?.({ abertas: 0, atrasadas: 0 });
       return;
     }
@@ -57,10 +60,12 @@ export default function TarefasDoLead({ pipelineItemIds, criarNoCard, aoContar, 
       const lista = (a.data as TarefaAtividade[]).sort(atrasadaPrimeiro);
       setAbertas(lista);
       setFeitas(f.data as TarefaAtividade[]);
+      setTotalFeitas(f.meta.total);
       contar.current?.({ abertas: lista.length, atrasadas: lista.filter(t => t.overdue).length });
     } catch {
       setAbertas([]);
       setFeitas([]);
+      setTotalFeitas(0);
     }
   }, [chave]);
 
@@ -78,14 +83,8 @@ export default function TarefasDoLead({ pipelineItemIds, criarNoCard, aoContar, 
   }, [abrirNovaAgora, criarNoCard, aoAbrirNova]);
 
   const concluir = async (t: TarefaAtividade) => {
-    try {
-      await tarefasService.concluir(t.id);
-      toast.success(T.concluida);
-      const proxima = await confirmar({ titulo: T.proxima, descricao: t.title, rotuloDaAcao: T.novaTarefa, rotuloDeCancelar: T.agoraNao });
-      if (proxima && criarNoCard) setJanela({ modo: 'nova', categoria: t.category ?? undefined });
-    } catch (e) {
-      toast.error(apiErrorMessage(e, T.erro));
-    }
+    // A próxima nasce no card da própria tarefa (na Conversa o lead tem vários).
+    if (await concluirEPerguntar(t, confirmar)) setJanela({ modo: 'nova', categoria: t.category ?? undefined, cardId: t.pipeline_item_id });
   };
 
   const reabrir = async (t: TarefaAtividade) => {
@@ -126,7 +125,7 @@ export default function TarefasDoLead({ pipelineItemIds, criarNoCard, aoContar, 
       {feitas.length > 0 && (
         <div>
           <button type="button" className="text-xs font-medium text-muted-foreground hover:text-foreground" aria-expanded={verFeitas} onClick={() => setVerFeitas(v => !v)}>
-            {T.concluidas} ({feitas.length})
+            {T.concluidas} ({totalFeitas})
           </button>
           {verFeitas && <ul className="divide-y divide-border/60">{feitas.map(t => <LinhaDaTarefa key={t.id} tarefa={t} {...acoes} />)}</ul>}
         </div>
@@ -136,7 +135,7 @@ export default function TarefasDoLead({ pipelineItemIds, criarNoCard, aoContar, 
         aoFechar={() => setJanela(null)}
         aoSalvar={() => void carregar()}
         tarefa={janela?.modo === 'editar' ? janela.tarefa : null}
-        pipelineItemId={criarNoCard}
+        pipelineItemId={janela?.modo === 'nova' ? janela.cardId ?? criarNoCard : criarNoCard}
         categoriaInicial={janela?.modo === 'nova' ? janela.categoria : undefined}
       />
       {dialogoDeConfirmacao}

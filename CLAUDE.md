@@ -4098,15 +4098,16 @@ Como ficou:
 
 **Não reabrir sem o dono pedir.** Tarefa do corretor tem lugar: Atividades (desde a Frente 2), Follow-up e Lembretes.
 
-## Tarefas e Atividades (desde 2026-10-07, Frente 2 — pedido da Nova 27)
+## Tarefas e Atividades (desde 2026-10-07, Frente 2 — pedido de um cliente)
 
 Spec: `LM FLOW/specs/2026-10-07-frente-2-tarefas-e-atividades-design.md`. Plano: `LM FLOW/plans/2026-10-07-frente-2-tarefas-e-atividades.md`.
 
-- **Tarefa mora no card do funil.** Lead sem card (cliente que não deixa WhatsApp orgânico virar card, ex.: Moeda Forte) ganha "Colocar no funil" na seção Tarefas da Conversa, que coloca pela conversa (origem certa) e já abre a tarefa nova.
+- **Tarefa mora no card do funil.** Lead sem card (cliente que não deixa WhatsApp orgânico virar card) ganha "Colocar no funil" na seção Tarefas da Conversa, que coloca pela conversa (origem certa) e já abre a tarefa nova.
 - **Três lugares, um bloco:** aba Tarefas do card, seção Tarefas da Conversa e (futuro) página do card completo usam `features/tarefas/TarefasDoLead`. Atividades (menu, no lugar de Visitas) tem as abas Lista e Agenda (`PaginaComAbas`).
 - **Lista do servidor:** `GET /api/v1/activities` (tarefas + visitas por prazo, contagem por aba, régua de quem vê do funil). CRUD em `/api/v1/tasks`.
 - **Categorias:** até as Listas da casa, os quatro nomes fixos (`CATEGORIAS_INICIAIS`); na troca, a janela lê `task_categories`.
-- **Concluir puxa a próxima:** pergunta "Criar a próxima tarefa deste lead?".
+- **Concluir puxa a próxima:** pergunta "Criar a próxima tarefa deste lead?". Vale na Lista e no card; a próxima nasce no card da tarefa concluída (`concluirEPerguntar`).
+- **Responsável:** só o gestor (`conversations.read_all`) escolhe na janela; corretor cria só pra si. Visitas na Lista ("Só visitas", "Agendar visita") dependem da função Visitas e do cargo.
 - **Excluir:** gestor qualquer uma; corretor só a que criou (sem permissão nova: cargo editado não recebe chave nova).
 - **Visita sem retorno conta como atrasada** na Lista.
 - **Avisos de tarefa (vence em 1h / venceu):** o mecanismo do servidor está em decisão do dono (07/10) — ver o PR do servidor. O atrasado na tela é sempre calculado pelo prazo.

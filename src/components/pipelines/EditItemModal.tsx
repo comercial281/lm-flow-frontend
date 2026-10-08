@@ -765,7 +765,7 @@ export default function EditItemModal({
 
               {activeTab === 'tasks' && (
                 foraDoFunil ? (
-                  <p className="text-sm text-muted-foreground">Pra criar tarefa, coloque o lead no funil (ao lado, em Etapa).</p>
+                  <p className="text-sm text-muted-foreground">Pra criar tarefa, coloque o lead no funil.</p>
                 ) : (
                   <Suspense fallback={null}>
                     <TarefasDoLead pipelineItemIds={[String(item.id)]} criarNoCard={String(item.id)} aoContar={setResumoTarefas} />

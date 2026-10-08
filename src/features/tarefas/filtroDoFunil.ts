@@ -1,4 +1,4 @@
-// Filtro "vence hoje / atrasadas" do funil (pedido da Natália, Nova 27).
+// Filtro "vence hoje / atrasadas" do funil (pedido de um cliente).
 // Lê a contagem que o servidor já manda em cada cartão (tasks_info): atrasada
 // conta também pendente com prazo vencido, sem esperar a rotina.
 export type FiltroDeTarefas = 'nenhum' | 'hoje' | 'atrasadas';

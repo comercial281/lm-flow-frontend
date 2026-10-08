@@ -10,6 +10,8 @@ import ContactSidebar from './ContactSidebar';
 // linha logo abaixo, Etiquetas só com as do lead e o resumo da IA à vista.
 
 const getContactConversations = vi.fn();
+// A janela da tarefa pergunta se quem usa é gestor; aqui não há AuthProvider.
+vi.mock('@/features/tarefas/useEhGestor', () => ({ useEhGestor: () => false }));
 vi.mock('@/services/contacts/contactsService', () => ({
   contactsService: {
     getContactNotes: () => Promise.resolve({ data: [] }),

@@ -265,7 +265,7 @@ export default function PipelineFiltersPopover({
             )}
           </section>
 
-          {/* TAREFAS — vence hoje / atrasadas (Frente 2, Nova 27) */}
+          {/* TAREFAS — vence hoje / atrasadas (Frente 2) */}
           <section className="mt-2.5 border-t pt-2.5">
             <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Tarefas</p>
             <div className="flex flex-wrap gap-1.5">
