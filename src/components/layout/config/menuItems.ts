@@ -220,7 +220,7 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       { name: 'Funil de vendas', href: '/pipelines', icon: SquareKanban, ...permissionFromRoute('/pipelines'), featureKey: 'pipelines' },
       // Atividades (Frente 2, 07/10/2026): ocupa o lugar de Visitas. Lista
       // (tarefas + visitas por prazo) e Agenda (o calendário de visitas).
-      itemComAbas({ id: 'customer-atividades', name: 'Atividades', icon: ListTodo, entrada: '/atividades' }, [
+      itemComAbas({ id: 'customer-atividades', name: 'Atividades', icon: ListTodo }, [
         { name: 'Lista', href: '/atividades', icon: ListTodo, ...permissionFromRoute('/atividades'), featureKey: 'pipelines' },
         { name: 'Agenda', href: '/visits', icon: CalendarClock, ...permissionFromRoute('/visits'), featureKey: 'visits' },
       ]),

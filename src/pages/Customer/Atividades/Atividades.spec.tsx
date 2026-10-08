@@ -48,4 +48,32 @@ describe('Atividades', () => {
     await screen.findByText('Nada por aqui.');
     expect(screen.queryByLabelText('Pessoa')).not.toBeInTheDocument();
   });
+
+  it('trocar de aba estando na página 2 pede uma vez só, na página 1', async () => {
+    const muitas = { ...resposta([]), meta: { ...resposta([]).meta, total: 100 } };
+    listar.mockResolvedValue(muitas);
+    render(<MemoryRouter><Atividades /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Próxima' }));
+    await waitFor(() => expect(listar).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 })));
+    listar.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: /Atrasadas/ }));
+    await waitFor(() => expect(listar).toHaveBeenCalled());
+    await new Promise(r => setTimeout(r, 50));
+    expect(listar).toHaveBeenCalledTimes(1);
+    expect(listar).toHaveBeenCalledWith(expect.objectContaining({ bucket: 'atrasadas', page: 1 }));
+  });
+
+  it('resposta lenta que chega depois da nova não sobrescreve a tela', async () => {
+    const tarefa = (id: string, title: string) => ({ kind: 'task', id, title, due_at: new Date().toISOString(), status: 'pending', overdue: false, pipeline_item_id: 'c1', pipeline_id: 'p1', contact: null, assignee: null, created_by_id: 'u1', can_edit: true, can_delete: true });
+    let soltarPrimeira: (v: unknown) => void = () => {};
+    listar.mockImplementationOnce(() => new Promise(r => { soltarPrimeira = r; }));
+    listar.mockResolvedValueOnce(resposta([tarefa('t2', 'Segunda')]));
+    render(<MemoryRouter><Atividades /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: /Atrasadas/ }));
+    expect(await screen.findByText('Segunda')).toBeInTheDocument();
+    soltarPrimeira(resposta([tarefa('t1', 'Primeira')]));
+    await new Promise(r => setTimeout(r, 50));
+    expect(screen.queryByText('Primeira')).not.toBeInTheDocument();
+    expect(screen.getByText('Segunda')).toBeInTheDocument();
+  });
 });

@@ -1,5 +1,5 @@
 // src/pages/Customer/Atividades/Atividades.tsx
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import BaseHeader from '@/components/base/BaseHeader';
@@ -26,35 +26,39 @@ const POR_PAGINA = 30;
 export default function Atividades() {
   const navigate = useNavigate();
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
-  const [balde, setBalde] = useState<Balde>('hoje');
-  const [tipo, setTipo] = useState<TipoDeAtividade>('all');
-  const [pessoa, setPessoa] = useState('');
-  const [categoria, setCategoria] = useState('');
+  // Filtros e página num só estado: mudar filtro volta à página 1 na MESMA
+  // atualização, então uma mudança = um pedido.
+  const [f, setF] = useState<{ balde: Balde; tipo: TipoDeAtividade; pessoa: string; categoria: string; buscaFirme: string; pagina: number }>(
+    { balde: 'hoje', tipo: 'all', pessoa: '', categoria: '', buscaFirme: '', pagina: 1 },
+  );
+  const { balde, tipo, pessoa, categoria, buscaFirme, pagina } = f;
+  const mudarFiltro = (parte: Partial<typeof f>) => setF(a => ({ ...a, ...parte, pagina: 1 }));
   const [busca, setBusca] = useState('');
-  const [buscaFirme, setBuscaFirme] = useState('');
-  const [pagina, setPagina] = useState(1);
+  const ultimoPedido = useRef(0);
   const [resposta, setResposta] = useState<RespostaDeAtividades | null>(null);
   const [pessoas, setPessoas] = useState<PersonRef[]>([]);
   const [janela, setJanela] = useState<{ tarefa: TarefaAtividade | null } | null>(null);
   const [agendandoVisita, setAgendandoVisita] = useState(false);
 
   useEffect(() => {
-    const id = window.setTimeout(() => setBuscaFirme(busca.trim()), 300);
+    const id = window.setTimeout(() => setF(a => (a.buscaFirme === busca.trim() ? a : { ...a, buscaFirme: busca.trim(), pagina: 1 })), 300);
     return () => window.clearTimeout(id);
   }, [busca]);
-  useEffect(() => setPagina(1), [balde, tipo, pessoa, categoria, buscaFirme]);
   useEffect(() => { visitsService.realtors().then(setPessoas).catch(() => setPessoas([])); }, []);
 
   const carregar = useCallback(async () => {
+    const meu = ++ultimoPedido.current;
     try {
-      setResposta(await tarefasService.listar({
+      const nova = await tarefasService.listar({
         bucket: balde, kind: tipo, page: pagina, per_page: POR_PAGINA,
         ...(pessoa ? { assigned_to_id: pessoa } : {}),
         ...(categoria ? { category: categoria } : {}),
         ...(buscaFirme ? { q: buscaFirme } : {}),
-      }));
+      });
+      // Só o pedido mais recente vale: resposta atrasada não sobrescreve.
+      if (meu === ultimoPedido.current) setResposta(nova);
     } catch (e) {
-      toast.error(apiErrorMessage(e, T.erro));
+      if (meu === ultimoPedido.current) toast.error(apiErrorMessage(e, T.erro));
     }
   }, [balde, tipo, pessoa, categoria, buscaFirme, pagina]);
 
@@ -109,7 +113,7 @@ export default function Atividades() {
             key={b.chave}
             type="button"
             aria-pressed={balde === b.chave}
-            onClick={() => setBalde(b.chave)}
+            onClick={() => mudarFiltro({ balde: b.chave })}
             className={`-mb-px border-b-2 px-3 py-2 text-sm ${balde === b.chave ? 'border-primary font-semibold text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
           >
             {b.rotulo} ({contagem(b.chave)})
@@ -118,17 +122,17 @@ export default function Atividades() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Seletor aria-label="Tipo" value={tipo} onChange={e => setTipo(e.target.value as TipoDeAtividade)} className="w-40">
+        <Seletor aria-label="Tipo" value={tipo} onChange={e => mudarFiltro({ tipo: e.target.value as TipoDeAtividade })} className="w-40">
           <option value="all">Tarefas e visitas</option>
           <option value="task">Só tarefas</option>
           <option value="visit">Só visitas</option>
         </Seletor>
-        <Seletor aria-label="Categoria" value={categoria} onChange={e => setCategoria(e.target.value)} className="w-48">
+        <Seletor aria-label="Categoria" value={categoria} onChange={e => mudarFiltro({ categoria: e.target.value })} className="w-48">
           <option value="">Todas as categorias</option>
           {CATEGORIAS_INICIAIS.map(c => <option key={c} value={c}>{c}</option>)}
         </Seletor>
         {!somenteMinhas && (
-          <Seletor aria-label="Pessoa" value={pessoa} onChange={e => setPessoa(e.target.value)} className="w-48">
+          <Seletor aria-label="Pessoa" value={pessoa} onChange={e => mudarFiltro({ pessoa: e.target.value })} className="w-48">
             <option value="">Todas as pessoas</option>
             {pessoas.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </Seletor>
@@ -145,9 +149,9 @@ export default function Atividades() {
 
       {total > POR_PAGINA && (
         <div className="flex items-center justify-end gap-2 text-sm">
-          <button type="button" disabled={pagina === 1} onClick={() => setPagina(p => p - 1)} className="rounded border px-2 py-1 disabled:opacity-40">Anterior</button>
+          <button type="button" disabled={pagina === 1} onClick={() => setF(a => ({ ...a, pagina: a.pagina - 1 }))} className="rounded border px-2 py-1 disabled:opacity-40">Anterior</button>
           <span className="tabular-nums">{pagina} de {Math.ceil(total / POR_PAGINA)}</span>
-          <button type="button" disabled={pagina * POR_PAGINA >= total} onClick={() => setPagina(p => p + 1)} className="rounded border px-2 py-1 disabled:opacity-40">Próxima</button>
+          <button type="button" disabled={pagina * POR_PAGINA >= total} onClick={() => setF(a => ({ ...a, pagina: a.pagina + 1 }))} className="rounded border px-2 py-1 disabled:opacity-40">Próxima</button>
         </div>
       )}
 
