@@ -67,7 +67,7 @@ export default function StageColumn({
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
               <h3 className="text-sm font-medium text-foreground">{stage.name}</h3>
               <span className="bg-muted text-muted-foreground text-xs px-2 py-1 rounded-full">
-                {stage.items?.length || stage.item_count || 0}
+                {(stage.items || []).length}
               </span>
               {/* Stage Total Value */}
               {total > 0 && (

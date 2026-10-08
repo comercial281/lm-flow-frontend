@@ -16,8 +16,20 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.f
 vi.mock('@/hooks/useLanguage', () => ({
   useLanguage: () => ({ t: (chave: string, reserva?: unknown) => (typeof reserva === 'string' ? reserva : chave) }),
 }));
-// As janelas do quadro são lazy (código só no clique): no teste, nenhuma monta.
-vi.mock('@/utils/chunkReload', () => ({ lazyWithRetry: () => () => null }));
+// As janelas do quadro são lazy: no teste, nenhuma monta — exceto a janela do
+// card (a única que recebe onItemStatusChanged), que aqui é um botão que marca
+// Ganho como o rodapé de verdade faria.
+vi.mock('@/utils/chunkReload', () => ({
+  lazyWithRetry: () => (p: { item?: Record<string, unknown>; onItemStatusChanged?: (i: unknown) => void }) =>
+    p.onItemStatusChanged && p.item ? (
+      <button
+        type="button"
+        onClick={() => p.onItemStatusChanged?.({ ...p.item, status: 'won', won_at: '2026-10-07T12:00:00Z' })}
+      >
+        Marcar ganho (janela falsa)
+      </button>
+    ) : null,
+}));
 vi.mock('@/contexts/TenantFeaturesContext', () => ({ useFeature: () => true }));
 vi.mock('@/hooks/useCan', () => ({ useCan: () => () => true }));
 vi.mock('@/hooks/useOpenLeadConversation', () => ({
@@ -69,11 +81,23 @@ const card = (id: string, nome: string, stageId: string, extra: Record<string, u
 const etapa = (id: string, name: string, items: PipelineItem[]) =>
   ({ id, name, color: '#3b82f6', position: id === 's1' ? 1 : 2, created_at: '', updated_at: '', items }) as unknown as PipelineStage;
 
-const FUNIL = (s1: PipelineItem[] = [card('i1', 'Maria Souza', 's1')], s2: PipelineItem[] = [
-  card('i2', 'João Lima', 's2'),
-  card('i3', 'Paula Reis', 's2', { status: 'won', won_at: '2026-10-06T15:00:00Z' }),
-]): Pipeline =>
-  ({
+const MARIA = card('i1', 'Maria Souza', 's1');
+const JOAO = card('i2', 'João Lima', 's2');
+const PAULA = card('i3', 'Paula Reis', 's2', { status: 'won', won_at: '2026-10-06T15:00:00Z' });
+const RUI = card('i4', 'Rui Alves', 's1', { status: 'lost', lost_at: '2026-10-05T15:00:00Z', lost_reason: { id: 'm1', label: 'Adiou a compra' } });
+const LIA = card('i5', 'Lia Prado', 's1', { archived_at: '2026-10-05T15:00:00Z' });
+
+// Ids que o servidor falso já arquivou / desarquivou (o recarregamento em
+// silêncio depois da ação precisa enxergar o que ela gravou).
+const arquivadosAgora = new Set<string>();
+const desarquivadosAgora = new Set<string>();
+
+// O servidor de verdade filtra por ?status= (P3-T8); aqui a fixture faz igual.
+const FUNIL = (status: string = 'open'): Pipeline => {
+  const ativos = [MARIA, JOAO, PAULA, RUI].filter(c => !arquivadosAgora.has(String(c.id)));
+  const arquivados = [LIA].filter(c => !desarquivadosAgora.has(String(c.id)));
+  const da = status === 'archived' ? arquivados : status === 'all' ? ativos : ativos.filter(c => c.status === status);
+  return {
     id: 'p1',
     name: 'Leads (Marketing)',
     pipeline_type: 'sale',
@@ -81,9 +105,10 @@ const FUNIL = (s1: PipelineItem[] = [card('i1', 'Maria Souza', 's1')], s2: Pipel
     is_active: true,
     created_at: '2026-10-01',
     updated_at: '2026-10-01',
-    status_counts: { open: 2, won: 1, lost: 0, all: 3, archived: 1 },
-    stages: [etapa('s1', 'Novo', s1), etapa('s2', 'Proposta', s2)],
-  }) as unknown as Pipeline;
+    status_counts: { open: 2, won: 1, lost: 1, all: 4, archived: 1 },
+    stages: [etapa('s1', 'Novo', da.filter(c => c.stage_id === 's1')), etapa('s2', 'Proposta', da.filter(c => c.stage_id === 's2'))],
+  } as unknown as Pipeline;
+};
 
 const BUSCA = 'Buscar lead';
 
@@ -111,16 +136,18 @@ const endereco = () => new URLSearchParams(screen.getByTestId('endereco').textCo
 
 beforeEach(() => {
   vi.clearAllMocks();
+  arquivadosAgora.clear();
+  desarquivadosAgora.clear();
   Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture ?? (() => false);
   Element.prototype.releasePointerCapture = Element.prototype.releasePointerCapture ?? (() => {});
   Element.prototype.scrollIntoView = Element.prototype.scrollIntoView ?? (() => {});
   // O auto-rolar do arraste pergunta qual elemento está sob o cursor; o jsdom não sabe.
   document.elementFromPoint = (() => null) as typeof document.elementFromPoint;
   vi.mocked(pipelinesService.getPipelines).mockResolvedValue({ data: [] } as never);
-  vi.mocked(pipelinesService.getPipeline).mockImplementation(async () => FUNIL());
+  vi.mocked(pipelinesService.getPipeline).mockImplementation(async (_id, opts) => FUNIL(opts?.status));
   vi.mocked(pipelinesService.reorderItem).mockResolvedValue({ success: true, message: '' });
-  vi.mocked(pipelinesService.archiveItem).mockResolvedValue({} as PipelineItem);
-  vi.mocked(pipelinesService.unarchiveItem).mockResolvedValue({} as PipelineItem);
+  vi.mocked(pipelinesService.archiveItem).mockImplementation(async (_p, id) => { arquivadosAgora.add(String(id)); return {} as PipelineItem; });
+  vi.mocked(pipelinesService.unarchiveItem).mockImplementation(async (_p, id) => { desarquivadosAgora.add(String(id)); return {} as PipelineItem; });
 });
 
 describe('quadro do funil · o que continua igual', () => {
@@ -152,7 +179,7 @@ describe('quadro do funil · o que continua igual', () => {
   });
 
   it('card ganho não arrasta: reabre antes (E2)', async () => {
-    montar();
+    montar('/pipelines/p1?aba=todos');
     await screen.findByText('Paula Reis');
     expect(cardDe('Paula Reis')).toHaveAttribute('draggable', 'false');
     fireEvent.dragStart(cardDe('Paula Reis'));
@@ -187,10 +214,13 @@ describe('quadro do funil · o que continua igual', () => {
       pending_count: 1, overdue_count: 0, due_soon_count: 0, due_today_count: 0, completed_count: 0, total_count: 1, ...extra,
     });
     vi.mocked(pipelinesService.getPipeline).mockImplementation(async () =>
-      FUNIL(
-        [card('i1', 'Maria Souza', 's1', { tasks_info: tarefas({ due_today_count: 1 }) })],
-        [card('i2', 'João Lima', 's2', { tasks_info: tarefas({ overdue_count: 1 }) })],
-      ),
+      ({
+        ...FUNIL(),
+        stages: [
+          etapa('s1', 'Novo', [card('i1', 'Maria Souza', 's1', { tasks_info: tarefas({ due_today_count: 1 }) })]),
+          etapa('s2', 'Proposta', [card('i2', 'João Lima', 's2', { tasks_info: tarefas({ overdue_count: 1 }) })]),
+        ],
+      }) as unknown as Pipeline,
     );
     montar();
     await screen.findByText('Maria Souza');
@@ -220,8 +250,8 @@ describe('quadro do funil · o que continua igual', () => {
     expect(screen.getByText('João Lima')).toBeInTheDocument();
   });
 
-  it('na visão padrão o card ganho aparece na sua coluna', async () => {
-    montar();
+  it('em Todos o card ganho aparece na sua coluna', async () => {
+    montar('/pipelines/p1?aba=todos');
     expect(await screen.findByText('Paula Reis')).toBeInTheDocument();
     expect(within(document.getElementById('etapa-s2')!).getByText('Paula Reis')).toBeInTheDocument();
   });
@@ -288,7 +318,7 @@ describe('quadro do funil · topo', () => {
     expect(screen.getByRole('button', { name: 'Leads (Marketing)' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Abertos 2' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('button', { name: 'Arquivados' })).toHaveTextContent('1');
-    expect(screen.getByText('3 leads')).toBeInTheDocument();
+    expect(screen.getByText('2 leads')).toBeInTheDocument();
     expect(screen.queryByText('kanban.header.stages')).toBeNull();
     expect(screen.queryByRole('button', { name: /Importar/ })).toBeNull();
   });
@@ -305,6 +335,113 @@ describe('quadro do funil · topo', () => {
     await screen.findByText('Maria Souza');
     await userEvent.click(screen.getByRole('tab', { name: 'Ganhos 1' }));
     expect(endereco().get('aba')).toBe('ganhos');
+    expect(endereco().get('card')).toBe('i1');
+  });
+});
+
+describe('quadro do funil · abas', () => {
+  it('cada aba pede ao servidor só os cards dela', async () => {
+    montar();
+    expect(await screen.findByText('Maria Souza')).toBeInTheDocument();
+    expect(pipelinesService.getPipeline).toHaveBeenCalledWith('p1', { status: 'open' });
+    expect(screen.queryByText('Paula Reis')).toBeNull();
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Ganhos 1' }));
+    expect(await screen.findByText('Paula Reis')).toBeInTheDocument();
+    expect(pipelinesService.getPipeline).toHaveBeenLastCalledWith('p1', { status: 'won' });
+    expect(screen.queryByText('Maria Souza')).toBeNull();
+  });
+
+  // Review Focus 1.
+  it('Ganhos e Perdidos não arrastam (nem pelo atributo, nem pelo handler)', async () => {
+    montar('/pipelines/p1?aba=perdidos');
+    await screen.findByText('Rui Alves');
+    expect(cardDe('Rui Alves')).toHaveAttribute('draggable', 'false');
+    fireEvent.dragStart(cardDe('Rui Alves'));
+    fireEvent.dragOver(colunaDe('s2'));
+    fireEvent.drop(colunaDe('s2'));
+    expect(pipelinesService.reorderItem).not.toHaveBeenCalled();
+  });
+
+  it('em Todos só o card aberto arrasta', async () => {
+    montar('/pipelines/p1?aba=todos');
+    await screen.findByText('Paula Reis');
+    expect(cardDe('Paula Reis')).toHaveAttribute('draggable', 'false');
+    expect(cardDe('Maria Souza')).toHaveAttribute('draggable', 'true');
+    fireEvent.dragStart(cardDe('Maria Souza'));
+    fireEvent.dragOver(colunaDe('s2'));
+    fireEvent.drop(colunaDe('s2'));
+    await waitFor(() =>
+      expect(pipelinesService.reorderItem).toHaveBeenCalledWith('p1', 'i1', expect.objectContaining({ new_stage_id: 's2' })),
+    );
+  });
+
+  it('Arquivados: o card na coluna dele, com Desarquivar, e não arrasta', async () => {
+    montar('/pipelines/p1?aba=arquivados');
+    expect(await screen.findByText('Lia Prado')).toBeInTheDocument();
+    expect(within(document.getElementById('etapa-s1')!).getByText('Lia Prado')).toBeInTheDocument();
+    expect(cardDe('Lia Prado')).toHaveAttribute('draggable', 'false');
+    await userEvent.click(screen.getByRole('button', { name: 'Desarquivar' }));
+    await waitFor(() => expect(pipelinesService.unarchiveItem).toHaveBeenCalledWith('p1', 'i5'));
+    expect(screen.queryByText('Lia Prado')).toBeNull();
+    await waitFor(() => expect(pipelinesService.getPipeline).toHaveBeenLastCalledWith('p1', { status: 'archived' }));
+  });
+
+  // Review Focus 5.
+  it('F5 numa aba: a aba e o card continuam no endereço', async () => {
+    montar('/pipelines/p1?aba=perdidos&card=i4');
+    await screen.findByText('Rui Alves');
+    expect(pipelinesService.getPipeline).toHaveBeenCalledWith('p1', { status: 'lost' });
+    expect(endereco().get('aba')).toBe('perdidos');
+    expect(endereco().get('card')).toBe('i4');
+    expect(screen.queryByText('Este lead não está nesta aba.')).toBeNull();
+  });
+
+  it('link de card que não está nesta aba: avisa, e o quadro aparece normal', async () => {
+    montar('/pipelines/p1?aba=ganhos&card=i1');
+    expect(await screen.findByText('Este lead não está nesta aba.')).toBeInTheDocument();
+    expect(screen.getByText('Paula Reis')).toBeInTheDocument();
+  });
+
+  it('resposta atrasada de outra aba não toma o lugar da aba aberta', async () => {
+    let soltarPerdidos: (p: Pipeline) => void = () => {};
+    vi.mocked(pipelinesService.getPipeline).mockImplementation(async (_id, opts) =>
+      opts?.status === 'lost' ? new Promise<Pipeline>(r => { soltarPerdidos = r; }) : FUNIL(opts?.status),
+    );
+    montar();
+    await screen.findByText('Maria Souza');
+    await userEvent.click(screen.getByRole('tab', { name: 'Perdidos 1' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Ganhos 1' }));
+    expect(await screen.findByText('Paula Reis')).toBeInTheDocument();
+
+    soltarPerdidos(FUNIL('lost'));
+    await new Promise(r => setTimeout(r, 0));
+    expect(screen.queryByText('Rui Alves')).toBeNull();
+    expect(screen.getByText('Paula Reis')).toBeInTheDocument();
+  });
+
+  it('"Adicionar etapa" só aparece em Abertos', async () => {
+    montar('/pipelines/p1?aba=ganhos');
+    await screen.findByText('Paula Reis');
+    expect(screen.queryByText('kanban.stage.addStage')).toBeNull();
+  });
+
+  // Review Focus 5: o card que acabou de sair da aba com a janela aberta.
+  it('marcar Ganho em Abertos com a janela aberta: o card sai da aba e o aviso NÃO aparece', async () => {
+    // Depois de gravar, o servidor já não manda a Maria em Abertos (o recarregamento
+    // em silêncio do handleItemStatusChanged). A 1ª carga ainda é a de antes de marcar.
+    vi.mocked(pipelinesService.getPipeline).mockImplementation(async (_id, opts) => {
+      const funil = FUNIL(opts?.status);
+      if ((opts?.status ?? 'open') !== 'open') return funil;
+      return { ...funil, stages: funil.stages.map(st => ({ ...st, items: (st.items || []).filter(i => i.id !== 'i1') })) };
+    });
+    vi.mocked(pipelinesService.getPipeline).mockImplementationOnce(async () => FUNIL('open'));
+    montar('/pipelines/p1?card=i1');
+    // A janela abre pelo ?card= e o botão falso aparece.
+    await userEvent.click(await screen.findByRole('button', { name: 'Marcar ganho (janela falsa)' }));
+
+    await waitFor(() => expect(within(document.getElementById('etapa-s1')!).queryByText('Maria Souza')).toBeNull());
+    expect(screen.queryByText('Este lead não está nesta aba.')).toBeNull();
     expect(endereco().get('card')).toBe('i1');
   });
 });

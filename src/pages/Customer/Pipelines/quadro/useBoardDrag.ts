@@ -8,7 +8,6 @@ import {
 } from 'react';
 import { toast } from 'sonner';
 import { pipelinesService } from '@/services/pipelines';
-import { situacaoDe } from '@/features/pipelines/situacao/situacao';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import { itemPos } from '../pipelineItemHelpers';
 
@@ -18,9 +17,11 @@ interface OpcoesDoArraste {
   setStages: Dispatch<SetStateAction<PipelineStage[]>>;
   /** Aviso quando o servidor recusa a mudança (o card volta pra onde estava). */
   mensagemDeErro: string;
+  /** A aba decide (podeArrastarNaAba): Ganhos, Perdidos e Arquivados não arrastam. */
+  podeArrastar: (item: PipelineItem) => boolean;
 }
 
-export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro }: OpcoesDoArraste) {
+export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, podeArrastar }: OpcoesDoArraste) {
   const [draggedItem, setDraggedItem] = useState<PipelineItem | null>(null);
   const isDraggingRef = useRef(false);
   const suppressClickUntilRef = useRef(0);
@@ -134,13 +135,13 @@ export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro }: 
   // memoizado — sem isso, cada render do board recriava a função e quebrava o
   // memo (card inteiro re-renderizava mesmo sem o item mudar).
   const handleDragStart = useCallback((item: PipelineItem) => {
-    // Card ganho/perdido não muda de etapa: reabre antes (spec funil §3.5).
-    if (situacaoDe(item) !== 'open') return;
+    // Card que a aba não deixa arrastar: nem começa (o dragstart sintético dispara mesmo com draggable="false").
+    if (!podeArrastar(item)) return;
     setDraggedItem(item);
     isDraggingRef.current = true;
     suppressClickUntilRef.current = Date.now() + 200;
     startAutoScroll();
-  }, [startAutoScroll]);
+  }, [startAutoScroll, podeArrastar]);
 
   const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import { formatDateBR } from '@/utils/dateUtils';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -23,7 +23,7 @@ import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import AvisoCardForaDaAba from './AvisoCardForaDaAba';
 import { useCardNoEndereco } from './useCardNoEndereco';
-import { podeArrastarNaAba } from './quadro/enderecoDoQuadro';
+import { STATUS_DA_ABA, pertenceAAba, podeArrastarNaAba } from './quadro/enderecoDoQuadro';
 import { useBoardDrag } from './quadro/useBoardDrag';
 import { usePipelineFilters } from './quadro/usePipelineFilters';
 import PainelDeFiltrosDoFunil from './quadro/PainelDeFiltrosDoFunil';
@@ -66,16 +66,21 @@ export default function PipelineKanban() {
   const [pipeline, setPipeline] = useState<Pipeline | null>(null);
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [allPipelines, setAllPipelines] = useState<Pipeline[]>([]);
+  // Aba e filtros no endereço; busca na tela (quadro/usePipelineFilters).
+  const { aba, setAba, filtros, aplicar, busca, setBusca, filteredStages, totalVisivel, quantosFiltros } = usePipelineFilters(stages);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
+  const statusDaAba = STATUS_DA_ABA[aba];
+  // A aba decide se o card arrasta (Ganhos, Perdidos e Arquivados não).
+  const podeArrastarCard = useCallback((item: PipelineItem) => podeArrastarNaAba(aba, item), [aba]);
+
   // Arraste do card, rolar o fundo e a roda do mouse (quadro/useBoardDrag).
   const {
     boardScrollRef, isDraggingRef, suppressClickUntilRef,
     handleBoardDragOver, handleBoardMouseDown, handleBoardWheel,
     handleDragStart, handleDragOver, handleDrop, handleCardDragOver, handleCardDrop, handleDragEnd,
-  } = useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro: t('kanban.messages.itemMoveError') });
-
-  // Aba e filtros no endereço; busca na tela (quadro/usePipelineFilters).
-  const { aba, setAba, filtros, aplicar, busca, setBusca, filteredStages, totalVisivel, quantosFiltros } = usePipelineFilters(stages);
-  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
+  } = useBoardDrag({
+    pipelineId, stages, setStages, mensagemDeErro: t('kanban.messages.itemMoveError'), podeArrastar: podeArrastarCard,
+  });
 
   // Modal states
   const [showEditPipelineModal, setShowEditPipelineModal] = useState(false);
@@ -122,38 +127,45 @@ export default function PipelineKanban() {
   const canBulkDispatch = acoesDoQuadro.bulkDispatch;
   const canAddItem = useFeature('pipeline_add_item');
 
-  // Load pipeline data
-  // silent=true: atualiza em segundo plano sem o spinner de tela cheia (usado
-  // pelo refresh automático ao voltar pra aba e no poll), pra lead novo aparecer
-  // sozinho sem o usuário recarregar a página.
+  // Carrega a ABA aberta (?status= no servidor: o Mais que Imóveis tem 2.800
+  // cards). silent=true: refresh por trás (foco, poll de 60 s, tempo real), sem
+  // espera na tela. Só Abertos usa o payload guardado (é o que o seletor de
+  // funis pré-carrega). Resposta de uma aba que já não está aberta é jogada fora.
+  const pedidoRef = useRef(0);
+  const pipelineRef = useRef<Pipeline | null>(null);
+  pipelineRef.current = pipeline;
+  const [carregandoQuadro, setCarregandoQuadro] = useState(false);
   const loadPipelineData = useCallback(async (silent = false) => {
     if (!pipelineId) return;
-
-    // Reabrir um pipe já visitado renderiza NA HORA com o último payload do
-    // servidor e revalida silencioso por trás (stale-while-revalidate).
-    const cached = getCachedPipeline(pipelineId);
-    const showSpinner = !silent && !cached;
+    const meu = ++pedidoRef.current;
+    const cached = statusDaAba === 'open' ? getCachedPipeline(pipelineId) : undefined;
+    const mostrarEspera = !silent && !cached;
     if (!silent && cached) {
       setPipeline(cached);
       setStages(cached.stages || []);
       setLoading(false);
     }
-
-    if (showSpinner) setLoading(true);
+    if (mostrarEspera) {
+      // Primeira carga: a tela inteira espera. Troca de aba: só o quadro.
+      if (pipelineRef.current) setCarregandoQuadro(true);
+      else setLoading(true);
+    }
     try {
-      // Load pipeline with all data (stages, items, tasks_info, services_info)
-      const pipelineData = await pipelinesService.getPipeline(pipelineId);
-
-      setCachedPipeline(pipelineId, pipelineData);
+      const pipelineData = await pipelinesService.getPipeline(pipelineId, { status: statusDaAba });
+      if (meu !== pedidoRef.current) return;
+      if (statusDaAba === 'open') setCachedPipeline(pipelineId, pipelineData);
       setPipeline(pipelineData);
       setStages(pipelineData.stages || []);
     } catch (error) {
       console.error('Error loading pipeline data:', error);
-      if (showSpinner) toast.error(t('kanban.messages.loadDataError'));
+      if (mostrarEspera && meu === pedidoRef.current) toast.error(t('kanban.messages.loadDataError'));
     } finally {
-      if (showSpinner) setLoading(false);
+      if (meu === pedidoRef.current) {
+        setLoading(false);
+        setCarregandoQuadro(false);
+      }
     }
-  }, [pipelineId]);
+  }, [pipelineId, statusDaAba]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Próximas visitas por contato (pra mostrar dia/hora no card).
   const [visitsByContact, setVisitsByContact] = useState<Record<string, string>>({});
@@ -188,9 +200,12 @@ export default function PipelineKanban() {
 
   useEffect(() => {
     loadPipelineData();
+  }, [loadPipelineData]);
+
+  useEffect(() => {
     loadAllPipelines();
     loadUpcomingVisits();
-  }, [loadPipelineData, loadAllPipelines, loadUpcomingVisits]);
+  }, [loadAllPipelines, loadUpcomingVisits]);
 
   // Atualização automática (sem recarregar a página): lead novo aparece sozinho.
   // - ao voltar o foco pra aba / aba ficar visível: refresh silencioso na hora.
@@ -245,7 +260,14 @@ export default function PipelineKanban() {
     setItemToEdit(item);
     setShowEditItemModal(true);
   }, []);
-  const itensDoQuadro = useMemo(() => stages.flatMap(s => s.items ?? []), [stages]);
+  // O card aberto na janela conta como "no quadro" mesmo depois de sair da aba
+  // (marcou Ganho em Abertos): sem isto, o aviso "não está nesta aba" aparecia
+  // com a janela ainda aberta.
+  const itensDoQuadro = useMemo(() => {
+    const doQuadro = stages.flatMap(s => s.items ?? []);
+    if (!showEditItemModal || !itemToEdit || doQuadro.some(i => String(i.id) === String(itemToEdit.id))) return doQuadro;
+    return [...doQuadro, itemToEdit];
+  }, [stages, showEditItemModal, itemToEdit]);
   const {
     foraDaAba: cardForaDaAba,
     abrirNoEndereco: abrirCardNoEndereco,
@@ -417,14 +439,12 @@ export default function PipelineKanban() {
     try {
       await pipelinesService.archiveItem(pipelineId, item.id);
       toast.success('Lead arquivado');
+      void loadPipelineData(true); // números das abas
     } catch {
       toast.error('Erro ao arquivar');
       loadPipelineData(true);
     }
   }, [pipelineId, removeItemFromBoardLocal, loadPipelineData]);
-
-  // A aba decide se o card arrasta (Ganhos, Perdidos e Arquivados não).
-  const podeArrastarCard = useCallback((item: PipelineItem) => podeArrastarNaAba(aba, item), [aba]);
 
   // Aba Arquivados: Desarquivar devolve o card ao quadro (some desta aba).
   const handleUnarchiveItem = useCallback(async (item: PipelineItem) => {
@@ -499,26 +519,30 @@ export default function PipelineKanban() {
     );
   }, []);
 
-  // Ganho/Perdido/Reabrir pela janela: o card do quadro pega a situação nova na
-  // hora (selo), sem esperar o próximo refresh. Se a situação mudou a coluna
-  // (Ganho → Concluído; Reabrir volta, ajuste de 08/10), o card troca de coluna.
+  // Ganho/Perdido/Reabrir pela janela (e o Ganho de soltar em Concluído, P3-T17A):
+  // o card pega a situação nova na hora; se a situação mudou a coluna (Ganho →
+  // Concluído; Reabrir volta, ajuste de 08/10), ele troca de coluna; se não é mais
+  // desta aba (marcou Ganho em Abertos), some do quadro. Os números das abas se
+  // refazem em silêncio. A janela continua aberta.
   const handleItemStatusChanged = useCallback((novo: PipelineItem) => {
     setStages(prev => {
       const antigo = prev.flatMap(stage => stage.items || []).find(i => String(i.id) === String(novo.id));
       if (!antigo) return prev;
       const junto = { ...antigo, ...novo } as PipelineItem;
+      const fica = pertenceAAba(aba, junto);
       const destino = String(junto.stage_id);
       return prev.map(stage => {
         const itens = stage.items || [];
         const estava = itens.some(i => String(i.id) === String(novo.id));
-        if (String(stage.id) === destino) {
+        if (fica && String(stage.id) === destino) {
           return { ...stage, items: estava ? itens.map(i => (String(i.id) === String(novo.id) ? junto : i)) : [junto, ...itens] };
         }
         return estava ? { ...stage, items: itens.filter(i => String(i.id) !== String(novo.id)) } : stage;
       });
     });
     setItemToEdit(prev => (prev && String(prev.id) === String(novo.id) ? { ...prev, ...novo } : prev));
-  }, []);
+    void loadPipelineData(true);
+  }, [aba, loadPipelineData]);
 
   const handleUpdateItem = async (data: {
     notes: string;
@@ -693,7 +717,10 @@ export default function PipelineKanban() {
         {cardForaDaAba && <AvisoCardForaDaAba aoFechar={fecharCardNoEndereco} />}
 
         {/* Kanban Board */}
-        {viewMode === 'board' && (
+        {viewMode === 'board' && carregandoQuadro && (
+          <div className="flex flex-1 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label="Carregando a aba" /></div>
+        )}
+        {viewMode === 'board' && !carregandoQuadro && (
         <div className="flex-1 overflow-hidden relative">
           <div
             ref={boardScrollRef}
@@ -736,6 +763,7 @@ export default function PipelineKanban() {
               ))}
 
               {/* Add Stage Column */}
+              {aba === 'abertos' && (
               <div className="w-80 flex-shrink-0">
                 <div
                   className="bg-muted/50 rounded-xl p-6 h-full border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors cursor-pointer"
@@ -748,6 +776,7 @@ export default function PipelineKanban() {
                   <p className="text-xs text-center">{t('kanban.stage.addStageDescription')}</p>
                 </div>
               </div>
+              )}
 
               {/* Empty state for no stages */}
               {stages.length === 0 && (
@@ -765,7 +794,10 @@ export default function PipelineKanban() {
         )}
 
         {/* Lista: todos os leads do funil, por ordem de chegada */}
-        {viewMode === 'list' && (
+        {viewMode === 'list' && carregandoQuadro && (
+          <div className="flex flex-1 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label="Carregando a aba" /></div>
+        )}
+        {viewMode === 'list' && !carregandoQuadro && (
           <PipelineListView
             stages={filteredStages}
             ordem={listSortOrder}
