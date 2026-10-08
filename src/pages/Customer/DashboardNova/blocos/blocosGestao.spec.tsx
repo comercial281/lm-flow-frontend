@@ -1,6 +1,6 @@
 // src/pages/Customer/DashboardNova/blocos/blocosGestao.spec.tsx
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 const navegar = vi.hoisted(() => vi.fn());
@@ -151,6 +151,21 @@ describe('Funil', () => {
       expect(screen.getByText('Novo')).toBeInTheDocument();
       unmount();
     });
+  });
+
+  // Ganho e Perdido viraram situação do card (spec do funil §3.7): à parte das etapas, no período do painel.
+  it('mostra Ganhos e Perdidos do período embaixo das etapas, sem link', () => {
+    wrap(<Funil {...ctx({ pipeline: { ...pipeline, outcomes: { won: 7, lost: 12 } } })} />);
+
+    expect(within(screen.getByText('Ganhos no período').parentElement as HTMLElement).getByText('7')).toBeInTheDocument();
+    expect(within(screen.getByText('Perdidos no período').parentElement as HTMLElement).getByText('12')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /no período/ })).toBeNull();
+  });
+
+  it('servidor sem outcomes (antes da E2 no ar): sem as duas linhas', () => {
+    wrap(<Funil {...ctx({ pipeline })} />);
+    expect(screen.queryByText('Ganhos no período')).toBeNull();
+    expect(screen.queryByText('Perdidos no período')).toBeNull();
   });
 });
 
