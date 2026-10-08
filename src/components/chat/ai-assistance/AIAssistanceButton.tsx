@@ -16,6 +16,8 @@ interface AIAssistanceButtonProps {
   onApplyText: (text: string) => void;
   disabled?: boolean;
   conversationId?: string;
+  /** Tamanho do botão. O campo de mensagem usa h-8 w-8 pra caber na barra do editor. */
+  sizeClass?: string;
 }
 
 const AIAssistanceButton: React.FC<AIAssistanceButtonProps> = ({
@@ -23,6 +25,7 @@ const AIAssistanceButton: React.FC<AIAssistanceButtonProps> = ({
   onApplyText,
   disabled = false,
   conversationId,
+  sizeClass = 'h-10 w-10',
 }) => {
   const { t } = useLanguage('chat');
   const config = useGlobalConfig();
@@ -159,7 +162,7 @@ const AIAssistanceButton: React.FC<AIAssistanceButtonProps> = ({
         variant="outline"
         size="icon"
         disabled={disabled}
-        className="h-10 w-10 flex-shrink-0 border-input hover:bg-accent hover:border-accent-foreground/20 disabled:opacity-50 group"
+        className={`${sizeClass} flex-shrink-0 border-input hover:bg-accent hover:border-accent-foreground/20 disabled:opacity-50 group`}
         onClick={handleOpenActions}
         title={t('aiAssistance.button.title')}
       >

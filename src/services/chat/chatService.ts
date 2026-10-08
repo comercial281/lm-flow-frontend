@@ -246,19 +246,6 @@ class ChatService {
     return extractData<Message>(response);
   }
 
-  // Envia o book (PDF) de um imóvel direto na conversa. O backend baixa o PDF da
-  // book_url e anexa server-side, sem passar pelo upload do navegador. Nasceu para
-  // contornar o antigo teto de 10MB do anexo; o teto hoje é CHAT_MAX_ATTACHMENT_BYTES
-  // (100MB), mas este caminho segue valendo: o book pode ter até 200MB no cadastro e
-  // aqui não trafega pela máquina de quem clica.
-  async sendPropertyBook(conversationId: string, propertyId: string, caption?: string): Promise<Message> {
-    const response = await api.post(`/conversations/${conversationId}/messages/send_book`, {
-      property_id: propertyId,
-      caption: caption ?? '',
-    });
-    return extractData<Message>(response);
-  }
-
   async sendMessageWithAttachments(
     conversationId: string,
     content: string,
