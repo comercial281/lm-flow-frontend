@@ -27,14 +27,14 @@ describe('EscolhaComBusca', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('busca sem acento e sem caixa; no máximo 8 e avisa o resto', async () => {
+  it('busca sem acento e sem caixa; no máximo 5 e avisa o resto', async () => {
     render(<Comigo />);
     await userEvent.type(screen.getByRole('textbox'), 'VISITÁ');
     expect(screen.getByRole('button', { name: 'Visita agendada' })).toBeInTheDocument();
     await userEvent.clear(screen.getByRole('textbox'));
     await userEvent.type(screen.getByRole('textbox'), 'demo');
-    expect(screen.getAllByRole('button')).toHaveLength(8);
-    expect(screen.getByText('Mais 22. Continue digitando para achar.')).toBeInTheDocument();
+    expect(screen.getAllByRole('button')).toHaveLength(5);
+    expect(screen.getByText('Mais 25. Continue digitando para achar.')).toBeInTheDocument();
   });
 
   it('clicar escolhe, limpa a busca e a escolhida vai pra cima com ✕', async () => {

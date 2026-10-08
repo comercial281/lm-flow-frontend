@@ -19,12 +19,12 @@ export interface EscolhaComBuscaProps {
   semBuscaAte?: number;
 }
 
-const LIMITE = 8;
+const LIMITE = 5;
 
 const normal = (t: string) => t.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 
 export default function EscolhaComBusca({
-  rotulo, opcoes, escolhidas, aoMudar, placeholder, semBuscaAte = 12,
+  rotulo, opcoes, escolhidas, aoMudar, placeholder, semBuscaAte = 5,
 }: EscolhaComBuscaProps) {
   const [busca, setBusca] = useState('');
   const termo = normal(busca.trim());
