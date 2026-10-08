@@ -14,8 +14,8 @@ import { CATEGORIAS_DE_TAREFA_NA_TELA } from './abasDasListas';
 // tarefa. Moldura e cabeçalho do padrão de telas: `Pagina` + `BaseHeader`, como
 // a RoletaLista; a lista em si é estreita (max-w-3xl) e fica à esquerda.
 // A aba fica no endereço (`?aba=categorias`; sem parâmetro = motivos).
-// Por ora só Motivos de perda aparece: Categorias de tarefa espera a sessão de
-// Tarefas ler esta lista (ver abasDasListas.ts); `?aba=categorias` cai em motivos.
+// As duas abas aparecem (Tarefas lê `task_categories`, ver abasDasListas.ts); com
+// a chave desligada, `?aba=categorias` cai em motivos.
 //
 // Quem pode mudar é o servidor (`pipelines.update`); aqui a mesma chave só
 // decide se a tela oferece editar.

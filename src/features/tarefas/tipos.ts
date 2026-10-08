@@ -14,6 +14,8 @@ export interface TarefaAtividade {
   title: string;
   description?: string | null;
   category?: string | null;
+  /** Id da opção da lista `task_categories`; null em tarefa antiga que só tem o nome. */
+  category_option_id?: string | null;
   due_at: string | null;
   status: 'pending' | 'completed' | 'cancelled' | 'overdue';
   overdue: boolean;
@@ -38,6 +40,7 @@ export interface ParametrosDaLista {
   kind?: TipoDeAtividade;
   assigned_to_id?: string;
   category?: string;
+  category_option_id?: string;
   q?: string;
   pipeline_item_ids?: string[];
   page?: number;
@@ -50,6 +53,7 @@ export interface DadosDaTarefa {
   title?: string;
   description?: string;
   due_date?: string;
-  category?: string;
+  /** Id da categoria; '' limpa. Omitir mantém. */
+  category_option_id?: string;
   assigned_to_id?: string;
 }

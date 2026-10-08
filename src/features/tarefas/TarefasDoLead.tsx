@@ -84,7 +84,7 @@ export default function TarefasDoLead({ pipelineItemIds, criarNoCard, aoContar, 
 
   const concluir = async (t: TarefaAtividade) => {
     // A próxima nasce no card da própria tarefa (na Conversa o lead tem vários).
-    if (await concluirEPerguntar(t, confirmar)) setJanela({ modo: 'nova', categoria: t.category ?? undefined, cardId: t.pipeline_item_id });
+    if (await concluirEPerguntar(t, confirmar)) setJanela({ modo: 'nova', categoria: t.category_option_id ?? undefined, cardId: t.pipeline_item_id });
   };
 
   const reabrir = async (t: TarefaAtividade) => {

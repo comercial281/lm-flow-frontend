@@ -12,8 +12,9 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import { visitsService, type PersonRef } from '@/services/visits/visitsService';
 import JanelaDaTarefa from '@/features/tarefas/JanelaDaTarefa';
 import LinhaDaTarefa from '@/features/tarefas/LinhaDaTarefa';
-import { BALDES, CATEGORIAS_INICIAIS, TEXTOS_DE_TAREFAS as T } from '@/features/tarefas/textos';
+import { BALDES, TEXTOS_DE_TAREFAS as T } from '@/features/tarefas/textos';
 import { EVENTO_TAREFAS_MUDARAM, tarefasService } from '@/features/tarefas/tarefasService';
+import { useCategoriasDeTarefa } from '@/features/tarefas/useCategoriasDeTarefa';
 import { concluirEPerguntar } from '@/features/tarefas/concluirEPerguntar';
 import type { Balde, RespostaDeAtividades, TarefaAtividade } from '@/features/tarefas/tipos';
 
@@ -35,6 +36,7 @@ export default function Tarefas() {
   const { balde, pessoa, categoria, buscaFirme, pagina } = f;
   const mudarFiltro = (parte: Partial<typeof f>) => setF(a => ({ ...a, ...parte, pagina: 1 }));
   const [busca, setBusca] = useState('');
+  const { ativas: categorias } = useCategoriasDeTarefa();
   const ultimoPedido = useRef(0);
   const [resposta, setResposta] = useState<RespostaDeAtividades | null>(null);
   const [pessoas, setPessoas] = useState<PersonRef[]>([]);
@@ -52,7 +54,7 @@ export default function Tarefas() {
       const nova = await tarefasService.listar({
         bucket: balde, kind: 'task', page: pagina, per_page: POR_PAGINA,
         ...(pessoa ? { assigned_to_id: pessoa } : {}),
-        ...(categoria ? { category: categoria } : {}),
+        ...(categoria ? { category_option_id: categoria } : {}),
         ...(buscaFirme ? { q: buscaFirme } : {}),
       });
       // Só o pedido mais recente vale: resposta atrasada não sobrescreve.
@@ -77,7 +79,7 @@ export default function Tarefas() {
   const acoes = {
     aoConcluir: async (t: TarefaAtividade) => {
       // A próxima tarefa nasce no card da que acabou de ser concluída.
-      if (await concluirEPerguntar(t, confirmar)) setJanela({ tarefa: null, cardId: t.pipeline_item_id, categoria: t.category ?? undefined });
+      if (await concluirEPerguntar(t, confirmar)) setJanela({ tarefa: null, cardId: t.pipeline_item_id, categoria: t.category_option_id ?? undefined });
     },
     aoReabrir: async (t: TarefaAtividade) => {
       try { await tarefasService.reabrir(t.id); toast.success(T.reaberta); } catch (e) { toast.error(apiErrorMessage(e, T.erro)); }
@@ -118,7 +120,7 @@ export default function Tarefas() {
           <div className="flex flex-wrap items-center gap-2">
             <Seletor aria-label="Categoria" value={categoria} onChange={e => mudarFiltro({ categoria: e.target.value })} className="w-48">
               <option value="">Todas as categorias</option>
-              {CATEGORIAS_INICIAIS.map(c => <option key={c} value={c}>{c}</option>)}
+              {categorias.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
             </Seletor>
             {!somenteMinhas && (
               <Seletor aria-label="Pessoa" value={pessoa} onChange={e => mudarFiltro({ pessoa: e.target.value })} className="w-48">
