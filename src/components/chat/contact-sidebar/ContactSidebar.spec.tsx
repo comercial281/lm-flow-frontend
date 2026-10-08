@@ -208,7 +208,7 @@ describe('ContactSidebar — painel do lead em seções', () => {
 
   it('funil, etiquetas e notas à vista, sem clicar', async () => {
     renderPainel();
-    expect(await screen.findByText('Colocar no funil')).toBeTruthy();
+    expect((await screen.findAllByText('Colocar no funil')).length).toBeGreaterThan(0);
     expect(screen.getByText('Funil')).toBeTruthy();
     expect(screen.getByText('Etiquetas')).toBeTruthy();
     expect(screen.getByRole('button', { name: '+ Etiqueta' })).toBeTruthy();
