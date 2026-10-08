@@ -28,6 +28,17 @@ const FORA: { valor: ForaDosCaminhos; rotulo: string }[] = [
 const SEM_PERGUNTA = 'Com um caminho só ela não pergunta. Escreva aqui se quiser que ela abra com uma pergunta.';
 const MAXIMO_GUARDADOS = 8;
 const MAXIMO_MARCADOS = 5;
+// O servidor descarta caminho com "como" vazio e nome repetido: o novo nasce com texto
+// inicial e nome livre (Novo caminho, Novo caminho 2...), desmarcado, e só vale quando
+// a pessoa preenche e marca.
+const COMO_INICIAL = 'Escreva como ela conduz quem segue este caminho.';
+const nomeLivre = (lista: CaminhoDaIntencao[]) => {
+  const usados = new Set(lista.map((c) => c.nome.trim().toLowerCase()));
+  if (!usados.has('novo caminho')) return 'Novo caminho';
+  let n = 2;
+  while (usados.has(`novo caminho ${n}`)) n += 1;
+  return `Novo caminho ${n}`;
+};
 
 export default function Intencao({ agent, gravar }: PropsDaPagina) {
   const playbook = agent.playbook ?? {};
@@ -82,7 +93,7 @@ export default function Intencao({ agent, gravar }: PropsDaPagina) {
         <p className="text-sm text-muted-foreground">Quem ainda não sabe o que quer, ela sempre atende sem pressão. Não precisa marcar.</p>
         <div className="flex flex-wrap items-center gap-3">
           <Button type="button" variant="ghost" className="text-primary" aria-label="Novo caminho" disabled={caminhos.length >= MAXIMO_GUARDADOS}
-            onClick={() => void gravarCaminhos([...caminhos, { nome: 'Novo caminho', sinais: '', como: '', ativo: false }])}>
+            onClick={() => void gravarCaminhos([...caminhos, { nome: nomeLivre(caminhos), sinais: '', como: COMO_INICIAL, ativo: false }])}>
             <Plus className="mr-1 h-4 w-4" aria-hidden /> Novo caminho
           </Button>
           <span className="text-xs text-muted-foreground">Até {MAXIMO_MARCADOS} marcados</span>

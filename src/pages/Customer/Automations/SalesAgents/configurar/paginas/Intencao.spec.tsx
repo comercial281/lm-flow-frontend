@@ -82,7 +82,22 @@ describe('Intenção', () => {
   it('"Novo caminho" entra desmarcado; até 8 guardados', async () => {
     const gravar = abrir();
     await userEvent.click(screen.getByRole('button', { name: 'Novo caminho' }));
-    expect(listaGravada(gravar).at(-1)).toEqual({ nome: 'Novo caminho', sinais: '', como: '', ativo: false });
+    expect(listaGravada(gravar).at(-1)).toEqual({
+      nome: 'Novo caminho', sinais: '', como: 'Escreva como ela conduz quem segue este caminho.', ativo: false,
+    });
+  });
+
+  it('cada "Novo caminho" ganha nome livre (sem repetir, sem diferença de caixa)', async () => {
+    const proprio = (nome: string): CaminhoDaIntencao => ({ nome, sinais: '', como: 'x', ativo: false });
+    const gravar = abrir(agente({ playbook: { vars: { caminhos_intencao: [...catalogo(['moradia']), proprio('Novo caminho'), proprio('novo caminho 2')] } } }));
+    await userEvent.click(screen.getByRole('button', { name: 'Novo caminho' }));
+    expect(listaGravada(gravar).at(-1)?.nome).toBe('Novo caminho 3');
+  });
+
+  it('o primeiro "Novo caminho" com a lista já tendo um ganha o 2', async () => {
+    const gravar = abrir(agente({ playbook: { vars: { caminhos_intencao: [...catalogo(['moradia']), { nome: 'Novo caminho', sinais: '', como: 'x', ativo: false }] } } }));
+    await userEvent.click(screen.getByRole('button', { name: 'Novo caminho' }));
+    expect(listaGravada(gravar).at(-1)?.nome).toBe('Novo caminho 2');
   });
 
   it('"Voltar ao padrão" grava o padrão do tipo de venda', async () => {
