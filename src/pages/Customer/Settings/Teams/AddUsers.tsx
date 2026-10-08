@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLanguage } from '@/hooks/useLanguage';
 import { toast } from 'sonner';
 import { Button, Checkbox, Avatar, AvatarFallback, AvatarImage } from '@/components/ui/ds';
 import { ArrowLeft, Users, UserPlus } from 'lucide-react';
 import BaseHeader from '@/components/base/BaseHeader';
+import Pagina from '@/components/base/Pagina';
 import BaseTable, { TableColumn } from '@/components/base/BaseTable';
 import TeamsService from '@/services/teams/teamsService';
 import type { Team } from '@/types/users';
@@ -47,7 +48,7 @@ const AddUsers: React.FC = () => {
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       toast.error(t('messages.loadDataError'));
-      navigate('/settings/teams');
+      navigate('/equipe?aba=times');
     } finally {
       setIsLoading(false);
     }
@@ -84,7 +85,7 @@ const AddUsers: React.FC = () => {
   };
 
   const handleGoBack = () => {
-    navigate('/settings/teams'); // Navigate back to teams list
+    navigate('/equipe?aba=times'); // Navigate back to teams list
   };
 
   const getUserInitials = (name: string) => {
@@ -185,25 +186,29 @@ const AddUsers: React.FC = () => {
     },
   ];
 
+  const voltar = (
+    <Link
+      to="/equipe?aba=times"
+      className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+    >
+      <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Equipe
+    </Link>
+  );
+
   if (isLoading) {
     return (
-      <div className="p-6">
+      <Pagina acima={voltar} cabecalho={<BaseHeader title={t('addUsers.subtitle')} />}>
         <div className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm" onClick={handleGoBack} aria-label="Voltar" title="Voltar">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div className="h-8 w-64 bg-muted animate-pulse rounded" />
-          </div>
+          <div className="h-8 w-64 bg-muted animate-pulse rounded" />
           <div className="h-64 bg-muted animate-pulse rounded" />
         </div>
-      </div>
+      </Pagina>
     );
   }
 
   if (!team) {
     return (
-      <div className="p-6">
+      <Pagina acima={voltar} cabecalho={<BaseHeader title={t('addUsers.notFound.title')} />}>
         <div className="text-center py-12">
           <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">{t('addUsers.notFound.title')}</h3>
@@ -213,25 +218,20 @@ const AddUsers: React.FC = () => {
             {t('addUsers.notFound.action')}
           </Button>
         </div>
-      </div>
+      </Pagina>
     );
   }
 
   return (
-    <div className="p-6">
-      <BaseHeader
-        title={t('addUsers.title', { name: team.name })}
-        subtitle={t('addUsers.subtitle')}
-        secondaryActions={[
-          {
-            label: t('actions.back'),
-            icon: <ArrowLeft className="h-4 w-4" />,
-            onClick: handleGoBack,
-            variant: 'outline',
-          },
-        ]}
-      />
-
+    <Pagina
+      acima={voltar}
+      cabecalho={
+        <BaseHeader
+          title={t('addUsers.title', { name: team.name })}
+          subtitle={t('addUsers.subtitle')}
+        />
+      }
+    >
       <div className="space-y-6">
         {/* Selection Summary */}
         <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
@@ -278,7 +278,7 @@ const AddUsers: React.FC = () => {
           className="border rounded-lg"
         />
       </div>
-    </div>
+    </Pagina>
   );
 };
 

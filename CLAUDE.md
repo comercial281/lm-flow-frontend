@@ -7438,7 +7438,9 @@ Folga 16/24px até o menu, conteúdo até 1400px, título com a barrinha roxa = 
 frase embaixo, botão principal à direita, busca/filtros/abas na linha de baixo. Formulário
 estreito: `<Pagina estreita>` (à esquerda, nunca centralizado). Tela de detalhe: "← volta" em
 `acima`, título = nome do item. Lista com tabela e paginação: `rolagem="conteudo"`.
-Telas de detalhe: o "← volta" fica acima do título, e foto/logo/avatar do item saem do título e vão pro começo do conteúdo (Ficha do proprietário, Portal, Configurações do número).
+
+**Telas de detalhe:** o "← volta" fica acima do título, e foto/logo/avatar do item saem do
+título e vão pro começo do conteúdo (Ficha do proprietário, Portal, Configurações do número).
 
 **Um título só:** Bolsão e Integrações não desenham título: entregam abas / "← Integrações"
 pela `ExtrasDaMolduraContext`. WhatsApp vira "Meus números" quando aberto pelo avatar.

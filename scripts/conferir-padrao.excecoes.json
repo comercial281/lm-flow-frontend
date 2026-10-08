@@ -39,8 +39,8 @@
   {"arquivo": "src/components/channels/TelegramForm.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "sem rota: não aparece pra ninguém (só o TelegramForm de channels/forms é usado, pelo Novo canal)"},
   {"arquivo": "src/components/integrations/base/IntegrationHeader.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "sem rota: não aparece pra ninguém (nada renderiza IntegrationHeader)"},
   {"arquivo": "src/components/quickReplies/QuickRepliesHeader.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "sem rota: não aparece pra ninguém (QuickReplies não tem rota; /settings/quick-replies redireciona)"},
-  {"arquivo": "src/pages/Customer/Academia/AcademyEntry.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "Área de Membros: tela cheia com shell próprio, fora do menu e da moldura do CRM"},
-  {"arquivo": "src/pages/Customer/Academia/CourseView.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "Área de Membros: tela cheia com shell próprio, fora do menu e da moldura do CRM"},
+  {"arquivo": "src/pages/Customer/Academia/AcademyEntry.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "player de aulas em tela cheia, aberto pelo Guia do LM Flow → Aulas; layout próprio, como o Guia (padrão de telas, 07/10)"},
+  {"arquivo": "src/pages/Customer/Academia/CourseView.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "player de aulas em tela cheia, aberto pelo Guia do LM Flow → Aulas; layout próprio, como o Guia (padrão de telas, 07/10)"},
   {"arquivo": "src/pages/Customer/Contracts/Contracts.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "fora do menu desde 01/10 (decisão do dono); entra no padrão quando voltar ao menu"},
   {"arquivo": "src/pages/Customer/Contracts/Contracts.tsx", "categoria": "barraAMao", "trecho": "linear-gradient(to bottom, #7c3aed, #9333ea)", "motivo": "fora do menu desde 01/10 (decisão do dono); entra no padrão quando voltar ao menu"},
   {"arquivo": "src/pages/Customer/DashboardApp/DashboardAppPage.tsx", "categoria": "tituloAMao", "trecho": "<h1", "motivo": "fora do menu desde 01/10 (decisão do dono); entra no padrão quando voltar ao menu (Painel antigo /dashboard-app)"},
@@ -57,7 +57,6 @@
   {"arquivo": "src/pages/Customer/Settings/CannedResponses/CannedResponses.tsx", "categoria": "foraDaMoldura", "trecho": "<CannedResponsesHeader", "motivo": "sem rota: não aparece pra ninguém (/settings/canned-responses redireciona)"},
   {"arquivo": "src/pages/Customer/Settings/EmailTemplateEditor/EmailTemplateEditor.tsx", "categoria": "foraDaMoldura", "trecho": "<BaseHeader", "motivo": "fora do menu desde 01/10 (decisão do dono); entra no padrão quando voltar ao menu (editor de modelo de e-mail)"},
   {"arquivo": "src/pages/Customer/Settings/Macros/Macros.tsx", "categoria": "foraDaMoldura", "trecho": "<MacrosHeader", "motivo": "fora do menu desde 01/10 (decisão do dono); entra no padrão quando voltar ao menu (Macros)"},
-  {"arquivo": "src/pages/Customer/Settings/Teams/AddUsers.tsx", "categoria": "foraDaMoldura", "trecho": "<BaseHeader", "motivo": "fora do menu desde 01/10 (decisão do dono); entra no padrão quando voltar ao menu (adicionar pessoas ao time)"},
   {"arquivo": "src/pages/Customer/Settings/Users/Users.tsx", "categoria": "foraDaMoldura", "trecho": "<UsersHeader", "motivo": "sem rota: não aparece pra ninguém (/settings/users redireciona pra Equipe; nada renderiza Users)"},
   {"arquivo": "src/pages/Customer/Settings/WhatsappReminders/WhatsappReminders.tsx", "categoria": "foraDaMoldura", "trecho": "<BaseHeader", "motivo": "fora do menu desde 01/10 (decisão do dono); entra no padrão quando voltar ao menu (Lembretes)"}
 ]
