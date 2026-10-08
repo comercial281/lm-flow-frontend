@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense, startTransition } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -304,10 +304,21 @@ export default function PipelineKanban() {
   useEffect(() => {
     if (cardForaDoQuadro.estado === 'achou') abrirCard(cardForaDoQuadro.item);
   }, [cardForaDoQuadro, abrirCard]);
-  const fecharCard = useCallback((aberto: boolean) => {
-    setShowEditItemModal(aberto);
-    if (!aberto) fecharCardNoEndereco();
+  // Fechar a janela e tirar o ?card= na MESMA transição: o react-router aplica a
+  // navegação dentro de uma transição, e se a janela fechasse antes o card (fora
+  // da aba) sumiria dos itens com o ?card= ainda no endereço — nova busca, ou a
+  // janela reabrindo sozinha.
+  const fecharJanelaDoCard = useCallback((limpar?: () => void) => {
+    startTransition(() => {
+      setShowEditItemModal(false);
+      limpar?.();
+      fecharCardNoEndereco();
+    });
   }, [fecharCardNoEndereco]);
+  const fecharCard = useCallback((aberto: boolean) => {
+    if (aberto) setShowEditItemModal(true);
+    else fecharJanelaDoCard();
+  }, [fecharJanelaDoCard]);
 
   // ?etapa= (link da Dashboard): rola até a coluna e destaca por 2 segundos.
   const [etapaDestacada, setEtapaDestacada] = useState<string | null>(null);
@@ -601,9 +612,7 @@ export default function PipelineKanban() {
         },
       });
       toast.success(t('kanban.messages.itemUpdated'));
-      setShowEditItemModal(false);
-      setItemToEdit(null);
-      fecharCardNoEndereco();
+      fecharJanelaDoCard(() => setItemToEdit(null));
       // Move otimista na hora + refresh silencioso (sem o spinner de tela cheia
       // que dava a sensação de "recarregar a página").
       if (stageChanged) moveItemToStageLocal(movedId, data.stage_id);

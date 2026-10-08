@@ -20,9 +20,12 @@ vi.mock('@/hooks/useLanguage', () => ({
 // card (a única que recebe onItemStatusChanged), que aqui é um botão que marca
 // Ganho como o rodapé de verdade faria.
 vi.mock('@/utils/chunkReload', () => ({
-  lazyWithRetry: () => (p: { item?: Record<string, unknown>; onItemStatusChanged?: (i: unknown) => void }) =>
-    p.onItemStatusChanged && p.item ? (
+  lazyWithRetry: () => (p: { item?: Record<string, unknown>; onItemStatusChanged?: (i: unknown) => void; onOpenChange?: (o: boolean) => void; open?: boolean }) =>
+    p.open !== false && p.onItemStatusChanged && p.item ? (
       <>
+        <button type="button" onClick={() => p.onOpenChange?.(false)}>
+          Fechar (janela falsa)
+        </button>
         <button
           type="button"
           onClick={() => p.onItemStatusChanged?.({ ...p.item, status: 'won', won_at: '2026-10-07T12:00:00Z' })}
@@ -57,9 +60,9 @@ vi.mock('@/pages/Customer/Pipelines/pipelinePayloadCache', () => ({
   prefetchPipeline: vi.fn(),
 }));
 vi.mock('@/services/listOptions/listOptionsService', () => ({ listOptionsService: { list: vi.fn().mockResolvedValue([]) } }));
-vi.mock('@/services/pipelines/pipelinesService', () => ({ pipelinesService: { getPipelineItem: mocks.getPipelineItem } }));
 vi.mock('@/services/pipelines', () => ({
   pipelinesService: {
+    getPipelineItem: mocks.getPipelineItem,
     getPipeline: vi.fn(),
     getPipelines: vi.fn(),
     reorderItem: vi.fn(),
@@ -154,6 +157,11 @@ const endereco = () => new URLSearchParams(screen.getByTestId('endereco').textCo
 
 beforeEach(() => {
   vi.clearAllMocks();
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
   mocks.getPipelineItem.mockReset().mockRejectedValue(Object.assign(new Error('404'), { response: { status: 404 } }));
   arquivadosAgora.clear();
   desarquivadosAgora.clear();
@@ -429,10 +437,36 @@ describe('quadro do funil · abas', () => {
     montar('/pipelines/p1?aba=ganhos&card=i1');
 
     expect(await screen.findByText('Paula Reis')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Marcar ganho (janela falsa)' })).toBeInTheDocument();
     await waitFor(() => expect(mocks.getPipelineItem).toHaveBeenCalledWith('p1', 'i1'));
     expect(endereco().get('card')).toBe('i1');
     expect(screen.queryByText('Você não tem acesso a este lead')).toBeNull();
     expect(screen.queryByText('Este lead não está nesta aba.')).toBeNull();
+  });
+
+  it('fechar a janela de um card FORA da aba: busca uma vez só, a janela fica fechada e o card sai do endereço', async () => {
+    mocks.getPipelineItem.mockResolvedValue({
+      item: MARIA,
+      stage_durations: [],
+      pipeline: { id: 'p1', name: 'Leads (Marketing)', stages: [] },
+    });
+    montar('/pipelines/p1?aba=ganhos&card=i1');
+    await userEvent.click(await screen.findByRole('button', { name: 'Fechar (janela falsa)' }));
+
+    await waitFor(() => expect(endereco().get('card')).toBeNull());
+    await new Promise(r => setTimeout(r, 20));
+    expect(screen.queryByRole('button', { name: 'Fechar (janela falsa)' })).toBeNull();
+    expect(mocks.getPipelineItem).toHaveBeenCalledTimes(1);
+  });
+
+  it('fechar a janela de um card que ESTÁ na aba: a janela não reabre', async () => {
+    montar('/pipelines/p1?card=i1');
+    await userEvent.click(await screen.findByRole('button', { name: 'Fechar (janela falsa)' }));
+
+    await waitFor(() => expect(endereco().get('card')).toBeNull());
+    await new Promise(r => setTimeout(r, 20));
+    expect(screen.queryByRole('button', { name: 'Fechar (janela falsa)' })).toBeNull();
+    expect(mocks.getPipelineItem).not.toHaveBeenCalled();
   });
 
   it('link de card sem acesso (outro corretor, apagado): avisa, e o X tira o card do endereço', async () => {

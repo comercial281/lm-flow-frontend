@@ -1,6 +1,6 @@
 // O card pelo id (GET de um card, E4) — a página do card e o quadro (link
 // ?card= de card fora da aba) leem por aqui.
-import { pipelinesService } from '@/services/pipelines/pipelinesService';
+import { pipelinesService } from '@/services/pipelines';
 import type { PipelineItemDetail } from '@/types/analytics';
 
 export const SEM_ACESSO_AO_CARD = 'Você não tem acesso a este lead';
