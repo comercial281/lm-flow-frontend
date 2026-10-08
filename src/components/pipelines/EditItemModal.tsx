@@ -16,11 +16,6 @@ import {
   DialogTitle,
   DialogDescription,
   Button,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Command,
   CommandEmpty,
   CommandGroup,
@@ -64,6 +59,7 @@ import CardResultFooter from './card/CardResultFooter';
 import CardMoreMenu from './card/CardMoreMenu';
 import CardOriginTab from './card/CardOriginTab';
 import ColocarNoFunil from './card/ColocarNoFunil';
+import { CampoEtapa, CampoResponsavel } from './card/CamposDaSituacao';
 import { toast } from 'sonner';
 import { serverRefusalMessageOf } from '@/services/core/forbidden';
 import { apiErrorMessage } from '@/utils/apiHelpers';
@@ -434,7 +430,6 @@ export default function EditItemModal({
   const dadosDaOrigem = (item.lead_origin as Record<string, unknown> | null)
     ?? ((contato?.additional_attributes as { lead_origin?: Record<string, unknown> } | undefined)?.lead_origin ?? null);
   const origem = origemCurta(dadosDaOrigem);
-  const etapaAtual = stages.find(s => s.id.toString() === etapaId);
   // Card aberto de Contatos pra quem não está em funil: sem etapa, sem
   // Ganho/Perdido, sem Conversão Meta (spec 2026-10-02-fase-4-card-do-contato).
   const foraDoFunil = semFunil(item);
@@ -570,53 +565,18 @@ export default function EditItemModal({
                   <ColocarNoFunil contactId={String(contato.id)} conversationId={conversaDoCard(item)} onColocado={onColocadoNoFunil} />
                 ) : <div />
               ) : (
-              <div className="grid gap-1 min-w-0">
-                <span className="text-xs font-medium text-muted-foreground">Etapa</span>
-                <Select value={etapaId ?? undefined} onValueChange={moverEtapa} disabled={movendoEtapa}>
-                  <SelectTrigger className="h-10 w-full text-sm">
-                    <SelectValue placeholder="Escolha a etapa">
-                      {etapaAtual && (
-                        <span className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: etapaAtual.color }} />
-                          {etapaAtual.name}
-                        </span>
-                      )}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stages.map(stage => (
-                      <SelectItem key={stage.id} value={stage.id.toString()}>
-                        <span className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
-                          {stage.name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <CampoEtapa stages={stages} etapaId={etapaId} onMover={moverEtapa} disabled={movendoEtapa} />
               )}
 
               {/* Responsável — sem gate de conversa: lead de formulário/anúncio
                   não tem conversa e mesmo assim precisa de dono. */}
               {(item.conversation?.id || contato?.id) && (
-                <div className="grid gap-1 min-w-0">
-                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    Responsável
-                    {assigningUser && <Loader2 className="h-3 w-3 animate-spin" />}
-                  </span>
-                  <Select value={selectedAssigneeId ?? 'unassigned'} onValueChange={handleAssigneeChange} disabled={assigningUser}>
-                    <SelectTrigger className="h-10 w-full text-sm">
-                      <SelectValue placeholder="Sem responsável" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Sem responsável</SelectItem>
-                      {users.map(u => (
-                        <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <CampoResponsavel
+                  users={users}
+                  responsavelId={selectedAssigneeId}
+                  onTrocar={handleAssigneeChange}
+                  carregando={assigningUser}
+                />
               )}
               </div>
               {roletaDoLead && (
