@@ -7629,6 +7629,11 @@ Armadilhas:
 6. O card que a rota de situação devolve já vem na coluna nova: quem recebe (`aoMudarSituacao`,
    `handleItemStatusChanged`) troca a Etapa e a coluna pelo `stage_id` dele.
 7. O "enviado" dos botões da Meta vem do servidor (`events[].once` + `sent_at`, `Capi::OncePerLead`).
+8. **A resposta da rota de situação não é o card do quadro** (vem sem Roleta, Origem e última
+   mensagem). Nunca espalhar a resposta inteira por cima do card: usar `comSituacaoNova(card,
+   resposta)` / `camposDaSituacao` (`situacao.ts`), que copiam só situação, etapa e datas. Vale
+   para a janela, a página, o quadro, Contatos e a lateral da conversa (`SecaoFunil`, que também
+   trava a Etapa do card fechado e recarrega quando a janela muda a situação).
 
 ## Funil: topo em três faixas, abas por situação, painel de filtros e card mínimo (07/10/2026)
 
@@ -7788,6 +7793,9 @@ Armadilhas:
     P3-T5) e recarrega o Histórico em `situacao.aoMudar`. A janela do card no quadro fecha
     dentro de um `startTransition` (`fecharJanelaDoCard` em `PipelineKanban.tsx`; transição
     do react-router 7: corrige o refetch e a reabertura do card). O painel da Meta é chaveado pela situação, na janela e na Ficha.
+11. **Duas guias:** a página recarrega em silêncio quando a guia volta a ficar visível
+    (`useCardCompleto`, sem aviso se falhar). No quadro, o refresh silencioso atualiza a janela
+    aberta só quando a situação ou a etapa do card mudou (senão a janela se refaria a cada 60 s).
 
 ## Histórico novo do lead (07/10/2026)
 

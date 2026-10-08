@@ -27,7 +27,7 @@ import { useCardForaDoQuadro } from '@/features/cardDoLead/useCardForaDoQuadro';
 import AvisoDoCardForaDoQuadro from '@/features/cardDoLead/AvisoDoCardForaDoQuadro';
 import { useCardNoEndereco } from './useCardNoEndereco';
 import { STATUS_DA_ABA, pertenceAAba, podeArrastarNaAba } from './quadro/enderecoDoQuadro';
-import { comSituacaoNova } from '@/features/pipelines/situacao/situacao';
+import { comSituacaoNova, situacaoDe } from '@/features/pipelines/situacao/situacao';
 import { useBoardDrag } from './quadro/useBoardDrag';
 import { usePipelineFilters } from './quadro/usePipelineFilters';
 import PainelDeFiltrosDoFunil from './quadro/PainelDeFiltrosDoFunil';
@@ -171,6 +171,16 @@ export default function PipelineKanban() {
       setPipeline(pipelineData);
       setStages(pipelineData.stages || []);
       setErroDaAba(false);
+      // Janela aberta num card que mudou de situação ou etapa por fora (outra
+      // guia, automação): a janela acompanha. Sem mudança, o card fica o mesmo
+      // objeto (a janela não se refaz a cada 60 s).
+      setItemToEdit(prev => {
+        if (!prev) return prev;
+        const achado = (pipelineData.stages || []).flatMap(s => s.items || []).find(i => String(i.id) === String(prev.id));
+        if (!achado) return prev;
+        const mudou = situacaoDe(achado) !== situacaoDe(prev) || String(achado.stage_id) !== String(prev.stage_id);
+        return mudou ? comSituacaoNova(prev, achado) : prev;
+      });
     } catch (error) {
       console.error('Error loading pipeline data:', error);
       if (mostrarEspera && meu === pedidoRef.current) {

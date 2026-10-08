@@ -23,6 +23,7 @@ vi.mock('@/utils/chunkReload', () => ({
   lazyWithRetry: () => (p: { item?: Record<string, unknown>; onItemStatusChanged?: (i: unknown) => void; onOpenChange?: (o: boolean) => void; open?: boolean }) =>
     p.open !== false && p.onItemStatusChanged && p.item ? (
       <>
+        <span>{`situação na janela: ${String(p.item.status ?? 'open')}`}</span>
         <button type="button" onClick={() => p.onOpenChange?.(false)}>
           Fechar (janela falsa)
         </button>
@@ -441,6 +442,25 @@ describe('quadro do funil · abas', () => {
     expect(endereco().get('aba')).toBe('perdidos');
     expect(endereco().get('card')).toBe('i4');
     expect(screen.queryByText('Este lead não está nesta aba.')).toBeNull();
+  });
+
+  it('janela aberta e o card ganho em outra guia: a volta do foco atualiza a janela', async () => {
+    montar('/pipelines/p1?aba=todos&card=i1');
+    expect(await screen.findByText('situação na janela: open')).toBeInTheDocument();
+
+    vi.mocked(pipelinesService.getPipeline).mockImplementation(async () => {
+      const f = FUNIL('all');
+      return {
+        ...f,
+        stages: f.stages.map(s => ({
+          ...s,
+          items: (s.items || []).map(i => (i.id === 'i1' ? { ...i, status: 'won', won_at: '2026-10-08T09:00:00Z' } : i)),
+        })),
+      } as Pipeline;
+    });
+    act(() => { window.dispatchEvent(new Event('focus')); });
+
+    expect(await screen.findByText('situação na janela: won')).toBeInTheDocument();
   });
 
   it('link de card que não está nesta aba: busca o card pelo id e abre, sem aviso', async () => {
