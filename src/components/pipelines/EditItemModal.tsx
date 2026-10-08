@@ -567,7 +567,7 @@ export default function EditItemModal({
               <div className="grid grid-cols-2 gap-3">
               {foraDoFunil ? (
                 contato?.id != null && onColocadoNoFunil ? (
-                  <ColocarNoFunil contactId={String(contato.id)} onColocado={onColocadoNoFunil} />
+                  <ColocarNoFunil contactId={String(contato.id)} conversationId={conversaDoCard(item)} onColocado={onColocadoNoFunil} />
                 ) : <div />
               ) : (
               <div className="grid gap-1 min-w-0">
