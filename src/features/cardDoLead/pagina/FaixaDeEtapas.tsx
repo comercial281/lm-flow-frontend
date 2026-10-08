@@ -91,7 +91,10 @@ export default function FaixaDeEtapas({
                   className={cn(classe, 'hover:border-primary disabled:opacity-60')}
                   disabled={movendo}
                   onClick={() => void escolher(etapa)}
-                  aria-label={`Mover para ${etapa.name}`}
+                  // O rótulo leva os dias (senão o leitor de tela não os ouve); Concluído marca Ganho.
+                  aria-label={ehColunaDeGanho(etapa)
+                    ? `Marcar como Ganho (${etapa.name})`
+                    : `Mover para ${etapa.name}${dias ? ` · ${dias}` : ''}`}
                 >
                   {conteudo}
                 </button>

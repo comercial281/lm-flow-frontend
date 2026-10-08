@@ -52,7 +52,8 @@ describe('topo do funil em três faixas', () => {
     expect(screen.getByRole('tab', { name: 'Abertos 312' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Perdidos 154' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Todos 468' })).toBeInTheDocument();
-    const arquivados = screen.getByRole('button', { name: 'Arquivados' });
+    // O número vai no nome que o leitor de tela lê.
+    const arquivados = screen.getByRole('button', { name: 'Arquivados 40' });
     expect(arquivados).toHaveAttribute('title', 'Arquivados');
     expect(arquivados).toHaveTextContent('40');
     expect(arquivados).toHaveAttribute('aria-pressed', 'false');
@@ -65,7 +66,7 @@ describe('topo do funil em três faixas', () => {
   it('na aba Arquivados nenhuma das quatro fica marcada e a caixa sim', () => {
     montar({ aba: 'arquivados' });
     expect(screen.getAllByRole('tab').every(t => t.getAttribute('aria-selected') === 'false')).toBe(true);
-    expect(screen.getByRole('button', { name: 'Arquivados' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /^Arquivados/ })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('faixa 3: busca, contador, Quadro|Lista e Filtros com a contagem', async () => {

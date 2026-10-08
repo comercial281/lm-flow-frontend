@@ -202,7 +202,7 @@ describe('CardCompletoPage', () => {
     expect(nomes[2]).toContain('Proposta');
     expect(screen.getByText('14 dias · atual')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Mover para Proposta' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Mover para Proposta( ·|$)/ }));
     await userEvent.click(await screen.findByRole('button', { name: 'Mover' }));
 
     await waitFor(() => expect(s.mover).toHaveBeenCalledWith('s3'));
@@ -215,12 +215,12 @@ describe('CardCompletoPage', () => {
     abrirPagina();
     await screen.findByRole('heading', { level: 1, name: 'Maria Souza' });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Mover para Proposta' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Mover para Proposta( ·|$)/ }));
     await userEvent.click(await screen.findByRole('button', { name: 'Mover' }));
     await waitFor(() => expect(s.mover).toHaveBeenCalledTimes(1));
 
     // O falso não liga o "movendo": só o trinco da página segura o segundo pedido.
-    await userEvent.click(screen.getByRole('button', { name: 'Mover para Novo' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Mover para Novo( ·|$)/ }));
     await userEvent.click(await screen.findByRole('button', { name: 'Mover' }));
     expect(s.mover).toHaveBeenCalledTimes(1);
     expect(s.mover).toHaveBeenCalledWith('s3');
@@ -235,7 +235,7 @@ describe('CardCompletoPage', () => {
     abrirPagina();
     await screen.findByRole('heading', { level: 1, name: 'Maria Souza' });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Mover para Concluído' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Marcar como Ganho (Concluído)' }));
     expect(await screen.findByRole('dialog', { name: 'Marcar Maria Souza como Ganho?' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Marcar como Ganho' }));
 

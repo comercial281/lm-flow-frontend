@@ -7684,12 +7684,19 @@ Armadilhas:
 3. **Resposta de outra aba é jogada fora** (`pedidoRef` no `loadPipelineData`): sem isso,
    trocar de aba rápido deixava o quadro com os cards da aba anterior.
 4. Só Abertos usa o payload guardado no navegador (`pipelinePayloadCache`, chave = id do funil).
+   A chave do armazenamento subiu para `lmflow:pipeline-payloads:v2`: o payload de antes da
+   entrega (todos os cards, sem situação) não pinta a aba Abertos depois da publicação.
 5. Os filtros rodam no navegador sobre os cards da aba carregada. `colunas` no endereço são as
    etapas VISÍVEIS (vazio = todas). `tarefas` (atrasada/hoje) usa `passaNoFiltroDeTarefas`
    (`src/features/tarefas/filtroDoFunil.ts`, `atrasada`→`'atrasadas'`) — a seção Tarefas do
    popover antigo veio para o painel (escolha múltipla).
-6. A chave `pipeline_import` deixou de ser usada no código: o `sync-feature-catalog` tira do
-   catálogo no próximo deploy. Ninguém mais a usava.
+6. Duas chaves de Funções deixaram de ser usadas no código e o `sync-feature-catalog` tira as
+   duas do catálogo no próximo deploy: `pipeline_import` (o Importar saiu do quadro) e
+   `card_remove_from_pipeline` (só o `components/pipelines/PipelineItemCard.tsx`, órfão e
+   apagado, usava; em produção o "Remover do funil" nunca passou por ela). O token do sync
+   (`LM_FLOW_SYNC_TOKEN`) tem que estar só no ambiente Production da Vercel: numa prévia, o
+   sync tiraria `pipeline_import` enquanto a `main` ainda usa a chave (chave ausente = ligada,
+   o Importar voltaria pra quem desligou).
 7. A setinha ↗ e o "Copiar link" apontam para `/pipelines/:pipelineId/card/:itemId`, a página
    da E4 (`src/features/pipelines/linkDoCard.ts`).
 8. "Agendar ação" e "Ver notas" saíram do ⋯ do card do quadro: moram dentro do card.

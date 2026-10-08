@@ -137,7 +137,7 @@ export default function BoardTopBar({
           type="button"
           onClick={() => onTrocarAba('arquivados')}
           aria-pressed={emArquivados}
-          aria-label="Arquivados"
+          aria-label={contagens ? `Arquivados ${numero(contagens.archived)}` : 'Arquivados'}
           title="Arquivados"
           className={cn(
             'inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1.5 text-sm font-medium tabular-nums transition-colors',

@@ -760,7 +760,7 @@ export default function PipelineKanban() {
           <EmptyState tipo="erro" aoTentarDeNovo={() => { void loadPipelineData(); }} />
         )}
         {viewMode === 'board' && carregandoQuadro && (
-          <div className="flex flex-1 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label="Carregando a aba" /></div>
+          <div className="flex flex-1 items-center justify-center"><div role="status" className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label="Carregando a aba" /></div>
         )}
         {viewMode === 'board' && !carregandoQuadro && !erroDaAba && (
         <div className="flex-1 overflow-hidden relative">
@@ -837,7 +837,7 @@ export default function PipelineKanban() {
 
         {/* Lista: todos os leads do funil, por ordem de chegada */}
         {viewMode === 'list' && carregandoQuadro && (
-          <div className="flex flex-1 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label="Carregando a aba" /></div>
+          <div className="flex flex-1 items-center justify-center"><div role="status" className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label="Carregando a aba" /></div>
         )}
         {viewMode === 'list' && !carregandoQuadro && !erroDaAba && (
           <PipelineListView

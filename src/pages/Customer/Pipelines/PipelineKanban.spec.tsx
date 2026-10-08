@@ -206,6 +206,21 @@ describe('quadro do funil · o que continua igual', () => {
     expect(within(document.getElementById('etapa-s2')!).getByText('Maria Souza')).toBeInTheDocument();
   });
 
+  it('arrastar card que outra guia fechou: volta e mostra a frase do servidor', async () => {
+    vi.mocked(pipelinesService.reorderItem).mockRejectedValueOnce({
+      response: { data: { success: false, error: { code: 'BUSINESS_RULE_VIOLATION', message: 'Lead fechado não muda de etapa. Reabra para mexer.' } } },
+    });
+    const calar = vi.spyOn(console, 'error').mockImplementation(() => {});
+    montar();
+    await screen.findByText('Maria Souza');
+    fireEvent.dragStart(cardDe('Maria Souza'));
+    fireEvent.dragOver(colunaDe('s2'));
+    fireEvent.drop(colunaDe('s2'));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Lead fechado não muda de etapa. Reabra para mexer.'));
+    expect(within(document.getElementById('etapa-s2')!).queryByText('Maria Souza')).toBeNull();
+    calar.mockRestore();
+  });
+
   it('card ganho não arrasta: reabre antes (E2)', async () => {
     montar('/pipelines/p1?aba=todos');
     await screen.findByText('Paula Reis');
@@ -348,7 +363,7 @@ describe('quadro do funil · topo', () => {
     await screen.findByText('Maria Souza');
     expect(screen.getByRole('button', { name: 'Leads (Marketing)' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Abertos 2' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('button', { name: 'Arquivados' })).toHaveTextContent('1');
+    expect(screen.getByRole('button', { name: /^Arquivados/ })).toHaveTextContent('1');
     expect(screen.getByText('2 leads')).toBeInTheDocument();
     expect(screen.queryByText('kanban.header.stages')).toBeNull();
     expect(screen.queryByRole('button', { name: /Importar/ })).toBeNull();
@@ -357,7 +372,7 @@ describe('quadro do funil · topo', () => {
   it('a caixa de Arquivados vai para a aba (no endereço)', async () => {
     montar();
     await screen.findByText('Maria Souza');
-    await userEvent.click(screen.getByRole('button', { name: 'Arquivados' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Arquivados/ }));
     expect(endereco().get('aba')).toBe('arquivados');
   });
 

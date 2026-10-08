@@ -43,11 +43,15 @@ describe('FaixaDeEtapas', () => {
     expect(screen.getByText('2 dias')).toBeInTheDocument();
     expect(screen.getByText('14 dias · atual')).toBeInTheDocument();
     expect(screen.getByText('1º contato').closest('li')).toHaveAttribute('aria-current', 'step');
+    // O leitor de tela ouve os dias, e Concluído diz que marca Ganho.
+    expect(screen.getByRole('button', { name: 'Mover para Novo · 2 dias' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mover para Proposta' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Marcar como Ganho (Concluído)' })).toBeInTheDocument();
   });
 
   it('clicar numa etapa pergunta antes e só move no "Mover"', async () => {
     const { aoMover } = montar();
-    await userEvent.click(screen.getByRole('button', { name: 'Mover para Proposta' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Mover para Proposta( ·|$)/ }));
 
     expect(await screen.findByRole('dialog', { name: 'Mover Maria Souza para Proposta?' })).toBeInTheDocument();
     expect(aoMover).not.toHaveBeenCalled();
@@ -58,7 +62,7 @@ describe('FaixaDeEtapas', () => {
 
   it('cancelar não move', async () => {
     const { aoMover } = montar();
-    await userEvent.click(screen.getByRole('button', { name: 'Mover para Novo' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Mover para Novo( ·|$)/ }));
     await userEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
 
     expect(aoMover).not.toHaveBeenCalled();
@@ -66,7 +70,7 @@ describe('FaixaDeEtapas', () => {
 
   it('a etapa atual não é botão', () => {
     montar();
-    expect(screen.queryByRole('button', { name: 'Mover para 1º contato' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Mover para 1º contato( ·|$)/ })).toBeNull();
   });
 
   it('card fechado: a faixa só informa', () => {
@@ -78,14 +82,14 @@ describe('FaixaDeEtapas', () => {
 
   it('enquanto move, nenhuma etapa aceita clique', () => {
     montar({ movendo: true });
-    expect(screen.getByRole('button', { name: 'Mover para Proposta' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Mover para Proposta( ·|$)/ })).toBeDisabled();
     expect(screen.getByRole('status')).toHaveTextContent('Mudando de etapa');
   });
 
   // Ajuste de 08/10: Concluído é a coluna do Ganho.
   it('clicar em Concluído pergunta "Marcar <nome> como Ganho?" e marca Ganho (não move)', async () => {
     const { aoMover, aoGanhar } = montar();
-    await userEvent.click(screen.getByRole('button', { name: 'Mover para Concluído' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Marcar como Ganho (Concluído)' }));
 
     expect(await screen.findByRole('dialog', { name: 'Marcar Maria Souza como Ganho?' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Marcar como Ganho' }));

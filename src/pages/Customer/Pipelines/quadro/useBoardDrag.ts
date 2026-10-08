@@ -231,7 +231,8 @@ export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, po
     } catch (error) {
       console.error('Error reordering item:', error);
       setStages(previousStages);
-      toast.error(mensagemDeErro);
+      // Card fechado em outra guia: o servidor recusa com "Lead fechado não muda de etapa".
+      toast.error(mensagemDaRecusa(error, mensagemDeErro));
     } finally {
       finishDrag();
     }
