@@ -7452,3 +7452,34 @@ da automação) não usam a moldura; só a folga lateral é a mesma.
 **Trava:** `conferir-padrao` conta `tituloAMao`, `barraAMao` e `foraDaMoldura`, teto 0. Tela
 fora do menu está nas exceções com o motivo; quando voltar ao menu, sai da exceção e entra
 no padrão. Não reabrir sem o dono pedir.
+
+## Prazo do imóvel desatualizado na Conta (07/10/2026)
+
+Pedido do Tony: o "Desatualizado" dos imóveis (número do Painel, filtro da lista de
+Imóveis e a dica "Sem nenhuma alteração há mais de X dias") eram 60 dias fixos no
+servidor. Agora cada imobiliária escolhe em **Minha imobiliária › Conta**, bloco
+**Atualização dos imóveis**, logo abaixo das Configurações Gerais.
+
+- Lista: 15, 30, 45, 60, 90, 120, 180 dias e **Personalizado**, que abre um campo de
+  dias (7 a 365). Prazo salvo fora da lista abre como Personalizado.
+- Espera a BarraSalvar como os outros campos. Escolher "Personalizado" sozinho não é
+  alteração (o campo abre com o prazo atual).
+- Grava `properties_stale_after_days` (backend lm-flow#438, `Property.stale_after_days`).
+  O GET da conta sempre manda o prazo que vale, então a tela não guarda o padrão.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **Faixa de 7 a 365 dias**: abaixo de 7 quase tudo vira desatualizado na semana; acima
+  de um ano o aviso perde o sentido. O servidor recusa fora da faixa e, se ler um valor
+  torto, volta pros 60.
+- **Avisar o corretor do imóvel desatualizado fica pra depois** (entrega própria, pelo
+  Operacional). Esta entrega só muda o prazo.
+
+Armadilhas:
+
+1. **A faixa mora nos dois lados**: `PRAZO_MINIMO`/`PRAZO_MAXIMO` em
+   `Settings/Account/AccountSettings.tsx` e `Property::STALE_AFTER_DAYS_RANGE` no backend.
+   Mudou um, muda o outro.
+2. **"Alteração" do imóvel = `updated_at`**: qualquer salvamento renova o prazo. Serviço
+   que mexe em imóvel em lote sem ser alteração de verdade usa `update_columns` pra não
+   esconder imóvel parado (ver `owner_migrator` e `listing_kind_classifier` no backend).

@@ -422,13 +422,13 @@ export const propertiesService = {
   async stats(): Promise<{
     total: number; active: number; reserved: number; sold: number; rented: number;
     inactive: number; for_sale: number; for_rent: number; exclusive: number;
-    featured: number; outdated: number; without_photos: number;
+    featured: number; stale: number; without_photos: number;
   }> {
     const res = await api.get('/properties/stats');
     return (res.data as { data: Record<string, number> }).data as {
       total: number; active: number; reserved: number; sold: number; rented: number;
       inactive: number; for_sale: number; for_rent: number; exclusive: number;
-      featured: number; outdated: number; without_photos: number;
+      featured: number; stale: number; without_photos: number;
     };
   },
 };
