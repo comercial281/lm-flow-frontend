@@ -6,11 +6,11 @@ import { useRef, useState } from 'react';
 import { Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Input } from '@/components/ui/ds';
-import { dinheiro, numero } from '@/lib/formato';
+import { dinheiro } from '@/lib/formato';
 import { formatDateBR } from '@/utils/dateUtils';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import type { PipelineItem } from '@/types/analytics';
-import { digitosDoPreco, precoParaEnviar } from '../sobreONegocio';
+import { dataValida, digitosDoPreco, precoInvalido, precoParaEnviar } from '../sobreONegocio';
 import CaixaDoCard from './CaixaDoCard';
 
 export type CamposDoNegocio = Partial<Pick<PipelineItem, 'estimated_value' | 'expected_close_on'>>;
@@ -35,6 +35,8 @@ export default function BlocoSobreONegocio({ pipelineId, itemId, preco, data, ao
   const desistiu = useRef(false);
 
   const abrirPreco = () => {
+    if (salvando) return;
+    desistiu.current = false;
     setDigitos(digitosDoPreco(preco));
     setEditandoPreco(true);
   };
@@ -43,6 +45,10 @@ export default function BlocoSobreONegocio({ pipelineId, itemId, preco, data, ao
     setEditandoPreco(false);
     if (desistiu.current) {
       desistiu.current = false;
+      return;
+    }
+    if (precoInvalido(digitos)) {
+      toast.error('Preço inválido. Use só reais inteiros, até 12 dígitos.');
       return;
     }
     const novo = precoParaEnviar(digitos);
@@ -61,6 +67,10 @@ export default function BlocoSobreONegocio({ pipelineId, itemId, preco, data, ao
   const salvarData = async (valor: string | null) => {
     setEditandoData(false);
     if (valor === (data ?? null)) return;
+    if (valor !== null && !dataValida(valor)) {
+      toast.error('Data inválida. Use um ano entre 1900 e 2100.');
+      return;
+    }
     setSalvando('data');
     try {
       const salvo = await pipelinesService.updateItemBusiness(pipelineId, itemId, { expected_close_on: valor });
@@ -87,8 +97,8 @@ export default function BlocoSobreONegocio({ pipelineId, itemId, preco, data, ao
                   autoFocus
                   className="h-8 w-36"
                   placeholder="450.000"
-                  value={digitos ? numero(Number(digitos)) : ''}
-                  onChange={e => setDigitos(e.target.value.replace(/\D/g, ''))}
+                  value={digitos}
+                  onChange={e => setDigitos(e.target.value)}
                   onBlur={() => void salvarPreco()}
                   onKeyDown={e => {
                     if (e.key === 'Enter') e.currentTarget.blur();
@@ -112,18 +122,21 @@ export default function BlocoSobreONegocio({ pipelineId, itemId, preco, data, ao
           <dt className="text-xs text-muted-foreground">Data de fechamento esperada</dt>
           <dd className="flex items-center gap-1.5">
             {editandoData ? (
-              // type="date" só dispara onChange com a data completa: gravar na hora é seguro.
+              // Digitar o ano dispara onChange a cada dígito (0002, 0020…): grava só ao sair ou Enter.
               <Input
                 type="date"
                 aria-label="Data de fechamento esperada"
                 autoFocus
                 className="h-8 w-44"
                 defaultValue={data ?? ''}
-                onChange={e => { if (e.target.value) void salvarData(e.target.value); }}
-                onBlur={() => setEditandoData(false)}
+                onBlur={e => (e.target.value ? void salvarData(e.target.value) : setEditandoData(false))}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') e.currentTarget.blur();
+                  if (e.key === 'Escape') setEditandoData(false);
+                }}
               />
             ) : (
-              <button type="button" onClick={() => setEditandoData(true)} className="text-left text-sm font-medium hover:text-primary">
+              <button type="button" onClick={() => !salvando && setEditandoData(true)} className="text-left text-sm font-medium hover:text-primary">
                 {data ? formatDateBR(data) : <span className="font-normal text-muted-foreground">Adicionar data</span>}
               </button>
             )}

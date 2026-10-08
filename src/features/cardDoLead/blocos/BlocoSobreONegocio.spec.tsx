@@ -84,7 +84,10 @@ describe('BlocoSobreONegocio', () => {
     const { aoSalvar } = montar();
     await userEvent.click(screen.getByRole('button', { name: 'Adicionar data' }));
 
-    fireEvent.change(screen.getByLabelText('Data de fechamento esperada'), { target: { value: '2026-12-20' } });
+    const campo = screen.getByLabelText('Data de fechamento esperada');
+    fireEvent.change(campo, { target: { value: '2026-12-20' } });
+    expect(s.salvar).not.toHaveBeenCalled();
+    fireEvent.blur(campo);
 
     await waitFor(() => expect(s.salvar).toHaveBeenCalledWith('p1', 'i1', { expected_close_on: '2026-12-20' }));
     expect(aoSalvar).toHaveBeenCalledWith({ expected_close_on: '2026-12-20' });
@@ -109,5 +112,47 @@ describe('BlocoSobreONegocio', () => {
 
     await waitFor(() => expect(s.toastError).toHaveBeenCalledWith('Não consegui salvar o preço estimado.'));
     expect(aoSalvar).not.toHaveBeenCalled();
+  });
+
+  it('depois de Esc, a próxima edição do preço grava', async () => {
+    s.salvar.mockResolvedValue({ id: 'i1', estimated_value: '300000.0' });
+    montar('100000.0');
+    await userEvent.click(screen.getByRole('button', { name: /100\.000/ }));
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Preço estimado' }), { key: 'Escape' });
+    await userEvent.click(screen.getByRole('button', { name: /100\.000/ }));
+    const campo = screen.getByRole('textbox', { name: 'Preço estimado' });
+    fireEvent.change(campo, { target: { value: '300.000' } });
+    fireEvent.blur(campo);
+    await waitFor(() => expect(s.salvar).toHaveBeenCalledWith('p1', 'i1', { estimated_value: 300000 }));
+  });
+
+  it('data com ano pela metade não grava', async () => {
+    montar();
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar data' }));
+    const campo = screen.getByLabelText('Data de fechamento esperada');
+    fireEvent.change(campo, { target: { value: '0002-12-20' } });
+    fireEvent.blur(campo);
+    expect(s.salvar).not.toHaveBeenCalled();
+    expect(s.toastError).toHaveBeenCalled();
+  });
+
+  it('preço colado com centavos grava só os reais', async () => {
+    s.salvar.mockResolvedValue({ id: 'i1', estimated_value: '1234.0' });
+    montar();
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar preço' }));
+    const campo = screen.getByRole('textbox', { name: 'Preço estimado' });
+    fireEvent.change(campo, { target: { value: 'R$ 1.234,56' } });
+    fireEvent.blur(campo);
+    await waitFor(() => expect(s.salvar).toHaveBeenCalledWith('p1', 'i1', { estimated_value: 1234 }));
+  });
+
+  it('preço negativo não grava', async () => {
+    montar('100000.0');
+    await userEvent.click(screen.getByRole('button', { name: /100\.000/ }));
+    const campo = screen.getByRole('textbox', { name: 'Preço estimado' });
+    fireEvent.change(campo, { target: { value: '-5' } });
+    fireEvent.blur(campo);
+    expect(s.salvar).not.toHaveBeenCalled();
+    expect(s.toastError).toHaveBeenCalled();
   });
 });
