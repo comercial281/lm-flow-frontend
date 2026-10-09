@@ -111,6 +111,11 @@ export default function PersonSheet({
   const canSend = active && !refusal && can('users', 'send_access');
   const canCopy = active && !refusal && can('users', 'update');
   const canCreateNumber = active && !refusal && !member.sees_all_inboxes && can('channels', 'create');
+  // Liberar e tirar mexem numa pessoa só: POST /inbox_members (o servidor cobra
+  // inboxes.create) e DELETE /inbox_members (cobra inboxes.delete). Sem a chave,
+  // a ficha não oferece — o servidor recusaria.
+  const canGrant = canEdit && can('inboxes', 'create');
+  const canRevoke = canEdit && can('inboxes', 'delete');
 
   /* Desativar/reativar: o servidor deixa ADMINISTRADOR passar pelo cargo, fora
      do RBAC. Exigir só a chave aqui esconderia os botões justamente de quem a
@@ -124,9 +129,12 @@ export default function PersonSheet({
     () => roles.find(o => isCargoSelected(o, member.role))?.key ?? null,
     [roles, member.role],
   );
+  // Um booleano, e não o `viewer`: ele é um objeto novo a cada render quando
+  // quem vê é a Leal Mídia, e o memo nunca guardaria nada.
+  const isAdminViewer = viewerIsAdmin(viewer, isSuper);
   const cargoOptions = useMemo(
-    () => assignableCargoOptions(roles, { viewerIsAdmin: viewerIsAdmin(viewer, isSuper), currentKey: initialCargoKey }),
-    [roles, viewer, isSuper, initialCargoKey],
+    () => assignableCargoOptions(roles, { viewerIsAdmin: isAdminViewer, currentKey: initialCargoKey }),
+    [roles, isAdminViewer, initialCargoKey],
   );
 
   // O rascunho é semeado ao ABRIR (a ficha é montada por pessoa) e não a cada
@@ -181,16 +189,15 @@ export default function PersonSheet({
           return;
         }
       }
-      // Números: só os que mudaram, um pedido por número. A lista de quem atende
-      // vem do servidor na hora, para não apagar quem entrou por outra tela.
+      // Números: só os que mudaram, e só ESTA pessoa em cada um. Nada de ler a
+      // lista e regravá-la inteira: a leitura devolve [] quando falha (o PATCH
+      // tiraria todo mundo do número) e traz quem só tem acesso automático (o
+      // PATCH o promoveria à distribuição de leads).
       const falhas: string[] = [];
       for (const id of [...diff.add, ...diff.remove]) {
-        const entra = diff.add.includes(id);
         try {
-          const atuais = await InboxMembersService.get(id);
-          const ids = new Set(atuais.map(m => String(m.id)));
-          if (entra) ids.add(member.id); else ids.delete(member.id);
-          await InboxMembersService.update(id, Array.from(ids));
+          if (diff.add.includes(id)) await InboxMembersService.add(id, [member.id]);
+          else await InboxMembersService.remove(id, [member.id]);
         } catch (e) {
           falhas.push(apiErrorMessage(e, `Não consegui mudar ${nomeDoNumero(id)}.`));
         }
@@ -243,9 +250,13 @@ export default function PersonSheet({
   // reenviar o acesso não pode trocar a senha de quem já usa o CRM.
   const enviarLink = async () => {
     if (phone.replace(/\D/g, '').length < 10) { toast.error(PHONE_TOO_SHORT); return; }
+    // O servidor grava o celular do envio no cadastro: com o campo diferente do
+    // gravado, isso acontece fora do Salvar — e a confirmação tem que dizer.
+    const gravaCelular = phone.trim() !== (member.whatsapp_number ?? '').trim();
     const ok = await confirmar({
       titulo: `Enviar o link de acesso para ${member.name}?`,
       descricao: `Vai para ${formatPhone(phone) || phone}, pelo número operacional da Leal Mídia. `
+        + (gravaCelular ? 'Esse celular fica gravado no cadastro. ' : '')
         + 'O link vale uma vez só, por 24 horas: a pessoa abre, cria a senha e entra. '
         + 'A senha de quem já usa o CRM não muda.',
       rotuloDaAcao: 'Enviar',
@@ -284,9 +295,22 @@ export default function PersonSheet({
     }
   };
 
+  // Esc, clique fora ou o X: com alteração por salvar, pergunta antes de perder.
+  const fechar = async () => {
+    if (dirty && !(await confirmar({
+      titulo: 'Descartar alterações?',
+      descricao: `O que você mudou na ficha de ${member.name} ainda não foi salvo.`,
+      rotuloDaAcao: 'Descartar',
+      rotuloDeCancelar: 'Continuar editando',
+      destrutivo: true,
+    }))) return;
+    onClose();
+  };
+
   const cartao = (n: MemberNumber, pendente: 'entra' | 'sai' | null) => {
     const state = numberState(n);
-    const podeTirar = canEdit && !n.owner;
+    // O liberado que ainda não foi salvo sai do rascunho sem pedir nada ao servidor.
+    const podeTirar = !n.owner && (pendente === 'entra' ? canEdit : canRevoke);
     return (
       <li
         key={n.inbox_id}
@@ -346,7 +370,7 @@ export default function PersonSheet({
   const cargoAtual = cargo ?? roles.find(o => o.key === initialCargoKey) ?? null;
 
   return (
-    <Sheet open onOpenChange={o => { if (!o) onClose(); }}>
+    <Sheet open onOpenChange={o => { if (!o) fechar(); }}>
       <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
         <SheetHeader className="border-b border-border pr-10">
           <SheetTitle>{member.name}</SheetTitle>
@@ -428,7 +452,7 @@ export default function PersonSheet({
                 )}
                 {podeEscolherPrincipal && <p className="text-xs text-muted-foreground">{PRIMARY_HINT_OTHER}</p>}
 
-                {canEdit && available.length > 0 && (
+                {canGrant && available.length > 0 && (
                   <Seletor
                     aria-label="Liberar outro número"
                     value=""

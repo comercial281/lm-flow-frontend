@@ -87,7 +87,7 @@ export default function PeopleList({ members, canCreateNumber, onOpen, onCreateN
               <li
                 key={member.id}
                 data-testid="person-row"
-                className={`relative grid gap-3 px-4 py-3 text-sm transition-colors hover:bg-muted/20 md:grid-cols-[minmax(0,1.4fr)_minmax(0,0.7fr)_minmax(0,1.6fr)_minmax(0,1fr)] md:items-center`}
+                className="relative grid gap-3 px-4 py-3 text-sm transition-colors hover:bg-muted/20 md:grid-cols-[minmax(0,1.4fr)_minmax(0,0.7fr)_minmax(0,1.6fr)_minmax(0,1fr)] md:items-center"
               >
                 <button
                   type="button"

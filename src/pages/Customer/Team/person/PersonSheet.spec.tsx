@@ -16,6 +16,8 @@ const s = vi.hoisted(() => ({
   reactivate: vi.fn(),
   membersGet: vi.fn(),
   membersUpdate: vi.fn(),
+  membersAdd: vi.fn(),
+  membersRemove: vi.fn(),
   setUserPrimary: vi.fn(),
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
@@ -38,7 +40,7 @@ vi.mock('@/services/users', () => ({
   },
 }));
 vi.mock('@/services/channels/inboxMembersService', () => ({
-  default: { get: s.membersGet, update: s.membersUpdate },
+  default: { get: s.membersGet, update: s.membersUpdate, add: s.membersAdd, remove: s.membersRemove },
 }));
 vi.mock('@/services/numbers/numbersService', () => ({ default: { setUserPrimary: s.setUserPrimary } }));
 vi.mock('@/utils/clipboard', () => ({ copyText: vi.fn(async () => true) }));
@@ -105,7 +107,7 @@ function abrir(member: TeamAccessMember = ANA, over: Partial<React.ComponentProp
   return props;
 }
 
-const tudo = ['users.update', 'users.send_access', 'users.deactivate', 'channels.create'];
+const tudo = ['users.update', 'users.send_access', 'users.deactivate', 'channels.create', 'inboxes.create', 'inboxes.delete'];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -115,6 +117,8 @@ beforeEach(() => {
   s.updateUser.mockResolvedValue({});
   s.membersGet.mockResolvedValue([{ id: 'a1' }, { id: 'x9' }]);
   s.membersUpdate.mockResolvedValue({});
+  s.membersAdd.mockResolvedValue(undefined);
+  s.membersRemove.mockResolvedValue(undefined);
 });
 
 describe('PersonSheet — quem pode mexer', () => {
@@ -236,18 +240,50 @@ describe('PersonSheet — Salvar manda só o que mudou', () => {
     await waitFor(() => expect(s.updateUser).toHaveBeenCalledWith('a1', { chave_role: 'manager' }));
   });
 
-  it('tirou um número e liberou outro: mexe só nesses dois, sem PATCH da pessoa', async () => {
+  it('tirou um número e liberou outro: mexe só nesses dois, só nesta pessoa, sem PATCH da pessoa', async () => {
     abrir();
     await userEvent.click(screen.getByRole('button', { name: 'Tirar Plantão de Ana Souza' }));
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Liberar outro número' }), '30');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    await waitFor(() => expect(s.membersUpdate).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(s.membersAdd).toHaveBeenCalledWith('30', ['a1']));
+    expect(s.membersRemove).toHaveBeenCalledWith('20', ['a1']);
+    expect(s.membersAdd).toHaveBeenCalledTimes(1);
+    expect(s.membersRemove).toHaveBeenCalledTimes(1);
     expect(s.updateUser).not.toHaveBeenCalled();
-    expect(s.membersGet).toHaveBeenCalledWith('20');
-    expect(s.membersGet).toHaveBeenCalledWith('30');
-    // O que já estava no número continua lá; só a pessoa entra ou sai.
-    expect(s.membersUpdate).toHaveBeenCalledWith('20', ['x9']);
-    expect(s.membersUpdate).toHaveBeenCalledWith('30', expect.arrayContaining(['a1', 'x9']));
+  });
+
+  // Ler a lista e devolvê-la inteira (GET + PATCH) apagava todo mundo do número
+  // quando a leitura falhava (o GET devolve [] no erro) e promovia à distribuição
+  // quem só tinha acesso automático. A ficha nunca faz isso.
+  it('nunca lê a lista do número nem a regrava inteira', async () => {
+    s.membersGet.mockResolvedValue([]);
+    abrir();
+    await userEvent.click(screen.getByRole('button', { name: 'Tirar Plantão de Ana Souza' }));
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Liberar outro número' }), '30');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(s.membersAdd).toHaveBeenCalled());
+    expect(s.membersGet).not.toHaveBeenCalled();
+    expect(s.membersUpdate).not.toHaveBeenCalled();
+  });
+
+  it('falha ao liberar: frase do servidor, ficha aberta', async () => {
+    s.membersAdd.mockRejectedValue({ response: { data: { error: { message: 'Sem permissão para isso.' } } } });
+    const props = abrir();
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Liberar outro número' }), '30');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(s.toastError).toHaveBeenCalledWith('Sem permissão para isso.'));
+    expect(props.onClose).not.toHaveBeenCalled();
+    expect(props.onChanged).toHaveBeenCalled();
+  });
+
+  // Liberar é POST /inbox_members (inboxes.create) e tirar é DELETE
+  // (inboxes.delete): sem a chave, a ficha não oferece o que o servidor recusa.
+  it('sem inboxes.delete não oferece tirar; sem inboxes.create não oferece liberar', () => {
+    s.perms = new Set(['users.update']);
+    abrir();
+    expect(screen.queryByRole('button', { name: 'Tirar Plantão de Ana Souza' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Liberar outro número' })).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Celular' })).toBeInTheDocument();
   });
 
   it('nada mudou: Salvar fica desligado', () => {
@@ -294,8 +330,17 @@ describe('PersonSheet — acesso e desativar', () => {
     await userEvent.clear(campo);
     await userEvent.type(campo, '11977776666');
     await userEvent.click(screen.getByRole('button', { name: 'Enviar link de acesso' }));
+    // O celular do campo é diferente do cadastro: o envio grava o novo.
+    expect(await screen.findByText(/Esse celular fica gravado no cadastro\./)).toBeInTheDocument();
     await userEvent.click(await screen.findByRole('button', { name: 'Enviar' }));
     await waitFor(() => expect(s.sendAccess).toHaveBeenCalledWith('a1', { whatsapp_number: '11977776666' }));
+  });
+
+  it('com o celular do cadastro, a confirmação não fala em gravar', async () => {
+    abrir();
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar link de acesso' }));
+    expect(await screen.findByRole('button', { name: 'Enviar' })).toBeInTheDocument();
+    expect(screen.queryByText(/fica gravado no cadastro/)).not.toBeInTheDocument();
   });
 
   it('sem users.send_access não há envio de link', () => {
@@ -303,5 +348,26 @@ describe('PersonSheet — acesso e desativar', () => {
     abrir();
     expect(screen.queryByRole('button', { name: /Enviar link|Reenviar link/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Copiar link' })).toBeInTheDocument();
+  });
+});
+
+describe('PersonSheet — fechar com alteração por salvar', () => {
+  it('sem alteração, fecha direto', async () => {
+    const props = abrir();
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+    expect(props.onClose).toHaveBeenCalled();
+  });
+
+  it('com alteração, pergunta; "Continuar editando" mantém, "Descartar" fecha', async () => {
+    const props = abrir();
+    await userEvent.type(screen.getByRole('textbox', { name: 'Celular' }), '9');
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+    expect(await screen.findByText('Descartar alterações?')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar editando' }));
+    expect(props.onClose).not.toHaveBeenCalled();
+
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(await screen.findByRole('button', { name: 'Descartar' }));
+    await waitFor(() => expect(props.onClose).toHaveBeenCalled());
   });
 });

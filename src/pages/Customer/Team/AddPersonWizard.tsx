@@ -95,22 +95,24 @@ export default function AddPersonWizard({ open, roles, inboxes, onClose, onCreat
       const userId = String(created?.id ?? '');
 
       if (userId && !roleSeesAll && inboxIds.size > 0) {
-        // Uma chamada por instância porque é assim que a API de membros funciona
-        // (a lista é por instância, não por pessoa). Falha em uma não pode perder
+        // Uma chamada por número porque é assim que a API de membros funciona
+        // (a lista é por número, não por pessoa). Falha em uma não pode perder
         // a pessoa que acabou de ser criada — por isso o aviso é parcial.
+        //
+        // Só ADICIONA esta pessoa (POST). O antigo "lê a lista e regrava com
+        // mais um" apagava todo mundo do número quando a leitura falhava (ela
+        // devolve [] no erro) e promovia à distribuição quem só tinha acesso
+        // automático.
         const falhas: string[] = [];
         for (const inboxId of inboxIds) {
           try {
-            const current = await InboxMembersService.get(inboxId);
-            const ids = new Set(current.map(m => String(m.id)));
-            ids.add(userId);
-            await InboxMembersService.update(inboxId, Array.from(ids));
+            await InboxMembersService.add(inboxId, [userId]);
           } catch {
             falhas.push(inboxes.find(i => String(i.id) === inboxId)?.name ?? inboxId);
           }
         }
         if (falhas.length > 0) {
-          toast.error(`Pessoa criada, mas não consegui liberar: ${falhas.join(', ')}. Ajuste em Gerenciar acesso.`);
+          toast.error(`Pessoa criada, mas não consegui liberar: ${falhas.join(', ')}. Ajuste na ficha da pessoa.`);
         }
       }
 
@@ -244,7 +246,7 @@ export default function AddPersonWizard({ open, roles, inboxes, onClose, onCreat
                   ))}
                   <p className="pt-1 text-xs text-muted-foreground">
                     Marcado = atende esse número e entra na fila para receber leads novos dele. Dá para
-                    mudar depois em Gerenciar acesso.
+                    mudar depois na ficha da pessoa.
                   </p>
                 </>
               )}
