@@ -8012,6 +8012,17 @@ Armadilhas:
 1. **O título do cabeçalho NÃO é o item.** Em várias telas ele é genérico ("Proprietário", "Roleta") ou um campo editável; por isso o item é avisado de propósito, com o gancho.
 2. **Tela de detalhe nova** (ficha de algo) → chamar `useNomeDaAba` antes de qualquer `return` antecipado (regra dos hooks).
 
+## Esperar em segundos nos fluxos de lead (desde 2026-10-08)
+
+Pedido do Tony: *"no flow builder o esperar tem que ter segundos também como opção"*.
+
+- **O bloco Esperar das Automações e do Follow-up** (modo *Por um tempo*) passa a oferecer **segundos, minutos, horas e dias** (`LeadWaitField` no `FlowNodePanel`, unidades `LEAD_WAIT_UNITS` em `waitTime.ts`). O funil de conversa continua com segundos, minutos e horas.
+- **Grava `minutes` + `seconds`** (o servidor soma os dois desde a sprint 4). Trocar de segundos pra minutos grava `seconds: 0`. Sem nada gravado, o padrão continua 1 dia (`leadWaitSeconds`).
+- **Espera de menos de 1 minuto mostra** "Esperas de menos de 1 minuto podem atrasar alguns segundos." O servidor retoma o fluxo na hora do prazo (`FlowAutomations::ShortWaitJob`, backend), não no relógio de 1 minuto.
+- *Só em horário comercial* e *Até uma data e hora* continuam iguais. O *Aguardar resposta* não ganhou segundos.
+
+Armadilha: o painel não troca mais pro campo do funil de conversa só porque o bloco tem segundos (`waitHasSeconds` saiu da condição): fluxo de lead com segundos continua mostrando os modos e o horário comercial.
+
 ## Configuração do canal sem os menus que ninguém usa (desde 2026-10-08)
 
 Pedido do dono: "eu nunca configuro esses menus em nenhum cliente".

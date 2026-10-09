@@ -37,3 +37,24 @@ describe('Esperar em segundos (funil de conversa)', () => {
     expect(describeWait({ mode: 'interval', minutes: 30 })).toBe('Espera 30 minutos');
   });
 });
+
+describe('Esperar dos fluxos de lead: segundos a dias (08/10/2026)', () => {
+  it('quebra o tempo em segundos, minutos, horas ou dias', async () => {
+    const { splitSeconds, joinSeconds, LEAD_WAIT_UNITS } = await import('./waitTime');
+    expect(LEAD_WAIT_UNITS.map(u => u.value)).toEqual(['s', 'min', 'h', 'd']);
+    expect(splitSeconds(10, true)).toEqual({ amount: 10, unit: 's' });
+    expect(splitSeconds(86400, true)).toEqual({ amount: 1, unit: 'd' });
+    expect(splitSeconds(86400)).toEqual({ amount: 24, unit: 'h' });
+    expect(joinSeconds(10, 's')).toEqual({ minutes: 0, seconds: 10 });
+    expect(joinSeconds(2, 'd')).toEqual({ minutes: 2880, seconds: 0 });
+  });
+
+  it('sem nada gravado, o padrão continua 1 dia; minutos antigos são lidos', async () => {
+    const { leadWaitSeconds } = await import('./waitTime');
+    expect(leadWaitSeconds({})).toBe(86400);
+    expect(leadWaitSeconds({ minutes: 30 })).toBe(1800);
+    expect(leadWaitSeconds({ minutes: 0, seconds: 15 })).toBe(15);
+    expect(describeWait({ mode: 'interval', minutes: 0, seconds: 15, business_hours: true }))
+      .toBe('Espera 15 segundos, em horário comercial');
+  });
+});
