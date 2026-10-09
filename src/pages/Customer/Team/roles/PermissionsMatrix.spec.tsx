@@ -45,16 +45,19 @@ function abrir() {
 }
 const sw = (cargo: string, linha: string) => screen.getByRole('switch', { name: `${cargo}: ${linha}` });
 
+let server: typeof roles = [];
+
 describe('PermissionsMatrix', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     s.perms = new Set(['roles.read', 'roles.update']);
-    s.capabilities.mockResolvedValue({ themes, roles });
+    // Servidor de mentira com estado: o PATCH grava e o GET seguinte (recarga) enxerga.
+    server = roles.map(r => ({ ...r, states: { ...r.states } }));
+    s.capabilities.mockImplementation(async () => ({ themes, roles: server.map(r => ({ ...r, states: { ...r.states } })) }));
     s.updateCapabilities.mockImplementation(async (id: number, c: Record<string, boolean>) => {
-      const r = roles.find(x => x.id === id)!;
-      const states = { ...r.states } as Record<string, string>;
-      Object.entries(c).forEach(([k, v]) => { states[k] = v ? 'on' : 'off'; });
-      return { ...r, states };
+      const r = server.find(x => x.id === id)!;
+      Object.entries(c).forEach(([k, v]) => { (r.states as Record<string, string>)[k] = v ? 'on' : 'off'; });
+      return { ...r, states: { ...r.states } };
     });
   });
 
@@ -110,7 +113,9 @@ describe('PermissionsMatrix', () => {
   it('falha parcial: mantém o rascunho do cargo que falhou e mostra a frase', async () => {
     s.updateCapabilities.mockImplementation(async (id: number, c: Record<string, boolean>) => {
       if (id === 9) throw { response: { data: { success: false, error: 'Essa permissão vem do cargo “Corretor”. Desligue lá.' } } };
-      return { ...roles.find(x => x.id === id)!, states: { ver: 'on', env: 'off', cad: c.cad ? 'on' : 'off' } };
+      const r = server.find(x => x.id === id)!;
+      (r.states as Record<string, string>).cad = c.cad ? 'on' : 'off';
+      return { ...r, states: { ...r.states } };
     });
     abrir();
     await screen.findByText('Atendimento');
@@ -162,5 +167,31 @@ describe('PermissionsMatrix', () => {
     expect(sw('Corretor', 'Ver conversas')).toHaveAttribute('aria-checked', 'false');
     expect(within(screen.getByTestId('quadro-permissoes')).queryAllByTestId('mudou')).toHaveLength(0);
     expect(s.updateCapabilities).not.toHaveBeenCalled();
+  });
+
+  it('depois de salvar, recarrega: cargo que herda mostra o estado novo do pai', async () => {
+    const depois = roles.map(r => (r.id === 3 || r.id === 9 ? { ...r, states: { ...r.states, env: 'on' } } : r));
+    s.capabilities.mockResolvedValueOnce({ themes, roles }).mockResolvedValue({ themes, roles: depois });
+    s.updateCapabilities.mockResolvedValue({ ...roles[2], states: { ver: 'off', env: 'on', cad: 'off' } });
+    abrir();
+    await screen.findByText('Atendimento');
+    expect(sw('SDR', 'Responder conversas')).toHaveAttribute('aria-checked', 'false');
+    await userEvent.click(sw('Corretor', 'Responder conversas'));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(s.capabilities).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(sw('SDR', 'Responder conversas — Vem do cargo Corretor')).toHaveAttribute('aria-checked', 'true'));
+  });
+
+  it('linha que o pai já libera: filha ligada, travada, "Vem do cargo"; linha livre continua mexível', async () => {
+    const com = roles.map(r => (r.id === 3 ? { ...r, states: { ...r.states, ver: 'on' } } : r));
+    s.capabilities.mockResolvedValue({ themes, roles: com });
+    abrir();
+    await screen.findByText('Atendimento');
+    const travada = sw('SDR', 'Ver conversas — Vem do cargo Corretor');
+    expect(travada).toBeDisabled();
+    expect(travada).toHaveAttribute('aria-checked', 'true');
+    expect(travada).toHaveAttribute('title', 'Vem do cargo Corretor');
+    await userEvent.click(sw('SDR', 'Responder conversas'));
+    expect(sw('SDR', 'Responder conversas')).toHaveAttribute('aria-checked', 'true');
   });
 });

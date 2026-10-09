@@ -1,10 +1,11 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Lock, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Switch } from '@/components/ui/ds';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { plural } from '@/lib/formato';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { customRolesService, capabilitiesErrorMessage } from '@/services/customRoles/customRolesService';
 import type { CapabilityState, CapabilityTheme, RoleCapabilities } from '@/types/customRoles';
@@ -24,9 +25,17 @@ import {
 
 const norm = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
+/** Nome do cargo-pai quando ele já libera a linha (o filho herda e não dá pra desligar aqui). */
+function lockedParent(roles: RoleCapabilities[], roleId: number, rowKey: string): string | undefined {
+  const role = roles.find(r => r.id === roleId);
+  if (!role?.inherits_from_id) return undefined;
+  const pai = roles.find(r => r.id === role.inherits_from_id);
+  return pai && pai.states[rowKey] === 'on' ? pai.name : undefined;
+}
+
 function Interruptor({
-  state, label, disabled, changed, onClick,
-}: { state: CapabilityState; label: string; disabled: boolean; changed: boolean; onClick: () => void }) {
+  state, label, disabled, changed, onClick, lockedBy,
+}: { state: CapabilityState; label: string; disabled: boolean; changed: boolean; onClick: () => void; lockedBy?: string }) {
   const partial = state === 'partial';
   const on = state === 'on';
   return (
@@ -36,8 +45,9 @@ function Interruptor({
       <Switch
         checked={on}
         aria-checked={partial ? 'mixed' : on}
-        aria-label={label}
-        disabled={disabled}
+        aria-label={lockedBy ? `${label} — Vem do cargo ${lockedBy}` : label}
+        title={lockedBy ? `Vem do cargo ${lockedBy}` : undefined}
+        disabled={disabled || !!lockedBy}
         onCheckedChange={() => onClick()}
         className={partial ? 'bg-primary/40 data-[state=unchecked]:bg-primary/40' : undefined}
       />
@@ -67,6 +77,8 @@ export default function PermissionsMatrix({ onDirtyChange }: Props) {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const savingRef = useRef(false);
+  const navigate = useNavigate();
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   const load = useCallback(async () => {
     setFailed(false);
@@ -84,12 +96,20 @@ export default function PermissionsMatrix({ onDirtyChange }: Props) {
   useEffect(() => { onDirtyChange?.(changes > 0); }, [changes, onDirtyChange]);
   useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
 
+  // Fechar/recarregar a aba com mudança não salva: o navegador pergunta.
+  useEffect(() => {
+    if (changes === 0) return;
+    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', h);
+    return () => window.removeEventListener('beforeunload', h);
+  }, [changes]);
+
   const themes = useMemo(() => {
     if (!data) return [];
     const q = norm(query.trim());
     if (!q) return data.themes;
     return data.themes
-      .map(t => ({ ...t, rows: t.rows.filter(r => norm(r.label).includes(q) || norm(r.hint).includes(q)) }))
+      .map(t => ({ ...t, rows: t.rows.filter(r => norm(r.label).includes(q) || norm(r.hint ?? '').includes(q)) }))
       .filter(t => t.rows.length > 0);
   }, [data, query]);
 
@@ -98,7 +118,15 @@ export default function PermissionsMatrix({ onDirtyChange }: Props) {
     savingRef.current = true;
     setSaving(true);
     setErrors([]);
-    const pending = changesByRole(draft);
+    const pending = changesByRole(draft)
+      .map(({ roleId, changes: c }) => ({
+        roleId,
+        changes: Object.fromEntries(Object.entries(c).filter(([k, v]) => v || !lockedParent(data.roles, roleId, k))),
+      }))
+      .filter(p => Object.keys(p.changes).length > 0);
+    // Rascunho que sobrou só de "desligar" linha herdada não vira chamada: sai do rascunho.
+    const comChamada = new Set(pending.map(p => p.roleId));
+    setDraft(cur => Object.keys(cur).reduce((acc, id) => (comChamada.has(Number(id)) ? acc : clearRole(acc, Number(id))), cur));
     const results = await Promise.all(pending.map(async ({ roleId, changes: c }) => {
       try {
         return { roleId, role: await customRolesService.updateCapabilities(roleId, c), error: null as string | null };
@@ -106,15 +134,16 @@ export default function PermissionsMatrix({ onDirtyChange }: Props) {
         return { roleId, role: null, error: capabilitiesErrorMessage(e, 'Não consegui salvar. Tente de novo.') };
       }
     }));
-    const okRoles = new Map(results.filter(r => r.role).map(r => [r.roleId, r.role!]));
-    setData(d => d && ({
-      ...d,
-      roles: d.roles.map(r => {
-        const novo = okRoles.get(r.id);
-        // O PATCH devolve o cargo com `states`; mantém o resto (contagem etc.) do que já tínhamos.
-        return novo ? { ...r, ...novo, states: novo.states } : r;
-      }),
-    }));
+    const okRoles = new Set(results.filter(r => r.role).map(r => r.roleId));
+    // Cargo que herda de um salvo mudou junto: recarrega tudo em vez de remendar um cargo só.
+    if (okRoles.size > 0) {
+      try {
+        setData(await customRolesService.capabilities());
+      } catch {
+        const salvos = new Map(results.filter(r => r.role).map(r => [r.roleId, r.role!]));
+        setData(d => d && ({ ...d, roles: d.roles.map(r => (salvos.has(r.id) ? { ...r, states: salvos.get(r.id)!.states } : r)) }));
+      }
+    }
     setDraft(cur => results.reduce((acc, r) => (r.role ? clearRole(acc, r.roleId) : acc), cur));
     const falhas = results.filter(r => r.error).map(r => {
       const nome = data.roles.find(x => x.id === r.roleId)?.name ?? 'Cargo';
@@ -208,14 +237,16 @@ export default function PermissionsMatrix({ onDirtyChange }: Props) {
                         );
                       }
                       const current = role.states[row.key] ?? 'off';
-                      const state = effectiveState(draft, role.id, row.key, current);
+                      const lockedBy = lockedParent(colunas, role.id, row.key);
+                      const state = lockedBy ? 'on' : effectiveState(draft, role.id, row.key, current);
                       return (
                         <td key={role.id} className="p-3 text-center">
                           <Interruptor
                             state={state}
                             label={`${role.name}: ${row.label}`}
                             disabled={!canUpdate || saving}
-                            changed={draft[role.id]?.[row.key] !== undefined}
+                            lockedBy={lockedBy}
+                            changed={!lockedBy && draft[role.id]?.[row.key] !== undefined}
                             onClick={() => setDraft(d => toggle(d, role.id, row.key, current))}
                           />
                         </td>
@@ -229,9 +260,24 @@ export default function PermissionsMatrix({ onDirtyChange }: Props) {
         </table>
       </div>
 
-      <Link to="/equipe/cargos/lista" className="inline-block text-sm text-primary hover:underline">
+      <Link
+        to="/equipe/cargos/lista"
+        className="inline-block text-sm text-primary hover:underline"
+        onClick={async e => {
+          if (changes === 0) return;
+          e.preventDefault();
+          const ok = await confirmar({
+            titulo: 'Descartar alterações?',
+            descricao: 'Você mudou permissões e ainda não salvou. Se sair agora, essas mudanças se perdem.',
+            rotuloDaAcao: 'Descartar',
+            destrutivo: true,
+          });
+          if (ok) navigate('/equipe/cargos/lista');
+        }}
+      >
         Ver a lista completa (cada botão de cada tela)
       </Link>
+      {dialogoDeConfirmacao}
 
       {canUpdate && (
         <div className="sticky bottom-0 z-20 -mx-1 rounded-lg border border-border bg-card p-3 shadow-lg">
