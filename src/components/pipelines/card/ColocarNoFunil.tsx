@@ -24,7 +24,7 @@ export default function ColocarNoFunil({ contactId, conversationId, onColocado }
   useEffect(() => {
     let vivo = true;
     pipelinesService
-      .getPipelines()
+      .getPipelines({ include_items: false })
       .then(res => { if (vivo) setFunis((res?.data ?? []).map(p => ({ id: String(p.id), name: p.name }))); })
       .catch(() => { if (vivo) setFunis([]); });
     return () => { vivo = false; };

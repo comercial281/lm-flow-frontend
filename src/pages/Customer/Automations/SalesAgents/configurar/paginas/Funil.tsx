@@ -27,7 +27,7 @@ export default function Funil({ agent, gravar }: PropsDaPagina) {
 
   useEffect(() => {
     if (!mover) return;
-    pipelinesService.getPipelines().then((r: unknown) => setFunis(lista<PipelineOpt>(r).map((p) => ({ id: String(p.id), name: p.name })))).catch(() => setFunis([]));
+    pipelinesService.getPipelines({ include_items: false }).then((r: unknown) => setFunis(lista<PipelineOpt>(r).map((p) => ({ id: String(p.id), name: p.name })))).catch(() => setFunis([]));
   }, [mover]);
   useEffect(() => {
     if (!mover || !funil) { setColunas([]); return; }

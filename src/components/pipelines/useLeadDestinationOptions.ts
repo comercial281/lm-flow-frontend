@@ -31,7 +31,7 @@ export function useLeadDestinationOptions({ withLabels = false }: { withLabels?:
     let ativo = true;
     (async () => {
       const [pRes, rRes, uRes, lRes] = await Promise.allSettled([
-        pipelinesService.getPipelines(),
+        pipelinesService.getPipelines({ include_items: false }),
         roletaConfigService.getAll(),
         usersService.getUsers({ per_page: 100 }),
         withLabels ? labelsService.getLabels() : Promise.resolve(null),

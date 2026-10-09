@@ -150,7 +150,7 @@ export default function LeadRoutingModal({
         // dois seletores de Tag (o normal e o do desqualificado) cortados no meio
         // do alfabeto, sem nada dizendo por quê.
         const [pRes, lRes] = await Promise.all([
-          pipelinesService.getPipelines(),
+          pipelinesService.getPipelines({ include_items: false }),
           labelsService.getLabels(),
         ]);
         if (!active) return;

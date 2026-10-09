@@ -150,7 +150,7 @@ export default function CreateLandingWizard({
         // Pelo serviço de etiquetas, nunca pela rota crua: a lista é
         // PAGINADA (20 por página por padrão), e quem tem mais que isso via o
         // seletor de Tag cortado no meio do alfabeto, sem nada dizendo por quê.
-        const [pRes, lRes] = await Promise.all([pipelinesService.getPipelines(), labelsService.getLabels()]);
+        const [pRes, lRes] = await Promise.all([pipelinesService.getPipelines({ include_items: false }), labelsService.getLabels()]);
         if (!active) return;
         const ps = (pRes?.data ?? []) as Array<{ id: string; name: string }>;
         setPipelines(ps.map((p) => ({ id: p.id, label: p.name })));

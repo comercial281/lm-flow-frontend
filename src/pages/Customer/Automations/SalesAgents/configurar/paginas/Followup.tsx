@@ -59,7 +59,7 @@ export default function Followup({ agent, gravar, irPara }: PropsDaPagina) {
   useEffect(() => {
     lendoFluxos.current = flowAutomationsService.list({ kind: 'followup' }).catch(() => [] as FlowAutomation[]);
     lendoFluxos.current.then(setFluxos);
-    pipelinesService.getPipelines().then((r: unknown) => setFunis(lista<PipelineOpt>(r).map((p) => ({ id: String(p.id), name: p.name })))).catch(() => setFunis([]));
+    pipelinesService.getPipelines({ include_items: false }).then((r: unknown) => setFunis(lista<PipelineOpt>(r).map((p) => ({ id: String(p.id), name: p.name })))).catch(() => setFunis([]));
   }, []);
   useEffect(() => {
     if (acao !== 'pipeline' || !agent.pipeline_id) { setColunas([]); return; }

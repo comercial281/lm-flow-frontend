@@ -116,7 +116,7 @@ export default function Disparos() {
       .finally(() => setLoadingChannels(false));
 
     pipelinesService
-      .getPipelines()
+      .getPipelines({ include_items: false })
       .then(r => {
         const list = (r?.data ?? []) as { id: string; name: string }[];
         setPipelines(list.map(p => ({ id: p.id, name: p.name })));
