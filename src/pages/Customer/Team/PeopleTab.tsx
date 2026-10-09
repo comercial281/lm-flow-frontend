@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { RefreshCw, ShieldCheck, MessageCircle, Search, Sparkles, UserPlus, Mails, UserX, UserCheck, Trash2, Link2, Smartphone } from 'lucide-react';
-import { Button, Input, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, Label as UILabel } from '@/components/ui/ds';
-import IconActionButton from '@/components/base/IconActionButton';
+import { RefreshCw, ShieldCheck, MessageCircle, UserPlus, UserX, UserCheck, Trash2, Link2, Smartphone } from 'lucide-react';
+import { Button, Input, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, Label as UILabel } from '@/components/ui/ds';
 import { usersService } from '@/services/users';
 import InboxMembersService from '@/services/channels/inboxMembersService';
 import { teamAccessService } from '@/services/teamAccess/teamAccessService';
@@ -10,9 +9,10 @@ import customRolesService from '@/services/customRoles/customRolesService';
 import InboxAccessList from '@/components/team/InboxAccessList';
 import AddPersonWizard from './AddPersonWizard';
 import { buildCargoOptions, cargoPayload, isCargoSelected, type CargoOption } from './cargoOptions';
-// Vem da tela antiga de Usuários: convidar vários por e-mail de uma vez era uma
-// capacidade real dela, e unificar não pode significar perder função.
-import BulkInviteModal from '@/components/users/BulkInviteModal';
+// F1-T6: o "Convidar por e-mail" (BulkInviteModal) saiu do cabeçalho — o fluxo de
+// várias pessoas de uma vez volta dentro do "Adicionar pessoa". O arquivo do
+// modal continua no repositório até lá.
+import PeopleList from './people/PeopleList';
 // A janela que mostra o ESTRAGO antes de desativar (leads, conversas abertas,
 // ofertas da roleta, roletas e o WhatsApp exclusivo). É a mesma de sempre: os
 // botões é que estavam na tela errada.
@@ -30,8 +30,8 @@ import OwnedNumbersList from '@/components/numbers/OwnedNumbersList';
 import numbersService from '@/services/numbers/numbersService';
 import { useNumberOwnerRule } from '@/features/numbers/useNumberOwnerRule';
 import {
-  LIBERATED_TITLE, NOTICE_PHONE_LABEL, NO_OWNED_NUMBERS_OTHER, NUMBERS_COLUMN, NUMBERS_TITLE, PRIMARY_DONE, PRIMARY_FAILED,
-  PRIMARY_HINT_OTHER, numbersColumnText,
+  LIBERATED_TITLE, NOTICE_PHONE_LABEL, NO_OWNED_NUMBERS_OTHER, NUMBERS_TITLE, PRIMARY_DONE, PRIMARY_FAILED,
+  PRIMARY_HINT_OTHER,
 } from '@/features/numbers/numberTexts';
 import type { CustomRole } from '@/types/customRoles';
 import type { TeamAccessInbox, TeamAccessMember } from '@/types/teamAccess';
@@ -58,13 +58,6 @@ import type { TeamAccessInbox, TeamAccessMember } from '@/types/teamAccess';
       novo o que o gestor liberou com o que o sistema liberou é o que fazia a
       tela dizer "3 instâncias" para quem tinha uma liberada. */
 
-const cargoColor = (key?: string) =>
-  key === 'admin' || key === 'administrador'
-    ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300'
-    : key === 'manager' || key === 'gerente'
-      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-      : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
-
 export default function PeopleTab() {
   const { can } = useUserPermissions();
   const { currentUser } = useAuthStore();
@@ -78,13 +71,14 @@ export default function PeopleTab() {
      menos do que o servidor permite. */
   const podeUsarDesativacao = isSuper || can('users', 'deactivate');
   const [adding, setAdding] = useState(false);
-  const [bulkInviting, setBulkInviting] = useState(false);
+  // F1-T4: quem está na janela "Criar número para {nome}". Por ora só guarda a
+  // escolha; a janela é ligada na tarefa F1-T4.
+  const [, setCreatingNumberFor] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<TeamAccessMember[]>([]);
   const [inboxes, setInboxes] = useState<TeamAccessInbox[]>([]);
   const [roles, setRoles] = useState<CustomRole[]>([]);
-  const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -153,12 +147,6 @@ export default function PeopleTab() {
 
   useEffect(() => { load(); }, [load]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return members;
-    return members.filter(m => `${m.name} ${m.email}`.toLowerCase().includes(q));
-  }, [members, search]);
-
   const openSend = (member: TeamAccessMember) => {
     setSendingId(member.id);
     setSendPhone(member.whatsapp_number ?? '');
@@ -179,6 +167,7 @@ export default function PeopleTab() {
       if (wa?.sent) {
         toast.success(`Acesso enviado no WhatsApp de ${who}${wa.instance ? ` (${wa.instance})` : ''}.`);
         setSendingId(null);
+        load(); // traz o "Link enviado" da coluna Acesso
       } else if (wa?.error) {
         toast.error(`Acesso salvo, mas o WhatsApp falhou: ${wa.error}`);
       } else {
@@ -225,6 +214,13 @@ export default function PeopleTab() {
   const abrirPessoa = (id: string) => {
     setWhatsappRascunho(members.find(m => m.id === id)?.whatsapp_number ?? '');
     setEditingId(id);
+  };
+
+  // Ao fechar, recarrega: cargo, números liberados e celular mexidos aqui mudam
+  // os chips e a coluna da lista, que vêm do retrato da equipe.
+  const closeEditing = () => {
+    setEditingId(null);
+    load();
   };
 
   const salvarWhatsapp = async (member: TeamAccessMember) => {
@@ -352,8 +348,6 @@ export default function PeopleTab() {
     }
   };
 
-  const initials = (name: string) => name.split(' ').filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
-
   return (
     <>
     <div>
@@ -361,150 +355,25 @@ export default function PeopleTab() {
         <p className="text-sm text-muted-foreground">
           {members.length} pessoa{members.length !== 1 ? 's' : ''} · cargo e números de cada um
         </p>
-        <div className="flex items-center gap-2">
-          <IconActionButton
-            label="Atualizar"
-            icon={<RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />}
-            onClick={load}
-            disabled={loading}
-          />
-          <Button variant="outline" onClick={() => setBulkInviting(true)} disabled={!canCreate} className="gap-1.5">
-            <Mails className="h-4 w-4" /> Convidar por e-mail
-          </Button>
-          <Button onClick={() => setAdding(true)} disabled={!canCreate} className="gap-1.5">
-            <UserPlus className="h-4 w-4" /> Adicionar pessoa
-          </Button>
-        </div>
+        <Button onClick={() => setAdding(true)} disabled={!canCreate} className="gap-1.5">
+          <UserPlus className="h-4 w-4" /> Adicionar pessoa
+        </Button>
       </div>
 
-      <div className="relative mb-4 max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome ou e-mail" className="pl-9" />
-      </div>
-
-      {loading ? (
+      {loading && members.length === 0 ? (
         <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
           <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Carregando equipe…
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="py-16 text-center text-sm text-muted-foreground">Nenhuma pessoa encontrada.</div>
       ) : (
-        <div className="rounded-xl border bg-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="font-medium px-4 py-3">Membro</th>
-                  <th className="font-medium px-4 py-3">Cargo</th>
-                  <th className="font-medium px-4 py-3">{numberOwnerRule ? NUMBERS_COLUMN : LIBERATED_TITLE}</th>
-                  <th className="font-medium px-4 py-3">Status</th>
-                  <th className="font-medium px-4 py-3 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(member => (
-                  <tr key={member.id} className="border-t border-border/60 hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                          {initials(member.name)}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="truncate font-medium">{member.name}</div>
-                          <div className="truncate text-xs text-muted-foreground">{member.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cargoColor(member.role.key)}`}>
-                        {member.role.name}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                      <span className="inline-flex items-center gap-1.5">
-                        {numberOwnerRule && (member.numbers?.length ?? 0) > 0
-                          ? <Smartphone className="h-3.5 w-3.5" />
-                          : member.auto_inbox_ids.length > 0 && !member.sees_all_inboxes
-                            ? <Sparkles className="h-3.5 w-3.5" />
-                            : <MessageCircle className="h-3.5 w-3.5" />}
-                        {numbersColumnText(member, numberOwnerRule)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {/* Desativado não tem status de convite nem de
-                            disponibilidade: ele não entra. Mostrar "Ativo" ao
-                            lado seria a tela mentindo. */}
-                        {member.deactivated
-                          ? <Badge variant="outline" className="text-xs text-muted-foreground">Inativo</Badge>
-                          : member.confirmed
-                            ? <Badge variant="outline" className="text-xs text-emerald-500">Ativo</Badge>
-                            : <Badge variant="outline" className="text-xs text-amber-600">Convite pendente</Badge>}
-                        {/* Quem está sem número é justamente quem recebe lead
-                            sorteado e não é avisado no WhatsApp. Precisa ser
-                            visível sem abrir pessoa por pessoa. */}
-                        {!member.deactivated && !(member.whatsapp_number ?? '').trim() && (
-                          <Badge
-                            variant="outline"
-                            className="text-xs text-amber-600"
-                            title="Sem WhatsApp no cadastro: os avisos da distribuição de leads não chegam por WhatsApp"
-                          >
-                            Sem WhatsApp
-                          </Badge>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {/* Para quem está fora, o botão que importa é a VOLTA.
-                            Mandar o acesso a quem não consegue entrar é um
-                            convite que não funciona. */}
-                        {member.deactivated ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => reativar(member)}
-                            disabled={saving || !podeUsarDesativacao}
-                            className="h-8 gap-1 text-xs text-emerald-600 hover:text-emerald-700"
-                            title="Devolver o acesso. Ele volta FORA das roletas."
-                          >
-                            <UserCheck className="h-3.5 w-3.5" /> Reativar
-                          </Button>
-                        ) : (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openSend(member)}
-                              disabled={!canManage}
-                              className="h-8 gap-1 text-xs text-emerald-600 hover:text-emerald-700"
-                              title="Enviar o acesso (link+login+senha) no WhatsApp da pessoa"
-                            >
-                              <MessageCircle className="h-3.5 w-3.5" /> Enviar acesso
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => copiarLinkDeAcesso(member)}
-                              disabled={!canManage}
-                              className="h-8 gap-1 text-xs"
-                              title="Gera um link novo (vale uma vez, por 24h) para você mandar por onde quiser"
-                            >
-                              <Link2 className="h-3.5 w-3.5" /> Copiar link de acesso
-                            </Button>
-                          </>
-                        )}
-                        <Button variant="outline" size="sm" onClick={() => abrirPessoa(member.id)} disabled={!canManage} className="h-8 text-xs">
-                          Gerenciar acesso
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <PeopleList
+          members={members}
+          canCreateNumber={can('channels', 'create')}
+          // F1-T3 troca isto pela ficha da pessoa. Até lá abre o "Gerenciar
+          // acesso", onde seguem desativar, reativar, excluir, enviar acesso e
+          // copiar link.
+          onOpen={member => abrirPessoa(member.id)}
+          onCreateNumber={member => setCreatingNumberFor(member.id)} // F1-T4
+        />
       )}
 
       <AddPersonWizard
@@ -513,12 +382,6 @@ export default function PeopleTab() {
         inboxes={inboxes}
         onClose={() => setAdding(false)}
         onCreated={load}
-      />
-
-      <BulkInviteModal
-        isOpen={bulkInviting}
-        onClose={() => setBulkInviting(false)}
-        onSuccess={load}
       />
 
       <DeactivateUserDialog
@@ -545,7 +408,7 @@ export default function PeopleTab() {
       />
 
       {/* Modal por pessoa */}
-      <Dialog open={!!editing} onOpenChange={o => !o && setEditingId(null)}>
+      <Dialog open={!!editing} onOpenChange={o => !o && closeEditing()}>
         <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
           {editing && (
             <>
@@ -690,6 +553,29 @@ export default function PeopleTab() {
 
               <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
                 <div className="flex flex-wrap items-center gap-1">
+                  {/* Quem está fora não entra: mandar acesso a ele é convite que não funciona. */}
+                  {!editing.deactivated && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        className="gap-1.5 text-emerald-600 hover:text-emerald-700"
+                        onClick={() => { setEditingId(null); openSend(editing); }}
+                        disabled={saving || !canManage}
+                        title="Enviar o acesso no celular da pessoa"
+                      >
+                        <MessageCircle className="h-4 w-4" /> Enviar acesso
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="gap-1.5"
+                        onClick={() => copiarLinkDeAcesso(editing)}
+                        disabled={saving || !canManage}
+                        title="Gera um link novo (vale uma vez, por 24h) para você mandar por onde quiser"
+                      >
+                        <Link2 className="h-4 w-4" /> Copiar link de acesso
+                      </Button>
+                    </>
+                  )}
                   {editing.deactivated ? (
                     <Button
                       variant="ghost"
@@ -725,7 +611,7 @@ export default function PeopleTab() {
                     <Trash2 className="h-4 w-4" /> Excluir cadastro
                   </Button>
                 </div>
-                <Button onClick={() => setEditingId(null)} disabled={saving}>Concluir</Button>
+                <Button onClick={closeEditing} disabled={saving}>Concluir</Button>
               </DialogFooter>
             </>
           )}

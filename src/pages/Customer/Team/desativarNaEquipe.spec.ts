@@ -34,9 +34,14 @@ describe('desativar corretor na tela de Equipe', () => {
     expect(src).toContain('Reativar');
   });
 
+  // Desde a Equipe nova a lista é o PeopleList e o selo vem do accessStatus.
   it('marca quem está fora, senão a lista diz que ele está ativo', () => {
-    expect(src).toContain('member.deactivated');
-    expect(src).toContain('Inativo');
+    const lista = read('src/pages/Customer/Team/people/PeopleList.tsx');
+    const acesso = read('src/pages/Customer/Team/people/accessStatus.ts');
+    expect(lista).toContain('accessStatus(member');
+    expect(lista).toContain('member.deactivated');
+    expect(acesso).toContain('member.deactivated');
+    expect(acesso).toContain('Inativo');
   });
 
   // O excluir renomeava o e-mail da pessoa, randomizava a senha e respondia
