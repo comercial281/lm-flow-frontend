@@ -176,4 +176,76 @@ describe('AddPersonWizard', () => {
     await userEvent.click(screen.getByText('Adicionar várias de uma vez'));
     expect(onBulk).toHaveBeenCalled();
   });
+
+  async function semCelular() {
+    await userEvent.type(screen.getByPlaceholderText('Ex: Ana Souza'), 'Ana Souza');
+    await userEvent.type(screen.getByPlaceholderText('ana@imobiliaria.com.br'), 'ana@x.com');
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    await userEvent.click(screen.getByText('Corretor'));
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+  }
+
+  it('sem celular no passo 1: o bloco do número nasce desmarcado e "Só cadastrar" fica livre', async () => {
+    open();
+    await semCelular();
+    expect(numeroMarcado()).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Só cadastrar' })).toBeEnabled();
+  });
+
+  it('número marcado e incompleto: o aviso diz o que falta e os botões ficam parados', async () => {
+    open();
+    await semCelular();
+    await userEvent.click(numeroMarcado()!);
+    expect(screen.getByText('Falta o telefone do número.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Só cadastrar' })).toBeDisabled();
+    await userEvent.type(screen.getByRole('textbox', { name: 'Telefone do número' }), '1194');
+    expect(screen.getByText('Telefone incompleto.')).toBeInTheDocument();
+    await userEvent.clear(screen.getByRole('textbox', { name: 'Nome do número' }));
+    expect(screen.getByText('Falta o nome do número.')).toBeInTheDocument();
+  });
+
+  it('falha ao liberar um número existente aparece no resumo', async () => {
+    s.add.mockRejectedValueOnce(new Error('x'));
+    open();
+    await preencher();
+    await userEvent.click(screen.getByRole('checkbox', { name: /Comercial/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Só cadastrar' }));
+    expect(await screen.findByText('Não consegui liberar: Comercial')).toBeInTheDocument();
+    expect(screen.getByText(/Número Ana Souza criado/)).toBeInTheDocument();
+    expect(screen.queryByText(/Link não enviado/)).not.toBeInTheDocument();
+  });
+
+  it('sem número, link falhou: resumo com a linha do link e tentar de novo', async () => {
+    s.sendAccess.mockResolvedValueOnce({ user: {}, whatsapp: { sent: false, error: 'Número fora do ar' } });
+    const props = open();
+    await preencher();
+    await userEvent.click(numeroMarcado()!);
+    await userEvent.click(screen.getByRole('button', { name: 'Cadastrar e enviar acesso' }));
+    expect(await screen.findByText(/Link não enviado: Número fora do ar/)).toBeInTheDocument();
+    expect(props.onClose).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    expect(await screen.findByText(/Link de acesso enviado para/)).toBeInTheDocument();
+    expect(s.sendAccess).toHaveBeenCalledTimes(2);
+    expect(s.createUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('cargo próprio com roles.update não aparece para quem não é administrador', async () => {
+    const custom = [{ id: 'r7', slug: 'coord', name: 'Coordenação', permissions: ['roles.update'], effective_permissions: ['roles.update'] }] as unknown as CustomRole[];
+    open({ members: members('manager'), roles: custom });
+    await userEvent.type(screen.getByPlaceholderText('Ex: Ana Souza'), 'Ana Souza');
+    await userEvent.type(screen.getByPlaceholderText('ana@imobiliaria.com.br'), 'ana@x.com');
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    expect(screen.queryByText('Coordenação')).not.toBeInTheDocument();
+    expect(screen.getByText('Corretor')).toBeInTheDocument();
+  });
+
+  it('"Tentar de novo" do número abre a criação já com nome e telefone', async () => {
+    s.createNumber.mockRejectedValueOnce(new Error('x'));
+    open();
+    await preencher();
+    await userEvent.click(screen.getByRole('button', { name: 'Só cadastrar' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Tentar de novo' }));
+    expect(await screen.findByRole('textbox', { name: 'Nome do número' })).toHaveValue('Ana Souza');
+    expect(screen.getByRole('textbox', { name: 'Telefone do número' })).toHaveValue('(11) 94087-1974');
+  });
 });

@@ -22,6 +22,10 @@ export interface NumberCreatedSummaryProps {
   inboxId: string;
   /** Linhas prontas antes das de sempre, ex.: "Cadastrado como Corretor". */
   extraLines?: string[];
+  /** Avisos de pendência (ex.: "Não consegui liberar: Comercial"), com ícone de atenção. */
+  warnings?: string[];
+  /** Não mostrar a linha do link (o acesso não foi pedido). */
+  hideLink?: boolean;
   onOpenQr: () => void;
   onDone: () => void;
   onRetryLink?: () => void;
@@ -29,7 +33,7 @@ export interface NumberCreatedSummaryProps {
 }
 
 export default function NumberCreatedSummary({
-  personName, numberName, phone, linkSent, linkError, extraLines = [], onOpenQr, onDone, onRetryLink, retrying,
+  personName, numberName, phone, linkSent, linkError, extraLines = [], warnings = [], hideLink = false, onOpenQr, onDone, onRetryLink, retrying,
 }: NumberCreatedSummaryProps) {
   const linkOk = linkSent === 'sent';
   return (
@@ -37,7 +41,13 @@ export default function NumberCreatedSummary({
       <ul className="space-y-2 text-sm">
         {extraLines.map(line => <Line key={line} text={line} />)}
         <Line text={`Número ${numberName} criado, com ${personName} como dono`} />
-        {linkOk ? (
+        {warnings.map(w => (
+          <li key={w} className="flex items-start gap-2">
+            <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+            <span>{w}</span>
+          </li>
+        ))}
+        {hideLink ? null : linkOk ? (
           <Line text={`Link de acesso enviado para ${telefone(phone) || phone || 'o celular'} · vale 24 h`} />
         ) : (
           <li className="flex items-start gap-2">

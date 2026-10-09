@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Check, CheckCircle2, Loader2, MessageCircle, ShieldCheck, TriangleAlert, User as UserIcon } from 'lucide-react';
@@ -34,9 +34,17 @@ import { DOT_CLASS, STATE_TEXT } from './people/NumberChip';
    As três etapas são deliberadamente as três perguntas do produto: quem é a
    pessoa, o que ela pode fazer, por onde ela atende. */
 
-type WizardResult =
-  | { kind: 'number'; userId: string; cargo: string; number: CreatedWhatsappNumber; link: LinkOutcome }
-  | { kind: 'no-number'; userId: string; cargo: string; reason: string };
+/* O que ficou pronto e o que falta depois de cadastrar. `number` nulo = não criou
+   número (não pediu ou falhou: `numberFailure`); `link` nulo = não pediu acesso. */
+interface WizardResult {
+  userId: string;
+  cargo: string;
+  number: CreatedWhatsappNumber | null;
+  numberFailure: string;
+  link: LinkOutcome | null;
+  /** nomes dos números que não consegui liberar */
+  liberateFailures: string[];
+}
 
 const STEPS = [
   { key: 'quem', label: 'Quem é', icon: UserIcon },
@@ -73,7 +81,8 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
 
   // Passo Números: criar o número da pessoa já aqui. Nome e telefone nascem do
   // que foi digitado no passo 1 e só viram "valor próprio" se a pessoa editar.
-  const [makeNumber, setMakeNumber] = useState(true);
+  // null = ainda não mexeu: o padrão depende de haver celular válido no passo 1.
+  const [makeNumberEdit, setMakeNumberEdit] = useState<boolean | null>(null);
   const [numberNameEdit, setNumberNameEdit] = useState<string | null>(null);
   const [numberPhoneEdit, setNumberPhoneEdit] = useState<string | null>(null);
 
@@ -110,18 +119,32 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
   const celularNational = national(whatsapp);
   const numberName = numberNameEdit ?? name.trim();
   const numberPhone = numberPhoneEdit ?? (validPhone(celularNational) ? celularNational : '');
+  // Sem celular válido no passo 1 não há telefone para sugerir: o bloco nasce
+  // desmarcado (a pessoa marca e digita se quiser).
+  const makeNumber = makeNumberEdit ?? validPhone(celularNational);
   const willMakeNumber = canCreateNumber && makeNumber;
-  const numberReady = !willMakeNumber || (numberName.trim().length > 0 && validPhone(numberPhone));
+  // Por que o botão final está parado — dito na tela, nunca botão morto calado.
+  const numberHint = !willMakeNumber ? null
+    : numberName.trim().length === 0 ? 'Falta o nome do número.'
+      : numberPhone.length === 0 ? 'Falta o telefone do número.'
+        : !validPhone(numberPhone) ? 'Telefone incompleto.'
+          : null;
+  const numberReady = numberHint === null;
 
   const reset = () => {
     setStep(0); setName(''); setEmail(''); setWhatsapp('');
     setCargoKey(null); setInboxIds(new Set());
-    setMakeNumber(true); setNumberNameEdit(null); setNumberPhoneEdit(null);
+    setMakeNumberEdit(null); setNumberNameEdit(null); setNumberPhoneEdit(null);
     setResult(null); setRetryOpen(false); setRetryingLink(false);
     busyRef.current = false;
   };
 
   const close = () => { reset(); onClose(); };
+
+  // Reabrir nunca mostra o resumo de uma pessoa anterior.
+  useEffect(() => {
+    if (open) { setResult(null); setRetryOpen(false); }
+  }, [open]);
 
   const canAdvance = () => {
     if (step === 0) return name.trim().length > 1 && /\S+@\S+\.\S+/.test(email.trim());
@@ -178,6 +201,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
         }
       }
 
+      const liberateFailures: string[] = [];
       if (userId && canLiberate && !roleSeesAll && inboxIds.size > 0) {
         // Uma chamada por número porque é assim que a API de membros funciona
         // (a lista é por número, não por pessoa). Falha em uma não pode perder
@@ -187,43 +211,32 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
         // mais um" apagava todo mundo do número quando a leitura falhava (ela
         // devolve [] no erro) e promovia à distribuição quem só tinha acesso
         // automático.
-        const falhas: string[] = [];
         for (const inboxId of inboxIds) {
           try {
             await InboxMembersService.add(inboxId, [userId]);
           } catch {
-            falhas.push(inboxes.find(i => String(i.id) === inboxId)?.name ?? inboxId);
+            liberateFailures.push(inboxes.find(i => String(i.id) === inboxId)?.name ?? inboxId);
           }
-        }
-        if (falhas.length > 0) {
-          toast.error(`Pessoa criada, mas não consegui liberar: ${falhas.join(', ')}. Ajuste na ficha da pessoa.`);
         }
       }
 
       // Link de acesso: fala com o mundo de fora, por isso é o último passo.
-      let link: LinkOutcome = { state: 'skipped', error: 'você escolheu só cadastrar' };
+      let link: LinkOutcome | null = null;
       if (sendAccess && userId) {
-        if (!validPhone(national(celular))) {
-          link = { state: 'skipped', error: `falta o celular de ${name.trim()}` };
-          if (!number) toast.warning('Pessoa criada. Para enviar o acesso, informe o WhatsApp com DDD em "Enviar acesso".');
-        } else {
-          link = await sendAccessLink(userId, national(celular));
-          if (!number) {
-            if (link.state === 'sent') toast.success(`${name.trim()} criada e o link de acesso saiu no WhatsApp dela.`);
-            else toast.warning(`Pessoa criada, mas o WhatsApp não saiu: ${link.error ?? 'não consegui enviar o link agora'}.`);
-          }
-        }
-      } else if (!number && !numberFailure) {
-        toast.success(`${name.trim()} adicionada à equipe.`);
+        link = validPhone(national(celular))
+          ? await sendAccessLink(userId, national(celular))
+          : { state: 'skipped', error: `falta o celular de ${name.trim()}` };
       }
 
       onCreated();
-      if (number) {
-        setResult({ kind: 'number', userId, cargo, number, link });
-      } else if (numberFailure) {
-        setResult({ kind: 'no-number', userId, cargo, reason: numberFailure });
-      } else {
+      // Só o caminho 100% limpo e sem número fecha com aviso rápido; qualquer
+      // pendência fica numa tela que não some sozinha.
+      const clean = !number && !numberFailure && liberateFailures.length === 0 && (!link || link.state === 'sent');
+      if (clean) {
+        toast.success(link ? `${name.trim()} criada e o link de acesso saiu no WhatsApp dela.` : `${name.trim()} adicionada à equipe.`);
         close();
+      } else {
+        setResult({ userId, cargo, number, numberFailure, link, liberateFailures });
       }
     } finally {
       busyRef.current = false;
@@ -238,35 +251,41 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
     : null;
 
   const retryLink = async () => {
-    if (result?.kind !== 'number') return;
+    if (!result) return;
     setRetryingLink(true);
-    const link = await sendAccessLink(result.userId, celularNational);
-    setResult({ ...result, link });
-    setRetryingLink(false);
+    try {
+      const link = await sendAccessLink(result.userId, celularNational);
+      setResult({ ...result, link });
+    } finally {
+      setRetryingLink(false);
+    }
   };
 
   if (result && createdMember) {
-    const openQr = () => { close(); navigate(qrPath(result.kind === 'number' ? result.number.inbox_id : '')); };
+    const liberateWarning = result.liberateFailures.length > 0 ? [`Não consegui liberar: ${result.liberateFailures.join(', ')}`] : [];
+    const openQr = () => { const id = result.number?.inbox_id; close(); if (id) navigate(qrPath(id)); };
     return (
       <>
-        <Dialog open={open && !retryOpen} onOpenChange={o => !o && close()}>
+        <Dialog open={open && !retryOpen} onOpenChange={o => !o && !saving && close()}>
           <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{name.trim()} foi adicionada</DialogTitle>
               <DialogDescription>O que ficou pronto e o que falta.</DialogDescription>
             </DialogHeader>
-            {result.kind === 'number' ? (
+            {result.number ? (
               <NumberCreatedSummary
                 personName={name.trim()}
                 numberName={result.number.name}
                 phone={celularNational}
-                linkSent={result.link.state}
-                linkError={result.link.error}
+                linkSent={result.link?.state ?? 'sent'}
+                linkError={result.link?.error}
+                hideLink={!result.link}
                 inboxId={result.number.inbox_id}
                 extraLines={[`Cadastrado como ${result.cargo}`]}
+                warnings={liberateWarning}
                 onOpenQr={openQr}
                 onDone={close}
-                onRetryLink={result.link.state === 'error' && canSendAccess ? retryLink : undefined}
+                onRetryLink={result.link?.state === 'error' && canSendAccess ? retryLink : undefined}
                 retrying={retryingLink}
               />
             ) : (
@@ -276,15 +295,45 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
                     <span>Cadastrado como {result.cargo}</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
-                    <span>
-                      Número não criado: {result.reason}
-                      <Button variant="outline" size="sm" className="ml-2 h-7" onClick={() => setRetryOpen(true)}>
-                        Tentar de novo
-                      </Button>
-                    </span>
-                  </li>
+                  {liberateWarning.map(w => (
+                    <li key={w} className="flex items-start gap-2">
+                      <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+                      <span>{w}</span>
+                    </li>
+                  ))}
+                  {result.numberFailure && (
+                    <li className="flex items-start gap-2">
+                      <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+                      <span>
+                        Número não criado: {result.numberFailure}
+                        <Button variant="outline" size="sm" className="ml-2 h-7" onClick={() => setRetryOpen(true)}>
+                          Tentar de novo
+                        </Button>
+                      </span>
+                    </li>
+                  )}
+                  {result.link && (
+                    <li className="flex items-start gap-2">
+                      {result.link.state === 'sent' ? (
+                        <>
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+                          <span>Link de acesso enviado para {telefone(celularNational) || 'o celular'} · vale 24 h</span>
+                        </>
+                      ) : (
+                        <>
+                          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+                          <span>
+                            Link não enviado: {result.link.error || 'Não consegui enviar o link agora.'}
+                            {result.link.state === 'error' && canSendAccess && (
+                              <Button variant="outline" size="sm" className="ml-2 h-7" onClick={retryLink} disabled={retryingLink}>
+                                Tentar de novo
+                              </Button>
+                            )}
+                          </span>
+                        </>
+                      )}
+                    </li>
+                  )}
                 </ul>
                 <div className="flex justify-end">
                   <Button onClick={close}>Concluir</Button>
@@ -306,7 +355,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
   }
 
   return (
-    <Dialog open={open} onOpenChange={o => !o && close()}>
+    <Dialog open={open} onOpenChange={o => !o && !saving && close()}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Adicionar pessoa</DialogTitle>
@@ -399,7 +448,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
                     <input
                       type="checkbox"
                       checked={makeNumber}
-                      onChange={e => setMakeNumber(e.target.checked)}
+                      onChange={e => setMakeNumberEdit(e.target.checked)}
                       className="h-4 w-4 rounded"
                     />
                     Criar um número novo para {name.trim()}
@@ -424,6 +473,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
                       </div>
                     </div>
                   )}
+                  {numberHint && <p role="status" className="pl-6 text-xs text-amber-700 dark:text-amber-400">{numberHint}</p>}
                 </div>
               )}
 
