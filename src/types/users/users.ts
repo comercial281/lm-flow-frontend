@@ -133,6 +133,33 @@ export interface UsersUserResponse extends StandardResponse<User> {}
 
 export interface UserDeleteResponse extends StandardResponse<{ message: string }> {}
 
+export interface BulkAddPerson {
+  name: string;
+  email: string;
+  whatsapp_number?: string;
+}
+
+export interface BulkAddParams {
+  people: BulkAddPerson[];
+  chave_role?: 'agent' | 'manager' | 'admin';
+  custom_role_id?: string | number;
+  send_access: boolean;
+}
+
+/** POST /users/bulk_create (Equipe nova). `message` das listas vem pronta em pt-BR. */
+export interface BulkAddResult {
+  invited: Array<{ id: string; name: string; email: string; access: 'sent' | 'error' | 'skipped' }>;
+  skipped: Array<{ email: string; reason: 'exists' | 'invalid'; message?: string }>;
+  refused: Array<{ email: string; message: string }>;
+}
+
+export interface CreatedWhatsappNumber {
+  inbox_id: string;
+  name: string;
+  phone: string | null;
+  connection: 'connected' | 'connecting' | 'disconnected' | null;
+}
+
 export interface BulkInviteParams {
   emails: string[];
 }

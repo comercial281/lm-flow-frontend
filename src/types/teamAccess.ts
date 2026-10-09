@@ -32,6 +32,20 @@ export interface TeamAccessRole {
   chave_role: string;
 }
 
+export type MemberNumberConnection = 'connected' | 'connecting' | 'disconnected' | null;
+
+/** Número que a pessoa alcança, na ordem do servidor: dona primeiro, depois liberados. */
+export interface MemberNumber {
+  inbox_id: string;
+  name: string;
+  phone: string | null;
+  connection: MemberNumberConnection;
+  principal: boolean;
+  never_connected: boolean;
+  /** true = a pessoa é DONA deste número; false = só foi liberado a ela. */
+  owner: boolean;
+}
+
 export interface TeamAccessInbox {
   id: string;
   /** o nome que a pessoa digitou ("Comercial") — é o que a tela mostra */
@@ -39,6 +53,9 @@ export interface TeamAccessInbox {
   /** o identificador sanitizado ("comercial"), que é o que vai para a Evolution */
   slug?: string;
   channel_type?: string;
+  /** Telefone do número; nulo enquanto não conectou. */
+  phone?: string | null;
+  connection?: MemberNumberConnection;
 }
 
 export interface TeamAccessMember {
@@ -59,6 +76,12 @@ export interface TeamAccessMember {
   auto_access: Record<string, AutoAccessDetail>;
   /** Fase 2b.1: os números de que a pessoa é DONA, o principal primeiro. Vazio sem a regra. */
   numbers?: OwnedNumber[];
+  /** Equipe nova: TODOS os números da pessoa (dona primeiro, liberados depois); administrador vem []. Servidor antigo não manda — o serviço normaliza para []. */
+  all_numbers?: MemberNumber[];
+  /** Último acesso (ISO); nulo = nunca entrou. */
+  last_seen_at?: string | null;
+  /** Até quando o link de acesso enviado vale (ISO); nulo = sem link pendente. */
+  access_link_until?: string | null;
 
   /* Quem foi DESATIVADO continua na lista, com o selo *Inativo* e o botão
      *Reativar* — é desta tela que sai a volta. Os campos vêm do mesmo serviço

@@ -14,7 +14,8 @@ class TeamAccessService {
     const data = extractData<TeamAccessOverview>(res);
     return {
       inboxes: data?.inboxes ?? [],
-      members: data?.members ?? [],
+      // Servidor antigo não manda all_numbers: a tela nova lê sempre uma lista.
+      members: (data?.members ?? []).map((m) => ({ ...m, all_numbers: m.all_numbers ?? [] })),
       number_owner_rule: typeof data?.number_owner_rule === 'boolean' ? data.number_owner_rule : null,
     };
   }

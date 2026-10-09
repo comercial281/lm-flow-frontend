@@ -81,32 +81,6 @@ const AgentsService = {
     const response = await authApi.delete(`/users/${agentId}`);
     return extractData<AgentDeleteResponse>(response);
   },
-
-  /**
-   * Bulk invite agents
-   * Endpoint: POST /api/v1/users/bulk_create
-   */
-  async bulkInvite(emails: string[]): Promise<AgentChannel[]> {
-    const response = await authApi.post('/users/bulk_create', {
-      emails,
-    });
-    const data = extractData<{ invited_users?: AgentChannel[] } | AgentChannel[]>(response);
-
-    if (Array.isArray(data)) {
-      return data;
-    }
-
-    if (
-      data &&
-      typeof data === 'object' &&
-      'invited_users' in data &&
-      Array.isArray(data.invited_users)
-    ) {
-      return data.invited_users;
-    }
-
-    return [];
-  },
 };
 
 export default AgentsService;
