@@ -55,6 +55,7 @@ import { useAppDataStore } from '@/store/appDataStore';
 import { usePilulaEFiltros } from '@/features/conversas/usePilulaEFiltros';
 import type { DashboardApp } from '../../../types/integrations';
 import type { AssignmentOption, AssignmentType } from '@/components/chat/assignment';
+import { useNomeDaAba } from '@/components/layout/nomeDaAba';
 
 const ContactSidebar = lazyWithRetry(() => import('@/components/chat/contact-sidebar/ContactSidebar'));
 
@@ -94,6 +95,7 @@ const Chat = () => {
   const conversations = chatContext.conversations;
   const { messages, selectedConversation, selectedMessages } = chatContext;
   const { othersPresent } = useConversationPresence(selectedConversation?.id);
+  useNomeDaAba(selectedConversation?.contact?.name || selectedConversation?.meta?.sender?.name);
 
   // 🔒 RACE CONDITION FIX: Ref para rastrear última conversa carregada
   const lastLoadedConversationRef = useRef<string | null>(null);

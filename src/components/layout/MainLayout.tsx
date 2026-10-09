@@ -19,6 +19,8 @@ import {
   filterMenuItemsByPermissions,
 } from './config/menuItems';
 import { MenuProvider } from '@/contexts/MenuContext';
+import { NomeDaAba, paginaNoMenu } from './nomeDaAba';
+import { useAppDataStore } from '@/store/appDataStore';
 import { aplicarProprietariosNoMenu, useProprietariosNoMenu } from '@/features/properties/proprietarios/menuDeProprietarios';
 
 import { useLanguage } from '../../hooks/useLanguage';
@@ -68,7 +70,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // sozinho, sem mexer nela; `escolhaNaVisita` guarda só o clique da visita.
   const [salvo, setSalvo] = useState(false);
   const [escolhaNaVisita, setEscolhaNaVisita] = useState<boolean | null>(null);
-  const emConversas = ROTA_RECOLHE_MENU.test(useLocation().pathname);
+  const { pathname } = useLocation();
+  const emConversas = ROTA_RECOLHE_MENU.test(pathname);
   const isCollapsed = menuRecolhido({ salvo, emConversas, escolhaNaVisita });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
@@ -131,6 +134,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
     regras,
   );
   const itensParaBusca = useMemo(() => [...secoes.flatMap(s => s.itens), ...rodape], [secoes, rodape]);
+  // Nome da aba do navegador: <item> · <página> · <cliente> (ver nomeDaAba.tsx).
+  const paginaDaAba = useMemo(() => paginaNoMenu(secoes, rodape, pathname), [secoes, rodape, pathname]);
+  const nomeDaConta = useAppDataStore(state => state.account?.name);
 
   const handleLogout = async () => {
     setLogoutDialogOpen(false);
@@ -202,7 +208,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
         {/* Main Content — as páginas com abas leem o menu filtrado daqui. */}
         <main className="flex-1 overflow-auto bg-background transition-colors duration-150 ease-in-out">
           <MenuProvider value={secoes}>
-            <div className="h-full">{children}</div>
+            <NomeDaAba pagina={paginaDaAba} cliente={nomeDaConta}>
+              <div className="h-full">{children}</div>
+            </NomeDaAba>
           </MenuProvider>
         </main>
 

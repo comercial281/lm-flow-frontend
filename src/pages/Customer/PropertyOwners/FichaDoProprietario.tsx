@@ -18,6 +18,7 @@ import { TONS, rotuloDaSituacao, tipoDoImovel, tomDaSituacao } from '@/features/
 import PilulaDeStatus from './PilulaDeStatus';
 import JanelaDoProprietario from './JanelaDoProprietario';
 import JanelaCorretoresAutorizados from './JanelaCorretoresAutorizados';
+import { useNomeDaAba } from '@/components/layout/nomeDaAba';
 
 const VAZIO = 'Nada registrado.';
 
@@ -118,6 +119,7 @@ export default function FichaDoProprietario() {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   const [dono, setDono] = useState<ProprietarioCompleto | null>(null);
+  useNomeDaAba(dono?.name);
   const [erro, setErro] = useState<'sem-acesso' | 'falha' | null>(null);
   const [notas, setNotas] = useState('');
   const [salvandoNotas, setSalvandoNotas] = useState(false);

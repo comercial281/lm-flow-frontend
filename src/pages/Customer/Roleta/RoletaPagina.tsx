@@ -34,6 +34,7 @@ import OrigensBloco from './blocos/OrigensBloco';
 import FilaBloco from './blocos/FilaBloco';
 import HorarioBloco from './blocos/HorarioBloco';
 import HistoricoLista from './HistoricoLista';
+import { useNomeDaAba } from '@/components/layout/nomeDaAba';
 
 // ── PÁGINA DA ROLETA (a roleta nova, a única desde 06/10/2026) ──────────────
 //
@@ -113,6 +114,7 @@ export default function RoletaPagina() {
   const filtroDoHistorico = params.get('filtro') === 'atencao' ? 'attention' : 'all';
 
   const [roleta, setRoleta] = useState<RoletaConfig | null>(null);
+  useNomeDaAba(roleta ? roletaLabel(roleta) : null);
   const [origens, setOrigens] = useState<RoletaOrigin[]>([]);
   const [erro, setErro] = useState(false);
   const [duplicando, setDuplicando] = useState(false);

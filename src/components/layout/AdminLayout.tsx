@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useChamadosAbertos } from '@/pages/SuperAdmin/Suporte/useChamadosAbertos';
 import { ADMIN_MENU_ITEMS, donoDoEnderecoAdmin } from './config/adminMenuItems';
+import { NomeDaAba, paginaNoMenuAdmin } from './nomeDaAba';
 
 function cn(...classes: (string | undefined | null | false)[]) {
   return classes.filter(Boolean).join(' ');
@@ -162,7 +163,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </Link>
             ))}
           </div>
-          <div className="h-full">{children}</div>
+          {/* Nome da aba: <item> · <página> · Admin (ver nomeDaAba.tsx). */}
+          <NomeDaAba pagina={paginaNoMenuAdmin(ADMIN_MENU_ITEMS, location.pathname)} cliente="Admin">
+            <div className="h-full">{children}</div>
+          </NomeDaAba>
         </main>
       </div>
 
