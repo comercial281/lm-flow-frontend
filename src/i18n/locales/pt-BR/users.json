@@ -168,8 +168,7 @@
       "read": "Você não tem permissão para visualizar atendentes",
       "create": "Você não tem permissão para criar atendentes",
       "update": "Você não tem permissão para editar atendentes",
-      "delete": "Você não tem permissão para excluir atendentes",
-      "invite": "Você não tem permissão para convidar atendentes"
+      "delete": "Você não tem permissão para excluir atendentes"
     },
     "loadError": "Erro ao carregar atendentes",
     "filterError": "Erro ao aplicar filtros",
