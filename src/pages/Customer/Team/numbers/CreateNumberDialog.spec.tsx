@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CreateNumberDialog from './CreateNumberDialog';
 import type { TeamAccessMember } from '@/types/teamAccess';
@@ -8,9 +8,11 @@ const s = vi.hoisted(() => ({
   create: vi.fn(),
   sendAccess: vi.fn(),
   navigate: vi.fn(),
+  can: vi.fn(),
 }));
 
 vi.mock('react-router-dom', () => ({ useNavigate: () => s.navigate }));
+vi.mock('@/hooks/useUserPermissions', () => ({ useUserPermissions: () => ({ can: s.can }) }));
 vi.mock('@/services/users', () => ({
   usersService: { createWhatsappNumber: s.create, sendAccess: s.sendAccess },
 }));
@@ -31,6 +33,7 @@ const serverError = (code: string, message: string) => ({ response: { data: { su
 describe('CreateNumberDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    s.can.mockReturnValue(true);
     s.create.mockResolvedValue({ inbox_id: '77', name: 'Ana Souza', phone: '5511940871974', connection: null });
     s.sendAccess.mockResolvedValue({ user: {}, whatsapp: { sent: true } });
   });
@@ -126,5 +129,34 @@ describe('CreateNumberDialog', () => {
     abrir();
     await userEvent.click(criar());
     expect(await screen.findByText(/Link não enviado: Seu cargo só mexe no cadastro de corretores\./)).toBeInTheDocument();
+  });
+
+  it('duplo clique em Criar número chama o servidor uma vez só', async () => {
+    let release!: (v: unknown) => void;
+    s.create.mockReturnValue(new Promise(r => { release = r; }));
+    abrir();
+    const btn = criar();
+    act(() => { btn.click(); btn.click(); });
+    release({ inbox_id: '77', name: 'Ana Souza', phone: '5511940871974', connection: null });
+    await screen.findByText(/Número Ana Souza criado/);
+    expect(s.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('sem users.send_access: some o "no primeiro acesso" e o padrão é "Agora, nesta tela"', async () => {
+    s.can.mockImplementation((_r: string, a: string) => a !== 'send_access');
+    abrir();
+    expect(screen.queryByRole('radio', { name: 'Ana Souza, no primeiro acesso' })).not.toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Agora, nesta tela' })).toBeChecked();
+    await userEvent.click(criar());
+    await waitFor(() => expect(s.navigate).toHaveBeenCalledWith('/channels/77/settings?tab=configuration&connect=1'));
+    expect(s.sendAccess).not.toHaveBeenCalled();
+  });
+
+  it('link sem motivo do servidor: texto claro, não "motivo desconhecido"', async () => {
+    s.sendAccess.mockResolvedValueOnce({ user: {}, whatsapp: {} });
+    abrir();
+    await userEvent.click(criar());
+    expect(await screen.findByText(/Link não enviado: Não consegui enviar o link agora\./)).toBeInTheDocument();
+    expect(screen.queryByText(/motivo desconhecido/)).not.toBeInTheDocument();
   });
 });

@@ -43,7 +43,7 @@ export default function NumberCreatedSummary({
           <li className="flex items-start gap-2">
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
             <span>
-              Link não enviado: {linkError || 'motivo desconhecido'}
+              Link não enviado: {linkError || 'Não consegui enviar o link agora.'}
               {onRetryLink && (
                 <Button
                   variant="outline" size="sm" className="ml-2 h-7" onClick={onRetryLink} disabled={retrying}

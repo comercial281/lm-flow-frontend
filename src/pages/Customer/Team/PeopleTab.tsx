@@ -114,6 +114,7 @@ export default function PeopleTab() {
         open={adding}
         roles={roles}
         inboxes={inboxes}
+        members={members}
         onClose={() => setAdding(false)}
         onCreated={load}
       />

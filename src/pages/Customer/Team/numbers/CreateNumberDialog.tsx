@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import {
@@ -7,9 +7,11 @@ import {
 import { BrPhoneInput } from '@/components/shared/BrPhoneInput';
 import { usersService } from '@/services/users';
 import { apiErrorMessage } from '@/utils/apiHelpers';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
 import type { CreatedWhatsappNumber } from '@/types/users';
 import type { TeamAccessMember } from '@/types/teamAccess';
 import NumberCreatedSummary, { type LinkSent } from './NumberCreatedSummary';
+import { national, qrPath, sendAccessLink, toApiPhone, validPhone } from './numberPhone';
 
 /* Atalho "Criar número para {nome}": cria o número já com a pessoa como dona.
 
@@ -33,23 +35,21 @@ interface Props {
 
 type Who = 'first' | 'now';
 
-const digitsOf = (v?: string | null) => (v ?? '').replace(/\D/g, '');
-/** Tira o 55 do país: o campo e o envio do link trabalham com DDD + número. */
-const national = (v?: string | null) => {
-  const d = digitsOf(v);
-  return d.startsWith('55') && (d.length === 12 || d.length === 13) ? d.slice(2) : d;
-};
-const validPhone = (v: string) => v.length === 10 || v.length === 11;
-const qrPath = (inboxId: string) => `/channels/${inboxId}/settings?tab=configuration&connect=1`;
-
 export default function CreateNumberDialog({ member, open, onClose, onDone }: Props) {
   const navigate = useNavigate();
+  // O link de acesso é do "Enviar acesso": sem a chave o servidor recusaria, então
+  // a opção nem aparece e o QR code abre na hora.
+  const { can } = useUserPermissions();
+  const canSendAccess = can('users', 'send_access');
+  // Guarda contra duplo clique: o `busy` do estado só vale no render seguinte, e
+  // dois cliques no mesmo instante criariam dois números.
+  const busyRef = useRef(false);
   const memberPhone = national(member.whatsapp_number);
   const hasCelular = validPhone(memberPhone);
 
   const [name, setName] = useState(member.name);
   const [phone, setPhone] = useState(memberPhone);
-  const [who, setWho] = useState<Who>('first');
+  const [who, setWho] = useState<Who>(canSendAccess ? 'first' : 'now');
   const [sameAsNumber, setSameAsNumber] = useState(true);
   const [otherCelular, setOtherCelular] = useState('');
   const [busy, setBusy] = useState(false);
@@ -63,10 +63,11 @@ export default function CreateNumberDialog({ member, open, onClose, onDone }: Pr
     if (!open) return;
     setName(member.name);
     setPhone(national(member.whatsapp_number));
-    setWho('first');
+    setWho(canSendAccess ? 'first' : 'now');
     setSameAsNumber(true);
     setOtherCelular('');
     setBusy(false);
+    busyRef.current = false;
     setError(null);
     setCreated(null);
     setLink({ state: 'sent' });
@@ -79,26 +80,19 @@ export default function CreateNumberDialog({ member, open, onClose, onDone }: Pr
 
   const finish = (result: CreatedWhatsappNumber) => { onDone(result); onClose(); };
 
-  const sendLink = async (): Promise<{ state: LinkSent; error?: string }> => {
-    try {
-      const res = await usersService.sendAccess(member.id, { whatsapp_number: celular });
-      const wa = res.whatsapp;
-      if (wa?.sent) return { state: 'sent' };
-      if (wa?.error) return { state: 'error', error: wa.error };
-      return { state: 'skipped', error: wa?.skipped };
-    } catch (e) {
-      return { state: 'error', error: apiErrorMessage(e, 'Não consegui enviar o link agora.') };
-    }
-  };
+  const sendLink = () => sendAccessLink(member.id, celular);
 
   const submit = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError(null);
     let result: CreatedWhatsappNumber;
     try {
-      result = await usersService.createWhatsappNumber(member.id, { name: name.trim(), phone_number: `55${phone}` });
+      result = await usersService.createWhatsappNumber(member.id, { name: name.trim(), phone_number: toApiPhone(phone) });
     } catch (e) {
       setError(apiErrorMessage(e, 'Não consegui criar o número agora.'));
+      busyRef.current = false;
       setBusy(false);
       return;
     }
@@ -112,6 +106,7 @@ export default function CreateNumberDialog({ member, open, onClose, onDone }: Pr
     const sent = await sendLink();
     setCreated(result);
     setLink(sent);
+    busyRef.current = false;
     setBusy(false);
   };
 
@@ -167,8 +162,10 @@ export default function CreateNumberDialog({ member, open, onClose, onDone }: Pr
 
               <fieldset className="space-y-2" disabled={busy}>
                 <legend className="text-sm font-medium">Quem lê o QR code</legend>
-                <Option checked={who === 'first'} onSelect={() => setWho('first')} label={`${member.name}, no primeiro acesso`}
-                  hint={`O link de acesso vai para o celular de ${member.name}, que conecta o número ao entrar.`} />
+                {canSendAccess && (
+                  <Option checked={who === 'first'} onSelect={() => setWho('first')} label={`${member.name}, no primeiro acesso`}
+                    hint={`O link de acesso vai para o celular de ${member.name}, que conecta o número ao entrar.`} />
+                )}
                 <Option checked={who === 'now'} onSelect={() => setWho('now')} label="Agora, nesta tela"
                   hint="Abre o QR code assim que o número for criado." />
               </fieldset>
