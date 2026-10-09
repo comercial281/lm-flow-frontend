@@ -4,7 +4,7 @@ import { Users2, Shield, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/ds';
 import { BaseHeader, Pagina } from '@/components/base';
 import PeopleTab from './PeopleTab';
-import RolesPage from '@/pages/Customer/Settings/Roles';
+import RoleCards from './roles/RoleCards';
 import Teams from '@/pages/Customer/Settings/Teams/Teams';
 
 /* "Equipe" — a tela única de pessoas, cargos e times.
@@ -63,9 +63,8 @@ export default function TeamAccessPage() {
           <PeopleTab />
         </TabsContent>
         <TabsContent value="cargos">
-          {/* embedded: a aba já tem o título "Equipe" acima, e a tela de cargos
-              traz o próprio <h1> quando aberta sozinha. */}
-          <RolesPage embedded />
+          {/* Cartões dos cargos. A lista completa antiga segue em /equipe/cargos/lista. */}
+          <RoleCards />
         </TabsContent>
         <TabsContent value="times">
           <Teams embutido />
