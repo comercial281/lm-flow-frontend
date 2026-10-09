@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -20,6 +20,13 @@ import ConnectNumberPrompt, { DISMISS_KEY } from './ConnectNumberPrompt';
 
 const fresh = { inbox_id: 'i1', name: 'WhatsApp Ana', phone: null, connection: 'disconnected' as const, principal: true, never_connected: true };
 const ok = { inbox_id: 'i2', name: 'Outro', phone: null, connection: 'connected' as const, principal: false, never_connected: false };
+
+// Deixa a promessa do mock assentar dentro do act, para o teste de "não aparece" não gerar aviso.
+const settle = async () => {
+  await act(async () => {
+    await Promise.resolve();
+  });
+};
 
 const renderIt = () => render(<MemoryRouter><ConnectNumberPrompt /></MemoryRouter>);
 
@@ -42,14 +49,23 @@ describe('ConnectNumberPrompt', () => {
   it('mostra "e mais N" quando há vários', async () => {
     myNumbers.mockResolvedValue({ number_owner_rule: true, numbers: [fresh, { ...fresh, inbox_id: 'i3', name: 'B' }] });
     renderIt();
-    expect(await screen.findByText(/e mais 1 número/)).toBeInTheDocument();
+    expect(await screen.findByText(/Você tem mais 1 número para conectar\./)).toBeInTheDocument();
+  });
+
+  it('prefere o número principal ao escolher qual mostrar', async () => {
+    myNumbers.mockResolvedValue({
+      number_owner_rule: true,
+      numbers: [{ ...fresh, inbox_id: 'i3', name: 'Secundário', principal: false }, fresh],
+    });
+    renderIt();
+    expect(await screen.findByText(/WhatsApp Ana está esperando/)).toBeInTheDocument();
   });
 
   it('some quando conectado ou never_connected false', async () => {
     myNumbers.mockResolvedValue({ number_owner_rule: true, numbers: [ok, { ...fresh, connection: 'connected' }] });
     renderIt();
     await waitFor(() => expect(myNumbers).toHaveBeenCalled());
-    await Promise.resolve();
+    await settle();
     expect(screen.queryByText('Conecte seu número')).toBeNull();
   });
 
@@ -57,7 +73,7 @@ describe('ConnectNumberPrompt', () => {
     state.support = true;
     myNumbers.mockResolvedValue({ number_owner_rule: true, numbers: [fresh] });
     renderIt();
-    await Promise.resolve();
+    await settle();
     expect(myNumbers).not.toHaveBeenCalled();
     expect(screen.queryByText('Conecte seu número')).toBeNull();
   });
@@ -66,7 +82,7 @@ describe('ConnectNumberPrompt', () => {
     state.tours = {};
     myNumbers.mockResolvedValue({ number_owner_rule: true, numbers: [fresh] });
     renderIt();
-    await Promise.resolve();
+    await settle();
     expect(screen.queryByText('Conecte seu número')).toBeNull();
   });
 
@@ -82,7 +98,7 @@ describe('ConnectNumberPrompt', () => {
     sessionStorage.setItem(DISMISS_KEY, '1');
     myNumbers.mockResolvedValue({ number_owner_rule: true, numbers: [fresh] });
     renderIt();
-    await Promise.resolve();
+    await settle();
     expect(screen.queryByText('Conecte seu número')).toBeNull();
   });
 
@@ -91,13 +107,14 @@ describe('ConnectNumberPrompt', () => {
     renderIt();
     await userEvent.click(await screen.findByRole('button', { name: 'Conectar agora' }));
     expect(navigate).toHaveBeenCalledWith('/channels/i1/settings?tab=configuration&connect=1');
+    expect(sessionStorage.getItem(DISMISS_KEY)).toBe('1');
   });
 
   it('falha na busca: não renderiza nada', async () => {
     myNumbers.mockRejectedValue(new Error('boom'));
     const { container } = renderIt();
     await waitFor(() => expect(myNumbers).toHaveBeenCalled());
-    await Promise.resolve();
+    await settle();
     expect(container.textContent).toBe('');
   });
 });

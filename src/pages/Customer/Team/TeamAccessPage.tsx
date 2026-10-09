@@ -25,8 +25,8 @@ import Teams from '@/pages/Customer/Settings/Teams/Teams';
 
 const TABS = [
   { key: 'pessoas', label: 'Pessoas', icon: Users2 },
-  { key: 'cargos', label: 'Cargos e Permissões', icon: Shield },
   { key: 'times', label: 'Times', icon: Users },
+  { key: 'cargos', label: 'Cargos', icon: Shield },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
@@ -46,7 +46,7 @@ export default function TeamAccessPage() {
   };
 
   return (
-    <Pagina cabecalho={<BaseHeader title="Equipe" subtitle="Quem é quem, o que cada cargo pode fazer e por onde cada um atende" />}>
+    <Pagina cabecalho={<BaseHeader title="Equipe" subtitle="Quem atende, por qual número e em qual time" />}>
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="flex flex-wrap justify-start gap-1 bg-transparent p-0 h-auto">
           {TABS.map(tab => {

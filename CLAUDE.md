@@ -8032,3 +8032,35 @@ Pedido do dono: "eu nunca configuro esses menus em nenhum cliente".
 - **O que estava gravado em cada canal continua valendo e não muda.** O Salvar da aba segue mandando `greeting_enabled`, `greeting_message`, `lock_to_single_conversation` e `default_conversation_status` com o valor que veio do canal. Pesquisa de satisfação não é tocada por aquele Salvar. Canal que tivesse alguma delas ligada segue ligado, só que sem tela: desligar é por nós, direto no canal.
 - Os componentes (`GreetingSettingsForm`, `LockToSingleConversationForm`, `DefaultConversationStatusForm`, `CSATForm`, `ModerationDashboard`) ficaram no código, sem uso nesta tela. A saudação da criação do canal de site (`WebWidgetForm`) não mudou.
 - Não reabrir sem o dono pedir.
+
+## Equipe nova: lista, ficha e o número da pessoa (desde 2026-10-09)
+
+Pedido do Tony: a Equipe responder "qual é o WhatsApp do Bruno?" e dar o número a quem entra, sem passar por Canais. Servidor: **lm-flow#449** (publicar ANTES desta frente).
+
+O que a tela mostra:
+
+- **Lista de Pessoas** (`Team/people/PeopleList.tsx`): cada linha traz os números da pessoa pelo **nome**, com a situação (conectado, desconectado, nunca conectado) e o selo de dono. Sem coluna "Instâncias", sem botões repetidos por linha. A linha inteira abre a ficha. Filtros por cargo, situação do acesso e problemas (sem celular, sem número, número desconectado), mais busca. Atalho **Criar número** na linha de quem não tem.
+- **Ficha lateral** (`Team/person/PersonSheet.tsx`): nome, cargo, celular (recebe o link de acesso e os avisos de lead novo), números (cartões com nome, telefone, situação e "Dono do número" ou "Atende as conversas"), acesso (copiar link, enviar/reenviar link) e rodapé com desativar, excluir e Salvar.
+- **Criar número** (`numbers/CreateNumberDialog.tsx`): nome = pessoa, telefone, e quem lê o QR code: a própria pessoa no primeiro acesso (padrão) ou agora, nesta tela. Sem celular válido, a tela exige o celular antes de criar (o link precisa de destino).
+- **Adicionar pessoa** (assistente) já cria o número junto (bloco marcado por padrão quando há celular) e manda o acesso. **Adicionar várias** (`Team/bulk/`) cola linhas com nome, e-mail e celular, um cargo para o lote, até 50 por vez.
+- **Conecte seu número** (`numbers/ConnectNumberPrompt.tsx`): no primeiro acesso, depois do tour de boas-vindas, quem é dono de número nunca conectado vê o convite; "Depois" vale só na sessão. Mostra o número principal primeiro.
+- Abas: **Pessoas · Times · Cargos** (`?aba=pessoas|times|cargos`; as rotas antigas continuam redirecionando). Subtítulo "Quem atende, por qual número e em qual time". A rota `/equipe` e o item do menu pedem `users.read`.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Quem lê o QR code é a própria pessoa, no primeiro acesso.** "Agora, nesta tela" é a exceção, para quem está do lado dela.
+2. **Liberar ou tirar número é POST/DELETE de UMA pessoa** (`InboxMembersService.add/remove`). Nunca ler a lista do número e regravar: duas pessoas editando ao mesmo tempo se sobrescreveriam.
+3. **Ficha só leitura** sem `users.update`, e também para alvo que não é corretor quando quem vê não é administrador (mesma régua do servidor: gestor só mexe em corretor ou em si mesmo). Enviar/reenviar link pede `users.send_access`.
+4. **Sem bloco Time na lista nem na ficha** até Times funcionando (o retrato não traz times; mostrar sem editar seria tela que mente).
+5. **A tela do cliente não mostra o limite do plano** ("Seu plano tem N números" só existe no painel da LM). Quando estoura, mostra a frase que o servidor devolve.
+6. **"Convidar por e-mail" morreu.** Virou **Adicionar várias**, com cargo para o lote e acesso pelo WhatsApp (um só jeito de dar acesso).
+7. **Gerente abre a Equipe** com `users.read` (antes pedia `users.update`). Gerente não dá Administrador nem cargo com mais permissões que o dele: o cargo some do Seletor, e o servidor recusa com frase pronta.
+8. Frases de recusa do servidor aparecem como vieram (`apiErrorMessage`); nunca o código.
+
+Armadilhas:
+
+1. **O servidor (lm-flow#449) precisa estar no ar antes.** Sem `all_numbers` no retrato, todo mundo aparece sem número (a lista nova não lê o campo antigo `numbers`).
+2. O `SheetContent` da casa troca o "Close" do pacote por "Fechar"; teste que procura "Close" não acha.
+3. O celular digitado no Reenviar link fica gravado no cadastro da pessoa.
+4. O `CollaboratorsForm` do número (tela do canal) ainda lê e regrava a lista inteira de colaboradores. Fora desta frente; quando for mexer, trocar por POST/DELETE de uma pessoa (decisão 2).
+5. A trava do tamanho do lote (50) existe nos dois lados; mudar um exige mudar o outro.

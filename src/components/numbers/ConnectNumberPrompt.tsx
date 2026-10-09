@@ -46,7 +46,10 @@ export default function ConnectNumberPrompt() {
       .myNumbers()
       .then(res => {
         if (!alive) return;
-        const list = res.numbers.filter(n => n.never_connected === true && n.connection !== 'connected');
+        // O número principal vem primeiro: é o que a pessoa mais precisa conectar.
+        const list = res.numbers
+          .filter(n => n.never_connected === true && n.connection !== 'connected')
+          .sort((a, b) => Number(b.principal) - Number(a.principal));
         setPending(list);
         setOpen(list.length > 0);
       })
@@ -61,7 +64,7 @@ export default function ConnectNumberPrompt() {
   const first = pending[0];
   const extra = pending.length - 1;
 
-  const later = () => {
+  const dismiss = () => {
     try {
       sessionStorage.setItem(DISMISS_KEY, '1');
     } catch {
@@ -69,9 +72,11 @@ export default function ConnectNumberPrompt() {
     }
     setOpen(false);
   };
+  const later = dismiss;
 
   const connect = () => {
-    setOpen(false);
+    // Quem foi conectar não precisa do convite de novo ao voltar nesta sessão.
+    dismiss();
     navigate(`/channels/${first.inbox_id}/settings?tab=configuration&connect=1`);
   };
 
@@ -82,7 +87,7 @@ export default function ConnectNumberPrompt() {
           <DialogTitle>Conecte seu número</DialogTitle>
           <DialogDescription>
             O número {first.name} está esperando você ler o QR code com o seu celular.
-            {extra > 0 && ` (e mais ${plural(extra, 'número', 'números')})`}
+            {extra > 0 && ` Você tem mais ${plural(extra, 'número', 'números')} para conectar.`}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2">
