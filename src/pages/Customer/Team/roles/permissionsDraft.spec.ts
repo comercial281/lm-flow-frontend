@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changesByRole, clearRole, countChanges, effectiveState, toggle } from './permissionsDraft';
+import { changesByRole, clearRole, countChanges, dropEntries, effectiveState, toggle } from './permissionsDraft';
 
 describe('permissionsDraft', () => {
   it('parcial liga; ligar de novo desliga', () => {
@@ -32,5 +32,11 @@ describe('permissionsDraft', () => {
   it('sem mudança usa o estado do servidor', () => {
     expect(effectiveState({}, 1, 'x', 'partial')).toBe('partial');
     expect(countChanges({})).toBe(0);
+  });
+
+  it('dropEntries tira só as linhas soltas e devolve o mesmo objeto quando nada sai', () => {
+    const d = { 3: { a: true, b: false }, 9: { a: true } };
+    expect(dropEntries(d, () => false)).toBe(d);
+    expect(dropEntries(d, (id, k) => id === 9 || k === 'b')).toEqual({ 3: { a: true } });
   });
 });

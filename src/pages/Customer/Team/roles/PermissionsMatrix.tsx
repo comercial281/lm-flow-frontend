@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Lock, Search } from 'lucide-react';
 import { toast } from 'sonner';
@@ -13,6 +13,7 @@ import {
   changesByRole,
   clearRole,
   countChanges,
+  dropEntries,
   effectiveState,
   toggle,
   type PermissionsDraft,
@@ -25,17 +26,29 @@ import {
 
 const norm = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-/** Nome do cargo-pai quando ele já libera a linha (o filho herda e não dá pra desligar aqui). */
-function lockedParent(roles: RoleCapabilities[], roleId: number, rowKey: string): string | undefined {
+/** Cargo-pai e o estado dele na linha (undefined: o cargo não herda de ninguém). */
+function parentOf(roles: RoleCapabilities[], roleId: number, rowKey: string): { name: string; state: CapabilityState } | undefined {
   const role = roles.find(r => r.id === roleId);
   if (!role?.inherits_from_id) return undefined;
   const pai = roles.find(r => r.id === role.inherits_from_id);
-  return pai && pai.states[rowKey] === 'on' ? pai.name : undefined;
+  return pai ? { name: pai.name, state: pai.states[rowKey] ?? 'off' } : undefined;
+}
+
+/** Nome do cargo-pai quando ele já libera a linha inteira (o filho herda e não dá pra desligar aqui). */
+function lockedParent(roles: RoleCapabilities[], roleId: number, rowKey: string): string | undefined {
+  const pai = parentOf(roles, roleId, rowKey);
+  return pai?.state === 'on' ? pai.name : undefined;
+}
+
+/** O servidor recusa DESLIGAR a linha no filho se o pai tem QUALQUER chave dela (ligada ou em parte). */
+function parentBlocksOff(roles: RoleCapabilities[], roleId: number, rowKey: string): boolean {
+  const pai = parentOf(roles, roleId, rowKey);
+  return !!pai && pai.state !== 'off';
 }
 
 function Interruptor({
-  state, label, disabled, changed, onClick, lockedBy,
-}: { state: CapabilityState; label: string; disabled: boolean; changed: boolean; onClick: () => void; lockedBy?: string }) {
+  state, label, disabled, changed, onClick, lockedBy, partialFrom,
+}: { state: CapabilityState; label: string; disabled: boolean; changed: boolean; onClick: () => void; lockedBy?: string; partialFrom?: string }) {
   const partial = state === 'partial';
   const on = state === 'on';
   return (
@@ -45,13 +58,13 @@ function Interruptor({
       <Switch
         checked={on}
         aria-checked={partial ? 'mixed' : on}
-        aria-label={lockedBy ? `${label} — Vem do cargo ${lockedBy}` : label}
-        title={lockedBy ? `Vem do cargo ${lockedBy}` : undefined}
-        disabled={disabled || !!lockedBy}
+        aria-label={lockedBy ? `${label} — Vem do cargo ${lockedBy}` : partial ? `${label} — em parte` : label}
+        title={lockedBy ? `Vem do cargo ${lockedBy}` : partialFrom ? `Parte vem do cargo ${partialFrom}` : undefined}
+        disabled={disabled || !!lockedBy || !!partialFrom}
         onCheckedChange={() => onClick()}
         className={partial ? 'bg-primary/40 data-[state=unchecked]:bg-primary/40' : undefined}
       />
-      {partial && <span className="ml-1.5 text-[10px] text-muted-foreground">em parte</span>}
+      {partial && <span aria-hidden className="ml-1.5 text-[10px] text-muted-foreground">em parte</span>}
       {changed && (
         <span data-testid="mudou" title="Mudança ainda não salva" aria-hidden className="absolute -right-2 -top-1 h-2 w-2 rounded-full bg-amber-500" />
       )}
@@ -92,6 +105,12 @@ export default function PermissionsMatrix({ onDirtyChange }: Props) {
 
   useEffect(() => { if (canRead) void load(); }, [canRead, load]);
 
+  // Depois de recarregar, linha que o pai passou a liberar fica travada no filho e some do
+  // rascunho: senão a contagem teria mudança sem bolinha na tela.
+  useEffect(() => {
+    if (data) setDraft(d => dropEntries(d, (roleId, key) => !!lockedParent(data.roles, roleId, key)));
+  }, [data]);
+
   const changes = countChanges(draft);
   useEffect(() => { onDirtyChange?.(changes > 0); }, [changes, onDirtyChange]);
   useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
@@ -121,19 +140,25 @@ export default function PermissionsMatrix({ onDirtyChange }: Props) {
     const pending = changesByRole(draft)
       .map(({ roleId, changes: c }) => ({
         roleId,
-        changes: Object.fromEntries(Object.entries(c).filter(([k, v]) => v || !lockedParent(data.roles, roleId, k))),
+        // Desligar linha que o pai tem (toda ou em parte) o servidor recusa: não vira chamada.
+        changes: Object.fromEntries(Object.entries(c).filter(([k, v]) => v || !parentBlocksOff(data.roles, roleId, k))),
       }))
       .filter(p => Object.keys(p.changes).length > 0);
     // Rascunho que sobrou só de "desligar" linha herdada não vira chamada: sai do rascunho.
     const comChamada = new Set(pending.map(p => p.roleId));
     setDraft(cur => Object.keys(cur).reduce((acc, id) => (comChamada.has(Number(id)) ? acc : clearRole(acc, Number(id))), cur));
-    const results = await Promise.all(pending.map(async ({ roleId, changes: c }) => {
+    const enviar = async ({ roleId, changes: c }: (typeof pending)[number]) => {
       try {
         return { roleId, role: await customRolesService.updateCapabilities(roleId, c), error: null as string | null };
       } catch (e) {
         return { roleId, role: null, error: capabilitiesErrorMessage(e, 'Não consegui salvar. Tente de novo.') };
       }
-    }));
+    };
+    // Pais antes dos filhos: o servidor confere a herança no momento de cada chamada.
+    const ids = new Set(pending.map(p => data.roles.find(r => r.id === p.roleId)?.inherits_from_id));
+    const pais = pending.filter(p => ids.has(p.roleId));
+    const demais = pending.filter(p => !ids.has(p.roleId));
+    const results = [...(await Promise.all(pais.map(enviar))), ...(await Promise.all(demais.map(enviar)))];
     const okRoles = new Set(results.filter(r => r.role).map(r => r.roleId));
     // Cargo que herda de um salvo mudou junto: recarrega tudo em vez de remendar um cargo só.
     if (okRoles.size > 0) {
@@ -160,7 +185,10 @@ export default function PermissionsMatrix({ onDirtyChange }: Props) {
     return (
       <div className="rounded-lg border border-border bg-card py-10 text-center">
         <p className="text-muted-foreground">Não consegui carregar as permissões.</p>
-        <Button className="mt-4" variant="outline" onClick={() => void load()}>Tentar de novo</Button>
+        <div className="mt-4 flex items-center justify-center gap-4">
+          <Button variant="outline" onClick={() => void load()}>Tentar de novo</Button>
+          <Link to="/equipe/cargos/lista" className="text-sm text-primary hover:underline">Ver a lista completa</Link>
+        </div>
       </div>
     );
   }
@@ -199,64 +227,68 @@ export default function PermissionsMatrix({ onDirtyChange }: Props) {
                     {!role.system && 'personalizado · '}{plural(role.users_count, 'pessoa', 'pessoas')}
                   </span>
                   {role.inherits_from_name && (
-                    <span className="block text-xs font-normal text-muted-foreground">herda de {role.inherits_from_name}</span>
+                    <span className="block text-xs font-normal text-muted-foreground">Herda do cargo {role.inherits_from_name}</span>
                   )}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
-            {themes.length === 0 && (
+          {themes.length === 0 && (
+            <tbody>
               <tr><td colSpan={colunas.length + 1} className="p-6 text-center text-muted-foreground">Nenhuma permissão com esse nome.</td></tr>
-            )}
-            {themes.map(theme => (
-              <Fragment key={theme.key}>
-                <tr className="bg-muted/40">
-                  <th scope="colgroup" colSpan={colunas.length + 1} className="sticky left-0 p-2 px-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {theme.label}
+            </tbody>
+          )}
+          {themes.map(theme => (
+            <tbody key={theme.key}>
+              <tr className="bg-muted/40">
+                <th scope="rowgroup" colSpan={colunas.length + 1} className="sticky left-0 p-2 px-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {theme.label}
+                </th>
+              </tr>
+              {theme.rows.map(row => (
+                <tr key={row.key} className="border-t border-border">
+                  <th scope="row" className="sticky left-0 z-10 bg-card p-3 text-left font-normal">
+                    <span className="block font-medium">{row.label}</span>
+                    {row.hint && <span className="block text-xs text-muted-foreground">{row.hint}</span>}
                   </th>
-                </tr>
-                {theme.rows.map(row => (
-                  <tr key={row.key} className="border-t border-border">
-                    <th scope="row" className="sticky left-0 z-10 bg-card p-3 text-left font-normal">
-                      <span className="block font-medium">{row.label}</span>
-                      {row.hint && <span className="block text-xs text-muted-foreground">{row.hint}</span>}
-                    </th>
-                    {colunas.map(role => {
-                      if (role.always_full) {
-                        return (
-                          <td key={role.id} className="p-3 text-center">
-                            <span
-                              title="O administrador sempre pode tudo"
-                              aria-label={`${role.name}: ${row.label} — O administrador sempre pode tudo`}
-                              className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-                            >
-                              <Lock className="h-3.5 w-3.5" aria-hidden /> Sempre
-                            </span>
-                          </td>
-                        );
-                      }
-                      const current = role.states[row.key] ?? 'off';
-                      const lockedBy = lockedParent(colunas, role.id, row.key);
-                      const state = lockedBy ? 'on' : effectiveState(draft, role.id, row.key, current);
+                  {colunas.map(role => {
+                    if (role.always_full) {
                       return (
                         <td key={role.id} className="p-3 text-center">
-                          <Interruptor
-                            state={state}
-                            label={`${role.name}: ${row.label}`}
-                            disabled={!canUpdate || saving}
-                            lockedBy={lockedBy}
-                            changed={!lockedBy && draft[role.id]?.[row.key] !== undefined}
-                            onClick={() => setDraft(d => toggle(d, role.id, row.key, current))}
-                          />
+                          <span title="O administrador sempre pode tudo" className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            <Lock className="h-3.5 w-3.5" aria-hidden />
+                            <span aria-hidden>Sempre</span>
+                            <span className="sr-only">{`${role.name}: ${row.label} — O administrador sempre pode tudo`}</span>
+                          </span>
                         </td>
                       );
-                    })}
-                  </tr>
-                ))}
-              </Fragment>
-            ))}
-          </tbody>
+                    }
+                    const current = role.states[row.key] ?? 'off';
+                    const lockedBy = lockedParent(colunas, role.id, row.key);
+                    const state = lockedBy ? 'on' : effectiveState(draft, role.id, row.key, current);
+                    // Pai com parte da linha: ligar pode, desligar o servidor recusa. Se a célula só está
+                    // ligada por rascunho (servidor 'off'), clicar de novo volta ao servidor e é permitido.
+                    const partialFrom = !lockedBy && state === 'on' && current !== 'off' && parentBlocksOff(colunas, role.id, row.key)
+                      ? parentOf(colunas, role.id, row.key)?.name
+                      : undefined;
+                    return (
+                      <td key={role.id} className="p-3 text-center">
+                        <Interruptor
+                          state={state}
+                          label={`${role.name}: ${row.label}`}
+                          disabled={!canUpdate || saving}
+                          lockedBy={lockedBy}
+                          partialFrom={partialFrom}
+                          changed={!lockedBy && draft[role.id]?.[row.key] !== undefined}
+                          onClick={() => setDraft(d => toggle(d, role.id, row.key, current))}
+                        />
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          ))}
         </table>
       </div>
 
@@ -287,7 +319,7 @@ export default function PermissionsMatrix({ onDirtyChange }: Props) {
             </ul>
           )}
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className={`text-sm font-medium ${changes ? 'text-amber-600' : 'text-emerald-600'}`}>
+            <p aria-live="polite" className={`text-sm font-medium ${changes ? 'text-amber-600' : 'text-emerald-600'}`}>
               {changes ? `${plural(changes, 'mudança', 'mudanças')} ainda não ${changes === 1 ? 'salva' : 'salvas'}` : 'Tudo salvo'}
             </p>
             <div className="flex gap-2">

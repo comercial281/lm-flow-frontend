@@ -72,7 +72,7 @@ describe('PermissionsMatrix', () => {
     expect(screen.getAllByText('2 pessoas')).toHaveLength(2);
     expect(screen.getByText('1 pessoa')).toBeInTheDocument();
     expect(screen.getByText(/personalizado · 1 pessoa/)).toBeInTheDocument();
-    expect(screen.getByText('herda de Corretor')).toBeInTheDocument();
+    expect(screen.getByText('Herda do cargo Corretor')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Ver a lista completa/ })).toHaveAttribute('href', '/equipe/cargos/lista');
   });
 
@@ -81,13 +81,16 @@ describe('PermissionsMatrix', () => {
     await screen.findByText('Atendimento');
     expect(screen.queryByRole('switch', { name: /^Administrador:/ })).toBeNull();
     expect(screen.getAllByTitle('O administrador sempre pode tudo')).toHaveLength(3);
+    // nome acessível por texto escondido, não por aria-label em span
+    expect(screen.getByText('Administrador: Ver conversas — O administrador sempre pode tudo')).toHaveClass('sr-only');
     expect(screen.getAllByText('Sempre')).toHaveLength(3);
   });
 
   it('parcial: aria mixed, clique liga e marca a bolinha', async () => {
     abrir();
     await screen.findByText('Atendimento');
-    const el = sw('Gerente', 'Responder conversas');
+    // "em parte" entra no nome acessível (leitor de tela não depende só do aria-checked)
+    const el = sw('Gerente', 'Responder conversas — em parte');
     expect(el).toHaveAttribute('aria-checked', 'mixed');
     await userEvent.click(el);
     expect(sw('Gerente', 'Responder conversas')).toHaveAttribute('aria-checked', 'true');
@@ -193,5 +196,94 @@ describe('PermissionsMatrix', () => {
     expect(travada).toHaveAttribute('title', 'Vem do cargo Corretor');
     await userEvent.click(sw('SDR', 'Responder conversas'));
     expect(sw('SDR', 'Responder conversas')).toHaveAttribute('aria-checked', 'true');
+  });
+  it('um tbody por tema, com a linha do tema como rowgroup', async () => {
+    abrir();
+    await screen.findByText('Atendimento');
+    const quadro = within(screen.getByTestId('quadro-permissoes')).getByRole('table');
+    expect(quadro.querySelectorAll('tbody')).toHaveLength(2);
+        expect(quadro.querySelectorAll('tbody th[scope="rowgroup"]')).toHaveLength(2);
+  });
+
+  it('a contagem de mudanças fica numa região aria-live', async () => {
+    abrir();
+    await screen.findByText('Atendimento');
+    expect(screen.getByText('Tudo salvo')).toHaveAttribute('aria-live', 'polite');
+  });
+
+  describe('pai com parte da linha (servidor recusa desligar no filho)', () => {
+    const comPai = (filhoEnv: 'on' | 'off') => roles.map(r => {
+      if (r.id === 3) return { ...r, states: { ...r.states, env: 'partial' as const } };
+      if (r.id === 9) return { ...r, states: { ...r.states, env: filhoEnv } };
+      return r;
+    });
+
+    it('filho ligado: não dá pra desligar, com a dica do pai', async () => {
+      s.capabilities.mockResolvedValue({ themes, roles: comPai('on') });
+      abrir();
+      await screen.findByText('Atendimento');
+      const el = sw('SDR', 'Responder conversas');
+      expect(el).toBeDisabled();
+      expect(el).toHaveAttribute('title', 'Parte vem do cargo Corretor');
+    });
+
+    it('filho desligado: ligar continua livre', async () => {
+      s.capabilities.mockResolvedValue({ themes, roles: comPai('off') });
+      abrir();
+      await screen.findByText('Atendimento');
+      await userEvent.click(sw('SDR', 'Responder conversas'));
+      expect(sw('SDR', 'Responder conversas')).toHaveAttribute('aria-checked', 'true');
+      // ligado só no rascunho: clicar de novo volta ao servidor e é permitido
+      expect(sw('SDR', 'Responder conversas')).not.toBeDisabled();
+    });
+
+    it('pai ligado inteiro continua travando o filho por completo', async () => {
+      const com = roles.map(r => (r.id === 3 ? { ...r, states: { ...r.states, env: 'on' as const } } : r));
+      s.capabilities.mockResolvedValue({ themes, roles: com });
+      abrir();
+      await screen.findByText('Atendimento');
+      expect(sw('SDR', 'Responder conversas — Vem do cargo Corretor')).toBeDisabled();
+    });
+  });
+
+  it('salva o cargo-pai antes do filho', async () => {
+    abrir();
+    await screen.findByText('Atendimento');
+    // SDR (filho) clicado primeiro; Corretor (pai) depois: a ordem do envio é pai, filho
+    await userEvent.click(sw('SDR', 'Responder conversas'));
+    await userEvent.click(sw('Corretor', 'Responder conversas'));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(s.updateCapabilities).toHaveBeenCalledTimes(2));
+    expect(s.updateCapabilities.mock.calls.map(c => c[0])).toEqual([3, 9]);
+  });
+
+  it('depois de recarregar, rascunho de linha que o pai passou a liberar sai e a contagem fecha', async () => {
+    const depois = roles.map(r => (r.id === 3 || r.id === 9 ? { ...r, states: { ...r.states, env: 'on' as const } } : r));
+    s.capabilities.mockResolvedValueOnce({ themes, roles }).mockResolvedValue({ themes, roles: depois });
+    s.updateCapabilities.mockImplementation(async (id: number) => {
+      if (id === 9) throw { response: { data: { success: false, error: 'Falhou.' } } };
+      return { ...roles[2], states: { ver: 'off', env: 'on', cad: 'off' } };
+    });
+    abrir();
+    await screen.findByText('Atendimento');
+    await userEvent.click(sw('SDR', 'Responder conversas'));
+    await userEvent.click(sw('Corretor', 'Responder conversas'));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(await screen.findByText('Tudo salvo')).toBeInTheDocument();
+    expect(screen.queryAllByTestId('mudou')).toHaveLength(0);
+  });
+
+  it('erro de carga: "Tentar de novo" e o link da lista completa', async () => {
+    s.capabilities.mockRejectedValue({ response: { status: 404 } });
+    abrir();
+    expect(await screen.findByText('Não consegui carregar as permissões.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ver a lista completa' })).toHaveAttribute('href', '/equipe/cargos/lista');
+  });
+
+  it('403 na carga: estado de sem acesso', async () => {
+    s.capabilities.mockRejectedValue({ response: { status: 403 } });
+    abrir();
+    expect(await screen.findByText(/Seu cargo não tem acesso a esta tela/)).toBeInTheDocument();
   });
 });

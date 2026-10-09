@@ -54,3 +54,16 @@ export function clearRole(draft: PermissionsDraft, roleId: number): PermissionsD
   delete out[roleId];
   return out;
 }
+
+/** Tira do rascunho as linhas que `drop` manda soltar (ex.: ficaram travadas pelo pai depois
+ *  de recarregar). Devolve o MESMO objeto quando nada sai, pra não render à toa. */
+export function dropEntries(draft: PermissionsDraft, drop: (roleId: number, rowKey: string) => boolean): PermissionsDraft {
+  let changed = false;
+  const out: PermissionsDraft = {};
+  for (const [id, rows] of Object.entries(draft)) {
+    const kept = Object.fromEntries(Object.entries(rows).filter(([k]) => !drop(Number(id), k)));
+    if (Object.keys(kept).length !== Object.keys(rows).length) changed = true;
+    if (Object.keys(kept).length > 0) out[Number(id)] = kept;
+  }
+  return changed ? out : draft;
+}
