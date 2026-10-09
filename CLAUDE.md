@@ -8039,7 +8039,7 @@ Pedido do Tony: a Equipe responder "qual é o WhatsApp do Bruno?" e dar o númer
 
 O que a tela mostra:
 
-- **Lista de Pessoas** (`Team/people/PeopleList.tsx`): cada linha traz os números da pessoa pelo **nome**, com a situação (conectado, desconectado, nunca conectado) e o selo de dono. Sem coluna "Instâncias", sem botões repetidos por linha. A linha inteira abre a ficha. Filtros por cargo, situação do acesso e problemas (sem celular, sem número, número desconectado), mais busca. Atalho **Criar número** na linha de quem não tem.
+- **Lista de Pessoas** (`Team/people/PeopleList.tsx`): cada linha traz os números da pessoa pelo **nome**, com a situação (conectado, esperando conectar, desconectado) e o selo de dono. Sem coluna "Instâncias", sem botões repetidos por linha. A linha inteira abre a ficha. Filtros: Todas, Sem número, Número desconectado, Ainda não entrou (mais a busca). Atalho **Criar número** na linha de quem não tem, só para quem o visitante pode mexer (mesma régua da ficha).
 - **Ficha lateral** (`Team/person/PersonSheet.tsx`): nome, cargo, celular (recebe o link de acesso e os avisos de lead novo), números (cartões com nome, telefone, situação e "Dono do número" ou "Atende as conversas"), acesso (copiar link, enviar/reenviar link) e rodapé com desativar, excluir e Salvar.
 - **Criar número** (`numbers/CreateNumberDialog.tsx`): nome = pessoa, telefone, e quem lê o QR code: a própria pessoa no primeiro acesso (padrão) ou agora, nesta tela. Sem celular válido, a tela exige o celular antes de criar (o link precisa de destino).
 - **Adicionar pessoa** (assistente) já cria o número junto (bloco marcado por padrão quando há celular) e manda o acesso. **Adicionar várias** (`Team/bulk/`) cola linhas com nome, e-mail e celular, um cargo para o lote, até 50 por vez.
@@ -8049,13 +8049,16 @@ O que a tela mostra:
 Decisões (não reabrir sem o dono pedir):
 
 1. **Quem lê o QR code é a própria pessoa, no primeiro acesso.** "Agora, nesta tela" é a exceção, para quem está do lado dela.
-2. **Liberar ou tirar número é POST/DELETE de UMA pessoa** (`InboxMembersService.add/remove`). Nunca ler a lista do número e regravar: duas pessoas editando ao mesmo tempo se sobrescreveriam.
+2. **Liberar ou tirar número é POST/DELETE de UMA pessoa** (`InboxMembersService.add/remove`). Nunca ler a lista do número e regravar: a leitura devolve `[]` quando falha e a regravação apagaria a equipe inteira do número, e devolver quem só tem acesso automático o promoveria à distribuição de leads.
 3. **Ficha só leitura** sem `users.update`, e também para alvo que não é corretor quando quem vê não é administrador (mesma régua do servidor: gestor só mexe em corretor ou em si mesmo). Enviar/reenviar link pede `users.send_access`.
 4. **Sem bloco Time na lista nem na ficha** até Times funcionando (o retrato não traz times; mostrar sem editar seria tela que mente).
 5. **A tela do cliente não mostra o limite do plano** ("Seu plano tem N números" só existe no painel da LM). Quando estoura, mostra a frase que o servidor devolve.
 6. **"Convidar por e-mail" morreu.** Virou **Adicionar várias**, com cargo para o lote e acesso pelo WhatsApp (um só jeito de dar acesso).
 7. **Gerente abre a Equipe** com `users.read` (antes pedia `users.update`). Gerente não dá Administrador nem cargo com mais permissões que o dele: o cargo some do Seletor, e o servidor recusa com frase pronta.
 8. Frases de recusa do servidor aparecem como vieram (`apiErrorMessage`); nunca o código.
+9. **Só o administrador dá o cargo Gerente** (servidor: "Só o administrador dá o cargo Gerente."). Quem não é admin dá Corretor ou cargo próprio que não seja de gerente; o Gerente some do Seletor no assistente, na ficha e no lote (a ficha ainda mostra o cargo atual da pessoa). Quem não é admin só mexe em corretor ou em si mesmo.
+10. **Link de acesso novo invalida o anterior.** "Tentar de novo" do número, no assistente, não manda outro link quando o primeiro já saiu (`linkAlreadySent` no `CreateNumberDialog`).
+11. Texto sem gênero: "{nome} entrou na equipe", "Cadastro criado", "Celular com DDD".
 
 Armadilhas:
 
