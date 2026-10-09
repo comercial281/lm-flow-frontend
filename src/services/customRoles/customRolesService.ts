@@ -15,6 +15,8 @@ import type {
 export function capabilitiesErrorMessage(err: unknown, fallback: string): string {
   const d = (err as { response?: { data?: { error?: unknown; message?: unknown } } })?.response?.data;
   const bruto = d?.error;
+  // RBAC 403 manda `error` em inglês E `message` em pt-BR: a frase da tela é a message.
+  if (typeof bruto === 'string' && typeof d?.message === 'string' && d.message) return d.message;
   if (typeof bruto === 'string' && bruto) return bruto;
   const msg = (bruto as { message?: unknown } | undefined)?.message;
   if (typeof msg === 'string' && msg) return msg;
@@ -68,7 +70,7 @@ class CustomRolesService {
     return extractData<{ themes: CapabilityTheme[]; roles: RoleCapabilities[] }>(res);
   }
 
-  /** Liga/desliga linhas de um cargo. Erro 422 vem com `error` em string: use apiErrorMessage. */
+  /** Liga/desliga linhas de um cargo. Erro 422 vem com `error` em string: use capabilitiesErrorMessage. */
   async updateCapabilities(id: number | string, changes: Record<string, boolean>): Promise<RoleCapabilities> {
     const res = await apiAuth.patch(`/roles/${id}/capabilities`, { changes });
     return extractData<RoleCapabilities>(res);

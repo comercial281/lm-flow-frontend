@@ -32,6 +32,7 @@ export interface RoutePermission {
 }
 
 export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
+  { path: '/equipe/cargos/lista', resource: 'roles', action: 'read' },
   { path: '/contacts', resource: 'contacts', action: 'read' },
   { path: '/contacts/:contactId', resource: 'contacts', action: 'read' },
   { path: '/contacts/scheduled-actions', resource: 'contacts', action: 'read' },

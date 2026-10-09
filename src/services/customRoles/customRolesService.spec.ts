@@ -30,6 +30,9 @@ describe('capabilitiesErrorMessage', () => {
     expect(capabilitiesErrorMessage(com({ error: { message: 'A' } }), 'x')).toBe('A');
     expect(capabilitiesErrorMessage(com({ message: 'M' }), 'x')).toBe('M');
   });
+  it('com error e message em texto, prefere a message (403 do RBAC: error em inglês)', () => {
+    expect(capabilitiesErrorMessage(com({ error: 'Forbidden', message: 'Seu cargo não pode.' }), 'x')).toBe('Seu cargo não pode.');
+  });
   it('sem nada, usa o texto reserva', () => {
     expect(capabilitiesErrorMessage(new Error('boom'), 'reserva')).toBe('reserva');
     expect(capabilitiesErrorMessage(com({ error: '' }), 'reserva')).toBe('reserva');
