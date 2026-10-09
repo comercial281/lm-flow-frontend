@@ -142,13 +142,13 @@ export default function BulkAddPeople({ open, roles, members, onClose, onDone }:
       ...data.invited.map(p => ({
         key: `i-${p.id}`,
         who: p.name || p.email,
-        text: sent && p.access === 'sent' ? 'Criada · link enviado'
-          : !phoneOf(p.email) ? 'Criada · sem celular — use Copiar link na ficha'
-            : 'Criada · link não enviado',
+        text: sent && p.access === 'sent' ? 'Cadastro criado · link enviado'
+          : !phoneOf(p.email) ? 'Cadastro criado · sem celular — use Copiar link na ficha'
+            : 'Cadastro criado · link não enviado',
       })),
       ...data.skipped.map(p => ({
         key: `s-${p.email}`, who: p.email,
-        text: p.reason === 'exists' ? 'Já existia' : 'E-mail inválido', bad: p.reason !== 'exists',
+        text: p.reason === 'exists' ? 'Já existia' : (p.message || 'E-mail inválido'), bad: p.reason !== 'exists',
       })),
       ...data.refused.map(p => ({ key: `r-${p.email}`, who: p.email, text: `Recusada: ${p.message}`, bad: true })),
     ];

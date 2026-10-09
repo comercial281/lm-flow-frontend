@@ -159,4 +159,14 @@ describe('CreateNumberDialog', () => {
     expect(await screen.findByText(/Link não enviado: Não consegui enviar o link agora\./)).toBeInTheDocument();
     expect(screen.queryByText(/motivo desconhecido/)).not.toBeInTheDocument();
   });
+
+  it('link já enviado (Tentar de novo do assistente): cria o número e NÃO manda um segundo link', async () => {
+    const props = { member: member(), open: true, onClose: vi.fn(), onDone: vi.fn(), linkAlreadySent: true };
+    render(<CreateNumberDialog {...props} />);
+    expect(screen.getByText(/já foi enviado para o celular de Ana Souza/)).toBeInTheDocument();
+    await userEvent.click(criar());
+    await waitFor(() => expect(s.create).toHaveBeenCalled());
+    expect(await screen.findByText(/Link de acesso enviado para/)).toBeInTheDocument();
+    expect(s.sendAccess).not.toHaveBeenCalled();
+  });
 });

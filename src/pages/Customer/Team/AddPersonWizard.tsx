@@ -233,7 +233,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
       // pendência fica numa tela que não some sozinha.
       const clean = !number && !numberFailure && liberateFailures.length === 0 && (!link || link.state === 'sent');
       if (clean) {
-        toast.success(link ? `${name.trim()} criada e o link de acesso saiu no WhatsApp dela.` : `${name.trim()} adicionada à equipe.`);
+        toast.success(link ? `Cadastro criado e link enviado para o celular de ${name.trim()}.` : `${name.trim()} está na equipe.`);
         close();
       } else {
         setResult({ userId, cargo, number, numberFailure, link, liberateFailures });
@@ -269,7 +269,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
         <Dialog open={open && !retryOpen} onOpenChange={o => !o && !saving && close()}>
           <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{name.trim()} foi adicionada</DialogTitle>
+              <DialogTitle>{name.trim()} entrou na equipe</DialogTitle>
               <DialogDescription>O que ficou pronto e o que falta.</DialogDescription>
             </DialogHeader>
             {result.number ? (
@@ -348,6 +348,8 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
             open
             onClose={() => setRetryOpen(false)}
             onDone={() => { onCreated(); close(); }}
+            // O link já saiu: o segundo invalidaria o primeiro.
+            linkAlreadySent={result.link?.state === 'sent'}
           />
         )}
       </>
@@ -360,7 +362,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
         <DialogHeader>
           <DialogTitle>Adicionar pessoa</DialogTitle>
           <DialogDescription>
-            Cadastro, cargo e números — e, no fim, o acesso vai no WhatsApp dela.
+            Cadastro, cargo e números — e, no fim, o acesso vai pelo celular informado.
           </DialogDescription>
         </DialogHeader>
 
@@ -397,11 +399,11 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
                 <Input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Ana Souza" className="mt-1" />
               </div>
               <div>
-                <UILabel className="text-xs">E-mail (é o login dela)</UILabel>
+                <UILabel className="text-xs">E-mail (vira o login)</UILabel>
                 <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="ana@imobiliaria.com.br" className="mt-1" />
               </div>
               <div>
-                <UILabel className="text-xs">WhatsApp com DDD</UILabel>
+                <UILabel className="text-xs">Celular com DDD</UILabel>
                 <Input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="Ex: 11 94087 1974" className="mt-1" />
                 <p className="mt-1 text-xs text-muted-foreground">
                   É para onde vai o link de acesso, no último passo. Quem cria a senha é a própria
@@ -510,7 +512,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
                         );
                       })}
                       <p className="pt-1 text-xs text-muted-foreground">
-                        Marcado = atende esse número e entra na fila para receber leads novos dele. Dá para
+                        Marcado = atende esse número e entra na fila para receber leads novos desse número. Dá para
                         mudar depois na ficha da pessoa.
                       </p>
                     </>

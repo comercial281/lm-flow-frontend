@@ -11,7 +11,7 @@ import { useUserPermissions } from '@/hooks/useUserPermissions';
 import type { CreatedWhatsappNumber } from '@/types/users';
 import type { TeamAccessMember } from '@/types/teamAccess';
 import NumberCreatedSummary, { type LinkSent } from './NumberCreatedSummary';
-import { national, qrPath, sendAccessLink, toApiPhone, validPhone } from './numberPhone';
+import { national, qrPath, sendAccessLink, toApiPhone, validPhone, type LinkOutcome } from './numberPhone';
 
 /* Atalho "Criar número para {nome}": cria o número já com a pessoa como dona.
 
@@ -31,11 +31,14 @@ interface Props {
   onClose: () => void;
   /** Chamado uma vez, quando o número foi criado e a lista precisa recarregar. */
   onDone: (result: CreatedWhatsappNumber) => void;
+  /** O link de acesso desta pessoa já saiu (ex.: "Tentar de novo" do Adicionar
+   *  pessoa). Criar o número NÃO manda outro: cada link novo invalida o anterior. */
+  linkAlreadySent?: boolean;
 }
 
 type Who = 'first' | 'now';
 
-export default function CreateNumberDialog({ member, open, onClose, onDone }: Props) {
+export default function CreateNumberDialog({ member, open, onClose, onDone, linkAlreadySent = false }: Props) {
   const navigate = useNavigate();
   // O link de acesso é do "Enviar acesso": sem a chave o servidor recusaria, então
   // a opção nem aparece e o QR code abre na hora.
@@ -73,7 +76,7 @@ export default function CreateNumberDialog({ member, open, onClose, onDone }: Pr
     setLink({ state: 'sent' });
   }, [open, member.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const needsCelular = who === 'first' && !hasCelular;
+  const needsCelular = who === 'first' && !hasCelular && !linkAlreadySent;
   // Celular que recebe o link: o que a pessoa já tem; sem ele, o pedido no bloco amarelo.
   const celular = hasCelular ? memberPhone : (sameAsNumber ? phone : otherCelular);
   const canCreate = name.trim().length > 0 && validPhone(phone) && (!needsCelular || validPhone(celular));
@@ -103,7 +106,8 @@ export default function CreateNumberDialog({ member, open, onClose, onDone }: Pr
       return;
     }
     // O número já existe daqui em diante: falha do link NÃO desfaz nada.
-    const sent = await sendLink();
+    // Link que já saiu não sai de novo: o segundo invalidaria o primeiro.
+    const sent: LinkOutcome = linkAlreadySent ? { state: 'sent' } : await sendLink();
     setCreated(result);
     setLink(sent);
     busyRef.current = false;
@@ -164,7 +168,9 @@ export default function CreateNumberDialog({ member, open, onClose, onDone }: Pr
                 <legend className="text-sm font-medium">Quem lê o QR code</legend>
                 {canSendAccess && (
                   <Option checked={who === 'first'} onSelect={() => setWho('first')} label={`${member.name}, no primeiro acesso`}
-                    hint={`O link de acesso vai para o celular de ${member.name}, que conecta o número ao entrar.`} />
+                    hint={linkAlreadySent
+                      ? `O link de acesso já foi enviado para o celular de ${member.name}, que conecta o número ao entrar.`
+                      : `O link de acesso vai para o celular de ${member.name}, que conecta o número ao entrar.`} />
                 )}
                 <Option checked={who === 'now'} onSelect={() => setWho('now')} label="Agora, nesta tela"
                   hint="Abre o QR code assim que o número for criado." />

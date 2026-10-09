@@ -57,7 +57,7 @@ describe('BulkAddPeople', () => {
         { id: '1', name: 'Ana', email: 'ana@x.com', access: 'sent' },
         { id: '2', name: 'Caio', email: 'caio@x.com', access: 'skipped' },
       ],
-      skipped: [{ email: 'bia@x.com', reason: 'exists' }, { email: 'dud@x.com', reason: 'invalid' }],
+      skipped: [{ email: 'bia@x.com', reason: 'exists' }, { email: 'dud@x.com', reason: 'invalid', message: 'O e-mail dud@x.com não existe.' }],
       refused: [{ email: 'leo@x.com', message: 'E-mail reservado.' }],
     });
     const p = open();
@@ -72,10 +72,10 @@ describe('BulkAddPeople', () => {
       chave_role: 'agent',
       send_access: true,
     });
-    expect(await screen.findByText('Criada · link enviado')).toBeInTheDocument();
-    expect(screen.getByText('Criada · sem celular — use Copiar link na ficha')).toBeInTheDocument();
+    expect(await screen.findByText('Cadastro criado · link enviado')).toBeInTheDocument();
+    expect(screen.getByText('Cadastro criado · sem celular — use Copiar link na ficha')).toBeInTheDocument();
     expect(screen.getByText('Já existia')).toBeInTheDocument();
-    expect(screen.getByText('E-mail inválido')).toBeInTheDocument();
+    expect(screen.getByText('O e-mail dud@x.com não existe.')).toBeInTheDocument();
     expect(screen.getByText('Recusada: E-mail reservado.')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Concluir' }));
     expect(p.onClose).toHaveBeenCalled();
@@ -90,7 +90,7 @@ describe('BulkAddPeople', () => {
     await colar('Ana;ana@x.com;11940871974');
     await userEvent.click(screen.getByRole('button', { name: 'Só cadastrar' }));
     await waitFor(() => expect(s.bulkAdd).toHaveBeenCalledWith(expect.objectContaining({ send_access: false })));
-    expect(await screen.findByText('Criada · link não enviado')).toBeInTheDocument();
+    expect(await screen.findByText('Cadastro criado · link não enviado')).toBeInTheDocument();
   });
 
   it('cargo recusado pelo servidor mostra a frase e não sai da tela', async () => {

@@ -123,7 +123,7 @@ describe('AddPersonWizard', () => {
     await userEvent.click(numeroMarcado()!);
     await userEvent.click(screen.getByRole('button', { name: 'Só cadastrar' }));
     await waitFor(() => expect(props.onClose).toHaveBeenCalled());
-    expect(s.toast.success).toHaveBeenCalledWith('Ana Souza adicionada à equipe.');
+    expect(s.toast.success).toHaveBeenCalledWith('Ana Souza está na equipe.');
     expect(s.createNumber).not.toHaveBeenCalled();
     expect(props.onCreated).toHaveBeenCalled();
   });
@@ -247,5 +247,29 @@ describe('AddPersonWizard', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Tentar de novo' }));
     expect(await screen.findByRole('textbox', { name: 'Nome do número' })).toHaveValue('Ana Souza');
     expect(screen.getByRole('textbox', { name: 'Telefone do número' })).toHaveValue('(11) 94087-1974');
+  });
+
+  it('"Tentar de novo" do número com o link já enviado não manda outro link', async () => {
+    s.createNumber.mockRejectedValueOnce(new Error('x'));
+    s.createNumber.mockResolvedValueOnce({ inbox_id: '88', name: 'Ana Souza', phone: '5511940871974', connection: null });
+    s.sendAccess.mockResolvedValue({ whatsapp: { sent: true } });
+    open();
+    await preencher();
+    await userEvent.click(screen.getByRole('button', { name: 'Cadastrar e enviar acesso' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Tentar de novo' }));
+    expect(s.sendAccess).toHaveBeenCalledTimes(1);
+    await userEvent.click(await screen.findByRole('button', { name: 'Criar número' }));
+    await waitFor(() => expect(s.createNumber).toHaveBeenCalledTimes(2));
+    expect(s.sendAccess).toHaveBeenCalledTimes(1);
+  });
+
+  it('o texto da tela não escolhe gênero', async () => {
+    open();
+    expect(screen.getByText('E-mail (vira o login)')).toBeInTheDocument();
+    expect(screen.getByText('Celular com DDD')).toBeInTheDocument();
+    await preencher();
+    s.createNumber.mockRejectedValueOnce(new Error('x'));
+    await userEvent.click(screen.getByRole('button', { name: 'Só cadastrar' }));
+    expect(await screen.findByText('Ana Souza entrou na equipe')).toBeInTheDocument();
   });
 });
