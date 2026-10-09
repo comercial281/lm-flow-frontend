@@ -16,9 +16,7 @@ import {
   Globe,
   Settings,
   Users,
-  Star,
   MessageSquare,
-  Shield,
   Mail,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -35,19 +33,14 @@ import { usePreviousOwnerPrompt } from '@/features/numbers/usePreviousOwnerPromp
 import type { NumberCardData } from '@/features/numbers/types';
 import {
   BasicSettingsForm,
-  GreetingSettingsForm,
   WebWidgetAdvancedForm,
   SenderSettingsForm,
   AuthorizationBanners,
-  LockToSingleConversationForm,
-  DefaultConversationStatusForm,
   CollaboratorsForm,
-  CSATForm,
   PreChatForm,
   WidgetBuilderForm,
   ConfigurationForm,
   MessageTemplateForm,
-  ModerationDashboard,
 } from '@/components/channels';
 import { telefone } from '@/lib/formato';
 
@@ -346,6 +339,11 @@ export default function ChannelSettings() {
     // horário é da ROLETA, e o do canal não era usado por número nenhum. Endereço
     // antigo com ?tab=businesshours cai na primeira aba.
     //
+    // As abas "Pesquisa de satisfação" e "Moderação" saíram em 08/10/2026
+    // (pedido do dono): ninguém configurava em cliente nenhum, e a Moderação era
+    // dos comentários do Facebook, que o LM Flow não atende. Endereço antigo com
+    // ?tab=csat ou ?tab=moderation cai na primeira aba.
+    //
     // Quem só atende no número vê UMA aba: a de conexão. As outras decidem
     // coisas do CRM que são do gestor — quem atende naquele WhatsApp, horário de
     // atendimento, pesquisa de satisfação, modelos de mensagem, o nome e a foto
@@ -355,7 +353,6 @@ export default function ChannelSettings() {
       ? [
           { key: 'inbox_settings', name: t('settings.tabs.inbox_settings'), icon: Settings },
           { key: 'collaborators', name: t('settings.tabs.collaborators'), icon: Users },
-          { key: 'csat', name: t('settings.tabs.csat'), icon: Star },
           { key: 'messageTemplates', name: t('settings.tabs.messageTemplates'), icon: MessageSquare },
         ]
       : [];
@@ -393,15 +390,6 @@ export default function ChannelSettings() {
     //
     // A IA Vendedora é a única IA do produto e se configura na tela dela, onde
     // já existe o campo "Instância do WhatsApp que ela opera".
-
-    // Moderation tab (available for all channel types)
-    if (managesChannels) {
-      baseTabs.push({
-        key: 'moderation',
-        name: t('settings.tabs.moderation'),
-        icon: Shield,
-      });
-    }
 
     return baseTabs;
   }, [inboxHook, inbox?.provider, managesChannels, t]);
@@ -724,12 +712,9 @@ export default function ChannelSettings() {
                   </CardContent>
                 </Card>
 
-                {/* Greeting Settings */}
-                <Card>
-                  <CardContent className="p-6">
-                    <GreetingSettingsForm formData={formData} onFormChange={handleFormChange} />
-                  </CardContent>
-                </Card>
+                {/* "Mensagem de saudação", "Bloquear para conversa única" e "Status
+                    padrão da conversa" saíram em 08/10/2026 (pedido do dono). O valor
+                    gravado de cada canal continua indo no Salvar, sem mudar. */}
 
                 {/* Web Widget Advanced Settings */}
                 {inboxHook.isAWebWidgetInbox && (
@@ -743,28 +728,6 @@ export default function ChannelSettings() {
                     </CardContent>
                   </Card>
                 )}
-
-                {/* Lock to Single Conversation */}
-                {inboxHook.canLocktoSingleConversation && (
-                  <Card>
-                    <CardContent className="p-6">
-                      <LockToSingleConversationForm
-                        formData={formData}
-                        onFormChange={handleFormChange}
-                      />
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Default Conversation Status */}
-                <Card>
-                  <CardContent className="p-6">
-                    <DefaultConversationStatusForm
-                      formData={formData}
-                      onFormChange={handleFormChange}
-                    />
-                  </CardContent>
-                </Card>
 
                 {/* Sender Name Settings */}
                 {(inboxHook.isAWebWidgetInbox || inboxHook.isAnEmailChannel) && (
@@ -869,29 +832,6 @@ export default function ChannelSettings() {
               />}
             </TabsContent>
 
-            {/* CSAT Tab */}
-            <TabsContent value="csat">
-              {activeTab === 'csat' && <CSATForm
-                inboxId={inboxId}
-                csatSurveyEnabled={inbox?.csat_survey_enabled === true}
-                csatConfig={
-                  inbox?.csat_config && Object.keys(inbox.csat_config).length > 0
-                    ? inbox.csat_config
-                    : undefined
-                }
-                onUpdate={async data => {
-                  // Update inbox CSAT settings
-                  const payload = {
-                    id: inboxId,
-                    csat_survey_enabled: data.csat_survey_enabled,
-                    csat_config: data.csat_config,
-                  };
-                  await InboxesService.update(inboxId, payload);
-                  await loadChannelData(); // Refresh data after update
-                }}
-              />}
-            </TabsContent>
-
             {/* Pre-Chat Form Tab */}
             <TabsContent value="preChatForm">
               {activeTab === 'preChatForm' && <PreChatForm
@@ -968,10 +908,6 @@ export default function ChannelSettings() {
               />}
             </TabsContent>
 
-            {/* Moderation Tab */}
-            <TabsContent value="moderation">
-              {activeTab === 'moderation' && <ModerationDashboard />}
-            </TabsContent>
           </Tabs>
       </Pagina>
 
