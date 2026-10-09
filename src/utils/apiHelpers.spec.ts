@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractError } from './apiHelpers';
+import { apiErrorMessage, extractError } from './apiHelpers';
 
 const axiosErro = (status: number, data: unknown) => ({ response: { status, statusText: 'x', data } });
 
@@ -39,5 +39,20 @@ describe('extractError', () => {
       .toEqual({ code: 'VALIDATION_ERROR', message: 'E-mail inválido', details: ['email'] });
     expect(extractError({ request: {} }).code).toBe('NETWORK_ERROR');
     expect(extractError(new Error('boom')).message).toBe('boom');
+  });
+});
+
+describe('apiErrorMessage', () => {
+  const com = (data: unknown) => ({ response: { data } });
+  it('aceita error como objeto, como string e message solta', () => {
+    expect(apiErrorMessage(com({ error: { message: 'A' } }), 'x')).toBe('A');
+    expect(apiErrorMessage(com({ success: false, error: 'O administrador sempre pode tudo.' }), 'x')).toBe('O administrador sempre pode tudo.');
+    expect(apiErrorMessage(com({ message: 'M' }), 'x')).toBe('M');
+    // formato legado: error é rótulo genérico, a explicação está em message
+    expect(apiErrorMessage(com({ error: 'Forbidden', message: 'Seu cargo não pode.' }), 'x')).toBe('Seu cargo não pode.');
+  });
+  it('cai no texto reserva', () => {
+    expect(apiErrorMessage(new Error('boom'), 'reserva')).toBe('reserva');
+    expect(apiErrorMessage(com({ error: '' }), 'reserva')).toBe('reserva');
   });
 });

@@ -65,3 +65,31 @@ export interface RoleAuditLogEntry {
   } | null;
   created_at: string;
 }
+
+// ── Permissões por linha (GET/PATCH /roles/capabilities) ─────────────────────
+export type CapabilityState = 'on' | 'off' | 'partial';
+
+export interface CapabilityRow {
+  key: string;
+  label: string;
+  hint: string;
+}
+
+export interface CapabilityTheme {
+  key: string;
+  label: string;
+  rows: CapabilityRow[];
+}
+
+export interface RoleCapabilities {
+  id: number;
+  name: string;
+  slug: string;
+  system: boolean;
+  color: string;
+  users_count: number;
+  inherits_from_id: number | null;
+  inherits_from_name: string | null;
+  always_full: boolean;
+  states: Record<string, CapabilityState>;
+}

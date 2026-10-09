@@ -5,6 +5,8 @@ import type {
   RoleFormData,
   PermissionSection,
   RoleAuditLogEntry,
+  CapabilityTheme,
+  RoleCapabilities,
 } from '@/types/customRoles';
 
 class CustomRolesService {
@@ -45,6 +47,18 @@ class CustomRolesService {
   async permissionsCatalog(): Promise<PermissionSection[]> {
     const res = await apiAuth.get('/roles/permissions_catalog');
     return extractData<PermissionSection[]>(res);
+  }
+
+  /** Linhas por tema + estado (ligado/desligado/parcial) de cada cargo. */
+  async capabilities(): Promise<{ themes: CapabilityTheme[]; roles: RoleCapabilities[] }> {
+    const res = await apiAuth.get('/roles/capabilities');
+    return extractData<{ themes: CapabilityTheme[]; roles: RoleCapabilities[] }>(res);
+  }
+
+  /** Liga/desliga linhas de um cargo. Erro 422 vem com `error` em string: use apiErrorMessage. */
+  async updateCapabilities(id: number | string, changes: Record<string, boolean>): Promise<RoleCapabilities> {
+    const res = await apiAuth.patch(`/roles/${id}/capabilities`, { changes });
+    return extractData<RoleCapabilities>(res);
   }
 }
 
