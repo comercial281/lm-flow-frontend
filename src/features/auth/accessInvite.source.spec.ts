@@ -12,7 +12,8 @@ const GUARDA = 'src/guards/RouterGuard.tsx';
 const SERVICO = 'src/services/auth/accessLinkService.ts';
 const TELA_LOGIN = 'src/pages/Auth/Auth.tsx';
 const TELA_CONVITE = 'src/pages/Auth/AccessInvite.tsx';
-const EQUIPE = 'src/pages/Customer/Team/PeopleTab.tsx';
+// Desde a Equipe nova (2026-10-09) o envio por pessoa mora na ficha da pessoa.
+const EQUIPE = 'src/pages/Customer/Team/person/PersonSheet.tsx';
 const ASSISTENTE = 'src/pages/Customer/Team/AddPersonWizard.tsx';
 
 describe('o convite de acesso', () => {
@@ -80,6 +81,8 @@ describe('o convite de acesso', () => {
   it('os dois botões de enviar acesso não mandam mais senha', () => {
     for (const arquivo of [EQUIPE, ASSISTENTE]) {
       const src = read(arquivo);
+      // Sem a chamada no arquivo, o recorte sairia vazio e o teste passaria calado.
+      expect(src).toContain('sendAccess(');
       const chamada = src.slice(src.indexOf('sendAccess('), src.indexOf('sendAccess(') + 220);
       expect(chamada).not.toContain('password');
     }

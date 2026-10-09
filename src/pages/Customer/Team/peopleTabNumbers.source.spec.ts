@@ -16,14 +16,15 @@ const semComentarios = (arquivo: string) =>
 const codigo = semComentarios('PeopleTab.tsx');
 const lista = semComentarios('people/PeopleList.tsx');
 const chip = semComentarios('people/NumberChip.tsx');
+const ficha = semComentarios('person/PersonSheet.tsx');
 
 describe('Equipe → Pessoas fala número', () => {
   it('nenhum texto de tela diz instância', () => {
     expect(codigo).not.toMatch(/inst[âa]ncia/i);
   });
 
-  it('a lista e o chip nunca dizem instância nem canal', () => {
-    for (const fonte of [lista, chip]) {
+  it('a lista, o chip e a ficha nunca dizem instância nem canal', () => {
+    for (const fonte of [lista, chip, ficha]) {
       expect(fonte).not.toMatch(/inst[âa]ncia/i);
       expect(fonte).not.toMatch(/\bcanal\b|\bcanais\b|\binbox\b/i);
     }
@@ -45,9 +46,17 @@ describe('Equipe → Pessoas fala número', () => {
     expect(codigo).toContain('setOwnerRuleEcho(overview.number_owner_rule ?? null)');
   });
 
-  it('a janela da pessoa mostra os Números de atendimento com a regra, e o Celular para avisos sempre', () => {
-    expect(codigo).toMatch(/numberOwnerRule && \(\s*<div[^>]*>\s*<UILabel[\s\S]*?NUMBERS_TITLE/);
-    expect(codigo).toContain('<OwnedNumbersList');
-    expect(codigo).toContain('{NOTICE_PHONE_LABEL}');
+  // A ficha (que substituiu o "Gerenciar acesso") lista TODOS os números da
+  // pessoa, separando o dono de quem só atende; o principal só se escolhe com a
+  // regra do dono (sem ela o principal não decide nada).
+  it('a ficha mostra todos os números, o dono e o celular para avisos', () => {
+    expect(ficha).toContain('member.all_numbers');
+    expect(ficha).not.toMatch(/member\.numbers\b/);
+    expect(ficha).toContain('OWNER_TITLE');
+    expect(ficha).toContain("'Atende as conversas'");
+    expect(ficha).toContain('canEdit && numberOwnerRule && owned.length > 1');
+    expect(ficha).toContain('numbersService.setUserPrimary(');
+    expect(ficha).toContain('Recebe o link de acesso e os avisos de lead novo.');
+    expect(codigo).toContain('numberOwnerRule={numberOwnerRule}');
   });
 });

@@ -117,4 +117,28 @@ describe('PeopleList', () => {
       expect(within(legenda).getByText(t)).toBeInTheDocument();
     }
   });
+
+  // A linha é coberta por um botão e o resto ignora o ponteiro: o `title` do chip
+  // nunca aparecia. Número com problema diz a situação escrita, sem passar o mouse.
+  it('chip com problema escreve a situação; o conectado só tem a bolinha', () => {
+    abrir();
+    const plantao = screen.getByText('Plantão').closest('span[title]') as HTMLElement;
+    expect(within(plantao).getByText('desconectado')).not.toHaveClass('sr-only');
+    const novo = screen.getByText('Novo').closest('span[title]') as HTMLElement;
+    expect(within(novo).getByText('esperando conectar')).not.toHaveClass('sr-only');
+    const comercial = screen.getAllByText('Comercial')[0].closest('span[title]') as HTMLElement;
+    expect(within(comercial).getByText(', Conectado')).toHaveClass('sr-only');
+  });
+
+  // Inativo esmaece o rosto e os números, não o nome nem o "Inativo": é o que o
+  // gestor precisa ler para saber quem está fora.
+  it('pessoa inativa: nome e selo legíveis, avatar e números esmaecidos', () => {
+    abrir({ members: [pessoa({ id: '7', name: 'Eva Fora', deactivated: true })] });
+    const linha = screen.getByTestId('person-row');
+    expect(linha).not.toHaveClass('opacity-60');
+    expect(within(linha).getByText('Eva Fora').closest('.opacity-60')).toBeNull();
+    expect(within(linha).getByText('Inativo').closest('.opacity-60')).toBeNull();
+    expect(within(linha).getByText('EF').closest('.opacity-60')).not.toBeNull();
+    expect(within(linha).getByText('Comercial').closest('.opacity-60')).not.toBeNull();
+  });
 });

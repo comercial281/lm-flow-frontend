@@ -87,9 +87,7 @@ export default function PeopleList({ members, canCreateNumber, onOpen, onCreateN
               <li
                 key={member.id}
                 data-testid="person-row"
-                className={`relative grid gap-3 px-4 py-3 text-sm transition-colors hover:bg-muted/20 md:grid-cols-[minmax(0,1.4fr)_minmax(0,0.7fr)_minmax(0,1.6fr)_minmax(0,1fr)] md:items-center ${
-                  member.deactivated ? 'opacity-60' : ''
-                }`}
+                className={`relative grid gap-3 px-4 py-3 text-sm transition-colors hover:bg-muted/20 md:grid-cols-[minmax(0,1.4fr)_minmax(0,0.7fr)_minmax(0,1.6fr)_minmax(0,1fr)] md:items-center`}
               >
                 <button
                   type="button"
@@ -99,7 +97,9 @@ export default function PeopleList({ members, canCreateNumber, onOpen, onCreateN
                 />
 
                 <div className="pointer-events-none flex min-w-0 items-center gap-2.5">
-                  <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                  {/* Inativo esmaece só o rosto e os números: nome e "Inativo"
+                      ficam legíveis, que é o que o gestor procura. */}
+                  <div className={`flex h-9 w-9 flex-none items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary ${member.deactivated ? 'opacity-60' : ''}`}>
                     {initials(member.name)}
                   </div>
                   <div className="min-w-0">
@@ -116,7 +116,7 @@ export default function PeopleList({ members, canCreateNumber, onOpen, onCreateN
                   </span>
                 </div>
 
-                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                <div className={`flex min-w-0 flex-wrap items-center gap-1.5 ${member.deactivated ? 'opacity-60' : ''}`}>
                   {member.sees_all_inboxes ? (
                     <span className="pointer-events-none rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 text-xs text-violet-700 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-300">
                       Vê todos os números
