@@ -143,7 +143,7 @@ export function TriggersSection({ agent, onSave, escolheuTodos }: {
 
 
   useEffect(() => {
-    pipelinesService.getPipelines()
+    pipelinesService.getPipelines({ include_items: false })
       .then((res: unknown) => {
         const raw = (res as { data?: PipelineOpt[] }).data ?? (Array.isArray(res) ? (res as PipelineOpt[]) : []);
         setPipelines(raw.map((p) => ({ id: String(p.id), name: p.name })));

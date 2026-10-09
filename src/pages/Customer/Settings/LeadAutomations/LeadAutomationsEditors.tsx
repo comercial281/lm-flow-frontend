@@ -132,7 +132,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
         labelsService.getLabels(),
         followupSequencesService.getAll(),
         usersService.getUsers(),
-        pipelinesService.getPipelines(),
+        pipelinesService.getPipelines({ include_items: false }),
         quickRepliesService.getQuickReplies(),
         leadAutomationService.getAdOrigins(),
         leadAutomationService.getFormOrigins(),

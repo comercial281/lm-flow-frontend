@@ -144,7 +144,7 @@ export default function CSATForm({
   useEffect(() => {
     const loadPipelines = async () => {
       try {
-        const response = await pipelinesService.getPipelines();
+        const response = await pipelinesService.getPipelines({ include_items: false });
         const pipelinesData = response.data || [];
         setPipelines(pipelinesData);
       } catch (error) {
