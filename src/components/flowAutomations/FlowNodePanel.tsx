@@ -13,8 +13,8 @@ import { mesmoConteudo } from '@/hooks/useAlteracoesNaoSalvas';
 import { isFlowOnlyLeadAction, leadActionConfig, leadActionOf } from '@/features/flowAutomations/leadAction';
 import { nodeProblem } from '@/features/flowAutomations/readiness';
 import {
-  SECONDS_UNITS, WAIT_FOR_REPLY_HELP, WAIT_UNITS, joinMinutes, joinSeconds, splitMinutes, splitSeconds, waitHasSeconds,
-  waitTotalSeconds, type SecondsUnit, type WaitUnit,
+  LEAD_WAIT_UNITS, SECONDS_UNITS, WAIT_FOR_REPLY_HELP, WAIT_UNITS, joinMinutes, joinSeconds, leadWaitSeconds,
+  splitMinutes, splitSeconds, waitTotalSeconds, type SecondsUnit, type WaitUnit,
 } from '@/features/flowAutomations/waitTime';
 import { guideRequiredProblem, stepLabel } from '@/features/flowAutomations/guide';
 import {
@@ -126,6 +126,33 @@ function SecondsField({ config, onChange }: { config: FlowNodeConfig; onChange: 
         aria-label="Unidade"
       >
         {SECONDS_UNITS.map(u => (
+          <option key={u.value} value={u.value}>{u.label}</option>
+        ))}
+      </Seletor>
+    </div>
+  );
+}
+
+// Esperar dos fluxos de lead (08/10/2026): segundos, minutos, horas ou dias.
+function LeadWaitField({ config, onChange }: { config: FlowNodeConfig; onChange: (next: { minutes: number; seconds: number }) => void }) {
+  const { amount, unit } = splitSeconds(leadWaitSeconds(config), true);
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        type="number"
+        min={1}
+        className="w-24"
+        value={amount}
+        onChange={e => onChange(joinSeconds(e.target.value, unit))}
+        aria-label="Quanto tempo"
+      />
+      <Seletor
+        value={unit}
+        onChange={e => onChange(joinSeconds(amount, e.target.value as SecondsUnit))}
+        className="w-32"
+        aria-label="Unidade"
+      >
+        {LEAD_WAIT_UNITS.map(u => (
           <option key={u.value} value={u.value}>{u.label}</option>
         ))}
       </Seletor>
@@ -485,7 +512,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
       case 'wait': {
         const mode = waitModeOf(config);
         // Funil de conversa (sprint 4): só "por um tempo", em segundos (é conversa ao vivo).
-        if (isConversation || waitHasSeconds(config)) {
+        if (isConversation) {
           return (
             <div className="space-y-1">
               <Label className="text-xs">Quanto tempo esperar antes da próxima mensagem</Label>
@@ -519,7 +546,10 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
             ) : (
               <div className="space-y-1">
                 <Label className="text-xs">Quanto tempo</Label>
-                <DurationField minutes={config.minutes ?? 1440} onChange={m => set('minutes', m)} label="Quanto tempo" />
+                <LeadWaitField config={config} onChange={next => setConfig(c => ({ ...c, ...next }))} />
+                {waitTotalSeconds(config) > 0 && waitTotalSeconds(config) < 60 && (
+                  <p className="text-xs text-muted-foreground">Esperas de menos de 1 minuto podem atrasar alguns segundos.</p>
+                )}
                 <BusinessHoursCheck
                   checked={waitUsesBusinessHours(config)}
                   onChange={on => setConfig(c => withWaitBusinessHours(c, on))}

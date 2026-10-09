@@ -54,12 +54,18 @@ export function describeWaitForReply(config: { minutes?: unknown; indefinite?: u
 // `wait.config.seconds`, somado com `minutes` no servidor. A tela guarda o
 // total quebrado em minutos + segundos.
 
-export type SecondsUnit = 's' | 'min' | 'h';
+export type SecondsUnit = 's' | 'min' | 'h' | 'd';
 
 export const SECONDS_UNITS: Array<{ value: SecondsUnit; label: string; factor: number }> = [
   { value: 's', label: 'segundos', factor: 1 },
   { value: 'min', label: 'minutos', factor: 60 },
   { value: 'h', label: 'horas', factor: 3600 },
+];
+
+// Esperar dos fluxos de lead (08/10/2026): segundos também, e dias continuam.
+export const LEAD_WAIT_UNITS: Array<{ value: SecondsUnit; label: string; factor: number }> = [
+  ...SECONDS_UNITS,
+  { value: 'd', label: 'dias', factor: 86400 },
 ];
 
 /** Tem segundos no tempo do Esperar (o bloco passa a falar em segundos). */
@@ -74,9 +80,13 @@ export function waitTotalSeconds(config: { minutes?: unknown; seconds?: unknown 
   return minutes * 60 + seconds;
 }
 
-/** 5 → { 5, 's' }; 120 → { 2, 'min' }; 7200 → { 2, 'h' }. Zero ou lixo vira 1 segundo. */
-export function splitSeconds(total: unknown): { amount: number; unit: SecondsUnit } {
+/**
+ * 5 → { 5, 's' }; 120 → { 2, 'min' }; 7200 → { 2, 'h' }; com `withDays`,
+ * 86400 → { 1, 'd' }. Zero ou lixo vira 1 segundo.
+ */
+export function splitSeconds(total: unknown, withDays = false): { amount: number; unit: SecondsUnit } {
   const t = Math.max(1, Math.round(Number(total) || 0));
+  if (withDays && t % 86400 === 0) return { amount: t / 86400, unit: 'd' };
   if (t % 3600 === 0) return { amount: t / 3600, unit: 'h' };
   if (t % 60 === 0) return { amount: t / 60, unit: 'min' };
   return { amount: t, unit: 's' };
@@ -84,9 +94,15 @@ export function splitSeconds(total: unknown): { amount: number; unit: SecondsUni
 
 /** O que vai no config: `{ minutes, seconds }` (nunca menos de 1 segundo). */
 export function joinSeconds(amount: unknown, unit: SecondsUnit): { minutes: number; seconds: number } {
-  const factor = SECONDS_UNITS.find(u => u.value === unit)?.factor ?? 1;
+  const factor = LEAD_WAIT_UNITS.find(u => u.value === unit)?.factor ?? 1;
   const total = Math.max(1, Math.round(Number(amount) || 0)) * factor;
   return { minutes: Math.floor(total / 60), seconds: total % 60 };
+}
+
+/** O tempo do Esperar dos fluxos de lead em segundos; sem nada gravado, 1 dia (o padrão de sempre). */
+export function leadWaitSeconds(config: { minutes?: unknown; seconds?: unknown } | null | undefined): number {
+  if (config?.minutes == null && !waitHasSeconds(config)) return 86400;
+  return waitTotalSeconds(config) || 60;
 }
 
 /** "5 segundos", "2 minutos", "1 minuto e 30 segundos". */
