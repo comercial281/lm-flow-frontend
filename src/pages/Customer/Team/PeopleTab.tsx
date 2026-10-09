@@ -6,9 +6,8 @@ import { teamAccessService } from '@/services/teamAccess/teamAccessService';
 import customRolesService from '@/services/customRoles/customRolesService';
 import AddPersonWizard from './AddPersonWizard';
 import { buildCargoOptions } from './cargoOptions';
-// F1-T6: o "Convidar por e-mail" (BulkInviteModal) saiu do cabeçalho — o fluxo de
-// várias pessoas de uma vez volta dentro do "Adicionar pessoa". O arquivo do
-// modal continua no repositório até lá.
+// "Adicionar várias de uma vez" abre pelo passo 1 do "Adicionar pessoa".
+import BulkAddPeople from './bulk/BulkAddPeople';
 import PeopleList from './people/PeopleList';
 // A ficha da pessoa (painel lateral) substituiu o "Gerenciar acesso": cargo,
 // celular, números, acesso, desativar/reativar e excluir moram lá.
@@ -40,6 +39,7 @@ export default function PeopleTab() {
   const canCreate = can('users', 'create');
 
   const [adding, setAdding] = useState(false);
+  const [addingMany, setAddingMany] = useState(false);
   // Quem está na janela "Criar número para {nome}" (atalho da lista e da ficha).
   const [creatingNumberFor, setCreatingNumberFor] = useState<string | null>(null);
 
@@ -115,8 +115,17 @@ export default function PeopleTab() {
         roles={roles}
         inboxes={inboxes}
         members={members}
+        onBulk={() => { setAdding(false); setAddingMany(true); }}
         onClose={() => setAdding(false)}
         onCreated={load}
+      />
+
+      <BulkAddPeople
+        open={addingMany}
+        roles={roles}
+        members={members}
+        onClose={() => setAddingMany(false)}
+        onDone={load}
       />
 
       {creatingNumber && (

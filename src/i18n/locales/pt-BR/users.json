@@ -127,46 +127,6 @@
       "saveError": "Erro ao salvar atendente"
     }
   },
-  "bulkInvite": {
-    "title": "Convite em Massa",
-    "resultTitle": "Resultado dos Convites",
-    "howToUse": {
-      "title": "Como usar:",
-      "step1": "Digite ou cole uma lista de emails",
-      "step2": "Um email por linha ou separados por vírgula",
-      "step3": "Emails duplicados serão automaticamente removidos",
-      "step4": "Os usuários receberão um email de convite para criar sua conta"
-    },
-    "fields": {
-      "emails": {
-        "label": "Emails dos Atendentes",
-        "placeholder": "atendente1@exemplo.com\natendente2@exemplo.com, atendente3@exemplo.com\natendente4@exemplo.com",
-        "hint": "Cole uma lista de emails, um por linha ou separados por vírgula"
-      }
-    },
-    "results": {
-      "invited": "Convites Enviados ({{count}})",
-      "failed": "Falhas nos Convites ({{count}})"
-    },
-    "actions": {
-      "cancel": "Cancelar",
-      "sendInvites": "Enviar Convites",
-      "sending": "Enviando Convites...",
-      "sendMore": "Enviar Mais Convites",
-      "finish": "Concluir"
-    },
-    "messages": {
-      "enterEmail": "Digite pelo menos um email",
-      "noValidEmail": "Nenhum email válido encontrado",
-      "allSuccess": "{{count}} convite enviado com sucesso",
-      "allSuccess_other": "{{count}} convites enviados com sucesso",
-      "allSuccess_zero": "{{count}} convites enviados com sucesso",
-      "allFailed": "Falha ao enviar {{count}} convite",
-      "allFailed_other": "Falha ao enviar {{count}} convites",
-      "allFailed_zero": "Falha ao enviar {{count}} convites",
-      "sendError": "Erro ao enviar convites"
-    }
-  },
   "filter": {
     "title": "Filtrar Atendentes",
     "description": "Configure os filtros para encontrar os atendentes que você procura",
@@ -176,7 +136,6 @@
   },
   "header": {
     "newUser": "Novo Atendente",
-    "bulkInvite": "Convidar em Massa",
     "export": "Exportar",
     "delete": "Excluir",
     "searchPlaceholder": "Buscar por nome, email ou função..."

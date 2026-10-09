@@ -4,8 +4,6 @@ import type {
   UsersResponse,
   UsersListParams,
   UserUpdateData,
-  BulkInviteParams,
-  BulkInviteResponse,
   BulkAddParams,
   BulkAddResult,
   CreatedWhatsappNumber,
@@ -142,12 +140,6 @@ class UsersService {
   async reactivate(userId: string): Promise<User> {
     const response = await apiAuth.post(`/users/${userId}/reactivate`, {});
     return extractData<User>(response);
-  }
-
-  // Bulk invite users
-  async bulkInvite(params: BulkInviteParams): Promise<BulkInviteResponse> {
-    const response = await apiAuth.post('/users/bulk_create', params);
-    return extractData<BulkInviteResponse>(response);
   }
 
   /**

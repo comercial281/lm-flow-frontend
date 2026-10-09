@@ -4,7 +4,6 @@ export { default as UsersPagination } from './UsersPagination';
 export { default as UsersTable } from './UsersTable';
 export { default as UsersFilter } from './UsersFilter';
 export { default as UserFormModal } from './UserFormModal';
-export { default as BulkInviteModal } from './BulkInviteModal';
 export { default as UserStatusBadge } from './UserStatusBadge';
 export { default as UserDetails } from './UserDetails';
 export { default as DeactivateUserDialog } from './DeactivateUserDialog';

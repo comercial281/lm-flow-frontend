@@ -160,29 +160,6 @@ export interface CreatedWhatsappNumber {
   connection: 'connected' | 'connecting' | 'disconnected' | null;
 }
 
-export interface BulkInviteParams {
-  emails: string[];
-}
-
-export interface BulkInviteResponse {
-  success: boolean;
-  message: string;
-  invited_users: User[];
-  failed_invitations: Array<{
-    email: string;
-    error: string;
-  }>;
-  /**
-   * E-mails que o servidor recusou de propósito antes de tentar convidar
-   * (ex.: e-mail reservado à equipe da Leal Mídia). `message` vem pronta, em
-   * português — é o texto que a tela mostra, verbatim.
-   */
-  refused?: Array<{
-    email: string;
-    message: string;
-  }>;
-}
-
 // UI State Types
 export interface UsersState {
   users: User[];

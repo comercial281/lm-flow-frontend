@@ -1,7 +1,6 @@
 import {
   Plus,
   Download,
-  Mail,
 } from 'lucide-react';
 import { BaseHeader, HeaderAction, HeaderFilter } from '@/components/base';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -13,7 +12,6 @@ interface UsersHeaderProps {
   searchValue: string;
   onSearchChange: (value: string) => void;
   onNewUser: () => void;
-  onBulkInvite: () => void;
   onFilter: () => void;
   onClearSelection?: () => void;
   activeFilters?: HeaderFilter[];
@@ -26,7 +24,6 @@ export default function UsersHeader({
   searchValue,
   onSearchChange,
   onNewUser,
-  onBulkInvite,
   onFilter,
   onClearSelection,
   activeFilters = [],
@@ -42,13 +39,6 @@ export default function UsersHeader({
   } : undefined;
 
   const secondaryActions: HeaderAction[] = [
-    ...(can('users', 'create') ? [{
-      label: t('header.bulkInvite'),
-      icon: <Mail className="h-4 w-4" />,
-      onClick: onBulkInvite,
-      variant: 'outline' as const,
-      iconOnly: true,
-    }] : []),
     {
       label: t('header.export'),
       icon: <Download className="h-4 w-4" />,
