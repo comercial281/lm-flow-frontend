@@ -8,13 +8,20 @@ const s = vi.hoisted(() => ({
   capabilities: vi.fn(),
   permissionsCatalog: vi.fn(),
   get: vi.fn(),
+  clone: vi.fn(),
+  admin: true,
 }));
+vi.mock('@/hooks/useIsSuperAdmin', () => ({ useIsSuperAdmin: () => false }));
+vi.mock('@/store/authStore', () => ({
+  useAuthStore: () => ({ currentUser: { id: 'u1', role: { key: s.admin ? 'administrator' : 'agent' } } }),
+}));
+vi.mock('@/pages/Customer/Settings/Roles', () => ({ default: () => <div data-testid="lista-antiga" /> }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@/hooks/useUserPermissions', () => ({
   useUserPermissions: () => ({ can: (r: string, a: string) => s.perms.has(`${r}.${a}`) }),
 }));
 vi.mock('@/services/customRoles/customRolesService', () => ({
-  customRolesService: { capabilities: s.capabilities, permissionsCatalog: s.permissionsCatalog, get: s.get },
+  customRolesService: { capabilities: s.capabilities, permissionsCatalog: s.permissionsCatalog, get: s.get, clone: s.clone },
 }));
 vi.mock('@/pages/Customer/Settings/Roles/RoleEditorModal', () => ({
   default: (p: { role: { name: string } | null }) => <div data-testid="editor">{p.role ? `editar ${p.role.name}` : 'novo cargo'}</div>,
@@ -34,8 +41,8 @@ const papel = (over: object) => ({
 });
 const roles = [
   papel({ id: 1, name: 'Administrador', always_full: true, users_count: 1, states: { imv: 'on', ver: 'on', env: 'on', lead: 'on', mover: 'on', eqp: 'on', num: 'on' } }),
-  papel({ id: 2, name: 'Gerente', states: { imv: 'on', ver: 'on', env: 'on', lead: 'on', mover: 'on', eqp: 'off', num: 'off' } }),
-  papel({ id: 3, name: 'Corretor', states: { imv: 'off', ver: 'off', env: 'off', lead: 'on', mover: 'on', eqp: 'off', num: 'off' } }),
+  papel({ id: 2, name: 'Gerente', slug: 'gerente', states: { imv: 'on', ver: 'on', env: 'on', lead: 'on', mover: 'on', eqp: 'off', num: 'off' } }),
+  papel({ id: 3, name: 'Corretor', slug: 'corretor', states: { imv: 'off', ver: 'off', env: 'off', lead: 'on', mover: 'on', eqp: 'off', num: 'off' } }),
   papel({ id: 9, name: 'SDR', system: false, users_count: 0, states: { lead: 'on' } }),
 ];
 
@@ -46,7 +53,9 @@ function abrir() {
 describe('RoleCards', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    s.perms = new Set();
+    s.perms = new Set(['roles.read']);
+    s.admin = true;
+    s.clone.mockResolvedValue({ id: 20, name: 'Novo' });
     s.capabilities.mockResolvedValue({ themes, roles });
     s.permissionsCatalog.mockResolvedValue([]);
     s.get.mockImplementation(async (id: number) => ({ id, name: roles.find(r => r.id === id)!.name }));
@@ -88,16 +97,47 @@ describe('RoleCards', () => {
     expect(screen.queryByRole('button', { name: /Criar cargo personalizado/ })).toBeNull();
   });
 
-  it('com roles.create, o clique carrega o catálogo e abre o editor', async () => {
-    s.perms = new Set(['roles.create', 'roles.update']);
+  it('criar cargo: janelinha com nome e "Começar igual a" (padrão Corretor); clona e recarrega', async () => {
+    s.perms = new Set(['roles.read', 'roles.create', 'roles.update']);
     abrir();
     await userEvent.click(await screen.findByRole('button', { name: /Criar cargo personalizado/ }));
-    expect(await screen.findByTestId('editor')).toHaveTextContent('novo cargo');
-    expect(s.permissionsCatalog).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText('Começar igual a')).toHaveValue('3');
+    expect(screen.queryByTestId('editor')).toBeNull();
+    await userEvent.type(screen.getByLabelText('Nome do cargo'), 'SDR novo');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar cargo' }));
+    await waitFor(() => expect(s.clone).toHaveBeenCalledWith('3', 'SDR novo'));
+    await waitFor(() => expect(s.capabilities).toHaveBeenCalledTimes(2));
+    expect(s.permissionsCatalog).not.toHaveBeenCalled();
+  });
+
+  it('administrador pode começar igual ao Gerente', async () => {
+    s.perms = new Set(['roles.read', 'roles.create', 'roles.update']);
+    abrir();
+    await userEvent.click(await screen.findByRole('button', { name: /Criar cargo personalizado/ }));
+    await userEvent.selectOptions(screen.getByLabelText('Começar igual a'), '2');
+    await userEvent.type(screen.getByLabelText('Nome do cargo'), 'Coordenação');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar cargo' }));
+    await waitFor(() => expect(s.clone).toHaveBeenCalledWith('2', 'Coordenação'));
+  });
+
+  it('quem não é administrador só vê o Corretor como base (Gerente é do administrador)', async () => {
+    s.admin = false;
+    s.perms = new Set(['roles.read', 'roles.create', 'roles.update']);
+    abrir();
+    await userEvent.click(await screen.findByRole('button', { name: /Criar cargo personalizado/ }));
+    const opcoes = within(screen.getByLabelText('Começar igual a')).getAllByRole('option').map(o => o.textContent);
+    expect(opcoes).toEqual(['Corretor']);
+  });
+
+  it('sem nome, não cria', async () => {
+    s.perms = new Set(['roles.read', 'roles.create', 'roles.update']);
+    abrir();
+    await userEvent.click(await screen.findByRole('button', { name: /Criar cargo personalizado/ }));
+    expect(screen.getByRole('button', { name: 'Criar cargo' })).toBeDisabled();
   });
 
   it('só roles.create, sem roles.update: não cria', async () => {
-    s.perms = new Set(['roles.create']);
+    s.perms = new Set(['roles.read', 'roles.create']);
     abrir();
     await screen.findByText('Cargos personalizados');
     expect(screen.queryByRole('button', { name: /Criar cargo personalizado/ })).toBeNull();
@@ -116,7 +156,7 @@ describe('RoleCards', () => {
   });
 
   it('com roles.update, abre o editor do cargo', async () => {
-    s.perms = new Set(['roles.update']);
+    s.perms = new Set(['roles.read', 'roles.update']);
     abrir();
     await screen.findByText('Gerente');
     const botoes = screen.getAllByRole('button', { name: 'Ver tudo o que pode' });
@@ -125,11 +165,24 @@ describe('RoleCards', () => {
     expect(await screen.findByTestId('editor')).toHaveTextContent('editar Gerente');
   });
 
-  it('erro: mensagem e "Tentar de novo" recarrega', async () => {
-    s.capabilities.mockRejectedValueOnce(new Error('x'));
+  it('servidor antigo (404): cai na lista antiga com a nota', async () => {
+    s.capabilities.mockRejectedValue({ response: { status: 404 } });
     abrir();
-    expect(await screen.findByText('Não consegui carregar os cargos.')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
-    await waitFor(() => expect(screen.getByText('Gerente')).toBeInTheDocument());
+    expect(await screen.findByTestId('lista-antiga')).toBeInTheDocument();
+    expect(screen.getByText('Mostrando a lista completa de permissões.')).toBeInTheDocument();
+  });
+
+  it('403: estado de sem acesso, sem lista antiga', async () => {
+    s.capabilities.mockRejectedValue({ response: { status: 403 } });
+    abrir();
+    expect(await screen.findByText(/Seu cargo não tem acesso a esta tela/)).toBeInTheDocument();
+    expect(screen.queryByTestId('lista-antiga')).toBeNull();
+  });
+
+  it('sem roles.read: sem acesso e nenhuma chamada', () => {
+    s.perms = new Set();
+    abrir();
+    expect(screen.getByText(/Seu cargo não tem acesso a esta tela/)).toBeInTheDocument();
+    expect(s.capabilities).not.toHaveBeenCalled();
   });
 });

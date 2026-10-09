@@ -7,6 +7,7 @@ import PeopleTab from './PeopleTab';
 import RoleCards from './roles/RoleCards';
 import PermissionsMatrix from './roles/PermissionsMatrix';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
 import Teams from '@/pages/Customer/Settings/Teams/Teams';
 
 /* "Equipe" — a tela única de pessoas, cargos e times.
@@ -37,10 +38,18 @@ type TabKey = (typeof TABS)[number]['key'];
 export default function TeamAccessPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Cargos e Permissões leem /roles: sem roles.read as abas nem aparecem.
+  const { can } = useUserPermissions();
+  const canReadRoles = can('roles', 'read');
+  const tabs = useMemo(
+    () => TABS.filter(t => canReadRoles || (t.key !== 'cargos' && t.key !== 'permissoes')),
+    [canReadRoles],
+  );
+
   const activeTab = useMemo<TabKey>(() => {
     const requested = searchParams.get('aba');
-    return TABS.some(t => t.key === requested) ? (requested as TabKey) : 'pessoas';
-  }, [searchParams]);
+    return tabs.some(t => t.key === requested) ? (requested as TabKey) : 'pessoas';
+  }, [searchParams, tabs]);
 
   // A aba Permissões avisa quando há mudança sem salvar; trocar de aba desmonta o
   // quadro e perderia o rascunho, então pede confirmação antes.
@@ -67,7 +76,7 @@ export default function TeamAccessPage() {
     <Pagina cabecalho={<BaseHeader title="Equipe" subtitle="Quem atende, por qual número e em qual time" />}>
       <Tabs value={activeTab} onValueChange={v => void handleTabChange(v)} className="space-y-6">
         <TabsList className="flex flex-wrap justify-start gap-1 bg-transparent p-0 h-auto">
-          {TABS.map(tab => {
+          {tabs.map(tab => {
             const Icon = tab.icon;
             return (
               <TabsTrigger key={tab.key} value={tab.key} className="gap-1.5">
