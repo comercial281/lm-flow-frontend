@@ -107,7 +107,7 @@ function abrir(member: TeamAccessMember = ANA, over: Partial<React.ComponentProp
   return props;
 }
 
-const tudo = ['users.update', 'users.send_access', 'users.deactivate', 'channels.create', 'inboxes.create', 'inboxes.delete'];
+const tudo = ['users.update', 'users.send_access', 'users.deactivate', 'channels.create', 'inboxes.update'];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -276,9 +276,9 @@ describe('PersonSheet — Salvar manda só o que mudou', () => {
     expect(props.onChanged).toHaveBeenCalled();
   });
 
-  // Liberar é POST /inbox_members (inboxes.create) e tirar é DELETE
-  // (inboxes.delete): sem a chave, a ficha não oferece o que o servidor recusa.
-  it('sem inboxes.delete não oferece tirar; sem inboxes.create não oferece liberar', () => {
+  // Liberar (POST) e tirar (DELETE /inbox_members) são cobrados como
+  // inboxes.update: sem a chave, a ficha não oferece o que o servidor recusa.
+  it('sem inboxes.update não oferece tirar nem liberar', () => {
     s.perms = new Set(['users.update']);
     abrir();
     expect(screen.queryByRole('button', { name: 'Tirar Plantão de Ana Souza' })).not.toBeInTheDocument();

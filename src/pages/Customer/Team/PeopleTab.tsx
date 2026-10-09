@@ -13,6 +13,7 @@ import PeopleList from './people/PeopleList';
 // A ficha da pessoa (painel lateral) substituiu o "Gerenciar acesso": cargo,
 // celular, números, acesso, desativar/reativar e excluir moram lá.
 import PersonSheet from './person/PersonSheet';
+import CreateNumberDialog from './numbers/CreateNumberDialog';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useNumberOwnerRule } from '@/features/numbers/useNumberOwnerRule';
 import type { CustomRole } from '@/types/customRoles';
@@ -39,9 +40,8 @@ export default function PeopleTab() {
   const canCreate = can('users', 'create');
 
   const [adding, setAdding] = useState(false);
-  // F1-T4: quem está na janela "Criar número para {nome}". Por ora só guarda a
-  // escolha; a janela é ligada na tarefa F1-T4.
-  const [, setCreatingNumberFor] = useState<string | null>(null);
+  // Quem está na janela "Criar número para {nome}" (atalho da lista e da ficha).
+  const [creatingNumberFor, setCreatingNumberFor] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<TeamAccessMember[]>([]);
@@ -60,6 +60,8 @@ export default function PeopleTab() {
 
   // Sempre traz os três de fábrica, mesmo quando o cliente não tem cargo nenhum
   // gravado no banco — que é o caso da maioria (ver cargoOptions).
+  const creatingNumber = useMemo(() => members.find(m => m.id === creatingNumberFor) ?? null, [members, creatingNumberFor]);
+
   const cargoOptions = useMemo(() => buildCargoOptions(roles), [roles]);
 
   const load = useCallback(async () => {
@@ -104,7 +106,7 @@ export default function PeopleTab() {
           members={members}
           canCreateNumber={can('channels', 'create')}
           onOpen={member => setOpenId(member.id)}
-          onCreateNumber={member => setCreatingNumberFor(member.id)} // F1-T4
+          onCreateNumber={member => setCreatingNumberFor(member.id)}
         />
       )}
 
@@ -115,6 +117,16 @@ export default function PeopleTab() {
         onClose={() => setAdding(false)}
         onCreated={load}
       />
+
+      {creatingNumber && (
+        <CreateNumberDialog
+          member={creatingNumber}
+          open
+          onClose={() => setCreatingNumberFor(null)}
+          // Recarrega o retrato: a lista e a ficha aberta passam a mostrar o número novo.
+          onDone={() => { void load(); }}
+        />
+      )}
 
       {open && (
         <PersonSheet
@@ -127,7 +139,7 @@ export default function PeopleTab() {
           numberOwnerRule={numberOwnerRule}
           onClose={() => setOpenId(null)}
           onChanged={load}
-          onCreateNumber={member => setCreatingNumberFor(member.id)} // F1-T4
+          onCreateNumber={member => setCreatingNumberFor(member.id)}
         />
       )}
     </div>

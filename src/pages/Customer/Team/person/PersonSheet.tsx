@@ -111,11 +111,11 @@ export default function PersonSheet({
   const canSend = active && !refusal && can('users', 'send_access');
   const canCopy = active && !refusal && can('users', 'update');
   const canCreateNumber = active && !refusal && !member.sees_all_inboxes && can('channels', 'create');
-  // Liberar e tirar mexem numa pessoa só: POST /inbox_members (o servidor cobra
-  // inboxes.create) e DELETE /inbox_members (cobra inboxes.delete). Sem a chave,
-  // a ficha não oferece — o servidor recusaria.
-  const canGrant = canEdit && can('inboxes', 'create');
-  const canRevoke = canEdit && can('inboxes', 'delete');
+  // Liberar e tirar mexem numa pessoa só: POST e DELETE /inbox_members, e o
+  // servidor cobra `inboxes.update` nos dois. Sem a chave, a ficha não oferece —
+  // o servidor recusaria.
+  const canGrant = canEdit && can('inboxes', 'update');
+  const canRevoke = canGrant;
 
   /* Desativar/reativar: o servidor deixa ADMINISTRADOR passar pelo cargo, fora
      do RBAC. Exigir só a chave aqui esconderia os botões justamente de quem a
