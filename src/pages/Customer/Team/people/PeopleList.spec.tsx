@@ -64,6 +64,12 @@ describe('PeopleList', () => {
     expect(onOpen).not.toHaveBeenCalled();
   });
 
+  it('pessoa em que quem vê não pode mexer: o atalho Criar número some', () => {
+    abrir({ canActOn: () => false });
+    expect(screen.getByText('Nenhum número')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Criar número/ })).toBeNull();
+  });
+
   it('sem permissão de criar número, o atalho some', () => {
     abrir({ canCreateNumber: false });
     expect(screen.getByText('Nenhum número')).toBeInTheDocument();

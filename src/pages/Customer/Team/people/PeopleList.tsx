@@ -3,7 +3,7 @@ import { Plus, Search } from 'lucide-react';
 import { Input } from '@/components/ui/ds';
 import { telefone } from '@/lib/formato';
 import NumberChip, { DOT_CLASS, STATE_TEXT } from './NumberChip';
-import { accessStatus, type AccessTone } from './accessStatus';
+import { TONE_CLASS, accessStatus } from './accessStatus';
 import { PEOPLE_FILTERS, applyPeopleFilters, filterCounts, type PeopleFilter } from './peopleFilters';
 import type { TeamAccessMember } from '@/types/teamAccess';
 
@@ -18,25 +18,22 @@ const cargoColor = (key?: string) =>
       ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
       : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
 
-const TONE_CLASS: Record<AccessTone, string> = {
-  ok: 'text-emerald-600 dark:text-emerald-400',
-  warn: 'text-amber-600 dark:text-amber-400',
-  off: 'text-muted-foreground',
-};
-
 const initials = (name: string) => name.split(' ').filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
 
 export interface PeopleListProps {
   members: TeamAccessMember[];
   /** can('channels','create'): sem ele o atalho "Criar número" some. */
   canCreateNumber: boolean;
+  /** Quem está na tela pode mexer nesta pessoa? (mesma régua da ficha: gestor só
+   *  mexe em corretor ou em si mesmo.) Sem ele, vale para todos. */
+  canActOn?: (member: TeamAccessMember) => boolean;
   onOpen: (member: TeamAccessMember) => void;
   onCreateNumber: (member: TeamAccessMember) => void;
   /** Relógio injetável, para o teste. */
   now?: Date;
 }
 
-export default function PeopleList({ members, canCreateNumber, onOpen, onCreateNumber, now }: PeopleListProps) {
+export default function PeopleList({ members, canCreateNumber, canActOn, onOpen, onCreateNumber, now }: PeopleListProps) {
   const [filter, setFilter] = useState<PeopleFilter>('todas');
   const [query, setQuery] = useState('');
 
@@ -128,7 +125,7 @@ export default function PeopleList({ members, canCreateNumber, onOpen, onCreateN
                   ) : (
                     <>
                       <span className="pointer-events-none text-xs text-muted-foreground">Nenhum número</span>
-                      {canCreateNumber && !member.deactivated && (
+                      {canCreateNumber && !member.deactivated && (canActOn?.(member) ?? true) && (
                         <button
                           type="button"
                           onClick={() => onCreateNumber(member)}

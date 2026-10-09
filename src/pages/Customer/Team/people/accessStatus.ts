@@ -8,6 +8,13 @@ import type { TeamAccessMember } from '@/types/teamAccess';
 export type AccessTone = 'ok' | 'warn' | 'off';
 export interface AccessStatus { label: string; detail: string; tone: AccessTone }
 
+/** A cor do texto de cada tom: a lista e a ficha pintam o acesso igual. */
+export const TONE_CLASS: Record<AccessTone, string> = {
+  ok: 'text-emerald-600 dark:text-emerald-400',
+  warn: 'text-amber-600 dark:text-amber-400',
+  off: 'text-muted-foreground',
+};
+
 const diaDoCalendario = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 
 export function accessStatus(

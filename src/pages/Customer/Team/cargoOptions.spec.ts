@@ -109,12 +109,26 @@ describe('assignableCargoOptions', () => {
   it('quem não é administrador não vê Administrador nem o cargo com roles.update', () => {
     const options = buildCargoOptions(roles);
     const labels = assignableCargoOptions(options, { viewerIsAdmin: false, currentKey: null }).map(o => o.label);
-    expect(labels).toEqual(['Gerente', 'Corretor', 'SDR']);
+    expect(labels).toEqual(['Corretor', 'SDR']);
   });
 
   it('sem cargos gravados, esconde o Administrador de reserva também', () => {
     const labels = assignableCargoOptions(buildCargoOptions([]), { viewerIsAdmin: false, currentKey: null }).map(o => o.label);
-    expect(labels).toEqual(['Gerente', 'Corretor']);
+    expect(labels).toEqual(['Corretor']);
+  });
+
+  it('só o administrador dá Gerente: some para os demais, inclusive o de fábrica gravado', () => {
+    const comGerente = buildCargoOptions([...roles, role({ id: 4, name: 'Gerente', slug: 'gerente', system: true })]);
+    expect(assignableCargoOptions(comGerente, { viewerIsAdmin: false, currentKey: null }).map(o => o.label))
+      .not.toContain('Gerente');
+    expect(assignableCargoOptions(comGerente, { viewerIsAdmin: true, currentKey: null }).map(o => o.label))
+      .toContain('Gerente');
+  });
+
+  it('o Gerente atual da pessoa continua na lista (só exibição)', () => {
+    const options = buildCargoOptions([]);
+    const labels = assignableCargoOptions(options, { viewerIsAdmin: false, currentKey: 'chave:manager' }).map(o => o.label);
+    expect(labels).toContain('Gerente');
   });
 
   it('mantém o cargo atual da pessoa mesmo quando ele não poderia ser dado', () => {

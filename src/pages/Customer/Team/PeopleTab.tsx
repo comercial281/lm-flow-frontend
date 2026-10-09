@@ -14,6 +14,10 @@ import PeopleList from './people/PeopleList';
 import PersonSheet from './person/PersonSheet';
 import CreateNumberDialog from './numbers/CreateNumberDialog';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import { useAuthStore } from '@/store/authStore';
+import { resolveActor } from '@/features/users/deactivation/deactivationRules';
+import { targetRefusal } from './person/personSheetRules';
 import { useNumberOwnerRule } from '@/features/numbers/useNumberOwnerRule';
 import type { CustomRole } from '@/types/customRoles';
 import type { TeamAccessInbox, TeamAccessMember } from '@/types/teamAccess';
@@ -37,6 +41,8 @@ import type { TeamAccessInbox, TeamAccessMember } from '@/types/teamAccess';
 export default function PeopleTab() {
   const { can } = useUserPermissions();
   const canCreate = can('users', 'create');
+  const { currentUser } = useAuthStore();
+  const isSuper = useIsSuperAdmin();
 
   const [adding, setAdding] = useState(false);
   const [addingMany, setAddingMany] = useState(false);
@@ -63,6 +69,14 @@ export default function PeopleTab() {
   const creatingNumber = useMemo(() => members.find(m => m.id === creatingNumberFor) ?? null, [members, creatingNumberFor]);
 
   const cargoOptions = useMemo(() => buildCargoOptions(roles), [roles]);
+
+  // Mesma régua da ficha: quem não é administrador só mexe em corretor ou em si
+  // mesmo — o atalho "Criar número" da linha não aparece onde a ficha abriria só leitura.
+  const viewer = useMemo(
+    () => resolveActor(currentUser?.id, members, { isPlatformOwner: isSuper, name: String(currentUser?.name ?? '') }),
+    [currentUser?.id, currentUser?.name, members, isSuper],
+  );
+  const canActOn = useCallback((m: TeamAccessMember) => !targetRefusal(viewer, m, isSuper), [viewer, isSuper]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -105,6 +119,7 @@ export default function PeopleTab() {
         <PeopleList
           members={members}
           canCreateNumber={can('channels', 'create')}
+          canActOn={canActOn}
           onOpen={member => setOpenId(member.id)}
           onCreateNumber={member => setCreatingNumberFor(member.id)}
         />

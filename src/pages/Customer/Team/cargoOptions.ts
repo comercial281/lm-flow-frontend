@@ -106,8 +106,11 @@ export function buildCargoOptions(roles: CustomRole[]): CargoOption[] {
  * As opções que quem está na tela pode DAR. Quem não é administrador não dá
  * Administrador nem cargo que muda permissões — o servidor recusa com frase, e
  * oferecer a opção para depois recusar é a tela prometendo o que não cumpre.
- * Sem os dados do cargo (cliente sem cargos gravados), só o Administrador some;
- * o resto o servidor explica.
+ * O Gerente também some: só o administrador dá o cargo Gerente (o servidor
+ * recusa com "Só o administrador dá o cargo Gerente."). Quem não é admin dá
+ * Corretor ou cargo próprio que não seja de gerente.
+ * Sem os dados do cargo (cliente sem cargos gravados), somem o Administrador e
+ * o Gerente de fábrica; o resto o servidor explica.
  *
  * O cargo ATUAL da pessoa fica sempre: sem ele a escolha apareceria vazia.
  */
@@ -116,7 +119,7 @@ export function assignableCargoOptions(
   { viewerIsAdmin, currentKey }: { viewerIsAdmin: boolean; currentKey: string | null },
 ): CargoOption[] {
   if (viewerIsAdmin) return options;
-  return options.filter(o => o.key === currentKey || (o.chaveRole !== 'admin' && !o.grantsRoleEditing));
+  return options.filter(o => o.key === currentKey || (o.chaveRole !== 'admin' && o.chaveRole !== 'manager' && !o.grantsRoleEditing));
 }
 
 /** O que mandar para a API ao escolher esta opção. */

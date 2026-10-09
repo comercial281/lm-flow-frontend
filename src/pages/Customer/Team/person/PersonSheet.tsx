@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import IconActionButton from '@/components/base/IconActionButton';
-import { autoAccessLabel } from '@/components/team/InboxAccessList';
+import { autoAccessLabel } from '@/components/team/autoAccessLabel';
 // A janela que mostra o ESTRAGO antes de desativar (leads, conversas abertas,
 // ofertas da roleta, roletas e o WhatsApp exclusivo). É a mesma de sempre: só
 // mudou de casa, do "Gerenciar acesso" para a ficha.
@@ -29,10 +29,12 @@ import InboxMembersService from '@/services/channels/inboxMembersService';
 import numbersService from '@/services/numbers/numbersService';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { copyText } from '@/utils/clipboard';
+import { BrPhoneInput } from '@/components/shared/BrPhoneInput';
+import { national, sendAccessLink, validPhone } from '../numbers/numberPhone';
 import { assignableCargoOptions, isCargoSelected, type CargoOption } from '../cargoOptions';
 import { DOT_CLASS, STATE_TEXT } from '../people/NumberChip';
 import { numberState } from '../people/peopleFilters';
-import { accessStatus } from '../people/accessStatus';
+import { TONE_CLASS, accessStatus } from '../people/accessStatus';
 import {
   PHONE_TOO_SHORT, READ_ONLY_NOTE, buildUserPatch, liberatedDiff, phoneIsValid, targetRefusal, viewerIsAdmin,
 } from './personSheetRules';
@@ -66,12 +68,6 @@ export interface PersonSheetProps {
   onChanged: () => void;
   onCreateNumber: (member: TeamAccessMember) => void;
 }
-
-const TONE_CLASS = {
-  ok: 'text-emerald-600 dark:text-emerald-400',
-  warn: 'text-amber-600 dark:text-amber-400',
-  off: 'text-muted-foreground',
-} as const;
 
 function fromInbox(ib: TeamAccessInbox): MemberNumber {
   return {
@@ -114,7 +110,7 @@ export default function PersonSheet({
   // Liberar e tirar mexem numa pessoa só: POST e DELETE /inbox_members, e o
   // servidor cobra `inboxes.update` nos dois. Sem a chave, a ficha não oferece —
   // o servidor recusaria.
-  const canGrant = canEdit && can('inboxes', 'update');
+  const canGrant = active && canEdit && can('inboxes', 'update');
   const canRevoke = canGrant;
 
   /* Desativar/reativar: o servidor deixa ADMINISTRADOR passar pelo cargo, fora
@@ -140,7 +136,7 @@ export default function PersonSheet({
   // O rascunho é semeado ao ABRIR (a ficha é montada por pessoa) e não a cada
   // recarga da lista: semear no render apagaria o que o gestor está digitando.
   const [name, setName] = useState(member.name);
-  const [phone, setPhone] = useState(member.whatsapp_number ?? '');
+  const [phone, setPhone] = useState(national(member.whatsapp_number));
   const [cargoKey, setCargoKey] = useState<string>(initialCargoKey ?? '');
   // Números: guarda só o que o gestor MUDOU. A base vem sempre da pessoa da
   // lista, então uma recarga no meio (depois de escolher o principal, por
@@ -249,10 +245,10 @@ export default function PersonSheet({
   // Sem senha no corpo: quem cria a senha é a própria pessoa ao abrir o link, e
   // reenviar o acesso não pode trocar a senha de quem já usa o CRM.
   const enviarLink = async () => {
-    if (phone.replace(/\D/g, '').length < 10) { toast.error(PHONE_TOO_SHORT); return; }
+    if (!validPhone(phone)) { toast.error(PHONE_TOO_SHORT); return; }
     // O servidor grava o celular do envio no cadastro: com o campo diferente do
     // gravado, isso acontece fora do Salvar — e a confirmação tem que dizer.
-    const gravaCelular = phone.trim() !== (member.whatsapp_number ?? '').trim();
+    const gravaCelular = national(phone) !== national(member.whatsapp_number);
     const ok = await confirmar({
       titulo: `Enviar o link de acesso para ${member.name}?`,
       descricao: `Vai para ${formatPhone(phone) || phone}, pelo número operacional da Leal Mídia. `
@@ -264,14 +260,11 @@ export default function PersonSheet({
     if (!ok) return;
     setSendBusy(true);
     try {
-      const res = await usersService.sendAccess(member.id, { whatsapp_number: phone.trim() });
-      const wa = res.whatsapp;
-      if (wa?.sent) toast.success(`Link de acesso enviado no WhatsApp de ${member.name}.`);
-      else if (wa?.error) toast.error(`Acesso salvo, mas o WhatsApp falhou: ${wa.error}`);
-      else toast.error(`Não enviou: ${wa?.skipped ?? 'motivo desconhecido'}`);
+      const { state, error } = await sendAccessLink(member.id, phone);
+      if (state === 'sent') toast.success(`Link de acesso enviado no WhatsApp de ${member.name}.`);
+      else if (state === 'error') toast.error(`Acesso salvo, mas o WhatsApp falhou: ${error}`);
+      else toast.error(`Não enviou: ${error ?? 'motivo desconhecido'}`);
       onChanged();
-    } catch (e) {
-      toast.error(apiErrorMessage(e, 'Erro ao enviar o acesso.'));
     } finally {
       setSendBusy(false);
     }
@@ -419,12 +412,12 @@ export default function PersonSheet({
             {canEdit ? (
               <>
                 <Label htmlFor="person-phone" className="sr-only">Celular</Label>
-                <Input
+                <BrPhoneInput
                   id="person-phone"
                   value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  placeholder="Ex.: 11 94087 1974"
+                  onChange={setPhone}
                   disabled={saving}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                 />
                 {!phoneIsValid(phone) && <p className="text-xs text-destructive">{PHONE_TOO_SHORT}</p>}
               </>

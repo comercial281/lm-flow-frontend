@@ -168,10 +168,18 @@ describe('PersonSheet — quem pode mexer', () => {
     abrir();
     const opcoes = within(screen.getByRole('combobox', { name: 'Cargo' })).getAllByRole('option').map(o => o.textContent);
     expect(opcoes).not.toContain('Administrador');
-    expect(opcoes).toEqual(expect.arrayContaining(['Gerente', 'Corretor', 'SDR']));
+    expect(opcoes).not.toContain('Gerente');
+    expect(opcoes).toEqual(expect.arrayContaining(['Corretor', 'SDR']));
   });
 
-  it('o administrador vê a opção Administrador', () => {
+  it('cargo próprio "administrador" com chave antiga de corretor também é só leitura para quem não é admin', () => {
+    s.viewerId = 'g1';
+    abrir(pessoa({ id: 'x1', role: { key: 'administrador', name: 'Administrador', chave_role: 'agent' } }));
+    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+    expect(screen.getByText('Só o administrador mexe no cadastro de outro administrador.')).toBeInTheDocument();
+  });
+
+  it('o administrador vê a opção Administrador e a Gerente', () => {
     s.viewerId = 'ad1';
     abrir();
     const opcoes = within(screen.getByRole('combobox', { name: 'Cargo' })).getAllByRole('option').map(o => o.textContent);
@@ -202,6 +210,12 @@ describe('PersonSheet — números', () => {
     expect(props.onCreateNumber).toHaveBeenCalledWith(ANA);
   });
 
+  it('pessoa desativada: não libera nem cria número', () => {
+    abrir(pessoa({ deactivated: true }));
+    expect(screen.queryByRole('combobox', { name: 'Liberar outro número' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Criar número novo/ })).not.toBeInTheDocument();
+  });
+
   it('sem channels.create, o "Criar número novo" some', () => {
     s.perms = new Set(['users.update']);
     abrir();
@@ -225,12 +239,13 @@ describe('PersonSheet — Salvar manda só o que mudou', () => {
     await userEvent.clear(campo);
     await userEvent.type(campo, '11 98888 7777');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    await waitFor(() => expect(s.updateUser).toHaveBeenCalledWith('a1', { whatsapp_number: '11 98888 7777' }));
+    await waitFor(() => expect(s.updateUser).toHaveBeenCalledWith('a1', { whatsapp_number: '11988887777' }));
     expect(s.membersUpdate).not.toHaveBeenCalled();
     await waitFor(() => expect(props.onChanged).toHaveBeenCalled());
   });
 
   it('mudou o cargo: manda o cargo, e só ele', async () => {
+    s.viewerId = 'ad1'; // só o administrador dá Gerente
     abrir();
     const corretor = ROLES.find(o => o.chaveRole === 'agent')!;
     const gerente = ROLES.find(o => o.chaveRole === 'manager')!;
@@ -293,6 +308,7 @@ describe('PersonSheet — Salvar manda só o que mudou', () => {
 
   it('a recusa do servidor aparece como veio', async () => {
     s.updateUser.mockRejectedValue({ response: { data: { error: { message: 'Seu cargo só mexe no cadastro de corretores.' } } } });
+    s.viewerId = 'ad1';
     const props = abrir();
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Cargo' }), ROLES.find(o => o.chaveRole === 'manager')!.key);
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
@@ -360,7 +376,7 @@ describe('PersonSheet — fechar com alteração por salvar', () => {
 
   it('com alteração, pergunta; "Continuar editando" mantém, "Descartar" fecha', async () => {
     const props = abrir();
-    await userEvent.type(screen.getByRole('textbox', { name: 'Celular' }), '9');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Nome' }), 'x');
     await userEvent.click(screen.getByRole('button', { name: 'Fechar' }));
     expect(await screen.findByText('Descartar alterações?')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Continuar editando' }));

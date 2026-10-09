@@ -1,4 +1,5 @@
 import { cargoPayload, type CargoOption } from '../cargoOptions';
+import { national } from '../numbers/numberPhone';
 import type { DeactivatablePerson } from '@/features/users/deactivation/deactivationRules';
 import type { TeamAccessMember } from '@/types/teamAccess';
 
@@ -35,9 +36,15 @@ export function targetRefusal(
 ): string | null {
   if (viewerIsAdmin(viewer, isPlatformOwner)) return null;
   if (viewer && viewer.id === target.id) return null;
+  // O cargo escolhido (`key`, o slug) manda sobre o `chave_role`: quem tem o cargo próprio
+  // "administrador" pode ter a chave antiga 'agent' sobrando, e a ficha dele tem
+  // que abrir só leitura para quem não é admin.
+  const slug = target.role?.key;
+  if (isAdminRole(slug) || slug === 'administrador') return TARGET_ADMIN_REFUSAL;
   const role = target.role?.chave_role ?? target.role?.key;
-  if (role === 'agent') return null;
-  return isAdminRole(role) ? TARGET_ADMIN_REFUSAL : TARGET_AGENT_ONLY_REFUSAL;
+  if (isAdminRole(role)) return TARGET_ADMIN_REFUSAL;
+  if (role === 'agent' && slug !== 'gerente') return null;
+  return TARGET_AGENT_ONLY_REFUSAL;
 }
 
 /** Celular vazio vale (tira o número); preenchido precisa de DDD. */
@@ -65,8 +72,10 @@ export function buildUserPatch(
   const patch: Record<string, unknown> = {};
   const name = draft.name.trim();
   if (name && name !== member.name.trim()) patch.name = name;
-  const phone = draft.phone.trim();
-  if (phone !== (member.whatsapp_number ?? '').trim()) patch.whatsapp_number = phone;
+  // Compara pelos dígitos nacionais: o campo da ficha trabalha sem o 55, e o
+  // cadastro pode tê-lo — sem isso, abrir e salvar regravaria o mesmo celular.
+  const phone = national(draft.phone);
+  if (phone !== national(member.whatsapp_number)) patch.whatsapp_number = phone;
   if (draft.cargo && draft.cargo.key !== initialCargoKey) Object.assign(patch, cargoPayload(draft.cargo));
   return patch;
 }
