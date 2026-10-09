@@ -38,7 +38,8 @@ function resumo(role: RoleCapabilities, themes: CapabilityTheme[]): string {
   if (role.always_full) return 'Controla tudo na imobiliária.';
   const total = themes.reduce((n, t) => n + t.rows.length, 0);
   const ligadas = themes.reduce((n, t) => n + t.rows.filter(r => role.states[r.key] === 'on').length, 0);
-  const base = `Libera ${ligadas} de ${plural(total, 'permissão', 'permissões')}.`;
+  const emParte = themes.reduce((n, t) => n + t.rows.filter(r => role.states[r.key] === 'partial').length, 0);
+  const base = `Libera ${ligadas} de ${plural(total, 'permissão', 'permissões')}${emParte ? ` (${emParte} em parte)` : ''}.`;
   return role.inherits_from_name ? `${base} Parte do cargo “${role.inherits_from_name}”.` : base;
 }
 
@@ -96,8 +97,9 @@ function RoleCard({ role, themes, onSeeAll, busy }: CardProps) {
 
 export default function RoleCards() {
   const { can } = useUserPermissions();
-  const canCreate = can('roles', 'create');
   const canUpdate = can('roles', 'update');
+  // O servidor só deixa criar cargo com roles.update (ou administrador).
+  const canCreate = can('roles', 'create') && canUpdate;
 
   const [data, setData] = useState<{ themes: CapabilityTheme[]; roles: RoleCapabilities[] } | null>(null);
   const [failed, setFailed] = useState(false);

@@ -122,18 +122,10 @@ export function extractError(error: any): ErrorInfo {
  * @param fallback - mensagem padrão se o backend não mandar nada
  */
 export function apiErrorMessage(error: unknown, fallback: string): string {
-  // `error` pode ser objeto ({ message }) ou a própria frase (string) — o PATCH
-  // das permissões por linha responde `{ error: "frase pt-BR" }`.
-  const e = error as { response?: { data?: { error?: { message?: string } | string; message?: string } }; message?: string };
-  const bruto = e?.response?.data?.error;
-  const doErro = typeof bruto === 'string' ? undefined : bruto?.message;
-  // A string de `error` fica por último: no formato legado ela é um rótulo genérico
-  // ("Forbidden") e a explicação de verdade está em `message`.
-  const frase = typeof bruto === 'string' ? bruto : undefined;
+  const e = error as { response?: { data?: { error?: { message?: string }; message?: string } }; message?: string };
   return (
-    doErro ||
+    e?.response?.data?.error?.message ||
     e?.response?.data?.message ||
-    frase ||
     fallback
   );
 }

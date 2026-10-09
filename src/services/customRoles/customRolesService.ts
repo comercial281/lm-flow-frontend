@@ -9,6 +9,19 @@ import type {
   RoleCapabilities,
 } from '@/types/customRoles';
 
+/** Frase de erro das permissões por linha: o PATCH responde `error` como TEXTO
+ *  (pt-BR), diferente do resto da API (`error.message`). Local de propósito:
+ *  mexer no apiErrorMessage global mostraria "Forbidden" em inglês em outras telas. */
+export function capabilitiesErrorMessage(err: unknown, fallback: string): string {
+  const d = (err as { response?: { data?: { error?: unknown; message?: unknown } } })?.response?.data;
+  const bruto = d?.error;
+  if (typeof bruto === 'string' && bruto) return bruto;
+  const msg = (bruto as { message?: unknown } | undefined)?.message;
+  if (typeof msg === 'string' && msg) return msg;
+  if (typeof d?.message === 'string' && d.message) return d.message;
+  return fallback;
+}
+
 class CustomRolesService {
   async list(): Promise<CustomRole[]> {
     const res = await apiAuth.get('/roles');

@@ -82,18 +82,31 @@ describe('RoleCards', () => {
     expect(adm.queryByText('Ver leads')).toBeNull();
   });
 
-  it('criar cargo só com roles.create; abre o editor em modo novo', async () => {
+  it('sem permissão, o botão de criar cargo não aparece', async () => {
     abrir();
     await screen.findByText('Cargos personalizados');
     expect(screen.queryByRole('button', { name: /Criar cargo personalizado/ })).toBeNull();
   });
 
   it('com roles.create, o clique carrega o catálogo e abre o editor', async () => {
-    s.perms = new Set(['roles.create']);
+    s.perms = new Set(['roles.create', 'roles.update']);
     abrir();
     await userEvent.click(await screen.findByRole('button', { name: /Criar cargo personalizado/ }));
     expect(await screen.findByTestId('editor')).toHaveTextContent('novo cargo');
     expect(s.permissionsCatalog).toHaveBeenCalledTimes(1);
+  });
+
+  it('só roles.create, sem roles.update: não cria', async () => {
+    s.perms = new Set(['roles.create']);
+    abrir();
+    await screen.findByText('Cargos personalizados');
+    expect(screen.queryByRole('button', { name: /Criar cargo personalizado/ })).toBeNull();
+  });
+
+  it('resumo conta linhas em parte', async () => {
+    s.capabilities.mockResolvedValue({ themes, roles: [papel({ id: 5, name: 'Meio', states: { lead: 'on', mover: 'partial' } })] });
+    abrir();
+    expect(await screen.findByText('Libera 1 de 7 permissões (1 em parte).')).toBeInTheDocument();
   });
 
   it('"Ver tudo o que pode" só com roles.update, e não no administrador', async () => {
