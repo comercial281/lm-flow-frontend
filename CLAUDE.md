@@ -8022,3 +8022,13 @@ Pedido do Tony: *"no flow builder o esperar tem que ter segundos também como op
 - *Só em horário comercial* e *Até uma data e hora* continuam iguais. O *Aguardar resposta* não ganhou segundos.
 
 Armadilha: o painel não troca mais pro campo do funil de conversa só porque o bloco tem segundos (`waitHasSeconds` saiu da condição): fluxo de lead com segundos continua mostrando os modos e o horário comercial.
+
+## Configuração do canal sem os menus que ninguém usa (desde 2026-10-08)
+
+Pedido do dono: "eu nunca configuro esses menus em nenhum cliente".
+
+- **Saíram da aba de configurações do canal** (`ChannelSettings.tsx`) os cartões **Mensagem de saudação**, **Bloquear para conversa única** e **Status padrão da conversa**.
+- **Saíram as abas** **Pesquisa de satisfação** e **Moderação**. A Moderação era dos comentários do Facebook, que o LM Flow não atende. Endereço antigo com `?tab=csat` ou `?tab=moderation` cai na primeira aba.
+- **O que estava gravado em cada canal continua valendo e não muda.** O Salvar da aba segue mandando `greeting_enabled`, `greeting_message`, `lock_to_single_conversation` e `default_conversation_status` com o valor que veio do canal. Pesquisa de satisfação não é tocada por aquele Salvar. Canal que tivesse alguma delas ligada segue ligado, só que sem tela: desligar é por nós, direto no canal.
+- Os componentes (`GreetingSettingsForm`, `LockToSingleConversationForm`, `DefaultConversationStatusForm`, `CSATForm`, `ModerationDashboard`) ficaram no código, sem uso nesta tela. A saudação da criação do canal de site (`WebWidgetForm`) não mudou.
+- Não reabrir sem o dono pedir.
