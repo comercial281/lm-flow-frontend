@@ -1,8 +1,10 @@
 import { Button } from '@/components/ui/ds';
+import { useOcupaCanto } from '@/components/support/cantoOcupado';
 
 // A barra que aparece fixa no pé da página quando há alteração pendente
 // (regra da Fase 3: campo espera o Salvar; ver hooks/useAlteracoesNaoSalvas).
-// Ela é `sticky`, então precisa morar DENTRO do container que rola.
+// Ela é `sticky`, então precisa morar DENTRO do container que rola. Enquanto
+// aparece, o Salvar ocupa o canto da bolinha do suporte, que vira a aba lateral.
 
 export interface BarraSalvarProps {
   visivel: boolean;
@@ -12,6 +14,7 @@ export interface BarraSalvarProps {
 }
 
 export default function BarraSalvar({ visivel, salvando, aoSalvar, aoDescartar }: BarraSalvarProps) {
+  useOcupaCanto(visivel);
   if (!visivel) return null;
   return (
     <div

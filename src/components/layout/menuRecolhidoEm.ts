@@ -1,4 +1,4 @@
-/** Rotas do chat (/conversations e /conversations/:id). Mesma regra do SupportWidget (escondeBolinha). */
+/** Rotas do chat (/conversations e /conversations/:id). Mesma regra do SupportWidget (rotaComAba). */
 export const ROTA_CONVERSAS = /^\/conversations(\/|$)/;
 
 /**

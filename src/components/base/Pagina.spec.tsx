@@ -8,7 +8,7 @@ describe('Pagina (moldura única)', () => {
     const largura = screen.getByText('cab').parentElement!;
     expect(largura.className).toContain('max-w-[1400px]');
     expect(largura.className).toContain('mx-auto');
-    expect(largura.parentElement!.className).toContain('px-4 py-6 sm:px-6');
+    expect(largura.parentElement!.className).toContain('px-4 pb-20 pt-6 sm:px-6');
     expect(largura.parentElement!.parentElement!.className).toContain('overflow-y-auto');
   });
 
