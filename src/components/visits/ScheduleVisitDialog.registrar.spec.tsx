@@ -32,12 +32,19 @@ vi.mock('@/services/visits/visitsService', async (orig) => {
   };
 });
 vi.mock('@/services/properties/propertiesService', () => ({ propertiesService: { list: vi.fn().mockResolvedValue({ data: [] }) } }));
+const availability = vi.fn();
 vi.mock('@/services/visits/agendaService', () => ({
-  agendaService: { getSettings: vi.fn().mockResolvedValue({ enabled: false }) },
+  agendaService: {
+    getSettings: vi.fn().mockResolvedValue({ enabled: false }),
+    listTimeOffs: vi.fn().mockResolvedValue([]),
+    availability: (...a: unknown[]) => availability(...a),
+  },
 }));
-// Agenda desligada: a grade fixa de daySlots.ts.
+// Agenda desligada por padrão (a grade fixa de daySlots.ts); um caso liga.
+const AGENDA_DESLIGADA = { ligada: false, ajustes: null };
+let agenda: { ligada: boolean; ajustes: unknown } = AGENDA_DESLIGADA;
 vi.mock('@/features/visits/useAgendaLigada', () => ({
-  useAgendaLigada: () => ({ ligada: false, ajustes: null }),
+  useAgendaLigada: () => agenda,
 }));
 
 import { ScheduleVisitDialog } from './ScheduleVisitDialog';
@@ -64,6 +71,7 @@ const VISITA: Visit = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  agenda = AGENDA_DESLIGADA;
   // Hoje é sexta, 10/10/2026, 11:10: de 07:00 a 11:00 já passou.
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date(2026, 9, 10, 11, 10));
@@ -201,6 +209,51 @@ describe('Agendar visita · remarcar', () => {
     expect(reschedule.mock.calls[0][2].realtor_id).toBeUndefined();
     expect(create).not.toHaveBeenCalled();
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith({ id: 'v1' }));
+  });
+
+  it('visita de um dia que passou (cliente não veio) abre em hoje, com horários futuros', async () => {
+    abrir({ leadInicial: null, visitaParaRemarcar: { ...VISITA, scheduled_at: new Date(2026, 9, 9, 10, 0).toISOString() } });
+
+    expect(await screen.findByRole('heading', { name: 'Remarcar visita' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '11:30' })).toBeEnabled();
+    // Dia escolhido é um atalho (Hoje): o campo "Outra data" fica vazio.
+    expect(screen.getByLabelText('Outra data')).toHaveValue('');
+    expect(screen.queryByText('Não sobrou horário nesse dia. Escolha outro dia.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Já passou')).not.toBeInTheDocument();
+
+    await clicar('15:00');
+    await clicar('Remarcar');
+    await waitFor(() => expect(reschedule).toHaveBeenCalledWith('v1', new Date(2026, 9, 10, 15, 0).toISOString(), { duration_minutes: 60 }));
+  });
+
+  it('com a agenda ligada, pede os horários sem contar as visitas desse cliente', async () => {
+    agenda = {
+      ligada: true,
+      ajustes: { enabled: true, days: [0, 1, 2, 3, 4, 5, 6], start: '08:00', end: '20:00', closed_dates: [], seeded_from: {} },
+    };
+    availability.mockResolvedValue({
+      enabled: true,
+      day: { open: true, reason: null, reason_text: null },
+      slots: [{ at: new Date(2026, 9, 11, 15, 0).toISOString(), label: '15:00', state: 'free', client_name: null }],
+    });
+    abrir({ leadInicial: null, visitaParaRemarcar: VISITA });
+
+    expect(await screen.findByRole('button', { name: '15:00' })).toBeEnabled();
+    expect(availability).toHaveBeenCalledWith(expect.objectContaining({
+      realtor_id: 'u1', date: '2026-10-11', exclude_contact_id: 'c9',
+    }));
+  });
+
+  it('agendar com a agenda ligada não manda exclude_contact_id', async () => {
+    agenda = {
+      ligada: true,
+      ajustes: { enabled: true, days: [0, 1, 2, 3, 4, 5, 6], start: '08:00', end: '20:00', closed_dates: [], seeded_from: {} },
+    };
+    availability.mockResolvedValue({ enabled: true, day: { open: true, reason: null, reason_text: null }, slots: [] });
+    abrir({ diaInicial: new Date(2026, 9, 11) });
+
+    await waitFor(() => expect(availability).toHaveBeenCalled());
+    expect(availability.mock.calls.every(c => c[0].exclude_contact_id === undefined)).toBe(true);
   });
 
   it('remarcar no dia de hoje não mostra "Já passou"', async () => {

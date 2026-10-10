@@ -92,6 +92,9 @@ interface DiaDaAgenda {
   slots: AvailabilitySlot[];
 }
 
+/** O imóvel da visita: o que a janela mostra e manda (vem da busca, da visita ou da prop). */
+type ImovelEscolhido = Pick<Property, 'id' | 'title' | 'code'>;
+
 const hojeSemHora = () => {
   const d = new Date();
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -111,7 +114,7 @@ export function ScheduleVisitDialog({
   const [inicio, setInicio] = useState<Date | null>(null);
   const [duracao, setDuracao] = useState<number>(60);
   const [observacoes, setObservacoes] = useState('');
-  const [imovel, setImovel] = useState<Property | null>(null);
+  const [imovel, setImovel] = useState<ImovelEscolhido | null>(null);
   const [doDia, setDoDia] = useState<BusyVisit[]>([]);
   const [salvando, setSalvando] = useState(false);
   // Horário de hoje que já passou: a resposta de "Essa visita já aconteceu?".
@@ -168,18 +171,23 @@ export function ScheduleVisitDialog({
         owner: v.realtor ?? null,
       });
       setCorretor(v.realtor ?? null);
+      // Abre no dia da visita, ou hoje se ela já passou (o cliente não veio,
+      // por exemplo): remarcar só aceita horário futuro, e o dia da visita
+      // passada abriria sem nenhum horário.
       const quando = new Date(v.scheduled_at);
-      setDia(new Date(quando.getFullYear(), quando.getMonth(), quando.getDate()));
+      const diaDaVisita = new Date(quando.getFullYear(), quando.getMonth(), quando.getDate());
+      const hoje = hojeSemHora();
+      setDia(diaDaVisita < hoje ? hoje : diaDaVisita);
       setInicio(null);
       setDuracao(v.duration_minutes || 60);
-      setImovel(v.property ? (v.property as Property) : null);
+      setImovel(v.property ?? null);
     } else {
       setLead(leadInicialRef.current ?? null);
       setCorretor(leadInicialRef.current?.owner ?? null);
       setDia(diaInicialRef.current ?? hojeSemHora());
       setInicio(inicioInicialRef.current ?? null);
       setDuracao(60);
-      setImovel((imovelInicialRef.current as Property | null | undefined) ?? null);
+      setImovel(imovelInicialRef.current ?? null);
     }
     setObservacoes('');
     setJaAconteceu(null);
@@ -241,6 +249,7 @@ export function ScheduleVisitDialog({
   const diaChave = diaISO(dia);
 
   const remarcando = !!visitaParaRemarcar;
+  const excluirContatoId = visitaParaRemarcar?.contact_id;
   const agora = new Date();
   // Dia anterior a hoje: só dá para registrar a visita como realizada.
   const passouODia = !remarcando && diaPassado(dia, agora);
@@ -266,7 +275,11 @@ export function ScheduleVisitDialog({
     // Dia que passou não pergunta ao servidor: registro não passa pela agenda.
     if (!open || !usarAgenda || verificandoCargo || passouODia) return;
     let vivo = true;
-    agendaService.availability({ realtor_id: corretorId, date: diaChave, duration: duracao })
+    agendaService.availability({
+      realtor_id: corretorId, date: diaChave, duration: duracao,
+      // Remarcando: as visitas desse cliente (a própria visita) não ocupam.
+      exclude_contact_id: excluirContatoId,
+    })
       .then(r => {
         if (!vivo) return;
         if (!r.enabled) { setServidorSemAgenda(true); return; }
@@ -274,7 +287,7 @@ export function ScheduleVisitDialog({
       })
       .catch(() => { if (vivo) setErroAgenda(true); });
     return () => { vivo = false; };
-  }, [open, usarAgenda, verificandoCargo, passouODia, corretorId, diaChave, duracao, recarregarDia]);
+  }, [open, usarAgenda, verificandoCargo, passouODia, corretorId, diaChave, duracao, recarregarDia, excluirContatoId]);
 
   // Remarcando: a própria visita não ocupa o horário que vai deixar (o
   // servidor também não conta ela contra si mesma).
@@ -660,7 +673,7 @@ export function ScheduleVisitDialog({
 }
 
 /** Imóvel, opcional e por último: é a última coisa que se combina com o cliente. */
-function BuscaImovel({ valor, onEscolher }: { valor: Property | null; onEscolher: (p: Property | null) => void }) {
+function BuscaImovel({ valor, onEscolher }: { valor: ImovelEscolhido | null; onEscolher: (p: ImovelEscolhido | null) => void }) {
   const [texto, setTexto] = useState('');
   const [lista, setLista] = useState<Property[]>([]);
   const [buscando, setBuscando] = useState(false);
