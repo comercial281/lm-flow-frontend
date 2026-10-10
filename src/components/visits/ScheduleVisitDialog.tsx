@@ -15,12 +15,22 @@
  * escolhe (`motivoDiaFechado`, com o horário de visita e as folgas do corretor
  * escolhido). Com o servidor respondendo `enabled: false` (ou ainda sem
  * resposta, ou com erro) é a grade fixa de `daySlots.ts`, exatamente como antes.
- * Specs: specs/2026-09-30-fase-4-agendar-visita-design.md e
- * specs/2026-10-01-fase-4-agenda-do-corretor-design.md (pasta LM FLOW).
+ *
+ * Três modos (frente 4 de Visitas):
+ * - Agendar: o de sempre, só horário que ainda não passou.
+ * - Registrar visita realizada: dia anterior a hoje (grade 07:00–22:00, sem
+ *   ocupado nem dia fechado, porque registro não passa por trava), ou horário de
+ *   hoje do grupo "Já passou" respondido com "Sim, já aconteceu". Vai com
+ *   `status: 'completed'` e o retorno (nota e comentário).
+ * - Remarcar (`visitaParaRemarcar`): cliente e imóvel fixos, dia/hora/duração/
+ *   corretor vindos da visita, só horários futuros; salva com `reschedule`.
+ * Specs: specs/2026-09-30-fase-4-agendar-visita-design.md,
+ * specs/2026-10-01-fase-4-agenda-do-corretor-design.md e
+ * specs/2026-10-10-visitas-frente-4-design.md (pasta LM FLOW).
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Building2, ChevronDown, Search } from 'lucide-react';
+import { Building2, ChevronDown, Search, Star } from 'lucide-react';
 import {
   Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
   Input, Label as UILabel, Textarea,
@@ -36,8 +46,8 @@ import { useAgendaLigada } from '@/features/visits/useAgendaLigada';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { hora } from '@/lib/formato';
 import {
-  DURACOES, atalhosDeDia, diaISO, horariosDoDia, mesmoDia, ocupando, porExtenso, rotuloDuracao,
-  type BusyVisit,
+  DURACOES, atalhosDeDia, diaISO, diaPassado, gradeDeRegistro, horariosDoDia, horariosQueJaPassaram,
+  mesmoDia, ocupando, porExtenso, rotuloDuracao, type BusyVisit,
 } from '@/features/visits/daySlots';
 import { motivoDiaFechado, type TimeOff } from '@/features/visits/agenda';
 
@@ -56,6 +66,14 @@ interface Props {
    * na lista: o dono dele vira o corretor, e o corretor travado continua travado.
    */
   leadInicial?: LeadPickerItem | null;
+  /**
+   * Abre em "Remarcar visita": cliente e imóvel fixos, dia, hora, duração e
+   * corretor vindos da visita, só horários futuros, salva com `reschedule`.
+   */
+  visitaParaRemarcar?: Visit | null;
+  /** Imóvel já escolhido ao abrir (a ficha do imóvel abre daqui). */
+  imovelInicial?: { id: string; title: string; code: string } | null;
+  /** Chamado com a visita salva: agendada, registrada ou remarcada. */
   onCreated: (v: Visit) => void;
 }
 
@@ -79,7 +97,9 @@ const hojeSemHora = () => {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 };
 
-export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, inicioInicial, leadInicial, onCreated }: Props) {
+export function ScheduleVisitDialog({
+  open, onOpenChange, diaInicial, inicioInicial, leadInicial, visitaParaRemarcar, imovelInicial, onCreated,
+}: Props) {
   const [travado, setTravado] = useState<PersonRef | null>(null);
   const [verificandoCargo, setVerificandoCargo] = useState(true);
   const [lead, setLead] = useState<LeadPickerItem | null>(null);
@@ -94,6 +114,12 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, inicioInic
   const [imovel, setImovel] = useState<Property | null>(null);
   const [doDia, setDoDia] = useState<BusyVisit[]>([]);
   const [salvando, setSalvando] = useState(false);
+  // Horário de hoje que já passou: a resposta de "Essa visita já aconteceu?".
+  // `null` = ainda não respondeu (salvar pede a resposta).
+  const [jaAconteceu, setJaAconteceu] = useState<boolean | null>(null);
+  // Retorno da visita registrada como realizada (nota 0 = sem nota).
+  const [nota, setNota] = useState(0);
+  const [retorno, setRetorno] = useState('');
   // Sobe quando o servidor recusa o agendamento por conflito (422): alguém
   // marcou nesse horário entre a tela abrir e o Agendar ser clicado. Entra nas
   // deps do efeito "visitas do dia" pra forçar um refetch sem duplicar a
@@ -122,19 +148,43 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, inicioInic
   inicioInicialRef.current = inicioInicial;
   const leadInicialRef = useRef<LeadPickerItem | null | undefined>(leadInicial);
   leadInicialRef.current = leadInicial;
+  const visitaParaRemarcarRef = useRef<Visit | null | undefined>(visitaParaRemarcar);
+  visitaParaRemarcarRef.current = visitaParaRemarcar;
+  const imovelInicialRef = useRef<{ id: string; title: string; code: string } | null | undefined>(imovelInicial);
+  imovelInicialRef.current = imovelInicial;
 
   // Abriu: zera e descobre se é corretor travado. Só depende de `open` —
   // reabrir é a única hora de zerar o formulário.
   useEffect(() => {
     if (!open) return;
     let vivo = true;
-    setLead(leadInicialRef.current ?? null);
-    setCorretor(leadInicialRef.current?.owner ?? null);
-    setDia(diaInicialRef.current ?? hojeSemHora());
-    setInicio(inicioInicialRef.current ?? null);
-    setDuracao(60);
+    const v = visitaParaRemarcarRef.current;
+    if (v) {
+      setLead({
+        id: v.contact_id,
+        name: v.contact?.name ?? 'Cliente',
+        phone_number: v.contact?.phone_number ?? null,
+        in_pipeline: false,
+        owner: v.realtor ?? null,
+      });
+      setCorretor(v.realtor ?? null);
+      const quando = new Date(v.scheduled_at);
+      setDia(new Date(quando.getFullYear(), quando.getMonth(), quando.getDate()));
+      setInicio(null);
+      setDuracao(v.duration_minutes || 60);
+      setImovel(v.property ? (v.property as Property) : null);
+    } else {
+      setLead(leadInicialRef.current ?? null);
+      setCorretor(leadInicialRef.current?.owner ?? null);
+      setDia(diaInicialRef.current ?? hojeSemHora());
+      setInicio(inicioInicialRef.current ?? null);
+      setDuracao(60);
+      setImovel((imovelInicialRef.current as Property | null | undefined) ?? null);
+    }
     setObservacoes('');
-    setImovel(null);
+    setJaAconteceu(null);
+    setNota(0);
+    setRetorno('');
     setTravado(null);
     setVerificandoCargo(true);
     setCorretores(null);
@@ -190,6 +240,11 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, inicioInic
   const corretorId = corretor?.id;
   const diaChave = diaISO(dia);
 
+  const remarcando = !!visitaParaRemarcar;
+  const agora = new Date();
+  // Dia anterior a hoje: só dá para registrar a visita como realizada.
+  const passouODia = !remarcando && diaPassado(dia, agora);
+
   // Agenda: as folgas do corretor escolhido, uma vez por abertura e corretor.
   useEffect(() => {
     setFolgas([]);
@@ -208,7 +263,8 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, inicioInic
   useEffect(() => {
     setDiaAgenda(null);
     setErroAgenda(false);
-    if (!open || !usarAgenda || verificandoCargo) return;
+    // Dia que passou não pergunta ao servidor: registro não passa pela agenda.
+    if (!open || !usarAgenda || verificandoCargo || passouODia) return;
     let vivo = true;
     agendaService.availability({ realtor_id: corretorId, date: diaChave, duration: duracao })
       .then(r => {
@@ -218,9 +274,15 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, inicioInic
       })
       .catch(() => { if (vivo) setErroAgenda(true); });
     return () => { vivo = false; };
-  }, [open, usarAgenda, verificandoCargo, corretorId, diaChave, duracao, recarregarDia]);
+  }, [open, usarAgenda, verificandoCargo, passouODia, corretorId, diaChave, duracao, recarregarDia]);
 
-  const ocupadas = useMemo(() => ocupando(doDia), [doDia]);
+  // Remarcando: a própria visita não ocupa o horário que vai deixar (o
+  // servidor também não conta ela contra si mesma).
+  const remarcandoId = visitaParaRemarcar?.id;
+  const ocupadas = useMemo(
+    () => ocupando(doDia).filter(v => v.id !== remarcandoId),
+    [doDia, remarcandoId],
+  );
   const slotsFixos = useMemo(() => horariosDoDia(dia, duracao, ocupadas, new Date()), [dia, duracao, ocupadas]);
   // `null` = a agenda ainda não respondeu.
   const slots = useMemo<SlotTela[] | null>(() => {
@@ -234,16 +296,40 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, inicioInic
     }));
   }, [usarAgenda, slotsFixos, diaAgenda]);
 
+  // Dia que passou: a grade de registro, toda clicável.
+  const gradeRegistro = useMemo<SlotTela[]>(
+    () => (passouODia ? gradeDeRegistro(dia).map(s => ({ ...s, folga: false })) : []),
+    [passouODia, dia],
+  );
+  // Hoje: os horários que já passaram (grupo "Já passou"). Remarcar não tem.
+  const passados = useMemo(
+    () => (remarcando ? [] : horariosQueJaPassaram(dia, new Date(), ocupadas)),
+    [remarcando, dia, ocupadas],
+  );
+  const escolheuPassado = !!inicio && passados.some(s => s.inicio.getTime() === inicio.getTime());
+  // Registrar = dia anterior a hoje, ou horário de hoje que já passou com "Sim, já aconteceu".
+  const registrando = passouODia || (escolheuPassado && jaAconteceu === true);
+  const modo: 'agendar' | 'registrar' | 'remarcar' = remarcando ? 'remarcar' : registrando ? 'registrar' : 'agendar';
+
   // Trocou dia, duração ou corretor e o horário escolhido deixou de caber: limpa.
+  // Horário do "Já passou" sempre cabe (o ocupado ali é só informação); no dia
+  // que passou, cabe qualquer um da grade de registro daquele dia.
   useEffect(() => {
-    if (!inicio || !slots) return;
-    const s = slots.find(x => x.inicio.getTime() === inicio.getTime());
+    if (!inicio) return;
+    const mesmo = (x: { inicio: Date }) => x.inicio.getTime() === inicio.getTime();
+    if (passouODia) {
+      if (!gradeRegistro.some(mesmo)) setInicio(null);
+      return;
+    }
+    if (passados.some(mesmo) || !slots) return;
+    const s = slots.find(mesmo);
     if (!s || s.ocupadoPor || s.folga) setInicio(null);
-  }, [slots, inicio]);
+  }, [passouODia, gradeRegistro, passados, slots, inicio]);
 
   // Por que o dia está fechado (agenda ligada e horário carregado), ou null.
+  // Dia que passou nunca está fechado: é registro, não agendamento.
   const motivoFechado = (d: Date): string | null =>
-    usarAgenda && ajustes ? motivoDiaFechado(d, ajustes, folgas) : null;
+    usarAgenda && ajustes && !diaPassado(d, new Date()) ? motivoDiaFechado(d, ajustes, folgas) : null;
 
   const escolherLead = (l: LeadPickerItem) => {
     setLead(l);
@@ -256,22 +342,38 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, inicioInic
     if (!lead) { toast.error('Escolha o cliente'); return; }
     if (!corretor) { toast.error('Escolha o corretor responsável'); return; }
     if (!inicio) { toast.error('Escolha o horário'); return; }
+    if (escolheuPassado && !passouODia && jaAconteceu === null) { toast.error('Diga se a visita já aconteceu'); return; }
     setSalvando(true);
     try {
-      const criada = await visitsService.create({
-        contact_id: lead.id,
-        // Corretor travado não manda: o servidor grava ele mesmo.
-        realtor_id: travado ? undefined : corretor.id,
-        scheduled_at: inicio.toISOString(),
-        duration_minutes: duracao,
-        realtor_notes: observacoes.trim() || undefined,
-        property_id: imovel?.id ?? null,
-      });
-      toast.success('Visita agendada');
-      onCreated(criada);
+      let salva: Visit;
+      if (modo === 'remarcar' && visitaParaRemarcar) {
+        salva = await visitsService.reschedule(visitaParaRemarcar.id, inicio.toISOString(), {
+          duration_minutes: duracao,
+          // Corretor travado não manda: o servidor mantém ele mesmo.
+          realtor_id: travado ? undefined : corretor.id,
+        });
+        toast.success('Visita remarcada');
+      } else {
+        salva = await visitsService.create({
+          contact_id: lead.id,
+          // Corretor travado não manda: o servidor grava ele mesmo.
+          realtor_id: travado ? undefined : corretor.id,
+          scheduled_at: inicio.toISOString(),
+          duration_minutes: duracao,
+          realtor_notes: observacoes.trim() || undefined,
+          property_id: imovel?.id ?? null,
+          ...(modo === 'registrar'
+            ? { status: 'completed' as const, rating: nota || undefined, feedback_notes: retorno.trim() || undefined }
+            : {}),
+        });
+        toast.success(modo === 'registrar' ? 'Visita registrada' : 'Visita agendada');
+      }
+      onCreated(salva);
       onOpenChange(false);
     } catch (e) {
-      toast.error(apiErrorMessage(e, 'Erro ao agendar visita'));
+      toast.error(apiErrorMessage(e, modo === 'remarcar'
+        ? 'Erro ao remarcar visita'
+        : modo === 'registrar' ? 'Erro ao registrar visita' : 'Erro ao agendar visita'));
       // 422 = corrida: alguém marcou nesse horário entre a tela abrir e o
       // clique no Agendar. O horário escolhido já não vale mais — recarrega a
       // lista do dia pra riscar o que acabou de ser ocupado por outra pessoa.
@@ -285,6 +387,34 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, inicioInic
   const atalhos = atalhosDeDia(new Date());
   const atalhoAtivo = atalhos.find(a => mesmoDia(a.dia, dia));
   const motivoOutraData = atalhoAtivo ? null : motivoFechado(dia);
+  const textos = {
+    agendar: { titulo: 'Agendar visita', descricao: 'Quem vai visitar e quando', botao: 'Agendar' },
+    registrar: { titulo: 'Registrar visita realizada', descricao: 'A visita já aconteceu: registre quando foi e como foi', botao: 'Registrar visita' },
+    remarcar: { titulo: 'Remarcar visita', descricao: 'Escolha o novo dia e horário', botao: 'Remarcar' },
+  }[modo];
+
+  // Um botão de horário: o mesmo para a grade de registro, o "Já passou" e a
+  // grade normal. Escolher outro horário zera a resposta da pergunta.
+  const botaoHorario = (s: SlotTela, extra?: { passado?: boolean }) => {
+    const bloqueado = !extra?.passado && (!!s.ocupadoPor || s.folga);
+    return (
+      <Button
+        key={s.rotulo}
+        type="button"
+        size="sm"
+        variant={inicio?.getTime() === s.inicio.getTime() ? 'default' : 'outline'}
+        disabled={bloqueado}
+        title={extra?.passado
+          ? (s.ocupadoPor ? `Visita com ${s.ocupadoPor} nesse horário` : undefined)
+          : s.ocupadoPor ? `Ocupado: visita com ${s.ocupadoPor}` : s.folga ? 'Folga do corretor' : undefined}
+        aria-label={bloqueado ? (s.ocupadoPor ? `${s.rotulo} · ocupado, ${s.ocupadoPor}` : `${s.rotulo} · folga`) : undefined}
+        className={extra?.passado ? 'opacity-70' : bloqueado ? 'line-through' : undefined}
+        onClick={() => { setInicio(s.inicio); setJaAconteceu(null); }}
+      >
+        {s.rotulo}
+      </Button>
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -292,24 +422,31 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, inicioInic
         className="max-w-5xl max-h-[90dvh] overflow-y-auto"
         // Cliente já escolhido (veio do card): o foco automático no campo de
         // cliente abriria a busca por cima do nome, como se nada estivesse escolhido.
-        onOpenAutoFocus={e => { if (leadInicialRef.current) e.preventDefault(); }}
+        onOpenAutoFocus={e => { if (leadInicialRef.current || visitaParaRemarcarRef.current) e.preventDefault(); }}
       >
         <DialogHeader>
-          <DialogTitle>Agendar visita</DialogTitle>
-          <DialogDescription>Quem vai visitar e quando</DialogDescription>
+          <DialogTitle>{textos.titulo}</DialogTitle>
+          <DialogDescription>{textos.descricao}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-8 py-2 md:grid-cols-2 md:grid-rows-[auto_1fr]">
           {/* Quem */}
           <section className="space-y-5 md:col-start-1 md:row-start-1" aria-label="Quem">
-            <LeadCombobox
-              value={lead}
-              onChange={escolherLead}
-              label="Cliente *"
-              placeholder="Buscar cliente por nome ou telefone"
-              allowCreate={false}
-              paginated
-            />
+            {remarcando ? (
+              <div>
+                <UILabel>Cliente</UILabel>
+                <p className="mt-1 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">{lead?.name ?? 'Cliente'}</p>
+              </div>
+            ) : (
+              <LeadCombobox
+                value={lead}
+                onChange={escolherLead}
+                label="Cliente *"
+                placeholder="Buscar cliente por nome ou telefone"
+                allowCreate={false}
+                paginated
+              />
+            )}
 
             <div>
               <UILabel>Corretor responsável{travado ? '' : ' *'}</UILabel>
@@ -322,18 +459,58 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, inicioInic
               )}
             </div>
 
-            <div>
-              <UILabel>Observações</UILabel>
-              <Textarea
-                value={observacoes}
-                onChange={e => setObservacoes(e.target.value)}
-                rows={2}
-                placeholder="Detalhes da visita"
-                className="mt-1 resize-none"
-              />
-            </div>
+            {remarcando ? (
+              imovel && (
+                <div>
+                  <UILabel>Imóvel</UILabel>
+                  <p className="mt-1 flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="truncate">{imovel.code} · {imovel.title}</span>
+                  </p>
+                </div>
+              )
+            ) : (
+              <>
+                <div>
+                  <UILabel>Observações</UILabel>
+                  <Textarea
+                    value={observacoes}
+                    onChange={e => setObservacoes(e.target.value)}
+                    rows={2}
+                    placeholder="Detalhes da visita"
+                    className="mt-1 resize-none"
+                  />
+                </div>
 
-            <BuscaImovel valor={imovel} onEscolher={setImovel} />
+                {modo === 'registrar' && (
+                  <div>
+                    <UILabel>Retorno (opcional)</UILabel>
+                    <div className="mt-2 flex gap-1">
+                      {[1, 2, 3, 4, 5].map(n => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setNota(n)}
+                          aria-label={`Avaliar com ${n} ${n === 1 ? 'estrela' : 'estrelas'}`}
+                          title={`Avaliar com ${n} ${n === 1 ? 'estrela' : 'estrelas'}`}
+                        >
+                          <Star className={`h-6 w-6 ${n <= nota ? 'text-violet-400 fill-violet-400' : 'text-muted-foreground'}`} />
+                        </button>
+                      ))}
+                    </div>
+                    <Textarea
+                      value={retorno}
+                      onChange={e => setRetorno(e.target.value)}
+                      rows={3}
+                      placeholder="Como foi a visita? Interesse do cliente?"
+                      className="mt-2 resize-none"
+                    />
+                  </div>
+                )}
+
+                <BuscaImovel valor={imovel} onEscolher={setImovel} />
+              </>
+            )}
           </section>
 
           {/* Quando */}
@@ -363,7 +540,8 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, inicioInic
                   className="w-auto"
                   title={motivoOutraData ?? undefined}
                   aria-invalid={motivoOutraData ? true : undefined}
-                  min={diaISO(hojeSemHora())}
+                  // Agendar aceita dia que passou (vira registro); remarcar, só daqui pra frente.
+                  min={remarcando ? diaISO(hojeSemHora()) : undefined}
                   value={atalhoAtivo ? '' : diaISO(dia)}
                   onChange={e => {
                     const [y, m, d] = e.target.value.split('-').map(Number);
@@ -392,6 +570,19 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, inicioInic
 
             <div>
               <UILabel>Horário *</UILabel>
+              {passouODia ? (
+                <div className="mt-1 grid max-h-64 grid-cols-3 gap-1.5 overflow-y-auto pr-1 md:grid-cols-4">
+                  {gradeRegistro.map(s => botaoHorario(s))}
+                </div>
+              ) : (<>
+              {passados.length > 0 && (
+                <div className="mt-1 mb-3">
+                  <UILabel className="text-muted-foreground">Já passou</UILabel>
+                  <div className="mt-1 grid max-h-32 grid-cols-3 gap-1.5 overflow-y-auto pr-1 md:grid-cols-4">
+                    {passados.map(s => botaoHorario({ ...s, folga: false }, { passado: true }))}
+                  </div>
+                </div>
+              )}
               {erroAgenda ? (
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   <span>Não deu para carregar os horários.</span>
@@ -404,24 +595,24 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, inicioInic
                   {diaAgenda.motivo || motivoFechado(dia) || 'Esse dia está fechado para visitas.'}
                 </p>
               ) : slots.length === 0 ? (
-                <p className="mt-1 text-sm text-muted-foreground">Não sobrou horário nesse dia. Escolha outro dia.</p>
+                // Fim do dia: com o "Já passou" na tela, o recado de dia cheio só confunde.
+                passados.length === 0 && (
+                  <p className="mt-1 text-sm text-muted-foreground">Não sobrou horário nesse dia. Escolha outro dia.</p>
+                )
               ) : (
                 <div className="mt-1 grid max-h-64 grid-cols-3 gap-1.5 overflow-y-auto pr-1 md:grid-cols-4">
-                  {slots.map(s => (
-                    <Button
-                      key={s.rotulo}
-                      type="button"
-                      size="sm"
-                      variant={inicio?.getTime() === s.inicio.getTime() ? 'default' : 'outline'}
-                      disabled={!!s.ocupadoPor || s.folga}
-                      title={s.ocupadoPor ? `Ocupado: visita com ${s.ocupadoPor}` : s.folga ? 'Folga do corretor' : undefined}
-                      aria-label={s.ocupadoPor ? `${s.rotulo} · ocupado, ${s.ocupadoPor}` : s.folga ? `${s.rotulo} · folga` : undefined}
-                      className={s.ocupadoPor || s.folga ? 'line-through' : undefined}
-                      onClick={() => setInicio(s.inicio)}
-                    >
-                      {s.rotulo}
-                    </Button>
-                  ))}
+                  {slots.map(s => botaoHorario(s))}
+                </div>
+              )}
+              </>)}
+
+              {escolheuPassado && !passouODia && (
+                <div className="mt-2 rounded-md border border-border bg-muted/40 p-3 text-sm" role="group" aria-label="Essa visita já aconteceu?">
+                  <p className="font-medium">Essa visita já aconteceu?</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant={jaAconteceu === true ? 'default' : 'outline'} onClick={() => setJaAconteceu(true)}>Sim, já aconteceu</Button>
+                    <Button type="button" size="sm" variant={jaAconteceu === false ? 'default' : 'outline'} onClick={() => setJaAconteceu(false)}>Não, ainda vai acontecer</Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -461,7 +652,7 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, inicioInic
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={salvar} disabled={salvando || verificandoCargo}>{salvando ? 'Salvando...' : 'Agendar'}</Button>
+          <Button onClick={salvar} disabled={salvando || verificandoCargo}>{salvando ? 'Salvando...' : textos.botao}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
