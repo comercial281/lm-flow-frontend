@@ -8108,3 +8108,14 @@ Decisões (não reabrir sem o dono pedir):
 
 1. Pedido do dono: cadastro de imóvel não parte de link de anúncio. O servidor ainda aceita `urls[]` no lote e o serviço (`propertyImportsService.createBatch`) mantém a opção; só a tela deixou de mandar.
 2. Lotes antigos que vieram de link continuam aparecendo na lista com o endereço no lugar do nome do arquivo (`item.source_url`).
+
+## Tipo de imóvel sem opções repetidas (desde 2026-10-10)
+
+Achado do Raio-X de 10/10: a lista **Tipo de imóvel** do cadastro mostrava Cobertura, Sala Comercial e Galpão duas vezes, e "Terreno" junto de "Lote/Terreno". O servidor tem dois códigos para esses quatro tipos (os antigos `penthouse`, `commercial_room`, `warehouse`, `lot` e os nativos `cobertura`, `sala_comercial`, `galpao`, `terreno`), e a lista despejava o dicionário de nomes inteiro.
+
+- **A lista oferece um código por nome**, sempre o antigo (é o que a importação por IA e por TXT grava). Regra em `opcoesDeTipoDeImovel` (`services/properties/propertiesService.ts`, com spec).
+- **Imóvel salvo com o código nativo** continua marcado: o código dele ocupa o lugar do antigo na lista, e nada muda no imóvel se o corretor não mexer.
+- `terreno` passou a se chamar "Lote/Terreno" também na exibição (lista, cartões, filtros).
+- Portais e catálogo do Meta tratam os dois códigos de cada par igual: nada muda lá fora.
+
+Armadilha: o filtro de tipo da lista de Imóveis (facetas do servidor) ainda pode mostrar o mesmo nome duas vezes se a carteira tiver os dois códigos de um par, e filtrar por um não traz o outro. Fica para quando alguém mexer no filtro.
