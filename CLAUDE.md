@@ -8099,3 +8099,12 @@ Armadilhas:
 3. Linha herdada não se desliga no filho; é no cargo-pai.
 4. Os cartões e o quadro mostram o que o servidor devolve; cargo novo só aparece depois do recarregamento.
 5. O `RoleEditorModal` antigo não tem modo leitura; por isso "Ver tudo o que pode" é só para quem tem `roles.update`.
+
+## Importar imóveis sem links de anúncio (desde 2026-10-10)
+
+A janela **Importar imóveis em lote (IA)** (`Properties/PropertyImportDialog.tsx`) aceita só arquivos (books). Saiu a caixa "Links de anúncios (opcional — um por linha)" e a menção a links no texto do topo; o botão de começar exige ao menos um arquivo.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. Pedido do dono: cadastro de imóvel não parte de link de anúncio. O servidor ainda aceita `urls[]` no lote e o serviço (`propertyImportsService.createBatch`) mantém a opção; só a tela deixou de mandar.
+2. Lotes antigos que vieram de link continuam aparecendo na lista com o endereço no lugar do nome do arquivo (`item.source_url`).

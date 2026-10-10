@@ -11,7 +11,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Textarea,
 } from '@/components/ui/ds';
 import {
   AlertCircle,
@@ -67,7 +66,6 @@ interface Props {
 
 export default function PropertyImportDialog({ open, onClose, onManual, onReview, onChanged, retomarRevisao, listingKind }: Props) {
   const [files, setFiles] = useState<File[]>([]);
-  const [urlsText, setUrlsText] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [batch, setBatch] = useState<PropertyImportBatch | null>(null);
@@ -165,26 +163,20 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
     disabled: uploading || !!batch,
   });
 
-  const parseUrls = () =>
-    urlsText.split('\n').map(u => u.trim()).filter(u => /^https?:\/\//i.test(u));
-
   const handleStart = async () => {
-    const urls = parseUrls();
-    if (!files.length && !urls.length) {
-      toast.error('Adicione arquivos (books) ou cole links de anúncios');
+    if (!files.length) {
+      toast.error('Adicione os arquivos (books)');
       return;
     }
     setUploading(true);
     setUploadProgress(0);
     try {
       const b = await propertyImportsService.createBatch(files, {
-        urls,
         onProgress: setUploadProgress,
         listingKind,
       });
       setBatch(b);
       setFiles([]);
-      setUrlsText('');
       startPolling(b.id);
       toast.info('Lote enviado — a IA está lendo os materiais e criando os rascunhos');
     } catch (e) {
@@ -302,8 +294,7 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
             Importar imóveis em lote (IA)
           </DialogTitle>
           <DialogDescription>
-            Suba até {IMPORT_MAX_FILES} books (PDF, foto, Word ou TXT — 1 arquivo = 1 imóvel) ou cole links de
-            anúncios. A IA lê cada material e cria o imóvel como <strong>rascunho</strong> pra você revisar e ativar.
+            Suba até {IMPORT_MAX_FILES} books (PDF, foto, Word ou TXT — 1 arquivo = 1 imóvel). A IA lê cada material e cria o imóvel como <strong>rascunho</strong> pra você revisar e ativar.
           </DialogDescription>
         </DialogHeader>
 
@@ -346,17 +337,6 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
                 <p className="text-xs text-muted-foreground">{plural(files.length, 'arquivo', 'arquivos')} — 1 imóvel por arquivo</p>
               </div>
             )}
-
-            <div>
-              <p className="text-sm font-medium mb-1">Links de anúncios (opcional — um por linha)</p>
-              <Textarea
-                value={urlsText}
-                onChange={e => setUrlsText(e.target.value)}
-                placeholder={'https://www.olx.com.br/...\nhttps://www.zapimoveis.com.br/...'}
-                rows={3}
-                disabled={uploading}
-              />
-            </div>
 
             {uploading && (
               <div className="space-y-1">
@@ -561,7 +541,7 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
           {!batch && (
             <>
               <Button variant="outline" onClick={fechar} disabled={uploading}>Cancelar</Button>
-              <Button onClick={handleStart} disabled={uploading || (!files.length && !parseUrls().length)}>
+              <Button onClick={handleStart} disabled={uploading || !files.length}>
                 {uploading
                   ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Enviando…</>
                   : <><Sparkles className="h-4 w-4 mr-2" />Importar com IA</>}
