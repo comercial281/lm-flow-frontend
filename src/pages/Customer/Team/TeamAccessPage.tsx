@@ -1,10 +1,13 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users2, Shield, Users } from 'lucide-react';
+import { Users2, Shield, Users, SlidersHorizontal } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/ds';
 import { BaseHeader, Pagina } from '@/components/base';
 import PeopleTab from './PeopleTab';
-import RolesPage from '@/pages/Customer/Settings/Roles';
+import RoleCards from './roles/RoleCards';
+import PermissionsMatrix from './roles/PermissionsMatrix';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
 import Teams from '@/pages/Customer/Settings/Teams/Teams';
 
 /* "Equipe" — a tela única de pessoas, cargos e times.
@@ -27,6 +30,7 @@ const TABS = [
   { key: 'pessoas', label: 'Pessoas', icon: Users2 },
   { key: 'times', label: 'Times', icon: Users },
   { key: 'cargos', label: 'Cargos', icon: Shield },
+  { key: 'permissoes', label: 'Permissões', icon: SlidersHorizontal },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
@@ -34,12 +38,35 @@ type TabKey = (typeof TABS)[number]['key'];
 export default function TeamAccessPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Cargos e Permissões leem /roles: sem roles.read as abas nem aparecem.
+  const { can } = useUserPermissions();
+  const canReadRoles = can('roles', 'read');
+  const tabs = useMemo(
+    () => TABS.filter(t => canReadRoles || (t.key !== 'cargos' && t.key !== 'permissoes')),
+    [canReadRoles],
+  );
+
   const activeTab = useMemo<TabKey>(() => {
     const requested = searchParams.get('aba');
-    return TABS.some(t => t.key === requested) ? (requested as TabKey) : 'pessoas';
-  }, [searchParams]);
+    return tabs.some(t => t.key === requested) ? (requested as TabKey) : 'pessoas';
+  }, [searchParams, tabs]);
 
-  const handleTabChange = (value: string) => {
+  // A aba Permissões avisa quando há mudança sem salvar; trocar de aba desmonta o
+  // quadro e perderia o rascunho, então pede confirmação antes.
+  const [dirty, setDirty] = useState(false);
+  const onDirtyChange = useCallback((v: boolean) => setDirty(v), []);
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+
+  const handleTabChange = async (value: string) => {
+    if (dirty && value !== activeTab) {
+      const ok = await confirmar({
+        titulo: 'Descartar alterações?',
+        descricao: 'Você mudou permissões e ainda não salvou. Se sair agora, essas mudanças se perdem.',
+        rotuloDaAcao: 'Descartar',
+        destrutivo: true,
+      });
+      if (!ok) return;
+    }
     // replace: trocar de aba não é navegação, e empilhar histórico faria o botão
     // Voltar do navegador percorrer abas em vez de sair da tela.
     setSearchParams(value === 'pessoas' ? {} : { aba: value }, { replace: true });
@@ -47,9 +74,9 @@ export default function TeamAccessPage() {
 
   return (
     <Pagina cabecalho={<BaseHeader title="Equipe" subtitle="Quem atende, por qual número e em qual time" />}>
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={v => void handleTabChange(v)} className="space-y-6">
         <TabsList className="flex flex-wrap justify-start gap-1 bg-transparent p-0 h-auto">
-          {TABS.map(tab => {
+          {tabs.map(tab => {
             const Icon = tab.icon;
             return (
               <TabsTrigger key={tab.key} value={tab.key} className="gap-1.5">
@@ -63,14 +90,17 @@ export default function TeamAccessPage() {
           <PeopleTab />
         </TabsContent>
         <TabsContent value="cargos">
-          {/* embedded: a aba já tem o título "Equipe" acima, e a tela de cargos
-              traz o próprio <h1> quando aberta sozinha. */}
-          <RolesPage embedded />
+          {/* Cartões dos cargos. A lista completa antiga segue em /equipe/cargos/lista. */}
+          <RoleCards />
+        </TabsContent>
+        <TabsContent value="permissoes">
+          <PermissionsMatrix onDirtyChange={onDirtyChange} />
         </TabsContent>
         <TabsContent value="times">
           <Teams embutido />
         </TabsContent>
       </Tabs>
+      {dialogoDeConfirmacao}
     </Pagina>
   );
 }

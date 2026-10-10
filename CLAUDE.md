@@ -8067,3 +8067,31 @@ Armadilhas:
 3. O celular digitado no Reenviar link fica gravado no cadastro da pessoa.
 4. O `CollaboratorsForm` do número (tela do canal) ainda lê e regrava a lista inteira de colaboradores. Fora desta frente; quando for mexer, trocar por POST/DELETE de uma pessoa (decisão 2).
 5. A trava do tamanho do lote (50) existe nos dois lados; mudar um exige mudar o outro.
+
+## Cargos e Permissões por linha (desde 2026-10-09)
+
+Empilhado no PR da Equipe nova (lm-flow-frontend#517, branch `claude/equipe-permissoes` sobre `claude/equipe-nova`). Servidor: lm-flow#450.
+
+O que a tela mostra:
+
+- **Aba Cargos** (`Team/roles/RoleCards.tsx`): um cartão por cargo, na ordem do servidor (Administrador, Gerente, Corretor, depois os personalizados por nome). Cada cartão traz a contagem de pessoas, até 3 coisas que **pode** e até 2 que **não pode** (temas Leads e Funil > Atendimento > Equipe e números > resto), o resumo "Libera N de M permissões (N em parte)" (cargo que herda diz "Herda do cargo {pai}", igual ao cabeçalho do quadro) e o selo **Pronto pra usar** nos de fábrica. Administrador diz "Pode tudo, sempre.". **Criar cargo personalizado** fica como opção secundária, abaixo dos cartões e abre uma janelinha com "Nome do cargo" + "Começar igual a" (Corretor ou Gerente, só os que quem está na tela poderia dar: Gerente é só do administrador). Chama o `clone` do servidor com o nome e recarrega; o cargo novo vira coluna na aba Permissões. Não existe mais editor em branco para criar. "Ver tudo o que pode" abre o editor antigo do cargo (só com `roles.update`; não aparece no Administrador).
+- **Aba Permissões** (`Team/roles/PermissionsMatrix.tsx`, aba `?aba=permissoes`): quadro com os cargos em colunas e uma linha por permissão, agrupadas por tema. Temas, linhas, rótulos e dicas vêm do servidor (`GET /roles/capabilities`). Administrador é **Sempre** (travado). Cargo com só parte das chaves da linha mostra **em parte** (interruptor `aria-checked="mixed"`; ligar liga tudo, desligar tira só as chaves daquela linha). Linha que o cargo-pai já libera inteira aparece ligada e travada com "Vem do cargo X"; se o pai só tem PARTE da linha, o filho pode ligar mas não desligar ("Parte vem do cargo X"), porque o servidor recusa desligar com qualquer chave do pai. O "em parte" entra no nome acessível da célula. Abas Cargos e Permissões só aparecem com `roles.read`. Busca por linha. Barra no pé: **Tudo salvo** ou **N mudanças** + **Desfazer** / **Salvar**. O rascunho é local; **Salvar** manda **um pedido por cargo** (`PATCH /roles/:id/capabilities`), cargos-pai antes dos filhos, e recarrega o quadro (rascunho de linha que o pai passou a liberar sai sozinho). Se um cargo falha, os outros salvam e o rascunho do que falhou fica na tela com a frase do servidor.
+- **Lista completa** em `/equipe/cargos/lista` (`RolesFullListPage.tsx`): a tela antiga de permissões chave por chave, dentro da moldura `Pagina` + `BaseHeader` "Lista completa de permissões", com "Voltar para os cargos". `/settings/roles` continua redirecionando para a aba.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Os rótulos das linhas moram no servidor** (lm-flow#450). A tela nunca escreve rótulo, dica nem tema de linha: mudou a lista, muda lá.
+2. **Criar cargo exige `roles.create` e `roles.update`**, porque o servidor cobra `roles.update` ao gravar as permissões do cargo novo. Só `roles.create` mostraria um botão que falha no fim.
+3. **O erro do PATCH vem como texto em `error`** (não `error.message`). Por isso existe o helper local `capabilitiesErrorMessage` em `services/customRoles`. **NUNCA mexer no `apiErrorMessage` global**: ele tem 106 chamadas e respostas legadas em inglês (`{error:'Forbidden', message:'frase'}`); mudar a ordem quebra frases em todo o app.
+4. Interruptor do design system (`Switch`) com `aria-checked="mixed"` no "em parte". A `Chave` da casa grava na hora e não serve para rascunho; a trava `chaveMao` barra `role="switch"` à mão.
+5. Linha herdada só destrava no cargo-pai: no filho fica ligada e desabilitada. Se o pai tem só parte da linha, desligar no filho também é bloqueado (e removido do envio no Salvar).
+6. Com rascunho, perguntam antes de descartar ("Descartar alterações?", via `useConfirmacao`) só: trocar de aba, abrir o link da lista completa e fechar/recarregar a página (`beforeunload`). Navegar pelo menu lateral NÃO pergunta.
+7. Sem `roles.read` a tela nem chama o servidor; 403 no GET mostra o estado de sem acesso.
+
+Armadilhas:
+
+1. **Publicar lm-flow#450 antes**, depois o PR da Equipe nova (#517), por último este. Sem `GET /roles/capabilities` (404 ou erro que não seja 403) a aba Cargos cai na lista antiga (`<RolesPage embedded />`) com a nota "Mostrando a lista completa de permissões." e a aba Permissões mostra o erro com "Tentar de novo" e o link "Ver a lista completa". 403 continua sendo o estado de sem acesso nas duas.
+2. **No espaço `public` o boot reaplica os reparos do Gerente e do Corretor**: linha que o Tony desligar lá pode voltar sozinha no próximo deploy (nos clientes não acontece).
+3. Linha herdada não se desliga no filho; é no cargo-pai.
+4. Os cartões e o quadro mostram o que o servidor devolve; cargo novo só aparece depois do recarregamento.
+5. O `RoleEditorModal` antigo não tem modo leitura; por isso "Ver tudo o que pode" é só para quem tem `roles.update`.
