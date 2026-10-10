@@ -68,6 +68,24 @@ describe('SupportWidget', () => {
     expect(await screen.findByText('Como podemos ajudar?')).toBeInTheDocument();
   });
 
+  it('em tela de celular é sempre a aba, em qualquer tela', () => {
+    const original = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(max-width: 767px)',
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+    try {
+      montar('/dashboard');
+      const aba = screen.getByRole('button', { name: 'Abrir ajuda e suporte' });
+      expect(aba.className).toContain('top-1/2');
+      expect(aba.className).not.toContain('bottom-4');
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
   it('em /conversations-old a bolinha continua', () => {
     montar('/conversations-old');
     expect(screen.getByRole('button', { name: 'Abrir ajuda e suporte' }).className).toContain('bottom-4');

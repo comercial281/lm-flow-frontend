@@ -143,8 +143,10 @@ const SharedImageBubble: React.FC<SharedImageBubbleProps> = ({
                   </div>
                 )}
 
-                {/* Overlay with actions */}
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                {/* Overlay with actions. No toque (sem mouse): some, e tocar na foto abre a
+                    tela cheia (que tem o baixar); no visualizador externo a foto não abre, então
+                    os botões ficam sempre à vista. */}
+                <div className={`absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100 ${isExternalViewerMode ? 'toque:opacity-100' : 'toque:hidden'}`}>
                   <div className="flex gap-2">
                     <button
                       onClick={(e) => {

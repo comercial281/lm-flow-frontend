@@ -154,6 +154,24 @@ describe('CardCompletoPage', () => {
     expect(screen.getByTestId('ficha')).toBeInTheDocument();
   });
 
+  it('aberta de dentro do app no celular: "← Voltar" volta pra onde a pessoa estava', async () => {
+    render(
+      <MemoryRouter
+        initialEntries={['/contacts', { pathname: '/pipelines/p1/card/i1', state: { voltarPeloHistorico: true } }]}
+        initialIndex={1}
+      >
+        <Routes>
+          <Route path="/pipelines/:pipelineId/card/:itemId" element={<CardCompletoPage />} />
+          <Route path="/contacts" element={<p>Lista de contatos</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { level: 1, name: 'Maria Souza' });
+    expect(screen.queryByRole('link', { name: /Funil Leads/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+    expect(await screen.findByText('Lista de contatos')).toBeInTheDocument();
+  });
+
   it('Ganho | Perdido recebe a trava cruzada com a Etapa (P3-T5)', async () => {
     abrirPagina();
     await screen.findByRole('heading', { level: 1, name: 'Maria Souza' });

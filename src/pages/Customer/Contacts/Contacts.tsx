@@ -1003,6 +1003,7 @@ export default function Contacts() {
         contactId={cardContatoId}
         onOpenChange={fecharCardDoContato}
         onMudou={() => loadContacts()}
+        abertoPeloEndereco={!!contactIdFromRoute && cardContatoId === contactIdFromRoute}
       />
 
       {/* Contact Export Modal */}

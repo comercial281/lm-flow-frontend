@@ -120,7 +120,7 @@ function CartaoDaFoto({ photo, indice, ehCapa, ocupado, aoDefinirCapa, aoAlterna
       </div>
 
       {/* Hover actions */}
-      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 toque:bg-transparent toque:opacity-100 transition-opacity flex items-center justify-center gap-1">
         {!ehCapa && !isVideo && (
           <button
             onClick={aoDefinirCapa}

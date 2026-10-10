@@ -24,3 +24,19 @@ export function useMediaQuery(query: string): boolean {
 
   return casa;
 }
+
+/**
+ * Tela de celular: abaixo do `md` do Tailwind (768px), o mesmo corte do menu do
+ * celular e do construtor de fluxos. Raio-X do celular, 10/10/2026: card do lead
+ * abre como página e o suporte vira sempre a aba da borda.
+ */
+export const TELA_DE_CELULAR = '(max-width: 767px)';
+
+export function useTelaDeCelular(): boolean {
+  return useMediaQuery(TELA_DE_CELULAR);
+}
+
+/** O mesmo corte, lido na hora (fora de componente, ex.: num clique). */
+export function ehTelaDeCelular(): boolean {
+  return consultar(TELA_DE_CELULAR);
+}

@@ -111,7 +111,7 @@ const MessageImage: React.FC<MessageImageProps> = ({ attachments }) => {
               </div>
 
               {/* ✅ OVERLAY com botões - posicionado sobre o container fixo */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 toque:hidden">
                 <div className="flex gap-2">
                   <Button
                     size="sm"

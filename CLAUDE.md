@@ -6383,6 +6383,7 @@ Armadilhas:
    - **Pelo endereço** (`rotaComAba`, em `SupportWidget.tsx`): `/conversations` (`/conversations-old` não conta), os canvas de `flow-builder`, `follow-ups` e `message-funnels/:id`, e o cadastro de imóvel (`/properties/new` e `/properties/:id/editar`).
    - **Pela tela que ocupa o canto** (`useOcupaCanto`, em `cantoOcupado.ts`): a moldura `Pagina` com `rolagem="conteudo"` (listas com paginação no pé: Etiquetas, Contatos, Canais…) e a `BarraSalvar` enquanto aparece. Tela nova que põe coisa fixa no canto inferior direito chama `useOcupaCanto(true)`; ao desmontar, a bolinha volta sozinha.
    - Sem folga extra no fim da rolagem das páginas: o dono achou estranho o scroll a mais (10/10/2026). Não reabrir sem ele pedir.
+   - **No celular (abaixo de 768px) é sempre a aba**, em todas as telas (Raio-X do celular, 10/10/2026; ver a seção "Celular: card do lead como página…").
    O menu do avatar continua abrindo o card (`openSupport`) em qualquer tela.
 3. **Card fechado = `hidden` + `inert` + `aria-hidden`.** Nada nele recebe foco nem é lido por leitor de tela, e a busca de um chamado aberto **pausa** enquanto o card está fechado.
 4. **No celular o card respeita áreas seguras e `--keyboard-inset`** (mesma fórmula do `MainLayout`): o teclado não cobre a caixa de texto.
@@ -8247,3 +8248,32 @@ Armadilhas:
 1. **Use `useCelular()`, não `useMediaQuery('(min-width: 768px)')`**: sem `matchMedia` (testes) o hook responde "computador", e o que já existia continua aparecendo nos specs. Pra testar o celular: `simularCelular()` de `src/test/telaDeCelular.ts` (e `restaurar()` no fim).
 2. **Item novo de montar/configurar no menu**: decidir se ganha `foraDoCelular`. O spec "gaveta do celular" trava a lista atual.
 3. **O modo celular do construtor não segue o redimensionamento, de propósito.** Trocar no meio desmontava o painel do bloco (`FlowNodePanel`/`FlowTriggerPanel`) e perdia o texto e o "não salvo" sem aviso. Não troque `modoCelular` por `useCelular()`.
+
+## Celular: card do lead como página, botões de passar o mouse e suporte na borda (desde 2026-10-10)
+
+Raio-X do celular de 10/10/2026 (tela 390×844). Três mudanças aprovadas pelo dono, **só no celular / aparelho de toque**. No computador nada muda.
+
+O que muda pra quem usa:
+
+1. **No celular, abrir um lead abre a página do card completo**, não a janela. A janela não cabia: a parte de cima ocupava ~600px e as abas ficavam num vão de 112px com rolagem dentro de rolagem. Vale pra todo caminho: cartão do quadro e lista do funil (clique e "Abrir" do ⋯), Contatos (inclusive `/contacts/:id`), "Abrir card do lead" do painel da conversa, e tudo que chega pelo `?card=` do funil (Tarefas, Bolsão, Painel, notificações, link colado). O voltar leva pra onde a pessoa estava: a página mostra **← Voltar** (igual ao voltar do navegador) quando foi aberta de dentro do app; pelo link colado continua **← Funil <nome>**.
+   - Contato em **mais de um funil**: no celular aparece "Abrir o card de qual funil?" com um botão por funil (no computador seguem as abinhas da janela).
+   - Contato **sem funil** continua na janela: a página precisa de um funil.
+   - O ↗ "abrir em nova guia" do cartão continua (de propósito).
+2. **Faixa de etapas da página no celular:** cada etapa tem a largura do próprio texto (até 220px, depois corta), a faixa rola de lado e abre já rolada até a etapa atual. Antes as etapas encolhiam abaixo da largura mínima e encavalavam ("menos de 1 dia · atual" por cima da vizinha).
+3. **Botão que só aparecia passando o mouse fica sempre visível em aparelho de toque.** No Tailwind 4, `hover:`/`group-hover:` só valem com mouse; o padrão `opacity-0 group-hover:opacity-100` deixava o botão invisível e ainda tocável (dava pra apertar Excluir no cartão de funil sem ver). Consertado em 25 pontos de 22 arquivos: cartões de Funis, Contatos, Equipes, Usuários, Integrações, canais MCP/ferramentas, curso da Academia, pastas de Automações e de Funis de mensagem, reordenar/criar etapas, campos personalizados, anexo do campo de mensagem, ⋯ do cartão do lead (tablet), fotos do imóvel, Tutoriais (categoria e comentário), ícone de ampliar da página pública do imóvel. Ficaram como estavam os brilhos de fundo dos cartões de canal e de link (enfeite, não recebe toque).
+   - **Exceção (sobreposição em cima de foto):** nas fotos da conversa e do visualizador compartilhado, e na foto de perfil, a camada com botões **some** no toque (`toque:hidden`): botões fixos em cima de cada foto poluíam e a camada invisível engolia o toque. Tocar na foto abre a tela cheia (que tem o baixar); na foto de perfil, o botão do lado faz o mesmo. No visualizador externo (onde a foto não abre), os botões ficam à vista.
+   - Fotos do imóvel: no toque os botões (capa, ocultar, remover) ficam à vista **sem** o fundo escuro.
+4. **Suporte no celular é sempre a lingueta** ("?" presa no meio da borda direita), em todas as telas. No computador vale a regra de antes (`rotaComAba` + canto ocupado).
+
+Como funciona (técnico):
+
+- **Corte de celular:** `TELA_DE_CELULAR = '(max-width: 767px)'` (abaixo do `md`), `useTelaDeCelular()` e `ehTelaDeCelular()` em `src/hooks/useMediaQuery.ts`.
+- **Card como página:** `src/features/cardDoLead/paginaNoCelular.ts` (`useAbrirPaginaDoCard`, estado `voltarPeloHistorico`). Ponto central do `?card=`: `useCardNoEndereco` ganhou `irParaPagina`; no celular troca o endereço pela página na hora (`replace`, sem esperar o quadro) e não liga o `foraDaAba`. `PipelineKanban` (clique), `CardDoContato` (prop `abertoPeloEndereco`, que troca o `/contacts/:id` no histórico) e `SecaoFunil` navegam com `push`. `CardCompletoPage` lê o estado e troca o "← Funil" pelo "← Voltar" (`navigate(-1)`).
+- **Variante `toque:`** em `src/styles/globals.css`: `@media (hover: none)`, o contrário exato do que o Tailwind usa pro `hover:`. Uso: `opacity-0 group-hover:opacity-100 toque:opacity-100`. Não usar `pointer-coarse:` nem `[@media(hover:none)]:` (um jeito só).
+- **Trava `soMouse`** no `conferir-padrao` (teto 0, **app inteiro**, como a lista nativa: a página pública é a mais aberta no celular). Lê pelo compilador e junta as classes do mesmo lugar (um `className`, um `cn(...)` inteiro mesmo em várias linhas, uma variável, uma chave de objeto). Conta quando há um par esconde/revela no mouse (`opacity-0` ↔ `hover:opacity-N`, `invisible` ↔ `hover:visible`, `hidden` ↔ `hover:flex/block/…`) sem nenhuma classe `toque:`. Não conta peça com `pointer-events-none` (brilho de fundo, enfeite: não há o que apertar) nem `hidden sm:flex hover:opacity-90` (o hover só clareia). Limite conhecido: esconder numa variável e revelar noutra não é pego.
+
+Armadilhas:
+
+1. Tela nova com botão de passar o mouse: põe `toque:` junto, senão o build reprova (`soMouse`).
+2. Lugar novo que abre a janela do card (`EditItemModal`) precisa decidir o celular: navegar com `useAbrirPaginaDoCard`. Se abrir pelo `?card=` do funil, já cai na página sozinho.
+3. Quem chega por um endereço que só existe pra abrir o card (`?card=`, `/contacts/:id`) navega com `substituir`, senão o voltar volta pra esse endereço e abre a página de novo.

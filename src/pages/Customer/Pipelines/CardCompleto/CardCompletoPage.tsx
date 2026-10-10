@@ -12,7 +12,7 @@
 // Card fechado ou arquivado continua mexível: "Sobre o negócio" e criar tarefa
 // seguem disponíveis (checklist f3-06: agir no arquivado sem desarquivar).
 import { Suspense, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArchiveRestore, ArrowLeft, CalendarCheck, ClipboardList, Megaphone, MessageSquare, ShieldX } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Skeleton } from '@/components/ui/ds';
@@ -30,6 +30,7 @@ import { linkDoCardCompleto } from '@/features/pipelines/linkDoCard';
 import { useCardDoLead } from '@/features/cardDoLead/useCardDoLead';
 import { useCardCompleto } from '@/features/cardDoLead/pagina/useCardCompleto';
 import { SEM_ACESSO_AO_CARD } from '@/features/cardDoLead/buscarCard';
+import { voltaPeloHistorico } from '@/features/cardDoLead/paginaNoCelular';
 import FaixaDeEtapas from '@/features/cardDoLead/pagina/FaixaDeEtapas';
 import FichaDoCard from '@/features/cardDoLead/pagina/FichaDoCard';
 import { ResponsavelComFoto } from '@/features/cardDoLead/blocos/BlocoSituacao';
@@ -218,6 +219,10 @@ function ConteudoDoCard({ dados, recarregar, atualizarItem }: {
   };
 
   const voltarAoFunil = () => navigate(enderecoDoFunil(pipeline.id));
+  // Aberta de dentro do app no celular (paginaNoCelular.ts): o "← Voltar" faz o
+  // mesmo que o voltar do navegador (quadro, Contatos, Tarefas, conversa).
+  // Pelo link ou em outra guia, continua o "← Funil <nome>".
+  const peloHistorico = voltaPeloHistorico(useLocation().state);
   const contato = card.contato;
   // A situação mais nova (a resposta do servidor por cima do que veio).
   const itemDaSituacao = card.situacao.item ?? item;
@@ -225,12 +230,22 @@ function ConteudoDoCard({ dados, recarregar, atualizarItem }: {
   return (
     <Pagina
       acima={
-        <Link
-          to={enderecoDoFunil(pipeline.id)}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Funil {pipeline.name}
-        </Link>
+        peloHistorico ? (
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Voltar
+          </button>
+        ) : (
+          <Link
+            to={enderecoDoFunil(pipeline.id)}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Funil {pipeline.name}
+          </Link>
+        )
       }
       cabecalho={
         <BaseHeader

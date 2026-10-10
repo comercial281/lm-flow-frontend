@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { fireEvent, render as renderRtl, screen, waitFor } from '@testing-library/react';
+import type { ReactElement, ReactNode } from 'react';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import SecaoFunil from './SecaoFunil';
 import type { Pipeline } from '@/types/analytics';
 
 // A seção Funil do painel do lead: trocar a etapa no seletor move o lead na
 // hora, pelo mesmo serviço de arrastar no quadro.
+
+// No celular o "Abrir card do lead" navega (useNavigate): precisa do roteador.
+const render = (ui: ReactElement) => renderRtl(ui, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
 
 const moveItem = vi.fn();
 vi.mock('@/services/pipelines', () => ({
@@ -120,6 +124,32 @@ describe('SecaoFunil', () => {
 
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('Não foi possível mudar a etapa.'));
     expect((screen.getByLabelText('etapa') as HTMLSelectElement).value).toBe('etapa-qualif');
+  });
+
+  it('no celular, "Abrir card do lead" vai pra página do card (sem a janela)', () => {
+    const original = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(max-width: 767px)', media: query, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+    function Endereco() {
+      const l = useLocation();
+      return <span data-testid="endereco">{l.pathname}|{JSON.stringify(l.state)}</span>;
+    }
+    try {
+      renderRtl(
+        <MemoryRouter initialEntries={['/conversations/conv-1']}>
+          <Routes>
+            <Route path="/conversations/:id" element={<SecaoFunil conversationId="conv-1" pipelines={[funil()]} carregando={false} onAtualizado={vi.fn()} />} />
+            <Route path="/pipelines/:p/card/:i" element={<Endereco />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+      fireEvent.click(screen.getByText('Abrir card do lead'));
+      expect(screen.getByTestId('endereco').textContent).toMatch(/^\/pipelines\/[^/]+\/card\/[^/|]+\|\{"voltarPeloHistorico":true\}$/);
+      expect(screen.queryByText('card-do-lead')).toBeNull();
+    } finally {
+      window.matchMedia = original;
+    }
   });
 
   it('"Abrir card do lead" abre o card completo', () => {

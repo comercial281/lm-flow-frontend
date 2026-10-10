@@ -14,6 +14,11 @@ import { useSearchParams } from 'react-router-dom';
 //
 // O quadro recarrega a cada 60 s e a cada evento ao vivo: `abertoRef` guarda o
 // card que já foi aberto por este endereço, senão ele seria reaberto a cada volta.
+//
+// No celular (10/10/2026, features/cardDoLead/paginaNoCelular.ts) o ?card= NÃO
+// abre a janela: `irParaPagina` troca o endereço pela página do card na hora,
+// sem esperar o quadro carregar. É o ponto por onde passam Tarefas, Bolsão,
+// Painel, notificações e link colado.
 
 export const CHAVE_DO_CARD = 'card';
 
@@ -21,9 +26,11 @@ interface Opcoes<T extends { id: string | number }> {
   itens: T[];
   carregando: boolean;
   aoAbrir: (item: T) => void;
+  /** Celular: em vez de abrir a janela, vai pra página do card (troca o endereço). */
+  irParaPagina?: ((id: string) => void) | null;
 }
 
-export function useCardNoEndereco<T extends { id: string | number }>({ itens, carregando, aoAbrir }: Opcoes<T>) {
+export function useCardNoEndereco<T extends { id: string | number }>({ itens, carregando, aoAbrir, irParaPagina = null }: Opcoes<T>) {
   const [searchParams, setSearchParams] = useSearchParams();
   const cardId = searchParams.get(CHAVE_DO_CARD);
 
@@ -34,10 +41,19 @@ export function useCardNoEndereco<T extends { id: string | number }>({ itens, ca
   trocarEndereco.current = setSearchParams;
   const aoAbrirRef = useRef(aoAbrir);
   aoAbrirRef.current = aoAbrir;
+  const irParaPaginaRef = useRef(irParaPagina);
+  irParaPaginaRef.current = irParaPagina;
+  const noCelular = !!irParaPagina;
 
   useEffect(() => {
     if (!cardId) {
       abertoRef.current = null;
+      return;
+    }
+    if (irParaPaginaRef.current) {
+      if (abertoRef.current === cardId) return;
+      abertoRef.current = cardId;
+      irParaPaginaRef.current(cardId);
       return;
     }
     if (carregando || abertoRef.current === cardId) return;
@@ -45,7 +61,7 @@ export function useCardNoEndereco<T extends { id: string | number }>({ itens, ca
     if (!achado) return;
     abertoRef.current = cardId;
     aoAbrirRef.current(achado);
-  }, [cardId, itens, carregando]);
+  }, [cardId, itens, carregando, noCelular]);
 
   const abrirNoEndereco = useCallback((id: string) => {
     abertoRef.current = id;
@@ -66,7 +82,7 @@ export function useCardNoEndereco<T extends { id: string | number }>({ itens, ca
     }, { replace: true });
   }, []);
 
-  const foraDaAba = !!cardId && !carregando && !itens.some(i => String(i.id) === cardId);
+  const foraDaAba = !noCelular && !!cardId && !carregando && !itens.some(i => String(i.id) === cardId);
 
   return { cardId, foraDaAba, abrirNoEndereco, fecharNoEndereco };
 }

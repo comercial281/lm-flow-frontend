@@ -168,7 +168,7 @@ export default function ProfilePhotoUploader({
 
         {/* Camera overlay on hover */}
         <div
-          className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+          className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 toque:hidden transition-opacity cursor-pointer"
           onClick={handleUploadClick}
         >
           <Camera className="h-6 w-6 text-white" />
