@@ -4,8 +4,9 @@ import type {
   UsersResponse,
   UsersListParams,
   UserUpdateData,
-  BulkInviteParams,
-  BulkInviteResponse,
+  BulkAddParams,
+  BulkAddResult,
+  CreatedWhatsappNumber,
   UserFormData,
   User,
   DeactivationPreview,
@@ -141,10 +142,27 @@ class UsersService {
     return extractData<User>(response);
   }
 
-  // Bulk invite users
-  async bulkInvite(params: BulkInviteParams): Promise<BulkInviteResponse> {
+  /**
+   * Adicionar várias pessoas (Equipe nova). Cargo único para o grupo; 403 do
+   * servidor = ninguém criado. Erros 4xx: use `apiErrorMessage` para mostrar a
+   * frase pronta do servidor.
+   */
+  async bulkAdd(params: BulkAddParams): Promise<BulkAddResult> {
     const response = await apiAuth.post('/users/bulk_create', params);
-    return extractData<BulkInviteResponse>(response);
+    return extractData<BulkAddResult>(response);
+  }
+
+  /**
+   * "Criar número para {nome}": cria o número já com a pessoa como dona.
+   * Recusa (422/403) vem com `error.message` pronta em pt-BR — mostrar como veio
+   * (`apiErrorMessage`).
+   */
+  async createWhatsappNumber(
+    userId: string,
+    payload: { name: string; phone_number: string },
+  ): Promise<CreatedWhatsappNumber> {
+    const response = await apiAuth.post(`/users/${userId}/whatsapp_number`, payload);
+    return extractData<CreatedWhatsappNumber>(response);
   }
 
   /**

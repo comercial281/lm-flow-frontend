@@ -21,7 +21,6 @@ import {
   UsersTable,
   UsersPagination,
   UserFormModal,
-  BulkInviteModal,
   UsersFilter,
   UserDetails,
   DeactivateUserDialog,
@@ -64,7 +63,6 @@ export default function Users() {
   const [userToDeactivate, setUserToDeactivate] = useState<User | null>(null);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [bulkInviteModalOpen, setBulkInviteModalOpen] = useState(false);
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<BaseFilter[]>([]);
   const [appliedFilters, setAppliedFilters] = useState<AppliedFilter[]>([]);
@@ -290,14 +288,6 @@ export default function Users() {
     }
   };
 
-  const handleBulkInvite = () => {
-    if (!can('users', 'create')) {
-      toast.error(t('messages.permissionDenied.invite'));
-      return;
-    }
-    setBulkInviteModalOpen(true);
-  };
-
   /**
    * Quem esta pessoa pode desativar: o gestor desativa CORRETOR; gestor e
    * administrador só o administrador desativa. A mesma régua roda no servidor —
@@ -344,11 +334,6 @@ export default function Users() {
     loadUsers();
   };
 
-  const handleBulkInviteSuccess = () => {
-    setBulkInviteModalOpen(false);
-    loadUsers();
-  };
-
   // Handle modal close
   // const handleUserModalClose = (open: boolean) => {
   //   if (!open) {
@@ -374,7 +359,6 @@ export default function Users() {
           searchValue={state.searchQuery}
           onSearchChange={handleSearchChange}
           onNewUser={handleCreateUser}
-          onBulkInvite={handleBulkInvite}
           onFilter={handleOpenFilter}
           onClearSelection={() => setState(prev => ({ ...prev, selectedUserIds: [] }))}
           activeFilters={appliedFilters}
@@ -501,13 +485,6 @@ export default function Users() {
         onClose={() => setUserModalOpen(false)}
         user={editingUser}
         onSuccess={handleUserFormSubmit}
-      />
-
-      {/* Bulk Invite Modal */}
-      <BulkInviteModal
-        isOpen={bulkInviteModalOpen}
-        onClose={() => setBulkInviteModalOpen(false)}
-        onSuccess={handleBulkInviteSuccess}
       />
 
       {/* Users Filter Modal */}

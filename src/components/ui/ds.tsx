@@ -65,10 +65,13 @@
 // 1400px, então a folga só cresce — nunca some. Junto vai o respiro de dentro
 // (a base traz `p-6`, que é pouco para uma janela de 1400px de largura).
 import { forwardRef, type ComponentProps, type ComponentRef } from 'react';
+import { XIcon } from 'lucide-react';
 import {
   DialogContent as BaseDialogContent,
   DialogDescription,
   AlertDialogContent as BaseAlertDialogContent,
+  SheetContent as BaseSheetContent,
+  SheetClose,
 } from '@evoapi/design-system';
 
 export * from '@evoapi/design-system';
@@ -193,3 +196,24 @@ export const AlertDialogContent = forwardRef<ComponentRef<typeof BaseAlertDialog
   },
 );
 AlertDialogContent.displayName = 'AlertDialogContent';
+
+// O painel lateral (Sheet) do design system traz o botão de fechar com o nome
+// "Close", em inglês, para o leitor de tela — e o botão é montado lá dentro,
+// sem prop para trocar. Aqui o painel ganha o nosso botão "Fechar" (mesmo
+// visual, mesma posição) e o do pacote some por CSS: ele é SEMPRE o último
+// filho do painel (vem depois do conteúdo), daí o `[&>button:last-child]`. O
+// nosso fica antes dele, então não casa com o seletor.
+type SheetContentProps = ComponentProps<typeof BaseSheetContent>;
+
+export const SheetContent = forwardRef<ComponentRef<typeof BaseSheetContent>, SheetContentProps>(
+  ({ className, children, ...props }, ref) => (
+    <BaseSheetContent ref={ref} className={`[&>button:last-child]:hidden ${className ?? ''}`} {...props}>
+      {children}
+      <SheetClose className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
+        <XIcon className="size-4" aria-hidden="true" />
+        <span className="sr-only">Fechar</span>
+      </SheetClose>
+    </BaseSheetContent>
+  ),
+);
+SheetContent.displayName = 'SheetContent';

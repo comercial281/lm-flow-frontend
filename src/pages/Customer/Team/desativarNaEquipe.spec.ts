@@ -18,11 +18,21 @@ import { describe, expect, it } from 'vitest';
 //    de verdade — saiu de lá?
 const read = (p: string) => readFileSync(resolve(__dirname, '../../../..', p), 'utf8');
 
-const TELA = 'src/pages/Customer/Team/PeopleTab.tsx';
+// Desde a Equipe nova (2026-10-09) os botões moram na FICHA da pessoa, que a
+// aba Pessoas abre ao clicar na linha. A trava segue a ficha — e confere que a
+// aba de fato a abre, senão a ficha vira a próxima tela que ninguém vê.
+const ABA = 'src/pages/Customer/Team/PeopleTab.tsx';
+const TELA = 'src/pages/Customer/Team/person/PersonSheet.tsx';
 const ROTAS = 'src/routes/index.tsx';
 
 describe('desativar corretor na tela de Equipe', () => {
   const src = read(TELA);
+  const aba = read(ABA);
+
+  it('a aba Pessoas abre a ficha da pessoa', () => {
+    expect(aba).toContain("import PersonSheet from './person/PersonSheet'");
+    expect(aba).toContain('<PersonSheet');
+  });
 
   it('a janela que mostra o estrago é aberta por esta tela', () => {
     expect(src).toContain("import DeactivateUserDialog from '@/components/users/DeactivateUserDialog'");
@@ -34,9 +44,14 @@ describe('desativar corretor na tela de Equipe', () => {
     expect(src).toContain('Reativar');
   });
 
+  // Desde a Equipe nova a lista é o PeopleList e o selo vem do accessStatus.
   it('marca quem está fora, senão a lista diz que ele está ativo', () => {
-    expect(src).toContain('member.deactivated');
-    expect(src).toContain('Inativo');
+    const lista = read('src/pages/Customer/Team/people/PeopleList.tsx');
+    const acesso = read('src/pages/Customer/Team/people/accessStatus.ts');
+    expect(lista).toContain('accessStatus(member');
+    expect(lista).toContain('member.deactivated');
+    expect(acesso).toContain('member.deactivated');
+    expect(acesso).toContain('Inativo');
   });
 
   // O excluir renomeava o e-mail da pessoa, randomizava a senha e respondia
@@ -44,8 +59,10 @@ describe('desativar corretor na tela de Equipe', () => {
   // leads e recebendo aviso no WhatsApp. Duas saídas para "tirar alguém do
   // time" é exatamente a segunda verdade que esta leva veio desfazer.
   it('não tem mais o "Remover do time"', () => {
-    expect(src).not.toContain('deleteUser(');
-    expect(src).not.toContain('Remover do time');
+    for (const fonte of [src, aba]) {
+      expect(fonte).not.toContain('deleteUser(');
+      expect(fonte).not.toContain('Remover do time');
+    }
   });
 
   // Desde 2026-09-16 existe o *Excluir cadastro* — que apaga DE VERDADE, e só o

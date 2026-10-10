@@ -18,6 +18,8 @@ export interface OwnedNumber {
   connection: NumberConnection;
   /** Só desempate: o número que o sistema escolhe quando precisa de um. */
   principal: boolean;
+  /** Nunca chegou a conectar (QR não lido) — a tela pede "Conectar" em vez de "Desconectado". */
+  never_connected?: boolean;
 }
 
 export interface NumberOwnerRef {

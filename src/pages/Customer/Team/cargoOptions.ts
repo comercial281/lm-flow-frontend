@@ -25,8 +25,11 @@ export interface CargoOption {
   customRoleId?: string | number | null;
   /** reserva: grava pelo cargo legado quando o cliente não tem o cargo gravado */
   chaveRole?: 'admin' | 'manager' | 'agent';
-  /** Administrador alcança toda instância sem precisar de liberação */
+  /** Administrador alcança todo número sem precisar de liberação */
   seesAllInboxes: boolean;
+  /** O cargo gravado tem `roles.update` (muda cargos e permissões). Quem não é
+   *  administrador não pode dá-lo: o servidor recusa. */
+  grantsRoleEditing?: boolean;
 }
 
 const FACTORY: Array<{ slug: string; label: string; description: string; chaveRole: 'admin' | 'manager' | 'agent' }> = [
@@ -50,6 +53,10 @@ const FACTORY: Array<{ slug: string; label: string; description: string; chaveRo
   },
 ];
 
+const ROLE_EDITING = 'roles.update';
+const editsRoles = (r: CustomRole) =>
+  [...(r.effective_permissions ?? []), ...(r.permissions ?? [])].includes(ROLE_EDITING);
+
 const CHAVE_BY_SLUG: Record<string, 'admin' | 'manager' | 'agent'> = {
   administrador: 'admin',
   gerente: 'manager',
@@ -70,6 +77,7 @@ export function buildCargoOptions(roles: CustomRole[]): CargoOption[] {
         customRoleId: saved.id,
         chaveRole: f.chaveRole,
         seesAllInboxes: f.slug === 'administrador',
+        grantsRoleEditing: editsRoles(saved),
       }
       : {
         key: `chave:${f.chaveRole}`,
@@ -88,9 +96,30 @@ export function buildCargoOptions(roles: CustomRole[]): CargoOption[] {
       description: r.description || undefined,
       customRoleId: r.id,
       seesAllInboxes: false,
+      grantsRoleEditing: editsRoles(r),
     }));
 
   return [...factory, ...proprios];
+}
+
+/**
+ * As opções que quem está na tela pode DAR. Quem não é administrador não dá
+ * Administrador nem cargo que muda permissões — o servidor recusa com frase, e
+ * oferecer a opção para depois recusar é a tela prometendo o que não cumpre.
+ * O Gerente também some: só o administrador dá o cargo Gerente (o servidor
+ * recusa com "Só o administrador dá o cargo Gerente."). Quem não é admin dá
+ * Corretor ou cargo próprio que não seja de gerente.
+ * Sem os dados do cargo (cliente sem cargos gravados), somem o Administrador e
+ * o Gerente de fábrica; o resto o servidor explica.
+ *
+ * O cargo ATUAL da pessoa fica sempre: sem ele a escolha apareceria vazia.
+ */
+export function assignableCargoOptions(
+  options: CargoOption[],
+  { viewerIsAdmin, currentKey }: { viewerIsAdmin: boolean; currentKey: string | null },
+): CargoOption[] {
+  if (viewerIsAdmin) return options;
+  return options.filter(o => o.key === currentKey || (o.chaveRole !== 'admin' && o.chaveRole !== 'manager' && !o.grantsRoleEditing));
 }
 
 /** O que mandar para a API ao escolher esta opção. */

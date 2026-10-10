@@ -19,8 +19,12 @@ describe('nenhuma tela guarda nem mostra senha legível', () => {
     expect(src).not.toMatch(/type="password"/);
   });
 
+  // Desde a Equipe nova (2026-10-09) o botão mora na ficha da pessoa, no bloco Acesso.
   it('a tela Equipe oferece Copiar link de acesso', () => {
-    expect(read('src/pages/Customer/Team/PeopleTab.tsx')).toContain('Copiar link de acesso');
+    const ficha = read('src/pages/Customer/Team/person/PersonSheet.tsx');
+    expect(ficha).toContain('Copiar link');
+    expect(ficha).toContain('usersService.accessLink(');
+    expect(ficha).not.toMatch(/type="password"/);
   });
 
   // 06/10/2026: a coluna saiu do servidor; a Equipe do admin não conta mais "senhas guardadas".

@@ -12,8 +12,11 @@ const GUARDA = 'src/guards/RouterGuard.tsx';
 const SERVICO = 'src/services/auth/accessLinkService.ts';
 const TELA_LOGIN = 'src/pages/Auth/Auth.tsx';
 const TELA_CONVITE = 'src/pages/Auth/AccessInvite.tsx';
-const EQUIPE = 'src/pages/Customer/Team/PeopleTab.tsx';
+// Desde a Equipe nova (2026-10-09) o envio por pessoa mora na ficha da pessoa.
+const EQUIPE = 'src/pages/Customer/Team/person/PersonSheet.tsx';
 const ASSISTENTE = 'src/pages/Customer/Team/AddPersonWizard.tsx';
+// A ficha e o assistente mandam o link por `sendAccessLink`; é ali que a chamada de verdade mora.
+const ENVIO_DO_LINK = 'src/pages/Customer/Team/numbers/numberPhone.ts';
 
 describe('o convite de acesso', () => {
   it('tem rota, e ela fica FORA do layout do CRM', () => {
@@ -78,10 +81,17 @@ describe('o convite de acesso', () => {
 
   // Nenhuma senha viaja escrita na conversa: quem a cria é a própria pessoa.
   it('os dois botões de enviar acesso não mandam mais senha', () => {
-    for (const arquivo of [EQUIPE, ASSISTENTE]) {
+    for (const arquivo of [ENVIO_DO_LINK]) {
       const src = read(arquivo);
+      // Sem a chamada no arquivo, o recorte sairia vazio e o teste passaria calado.
+      expect(src).toContain('sendAccess(');
       const chamada = src.slice(src.indexOf('sendAccess('), src.indexOf('sendAccess(') + 220);
       expect(chamada).not.toContain('password');
+    }
+    // Ficha e assistente não têm caminho próprio com senha: só passam pelo envio acima.
+    for (const arquivo of [EQUIPE, ASSISTENTE]) {
+      expect(read(arquivo)).toContain('sendAccessLink(');
+      expect(read(arquivo)).not.toContain('password');
     }
   });
 });

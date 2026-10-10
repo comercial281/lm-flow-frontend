@@ -597,7 +597,7 @@ const AppRouter = () => {
             <Route
               path="/equipe"
               element={
-                <PermissionRoute resource="users" action="update">
+                <PermissionRoute resource="users" action="read">
                   <TeamAccess />
                 </PermissionRoute>
               }
