@@ -8118,4 +8118,4 @@ Achado do Raio-X de 10/10: a lista **Tipo de imóvel** do cadastro mostrava Cobe
 - `terreno` passou a se chamar "Lote/Terreno" também na exibição (lista, cartões, filtros).
 - Portais e catálogo do Meta tratam os dois códigos de cada par igual: nada muda lá fora.
 
-Armadilha: o filtro de tipo da lista de Imóveis (facetas do servidor) ainda pode mostrar o mesmo nome duas vezes se a carteira tiver os dois códigos de um par, e filtrar por um não traz o outro. Fica para quando alguém mexer no filtro.
+O filtro de tipo da lista de Imóveis também trata os dois códigos como um: quem resolve é o servidor (as opções vêm com um código por tipo, e filtrar por um traz os dois; lm-flow#454). A tela não precisou mudar.
