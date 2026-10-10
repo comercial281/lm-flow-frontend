@@ -10,8 +10,6 @@ import {
   Button,
   Input,
   Label as UILabel,
-  Textarea,
-  Switch,
 } from '@/components/ui/ds';
 import { Label } from '@/types/settings';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -24,9 +22,7 @@ interface LabelModalProps {
   loading: boolean;
   onSubmit: (data: {
     title: string;
-    description?: string;
     color: string;
-    show_on_sidebar?: boolean;
   }) => void;
 }
 
@@ -52,9 +48,7 @@ export default function LabelModal({
   const { can } = useUserPermissions();
   const [formData, setFormData] = useState({
     title: '',
-    description: '',
     color: '#1f93ff',
-    show_on_sidebar: true,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -64,16 +58,12 @@ export default function LabelModal({
       if (label && !isNew) {
         setFormData({
           title: label.title,
-          description: label.description || '',
           color: label.color,
-          show_on_sidebar: label.show_on_sidebar,
         });
       } else {
         setFormData({
           title: '',
-          description: '',
           color: getRandomColor(),
-          show_on_sidebar: true,
         });
       }
       setErrors({});
@@ -114,9 +104,7 @@ export default function LabelModal({
 
     onSubmit({
       title: formData.title.toLowerCase().trim(),
-      description: formData.description.trim() || undefined,
       color: formData.color,
-      show_on_sidebar: formData.show_on_sidebar,
     });
   };
 
@@ -158,18 +146,6 @@ export default function LabelModal({
           </div>
 
           <div className="space-y-2">
-            <UILabel htmlFor="description">{t('modal.labels.description')}</UILabel>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder={t('modal.placeholders.description')}
-              className="resize-none"
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
             <UILabel htmlFor="color">
               {t('modal.labels.color')} <span className="text-destructive">*</span>
             </UILabel>
@@ -205,20 +181,6 @@ export default function LabelModal({
                 />
               ))}
             </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <UILabel htmlFor="show_on_sidebar">{t('modal.labels.showOnSidebar')}</UILabel>
-              <p className="text-sm text-muted-foreground">
-                {t('modal.hints.showOnSidebar')}
-              </p>
-            </div>
-            <Switch
-              id="show_on_sidebar"
-              checked={formData.show_on_sidebar}
-              onCheckedChange={(checked) => handleInputChange('show_on_sidebar', checked)}
-            />
           </div>
         </form>
 

@@ -1,4 +1,4 @@
-import type { PaginatedResponse, StandardResponse, PaginationMeta } from '@/types/core';
+import type { PaginatedResponse, StandardResponse } from '@/types/core';
 
 export type LabelCategory =
   | 'own' | 'property' | 'followup' | 'sales_agent' | 'service' | 'deal_type' | 'lead_source';
@@ -28,22 +28,3 @@ export interface LabelsResponse extends PaginatedResponse<Label> {}
 export interface LabelResponse extends StandardResponse<Label> {}
 
 export interface LabelDeleteResponse extends StandardResponse<{ message: string }> {}
-
-export interface LabelsState {
-  labels: Label[];
-  selectedLabelIds: string[];
-  meta: {
-    pagination: PaginationMeta;
-  };
-  loading: {
-    list: boolean;
-    create: boolean;
-    update: boolean;
-    delete: boolean;
-    bulk: boolean;
-  };
-  searchQuery: string;
-  sortBy: 'title' | 'created_at';
-  sortOrder: 'asc' | 'desc';
-  loadError: boolean;
-}
