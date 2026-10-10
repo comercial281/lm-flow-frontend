@@ -6,9 +6,13 @@ import {
   type Node, type Edge, type NodeChange, type Connection, type ReactFlowInstance, BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { ArrowLeft, Save, Play, Loader2, Settings2, AlertTriangle, LayoutGrid, Copy, Users } from 'lucide-react';
+import { ArrowLeft, Save, Play, Loader2, Settings2, AlertTriangle, LayoutGrid, Copy, Users, Monitor } from 'lucide-react';
 import { Badge, Button, Input } from '@/components/ui/ds';
 import Chave from '@/components/base/Chave';
+import Pagina from '@/components/base/Pagina';
+import BaseHeader from '@/components/base/BaseHeader';
+import EmptyState from '@/components/base/EmptyState';
+import type { FlowAutomationKind } from '@/types/flowAutomations';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation, FlowAutomationNode, TestRunResult } from '@/types/flowAutomations';
 import {
@@ -83,6 +87,16 @@ const PEDIDO_TIRAR_MENSAGEM = {
   descricao: 'A mensagem sai do funil e a anterior passa a seguir direto pra próxima. Isso já fica salvo.',
   rotuloDaAcao: 'Tirar',
   destrutivo: true,
+};
+
+/**
+ * Celular (Raio-X do celular, 10/10/2026): o desenho não abre numa tela pequena.
+ * A tela mostra o nome, a chave de ligar e o aviso de abrir no computador.
+ */
+const NO_CELULAR: Record<FlowAutomationKind, { aviso: string; chave: string }> = {
+  automation: { aviso: 'Pra editar este fluxo, abra no computador.', chave: 'Ligar o fluxo' },
+  followup: { aviso: 'Pra editar este follow-up, abra no computador.', chave: 'Ligar o fluxo' },
+  conversation: { aviso: 'Pra editar este funil, abra no computador.', chave: 'Ligar o funil' },
 };
 
 /** Distância entre o Início e o primeiro bloco (a mesma entre colunas do layout). */
@@ -542,6 +556,74 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
   }
 
+  // A chave de ligar: a mesma no canvas e na tela do celular.
+  async function alternarLigado(): Promise<boolean> {
+    if (!automation) return false;
+    // Ligar: o fluxo liga como está SALVO, então pede o Salvar antes e
+    // recusa enquanto faltar algo num bloco (modelo com campo em branco)
+    // ou um passo do guia (sprint 4).
+    if (!automation.is_enabled) {
+      if (hasChanges) {
+        toast.error('Salve as alterações antes de ligar: o fluxo liga como está salvo.');
+        return false;
+      }
+      const pendingGuide = guidePendingText(steps);
+      if (pendingGuide) {
+        toast.error(pendingGuide);
+        return false;
+      }
+      if (blockingProblem) {
+        toast.error(blockingProblem);
+        return false;
+      }
+    }
+    try {
+      const updated = await flowAutomationsService.toggle(automation.id);
+      // Só a chave: recarregar o fluxo apagaria o que ainda não foi salvo.
+      setAutomation(a => (a ? { ...a, is_enabled: updated.is_enabled } : a));
+      return true;
+    } catch (e) {
+      toast.error(serverMessage(e, 'Não deu pra ligar agora. Tente de novo.'));
+      return false;
+    }
+  }
+
+  // Celular (Raio-X do celular, 10/10/2026): sem o desenho, sem Salvar, Blocos
+  // nem Simular. Fica o nome, a chave (a mesma ação do canvas) e o voltar. Quem
+  // só pode ver o funil da equipe não ganha a chave, como no canvas.
+  if (isMobile) {
+    const textos = NO_CELULAR[kind];
+    return (
+      <Pagina
+        acima={
+          <button
+            type="button"
+            onClick={goBack}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Voltar
+          </button>
+        }
+        cabecalho={<BaseHeader title={automation.name} />}
+      >
+        {!readOnly && (
+          <div className="rounded-lg border border-border bg-card p-4" data-testid="chave-no-celular">
+            <Chave rotulo={textos.chave} ligada={automation.is_enabled} aoMudar={alternarLigado} />
+          </div>
+        )}
+        <EmptyState
+          icon={Monitor}
+          title={textos.aviso}
+          description={readOnly
+            ? 'No celular o desenho não abre. No computador dá pra ver os passos e duplicar.'
+            : 'No celular dá pra ligar e desligar. Mexer nos blocos, salvar e simular fica pro computador.'}
+        />
+        {dialogoDeConfirmacao}
+      </Pagina>
+    );
+  }
+
   return (
     <MessageVariablesContext.Provider value={messageVariables}>
       <div className="flex flex-col h-full">
@@ -567,35 +649,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
               semRotuloVisivel
               className="ml-2"
               ligada={automation.is_enabled}
-              aoMudar={async () => {
-                // Ligar: o fluxo liga como está SALVO, então pede o Salvar antes e
-                // recusa enquanto faltar algo num bloco (modelo com campo em branco)
-                // ou um passo do guia (sprint 4).
-                if (!automation.is_enabled) {
-                  if (hasChanges) {
-                    toast.error('Salve as alterações antes de ligar: o fluxo liga como está salvo.');
-                    return false;
-                  }
-                  const pendingGuide = guidePendingText(steps);
-                  if (pendingGuide) {
-                    toast.error(pendingGuide);
-                    return false;
-                  }
-                  if (blockingProblem) {
-                    toast.error(blockingProblem);
-                    return false;
-                  }
-                }
-                try {
-                  const updated = await flowAutomationsService.toggle(automation.id);
-                  // Só a chave: recarregar o fluxo apagaria o que ainda não foi salvo.
-                  setAutomation(a => (a ? { ...a, is_enabled: updated.is_enabled } : a));
-                  return true;
-                } catch (e) {
-                  toast.error(serverMessage(e, 'Não deu pra ligar agora. Tente de novo.'));
-                  return false;
-                }
-              }}
+              aoMudar={alternarLigado}
             />
           )}
           {builderTools && (

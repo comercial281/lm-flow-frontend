@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/ds';
 import { BaseHeader, HeaderAction } from '@/components/base';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { useCelular } from '@/hooks/useCelular';
 import { contactsHeaderGates } from './contactsHeaderGates';
 
 interface ContactsHeaderProps {
@@ -57,6 +58,8 @@ export default function ContactsHeader({
   };
 
   const gates = contactsHeaderGates(ff, isReady, can);
+  // Exportar planilha não serve no celular (Raio-X do celular, 10/10/2026).
+  const ehCelular = useCelular();
 
   const primaryAction: HeaderAction | undefined = gates.create ? {
     label: 'Novo contato',
@@ -68,7 +71,7 @@ export default function ContactsHeader({
   // Só Exportar, com texto (decisão do dono, 02/10/2026). O Importar saiu de
   // Contatos pra todo mundo: planilha entra pelo Bolsão e pelo quadro do funil,
   // que distribuem; aqui ela virava contato solto, sem dono nem funil.
-  const secondaryActions: HeaderAction[] = gates.export
+  const secondaryActions: HeaderAction[] = gates.export && !ehCelular
     ? [{
         label: 'Exportar',
         icon: <Download className="h-4 w-4" />,

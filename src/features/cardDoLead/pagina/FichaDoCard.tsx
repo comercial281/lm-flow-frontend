@@ -11,6 +11,7 @@ import FollowupTimeline from '@/components/pipelines/FollowupTimeline';
 import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import OutrasInformacoes from '@/components/pipelines/card/OutrasInformacoes';
 import { situacaoDe } from '@/features/pipelines/situacao/situacao';
+import { useCelular } from '@/hooks/useCelular';
 import type { PipelineItem } from '@/types/analytics';
 import { conversaDoCard } from '../cardDoLead';
 import type { CardDoLead } from '../useCardDoLead';
@@ -44,6 +45,8 @@ export default function FichaDoCard({
 }: FichaDoCardProps) {
   const Tarefas = blocoDeTarefas;
   const contato = card.contato;
+  // No celular a linha da Meta não aparece (Raio-X do celular, 10/10/2026): a caixa vira só Follow-up.
+  const ehCelular = useCelular();
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
@@ -79,7 +82,7 @@ export default function FichaDoCard({
           <BlocoEtiquetas card={card} />
         </CaixaDoCard>
 
-        <CaixaDoCard titulo="Follow-up e Meta">
+        <CaixaDoCard titulo={ehCelular ? 'Follow-up' : 'Follow-up e Meta'}>
           <FollowupTimeline
             contactId={contato?.id != null ? String(contato.id) : null}
             conversationId={conversaDoCard(item)}
