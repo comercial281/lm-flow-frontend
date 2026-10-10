@@ -466,8 +466,10 @@ export default function PipelineKanban() {
     setShowAddItemModal(true);
   };
 
+  // Sem aviso aqui: a janela "Adicionar Lead ao Funil" já mostra o dela
+  // ("Lead criado e adicionado ao funil." ou "Lead adicionado ao funil.").
+  // Avisar aqui também dava dois avisos pro mesmo lead.
   const handleItemAdded = async () => {
-    toast.success(t('kanban.messages.itemAdded'));
     // Reload pipeline data to show new item
     await loadPipelineData();
   };

@@ -8190,3 +8190,12 @@ Pedido do dono: escolher o melhor jeito de cada peça e padronizar, pra que **te
 **Achados do levantamento (backlog):** 9 janelas de Conversas importam o `Dialog` direto do pacote e pulam o ajuste de largura (Atribuir conversa pede 448 e abre com 512); 8 confirmações do `AlertDialog` mostram Excluir em roxo; `NotesHistoryModal` é branca no tema escuro e usa `window.confirm`; botões `#00ffa7` sobrados da Evolution (`BulkInviteModal`, `MacroFormModal`); a regra global `button.bg-primary` (globals.css) pinta filtro selecionado com degradê e sombra; `--chart-*` sem uso e 3 cartões de gráfico parados em `components/charts/`.
 
 Não reabrir sem o dono pedir.
+
+## Telefone com países em português e um aviso só ao criar lead (10/10/2026)
+
+Relato do dono do produto: na janela **Adicionar Lead ao Funil → Criar novo lead** a lista de países do telefone vinha em inglês (Brazil, Germany…, e o leitor de tela dizia "Phone number country"), e criar o lead mostrava dois avisos ("Lead adicionado com sucesso" e "Lead criado e adicionado ao funil.").
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Lista de países em português em todo campo de telefone com bandeira.** Todos passam pelo `PhoneInput` da casa (`@/components/shared/PhoneInput`), que agora usa os rótulos pt-BR da própria biblioteca (`react-phone-number-input/locale/pt-BR`, ordem alfabética em pt-BR) e Brasil por padrão. Vale para Criar novo lead, Contatos, canais, Equipe/Perfil, Lembretes, Bolsão, landing (editor) e janela de conversa do site (pré-chat). O valor gravado não muda. Os formulários públicos do site e da landing continuam com o `BrPhoneInput` (sem bandeira, de propósito: não puxa o CRM pro pacote público). Campo de telefone novo com país usa o `PhoneInput`; nunca o `react-phone-number-input` direto.
+2. **Um aviso por lead na janela Adicionar Lead ao Funil.** Quem avisa é a janela: "Lead criado e adicionado ao funil." (lead novo), "Lead já existia — adicionado ao funil." (telefone/e-mail já cadastrado) ou "Lead adicionado ao funil." (lead existente). O quadro (`handleItemAdded` no `PipelineKanban`) só recarrega. Textos em `pipelines.json` › `addItem`. Conferidos e já com aviso único: Contatos › Novo contato, Colocar no funil (card e painel da conversa) e criar contato na Agenda de visitas.

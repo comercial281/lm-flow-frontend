@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import PhoneInputLib, { type Country } from 'react-phone-number-input';
+import ptBR from 'react-phone-number-input/locale/pt-BR';
 import 'react-phone-number-input/style.css';
 import './PhoneInput.css';
 import { cn } from '@/lib/utils';
@@ -30,7 +31,8 @@ interface PhoneInputProps {
  * PhoneInput Component
  *
  * Padronized phone input with:
- * - Country selector with flags
+ * - Country selector with flags, nomes dos países em português (rótulos pt-BR
+ *   da própria biblioteca: "Brasil", "Alemanha"; o leitor de tela diz "País")
  * - Dynamic mask per country
  * - E.164 format output (e.g., +5531912345678), ou só dígitos com `valueFormat="digits"`
  * - Aceita valor salvo sem "+" e número antigo só com DDD (ganha o 55)
@@ -70,6 +72,8 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
     <PhoneInputLib
       international
       defaultCountry={defaultCountry}
+      labels={ptBR}
+      locales="pt-BR"
       value={shown}
       onChange={(next) => {
         const e164 = next || '';
