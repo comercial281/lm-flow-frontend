@@ -56,7 +56,7 @@ describe('catálogo de etiquetas: uma porta só', () => {
   it('o serviço pede o catálogo COMPLETO', () => {
     // Sem isto, passar pelo serviço não conserta nada — ele voltaria a entregar
     // as mesmas 20 primeiras para todas as telas de uma vez.
-    expect(read(SERVICO)).toContain('per_page: 1000');
+    expect(read(SERVICO)).toContain('per_page: 5000');
   });
 
   // As telas onde a lista truncada foi vista com os próprios olhos. Não é a

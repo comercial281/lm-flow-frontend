@@ -1,8 +1,14 @@
 import type { PaginatedResponse, StandardResponse, PaginationMeta } from '@/types/core';
 
+export type LabelCategory =
+  | 'own' | 'property' | 'followup' | 'sales_agent' | 'service' | 'deal_type' | 'lead_source';
+
 export interface Label {
   id: string;
   title: string;
+  display_name?: string;
+  category?: LabelCategory;
+  contacts_count?: number;
   description?: string;
   color: string;
   show_on_sidebar: boolean;

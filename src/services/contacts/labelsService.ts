@@ -3,12 +3,20 @@ import { extractData, extractResponse } from '@/utils/apiHelpers';
 import { LabelsResponse, LabelResponse, LabelDeleteResponse, Label } from '@/types/settings';
 
 class LabelsService {
-  async getLabels(): Promise<LabelsResponse> {
+  async getLabels(opts: { withCounts?: boolean } = {}): Promise<LabelsResponse> {
     // per_page alto pra trazer o catálogo COMPLETO: /labels pagina em 20 por padrão,
     // e um catálogo truncado quebra a busca/seleção e a detecção de duplicata (criar
     // uma etiqueta que já existe fora da 1ª página dava "Validation failed").
-    const response = await api.get('/labels', { params: { per_page: 1000 } });
+    // 5000 e não 1000: a Mais Que Imóveis passa de 900 só de etiqueta de imóvel (10/10/2026).
+    const params: Record<string, unknown> = { per_page: 5000 };
+    if (opts.withCounts) params.with_counts = 1;
+    const response = await api.get('/labels', { params });
     return extractResponse<Label>(response) as LabelsResponse;
+  }
+
+  async shuffleColor(labelId: string): Promise<LabelResponse> {
+    const response = await api.post(`/labels/${labelId}/shuffle_color`);
+    return extractData<LabelResponse>(response);
   }
 
   async createLabel(data: {
