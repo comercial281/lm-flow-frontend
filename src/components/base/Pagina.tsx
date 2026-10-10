@@ -1,5 +1,6 @@
 import { createContext, useContext, type ReactNode, type Ref } from 'react';
 import { cn } from '@/lib/utils';
+import { useOcupaCanto } from '@/components/support/cantoOcupado';
 
 // ── PÁGINA: a moldura única das telas (07/10/2026, pedido do dono) ───────────
 //
@@ -11,7 +12,11 @@ import { cn } from '@/lib/utils';
 // rolagem="pagina" (padrão): a tela inteira rola.
 // rolagem="conteudo": o cabeçalho fica parado e só o conteúdo rola. É o das
 //   listas com tabela e paginação (Contatos, Etiquetas…): o filho que rola
-//   continua sendo o da própria tela (`flex-1 overflow-auto`).
+//   continua sendo o da própria tela (`flex-1 overflow-auto`). A paginação fica
+//   no canto inferior direito, então a bolinha do suporte vira a aba lateral
+//   (`useOcupaCanto`, 10/10/2026).
+// No modo página, o fim da rolagem tem folga do tamanho da bolinha: o último
+//   botão à direita (Salvar, Próxima) para acima dela, não embaixo.
 // estreita: formulário que não deve esticar fica até max-w-4xl, À ESQUERDA
 //   (nunca centralizado: o título não pode mudar de lugar entre telas).
 //
@@ -54,6 +59,7 @@ export default function Pagina({
   children,
 }: PaginaProps) {
   const extras = useExtrasDaMoldura();
+  useOcupaCanto(rolagem === 'conteudo');
   const topo = (
     <>
       {extras.acima}
@@ -81,7 +87,7 @@ export default function Pagina({
     <div className="flex h-full min-h-0 flex-col" data-tour={dataTour}>
       <div ref={rolagemRef} className="flex-1 overflow-y-auto">
         {barraDoTopo}
-        <div className="px-4 py-6 sm:px-6">
+        <div className="px-4 pb-20 pt-6 sm:px-6">
           <div className={cn('mx-auto w-full max-w-[1400px] space-y-6', className)}>
             {topo}
             {estreita ? <div className="w-full max-w-4xl space-y-6">{children}</div> : children}
