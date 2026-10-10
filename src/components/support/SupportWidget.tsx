@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Home, MessageCircle, MessagesSquare, X } from 'lucide-react';
+import { ArrowLeft, HelpCircle, Home, MessageCircle, MessagesSquare, X } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useAuthStore } from '@/store/authStore';
 import type { SupportKind } from '@/services/support/supportService';
 import type { PassoId } from './roteiro';
 import { SUPPORT_OPEN_EVENT, type AlvoSuporte } from './openSupport';
 import { useNaoLidos } from './useNaoLidos';
+import { useCantoOcupado } from './cantoOcupado';
 import SupportInicio from './SupportInicio';
 import SupportRoteiro from './SupportRoteiro';
 import SupportNovoChamado from './SupportNovoChamado';
@@ -23,7 +24,12 @@ const BUILDER_CANVAS_ROUTE = /^\/automations\/(flow-builder|follow-ups|message-f
 // A lista e o mapa continuam com a bolinha.
 const PROPERTY_FORM_ROUTE = /^\/properties\/(new|[^/]+\/editar)\/?$/;
 
-export const escondeBolinha = (pathname: string): boolean =>
+/**
+ * Telas em que o canto inferior direito é sempre da tela. Nelas a bolinha vira a
+ * aba presa na borda direita (10/10/2026; antes ela sumia e só o menu do avatar
+ * abria o suporte). As outras telas avisam pelo `useOcupaCanto` (cantoOcupado.ts).
+ */
+export const rotaComAba = (pathname: string): boolean =>
   CHAT_ROUTE.test(pathname) || BUILDER_CANVAS_ROUTE.test(pathname) || PROPERTY_FORM_ROUTE.test(pathname);
 
 /** Mesmo tempo do `duration-200` do card (e do menu lateral). */
@@ -55,9 +61,11 @@ const ABA_DA_TELA: Record<Tela['nome'], 'inicio' | 'mensagens'> = {
  * e Mensagens (chamados da pessoa). O card não escurece a tela nem trava o app;
  * no celular ocupa a tela inteira. Fechar e reabrir mantém onde a pessoa estava.
  *
- * Em Conversas a bolinha NÃO é renderizada: ela é fixed no canto e cobria o
- * botão de enviar do MessageInput (decisão de 26/07). Lá o card abre pelo menu
- * do avatar (openSupport). `?suporte=<id>` (link do e-mail) abre direto no chamado.
+ * Onde o canto inferior direito é da tela (Conversas, construtor, cadastro de
+ * imóvel, listas com paginação e a barra "Alterações não salvas"), a bolinha vira
+ * a aba presa no meio da borda direita, com "?" (pedido do dono, 10/10/2026).
+ * O menu do avatar continua abrindo o card (openSupport). `?suporte=<id>` (link
+ * do e-mail) abre direto no chamado.
  */
 export default function SupportWidget() {
   const location = useLocation();
@@ -75,6 +83,8 @@ export default function SupportWidget() {
   const focoAnterior = useRef<HTMLElement | null>(null);
   const [tela, setTela] = useState<Tela>({ nome: 'inicio' });
   const { naoLidos, atualizar } = useNaoLidos();
+  const cantoOcupado = useCantoOcupado();
+  const comAba = rotaComAba(location.pathname) || cantoOcupado;
   const bolinha = useRef<HTMLButtonElement>(null);
   const card = useRef<HTMLDivElement>(null);
   // Tocar na aba Mensagens sempre recarrega a lista (vira `recarga` do SupportMensagens).
@@ -157,23 +167,38 @@ export default function SupportWidget() {
 
   return (
     <>
-      {!escondeBolinha(location.pathname) && (
-        <button
-          ref={bolinha}
-          type="button"
-          onClick={() => (aberto ? fechar() : abrir())}
-          aria-label={naoLidos > 0 && !aberto ? `Abrir ajuda e suporte, ${naoLidos} com resposta nova` : 'Abrir ajuda e suporte'}
-          aria-expanded={aberto}
-          className="fixed bottom-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90"
-        >
-          {aberto ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
-          {naoLidos > 0 && !aberto && (
-            <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground">
-              {naoLidos}
-            </span>
-          )}
-        </button>
-      )}
+      <button
+        ref={bolinha}
+        type="button"
+        onClick={() => (aberto ? fechar() : abrir())}
+        aria-label={naoLidos > 0 && !aberto ? `Abrir ajuda e suporte, ${naoLidos} com resposta nova` : 'Abrir ajuda e suporte'}
+        aria-expanded={aberto}
+        title={comAba ? 'Ajuda e suporte' : undefined}
+        className={
+          comAba
+            ? 'fixed right-0 top-1/2 z-40 flex h-12 w-6 -translate-y-1/2 items-center justify-center rounded-l-lg bg-primary text-primary-foreground shadow-lg transition-[width] duration-150 hover:w-8 focus-visible:w-8 motion-reduce:transition-none'
+            : 'fixed bottom-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90'
+        }
+      >
+        {comAba ? (
+          aberto ? <X className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />
+        ) : aberto ? (
+          <X className="h-5 w-5" />
+        ) : (
+          <MessageCircle className="h-5 w-5" />
+        )}
+        {naoLidos > 0 && !aberto && (
+          <span
+            aria-hidden="true"
+            className={cn(
+              'absolute flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground',
+              comAba ? '-left-2 -top-2' : '-right-1 -top-1',
+            )}
+          >
+            {naoLidos}
+          </span>
+        )}
+      </button>
 
       {jaAbriu && (
         <div

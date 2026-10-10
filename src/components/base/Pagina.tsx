@@ -1,5 +1,6 @@
 import { createContext, useContext, type ReactNode, type Ref } from 'react';
 import { cn } from '@/lib/utils';
+import { useOcupaCanto } from '@/components/support/cantoOcupado';
 
 // ── PÁGINA: a moldura única das telas (07/10/2026, pedido do dono) ───────────
 //
@@ -11,7 +12,9 @@ import { cn } from '@/lib/utils';
 // rolagem="pagina" (padrão): a tela inteira rola.
 // rolagem="conteudo": o cabeçalho fica parado e só o conteúdo rola. É o das
 //   listas com tabela e paginação (Contatos, Etiquetas…): o filho que rola
-//   continua sendo o da própria tela (`flex-1 overflow-auto`).
+//   continua sendo o da própria tela (`flex-1 overflow-auto`). A paginação fica
+//   no canto inferior direito, então a bolinha do suporte vira a aba lateral
+//   (`useOcupaCanto`, 10/10/2026).
 // estreita: formulário que não deve esticar fica até max-w-4xl, À ESQUERDA
 //   (nunca centralizado: o título não pode mudar de lugar entre telas).
 //
@@ -54,6 +57,7 @@ export default function Pagina({
   children,
 }: PaginaProps) {
   const extras = useExtrasDaMoldura();
+  useOcupaCanto(rolagem === 'conteudo');
   const topo = (
     <>
       {extras.acima}

@@ -17,6 +17,7 @@ vi.mock('@/services/support/supportService', async orig => ({
 import SupportWidget from './SupportWidget';
 import { openSupport } from './openSupport';
 import { avisarSuporte } from './aoVivo';
+import { useOcupaCanto } from './cantoOcupado';
 import { useAuthStore } from '@/store/authStore';
 
 const detalhe = {
@@ -58,16 +59,44 @@ describe('SupportWidget', () => {
     expect(screen.getByRole('button', { name: /Abrir ajuda e suporte, 2 com resposta nova/ })).toBeInTheDocument();
   });
 
-  it('a bolinha some em Conversas, mas o menu do avatar ainda abre o card', async () => {
+  it('em Conversas a bolinha vira a aba da borda, e o menu do avatar ainda abre o card', async () => {
     montar('/conversations/123');
-    expect(screen.queryByRole('button', { name: 'Abrir ajuda e suporte' })).toBeNull();
+    const aba = screen.getByRole('button', { name: 'Abrir ajuda e suporte' });
+    expect(aba.className).toContain('top-1/2');
+    expect(aba.className).not.toContain('bottom-4');
     act(() => openSupport());
     expect(await screen.findByText('Como podemos ajudar?')).toBeInTheDocument();
   });
 
   it('em /conversations-old a bolinha continua', () => {
     montar('/conversations-old');
-    expect(screen.getByRole('button', { name: 'Abrir ajuda e suporte' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Abrir ajuda e suporte' }).className).toContain('bottom-4');
+  });
+
+  it('tela que ocupa o canto troca a bolinha pela aba, e devolve ao sair', () => {
+    function OcupaCanto() {
+      useOcupaCanto(true);
+      return null;
+    }
+    const { rerender } = render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <SupportWidget />
+        <OcupaCanto />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('button', { name: 'Abrir ajuda e suporte' }).className).toContain('top-1/2');
+    rerender(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <SupportWidget />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('button', { name: 'Abrir ajuda e suporte' }).className).toContain('bottom-4');
+  });
+
+  it('a aba abre o card como a bolinha', async () => {
+    montar('/properties/new');
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir ajuda e suporte' }));
+    expect(await screen.findByText('Como podemos ajudar?')).toBeInTheDocument();
   });
 
   it('roteiro → "Não, falar com o time" abre chamado com a pergunta como assunto', async () => {
