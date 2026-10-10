@@ -17,6 +17,7 @@ export interface Visit {
   cancelled_at?: string | null;
   feedback_notes?: string;
   rating?: number | null;
+  metadata?: Record<string, unknown> | null;
   property?: { id: string; title: string; code: string; address_city?: string; address_neighborhood?: string };
   contact?: { id: string; name: string; phone_number?: string };
   realtor?: PersonRef | null;
@@ -31,6 +32,9 @@ export interface VisitFormData {
   scheduled_at: string;
   duration_minutes?: number;
   realtor_notes?: string;
+  status?: 'completed';
+  rating?: number;
+  feedback_notes?: string;
 }
 
 const BASE = '/visits';
@@ -88,8 +92,15 @@ export const visitsService = {
     return (res.data as { data: Visit }).data;
   },
 
-  async reschedule(id: string, scheduled_at: string): Promise<Visit> {
-    const res = await api.post(`${BASE}/${id}/reschedule`, { scheduled_at });
+  /** Remarcar: só horário futuro; o gestor pode trocar corretor e duração junto. */
+  async reschedule(id: string, scheduled_at: string, opts: { duration_minutes?: number; realtor_id?: string } = {}): Promise<Visit> {
+    const res = await api.post(`${BASE}/${id}/reschedule`, { scheduled_at, ...opts });
+    return (res.data as { data: Visit }).data;
+  },
+
+  /** O cliente não veio. Só depois do horário; libera a agenda e para os lembretes. */
+  async noShow(id: string): Promise<Visit> {
+    const res = await api.post(`${BASE}/${id}/no_show`);
     return (res.data as { data: Visit }).data;
   },
 
