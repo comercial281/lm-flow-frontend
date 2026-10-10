@@ -6382,7 +6382,7 @@ Armadilhas:
 2. **Onde o canto inferior direito é da tela, a bolinha vira a aba lateral** (pedido do dono, 10/10/2026; antes ela sumia e só o menu do avatar abria o suporte). A aba é um "post-it" roxo com "?", preso no meio da borda direita da janela, com o mesmo contador e o mesmo card. Dois jeitos de virar aba:
    - **Pelo endereço** (`rotaComAba`, em `SupportWidget.tsx`): `/conversations` (`/conversations-old` não conta), os canvas de `flow-builder`, `follow-ups` e `message-funnels/:id`, e o cadastro de imóvel (`/properties/new` e `/properties/:id/editar`).
    - **Pela tela que ocupa o canto** (`useOcupaCanto`, em `cantoOcupado.ts`): a moldura `Pagina` com `rolagem="conteudo"` (listas com paginação no pé: Etiquetas, Contatos, Canais…) e a `BarraSalvar` enquanto aparece. Tela nova que põe coisa fixa no canto inferior direito chama `useOcupaCanto(true)`; ao desmontar, a bolinha volta sozinha.
-   - No modo página, a `Pagina` tem folga de 80px no fim da rolagem (`pb-20`): o último botão à direita para acima da bolinha.
+   - Sem folga extra no fim da rolagem das páginas: o dono achou estranho o scroll a mais (10/10/2026). Não reabrir sem ele pedir.
    O menu do avatar continua abrindo o card (`openSupport`) em qualquer tela.
 3. **Card fechado = `hidden` + `inert` + `aria-hidden`.** Nada nele recebe foco nem é lido por leitor de tela, e a busca de um chamado aberto **pausa** enquanto o card está fechado.
 4. **No celular o card respeita áreas seguras e `--keyboard-inset`** (mesma fórmula do `MainLayout`): o teclado não cobre a caixa de texto.
