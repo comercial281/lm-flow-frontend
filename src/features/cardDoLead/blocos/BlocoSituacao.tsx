@@ -44,6 +44,9 @@ export function ResponsavelDoCard({ card }: { card: CardDoLead }) {
       responsavelId={responsavel.id}
       onTrocar={responsavel.trocar}
       carregando={responsavel.salvando}
+      podeTrocar={responsavel.podeTrocar}
+      meuId={responsavel.meuId}
+      nomeDoResponsavel={responsavel.nomeDoCard}
     />
   );
 }

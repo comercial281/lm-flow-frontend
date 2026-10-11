@@ -12,6 +12,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAccountUsers } from '@/hooks/useAccountUsers';
+import { useAuthStore } from '@/store/authStore';
+import { useEhGestor } from '@/features/tarefas/useEhGestor';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -62,7 +64,12 @@ export function useCardDoLead(
   item: PipelineItem | null,
   { aberto, stages, onItemStageMoved, onLabelsChanged, onItemStatusChanged }: OpcoesDoCard,
 ) {
-  const { users } = useAccountUsers();
+  // Responsável (10/10/2026): só o gestor troca (mesma régua do servidor,
+  // useEhGestor) e só ele precisa da lista de pessoas — o corretor não lê
+  // GET /users (o 403 deixava o campo em branco). O nome vem do card.
+  const podeTrocarResponsavel = useEhGestor();
+  const meuId = useAuthStore(st => st.currentUser?.id);
+  const { users } = useAccountUsers({ enabled: podeTrocarResponsavel });
   // Juntar contatos: só gestor (corretor isolado não vê a base pra escolher o outro).
   const corretor = useCorretorLogado();
   const { can } = useUserPermissions();
@@ -440,7 +447,19 @@ export function useCardDoLead(
       rodapeSalvando,
       setRodapeSalvando,
     },
-    responsavel: { id: selectedAssigneeId, salvando: assigningUser, usuarios: users, trocar: handleAssigneeChange },
+    responsavel: {
+      id: selectedAssigneeId,
+      salvando: assigningUser,
+      usuarios: users,
+      trocar: handleAssigneeChange,
+      podeTrocar: podeTrocarResponsavel,
+      meuId: meuId != null ? String(meuId) : null,
+      // O nome do responsável que o servidor mandou no card — vale enquanto o
+      // escolhido é ele (o gestor troca e a lista passa a dar o nome).
+      nomeDoCard: item?.assignee && selectedAssigneeId && String(item.assignee.id) === selectedAssigneeId
+        ? item.assignee.name ?? null
+        : null,
+    },
     roleta: {
       ligadas: roletas,
       mandando: assigningRoleta,

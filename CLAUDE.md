@@ -8199,3 +8199,26 @@ Decisões (não reabrir sem o dono pedir):
 
 1. **Lista de países em português em todo campo de telefone com bandeira.** Todos passam pelo `PhoneInput` da casa (`@/components/shared/PhoneInput`), que agora usa os rótulos pt-BR da própria biblioteca (`react-phone-number-input/locale/pt-BR`, ordem alfabética em pt-BR) e Brasil por padrão. Vale para todo campo com bandeira, por exemplo: Criar novo lead, Contatos, Disparo em massa, mensagem do funil (teste de follow-up), canais, Perfil, Lembretes, Bolsão, WhatsApp do Meu site › Dados, landing (editor), assistente de novo cliente (painel raiz) e janela de conversa do site (pré-chat). O valor gravado não muda. Usam o `BrPhoneInput` (só Brasil, sem bandeira nem lista de países): os formulários públicos do site e da landing (de propósito: não puxa o CRM pro pacote público), as telas de Equipe (ficha da pessoa, Adicionar pessoa, Novo número) e o telefone do topo/rodapé em Meu site › Dados. Campo de telefone novo com país usa o `PhoneInput`; nunca o `react-phone-number-input` direto.
 2. **Um aviso por lead na janela Adicionar Lead ao Funil.** Quem avisa é a janela: "Lead criado e adicionado ao funil." (lead novo), "Lead já existia — adicionado ao funil." (telefone/e-mail já cadastrado) ou "Lead adicionado ao funil." (lead existente). O quadro (`handleItemAdded` no `PipelineKanban`) só recarrega. Textos em `pipelines.json` › `addItem`. Conferidos e já com aviso único: Contatos › Novo contato, Colocar no funil (card e painel da conversa) e criar contato na Agenda de visitas.
+
+## Card do lead: Responsável com "Você" e campos personalizados sem aviso quebrado (desde 2026-10-10)
+
+Raio-X de 10/10/2026 (espaço Barones, logado como corretor): no card do lead o campo **Responsável** aparecia em branco, e ao abrir o card subia um aviso com o texto literal `contactSidebar.customAttributes.loadError`.
+
+O que aparece na tela:
+
+- **Responsável** (janela do card, página do card completo e o card aberto pelo painel do lead na Conversa — todos passam por `CampoResponsavel` em `components/pipelines/card/CamposDaSituacao.tsx`):
+  - **Quem não é gestor** vê só texto, sem lista: **"Você"** quando o responsável é a própria pessoa, o **nome** de quem é, ou **"Sem responsável"**. Nome que não chegou aparece "—", nunca em branco.
+  - **Gestor** continua com a lista; a própria pessoa aparece escrita **"Você"** na lista e no valor escolhido.
+- **Outras informações** (campos personalizados do card e do painel da Conversa): leitura recusada pelo cargo (403) não mostra aviso, a seção só não aparece; outra falha mostra "Não foi possível carregar os campos personalizados" (ou "...os campos da conversa").
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Quem é gestor aqui é a régua do servidor** (`Visits::Visibility.manager?`: administrador, suporte ou `conversations.read_all`), lida na tela por `useEhGestor`. Não inventar outra regra de "quem troca o responsável".
+2. **O nome vem do card** (`item.assignee`, que o servidor já manda), não de `GET /users`: o corretor não tem `users.read`, a lista voltava 403 e o campo ficava vazio. Só o gestor busca a lista (`useAccountUsers({ enabled })`).
+3. **A tela não mudou regra do servidor sobre reatribuir.** Hoje o servidor não barra o corretor de trocar o responsável pela API (atribuição da conversa e `default_assignee_id` do contato); quem impede é a tela. Fica para a frente do acesso pela tarefa/visita (em desenho).
+4. **Leitura das definições dos campos personalizados** passou a pedir `contacts.read` no servidor (lm-flow#456); criar/editar/apagar seguem do administrador. A chave `custom_attribute_definitions.read` continua aparecendo em Cargos, sem efeito pra quem já vê contatos.
+
+Armadilhas:
+
+1. **A trava de i18n não pega chave passada por prop** (`translationKeys={{ loadError: '...' }}`): ela só lê `t('literal')`. Foi assim que `contactSidebar.customAttributes.loadError` e `contactSidebar.conversationAttributes.loadError` viveram sem tradução. Chave nova por prop: conferir no `pt-BR` à mão.
+2. Sem o lm-flow#456 no ar, o card só fica quieto (sem aviso) e o bloco *Outras informações* continua escondido pro corretor e pro gestor; com ele, o bloco volta a aparecer.
