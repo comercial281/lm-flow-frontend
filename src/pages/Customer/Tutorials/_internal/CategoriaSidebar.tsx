@@ -117,12 +117,12 @@ export default function CategoriaSidebar({ selectedId, onSelect, canEdit }: Prop
               className="p-0.5 text-muted-foreground hover:text-foreground"
               type="button"
             >
-              {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             </button>
           ) : (
             <span className="w-4" />
           )}
-          {isOpen ? <FolderOpen size={14} /> : <Folder size={14} />}
+          {isOpen ? <FolderOpen className="h-3.5 w-3.5" /> : <Folder className="h-3.5 w-3.5" />}
           {editingId === node.id ? (
             <input
               autoFocus
@@ -236,7 +236,7 @@ export default function CategoriaSidebar({ selectedId, onSelect, canEdit }: Prop
             title="Nova categoria"
             type="button"
           >
-            <Plus size={14} />
+            <Plus className="h-3.5 w-3.5" />
           </button>
         )}
       </div>

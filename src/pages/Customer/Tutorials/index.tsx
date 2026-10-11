@@ -5,8 +5,9 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FileText, GraduationCap, AlertTriangle } from 'lucide-react';
+import { FileText, GraduationCap } from 'lucide-react';
 import { BaseHeader } from '@/components/base';
+import Aviso from '@/components/base/Aviso';
 import Abas from '@/components/base/Abas';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useCategories } from '@/hooks/useKnowledge';
@@ -61,17 +62,9 @@ const Tutorials = () => {
           <BaseHeader title={t('title')} />
         </div>
         <div className="flex-1 flex items-center justify-center p-6">
-          <div className="max-w-md bg-card border border-orange-500/40 rounded-xl p-6 flex items-start gap-3">
-            <AlertTriangle size={20} className="text-orange-500 shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <p className="font-semibold mb-1">Tutorial indisponível</p>
-              <p className="text-muted-foreground text-xs">
-                As variáveis <code>VITE_LMHUB_SUPABASE_URL</code> e{' '}
-                <code>VITE_LMHUB_SUPABASE_ANON_KEY</code> precisam ser configuradas no deploy
-                do seu LM Flow.
-              </p>
-            </div>
-          </div>
+          <Aviso tom="atencao" titulo="Tutorial indisponível" className="max-w-md">
+            As variáveis <code>VITE_LMHUB_SUPABASE_URL</code> e <code>VITE_LMHUB_SUPABASE_ANON_KEY</code> precisam ser configuradas no deploy do seu LM Flow.
+          </Aviso>
         </div>
       </div>
     );
