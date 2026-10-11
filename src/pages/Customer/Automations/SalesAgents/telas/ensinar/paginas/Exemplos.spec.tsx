@@ -96,6 +96,17 @@ describe('Exemplos', () => {
     expect(gravar).toHaveBeenCalledWith({ example_conversations: [{ lead: 'y', resposta: 'segunda' }] });
   });
 
+  it('excluir fecha a edição aberta (o índice das conversas anda)', async () => {
+    const { gravar } = abrir([], [{ lead: 'x', resposta: 'primeira' }, { lead: 'y', resposta: 'segunda' }, { lead: 'z', resposta: 'terceira' }]);
+    await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[2]);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
+    expect(screen.getByRole('button', { name: 'Salvar exemplo' })).toBeInTheDocument();
+    await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Excluir' }));
+    expect(gravar).toHaveBeenCalledWith({ example_conversations: [{ lead: 'y', resposta: 'segunda' }, { lead: 'z', resposta: 'terceira' }] });
+    expect(screen.queryByRole('button', { name: 'Salvar exemplo' })).not.toBeInTheDocument();
+  });
+
   it('excluir lição confirma e apaga; sem confirmação não apaga', async () => {
     const { l, confirmar } = abrir([L('a', 'good_example')], []);
     confirmar.mockResolvedValueOnce(false);

@@ -60,10 +60,13 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
     if (!compor || !compor.resposta.trim() || gravando) return;
     const resposta = compor.resposta.trim();
     const lead = compor.lead.trim();
+    const alvo = compor.chave === null ? null : itens.find((i) => i.chave === compor.chave) ?? null;
+    // Editando um exemplo que saiu da lista (excluído, movido, lista relida): fecha.
+    // Cair no "criar" aqui faria um exemplo novo que ninguém pediu.
+    if (compor.chave !== null && !alvo) { setCompor(null); return; }
     setGravando(true);
     try {
       let ok: boolean;
-      const alvo = compor.chave === null ? null : itens.find((i) => i.chave === compor.chave) ?? null;
       if (!alvo) ok = await L.criar(aba === 'bom' ? 'good_example' : 'bad_example', resposta, lead || undefined);
       else if (alvo.fonte === 'licao') ok = await L.atualizar(alvo.licao.id, { content: resposta, context: lead || null });
       else ok = await gravar({ example_conversations: conversas.map((c, i) => (i === alvo.indice ? { lead, resposta } : c)) });
@@ -73,6 +76,9 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
 
   const apagar = async (item: ItemDeExemplo) => {
     if (!(await confirmar({ titulo: 'Excluir exemplo', descricao: item.resposta, rotuloDaAcao: 'Excluir', destrutivo: true }))) return;
+    // A composição aberta aponta pra um item pela chave; as conversas reais são
+    // chaveadas pelo índice, que anda quando uma sai. Fecha pra não editar a errada.
+    setCompor(null);
     if (item.fonte === 'licao') await L.apagar(item.licao.id);
     else await gravar({ example_conversations: conversas.filter((_, i) => i !== item.indice) });
   };
