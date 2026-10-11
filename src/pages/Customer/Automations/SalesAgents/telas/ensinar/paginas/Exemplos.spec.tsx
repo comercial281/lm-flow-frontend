@@ -88,19 +88,19 @@ describe('Exemplos', () => {
     expect(screen.queryByRole('menuitem', { name: /Mover/ })).not.toBeInTheDocument();
   });
 
-  it('apagar conversa real confirma e grava a lista sem ela', async () => {
+  it('excluir conversa real confirma e grava a lista sem ela', async () => {
     const { gravar, confirmar } = abrir([], [{ lead: 'x', resposta: 'primeira' }, { lead: 'y', resposta: 'segunda' }]);
     await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[0]);
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Apagar' }));
-    expect(confirmar).toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Excluir' }));
+    expect(confirmar).toHaveBeenCalledWith(expect.objectContaining({ titulo: 'Excluir exemplo', rotuloDaAcao: 'Excluir' }));
     expect(gravar).toHaveBeenCalledWith({ example_conversations: [{ lead: 'y', resposta: 'segunda' }] });
   });
 
-  it('apagar lição confirma e apaga; sem confirmação não apaga', async () => {
+  it('excluir lição confirma e apaga; sem confirmação não apaga', async () => {
     const { l, confirmar } = abrir([L('a', 'good_example')], []);
     confirmar.mockResolvedValueOnce(false);
     await userEvent.click(screen.getByRole('button', { name: /Ações do exemplo/ }));
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Apagar' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Excluir' }));
     expect(l.apagar).not.toHaveBeenCalled();
   });
 

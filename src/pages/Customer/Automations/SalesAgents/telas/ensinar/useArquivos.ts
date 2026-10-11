@@ -54,7 +54,7 @@ export function useArquivos(agentId: string, aoMudarContagem: () => void): Arqui
       aoMudarContagem();
       return true;
     } catch {
-      toast.error('Não deu pra apagar. Tente de novo.');
+      toast.error('Não deu pra excluir. Tente de novo.');
       return false;
     }
   }, [agentId, carregar, aoMudarContagem]);

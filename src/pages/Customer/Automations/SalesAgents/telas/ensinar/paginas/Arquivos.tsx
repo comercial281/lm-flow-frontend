@@ -77,7 +77,7 @@ export default function Arquivos({ agent, arquivos: A, confirmar }: PropsDaPagin
   };
 
   const apagar = async (d: SalesAgentDocument) => {
-    if (!(await confirmar({ titulo: 'Apagar arquivo', descricao: d.title, rotuloDaAcao: 'Apagar', destrutivo: true }))) return;
+    if (!(await confirmar({ titulo: 'Excluir arquivo', descricao: d.title, rotuloDaAcao: 'Excluir', destrutivo: true }))) return;
     await A.apagar(d);
   };
 
@@ -193,7 +193,7 @@ export default function Arquivos({ agent, arquivos: A, confirmar }: PropsDaPagin
                         : <span className="block text-sm font-semibold text-amber-700 dark:text-amber-400">Falta dizer quando mandar</span>)}
                     </span>
                   </button>
-                  <DropdownMenu>
+                  <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
                       <Button type="button" variant="ghost" size="icon" aria-label={`Ações do arquivo ${d.title}`} className="shrink-0 text-muted-foreground">
                         <MoreVertical className="h-4 w-4" aria-hidden />
@@ -213,7 +213,7 @@ export default function Arquivos({ agent, arquivos: A, confirmar }: PropsDaPagin
                       )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem variant="destructive" onSelect={() => void apagar(d)}>
-                        <Trash2 className="h-4 w-4" aria-hidden /> Apagar
+                        <Trash2 className="h-4 w-4" aria-hidden /> Excluir
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

@@ -1,5 +1,5 @@
 // Ensinar · Prova social: lista de casos, um por linha no MESMO texto `social_proof`
-// (decisão 4 do spec). Grava na hora; apagar pede confirmação.
+// (decisão 4 do spec). Grava na hora; excluir pede confirmação.
 import { useState } from 'react';
 import { MoreVertical, Plus, Quote, Star } from 'lucide-react';
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/ds';
@@ -25,7 +25,7 @@ export default function ProvaSocial({ agent, gravar, confirmar }: PropsDaPaginaD
     if (await gravarCasos([...casos, t])) setNovo('');
   };
   const apagar = async (i: number) => {
-    if (!(await confirmar({ titulo: 'Apagar caso', descricao: casos[i], rotuloDaAcao: 'Apagar', destrutivo: true }))) return;
+    if (!(await confirmar({ titulo: 'Excluir caso', descricao: casos[i], rotuloDaAcao: 'Excluir', destrutivo: true }))) return;
     await gravarCasos(casos.filter((_, j) => j !== i));
   };
   const salvarEdicao = async () => {
@@ -65,7 +65,7 @@ export default function ProvaSocial({ agent, gravar, confirmar }: PropsDaPaginaD
                     </div>
                   </div>
                 ) : <p className="flex-1 pt-1 text-[15px] leading-snug">{c}</p>}
-                <DropdownMenu>
+                <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
                     <Button type="button" variant="ghost" size="icon" aria-label={`Ações do caso ${i + 1}`} className="text-muted-foreground">
                       <MoreVertical className="h-4 w-4" aria-hidden />
@@ -73,7 +73,7 @@ export default function ProvaSocial({ agent, gravar, confirmar }: PropsDaPaginaD
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => setEditando({ i, texto: c })}>Editar</DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive" onSelect={() => void apagar(i)}>Apagar</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onSelect={() => void apagar(i)}>Excluir</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </li>

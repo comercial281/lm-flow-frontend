@@ -1,10 +1,11 @@
 import type { SalesAgentLesson } from '@/services/salesAgents/salesAgentsService';
 import { cn } from '@/lib/utils';
+import { VAZIO, dataCurta as dataCurtaDaCasa } from '@/lib/formato';
 
-/** dd/mm (vazio se a data não for válida). */
+/** dd/mm pelo módulo de formato da casa (vazio, sem travessão, se a data não for válida: fica ao lado do selo). */
 export const dataCurta = (iso: string) => {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  const d = dataCurtaDaCasa(iso);
+  return d === VAZIO ? '' : d;
 };
 
 /** "Sugestão aceita" ou "Escrita à mão" (o servidor não guarda quem escreveu). */

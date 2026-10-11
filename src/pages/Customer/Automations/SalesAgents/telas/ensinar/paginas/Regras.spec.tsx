@@ -57,11 +57,18 @@ describe('Regras', () => {
     expect(screen.getByText('regra b')).toBeInTheDocument();
   });
 
-  it('apagar pede confirmação', async () => {
+  it('filtro Escritas à mão deixa de fora as sugestões aceitas', async () => {
+    abrir([L('a'), L('b', { origin: 'suggestion' })]);
+    await userEvent.click(screen.getByRole('tab', { name: /Escritas à mão/ }));
+    expect(screen.getByText('regra a')).toBeInTheDocument();
+    expect(screen.queryByText('regra b')).not.toBeInTheDocument();
+  });
+
+  it('excluir pede confirmação', async () => {
     const { l, confirmar } = abrir([L('a')]);
     await userEvent.click(screen.getByRole('button', { name: 'Ações da regra regra a' }));
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Apagar' }));
-    expect(confirmar).toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Excluir' }));
+    expect(confirmar).toHaveBeenCalledWith(expect.objectContaining({ titulo: 'Excluir regra', rotuloDaAcao: 'Excluir' }));
     expect(l.apagar).toHaveBeenCalledWith('a');
   });
 

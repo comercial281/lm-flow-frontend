@@ -145,11 +145,11 @@ describe('Arquivos', () => {
     expect(screen.getByText(/não tem texto pra aprender/)).toBeInTheDocument();
   });
 
-  it('apagar pede confirmação', async () => {
+  it('excluir pede confirmação', async () => {
     const { a, confirmar } = abrir([D('a')]);
     await userEvent.click(screen.getByRole('button', { name: 'Ações do arquivo Arquivo a' }));
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Apagar' }));
-    expect(confirmar).toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Excluir' }));
+    expect(confirmar).toHaveBeenCalledWith(expect.objectContaining({ titulo: 'Excluir arquivo', rotuloDaAcao: 'Excluir' }));
     await waitFor(() => expect(a.apagar).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' })));
   });
 

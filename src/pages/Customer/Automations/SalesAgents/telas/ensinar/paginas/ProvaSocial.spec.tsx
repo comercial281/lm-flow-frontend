@@ -26,11 +26,11 @@ describe('Prova social', () => {
     expect(gravar).toHaveBeenCalledWith({ social_proof: 'A\nB' });
   });
 
-  it('apagar o único caso grava vazio (null), depois de confirmar', async () => {
+  it('excluir o único caso grava vazio (null), depois de confirmar', async () => {
     const { gravar, confirmar } = abrir('A');
     await userEvent.click(screen.getByRole('button', { name: 'Ações do caso 1' }));
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Apagar' }));
-    expect(confirmar).toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Excluir' }));
+    expect(confirmar).toHaveBeenCalledWith(expect.objectContaining({ titulo: 'Excluir caso', rotuloDaAcao: 'Excluir' }));
     expect(gravar).toHaveBeenCalledWith({ social_proof: null });
   });
 

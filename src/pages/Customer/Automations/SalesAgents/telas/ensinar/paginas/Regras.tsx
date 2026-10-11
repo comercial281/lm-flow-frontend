@@ -1,6 +1,6 @@
 // Ensinar · Regras: lições `rule`. Nova regra em cima, medidor "N de 12 valendo"
 // (o servidor diz quais valem: `in_use`), aviso quando alguma ligada ficou de fora,
-// filtros e a lista com chave (pausar), selo de origem e ⋮ (Editar, Pausar, Apagar).
+// filtros e a lista com chave (pausar), selo de origem e ⋮ (Editar, Pausar, Excluir).
 import { useMemo, useState } from 'react';
 import { AlertTriangle, MoreVertical, Plus, SquareCheck } from 'lucide-react';
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/ds';
@@ -15,10 +15,10 @@ import { regrasForaDoLimite } from '../paginas';
 import { SeloDeOrigem, dataCurta } from './LinhaDaLicao';
 import type { PropsDaPaginaDoEnsinar } from './tipos';
 
-type Filtro = 'todas' | 'suas' | 'sugestoes' | 'pausadas';
+type Filtro = 'todas' | 'mao' | 'sugestoes' | 'pausadas';
 const FILTROS: { chave: Filtro; rotulo: string; passa: (l: SalesAgentLesson) => boolean }[] = [
   { chave: 'todas', rotulo: 'Todas', passa: () => true },
-  { chave: 'suas', rotulo: 'Suas', passa: (l) => l.origin === 'manual' },
+  { chave: 'mao', rotulo: 'Escritas à mão', passa: (l) => l.origin === 'manual' },
   { chave: 'sugestoes', rotulo: 'Das sugestões', passa: (l) => l.origin === 'suggestion' },
   { chave: 'pausadas', rotulo: 'Pausadas', passa: (l) => !l.enabled },
 ];
@@ -42,7 +42,7 @@ export default function Regras({ licoes: L, confirmar }: PropsDaPaginaDoEnsinar)
     try { if (await L.criar('rule', t)) { setNova(''); setFiltro('todas'); } } finally { setGravando(false); }
   };
   const apagar = async (r: SalesAgentLesson) => {
-    if (!(await confirmar({ titulo: 'Apagar regra', descricao: r.content, rotuloDaAcao: 'Apagar', destrutivo: true }))) return;
+    if (!(await confirmar({ titulo: 'Excluir regra', descricao: r.content, rotuloDaAcao: 'Excluir', destrutivo: true }))) return;
     await L.apagar(r.id);
   };
   const salvarEdicao = async () => {
@@ -120,7 +120,7 @@ export default function Regras({ licoes: L, confirmar }: PropsDaPaginaDoEnsinar)
                         </div>
                       </div>
                     )}
-                    <DropdownMenu>
+                    <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild>
                         <Button type="button" variant="ghost" size="icon" aria-label={`Ações da regra ${r.content}`} className="text-muted-foreground">
                           <MoreVertical className="h-4 w-4" aria-hidden />
@@ -129,7 +129,7 @@ export default function Regras({ licoes: L, confirmar }: PropsDaPaginaDoEnsinar)
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onSelect={() => setEditando({ id: r.id, texto: r.content })}>Editar</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => void L.atualizar(r.id, { enabled: !r.enabled })}>{r.enabled ? 'Pausar' : 'Ligar'}</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onSelect={() => void apagar(r)}>Apagar</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onSelect={() => void apagar(r)}>Excluir</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </li>

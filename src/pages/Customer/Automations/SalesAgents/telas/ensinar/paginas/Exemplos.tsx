@@ -72,7 +72,7 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
   };
 
   const apagar = async (item: ItemDeExemplo) => {
-    if (!(await confirmar({ titulo: 'Apagar exemplo', descricao: item.resposta, rotuloDaAcao: 'Apagar', destrutivo: true }))) return;
+    if (!(await confirmar({ titulo: 'Excluir exemplo', descricao: item.resposta, rotuloDaAcao: 'Excluir', destrutivo: true }))) return;
     if (item.fonte === 'licao') await L.apagar(item.licao.id);
     else await gravar({ example_conversations: conversas.filter((_, i) => i !== item.indice) });
   };
@@ -149,7 +149,7 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
                 )}
                 {item.fonte === 'licao' && !item.licao.enabled && <span className="rounded-full bg-muted px-2.5 py-0.5 font-semibold">Pausado</span>}
                 {item.fonte === 'conversa' || item.licao.enabled ? (!item.valendo && <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 font-semibold text-amber-800 dark:text-amber-300">Não está valendo</span>) : null}
-                <DropdownMenu>
+                <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
                     <Button type="button" variant="ghost" size="icon" aria-label={`Ações do exemplo ${n + 1}`} className="ml-auto text-muted-foreground">
                       <MoreVertical className="h-4 w-4" aria-hidden />
@@ -162,7 +162,7 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
                         {aba === 'bom' ? 'Mover pra Não responda assim' : 'Mover pra Responda assim'}
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem className="text-destructive" onSelect={() => void apagar(item)}>Apagar</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onSelect={() => void apagar(item)}>Excluir</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
