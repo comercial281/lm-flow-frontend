@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Visit } from '@/services/visits/visitsService';
 
@@ -36,14 +36,18 @@ vi.mock('@/hooks/useCan', () => ({ useCan: () => () => true }));
 
 // A janela de agendar de verdade busca horários e corretores: aqui só importa
 // com o que ela abriu.
+// `criarNaJanela` simula a visita nova criada pela janela aberta.
+let criarNaJanela: (v: Visit) => void = () => {};
 vi.mock('@/components/visits/ScheduleVisitDialog', () => ({
   ScheduleVisitDialog: (p: {
     open: boolean;
     visitaParaRemarcar?: Visit | null;
     leadInicial?: { id: string; name: string } | null;
     imovelInicial?: { id: string } | null;
-  }) =>
-    p.open ? (
+    onCreated?: (v: Visit) => void;
+  }) => {
+    if (p.open) criarNaJanela = v => p.onCreated?.(v);
+    return p.open ? (
       <div
         data-testid="janela"
         data-lead={p.leadInicial?.id ?? ''}
@@ -51,7 +55,8 @@ vi.mock('@/components/visits/ScheduleVisitDialog', () => ({
       >
         {p.visitaParaRemarcar ? 'Remarcar visita' : 'Nova visita'}
       </div>
-    ) : null,
+    ) : null;
+  },
 }));
 
 import { AcoesDaVisita } from './AcoesDaVisita';
@@ -160,11 +165,12 @@ describe('AcoesDaVisita', () => {
     expect(noShow).not.toHaveBeenCalled();
     await user.click(within(dialogo).getByRole('button', { name: 'Não compareceu' }));
 
-    await waitFor(() => expect(onAtualizada).toHaveBeenCalledWith(faltou));
-    expect(noShow).toHaveBeenCalledWith('v1');
+    await waitFor(() => expect(noShow).toHaveBeenCalledWith('v1'));
     expect(toastSuccess).toHaveBeenCalledWith('Marcado que o cliente não veio');
 
     const pergunta = await screen.findByRole('dialog');
+    // Ainda não avisou: trocar a visita agora desmontaria a pergunta.
+    expect(onAtualizada).not.toHaveBeenCalled();
     expect(within(pergunta).getByText('Remarcar agora?')).toBeInTheDocument();
     expect(
       within(pergunta).getByText('Abre uma visita nova para Maria Teste, com o mesmo imóvel e corretor.'),
@@ -175,6 +181,41 @@ describe('AcoesDaVisita', () => {
     expect(janela).toHaveTextContent('Nova visita');
     expect(janela).toHaveAttribute('data-lead', 'c1');
     expect(janela).toHaveAttribute('data-imovel', 'p1');
+  });
+
+  it('Agora não: só então avisa a visita com o cliente que não veio, uma vez', async () => {
+    const user = userEvent.setup();
+    const onAtualizada = vi.fn();
+    const faltou = visita({ scheduled_at: ONTEM, status: 'no_show' });
+    noShow.mockResolvedValue(faltou);
+    render(<AcoesDaVisita visita={visita({ scheduled_at: ONTEM })} onAtualizada={onAtualizada} />);
+
+    await user.click(screen.getByRole('button', { name: 'Não compareceu' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Não compareceu' }));
+    const pergunta = await screen.findByText('Remarcar agora?');
+    expect(onAtualizada).not.toHaveBeenCalled();
+    await user.click(within(pergunta.closest('[role="dialog"]') as HTMLElement).getByRole('button', { name: 'Agora não' }));
+    expect(onAtualizada).toHaveBeenCalledTimes(1);
+    expect(onAtualizada).toHaveBeenCalledWith(faltou);
+  });
+
+  it('Remarcar agora: avisa a visita encerrada e depois a nova', async () => {
+    const user = userEvent.setup();
+    const onAtualizada = vi.fn();
+    const faltou = visita({ scheduled_at: ONTEM, status: 'no_show' });
+    noShow.mockResolvedValue(faltou);
+    render(<AcoesDaVisita visita={visita({ scheduled_at: ONTEM })} onAtualizada={onAtualizada} />);
+
+    await user.click(screen.getByRole('button', { name: 'Não compareceu' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Não compareceu' }));
+    const pergunta = await screen.findByText('Remarcar agora?');
+    await user.click(within(pergunta.closest('[role="dialog"]') as HTMLElement).getByRole('button', { name: 'Remarcar' }));
+    await screen.findByTestId('janela');
+    expect(onAtualizada).not.toHaveBeenCalled();
+
+    const nova = visita({ id: 'v2', status: 'scheduled' });
+    act(() => { criarNaJanela(nova); });
+    expect(onAtualizada.mock.calls.map(c => c[0])).toEqual([faltou, nova]);
   });
 
   it('Remarcar abre a janela de remarcar a própria visita', async () => {

@@ -10,7 +10,7 @@
  * "Não compareceu" pergunta antes (encerra a visita) e oferece abrir uma visita
  * nova com o mesmo cliente, imóvel e corretor.
  */
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { CalendarClock, CheckCircle2, MessageSquare, Star, UserX, XCircle } from 'lucide-react';
 import {
@@ -38,6 +38,16 @@ export function AcoesDaVisita({ visita, onAtualizada }: { visita: Visit; onAtual
   };
   const botoes = botoesDaVisita(visita, podeNa);
 
+  // "Não compareceu" só avisa quem usa a peça no FIM do fluxo (Agora não, fechar
+  // ou janela da visita nova fechada). Avisar na hora trocaria a visita na lista
+  // (a aba "Agendadas" a tiraria) e desmontaria esta peça antes do "Remarcar agora?".
+  const pendente = useRef<Visit | null>(null);
+  const liberarPendente = () => {
+    const v = pendente.current;
+    pendente.current = null;
+    if (v) onAtualizada(v);
+  };
+
   const [dialogo, setDialogo] = useState<Dialogo>(null);
   const [remarcando, setRemarcando] = useState(false);
   const [novaVisita, setNovaVisita] = useState(false);
@@ -58,12 +68,13 @@ export function AcoesDaVisita({ visita, onAtualizada }: { visita: Visit; onAtual
   };
 
   /** Roda a ação no servidor; devolve a visita salva ou null se deu erro. */
-  const salvar = async (acao: () => Promise<Visit>, sucesso: string): Promise<Visit | null> => {
+  const salvar = async (acao: () => Promise<Visit>, sucesso: string, adiarAviso = false): Promise<Visit | null> => {
     setSalvando(true);
     try {
       const v = await acao();
       toast.success(sucesso);
-      onAtualizada(v);
+      if (adiarAviso) pendente.current = v;
+      else onAtualizada(v);
       return v;
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Não deu para salvar'));
@@ -89,7 +100,7 @@ export function AcoesDaVisita({ visita, onAtualizada }: { visita: Visit; onAtual
     } else if (dialogo === 'cancelar') {
       if (await salvar(() => visitsService.cancel(visita.id, motivo.trim() || undefined), 'Visita cancelada')) setDialogo(null);
     } else if (dialogo === 'nao_compareceu') {
-      if (await salvar(() => visitsService.noShow(visita.id), 'Marcado que o cliente não veio')) setDialogo('remarcar_agora');
+      if (await salvar(() => visitsService.noShow(visita.id), 'Marcado que o cliente não veio', true)) setDialogo('remarcar_agora');
     }
   };
 
@@ -149,7 +160,11 @@ export function AcoesDaVisita({ visita, onAtualizada }: { visita: Visit; onAtual
         </Button>
       )}
 
-      <Dialog open={dialogo !== null} onOpenChange={aberto => { if (!aberto && !salvando) setDialogo(null); }}>
+      <Dialog open={dialogo !== null} onOpenChange={aberto => {
+        if (aberto || salvando) return;
+        setDialogo(null);
+        if (dialogo === 'remarcar_agora') liberarPendente();
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{tituloDoDialogo}</DialogTitle>
@@ -207,7 +222,7 @@ export function AcoesDaVisita({ visita, onAtualizada }: { visita: Visit; onAtual
           <DialogFooter>
             {dialogo === 'remarcar_agora' ? (
               <>
-                <Button variant="outline" onClick={() => setDialogo(null)}>Agora não</Button>
+                <Button variant="outline" onClick={() => { setDialogo(null); liberarPendente(); }}>Agora não</Button>
                 <Button onClick={() => { setDialogo(null); setNovaVisita(true); }}>Remarcar</Button>
               </>
             ) : (
@@ -234,7 +249,7 @@ export function AcoesDaVisita({ visita, onAtualizada }: { visita: Visit; onAtual
       />
       <ScheduleVisitDialog
         open={novaVisita}
-        onOpenChange={setNovaVisita}
+        onOpenChange={aberto => { setNovaVisita(aberto); if (!aberto) liberarPendente(); }}
         leadInicial={{
           id: visita.contact_id,
           name: nomeDoCliente,
@@ -243,7 +258,7 @@ export function AcoesDaVisita({ visita, onAtualizada }: { visita: Visit; onAtual
           owner: visita.realtor ?? null,
         }}
         imovelInicial={visita.property ?? null}
-        onCreated={onAtualizada}
+        onCreated={nova => { liberarPendente(); onAtualizada(nova); }}
       />
     </>
   );
