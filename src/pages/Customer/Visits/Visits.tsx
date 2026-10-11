@@ -19,8 +19,6 @@ import {
   Building2,
   User as UserIcon,
   Clock,
-  CheckCircle2,
-  XCircle,
   MapPin,
   Phone,
   Star,
@@ -28,7 +26,6 @@ import {
   ChevronRight,
   CalendarDays,
   List,
-  MessageSquare,
   CalendarOff,
 } from 'lucide-react';
 import {
@@ -62,7 +59,8 @@ import {
   periodoDoContador,
   tituloDaVisao,
 } from '@/features/visits/gradeDoCalendario';
-import { acaoDaVisita, temRetorno, type AcaoDaVisita } from '@/features/visits/acaoDaVisita';
+import { AcoesDaVisita } from '@/features/visits/AcoesDaVisita';
+import { acaoDaVisita, type AcaoDaVisita } from '@/features/visits/acaoDaVisita';
 
 const FILTER_TABS = [
   { key: '', label: 'Todas' },
@@ -492,6 +490,14 @@ export default function Visits() {
     setActionModal({ visit, action });
   };
 
+  // Troca a visita alterada na lista e recarrega: o "Remarcar agora?" cria uma
+  // visita NOVA (outro id) e o contador também muda. O resumo do calendário fica
+  // aberto: os diálogos da peça vivem dentro dele, e ele relê a visita de `visits`.
+  const aoAtualizar = (v: Visit) => {
+    setVisits(prev => prev.map(x => (x.id === v.id ? v : x)));
+    load();
+  };
+
   const handleVisitClick = (visit: Visit) => {
     const acao = acaoDaVisita(visit, 'clique');
     if (acao === 'resumo') setResumoId(visit.id);
@@ -653,23 +659,11 @@ export default function Visits() {
     setModalOpen(true);
   };
 
-  // Clique num dia (Mês) ou num horário (Semana/Dia). Dia que já passou não
-  // abre: o servidor recusaria e o modal abriria com data vencida.
+  // Clique num dia (Mês) ou num horário (Semana/Dia).
+  // Dia que já passou abre a janela em "Registrar visita realizada" (frente 4, 10/10).
   const agendarNoCalendario = (d: Date, inicio?: Date) => {
     if (!canCreate) return;
-    const hoje = new Date();
-    if (d < new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())) return;
     openScheduleModal(new Date(d.getFullYear(), d.getMonth(), d.getDate()), inicio);
-  };
-
-  const handleConfirm = async (visit: Visit) => {
-    try {
-      const updated = await visitsService.confirm(visit.id);
-      setVisits(prev => prev.map(v => v.id === updated.id ? updated : v));
-      toast.success('Visita confirmada');
-    } catch {
-      toast.error('Erro ao confirmar visita');
-    }
   };
 
   const handleAction = async () => {
@@ -859,10 +853,7 @@ export default function Visits() {
                       key={visit.id}
                       visit={visit}
                       destacada={visitaDestacada === visit.id}
-                      onConfirm={handleConfirm}
-                      onComplete={() => abrirAcao(visit, 'complete')}
-                      onCancel={() => abrirAcao(visit, 'cancel')}
-                      onRetorno={() => abrirAcao(visit, 'retorno')}
+                      onAtualizada={aoAtualizar}
                     />
                   ))}
                 </div>
@@ -903,10 +894,7 @@ export default function Visits() {
             <VisitCard
               visit={visitaDoResumo}
               ancorada={false}
-              onConfirm={handleConfirm}
-              onComplete={v => { setResumoId(null); abrirAcao(v, 'complete'); }}
-              onCancel={v => { setResumoId(null); abrirAcao(v, 'cancel'); }}
-              onRetorno={v => { setResumoId(null); abrirAcao(v, 'retorno'); }}
+              onAtualizada={aoAtualizar}
             />
           )}
         </DialogContent>
@@ -981,24 +969,18 @@ function VisitCard({
   visit,
   destacada = false,
   ancorada = true,
-  onConfirm,
-  onComplete,
-  onCancel,
-  onRetorno,
+  onAtualizada,
 }: {
   visit: Visit;
   /** Visita que veio pelo link: ganha contorno. */
   destacada?: boolean;
   /** Leva o id `visita-<id>` (alvo do destaque). O resumo do calendário não leva: a pílula já tem. */
   ancorada?: boolean;
-  onConfirm: (v: Visit) => void;
-  onComplete: (v: Visit) => void;
-  onCancel: (v: Visit) => void;
-  /** Realizada sem nota nem comentário: abre "Dar retorno". */
-  onRetorno: (v: Visit) => void;
+  /** Os botões são da peça única `AcoesDaVisita`; ela avisa com a visita alterada (ou nova). */
+  onAtualizada: (v: Visit) => void;
 }) {
   const isPastVisit = isPast(visit.scheduled_at);
-  const isActive = ['scheduled', 'confirmed', 'in_progress'].includes(visit.status);
+  const isActive = ['scheduled', 'confirmed', 'in_progress', 'rescheduled'].includes(visit.status);
 
   return (
     <div id={ancorada ? `visita-${visit.id}` : undefined} className={`flex gap-4 p-4 rounded-xl border border-border bg-card transition-shadow ${
@@ -1074,35 +1056,9 @@ function VisitCard({
           <p className="text-xs text-muted-foreground mt-1 italic">{visit.realtor_notes}</p>
         )}
 
-        {/* Actions */}
-        {isActive && (
-          <div className="flex gap-2 mt-3">
-            {visit.status === 'scheduled' && (
-              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onConfirm(visit)}>
-                <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                Confirmar
-              </Button>
-            )}
-            <Button size="sm" variant="outline" className="h-7 text-xs text-green-700 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-800"
-              onClick={() => onComplete(visit)}>
-              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-              Realizada
-            </Button>
-            <Button size="sm" variant="outline" className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800"
-              onClick={() => onCancel(visit)}>
-              <XCircle className="h-3.5 w-3.5 mr-1" />
-              Cancelar
-            </Button>
-          </div>
-        )}
-        {visit.status === 'completed' && !temRetorno(visit) && (
-          <div className="flex gap-2 mt-3">
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onRetorno(visit)}>
-              <MessageSquare className="h-3.5 w-3.5 mr-1" />
-              Dar retorno
-            </Button>
-          </div>
-        )}
+        <div className="mt-3">
+          <AcoesDaVisita visita={visit} onAtualizada={onAtualizada} />
+        </div>
       </div>
     </div>
   );
