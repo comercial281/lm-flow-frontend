@@ -549,8 +549,18 @@ export function importaPaginaDaCasa(codigo, arquivo = 'x.tsx') {
 // No Tailwind 4, `hover:` e `group-hover:` só valem em aparelho com mouse
 // (@media (hover: hover)). Então `opacity-0 group-hover:opacity-100` deixa o
 // botão INVISÍVEL e ainda assim tocável no celular: dava pra apertar Excluir
-// sem ver. A alternativa da casa é a variante `toque:` (globals.css,
-// @media (hover: none)): `opacity-0 group-hover:opacity-100 toque:opacity-100`.
+// sem ver. O conserto é a peça 16 do GLOSSARIO (escolha do dono em 10/10/2026):
+// a ação fica SEMPRE à vista, apagada, e acende no mouse ou no foco:
+// `opacity-70 group-hover:opacity-100 focus-within:opacity-100`.
+// A variante `toque:` (globals.css, @media (hover: none)) NÃO é a saída
+// recomendada. Ela só vale em dois casos:
+//   - `toque:hidden`: camada sobre foto que some no toque e deixa o toque cair
+//     na foto (SharedImageBubble, ProfilePhotoUploader);
+//   - `toque:opacity-100` fora da tela do cliente (página pública, sobra do fork).
+// Na tela do cliente quem manda é a `soNoMouse` (linha a linha), que reprova
+// `opacity-0 group-hover:opacity-100` mesmo com `toque:opacity-100`. As duas
+// réguas ficam: esta vale no app inteiro e lê pelo compilador (pega cn(...)
+// quebrado em linhas); a `soNoMouse` só na tela do cliente.
 //
 // Como lê: pelo compilador, junta as classes de um mesmo lugar (um className,
 // um cn(...) inteiro, mesmo quebrado em várias linhas, uma variável ou uma
