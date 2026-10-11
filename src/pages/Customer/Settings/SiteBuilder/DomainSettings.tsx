@@ -13,6 +13,7 @@ import {
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import Aviso from '@/components/base/Aviso';
+import { Card } from '@/components/ui/ds';
 const POLL_INTERVAL_MS = 15_000;
 
 const PENDING: SiteDomainStatus[] = ['pending_dns', 'pending_verification'];
@@ -143,12 +144,12 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
 
   if (loading) {
     return (
-      <section className="rounded-xl border border-border bg-card p-5">
+      <Card className="gap-0 p-5">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Carregando domínio...
         </div>
-      </section>
+      </Card>
     );
   }
 
@@ -157,7 +158,7 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
 
   return (
     <>
-    <section className="rounded-xl border border-border bg-card p-5">
+    <Card className="gap-0 p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-base font-semibold">
           <Globe className="h-4 w-4" />
@@ -343,7 +344,7 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
           </div>
         </div>
       )}
-    </section>
+    </Card>
       {dialogoDeConfirmacao}
     </>
   );

@@ -17,7 +17,7 @@ export const FormSection = ({
 }: FormSectionProps) => {
   return (
     <div
-      className={`p-4 rounded-lg border border-sidebar-border bg-sidebar ${className || ''}`}
+      className={`rounded-lg border bg-muted/30 p-4 ${className || ''}`}
       data-tour={dataTour}
     >
       <div className="mb-3">

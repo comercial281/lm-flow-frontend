@@ -1,10 +1,9 @@
-// Duas identidades, e só duas: roxo = o que a IA atendeu, verde = visita marcada.
-// O par passa nas seis checagens de daltonismo e contraste NOS DOIS TEMAS (claro
-// e escuro), então a tela não precisa trocar de cor junto com o tema — uma cor
-// por entidade, sempre a mesma, é também o que faz o gráfico e o número lá em
-// cima serem lidos como a mesma coisa.
-export const COLOR_LEADS = '#7c3aed';
-export const COLOR_VISITS = '#059669';
+// Duas identidades, e só duas: a 1ª cor de gráfico do tema = o que a IA atendeu
+// (roxo), a 2ª = visita marcada. Uma cor por entidade, sempre a mesma, é o que faz
+// o gráfico e o número lá em cima serem lidos como a mesma coisa. Saem do tema
+// (`--chart-1`/`--chart-2`, peça 21 do GLOSSARIO) e acompanham o claro/escuro.
+export const COLOR_LEADS = 'var(--chart-1)';
+export const COLOR_VISITS = 'var(--chart-2)';
 
 // ── Formatação ──────────────────────────────────────────────────────────────
 

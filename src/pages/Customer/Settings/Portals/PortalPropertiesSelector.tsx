@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { plural } from '@/lib/formato';
-import { Button, Input } from '@/components/ui/ds';
+import { Card, Button, Input } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import { Star, Search } from 'lucide-react';
 import {
@@ -236,7 +236,7 @@ export default function PortalPropertiesSelector({
   };
 
   return (
-    <div className="rounded-xl border bg-card p-6 space-y-4">
+    <Card className="gap-4 p-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h2 className="font-semibold text-sm">Imóveis publicados neste portal</h2>
@@ -367,6 +367,6 @@ export default function PortalPropertiesSelector({
         </div>
       )}
       {dialogoDeConfirmacao}
-    </div>
+    </Card>
   );
 }

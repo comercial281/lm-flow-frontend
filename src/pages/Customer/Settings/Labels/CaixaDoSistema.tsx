@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/ds';
+import { Card, Button } from '@/components/ui/ds';
 import LinhaEtiqueta from './LinhaEtiqueta';
 import type { Label } from '@/types/settings';
 
@@ -21,7 +21,7 @@ export default function CaixaDoSistema({ nome, frase, itens, abertaPorBusca, onT
   const Chevron = visivel ? ChevronDown : ChevronRight;
 
   return (
-    <div className="rounded-lg border bg-card">
+    <Card className="gap-0 py-0">
       <button
         type="button"
         aria-expanded={visivel}
@@ -46,6 +46,6 @@ export default function CaixaDoSistema({ nome, frase, itens, abertaPorBusca, onT
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

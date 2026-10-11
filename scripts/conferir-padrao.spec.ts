@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, cartaoAMao, corFixaEmGrafico } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -186,6 +186,34 @@ describe('tagsJsx', () => {
       { tag: 'h1', linha: 3 },
       { tag: 'BaseHeader', linha: 4 },
     ]);
+  });
+});
+
+describe('cartaoAMao: caixa fazendo papel de cartão (peça 20)', () => {
+  it('pega cantos + borda + fundo de cartão na mesma linha', () => {
+    expect(cartaoAMao('<div className="rounded-xl border border-border bg-card p-5">')).toBe(true);
+    expect(cartaoAMao('<div className="rounded-lg border bg-card">')).toBe(true);
+    expect(cartaoAMao("'rounded-lg border border-sidebar-border bg-sidebar p-4'")).toBe(true);
+  });
+  it('deixa passar o bloco dentro de cartão, a caixa tracejada e o fundo de menu sem a borda dele', () => {
+    expect(cartaoAMao('<div className="rounded-lg border bg-muted/30 p-4">')).toBe(false);
+    expect(cartaoAMao('<div className="rounded-xl border border-dashed border-border bg-card p-6">')).toBe(false);
+    expect(cartaoAMao('<div className="rounded-lg border bg-sidebar p-4">')).toBe(false);
+    expect(cartaoAMao('<Card className="gap-0 p-4">')).toBe(false);
+    expect(cartaoAMao('<div className="rounded-xl bg-card-foreground border">')).toBe(false);
+  });
+});
+
+describe('corFixaEmGrafico: hex direto no gráfico (peça 21)', () => {
+  it('pega fill, stroke e stopColor com hex', () => {
+    expect(corFixaEmGrafico('<Bar dataKey="v" fill="#3b82f6" />')).toBe(true);
+    expect(corFixaEmGrafico("<Line stroke={'#059669'} />")).toBe(true);
+    expect(corFixaEmGrafico('<stop offset="0%" stopColor="#ef4444" />')).toBe(true);
+  });
+  it('deixa passar a cor do tema e a referência a degradê', () => {
+    expect(corFixaEmGrafico('<Bar fill="var(--chart-1)" />')).toBe(false);
+    expect(corFixaEmGrafico('<Area fill={`url(#${id})`} />')).toBe(false);
+    expect(corFixaEmGrafico('<Bar fill={COR} />')).toBe(false);
   });
 });
 

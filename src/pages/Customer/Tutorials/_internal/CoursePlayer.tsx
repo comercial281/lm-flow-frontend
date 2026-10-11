@@ -41,6 +41,7 @@ import CommentsSection from './CommentsSection';
 import { toast } from 'sonner';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { Card } from '@/components/ui/ds';
 interface Props {
   module: KnowledgeModule;
   onBack: () => void;
@@ -96,9 +97,9 @@ export default function CoursePlayer({ module: m, onBack, canEdit }: Props) {
               <span>Seu progresso</span>
               <span className="text-primary font-semibold">{pct}%</span>
             </div>
-            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full bg-primary transition-all duration-300"
+                className="h-full rounded-full bg-primary transition-all duration-300"
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -375,7 +376,7 @@ function LessonEditForm({ lesson, onClose }: { lesson: KnowledgeLesson; onClose:
   }
 
   return (
-    <div className="mt-3 space-y-3 max-w-2xl bg-card border border-border rounded-xl p-4">
+    <Card className="mt-3 max-w-2xl gap-3 p-4">
       <p className="text-xs font-semibold">Editar aula</p>
 
       <input
@@ -467,7 +468,7 @@ function LessonEditForm({ lesson, onClose }: { lesson: KnowledgeLesson; onClose:
           {busy ? 'Salvando...' : 'Salvar'}
         </button>
       </div>
-    </div>
+    </Card>
   );
 }
 

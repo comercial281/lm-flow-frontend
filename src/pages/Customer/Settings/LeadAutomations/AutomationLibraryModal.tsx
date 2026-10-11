@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import {
+  Card,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -154,9 +155,9 @@ export default function AutomationLibraryModal({ open, onClose, onApplied }: Pro
             filtered.map(tpl => {
               const applied = appliedIds.includes(tpl.id);
               return (
-                <div
+                <Card
                   key={tpl.id}
-                  className="flex items-start gap-3 border border-border rounded-xl bg-card px-4 py-3"
+                  className="flex-row items-start gap-3 px-4 py-3"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -184,7 +185,7 @@ export default function AutomationLibraryModal({ open, onClose, onApplied }: Pro
                       <><Plus className="h-3.5 w-3.5 mr-1" /> Adicionar</>
                     )}
                   </Button>
-                </div>
+                </Card>
               );
             })
           )}

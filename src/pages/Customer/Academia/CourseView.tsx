@@ -33,6 +33,7 @@ import { GERAL_COURSE_ID } from './_lib';
 import { toast } from 'sonner';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { Card } from '@/components/ui/ds';
 interface Props {
   onBack: () => void;
 }
@@ -544,7 +545,7 @@ function EditLessonForm({ lesson, onClose }: { lesson: KnowledgeLesson; onClose:
   }
 
   return (
-    <div className="mt-3 rounded-xl border border-border bg-card p-4 space-y-3 max-w-2xl">
+    <Card className="mt-3 max-w-2xl gap-3 p-4">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold">Editar aula</p>
         <button onClick={onClose} type="button" aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground"><X size={14} /></button>
@@ -588,7 +589,7 @@ function EditLessonForm({ lesson, onClose }: { lesson: KnowledgeLesson; onClose:
           {busy ? 'Salvando...' : 'Salvar'}
         </button>
       </div>
-    </div>
+    </Card>
   );
 }
 

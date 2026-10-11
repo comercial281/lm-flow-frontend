@@ -3,6 +3,7 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import { SEND_FROM_WARNING_MS, sendFromWarnings } from '@/features/numbers/sendFrom';
 import {
+  Card,
   Button,
   Dialog,
   DialogContent,
@@ -472,9 +473,9 @@ export default function LeadAutomations() {
       ) : (
         <div className="space-y-3">
           {rules.map(rule => (
-            <div
+            <Card
               key={rule.id}
-              className="border border-border rounded-xl bg-card overflow-hidden"
+              className="gap-0 overflow-hidden py-0"
             >
               <div className="flex items-center gap-4 px-5 py-4">
                 {!archivedTab && (
@@ -689,7 +690,7 @@ export default function LeadAutomations() {
                   )}
                 </div>
               )}
-            </div>
+            </Card>
           ))}
         </div>
       )}

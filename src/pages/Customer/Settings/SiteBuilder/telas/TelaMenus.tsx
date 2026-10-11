@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import { ChevronDown, ChevronUp, GripVertical, Plus, Trash2 } from 'lucide-react';
-import { Button, Checkbox, Input, Label as UILabel } from '@/components/ui/ds';
+import { Card, Button, Checkbox, Input, Label as UILabel } from '@/components/ui/ds';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { siteBuilderService, type MenuDoPainel, type SitePage } from '@/services/siteBuilder/siteBuilderService';
 import { ROTULO_MAX, ehPagina } from '@/features/siteBuilder/public/menuConfig';
@@ -155,7 +155,7 @@ function ItemDoMenu({ item, primeiro, ultimo, aviso, mudar, mover }: ItemProps) 
 
   return (
     <Reorder.Item value={item} dragListener={false} dragControls={controles} className="list-none">
-      <div className="space-y-2 rounded-lg border border-border bg-card p-4">
+      <Card className="gap-2 p-4">
         <div className="flex flex-wrap items-center gap-2">
           {/* Fora do Tab: pelo teclado a ordem muda com Subir/Descer. */}
           <button type="button" tabIndex={-1} aria-label="Arrastar pra mudar a ordem" title="Arrastar pra mudar a ordem"
@@ -184,7 +184,7 @@ function ItemDoMenu({ item, primeiro, ultimo, aviso, mudar, mover }: ItemProps) 
         </div>
         {ehPagina(item.key) && <p className="text-sm text-muted-foreground">Página criada em Páginas.</p>}
         {aviso && <p className="text-sm text-amber-700 dark:text-amber-400">{aviso}</p>}
-      </div>
+      </Card>
     </Reorder.Item>
   );
 }

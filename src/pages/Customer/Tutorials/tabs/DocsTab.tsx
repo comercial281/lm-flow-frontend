@@ -15,6 +15,7 @@ import {
 } from '@/hooks/useKnowledge';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { Card } from '@/components/ui/ds';
 interface Props {
   categoryId: string | null;
   canEdit: boolean;
@@ -193,7 +194,7 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
           </p>
         )}
         {creating && (
-          <div className="mb-6 bg-card border border-border rounded-xl p-4 space-y-3">
+          <Card className="mb-6 gap-3 p-4">
             <input
               autoFocus
               value={draftTitle}
@@ -236,16 +237,17 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
                 Criar
               </button>
             </div>
-          </div>
+          </Card>
         )}
         <div className="space-y-2 max-w-3xl">
           {docs.map((doc) => (
             <button
               key={doc.id}
               onClick={() => setSelected(doc)}
-              className="w-full text-left bg-card border border-border hover:border-primary/30 rounded-xl p-4 transition-colors"
+              className="group block w-full rounded-xl text-left"
               type="button"
             >
+              <Card className="gap-0 p-4 transition-colors group-hover:border-primary/30">
               <div className="flex items-start gap-2">
                 {doc.pinned && <Pin size={12} className="text-primary mt-1 shrink-0" />}
                 <div className="flex-1 min-w-0">
@@ -258,6 +260,7 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
                   </p>
                 </div>
               </div>
+            </Card>
             </button>
           ))}
         </div>

@@ -18,6 +18,7 @@ import LabelModal from '@/components/labels/LabelModal';
 import LinhaEtiqueta from './LinhaEtiqueta';
 import CaixaDoSistema from './CaixaDoSistema';
 import { agruparEtiquetas } from './agruparEtiquetas';
+import { Card } from '@/components/ui/ds';
 
 export default function Labels() {
   const { t } = useLanguage('labels');
@@ -203,7 +204,7 @@ export default function Labels() {
               <section className="space-y-2">
                 <h2 className="text-base font-semibold">Suas etiquetas</h2>
                 {grupos.suas.length > 0 ? (
-                  <div className="rounded-lg border bg-card">
+                  <Card className="gap-0 py-0">
                     {grupos.suas.map(l => (
                       <LinhaEtiqueta
                         key={l.id}
@@ -213,7 +214,7 @@ export default function Labels() {
                         onExcluir={can('labels', 'delete') ? handleDelete : undefined}
                       />
                     ))}
-                  </div>
+                  </Card>
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     Você ainda não criou nenhuma. Ex.: Investidor, Primeiro imóvel, Permuta.

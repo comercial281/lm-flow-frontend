@@ -3,6 +3,7 @@ import { Contact } from '@/types/contacts';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
 import { telefone } from '@/lib/formato';
 import { Atendimento } from './ContactsTable';
+import { Card } from '@/components/ui/ds';
 
 interface Props {
   contact: Contact;
@@ -16,7 +17,7 @@ interface Props {
 export default function ContactCartaoMovel({ contact, onAbrir, onConversa }: Props) {
   const numero = contact.phone_number;
   return (
-    <div className="rounded-lg border border-border bg-card p-3">
+    <Card className="gap-0 p-3">
       <button type="button" onClick={() => onAbrir(contact)} className="flex w-full min-w-0 items-center gap-3 text-left">
         <ContactAvatar contact={contact} size="md" showColoredFallback={true} />
         <span className="min-w-0 flex-1">
@@ -48,6 +49,6 @@ export default function ContactCartaoMovel({ contact, onAbrir, onConversa }: Pro
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

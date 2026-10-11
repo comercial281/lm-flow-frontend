@@ -1,5 +1,6 @@
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Card } from '@/components/ui/ds';
 import { dinheiro, moedaValida, porcentagem } from '@/lib/formato';
 
 export interface BaseStatsCardProps {
@@ -129,9 +130,9 @@ export default function BaseStatsCard({
   const colorScheme = colorVariants[color];
 
   return (
-    <div 
+    <Card
       className={cn(
-        "bg-card rounded-lg p-4 border transition-all duration-200",
+        "gap-0 p-4 transition-all duration-200",
         onClick && "cursor-pointer hover:shadow-md hover:border-primary/20",
         className
       )}
@@ -182,6 +183,6 @@ export default function BaseStatsCard({
         )}
       </div>
       {footer && <div className="mt-2">{footer}</div>}
-    </div>
+    </Card>
   );
 }

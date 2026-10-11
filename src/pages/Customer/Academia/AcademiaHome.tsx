@@ -22,6 +22,7 @@ import ModuleForm from './ModuleForm';
 import { GERAL_COURSE_ID } from './_lib';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { Card } from '@/components/ui/ds';
 interface Props {
   canEdit: boolean;
   embedded?: boolean; // true = dentro da aba do app (sem chrome de tela cheia)
@@ -144,7 +145,7 @@ export default function AcademiaHome({ canEdit, embedded }: Props) {
             className="w-full text-left mb-8 group"
           >
             <p className="text-xs font-semibold text-muted-foreground mb-2">Continue assistindo</p>
-            <div className="flex items-center gap-4 rounded-xl border border-border bg-card hover:border-primary/40 p-4 transition-colors">
+            <Card className="flex-row items-center gap-4 p-4 transition-colors hover:border-primary/40">
               <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
                 <PlayCircle size={24} className="text-primary" />
               </div>
@@ -152,7 +153,7 @@ export default function AcademiaHome({ canEdit, embedded }: Props) {
                 <p className="text-sm font-semibold truncate">{continueTarget.lessonTitle}</p>
                 <p className="text-xs text-muted-foreground truncate">{continueTarget.courseTitle}</p>
               </div>
-            </div>
+            </Card>
           </button>
         )}
 

@@ -33,9 +33,9 @@ const BarChartCard = ({
   description,
   data,
   icon: Icon,
-  color = '#3b82f6',
-  gradientFrom = '#3b82f6',
-  gradientTo = '#8b5cf6',
+  color = 'var(--chart-1)',
+  gradientFrom = 'var(--chart-1)',
+  gradientTo = 'var(--chart-5)',
   valueFormatter = (value) => numero(value, 2),
   highlightMax = true,
   tooltip,
@@ -84,19 +84,19 @@ const BarChartCard = ({
                 <stop offset="100%" stopColor={gradientTo} stopOpacity={0.8} />
               </linearGradient>
               <linearGradient id={barGradientHighlightId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#ef4444" stopOpacity={1} />
-                <stop offset="100%" stopColor="#f97316" stopOpacity={0.8} />
+                <stop offset="0%" stopColor="var(--chart-4)" stopOpacity={1} />
+                <stop offset="100%" stopColor="var(--chart-4)" stopOpacity={0.8} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#333" opacity={0.1} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis
               dataKey="name"
-              stroke="#888"
+              stroke="var(--muted-foreground)"
               fontSize={12}
               tickLine={false}
             />
             <YAxis
-              stroke="#888"
+              stroke="var(--muted-foreground)"
               fontSize={12}
               tickLine={false}
               tickFormatter={valueFormatter}

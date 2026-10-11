@@ -172,6 +172,33 @@ const AVISOS_DA_CASA = new Set(['src/components/base/Aviso.tsx', 'src/components
 export const avisoAMao = linha =>
   FUNDO_DE_AVISO.test(linha) && BORDA_DE_AVISO.test(linha) && !/rounded-full|<Badge\b/.test(linha);
 
+// Cartão feito à mão (peça 20 do GLOSSARIO, escolha do dono em 10/10/2026): o
+// cartão da casa é o `Card` do pacote base (data-slot="card", que ganha o anel
+// violeta e a sombra da marca no globals.css). A régua é por linha: cantos
+// `rounded-lg`/`rounded-xl` + `border` solta + fundo de cartão (`bg-card`, ou o
+// `bg-sidebar` com `border-sidebar-border` que imitava os cartões de Canais).
+// Caixa tracejada (`border-dashed`) não conta: é a lista vazia compacta ou o
+// convite de criar (peça 7). Bloco dentro de cartão é `bg-muted/30` e não entra.
+// O que a régua pega e não é cartão (menu, painel flutuante, carregando, vazio,
+// linha arrastável…) vai pras exceções com o motivo.
+const FUNDO_DE_CARTAO = /(?:^|[\s'"`{(])bg-card(?![\w-])/;
+const FUNDO_DE_MENU = /(?:^|[\s'"`{(])bg-sidebar(?![\w-])/;
+// Secoes/Secao é a moldura da tela de configuração (peça própria, não cartão).
+const CARTOES_DA_CASA = new Set(['src/components/base/Secao.tsx']);
+export const cartaoAMao = linha =>
+  /(?:^|[\s'"`{(])rounded-(?:lg|xl)(?![\w-])/.test(linha) &&
+  /(?:^|[\s'"`{(])border(?=[\s'"`]|$)/.test(linha) &&
+  (FUNDO_DE_CARTAO.test(linha) || (FUNDO_DE_MENU.test(linha) && /border-sidebar-border/.test(linha))) &&
+  !/border-dashed/.test(linha);
+
+// Cor fixa em gráfico (peça 21 do GLOSSARIO, escolha do dono em 10/10/2026): as
+// séries saem de `--chart-1` a `--chart-5` (ou de components/base/grafico.ts),
+// que acompanham o tema escuro. Conta `fill`, `stroke` e `stopColor` com hex
+// direto no atributo ("#…" ou {'#…'}). Cor guardada numa constante antes
+// (`const COR = '#…'` e depois `fill={COR}`) escapa: a revisão de PR confere.
+// Logo da marca vai pras exceções.
+export const corFixaEmGrafico = linha => /\b(?:fill|stroke|stopColor)=(?:["']#|\{\s*["'`]#)/.test(linha);
+
 const SELETORES_DA_CASA = new Set(['src/components/base/Seletor.tsx', 'src/components/base/SeletorComAbas.tsx']);
 // Ficam com a lista do sistema DE PROPÓSITO (decisão 3 da spec do Seletor): o
 // widget de chat roda num iframe no site do cliente, que mede a própria altura,
@@ -501,6 +528,8 @@ export function varrer() {
       if (escopo && rel !== CHAVE_DA_CASA && CHAVE_A_MAO.test(l)) anotar('chaveMao', rel, i + 1, 'role="switch" feito à mão', l.trim());
       if (escopo && rel !== CABECALHO_DA_CASA && BARRA_A_MAO.test(l)) anotar('barraAMao', rel, i + 1, 'barrinha roxa copiada', l.trim());
       if (escopo && rel.endsWith('.tsx') && !AVISOS_DA_CASA.has(rel) && avisoAMao(l)) anotar('avisoAMao', rel, i + 1, 'aviso pintado à mão', l.trim());
+      if (escopo && rel.endsWith('.tsx') && !CARTOES_DA_CASA.has(rel) && cartaoAMao(l)) anotar('cartaoAMao', rel, i + 1, 'cartão feito à mão', l.trim());
+      if (escopo && rel.endsWith('.tsx') && corFixaEmGrafico(l)) anotar('corFixaEmGrafico', rel, i + 1, 'cor fixa em gráfico', l.trim());
       // selectNativo (app inteiro): pula linhas que começam com comentário ou têm */ após a tag
       if (lista && SELECT_NATIVO.test(l) && !COMECO_DE_COMENTARIO.test(limpa)) {
         const match = SELECT_NATIVO.exec(l);
@@ -535,6 +564,8 @@ export const CATEGORIAS = {
   barraAMao: 'barrinha roxa copiada',
   foraDaMoldura: 'cabeçalho fora da moldura',
   avisoAMao: 'aviso ou faixa pintado à mão',
+  cartaoAMao: 'cartão feito à mão (fora do Card)',
+  corFixaEmGrafico: 'cor fixa em gráfico',
 };
 
 function principal() {

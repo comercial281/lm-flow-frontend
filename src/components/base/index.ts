@@ -11,6 +11,7 @@ export { default as Aviso, COR_DO_TOM, ICONE_DO_TOM } from './Aviso';
 export type { AvisoProps, TomDoAviso } from './Aviso';
 export { default as Faixa } from './Faixa';
 export type { FaixaProps } from './Faixa';
+export { CORES_DO_GRAFICO, COR_DO_EIXO, EIXO_DO_GRAFICO, CANTOS_DA_BARRA, DICA_DO_GRAFICO, CLASSE_DA_DICA } from './grafico';
 export { default as PrimaryActionButton } from './PrimaryActionButton';
 export { default as IconActionButton } from './IconActionButton';
 export type { IconActionButtonProps } from './IconActionButton';

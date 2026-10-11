@@ -7,6 +7,7 @@ import {
   Send, CheckCircle, XCircle, RefreshCw, ChevronDown, X,
 } from 'lucide-react';
 import {
+  Card,
   Button,
   Input,
   Badge,
@@ -293,7 +294,7 @@ export default function Proposals() {
             <Button variant="outline" size="sm" onClick={openCreate}>Criar primeira proposta</Button>
           </div>
         ) : (
-          <div className="rounded-xl border bg-card overflow-hidden">
+          <Card className="gap-0 overflow-hidden py-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -324,7 +325,7 @@ export default function Proposals() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         )}
       </div>
 

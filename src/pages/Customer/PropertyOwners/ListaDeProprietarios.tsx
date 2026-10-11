@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Loader2, Search, UserRoundCheck } from 'lucide-react';
-import { Button, Input } from '@/components/ui/ds';
+import { Card, Button, Input } from '@/components/ui/ds';
 import { EmptyState } from '@/components/base';
 import { useCan } from '@/hooks/useCan';
 import { cn } from '@/lib/utils';
@@ -30,8 +30,8 @@ function Linha({ o, aoAbrir, aoMudarStatus }: {
   aoMudarStatus: (atualizado: ProprietarioCompleto) => void;
 }) {
   return (
-    <article data-testid="linha-proprietario" onClick={aoAbrir}
-      className="flex cursor-pointer items-start gap-3 rounded-xl border bg-card px-4 py-3 shadow-sm transition-colors hover:border-primary/40">
+    <Card role="article" data-testid="linha-proprietario" onClick={aoAbrir}
+      className="cursor-pointer flex-row items-start gap-3 px-4 py-3 transition-colors hover:border-primary/40">
       <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
         {iniciais(o.name)}
       </span>
@@ -60,7 +60,7 @@ function Linha({ o, aoAbrir, aoMudarStatus }: {
       <div onClick={naoAbreAFicha} className="shrink-0">
         <PilulaDeStatus id={o.id} status={o.status} aoMudar={aoMudarStatus} />
       </div>
-    </article>
+    </Card>
   );
 }
 

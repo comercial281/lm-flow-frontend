@@ -3,6 +3,7 @@
 import { PlayCircle, Lock, Pencil, Trash2, GraduationCap } from 'lucide-react';
 import type { LockCtaType } from '@/hooks/useKnowledge';
 import { LockCta } from './LockOverlay';
+import { Card } from '@/components/ui/ds';
 
 interface Props {
   titulo: string;
@@ -32,7 +33,7 @@ export default function CourseCard({
   const pct = progress && progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
 
   return (
-    <div className="group relative bg-card border border-border hover:border-primary/40 rounded-xl overflow-hidden transition-colors">
+    <Card className="group relative gap-0 overflow-hidden py-0 transition-colors hover:border-primary/40">
       <button onClick={onOpen} className="w-full text-left" type="button">
         <div className="aspect-video bg-gradient-to-br from-primary/20 via-purple-500/10 to-muted flex items-center justify-center relative overflow-hidden">
           {capaUrl ? (
@@ -62,8 +63,8 @@ export default function CourseCard({
           {descricao && <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{descricao}</p>}
           {!locked && progress && progress.total > 0 && (
             <div className="mt-3">
-              <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
               </div>
               <p className="text-[10px] text-muted-foreground mt-1">
                 {progress.done}/{progress.total} aulas · {pct}%
@@ -102,6 +103,6 @@ export default function CourseCard({
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

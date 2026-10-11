@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
+  Card,
   Button,
   Badge,
   Dialog,
@@ -252,7 +253,7 @@ export default function PropertyInterests() {
             </Button>
           </div>
         ) : (
-          <div className="rounded-xl border bg-card overflow-hidden">
+          <Card className="gap-0 overflow-hidden py-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -355,7 +356,7 @@ export default function PropertyInterests() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         )}
       </div>
 

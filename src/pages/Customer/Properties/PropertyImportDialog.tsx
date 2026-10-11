@@ -340,8 +340,8 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
 
             {uploading && (
               <div className="space-y-1">
-                <div className="h-2 bg-muted rounded overflow-hidden">
-                  <div className="h-full bg-primary transition-all" style={{ width: `${uploadProgress}%` }} />
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${uploadProgress}%` }} />
                 </div>
                 <p className="text-xs text-muted-foreground text-center">Enviando arquivos… {uploadProgress}%</p>
               </div>
@@ -382,9 +382,9 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
                 </span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="h-2 w-32 bg-muted rounded overflow-hidden">
+                <div className="h-2 w-32 overflow-hidden rounded-full bg-muted">
                   <div
-                    className="h-full bg-primary transition-all"
+                    className="h-full rounded-full bg-primary transition-all"
                     style={{ width: `${batch.total_items ? Math.round((batch.processed_items * 100) / batch.total_items) : 0}%` }}
                   />
                 </div>

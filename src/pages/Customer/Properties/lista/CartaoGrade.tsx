@@ -8,6 +8,7 @@ import Selo, { TOM_DA_FASE } from './SeloSituacao';
 import MenuDoImovel, { estaNoSite, type AcoesDoImovel, type Permissoes } from './MenuDoImovel';
 import { faixaDePreco } from './LinhaEmpreendimento';
 import TituloDoImovel from './TituloDoImovel';
+import { Card } from '@/components/ui/ds';
 
 export default function CartaoGrade({ p, acoes, permissoes, forca }: {
   p: Property; acoes: AcoesDoImovel; permissoes: Permissoes; forca?: number;
@@ -19,7 +20,7 @@ export default function CartaoGrade({ p, acoes, permissoes, forca }: {
     ? (faixaDePreco(p).de ? `a partir de ${dinheiro(faixaDePreco(p).de, { centavos: false })}` : null)
     : p.sale_price ? dinheiro(p.sale_price, { centavos: false }) : p.rent_price ? `${dinheiro(p.rent_price, { centavos: false })}/mês` : null;
   return (
-    <article className="flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
+    <Card role="article" className="gap-0 overflow-hidden py-0">
       <FotoDoImovel p={p} aoAdicionar={() => acoes.fotos(p)} compacta />
       <div className="flex flex-col gap-1.5 p-3">
         <div className="flex flex-wrap gap-1.5">
@@ -38,6 +39,6 @@ export default function CartaoGrade({ p, acoes, permissoes, forca }: {
           <MenuDoImovel p={p} acoes={acoes} permissoes={permissoes} forca={forca} />
         </div>
       </div>
-    </article>
+    </Card>
   );
 }

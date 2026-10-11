@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { formatDateTimeBR } from '@/utils/dateUtils';
 import {
+  Card,
   Dialog,
   DialogContent,
   DialogHeader,
@@ -75,9 +76,9 @@ export default function RoleAuditModal({ open, onClose, role }: Props) {
         {!loading && logs.length > 0 && (
           <div className="space-y-3">
             {logs.map(log => (
-              <div
+              <Card
                 key={log.id}
-                className="flex gap-3 rounded-lg border border-border bg-card p-3"
+                className="flex-row gap-3 p-3"
               >
                 <div
                   className={`mt-1 h-3 w-3 flex-shrink-0 rounded-full ${
@@ -104,7 +105,7 @@ export default function RoleAuditModal({ open, onClose, role }: Props) {
                     </p>
                   )}
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}

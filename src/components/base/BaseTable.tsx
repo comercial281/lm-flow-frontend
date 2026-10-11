@@ -7,6 +7,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Card,
   Checkbox,
   Button,
   DropdownMenu,
@@ -16,6 +17,7 @@ import {
 } from '@/components/ui/ds';
 import { MoreHorizontal, ArrowUpDown, ArrowUp, ArrowDown, LucideIcon } from 'lucide-react';
 import EmptyState from './EmptyState';
+import { cn } from '@/lib/utils';
 
 export interface TableColumn<T> {
   key: string;
@@ -222,9 +224,7 @@ export default function BaseTable<T extends Record<string, any>>({
   }
 
   return (
-    <div
-      className={`rounded-lg border border-sidebar-border bg-sidebar overflow-hidden ${className}`}
-    >
+    <Card className={cn('gap-0 overflow-hidden py-0', className)}>
       <Table>
         <TableHeader>
           <TableRow className="border-sidebar-border hover:bg-sidebar-accent/50">
@@ -294,6 +294,6 @@ export default function BaseTable<T extends Record<string, any>>({
           })}
         </TableBody>
       </Table>
-    </div>
+    </Card>
   );
 }

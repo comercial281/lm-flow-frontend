@@ -1,5 +1,6 @@
 import { dataCurta, numero, porcentagem, VAZIO } from '@/lib/formato';
 import type { DashboardNumbers, SiteDashboard } from '@/services/siteBuilder/siteBuilderService';
+import { Card } from '@/components/ui/ds';
 
 // Os quatro cartões de cima do Painel. Variação só existe com período anterior;
 // sem ele, o cartão diz desde quando o site está sendo contado.
@@ -40,11 +41,11 @@ export default function Numeros({ dash }: { dash: SiteDashboard }) {
         const v = dash[c.chave];
         const valor = v == null ? VAZIO : c.taxa ? porcentagem(v) : numero(v);
         return (
-          <div key={c.chave} className="space-y-1 rounded-xl border border-border bg-card p-4">
+          <Card key={c.chave} className="gap-1 p-4">
             <p className="text-sm text-muted-foreground">{c.rotulo}</p>
             <p className="text-3xl font-semibold">{valor}</p>
             <Variacao dash={dash} chave={c.chave} taxa={c.taxa} />
-          </div>
+          </Card>
         );
       })}
     </div>
