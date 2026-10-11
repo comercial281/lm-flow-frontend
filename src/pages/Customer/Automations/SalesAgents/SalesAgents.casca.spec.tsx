@@ -287,6 +287,14 @@ describe('IA Vendedora · casca', () => {
     limparPendentes();
   });
 
+  it('falha ao ler as IAs: o cabeçalho não empurra a criar outra ("Crie a primeira IA")', async () => {
+    list.mockRejectedValue({ response: { status: 500 } });
+    abrir('/ia-vendedora');
+    expect(await screen.findByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
+    expect(screen.queryByText(/Crie a primeira IA/)).toBeNull();
+    expect(screen.getByRole('heading', { name: 'IA Vendedora' })).toBeInTheDocument();
+  });
+
   it('recusa do servidor vira o aviso de acesso, não "nenhuma IA"', async () => {
     list.mockRejectedValue({ response: { status: 403 } });
     abrir('/ia-vendedora');

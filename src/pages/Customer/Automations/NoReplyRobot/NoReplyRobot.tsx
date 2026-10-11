@@ -90,6 +90,15 @@ export function NoReplyRobot({ embedded = false }: NoReplyRobotProps = {}) {
   if (loading) {
     return <Carregando variante="texto" linhas={6} className={embedded ? 'py-2' : 'p-6'} />;
   }
+  // Falha na carga: só o erro. Mostrar o formulário com os padrões (desligado, 30 min)
+  // deixaria o Salvar gravar isso por cima da configuração real (gêmeo do Pixel/CAPI).
+  if (!config && erroAoCarregar) {
+    return (
+      <div className={embedded ? undefined : 'max-w-2xl p-6'}>
+        <EmptyState tipo="erro" tamanho={embedded ? 'compacto' : 'grande'} aoTentarDeNovo={() => void load()} />
+      </div>
+    );
+  }
 
   const noSequences = !config || config.sequences.length === 0;
   const disabledCls = enabled ? '' : 'opacity-50 pointer-events-none';
@@ -137,12 +146,7 @@ export function NoReplyRobot({ embedded = false }: NoReplyRobotProps = {}) {
         </Aviso>
       )}
 
-      {/* Falha na carga não vira "Nenhum funil de follow-up ativo". */}
-      {!config && erroAoCarregar && (
-        <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} />
-      )}
-
-      {noSequences && !(!config && erroAoCarregar) && (
+      {noSequences && (
         <Aviso tom="neutro">
           <p>
             Nenhum funil de follow-up ativo. Crie um {embedded ? 'na lista abaixo' : <>em <strong>Automações → Follow-up</strong></>} antes de ligar o robô.

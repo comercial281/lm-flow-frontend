@@ -106,6 +106,8 @@ export default function LeadAdsForms() {
 
   const [configs, setConfigs] = useState<LeadAdsFormConfig[]>([]);
   const [loading, setLoading] = useState(false);
+  // Falha na leitura não vira "Nenhum formulário configurado" (o gestor recadastraria).
+  const [erro, setErro] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [metaForms, setMetaForms] = useState<MetaForm[]>([]);
@@ -243,7 +245,9 @@ export default function LeadAdsForms() {
     setLoading(true);
     try {
       setConfigs(await leadAdsFormsService.getAll());
+      setErro(false);
     } catch {
+      setErro(true);
       toast.error('Erro ao carregar formulários');
     } finally {
       setLoading(false);
@@ -1083,6 +1087,8 @@ export default function LeadAdsForms() {
         </h2>
         {loading ? (
           <Carregando linhas={3} />
+        ) : erro && configs.length === 0 ? (
+          <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />
         ) : visibleConfigs.length === 0 ? (
           <EmptyState
             title={configs.length === 0 ? 'Nenhum formulário configurado' : 'Nenhum formulário desta página'}

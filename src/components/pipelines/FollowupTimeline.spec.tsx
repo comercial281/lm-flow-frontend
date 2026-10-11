@@ -214,6 +214,28 @@ describe('Follow-up do card — acesso e lead sem referência', () => {
     expect(await screen.findByText(/não dá acesso ao follow-up/i)).toBeInTheDocument();
   });
 
+  // Falha que não é 403 não pode virar "Sem follow-up": o follow-up pode estar rodando.
+  // E o erro aparece pra todo mundo, não só pra quem pode Iniciar.
+  it('leitura que falha (500) em modo leitura: o selo não diz "Sem follow-up" e aparece Tentar de novo', async () => {
+    running.mockRejectedValue({ response: { status: 500 } });
+
+    render(<FollowupTimeline contactId="c-1" readOnly />);
+
+    expect(await screen.findByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
+    expect(screen.queryByText('Sem follow-up')).toBeNull();
+    expect(screen.getByText('Não deu pra ler')).toBeInTheDocument();
+  });
+
+  it('leitura que falha (500) pra quem pode agir: um erro só, sem "Nenhum follow-up pra iniciar"', async () => {
+    running.mockRejectedValue({ response: { status: 500 } });
+
+    render(<FollowupTimeline contactId="c-1" />);
+
+    expect(await screen.findAllByRole('button', { name: 'Tentar de novo' })).toHaveLength(1);
+    expect(screen.queryByText('Nenhum follow-up pra iniciar.')).toBeNull();
+    expect(screen.queryByText('Sem follow-up')).toBeNull();
+  });
+
   it('não pede nada ao servidor quando o card não tem nem contato nem conversa', async () => {
     render(<FollowupTimeline contactId={null} conversationId={null} />);
 

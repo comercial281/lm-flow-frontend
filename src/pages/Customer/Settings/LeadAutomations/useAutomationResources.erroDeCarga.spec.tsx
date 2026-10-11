@@ -53,6 +53,20 @@ describe('useAutomationResources · erro de carga', () => {
     expect(result.current.labels).toHaveLength(1);
   });
 
+  it('durante o Tentar de novo o erro antigo sai da tela (não fica "Não deu pra carregar" enquanto recarrega)', async () => {
+    s.labels.mockRejectedValueOnce(new Error('rede'));
+    const { result } = renderHook(() => useAutomationResources(true));
+    await waitFor(() => expect(result.current.erros?.labels).toBe(true));
+    let soltar: (v: unknown) => void = () => {};
+    s.labels.mockReturnValueOnce(new Promise(r => { soltar = r; }));
+    await act(async () => { result.current.recarregar?.(); });
+    expect(result.current.loading).toBe(true);
+    expect(result.current.erro).toBe(false);
+    await act(async () => { soltar({ data: [{ id: 1, title: 'quente' }] }); });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.erro).toBe(false);
+  });
+
   it('recarregar duas vezes seguidas fica com uma lista só (resposta antiga é ignorada)', async () => {
     s.users.mockRejectedValueOnce(new Error('rede'));
     const { result } = renderHook(() => useAutomationResources(true));

@@ -48,6 +48,8 @@ const STATUS: Record<string, { label: string; cls: string; dot: string }> = {
 
 const RUNNING = { label: 'Rodando', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' };
 const IDLE = { label: 'Sem follow-up', cls: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
+// Leitura dos fluxos falhou: "Sem follow-up" mentiria (pode estar rodando).
+const UNKNOWN = { label: 'Não deu pra ler', cls: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
 
 const fmt = (s: number | null | undefined) =>
   s ? new Date(s * 1000).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
@@ -166,7 +168,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
   }
 
   const canAct = !readOnly;
-  const headline = running ? RUNNING : IDLE;
+  const headline = running ? RUNNING : erroFluxos ? UNKNOWN : IDLE;
 
   const stopButton = (onClick: () => void, label: string) => (
     <Button size="sm" variant="outline" className="text-xs gap-1.5 shrink-0" disabled={busy} onClick={onClick} aria-label={label}>
@@ -274,6 +276,11 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
         </div>
       )}
 
+      {/* O erro vale pra todos, inclusive quem só lê: sem ele, o selo cinza parecia "nada rodando". */}
+      {erroFluxos && !running && (
+        <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} className="p-3 text-xs" />
+      )}
+
       {/* Iniciar só com nada rodando: começar por cima mandaria mensagem em dobro. */}
       {canAct && !running && (
         options.length > 0 ? (
@@ -296,9 +303,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
               Iniciar follow-up
             </Button>
           </div>
-        ) : erroFluxos ? (
-          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} className="p-3 text-xs" />
-        ) : (
+        ) : erroFluxos ? null : (
           <EmptyState
             tamanho="compacto"
             title="Nenhum follow-up pra iniciar."

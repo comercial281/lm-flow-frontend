@@ -148,6 +148,8 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     const vez = ++ultimaCarga.current;
     const cancelled = () => vez !== ultimaCarga.current;
     setLoading(true);
+    // O erro da carga anterior sai já: sem isto o "Não deu pra carregar" ficava na tela durante o Tentar de novo.
+    setErros({});
 
     (async () => {
       const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes, adRes, formRes, funnelsRes, evoRes, fuFlowsRes, convRes, roletasRes] = await Promise.allSettled([
@@ -299,7 +301,9 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
           <div>
             <UILabel>Quais formulários? (opcional)</UILabel>
             <div className="mt-1 max-h-52 overflow-y-auto rounded-md border border-border divide-y divide-border">
-              {resources.erros?.formOrigins ? (
+              {resources.formOrigins.length === 0 && resources.loading ? (
+                <Carregando linhas={2} rotulo="Carregando os formulários…" className="p-2" />
+              ) : resources.erros?.formOrigins ? (
                 <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={resources.recarregar} className="rounded-none border-0 p-3" />
               ) : resources.formOrigins.length === 0 ? (
                 <EmptyState
@@ -1349,10 +1353,13 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
         <>
           <Field label="Notificar quais usuários? *" hint="Recebe o push só quem ativou o Modo Plantão no app/celular.">
             <div className="mt-1 max-h-44 overflow-y-auto rounded-md border border-input bg-background divide-y divide-input">
-              {resources.users.length === 0 && resources.erros?.users && (
+              {resources.users.length === 0 && resources.loading && (
+                <Carregando linhas={2} rotulo="Carregando a equipe…" className="p-2" />
+              )}
+              {resources.users.length === 0 && !resources.loading && resources.erros?.users && (
                 <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={resources.recarregar} className="rounded-none border-0 p-3" />
               )}
-              {resources.users.length === 0 && !resources.erros?.users && (
+              {resources.users.length === 0 && !resources.loading && !resources.erros?.users && (
                 <EmptyState tamanho="compacto" className="rounded-none border-0 p-3" title="Nenhum usuário cadastrado." />
               )}
               {resources.users.map(u => (
