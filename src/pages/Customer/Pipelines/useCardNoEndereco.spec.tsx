@@ -109,4 +109,24 @@ describe('useCardNoEndereco (E0: F5 mantém o card aberto)', () => {
       expect(result.current.card.foraDaAba).toBe(false);
     });
   });
+
+  it('no celular, o ?card= vai pra página na hora (sem esperar o quadro) e não abre a janela', () => {
+    const aoAbrir = vi.fn();
+    const irParaPagina = vi.fn();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <MemoryRouter initialEntries={['/pipelines/p1?card=c1']}>{children}</MemoryRouter>
+    );
+    const { result, rerender } = renderHook(
+      (p: Props) => useCardNoEndereco({ ...p, aoAbrir, irParaPagina }),
+      { wrapper, initialProps: { itens: [], carregando: true } },
+    );
+    expect(irParaPagina).toHaveBeenCalledTimes(1);
+    expect(irParaPagina).toHaveBeenCalledWith('c1');
+    rerender({ itens: [A], carregando: false });
+    rerender({ itens: [{ ...A }], carregando: false });
+    expect(irParaPagina).toHaveBeenCalledTimes(1);
+    expect(aoAbrir).not.toHaveBeenCalled();
+    // Sem o aviso de "fora da aba": no celular o quadro não procura o card.
+    expect(result.current.foraDaAba).toBe(false);
+  });
 });

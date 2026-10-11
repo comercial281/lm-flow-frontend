@@ -24,6 +24,8 @@ import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import { useCardForaDoQuadro } from '@/features/cardDoLead/useCardForaDoQuadro';
+import { useAbrirPaginaDoCard, veioDeDentroDoApp } from '@/features/cardDoLead/paginaNoCelular';
+import { useCelular } from '@/hooks/useCelular';
 import AvisoDoCardForaDoQuadro from '@/features/cardDoLead/AvisoDoCardForaDoQuadro';
 import { useCardNoEndereco } from './useCardNoEndereco';
 import { STATUS_DA_ABA, pertenceAAba, podeArrastarNaAba } from './quadro/enderecoDoQuadro';
@@ -302,12 +304,27 @@ export default function PipelineKanban() {
     if (!showEditItemModal || !itemToEdit || doQuadro.some(i => String(i.id) === String(itemToEdit.id))) return doQuadro;
     return [...doQuadro, itemToEdit];
   }, [stages, showEditItemModal, itemToEdit]);
+  // Celular (10/10/2026): o card abre na página, não na janela
+  // (features/cardDoLead/paginaNoCelular.ts). O ?card= que chegou de outra tela
+  // ou de um link troca de endereço (replace): o voltar leva pra onde a pessoa
+  // estava, sem passar de novo pelo quadro.
+  const celular = useCelular();
+  const abrirPaginaDoCard = useAbrirPaginaDoCard();
+  const irParaPaginaDoCard = useCallback((id: string) => {
+    if (!pipelineId) return;
+    abrirPaginaDoCard(pipelineId, id, { substituir: true, voltarPeloHistorico: veioDeDentroDoApp() });
+  }, [pipelineId, abrirPaginaDoCard]);
   const {
     cardId: cardDoEndereco,
     foraDaAba: cardForaDaAba,
     abrirNoEndereco: abrirCardNoEndereco,
     fecharNoEndereco: fecharCardNoEndereco,
-  } = useCardNoEndereco({ itens: itensDoQuadro, carregando: loading, aoAbrir: abrirCard });
+  } = useCardNoEndereco({
+    itens: itensDoQuadro,
+    carregando: loading,
+    aoAbrir: abrirCard,
+    irParaPagina: celular && pipelineId ? irParaPaginaDoCard : null,
+  });
 
   // E4: o card do endereço que não está nos cards da aba (arquivado, de outra
   // aba, F5 noutra aba) é buscado pelo id e abre na janela. 404/403 = sem
@@ -538,10 +555,16 @@ export default function PipelineKanban() {
 
   // Clique no card: abre e grava o ?card= (F5 e "copiar o endereço" funcionam).
   // As duas funções são estáveis: o PipelineItemCard continua memoizado.
+  // No celular, o clique vai pra página do card (entra no histórico: o voltar
+  // devolve ao quadro).
   const handleEditItem = useCallback((item: PipelineItem) => {
+    if (celular && pipelineId) {
+      abrirPaginaDoCard(pipelineId, item.id);
+      return;
+    }
     abrirCard(item);
     abrirCardNoEndereco(String(item.id));
-  }, [abrirCard, abrirCardNoEndereco]);
+  }, [celular, pipelineId, abrirPaginaDoCard, abrirCard, abrirCardNoEndereco]);
 
   // Move otimista do card pra outra etapa, SEM reload (fluido igual o arrastar).
   // Usado pelas ações do card no modal ("Mover para coluna", "Ganho/Perdido")
