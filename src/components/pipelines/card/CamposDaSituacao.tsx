@@ -56,6 +56,11 @@ export function CampoEtapa({ stages, etapaId, onMover, disabled }: CampoEtapaPro
 //   Visits::Visibility.manager? — administrador, suporte ou
 //   `conversations.read_all`) vê só TEXTO, sem lista;
 // - a própria pessoa aparece como "Você" (no texto, na lista e no escolhido).
+//
+// ⚠️ Esconder a lista do corretor é SÓ VISUAL. Hoje o servidor ainda aceita que
+// o corretor reatribua pela API (atribuição da conversa e `default_assignee_id`
+// do contato não conferem o cargo); travar lá é da frente do acesso pela
+// tarefa/visita (C, em desenho). Não tratar este campo como a trava.
 export const VOCE = 'Você';
 export const SEM_RESPONSAVEL = 'Sem responsável';
 

@@ -33,7 +33,7 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import type { Label as LabelType } from '@/types/settings';
 import { cardFechado, comSituacaoNova, ehColunaDeGanho, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
-import { contatoDoCard, origemCurta, podeCorrigirContato, semFunil } from './cardDoLead';
+import { contatoDoCard, origemCurta, podeCorrigirContato, responsavelNoCard, semFunil } from './cardDoLead';
 import { useVersaoDoHistorico } from './historico/useVersaoDoHistorico';
 
 // Do contato vêm {name}, da conversa {title}.
@@ -454,11 +454,10 @@ export function useCardDoLead(
       trocar: handleAssigneeChange,
       podeTrocar: podeTrocarResponsavel,
       meuId: meuId != null ? String(meuId) : null,
-      // O nome do responsável que o servidor mandou no card — vale enquanto o
-      // escolhido é ele (o gestor troca e a lista passa a dar o nome).
-      nomeDoCard: item?.assignee && selectedAssigneeId && String(item.assignee.id) === selectedAssigneeId
-        ? item.assignee.name ?? null
-        : null,
+      // O nome do responsável que o servidor mandou no card (o do card ou o da
+      // conversa) — vale enquanto o escolhido é ele (o gestor troca e a lista
+      // passa a dar o nome).
+      nomeDoCard: responsavelNoCard(item, selectedAssigneeId)?.name ?? null,
     },
     roleta: {
       ligadas: roletas,

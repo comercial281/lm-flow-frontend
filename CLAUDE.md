@@ -8214,9 +8214,9 @@ O que aparece na tela:
 Decisões (não reabrir sem o dono pedir):
 
 1. **Quem é gestor aqui é a régua do servidor** (`Visits::Visibility.manager?`: administrador, suporte ou `conversations.read_all`), lida na tela por `useEhGestor`. Não inventar outra regra de "quem troca o responsável".
-2. **O nome vem do card** (`item.assignee`, que o servidor já manda), não de `GET /users`: o corretor não tem `users.read`, a lista voltava 403 e o campo ficava vazio. Só o gestor busca a lista (`useAccountUsers({ enabled })`).
-3. **A tela não mudou regra do servidor sobre reatribuir.** Hoje o servidor não barra o corretor de trocar o responsável pela API (atribuição da conversa e `default_assignee_id` do contato); quem impede é a tela. Fica para a frente do acesso pela tarefa/visita (em desenho).
-4. **Leitura das definições dos campos personalizados** passou a pedir `contacts.read` no servidor (lm-flow#456); criar/editar/apagar seguem do administrador. A chave `custom_attribute_definitions.read` continua aparecendo em Cargos, sem efeito pra quem já vê contatos.
+2. **O nome vem do card** (`item.assignee` e, em reserva, `item.conversation.assignee`, com o mesmo id — `responsavelNoCard`), e a foto do cabeçalho da página usa o mesmo nome; não vem de `GET /users`: o corretor não tem `users.read`, a lista voltava 403 e o campo ficava vazio. Só o gestor busca a lista (`useAccountUsers({ enabled })`).
+3. **Esconder a lista do corretor é só visual; a tela não mudou regra do servidor sobre reatribuir.** Hoje o servidor não barra o corretor de trocar o responsável pela API (atribuição da conversa e `default_assignee_id` do contato); quem impede é a tela. Fica para a frente do acesso pela tarefa/visita (em desenho).
+4. **Leitura das definições dos campos personalizados** no servidor (lm-flow#456) aceita **qualquer uma** de duas chaves: `contacts.read` (Corretor e Gerente já têm) **ou** `custom_attribute_definitions.read`. A chave antiga continua valendo: libera a tela Configurações → Atributos e a leitura das definições (cargo personalizado que só tem ela não perdeu nada). Criar/editar/apagar seguem com as chaves de administrador. Desmarcar `custom_attribute_definitions.read` em Cargos não esconde as definições de quem tem `contacts.read`.
 
 Armadilhas:
 

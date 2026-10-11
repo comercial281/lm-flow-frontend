@@ -14,7 +14,7 @@ import OfferActions from '@/components/roleta/OfferActions';
 import ColocarNoFunil from '@/components/pipelines/card/ColocarNoFunil';
 import { CampoEtapa, CampoResponsavel } from '@/components/pipelines/card/CamposDaSituacao';
 import { ETAPA_TRAVADA } from '@/features/pipelines/situacao/situacao';
-import { conversaDoCard } from '../cardDoLead';
+import { conversaDoCard, responsavelNoCard } from '../cardDoLead';
 import type { CardDoLead } from '../useCardDoLead';
 
 // Card ganho/perdido não muda de etapa (Parte 3): o campo trava e diz por quê.
@@ -56,10 +56,12 @@ export function ResponsavelComFoto({ card }: { card: CardDoLead }) {
   const { responsavel, item } = card;
   // A foto é a do responsável ATUAL (após "Trocar" e a foto acompanha o nome).
   const atual = responsavel.usuarios.find(u => String(u.id) === responsavel.id);
-  // Responsável que não está na lista de usuários (desligado, fora do cargo):
-  // cai na foto do assignee do card, se for o mesmo id.
-  const doCard = item?.assignee && String(item.assignee.id) === responsavel.id ? item.assignee : null;
-  const nome = atual?.name ?? doCard?.name ?? 'Sem responsável';
+  // Responsável que não está na lista de usuários (corretor, que não lê a
+  // lista; desligado; fora do cargo): cai no que veio no card — o assignee do
+  // card ou o da conversa, se for o mesmo id. É o mesmo nome do campo ao lado.
+  const doCard = responsavelNoCard(item, responsavel.id);
+  // "Sem responsável" só quando não há responsável: nunca ao lado de um nome.
+  const nome = atual?.name ?? doCard?.name ?? (responsavel.id ? '' : 'Sem responsável');
   return (
     <div className="flex min-w-0 items-end gap-2">
       <ContactAvatar

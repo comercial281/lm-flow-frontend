@@ -93,6 +93,15 @@ describe('useCardDoLead — responsável pro corretor', () => {
     expect(result.current.responsavel.meuId).toBe('eu');
   });
 
+  it('responsável vindo da conversa: o nome é o da conversa', () => {
+    contas.gestor = false;
+    const item = { ...(card(null) as object), conversation: { id: 77, labels: [], additional_attributes: {}, assignee: { id: 'u7', name: 'Carla' } } };
+    const { result } = abrir(item);
+
+    expect(result.current.responsavel.id).toBe('u7');
+    expect(result.current.responsavel.nomeDoCard).toBe('Carla');
+  });
+
   it('gestor troca e busca a lista', () => {
     contas.gestor = true;
     const { result } = abrir(card(null));
