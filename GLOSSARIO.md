@@ -92,7 +92,8 @@ As peças 11 a 22 (e os acréscimos em 6, 7 e 9) são as **escolhas do dono em 1
    - `semResultado` oferece limpar filtros.
    - `erro` oferece tentar de novo.
    - Sem acesso é o `NoAccessState`.
-   - **Erro nunca aparece como lista vazia.**
+   - **Erro nunca aparece como lista vazia.** A carga é uma função `carregar` (`useCallback`), chamada pelo efeito e pelo "Tentar de novo", com contador que ignora resposta antiga; duas cargas na mesma tela têm erros separados (o erro de uma não apaga a outra).
+   - **Formulário que grava configuração não aparece quando a carga falha** (só o erro com "Tentar de novo"): salvar em cima do formulário vazio apagaria a configuração real (Pixel/Conversões, Quem não respondeu).
    - **Duas medidas:** `tamanho="grande"` (padrão: ícone, título, explicação, botão) na lista principal da tela; `tamanho="compacto"` dentro de bloco, aba do card, painel ou janela (caixa tracejada, ação em link roxo ao lado da frase). Os três tipos valem nos dois. `title`/`description` aceitam texto com link.
    - **Nunca "Nenhum…" solto.** **Trava:** `vazioSolto` conta texto entre tags começando com "Nenhum"/"Nenhuma" fora do `EmptyState` (ponto cego: texto vindo de variável ou de `t()`).
 8. **Lista de escolha** (`Seletor`): toda lista de escolha usa ele, nunca `<select>` cru.
@@ -130,7 +131,8 @@ As peças 11 a 22 (e os acréscimos em 6, 7 e 9) são as **escolhas do dono em 1
    - Variantes: `default` (principal, com o degradê roxo), `outline` (secundário), `ghost` (discreto), `destructive` (Excluir). Tamanhos `default` (36 px) e `sm` (32 px).
    - **O degradê é só do principal:** a regra do `globals.css` vale pra `[data-slot='button'][data-variant='default']` sem `aria-pressed`. Botão de selecionar (`variant={ativo ? 'default' : 'outline'}`) leva `aria-pressed={ativo}` e fica roxo liso.
    - **Nunca** `<button>` pintado à mão com `bg-primary`, cor fixa (`bg-[#…]`) nem botão menor que 32 px. Exceções de significado: Ganho verde no card, área do administrador.
-   - **Trava:** `botaoPintado`.
+   - Botão só-ícone: `size="icon"` com `className="size-8"` no mínimo. A ação da `Faixa` é `size="sm"`. Barra apertada: compense no espaço em volta, nunca encolha o botão.
+   - **Trava:** `botaoPintado` e `botaoPequeno` (`h-4`…`h-7`/`size-4`…`size-7` na tag do `<Button`; ponto cego: componente que embrulha o `Button`, como o `IconActionButton`).
 15. **Menu de ações:** `DropdownMenu` com gatilho `BotaoMaisAcoes` (⋮ em pé, `ghost`, 36 px, nome "Mais ações"), dentro de `<DropdownMenuTrigger asChild>`; `compacto` (32 px) só onde não cabe; `contorno` (40 px, com contorno) só ao lado de botões grandes de contorno, como o Ganho | Perdido no topo da página do card.
    - Itens com ícone `h-4 w-4` antes do texto.
    - Excluir por último, depois de `DropdownMenuSeparator`, com `variant="destructive"` do pacote. Nunca `text-red-*` à mão.
@@ -140,10 +142,11 @@ As peças 11 a 22 (e os acréscimos em 6, 7 e 9) são as **escolhas do dono em 1
    - **Trava:** `soNoMouse` (`opacity-0`/`invisible`/`hidden` + `group-hover` na mesma linha); brilho decorativo vai pras exceções.
 17. **Janela** (`Dialog` de `components/ui/ds`): nunca importar do pacote base nem montar `div fixed inset-0`.
    - **Topo e rodapé fixos, só o meio rola**, quando a tela usa `DialogHeader`/`DialogFooter` (rodapé feito à mão rola junto: ao mexer na tela, troque). O X de fechar ("Fechar") mora no topo; o foco de abertura vai pro primeiro campo.
-   - Rodapé: *Cancelar* (contorno) à esquerda e a ação à direita.
+   - Rodapé: os botões finais ficam no `DialogFooter`, *Cancelar* (contorno) à esquerda e a ação à direita. Ação do outro lado (Desconectar, Excluir): `className="sm:justify-between"` com os dois grupos dentro. Janela de formulário com rolagem própria: o `<form>` envolve o miolo que rola + o `DialogFooter`.
+   - Janela com trabalho em andamento (assistente de página de captura, roteamento de lead, avisar os clientes da Academia): Esc e clique fora **não** fecham (`onEscapeKeyDown`/`onInteractOutside` com `preventDefault`); fecha pelo X ou pelo Cancelar.
    - **Quatro larguras:** pequena 448 px (`max-w-md`: confirmação, pergunta curta), padrão 512 px (sem largura), grande 672 px (`max-w-2xl`: formulário longo), larga 1400 px (`size="wide"`: duas colunas, tabela, editor, prévia). Nenhuma outra.
    - **No celular a janela sobe de baixo**: largura inteira, cantos de cima, alcinha, botões do rodapé empilhados (o principal em cima). Vale também pra confirmação. Tudo mora no ajuste da casa (`ds.tsx`).
-   - **Trava:** `larguraDeJanela`, `janelaDireta` e `janelaAMao`.
+   - **Trava:** `larguraDeJanela`, `janelaDireta`, `janelaAMao` e `rodapeAMao` (arquivo com mais `DialogContent` que `DialogFooter` e com `<Button`; ponto cego: rodapé dentro de componente filho).
 18. **Confirmação:** `useConfirmacao`. Vermelho só com `destrutivo: true` (arquivar, executar e mover não são vermelhos).
    - Janela com conteúdo a mais (lista do que vai ser apagado, campo, escolha) fica `Dialog` da casa, título simples, sem círculo com ícone, botão `variant="destructive"`.
    - "Digite o nome pra confirmar" só em excluir canal e excluir conta.
