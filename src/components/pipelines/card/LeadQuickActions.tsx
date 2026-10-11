@@ -180,9 +180,13 @@ export default function LeadQuickActions({
             open={visitaAberta}
             onOpenChange={setVisitaAberta}
             leadInicial={lead}
-            onCreated={() => {
+            onCreated={v => {
               setVisitaAberta(false);
-              if (convId) conversationAPI.addLabels(convId, [VISIT_SCHEDULED_LABEL]).catch(() => {});
+              // Visita registrada como realizada (dia que já passou) não está
+              // agendada: a etiqueta mentiria na conversa.
+              if (convId && v.status !== 'completed') {
+                conversationAPI.addLabels(convId, [VISIT_SCHEDULED_LABEL]).catch(() => {});
+              }
               onVisitaCriada?.();
             }}
           />
