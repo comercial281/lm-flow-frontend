@@ -8225,7 +8225,7 @@ Armadilhas:
 
 ## Celular sem o que não serve lá (Raio-X do celular, 10/10/2026)
 
-Pedido do dono depois do Raio-X do celular: tirar da tela pequena o que é de montar ou configurar e não se usa no celular. **No computador nada muda.** Esconder não é bloquear: quem abrir o endereço direto no celular ainda chega na tela (a exceção é o construtor, que vira aviso). "Celular" é o mesmo corte do menu, abaixo de 768px (`useCelular`, em `src/hooks/useCelular.ts`, com `CONSULTA_CELULAR = '(max-width: 767px)'`; o `MOBILE_QUERY` do construtor aponta pra mesma constante).
+Pedido do dono depois do Raio-X do celular: tirar da tela pequena o que é de montar ou configurar e não se usa no celular. **No computador nada muda.** Esconder não é bloquear: quem abrir o endereço direto no celular ainda chega na tela (a exceção é o construtor, que vira aviso). "Celular" é o mesmo corte do menu, abaixo de 768px. **`useCelular` / `ehCelular` / `CONSULTA_CELULAR` (`src/hooks/useCelular.ts`) são o detector ÚNICO de celular da casa**: `useCelular()` acompanha o redimensionamento, `ehCelular()` lê uma vez (fora de componente ou pra decidir só na abertura da tela), `CONSULTA_CELULAR = '(max-width: 767px)'`. O `MOBILE_QUERY` do construtor aponta pra mesma constante. Ainda sobra um detector solto: `ContactSidebar.tsx` (`window.innerWidth < 768`), fora desta entrega.
 
 O que sai do celular:
 
@@ -8234,7 +8234,7 @@ O que sai do celular:
 - **Meus imóveis**: o "Gerar descrições com IA" (o em lote, do topo). "Novo imóvel" e o cadastro não mudam.
 - **Contatos**: o "Exportar".
 - **Visitas**: "Horário de visita" e "Folgas"/"Minhas folgas" saem do topo e vão pro menu ⋯ ("Mais ações da agenda"). A tela abre na **Lista** (o mês não cabe); a pessoa troca pro Calendário quando quiser. A escolha Calendário/Lista não é guardada (nunca foi): só o padrão mudou. Mês/Semana/Dia continua guardado como antes.
-- **Construtor de fluxos** (Automações `/automations/flow-builder/:id`, Follow-up `/automations/follow-ups/:id`, Funis de mensagem `/automations/message-funnels/:id`): no lugar do desenho, uma página com "← Voltar", o nome do fluxo, a chave **Ligar o fluxo / Ligar o funil** e o aviso "Pra editar este fluxo (follow-up, funil), abra no computador." Sem Salvar, Blocos, Simular nem Configurações. A chave é a mesma ação do canvas (`alternarLigado`): recusa ligar com bloco incompleto ou passo do guia pendente, com a mesma frase. Funil da equipe que a pessoa só vê fica sem a chave, como no canvas.
+- **Construtor de fluxos** (Automações `/automations/flow-builder/:id`, Follow-up `/automations/follow-ups/:id`, Funis de mensagem `/automations/message-funnels/:id`): no lugar do desenho, uma página com "← Voltar", o nome do fluxo, a chave **Ligar o fluxo / Ligar o funil** e o aviso "Pra editar este fluxo (follow-up, funil), abra no computador." Sem Salvar, Blocos, Simular nem Configurações. A chave é a mesma ação do canvas (`alternarLigado`): recusa ligar com bloco incompleto ou passo do guia pendente, com a mesma frase. Funil da equipe que a pessoa só vê fica sem a chave, como no canvas. Com alteração não salva, a chave some e aparece "Há alterações não salvas: abra no computador pra salvar." (no celular não tem Salvar). A tela (`FlowBuilder/FlowCanvasCelular.tsx`) é decidida **só na abertura** (`useState(ehCelular)`): girar o celular ou encolher a janela não troca o canvas pela tela do celular, nem o contrário.
 
 Decisões do dono (não reabrir sem ele pedir):
 
@@ -8246,4 +8246,4 @@ Armadilhas:
 
 1. **Use `useCelular()`, não `useMediaQuery('(min-width: 768px)')`**: sem `matchMedia` (testes) o hook responde "computador", e o que já existia continua aparecendo nos specs. Pra testar o celular: `simularCelular()` de `src/test/telaDeCelular.ts` (e `restaurar()` no fim).
 2. **Item novo de montar/configurar no menu**: decidir se ganha `foraDoCelular`. O spec "gaveta do celular" trava a lista atual.
-3. **A chave do construtor no celular depende de `hasChanges`** como no canvas: se alguém mexer no computador, encolher a janela e tentar ligar, recebe "Salve as alterações antes de ligar".
+3. **O modo celular do construtor não segue o redimensionamento, de propósito.** Trocar no meio desmontava o painel do bloco (`FlowNodePanel`/`FlowTriggerPanel`) e perdia o texto e o "não salvo" sem aviso. Não troque `modoCelular` por `useCelular()`.

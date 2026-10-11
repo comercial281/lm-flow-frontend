@@ -35,6 +35,8 @@ vi.mock('@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors', asyn
 
 import FlowAutomationCanvas from './FlowAutomationCanvas';
 import { simularCelular } from '@/test/telaDeCelular';
+import FlowCanvasCelular, { AVISO_NAO_SALVO_NO_CELULAR } from './FlowCanvasCelular';
+import { act } from '@testing-library/react';
 
 beforeAll(() => {
   // O React Flow mede os blocos; o jsdom não tem estas duas. Sem medida, os
@@ -273,6 +275,43 @@ describe('celular (Raio-X do celular, 10/10/2026)', () => {
     abrirNoCelular();
     expect(await screen.findByText('Pra editar este funil, abra no computador.')).toBeTruthy();
     expect(screen.queryByRole('switch')).toBeNull();
+  });
+
+  it('abrir no computador e encolher pra celular não troca a tela (o painel aberto fica)', async () => {
+    tela = simularCelular(false);
+    get.mockResolvedValue(flow());
+    abrirNoCelular();
+    fireEvent.click(await screen.findByLabelText(/Início\. Quando:/));
+    expect(await screen.findByTestId('painel-do-inicio')).toBeTruthy();
+    act(() => tela!.mudar(true));
+    expect(screen.getByTestId('painel-do-inicio')).toBeTruthy();
+    expect(screen.getByTestId('bloco-inicio')).toBeTruthy();
+    expect(screen.queryByText('Pra editar este fluxo, abra no computador.')).toBeNull();
+  });
+
+  it('abrir no celular e alargar a tela continua na tela do celular', async () => {
+    tela = simularCelular();
+    get.mockResolvedValue(flow());
+    abrirNoCelular();
+    expect(await screen.findByText('Pra editar este fluxo, abra no computador.')).toBeTruthy();
+    act(() => tela!.mudar(false));
+    expect(screen.getByText('Pra editar este fluxo, abra no computador.')).toBeTruthy();
+    expect(screen.queryByTestId('bloco-inicio')).toBeNull();
+  });
+
+  it('com alteração não salva: sem a chave, com a linha de abrir no computador', () => {
+    const aoMudarLigado = vi.fn();
+    render(
+      <MemoryRouter>
+        <FlowCanvasCelular
+          kind="automation" nome="Boas-vindas" ligado={false} soVer={false} naoSalvo
+          aoMudarLigado={aoMudarLigado} aoVoltar={() => {}}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('status').textContent).toContain(AVISO_NAO_SALVO_NO_CELULAR);
+    expect(screen.queryByRole('switch')).toBeNull();
+    expect(screen.getByText('Pra editar este fluxo, abra no computador.')).toBeTruthy();
   });
 
   it('computador: o canvas continua igual', async () => {

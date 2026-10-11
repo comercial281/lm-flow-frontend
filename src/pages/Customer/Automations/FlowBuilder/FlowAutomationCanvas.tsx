@@ -6,13 +6,9 @@ import {
   type Node, type Edge, type NodeChange, type Connection, type ReactFlowInstance, BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { ArrowLeft, Save, Play, Loader2, Settings2, AlertTriangle, LayoutGrid, Copy, Users, Monitor } from 'lucide-react';
+import { ArrowLeft, Save, Play, Loader2, Settings2, AlertTriangle, LayoutGrid, Copy, Users } from 'lucide-react';
 import { Badge, Button, Input } from '@/components/ui/ds';
 import Chave from '@/components/base/Chave';
-import Pagina from '@/components/base/Pagina';
-import BaseHeader from '@/components/base/BaseHeader';
-import EmptyState from '@/components/base/EmptyState';
-import type { FlowAutomationKind } from '@/types/flowAutomations';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation, FlowAutomationNode, TestRunResult } from '@/types/flowAutomations';
 import {
@@ -54,6 +50,8 @@ import {
 } from '@/hooks/useAlteracoesNaoSalvas';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { ehCelular } from '@/hooks/useCelular';
+import FlowCanvasCelular from './FlowCanvasCelular';
 import { cn } from '@/lib/utils';
 
 // Canvas do construtor de fluxos. Fonte de verdade é o array `nodes` (árvore
@@ -89,16 +87,6 @@ const PEDIDO_TIRAR_MENSAGEM = {
   destrutivo: true,
 };
 
-/**
- * Celular (Raio-X do celular, 10/10/2026): o desenho não abre numa tela pequena.
- * A tela mostra o nome, a chave de ligar e o aviso de abrir no computador.
- */
-const NO_CELULAR: Record<FlowAutomationKind, { aviso: string; chave: string }> = {
-  automation: { aviso: 'Pra editar este fluxo, abra no computador.', chave: 'Ligar o fluxo' },
-  followup: { aviso: 'Pra editar este follow-up, abra no computador.', chave: 'Ligar o fluxo' },
-  conversation: { aviso: 'Pra editar este funil, abra no computador.', chave: 'Ligar o funil' },
-};
-
 /** Distância entre o Início e o primeiro bloco (a mesma entre colunas do layout). */
 const START_GAP_X = 320;
 
@@ -124,6 +112,10 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const sidePanel = useSidePanel(confirmar);
   const isMobile = useMediaQuery(MOBILE_QUERY);
+  // Raio-X do celular (10/10/2026): a tela do celular (sem o desenho) é decidida
+  // SÓ na abertura. Seguir o redimensionamento trocaria o canvas no meio da
+  // edição ao girar o celular, desmontando o painel do bloco e perdendo o texto.
+  const [modoCelular] = useState(ehCelular);
   // No celular o painel Blocos cobre a tela: começa sempre fechado.
   const [blocksOpen, setBlocksOpenState] = useState(
     () => readBlocksOpen() && !(typeof window !== 'undefined' && window.matchMedia?.(MOBILE_QUERY).matches),
@@ -589,38 +581,21 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   }
 
   // Celular (Raio-X do celular, 10/10/2026): sem o desenho, sem Salvar, Blocos
-  // nem Simular. Fica o nome, a chave (a mesma ação do canvas) e o voltar. Quem
-  // só pode ver o funil da equipe não ganha a chave, como no canvas.
-  if (isMobile) {
-    const textos = NO_CELULAR[kind];
+  // nem Simular. Fica o nome, a chave (a mesma ação do canvas) e o voltar.
+  if (modoCelular) {
     return (
-      <Pagina
-        acima={
-          <button
-            type="button"
-            onClick={goBack}
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Voltar
-          </button>
-        }
-        cabecalho={<BaseHeader title={automation.name} />}
-      >
-        {!readOnly && (
-          <div className="rounded-lg border border-border bg-card p-4" data-testid="chave-no-celular">
-            <Chave rotulo={textos.chave} ligada={automation.is_enabled} aoMudar={alternarLigado} />
-          </div>
-        )}
-        <EmptyState
-          icon={Monitor}
-          title={textos.aviso}
-          description={readOnly
-            ? 'No celular o desenho não abre. No computador dá pra ver os passos e duplicar.'
-            : 'No celular dá pra ligar e desligar. Mexer nos blocos, salvar e simular fica pro computador.'}
+      <>
+        <FlowCanvasCelular
+          kind={kind}
+          nome={automation.name}
+          ligado={automation.is_enabled}
+          soVer={readOnly}
+          naoSalvo={unsaved}
+          aoMudarLigado={alternarLigado}
+          aoVoltar={goBack}
         />
         {dialogoDeConfirmacao}
-      </Pagina>
+      </>
     );
   }
 
