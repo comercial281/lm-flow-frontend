@@ -8,7 +8,7 @@
  * antes do horário Remarcar | Cancelar (+ Confirmar); depois Não compareceu |
  * Remarcar + Realizada em destaque embaixo; Realizada sem retorno só "Dar retorno".
  * "Não compareceu" pergunta antes (encerra a visita) e oferece abrir uma visita
- * nova com o mesmo cliente, imóvel e corretor.
+ * nova com o mesmo cliente, imóvel e corretor (o que a visita tiver).
  */
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -118,6 +118,12 @@ export function AcoesDaVisita({ visita, onAtualizada }: { visita: Visit; onAtual
   const retornoVazio = dialogo === 'retorno' && !nota && !comentario.trim();
   const quando = `${dataCurta(visita.scheduled_at)} às ${hora(visita.scheduled_at)}`;
   const nomeDoCliente = visita.contact?.name ?? 'Cliente';
+  // A visita nova leva o imóvel e o corretor da que o cliente faltou: o texto só
+  // promete o que de fato vai junto.
+  const oQueVaiJunto = [visita.property ? 'imóvel' : null, visita.realtor ? 'corretor' : null].filter(Boolean).join(' e ');
+  const textoRemarcarAgora = oQueVaiJunto
+    ? `Abre uma visita nova para ${nomeDoCliente}, com o mesmo ${oQueVaiJunto}.`
+    : `Abre uma visita nova para ${nomeDoCliente}.`;
 
   const tituloDoDialogo =
     dialogo === 'realizada' ? 'Marcar visita como realizada'
@@ -170,7 +176,7 @@ export function AcoesDaVisita({ visita, onAtualizada }: { visita: Visit; onAtual
             <DialogTitle>{tituloDoDialogo}</DialogTitle>
             {dialogo === 'remarcar_agora' && (
               <DialogDescription>
-                Abre uma visita nova para {nomeDoCliente}, com o mesmo imóvel e corretor.
+                {textoRemarcarAgora}
               </DialogDescription>
             )}
           </DialogHeader>
@@ -241,25 +247,33 @@ export function AcoesDaVisita({ visita, onAtualizada }: { visita: Visit; onAtual
         </DialogContent>
       </Dialog>
 
-      <ScheduleVisitDialog
-        open={remarcando}
-        onOpenChange={setRemarcando}
-        visitaParaRemarcar={visita}
-        onCreated={onAtualizada}
-      />
-      <ScheduleVisitDialog
-        open={novaVisita}
-        onOpenChange={aberto => { setNovaVisita(aberto); if (!aberto) liberarPendente(); }}
-        leadInicial={{
-          id: visita.contact_id,
-          name: nomeDoCliente,
-          phone_number: visita.contact?.phone_number ?? null,
-          in_pipeline: false,
-          owner: visita.realtor ?? null,
-        }}
-        imovelInicial={visita.property ?? null}
-        onCreated={nova => { liberarPendente(); onAtualizada(nova); }}
-      />
+      {/* As janelas só existem quando abrem: a Lista da Agenda pode ter 200
+          visitas, e duas janelas fechadas por visita pesam à toa. A janela chama
+          `onCreated` e depois `onOpenChange(false)`; `liberarPendente` esvazia a
+          pendente na primeira chamada, então o aviso sai uma vez só. */}
+      {remarcando && (
+        <ScheduleVisitDialog
+          open
+          onOpenChange={setRemarcando}
+          visitaParaRemarcar={visita}
+          onCreated={onAtualizada}
+        />
+      )}
+      {novaVisita && (
+        <ScheduleVisitDialog
+          open
+          onOpenChange={aberto => { setNovaVisita(aberto); if (!aberto) liberarPendente(); }}
+          leadInicial={{
+            id: visita.contact_id,
+            name: nomeDoCliente,
+            phone_number: visita.contact?.phone_number ?? null,
+            in_pipeline: false,
+            owner: visita.realtor ?? null,
+          }}
+          imovelInicial={visita.property ?? null}
+          onCreated={nova => { liberarPendente(); onAtualizada(nova); }}
+        />
+      )}
     </>
   );
 }

@@ -36,17 +36,27 @@ vi.mock('@/hooks/useCan', () => ({ useCan: () => () => true }));
 
 // A janela de agendar de verdade busca horários e corretores: aqui só importa
 // com o que ela abriu.
-// `criarNaJanela` simula a visita nova criada pela janela aberta.
+// `criarNaJanela` simula a visita salva como a janela de verdade faz: chama
+// `onCreated` e depois fecha (`onOpenChange(false)`). `fecharJanela` fecha sem
+// criar. `desenhosDaJanela` conta quantas vezes a janela foi desenhada (aberta
+// ou não): fechada, ela nem deve existir.
 let criarNaJanela: (v: Visit) => void = () => {};
+let fecharJanela: () => void = () => {};
+let desenhosDaJanela = 0;
 vi.mock('@/components/visits/ScheduleVisitDialog', () => ({
   ScheduleVisitDialog: (p: {
     open: boolean;
+    onOpenChange: (v: boolean) => void;
     visitaParaRemarcar?: Visit | null;
     leadInicial?: { id: string; name: string } | null;
     imovelInicial?: { id: string } | null;
     onCreated?: (v: Visit) => void;
   }) => {
-    if (p.open) criarNaJanela = v => p.onCreated?.(v);
+    desenhosDaJanela++;
+    if (p.open) {
+      criarNaJanela = v => { p.onCreated?.(v); p.onOpenChange(false); };
+      fecharJanela = () => p.onOpenChange(false);
+    }
     return p.open ? (
       <div
         data-testid="janela"
@@ -80,6 +90,7 @@ const ONTEM = new Date(2026, 9, 9, 15, 0).toISOString();
 
 beforeEach(() => {
   vi.clearAllMocks();
+  desenhosDaJanela = 0;
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(AGORA);
 });
@@ -216,6 +227,75 @@ describe('AcoesDaVisita', () => {
     const nova = visita({ id: 'v2', status: 'scheduled' });
     act(() => { criarNaJanela(nova); });
     expect(onAtualizada.mock.calls.map(c => c[0])).toEqual([faltou, nova]);
+  });
+
+  it('Remarcar agora e a janela fechada sem criar: avisa a visita encerrada uma vez só', async () => {
+    const user = userEvent.setup();
+    const onAtualizada = vi.fn();
+    const faltou = visita({ scheduled_at: ONTEM, status: 'no_show' });
+    noShow.mockResolvedValue(faltou);
+    render(<AcoesDaVisita visita={visita({ scheduled_at: ONTEM })} onAtualizada={onAtualizada} />);
+
+    await user.click(screen.getByRole('button', { name: 'Não compareceu' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Não compareceu' }));
+    const pergunta = await screen.findByText('Remarcar agora?');
+    await user.click(within(pergunta.closest('[role="dialog"]') as HTMLElement).getByRole('button', { name: 'Remarcar' }));
+    await screen.findByTestId('janela');
+
+    act(() => { fecharJanela(); });
+    expect(onAtualizada).toHaveBeenCalledTimes(1);
+    expect(onAtualizada).toHaveBeenCalledWith(faltou);
+    expect(screen.queryByTestId('janela')).toBeNull();
+  });
+
+  it('a janela de agendar só existe quando abre (a Lista pode ter 200 visitas)', async () => {
+    const user = userEvent.setup();
+    render(<AcoesDaVisita visita={visita()} onAtualizada={vi.fn()} />);
+    expect(desenhosDaJanela).toBe(0);
+    await user.click(screen.getByRole('button', { name: 'Remarcar' }));
+    expect(await screen.findByTestId('janela')).toBeInTheDocument();
+    act(() => { fecharJanela(); });
+    expect(screen.queryByTestId('janela')).toBeNull();
+  });
+
+  it('Remarcar: a visita remarcada é avisada uma vez e a janela fecha', async () => {
+    const user = userEvent.setup();
+    const onAtualizada = vi.fn();
+    render(<AcoesDaVisita visita={visita()} onAtualizada={onAtualizada} />);
+    await user.click(screen.getByRole('button', { name: 'Remarcar' }));
+    await screen.findByTestId('janela');
+
+    const remarcada = visita({ status: 'rescheduled' });
+    act(() => { criarNaJanela(remarcada); });
+    expect(onAtualizada).toHaveBeenCalledTimes(1);
+    expect(onAtualizada).toHaveBeenCalledWith(remarcada);
+    expect(screen.queryByTestId('janela')).toBeNull();
+  });
+
+  describe('texto do "Remarcar agora?"', () => {
+    const perguntar = async (v: Visit) => {
+      const user = userEvent.setup();
+      noShow.mockResolvedValue({ ...v, status: 'no_show' });
+      render(<AcoesDaVisita visita={v} onAtualizada={vi.fn()} />);
+      await user.click(screen.getByRole('button', { name: 'Não compareceu' }));
+      await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Não compareceu' }));
+      return (await screen.findByText('Remarcar agora?')).closest('[role="dialog"]') as HTMLElement;
+    };
+
+    it('sem imóvel: com o mesmo corretor', async () => {
+      const pergunta = await perguntar(visita({ scheduled_at: ONTEM, property_id: null, property: undefined }));
+      expect(within(pergunta).getByText('Abre uma visita nova para Maria Teste, com o mesmo corretor.')).toBeInTheDocument();
+    });
+
+    it('sem corretor: com o mesmo imóvel', async () => {
+      const pergunta = await perguntar(visita({ scheduled_at: ONTEM, realtor: null }));
+      expect(within(pergunta).getByText('Abre uma visita nova para Maria Teste, com o mesmo imóvel.')).toBeInTheDocument();
+    });
+
+    it('sem imóvel nem corretor: só a visita nova', async () => {
+      const pergunta = await perguntar(visita({ scheduled_at: ONTEM, property_id: null, property: undefined, realtor: null }));
+      expect(within(pergunta).getByText('Abre uma visita nova para Maria Teste.')).toBeInTheDocument();
+    });
   });
 
   it('Remarcar abre a janela de remarcar a própria visita', async () => {
