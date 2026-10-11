@@ -80,12 +80,16 @@ export function ResponsavelComFoto({ card }: { card: CardDoLead }) {
   );
 }
 
-export function AvisosDaRoleta({ card }: { card: CardDoLead }) {
+export function AvisosDaRoleta({ card, semDeOnde = false }: {
+  card: CardDoLead;
+  /** Página do card: "veio pela Roleta X" já está no cartão do topo. */
+  semDeOnde?: boolean;
+}) {
   const { item, contato, roletaDoLead, roleta } = card;
   if (!item) return null;
   return (
     <>
-      {roletaDoLead && (
+      {roletaDoLead && !semDeOnde && (
         <span className="text-xs text-muted-foreground flex items-center gap-1">
           <Shuffle className="h-3.5 w-3.5" /> veio pela {roletaDoLead}
         </span>
