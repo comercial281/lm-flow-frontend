@@ -16,6 +16,8 @@ export interface Arquivos {
   carregar: () => Promise<void>;
   apagar: (doc: SalesAgentDocument) => Promise<boolean>;
   reprocessar: (doc: SalesAgentDocument) => Promise<void>;
+  /** Depois de subir arquivo ou escrever texto: relê a lista e avisa a contagem da IA. */
+  aoCriar: () => Promise<void>;
 }
 
 export function useArquivos(agentId: string, aoMudarContagem: () => void): Arquivos {
@@ -61,5 +63,10 @@ export function useArquivos(agentId: string, aoMudarContagem: () => void): Arqui
     try { await salesAgentsService.reprocessDocument(agentId, doc.id); } finally { await carregar(); }
   }, [agentId, carregar]);
 
-  return { docs, estado, carregar, apagar, reprocessar };
+  const aoCriar = useCallback(async () => {
+    await carregar();
+    aoMudarContagem();
+  }, [carregar, aoMudarContagem]);
+
+  return { docs, estado, carregar, apagar, reprocessar, aoCriar };
 }
