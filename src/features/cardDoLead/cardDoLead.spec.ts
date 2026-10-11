@@ -140,9 +140,13 @@ describe('visitaSemFeedback', () => {
     expect(visitaSemFeedback(visita({ status: 'scheduled', scheduled_at: '2026-10-05T15:00:00Z' }), agora)).toBe(false);
   });
 
-  it('cancelada ou remarcada não pede feedback', () => {
+  it('cancelada ou "Não compareceu" não pede feedback', () => {
     expect(visitaSemFeedback(visita({ status: 'cancelled' }), agora)).toBe(false);
-    expect(visitaSemFeedback(visita({ status: 'rescheduled' }), agora)).toBe(false);
+    expect(visitaSemFeedback(visita({ status: 'no_show' }), agora)).toBe(false);
+  });
+
+  it('Reagendada que já passou pede (agora ela tem Realizada)', () => {
+    expect(visitaSemFeedback(visita({ status: 'rescheduled' }), agora)).toBe(true);
   });
 
   it('agendada que já passou e ninguém mexeu também pede', () => {
