@@ -573,6 +573,129 @@ export function iconesComTamanho(codigo, arquivo = 'x.tsx') {
   return achados;
 }
 
+// ── Carregando e estado vazio (peças 13 e 7 do GLOSSARIO, escolha do dono 10/10/2026) ──
+// Três réguas, todas pelo compilador (não por linha):
+//  - rodinhaCentral: elemento com `animate-spin` FORA de botão (Button, button,
+//    *MenuItem, SelectItem, Badge, link) que é grande (h-6 pra cima, ou size={20+})
+//    ou está sozinho dentro de uma caixa `justify-center`. É a rodinha no meio da
+//    lista ou da tela, que vira o esqueleto cinza (`Carregando`). A rodinha
+//    pequena dentro de botão ou ao lado de um texto fica.
+//  - telaEmBranco: `fallback={null}` num <Suspense>: a tela some enquanto carrega.
+//    Não conta quando o que carrega é uma janela (…Modal, …Dialog).
+//  - vazioSolto: texto entre tags que começa com "Nenhum"/"Nenhuma" (fora de
+//    opção de lista e do próprio EmptyState). É a lista vazia escrita à mão,
+//    que vira `EmptyState` (grande na tela, compacto dentro de bloco). "Nenhum"
+//    sozinho é valor de seletor e não conta; frase de ajuda que começa com
+//    "Nenhum" vai pras exceções com motivo.
+export const ESTADOS_DA_CASA = new Set([
+  'src/components/base/Carregando.tsx',
+  'src/components/base/EmptyState.tsx',
+  // a tela de partida do app (antes de saber qual tela vem) fica com a rodinha
+  'src/components/LoadingScreen.tsx',
+]);
+const TAG_DE_BOTAO = /^(?:\w*Button|button|a|Link|\w*MenuItem|SelectItem|\w*Badge|CommandItem)$/;
+const RODINHA_GRANDE = /\b(?:h|size)-(?:[6-9]|1\d|2\d|3\d)\b|\bsize=\{(?:[2-9]\d)\}/;
+const percorrerJsx = (fonte, aoAbrir) => {
+  const visitar = (no, pilha) => {
+    if (ts.isJsxElement(no) || ts.isJsxSelfClosingElement(no)) {
+      const abre = ts.isJsxElement(no) ? no.openingElement : no;
+      const tag = abre.tagName.getText(fonte);
+      aoAbrir(abre, tag, pilha);
+      const nova = [...pilha, { tag, abre }];
+      ts.forEachChild(no, c => visitar(c, nova));
+      return;
+    }
+    ts.forEachChild(no, c => visitar(c, pilha));
+  };
+  visitar(fonte, []);
+};
+const atributo = (abre, nome, fonte) =>
+  abre.attributes.properties.find(a => ts.isJsxAttribute(a) && a.name.getText(fonte) === nome);
+const linhaDe = (fonte, no) => fonte.getLineAndCharacterOfPosition(no.getStart(fonte)).line + 1;
+
+export function rodinhasCentrais(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const achados = [];
+  percorrerJsx(fonte, (abre, tag, pilha) => {
+    const classe = atributo(abre, 'className', fonte)?.getText(fonte) ?? '';
+    if (!/\banimate-spin\b/.test(classe)) return;
+    if (pilha.some(p => TAG_DE_BOTAO.test(p.tag))) return;
+    const pai = pilha[pilha.length - 1];
+    const classeDoPai = pai ? atributo(pai.abre, 'className', fonte)?.getText(fonte) ?? '' : '';
+    if (RODINHA_GRANDE.test(abre.getText(fonte)) || /\bjustify-center\b/.test(classeDoPai)) {
+      achados.push({ linha: linhaDe(fonte, abre), texto: `<${tag}> ${classe}` });
+    }
+  });
+  return achados;
+}
+
+export function telasEmBranco(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const achados = [];
+  percorrerJsx(fonte, abre => {
+    const fb = atributo(abre, 'fallback', fonte);
+    const valor = fb?.initializer && ts.isJsxExpression(fb.initializer) ? fb.initializer.expression : null;
+    if (!valor || valor.kind !== ts.SyntaxKind.NullKeyword) return;
+    // O texto leva o primeiro filho (`fallback={null} → <AgendarVisitaDialog>`), pra
+    // exceção poder perdoar uma janela carregada sob demanda sem perdoar a tela.
+    const filho = ts.isJsxElement(abre.parent)
+      ? abre.parent.children.find(c => ts.isJsxElement(c) || ts.isJsxSelfClosingElement(c))
+      : null;
+    const tagDoFilho = filho ? (ts.isJsxElement(filho) ? filho.openingElement : filho).tagName.getText(fonte) : '';
+    // Janela carregada sob demanda (…Modal, …Dialog) fica: o esqueleto apareceria
+    // FORA da janela, no meio da tela de trás, no instante antes de ela abrir.
+    if (/(?:Modal|Dialog)$/.test(tagDoFilho)) return;
+    achados.push({ linha: linhaDe(fonte, abre), texto: `${fb.getText(fonte)} → <${tagDoFilho}>` });
+  });
+  return achados;
+}
+
+const TAG_DE_OPCAO = /^(?:option|SelectItem|\w*MenuItem|CommandItem|EmptyState|Aviso)$/;
+export function vaziosSoltos(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const achados = [];
+  // A tag dona do texto: a que o envolve, ou a que o recebe num atributo
+  // (`<EmptyState description={<>Nenhum… <Link/></>} />` é do EmptyState).
+  const tagDoPai = no => {
+    let a = no.parent;
+    while (a && !ts.isJsxElement(a) && !ts.isJsxSelfClosingElement(a)) a = a.parent;
+    if (!a) return '';
+    return (ts.isJsxElement(a) ? a.openingElement : a).tagName.getText(fonte);
+  };
+  // string que vira filho de tag: {vazio ? 'Nenhum…' : …}, {lista.length === 0 && 'Nenhum…'}
+  const filhoDeTag = no => {
+    let filho = no;
+    let a = no.parent;
+    while (a) {
+      if (ts.isJsxExpression(a)) return ts.isJsxElement(a.parent) || ts.isJsxFragment(a.parent);
+      const passa =
+        (ts.isConditionalExpression(a) && a.condition !== filho) ||
+        ts.isParenthesizedExpression(a) ||
+        (ts.isBinaryExpression(a) && a.right === filho) ||
+        ts.isTemplateSpan(a);
+      if (!passa) return false;
+      filho = a;
+      a = a.parent;
+    }
+    return false;
+  };
+  const visitar = no => {
+    let texto = null;
+    if (ts.isJsxText(no)) texto = no.text;
+    else if ((ts.isStringLiteral(no) || ts.isNoSubstitutionTemplateLiteral(no)) && filhoDeTag(no)) texto = no.text;
+    else if (ts.isTemplateExpression(no) && filhoDeTag(no)) texto = no.head.text;
+    if (texto !== null) {
+      const limpo = texto.replace(/\s+/g, ' ').trim();
+      if (/^Nenhuma?\b/.test(limpo) && !/^Nenhuma?\.?$/.test(limpo) && !TAG_DE_OPCAO.test(tagDoPai(no))) {
+        achados.push({ linha: linhaDe(fonte, no), texto: limpo });
+      }
+    }
+    ts.forEachChild(no, visitar);
+  };
+  visitar(fonte);
+  return achados;
+}
+
 // ── Textos dos arquivos de tradução ────────────────────────────────────────
 export function textosDoJson(obj, caminho = '') {
   const saida = [];
@@ -655,6 +778,11 @@ export function varrer() {
       for (const { linha, texto } of botoesSemNome(codigo, rel)) anotar('iconeSemNome', rel, linha, texto, texto);
       for (const { linha, texto } of botoesPintados(codigo, rel)) anotar('botaoPintado', rel, linha, 'botão pintado à mão', texto);
       for (const { linha, texto } of iconesComTamanho(codigo, rel)) anotar('tamanhoDeIcone', rel, linha, 'ícone com size em pixel', texto);
+      if (!ESTADOS_DA_CASA.has(rel)) {
+        for (const { linha, texto } of rodinhasCentrais(codigo, rel)) anotar('rodinhaCentral', rel, linha, 'rodinha no meio da tela', texto);
+        for (const { linha, texto } of telasEmBranco(codigo, rel)) anotar('telaEmBranco', rel, linha, 'tela em branco carregando', texto);
+        for (const { linha, texto } of vaziosSoltos(codigo, rel)) anotar('vazioSolto', rel, linha, '"Nenhum…" solto fora do EmptyState', texto);
+      }
       const linhas = codigo.split('\n');
       const tags = tagsJsx(codigo, rel);
       if (rel !== CABECALHO_DA_CASA) {
@@ -724,6 +852,9 @@ export const CATEGORIAS = {
   corFixaEmGrafico: 'cor fixa em gráfico',
   botaoPintado: 'botão pintado à mão (fora do Button)',
   tamanhoDeIcone: 'ícone com size em pixel',
+  rodinhaCentral: 'rodinha no meio da tela (use Carregando)',
+  telaEmBranco: 'tela em branco carregando (fallback={null})',
+  vazioSolto: '"Nenhum…" solto fora do EmptyState',
 };
 
 function principal() {

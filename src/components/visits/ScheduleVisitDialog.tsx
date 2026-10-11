@@ -50,6 +50,7 @@ import {
   mesmoDia, ocupando, porExtenso, rotuloDuracao, type BusyVisit,
 } from '@/features/visits/daySlots';
 import { motivoDiaFechado, type TimeOff } from '@/features/visits/agenda';
+import EmptyState from '@/components/base/EmptyState';
 
 interface Props {
   open: boolean;
@@ -116,6 +117,8 @@ export function ScheduleVisitDialog({
   const [observacoes, setObservacoes] = useState('');
   const [imovel, setImovel] = useState<ImovelEscolhido | null>(null);
   const [doDia, setDoDia] = useState<BusyVisit[]>([]);
+  // Falha ao ler as visitas do dia não vira "Nenhuma outra visita".
+  const [erroDoDia, setErroDoDia] = useState(false);
   const [salvando, setSalvando] = useState(false);
   // Horário de hoje que já passou: a resposta de "Essa visita já aconteceu?".
   // `null` = ainda não respondeu (salvar pede a resposta).
@@ -227,8 +230,9 @@ export function ScheduleVisitDialog({
   // resposta anterior chegar não pode deixar a resposta velha pisar na nova
   // (resposta mais lenta de um pedido antigo vencendo a mais rápida do atual).
   useEffect(() => {
-    if (!open || !corretor) { setDoDia([]); return; }
+    if (!open || !corretor) { setDoDia([]); setErroDoDia(false); return; }
     setDoDia([]);
+    setErroDoDia(false);
     let vivo = true;
     const d = diaISO(dia);
     visitsService.list({ realtor_id: corretor.id, since: d, until: d, per_page: 50 })
@@ -241,7 +245,7 @@ export function ScheduleVisitDialog({
           .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
         setDoDia(ordenada);
       })
-      .catch(() => { if (vivo) setDoDia([]); });
+      .catch(() => { if (vivo) { setDoDia([]); setErroDoDia(true); } });
     return () => { vivo = false; };
   }, [open, corretor, dia, recarregarDia]);
 
@@ -640,10 +644,19 @@ export function ScheduleVisitDialog({
               {corretor && (
                 <div>
                   <UILabel>{travado ? 'Suas visitas nesse dia' : `Visitas de ${corretor.name} nesse dia`}</UILabel>
-                  {ocupadas.length === 0 ? (
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {travado ? 'Nenhuma outra visita sua nesse dia.' : `Nenhuma outra visita de ${corretor.name} nesse dia.`}
-                    </p>
+                  {ocupadas.length === 0 && erroDoDia ? (
+                    <EmptyState
+                      tipo="erro"
+                      tamanho="compacto"
+                      aoTentarDeNovo={() => setRecarregarDia(c => c + 1)}
+                      className="mt-1 p-3"
+                    />
+                  ) : ocupadas.length === 0 ? (
+                    <EmptyState
+                      tamanho="compacto"
+                      title={travado ? 'Nenhuma outra visita sua nesse dia.' : `Nenhuma outra visita de ${corretor.name} nesse dia.`}
+                      className="mt-1 p-3"
+                    />
                   ) : (
                     <ul className="mt-1 space-y-1 text-sm">
                       {ocupadas.map(v => (

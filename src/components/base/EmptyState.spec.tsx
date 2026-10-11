@@ -42,3 +42,34 @@ describe('EmptyState: quatro casos, nunca confundidos', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });
+
+describe('EmptyState compacto: caixa tracejada pra dentro de bloco', () => {
+  it('frase e ação em link roxo ao lado, sem ícone grande', async () => {
+    const criar = vi.fn();
+    const { container } = render(
+      <EmptyState tamanho="compacto" title="Nenhuma visita com este lead ainda." action={{ label: 'Agendar visita', onClick: criar }} />,
+    );
+    const caixa = container.firstElementChild as HTMLElement;
+    expect(caixa.className).toContain('border-dashed');
+    expect(caixa).toHaveTextContent('Nenhuma visita com este lead ainda. Agendar visita');
+    expect(container.querySelector('h3')).toBeNull();
+    const link = screen.getByRole('button', { name: 'Agendar visita' });
+    expect(link.className).toContain('text-primary');
+    await userEvent.click(link);
+    expect(criar).toHaveBeenCalled();
+  });
+
+  it('erro compacto é alerta, com "Tentar de novo" ao lado da frase', async () => {
+    const tentar = vi.fn();
+    render(<EmptyState tamanho="compacto" tipo="erro" aoTentarDeNovo={tentar} />);
+    expect(screen.getByRole('alert')).toHaveTextContent(`${TEXTO_ERRO.title}. ${TEXTO_ERRO.acao}`);
+    await userEvent.click(screen.getByRole('button', { name: TEXTO_ERRO.acao }));
+    expect(tentar).toHaveBeenCalled();
+  });
+
+  it('sem resultado compacto oferece limpar filtros', () => {
+    render(<EmptyState tamanho="compacto" tipo="semResultado" aoLimparFiltros={() => {}} />);
+    expect(screen.getByRole('button', { name: TEXTO_SEM_RESULTADO.acao })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+});

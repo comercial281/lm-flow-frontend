@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 import ProviderSelection from '@/components/channels/ProviderSelection';
 import { BaseHeader, Pagina } from '@/components/base';
+import Carregando from '@/components/base/Carregando';
 import ChannelBreadcrumb, { BreadcrumbItem } from '@/components/channels/ChannelBreadcrumb';
 
 // Import hooks
@@ -431,9 +432,7 @@ export default function NewChannel() {
       >
         <Suspense
           fallback={
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-            </div>
+            <Carregando variante="texto" linhas={6} className="py-6" />
           }
         >
           {renderForm()}

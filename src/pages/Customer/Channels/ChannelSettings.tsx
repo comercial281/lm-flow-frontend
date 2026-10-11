@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner';
 import { BaseHeader, Pagina } from '@/components/base';
 import Abas from '@/components/base/Abas';
+import Carregando from '@/components/base/Carregando';
 import { useLanguage } from '@/hooks/useLanguage';
 import { usePermissions } from '@/contexts/PermissionsContext';
 
@@ -590,12 +591,7 @@ export default function ChannelSettings() {
     // o resto da tela sempre que este spinner aparecer no caminho.
     return (
       <>
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">{t('settings.loading')}</p>
-          </div>
-        </div>
+        <Carregando variante="texto" linhas={8} rotulo={t('settings.loading')} className="p-6" />
         {ownerPrompt.dialog}
       </>
     );

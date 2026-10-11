@@ -241,3 +241,15 @@ const ButtonDaCasa = forwardRef<HTMLButtonElement, ComponentProps<typeof BaseBut
 ));
 ButtonDaCasa.displayName = 'Button';
 export const Button: typeof BaseButton = ButtonDaCasa;
+
+// ── Esqueleto (Skeleton) cinza ───────────────────────────────────────────────
+// O Skeleton do pacote nasce `bg-accent` (lavanda). A peça 13 do GLOSSARIO
+// (escolha do dono em 10/10/2026) é o esqueleto CINZA: `bg-muted animate-pulse`,
+// parado pra quem pediu menos movimento. A classe de quem chama vem depois e
+// continua mandando (altura, largura, canto). Pra lista, cartão ou texto
+// inteiro, prefira o `Carregando` de `@/components/base`, que já tem a forma.
+import { Skeleton as SkeletonDoPacote } from '@evoapi/design-system';
+
+export function Skeleton({ className, ...props }: ComponentProps<typeof SkeletonDoPacote>) {
+  return <SkeletonDoPacote className={`bg-muted motion-reduce:animate-none ${className ?? ''}`} {...props} />;
+}

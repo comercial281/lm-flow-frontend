@@ -7,6 +7,7 @@ import { siteBuilderService, type MenuDoPainel, type SitePage } from '@/services
 import { ROTULO_MAX, ehPagina } from '@/features/siteBuilder/public/menuConfig';
 import { EXTERNOS_MAX, avisosDoExterno, menuDeFabrica, nomeDeFabrica } from '@/features/siteBuilder/menuDoPainel';
 import { Secao, Secoes } from '@/components/base/Secao';
+import EmptyState from '@/components/base/EmptyState';
 import { CLASSE_DO_CAMPO, CampoTexto } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
 
@@ -109,7 +110,7 @@ export default function TelaMenus({ site, siteForm, setF, versaoDasPaginas = 0 }
         titulo="Links externos"
         descricao={`Até ${EXTERNOS_MAX} links para fora do site, como o CRECI ou um portal parceiro. Aparecem no fim do menu e abrem em outra aba.`}
       >
-        {externos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum link externo.</p>}
+        {externos.length === 0 && <EmptyState tamanho="compacto" title="Nenhum link externo." />}
         <div className="space-y-4">
           {externos.map((e, i) => {
             const avisos = avisosDoExterno(e);

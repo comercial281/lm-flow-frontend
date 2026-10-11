@@ -40,6 +40,8 @@ import { dinheiro } from '@/lib/formato';
 import { lerFiltroPropostas, type FiltroDoLink } from '@/features/dashboard/links';
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
 import IconActionButton from '@/components/base/IconActionButton';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 function formatCurrency(value?: number | null): string {
   return dinheiro(value);
@@ -73,6 +75,7 @@ export default function Proposals() {
   const [rejectModal, setRejectModal] = useState<RejectModalState>({ open: false, proposalId: '', reason: '' });
   const [counterModal, setCounterModal] = useState<CounterModalState>({ open: false, proposalId: '', value: '' });
   const [recusado, setRecusado] = useState(false);
+  const [erro, setErro] = useState(false);
 
   const [searchParams, setSearchParams] = useSearchParams();
   // Filtro de período que veio de um clique na Dashboard (?desde=&ate=). Lido uma vez ao abrir.
@@ -92,9 +95,11 @@ export default function Proposals() {
       if (statusFilter) params.status = statusFilter;
       const res = await proposalsService.list(params);
       setProposals(res.data);
+      setErro(false);
     } catch (e) {
       setProposals([]);
       if (isForbiddenError(e)) setRecusado(true);
+      else setErro(true);
     } finally {
       setLoading(false);
     }
@@ -285,16 +290,15 @@ export default function Proposals() {
       {/* Table */}
       <div className="flex-1 overflow-auto px-6 py-4">
         {loading ? (
-          <div className="flex items-center justify-center h-48 text-muted-foreground">
-            <RefreshCw className="h-5 w-5 animate-spin mr-2" />
-            Carregando...
-          </div>
+          <Carregando linhas={6} rotulo="Carregando..." />
+        ) : erro ? (
+          <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-muted-foreground gap-2">
-            <FileText className="h-10 w-10 opacity-30" />
-            <p className="font-medium">Nenhuma proposta encontrada</p>
-            <Button variant="outline" size="sm" onClick={openCreate}>Criar primeira proposta</Button>
-          </div>
+          <EmptyState
+            icon={FileText}
+            title="Nenhuma proposta encontrada"
+            action={{ label: 'Criar primeira proposta', onClick: openCreate, variant: 'outline' }}
+          />
         ) : (
           <Card className="gap-0 overflow-hidden py-0">
             <div className="overflow-x-auto">

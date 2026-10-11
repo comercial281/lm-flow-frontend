@@ -16,6 +16,7 @@ import {
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { Card, Button } from '@/components/ui/ds';
+import EmptyState from '@/components/base/EmptyState';
 interface Props {
   categoryId: string | null;
   canEdit: boolean;
@@ -23,7 +24,7 @@ interface Props {
 
 export default function DocsTab({ categoryId, canEdit }: Props) {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
-  const { data: docs = [], isLoading } = useDocs(categoryId);
+  const { data: docs = [], isLoading, error, refetch } = useDocs(categoryId);
   const createMut = useCreateDoc();
   const updateMut = useUpdateDoc();
   const deleteMut = useDeleteDoc();
@@ -193,10 +194,11 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
       </div>
       <div className="flex-1 overflow-y-auto p-6">
         {isLoading && <p className="text-xs text-muted-foreground">Carregando...</p>}
-        {!isLoading && docs.length === 0 && !creating && (
-          <p className="text-xs text-muted-foreground text-center py-12">
-            Nenhum doc nesta categoria ainda.
-          </p>
+        {!isLoading && error && !creating && (
+          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void refetch()} />
+        )}
+        {!isLoading && !error && docs.length === 0 && !creating && (
+          <EmptyState tamanho="compacto" title="Nenhum doc nesta categoria ainda." />
         )}
         {creating && (
           <Card className="mb-6 gap-3 p-4">

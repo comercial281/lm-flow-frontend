@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { Button } from '@/components/ui/ds';
 import { Loader2, Bot, CheckCircle2 } from 'lucide-react';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { toast } from 'sonner';
 import {
   noReplyRobotService,
@@ -33,6 +35,7 @@ export function NoReplyRobot({ embedded = false }: NoReplyRobotProps = {}) {
   const [skipUnnamed, setSkipUnnamed] = useState(true);
   const [sequenceSlug, setSequenceSlug] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [erroAoCarregar, setErroAoCarregar] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const apply = useCallback((c: NoReplyRobotConfig) => {
@@ -49,7 +52,9 @@ export function NoReplyRobot({ embedded = false }: NoReplyRobotProps = {}) {
     setLoading(true);
     try {
       apply(await noReplyRobotService.get());
+      setErroAoCarregar(false);
     } catch (e) {
+      setErroAoCarregar(true);
       toast.error(apiErrorMessage(e, 'Erro ao carregar a configuração do robô'));
     } finally {
       setLoading(false);
@@ -83,11 +88,7 @@ export function NoReplyRobot({ embedded = false }: NoReplyRobotProps = {}) {
   }, [enabled, minutes, scanWindow, audience, skipUnnamed, sequenceSlug, apply]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
+    return <Carregando variante="texto" linhas={6} className={embedded ? 'py-2' : 'p-6'} />;
   }
 
   const noSequences = !config || config.sequences.length === 0;
@@ -136,7 +137,12 @@ export function NoReplyRobot({ embedded = false }: NoReplyRobotProps = {}) {
         </Aviso>
       )}
 
-      {noSequences && (
+      {/* Falha na carga não vira "Nenhum funil de follow-up ativo". */}
+      {!config && erroAoCarregar && (
+        <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} />
+      )}
+
+      {noSequences && !(!config && erroAoCarregar) && (
         <Aviso tom="neutro">
           <p>
             Nenhum funil de follow-up ativo. Crie um {embedded ? 'na lista abaixo' : <>em <strong>Automações → Follow-up</strong></>} antes de ligar o robô.

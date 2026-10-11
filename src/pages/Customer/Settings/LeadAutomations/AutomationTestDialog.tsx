@@ -23,6 +23,7 @@ import {
 } from '@/services/leadAutomation/leadAutomationService';
 import { telefone } from '@/lib/formato';
 import Aviso from '@/components/base/Aviso';
+import EmptyState from '@/components/base/EmptyState';
 
 // Nome de campo do lead como a pessoa vê na tela de automação — "source" não diz
 // nada para quem escolheu "Origem do lead" num seletor.
@@ -202,10 +203,10 @@ export default function AutomationTestDialog({ rule, open, onOpenChange, users =
 
             <section>
               <h4 className="font-medium mb-1">O que a regra fez</h4>
+              {result.acoes.length === 0 ? (
+                <EmptyState tamanho="compacto" title="Nenhuma ação foi executada." />
+              ) : (
               <ul className="space-y-1">
-                {result.acoes.length === 0 && (
-                  <li className="text-muted-foreground">Nenhuma ação foi executada.</li>
-                )}
                 {result.acoes.map((a, i) => {
                   const look = STATUS_LOOK[a.status] ?? STATUS_LOOK.skipped;
                   return (
@@ -221,6 +222,7 @@ export default function AutomationTestDialog({ rule, open, onOpenChange, users =
                   );
                 })}
               </ul>
+              )}
             </section>
 
             {!result.avisos_ligados && (

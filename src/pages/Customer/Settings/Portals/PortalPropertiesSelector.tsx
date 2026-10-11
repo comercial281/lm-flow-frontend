@@ -15,6 +15,8 @@ import {
   PortalPublication,
 } from '@/services/portals/portalsService';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { extractError } from '@/utils/apiHelpers';
 import {
   LEGADO_BASE,
@@ -295,15 +297,21 @@ export default function PortalPropertiesSelector({
       </div>
 
       {loading ? (
-        <div className="py-10 text-center text-sm text-muted-foreground">Carregando imóveis...</div>
+        <Carregando linhas={4} rotulo="Carregando imóveis..." className="py-2" />
       ) : loadFailed ? (
-        <div className="py-10 text-center text-sm text-muted-foreground">
-          Não foi possível carregar os imóveis agora. Recarregue a página para tentar de novo.
-        </div>
+        <EmptyState
+          tipo="erro"
+          tamanho="compacto"
+          title="Não foi possível carregar os imóveis agora."
+          aoTentarDeNovo={() => void load()}
+        />
       ) : filtered.length === 0 ? (
-        <div className="py-10 text-center text-sm text-muted-foreground">
-          Nenhum imóvel ativo encontrado. Cadastre imóveis com status Ativo para publicá-los.
-        </div>
+        <EmptyState
+          tamanho="compacto"
+          tipo={search.trim() ? 'semResultado' : 'vazio'}
+          title="Nenhum imóvel ativo encontrado."
+          description="Cadastre imóveis com status Ativo para publicá-los."
+        />
       ) : (
         <div className="max-h-96 overflow-y-auto divide-y rounded-lg border">
           {filtered.map(p => {

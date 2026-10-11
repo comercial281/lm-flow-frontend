@@ -30,6 +30,8 @@ import { propertiesService, Property } from '@/services/properties/propertiesSer
 import { contactsService } from '@/services/contacts/contactsService';
 import type { Contact } from '@/types/contacts';
 import NoAccessState from '@/components/permissions/NoAccessState';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { telefone } from '@/lib/formato';
 
@@ -57,6 +59,7 @@ export default function PropertyInterests() {
   const [loading, setLoading] = useState(false);
   const [activeStage, setActiveStage] = useState('');
   const [recusado, setRecusado] = useState(false);
+  const [erro, setErro] = useState(false);
 
   // Close Lost modal
   const [lostTarget, setLostTarget] = useState<PropertyInterest | null>(null);
@@ -87,9 +90,13 @@ export default function PropertyInterests() {
       const res = await propertyInterestsService.list(params);
       setInterests(res.data);
       setTotal(res.meta?.total ?? res.data.length);
+      setErro(false);
     } catch (e) {
       if (isForbiddenError(e)) setRecusado(true);
-      else toast.error('Erro ao carregar interesses');
+      else {
+        setErro(true);
+        toast.error('Erro ao carregar interesses');
+      }
     } finally {
       setLoading(false);
     }
@@ -240,18 +247,15 @@ export default function PropertyInterests() {
       {/* List */}
       <div className="flex-1 overflow-y-auto p-6">
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-            Carregando interesses...
-          </div>
+          <Carregando linhas={6} rotulo="Carregando interesses..." />
+        ) : erro ? (
+          <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />
         ) : interests.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <TrendingUp className="h-12 w-12 mb-3 opacity-30" />
-            <p className="text-sm font-medium">Nenhum interesse encontrado</p>
-            <Button className="mt-4" onClick={openCreate}>
-              <Plus className="h-4 w-4 mr-2" />
-              Registrar interesse
-            </Button>
-          </div>
+          <EmptyState
+            icon={TrendingUp}
+            title="Nenhum interesse encontrado"
+            action={{ label: 'Registrar interesse', onClick: openCreate }}
+          />
         ) : (
           <Card className="gap-0 overflow-hidden py-0">
             <div className="overflow-x-auto">

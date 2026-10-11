@@ -16,8 +16,9 @@ import {
 } from '@/components/ui/ds';
 import { Contact } from '@/types/contacts';
 import { contactsService } from '@/services/contacts/contactsService';
-import { Search, Mail, Phone, Building2, User, Loader2 } from 'lucide-react';
+import { Search, Mail, Phone, Building2, User } from 'lucide-react';
 import { toast } from 'sonner';
+import Carregando from '@/components/base/Carregando';
 import { telefone } from '@/lib/formato';
 
 interface ContactMergeSelectorModalProps {
@@ -111,9 +112,7 @@ export default function ContactMergeSelectorModal({
 
         <ScrollArea className="max-h-[calc(90vh-280px)] px-6 py-4">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
+            <Carregando linhas={4} />
           ) : contacts.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <p>{searchQuery ? t('empty.title') : t('dialog.selectContactToMerge.noContacts')}</p>

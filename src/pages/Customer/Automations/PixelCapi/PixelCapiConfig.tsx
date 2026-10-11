@@ -11,6 +11,8 @@ import {
 import { Seletor } from '@/components/base/Seletor';
 import Aviso from '@/components/base/Aviso';
 import { Button } from '@/components/ui/ds';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 const VALUE_EVENTS = ['Purchase', 'UltraQualificado'];
 
@@ -239,7 +241,7 @@ export default function PixelCapiConfig() {
   }
 
   if (loading) {
-    return <div className="text-sm text-muted-foreground">Carregando…</div>;
+    return <Carregando variante="texto" linhas={6} rotulo="Carregando…" />;
   }
 
   const inputCls =
@@ -426,8 +428,9 @@ export default function PixelCapiConfig() {
           </div>
         ))}
 
-        {(config?.pipelines ?? []).length === 0 && (
-          <p className="text-sm text-muted-foreground">Nenhum funil encontrado para este cliente.</p>
+        {/* Sem config = a carga falhou (o erro aparece ao lado do Salvar): não vira "Nenhum funil". */}
+        {config && (config.pipelines ?? []).length === 0 && (
+          <EmptyState tamanho="compacto" title="Nenhum funil encontrado para este cliente." />
         )}
       </section>
 

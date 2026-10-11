@@ -8,7 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@evoapi/design-system/dialog';
-import { Loader2, Copy, Check } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
+import Carregando from '@/components/base/Carregando';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 
@@ -95,12 +96,7 @@ const AIResultModal: React.FC<AIResultModalProps> = ({
             </div>
             <div className="p-3 bg-primary/5 border border-primary/20 rounded-md text-sm min-h-[100px] whitespace-pre-wrap">
               {isLoading ? (
-                <div className="flex items-center justify-center h-[100px]">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  <span className="ml-2 text-muted-foreground">
-                    {t('aiAssistance.resultModal.processing')}
-                  </span>
-                </div>
+                <Carregando variante="texto" linhas={4} rotulo={t('aiAssistance.resultModal.processing')} />
               ) : generatedMessage ? (
                 generatedMessage
               ) : (

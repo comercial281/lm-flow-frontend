@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { salesAgentsService, type SalesAgentRun } from '@/services/salesAgents/salesAgentsService';
 import { dataHora, dolar } from '@/lib/formato';
 import { Card } from '@/components/ui/ds';
+import EmptyState from '@/components/base/EmptyState';
 
 const SITUACAO: Record<string, string> = { replied: 'Respondeu', skipped: 'Não respondeu', failed: 'Falhou' };
 const TIPO: Record<string, string> = { live: 'Conversa', followup: 'Follow-up', reengage: 'Retomada', engage: 'Acionada pelo corretor', test: 'Teste' };
@@ -35,7 +36,11 @@ export default function UltimosAtendimentos({ agentId, completo }: { agentId: st
     <section aria-labelledby="ultimos-atendimentos" className="space-y-2">
       <h2 id="ultimos-atendimentos" className="text-sm font-medium">Últimos atendimentos</h2>
       {runs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhum registro ainda. Cada mensagem que chegar aparece aqui, inclusive as que ela decidir não responder.</p>
+        <EmptyState
+          tamanho="compacto"
+          title="Nenhum registro ainda."
+          description="Cada mensagem que chegar aparece aqui, inclusive as que ela decidir não responder."
+        />
       ) : (
         <Card className="gap-0 py-0">
         <ul className="divide-y divide-border">

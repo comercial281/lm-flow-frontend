@@ -6,6 +6,7 @@ import { macrosService } from '@/services/macros/macrosService';
 import type { Macro } from '@/types/automation';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import Carregando from '@/components/base/Carregando';
 
 interface MacrosListProps {
   conversationId: string;
@@ -72,9 +73,7 @@ const MacrosList: React.FC<MacrosListProps> = ({ conversationId, onMacroExecuted
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
+      <Carregando linhas={3} className="py-2" />
     );
   }
 

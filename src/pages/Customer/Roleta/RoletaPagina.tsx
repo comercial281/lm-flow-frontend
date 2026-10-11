@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Copy, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Copy, Pencil, Trash2 } from 'lucide-react';
 import {
   Button,
   DropdownMenu,
@@ -14,6 +14,7 @@ import Abas from '@/components/base/Abas';
 import BaseHeader from '@/components/base/BaseHeader';
 import Pagina from '@/components/base/Pagina';
 import Chave from '@/components/base/Chave';
+import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import IconActionButton from '@/components/base/IconActionButton';
 import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
@@ -163,9 +164,7 @@ export default function RoletaPagina() {
   if (!roleta) {
     return (
       <Pagina acima={voltar} cabecalho={<BaseHeader title="Roleta" />}>
-        <div className="flex justify-center py-16 text-muted-foreground" role="status" aria-label="Carregando a roleta">
-          <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
-        </div>
+        <Carregando variante="texto" linhas={6} rotulo="Carregando a roleta" className="py-6" />
       </Pagina>
     );
   }

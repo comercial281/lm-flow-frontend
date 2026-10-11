@@ -16,6 +16,7 @@ import {
   type KnowledgeAttachment,
 } from '@/hooks/useKnowledge';
 import { formatBytes } from './_lib';
+import EmptyState from '@/components/base/EmptyState';
 import { toast } from 'sonner';
 import { Card, Button } from '@/components/ui/ds';
 
@@ -25,7 +26,7 @@ interface Props {
 }
 
 export default function LessonAttachments({ lessonId, canEdit }: Props) {
-  const { data: attachments = [] } = useAttachments(lessonId);
+  const { data: attachments = [], error: erroAnexos, refetch: recarregarAnexos } = useAttachments(lessonId);
   const upload = useUploadAttachment();
   const del = useDeleteAttachment();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -95,8 +96,10 @@ export default function LessonAttachments({ lessonId, canEdit }: Props) {
         <TextForm lessonId={lessonId} onDone={() => setAdding(null)} />
       )}
 
-      {attachments.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Nenhum material nesta aula ainda.</p>
+      {attachments.length === 0 && erroAnexos ? (
+        <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void recarregarAnexos()} />
+      ) : attachments.length === 0 ? (
+        <EmptyState tamanho="compacto" title="Nenhum material nesta aula ainda." />
       ) : (
         <div className="space-y-2">
           {attachments.map((a) => (

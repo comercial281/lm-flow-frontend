@@ -3,6 +3,7 @@ import type { EmojiClickData, Theme } from 'emoji-picker-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useIsDarkClass } from '@/hooks/chat/useIsDarkClass';
 import { lazyWithRetry } from '@/utils/chunkReload';
+import Carregando from '@/components/base/Carregando';
 
 const EmojiPickerReact = lazyWithRetry(() =>
   import('emoji-picker-react').then((m) => ({ default: m.default })),
@@ -85,7 +86,7 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose, isOpe
       }}
     >
       <div className="bg-background border-2 border-border rounded-lg shadow-2xl overflow-hidden">
-        <Suspense fallback={null}>
+        <Suspense fallback={<Carregando variante="texto" linhas={8} rotulo="Carregando emojis…" className="w-[300px] p-4" />}>
           <EmojiPickerReact
             onEmojiClick={handleEmojiClick}
             theme={emojiTheme}

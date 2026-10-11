@@ -18,6 +18,8 @@ import { motivoSemAtendimento, pendenciasDaIa, type Situacao } from '@/features/
 import { SuggestionCard } from './TelaSugestoes';
 import UltimosAtendimentos from './UltimosAtendimentos';
 import Aviso from '@/components/base/Aviso';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 // Visão geral, números do período — o que ESTA IA produziu, pro próprio cliente ver.
 //
@@ -39,12 +41,16 @@ export function ResultsTab({ agent, motivo = null }: { agent: SalesAgent; motivo
   const [data, setData] = useState<AgentPerformance | null>(null);
   const [days, setDays] = useState(30);
   const [loading, setLoading] = useState(true);
+  // Falha na leitura não vira "Nenhum atendimento no período".
+  const [erroAoCarregar, setErroAoCarregar] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       setData(await salesAgentsService.performance(agent.id, days));
+      setErroAoCarregar(false);
     } catch {
+      setErroAoCarregar(true);
       toast.error('Não consegui carregar os resultados desta IA.');
     } finally {
       setLoading(false);
@@ -78,15 +84,18 @@ export function ResultsTab({ agent, motivo = null }: { agent: SalesAgent; motivo
       </div>
 
       {loading && !data ? (
-        <p className="text-sm text-muted-foreground flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
-        </p>
+        <Carregando variante="texto" linhas={5} rotulo="Carregando…" />
+      ) : !data && erroAoCarregar ? (
+        <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} />
       ) : !data ? (
-        <p className="text-sm text-muted-foreground rounded-lg border border-sidebar-border bg-sidebar p-4">
-          {motivo
-            ? `Nenhum atendimento no período. Motivo: ${motivo}. Os números aparecem sozinhos quando ela voltar a responder os leads.`
-            : 'Esta IA ainda não tem atendimento registrado no período. Os números aparecem sozinhos conforme ela responde os leads.'}
-        </p>
+        <EmptyState
+          tamanho="compacto"
+          title={
+            motivo
+              ? `Nenhum atendimento no período. Motivo: ${motivo}. Os números aparecem sozinhos quando ela voltar a responder os leads.`
+              : 'Esta IA ainda não tem atendimento registrado no período. Os números aparecem sozinhos conforme ela responde os leads.'
+          }
+        />
       ) : (
         // Segura o desenho anterior mais apagado ao recarregar, em vez de piscar
         // um esqueleto e fazer a tela sumir e voltar ao trocar de período.

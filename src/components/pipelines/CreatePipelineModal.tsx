@@ -17,10 +17,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/ds';
-import { Plus, Trash2, GripVertical, Loader2, X, Users } from 'lucide-react';
+import { Plus, Trash2, GripVertical, X, Users } from 'lucide-react';
 import { CreatePipelineData, PipelineStage } from '@/types/analytics';
 import TeamsService from '@/services/teams/teamsService';
 import { Team } from '@/types/users/teams';
+import Carregando from '@/components/base/Carregando';
 
 interface StageFormData {
   name: string;
@@ -469,9 +470,7 @@ export default function CreatePipelineModal({
                         )}
                         <div className="border rounded-lg max-h-36 overflow-y-auto">
                           {teamsLoading ? (
-                            <div className="flex items-center justify-center py-4">
-                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                            </div>
+                            <Carregando linhas={2} className="px-3" />
                           ) : teams.length === 0 ? (
                             <div className="text-center text-sm text-muted-foreground py-4">
                               {t('createPipeline.teamSelection.noTeams')}

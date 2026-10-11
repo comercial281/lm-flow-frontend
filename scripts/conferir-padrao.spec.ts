@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, iconesComTamanho } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, iconesComTamanho, rodinhasCentrais, telasEmBranco, vaziosSoltos } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -221,6 +221,9 @@ describe('contaConfirmacao: a confirmação da casa vale para o app inteiro', ()
     expect(contaConfirmacao('src/hooks/usePergunta.tsx')).toBe(false);
     expect(contaConfirmacao('src/components/ui/ds.tsx')).toBe(false);
     expect(contaConfirmacao('src/components/chat/contact-sidebar/PipelineManagement.spec.tsx')).toBe(false);
+  });
+});
+
 describe('abaForaDaCasa e alternadorAMao (peças 6 e 19)', () => {
   it('aba: conta o Tabs do pacote em JSX e o sublinhado copiado, não a rodinha nem o import', () => {
     expect(abaForaDaCasa('<Tabs defaultValue="geral">')).toBe(true);
@@ -236,6 +239,9 @@ describe('abaForaDaCasa e alternadorAMao (peças 6 e 19)', () => {
     expect(alternadorAMao('<LayoutGrid className="h-3.5 w-3.5" />')).toBe(true);
     expect(alternadorAMao("{ valor: 'cards', icone: Grid3X3, nome: 'Ver em cartões' },")).toBe(false);
     expect(alternadorAMao('<KanbanBoard />')).toBe(false);
+  });
+});
+
 describe('soNoMouse: ação que só aparece no mouse (peça 16)', () => {
   it('pega os três jeitos de esconder, com prefixo de tela e grupo nomeado', () => {
     expect(soNoMouse('<div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">')).toBe(true);
@@ -453,5 +459,48 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     expect(saida).not.toContain('PreChatForm.tsx');
     expect(saida).not.toContain('portalShared.tsx');
     expect(saida).not.toContain('Lista.spec.tsx');
+  });
+});
+
+// Peças 13 (Carregando) e 7 (Estado vazio), escolha do dono em 10/10/2026.
+describe('rodinhaCentral: rodinha no meio da tela vira esqueleto', () => {
+  const conta = (codigo: string) => rodinhasCentrais(codigo).length;
+  it('conta a rodinha grande e a centralizada, fora de botão', () => {
+    expect(conta('const a = <div className="flex justify-center py-8"><Loader2 className="h-4 w-4 animate-spin" /></div>;')).toBe(1);
+    expect(conta('const a = <div><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;')).toBe(1);
+    expect(conta('const a = <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />;')).toBe(1);
+  });
+  it('não conta rodinha de botão nem a pequena ao lado de um texto', () => {
+    expect(conta('const a = <Button disabled><div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>Salvar</Button>;')).toBe(0);
+    expect(conta('const a = <button><Loader2 className="h-4 w-4 animate-spin" /></button>;')).toBe(0);
+    expect(conta('const a = <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Enviando…</span>;')).toBe(0);
+  });
+});
+
+describe('telaEmBranco: Suspense sem nada enquanto carrega', () => {
+  it('conta fallback={null} de tela ou aba e diz o que carrega', () => {
+    const achados = telasEmBranco('const a = <Suspense fallback={null}><CardConversationTab item={i} /></Suspense>;');
+    expect(achados).toHaveLength(1);
+    expect(achados[0].texto).toContain('<CardConversationTab>');
+  });
+  it('não conta janela carregada sob demanda nem fallback com esqueleto', () => {
+    expect(telasEmBranco('const a = <Suspense fallback={null}><ScheduleVisitDialog open /></Suspense>;')).toHaveLength(0);
+    expect(telasEmBranco('const a = <Suspense fallback={<Carregando />}><Aba /></Suspense>;')).toHaveLength(0);
+  });
+});
+
+describe('vazioSolto: "Nenhum…" escrito à mão fora do EmptyState', () => {
+  const textos = (codigo: string) => vaziosSoltos(codigo).map((a: { texto: string }) => a.texto);
+  it('conta texto entre tags e string que vira filho de tag', () => {
+    expect(textos('const a = <p className="text-sm text-muted-foreground">Nenhuma visita ainda.</p>;')).toEqual(['Nenhuma visita ainda.']);
+    expect(textos("const a = <div>{vazio ? 'Nenhum lead nesta aba.' : null}</div>;")).toEqual(['Nenhum lead nesta aba.']);
+  });
+  it('não conta opção de lista, o EmptyState, o Aviso nem "Nenhum" sozinho', () => {
+    expect(textos('const a = <option value="">Nenhum</option>;')).toEqual([]);
+    expect(textos('const a = <SelectItem value="x">Nenhuma etapa</SelectItem>;')).toEqual([]);
+    expect(textos('const a = <EmptyState tamanho="compacto" title="Nenhum lead" description={<>Nenhum ainda, <Link to="/x">crie</Link>.</>} />;')).toEqual([]);
+    expect(textos('const a = <Aviso tom="atencao">Nenhum grupo apareceu.</Aviso>;')).toEqual([]);
+    expect(textos('const a = <span>Nenhum</span>;')).toEqual([]);
+    expect(textos("const a = <Campo hint=\"Nenhum marcado = todos\" />;")).toEqual([]);
   });
 });

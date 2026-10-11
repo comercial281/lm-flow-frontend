@@ -4,13 +4,14 @@ import { Suspense } from 'react';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import type { PipelineItem } from '@/types/analytics';
 import CaixaDoCard from './CaixaDoCard';
+import Carregando from '@/components/base/Carregando';
 
 const CardPropertyInterests = lazyWithRetry(() => import('@/components/pipelines/CardPropertyInterests'));
 
 export default function BlocoImoveisDeInteresse({ item }: { item: PipelineItem }) {
   return (
     <CaixaDoCard titulo="Imóveis de interesse">
-      <Suspense fallback={null}>
+      <Suspense fallback={<Carregando linhas={2} />}>
         <CardPropertyInterests item={item} />
       </Suspense>
     </CaixaDoCard>

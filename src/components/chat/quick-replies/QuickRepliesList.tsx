@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent } from '@evoapi/design-system/card';
-import { Zap, Loader2, Search, X } from 'lucide-react';
+import { Zap, Search, X } from 'lucide-react';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { Button } from '@/components/ui/ds';
 import type { QuickReply } from '@/types/knowledge';
 
@@ -102,15 +104,14 @@ const QuickRepliesList: React.FC<QuickRepliesListProps> = ({
 
         {/* List */}
         {isLoading ? (
-          <div className="flex items-center justify-center gap-2 p-6 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-sm">Carregando...</span>
-          </div>
+          <Carregando linhas={3} rotulo="Carregando..." className="px-4 py-2" />
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 p-6 text-muted-foreground">
-            <Search className="h-8 w-8" />
-            <p className="text-sm">Nenhuma resposta encontrada</p>
-          </div>
+          <EmptyState
+            tipo={search ? 'semResultado' : 'vazio'}
+            tamanho="compacto"
+            title="Nenhuma resposta encontrada"
+            className="m-3"
+          />
         ) : (
           <div
             ref={listRef}

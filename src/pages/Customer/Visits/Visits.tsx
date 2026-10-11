@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { Pagina, BaseHeader, AlternadorDeVisao } from '@/components/base';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import type { OpcaoDeEscolha } from '@/components/base/escolha';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { toast } from 'sonner';
 import {
   Card,
@@ -439,6 +441,7 @@ export default function Visits() {
     return f && Object.keys(f.params).length > 0 ? 'list' : 'calendar';
   });
   const [recusado, setRecusado]     = useState(false);
+  const [erro, setErro]             = useState(false);
 
   const [calDate, setCalDate]       = useState<Date>(new Date());
   const [visaoCal, setVisaoCal]     = useState<VisaoCalendario>(lerVisao);
@@ -532,6 +535,7 @@ export default function Visits() {
       });
       if (!atual()) return;
       setVisits(res.data ?? []);
+      setErro(false);
       setCarregadoPara(viewMode === 'calendar' && !temFiltroNoLink ? chaveDoPeriodo(visaoCal, calDate) : null);
       const contador = lerContador(res.meta, {
         mesInteiro: viewMode === 'calendar' && !temFiltroNoLink && !status,
@@ -543,7 +547,10 @@ export default function Visits() {
     } catch (e) {
       if (!atual()) return;
       if (isForbiddenError(e)) setRecusado(true);
-      else toast.error('Erro ao carregar visitas');
+      else {
+        setErro(true);
+        toast.error('Erro ao carregar visitas');
+      }
     } finally {
       if (atual()) setLoading(false);
     }
@@ -799,20 +806,15 @@ export default function Visits() {
             )}
           </Card>
         ) : loading ? (
-          <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-            Carregando visitas...
-          </div>
+          <Carregando linhas={6} rotulo="Carregando visitas..." className="max-w-3xl" />
+        ) : erro ? (
+          <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />
         ) : visits.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <CalendarClock className="h-12 w-12 mb-3" />
-            <p className="text-sm font-medium">Nenhuma visita encontrada</p>
-            {canCreate && (
-              <Button className="mt-4" onClick={() => openScheduleModal()}>
-                <Plus className="h-4 w-4 mr-2" />
-                Agendar primeira visita
-              </Button>
-            )}
-          </div>
+          <EmptyState
+            icon={CalendarClock}
+            title="Nenhuma visita encontrada"
+            action={canCreate ? { label: 'Agendar primeira visita', onClick: () => openScheduleModal() } : undefined}
+          />
         ) : (
           <div className="space-y-6 max-w-3xl">
             {Array.from(grouped.entries()).map(([date, dayVisits]) => (

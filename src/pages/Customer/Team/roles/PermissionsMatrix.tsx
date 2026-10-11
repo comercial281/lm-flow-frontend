@@ -4,6 +4,7 @@ import { Lock, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, Button, Switch } from '@/components/ui/ds';
 import NoAccessState from '@/components/permissions/NoAccessState';
+import EmptyState from '@/components/base/EmptyState';
 import { plural } from '@/lib/formato';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -235,7 +236,11 @@ export default function PermissionsMatrix({ onDirtyChange }: Props) {
           </thead>
           {themes.length === 0 && (
             <tbody>
-              <tr><td colSpan={colunas.length + 1} className="p-6 text-center text-muted-foreground">Nenhuma permissão com esse nome.</td></tr>
+              <tr>
+                <td colSpan={colunas.length + 1} className="p-4">
+                  <EmptyState tipo="semResultado" tamanho="compacto" title="Nenhuma permissão com esse nome." />
+                </td>
+              </tr>
             </tbody>
           )}
           {themes.map(theme => (

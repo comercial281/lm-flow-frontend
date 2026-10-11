@@ -8,6 +8,8 @@ import type { CustomRole, PermissionSection } from '@/types/customRoles';
 import RoleEditorModal from './RoleEditorModal';
 import RoleAuditModal from './RoleAuditModal';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 interface RolesPageProps {
   /* Dentro da aba Cargos da tela de Equipe, o título da página já está acima.
@@ -20,6 +22,8 @@ export default function RolesPage({ embedded = false }: RolesPageProps) {
   const [roles, setRoles] = useState<CustomRole[]>([]);
   const [catalog, setCatalog] = useState<PermissionSection[]>([]);
   const [loading, setLoading] = useState(true);
+  // Falha na carga não pode virar "Nenhum cargo encontrado" (erro nunca vira vazio).
+  const [erro, setErro] = useState(false);
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<CustomRole | null>(null);
@@ -38,7 +42,9 @@ export default function RolesPage({ embedded = false }: RolesPageProps) {
       ]);
       setRoles(r);
       setCatalog(c);
+      setErro(false);
     } catch (err: any) {
+      setErro(true);
       toast.error('Erro ao carregar cargos: ' + (err?.message ?? 'desconhecido'));
     } finally {
       setLoading(false);
@@ -130,18 +136,18 @@ export default function RolesPage({ embedded = false }: RolesPageProps) {
         </Button>
       </div>
 
-      {loading && (
-        <div className="rounded-lg border border-border bg-card py-10 text-center text-muted-foreground">
-          Carregando cargos...
-        </div>
+      {loading && <Carregando variante="cartoes" rotulo="Carregando cargos..." />}
+
+      {!loading && erro && roles.length === 0 && (
+        <EmptyState tipo="erro" aoTentarDeNovo={() => void refresh()} />
       )}
 
-      {!loading && roles.length === 0 && (
-        <div className="rounded-lg border border-dashed border-border bg-card py-10 text-center">
-          <Shield className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-          <p className="text-muted-foreground">Nenhum cargo encontrado.</p>
-          <Button className="mt-4" onClick={handleNew}>Criar primeiro cargo</Button>
-        </div>
+      {!loading && !erro && roles.length === 0 && (
+        <EmptyState
+          icon={Shield}
+          title="Nenhum cargo encontrado."
+          action={{ label: 'Criar primeiro cargo', onClick: handleNew }}
+        />
       )}
 
       {!loading && roles.length > 0 && (

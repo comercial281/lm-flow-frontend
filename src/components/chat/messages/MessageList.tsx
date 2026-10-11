@@ -10,6 +10,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@evoapi/design-system/avata
 import { Badge } from '@evoapi/design-system/badge';
 
 import { ChevronDown, Loader2 } from 'lucide-react';
+import Carregando from '@/components/base/Carregando';
 
 import MessageBubble from '@/components/chat/messages/MessageBubble';
 import PostPreview from '@/components/chat/messages/PostPreview';
@@ -339,12 +340,11 @@ const MessageList: React.FC<MessageListProps> = ({
   // Loading durante carregamento inicial
   if (isInitialLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <div className="text-sm text-muted-foreground">{t('messages.messageList.loadingConversation')}</div>
-        </div>
-      </div>
+      <Carregando
+        linhas={6}
+        rotulo={t('messages.messageList.loadingConversation')}
+        className="flex-1 bg-background p-4"
+      />
     );
   }
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Mail, RefreshCw, Users } from 'lucide-react';
+import { Mail, Users } from 'lucide-react';
 import { formatDateBR } from '@/utils/dateUtils';
 import { telefone } from '@/lib/formato';
 import {
@@ -9,6 +9,8 @@ import {
 } from '@/services/siteBuilder/siteBuilderService';
 import { emailDeliveryLabel } from '@/features/siteBuilder/portalPages';
 import { Card } from '@/components/ui/ds';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 export default function TelaContatos({ site }: { site: Site }) {
   // Leads
@@ -16,6 +18,8 @@ export default function TelaContatos({ site }: { site: Site }) {
   const [leadsTotal, setLeadsTotal] = useState(0);
   const [leadsLoading, setLeadsLoading] = useState(false);
   const [leadsStatusFilter, setLeadsStatusFilter] = useState('');
+  // Falha na carga não pode virar "Nenhum lead capturado ainda" (erro nunca vira vazio).
+  const [leadsErro, setLeadsErro] = useState(false);
 
   const loadLeads = useCallback(async (statusFilter?: string) => {
     if (!site) return;
@@ -26,7 +30,9 @@ export default function TelaContatos({ site }: { site: Site }) {
       const result = await siteBuilderService.listLeads(site.id, params);
       setLeads(result.data);
       setLeadsTotal(result.meta.total);
+      setLeadsErro(false);
     } catch {
+      setLeadsErro(true);
       toast.error('Erro ao carregar leads');
     } finally {
       setLeadsLoading(false);
@@ -55,14 +61,15 @@ export default function TelaContatos({ site }: { site: Site }) {
       </div>
 
       {leadsLoading ? (
-        <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-          <RefreshCw className="h-4 w-4 animate-spin mr-2" />Carregando...
-        </div>
+        <Carregando linhas={3} />
+      ) : leadsErro ? (
+        <EmptyState tipo="erro" aoTentarDeNovo={() => void loadLeads(leadsStatusFilter || undefined)} />
       ) : leads.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-          <Users className="h-10 w-10 mb-2 opacity-30" />
-          <p className="text-sm">Nenhum lead capturado ainda</p>
-        </div>
+        <EmptyState
+          icon={Users}
+          tipo={leadsStatusFilter ? 'semResultado' : 'vazio'}
+          title="Nenhum lead capturado ainda"
+        />
       ) : (
         <div className="space-y-2">
           {leads.map(lead => (

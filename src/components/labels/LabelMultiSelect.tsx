@@ -5,6 +5,7 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import { labelsService } from '@/services/contacts/labelsService';
 import type { Label } from '@/types/settings';
 import { Button } from '@/components/ui/ds';
+import EmptyState from '@/components/base/EmptyState';
 
 interface LabelMultiSelectProps {
   /** Catálogo global de etiquetas (nome + cor) pra sugerir/escolher. */
@@ -197,11 +198,12 @@ export default function LabelMultiSelect({
           ))}
         </div>
       ) : (
-        !canCreate && (
-          <p className="text-xs text-muted-foreground">
-            {q ? 'Nenhuma etiqueta encontrada.' : 'Digite pra buscar ou criar uma etiqueta.'}
-          </p>
-        )
+        !canCreate &&
+        (q ? (
+          <EmptyState tipo="semResultado" tamanho="compacto" title="Nenhuma etiqueta encontrada." className="p-3 text-xs" />
+        ) : (
+          <p className="text-xs text-muted-foreground">Digite pra buscar ou criar uma etiqueta.</p>
+        ))
       )}
     </div>
   );

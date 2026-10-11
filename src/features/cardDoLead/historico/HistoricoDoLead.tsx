@@ -18,6 +18,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { History, Loader2, RefreshCw, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Textarea } from '@/components/ui/ds';
+import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import EtiquetasDeEscolha from '@/components/base/EtiquetasDeEscolha';
 import { quandoAcontece } from '@/lib/formato';
@@ -235,16 +236,14 @@ export default function HistoricoDoLead({
 
       <div className="min-h-0 flex-1 overflow-y-auto pr-1">
         {estado === 'carregando' ? (
-          <div role="status" aria-label="Carregando o histórico" className="flex items-center justify-center py-10">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
+          <Carregando linhas={3} rotulo="Carregando o histórico" />
         ) : estado === 'erro' ? (
-          <EmptyState tipo="erro" aoTentarDeNovo={() => void carregar()} className="py-8" />
+          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void carregar()} />
         ) : visiveis.length === 0 && !proximo ? (
           <EmptyState
+            tamanho="compacto"
             title={VAZIO_POR_FILTRO[categoria]}
             description="Quando algo acontecer com este lead, aparece aqui."
-            className="py-8"
           />
         ) : (
           <>

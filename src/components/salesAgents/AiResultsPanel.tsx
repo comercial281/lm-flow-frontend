@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 
 import type { PerformanceCounts, PerformancePoint } from '@/types/aiResults';
+import EmptyState from '@/components/base/EmptyState';
 import { COLOR_LEADS, COLOR_VISITS, dayLabel, int, latency, pct } from './aiResultsFormat';
 import { Card } from '@/components/ui/ds';
 import { CANTOS_DA_BARRA, CLASSE_DA_DICA, COR_DO_EIXO, EIXO_DO_GRAFICO } from '@/components/base/grafico';
@@ -82,9 +83,7 @@ export default function AiResultsPanel({ counts, series, caption, seriesTitle }:
         </div>
 
         {!hasMovement ? (
-          <p className="text-sm text-muted-foreground rounded-lg border border-sidebar-border bg-sidebar p-4">
-            Nenhum atendimento registrado neste período.
-          </p>
+          <EmptyState tamanho="compacto" title="Nenhum atendimento registrado neste período." />
         ) : asTable ? (
           <DailyTable series={series} />
         ) : (

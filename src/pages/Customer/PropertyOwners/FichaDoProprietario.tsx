@@ -249,7 +249,7 @@ export default function FichaDoProprietario() {
           )}
         </div>
         {dono.properties.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum imóvel ligado a este proprietário.</p>
+          <EmptyState tamanho="compacto" title="Nenhum imóvel ligado a este proprietário." />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {dono.properties.map(p => <Cartao key={p.id} imovel={p} gestor={gestor} aoAbrirDados={() => setImovelAberto(p)} />)}
@@ -296,7 +296,7 @@ export default function FichaDoProprietario() {
       <section className="space-y-2">
         <h2 className="text-base font-semibold">Histórico de status</h2>
         {dono.history.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma troca ainda.</p>
+          <EmptyState tamanho="compacto" title="Nenhuma troca ainda." />
         ) : (
           <ul className="space-y-1 text-sm">
             {[...dono.history].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).map((h, i) => (

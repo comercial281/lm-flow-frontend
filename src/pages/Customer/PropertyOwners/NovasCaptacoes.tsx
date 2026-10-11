@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ClipboardList, Loader2, RefreshCw, Search } from 'lucide-react';
+import { ClipboardList, RefreshCw, Search } from 'lucide-react';
 import {
   Card,
   Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Textarea,
 } from '@/components/ui/ds';
 import { EmptyState } from '@/components/base';
+import Carregando from '@/components/base/Carregando';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
@@ -170,9 +171,7 @@ export default function NovasCaptacoes() {
         </Button>
       </div>
       {carregando ? (
-        <div className="flex h-40 items-center justify-center text-muted-foreground">
-          <Loader2 className="mr-2 h-5 w-5 animate-spin" />Carregando...
-        </div>
+        <Carregando linhas={3} rotulo="Carregando..." />
       ) : falhou ? (
         <EmptyState tipo="erro" aoTentarDeNovo={() => void carregar()} />
       ) : pedidos.length > 0 && visiveis.length === 0 ? (

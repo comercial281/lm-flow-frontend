@@ -15,6 +15,8 @@ import { toast } from 'sonner';
 import CanvaService from '@/services/integrations/canvaService';
 import { MCPTool, CanvaConfig } from '@/types/integrations';
 import Aviso from '@/components/base/Aviso';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 interface CanvaConfigDialogProps {
   open: boolean;
@@ -38,6 +40,8 @@ const CanvaConfigDialog = ({
   const [isConnecting, setIsConnecting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingTools, setIsLoadingTools] = useState(false);
+  // Erro ao buscar as ferramentas não pode aparecer como "Nenhuma ferramenta"
+  const [erroFerramentas, setErroFerramentas] = useState(false);
   const [availableTools, setAvailableTools] = useState<MCPTool[]>([]);
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [config, setConfig] = useState<CanvaConfig>({
@@ -101,7 +105,9 @@ const CanvaConfigDialog = ({
     try {
       const response = await CanvaService.discoverTools(agentId);
       setAvailableTools(response.tools || []);
+      setErroFerramentas(false);
     } catch (error) {
+      setErroFerramentas(true);
       console.error('Error loading Canva tools:', error);
       toast.error('Erro ao carregar ferramentas disponíveis');
     } finally {
@@ -184,9 +190,7 @@ const CanvaConfigDialog = ({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
-          <div className="flex items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
+          <Carregando variante="texto" linhas={4} className="p-4" />
         </DialogContent>
       </Dialog>
     );
@@ -293,9 +297,13 @@ const CanvaConfigDialog = ({
               </div>
 
               {isLoadingTools ? (
-                <div className="flex items-center justify-center p-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
+                <Carregando linhas={3} />
+              ) : erroFerramentas ? (
+                <EmptyState
+                  tipo="erro"
+                  tamanho="compacto"
+                  aoTentarDeNovo={() => void loadAvailableTools()}
+                />
               ) : availableTools.length > 0 ? (
                 <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-3">
                   {availableTools.map(tool => (
@@ -320,9 +328,10 @@ const CanvaConfigDialog = ({
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center p-4">
-                  {t('edit.integrations.canva.noTools') || 'Nenhuma ferramenta disponível'}
-                </p>
+                <EmptyState
+                  tamanho="compacto"
+                  title={t('edit.integrations.canva.noTools') || 'Nenhuma ferramenta disponível'}
+                />
               )}
             </div>
 

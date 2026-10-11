@@ -7,6 +7,7 @@
  */
 import { Button } from '@/components/ui/ds';
 import type { PersonRef } from '@/services/visits/visitsService';
+import EmptyState from '@/components/base/EmptyState';
 
 export function EscolhaCorretor({ corretores, erro, valor, onEscolher, rotulo = 'Corretor responsável' }: {
   corretores: PersonRef[] | null;
@@ -23,7 +24,7 @@ export function EscolhaCorretor({ corretores, erro, valor, onEscolher, rotulo = 
     return <p className="mt-1 text-sm text-muted-foreground">Carregando...</p>;
   }
   if (corretores.length === 0) {
-    return <p className="mt-1 text-sm text-muted-foreground">Nenhum corretor ativo na equipe.</p>;
+    return <EmptyState tamanho="compacto" title="Nenhum corretor ativo na equipe." className="mt-1 p-3" />;
   }
   return (
     <div role="group" aria-label={rotulo} className="mt-1 flex max-h-40 flex-wrap gap-2 overflow-y-auto pr-1">

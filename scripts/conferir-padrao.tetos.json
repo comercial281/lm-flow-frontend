@@ -20,5 +20,8 @@
   "cartaoAMao": 0,
   "corFixaEmGrafico": 0,
   "botaoPintado": 0,
-  "tamanhoDeIcone": 0
+  "tamanhoDeIcone": 0,
+  "rodinhaCentral": 0,
+  "telaEmBranco": 0,
+  "vazioSolto": 0
 }

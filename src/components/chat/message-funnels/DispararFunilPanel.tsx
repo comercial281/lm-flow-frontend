@@ -6,6 +6,7 @@ import { Card, CardContent } from '@evoapi/design-system/card';
 import { Button, Input } from '@/components/ui/ds';
 import Abas from '@/components/base/Abas';
 import IconActionButton from '@/components/base/IconActionButton';
+import EmptyState from '@/components/base/EmptyState';
 import { PreviewStepLine } from '@/components/flowAutomations/FunnelTemplatePicker';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import { flowAutomationInstancesService } from '@/services/flowAutomations/flowAutomationInstancesService';
@@ -196,13 +197,19 @@ export function DispararFunilPanel({ isOpen, onClose, conversationId, onStarted 
                 </p>
               )}
               {funnels && shown.length === 0 && (
-                <p className="px-2 py-4 text-sm text-muted-foreground">
-                  {search
-                    ? 'Nenhum funil com esse nome.'
-                    : aba === 'meus'
-                      ? 'Você ainda não tem funil. Crie o seu em Funis de mensagem, a partir de um modelo pronto.'
-                      : 'Nenhum funil da equipe ainda.'}
-                </p>
+                search ? (
+                  <EmptyState tipo="semResultado" tamanho="compacto" title="Nenhum funil com esse nome." className="m-2" />
+                ) : (
+                  <EmptyState
+                    tamanho="compacto"
+                    title={
+                      aba === 'meus'
+                        ? 'Você ainda não tem funil. Crie o seu em Funis de mensagem, a partir de um modelo pronto.'
+                        : 'Nenhum funil da equipe ainda.'
+                    }
+                    className="m-2"
+                  />
+                )
               )}
               <ul className="space-y-1">
                 {shown.map(f => {

@@ -11,6 +11,7 @@ import { describeSeconds } from '@/features/flowAutomations/waitTime';
 import { serverMessage } from '@/features/flowAutomations/guide';
 import { BOOK_SOURCE, BOOK_SUMMARY } from '@/features/flowAutomations/book';
 import { cn } from '@/lib/utils';
+import EmptyState from '@/components/base/EmptyState';
 
 // "+ Novo funil" (Automações · sprint 4, parte B): o corretor não cria funil do
 // zero, escolhe um MODELO pronto e ganha a cópia dele, que abre no canvas com o
@@ -143,7 +144,7 @@ export function FunnelTemplatePicker({ open, onClose, onCreated, canCreateBlank 
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Carregando os modelos…
           </p>
         )}
-        {templates && templates.length === 0 && <p className="text-sm text-muted-foreground">Nenhum modelo disponível agora.</p>}
+        {templates && templates.length === 0 && <EmptyState tamanho="compacto" title="Nenhum modelo disponível agora." />}
 
         {templates && templates.length > 0 && (
           <ul className="space-y-2" aria-label="Modelos de funil">

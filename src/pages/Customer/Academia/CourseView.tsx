@@ -28,6 +28,8 @@ import StarRating from './StarRating';
 import ModuleForm from './ModuleForm';
 import AnnounceLessonModal from './AnnounceLessonModal';
 import CourseForm from './CourseForm';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import CoverPicker from './CoverPicker';
 import { GERAL_COURSE_ID } from './_lib';
 import { toast } from 'sonner';
@@ -45,7 +47,7 @@ export default function CourseView({ onBack }: Props) {
   const canEdit = useIsSuperAdmin();
 
   const { data: courses = [] } = useCourses();
-  const { data: allModules = [] } = useModules();
+  const { data: allModules = [], isLoading: carregandoModulos, error: erroModulos, refetch: recarregarModulos } = useModules();
   const { data: entitlements = [] } = useEntitlements();
   const { data: progress = {} } = useProgress();
 
@@ -187,13 +189,17 @@ export default function CourseView({ onBack }: Props) {
               onSelect={setSelectedId}
               onDeleted={() => setSelectedId(null)}
             />
+          ) : modules.length === 0 && carregandoModulos ? (
+            <Carregando variante="texto" linhas={6} className="p-10" />
+          ) : modules.length === 0 && erroModulos ? (
+            <EmptyState tipo="erro" className="h-full min-h-[280px]" aoTentarDeNovo={() => void recarregarModulos()} />
+          ) : modules.length === 0 ? (
+            <EmptyState icon={PlayCircle} title="Nenhum módulo neste curso ainda." className="h-full min-h-[280px]" />
           ) : (
             <div className="h-full min-h-[280px] flex items-center justify-center text-center p-10">
               <div>
                 <PlayCircle className="h-11 w-11 mx-auto text-muted-foreground/40 mb-3" strokeWidth={1.5} />
-                <p className="text-sm text-muted-foreground">
-                  {modules.length === 0 ? 'Nenhum módulo neste curso ainda.' : 'Escolha uma aula na lista.'}
-                </p>
+                <p className="text-sm text-muted-foreground">Escolha uma aula na lista.</p>
               </div>
             </div>
           )}

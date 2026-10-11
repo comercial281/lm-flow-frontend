@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import Abas from '@/components/base/Abas';
+import Carregando from '@/components/base/Carregando';
 import {
   leadAutomationService,
   LeadAutomationRule,
@@ -157,6 +158,8 @@ export default function LeadAutomations() {
   const [testing, setTesting] = useState<LeadAutomationRule | null>(null);
   const [history, setHistory] = useState<LeadAutomationRule | null>(null);
   const [recusado, setRecusado] = useState(false);
+  // Falha na carga não pode virar "Nenhuma automação criada" (erro nunca vira vazio).
+  const [erro, setErro] = useState(false);
 
   const resources = useAutomationResources(canAccess);
 
@@ -165,9 +168,13 @@ export default function LeadAutomations() {
     setRecusado(false);
     try {
       setRules(sortRules(await leadAutomationService.getAll(which === 'archived')));
+      setErro(false);
     } catch (e) {
       if (isForbiddenError(e)) setRecusado(true);
-      else toast.error('Erro ao carregar automações');
+      else {
+        setErro(true);
+        toast.error('Erro ao carregar automações');
+      }
     } finally {
       setLoading(false);
     }
@@ -452,10 +459,12 @@ export default function LeadAutomations() {
 
       {/* List */}
       {loading ? (
-        <div className="text-center py-16 text-muted-foreground text-sm">Carregando...</div>
+        <Carregando linhas={4} />
+      ) : erro ? (
+        <EmptyState tipo="erro" aoTentarDeNovo={() => void load(tab)} />
       ) : rules.length === 0 ? (
         archivedTab ? (
-          <div className="text-center py-16 text-sm text-muted-foreground">Nenhuma automação arquivada.</div>
+          <EmptyState title="Nenhuma automação arquivada." />
         ) : (
           <EmptyState
             title="Nenhuma automação criada"
