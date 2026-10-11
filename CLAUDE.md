@@ -8119,3 +8119,26 @@ Achado do Raio-X de 10/10: a lista **Tipo de imóvel** do cadastro mostrava Cobe
 - Portais e catálogo do Meta tratam os dois códigos de cada par igual: nada muda lá fora.
 
 O filtro de tipo da lista de Imóveis também trata os dois códigos como um: quem resolve é o servidor (as opções vêm com um código por tipo, e filtrar por um traz os dois; lm-flow#454). A tela não precisou mudar.
+
+## Etiquetas: Suas × Do sistema (desde 2026-10-10)
+
+Relato do dono do produto: na Mais Que Imóveis a tela de Etiquetas tinha ~900 etiquetas de imóvel (uma por imóvel, criada pela página dele) misturadas às que o gestor criou, todas da mesma cor. Junto vinham as do follow-up (`<prefixo>-msg-N`), as da IA e as de origem, e todas dava pra renomear ou apagar: renomear `follow-up` desliga o follow-up da Meu Imóvel. Servidor: lm-flow#455. Complementa [A lista de etiquetas parava nas 20 primeiras](#a-lista-de-etiquetas-parava-nas-20-primeiras-desde-2026-09-09).
+
+O que a tela faz (`Settings/Labels/Labels.tsx`, `LinhaEtiqueta.tsx`, `CaixaDoSistema.tsx`, `agruparEtiquetas.ts`):
+
+- **Suas etiquetas** (aberta, no topo) e **Do sistema** (uma caixa recolhível por categoria, fechadas de início, vazia some). Ordem das caixas: Atendimento, Follow-up, Origem do lead, Tipo de negócio, Imóveis, IA Vendedora (antigas). Quem decide a categoria é o servidor (`category`, coluna nova em `labels`); a tela só agrupa (`agruparEtiquetas`). Etiqueta sem categoria conhecida cai em Suas.
+- **Suas**: editar (clicar na linha ou no nome, que é um botão para quem usa teclado), **Trocar cor**, **Excluir**. **Do sistema**: só **Trocar cor**; clicar na linha não abre edição. A trava de verdade é do servidor (renomear ou apagar etiqueta do sistema devolve 422); a tela só não oferece.
+- **Trocar cor** chama `shuffle_color`: o servidor sorteia uma cor diferente da atual. A tela troca a bolinha da linha e atualiza o catálogo guardado (`useAppDataStore.labels`) no lugar, sem recarregar o catálogo (com 900+ etiquetas seria caro e o dedupe devolveria a cor velha). A janela de criação sorteia, no navegador, da mesma paleta de 12 cores do servidor; o gestor pode escolher outra.
+- **Nome legível**: a linha mostra `display_name`, que é só exibição (`im0001` vira "IM0001", `<prefixo>-msg-3` vira "<prefixo> · mensagem 3"). O título real não muda e a automação casa pelo título. A busca acha pelos dois.
+- **Catálogo** pedido com `per_page: 5000` (Mais Que Imóveis passa de 900). A contagem "em X leads" vem de `with_counts=1`, pedido só por esta tela, nunca pelos seletores.
+- Caixa do sistema com mais de 20 mostra 20 + "Mostrar mais". Com busca ativa, as caixas com resultado abrem sozinhas, já filtradas.
+
+**A IA Vendedora não etiqueta mais** (decisão do dono): temperatura, intenção, humor, pediu humano e BANT já ficam na ficha do lead e no painel "O que a IA entendeu"; a etiqueta era cópia velha e nada a lia. Fica só `visita-agendada`, que os botões "Agendar visita" também põem. Leitura do banco em 10/10 (só leitura, 17 clientes + public): nenhuma regra, fluxo, macro, disparo ou filtro salvo usa essas etiquetas. As que já estão nos leads ficam. O Eduardo (Moeda Forte) põe `lead-morno` à mão e continua podendo: aplicar etiqueta não é travado.
+
+Saíram da tela: código hexadecimal da cor, colunas Descrição e Criado em, **Barra lateral** (nada no sistema lia `show_on_sidebar`; a coluna fica no banco), caixas de seleção e ação em massa, paginação de 50.
+
+Ficou de fora (backlog): esconder as etiquetas do sistema (principalmente Imóveis) dos seletores do painel do lead, dos filtros e das regras (a categoria nova é o que permite); "Sortear cores da categoria" (recolorir em massa as ~900 verdes que já existem).
+
+Ordem de publicação: servidor (#455), classificação aplicada nos clientes (com ok), e só então a tela. Antes da classificação a tela nova mostra tudo em Suas.
+
+Não reabrir sem o dono pedir.
