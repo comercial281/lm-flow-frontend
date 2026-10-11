@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, iconesComTamanho, rodinhasCentrais, telasEmBranco, vaziosSoltos, largurasForaDaEscala, importaJanelaDoPacote, JANELA_A_MAO, escondidosSoComMouse } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, iconesComTamanho, rodinhasCentrais, telasEmBranco, vaziosSoltos, largurasForaDaEscala, importaJanelaDoPacote, JANELA_A_MAO, rodapeAMao, escondidosSoComMouse } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -369,6 +369,29 @@ describe('Janela (peça 17): larguras, import direto e janela à mão', () => {
     expect(JANELA_A_MAO.test('<div className="fixed inset-0 z-50 bg-black/60">')).toBe(true);
     expect(JANELA_A_MAO.test("isMobile ? 'fixed inset-0 z-50' : ''")).toBe(true);
     expect(JANELA_A_MAO.test('<div className="fixed inset-x-0 bottom-0">')).toBe(false);
+  });
+});
+
+describe('rodapeAMao: botões finais da janela no DialogFooter', () => {
+  it('acusa janela com botão e rodapé à mão', () => {
+    const codigo = [
+      "import { Dialog, DialogContent, Button } from '@/components/ui/ds';",
+      'const X = () => (<Dialog><DialogContent>',
+      '<div className="flex justify-end"><Button>Salvar</Button></div>',
+      '</DialogContent></Dialog>);',
+    ].join('\n');
+    expect(rodapeAMao(codigo)).toMatchObject({ linha: 2, janelas: 1, rodapes: 0 });
+  });
+
+  it('passa com DialogFooter, e sem botão nenhum', () => {
+    const com = '<DialogContent><DialogFooter><Button>Salvar</Button></DialogFooter></DialogContent>';
+    expect(rodapeAMao(com)).toBeNull();
+    expect(rodapeAMao('<DialogContent><p>só leitura</p></DialogContent>')).toBeNull();
+  });
+
+  it('conta janela a janela: duas janelas e um rodapé acusa', () => {
+    const codigo = '<DialogContent><DialogFooter><Button/></DialogFooter></DialogContent><DialogContent><Button/></DialogContent>';
+    expect(rodapeAMao(codigo)).toMatchObject({ janelas: 2, rodapes: 1 });
   });
 });
 

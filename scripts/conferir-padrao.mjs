@@ -314,6 +314,24 @@ export function importaJanelaDoPacote(codigo, arquivo = 'x.tsx') {
 }
 export const JANELA_A_MAO = /(?:^|[\s'"`])fixed inset-0(?=[\s'"`]|$)/;
 
+// Rodapé à mão (peça 17 do GLOSSARIO, escolha do dono em 10/10/2026): os botões
+// finais de toda janela moram no `DialogFooter` da casa (fica parado embaixo
+// enquanto o meio rola; no celular empilha com a ação principal em cima).
+// Janela com botão e sem `DialogFooter` tem o rodapé feito à mão (um `div flex
+// justify-end` dentro do miolo), que rola junto com o conteúdo. A régua é por
+// ARQUIVO: um achado quando há mais `<DialogContent` do que `<DialogFooter` e o
+// arquivo tem `<Button`. Janela sem botão final (paleta de comando, conteúdo só
+// de leitura, rodapé num componente filho que já usa o DialogFooter) vai pras
+// exceções com o motivo (trecho = `<DialogContent`).
+export function rodapeAMao(codigo) {
+  const conta = re => (codigo.match(re) || []).length;
+  const janelas = conta(/<DialogContent(?=[\s>/]|$)/g);
+  const rodapes = conta(/<DialogFooter(?=[\s>/]|$)/g);
+  if (janelas <= rodapes || !/<Button(?=[\s>/]|$)/.test(codigo)) return null;
+  const i = codigo.search(/<DialogContent(?=[\s>/]|$)/);
+  return { linha: codigo.slice(0, i).split('\n').length, janelas, rodapes };
+}
+
 const SELETORES_DA_CASA = new Set(['src/components/base/Seletor.tsx', 'src/components/base/SeletorComAbas.tsx']);
 // Ficam com a lista do sistema DE PROPÓSITO (decisão 3 da spec do Seletor): o
 // widget de chat roda num iframe no site do cliente, que mede a própria altura,
@@ -924,6 +942,8 @@ export function varrer() {
         for (const t of tags.filter(x => x.tag === 'h1')) anotar('tituloAMao', rel, t.linha, 'título feito à mão', linhas[t.linha - 1].trim());
       }
       if (rel !== AJUSTE_DA_CASA) {
+        const r = rodapeAMao(codigo);
+        if (r) anotar('rodapeAMao', rel, r.linha, `${r.janelas} janelas, ${r.rodapes} DialogFooter`, linhas[r.linha - 1].trim());
         for (const a of largurasForaDaEscala(codigo, rel)) anotar('larguraDeJanela', rel, a.linha, a.largura, a.texto);
       }
       if (!embrulhos.has(rel) && rel !== CABECALHO_DA_CASA && rel !== MOLDURA_DA_CASA) {
@@ -997,6 +1017,7 @@ export const CATEGORIAS = {
   larguraDeJanela: 'janela com largura fora das quatro',
   janelaDireta: 'janela importada do pacote base (app inteiro)',
   janelaAMao: 'janela montada à mão (fixed inset-0)',
+  rodapeAMao: 'janela com botões fora do DialogFooter',
   soMouse: 'escondido que só aparece com mouse (app inteiro)',
 };
 

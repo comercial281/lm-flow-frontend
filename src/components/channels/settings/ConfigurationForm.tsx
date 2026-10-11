@@ -19,6 +19,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/ds';
@@ -2312,15 +2313,15 @@ const ZapiWhatsAppConfig: React.FC<{
                 </p>
               </div>
             )}
-            <div className="flex gap-2">
-              <Button onClick={() => setShowQrModal(false)} variant="outline">
-                Fechar
-              </Button>
-              <Button onClick={handleRefreshQRCode} disabled={isLoading}>
-                Atualizar QR Code
-              </Button>
-            </div>
           </div>
+          <DialogFooter>
+            <Button onClick={() => setShowQrModal(false)} variant="outline">
+              Fechar
+            </Button>
+            <Button onClick={handleRefreshQRCode} disabled={isLoading}>
+              Atualizar QR Code
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
