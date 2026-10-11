@@ -1,8 +1,9 @@
 // src/features/cardDoLead/blocos/BlocoIdentidade.tsx
 // Quem é o lead. Na janela: foto, nome grande, telefone, e-mail e o selo da
 // origem, com os botões do topo ao lado. Na página o nome já é o título: o
-// bloco vira "Dados da pessoa". Nome, telefone e e-mail não se editam no card;
-// o lápis só aparece com `identity_correctable` do servidor (decisão de 02/10).
+// bloco vira "Dados da pessoa". O lápis só aparece com o que o servidor libera:
+// nome (`name_editable`: responsável ou gestor, 11/10) e telefone/e-mail
+// (`identity_correctable`: gestor em lead cadastrado à mão, 02/10).
 import type { ReactNode } from 'react';
 import { Mail, Pencil, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
@@ -22,16 +23,19 @@ interface BlocoIdentidadeProps {
 }
 
 export default function BlocoIdentidade({ card, variante = 'janela', acoes }: BlocoIdentidadeProps) {
-  const { contato, avatarContact, nomeExibido, origem, dadosDaOrigem, corrigivel, identidade, situacao } = card;
+  const { contato, avatarContact, nomeExibido, origem, dadosDaOrigem, corrigivel, nomeEditavel, identidade, situacao } = card;
 
-  const lapis = corrigivel && contato?.id != null ? (
+  const tituloDoLapis = corrigivel && nomeEditavel
+    ? 'Corrigir nome, telefone ou e-mail'
+    : corrigivel ? 'Corrigir telefone ou e-mail' : 'Corrigir nome';
+  const lapis = (corrigivel || nomeEditavel) && contato?.id != null ? (
     <Button
       type="button"
       variant="ghost"
       size="sm"
       className="h-8 w-8 p-0"
-      aria-label="Corrigir telefone ou e-mail"
-      title="Corrigir telefone ou e-mail"
+      aria-label={tituloDoLapis}
+      title={tituloDoLapis}
       onClick={() => identidade.setCorrigindo(true)}
     >
       <Pencil className="h-3.5 w-3.5" />
