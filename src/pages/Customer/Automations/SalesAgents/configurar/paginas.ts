@@ -9,6 +9,7 @@
  * dividido): o `ConfigurarPaginas` recusa gravar campo de fora (erro de
  * programação), e o paginas.spec confere que nada saiu sem querer.
  */
+import { Ban, Building2, CalendarDays, Clock, Filter, Gauge, Hand, ListChecks, MessageCircle, RotateCcw, Send, Signpost, Smile, Target, UserRound, type LucideIcon } from 'lucide-react';
 import type { HealthReport, SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { lerEscolhas } from '@/features/salesAgents/tresEscolhas';
 import { pendenciasDasPaginas } from '@/features/salesAgents/pendencias';
@@ -25,6 +26,7 @@ export interface PaginaInfo {
   grupo: GrupoDePaginas;
   titulo: string;
   frase: string;
+  icone: LucideIcon;
   campos: readonly string[];
 }
 
@@ -37,41 +39,41 @@ export const GRUPOS_DE_PAGINAS: { id: GrupoDePaginas; rotulo: string; paginas: P
 ];
 
 export const PAGINAS: Record<PaginaId, PaginaInfo> = {
-  canal: { id: 'canal', grupo: 'atendimento', titulo: 'Canal', frase: 'Em qual número ela atende, de que jeito e quais leads.',
+  canal: { id: 'canal', grupo: 'atendimento', titulo: 'Canal', frase: 'Em qual número ela atende, de que jeito e quais leads.', icone: MessageCircle,
     campos: ['inbox_id', 'followup_only', 'triggers', 'trigger_match_mode', 'trigger_keyword'] },
-  horario: { id: 'horario', grupo: 'atendimento', titulo: 'Horário', frase: 'Quando ela responde e o que diz fora do horário.',
+  horario: { id: 'horario', grupo: 'atendimento', titulo: 'Horário', frase: 'Quando ela responde e o que diz fora do horário.', icone: Clock,
     campos: ['active_hours', 'out_of_hours_reply', 'out_of_hours_message'] },
-  identidade: { id: 'identidade', grupo: 'introducao', titulo: 'Identidade', frase: 'Em nome de quem ela fala e como se apresenta.',
+  identidade: { id: 'identidade', grupo: 'introducao', titulo: 'Identidade', frase: 'Em nome de quem ela fala e como se apresenta.', icone: UserRound,
     campos: ['name', 'lead_facing_name', 'persona_kind', 'transfer_config.voice', 'handoff_target', 'handoff_roleta_config_id', 'handoff_user_id'] },
-  abertura: { id: 'abertura', grupo: 'introducao', titulo: 'Abertura', frase: 'A primeira mensagem e as variações por campanha.',
+  abertura: { id: 'abertura', grupo: 'introducao', titulo: 'Abertura', frase: 'A primeira mensagem e as variações por campanha.', icone: Hand,
     campos: ['greeting', 'default_origin', 'opening_image_url', 'opening_audio_url', 'openings'] },
-  intencao: { id: 'intencao', grupo: 'introducao', titulo: 'Intenção', frase: 'A pergunta que separa os leads e o caminho de cada resposta.',
+  intencao: { id: 'intencao', grupo: 'introducao', titulo: 'Intenção', frase: 'A pergunta que separa os leads e o caminho de cada resposta.', icone: Signpost,
     campos: ['intent_question', 'playbook.intent_question_mode', 'playbook.vars.caminhos_intencao', 'playbook.vars.fora_dos_caminhos'] },
-  personalidade: { id: 'personalidade', grupo: 'conversa', titulo: 'Personalidade', frase: 'O formato das respostas: mensagens, áudio e curtidas.',
+  personalidade: { id: 'personalidade', grupo: 'conversa', titulo: 'Personalidade', frase: 'O formato das respostas: mensagens, áudio e curtidas.', icone: Smile,
     campos: ['message_split_enabled', 'audio_enabled', 'audio_mode', 'audio_voice_id', 'reaction_enabled', 'reaction_emojis', 'reaction_max_per_conversation'] },
-  qualificacao: { id: 'qualificacao', grupo: 'conversa', titulo: 'Qualificação', frase: 'As perguntas que ela faz pra entender o lead.',
+  qualificacao: { id: 'qualificacao', grupo: 'conversa', titulo: 'Qualificação', frase: 'As perguntas que ela faz pra entender o lead.', icone: ListChecks,
     campos: ['qualification_questions', 'transfer_config.required_questions'] },
-  catalogo: { id: 'catalogo', grupo: 'conversa', titulo: 'Catálogo', frase: 'O que ela vende e o que pode mandar dos imóveis.',
+  catalogo: { id: 'catalogo', grupo: 'conversa', titulo: 'Catálogo', frase: 'O que ela vende e o que pode mandar dos imóveis.', icone: Building2,
     campos: ['playbook.vars.tipo_venda', 'locacao_enabled', 'default_property_code', 'catalog_search_enabled', 'cross_sell_enabled',
       'rich_media_enabled', 'send_property_book_enabled', 'book_send_rule'] },
-  restricoes: { id: 'restricoes', grupo: 'conversa', titulo: 'Restrições', frase: 'O que ela nunca informa sozinha.',
+  restricoes: { id: 'restricoes', grupo: 'conversa', titulo: 'Restrições', frase: 'O que ela nunca informa sozinha.', icone: Ban,
     campos: ['ai_limits.address', 'ai_limits.discount', 'ai_limits.price', 'ai_limits.iptu', 'ai_limits.custom'] },
-  objetivo: { id: 'objetivo', grupo: 'repasse', titulo: 'Objetivo', frase: 'Até onde ela leva a conversa.',
+  objetivo: { id: 'objetivo', grupo: 'repasse', titulo: 'Objetivo', frase: 'Até onde ela leva a conversa.', icone: Target,
     campos: ['reach', 'booking_enabled', 'transfer_config.mode'] },
-  criterio: { id: 'criterio', grupo: 'repasse', titulo: 'Critério', frase: 'Quando o lead está pronto pra ir pra uma pessoa.',
+  criterio: { id: 'criterio', grupo: 'repasse', titulo: 'Critério', frase: 'Quando o lead está pronto pra ir pra uma pessoa.', icone: Gauge,
     campos: ['transfer_config.mode', 'transfer_config.min_temperature', 'crm_policy.cold',
       'escalate_on_frustration', 'escalate_on_human_request', 'escalate_on_ai_detected'] },
-  destino: { id: 'destino', grupo: 'repasse', titulo: 'Destino', frase: 'Pra quem o lead vai e o que vai junto.',
+  destino: { id: 'destino', grupo: 'repasse', titulo: 'Destino', frase: 'Pra quem o lead vai e o que vai junto.', icone: Send,
     // `persona_kind`: o "Passar a entregar pro dono do número" da IA antiga (persona só DERIVADA da voz) grava a persona junto.
     campos: ['handoff_target', 'handoff_roleta_config_id', 'handoff_user_id', 'handoff_webhook_url', 'handoff_webhook_system', 'handoff_cvcrm',
       'transfer_config.briefing_enabled', 'persona_kind'] },
-  funil: { id: 'funil', grupo: 'repasse', titulo: 'Funil', frase: 'Onde o card fica em cada momento da conversa.',
+  funil: { id: 'funil', grupo: 'repasse', titulo: 'Funil', frase: 'Onde o card fica em cada momento da conversa.', icone: Filter,
     campos: ['pipeline_move_enabled', 'pipeline_id', 'pipeline_stage_map'] },
-  agendamento: { id: 'agendamento', grupo: 'repasse', titulo: 'Agendamento', frase: 'Como ela marca a visita.',
+  agendamento: { id: 'agendamento', grupo: 'repasse', titulo: 'Agendamento', frase: 'Como ela marca a visita.', icone: CalendarDays,
     campos: ['visit_duration_minutes', 'visit_config.days', 'visit_config.start', 'visit_config.end', 'visit_config.min_advance_hours',
       'visit_config.max_advance_days', 'visit_config.same_day_requires_human',
       'ask_google_review', 'google_review_link', 'playbook.vars.lead_pronto'] },
-  followup: { id: 'followup', grupo: 'followup', titulo: 'Follow-up', frase: 'O que ela faz quando o lead para de responder.',
+  followup: { id: 'followup', grupo: 'followup', titulo: 'Follow-up', frase: 'O que ela faz quando o lead para de responder.', icone: RotateCcw,
     campos: ['followup_enabled', 'followup_min_days', 'followup_max_days', 'followup_action', 'followup_stage_id',
       'followup_return_stage_id', 'followup_flow_id', 'followup_pipeline_ids', 'followup_hours', 'reengagement_enabled',
       'reengagement_first_hours', 'reengagement_second_hours'] },

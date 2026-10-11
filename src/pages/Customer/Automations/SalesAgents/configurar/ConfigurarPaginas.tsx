@@ -3,10 +3,7 @@
 // cabeçalho (grupo, título, frase). Cada página grava na hora (useGravarNaHora):
 // sem Salvar, sem "Sair sem salvar?".
 //
-// ⚠️ ROLAGEM: quem rola é a Pagina da IA Vendedora (o contêiner `overflow-y-auto` dela). O trilho é o ÚNICO `sticky` e
-// precisa de `self-start` (item de flex esticado não gruda). Nada no meio pode
-// grudar ou ter rolagem própria — era o "objeto solto" do passo a passo (a prévia
-// `sticky` e a BarraSalvar). Há spec que confere.
+// ⚠️ ROLAGEM: ver o comentário em ../moldura/PaginasComTrilho.tsx (trilho sticky, nada no meio gruda).
 //
 // ⚠️ Sem `?pagina=`: abre na primeira página com pendência e grava no endereço
 // (replace: o Voltar sai da IA). Trocar de página empurra no histórico (o Voltar
@@ -18,16 +15,14 @@
 // cima da tradução.
 import { useCallback, useEffect, useMemo, type ComponentType } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BaseHeader } from '@/components/base';
-import { Lock } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { salesAgentsService, type HealthReport, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { paginasComPendencia } from '@/features/salesAgents/pendencias';
 import type { InboxOption } from '../configuracao/comum';
 import {
-  GRUPOS_DE_PAGINAS, PAGINAS, agendamentoTravado, conferirCamposDaPagina, paginaDaUrl, paginaInicial, rotuloDoGrupo,
+  GRUPOS_DE_PAGINAS, PAGINAS, agendamentoTravado, conferirCamposDaPagina, paginaDaUrl, paginaInicial,
   type PaginaId, type PropsDaPagina,
 } from './paginas';
+import PaginasComTrilho from '../moldura/PaginasComTrilho';
 import { camposDaMudanca, useGravarNaHora, type Gravar } from './useGravarNaHora';
 import Canal from './paginas/Canal';
 import Horario from './paginas/Horario';
@@ -100,45 +95,26 @@ export default function ConfigurarPaginas({ agent, inboxes, aoSalvo, diagnostico
   }, [agent.id, aoSalvo]);
 
   const Pagina = COMPONENTES[atual];
-  const info = PAGINAS[atual];
+
+  const grupos = GRUPOS_DE_PAGINAS.map((g) => ({
+    id: g.id,
+    rotulo: g.rotulo,
+    itens: g.paginas.map((p) => ({
+      id: p,
+      titulo: PAGINAS[p].titulo,
+      frase: PAGINAS[p].frase,
+      icone: PAGINAS[p].icone,
+      pendente: pendentes.has(p),
+      trava: p === 'agendamento' && travado
+        ? { dica: 'Só quando o objetivo é agendar visita', leitor: '(travada: só com o objetivo Agendar visita)' }
+        : undefined,
+    })),
+  }));
 
   return (
-    <div className="flex flex-col gap-7 lg:flex-row lg:items-start">
-      <nav aria-label="Páginas da configuração"
-        className="flex shrink-0 flex-col gap-4 lg:sticky lg:top-6 lg:w-60 lg:self-start lg:max-h-[calc(100dvh-9rem)] lg:overflow-y-auto">
-        {GRUPOS_DE_PAGINAS.map((g) => (
-          <div key={g.id} role="group" aria-labelledby={`grupo-${g.id}`}>
-            <p id={`grupo-${g.id}`} className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{g.rotulo}</p>
-            {g.paginas.map((p) => {
-              const trava = p === 'agendamento' && travado;
-              const pendente = pendentes.has(p);
-              const on = atual === p;
-              return (
-                <button key={p} type="button" onClick={() => irPara(p)} aria-current={on ? 'page' : undefined}
-                  title={trava ? 'Só quando o objetivo é agendar visita' : PAGINAS[p].frase}
-                  className={cn('flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    on ? 'bg-primary/10 font-semibold text-primary' : 'hover:bg-accent',
-                    trava && !on && 'text-muted-foreground')}>
-                  <span className="flex-1">{PAGINAS[p].titulo}</span>
-                  {pendente && <span className="h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden />}
-                  {pendente && <span className="sr-only">(tem pendência)</span>}
-                  {trava && <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />}
-                  {trava && <span className="sr-only">(travada: só com o objetivo Agendar visita)</span>}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </nav>
-      <div className="flex min-w-0 flex-1 flex-col gap-5">
-        <header className="space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">{rotuloDoGrupo(atual)}</p>
-          <BaseHeader title={info.titulo} subtitle={info.frase} />
-        </header>
-        <Pagina key={atual} agent={agent} inboxes={inboxes} gravar={gravarNaPagina} irPara={irPara} diagnostico={diagnostico}
-          aoChaveGerada={aoChaveGerada} />
-      </div>
-    </div>
+    <PaginasComTrilho rotulo="Páginas da configuração" grupos={grupos} atual={atual} aoIr={irPara}>
+      <Pagina key={atual} agent={agent} inboxes={inboxes} gravar={gravarNaPagina} irPara={irPara} diagnostico={diagnostico}
+        aoChaveGerada={aoChaveGerada} />
+    </PaginasComTrilho>
   );
 }
