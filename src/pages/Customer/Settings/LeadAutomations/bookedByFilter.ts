@@ -26,5 +26,9 @@ export function bookedByCondition(value: '' | BookedBy): LeadAutomationCondition
 }
 
 export function bookedBySummary(condition: LeadAutomationCondition): string {
-  return bookedByOf(condition) === 'ia' ? 'Quem marcou: a IA' : 'Quem marcou: uma pessoa';
+  const by = bookedByOf(condition);
+  if (by === 'ia') return 'Quem marcou: a IA';
+  if (by === 'pessoa') return 'Quem marcou: uma pessoa';
+  // Campo ou valor desconhecido: mostra a condição crua em vez de afirmar algo falso.
+  return `${condition.field} ${condition.operator} ${JSON.stringify(condition.value)}`;
 }

@@ -25,6 +25,8 @@ describe('filtro "Quem marcou"', () => {
   it('resumo em português', () => {
     expect(bookedBySummary({ field: 'booked_by', operator: 'eq', value: 'ia' })).toBe('Quem marcou: a IA');
     expect(bookedBySummary({ field: 'booked_by', operator: 'eq', value: 'pessoa' })).toBe('Quem marcou: uma pessoa');
+    // Valor/campo desconhecido: mostra a condição crua em vez de mentir.
+    expect(bookedBySummary({ field: 'booked_by', operator: 'eq', value: 'robo' })).toBe('booked_by eq "robo"');
   });
 
   it('vale nos dois gatilhos de visita e ambos aceitam o filtro', () => {
