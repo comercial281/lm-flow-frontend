@@ -14,6 +14,7 @@ type ContatoDoCard = {
   custom_attributes?: Record<string, unknown> | null;
   additional_attributes?: Record<string, unknown> | null;
   identity_correctable?: boolean;
+  name_editable?: boolean;
 };
 
 /** Quantas respostas do formulário aparecem antes do "ver todas". */
@@ -61,6 +62,14 @@ export function conversaDoCard(item: PipelineItem | null | undefined): string | 
  */
 export function podeCorrigirContato(contato: ContatoDoCard | null | undefined): boolean {
   return contato?.identity_correctable === true;
+}
+
+/**
+ * Lápis do nome: o servidor manda `name_editable` (responsável pelo lead ou
+ * gestor, revisto em 11/10/2026). Sem o campo, travado.
+ */
+export function podeEditarNome(contato: ContatoDoCard | null | undefined): boolean {
+  return contato?.name_editable === true;
 }
 
 /**

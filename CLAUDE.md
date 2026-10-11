@@ -5102,10 +5102,16 @@ O que aparece na tela hoje:
 
 Decisões do dono (não reabrir sem ele pedir):
 
-- **Nome, telefone e e-mail não se editam no card.** O lápis de telefone/e-mail
-  só aparece com `identity_correctable` do servidor (gestor, lead cadastrado à
-  mão); a correção vai pro Histórico. O formulário de Contatos e o "Editar
-  contato" da conversa seguem a mesma trava (`ContactForm`).
+- **Nome, telefone e e-mail não se editam no card**, com duas exceções que o
+  servidor libera: telefone/e-mail com `identity_correctable` (gestor, lead
+  cadastrado à mão) e, **desde 11/10/2026, o nome com `name_editable`** (o
+  responsável pelo lead, já aceito, ou o gestor, em qualquer lead). O lápis
+  aparece se uma das duas vale e a janela *Corrigir nome* / *Corrigir contato*
+  (`CorrigirContatoDialog`) mostra só os campos liberados. Nome vazio não salva.
+  A mudança vai pro Histórico ("Nome alterado", "Telefone corrigido"). O
+  formulário de Contatos e o "Editar contato" da conversa seguem a mesma regra
+  (`ContactForm`). O nome do perfil do WhatsApp não regrava mais nome de verdade
+  (servidor), senão a correção sumia.
 - **Histórico e Observações ficam separados.** Um o sistema escreve sozinho, o
   outro é o comentário que o corretor escolheu deixar.
 - **Aba Retorno saiu** (nenhum cliente tinha um retorno sequer, 02/10). **Aba

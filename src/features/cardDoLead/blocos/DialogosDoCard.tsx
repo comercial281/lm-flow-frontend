@@ -1,5 +1,5 @@
 // src/features/cardDoLead/blocos/DialogosDoCard.tsx
-// As janelas que o card abre por cima: corrigir telefone/e-mail, agendar envio,
+// As janelas que o card abre por cima: corrigir nome/telefone/e-mail, agendar envio,
 // tirar da roleta, juntar contatos e iniciar conversa.
 import { Suspense } from 'react';
 import { lazyWithRetry } from '@/utils/chunkReload';
@@ -28,6 +28,9 @@ export default function DialogosDoCard({ card, onJuntado }: {
             open={identidade.corrigindo}
             onOpenChange={identidade.setCorrigindo}
             contactId={String(contato.id)}
+            nomeAtual={identidade.nome}
+            podeNome={card.nomeEditavel}
+            podeContato={card.corrigivel}
             telefoneAtual={identidade.telefone}
             emailAtual={identidade.email}
             onCorrigido={identidade.aoCorrigir}
