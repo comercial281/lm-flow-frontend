@@ -7773,10 +7773,16 @@ O que aparece na tela:
 - **Página `/pipelines/:pipelineId/card/:itemId`, com o menu lateral.** Abre pela setinha ↗
   ao lado do ⋯ da janela ("Ver card completo", sempre em outra guia), pela setinha do card
   do quadro e por qualquer link colado. O F5 mantém.
-- **Cabeçalho de tela de detalhe:** moldura `Pagina` com `acima` (← Funil) e `BaseHeader`
-  com `aoLadoDoTitulo` (selo da situação) e `aDireita` (ações). O nome do lead é o título,
-  com a barrinha da casa; à direita, Responsável com foto, Ganho | Perdido (ou Reabrir) e o
-  ⋯ (Copiar link — o da página —, Mandar pra roleta, Arquivar/Desarquivar, Remover do funil).
+- **Topo em cartão da pessoa** (desde 11/10, escolha do dono numa página de decisão com três
+  versões): moldura `Pagina` com `acima` (← Funil) e o `CardDoLeadHeader`, um cartão com três
+  partes. **Quem é:** a foto do lead no lugar da barrinha (`BaseHeader` ganhou `foto`), o nome
+  como título, o selo da situação e "Entrou no funil em 26/09 · há 14 dias" (`created_at` do
+  card). **Dados da pessoa:** Telefone, Origem, E-mail e Roleta (só se veio por uma), com o
+  lápis de corrigir quando o servidor deixa. **Ações:** Responsável com foto, Ganho | Perdido
+  (ou Reabrir) e o ⋯ (Copiar link — o da página —, Mandar pra roleta, Arquivar/Desarquivar,
+  Remover do funil), todos com 40 px de altura. No computador largo as três ficam lado a lado;
+  no médio, quem é e ações em cima e os dados embaixo; no celular, uma embaixo da outra. Lead
+  fechado: o selo fica só ao lado do nome e o Reabrir ocupa a linha.
 - **Faixa de etapas** com os dias em cada uma: idas e voltas somam; a atual conta até agora;
   card Ganho/Perdido para o relógio no dia em que fechou. Clicar numa etapa pergunta "Mover
   <nome> para <etapa>?". Card fechado: a faixa só informa.
@@ -7788,10 +7794,15 @@ O que aparece na tela:
   Follow-up Automático) fica só pintada, sem "menos de 1 dia" (Tony, 08/10). Na atual continua.
 - **Abas** Ficha · Conversa · Visitas e propostas · Origem (a aba vai no endereço, `?aba=`).
   A página não tem aba Tarefas: as tarefas são um bloco da Ficha.
-- **Ficha:** à esquerda Ações rápidas, Próximas tarefas (o `TarefasDoLead` da sessão de
-  Tarefas, o mesmo da aba Tarefas da janela), Dados da pessoa, Sobre o negócio, Etiquetas,
-  Follow-up e Meta, o que a IA entendeu, Imóveis de interesse, Respostas do formulário,
-  Outras informações; à direita Histórico e Observações, separados como na janela.
+- **Ficha:** à esquerda Ações rápidas (com a linha da Meta embaixo dos botões), Próximas
+  tarefas (o `TarefasDoLead` da sessão de Tarefas, o mesmo da aba Tarefas da janela), Sobre o
+  negócio, Etiquetas, Follow-up, o que a IA entendeu, Imóveis de interesse, Respostas do
+  formulário, Outras informações; à direita Histórico e Observações, separados como na janela.
+  Desde 11/10 não existe mais a caixa "Dados da pessoa" (subiu pro topo), e a caixa "Follow-up
+  e Meta" virou só "Follow-up": a Meta (Qualificado · Venda · Desqualificado) foi pra Ações
+  rápidas porque **o Qualificado só vai se alguém apertar** (Venda e Desqualificado vão
+  sozinhos com Ganho e Perdido); escondida, a Meta recebe menos lead qualificado. O "veio pela
+  Roleta X" não se repete na Ficha (`AvisosDaRoleta semDeOnde`).
 - **Sobre o negócio** (só na página): Preço estimado e Data de fechamento esperada, editados
   na hora, sem Salvar. O preço estimado é o valor da Compra que vai para a Meta no Ganho.
   Regras do campo: Esc sai da edição (no preço, desfaz o que foi digitado; na data, só fecha
@@ -7817,7 +7828,10 @@ O que aparece na tela:
 
 Decisões do dono (não reabrir sem ele pedir): a janela não muda de cara (ganha só a
 setinha); preço e data só na página (depois viram filtro); mover pela faixa pede
-confirmação; a página abre com o menu lateral.
+confirmação; a página abre com o menu lateral. Topo de 11/10: **cartão da pessoa** (não a
+linha da pessoa nem o Responsável na linha), **Ganho verde cheio e Perdido só no contorno**
+(não os dois cheios nem a peça colada) e **a Meta dentro de Ações rápidas** (não caixa
+própria nem aba Origem). A janela do quadro continua igual (só a página mudou).
 
 Armadilhas:
 
@@ -7853,6 +7867,12 @@ Armadilhas:
 11. **Duas guias:** a página recarrega em silêncio quando a guia volta a ficar visível
     (`useCardCompleto`, sem aviso se falhar). No quadro, o refresh silencioso atualiza a janela
     aberta só quando a situação ou a etapa do card mudou (senão a janela se refaria a cada 60 s).
+12. **O topo da página é o `CardDoLeadHeader`** (`features/cardDoLead/pagina/`). O nome do
+    arquivo termina em `Header.tsx` de propósito: a trava `foraDaMoldura` trata o cartão como
+    embrulho do `BaseHeader`, e o nome continua saindo do `<h1>` dele (trava `tituloAMao`).
+    Os dados vêm de `DadosDaPessoa` (`blocos/BlocoIdentidade.tsx`); a janela segue com o
+    `BlocoIdentidade` de sempre. Ganho | Perdido e o ⋯ grandes são `tamanho="grande"` no
+    `CardResultFooter` e `grande` no `CardMoreMenu`; sem isso, o tamanho da janela.
 
 ## Histórico novo do lead (07/10/2026)
 

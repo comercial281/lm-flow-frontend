@@ -5,9 +5,11 @@
 // lateral (GRUPO A das rotas, decisão 15).
 //
 // Moldura da casa (Pagina, padrão de telas 07/10) no esqueleto de tela de
-// detalhe da Roleta: "← Funil <nome>" em cima e o nome do lead como título
-// (BaseHeader, com a barrinha), o selo da situação ao lado e, à direita,
-// Responsável, Ganho | Perdido (ou Reabrir) e o ⋯.
+// detalhe da Roleta: "← Funil <nome>" em cima e, desde 11/10 ("cartão da
+// pessoa", escolha do dono), o topo é um cartão (CardDoLeadHeader): a foto no
+// lugar da barrinha, o nome com o selo da situação, desde quando está no funil,
+// telefone, origem, e-mail e roleta, e as ações Responsável, Ganho | Perdido
+// (ou Reabrir) e o ⋯, no tamanho grande.
 //
 // Card fechado ou arquivado continua mexível: "Sobre o negócio" e criar tarefa
 // seguem disponíveis (checklist f3-06: agir no arquivado sem desarquivar).
@@ -17,7 +19,6 @@ import { ArchiveRestore, ArrowLeft, CalendarCheck, ClipboardList, Megaphone, Mes
 import { toast } from 'sonner';
 import { Button, Skeleton } from '@/components/ui/ds';
 import Abas from '@/components/base/Abas';
-import BaseHeader from '@/components/base/BaseHeader';
 import EmptyState from '@/components/base/EmptyState';
 import Pagina from '@/components/base/Pagina';
 import { lazyWithRetry } from '@/utils/chunkReload';
@@ -33,6 +34,7 @@ import { SEM_ACESSO_AO_CARD } from '@/features/cardDoLead/buscarCard';
 import { voltaPeloHistorico } from '@/features/cardDoLead/paginaNoCelular';
 import FaixaDeEtapas from '@/features/cardDoLead/pagina/FaixaDeEtapas';
 import FichaDoCard from '@/features/cardDoLead/pagina/FichaDoCard';
+import CardDoLeadHeader from '@/features/cardDoLead/pagina/CardDoLeadHeader';
 import { ResponsavelComFoto } from '@/features/cardDoLead/blocos/BlocoSituacao';
 import DialogosDoCard from '@/features/cardDoLead/blocos/DialogosDoCard';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
@@ -262,39 +264,40 @@ function ConteudoDoCard({ dados, recarregar, atualizarItem }: {
         )
       }
       cabecalho={
-        <BaseHeader
-          title={card.nomeExibido}
+        <CardDoLeadHeader
+          card={card}
+          criadoEm={item.created_at}
           // Selo da situação (Parte 3): nada em "open"; data e motivo ao passar o mouse.
           aoLadoDoTitulo={<SeloSituacao status={situacaoDe(itemDaSituacao)} detalhe={detalheDaSituacao(itemDaSituacao)} />}
-          aDireita={
-            <div className="flex flex-wrap items-end gap-3">
-              {(item.conversation?.id || contato?.id) && (
-                <div className="w-56">
-                  <ResponsavelComFoto card={card} />
+          acoes={
+            <>
+              {(item.conversation?.id || contato?.id) && <ResponsavelComFoto card={card} />}
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  {/* Ganho | Perdido ou Reabrir (Parte 3), com a trava cruzada da Etapa (P3-T5). */}
+                  <CardResultFooter
+                    item={itemDaSituacao}
+                    onMudou={aoMudarSituacao}
+                    bloqueado={card.etapa.movendo || ganhando}
+                    onSalvando={card.situacao.setRodapeSalvando}
+                    tamanho="grande"
+                  />
                 </div>
-              )}
-              <div className="w-56">
-                {/* Ganho | Perdido ou Reabrir (Parte 3), com a trava cruzada da Etapa (P3-T5). */}
-                <CardResultFooter
-                  item={itemDaSituacao}
-                  onMudou={aoMudarSituacao}
-                  bloqueado={card.etapa.movendo || ganhando}
-                  onSalvando={card.situacao.setRodapeSalvando}
+                <CardMoreMenu
+                  item={item}
+                  roletas={card.roleta.ligadas}
+                  trocandoRoleta={card.roleta.mandando}
+                  onTrocarRoleta={card.roleta.mandar}
+                  onTirarDaRoleta={card.roleta.ofertasAbertas.length > 0 ? () => card.roleta.setTirando(true) : undefined}
+                  onRemovido={voltarAoFunil}
+                  onJuntar={card.juntar.pode && contato?.id != null ? () => card.juntar.setJuntando(true) : undefined}
+                  linkDoCard={linkDoCardCompleto(pipeline.id, item.id)}
+                  onArquivar={arquivado ? undefined : () => void alternarArquivo()}
+                  onDesarquivar={arquivado ? () => void alternarArquivo() : undefined}
+                  grande
                 />
               </div>
-              <CardMoreMenu
-                item={item}
-                roletas={card.roleta.ligadas}
-                trocandoRoleta={card.roleta.mandando}
-                onTrocarRoleta={card.roleta.mandar}
-                onTirarDaRoleta={card.roleta.ofertasAbertas.length > 0 ? () => card.roleta.setTirando(true) : undefined}
-                onRemovido={voltarAoFunil}
-                onJuntar={card.juntar.pode && contato?.id != null ? () => card.juntar.setJuntando(true) : undefined}
-                linkDoCard={linkDoCardCompleto(pipeline.id, item.id)}
-                onArquivar={arquivado ? undefined : () => void alternarArquivo()}
-                onDesarquivar={arquivado ? () => void alternarArquivo() : undefined}
-              />
-            </div>
+            </>
           }
         />
       }

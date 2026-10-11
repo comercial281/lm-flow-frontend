@@ -3,7 +3,7 @@
 // (F5, link colado), abre arquivado e de outra aba, e sem acesso avisa —
 // nunca tela em branco.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import CardCompletoPage from './CardCompletoPage';
@@ -42,6 +42,12 @@ vi.mock('@/features/cardDoLead/useCardDoLead', () => ({
     item,
     contato: item.contact ?? null,
     nomeExibido: item.contact?.name ?? 'Lead sem nome',
+    avatarContact: item.contact ? { id: item.contact.id, name: item.contact.name } : null,
+    corrigivel: false,
+    identidade: { telefone: '5511987654321', email: 'maria@email.com', setCorrigindo: vi.fn() },
+    origem: 'Meta · Formulário',
+    dadosDaOrigem: null,
+    roletaDoLead: null,
     foraDoFunil: false,
     etapa: {
       id: item.stage_id,
@@ -73,6 +79,7 @@ vi.mock('@/features/cardDoLead/pagina/FichaDoCard', () => ({
   },
 }));
 vi.mock('@/features/cardDoLead/blocos/DialogosDoCard', () => ({ default: () => null }));
+vi.mock('@/components/chat/contact/ContactAvatar', () => ({ default: () => <span data-testid="foto-do-lead" /> }));
 vi.mock('@/features/cardDoLead/blocos/BlocoSituacao', () => ({ ResponsavelComFoto: () => <div data-testid="responsavel" /> }));
 // As peças de situação são da Parte 3 (com a bateria delas).
 vi.mock('@/components/pipelines/card/CardResultFooter', () => ({
@@ -212,6 +219,22 @@ describe('CardCompletoPage', () => {
     abrirVindoDasTarefas();
     expect(screen.getByRole('status', { name: 'Carregando o card' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Voltar' })).toBeInTheDocument();
+  });
+
+  // 11/10 ("cartão da pessoa"): foto, dados da pessoa e as ações no mesmo cartão,
+  // com Ganho | Perdido e o ⋯ no tamanho grande.
+  it('topo: cartão com a foto, os dados da pessoa e as ações grandes', async () => {
+    abrirPagina();
+    const topo = await screen.findByRole('region', { name: 'Quem é o lead' });
+
+    expect(within(topo).getByRole('heading', { level: 1, name: 'Maria Souza' })).toBeInTheDocument();
+    expect(within(topo).getByTestId('foto-do-lead')).toBeInTheDocument();
+    expect(within(topo).getByText('(11) 98765-4321')).toBeInTheDocument();
+    expect(within(topo).getByText('maria@email.com')).toBeInTheDocument();
+    expect(within(topo).getByTestId('responsavel')).toBeInTheDocument();
+    expect(within(topo).getByTestId('ganho-perdido')).toBeInTheDocument();
+    expect(s.rodape.mock.calls.at(-1)![0]).toMatchObject({ tamanho: 'grande' });
+    expect(s.menu.mock.calls.at(-1)![0]).toMatchObject({ grande: true });
   });
 
   it('Ganho | Perdido recebe a trava cruzada com a Etapa (P3-T5)', async () => {

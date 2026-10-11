@@ -1,8 +1,13 @@
 // Aba Ficha da página do card (spec do funil §5.3): os MESMOS blocos da
-// janela, em diagramação maior. Esquerda, nesta ordem: Ações rápidas,
-// Próximas tarefas, Dados da pessoa, Sobre o negócio, Etiquetas,
-// Follow-up e Meta, o que a IA entendeu, Imóveis de interesse, Respostas do
-// formulário, Outras informações. Direita: Histórico.
+// janela, em diagramação maior. Esquerda, nesta ordem: Ações rápidas (com a
+// linha da Meta), Próximas tarefas, Sobre o negócio, Etiquetas, Follow-up, o
+// que a IA entendeu, Imóveis de interesse, Respostas do formulário, Outras
+// informações. Direita: Histórico.
+//
+// 11/10/2026 (escolha do dono): os dados da pessoa subiram pro cartão do topo
+// (CardDoLeadHeader) e a Meta saiu da caixa do Follow-up pra Ações rápidas,
+// onde o corretor já age: Venda e Desqualificado vão sozinhos com Ganho e
+// Perdido, mas o Qualificado só vai se alguém apertar.
 //
 // Documentos, Seguidor e E-mail do atendimento entram depois como mais blocos
 // no fim da esquerda (decisão 14), sem mexer no resto.
@@ -11,12 +16,10 @@ import FollowupTimeline from '@/components/pipelines/FollowupTimeline';
 import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import OutrasInformacoes from '@/components/pipelines/card/OutrasInformacoes';
 import { situacaoDe } from '@/features/pipelines/situacao/situacao';
-import { useCelular } from '@/hooks/useCelular';
 import type { PipelineItem } from '@/types/analytics';
 import { conversaDoCard } from '../cardDoLead';
 import type { CardDoLead } from '../useCardDoLead';
 import CaixaDoCard from '../blocos/CaixaDoCard';
-import BlocoIdentidade from '../blocos/BlocoIdentidade';
 import { AvisosDaRoleta } from '../blocos/BlocoSituacao';
 import BlocoSobreONegocio, { type CamposDoNegocio } from '../blocos/BlocoSobreONegocio';
 import BlocoEtiquetas from '../blocos/BlocoEtiquetas';
@@ -45,8 +48,6 @@ export default function FichaDoCard({
 }: FichaDoCardProps) {
   const Tarefas = blocoDeTarefas;
   const contato = card.contato;
-  // No celular a linha da Meta não aparece (Raio-X do celular, 10/10/2026): a caixa vira só Follow-up.
-  const ehCelular = useCelular();
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
@@ -59,6 +60,16 @@ export default function FichaDoCard({
             onAbrirConversa={() => card.conversa.abrir(item)}
             onVisitaCriada={card.historico.recarregar}
           />
+          {/* Ganho/Perdido mandam Compra/Desqualificado à Meta no servidor: a chave
+              pela situação remonta o painel, que relê e mostra "enviado" (como a janela).
+              No celular o painel não aparece (Raio-X do celular, 10/10/2026). */}
+          <CapiConversionPanel
+            key={situacaoDe(card.situacao.item ?? item)}
+            variante="compacto"
+            contactId={contato?.id ?? null}
+            pipelineItemId={item.id}
+            className="border-t border-dashed border-border pt-3"
+          />
         </CaixaDoCard>
 
         {Tarefas && (
@@ -67,8 +78,8 @@ export default function FichaDoCard({
           </CaixaDoCard>
         )}
 
-        <BlocoIdentidade card={card} variante="pagina" />
-        <AvisosDaRoleta card={card} />
+        {/* "veio pela Roleta X" já está no topo: aqui só a oferta e o sorteio. */}
+        <AvisosDaRoleta card={card} semDeOnde />
 
         <BlocoSobreONegocio
           pipelineId={item.pipeline_id}
@@ -82,18 +93,11 @@ export default function FichaDoCard({
           <BlocoEtiquetas card={card} />
         </CaixaDoCard>
 
-        <CaixaDoCard titulo={ehCelular ? 'Follow-up' : 'Follow-up e Meta'}>
+        <CaixaDoCard titulo="Follow-up">
           <FollowupTimeline
             contactId={contato?.id != null ? String(contato.id) : null}
             conversationId={conversaDoCard(item)}
             leadName={contato?.name ?? null}
-          />
-          {/* Ganho/Perdido mandam Compra/Desqualificado à Meta no servidor: a chave
-              pela situação remonta o painel, que relê e mostra "enviado" (como a janela). */}
-          <CapiConversionPanel
-            key={situacaoDe(card.situacao.item ?? item)}
-            contactId={contato?.id ?? null}
-            pipelineItemId={item.id}
           />
         </CaixaDoCard>
 
