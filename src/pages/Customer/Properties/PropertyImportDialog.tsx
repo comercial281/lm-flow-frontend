@@ -280,13 +280,13 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) fechar(); }}>
-      {/* Folga e altura vêm do preset `size="wide"` (ver ds.tsx); aqui fica só o
-          teto, que é maior no modo lote por causa da tabela de conferência. */}
+      {/* No modo lote a tabela de conferência pede a janela larga (`size="wide"`,
+          ver ds.tsx); o envio de um arquivo só cabe na grande. */}
       <DialogContent
-        size="wide"
+        size={batch ? 'wide' : 'default'}
         className={batch
-          ? 'sm:max-w-[1600px] h-[88dvh] flex flex-col overflow-hidden'
-          : 'sm:max-w-3xl overflow-y-auto'}
+          ? 'h-[88dvh] flex flex-col overflow-hidden'
+          : 'max-w-2xl overflow-y-auto'}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -340,8 +340,8 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
 
             {uploading && (
               <div className="space-y-1">
-                <div className="h-2 bg-muted rounded overflow-hidden">
-                  <div className="h-full bg-primary transition-all" style={{ width: `${uploadProgress}%` }} />
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${uploadProgress}%` }} />
                 </div>
                 <p className="text-xs text-muted-foreground text-center">Enviando arquivos… {uploadProgress}%</p>
               </div>
@@ -382,9 +382,9 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
                 </span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="h-2 w-32 bg-muted rounded overflow-hidden">
+                <div className="h-2 w-32 overflow-hidden rounded-full bg-muted">
                   <div
-                    className="h-full bg-primary transition-all"
+                    className="h-full rounded-full bg-primary transition-all"
                     style={{ width: `${batch.total_items ? Math.round((batch.processed_items * 100) / batch.total_items) : 0}%` }}
                   />
                 </div>

@@ -37,10 +37,12 @@ import {
 } from '@/hooks/useKnowledge';
 import { parseVideoUrl, formatDuration } from './lib';
 import VideoEmbed from './VideoEmbed';
+import EmptyState from '@/components/base/EmptyState';
 import CommentsSection from './CommentsSection';
 import { toast } from 'sonner';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { Card, Button } from '@/components/ui/ds';
 interface Props {
   module: KnowledgeModule;
   onBack: () => void;
@@ -48,7 +50,7 @@ interface Props {
 }
 
 export default function CoursePlayer({ module: m, onBack, canEdit }: Props) {
-  const { data: lessons = [], isLoading } = useLessons(m.id);
+  const { data: lessons = [], isLoading, error, refetch } = useLessons(m.id);
   const { data: progress = {} } = useProgress();
   const toggleProgress = useToggleProgress();
 
@@ -87,7 +89,7 @@ export default function CoursePlayer({ module: m, onBack, canEdit }: Props) {
             className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground mb-3"
             type="button"
           >
-            <ArrowLeft size={14} /> Todos os módulos
+            <ArrowLeft className="h-3.5 w-3.5" /> Todos os módulos
           </button>
           <p className="text-sm font-bold leading-tight">{m.titulo}</p>
           {/* Progresso */}
@@ -96,16 +98,16 @@ export default function CoursePlayer({ module: m, onBack, canEdit }: Props) {
               <span>Seu progresso</span>
               <span className="text-primary font-semibold">{pct}%</span>
             </div>
-            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full bg-primary transition-all duration-300"
+                className="h-full rounded-full bg-primary transition-all duration-300"
                 style={{ width: `${pct}%` }}
               />
             </div>
           </div>
           {/* Busca */}
           <div className="relative mt-3">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -117,10 +119,11 @@ export default function CoursePlayer({ module: m, onBack, canEdit }: Props) {
 
         <div className="flex-1 overflow-y-auto py-2">
           {isLoading && <p className="px-4 py-2 text-xs text-muted-foreground">Carregando...</p>}
-          {!isLoading && lessons.length === 0 && (
-            <p className="px-4 py-6 text-xs text-muted-foreground text-center">
-              Nenhuma aula neste módulo ainda.
-            </p>
+          {!isLoading && error && (
+            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void refetch()} className="mx-4" />
+          )}
+          {!isLoading && !error && lessons.length === 0 && (
+            <EmptyState tamanho="compacto" title="Nenhuma aula neste módulo ainda." className="mx-4" />
           )}
           {filtered.map((lesson) => {
             const realIdx = lessons.findIndex((l) => l.id === lesson.id);
@@ -136,9 +139,9 @@ export default function CoursePlayer({ module: m, onBack, canEdit }: Props) {
                 type="button"
               >
                 {done ? (
-                  <CheckCircle2 size={16} className="text-primary shrink-0" />
+                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                 ) : (
-                  <Circle size={16} className="text-muted-foreground/50 shrink-0" />
+                  <Circle className="h-4 w-4 text-muted-foreground/50 shrink-0" />
                 )}
                 <span className="shrink-0 text-muted-foreground tabular-nums">
                   {String(realIdx + 1).padStart(2, '0')}
@@ -164,7 +167,7 @@ export default function CoursePlayer({ module: m, onBack, canEdit }: Props) {
         {!selected && !isLoading && (
           <div className="h-full flex items-center justify-center text-center p-10">
             <div>
-              <PlayCircle size={44} className="mx-auto text-muted-foreground/40 mb-3" strokeWidth={1.5} />
+              <PlayCircle className="h-11 w-11 mx-auto text-muted-foreground/40 mb-3" strokeWidth={1.5} />
               <p className="text-sm text-muted-foreground">
                 {lessons.length === 0 ? 'Sem aulas por aqui ainda.' : 'Escolha uma aula na lista.'}
               </p>
@@ -195,34 +198,36 @@ export default function CoursePlayer({ module: m, onBack, canEdit }: Props) {
                 }`}
                 type="button"
               >
-                {progress[selected.id] ? <CheckCircle2 size={14} /> : <Circle size={14} />}
+                {progress[selected.id] ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
                 {progress[selected.id] ? 'Aula concluída' : 'Marcar como visto'}
               </button>
 
               <div className="flex items-center gap-2">
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => goTo(-1)}
                   disabled={selectedIndex <= 0}
-                  className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg border border-border hover:border-primary/40 disabled:opacity-40"
                   type="button"
                 >
-                  <ChevronLeft size={14} /> Anterior
-                </button>
-                <button
+                  <ChevronLeft className="h-4 w-4" /> Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => goTo(1)}
                   disabled={selectedIndex >= lessons.length - 1}
-                  className="flex items-center gap-1 px-3 py-2 text-xs rounded-lg border border-border hover:border-primary/40 disabled:opacity-40"
                   type="button"
                 >
-                  Próximo <ChevronRight size={14} />
-                </button>
+                  Próximo <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             </div>
 
             <h2 className="text-2xl font-bold mb-1">{selected.titulo}</h2>
             {selected.duracao_min ? (
               <p className="text-xs text-muted-foreground mb-4 flex items-center gap-1">
-                <Clock size={11} /> {formatDuration(selected.duracao_min)}
+                <Clock className="h-3.5 w-3.5" /> {formatDuration(selected.duracao_min)}
               </p>
             ) : null}
 
@@ -277,7 +282,7 @@ function LessonAdminActions({
           }`}
           type="button"
         >
-          <Pencil size={12} /> Editar aula
+          <Pencil className="h-3.5 w-3.5" /> Editar aula
         </button>
         <button
           onClick={() => move(-1)}
@@ -285,7 +290,7 @@ function LessonAdminActions({
           className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-border hover:border-primary/40 disabled:opacity-30"
           type="button"
         >
-          <ChevronUp size={12} /> Subir
+          <ChevronUp className="h-3.5 w-3.5" /> Subir
         </button>
         <button
           onClick={() => move(1)}
@@ -293,7 +298,7 @@ function LessonAdminActions({
           className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-border hover:border-primary/40 disabled:opacity-30"
           type="button"
         >
-          <ChevronDown size={12} /> Descer
+          <ChevronDown className="h-3.5 w-3.5" /> Descer
         </button>
         <button
           onClick={async () => {
@@ -310,7 +315,7 @@ function LessonAdminActions({
           className="flex items-center gap-1 px-2 py-1 text-[11px] text-red-500 rounded-md border border-red-500/30 hover:bg-red-500/10"
           type="button"
         >
-          <Trash2 size={12} /> Excluir aula
+          <Trash2 className="h-3.5 w-3.5" /> Excluir aula
         </button>
       </div>
 
@@ -375,7 +380,7 @@ function LessonEditForm({ lesson, onClose }: { lesson: KnowledgeLesson; onClose:
   }
 
   return (
-    <div className="mt-3 space-y-3 max-w-2xl bg-card border border-border rounded-xl p-4">
+    <Card className="mt-3 max-w-2xl gap-3 p-4">
       <p className="text-xs font-semibold">Editar aula</p>
 
       <input
@@ -419,7 +424,7 @@ function LessonEditForm({ lesson, onClose }: { lesson: KnowledgeLesson; onClose:
             }`}
             type="button"
           >
-            <Link2 size={12} /> Link YouTube/Vimeo
+            <Link2 className="h-3.5 w-3.5" /> Link YouTube/Vimeo
           </button>
           <button
             onClick={() => setVideoMode('upload')}
@@ -428,7 +433,7 @@ function LessonEditForm({ lesson, onClose }: { lesson: KnowledgeLesson; onClose:
             }`}
             type="button"
           >
-            <Upload size={12} /> Enviar arquivo
+            <Upload className="h-3.5 w-3.5" /> Enviar arquivo
           </button>
         </div>
 
@@ -451,23 +456,24 @@ function LessonEditForm({ lesson, onClose }: { lesson: KnowledgeLesson; onClose:
       </div>
 
       <div className="flex justify-end gap-2">
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           onClick={onClose}
-          className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
           type="button"
         >
           Cancelar
-        </button>
-        <button
+        </Button>
+        <Button
+          size="sm"
           onClick={save}
           disabled={busy}
-          className="px-3 py-1.5 text-xs text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-50 rounded-lg"
           type="button"
         >
           {busy ? 'Salvando...' : 'Salvar'}
-        </button>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -533,20 +539,20 @@ function AdminBar({ moduleId, lessons }: { moduleId: string; lessons: KnowledgeL
           <span className="text-[11px] text-muted-foreground">
             {lessons.length} aula{lessons.length === 1 ? '' : 's'} · modo edição
           </span>
-          <button
+          <Button
+            size="sm"
             onClick={() => setOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-primary-foreground bg-primary hover:opacity-90 rounded-lg"
             type="button"
           >
-            <Plus size={12} /> Nova aula
-          </button>
+            <Plus className="h-4 w-4" /> Nova aula
+          </Button>
         </div>
       ) : (
         <div className="space-y-3 max-w-2xl">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold">Nova aula</p>
             <button onClick={reset} type="button" aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground">
-              <X size={14} />
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
 
@@ -559,7 +565,7 @@ function AdminBar({ moduleId, lessons }: { moduleId: string; lessons: KnowledgeL
               }`}
               type="button"
             >
-              <Link2 size={12} /> Link YouTube/Vimeo
+              <Link2 className="h-3.5 w-3.5" /> Link YouTube/Vimeo
             </button>
             <button
               onClick={() => setMode('upload')}
@@ -568,7 +574,7 @@ function AdminBar({ moduleId, lessons }: { moduleId: string; lessons: KnowledgeL
               }`}
               type="button"
             >
-              <Upload size={12} /> Enviar arquivo
+              <Upload className="h-3.5 w-3.5" /> Enviar arquivo
             </button>
           </div>
 
@@ -611,17 +617,17 @@ function AdminBar({ moduleId, lessons }: { moduleId: string; lessons: KnowledgeL
           />
 
           <div className="flex justify-end gap-2">
-            <button onClick={reset} className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground" type="button">
+            <Button variant="outline" size="sm" onClick={reset} type="button">
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
               onClick={submit}
               disabled={busy}
-              className="px-3 py-1.5 text-xs text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-50 rounded-lg"
               type="button"
             >
               {busy ? (mode === 'upload' ? 'Enviando vídeo...' : 'Salvando...') : 'Adicionar aula'}
-            </button>
+            </Button>
           </div>
         </div>
       )}

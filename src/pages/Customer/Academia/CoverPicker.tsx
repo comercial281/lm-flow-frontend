@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { PlayCircle, ImagePlus, Loader2, X } from 'lucide-react';
 import { useUploadModuleCover } from '@/hooks/useKnowledge';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/ds';
 
 interface Props {
   value: string;
@@ -44,27 +45,28 @@ export default function CoverPicker({ value, onChange }: Props) {
                 className="absolute top-1 right-1 p-1 bg-black/55 text-white hover:text-red-400 rounded-md backdrop-blur"
                 title="Remover capa"
               >
-                <X size={12} />
+                <X className="h-3.5 w-3.5" />
               </button>
             </>
           ) : (
-            <PlayCircle size={24} className="text-primary/60" strokeWidth={1.5} />
+            <PlayCircle className="h-5 w-5 text-primary/60" strokeWidth={1.5} />
           )}
         </div>
         <div className="flex-1 min-w-0 space-y-2">
           <input ref={inputRef} type="file" accept="image/*" onChange={(e) => handleFile(e.target.files?.[0] ?? null)} className="hidden" />
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={upload.isPending}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border hover:border-primary/40 disabled:opacity-50"
           >
             {upload.isPending ? (
-              <><Loader2 size={12} className="animate-spin" /> Enviando...</>
+              <><Loader2 className="h-4 w-4 animate-spin" /> Enviando...</>
             ) : (
-              <><ImagePlus size={12} /> Enviar imagem</>
+              <><ImagePlus className="h-4 w-4" /> Enviar imagem</>
             )}
-          </button>
+          </Button>
           <input
             value={value}
             onChange={(e) => onChange(e.target.value)}

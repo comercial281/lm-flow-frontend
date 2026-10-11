@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/ds';
 import EditItemModal from '@/components/pipelines/EditItemModal';
+import Carregando from '@/components/base/Carregando';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { contactsService } from '@/services/contacts/contactsService';
 import {
@@ -110,12 +111,10 @@ export default function CardDoContato({ contactId, onOpenChange, onMudou, aberto
   if (!carregado) {
     return (
       <Dialog open onOpenChange={fechar}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogTitle className="sr-only">Abrindo o contato</DialogTitle>
           <DialogDescription className="sr-only">Carregando o card do contato</DialogDescription>
-          <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Abrindo o contato…
-          </div>
+          <Carregando variante="texto" linhas={4} rotulo="Abrindo o contato…" className="py-2" />
         </DialogContent>
       </Dialog>
     );
@@ -144,7 +143,7 @@ export default function CardDoContato({ contactId, onOpenChange, onMudou, aberto
   if (celular) {
     return (
       <Dialog open onOpenChange={fechar}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogTitle>Abrir o card de qual funil?</DialogTitle>
           <DialogDescription>Este contato está em mais de um funil.</DialogDescription>
           <ul className="space-y-2">

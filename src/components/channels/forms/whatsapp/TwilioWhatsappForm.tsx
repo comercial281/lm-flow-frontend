@@ -1,10 +1,10 @@
 import { useLanguage } from '@/hooks/useLanguage';
 import { FormField } from '../../shared/FormField';
 import { FormCheckbox } from '../../shared/FormCheckbox';
-import { FormSection } from '../../shared/FormSection';
 import { FormData } from '@/hooks/channels/useChannelForm';
 import { sanitizeInboxName } from '@/utils/sanitizeName';
 import { PhoneInput } from '@/components/shared/PhoneInput';
+import Aviso from '@/components/base/Aviso';
 
 interface TwilioWhatsappFormProps {
   form: FormData;
@@ -120,12 +120,8 @@ export const TwilioWhatsappForm = ({ form, onFormChange }: TwilioWhatsappFormPro
       )}
 
       {/* Help Section */}
-      <FormSection
-        title={t('twilioForm.help.title')}
-        className="bg-blue-50/10 border-blue-200/20"
-        data-tour="whatsapp-help"
-      >
-        <div className="text-sm text-sidebar-foreground/70 space-y-2">
+      <div data-tour="whatsapp-help">
+        <Aviso tom="info" titulo={t('twilioForm.help.title')}>
           <p>
             <strong>
               1. {t('twilioForm.fields.accountSid.label')}:
@@ -150,8 +146,8 @@ export const TwilioWhatsappForm = ({ form, onFormChange }: TwilioWhatsappFormPro
             </strong>{' '}
             {t('twilioForm.fields.phoneNumber.placeholder')}
           </p>
-        </div>
-      </FormSection>
+        </Aviso>
+      </div>
     </div>
   );
 };

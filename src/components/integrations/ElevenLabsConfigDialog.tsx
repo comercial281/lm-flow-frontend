@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/ds';
 import { Play, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
+import Aviso from '@/components/base/Aviso';
 
 interface ElevenLabsConfig {
   apiKey: string;
@@ -238,11 +239,9 @@ const ElevenLabsConfigDialog = ({
           )}
 
           {config.apiKey && voicesError && (
-            <div className="p-4 border border-destructive/50 rounded-lg bg-destructive/10">
-              <p className="text-sm text-destructive">
-                {t('edit.integrations.elevenlabs.errorLoadingVoices') || 'Erro ao carregar vozes'} - Verifique se a API Key está correta.
-              </p>
-            </div>
+            <Aviso tom="erro">
+              {t('edit.integrations.elevenlabs.errorLoadingVoices') || 'Erro ao carregar vozes'} - Verifique se a API Key está correta.
+            </Aviso>
           )}
 
           {/* Estabilidade */}

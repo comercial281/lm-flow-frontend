@@ -1,8 +1,9 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ChevronDown, ChevronUp, History, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, History } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
+import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
 import { useCan } from '@/hooks/useCan';
@@ -119,10 +120,10 @@ export default function HistoricoLista({ roletaId, filtroInicial = 'all' }: Prop
   const filtros = (
     <div className="flex flex-wrap items-center gap-3">
       <div role="radiogroup" aria-label="Quais leads mostrar" className="flex gap-2">
-        <Button type="button" size="sm" role="radio" aria-checked={filtro === 'all'} variant={filtro === 'all' ? 'default' : 'outline'} onClick={() => setFiltro('all')}>
+        <Button type="button" size="sm" role="radio" aria-checked={filtro === 'all'} variant={filtro === 'all' ? 'default' : 'outline'} aria-pressed={filtro === 'all'} onClick={() => setFiltro('all')}>
           Todos
         </Button>
-        <Button type="button" size="sm" role="radio" aria-checked={filtro === 'attention'} variant={filtro === 'attention' ? 'default' : 'outline'} onClick={() => setFiltro('attention')}>
+        <Button type="button" size="sm" role="radio" aria-checked={filtro === 'attention'} variant={filtro === 'attention' ? 'default' : 'outline'} aria-pressed={filtro === 'attention'} onClick={() => setFiltro('attention')}>
           Precisa de atenção
         </Button>
       </div>
@@ -147,9 +148,7 @@ export default function HistoricoLista({ roletaId, filtroInicial = 'all' }: Prop
     if (erro) return <EmptyState tipo="erro" aoTentarDeNovo={carregar} />;
     if (!itens) {
       return (
-        <div className="flex justify-center py-16 text-muted-foreground" role="status" aria-label="Carregando o histórico">
-          <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
-        </div>
+        <Carregando linhas={5} rotulo="Carregando o histórico" className="py-2" />
       );
     }
     if (itens.length === 0) {

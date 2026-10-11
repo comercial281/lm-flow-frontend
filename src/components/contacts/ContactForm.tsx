@@ -140,12 +140,20 @@ export default function ContactForm({
     });
   };
 
-  // Nome, telefone e e-mail não mudam depois do cadastro (decisão do dono,
-  // 02/10/2026). Telefone/e-mail só o gestor corrige, e só em lead cadastrado
-  // à mão — quem diz é o servidor (`identity_correctable`), que confere de novo
+  // Nome só o responsável pelo lead ou o gestor muda (revisto em 11/10/2026);
+  // telefone/e-mail só o gestor corrige, e só em lead cadastrado à mão. Quem diz
+  // é o servidor (`name_editable`, `identity_correctable`), que confere de novo
   // ao salvar.
-  const nomeTravado = !isNew;
+  const nomeTravado = !isNew && !contact?.name_editable;
   const contatoTravado = !isNew && !contact?.identity_correctable;
+  const avisoDaIdentidade = isNew
+    ? null
+    : [
+        nomeTravado && 'Só o responsável pelo lead ou o gestor muda o nome.',
+        contatoTravado
+          ? 'Telefone e e-mail não mudam depois do cadastro.'
+          : 'Telefone e e-mail: corrija só se foi erro de digitação.',
+      ].filter(Boolean).join(' ');
 
   // O dono atual aparece pro corretor que edita; no cadastro é ele mesmo.
   const corretorExibido = corretor
@@ -160,12 +168,8 @@ export default function ContactForm({
   return (
     <form onSubmit={handleSubmit} className="flex max-h-[calc(90dvh-4.5rem)] flex-col">
       <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
-        {nomeTravado && (
-          <p className="text-xs text-muted-foreground">
-            {contatoTravado
-              ? 'Nome, telefone e e-mail não mudam depois do cadastro.'
-              : 'O nome não muda depois do cadastro. Telefone e e-mail: corrija só se foi erro de digitação.'}
-          </p>
+        {avisoDaIdentidade && (
+          <p className="text-xs text-muted-foreground">{avisoDaIdentidade}</p>
         )}
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

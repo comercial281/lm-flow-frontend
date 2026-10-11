@@ -15,6 +15,7 @@ import { propertiesService } from '@/services/properties/propertiesService';
 import { propertyPhotosService } from '@/services/propertyPhotos/propertyPhotosService';
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
 import PublishLandingButton from '@/features/landing/manage/PublishLandingButton';
+import { Button } from '@/components/ui/ds';
 
 // Endereço da aba de landings dentro do Site Builder — a casa da funcionalidade.
 const LANDINGS_TAB = '/settings/site-builder?tab=landings';
@@ -122,13 +123,12 @@ export default function LandingByIdEditorPage() {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center text-foreground">
         <p className="max-w-md">{error}</p>
-        <button
+        <Button
           type="button"
           onClick={() => navigate(LANDINGS_TAB)}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
         >
           Voltar
-        </button>
+        </Button>
       </div>
     );
   }

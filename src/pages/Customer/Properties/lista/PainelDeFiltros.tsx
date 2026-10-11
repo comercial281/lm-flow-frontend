@@ -4,7 +4,7 @@
 // "Buscar". Pílulas são botões com aria-pressed: caixinha nativa tem teto no build.
 // Preço é digitado: só vai para a lista 400 ms depois da última tecla, como a busca.
 import { useEffect, useId, useRef, useState } from 'react';
-import { Button } from '@/components/ui/ds';
+import { Card, Button } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import { PROPERTY_TYPE_LABELS } from '@/services/properties/propertiesService';
 import { numero } from '@/lib/formato';
@@ -185,13 +185,13 @@ export default function PainelDeFiltros({ kind, filtros, facetas, aoMudar, aoLim
   })();
 
   return (
-    <section aria-label="Filtros" className="mt-3 rounded-xl border bg-card p-4 shadow-sm">
+    <Card role="region" aria-label="Filtros" className="mt-3 gap-0 p-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">{corpo}</div>
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t pt-3">
         <span className="mr-auto text-xs text-muted-foreground">A lista atualiza enquanto você escolhe.</span>
         <Button variant="ghost" onClick={aoLimpar}>Limpar filtros</Button>
         <Button variant="outline" onClick={aoRecolher}>Recolher</Button>
       </div>
-    </section>
+    </Card>
   );
 }

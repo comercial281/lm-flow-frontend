@@ -4,10 +4,6 @@ import {
   Card,
   CardContent,
   Button,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
   Textarea,
 } from '@/components/ui/ds';
 import {
@@ -21,6 +17,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BaseHeader, Pagina } from '@/components/base';
+import Abas from '@/components/base/Abas';
+import Carregando from '@/components/base/Carregando';
 import { useLanguage } from '@/hooks/useLanguage';
 import { usePermissions } from '@/contexts/PermissionsContext';
 
@@ -593,12 +591,7 @@ export default function ChannelSettings() {
     // o resto da tela sempre que este spinner aparecer no caminho.
     return (
       <>
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">{t('settings.loading')}</p>
-          </div>
-        </div>
+        <Carregando variante="texto" linhas={8} rotulo={t('settings.loading')} className="p-6" />
         {ownerPrompt.dialog}
       </>
     );
@@ -676,28 +669,19 @@ export default function ChannelSettings() {
           )}
 
           {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <div className="flex flex-col gap-2 space-y-6">
             {/* Uma aba só não é escolha: a barra viraria enfeite. */}
-            <TabsList
-              className={`flex flex-wrap justify-start gap-1 bg-transparent p-0 h-auto ${tabs.length < 2 ? 'hidden' : ''}`}
-            >
-              {tabs.map(tab => {
-                const Icon = tab.icon;
-                return (
-                  <TabsTrigger
-                    key={tab.key}
-                    value={tab.key}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span className="text-sm">{tab.name}</span>
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
+            {tabs.length >= 2 && (
+              <Abas
+                rotulo="Partes do canal"
+                ativa={activeTab}
+                aoTrocar={setActiveTab}
+                abas={tabs.map(tab => ({ chave: tab.key, rotulo: tab.name, icone: tab.icon }))}
+              />
+            )}
 
             {/* Tab Contents */}
-            <TabsContent value="inbox_settings">
+            {activeTab === 'inbox_settings' && <div>
               {activeTab === 'inbox_settings' && <div className="space-y-6">
                 {/* Basic Settings */}
                 <Card>
@@ -802,10 +786,10 @@ export default function ChannelSettings() {
                   </Card>
                 )}
               </div>}
-            </TabsContent>
+            </div>}
 
             {/* Collaborators Tab */}
-            <TabsContent value="collaborators">
+            {activeTab === 'collaborators' && <div>
               {activeTab === 'collaborators' && <CollaboratorsForm
                 inboxId={inboxId}
                 ownerUserId={inbox?.owner_user_id ?? null}
@@ -830,10 +814,10 @@ export default function ChannelSettings() {
                   await loadChannelData(); // Refresh data after update (e depois da pergunta, uma vez só)
                 }}
               />}
-            </TabsContent>
+            </div>}
 
             {/* Pre-Chat Form Tab */}
-            <TabsContent value="preChatForm">
+            {activeTab === 'preChatForm' && <div>
               {activeTab === 'preChatForm' && <PreChatForm
                 inboxId={inboxId}
                 preChatFormEnabled={inbox?.pre_chat_form_enabled === true}
@@ -851,10 +835,10 @@ export default function ChannelSettings() {
                   await loadChannelData(); // Refresh data after update
                 }}
               />}
-            </TabsContent>
+            </div>}
 
             {/* Widget Builder Tab */}
-            <TabsContent value="widgetBuilder">
+            {activeTab === 'widgetBuilder' && <div>
               {activeTab === 'widgetBuilder' && <WidgetBuilderForm
                 inboxId={inboxId}
                 inbox={{
@@ -876,10 +860,10 @@ export default function ChannelSettings() {
                   await loadChannelData();
                 }}
               />}
-            </TabsContent>
+            </div>}
 
             {/* Configuration Tab */}
-            <TabsContent value="configuration">
+            {activeTab === 'configuration' && <div>
               {activeTab === 'configuration' && <ConfigurationForm
                 inboxId={inboxId}
                 inbox={inbox}
@@ -894,10 +878,10 @@ export default function ChannelSettings() {
                   }
                 }}
               />}
-            </TabsContent>
+            </div>}
 
             {/* Message Templates Tab */}
-            <TabsContent value="messageTemplates">
+            {activeTab === 'messageTemplates' && <div>
               {activeTab === 'messageTemplates' && <MessageTemplateForm
                 inboxId={inboxId}
                 channelType={inbox?.channel_type || ''}
@@ -906,9 +890,9 @@ export default function ChannelSettings() {
                   await loadChannelData();
                 }}
               />}
-            </TabsContent>
+            </div>}
 
-          </Tabs>
+          </div>
       </Pagina>
 
       {ownerPrompt.dialog}

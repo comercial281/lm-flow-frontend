@@ -8,8 +8,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/ds';
-import { Loader2, CheckCircle2, XCircle, AlertTriangle, History, RefreshCw, FlaskConical } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, History, RefreshCw, FlaskConical } from 'lucide-react';
 import { toast } from 'sonner';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   leadAutomationService,
@@ -69,13 +71,17 @@ interface Props {
 export default function AutomationHistoryDialog({ rule, open, onOpenChange }: Props) {
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<AutomationLog[]>([]);
+  // Falha na carga não pode cair no "Nenhum lead passou…" (erro nunca vira vazio).
+  const [erro, setErro] = useState(false);
 
   const load = async () => {
     if (!rule) return;
     setLoading(true);
     try {
       setLogs(await leadAutomationService.getLogs(rule.id));
+      setErro(false);
     } catch (e) {
+      setErro(true);
       // Clique explícito: aqui o motivo APARECE (inclusive a recusa por cargo,
       // que a API devolve em outro formato — quem lê só um dos dois mostra a
       // frase genérica e manda procurar o problema no lugar errado).
@@ -87,7 +93,10 @@ export default function AutomationHistoryDialog({ rule, open, onOpenChange }: Pr
 
   useEffect(() => {
     if (open && rule) load();
-    if (!open) setLogs([]);
+    if (!open) {
+      setLogs([]);
+      setErro(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, rule?.id]);
 
@@ -105,17 +114,18 @@ export default function AutomationHistoryDialog({ rule, open, onOpenChange }: Pr
           </DialogDescription>
         </DialogHeader>
 
-        {loading && (
-          <div className="flex items-center gap-2 py-10 justify-center text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
-          </div>
+        {loading && <Carregando linhas={4} className="py-2" />}
+
+        {!loading && erro && logs.length === 0 && (
+          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} />
         )}
 
-        {!loading && logs.length === 0 && (
-          <p className="py-8 text-sm text-muted-foreground text-center">
-            Nenhum lead passou por esta automação ainda. As linhas aparecem aqui a partir do
-            próximo lead que entrar.
-          </p>
+        {!loading && !erro && logs.length === 0 && (
+          <EmptyState
+            tamanho="compacto"
+            title="Nenhum lead passou por esta automação ainda."
+            description="As linhas aparecem aqui a partir do próximo lead que entrar."
+          />
         )}
 
         {!loading && logs.length > 0 && (

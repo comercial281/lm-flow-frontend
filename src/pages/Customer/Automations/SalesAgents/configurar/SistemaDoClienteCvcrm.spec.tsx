@@ -60,7 +60,7 @@ describe('Sistema do cliente → CVCRM', () => {
 
     expect(await screen.findByText(/cria um lead de verdade no CVCRM/)).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: /Mandar um lead de teste/ }));
-    expect(await screen.findByRole('status')).toHaveTextContent('Não chegou: O CVCRM recusou o e-mail ou o token.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não chegou: O CVCRM recusou o e-mail ou o token.');
     expect(servico.testWebhook).toHaveBeenCalledWith('ia-1');
   });
 

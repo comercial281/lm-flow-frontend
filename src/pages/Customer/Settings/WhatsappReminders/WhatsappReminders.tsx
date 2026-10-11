@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Bell, Play, Plus, Pencil, Loader2, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Bell, Play, Plus, Pencil, Loader2, Trash2 } from 'lucide-react';
 import {
   Button,
   Checkbox,
@@ -45,6 +45,7 @@ import BaseHeader from '@/components/base/BaseHeader';
 import EmptyState from '@/components/base/EmptyState';
 import Chave from '@/components/base/Chave';
 import IconActionButton from '@/components/base/IconActionButton';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import { PhoneInput } from '@/components/shared/PhoneInput';
 
 // Tela piloto da Fase 3 (base de design e linguagem). O que mudou aqui é a
@@ -307,13 +308,11 @@ export default function WhatsappReminders() {
                     <IconActionButton label="Editar" variant="ghost" onClick={() => openEdit(r)} icon={<Pencil className="w-4 h-4" />} />
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost" aria-label={`Mais ações de ${r.name}`}>
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
+                        <BotaoMaisAcoes aria-label={`Mais ações de ${r.name}`} />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => remove(r)} className="text-destructive">
-                          <Trash2 className="w-4 h-4 mr-2" /> Excluir
+                        <DropdownMenuItem variant="destructive" onClick={() => remove(r)}>
+                          <Trash2 className="h-4 w-4" /> Excluir
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

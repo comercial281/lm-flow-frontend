@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/ds';
+import { Card, Button } from '@/components/ui/ds';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { APARENCIA_FABRICA, CORES_DO_FUNDO, textoSobre } from '@/features/siteBuilder/public/aparenciaConfig';
 import { HOME_FABRICA } from '@/features/siteBuilder/public/homeConfig';
@@ -141,8 +141,8 @@ export default function TelaModelo({ siteForm, setF, urlDoSite, noAr = false, ao
     <>
       <div className="grid gap-5 md:grid-cols-3">
         {MODELOS_DO_SITE.map(m => (
-          <div key={m.id} role="group" aria-label={m.nome}
-            className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4">
+          <Card key={m.id} role="group" aria-label={m.nome}
+            className="gap-4 p-4">
             <Miniatura id={m.id} principal={principal} destaque={destaque} />
             <div className="flex-1 space-y-1">
               <h3 className="text-base font-semibold">{m.nome}</h3>
@@ -161,7 +161,7 @@ export default function TelaModelo({ siteForm, setF, urlDoSite, noAr = false, ao
                 Ver como fica
               </Button>
             )}
-          </div>
+          </Card>
         ))}
       </div>
       {comPrevia && (

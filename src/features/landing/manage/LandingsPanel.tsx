@@ -2,14 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
   Button,
   Dialog,
   DialogContent,
@@ -29,6 +21,7 @@ import { landingTemplatesService } from '@/services/landingPages/landingTemplate
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
 import { getTenantSlug } from '@/services/core/tenant';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 import LeadRoutingModal from './LeadRoutingModal';
 import CreateLandingWizard from '@/features/landing/wizard/CreateLandingWizard';
 import { landingPublicUrl, slugifyLandingName } from './landingUrl';
@@ -57,7 +50,7 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
   const [publishName, setPublishName] = useState('');
 
   // Excluir: landing publicada mata o link que já está no anúncio — confirma.
-  const [deleting, setDeleting] = useState<LandingPageDTO | null>(null);
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   // Salvar como template (só a Leal Mídia: template global é decisão da casa).
   const [templating, setTemplating] = useState<LandingPageDTO | null>(null);
@@ -156,10 +149,16 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
     }
   };
 
-  const confirmDelete = async () => {
-    if (!deleting) return;
-    const page = deleting;
-    setDeleting(null);
+  const confirmDelete = async (page: LandingPageDTO) => {
+    const ok = await confirmar({
+      titulo: `Excluir “${page.title}”?`,
+      descricao: page.active
+        ? 'Esta landing está PUBLICADA. Excluir derruba o link que já está no ar — quem clicar no anúncio cai numa página que não existe mais. Os leads já capturados continuam no CRM.'
+        : 'A landing e as seções montadas nela são apagadas. Os leads já capturados continuam no CRM.',
+      rotuloDaAcao: 'Excluir',
+      destrutivo: true,
+    });
+    if (!ok) return;
     try {
       await siteBuilderService.deletePage(siteId, page.id);
       setLandings((prev) => prev.filter((l) => l.id !== page.id));
@@ -243,7 +242,7 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
                       <LayoutTemplate className="h-3.5 w-3.5" /> Salvar como template
                     </button>
                   )}
-                  <button type="button" onClick={() => setDeleting(l)}
+                  <button type="button" onClick={() => confirmDelete(l)}
                     className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-red-500">
                     <Trash2 className="h-3.5 w-3.5" /> Excluir
                   </button>
@@ -355,23 +354,7 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
         </DialogContent>
       </Dialog>
 
-      {/* Excluir */}
-      <AlertDialog open={!!deleting} onOpenChange={(v) => (v ? null : setDeleting(null))}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir “{deleting?.title}”?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleting?.active
-                ? 'Esta landing está PUBLICADA. Excluir derruba o link que já está no ar — quem clicar no anúncio cai numa página que não existe mais. Os leads já capturados continuam no CRM.'
-                : 'A landing e as seções montadas nela são apagadas. Os leads já capturados continuam no CRM.'}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Excluir</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {dialogoDeConfirmacao}
 
       {routingPage && (
         <LeadRoutingModal

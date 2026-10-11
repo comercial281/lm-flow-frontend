@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import { ChevronDown, ChevronUp, GripVertical, Plus, SlidersHorizontal, Trash2 } from 'lucide-react';
-import { Button, Checkbox, Input, Label as UILabel } from '@/components/ui/ds';
+import { Card, Button, Checkbox, Input, Label as UILabel } from '@/components/ui/ds';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { HOME_FABRICA, type HomeConfig, type RegrasVitrine, type Vitrine } from '@/features/siteBuilder/public/homeConfig';
 import { ROTULO_TIPO, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
@@ -104,7 +104,7 @@ function ItemVitrine({ vitrine: v, primeira, ultima, aberta, alternarEditor, mud
 
   return (
     <Reorder.Item value={v} dragListener={false} dragControls={controles} className="list-none">
-      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+      <Card className="gap-3 p-4">
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" aria-label="Arrastar pra mudar a ordem" title="Arrastar pra mudar a ordem"
             onPointerDown={e => controles.start(e)}
@@ -147,7 +147,7 @@ function ItemVitrine({ vitrine: v, primeira, ultima, aberta, alternarEditor, mud
           <EditorDeRegra idBase={idBase} regras={v.rules ?? REGRA_VAZIA}
             mudar={parte => mudar({ rules: { ...(v.rules ?? REGRA_VAZIA), ...parte } })} />
         )}
-      </div>
+      </Card>
     </Reorder.Item>
   );
 }

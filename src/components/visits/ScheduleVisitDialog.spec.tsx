@@ -97,11 +97,11 @@ describe('Agendar visita', () => {
     expect(screen.queryByRole('button', { name: 'Bruno' })).not.toBeInTheDocument();
   });
 
-  it('o modal é maior (64rem de largura máxima)', async () => {
+  it('é a janela larga da casa (duas colunas: size="wide", teto de 1400px)', async () => {
     comoGestor();
     abrir();
 
-    expect(await screen.findByRole('dialog')).toHaveStyle({ maxWidth: '64rem' });
+    expect(await screen.findByRole('dialog')).toHaveClass('sm:max-w-[1400px]');
   });
 
   it('gestor: vê os corretores em botões e escolher o cliente marca o dono do lead', async () => {

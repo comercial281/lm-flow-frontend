@@ -8,6 +8,7 @@ import {
   type ReentryMode,
   type ReentrySetting,
 } from '@/features/flowAutomations/reentry';
+import Aviso from '@/components/base/Aviso';
 import { BUSINESS_HOURS_FLOW_HELP, BUSINESS_HOURS_LABEL } from '@/features/flowAutomations/businessHours';
 
 // Configurações do fluxo: "Pode rodar de novo pro mesmo lead" (sprint 2,
@@ -83,9 +84,9 @@ export function FlowSettingsDialog({ open, settings, triggerEvent, onClose, onSa
                 )}
               </label>
               {option.value === 'always' && warning && (
-                <p className="mt-1 ml-6 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-700">
+                <Aviso tom="atencao" compacto className="mt-1 ml-6">
                   {warning}
-                </p>
+                </Aviso>
               )}
             </div>
           ))}

@@ -2,9 +2,10 @@
 // Quem é o lead. Na janela: foto, nome grande, telefone, e-mail e o selo da
 // origem, com os botões do topo ao lado. Na página (11/10/2026, "cartão da
 // pessoa") os dados vão pro cartão do topo (`DadosDaPessoa`, no
-// CardDoLeadHeader) e a Ficha não tem mais a caixa "Dados da pessoa". Nome,
-// telefone e e-mail não se editam no card; o lápis só aparece com
-// `identity_correctable` do servidor (decisão de 02/10).
+// CardDoLeadHeader) e a Ficha não tem mais a caixa "Dados da pessoa". O lápis só
+// aparece com o que o servidor libera: nome (`name_editable`: responsável ou
+// gestor, 11/10) e telefone/e-mail (`identity_correctable`: gestor em lead
+// cadastrado à mão, 02/10).
 import type { ReactNode } from 'react';
 import { Mail, Pencil, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
@@ -16,16 +17,19 @@ import { classeDaOrigem } from '../cardDoLead';
 import type { CardDoLead } from '../useCardDoLead';
 
 function LapisDeCorrigir({ card }: { card: CardDoLead }) {
-  const { corrigivel, contato, identidade } = card;
-  if (!corrigivel || contato?.id == null) return null;
+  const { corrigivel, nomeEditavel, contato, identidade } = card;
+  if (!(corrigivel || nomeEditavel) || contato?.id == null) return null;
+  const titulo = corrigivel && nomeEditavel
+    ? 'Corrigir nome, telefone ou e-mail'
+    : corrigivel ? 'Corrigir telefone ou e-mail' : 'Corrigir nome';
   return (
     <Button
       type="button"
       variant="ghost"
       size="sm"
       className="h-8 w-8 shrink-0 p-0"
-      aria-label="Corrigir telefone ou e-mail"
-      title="Corrigir telefone ou e-mail"
+      aria-label={titulo}
+      title={titulo}
       onClick={() => identidade.setCorrigindo(true)}
     >
       <Pencil className="h-3.5 w-3.5" />

@@ -94,7 +94,7 @@ export default function UserCard({
           </div>
         </div>
 
-        <div className="flex border-t border-sidebar-border opacity-0 group-hover:opacity-100 toque:opacity-100 transition-opacity duration-200">
+        <div className="flex border-t border-sidebar-border opacity-70 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
           {onStartConversation && (
             <>
               <Button

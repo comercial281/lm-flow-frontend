@@ -6,9 +6,10 @@ import {
   type Node, type Edge, type NodeChange, type Connection, type ReactFlowInstance, BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { ArrowLeft, Save, Play, Loader2, Settings2, AlertTriangle, LayoutGrid, Copy, Users } from 'lucide-react';
+import { ArrowLeft, Save, Play, Loader2, Settings2, LayoutGrid, Copy, Users } from 'lucide-react';
 import { Badge, Button, Input } from '@/components/ui/ds';
 import Chave from '@/components/base/Chave';
+import Faixa from '@/components/base/Faixa';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation, FlowAutomationNode, TestRunResult } from '@/types/flowAutomations';
 import {
@@ -53,6 +54,8 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { ehCelular } from '@/hooks/useCelular';
 import FlowCanvasCelular from './FlowCanvasCelular';
 import { cn } from '@/lib/utils';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 // Canvas do construtor de fluxos. Fonte de verdade é o array `nodes` (árvore
 // de ponteiros); os Node/Edge do React Flow são SEMPRE derivados dele, nunca
@@ -131,6 +134,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const [initialNodeId, setInitialNodeId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState<ReturnType<typeof snapshot> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [erroAoCarregar, setErroAoCarregar] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pendingSource, setPendingSource] = useState<{ id: string; handle: OutputHandle } | null>(null);
   const [testResult, setTestResult] = useState<TestRunResult | null>(null);
@@ -158,7 +162,9 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     setLoading(true);
     try {
       applyFlow(await flowAutomationsService.get(id));
+      setErroAoCarregar(false);
     } catch (e) {
+      setErroAoCarregar(true);
       toast.error(serverMessage(e, 'Não deu pra carregar o fluxo'));
     } finally {
       setLoading(false);
@@ -544,8 +550,11 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const messageEvent = triggerEvents(trigger).includes('lead.message_received') ? 'lead.message_received' : trigger.event;
   const reentryAlert = reentryWarning(reentry, messageEvent);
 
+  if (!loading && !automation && erroAoCarregar) {
+    return <EmptyState tipo="erro" className="h-full" aoTentarDeNovo={() => void load()} />;
+  }
   if (loading || !automation) {
-    return <div className="flex h-full items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+    return <Carregando variante="texto" linhas={6} className="p-6" />;
   }
 
   // A chave de ligar: a mesma no canvas e na tela do celular.
@@ -651,27 +660,20 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
           )}
         </div>
         {readOnly && (
-          <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-1.5 text-xs text-muted-foreground" role="status" data-testid="faixa-so-ver">
-            <Users className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span>
+          <Faixa tom="neutro" icone={Users}>
+            <span data-testid="faixa-so-ver">
               {automation.team
                 ? 'Este funil é da equipe: só o gestor edita. Você pode disparar ele nas conversas ou duplicar pra ter a sua cópia.'
                 : 'Você só pode ver este funil. Duplique pra ter a sua cópia.'}
             </span>
-          </div>
+          </Faixa>
         )}
 
         {!readOnly && !step && !automation.is_enabled && blockingProblem && nodes.length > 0 && (
-          <div className="flex items-center gap-2 border-b border-amber-500/40 bg-amber-500/10 px-4 py-1.5 text-xs text-amber-700 dark:text-amber-300" role="status">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span>{blockingProblem}</span>
-          </div>
+          <Faixa tom="atencao">{blockingProblem}</Faixa>
         )}
         {reentryAlert && (
-          <div className="flex items-center gap-2 border-b border-amber-500/40 bg-amber-500/10 px-4 py-1.5 text-xs text-amber-700 dark:text-amber-300" role="status">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span>{reentryAlert}</span>
-          </div>
+          <Faixa tom="atencao">{reentryAlert}</Faixa>
         )}
         {banner !== undefined ? (
           banner && <div data-testid="faixa-do-canvas">{banner}</div>

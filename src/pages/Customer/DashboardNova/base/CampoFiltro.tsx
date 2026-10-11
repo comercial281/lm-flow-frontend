@@ -25,7 +25,7 @@ export const CampoFiltro: React.FC<Props> = ({ rotulo, id, idRotulo, icone, seta
     <div className={`lmf-campo-caixa${icone ? '' : ' lmf-campo-sem-icone'}`}>
       {icone && <span className="lmf-campo-icone" aria-hidden>{icone}</span>}
       {children}
-      {seta && <ChevronDown size={14} aria-hidden className="lmf-campo-seta" />}
+      {seta && <ChevronDown aria-hidden className="h-3.5 w-3.5 lmf-campo-seta" />}
     </div>
   );
   if (id) {

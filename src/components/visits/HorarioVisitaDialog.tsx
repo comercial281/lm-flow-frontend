@@ -24,6 +24,8 @@ import { esquecerAgendaLigada } from '@/features/visits/useAgendaLigada';
 import { avisoSemente, opcoesDeHora, type SeededFrom } from '@/features/visits/agenda';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { data } from '@/lib/formato';
+import Aviso from '@/components/base/Aviso';
+import EmptyState from '@/components/base/EmptyState';
 
 interface Props {
   open: boolean;
@@ -101,7 +103,7 @@ export function HorarioVisitaDialog({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Horário de visita</DialogTitle>
           <DialogDescription>Vale para a IA e para quem marca à mão. Fora disso, nenhuma visita é marcada.</DialogDescription>
@@ -123,9 +125,7 @@ export function HorarioVisitaDialog({ open, onOpenChange }: Props) {
         {estado === 'pronto' && (
           <div className="space-y-5 py-2">
             {aviso && (
-              <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-                {aviso}
-              </p>
+              <Aviso tom="atencao">{aviso}</Aviso>
             )}
 
             <div role="group" aria-label="Dias da semana">
@@ -167,7 +167,7 @@ export function HorarioVisitaDialog({ open, onOpenChange }: Props) {
                 </Button>
               </div>
               {fechadas.length === 0 ? (
-                <p className="mt-2 text-sm text-muted-foreground">Nenhuma data fechada.</p>
+                <EmptyState tamanho="compacto" title="Nenhuma data fechada." className="mt-2 p-3" />
               ) : (
                 <ul className="mt-2 flex flex-wrap gap-2">
                   {fechadas.map(d => (

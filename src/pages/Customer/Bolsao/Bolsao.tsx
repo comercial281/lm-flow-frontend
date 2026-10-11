@@ -21,6 +21,8 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
+import Carregando from '@/components/base/Carregando';
+import Aviso from '@/components/base/Aviso';
 import { BaseHeader, Pagina } from '@/components/base';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import bolsaoService, { BolsaoLead, BolsaoQuota } from '@/services/bolsao/bolsaoService';
@@ -47,6 +49,8 @@ export default function Bolsao() {
   const [leads, setLeads] = useState<BolsaoLead[]>([]);
   const [quota, setQuota] = useState<BolsaoQuota | null>(null);
   const [loading, setLoading] = useState(true);
+  // Falha na leitura não vira "O Bolsão está vazio agora".
+  const [erroAoCarregar, setErroAoCarregar] = useState(false);
   const [claiming, setClaiming] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   // O lead recém-puxado, com o contato revelado. Fica no topo até o corretor
@@ -64,7 +68,9 @@ export default function Bolsao() {
       );
       setLeads(rows);
       setQuota(q);
+      setErroAoCarregar(false);
     } catch (e) {
+      setErroAoCarregar(true);
       // No polling silencioso não vale gritar: a rede oscila, e um toast a cada
       // 30 segundos transformaria a tela numa cachoeira de erro.
       if (!silent) toast.error(apiErrorMessage(e, 'Não consegui carregar o Bolsão.'));
@@ -161,9 +167,9 @@ export default function Bolsao() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin mr-2" /> Carregando o Bolsão…
-        </div>
+        <Carregando rotulo="Carregando o Bolsão…" className="py-2" />
+      ) : leads.length === 0 && erroAoCarregar ? (
+        <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />
       ) : leads.length === 0 ? (
         // O estado vazio importa: sem explicação, o corretor conclui que a tela
         // está quebrada em vez de que ninguém abasteceu ainda.
@@ -213,28 +219,26 @@ function QuotaBanner({
   if (!quota) return null;
 
   return (
-    <Card className={blocked ? 'border-amber-500/50 bg-amber-500/5' : 'border-emerald-500/40 bg-emerald-500/5'}>
-      <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
-        <div className="flex items-center gap-3">
-          {blocked ? <Clock className="h-5 w-5 text-amber-600" /> : <Hand className="h-5 w-5 text-emerald-600" />}
-          <div>
-            <p className="font-medium text-foreground">
-              {blocked
-                ? 'Você atingiu o limite por enquanto'
-                : `Você pode pegar mais ${quota.remaining} ${quota.remaining === 1 ? 'lead' : 'leads'}`}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {blocked && countdown
-                ? `Próxima liberação em ${countdown}`
-                : `São ${quota.limit} ${quota.limit === 1 ? 'lead' : 'leads'} a cada ${quota.window_minutes} minutos.`}
-            </p>
-          </div>
-        </div>
+    <Aviso
+      tom={blocked ? 'atencao' : 'sucesso'}
+      icone={blocked ? Clock : Hand}
+      titulo={
+        blocked
+          ? 'Você atingiu o limite por enquanto'
+          : `Você pode pegar mais ${quota.remaining} ${quota.remaining === 1 ? 'lead' : 'leads'}`
+      }
+      acao={
         <Button variant="ghost" size="sm" onClick={onRefresh}>
           <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
         </Button>
-      </CardContent>
-    </Card>
+      }
+    >
+      <p>
+        {blocked && countdown
+          ? `Próxima liberação em ${countdown}`
+          : `São ${quota.limit} ${quota.limit === 1 ? 'lead' : 'leads'} a cada ${quota.window_minutes} minutos.`}
+      </p>
+    </Aviso>
   );
 }
 
@@ -322,16 +326,11 @@ function ClaimedCard({
   onDismiss: () => void;
 }) {
   return (
-    <Card className="border-emerald-500/50 bg-emerald-500/5">
-      <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
-        <div className="min-w-0">
-          <p className="font-medium text-foreground">{lead.name} agora é seu</p>
-          <p className="text-sm text-muted-foreground">
-            {telefone(lead.phone_number)}
-            {lead.email ? ` · ${lead.email}` : ''}
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <Aviso
+      tom="sucesso"
+      titulo={`${lead.name} agora é seu`}
+      acao={
+        <>
           {onOpen && (
             <Button size="sm" onClick={onOpen}>
               <UserRound className="h-4 w-4 mr-2" /> Abrir contato
@@ -340,8 +339,13 @@ function ClaimedCard({
           <Button size="sm" variant="ghost" onClick={onDismiss}>
             Fechar
           </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </>
+      }
+    >
+      <p>
+        {telefone(lead.phone_number)}
+        {lead.email ? ` · ${lead.email}` : ''}
+      </p>
+    </Aviso>
   );
 }

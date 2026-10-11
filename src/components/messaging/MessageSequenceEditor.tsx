@@ -266,7 +266,7 @@ function ItemEditor({
           className="flex items-center gap-1.5 px-2 py-0.5 rounded-md"
           style={{ background: color + '20', color }}
         >
-          <Icon size={12} />
+          <Icon className="h-3.5 w-3.5" />
           <span className="text-xs font-semibold">{KIND_LABELS[item.kind]}</span>
         </div>
         {item.kind !== 'text' && item.kind !== 'delay' && item.kind !== 'contact' && (
@@ -292,19 +292,19 @@ function ItemEditor({
         <div className="ml-auto flex items-center gap-0.5">
           <Button variant="ghost" size="icon" className="h-7 w-7"
                   onClick={onMoveUp} disabled={index === 0} aria-label="Mover pra cima">
-            <ChevronUp size={14} />
+            <ChevronUp className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" className="h-7 w-7"
                   onClick={onMoveDown} disabled={index === totalCount - 1} aria-label="Mover pra baixo">
-            <ChevronDown size={14} />
+            <ChevronDown className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" className="h-7 w-7"
                   onClick={onDuplicate} aria-label="Duplicar" title="Duplicar">
-            <Copy size={14} />
+            <Copy className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"
                   onClick={onRemove} disabled={totalCount === 1} aria-label="Remover">
-            <Trash2 size={14} />
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -368,7 +368,7 @@ function ItemEditor({
               )}
               {item.kind === 'document' && (
                 <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
-                  <FileText size={20} className="text-orange-500" />
+                  <FileText className="h-5 w-5 text-orange-500" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
@@ -383,12 +383,12 @@ function ItemEditor({
                 onClick={() => onUpdate({ media_url: null, media_filename: null, pendingFile: null })}
                 aria-label="Remover mídia"
               >
-                <X size={14} />
+                <X className="h-4 w-4" />
               </Button>
             </div>
           ) : uploading ? (
             <div className="flex items-center gap-2 bg-background border border-border rounded-lg px-2.5 py-2 text-xs text-muted-foreground">
-              <Loader2 size={14} className="animate-spin" /> Enviando arquivo...
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Enviando arquivo...
             </div>
           ) : item.kind === 'audio' ? (
             recording ? (
@@ -406,7 +406,7 @@ function ItemEditor({
                   onClick={stopRec}
                   aria-label="Parar gravação"
                 >
-                  <Square size={12} fill="currentColor" />
+                  <Square className="h-4 w-4" fill="currentColor" />
                 </Button>
               </div>
             ) : (
@@ -416,14 +416,14 @@ function ItemEditor({
                   onClick={startRec}
                   className="flex-1 justify-center gap-2 border-dashed"
                 >
-                  <Mic size={14} /> Gravar áudio
+                  <Mic className="h-4 w-4" /> Gravar áudio
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
                   className="flex-1 justify-center gap-2 border-dashed"
                 >
-                  <Upload size={14} /> Subir arquivo
+                  <Upload className="h-4 w-4" /> Subir arquivo
                 </Button>
               </div>
             )
@@ -433,7 +433,7 @@ function ItemEditor({
               onClick={() => fileInputRef.current?.click()}
               className="w-full justify-center gap-2 border-dashed"
             >
-              <Upload size={14} /> Anexar {KIND_LABELS[item.kind].toLowerCase()}
+              <Upload className="h-4 w-4" /> Anexar {KIND_LABELS[item.kind].toLowerCase()}
             </Button>
           )}
 
@@ -505,7 +505,7 @@ function ItemEditor({
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Clock size={14} className="text-muted-foreground shrink-0" />
+              <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               <span className="text-xs text-muted-foreground">Aguardar</span>
               <Input
                 type="number"
@@ -522,7 +522,7 @@ function ItemEditor({
           )}
           {index === 0 && (
             <div className="flex items-center gap-1 text-xs text-orange-500" title="Espera como 1º item não faz sentido">
-              <AlertCircle size={10} />
+              <AlertCircle className="h-3.5 w-3.5" />
               <span>1º item</span>
             </div>
           )}
@@ -572,7 +572,7 @@ function TextVariations({ variations, variables, onChange }: TextVariationsProps
         className="gap-1 h-7 border-dashed"
         title="Adicionar outra forma de escrever a mesma mensagem"
       >
-        <Plus size={12} /> Variação
+        <Plus className="h-4 w-4" /> Variação
       </Button>
     </div>
   );
@@ -601,7 +601,7 @@ function VariationField({ value, index, variables, onChange, onRemove }: Variati
           onClick={onRemove}
           aria-label="Remover variação"
         >
-          <X size={12} />
+          <X className="h-4 w-4" />
         </Button>
       </div>
       <Textarea
@@ -682,7 +682,7 @@ function AddItemButtons({ onAdd, excludeKinds }: { onAdd: (kind: FunnelItemKind)
             onClick={() => onAdd(k)}
             className="gap-1 h-7"
           >
-            <Icon size={12} style={{ color: KIND_COLORS[k] }} />
+            <Icon className="h-4 w-4" style={{ color: KIND_COLORS[k] }} />
             {KIND_LABELS[k]}
           </Button>
         );

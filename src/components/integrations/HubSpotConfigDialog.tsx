@@ -14,6 +14,9 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { toast } from 'sonner';
 import HubSpotService from '@/services/integrations/hubspotService';
 import { MCPTool, HubSpotConfig } from '@/types/integrations';
+import Aviso from '@/components/base/Aviso';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 interface HubSpotConfigDialogProps {
   open: boolean;
@@ -37,6 +40,8 @@ const HubSpotConfigDialog = ({
   const [isConnecting, setIsConnecting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingTools, setIsLoadingTools] = useState(false);
+  // Erro ao buscar as ferramentas não pode aparecer como "Nenhuma ferramenta"
+  const [erroFerramentas, setErroFerramentas] = useState(false);
   const [availableTools, setAvailableTools] = useState<MCPTool[]>([]);
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [config, setConfig] = useState<HubSpotConfig>({
@@ -100,7 +105,9 @@ const HubSpotConfigDialog = ({
     try {
       const response = await HubSpotService.discoverTools(agentId);
       setAvailableTools(response.tools || []);
+      setErroFerramentas(false);
     } catch (error) {
+      setErroFerramentas(true);
       console.error('Error loading HubSpot tools:', error);
       toast.error('Erro ao carregar ferramentas disponíveis');
     } finally {
@@ -183,9 +190,7 @@ const HubSpotConfigDialog = ({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
-          <div className="flex items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
+          <Carregando variante="texto" linhas={4} className="p-4" />
         </DialogContent>
       </Dialog>
     );
@@ -255,23 +260,15 @@ const HubSpotConfigDialog = ({
           /* Connected - Show configuration */
           <div className="space-y-6 py-4">
             <div className="space-y-4">
-              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                <div className="flex items-center gap-2 text-green-800 dark:text-green-200">
-                  <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-                  <span className="font-medium">
-                    {t('edit.integrations.hubspot.connected') || 'Conectado'}
-                  </span>
-                </div>
+              <Aviso tom="sucesso" titulo={t('edit.integrations.hubspot.connected') || 'Conectado'}>
                 {config.username && (
-                  <p className="text-sm text-green-700 dark:text-green-300 mt-2">
+                  <p>
                     {t('edit.integrations.hubspot.connectedAs') || 'Conectado como'}:{' '}
                     <strong>{config.username}</strong>
                   </p>
                 )}
-                {config.email && (
-                  <p className="text-sm text-green-700 dark:text-green-300">{config.email}</p>
-                )}
-              </div>
+                {config.email && <p>{config.email}</p>}
+              </Aviso>
 
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
@@ -311,9 +308,13 @@ const HubSpotConfigDialog = ({
               </div>
 
               {isLoadingTools ? (
-                <div className="flex items-center justify-center p-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
+                <Carregando linhas={3} />
+              ) : erroFerramentas ? (
+                <EmptyState
+                  tipo="erro"
+                  tamanho="compacto"
+                  aoTentarDeNovo={() => void loadAvailableTools()}
+                />
               ) : availableTools.length > 0 ? (
                 <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-3">
                   {availableTools.map(tool => (
@@ -338,9 +339,10 @@ const HubSpotConfigDialog = ({
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center p-4">
-                  {t('edit.integrations.hubspot.noTools') || 'Nenhuma ferramenta disponível'}
-                </p>
+                <EmptyState
+                  tamanho="compacto"
+                  title={t('edit.integrations.hubspot.noTools') || 'Nenhuma ferramenta disponível'}
+                />
               )}
             </div>
 

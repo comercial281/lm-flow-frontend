@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { Download, FileText, File, Image, Music, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import { Attachment } from '@/types/chat/api';

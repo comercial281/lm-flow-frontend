@@ -14,6 +14,7 @@ import {
   Label as UILabel,
 } from '@/components/ui/ds';
 import { apiErrorMessage, isErrorCode } from '@/utils/apiHelpers';
+import EmptyState from '@/components/base/EmptyState';
 import {
   metaPagesService,
   type AvailableMetaPage,
@@ -102,7 +103,7 @@ export default function AddMetaPageDialog({ open, onOpenChange, onAdded }: Props
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Adicionar página do Facebook</DialogTitle>
           <DialogDescription>
@@ -123,9 +124,7 @@ export default function AddMetaPageDialog({ open, onOpenChange, onAdded }: Props
               </p>
             )}
             {list && list.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                Nenhuma página visível para este acesso.
-              </p>
+              <EmptyState tamanho="compacto" title="Nenhuma página visível para este acesso." />
             )}
             {list && list.length > 0 && (
               <ul className="max-h-72 overflow-y-auto divide-y rounded-md border">

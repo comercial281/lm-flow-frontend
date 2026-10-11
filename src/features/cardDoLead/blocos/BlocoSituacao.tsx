@@ -9,6 +9,7 @@
 // card — nunca um segundo seletor de etapa/responsável.
 import { Shuffle, User } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
+import Aviso from '@/components/base/Aviso';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
 import OfferActions from '@/components/roleta/OfferActions';
 import ColocarNoFunil from '@/components/pipelines/card/ColocarNoFunil';
@@ -102,15 +103,20 @@ export function AvisosDaRoleta({ card, semDeOnde = false }: {
         onAccepted={card.aoAceitarOferta}
       />
       {roleta.ofertasAbertas.length > 0 && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 dark:border-amber-900 dark:bg-amber-950/30">
-          <p className="text-[11px] text-amber-800 dark:text-amber-300">
+        <Aviso
+          tom="atencao"
+          compacto
+          acao={
+            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => roleta.setTirando(true)}>
+              Tirar da roleta
+            </Button>
+          }
+        >
+          <p>
             No sorteio agora, esperando o aceite de{' '}
             <strong>{roleta.ofertasAbertas.map(o => o.corretor ?? 'corretor').join(', ')}</strong>.
           </p>
-          <Button variant="outline" size="sm" className="mt-1.5 h-7 text-xs" onClick={() => roleta.setTirando(true)}>
-            Tirar da roleta
-          </Button>
-        </div>
+        </Aviso>
       )}
     </>
   );

@@ -1,4 +1,6 @@
-import { AlertTriangle, ArrowLeft, Monitor } from 'lucide-react';
+import { ArrowLeft, Monitor } from 'lucide-react';
+import { Card } from '@/components/ui/ds';
+import Aviso from '@/components/base/Aviso';
 import Chave from '@/components/base/Chave';
 import Pagina from '@/components/base/Pagina';
 import BaseHeader from '@/components/base/BaseHeader';
@@ -54,18 +56,12 @@ export default function FlowCanvasCelular({
       cabecalho={<BaseHeader title={nome} />}
     >
       {!soVer && naoSalvo && (
-        <div
-          role="status"
-          className="flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300"
-        >
-          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>{AVISO_NAO_SALVO_NO_CELULAR}</span>
-        </div>
+        <Aviso tom="atencao">{AVISO_NAO_SALVO_NO_CELULAR}</Aviso>
       )}
       {!soVer && !naoSalvo && (
-        <div className="rounded-lg border border-border bg-card p-4" data-testid="chave-no-celular">
+        <Card className="gap-0 p-4" data-testid="chave-no-celular">
           <Chave rotulo={textos.chave} ligada={ligado} aoMudar={aoMudarLigado} />
-        </div>
+        </Card>
       )}
       <EmptyState
         icon={Monitor}

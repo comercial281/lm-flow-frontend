@@ -3,6 +3,7 @@
 import { PlayCircle, Lock, Pencil, Trash2, GraduationCap } from 'lucide-react';
 import type { LockCtaType } from '@/hooks/useKnowledge';
 import { LockCta } from './LockOverlay';
+import { Card } from '@/components/ui/ds';
 
 interface Props {
   titulo: string;
@@ -32,38 +33,38 @@ export default function CourseCard({
   const pct = progress && progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
 
   return (
-    <div className="group relative bg-card border border-border hover:border-primary/40 rounded-xl overflow-hidden transition-colors">
+    <Card className="group relative gap-0 overflow-hidden py-0 transition-colors hover:border-primary/40">
       <button onClick={onOpen} className="w-full text-left" type="button">
         <div className="aspect-video bg-gradient-to-br from-primary/20 via-purple-500/10 to-muted flex items-center justify-center relative overflow-hidden">
           {capaUrl ? (
             <img src={capaUrl} alt="" className={`w-full h-full object-cover ${locked ? 'opacity-40' : ''}`} />
           ) : (
-            <GraduationCap size={40} className={`text-primary/70 ${locked ? 'opacity-40' : ''}`} strokeWidth={1.5} />
+            <GraduationCap className={`h-10 w-10 text-primary/70 ${locked ? 'opacity-40' : ''}`} strokeWidth={1.5} />
           )}
           {locked && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/45 backdrop-blur-[1px]">
               <div className="w-11 h-11 rounded-xl bg-white/12 flex items-center justify-center">
-                <Lock size={20} className="text-white" />
+                <Lock className="h-5 w-5 text-white" />
               </div>
               <LockCta lock={lock} />
             </div>
           )}
           {!locked && restricted && (
             <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-semibold rounded-full bg-black/55 text-amber-300 backdrop-blur">
-              <Lock size={9} /> Restrito
+              <Lock className="h-3.5 w-3.5" /> Restrito
             </span>
           )}
         </div>
         <div className="p-4">
           <p className="text-sm font-semibold flex items-center gap-1.5">
-            {locked && <Lock size={12} className="text-muted-foreground shrink-0" />}
+            {locked && <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
             <span className="truncate">{titulo}</span>
           </p>
           {descricao && <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{descricao}</p>}
           {!locked && progress && progress.total > 0 && (
             <div className="mt-3">
-              <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
               </div>
               <p className="text-[10px] text-muted-foreground mt-1">
                 {progress.done}/{progress.total} aulas · {pct}%
@@ -72,14 +73,14 @@ export default function CourseCard({
           )}
           {!locked && (!progress || progress.total === 0) && (
             <p className="mt-3 text-[10px] text-muted-foreground flex items-center gap-1">
-              <PlayCircle size={11} /> Começar
+              <PlayCircle className="h-3.5 w-3.5" /> Começar
             </p>
           )}
         </div>
       </button>
 
       {(onEdit || onDelete) && (
-        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 toque:opacity-100 transition-all">
+        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-80 group-hover:opacity-100 focus-within:opacity-100 transition-all">
           {onEdit && (
             <button
               onClick={onEdit}
@@ -87,7 +88,7 @@ export default function CourseCard({
               title="Editar"
               type="button"
             >
-              <Pencil size={12} />
+              <Pencil className="h-3.5 w-3.5" />
             </button>
           )}
           {onDelete && (
@@ -97,11 +98,11 @@ export default function CourseCard({
               title="Excluir"
               type="button"
             >
-              <Trash2 size={12} />
+              <Trash2 className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

@@ -18,7 +18,7 @@ export type BlocoApi =
   | 'kpis' | 'series' | 'sources' | 'pipeline' | 'agent' | 'ai' | 'response' | 'heatmap'
   | 'upcoming' | 'history' | 'queue'
   | 'properties' | 'pending' | 'team' | 'results'
-  | 'leads_by_weekday' | 'leads_by_hour' | 'leads_6_months';
+  | 'leads_by_weekday' | 'leads_by_hour' | 'leads_6_months' | 'negotiation_time';
 
 /** Item de Próximas visitas. `property_title` não vem de servidor antigo. */
 type UpcomingItemBase = UpcomingBlock['items'][number];
@@ -31,6 +31,11 @@ export interface UpcomingBlockNova { items: UpcomingItem[] }
 export interface PropertiesSummary {
   active: number; new: number; exclusive: number; on_sign: number;
   without_photos: number; off_site: number; stale: number; stale_after_days: number;
+  /**
+   * Empreendimentos ativos por fase, sem período (frente 5 da Nova 27). `plan`
+   * junta pré-lançamento e na planta. Ausente em servidor de antes.
+   */
+  phases?: { plan: number; construction: number; ready: number };
 }
 
 export type PendenciaChave =
@@ -61,6 +66,15 @@ export interface ResultsBlock {
   lead_to_sale_percent: number | null; visits_done: number; good_visits: number;
 }
 
+/**
+ * Tempo médio de negociação (só gestão): da criação do card até o Ganho / o
+ * Perdido, entre os que fecharam no período. `avg_seconds` nulo sem nenhum.
+ */
+export interface NegotiationBlock {
+  won: { count: number; avg_seconds: number | null };
+  lost: { count: number; avg_seconds: number | null };
+}
+
 /** `day`: 0 = domingo … 6 = sábado (DOW do Postgres, no fuso da conta). */
 export interface WeekdayBlock { days: { day: number; leads: number }[] }
 export interface HourBlock { hours: { hour: number; leads: number }[] }
@@ -81,7 +95,7 @@ export interface ScopeInfoNova extends ScopeInfo {
 }
 
 /**
- * Só vêm as chaves pedidas em `blocks=`. `team` e `results` também somem no
+ * Só vêm as chaves pedidas em `blocks=`. `team`, `results` e `negotiation_time` também somem no
  * recorte `mine`, mesmo pedidas.
  */
 export interface DashboardNovaPayload {
@@ -105,6 +119,7 @@ export interface DashboardNovaPayload {
   leads_by_weekday?: Maybe<WeekdayBlock>;
   leads_by_hour?: Maybe<HourBlock>;
   leads_6_months?: Maybe<SixMonthsBlock>;
+  negotiation_time?: Maybe<NegotiationBlock>;
 }
 
 export type ListaKind = PendenciaChave | 'leads_periodo' | 'conversas_periodo';

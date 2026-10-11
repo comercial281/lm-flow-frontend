@@ -1,6 +1,7 @@
 import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
 import { ConnectionTest } from './ConnectionTest';
+import Aviso from '@/components/base/Aviso';
 
 interface FormFooterProps {
   onCancel: () => void;
@@ -76,11 +77,9 @@ export const FormFooter = ({
     <div className="border-t border-border bg-muted/20 px-6 py-4">
       {/* Aviso quando health check não passou */}
       {isDisabledByHealthCheck && (
-        <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-          <p className="text-sm text-orange-800 dark:text-orange-200">
-            ⚠️ {t('newChannel.messages.testConnectionFirst')}
-          </p>
-        </div>
+        <Aviso tom="atencao" className="mb-4">
+          {t('newChannel.messages.testConnectionFirst')}
+        </Aviso>
       )}
 
       <div className="flex justify-between">

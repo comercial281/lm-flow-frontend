@@ -9,6 +9,7 @@ import {
   useUnsetEntitlement,
   type KnowledgeEntitlement,
 } from '@/hooks/useKnowledge';
+import { Button } from '@/components/ui/ds';
 
 interface Props {
   targetType: 'course' | 'module';
@@ -49,7 +50,7 @@ export default function EntitlementsEditor({ targetType, targetId }: Props) {
               key={e.id}
               className="inline-flex items-center gap-1.5 pl-2 pr-1 py-1 text-[11px] rounded-full bg-primary/10 text-primary border border-primary/30"
             >
-              {e.subject_type === 'tenant' ? <Building2 size={11} /> : <UserIcon size={11} />}
+              {e.subject_type === 'tenant' ? <Building2 className="h-3.5 w-3.5" /> : <UserIcon className="h-3.5 w-3.5" />}
               {e.subject_value}
               <button
                 type="button"
@@ -57,7 +58,7 @@ export default function EntitlementsEditor({ targetType, targetId }: Props) {
                 className="p-0.5 hover:text-red-400"
                 title="Remover acesso"
               >
-                <X size={11} />
+                <X className="h-3.5 w-3.5" />
               </button>
             </span>
           ))}
@@ -74,7 +75,7 @@ export default function EntitlementsEditor({ targetType, targetId }: Props) {
               subjectType === 'tenant' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
             }`}
           >
-            <Building2 size={11} /> Cliente
+            <Building2 className="h-3.5 w-3.5" /> Cliente
           </button>
           <button
             type="button"
@@ -83,7 +84,7 @@ export default function EntitlementsEditor({ targetType, targetId }: Props) {
               subjectType === 'user' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
             }`}
           >
-            <UserIcon size={11} /> Usuário
+            <UserIcon className="h-3.5 w-3.5" /> Usuário
           </button>
         </div>
         <input
@@ -98,14 +99,14 @@ export default function EntitlementsEditor({ targetType, targetId }: Props) {
           placeholder={subjectType === 'tenant' ? 'código do cliente (ex.: imob-x)' : 'e-mail do usuário'}
           className="flex-1 bg-background border border-border rounded px-2.5 py-1.5 text-xs"
         />
-        <button
+        <Button
+          size="sm"
           type="button"
           onClick={add}
           disabled={setEnt.isPending || !value.trim()}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >
-          <Plus size={12} /> Add
-        </button>
+          <Plus className="h-4 w-4" /> Add
+        </Button>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Button } from '@/components/ui/ds';
 import { Grid3X3, List, Users } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
+import AlternadorDeVisao from '@/components/base/AlternadorDeVisao';
 import { useNavigate } from 'react-router-dom';
 
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -351,28 +352,14 @@ export default function Teams({ embutido = false }: { embutido?: boolean }) {
 
       {/* View Mode Toggle */}
       <div className="flex items-center justify-end mb-3" data-tour="settings-teams-view-toggle">
-        <div className="flex items-center border rounded-lg">
-          <Button
-            variant={viewMode === 'cards' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('cards')}
-            aria-label="Ver em cartões"
-            title="Ver em cartões"
-            className="border-0 rounded-r-none"
-          >
-            <Grid3X3 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'table' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('table')}
-            aria-label="Ver em tabela"
-            title="Ver em tabela"
-            className="border-0 rounded-l-none"
-          >
-            <List className="h-4 w-4" />
-          </Button>
-        </div>
+        <AlternadorDeVisao
+          valor={viewMode}
+          aoEscolher={setViewMode}
+          opcoes={[
+            { valor: 'cards', icone: Grid3X3, nome: 'Ver em cartões' },
+            { valor: 'table', icone: List, nome: 'Ver em tabela' },
+          ]}
+        />
       </div>
 
       {/* Content */}

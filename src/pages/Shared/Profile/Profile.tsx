@@ -1,10 +1,6 @@
 import { useState, ChangeEvent, useEffect } from 'react';
 import {
   Button,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
   Input,
   Label,
   Separator,
@@ -47,6 +43,9 @@ import { getModifierKey } from '@/utils/platform';
 import { normalizeAvatarUrl } from '@/utils/avatarUrl';
 import { ProfilePhotoUploader, TwoFactorSetup } from '@/components/shared/profile';
 import { BaseHeader, Pagina } from '@/components/base';
+import Aviso from '@/components/base/Aviso';
+import Abas from '@/components/base/Abas';
+import Carregando from '@/components/base/Carregando';
 import { PhoneInput } from '@/components/shared/PhoneInput';
 
 const Profile = () => {
@@ -435,22 +434,23 @@ const Profile = () => {
               disabled={!!userData.unconfirmed_email}
             />
             {userData.unconfirmed_email && (
-              <div className="flex items-start gap-3 p-3 border rounded-lg bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 mt-2">
-                <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-blue-800 dark:text-blue-300">
-                    {t('personalData.emailConfirmation.pendingChange', { email: userData.unconfirmed_email })}
-                  </p>
-                  <div className="flex gap-2 mt-2">
+              <Aviso
+                tom="info"
+                icone={Mail}
+                className="mt-2"
+                acao={
+                  <>
                     <Button size="sm" variant="outline" onClick={handleResendConfirmation} disabled={isResending}>
                       {isResending ? '...' : t('personalData.emailConfirmation.resend')}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={handleCancelEmailChange} disabled={isCancelling}>
                       {isCancelling ? '...' : t('personalData.emailConfirmation.cancel')}
                     </Button>
-                  </div>
-                </div>
-              </div>
+                  </>
+                }
+              >
+                <p>{t('personalData.emailConfirmation.pendingChange', { email: userData.unconfirmed_email })}</p>
+              </Aviso>
             )}
           </div>
         </div>
@@ -746,19 +746,13 @@ const Profile = () => {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Banner: instalar como app */}
-        <div className="flex items-start gap-3 p-4 border rounded-lg bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800">
-          <Smartphone className="h-5 w-5 text-violet-600 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="font-medium text-violet-900 dark:text-violet-200">Instalar como aplicativo</p>
-            <p className="text-sm text-violet-700 dark:text-violet-400 mt-1">
-              Para receber notificações no celular, primeiro instale o LM Flow como app:
-            </p>
-            <div className="mt-2 space-y-1 text-sm text-violet-700 dark:text-violet-400">
-              <p><strong>Android (Chrome):</strong> menu &gt; "Adicionar à tela inicial"</p>
-              <p><strong>iPhone (Safari):</strong> botão Compartilhar &gt; "Adicionar à Tela de Início"</p>
-            </div>
+        <Aviso tom="info" icone={Smartphone} titulo="Instalar como aplicativo">
+          <p>Para receber notificações no celular, primeiro instale o LM Flow como app:</p>
+          <div className="mt-2 space-y-1">
+            <p><strong>Android (Chrome):</strong> menu &gt; "Adicionar à tela inicial"</p>
+            <p><strong>iPhone (Safari):</strong> botão Compartilhar &gt; "Adicionar à Tela de Início"</p>
           </div>
-        </div>
+        </Aviso>
 
         {/* Permissão de notificações push */}
         <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -937,12 +931,7 @@ const Profile = () => {
   // Loading state se não há usuário
   if (!user) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">{t('loading')}</p>
-        </div>
-      </div>
+      <Carregando variante="texto" linhas={6} rotulo={t('loading')} className="p-6" />
     );
   }
 
@@ -950,41 +939,47 @@ const Profile = () => {
 
   return (
     <Pagina estreita cabecalho={<BaseHeader title={t('title')} subtitle={t('subtitle')} />}>
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-8">
-          <TabsTrigger value="dados">{t('tabs.personalData')}</TabsTrigger>
-          <TabsTrigger value="interface">{t('tabs.interface')}</TabsTrigger>
-          <TabsTrigger value="notificacoes">{t('tabs.notifications')}</TabsTrigger>
-          <TabsTrigger value="seguranca">{t('tabs.security')}</TabsTrigger>
-        </TabsList>
+      <div className="flex w-full flex-col gap-2">
+        <Abas
+          rotulo={t('title')}
+          className="mb-8"
+          ativa={activeTab}
+          aoTrocar={setActiveTab}
+          abas={[
+            { chave: 'dados', rotulo: t('tabs.personalData') },
+            { chave: 'interface', rotulo: t('tabs.interface') },
+            { chave: 'notificacoes', rotulo: t('tabs.notifications') },
+            { chave: 'seguranca', rotulo: t('tabs.security') },
+          ]}
+        />
 
-        <TabsContent value="dados" className="space-y-6">
+        {activeTab === 'dados' && <div className="space-y-6">
           {renderDadosPessoais()}
           {/* Fase 2b.1: os números de que a pessoa é dona, com o principal.
               Some sozinho sem a regra do dono ou quando a leitura falha. */}
           <MyNumbersCard />
-        </TabsContent>
+        </div>}
 
-        <TabsContent value="interface" className="space-y-6">
+        {activeTab === 'interface' && <div className="space-y-6">
           {renderInterfaceSettings()}
-        </TabsContent>
+        </div>}
 
-        <TabsContent value="notificacoes" className="space-y-6">
+        {activeTab === 'notificacoes' && <div className="space-y-6">
           {renderNotificationSettings()}
           {renderAudioSettings()}
-        </TabsContent>
+        </div>}
 
-        <TabsContent value="seguranca" className="space-y-6">
+        {activeTab === 'seguranca' && <div className="space-y-6">
           {renderSenha()}
           <TwoFactorSetup onUpdate={refreshUser} />
           {/* Zona de Perigo - movida para aba Segurança */}
           {renderZonaPerigo()}
-        </TabsContent>
-      </Tabs>
+        </div>}
+      </div>
 
       {/* Dialog de Confirmação de Exclusão */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent>
           <DialogHeader className="space-y-3">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-6 w-6 text-destructive" />

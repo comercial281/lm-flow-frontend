@@ -7,8 +7,8 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@evoapi/design-system/dialog';
-import { Button } from '@evoapi/design-system/button';
+} from '@/components/ui/ds';
+import { Button } from '@/components/ui/ds';
 import { Input } from '@evoapi/design-system/input';
 import { Label } from '@evoapi/design-system/label';
 import { Checkbox } from '@evoapi/design-system/checkbox';
@@ -19,6 +19,7 @@ import { Conversation } from '@/types/chat/api';
 import { salesAgentsService, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { chatService } from '@/services/chat/chatService';
 import type { SalesAgentLeadReport } from '@/types/analytics/pipelines';
+import EmptyState from '@/components/base/EmptyState';
 
 interface Props {
   conversation: Conversation | null;
@@ -100,11 +101,16 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
           </div>
         ) : !agent ? (
           <div className="text-sm text-muted-foreground py-4 space-y-2">
-            <p>
-              Nenhuma IA Vendedora ativa neste canal. Abra <strong>IA Vendedora</strong> no menu,
-              crie ou ative uma, e escolha este canal no campo{' '}
-              <em>Número de WhatsApp que ela opera</em>.
-            </p>
+            <EmptyState
+              tamanho="compacto"
+              title="Nenhuma IA Vendedora ativa neste canal."
+              description={
+                <>
+                  Abra <strong>IA Vendedora</strong> no menu, crie ou ative uma, e escolha este
+                  canal no campo <em>Número de WhatsApp que ela opera</em>.
+                </>
+              }
+            />
             {report && <p className="text-foreground">{report.why}</p>}
             {report?.next_step && <p>{report.next_step}</p>}
           </div>

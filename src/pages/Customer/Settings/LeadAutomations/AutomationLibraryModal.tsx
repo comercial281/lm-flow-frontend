@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import {
+  Card,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -13,6 +14,8 @@ import {
 } from '@/components/ui/ds';
 import { Search, Plus, Loader2, BookOpen, Check } from 'lucide-react';
 import api from '@/services/core/api';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import {
   automationTemplatesService,
   AutomationTemplate,
@@ -91,7 +94,7 @@ export default function AutomationLibraryModal({ open, onClose, onApplied }: Pro
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-primary" />
@@ -143,20 +146,20 @@ export default function AutomationLibraryModal({ open, onClose, onApplied }: Pro
         {/* Lista */}
         <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-2 mt-1">
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
-            </div>
+            <Carregando linhas={4} className="py-2" />
           ) : filtered.length === 0 ? (
-            <div className="text-center py-16 text-sm text-muted-foreground">
-              Nenhum modelo encontrado.
-            </div>
+            <EmptyState
+              tamanho="compacto"
+              tipo={search.trim() || category !== 'all' ? 'semResultado' : 'vazio'}
+              title="Nenhum modelo encontrado."
+            />
           ) : (
             filtered.map(tpl => {
               const applied = appliedIds.includes(tpl.id);
               return (
-                <div
+                <Card
                   key={tpl.id}
-                  className="flex items-start gap-3 border border-border rounded-xl bg-card px-4 py-3"
+                  className="flex-row items-start gap-3 px-4 py-3"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -184,7 +187,7 @@ export default function AutomationLibraryModal({ open, onClose, onApplied }: Pro
                       <><Plus className="h-3.5 w-3.5 mr-1" /> Adicionar</>
                     )}
                   </Button>
-                </div>
+                </Card>
               );
             })
           )}

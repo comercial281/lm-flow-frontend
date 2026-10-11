@@ -5,8 +5,10 @@
 // Visita: Nova visita no topo e os botões da peça única AcoesDaVisita (desde 10/10).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarCheck, FileText, Loader2, Plus, Star } from 'lucide-react';
+import { CalendarCheck, FileText, Plus, Star } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { ScheduleVisitDialog } from '@/components/visits/ScheduleVisitDialog';
 import { AcoesDaVisita } from '@/features/visits/AcoesDaVisita';
 import ProposalFormDialog from '@/components/proposals/ProposalFormDialog';
@@ -45,6 +47,9 @@ export default function VisitsProposalsTab({ item, nomeExibido, versao = 0 }: Vi
   const [visitas, setVisitas] = useState<Visit[] | null>(null);
   const [propostas, setPropostas] = useState<Proposal[] | null>(null);
   const [propostasRecusadas, setPropostasRecusadas] = useState(false);
+  // Falha de carga não vira "Nenhuma…": guarda o erro e mostra "Tentar de novo".
+  const [erroVisitas, setErroVisitas] = useState(false);
+  const [erroPropostas, setErroPropostas] = useState(false);
   const [registrando, setRegistrando] = useState(false);
   const [agendando, setAgendando] = useState(false);
   const carga = useRef(0);
@@ -54,10 +59,12 @@ export default function VisitsProposalsTab({ item, nomeExibido, versao = 0 }: Vi
     try {
       const res = await proposalsService.list({ contact_id: contactId });
       setPropostas(res.data);
+      setErroPropostas(false);
     } catch (e) {
       setPropostas([]);
       // Sem permissão de ver propostas: a seção some, as visitas ficam.
       if (isForbiddenError(e)) setPropostasRecusadas(true);
+      else setErroPropostas(true);
     }
   }, [contactId]);
 
@@ -67,9 +74,15 @@ export default function VisitsProposalsTab({ item, nomeExibido, versao = 0 }: Vi
     const minha = ++carga.current;
     try {
       const res = await visitsService.list({ contact_id: contactId, per_page: 50 });
-      if (carga.current === minha) setVisitas(visitasEmOrdem(res.data ?? []));
+      if (carga.current === minha) {
+        setVisitas(visitasEmOrdem(res.data ?? []));
+        setErroVisitas(false);
+      }
     } catch {
-      if (carga.current === minha) setVisitas(prev => prev ?? []);
+      if (carga.current === minha) {
+        setVisitas(prev => prev ?? []);
+        setErroVisitas(true);
+      }
     }
   }, [contactId]);
 
@@ -109,9 +122,11 @@ export default function VisitsProposalsTab({ item, nomeExibido, versao = 0 }: Vi
           )}
         </div>
         {visitas === null ? (
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <Carregando linhas={2} />
+        ) : visitas.length === 0 && erroVisitas ? (
+          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void carregarVisitas()} />
         ) : visitas.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma visita com este lead ainda.</p>
+          <EmptyState tamanho="compacto" title="Nenhuma visita com este lead ainda." />
         ) : (
           <ul className="space-y-3">
             {visitas.map(v => (
@@ -160,11 +175,15 @@ export default function VisitsProposalsTab({ item, nomeExibido, versao = 0 }: Vi
             </Link>
           </div>
           {propostas === null ? (
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <Carregando linhas={2} />
+          ) : erroPropostas ? (
+            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void carregarPropostas()} />
           ) : propostas.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nenhuma proposta deste lead. Quando ele fizer uma oferta, registre aqui.
-            </p>
+            <EmptyState
+              tamanho="compacto"
+              title="Nenhuma proposta deste lead."
+              description="Quando ele fizer uma oferta, registre aqui."
+            />
           ) : (
             <ul className="space-y-3">
               {propostas.map(p => (

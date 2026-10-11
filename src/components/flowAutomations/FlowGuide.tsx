@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { CheckCircle2, ChevronDown, ChevronUp, ListChecks, MousePointerClick } from 'lucide-react';
+import { ChevronDown, ChevronUp, ListChecks, MousePointerClick } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
+import Faixa from '@/components/base/Faixa';
 import type { FlowAutomationKind } from '@/types/flowAutomations';
 import {
   currentStep, guideFinishedText, guideInstruction, stepLabel, type GuideStep,
@@ -25,31 +26,26 @@ export function FlowGuideBanner({ steps, kind, showFinished, onOpenStep }: Banne
   const step = currentStep(steps);
   if (step) {
     return (
-      <div
-        className="flex flex-wrap items-center gap-2 border-b border-amber-400/60 bg-amber-400/15 px-4 py-2 text-sm"
-        role="status"
-        data-testid="faixa-do-guia"
+      <Faixa
+        tom="atencao"
+        icone={MousePointerClick}
+        acao={
+          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onOpenStep(step.nodeId)}>
+            Abrir o bloco
+          </Button>
+        }
       >
-        <MousePointerClick className="h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden="true" />
-        <span className="min-w-0 flex-1">
+        <span data-testid="faixa-do-guia">
           <strong>{stepLabel(step)}:</strong> {guideInstruction(step)}
         </span>
-        <Button size="sm" variant="outline" className="h-8 bg-background" onClick={() => onOpenStep(step.nodeId)}>
-          Abrir o bloco
-        </Button>
-      </div>
+      </Faixa>
     );
   }
   if (!showFinished || steps.length === 0) return null;
   return (
-    <div
-      className="flex items-center gap-2 border-b border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-800 dark:text-emerald-200"
-      role="status"
-      data-testid="faixa-do-guia"
-    >
-      <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-      <strong>{guideFinishedText(kind)}</strong>
-    </div>
+    <Faixa tom="sucesso">
+      <strong data-testid="faixa-do-guia">{guideFinishedText(kind)}</strong>
+    </Faixa>
   );
 }
 

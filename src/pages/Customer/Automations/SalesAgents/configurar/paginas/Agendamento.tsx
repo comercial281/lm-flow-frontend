@@ -13,7 +13,7 @@ import { useAgendaLigada } from '@/features/visits/useAgendaLigada';
 import { salesAgentsService, type PlaybookVars, type VisitConfig } from '@/services/salesAgents/salesAgentsService';
 import TextoNaHora from '../TextoNaHora';
 import JanelaDaSemana from './JanelaDaSemana';
-import { Aviso } from '../Aviso';
+import Aviso from '@/components/base/Aviso';
 import { agendamentoTravado, type PropsDaPagina } from '../paginas';
 
 const DURACOES = [30, 45, 60, 90];

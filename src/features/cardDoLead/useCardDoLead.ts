@@ -33,7 +33,7 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import type { Label as LabelType } from '@/types/settings';
 import { cardFechado, comSituacaoNova, ehColunaDeGanho, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
-import { contatoDoCard, origemCurta, podeCorrigirContato, responsavelNoCard, semFunil } from './cardDoLead';
+import { contatoDoCard, origemCurta, podeCorrigirContato, podeEditarNome, responsavelNoCard, semFunil } from './cardDoLead';
 import { useVersaoDoHistorico } from './historico/useVersaoDoHistorico';
 
 // Do contato vêm {name}, da conversa {title}.
@@ -98,6 +98,8 @@ export function useCardDoLead(
   const [rodapeSalvando, setRodapeSalvando] = useState(false);
 
   // Telefone/e-mail exibidos: começam do contato e mudam depois de uma correção.
+  // O nome também, mas só depois de corrigido (null = o do contato).
+  const [nomeCorrigido, setNomeCorrigido] = useState<string | null>(null);
   const [telefoneDoLead, setTelefoneDoLead] = useState('');
   const [emailDoLead, setEmailDoLead] = useState('');
   const [corrigindoContato, setCorrigindoContato] = useState(false);
@@ -154,6 +156,7 @@ export function useCardDoLead(
       setEtapaId(item.stage_id);
 
       const c = contatoDoCard(item);
+      setNomeCorrigido(null);
       setTelefoneDoLead(c?.phone_number || '');
       setEmailDoLead(c?.email || '');
 
@@ -351,6 +354,7 @@ export function useCardDoLead(
   const contato = contatoDoCard(item);
   const nomeExibido = (() => {
     if (!item) return 'Lead sem nome';
+    if (nomeCorrigido) return nomeCorrigido;
     const candidatos = [item.contact?.name, (item.conversation as any)?.contact?.name];
     const bom = candidatos.find(c => c && !isPhoneLikeName(c));
     if (bom) return bom as string;
@@ -365,6 +369,7 @@ export function useCardDoLead(
       }
     : null;
   const corrigivel = podeCorrigirContato(contato);
+  const nomeEditavel = podeEditarNome(contato);
   const dadosDaOrigem = (item?.lead_origin as Record<string, unknown> | null | undefined)
     ?? ((contato?.additional_attributes as { lead_origin?: Record<string, unknown> } | undefined)?.lead_origin ?? null);
   const origem = origemCurta(dadosDaOrigem);
@@ -432,6 +437,7 @@ export function useCardDoLead(
     nomeExibido,
     avatarContact,
     corrigivel,
+    nomeEditavel,
     dadosDaOrigem,
     origem,
     foraDoFunil,
@@ -495,11 +501,13 @@ export function useCardDoLead(
       salvar: handleSaveManualOrigin,
     },
     identidade: {
+      nome: nomeCorrigido ?? contato?.name ?? '',
       telefone: telefoneDoLead,
       email: emailDoLead,
       corrigindo: corrigindoContato,
       setCorrigindo: setCorrigindoContato,
-      aoCorrigir: ({ phone_number, email }: { phone_number: string; email: string }) => {
+      aoCorrigir: ({ name, phone_number, email }: { name: string; phone_number: string; email: string }) => {
+        setNomeCorrigido(name || null);
         setTelefoneDoLead(phone_number);
         setEmailDoLead(email);
         recarregarHistorico();

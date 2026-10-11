@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useGlobalConfig } from '@/contexts/GlobalConfigContext';

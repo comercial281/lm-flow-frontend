@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import BarraSalvar from '@/components/base/BarraSalvar';
 import Chave from '@/components/base/Chave';
 import { Campo, CampoTextoLongo } from '@/components/base/Campo';
+import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import IconActionButton from '@/components/base/IconActionButton';
 import { Secao, Secoes } from '@/components/base/Secao';
@@ -126,9 +127,7 @@ export default function AvisosAba() {
   if (erro) return <EmptyState tipo="erro" aoTentarDeNovo={carregar} />;
   if (!avisos || !textos) {
     return (
-      <div className="flex justify-center py-16 text-muted-foreground" role="status" aria-label="Carregando os avisos">
-        <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
-      </div>
+      <Carregando variante="texto" linhas={6} rotulo="Carregando os avisos" className="py-6" />
     );
   }
 
@@ -213,7 +212,7 @@ export default function AvisosAba() {
         >
           <div className="space-y-3">
             {avisos.gestor_user_ids.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum gestor escolhido ainda.</p>
+              <EmptyState tamanho="compacto" title="Nenhum gestor escolhido ainda." />
             ) : (
               <ul className="space-y-2" aria-label="Gestores que recebem os avisos">
                 {avisos.gestor_user_ids.map(id => (

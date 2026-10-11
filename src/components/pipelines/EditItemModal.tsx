@@ -30,6 +30,7 @@ import LeadDetailsTab from './card/LeadDetailsTab';
 import CardResultFooter from './card/CardResultFooter';
 import CardMoreMenu from './card/CardMoreMenu';
 import CardOriginTab from './card/CardOriginTab';
+import Carregando from '@/components/base/Carregando';
 
 const CardConversationTab = lazyWithRetry(() => import('./CardConversationTab'));
 const TarefasDoLead = lazyWithRetry(() => import('@/features/tarefas/TarefasDoLead'));
@@ -98,7 +99,7 @@ export default function EditItemModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1280px] w-[96vw] h-[92vh] max-h-[92vh] p-0 gap-0 overflow-hidden flex flex-col">
+      <DialogContent size="wide" className="h-[92dvh] max-h-[92dvh] p-0 gap-0 overflow-hidden flex flex-col">
         <DialogTitle className="sr-only">{card.nomeExibido}</DialogTitle>
         <DialogDescription className="sr-only">Card do lead</DialogDescription>
 
@@ -192,7 +193,7 @@ export default function EditItemModal({
               )}
 
               {activeTab === 'conversation' && (
-                <Suspense fallback={null}>
+                <Suspense fallback={<Carregando />}>
                   <CardConversationTab
                     item={item}
                     onAgendarEnvio={card.recursos.agendarEnvio && contato?.id != null ? texto => card.envio.setAgendando(texto) : undefined}
@@ -204,14 +205,14 @@ export default function EditItemModal({
                 card.foraDoFunil ? (
                   <p className="text-sm text-muted-foreground">Pra criar tarefa, coloque o lead no funil.</p>
                 ) : (
-                  <Suspense fallback={null}>
+                  <Suspense fallback={<Carregando linhas={2} />}>
                     <TarefasDoLead pipelineItemIds={[String(item.id)]} criarNoCard={String(item.id)} aoContar={setResumoTarefas} />
                   </Suspense>
                 )
               )}
 
               {activeTab === 'visits' && (
-                <Suspense fallback={null}>
+                <Suspense fallback={<Carregando />}>
                   <VisitsProposalsTab item={item} nomeExibido={card.nomeExibido} versao={card.historico.versao} />
                 </Suspense>
               )}

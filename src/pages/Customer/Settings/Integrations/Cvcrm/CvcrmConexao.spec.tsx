@@ -44,7 +44,7 @@ describe('Integrações → CVCRM', () => {
     digitar('Token', 'errado');
     fireEvent.click(screen.getByRole('button', { name: /Conectar/ }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent('O CVCRM recusou o e-mail ou o token.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('O CVCRM recusou o e-mail ou o token.');
   });
 
   it('conectado: mostra endereço e e-mail, nunca o token, e troca o token reabrindo os campos', async () => {

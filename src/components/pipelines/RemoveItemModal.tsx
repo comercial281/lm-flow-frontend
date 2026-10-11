@@ -8,7 +8,6 @@ import {
   DialogTitle,
   Button,
 } from '@/components/ui/ds';
-import { AlertTriangle } from 'lucide-react';
 import { PipelineItem } from '@/types/analytics';
 
 interface RemoveItemModalProps {
@@ -56,17 +55,8 @@ export default function RemoveItemModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-destructive" />
-            </div>
-            <div>
-              <DialogTitle>{t('removeItem.title')}</DialogTitle>
-              <DialogDescription className="mt-1">
-                {t('removeItem.description')}
-              </DialogDescription>
-            </div>
-          </div>
+          <DialogTitle>{t('removeItem.title')}</DialogTitle>
+          <DialogDescription>{t('removeItem.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="py-4">

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -65,6 +66,55 @@ describe('Abas de estado', () => {
     expect(screen.getByRole('tab', { name: 'Geral' })).toHaveAttribute('aria-selected', 'true');
     await userEvent.click(screen.getByRole('tab', { name: 'Mensagem' }));
     expect(aoTrocar).toHaveBeenCalledWith('mensagem');
+  });
+});
+
+describe('Abas de estado no teclado', () => {
+  const TRES = [
+    { chave: 'geral', rotulo: 'Geral' },
+    { chave: 'mensagem', rotulo: 'Mensagem' },
+    { chave: 'horario', rotulo: 'Horário' },
+  ];
+  const Controlada = ({ inicio = 'geral' }: { inicio?: string }) => {
+    const [ativa, setAtiva] = useState(inicio);
+    return (
+      <MemoryRouter>
+        <button type="button">antes</button>
+        <Abas rotulo="Partes" abas={TRES} ativa={ativa} aoTrocar={setAtiva} />
+        <button type="button">depois</button>
+      </MemoryRouter>
+    );
+  };
+
+  it('só a aba ativa entra no Tab', async () => {
+    render(<Controlada inicio="mensagem" />);
+    expect(screen.getByRole('tab', { name: 'Mensagem' })).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tab', { name: 'Geral' })).toHaveAttribute('tabindex', '-1');
+    screen.getByRole('button', { name: 'antes' }).focus();
+    await userEvent.tab();
+    expect(screen.getByRole('tab', { name: 'Mensagem' })).toHaveFocus();
+    await userEvent.tab();
+    expect(screen.getByRole('button', { name: 'depois' })).toHaveFocus();
+  });
+
+  it('setas andam e trocam, dando a volta; Home e End vão às pontas', async () => {
+    render(<Controlada />);
+    screen.getByRole('tab', { name: 'Geral' }).focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Mensagem' })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: 'Mensagem' })).toHaveAttribute('aria-selected', 'true');
+    await userEvent.keyboard('{ArrowLeft}{ArrowLeft}');
+    expect(screen.getByRole('tab', { name: 'Horário' })).toHaveAttribute('aria-selected', 'true');
+    await userEvent.keyboard('{Home}');
+    expect(screen.getByRole('tab', { name: 'Geral' })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: 'Geral' })).toHaveAttribute('aria-selected', 'true');
+    await userEvent.keyboard('{End}');
+    expect(screen.getByRole('tab', { name: 'Horário' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('sem aba ativa conhecida, a primeira entra no Tab', () => {
+    render(<Controlada inicio="nenhuma" />);
+    expect(screen.getByRole('tab', { name: 'Geral' })).toHaveAttribute('tabindex', '0');
   });
 });
 

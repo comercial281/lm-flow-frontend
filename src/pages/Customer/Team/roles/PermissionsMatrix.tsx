@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Lock, Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button, Switch } from '@/components/ui/ds';
+import { Card, Button, Switch } from '@/components/ui/ds';
 import NoAccessState from '@/components/permissions/NoAccessState';
+import EmptyState from '@/components/base/EmptyState';
 import { plural } from '@/lib/formato';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -212,7 +213,7 @@ export default function PermissionsMatrix({ onDirtyChange }: Props) {
         />
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-card" data-testid="quadro-permissoes">
+      <Card className="gap-0 overflow-x-auto py-0" data-testid="quadro-permissoes">
         <table className="w-full min-w-[640px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border">
@@ -235,7 +236,11 @@ export default function PermissionsMatrix({ onDirtyChange }: Props) {
           </thead>
           {themes.length === 0 && (
             <tbody>
-              <tr><td colSpan={colunas.length + 1} className="p-6 text-center text-muted-foreground">Nenhuma permissão com esse nome.</td></tr>
+              <tr>
+                <td colSpan={colunas.length + 1} className="p-4">
+                  <EmptyState tipo="semResultado" tamanho="compacto" title="Nenhuma permissão com esse nome." />
+                </td>
+              </tr>
             </tbody>
           )}
           {themes.map(theme => (
@@ -290,7 +295,7 @@ export default function PermissionsMatrix({ onDirtyChange }: Props) {
             </tbody>
           ))}
         </table>
-      </div>
+      </Card>
 
       <Link
         to="/equipe/cargos/lista"

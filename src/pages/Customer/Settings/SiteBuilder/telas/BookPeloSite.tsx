@@ -142,8 +142,8 @@ export default function BookPeloSite({ siteId, ligado, aoMudarChave }: Props) {
           {temIa && (
             <Campo id="book-ia" rotulo="Depois do book, a IA Vendedora assume a conversa">
               <div role="radiogroup" aria-label="Depois do book, a IA Vendedora assume a conversa" className="flex gap-2">
-                <Button type="button" role="radio" aria-checked={iaAssume} variant={iaAssume ? 'default' : 'outline'} onClick={() => setIaAssume(true)}>Sim</Button>
-                <Button type="button" role="radio" aria-checked={!iaAssume} variant={!iaAssume ? 'default' : 'outline'} onClick={() => setIaAssume(false)}>Não</Button>
+                <Button type="button" role="radio" aria-checked={iaAssume} variant={iaAssume ? 'default' : 'outline'} aria-pressed={iaAssume} onClick={() => setIaAssume(true)}>Sim</Button>
+                <Button type="button" role="radio" aria-checked={!iaAssume} variant={!iaAssume ? 'default' : 'outline'} aria-pressed={!iaAssume} onClick={() => setIaAssume(false)}>Não</Button>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">Vale para o número por onde o book sair: a IA precisa estar ligada nele.</p>
             </Campo>

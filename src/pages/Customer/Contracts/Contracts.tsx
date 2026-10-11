@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import {
   FileCheck, Search, ExternalLink, RefreshCw, FileText, AlertTriangle,
 } from 'lucide-react';
-import { Button, Input, Badge } from '@/components/ui/ds';
+import { Card, Button, Input, Badge } from '@/components/ui/ds';
 import {
   contractsService,
   Contract,
@@ -12,6 +12,8 @@ import {
   CONTRACT_STATUS_COLORS,
 } from '@/services/contracts/contractsService';
 import NoAccessState from '@/components/permissions/NoAccessState';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { isForbiddenError } from '@/services/core/forbidden';
 
 const STATUS_TABS = [
@@ -39,10 +41,13 @@ export default function Contracts() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [recusado, setRecusado] = useState(false);
+  // Queda de rede não vira "Nenhum contrato encontrado": mostra o erro com "Tentar de novo".
+  const [erroAoCarregar, setErroAoCarregar] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setRecusado(false);
+    setErroAoCarregar(false);
     try {
       const params: Record<string, string> = {};
       if (statusFilter) params.status = statusFilter;
@@ -51,6 +56,7 @@ export default function Contracts() {
     } catch (e) {
       setContracts([]);
       if (isForbiddenError(e)) setRecusado(true);
+      else setErroAoCarregar(true);
     } finally {
       setLoading(false);
     }
@@ -116,7 +122,7 @@ export default function Contracts() {
             {STATUS_TABS.map(tab => (
               <Button
                 key={tab.key}
-                variant={statusFilter === tab.key ? 'default' : 'outline'}
+                variant={statusFilter === tab.key ? 'default' : 'outline'} aria-pressed={statusFilter === tab.key}
                 size="sm"
                 onClick={() => setStatusFilter(tab.key)}
                 className="text-xs h-8"
@@ -134,18 +140,18 @@ export default function Contracts() {
 
       <div className="flex-1 overflow-auto px-6 py-5">
         {loading ? (
-          <div className="flex items-center justify-center h-48 text-muted-foreground">
-            <RefreshCw className="h-5 w-5 animate-spin mr-2" />
-            Carregando...
-          </div>
+          <Carregando rotulo="Carregando..." />
+        ) : erroAoCarregar ? (
+          <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-muted-foreground gap-2">
-            <FileCheck className="h-10 w-10 opacity-30" />
-            <p className="font-medium">Nenhum contrato encontrado</p>
-            <p className="text-xs">Contratos são gerados automaticamente quando uma proposta é aceita.</p>
-          </div>
+          <EmptyState
+            tipo={search ? 'semResultado' : 'vazio'}
+            icon={FileCheck}
+            title="Nenhum contrato encontrado"
+            description="Contratos são gerados automaticamente quando uma proposta é aceita."
+          />
         ) : (
-          <div className="rounded-xl border bg-card overflow-hidden">
+          <Card className="gap-0 overflow-hidden py-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -169,7 +175,7 @@ export default function Contracts() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         )}
       </div>
     </div>

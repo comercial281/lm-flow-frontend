@@ -2,14 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { plural } from '@/lib/formato';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
   Badge,
   Button,
   Card,
@@ -17,10 +9,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
 } from '@/components/ui/ds';
 import {
   Upload,
@@ -37,8 +25,11 @@ import {
   Eraser,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
+import Abas from '@/components/base/Abas';
+import Carregando from '@/components/base/Carregando';
 import { BaseHeader, Pagina } from '@/components/base';
 import { apiErrorMessage } from '@/utils/apiHelpers';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 import bolsaoService, { BolsaoBatch, BolsaoClaimRow } from '@/services/bolsao/bolsaoService';
 import BolsaoImportWizard from './BolsaoImportWizard';
 import BolsaoTestLeadDialog from './BolsaoTestLeadDialog';
@@ -67,17 +58,22 @@ export default function BolsaoBatches() {
   const [claims, setClaims] = useState<BolsaoClaimRow[]>([]);
   const [byUser, setByUser] = useState<{ user_id: string; name: string | null; count: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  // Falha na leitura não vira "Nenhuma lista ainda" / "Ninguém pegou nada ainda".
+  const [erroListas, setErroListas] = useState(false);
+  const [erroHistorico, setErroHistorico] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [testOpen, setTestOpen] = useState(false);
-  const [confirmArchive, setConfirmArchive] = useState<BolsaoBatch | null>(null);
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [cleaning, setCleaning] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [aba, setAba] = useState('listas');
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
       const rows = await bolsaoService.listBatches();
       setBatches(rows);
+      setErroListas(false);
 
       // O #show é quem bate o watchdog do servidor. Só é chamado para lista que
       // está mesmo importando — chamar para todas seria trabalho à toa.
@@ -85,6 +81,7 @@ export default function BolsaoBatches() {
         bolsaoService.getBatch(b.id).catch(() => undefined);
       });
     } catch (e) {
+      setErroListas(true);
       if (!silent) toast.error(apiErrorMessage(e, 'Não consegui carregar as listas.'));
     } finally {
       if (!silent) setLoading(false);
@@ -96,7 +93,9 @@ export default function BolsaoBatches() {
       const { rows, byUser: agg } = await bolsaoService.claims();
       setClaims(rows);
       setByUser(agg);
+      setErroHistorico(false);
     } catch (e) {
+      setErroHistorico(true);
       toast.error(apiErrorMessage(e, 'Não consegui carregar o histórico.'));
     }
   }, []);
@@ -133,12 +132,20 @@ export default function BolsaoBatches() {
     }
   };
 
-  const doArchive = async () => {
-    if (!confirmArchive) return;
+  // Arquivar não é vermelho: nada é excluído e dá pra reabrir depois.
+  const doArchive = async (batch: BolsaoBatch) => {
+    const ok = await confirmar({
+      titulo: `Arquivar “${batch.name}”?`,
+      descricao:
+        'Ela sai desta lista e para de oferecer leads: os que ainda estavam esperando saem do ' +
+        'Bolsão. Quem já foi puxado por um corretor continua com ele, como qualquer outro lead. ' +
+        'Nada é excluído — dá para reabrir depois.',
+      rotuloDaAcao: 'Arquivar',
+    });
+    if (!ok) return;
     try {
-      await bolsaoService.archiveBatch(confirmArchive.id);
+      await bolsaoService.archiveBatch(batch.id);
       toast.success('Lista arquivada. Os leads que sobraram saíram do Bolsão.');
-      setConfirmArchive(null);
       load(true);
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Não consegui arquivar a lista.'));
@@ -198,18 +205,23 @@ export default function BolsaoBatches() {
         />
       }
     >
-      <Tabs defaultValue="listas">
-        <TabsList>
-          <TabsTrigger value="listas">Listas</TabsTrigger>
-          <TabsTrigger value="quem-pegou">Quem pegou o quê</TabsTrigger>
-          <TabsTrigger value="regras">Regras</TabsTrigger>
-        </TabsList>
+      <div className="flex flex-col gap-2">
+        <Abas
+          rotulo="Partes do Bolsão"
+          ativa={aba}
+          aoTrocar={setAba}
+          abas={[
+            { chave: 'listas', rotulo: 'Listas' },
+            { chave: 'quem-pegou', rotulo: 'Quem pegou o quê' },
+            { chave: 'regras', rotulo: 'Regras' },
+          ]}
+        />
 
-        <TabsContent value="listas" className="mt-4 space-y-4">
+        {aba === 'listas' && <div className="mt-4 space-y-4">
           {loading ? (
-            <div className="flex items-center gap-2 py-12 text-muted-foreground justify-center">
-              <Loader2 className="h-5 w-5 animate-spin" /> Carregando…
-            </div>
+            <Carregando rotulo="Carregando…" className="py-2" />
+          ) : batches.length === 0 && erroListas ? (
+            <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />
           ) : batches.length === 0 ? (
             <EmptyState
               icon={Upload}
@@ -224,14 +236,16 @@ export default function BolsaoBatches() {
                   key={batch.id}
                   batch={batch}
                   onTogglePause={() => togglePause(batch)}
-                  onArchive={() => setConfirmArchive(batch)}
+                  onArchive={() => doArchive(batch)}
                 />
               ))}
 
               {activeBatches.length === 0 && (
-                <p className="text-sm text-muted-foreground py-6 text-center border border-dashed border-border rounded-lg">
-                  Nenhuma lista no ar. As arquivadas continuam aí embaixo.
-                </p>
+                <EmptyState
+                  tamanho="compacto"
+                  title="Nenhuma lista no ar."
+                  description="As arquivadas continuam aí embaixo."
+                />
               )}
 
               {/* Arquivadas ficam recolhidas: saíram da frente de propósito, mas
@@ -266,16 +280,16 @@ export default function BolsaoBatches() {
               )}
             </>
           )}
-        </TabsContent>
+        </div>}
 
-        <TabsContent value="quem-pegou" className="mt-4 space-y-4">
-          <ClaimsPanel claims={claims} byUser={byUser} />
-        </TabsContent>
+        {aba === 'quem-pegou' && <div className="mt-4 space-y-4">
+          <ClaimsPanel claims={claims} byUser={byUser} erro={erroHistorico} aoTentarDeNovo={() => void loadClaims()} />
+        </div>}
 
-        <TabsContent value="regras" className="mt-4">
+        {aba === 'regras' && <div className="mt-4">
           <BolsaoRulesCard />
-        </TabsContent>
-      </Tabs>
+        </div>}
+      </div>
 
       <BolsaoImportWizard
         open={wizardOpen}
@@ -288,22 +302,7 @@ export default function BolsaoBatches() {
         onCreated={() => load(true)}
       />
 
-      <AlertDialog open={!!confirmArchive} onOpenChange={v => (v ? null : setConfirmArchive(null))}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Arquivar “{confirmArchive?.name}”?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Ela sai desta lista e para de oferecer leads: os que ainda estavam esperando saem do
-              Bolsão. Quem já foi puxado por um corretor continua com ele, como qualquer outro lead.
-              Nada é excluído — dá para reabrir depois.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={doArchive}>Arquivar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {dialogoDeConfirmacao}
     </Pagina>
   );
 }
@@ -413,10 +412,17 @@ function Stat({ label, value }: { label: string; value: number }) {
 function ClaimsPanel({
   claims,
   byUser,
+  erro,
+  aoTentarDeNovo,
 }: {
   claims: BolsaoClaimRow[];
   byUser: { user_id: string; name: string | null; count: number }[];
+  erro: boolean;
+  aoTentarDeNovo: () => void;
 }) {
+  if (claims.length === 0 && erro) {
+    return <EmptyState tipo="erro" aoTentarDeNovo={aoTentarDeNovo} />;
+  }
   if (claims.length === 0) {
     return (
       <EmptyState

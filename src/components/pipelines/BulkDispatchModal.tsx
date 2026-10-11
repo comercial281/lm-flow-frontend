@@ -58,6 +58,7 @@ import MessageSequenceEditor, {
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { PhoneInput } from '@/components/shared/PhoneInput';
+import EmptyState from '@/components/base/EmptyState';
 interface BulkDispatchModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -177,6 +178,8 @@ export default function BulkDispatchModal({
 
   // Acompanhamento
   const [campaigns, setCampaigns] = useState<BroadcastCampaign[]>([]);
+  // Falha ao listar os disparos não vira "Nenhum disparo ainda".
+  const [erroLista, setErroLista] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const resetWizard = useCallback(() => {
@@ -208,9 +211,11 @@ export default function BulkDispatchModal({
     try {
       const list = await broadcastsService.list(pipelineId);
       setCampaigns(list);
+      setErroLista(false);
       return list;
     } catch {
       setCampaigns([]);
+      setErroLista(true);
       return [];
     }
   }, [pipelineId]);
@@ -447,7 +452,7 @@ export default function BulkDispatchModal({
             </DialogTitle>
             <div className="flex items-center gap-1 mr-6">
               <Button
-                variant={view === 'new' ? 'default' : 'ghost'}
+                variant={view === 'new' ? 'default' : 'ghost'} aria-pressed={view === 'new'}
                 size="sm"
                 onClick={() => {
                   setView('new');
@@ -456,7 +461,7 @@ export default function BulkDispatchModal({
               >
                 Novo
               </Button>
-              <Button variant={view === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setView('list')}>
+              <Button variant={view === 'list' ? 'default' : 'ghost'} aria-pressed={view === 'list'} size="sm" onClick={() => setView('list')}>
                 Disparos {campaigns.length > 0 && `(${campaigns.length})`}
               </Button>
             </div>
@@ -471,11 +476,16 @@ export default function BulkDispatchModal({
         {/* ===================== ACOMPANHAMENTO ===================== */}
         {view === 'list' && (
           <div className="space-y-3 py-2">
-            {campaigns.length === 0 && (
-              <div className="text-center py-10 text-muted-foreground text-sm">
-                Nenhum disparo ainda. Clique em "Novo" pra criar o primeiro.
-              </div>
-            )}
+            {campaigns.length === 0 &&
+              (erroLista ? (
+                <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void refreshList()} />
+              ) : (
+                <EmptyState
+                  tamanho="compacto"
+                  title="Nenhum disparo ainda."
+                  description={'Clique em "Novo" pra criar o primeiro.'}
+                />
+              ))}
             {campaigns.map(c => {
               const meta = STATUS_META[c.status];
               const done = c.sent_count + c.failed_count + c.skipped_count;
@@ -491,8 +501,8 @@ export default function BulkDispatchModal({
                     </div>
                     <Badge className={`text-xs border ${meta.cls}`}>{meta.label}</Badge>
                   </div>
-                  <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-primary h-1.5 transition-all" style={{ width: `${pct}%` }} />
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
                   </div>
                   {(c.status === 'running' || c.status === 'paused') && (
                     <div className="flex items-center gap-2 pt-1">
@@ -569,7 +579,7 @@ export default function BulkDispatchModal({
                   <div className="space-y-1.5">
                     <Label className="text-sm">Etiquetas</Label>
                     {availableLabels.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">Nenhuma etiqueta cadastrada ainda.</p>
+                      <EmptyState tamanho="compacto" title="Nenhuma etiqueta cadastrada ainda." className="p-3" />
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
                         {availableLabels.map(l => {
@@ -735,10 +745,17 @@ export default function BulkDispatchModal({
                 {cloudMode && (
                   <div className="space-y-3">
                     {cloudOptions.length === 0 ? (
-                      <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-                        Nenhum canal WhatsApp Oficial conectado. Conecte um número em{' '}
-                        <strong>Canais → WhatsApp Oficial</strong> e aprove um template pra disparar por aqui.
-                      </div>
+                      <EmptyState
+                        tamanho="compacto"
+                        title="Nenhum canal WhatsApp Oficial conectado."
+                        description={
+                          <>
+                            Conecte um número em <strong>Canais → WhatsApp Oficial</strong> e aprove um template pra
+                            disparar por aqui.
+                          </>
+                        }
+                        className="p-4"
+                      />
                     ) : (
                       <>
                         {cloudOptions.length > 1 && (

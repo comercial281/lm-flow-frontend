@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Minus, Plus, Shield } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/ds';
+import { Card, Button } from '@/components/ui/ds';
 import { plural } from '@/lib/formato';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import NoAccessState from '@/components/permissions/NoAccessState';
@@ -61,7 +61,7 @@ function RoleCard({ role, themes, onSeeAll, busy }: CardProps) {
   const pode = linhasPorEstado(themes, role.states, 'on').slice(0, MAX_PODE);
   const naoPode = linhasPorEstado(themes, role.states, 'off').slice(0, MAX_NAO_PODE);
   return (
-    <div className="flex flex-col rounded-lg border border-border bg-card p-4" data-testid={`cargo-${role.id}`}>
+    <Card className="gap-0 p-4" data-testid={`cargo-${role.id}`}>
       <div className="mb-1 flex flex-wrap items-center gap-2">
         <span className="inline-block h-3 w-3 rounded-full" style={{ background: role.color }} aria-hidden />
         <h3 className="text-base font-semibold">{role.name}</h3>
@@ -98,7 +98,7 @@ function RoleCard({ role, themes, onSeeAll, busy }: CardProps) {
           Ver tudo o que pode
         </Button>
       )}
-    </div>
+    </Card>
   );
 }
 

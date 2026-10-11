@@ -8,6 +8,7 @@ import {
   type ChaveEmpreendimento, type ChaveRevenda, type FichaConfigDoAdmin,
 } from '@/features/siteBuilder/public/fichaConfig';
 import { Secao, Secoes } from '@/components/base/Secao';
+import EmptyState from '@/components/base/EmptyState';
 import { CLASSE_DO_CAMPO, descricaoDoCampo } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
 import BookPeloSite from './BookPeloSite';
@@ -139,7 +140,7 @@ export default function TelaFicha({ site, siteForm, setF, aplicarSemMarcar }: Fo
         descricao="Cada contato feito na página de um imóvel também chega nesses e-mails. Ele continua indo pro funil e pra roleta normalmente."
       >
         {emails.length === 0 && (
-          <p className="text-sm text-muted-foreground">Nenhum e-mail ainda: os contatos chegam só no CRM.</p>
+          <EmptyState tamanho="compacto" title="Nenhum e-mail ainda: os contatos chegam só no CRM." />
         )}
         {emails.map((email, i) => {
           const id = `ficha-email-${i}`;

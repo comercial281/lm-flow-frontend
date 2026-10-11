@@ -4,6 +4,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import PermissionsRetryState from '@/components/permissions/PermissionsRetryState';
+import LoadingScreen from '@/components/LoadingScreen';
 import { permissionGate } from './permissionGate';
 
 interface PermissionRouteProps {
@@ -104,11 +105,7 @@ const PermissionRoute: React.FC<PermissionRouteProps> = ({
 
   // Mostrar loading enquanto carrega permissões
   if (permissionCheck.gate === 'loading') {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <LoadingScreen className="min-h-screen" />;
   }
 
   // A leitura das permissões caiu: tentar de novo, nunca o aviso do cargo.

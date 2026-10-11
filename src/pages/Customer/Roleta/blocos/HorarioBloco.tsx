@@ -125,10 +125,10 @@ export default function HorarioBloco({ roleta, aoMudar }: Props) {
   return (
     <div className="space-y-6">
       <div role="radiogroup" aria-label="Quando a roleta funciona" className="flex flex-wrap gap-2">
-        <Button type="button" role="radio" aria-checked={d.sempre} variant={d.sempre ? 'default' : 'outline'} onClick={() => mudar({ sempre: true })}>
+        <Button type="button" role="radio" aria-checked={d.sempre} variant={d.sempre ? 'default' : 'outline'} aria-pressed={d.sempre} onClick={() => mudar({ sempre: true })}>
           24 horas
         </Button>
-        <Button type="button" role="radio" aria-checked={!d.sempre} variant={!d.sempre ? 'default' : 'outline'} onClick={() => mudar({ sempre: false })}>
+        <Button type="button" role="radio" aria-checked={!d.sempre} variant={!d.sempre ? 'default' : 'outline'} aria-pressed={!d.sempre} onClick={() => mudar({ sempre: false })}>
           Só em alguns horários
         </Button>
       </div>

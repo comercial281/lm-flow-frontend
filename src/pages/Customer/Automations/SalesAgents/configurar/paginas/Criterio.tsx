@@ -16,7 +16,7 @@ import type { HandoffMode } from '@/services/salesAgents/salesAgentsService';
 import { lerEscolhas } from '@/features/salesAgents/tresEscolhas';
 import { keepBriefing } from '@/features/salesAgents/handoffBriefing';
 import { perguntasDoAgente } from '@/features/salesAgents/perguntas';
-import { Aviso } from '../Aviso';
+import Aviso from '@/components/base/Aviso';
 import type { PropsDaPagina } from '../paginas';
 
 type Quando = HandoffMode | 'julgar';
@@ -53,12 +53,12 @@ export default function Criterio({ agent, gravar, irPara }: PropsDaPagina) {
           </div>
         )}
         {quando === 'checklist' && semPerguntas && (
-          <Aviso>
+          <Aviso tom="atencao">
             <p>Nenhuma pergunta obrigatória ainda.</p>
             <Button type="button" size="sm" variant="outline" className="mt-2" onClick={() => irPara('qualificacao')}>Abrir Qualificação</Button>
           </Aviso>
         )}
-        {quando === 'pos_visita' && !visita && <Aviso>Ela só qualifica e passa, então "Visita marcada" nunca acontece. Escolha outro.</Aviso>}
+        {quando === 'pos_visita' && !visita && <Aviso tom="atencao">Ela só qualifica e passa, então "Visita marcada" nunca acontece. Escolha outro.</Aviso>}
       </Secao>
 
       <Secao titulo="Lead frio" descricao="Quem ainda está só olhando. Desligado, ela segue conversando em vez de passar.">

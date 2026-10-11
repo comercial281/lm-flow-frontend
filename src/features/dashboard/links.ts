@@ -1,5 +1,6 @@
 // src/features/dashboard/links.ts
 import { dataCurta } from '@/lib/formato';
+import { ABA_NA_URL } from '@/features/properties/listingKind';
 
 /**
  * Os links da Dashboard. Quem MONTA (a Dashboard) e quem LÊ (a tela de destino)
@@ -19,10 +20,20 @@ export interface FiltroAgenda extends FiltroDoLink {
   visita: string | null;
 }
 
-export type RecorteImoveis =
-  | 'ativos' | 'novos' | 'exclusivos' | 'com_placa' | 'sem_fotos' | 'fora_do_site' | 'desatualizados';
+/** O recorte de Imóveis pode levar lista (`stage[]` da fase). */
+export interface FiltroImoveis {
+  rotulo: string;
+  params: Record<string, string | string[]>;
+}
 
-const RECORTES_IMOVEIS: Record<RecorteImoveis, FiltroDoLink> = {
+export type RecorteImoveis =
+  | 'ativos' | 'novos' | 'exclusivos' | 'com_placa' | 'sem_fotos' | 'fora_do_site' | 'desatualizados'
+  | 'na_planta' | 'em_obra' | 'prontos';
+
+/** Fases: empreendimento ativo, sem período (frente 5 da Nova 27). Abrem na aba Empreendimentos. */
+const RECORTES_DE_FASE: RecorteImoveis[] = ['na_planta', 'em_obra', 'prontos'];
+
+const RECORTES_IMOVEIS: Record<RecorteImoveis, FiltroImoveis> = {
   ativos:         { rotulo: 'Ativos',         params: { status: 'active' } },
   novos:          { rotulo: 'Novos',          params: {} },
   exclusivos:     { rotulo: 'Exclusivos',     params: { status: 'active', exclusive: '1' } },
@@ -30,9 +41,13 @@ const RECORTES_IMOVEIS: Record<RecorteImoveis, FiltroDoLink> = {
   sem_fotos:      { rotulo: 'Sem fotos',      params: { status: 'active', without_photos: '1' } },
   fora_do_site:   { rotulo: 'Fora do site',   params: { status: 'active', off_site: '1' } },
   desatualizados: { rotulo: 'Desatualizados', params: { status: 'active', stale: '1' } },
+  // Pré-lançamento entra em "Na planta", como no número do Painel.
+  na_planta:      { rotulo: 'Na planta',      params: { status: 'active', 'stage[]': ['pre_launch', 'launch'] } },
+  em_obra:        { rotulo: 'Em obra',        params: { status: 'active', 'stage[]': ['in_construction'] } },
+  prontos:        { rotulo: 'Prontos',        params: { status: 'active', 'stage[]': ['ready'] } },
 };
 
-export type SituacaoAgenda = 'a_confirmar' | 'sem_feedback';
+export type SituacaoAgenda = 'a_confirmar' | 'sem_feedback' | 'realizadas';
 
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
 const diaValido = (valor: string | null | undefined): string | null => (valor && DIA.test(valor) ? valor : null);
@@ -59,6 +74,7 @@ export function linkImoveis(
   opcoes: { desde?: string; ate?: string; meus?: boolean } = {},
 ): string {
   return `/properties${query({
+    aba: RECORTES_DE_FASE.includes(recorte) ? ABA_NA_URL.development : null,
     recorte,
     desde: recorte === 'novos' ? diaValido(opcoes.desde) : null,
     ate: recorte === 'novos' ? diaValido(opcoes.ate) : null,
@@ -66,7 +82,7 @@ export function linkImoveis(
   })}`;
 }
 
-export function lerRecorteImoveis(sp: URLSearchParams): FiltroDoLink | null {
+export function lerRecorteImoveis(sp: URLSearchParams): FiltroImoveis | null {
   const recorte = sp.get('recorte');
   if (!recorte || !(recorte in RECORTES_IMOVEIS)) return null;
   const base = RECORTES_IMOVEIS[recorte as RecorteImoveis];
@@ -103,6 +119,10 @@ export function lerFiltroAgenda(sp: URLSearchParams): FiltroAgenda | null {
   } else if (situacao === 'sem_feedback') {
     params.without_feedback = '1';
     partes.push('Sem feedback');
+  } else if (situacao === 'realizadas') {
+    // A mesma regra do número "Visitas realizadas": marcada Realizada, pelo dia da visita.
+    params.status = 'completed';
+    partes.push('Realizadas');
   }
   const desde = diaValido(sp.get('desde'));
   const ate = diaValido(sp.get('ate'));

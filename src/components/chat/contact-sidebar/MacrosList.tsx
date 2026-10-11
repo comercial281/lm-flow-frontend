@@ -1,20 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@evoapi/design-system/button';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@evoapi/design-system/alert-dialog';
+import { Button, Card } from '@/components/ui/ds';
 import { Play, Loader2, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { macrosService } from '@/services/macros/macrosService';
 import type { Macro } from '@/types/automation';
 import { useLanguage } from '@/hooks/useLanguage';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
+import Carregando from '@/components/base/Carregando';
 
 interface MacrosListProps {
   conversationId: string;
@@ -26,8 +18,7 @@ const MacrosList: React.FC<MacrosListProps> = ({ conversationId, onMacroExecuted
   const [macros, setMacros] = useState<Macro[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [executingMacro, setExecutingMacro] = useState<string | number | null>(null);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [selectedMacro, setSelectedMacro] = useState<Macro | null>(null);
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   useEffect(() => {
     loadMacros();
@@ -46,17 +37,26 @@ const MacrosList: React.FC<MacrosListProps> = ({ conversationId, onMacroExecuted
     }
   };
 
-  const handleMacroClick = (macro: Macro) => {
-    setSelectedMacro(macro);
-    setShowConfirmDialog(true);
+  const handleMacroClick = async (macro: Macro) => {
+    const ok = await confirmar({
+      titulo: t('contactSidebar.macros.dialog.title'),
+      descricao: t('contactSidebar.macros.dialog.description', {
+        name: macro.name || '',
+        count: macro.actions.length || 0,
+        actionLabel:
+          (macro.actions.length || 0) === 1
+            ? t('contactSidebar.macros.action')
+            : t('contactSidebar.macros.actions'),
+      }),
+      rotuloDeCancelar: t('contactSidebar.macros.dialog.cancel'),
+      rotuloDaAcao: t('contactSidebar.macros.dialog.execute'),
+    });
+    if (ok) await executeMacro(macro);
   };
 
-  const executeMacro = async () => {
-    if (!selectedMacro) return;
-
+  const executeMacro = async (selectedMacro: Macro) => {
     try {
       setExecutingMacro(selectedMacro.id);
-      setShowConfirmDialog(false);
       await macrosService.executeMacro({
         macroId: String(selectedMacro.id),
         conversationIds: [conversationId],
@@ -68,15 +68,12 @@ const MacrosList: React.FC<MacrosListProps> = ({ conversationId, onMacroExecuted
       toast.error(t('contactSidebar.macros.executeError', { name: selectedMacro.name }));
     } finally {
       setExecutingMacro(null);
-      setSelectedMacro(null);
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
+      <Carregando linhas={3} className="py-2" />
     );
   }
 
@@ -95,9 +92,9 @@ const MacrosList: React.FC<MacrosListProps> = ({ conversationId, onMacroExecuted
         className="max-h-[280px] overflow-y-auto overflow-x-hidden pr-1 space-y-2 overscroll-contain [scrollbar-width:thin]"
       >
         {macros.map(macro => (
-          <div
+          <Card
             key={macro.id}
-            className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+            className="flex-row items-center justify-between gap-0 p-3 transition-colors hover:bg-accent/50"
           >
             <div className="flex-1 min-w-0 mr-2">
               <h4 className="text-sm font-medium truncate">{macro.name}</h4>
@@ -123,50 +120,11 @@ const MacrosList: React.FC<MacrosListProps> = ({ conversationId, onMacroExecuted
                 <Play className="h-4 w-4" />
               )}
             </Button>
-          </div>
+          </Card>
         ))}
       </div>
 
-      {/* Confirmation Dialog */}
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader className="text-left space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-orange-500/10 rounded-full flex items-center justify-center">
-                <Zap className="h-6 w-6 text-orange-500" />
-              </div>
-              <div className="flex-1 space-y-2">
-                <AlertDialogTitle className="text-lg font-semibold">
-                  {t('contactSidebar.macros.dialog.title')}
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
-                  {t('contactSidebar.macros.dialog.description', {
-                    name: selectedMacro?.name || '',
-                    count: selectedMacro?.actions.length || 0,
-                    actionLabel:
-                      (selectedMacro?.actions.length || 0) === 1
-                        ? t('contactSidebar.macros.action')
-                        : t('contactSidebar.macros.actions'),
-                  })}
-                </AlertDialogDescription>
-              </div>
-            </div>
-          </AlertDialogHeader>
-
-          <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-3 sm:gap-3">
-            <AlertDialogCancel className="w-full sm:w-auto">
-              {t('contactSidebar.macros.dialog.cancel')}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={executeMacro}
-              className="w-full sm:w-auto bg-orange-500 text-white hover:bg-orange-600 focus:ring-orange-500"
-            >
-              <Play className="h-4 w-4 mr-2" />
-              {t('contactSidebar.macros.dialog.execute')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {dialogoDeConfirmacao}
     </>
   );
 };

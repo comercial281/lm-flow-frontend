@@ -4,6 +4,7 @@ import { plural } from '@/lib/formato';
 import { toast } from 'sonner';
 import { Button, Popover, PopoverContent, PopoverTrigger } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
+import EmptyState from '@/components/base/EmptyState';
 import {
   leadFollowupService,
   EMPTY_LEAD_FOLLOWUP_STATE,
@@ -88,6 +89,9 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [denied, setDenied] = useState(false);
+  // Falha (que não é 403) não vira "Nenhum…": cada fonte guarda o próprio erro.
+  const [erroFluxos, setErroFluxos] = useState(false);
+  const [erroAntigo, setErroAntigo] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
   const [chosenId, setChosenId] = useState('');
 
@@ -111,6 +115,9 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
     // corretor e gestor com a fila cheia.
     const recusado = (r: PromiseSettledResult<unknown>) => r.status === 'rejected' && httpStatusOf(r.reason) === 403;
     setDenied(recusado(running) && recusado(old));
+    const falhou = (r: PromiseSettledResult<unknown>) => r.status === 'rejected' && httpStatusOf(r.reason) !== 403;
+    setErroFluxos(falhou(running));
+    setErroAntigo(falhou(old));
     setLoading(false);
   }, [ref, contactId, conversationId]);
 
@@ -180,8 +187,14 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
           </button>
         )}
       </div>
-      {visibleJobs.length === 0 ? (
-        <p className="text-[11px] text-muted-foreground">Nenhuma mensagem do formato antigo pra este lead.</p>
+      {visibleJobs.length === 0 && erroAntigo ? (
+        <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} className="p-3 text-xs" />
+      ) : visibleJobs.length === 0 ? (
+        <EmptyState
+          tamanho="compacto"
+          title="Nenhuma mensagem do formato antigo pra este lead."
+          className="p-3 text-xs"
+        />
       ) : (
         <ol className="space-y-2">
           {visibleJobs.map((j, i) => {
@@ -283,10 +296,15 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
               Iniciar follow-up
             </Button>
           </div>
+        ) : erroFluxos ? (
+          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} className="p-3 text-xs" />
         ) : (
-          <p className="text-[10px] text-muted-foreground">
-            Nenhum follow-up pra iniciar. Crie e ligue um em <em>Automações → Follow-up</em>.
-          </p>
+          <EmptyState
+            tamanho="compacto"
+            title="Nenhum follow-up pra iniciar."
+            description={<>Crie e ligue um em <em>Automações → Follow-up</em>.</>}
+            className="p-3 text-xs"
+          />
         )
       )}
     </div>

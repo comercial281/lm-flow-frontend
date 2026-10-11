@@ -4449,7 +4449,7 @@ Fase 4, jornada 1. Spec: `LM FLOW/specs/2026-09-30-fase-4-jornada-dashboard-desi
   `GET /dashboard/list`), das mesmas fontes que o número.
 - **Número sem link quando o recorte não bate com o destino.** A Agenda,
   Propostas e o funil não recebem time, corretor, número, etiqueta nem IA pelo
-  link. Então Visitas agendadas, Propostas e as etapas do Funil só levam ao
+  link. Então Visitas realizadas, Propostas e as etapas do Funil só levam ao
   destino na imobiliária inteira sem filtro, ou para o corretor travado sem
   filtro (o destino já recorta por ele, mas não por Número, Etiqueta nem IA:
   com um desses ligado, o corretor travado também fica sem link):
@@ -4460,7 +4460,8 @@ Fase 4, jornada 1. Spec: `LM FLOW/specs/2026-09-30-fase-4-jornada-dashboard-desi
   `meus=1`). O conserto de vez é o servidor aceitar `owner_ids` nas telas de
   destino; aí os links voltam.
 - **O corretor não vê Propostas na Dashboard** (decisão do dono, 01/10/2026):
-  os números dele são três (leads recebidos, conversas, visitas agendadas).
+  os números dele são três (leads recebidos, conversas, visitas realizadas;
+  eram "agendadas" até 11/10/2026).
 - **Pendências = abertas agora**, não seguem o período.
 - **Roleta agora** reaproveita `GET /roleta_configs/queue`, a cada 30 s com a aba
   visível; some para quem não tem `roleta_configs.queue`. **Compacto (pedido do
@@ -5102,10 +5103,16 @@ O que aparece na tela hoje:
 
 Decisões do dono (não reabrir sem ele pedir):
 
-- **Nome, telefone e e-mail não se editam no card.** O lápis de telefone/e-mail
-  só aparece com `identity_correctable` do servidor (gestor, lead cadastrado à
-  mão); a correção vai pro Histórico. O formulário de Contatos e o "Editar
-  contato" da conversa seguem a mesma trava (`ContactForm`).
+- **Nome, telefone e e-mail não se editam no card**, com duas exceções que o
+  servidor libera: telefone/e-mail com `identity_correctable` (gestor, lead
+  cadastrado à mão) e, **desde 11/10/2026, o nome com `name_editable`** (o
+  responsável pelo lead, já aceito, ou o gestor, em qualquer lead). O lápis
+  aparece se uma das duas vale e a janela *Corrigir nome* / *Corrigir contato*
+  (`CorrigirContatoDialog`) mostra só os campos liberados. Nome vazio não salva.
+  A mudança vai pro Histórico ("Nome alterado", "Telefone corrigido"). O
+  formulário de Contatos e o "Editar contato" da conversa seguem a mesma regra
+  (`ContactForm`). O nome do perfil do WhatsApp não regrava mais nome de verdade
+  (servidor), senão a correção sumia.
 - **Histórico e Observações ficam separados.** Um o sistema escreve sozinho, o
   outro é o comentário que o corretor escolheu deixar.
 - **Aba Retorno saiu** (nenhum cliente tinha um retorno sequer, 02/10). **Aba
@@ -8230,9 +8237,18 @@ Pedido do dono: escolher o melhor jeito de cada peça e padronizar, pra que **te
 | Cartão | `Card` do pacote |
 | Gráficos | desenho do Painel, cores `--chart-*` |
 
-**Estado:** só a regra está escrita. Nenhuma tela mudou. Peça que ainda não é componente: tela nova copia o desenho escrito no glossário. A migração vai peça por peça, cada uma com componente + trava no `conferir-padrao` (teto = contagem do dia, descendo até 0), como o Seletor e a moldura de página. Ordem proposta: caixa de aviso e faixa → ações no mouse → janela no celular → o resto.
+**As 15 peças viraram componente ou regra do ajuste da casa (PR "Peças da casa", 11/10/2026), cada uma com trava em 0 no `conferir-padrao`.** Feito em sete frentes paralelas, um commit por peça, juntadas em `claude/pecas-da-casa`. A regra de cada peça está no GLOSSARIO; aqui ficam as armadilhas:
 
-**Achados do levantamento (backlog):** 9 janelas de Conversas importam o `Dialog` direto do pacote e pulam o ajuste de largura (Atribuir conversa pede 448 e abre com 512); 8 confirmações do `AlertDialog` mostram Excluir em roxo; `NotesHistoryModal` é branca no tema escuro e usa `window.confirm`; botões `#00ffa7` sobrados da Evolution (`BulkInviteModal`, `MacroFormModal`); a regra global `button.bg-primary` (globals.css) pinta filtro selecionado com degradê e sombra; `--chart-*` sem uso e 3 cartões de gráfico parados em `components/charts/`.
+- **Aviso e Faixa** (`avisoAMao`): erro se anuncia como `role="alert"` (teste procura `alert`, não `status`). Nas telas de entrar/convite/cadastro (fundo fixo `#0F0520`) o aviso vai dentro de `<div className="dark">`. Fora de propósito: `OfferAiBriefing` (bloco pintado pra fundo escuro), rodapé "automação rodando", cartão de revisão da resposta pendente.
+- **Confirmação** (`confirmacaoForaDaCasa`, app inteiro): o `useConfirmacao` não tem ação assíncrona: a janela fecha e a ação roda depois, o carregando fica no botão de origem. O `prompt` do link do editor de texto (Meu site) virou `usePergunta`: relê o estado do editor depois da resposta e desiste se o documento mudou. Ficou o `prompt` do Shopify (`useOAuthFlow`, hook sem tela). Caixinhas do cliente: 1.
+- **Abas e Alternador** (`abaForaDaCasa`, `alternadorAMao`): o `Abas` foi dividido em `AbasDeLink` e `AbasDeEstado`; a de estado não precisa do roteador. Janela que usava `defaultValue` usa `useAbaDaJanela`. O roxo do alternador selecionado vem por `aria-pressed:bg-primary`. Mês/Semana/Dia de Visitas virou `BotoesDeEscolha`. Fora: Novo/Disparos da janela de Disparo em massa, abas do suporte.
+- **Menu ⋮ e Ações à vista** (`menuDeitado`, `soNoMouse`): `BotaoMaisAcoes`. Pastas de Funis de mensagem e de Automações viraram ⋮ (Renomear/Excluir pasta). Fotos do imóvel com faixa de ações embaixo. Notificação mostra "Marcar como lida" sem mouse. Pendente: lixeira solta no rodapé do cartão de funil (`PipelineCard`), que pela peça 9 sairia (o Excluir já está no ⋮).
+- **Janela** (`larguraDeJanela`, `janelaDireta`, `janelaAMao`): `ds.tsx` dá topo/rodapé fixos (`--janela-p` acompanha o respiro), X no topo chamado "Fechar" (teste procura "Fechar"), foco de abertura no primeiro campo pulando o X, folha de baixo no celular (animação `janela-sobe` no `globals.css`; o tw-animate do pacote não é carregado). Rodapé à mão (div) não fica fixo: troque por `DialogFooter` ao mexer na tela (~50 janelas). Agendar visita e Agendar tarefa viraram larga (1400). `NotesHistoryModal` não é usada por nenhuma tela (candidata a apagar).
+- **Carregando e Vazio** (`rodinhaCentral`, `telaEmBranco`, `vazioSolto`): `Carregando` + `EmptyState tamanho="compacto"`; ~125 "Nenhum…" e ~100 rodinhas trocados; erro separado do vazio em ~45 lugares. Ainda caem no vazio quando a carga falha (carga solta no `useEffect`): ActivateAiDialog, QuickFilters, ContactsFiltros, Disparos (canais e funis), PixelCapiConfig, AnnounceLessonModal, BulkDispatchModal, FlowNodePanel, HeroImagePicker, AutomationLibraryModal/`useAutomationResources`.
+- **Botões e Ícones** (`botaoPintado`, `tamanhoDeIcone`): o `Button` de `components/ui/ds` embrulha o do pacote pra marcar `data-variant`; o degradê do `globals.css` só pega `[data-slot='button'][data-variant='default']` sem `aria-pressed`. 39 importações diretas de `@evoapi/design-system/button` trocadas; botão de selecionar leva `aria-pressed`. Pendente: ~25 `Button` com `h-6`/`h-7` (menores que 32 px).
+- **Cartão e Gráficos** (`cartaoAMao`, `corFixaEmGrafico`): `BaseTable` usa `Card` no contêiner (muda ~20 listas). `components/base/grafico.ts`. Apagados `AreaChartCard`, `DonutChartCard`, `OperationHeatmapCard` e `CHART_COLORS`. Resultados da IA: visita passou do verde pra `--chart-2` (conferir contraste no claro).
+
+**Testes que já falhavam antes das peças** (não são delas): PipelineKanban "link de card fora da aba"/"fechar a janela de um card FORA da aba", ScheduleVisitDialog "horário ocupado riscado", ScheduleVisitDialog.agenda "os horários vêm do servidor", JanelaDaTarefa (3), CadastroDoImovel "arrastar o alfinete". Com a máquina carregada estouram tempo: SiteBuilder, RoletaLista/RoletaPagina; rodar com `--minWorkers=1 --maxWorkers=2` (só `--maxWorkers` dá RangeError nesta versão do vitest).
 
 Não reabrir sem o dono pedir.
 
@@ -8325,3 +8341,29 @@ Armadilhas:
 2. Lugar novo que abre a janela do card (`EditItemModal`) precisa decidir o celular: navegar com `useAbrirPaginaDoCard`. Se abrir pelo `?card=` do funil, já cai na página sozinho.
 3. Quem chega por um endereço que só existe pra abrir o card (`?card=`, `/contacts/:id`) navega com `substituir`, senão o voltar volta pra esse endereço e abre a página de novo.
 4. "Veio de dentro do app" é `veioDeDentroDoApp()` (`paginaNoCelular.ts`): `window.history.state.idx > 0`, que o BrowserRouter grava e o replace preserva, lido **na hora de navegar**. Não usar `location.key !== 'default'`: qualquer replace troca a chave, e abrir /contacts por link e depois ir pra /contacts/:id por dentro do app ainda contava como "primeira tela". Nos testes (MemoryRouter não grava `idx`): `window.history.replaceState({ idx: 1 }, '')`.
+
+## Visita: quem marcou e Visita remarcada (11/10/2026)
+
+Origem: a automação "Visita agendada" disparava pra qualquer visita, da IA ou à mão, e remarcar não disparava nada. Desenho aprovado pelo dono em 11/10. A metade do servidor é o PR `comercial281/lm-flow#459`; esta tela só funciona de ponta a ponta com ele no ar.
+
+- **Filtro "Quem marcou"** nos gatilhos "Visita agendada" e "Visita remarcada", no mesmo lugar da Origem e da Etiqueta (`bookedByFilter.ts` em `LeadAutomations/`, editor `ConditionEditor`). Três opções: **Qualquer um** (nenhuma condição gravada, o comportamento de sempre), **A IA** (`booked_by eq ia`) e **Uma pessoa** (`booked_by eq pessoa`). Os valores são fixos porque a condição compara ao pé da letra.
+- **Sem condição = Qualquer um.** Por isso o filtro é opcional no `validateRule`, também na tela antiga de Automações: regra antiga com "Visita agendada" continua válida e não muda.
+- **Gatilho "Visita remarcada"** (`lead.visit_rescheduled`): entra no grupo Visita, logo depois de "Visita agendada". Só existe no construtor (como "Pediu o book no site"); a tela antiga de regras não oferece.
+- **Trocar entre os dois gatilhos de visita zera o filtro.** É o comportamento de sempre do `conditionsOnTriggerChange` (troca de gatilho limpa as condições), não uma regra nova.
+- **Cinco variáveis nos botõezinhos:** Data da visita, Hora da visita, Horário anterior, Imóvel da visita e Corretor da visita. "Corretor da visita" é o corretor da visita; `{{corretor}}` continua sendo o dono do lead.
+- **O modelo "Avisar o grupo quando a IA marcar visita" vem do servidor** (lista de modelos do backend); a tela não tem cópia dele.
+- **Pendente (envio separado):** o aviso fixo de visita da IA, configurado no painel raiz, vai sair depois que o único cliente que usa o aviso fixo estiver migrado pro modelo acima. Quando sair, some também a tela dele no painel raiz.
+- Não reabrir sem o dono pedir.
+
+## Painel: frente 5 da Nova 27 (desde 2026-10-11)
+
+Pedido do Cleverson (Nova 27) na call de 07/10, desenho aprovado pelo dono em 11/10. Servidor: seção "Painel: frente 5" no `backend/CLAUDE.md`.
+
+- **"Visitas realizadas" no lugar de "Visitas agendadas"** (Números, `kpis.visits_done`). Realizada = marcada Realizada, pelo dia da visita; o mesmo número de Resultados e do Atendimento do time. Segue o PERÍODO (não a janela do calendário, que era das agendadas). Clicar abre a Agenda com `situacao=realizadas` (`status=completed` no servidor), chip "Realizadas".
+- **Cartão "Tempo médio de negociação"** (`blocos/TempoNegociacao.tsx`, bloco `tempo_negociacao` → `negotiation_time`): estreito ao lado de Resultados (linha `lateral`), com a MESMA altura de Resultados e um número por vez: troca Ganhos | Perdidos compacta AO LADO DO TÍTULO (`.lmfn-seg-mini` no `action`; ajustes do dono, 11/10). A coluna estreita dessa linha tem 340 px (`:has(.lmfn-negociacao-card)`) e Resultados estica (`.lmfn-estica`), então os dois ficam sempre da mesma altura. Embaixo do número só "N ganhos no período". Até o ganho / até a perda, da criação do card até fechar, todos os funis. Só gestão: sem a chave, não desenha. Tempo escrito como se fala (`tempoEmDias`: "18 dias", "5 h", "menos de 1 h").
+- **Funil: Lista | Funil** (`.lmfn-seg` no `action` do cartão). A Lista é a de antes. O Funil é desenho FIXO: faixas que estreitam sempre igual (`clip-path`), com nome e número dentro; a largura não segue o número, porque "agora" não afunila de verdade (Atendimento costuma ter mais que Novo Lead). Clicar na faixa abre o quadro na etapa. A escolha fica no `localStorage` (`lmf.painel.funil.forma`), com try/catch. Ganhos/Perdidos embaixo nas duas formas.
+- **Relógio do Funil**: troca o número de cada etapa por "~N dias", a média de há quanto tempo os cards abertos de agora estão nela (`avg_seconds_in_stage`, desde a última entrada). Servidor sem o campo: sem relógio. Não é a soma de idas e voltas da faixa da página do card.
+- **Imóveis por fase**: Na planta (com pré-lançamento) · Em obra · Prontos, só empreendimento ativo, sem período, acima dos recortes. Some quando os três são zero. Cada um abre Imóveis na aba Empreendimentos com `stage[]` (recortes `na_planta`/`em_obra`/`prontos`; o recorte de Imóveis aceita lista: `FiltroImoveis`).
+- **Fica pra depois**: funil de passagem (quantos do período chegaram até cada etapa, com % entre etapas). Depende de conferir o histórico de movimentação.
+
+Não reabrir sem o dono pedir.

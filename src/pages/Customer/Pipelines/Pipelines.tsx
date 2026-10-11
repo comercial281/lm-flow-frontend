@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
-import { Button } from '@/components/ui/ds';
 import { Grid3X3, List, GitBranch } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
-import { Pagina } from '@/components/base';
+import { Pagina, AlternadorDeVisao } from '@/components/base';
+import Abas from '@/components/base/Abas';
 
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { pipelinesService } from '@/services/pipelines';
@@ -346,52 +346,32 @@ export default function Pipelines() {
 
       {/* Type Tabs — only shown when real-estate pipelines exist */}
       {hasRealEstatePipelines && (
-        <div className="flex gap-1 border-b border-border mb-4">
-          {TYPE_TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                activeTab === tab.key
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {tab.label}
-              <span className="ml-1.5 text-xs">
-                ({tab.key === 'all'
-                  ? state.pipelines.length
-                  : state.pipelines.filter(p => p.pipeline_type === tab.key).length})
-              </span>
-            </button>
-          ))}
-        </div>
+        <Abas
+          rotulo="Tipos de funil"
+          className="mb-4"
+          ativa={activeTab}
+          aoTrocar={chave => setActiveTab(chave as PipelineTypeTab)}
+          abas={TYPE_TABS.map(tab => ({
+            chave: tab.key,
+            rotulo: tab.label,
+            contagem:
+              tab.key === 'all'
+                ? state.pipelines.length
+                : state.pipelines.filter(p => p.pipeline_type === tab.key).length,
+          }))}
+        />
       )}
 
       {/* View Mode Toggle */}
       <div className="flex items-center justify-between mb-3" data-tour="pipelines-view-toggle">
-        <div className="flex items-center border rounded-lg">
-          <Button
-            variant={viewMode === 'cards' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('cards')}
-            aria-label="Ver em cartões"
-            title="Ver em cartões"
-            className="border-0 rounded-r-none"
-          >
-            <Grid3X3 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'table' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('table')}
-            aria-label="Ver em tabela"
-            title="Ver em tabela"
-            className="border-0 rounded-l-none"
-          >
-            <List className="h-4 w-4" />
-          </Button>
-        </div>
+        <AlternadorDeVisao
+          valor={viewMode}
+          aoEscolher={setViewMode}
+          opcoes={[
+            { valor: 'cards', icone: Grid3X3, nome: 'Ver em cartões' },
+            { valor: 'table', icone: List, nome: 'Ver em tabela' },
+          ]}
+        />
       </div>
 
       {/* Content */}

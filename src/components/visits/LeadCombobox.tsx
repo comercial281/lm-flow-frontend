@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { visitsService, LeadPickerItem } from '@/services/visits/visitsService';
 import { numero, telefone } from '@/lib/formato';
 import { PhoneInput } from '@/components/shared/PhoneInput';
+import EmptyState from '@/components/base/EmptyState';
 
 interface Props {
   value: LeadPickerItem | null;
@@ -69,6 +70,8 @@ export function LeadCombobox({
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<LeadPickerItem[]>([]);
   const [loading, setLoading] = useState(false);
+  // Busca que falhou não vira "Nenhum lead encontrado".
+  const [erro, setErro] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickName, setQuickName] = useState('');
   const [quickPhone, setQuickPhone] = useState('');
@@ -89,8 +92,8 @@ export function LeadCombobox({
     if (!paginated) {
       setLoading(true);
       visitsService.leadPicker(q, 20)
-        .then(setItems)
-        .catch(() => setItems([]))
+        .then(lista => { setItems(lista); setErro(false); })
+        .catch(() => { setItems([]); setErro(true); })
         .finally(() => setLoading(false));
       return;
     }
@@ -105,10 +108,12 @@ export function LeadCombobox({
         setItems(data);
         setTotal(meta.total ?? null);
         setTemMais(!!meta.has_more);
+        setErro(false);
       })
       .catch(() => {
         if (pedido !== pedidoRef.current) return;
         setItems([]);
+        setErro(true);
         setTotal(null);
         setTemMais(false);
       })
@@ -214,9 +219,16 @@ export function LeadCombobox({
             className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-72 overflow-y-auto"
           >
             {items.length === 0 && !loading && (
-              <div className="px-3 py-4 text-sm text-muted-foreground text-center">
-                {allowCreate ? 'Nenhum lead encontrado' : 'Nenhum cliente seu com esse nome ou telefone'}
-              </div>
+              erro ? (
+                <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => fetchList(query)} className="m-2 p-4" />
+              ) : (
+                <EmptyState
+                  tipo={query ? 'semResultado' : 'vazio'}
+                  tamanho="compacto"
+                  title={allowCreate ? 'Nenhum lead encontrado' : 'Nenhum cliente seu com esse nome ou telefone'}
+                  className="m-2 p-4"
+                />
+              )
             )}
             {items.map(item => {
               const { nome, ehTelefone } = nomeDoCliente(item);

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { Avatar, AvatarFallback } from '@/components/ui/ds';
 import { formatDistanceToNow } from 'date-fns';
@@ -20,8 +19,8 @@ export default function NotificationItem({
   getTypeLabel,
 }: NotificationItemProps) {
   const { t } = useLanguage('layout');
-  const [isHovered, setIsHovered] = useState(false);
   const isUnread = !notification.read_at;
+  const mostraAcoes = isUnread && !!onMarkRead;
   const assignee = notification.primary_actor_meta?.assignee;
 
   const formatTime = (dateString: string) => {
@@ -38,15 +37,11 @@ export default function NotificationItem({
   };
 
   return (
-    <div
-      className="w-full relative group"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
+    <div className="w-full relative group">
       <div
         className={`flex items-center p-4 border-b border-border transition-colors cursor-pointer ${
           isUnread ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/30'
-        }`}
+        } ${mostraAcoes ? 'pr-20' : ''}`}
         onClick={() => onOpen(notification)}
       >
         {/* Unread indicator */}
@@ -92,9 +87,10 @@ export default function NotificationItem({
         </div>
       </div>
 
-      {/* Hover action buttons */}
-      {isHovered && isUnread && onMarkRead && (
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-background border border-border rounded-md shadow-sm p-0.5">
+      {/* Ações sempre à vista (GLOSSARIO, peça 16): antes só apareciam com o mouse
+          em cima, e no celular "Marcar como lida" não existia. Apagadas até passar o mouse. */}
+      {mostraAcoes && (
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-background border border-border rounded-md shadow-sm p-0.5 opacity-70 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
           <button
             title={t('notifications.item.markAsRead')}
             onClick={e => { e.stopPropagation(); onMarkRead(notification); }}

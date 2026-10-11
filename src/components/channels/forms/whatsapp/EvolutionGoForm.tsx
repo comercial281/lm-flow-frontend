@@ -5,6 +5,7 @@ import { FormSection } from '../../shared/FormSection';
 import { FormData } from '@/hooks/channels/useChannelForm';
 import  { sanitizeInboxName } from '@/utils/sanitizeName';
 import { PhoneInput } from '@/components/shared/PhoneInput';
+import Aviso from '@/components/base/Aviso';
 
 interface EvolutionGoFormProps {
   form: FormData;
@@ -147,18 +148,14 @@ export const EvolutionGoForm = ({ form, onFormChange, hasEvolutionGoConfig }: Ev
       </FormSection>
 
       {/* Help Section */}
-      <FormSection
-        title={t('evolutionGoForm.help.title')}
-        className="bg-green-50/10 border-green-200/20"
-        data-tour="whatsapp-help"
-      >
-        <div className="text-sm text-sidebar-foreground/70 space-y-2">
+      <div data-tour="whatsapp-help">
+        <Aviso tom="info" titulo={t('evolutionGoForm.help.title')}>
           <p><strong>{t('evolutionGoForm.help.performance.title')}:</strong> {t('evolutionGoForm.help.performance.description')}</p>
           <p><strong>{t('evolutionGoForm.help.stability.title')}:</strong> {t('evolutionGoForm.help.stability.description')}</p>
           <p><strong>{t('evolutionGoForm.help.features.title')}:</strong> {t('evolutionGoForm.help.features.description')}</p>
           <p><strong>{t('evolutionGoForm.help.uuidToken.title')}:</strong> {t('evolutionGoForm.help.uuidToken.description')}</p>
-        </div>
-      </FormSection>
+        </Aviso>
+      </div>
     </div>
   );
 };

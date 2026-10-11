@@ -3,6 +3,7 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import { SEND_FROM_WARNING_MS, sendFromWarnings } from '@/features/numbers/sendFrom';
 import {
+  Card,
   Button,
   Dialog,
   DialogContent,
@@ -24,6 +25,8 @@ import {
   Archive, ArchiveRestore, BookOpen, Lock, Copy, Star, ArrowUp, ArrowDown, FlaskConical, History,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
+import Abas from '@/components/base/Abas';
+import Carregando from '@/components/base/Carregando';
 import {
   leadAutomationService,
   LeadAutomationRule,
@@ -155,6 +158,8 @@ export default function LeadAutomations() {
   const [testing, setTesting] = useState<LeadAutomationRule | null>(null);
   const [history, setHistory] = useState<LeadAutomationRule | null>(null);
   const [recusado, setRecusado] = useState(false);
+  // Falha na carga não pode virar "Nenhuma automação criada" (erro nunca vira vazio).
+  const [erro, setErro] = useState(false);
 
   const resources = useAutomationResources(canAccess);
 
@@ -163,9 +168,13 @@ export default function LeadAutomations() {
     setRecusado(false);
     try {
       setRules(sortRules(await leadAutomationService.getAll(which === 'archived')));
+      setErro(false);
     } catch (e) {
       if (isForbiddenError(e)) setRecusado(true);
-      else toast.error('Erro ao carregar automações');
+      else {
+        setErro(true);
+        toast.error('Erro ao carregar automações');
+      }
     } finally {
       setLoading(false);
     }
@@ -440,28 +449,22 @@ export default function LeadAutomations() {
       {/* Central de Notificações — presets de push em toggle */}
 
       {/* Tabs Ativas / Arquivadas */}
-      <div className="flex gap-1 mb-4 border-b border-border">
-        {([['active', 'Ativas'], ['archived', 'Arquivadas']] as const).map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => { setTab(key); setExpandedId(null); }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === key
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Abas
+        rotulo="Situação das automações"
+        className="mb-4"
+        ativa={tab}
+        aoTrocar={chave => { setTab(chave as Tab); setExpandedId(null); }}
+        abas={[{ chave: 'active', rotulo: 'Ativas' }, { chave: 'archived', rotulo: 'Arquivadas' }]}
+      />
 
       {/* List */}
       {loading ? (
-        <div className="text-center py-16 text-muted-foreground text-sm">Carregando...</div>
+        <Carregando linhas={4} />
+      ) : erro ? (
+        <EmptyState tipo="erro" aoTentarDeNovo={() => void load(tab)} />
       ) : rules.length === 0 ? (
         archivedTab ? (
-          <div className="text-center py-16 text-sm text-muted-foreground">Nenhuma automação arquivada.</div>
+          <EmptyState title="Nenhuma automação arquivada." />
         ) : (
           <EmptyState
             title="Nenhuma automação criada"
@@ -472,9 +475,9 @@ export default function LeadAutomations() {
       ) : (
         <div className="space-y-3">
           {rules.map(rule => (
-            <div
+            <Card
               key={rule.id}
-              className="border border-border rounded-xl bg-card overflow-hidden"
+              className="gap-0 overflow-hidden py-0"
             >
               <div className="flex items-center gap-4 px-5 py-4">
                 {!archivedTab && (
@@ -689,7 +692,7 @@ export default function LeadAutomations() {
                   )}
                 </div>
               )}
-            </div>
+            </Card>
           ))}
         </div>
       )}

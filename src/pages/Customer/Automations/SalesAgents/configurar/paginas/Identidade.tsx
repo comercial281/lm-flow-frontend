@@ -16,7 +16,7 @@ import { previaConversa } from '@/features/salesAgents/previaConversa';
 import { FRASE_SEM_DONO } from '@/features/salesAgents/pendencias';
 import { PERSONA_ROTULOS } from '@/features/salesAgents/rotulosDaIa';
 import TextoNaHora from '../TextoNaHora';
-import { Aviso } from '../Aviso';
+import Aviso from '@/components/base/Aviso';
 import type { PropsDaPagina } from '../paginas';
 
 const PERSONAS = [
@@ -50,7 +50,7 @@ export default function Identidade({ agent, gravar }: PropsDaPagina) {
       <Secao titulo="Persona" descricao="Em nome de quem ela fala. Muda a apresentação e pra quem o lead vai.">
         <CartoesDeEscolha<PersonaGravavel> rotulo="Persona" valor={persona} opcoes={PERSONAS}
           aoEscolher={(p) => void escolherPersona(p)} />
-        {semDono && <Aviso tom="vermelho">{FRASE_SEM_DONO}</Aviso>}
+        {semDono && <Aviso tom="erro">{FRASE_SEM_DONO}</Aviso>}
       </Secao>
       <Secao titulo="Nome" descricao="O nome que ela diz pro lead. O nome interno só aparece aqui no LM Flow.">
         <div className="grid gap-4 md:grid-cols-2">

@@ -5,6 +5,7 @@ import {
   Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label,
 } from '@/components/ui/ds';
 import { BrPhoneInput } from '@/components/shared/BrPhoneInput';
+import Aviso from '@/components/base/Aviso';
 import { usersService } from '@/services/users';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -177,7 +178,7 @@ export default function CreateNumberDialog({ member, open, onClose, onDone, link
               </fieldset>
 
               {needsCelular && (
-                <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+                <Aviso tom="atencao">
                   <p>{member.name} ainda não tem celular cadastrado, e precisa de um celular para receber o link de acesso.</p>
                   <label className="flex items-center gap-2">
                     <input
@@ -199,7 +200,7 @@ export default function CreateNumberDialog({ member, open, onClose, onDone, link
                       />
                     </>
                   )}
-                </div>
+                </Aviso>
               )}
 
               {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

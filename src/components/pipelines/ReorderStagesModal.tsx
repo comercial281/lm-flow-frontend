@@ -163,7 +163,7 @@ export default function ReorderStagesModal({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 toque:opacity-100 transition-opacity"
+                      className="h-8 w-8 p-0 text-muted-foreground opacity-70 transition-opacity group-hover:opacity-100 group-hover:text-foreground focus-visible:opacity-100"
                       onClick={() => moveStage(index, 'up')}
                       disabled={index === 0}
                       aria-label="Mover para cima"
@@ -176,7 +176,7 @@ export default function ReorderStagesModal({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 toque:opacity-100 transition-opacity"
+                      className="h-8 w-8 p-0 text-muted-foreground opacity-70 transition-opacity group-hover:opacity-100 group-hover:text-foreground focus-visible:opacity-100"
                       onClick={() => moveStage(index, 'down')}
                       disabled={index === orderedStages.length - 1}
                       aria-label="Mover para baixo"
@@ -186,7 +186,7 @@ export default function ReorderStagesModal({
                     </Button>
 
                     {/* Drag Handle */}
-                    <div className="cursor-grab active:cursor-grabbing p-1 opacity-0 group-hover:opacity-100 toque:opacity-100 transition-opacity">
+                    <div className="cursor-grab active:cursor-grabbing p-1 opacity-70 group-hover:opacity-100 transition-opacity">
                       <GripVertical className="w-4 h-4 text-muted-foreground" />
                     </div>
                   </div>

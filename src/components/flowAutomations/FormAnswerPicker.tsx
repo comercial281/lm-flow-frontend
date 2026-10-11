@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Input, Label, Badge } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
+import EmptyState from '@/components/base/EmptyState';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import {
   FORM_SOURCE_BADGE,
@@ -91,9 +92,12 @@ export function FormAnswerPicker({ value, onChange }: Props) {
           <p className="text-xs text-amber-600 mt-1">Não consegui carregar os formulários agora. A escolha que já estava continua.</p>
         )}
         {forms.state === 'loaded' && formList.length === 0 && !savedMissing && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Nenhum formulário ainda. Os de anúncio aparecem quando são vinculados na tela Formulários; os do site, quando são criados no Site.
-          </p>
+          <EmptyState
+            tamanho="compacto"
+            title="Nenhum formulário ainda."
+            description="Os de anúncio aparecem quando são vinculados na tela Formulários; os do site, quando são criados no Site."
+            className="mt-1 p-3 text-xs"
+          />
         )}
         {(formList.length > 0 || savedMissing) && (
           <div className={boxClass} role="radiogroup" aria-label="Formulário">

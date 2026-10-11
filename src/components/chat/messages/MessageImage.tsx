@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { Download, ZoomIn, ZoomOut, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Attachment } from '@/types/chat/api';
@@ -110,11 +110,12 @@ const MessageImage: React.FC<MessageImageProps> = ({ attachments }) => {
                 )}
               </div>
 
-              {/* ✅ OVERLAY com botões - posicionado sobre o container fixo */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 toque:hidden">
-                <div className="flex gap-2">
+              {/* Ampliar e Baixar sempre à vista (GLOSSARIO, peça 16): no canto da foto,
+                  com fundo pra aparecer em qualquer imagem. Clicar na foto também amplia. */}
+              <div className="absolute bottom-2 right-2 opacity-80 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                <div className="flex gap-1">
                   <Button
-                    size="sm"
+                    size="icon"
                     variant="secondary"
                     onClick={e => {
                       e.stopPropagation();
@@ -122,12 +123,12 @@ const MessageImage: React.FC<MessageImageProps> = ({ attachments }) => {
                     }}
                     aria-label="Ampliar imagem"
                     title="Ampliar imagem"
-                    className="bg-white/95 text-black hover:bg-white shadow-lg"
+                    className="size-8 rounded-md bg-background/80 text-foreground hover:bg-background shadow-sm"
                   >
                     <ZoomIn className="h-4 w-4" />
                   </Button>
                   <Button
-                    size="sm"
+                    size="icon"
                     variant="secondary"
                     onClick={e => {
                       e.stopPropagation();
@@ -135,7 +136,7 @@ const MessageImage: React.FC<MessageImageProps> = ({ attachments }) => {
                     }}
                     aria-label="Baixar imagem"
                     title="Baixar imagem"
-                    className="bg-white/95 text-black hover:bg-white shadow-lg"
+                    className="size-8 rounded-md bg-background/80 text-foreground hover:bg-background shadow-sm"
                   >
                     <Download className="h-4 w-4" />
                   </Button>

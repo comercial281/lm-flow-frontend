@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/ds';
+import Aviso from '@/components/base/Aviso';
 import { usePendingOffers } from '@/contexts/PendingOffersContext';
 import OfferAiBriefing from './OfferAiBriefing';
 import { deadlineLabel, SEM_PRAZO } from './offerDeadline';
@@ -161,14 +162,9 @@ export default function OfferPopup() {
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
-            prazo === 'prazo esgotado'
-              ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300'
-              : 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300'
-          }`}>
-            <Clock className="h-4 w-4 shrink-0" />
+          <Aviso tom={prazo === 'prazo esgotado' ? 'erro' : 'atencao'} icone={Clock}>
             {textoDoPrazo(prazo)}
-          </div>
+          </Aviso>
 
           <div className="space-y-1">
             <p className="break-words text-lg font-semibold">{atual.lead_name}</p>

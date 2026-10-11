@@ -133,7 +133,7 @@ export default function BaseFilter<T extends BaseFilterType>({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-4xl bg-sidebar border-sidebar-border ${className}`}>
+      <DialogContent className={`max-w-2xl ${className}`}>
         <DialogHeader>
           <DialogTitle className="text-sidebar-foreground">{finalTitle}</DialogTitle>
           <DialogDescription className="text-sidebar-foreground/70">

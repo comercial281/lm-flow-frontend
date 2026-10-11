@@ -11,7 +11,7 @@ export type Visao = 'gestor' | 'corretor';
 
 export type BlocoId =
   | 'imoveis' | 'numeros' | 'pendencias' | 'proximas_visitas' | 'roleta_agora' | 'minha_vez'
-  | 'atendimento_time' | 'funil' | 'resultados'
+  | 'atendimento_time' | 'funil' | 'resultados' | 'tempo_negociacao'
   | 'leads_dia_semana' | 'leads_horario' | 'leads_seis_meses' | 'origem' | 'mapa_calor';
 
 export interface BlocoCatalogo {
@@ -36,6 +36,8 @@ export const CATALOGO: Record<BlocoId, BlocoCatalogo> = {
   atendimento_time: bloco({ id: 'atendimento_time', titulo: 'Atendimento do time', visoes: ['gestor'], api: ['team'], seguePeriodo: true, ligado: true }),
   funil:            bloco({ id: 'funil', titulo: 'Funil', visoes: ['gestor', 'corretor'], api: ['pipeline'], seguePeriodo: false, ligado: true }),
   resultados:       bloco({ id: 'resultados', titulo: 'Resultados', visoes: ['gestor'], api: ['results'], seguePeriodo: true, ligado: true }),
+  // Da criação do card até Ganho/Perdido (frente 5 da Nova 27). Estreito, ao lado de Resultados.
+  tempo_negociacao: bloco({ id: 'tempo_negociacao', titulo: 'Tempo médio de negociação', visoes: ['gestor'], api: ['negotiation_time'], seguePeriodo: true, ligado: true }),
   leads_dia_semana: bloco({ id: 'leads_dia_semana', titulo: 'Leads por dia da semana', visoes: ['gestor', 'corretor'], api: ['leads_by_weekday'], seguePeriodo: true, ligado: true }),
   leads_horario:    bloco({ id: 'leads_horario', titulo: 'Leads por horário', visoes: ['gestor'], api: ['leads_by_hour'], seguePeriodo: true, ligado: true }),
   leads_seis_meses: bloco({ id: 'leads_seis_meses', titulo: 'Leads nos últimos 6 meses', visoes: ['gestor'], api: ['leads_6_months'], seguePeriodo: false, ligado: true }),
@@ -49,7 +51,7 @@ export interface Linha {
   subtitulo?: string;
   /** A linha de cima do gestor: Imóveis estreito à esquerda, o resto largo à direita. */
   principal?: boolean;
-  /** A segunda coluna é um cartão estreito, quase quadrado, à direita (Sua vez na fila). */
+  /** A segunda coluna é um cartão estreito, quase quadrado, à direita (Sua vez na fila, Tempo médio de negociação). */
   lateral?: boolean;
   colunas: BlocoId[][];
 }
@@ -59,7 +61,7 @@ export const LINHAS: Record<Visao, Linha[]> = {
     { principal: true, colunas: [['imoveis'], ['numeros', 'pendencias']] },
     { colunas: [['proximas_visitas'], ['roleta_agora']] },
     { colunas: [['atendimento_time'], ['funil']] },
-    { colunas: [['resultados']] },
+    { lateral: true, colunas: [['resultados'], ['tempo_negociacao']] },
     {
       titulo: 'Análise do período',
       subtitulo: 'De onde e quando os leads chegam',

@@ -20,6 +20,8 @@ import { boardHeaderActions } from './boardActions';
 import BoardTopBar, { type ModoDoQuadro } from './quadro/BoardTopBar';
 import { csvDoFunil } from './quadro/csvDoFunil';
 import EmptyState from '@/components/base/EmptyState';
+import Carregando from '@/components/base/Carregando';
+import { Skeleton } from '@/components/ui/ds';
 import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { lazyWithRetry } from '@/utils/chunkReload';
@@ -50,6 +52,24 @@ const EditStageModal = lazyWithRetry(() => import('@/components/pipelines/EditSt
 const DeleteStageModal = lazyWithRetry(() => import('@/components/pipelines/DeleteStageModal'));
 const DeletePipelineModal = lazyWithRetry(() => import('@/components/pipelines/DeletePipelineModal'));
 const ReorderStagesModal = lazyWithRetry(() => import('@/components/pipelines/ReorderStagesModal'));
+
+// Esqueleto cinza do quadro (peça 13 do GLOSSARIO): colunas com a largura das
+// etapas e alguns cards dentro, no lugar da rodinha no meio da tela.
+function EsqueletoDoQuadro({ rotulo }: { rotulo: string }) {
+  return (
+    <div role="status" aria-busy="true" aria-live="polite" className="flex flex-1 gap-6 overflow-hidden px-4 py-6 sm:px-6">
+      <span className="sr-only">{rotulo}</span>
+      {[3, 2, 4, 1].map((cards, i) => (
+        <div key={i} aria-hidden="true" className="w-80 flex-shrink-0 space-y-3 rounded-xl border border-border bg-muted/40 p-4">
+          <Skeleton className="h-5 w-1/2" />
+          {Array.from({ length: cards }).map((_, j) => (
+            <Skeleton key={j} className="h-20 w-full rounded-lg" />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function PipelineKanban() {
   const { t } = useLanguage('pipelines');
@@ -751,8 +771,8 @@ export default function PipelineKanban() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+      <div className="flex h-full">
+        <EsqueletoDoQuadro rotulo="Carregando o funil" />
       </div>
     );
   }
@@ -796,9 +816,7 @@ export default function PipelineKanban() {
         {(viewMode === 'board' || viewMode === 'list') && erroDaAba && !carregandoQuadro && (
           <EmptyState tipo="erro" aoTentarDeNovo={() => { void loadPipelineData(); }} />
         )}
-        {viewMode === 'board' && carregandoQuadro && (
-          <div className="flex flex-1 items-center justify-center"><div role="status" className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label="Carregando a aba" /></div>
-        )}
+        {viewMode === 'board' && carregandoQuadro && <EsqueletoDoQuadro rotulo="Carregando a aba" />}
         {viewMode === 'board' && !carregandoQuadro && !erroDaAba && (
         <div className="flex-1 overflow-hidden relative">
           <div
@@ -874,7 +892,7 @@ export default function PipelineKanban() {
 
         {/* Lista: todos os leads do funil, por ordem de chegada */}
         {viewMode === 'list' && carregandoQuadro && (
-          <div className="flex flex-1 items-center justify-center"><div role="status" className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label="Carregando a aba" /></div>
+          <Carregando linhas={6} rotulo="Carregando a aba" className="px-4 py-2 sm:px-6" />
         )}
         {viewMode === 'list' && !carregandoQuadro && !erroDaAba && (
           <PipelineListView

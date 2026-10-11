@@ -11,12 +11,13 @@ import { memo, type DragEvent, type MouseEvent, type MutableRefObject, type Synt
 import { toast } from 'sonner';
 import {
   AlarmClock, Archive, ArchiveRestore, ArrowUpRight, CalendarClock, Clock, ExternalLink, Link2, Maximize2,
-  MessageCircle, MoreVertical, Trash2, UserRound,
+  MessageCircle, Trash2, UserRound,
 } from 'lucide-react';
 import {
   Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import SeloSituacao from '@/features/pipelines/situacao/SeloSituacao';
 import { detalheDaSituacao, situacaoDe } from '@/features/pipelines/situacao/situacao';
 import { linkAbsolutoDoCard, linkDoCardCompleto } from '@/features/pipelines/linkDoCard';
@@ -139,43 +140,42 @@ function PipelineItemCardComponent({
           </div>
         </div>
 
+        {/* Sempre à vista (GLOSSARIO, peça 16): apagado, acende ao passar o mouse no card. */}
         <div onClick={pararClique}
-          className="shrink-0 opacity-100 transition-opacity focus-within:opacity-100 md:opacity-0 md:group-hover:opacity-100 toque:opacity-100">
+          className="-mr-1 shrink-0 opacity-70 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-auto p-1 hover:bg-muted" aria-label="Mais ações" title="Mais ações">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
+              <BotaoMaisAcoes compacto className="text-muted-foreground group-hover:text-foreground" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => onOpenItem(item)}>
-                <Maximize2 className="mr-2 h-4 w-4" />
+                <Maximize2 className="h-4 w-4" />
                 Abrir
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <a href={link} target="_blank" rel="noopener">
-                  <ExternalLink className="mr-2 h-4 w-4" />
+                  <ExternalLink className="h-4 w-4" />
                   Abrir em nova guia
                 </a>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => { void copiarLink(); }}>
-                <Link2 className="mr-2 h-4 w-4" />
+                <Link2 className="h-4 w-4" />
                 Copiar link
               </DropdownMenuItem>
               {arquivado ? (
                 <DropdownMenuItem onClick={() => onUnarchive(item)}>
-                  <ArchiveRestore className="mr-2 h-4 w-4" />
+                  <ArchiveRestore className="h-4 w-4" />
                   Desarquivar
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem onClick={() => onArchive(item)}>
-                  <Archive className="mr-2 h-4 w-4" />
+                  <Archive className="h-4 w-4" />
                   Arquivar
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive" onClick={() => onRemove(item)}>
-                <Trash2 className="mr-2 h-4 w-4" />
+              <DropdownMenuItem variant="destructive" onClick={() => onRemove(item)}>
+                <Trash2 className="h-4 w-4" />
                 Remover do funil
               </DropdownMenuItem>
             </DropdownMenuContent>

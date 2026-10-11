@@ -72,7 +72,7 @@ export const InstancePicker: React.FC<Props> = ({ value, onChange, rotulo }) => 
 
   if (rotulo) {
     return (
-      <CampoFiltro id={id} rotulo={rotulo} icone={<Smartphone size={14} />}>
+      <CampoFiltro id={id} rotulo={rotulo} icone={<Smartphone className="h-3.5 w-3.5" />}>
         <Seletor bare id={id} className="lmf-campo-controle" data-active={value ? true : undefined}
           value={value ?? ''} onChange={e => handleChange(e.target.value)}>
           {opcoes}
@@ -83,7 +83,7 @@ export const InstancePicker: React.FC<Props> = ({ value, onChange, rotulo }) => 
 
   return (
     <label className="lmf-select flex items-center gap-2" title="Filtrar por número de WhatsApp">
-      <Smartphone size={14} aria-hidden />
+      <Smartphone className="h-3.5 w-3.5" aria-hidden />
       <span className="sr-only">Número</span>
       <Seletor
         bare

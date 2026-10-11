@@ -232,7 +232,7 @@ export default function MacroFormModal({ isOpen, onClose, macro, onSuccess }: Ma
           e da largura de tablet pra cima o preset já entrega mais de 700px sozinho. */}
       <DialogContent
         size="wide"
-        className="sm:max-w-6xl overflow-y-auto bg-sidebar border-sidebar-border"
+        className="overflow-y-auto"
       >
         <DialogHeader>
           <DialogTitle className="text-sidebar-foreground">
@@ -373,7 +373,6 @@ export default function MacroFormModal({ isOpen, onClose, macro, onSuccess }: Ma
             type="submit"
             onClick={handleSubmit}
             disabled={loading}
-            className="bg-[#00ffa7] hover:bg-[#00e693] text-black border-0 font-semibold"
           >
             {loading
               ? t('modal.buttons.saving')

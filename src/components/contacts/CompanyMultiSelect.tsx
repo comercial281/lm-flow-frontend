@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Input, Label, Badge, Checkbox } from '@/components/ui/ds';
-import { Building2, X, Loader2 } from 'lucide-react';
+import { Building2, X } from 'lucide-react';
+import Carregando from '@/components/base/Carregando';
 import { useLanguage } from '@/hooks/useLanguage';
 import { contactsService } from '@/services/contacts';
 
@@ -91,9 +92,7 @@ export default function CompanyMultiSelect({
       {/* Companies List */}
       <div className="border rounded-lg max-h-48 overflow-y-auto">
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
+          <Carregando linhas={3} className="px-2" />
         ) : filteredCompanies.length === 0 ? (
           <div className="text-center text-sm text-muted-foreground py-4">
             {searchTerm

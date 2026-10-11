@@ -3,10 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Input,
   Label,
-  Alert,
-  AlertTitle,
-  AlertDescription,
 } from '@/components/ui/ds';
+import Aviso from '@/components/base/Aviso';
 import { toast } from 'sonner';
 import { login, register } from '@/services/auth';
 import { accessLinkService } from '@/services/auth/accessLinkService';
@@ -21,7 +19,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, ArrowRight, ChevronLeft, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, ChevronLeft, Eye, EyeOff } from 'lucide-react';
 
 import { ApiError } from '@/types/auth';
 import { useGlobalConfig } from '@/contexts/GlobalConfigContext';
@@ -330,11 +328,7 @@ export const Auth: React.FC = () => {
 
                   {loginError && (
                     <motion.div custom={0.5} variants={fadeUpVariant} initial="hidden" animate="visible">
-                      <Alert variant="destructive" className="mb-5 border-red-500/30 bg-red-500/10">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>{t('auth.errors.title')}</AlertTitle>
-                        <AlertDescription>{loginError}</AlertDescription>
-                      </Alert>
+                      <div className="dark mb-5"><Aviso tom="erro" titulo={t('auth.errors.title')}>{loginError}</Aviso></div>
                     </motion.div>
                   )}
 
@@ -472,11 +466,7 @@ export const Auth: React.FC = () => {
                   </motion.div>
 
                   {registerError && (
-                    <Alert variant="destructive" className="mb-5 border-red-500/30 bg-red-500/10">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>{t('auth.errors.title')}</AlertTitle>
-                      <AlertDescription>{registerError}</AlertDescription>
-                    </Alert>
+                    <div className="dark mb-5"><Aviso tom="erro" titulo={t('auth.errors.title')}>{registerError}</Aviso></div>
                   )}
 
                   <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
@@ -532,11 +522,7 @@ export const Auth: React.FC = () => {
                   </motion.div>
 
                   {forgotPasswordError && (
-                    <Alert variant="destructive" className="mb-5 border-red-500/30 bg-red-500/10">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>{t('auth.errors.title')}</AlertTitle>
-                      <AlertDescription>{forgotPasswordError}</AlertDescription>
-                    </Alert>
+                    <div className="dark mb-5"><Aviso tom="erro" titulo={t('auth.errors.title')}>{forgotPasswordError}</Aviso></div>
                   )}
 
                   {forgotSent ? (

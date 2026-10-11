@@ -10,6 +10,7 @@ import {
   origemCurta,
   classeDaOrigem,
   podeCorrigirContato,
+  podeEditarNome,
   respostasDoLead,
   visitaSemFeedback,
   visitasEmOrdem,
@@ -44,6 +45,14 @@ describe('conversaDoCard', () => {
 
   it('sem conversa devolve null', () => {
     expect(conversaDoCard(item({}))).toBeNull();
+  });
+});
+
+describe('podeEditarNome', () => {
+  it('só com name_editable === true; servidor antigo deixa travado', () => {
+    expect(podeEditarNome({ name_editable: true })).toBe(true);
+    expect(podeEditarNome({ name_editable: false })).toBe(false);
+    expect(podeEditarNome({})).toBe(false);
   });
 });
 

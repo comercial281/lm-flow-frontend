@@ -24,10 +24,19 @@ describe('Contratos: recusa explicada', () => {
     expect(screen.queryByText('Nenhum contrato encontrado')).not.toBeInTheDocument();
   });
 
-  it('queda de rede NÃO culpa o cargo — mostra a lista vazia de sempre', async () => {
+  it('queda de rede NÃO culpa o cargo nem vira lista vazia — mostra o erro com Tentar de novo', async () => {
     mocks.list.mockRejectedValue(new Error('Network Error'));
     render(<Contracts />);
-    await waitFor(() => expect(screen.getByText('Nenhum contrato encontrado')).toBeInTheDocument());
+    expect(await screen.findByText('Não deu pra carregar')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
+    expect(screen.queryByText('Nenhum contrato encontrado')).not.toBeInTheDocument();
     expect(screen.queryByText(NO_ACCESS_MESSAGE)).not.toBeInTheDocument();
+  });
+
+  it('lista vazia de verdade mostra "Nenhum contrato encontrado"', async () => {
+    mocks.list.mockResolvedValue({ data: [] });
+    render(<Contracts />);
+    await waitFor(() => expect(screen.getByText('Nenhum contrato encontrado')).toBeInTheDocument());
+    expect(screen.queryByText('Não deu pra carregar')).not.toBeInTheDocument();
   });
 });

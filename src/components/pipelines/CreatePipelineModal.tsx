@@ -17,10 +17,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/ds';
-import { Plus, Trash2, GripVertical, Loader2, X, Users } from 'lucide-react';
+import { Plus, Trash2, GripVertical, X, Users } from 'lucide-react';
 import { CreatePipelineData, PipelineStage } from '@/types/analytics';
 import TeamsService from '@/services/teams/teamsService';
 import { Team } from '@/types/users/teams';
+import Carregando from '@/components/base/Carregando';
 
 interface StageFormData {
   name: string;
@@ -356,7 +357,7 @@ export default function CreatePipelineModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden sm:max-w-5xl">
+      <DialogContent size="wide" className="max-h-[85vh] overflow-hidden">
         <form onSubmit={handleSubmit} className="flex flex-col h-full">
           <DialogHeader>
             <DialogTitle>{t('createPipeline.title')}</DialogTitle>
@@ -365,7 +366,7 @@ export default function CreatePipelineModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-hidden">
+          <div className="mt-4 flex-1 overflow-hidden">
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 h-full">
               {/* Coluna da Esquerda - Informações Básicas (2/5) */}
               <div className="lg:col-span-2 space-y-4">
@@ -469,9 +470,7 @@ export default function CreatePipelineModal({
                         )}
                         <div className="border rounded-lg max-h-36 overflow-y-auto">
                           {teamsLoading ? (
-                            <div className="flex items-center justify-center py-4">
-                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                            </div>
+                            <Carregando linhas={2} className="px-3" />
                           ) : teams.length === 0 ? (
                             <div className="text-center text-sm text-muted-foreground py-4">
                               {t('createPipeline.teamSelection.noTeams')}
@@ -542,7 +541,7 @@ export default function CreatePipelineModal({
                       `}
                     >
                       <div className="flex items-center space-x-3 flex-1 min-w-0">
-                        <GripVertical className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 toque:opacity-100 transition-opacity" />
+                        <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground opacity-70 group-hover:opacity-100 transition-opacity" />
                         <span className="text-xs font-medium text-muted-foreground w-5 text-center">
                           {index + 1}
                         </span>
@@ -563,13 +562,13 @@ export default function CreatePipelineModal({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={() => removeStage(index)}
                         aria-label="Remover etapa"
                         title="Remover etapa"
-                        className="opacity-0 group-hover:opacity-100 toque:opacity-100 transition-opacity text-destructive hover:text-destructive p-1 h-auto"
+                        className="size-8 shrink-0 text-muted-foreground opacity-70 transition-opacity group-hover:opacity-100 hover:text-destructive focus-visible:opacity-100"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   )) || []}

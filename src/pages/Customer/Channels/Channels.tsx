@@ -25,6 +25,7 @@ import {
   ChannelCard,
 } from '@/components/channels';
 import EmptyState from '@/components/base/EmptyState';
+import AlternadorDeVisao from '@/components/base/AlternadorDeVisao';
 import { Pagina, useExtrasDaMoldura } from '@/components/base';
 // table types imported where needed in ChannelsTable
 import { useNavigate } from 'react-router-dom';
@@ -246,28 +247,14 @@ export default function Channels() {
       <ChannelsTour />
 
       <div className="flex items-center justify-end" data-tour="channels-view-toggle">
-        <div className="flex items-center border rounded-lg">
-          <Button
-            variant={viewMode === 'cards' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('cards')}
-            aria-label="Ver em cartões"
-            title="Ver em cartões"
-            className="border-0 rounded-r-none"
-          >
-            <Grid3X3 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'table' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('table')}
-            aria-label="Ver em tabela"
-            title="Ver em tabela"
-            className="border-0 rounded-l-none"
-          >
-            <List className="h-4 w-4" />
-          </Button>
-        </div>
+        <AlternadorDeVisao
+          valor={viewMode}
+          aoEscolher={setViewMode}
+          opcoes={[
+            { valor: 'cards', icone: Grid3X3, nome: 'Ver em cartões' },
+            { valor: 'table', icone: List, nome: 'Ver em tabela' },
+          ]}
+        />
       </div>
 
       <div className="flex-1 overflow-auto" data-tour="channels-list">
@@ -338,7 +325,7 @@ export default function Channels() {
       <Dialog open={deleteModal.isOpen} onOpenChange={closeDeleteModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-400">
+            <DialogTitle className="flex items-center gap-2 text-destructive">
               <Trash2 className="h-5 w-5" />
               {t('deleteDialog.title')}
             </DialogTitle>
@@ -378,7 +365,6 @@ export default function Channels() {
               variant="destructive"
               onClick={handleConfirmDelete}
               disabled={!isDeleteConfirmationValid || isDeleting === deleteModal.channel?.id}
-              className="bg-red-600 hover:bg-red-700 text-white"
             >
               {isDeleting === deleteModal.channel?.id
                 ? t('deleteDialog.deleting')

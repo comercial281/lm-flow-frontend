@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Pagina, BaseHeader } from '@/components/base';
+import Abas from '@/components/base/Abas';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import {
   Megaphone,
   ShieldCheck,
@@ -8,7 +11,6 @@ import {
   ListOrdered,
   BarChart3,
   Plus,
-  Loader2,
   Radio,
   ExternalLink,
   Pause,
@@ -16,6 +18,7 @@ import {
   Ban,
 } from 'lucide-react';
 import {
+  Card,
   Button,
   Select,
   SelectContent,
@@ -79,6 +82,8 @@ export default function Disparos() {
   const [pipelineId, setPipelineId] = useState('');
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [campaigns, setCampaigns] = useState<BroadcastCampaign[]>([]);
+  // Falha na leitura não vira "Nenhum disparo neste funil ainda".
+  const [erroDisparos, setErroDisparos] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
   // Aba Templates
@@ -91,13 +96,21 @@ export default function Disparos() {
   const [metrics, setMetrics] = useState<CloudMetrics | null>(null);
   const [metricsDays, setMetricsDays] = useState(30);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
+  // Falha na leitura não vira "Nenhum número oficial conectado ainda".
+  const [erroMetricas, setErroMetricas] = useState(false);
 
   const loadMetrics = useCallback((days: number) => {
     setLoadingMetrics(true);
     broadcastsService
       .whatsappCloudMetrics(days)
-      .then(setMetrics)
-      .catch(() => setMetrics(null))
+      .then(m => {
+        setMetrics(m);
+        setErroMetricas(false);
+      })
+      .catch(() => {
+        setMetrics(null);
+        setErroMetricas(true);
+      })
       .finally(() => setLoadingMetrics(false));
   }, []);
 
@@ -133,11 +146,13 @@ export default function Disparos() {
   const loadCampaigns = useCallback((pid: string) => {
     if (!pid) {
       setCampaigns([]);
+      setErroDisparos(false);
       return;
     }
-    broadcastsService.list(pid).then(list => { setCampaigns(list); setRecusado(false); }).catch(e => {
+    broadcastsService.list(pid).then(list => { setCampaigns(list); setRecusado(false); setErroDisparos(false); }).catch(e => {
       setCampaigns([]);
       if (isForbiddenError(e)) setRecusado(true);
+      else setErroDisparos(true);
     });
   }, []);
 
@@ -187,25 +202,12 @@ export default function Disparos() {
       }
     >
       {/* Abas */}
-      <div className="flex items-center gap-1 border-b border-border">
-        {TABS.map(tItem => {
-          const Icon = tItem.icon;
-          const active = tab === tItem.id;
-          return (
-            <button
-              key={tItem.id}
-              type="button"
-              onClick={() => setTab(tItem.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm border-b-2 -mb-px transition-colors ${
-                active ? 'border-primary text-primary font-medium' : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {tItem.label}
-            </button>
-          );
-        })}
-      </div>
+      <Abas
+        rotulo="Partes de Disparos"
+        ativa={tab}
+        aoTrocar={chave => setTab(chave as Tab)}
+        abas={TABS.map(t => ({ chave: t.id, rotulo: t.label, icone: t.icon }))}
+      />
 
       {/* ===================== DISPAROS ===================== */}
       {tab === 'disparos' && (
@@ -233,10 +235,13 @@ export default function Disparos() {
             )}
           </div>
 
-          {campaigns.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Nenhum disparo neste funil ainda. Clique em "Novo disparo" pra criar o primeiro.
-            </div>
+          {campaigns.length === 0 && erroDisparos ? (
+            <EmptyState tipo="erro" aoTentarDeNovo={() => loadCampaigns(pipelineId)} />
+          ) : campaigns.length === 0 ? (
+            <EmptyState
+              title="Nenhum disparo neste funil ainda."
+              description='Clique em "Novo disparo" pra criar o primeiro.'
+            />
           ) : (
             <>
               {/* KPIs — agregado real das campanhas */}
@@ -255,18 +260,18 @@ export default function Disparos() {
                 return (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {kpis.map(k => (
-                      <div key={k.label} className="relative overflow-hidden rounded-xl border bg-card/60 p-4" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                      <Card key={k.label} className="relative gap-0 overflow-hidden p-4">
                         <div aria-hidden className="pointer-events-none absolute -top-8 -right-8 h-24 w-24 rounded-full blur-2xl" style={{ background: k.tint }} />
                         <p className="relative text-xs font-medium text-muted-foreground">{k.label}</p>
                         <p className={`relative text-2xl font-bold tracking-tight mt-1 ${k.color}`}>{k.value.toLocaleString('pt-BR')}</p>
-                      </div>
+                      </Card>
                     ))}
                   </div>
                 );
               })()}
 
               {/* Tabela de campanhas — estilo protótipo */}
-              <div className="rounded-xl border bg-card overflow-hidden">
+              <Card className="gap-0 overflow-hidden py-0">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -293,8 +298,8 @@ export default function Disparos() {
                             <td className="px-4 py-3 tabular-nums font-medium">{c.replied_count ?? 0}</td>
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
-                                <div className="w-full min-w-[70px] bg-muted rounded-full h-1.5 overflow-hidden">
-                                  <div className="bg-primary h-1.5 transition-all" style={{ width: `${pct}%` }} />
+                                <div className="h-2 w-full min-w-[70px] overflow-hidden rounded-full bg-muted">
+                                  <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
                                 </div>
                                 <span className="text-[11px] text-muted-foreground tabular-nums">{pct}%</span>
                               </div>
@@ -332,7 +337,7 @@ export default function Disparos() {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </Card>
             </>
           )}
 
@@ -355,18 +360,13 @@ export default function Disparos() {
       {tab === 'templates' && (
         <div className="space-y-4">
           {loadingChannels ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="w-4 h-4 animate-spin" /> Carregando canais...
-            </div>
+            <Carregando variante="texto" linhas={4} rotulo="Carregando canais..." />
           ) : channels.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-8 text-center space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Nenhum canal WhatsApp Oficial conectado. Templates são criados e aprovados por número oficial.
-              </p>
-              <Button variant="outline" onClick={() => navigate('/channels')}>
-                <Plus className="w-4 h-4 mr-1" /> Conectar canal oficial
-              </Button>
-            </div>
+            <EmptyState
+              title="Nenhum canal WhatsApp Oficial conectado."
+              description="Templates são criados e aprovados por número oficial."
+              action={{ label: 'Conectar canal oficial', onClick: () => navigate('/channels'), variant: 'outline' }}
+            />
           ) : (
             <>
               {channels.length > 1 && (
@@ -411,13 +411,9 @@ export default function Disparos() {
             </Button>
           </div>
           {loadingChannels ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
-            </div>
+            <Carregando rotulo="Carregando..." />
           ) : channels.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Nenhum canal oficial conectado ainda.
-            </div>
+            <EmptyState title="Nenhum canal oficial conectado ainda." />
           ) : (
             <div className="space-y-3">
               {channels.map(o => {
@@ -454,12 +450,10 @@ export default function Disparos() {
             carregar um deles na sequência de mensagens.
           </p>
           {funnels.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-8 text-center space-y-2">
-              <p className="text-sm text-muted-foreground">Nenhum funil ainda.</p>
-              <Button variant="outline" onClick={() => navigate(FLOW_KIND_COPY.conversation.listPath)}>
-                <Plus className="w-4 h-4 mr-1" /> Novo funil
-              </Button>
-            </div>
+            <EmptyState
+              title="Nenhum funil ainda."
+              action={{ label: 'Novo funil', onClick: () => navigate(FLOW_KIND_COPY.conversation.listPath), variant: 'outline' }}
+            />
           ) : (
             <div className="space-y-2">
               {funnels.map(f => {
@@ -581,13 +575,11 @@ export default function Disparos() {
           })()}
 
           {loadingMetrics ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="w-4 h-4 animate-spin" /> Carregando métricas...
-            </div>
+            <Carregando variante="texto" linhas={4} rotulo="Carregando métricas..." />
+          ) : !metrics && erroMetricas ? (
+            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => loadMetrics(metricsDays)} />
           ) : !metrics || metrics.channels.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Nenhum número oficial conectado ainda, ou sem envios no período.
-            </div>
+            <EmptyState tamanho="compacto" title="Nenhum número oficial conectado ainda, ou sem envios no período." />
           ) : (
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

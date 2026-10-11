@@ -28,6 +28,7 @@ import { PhoneInput } from '@/components/shared/PhoneInput';
 import '@/components/shared/PhoneInput.css';
 import { contactSaveError } from '@/utils/contactErrors';
 import { telefone } from '@/lib/formato';
+import Carregando from '@/components/base/Carregando';
 
 // Normaliza telefone para E.164 (backend exige). Limpa tudo que não é dígito e prefixa "+".
 function normalizePhoneE164(raw: string): string {
@@ -351,7 +352,7 @@ export default function AddItemModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] min-h-[500px] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[80vh] min-h-[500px] flex flex-col">
         <DialogHeader>
           <DialogTitle>{t('addItem.title')}</DialogTitle>
           <DialogDescription>{t('addItem.description')}</DialogDescription>
@@ -391,7 +392,7 @@ export default function AddItemModal({
           <div className="grid grid-cols-2 gap-2">
             <Button
               type="button"
-              variant={mode === 'existing' ? 'default' : 'outline'}
+              variant={mode === 'existing' ? 'default' : 'outline'} aria-pressed={mode === 'existing'}
               onClick={() => setMode('existing')}
               className="justify-center"
             >
@@ -400,7 +401,7 @@ export default function AddItemModal({
             </Button>
             <Button
               type="button"
-              variant={mode === 'new' ? 'default' : 'outline'}
+              variant={mode === 'new' ? 'default' : 'outline'} aria-pressed={mode === 'new'}
               onClick={() => setMode('new')}
               className="justify-center"
             >
@@ -494,9 +495,7 @@ export default function AddItemModal({
             <Label>{t('addItem.availableItems')}</Label>
             <div className="border rounded-lg h-48 overflow-y-auto">
               {isLoadingItems ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
-                </div>
+                <Carregando linhas={3} className="px-3" />
               ) : availableItems.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   <div className="text-center">

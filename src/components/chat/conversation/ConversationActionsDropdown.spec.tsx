@@ -19,14 +19,6 @@ vi.mock('@/hooks/chat/useConversations', () => ({
   useConversations: () => mockConversations,
 }));
 
-vi.mock('@evoapi/design-system/button', () => ({
-  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
-    <button type="button" {...props}>
-      {children}
-    </button>
-  ),
-}));
-
 vi.mock('@evoapi/design-system/badge', () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }));

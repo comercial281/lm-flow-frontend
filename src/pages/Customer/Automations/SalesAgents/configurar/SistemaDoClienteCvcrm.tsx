@@ -14,7 +14,7 @@ import {
 } from '@/services/salesAgents/salesAgentsService';
 import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
 import { segundos } from '@/features/salesAgents/sistemaDoCliente';
-import { Aviso } from './Aviso';
+import Aviso from '@/components/base/Aviso';
 
 // Sistema do cliente → CVCRM (06/10/2026). O lead é cadastrado direto no CVCRM do
 // cliente, pela conexão de Integrações → CVCRM (uma por cliente). Aqui a IA só
@@ -86,7 +86,7 @@ export default function SistemaDoClienteCvcrm({ agentId, valor, aoMudar, podeTes
   if (falhaGeral) {
     return (
       <div className="mt-2 space-y-2">
-        <Aviso tom="vermelho">{falhaGeral}</Aviso>
+        <Aviso tom="erro">{falhaGeral}</Aviso>
         <p className="text-sm text-muted-foreground">{guardada || 'Escolhido: deixar o CVCRM decidir empreendimento e fila.'}</p>
       </div>
     );
@@ -95,7 +95,7 @@ export default function SistemaDoClienteCvcrm({ agentId, valor, aoMudar, podeTes
   if (!opcoes?.connected) {
     return (
       <div className="mt-2">
-        <Aviso>
+        <Aviso tom="atencao">
           <p>Este cliente ainda não conectou o CVCRM. Sem a conexão, a IA não liga com este destino.</p>
           <Button asChild size="sm" variant="outline" className="mt-2">
             <Link to="/settings/cvcrm">Conectar o CVCRM</Link>
@@ -145,14 +145,13 @@ export default function SistemaDoClienteCvcrm({ agentId, valor, aoMudar, podeTes
             : 'Use o CVCRM como destino antes de testar.'}
         </p>
         {teste && (
-          <div role="status"
-            className={`mt-2 rounded-md border p-3 ${teste.ok ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20' : 'border-red-300 bg-red-50 dark:bg-red-900/20'}`}>
-            <p className="text-xs font-medium">
+          <Aviso tom={teste.ok ? 'sucesso' : 'erro'} compacto className="mt-2">
+            <p className="font-medium">
               {teste.ok
                 ? `Chegou: o lead de teste foi cadastrado no CVCRM${teste.remote_ref?.owner ? ` e ficou com ${teste.remote_ref.owner}` : ''}${tempo}`
                 : `Não chegou: ${teste.error ?? 'o CVCRM recusou o envio'}${tempo}`}
             </p>
-          </div>
+          </Aviso>
         )}
       </div>
     </div>

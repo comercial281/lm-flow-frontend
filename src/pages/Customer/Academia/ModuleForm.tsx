@@ -14,6 +14,7 @@ import CoverPicker from './CoverPicker';
 import LockConfigFields, { type LockConfig } from './LockConfigFields';
 import EntitlementsEditor from './EntitlementsEditor';
 import { Seletor } from '@/components/base/Seletor';
+import { Card, Button } from '@/components/ui/ds';
 
 export default function ModuleForm({
   editing,
@@ -64,11 +65,11 @@ export default function ModuleForm({
   }
 
   return (
-    <div className="mb-6 bg-card border border-border rounded-xl p-4 space-y-4 max-w-2xl">
+    <Card className="mb-6 max-w-2xl gap-4 p-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold">{editing ? 'Editar módulo' : 'Novo módulo'}</p>
         <button onClick={onClose} type="button" aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground">
-          <X size={16} />
+          <X className="h-4 w-4" />
         </button>
       </div>
 
@@ -141,18 +142,18 @@ export default function ModuleForm({
       )}
 
       <div className="flex justify-end gap-2">
-        <button onClick={onClose} className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground" type="button">
+        <Button variant="outline" size="sm" onClick={onClose} type="button">
           Cancelar
-        </button>
-        <button
+        </Button>
+        <Button
+          size="sm"
           onClick={submit}
           disabled={busy}
-          className="px-3 py-1.5 text-xs text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-50 rounded-lg"
           type="button"
         >
           {busy ? 'Salvando...' : editing ? 'Salvar' : 'Criar módulo'}
-        </button>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 }

@@ -37,6 +37,10 @@ import {
   toggleAcceptedBy,
 } from './acceptedByFilter';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
+import EmptyState from '@/components/base/EmptyState';
+import Carregando from '@/components/base/Carregando';
+import { BOOKED_BY_OPTIONS, BOOKED_BY_TRIGGERS, bookedByCondition, bookedByOf, bookedBySummary, type BookedBy } from './bookedByFilter';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { VariableChipBar } from '@/components/flowAutomations/VariableChipBar';
 import { FLOW_KIND_COPY } from '@/features/flowAutomations/kind';
@@ -55,6 +59,9 @@ const TRIGGERS_WITH_CONDITION = new Set([
   'lead.no_reply_after',
   // Filtro opcional por quem aceitou (ver acceptedByFilter.ts).
   'lead.roleta_accepted',
+  // Filtro opcional por quem marcou (ver bookedByFilter.ts).
+  'lead.visit_scheduled',
+  'lead.visit_rescheduled',
 ]);
 
 export const triggerNeedsCondition = (trigger: string): boolean =>
@@ -265,9 +272,11 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
             <UILabel>Quais formulários? (opcional)</UILabel>
             <div className="mt-1 max-h-52 overflow-y-auto rounded-md border border-border divide-y divide-border">
               {resources.formOrigins.length === 0 ? (
-                <p className="text-xs text-muted-foreground p-2">
-                  Nenhum formulário conectado ainda — veja Configurações → Formulários (Meta).
-                </p>
+                <EmptyState
+                  tamanho="compacto"
+                  className="rounded-none border-0 p-3"
+                  title="Nenhum formulário conectado ainda — veja Configurações → Formulários (Meta)."
+                />
               ) : (
                 resources.formOrigins.map(f => (
                   <label
@@ -298,6 +307,27 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
     );
   }
 
+  // --- Visita agendada / remarcada ---
+  // Filtro opcional por QUEM marcou (ver bookedByFilter.ts).
+  if (BOOKED_BY_TRIGGERS.includes(trigger)) {
+    return (
+      <div>
+        <UILabel>Quem marcou (opcional)</UILabel>
+        <Seletor
+          value={bookedByOf(condition)}
+          onChange={e => onChange(bookedByCondition(e.target.value as '' | BookedBy))}
+          className={baseSelectClass}
+        >
+          {BOOKED_BY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </Seletor>
+        <p className="text-xs text-muted-foreground mt-1">
+          <strong>A IA</strong>: a IA Vendedora marcou ou mudou o horário na conversa.{' '}
+          <strong>Uma pessoa</strong>: alguém da equipe marcou ou remarcou pela Agenda ou pelo card.
+        </p>
+      </div>
+    );
+  }
+
   // --- lead.roleta_accepted ---
   // Filtro opcional por QUEM aceitou. Backend: context { assigned_user_id, ... }
   // casa com { assigned_user_id in [ids] }. Nenhum marcado = qualquer corretor.
@@ -311,9 +341,15 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
         <UILabel>Só quando quem aceitou for (opcional)</UILabel>
         <div className="mt-1 max-h-52 overflow-y-auto rounded-md border border-border divide-y divide-border">
           {options.length === 0 ? (
-            <p className="text-xs text-muted-foreground p-2">
-              {resources.loading ? 'Carregando a equipe…' : 'Nenhum usuário encontrado na conta.'}
-            </p>
+            resources.loading ? (
+              <Carregando linhas={2} rotulo="Carregando a equipe…" className="p-2" />
+            ) : (
+              <EmptyState
+                tamanho="compacto"
+                className="rounded-none border-0 p-3"
+                title="Nenhum usuário encontrado na conta."
+              />
+            )
           ) : (
             options.map(o => (
               <label
@@ -402,9 +438,11 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
           ))}
         </Seletor>
         {resources.labels.length === 0 && !resources.loading && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Nenhuma etiqueta cadastrada. Crie em Configurações &rarr; Etiquetas.
-          </p>
+          <EmptyState
+            tamanho="compacto"
+            className="mt-1 p-3"
+            title="Nenhuma etiqueta cadastrada. Crie em Configurações → Etiquetas."
+          />
         )}
       </div>
     );
@@ -628,9 +666,7 @@ export function PipelineFilterEditor({
         )}
       </p>
       {resources.pipelines.length === 0 && !resources.loading && (
-        <p className="text-xs text-muted-foreground mt-1">
-          Nenhum funil cadastrado ainda.
-        </p>
+        <EmptyState tamanho="compacto" className="mt-1 p-3" title="Nenhum funil cadastrado ainda." />
       )}
     </div>
   );
@@ -721,11 +757,13 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
           hint="Os funis ficam em Funis de mensagem. As mensagens saem pelo número da conversa do lead, com as esperas do funil. Desligado ou com o passo a passo pela metade, ele não dispara."
         >
           {!atual && antigoId && (
-            <p className="mb-2 rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs text-amber-800 dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-300">
-              Esta ação usa um funil do editor de antes:{' '}
-              <strong>{antigo ? antigo.name : resources.loading ? 'carregando…' : 'funil que não existe mais'}</strong>{' '}
-              (formato antigo). Ele continua disparando igual. Pra usar um funil de Funis de mensagem, escolha abaixo.
-            </p>
+            <Aviso tom="atencao" compacto className="mb-2">
+              <p>
+                Esta ação usa um funil do editor de antes:{' '}
+                <strong>{antigo ? antigo.name : resources.loading ? 'carregando…' : 'funil que não existe mais'}</strong>{' '}
+                (formato antigo). Ele continua disparando igual. Pra usar um funil de Funis de mensagem, escolha abaixo.
+              </p>
+            </Aviso>
           )}
           <Seletor
             value={atual}
@@ -753,9 +791,12 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
             </button>
           </div>
           {lista.length === 0 && !resources.loading && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Nenhum funil ainda. Monte um em <strong>Funis de mensagem</strong> (a partir de um modelo pronto) e volte aqui.
-            </p>
+            <EmptyState
+              tamanho="compacto"
+              className="mt-1 p-3"
+              title="Nenhum funil ainda."
+              description={<>Monte um em <strong>Funis de mensagem</strong> (a partir de um modelo pronto) e volte aqui.</>}
+            />
           )}
         </Field>
       );
@@ -1072,9 +1113,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
             {/* Lista vazia com o motivo: quase sempre é o nome da instância
                 escrito diferente do painel, ou a instância desconectada. */}
             {!loadingGroups && groups.length === 0 && groupsReason && (
-              <p className="mt-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-700">
-                Nenhum grupo apareceu: {groupsReason}
-              </p>
+              <Aviso tom="atencao" compacto className="mt-1">{`Nenhum grupo apareceu: ${groupsReason}`}</Aviso>
             )}
           </Field>
           <Field label="Mensagem *">
@@ -1270,7 +1309,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
           <Field label="Notificar quais usuários? *" hint="Recebe o push só quem ativou o Modo Plantão no app/celular.">
             <div className="mt-1 max-h-44 overflow-y-auto rounded-md border border-input bg-background divide-y divide-input">
               {resources.users.length === 0 && (
-                <p className="text-xs text-muted-foreground p-2">Nenhum usuário cadastrado.</p>
+                <EmptyState tamanho="compacto" className="rounded-none border-0 p-3" title="Nenhum usuário cadastrado." />
               )}
               {resources.users.map(u => (
                 <label key={u.id} className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-muted/50">
@@ -1350,7 +1389,8 @@ export function validateRule(
       trigger === 'lead.message_received' ||
       trigger === 'lead.created' ||
       trigger === 'lead.campaign_received' ||
-      trigger === 'lead.roleta_accepted';
+      trigger === 'lead.roleta_accepted' ||
+      BOOKED_BY_TRIGGERS.includes(trigger);
     // Só a condição do GATILHO conta aqui. O filtro de funil viaja no mesmo
     // array e é sempre opcional — sem esta separação, escolher um funil faria
     // um gatilho que EXIGE condição (etiqueta, etapa) passar pela validação sem
@@ -1442,6 +1482,7 @@ export function formatConditionSummary(
   if (trigger === 'lead.no_reply_after') {
     return `Sem resposta por ${condition.value} min`;
   }
+  if (BOOKED_BY_TRIGGERS.includes(trigger)) return bookedBySummary(condition);
   if (trigger === 'lead.roleta_accepted') {
     return acceptedBySummary(acceptedByIds(condition), resources.users);
   }

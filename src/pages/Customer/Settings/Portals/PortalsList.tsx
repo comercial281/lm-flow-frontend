@@ -9,6 +9,7 @@ import { PortalStatusBadge, PortalTypeCounters } from '@/components/portals/Port
 import { temTiposDeAnuncio } from '@/features/portals/adPlan';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
+import { Card } from '@/components/ui/ds';
 
 function lastUpdateLabel(portal: Portal): string {
   if (!portal.last_accessed_at) return 'aguardando portal';
@@ -64,8 +65,9 @@ export default function PortalsList() {
               <button
                 key={portal.portal_key}
                 onClick={() => navigate(`/settings/portals/${portal.portal_key}`)}
-                className="w-full rounded-xl border border-sidebar-border bg-sidebar p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                className="group block w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
+                <Card className="gap-0 p-5 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:border-primary/40">
                 {/* Linha 1: quem é o portal e em que estado está. O nome tem prioridade
                     de largura — os contadores moram na linha de baixo, senão com seis
                     tipos de anúncio eles tomavam a linha inteira e o nome sumia. */}
@@ -126,6 +128,7 @@ export default function PortalsList() {
                     </div>
                   )}
                 </div>
+              </Card>
               </button>
             ))}
           </div>

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import { ChevronDown, ChevronUp, GripVertical, Plus, Trash2 } from 'lucide-react';
-import { Button, Checkbox, Input, Label as UILabel } from '@/components/ui/ds';
+import { Card, Button, Checkbox, Input, Label as UILabel } from '@/components/ui/ds';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { siteBuilderService, type MenuDoPainel, type SitePage } from '@/services/siteBuilder/siteBuilderService';
 import { ROTULO_MAX, ehPagina } from '@/features/siteBuilder/public/menuConfig';
 import { EXTERNOS_MAX, avisosDoExterno, menuDeFabrica, nomeDeFabrica } from '@/features/siteBuilder/menuDoPainel';
 import { Secao, Secoes } from '@/components/base/Secao';
+import EmptyState from '@/components/base/EmptyState';
 import { CLASSE_DO_CAMPO, CampoTexto } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
 
@@ -109,7 +110,7 @@ export default function TelaMenus({ site, siteForm, setF, versaoDasPaginas = 0 }
         titulo="Links externos"
         descricao={`Até ${EXTERNOS_MAX} links para fora do site, como o CRECI ou um portal parceiro. Aparecem no fim do menu e abrem em outra aba.`}
       >
-        {externos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum link externo.</p>}
+        {externos.length === 0 && <EmptyState tamanho="compacto" title="Nenhum link externo." />}
         <div className="space-y-4">
           {externos.map((e, i) => {
             const avisos = avisosDoExterno(e);
@@ -155,7 +156,7 @@ function ItemDoMenu({ item, primeiro, ultimo, aviso, mudar, mover }: ItemProps) 
 
   return (
     <Reorder.Item value={item} dragListener={false} dragControls={controles} className="list-none">
-      <div className="space-y-2 rounded-lg border border-border bg-card p-4">
+      <Card className="gap-2 p-4">
         <div className="flex flex-wrap items-center gap-2">
           {/* Fora do Tab: pelo teclado a ordem muda com Subir/Descer. */}
           <button type="button" tabIndex={-1} aria-label="Arrastar pra mudar a ordem" title="Arrastar pra mudar a ordem"
@@ -184,7 +185,7 @@ function ItemDoMenu({ item, primeiro, ultimo, aviso, mudar, mover }: ItemProps) 
         </div>
         {ehPagina(item.key) && <p className="text-sm text-muted-foreground">Página criada em Páginas.</p>}
         {aviso && <p className="text-sm text-amber-700 dark:text-amber-400">{aviso}</p>}
-      </div>
+      </Card>
     </Reorder.Item>
   );
 }

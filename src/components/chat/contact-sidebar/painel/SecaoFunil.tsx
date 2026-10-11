@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Loader2, SquareKanban } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@evoapi/design-system/select';
 
 import { useLanguage } from '@/hooks/useLanguage';

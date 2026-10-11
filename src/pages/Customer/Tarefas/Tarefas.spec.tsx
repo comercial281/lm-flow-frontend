@@ -41,14 +41,14 @@ describe('Tarefas', () => {
     expect(await screen.findByText('Ligar')).toBeInTheDocument();
     expect(listar).toHaveBeenCalledWith(expect.objectContaining({ bucket: 'hoje', kind: 'task' }));
     expect(screen.getByRole('heading', { name: 'Tarefas' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Vence hoje \(2\)/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Concluídas \(40\)/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Vence hoje 2' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Concluídas 40' })).toBeInTheDocument();
   });
 
   it('trocar de aba pede o balde novo', async () => {
     listar.mockResolvedValue(resposta([]));
     render(<MemoryRouter><Tarefas /></MemoryRouter>);
-    fireEvent.click(await screen.findByRole('button', { name: /Atrasadas/ }));
+    fireEvent.click(await screen.findByRole('tab', { name: /Atrasadas/ }));
     await waitFor(() => expect(listar).toHaveBeenLastCalledWith(expect.objectContaining({ bucket: 'atrasadas' })));
   });
 
@@ -66,7 +66,7 @@ describe('Tarefas', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Próxima' }));
     await waitFor(() => expect(listar).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 })));
     listar.mockClear();
-    fireEvent.click(screen.getByRole('button', { name: /Atrasadas/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /Atrasadas/ }));
     await waitFor(() => expect(listar).toHaveBeenCalled());
     await new Promise(r => setTimeout(r, 50));
     expect(listar).toHaveBeenCalledTimes(1);
@@ -79,7 +79,7 @@ describe('Tarefas', () => {
     listar.mockImplementationOnce(() => new Promise(r => { soltarPrimeira = r; }));
     listar.mockResolvedValueOnce(resposta([tarefa('t2', 'Segunda')]));
     render(<MemoryRouter><Tarefas /></MemoryRouter>);
-    fireEvent.click(await screen.findByRole('button', { name: /Atrasadas/ }));
+    fireEvent.click(await screen.findByRole('tab', { name: /Atrasadas/ }));
     expect(await screen.findByText('Segunda')).toBeInTheDocument();
     soltarPrimeira(resposta([tarefa('t1', 'Primeira')]));
     await new Promise(r => setTimeout(r, 50));
@@ -134,7 +134,7 @@ describe('Tarefas', () => {
   it('todo pedido leva kind task, também ao trocar de aba', async () => {
     listar.mockResolvedValue(resposta([]));
     render(<MemoryRouter><Tarefas /></MemoryRouter>);
-    fireEvent.click(await screen.findByRole('button', { name: /Atrasadas/ }));
+    fireEvent.click(await screen.findByRole('tab', { name: /Atrasadas/ }));
     await waitFor(() => expect(listar).toHaveBeenLastCalledWith(expect.objectContaining({ bucket: 'atrasadas', kind: 'task' })));
   });
 });

@@ -24,6 +24,8 @@ async function transcribeAudioUrl(audioUrl: string): Promise<string> {
   return data.text as string;
 }
 import { toast } from 'sonner';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import { chatService } from '@/services/chat/chatService';
 import { DispararFunilPanel } from '@/components/chat/message-funnels/DispararFunilPanel';
@@ -360,11 +362,9 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
       {/* messages list */}
       <div className="flex-1 space-y-2 overflow-y-auto rounded-lg border bg-muted/30 p-3">
         {loading && messages.length === 0 ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
+          <Carregando linhas={3} />
         ) : messages.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma mensagem ainda.</p>
+          <EmptyState tamanho="compacto" title="Nenhuma mensagem ainda." />
         ) : (
           messages.map((m, index) => {
             // Eventos do sistema (atribuição, mudança de status/etiqueta, etc)
