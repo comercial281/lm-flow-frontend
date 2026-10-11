@@ -131,7 +131,7 @@ As peças 11 a 22 (e os acréscimos em 6, 7 e 9) são as **escolhas do dono em 1
    - **O degradê é só do principal:** a regra do `globals.css` vale pra `[data-slot='button'][data-variant='default']` sem `aria-pressed`. Botão de selecionar (`variant={ativo ? 'default' : 'outline'}`) leva `aria-pressed={ativo}` e fica roxo liso.
    - **Nunca** `<button>` pintado à mão com `bg-primary`, cor fixa (`bg-[#…]`) nem botão menor que 32 px. Exceções de significado: Ganho verde no card, área do administrador.
    - **Trava:** `botaoPintado`.
-15. **Menu de ações:** `DropdownMenu` com gatilho `BotaoMaisAcoes` (⋮ em pé, `ghost`, 36 px, nome "Mais ações"), dentro de `<DropdownMenuTrigger asChild>`; `compacto` (32 px) só onde não cabe.
+15. **Menu de ações:** `DropdownMenu` com gatilho `BotaoMaisAcoes` (⋮ em pé, `ghost`, 36 px, nome "Mais ações"), dentro de `<DropdownMenuTrigger asChild>`; `compacto` (32 px) só onde não cabe; `contorno` (40 px, com contorno) só ao lado de botões grandes de contorno, como o Ganho | Perdido no topo da página do card.
    - Itens com ícone `h-4 w-4` antes do texto.
    - Excluir por último, depois de `DropdownMenuSeparator`, com `variant="destructive"` do pacote. Nunca `text-red-*` à mão.
    - **Trava:** `menuDeitado` (⋯ deitado na tela).
