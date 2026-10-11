@@ -21,7 +21,7 @@ export function LockCta({ lock, className }: { lock: LockInfo; className?: strin
   if (lock.lock_cta_type === 'text' || !href) {
     return (
       <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/10 text-white ${className ?? ''}`}>
-        <Lock size={12} /> {label}
+        <Lock className="h-3.5 w-3.5" /> {label}
       </span>
     );
   }
@@ -33,7 +33,7 @@ export function LockCta({ lock, className }: { lock: LockInfo; className?: strin
       onClick={(e) => e.stopPropagation()}
       className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition ${className ?? ''}`}
     >
-      <Lock size={12} /> {label}
+      <Lock className="h-3.5 w-3.5" /> {label}
     </a>
   );
 }
@@ -44,7 +44,7 @@ export default function LockOverlay({ lock }: { lock: LockInfo }) {
     <div className="h-full min-h-[300px] flex items-center justify-center p-8">
       <div className="max-w-md text-center">
         <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center mb-4">
-          <Lock size={30} className="text-primary" />
+          <Lock className="h-7.5 w-7.5 text-primary" />
         </div>
         <h2 className="text-lg font-bold mb-2">Conteúdo bloqueado</h2>
         <p className="text-sm text-muted-foreground mb-5">

@@ -17,7 +17,7 @@ import {
 } from '@/hooks/useKnowledge';
 import { formatBytes } from './_lib';
 import { toast } from 'sonner';
-import { Card } from '@/components/ui/ds';
+import { Card, Button } from '@/components/ui/ds';
 
 interface Props {
   lessonId: string;
@@ -50,33 +50,40 @@ export default function LessonAttachments({ lessonId, canEdit }: Props) {
     <div className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
-          <Paperclip size={15} /> Materiais de apoio
+          <Paperclip className="h-4 w-4" /> Materiais de apoio
         </h3>
         {canEdit && (
           <div className="flex items-center gap-1.5">
             <input ref={inputRef} type="file" onChange={(e) => handleFile(e.target.files?.[0] ?? null)} className="hidden" />
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               type="button"
               onClick={() => inputRef.current?.click()}
               disabled={upload.isPending}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] rounded-lg border border-border hover:border-primary/40 disabled:opacity-50"
             >
-              {upload.isPending ? <><Loader2 size={12} className="animate-spin" /> Enviando...</> : <><Plus size={12} /> Arquivo</>}
-            </button>
-            <button
+              {upload.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Enviando...</> : <><Plus className="h-4 w-4" /> Arquivo</>}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               type="button"
               onClick={() => setAdding(adding === 'link' ? null : 'link')}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] rounded-lg border hover:border-primary/40 ${adding === 'link' ? 'border-primary/40 text-primary' : 'border-border'}`}
+              aria-expanded={adding === 'link'}
+              className={adding === 'link' ? 'border-primary/40 text-primary' : undefined}
             >
-              <Link2 size={12} /> Link
-            </button>
-            <button
+              <Link2 className="h-4 w-4" /> Link
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               type="button"
               onClick={() => setAdding(adding === 'text' ? null : 'text')}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] rounded-lg border hover:border-primary/40 ${adding === 'text' ? 'border-primary/40 text-primary' : 'border-border'}`}
+              aria-expanded={adding === 'text'}
+              className={adding === 'text' ? 'border-primary/40 text-primary' : undefined}
             >
-              <Type size={12} /> Texto
-            </button>
+              <Type className="h-4 w-4" /> Texto
+            </Button>
           </div>
         )}
       </div>
@@ -107,7 +114,7 @@ function AttachmentRow({ a, canEdit, onDelete }: { a: KnowledgeAttachment; canEd
   const isLink = a.kind === 'link';
   const isText = a.kind === 'text';
 
-  const icon = isLink ? <Link2 size={16} /> : isText ? <Type size={16} /> : <FileText size={16} />;
+  const icon = isLink ? <Link2 className="h-4 w-4" /> : isText ? <Type className="h-4 w-4" /> : <FileText className="h-4 w-4" />;
   const iconWrap = isLink
     ? 'bg-sky-500/15 text-sky-500'
     : isText
@@ -127,22 +134,22 @@ function AttachmentRow({ a, canEdit, onDelete }: { a: KnowledgeAttachment; canEd
         </div>
 
         {isText ? (
-          <button type="button" onClick={() => setOpen((v) => !v)} className="px-2 py-1 text-[11px] rounded-md border border-border hover:border-primary/40">
+          <Button variant="outline" size="sm" type="button" onClick={() => setOpen((v) => !v)}>
             {open ? 'Fechar' : 'Ler'}
-          </button>
+          </Button>
         ) : isLink ? (
           <a href={a.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-muted-foreground hover:text-primary rounded-md" title="Abrir link">
-            <ExternalLink size={15} />
+            <ExternalLink className="h-4 w-4" />
           </a>
         ) : (
           <a href={a.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-muted-foreground hover:text-primary rounded-md" title="Baixar" download>
-            <Download size={15} />
+            <Download className="h-4 w-4" />
           </a>
         )}
 
         {canEdit && (
           <button type="button" onClick={onDelete} className="p-1.5 text-muted-foreground hover:text-red-400 rounded-md" title="Remover">
-            <Trash2 size={15} />
+            <Trash2 className="h-4 w-4" />
           </button>
         )}
       </div>
@@ -173,15 +180,15 @@ function LinkForm({ lessonId, onDone }: { lessonId: string; onDone: () => void }
   return (
     <div className="mb-3 rounded-lg border border-border bg-background/60 p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold flex items-center gap-1.5"><Link2 size={12} /> Novo link</p>
-        <button type="button" onClick={onDone} aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground"><X size={13} /></button>
+        <p className="text-[11px] font-semibold flex items-center gap-1.5"><Link2 className="h-3.5 w-3.5" /> Novo link</p>
+        <button type="button" onClick={onDone} aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
       </div>
       <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome (ex.: Planilha de metas)" className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs" />
       <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs" />
       <div className="flex justify-end">
-        <button type="button" onClick={submit} disabled={add.isPending} className="px-2.5 py-1.5 text-[11px] text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-50 rounded-lg">
+        <Button size="sm" type="button" onClick={submit} disabled={add.isPending}>
           {add.isPending ? 'Salvando...' : 'Adicionar'}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -202,15 +209,15 @@ function TextForm({ lessonId, onDone }: { lessonId: string; onDone: () => void }
   return (
     <div className="mb-3 rounded-lg border border-border bg-background/60 p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold flex items-center gap-1.5"><Type size={12} /> Nova nota de texto</p>
-        <button type="button" onClick={onDone} aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground"><X size={13} /></button>
+        <p className="text-[11px] font-semibold flex items-center gap-1.5"><Type className="h-3.5 w-3.5" /> Nova nota de texto</p>
+        <button type="button" onClick={onDone} aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
       </div>
       <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Título (ex.: Passo a passo)" className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs" />
       <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Escreva aqui (aceita markdown: **negrito**, listas, links)" rows={5} className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs resize-y" />
       <div className="flex justify-end">
-        <button type="button" onClick={submit} disabled={add.isPending} className="px-2.5 py-1.5 text-[11px] text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-50 rounded-lg">
+        <Button size="sm" type="button" onClick={submit} disabled={add.isPending}>
           {add.isPending ? 'Salvando...' : 'Adicionar'}
-        </button>
+        </Button>
       </div>
     </div>
   );

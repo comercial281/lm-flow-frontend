@@ -1,6 +1,6 @@
 import React from 'react';
 import { MessageCircle, Plus } from 'lucide-react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
 
 interface NoConversationsProps {

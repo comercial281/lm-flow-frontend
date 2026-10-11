@@ -16,14 +16,6 @@ vi.mock('@/hooks/useLanguage', () => ({
   useLanguage: () => ({ t: (key: string, fallback?: string) => fallback ?? key }),
 }));
 
-vi.mock('@evoapi/design-system/button', () => ({
-  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
-    <button type="button" {...props}>
-      {children}
-    </button>
-  ),
-}));
-
 // O menu é achatado: submenus abertos, cada item um botão. O que este arquivo
 // confere é QUAIS itens existem, em que ordem e o que cada um chama; abrir e
 // fechar o submenu é assunto do Radix.

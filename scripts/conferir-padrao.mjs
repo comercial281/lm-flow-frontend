@@ -491,6 +491,88 @@ export function botoesSemNome(codigo, arquivo = 'x.tsx') {
   return achados;
 }
 
+// ── Botão pintado à mão (peça 14 do GLOSSARIO, escolha do dono 10/10/2026) ──
+// Botão de ação é o `Button` de `components/ui/ds` (é ele que leva o degradê do
+// principal). A régua: `<button>` com `bg-primary` FIXO na className (não
+// `bg-primary/10`, e não dentro de condição: `ativo ? 'bg-primary' : …` é o
+// estado de filtro, pílula ou alternador, que não é botão de ação), ou
+// `<button>`/`<Button>` com cor fixa `bg-[#…]`. Lê a className pelo compilador,
+// então classe quebrada em várias linhas também conta.
+const FUNDO_PRINCIPAL = /(?:^|[\s'"`])bg-primary(?![\w/-])/;
+const FUNDO_FIXO = /(?:^|[\s'"`])bg-\[#/;
+const emCondicao = (no, ate) => {
+  for (let filho = no, pai = no.parent; pai && pai !== ate; filho = pai, pai = pai.parent) {
+    if (ts.isConditionalExpression(pai) && pai.condition !== filho) return true;
+    if (ts.isBinaryExpression(pai) && pai.right === filho &&
+      [ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken].includes(pai.operatorToken.kind)) return true;
+  }
+  return false;
+};
+export function botoesPintados(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const achados = [];
+  const visitar = no => {
+    if (ts.isJsxOpeningElement(no) || ts.isJsxSelfClosingElement(no)) {
+      const tag = no.tagName.getText(fonte);
+      const cn = (tag === 'button' || tag === 'Button') &&
+        no.attributes.properties.find(a => ts.isJsxAttribute(a) && nomeDe(a.name) === 'className' && a.initializer);
+      if (cn) {
+        let pintado = false;
+        const olhar = n => {
+          if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n) || ts.isTemplateHead(n) || ts.isTemplateMiddle(n) || ts.isTemplateTail(n)) {
+            const t = ' ' + n.text;
+            if (FUNDO_FIXO.test(t) || (tag === 'button' && FUNDO_PRINCIPAL.test(t) && !emCondicao(n, cn))) pintado = true;
+          }
+          ts.forEachChild(n, olhar);
+        };
+        olhar(cn.initializer);
+        if (pintado) {
+          const { line } = fonte.getLineAndCharacterOfPosition(no.getStart(fonte));
+          achados.push({ linha: line + 1, texto: cn.initializer.getText(fonte).replace(/\s+/g, ' ') });
+        }
+      }
+    }
+    ts.forEachChild(no, visitar);
+  };
+  visitar(fonte);
+  return achados;
+}
+
+// ── Ícone com tamanho em pixel (peça 22 do GLOSSARIO, 10/10/2026) ──────────
+// Ícone é `lucide-react` em três tamanhos, por classe: `h-3.5 w-3.5` (aba,
+// etiqueta, filtro), `h-4 w-4` (botão, menu), `h-5 w-5` (título). Conta `size=`
+// em ícone: componente importado de lucide-react, ou variável de ícone
+// (`Icon`, `IconComponent`, `XxxIcon`, `item.icon`) com `size={…}`. Ícone da
+// casa que recebe tamanho por nome (`<ChannelIcon size="sm">`) não conta.
+const TAG_DE_ICONE = /(?:^|\.)(?:icon|Icon|IconComponent|[A-Z]\w*Icon)$/;
+export function iconesComTamanho(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const lucide = new Set();
+  for (const st of fonte.statements) {
+    if (ts.isImportDeclaration(st) && ts.isStringLiteral(st.moduleSpecifier) && st.moduleSpecifier.text === 'lucide-react') {
+      const nb = st.importClause?.namedBindings;
+      if (nb && ts.isNamedImports(nb)) for (const e of nb.elements) lucide.add(e.name.text);
+    }
+  }
+  const achados = [];
+  const visitar = no => {
+    if (ts.isJsxOpeningElement(no) || ts.isJsxSelfClosingElement(no)) {
+      const tag = no.tagName.getText(fonte);
+      if (lucide.has(tag) || TAG_DE_ICONE.test(tag)) {
+        const sz = no.attributes.properties.find(a => ts.isJsxAttribute(a) && nomeDe(a.name) === 'size');
+        // ícone da casa com tamanho por nome (`<ChannelIcon size="sm">`) não conta
+        if (sz && (lucide.has(tag) || (sz.initializer && ts.isJsxExpression(sz.initializer)))) {
+          const { line } = fonte.getLineAndCharacterOfPosition(no.getStart(fonte));
+          achados.push({ linha: line + 1, texto: `<${tag} size=${sz.initializer ? sz.initializer.getText(fonte) : ''}>` });
+        }
+      }
+    }
+    ts.forEachChild(no, visitar);
+  };
+  visitar(fonte);
+  return achados;
+}
+
 // ── Textos dos arquivos de tradução ────────────────────────────────────────
 export function textosDoJson(obj, caminho = '') {
   const saida = [];
@@ -571,6 +653,8 @@ export function varrer() {
     }
     if (escopo && rel.endsWith('.tsx')) {
       for (const { linha, texto } of botoesSemNome(codigo, rel)) anotar('iconeSemNome', rel, linha, texto, texto);
+      for (const { linha, texto } of botoesPintados(codigo, rel)) anotar('botaoPintado', rel, linha, 'botão pintado à mão', texto);
+      for (const { linha, texto } of iconesComTamanho(codigo, rel)) anotar('tamanhoDeIcone', rel, linha, 'ícone com size em pixel', texto);
       const linhas = codigo.split('\n');
       const tags = tagsJsx(codigo, rel);
       if (rel !== CABECALHO_DA_CASA) {
@@ -638,6 +722,8 @@ export const CATEGORIAS = {
   menuDeitado: 'menu de ações com ⋯ deitado',
   cartaoAMao: 'cartão feito à mão (fora do Card)',
   corFixaEmGrafico: 'cor fixa em gráfico',
+  botaoPintado: 'botão pintado à mão (fora do Button)',
+  tamanhoDeIcone: 'ícone com size em pixel',
 };
 
 function principal() {

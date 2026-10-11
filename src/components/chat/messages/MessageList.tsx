@@ -5,7 +5,7 @@ import { FacebookCommentModeration } from '@/types/channels/inbox';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useKeyboardInsetEffect } from '@/hooks/useKeyboardInset';
 
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { Avatar, AvatarImage, AvatarFallback } from '@evoapi/design-system/avatar';
 import { Badge } from '@evoapi/design-system/badge';
 

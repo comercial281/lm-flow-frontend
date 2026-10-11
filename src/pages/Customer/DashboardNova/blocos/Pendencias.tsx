@@ -30,7 +30,7 @@ export const Pendencias: React.FC<ContextoBloco> = ({ dados, carregando, visao, 
     <button type="button" className="lmfn-item" onClick={() => navigate(linkAceite(offers[0].id))}>
       <span className="lmfn-pilula lmfn-pilula-alerta">{numero(ofertas)}</span>
       <span className="lmfn-item-texto">Ofertas esperando seu aceite<small>Leads da roleta oferecidos a você</small></span>
-      <ChevronRight size={14} aria-hidden style={{ color: 'var(--lmf-faint)' }} />
+      <ChevronRight className="h-3.5 w-3.5" aria-hidden style={{ color: 'var(--lmf-faint)' }} />
     </button>
   );
 
@@ -64,7 +64,7 @@ export const Pendencias: React.FC<ContextoBloco> = ({ dados, carregando, visao, 
           <button key={r.key} type="button" className="lmfn-item" onClick={() => abrirLista(r.key, rotulo, !!r.capped)}>
             <span className={`lmfn-pilula${r.total ? ` lmfn-pilula-${ROTULOS[r.key].tom}` : ''}`}>{valor}</span>
             <span className="lmfn-item-texto">{rotulo}<small>{ROTULOS[r.key].dica}{antigos}</small></span>
-            <ChevronRight size={14} aria-hidden style={{ color: 'var(--lmf-faint)' }} />
+            <ChevronRight className="h-3.5 w-3.5" aria-hidden style={{ color: 'var(--lmf-faint)' }} />
           </button>
         );
       })}

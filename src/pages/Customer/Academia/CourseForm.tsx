@@ -12,7 +12,7 @@ import {
 import CoverPicker from './CoverPicker';
 import LockConfigFields, { type LockConfig } from './LockConfigFields';
 import EntitlementsEditor from './EntitlementsEditor';
-import { Card } from '@/components/ui/ds';
+import { Card, Button } from '@/components/ui/ds';
 
 export default function CourseForm({
   editing,
@@ -62,7 +62,7 @@ export default function CourseForm({
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold">{editing ? 'Editar curso' : 'Novo curso'}</p>
         <button onClick={onClose} type="button" aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground">
-          <X size={16} />
+          <X className="h-4 w-4" />
         </button>
       </div>
 
@@ -121,17 +121,17 @@ export default function CourseForm({
       )}
 
       <div className="flex justify-end gap-2">
-        <button onClick={onClose} className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground" type="button">
+        <Button variant="outline" size="sm" onClick={onClose} type="button">
           Cancelar
-        </button>
-        <button
+        </Button>
+        <Button
+          size="sm"
           onClick={submit}
           disabled={busy}
-          className="px-3 py-1.5 text-xs text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-50 rounded-lg"
           type="button"
         >
           {busy ? 'Salvando...' : editing ? 'Salvar' : 'Criar curso'}
-        </button>
+        </Button>
       </div>
     </Card>
   );

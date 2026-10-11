@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, iconesComTamanho } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -112,6 +112,37 @@ describe('botoesSemNome', () => {
     expect(conta('const x = <Button>{busy ? <><Loader2 />{t("a")}</> : <Play />}</Button>;')).toBe(0);
     expect(conta('const x = <Button><img src="a.png" alt="Atlassian" /></Button>;')).toBe(0);
     expect(conta('const x = <Button {...props}><X /></Button>;')).toBe(0);
+  });
+});
+
+describe('botoesPintados (peça 14: botão é o Button da casa)', () => {
+  it('pega <button> com bg-primary fixo, mesmo com a classe em várias linhas', () => {
+    expect(botoesPintados('<button className="px-3 bg-primary text-white">Salvar</button>')).toHaveLength(1);
+    expect(botoesPintados('<button\n  type="button"\n  className="rounded bg-primary"\n>Criar</button>')).toHaveLength(1);
+  });
+  it('pega cor fixa bg-[#…] em <button> e em <Button>', () => {
+    expect(botoesPintados('<Button className="bg-[#00ffa7] text-black">Criar</Button>')).toHaveLength(1);
+    expect(botoesPintados('<button className="bg-[#00a884]">Enviar</button>')).toHaveLength(1);
+  });
+  it('não pega fundo translúcido, estado selecionado nem o Button com bg-primary', () => {
+    expect(botoesPintados('<button className="bg-primary/10 text-primary">Filtro</button>')).toHaveLength(0);
+    expect(botoesPintados("<button className={`px-3 ${ativo ? 'bg-primary text-white' : 'bg-muted'}`}>Todos</button>")).toHaveLength(0);
+    expect(botoesPintados("<button className={cn('px-3', ativo && 'bg-primary')}>Todos</button>")).toHaveLength(0);
+    expect(botoesPintados('<Button className="bg-primary">Salvar</Button>')).toHaveLength(0);
+    expect(botoesPintados('<div className="bg-primary">x</div>')).toHaveLength(0);
+  });
+});
+
+describe('iconesComTamanho (peça 22: ícone em três tamanhos, por classe)', () => {
+  it('pega size em ícone do lucide e em variável de ícone', () => {
+    expect(iconesComTamanho("import { Plus } from 'lucide-react';\nconst a = <Plus size={14} />;")).toHaveLength(1);
+    expect(iconesComTamanho('const a = <Icon size={12} />;')).toHaveLength(1);
+    expect(iconesComTamanho('const a = <item.icon size={16} />;')).toHaveLength(1);
+  });
+  it('não pega ícone com classe, Button com size nem ícone da casa com tamanho por nome', () => {
+    expect(iconesComTamanho("import { Plus } from 'lucide-react';\nconst a = <Plus className=\"h-4 w-4\" />;")).toHaveLength(0);
+    expect(iconesComTamanho('const a = <Button size="sm">x</Button>;')).toHaveLength(0);
+    expect(iconesComTamanho('const a = <ChannelIcon size="sm" />;')).toHaveLength(0);
   });
 });
 

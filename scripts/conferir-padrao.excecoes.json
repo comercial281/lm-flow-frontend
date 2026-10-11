@@ -107,5 +107,7 @@
   { "arquivo": "src/pages/Customer/Team/roles/RoleCards.tsx", "categoria": "cartaoAMao", "trecho": "Carregando cargos...", "motivo": "carregando (peça 13)" },
   { "arquivo": "src/pages/Customer/Tutorials/_internal/CategoriaSidebar.tsx", "categoria": "cartaoAMao", "trecho": "absolute right-0 top-5 z-20 bg-card border border-border rounded-lg shadow-xl", "motivo": "menu suspenso da categoria" },
   { "arquivo": "src/pages/Customer/Tutorials/index.tsx", "categoria": "cartaoAMao", "trecho": "bg-card border border-orange-500/40 rounded-xl", "motivo": "é aviso (peça 11), não cartão" },
-  { "arquivo": "src/components/AppLogo.tsx", "categoria": "corFixaEmGrafico", "trecho": "stopColor=\"#", "motivo": "degradê oficial do logo da marca, não é gráfico" }
+  { "arquivo": "src/components/AppLogo.tsx", "categoria": "corFixaEmGrafico", "trecho": "stopColor=\"#", "motivo": "degradê oficial do logo da marca, não é gráfico" },
+  { "arquivo": "src/components/chat/contact-sidebar/ContactTagsManager.tsx", "categoria": "botaoPintado", "trecho": "rounded-full bg-primary px-2 py-0.5", "motivo": "sugestão \"Criar etiqueta\" no meio das pílulas de etiqueta, com a mesma forma delas: é item da lista, não botão de ação" },
+  { "arquivo": "src/pages/Customer/Automations/SalesAgents/telas/TestarJanela.tsx", "categoria": "botaoPintado", "trecho": "rounded-full bg-[#00a884]", "motivo": "botão de enviar do celular de teste, que imita o WhatsApp de propósito (verde do WhatsApp)" }
 ]

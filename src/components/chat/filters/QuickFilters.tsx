@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Bot, Check, ChevronDown, SlidersHorizontal, X } from 'lucide-react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import chatService from '@/services/chat/chatService';
 import usersService from '@/services/users/usersService';

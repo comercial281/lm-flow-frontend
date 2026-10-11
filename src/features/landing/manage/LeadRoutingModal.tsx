@@ -33,6 +33,7 @@ import {
   type PixelForm,
   type StoredPixel,
 } from './landingPixel';
+import { Button } from '@/components/ui/ds';
 
 interface Opt {
   id: string;
@@ -430,11 +431,10 @@ export default function LeadRoutingModal({
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={onClose} className="rounded-md px-4 py-2 text-sm text-muted-foreground">Cancelar</button>
-              <button type="button" onClick={save} disabled={saving}
-                className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40">
+              <Button variant="outline" type="button" onClick={onClose}>Cancelar</Button>
+              <Button type="button" onClick={save} disabled={saving}>
                 {saving && <Loader2 className="h-4 w-4 animate-spin" />} Salvar
-              </button>
+              </Button>
             </div>
           </div>
         )}

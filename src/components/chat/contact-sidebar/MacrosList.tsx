@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@evoapi/design-system/button';
+import { Button, Card } from '@/components/ui/ds';
 import { Play, Loader2, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { macrosService } from '@/services/macros/macrosService';
 import type { Macro } from '@/types/automation';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
-import { Card } from '@/components/ui/ds';
 
 interface MacrosListProps {
   conversationId: string;

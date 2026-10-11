@@ -71,7 +71,7 @@ export const TagPicker: React.FC<Props> = ({ value, onChange, rotulo }) => {
   if (rotulo) {
     const icone = selected
       ? <span style={{ width: 10, height: 10, borderRadius: '50%', background: selected.color }} />
-      : <Tag size={14} />;
+      : <Tag className="h-3.5 w-3.5" />;
     return (
       <CampoFiltro id={id} rotulo={rotulo} icone={icone}>
         <Seletor bare id={id} className="lmf-campo-controle" data-active={selected ? true : undefined}
@@ -92,7 +92,7 @@ export const TagPicker: React.FC<Props> = ({ value, onChange, rotulo }) => {
           style={{ width: 10, height: 10, borderRadius: '50%', background: selected.color, flexShrink: 0 }}
         />
       ) : (
-        <Tag size={14} aria-hidden />
+        <Tag className="h-3.5 w-3.5" aria-hidden />
       )}
       <span className="sr-only">Etiqueta</span>
       <Seletor

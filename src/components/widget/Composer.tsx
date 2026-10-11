@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { ChatAttachment } from './ChatAttachment';
 import { EmojiPickerComponent } from './EmojiPicker';
 import { ResizableTextarea, ResizableTextareaRef } from './ResizableTextarea';

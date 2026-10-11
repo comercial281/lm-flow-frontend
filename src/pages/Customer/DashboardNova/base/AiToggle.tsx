@@ -48,7 +48,7 @@ export const AiToggle: React.FC<Props> = ({ active, salesAgentId, onChange, rotu
     // Botão liga/desliga: sem seta (não abre lista). O rótulo dá nome ao grupo;
     // o botão continua se chamando "Só IA".
     return (
-      <CampoFiltro rotulo={rotulo} idRotulo={`${id}-rotulo`} icone={<Bot size={14} />} seta={false}>
+      <CampoFiltro rotulo={rotulo} idRotulo={`${id}-rotulo`} icone={<Bot className="h-3.5 w-3.5" />} seta={false}>
         <button
           type="button"
           className="lmf-campo-controle"
@@ -73,7 +73,7 @@ export const AiToggle: React.FC<Props> = ({ active, salesAgentId, onChange, rotu
         aria-pressed={active}
         title="Mostrar só leads atendidos pela IA"
       >
-        <Bot size={14} aria-hidden />
+        <Bot className="h-3.5 w-3.5" aria-hidden />
         Só IA
       </button>
     );
@@ -106,7 +106,7 @@ export const AiToggle: React.FC<Props> = ({ active, salesAgentId, onChange, rotu
 
   if (rotulo) {
     return (
-      <CampoFiltro id={id} rotulo={rotulo} icone={<Bot size={14} />}>
+      <CampoFiltro id={id} rotulo={rotulo} icone={<Bot className="h-3.5 w-3.5" />}>
         <Seletor bare id={id} className="lmf-campo-controle" data-active={active || undefined}
           value={value} onChange={e => handleChange(e.target.value)}>
           {opcoes}
@@ -117,7 +117,7 @@ export const AiToggle: React.FC<Props> = ({ active, salesAgentId, onChange, rotu
 
   return (
     <label className="lmf-select flex items-center gap-2" title="Filtrar por IA que atendeu">
-      <Bot size={14} aria-hidden />
+      <Bot className="h-3.5 w-3.5" aria-hidden />
       <span className="sr-only">IA</span>
       <Seletor
         bare

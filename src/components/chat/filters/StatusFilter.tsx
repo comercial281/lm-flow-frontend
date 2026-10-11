@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { Check, Filter } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@evoapi/design-system/popover';
 import { useLanguage } from '@/hooks/useLanguage';

@@ -296,7 +296,7 @@ export function BaseNodePanel({
                         'hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all',
                       )}
                     >
-                      <Plus size={16} />
+                      <Plus className="h-4 w-4" />
                     </div>
                   </div>
                 </TooltipTrigger>

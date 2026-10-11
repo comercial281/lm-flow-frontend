@@ -1,6 +1,6 @@
 import React from 'react';
 import { EditorState } from 'prosemirror-state';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { Bold, Italic, Code, Heading2, Heading3, ImagePlus, Link2, List, ListOrdered, Quote, Undo, Redo } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Input } from '@/components/ui/ds';
+import { Input, Button } from '@/components/ui/ds';
 import { propertyOwnersService, type Proprietario } from '@/services/propertyOwners/propertyOwnersService';
 import { telefone } from '@/lib/formato';
 import { CampoTexto } from './campos';
@@ -180,11 +180,10 @@ function NovoProprietario({ aoCriar, aoUsarExistente, aoCancelar }: {
       )}
       <CampoTexto rotulo="E-mail" type="email" valor={email} aoMudar={setEmail} />
       <div className="flex gap-2">
-        <button type="button" onClick={salvar} disabled={salvando}
-          className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+        <Button type="button" onClick={salvar} disabled={salvando}>
           Salvar proprietário
-        </button>
-        <button type="button" onClick={aoCancelar} className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted">Cancelar</button>
+        </Button>
+        <Button variant="outline" type="button" onClick={aoCancelar}>Cancelar</Button>
       </div>
     </div>
   );

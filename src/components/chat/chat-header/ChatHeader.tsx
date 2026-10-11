@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import {
   Tooltip,
   TooltipContent,

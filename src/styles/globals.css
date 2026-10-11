@@ -580,13 +580,16 @@ button[role='switch'][data-state='unchecked'],
   color: #53bdeb !important; /* ✓✓ lido = azul do WhatsApp */
 }
 
-/* ═══ Lote geral: gradiente da marca nos botões primários (todas as telas) ═══ */
-button.bg-primary, [data-slot='button'].bg-primary {
+/* ═══ Degradê da marca: só no botão PRINCIPAL (peça 14 do GLOSSARIO, 10/10/2026) ═══
+   A marca `data-slot`/`data-variant` vem do Button de `components/ui/ds`. Filtro,
+   pílula e alternador selecionados (bg-primary à mão, ou Button com aria-pressed)
+   ficam com o roxo liso, sem degradê nem sombra. */
+[data-slot='button'][data-variant='default'].bg-primary:not([aria-pressed]) {
   background-image: linear-gradient(135deg, #7c3aed 0%, #9333ea 55%, #a855f7 100%) !important;
   box-shadow: 0 8px 18px -6px rgba(124, 58, 237, 0.5) !important;
   border-color: transparent !important;
 }
-button.bg-primary:hover, [data-slot='button'].bg-primary:hover {
+[data-slot='button'][data-variant='default'].bg-primary:not([aria-pressed]):hover {
   filter: brightness(1.07);
 }
 /* item ativo do menu com o mesmo gradiente */

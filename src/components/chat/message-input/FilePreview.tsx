@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { X, Send, File, FileText, Image, Music, Video, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 

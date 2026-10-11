@@ -15,7 +15,7 @@ import {
 } from '@/hooks/useKnowledge';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
-import { Card } from '@/components/ui/ds';
+import { Card, Button } from '@/components/ui/ds';
 interface Props {
   categoryId: string | null;
   canEdit: boolean;
@@ -54,31 +54,35 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
             className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
             type="button"
           >
-            <ArrowLeft size={14} /> Voltar
+            <ArrowLeft className="h-3.5 w-3.5" /> Voltar
           </button>
           <div className="flex items-center gap-2">
             {canEdit && !editing && (
               <>
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => updateMut.mutate({ id: selected.id, pinned: !selected.pinned })}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs text-foreground border border-border hover:border-primary/40 rounded-lg transition-colors"
                   type="button"
                 >
-                  {selected.pinned ? <PinOff size={12} /> : <Pin size={12} />}
+                  {selected.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
                   {selected.pinned ? 'Desafixar' : 'Fixar'}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => {
                     setEditing(true);
                     setDraftTitle(selected.titulo);
                     setDraftBody(selected.content_md);
                   }}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs text-foreground border border-border hover:border-primary/40 rounded-lg transition-colors"
                   type="button"
                 >
-                  <Pencil size={12} /> Editar
-                </button>
-                <button
+                  <Pencil className="h-4 w-4" /> Editar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={async () => {
                     if (await confirmar({
                       titulo: 'Excluir documento',
@@ -90,23 +94,25 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
                       setSelected(null);
                     }
                   }}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs text-red-500 border border-red-500/30 hover:bg-red-500/10 rounded-lg transition-colors"
+                  className="text-destructive hover:text-destructive"
                   type="button"
                 >
-                  <Trash2 size={12} /> Excluir
-                </button>
+                  <Trash2 className="h-4 w-4" /> Excluir
+                </Button>
               </>
             )}
             {editing && (
               <>
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setEditing(false)}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs text-muted-foreground border border-border hover:text-foreground rounded-lg transition-colors"
                   type="button"
                 >
-                  <X size={12} /> Cancelar
-                </button>
-                <button
+                  <X className="h-4 w-4" /> Cancelar
+                </Button>
+                <Button
+                  size="sm"
                   onClick={async () => {
                     await updateMut.mutateAsync({
                       id: selected.id,
@@ -116,11 +122,10 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
                     setSelected({ ...selected, titulo: draftTitle, content_md: draftBody });
                     setEditing(false);
                   }}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs text-primary-foreground bg-primary hover:opacity-90 rounded-lg transition-colors"
                   type="button"
                 >
-                  <Save size={12} /> Salvar
-                </button>
+                  <Save className="h-4 w-4" /> Salvar
+                </Button>
               </>
             )}
           </div>
@@ -150,7 +155,7 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
           ) : (
             <article className="prose prose-sm max-w-none dark:prose-invert">
               <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                {selected.pinned && <Pin size={16} className="text-primary" />}
+                {selected.pinned && <Pin className="h-4 w-4 text-primary" />}
                 {selected.titulo}
               </h2>
               <div className="text-sm leading-relaxed">
@@ -173,17 +178,17 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
           {docs.length} doc{docs.length === 1 ? '' : 's'}
         </span>
         {canEdit && (
-          <button
+          <Button
+            size="sm"
             onClick={() => {
               setCreating(true);
               setDraftTitle('');
               setDraftBody('');
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-primary-foreground bg-primary hover:opacity-90 rounded-lg transition-colors"
             type="button"
           >
-            <Plus size={12} /> Novo doc
-          </button>
+            <Plus className="h-4 w-4" /> Novo doc
+          </Button>
         )}
       </div>
       <div className="flex-1 overflow-y-auto p-6">
@@ -214,14 +219,16 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
               className="w-full bg-background border border-border rounded px-3 py-2 text-sm font-mono resize-y"
             />
             <div className="flex justify-end gap-2">
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setCreating(false)}
-                className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
                 type="button"
               >
                 Cancelar
-              </button>
-              <button
+              </Button>
+              <Button
+                size="sm"
                 onClick={async () => {
                   if (!draftTitle.trim()) return;
                   await createMut.mutateAsync({
@@ -231,11 +238,10 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
                   });
                   setCreating(false);
                 }}
-                className="px-3 py-1.5 text-xs text-primary-foreground bg-primary hover:opacity-90 rounded-lg"
                 type="button"
               >
                 Criar
-              </button>
+              </Button>
             </div>
           </Card>
         )}
@@ -249,7 +255,7 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
             >
               <Card className="gap-0 p-4 transition-colors group-hover:border-primary/30">
               <div className="flex items-start gap-2">
-                {doc.pinned && <Pin size={12} className="text-primary mt-1 shrink-0" />}
+                {doc.pinned && <Pin className="h-3.5 w-3.5 text-primary mt-1 shrink-0" />}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">{doc.titulo}</p>
                   <p className="text-[11px] text-muted-foreground line-clamp-2 mt-1">

@@ -1,6 +1,6 @@
 import { Smartphone, WifiOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import Aviso from '@/components/base/Aviso';
 import EmptyState from '@/components/base/EmptyState';
 import {

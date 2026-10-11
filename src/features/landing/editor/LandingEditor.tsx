@@ -13,6 +13,7 @@ import { SectionList } from './SectionList';
 import { BlockLibrary } from './BlockLibrary';
 import { BlockConfigPanel } from './BlockConfigPanel';
 import { AppearancePanel } from './AppearancePanel';
+import { Button } from '@/components/ui/ds';
 
 export interface LandingEditorProps {
   title?: string;
@@ -137,14 +138,13 @@ export function LandingEditor({
             <Redo2 className="h-4 w-4" />
           </button>
           {headerActions}
-          <button
+          <Button
             type="button"
             onClick={handleSave}
             disabled={saving || !dirty}
-            className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-40"
           >
             <Save className="h-4 w-4" /> {saving ? 'Salvando…' : 'Salvar'}
-          </button>
+          </Button>
         </div>
       </header>
 
