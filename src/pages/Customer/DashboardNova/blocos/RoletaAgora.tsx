@@ -128,14 +128,14 @@ export const RoletaAgora: React.FC<ContextoBloco> = ({ visao, pode }) => {
     <div className="lmfn-carrossel">
       <IconActionButton
         label="Roleta anterior"
-        icon={<ChevronLeft size={14} aria-hidden />}
+        icon={<ChevronLeft className="h-3.5 w-3.5" aria-hidden />}
         disabled={indice === 0}
         onClick={() => irPara(indice - 1)}
       />
       <span className="lmf-card-sub" style={{ margin: 0 }}>{`${numero(indice + 1)} de ${numero(roletas.length)}`}</span>
       <IconActionButton
         label="Próxima roleta"
-        icon={<ChevronRight size={14} aria-hidden />}
+        icon={<ChevronRight className="h-3.5 w-3.5" aria-hidden />}
         disabled={indice >= roletas.length - 1}
         onClick={() => irPara(indice + 1)}
       />

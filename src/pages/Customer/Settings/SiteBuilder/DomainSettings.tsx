@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import { Button, Input, Badge, Label as UILabel } from '@evoapi/design-system';
+import { Input, Badge, Label as UILabel } from '@evoapi/design-system';
+import { Button } from '@/components/ui/ds';
 import {
   Globe, Copy, Check, RefreshCw, Trash2, AlertTriangle,
   Loader2, ExternalLink, ShieldCheck,

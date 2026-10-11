@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ShieldX, ArrowLeft, Home } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import Aviso from '@/components/base/Aviso';
+import { Button } from '@/components/ui/ds';
 
 const Unauthorized: React.FC = () => {
   const navigate = useNavigate();
@@ -37,21 +38,20 @@ const Unauthorized: React.FC = () => {
 
         {/* Botões de Ação */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <button
+          <Button
+            variant="outline"
             onClick={() => navigate(-1)}
-            className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
           >
-            <ArrowLeft className="h-5 w-5 mr-2" />
+            <ArrowLeft className="h-4 w-4" />
             {t('buttons.back')}
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={() => navigate('/')}
-            className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
           >
-            <Home className="h-5 w-5 mr-2" />
+            <Home className="h-4 w-4" />
             {t('buttons.goHome')}
-          </button>
+          </Button>
         </div>
 
         {/* Informações Adicionais */}

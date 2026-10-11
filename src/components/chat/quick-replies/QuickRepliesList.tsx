@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent } from '@evoapi/design-system/card';
 import { Zap, Loader2, Search, X } from 'lucide-react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import type { QuickReply } from '@/types/knowledge';
 
 interface QuickRepliesListProps {

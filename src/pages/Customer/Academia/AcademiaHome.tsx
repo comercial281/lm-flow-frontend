@@ -22,6 +22,7 @@ import ModuleForm from './ModuleForm';
 import { GERAL_COURSE_ID } from './_lib';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { Button } from '@/components/ui/ds';
 interface Props {
   canEdit: boolean;
   embedded?: boolean; // true = dentro da aba do app (sem chrome de tela cheia)
@@ -114,20 +115,21 @@ export default function AcademiaHome({ canEdit, embedded }: Props) {
         {/* Ações admin */}
         {canEdit && (
           <div className="flex flex-wrap items-center gap-2 mb-6">
-            <button
+            <Button
+              size="sm"
               onClick={() => setCourseForm({ editing: null })}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-primary-foreground bg-primary hover:opacity-90 rounded-lg"
               type="button"
             >
-              <Plus size={13} /> Novo curso
-            </button>
-            <button
+              <Plus className="h-4 w-4" /> Novo curso
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowModuleForm(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border hover:border-primary/40"
               type="button"
             >
-              <FolderPlus size={13} /> Novo módulo
-            </button>
+              <FolderPlus className="h-4 w-4" /> Novo módulo
+            </Button>
           </div>
         )}
 
@@ -146,7 +148,7 @@ export default function AcademiaHome({ canEdit, embedded }: Props) {
             <p className="text-xs font-semibold text-muted-foreground mb-2">Continue assistindo</p>
             <div className="flex items-center gap-4 rounded-xl border border-border bg-card hover:border-primary/40 p-4 transition-colors">
               <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
-                <PlayCircle size={24} className="text-primary" />
+                <PlayCircle className="h-5 w-5 text-primary" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold truncate">{continueTarget.lessonTitle}</p>
@@ -160,7 +162,7 @@ export default function AcademiaHome({ canEdit, embedded }: Props) {
 
         {!isLoading && !hasContent && (
           <div className="text-center py-16">
-            <GraduationCap size={44} className="mx-auto text-muted-foreground/40 mb-3" strokeWidth={1.5} />
+            <GraduationCap className="h-11 w-11 mx-auto text-muted-foreground/40 mb-3" strokeWidth={1.5} />
             <p className="text-sm text-muted-foreground">Nenhum curso ainda.</p>
             <p className="text-xs text-muted-foreground/70 mt-1">
               {canEdit ? 'Crie um curso pra montar a área de membros.' : 'Em breve teremos conteúdo aqui.'}

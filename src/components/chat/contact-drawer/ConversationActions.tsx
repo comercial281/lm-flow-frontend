@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { Badge } from '@evoapi/design-system/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@evoapi/design-system/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@evoapi/design-system/select';

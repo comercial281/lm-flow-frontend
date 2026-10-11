@@ -59,7 +59,7 @@ export const Imoveis: React.FC<ContextoBloco> = ({ dados, carregando, visao, pod
           onClick={() => abrir('ativos')}
         >
           {ativos}
-          <ChevronRight size={14} aria-hidden style={{ color: 'var(--lmf-faint)' }} />
+          <ChevronRight className="h-3.5 w-3.5" aria-hidden style={{ color: 'var(--lmf-faint)' }} />
         </button>
       ) : (
         <div className="flex items-baseline gap-2 mb-2">{ativos}</div>
@@ -74,7 +74,7 @@ export const Imoveis: React.FC<ContextoBloco> = ({ dados, carregando, visao, pod
           <>
             <span className="lmfn-item-texto">{l.rotulo}{dica && <small>{dica}</small>}</span>
             <span className={`lmfn-pilula${tom}`}>{l.campo === 'new' && valor > 0 ? `+${numero(valor)}` : numero(valor)}</span>
-            {pode.imoveis && <ChevronRight size={14} aria-hidden style={{ color: 'var(--lmf-faint)' }} />}
+            {pode.imoveis && <ChevronRight className="h-3.5 w-3.5" aria-hidden style={{ color: 'var(--lmf-faint)' }} />}
           </>
         );
         return pode.imoveis ? (

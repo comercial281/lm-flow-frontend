@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import {
   Dialog,
   DialogContent,

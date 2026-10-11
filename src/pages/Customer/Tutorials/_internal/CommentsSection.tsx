@@ -8,6 +8,7 @@ import {
   useDeleteComment,
   getCurrentUserRef,
 } from '@/hooks/useKnowledge';
+import { Button } from '@/components/ui/ds';
 
 function formatWhen(iso: string): string {
   try {
@@ -49,7 +50,7 @@ export default function CommentsSection({ lessonId, canModerate }: Props) {
   return (
     <div className="mt-8 max-w-3xl">
       <div className="flex items-center gap-2 mb-4">
-        <MessageSquare size={16} className="text-primary" />
+        <MessageSquare className="h-4 w-4 text-primary" />
         <h3 className="text-sm font-semibold">Comentários</h3>
         <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">
           {comments.length}
@@ -68,14 +69,15 @@ export default function CommentsSection({ lessonId, canModerate }: Props) {
           rows={2}
           className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm resize-y"
         />
-        <button
+        <Button
+          size="sm"
           onClick={send}
           disabled={create.isPending || !body.trim()}
-          className="flex items-center gap-1.5 px-4 py-2 text-xs text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-50 rounded-lg shrink-0"
+          className="shrink-0"
           type="button"
         >
-          <Send size={13} /> Enviar
-        </button>
+          <Send className="h-4 w-4" /> Enviar
+        </Button>
       </div>
 
       {/* Lista */}
@@ -109,7 +111,7 @@ export default function CommentsSection({ lessonId, canModerate }: Props) {
                   title="Excluir comentário"
                   type="button"
                 >
-                  <Trash2 size={13} />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>

@@ -217,3 +217,27 @@ export const SheetContent = forwardRef<ComponentRef<typeof BaseSheetContent>, Sh
   ),
 );
 SheetContent.displayName = 'SheetContent';
+
+// ── Botão (peça 14 do GLOSSARIO, escolha do dono em 10/10/2026) ─────────────
+// Bloco separado do Dialog de propósito: quem mexer na janela não esbarra aqui.
+//
+// O degradê roxo com sombra é do botão PRINCIPAL. A regra antiga do globals.css
+// pintava qualquer `<button>` com `bg-primary` (filtro selecionado, pílula,
+// alternador) e não alcançava o principal com `asChild` (vira `<a>`). O Button
+// do pacote não marca a variante no HTML, então este embrulho marca:
+// `data-slot="button"` e `data-variant` (sem variante = `default`). O CSS mira
+// `[data-slot='button'][data-variant='default'].bg-primary`: quem trocou o fundo
+// pela className (o tailwind-merge tira o `bg-primary`) também não ganha degradê.
+// Botão de ligar/selecionar (`aria-pressed`) fica sem degradê mesmo em `default`.
+//
+// Use sempre `Button` daqui (`@/components/ui/ds`), nunca de
+// `@evoapi/design-system/button`: o de lá não tem a marca e sai sem degradê.
+import { Button as BaseButton } from '@evoapi/design-system';
+
+// Tipado como o do pacote (`typeof BaseButton`): quem chama continua com a mesma
+// inferência de antes (o `e` do onClick, por exemplo).
+const ButtonDaCasa = forwardRef<HTMLButtonElement, ComponentProps<typeof BaseButton>>(({ variant, ...props }, ref) => (
+  <BaseButton ref={ref} data-slot="button" data-variant={variant ?? 'default'} variant={variant} {...props} />
+));
+ButtonDaCasa.displayName = 'Button';
+export const Button: typeof BaseButton = ButtonDaCasa;

@@ -33,12 +33,6 @@ vi.mock('@/hooks/useLanguage', () => ({
 }));
 
 // Mock design-system components
-vi.mock('@evoapi/design-system/button', () => ({
-  Button: ({ children, onClick, disabled, ...props }: any) => (
-    <button type="button" onClick={onClick} disabled={disabled} {...props}>{children}</button>
-  ),
-}));
-
 vi.mock('@evoapi/design-system/select', () => ({
   Select: ({ children, value, onValueChange }: any) => (
     <div data-testid="select" data-value={value}>

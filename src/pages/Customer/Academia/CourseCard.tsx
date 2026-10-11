@@ -38,25 +38,25 @@ export default function CourseCard({
           {capaUrl ? (
             <img src={capaUrl} alt="" className={`w-full h-full object-cover ${locked ? 'opacity-40' : ''}`} />
           ) : (
-            <GraduationCap size={40} className={`text-primary/70 ${locked ? 'opacity-40' : ''}`} strokeWidth={1.5} />
+            <GraduationCap className={`h-10 w-10 text-primary/70 ${locked ? 'opacity-40' : ''}`} strokeWidth={1.5} />
           )}
           {locked && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/45 backdrop-blur-[1px]">
               <div className="w-11 h-11 rounded-xl bg-white/12 flex items-center justify-center">
-                <Lock size={20} className="text-white" />
+                <Lock className="h-5 w-5 text-white" />
               </div>
               <LockCta lock={lock} />
             </div>
           )}
           {!locked && restricted && (
             <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-semibold rounded-full bg-black/55 text-amber-300 backdrop-blur">
-              <Lock size={9} /> Restrito
+              <Lock className="h-3.5 w-3.5" /> Restrito
             </span>
           )}
         </div>
         <div className="p-4">
           <p className="text-sm font-semibold flex items-center gap-1.5">
-            {locked && <Lock size={12} className="text-muted-foreground shrink-0" />}
+            {locked && <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
             <span className="truncate">{titulo}</span>
           </p>
           {descricao && <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{descricao}</p>}
@@ -72,7 +72,7 @@ export default function CourseCard({
           )}
           {!locked && (!progress || progress.total === 0) && (
             <p className="mt-3 text-[10px] text-muted-foreground flex items-center gap-1">
-              <PlayCircle size={11} /> Começar
+              <PlayCircle className="h-3.5 w-3.5" /> Começar
             </p>
           )}
         </div>
@@ -87,7 +87,7 @@ export default function CourseCard({
               title="Editar"
               type="button"
             >
-              <Pencil size={12} />
+              <Pencil className="h-3.5 w-3.5" />
             </button>
           )}
           {onDelete && (
@@ -97,7 +97,7 @@ export default function CourseCard({
               title="Excluir"
               type="button"
             >
-              <Trash2 size={12} />
+              <Trash2 className="h-3.5 w-3.5" />
             </button>
           )}
         </div>

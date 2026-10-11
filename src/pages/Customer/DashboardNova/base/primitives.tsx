@@ -44,7 +44,7 @@ export const EmptyBlock: React.FC<{ block?: Unavailable; text?: string }> = ({ b
 
   return (
     <div className="lmf-empty">
-      <AlertCircle size={16} />
+      <AlertCircle className="h-4 w-4" />
       <span>{message}</span>
     </div>
   );

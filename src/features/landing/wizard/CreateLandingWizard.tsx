@@ -13,6 +13,7 @@ import { safeParsePageBlocks } from '@/features/landing/blocks';
 import { slugifyLandingName } from '@/features/landing/manage/landingUrl';
 import { Seletor } from '@/components/base/Seletor';
 import { MODELOS_DE_ANUNCIO, modeloSugerido, type ModeloDeAnuncioId } from '@/features/landing/modelos/modelosDeAnuncio';
+import { Button } from '@/components/ui/ds';
 
 interface Opt {
   id: string;
@@ -444,31 +445,29 @@ export default function CreateLandingWizard({
 
         {/* footer */}
         <div className="flex items-center justify-between border-t border-border p-4">
-          <button
+          <Button
+            variant="outline"
             type="button"
             onClick={() => (step === 1 ? onClose() : setStep((s) => (s - 1) as 1 | 2 | 3))}
-            className="rounded-md px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
           >
             {step === 1 ? 'Cancelar' : 'Voltar'}
-          </button>
+          </Button>
           {step < 3 ? (
-            <button
+            <Button
               type="button"
               disabled={!canNext}
               onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40"
             >
               Próximo
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
               type="button"
               disabled={creating || !name.trim()}
               onClick={handleCreate}
-              className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40"
             >
               {creating && <Loader2 className="h-4 w-4 animate-spin" />} Criar landing
-            </button>
+            </Button>
           )}
         </div>
       </div>

@@ -7,11 +7,10 @@ interface Props {
   value: number; // nota atual (0-5), pode ser fracionária no modo leitura
   count?: number; // qtd de avaliações (modo leitura)
   onRate?: (stars: number) => void; // se presente, vira interativo
-  size?: number;
   className?: string;
 }
 
-export default function StarRating({ value, count, onRate, size = 18, className }: Props) {
+export default function StarRating({ value, count, onRate, className }: Props) {
   const [hover, setHover] = useState(0);
   const interactive = typeof onRate === 'function';
   const shown = hover || value;
@@ -33,8 +32,7 @@ export default function StarRating({ value, count, onRate, size = 18, className 
               title={interactive ? `Avaliar ${n} estrela${n > 1 ? 's' : ''}` : undefined}
             >
               <Star
-                size={size}
-                className={filled ? 'text-amber-400' : 'text-muted-foreground/40'}
+                className={`h-5 w-5 ${filled ? 'text-amber-400' : 'text-muted-foreground/40'}`}
                 fill={filled ? 'currentColor' : 'none'}
               />
             </button>

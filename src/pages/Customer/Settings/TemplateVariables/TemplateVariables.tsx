@@ -235,7 +235,7 @@ export default function TemplateVariables() {
       {/* Built-in section */}
       <section className="mb-6">
         <div className="flex items-center gap-2 mb-2">
-          <Lock size={14} className="text-muted-foreground" />
+          <Lock className="h-3.5 w-3.5 text-muted-foreground" />
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Sistema (pronta, não editável)
           </h2>
@@ -262,7 +262,7 @@ export default function TemplateVariables() {
       {/* Custom section */}
       <section className="flex-1 min-h-0 overflow-auto">
         <div className="flex items-center gap-2 mb-2">
-          <Code size={14} className="text-muted-foreground" />
+          <Code className="h-3.5 w-3.5 text-muted-foreground" />
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Customizadas ({custom.length}
             {autoCount > 0 && `, ${autoCount} automática${autoCount > 1 ? 's' : ''}`})
@@ -271,12 +271,12 @@ export default function TemplateVariables() {
 
         {loading ? (
           <div className="flex items-center justify-center py-8 text-sm text-muted-foreground gap-2">
-            <RefreshCw size={14} className="animate-spin" />
+            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
             Carregando...
           </div>
         ) : custom.length === 0 ? (
           <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-            <Code size={32} className="mx-auto mb-2 text-muted-foreground" />
+            <Code className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
             <p className="font-semibold mb-1">Nenhuma variável customizada</p>
             <p className="text-sm text-muted-foreground mb-4">
               Crie variáveis específicas da sua conta pra usar nos funis (ex:
@@ -287,7 +287,7 @@ export default function TemplateVariables() {
               campo respondido pelo lead vira uma variável aqui automaticamente.
             </p>
             <Button variant="outline" onClick={openCreate}>
-              <Plus size={14} className="mr-2" />
+              <Plus className="h-4 w-4 mr-2" />
               Criar primeira
             </Button>
           </div>
@@ -323,7 +323,7 @@ export default function TemplateVariables() {
                       onClick={() => openEdit(v)}
                       aria-label="Editar"
                     >
-                      <Pencil size={13} />
+                      <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -332,7 +332,7 @@ export default function TemplateVariables() {
                       onClick={() => setToDelete(v)}
                       aria-label="Excluir"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -463,7 +463,7 @@ export default function TemplateVariables() {
               Cancelar
             </Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving && <RefreshCw size={14} className="animate-spin mr-2" />}
+              {saving && <RefreshCw className="h-4 w-4 animate-spin mr-2" />}
               {editing ? 'Salvar' : 'Criar'}
             </Button>
           </DialogFooter>

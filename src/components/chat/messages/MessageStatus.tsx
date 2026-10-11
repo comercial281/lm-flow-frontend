@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { Check, CheckCheck, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Message } from '@/types/chat/api';

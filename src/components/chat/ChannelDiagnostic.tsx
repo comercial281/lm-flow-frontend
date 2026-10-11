@@ -1,7 +1,7 @@
 import React from 'react';
 import { Settings } from 'lucide-react';
 
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 
 import Aviso from '@/components/base/Aviso';
 import { useLanguage } from '@/hooks/useLanguage';

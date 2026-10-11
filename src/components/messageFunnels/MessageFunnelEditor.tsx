@@ -348,7 +348,7 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved, de
             Cancelar
           </Button>
           <Button onClick={handleSave} disabled={saving}>
-            {saving && <RefreshCw size={14} className="animate-spin mr-2" />}
+            {saving && <RefreshCw className="h-4 w-4 animate-spin mr-2" />}
             {funnel ? 'Salvar' : 'Criar funil'}
           </Button>
         </DialogFooter>

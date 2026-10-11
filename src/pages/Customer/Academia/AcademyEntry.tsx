@@ -19,6 +19,7 @@ import {
   esquecerCliente,
   type ClienteLembrado,
 } from '@/services/academy/academyEntryService';
+import { Button } from '@/components/ui/ds';
 
 // Quanto a tela do "levando você para..." fica no ar antes de sair. Existe para
 // dar tempo de clicar em "não é você?" — sem isso, quem usa o aparelho de outra
@@ -74,14 +75,14 @@ export default function AcademyEntry() {
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
       <div className="w-full max-w-md">
         <div className="flex items-center gap-2.5 mb-5">
-          <GraduationCap size={22} className="text-primary" />
+          <GraduationCap className="h-5 w-5 text-primary" />
           <h1 className="text-lg font-bold">Área de Membros</h1>
         </div>
 
         {lembrado ? (
           <div className="rounded-xl border border-border bg-card p-5">
             <p className="text-sm flex items-center gap-2">
-              <Loader2 size={15} className="animate-spin text-primary shrink-0" />
+              <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
               Abrindo a aula em <strong>{lembrado.name || lembrado.slug}</strong>...
             </p>
             <button
@@ -121,18 +122,18 @@ export default function AcademyEntry() {
 
             {erro && (
               <p className="text-xs text-red-500 flex items-start gap-1.5">
-                <AlertCircle size={13} className="shrink-0 mt-0.5" /> {erro}
+                <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" /> {erro}
               </p>
             )}
 
-            <button
+            <Button
               type="submit"
               disabled={buscando || !email.trim()}
-              className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40"
+              className="w-full"
             >
-              {buscando ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} />}
+              {buscando ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
               Abrir a aula
-            </button>
+            </Button>
 
             <p className="text-[11px] text-muted-foreground">
               Você vai entrar no sistema da sua imobiliária, com o mesmo login de sempre.

@@ -9,6 +9,9 @@ import { isRootTenantHost } from '../config/menuItems';
  * Espelha exatamente o gate do SuperAdminRoute (host raiz + acesso de admin:
  * dono OU equipe cadastrada). Se o gate mudar, muda nos dois lugares — senão o
  * botão aparece e a rota chuta pra home, que é pior do que não ter botão.
+ *
+ * Exceção da peça 14 (Botões): o degradê à mão fica, porque só a equipe da Leal
+ * Mídia vê este botão (painel raiz).
  */
 export default function AdminAreaButton() {
   const { isAdmin } = useAdminAccess();

@@ -10,6 +10,7 @@ import {
 } from '@/services/capi/capiConfigService';
 import { Seletor } from '@/components/base/Seletor';
 import Aviso from '@/components/base/Aviso';
+import { Button } from '@/components/ui/ds';
 
 const VALUE_EVENTS = ['Purchase', 'UltraQualificado'];
 
@@ -431,13 +432,12 @@ export default function PixelCapiConfig() {
       </section>
 
       <div className="flex items-center gap-3">
-        <button
+        <Button
           onClick={handleSave}
           disabled={saving}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
         >
           {saving ? 'Salvando…' : 'Salvar'}
-        </button>
+        </Button>
         {saved && <span className="text-sm text-green-600">Salvo.</span>}
         {error && <span className="text-sm text-red-600">{error}</span>}
       </div>

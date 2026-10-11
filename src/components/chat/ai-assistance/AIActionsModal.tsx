@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@evoapi/design-system/dialog';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { Sparkles, FileText, Type, Minimize2, Maximize2, Smile, Briefcase, Lightbulb, Shield } from 'lucide-react';
 import { AIAction, AIActionType } from '@/types/chat/ai-assistance';
 import { useLanguage } from '@/hooks/useLanguage';

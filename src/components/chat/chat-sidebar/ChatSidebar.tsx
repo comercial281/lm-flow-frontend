@@ -1,6 +1,6 @@
 import { ordemDaLista } from '@/features/conversas/itemDaLista';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { Input } from '@evoapi/design-system/input';
 import { Badge } from '@evoapi/design-system/badge';
 import {

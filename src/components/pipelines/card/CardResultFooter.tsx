@@ -49,6 +49,8 @@ export default function CardResultFooter({ item, onMudou, bloqueado = false, onS
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-2">
+          {/* Exceção da peça 14 (Botões): Ganho verde e Perdido vermelho são cor de
+              significado do resultado, não enfeite. Fica fora do roxo de propósito. */}
           <Button
             type="button"
             size="sm"

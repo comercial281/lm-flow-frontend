@@ -61,7 +61,7 @@ const Tutorials = () => {
         </div>
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="max-w-md bg-card border border-orange-500/40 rounded-xl p-6 flex items-start gap-3">
-            <AlertTriangle size={20} className="text-orange-500 shrink-0 mt-0.5" />
+            <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0 mt-0.5" />
             <div className="text-sm">
               <p className="font-semibold mb-1">Tutorial indisponível</p>
               <p className="text-muted-foreground text-xs">
@@ -97,7 +97,7 @@ const Tutorials = () => {
                 }`}
                 type="button"
               >
-                <Icon size={13} />
+                <Icon className="h-3.5 w-3.5" />
                 {x.label}
               </button>
             );
