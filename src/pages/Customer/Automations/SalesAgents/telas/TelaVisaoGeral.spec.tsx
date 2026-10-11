@@ -38,13 +38,13 @@ beforeEach(() => {
 });
 
 describe('Painel → Visão geral', () => {
-  it('cada pendência tem "Corrigir", que leva pra tela certa', async () => {
+  it('cada pendência tem "Corrigir", que leva pra tela certa (arquivos: página Arquivos do Ensinar)', async () => {
     const props = abrir({
       diagnostico: { status: 'warning', items: [{ key: 'knowledge', label: 'Base de conhecimento', status: 'warning', detail: 'Nenhum documento pronto.' }] },
     });
     expect(screen.getByText('Nenhum documento pronto.')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Corrigir' }));
-    expect(props.aoIr).toHaveBeenCalledWith('ensinar');
+    expect(props.aoIr).toHaveBeenCalledWith('ensinar', 'arquivos');
   });
 
   it('o "Corrigir" de uma página do Configurar leva à página (onda 3)', async () => {

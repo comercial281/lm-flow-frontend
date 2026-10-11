@@ -12,6 +12,7 @@
 // checklist do Diagnóstico). Mudou lá, muda aqui, com o caso no spec.
 import type { HealthItem, HealthReport, SalesAgent, SalesAgentTrigger } from '@/services/salesAgents/salesAgentsService';
 import type { PaginaId } from '@/pages/Customer/Automations/SalesAgents/configurar/paginas';
+import type { PaginaDoEnsinar } from '@/pages/Customer/Automations/SalesAgents/telas/ensinar/paginas';
 import type { TelaId } from './iaMenu';
 import { pendenciasDasPaginas } from './pendencias';
 import { enderecoConexao } from '@/features/numbers/avisoConversas';
@@ -20,8 +21,8 @@ export type TipoSituacao = 'atendendo' | 'parada' | 'restricao' | 'desligada' | 
 
 export interface Corrigir {
   tela: TelaId;
-  /** Página do Configurar (onda 3). */
-  pagina?: PaginaId;
+  /** Página do Configurar (onda 3) ou do Ensinar (11/10/2026), conforme a `tela`. */
+  pagina?: PaginaId | PaginaDoEnsinar;
   /**
    * Fora da IA: quando existe, o "Corrigir" leva pra cá (`tela`/`pagina` ficam de
    * reserva). Hoje só o WhatsApp desconectado, que se religa (QR code) na
@@ -75,8 +76,10 @@ const CORRIGIR_DO_ITEM: Record<string, Corrigir> = {
   traffic: PAGINA('canal'),
   activity: PAGINA('canal'),
   credentials: PAGINA('canal'),
-  knowledge: { tela: 'ensinar' },
-  files: { tela: 'ensinar' },
+  // Base de conhecimento e arquivos se corrigem na página Arquivos do Ensinar (sem a
+  // página, o Ensinar abre em Instruções, que não resolve nada disso).
+  knowledge: { tela: 'ensinar', pagina: 'arquivos' },
+  files: { tela: 'ensinar', pagina: 'arquivos' },
   handoff: PAGINA('destino'),
   default_property: PAGINA('catalogo'),
   schedule: PAGINA('horario'),

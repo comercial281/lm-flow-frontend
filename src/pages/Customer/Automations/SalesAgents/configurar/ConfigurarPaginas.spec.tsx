@@ -158,8 +158,9 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 // Bug (b): nada dentro do meio pode grudar ou rolar sozinho — a rolagem é uma só (a do main).
-// Vale pra TODO .tsx do configurar/ (páginas e peças), menos o ConfigurarPaginas, que é
-// dono do trilho (o único sticky). O Ensinar, que ainda tem Salvar, mora em telas/ensinar.
+// Vale pra TODO .tsx do configurar/ (páginas e peças), menos o ConfigurarPaginas, que monta
+// o trilho. O trilho (o único sticky) mora em moldura/PaginasComTrilho desde 11/10, e as
+// páginas do Ensinar (telas/ensinar) também gravam na hora, sem Salvar.
 function tsxDoConfigurar(dir: string): string[] {
   return readdirSync(dir).flatMap((nome) => {
     const cheio = join(dir, nome);

@@ -33,7 +33,6 @@ import { situacaoDaIa } from '@/features/salesAgents/situacao';
 import { novaIaRascunho } from '@/features/salesAgents/tresEscolhas';
 import { type InboxOption } from './configuracao/comum';
 import { registrarSalvo, ultimoSalvoDa } from './configurar/useGravarNaHora';
-import type { PaginaId } from './configurar/paginas';
 import IaBarra from './IaBarra';
 import TelaVisaoGeral from './telas/TelaVisaoGeral';
 import TelaSugestoes from './telas/TelaSugestoes';
@@ -139,7 +138,7 @@ export default function SalesAgents() {
     // null), nada fica armado pra uma IA criada depois.
     if (pediuTestar(searchParams)) setTestandoIa(alvo);
     // A página do Configurar (e o `?passo=` antigo, traduzido) atravessa a normalização.
-    const certo = paramsDaIa(alvo, tela, paginaPedida(searchParams));
+    const certo = paramsDaIa(alvo, tela, paginaPedida(searchParams, tela));
     if (searchParams.toString() !== new URLSearchParams(certo).toString()) setSearchParams(certo, { replace: true });
     if (alvo) gravarUltimaIa(alvo);
     setSelected((prev) => (prev?.id === alvo ? prev : agents.find((a) => a.id === alvo) ?? null));
@@ -166,7 +165,7 @@ export default function SalesAgents() {
     return () => { vivo = false; };
   }, [selId, selUpdatedAt]);
 
-  const irPara = useCallback((t: TelaId, pagina?: PaginaId) => {
+  const irPara = useCallback((t: TelaId, pagina?: string) => {
     setSearchParams(paramsDaIa(selected?.id ?? null, t, pagina), { replace: true });
   }, [selected?.id, setSearchParams]);
 
@@ -206,7 +205,7 @@ export default function SalesAgents() {
   // ⚠️ Trocar de IA, de tela, criar ou duplicar com uma edição pela metade pergunta
   // antes; senão a edição some calada. Os botões da barra não são links, e a guarda
   // do menu lateral (useGuardaDeSaida) não os pega.
-  // Onda 3: as páginas da IA gravam na hora e não marcam pendência; a guarda fica pelo Ensinar (EnsinarTextos ainda tem Salvar).
+  // Onda 3 + Ensinar novo (11/10): nenhuma tela da IA marca pendência; a guarda fica pra quem ainda marcar.
   const guardar = useCallback(async (acao: () => void) => {
     if (temAlteracaoPendente() && !(await confirmar(PEDIDO_SAIR_SEM_SALVAR))) return;
     limparPendentes();
@@ -296,10 +295,10 @@ export default function SalesAgents() {
             aoCorrigirLigar={(p) => void guardar(() => irPara('configurar', p))}
           />
         )}
-        acima={selected && situacao && tela !== 'configurar' && trilha
+        acima={selected && situacao && tela !== 'configurar' && tela !== 'ensinar' && trilha
           ? <p className="text-xs font-medium text-muted-foreground">{trilha}</p> : undefined}
-        // Em Configurar o título mora em ConfigurarPaginas (grupo, título, frase ao lado do trilho).
-        cabecalho={tela === 'configurar' && selected && situacao
+        // Em Configurar e Ensinar o título mora na moldura do trilho (grupo, título, frase ao lado do trilho).
+        cabecalho={(tela === 'configurar' || tela === 'ensinar') && selected && situacao
           ? undefined
           : selected && situacao
             ? <BaseHeader title={info.titulo} subtitle={info.frase} />

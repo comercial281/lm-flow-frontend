@@ -1,6 +1,6 @@
 /**
  * O PATCH de uma gravação da IA Vendedora (nasceu no passo a passo da entrega 2;
- * desde a onda 3 quem usa é o `useGravarNaHora` das páginas e o `useRascunho` do
+ * desde a onda 3 quem usa é o `useGravarNaHora` das páginas do Configurar e do
  * Ensinar).
  *
  * POR QUE EXISTE: o `saveAgent` da tela antiga montava o PATCH campo a campo

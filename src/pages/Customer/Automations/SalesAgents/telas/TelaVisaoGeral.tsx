@@ -14,6 +14,7 @@ import {
 import { plural } from '@/lib/formato';
 import type { TelaId } from '@/features/salesAgents/iaMenu';
 import type { PaginaId } from '../configurar/paginas';
+import type { PaginaDoEnsinar } from './ensinar/paginas';
 import { motivoSemAtendimento, pendenciasDaIa, type Situacao } from '@/features/salesAgents/situacao';
 import { SuggestionCard } from './TelaSugestoes';
 import UltimosAtendimentos from './UltimosAtendimentos';
@@ -195,8 +196,8 @@ export interface TelaVisaoGeralProps {
   mostrarSugestoes: boolean;
   /** Equipe da Leal Mídia: vê o custo e o erro técnico nos últimos atendimentos. */
   equipe: boolean;
-  /** `pagina`: a página do Configurar que corrige a pendência (onda 3). */
-  aoIr: (tela: TelaId, pagina?: PaginaId) => void;
+  /** `pagina`: a página do Configurar (onda 3) ou do Ensinar que corrige a pendência. */
+  aoIr: (tela: TelaId, pagina?: PaginaId | PaginaDoEnsinar) => void;
 }
 
 export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferindo, falhou = false, mostrarSugestoes, equipe, aoIr }: TelaVisaoGeralProps) {

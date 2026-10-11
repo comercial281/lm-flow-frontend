@@ -99,7 +99,12 @@ describe('pendenciasDaIa', () => {
     expect(p.map((x) => x.chave)).toEqual(['inbox', 'api_key', 'knowledge']);
     expect(p[0]).toMatchObject({ grave: true, corrigir: { tela: 'configurar', pagina: 'canal' }, detalhe: 'O canal vinculado não existe mais.' });
     expect(p[1].corrigir).toBeUndefined();
-    expect(p[2]).toMatchObject({ grave: false, corrigir: { tela: 'ensinar' } });
+    expect(p[2]).toMatchObject({ grave: false, corrigir: { tela: 'ensinar', pagina: 'arquivos' } });
+  });
+
+  it('base de conhecimento e arquivos se corrigem na página Arquivos do Ensinar', () => {
+    const p = pendenciasDaIa(ia(), diag(['knowledge', 'warning', 'Nenhum documento pronto.'], ['files', 'warning', 'Arquivo falhou.']));
+    expect(p.map((x) => x.corrigir)).toEqual([{ tela: 'ensinar', pagina: 'arquivos' }, { tela: 'ensinar', pagina: 'arquivos' }]);
   });
 
   it('"IA ligada" desligada não vira pendência (já é o veredito)', () => {

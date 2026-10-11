@@ -1,0 +1,180 @@
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
+import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
+import type { Licoes } from '../useLicoes';
+import Exemplos from './Exemplos';
+
+const L = (id: string, kind: string, extra = {}) => ({ id, kind, content: `resp ${id}`, context: `lead ${id}`, enabled: true, created_at: '2026-10-10T12:00:00Z', origin: 'manual', in_use: true, ...extra });
+
+function abrir(licoes: object[], conversas = [{ lead: 'Tem varanda?', resposta: 'Tem sim!' }], extra: Partial<Licoes> = {}) {
+  const l: Licoes = { licoes: licoes as never, limites: { per_kind: 12, conversations: 1 }, estado: 'pronto', carregar: vi.fn(),
+    criar: vi.fn().mockResolvedValue(true), atualizar: vi.fn().mockResolvedValue(true), apagar: vi.fn().mockResolvedValue(true), ...extra };
+  const gravar = vi.fn().mockResolvedValue(true);
+  const confirmar = vi.fn().mockResolvedValue(true);
+  render(<MemoryRouter><Exemplos agent={agenteDeTeste({ example_conversations: conversas })} gravar={gravar} licoes={l} arquivos={{} as never} irPara={vi.fn()} confirmar={confirmar} /></MemoryRouter>);
+  return { l, gravar, confirmar };
+}
+
+describe('Exemplos', () => {
+  it('Responda assim junta lições boas e conversas reais', () => {
+    abrir([L('a', 'good_example'), L('b', 'bad_example')]);
+    expect(screen.getByText('resp a')).toBeInTheDocument();
+    expect(screen.getByText('Tem sim!')).toBeInTheDocument();
+    expect(screen.getByText('Conversa real')).toBeInTheDocument();
+    expect(screen.queryByText('resp b')).not.toBeInTheDocument();
+    expect(screen.getByText('Ela imita o ritmo e o tom, não copia palavra por palavra.')).toBeInTheDocument();
+  });
+
+  it('conversa real além do limite não vale', () => {
+    abrir([], [{ lead: 'x', resposta: 'primeira' }, { lead: 'y', resposta: 'segunda' }]);
+    expect(screen.getAllByText('Não está valendo')).toHaveLength(1);
+  });
+
+  it('conversa com resposta vazia (o servidor descarta) não aparece nem ocupa vaga do limite', () => {
+    abrir([], [{ lead: 'vazia', resposta: '   ' }, { lead: 'x', resposta: 'primeira' }, { lead: 'y', resposta: 'segunda' }]);
+    expect(screen.queryByText('vazia')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Conversa real')).toHaveLength(2);
+    // Limite 1: a "primeira" vale (a vazia não conta), só a "segunda" fica de fora.
+    const naoValendo = screen.getAllByText('Não está valendo');
+    expect(naoValendo).toHaveLength(1);
+    expect(naoValendo[0].closest('li')).toHaveTextContent('segunda');
+    expect(screen.getByText('primeira').closest('li')).not.toHaveTextContent('Não está valendo');
+  });
+
+  it('com conversa vazia no meio, editar e excluir acertam o índice cru', async () => {
+    const cru = [{ lead: 'x', resposta: 'primeira' }, { lead: 'vazia', resposta: '' }, { lead: 'z', resposta: 'terceira' }];
+    const { gravar } = abrir([], cru);
+    await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[1]);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
+    const resp = screen.getByLabelText('Como ela deve responder');
+    await userEvent.clear(resp);
+    await userEvent.type(resp, 'trocada');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar exemplo' }));
+    expect(gravar).toHaveBeenLastCalledWith({ example_conversations: [cru[0], cru[1], { lead: 'z', resposta: 'trocada' }] });
+
+    await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[1]);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Excluir' }));
+    expect(gravar).toHaveBeenLastCalledWith({ example_conversations: [cru[0], cru[1]] });
+  });
+
+  it('lição pausada não ganha selo de não valendo', () => {
+    abrir([L('a', 'good_example', { enabled: false, in_use: false }), L('b', 'good_example', { in_use: false })], []);
+    expect(screen.getAllByText('Não está valendo')).toHaveLength(1);
+  });
+
+  it('novo exemplo na aba ruim cria bad_example', async () => {
+    const { l } = abrir([]);
+    await userEvent.click(screen.getByRole('tab', { name: /Não responda assim/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Novo exemplo' }));
+    await userEvent.type(screen.getByLabelText('O que o lead disse'), 'Qual o valor?');
+    await userEvent.type(screen.getByLabelText('A resposta que ela não deve dar'), 'R$ 389 mil.');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar exemplo' }));
+    expect(l.criar).toHaveBeenCalledWith('bad_example', 'R$ 389 mil.', 'Qual o valor?');
+  });
+
+  it('Salvar exemplo fica desabilitado sem resposta', async () => {
+    abrir([]);
+    await userEvent.click(screen.getByRole('button', { name: 'Novo exemplo' }));
+    expect(screen.getByRole('button', { name: 'Salvar exemplo' })).toBeDisabled();
+  });
+
+  it('editar lição salva content e context', async () => {
+    const { l } = abrir([L('a', 'good_example')], []);
+    await userEvent.click(screen.getByRole('button', { name: /Ações do exemplo/ }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
+    const resp = screen.getByLabelText('Como ela deve responder');
+    await userEvent.clear(resp);
+    await userEvent.type(resp, 'nova');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar exemplo' }));
+    expect(l.atualizar).toHaveBeenCalledWith('a', { content: 'nova', context: 'lead a' });
+  });
+
+  it('editar conversa real grava a lista com o item trocado', async () => {
+    const { gravar } = abrir([], [{ lead: 'x', resposta: 'primeira' }, { lead: 'y', resposta: 'segunda' }]);
+    await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[1]);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
+    const resp = screen.getByLabelText('Como ela deve responder');
+    await userEvent.clear(resp);
+    await userEvent.type(resp, 'trocada');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar exemplo' }));
+    expect(gravar).toHaveBeenCalledWith({ example_conversations: [{ lead: 'x', resposta: 'primeira' }, { lead: 'y', resposta: 'trocada' }] });
+  });
+
+  it('mover lição boa pra ruim', async () => {
+    const { l } = abrir([L('a', 'good_example')], []);
+    await userEvent.click(screen.getByRole('button', { name: /Ações do exemplo/ }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Mover pra Não responda assim' }));
+    expect(l.atualizar).toHaveBeenCalledWith('a', { kind: 'bad_example' });
+  });
+
+  it('conversa real não tem Mover', async () => {
+    abrir([], [{ lead: 'x', resposta: 'primeira' }]);
+    await userEvent.click(screen.getByRole('button', { name: /Ações do exemplo/ }));
+    expect(screen.queryByRole('menuitem', { name: /Mover/ })).not.toBeInTheDocument();
+  });
+
+  it('excluir conversa real confirma e grava a lista sem ela', async () => {
+    const { gravar, confirmar } = abrir([], [{ lead: 'x', resposta: 'primeira' }, { lead: 'y', resposta: 'segunda' }]);
+    await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Excluir' }));
+    expect(confirmar).toHaveBeenCalledWith(expect.objectContaining({ titulo: 'Excluir exemplo', rotuloDaAcao: 'Excluir' }));
+    expect(gravar).toHaveBeenCalledWith({ example_conversations: [{ lead: 'y', resposta: 'segunda' }] });
+  });
+
+  it('excluir fecha a edição aberta (o índice das conversas anda)', async () => {
+    const { gravar } = abrir([], [{ lead: 'x', resposta: 'primeira' }, { lead: 'y', resposta: 'segunda' }, { lead: 'z', resposta: 'terceira' }]);
+    await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[2]);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
+    expect(screen.getByRole('button', { name: 'Salvar exemplo' })).toBeInTheDocument();
+    await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Excluir' }));
+    expect(gravar).toHaveBeenCalledWith({ example_conversations: [{ lead: 'y', resposta: 'segunda' }, { lead: 'z', resposta: 'terceira' }] });
+    expect(screen.queryByRole('button', { name: 'Salvar exemplo' })).not.toBeInTheDocument();
+  });
+
+  it('excluir com um exemplo NOVO sendo escrito não joga o texto fora', async () => {
+    const { gravar } = abrir([], [{ lead: 'x', resposta: 'primeira' }, { lead: 'y', resposta: 'segunda' }]);
+    await userEvent.click(screen.getByRole('button', { name: 'Novo exemplo' }));
+    await userEvent.type(screen.getByLabelText('Como ela deve responder'), 'rascunho');
+    await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Excluir' }));
+    expect(gravar).toHaveBeenCalledWith({ example_conversations: [{ lead: 'y', resposta: 'segunda' }] });
+    expect(screen.getByLabelText('Como ela deve responder')).toHaveValue('rascunho');
+    expect(screen.getByRole('button', { name: 'Salvar exemplo' })).toBeEnabled();
+  });
+
+  it('lição pausada tem "Ligar" no menu; a ligada não', async () => {
+    const { l } = abrir([L('a', 'good_example', { enabled: false, in_use: false }), L('b', 'good_example')], []);
+    await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[1]);
+    expect(screen.queryByRole('menuitem', { name: 'Ligar' })).not.toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Ligar' }));
+    expect(l.atualizar).toHaveBeenCalledWith('a', { enabled: true });
+  });
+
+  it('excluir lição confirma e apaga; sem confirmação não apaga', async () => {
+    const { l, confirmar } = abrir([L('a', 'good_example')], []);
+    confirmar.mockResolvedValueOnce(false);
+    await userEvent.click(screen.getByRole('button', { name: /Ações do exemplo/ }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Excluir' }));
+    expect(l.apagar).not.toHaveBeenCalled();
+  });
+
+  it('vazio da aba ruim', async () => {
+    abrir([], []);
+    expect(screen.getByText('Nenhum exemplo de como responder')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: /Não responda assim/ }));
+    expect(screen.getByText('Nenhum exemplo do que evitar')).toBeInTheDocument();
+    expect(screen.getByText('Respostas que ela deve evitar.')).toBeInTheDocument();
+  });
+
+  it('os campos do exemplo param no teto do servidor (4000 letras)', async () => {
+    abrir([]);
+    await userEvent.click(screen.getByRole('button', { name: 'Novo exemplo' }));
+    expect(screen.getByLabelText('O que o lead disse')).toHaveAttribute('maxLength', '4000');
+    expect(screen.getByLabelText('Como ela deve responder')).toHaveAttribute('maxLength', '4000');
+  });
+});

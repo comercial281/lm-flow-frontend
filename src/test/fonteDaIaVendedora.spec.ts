@@ -11,10 +11,10 @@ describe('fonteDaIaVendedora', () => {
     expect(fonte).toContain('export default function SalesAgents');
     expect(fonte).toContain('export default function ConfigurarPaginas');
     expect(fonte).toContain('export default function Destino');
-    expect(fonte).toContain('export default function EnsinarTextos');
+    expect(fonte).toContain('export default function TelaEnsinar');
     expect(fonte).toContain('export function TriggersSection');
     expect(fonte).toContain('export default function TelaDiagnostico');
-    expect(fonte).toContain('export function KnowledgeTab');
+    expect(fonte).toContain('export default function PaginasComTrilho');
   });
 
   it('a casca vem primeiro', () => {
