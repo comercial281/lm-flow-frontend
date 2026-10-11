@@ -454,7 +454,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
             variant="outline"
             size="sm"
             onClick={salvarPadrao}
-            disabled={salvando || carregando}
+            disabled={salvando || carregando || erroCarga || !config}
             type="button"
           >
             {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar como padrão

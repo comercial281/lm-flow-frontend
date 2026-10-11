@@ -74,7 +74,7 @@ export function WelcomeTourModal() {
           </DialogDescription>
         </div>
 
-        <DialogFooter className="w-full">
+        <DialogFooter className="w-full justify-self-stretch sm:justify-center">
           <Button variant="outline" onClick={handleDismiss}>
             {t('welcome.skipButton')}
           </Button>

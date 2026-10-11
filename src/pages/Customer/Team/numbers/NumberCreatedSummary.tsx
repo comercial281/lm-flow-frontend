@@ -1,5 +1,5 @@
 import { CheckCircle2, Clock, Loader2, TriangleAlert } from 'lucide-react';
-import { Button } from '@/components/ui/ds';
+import { Button, DialogFooter } from '@/components/ui/ds';
 import { telefone } from '@/lib/formato';
 
 /* O que aconteceu depois de "Criar número": a lista do que ficou pronto e do que
@@ -70,10 +70,10 @@ export default function NumberCreatedSummary({
           <span>Esperando {personName} conectar o número</span>
         </li>
       </ul>
-      <div className="flex flex-wrap justify-end gap-2">
+      <DialogFooter>
         <Button variant="outline" onClick={onOpenQr}>{personName} está aqui: abrir QR code</Button>
         <Button onClick={onDone}>Concluir</Button>
-      </div>
+      </DialogFooter>
     </div>
   );
 }

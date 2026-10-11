@@ -18,7 +18,6 @@ const LoadingScreen = ({ fullScreen = false, showLogo = false, className, rotulo
   return (
     <div
       role="status"
-      aria-label={rotulo}
       className={cn(
         'flex flex-col items-center justify-center bg-background',
         fullScreen && 'h-screen',

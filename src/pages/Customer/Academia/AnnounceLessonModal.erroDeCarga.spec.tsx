@@ -4,12 +4,12 @@ import userEvent from '@testing-library/user-event';
 import AnnounceLessonModal from './AnnounceLessonModal';
 
 const s = vi.hoisted(() => ({
-  config: vi.fn(), instances: vi.fn(), groups: vi.fn(), preview: vi.fn(),
+  saveConfig: vi.fn(), config: vi.fn(), instances: vi.fn(), groups: vi.fn(), preview: vi.fn(),
 }));
 vi.mock('@/services/academy/academyAnnouncementsService', () => ({
   academyAnnouncementsService: {
     config: s.config, instances: s.instances, groups: s.groups, preview: s.preview,
-    saveConfig: vi.fn(), send: vi.fn(),
+    saveConfig: s.saveConfig, send: vi.fn(),
   },
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } }));
@@ -49,6 +49,23 @@ describe('AnnounceLessonModal · erro de carga', () => {
 });
 
 // Esc fechava e perdia o texto do aviso. Nem Esc nem clique fora fecham; o X e o Fechar fecham.
+describe('AnnounceLessonModal · carga que falhou não grava por cima', () => {
+  it('Salvar como padrão fica desabilitado até a carga dar certo', async () => {
+    s.saveConfig.mockReset();
+    s.config.mockRejectedValueOnce(new Error('rede'));
+    render(<AnnounceLessonModal lesson={aula} courseId="c1" onClose={() => {}} />);
+    await screen.findByText('Não deu pra carregar');
+    const salvar = screen.getByRole('button', { name: /Salvar como padrão/ });
+    expect(salvar).toBeDisabled();
+    await userEvent.click(salvar);
+    expect(s.saveConfig).not.toHaveBeenCalled();
+    s.config.mockResolvedValueOnce({ data: { data: CONFIG } });
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    await screen.findByText(/Ver os últimos avisos/);
+    expect(screen.getByRole('button', { name: /Salvar como padrão/ })).toBeEnabled();
+  });
+});
+
 describe('AnnounceLessonModal · Esc não perde o texto', () => {
   it('Esc não fecha; Fechar fecha', async () => {
     s.config.mockResolvedValue({ data: { data: CONFIG } });

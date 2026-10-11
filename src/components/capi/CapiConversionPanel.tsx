@@ -138,7 +138,7 @@ function PainelConversaoMeta({
   if (loading && hasTarget && variante === 'compacto' && podiaEnviar.current) {
     return (
       <div data-testid="conversao-meta-carregando" aria-hidden className={className}>
-        <div className="h-7" />
+        <div className="h-8" />
       </div>
     );
   }
