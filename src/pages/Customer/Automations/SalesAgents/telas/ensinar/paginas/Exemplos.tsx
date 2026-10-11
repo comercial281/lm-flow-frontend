@@ -12,7 +12,7 @@ import Abas from '@/components/base/Abas';
 import EmptyState from '@/components/base/EmptyState';
 import { cn } from '@/lib/utils';
 import type { SalesAgentLesson } from '@/services/salesAgents/salesAgentsService';
-import { conversasReais, type ConversaReal } from '../paginas';
+import { LIMITE_DO_TEXTO, conversasReais, type ConversaReal } from '../paginas';
 import { SeloDeOrigem, dataCurta } from './LinhaDaLicao';
 import type { PropsDaPaginaDoEnsinar } from './tipos';
 
@@ -93,8 +93,8 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
 
   const composicao = (c: Composicao) => (
     <div className="space-y-3 rounded-xl border border-primary/40 p-4 ring-2 ring-primary/15">
-      <CampoTexto id="en-ex-lead" rotulo="O que o lead disse" valor={c.lead} aoMudar={(v) => setCompor({ ...c, lead: v })} placeholder="Ex.: Achei caro." />
-      <CampoTextoLongo id="en-ex-resp" rotulo={aba === 'bom' ? 'Como ela deve responder' : 'A resposta que ela não deve dar'}
+      <CampoTexto id="en-ex-lead" rotulo="O que o lead disse" maxLength={LIMITE_DO_TEXTO} valor={c.lead} aoMudar={(v) => setCompor({ ...c, lead: v })} placeholder="Ex.: Achei caro." />
+      <CampoTextoLongo id="en-ex-resp" maxLength={LIMITE_DO_TEXTO} rotulo={aba === 'bom' ? 'Como ela deve responder' : 'A resposta que ela não deve dar'}
         valor={c.resposta} aoMudar={(v) => setCompor({ ...c, resposta: v })} rows={3}
         placeholder={aba === 'bom' ? 'Ex.: Entendo! Muita gente usa o FGTS na entrada e a parcela cai bastante.' : 'Ex.: O valor é R$ 389.000.'} />
       <div className="flex gap-2">

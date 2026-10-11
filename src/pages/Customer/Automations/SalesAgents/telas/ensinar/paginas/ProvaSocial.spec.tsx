@@ -54,4 +54,12 @@ describe('Prova social', () => {
     abrir(null);
     expect(screen.getByText('Nenhum caso ainda')).toBeInTheDocument();
   });
+
+  it('novo caso e edição param no teto do servidor (4000 letras)', async () => {
+    abrir('A');
+    expect(screen.getByLabelText('Novo caso')).toHaveAttribute('maxLength', '4000');
+    await userEvent.click(screen.getByRole('button', { name: 'Ações do caso 1' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
+    expect(screen.getByLabelText('Editar caso')).toHaveAttribute('maxLength', '4000');
+  });
 });

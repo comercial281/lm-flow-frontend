@@ -6,7 +6,7 @@ import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMe
 import { Secao, Secoes } from '@/components/base/Secao';
 import { CampoTexto } from '@/components/base/Campo';
 import EmptyState from '@/components/base/EmptyState';
-import { casosDe, textoDosCasos } from '../paginas';
+import { LIMITE_DO_TEXTO, casosDe, textoDosCasos } from '../paginas';
 import type { PropsDaPaginaDoEnsinar } from './tipos';
 
 export default function ProvaSocial({ agent, gravar, confirmar }: PropsDaPaginaDoEnsinar) {
@@ -42,7 +42,7 @@ export default function ProvaSocial({ agent, gravar, confirmar }: PropsDaPaginaD
       <Secoes>
         <Secao titulo="Novo caso" descricao="Ela usa um caso por vez, só quando encaixa, e nunca inventa número fora desta lista.">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <CampoTexto id="en-novo-caso" rotulo="Novo caso" className="flex-1" valor={novo} aoMudar={setNovo}
+            <CampoTexto id="en-novo-caso" rotulo="Novo caso" maxLength={LIMITE_DO_TEXTO} className="flex-1" valor={novo} aoMudar={setNovo}
               placeholder="Ex.: Mais de 300 famílias já pegaram a chave com a gente."
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void adicionar(); } }} />
             <Button type="button" onClick={() => void adicionar()} disabled={!novo.trim() || gravando}>
@@ -62,7 +62,7 @@ export default function ProvaSocial({ agent, gravar, confirmar }: PropsDaPaginaD
                 <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><Quote className="h-4 w-4" aria-hidden /></span>
                 {editando?.i === i ? (
                   <div className="flex flex-1 flex-col gap-2">
-                    <CampoTexto id={`en-caso-${i}`} rotulo="Editar caso" valor={editando.texto} aoMudar={(t) => setEditando({ i, texto: t })} />
+                    <CampoTexto id={`en-caso-${i}`} rotulo="Editar caso" maxLength={LIMITE_DO_TEXTO} valor={editando.texto} aoMudar={(t) => setEditando({ i, texto: t })} />
                     <div className="flex gap-2">
                       <Button type="button" size="sm" onClick={() => void salvarEdicao()} disabled={gravando}>Pronto</Button>
                       <Button type="button" size="sm" variant="outline" onClick={() => setEditando(null)}>Cancelar</Button>

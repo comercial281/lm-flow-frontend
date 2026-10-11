@@ -11,7 +11,7 @@ import Abas from '@/components/base/Abas';
 import EmptyState from '@/components/base/EmptyState';
 import { cn } from '@/lib/utils';
 import type { SalesAgentLesson } from '@/services/salesAgents/salesAgentsService';
-import { regrasForaDoLimite } from '../paginas';
+import { LIMITE_DO_TEXTO, regrasForaDoLimite } from '../paginas';
 import { SeloDeOrigem, dataCurta } from './LinhaDaLicao';
 import type { PropsDaPaginaDoEnsinar } from './tipos';
 
@@ -55,7 +55,7 @@ export default function Regras({ licoes: L, confirmar }: PropsDaPaginaDoEnsinar)
       <Secoes>
         <Secao titulo="Nova regra" descricao={`Ela lê as ${limite} regras ligadas mais novas.`}>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <CampoTexto id="en-nova-regra" rotulo="Nova regra" className="flex-1" valor={nova} aoMudar={setNova}
+            <CampoTexto id="en-nova-regra" rotulo="Nova regra" maxLength={LIMITE_DO_TEXTO} className="flex-1" valor={nova} aoMudar={setNova}
               placeholder="Ex.: Não prometa aprovação de financiamento."
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void adicionar(); } }} />
             <Button type="button" onClick={() => void adicionar()} disabled={!nova.trim() || gravando}>
@@ -103,7 +103,7 @@ export default function Regras({ licoes: L, confirmar }: PropsDaPaginaDoEnsinar)
                     <Chave rotulo={r.content} semRotuloVisivel semAviso ligada={r.enabled} aoMudar={(v) => L.atualizar(r.id, { enabled: v })} genero="a" />
                     {editando?.id === r.id ? (
                       <div className="flex flex-1 flex-col gap-2">
-                        <CampoTexto id={`en-regra-${r.id}`} rotulo="Editar regra" valor={editando.texto} aoMudar={(t) => setEditando({ id: r.id, texto: t })} />
+                        <CampoTexto id={`en-regra-${r.id}`} rotulo="Editar regra" maxLength={LIMITE_DO_TEXTO} valor={editando.texto} aoMudar={(t) => setEditando({ id: r.id, texto: t })} />
                         <div className="flex gap-2">
                           <Button type="button" size="sm" onClick={() => void salvarEdicao()}>Pronto</Button>
                           <Button type="button" size="sm" variant="outline" onClick={() => setEditando(null)}>Cancelar</Button>

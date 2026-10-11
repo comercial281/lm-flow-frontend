@@ -83,4 +83,12 @@ describe('Regras', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
     expect(l.carregar).toHaveBeenCalled();
   });
+
+  it('nova regra e edição param no teto do servidor (4000 letras)', async () => {
+    abrir([L('a')]);
+    expect(screen.getByLabelText('Nova regra')).toHaveAttribute('maxLength', '4000');
+    await userEvent.click(screen.getByRole('button', { name: 'Ações da regra regra a' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
+    expect(screen.getByLabelText('Editar regra')).toHaveAttribute('maxLength', '4000');
+  });
 });

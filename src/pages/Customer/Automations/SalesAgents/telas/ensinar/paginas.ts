@@ -22,6 +22,9 @@ export const PAGINAS_DO_ENSINAR: Record<PaginaDoEnsinar, { titulo: string; frase
   prova: { titulo: 'Prova social', frase: 'Casos reais que ela pode citar pra gerar confiança.', icone: Star },
 };
 
+/** Teto de texto de uma lição/exemplo/caso: o mesmo do servidor (`SalesAgentLesson`, 4000), pra não voltar erro em inglês. */
+export const LIMITE_DO_TEXTO = 4000;
+
 /** Sem `?pagina=`: sempre Instruções (as pendências chegam depois da lista; escolher por elas faria a tela pular). */
 export const PAGINA_INICIAL_DO_ENSINAR: PaginaDoEnsinar = 'instrucoes';
 

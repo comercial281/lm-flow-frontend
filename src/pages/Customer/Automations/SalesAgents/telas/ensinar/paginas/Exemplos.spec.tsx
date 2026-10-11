@@ -170,4 +170,11 @@ describe('Exemplos', () => {
     expect(screen.getByText('Nenhum exemplo do que evitar')).toBeInTheDocument();
     expect(screen.getByText('Respostas que ela deve evitar.')).toBeInTheDocument();
   });
+
+  it('os campos do exemplo param no teto do servidor (4000 letras)', async () => {
+    abrir([]);
+    await userEvent.click(screen.getByRole('button', { name: 'Novo exemplo' }));
+    expect(screen.getByLabelText('O que o lead disse')).toHaveAttribute('maxLength', '4000');
+    expect(screen.getByLabelText('Como ela deve responder')).toHaveAttribute('maxLength', '4000');
+  });
 });
