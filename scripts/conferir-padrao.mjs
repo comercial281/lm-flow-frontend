@@ -192,6 +192,26 @@ export const contaConfirmacao = rel =>
   /\.(ts|tsx)$/.test(rel) &&
   !/\.(spec|test)\.tsx?$/.test(rel) &&
   !CONFIRMACOES_DA_CASA.has(rel);
+// Aba fora da casa (peça 6 do GLOSSARIO, escolha do dono em 10/10/2026): a aba
+// é o sublinhado do `Abas`. Conta (1) o `Tabs` do pacote base em JSX (`<Tabs`,
+// `<TabsList`, `<TabsTrigger`, `<TabsContent`), que desenha pílula, e (2) a aba
+// copiada à mão: `border-b-2` com `-mb-px` na mesma linha. O segmentado cinza de
+// filtro (Conversas, Contatos, SeletorComAbas) não usa nenhum dos dois e fica.
+// Régua por linha: classe quebrada em várias linhas escapa, e a revisão confere.
+const TABS_DO_PACOTE = /<Tabs(?:List|Trigger|Content)?(?=[\s>/]|$)/;
+const ABA_COPIADA = /(?=.*\bborder-b-2\b)(?=.*(?:^|[\s'"`])-mb-px\b)/;
+const ABAS_DA_CASA = 'src/components/base/Abas.tsx';
+export const abaForaDaCasa = linha => TABS_DO_PACOTE.test(linha) || ABA_COPIADA.test(linha);
+
+// Alternador de visão à mão (peça 19 do GLOSSARIO, escolha do dono em
+// 10/10/2026): o da casa é o `AlternadorDeVisao` (só ícones, colados num
+// contorno). A marca confiável é o ícone de visão desenhado em JSX
+// (`<Grid3X3`, `<LayoutGrid`, `<Kanban`…): no alternador da casa ele vai como
+// dado (`icone: Grid3X3`), nunca como tag. Ícone em dado fora do alternador
+// escapa; a revisão confere.
+const ICONE_DE_VISAO = /<(?:Grid3X3|Grid3x3|LayoutGrid|LayoutList|Kanban|SquareKanban|Columns3)(?=[\s>/]|$)/;
+const ALTERNADOR_DA_CASA = 'src/components/base/AlternadorDeVisao.tsx';
+export const alternadorAMao = linha => ICONE_DE_VISAO.test(linha);
 
 const SELETORES_DA_CASA = new Set(['src/components/base/Seletor.tsx', 'src/components/base/SeletorComAbas.tsx']);
 // Ficam com a lista do sistema DE PROPÓSITO (decisão 3 da spec do Seletor): o
@@ -524,6 +544,8 @@ export function varrer() {
       if (escopo && rel !== CABECALHO_DA_CASA && BARRA_A_MAO.test(l)) anotar('barraAMao', rel, i + 1, 'barrinha roxa copiada', l.trim());
       if (escopo && rel.endsWith('.tsx') && !AVISOS_DA_CASA.has(rel) && avisoAMao(l)) anotar('avisoAMao', rel, i + 1, 'aviso pintado à mão', l.trim());
       if (confirmacao && ALERT_DIALOG.test(l)) anotar('confirmacaoForaDaCasa', rel, i + 1, 'confirmação fora do useConfirmacao', l.trim());
+      if (escopo && rel.endsWith('.tsx') && rel !== ABAS_DA_CASA && abaForaDaCasa(l)) anotar('abaForaDaCasa', rel, i + 1, 'aba fora da casa', l.trim());
+      if (escopo && rel.endsWith('.tsx') && rel !== ALTERNADOR_DA_CASA && alternadorAMao(l)) anotar('alternadorAMao', rel, i + 1, 'alternador de visão à mão', l.trim());
       // selectNativo (app inteiro): pula linhas que começam com comentário ou têm */ após a tag
       if (lista && SELECT_NATIVO.test(l) && !COMECO_DE_COMENTARIO.test(limpa)) {
         const match = SELECT_NATIVO.exec(l);
@@ -559,6 +581,8 @@ export const CATEGORIAS = {
   foraDaMoldura: 'cabeçalho fora da moldura',
   avisoAMao: 'aviso ou faixa pintado à mão',
   confirmacaoForaDaCasa: 'confirmação fora do useConfirmacao (app inteiro)',
+  abaForaDaCasa: 'aba fora da casa (pílula ou à mão)',
+  alternadorAMao: 'alternador de visão à mão',
 };
 
 function principal() {

@@ -10,14 +10,11 @@ import {
   DialogHeader,
   DialogTitle,
   Button,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
 } from '@/components/ui/ds';
 import { Settings } from 'lucide-react';
 import { Pagina } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
+import Abas from '@/components/base/Abas';
 
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { customAttributesService } from '@/services/customAttributes/customAttributesService';
@@ -324,17 +321,17 @@ export default function CustomAttributes() {
 
       {/* Tabs */}
       <div className="flex min-h-0 flex-1 flex-col" data-tour="settings-custom-attributes-tabs">
-      <Tabs value={state.activeTab} onValueChange={handleTabChange} className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="mb-4">
-          {ATTRIBUTE_TABS.map(tab => (
-            <TabsTrigger key={tab.key} value={tab.key}>
-              {tab.name}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      <div className="flex min-h-0 flex-1 flex-col gap-2">
+        <Abas
+          rotulo="Onde o campo aparece"
+          className="mb-4"
+          ativa={state.activeTab}
+          aoTrocar={tab => { if (tab !== state.activeTab) handleTabChange(tab); }}
+          abas={ATTRIBUTE_TABS.map(tab => ({ chave: tab.key, rotulo: tab.name }))}
+        />
 
-        {ATTRIBUTE_TABS.map(tab => (
-          <TabsContent key={tab.key} value={tab.key} className="flex min-h-0 flex-1 flex-col">
+        {ATTRIBUTE_TABS.filter(tab => tab.key === state.activeTab).map(tab => (
+          <div key={tab.key} className="flex min-h-0 flex-1 flex-col">
             {/* Content */}
             <div className="flex-1 overflow-auto">
               {state.loading.list ? (
@@ -389,9 +386,9 @@ export default function CustomAttributes() {
                 />
               )}
             </div>
-          </TabsContent>
+          </div>
         ))}
-      </Tabs>
+      </div>
       </div>
 
       {/* Pagination fixa em baixo */}

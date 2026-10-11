@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Pagina, BaseHeader } from '@/components/base';
+import Abas from '@/components/base/Abas';
 import {
   Megaphone,
   ShieldCheck,
@@ -187,25 +188,12 @@ export default function Disparos() {
       }
     >
       {/* Abas */}
-      <div className="flex items-center gap-1 border-b border-border">
-        {TABS.map(tItem => {
-          const Icon = tItem.icon;
-          const active = tab === tItem.id;
-          return (
-            <button
-              key={tItem.id}
-              type="button"
-              onClick={() => setTab(tItem.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm border-b-2 -mb-px transition-colors ${
-                active ? 'border-primary text-primary font-medium' : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {tItem.label}
-            </button>
-          );
-        })}
-      </div>
+      <Abas
+        rotulo="Partes de Disparos"
+        ativa={tab}
+        aoTrocar={chave => setTab(chave as Tab)}
+        abas={TABS.map(t => ({ chave: t.id, rotulo: t.label, icone: t.icon }))}
+      />
 
       {/* ===================== DISPAROS ===================== */}
       {tab === 'disparos' && (

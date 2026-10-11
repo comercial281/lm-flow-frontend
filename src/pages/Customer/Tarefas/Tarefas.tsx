@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import BaseHeader from '@/components/base/BaseHeader';
 import Pagina from '@/components/base/Pagina';
+import Abas from '@/components/base/Abas';
 import { Seletor } from '@/components/base/Seletor';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { apiErrorMessage } from '@/utils/apiHelpers';
@@ -103,19 +104,12 @@ export default function Tarefas() {
           onSearchChange={setBusca}
           searchPlaceholder="Buscar por tarefa ou lead"
         >
-          <div role="group" aria-label="Prazo" className="flex gap-1 overflow-x-auto whitespace-nowrap border-b border-border">
-            {BALDES.map(b => (
-              <button
-                key={b.chave}
-                type="button"
-                aria-pressed={balde === b.chave}
-                onClick={() => mudarFiltro({ balde: b.chave })}
-                className={`-mb-px shrink-0 border-b-2 px-3 py-2 text-sm ${balde === b.chave ? 'border-primary font-semibold text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
-              >
-                {b.rotulo} ({contagem(b.chave)})
-              </button>
-            ))}
-          </div>
+          <Abas
+            rotulo="Prazo"
+            ativa={balde}
+            aoTrocar={chave => mudarFiltro({ balde: chave as Balde })}
+            abas={BALDES.map(b => ({ chave: b.chave, rotulo: b.rotulo, contagem: contagem(b.chave) }))}
+          />
 
           <div className="flex flex-wrap items-center gap-2">
             <Seletor aria-label="Categoria" value={categoria} onChange={e => mudarFiltro({ categoria: e.target.value })} className="w-48">

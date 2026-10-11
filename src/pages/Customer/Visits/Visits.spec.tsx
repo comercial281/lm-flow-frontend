@@ -116,7 +116,7 @@ describe('Agenda de Visitas: Semana e Dia', () => {
     });
     const user = userEvent.setup();
     abrir();
-    await user.click(await screen.findByRole('button', { name: 'Semana' }));
+    await user.click(await screen.findByRole('radio', { name: 'Semana' }));
 
     const domingo = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - hoje.getDay());
     const sabado = new Date(domingo.getFullYear(), domingo.getMonth(), domingo.getDate() + 6);
@@ -124,22 +124,22 @@ describe('Agenda de Visitas: Semana e Dia', () => {
     await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ since: iso(domingo), until: iso(sabado) })));
     expect(await screen.findByRole('button', { name: /15:00–16:00 · Thyago/ })).toBeInTheDocument();
     expect(screen.getByText(/1 visita nesta semana/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Semana' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('radio', { name: 'Semana' })).toHaveAttribute('aria-checked', 'true');
   });
 
   it('clicar no dia da semana abre a visão Dia, e a escolha fica guardada', async () => {
     list.mockResolvedValue({ data: [], meta: { total: 0, active_total: 0, only_mine: false } });
     const user = userEvent.setup();
     const { unmount } = abrir();
-    await user.click(await screen.findByRole('button', { name: 'Semana' }));
+    await user.click(await screen.findByRole('radio', { name: 'Semana' }));
     const hoje = new Date();
     await user.click(screen.getByRole('button', { name: `Ver o dia ${hoje.getDate()}` }));
-    expect(screen.getByRole('button', { name: 'Dia' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('radio', { name: 'Dia' })).toHaveAttribute('aria-checked', 'true');
     await waitFor(() => expect(screen.getByText(/0 visitas hoje/)).toBeInTheDocument());
     unmount();
 
     abrir();
-    expect(await screen.findByRole('button', { name: 'Dia' })).toHaveAttribute('aria-pressed', 'true');
+    expect(await screen.findByRole('radio', { name: 'Dia' })).toHaveAttribute('aria-checked', 'true');
   });
 });
 
@@ -165,7 +165,7 @@ describe('Agenda de Visitas: clique na visita do calendário', () => {
     cancel.mockResolvedValue({ ...visita, status: 'cancelled' });
     const user = userEvent.setup();
     abrir();
-    await user.click(await screen.findByRole('button', { name: 'Semana' }));
+    await user.click(await screen.findByRole('radio', { name: 'Semana' }));
     await user.click(await screen.findByRole('button', { name: /15:00–16:00 · Thyago/ }));
 
     const resumo = await screen.findByRole('dialog');
@@ -189,7 +189,7 @@ describe('Agenda de Visitas: clique na visita do calendário', () => {
     list.mockResolvedValue({ data: [visita], meta: { total: 1, active_total: 1, only_mine: false } });
     const user = userEvent.setup();
     abrir();
-    await user.click(await screen.findByRole('button', { name: 'Semana' }));
+    await user.click(await screen.findByRole('radio', { name: 'Semana' }));
     await user.click(await screen.findByRole('button', { name: /15:00–16:00 · Thyago/ }));
     const resumo = await screen.findByRole('dialog');
     expect(within(resumo).getByRole('button', { name: /Cancelar/ })).toBeInTheDocument();
@@ -213,7 +213,7 @@ describe('Agenda de Visitas: dia que já passou', () => {
     list.mockResolvedValue({ data: [visitaDeOntem()], meta: { total: 1, active_total: 1, only_mine: false } });
     const user = userEvent.setup();
     abrir();
-    await user.click(await screen.findByRole('button', { name: 'Mês' }));
+    await user.click(await screen.findByRole('radio', { name: 'Mês' }));
     const celula = (await screen.findByRole('button', { name: /15:00 · Thyago/ })).parentElement!;
     fireEvent.click(celula);
     const janela = await screen.findByTestId('janela');
@@ -224,7 +224,7 @@ describe('Agenda de Visitas: dia que já passou', () => {
     list.mockResolvedValue({ data: [visitaDeOntem()], meta: { total: 1, active_total: 1, only_mine: false } });
     const user = userEvent.setup();
     abrir();
-    await user.click(await screen.findByRole('button', { name: 'Lista' }));
+    await user.click(await screen.findByRole('button', { name: 'Ver em lista' }));
     const card = (await screen.findByText('Thyago')).closest('[id^="visita-"]') as HTMLElement;
     expect(within(card).getByRole('button', { name: /Não compareceu/ })).toBeInTheDocument();
     expect(within(card).getByRole('button', { name: /^Remarcar$/ })).toBeInTheDocument();
@@ -236,7 +236,7 @@ describe('Agenda de Visitas: aba Agendadas da Lista', () => {
   it('pede Agendada e Reagendada: visita remarcada continua na aba', async () => {
     const user = userEvent.setup();
     abrir();
-    await user.click(await screen.findByRole('button', { name: 'Lista' }));
+    await user.click(await screen.findByRole('button', { name: 'Ver em lista' }));
     await user.click(await screen.findByRole('button', { name: 'Agendadas' }));
     await waitFor(() =>
       expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ status: ['scheduled', 'rescheduled'] })),
@@ -246,7 +246,7 @@ describe('Agenda de Visitas: aba Agendadas da Lista', () => {
   it('as outras abas continuam pedindo uma situação só', async () => {
     const user = userEvent.setup();
     abrir();
-    await user.click(await screen.findByRole('button', { name: 'Lista' }));
+    await user.click(await screen.findByRole('button', { name: 'Ver em lista' }));
     await user.click(await screen.findByRole('button', { name: 'Confirmadas' }));
     await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'confirmed' })));
   });

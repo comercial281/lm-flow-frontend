@@ -16,11 +16,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
 } from '@/components/ui/ds';
+import Abas from '@/components/base/Abas';
+import { useAbaDaJanela } from '@/hooks/useAbaDaJanela';
 import { PipelineStage } from '@/types/analytics';
 import { LocalAttributeDefinition, LocalAttributeDefinitionPayload } from '@/types/pipelines/localAttributeDefinition';
 import PipelineStageCustomAttributes from './PipelineStageCustomAttributes';
@@ -55,6 +53,8 @@ interface EditStageModalProps {
   loading: boolean;
 }
 
+type AbaDaEtapa = 'details' | 'attributes';
+
 export default function EditStageModal({
   open,
   onOpenChange,
@@ -68,6 +68,7 @@ export default function EditStageModal({
   const [stageType, setStageType] = useState('active');
   const [description, setDescription] = useState('');
   const [customAttributes, setCustomAttributes] = useState<Record<string, unknown>>({});
+  const [aba, setAba] = useAbaDaJanela<AbaDaEtapa>(open, 'details');
 
   const stageColors = getStageColors(t);
 
@@ -166,13 +167,18 @@ export default function EditStageModal({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="details">{t('editStage.details')}</TabsTrigger>
-            <TabsTrigger value="attributes">{t('editStage.customAttributes')}</TabsTrigger>
-          </TabsList>
+        <div className="flex flex-1 flex-col gap-2 min-h-0">
+          <Abas
+            rotulo={t('editStage.title')}
+            ativa={aba}
+            aoTrocar={chave => setAba(chave as AbaDaEtapa)}
+            abas={[
+              { chave: 'details', rotulo: t('editStage.details') },
+              { chave: 'attributes', rotulo: t('editStage.customAttributes') },
+            ]}
+          />
 
-          <TabsContent value="details" className="py-4 space-y-4 overflow-y-auto flex-1">
+          {aba === 'details' && <div className="py-4 space-y-4 overflow-y-auto flex-1">
           {/* Stage Name */}
           <div className="grid gap-2">
             <Label htmlFor="stage-name">{t('editStage.name')}</Label>
@@ -269,9 +275,9 @@ export default function EditStageModal({
               </div>
             </div>
           </div>
-          </TabsContent>
+          </div>}
 
-          <TabsContent value="attributes" className="py-4 overflow-y-auto flex-1">
+          {aba === 'attributes' && <div className="py-4 overflow-y-auto flex-1">
             <div className="mb-4">
               <h3 className="text-lg font-semibold mb-2">{t('editStage.customAttributes')}</h3>
               <p className="text-sm text-muted-foreground">
@@ -285,8 +291,8 @@ export default function EditStageModal({
               pipelineId={stage.pipeline_id}
               stageId={stage.id}
             />
-          </TabsContent>
-        </Tabs>
+          </div>}
+        </div>
 
         <DialogFooter>
           <Button

@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -190,6 +190,21 @@ describe('contaConfirmacao: a confirmação da casa vale para o app inteiro', ()
     expect(contaConfirmacao('src/hooks/usePergunta.tsx')).toBe(false);
     expect(contaConfirmacao('src/components/ui/ds.tsx')).toBe(false);
     expect(contaConfirmacao('src/components/chat/contact-sidebar/PipelineManagement.spec.tsx')).toBe(false);
+describe('abaForaDaCasa e alternadorAMao (peças 6 e 19)', () => {
+  it('aba: conta o Tabs do pacote em JSX e o sublinhado copiado, não a rodinha nem o import', () => {
+    expect(abaForaDaCasa('<Tabs defaultValue="geral">')).toBe(true);
+    expect(abaForaDaCasa('<TabsList className="mb-4">')).toBe(true);
+    expect(abaForaDaCasa('<TabsTrigger value="geral">')).toBe(true);
+    expect(abaForaDaCasa('className={`px-4 py-2 border-b-2 -mb-px ${on ? "a" : "b"}`}')).toBe(true);
+    expect(abaForaDaCasa('<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />')).toBe(false);
+    expect(abaForaDaCasa("import { Tabs } from '@/components/ui/ds';")).toBe(false);
+  });
+
+  it('alternador: conta o ícone de visão em tag, não em dado', () => {
+    expect(alternadorAMao('<Grid3X3 className="h-4 w-4" />')).toBe(true);
+    expect(alternadorAMao('<LayoutGrid className="h-3.5 w-3.5" />')).toBe(true);
+    expect(alternadorAMao("{ valor: 'cards', icone: Grid3X3, nome: 'Ver em cartões' },")).toBe(false);
+    expect(alternadorAMao('<KanbanBoard />')).toBe(false);
   });
 });
 

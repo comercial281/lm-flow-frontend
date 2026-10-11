@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/ds';
+import Abas from '@/components/base/Abas';
 import { Card, CardContent, CardHeader } from '@/components/ui/ds';
 import { User, Settings, Wrench, Users } from 'lucide-react';
 import BasicInfoForm, { BasicInfoData } from '../Forms/BasicInfoForm';
@@ -361,27 +361,17 @@ const AgentTabs = ({
 
   return (
     <div className="w-full">
-      <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-        <TabsList
-          className={`grid w-full ${
-            tabs.length === 2 ? 'grid-cols-2' : tabs.length === 3 ? 'grid-cols-3' : 'grid-cols-4'
-          } mb-8`}
-        >
-          {tabs.map(tab => {
-            const IconComponent = tab.icon;
+      <div className="flex w-full flex-col gap-2">
+        <Abas
+          rotulo="Partes da IA"
+          className="mb-8"
+          ativa={activeTab}
+          aoTrocar={tab => { if (tab !== activeTab) onTabChange(tab); }}
+          abas={tabs.map(tab => ({ chave: tab.id, rotulo: tab.label, icone: tab.icon }))}
+        />
 
-            return (
-              <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2">
-                <IconComponent className="h-4 w-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
-
-        {tabs.map(tab => (
-          <TabsContent key={tab.id} value={tab.id} className="mt-0">
+        {tabs.filter(tab => tab.id === activeTab).map(tab => (
+          <div key={tab.id} className="mt-0">
             <TabContent
               tabId={tab.id}
               mode={mode}
@@ -407,9 +397,9 @@ const AgentTabs = ({
               editingAgentId={editingAgentId}
               folderId={folderId}
             />
-          </TabsContent>
+          </div>
         ))}
-      </Tabs>
+      </div>
     </div>
   );
 };

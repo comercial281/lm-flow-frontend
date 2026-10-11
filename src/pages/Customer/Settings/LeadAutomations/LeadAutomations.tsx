@@ -24,6 +24,7 @@ import {
   Archive, ArchiveRestore, BookOpen, Lock, Copy, Star, ArrowUp, ArrowDown, FlaskConical, History,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
+import Abas from '@/components/base/Abas';
 import {
   leadAutomationService,
   LeadAutomationRule,
@@ -440,21 +441,13 @@ export default function LeadAutomations() {
       {/* Central de Notificações — presets de push em toggle */}
 
       {/* Tabs Ativas / Arquivadas */}
-      <div className="flex gap-1 mb-4 border-b border-border">
-        {([['active', 'Ativas'], ['archived', 'Arquivadas']] as const).map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => { setTab(key); setExpandedId(null); }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === key
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Abas
+        rotulo="Situação das automações"
+        className="mb-4"
+        ativa={tab}
+        aoTrocar={chave => { setTab(chave as Tab); setExpandedId(null); }}
+        abas={[{ chave: 'active', rotulo: 'Ativas' }, { chave: 'archived', rotulo: 'Arquivadas' }]}
+      />
 
       {/* List */}
       {loading ? (

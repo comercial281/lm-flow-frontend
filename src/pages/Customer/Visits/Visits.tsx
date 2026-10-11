@@ -1,6 +1,8 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Pagina, BaseHeader } from '@/components/base';
+import { Pagina, BaseHeader, AlternadorDeVisao } from '@/components/base';
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import type { OpcaoDeEscolha } from '@/components/base/escolha';
 import { toast } from 'sonner';
 import {
   Button,
@@ -241,29 +243,15 @@ function BarraDoCalendario({ visao, date, onVisao, onNavigate }: {
         <div className="w-1 h-6 rounded-full shrink-0 ml-1" style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }} />
         <h2 className="text-base font-bold truncate">{tituloDaVisao(visao, date)}</h2>
       </div>
-      <div className="inline-flex rounded-md border border-border bg-background p-0.5" role="group" aria-label="Visão do calendário">
-        {VISOES.map(v => (
-          <button
-            key={v.key}
-            type="button"
-            aria-pressed={visao === v.key}
-            onClick={() => onVisao(v.key)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
-              visao === v.key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {v.label}
-          </button>
-        ))}
-      </div>
+      <BotoesDeEscolha rotulo="Visão do calendário" valor={visao} opcoes={VISOES} aoEscolher={onVisao} />
     </div>
   );
 }
 
-const VISOES: { key: VisaoCalendario; label: string }[] = [
-  { key: 'mes', label: 'Mês' },
-  { key: 'semana', label: 'Semana' },
-  { key: 'dia', label: 'Dia' },
+const VISOES: OpcaoDeEscolha<VisaoCalendario>[] = [
+  { valor: 'mes', rotulo: 'Mês' },
+  { valor: 'semana', rotulo: 'Semana' },
+  { valor: 'dia', rotulo: 'Dia' },
 ];
 
 const mesmoDiaQue = (a: Date, b: Date) => a.toDateString() === b.toDateString();
@@ -731,31 +719,19 @@ export default function Visits() {
             aDireita={
               <>
             {/* View toggle */}
-            <div className="inline-flex rounded-md border border-border bg-background p-0.5">
-              <button
-                onClick={() => {
-                  // O calendário sempre mostra o mês visível inteiro — um filtro
-                  // da Dashboard ativo (ex.: "A confirmar") não sobrevive à troca.
-                  if (temFiltroNoLink) tirarFiltroLink();
-                  setViewMode('calendar');
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
-                  viewMode === 'calendar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <CalendarDays className="h-3.5 w-3.5" />
-                Calendário
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
-                  viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <List className="h-3.5 w-3.5" />
-                Lista
-              </button>
-            </div>
+            <AlternadorDeVisao
+              valor={viewMode}
+              aoEscolher={v => {
+                // O calendário sempre mostra o mês visível inteiro — um filtro
+                // da Dashboard ativo (ex.: "A confirmar") não sobrevive à troca.
+                if (v === 'calendar' && temFiltroNoLink) tirarFiltroLink();
+                setViewMode(v);
+              }}
+              opcoes={[
+                { valor: 'calendar', icone: CalendarDays, nome: 'Ver no calendário' },
+                { valor: 'list', icone: List, nome: 'Ver em lista' },
+              ]}
+            />
             {agendaLigada && cargoConhecido && !soMinhas && (
               <Button variant="outline" onClick={() => setHorarioAberto(true)}>
                 <Clock className="h-4 w-4 mr-2" />

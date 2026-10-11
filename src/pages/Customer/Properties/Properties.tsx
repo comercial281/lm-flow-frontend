@@ -19,10 +19,9 @@ import {
   Wand2,
   Loader2,
   List,
-  LayoutGrid,
+  Grid3X3,
   Map as MapIcon,
   SlidersHorizontal,
-  type LucideIcon,
 } from 'lucide-react';
 import {
   propertiesService,
@@ -43,7 +42,7 @@ import { lerRecorteImoveis, type FiltroDoLink } from '@/features/dashboard/links
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
 import { getTenantSlug } from '@/services/core/tenant';
 import Abas from '@/components/base/Abas';
-import { BaseHeader, EmptyState, Pagina } from '@/components/base';
+import { BaseHeader, EmptyState, Pagina, AlternadorDeVisao, type OpcaoDeVisao } from '@/components/base';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import {
   ABA_NA_URL,
@@ -69,10 +68,10 @@ import { lerVisao, paramsDaLista, type Ordem, type Visao } from './lista/estadoD
 // O mapa (Leaflet) só baixa quando a pessoa abre a visão Mapa.
 const VisaoMapa = lazy(() => import('./lista/VisaoMapa'));
 
-const VISOES: { valor: Visao; rotulo: string; icone: LucideIcon }[] = [
-  { valor: 'lista', rotulo: 'Lista', icone: List },
-  { valor: 'grade', rotulo: 'Grade', icone: LayoutGrid },
-  { valor: 'mapa', rotulo: 'Mapa', icone: MapIcon },
+const VISOES: OpcaoDeVisao<Visao>[] = [
+  { valor: 'lista', nome: 'Ver em lista', icone: List },
+  { valor: 'grade', nome: 'Ver em grade', icone: Grid3X3 },
+  { valor: 'mapa', nome: 'Ver no mapa', icone: MapIcon },
 ];
 
 export default function Properties() {
@@ -566,20 +565,7 @@ export default function Properties() {
                   </Seletor>
                 </>
               )}
-              <div role="group" aria-label="Visão" className="inline-flex rounded-md border border-input p-0.5">
-                {VISOES.map(({ valor, rotulo, icone: Icone }) => (
-                  <button
-                    key={valor}
-                    type="button"
-                    aria-pressed={visao === valor}
-                    onClick={() => trocarVisao(valor)}
-                    className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium ${visao === valor ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
-                    <Icone className="h-3.5 w-3.5" aria-hidden="true" />
-                    {rotulo}
-                  </button>
-                ))}
-              </div>
+              <AlternadorDeVisao valor={visao} opcoes={VISOES} aoEscolher={trocarVisao} />
               {recorte && visao !== 'mapa' && <ChipDaDashboard rotulo={recorte.rotulo} onTirar={tirarRecorte} />}
             </div>
 

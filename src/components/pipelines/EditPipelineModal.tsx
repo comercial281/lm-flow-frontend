@@ -16,11 +16,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
 } from '@/components/ui/ds';
+import Abas from '@/components/base/Abas';
+import { useAbaDaJanela } from '@/hooks/useAbaDaJanela';
 import { Loader2, X, Users } from 'lucide-react';
 import { Pipeline, UpdatePipelineData } from '@/types/analytics';
 import TeamsService from '@/services/teams/teamsService';
@@ -28,6 +26,8 @@ import { Team } from '@/types/users/teams';
 import { LocalAttributeDefinition, LocalAttributeDefinitionPayload } from '@/types/pipelines/localAttributeDefinition';
 import PipelineCustomAttributes from './PipelineCustomAttributes';
 import { PIPE_ENTRY_SOURCES } from '@/constants/pipeEntrySources';
+
+type AbaDoFunil = 'details' | 'entry' | 'attributes';
 
 interface EditPipelineModalProps {
   open: boolean;
@@ -52,6 +52,7 @@ export default function EditPipelineModal({
     visibility: pipeline.visibility,
     is_active: pipeline.is_active,
   });
+  const [aba, setAba] = useAbaDaJanela<AbaDoFunil>(open, 'details');
   const [teamIds, setTeamIds] = useState<string[]>(pipeline.team_ids || []);
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamsLoading, setTeamsLoading] = useState(false);
@@ -173,14 +174,19 @@ export default function EditPipelineModal({
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="details">{t('editPipeline.details')}</TabsTrigger>
-              <TabsTrigger value="entry">Entrada de leads</TabsTrigger>
-              <TabsTrigger value="attributes">{t('editPipeline.customAttributes')}</TabsTrigger>
-            </TabsList>
+          <div className="flex flex-1 flex-col gap-2 min-h-0">
+            <Abas
+              rotulo={t('editPipeline.title')}
+              ativa={aba}
+              aoTrocar={chave => setAba(chave as AbaDoFunil)}
+              abas={[
+                { chave: 'details', rotulo: t('editPipeline.details') },
+                { chave: 'entry', rotulo: 'Entrada de leads' },
+                { chave: 'attributes', rotulo: t('editPipeline.customAttributes') },
+              ]}
+            />
 
-            <TabsContent value="details" className="py-4 overflow-y-auto flex-1">
+            {aba === 'details' && <div className="py-4 overflow-y-auto flex-1">
               <div className="grid gap-4">
             {/* Name */}
             <div className="grid gap-2">
@@ -328,9 +334,9 @@ export default function EditPipelineModal({
               </Label>
             </div>
               </div>
-            </TabsContent>
+            </div>}
 
-            <TabsContent value="entry" className="py-4 overflow-y-auto flex-1">
+            {aba === 'entry' && <div className="py-4 overflow-y-auto flex-1">
               <div className="mb-4">
                 <h3 className="text-lg font-semibold mb-1">Quais leads entram neste funil</h3>
                 <p className="text-sm text-muted-foreground">
@@ -390,9 +396,9 @@ export default function EditPipelineModal({
                 Lead que já tem card aqui não vira card novo: se a pessoa preencheu um formulário e
                 depois mandou WhatsApp, a conversa é amarrada no card que já existe, na etapa em que ele está.
               </p>
-            </TabsContent>
+            </div>}
 
-            <TabsContent value="attributes" className="py-4 overflow-y-auto flex-1">
+            {aba === 'attributes' && <div className="py-4 overflow-y-auto flex-1">
               <div className="mb-4">
                 <h3 className="text-lg font-semibold mb-2">{t('editPipeline.customAttributes')}</h3>
                 <p className="text-sm text-muted-foreground">
@@ -405,8 +411,8 @@ export default function EditPipelineModal({
                 disabled={loading}
                 pipelineId={pipeline.id}
               />
-            </TabsContent>
-          </Tabs>
+            </div>}
+          </div>
 
           <DialogFooter>
             <Button

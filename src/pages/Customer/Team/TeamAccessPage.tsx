@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Users2, Shield, Users, SlidersHorizontal } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/ds';
 import { BaseHeader, Pagina } from '@/components/base';
+import Abas from '@/components/base/Abas';
 import PeopleTab from './PeopleTab';
 import RoleCards from './roles/RoleCards';
 import PermissionsMatrix from './roles/PermissionsMatrix';
@@ -74,32 +74,28 @@ export default function TeamAccessPage() {
 
   return (
     <Pagina cabecalho={<BaseHeader title="Equipe" subtitle="Quem atende, por qual número e em qual time" />}>
-      <Tabs value={activeTab} onValueChange={v => void handleTabChange(v)} className="space-y-6">
-        <TabsList className="flex flex-wrap justify-start gap-1 bg-transparent p-0 h-auto">
-          {tabs.map(tab => {
-            const Icon = tab.icon;
-            return (
-              <TabsTrigger key={tab.key} value={tab.key} className="gap-1.5">
-                <Icon className="h-4 w-4" /> {tab.label}
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
+      <div className="flex flex-col gap-2 space-y-6">
+        <Abas
+          rotulo="Partes da Equipe"
+          ativa={activeTab}
+          aoTrocar={v => { if (v !== activeTab) void handleTabChange(v); }}
+          abas={tabs.map(tab => ({ chave: tab.key, rotulo: tab.label, icone: tab.icon }))}
+        />
 
-        <TabsContent value="pessoas">
+        {activeTab === 'pessoas' && <div>
           <PeopleTab />
-        </TabsContent>
-        <TabsContent value="cargos">
+        </div>}
+        {activeTab === 'cargos' && <div>
           {/* Cartões dos cargos. A lista completa antiga segue em /equipe/cargos/lista. */}
           <RoleCards />
-        </TabsContent>
-        <TabsContent value="permissoes">
+        </div>}
+        {activeTab === 'permissoes' && <div>
           <PermissionsMatrix onDirtyChange={onDirtyChange} />
-        </TabsContent>
-        <TabsContent value="times">
+        </div>}
+        {activeTab === 'times' && <div>
           <Teams embutido />
-        </TabsContent>
-      </Tabs>
+        </div>}
+      </div>
       {dialogoDeConfirmacao}
     </Pagina>
   );

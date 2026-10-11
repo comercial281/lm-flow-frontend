@@ -1,10 +1,6 @@
 import { useState, ChangeEvent, useEffect } from 'react';
 import {
   Button,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
   Input,
   Label,
   Separator,
@@ -48,6 +44,7 @@ import { normalizeAvatarUrl } from '@/utils/avatarUrl';
 import { ProfilePhotoUploader, TwoFactorSetup } from '@/components/shared/profile';
 import { BaseHeader, Pagina } from '@/components/base';
 import Aviso from '@/components/base/Aviso';
+import Abas from '@/components/base/Abas';
 import { PhoneInput } from '@/components/shared/PhoneInput';
 
 const Profile = () => {
@@ -946,37 +943,43 @@ const Profile = () => {
 
   return (
     <Pagina estreita cabecalho={<BaseHeader title={t('title')} subtitle={t('subtitle')} />}>
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-8">
-          <TabsTrigger value="dados">{t('tabs.personalData')}</TabsTrigger>
-          <TabsTrigger value="interface">{t('tabs.interface')}</TabsTrigger>
-          <TabsTrigger value="notificacoes">{t('tabs.notifications')}</TabsTrigger>
-          <TabsTrigger value="seguranca">{t('tabs.security')}</TabsTrigger>
-        </TabsList>
+      <div className="flex w-full flex-col gap-2">
+        <Abas
+          rotulo={t('title')}
+          className="mb-8"
+          ativa={activeTab}
+          aoTrocar={setActiveTab}
+          abas={[
+            { chave: 'dados', rotulo: t('tabs.personalData') },
+            { chave: 'interface', rotulo: t('tabs.interface') },
+            { chave: 'notificacoes', rotulo: t('tabs.notifications') },
+            { chave: 'seguranca', rotulo: t('tabs.security') },
+          ]}
+        />
 
-        <TabsContent value="dados" className="space-y-6">
+        {activeTab === 'dados' && <div className="space-y-6">
           {renderDadosPessoais()}
           {/* Fase 2b.1: os números de que a pessoa é dona, com o principal.
               Some sozinho sem a regra do dono ou quando a leitura falha. */}
           <MyNumbersCard />
-        </TabsContent>
+        </div>}
 
-        <TabsContent value="interface" className="space-y-6">
+        {activeTab === 'interface' && <div className="space-y-6">
           {renderInterfaceSettings()}
-        </TabsContent>
+        </div>}
 
-        <TabsContent value="notificacoes" className="space-y-6">
+        {activeTab === 'notificacoes' && <div className="space-y-6">
           {renderNotificationSettings()}
           {renderAudioSettings()}
-        </TabsContent>
+        </div>}
 
-        <TabsContent value="seguranca" className="space-y-6">
+        {activeTab === 'seguranca' && <div className="space-y-6">
           {renderSenha()}
           <TwoFactorSetup onUpdate={refreshUser} />
           {/* Zona de Perigo - movida para aba Segurança */}
           {renderZonaPerigo()}
-        </TabsContent>
-      </Tabs>
+        </div>}
+      </div>
 
       {/* Dialog de Confirmação de Exclusão */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

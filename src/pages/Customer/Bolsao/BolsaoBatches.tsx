@@ -9,10 +9,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
 } from '@/components/ui/ds';
 import {
   Upload,
@@ -29,6 +25,7 @@ import {
   Eraser,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
+import Abas from '@/components/base/Abas';
 import { BaseHeader, Pagina } from '@/components/base';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -65,6 +62,7 @@ export default function BolsaoBatches() {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [cleaning, setCleaning] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [aba, setAba] = useState('listas');
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -199,14 +197,19 @@ export default function BolsaoBatches() {
         />
       }
     >
-      <Tabs defaultValue="listas">
-        <TabsList>
-          <TabsTrigger value="listas">Listas</TabsTrigger>
-          <TabsTrigger value="quem-pegou">Quem pegou o quê</TabsTrigger>
-          <TabsTrigger value="regras">Regras</TabsTrigger>
-        </TabsList>
+      <div className="flex flex-col gap-2">
+        <Abas
+          rotulo="Partes do Bolsão"
+          ativa={aba}
+          aoTrocar={setAba}
+          abas={[
+            { chave: 'listas', rotulo: 'Listas' },
+            { chave: 'quem-pegou', rotulo: 'Quem pegou o quê' },
+            { chave: 'regras', rotulo: 'Regras' },
+          ]}
+        />
 
-        <TabsContent value="listas" className="mt-4 space-y-4">
+        {aba === 'listas' && <div className="mt-4 space-y-4">
           {loading ? (
             <div className="flex items-center gap-2 py-12 text-muted-foreground justify-center">
               <Loader2 className="h-5 w-5 animate-spin" /> Carregando…
@@ -267,16 +270,16 @@ export default function BolsaoBatches() {
               )}
             </>
           )}
-        </TabsContent>
+        </div>}
 
-        <TabsContent value="quem-pegou" className="mt-4 space-y-4">
+        {aba === 'quem-pegou' && <div className="mt-4 space-y-4">
           <ClaimsPanel claims={claims} byUser={byUser} />
-        </TabsContent>
+        </div>}
 
-        <TabsContent value="regras" className="mt-4">
+        {aba === 'regras' && <div className="mt-4">
           <BolsaoRulesCard />
-        </TabsContent>
-      </Tabs>
+        </div>}
+      </div>
 
       <BolsaoImportWizard
         open={wizardOpen}
