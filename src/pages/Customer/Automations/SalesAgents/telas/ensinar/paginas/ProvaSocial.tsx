@@ -25,7 +25,11 @@ export default function ProvaSocial({ agent, gravar, confirmar }: PropsDaPaginaD
     if (await gravarCasos([...casos, t])) setNovo('');
   };
   const apagar = async (i: number) => {
+    if (gravando) return;
     if (!(await confirmar({ titulo: 'Excluir caso', descricao: casos[i], rotuloDaAcao: 'Excluir', destrutivo: true }))) return;
+    // A edição aberta aponta pro caso pela POSIÇÃO, que anda quando um sai: fecha
+    // pra o "Pronto" não gravar o texto em cima do caso errado.
+    setEditando(null);
     await gravarCasos(casos.filter((_, j) => j !== i));
   };
   const salvarEdicao = async () => {
