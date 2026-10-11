@@ -74,6 +74,24 @@ describe('Adicionar Lead ao Funil · um aviso só', () => {
     expect(toast.success).toHaveBeenCalledWith('addItem.created');
   });
 
+  it('Lead reaproveitado (telefone/e-mail já cadastrado): um aviso só, "Lead já existia — adicionado ao funil."', async () => {
+    vi.mocked(contactsService.createContact).mockRejectedValue({ response: { status: 422 } });
+    vi.mocked(contactsService.searchContacts).mockResolvedValue({
+      data: [{ id: 'k5', name: 'Ana Lima', email: 'ana@exemplo.com' }],
+    } as never);
+    const { onItemAdded } = abrir();
+    await userEvent.click(screen.getByRole('button', { name: /Criar novo lead/ }));
+    await userEvent.type(screen.getByPlaceholderText('Nome do lead'), 'Ana Lima');
+    await userEvent.type(screen.getByPlaceholderText('email@exemplo.com'), 'ana@exemplo.com');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar e adicionar' }));
+
+    await waitFor(() => expect(onItemAdded).toHaveBeenCalledTimes(1));
+    expect(pipelinesService.addItemToPipeline).toHaveBeenCalledWith('p1', expect.objectContaining({ item_id: 'k5' }));
+    expect(toast.success).toHaveBeenCalledTimes(1);
+    expect(toast.success).toHaveBeenCalledWith('addItem.reused');
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
   it('Lead existente: um aviso só, "Lead adicionado ao funil."', async () => {
     const { onItemAdded } = abrir();
     await userEvent.click(await screen.findByText('Maria Souza'));
