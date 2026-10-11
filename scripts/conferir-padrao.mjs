@@ -172,6 +172,27 @@ const AVISOS_DA_CASA = new Set(['src/components/base/Aviso.tsx', 'src/components
 export const avisoAMao = linha =>
   FUNDO_DE_AVISO.test(linha) && BORDA_DE_AVISO.test(linha) && !/rounded-full|<Badge\b/.test(linha);
 
+// Confirmação fora da casa (peça 18 do GLOSSARIO, escolha do dono em
+// 10/10/2026): toda pergunta "tem certeza?" é o `useConfirmacao`, que usa o
+// `Dialog` da casa e só pinta de vermelho com `destrutivo: true`. O
+// `AlertDialog` do pacote base mostra "Excluir" em roxo. A régua conta cada
+// `<AlertDialog` aberto e cada import direto de `@evoapi/design-system/alert-dialog`,
+// venha de onde vier (pacote ou `components/ui/ds`). Vale para o app INTEIRO,
+// como a lista nativa: no dia da migração (11/10/2026) não sobrou nenhuma em
+// tela nenhuma, nem no painel raiz nem no painel de landings. Os dois "digite o
+// nome pra excluir" (canal e conta) já são `Dialog` da casa e não contam.
+const ALERT_DIALOG = /<AlertDialog(?=[\s>]|$)|['"]@evoapi\/design-system\/alert-dialog['"]/;
+const CONFIRMACOES_DA_CASA = new Set([
+  'src/hooks/useConfirmacao.tsx',
+  'src/hooks/usePergunta.tsx',
+  'src/components/ui/ds.tsx',
+]);
+export const contaConfirmacao = rel =>
+  rel.startsWith('src/') &&
+  /\.(ts|tsx)$/.test(rel) &&
+  !/\.(spec|test)\.tsx?$/.test(rel) &&
+  !CONFIRMACOES_DA_CASA.has(rel);
+
 const SELETORES_DA_CASA = new Set(['src/components/base/Seletor.tsx', 'src/components/base/SeletorComAbas.tsx']);
 // Ficam com a lista do sistema DE PROPÓSITO (decisão 3 da spec do Seletor): o
 // widget de chat roda num iframe no site do cliente, que mede a própria altura,
@@ -475,7 +496,8 @@ export function varrer() {
     const rel = relative(RAIZ, arquivo).split(sep).join('/');
     const escopo = noEscopo(rel);
     const lista = contaSelectNativo(rel);
-    if (!escopo && !lista) continue;
+    const confirmacao = contaConfirmacao(rel);
+    if (!escopo && !lista && !confirmacao) continue;
     const codigo = readFileSync(arquivo, 'utf8');
     if (escopo && (rel.endsWith('.tsx') || rel.endsWith('.ts'))) {
       for (const { linha, texto } of textosDaTela(codigo, rel)) conferirTexto(rel, linha, texto);
@@ -501,6 +523,7 @@ export function varrer() {
       if (escopo && rel !== CHAVE_DA_CASA && CHAVE_A_MAO.test(l)) anotar('chaveMao', rel, i + 1, 'role="switch" feito à mão', l.trim());
       if (escopo && rel !== CABECALHO_DA_CASA && BARRA_A_MAO.test(l)) anotar('barraAMao', rel, i + 1, 'barrinha roxa copiada', l.trim());
       if (escopo && rel.endsWith('.tsx') && !AVISOS_DA_CASA.has(rel) && avisoAMao(l)) anotar('avisoAMao', rel, i + 1, 'aviso pintado à mão', l.trim());
+      if (confirmacao && ALERT_DIALOG.test(l)) anotar('confirmacaoForaDaCasa', rel, i + 1, 'confirmação fora do useConfirmacao', l.trim());
       // selectNativo (app inteiro): pula linhas que começam com comentário ou têm */ após a tag
       if (lista && SELECT_NATIVO.test(l) && !COMECO_DE_COMENTARIO.test(limpa)) {
         const match = SELECT_NATIVO.exec(l);
@@ -535,6 +558,7 @@ export const CATEGORIAS = {
   barraAMao: 'barrinha roxa copiada',
   foraDaMoldura: 'cabeçalho fora da moldura',
   avisoAMao: 'aviso ou faixa pintado à mão',
+  confirmacaoForaDaCasa: 'confirmação fora do useConfirmacao (app inteiro)',
 };
 
 function principal() {

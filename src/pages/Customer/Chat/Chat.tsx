@@ -8,6 +8,7 @@ import { useChatContext } from '@/contexts/chat/ChatContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 
 import { useLanguage } from '@/hooks/useLanguage';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { useConversationPresence } from '@/hooks/useConversationPresence';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { usePendingOffers } from '@/contexts/PendingOffersContext';
@@ -26,16 +27,6 @@ import { loadConversationFilters, getDefaultFilter } from '@/utils/storage/filte
 
 import { toast } from 'sonner';
 import { AxiosError } from 'axios';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@evoapi/design-system/alert-dialog';
 
 import ErrorBoundary from '../../../components/ErrorBoundary';
 import { ChatTour } from '@/tours';
@@ -46,7 +37,7 @@ import ChatHeader from '@/components/chat/chat-header/ChatHeader';
 import ChatArea from '@/components/chat/chat-area/ChatArea';
 import ChatTabs from '@/components/chat/chat-tabs/ChatTabs';
 
-import { AlertTriangle, MessageCircle, Trash2 } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import { AvisoListaVaziaNumero } from '@/components/chat/empty-states/AvisoNumero';
 import { useAvisoDeNumero } from '@/features/numbers/useAvisoDeNumero';
 
@@ -124,8 +115,7 @@ const Chat = () => {
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
   // Modal states
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [assignmentType, setAssignmentType] = useState<AssignmentType>('agent');
   const [conversationToAssign, setConversationToAssign] = useState<Conversation | null>(null);
@@ -547,25 +537,9 @@ const Chat = () => {
     [assignmentHandlers, reloadCurrentFilters],
   );
 
-  const handleDeleteConversation = useCallback(
-    (conversation: Conversation) => {
-      const result = conversationHandlers.handleDeleteConversation(conversation);
-      if (result) {
-        setConversationToDelete(result);
-        setShowDeleteDialog(true);
-      }
-    },
-    [conversationHandlers],
-  );
-
-
-  const confirmDeleteConversation = async () => {
-    if (!conversationToDelete) return;
-
+  const confirmDeleteConversation = async (conversationToDelete: Conversation) => {
     try {
       await conversations.deleteConversation(String(conversationToDelete.id));
-      setShowDeleteDialog(false);
-      setConversationToDelete(null);
       setMobileView('list');
       setIsContactSidebarOpen(false);
       isManualNavigationRef.current = true;
@@ -578,6 +552,36 @@ const Chat = () => {
       // Error is already handled in the context with toast
     }
   };
+  // Em ref pra o useCallback abaixo ficar estável e, depois do `await`, chamar
+  // a versão da exclusão do render mais recente (como fazia o botão do diálogo).
+  const confirmDeleteConversationRef = useRef(confirmDeleteConversation);
+  confirmDeleteConversationRef.current = confirmDeleteConversation;
+
+  const handleDeleteConversation = useCallback(
+    async (conversation: Conversation) => {
+      const result = conversationHandlers.handleDeleteConversation(conversation);
+      if (!result) return;
+      const contactName = result.assignee?.name || t('deleteDialog.contactFallback');
+      const description = t('deleteDialog.description', { name: contactName });
+      const parts = description.split(contactName);
+      const ok = await confirmar({
+        titulo: t('deleteDialog.title'),
+        descricao: (
+          <>
+            {parts[0]}
+            <strong>{contactName}</strong>
+            {parts[1]}
+          </>
+        ),
+        rotuloDeCancelar: t('deleteDialog.cancel'),
+        rotuloDaAcao: t('deleteDialog.confirm'),
+        destrutivo: true,
+      });
+      if (!ok) return;
+      await confirmDeleteConversationRef.current(result);
+    },
+    [conversationHandlers, confirmar, t],
+  );
 
   // Assignment modal handlers
   const handleAssignmentConfirm = async (selectedIds: string[]) => {
@@ -938,51 +942,7 @@ const Chat = () => {
           )}
         </Suspense>
 
-        {/* Delete Conversation Confirmation Dialog */}
-        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <AlertDialogContent className="max-w-md">
-            <AlertDialogHeader className="text-left space-y-4">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
-                  <AlertTriangle className="h-6 w-6 text-destructive" />
-                </div>
-                <div className="flex-1 space-y-2">
-                  <AlertDialogTitle className="text-lg font-semibold">
-                    {t('deleteDialog.title')}
-                  </AlertDialogTitle>
-                  <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
-                    {(() => {
-                      const contactName =
-                        conversationToDelete?.assignee?.name || t('deleteDialog.contactFallback');
-                      const description = t('deleteDialog.description', { name: contactName });
-                      const parts = description.split(contactName);
-                      return (
-                        <>
-                          {parts[0]}
-                          <strong>{contactName}</strong>
-                          {parts[1]}
-                        </>
-                      );
-                    })()}
-                  </AlertDialogDescription>
-                </div>
-              </div>
-            </AlertDialogHeader>
-
-            <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-3 sm:gap-3">
-              <AlertDialogCancel className="w-full sm:w-auto">
-                {t('deleteDialog.cancel')}
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={confirmDeleteConversation}
-                className="w-full sm:w-auto bg-destructive text-white hover:bg-destructive/90 focus:ring-destructive"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                {t('deleteDialog.confirm')}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {dialogoDeConfirmacao}
       </div>
     </ErrorBoundary>
   );

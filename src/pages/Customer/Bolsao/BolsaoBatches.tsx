@@ -2,14 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { plural } from '@/lib/formato';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
   Badge,
   Button,
   Card,
@@ -39,6 +31,7 @@ import {
 import EmptyState from '@/components/base/EmptyState';
 import { BaseHeader, Pagina } from '@/components/base';
 import { apiErrorMessage } from '@/utils/apiHelpers';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 import bolsaoService, { BolsaoBatch, BolsaoClaimRow } from '@/services/bolsao/bolsaoService';
 import BolsaoImportWizard from './BolsaoImportWizard';
 import BolsaoTestLeadDialog from './BolsaoTestLeadDialog';
@@ -69,7 +62,7 @@ export default function BolsaoBatches() {
   const [loading, setLoading] = useState(true);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [testOpen, setTestOpen] = useState(false);
-  const [confirmArchive, setConfirmArchive] = useState<BolsaoBatch | null>(null);
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [cleaning, setCleaning] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -133,12 +126,20 @@ export default function BolsaoBatches() {
     }
   };
 
-  const doArchive = async () => {
-    if (!confirmArchive) return;
+  // Arquivar não é vermelho: nada é excluído e dá pra reabrir depois.
+  const doArchive = async (batch: BolsaoBatch) => {
+    const ok = await confirmar({
+      titulo: `Arquivar “${batch.name}”?`,
+      descricao:
+        'Ela sai desta lista e para de oferecer leads: os que ainda estavam esperando saem do ' +
+        'Bolsão. Quem já foi puxado por um corretor continua com ele, como qualquer outro lead. ' +
+        'Nada é excluído — dá para reabrir depois.',
+      rotuloDaAcao: 'Arquivar',
+    });
+    if (!ok) return;
     try {
-      await bolsaoService.archiveBatch(confirmArchive.id);
+      await bolsaoService.archiveBatch(batch.id);
       toast.success('Lista arquivada. Os leads que sobraram saíram do Bolsão.');
-      setConfirmArchive(null);
       load(true);
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Não consegui arquivar a lista.'));
@@ -224,7 +225,7 @@ export default function BolsaoBatches() {
                   key={batch.id}
                   batch={batch}
                   onTogglePause={() => togglePause(batch)}
-                  onArchive={() => setConfirmArchive(batch)}
+                  onArchive={() => doArchive(batch)}
                 />
               ))}
 
@@ -288,22 +289,7 @@ export default function BolsaoBatches() {
         onCreated={() => load(true)}
       />
 
-      <AlertDialog open={!!confirmArchive} onOpenChange={v => (v ? null : setConfirmArchive(null))}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Arquivar “{confirmArchive?.name}”?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Ela sai desta lista e para de oferecer leads: os que ainda estavam esperando saem do
-              Bolsão. Quem já foi puxado por um corretor continua com ele, como qualquer outro lead.
-              Nada é excluído — dá para reabrir depois.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={doArchive}>Arquivar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {dialogoDeConfirmacao}
     </Pagina>
   );
 }

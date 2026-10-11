@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -178,6 +178,21 @@ describe('contaSelectNativo: a lista nativa vale para o app inteiro', () => {
   });
 });
 
+describe('contaConfirmacao: a confirmação da casa vale para o app inteiro', () => {
+  it('conta tela do cliente, painel raiz e painel de landings', () => {
+    expect(contaConfirmacao('src/pages/Customer/Bolsao/BolsaoBatches.tsx')).toBe(true);
+    expect(contaConfirmacao('src/pages/SuperAdmin/LeadsFeed/index.tsx')).toBe(true);
+    expect(contaConfirmacao('src/features/landing/manage/LandingsPanel.tsx')).toBe(true);
+  });
+
+  it('não conta os hooks da casa, o ds e os testes', () => {
+    expect(contaConfirmacao('src/hooks/useConfirmacao.tsx')).toBe(false);
+    expect(contaConfirmacao('src/hooks/usePergunta.tsx')).toBe(false);
+    expect(contaConfirmacao('src/components/ui/ds.tsx')).toBe(false);
+    expect(contaConfirmacao('src/components/chat/contact-sidebar/PipelineManagement.spec.tsx')).toBe(false);
+  });
+});
+
 describe('tagsJsx', () => {
   it('lista as tags JSX com a linha', () => {
     const tags = tagsJsx('const a = (\n<div>\n<h1>{x}</h1>\n<BaseHeader title="t" />\n</div>);', 'x.tsx');
@@ -253,6 +268,20 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     mkdirSync(join(raiz, 'src/pages/Public'), { recursive: true });
     writeFileSync(join(raiz, 'src/pages/Public/portalShared.tsx'), 'const p = <select value="x" />;');
     writeFileSync(join(raiz, 'src/pages/Customer/Lista.spec.tsx'), 'const t = <select value="x" />;');
+    // Confirmação fora da casa: conta o <AlertDialog> aberto e o import direto
+    // do pacote, em qualquer tela; <AlertDialogContent> sozinho e o hook da casa, não.
+    writeFileSync(
+      join(raiz, 'src/pages/Customer/Pergunta.tsx'),
+      `import { AlertDialog, AlertDialogContent } from '@evoapi/design-system/alert-dialog';
+      export const P = () => (
+        <AlertDialog open>
+          <AlertDialogContent />
+        </AlertDialog>
+      );`,
+    );
+    writeFileSync(join(raiz, 'src/pages/SuperAdmin/Confirma.tsx'), 'export const C = () => <AlertDialog open={x} />;');
+    mkdirSync(join(raiz, 'src/hooks'), { recursive: true });
+    writeFileSync(join(raiz, 'src/hooks/useConfirmacao.tsx'), 'export const D = () => <AlertDialog open={x} />;');
     // no painel raiz, o mesmo texto NÃO conta
     writeFileSync(join(raiz, 'src/pages/SuperAdmin/Painel.tsx'), 'const x = <p>Deletar instância</p>;');
     writeFileSync(
@@ -303,6 +332,8 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     expect(contagem(saida, 'foraDaMoldura')).toBe(3); // SemMoldura + DiretoSemMoldura + PaginaLocal (wrapper e ComMoldura, que importa a Pagina da casa, não contam)
     // <select> e <NativeSelect> de Lista.tsx + painel raiz (Filtro.tsx) + sobra (Herdado.tsx)
     expect(contagem(saida, 'selectNativo')).toBe(4);
+    // Pergunta.tsx (import + <AlertDialog>) + painel raiz (Confirma.tsx)
+    expect(contagem(saida, 'confirmacaoForaDaCasa')).toBe(3);
   });
 
   it('PASSA no teto exato e REPROVA um abaixo', () => {

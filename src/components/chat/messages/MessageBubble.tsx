@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Badge } from '@evoapi/design-system/badge';
 import {
   ContextMenu,
@@ -7,19 +7,10 @@ import {
   ContextMenuItem,
   ContextMenuSeparator,
 } from '@evoapi/design-system/context-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@evoapi/design-system/alert-dialog';
-import { LockIcon, Reply, Copy, Trash2, AlertTriangle, Shield, Ban } from 'lucide-react';
+import { LockIcon, Reply, Copy, Trash2, Shield, Ban } from 'lucide-react';
 import { Message, MESSAGE_TYPE } from '@/types/chat/api';
 import { useLanguage } from '@/hooks/useLanguage';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 import MessageText from '@/components/chat/messages/MessageText';
 import MessageImage from '@/components/chat/messages/MessageImage';
 import MessageFile from '@/components/chat/messages/MessageFile';
@@ -111,7 +102,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   // Retomada da IA antes do follow-up: selo próprio, azul claro.
   const isReengagement = isReengagementMessage(message);
 
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   // 🔧 REPLY TO: Buscar mensagem original quando content_attributes.in_reply_to ou in_reply_to_external_id existe
   const replyToMessageId = message.content_attributes?.in_reply_to;
@@ -135,12 +126,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     onReply?.(message);
   };
 
-  const handleDeleteMessage = () => {
-    setShowDeleteDialog(true);
-  };
-
-  const confirmDeleteMessage = async () => {
-    setShowDeleteDialog(false);
+  const handleDeleteMessage = async () => {
+    const ok = await confirmar({
+      titulo: t('messages.messageBubble.deleteDialog.title'),
+      descricao: t('messages.messageBubble.deleteDialog.description'),
+      rotuloDeCancelar: t('messages.messageBubble.deleteDialog.cancel'),
+      rotuloDaAcao: t('messages.messageBubble.deleteDialog.confirm'),
+      destrutivo: true,
+    });
+    if (!ok) return;
     await onDelete?.(message);
   };
 
@@ -367,37 +361,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           )}
         </div>
 
-        {/* Alert Dialog para confirmação de exclusão */}
-        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <AlertDialogContent className="max-w-md">
-            <AlertDialogHeader className="text-left space-y-4">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
-                  <AlertTriangle className="h-6 w-6 text-destructive" />
-                </div>
-                <div className="flex-1 space-y-2">
-                  <AlertDialogTitle className="text-lg font-semibold">
-                    {t('messages.messageBubble.deleteDialog.title')}
-                  </AlertDialogTitle>
-                  <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
-                    {t('messages.messageBubble.deleteDialog.description')}
-                  </AlertDialogDescription>
-                </div>
-              </div>
-            </AlertDialogHeader>
-
-            <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-3 sm:gap-3">
-              <AlertDialogCancel className="w-full sm:w-auto">{t('messages.messageBubble.deleteDialog.cancel')}</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={confirmDeleteMessage}
-                className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                {t('messages.messageBubble.deleteDialog.confirm')}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {dialogoDeConfirmacao}
       </>
     );
   }
@@ -537,37 +501,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         <MessageReactions message={message} isOwn={isOwn} />
       </div>
 
-      {/* Alert Dialog para confirmação de exclusão */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader className="text-left space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-destructive" />
-              </div>
-              <div className="flex-1 space-y-2">
-                <AlertDialogTitle className="text-lg font-semibold">
-                  {t('messages.messageBubble.deleteDialog.title')}
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
-                  {t('messages.messageBubble.deleteDialog.description')}
-                </AlertDialogDescription>
-              </div>
-            </div>
-          </AlertDialogHeader>
-
-          <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-3 sm:gap-3">
-            <AlertDialogCancel className="w-full sm:w-auto">{t('messages.messageBubble.deleteDialog.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDeleteMessage}
-              className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              {t('messages.messageBubble.deleteDialog.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {dialogoDeConfirmacao}
     </div>
   );
 };

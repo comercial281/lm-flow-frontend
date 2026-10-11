@@ -57,25 +57,11 @@ vi.mock('@evoapi/design-system/label', () => ({
   Label: ({ children, ...props }: any) => <label {...props}>{children}</label>,
 }));
 
-vi.mock('@evoapi/design-system/alert-dialog', () => ({
-  AlertDialog: ({ children, open }: any) => open ? <div data-testid="alert-dialog">{children}</div> : null,
-  AlertDialogContent: ({ children }: any) => <div>{children}</div>,
-  AlertDialogHeader: ({ children }: any) => <div>{children}</div>,
-  AlertDialogTitle: ({ children }: any) => <h2>{children}</h2>,
-  AlertDialogDescription: ({ children }: any) => <p>{children}</p>,
-  AlertDialogFooter: ({ children }: any) => <div>{children}</div>,
-  AlertDialogAction: ({ children, onClick }: any) => (
-    <button type="button" data-testid="confirm-action" onClick={onClick}>{children}</button>
-  ),
-  AlertDialogCancel: ({ children }: any) => <button type="button">{children}</button>,
-}));
-
 vi.mock('lucide-react', () => ({
   Loader2: () => <span data-testid="icon-loader" />,
   GitBranch: () => <span data-testid="icon-branch" />,
   Trash2: () => <span data-testid="icon-trash" />,
   Save: () => <span data-testid="icon-save" />,
-  AlertTriangle: () => <span data-testid="icon-alert" />,
 }));
 
 const CONVERSATION_ID = 'conv-123';

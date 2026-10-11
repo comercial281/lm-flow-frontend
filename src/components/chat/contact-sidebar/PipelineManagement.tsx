@@ -2,21 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@evoapi/design-system/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@evoapi/design-system/select';
 import { Label } from '@evoapi/design-system/label';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@evoapi/design-system/alert-dialog';
-import { Loader2, GitBranch, Trash2, Save, AlertTriangle } from 'lucide-react';
+import { Loader2, GitBranch, Trash2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import type { Pipeline, PipelineItem, PipelineStage } from '@/types/analytics';
 import { useLanguage } from '@/hooks/useLanguage';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 
 interface PipelineManagementProps {
   conversationId: string;
@@ -39,8 +30,7 @@ const PipelineManagement: React.FC<PipelineManagementProps> = ({
   const [selectedPipelineId, setSelectedPipelineId] = useState<string>('');
   const [selectedStageId, setSelectedStageId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
-  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
-  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [originalPipelines, setOriginalPipelines] = useState<Pipeline[]>([]);
 
   const loadData = async () => {
@@ -107,12 +97,35 @@ const PipelineManagement: React.FC<PipelineManagementProps> = ({
     setSelectedStageId('');
   };
 
-  const handleSaveClick = () => {
+  const handleSaveClick = async () => {
     if (!selectedPipelineId || !selectedStageId) {
       toast.error(t('contactSidebar.pipeline.selectError'));
       return;
     }
-    setShowSaveConfirm(true);
+    // Frase com o nome do funil e da etapa em negrito.
+    const chave = currentPipeline ? 'update' : 'add';
+    const pipelineName = selectedPipeline?.name || '';
+    const stageName = availableStages.find(s => String(s.id) === selectedStageId)?.name || '';
+    const parts = t(`contactSidebar.pipeline.dialogs.${chave}.description`, {
+      pipelineName,
+      stageName,
+    }).split(pipelineName);
+    const stageParts = parts[1]?.split(stageName) || [];
+    const ok = await confirmar({
+      titulo: t(`contactSidebar.pipeline.dialogs.${chave}.title`),
+      descricao: (
+        <>
+          {parts[0]}
+          <strong>{selectedPipeline?.name}</strong>
+          {stageParts[0]}
+          <strong>{stageName}</strong>
+          {stageParts[1]}
+        </>
+      ),
+      rotuloDeCancelar: t('contactSidebar.pipeline.dialogs.remove.cancel'),
+      rotuloDaAcao: t(`contactSidebar.pipeline.dialogs.${chave}.confirm`),
+    });
+    if (ok) await confirmSave();
   };
 
   const confirmSave = async () => {
@@ -120,7 +133,6 @@ const PipelineManagement: React.FC<PipelineManagementProps> = ({
 
     try {
       setIsSaving(true);
-      setShowSaveConfirm(false);
 
       // Find the pipeline item for this conversation by searching through stages
       const conversationPipeline = pipelines?.find(
@@ -167,8 +179,25 @@ const PipelineManagement: React.FC<PipelineManagementProps> = ({
     }
   };
 
-  const handleRemoveClick = () => {
-    setShowRemoveConfirm(true);
+  const handleRemoveClick = async () => {
+    const pipelineName = currentPipeline?.pipeline.name || '';
+    const parts = t('contactSidebar.pipeline.dialogs.remove.description', { pipelineName }).split(
+      pipelineName,
+    );
+    const ok = await confirmar({
+      titulo: t('contactSidebar.pipeline.dialogs.remove.title'),
+      descricao: (
+        <>
+          {parts[0]}
+          <strong>{pipelineName}</strong>
+          {parts[1]}
+        </>
+      ),
+      rotuloDeCancelar: t('contactSidebar.pipeline.dialogs.remove.cancel'),
+      rotuloDaAcao: t('contactSidebar.pipeline.dialogs.remove.confirm'),
+      destrutivo: true,
+    });
+    if (ok) await confirmRemove();
   };
 
   const confirmRemove = async () => {
@@ -176,7 +205,6 @@ const PipelineManagement: React.FC<PipelineManagementProps> = ({
 
     try {
       setIsSaving(true);
-      setShowRemoveConfirm(false);
       await pipelinesService.removeItemFromPipeline(
         String(currentPipeline.pipeline.id),
         conversationId,
@@ -278,132 +306,7 @@ const PipelineManagement: React.FC<PipelineManagementProps> = ({
         )}
       </div>
 
-      {/* Save Confirmation Dialog */}
-      <AlertDialog open={showSaveConfirm} onOpenChange={setShowSaveConfirm}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader className="text-left space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center">
-                <GitBranch className="h-6 w-6 text-blue-500" />
-              </div>
-              <div className="flex-1 space-y-2">
-                <AlertDialogTitle className="text-lg font-semibold">
-                  {currentPipeline
-                    ? t('contactSidebar.pipeline.dialogs.update.title')
-                    : t('contactSidebar.pipeline.dialogs.add.title')}
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
-                  {currentPipeline ? (
-                    <>
-                      {(() => {
-                        const stageName =
-                          availableStages.find(s => String(s.id) === selectedStageId)?.name || '';
-                        const parts = t('contactSidebar.pipeline.dialogs.update.description', {
-                          pipelineName: selectedPipeline?.name || '',
-                          stageName: stageName,
-                        }).split(selectedPipeline?.name || '');
-                        const stageParts = parts[1]?.split(stageName) || [];
-                        return (
-                          <>
-                            {parts[0]}
-                            <strong>{selectedPipeline?.name}</strong>
-                            {stageParts[0]}
-                            <strong>{stageName}</strong>
-                            {stageParts[1]}
-                          </>
-                        );
-                      })()}
-                    </>
-                  ) : (
-                    <>
-                      {(() => {
-                        const stageName =
-                          availableStages.find(s => String(s.id) === selectedStageId)?.name || '';
-                        const parts = t('contactSidebar.pipeline.dialogs.add.description', {
-                          pipelineName: selectedPipeline?.name || '',
-                          stageName: stageName,
-                        }).split(selectedPipeline?.name || '');
-                        const stageParts = parts[1]?.split(stageName) || [];
-                        return (
-                          <>
-                            {parts[0]}
-                            <strong>{selectedPipeline?.name}</strong>
-                            {stageParts[0]}
-                            <strong>{stageName}</strong>
-                            {stageParts[1]}
-                          </>
-                        );
-                      })()}
-                    </>
-                  )}
-                </AlertDialogDescription>
-              </div>
-            </div>
-          </AlertDialogHeader>
-
-          <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-3 sm:gap-3">
-            <AlertDialogCancel className="w-full sm:w-auto">
-              {t('contactSidebar.pipeline.dialogs.remove.cancel')}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmSave}
-              className="w-full sm:w-auto bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {currentPipeline
-                ? t('contactSidebar.pipeline.dialogs.update.confirm')
-                : t('contactSidebar.pipeline.dialogs.add.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Remove Confirmation Dialog */}
-      <AlertDialog open={showRemoveConfirm} onOpenChange={setShowRemoveConfirm}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader className="text-left space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-destructive" />
-              </div>
-              <div className="flex-1 space-y-2">
-                <AlertDialogTitle className="text-lg font-semibold">
-                  {t('contactSidebar.pipeline.dialogs.remove.title')}
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
-                  {(() => {
-                    const pipelineName = currentPipeline?.pipeline.name || '';
-                    const description = t('contactSidebar.pipeline.dialogs.remove.description', {
-                      pipelineName: pipelineName,
-                    });
-                    const parts = description.split(pipelineName);
-                    return (
-                      <>
-                        {parts[0]}
-                        <strong>{pipelineName}</strong>
-                        {parts[1]}
-                      </>
-                    );
-                  })()}
-                </AlertDialogDescription>
-              </div>
-            </div>
-          </AlertDialogHeader>
-
-          <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-3 sm:gap-3">
-            <AlertDialogCancel className="w-full sm:w-auto">
-              {t('contactSidebar.pipeline.dialogs.remove.cancel')}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmRemove}
-              className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              {t('contactSidebar.pipeline.dialogs.remove.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {dialogoDeConfirmacao}
     </div>
   );
 };
