@@ -11,7 +11,7 @@ import type { PropertiesSummary } from '../types';
 import { diaDoPeriodo } from './comum';
 
 type Tom = 'neutro' | 'atencao' | 'alerta';
-interface LinhaImovel { recorte: RecorteImoveis; rotulo: string; campo: keyof PropertiesSummary; tom: Tom; dica?: string }
+interface LinhaImovel { recorte: RecorteImoveis; rotulo: string; campo: Exclude<keyof PropertiesSummary, 'phases'>; tom: Tom; dica?: string }
 
 const LINHAS: LinhaImovel[] = [
   { recorte: 'novos', rotulo: 'Novos no período', campo: 'new', tom: 'neutro' },
