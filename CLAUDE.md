@@ -8301,3 +8301,16 @@ Armadilhas:
 2. Lugar novo que abre a janela do card (`EditItemModal`) precisa decidir o celular: navegar com `useAbrirPaginaDoCard`. Se abrir pelo `?card=` do funil, já cai na página sozinho.
 3. Quem chega por um endereço que só existe pra abrir o card (`?card=`, `/contacts/:id`) navega com `substituir`, senão o voltar volta pra esse endereço e abre a página de novo.
 4. "Veio de dentro do app" é `veioDeDentroDoApp()` (`paginaNoCelular.ts`): `window.history.state.idx > 0`, que o BrowserRouter grava e o replace preserva, lido **na hora de navegar**. Não usar `location.key !== 'default'`: qualquer replace troca a chave, e abrir /contacts por link e depois ir pra /contacts/:id por dentro do app ainda contava como "primeira tela". Nos testes (MemoryRouter não grava `idx`): `window.history.replaceState({ idx: 1 }, '')`.
+
+## Visita: quem marcou e Visita remarcada (11/10/2026)
+
+Origem: a automação "Visita agendada" disparava pra qualquer visita, da IA ou à mão, e remarcar não disparava nada. Desenho aprovado pelo dono em 11/10. A metade do servidor é o PR `comercial281/lm-flow#459`; esta tela só funciona de ponta a ponta com ele no ar.
+
+- **Filtro "Quem marcou"** nos gatilhos "Visita agendada" e "Visita remarcada", no mesmo lugar da Origem e da Etiqueta (`bookedByFilter.ts` em `LeadAutomations/`, editor `ConditionEditor`). Três opções: **Qualquer um** (nenhuma condição gravada, o comportamento de sempre), **A IA** (`booked_by eq ia`) e **Uma pessoa** (`booked_by eq pessoa`). Os valores são fixos porque a condição compara ao pé da letra.
+- **Sem condição = Qualquer um.** Por isso o filtro é opcional no `validateRule`, também na tela antiga de Automações: regra antiga com "Visita agendada" continua válida e não muda.
+- **Gatilho "Visita remarcada"** (`lead.visit_rescheduled`): entra no grupo Visita, logo depois de "Visita agendada". Só existe no construtor (como "Pediu o book no site"); a tela antiga de regras não oferece.
+- **Trocar entre os dois gatilhos de visita zera o filtro.** É o comportamento de sempre do `conditionsOnTriggerChange` (troca de gatilho limpa as condições), não uma regra nova.
+- **Cinco variáveis nos botõezinhos:** Data da visita, Hora da visita, Horário anterior, Imóvel da visita e Corretor da visita. "Corretor da visita" é o corretor da visita; `{{corretor}}` continua sendo o dono do lead.
+- **O modelo "Avisar o grupo quando a IA marcar visita" vem do servidor** (lista de modelos do backend); a tela não tem cópia dele.
+- **Pendente (envio separado):** o aviso fixo de visita da IA, configurado no painel raiz, vai sair depois que o único cliente que usa o aviso fixo estiver migrado pro modelo acima. Quando sair, some também a tela dele no painel raiz.
+- Não reabrir sem o dono pedir.

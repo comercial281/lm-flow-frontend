@@ -11,6 +11,13 @@ describe('variáveis de mensagem (sprint 4)', () => {
     expect(tokens).not.toContain('{{first_name}}');
   });
 
+  it('traz as variáveis da visita', () => {
+    const tokens = BUILTIN_MESSAGE_VARIABLES.map(v => v.token);
+    expect(tokens).toEqual(expect.arrayContaining([
+      '{{visita_data}}', '{{visita_hora}}', '{{visita_horario_anterior}}', '{{imovel}}', '{{visita_corretor}}',
+    ]));
+  });
+
   it('acrescenta as da imobiliária ligadas, sem repetir as prontas', () => {
     const list = withTenantVariables(BUILTIN_MESSAGE_VARIABLES, {
       custom: [

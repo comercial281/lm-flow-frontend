@@ -34,6 +34,12 @@ export const BUILTIN_MESSAGE_VARIABLES: MessageVariable[] = [
   { label: 'Link do card', token: '{{link_do_card}}' },
   { label: 'Imóvel', token: '{{imovel_titulo}}', description: 'O imóvel pelo qual o lead chegou' },
   { label: 'Link do imóvel', token: '{{imovel_link}}' },
+  // Da visita: preenchidas nos gatilhos de visita (agendada, remarcada, realizada, lembretes).
+  { label: 'Data da visita', token: '{{visita_data}}', description: 'Só nos gatilhos de visita' },
+  { label: 'Hora da visita', token: '{{visita_hora}}', description: 'Só nos gatilhos de visita' },
+  { label: 'Horário anterior', token: '{{visita_horario_anterior}}', description: 'Só na Visita remarcada: o dia e a hora de antes' },
+  { label: 'Imóvel da visita', token: '{{imovel}}', description: 'Só nos gatilhos de visita: o imóvel da visita marcada (pode ser outro que o imóvel pelo qual o lead chegou)' },
+  { label: 'Corretor da visita', token: '{{visita_corretor}}', description: 'Só nos gatilhos de visita: quem vai fazer a visita (pode ser diferente do responsável pelo lead)' },
   { label: 'Origem', token: '{{origem}}' },
   { label: 'Campanha', token: '{{campanha}}' },
   { label: 'Conjunto', token: '{{conjunto}}' },
