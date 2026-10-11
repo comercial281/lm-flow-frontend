@@ -6577,7 +6577,7 @@ O que ainda usa o serviço antigo no frontend:
 
 - *Visão geral* abre primeiro: *O que precisa de atenção* (cada pendência com *Corrigir*), *Números do período* (o painel da antiga aba Resultados; sem números, diz o motivo) e até 3 sugestões esperando resposta, com *Ver todas*.
 - *Configurar* é a página de configuração de sempre, inteira, com o nome e a caixinha *Ativa* em cima (até a entrega 2).
-- *Ensinar* junta *O que ela sabe* (Base de Conhecimento) e *Regras e exemplos* (Aprendizado).
+- *Ensinar* junta *O que ela sabe* (Base de Conhecimento) e *Regras e exemplos* (Aprendizado). ⚠️ Revista em 11/10/2026: ver *IA Vendedora · Ensinar no padrão do Configurar*.
 - *Testar*, *Sugestões*, *Relatório semanal* e *Diagnóstico* são as abas de antes, movidas.
 
 **Decisões (não reabrir sem o dono pedir):**
@@ -6592,7 +6592,7 @@ O que ainda usa o serviço antigo no frontend:
 1. **O `?agent=<id>` continua valendo**: é como o assistente (`/ia-vendedora/:id/assistente`) devolve. Abre a IA em Configurar e vira `?ia=&tela=configurar`. Quem mexer no assistente antes da entrega 2 não troca esse retorno.
 2. **Duplicar abre a cópia na hora:** põe a cópia na lista, seleciona a cópia (`setSelected(copy)`) e só então aponta o endereço pra ela. Sem a seleção, durante a recarga da lista a tela Configurar mostrava a IA original e um Salvar gravava nela; sem a cópia na lista, a resolução do endereço voltava pra original (`SalesAgents.casca.spec.tsx`).
 3. **Specs que leem o código leem a pasta inteira** (`src/test/fonteDaIaVendedora.ts`: casca primeiro, sem o `assistente/` e sem specs). Campo novo no `saveAgent` continua no `SalesAgents.tsx`; frase nova de uma seção mora no arquivo dela, em `configuracao/legado/`.
-4. **`configuracao/comum.tsx`** (`Toggle`, `CheckRow`, `InboxOption`, `PipelineOpt`, `StageOpt`) fica FORA de `legado/` porque a Base de Conhecimento usa o `CheckRow`: a entrega 2 apaga o legado sem quebrar o Ensinar.
+4. **`configuracao/comum.tsx`** (`Toggle`, `CheckRow`, `InboxOption`, `PipelineOpt`, `StageOpt`) fica FORA de `legado/` porque a Base de Conhecimento usa o `CheckRow`: a entrega 2 apaga o legado sem quebrar o Ensinar. ⚠️ Histórico desde 11/10/2026: o Ensinar novo não usa o `CheckRow` e ele saiu do `comum.tsx`.
 5. **O Diagnóstico da IA aberta é lido ao abrir a página** (antes, só ao abrir a aba) e relido quando a IA é salva (`updated_at`), nunca a cada tecla. A tela Diagnóstico continua lendo por conta própria.
 6. Nenhuma chave de funcionalidade nova: `useClientToggle('ia_insights')` continua literal no `SalesAgents.tsx` e `useClientToggle('ia_playbook')` no `ConfigLegado.tsx`.
 7. **O Diagnóstico guardado leva o id da IA** (`{ id, report }`) e só vale pra IA aberta: ao trocar de IA, o selo não herda o veredito da anterior enquanto o da nova carrega (`SalesAgents.casca.spec.tsx`).
@@ -7296,6 +7296,30 @@ botão Aceitar.") no lugar de "Seu cargo não permite esta ação".
 13. **O Desfazer não regrava valor antigo recusado** (`inbox_roleta` → roleta; a persona `owner` volta como dono), em `useGravarNaHora#inversa`.
 14. **WhatsApp desconectado:** o *Corrigir* leva à configuração do número (`enderecoConexao`, onde se lê o QR code), não ao Canal, que só mostra *Desconectado*.
 15. **CVCRM na página Destino** (06/10, vindo do #485 que entrou no passo 2 antigo): dentro de *Sistema do cliente*, os cartões *CVCRM* · *Outro sistema*. Trocar o cartão não grava; *Usar o CVCRM* só acende com a conexão de Integrações → CVCRM (`handoff_cvcrm_connected`); empreendimento e fila gravam na hora. A pendência `destino_cvcrm_desconectado` aponta pra página Destino.
+
+## IA Vendedora · Ensinar no padrão do Configurar (11/10/2026)
+
+> Spec: `LM FLOW/specs/2026-10-11-ia-ensinar-refatoracao-design.md`; plano: `LM FLOW/plans/2026-10-11-ia-ensinar-refatoracao.md`. Protótipo: https://claude.ai/artifact/9uC2FJBqkVBozCLRwzTCVh
+
+**O que aparece na tela:** *IA Vendedora → Ensinar* tem 5 páginas no trilho, em 2 grupos: **Como ela fala** (Instruções · Regras · Exemplos) e **O que ela sabe** (Arquivos · Prova social), com contador e bolinha âmbar de pendência (regra ligada fora do limite; arquivo que manda sem "quando"). Mesmo arranjo e margens do Configurar (`moldura/PaginasComTrilho`), que ganhou ícones no trilho. Grava na hora com "Salvo · Desfazer"; Excluir confirma; a janela do arquivo tem Salvar. Filtros das Regras: *Todas* · *Escritas à mão* · *Das sugestões* · *Pausadas*. O cartão do arquivo pendente tem uma fala só (*Lendo o arquivo…*, depois *Lendo há N min*) e a faixa de soltar diz os limites do `docUpload` (25 MB; vídeo MP4 até 16 MB).
+
+**Decisões (não reabrir sem o dono pedir):**
+1. Dados NÃO fundidos: Instruções e Regras continuam separadas (texto corrido × ordem curta com chave); exemplo = lições `good/bad_example` + `example_conversations` ("Conversa real") numa lista só.
+2. "Não está valendo" vem do servidor (`in_use`, mesma régua do `LessonsContext` que monta o prompt) e o limite (12 por tipo, 6 conversas) vem em `meta.limits`. A tela não recalcula.
+3. Prova social é lista, um caso por linha, no mesmo `social_proof`.
+4. O limite não muda aqui (custo de prompt): fica no `_MELHORIAS`.
+5. Sem `?pagina=`, abre sempre em Instruções (pendência chega depois da lista).
+6. Ícones no trilho nas duas telas; contador só no Ensinar.
+7. O servidor não guarda quem escreveu a lição: o selo e o filtro dizem *Escrita à mão* × *Sugestão aceita* (nada de "Suas").
+
+**Armadilhas:**
+1. `paramsDaIa`/`paginaPedida(params, tela)` mantêm o `pagina` no Ensinar: sem isso a casca derruba a página e a tela regrava (laço).
+2. `useLicoes`/`useArquivos` descartam resposta atrasada de outra IA.
+3. Editar lição usa a permissão `sales_agent_lessons.create` (quem ensina corrige).
+4. **Menu ⋮ que abre confirmação ou janela usa `<DropdownMenu modal={false}>`** (Regras, Exemplos, Prova social, Arquivos): com o menu modal, a confirmação aberta pelo item pode deixar o `body` com `pointer-events: none` e a página sem clique.
+5. **Exemplos:** excluir qualquer exemplo fecha a edição aberta (as conversas reais são chaveadas pelo índice, que anda), e salvar uma edição cujo exemplo sumiu da lista fecha sem cair no "criar".
+6. **O cabeçalho da moldura é exceção do `conferir-padrao`** (`foraDaMoldura`, `moldura/PaginasComTrilho.tsx`): a exceção que era do `ConfigurarPaginas` mudou de arquivo com ele. A data das lições sai do `@/lib/formato` (a trava de formato não deixa `toLocaleDateString` na tela).
+7. Saíram `EnsinarTextos`, `BaseDeConhecimento`, `Aprendizado`, `useRascunho` e o `CheckRow` (sem uso). O `processingLabel`/`processingWarning` (`features/salesAgents/documentStatus.ts`) é a fonte do selo do pendente e do aviso de espera longa, que aponta o menu ⋮.
 
 ## Roleta: cartão da lista em blocos e triângulo de atenção (06/10/2026)
 
