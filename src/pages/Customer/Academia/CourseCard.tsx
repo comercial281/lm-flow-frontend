@@ -79,7 +79,7 @@ export default function CourseCard({
       </button>
 
       {(onEdit || onDelete) && (
-        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-80 group-hover:opacity-100 focus-within:opacity-100 transition-all">
           {onEdit && (
             <button
               onClick={onEdit}

@@ -4,7 +4,7 @@ import { formatDateBR } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 import {
   Search, Plus, FileText, Building2, User, TrendingUp,
-  Send, CheckCircle, XCircle, RefreshCw, ChevronDown, X,
+  Send, CheckCircle, XCircle, RefreshCw, X, Pencil, Trash2, UserX,
 } from 'lucide-react';
 import {
   Button,
@@ -18,6 +18,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
   Label,
   Textarea,
@@ -30,6 +31,7 @@ import {
   PROPOSAL_TYPE_LABELS,
 } from '@/services/proposals/proposalsService';
 import ProposalFormDialog from '@/components/proposals/ProposalFormDialog';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
@@ -487,17 +489,19 @@ function ProposalRow({ proposal, onEdit, onDelete, onSend, onAccept, onReject, o
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 px-2" aria-label="Mais ações" title="Mais ações">
-                <ChevronDown className="h-4 w-4" />
-              </Button>
+              <BotaoMaisAcoes compacto />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {canEdit && <DropdownMenuItem onClick={onEdit}>Editar rascunho</DropdownMenuItem>}
-              {canWithdraw && <DropdownMenuItem onClick={onWithdraw}>Marcar desistência</DropdownMenuItem>}
+              {canEdit && <DropdownMenuItem onClick={onEdit}><Pencil className="h-4 w-4" />Editar rascunho</DropdownMenuItem>}
+              {canWithdraw && <DropdownMenuItem onClick={onWithdraw}><UserX className="h-4 w-4" />Marcar desistência</DropdownMenuItem>}
               {proposal.status === 'draft' && (
-                <DropdownMenuItem onClick={onDelete} className="text-destructive">
-                  Excluir
-                </DropdownMenuItem>
+                <>
+                  {(canEdit || canWithdraw) && <DropdownMenuSeparator />}
+                  <DropdownMenuItem variant="destructive" onClick={onDelete}>
+                    <Trash2 className="h-4 w-4" />
+                    Excluir
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>

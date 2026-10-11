@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Home, Loader2, MessageCircle, MoreHorizontal, Plus } from 'lucide-react';
+import { ArrowLeft, Home, Loader2, MessageCircle, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Button, Dialog, DialogContent, DialogHeader, DialogTitle, DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuTrigger, Label, Textarea,
 } from '@/components/ui/ds';
-import { BaseHeader, EmptyState, Pagina } from '@/components/base';
+import { BaseHeader, BotaoMaisAcoes, EmptyState, Pagina } from '@/components/base';
 import { useCan } from '@/hooks/useCan';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { cn } from '@/lib/utils';
@@ -219,10 +219,10 @@ export default function FichaDoProprietario() {
               {gestor && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" aria-label="Mais ações"><MoreHorizontal className="h-4 w-4" /></Button>
+                    <BotaoMaisAcoes />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem className="text-destructive" onClick={() => void excluir()}>Excluir proprietário</DropdownMenuItem>
+                    <DropdownMenuItem variant="destructive" onClick={() => void excluir()}><Trash2 className="h-4 w-4" />Excluir proprietário</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}

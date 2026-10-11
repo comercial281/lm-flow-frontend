@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Button, Badge } from '@/components/ui/ds';
+import {
+  Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/ds';
 import { Zap, Plus, Folder, FolderPlus, Pencil, Play, Pause, Copy, Archive, Trash2, LayoutTemplate, Repeat } from 'lucide-react';
 import { BaseHeader, Pagina } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import { flowAutomationsService, flowAutomationFoldersService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation, FlowAutomationFolder, FlowAutomationKind } from '@/types/flowAutomations';
 import { flowTriggerSummary, normalizeTrigger, triggerEvents } from '@/features/flowAutomations/trigger';
@@ -213,13 +216,22 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
                   <div className="text-xs text-muted-foreground">{f.automations_count} itens · {f.enabled_count} ligados</div>
                 </div>
               </button>
-              <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-                <button onClick={ev => renameFolder(f, ev)} title="Renomear" className="p-1 rounded hover:bg-accent">
-                  <Pencil className="h-3 w-3 text-muted-foreground" />
-                </button>
-                <button onClick={ev => deleteFolder(f, ev)} title="Excluir pasta" className="p-1 rounded hover:bg-accent">
-                  <Trash2 className="h-3 w-3 text-muted-foreground" />
-                </button>
+              {/* Sempre à vista (GLOSSARIO, peças 15 e 16): ⋮ apagado, acende ao passar o mouse. */}
+              <div className="shrink-0 opacity-70 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <BotaoMaisAcoes compacto aria-label={`Mais ações da pasta ${f.name}`} className="-my-1 -mr-1 text-muted-foreground group-hover:text-foreground" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={ev => renameFolder(f, ev)}>
+                      <Pencil className="h-4 w-4" /> Renomear
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive" onClick={ev => deleteFolder(f, ev)}>
+                      <Trash2 className="h-4 w-4" /> Excluir pasta
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           ))}

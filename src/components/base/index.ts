@@ -16,6 +16,8 @@ export type { FaixaProps } from './Faixa';
 export { default as PrimaryActionButton } from './PrimaryActionButton';
 export { default as IconActionButton } from './IconActionButton';
 export type { IconActionButtonProps } from './IconActionButton';
+export { default as BotaoMaisAcoes } from './BotaoMaisAcoes';
+export type { BotaoMaisAcoesProps } from './BotaoMaisAcoes';
 export { TooltipInfo } from './TooltipInfo';
 export { default as BaseStatusBadge } from './BaseStatusBadge';
 export { default as BaseStatsCard } from './BaseStatsCard';

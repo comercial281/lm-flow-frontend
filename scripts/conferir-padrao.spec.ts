@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -205,6 +205,30 @@ describe('abaForaDaCasa e alternadorAMao (peças 6 e 19)', () => {
     expect(alternadorAMao('<LayoutGrid className="h-3.5 w-3.5" />')).toBe(true);
     expect(alternadorAMao("{ valor: 'cards', icone: Grid3X3, nome: 'Ver em cartões' },")).toBe(false);
     expect(alternadorAMao('<KanbanBoard />')).toBe(false);
+describe('soNoMouse: ação que só aparece no mouse (peça 16)', () => {
+  it('pega os três jeitos de esconder, com prefixo de tela e grupo nomeado', () => {
+    expect(soNoMouse('<div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">')).toBe(true);
+    expect(soNoMouse('className="shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100"')).toBe(true);
+    expect(soNoMouse('className="invisible group-hover/linha:visible"')).toBe(true);
+    expect(soNoMouse('<div className="hidden group-hover:flex items-center gap-0.5 shrink-0">')).toBe(true);
+  });
+
+  it('não pega a ação apagada à vista nem o que não esconde nada', () => {
+    expect(soNoMouse('className="opacity-70 group-hover:opacity-100 focus-within:opacity-100"')).toBe(false);
+    expect(soNoMouse('className="bg-black bg-opacity-0 group-hover:bg-opacity-30"')).toBe(false);
+    expect(soNoMouse('className="hidden md:flex"')).toBe(false);
+    expect(soNoMouse("estaAberta ? 'opacity-100' : 'opacity-0'")).toBe(false);
+  });
+});
+
+describe('menuDeitado: menu de ações com ⋯ deitado (peça 15)', () => {
+  it('pega o ícone deitado na tela, não o import nem o ⋮', () => {
+    expect(menuDeitado('<MoreHorizontal className="h-4 w-4" />')).toBe(true);
+    expect(menuDeitado('<Ellipsis className="h-4 w-4" />')).toBe(true);
+    expect(menuDeitado('icon={MoreHorizontal}')).toBe(true);
+    expect(menuDeitado("import { MoreHorizontal } from 'lucide-react';")).toBe(false);
+    expect(menuDeitado('<EllipsisVertical className="h-4 w-4" />')).toBe(false);
+    expect(menuDeitado('<MoreVertical className="h-4 w-4" />')).toBe(false);
   });
 });
 

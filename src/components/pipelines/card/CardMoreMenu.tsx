@@ -1,4 +1,4 @@
-// Menu "⋯" do topo do card: as ações que não são do dia a dia — copiar o link,
+// Menu "⋮" do topo do card: as ações que não são do dia a dia — copiar o link,
 // mandar pra roleta / tirar da roleta e tirar o lead do funil. Remover pede
 // confirmação numa janela, nunca no confirm() do navegador.
 //
@@ -6,7 +6,7 @@
 // "Nova roleta" morreu: sem roleta ligada, o item leva pra página da roleta.
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Archive, ArchiveRestore, CircleSlash, Link, Loader2, Merge, MoreHorizontal, Shuffle, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, CircleSlash, Link, Loader2, Merge, Shuffle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Button,
@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/ds';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { PAGINA_DA_ROLETA } from '@/components/roleta/textosDaRoleta';
@@ -101,20 +102,18 @@ export default function CardMoreMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Mais ações do card" title="Mais ações">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
+          <BotaoMaisAcoes compacto aria-label="Mais ações do card" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={copiarLink}>
-            <Link className="h-3.5 w-3.5 mr-2" />
+            <Link className="h-4 w-4" />
             Copiar link do card
           </DropdownMenuItem>
           {roletas === null ? (
             // Sem acesso às roletas: o item fica, desabilitado e dizendo por quê,
             // em vez de mandar pra uma página que a pessoa não abre.
             <DropdownMenuItem disabled>
-              <Shuffle className="h-3.5 w-3.5 mr-2" />
+              <Shuffle className="h-4 w-4" />
               <span className="flex flex-col">
                 Mandar pra roleta
                 <span className="text-[11px] text-muted-foreground">Sem acesso às roletas</span>
@@ -128,39 +127,39 @@ export default function CardMoreMenu({
                 setRoletaAberta(true);
               }}
             >
-              <Shuffle className="h-3.5 w-3.5 mr-2" />
+              <Shuffle className="h-4 w-4" />
               Mandar pra roleta
             </DropdownMenuItem>
           )}
           {onTirarDaRoleta && (
             <DropdownMenuItem onClick={onTirarDaRoleta}>
-              <CircleSlash className="h-3.5 w-3.5 mr-2" />
+              <CircleSlash className="h-4 w-4" />
               Tirar da roleta
             </DropdownMenuItem>
           )}
           {onJuntar && (
             <DropdownMenuItem onClick={onJuntar}>
-              <Merge className="h-3.5 w-3.5 mr-2" />
+              <Merge className="h-4 w-4" />
               Juntar com outro contato
             </DropdownMenuItem>
           )}
           {onArquivar && (
             <DropdownMenuItem onClick={onArquivar}>
-              <Archive className="h-3.5 w-3.5 mr-2" />
+              <Archive className="h-4 w-4" />
               Arquivar
             </DropdownMenuItem>
           )}
           {onDesarquivar && (
             <DropdownMenuItem onClick={onDesarquivar}>
-              <ArchiveRestore className="h-3.5 w-3.5 mr-2" />
+              <ArchiveRestore className="h-4 w-4" />
               Desarquivar
             </DropdownMenuItem>
           )}
           {!foraDoFunil && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setRemoverAberto(true)}>
-                <Trash2 className="h-3.5 w-3.5 mr-2" />
+              <DropdownMenuItem variant="destructive" onClick={() => setRemoverAberto(true)}>
+                <Trash2 className="h-4 w-4" />
                 Remover do funil
               </DropdownMenuItem>
             </>

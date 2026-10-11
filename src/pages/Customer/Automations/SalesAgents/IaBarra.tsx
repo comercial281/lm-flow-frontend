@@ -8,11 +8,12 @@
 // número, corretor sem dono do número, sistema do cliente sem chave). Travada,
 // fica desabilitada com o motivo no `title`, e um clique leva à página que
 // corrige. Desligar nunca trava.
-import { Bot, ChevronDown, Copy, Gauge, MoreHorizontal, Plus, Smartphone, Stethoscope, Trash2 } from 'lucide-react';
+import { Bot, ChevronDown, Copy, Gauge, Plus, Smartphone, Stethoscope, Trash2 } from 'lucide-react';
 import {
   Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/ds';
 import Chave from '@/components/base/Chave';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { GRUPOS, itensDoGrupo, telaInfo, type TelaId } from '@/features/salesAgents/iaMenu';
 import { situacaoDaIa, type Situacao } from '@/features/salesAgents/situacao';
@@ -126,20 +127,21 @@ export default function IaBarra({
           {temMais && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Mais ações" title="Mais ações">
-                  <MoreHorizontal className="h-4 w-4" aria-hidden />
-                </Button>
+                <BotaoMaisAcoes />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {podeCriar && <DropdownMenuItem onSelect={aoDuplicar}><Copy className="mr-2 h-4 w-4" aria-hidden /> Duplicar esta IA</DropdownMenuItem>}
+                {podeCriar && <DropdownMenuItem onSelect={aoDuplicar}><Copy className="h-4 w-4" aria-hidden /> Duplicar esta IA</DropdownMenuItem>}
+                {podeCriar && (verMotor || equipe) && <DropdownMenuSeparator />}
+                {verMotor && <DropdownMenuItem onSelect={() => aoIr('motor')}><Gauge className="h-4 w-4" aria-hidden /> Motor</DropdownMenuItem>}
+                {equipe && <DropdownMenuItem onSelect={() => aoIr('diagnostico')}><Stethoscope className="h-4 w-4" aria-hidden /> Diagnóstico</DropdownMenuItem>}
                 {podeExcluir && (
-                  <DropdownMenuItem onSelect={aoExcluir} className="text-red-600 focus:text-red-600">
-                    <Trash2 className="mr-2 h-4 w-4" aria-hidden /> Excluir IA
-                  </DropdownMenuItem>
+                  <>
+                    {(podeCriar || verMotor || equipe) && <DropdownMenuSeparator />}
+                    <DropdownMenuItem variant="destructive" onSelect={aoExcluir}>
+                      <Trash2 className="h-4 w-4" aria-hidden /> Excluir IA
+                    </DropdownMenuItem>
+                  </>
                 )}
-                {(verMotor || equipe) && (podeCriar || podeExcluir) && <DropdownMenuSeparator />}
-                {verMotor && <DropdownMenuItem onSelect={() => aoIr('motor')}><Gauge className="mr-2 h-4 w-4" aria-hidden /> Motor</DropdownMenuItem>}
-                {equipe && <DropdownMenuItem onSelect={() => aoIr('diagnostico')}><Stethoscope className="mr-2 h-4 w-4" aria-hidden /> Diagnóstico</DropdownMenuItem>}
               </DropdownMenuContent>
             </DropdownMenu>
           )}

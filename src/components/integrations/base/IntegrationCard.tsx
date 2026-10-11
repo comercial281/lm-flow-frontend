@@ -120,7 +120,7 @@ export default function IntegrationCard({
         </div>
 
         {/* Action buttons - hover effect like ContactCard */}
-        <div className="flex border-t border-sidebar-border opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className="flex border-t border-sidebar-border opacity-70 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
           {configOnly ? (
             <Button
               variant="ghost"

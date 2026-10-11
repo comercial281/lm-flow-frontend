@@ -1,6 +1,7 @@
 // src/pages/Customer/Properties/lista/MenuDoImovel.tsx
-import { MoreVertical } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/ds';
+import { ArrowRightLeft, BookOpen, CircleDot, Gauge, Globe, Images, Megaphone, Pencil, Trash2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/ds';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import type { Property } from '@/services/properties/propertiesService';
 import { tipoDoImovel } from '@/features/properties/listingKind';
 
@@ -30,23 +31,26 @@ export default function MenuDoImovel({ p, acoes, permissoes, forca }: {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" aria-label={`Ações do ${p.code}`} title="Ações"
-          className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-primary">
-          <MoreVertical className="h-4 w-4" />
-        </button>
+        <BotaoMaisAcoes aria-label={`Ações do ${p.code}`} className="text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">
-        {permissoes.editar && <DropdownMenuItem onClick={() => acoes.editar(p)}>{emp ? 'Editar empreendimento' : 'Editar imóvel'}</DropdownMenuItem>}
-        <DropdownMenuItem onClick={() => acoes.fotos(p)}>Fotos e vídeos</DropdownMenuItem>
-        {p.has_book && <DropdownMenuItem onClick={() => acoes.book(p)}>Ver book</DropdownMenuItem>}
-        {noSite && <DropdownMenuItem onClick={() => acoes.site(p)}>Ver página no site</DropdownMenuItem>}
-        <DropdownMenuItem onClick={() => acoes.landing(p)}>Landing de anúncio</DropdownMenuItem>
+        {permissoes.editar && <DropdownMenuItem onClick={() => acoes.editar(p)}><Pencil className="h-4 w-4" />{emp ? 'Editar empreendimento' : 'Editar imóvel'}</DropdownMenuItem>}
+        <DropdownMenuItem onClick={() => acoes.fotos(p)}><Images className="h-4 w-4" />Fotos e vídeos</DropdownMenuItem>
+        {p.has_book && <DropdownMenuItem onClick={() => acoes.book(p)}><BookOpen className="h-4 w-4" />Ver book</DropdownMenuItem>}
+        {noSite && <DropdownMenuItem onClick={() => acoes.site(p)}><Globe className="h-4 w-4" />Ver página no site</DropdownMenuItem>}
+        <DropdownMenuItem onClick={() => acoes.landing(p)}><Megaphone className="h-4 w-4" />Landing de anúncio</DropdownMenuItem>
         <DropdownMenuItem onClick={() => acoes.forca(p)}>
+          <Gauge className="h-4 w-4" />
           {forca != null ? `Força do anúncio: ${forca}%` : 'Calcular força do anúncio'}
         </DropdownMenuItem>
-        {permissoes.editar && <DropdownMenuItem onClick={() => acoes.situacao(p)}>Mudar situação…</DropdownMenuItem>}
-        {permissoes.editar && <DropdownMenuItem onClick={() => acoes.mover(p)}>{emp ? 'Mover para Revenda' : 'Mover para Empreendimentos'}</DropdownMenuItem>}
-        {permissoes.excluir && <DropdownMenuItem className="text-destructive" onClick={() => acoes.excluir(p)}>Excluir</DropdownMenuItem>}
+        {permissoes.editar && <DropdownMenuItem onClick={() => acoes.situacao(p)}><CircleDot className="h-4 w-4" />Mudar situação…</DropdownMenuItem>}
+        {permissoes.editar && <DropdownMenuItem onClick={() => acoes.mover(p)}><ArrowRightLeft className="h-4 w-4" />{emp ? 'Mover para Revenda' : 'Mover para Empreendimentos'}</DropdownMenuItem>}
+        {permissoes.excluir && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={() => acoes.excluir(p)}><Trash2 className="h-4 w-4" />Excluir</DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

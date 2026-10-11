@@ -66,6 +66,11 @@ interface CartaoProps {
   aoRemover: () => void;
 }
 
+// Botão de ação da foto: apagado, acende ao passar o mouse no cartão.
+const ACAO_DA_FOTO =
+  'flex size-8 items-center justify-center rounded-md text-muted-foreground opacity-70 transition-opacity ' +
+  'hover:bg-muted group-hover:opacity-100 group-hover:text-foreground focus-visible:opacity-100';
+
 function CartaoDaFoto({ photo, indice, ehCapa, ocupado, aoDefinirCapa, aoAlternarVisivel, aoRemover }: CartaoProps) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: photo.id, disabled: ocupado, attributes: { roleDescription: 'foto do imóvel' } });
@@ -75,92 +80,102 @@ function CartaoDaFoto({ photo, indice, ehCapa, ocupado, aoDefinirCapa, aoAlterna
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        'group relative rounded-lg overflow-hidden border border-border bg-muted aspect-video',
+        'group relative rounded-lg overflow-hidden border border-border bg-background',
         isDragging && 'z-10 shadow-lg ring-2 ring-primary',
       )}
     >
-      {isVideo ? (
-        <video
-          src={photo.file_url}
-          className="w-full h-full object-cover"
-          muted
-          playsInline
-          preload="metadata"
-          controls
-        />
-      ) : (
-        <img
-          src={photo.thumbnail_url || photo.file_url}
-          alt={photo.alt_text ?? photo.caption ?? ''}
-          className="w-full h-full object-cover"
-          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-        />
-      )}
+      <div className="relative aspect-video bg-muted">
+        {isVideo ? (
+          <video
+            src={photo.file_url}
+            className="w-full h-full object-cover"
+            muted
+            playsInline
+            preload="metadata"
+            controls
+          />
+        ) : (
+          <img
+            src={photo.thumbnail_url || photo.file_url}
+            alt={photo.alt_text ?? photo.caption ?? ''}
+            className="w-full h-full object-cover"
+            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        )}
 
-      {/* Badges */}
-      <div className="absolute top-1.5 left-1.5 flex gap-1">
-        {ehCapa && (
-          <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500 text-white font-medium flex items-center gap-0.5">
-            <Crown className="h-2.5 w-2.5" />
-            Capa
+        {/* Badges */}
+        <div className="absolute top-1.5 left-1.5 flex gap-1">
+          {ehCapa && (
+            <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500 text-white font-medium flex items-center gap-0.5">
+              <Crown className="h-2.5 w-2.5" />
+              Capa
+            </span>
+          )}
+          {!photo.published && (
+            <span className="text-xs px-1.5 py-0.5 rounded bg-slate-600 text-white font-medium">
+              Oculta
+            </span>
+          )}
+        </div>
+
+        {/* Type label */}
+        <div className="absolute bottom-1.5 left-1.5">
+          <span className="text-xs px-1.5 py-0.5 rounded bg-black/60 text-white">
+            {PHOTO_TYPE_LABELS[photo.photo_type] ?? photo.photo_type}
           </span>
-        )}
-        {!photo.published && (
-          <span className="text-xs px-1.5 py-0.5 rounded bg-slate-600 text-white font-medium">
-            Oculta
-          </span>
-        )}
+        </div>
+
+        {/* Alça de arrastar: sempre visível (no celular não existe passar o mouse) */}
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          {...attributes}
+          {...listeners}
+          aria-label={`Arrastar a ${indice + 1}ª foto`}
+          title="Arraste para mudar a ordem"
+          className="absolute top-1.5 right-1.5 z-10 cursor-grab touch-none rounded bg-black/60 p-1 text-white hover:bg-black/80 active:cursor-grabbing disabled:cursor-not-allowed"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
       </div>
 
-      {/* Type label */}
-      <div className="absolute bottom-1.5 left-1.5">
-        <span className="text-xs px-1.5 py-0.5 rounded bg-black/60 text-white">
-          {PHOTO_TYPE_LABELS[photo.photo_type] ?? photo.photo_type}
-        </span>
-      </div>
-
-      {/* Hover actions */}
-      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+      {/* Ações sempre à vista (GLOSSARIO, peça 16): embaixo da foto, apagadas, acendem
+          ao passar o mouse. Em cima da foto elas brigavam com os selos e com os
+          controles do vídeo. */}
+      <div className="flex items-center justify-end gap-0.5 border-t border-border px-1 py-0.5">
         {!ehCapa && !isVideo && (
           <button
+            type="button"
             onClick={aoDefinirCapa}
-            className="p-1.5 rounded bg-orange-500 text-white hover:bg-orange-600"
+            className={ACAO_DA_FOTO}
+            aria-label="Definir como capa"
             title="Definir como capa (vai para o primeiro lugar)"
           >
-            <Crown className="h-3.5 w-3.5" />
+            <Crown className="h-4 w-4" />
           </button>
         )}
         <button
+          type="button"
           onClick={aoAlternarVisivel}
-          className="p-1.5 rounded bg-slate-600 text-white hover:bg-slate-700"
+          className={ACAO_DA_FOTO}
+          aria-label={photo.published ? 'Ocultar' : 'Publicar'}
           title={photo.published ? 'Ocultar' : 'Publicar'}
         >
           {photo.published
-            ? <EyeOff className="h-3.5 w-3.5" />
-            : <Eye className="h-3.5 w-3.5" />
+            ? <EyeOff className="h-4 w-4" />
+            : <Eye className="h-4 w-4" />
           }
         </button>
         <button
+          type="button"
           onClick={aoRemover}
-          className="p-1.5 rounded bg-red-600 text-white hover:bg-red-700"
+          className={cn(ACAO_DA_FOTO, 'hover:text-destructive group-hover:hover:text-destructive')}
+          aria-label="Remover"
           title="Remover"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-4 w-4" />
         </button>
       </div>
-
-      {/* Alça de arrastar: sempre visível (no celular não existe passar o mouse) */}
-      <button
-        type="button"
-        ref={setActivatorNodeRef}
-        {...attributes}
-        {...listeners}
-        aria-label={`Arrastar a ${indice + 1}ª foto`}
-        title="Arraste para mudar a ordem"
-        className="absolute top-1.5 right-1.5 z-10 cursor-grab touch-none rounded bg-black/60 p-1 text-white hover:bg-black/80 active:cursor-grabbing disabled:cursor-not-allowed"
-      >
-        <GripVertical className="h-3.5 w-3.5" />
-      </button>
     </div>
   );
 }

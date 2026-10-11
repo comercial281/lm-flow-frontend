@@ -1,6 +1,7 @@
 import { useLanguage } from '@/hooks/useLanguage';
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/ds';
-import { Settings, Power, MoreVertical, Trash2, RefreshCw, ExternalLink } from 'lucide-react';
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/ds';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
+import { Settings, Power, Trash2, RefreshCw, ExternalLink } from 'lucide-react';
 import { Integration } from '@/types/integrations';
 
 interface IntegrationAction {
@@ -91,6 +92,19 @@ export default function IntegrationActions({
   const visiblePrimaryActions = primaryActions.slice(0, 2);
   const remainingActions = [...primaryActions.slice(2), ...dropdownActions];
   const hasDropdownActions = showDropdown && remainingActions.length > 0;
+  const menuComuns = remainingActions.filter(action => action.variant !== 'destructive');
+  const menuDestrutivas = remainingActions.filter(action => action.variant === 'destructive');
+  const renderItem = (action: IntegrationAction) => (
+    <DropdownMenuItem
+      key={action.id}
+      variant={action.variant === 'destructive' ? 'destructive' : 'default'}
+      onClick={action.onClick}
+      disabled={action.disabled}
+    >
+      <action.icon className="h-4 w-4" />
+      {action.label}
+    </DropdownMenuItem>
+  );
 
   return (
     <div className="flex items-center gap-2">
@@ -113,29 +127,13 @@ export default function IntegrationActions({
       {hasDropdownActions && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="p-2"
-              disabled={isProcessing}
-              aria-label="Mais ações"
-              title="Mais ações"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </Button>
+            <BotaoMaisAcoes compacto disabled={isProcessing} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            {remainingActions.map((action) => (
-              <DropdownMenuItem
-                key={action.id}
-                onClick={action.onClick}
-                disabled={action.disabled}
-                className={`flex items-center gap-2 ${action.variant === 'destructive' ? 'text-red-600 dark:text-red-400' : ''}`}
-              >
-                <action.icon className="w-4 h-4" />
-                {action.label}
-              </DropdownMenuItem>
-            ))}
+            {/* Menu ⋮ da casa: Excluir e afins por último, depois de um separador. */}
+            {menuComuns.map(renderItem)}
+            {menuComuns.length > 0 && menuDestrutivas.length > 0 && <DropdownMenuSeparator />}
+            {menuDestrutivas.map(renderItem)}
           </DropdownMenuContent>
         </DropdownMenu>
       )}

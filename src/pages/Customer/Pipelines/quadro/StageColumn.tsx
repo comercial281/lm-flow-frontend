@@ -4,13 +4,14 @@
 // PipelineKanban.tsx sem mudar comportamento (spec funil §4.5).
 import type { DragEvent, MutableRefObject } from 'react';
 import { toast } from 'sonner';
-import { Copy, Edit, MoreVertical, Trash2 } from 'lucide-react';
+import { Copy, Edit, Trash2 } from 'lucide-react';
 import {
-  Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
 import { dinheiro } from '@/lib/formato';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 // Card do board, sempre visível de cara — import estático de propósito.
 import PipelineItemCard from '../PipelineItemCard';
 import { calculateStageTotal } from '../pipelineItemHelpers';
@@ -80,13 +81,11 @@ export default function StageColumn({
             {/* Stage Options */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-auto p-1" aria-label="Mais ações" title="Mais ações">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
+                <BotaoMaisAcoes compacto className="shrink-0 text-muted-foreground" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => onEditStage(stage)}>
-                  <Edit className="h-4 w-4 mr-2" />
+                  <Edit className="h-4 w-4" />
                   {t('kanban.stage.editStage')}
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -95,12 +94,12 @@ export default function StageColumn({
                     toast.success(t('kanban.idCopied'));
                   }}
                 >
-                  <Copy className="h-4 w-4 mr-2" />
+                  <Copy className="h-4 w-4" />
                   {t('kanban.copyId')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive" onClick={() => onDeleteStage(stage)}>
-                  <Trash2 className="h-4 w-4 mr-2" />
+                <DropdownMenuItem variant="destructive" onClick={() => onDeleteStage(stage)}>
+                  <Trash2 className="h-4 w-4" />
                   {t('kanban.stage.deleteStage')}
                 </DropdownMenuItem>
               </DropdownMenuContent>

@@ -212,6 +212,27 @@ export const abaForaDaCasa = linha => TABS_DO_PACOTE.test(linha) || ABA_COPIADA.
 const ICONE_DE_VISAO = /<(?:Grid3X3|Grid3x3|LayoutGrid|LayoutList|Kanban|SquareKanban|Columns3)(?=[\s>/]|$)/;
 const ALTERNADOR_DA_CASA = 'src/components/base/AlternadorDeVisao.tsx';
 export const alternadorAMao = linha => ICONE_DE_VISAO.test(linha);
+// Ação que só aparece com o mouse (peça 16 do GLOSSARIO, escolha do dono em
+// 10/10/2026): no celular não existe "passar o mouse", então o botão some. Conta
+// linha com `opacity-0` + `group-hover:opacity-100`, `invisible` +
+// `group-hover:visible` ou `hidden` + `group-hover:flex|block|…` (com ou sem
+// prefixo de tela, `md:opacity-0`, e com grupo nomeado, `group-hover/x:`). A ação
+// fica visível e apagada (`opacity-70`) e acende no mouse. Realce decorativo que
+// não é ação (brilho do cartão) vai pras exceções. A régua é por linha: classe
+// montada em várias linhas escapa, e a revisão de PR confere.
+const ANTES = `(?:^|[\\s'"\`{(])(?:[\\w-]+:)*`;
+const SO_NO_MOUSE = [
+  [new RegExp(`${ANTES}opacity-0(?![\\w/.-])`), /group-hover(?:\/[\w-]+)?:opacity-(?:100|[5-9]\d)\b/],
+  [new RegExp(`${ANTES}invisible(?![\\w-])`), /group-hover(?:\/[\w-]+)?:visible\b/],
+  [new RegExp(`${ANTES}hidden(?![\\w-])`), /group-hover(?:\/[\w-]+)?:(?:flex|block|inline-flex|inline-block|grid|inline)\b/],
+];
+export const soNoMouse = linha => SO_NO_MOUSE.some(([escondido, aparece]) => escondido.test(linha) && aparece.test(linha));
+
+// Menu de ações com ⋯ deitado (peça 15 do GLOSSARIO, escolha do dono em
+// 10/10/2026): o gatilho é o ⋮ em pé (`EllipsisVertical`, pela peça
+// `BotaoMaisAcoes`). Conta o ícone deitado na tela, não o import.
+export const menuDeitado = linha =>
+  /<(?:MoreHorizontal|Ellipsis)(?:Icon)?(?=[\s/>]|$)|\b[iI]con[a-z]*=\{(?:MoreHorizontal|Ellipsis)(?:Icon)?\}/.test(linha);
 
 const SELETORES_DA_CASA = new Set(['src/components/base/Seletor.tsx', 'src/components/base/SeletorComAbas.tsx']);
 // Ficam com a lista do sistema DE PROPÓSITO (decisão 3 da spec do Seletor): o
@@ -546,6 +567,8 @@ export function varrer() {
       if (confirmacao && ALERT_DIALOG.test(l)) anotar('confirmacaoForaDaCasa', rel, i + 1, 'confirmação fora do useConfirmacao', l.trim());
       if (escopo && rel.endsWith('.tsx') && rel !== ABAS_DA_CASA && abaForaDaCasa(l)) anotar('abaForaDaCasa', rel, i + 1, 'aba fora da casa', l.trim());
       if (escopo && rel.endsWith('.tsx') && rel !== ALTERNADOR_DA_CASA && alternadorAMao(l)) anotar('alternadorAMao', rel, i + 1, 'alternador de visão à mão', l.trim());
+      if (escopo && rel.endsWith('.tsx') && soNoMouse(l)) anotar('soNoMouse', rel, i + 1, 'ação que só aparece no mouse', l.trim());
+      if (escopo && rel.endsWith('.tsx') && menuDeitado(l)) anotar('menuDeitado', rel, i + 1, 'menu de ações com ⋯ deitado', l.trim());
       // selectNativo (app inteiro): pula linhas que começam com comentário ou têm */ após a tag
       if (lista && SELECT_NATIVO.test(l) && !COMECO_DE_COMENTARIO.test(limpa)) {
         const match = SELECT_NATIVO.exec(l);
@@ -583,6 +606,8 @@ export const CATEGORIAS = {
   confirmacaoForaDaCasa: 'confirmação fora do useConfirmacao (app inteiro)',
   abaForaDaCasa: 'aba fora da casa (pílula ou à mão)',
   alternadorAMao: 'alternador de visão à mão',
+  soNoMouse: 'ação que só aparece no mouse',
+  menuDeitado: 'menu de ações com ⋯ deitado',
 };
 
 function principal() {

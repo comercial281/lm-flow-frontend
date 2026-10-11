@@ -1,11 +1,12 @@
-import { MoreHorizontal, Palette, Trash2 } from 'lucide-react';
+import { Palette, Trash2 } from 'lucide-react';
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/ds';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import { plural } from '@/lib/formato';
 import type { Label } from '@/types/settings';
 
@@ -56,21 +57,21 @@ export default function LinhaEtiqueta({ label, travada, onEditar, onTrocarCor, o
       <div onClick={e => e.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            {/* Igual à tela de Lembretes: o IconActionButton não repassa as props do gatilho do menu. */}
-            <Button size="icon" variant="ghost" aria-label={`Mais ações: ${nome}`} title={`Mais ações: ${nome}`}>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
+            <BotaoMaisAcoes aria-label={`Mais ações: ${nome}`} title={`Mais ações: ${nome}`} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {onTrocarCor && (
               <DropdownMenuItem onClick={() => onTrocarCor(label)}>
-                <Palette className="w-4 h-4 mr-2" /> Trocar cor
+                <Palette className="h-4 w-4" /> Trocar cor
               </DropdownMenuItem>
             )}
             {!travada && onExcluir && (
-              <DropdownMenuItem onClick={() => onExcluir(label)} className="text-destructive">
-                <Trash2 className="w-4 h-4 mr-2" /> Excluir
-              </DropdownMenuItem>
+              <>
+                {onTrocarCor && <DropdownMenuSeparator />}
+                <DropdownMenuItem variant="destructive" onClick={() => onExcluir(label)}>
+                  <Trash2 className="h-4 w-4" /> Excluir
+                </DropdownMenuItem>
+              </>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
