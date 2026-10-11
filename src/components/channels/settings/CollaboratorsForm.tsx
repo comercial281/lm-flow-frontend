@@ -15,6 +15,7 @@ import type { NumberCardData } from '@/features/numbers/types';
 import AgentsService from '@/services/channels/agentsService';
 import InboxMembersService from '@/services/channels/inboxMembersService';
 import type { AgentChannel } from '@/types/channels/inbox';
+import Carregando from '@/components/base/Carregando';
 
 interface CollaboratorsFormProps {
   inboxId: string;
@@ -196,12 +197,7 @@ export default function CollaboratorsForm({
 
   if (isLoadingAgents) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">{t('settings.collaborators.agents.loading')}</p>
-        </div>
-      </div>
+      <Carregando linhas={4} rotulo={t('settings.collaborators.agents.loading')} className="py-2" />
     );
   }
 

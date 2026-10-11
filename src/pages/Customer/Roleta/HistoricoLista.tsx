@@ -1,8 +1,9 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ChevronDown, ChevronUp, History, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, History } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
+import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
 import { useCan } from '@/hooks/useCan';
@@ -147,9 +148,7 @@ export default function HistoricoLista({ roletaId, filtroInicial = 'all' }: Prop
     if (erro) return <EmptyState tipo="erro" aoTentarDeNovo={carregar} />;
     if (!itens) {
       return (
-        <div className="flex justify-center py-16 text-muted-foreground" role="status" aria-label="Carregando o histórico">
-          <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
-        </div>
+        <Carregando linhas={5} rotulo="Carregando o histórico" className="py-2" />
       );
     }
     if (itens.length === 0) {

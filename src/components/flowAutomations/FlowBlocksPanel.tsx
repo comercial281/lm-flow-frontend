@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/ds';
 import IconActionButton from '@/components/base/IconActionButton';
+import EmptyState from '@/components/base/EmptyState';
 import { nodeColor } from '@/lib/flowAutomationGraph';
 import { paletteGroups, type PaletteItem } from '@/features/flowAutomations/palette';
 import { blockDescription, blockIcon } from '@/features/flowAutomations/blockInfo';
@@ -61,7 +62,9 @@ export function FlowBlocksPanel({ onPick, onClose }: Props) {
         </div>
       </div>
       <div className="flex-1 overflow-auto p-2 space-y-3">
-        {groups.length === 0 && <p className="text-xs text-muted-foreground px-1">Nenhum bloco com esse nome.</p>}
+        {groups.length === 0 && (
+          <EmptyState tipo="semResultado" tamanho="compacto" title="Nenhum bloco com esse nome." className="p-3 text-xs" />
+        )}
         {groups.map(({ group, label, items }) => (
           <section key={group} aria-label={label}>
             <h3 className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground px-1 mb-1">

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Bot, Check, ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@evoapi/design-system/button';
 import { Seletor } from '@/components/base/Seletor';
+import EmptyState from '@/components/base/EmptyState';
 import chatService from '@/services/chat/chatService';
 import usersService from '@/services/users/usersService';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
@@ -321,9 +322,7 @@ export default function QuickFilters({
             {loadingLabels ? (
               <p className="px-0.5 py-1.5 text-xs text-muted-foreground">Carregando…</p>
             ) : labels.length === 0 ? (
-              <p className="px-0.5 py-1.5 text-xs text-muted-foreground">
-                Nenhuma etiqueta criada ainda.
-              </p>
+              <EmptyState tamanho="compacto" title="Nenhuma etiqueta criada ainda." className="p-3 text-xs" />
             ) : (
               <Seletor
                 value={activeTagTitle ?? ''}
@@ -409,9 +408,7 @@ export default function QuickFilters({
             {loadingAgents ? (
               <p className="px-0.5 py-1.5 text-xs text-muted-foreground">Carregando…</p>
             ) : agents.length === 0 ? (
-              <p className="px-0.5 py-1.5 text-xs text-muted-foreground">
-                Nenhum usuário encontrado.
-              </p>
+              <EmptyState tamanho="compacto" title="Nenhum usuário encontrado." className="p-3 text-xs" />
             ) : (
               <Seletor
                 value={activeAssigneeId ?? ''}

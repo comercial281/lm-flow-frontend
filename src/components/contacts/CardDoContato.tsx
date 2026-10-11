@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/ds';
 import EditItemModal from '@/components/pipelines/EditItemModal';
+import Carregando from '@/components/base/Carregando';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { contactsService } from '@/services/contacts/contactsService';
 import {
@@ -79,9 +79,7 @@ export default function CardDoContato({ contactId, onOpenChange, onMudou }: Prop
         <DialogContent className="sm:max-w-sm">
           <DialogTitle className="sr-only">Abrindo o contato</DialogTitle>
           <DialogDescription className="sr-only">Carregando o card do contato</DialogDescription>
-          <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Abrindo o contato…
-          </div>
+          <Carregando variante="texto" linhas={4} rotulo="Abrindo o contato…" className="py-2" />
         </DialogContent>
       </Dialog>
     );

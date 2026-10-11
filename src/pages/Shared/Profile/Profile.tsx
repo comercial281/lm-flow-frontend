@@ -48,6 +48,7 @@ import { normalizeAvatarUrl } from '@/utils/avatarUrl';
 import { ProfilePhotoUploader, TwoFactorSetup } from '@/components/shared/profile';
 import { BaseHeader, Pagina } from '@/components/base';
 import Aviso from '@/components/base/Aviso';
+import Carregando from '@/components/base/Carregando';
 import { PhoneInput } from '@/components/shared/PhoneInput';
 
 const Profile = () => {
@@ -933,12 +934,7 @@ const Profile = () => {
   // Loading state se não há usuário
   if (!user) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">{t('loading')}</p>
-        </div>
-      </div>
+      <Carregando variante="texto" linhas={6} rotulo={t('loading')} className="p-6" />
     );
   }
 

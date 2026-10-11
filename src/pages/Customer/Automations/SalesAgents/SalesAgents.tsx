@@ -10,10 +10,10 @@
 // Spec: LM FLOW/specs/2026-10-05-ia-vendedora-refatoracao-design.md.
 import { startTransition, useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button } from '@/components/ui/ds';
 import { BaseHeader, Pagina } from '@/components/base';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { toast } from 'sonner';
-import { Loader2, Plus } from 'lucide-react';
 import DuplicateAgentDialog from '@/components/salesAgents/DuplicateAgentDialog';
 import { salesAgentsService, type HealthReport, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { useClientToggle } from '@/contexts/TenantFeaturesContext';
@@ -308,16 +308,15 @@ export default function SalesAgents() {
               : <BaseHeader title="IA Vendedora" subtitle="Crie a primeira IA pra atender seus leads no WhatsApp." />}
       >
         {loading && agents.length === 0 ? (
-          <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          <Carregando className="py-2" />
+        ) : loadFailure === 'failed' && agents.length === 0 ? (
+          // Falha na carga não vira "Nenhuma IA criada" (o gestor criaria outra).
+          <EmptyState tipo="erro" aoTentarDeNovo={() => void loadAgents()} />
         ) : !selected || !situacao ? (
-          <div className="flex flex-col items-start gap-3 rounded-lg border border-sidebar-border bg-sidebar p-6">
-            <p className="text-sm text-muted-foreground">Nenhuma IA Vendedora criada ainda.</p>
-            {podeCriar && (
-              <Button onClick={createAgent}>
-                <Plus className="mr-1 h-4 w-4" aria-hidden /> Nova IA
-              </Button>
-            )}
-          </div>
+          <EmptyState
+            title="Nenhuma IA Vendedora criada ainda."
+            action={podeCriar ? { label: 'Nova IA', onClick: () => void createAgent() } : undefined}
+          />
         ) : (
           // ⚠️ `key` = id da IA: trocar de IA remonta a tela inteira. Sem isso o
           // Testar levava a conversa da IA anterior (e a próxima mensagem iria

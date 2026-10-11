@@ -21,6 +21,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
+import Carregando from '@/components/base/Carregando';
 import Aviso from '@/components/base/Aviso';
 import { BaseHeader, Pagina } from '@/components/base';
 import { apiErrorMessage } from '@/utils/apiHelpers';
@@ -48,6 +49,8 @@ export default function Bolsao() {
   const [leads, setLeads] = useState<BolsaoLead[]>([]);
   const [quota, setQuota] = useState<BolsaoQuota | null>(null);
   const [loading, setLoading] = useState(true);
+  // Falha na leitura não vira "O Bolsão está vazio agora".
+  const [erroAoCarregar, setErroAoCarregar] = useState(false);
   const [claiming, setClaiming] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   // O lead recém-puxado, com o contato revelado. Fica no topo até o corretor
@@ -65,7 +68,9 @@ export default function Bolsao() {
       );
       setLeads(rows);
       setQuota(q);
+      setErroAoCarregar(false);
     } catch (e) {
+      setErroAoCarregar(true);
       // No polling silencioso não vale gritar: a rede oscila, e um toast a cada
       // 30 segundos transformaria a tela numa cachoeira de erro.
       if (!silent) toast.error(apiErrorMessage(e, 'Não consegui carregar o Bolsão.'));
@@ -162,9 +167,9 @@ export default function Bolsao() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin mr-2" /> Carregando o Bolsão…
-        </div>
+        <Carregando rotulo="Carregando o Bolsão…" className="py-2" />
+      ) : leads.length === 0 && erroAoCarregar ? (
+        <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />
       ) : leads.length === 0 ? (
         // O estado vazio importa: sem explicação, o corretor conclui que a tela
         // está quebrada em vez de que ninguém abasteceu ainda.

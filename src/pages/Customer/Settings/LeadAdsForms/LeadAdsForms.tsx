@@ -20,6 +20,7 @@ import {
 import { Link } from 'react-router-dom';
 import { Pagina, BaseHeader } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
+import Carregando from '@/components/base/Carregando';
 import Aviso from '@/components/base/Aviso';
 import IconActionButton from '@/components/base/IconActionButton';
 import {
@@ -794,9 +795,10 @@ export default function LeadAdsForms() {
                   dizer "entrou sem etiqueta" quando o lead nem entrou seria mentira. */}
               {typeof debug.total_recent_leads === 'number' && (
                 debug.total_recent_leads === 0 ? (
-                  <div className="rounded-lg border border-border p-3 text-xs text-muted-foreground">
-                    Nenhum lead recebido por esta página ainda — quando chegar, este quadro mostra se ele entrou.
-                  </div>
+                  <EmptyState
+                    tamanho="compacto"
+                    title="Nenhum lead recebido por esta página ainda — quando chegar, este quadro mostra se ele entrou."
+                  />
                 ) : debug.routing_ok ? (
                   <Aviso tom="sucesso" icone={Check} titulo="Tudo certo.">
                     Os últimos leads vieram de formulários cadastrados e entraram com as etiquetas deles.
@@ -1079,7 +1081,7 @@ export default function LeadAdsForms() {
           Formulários configurados
         </h2>
         {loading ? (
-          <div className="text-center py-12 text-muted-foreground text-sm">Carregando...</div>
+          <Carregando linhas={3} />
         ) : visibleConfigs.length === 0 ? (
           <EmptyState
             title={configs.length === 0 ? 'Nenhum formulário configurado' : 'Nenhum formulário desta página'}

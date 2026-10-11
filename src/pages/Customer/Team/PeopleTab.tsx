@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { RefreshCw, UserPlus } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { teamAccessService } from '@/services/teamAccess/teamAccessService';
 import customRolesService from '@/services/customRoles/customRolesService';
 import AddPersonWizard from './AddPersonWizard';
@@ -50,6 +52,7 @@ export default function PeopleTab() {
   const [creatingNumberFor, setCreatingNumberFor] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState(false);
   const [members, setMembers] = useState<TeamAccessMember[]>([]);
   const [inboxes, setInboxes] = useState<TeamAccessInbox[]>([]);
   const [roles, setRoles] = useState<CustomRole[]>([]);
@@ -91,7 +94,9 @@ export default function PeopleTab() {
       setInboxes(overview.inboxes);
       setOwnerRuleEcho(overview.number_owner_rule ?? null);
       setRoles(roleList);
+      setErro(false);
     } catch {
+      setErro(true);
       toast.error('Erro ao carregar a equipe');
     } finally {
       setLoading(false);
@@ -112,9 +117,9 @@ export default function PeopleTab() {
       </div>
 
       {loading && members.length === 0 ? (
-        <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
-          <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Carregando equipe…
-        </div>
+        <Carregando linhas={5} rotulo="Carregando equipe…" />
+      ) : erro && members.length === 0 ? (
+        <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />
       ) : (
         <PeopleList
           members={members}

@@ -4,7 +4,7 @@ import {
   Badge, Button, Checkbox, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
   Label as UILabel,
 } from '@/components/ui/ds';
-import { Edit, FileText, Loader2, Plus, RefreshCw, ShieldCheck, Trash2, Upload, Users } from 'lucide-react';
+import { Edit, FileText, Loader2, Plus, ShieldCheck, Trash2, Upload, Users } from 'lucide-react';
 import { formatDateBR } from '@/utils/dateUtils';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -16,6 +16,8 @@ import {
   siteBuilderService, type ModeloDePagina, type PageFormData, type Site, type SitePage,
 } from '@/services/siteBuilder/siteBuilderService';
 import { CampoTexto } from '@/components/base/Campo';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 /** O que a tela Páginas avisa ao pai: o menu da tela Menus acompanha as páginas. */
 export type MudancaDePagina =
@@ -50,6 +52,8 @@ const ehHttp = (v: string) => /^https?:\/\/\S+$/i.test(v.trim());
 export default function TelaPaginas({ site, versaoDasPaginas = 0, aoMudarPagina }: Props) {
   const [pages, setPages] = useState<SitePage[]>([]);
   const [pagesLoading, setPagesLoading] = useState(false);
+  // Falha na carga não pode virar "Nenhuma página criada" (erro nunca vira vazio).
+  const [pagesErro, setPagesErro] = useState(false);
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   // Janela "Nova página": em branco ou a partir de um modelo.
@@ -89,7 +93,9 @@ export default function TelaPaginas({ site, versaoDasPaginas = 0, aoMudarPagina 
       // título/HTML e salvava por cima do que o construtor montou.
       const all = await siteBuilderService.listPages(site.id);
       setPages(all.filter(p => p.page_kind !== 'ad_landing'));
+      setPagesErro(false);
     } catch {
+      setPagesErro(true);
       toast.error('Erro ao carregar páginas');
     } finally {
       setPagesLoading(false);
@@ -240,18 +246,15 @@ export default function TelaPaginas({ site, versaoDasPaginas = 0, aoMudarPagina 
         </div>
 
         {pagesLoading ? (
-          <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-            <RefreshCw className="h-4 w-4 animate-spin mr-2" />Carregando...
-          </div>
+          <Carregando linhas={3} />
+        ) : pagesErro && pages.length === 0 ? (
+          <EmptyState tipo="erro" aoTentarDeNovo={() => void loadPages()} />
         ) : pages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <FileText className="h-10 w-10 mb-2 opacity-30" />
-            <p className="text-sm">Nenhuma página criada</p>
-            <Button size="sm" className="mt-3" onClick={abrirEscolha}>
-              <Plus className="h-4 w-4 mr-1" />
-              Criar primeira página
-            </Button>
-          </div>
+          <EmptyState
+            icon={FileText}
+            title="Nenhuma página criada"
+            action={{ label: 'Criar primeira página', onClick: abrirEscolha }}
+          />
         ) : (
           <div className="space-y-2">
             {pages.map(page => (

@@ -13,6 +13,8 @@ import { propertiesService, type Property } from '@/services/properties/properti
 import type { PipelineItem } from '@/types/analytics';
 import { dinheiro } from '@/lib/formato';
 import { Seletor } from '@/components/base/Seletor';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 interface CardPropertyInterestsProps {
   item: PipelineItem;
@@ -28,6 +30,7 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
 
   const [interests, setInterests] = useState<PropertyInterest[]>([]);
   const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
 
   // Search state
@@ -53,8 +56,10 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
         return sum + num;
       }, 0);
       onValueChange?.(total, formatBRL(total));
+      setErro(false);
     } catch {
       setInterests([]);
+      setErro(true);
     } finally {
       setLoading(false);
     }
@@ -214,15 +219,11 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
 
       {/* List */}
       {loading ? (
-        <div className="flex items-center justify-center py-10">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
+        <Carregando linhas={2} />
+      ) : erro ? (
+        <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} />
       ) : interests.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-10 text-center">
-          <Home className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Nenhum imóvel vinculado ainda.</p>
-          <p className="text-xs text-muted-foreground">Use a busca acima para adicionar.</p>
-        </div>
+        <EmptyState tamanho="compacto" title="Nenhum imóvel vinculado ainda." description="Use a busca acima para adicionar." />
       ) : (
         // Scroll só dentro da lista: com muitos imóveis o card não empurra
         // o resto do Detalhes pra baixo (~3 imóveis visíveis por vez).

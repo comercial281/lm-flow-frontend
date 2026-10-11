@@ -51,6 +51,8 @@ export default function MessageFunnels() {
   // Por isso a etiqueta filtra a lista em vez de navegar, e o filtro é aplicado
   // pelo BACKEND — `tag_id` já existe no controller, não é filtro de tela.
   const [tags, setTags] = useState<MessageFunnelTag[]>([]);
+  // Falha ao ler as etiquetas não pode aparecer como "Nenhuma etiqueta ainda" na janela.
+  const [erroTags, setErroTags] = useState(false);
   const [tagId, setTagId] = useState<string | null>(null);
   const [gerenciandoTags, setGerenciandoTags] = useState(false);
   // undefined = mostrando a grade de pastas; null = "Sem pasta"; string = dentro de uma pasta.
@@ -100,8 +102,10 @@ export default function MessageFunnels() {
   const carregarTags = useCallback(async () => {
     try {
       setTags(await messageFunnelTagsService.list());
+      setErroTags(false);
     } catch {
       setTags([]);
+      setErroTags(true);
     }
   }, []);
 
@@ -455,8 +459,11 @@ export default function MessageFunnels() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-1.5 max-h-72 overflow-auto">
-            {tags.length === 0 && (
-              <p className="text-sm text-muted-foreground py-2">Nenhuma etiqueta ainda.</p>
+            {tags.length === 0 && erroTags && (
+              <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void carregarTags()} />
+            )}
+            {tags.length === 0 && !erroTags && (
+              <EmptyState tamanho="compacto" title="Nenhuma etiqueta ainda." />
             )}
             {tags.map(tag => (
               <div key={tag.id} className="flex items-center gap-2 rounded-md border border-border p-2">

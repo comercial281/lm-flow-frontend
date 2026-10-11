@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { AlertTriangle, CalendarClock, FileText, Loader2, Plus, Shuffle, Timer, Users, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, CalendarClock, FileText, Plus, Shuffle, Timer, Users, type LucideIcon } from 'lucide-react';
 import {
   Button,
   Dialog,
@@ -15,6 +15,7 @@ import Abas from '@/components/base/Abas';
 import Pagina from '@/components/base/Pagina';
 import BaseHeader from '@/components/base/BaseHeader';
 import BaseStatusBadge from '@/components/base/BaseStatusBadge';
+import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import { CampoTexto } from '@/components/base/Campo';
 import { useCan } from '@/hooks/useCan';
@@ -119,9 +120,7 @@ function ListaDeRoletas({ aoCriar, podeCriar }: { aoCriar: () => void; podeCriar
   if (erro) return <EmptyState tipo="erro" aoTentarDeNovo={carregar} />;
   if (!roletas) {
     return (
-      <div className="flex justify-center py-16 text-muted-foreground" role="status" aria-label="Carregando as roletas">
-        <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
-      </div>
+      <Carregando variante="cartoes" linhas={3} rotulo="Carregando as roletas" className="py-2" />
     );
   }
   if (roletas.length === 0) {

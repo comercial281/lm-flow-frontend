@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Send, Trash2, MessageSquare } from 'lucide-react';
+import EmptyState from '@/components/base/EmptyState';
 import {
   useComments,
   useCreateComment,
@@ -33,7 +34,7 @@ interface Props {
 }
 
 export default function CommentsSection({ lessonId, canModerate }: Props) {
-  const { data: comments = [], isLoading } = useComments(lessonId);
+  const { data: comments = [], isLoading, error, refetch } = useComments(lessonId);
   const create = useCreateComment();
   const del = useDeleteComment();
   const [body, setBody] = useState('');
@@ -80,10 +81,11 @@ export default function CommentsSection({ lessonId, canModerate }: Props) {
 
       {/* Lista */}
       {isLoading && <p className="text-xs text-muted-foreground">Carregando...</p>}
-      {!isLoading && comments.length === 0 && (
-        <p className="text-xs text-muted-foreground text-center py-6">
-          Nenhum comentário ainda. Seja o primeiro.
-        </p>
+      {!isLoading && error && (
+        <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void refetch()} />
+      )}
+      {!isLoading && !error && comments.length === 0 && (
+        <EmptyState tamanho="compacto" title="Nenhum comentário ainda." description="Seja o primeiro." />
       )}
       <div className="space-y-4">
         {comments.map((c) => {

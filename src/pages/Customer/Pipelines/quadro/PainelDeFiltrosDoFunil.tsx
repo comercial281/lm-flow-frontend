@@ -159,19 +159,19 @@ export default function PainelDeFiltrosDoFunil({
 
           <Secao id="filtro-origem" titulo="Origem">
             {origens.length === 0
-              ? <p className="text-sm text-muted-foreground">Nenhum lead nesta aba.</p>
+              ? <EmptyState tamanho="compacto" title="Nenhum lead nesta aba." />
               : <EtiquetasDeEscolha rotulo="Origem" opcoes={origens} escolhidas={rascunho.origens} aoMudar={v => mudar('origens', v)} />}
           </Secao>
 
           <Secao id="filtro-resp" titulo="Responsável">
             {responsaveis.length === 0
-              ? <p className="text-sm text-muted-foreground">Nenhum lead nesta aba.</p>
+              ? <EmptyState tamanho="compacto" title="Nenhum lead nesta aba." />
               : <EtiquetasDeEscolha rotulo="Responsável" opcoes={responsaveis} escolhidas={rascunho.resp} aoMudar={v => mudar('resp', v)} />}
           </Secao>
 
           <Secao id="filtro-etiq" titulo="Etiquetas">
             {etiquetas.length === 0
-              ? <p className="text-sm text-muted-foreground">Nenhuma etiqueta cadastrada.</p>
+              ? <EmptyState tamanho="compacto" title="Nenhuma etiqueta cadastrada." />
               : <EscolhaComBusca rotulo="Etiquetas" placeholder="Buscar etiqueta"
                   opcoes={etiquetas.map(e => ({ valor: e.name, rotulo: e.name }))}
                   escolhidas={rascunho.etiq} aoMudar={v => mudar('etiq', v)} />}

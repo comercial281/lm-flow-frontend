@@ -13,6 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/ds';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import IconActionButton from '@/components/base/IconActionButton';
 import { CampoTexto } from '@/components/base/Campo';
 import { plural } from '@/lib/formato';
@@ -233,9 +235,7 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
     if (erroAoCarregar) return <p role="alert" className="text-sm text-destructive">Não deu pra carregar as origens. Feche e tente de novo.</p>;
     if (!opcoes) {
       return (
-        <div className="flex justify-center py-8 text-muted-foreground" role="status" aria-label="Carregando as origens">
-          <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-        </div>
+        <Carregando linhas={3} rotulo="Carregando as origens" className="py-2" />
       );
     }
     if (!definicao) {
@@ -443,9 +443,7 @@ export default function OrigensBloco({ roletaId, origens, recarregar }: Props) {
   return (
     <div className="space-y-4">
       {origens.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
-          Nenhuma origem ainda. Sem origem, a roleta não recebe lead.
-        </p>
+        <EmptyState tamanho="compacto" title="Nenhuma origem ainda. Sem origem, a roleta não recebe lead." />
       ) : (
         <ul className="space-y-2" aria-label="Origens desta roleta">
           {origens.map(o => (

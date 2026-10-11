@@ -10,6 +10,7 @@ export type { NodeType, NodeCategory };
 import { Button } from '@/components/ui/ds';
 import { Save, Play, Pause, RotateCcw } from 'lucide-react';
 import Aviso from './Aviso';
+import Carregando from './Carregando';
 import { cn } from '@/lib/utils';
 
 // Tipos para configuração do editor
@@ -312,12 +313,7 @@ export function BaseFlowEditor({
       {/* Canvas - DIMENSÕES FIXAS PARA REACTFLOW */}
       <div className={cn('flex-1 relative w-full min-h-0', canvasWrapperClassName)} style={{ height: '100%' }}>
         {isLoading ? (
-          <div className="flex items-center justify-center h-full w-full">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-              <p className="text-sm text-sidebar-foreground/70">{t('base.flow.editor.loading')}</p>
-            </div>
-          </div>
+          <Carregando variante="cartoes" linhas={3} rotulo={t('base.flow.editor.loading')} className="p-6" />
         ) : (
           <ReactFlowProvider>
             <DnDProvider>

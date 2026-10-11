@@ -22,6 +22,7 @@ import NotificationCenter from './NotificationCenter';
 import { toast } from 'sonner';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import BaseHeader from '@/components/base/BaseHeader';
+import Carregando from '@/components/base/Carregando';
 import { Pagina } from '@/components/base';
 import BarraSalvar from '@/components/base/BarraSalvar';
 import Chave from '@/components/base/Chave';
@@ -410,12 +411,7 @@ export default function AccountSettings() {
   if (loading && !carregado) {
     return (
       <Pagina rolagem="conteudo" cabecalho={<BaseHeader title={t('title')} subtitle={t('subtitle')} />}>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-            <p className="text-sidebar-foreground/60">{t('loading')}</p>
-          </div>
-        </div>
+        <Carregando variante="texto" linhas={6} rotulo={t('loading')} className="p-6" />
       </Pagina>
     );
   }

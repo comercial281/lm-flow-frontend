@@ -21,10 +21,11 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/ds';
-import { Loader2, X, Users } from 'lucide-react';
+import { X, Users } from 'lucide-react';
 import { Pipeline, UpdatePipelineData } from '@/types/analytics';
 import TeamsService from '@/services/teams/teamsService';
 import { Team } from '@/types/users/teams';
+import Carregando from '@/components/base/Carregando';
 import { LocalAttributeDefinition, LocalAttributeDefinitionPayload } from '@/types/pipelines/localAttributeDefinition';
 import PipelineCustomAttributes from './PipelineCustomAttributes';
 import { PIPE_ENTRY_SOURCES } from '@/constants/pipeEntrySources';
@@ -279,9 +280,7 @@ export default function EditPipelineModal({
                 )}
                 <div className="border rounded-lg max-h-36 overflow-y-auto">
                   {teamsLoading ? (
-                    <div className="flex items-center justify-center py-4">
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    </div>
+                    <Carregando linhas={2} className="px-3" />
                   ) : teams.length === 0 ? (
                     <div className="text-center text-sm text-muted-foreground py-4">
                       {t('editPipeline.teamSelection.noTeams')}

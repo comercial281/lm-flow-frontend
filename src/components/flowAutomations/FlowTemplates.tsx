@@ -8,6 +8,7 @@ import { flowAutomationsService } from '@/services/flowAutomations/flowAutomatio
 import type { FlowAutomation } from '@/types/flowAutomations';
 import type { FlowTemplate } from '@/features/flowAutomations/templates';
 import { cn } from '@/lib/utils';
+import EmptyState from '@/components/base/EmptyState';
 
 // MODELOS (sprint 2, spec 03/10/2026, seção 4): a mesma lista no botão
 // "Modelos" e no estado vazio da tela Automações. "Usar este modelo" cria o
@@ -62,7 +63,7 @@ export function FlowTemplateList({ onApplied, className }: ListProps) {
     );
   }
   if (templates.length === 0) {
-    return <p className={cn('text-sm text-muted-foreground', className)}>Nenhum modelo disponível agora.</p>;
+    return <EmptyState tamanho="compacto" title="Nenhum modelo disponível agora." className={className} />;
   }
 
   return (

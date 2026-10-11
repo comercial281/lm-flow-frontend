@@ -3,6 +3,8 @@ import { X, MessageCircle, Send } from 'lucide-react';
 import { notesService, Note } from '@/services/notes/notesService';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 interface NotesHistoryModalProps {
   isOpen: boolean;
@@ -14,6 +16,7 @@ interface NotesHistoryModalProps {
 export function NotesHistoryModal({ isOpen, contactId, contactName, onClose }: NotesHistoryModalProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState(false);
   const [newContent, setNewContent] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -28,8 +31,10 @@ export function NotesHistoryModal({ isOpen, contactId, contactName, onClose }: N
     try {
       const data = await notesService.getByContact(contactId);
       setNotes(data);
+      setErro(false);
     } catch (error) {
       console.error('Erro ao carregar notas:', error);
+      setErro(true);
     } finally {
       setLoading(false);
     }
@@ -95,13 +100,11 @@ export function NotesHistoryModal({ isOpen, contactId, contactName, onClose }: N
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
-            </div>
+            <Carregando linhas={3} />
+          ) : erro && notes.length === 0 ? (
+            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void loadNotes()} />
           ) : notes.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              Nenhuma nota registrada ainda
-            </div>
+            <EmptyState tamanho="compacto" title="Nenhuma nota registrada ainda" />
           ) : (
             notes.map(note => (
               <div key={note.id} className="bg-gray-50 rounded-lg p-4">

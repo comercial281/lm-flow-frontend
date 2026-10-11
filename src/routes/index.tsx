@@ -43,6 +43,8 @@ import RedirecionaAssistente from '@/pages/Customer/Automations/SalesAgents/Redi
 import PrivateRoute from './PrivateRoute';
 import AcademiaRoute from './AcademiaRoute';
 import PublicRoute from './PublicRoute';
+import Carregando from '@/components/base/Carregando';
+import LoadingScreen from '@/components/LoadingScreen';
 import CustomerRoute from './CustomerRoute';
 import SmartRedirect from './SmartRedirect';
 import RouterGuard from '@/guards/RouterGuard';
@@ -221,11 +223,7 @@ const ChatRouteElement = (
 // Fallback padrão do Suspense compartilhado que envolve o <Outlet/> de cada
 // grupo de layout persistente — só o CONTEÚDO pisca "Carregando...", nunca o
 // menu/header, porque o MainLayout/AdminLayout já commitou fora desse Suspense.
-const outletSuspenseFallback = (
-  <div className="flex items-center justify-center h-full">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-  </div>
-);
+const outletSuspenseFallback = <Carregando variante="texto" linhas={6} className="p-6" />;
 
 const AppRouter = () => {
   return (
@@ -233,11 +231,7 @@ const AppRouter = () => {
       <RouterGuard>
         <GlobalEventTracker />
         <Suspense
-          fallback={
-            <div className="flex items-center justify-center h-screen w-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-            </div>
-          }
+          fallback={<LoadingScreen fullScreen />}
         >
         <Routes>
           {/* Redirecionamento inteligente da raiz baseado no tipo de usuário */}

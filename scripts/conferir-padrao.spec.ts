@@ -326,3 +326,49 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     expect(saida).not.toContain('Lista.spec.tsx');
   });
 });
+
+// Peças 13 (Carregando) e 7 (Estado vazio), escolha do dono em 10/10/2026.
+// @ts-expect-error módulo .mjs sem tipos
+import { rodinhasCentrais, telasEmBranco, vaziosSoltos } from './conferir-padrao.mjs';
+
+describe('rodinhaCentral: rodinha no meio da tela vira esqueleto', () => {
+  const conta = (codigo: string) => rodinhasCentrais(codigo).length;
+  it('conta a rodinha grande e a centralizada, fora de botão', () => {
+    expect(conta('const a = <div className="flex justify-center py-8"><Loader2 className="h-4 w-4 animate-spin" /></div>;')).toBe(1);
+    expect(conta('const a = <div><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;')).toBe(1);
+    expect(conta('const a = <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />;')).toBe(1);
+  });
+  it('não conta rodinha de botão nem a pequena ao lado de um texto', () => {
+    expect(conta('const a = <Button disabled><div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>Salvar</Button>;')).toBe(0);
+    expect(conta('const a = <button><Loader2 className="h-4 w-4 animate-spin" /></button>;')).toBe(0);
+    expect(conta('const a = <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Enviando…</span>;')).toBe(0);
+  });
+});
+
+describe('telaEmBranco: Suspense sem nada enquanto carrega', () => {
+  it('conta fallback={null} de tela ou aba e diz o que carrega', () => {
+    const achados = telasEmBranco('const a = <Suspense fallback={null}><CardConversationTab item={i} /></Suspense>;');
+    expect(achados).toHaveLength(1);
+    expect(achados[0].texto).toContain('<CardConversationTab>');
+  });
+  it('não conta janela carregada sob demanda nem fallback com esqueleto', () => {
+    expect(telasEmBranco('const a = <Suspense fallback={null}><ScheduleVisitDialog open /></Suspense>;')).toHaveLength(0);
+    expect(telasEmBranco('const a = <Suspense fallback={<Carregando />}><Aba /></Suspense>;')).toHaveLength(0);
+  });
+});
+
+describe('vazioSolto: "Nenhum…" escrito à mão fora do EmptyState', () => {
+  const textos = (codigo: string) => vaziosSoltos(codigo).map((a: { texto: string }) => a.texto);
+  it('conta texto entre tags e string que vira filho de tag', () => {
+    expect(textos('const a = <p className="text-sm text-muted-foreground">Nenhuma visita ainda.</p>;')).toEqual(['Nenhuma visita ainda.']);
+    expect(textos("const a = <div>{vazio ? 'Nenhum lead nesta aba.' : null}</div>;")).toEqual(['Nenhum lead nesta aba.']);
+  });
+  it('não conta opção de lista, o EmptyState, o Aviso nem "Nenhum" sozinho', () => {
+    expect(textos('const a = <option value="">Nenhum</option>;')).toEqual([]);
+    expect(textos('const a = <SelectItem value="x">Nenhuma etapa</SelectItem>;')).toEqual([]);
+    expect(textos('const a = <EmptyState tamanho="compacto" title="Nenhum lead" description={<>Nenhum ainda, <Link to="/x">crie</Link>.</>} />;')).toEqual([]);
+    expect(textos('const a = <Aviso tom="atencao">Nenhum grupo apareceu.</Aviso>;')).toEqual([]);
+    expect(textos('const a = <span>Nenhum</span>;')).toEqual([]);
+    expect(textos("const a = <Campo hint=\"Nenhum marcado = todos\" />;")).toEqual([]);
+  });
+});

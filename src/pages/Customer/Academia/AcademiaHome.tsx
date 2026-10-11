@@ -20,6 +20,8 @@ import CourseCard from './CourseCard';
 import CourseForm from './CourseForm';
 import ModuleForm from './ModuleForm';
 import { GERAL_COURSE_ID } from './_lib';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 interface Props {
@@ -30,8 +32,8 @@ interface Props {
 export default function AcademiaHome({ canEdit, embedded }: Props) {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const navigate = useNavigate();
-  const { data: courses = [], isLoading: loadingCourses } = useCourses();
-  const { data: modules = [], isLoading: loadingModules } = useModules();
+  const { data: courses = [], isLoading: loadingCourses, error: erroCourses, refetch: refetchCourses } = useCourses();
+  const { data: modules = [], isLoading: loadingModules, error: erroModules, refetch: refetchModules } = useModules();
   const moduleIds = useMemo(() => modules.map((m) => m.id), [modules]);
   const { data: allLessons = [] } = useAllLessons(moduleIds);
   const { data: progress = {} } = useProgress();
@@ -43,6 +45,8 @@ export default function AcademiaHome({ canEdit, embedded }: Props) {
 
   const userRef = getCurrentUserRef();
   const isLoading = loadingCourses || loadingModules;
+  // Erro nunca vira "Nenhum curso ainda": a falha da carga mostra o erro com "Tentar de novo".
+  const erroAoCarregar = erroCourses || erroModules;
 
   // Lições por módulo (ordem já vem do hook).
   const lessonsByModule = useMemo(() => {
@@ -156,16 +160,24 @@ export default function AcademiaHome({ canEdit, embedded }: Props) {
           </button>
         )}
 
-        {isLoading && <p className="text-sm text-muted-foreground">Carregando...</p>}
+        {isLoading && <Carregando variante="cartoes" rotulo="Carregando..." />}
 
-        {!isLoading && !hasContent && (
-          <div className="text-center py-16">
-            <GraduationCap size={44} className="mx-auto text-muted-foreground/40 mb-3" strokeWidth={1.5} />
-            <p className="text-sm text-muted-foreground">Nenhum curso ainda.</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">
-              {canEdit ? 'Crie um curso pra montar a área de membros.' : 'Em breve teremos conteúdo aqui.'}
-            </p>
-          </div>
+        {!isLoading && !hasContent && erroAoCarregar && (
+          <EmptyState
+            tipo="erro"
+            aoTentarDeNovo={() => {
+              if (erroCourses) void refetchCourses();
+              if (erroModules) void refetchModules();
+            }}
+          />
+        )}
+
+        {!isLoading && !hasContent && !erroAoCarregar && (
+          <EmptyState
+            icon={GraduationCap}
+            title="Nenhum curso ainda."
+            description={canEdit ? 'Crie um curso pra montar a área de membros.' : 'Em breve teremos conteúdo aqui.'}
+          />
         )}
 
         {/* Grade de cursos */}

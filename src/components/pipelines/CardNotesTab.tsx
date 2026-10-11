@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Button, Textarea } from '@/components/ui/ds';
-import { Loader2, Send, Trash2, MessageSquareText } from 'lucide-react';
+import { Loader2, Send, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { notesService, Note } from '@/services/notes/notesService';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 interface CardNotesTabProps {
   contactId: string | null;
@@ -23,6 +25,7 @@ function initials(name?: string) {
 export default function CardNotesTab({ contactId }: CardNotesTabProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState(false);
   const [content, setContent] = useState('');
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -33,8 +36,10 @@ export default function CardNotesTab({ contactId }: CardNotesTabProps) {
     try {
       const data = await notesService.getByContact(contactId);
       setNotes(data);
+      setErro(false);
     } catch {
       setNotes([]);
+      setErro(true);
     } finally {
       setLoading(false);
     }
@@ -109,14 +114,11 @@ export default function CardNotesTab({ contactId }: CardNotesTabProps) {
       {/* Feed */}
       <div className="flex-1 overflow-y-auto mt-4 space-y-3">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
+          <Carregando linhas={3} />
+        ) : erro ? (
+          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} />
         ) : notes.length === 0 ? (
-          <div className="text-sm text-muted-foreground py-12 text-center flex flex-col items-center gap-2">
-            <MessageSquareText className="h-6 w-6 opacity-50" />
-            Nenhum comentário ainda. Seja o primeiro a postar.
-          </div>
+          <EmptyState tamanho="compacto" title="Nenhum comentário ainda." description="Seja o primeiro a postar." />
         ) : (
           notes.map(note => (
             <div key={note.id} className="flex gap-2.5">

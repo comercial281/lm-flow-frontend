@@ -3,6 +3,8 @@ import { formatDateTimeBR } from '@/utils/dateUtils';
 import { CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Badge } from '@evoapi/design-system/badge';
 import api from '@/services/core/api';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 interface AutomationLog {
   id: number;
@@ -45,9 +47,7 @@ export function AutomationLogs({ automationRuleId }: AutomationLogsProps) {
   }, [automationRuleId]);
 
   if (loading) {
-    return (
-      <div className="text-sm text-muted-foreground p-4">Carregando logs...</div>
-    );
+    return <Carregando linhas={3} rotulo="Carregando logs..." className="p-4" />;
   }
 
   if (error) {
@@ -58,7 +58,9 @@ export function AutomationLogs({ automationRuleId }: AutomationLogsProps) {
 
   if (!logs.length) {
     return (
-      <div className="text-sm text-muted-foreground p-4">Nenhum log de execucao ainda.</div>
+      <div className="p-4">
+        <EmptyState tamanho="compacto" title="Nenhum log de execucao ainda." />
+      </div>
     );
   }
 

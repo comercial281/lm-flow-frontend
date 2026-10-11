@@ -23,6 +23,7 @@ import {
   getFormattedPreChatFields,
 } from './helpers/preChatHelpers';
 import Aviso from '@/components/base/Aviso';
+import EmptyState from '@/components/base/EmptyState';
 
 interface PreChatFormProps {
   inboxId: string;
@@ -244,9 +245,7 @@ export default function PreChatForm({
                   </div>
 
                   {enabledFieldsCount === 0 && (
-                    <div className="text-center py-4 text-muted-foreground">
-                      Nenhum campo ativo para exibir
-                    </div>
+                    <EmptyState tamanho="compacto" title="Nenhum campo ativo para exibir" />
                   )}
                 </div>
               )}

@@ -52,6 +52,8 @@ import {
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 // Canvas do construtor de fluxos. Fonte de verdade é o array `nodes` (árvore
 // de ponteiros); os Node/Edge do React Flow são SEMPRE derivados dele, nunca
@@ -126,6 +128,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const [initialNodeId, setInitialNodeId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState<ReturnType<typeof snapshot> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [erroAoCarregar, setErroAoCarregar] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pendingSource, setPendingSource] = useState<{ id: string; handle: OutputHandle } | null>(null);
   const [testResult, setTestResult] = useState<TestRunResult | null>(null);
@@ -153,7 +156,9 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     setLoading(true);
     try {
       applyFlow(await flowAutomationsService.get(id));
+      setErroAoCarregar(false);
     } catch (e) {
+      setErroAoCarregar(true);
       toast.error(serverMessage(e, 'Não deu pra carregar o fluxo'));
     } finally {
       setLoading(false);
@@ -539,8 +544,11 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const messageEvent = triggerEvents(trigger).includes('lead.message_received') ? 'lead.message_received' : trigger.event;
   const reentryAlert = reentryWarning(reentry, messageEvent);
 
+  if (!loading && !automation && erroAoCarregar) {
+    return <EmptyState tipo="erro" className="h-full" aoTentarDeNovo={() => void load()} />;
+  }
   if (loading || !automation) {
-    return <div className="flex h-full items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+    return <Carregando variante="texto" linhas={6} className="p-6" />;
   }
 
   return (

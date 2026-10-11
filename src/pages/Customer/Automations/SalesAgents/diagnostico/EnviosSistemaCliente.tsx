@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { salesAgentsService, type WebhookDelivery } from '@/services/salesAgents/salesAgentsService';
 import { dataHora, fraseDaResposta, segundos, situacaoDoEnvio, type Tom } from '@/features/salesAgents/sistemaDoCliente';
 import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
@@ -53,11 +55,14 @@ export default function EnviosSistemaCliente({ agentId }: { agentId: string }) {
       </div>
 
       {erro && <p className="text-xs text-red-600 mt-1">{erro}</p>}
-      {envios === null && !erro && <p className="text-xs text-muted-foreground mt-1">Carregando…</p>}
+      {envios === null && !erro && <Carregando linhas={2} rotulo="Carregando…" className="mt-1" />}
       {envios?.length === 0 && (
-        <p className="text-xs text-muted-foreground mt-1">
-          Nenhum envio ainda. Use "Mandar um lead de teste" em Configurar → Objetivo.
-        </p>
+        <EmptyState
+          tamanho="compacto"
+          className="mt-2"
+          title="Nenhum envio ainda."
+          description='Use "Mandar um lead de teste" em Configurar → Objetivo.'
+        />
       )}
 
       <ul className="mt-2 divide-y divide-sidebar-border">

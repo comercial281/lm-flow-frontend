@@ -8,6 +8,7 @@ import {
   Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle, Label, Textarea,
 } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
+import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import { listOptionsService, type ListOption } from '@/services/listOptions/listOptionsService';
 
@@ -53,15 +54,15 @@ export default function MarcarPerdidoDialog({ aberto, nomeDoLead, salvando, aoFe
         </DialogDescription>
 
         {erro ? (
-          <EmptyState tipo="erro" aoTentarDeNovo={() => { void carregar(); }} />
+          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => { void carregar(); }} />
         ) : motivos === null ? (
-          <div className="flex justify-center py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-label="Carregando os motivos" />
-          </div>
+          <Carregando variante="texto" linhas={2} rotulo="Carregando os motivos" />
         ) : motivos.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nenhum motivo de perda ativo. Um gestor cadastra em Minha imobiliária › Listas.
-          </p>
+          <EmptyState
+            tamanho="compacto"
+            title="Nenhum motivo de perda ativo."
+            description="Um gestor cadastra em Minha imobiliária › Listas."
+          />
         ) : (
           <div className="space-y-4">
             <div className="grid gap-1.5">

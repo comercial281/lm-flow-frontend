@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Pagina, BaseHeader } from '@/components/base';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import {
   Megaphone,
   ShieldCheck,
@@ -8,7 +10,6 @@ import {
   ListOrdered,
   BarChart3,
   Plus,
-  Loader2,
   Radio,
   ExternalLink,
   Pause,
@@ -79,6 +80,8 @@ export default function Disparos() {
   const [pipelineId, setPipelineId] = useState('');
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [campaigns, setCampaigns] = useState<BroadcastCampaign[]>([]);
+  // Falha na leitura não vira "Nenhum disparo neste funil ainda".
+  const [erroDisparos, setErroDisparos] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
   // Aba Templates
@@ -91,13 +94,21 @@ export default function Disparos() {
   const [metrics, setMetrics] = useState<CloudMetrics | null>(null);
   const [metricsDays, setMetricsDays] = useState(30);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
+  // Falha na leitura não vira "Nenhum número oficial conectado ainda".
+  const [erroMetricas, setErroMetricas] = useState(false);
 
   const loadMetrics = useCallback((days: number) => {
     setLoadingMetrics(true);
     broadcastsService
       .whatsappCloudMetrics(days)
-      .then(setMetrics)
-      .catch(() => setMetrics(null))
+      .then(m => {
+        setMetrics(m);
+        setErroMetricas(false);
+      })
+      .catch(() => {
+        setMetrics(null);
+        setErroMetricas(true);
+      })
       .finally(() => setLoadingMetrics(false));
   }, []);
 
@@ -133,11 +144,13 @@ export default function Disparos() {
   const loadCampaigns = useCallback((pid: string) => {
     if (!pid) {
       setCampaigns([]);
+      setErroDisparos(false);
       return;
     }
-    broadcastsService.list(pid).then(list => { setCampaigns(list); setRecusado(false); }).catch(e => {
+    broadcastsService.list(pid).then(list => { setCampaigns(list); setRecusado(false); setErroDisparos(false); }).catch(e => {
       setCampaigns([]);
       if (isForbiddenError(e)) setRecusado(true);
+      else setErroDisparos(true);
     });
   }, []);
 
@@ -233,10 +246,13 @@ export default function Disparos() {
             )}
           </div>
 
-          {campaigns.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Nenhum disparo neste funil ainda. Clique em "Novo disparo" pra criar o primeiro.
-            </div>
+          {campaigns.length === 0 && erroDisparos ? (
+            <EmptyState tipo="erro" aoTentarDeNovo={() => loadCampaigns(pipelineId)} />
+          ) : campaigns.length === 0 ? (
+            <EmptyState
+              title="Nenhum disparo neste funil ainda."
+              description='Clique em "Novo disparo" pra criar o primeiro.'
+            />
           ) : (
             <>
               {/* KPIs — agregado real das campanhas */}
@@ -355,18 +371,13 @@ export default function Disparos() {
       {tab === 'templates' && (
         <div className="space-y-4">
           {loadingChannels ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="w-4 h-4 animate-spin" /> Carregando canais...
-            </div>
+            <Carregando variante="texto" linhas={4} rotulo="Carregando canais..." />
           ) : channels.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-8 text-center space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Nenhum canal WhatsApp Oficial conectado. Templates são criados e aprovados por número oficial.
-              </p>
-              <Button variant="outline" onClick={() => navigate('/channels')}>
-                <Plus className="w-4 h-4 mr-1" /> Conectar canal oficial
-              </Button>
-            </div>
+            <EmptyState
+              title="Nenhum canal WhatsApp Oficial conectado."
+              description="Templates são criados e aprovados por número oficial."
+              action={{ label: 'Conectar canal oficial', onClick: () => navigate('/channels'), variant: 'outline' }}
+            />
           ) : (
             <>
               {channels.length > 1 && (
@@ -411,13 +422,9 @@ export default function Disparos() {
             </Button>
           </div>
           {loadingChannels ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
-            </div>
+            <Carregando rotulo="Carregando..." />
           ) : channels.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Nenhum canal oficial conectado ainda.
-            </div>
+            <EmptyState title="Nenhum canal oficial conectado ainda." />
           ) : (
             <div className="space-y-3">
               {channels.map(o => {
@@ -454,12 +461,10 @@ export default function Disparos() {
             carregar um deles na sequência de mensagens.
           </p>
           {funnels.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-8 text-center space-y-2">
-              <p className="text-sm text-muted-foreground">Nenhum funil ainda.</p>
-              <Button variant="outline" onClick={() => navigate(FLOW_KIND_COPY.conversation.listPath)}>
-                <Plus className="w-4 h-4 mr-1" /> Novo funil
-              </Button>
-            </div>
+            <EmptyState
+              title="Nenhum funil ainda."
+              action={{ label: 'Novo funil', onClick: () => navigate(FLOW_KIND_COPY.conversation.listPath), variant: 'outline' }}
+            />
           ) : (
             <div className="space-y-2">
               {funnels.map(f => {
@@ -581,13 +586,11 @@ export default function Disparos() {
           })()}
 
           {loadingMetrics ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="w-4 h-4 animate-spin" /> Carregando métricas...
-            </div>
+            <Carregando variante="texto" linhas={4} rotulo="Carregando métricas..." />
+          ) : !metrics && erroMetricas ? (
+            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => loadMetrics(metricsDays)} />
           ) : !metrics || metrics.channels.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Nenhum número oficial conectado ainda, ou sem envios no período.
-            </div>
+            <EmptyState tamanho="compacto" title="Nenhum número oficial conectado ainda, ou sem envios no período." />
           ) : (
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

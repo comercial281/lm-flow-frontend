@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Button, Input, Label, Textarea } from '@/components/ui/ds';
 import Aviso from '@/components/base/Aviso';
+import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
 import SendFromField from '@/components/numbers/SendFromField';
 import { applySendFrom, sendFromOf } from '@/features/numbers/sendFrom';
@@ -252,9 +253,15 @@ function LabelChecklist({ selected, onChange, resources }: { selected: string[];
       <Label className="text-xs">Etiquetas</Label>
       <div className="max-h-52 overflow-y-auto rounded-md border border-border divide-y divide-border">
         {resources.labels.length === 0 && missing.length === 0 && (
-          <p className="text-xs text-muted-foreground p-2">
-            {resources.loading ? 'Carregando as etiquetas…' : 'Nenhuma etiqueta cadastrada. Crie em Configurações → Etiquetas.'}
-          </p>
+          resources.loading ? (
+            <p className="text-xs text-muted-foreground p-2">Carregando as etiquetas…</p>
+          ) : (
+            <EmptyState
+              tamanho="compacto"
+              title="Nenhuma etiqueta cadastrada. Crie em Configurações → Etiquetas."
+              className="m-2 p-3 text-xs"
+            />
+          )
         )}
         {[...resources.labels.map(l => l.title), ...missing].map(title => (
           <label key={title} className="flex items-center gap-2 px-2.5 py-2 cursor-pointer hover:bg-muted/50 text-sm">

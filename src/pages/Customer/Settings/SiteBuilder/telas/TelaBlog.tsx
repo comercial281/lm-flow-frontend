@@ -4,7 +4,7 @@ import {
   Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/ds';
 import {
-  Archive, Edit, Image as ImageIcon, Lightbulb, Loader2, Newspaper, Plus, RefreshCw, Send, Trash2, X,
+  Archive, Edit, Image as ImageIcon, Lightbulb, Loader2, Newspaper, Plus, Send, Trash2, X,
 } from 'lucide-react';
 import { formatDateBR } from '@/utils/dateUtils';
 import { apiErrorMessage } from '@/utils/apiHelpers';
@@ -14,6 +14,8 @@ import {
   type ArticleFormData, type Site, type SiteArticle,
 } from '@/services/siteBuilder/siteBuilderService';
 import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 const EMPTY_ARTICLE_FORM: ArticleFormData = {
   title: '',
@@ -40,6 +42,8 @@ export default function TelaBlog({ site }: { site: Site }) {
   // Articles
   const [articles, setArticles] = useState<SiteArticle[]>([]);
   const [articlesLoading, setArticlesLoading] = useState(false);
+  // Falha na carga não pode virar "Nenhum artigo criado" (erro nunca vira vazio).
+  const [articlesErro, setArticlesErro] = useState(false);
   const [articleModal, setArticleModal] = useState(false);
   const [editingArticle, setEditingArticle] = useState<SiteArticle | null>(null);
   const [articleForm, setArticleForm] = useState<ArticleFormData>(EMPTY_ARTICLE_FORM);
@@ -56,7 +60,9 @@ export default function TelaBlog({ site }: { site: Site }) {
     setArticlesLoading(true);
     try {
       setArticles(await siteBuilderService.listArticles(site.id));
+      setArticlesErro(false);
     } catch {
+      setArticlesErro(true);
       toast.error('Erro ao carregar artigos');
     } finally {
       setArticlesLoading(false);
@@ -193,18 +199,15 @@ export default function TelaBlog({ site }: { site: Site }) {
         </div>
 
         {articlesLoading ? (
-          <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-            <RefreshCw className="h-4 w-4 animate-spin mr-2" />Carregando...
-          </div>
+          <Carregando linhas={3} />
+        ) : articlesErro && articles.length === 0 ? (
+          <EmptyState tipo="erro" aoTentarDeNovo={() => void loadArticles()} />
         ) : articles.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Newspaper className="h-10 w-10 mb-2 opacity-30" />
-            <p className="text-sm">Nenhum artigo criado</p>
-            <Button size="sm" className="mt-3" onClick={openCreateArticle}>
-              <Plus className="h-4 w-4 mr-1" />
-              Criar primeiro artigo
-            </Button>
-          </div>
+          <EmptyState
+            icon={Newspaper}
+            title="Nenhum artigo criado"
+            action={{ label: 'Criar primeiro artigo', onClick: openCreateArticle }}
+          />
         ) : (
           <div className="space-y-2">
             {articles.map(article => (
@@ -315,8 +318,8 @@ export default function TelaBlog({ site }: { site: Site }) {
                   <RichTextEditor ref={articleEditorRef} showToolbar
                     placeholder="Escreva o conteúdo do artigo... (use a barra para negrito, itálico e listas)" />
                   {articleLoadingBody && (
-                    <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/70 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" /> Carregando conteúdo...
+                    <div className="absolute inset-0 rounded-lg bg-background/70 p-4">
+                      <Carregando variante="texto" linhas={5} rotulo="Carregando conteúdo..." />
                     </div>
                   )}
                 </div>

@@ -37,6 +37,7 @@ import {
 } from '@/hooks/useKnowledge';
 import { parseVideoUrl, formatDuration } from './lib';
 import VideoEmbed from './VideoEmbed';
+import EmptyState from '@/components/base/EmptyState';
 import CommentsSection from './CommentsSection';
 import { toast } from 'sonner';
 
@@ -48,7 +49,7 @@ interface Props {
 }
 
 export default function CoursePlayer({ module: m, onBack, canEdit }: Props) {
-  const { data: lessons = [], isLoading } = useLessons(m.id);
+  const { data: lessons = [], isLoading, error, refetch } = useLessons(m.id);
   const { data: progress = {} } = useProgress();
   const toggleProgress = useToggleProgress();
 
@@ -117,10 +118,11 @@ export default function CoursePlayer({ module: m, onBack, canEdit }: Props) {
 
         <div className="flex-1 overflow-y-auto py-2">
           {isLoading && <p className="px-4 py-2 text-xs text-muted-foreground">Carregando...</p>}
-          {!isLoading && lessons.length === 0 && (
-            <p className="px-4 py-6 text-xs text-muted-foreground text-center">
-              Nenhuma aula neste módulo ainda.
-            </p>
+          {!isLoading && error && (
+            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void refetch()} className="mx-4" />
+          )}
+          {!isLoading && !error && lessons.length === 0 && (
+            <EmptyState tamanho="compacto" title="Nenhuma aula neste módulo ainda." className="mx-4" />
           )}
           {filtered.map((lesson) => {
             const realIdx = lessons.findIndex((l) => l.id === lesson.id);

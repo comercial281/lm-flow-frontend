@@ -7,6 +7,8 @@ export { default as BaseForm } from './BaseForm';
 export { default as BaseFilter } from './BaseFilter';
 export { default as BaseFilterRow } from './BaseFilterRow';
 export { default as EmptyState } from './EmptyState';
+export { default as Carregando } from './Carregando';
+export type { CarregandoProps, FormaDoCarregando } from './Carregando';
 export { default as Aviso, COR_DO_TOM, ICONE_DO_TOM } from './Aviso';
 export type { AvisoProps, TomDoAviso } from './Aviso';
 export { default as Faixa } from './Faixa';

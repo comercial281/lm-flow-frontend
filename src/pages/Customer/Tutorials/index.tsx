@@ -7,6 +7,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FileText, GraduationCap, AlertTriangle } from 'lucide-react';
 import { BaseHeader } from '@/components/base';
+import Carregando from '@/components/base/Carregando';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useCategories } from '@/hooks/useKnowledge';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
@@ -116,9 +117,7 @@ const Tutorials = () => {
         )}
         <Suspense
           fallback={
-            <div className="flex-1 flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-            </div>
+            <Carregando variante="texto" linhas={6} className="flex-1 p-6" />
           }
         >
           {tab === 'docs' && <DocsTab categoryId={categoryId} canEdit={canEdit} />}

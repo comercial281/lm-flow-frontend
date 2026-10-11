@@ -28,6 +28,7 @@ import { PhoneInput } from '@/components/shared/PhoneInput';
 import '@/components/shared/PhoneInput.css';
 import { contactSaveError } from '@/utils/contactErrors';
 import { telefone } from '@/lib/formato';
+import Carregando from '@/components/base/Carregando';
 
 // Normaliza telefone para E.164 (backend exige). Limpa tudo que não é dígito e prefixa "+".
 function normalizePhoneE164(raw: string): string {
@@ -492,9 +493,7 @@ export default function AddItemModal({
             <Label>{t('addItem.availableItems')}</Label>
             <div className="border rounded-lg h-48 overflow-y-auto">
               {isLoadingItems ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
-                </div>
+                <Carregando linhas={3} className="px-3" />
               ) : availableItems.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   <div className="text-center">

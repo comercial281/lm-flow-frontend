@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { plural } from '@/lib/formato';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import {
   academyAnnouncementsService,
   type AnnounceConfig,
@@ -46,6 +48,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
   const [grupos, setGrupos] = useState<AvailableGroup[]>([]);
   const [foraDaLista, setForaDaLista] = useState(0);
   const [buscandoGrupos, setBuscandoGrupos] = useState(false);
+  const [erroGrupos, setErroGrupos] = useState(false);
   const [escolhidos, setEscolhidos] = useState<string[]>([]);
   const [busca, setBusca] = useState('');
   const [previa, setPrevia] = useState('');
@@ -67,7 +70,9 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
       const r = await academyAnnouncementsService.groups(nomeInstancia);
       setGrupos(r.data.data ?? []);
       setForaDaLista(r.data.hidden ?? 0);
+      setErroGrupos(false);
     } catch {
+      setErroGrupos(true);
       toast.error('Não deu para ler os grupos do WhatsApp agora.');
     } finally {
       setBuscandoGrupos(false);
@@ -229,9 +234,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
         </div>
 
         {carregando ? (
-          <div className="flex-1 flex items-center justify-center py-16">
-            <Loader2 className="animate-spin text-primary" size={22} />
-          </div>
+          <Carregando variante="texto" linhas={6} className="flex-1 px-5 py-6" />
         ) : (
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
             {desativado && (
@@ -368,13 +371,24 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                     </button>
                   );
                 })}
-                {visiveis.length === 0 && (
-                  <p className="px-3 py-6 text-center text-[11px] text-muted-foreground">
-                    {buscandoGrupos
-                      ? 'Procurando os grupos...'
-                      : 'Nenhum grupo terminado em "Leal Mídia" neste número.'}
-                  </p>
-                )}
+                {visiveis.length === 0 &&
+                  (buscandoGrupos ? (
+                    <p className="px-3 py-6 text-center text-[11px] text-muted-foreground">Procurando os grupos...</p>
+                  ) : erroGrupos && grupos.length === 0 ? (
+                    <EmptyState
+                      tipo="erro"
+                      tamanho="compacto"
+                      className="rounded-none border-0"
+                      aoTentarDeNovo={() => void carregarGrupos(instancia)}
+                    />
+                  ) : (
+                    <EmptyState
+                      tipo={busca.trim() && grupos.length > 0 ? 'semResultado' : 'vazio'}
+                      tamanho="compacto"
+                      className="rounded-none border-0"
+                      title='Nenhum grupo terminado em "Leal Mídia" neste número.'
+                    />
+                  ))}
               </div>
               <p className="text-[11px] text-muted-foreground">
                 Só aparecem os grupos cujo nome termina em <strong>Leal Mídia</strong> — é assim que
@@ -418,9 +432,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                       </p>
                     </div>
                   ))}
-                  {historico.length === 0 && (
-                    <p className="text-[11px] text-muted-foreground">Nenhum aviso enviado ainda.</p>
-                  )}
+                  {historico.length === 0 && <EmptyState tamanho="compacto" title="Nenhum aviso enviado ainda." />}
                 </div>
               )}
             </div>

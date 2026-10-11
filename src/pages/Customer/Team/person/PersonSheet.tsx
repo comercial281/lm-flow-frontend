@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import IconActionButton from '@/components/base/IconActionButton';
+import EmptyState from '@/components/base/EmptyState';
 import { autoAccessLabel } from '@/components/team/autoAccessLabel';
 // A janela que mostra o ESTRAGO antes de desativar (leads, conversas abertas,
 // ofertas da roleta, roletas e o WhatsApp exclusivo). É a mesma de sempre: só
@@ -435,7 +436,7 @@ export default function PersonSheet({
             ) : (
               <>
                 {numbers.length + addedNumbers.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Nenhum número ainda.</p>
+                  <EmptyState tamanho="compacto" title="Nenhum número ainda." />
                 ) : (
                   <ul className="space-y-1.5">
                     {owned.map(n => cartao(n, null))}

@@ -22,6 +22,7 @@ import {
 } from '@/hooks/useKnowledge';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import EmptyState from '@/components/base/EmptyState';
 interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -48,7 +49,7 @@ function buildTree(items: KnowledgeCategory[]): TreeNode[] {
 
 export default function CategoriaSidebar({ selectedId, onSelect, canEdit }: Props) {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
-  const { data: cats = [], isLoading } = useCategories();
+  const { data: cats = [], isLoading, error, refetch } = useCategories();
   const createMut = useCreateCategory();
   const updateMut = useUpdateCategory();
   const deleteMut = useDeleteCategory();
@@ -245,8 +246,11 @@ export default function CategoriaSidebar({ selectedId, onSelect, canEdit }: Prop
       </div>
       <div className="flex-1 overflow-y-auto py-2 space-y-0.5">
         {isLoading && <p className="px-3 py-2 text-xs text-muted-foreground">Carregando...</p>}
-        {!isLoading && tree.length === 0 && creatingParent !== null && (
-          <p className="px-3 py-2 text-xs text-muted-foreground">Nenhuma categoria ainda.</p>
+        {!isLoading && error && (
+          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void refetch()} className="mx-2 p-4" />
+        )}
+        {!isLoading && !error && tree.length === 0 && creatingParent !== null && (
+          <EmptyState tamanho="compacto" title="Nenhuma categoria ainda." className="mx-2 p-4" />
         )}
         {creatingParent === null && (
           <div className="px-2 py-1">

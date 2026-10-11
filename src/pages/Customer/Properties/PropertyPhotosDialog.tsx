@@ -38,6 +38,8 @@ import {
   MAX_UPLOAD_BYTES,
 } from '@/services/propertyPhotos/propertyPhotosService';
 import { Seletor } from '@/components/base/Seletor';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { cn } from '@/lib/utils';
 import { ehVideoOuAudio, idDaCapa, moverParaCapa, posicoes } from './ordemDasFotos';
 
@@ -174,6 +176,7 @@ export default function PropertyPhotosDialog({
 }) {
   const [photos, setPhotos] = useState<PropertyPhoto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragOver, setDragOver] = useState(false);
@@ -189,7 +192,9 @@ export default function PropertyPhotosDialog({
     setLoading(true);
     try {
       setPhotos(await propertyPhotosService.list(property.id));
+      setErro(false);
     } catch {
+      setErro(true);
       toast.error('Erro ao carregar fotos');
     } finally {
       setLoading(false);
@@ -432,15 +437,11 @@ export default function PropertyPhotosDialog({
 
         {/* Photo list */}
         {loading ? (
-          <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            Carregando fotos...
-          </div>
+          <Carregando variante="cartoes" linhas={3} rotulo="Carregando fotos..." className="py-2" />
+        ) : erro ? (
+          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void loadPhotos()} />
         ) : photos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-            <Image className="h-10 w-10 mb-2 opacity-30" />
-            <p className="text-sm">Nenhuma foto cadastrada</p>
-          </div>
+          <EmptyState tamanho="compacto" title="Nenhuma foto cadastrada" />
         ) : (
           <DndContext
             sensors={sensores}

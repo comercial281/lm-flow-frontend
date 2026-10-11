@@ -7,6 +7,8 @@ import { salesAgentsService, type WeeklyReportCheck, type WeeklyReportConfig, ty
 import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
 import { Seletor } from '@/components/base/Seletor';
 import Aviso from '@/components/base/Aviso';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { WEEKDAY_OPTIONS } from './TelaSugestoes';
 
 // ---------------- Relatórios (do CLIENTE, não da IA) ----------------
@@ -21,6 +23,9 @@ export default function TelaRelatorioSemanal() {
   const [payload, setPayload] = useState<WeeklyReportPayload | null>(null);
   const [targets, setTargets] = useState<WeeklyReportTargets>({ groups: [], managers: [] });
   const [loading, setLoading] = useState(true);
+  // Falha na leitura não vira "Nenhum relatório"/"Nenhum grupo": cada uma mostra o erro.
+  const [erroAoCarregar, setErroAoCarregar] = useState(false);
+  const [erroAlvos, setErroAlvos] = useState(false);
   const [busy, setBusy] = useState<'preview' | 'send' | 'text' | null>(null);
   const [texto, setTexto] = useState('');
   // "Por que não está saindo?" — só aparece depois do clique; a conferência é cara
@@ -30,18 +35,36 @@ export default function TelaRelatorioSemanal() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    let falhouAlvos = false;
     try {
       const [dados, alvos] = await Promise.all([
         salesAgentsService.weeklyReport(),
-        salesAgentsService.weeklyReportTargets().catch(() => ({ groups: [], managers: [] })),
+        salesAgentsService.weeklyReportTargets().catch(() => {
+          falhouAlvos = true;
+          return { groups: [], managers: [] };
+        }),
       ]);
       setPayload(dados);
       setTargets(alvos);
       setTexto(dados.current?.text ?? '');
+      setErroAoCarregar(false);
+      setErroAlvos(falhouAlvos);
     } catch {
       // Leitura de fundo não grita.
+      setErroAoCarregar(true);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  // "Tentar de novo" dos grupos/gestores relê só os destinos: o `load` regravaria
+  // o texto do relatório que a pessoa pode estar editando.
+  const recarregarAlvos = useCallback(async () => {
+    try {
+      setTargets(await salesAgentsService.weeklyReportTargets());
+      setErroAlvos(false);
+    } catch {
+      setErroAlvos(true);
     }
   }, []);
 
@@ -215,7 +238,7 @@ export default function TelaRelatorioSemanal() {
     lista.includes(valor) ? lista.filter((v) => v !== valor) : [...lista, valor];
 
   if (loading && !payload) {
-    return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+    return <Carregando variante="texto" linhas={6} className="py-2" />;
   }
 
   return (
@@ -291,12 +314,21 @@ export default function TelaRelatorioSemanal() {
 
       {/* Sem relatório na tela, dizer o que fazer — e não deixar um vazio que parece
           defeito, que é como esta aba se apresentava quando o botão falhava. */}
-      {!atual && !loading && (
-        <div className="rounded-md border border-dashed border-sidebar-border p-4 text-sm text-muted-foreground">
-          Nenhum relatório montado ainda. Clique em <span className="font-medium">Gerar prévia</span> para
-          montar o da semana fechada mais recente. Se ele não aparecer, o botão{' '}
-          <span className="font-medium">Por que não está saindo?</span> diz em qual ponto travou.
-        </div>
+      {!atual && !loading && erroAoCarregar && (
+        <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} />
+      )}
+      {!atual && !loading && !erroAoCarregar && (
+        <EmptyState
+          tamanho="compacto"
+          title="Nenhum relatório montado ainda."
+          description={
+            <>
+              Clique em <span className="font-medium">Gerar prévia</span> para montar o da semana fechada mais
+              recente. Se ele não aparecer, o botão <span className="font-medium">Por que não está saindo?</span> diz
+              em qual ponto travou.
+            </>
+          }
+        />
       )}
 
       {atual && (
@@ -367,11 +399,14 @@ export default function TelaRelatorioSemanal() {
 
         <div>
           <p className="text-xs text-muted-foreground mb-1">Grupos de WhatsApp desta imobiliária</p>
-          {targets.groups.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nenhum grupo desta imobiliária foi encontrado no número operacional. Você ainda pode
-              mandar para os gestores abaixo.
-            </p>
+          {targets.groups.length === 0 && erroAlvos ? (
+            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void recarregarAlvos()} />
+          ) : targets.groups.length === 0 ? (
+            <EmptyState
+              tamanho="compacto"
+              title="Nenhum grupo desta imobiliária foi encontrado no número operacional."
+              description="Você ainda pode mandar para os gestores abaixo."
+            />
           ) : (
             targets.groups.map((g) => (
               <label key={g.jid} className="flex items-center gap-2 text-sm cursor-pointer py-0.5">
@@ -388,11 +423,14 @@ export default function TelaRelatorioSemanal() {
 
         <div>
           <p className="text-xs text-muted-foreground mb-1">Gestores</p>
-          {targets.managers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nenhum gestor com WhatsApp cadastrado. O número sai do cadastro da pessoa, em
-              Configurações → Equipe.
-            </p>
+          {targets.managers.length === 0 && erroAlvos ? (
+            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void recarregarAlvos()} />
+          ) : targets.managers.length === 0 ? (
+            <EmptyState
+              tamanho="compacto"
+              title="Nenhum gestor com WhatsApp cadastrado."
+              description="O número sai do cadastro da pessoa, em Configurações → Equipe."
+            />
           ) : (
             targets.managers.map((m) => (
               <label key={m.id} className="flex items-center gap-2 text-sm cursor-pointer py-0.5">

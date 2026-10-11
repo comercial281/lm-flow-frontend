@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Building2 } from 'lucide-react';
 import { numero, porcentagem } from '@/lib/formato';
 import type { SiteDashboard } from '@/services/siteBuilder/siteBuilderService';
+import EmptyState from '@/components/base/EmptyState';
 
 const ROTULOS: Record<SiteDashboard['sources'][number]['key'], string> = {
   google: 'Google', direct: 'Link direto', ads: 'Anúncios', social: 'Redes sociais', other: 'Outros sites',
@@ -12,7 +13,7 @@ export function Origens({ dash }: { dash: SiteDashboard }) {
     <section className="space-y-3 rounded-xl border border-border bg-card p-5">
       <h2 className="text-base font-semibold">De onde vêm as visitas</h2>
       {dash.visits === 0 ? (
-        <p className="text-sm text-muted-foreground">Ainda sem visitas no período.</p>
+        <EmptyState tamanho="compacto" title="Ainda sem visitas no período." />
       ) : (
         <ul className="space-y-2.5">
           {dash.sources.map(s => (
@@ -37,7 +38,7 @@ export function ImoveisVistos({ dash }: { dash: SiteDashboard }) {
     <section className="space-y-3 rounded-xl border border-border bg-card p-5">
       <h2 className="text-base font-semibold">Imóveis mais vistos</h2>
       {dash.top_properties.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhum imóvel visto ainda.</p>
+        <EmptyState tamanho="compacto" title="Nenhum imóvel visto ainda." />
       ) : (
         <ul className="space-y-1">
           {dash.top_properties.slice(0, 5).map(p => (

@@ -6,6 +6,8 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import BaseHeader from '@/components/base/BaseHeader';
 import Pagina from '@/components/base/Pagina';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { apiErrorMessage } from '@/utils/apiHelpers';
@@ -39,6 +41,8 @@ export default function Tarefas() {
   const { ativas: categorias } = useCategoriasDeTarefa();
   const ultimoPedido = useRef(0);
   const [resposta, setResposta] = useState<RespostaDeAtividades | null>(null);
+  // A primeira carga falhou: mostra o erro com "Tentar de novo", nunca o esqueleto parado.
+  const [falhou, setFalhou] = useState(false);
   const [pessoas, setPessoas] = useState<PersonRef[]>([]);
   const [janela, setJanela] = useState<{ tarefa: TarefaAtividade | null; cardId?: string; categoria?: string } | null>(null);
 
@@ -58,9 +62,15 @@ export default function Tarefas() {
         ...(buscaFirme ? { q: buscaFirme } : {}),
       });
       // Só o pedido mais recente vale: resposta atrasada não sobrescreve.
-      if (meu === ultimoPedido.current) setResposta(nova);
+      if (meu === ultimoPedido.current) {
+        setResposta(nova);
+        setFalhou(false);
+      }
     } catch (e) {
-      if (meu === ultimoPedido.current) toast.error(apiErrorMessage(e, T.erro));
+      if (meu === ultimoPedido.current) {
+        toast.error(apiErrorMessage(e, T.erro));
+        setFalhou(true);
+      }
     }
   }, [balde, pessoa, categoria, buscaFirme, pagina]);
 
@@ -138,8 +148,12 @@ export default function Tarefas() {
       }
     >
       <div className="rounded-lg border border-border bg-background px-4">
-        {resposta && itens.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">{balde === 'hoje' ? 'Nada pra hoje.' : 'Nada por aqui.'}</p>
+        {!resposta && falhou ? (
+          <EmptyState tipo="erro" aoTentarDeNovo={() => void carregar()} />
+        ) : !resposta ? (
+          <Carregando linhas={5} rotulo="Carregando tarefas…" />
+        ) : itens.length === 0 ? (
+          <EmptyState title={balde === 'hoje' ? 'Nada pra hoje.' : 'Nada por aqui.'} />
         ) : (
           <ul className="divide-y divide-border/60">{itens.map(t => <LinhaDaTarefa key={t.id} tarefa={t} mostrarLead {...acoes} />)}</ul>
         )}

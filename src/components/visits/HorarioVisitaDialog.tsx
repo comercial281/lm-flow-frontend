@@ -25,6 +25,7 @@ import { avisoSemente, opcoesDeHora, type SeededFrom } from '@/features/visits/a
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { data } from '@/lib/formato';
 import Aviso from '@/components/base/Aviso';
+import EmptyState from '@/components/base/EmptyState';
 
 interface Props {
   open: boolean;
@@ -166,7 +167,7 @@ export function HorarioVisitaDialog({ open, onOpenChange }: Props) {
                 </Button>
               </div>
               {fechadas.length === 0 ? (
-                <p className="mt-2 text-sm text-muted-foreground">Nenhuma data fechada.</p>
+                <EmptyState tamanho="compacto" title="Nenhuma data fechada." className="mt-2 p-3" />
               ) : (
                 <ul className="mt-2 flex flex-wrap gap-2">
                   {fechadas.map(d => (

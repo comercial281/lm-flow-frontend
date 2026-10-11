@@ -18,6 +18,8 @@ import type { TemplateVariable, TenantTemplateVariable } from '@/types/messageFu
 import { BaseHeader, Pagina } from '@/components/base';
 import { plural } from '@/lib/formato';
 import { Seletor } from '@/components/base/Seletor';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 // ── Presets de value_source pro UI guiado ────────────────────────────────────
 
@@ -110,6 +112,8 @@ export default function TemplateVariables() {
   const [builtin, setBuiltin] = useState<TemplateVariable[]>([]);
   const [custom, setCustom] = useState<TenantTemplateVariable[]>([]);
   const [loading, setLoading] = useState(true);
+  // Falha na carga não pode virar "Nenhuma variável customizada" (erro nunca vira vazio).
+  const [erro, setErro] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<TenantTemplateVariable | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -125,7 +129,9 @@ export default function TemplateVariables() {
       const res = await tenantTemplateVariablesService.list();
       setBuiltin(res.builtin ?? []);
       setCustom(res.custom ?? []);
+      setErro(false);
     } catch (e: unknown) {
+      setErro(true);
       toast.error('Falha ao carregar variáveis');
     } finally {
       setLoading(false);
@@ -270,27 +276,25 @@ export default function TemplateVariables() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-8 text-sm text-muted-foreground gap-2">
-            <RefreshCw size={14} className="animate-spin" />
-            Carregando...
-          </div>
+          <Carregando variante="cartoes" linhas={3} />
+        ) : erro && custom.length === 0 ? (
+          <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />
         ) : custom.length === 0 ? (
-          <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-            <Code size={32} className="mx-auto mb-2 text-muted-foreground" />
-            <p className="font-semibold mb-1">Nenhuma variável customizada</p>
-            <p className="text-sm text-muted-foreground mb-4">
-              Crie variáveis específicas da sua conta pra usar nos funis (ex:
-              {' '}<code className="text-xs">{'{{empreendimento_atual}}'}</code>).
-            </p>
-            <p className="text-sm text-muted-foreground mb-4">
-              Você também não precisa criar na mão: ao conectar um formulário ao CRM, cada
-              campo respondido pelo lead vira uma variável aqui automaticamente.
-            </p>
-            <Button variant="outline" onClick={openCreate}>
-              <Plus size={14} className="mr-2" />
-              Criar primeira
-            </Button>
-          </div>
+          <EmptyState
+            icon={Code}
+            title="Nenhuma variável customizada"
+            description={
+              <>
+                Crie variáveis específicas da sua conta pra usar nos funis (ex:
+                {' '}<code className="text-xs">{'{{empreendimento_atual}}'}</code>).
+                <span className="mt-2 block text-sm">
+                  Você também não precisa criar na mão: ao conectar um formulário ao CRM, cada
+                  campo respondido pelo lead vira uma variável aqui automaticamente.
+                </span>
+              </>
+            }
+            action={{ label: 'Criar primeira', onClick: openCreate, variant: 'outline' }}
+          />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {custom.map(v => (

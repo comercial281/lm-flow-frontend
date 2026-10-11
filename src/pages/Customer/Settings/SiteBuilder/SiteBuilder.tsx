@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
-import { RefreshCw } from 'lucide-react';
 import { getTenantSlug } from '@/services/core/tenant';
 import { useLeadDestinationOptions } from '@/components/pipelines/useLeadDestinationOptions';
 import { siteRoutingFrom, siteRoutingPayload, type SiteRoutingState } from './siteLeadRouting';
@@ -31,6 +30,7 @@ import { useTenantFeatures, useClientToggle } from '@/contexts/TenantFeaturesCon
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useAlteracoesNaoSalvas } from '@/hooks/useAlteracoesNaoSalvas';
 import BarraSalvar from '@/components/base/BarraSalvar';
+import Carregando from '@/components/base/Carregando';
 import { BaseHeader, Pagina } from '@/components/base';
 import MeuSiteBarra from './MeuSiteBarra';
 import TelaPainel from './telas/TelaPainel';
@@ -392,10 +392,7 @@ export default function SiteBuilder() {
   if (loading) {
     return (
       <Pagina cabecalho={<BaseHeader title={telaInfo(tela).titulo} />}>
-        <div className="flex items-center justify-center p-6 text-muted-foreground">
-          <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
-          Carregando site...
-        </div>
+        <Carregando variante="texto" linhas={6} rotulo="Carregando site..." className="p-6" />
       </Pagina>
     );
   }

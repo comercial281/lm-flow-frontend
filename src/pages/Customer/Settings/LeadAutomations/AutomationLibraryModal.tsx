@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/ds';
 import { Search, Plus, Loader2, BookOpen, Check } from 'lucide-react';
 import api from '@/services/core/api';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import {
   automationTemplatesService,
   AutomationTemplate,
@@ -143,13 +145,13 @@ export default function AutomationLibraryModal({ open, onClose, onApplied }: Pro
         {/* Lista */}
         <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-2 mt-1">
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
-            </div>
+            <Carregando linhas={4} className="py-2" />
           ) : filtered.length === 0 ? (
-            <div className="text-center py-16 text-sm text-muted-foreground">
-              Nenhum modelo encontrado.
-            </div>
+            <EmptyState
+              tamanho="compacto"
+              tipo={search.trim() || category !== 'all' ? 'semResultado' : 'vazio'}
+              title="Nenhum modelo encontrado."
+            />
           ) : (
             filtered.map(tpl => {
               const applied = appliedIds.includes(tpl.id);
