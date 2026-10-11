@@ -69,9 +69,9 @@ describe('zero no plural (pt-BR)', () => {
 
   it('etiquetas: 0 etiquetas, 1 etiqueta, 2 etiquetas', async () => {
     const i18n = await carregar({ labels });
-    expect(i18n.t('labels:header.subtitle', { count: 0 })).toBe('Marcadores pra separar e achar contatos e conversas. · 0 etiquetas');
-    expect(i18n.t('labels:header.subtitle', { count: 1 })).toBe('Marcadores pra separar e achar contatos e conversas. · 1 etiqueta');
-    expect(i18n.t('labels:header.subtitle', { count: 2 })).toBe('Marcadores pra separar e achar contatos e conversas. · 2 etiquetas');
+    expect(i18n.t('labels:header.subtitle', { count: 0 })).toBe('Separe e ache seus leads e conversas. · 0 etiquetas');
+    expect(i18n.t('labels:header.subtitle', { count: 1 })).toBe('Separe e ache seus leads e conversas. · 1 etiqueta');
+    expect(i18n.t('labels:header.subtitle', { count: 2 })).toBe('Separe e ache seus leads e conversas. · 2 etiquetas');
   });
 
   it('macros: 0 macros, 1 macro, 2 macros', async () => {

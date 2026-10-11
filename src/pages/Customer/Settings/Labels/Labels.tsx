@@ -1,315 +1,166 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { SettingsLabelsTour } from '@/tours';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Button,
-} from '@/components/ui/ds';
-import { Tags, AlertTriangle } from 'lucide-react';
+import { Tags } from 'lucide-react';
 import { Pagina } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
 
 import { labelsService } from '@/services/contacts/labelsService';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
-import { Label, LabelsState, LabelFormData } from '@/types/settings';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { useAppDataStore } from '@/store/appDataStore';
+import { apiErrorMessage } from '@/utils/apiHelpers';
+import type { Label, LabelFormData } from '@/types/settings';
 
 import LabelsHeader from '@/components/labels/LabelsHeader';
-import LabelsTable from '@/components/labels/LabelsTable';
-import LabelsPagination from '@/components/labels/LabelsPagination';
 import LabelModal from '@/components/labels/LabelModal';
-import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
-
-const INITIAL_STATE: LabelsState = {
-  labels: [],
-  selectedLabelIds: [],
-  meta: {
-    pagination: {
-      page: 1,
-      page_size: DEFAULT_PAGE_SIZE,
-      total: 0,
-      total_pages: 0,
-    },
-  },
-  loading: {
-    list: false,
-    create: false,
-    update: false,
-    delete: false,
-    bulk: false,
-  },
-  searchQuery: '',
-  sortBy: 'title',
-  sortOrder: 'asc',
-  loadError: false,
-};
+import LinhaEtiqueta from './LinhaEtiqueta';
+import CaixaDoSistema from './CaixaDoSistema';
+import { agruparEtiquetas } from './agruparEtiquetas';
 
 export default function Labels() {
   const { t } = useLanguage('labels');
   const { can, isReady: permissionsReady } = useUserPermissions();
-  const [state, setState] = useState<LabelsState>(INITIAL_STATE);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [labelToDelete, setLabelToDelete] = useState<Label | null>(null);
-  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
-  const [labelModalOpen, setLabelModalOpen] = useState(false);
-  const [editingLabel, setEditingLabel] = useState<Label | null>(null);
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+  const fetchLabels = useAppDataStore(s => s.fetchLabels);
+
+  const [labels, setLabels] = useState<Label[]>([]);
+  const [busca, setBusca] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [modalAberto, setModalAberto] = useState(false);
+  const [editando, setEditando] = useState<Label | null>(null);
   const hasLoaded = useRef(false);
 
-  // Load labels
   const loadLabels = useCallback(async () => {
     if (!can('labels', 'read')) {
       toast.error(t('messages.permissionDenied.read'));
       return;
     }
-
-    setState(prev => ({ ...prev, loading: { ...prev.loading, list: true }, loadError: false }));
-
+    setLoading(true);
+    setLoadError(false);
     try {
-      const response = await labelsService.getLabels();
-      const total = response.meta.pagination.total;
-      const pageSize = response.meta.pagination.page_size;
-
-      setState(prev => ({
-        ...prev,
-        labels: response.data,
-        meta: {
-          pagination: {
-            page: response.meta.pagination.page,
-            page_size: pageSize,
-            total: total,
-            total_pages: response.meta.pagination.total_pages,
-            has_next_page: response.meta.pagination.has_next_page,
-            has_previous_page: response.meta.pagination.has_previous_page,
-          }
-        },
-        loading: { ...prev.loading, list: false },
-        loadError: false,
-      }));
+      const response = await labelsService.getLabels({ withCounts: true });
+      setLabels(response.data);
     } catch (error) {
-      // Antes: erro caía aqui e a tela ficava indistinguível de "0 etiquetas
-      // cadastradas" (só um toast que some sozinho) — parecia catálogo vazio
-      // quando na verdade a request falhou. Agora marca loadError pra render
-      // um estado de erro explícito, com botão de tentar de novo.
+      // Erro nunca vira lista vazia: a tela mostra o estado de erro com "Tentar de novo".
       console.error('Error loading labels:', error);
       toast.error(t('messages.loadError'));
-      setState(prev => ({ ...prev, loading: { ...prev.loading, list: false }, loadError: true }));
+      setLoadError(true);
+    } finally {
+      setLoading(false);
     }
   }, [can, t]);
 
-  // Initial load
   useEffect(() => {
-    if (!permissionsReady) {
-      return;
-    }
-
-    if (!hasLoaded.current) {
-      hasLoaded.current = true;
-      loadLabels();
-    }
+    if (!permissionsReady || hasLoaded.current) return;
+    hasLoaded.current = true;
+    loadLabels();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permissionsReady]);
 
-  // Handlers
-  const handleSearchChange = (query: string) => {
-    setState(prev => ({
-      ...prev,
-      searchQuery: query,
-      meta: { pagination: { ...prev.meta.pagination, page: 1 } },
-    }));
+  // Catálogo pode passar de milhares de etiquetas: agrupa só quando muda a lista ou a busca.
+  const grupos = useMemo(() => agruparEtiquetas(labels, busca), [labels, busca]);
+  const buscando = busca.trim().length > 0;
 
-    // For now, just filter client-side. In production, this should be server-side
-    if (query.trim()) {
-      const filteredLabels = state.labels.filter(
-        label =>
-          label.title.toLowerCase().includes(query.toLowerCase()) ||
-          label.description?.toLowerCase().includes(query.toLowerCase()),
-      );
-      setState(prev => ({
-        ...prev,
-        labels: filteredLabels,
-      }));
-    } else {
-      loadLabels();
-    }
-  };
-
-  const handlePageChange = (page: number) => {
-    setState(prev => ({
-      ...prev,
-      meta: { pagination: { ...prev.meta.pagination, page } },
-    }));
-
-    // For client-side pagination, this is just for UI state
-    // In production, this would trigger a new API call
-  };
-
-  const handlePerPageChange = (perPage: number) => {
-    setState(prev => ({
-      ...prev,
-      meta: { pagination: { ...prev.meta.pagination, page_size: perPage, page: 1 } },
-    }));
-  };
-
-  // Label actions
-  const handleCreateLabel = () => {
+  const handleCreate = () => {
     if (!can('labels', 'create')) {
       toast.error(t('messages.permissionDenied.create'));
       return;
     }
-
-    setEditingLabel(null);
-    setLabelModalOpen(true);
+    setEditando(null);
+    setModalAberto(true);
   };
 
-  const handleEditLabel = (label: Label) => {
+  const handleEdit = (label: Label) => {
     if (!can('labels', 'update')) {
       toast.error(t('messages.permissionDenied.update'));
       return;
     }
-    setEditingLabel(label);
-    setLabelModalOpen(true);
+    setEditando(label);
+    setModalAberto(true);
   };
 
-  const handleDeleteLabel = (label: Label) => {
-    if (!can('labels', 'delete')) {
-      toast.error(t('messages.permissionDenied.delete'));
+  const handleTrocarCor = async (label: Label) => {
+    if (!can('labels', 'update')) {
+      toast.error(t('messages.permissionDenied.update'));
       return;
     }
-
-    setLabelToDelete(label);
-    setDeleteDialogOpen(true);
-  };
-
-  // Bulk actions
-  const handleBulkDelete = () => {
-    if (!can('labels', 'delete')) {
-      toast.error(t('messages.permissionDenied.delete'));
-      return;
-    }
-    setBulkDeleteDialogOpen(true);
-  };
-
-  // Confirm delete single label
-  const confirmDeleteLabel = async () => {
-    if (!labelToDelete) return;
-
-    // Verificar permissão antes de executar
-    if (!can('labels', 'delete')) {
-      toast.error(t('messages.permissionDenied.delete'));
-      return;
-    }
-
-    setState(prev => ({ ...prev, loading: { ...prev.loading, delete: true } }));
-
     try {
-      await labelsService.deleteLabel(labelToDelete.id);
+      const nova = await labelsService.shuffleColor(label.id);
+      // Mantém contagem e nome de exibição que a resposta pode não trazer.
+      setLabels(prev => prev.map(l => (l.id === label.id ? { ...l, ...nova } : l)));
+      // Atualiza o catálogo guardado na hora, sem recarregar a lista inteira a cada troca.
+      useAppDataStore.setState(s => ({
+        labels: s.labels.map(x => (x.id === nova.id ? { ...x, color: nova.color } : x)),
+      }));
+    } catch (error) {
+      toast.error(apiErrorMessage(error, 'Não deu pra trocar a cor'));
+    }
+  };
+
+  const handleDelete = async (label: Label) => {
+    if (!can('labels', 'delete')) {
+      toast.error(t('messages.permissionDenied.delete'));
+      return;
+    }
+    const ok = await confirmar({
+      titulo: t('dialog.delete.title'),
+      descricao: t('dialog.delete.description', { title: label.display_name ?? label.title }),
+      rotuloDaAcao: t('dialog.delete.confirm'),
+      destrutivo: true,
+    });
+    if (!ok) return;
+    try {
+      await labelsService.deleteLabel(label.id);
       toast.success(t('messages.deleteSuccess'));
-
-      // Refresh the list
-      loadLabels();
-
-      setDeleteDialogOpen(false);
-      setLabelToDelete(null);
+      setLabels(prev => prev.filter(l => l.id !== label.id));
+      fetchLabels(true)?.catch(() => {});
     } catch (error) {
       console.error('Error deleting label:', error);
-      toast.error(t('messages.deleteError'));
-    } finally {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, delete: false } }));
+      toast.error(apiErrorMessage(error, t('messages.deleteError')));
     }
   };
 
-  // Confirm bulk delete
-  const confirmBulkDelete = async () => {
-    if (state.selectedLabelIds.length === 0) return;
-
-    // Verificar permissão antes de executar
-    if (!can('labels', 'delete')) {
-      toast.error(t('messages.permissionDenied.delete'));
+  const handleSubmit = async (data: LabelFormData) => {
+    const permissao = editando ? 'update' : 'create';
+    if (!can('labels', permissao)) {
+      toast.error(editando ? t('messages.permissionDenied.update') : t('messages.permissionDenied.create'));
       return;
     }
-
-    setState(prev => ({ ...prev, loading: { ...prev.loading, bulk: true } }));
-
+    setSalvando(true);
     try {
-      // Delete each selected label
-      await Promise.all(state.selectedLabelIds.map(id => labelsService.deleteLabel(id)));
-      toast.success(t('messages.bulkDeleteSuccess', { count: state.selectedLabelIds.length }));
-
-      // Clear selection and refresh
-      setState(prev => ({ ...prev, selectedLabelIds: [] }));
-      loadLabels();
-
-      setBulkDeleteDialogOpen(false);
-    } catch (error) {
-      console.error('Error bulk deleting labels:', error);
-      toast.error(t('messages.bulkDeleteError'));
-    } finally {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, bulk: false } }));
-    }
-  };
-
-  // Handle label form submission
-  const handleLabelFormSubmit = async (data: LabelFormData) => {
-
-    // Verificar permissão antes de executar
-    const requiredPermission = editingLabel ? 'update' : 'create';
-    if (!can('labels', requiredPermission)) {
-      toast.error(editingLabel ? t('messages.permissionDenied.update') : t('messages.permissionDenied.create'));
-      return;
-    }
-
-    setState(prev => ({
-      ...prev,
-      loading: { ...prev.loading, [editingLabel ? 'update' : 'create']: true },
-    }));
-
-    try {
-      if (editingLabel) {
-        // Update existing label
-        const response = await labelsService.updateLabel(editingLabel.id, data);
+      if (editando) {
+        const atualizada = await labelsService.updateLabel(editando.id, data);
         toast.success(t('messages.updateSuccess'));
-
-        // Update the specific label in the list
-        const updatedLabel = response.data;
-        setState(prev => ({
-          ...prev,
-          labels: prev.labels.map(label => (label.id === editingLabel.id ? updatedLabel : label)),
-        }));
+        setLabels(prev => prev.map(l => (l.id === editando.id ? { ...l, ...atualizada } : l)));
       } else {
-        // Create new label
         await labelsService.createLabel(data);
         toast.success(t('messages.createSuccess'));
+        await loadLabels();
       }
-
-      // Refresh the entire list for new labels
-      loadLabels();
-
-      // Close modal and clear editing state
-      setLabelModalOpen(false);
-      setEditingLabel(null);
+      fetchLabels(true)?.catch(() => {});
+      setModalAberto(false);
+      setEditando(null);
     } catch (error) {
       console.error('Error saving label:', error);
-      toast.error(editingLabel ? t('messages.updateError') : t('messages.createError'));
+      toast.error(apiErrorMessage(error, editando ? t('messages.updateError') : t('messages.createError')));
     } finally {
-      setState(prev => ({
-        ...prev,
-        loading: { ...prev.loading, create: false, update: false },
-      }));
+      setSalvando(false);
     }
   };
 
-  // Handle modal close
-  const handleLabelModalClose = (open: boolean) => {
+  const handleModalClose = (open: boolean) => {
     if (!open) {
-      setLabelModalOpen(false);
-      setEditingLabel(null);
+      setModalAberto(false);
+      setEditando(null);
     }
   };
+
+  const semNada = labels.length === 0;
+  const semResultado = !semNada && grupos.suas.length === 0 && grupos.sistema.length === 0;
 
   return (
     <Pagina
@@ -318,150 +169,91 @@ export default function Labels() {
       cabecalho={
         <div data-tour="settings-labels-header">
           <LabelsHeader
-            totalCount={state.meta.pagination.total}
-            selectedCount={state.selectedLabelIds.length}
-            searchValue={state.searchQuery}
-            onSearchChange={handleSearchChange}
-            onNewLabel={handleCreateLabel}
-            onBulkDelete={handleBulkDelete}
-            onClearSelection={() => setState(prev => ({ ...prev, selectedLabelIds: [] }))}
-            showBulkActions={state.selectedLabelIds.length > 0}
+            totalCount={labels.length}
+            searchValue={busca}
+            onSearchChange={setBusca}
+            onNewLabel={handleCreate}
           />
         </div>
       }
     >
       <SettingsLabelsTour />
 
-      {/* Content */}
       <div className="flex-1 overflow-auto" data-tour="settings-labels-content">
-        {state.loading.list ? (
+        {loading ? (
           <div className="flex items-center justify-center py-16">
             <div className="text-muted-foreground">{t('loading')}</div>
           </div>
-        ) : state.loadError ? (
+        ) : loadError ? (
+          <EmptyState tipo="erro" icon={Tags} aoTentarDeNovo={loadLabels} />
+        ) : semNada ? (
           <EmptyState
-            icon={AlertTriangle}
-            title="Não deu pra carregar as etiquetas"
-            description="A busca falhou (conexão ou servidor). Isso NÃO significa que não existem etiquetas cadastradas — tente de novo."
-            action={{
-              label: 'Tentar novamente',
-              onClick: loadLabels,
-            }}
-            className="h-full"
-          />
-        ) : state.labels.length === 0 ? (
-          <EmptyState
+            tipo="vazio"
             icon={Tags}
-            title={t('empty.title')}
-            description={t('empty.description')}
-            action={can('labels', 'create') ? {
-              label: t('empty.action'),
-              onClick: handleCreateLabel,
-            } : undefined}
-            className="h-full"
+            title="Nenhuma etiqueta ainda"
+            description="Etiquetas separam seus leads e conversas para você achar rápido."
+            exemplo="Investidor, Primeiro imóvel, Permuta"
+            action={can('labels', 'create') ? { label: t('empty.action'), onClick: handleCreate } : undefined}
           />
+        ) : semResultado ? (
+          <EmptyState tipo="semResultado" icon={Tags} aoLimparFiltros={() => setBusca('')} />
         ) : (
-          <LabelsTable
-            labels={state.labels}
-            selectedLabels={state.labels.filter(label => state.selectedLabelIds.includes(label.id))}
-            loading={state.loading.list}
-            onSelectionChange={labels =>
-              setState(prev => ({
-                ...prev,
-                selectedLabelIds: labels.map(l => l.id),
-              }))
-            }
-            onEditLabel={handleEditLabel}
-            onDeleteLabel={handleDeleteLabel}
-            onCreateLabel={handleCreateLabel}
-            sortBy={state.sortBy}
-            sortOrder={state.sortOrder}
-            onSort={column => {
-              const newOrder =
-                state.sortBy === column && state.sortOrder === 'asc' ? 'desc' : 'asc';
-              setState(prev => ({
-                ...prev,
-                sortBy: column as 'title' | 'created_at',
-                sortOrder: newOrder
-              }));
-              // In production, this would trigger a new API call with sort parameters
-            }}
-          />
+          <div className="space-y-8 p-4">
+            {(grupos.suas.length > 0 || !buscando) && (
+              <section className="space-y-2">
+                <h2 className="text-base font-semibold">Suas etiquetas</h2>
+                {grupos.suas.length > 0 ? (
+                  <div className="rounded-lg border bg-card">
+                    {grupos.suas.map(l => (
+                      <LinhaEtiqueta
+                        key={l.id}
+                        label={l}
+                        onEditar={handleEdit}
+                        onTrocarCor={can('labels', 'update') ? handleTrocarCor : undefined}
+                        onExcluir={can('labels', 'delete') ? handleDelete : undefined}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Você ainda não criou nenhuma. Ex.: Investidor, Primeiro imóvel, Permuta.
+                  </p>
+                )}
+              </section>
+            )}
+            {grupos.sistema.length > 0 && (
+              <section className="space-y-2">
+                <h2 className="text-base font-semibold">Do sistema</h2>
+                <p className="text-sm text-muted-foreground">
+                  O sistema coloca estas etiquetas sozinho. Aqui você só muda a cor.
+                </p>
+                <div className="space-y-2">
+                  {grupos.sistema.map(c => (
+                    <CaixaDoSistema
+                      key={c.id}
+                      nome={c.nome}
+                      frase={c.frase}
+                      itens={c.itens}
+                      abertaPorBusca={buscando}
+                      onTrocarCor={can('labels', 'update') ? handleTrocarCor : undefined}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Pagination */}
-      {state.meta.pagination.total > 0 && (
-        <LabelsPagination
-          currentPage={state.meta.pagination.page}
-          totalPages={state.meta.pagination.total_pages}
-          totalCount={state.meta.pagination.total}
-          perPage={state.meta.pagination.page_size}
-          onPageChange={handlePageChange}
-          onPerPageChange={handlePerPageChange}
-        />
-      )}
+      {dialogoDeConfirmacao}
 
-      {/* Delete Label Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('dialog.delete.title')}</DialogTitle>
-            <DialogDescription>
-              {t('dialog.delete.description', { title: labelToDelete?.title })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-              disabled={state.loading.delete}
-            >
-              {t('dialog.delete.cancel')}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDeleteLabel}
-              disabled={state.loading.delete}
-            >
-              {state.loading.delete ? t('dialog.delete.deleting') : t('dialog.delete.confirm')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bulk Delete Dialog */}
-      <Dialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('dialog.bulkDelete.title')}</DialogTitle>
-            <DialogDescription>
-              {t('dialog.bulkDelete.description', { count: state.selectedLabelIds.length })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setBulkDeleteDialogOpen(false)}
-              disabled={state.loading.bulk}
-            >
-              {t('dialog.bulkDelete.cancel')}
-            </Button>
-            <Button variant="destructive" onClick={confirmBulkDelete} disabled={state.loading.bulk}>
-              {state.loading.bulk ? t('dialog.bulkDelete.deleting') : t('dialog.bulkDelete.confirm')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Label Modal */}
       <LabelModal
-        open={labelModalOpen}
-        onOpenChange={handleLabelModalClose}
-        label={editingLabel || undefined}
-        isNew={!editingLabel}
-        loading={state.loading.create || state.loading.update}
-        onSubmit={handleLabelFormSubmit}
+        open={modalAberto}
+        onOpenChange={handleModalClose}
+        label={editando || undefined}
+        isNew={!editando}
+        loading={salvando}
+        onSubmit={handleSubmit}
       />
     </Pagina>
   );
