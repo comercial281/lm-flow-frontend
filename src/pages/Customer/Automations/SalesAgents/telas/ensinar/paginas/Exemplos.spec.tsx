@@ -134,6 +134,27 @@ describe('Exemplos', () => {
     expect(screen.queryByRole('button', { name: 'Salvar exemplo' })).not.toBeInTheDocument();
   });
 
+  it('excluir com um exemplo NOVO sendo escrito não joga o texto fora', async () => {
+    const { gravar } = abrir([], [{ lead: 'x', resposta: 'primeira' }, { lead: 'y', resposta: 'segunda' }]);
+    await userEvent.click(screen.getByRole('button', { name: 'Novo exemplo' }));
+    await userEvent.type(screen.getByLabelText('Como ela deve responder'), 'rascunho');
+    await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Excluir' }));
+    expect(gravar).toHaveBeenCalledWith({ example_conversations: [{ lead: 'y', resposta: 'segunda' }] });
+    expect(screen.getByLabelText('Como ela deve responder')).toHaveValue('rascunho');
+    expect(screen.getByRole('button', { name: 'Salvar exemplo' })).toBeEnabled();
+  });
+
+  it('lição pausada tem "Ligar" no menu; a ligada não', async () => {
+    const { l } = abrir([L('a', 'good_example', { enabled: false, in_use: false }), L('b', 'good_example')], []);
+    await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[1]);
+    expect(screen.queryByRole('menuitem', { name: 'Ligar' })).not.toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Ligar' }));
+    expect(l.atualizar).toHaveBeenCalledWith('a', { enabled: true });
+  });
+
   it('excluir lição confirma e apaga; sem confirmação não apaga', async () => {
     const { l, confirmar } = abrir([L('a', 'good_example')], []);
     confirmar.mockResolvedValueOnce(false);

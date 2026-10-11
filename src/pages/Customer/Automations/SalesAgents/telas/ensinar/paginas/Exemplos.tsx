@@ -81,9 +81,10 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
 
   const apagar = async (item: ItemDeExemplo) => {
     if (!(await confirmar({ titulo: 'Excluir exemplo', descricao: item.resposta, rotuloDaAcao: 'Excluir', destrutivo: true }))) return;
-    // A composição aberta aponta pra um item pela chave; as conversas reais são
-    // chaveadas pelo índice, que anda quando uma sai. Fecha pra não editar a errada.
-    setCompor(null);
+    // A EDIÇÃO aberta aponta pra um item pela chave; as conversas reais são chaveadas
+    // pelo índice, que anda quando uma sai. Fecha pra não editar a errada. Um exemplo
+    // NOVO sendo escrito não aponta pra nada: fica aberto (fechar jogaria o texto fora).
+    setCompor((c) => (c?.chave != null ? null : c));
     if (item.fonte === 'licao') await L.apagar(item.licao.id);
     else await gravar({ example_conversations: conversas.filter((_, i) => i !== item.indice) });
   };
@@ -168,6 +169,9 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => setCompor({ chave: item.chave, lead: item.lead ?? '', resposta: item.resposta })}>Editar</DropdownMenuItem>
+                    {item.fonte === 'licao' && !item.licao.enabled && (
+                      <DropdownMenuItem onSelect={() => void L.atualizar(item.licao.id, { enabled: true })}>Ligar</DropdownMenuItem>
+                    )}
                     {item.fonte === 'licao' && (
                       <DropdownMenuItem onSelect={() => mover(item.licao)}>
                         {aba === 'bom' ? 'Mover pra Não responda assim' : 'Mover pra Responda assim'}
