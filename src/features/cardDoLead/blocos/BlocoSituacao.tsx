@@ -7,7 +7,7 @@
 // Os campos de Etapa e Responsável são os da Parte 1 (CamposDaSituacao: nome
 // longo corta com reticências e o title mostra inteiro). Aqui só se ligam ao
 // card — nunca um segundo seletor de etapa/responsável.
-import { Shuffle } from 'lucide-react';
+import { Shuffle, User } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
 import OfferActions from '@/components/roleta/OfferActions';
@@ -68,6 +68,9 @@ export function ResponsavelComFoto({ card }: { card: CardDoLead }) {
         contact={{ name: nome, avatar_url: atual?.avatar_url ?? atual?.thumbnail ?? doCard?.avatar_url ?? null }}
         size="sm"
         showColoredFallback
+        // Responsável sem nome conhecido: ícone de PESSOA (o padrão do avatar é
+        // o balão de conversa, que aqui parecia "lead", não "corretor").
+        iconeSemNome={User}
         className="mb-1 shrink-0"
       />
       <div className="min-w-0 flex-1">

@@ -4,8 +4,8 @@ import { render, screen } from '@testing-library/react';
 import { ResponsavelComFoto } from './BlocoSituacao';
 
 vi.mock('@/components/chat/contact/ContactAvatar', () => ({
-  default: ({ contact }: { contact: { name: string; avatar_url: string | null } }) => (
-    <div data-testid="foto" data-nome={contact.name} data-url={contact.avatar_url ?? ''} />
+  default: ({ contact, iconeSemNome }: { contact: { name: string; avatar_url: string | null }; iconeSemNome?: { displayName?: string } }) => (
+    <div data-testid="foto" data-nome={contact.name} data-url={contact.avatar_url ?? ''} data-icone={iconeSemNome?.displayName ?? ''} />
   ),
 }));
 vi.mock('@/components/pipelines/card/CamposDaSituacao', () => ({
@@ -66,9 +66,11 @@ describe('ResponsavelComFoto sem a lista de pessoas (corretor)', () => {
     expect(foto).toHaveAttribute('data-url', 'b.png');
   });
 
-  it('com responsável sem nome conhecido, nunca "Sem responsável" ao lado', () => {
+  it('com responsável sem nome conhecido, nunca "Sem responsável" ao lado, e o ícone é de pessoa', () => {
     render(<ResponsavelComFoto card={doCorretor({}, 'u9')} />);
-    expect(screen.getByTestId('foto')).not.toHaveAttribute('data-nome', 'Sem responsável');
+    const foto = screen.getByTestId('foto');
+    expect(foto).not.toHaveAttribute('data-nome', 'Sem responsável');
+    expect(foto).toHaveAttribute('data-icone', 'User');
   });
 
   it('sem responsável: "Sem responsável"', () => {
