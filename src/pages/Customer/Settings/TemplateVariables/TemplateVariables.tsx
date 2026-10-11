@@ -323,7 +323,7 @@ export default function TemplateVariables() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7"
+                      className="size-8"
                       onClick={() => openEdit(v)}
                       aria-label="Editar"
                     >
@@ -332,7 +332,7 @@ export default function TemplateVariables() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-destructive"
+                      className="size-8 text-destructive"
                       onClick={() => setToDelete(v)}
                       aria-label="Excluir"
                     >

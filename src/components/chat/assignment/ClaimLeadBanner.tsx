@@ -54,7 +54,7 @@ export default function ClaimLeadBanner({ conversationId, onClaimed }: ClaimLead
           type="button"
           variant="outline"
           size="sm"
-          className="h-7 text-xs"
+          className="text-xs"
           onClick={handleClaim}
           disabled={claiming}
         >

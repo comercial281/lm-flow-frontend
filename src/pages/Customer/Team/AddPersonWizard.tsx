@@ -307,7 +307,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
                       <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
                       <span>
                         Número não criado: {result.numberFailure}
-                        <Button variant="outline" size="sm" className="ml-2 h-7" onClick={() => setRetryOpen(true)}>
+                        <Button variant="outline" size="sm" className="ml-2" onClick={() => setRetryOpen(true)}>
                           Tentar de novo
                         </Button>
                       </span>
@@ -326,7 +326,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
                           <span>
                             Link não enviado: {result.link.error || 'Não consegui enviar o link agora.'}
                             {result.link.state === 'error' && canSendAccess && (
-                              <Button variant="outline" size="sm" className="ml-2 h-7" onClick={retryLink} disabled={retryingLink}>
+                              <Button variant="outline" size="sm" className="ml-2" onClick={retryLink} disabled={retryingLink}>
                                 Tentar de novo
                               </Button>
                             )}

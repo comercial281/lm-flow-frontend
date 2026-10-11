@@ -89,12 +89,12 @@ const FilePreview: React.FC<FilePreviewProps> = ({
               {/* Remove Button */}
               <Button
                 variant="destructive"
-                size="sm"
+                size="icon"
                 onClick={() => onRemove(index)}
                 disabled={isSending}
                 aria-label="Remover anexo"
                 title="Remover anexo"
-                className="absolute -top-2 -right-2 h-6 w-6 p-0 opacity-80 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                className="absolute -top-2 -right-2 size-8 p-0 opacity-80 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
               >
                 <X className="h-3 w-3" />
               </Button>
@@ -127,7 +127,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({
             {t('messageInput.filePreview.sending')}
           </div>
         ) : (
-          <Button size="sm" onClick={() => onSend(files)} className="gap-1 h-7 text-xs">
+          <Button size="sm" onClick={() => onSend(files)} className="gap-1 text-xs">
             <Send className="h-3 w-3" />
             {t('messageInput.filePreview.send')}
           </Button>

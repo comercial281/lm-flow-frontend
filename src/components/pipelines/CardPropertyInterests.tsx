@@ -196,7 +196,7 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
                   <Button
                     size="sm"
                     variant={alreadyAdded ? 'ghost' : 'outline'}
-                    className="h-7 text-xs shrink-0"
+                    className="text-xs shrink-0"
                     disabled={alreadyAdded || adding === p.id}
                     onClick={() => !alreadyAdded && handleAdd(p)}
                   >
@@ -268,9 +268,9 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
                 </div>
               </div>
               <Button
-                size="sm"
+                size="icon"
                 variant="ghost"
-                className="h-7 w-7 p-0 shrink-0 text-muted-foreground hover:text-destructive"
+                className="size-8 p-0 shrink-0 text-muted-foreground hover:text-destructive"
                 onClick={() => handleRemove(interest.id)}
                 disabled={removing === interest.id}
                 aria-label="Remover interesse"

@@ -187,7 +187,7 @@ export default function HistoricoDoLead({
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 px-2"
+          className="px-2"
           onClick={() => void carregar()}
           disabled={estado === 'carregando'}
           aria-label="Atualizar histórico"
@@ -226,7 +226,7 @@ export default function HistoricoDoLead({
           />
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Ctrl + Enter para postar</span>
-            <Button size="sm" className="h-7 gap-1.5 text-xs" onClick={() => void postar()} disabled={postando || !texto.trim()}>
+            <Button size="sm" className="gap-1.5 text-xs" onClick={() => void postar()} disabled={postando || !texto.trim()}>
               {postando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
               Postar
             </Button>

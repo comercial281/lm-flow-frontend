@@ -113,7 +113,7 @@ export default function ContactsHeader({
           variant="ghost"
           size="sm"
           onClick={onSelectAllMatching}
-          className="h-7 px-2 text-primary hover:text-primary hover:bg-sidebar-accent"
+          className="px-2 text-primary hover:text-primary hover:bg-sidebar-accent"
         >
           <CheckCheck className="h-3.5 w-3.5 mr-1" />
           {t('header.selectAllMatching', { count: totalCount })}

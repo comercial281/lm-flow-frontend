@@ -36,7 +36,7 @@ export default function PendingOffersBanner() {
           type="button"
           variant="outline"
           size="sm"
-          className="h-7 text-xs"
+          className="text-xs"
           onClick={() => navigate(`/roleta/aceite/${primeira.id}`)}
         >
           Ver lead

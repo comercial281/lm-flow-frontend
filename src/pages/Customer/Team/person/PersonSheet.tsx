@@ -328,7 +328,7 @@ export default function PersonSheet({
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 text-xs"
+            className="text-xs"
             disabled={!!primaryBusy}
             onClick={() => escolherPrincipal(n.inbox_id)}
           >

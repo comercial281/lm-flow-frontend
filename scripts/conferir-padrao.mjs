@@ -664,6 +664,41 @@ export function botoesPintados(codigo, arquivo = 'x.tsx') {
   return achados;
 }
 
+// ── Botão com no mínimo 32 px (peça 14 do GLOSSARIO, 12/10/2026) ───────────
+// `Button` nunca abaixo de 32 px: texto usa `size="sm"` (h-8); só-ícone usa
+// `size="icon"` com `size-8`. Régua: na tag de abertura de `<Button`, uma classe
+// `h-4..h-7` ou `size-4..size-7` (com ou sem `.5`), sem prefixo de tela/estado
+// (`sm:h-7` não conta). JSX aninhado dentro de um atributo (ícone passado como
+// prop) é apagado antes, pra o `h-4 w-4` do ícone não contar pro botão.
+export const botaoPequeno = tag => /(?<![\w:/\-.])(?:h|size)-[4-7](?:\.5)?(?![\w.\-/])/.test(tag);
+export function botoesPequenos(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const achados = [];
+  const visitar = no => {
+    if ((ts.isJsxOpeningElement(no) || ts.isJsxSelfClosingElement(no)) && no.tagName.getText(fonte) === 'Button') {
+      const ini = no.getStart(fonte);
+      let texto = no.getText(fonte);
+      const buracos = [];
+      const aninhado = n => {
+        if (n !== no && (ts.isJsxElement(n) || ts.isJsxSelfClosingElement(n) || ts.isJsxFragment(n))) {
+          buracos.push([n.getStart(fonte) - ini, n.getEnd() - ini]);
+          return;
+        }
+        ts.forEachChild(n, aninhado);
+      };
+      ts.forEachChild(no.attributes, aninhado);
+      for (const [a, b] of buracos.sort((x, y) => y[0] - x[0])) texto = texto.slice(0, a) + ' ' + texto.slice(b);
+      if (botaoPequeno(texto)) {
+        const { line } = fonte.getLineAndCharacterOfPosition(ini);
+        achados.push({ linha: line + 1, texto: no.getText(fonte).replace(/\s+/g, ' ') });
+      }
+    }
+    ts.forEachChild(no, visitar);
+  };
+  visitar(fonte);
+  return achados;
+}
+
 // ── Ícone com tamanho em pixel (peça 22 do GLOSSARIO, 10/10/2026) ──────────
 // Ícone é `lucide-react` em três tamanhos, por classe: `h-3.5 w-3.5` (aba,
 // etiqueta, filtro), `h-4 w-4` (botão, menu), `h-5 w-5` (título). Conta `size=`
@@ -912,6 +947,7 @@ export function varrer() {
     if (escopo && rel.endsWith('.tsx')) {
       for (const { linha, texto } of botoesSemNome(codigo, rel)) anotar('iconeSemNome', rel, linha, texto, texto);
       for (const { linha, texto } of botoesPintados(codigo, rel)) anotar('botaoPintado', rel, linha, 'botão pintado à mão', texto);
+      for (const { linha, texto } of botoesPequenos(codigo, rel)) anotar('botaoPequeno', rel, linha, 'botão abaixo de 32 px', texto);
       for (const { linha, texto } of iconesComTamanho(codigo, rel)) anotar('tamanhoDeIcone', rel, linha, 'ícone com size em pixel', texto);
       if (!ESTADOS_DA_CASA.has(rel)) {
         for (const { linha, texto } of rodinhasCentrais(codigo, rel)) anotar('rodinhaCentral', rel, linha, 'rodinha no meio da tela', texto);
@@ -990,6 +1026,7 @@ export const CATEGORIAS = {
   cartaoAMao: 'cartão feito à mão (fora do Card)',
   corFixaEmGrafico: 'cor fixa em gráfico',
   botaoPintado: 'botão pintado à mão (fora do Button)',
+  botaoPequeno: 'botão abaixo de 32 px (Button h-4..h-7)',
   tamanhoDeIcone: 'ícone com size em pixel',
   rodinhaCentral: 'rodinha no meio da tela (use Carregando)',
   telaEmBranco: 'tela em branco carregando (fallback={null})',

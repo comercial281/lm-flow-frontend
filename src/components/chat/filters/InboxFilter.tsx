@@ -113,8 +113,8 @@ const InboxFilter: React.FC<InboxFilterProps> = ({
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
-          size="sm"
-          className={`h-6 w-6 p-0 relative ${
+          size="icon"
+          className={`size-8 p-0 relative ${
             hasActiveFilter ? 'text-primary' : 'text-muted-foreground'
           }`}
           disabled={disabled}

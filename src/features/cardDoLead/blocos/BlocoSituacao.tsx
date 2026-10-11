@@ -107,7 +107,7 @@ export function AvisosDaRoleta({ card, semDeOnde = false }: {
           tom="atencao"
           compacto
           acao={
-            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => roleta.setTirando(true)}>
+            <Button variant="outline" size="sm" className="text-xs" onClick={() => roleta.setTirando(true)}>
               Tirar da roleta
             </Button>
           }

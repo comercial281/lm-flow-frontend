@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, iconesComTamanho, rodinhasCentrais, telasEmBranco, vaziosSoltos, largurasForaDaEscala, importaJanelaDoPacote, JANELA_A_MAO, escondidosSoComMouse } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, botaoPequeno, botoesPequenos, iconesComTamanho, rodinhasCentrais, telasEmBranco, vaziosSoltos, largurasForaDaEscala, importaJanelaDoPacote, JANELA_A_MAO, escondidosSoComMouse } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -573,5 +573,27 @@ describe('vazioSolto: "Nenhum…" escrito à mão fora do EmptyState', () => {
     expect(textos('const a = <Aviso tom="atencao">Nenhum grupo apareceu.</Aviso>;')).toEqual([]);
     expect(textos('const a = <span>Nenhum</span>;')).toEqual([]);
     expect(textos("const a = <Campo hint=\"Nenhum marcado = todos\" />;")).toEqual([]);
+  });
+});
+
+describe('botaoPequeno (peça 14)', () => {
+  it('pega Button com h-4..h-7 ou size-4..size-7', () => {
+    expect(botaoPequeno('<Button size="sm" className="h-7 text-xs">')).toBe(true);
+    expect(botaoPequeno('<Button variant="ghost" className="size-6 p-0">')).toBe(true);
+    expect(botaoPequeno('<Button className="h-4 px-1">')).toBe(true);
+    expect(botaoPequeno('<Button className={cn("h-5", x)}>')).toBe(true);
+    expect(botaoPequeno('<Button className="h-6.5 w-7">')).toBe(true);
+  });
+  it('não pega o tamanho da casa nem ícone dentro do botão', () => {
+    expect(botaoPequeno('<Button size="sm">')).toBe(false);
+    expect(botaoPequeno('<Button size="icon" className="size-8">')).toBe(false);
+    expect(botaoPequeno('<Button className="sm:h-7 h-8">')).toBe(false);
+    expect(botaoPequeno('<Button className="h-10 min-h-7">')).toBe(false);
+  });
+  it('botoesPequenos lê a tag de abertura e ignora ícone passado por prop', () => {
+    const codigo = `const a = <Button className="h-7">ok <X className="h-4 w-4" /></Button>;
+const b = <Button size="sm" icon={<X className="h-4 w-4" />}>ok</Button>;
+const c = <div className="h-6"><Button className="size-8" onClick={() => a > 1}>x</Button></div>;`;
+    expect(botoesPequenos(codigo).map((x: { linha: number }) => x.linha)).toEqual([1]);
   });
 });

@@ -50,7 +50,7 @@ export default function SecaoTarefas({ conversationId, pipelines, carregando, on
       ) : (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">{T.semCard}</p>
-          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setColocando(true)}>
+          <Button variant="outline" size="sm" className="text-xs" onClick={() => setColocando(true)}>
             {TEXTOS_DO_PAINEL.colocarNoFunil}
           </Button>
         </div>

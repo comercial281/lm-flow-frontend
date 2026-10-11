@@ -48,7 +48,7 @@ export default function OwnedNumbersList({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-xs"
+                className="text-xs"
                 disabled={!!busyId}
                 onClick={() => onChoosePrimary?.(n.inbox_id)}
               >

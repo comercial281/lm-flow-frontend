@@ -147,7 +147,7 @@ export function AcoesDaVisita({ visita, onAtualizada }: { visita: Visit; onAtual
               key={b}
               size="sm"
               variant="outline"
-              className={`h-7 text-xs ${b === 'cancelar' || b === 'nao_compareceu' ? VERMELHO : ''}`}
+              className={`text-xs ${b === 'cancelar' || b === 'nao_compareceu' ? VERMELHO : ''}`}
               disabled={salvando}
               onClick={() => clicar(b)}
             >

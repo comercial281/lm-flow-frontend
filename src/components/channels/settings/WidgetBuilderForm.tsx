@@ -246,8 +246,8 @@ export default function WidgetBuilderForm({ inboxId, inbox, onUpdate }: WidgetBu
                         <Button
                           type="button"
                           variant="destructive"
-                          size="sm"
-                          className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
+                          size="icon"
+                          className="absolute -top-2 -right-2 size-8 rounded-full p-0"
                           onClick={handleAvatarDelete}
                           aria-label="Remover foto"
                           title="Remover foto"

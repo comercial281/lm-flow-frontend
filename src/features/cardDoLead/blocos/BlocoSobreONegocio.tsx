@@ -144,8 +144,8 @@ export default function BlocoSobreONegocio({ pipelineId, itemId, preco, data, ao
               <Button
                 type="button"
                 variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0"
+                size="icon"
+                className="size-8 p-0"
                 aria-label="Limpar data de fechamento"
                 title="Limpar data de fechamento"
                 onClick={() => void salvarData(null)}
