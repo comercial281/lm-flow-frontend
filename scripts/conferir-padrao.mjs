@@ -323,6 +323,12 @@ export const JANELA_A_MAO = /(?:^|[\s'"`])fixed inset-0(?=[\s'"`]|$)/;
 // arquivo tem `<Button`. Janela sem botão final (paleta de comando, conteúdo só
 // de leitura, rodapé num componente filho que já usa o DialogFooter) vai pras
 // exceções com o motivo (trecho = `<DialogContent`).
+// PONTO CEGO: a régua lê um arquivo por vez. Janela cujo rodapé mora num
+// componente FILHO (o formulário que a janela renderiza, ex.: o botão Salvar
+// dentro do `XxxForm`) não aparece: a janela não tem `<Button` e o filho não tem
+// `<DialogContent`. O rodapé do filho tem que ser `DialogFooter` na mão, e a
+// revisão de PR confere. Também não vê 'Cancelar/Salvar' escritos fora de
+// `<Button` (botão de outro componente).
 export function rodapeAMao(codigo) {
   const conta = re => (codigo.match(re) || []).length;
   const janelas = conta(/<DialogContent(?=[\s>/]|$)/g);

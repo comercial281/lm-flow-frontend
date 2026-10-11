@@ -531,7 +531,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
         </div>
 
         <DialogFooter className="sm:justify-between">
-          <Button variant="ghost" onClick={() => (step === 0 ? close() : setStep(step - 1))} disabled={saving}>
+          <Button variant="outline" onClick={() => (step === 0 ? close() : setStep(step - 1))} disabled={saving}>
             {step === 0 ? 'Cancelar' : 'Voltar'}
           </Button>
           {step < STEPS.length - 1 ? (

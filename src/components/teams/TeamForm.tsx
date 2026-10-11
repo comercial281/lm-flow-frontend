@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Button,
+  DialogFooter,
   Input,
   Label,
   Textarea,
@@ -96,7 +97,8 @@ export default function TeamForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="flex max-h-[calc(90dvh-4.5rem)] flex-col">
+      <div className="flex-1 space-y-6 overflow-y-auto px-6 py-4">
       {/* Basic Information */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-lg font-semibold">
@@ -173,8 +175,10 @@ export default function TeamForm({
         </div>
       </div>
 
+      </div>
+
       {/* Form Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t">
+      <DialogFooter className="shrink-0">
         {onCancel && (
           <Button
             type="button"
@@ -201,7 +205,7 @@ export default function TeamForm({
             </>
           )}
         </Button>
-      </div>
+      </DialogFooter>
     </form>
   );
 }

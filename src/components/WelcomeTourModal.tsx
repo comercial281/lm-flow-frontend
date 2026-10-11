@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Map } from 'lucide-react';
-import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/ds';
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/ds';
 import { tourRegistry } from '@/tours/tourRegistry';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
@@ -74,18 +74,14 @@ export function WelcomeTourModal() {
           </DialogDescription>
         </div>
 
-        <div className="flex flex-col gap-3 w-full">
-          <Button
-            onClick={handleStartTour}
-            className="w-full"
-            style={{ backgroundColor: '#00C48C', color: '#fff' }}
-          >
-            {t('welcome.startButton')}
-          </Button>
-          <Button variant="ghost" onClick={handleDismiss} className="w-full text-muted-foreground">
+        <DialogFooter className="w-full">
+          <Button variant="outline" onClick={handleDismiss}>
             {t('welcome.skipButton')}
           </Button>
-        </div>
+          <Button onClick={handleStartTour} style={{ backgroundColor: '#00C48C', color: '#fff' }}>
+            {t('welcome.startButton')}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

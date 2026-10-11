@@ -1151,16 +1151,6 @@ const EvolutionWhatsAppConfig: React.FC<{
                   </p>
                 )}
 
-                <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-                  <Button onClick={handleRefreshQR} disabled={isRefreshingQr} size="sm" variant="outline">
-                    <QrCode className="w-4 h-4 mr-2" />
-                    {t('settings.configuration.whatsapp.instance.refreshQrCode')}
-                  </Button>
-                  <Button onClick={closeQrModal} size="sm" variant="ghost">
-                    {t('settings.configuration.whatsapp.instance.closeQrModal')}
-                  </Button>
-                </div>
-
                 {/* Passo a passo recolhido: ele continua a um clique, mas parou
                     de consumir a validade do código enquanto é lido. */}
                 <details className="w-full mt-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4">
@@ -1195,6 +1185,17 @@ const EvolutionWhatsAppConfig: React.FC<{
               </div>
             )}
           </div>
+          {qrCode && (
+            <DialogFooter>
+              <Button onClick={closeQrModal} variant="outline">
+                {t('settings.configuration.whatsapp.instance.closeQrModal')}
+              </Button>
+              <Button onClick={handleRefreshQR} disabled={isRefreshingQr}>
+                <QrCode className="w-4 h-4 mr-2" />
+                {t('settings.configuration.whatsapp.instance.refreshQrCode')}
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
 
