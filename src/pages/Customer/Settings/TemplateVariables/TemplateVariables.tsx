@@ -350,7 +350,7 @@ export default function TemplateVariables() {
 
       {/* Create/edit modal */}
       <Dialog open={modalOpen} onOpenChange={v => !v && setModalOpen(false)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>{editing ? 'Editar variável' : 'Nova variável'}</DialogTitle>
             <DialogDescription>

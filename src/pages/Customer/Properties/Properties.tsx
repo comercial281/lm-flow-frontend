@@ -675,7 +675,7 @@ export default function Properties() {
 
       {/* Batch generate dialog */}
       <Dialog open={batchModalOpen} onOpenChange={open => { if (!batchRunning) setBatchModalOpen(open); }}>
-        <DialogContent className="max-w-xl max-h-[80vh] flex flex-col">
+        <DialogContent className="max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Wand2 className="h-5 w-5 text-primary" />

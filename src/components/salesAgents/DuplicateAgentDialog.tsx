@@ -53,7 +53,7 @@ export default function DuplicateAgentDialog({ agent, inboxes, onClose, onDuplic
 
   return (
     <Dialog open onOpenChange={(v) => { if (!v && !saving) onClose(); }}>
-      <DialogContent className="max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Duplicar IA</DialogTitle>
           <DialogDescription>

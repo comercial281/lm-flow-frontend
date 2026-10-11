@@ -43,7 +43,7 @@ export default function DeletePipelineModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">

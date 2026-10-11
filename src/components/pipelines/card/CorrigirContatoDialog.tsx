@@ -72,7 +72,7 @@ export default function CorrigirContatoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="max-w-md">
         <DialogTitle>Corrigir contato</DialogTitle>
         <DialogDescription>
           Só para erro de digitação em lead cadastrado à mão. A correção fica no histórico do lead.

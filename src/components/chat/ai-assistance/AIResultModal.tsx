@@ -7,7 +7,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@evoapi/design-system/dialog';
+} from '@/components/ui/ds';
 import { Loader2, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -46,7 +46,7 @@ const AIResultModal: React.FC<AIResultModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{t('aiAssistance.resultModal.title', { actionLabel: displayActionLabel })}</DialogTitle>
           <DialogDescription>

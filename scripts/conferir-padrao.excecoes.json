@@ -76,5 +76,13 @@
   { "arquivo": "src/pages/Customer/Roleta/AcceptLeadPage.tsx", "categoria": "avisoAMao", "trecho": "border-red-500/50 bg-red-500/10", "motivo": "botão Recusar, não é aviso" },
   { "arquivo": "src/pages/Customer/Settings/LeadAdsForms/LeadAdsForms.tsx", "categoria": "avisoAMao", "trecho": "mb-8 rounded-xl border border-amber-500/40", "motivo": "quadro \"Leads ignorados\" com lista e ação por linha, não é aviso" },
   { "arquivo": "src/components/chat/chat-sidebar/ChatSidebar.tsx", "categoria": "avisoAMao", "trecho": "bg-blue-50 text-blue-700 border-blue-200", "motivo": "selo \"Post\" da conversa, não é aviso" },
-  { "arquivo": "src/components/cannedResponses/CannedResponseModal.tsx", "categoria": "avisoAMao", "trecho": "border-blue-200 dark:border-blue-800 bg-white/70", "motivo": "botão de inserir variável na resposta pronta, não é aviso" }
+  { "arquivo": "src/components/cannedResponses/CannedResponseModal.tsx", "categoria": "avisoAMao", "trecho": "border-blue-200 dark:border-blue-800 bg-white/70", "motivo": "botão de inserir variável na resposta pronta, não é aviso" },
+  { "arquivo": "src/components/chat/messages/MessageImage.tsx", "categoria": "janelaAMao", "trecho": "fixed inset-0 bg-black/90 z-50 flex flex-col", "motivo": "visualizador de foto em tela cheia, não é janela" },
+  { "arquivo": "src/components/shared/attachments/SharedImageBubble.tsx", "categoria": "janelaAMao", "trecho": "fixed inset-0 bg-black bg-opacity-90 z-50", "motivo": "visualizador de foto em tela cheia, não é janela" },
+  { "arquivo": "src/components/chat/message-input/FileUpload.tsx", "categoria": "janelaAMao", "trecho": "fixed inset-0 bg-primary/10 backdrop-blur-sm z-40", "motivo": "camada de soltar arquivo enquanto arrasta, não é janela" },
+  { "arquivo": "src/components/base/BaseFlowContextMenu.tsx", "categoria": "janelaAMao", "trecho": "fixed inset-0 z-40", "motivo": "fundo invisível do menu de contexto (clique fora fecha), não é janela" },
+  { "arquivo": "src/components/flowAutomations/FlowBlocksPanel.tsx", "categoria": "janelaAMao", "trecho": "isMobile ? 'fixed inset-0 z-50 w-full'", "motivo": "painel de blocos do construtor que vira tela cheia no celular, não é janela" },
+  { "arquivo": "src/components/flowAutomations/FlowSidePanel.tsx", "categoria": "janelaAMao", "trecho": "? 'fixed inset-0 z-50 w-full'", "motivo": "painel lateral do construtor que vira tela cheia no celular, não é janela" },
+  { "arquivo": "src/pages/Customer/Automations/SalesAgents/telas/TestarJanela.tsx", "categoria": "janelaAMao", "trecho": "fixed inset-0 z-50 bg-black/55", "motivo": "simulador do Testar em tela cheia (celular no meio, painéis dos lados, sem caixa), não é janela" },
+  { "arquivo": "src/pages/Customer/Automations/SalesAgents/telas/TestarJanela.tsx", "categoria": "janelaAMao", "trecho": "pointer-events-none fixed inset-0 z-50 flex", "motivo": "simulador do Testar em tela cheia (celular no meio, painéis dos lados, sem caixa), não é janela" }
 ]

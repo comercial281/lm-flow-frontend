@@ -287,7 +287,7 @@ function FileConfigDialog({
 
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Como a IA deve usar este arquivo</DialogTitle>
           <DialogDescription>

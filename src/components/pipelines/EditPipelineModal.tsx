@@ -173,7 +173,7 @@ export default function EditPipelineModal({
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
+          <Tabs defaultValue="details" className="mt-4 flex-1 flex flex-col min-h-0">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="details">{t('editPipeline.details')}</TabsTrigger>
               <TabsTrigger value="entry">Entrada de leads</TabsTrigger>

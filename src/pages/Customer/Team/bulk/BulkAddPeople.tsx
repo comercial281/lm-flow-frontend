@@ -154,7 +154,7 @@ export default function BulkAddPeople({ open, roles, members, onClose, onDone }:
     ];
     return (
       <Dialog open={open} onOpenChange={o => !o && close()}>
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Resultado</DialogTitle>
             <DialogDescription>

@@ -239,7 +239,7 @@ export default function WelcomeAutomations() {
 
       {/* Modal create/edit */}
       <Dialog open={modalOpen} onOpenChange={open => { if (!open) { setModalOpen(false); setEditing(null); } }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>{editing ? 'Editar Automação' : 'Nova Automação de Boas-Vindas'}</DialogTitle>
           </DialogHeader>

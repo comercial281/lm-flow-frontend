@@ -379,7 +379,7 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
 
   return (
     <Dialog open={aberto} onOpenChange={a => { if (!a && !salvando) aoFechar(); }}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{definicao ? definicao.rotulo : 'Adicionar origem'}</DialogTitle>
           <DialogDescription>

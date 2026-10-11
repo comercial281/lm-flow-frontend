@@ -5,7 +5,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@evoapi/design-system/dialog';
+} from '@/components/ui/ds';
 import { Button } from '@evoapi/design-system/button';
 import { Sparkles, FileText, Type, Minimize2, Maximize2, Smile, Briefcase, Lightbulb, Shield } from 'lucide-react';
 import { AIAction, AIActionType } from '@/types/chat/ai-assistance';
@@ -63,7 +63,7 @@ const AIActionsModal: React.FC<AIActionsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />

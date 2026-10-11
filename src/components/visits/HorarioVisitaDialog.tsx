@@ -102,7 +102,7 @@ export function HorarioVisitaDialog({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Horário de visita</DialogTitle>
           <DialogDescription>Vale para a IA e para quem marca à mão. Fora disso, nenhuma visita é marcada.</DialogDescription>

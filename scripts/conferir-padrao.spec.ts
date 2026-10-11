@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, largurasForaDaEscala, importaJanelaDoPacote, JANELA_A_MAO } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -186,6 +186,40 @@ describe('tagsJsx', () => {
       { tag: 'h1', linha: 3 },
       { tag: 'BaseHeader', linha: 4 },
     ]);
+  });
+});
+
+describe('Janela (peça 17): larguras, import direto e janela à mão', () => {
+  it('só passam max-w-md e max-w-2xl (com ou sem sm:); celular (max-sm:) não conta', () => {
+    const codigo = [
+      'const a = <>',
+      '<DialogContent className="max-w-md" /><DialogContent className="sm:max-w-2xl" />',
+      '<DialogContent className="max-w-lg" /><AlertDialogContent className="sm:max-w-[500px]" />',
+      '<DialogContent size="wide" className="sm:max-w-6xl max-sm:max-w-none" />',
+      '<DialogContent',
+      '  className={x ? "max-w-3xl" : "max-w-md"}',
+      '/></>;',
+    ].join('\n');
+    expect(largurasForaDaEscala(codigo, 'x.tsx').map(a => `${a.linha} ${a.largura}`)).toEqual([
+      '3 max-w-lg', '3 sm:max-w-[500px]', '4 sm:max-w-6xl', '5 max-w-3xl',
+    ]);
+  });
+
+  it('acusa Dialog* do pacote base (raiz ou /dialog), não o resto do pacote', () => {
+    const codigo = [
+      "import { Button, DialogContent } from '@evoapi/design-system';",
+      "import { Button as B } from '@evoapi/design-system';",
+      "import { Dialog } from '@evoapi/design-system/dialog';",
+      "import { AlertDialog } from '@evoapi/design-system/alert-dialog';",
+      "import { Dialog as D } from '@/components/ui/ds';",
+    ].join('\n');
+    expect(importaJanelaDoPacote(codigo, 'x.tsx').map(a => a.linha)).toEqual([1, 3]);
+  });
+
+  it('janela à mão é fixed inset-0 numa classe', () => {
+    expect(JANELA_A_MAO.test('<div className="fixed inset-0 z-50 bg-black/60">')).toBe(true);
+    expect(JANELA_A_MAO.test("isMobile ? 'fixed inset-0 z-50' : ''")).toBe(true);
+    expect(JANELA_A_MAO.test('<div className="fixed inset-x-0 bottom-0">')).toBe(false);
   });
 });
 

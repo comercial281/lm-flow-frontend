@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@evoapi/design-system/dialog';
+} from '@/components/ui/ds';
 import MessageTemplateService from '@/services/channels/messageTemplatesService';
 import { useLanguage } from '@/hooks/useLanguage';
 import { toast } from 'sonner';

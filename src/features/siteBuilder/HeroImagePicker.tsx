@@ -100,7 +100,7 @@ export default function HeroImagePicker({ open, onClose, onPick, currentProperty
 
   return (
     <Dialog open={open} onOpenChange={o => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {selected && (

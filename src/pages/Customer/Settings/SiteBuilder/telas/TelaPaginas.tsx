@@ -288,7 +288,7 @@ export default function TelaPaginas({ site, versaoDasPaginas = 0, aoMudarPagina 
 
       {/* Nova página: em branco ou a partir de um modelo pronto */}
       <Dialog open={escolhaAberta} onOpenChange={setEscolhaAberta}>
-        <DialogContent className="max-w-xl">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Nova página</DialogTitle>
             <DialogDescription>
@@ -323,7 +323,7 @@ export default function TelaPaginas({ site, versaoDasPaginas = 0, aoMudarPagina 
 
       {/* A página: título, endereço, conteúdo e as caixinhas */}
       <Dialog open={pageModal} onOpenChange={setPageModal}>
-        <DialogContent size="wide" className="sm:max-w-4xl overflow-y-auto">
+        <DialogContent size="wide" className="overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingPage ? 'Editar página' : 'Nova página'}</DialogTitle>
             <DialogDescription>O texto da página e se ela aparece no site e no menu.</DialogDescription>

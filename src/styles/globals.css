@@ -752,3 +752,18 @@ button.bg-primary:hover, [data-slot='button'].bg-primary:hover {
    nada muda. Só o site público usa `--display`.
    ============================================================================ */
 .font-\[var\(--display\)\] { font-family: var(--display); }
+
+/* Janela da casa no celular (peça 17 do GLOSSARIO, 10/10/2026): sobe de baixo.
+   Usada só com `max-sm:` no DialogContent/AlertDialogContent de
+   components/ui/ds.tsx (e só com `motion-safe:`). */
+@theme {
+  --animate-janela-sobe: janela-sobe 0.24s cubic-bezier(0.32, 0.72, 0, 1);
+  @keyframes janela-sobe {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+}

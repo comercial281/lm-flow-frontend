@@ -85,7 +85,7 @@ export default function ContactImportModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('import.title')}</DialogTitle>
           <DialogDescription>

@@ -55,7 +55,7 @@ export default function DuplicatePipelineModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{t('duplicatePipeline.title')}</DialogTitle>

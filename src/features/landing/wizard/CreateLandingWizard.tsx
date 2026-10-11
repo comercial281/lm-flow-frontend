@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Building2, Check, LayoutTemplate, Loader2, Megaphone, Search, X } from 'lucide-react';
+import { Building2, Check, LayoutTemplate, Loader2, Megaphone, Search } from 'lucide-react';
 import { labelsService } from '@/services/contacts/labelsService';
 import { landingPageService } from '@/services/landingPages/landingPageService';
 import { landingTemplatesService, type LandingTemplateDTO } from '@/services/landingPages/landingTemplatesService';
@@ -12,6 +12,14 @@ import { safeParsePageBlocks } from '@/features/landing/blocks';
 // idêntico ao que a página vai receber ao publicar.
 import { slugifyLandingName } from '@/features/landing/manage/landingUrl';
 import { Seletor } from '@/components/base/Seletor';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/ds';
 import { MODELOS_DE_ANUNCIO, modeloSugerido, type ModeloDeAnuncioId } from '@/features/landing/modelos/modelosDeAnuncio';
 
 interface Opt {
@@ -244,18 +252,14 @@ export default function CreateLandingWizard({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-border bg-card">
-        {/* header */}
-        <div className="flex items-start justify-between border-b border-border p-5">
-          <div>
-            <h2 className="text-base font-semibold">Criar com assistente</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">Passo {step} de 3</p>
-          </div>
-          <button type="button" aria-label="Fechar" onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    // Janela da casa. Clique fora não fecha (como antes: perderia o que já foi
+    // escolhido nos passos); o X e o Esc fecham.
+    <Dialog open onOpenChange={(aberta) => { if (!aberta) onClose(); }}>
+      <DialogContent className="flex flex-col gap-0 overflow-hidden p-0" onInteractOutside={(e) => e.preventDefault()}>
+        <DialogHeader>
+          <DialogTitle className="text-base">Criar com assistente</DialogTitle>
+          <DialogDescription className="text-xs">Passo {step} de 3</DialogDescription>
+        </DialogHeader>
 
         {/* body */}
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
@@ -443,7 +447,7 @@ export default function CreateLandingWizard({
         </div>
 
         {/* footer */}
-        <div className="flex items-center justify-between border-t border-border p-4">
+        <DialogFooter className="sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={() => (step === 1 ? onClose() : setStep((s) => (s - 1) as 1 | 2 | 3))}
@@ -470,8 +474,8 @@ export default function CreateLandingWizard({
               {creating && <Loader2 className="h-4 w-4 animate-spin" />} Criar landing
             </button>
           )}
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

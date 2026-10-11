@@ -116,7 +116,7 @@ export default function BolsaoImportWizard({ open, onOpenChange, onImported }: P
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent size="wide">
         <DialogHeader>
           <DialogTitle>Nova lista no Bolsão</DialogTitle>
           <DialogDescription>
