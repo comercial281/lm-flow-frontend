@@ -47,3 +47,19 @@ describe('AnnounceLessonModal · erro de carga', () => {
     expect(await screen.findAllByText(/Ver os últimos avisos/)).toHaveLength(1);
   });
 });
+
+// Esc fechava e perdia o texto do aviso. Nem Esc nem clique fora fecham; o X e o Fechar fecham.
+describe('AnnounceLessonModal · Esc não perde o texto', () => {
+  it('Esc não fecha; Fechar fecha', async () => {
+    s.config.mockResolvedValue({ data: { data: CONFIG } });
+    const onClose = vi.fn();
+    render(<AnnounceLessonModal lesson={aula} courseId="c1" onClose={onClose} />);
+    await screen.findByText(/Ver os últimos avisos/);
+    await userEvent.keyboard('{Escape}');
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    const fechar = screen.getAllByRole('button', { name: 'Fechar' });
+    await userEvent.click(fechar[fechar.length - 1]);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});

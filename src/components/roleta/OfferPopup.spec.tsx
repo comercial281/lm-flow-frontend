@@ -248,6 +248,21 @@ describe('OfferPopup', () => {
 
   // I1: clique fora não adia a oferta; Esc adia (= Ver depois), mas não com
   // Aceitar/Recusar em curso.
+  // Celular com o app instalado (barra de status translúcida): o topo da casa sobe
+  // 24 px (-mt-(--janela-p)) e entrava na faixa do relógio. O topo do pop-up de tela
+  // cheia cobre a barra de status e põe o título abaixo dela; a alcinha some (não há
+  // "puxar pra baixo" numa tela cheia, e ela ficaria sob a Dynamic Island).
+  // O jsdom não calcula env(): conferir também num iPhone com o app instalado.
+  it('celular: o topo respeita a barra de status e a alcinha some no pop-up de tela cheia', () => {
+    ofertas = [oferta('a')];
+    montar();
+    const topo = screen.getByText('Lead novo pra você').closest('[data-slot="dialog-header"]')!;
+    expect(topo.className).toContain('max-sm:-mt-[max(1.5rem,env(safe-area-inset-top))]');
+    expect(topo.className).toContain('max-sm:pt-[calc(1rem+env(safe-area-inset-top))]');
+    const caixa = screen.getByRole('dialog');
+    expect(caixa.className).toContain('max-sm:[&_[data-janela-alca]]:hidden');
+  });
+
   it('clique fora não fecha nem adia a oferta', () => {
     ofertas = [oferta('a')];
     montar();

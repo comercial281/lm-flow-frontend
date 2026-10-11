@@ -223,8 +223,13 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
 
   return (
     <Dialog open onOpenChange={(aberta) => { if (!aberta) onClose(); }}>
-      {/* Topo e rodapé da casa; o miolo rola sozinho (p-0 + flex-col). */}
-      <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden flex flex-col">
+      {/* Topo e rodapé da casa; o miolo rola sozinho (p-0 + flex-col).
+          Nem Esc nem clique fora fecham (perderiam o texto do aviso); o X e o Fechar fecham. */}
+      <DialogContent
+        className="max-w-2xl p-0 gap-0 overflow-hidden flex flex-col"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader className="flex-row items-start gap-2.5 text-left">
           <Megaphone className="h-5 w-5 text-primary shrink-0 mt-0.5" aria-hidden="true" />
           <div className="min-w-0">

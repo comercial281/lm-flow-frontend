@@ -124,3 +124,18 @@ describe('Roteamento de lead · Quem assume o lead', () => {
     expect(screen.queryByText(/número de plantão/)).toBeNull();
   });
 });
+
+// Esc fechava e descartava funil, coluna, tag, quem assume e pixel não salvos.
+// Volta ao de antes: nem Esc nem clique fora fecham; o X e o Cancelar fecham.
+describe('Roteamento de lead: Esc não descarta', () => {
+  it('Esc não fecha; Cancelar fecha', async () => {
+    const onClose = vi.fn();
+    render(<LeadRoutingModal siteId="s1" page={page} onClose={onClose} onSaved={() => {}} />);
+    await screen.findAllByRole('combobox', { name: /Tag/ });
+    await userEvent.keyboard('{Escape}');
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
