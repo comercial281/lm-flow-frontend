@@ -39,7 +39,7 @@ import PropertyBookDialog from '@/components/properties/PropertyBookDialog';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { Seletor } from '@/components/base/Seletor';
 import { isForbiddenError } from '@/services/core/forbidden';
-import { lerRecorteImoveis, type FiltroDoLink } from '@/features/dashboard/links';
+import { lerRecorteImoveis, type FiltroImoveis } from '@/features/dashboard/links';
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
 import { getTenantSlug } from '@/services/core/tenant';
 import Abas from '@/components/base/Abas';
@@ -92,7 +92,7 @@ export default function Properties() {
 
   const [searchParams, setSearchParams]       = useSearchParams();
   // Filtro que veio de um clique na Dashboard (?recorte=…). Lido uma vez ao abrir.
-  const [recorte, setRecorte]                 = useState<FiltroDoLink | null>(() => lerRecorteImoveis(searchParams));
+  const [recorte, setRecorte]                 = useState<FiltroImoveis | null>(() => lerRecorteImoveis(searchParams));
   const [search, setSearch]                   = useState(searchParams.get('q') ?? '');
   // A busca que a lista usa: anda 400 ms atrás do que a pessoa digita.
   const [buscaAtiva, setBuscaAtiva]           = useState(search);

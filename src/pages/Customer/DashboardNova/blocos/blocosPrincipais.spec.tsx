@@ -103,36 +103,37 @@ describe('bloco Números', () => {
   const kpis = {
     leads: { value: 195, previous: 172, delta: 13.4 },
     conversations: { value: 312, previous: 300, delta: 4 },
-    visits_scheduled: { value: 28, previous: 30, delta: -6.7 },
+    visits_done: { value: 11, previous: 8, delta: 37.5 },
     proposals: { value: 9, previous: 6, delta: 50 },
   };
 
-  it('Leads e Conversas abrem a lista rápida; Visitas vai para a Agenda no período', () => {
+  it('Leads e Conversas abrem a lista rápida; Visitas realizadas vai para a Agenda no período', () => {
     const abrirLista = vi.fn();
     wrap(<Numeros {...ctx({ abrirLista }, { kpis })} />);
     fireEvent.click(screen.getByRole('button', { name: /Leads captados/ }));
     expect(abrirLista).toHaveBeenCalledWith('leads_periodo', 'Leads captados');
     fireEvent.click(screen.getByRole('button', { name: /Conversas/ }));
     expect(abrirLista).toHaveBeenLastCalledWith('conversas_periodo', 'Conversas');
-    fireEvent.click(screen.getByRole('button', { name: /Visitas agendadas/ }));
-    expect(navegar).toHaveBeenLastCalledWith('/visits?desde=2026-09-24&ate=2026-09-30');
+    fireEvent.click(screen.getByRole('button', { name: /Visitas realizadas/ }));
+    expect(navegar).toHaveBeenLastCalledWith('/visits?situacao=realizadas&desde=2026-09-24&ate=2026-09-30');
   });
 
-  it('Visitas agendadas abre a Agenda na janela do calendário, com as visitas que ainda vão acontecer', () => {
+  // Frente 5 da Nova 27: realizadas contam no período (não na janela do
+  // calendário, que era das agendadas) e a Agenda abre filtrada em Realizadas.
+  it('Visitas realizadas abre a Agenda no período, não no mês inteiro', () => {
     const esteMes = {
       ...periodo, preset: 'this_month', since: '2026-09-01T00:00:00-03:00', until: '2026-09-15T23:59:59-03:00',
       calendar: { since: '2026-09-01T00:00:00-03:00', until: '2026-09-30T23:59:59-03:00' },
     };
     wrap(<Numeros {...ctx({}, { kpis, period: esteMes })} />);
-    fireEvent.click(screen.getByRole('button', { name: /Visitas agendadas/ }));
-    expect(navegar).toHaveBeenLastCalledWith('/visits?desde=2026-09-01&ate=2026-09-30');
+    fireEvent.click(screen.getByRole('button', { name: /Visitas realizadas/ }));
+    expect(navegar).toHaveBeenLastCalledWith('/visits?situacao=realizadas&desde=2026-09-01&ate=2026-09-15');
   });
 
-  it('servidor sem a janela do calendário: a Agenda abre no período', () => {
-    const esteMes = { ...periodo, preset: 'this_month', since: '2026-09-01T00:00:00-03:00', until: '2026-09-15T23:59:59-03:00' };
-    wrap(<Numeros {...ctx({}, { kpis, period: esteMes })} />);
-    fireEvent.click(screen.getByRole('button', { name: /Visitas agendadas/ }));
-    expect(navegar).toHaveBeenLastCalledWith('/visits?desde=2026-09-01&ate=2026-09-15');
+  it('não mostra mais Visitas realizadas', () => {
+    wrap(<Numeros {...ctx({}, { kpis: { ...kpis, visits_scheduled: { value: 28, previous: 30, delta: -6.7 } } })} />);
+    expect(screen.queryByText('Visitas agendadas')).not.toBeInTheDocument();
+    expect(screen.getByText('11')).toBeInTheDocument();
   });
 
   it('Propostas vai para Propostas no período', () => {
@@ -179,26 +180,26 @@ describe('bloco Números', () => {
     ];
     casos.forEach(over => {
       const { unmount } = wrap(<Numeros {...ctx(over, { kpis })} />);
-      expect(screen.queryByRole('button', { name: /Visitas agendadas/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Visitas realizadas/ })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /Propostas/ })).not.toBeInTheDocument();
-      expect(screen.getByText('Visitas agendadas')).toBeInTheDocument();
+      expect(screen.getByText('Visitas realizadas')).toBeInTheDocument();
       // Leads e Conversas abrem a lista rápida, que usa os mesmos filtros: continuam.
       expect(screen.getByRole('button', { name: /Leads captados/ })).toBeInTheDocument();
       unmount();
     });
     wrap(<Numeros {...ctx({}, { kpis, scope: escopo('team') })} />);
-    expect(screen.queryByRole('button', { name: /Visitas agendadas/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Visitas realizadas/ })).not.toBeInTheDocument();
   });
 
-  it('o corretor travado: Visitas agendadas leva à Agenda, que já recorta por ele', () => {
+  it('o corretor travado: Visitas realizadas leva à Agenda, que já recorta por ele', () => {
     wrap(<Numeros {...ctx({ visao: 'corretor' }, { kpis, scope: escopo('mine', { locked: true, available_modes: ['mine'] }) })} />);
-    fireEvent.click(screen.getByRole('button', { name: /Visitas agendadas/ }));
-    expect(navegar).toHaveBeenLastCalledWith('/visits?desde=2026-09-24&ate=2026-09-30');
+    fireEvent.click(screen.getByRole('button', { name: /Visitas realizadas/ }));
+    expect(navegar).toHaveBeenLastCalledWith('/visits?situacao=realizadas&desde=2026-09-24&ate=2026-09-30');
   });
 
   it('o corretor sem trava (isolamento desligado): a Agenda mostraria a casa toda, então não é link', () => {
     wrap(<Numeros {...ctx({ visao: 'corretor' }, { kpis, scope: escopo('mine') })} />);
-    expect(screen.queryByRole('button', { name: /Visitas agendadas/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Visitas realizadas/ })).not.toBeInTheDocument();
   });
 });
 

@@ -96,6 +96,12 @@ export interface PipelineBlock {
     entered: number; current: number;
     /** gasto do período / quantos entraram na etapa; null quando não há base */
     cost_per_entry?: number | null;
+    /**
+     * Média de há quanto tempo os cards abertos de agora estão na etapa, desde a
+     * última entrada (o relógio do Funil). Null = ninguém parado; ausente em
+     * servidor de antes.
+     */
+    avg_seconds_in_stage?: number | null;
   }[];
   /**
    * Ganhos e Perdidos do período (situação do card, desde 07/10/2026): leads cuja

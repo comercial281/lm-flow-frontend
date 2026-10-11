@@ -1,5 +1,6 @@
 // src/pages/Customer/DashboardNova/blocos/Funil.tsx
-import React from 'react';
+import React, { useState } from 'react';
+import { Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { numero } from '@/lib/formato';
 import { EmptyBlock, GlassCard, Skeleton } from '../base/primitives';
@@ -8,9 +9,36 @@ import { linkFunil } from '@/features/dashboard/links';
 import type { ContextoBloco } from '../usePodeAbrir';
 import { recorteBateComDestino } from '../visao';
 import { Seletor } from '@/components/base/Seletor';
+import { VAZIO } from '@/lib/formato';
+import { tempoEmDias } from './comum';
+
+type Forma = 'lista' | 'funil';
+const CHAVE_FORMA = 'lmf.painel.funil.forma';
+
+// Lista ou desenho de funil: escolha de cada pessoa, lembrada neste navegador.
+// Sem acesso ao armazenamento (aba anônima), abre na Lista e não lembra.
+const lerForma = (): Forma => {
+  try {
+    return window.localStorage.getItem(CHAVE_FORMA) === 'funil' ? 'funil' : 'lista';
+  } catch {
+    return 'lista';
+  }
+};
+const gravarForma = (f: Forma) => {
+  try {
+    window.localStorage.setItem(CHAVE_FORMA, f);
+  } catch {
+    // sem armazenamento: só não lembra
+  }
+};
+
+/** O desenho afunila sempre no mesmo formato: a última faixa fica com esta largura (%). */
+const LARGURA_FINAL = 44;
 
 export const Funil: React.FC<ContextoBloco> = ({ dados, visao, pode, filtros, funil, mudarFunil }) => {
   const navigate = useNavigate();
+  const [forma, setForma] = useState<Forma>(lerForma);
+  const [relogio, setRelogio] = useState(false);
   // O Funil lê o pedido dele (dados, erro e espera próprios), não o dos outros blocos.
   const bloco = funil.dados?.pipeline;
   const titulo = visao === 'corretor' ? 'Seu funil' : 'Funil';
@@ -56,25 +84,85 @@ export const Funil: React.FC<ContextoBloco> = ({ dados, visao, pode, filtros, fu
   // que ele mostra sozinho, a etapa fica sem link. Enquanto o funil novo
   // carrega, as etapas na tela são do antigo: também sem link.
   const abreEtapa = pode.funil && !funil.pendente && recorteBateComDestino(dados?.scope ?? funil.dados?.scope, filtros);
-  const max = Math.max(1, ...bloco.stages.map(s => s.current));
+  // Relógio (frente 5 da Nova 27): o número de cada etapa vira o tempo médio que
+  // os leads de agora estão parados nela. Servidor de antes não manda: sem relógio.
+  const temRelogio = bloco.stages.some(s => s.avg_seconds_in_stage !== undefined);
+  const comRelogio = relogio && temRelogio;
+  const medida = (s: (typeof bloco.stages)[number]) => (comRelogio ? s.avg_seconds_in_stage ?? 0 : s.current);
+  const rotulo = (s: (typeof bloco.stages)[number]) => {
+    if (!comRelogio) return numero(s.current);
+    return s.avg_seconds_in_stage == null ? VAZIO : `~${tempoEmDias(s.avg_seconds_in_stage)}`;
+  };
+  const max = Math.max(1, ...bloco.stages.map(medida));
+  const trocarForma = (f: Forma) => {
+    setForma(f);
+    gravarForma(f);
+  };
+
+  const acoes = (
+    <div className="lmfn-controles">
+      <div className="lmfn-seg" role="group" aria-label="Forma do funil">
+        {(['lista', 'funil'] as Forma[]).map(f => (
+          <button key={f} type="button" aria-pressed={forma === f} onClick={() => trocarForma(f)}>
+            {f === 'lista' ? 'Lista' : 'Funil'}
+          </button>
+        ))}
+      </div>
+      {temRelogio && (
+        <div className="lmfn-seg">
+          <button type="button" aria-pressed={comRelogio} onClick={() => setRelogio(r => !r)}
+            aria-label="Tempo médio em cada etapa" title="Tempo médio em cada etapa"
+            style={{ display: 'inline-flex', alignItems: 'center', padding: '6px 8px' }}>
+            <Clock size={15} aria-hidden />
+          </button>
+        </div>
+      )}
+      {seletor}
+    </div>
+  );
+  const subtitulo = comRelogio ? 'Há quanto tempo, em média, os leads estão em cada etapa' : 'Leads em cada etapa agora';
+  const abrir = (etapaId: string) => navigate(linkFunil(bloco.pipeline.id, etapaId));
+  const n = bloco.stages.length;
+  // Recuo de cada lado, em %: a faixa i começa onde a anterior terminou.
+  const recuo = (i: number) => (n <= 1 ? 0 : ((100 - LARGURA_FINAL) / 2) * (i / n));
 
   return (
     // Mesmo aviso da área dos blocos: ocupado e esmaecido enquanto o funil novo não chega.
     <div className={funil.pendente ? 'lmfn-blocos-pendente' : undefined} aria-busy={funil.pendente || undefined}>
-      <GlassCard title={titulo} subtitle="Leads em cada etapa agora" action={seletor ?? undefined}>
+      <GlassCard title={titulo} subtitle={subtitulo} action={acoes}>
         {bloco.stages.length === 0 && <EmptyBlock text="Este funil ainda não tem etapas." />}
-        {bloco.stages.map(s => {
+        {forma === 'funil' && n > 0 && (
+          <div className="lmfn-funil">
+            {bloco.stages.map((s, i) => {
+              const a = recuo(i);
+              const b = recuo(i + 1);
+              const corpo = (
+                <>
+                  <span className="lmfn-funil-nome">{s.name}</span>
+                  <span className="lmfn-funil-valor">{rotulo(s)}</span>
+                </>
+              );
+              const estilo = { clipPath: `polygon(${a}% 0, ${100 - a}% 0, ${100 - b}% 100%, ${b}% 100%)`, paddingInline: `${b + 3}%` };
+              return abreEtapa ? (
+                <button key={s.id} type="button" className="lmfn-funil-faixa" style={estilo} onClick={() => abrir(s.id)}>{corpo}</button>
+              ) : (
+                <div key={s.id} className="lmfn-funil-faixa" style={estilo}>{corpo}</div>
+              );
+            })}
+          </div>
+        )}
+        {forma === 'lista' && bloco.stages.map(s => {
           const corpo = (
             <>
               <span className="lmfn-item-texto" style={{ flex: '0 0 40%' }}>{s.name}</span>
               <span style={{ flex: 1, height: 10, borderRadius: 5, background: 'var(--lmf-track)', overflow: 'hidden' }}>
-                <span style={{ display: 'block', height: '100%', width: `${(s.current / max) * 100}%`, background: 'var(--lmf-accent)' }} />
+                <span style={{ display: 'block', height: '100%', width: `${(medida(s) / max) * 100}%`, background: 'var(--lmf-accent)' }} />
               </span>
-              <span style={{ width: 40, textAlign: 'right', fontWeight: 600 }}>{numero(s.current)}</span>
+              <span style={{ minWidth: 40, textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>{rotulo(s)}</span>
             </>
           );
           return abreEtapa ? (
-            <button key={s.id} type="button" className="lmfn-item" onClick={() => navigate(linkFunil(bloco.pipeline.id, s.id))}>{corpo}</button>
+            <button key={s.id} type="button" className="lmfn-item" onClick={() => abrir(s.id)}>{corpo}</button>
           ) : (
             <div key={s.id} className="lmfn-item">{corpo}</div>
           );

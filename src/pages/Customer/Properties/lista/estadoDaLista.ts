@@ -9,7 +9,7 @@ export type Visao = 'lista' | 'grade' | 'mapa';
 
 export function paramsDaLista(a: {
   kind: ListingKind; filtros: Filtros; busca: string; ordem: Ordem;
-  recorte: Record<string, string> | null; pagina: number;
+  recorte: Record<string, string | string[]> | null; pagina: number;
 }): PropertiesListParams {
   const q = a.busca.trim();
   return {

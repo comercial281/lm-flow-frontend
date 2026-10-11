@@ -22,6 +22,13 @@ const LINHAS: LinhaImovel[] = [
   { recorte: 'desatualizados', rotulo: 'Desatualizados', campo: 'stale', tom: 'alerta' },
 ];
 
+// Empreendimentos ativos por fase (frente 5 da Nova 27): sem período, como "ativos".
+const FASES: { recorte: RecorteImoveis; rotulo: string; campo: keyof NonNullable<PropertiesSummary['phases']> }[] = [
+  { recorte: 'na_planta', rotulo: 'Na planta', campo: 'plan' },
+  { recorte: 'em_obra', rotulo: 'Em obra', campo: 'construction' },
+  { recorte: 'prontos', rotulo: 'Prontos', campo: 'ready' },
+];
+
 export const Imoveis: React.FC<ContextoBloco> = ({ dados, carregando, visao, pode }) => {
   const navigate = useNavigate();
   const bloco = dados?.properties;
@@ -63,6 +70,24 @@ export const Imoveis: React.FC<ContextoBloco> = ({ dados, carregando, visao, pod
         </button>
       ) : (
         <div className="flex items-baseline gap-2 mb-2">{ativos}</div>
+      )}
+      {/* Sem empreendimento nenhum (só revenda), a linha não aparece. */}
+      {bloco.phases && FASES.some(f => bloco.phases![f.campo] > 0) && (
+        <div className="lmfn-fases" role="group" aria-label="Empreendimentos por fase">
+          {FASES.map(f => {
+            const conteudo = (
+              <>
+                <span className="lmfn-fase-valor">{numero(bloco.phases![f.campo])}</span>
+                <span className="lmfn-fase-rotulo">{f.rotulo}</span>
+              </>
+            );
+            return pode.imoveis ? (
+              <button key={f.recorte} type="button" className="lmfn-fase" onClick={() => abrir(f.recorte)}>{conteudo}</button>
+            ) : (
+              <div key={f.recorte} className="lmfn-fase">{conteudo}</div>
+            );
+          })}
+        </div>
       )}
       {LINHAS.map(l => {
         const valor = bloco[l.campo];
