@@ -200,7 +200,7 @@ export default function UserFormModal({ isOpen, onClose, user, onSuccess }: User
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-sidebar border-sidebar-border max-w-md">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="text-sidebar-foreground">
             {user ? t('form.title.edit') : t('form.title.create')}

@@ -394,7 +394,7 @@ export default function PropertyInterests() {
 
       {/* Create Modal */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Registrar interesse</DialogTitle>
             <DialogDescription>Vincule um contato a um imóvel</DialogDescription>

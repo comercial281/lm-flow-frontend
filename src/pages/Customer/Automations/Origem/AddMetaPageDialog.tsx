@@ -103,7 +103,7 @@ export default function AddMetaPageDialog({ open, onOpenChange, onAdded }: Props
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Adicionar página do Facebook</DialogTitle>
           <DialogDescription>

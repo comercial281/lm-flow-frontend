@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Briefcase, Building2, Search, Trash2 } from 'lucide-react';
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Input, Label, Textarea } from '@/components/ui/ds';
+import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Label, Textarea } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import { visitsService, type LeadPickerItem, type PersonRef } from '@/services/visits/visitsService';
 import { propertiesService } from '@/services/properties/propertiesService';
@@ -252,7 +252,7 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
 
   return (
     <Dialog open={aberta} onOpenChange={v => !v && aoFechar()}>
-      <DialogContent className="max-w-5xl max-h-[90dvh] overflow-y-auto">
+      <DialogContent size="wide" className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{tarefa ? T.editarTarefa : T.agendarTarefa}</DialogTitle>
         </DialogHeader>
@@ -425,7 +425,7 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
           <AgendaDoDia className="hidden md:flex" dia={diaDaAgenda} aoMudarDia={setDiaDaAgenda} responsavel={donoDaAgenda} />
         </div>
 
-        <div className="flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <DialogFooter className="gap-3 sm:items-center sm:justify-between">
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" className="h-4 w-4 accent-primary" checked={concluida} onChange={e => setConcluida(e.target.checked)} />
             {T.marcarConcluida}
@@ -434,7 +434,7 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
             <Button variant="outline" onClick={aoFechar} disabled={salvando}>{T.cancelar}</Button>
             <Button onClick={salvar} disabled={salvando || carregando}>{T.salvar}</Button>
           </div>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

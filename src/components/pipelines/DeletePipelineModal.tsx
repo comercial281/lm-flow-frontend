@@ -43,7 +43,7 @@ export default function DeletePipelineModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('deletePipeline.title')}</DialogTitle>
           <DialogDescription>{t('deletePipeline.description')}</DialogDescription>

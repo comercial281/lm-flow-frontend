@@ -76,7 +76,7 @@ export default function CardDoContato({ contactId, onOpenChange, onMudou }: Prop
   if (!carregado) {
     return (
       <Dialog open onOpenChange={fechar}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogTitle className="sr-only">Abrindo o contato</DialogTitle>
           <DialogDescription className="sr-only">Carregando o card do contato</DialogDescription>
           <Carregando variante="texto" linhas={4} rotulo="Abrindo o contato…" className="py-2" />

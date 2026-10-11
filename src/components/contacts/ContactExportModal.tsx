@@ -143,7 +143,7 @@ export default function ContactExportModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('export.title')}</DialogTitle>
           <DialogDescription>{getExportDescription()}</DialogDescription>

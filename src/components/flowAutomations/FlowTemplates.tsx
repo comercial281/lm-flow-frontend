@@ -92,7 +92,7 @@ interface DialogProps extends ListProps {
 export function FlowTemplatesDialog({ open, onClose, onApplied }: DialogProps) {
   return (
     <Dialog open={open} onOpenChange={o => !o && onClose()}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Modelos</DialogTitle>
           <DialogDescription>

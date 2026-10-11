@@ -175,7 +175,7 @@ export default function EditPipelineModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-1 flex-col gap-2 min-h-0">
+          <div className="mt-4 flex flex-1 flex-col gap-2 min-h-0">
             <Abas
               rotulo={t('editPipeline.title')}
               ativa={aba}

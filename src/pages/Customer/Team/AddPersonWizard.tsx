@@ -268,7 +268,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
     return (
       <>
         <Dialog open={open && !retryOpen} onOpenChange={o => !o && !saving && close()}>
-          <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{name.trim()} entrou na equipe</DialogTitle>
               <DialogDescription>O que ficou pronto e o que falta.</DialogDescription>
@@ -359,7 +359,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
 
   return (
     <Dialog open={open} onOpenChange={o => !o && !saving && close()}>
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Adicionar pessoa</DialogTitle>
           <DialogDescription>

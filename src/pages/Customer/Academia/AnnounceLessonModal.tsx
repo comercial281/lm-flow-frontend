@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Megaphone, X, Send, Loader2, Check, Users, RefreshCw, Save, Search, History,
+  Megaphone, Send, Loader2, Check, Users, RefreshCw, Save, Search, History,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { plural } from '@/lib/formato';
@@ -25,7 +25,15 @@ import {
 } from '@/services/academy/academyAnnouncementsService';
 import { Seletor } from '@/components/base/Seletor';
 import Aviso from '@/components/base/Aviso';
-import { Button } from '@/components/ui/ds';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/ds';
 
 interface Props {
   lesson: AnnounceLesson;
@@ -209,30 +217,16 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
   const desativado = config ? !config.enabled : false;
 
   return (
-    <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60"
-      onClick={onClose}
-      role="presentation"
-    >
-      <div
-        className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl bg-card border border-border overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        {/* Cabeçalho */}
-        <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border">
-          <div className="flex items-start gap-2.5 min-w-0">
-            <Megaphone className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-            <div className="min-w-0">
-              <h2 className="text-sm font-bold">Avisar os clientes sobre esta aula</h2>
-              <p className="text-xs text-muted-foreground truncate">{lesson.titulo}</p>
-            </div>
+    <Dialog open onOpenChange={(aberta) => { if (!aberta) onClose(); }}>
+      {/* Topo e rodapé da casa; o miolo rola sozinho (p-0 + flex-col). */}
+      <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden flex flex-col">
+        <DialogHeader className="flex-row items-start gap-2.5 text-left">
+          <Megaphone className="h-5 w-5 text-primary shrink-0 mt-0.5" aria-hidden="true" />
+          <div className="min-w-0">
+            <DialogTitle className="text-sm font-bold">Avisar os clientes sobre esta aula</DialogTitle>
+            <DialogDescription className="text-xs truncate">{lesson.titulo}</DialogDescription>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground" type="button" aria-label="Fechar">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+        </DialogHeader>
 
         {carregando ? (
           <Carregando variante="texto" linhas={6} className="flex-1 px-5 py-6" />
@@ -441,7 +435,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
         )}
 
         {/* Rodapé */}
-        <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-t border-border">
+        <DialogFooter className="sm:flex-wrap sm:items-center sm:justify-between">
           <Button
             variant="outline"
             size="sm"
@@ -465,8 +459,8 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
               Enviar para {plural(selecionados.length, 'grupo', 'grupos')}
             </Button>
           </div>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

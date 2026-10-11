@@ -259,6 +259,60 @@ export const cartaoAMao = linha =>
 // (`const COR = '#…'` e depois `fill={COR}`) escapa: a revisão de PR confere.
 // Logo da marca vai pras exceções.
 export const corFixaEmGrafico = linha => /\b(?:fill|stroke|stopColor)=(?:["']#|\{\s*["'`]#)/.test(linha);
+// Janela (peça 17 do GLOSSARIO, escolha do dono em 10/10/2026). O ajuste da
+// casa (`src/components/ui/ds.tsx`) é quem dá topo e rodapé fixos, rolagem por
+// dentro e o jeito do celular (sobe de baixo); janela que escapa dele não ganha
+// nada disso. Três réguas:
+// - larguraDeJanela: só quatro larguras. `DialogContent`/`AlertDialogContent` com
+//   `max-w-*` diferente de `max-w-md` (448) e `max-w-2xl` (672), com ou sem `sm:`.
+//   A padrão (512) é sem largura e a larga (1400) é `size="wide"`. Variante de
+//   celular (`max-sm:max-w-*`) não conta: é ajuste fino de tela pequena.
+// - janelaDireta: `Dialog*` importado do pacote base (`@evoapi/design-system` ou
+//   `/dialog`) fora do ajuste da casa. Vale pro app inteiro. (O `/alert-dialog`
+//   é da peça Confirmação.)
+// - janelaAMao: `fixed inset-0` na tela do cliente (janela montada à mão com uma
+//   div). O que não é janela (visualizador de foto, camada de soltar arquivo,
+//   fundo de menu de contexto, painel do construtor que vira tela cheia no
+//   celular, simulador do Testar) fica em conferir-padrao.excecoes.json.
+const AJUSTE_DA_CASA = 'src/components/ui/ds.tsx';
+const LARGURAS_DA_CASA = new Set(['md', '2xl']);
+const TAGS_DE_JANELA = new Set(['DialogContent', 'AlertDialogContent']);
+export function largurasForaDaEscala(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const achados = [];
+  const visitar = no => {
+    if ((ts.isJsxOpeningElement(no) || ts.isJsxSelfClosingElement(no)) && TAGS_DE_JANELA.has(no.tagName.getText(fonte))) {
+      const classe = no.attributes.properties.find(a => ts.isJsxAttribute(a) && a.name.getText(fonte) === 'className');
+      const texto = classe?.initializer ? classe.initializer.getText(fonte) : '';
+      for (const m of texto.matchAll(/(?:^|[\s'"`{])((?:[\w\[\]-]+:)*)!?max-w-([^\s'"`}]+)/g)) {
+        if (/(^|:)max-[\w-]*:$/.test(m[1]) || m[1].startsWith('max-')) continue;
+        if (LARGURAS_DA_CASA.has(m[2].replace(/!$/, ''))) continue;
+        const { line } = fonte.getLineAndCharacterOfPosition(no.getStart(fonte));
+        achados.push({ linha: line + 1, texto: `<${no.tagName.getText(fonte)} className=${texto.replace(/\s+/g, ' ')}`, largura: `${m[1]}max-w-${m[2]}` });
+      }
+    }
+    ts.forEachChild(no, visitar);
+  };
+  visitar(fonte);
+  return achados;
+}
+export function importaJanelaDoPacote(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const achados = [];
+  for (const no of fonte.statements) {
+    if (!ts.isImportDeclaration(no) || !ts.isStringLiteral(no.moduleSpecifier)) continue;
+    const mod = no.moduleSpecifier.text;
+    if (mod !== '@evoapi/design-system' && mod !== '@evoapi/design-system/dialog') continue;
+    const nomes = no.importClause?.namedBindings;
+    const direto = mod.endsWith('/dialog') || (nomes && ts.isNamedImports(nomes) && nomes.elements.some(e => /^Dialog/.test((e.propertyName ?? e.name).text)));
+    if (direto) {
+      const { line } = fonte.getLineAndCharacterOfPosition(no.getStart(fonte));
+      achados.push({ linha: line + 1, texto: no.getText(fonte).replace(/\s+/g, ' ') });
+    }
+  }
+  return achados;
+}
+export const JANELA_A_MAO = /(?:^|[\s'"`])fixed inset-0(?=[\s'"`]|$)/;
 
 const SELETORES_DA_CASA = new Set(['src/components/base/Seletor.tsx', 'src/components/base/SeletorComAbas.tsx']);
 // Ficam com a lista do sistema DE PROPÓSITO (decisão 3 da spec do Seletor): o
@@ -769,8 +823,12 @@ export function varrer() {
     const escopo = noEscopo(rel);
     const lista = contaSelectNativo(rel);
     const confirmacao = contaConfirmacao(rel);
-    if (!escopo && !lista && !confirmacao) continue;
+    const janela = rel.startsWith('src/') && /\.tsx?$/.test(rel) && !/\.(spec|test)\.tsx?$/.test(rel) && rel !== AJUSTE_DA_CASA;
+    if (!escopo && !lista && !confirmacao && !janela) continue;
     const codigo = readFileSync(arquivo, 'utf8');
+    if (janela && codigo.includes('@evoapi/design-system')) {
+      for (const a of importaJanelaDoPacote(codigo, rel)) anotar('janelaDireta', rel, a.linha, 'janela importada do pacote base', a.texto);
+    }
     if (escopo && (rel.endsWith('.tsx') || rel.endsWith('.ts'))) {
       for (const { linha, texto } of textosDaTela(codigo, rel)) conferirTexto(rel, linha, texto);
     }
@@ -787,6 +845,9 @@ export function varrer() {
       const tags = tagsJsx(codigo, rel);
       if (rel !== CABECALHO_DA_CASA) {
         for (const t of tags.filter(x => x.tag === 'h1')) anotar('tituloAMao', rel, t.linha, 'título feito à mão', linhas[t.linha - 1].trim());
+      }
+      if (rel !== AJUSTE_DA_CASA) {
+        for (const a of largurasForaDaEscala(codigo, rel)) anotar('larguraDeJanela', rel, a.linha, a.largura, a.texto);
       }
       if (!embrulhos.has(rel) && rel !== CABECALHO_DA_CASA && rel !== MOLDURA_DA_CASA) {
         const cab = tags.find(x => cabecalhos.has(x.tag));
@@ -809,6 +870,7 @@ export function varrer() {
       if (escopo && rel.endsWith('.tsx') && menuDeitado(l)) anotar('menuDeitado', rel, i + 1, 'menu de ações com ⋯ deitado', l.trim());
       if (escopo && rel.endsWith('.tsx') && !CARTOES_DA_CASA.has(rel) && cartaoAMao(l)) anotar('cartaoAMao', rel, i + 1, 'cartão feito à mão', l.trim());
       if (escopo && rel.endsWith('.tsx') && corFixaEmGrafico(l)) anotar('corFixaEmGrafico', rel, i + 1, 'cor fixa em gráfico', l.trim());
+      if (escopo && rel.endsWith('.tsx') && JANELA_A_MAO.test(l)) anotar('janelaAMao', rel, i + 1, 'janela montada à mão', l.trim());
       // selectNativo (app inteiro): pula linhas que começam com comentário ou têm */ após a tag
       if (lista && SELECT_NATIVO.test(l) && !COMECO_DE_COMENTARIO.test(limpa)) {
         const match = SELECT_NATIVO.exec(l);
@@ -855,13 +917,16 @@ export const CATEGORIAS = {
   rodinhaCentral: 'rodinha no meio da tela (use Carregando)',
   telaEmBranco: 'tela em branco carregando (fallback={null})',
   vazioSolto: '"Nenhum…" solto fora do EmptyState',
+  larguraDeJanela: 'janela com largura fora das quatro',
+  janelaDireta: 'janela importada do pacote base (app inteiro)',
+  janelaAMao: 'janela montada à mão (fixed inset-0)',
 };
 
 function principal() {
   const achados = varrer();
   const conta = c => achados.filter(a => a.categoria === c).length;
   console.log('padrão da tela do cliente (Fase 3)\n');
-  for (const [c, nome] of Object.entries(CATEGORIAS)) console.log(`  ${c.padEnd(14)}${String(conta(c)).padStart(6)}  ${nome}`);
+  for (const [c, nome] of Object.entries(CATEGORIAS)) console.log(`  ${c.padEnd(16)}${String(conta(c)).padStart(6)}  ${nome}`);
 
   const i = process.argv.indexOf('--listar');
   if (i !== -1) {

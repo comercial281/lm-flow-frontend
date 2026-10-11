@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Map } from 'lucide-react';
-import { Button } from '@/components/ui/ds';
+import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/ds';
 import { tourRegistry } from '@/tours/tourRegistry';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
@@ -50,9 +50,16 @@ export function WelcomeTourModal() {
     setPendingTour(true);
   };
 
+  // Janela da casa sem X e sem fechar por fora/Esc: como antes, só sai por um
+  // dos dois botões (começar o tour ou pular).
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-background rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 flex flex-col items-center gap-6 text-center">
+    <Dialog open>
+      <DialogContent
+        showCloseButton={false}
+        onInteractOutside={e => e.preventDefault()}
+        onEscapeKeyDown={e => e.preventDefault()}
+        className="max-w-md p-8 gap-6 justify-items-center text-center"
+      >
         <div
           className="flex items-center justify-center rounded-full w-16 h-16"
           style={{ backgroundColor: '#00C48C' }}
@@ -61,10 +68,10 @@ export function WelcomeTourModal() {
         </div>
 
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold">{t('welcome.title')}</h2>
-          <p className="text-muted-foreground text-sm">
+          <DialogTitle className="text-xl font-semibold">{t('welcome.title')}</DialogTitle>
+          <DialogDescription>
             {t('welcome.description')}
-          </p>
+          </DialogDescription>
         </div>
 
         <div className="flex flex-col gap-3 w-full">
@@ -79,7 +86,7 @@ export function WelcomeTourModal() {
             {t('welcome.skipButton')}
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

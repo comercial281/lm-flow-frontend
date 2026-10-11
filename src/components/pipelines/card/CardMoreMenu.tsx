@@ -168,7 +168,7 @@ export default function CardMoreMenu({
       </DropdownMenu>
 
       <Dialog open={roletaAberta} onOpenChange={setRoletaAberta}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogTitle>Mandar pra roleta</DialogTitle>
           <DialogDescription>
             A roleta escolhida oferece o lead a um corretor. Ele vira o responsável quando aceitar.
@@ -198,7 +198,7 @@ export default function CardMoreMenu({
       </Dialog>
 
       <Dialog open={removerAberto} onOpenChange={setRemoverAberto}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogTitle>Remover do funil?</DialogTitle>
           <DialogDescription>
             O lead sai deste funil. A conversa e o contato continuam existindo.

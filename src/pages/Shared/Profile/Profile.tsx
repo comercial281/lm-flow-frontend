@@ -979,7 +979,7 @@ const Profile = () => {
 
       {/* Dialog de Confirmação de Exclusão */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent>
           <DialogHeader className="space-y-3">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-6 w-6 text-destructive" />

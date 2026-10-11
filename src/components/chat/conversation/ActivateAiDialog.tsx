@@ -7,7 +7,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@evoapi/design-system/dialog';
+} from '@/components/ui/ds';
 import { Button } from '@/components/ui/ds';
 import { Input } from '@evoapi/design-system/input';
 import { Label } from '@evoapi/design-system/label';

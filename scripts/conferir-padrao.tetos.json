@@ -23,5 +23,8 @@
   "tamanhoDeIcone": 0,
   "rodinhaCentral": 0,
   "telaEmBranco": 0,
-  "vazioSolto": 0
+  "vazioSolto": 0,
+  "larguraDeJanela": 0,
+  "janelaDireta": 0,
+  "janelaAMao": 0
 }

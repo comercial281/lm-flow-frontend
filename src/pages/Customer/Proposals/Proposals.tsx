@@ -345,7 +345,7 @@ export default function Proposals() {
 
       {/* Reject Modal */}
       <Dialog open={rejectModal.open} onOpenChange={(o: boolean) => setRejectModal(s => ({ ...s, open: o }))}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Rejeitar Proposta</DialogTitle>
           </DialogHeader>
@@ -372,7 +372,7 @@ export default function Proposals() {
 
       {/* Counter Modal */}
       <Dialog open={counterModal.open} onOpenChange={(o: boolean) => setCounterModal(s => ({ ...s, open: o }))}>
-        <DialogContent className="sm:max-w-[380px]">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Enviar Contra-proposta</DialogTitle>
           </DialogHeader>

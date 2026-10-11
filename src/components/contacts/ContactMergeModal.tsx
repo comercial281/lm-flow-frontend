@@ -70,7 +70,7 @@ export default function ContactMergeModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] p-0">
+      <DialogContent className="max-w-2xl max-h-[90vh] p-0">
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle className="text-xl">{t('dialog.mergeContacts.title')}</DialogTitle>
           <DialogDescription>{t('dialog.mergeContacts.description')}</DialogDescription>

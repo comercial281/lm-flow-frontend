@@ -436,7 +436,8 @@ export function ScheduleVisitDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-5xl max-h-[90dvh] overflow-y-auto"
+        size="wide"
+        className="max-h-[90dvh] overflow-y-auto"
         // Cliente já escolhido (veio do card): o foco automático no campo de
         // cliente abriria a busca por cima do nome, como se nada estivesse escolhido.
         onOpenAutoFocus={e => { if (leadInicialRef.current || visitaParaRemarcarRef.current) e.preventDefault(); }}

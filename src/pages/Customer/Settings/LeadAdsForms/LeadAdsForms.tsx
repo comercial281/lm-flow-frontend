@@ -656,7 +656,7 @@ export default function LeadAdsForms() {
 
       {/* Modal: diagnóstico do token da Meta (app, permissões, página e o token salvo) */}
       <Dialog open={debugOpen} onOpenChange={setDebugOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Diagnóstico da conexão com o Meta</DialogTitle>
             <DialogDescription>
@@ -1224,7 +1224,7 @@ export default function LeadAdsForms() {
 
       {/* Create / Edit Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? 'Editar destino do formulário' : 'Configurar destino'}</DialogTitle>
             <DialogDescription>

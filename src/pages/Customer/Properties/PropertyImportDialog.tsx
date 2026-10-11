@@ -280,13 +280,13 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) fechar(); }}>
-      {/* Folga e altura vêm do preset `size="wide"` (ver ds.tsx); aqui fica só o
-          teto, que é maior no modo lote por causa da tabela de conferência. */}
+      {/* No modo lote a tabela de conferência pede a janela larga (`size="wide"`,
+          ver ds.tsx); o envio de um arquivo só cabe na grande. */}
       <DialogContent
-        size="wide"
+        size={batch ? 'wide' : 'default'}
         className={batch
-          ? 'sm:max-w-[1600px] h-[88dvh] flex flex-col overflow-hidden'
-          : 'sm:max-w-3xl overflow-y-auto'}
+          ? 'h-[88dvh] flex flex-col overflow-hidden'
+          : 'max-w-2xl overflow-y-auto'}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

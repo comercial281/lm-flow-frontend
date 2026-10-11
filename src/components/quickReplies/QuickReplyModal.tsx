@@ -76,7 +76,7 @@ export default function QuickReplyModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{isNew ? 'Nova Resposta Rápida' : 'Editar Resposta Rápida'}</DialogTitle>
         </DialogHeader>

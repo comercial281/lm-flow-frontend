@@ -222,7 +222,7 @@ export default function RoletaLista() {
           </DialogHeader>
           <form
             onSubmit={e => { e.preventDefault(); void criar(); }}
-            className="space-y-6 py-2"
+            className="space-y-6 pt-2"
           >
             <CampoTexto
               id="roleta-nova-nome"

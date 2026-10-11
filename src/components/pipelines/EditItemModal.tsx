@@ -99,7 +99,7 @@ export default function EditItemModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1280px] w-[96vw] h-[92vh] max-h-[92vh] p-0 gap-0 overflow-hidden flex flex-col">
+      <DialogContent size="wide" className="h-[92dvh] max-h-[92dvh] p-0 gap-0 overflow-hidden flex flex-col">
         <DialogTitle className="sr-only">{card.nomeExibido}</DialogTitle>
         <DialogDescription className="sr-only">Card do lead</DialogDescription>
 
