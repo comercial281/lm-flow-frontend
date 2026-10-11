@@ -12,6 +12,7 @@ import {
 import CoverPicker from './CoverPicker';
 import LockConfigFields, { type LockConfig } from './LockConfigFields';
 import EntitlementsEditor from './EntitlementsEditor';
+import { Card } from '@/components/ui/ds';
 
 export default function CourseForm({
   editing,
@@ -57,7 +58,7 @@ export default function CourseForm({
   }
 
   return (
-    <div className="mb-6 bg-card border border-border rounded-xl p-4 space-y-4 max-w-2xl">
+    <Card className="mb-6 max-w-2xl gap-4 p-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold">{editing ? 'Editar curso' : 'Novo curso'}</p>
         <button onClick={onClose} type="button" aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground">
@@ -132,6 +133,6 @@ export default function CourseForm({
           {busy ? 'Salvando...' : editing ? 'Salvar' : 'Criar curso'}
         </button>
       </div>
-    </div>
+    </Card>
   );
 }

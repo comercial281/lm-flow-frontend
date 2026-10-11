@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Circle } from 'lucide-react';
-import { Button } from '@/components/ui/ds';
+import { Card, Button } from '@/components/ui/ds';
 import { EmptyState } from '@/components/base';
 import {
   siteBuilderService, type DashboardScope, type Site, type SiteDashboard, type SiteFormData,
@@ -88,7 +88,7 @@ export default function TelaPainel({ site, irPara, setF, podeAnuncios = false }:
 
       <ContatosRecentes siteId={site.id} aoVerTodos={() => irPara('contatos')} />
 
-      <section className="space-y-4 rounded-xl border border-border bg-card p-5">
+      <Card className="gap-4 p-5">
         <h2 className="text-base font-semibold">{dash ? `Seu site está ${pronto.percent}% pronto` : 'Seu site'}</h2>
         {dash && (
           <div className="h-2 overflow-hidden rounded-full bg-muted">
@@ -115,7 +115,7 @@ export default function TelaPainel({ site, irPara, setF, podeAnuncios = false }:
           ))}
         </ul>
         <PreencherComIA site={site} setF={setF} />
-      </section>
+      </Card>
     </div>
   );
 }

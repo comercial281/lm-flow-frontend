@@ -4,6 +4,7 @@ import { SUPORTE_WHATSAPP_URL } from '@/components/layout/components/Sidebar';
 import type { SupportKind } from '@/services/support/supportService';
 import { ROTEIRO, type PassoId } from './roteiro';
 import { buscarPerguntas } from './buscaRoteiro';
+import { Card } from '@/components/ui/ds';
 
 interface Props {
   onPergunta: (id: PassoId) => void;
@@ -26,7 +27,7 @@ export default function SupportInicio({ onPergunta, onChamado }: Props) {
         <Send className="h-4 w-4 text-primary" aria-hidden="true" />
       </button>
 
-      <div className="rounded-xl border border-border bg-card p-2 shadow-sm">
+      <Card className="gap-0 p-2">
         <label className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
           <Search className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
           <input
@@ -61,7 +62,7 @@ export default function SupportInicio({ onPergunta, onChamado }: Props) {
             </button>
           </div>
         )}
-      </div>
+      </Card>
 
       <div className="grid grid-cols-1 gap-1 text-sm">
         <button type="button" onClick={() => onChamado('bug')} className="flex items-center gap-2 rounded-md px-3 py-2 text-left hover:bg-accent">

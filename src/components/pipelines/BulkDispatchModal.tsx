@@ -491,8 +491,8 @@ export default function BulkDispatchModal({
                     </div>
                     <Badge className={`text-xs border ${meta.cls}`}>{meta.label}</Badge>
                   </div>
-                  <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-primary h-1.5 transition-all" style={{ width: `${pct}%` }} />
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
                   </div>
                   {(c.status === 'running' || c.status === 'paused') && (
                     <div className="flex items-center gap-2 pt-1">

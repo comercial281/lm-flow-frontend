@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { PermissionSection } from '@/types/customRoles';
+import { Card } from '@/components/ui/ds';
 
 interface Props {
   catalog: PermissionSection[];
@@ -38,9 +39,8 @@ export default function PermissionMatrix({
         const allPerms = section.resources.flatMap(r => r.actions.map(a => a.permission));
         const state = sectionStates[section.key];
         return (
+          <Card key={section.key} className="gap-0 py-0">
           <details
-            key={section.key}
-            className="rounded-lg border border-border bg-card"
             open={state.on > 0}
           >
             <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 hover:bg-muted/40">
@@ -135,6 +135,7 @@ export default function PermissionMatrix({
               })}
             </div>
           </details>
+          </Card>
         );
       })}
     </div>

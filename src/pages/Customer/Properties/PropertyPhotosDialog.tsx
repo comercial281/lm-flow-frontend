@@ -380,8 +380,8 @@ export default function PropertyPhotosDialog({
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-8 w-8 text-primary animate-spin" />
               <p className="text-sm font-medium">Enviando {uploadProgress}%...</p>
-              <div className="w-full max-w-xs bg-muted rounded-full h-1.5 overflow-hidden">
-                <div className="bg-primary h-full transition-all" style={{ width: `${uploadProgress}%` }} />
+              <div className="h-2 w-full max-w-xs overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${uploadProgress}%` }} />
               </div>
             </div>
           ) : (

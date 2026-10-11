@@ -13,6 +13,7 @@ export { default as Faixa } from './Faixa';
 export { default as AlternadorDeVisao } from './AlternadorDeVisao';
 export type { AlternadorDeVisaoProps, OpcaoDeVisao } from './AlternadorDeVisao';
 export type { FaixaProps } from './Faixa';
+export { CORES_DO_GRAFICO, COR_DO_EIXO, EIXO_DO_GRAFICO, CANTOS_DA_BARRA, DICA_DO_GRAFICO, CLASSE_DA_DICA } from './grafico';
 export { default as PrimaryActionButton } from './PrimaryActionButton';
 export { default as IconActionButton } from './IconActionButton';
 export type { IconActionButtonProps } from './IconActionButton';

@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 import { salesAgentsService, type SalesAgentRun } from '@/services/salesAgents/salesAgentsService';
 import { dataHora, dolar } from '@/lib/formato';
+import { Card } from '@/components/ui/ds';
 
 const SITUACAO: Record<string, string> = { replied: 'Respondeu', skipped: 'Não respondeu', failed: 'Falhou' };
 const TIPO: Record<string, string> = { live: 'Conversa', followup: 'Follow-up', reengage: 'Retomada', engage: 'Acionada pelo corretor', test: 'Teste' };
@@ -36,7 +37,8 @@ export default function UltimosAtendimentos({ agentId, completo }: { agentId: st
       {runs.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nenhum registro ainda. Cada mensagem que chegar aparece aqui, inclusive as que ela decidir não responder.</p>
       ) : (
-        <ul className="divide-y divide-border rounded-xl border border-border bg-card">
+        <Card className="gap-0 py-0">
+        <ul className="divide-y divide-border">
           {runs.map((run) => {
             const tecnico = run.error_message && (completo || run.error_class === 'Detalhe');
             return (
@@ -64,6 +66,7 @@ export default function UltimosAtendimentos({ agentId, completo }: { agentId: st
             );
           })}
         </ul>
+        </Card>
       )}
     </section>
   );

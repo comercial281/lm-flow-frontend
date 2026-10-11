@@ -6,6 +6,7 @@ import { macrosService } from '@/services/macros/macrosService';
 import type { Macro } from '@/types/automation';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { Card } from '@/components/ui/ds';
 
 interface MacrosListProps {
   conversationId: string;
@@ -93,9 +94,9 @@ const MacrosList: React.FC<MacrosListProps> = ({ conversationId, onMacroExecuted
         className="max-h-[280px] overflow-y-auto overflow-x-hidden pr-1 space-y-2 overscroll-contain [scrollbar-width:thin]"
       >
         {macros.map(macro => (
-          <div
+          <Card
             key={macro.id}
-            className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+            className="flex-row items-center justify-between gap-0 p-3 transition-colors hover:bg-accent/50"
           >
             <div className="flex-1 min-w-0 mr-2">
               <h4 className="text-sm font-medium truncate">{macro.name}</h4>
@@ -121,7 +122,7 @@ const MacrosList: React.FC<MacrosListProps> = ({ conversationId, onMacroExecuted
                 <Play className="h-4 w-4" />
               )}
             </Button>
-          </div>
+          </Card>
         ))}
       </div>
 

@@ -5,6 +5,7 @@ import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import type { OpcaoDeEscolha } from '@/components/base/escolha';
 import { toast } from 'sonner';
 import {
+  Card,
   Button,
   Badge,
   Dialog,
@@ -772,7 +773,7 @@ export default function Visits() {
         }
       >
         {viewMode === 'calendar' ? (
-          <div className="rounded-xl border bg-card p-4">
+          <Card className="gap-0 p-4">
             <BarraDoCalendario visao={visaoCal} date={calDate} onVisao={trocarVisao} onNavigate={setCalDate} />
             {visaoCal === 'mes' ? (
               <MonthGrid
@@ -796,7 +797,7 @@ export default function Visits() {
                 destacadaId={visitaDestacada}
               />
             )}
-          </div>
+          </Card>
         ) : loading ? (
           <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
             Carregando visitas...
@@ -964,9 +965,9 @@ function VisitCard({
   const isActive = ['scheduled', 'confirmed', 'in_progress', 'rescheduled'].includes(visit.status);
 
   return (
-    <div id={ancorada ? `visita-${visit.id}` : undefined} className={`flex gap-4 p-4 rounded-xl border border-border bg-card transition-shadow ${
+    <Card id={ancorada ? `visita-${visit.id}` : undefined} className={`flex-row gap-4 p-4 transition-shadow ${
       isPastVisit && isActive ? 'border-orange-300 dark:border-orange-700' : ''
-    } ${destacada ? 'ring-2 ring-primary' : ''}`}>
+    } ${destacada ? 'outline-2 outline-primary' : ''}`}>
       {/* Time column */}
       <div className="flex-shrink-0 w-16 text-center">
         <div className="text-lg font-bold text-foreground">
@@ -1041,6 +1042,6 @@ function VisitCard({
           <AcoesDaVisita visita={visit} onAtualizada={onAtualizada} />
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

@@ -17,6 +17,7 @@ import {
   Ban,
 } from 'lucide-react';
 import {
+  Card,
   Button,
   Select,
   SelectContent,
@@ -243,18 +244,18 @@ export default function Disparos() {
                 return (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {kpis.map(k => (
-                      <div key={k.label} className="relative overflow-hidden rounded-xl border bg-card/60 p-4" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                      <Card key={k.label} className="relative gap-0 overflow-hidden p-4">
                         <div aria-hidden className="pointer-events-none absolute -top-8 -right-8 h-24 w-24 rounded-full blur-2xl" style={{ background: k.tint }} />
                         <p className="relative text-xs font-medium text-muted-foreground">{k.label}</p>
                         <p className={`relative text-2xl font-bold tracking-tight mt-1 ${k.color}`}>{k.value.toLocaleString('pt-BR')}</p>
-                      </div>
+                      </Card>
                     ))}
                   </div>
                 );
               })()}
 
               {/* Tabela de campanhas — estilo protótipo */}
-              <div className="rounded-xl border bg-card overflow-hidden">
+              <Card className="gap-0 overflow-hidden py-0">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -281,8 +282,8 @@ export default function Disparos() {
                             <td className="px-4 py-3 tabular-nums font-medium">{c.replied_count ?? 0}</td>
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
-                                <div className="w-full min-w-[70px] bg-muted rounded-full h-1.5 overflow-hidden">
-                                  <div className="bg-primary h-1.5 transition-all" style={{ width: `${pct}%` }} />
+                                <div className="h-2 w-full min-w-[70px] overflow-hidden rounded-full bg-muted">
+                                  <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
                                 </div>
                                 <span className="text-[11px] text-muted-foreground tabular-nums">{pct}%</span>
                               </div>
@@ -320,7 +321,7 @@ export default function Disparos() {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </Card>
             </>
           )}
 

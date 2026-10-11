@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Button, Input } from '@/components/ui/ds';
+import { Card, Button, Input } from '@/components/ui/ds';
 import {
   portalsService,
   PortalAdType,
@@ -69,7 +69,7 @@ export default function PortalAdPlanCard({ portalKey, adTypes, settings, onSaved
   };
 
   return (
-    <div className="rounded-xl border bg-card p-6 space-y-5">
+    <Card className="gap-5 p-6">
       <div>
         <h2 className="font-semibold text-sm">Plano de anúncios</h2>
         <p className="text-xs text-muted-foreground mt-0.5">
@@ -125,6 +125,6 @@ export default function PortalAdPlanCard({ portalKey, adTypes, settings, onSaved
           {saving ? 'Salvando...' : 'Salvar plano'}
         </Button>
       </div>
-    </div>
+    </Card>
   );
 }

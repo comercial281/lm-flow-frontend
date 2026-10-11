@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
+  Card,
   Badge, Button, Checkbox, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
   Label as UILabel,
 } from '@/components/ui/ds';
@@ -255,7 +256,7 @@ export default function TelaPaginas({ site, versaoDasPaginas = 0, aoMudarPagina 
         ) : (
           <div className="space-y-2">
             {pages.map(page => (
-              <div key={page.id} className="flex items-center gap-4 p-4 rounded-lg border border-border bg-card">
+              <Card key={page.id} className="flex-row items-center gap-4 p-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm">{page.title}</span>
@@ -280,7 +281,7 @@ export default function TelaPaginas({ site, versaoDasPaginas = 0, aoMudarPagina 
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}

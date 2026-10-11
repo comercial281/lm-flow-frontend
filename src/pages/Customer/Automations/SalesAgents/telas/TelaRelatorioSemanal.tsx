@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Button, Label, Textarea } from '@/components/ui/ds';
+import { Card, Button, Label, Textarea } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { Bot, Send, RefreshCw, Loader2, CalendarDays, Users } from 'lucide-react';
 import { plural } from '@/lib/formato';
@@ -483,7 +483,7 @@ export default function TelaRelatorioSemanal() {
 
 function StatsBlock({ titulo, icone, linhas }: { titulo: string; icone: React.ReactNode; linhas: [string, number][] }) {
   return (
-    <div className="rounded-lg border border-sidebar-border bg-sidebar p-4">
+    <Card className="gap-0 p-4">
       <div className="text-sm font-medium flex items-center gap-2 mb-2">{icone} {titulo}</div>
       <ul className="space-y-1">
         {linhas.map(([rotulo, valor]) => (
@@ -493,6 +493,6 @@ function StatsBlock({ titulo, icone, linhas }: { titulo: string; icone: React.Re
           </li>
         ))}
       </ul>
-    </div>
+    </Card>
   );
 }

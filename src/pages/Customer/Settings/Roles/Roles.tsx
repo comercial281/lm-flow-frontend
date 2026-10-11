@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/ds';
+import { Card, Button } from '@/components/ui/ds';
 import { Plus, Copy, Pencil, Trash2, Clock, Shield, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { plural, numero } from '@/lib/formato';
@@ -147,9 +147,9 @@ export default function RolesPage({ embedded = false }: RolesPageProps) {
       {!loading && roles.length > 0 && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {roles.map(role => (
-            <div
+            <Card
               key={role.id}
-              className="rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/50"
+              className="gap-0 p-4 transition-colors hover:border-primary/50"
             >
               <div className="mb-3 flex items-start justify-between">
                 <div className="flex items-center gap-2">
@@ -218,7 +218,7 @@ export default function RolesPage({ embedded = false }: RolesPageProps) {
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}

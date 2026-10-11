@@ -52,6 +52,7 @@ import SecaoComissao from './secoes/SecaoComissao';
 import SecaoProprietario from './secoes/SecaoProprietario';
 import OndeDivulgar from './OndeDivulgar';
 import { useNomeDaAba } from '@/components/layout/nomeDaAba';
+import { Card } from '@/components/ui/ds';
 
 // A mensagem real do servidor (ex.: "Valor de venda é obrigatório..."), não um genérico.
 function mensagemDoErro(e: unknown, reserva: string): string {
@@ -320,10 +321,10 @@ function Cadastro() {
               <div className="mt-4 space-y-4 lg:mt-0">
                 {!editandoId && <PreencherPorTexto form={form} setF={setF} texto={texto} aoMudarTexto={setTexto} temBook={!!book} aoEscolherBook={setBook} />}
                 {secoes.map(s => (
-                  <section key={s.id} id={`secao-${s.id}`} aria-labelledby={`titulo-${s.id}`} className="scroll-mt-24 rounded-xl border bg-card p-5">
+                  <Card role="region" key={s.id} id={`secao-${s.id}`} aria-labelledby={`titulo-${s.id}`} className="scroll-mt-24 gap-0 p-5">
                     <h2 id={`titulo-${s.id}`} className="text-base font-semibold">{s.titulo}</h2>
                     {conteudoDa(s.id)}
-                  </section>
+                  </Card>
                 ))}
               </div>
             </div>

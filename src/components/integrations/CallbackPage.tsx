@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/ds';
+import { Card, Button } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 import i18n from '@/i18n/config';
@@ -122,7 +122,7 @@ export default function CallbackPage({ integrationName, onCallback, onSuccess, r
         </div>
 
         {/* Status Card */}
-        <div className="bg-card border border-border rounded-lg p-8 space-y-4 text-center">
+        <Card className="gap-4 p-8 text-center">
           {status === 'processing' && (
             <>
               <div className="flex justify-center">
@@ -179,7 +179,7 @@ export default function CallbackPage({ integrationName, onCallback, onSuccess, r
               </Button>
             </>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );

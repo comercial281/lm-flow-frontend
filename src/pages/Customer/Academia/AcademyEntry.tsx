@@ -19,6 +19,7 @@ import {
   esquecerCliente,
   type ClienteLembrado,
 } from '@/services/academy/academyEntryService';
+import { Card } from '@/components/ui/ds';
 
 // Quanto a tela do "levando você para..." fica no ar antes de sair. Existe para
 // dar tempo de clicar em "não é você?" — sem isso, quem usa o aparelho de outra
@@ -79,7 +80,7 @@ export default function AcademyEntry() {
         </div>
 
         {lembrado ? (
-          <div className="rounded-xl border border-border bg-card p-5">
+          <Card className="gap-0 p-5">
             <p className="text-sm flex items-center gap-2">
               <Loader2 size={15} className="animate-spin text-primary shrink-0" />
               Abrindo a aula em <strong>{lembrado.name || lembrado.slug}</strong>...
@@ -91,9 +92,10 @@ export default function AcademyEntry() {
             >
               Não é você? Entrar com outro e-mail
             </button>
-          </div>
+          </Card>
         ) : (
-          <form onSubmit={entrar} className="rounded-xl border border-border bg-card p-5 space-y-4">
+          <Card className="p-5">
+          <form onSubmit={entrar} className="space-y-4">
             <div>
               <p className="text-sm font-medium mb-1">Tem aula nova esperando por você</p>
               <p className="text-xs text-muted-foreground">
@@ -138,6 +140,7 @@ export default function AcademyEntry() {
               Você vai entrar no sistema da sua imobiliária, com o mesmo login de sempre.
             </p>
           </form>
+          </Card>
         )}
       </div>
     </div>

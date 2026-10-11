@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Home, Loader2, MessageCircle, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
+  Card,
   Button, Dialog, DialogContent, DialogHeader, DialogTitle, DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuTrigger, Label, Textarea,
 } from '@/components/ui/ds';
@@ -60,10 +61,14 @@ function Cartao({ imovel, gestor, aoAbrirDados }: { imovel: ImovelDoProprietario
       </div>
     </>
   );
-  const classe = 'block overflow-hidden rounded-xl border bg-card text-left shadow-sm transition-colors hover:border-primary/40';
-  return gestor
-    ? <Link to={`/properties/${imovel.id}/editar`} className={classe}>{corpo}</Link>
-    : <button type="button" onClick={aoAbrirDados} className={classe}>{corpo}</button>;
+  const classe = 'block w-full text-left';
+  return (
+    <Card className="gap-0 overflow-hidden py-0 transition-colors hover:border-primary/40">
+      {gestor
+        ? <Link to={`/properties/${imovel.id}/editar`} className={classe}>{corpo}</Link>
+        : <button type="button" onClick={aoAbrirDados} className={classe}>{corpo}</button>}
+    </Card>
+  );
 }
 
 /** O que o corretor vê do imóvel: só os dados internos (a página de cadastro é do gestor). */

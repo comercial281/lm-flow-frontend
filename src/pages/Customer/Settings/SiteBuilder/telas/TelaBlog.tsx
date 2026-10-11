@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
+  Card,
   Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/ds';
 import {
@@ -208,7 +209,7 @@ export default function TelaBlog({ site }: { site: Site }) {
         ) : (
           <div className="space-y-2">
             {articles.map(article => (
-              <div key={article.id} className="flex items-center gap-4 p-4 rounded-lg border border-border bg-card">
+              <Card key={article.id} className="flex-row items-center gap-4 p-4">
                 {article.cover_image_url && (
                   <img src={article.cover_image_url} alt=""
                     className="h-14 w-20 object-cover rounded flex-shrink-0"
@@ -252,7 +253,7 @@ export default function TelaBlog({ site }: { site: Site }) {
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}

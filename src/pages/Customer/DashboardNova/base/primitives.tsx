@@ -94,5 +94,3 @@ export const tooltipStyle = {
   labelStyle: { color: 'var(--lmf-muted)', marginBottom: 4 },
   itemStyle: { color: 'var(--lmf-text)' },
 };
-
-export const CHART_COLORS = ['#7c3aed', '#34d399', '#38bdf8', '#fbbf24', '#fb7185', '#c4b5fd', '#f472b6', '#22d3ee'];

@@ -3,6 +3,7 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import { plural } from '@/lib/formato';
 import {
+  Card,
   Button,
   Dialog,
   DialogContent,
@@ -1092,7 +1093,7 @@ export default function LeadAdsForms() {
         ) : (
           <div className="space-y-3">
             {visibleConfigs.map(cfg => (
-              <div key={cfg.id} className="border border-border rounded-xl bg-card overflow-hidden">
+              <Card key={cfg.id} className="gap-0 overflow-hidden py-0">
                 <div className="flex items-center gap-4 px-5 py-4">
                   <button
                     onClick={() => handleToggle(cfg)}
@@ -1145,7 +1146,7 @@ export default function LeadAdsForms() {
                     <Edit className="h-4 w-4" />
                   </Button>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}

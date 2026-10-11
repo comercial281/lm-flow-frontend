@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import {
   FileCheck, Search, ExternalLink, RefreshCw, FileText, AlertTriangle,
 } from 'lucide-react';
-import { Button, Input, Badge } from '@/components/ui/ds';
+import { Card, Button, Input, Badge } from '@/components/ui/ds';
 import {
   contractsService,
   Contract,
@@ -145,7 +145,7 @@ export default function Contracts() {
             <p className="text-xs">Contratos são gerados automaticamente quando uma proposta é aceita.</p>
           </div>
         ) : (
-          <div className="rounded-xl border bg-card overflow-hidden">
+          <Card className="gap-0 overflow-hidden py-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -169,7 +169,7 @@ export default function Contracts() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         )}
       </div>
     </div>

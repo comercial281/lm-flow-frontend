@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/ds';
+import { Card, Button } from '@/components/ui/ds';
 import { BaseHeader, Pagina } from '@/components/base';
 import {
   ArrowLeft, CheckCircle2, Copy, RefreshCw, Home, Star, Clock, Mail, Webhook,
@@ -77,7 +77,7 @@ function FeedAccessHistory({ log }: { log: PortalFeedAccess[] }) {
     : 'O portal ainda não baixou o feed.';
 
   return (
-    <div className="rounded-xl border bg-card max-w-3xl">
+    <Card className="max-w-3xl gap-0 py-0">
       <button
         type="button"
         onClick={() => setAberto(a => !a)}
@@ -110,7 +110,7 @@ function FeedAccessHistory({ log }: { log: PortalFeedAccess[] }) {
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -295,7 +295,7 @@ export default function PortalDetailPage() {
       </div>
 
         {portal.connected && (
-          <div className="rounded-xl border bg-card p-6 space-y-5 max-w-3xl">
+          <Card className="max-w-3xl gap-5 p-6">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-sm">Integração com o portal</h2>
               <Button variant="outline" className="text-xs" onClick={handleRegenerateToken}>
@@ -323,17 +323,17 @@ export default function PortalDetailPage() {
                 captação de leads do LM Flow (recurso em implantação).
               </p>
             )}
-          </div>
+          </Card>
         )}
 
-        <div className="rounded-xl border bg-card p-6 max-w-3xl">
+        <Card className="max-w-3xl gap-0 p-6">
           <h2 className="font-semibold text-sm mb-3">Como ativar</h2>
           <ol className="space-y-2 text-sm text-muted-foreground list-decimal ml-4">
             {portal.onboarding.map((step, i) => (
               <li key={i}>{step}</li>
             ))}
           </ol>
-        </div>
+        </Card>
 
         {portal.connected && (
           <div className="max-w-3xl">

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Button } from '@/components/ui/ds';
+import { Card, Button } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { Loader2, Check, Lightbulb, Users, MessageSquare, Sparkles, X } from 'lucide-react';
 import { dolar, plural } from '@/lib/formato';
@@ -181,7 +181,7 @@ export default function TelaSugestoes({ agent }: { agent: SalesAgent }) {
       </div>
 
       {/* Automático */}
-      <div className="rounded-lg border border-sidebar-border bg-sidebar p-4 space-y-2">
+      <Card className="gap-2 p-4">
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
             type="checkbox"
@@ -215,7 +215,7 @@ export default function TelaSugestoes({ agent }: { agent: SalesAgent }) {
             </Seletor>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Lista */}
       {loading && !data ? (

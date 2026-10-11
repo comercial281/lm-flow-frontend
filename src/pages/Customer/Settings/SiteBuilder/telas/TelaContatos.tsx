@@ -8,6 +8,7 @@ import {
   type Site, type SiteLead,
 } from '@/services/siteBuilder/siteBuilderService';
 import { emailDeliveryLabel } from '@/features/siteBuilder/portalPages';
+import { Card } from '@/components/ui/ds';
 
 export default function TelaContatos({ site }: { site: Site }) {
   // Leads
@@ -65,7 +66,7 @@ export default function TelaContatos({ site }: { site: Site }) {
       ) : (
         <div className="space-y-2">
           {leads.map(lead => (
-            <div key={lead.id} className="flex items-start gap-4 p-4 rounded-lg border border-border bg-card">
+            <Card key={lead.id} className="flex-row items-start gap-4 p-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-sm">{lead.name ?? '—'}</span>
@@ -113,7 +114,7 @@ export default function TelaContatos({ site }: { site: Site }) {
                   {lead.utm_campaign && ` · campanha: ${lead.utm_campaign}`}
                 </p>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
