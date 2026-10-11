@@ -8380,3 +8380,16 @@ Pedido do Cleverson (Nova 27) na call de 07/10, desenho aprovado pelo dono em 11
 - **Fica pra depois**: funil de passagem (quantos do período chegaram até cada etapa, com % entre etapas). Depende de conferir o histórico de movimentação.
 
 Não reabrir sem o dono pedir.
+
+## Chaves do MCP (11/10/2026)
+
+Origem: o dono quer conectar o LM Flow no Claude (Conectores) e no Claude Code pra operar a plataforma por conversa. Desenho em `specs/2026-10-11-mcp-admin-design.md`. A metade do servidor (chaves, endereço do MCP, registro nos Logs) é um PR do backend que entra primeiro; esta tela só funciona de ponta a ponta com ele no ar.
+
+- **Aba "Chaves do MCP" em Admin → Plataforma** (`/admin/plataforma/mcp`, `src/pages/SuperAdmin/ChavesMcp/`). A lista mostra nome, começo da chave (`lmf_` + prefixo), quando foi criada e por quem, último uso ("Nunca usada" quando não houve) e o estado, **Ativa** ou **Revogada**.
+- **"Gerar chave" pede só um nome** e mostra o endereço completo **uma única vez**, numa janela com **Copiar** e **Já guardei**. Depois de fechar, ele não aparece de novo: o servidor não guarda a chave inteira, só o começo. Perdeu, revoga e gera outra.
+- **Revogar pede confirmação e vale na hora.** Quem estiver usando perde o acesso no próximo pedido. A chave revogada continua na lista, marcada como Revogada, sem botão.
+- **O texto de ajuda da tela ensina a conectar:** no Claude, Configurações → Conectores → Adicionar conector personalizado, colando o endereço; no Claude Code, `claude mcp add --transport http lm-flow <endereço>`.
+- **Quem pode:** só o e-mail do super-admin gera, lista e revoga chaves; qualquer outro recebe 403 do servidor. A tela não esconde nada por conta própria.
+- **A chave de admin entra em todos os clientes.** O aviso está na tela, antes e depois de gerar. Chave limitada a um cliente fica pra depois, não existe ainda.
+- **Logs:** ação feita pelo MCP aparece com "MCP · nome da chave" no lugar de quem fez, e há a categoria **MCP** no filtro (`formatoLogs.ts` em `SuperAdmin/Logs/`).
+- Não reabrir sem o dono pedir.
