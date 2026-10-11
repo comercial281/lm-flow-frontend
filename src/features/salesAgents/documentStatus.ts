@@ -1,13 +1,14 @@
-// "Processando..." da Base de Conhecimento da IA Vendedora.
+// "Lendo o arquivo…" dos Arquivos do Ensinar da IA Vendedora (era "Processando..."
+// da Base de Conhecimento até 11/10/2026).
 //
-// Por que isto existe fora da tela: o texto fixo "Processando..." é idêntico depois
+// Por que isto existe fora da tela: o texto fixo "Processando..." era idêntico depois
 // de dois segundos e depois de dois dias. Quem sobe o material e fica olhando não
 // tem como saber se ainda está andando ou se parou — e foi exatamente esse silêncio
 // que virou relato ("não acaba o carregamento"). Aqui o texto passa a dizer HÁ
 // QUANTO TEMPO, e depois de alguns minutos a tela avisa que já não é normal.
 //
-// A lógica mora num arquivo próprio, com teste, porque a tela da IA Vendedora tem
-// ~4.800 linhas e nada testável cabe dentro dela.
+// A lógica mora num arquivo próprio, com teste: é a única fonte do texto do cartão
+// pendente (o selo do cartão mostra exatamente o que sai daqui).
 
 // A partir daqui a espera deixou de ser normal. Menor que a carência do servidor
 // para retomar o arquivo preso (3 minutos), de propósito: o aviso aparece junto com
@@ -28,11 +29,11 @@ function minutesSince(createdAt?: string | null, now: Date = new Date()): number
   return Math.floor(decorrido / 60000);
 }
 
-/** O texto ao lado do arquivo enquanto ele está sendo lido. */
+/** O selo do cartão enquanto o arquivo está sendo lido. */
 export function processingLabel(createdAt?: string | null, now: Date = new Date()): string {
   const min = minutesSince(createdAt, now);
-  if (min === null || min < 1) return 'Processando...';
-  return `Processando há ${min} min`;
+  if (min === null || min < 1) return 'Lendo o arquivo…';
+  return `Lendo há ${min} min`;
 }
 
 /**
@@ -42,5 +43,5 @@ export function processingLabel(createdAt?: string | null, now: Date = new Date(
 export function processingWarning(createdAt?: string | null, now: Date = new Date()): string | null {
   const min = minutesSince(createdAt, now);
   if (min === null || min * 60000 < SLOW_AFTER_MS) return null;
-  return `Está demorando mais que o normal. O sistema tenta de novo sozinho; se passar de ${GIVE_UP_MINUTES} minutos, ele marca como falha e diz o motivo. Você também pode usar o botão de tentar de novo, ao lado.`;
+  return `Está demorando mais que o normal. O sistema tenta de novo sozinho; se passar de ${GIVE_UP_MINUTES} minutos, ele marca como falha e diz o motivo. Você também pode tentar de novo pelo menu ⋮ do arquivo.`;
 }

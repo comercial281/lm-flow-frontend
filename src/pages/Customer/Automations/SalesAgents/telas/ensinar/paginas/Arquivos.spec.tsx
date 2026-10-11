@@ -67,7 +67,27 @@ describe('Arquivos', () => {
   it('espera longa avisa em âmbar', () => {
     abrir([D('p', { status: 'pending', created_at: new Date(Date.now() - 10 * 60000).toISOString() })]);
     expect(screen.getByText(/Está demorando mais que o normal/)).toBeInTheDocument();
-    expect(screen.getByText('Processando há 10 min')).toBeInTheDocument();
+    expect(screen.getByText(/menu ⋮ do arquivo/)).toBeInTheDocument();
+    // Uma fala só: o selo passa a dizer há quanto tempo, sem um segundo "Processando".
+    expect(screen.getByText('Lendo há 10 min')).toBeInTheDocument();
+    expect(screen.queryByText('Lendo o arquivo…')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Processando/)).not.toBeInTheDocument();
+  });
+
+  it('caracteres só no arquivo lido; falha sem motivo não tem dois-pontos', () => {
+    abrir([
+      D('p', { status: 'pending', size_label: null, char_count: 0 }),
+      D('f', { status: 'failed', error_message: null, size_label: null, char_count: 0 }),
+      D('t', { source_type: 'text', size_label: null, char_count: 42, sendable: false }),
+    ]);
+    expect(screen.getByText('42 caracteres')).toBeInTheDocument();
+    expect(screen.queryByText('0 caracteres')).not.toBeInTheDocument();
+    expect(screen.getByText('Falhou')).toBeInTheDocument();
+  });
+
+  it('a faixa de soltar diz os limites de verdade (vídeo é menor)', () => {
+    abrir([D('a')]);
+    expect(screen.getByText(/até 25 MB \(vídeo até 16 MB\)/)).toBeInTheDocument();
   });
 
   it('sem arquivo, a área de soltar grande diz que está vazio', () => {

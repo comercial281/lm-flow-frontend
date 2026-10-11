@@ -14,11 +14,13 @@ import { cn } from '@/lib/utils';
 import { numero } from '@/lib/formato';
 import { salesAgentsService, type SalesAgentDocument } from '@/services/salesAgents/salesAgentsService';
 import { processingLabel, processingWarning } from '@/features/salesAgents/documentStatus';
-import { DOC_ACCEPT, docUploadError } from '../../../docUpload';
+import { DOC_ACCEPT, DOC_MAX_BYTES, VIDEO_MAX_BYTES, docUploadError } from '../../../docUpload';
 import JanelaDoArquivo, { JanelaDeTexto } from './JanelaDoArquivo';
 import type { PropsDaPaginaDoEnsinar } from './tipos';
 
-const TEXTO_DA_AREA = 'Arraste arquivos pra cá · PDF, Word, planilha, imagem ou vídeo, até 25 MB';
+// Os limites saem do docUpload (o mesmo que barra o arquivo): vídeo tem teto menor (WhatsApp).
+const MB = 1024 * 1024;
+const TEXTO_DA_AREA = `Arraste arquivos pra cá · PDF, Word, planilha, texto, imagem ou vídeo MP4, até ${DOC_MAX_BYTES / MB} MB (vídeo até ${VIDEO_MAX_BYTES / MB} MB)`;
 const SELO = 'rounded-full px-2.5 py-0.5 text-xs font-semibold';
 
 function IconeDoArquivo({ doc }: { doc: SalesAgentDocument }) {
@@ -156,7 +158,6 @@ export default function Arquivos({ agent, arquivos: A, confirmar }: PropsDaPagin
       ) : A.docs.length > 0 && (
         <ul className="grid gap-4 md:grid-cols-2">
           {A.docs.map((d) => {
-            const espera = d.status === 'pending' ? processingLabel(d.created_at) : null;
             const aviso = d.status === 'pending' ? processingWarning(d.created_at) : null;
             const quando = (d.send_when ?? '').trim();
             return (
@@ -168,21 +169,23 @@ export default function Arquivos({ agent, arquivos: A, confirmar }: PropsDaPagin
                     <span className="min-w-0 flex-1 space-y-1.5">
                       <span className="sr-only">Como ela usa: </span>
                       <span className="block truncate text-[15px] font-semibold">{d.title}</span>
-                      <span className="block text-xs text-muted-foreground">
-                        {d.size_label ?? `${numero(d.char_count)} caracteres`}
-                        {/* "Processando…" do primeiro minuto já é o selo; depois diz HÁ QUANTO TEMPO. */}
-                        {espera && espera !== processingLabel(null) && <> · <span>{espera}</span></>}
-                      </span>
+                      {/* Caracteres só do arquivo lido: pendente ou que falhou ainda não tem texto contado. */}
+                      {(d.size_label || d.status === 'ready') && (
+                        <span className="block text-xs text-muted-foreground">
+                          {d.size_label ?? `${numero(d.char_count)} caracteres`}
+                        </span>
+                      )}
                       <span className="flex flex-wrap gap-1.5">
                         {d.learnable && d.status === 'ready' && <span className={cn(SELO, 'bg-primary/10 text-primary')}>Aprende</span>}
                         {d.sendable && <span className={cn(SELO, 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300')}>Manda pro lead</span>}
                         {d.send_mode === 'link' && <span className={cn(SELO, 'bg-amber-500/15 text-amber-800 dark:text-amber-300')}>Vai como link</span>}
                         {d.send_mode === 'blocked' && <span className={cn(SELO, 'bg-red-500/10 text-red-700 dark:text-red-400')}>Grande demais</span>}
-                        {d.status === 'pending' && <span className={cn(SELO, 'bg-muted text-muted-foreground')}>Lendo o arquivo…</span>}
+                        {/* Uma fala só pro pendente: "Lendo o arquivo…" e, passado o primeiro minuto, HÁ QUANTO TEMPO. */}
+                        {d.status === 'pending' && <span className={cn(SELO, 'bg-muted text-muted-foreground')}>{processingLabel(d.created_at)}</span>}
                         {/* Arquivo íntegro, só sem texto: o envio funciona. Pintar de
                             vermelho aqui fazia o dono apagar e subir de novo. */}
                         {d.status === 'no_text' && <span className={cn(SELO, 'bg-amber-500/15 text-amber-800 dark:text-amber-300')}>Sem texto pra aprender</span>}
-                        {d.status === 'failed' && <span className={cn(SELO, 'bg-red-500/10 text-red-700 dark:text-red-400')}>Falhou: {d.error_message}</span>}
+                        {d.status === 'failed' && <span className={cn(SELO, 'bg-red-500/10 text-red-700 dark:text-red-400')}>{d.error_message ? `Falhou: ${d.error_message}` : 'Falhou'}</span>}
                       </span>
                       {/* Espera que passou do normal DIZ isso, em vez de continuar igual.
                           Sem esta linha, o único desfecho visível de um arquivo travado era
@@ -203,7 +206,7 @@ export default function Arquivos({ agent, arquivos: A, confirmar }: PropsDaPagin
                       <DropdownMenuItem onSelect={() => setAberto(d)}>
                         <SlidersHorizontal className="h-4 w-4" aria-hidden /> Como ela usa
                       </DropdownMenuItem>
-                      {/* Também em "Processando", não só em falha: um arquivo cujo
+                      {/* Também em "Lendo o arquivo…", não só em falha: um arquivo cujo
                           processamento se perdeu num deploy fica pendente sem nenhuma
                           alavanca — era preciso apagar e subir de novo pra destravar. */}
                       {(d.status === 'failed' || d.status === 'pending') && (
