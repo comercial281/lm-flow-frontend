@@ -1,5 +1,5 @@
 // src/pages/Customer/DashboardNova/blocos/TempoNegociacao.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { VAZIO, plural } from '@/lib/formato';
 import { EmptyBlock, GlassCard, Skeleton } from '../base/primitives';
 import { isAvailable } from '../base/types';
@@ -11,6 +11,9 @@ import { tempoEmDias } from './comum';
  * lado de Resultados, no molde do "Sua vez na fila". Da criação do card até o
  * Ganho e até o Perdido, entre os que fecharam no período, em todos os funis.
  * Só gestão: o corretor não recebe a chave e o cartão não existe.
+ *
+ * Um número por vez, com a troca Ganhos | Perdidos no topo, e a mesma altura de
+ * Resultados (pedido do dono, 11/10: as duas linhas empilhadas esticavam a linha).
  */
 export const TempoNegociacao: React.FC<ContextoBloco> = ({ dados, carregando }) => {
   const bloco = dados?.negotiation_time;
@@ -18,25 +21,26 @@ export const TempoNegociacao: React.FC<ContextoBloco> = ({ dados, carregando }) 
   if (!isAvailable(bloco)) {
     if (dados && bloco === undefined) return null;
     return (
-      <GlassCard title={titulo} className="lmfn-vez-card">
+      <GlassCard title={titulo} className="lmfn-negociacao-card">
         {carregando && !dados ? <Skeleton height={160} /> : <EmptyBlock block={bloco} text="Não deu para carregar agora." />}
       </GlassCard>
     );
   }
-  const linhas = [
-    { rotulo: 'Até o ganho', dado: bloco.won, contagem: plural(bloco.won.count, 'ganho', 'ganhos') },
-    { rotulo: 'Até a perda', dado: bloco.lost, contagem: plural(bloco.lost.count, 'perdido', 'perdidos') },
-  ];
+  const [qual, setQual] = useState<'won' | 'lost'>('won');
+  const dado = bloco[qual];
+  const contagem = qual === 'won' ? plural(dado.count, 'ganho', 'ganhos') : plural(dado.count, 'perdido', 'perdidos');
   return (
-    <GlassCard title={titulo} subtitle="Da criação do card até fechar" className="lmfn-vez-card" bodyClassName="lmfn-vez-corpo">
-      <div className="lmfn-negociacao">
-        {linhas.map(l => (
-          <div key={l.rotulo} className="lmfn-resumo-item">
-            <div className="lmfn-numero-rotulo">{l.rotulo}</div>
-            <div className="lmfn-numero-valor">{l.dado.avg_seconds === null ? VAZIO : tempoEmDias(l.dado.avg_seconds)}</div>
-          </div>
+    <GlassCard title={titulo} className="lmfn-negociacao-card" bodyClassName="lmfn-negociacao">
+      <div className="lmfn-seg" role="group" aria-label="Ganhos ou perdidos">
+        {(['won', 'lost'] as const).map(q => (
+          <button key={q} type="button" aria-pressed={qual === q} onClick={() => setQual(q)}>
+            {q === 'won' ? 'Ganhos' : 'Perdidos'}
+          </button>
         ))}
-        <p className="lmf-card-sub" style={{ margin: 0 }}>{`${linhas[0].contagem} · ${linhas[1].contagem} no período`}</p>
+      </div>
+      <div>
+        <div className="lmfn-numero-valor">{dado.avg_seconds === null ? VAZIO : tempoEmDias(dado.avg_seconds)}</div>
+        <p className="lmf-card-sub" style={{ margin: 0 }}>{`da criação do card até ${qual === 'won' ? 'o ganho' : 'a perda'} · ${contagem}`}</p>
       </div>
     </GlassCard>
   );

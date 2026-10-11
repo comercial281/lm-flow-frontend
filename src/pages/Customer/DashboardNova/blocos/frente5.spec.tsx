@@ -111,17 +111,20 @@ describe('Funil: Lista, desenho e relógio', () => {
 });
 
 describe('Tempo médio de negociação', () => {
-  it('mostra até o ganho e até a perda, com quantos fecharam', () => {
+  it('mostra um número por vez: Ganhos primeiro, Perdidos na troca', () => {
     wrap(<TempoNegociacao {...ctx({}, { negotiation_time: { won: { count: 12, avg_seconds: 18 * DIA }, lost: { count: 1, avg_seconds: 9 * DIA } } })} />);
-    expect(screen.getByText('Até o ganho')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ganhos' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('18 dias')).toBeInTheDocument();
+    expect(screen.getByText('da criação do card até o ganho · 12 ganhos')).toBeInTheDocument();
+    expect(screen.queryByText('9 dias')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Perdidos' }));
     expect(screen.getByText('9 dias')).toBeInTheDocument();
-    expect(screen.getByText('12 ganhos · 1 perdido no período')).toBeInTheDocument();
+    expect(screen.getByText('da criação do card até a perda · 1 perdido')).toBeInTheDocument();
   });
 
   it('sem nenhum fechado, traço no lugar do tempo', () => {
     wrap(<TempoNegociacao {...ctx({}, { negotiation_time: { won: { count: 0, avg_seconds: null }, lost: { count: 0, avg_seconds: null } } })} />);
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.getByText('—')).toBeInTheDocument();
   });
 
   it('o corretor não recebe a chave: o cartão não existe', () => {

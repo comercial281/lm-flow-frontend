@@ -119,6 +119,9 @@ button.lmfn-funil-faixa { cursor: pointer; }
 button.lmfn-funil-faixa:hover { filter: brightness(1.08); }
 .lmfn-funil-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lmfn-funil-valor { font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.lmfn-negociacao { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 14px; }
+/* Tempo médio de negociação: estica até a altura de Resultados (sem altura mínima própria). */
+.lmfn-negociacao-card { flex: 1; display: flex; flex-direction: column; }
+.lmfn-negociacao { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; }
+.lmfn-negociacao .lmfn-seg { align-self: flex-start; }
 .lmfn-vez .lmfn-carrossel { padding-top: 14px; justify-content: center; }
 .lmfn-blocos > :first-child { margin-top: 0; }
