@@ -57,6 +57,8 @@ Tudo que aparece sai de `src/lib/formato.ts`, e o vazio/inválido vira `—`:
 
 Cada peça mora em `src/components/base/` (ou `src/hooks/`). A regra de uso vale pra toda tela nova e pra toda tela que a fase 4 refizer.
 
+As peças 11 a 22 (e os acréscimos em 6, 7 e 9) são as **escolhas do dono em 10/10/2026**, feitas olhando as variações que existiam no app lado a lado (registro em `LM FLOW/specs/registros/pecas-da-casa-2026-10-10/`, na pasta do Tony). Parte delas ainda não virou componente: até virar, **tela nova copia o desenho escrito aqui**, classe por classe, e não inventa outro. Cada peça vira componente com trava no build, uma por vez, com teto descendo até zero.
+
 1. **Chave** (`Chave`): ligar/desligar **com efeito na hora**.
    - O rótulo diz o efeito ("Mandar lembrete no WhatsApp") e o estado vai escrito ao lado (*Ligado/Desligado*).
    - Se o servidor recusar, ela volta sozinha e diz por quê.
@@ -82,12 +84,16 @@ Cada peça mora em `src/components/base/` (ou `src/hooks/`). A regra de uso vale
 6. **Abas** (`Abas`): sublinhado, ícone opcional, nome da aba igual ao título do que ela abre, **no máximo um nível**.
    - Com `para` em todas as abas, a faixa é navegação (e guarda a saída).
    - Sem `para`, é aba de estado. **Ainda sem navegação por setas:** a primeira tela que usar esse modo acrescenta (setas esquerda/direita e tabindex móvel).
+   - Não usar como aba: pílula do pacote base (`Tabs`/`TabsList`), pílula roxa cheia nem botão fazendo papel de aba. Abas feitas à mão (Funis, Tarefas, Disparos, Automações de lead) passam pra `Abas`.
+   - **Filtro rápido não é aba.** O segmentado cinza de Conversas e Contatos (Todas · Minhas · Sem resposta · Arquivadas) continua como está.
 7. **Estado vazio** (`EmptyState`): os tipos nunca se confundem.
    - `vazio` explica pra que serve, dá o botão de criar e um **exemplo imobiliário**.
    - `semResultado` oferece limpar filtros.
    - `erro` oferece tentar de novo.
    - Sem acesso é o `NoAccessState`.
    - **Erro nunca aparece como lista vazia.**
+   - **Duas medidas:** a grande (ícone, título, explicação, botão) na tela inteira; a compacta dentro de bloco (card do lead, painel, lista curta): caixa tracejada `rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground` com a ação em link roxo ao lado da frase. A medida compacta ainda não está no `EmptyState`; até entrar, tela nova usa a caixa tracejada.
+   - **Nunca "Nenhum…" solto** num `<p>` cinza.
 8. **Lista de escolha** (`Seletor`): toda lista de escolha usa ele, nunca `<select>` cru.
    - Recebe o mesmo que o `<select>`: `value`, `onChange` com `e.target.value`, `<option>`/`<optgroup>`. Trocar uma tela é trocar a tag.
    - No computador abre a lista do produto; no celular, a do sistema.
@@ -97,12 +103,58 @@ Cada peça mora em `src/components/base/` (ou `src/hooks/`). A regra de uso vale
 9. **Botão de ícone:** sempre com nome (o efeito).
    - Em botão novo, use `IconActionButton`.
    - Os 202 que já existiam ganharam `aria-label` + `title` na Fase 3.4 e migram pro `IconActionButton` tela a tela na fase 4.
-   - **Excluir não é lixeira solta ao lado da ação principal:** vai pro menu "…" e pede confirmação.
+   - **Excluir não é lixeira solta ao lado da ação principal:** vai pro menu "⋮" e pede confirmação.
 10. **Selo de situação** (`BaseStatusBadge`):
    - verde = funcionando;
    - cinza = desligado;
    - laranja = precisa de atenção;
    - vermelho = erro, falhou ou não entregou.
+11. **Caixa de aviso:** translúcida, com ícone. Um desenho só, quatro tons.
+   - Desenho: `flex items-start gap-2 rounded-md border border-<cor>-500/40 bg-<cor>-500/10 p-3 text-sm text-<cor>-700 dark:text-<cor>-400`, ícone `h-4 w-4 mt-0.5 shrink-0`.
+   - Tons: informação = `sky` + `Info`; atenção = `amber` + `TriangleAlert`; erro = `red` + `CircleAlert`; sucesso = `emerald` + `CircleCheck`.
+   - Título, quando tem, vai em negrito no começo da frase ("**WhatsApp desconectado.** Reconecte pra…").
+   - **Nunca** a caixa pastel (`bg-orange-50 border-orange-200`, `bg-blue-50`…), nem borda à esquerda, nem o `Alert` do pacote base com cor por cima.
+   - Embrião do componente: `Aviso` do configurador da IA (`pages/Customer/Automations/SalesAgents/configurar/Aviso.tsx`), que vai pra `components/base/`.
+12. **Faixa no topo:** a mesma família da caixa de aviso, atravessando a tela.
+   - Desenho: `flex items-center justify-between gap-2 border-b border-<cor>-500/40 bg-<cor>-500/10 px-4 py-2 text-xs text-<cor>-700 dark:text-<cor>-400`, ícone `h-3.5 w-3.5`; a ação é botão de contorno pequeno à direita.
+   - Mesmos tons da caixa. Nada de faixa pastel com botão âmbar cheio nem faixa vermelha cheia (a da janela de 24h passa pra essa).
+   - Exceção: a faixa de acesso como administrador (só a equipe vê).
+13. **Carregando:**
+   - Lista, cartão ou tela carregando = **esqueleto cinza** com a forma do que vai chegar: `bg-muted animate-pulse`, linhas `rounded`, a de baixo `bg-muted/70`. Referência: `components/chat/loading-states/ConversationSkeleton.tsx`.
+   - Rodinha (`Loader2 h-4 w-4 animate-spin`) só dentro de botão ou ação pequena.
+   - **Nunca tela em branco:** `<Suspense fallback={null}>` em tela ou aba não vale.
+14. **Botões:** o `Button` do pacote base (`components/ui/ds`), sempre.
+   - Variantes: `default` (principal, com o degradê roxo), `outline` (secundário), `ghost` (discreto), `destructive` (Excluir). Tamanhos `default` (36 px) e `sm` (32 px).
+   - **Nunca** `<button>` pintado à mão com `bg-primary`, cor fixa (`#00ffa7`, `emerald-600`…) nem botão menor que 32 px.
+   - O degradê é do botão principal. Filtro ou alternador selecionado não ganha degradê nem sombra roxa.
+15. **Menu de ações:** `DropdownMenu` com gatilho **⋮** (`EllipsisVertical`), botão `ghost` `size="icon"` com nome ("Mais ações").
+   - Itens com ícone `h-4 w-4` antes do texto.
+   - Excluir por último, depois de um separador, com `variant="destructive"` do pacote. Nunca `text-red-*` à mão.
+   - Nunca ⋯ deitado.
+16. **Ações sempre à vista.** Botão que só aparece ao passar o mouse (`opacity-0 group-hover:opacity-100`) não existe no celular.
+   - Ação de cartão ou linha fica visível, apagada (`text-muted-foreground opacity-70`), e acende ao passar o mouse (`group-hover:opacity-100 group-hover:text-foreground`).
+17. **Janela** (`Dialog` do ajuste da casa, `components/ui/ds`): nunca importar direto de `@evoapi/design-system/dialog` nem montar `div fixed inset-0`.
+   - **Topo e rodapé fixos, só o meio rola.** Topo `px-6 py-4 border-b` com título e uma frase; ícone no título é opcional. Rodapé `px-6 py-4 border-t`, *Cancelar* (contorno) à esquerda e a ação à direita.
+   - **Quatro larguras:** pequena 448 px (`max-w-md`: confirmação, pergunta curta), padrão 512 px (sem largura), grande 672 px (`max-w-2xl`: formulário longo), larga 1400 px (`size="wide"`: editor, prévia). Nenhuma outra.
+   - **No celular a janela sobe de baixo**, com a largura inteira. Isso muda no ajuste da casa, uma vez só (ainda a fazer).
+18. **Confirmação:** `useConfirmacao`. Vermelho só com `destrutivo: true`.
+   - Nunca `AlertDialog` do pacote base (mostra "Excluir" em roxo), círculo com ícone nem `window.confirm`.
+   - As duas de digitar o nome (excluir canal, excluir conta) ficam como estão.
+19. **Alternador de visão:** só ícones, colados num contorno (`flex items-center border rounded-lg`), o selecionado em roxo.
+   - Ícones: `Grid3X3` cartões, `List` lista, `Map` mapa, `CalendarDays` calendário.
+   - Cada botão com nome (`aria-label` + `title`: "Ver em lista") e `aria-pressed`. No celular, alvo de toque de 40 px.
+   - Vira componente na frente das peças; até lá, copiar o de Funis (`pages/Customer/Pipelines/Pipelines.tsx`).
+20. **Cartão:** `Card` do pacote base (é o que tem o anel violeta e a sombra da marca).
+   - Bloco dentro de um cartão: `rounded-lg border bg-muted/30 p-4`.
+   - Tela de configuração continua em `Secoes`/`Secao`.
+   - Nada de caixa `rounded-xl border bg-card` sem sombra fazendo papel de cartão. O Painel mantém o cartão de vidro dele (tela com padrão próprio, como no padrão de telas).
+21. **Gráficos:** o desenho do Painel (recharts).
+   - Sem grade; barras na cor do tema com cantos de 4 px no topo; eixo com texto cinza de 11 px, sem linha; dica com borda e cantos de 10 px.
+   - Cores das séries saem de `--chart-1` a `--chart-5`. **Nunca hex fixo** (`#3b82f6`, `#059669`…).
+   - Barra de progresso: `h-2 rounded-full bg-muted` com o preenchimento `bg-primary`.
+22. **Ícones:** só `lucide-react`, em três tamanhos.
+   - `h-3.5 w-3.5` em aba, etiqueta e filtro; `h-4 w-4` em botão e menu; `h-5 w-5` em título.
+   - Nada de `size={N}` em pixel solto.
 
 **As telas de referência são Configurações → Conta e Automações → Lembretes.** Foram as duas pilotos, já na base.
 
