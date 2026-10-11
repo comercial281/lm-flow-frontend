@@ -7779,6 +7779,10 @@ O que aparece na tela:
 - **Faixa de etapas** com os dias em cada uma: idas e voltas somam; a atual conta até agora;
   card Ganho/Perdido para o relógio no dia em que fechou. Clicar numa etapa pergunta "Mover
   <nome> para <etapa>?". Card fechado: a faixa só informa.
+  Desde 10/10 as etapas são **setas encaixadas** (pedido do dono, pra ler como continuidade):
+  a primeira reta à esquerda, a última reta à direita, fresta de 4 px. O recorte é `clip-path`
+  (`formaDaSeta.ts`) e o fundo é uma camada própria com o contorno em `drop-shadow`, senão a
+  sombra pega o texto. Não voltar aos retângulos sem o dono pedir.
   Etapa já passada em que o lead ficou menos de 1 dia (ex.: respondeu no mesmo dia e saiu do
   Follow-up Automático) fica só pintada, sem "menos de 1 dia" (Tony, 08/10). Na atual continua.
 - **Abas** Ficha · Conversa · Visitas e propostas · Origem (a aba vai no endereço, `?aba=`).
