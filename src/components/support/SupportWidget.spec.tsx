@@ -15,6 +15,7 @@ vi.mock('@/services/support/supportService', async orig => ({
 }));
 
 import SupportWidget from './SupportWidget';
+import { simularCelular } from '@/test/telaDeCelular';
 import { openSupport } from './openSupport';
 import { avisarSuporte } from './aoVivo';
 import { useOcupaCanto } from './cantoOcupado';
@@ -69,20 +70,14 @@ describe('SupportWidget', () => {
   });
 
   it('em tela de celular é sempre a aba, em qualquer tela', () => {
-    const original = window.matchMedia;
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query === '(max-width: 767px)',
-      media: query,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    })) as unknown as typeof window.matchMedia;
+    const tela = simularCelular();
     try {
       montar('/dashboard');
       const aba = screen.getByRole('button', { name: 'Abrir ajuda e suporte' });
       expect(aba.className).toContain('top-1/2');
       expect(aba.className).not.toContain('bottom-4');
     } finally {
-      window.matchMedia = original;
+      tela.restaurar();
     }
   });
 

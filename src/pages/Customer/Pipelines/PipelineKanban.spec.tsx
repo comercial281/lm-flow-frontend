@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { pipelinesService } from '@/services/pipelines';
 import type { Pipeline, PipelineItem, PipelineStage } from '@/types/analytics';
 import PipelineKanban from './PipelineKanban';
+import { simularCelular } from '@/test/telaDeCelular';
 
 const mocks = vi.hoisted(() => ({ abrirConversa: vi.fn(), fetchLabels: vi.fn(), getPipelineItem: vi.fn() }));
 
@@ -691,13 +692,9 @@ describe('quadro do funil · exportar', () => {
 
 // Raio-X do celular (10/10/2026): no celular o card abre na PÁGINA, não na janela.
 describe('quadro do funil · no celular', () => {
-  let original: typeof window.matchMedia;
   beforeEach(() => {
-    original = window.matchMedia;
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query === '(max-width: 767px)', media: query, addEventListener: vi.fn(), removeEventListener: vi.fn(),
-    })) as unknown as typeof window.matchMedia;
-    return () => { window.matchMedia = original; };
+    const tela = simularCelular();
+    return () => tela.restaurar();
   });
 
   function PaginaDoCard() {

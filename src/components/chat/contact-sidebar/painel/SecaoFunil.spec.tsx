@@ -3,6 +3,7 @@ import { fireEvent, render as renderRtl, screen, waitFor } from '@testing-librar
 import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import SecaoFunil from './SecaoFunil';
+import { simularCelular } from '@/test/telaDeCelular';
 import type { Pipeline } from '@/types/analytics';
 
 // A seção Funil do painel do lead: trocar a etapa no seletor move o lead na
@@ -127,10 +128,7 @@ describe('SecaoFunil', () => {
   });
 
   it('no celular, "Abrir card do lead" vai pra página do card (sem a janela)', () => {
-    const original = window.matchMedia;
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query === '(max-width: 767px)', media: query, addEventListener: vi.fn(), removeEventListener: vi.fn(),
-    })) as unknown as typeof window.matchMedia;
+    const tela = simularCelular();
     function Endereco() {
       const l = useLocation();
       return <span data-testid="endereco">{l.pathname}|{JSON.stringify(l.state)}</span>;
@@ -148,7 +146,7 @@ describe('SecaoFunil', () => {
       expect(screen.getByTestId('endereco').textContent).toMatch(/^\/pipelines\/[^/]+\/card\/[^/|]+\|\{"voltarPeloHistorico":true\}$/);
       expect(screen.queryByText('card-do-lead')).toBeNull();
     } finally {
-      window.matchMedia = original;
+      tela.restaurar();
     }
   });
 

@@ -13,7 +13,7 @@ import {
 } from '@/features/cardDoLead/cardDoLead';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import { comSituacaoNova } from '@/features/pipelines/situacao/situacao';
-import { useTelaDeCelular } from '@/hooks/useMediaQuery';
+import { useCelular } from '@/hooks/useCelular';
 import { useAbrirPaginaDoCard } from '@/features/cardDoLead/paginaNoCelular';
 
 interface Props {
@@ -43,7 +43,7 @@ export default function CardDoContato({ contactId, onOpenChange, onMudou, aberto
   const [carregado, setCarregado] = useState<Carregado | null>(null);
   const [abaAtiva, setAbaAtiva] = useState<string | null>(null);
   const [mudou, setMudou] = useState(false);
-  const celular = useTelaDeCelular();
+  const celular = useCelular();
   const abrirPaginaDoCard = useAbrirPaginaDoCard();
   // A chave de quando a tela abriu: a lista de Contatos grava filtros no
   // endereço (replace), e isso troca a chave depois.

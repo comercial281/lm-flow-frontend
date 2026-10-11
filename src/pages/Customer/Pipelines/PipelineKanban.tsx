@@ -25,7 +25,7 @@ import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import { useCardForaDoQuadro } from '@/features/cardDoLead/useCardForaDoQuadro';
 import { useAbrirPaginaDoCard } from '@/features/cardDoLead/paginaNoCelular';
-import { useTelaDeCelular } from '@/hooks/useMediaQuery';
+import { useCelular } from '@/hooks/useCelular';
 import AvisoDoCardForaDoQuadro from '@/features/cardDoLead/AvisoDoCardForaDoQuadro';
 import { useCardNoEndereco } from './useCardNoEndereco';
 import { STATUS_DA_ABA, pertenceAAba, podeArrastarNaAba } from './quadro/enderecoDoQuadro';
@@ -308,7 +308,7 @@ export default function PipelineKanban() {
   // (features/cardDoLead/paginaNoCelular.ts). O ?card= que chegou de outra tela
   // ou de um link troca de endereço (replace): o voltar leva pra onde a pessoa
   // estava, sem passar de novo pelo quadro.
-  const celular = useTelaDeCelular();
+  const celular = useCelular();
   const abrirPaginaDoCard = useAbrirPaginaDoCard();
   const location = useLocation();
   const veioDeDentroDoApp = location.key !== 'default';

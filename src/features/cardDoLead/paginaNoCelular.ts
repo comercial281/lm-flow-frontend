@@ -3,7 +3,7 @@
 // Raio-X do celular (tela 390×844): a janela do card (EditItemModal) não cabe
 // no celular — a parte de cima ocupa ~600px e as abas ficam num vão de 112px
 // com rolagem dentro de rolagem. A página do card completo funciona bem. Então,
-// em tela de celular (abaixo de 768px, `useTelaDeCelular`), todo caminho que
+// em tela de celular (abaixo de 768px, `useCelular`), todo caminho que
 // abriria a janela navega pra página:
 //   - quadro e lista do funil (clique no card e o `?card=` do endereço, que é
 //     por onde chegam Tarefas, Bolsão, Painel, notificações e link colado);

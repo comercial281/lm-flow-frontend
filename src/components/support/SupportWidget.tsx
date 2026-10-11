@@ -8,7 +8,7 @@ import type { PassoId } from './roteiro';
 import { SUPPORT_OPEN_EVENT, type AlvoSuporte } from './openSupport';
 import { useNaoLidos } from './useNaoLidos';
 import { useCantoOcupado } from './cantoOcupado';
-import { useTelaDeCelular } from '@/hooks/useMediaQuery';
+import { useCelular } from '@/hooks/useCelular';
 import SupportInicio from './SupportInicio';
 import SupportRoteiro from './SupportRoteiro';
 import SupportNovoChamado from './SupportNovoChamado';
@@ -88,7 +88,7 @@ export default function SupportWidget() {
   const cantoOcupado = useCantoOcupado();
   // No celular é SEMPRE a aba, em todas as telas (Raio-X do celular, pedido do
   // dono, 10/10/2026). No computador, a regra de antes (endereço ou canto ocupado).
-  const celular = useTelaDeCelular();
+  const celular = useCelular();
   const comAba = celular || rotaComAba(location.pathname) || cantoOcupado;
   const bolinha = useRef<HTMLButtonElement>(null);
   const card = useRef<HTMLDivElement>(null);

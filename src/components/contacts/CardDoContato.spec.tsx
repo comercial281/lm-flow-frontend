@@ -3,17 +3,10 @@ import { act, fireEvent, render as renderRtl, screen } from '@testing-library/re
 import { useState, type ReactElement } from 'react';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import CardDoContato from './CardDoContato';
+import { simularCelular } from '@/test/telaDeCelular';
 
 // No celular o card navega pra página (useNavigate): precisa do roteador.
 const render = (ui: ReactElement) => renderRtl(ui, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
-
-function noCelular() {
-  const original = window.matchMedia;
-  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-    matches: query === '(max-width: 767px)', media: query, addEventListener: vi.fn(), removeEventListener: vi.fn(),
-  })) as unknown as typeof window.matchMedia;
-  return () => { window.matchMedia = original; };
-}
 
 function Endereco() {
   const l = useLocation();
@@ -121,9 +114,9 @@ describe('CardDoContato', () => {
   });
 
   describe('no celular', () => {
-    let devolver: () => void;
-    beforeEach(() => { devolver = noCelular(); });
-    afterEach(() => devolver());
+    let tela: ReturnType<typeof simularCelular>;
+    beforeEach(() => { tela = simularCelular(); });
+    afterEach(() => tela.restaurar());
 
     it('em um funil só: vai pra página do card, sem a janela', async () => {
       servicos.porContato.mockResolvedValue([funil('p1', 'Venda', 'i1', 1)]);
