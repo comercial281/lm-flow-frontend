@@ -7,13 +7,20 @@ interface LoadingScreenProps {
   fullScreen?: boolean;
   showLogo?: boolean;
   className?: string;
+  /** O que está acontecendo, pro leitor de tela ("Verificando autenticação…"). */
+  rotulo?: string;
 }
 
-const LoadingScreen = ({ fullScreen = false, showLogo = false, className }: LoadingScreenProps) => {
+// Tela de partida (guarda de rota). As cores são as do tema: as antigas
+// (`bg-neutral-background-default`, `text-primary-interaction-default`) não
+// existiam no CSS, e a rodinha não saía roxa.
+const LoadingScreen = ({ fullScreen = false, showLogo = false, className, rotulo = 'Carregando…' }: LoadingScreenProps) => {
   return (
     <div
+      role="status"
+      aria-label={rotulo}
       className={cn(
-        'flex flex-col items-center justify-center bg-neutral-background-default',
+        'flex flex-col items-center justify-center bg-background',
         fullScreen && 'h-screen',
         className,
       )}
@@ -21,11 +28,8 @@ const LoadingScreen = ({ fullScreen = false, showLogo = false, className }: Load
       {showLogo && (
         <AppLogo className="w-1/4 mb-4" />
       )}
-      <Loader2
-        className={cn(
-          'h-8 w-8 animate-spin text-primary-interaction-default dark:text-primary-surface-default'
-        )}
-      />
+      <Loader2 aria-hidden="true" className="h-8 w-8 animate-spin text-primary" />
+      <span className="sr-only">{rotulo}</span>
     </div>
   );
 };
