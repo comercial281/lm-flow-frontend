@@ -422,8 +422,6 @@ export interface VisitConfig {
   max_advance_days?: number;
   /** Datas específicas (YYYY-MM-DD) que a IA NUNCA pode oferecer — feriado, plantão fechado, manutenção. */
   blocked_dates?: string[];
-  /** Antes de marcar, checa se já existe outra visita no mesmo imóvel no mesmo horário (padrão: sim). */
-  avoid_double_booking?: boolean;
   /**
    * Visita para HOJE a IA nunca confirma sozinha: ela passa o lead para o corretor.
    * Ausente = LIGADO (é a regra, não uma funcionalidade a liberar aos poucos).

@@ -74,8 +74,6 @@ export default function Agendamento({ agent, gravar, irPara }: PropsDaPagina) {
         <LinhaComChave rotulo="Visita para hoje só com o corretor confirmando"
           descricao="Pra hoje ela não confirma sozinha e nunca afirma que alguém estará no local: quem confirma presença é o corretor."
           ligada={c.same_day_requires_human !== false} aoMudar={(v) => gravarVisita({ same_day_requires_human: v })} />
-        <LinhaComChave rotulo="Evitar dois leads no mesmo horário" ligada={c.avoid_double_booking !== false}
-          aoMudar={(v) => gravarVisita({ avoid_double_booking: v })} />
       </Secao>
 
       <Secao titulo="Avaliação no Google" descricao="Depois de uma visita realizada, ela pede pro lead avaliar a imobiliária. Visita cancelada ou em que o lead faltou não pede.">

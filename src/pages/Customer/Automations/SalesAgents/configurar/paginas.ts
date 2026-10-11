@@ -69,7 +69,7 @@ export const PAGINAS: Record<PaginaId, PaginaInfo> = {
     campos: ['pipeline_move_enabled', 'pipeline_id', 'pipeline_stage_map'] },
   agendamento: { id: 'agendamento', grupo: 'repasse', titulo: 'Agendamento', frase: 'Como ela marca a visita.',
     campos: ['visit_duration_minutes', 'visit_config.days', 'visit_config.start', 'visit_config.end', 'visit_config.min_advance_hours',
-      'visit_config.max_advance_days', 'visit_config.same_day_requires_human', 'visit_config.avoid_double_booking',
+      'visit_config.max_advance_days', 'visit_config.same_day_requires_human',
       'ask_google_review', 'google_review_link', 'playbook.vars.lead_pronto'] },
   followup: { id: 'followup', grupo: 'followup', titulo: 'Follow-up', frase: 'O que ela faz quando o lead para de responder.',
     campos: ['followup_enabled', 'followup_min_days', 'followup_max_days', 'followup_action', 'followup_stage_id',
