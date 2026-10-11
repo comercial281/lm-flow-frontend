@@ -212,7 +212,7 @@ export default function EditItemModal({
 
               {activeTab === 'visits' && (
                 <Suspense fallback={null}>
-                  <VisitsProposalsTab item={item} nomeExibido={card.nomeExibido} />
+                  <VisitsProposalsTab item={item} nomeExibido={card.nomeExibido} versao={card.historico.versao} />
                 </Suspense>
               )}
 
