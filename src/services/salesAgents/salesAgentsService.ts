@@ -864,6 +864,7 @@ export interface RehearsalForm {
 }
 
 export type SalesAgentLessonKind = 'rule' | 'good_example' | 'bad_example';
+export type OrigemDaLicao = 'manual' | 'suggestion';
 export interface SalesAgentLesson {
   id: string;
   kind: SalesAgentLessonKind;
@@ -871,7 +872,15 @@ export interface SalesAgentLesson {
   context: string | null;
   enabled: boolean;
   created_at: string;
+  /** 'suggestion' = veio do "Aplicar" de uma sugestão do Painel. */
+  origin: OrigemDaLicao;
+  /** Entra no prompt hoje (régua do servidor: as N ligadas mais novas de cada tipo). */
+  in_use: boolean;
 }
+
+/** Quantas ela lê: lições por tipo e conversas reais. Vem do servidor (meta.limits). */
+export interface LimitesDasLicoes { per_kind: number; conversations: number }
+export const LIMITES_PADRAO: LimitesDasLicoes = { per_kind: 12, conversations: 6 };
 
 // --- sugestões da IA e relatório semanal ---
 
@@ -1362,9 +1371,14 @@ export const salesAgentsService = {
 
   // --- aprendizado (lições: feedback -> regra / exemplo) ---
 
-  async listLessons(agentId: string): Promise<SalesAgentLesson[]> {
+  async listLessons(agentId: string): Promise<{ licoes: SalesAgentLesson[]; limites: LimitesDasLicoes }> {
     const res = await api.get(`${BASE}/${agentId}/lessons`);
-    return (res.data as { data: SalesAgentLesson[] }).data ?? [];
+    const body = res.data as { data?: Partial<SalesAgentLesson>[]; meta?: { limits?: LimitesDasLicoes } };
+    // Servidor anterior ao Ensinar novo não manda origin/in_use/limits: tudo conta como valendo.
+    const licoes = (body.data ?? []).map((l) => ({
+      origin: 'manual', in_use: true, ...l,
+    }) as SalesAgentLesson);
+    return { licoes, limites: body.meta?.limits ?? LIMITES_PADRAO };
   },
 
   async createLesson(
@@ -1374,6 +1388,15 @@ export const salesAgentsService = {
     context?: string,
   ): Promise<SalesAgentLesson> {
     const res = await api.post(`${BASE}/${agentId}/lessons`, { kind, content, context: context || undefined });
+    return (res.data as { data: SalesAgentLesson }).data;
+  },
+
+  async updateLesson(
+    agentId: string,
+    lessonId: string,
+    patch: Partial<Pick<SalesAgentLesson, 'content' | 'context' | 'enabled' | 'kind'>>,
+  ): Promise<SalesAgentLesson> {
+    const res = await api.patch(`${BASE}/${agentId}/lessons/${lessonId}`, patch);
     return (res.data as { data: SalesAgentLesson }).data;
   },
 

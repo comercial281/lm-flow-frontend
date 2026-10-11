@@ -27,7 +27,7 @@ export function LearningTab({ agent }: { agent: SalesAgent }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setLessons(await salesAgentsService.listLessons(agent.id));
+      setLessons((await salesAgentsService.listLessons(agent.id)).licoes);
     } catch {
       toast.error('Erro ao carregar o aprendizado');
     } finally {
