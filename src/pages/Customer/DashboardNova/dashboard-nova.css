@@ -121,7 +121,12 @@ button.lmfn-funil-faixa:hover { filter: brightness(1.08); }
 .lmfn-funil-valor { font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; }
 /* Tempo médio de negociação: estica até a altura de Resultados (sem altura mínima própria). */
 .lmfn-negociacao-card { flex: 1; display: flex; flex-direction: column; }
-.lmfn-negociacao { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; }
-.lmfn-negociacao .lmfn-seg { align-self: flex-start; }
+.lmfn-negociacao { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; }
+/* Troca compacta ao lado do título; a coluna estreita ganha espaço pra ela caber. */
+.lmfn-seg-mini { flex-shrink: 0; }
+.lmfn-seg-mini button { padding: 4px 9px; font-size: 12px; }
+.lmfn-linha-lateral > .lmfn-coluna:has(.lmfn-negociacao-card) { flex-basis: 340px; }
+/* Os dois cartões da linha com a mesma altura, seja qual for o mais alto. */
+.lmfn-estica { flex: 1; }
 .lmfn-vez .lmfn-carrossel { padding-top: 14px; justify-content: center; }
 .lmfn-blocos > :first-child { margin-top: 0; }

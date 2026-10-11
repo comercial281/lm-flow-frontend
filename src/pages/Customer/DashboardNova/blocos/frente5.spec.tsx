@@ -115,11 +115,11 @@ describe('Tempo médio de negociação', () => {
     wrap(<TempoNegociacao {...ctx({}, { negotiation_time: { won: { count: 12, avg_seconds: 18 * DIA }, lost: { count: 1, avg_seconds: 9 * DIA } } })} />);
     expect(screen.getByRole('button', { name: 'Ganhos' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('18 dias')).toBeInTheDocument();
-    expect(screen.getByText('da criação do card até o ganho · 12 ganhos')).toBeInTheDocument();
+    expect(screen.getByText('12 ganhos no período')).toBeInTheDocument();
     expect(screen.queryByText('9 dias')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Perdidos' }));
     expect(screen.getByText('9 dias')).toBeInTheDocument();
-    expect(screen.getByText('da criação do card até a perda · 1 perdido')).toBeInTheDocument();
+    expect(screen.getByText('1 perdido no período')).toBeInTheDocument();
   });
 
   it('sem nenhum fechado, traço no lugar do tempo', () => {
