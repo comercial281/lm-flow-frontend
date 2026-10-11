@@ -1,6 +1,6 @@
 // Ensinar · Arquivos: a janela "Como ela usa este arquivo" (era o FileConfigDialog da
-// Base de conhecimento) e a "Escrever texto". Janela no padrão da casa: topo e rodapé
-// fixos, só o meio rola; no celular sobe de baixo com a largura inteira.
+// Base de conhecimento) e a "Escrever texto". Janela grande da casa (Dialog do ds):
+// topo e rodapé fixos, só o meio rola; no celular sobe de baixo com a largura inteira.
 //
 // As chaves aqui dentro NÃO gravam na hora (exceção da janela, decisão 6 do spec):
 // são estado local até o Salvar, que manda tudo de uma vez no mesmo pacote de antes.
@@ -22,16 +22,15 @@ function Janela({ titulo, descricao, aoFechar, rodape, children }: {
 }) {
   return (
     <Dialog open onOpenChange={(v) => { if (!v) aoFechar(); }}>
-      {/* `max-w-2xl` vira teto inline no ajuste da casa (ds.tsx); `p-0` tira o respiro
-          do pacote pra o topo e o rodapé encostarem na borda. `dvh`, não `vh`: no
-          celular o `vh` ignora a barra do navegador e esconde o rodapé. */}
-      <DialogContent className="flex max-h-[90dvh] max-w-2xl flex-col gap-0 p-0 max-sm:top-auto max-sm:bottom-0 max-sm:w-full max-sm:translate-y-0 max-sm:rounded-b-none">
-        <DialogHeader className="border-b px-6 py-5 pr-12">
+      {/* Janela grande (672 px) da casa: o ajuste (ds.tsx) já prende o topo (com o X
+          "Fechar") e o rodapé, rola só o meio e, no celular, sobe de baixo. */}
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
           <DialogTitle>{titulo}</DialogTitle>
           <DialogDescription>{descricao}</DialogDescription>
         </DialogHeader>
-        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">{children}</div>
-        <DialogFooter className="border-t px-6 py-4">{rodape}</DialogFooter>
+        <div className="space-y-6">{children}</div>
+        <DialogFooter>{rodape}</DialogFooter>
       </DialogContent>
     </Dialog>
   );

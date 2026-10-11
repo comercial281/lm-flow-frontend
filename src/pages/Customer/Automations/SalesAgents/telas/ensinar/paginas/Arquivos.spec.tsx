@@ -111,7 +111,7 @@ describe('Arquivos', () => {
 
   it('carregando mostra esqueleto, não vazio', () => {
     abrir([], { estado: 'carregando' });
-    expect(screen.getByRole('status', { name: 'Carregando os arquivos' })).toBeInTheDocument();
+    expect(screen.getByText('Carregando os arquivos').closest('[role="status"]')).toHaveAttribute('aria-busy', 'true');
     expect(screen.queryByText('Nenhum arquivo ainda')).not.toBeInTheDocument();
   });
 
@@ -119,6 +119,8 @@ describe('Arquivos', () => {
     abrir([D('a')]);
     await userEvent.click(screen.getByRole('button', { name: /Como ela usa: Arquivo a/ }));
     expect(screen.getByRole('dialog', { name: 'Como ela usa este arquivo' })).toBeInTheDocument();
+    // X da casa no topo da janela.
+    expect(screen.getByRole('button', { name: 'Fechar' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(S.updateDocument).not.toHaveBeenCalled();

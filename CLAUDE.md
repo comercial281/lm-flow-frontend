@@ -7327,6 +7327,7 @@ botão Aceitar.") no lugar de "Seu cargo não permite esta ação".
 5. **Exemplos:** excluir qualquer exemplo fecha a edição aberta (as conversas reais são chaveadas pelo índice, que anda), e salvar uma edição cujo exemplo sumiu da lista fecha sem cair no "criar".
 6. **O cabeçalho da moldura é exceção do `conferir-padrao`** (`foraDaMoldura`, `moldura/PaginasComTrilho.tsx`): a exceção que era do `ConfigurarPaginas` mudou de arquivo com ele. A data das lições sai do `@/lib/formato` (a trava de formato não deixa `toLocaleDateString` na tela).
 7. Saíram `EnsinarTextos`, `BaseDeConhecimento`, `Aprendizado`, `useRascunho` e o `CheckRow` (sem uso). O `processingLabel`/`processingWarning` (`features/salesAgents/documentStatus.ts`) é a fonte do selo do pendente e do aviso de espera longa, que aponta o menu ⋮.
+8. **Peças da casa (#538):** o aviso das Regras e o dos Arquivos são `Aviso`; carregando é `Carregando`; vazio e erro são `EmptyState` (o "Nenhuma regra neste filtro." é `semResultado` compacto com *Limpar filtros*; sem arquivo nenhum, a área de soltar leva o `EmptyState` grande); o gatilho do ⋮ é `BotaoMaisAcoes` (com o `modal={false}` da armadilha 4) e Excluir vai por último, depois do separador; a janela do arquivo é a grande da casa (`max-w-2xl`), sem classe de topo/rodapé/celular própria.
 
 ## Roleta: cartão da lista em blocos e triângulo de atenção (06/10/2026)
 

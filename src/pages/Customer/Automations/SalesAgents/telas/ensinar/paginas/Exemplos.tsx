@@ -4,12 +4,16 @@
 // a conversa real vale se a POSIÇÃO entre as que o servidor lê (`conversasReais`, que
 // descarta resposta vazia) < limites.conversations. Editar/excluir usa o índice cru.
 import { useMemo, useState } from 'react';
-import { MessageSquareText, MoreVertical, Plus } from 'lucide-react';
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/ds';
+import { ArrowLeftRight, MessageSquareText, Pencil, Play, Plus, Trash2 } from 'lucide-react';
+import {
+  Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/ds';
 import { Secao, Secoes } from '@/components/base/Secao';
 import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
 import Abas from '@/components/base/Abas';
 import EmptyState from '@/components/base/EmptyState';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
+import Carregando from '@/components/base/Carregando';
 import { cn } from '@/lib/utils';
 import type { SalesAgentLesson } from '@/services/salesAgents/salesAgentsService';
 import { LIMITE_DO_TEXTO, conversasReais, type ConversaReal } from '../paginas';
@@ -126,11 +130,7 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
       {L.estado === 'erro' ? (
         <EmptyState tipo="erro" aoTentarDeNovo={() => void L.carregar()} />
       ) : L.estado === 'carregando' ? (
-        <Secoes>
-          <div role="status" aria-label="Carregando os exemplos" className="space-y-4 py-4">
-            {[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse rounded-lg bg-muted" />)}
-          </div>
-        </Secoes>
+        <Carregando variante="cartoes" linhas={2} rotulo="Carregando os exemplos" />
       ) : itens.length === 0 ? (
         compor?.chave === null ? null : <EmptyState icon={MessageSquareText} title={VAZIO[aba].title} description={VAZIO[aba].description} />
       ) : (
@@ -163,21 +163,26 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
                 {item.fonte === 'conversa' || item.licao.enabled ? (!item.valendo && <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 font-semibold text-amber-800 dark:text-amber-300">Não está valendo</span>) : null}
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="ghost" size="icon" aria-label={`Ações do exemplo ${n + 1}`} className="ml-auto text-muted-foreground">
-                      <MoreVertical className="h-4 w-4" aria-hidden />
-                    </Button>
+                    <BotaoMaisAcoes aria-label={`Ações do exemplo ${n + 1}`} className="ml-auto text-muted-foreground" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => setCompor({ chave: item.chave, lead: item.lead ?? '', resposta: item.resposta })}>Editar</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setCompor({ chave: item.chave, lead: item.lead ?? '', resposta: item.resposta })}>
+                      <Pencil className="h-4 w-4" aria-hidden /> Editar
+                    </DropdownMenuItem>
                     {item.fonte === 'licao' && !item.licao.enabled && (
-                      <DropdownMenuItem onSelect={() => void L.atualizar(item.licao.id, { enabled: true })}>Ligar</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => void L.atualizar(item.licao.id, { enabled: true })}>
+                        <Play className="h-4 w-4" aria-hidden /> Ligar
+                      </DropdownMenuItem>
                     )}
                     {item.fonte === 'licao' && (
                       <DropdownMenuItem onSelect={() => mover(item.licao)}>
-                        {aba === 'bom' ? 'Mover pra Não responda assim' : 'Mover pra Responda assim'}
+                        <ArrowLeftRight className="h-4 w-4" aria-hidden /> {aba === 'bom' ? 'Mover pra Não responda assim' : 'Mover pra Responda assim'}
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem className="text-destructive" onSelect={() => void apagar(item)}>Excluir</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive" onSelect={() => void apagar(item)}>
+                      <Trash2 className="h-4 w-4" aria-hidden /> Excluir
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

@@ -84,6 +84,20 @@ describe('Regras', () => {
     expect(l.carregar).toHaveBeenCalled();
   });
 
+  it('filtro sem regra mostra o vazio compacto, e Limpar filtros volta pra Todas', async () => {
+    abrir([L('a')]);
+    await userEvent.click(screen.getByRole('tab', { name: /Pausadas/ }));
+    expect(screen.getByText('Nenhuma regra neste filtro.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(screen.getByText('regra a')).toBeInTheDocument();
+  });
+
+  it('carregando mostra o esqueleto da casa, não o vazio', () => {
+    abrir([], { estado: 'carregando' });
+    expect(screen.getByRole('status')).toHaveTextContent('Carregando as regras');
+    expect(screen.queryByText('Nenhuma regra ainda')).not.toBeInTheDocument();
+  });
+
   it('nova regra e edição param no teto do servidor (4000 letras)', async () => {
     abrir([L('a')]);
     expect(screen.getByLabelText('Nova regra')).toHaveAttribute('maxLength', '4000');

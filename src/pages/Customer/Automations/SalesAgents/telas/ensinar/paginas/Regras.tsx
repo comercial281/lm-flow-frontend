@@ -2,13 +2,18 @@
 // (o servidor diz quais valem: `in_use`), aviso quando alguma ligada ficou de fora,
 // filtros e a lista com chave (pausar), selo de origem e ⋮ (Editar, Pausar, Excluir).
 import { useMemo, useState } from 'react';
-import { AlertTriangle, MoreVertical, Plus, SquareCheck } from 'lucide-react';
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/ds';
+import { Pause, Pencil, Play, Plus, SquareCheck, Trash2 } from 'lucide-react';
+import {
+  Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/ds';
 import { Secao, Secoes } from '@/components/base/Secao';
 import { CampoTexto } from '@/components/base/Campo';
 import Chave from '@/components/base/Chave';
 import Abas from '@/components/base/Abas';
 import EmptyState from '@/components/base/EmptyState';
+import Aviso from '@/components/base/Aviso';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
+import Carregando from '@/components/base/Carregando';
 import { cn } from '@/lib/utils';
 import type { SalesAgentLesson } from '@/services/salesAgents/salesAgentsService';
 import { LIMITE_DO_TEXTO, regrasForaDoLimite } from '../paginas';
@@ -72,19 +77,16 @@ export default function Regras({ licoes: L, confirmar }: PropsDaPaginaDoEnsinar)
       </Secoes>
 
       {fora > 0 && (
-        <div role="status" className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-300">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          <p><b>{fora === 1 ? '1 regra não está valendo.' : `${fora} regras não estão valendo.`}</b> Ela só lê as {limite} regras ligadas mais novas. Pause uma que não faz mais sentido ou junte duas numa só.</p>
-        </div>
+        <Aviso tom="atencao" titulo={fora === 1 ? '1 regra não está valendo.' : `${fora} regras não estão valendo.`}>
+          {`Ela só lê as ${limite} regras ligadas mais novas. Pause uma que não faz mais sentido ou junte duas numa só.`}
+        </Aviso>
       )}
 
       {L.estado === 'erro' ? (
         <EmptyState tipo="erro" aoTentarDeNovo={() => void L.carregar()} />
       ) : L.estado === 'carregando' ? (
         <Secoes>
-          <div role="status" aria-label="Carregando as regras" className="space-y-4 py-4">
-            {[0, 1, 2].map((i) => <div key={i} className="h-10 animate-pulse rounded-lg bg-muted" />)}
-          </div>
+          <Carregando linhas={3} rotulo="Carregando as regras" />
         </Secoes>
       ) : regras.length === 0 ? (
         <EmptyState icon={SquareCheck} title="Nenhuma regra ainda" description="Escreva a primeira no campo acima. As sugestões que você aceitar no Painel também aparecem aqui." />
@@ -93,7 +95,8 @@ export default function Regras({ licoes: L, confirmar }: PropsDaPaginaDoEnsinar)
           <Abas rotulo="Filtrar regras" ativa={filtro} aoTrocar={(c) => setFiltro(c as Filtro)} className="pt-2"
             abas={FILTROS.map((f) => ({ chave: f.chave, rotulo: f.rotulo, contagem: regras.filter(f.passa).length }))} />
           {visiveis.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma regra neste filtro.</p>
+            <EmptyState tipo="semResultado" tamanho="compacto" className="my-4" title="Nenhuma regra neste filtro."
+              aoLimparFiltros={() => setFiltro('todas')} />
           ) : (
             <ul className="divide-y divide-border">
               {visiveis.map((r) => {
@@ -122,14 +125,19 @@ export default function Regras({ licoes: L, confirmar }: PropsDaPaginaDoEnsinar)
                     )}
                     <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild>
-                        <Button type="button" variant="ghost" size="icon" aria-label={`Ações da regra ${r.content}`} className="text-muted-foreground">
-                          <MoreVertical className="h-4 w-4" aria-hidden />
-                        </Button>
+                        <BotaoMaisAcoes aria-label={`Ações da regra ${r.content}`} className="shrink-0 text-muted-foreground" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => setEditando({ id: r.id, texto: r.content })}>Editar</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => void L.atualizar(r.id, { enabled: !r.enabled })}>{r.enabled ? 'Pausar' : 'Ligar'}</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onSelect={() => void apagar(r)}>Excluir</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setEditando({ id: r.id, texto: r.content })}>
+                          <Pencil className="h-4 w-4" aria-hidden /> Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => void L.atualizar(r.id, { enabled: !r.enabled })}>
+                          {r.enabled ? <Pause className="h-4 w-4" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />} {r.enabled ? 'Pausar' : 'Ligar'}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onSelect={() => void apagar(r)}>
+                          <Trash2 className="h-4 w-4" aria-hidden /> Excluir
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </li>

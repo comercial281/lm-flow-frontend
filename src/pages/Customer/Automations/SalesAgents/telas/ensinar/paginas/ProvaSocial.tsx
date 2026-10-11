@@ -1,11 +1,14 @@
 // Ensinar · Prova social: lista de casos, um por linha no MESMO texto `social_proof`
 // (decisão 4 do spec). Grava na hora; excluir pede confirmação.
 import { useState } from 'react';
-import { MoreVertical, Plus, Quote, Star } from 'lucide-react';
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/ds';
+import { Pencil, Plus, Quote, Star, Trash2 } from 'lucide-react';
+import {
+  Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/ds';
 import { Secao, Secoes } from '@/components/base/Secao';
 import { CampoTexto } from '@/components/base/Campo';
 import EmptyState from '@/components/base/EmptyState';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import { LIMITE_DO_TEXTO, casosDe, textoDosCasos } from '../paginas';
 import type { PropsDaPaginaDoEnsinar } from './tipos';
 
@@ -71,13 +74,16 @@ export default function ProvaSocial({ agent, gravar, confirmar }: PropsDaPaginaD
                 ) : <p className="flex-1 pt-1 text-[15px] leading-snug">{c}</p>}
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="ghost" size="icon" aria-label={`Ações do caso ${i + 1}`} className="text-muted-foreground">
-                      <MoreVertical className="h-4 w-4" aria-hidden />
-                    </Button>
+                    <BotaoMaisAcoes aria-label={`Ações do caso ${i + 1}`} className="shrink-0 text-muted-foreground" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => setEditando({ i, texto: c })}>Editar</DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive" onSelect={() => void apagar(i)}>Excluir</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setEditando({ i, texto: c })}>
+                      <Pencil className="h-4 w-4" aria-hidden /> Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive" onSelect={() => void apagar(i)}>
+                      <Trash2 className="h-4 w-4" aria-hidden /> Excluir
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </li>

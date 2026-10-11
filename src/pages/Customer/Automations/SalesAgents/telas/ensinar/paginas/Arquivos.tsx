@@ -5,11 +5,14 @@
 // com arquivo em processamento mora no useArquivos.
 import { useId, useRef, useState, type DragEvent } from 'react';
 import { toast } from 'sonner';
-import { AlignLeft, Film, FileText, ImageIcon, Info, MoreVertical, PenLine, RefreshCw, SlidersHorizontal, Trash2, Upload } from 'lucide-react';
+import { AlignLeft, Film, FileText, ImageIcon, PenLine, RefreshCw, SlidersHorizontal, Trash2, Upload } from 'lucide-react';
 import {
   Button, Card, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/ds';
 import EmptyState from '@/components/base/EmptyState';
+import Aviso from '@/components/base/Aviso';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
+import Carregando from '@/components/base/Carregando';
 import { cn } from '@/lib/utils';
 import { numero } from '@/lib/formato';
 import { salesAgentsService, type SalesAgentDocument } from '@/services/salesAgents/salesAgentsService';
@@ -96,14 +99,10 @@ export default function Arquivos({ agent, arquivos: A, confirmar }: PropsDaPagin
           catálogo entrou: ela consulta os imóveis cadastrados a cada mensagem.
           Pior que desatualizado, o conselho era ruim — uma tabela colada aqui
           envelhece e passa a contradizer o preço real do cadastro. */}
-      <div className="flex items-start gap-2 rounded-md border border-primary/40 bg-primary/10 p-3 text-sm text-foreground">
-        <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
-        <p>
-          <b>Os imóveis já estão conectados:</b> preço e características vêm do cadastro, sempre atualizados. Aqui vai o
-          resto: condições de pagamento, documentação, perguntas frequentes. Evite tabela de preço, ela envelhece e
-          contradiz o cadastro.
-        </p>
-      </div>
+      <Aviso tom="info" titulo="Os imóveis já estão conectados:">
+        preço e características vêm do cadastro, sempre atualizados. Aqui vai o resto: condições de pagamento,
+        documentação, perguntas frequentes. Evite tabela de preço, ela envelhece e contradiz o cadastro.
+      </Aviso>
 
       <div className="flex flex-wrap gap-2">
         <Button type="button" onClick={() => seletor.current?.click()} disabled={busy}>
@@ -125,15 +124,12 @@ export default function Arquivos({ agent, arquivos: A, confirmar }: PropsDaPagin
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           className={cn('flex cursor-pointer rounded-xl border-2 border-dashed text-muted-foreground transition-colors',
-            vazio ? 'flex-col items-center gap-2 px-6 py-12 text-center' : 'items-center justify-center gap-2 px-4 py-3 text-sm',
+            vazio ? 'flex-col' : 'items-center justify-center gap-2 px-4 py-3 text-sm',
             dragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50')}
         >
+          {/* Sem arquivo nenhum, a área de soltar É o vazio da página (medida grande). */}
           {vazio ? (
-            <>
-              <Upload className="h-5 w-5" aria-hidden />
-              <span className="text-base font-semibold text-foreground">Nenhum arquivo ainda</span>
-              <span className="text-sm">{TEXTO_DA_AREA}</span>
-            </>
+            <EmptyState icon={Upload} title="Nenhum arquivo ainda" description={TEXTO_DA_AREA} className="py-12" />
           ) : (
             <>
               <Upload className="h-4 w-4 shrink-0" aria-hidden />
@@ -152,9 +148,7 @@ export default function Arquivos({ agent, arquivos: A, confirmar }: PropsDaPagin
       {A.estado === 'erro' ? (
         <EmptyState tipo="erro" aoTentarDeNovo={() => void A.carregar()} />
       ) : A.estado === 'carregando' ? (
-        <div role="status" aria-label="Carregando os arquivos" className="grid gap-4 md:grid-cols-2">
-          {[0, 1].map((i) => <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />)}
-        </div>
+        <Carregando variante="cartoes" linhas={2} rotulo="Carregando os arquivos" />
       ) : A.docs.length > 0 && (
         <ul className="grid gap-4 md:grid-cols-2">
           {A.docs.map((d) => {
@@ -198,9 +192,7 @@ export default function Arquivos({ agent, arquivos: A, confirmar }: PropsDaPagin
                   </button>
                   <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
-                      <Button type="button" variant="ghost" size="icon" aria-label={`Ações do arquivo ${d.title}`} className="shrink-0 text-muted-foreground">
-                        <MoreVertical className="h-4 w-4" aria-hidden />
-                      </Button>
+                      <BotaoMaisAcoes aria-label={`Ações do arquivo ${d.title}`} className="shrink-0 text-muted-foreground" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onSelect={() => setAberto(d)}>
