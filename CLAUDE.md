@@ -8158,3 +8158,31 @@ Pedido do Cleverson (Nova 27, call de 07/10). Spec: `LM FLOW/specs/2026-10-10-vi
 - **Modal do card:** a aba Visitas e propostas recarrega quando o "Agendar visita" das Ações rápidas cria uma visita (prop `versao`, vinda de `card.historico.versao`).
 - **Trava por imóvel:** caixinha no cadastro do imóvel (seção Equipe), nulo = segue o tipo (empreendimento aceita, revenda não). Vale à mão e na IA. A caixinha "Evitar dois leads no mesmo horário" da IA saiu.
 - Não reabrir sem o dono pedir.
+
+## Peças da casa: as escolhas do dono (10/10/2026)
+
+Pedido do dono: escolher o melhor jeito de cada peça e padronizar, pra que **tela nova já saia no mesmo padrão**. Ele escolheu olhando lado a lado as variações que existiam no app, desenhadas com os tokens reais (registro e página de escolha em `LM FLOW/specs/registros/pecas-da-casa-2026-10-10/`, na pasta do Tony).
+
+**A regra mora no [GLOSSARIO.md → As peças da casa](GLOSSARIO.md#as-peças-da-casa), itens 11 a 22** (e acréscimos em Abas, Estado vazio e Botão de ícone). Resumo das escolhas:
+
+| Peça | Escolha |
+|---|---|
+| Caixa de aviso | translúcida com ícone (era: 93 caixas em 5 jeitos) |
+| Faixa no topo | translúcida, mesma família da caixa |
+| Carregando | esqueleto cinza; rodinha só em botão |
+| Lista vazia | duas medidas: grande na tela, compacta (tracejada) dentro de bloco |
+| Botões | `Button` do pacote, com o degradê no principal |
+| Menu de ações | ⋮ em pé |
+| Ações no mouse | sempre visíveis, apagadas, acendem no mouse |
+| Janela | topo e rodapé fixos; quatro larguras (448, 512, 672, 1400); no celular sobe de baixo |
+| Confirmação | `useConfirmacao` |
+| Abas | sublinhado da casa (`Abas`) |
+| Alternador de visão | só ícones, colados (o dono preferiu ao segmentado com texto: "mais clean") |
+| Cartão | `Card` do pacote |
+| Gráficos | desenho do Painel, cores `--chart-*` |
+
+**Estado:** só a regra está escrita. Nenhuma tela mudou. Peça que ainda não é componente: tela nova copia o desenho escrito no glossário. A migração vai peça por peça, cada uma com componente + trava no `conferir-padrao` (teto = contagem do dia, descendo até 0), como o Seletor e a moldura de página. Ordem proposta: caixa de aviso e faixa → ações no mouse → janela no celular → o resto.
+
+**Achados do levantamento (backlog):** 9 janelas de Conversas importam o `Dialog` direto do pacote e pulam o ajuste de largura (Atribuir conversa pede 448 e abre com 512); 8 confirmações do `AlertDialog` mostram Excluir em roxo; `NotesHistoryModal` é branca no tema escuro e usa `window.confirm`; botões `#00ffa7` sobrados da Evolution (`BulkInviteModal`, `MacroFormModal`); a regra global `button.bg-primary` (globals.css) pinta filtro selecionado com degradê e sombra; `--chart-*` sem uso e 3 cartões de gráfico parados em `components/charts/`.
+
+Não reabrir sem o dono pedir.
