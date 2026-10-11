@@ -205,7 +205,7 @@ export default function SalesAgents() {
   // ⚠️ Trocar de IA, de tela, criar ou duplicar com uma edição pela metade pergunta
   // antes; senão a edição some calada. Os botões da barra não são links, e a guarda
   // do menu lateral (useGuardaDeSaida) não os pega.
-  // Onda 3: as páginas da IA gravam na hora e não marcam pendência; a guarda fica pelo Ensinar (EnsinarTextos ainda tem Salvar).
+  // Onda 3 + Ensinar novo (11/10): nenhuma tela da IA marca pendência; a guarda fica pra quem ainda marcar.
   const guardar = useCallback(async (acao: () => void) => {
     if (temAlteracaoPendente() && !(await confirmar(PEDIDO_SAIR_SEM_SALVAR))) return;
     limparPendentes();

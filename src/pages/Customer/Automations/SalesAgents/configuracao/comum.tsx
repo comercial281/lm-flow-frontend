@@ -25,19 +25,5 @@ export function Toggle({ on, onChange, rotulo }: { on: boolean; onChange: (v: bo
 
 // ---------------- Inteligência, limites e escopo (Fase 3) ----------------
 
-export function CheckRow({ checked, onChange, title, desc }: {
-  checked: boolean; onChange: (v: boolean) => void; title: string; desc?: string;
-}) {
-  return (
-    <label className="flex items-start gap-3 cursor-pointer py-1">
-      <input type="checkbox" className="mt-1" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <div>
-        <div className="text-sm font-medium">{title}</div>
-        {desc && <div className="text-xs text-muted-foreground">{desc}</div>}
-      </div>
-    </label>
-  );
-}
-
 export interface PipelineOpt { id: string; name: string }
 export interface StageOpt { id: string; name: string }

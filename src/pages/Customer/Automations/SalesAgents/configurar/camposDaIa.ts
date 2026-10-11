@@ -6,7 +6,7 @@
  * `CAMPOS_ESCONDIDOS` nenhuma página grava: o `useGravarNaHora` recusa os dois.
  */
 
-/** Ensinar (instruções, prova social, exemplos): saiu do Configurar e mora lá. */
+/** Ensinar (instruções, prova social, exemplos de conversa): gravados na hora pelas páginas do Ensinar. */
 export const CAMPOS_DE_ENSINAR = ['instructions', 'social_proof', 'example_conversations'] as const;
 
 /**
