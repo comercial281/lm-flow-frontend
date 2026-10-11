@@ -7,6 +7,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FileText, GraduationCap, AlertTriangle } from 'lucide-react';
 import { BaseHeader } from '@/components/base';
+import Abas from '@/components/base/Abas';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useCategories } from '@/hooks/useKnowledge';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
@@ -79,30 +80,16 @@ const Tutorials = () => {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="border-b border-border px-4 py-6 sm:px-6">
+      <div className="border-b border-border px-4 pt-6 sm:px-6">
         <BaseHeader title={t('title')} subtitle={t('description')} />
-        {/* Tabs */}
-        <div className="mt-4 flex items-center gap-1">
-          {TABS.map((x) => {
-            const Icon = x.icon;
-            const active = tab === x.key;
-            return (
-              <button
-                key={x.key}
-                onClick={() => setTab(x.key)}
-                className={`flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-lg transition-colors ${
-                  active
-                    ? 'bg-primary/15 text-primary border border-primary/40'
-                    : 'text-muted-foreground hover:text-foreground border border-transparent'
-                }`}
-                type="button"
-              >
-                <Icon size={13} />
-                {x.label}
-              </button>
-            );
-          })}
-        </div>
+        {/* A linha de baixo das abas é a do próprio cabeçalho. */}
+        <Abas
+          rotulo="Partes dos Tutoriais"
+          className="mt-4 border-b-0"
+          ativa={tab}
+          aoTrocar={chave => setTab(chave as Tab)}
+          abas={TABS.map(x => ({ chave: x.key, rotulo: x.label, icone: x.icon }))}
+        />
       </div>
 
       {/* Body */}

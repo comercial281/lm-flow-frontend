@@ -132,7 +132,7 @@ describe('Tela de Imóveis', () => {
     svc.contarPorTipo.mockResolvedValue({ development: 2, resale: 1 });
     abrir('/properties?visao=mapa');
     expect(await screen.findByTestId('mapa')).toHaveTextContent('mapa development');
-    expect(screen.getByRole('button', { name: 'Mapa' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Ver no mapa' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('Mostrar mais acrescenta a página 2 no fim da lista', async () => {
@@ -229,7 +229,7 @@ describe('Tela de Imóveis', () => {
     expect(screen.queryByRole('button', { name: /Filtros/ })).toBeNull();
     expect(screen.queryByRole('combobox', { name: 'Ordenar' })).toBeNull();
     expect(svc.list).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Lista' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ver em lista' }));
     await waitFor(() => expect(svc.list).toHaveBeenCalledWith(expect.objectContaining({ listing_kind: 'development', page: 1 })));
     expect(screen.getByRole('textbox', { name: 'Buscar' })).toBeInTheDocument();
   });

@@ -14,11 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
 } from '@/components/ui/ds';
+import Abas from '@/components/base/Abas';
+import { useAbaDaJanela } from '@/hooks/useAbaDaJanela';
 import {
   Calendar,
   Clock,
@@ -48,6 +46,8 @@ interface GoogleCalendarConfigDialogProps {
   agentId: string;
 }
 
+type AbaDaAgenda = 'general' | 'schedule' | 'settings';
+
 const DAYS_OF_WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 const GoogleCalendarConfigDialog = ({
@@ -60,6 +60,7 @@ const GoogleCalendarConfigDialog = ({
 }: GoogleCalendarConfigDialogProps) => {
   const { t } = useLanguage('aiAgents');
 
+  const [aba, setAba] = useAbaDaJanela<AbaDaAgenda>(open, 'general');
   const [isConnecting, setIsConnecting] = useState(false);
   const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
   const [availableCalendars, setAvailableCalendars] = useState<GoogleCalendarItem[]>([]);
@@ -379,24 +380,20 @@ const GoogleCalendarConfigDialog = ({
           </div>
         ) : (
           /* Connected - Show configuration */
-          <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="general">
-                <Settings className="h-4 w-4 mr-2" />
-                Geral
-              </TabsTrigger>
-              <TabsTrigger value="schedule">
-                <CalendarClock className="h-4 w-4 mr-2" />
-                Horários
-              </TabsTrigger>
-              <TabsTrigger value="settings">
-                <Zap className="h-4 w-4 mr-2" />
-                Configurações
-              </TabsTrigger>
-            </TabsList>
+          <div className="flex w-full flex-col gap-2">
+            <Abas
+              rotulo="Partes da agenda"
+              ativa={aba}
+              aoTrocar={chave => setAba(chave as AbaDaAgenda)}
+              abas={[
+                { chave: 'general', rotulo: 'Geral', icone: Settings },
+                { chave: 'schedule', rotulo: 'Horários', icone: CalendarClock },
+                { chave: 'settings', rotulo: 'Configurações', icone: Zap },
+              ]}
+            />
 
             {/* General Tab */}
-            <TabsContent value="general" className="space-y-6">
+            {aba === 'general' && <div className="space-y-6">
               {/* Calendar Selection */}
               <div className="space-y-3">
                 <Label>
@@ -637,10 +634,10 @@ const GoogleCalendarConfigDialog = ({
                   Limite tempo para cada agendamento
                 </p>
               </div>
-            </TabsContent>
+            </div>}
 
             {/* Schedule Tab */}
-            <TabsContent value="schedule" className="space-y-6">
+            {aba === 'schedule' && <div className="space-y-6">
               {/* Simultaneous Bookings */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -752,10 +749,10 @@ const GoogleCalendarConfigDialog = ({
                   </div>
                 </div>
               )}
-            </TabsContent>
+            </div>}
 
             {/* Settings Tab */}
-            <TabsContent value="settings" className="space-y-6">
+            {aba === 'settings' && <div className="space-y-6">
               {/* Google Meet Integration */}
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
@@ -874,8 +871,8 @@ const GoogleCalendarConfigDialog = ({
                   ))}
                 </div>
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>}
+          </div>
         )}
 
         {/* Action Buttons */}

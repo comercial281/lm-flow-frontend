@@ -10,6 +10,8 @@ export { default as EmptyState } from './EmptyState';
 export { default as Aviso, COR_DO_TOM, ICONE_DO_TOM } from './Aviso';
 export type { AvisoProps, TomDoAviso } from './Aviso';
 export { default as Faixa } from './Faixa';
+export { default as AlternadorDeVisao } from './AlternadorDeVisao';
+export type { AlternadorDeVisaoProps, OpcaoDeVisao } from './AlternadorDeVisao';
 export type { FaixaProps } from './Faixa';
 export { default as PrimaryActionButton } from './PrimaryActionButton';
 export { default as IconActionButton } from './IconActionButton';

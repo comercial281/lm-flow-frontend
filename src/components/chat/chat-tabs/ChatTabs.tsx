@@ -1,6 +1,7 @@
 import { MessageCircle } from 'lucide-react';
 import type { DashboardApp } from '@/types/integrations';
 import { useLanguage } from '@/hooks/useLanguage';
+import Abas from '@/components/base/Abas';
 
 interface ChatTabsProps {
   dashboardApps: DashboardApp[];
@@ -25,41 +26,16 @@ const ChatTabs = ({ dashboardApps, activeTab, onTabChange, conversationSelected 
   }
 
   return (
-    <div className="flex items-center gap-1 px-4 py-2 border-b bg-background">
-      {/* Chat Tab */}
-      <button
-        onClick={() => onTabChange('chat')}
-        className={`
-          flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer
-          ${
-            activeTab === 'chat'
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-          }
-        `}
-      >
-        <MessageCircle className="h-4 w-4" />
-        {t('chatTabs.chat')}
-      </button>
-
-      {/* Dashboard App Tabs */}
-      {conversationApps.map(app => (
-        <button
-          key={app.id}
-          onClick={() => onTabChange(app.id)}
-          className={`
-            flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer
-            ${
-              activeTab === app.id
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-            }
-          `}
-        >
-          {app.title}
-        </button>
-      ))}
-    </div>
+    <Abas
+      rotulo="Partes da conversa"
+      className="bg-background px-4"
+      ativa={activeTab}
+      aoTrocar={onTabChange}
+      abas={[
+        { chave: 'chat', rotulo: t('chatTabs.chat'), icone: MessageCircle },
+        ...conversationApps.map(app => ({ chave: app.id, rotulo: app.title })),
+      ]}
+    />
   );
 };
 
