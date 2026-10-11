@@ -8368,3 +8368,13 @@ Pedido do Cleverson (Nova 27) na call de 07/10, desenho aprovado pelo dono em 11
 - **Fica pra depois**: funil de passagem (quantos do período chegaram até cada etapa, com % entre etapas). Depende de conferir o histórico de movimentação.
 
 Não reabrir sem o dono pedir.
+
+## Formulários públicos: limite de envios e "Quero ajuda" que só confirma o que chegou (desde 2026-10-11)
+
+Desde 11/10 o servidor (`comercial281/lm-flow#451`) aceita 10 envios a cada 10 minutos por visitante em `site/leads`, `site/anuncie` e `landing/:slug/leads`; passou disso, responde 429 com a frase em `error.message` e o cabeçalho `Retry-After`. Nenhuma tela lia isso.
+
+- **Ajudante único** `features/siteBuilder/public/limiteDeEnvios.ts` (sem imports, entra no pacote enxuto do site e da landing): `lerLimiteDeEnvios(res)` devolve frase + espera só no 429 (não lê o corpo de outra resposta); `textoDoErroDeEnvio(res, textoDaTela)` é o atalho das telas. Reserva fixa igual à do servidor: "Muitos envios seguidos. Tente de novo em alguns minutos." `Retry-After` em segundos ou data HTTP, com teto de 15 min.
+- **No 429 vale a frase do servidor; qualquer outro erro continua com a frase de cada tela.** Página do imóvel (interesse e book) e página inicial: "Não consegui enviar agora. Tente de novo em instantes." (`TEXTO_FALHA_DE_ENVIO`). Anuncie: a frase + "O que você preencheu continua aqui."
+- **Landing de anúncio:** no 429, a frase do servidor no lugar de "Confira sua conexão…" (que o gestor edita no formulário), o botão volta a dizer o texto normal (nada de "Tentar de novo") e fica desligado enquanto durar o `Retry-After`. Sem o cabeçalho, só a frase muda. Outro erro: igual a antes, com "Tentar de novo". Vai pelo `LeadSubmitResult` (`failedMessage`, `retryAfterSeconds`).
+- **Página inicial ("Quero ajuda pra encontrar") só confirma quando o servidor aceitou.** Antes ela mostrava "Recebemos seu contato!" em QUALQUER erro (não conferia a resposta) e ficava calada se a rede caía: o lead se perdia sem ninguém saber. Agora o erro aparece embaixo do botão e o que a pessoa digitou fica no lugar, como na página do imóvel. Prévia segue com o aviso próprio.
+- Testes: `limiteDeEnvios.spec.ts`, `pages/Public/limiteDeEnviosNoSite.spec.tsx`, `LandingPublicView.spec.tsx` (limite de envios).

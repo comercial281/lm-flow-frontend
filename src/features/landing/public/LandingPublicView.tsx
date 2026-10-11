@@ -12,6 +12,7 @@ import { loadLanding, type LandingPixel, type PublicLandingDTO } from './landing
 import { installPixel } from './metaPixel';
 import { sendSiteVisit } from '@/features/siteBuilder/public/siteVisits';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
+import { lerLimiteDeEnvios } from '@/features/siteBuilder/public/limiteDeEnvios';
 import { FONTES_DO_SITE, fonteDoSite } from '@/features/siteBuilder/public/aparenciaConfig';
 
 /**
@@ -175,7 +176,13 @@ export function LandingPublicView({ tenant, slug, noDominio = false }: LandingPu
       // o lead pago sumia sem ninguém saber.
       return { failed: true };
     }
-    if (!res.ok) return { failed: true };
+    if (!res.ok) {
+      // Limite de envios (429): a frase do servidor no lugar de "confira sua
+      // conexão", e o botão espera o Retry-After em vez de chamar a tentar de novo.
+      const limite = await lerLimiteDeEnvios(res);
+      if (!limite) return { failed: true };
+      return { failed: true, failedMessage: limite.mensagem, retryAfterSeconds: limite.esperarSegundos ?? undefined };
+    }
 
     // Retorna a qualificação computada no backend pra a tela final ramificar.
     try {

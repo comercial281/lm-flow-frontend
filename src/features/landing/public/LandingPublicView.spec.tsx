@@ -1,8 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { LandingPublicView } from './LandingPublicView';
 import * as loader from './landingLoader';
 import { createBlock } from '@/features/landing/blocks';
+import { BR_PHONE_PLACEHOLDER } from '@/lib/brPhone';
 
 vi.mock('./metaPixel', () => ({ installPixel: vi.fn() }));
 vi.mock('@/features/siteBuilder/public/siteVisits', () => ({ sendSiteVisit: vi.fn() }));
@@ -75,5 +76,58 @@ describe('LandingPublicView: largura', () => {
     const r2 = await abrir(dto({ content_blocks: [capa(true), faixa()] }));
     expect(r2.container.querySelector('.max-w-\\[460px\\]')).not.toBeNull();
     expect(r2.container.querySelector('.lg\\:max-w-\\[1200px\\]')).toBeNull();
+  });
+});
+
+describe('LandingPublicView: limite de envios', () => {
+  beforeEach(() => {
+    document.head.innerHTML = '';
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const FRASE = 'Muitos envios seguidos. Tente de novo em alguns minutos.';
+
+  // Formulário sem perguntas: abre direto no contato.
+  const formulario = () => {
+    const b = createBlock('lead_form');
+    (b.config as { steps: unknown[] }).steps = [];
+    return b;
+  };
+
+  async function enviar(resposta: () => Response) {
+    vi.stubGlobal('fetch', vi.fn(async () => resposta()));
+    await abrir(dto({ content_blocks: [formulario()] }));
+    fireEvent.change(screen.getByPlaceholderText('Seu nome *'), { target: { value: 'Fulano' } });
+    fireEvent.input(screen.getByPlaceholderText(BR_PHONE_PLACEHOLDER), { target: { value: '(11) 99999-0000' } });
+    await waitFor(() => expect(screen.getByRole('button', { name: /Falar com Especialista/ })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: /Falar com Especialista/ }));
+  }
+
+  it('429 mostra a frase do servidor e desliga o botão, sem "Tentar de novo"', async () => {
+    await enviar(() => new Response(
+      JSON.stringify({ success: false, error: { code: 'TOO_MANY_REQUESTS', message: FRASE } }),
+      { status: 429, headers: { 'Retry-After': '540' } },
+    ));
+
+    expect(await screen.findByText(FRASE)).toBeInTheDocument();
+    expect(screen.queryByText(/Confira sua conexão/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /Tentar de novo/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /Falar com Especialista/ })).toBeDisabled();
+    expect(screen.queryByText('Recebemos suas informações!')).toBeNull();
+  });
+
+  it('429 sem Retry-After: a frase do servidor, botão ligado', async () => {
+    await enviar(() => new Response(JSON.stringify({ error: { message: FRASE } }), { status: 429 }));
+
+    expect(await screen.findByText(FRASE)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Falar com Especialista/ })).toBeEnabled();
+  });
+
+  it('outro erro segue com a frase de conexão e o "Tentar de novo"', async () => {
+    await enviar(() => new Response('{}', { status: 500 }));
+
+    expect(await screen.findByText(/Não conseguimos enviar seus dados/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Tentar de novo/ })).toBeEnabled();
   });
 });
