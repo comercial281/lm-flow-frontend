@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import {
@@ -31,34 +31,42 @@ interface Props {
 export default function AutomationLibraryModal({ open, onClose, onApplied }: Props) {
   const [templates, setTemplates] = useState<AutomationTemplate[]>([]);
   const [loading, setLoading] = useState(false);
+  // Falha ao carregar não vira "Nenhum modelo encontrado".
+  const [erro, setErro] = useState(false);
+  const ultimaCarga = useRef(0);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string>('all');
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [appliedIds, setAppliedIds] = useState<string[]>([]);
   const [inboxId, setInboxId] = useState<string | undefined>(undefined);
 
+  const carregar = useCallback(async () => {
+    const vez = ++ultimaCarga.current;
+    setLoading(true);
+    setErro(false);
+    try {
+      const [tpls, inboxesRes] = await Promise.all([
+        automationTemplatesService.getAll(),
+        api.get('/inboxes').catch(() => null),
+      ]);
+      if (vez !== ultimaCarga.current) return;
+      setTemplates(tpls);
+      const inboxes = (inboxesRes?.data as { data?: Array<{ id: string }> } | undefined)?.data ?? [];
+      setInboxId(inboxes[0]?.id);
+    } catch {
+      if (vez === ultimaCarga.current) setErro(true);
+    } finally {
+      if (vez === ultimaCarga.current) setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     setSearch('');
     setCategory('all');
     setAppliedIds([]);
-    (async () => {
-      setLoading(true);
-      try {
-        const [tpls, inboxesRes] = await Promise.all([
-          automationTemplatesService.getAll(),
-          api.get('/inboxes').catch(() => null),
-        ]);
-        setTemplates(tpls);
-        const inboxes = (inboxesRes?.data as { data?: Array<{ id: string }> } | undefined)?.data ?? [];
-        setInboxId(inboxes[0]?.id);
-      } catch {
-        toast.error('Erro ao carregar a biblioteca');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [open]);
+    void carregar();
+  }, [open, carregar]);
 
   const categories = useMemo(() => {
     const present = Array.from(new Set(templates.map(t => t.category)));
@@ -147,6 +155,8 @@ export default function AutomationLibraryModal({ open, onClose, onApplied }: Pro
         <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-2 mt-1">
           {loading ? (
             <Carregando linhas={4} className="py-2" />
+          ) : erro ? (
+            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void carregar()} />
           ) : filtered.length === 0 ? (
             <EmptyState
               tamanho="compacto"

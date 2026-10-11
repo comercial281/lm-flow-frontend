@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Check, Search } from 'lucide-react';
 import {
   Button,
@@ -55,32 +55,32 @@ export default function HeroImagePicker({ open, onClose, onPick, currentProperty
   // Falha de carga não vira "Nenhum imóvel…" nem "não tem foto".
   const [erroLista, setErroLista] = useState(false);
   const [erroFotos, setErroFotos] = useState(false);
+  const ultimaCargaLista = useRef(0);
+
+  const carregar = useCallback(async () => {
+    const vez = ++ultimaCargaLista.current;
+    setErroLista(false);
+    setLoading(true);
+    try {
+      const res = await propertiesService.list({ status: 'active', per_page: 200 });
+      if (vez !== ultimaCargaLista.current) return;
+      setProperties(res.data.filter(p => p.published_on_site && (p.photos_count ?? 0) > 0));
+    } catch {
+      if (vez === ultimaCargaLista.current) setErroLista(true);
+    } finally {
+      if (vez === ultimaCargaLista.current) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) return;
-    let active = true;
     setSelected(null);
     setPhotos([]);
     setQ('');
     setError(null);
-    setErroLista(false);
-    setLoading(true);
-    (async () => {
-      try {
-        const res = await propertiesService.list({ status: 'active', per_page: 200 });
-        if (!active) return;
-        setProperties(res.data.filter(p => p.published_on_site && (p.photos_count ?? 0) > 0));
-      } catch {
-        if (active) {
-          setError('Não consegui carregar a lista de imóveis.');
-          setErroLista(true);
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => { active = false; };
-  }, [open]);
+    void carregar();
+    return () => { ultimaCargaLista.current += 1; };
+  }, [open, carregar]);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -138,7 +138,9 @@ export default function HeroImagePicker({ open, onClose, onPick, currentProperty
             </div>
             {loading ? (
               <Carregando variante="cartoes" linhas={6} rotulo="Carregando imóveis..." />
-            ) : erroLista && properties.length === 0 ? null : filtered.length === 0 ? (
+            ) : erroLista ? (
+              <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void carregar()} />
+            ) : filtered.length === 0 ? (
               properties.length === 0 ? (
                 <EmptyState
                   tamanho="compacto"

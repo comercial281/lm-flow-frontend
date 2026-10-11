@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@evoapi/design-system/popover';
 import { Badge, Button, Checkbox, Label } from '@/components/ui/ds';
@@ -29,14 +29,21 @@ interface Props {
 export default function ContactsFiltros({ pilula, onPilula, filtros, onFiltros, daEquipe, users }: Props) {
   const [etiquetas, setEtiquetas] = useState<string[]>([]);
 
-  useEffect(() => {
-    let vivo = true;
+  const [erroEtiquetas, setErroEtiquetas] = useState(false);
+  const ultimaCarga = useRef(0);
+
+  const carregar = useCallback(() => {
+    const vez = ++ultimaCarga.current;
+    setErroEtiquetas(false);
     labelsService
       .getLabels()
-      .then(res => { if (vivo) setEtiquetas((res.data || []).map(l => l.title)); })
-      .catch(() => { /* sem etiquetas: o filtro de responsável segue valendo */ });
-    return () => { vivo = false; };
+      .then(res => { if (vez === ultimaCarga.current) setEtiquetas((res.data || []).map(l => l.title)); })
+      .catch(() => { if (vez === ultimaCarga.current) setErroEtiquetas(true); });
   }, []);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
 
   const quantos = quantosFiltros(daEquipe ? filtros : { ...filtros, responsavel: '' });
   const mudar = (patch: Partial<FiltrosDoPopover>) => onFiltros({ ...filtros, ...patch });
@@ -97,7 +104,9 @@ export default function ContactsFiltros({ pilula, onPilula, filtros, onFiltros, 
 
           <div className="space-y-1.5">
             <Label className="text-xs">Sem as etiquetas</Label>
-            {etiquetas.length === 0 ? (
+            {erroEtiquetas ? (
+              <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregar} className="p-3 text-xs" />
+            ) : etiquetas.length === 0 ? (
               <EmptyState tamanho="compacto" title="Nenhuma etiqueta criada." className="p-3 text-xs" />
             ) : (
               <div className="max-h-40 space-y-0.5 overflow-y-auto rounded-md border border-border p-1">

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { plural, numero, telefone } from '@/lib/formato';
 import {
   Dialog,
@@ -140,6 +140,11 @@ export default function BulkDispatchModal({
   const [stageId, setStageId] = useState('');
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [availableLabels, setAvailableLabels] = useState<LabelType[]>([]);
+  // Etiquetas e canais oficiais: falha ao carregar não vira "Nenhuma … cadastrada/conectada".
+  const [erroEtiquetas, setErroEtiquetas] = useState(false);
+  const [erroCanais, setErroCanais] = useState(false);
+  const ultimaCargaEtiquetas = useRef(0);
+  const ultimaCargaCanais = useRef(0);
   const [recipientCount, setRecipientCount] = useState<number | null>(null);
   const [countingAudience, setCountingAudience] = useState(false);
 
@@ -220,6 +225,34 @@ export default function BulkDispatchModal({
     }
   }, [pipelineId]);
 
+  const carregarEtiquetas = useCallback(() => {
+    const vez = ++ultimaCargaEtiquetas.current;
+    setErroEtiquetas(false);
+    labelsService
+      .getLabels()
+      .then(res => {
+        if (vez === ultimaCargaEtiquetas.current) setAvailableLabels(Array.isArray(res.data) ? (res.data as LabelType[]) : []);
+      })
+      .catch(() => {
+        if (vez !== ultimaCargaEtiquetas.current) return;
+        setAvailableLabels([]);
+        setErroEtiquetas(true);
+      });
+  }, []);
+
+  const carregarCanais = useCallback(() => {
+    const vez = ++ultimaCargaCanais.current;
+    setErroCanais(false);
+    broadcastsService
+      .whatsappCloudOptions()
+      .then(c => { if (vez === ultimaCargaCanais.current) setCloudOptions(c); })
+      .catch(() => {
+        if (vez !== ultimaCargaCanais.current) return;
+        setCloudOptions([]);
+        setErroCanais(true);
+      });
+  }, []);
+
   // Ao abrir: carrega campanhas + variáveis do tenant e decide a view inicial.
   useEffect(() => {
     if (!open) return;
@@ -228,10 +261,7 @@ export default function BulkDispatchModal({
       const hasActive = list.some(c => c.status === 'running' || c.status === 'paused');
       setView(hasActive ? 'list' : 'new');
     });
-    labelsService
-      .getLabels()
-      .then(res => setAvailableLabels(Array.isArray(res.data) ? (res.data as LabelType[]) : []))
-      .catch(() => setAvailableLabels([]));
+    carregarEtiquetas();
     tenantTemplateVariablesService
       .list()
       .then(res => {
@@ -253,11 +283,8 @@ export default function BulkDispatchModal({
           { token: 'email', placeholder: '{{email}}', label: 'E-mail', builtin: true },
         ]),
       );
-    broadcastsService
-      .whatsappCloudOptions()
-      .then(setCloudOptions)
-      .catch(() => setCloudOptions([]));
-  }, [open, refreshList, resetWizard]);
+    carregarCanais();
+  }, [open, refreshList, resetWizard, carregarEtiquetas, carregarCanais]);
 
   // Conta destinatários quando a audiência muda (só na view de criação).
   const audiencePayload = useMemo(
@@ -578,7 +605,9 @@ export default function BulkDispatchModal({
                 {audienceMode === 'tag' && (
                   <div className="space-y-1.5">
                     <Label className="text-sm">Etiquetas</Label>
-                    {availableLabels.length === 0 ? (
+                    {erroEtiquetas ? (
+                      <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregarEtiquetas} className="p-3" />
+                    ) : availableLabels.length === 0 ? (
                       <EmptyState tamanho="compacto" title="Nenhuma etiqueta cadastrada ainda." className="p-3" />
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
@@ -744,7 +773,9 @@ export default function BulkDispatchModal({
                 {/* ---- WhatsApp Oficial: template aprovado ---- */}
                 {cloudMode && (
                   <div className="space-y-3">
-                    {cloudOptions.length === 0 ? (
+                    {erroCanais ? (
+                      <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregarCanais} className="p-4" />
+                    ) : cloudOptions.length === 0 ? (
                       <EmptyState
                         tamanho="compacto"
                         title="Nenhum canal WhatsApp Oficial conectado."

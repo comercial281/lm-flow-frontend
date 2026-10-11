@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   capiConfigService,
   CAPI_EVENT_LABELS,
@@ -113,6 +113,9 @@ function LinhaDaRegra({
 export default function PixelCapiConfig() {
   const [config, setConfig] = useState<CapiConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  // Falha ao carregar não vira formulário em branco (salvar por cima apagaria a config).
+  const [erroCarga, setErroCarga] = useState(false);
+  const ultimaCarga = useRef(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -130,12 +133,14 @@ export default function PixelCapiConfig() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<CapiConnectionTest | null>(null);
 
-  useEffect(() => {
-    let alive = true;
+  const carregar = useCallback(() => {
+    const vez = ++ultimaCarga.current;
+    setLoading(true);
+    setErroCarga(false);
     capiConfigService
       .get()
       .then((c) => {
-        if (!alive) return;
+        if (vez !== ultimaCarga.current) return;
         setConfig(c);
         setIsEnabled(c.is_enabled);
         setPixelId(c.pixel_id ?? '');
@@ -144,12 +149,13 @@ export default function PixelCapiConfig() {
         setStageMap(c.stage_map || {});
         setStatusMap(c.status_map || {});
       })
-      .catch(() => alive && setError('Não foi possível carregar a configuração.'))
-      .finally(() => alive && setLoading(false));
-    return () => {
-      alive = false;
-    };
+      .catch(() => { if (vez === ultimaCarga.current) setErroCarga(true); })
+      .finally(() => { if (vez === ultimaCarga.current) setLoading(false); });
   }, []);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
 
   const eventOptions = useMemo(() => config?.known_events ?? [], [config]);
   const intentOptions = useMemo(() => config?.intents ?? ['lookalike', 'exclusion', 'none'], [config]);
@@ -242,6 +248,9 @@ export default function PixelCapiConfig() {
 
   if (loading) {
     return <Carregando variante="texto" linhas={6} rotulo="Carregando…" />;
+  }
+  if (erroCarga) {
+    return <EmptyState tipo="erro" aoTentarDeNovo={carregar} />;
   }
 
   const inputCls =
