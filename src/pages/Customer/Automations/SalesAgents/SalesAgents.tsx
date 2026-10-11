@@ -33,7 +33,6 @@ import { situacaoDaIa } from '@/features/salesAgents/situacao';
 import { novaIaRascunho } from '@/features/salesAgents/tresEscolhas';
 import { type InboxOption } from './configuracao/comum';
 import { registrarSalvo, ultimoSalvoDa } from './configurar/useGravarNaHora';
-import type { PaginaId } from './configurar/paginas';
 import IaBarra from './IaBarra';
 import TelaVisaoGeral from './telas/TelaVisaoGeral';
 import TelaSugestoes from './telas/TelaSugestoes';
@@ -139,7 +138,7 @@ export default function SalesAgents() {
     // null), nada fica armado pra uma IA criada depois.
     if (pediuTestar(searchParams)) setTestandoIa(alvo);
     // A página do Configurar (e o `?passo=` antigo, traduzido) atravessa a normalização.
-    const certo = paramsDaIa(alvo, tela, paginaPedida(searchParams));
+    const certo = paramsDaIa(alvo, tela, paginaPedida(searchParams, tela));
     if (searchParams.toString() !== new URLSearchParams(certo).toString()) setSearchParams(certo, { replace: true });
     if (alvo) gravarUltimaIa(alvo);
     setSelected((prev) => (prev?.id === alvo ? prev : agents.find((a) => a.id === alvo) ?? null));
@@ -166,7 +165,7 @@ export default function SalesAgents() {
     return () => { vivo = false; };
   }, [selId, selUpdatedAt]);
 
-  const irPara = useCallback((t: TelaId, pagina?: PaginaId) => {
+  const irPara = useCallback((t: TelaId, pagina?: string) => {
     setSearchParams(paramsDaIa(selected?.id ?? null, t, pagina), { replace: true });
   }, [selected?.id, setSearchParams]);
 
@@ -296,10 +295,10 @@ export default function SalesAgents() {
             aoCorrigirLigar={(p) => void guardar(() => irPara('configurar', p))}
           />
         )}
-        acima={selected && situacao && tela !== 'configurar' && trilha
+        acima={selected && situacao && tela !== 'configurar' && tela !== 'ensinar' && trilha
           ? <p className="text-xs font-medium text-muted-foreground">{trilha}</p> : undefined}
-        // Em Configurar o título mora em ConfigurarPaginas (grupo, título, frase ao lado do trilho).
-        cabecalho={tela === 'configurar' && selected && situacao
+        // Em Configurar e Ensinar o título mora na moldura do trilho (grupo, título, frase ao lado do trilho).
+        cabecalho={(tela === 'configurar' || tela === 'ensinar') && selected && situacao
           ? undefined
           : selected && situacao
             ? <BaseHeader title={info.titulo} subtitle={info.frase} />

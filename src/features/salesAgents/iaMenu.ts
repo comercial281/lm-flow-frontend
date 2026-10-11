@@ -7,7 +7,8 @@
 // moram no "⋯", só equipe (o Motor também pra quem tem `ia_playbook`). As duas
 // continuam no mapa, FORA do menu, e o endereço delas sem permissão cai na
 // Visão geral. `?tela=testar` antigo abre a Visão geral com a janela por cima.
-import { paginaDaUrl, type PaginaId } from '@/pages/Customer/Automations/SalesAgents/configurar/paginas';
+import { paginaDaUrl } from '@/pages/Customer/Automations/SalesAgents/configurar/paginas';
+import { paginaDoEnsinarDaUrl } from '@/pages/Customer/Automations/SalesAgents/telas/ensinar/paginas';
 
 export type GrupoId = 'painel' | 'configurar' | 'ensinar';
 export type TelaId = 'visao-geral' | 'sugestoes' | 'relatorio-semanal' | 'configurar' | 'ensinar' | 'diagnostico' | 'motor';
@@ -42,7 +43,7 @@ export const TELAS: TelaInfo[] = [
   { id: 'sugestoes', grupo: 'painel', rotulo: 'Sugestões', dica: 'O que mudar no jeito de ela falar', titulo: 'Sugestões', frase: 'A IA relê as conversas e aponta o que se repete. O que você aplica vira lição em Ensinar.', soComInsights: true },
   { id: 'relatorio-semanal', grupo: 'painel', rotulo: 'Relatório semanal', dica: 'O resumo da semana no WhatsApp', titulo: 'Relatório semanal', frase: 'O resumo da semana dos atendimentos, enviado no WhatsApp para os gestores e grupos.', soComInsights: true },
   { id: 'configurar', grupo: 'configurar', rotulo: 'Configurar', dica: '', titulo: 'Configurar', frase: '', soComInsights: false },
-  { id: 'ensinar', grupo: 'ensinar', rotulo: 'Ensinar', dica: '', titulo: 'Ensinar', frase: 'O que ela sabe (arquivos e textos) e as regras e exemplos que você ensinou.', soComInsights: false },
+  { id: 'ensinar', grupo: 'ensinar', rotulo: 'Ensinar', dica: '', titulo: 'Ensinar', frase: '', soComInsights: false },
   { id: 'diagnostico', grupo: null, rotulo: 'Diagnóstico', dica: '', titulo: 'Diagnóstico', frase: 'Os passos para ela atender, verificados agora, e os últimos atendimentos.', soComInsights: false },
   { id: 'motor', grupo: null, rotulo: 'Motor', dica: '', titulo: 'Motor', frase: 'Modelo, ritmo, limites por dia e o texto que a IA recebe.', soComInsights: false },
 ];
@@ -87,21 +88,23 @@ export function iaDaUrl(params: URLSearchParams): string | null {
   return params.get('ia') || params.get('agent') || null;
 }
 
-/** A página pedida (ou o `?passo=` antigo traduzido). */
-export function paginaPedida(params: URLSearchParams): PaginaId | null {
-  return paginaDaUrl(params);
+/** A página pedida da tela (Configurar traduz também o `?passo=` antigo). */
+export function paginaPedida(params: URLSearchParams, tela: TelaId): string | null {
+  if (tela === 'configurar') return paginaDaUrl(params);
+  if (tela === 'ensinar') return paginaDoEnsinarDaUrl(params);
+  return null;
 }
 
 /**
  * O endereço certo pra IA e a tela. A Visão geral não aparece no endereço.
- * `pagina` só existe em Configurar: sem ela, a casca reescreveria o endereço e o
- * Configurar voltaria sempre pra página inicial.
+ * `pagina` só existe em Configurar e Ensinar: sem ela, a casca reescreveria o
+ * endereço e a tela voltaria sempre pra página inicial (e regravaria: laço).
  */
-export function paramsDaIa(ia: string | null, tela: TelaId, pagina?: PaginaId | null): Record<string, string> {
+export function paramsDaIa(ia: string | null, tela: TelaId, pagina?: string | null): Record<string, string> {
   const params: Record<string, string> = {};
   if (ia) params.ia = ia;
   if (tela !== PRIMEIRA) params.tela = tela;
-  if (tela === 'configurar' && pagina) params.pagina = pagina;
+  if ((tela === 'configurar' || tela === 'ensinar') && pagina) params.pagina = pagina;
   return params;
 }
 

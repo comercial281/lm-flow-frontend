@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GRUPOS, itensDoGrupo, paramsDaIa, pediuTestar, telaDaUrl } from './iaMenu';
+import { GRUPOS, itensDoGrupo, paginaPedida, paramsDaIa, pediuTestar, telaDaUrl } from './iaMenu';
 
 const url = (s: string) => new URLSearchParams(s);
 const CLIENTE = { insights: true, equipe: false, motor: false };
@@ -36,11 +36,21 @@ describe('iaMenu (onda 3)', () => {
 
   it('a página só fica no endereço em Configurar', () => {
     expect(paramsDaIa('ia-1', 'configurar', 'destino')).toEqual({ ia: 'ia-1', tela: 'configurar', pagina: 'destino' });
-    expect(paramsDaIa('ia-1', 'ensinar', 'destino')).toEqual({ ia: 'ia-1', tela: 'ensinar' });
+    expect(paramsDaIa('ia-1', 'ensinar', 'regras')).toEqual({ ia: 'ia-1', tela: 'ensinar', pagina: 'regras' });
+    expect(paramsDaIa('ia-1', 'visao-geral', 'regras')).toEqual({ ia: 'ia-1' });
     expect(paramsDaIa('ia-1', 'visao-geral')).toEqual({ ia: 'ia-1' });
   });
 
   it('o ?agent= de link antigo continua abrindo Configurar', () => {
     expect(telaDaUrl(url('agent=ia-1'), CLIENTE)).toBe('configurar');
+  });
+  it('a página pedida depende da tela (Review Focus 1: o endereço do Ensinar sobrevive à normalização)', () => {
+    const p = new URLSearchParams('ia=ia-1&tela=ensinar&pagina=regras');
+    expect(paginaPedida(p, 'ensinar')).toBe('regras');
+    expect(paginaPedida(p, 'configurar')).toBeNull();
+    expect(paginaPedida(new URLSearchParams('pagina=destino'), 'ensinar')).toBeNull();
+    expect(paginaPedida(new URLSearchParams('pagina=destino'), 'configurar')).toBe('destino');
+    const certo = paramsDaIa('ia-1', 'ensinar', paginaPedida(p, 'ensinar'));
+    expect(new URLSearchParams(certo).toString()).toBe(p.toString());
   });
 });
