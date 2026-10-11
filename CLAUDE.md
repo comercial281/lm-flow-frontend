@@ -4507,6 +4507,12 @@ Regras de tela que vieram das revisões (o que quem usa vê):
   caixa de 40 px com ícone à esquerda e seta à direita (`CampoFiltro`, ligado
   pela prop `rotulo` dos seletores). Em Atendimento do time,
   "Visitas com feedback" é o quarto item do resumo, com a frase como legenda.
+- **Cartões da mesma linha têm sempre a mesma altura** (pedido do dono, 11/10/2026:
+  *"mesmo que um card for menor em informação, ele tem que ser padrão em tamanho"*).
+  Uma regra só no `dashboard-nova.css`: o último cartão de cada coluna estica até o
+  fundo da linha. Vale para todo bloco, inclusive quando um cresce na hora (o Funil
+  com o relógio): o vizinho cresce junto. Imóveis do gestor fica da altura de
+  Números + Pendências. Nada de conserto por cartão (`lmfn-estica` saiu).
 - **Análise do período:** "De onde vêm os leads" conta contatos captados no
   período pela primeira origem, com o total em cima; seis meses sem lead nenhum
   dizem "Nenhum lead nos últimos 6 meses" em vez de um gráfico zerado; cada

@@ -25,7 +25,7 @@ export const Resultados: React.FC<ContextoBloco> = ({ dados, carregando }) => {
   const boas = `${numero(bloco.good_visits)} ${bloco.good_visits === 1 ? 'visita boa' : 'visitas boas'}`;
   const realizadas = `${numero(bloco.visits_done)} ${bloco.visits_done === 1 ? 'realizada' : 'realizadas'}`;
   return (
-    <GlassCard title="Resultados" subtitle="Vendas registradas no funil e visitas do período" className="lmfn-estica">
+    <GlassCard title="Resultados" subtitle="Vendas registradas no funil e visitas do período">
       <div className="lmfn-resumo">
         {itens.map(i => (
           <div key={i.rotulo} className="lmfn-resumo-item">
