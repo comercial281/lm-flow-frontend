@@ -8108,3 +8108,16 @@ Decisões (não reabrir sem o dono pedir):
 
 1. Pedido do dono: cadastro de imóvel não parte de link de anúncio. O servidor ainda aceita `urls[]` no lote e o serviço (`propertyImportsService.createBatch`) mantém a opção; só a tela deixou de mandar.
 2. Lotes antigos que vieram de link continuam aparecendo na lista com o endereço no lugar do nome do arquivo (`item.source_url`).
+
+## Visitas: remarcar, registrar a que já aconteceu, não compareceu e trava por imóvel (desde 10/10/2026)
+
+Pedido do Cleverson (Nova 27, call de 07/10). Spec: `LM FLOW/specs/2026-10-10-visitas-frente-4-design.md`.
+
+- **Botões numa peça só** (`src/features/visits/AcoesDaVisita.tsx`, regra pura em `botoesDaVisita`): card do lead e Agenda usam a mesma. Antes do horário: Remarcar | Cancelar (+ Confirmar). Depois: Não compareceu | Remarcar + **Realizada** em destaque. Encerrada: só "Dar retorno" (realizada sem retorno). Reagendada tem ações (antes não tinha nenhuma).
+- **Passado à mão:** dia anterior → a janela abre em "Registrar visita realizada" (grade 07h–22h, sem trava). Hoje com horário passado → grupo "Já passou" + pergunta "Essa visita já aconteceu?". Realizada não passa por horário de visita nem travas; Agendada continua na regra dura de 01/10. Isto reverte de propósito "horário passado não aparece" (30/09) e "dia passado no Calendário não abre" (30/09).
+- **A IA não ganhou o passado:** quem abre é só `Visits::Booking` (visita à mão); a régua da IA é outra.
+- **Não compareceu → "Remarcar agora?"** abre uma visita NOVA (visita encerrada não se remarca). A peça só avisa a tela (`onAtualizada`) quando o "Remarcar agora?" termina, pra pergunta não sumir quando a lista está filtrada.
+- **Remarcar** abre a janela no dia da visita ou em hoje, o que vier depois (remarcar só aceita horário futuro). Com a Agenda ligada, a janela pede os horários do dia sem contar as visitas do próprio lead (`exclude_contact_id` no `/visits/availability`).
+- **Modal do card:** a aba Visitas e propostas recarrega quando o "Agendar visita" das Ações rápidas cria uma visita (prop `versao`, vinda de `card.historico.versao`).
+- **Trava por imóvel:** caixinha no cadastro do imóvel (seção Equipe), nulo = segue o tipo (empreendimento aceita, revenda não). Vale à mão e na IA. A caixinha "Evitar dois leads no mesmo horário" da IA saiu.
+- Não reabrir sem o dono pedir.
