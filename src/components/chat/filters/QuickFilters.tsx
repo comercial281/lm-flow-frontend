@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Bot, Check, ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
@@ -85,23 +85,34 @@ export default function QuickFilters({
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [roletas, setRoletas] = useState<RoletaConfig[]>([]);
   const [loadingRoletas, setLoadingRoletas] = useState(false);
+  // Carga que falhou não é lista vazia: mostra "Não deu pra carregar" com o botão.
+  const [erroLabels, setErroLabels] = useState(false);
+  const [erroAgents, setErroAgents] = useState(false);
+  const [erroRoletas, setErroRoletas] = useState(false);
+  const ultimaCargaLabels = useRef(0);
+  const ultimaCargaAgents = useRef(0);
+  const ultimaCargaRoletas = useRef(0);
   const boxRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open || labels.length > 0) return;
-    let alive = true;
+  const carregarLabels = useCallback(() => {
+    const vez = ++ultimaCargaLabels.current;
     setLoadingLabels(true);
+    setErroLabels(false);
     chatService
       .getAvailableLabels()
       .then(res => {
-        if (!alive) return;
+        if (vez !== ultimaCargaLabels.current) return;
         const list = Array.isArray(res) ? res : (res as { data?: Label[] })?.data || [];
         setLabels(list);
       })
-      .catch(() => { /* silencioso, seção fica vazia */ })
-      .finally(() => { if (alive) setLoadingLabels(false); });
-    return () => { alive = false; };
-  }, [open, labels.length]);
+      .catch(() => { if (vez === ultimaCargaLabels.current) setErroLabels(true); })
+      .finally(() => { if (vez === ultimaCargaLabels.current) setLoadingLabels(false); });
+  }, []);
+
+  useEffect(() => {
+    if (!open || labels.length > 0) return;
+    carregarLabels();
+  }, [open, labels.length, carregarLabels]);
 
   // RESPONSÁVEL — lista de todo mundo que pode ser dono de conversa no
   // tenant (mesma fonte de Configurações > Usuários), não só quem atende
@@ -109,21 +120,25 @@ export default function QuickFilters({
   // ver o atendimento, por nome, não por número/roleta — "Instância" e
   // "Responsável" são dimensões diferentes (uma instância pode ser
   // compartilhada por vários corretores via roleta).
-  useEffect(() => {
-    if (!open || agents.length > 0) return;
-    let alive = true;
+  const carregarAgents = useCallback(() => {
+    const vez = ++ultimaCargaAgents.current;
     setLoadingAgents(true);
+    setErroAgents(false);
     usersService
       .getUsers({ per_page: 100 })
       .then(res => {
-        if (!alive) return;
+        if (vez !== ultimaCargaAgents.current) return;
         const list = Array.isArray(res) ? res : (res as { data?: User[] })?.data || [];
         setAgents(list);
       })
-      .catch(() => { /* silencioso, seção fica vazia */ })
-      .finally(() => { if (alive) setLoadingAgents(false); });
-    return () => { alive = false; };
-  }, [open, agents.length]);
+      .catch(() => { if (vez === ultimaCargaAgents.current) setErroAgents(true); })
+      .finally(() => { if (vez === ultimaCargaAgents.current) setLoadingAgents(false); });
+  }, []);
+
+  useEffect(() => {
+    if (!open || agents.length > 0) return;
+    carregarAgents();
+  }, [open, agents.length, carregarAgents]);
 
   // ROLETA — isola por GRUPO de distribuição (ex: "ROLETA MULTI - TENDA"),
   // não por corretor nem por número. Uma instância é compartilhada por várias
@@ -132,20 +147,24 @@ export default function QuickFilters({
   // pergunta diferente (pedido do Giovani, 19/08: "ver pelas roletas E o lead
   // de cada atendente isolado"). Mesma fonte de Automações > Distribuição de
   // Leads.
-  useEffect(() => {
-    if (!open || roletas.length > 0) return;
-    let alive = true;
+  const carregarRoletas = useCallback(() => {
+    const vez = ++ultimaCargaRoletas.current;
     setLoadingRoletas(true);
+    setErroRoletas(false);
     roletaConfigService
       .getAll()
       .then(res => {
-        if (!alive) return;
+        if (vez !== ultimaCargaRoletas.current) return;
         setRoletas(res);
       })
-      .catch(() => { /* silencioso, seção fica vazia */ })
-      .finally(() => { if (alive) setLoadingRoletas(false); });
-    return () => { alive = false; };
-  }, [open, roletas.length]);
+      .catch(() => { if (vez === ultimaCargaRoletas.current) setErroRoletas(true); })
+      .finally(() => { if (vez === ultimaCargaRoletas.current) setLoadingRoletas(false); });
+  }, []);
+
+  useEffect(() => {
+    if (!open || roletas.length > 0) return;
+    carregarRoletas();
+  }, [open, roletas.length, carregarRoletas]);
 
   useEffect(() => {
     if (!open) return;
@@ -321,6 +340,8 @@ export default function QuickFilters({
             </p>
             {loadingLabels ? (
               <p className="px-0.5 py-1.5 text-xs text-muted-foreground">Carregando…</p>
+            ) : erroLabels ? (
+              <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregarLabels} className="p-3 text-xs" />
             ) : labels.length === 0 ? (
               <EmptyState tamanho="compacto" title="Nenhuma etiqueta criada ainda." className="p-3 text-xs" />
             ) : (
@@ -407,6 +428,8 @@ export default function QuickFilters({
             </p>
             {loadingAgents ? (
               <p className="px-0.5 py-1.5 text-xs text-muted-foreground">Carregando…</p>
+            ) : erroAgents ? (
+              <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregarAgents} className="p-3 text-xs" />
             ) : agents.length === 0 ? (
               <EmptyState tamanho="compacto" title="Nenhum usuário encontrado." className="p-3 text-xs" />
             ) : (
@@ -430,13 +453,15 @@ export default function QuickFilters({
               Automações > Distribuição de Leads (pedido do Giovani, 19/08).
               Some se o tenant não usa roleta nenhuma (loadingRoletas some,
               lista vazia) — nada a filtrar aqui. */}
-          {(loadingRoletas || roletas.length > 0) && (
+          {(loadingRoletas || roletas.length > 0 || erroRoletas) && (
             <section className="mt-2 border-t pt-2">
               <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                 Roleta
               </p>
               {loadingRoletas ? (
                 <p className="px-0.5 py-1.5 text-xs text-muted-foreground">Carregando…</p>
+              ) : erroRoletas ? (
+                <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregarRoletas} className="p-3 text-xs" />
               ) : (
                 <Seletor
                   value={activeRoletaId ?? ''}

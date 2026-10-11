@@ -6,7 +6,7 @@
 // texto já montado aqui mandaria todo mundo para o app de um cliente só. Por
 // isso a prévia também vem do servidor — é ele quem monta a mensagem de verdade.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Megaphone, Send, Loader2, Check, Users, RefreshCw, Save, Search, History,
 } from 'lucide-react';
@@ -50,6 +50,9 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
   const path = `/academia/curso/${courseId}?lesson=${lesson.id}`;
 
   const [carregando, setCarregando] = useState(true);
+  // Config + histórico vêm numa chamada só: se falha, não é "Nenhum aviso enviado ainda".
+  const [erroCarga, setErroCarga] = useState(false);
+  const ultimaCarga = useRef(0);
   const [config, setConfig] = useState<AnnounceConfig | null>(null);
   const [mensagem, setMensagem] = useState('');
   const [instancia, setInstancia] = useState('');
@@ -88,33 +91,35 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
     }
   }, []);
 
-  useEffect(() => {
-    let vivo = true;
-    (async () => {
-      try {
-        const [cfg, inst] = await Promise.all([
-          academyAnnouncementsService.config(),
-          academyAnnouncementsService.instances().catch(() => ({ data: { data: [] as CentralInstance[] } })),
-        ]);
-        if (!vivo) return;
-        const dados = cfg.data.data;
-        setConfig(dados);
-        setMensagem(dados.template);
-        setInstancia(dados.instance);
-        setEscolhidos(dados.groups.map((g) => g.jid));
-        setHistorico(dados.history ?? []);
-        setInstancias(inst.data.data ?? []);
-        await carregarGrupos(dados.instance);
-      } catch {
-        if (vivo) toast.error('Não deu para abrir o aviso de aula nova.');
-      } finally {
-        if (vivo) setCarregando(false);
-      }
-    })();
-    return () => {
-      vivo = false;
-    };
+  const carregar = useCallback(async () => {
+    const vez = ++ultimaCarga.current;
+    const atual = () => vez === ultimaCarga.current;
+    setCarregando(true);
+    setErroCarga(false);
+    try {
+      const [cfg, inst] = await Promise.all([
+        academyAnnouncementsService.config(),
+        academyAnnouncementsService.instances().catch(() => ({ data: { data: [] as CentralInstance[] } })),
+      ]);
+      if (!atual()) return;
+      const dados = cfg.data.data;
+      setConfig(dados);
+      setMensagem(dados.template);
+      setInstancia(dados.instance);
+      setEscolhidos(dados.groups.map((g) => g.jid));
+      setHistorico(dados.history ?? []);
+      setInstancias(inst.data.data ?? []);
+      await carregarGrupos(dados.instance);
+    } catch {
+      if (atual()) setErroCarga(true);
+    } finally {
+      if (atual()) setCarregando(false);
+    }
   }, [carregarGrupos]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
 
   // Prévia do texto final, montada pelo servidor. Espera a digitação parar.
   useEffect(() => {
@@ -230,6 +235,10 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
 
         {carregando ? (
           <Carregando variante="texto" linhas={6} className="flex-1 px-5 py-6" />
+        ) : erroCarga ? (
+          <div className="flex-1 px-5 py-6">
+            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void carregar()} />
+          </div>
         ) : (
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
             {desativado && (

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   Dialog,
@@ -32,6 +32,8 @@ interface Props {
 // focar num imóvel. Espelha o endpoint POST /sales_agents/:id/engage.
 const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange }) => {
   const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState(false);
+  const ultimaCarga = useRef(0);
   const [firing, setFiring] = useState(false);
   const [agent, setAgent] = useState<SalesAgent | null>(null);
   const [propertyCode, setPropertyCode] = useState('');
@@ -42,18 +44,21 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
   // acionada e não sobra turno, erro nem log pra investigar depois.
   const [report, setReport] = useState<SalesAgentLeadReport | null>(null);
 
-  useEffect(() => {
+  const carregar = useCallback(() => {
     if (!open || !conversation) return;
+    const vez = ++ultimaCarga.current;
     setLoading(true);
+    setErro(false);
     setFresh(false);
     setReport(null);
     chatService
       .getSalesAgentStatus(conversation.id)
-      .then(setReport)
-      .catch(() => setReport(null));
+      .then((r) => { if (vez === ultimaCarga.current) setReport(r); })
+      .catch(() => { if (vez === ultimaCarga.current) setReport(null); });
     salesAgentsService
       .list()
       .then((agents) => {
+        if (vez !== ultimaCarga.current) return;
         const match =
           agents.find((a) => a.inbox_id === conversation.inbox_id && a.enabled) ||
           agents.find((a) => a.inbox_id === conversation.inbox_id) ||
@@ -61,9 +66,17 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
         setAgent(match);
         setPropertyCode(match?.default_property_code ?? '');
       })
-      .catch(() => setAgent(null))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (vez !== ultimaCarga.current) return;
+        setAgent(null);
+        setErro(true);
+      })
+      .finally(() => { if (vez === ultimaCarga.current) setLoading(false); });
   }, [open, conversation]);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
 
   const handleFire = async () => {
     if (!agent || !conversation) return;
@@ -99,6 +112,8 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
             <Loader2 className="h-4 w-4 animate-spin" /> Procurando a IA deste canal…
           </div>
+        ) : erro ? (
+          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregar} />
         ) : !agent ? (
           <div className="text-sm text-muted-foreground py-4 space-y-2">
             <EmptyState
