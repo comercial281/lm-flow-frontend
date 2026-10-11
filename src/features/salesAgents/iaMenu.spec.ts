@@ -34,7 +34,7 @@ describe('iaMenu (onda 3)', () => {
     expect(telaDaUrl(url('tela=configurar&passo=avancado'), CLIENTE)).toBe('configurar');
   });
 
-  it('a página só fica no endereço em Configurar', () => {
+  it('a página só fica no endereço em Configurar e Ensinar', () => {
     expect(paramsDaIa('ia-1', 'configurar', 'destino')).toEqual({ ia: 'ia-1', tela: 'configurar', pagina: 'destino' });
     expect(paramsDaIa('ia-1', 'ensinar', 'regras')).toEqual({ ia: 'ia-1', tela: 'ensinar', pagina: 'regras' });
     expect(paramsDaIa('ia-1', 'visao-geral', 'regras')).toEqual({ ia: 'ia-1' });
@@ -44,7 +44,8 @@ describe('iaMenu (onda 3)', () => {
   it('o ?agent= de link antigo continua abrindo Configurar', () => {
     expect(telaDaUrl(url('agent=ia-1'), CLIENTE)).toBe('configurar');
   });
-  it('a página pedida depende da tela (Review Focus 1: o endereço do Ensinar sobrevive à normalização)', () => {
+
+  it('a página pedida depende da tela (o endereço do Ensinar sobrevive à normalização)', () => {
     const p = new URLSearchParams('ia=ia-1&tela=ensinar&pagina=regras');
     expect(paginaPedida(p, 'ensinar')).toBe('regras');
     expect(paginaPedida(p, 'configurar')).toBeNull();
