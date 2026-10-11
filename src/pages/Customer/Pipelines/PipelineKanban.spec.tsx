@@ -19,9 +19,16 @@ vi.mock('@/hooks/useLanguage', () => ({
 // As janelas do quadro são lazy: no teste, nenhuma monta — exceto a janela do
 // card (a única que recebe onItemStatusChanged), que aqui é um botão que marca
 // Ganho como o rodapé de verdade faria.
+// A janela "Adicionar Lead ao Funil" (a única que recebe onItemAdded) vira um
+// botão que avisa o quadro que o lead entrou, como a de verdade faz depois do
+// aviso dela.
 vi.mock('@/utils/chunkReload', () => ({
-  lazyWithRetry: () => (p: { item?: Record<string, unknown>; onItemStatusChanged?: (i: unknown) => void; onOpenChange?: (o: boolean) => void; open?: boolean }) =>
-    p.open !== false && p.onItemStatusChanged && p.item ? (
+  lazyWithRetry: () => (p: { item?: Record<string, unknown>; onItemStatusChanged?: (i: unknown) => void; onItemAdded?: () => void; onOpenChange?: (o: boolean) => void; open?: boolean }) =>
+    p.open && p.onItemAdded ? (
+      <button type="button" onClick={() => p.onItemAdded?.()}>
+        Lead adicionado (janela falsa)
+      </button>
+    ) : p.open !== false && p.onItemStatusChanged && p.item ? (
       <>
         <span>{`situação na janela: ${String(p.item.status ?? 'open')}`}</span>
         <button type="button" onClick={() => p.onOpenChange?.(false)}>
@@ -185,6 +192,18 @@ describe('quadro do funil · o que continua igual', () => {
     expect(await screen.findByText('Maria Souza')).toBeInTheDocument();
     expect(within(document.getElementById('etapa-s1')!).getByText('Novo')).toBeInTheDocument();
     expect(within(document.getElementById('etapa-s2')!).getByText('João Lima')).toBeInTheDocument();
+  });
+
+  it('lead adicionado pela janela "Adicionar Lead ao Funil": o quadro recarrega sem um segundo aviso', async () => {
+    montar();
+    await screen.findByText('Maria Souza');
+    await userEvent.click(screen.getByTitle('Adicionar lead'));
+    const chamadasAntes = vi.mocked(pipelinesService.getPipeline).mock.calls.length;
+    await userEvent.click(await screen.findByText('Lead adicionado (janela falsa)'));
+    await waitFor(() => expect(vi.mocked(pipelinesService.getPipeline).mock.calls.length).toBeGreaterThan(chamadasAntes));
+    await esvaziar();
+    // O aviso é da janela ("Lead criado e adicionado ao funil."); o quadro não repete.
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it('a busca filtra os cards pelo nome', async () => {

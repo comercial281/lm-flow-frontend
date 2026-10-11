@@ -220,6 +220,7 @@ export default function AddItemModal({
       // Remove from available items
       setAvailableItems(prev => prev.filter(item => item.id !== selectedItem.id));
 
+      // Aviso único: o quadro (onItemAdded) só recarrega, não avisa de novo.
       toast.success(t('addItem.success'));
       onItemAdded();
       onOpenChange(false);
@@ -316,7 +317,8 @@ export default function AddItemModal({
         }
       }
 
-      toast.success(reused ? 'Lead já existia — adicionado ao funil.' : 'Lead criado e adicionado ao funil.');
+      // Aviso único: o quadro (onItemAdded) só recarrega, não avisa de novo.
+      toast.success(reused ? t('addItem.reused') : t('addItem.created'));
       onItemAdded();
       onOpenChange(false);
     } catch (error) {
