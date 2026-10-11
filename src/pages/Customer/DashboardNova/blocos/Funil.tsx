@@ -128,7 +128,7 @@ export const Funil: React.FC<ContextoBloco> = ({ dados, visao, pode, filtros, fu
 
   return (
     // Mesmo aviso da área dos blocos: ocupado e esmaecido enquanto o funil novo não chega.
-    <div className={funil.pendente ? 'lmfn-blocos-pendente' : undefined} aria-busy={funil.pendente || undefined}>
+    <div className={`lmfn-celula${funil.pendente ? ' lmfn-blocos-pendente' : ''}`} aria-busy={funil.pendente || undefined}>
       <GlassCard title={titulo} subtitle={subtitulo} action={acoes}>
         {bloco.stages.length === 0 && <EmptyBlock text="Este funil ainda não tem etapas." />}
         {forma === 'funil' && n > 0 && (
