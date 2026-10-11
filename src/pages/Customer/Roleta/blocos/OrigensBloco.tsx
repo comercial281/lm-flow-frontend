@@ -262,10 +262,10 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
       <div className="space-y-5">
         {definicao.chave === 'meta' && (
           <div role="radiogroup" aria-label="Como escolher o formulário" className="flex flex-wrap gap-2">
-            <Button type="button" role="radio" aria-checked={!pelaPalavra} variant={!pelaPalavra ? 'default' : 'outline'} onClick={() => { setPelaPalavra(false); setErro(''); }}>
+            <Button type="button" role="radio" aria-checked={!pelaPalavra} variant={!pelaPalavra ? 'default' : 'outline'} aria-pressed={!pelaPalavra} onClick={() => { setPelaPalavra(false); setErro(''); }}>
               Um formulário
             </Button>
-            <Button type="button" role="radio" aria-checked={pelaPalavra} variant={pelaPalavra ? 'default' : 'outline'} onClick={() => { setPelaPalavra(true); setTrazer(null); setErro(''); }}>
+            <Button type="button" role="radio" aria-checked={pelaPalavra} variant={pelaPalavra ? 'default' : 'outline'} aria-pressed={pelaPalavra} onClick={() => { setPelaPalavra(true); setTrazer(null); setErro(''); }}>
               Pelo nome do formulário
             </Button>
           </div>

@@ -156,7 +156,7 @@ export default function ContactExportModal({
             <div className="flex gap-3">
               <Button
                 type="button"
-                variant={format === 'xlsx' ? 'default' : 'outline'}
+                variant={format === 'xlsx' ? 'default' : 'outline'} aria-pressed={format === 'xlsx'}
                 size="sm"
                 onClick={() => setFormat('xlsx')}
                 className="flex-1"
@@ -166,7 +166,7 @@ export default function ContactExportModal({
               </Button>
               <Button
                 type="button"
-                variant={format === 'csv' ? 'default' : 'outline'}
+                variant={format === 'csv' ? 'default' : 'outline'} aria-pressed={format === 'csv'}
                 size="sm"
                 onClick={() => setFormat('csv')}
                 className="flex-1"

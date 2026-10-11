@@ -257,7 +257,7 @@ export default function Proposals() {
             {STATUS_TABS.map(tab => (
               <Button
                 key={tab.key}
-                variant={statusFilter === tab.key ? 'default' : 'outline'}
+                variant={statusFilter === tab.key ? 'default' : 'outline'} aria-pressed={statusFilter === tab.key}
                 size="sm"
                 onClick={() => setStatusFilter(tab.key)}
                 className="text-xs h-8"

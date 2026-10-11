@@ -252,7 +252,7 @@ const A2AConfigForm = ({ mode, data, onChange, onValidationChange }: A2AConfigFo
                   <Button
                     key={state}
                     type="button"
-                    variant={externalSharing.publish_state === state ? 'default' : 'outline'}
+                    variant={externalSharing.publish_state === state ? 'default' : 'outline'} aria-pressed={externalSharing.publish_state === state}
                     size="sm"
                     onClick={() => !isReadOnly && handleExternalSharingChange({ publish_state: state })}
                     disabled={isReadOnly}

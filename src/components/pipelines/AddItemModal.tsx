@@ -390,7 +390,7 @@ export default function AddItemModal({
           <div className="grid grid-cols-2 gap-2">
             <Button
               type="button"
-              variant={mode === 'existing' ? 'default' : 'outline'}
+              variant={mode === 'existing' ? 'default' : 'outline'} aria-pressed={mode === 'existing'}
               onClick={() => setMode('existing')}
               className="justify-center"
             >
@@ -399,7 +399,7 @@ export default function AddItemModal({
             </Button>
             <Button
               type="button"
-              variant={mode === 'new' ? 'default' : 'outline'}
+              variant={mode === 'new' ? 'default' : 'outline'} aria-pressed={mode === 'new'}
               onClick={() => setMode('new')}
               className="justify-center"
             >

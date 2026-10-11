@@ -301,7 +301,7 @@ const StatusButton: React.FC<StatusButtonProps> = ({ status, current, onClick, d
 
   return (
     <Button
-      variant={isCurrent ? 'default' : 'outline'}
+      variant={isCurrent ? 'default' : 'outline'} aria-pressed={isCurrent}
       size="sm"
       onClick={onClick}
       disabled={disabled}
@@ -362,7 +362,7 @@ const PriorityButton: React.FC<PriorityButtonProps> = ({
 
   return (
     <Button
-      variant={isCurrent ? 'default' : 'outline'}
+      variant={isCurrent ? 'default' : 'outline'} aria-pressed={isCurrent}
       size="sm"
       onClick={onClick}
       disabled={disabled}

@@ -419,7 +419,7 @@ export function ScheduleVisitDialog({
         key={s.rotulo}
         type="button"
         size="sm"
-        variant={inicio?.getTime() === s.inicio.getTime() ? 'default' : 'outline'}
+        variant={inicio?.getTime() === s.inicio.getTime() ? 'default' : 'outline'} aria-pressed={inicio?.getTime() === s.inicio.getTime()}
         disabled={bloqueado}
         title={extra?.passado
           ? (s.ocupadoPor ? `Visita com ${s.ocupadoPor} nesse horário` : undefined)
@@ -543,7 +543,7 @@ export function ScheduleVisitDialog({
                       key={a.rotulo}
                       type="button"
                       size="sm"
-                      variant={atalhoAtivo?.rotulo === a.rotulo ? 'default' : 'outline'}
+                      variant={atalhoAtivo?.rotulo === a.rotulo ? 'default' : 'outline'} aria-pressed={atalhoAtivo?.rotulo === a.rotulo}
                       disabled={!!motivo}
                       title={motivo ?? undefined}
                       onClick={() => setDia(a.dia)}
@@ -577,7 +577,7 @@ export function ScheduleVisitDialog({
                     key={min}
                     type="button"
                     size="sm"
-                    variant={duracao === min ? 'default' : 'outline'}
+                    variant={duracao === min ? 'default' : 'outline'} aria-pressed={duracao === min}
                     onClick={() => setDuracao(min)}
                   >
                     {rotuloDuracao(min)}
@@ -628,8 +628,8 @@ export function ScheduleVisitDialog({
                 <div className="mt-2 rounded-md border border-border bg-muted/40 p-3 text-sm" role="group" aria-label="Essa visita já aconteceu?">
                   <p className="font-medium">Essa visita já aconteceu?</p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <Button type="button" size="sm" variant={jaAconteceu === true ? 'default' : 'outline'} onClick={() => setJaAconteceu(true)}>Sim, já aconteceu</Button>
-                    <Button type="button" size="sm" variant={jaAconteceu === false ? 'default' : 'outline'} onClick={() => setJaAconteceu(false)}>Não, ainda vai acontecer</Button>
+                    <Button type="button" size="sm" variant={jaAconteceu === true ? 'default' : 'outline'} aria-pressed={jaAconteceu === true} onClick={() => setJaAconteceu(true)}>Sim, já aconteceu</Button>
+                    <Button type="button" size="sm" variant={jaAconteceu === false ? 'default' : 'outline'} aria-pressed={jaAconteceu === false} onClick={() => setJaAconteceu(false)}>Não, ainda vai acontecer</Button>
                   </div>
                 </div>
               )}

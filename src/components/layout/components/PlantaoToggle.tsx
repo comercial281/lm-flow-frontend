@@ -118,7 +118,7 @@ export default function PlantaoToggle({ compact = false }: { compact?: boolean }
 
   const trigger = (
     <Button
-      variant={on ? 'default' : 'ghost'}
+      variant={on ? 'default' : 'ghost'} aria-pressed={on}
       size={compact ? 'icon' : 'sm'}
       disabled={loading}
       aria-label={label}

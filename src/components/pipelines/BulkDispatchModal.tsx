@@ -452,7 +452,7 @@ export default function BulkDispatchModal({
             </DialogTitle>
             <div className="flex items-center gap-1 mr-6">
               <Button
-                variant={view === 'new' ? 'default' : 'ghost'}
+                variant={view === 'new' ? 'default' : 'ghost'} aria-pressed={view === 'new'}
                 size="sm"
                 onClick={() => {
                   setView('new');
@@ -461,7 +461,7 @@ export default function BulkDispatchModal({
               >
                 Novo
               </Button>
-              <Button variant={view === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setView('list')}>
+              <Button variant={view === 'list' ? 'default' : 'ghost'} aria-pressed={view === 'list'} size="sm" onClick={() => setView('list')}>
                 Disparos {campaigns.length > 0 && `(${campaigns.length})`}
               </Button>
             </div>

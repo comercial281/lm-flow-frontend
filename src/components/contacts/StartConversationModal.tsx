@@ -478,7 +478,7 @@ export default function StartConversationModal({
                 {!isWhatsAppCloud && (
                   <Button
                     type="button"
-                    variant={useTemplate ? 'default' : 'outline'}
+                    variant={useTemplate ? 'default' : 'outline'} aria-pressed={useTemplate}
                     size="sm"
                     onClick={() => {
                       setUseTemplate(!useTemplate);

@@ -120,10 +120,10 @@ export default function HistoricoLista({ roletaId, filtroInicial = 'all' }: Prop
   const filtros = (
     <div className="flex flex-wrap items-center gap-3">
       <div role="radiogroup" aria-label="Quais leads mostrar" className="flex gap-2">
-        <Button type="button" size="sm" role="radio" aria-checked={filtro === 'all'} variant={filtro === 'all' ? 'default' : 'outline'} onClick={() => setFiltro('all')}>
+        <Button type="button" size="sm" role="radio" aria-checked={filtro === 'all'} variant={filtro === 'all' ? 'default' : 'outline'} aria-pressed={filtro === 'all'} onClick={() => setFiltro('all')}>
           Todos
         </Button>
-        <Button type="button" size="sm" role="radio" aria-checked={filtro === 'attention'} variant={filtro === 'attention' ? 'default' : 'outline'} onClick={() => setFiltro('attention')}>
+        <Button type="button" size="sm" role="radio" aria-checked={filtro === 'attention'} variant={filtro === 'attention' ? 'default' : 'outline'} aria-pressed={filtro === 'attention'} onClick={() => setFiltro('attention')}>
           Precisa de atenção
         </Button>
       </div>

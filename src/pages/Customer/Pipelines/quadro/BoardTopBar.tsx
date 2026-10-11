@@ -173,7 +173,7 @@ export default function BoardTopBar({
             )}
           </div>
           <AlternadorDeVisao rotulo="Visualização" valor={modo} opcoes={MODOS} aoEscolher={onModo} />
-          <Button type="button" variant={quantosFiltros > 0 ? 'default' : 'outline'} size="sm" onClick={onAbrirFiltros}
+          <Button type="button" variant={quantosFiltros > 0 ? 'default' : 'outline'} aria-pressed={quantosFiltros > 0} size="sm" onClick={onAbrirFiltros}
             aria-label={quantosFiltros > 0 ? `Filtros · ${quantosFiltros}` : 'Filtros'} title="Filtros"
             className="relative h-9 w-9 shrink-0 p-0">
             <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />

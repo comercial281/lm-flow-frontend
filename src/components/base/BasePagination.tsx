@@ -106,7 +106,7 @@ export default function BasePagination({
   const renderPageButton = (page: number, isActive = false) => (
     <Button
       key={page}
-      variant={isActive ? 'default' : 'outline'}
+      variant={isActive ? 'default' : 'outline'} aria-pressed={isActive}
       size="sm"
       onClick={() => handlePageChange(page)}
       disabled={disabled || isActive}
