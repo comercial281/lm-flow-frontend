@@ -172,6 +172,48 @@ describe('CardCompletoPage', () => {
     expect(await screen.findByText('Lista de contatos')).toBeInTheDocument();
   });
 
+  // Aberta de dentro do app no celular, vindo das Tarefas.
+  function abrirVindoDasTarefas() {
+    render(
+      <MemoryRouter
+        initialEntries={['/tarefas', { pathname: '/pipelines/p1/card/i1', state: { voltarPeloHistorico: true } }]}
+        initialIndex={1}
+      >
+        <Routes>
+          <Route path="/pipelines/:pipelineId/card/:itemId" element={<CardCompletoPage />} />
+          <Route path="/tarefas" element={<p>Tela de tarefas</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  it('trocar de aba não apaga o "← Voltar" (o estado vai junto)', async () => {
+    abrirVindoDasTarefas();
+    await screen.findByRole('heading', { level: 1, name: 'Maria Souza' });
+    await userEvent.click(screen.getByRole('tab', { name: 'Origem' }));
+    expect(await screen.findByTestId('aba-origem')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Voltar' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'Ficha' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+    expect(await screen.findByText('Tela de tarefas')).toBeInTheDocument();
+  });
+
+  it('sem acesso, aberto pelas Tarefas: "Voltar" volta pras Tarefas', async () => {
+    s.getPipelineItem.mockRejectedValue(erroHttp(404));
+    abrirVindoDasTarefas();
+    expect(await screen.findByText('Você não tem acesso a este lead')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Voltar ao funil' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+    expect(await screen.findByText('Tela de tarefas')).toBeInTheDocument();
+  });
+
+  it('carregando, aberto de dentro do app: o "← Voltar" já aparece', () => {
+    s.getPipelineItem.mockReturnValue(new Promise(() => {}));
+    abrirVindoDasTarefas();
+    expect(screen.getByRole('status', { name: 'Carregando o card' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Voltar' })).toBeInTheDocument();
+  });
+
   it('Ganho | Perdido recebe a trava cruzada com a Etapa (P3-T5)', async () => {
     abrirPagina();
     await screen.findByRole('heading', { level: 1, name: 'Maria Souza' });

@@ -45,7 +45,10 @@ export default function CardDoContato({ contactId, onOpenChange, onMudou, aberto
   const [mudou, setMudou] = useState(false);
   const celular = useTelaDeCelular();
   const abrirPaginaDoCard = useAbrirPaginaDoCard();
-  const veioDeDentroDoApp = useLocation().key !== 'default';
+  // A chave de quando a tela abriu: a lista de Contatos grava filtros no
+  // endereço (replace), e isso troca a chave depois.
+  const chaveAoAbrir = useLocation().key;
+  const [veioDeDentroDoApp] = useState(() => chaveAoAbrir !== 'default');
   const irParaPagina = (a: Atendimento) =>
     abrirPaginaDoCard(a.pipeline.id, a.item.id, {
       substituir: abertoPeloEndereco,

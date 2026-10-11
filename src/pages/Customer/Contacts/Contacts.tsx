@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { serverRefusalMessageOf } from '@/services/core/forbidden';
 import { useLanguage } from '@/hooks/useLanguage';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -47,6 +47,7 @@ import {
   type FiltrosDoPopover,
   type PilulaDeContatos,
 } from '@/features/contatos/filtros';
+import { comListaNoEndereco, lerListaDoEndereco } from '@/features/contatos/listaNoEndereco';
 import ContactExportModal from '@/components/contacts/ContactExportModal';
 import ContactMergeModal from '@/components/contacts/ContactMergeModal';
 import { AxiosError } from 'axios';
@@ -87,7 +88,22 @@ export default function Contacts() {
   const { contactId: contactIdFromRoute } = useParams<{ contactId?: string }>();
   const navigate = useNavigate();
   const { can, isReady: permissionsReady } = useUserPermissions();
-  const [state, setState] = useState<ContactsState>(INITIAL_STATE);
+  // Busca, pílula, filtros e página moram no endereço (10/10/2026,
+  // features/contatos/listaNoEndereco.ts): voltar do card (no celular é outra
+  // tela) traz a mesma lista. Lidos uma vez, ao montar.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [listaInicial] = useState(() => lerListaDoEndereco(searchParams));
+  const [state, setState] = useState<ContactsState>(() => ({
+    ...INITIAL_STATE,
+    searchQuery: listaInicial.busca,
+    meta: {
+      pagination: {
+        ...INITIAL_STATE.meta.pagination,
+        page: listaInicial.pagina,
+        page_size: listaInicial.porPagina ?? DEFAULT_PAGE_SIZE,
+      },
+    },
+  }));
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
@@ -99,8 +115,8 @@ export default function Contacts() {
   const [cardContatoId, setCardContatoId] = useState<string | null>(null);
   const [activeFilters, setActiveFilters] = useState<BaseFilter[]>([]);
   // Pílula + popover (fase 4). Viram as linhas de `activeFilters`.
-  const [pilula, setPilula] = useState<PilulaDeContatos>('todos');
-  const [filtrosPopover, setFiltrosPopover] = useState<FiltrosDoPopover>(FILTROS_VAZIOS);
+  const [pilula, setPilula] = useState<PilulaDeContatos>(listaInicial.pilula);
+  const [filtrosPopover, setFiltrosPopover] = useState<FiltrosDoPopover>(listaInicial.filtros);
   const { users: equipe } = useAccountUsers();
   const { user: eu } = useAuth();
   const corretor = useCorretorLogado();
@@ -221,14 +237,44 @@ export default function Contacts() {
     [t],
   );
 
-  // Initial load
+  // Initial load: a lista que estava no endereço (mesma precedência da troca de
+  // página: busca > filtros > lista simples).
   useEffect(() => {
     if (!permissionsReady) {
       return;
     }
 
-    loadContacts();
+    const { busca, pagina, porPagina } = listaInicial;
+    const tamanho = porPagina ? { per_page: porPagina } : {};
+    if (busca.trim()) {
+      loadContactsWithSearch(busca.trim(), { page: pagina, ...tamanho });
+      return;
+    }
+    const linhas = linhasDoFiltro(listaInicial.filtros, listaInicial.pilula, eu?.id ? String(eu.id) : null);
+    if (linhas.length > 0) {
+      setActiveFilters(linhas);
+      handleApplyFiltersWithPagination(linhas, pagina, porPagina ?? undefined);
+      return;
+    }
+    loadContacts({ page: pagina, ...tamanho });
   }, [permissionsReady]);
+
+  // A lista atual vai pro endereço (replace: não enche o histórico). Valor
+  // padrão não aparece, então a tela sem filtro continua em /contacts.
+  const paginaAtual = state.meta.pagination.page;
+  const tamanhoAtual = state.meta.pagination.page_size;
+  // Só navega quando muda: navegar (mesmo com replace) troca a chave do
+  // endereço, e o CardDoContato usa a chave pra saber se veio de dentro do app.
+  useEffect(() => {
+    const novo = comListaNoEndereco(searchParams, {
+      busca: state.searchQuery,
+      pilula,
+      filtros: filtrosPopover,
+      pagina: paginaAtual,
+      porPagina: tamanhoAtual && tamanhoAtual !== DEFAULT_PAGE_SIZE ? tamanhoAtual : null,
+    });
+    if (novo.toString() !== searchParams.toString()) setSearchParams(novo, { replace: true });
+  }, [state.searchQuery, pilula, filtrosPopover, paginaAtual, tamanhoAtual, searchParams, setSearchParams]);
 
   // No modo "todos", paginar não pode desmarcar nada: o conjunto é a consulta,
   // não a página. Remarca as linhas recém-carregadas para o checkbox refletir o

@@ -4,7 +4,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { pipelinesService } from '@/services/pipelines';
 import type { Pipeline, PipelineItem, PipelineStage } from '@/types/analytics';
@@ -688,3 +688,63 @@ describe('quadro do funil · exportar', () => {
     clique.mockRestore();
   });
 });
+
+// Raio-X do celular (10/10/2026): no celular o card abre na PÁGINA, não na janela.
+describe('quadro do funil · no celular', () => {
+  let original: typeof window.matchMedia;
+  beforeEach(() => {
+    original = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(max-width: 767px)', media: query, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+    return () => { window.matchMedia = original; };
+  });
+
+  function PaginaDoCard() {
+    const l = useLocation();
+    const navigate = useNavigate();
+    return (
+      <>
+        <output data-testid="pagina-do-card">{`${l.pathname}|${JSON.stringify(l.state)}`}</output>
+        <button type="button" onClick={() => navigate(-1)}>Voltar (página falsa)</button>
+      </>
+    );
+  }
+  const montarComPagina = (entradas: string[]) =>
+    render(
+      <MemoryRouter initialEntries={entradas} initialIndex={entradas.length - 1}>
+        <Routes>
+          <Route path="/pipelines/:pipelineId" element={<><PipelineKanban /><Endereco /></>} />
+          <Route path="/pipelines/:pipelineId/card/:itemId" element={<PaginaDoCard />} />
+          <Route path="/tarefas" element={<p>Tela de tarefas</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+  it('tocar no cartão empilha a página do card (sem a janela) e o voltar devolve ao quadro', async () => {
+    montarComPagina(['/pipelines/p1']);
+    await screen.findByText('Maria Souza');
+    fireEvent.click(cardDe('Maria Souza'));
+
+    expect(await screen.findByTestId('pagina-do-card')).toHaveTextContent('/pipelines/p1/card/i1|{"voltarPeloHistorico":true}');
+    expect(screen.queryByText(/situação na janela/)).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar (página falsa)' }));
+    expect(await screen.findByText('Maria Souza')).toBeInTheDocument();
+    expect(endereco().get('card')).toBeNull();
+  });
+
+  it('?card= vindo de outra tela (Tarefas): troca o endereço pela página e o voltar volta pras Tarefas', async () => {
+    montarComPagina(['/tarefas', '/pipelines/p1?card=i1']);
+
+    expect(await screen.findByTestId('pagina-do-card')).toHaveTextContent('/pipelines/p1/card/i1|{"voltarPeloHistorico":true}');
+    expect(screen.queryByText(/situação na janela/)).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar (página falsa)' }));
+    expect(await screen.findByText('Tela de tarefas')).toBeInTheDocument();
+  });
+
+  it('?card= de link colado (primeira tela da guia): página sem o voltar pelo histórico', async () => {
+    montarComPagina(['/pipelines/p1?card=i1']);
+    expect(await screen.findByTestId('pagina-do-card')).toHaveTextContent('/pipelines/p1/card/i1|null');
+  });
+});
+

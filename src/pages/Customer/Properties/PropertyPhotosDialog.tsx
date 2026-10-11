@@ -119,12 +119,13 @@ function CartaoDaFoto({ photo, indice, ehCapa, ocupado, aoDefinirCapa, aoAlterna
         </span>
       </div>
 
-      {/* Hover actions */}
-      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 toque:bg-transparent toque:opacity-100 transition-opacity flex items-center justify-center gap-1">
+      {/* Hover actions. A camada não pega toque (no vídeo, deixava os controles
+          inalcançáveis no celular); só os botões pegam. */}
+      <div className="pointer-events-none absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 toque:bg-transparent toque:opacity-100 transition-opacity flex items-center justify-center gap-1">
         {!ehCapa && !isVideo && (
           <button
             onClick={aoDefinirCapa}
-            className="p-1.5 rounded bg-orange-500 text-white hover:bg-orange-600"
+            className="pointer-events-auto p-1.5 rounded bg-orange-500 text-white hover:bg-orange-600"
             title="Definir como capa (vai para o primeiro lugar)"
           >
             <Crown className="h-3.5 w-3.5" />
@@ -132,7 +133,7 @@ function CartaoDaFoto({ photo, indice, ehCapa, ocupado, aoDefinirCapa, aoAlterna
         )}
         <button
           onClick={aoAlternarVisivel}
-          className="p-1.5 rounded bg-slate-600 text-white hover:bg-slate-700"
+          className="pointer-events-auto p-1.5 rounded bg-slate-600 text-white hover:bg-slate-700"
           title={photo.published ? 'Ocultar' : 'Publicar'}
         >
           {photo.published
@@ -142,7 +143,7 @@ function CartaoDaFoto({ photo, indice, ehCapa, ocupado, aoDefinirCapa, aoAlterna
         </button>
         <button
           onClick={aoRemover}
-          className="p-1.5 rounded bg-red-600 text-white hover:bg-red-700"
+          className="pointer-events-auto p-1.5 rounded bg-red-600 text-white hover:bg-red-700"
           title="Remover"
         >
           <X className="h-3.5 w-3.5" />
