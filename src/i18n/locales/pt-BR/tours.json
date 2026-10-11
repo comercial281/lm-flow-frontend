@@ -268,11 +268,11 @@
     },
     "step2": {
       "title": "Barra de Ferramentas",
-      "content": "Pesquise etiquetas existentes ou crie uma nova clicando no botão \"Nova Etiqueta\"."
+      "content": "Pesquise etiquetas existentes ou crie uma nova clicando no botão \"Nova etiqueta\"."
     },
     "step3": {
       "title": "Lista de Etiquetas",
-      "content": "Todas as etiquetas são exibidas aqui com seu nome, descrição e cor. Clique nos ícones de ação para editar ou excluir."
+      "content": "Em cima, as suas etiquetas: clique numa para editar ou use o menu \"…\" para trocar a cor ou excluir. Embaixo, as do sistema, em caixas por categoria: nelas só dá para trocar a cor."
     }
   },
   "settingsCustomAttributes": {
