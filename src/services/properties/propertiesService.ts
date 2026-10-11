@@ -464,11 +464,32 @@ export const PROPERTY_TYPE_LABELS: Record<string, string> = {
   sala_comercial:  'Sala Comercial',
   galpao:          'Galpão',
   predio:          'Prédio',
-  terreno:         'Terreno',
+  terreno:         'Lote/Terreno',
   chacara:         'Chácara',
   sitio:           'Sítio',
   other:           'Outro',
 };
+
+// O servidor tem dois códigos para quatro tipos. A importação (IA e TXT) grava
+// o antigo; o nativo fica só para exibir imóvel que já foi salvo com ele.
+const TIPO_NATIVO_PARA_ANTIGO: Record<string, string> = {
+  cobertura:      'penthouse',
+  sala_comercial: 'commercial_room',
+  galpao:         'warehouse',
+  terreno:        'lot',
+};
+
+/**
+ * Opções do seletor "Tipo de imóvel": uma por nome. Se o imóvel aberto está
+ * salvo com o código nativo, ele ocupa o lugar do antigo (aparece marcado e
+ * não muda nada no imóvel se o corretor não mexer).
+ */
+export function opcoesDeTipoDeImovel(atual?: string): [string, string][] {
+  return Object.keys(PROPERTY_TYPE_LABELS)
+    .filter(t => !(t in TIPO_NATIVO_PARA_ANTIGO))
+    .map(t => (atual && TIPO_NATIVO_PARA_ANTIGO[atual] === t ? atual : t))
+    .map(t => [t, PROPERTY_TYPE_LABELS[t]] as [string, string]);
+}
 
 export const STATUS_LABELS: Record<string, string> = {
   draft:    'Rascunho',

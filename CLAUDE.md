@@ -8109,6 +8109,17 @@ Decisões (não reabrir sem o dono pedir):
 1. Pedido do dono: cadastro de imóvel não parte de link de anúncio. O servidor ainda aceita `urls[]` no lote e o serviço (`propertyImportsService.createBatch`) mantém a opção; só a tela deixou de mandar.
 2. Lotes antigos que vieram de link continuam aparecendo na lista com o endereço no lugar do nome do arquivo (`item.source_url`).
 
+## Tipo de imóvel sem opções repetidas (desde 2026-10-10)
+
+Achado do Raio-X de 10/10: a lista **Tipo de imóvel** do cadastro mostrava Cobertura, Sala Comercial e Galpão duas vezes, e "Terreno" junto de "Lote/Terreno". O servidor tem dois códigos para esses quatro tipos (os antigos `penthouse`, `commercial_room`, `warehouse`, `lot` e os nativos `cobertura`, `sala_comercial`, `galpao`, `terreno`), e a lista despejava o dicionário de nomes inteiro.
+
+- **A lista oferece um código por nome**, sempre o antigo (é o que a importação por IA e por TXT grava). Regra em `opcoesDeTipoDeImovel` (`services/properties/propertiesService.ts`, com spec).
+- **Imóvel salvo com o código nativo** continua marcado: o código dele ocupa o lugar do antigo na lista, e nada muda no imóvel se o corretor não mexer.
+- `terreno` passou a se chamar "Lote/Terreno" também na exibição (lista, cartões, filtros).
+- Portais e catálogo do Meta tratam os dois códigos de cada par igual: nada muda lá fora.
+
+O filtro de tipo da lista de Imóveis também trata os dois códigos como um: quem resolve é o servidor (as opções vêm com um código por tipo, e filtrar por um traz os dois; lm-flow#454). A tela não precisou mudar.
+
 ## Etiquetas: Suas × Do sistema (desde 2026-10-10)
 
 Relato do dono do produto: na Mais Que Imóveis a tela de Etiquetas tinha ~900 etiquetas de imóvel (uma por imóvel, criada pela página dele) misturadas às que o gestor criou, todas da mesma cor. Junto vinham as do follow-up (`<prefixo>-msg-N`), as da IA e as de origem, e todas dava pra renomear ou apagar: renomear `follow-up` desliga o follow-up da Meu Imóvel. Servidor: lm-flow#455. Complementa [A lista de etiquetas parava nas 20 primeiras](#a-lista-de-etiquetas-parava-nas-20-primeiras-desde-2026-09-09).

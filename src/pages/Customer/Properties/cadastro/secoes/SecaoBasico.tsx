@@ -1,6 +1,6 @@
 import { Input, Label as UILabel } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
-import { PROPERTY_TYPE_LABELS } from '@/services/properties/propertiesService';
+import { opcoesDeTipoDeImovel } from '@/services/properties/propertiesService';
 import { SITUACOES, rotuloDaSituacao } from '@/features/properties/listingKind';
 import { Pilulas } from './campos';
 import { CLASSE_SELETOR, type PropsDaSecao } from './tipos';
@@ -38,7 +38,7 @@ export default function SecaoBasico({ form: f, setF }: PropsDaSecao) {
       <div>
         <UILabel>Tipo de imóvel</UILabel>
         <Seletor value={f.property_type} onChange={e => setF({ property_type: e.target.value })} className={CLASSE_SELETOR}>
-          {Object.entries(PROPERTY_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          {opcoesDeTipoDeImovel(f.property_type).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </Seletor>
       </div>
 
