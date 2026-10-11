@@ -198,8 +198,8 @@ export default function MacroActionRow({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
-                        className="h-4 w-4 p-0 hover:bg-transparent text-sidebar-foreground/60"
+                        size="icon"
+                        className="-my-1.5 size-8 p-0 hover:bg-transparent text-sidebar-foreground/60"
                         onClick={() =>
                           handleParamsChange(action.action_params.filter(p => p !== paramValue))
                         }

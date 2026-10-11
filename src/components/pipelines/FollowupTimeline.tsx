@@ -169,7 +169,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
   const headline = running ? RUNNING : IDLE;
 
   const stopButton = (onClick: () => void, label: string) => (
-    <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 shrink-0" disabled={busy} onClick={onClick} aria-label={label}>
+    <Button size="sm" variant="outline" className="text-xs gap-1.5 shrink-0" disabled={busy} onClick={onClick} aria-label={label}>
       {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <StopCircle className="h-3.5 w-3.5" />}
       Parar
     </Button>
@@ -290,7 +290,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
                 {options.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
               </Seletor>
             )}
-            <Button size="sm" variant="default" className="h-7 text-xs gap-1.5" disabled={busy || !chosen}
+            <Button size="sm" variant="default" className="text-xs gap-1.5" disabled={busy || !chosen}
               onClick={() => void act(() => flowAutomationInstancesService.start(ref, chosen), 'Follow-up iniciado')}>
               {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
               Iniciar follow-up

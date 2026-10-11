@@ -162,7 +162,7 @@ export default function SecaoFunil({
                 </div>
                 {fechado && <p className="text-xs text-muted-foreground">{ETAPA_TRAVADA}</p>}
                 {!emOferta && (
-                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => abrirCard(linha)}>
+                  <Button variant="outline" size="sm" className="text-xs" onClick={() => abrirCard(linha)}>
                     {T.abrirCard}
                   </Button>
                 )}
@@ -173,7 +173,7 @@ export default function SecaoFunil({
       ) : colocando ? (
         <PipelineManagement conversationId={conversationId} pipelines={pipelines} onPipelineUpdated={onAtualizado} />
       ) : (
-        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setColocando(true)}>
+        <Button variant="outline" size="sm" className="text-xs" onClick={() => setColocando(true)}>
           {T.colocarNoFunil}
         </Button>
       )}

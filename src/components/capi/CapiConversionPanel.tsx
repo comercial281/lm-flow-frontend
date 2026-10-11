@@ -176,7 +176,7 @@ function PainelConversaoMeta({
                 disabled={Boolean(sending) || travado}
                 onClick={() => handleSend(event)}
                 title={dica}
-                className="h-7 gap-1 px-2 text-xs"
+                className="gap-1 px-2 text-xs"
               >
                 {isSending ? (
                   <Loader2 className="h-3 w-3 animate-spin" />

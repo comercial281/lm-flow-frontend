@@ -93,7 +93,7 @@ export default function SendToMeButton({
           <Button
             size="sm"
             variant="outline"
-            className="h-7 text-xs shrink-0"
+            className="text-xs shrink-0"
             disabled={sending || !phoneInput.trim()}
             onClick={() => void send(phoneInput)}
           >
@@ -105,7 +105,7 @@ export default function SendToMeButton({
           <Button
             size="sm"
             variant="outline"
-            className="h-7 text-xs gap-1"
+            className="text-xs gap-1"
             disabled={sending}
             onClick={handleMainClick}
           >

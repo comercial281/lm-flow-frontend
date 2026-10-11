@@ -63,7 +63,7 @@ const Banner: React.FC<BannerProps> = ({
       tom={tomDoEsquema[colorScheme]}
       acao={
         hasActionButton && actionButtonLabel ? (
-          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onPrimaryAction}>
+          <Button variant="outline" size="sm" className="text-xs" onClick={onPrimaryAction}>
             {actionButtonLabel}
           </Button>
         ) : undefined

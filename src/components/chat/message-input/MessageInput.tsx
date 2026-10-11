@@ -474,7 +474,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 ml-auto hover:bg-destructive/20 hover:text-destructive"
+          className="size-8 ml-auto hover:bg-destructive/20 hover:text-destructive"
           onClick={onCancel}
           aria-label="Cancelar resposta"
           title="Cancelar resposta"

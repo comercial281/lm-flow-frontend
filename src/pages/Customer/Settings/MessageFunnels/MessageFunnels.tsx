@@ -685,13 +685,13 @@ function FunnelCard({ funnel, tags, onEdit, onDelete, onToggleArchive }: FunnelC
           )}
         </div>
         <div className="flex items-center gap-0.5 shrink-0">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit} aria-label="Editar">
+          <Button variant="ghost" size="icon" className="size-8" onClick={onEdit} aria-label="Editar">
             <Edit2 className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="size-8"
             onClick={onToggleArchive}
             aria-label={funnel.active ? 'Arquivar' : 'Reativar'}
             title={funnel.active ? 'Arquivar (some do chat)' : 'Reativar'}
@@ -699,7 +699,7 @@ function FunnelCard({ funnel, tags, onEdit, onDelete, onToggleArchive }: FunnelC
             {funnel.active ? <Archive className="h-4 w-4" /> : <ArchiveRestore className="h-4 w-4" />}
           </Button>
           {onDelete && (
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={onDelete} aria-label="Excluir">
+            <Button variant="ghost" size="icon" className="size-8 text-destructive" onClick={onDelete} aria-label="Excluir">
               <Trash2 className="h-4 w-4" />
             </Button>
           )}

@@ -115,7 +115,7 @@ export default function HeroImagePicker({ open, onClose, onPick, currentProperty
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {selected && (
-              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelected(null)} title="Voltar aos imóveis">
+              <Button type="button" variant="ghost" size="icon" className="size-8" onClick={() => setSelected(null)} title="Voltar aos imóveis">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             )}

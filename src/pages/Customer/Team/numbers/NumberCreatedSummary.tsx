@@ -56,7 +56,7 @@ export default function NumberCreatedSummary({
               Link não enviado: {linkError || 'Não consegui enviar o link agora.'}
               {onRetryLink && (
                 <Button
-                  variant="outline" size="sm" className="ml-2 h-7" onClick={onRetryLink} disabled={retrying}
+                  variant="outline" size="sm" className="ml-2" onClick={onRetryLink} disabled={retrying}
                 >
                   {retrying && <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
                   Tentar de novo

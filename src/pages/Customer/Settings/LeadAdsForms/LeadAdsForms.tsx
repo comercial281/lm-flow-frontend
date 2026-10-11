@@ -904,11 +904,11 @@ export default function LeadAdsForms() {
                       Chave de acesso salva{typeof debug.token_length === 'number' ? ` (${debug.token_length} caracteres)` : ''}
                     </p>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowToken(s => !s)}
+                      <Button variant="ghost" size="icon" className="size-8" onClick={() => setShowToken(s => !s)}
                         title={showToken ? 'Ocultar' : 'Mostrar'}>
                         {showToken ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={copyToken} title="Copiar">
+                      <Button variant="ghost" size="icon" className="size-8" onClick={copyToken} title="Copiar">
                         <Copy className="h-3.5 w-3.5" />
                       </Button>
                     </div>

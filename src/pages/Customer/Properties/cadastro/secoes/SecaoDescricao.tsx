@@ -47,7 +47,7 @@ export default function SecaoDescricao({ form: f, setF, editando, podeGerar, ger
               size="sm"
               disabled={gerando}
               onClick={aoGerar}
-              className="h-7 text-xs gap-1"
+              className="text-xs gap-1"
             >
               {gerando
                 ? <Loader2 className="h-3 w-3 animate-spin" />

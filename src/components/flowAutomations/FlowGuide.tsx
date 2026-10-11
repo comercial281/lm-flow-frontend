@@ -30,7 +30,7 @@ export function FlowGuideBanner({ steps, kind, showFinished, onOpenStep }: Banne
         tom="atencao"
         icone={MousePointerClick}
         acao={
-          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onOpenStep(step.nodeId)}>
+          <Button size="sm" variant="outline" className="text-xs" onClick={() => onOpenStep(step.nodeId)}>
             Abrir o bloco
           </Button>
         }

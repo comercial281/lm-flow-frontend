@@ -411,11 +411,11 @@ export default function CustomAttributeModal({
                       <Button
                         type="button"
                         onClick={() => removeListValue(index)}
-                        size="sm"
+                        size="icon"
                         variant="ghost"
                         aria-label="Remover valor"
                         title="Remover valor"
-                        className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                        className="-my-1.5 size-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
                       >
                         <X className="h-3 w-3" />
                       </Button>
