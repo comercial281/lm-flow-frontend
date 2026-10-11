@@ -8190,3 +8190,16 @@ Pedido do dono: escolher o melhor jeito de cada peça e padronizar, pra que **te
 **Achados do levantamento (backlog):** 9 janelas de Conversas importam o `Dialog` direto do pacote e pulam o ajuste de largura (Atribuir conversa pede 448 e abre com 512); 8 confirmações do `AlertDialog` mostram Excluir em roxo; `NotesHistoryModal` é branca no tema escuro e usa `window.confirm`; botões `#00ffa7` sobrados da Evolution (`BulkInviteModal`, `MacroFormModal`); a regra global `button.bg-primary` (globals.css) pinta filtro selecionado com degradê e sombra; `--chart-*` sem uso e 3 cartões de gráfico parados em `components/charts/`.
 
 Não reabrir sem o dono pedir.
+
+## Visita: quem marcou e Visita remarcada (11/10/2026)
+
+Origem: a automação "Visita agendada" disparava pra qualquer visita, da IA ou à mão, e remarcar não disparava nada. Desenho aprovado pelo dono em 11/10. A metade do servidor é o PR `comercial281/lm-flow#459`; esta tela só funciona de ponta a ponta com ele no ar.
+
+- **Filtro "Quem marcou"** nos gatilhos "Visita agendada" e "Visita remarcada", no mesmo lugar da Origem e da Etiqueta (`bookedByFilter.ts` em `LeadAutomations/`, editor `ConditionEditor`). Três opções: **Qualquer um** (nenhuma condição gravada, o comportamento de sempre), **A IA** (`booked_by eq ia`) e **Uma pessoa** (`booked_by eq pessoa`). Os valores são fixos porque a condição compara ao pé da letra.
+- **Sem condição = Qualquer um.** Por isso o filtro é opcional no `validateRule`, também na tela antiga de Automações: regra antiga com "Visita agendada" continua válida e não muda.
+- **Gatilho "Visita remarcada"** (`lead.visit_rescheduled`): entra no grupo Visita, logo depois de "Visita agendada". Só existe no construtor (como "Pediu o book no site"); a tela antiga de regras não oferece.
+- **Trocar entre os dois gatilhos de visita zera o filtro.** É o comportamento de sempre do `conditionsOnTriggerChange` (troca de gatilho limpa as condições), não uma regra nova.
+- **Cinco variáveis nos botõezinhos:** Data da visita, Hora da visita, Horário anterior, Imóvel da visita e Corretor da visita. "Corretor da visita" é o corretor da visita; `{{corretor}}` continua sendo o dono do lead.
+- **O modelo "Avisar o grupo quando a IA marcar visita" vem do servidor** (lista de modelos do backend); a tela não tem cópia dele.
+- **Pendente (envio separado):** o aviso fixo de visita da IA, configurado no painel raiz, vai sair depois que o único cliente que usa o aviso fixo estiver migrado pro modelo acima. Quando sair, some também a tela dele no painel raiz.
+- Não reabrir sem o dono pedir.
