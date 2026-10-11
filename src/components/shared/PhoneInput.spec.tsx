@@ -42,4 +42,15 @@ describe('PhoneInput', () => {
     render(<Campo inicial="11987654321" formato="digits" />);
     expect((screen.getByPlaceholderText('tel') as HTMLInputElement).value).toBe('+55 11 98765 4321');
   });
+
+  it('lista de países em português, com Brasil escolhido e o leitor de tela dizendo "País"', () => {
+    render(<Campo />);
+    const pais = screen.getByRole('combobox', { name: 'País' }) as HTMLSelectElement;
+    expect(pais.value).toBe('BR');
+    const nomes = Array.from(pais.options).map((o) => o.textContent);
+    expect(nomes).toContain('Brasil');
+    expect(nomes).toContain('Alemanha');
+    expect(nomes).not.toContain('Germany');
+    expect(screen.queryByLabelText('Phone number country')).toBeNull();
+  });
 });

@@ -30,6 +30,7 @@ import {
 } from '@/services/properties/propertiesService';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useCan } from '@/hooks/useCan';
+import { useCelular } from '@/hooks/useCelular';
 import { propertiesActionGates } from './propertiesActionGates';
 import PropertyImportDialog from './PropertyImportDialog';
 import PropertyPhotosDialog from './PropertyPhotosDialog';
@@ -38,7 +39,7 @@ import NoAccessState from '@/components/permissions/NoAccessState';
 import { Seletor } from '@/components/base/Seletor';
 import Aviso from '@/components/base/Aviso';
 import { isForbiddenError } from '@/services/core/forbidden';
-import { lerRecorteImoveis, type FiltroDoLink } from '@/features/dashboard/links';
+import { lerRecorteImoveis, type FiltroImoveis } from '@/features/dashboard/links';
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
 import { getTenantSlug } from '@/services/core/tenant';
 import Abas from '@/components/base/Abas';
@@ -81,6 +82,8 @@ export default function Properties() {
   const canCreate      = acoes.create;
   const canDelete      = acoes.delete;
   const canAiBatch     = useFeature('properties_ai_batch');
+  // Gerar descrições em lote é trabalho de computador (Raio-X do celular, 10/10/2026).
+  const ehCelular      = useCelular();
   const [properties, setProperties] = useState<Property[]>([]);
   const [total, setTotal]           = useState(0);
   const [loading, setLoading]       = useState(true);
@@ -89,7 +92,7 @@ export default function Properties() {
 
   const [searchParams, setSearchParams]       = useSearchParams();
   // Filtro que veio de um clique na Dashboard (?recorte=…). Lido uma vez ao abrir.
-  const [recorte, setRecorte]                 = useState<FiltroDoLink | null>(() => lerRecorteImoveis(searchParams));
+  const [recorte, setRecorte]                 = useState<FiltroImoveis | null>(() => lerRecorteImoveis(searchParams));
   const [search, setSearch]                   = useState(searchParams.get('q') ?? '');
   // A busca que a lista usa: anda 400 ms atrás do que a pessoa digita.
   const [buscaAtiva, setBuscaAtiva]           = useState(search);
@@ -508,7 +511,7 @@ export default function Properties() {
           subtitle={contagem && !recorte
             ? `Empreendimentos e imóveis de revenda da imobiliária. · ${plural(contagem.development + contagem.resale, 'cadastro', 'cadastros')}`
             : 'Empreendimentos e imóveis de revenda da imobiliária.'}
-          aDireita={kind && canAiBatch && (
+          aDireita={kind && canAiBatch && !ehCelular && (
             <Button variant="outline" onClick={() => { setBatchSelected(new Set()); setBatchResults(null); setBatchModalOpen(true); }}>
               <Wand2 className="h-4 w-4 mr-2" />
               Gerar descrições com IA

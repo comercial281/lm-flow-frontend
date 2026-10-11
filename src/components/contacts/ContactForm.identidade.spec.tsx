@@ -3,9 +3,9 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import ContactForm from './ContactForm';
 import type { Contact } from '@/types/contacts';
 
-// Nome, telefone e e-mail não mudam depois do cadastro (decisão do dono,
-// 02/10/2026). Telefone/e-mail só o gestor corrige, em lead cadastrado à mão:
-// quem diz é o servidor, pelo `identity_correctable` do contato.
+// Nome só o responsável pelo lead ou o gestor muda (revisto em 11/10/2026);
+// telefone/e-mail só o gestor corrige, em lead cadastrado à mão. Quem diz é o
+// servidor, pelo `name_editable` e o `identity_correctable` do contato.
 // E o cadastro enxuto da fase 4: responsável do corretor travado nele; gestor
 // escolhe corretor ou roleta, obrigatório.
 
@@ -61,13 +61,34 @@ describe('Formulário de contato · nome, telefone e e-mail travados', () => {
 
     expect(screen.getByDisplayValue('Ana Teste')).toBeDisabled();
     expect(screen.getByDisplayValue('ana@teste.com')).toBeDisabled();
-    expect(screen.getByText('Nome, telefone e e-mail não mudam depois do cadastro.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Só o responsável pelo lead ou o gestor muda o nome. Telefone e e-mail não mudam depois do cadastro.'),
+    ).toBeInTheDocument();
   });
 
-  it('editando: gestor em lead manual corrige o e-mail, mas o nome continua travado', () => {
-    abrir(contato({ identity_correctable: true }));
+  it('editando: o responsável muda o nome, mas não o e-mail', () => {
+    const onSubmit = abrir(contato({ name_editable: true }));
 
-    expect(screen.getByDisplayValue('Ana Teste')).toBeDisabled();
+    expect(screen.getByDisplayValue('ana@teste.com')).toBeDisabled();
+    expect(screen.getByText('Telefone e e-mail não mudam depois do cadastro.')).toBeInTheDocument();
+    fireEvent.change(screen.getByDisplayValue('Ana Teste'), { target: { value: 'Ana Souza' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ name: 'Ana Souza' }));
+  });
+
+  it('editando: nome apagado não salva', () => {
+    const onSubmit = abrir(contato({ name_editable: true }));
+    fireEvent.change(screen.getByDisplayValue('Ana Teste'), { target: { value: '  ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('editando: gestor em lead manual muda nome e e-mail', () => {
+    abrir(contato({ name_editable: true, identity_correctable: true }));
+
+    expect(screen.getByDisplayValue('Ana Teste')).not.toBeDisabled();
     expect(screen.getByDisplayValue('ana@teste.com')).not.toBeDisabled();
   });
 
@@ -83,8 +104,10 @@ describe('Formulário de contato · cadastro enxuto', () => {
   it('não pergunta empresa, redes sociais, tipo, país nem cidade', () => {
     abrir(null, true);
 
+    // A lista de países do telefone (em português desde 10/10/2026: "Países
+    // Baixos", "Cidade do Vaticano"…) não é pergunta do formulário: fica de fora.
     for (const fora of [/empresa/i, /linkedin/i, /instagram/i, /pa[ií]s/i, /cidade/i, /pessoa f[ií]sica/i]) {
-      expect(screen.queryByText(fora)).not.toBeInTheDocument();
+      expect(screen.queryByText(fora, { ignore: 'script, style, option' })).not.toBeInTheDocument();
     }
   });
 

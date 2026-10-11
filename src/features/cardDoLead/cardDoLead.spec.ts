@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   contatoDoCard,
+  responsavelNoCard,
   itemSemFunil,
   semFunil,
   atendimentosDoContato,
@@ -9,6 +10,7 @@ import {
   origemCurta,
   classeDaOrigem,
   podeCorrigirContato,
+  podeEditarNome,
   respostasDoLead,
   visitaSemFeedback,
   visitasEmOrdem,
@@ -43,6 +45,14 @@ describe('conversaDoCard', () => {
 
   it('sem conversa devolve null', () => {
     expect(conversaDoCard(item({}))).toBeNull();
+  });
+});
+
+describe('podeEditarNome', () => {
+  it('só com name_editable === true; servidor antigo deixa travado', () => {
+    expect(podeEditarNome({ name_editable: true })).toBe(true);
+    expect(podeEditarNome({ name_editable: false })).toBe(false);
+    expect(podeEditarNome({})).toBe(false);
   });
 });
 
@@ -194,5 +204,30 @@ describe('card aberto pela pessoa (Contatos)', () => {
     expect(lista[1].item.stage_id).toBe('s1');
     expect(lista[1].stages.map(s => s.name)).toEqual(['Novo', 'Visita']);
     expect(semFunil(lista[0].item)).toBe(false);
+  });
+});
+
+describe('responsavelNoCard', () => {
+  const comConversa = {
+    assignee: undefined,
+    conversation: { id: 77, assignee: { id: 'u9', name: 'Bruno Silva', avatar_url: 'b.png' } },
+  } as never;
+
+  it('o assignee do card com o mesmo id', () => {
+    expect(responsavelNoCard({ assignee: { id: 'u1', name: 'Ana' } } as never, 'u1')?.name).toBe('Ana');
+  });
+
+  it('em reserva, o responsável da conversa com o mesmo id', () => {
+    expect(responsavelNoCard(comConversa, 'u9')).toMatchObject({ name: 'Bruno Silva', avatar_url: 'b.png' });
+  });
+
+  it('id que não bate com nenhum dos dois: null (vale a lista)', () => {
+    expect(responsavelNoCard(comConversa, 'u2')).toBeNull();
+    expect(responsavelNoCard({ assignee: { id: 'u1', name: 'Ana' } } as never, 'u2')).toBeNull();
+  });
+
+  it('sem id ou sem card: null', () => {
+    expect(responsavelNoCard(comConversa, null)).toBeNull();
+    expect(responsavelNoCard(null, 'u9')).toBeNull();
   });
 });

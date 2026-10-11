@@ -117,4 +117,10 @@ describe('CardMoreMenu · página do card completo (E4)', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: 'Arquivar' }));
     expect(onArquivar).toHaveBeenCalled();
   });
+
+  // Página do card (11/10): o ⋯ na altura do Ganho | Perdido, com contorno.
+  it('grande: o botão do ⋯ no tamanho dos outros do topo', () => {
+    montar({ grande: true });
+    expect(screen.getByRole('button', { name: 'Mais ações do card' })).toHaveClass('size-10');
+  });
 });

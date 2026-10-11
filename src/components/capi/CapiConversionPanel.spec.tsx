@@ -6,6 +6,7 @@ vi.mock('sonner', () => ({
   toast: { info: (...a: unknown[]) => toastInfo(...a), success: (...a: unknown[]) => toastSuccess(...a), error: vi.fn() },
 }));
 import CapiConversionPanel from './CapiConversionPanel';
+import { simularCelular } from '@/test/telaDeCelular';
 
 // Conversão Meta: o completo é o do card do lead; o compacto (Proposta B, 02/10)
 // é a linha logo abaixo dos selos no painel do lead em Conversas.
@@ -151,5 +152,31 @@ describe('CapiConversionPanel', () => {
     await vi.waitFor(() => expect(toastInfo).toHaveBeenCalledWith('Este evento já foi enviado para este lead.'));
     expect(toastSuccess).not.toHaveBeenCalled();
     expect(await screen.findByRole('button', { name: 'Venda · enviado' })).toBeDisabled();
+  });
+
+  // Raio-X do celular (10/10/2026): a linha da Meta e o aviso do Pixel saem do celular.
+  it.each(['compacto', 'completo'] as const)('celular: o %s não aparece nem pergunta o status ao servidor', async variante => {
+    status.mockResolvedValue({ ...pronto, client_ready: false });
+    const tela = simularCelular();
+    try {
+      const { container } = render(<CapiConversionPanel contactId="c1" variante={variante} />);
+      await act(() => new Promise(r => setTimeout(r, 0)));
+      expect(container.innerHTML).toBe('');
+      expect(status).not.toHaveBeenCalled();
+      expect(screen.queryByText(/Pixel ou chave do cliente incompletos/)).toBeNull();
+    } finally {
+      tela.restaurar();
+    }
+  });
+
+  it('computador: o aviso do Pixel incompleto continua aparecendo', async () => {
+    status.mockResolvedValue({ ...pronto, client_ready: false });
+    const tela = simularCelular(false);
+    try {
+      render(<CapiConversionPanel contactId="c1" />);
+      expect(await screen.findByText(/Pixel ou chave do cliente incompletos/)).toBeTruthy();
+    } finally {
+      tela.restaurar();
+    }
   });
 });

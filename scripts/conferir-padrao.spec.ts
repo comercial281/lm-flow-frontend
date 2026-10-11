@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, iconesComTamanho, rodinhasCentrais, telasEmBranco, vaziosSoltos, largurasForaDaEscala, importaJanelaDoPacote, JANELA_A_MAO } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, iconesComTamanho, rodinhasCentrais, telasEmBranco, vaziosSoltos, largurasForaDaEscala, importaJanelaDoPacote, JANELA_A_MAO, escondidosSoComMouse } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -269,6 +269,36 @@ describe('menuDeitado: menu de ações com ⋯ deitado (peça 15)', () => {
   });
 });
 
+describe('escondidosSoComMouse: botão que só aparece com o mouse', () => {
+  const achados = (codigo: string) => escondidosSoComMouse(codigo).map((a: { texto: string }) => a.texto);
+
+  it('pega opacity-0 + group-hover sem a alternativa de toque', () => {
+    expect(achados(`const a = <div className="opacity-0 group-hover:opacity-100"><Trash2 /></div>;`)).toEqual(['group-hover:opacity-100']);
+    expect(achados(`const a = <div className="invisible group-hover/linha:visible" />;`)).toEqual(['group-hover/linha:visible']);
+    expect(achados(`const a = <div className="hidden group-hover:flex" />;`)).toEqual(['group-hover:flex']);
+    expect(achados(`const a = <div className="md:opacity-0 md:group-hover:opacity-100" />;`)).toEqual(['md:group-hover:opacity-100']);
+  });
+
+  it('junta as classes de um cn() quebrado em várias linhas e de uma variável', () => {
+    expect(achados(`const a = <div className={cn(\n  'flex opacity-0',\n  ativo && 'group-hover:opacity-100',\n)} />;`)).toHaveLength(1);
+    expect(achados("const classe = `opacity-0 ${x} group-hover:opacity-100`;")).toHaveLength(1);
+  });
+
+  it('com toque: (em qualquer pedaço do mesmo lugar) não conta', () => {
+    expect(achados(`const a = <div className="opacity-0 group-hover:opacity-100 toque:opacity-100" />;`)).toEqual([]);
+    expect(achados(`const a = <div className={cn('opacity-0 group-hover:opacity-100', x ? 'toque:hidden' : 'toque:opacity-100')} />;`)).toEqual([]);
+  });
+
+  it('NÃO conta hover que só clareia, enfeite sem toque nem lugares diferentes', () => {
+    // botão escondido no celular por tamanho de tela, com hover que só clareia
+    expect(achados(`const a = <a className="hidden sm:inline-flex hover:opacity-90" />;`)).toEqual([]);
+    expect(achados(`const a = <div className="opacity-70 hover:opacity-100" />;`)).toEqual([]);
+    // brilho de fundo: não recebe toque
+    expect(achados(`const a = <div className="pointer-events-none opacity-0 group-hover:opacity-100" />;`)).toEqual([]);
+    expect(achados(`const a = <><div className="opacity-0" /><div className="group-hover:opacity-100" /></>;`)).toEqual([]);
+  });
+});
+
 describe('tagsJsx', () => {
   it('lista as tags JSX com a linha', () => {
     const tags = tagsJsx('const a = (\n<div>\n<h1>{x}</h1>\n<BaseHeader title="t" />\n</div>);', 'x.tsx');
@@ -420,6 +450,9 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     writeFileSync(join(raiz, 'src/pages/SuperAdmin/Confirma.tsx'), 'export const C = () => <AlertDialog open={x} />;');
     mkdirSync(join(raiz, 'src/hooks'), { recursive: true });
     writeFileSync(join(raiz, 'src/hooks/useConfirmacao.tsx'), 'export const D = () => <AlertDialog open={x} />;');
+    // escondido só com mouse conta no app inteiro (o portal público também); com toque:, não
+    writeFileSync(join(raiz, 'src/pages/Public/Foto.tsx'), 'const f = <button className="opacity-0 group-hover:opacity-100">x</button>;');
+    writeFileSync(join(raiz, 'src/pages/Customer/ComToque.tsx'), 'const f = <button className="opacity-0 group-hover:opacity-100 toque:opacity-100">x</button>;');
     // no painel raiz, o mesmo texto NÃO conta
     writeFileSync(join(raiz, 'src/pages/SuperAdmin/Painel.tsx'), 'const x = <p>Deletar instância</p>;');
     writeFileSync(
@@ -472,14 +505,18 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     expect(contagem(saida, 'selectNativo')).toBe(4);
     // Pergunta.tsx (import + <AlertDialog>) + painel raiz (Confirma.tsx)
     expect(contagem(saida, 'confirmacaoForaDaCasa')).toBe(3);
+    expect(contagem(saida, 'soMouse')).toBe(1); // Public/Foto.tsx (ComToque.tsx não conta)
   });
 
   it('PASSA no teto exato e REPROVA um abaixo', () => {
-    const exato = { tecnico: 1, glossario: 1, plural: 1, acento: 1, maiusculas: 1, formato: 1, chaveMao: 1, iconeSemNome: 1, selectNativo: 4, tituloAMao: 1, barraAMao: 1, foraDaMoldura: 3 };
+    const exato = { tecnico: 1, glossario: 1, plural: 1, acento: 1, maiusculas: 1, formato: 1, chaveMao: 1, iconeSemNome: 1, selectNativo: 4, tituloAMao: 1, barraAMao: 1, foraDaMoldura: 3, soMouse: 1 };
     expect(rodar(['--tetos', tetos(exato)]).codigo).toBe(0);
     const { saida, codigo } = rodar(['--tetos', tetos({ ...exato, glossario: 0 })]);
     expect(codigo).toBe(1);
     expect(saida).toContain('palavra fora do glossário: 1, e o teto é 0');
+    const soMouse = rodar(['--tetos', tetos({ ...exato, soMouse: 0 })]);
+    expect(soMouse.codigo).toBe(1);
+    expect(soMouse.saida).toContain('escondido que só aparece com mouse (app inteiro): 1, e o teto é 0');
   });
 
   it('--listar mostra onde', () => {

@@ -11,6 +11,8 @@
 // `compacto` (32 px) é o mínimo, pra lugar apertado: coluna do quadro do funil,
 // linha da tarefa, cartão do lead. `aria-label` próprio ("Opções de Visita")
 // substitui o nome lido; a dica ao passar o mouse continua "Mais ações".
+// `contorno` (40 px, `outline`) só ao lado de botões grandes de contorno, como o
+// Ganho | Perdido no topo da página do card (11/10/2026).
 //
 // O menu em si é o `DropdownMenuContent` do pacote, sem classe de cor. Excluir
 // vai por último, depois de `DropdownMenuSeparator`, com `variant="destructive"`.
@@ -22,19 +24,21 @@ import { cn } from '@/lib/utils';
 export interface BotaoMaisAcoesProps extends Omit<ComponentPropsWithoutRef<'button'>, 'children'> {
   /** 32 px em vez de 36: só onde não cabe o tamanho normal. */
   compacto?: boolean;
+  /** Com contorno e 40 px, pra ficar na altura de botões grandes ao lado. */
+  contorno?: boolean;
 }
 
 const BotaoMaisAcoes = forwardRef<HTMLButtonElement, BotaoMaisAcoesProps>(
-  ({ compacto, className, ...props }, ref) => (
+  ({ compacto, contorno, className, ...props }, ref) => (
     <Button
       ref={ref}
       type="button"
-      variant="ghost"
+      variant={contorno ? 'outline' : 'ghost'}
       size="icon"
       aria-label="Mais ações"
       title="Mais ações"
       {...props}
-      className={cn(compacto && 'size-8', className)}
+      className={cn(compacto && 'size-8', contorno && 'size-10 shrink-0', className)}
     >
       <EllipsisVertical className="h-4 w-4" aria-hidden />
     </Button>

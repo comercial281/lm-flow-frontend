@@ -8,6 +8,7 @@ import type { PassoId } from './roteiro';
 import { SUPPORT_OPEN_EVENT, type AlvoSuporte } from './openSupport';
 import { useNaoLidos } from './useNaoLidos';
 import { useCantoOcupado } from './cantoOcupado';
+import { useCelular } from '@/hooks/useCelular';
 import SupportInicio from './SupportInicio';
 import SupportRoteiro from './SupportRoteiro';
 import SupportNovoChamado from './SupportNovoChamado';
@@ -64,6 +65,7 @@ const ABA_DA_TELA: Record<Tela['nome'], 'inicio' | 'mensagens'> = {
  * Onde o canto inferior direito é da tela (Conversas, construtor, cadastro de
  * imóvel, listas com paginação e a barra "Alterações não salvas"), a bolinha vira
  * a aba presa no meio da borda direita, com "?" (pedido do dono, 10/10/2026).
+ * Em tela de celular (abaixo de 768px) é sempre a aba, em todas as telas.
  * O menu do avatar continua abrindo o card (openSupport). `?suporte=<id>` (link
  * do e-mail) abre direto no chamado.
  */
@@ -84,7 +86,10 @@ export default function SupportWidget() {
   const [tela, setTela] = useState<Tela>({ nome: 'inicio' });
   const { naoLidos, atualizar } = useNaoLidos();
   const cantoOcupado = useCantoOcupado();
-  const comAba = rotaComAba(location.pathname) || cantoOcupado;
+  // No celular é SEMPRE a aba, em todas as telas (Raio-X do celular, pedido do
+  // dono, 10/10/2026). No computador, a regra de antes (endereço ou canto ocupado).
+  const celular = useCelular();
+  const comAba = celular || rotaComAba(location.pathname) || cantoOcupado;
   const bolinha = useRef<HTMLButtonElement>(null);
   const card = useRef<HTMLDivElement>(null);
   // Tocar na aba Mensagens sempre recarrega a lista (vira `recarga` do SupportMensagens).

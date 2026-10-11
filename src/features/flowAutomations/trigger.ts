@@ -40,7 +40,7 @@ export const FLOW_TRIGGER_GROUPS: FlowTriggerGroup[] = [
   {
     label: 'Visita',
     events: [
-      'lead.visit_scheduled', 'lead.visit_completed',
+      'lead.visit_scheduled', 'lead.visit_rescheduled', 'lead.visit_completed',
       'lead.visit_reminder_24h', 'lead.visit_reminder_1h', 'lead.visit_reminder_15min',
     ],
   },

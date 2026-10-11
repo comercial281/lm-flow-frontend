@@ -14,6 +14,7 @@ type ContatoDoCard = {
   custom_attributes?: Record<string, unknown> | null;
   additional_attributes?: Record<string, unknown> | null;
   identity_correctable?: boolean;
+  name_editable?: boolean;
 };
 
 /** Quantas respostas do formulário aparecem antes do "ver todas". */
@@ -25,6 +26,22 @@ export function contatoDoCard(item: PipelineItem | null | undefined): ContatoDoC
   const direto = item.contact as ContatoDoCard | undefined;
   const daConversa = (item.conversation as { contact?: ContatoDoCard } | undefined)?.contact;
   return direto ?? daConversa ?? null;
+}
+
+/**
+ * O responsável que VEIO NO CARD com este id (nome e foto), sem depender da
+ * lista de pessoas — que o corretor não lê. É o `assignee` do card (conversa OU
+ * dono do contato, resolvido pelo servidor) e, em reserva, o da conversa: o
+ * card guarda o id de um ou do outro (`useCardDoLead`). Id que não bate com
+ * nenhum dos dois (o gestor acabou de trocar) devolve null: aí vale a lista.
+ */
+export function responsavelNoCard(
+  item: PipelineItem | null | undefined,
+  id: string | null | undefined,
+): { name: string; avatar_url?: string | null } | null {
+  if (!item || !id) return null;
+  const candidatos = [item.assignee, item.conversation?.assignee];
+  return candidatos.find(p => p && String(p.id) === id && p.name) ?? null;
 }
 
 /**
@@ -45,6 +62,14 @@ export function conversaDoCard(item: PipelineItem | null | undefined): string | 
  */
 export function podeCorrigirContato(contato: ContatoDoCard | null | undefined): boolean {
   return contato?.identity_correctable === true;
+}
+
+/**
+ * Lápis do nome: o servidor manda `name_editable` (responsável pelo lead ou
+ * gestor, revisto em 11/10/2026). Sem o campo, travado.
+ */
+export function podeEditarNome(contato: ContatoDoCard | null | undefined): boolean {
+  return contato?.name_editable === true;
 }
 
 /**

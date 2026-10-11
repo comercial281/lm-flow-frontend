@@ -22,6 +22,14 @@ describe('BotaoMaisAcoes: gatilho do menu ⋮', () => {
     expect(botao).toHaveAttribute('title', 'Mais ações');
   });
 
+  it('contorno: 40 px com contorno, pra ficar na altura de botões grandes', () => {
+    render(<BotaoMaisAcoes contorno />);
+    const botao = screen.getByRole('button', { name: 'Mais ações' });
+    expect(botao).toHaveAttribute('data-variant', 'outline');
+    expect(botao.className).toContain('size-10');
+    expect(botao.className).not.toContain('size-9');
+  });
+
   it('abre o menu como gatilho do DropdownMenu', async () => {
     const aoExcluir = vi.fn();
     render(

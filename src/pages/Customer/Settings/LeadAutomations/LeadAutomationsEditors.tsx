@@ -40,6 +40,7 @@ import { Seletor } from '@/components/base/Seletor';
 import Aviso from '@/components/base/Aviso';
 import EmptyState from '@/components/base/EmptyState';
 import Carregando from '@/components/base/Carregando';
+import { BOOKED_BY_OPTIONS, BOOKED_BY_TRIGGERS, bookedByCondition, bookedByOf, bookedBySummary, type BookedBy } from './bookedByFilter';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { VariableChipBar } from '@/components/flowAutomations/VariableChipBar';
 import { FLOW_KIND_COPY } from '@/features/flowAutomations/kind';
@@ -58,6 +59,9 @@ const TRIGGERS_WITH_CONDITION = new Set([
   'lead.no_reply_after',
   // Filtro opcional por quem aceitou (ver acceptedByFilter.ts).
   'lead.roleta_accepted',
+  // Filtro opcional por quem marcou (ver bookedByFilter.ts).
+  'lead.visit_scheduled',
+  'lead.visit_rescheduled',
 ]);
 
 export const triggerNeedsCondition = (trigger: string): boolean =>
@@ -299,6 +303,27 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
             </p>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // --- Visita agendada / remarcada ---
+  // Filtro opcional por QUEM marcou (ver bookedByFilter.ts).
+  if (BOOKED_BY_TRIGGERS.includes(trigger)) {
+    return (
+      <div>
+        <UILabel>Quem marcou (opcional)</UILabel>
+        <Seletor
+          value={bookedByOf(condition)}
+          onChange={e => onChange(bookedByCondition(e.target.value as '' | BookedBy))}
+          className={baseSelectClass}
+        >
+          {BOOKED_BY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </Seletor>
+        <p className="text-xs text-muted-foreground mt-1">
+          <strong>A IA</strong>: a IA Vendedora marcou ou mudou o horário na conversa.{' '}
+          <strong>Uma pessoa</strong>: alguém da equipe marcou ou remarcou pela Agenda ou pelo card.
+        </p>
       </div>
     );
   }
@@ -1364,7 +1389,8 @@ export function validateRule(
       trigger === 'lead.message_received' ||
       trigger === 'lead.created' ||
       trigger === 'lead.campaign_received' ||
-      trigger === 'lead.roleta_accepted';
+      trigger === 'lead.roleta_accepted' ||
+      BOOKED_BY_TRIGGERS.includes(trigger);
     // Só a condição do GATILHO conta aqui. O filtro de funil viaja no mesmo
     // array e é sempre opcional — sem esta separação, escolher um funil faria
     // um gatilho que EXIGE condição (etiqueta, etapa) passar pela validação sem
@@ -1456,6 +1482,7 @@ export function formatConditionSummary(
   if (trigger === 'lead.no_reply_after') {
     return `Sem resposta por ${condition.value} min`;
   }
+  if (BOOKED_BY_TRIGGERS.includes(trigger)) return bookedBySummary(condition);
   if (trigger === 'lead.roleta_accepted') {
     return acceptedBySummary(acceptedByIds(condition), resources.users);
   }

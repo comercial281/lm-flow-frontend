@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import FaixaDeEtapas from './FaixaDeEtapas';
+import { formaDaSeta } from './formaDaSeta';
 
 const etapas = [
   { id: 's1', name: 'Novo', color: '#3b82f6', position: 1 },
@@ -62,7 +63,9 @@ describe('FaixaDeEtapas', () => {
     });
     const passada = screen.getByText('1º contato').closest('li')!;
     expect(passada).not.toHaveTextContent('menos de 1 dia');
-    expect(screen.getByRole('button', { name: 'Mover para 1º contato' })).toHaveClass('bg-primary/10');
+    expect(screen.getByRole('button', { name: 'Mover para 1º contato' })).toBeInTheDocument();
+    // A pintura mora na camada de fundo da seta (10/10).
+    expect(passada.querySelector('[aria-hidden] > span')).toHaveClass('bg-primary/10');
     // Na etapa atual continua dizendo que ele entrou hoje.
     expect(screen.getByText('menos de 1 dia · atual')).toBeInTheDocument();
   });
@@ -122,5 +125,18 @@ describe('FaixaDeEtapas', () => {
     expect(concluido).toHaveAttribute('aria-current', 'step');
     expect(concluido).toHaveTextContent('atual');
     expect(concluido).not.toHaveTextContent('menos de 1 dia');
+  });
+});
+
+// Setas encaixadas (10/10): a primeira sem encaixe, a última sem ponta.
+describe('formaDaSeta', () => {
+  it('primeira: reta à esquerda, ponta à direita', () => {
+    expect(formaDaSeta(0, 3)).toBe('polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)');
+  });
+  it('do meio: encaixe à esquerda e ponta à direita', () => {
+    expect(formaDaSeta(1, 3)).toBe('polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%)');
+  });
+  it('última: encaixe à esquerda, reta à direita', () => {
+    expect(formaDaSeta(2, 3)).toBe('polygon(0 0, 100% 0, 100% 100%, 0 100%, 12px 50%)');
   });
 });

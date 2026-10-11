@@ -129,6 +129,8 @@ export interface Contact {
    * Nome nunca muda depois do cadastro.
    */
   identity_correctable?: boolean;
+  /** Quem está olhando pode mudar o nome (responsável pelo lead ou gestor). Regra do servidor. */
+  name_editable?: boolean;
   type: 'person' | 'company';
   email: string;
   phone_number: string;

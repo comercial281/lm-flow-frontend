@@ -51,6 +51,8 @@ import {
 } from '@/hooks/useAlteracoesNaoSalvas';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { ehCelular } from '@/hooks/useCelular';
+import FlowCanvasCelular from './FlowCanvasCelular';
 import { cn } from '@/lib/utils';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
@@ -113,6 +115,10 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const sidePanel = useSidePanel(confirmar);
   const isMobile = useMediaQuery(MOBILE_QUERY);
+  // Raio-X do celular (10/10/2026): a tela do celular (sem o desenho) é decidida
+  // SÓ na abertura. Seguir o redimensionamento trocaria o canvas no meio da
+  // edição ao girar o celular, desmontando o painel do bloco e perdendo o texto.
+  const [modoCelular] = useState(ehCelular);
   // No celular o painel Blocos cobre a tela: começa sempre fechado.
   const [blocksOpen, setBlocksOpenState] = useState(
     () => readBlocksOpen() && !(typeof window !== 'undefined' && window.matchMedia?.(MOBILE_QUERY).matches),
@@ -551,6 +557,57 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     return <Carregando variante="texto" linhas={6} className="p-6" />;
   }
 
+  // A chave de ligar: a mesma no canvas e na tela do celular.
+  async function alternarLigado(): Promise<boolean> {
+    if (!automation) return false;
+    // Ligar: o fluxo liga como está SALVO, então pede o Salvar antes e
+    // recusa enquanto faltar algo num bloco (modelo com campo em branco)
+    // ou um passo do guia (sprint 4).
+    if (!automation.is_enabled) {
+      if (hasChanges) {
+        toast.error('Salve as alterações antes de ligar: o fluxo liga como está salvo.');
+        return false;
+      }
+      const pendingGuide = guidePendingText(steps);
+      if (pendingGuide) {
+        toast.error(pendingGuide);
+        return false;
+      }
+      if (blockingProblem) {
+        toast.error(blockingProblem);
+        return false;
+      }
+    }
+    try {
+      const updated = await flowAutomationsService.toggle(automation.id);
+      // Só a chave: recarregar o fluxo apagaria o que ainda não foi salvo.
+      setAutomation(a => (a ? { ...a, is_enabled: updated.is_enabled } : a));
+      return true;
+    } catch (e) {
+      toast.error(serverMessage(e, 'Não deu pra ligar agora. Tente de novo.'));
+      return false;
+    }
+  }
+
+  // Celular (Raio-X do celular, 10/10/2026): sem o desenho, sem Salvar, Blocos
+  // nem Simular. Fica o nome, a chave (a mesma ação do canvas) e o voltar.
+  if (modoCelular) {
+    return (
+      <>
+        <FlowCanvasCelular
+          kind={kind}
+          nome={automation.name}
+          ligado={automation.is_enabled}
+          soVer={readOnly}
+          naoSalvo={unsaved}
+          aoMudarLigado={alternarLigado}
+          aoVoltar={goBack}
+        />
+        {dialogoDeConfirmacao}
+      </>
+    );
+  }
+
   return (
     <MessageVariablesContext.Provider value={messageVariables}>
       <div className="flex flex-col h-full">
@@ -576,35 +633,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
               semRotuloVisivel
               className="ml-2"
               ligada={automation.is_enabled}
-              aoMudar={async () => {
-                // Ligar: o fluxo liga como está SALVO, então pede o Salvar antes e
-                // recusa enquanto faltar algo num bloco (modelo com campo em branco)
-                // ou um passo do guia (sprint 4).
-                if (!automation.is_enabled) {
-                  if (hasChanges) {
-                    toast.error('Salve as alterações antes de ligar: o fluxo liga como está salvo.');
-                    return false;
-                  }
-                  const pendingGuide = guidePendingText(steps);
-                  if (pendingGuide) {
-                    toast.error(pendingGuide);
-                    return false;
-                  }
-                  if (blockingProblem) {
-                    toast.error(blockingProblem);
-                    return false;
-                  }
-                }
-                try {
-                  const updated = await flowAutomationsService.toggle(automation.id);
-                  // Só a chave: recarregar o fluxo apagaria o que ainda não foi salvo.
-                  setAutomation(a => (a ? { ...a, is_enabled: updated.is_enabled } : a));
-                  return true;
-                } catch (e) {
-                  toast.error(serverMessage(e, 'Não deu pra ligar agora. Tente de novo.'));
-                  return false;
-                }
-              }}
+              aoMudar={alternarLigado}
             />
           )}
           {builderTools && (

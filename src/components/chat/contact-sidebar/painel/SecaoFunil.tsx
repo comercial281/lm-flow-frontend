@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/ds';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@evoapi/design-system/select';
 
 import { useLanguage } from '@/hooks/useLanguage';
+import { useCelular } from '@/hooks/useCelular';
+import { useAbrirPaginaDoCard } from '@/features/cardDoLead/paginaNoCelular';
 import { pipelinesService } from '@/services/pipelines';
 import EditItemModal from '@/components/pipelines/EditItemModal';
 import PipelineManagement from '../PipelineManagement';
@@ -48,6 +50,13 @@ export default function SecaoFunil({
   const [cardAberto, setCardAberto] = useState<LinhaDoFunil | null>(null);
   const [salvandoCard, setSalvandoCard] = useState(false);
   const [colocando, setColocando] = useState(false);
+  // Celular (10/10/2026): o card abre na página, não na janela; o voltar devolve à conversa.
+  const celular = useCelular();
+  const abrirPaginaDoCard = useAbrirPaginaDoCard();
+  const abrirCard = (linha: LinhaDoFunil) => {
+    if (celular) abrirPaginaDoCard(linha.pipeline.id, linha.item.id);
+    else setCardAberto(linha);
+  };
 
   const linhas = useMemo<LinhaDoFunil[]>(
     () =>
@@ -153,7 +162,7 @@ export default function SecaoFunil({
                 </div>
                 {fechado && <p className="text-xs text-muted-foreground">{ETAPA_TRAVADA}</p>}
                 {!emOferta && (
-                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setCardAberto(linha)}>
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => abrirCard(linha)}>
                     {T.abrirCard}
                   </Button>
                 )}

@@ -236,6 +236,7 @@ export const TRIGGER_LABELS: Record<string, string> = {
   'lead.created':              'Lead criado',
   'lead.stage_changed':        'Etapa alterada',
   'lead.visit_scheduled':      'Visita agendada',
+  'lead.visit_rescheduled':    'Visita remarcada',
   'lead.visit_completed':      'Visita realizada',
   'lead.visit_reminder_24h':   'Lembrete — 1 dia antes da visita',
   'lead.visit_reminder_1h':    'Lembrete — 1 hora antes da visita',
@@ -254,7 +255,7 @@ export const TRIGGER_LABELS: Record<string, string> = {
 
 // Gatilhos que só existem no construtor de fluxos: o servidor recusa regra antiga
 // (Automações de Lead) com eles. Ficam em TRIGGER_LABELS só pra exibir o nome.
-export const FLOW_ONLY_TRIGGERS: string[] = ['lead.book_requested'];
+export const FLOW_ONLY_TRIGGERS: string[] = ['lead.book_requested', 'lead.visit_rescheduled'];
 
 // Actions processadas pelo LeadAutomation::Executor.
 export const ACTION_TYPE_LABELS: Record<string, string> = {

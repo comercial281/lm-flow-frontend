@@ -46,6 +46,7 @@ vi.mock('@/services/visits/agendaService', () => ({
 
 import Visits from './Visits';
 import { esquecerAgendaLigada } from '@/features/visits/useAgendaLigada';
+import { simularCelular } from '@/test/telaDeCelular';
 
 // A agenda ligada ou não é o que o servidor responde em `GET /visit_settings`.
 const LIGADA = { enabled: true, days: [1, 2, 3, 4, 5, 6], start: '08:00', end: '20:00', closed_dates: [], seeded_from: {} };
@@ -249,5 +250,56 @@ describe('Agenda de Visitas: aba Agendadas da Lista', () => {
     await user.click(await screen.findByRole('button', { name: 'Ver em lista' }));
     await user.click(await screen.findByRole('button', { name: 'Confirmadas' }));
     await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'confirmed' })));
+  });
+});
+
+describe('Agenda de Visitas no celular (Raio-X do celular, 10/10/2026)', () => {
+  let tela: ReturnType<typeof simularCelular> | null = null;
+  afterEach(() => {
+    tela?.restaurar();
+    tela = null;
+  });
+
+  it('celular: abre na Lista, e Horário de visita e Folgas moram no ⋯', async () => {
+    tela = simularCelular();
+    const user = userEvent.setup();
+    abrir();
+    // Lista: os filtros por situação aparecem e a barra do mês não.
+    expect(await screen.findByRole('button', { name: 'Todas' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'Semana' })).toBeNull();
+    // Nada de botão da agenda no topo: só o ⋯.
+    const mais = await screen.findByRole('button', { name: 'Mais ações da agenda' });
+    expect(screen.queryByRole('button', { name: /Horário de visita/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Folgas$/ })).toBeNull();
+    await user.click(mais);
+    expect(await screen.findByRole('menuitem', { name: /Horário de visita/ })).toBeInTheDocument();
+    await user.click(screen.getByRole('menuitem', { name: /^Folgas$/ }));
+    expect(await screen.findByRole('heading', { name: 'Folgas' })).toBeInTheDocument();
+  });
+
+  it('celular: trocar pro Calendário continua possível', async () => {
+    tela = simularCelular();
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Ver no calendário' }));
+    expect(await screen.findByRole('radio', { name: 'Semana' })).toBeInTheDocument();
+  });
+
+  it('celular, corretor: o ⋯ só tem Minhas folgas', async () => {
+    tela = simularCelular();
+    list.mockResolvedValue({ data: [], meta: { total: 0, only_mine: true } });
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Mais ações da agenda' }));
+    expect(await screen.findByRole('menuitem', { name: /Minhas folgas/ })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /Horário de visita/ })).toBeNull();
+  });
+
+  it('computador: abre no Calendário, com os botões no topo e sem ⋯', async () => {
+    tela = simularCelular(false);
+    abrir();
+    expect(await screen.findByRole('button', { name: /Horário de visita/ })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Semana' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mais ações da agenda' })).toBeNull();
   });
 });

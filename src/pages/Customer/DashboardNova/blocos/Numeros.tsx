@@ -28,11 +28,6 @@ export const Numeros: React.FC<ContextoBloco> = ({ dados, carregando, visao, pod
 
   const desde = diaDoPeriodo(dados?.period?.since);
   const ate = diaDoPeriodo(dados?.period?.until);
-  // Visitas agendadas conta o mês/semana/ano inteiro, inclusive as que ainda vão
-  // acontecer: a Agenda abre nessa janela. Servidor antigo não manda; cai no período.
-  const calendario = dados?.period?.calendar ?? dados?.period;
-  const visitasDesde = diaDoPeriodo(calendario?.since);
-  const visitasAte = diaDoPeriodo(calendario?.until);
   const corretor = visao === 'corretor';
   const rotuloLeads = corretor ? 'Leads recebidos' : 'Leads captados';
   // Corretor não vê Propostas na Dashboard (decisão do dono, 01/10/2026).
@@ -44,7 +39,9 @@ export const Numeros: React.FC<ContextoBloco> = ({ dados, carregando, visao, pod
   const cartoes: { chave: KpiKey; rotulo: string; acao?: () => void }[] = [
     { chave: 'leads', rotulo: rotuloLeads, acao: () => abrirLista('leads_periodo', rotuloLeads) },
     { chave: 'conversations', rotulo: 'Conversas', acao: () => abrirLista('conversas_periodo', 'Conversas') },
-    { chave: 'visits_scheduled', rotulo: 'Visitas agendadas', acao: agendaAbre ? () => navigate(linkAgenda({ desde: visitasDesde, ate: visitasAte })) : undefined },
+    // Realizadas = marcadas Realizada, pelo dia da visita (frente 5 da Nova 27, no
+    // lugar de "Visitas agendadas"). A Agenda abre com o mesmo recorte.
+    { chave: 'visits_done', rotulo: 'Visitas realizadas', acao: agendaAbre ? () => navigate(linkAgenda({ desde, ate, situacao: 'realizadas' })) : undefined },
     ...(corretor ? [] : [
       { chave: 'proposals' as KpiKey, rotulo: 'Propostas', acao: propostasAbre ? () => navigate(linkPropostas({ desde, ate })) : undefined },
     ]),

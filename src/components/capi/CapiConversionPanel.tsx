@@ -5,6 +5,7 @@ import { Check, Info, Loader2, TrendingUp } from 'lucide-react';
 import IconActionButton from '@/components/base/IconActionButton';
 import metaLogo from '@/assets/portals/meta.svg';
 import { dataHora } from '@/lib/formato';
+import { useCelular } from '@/hooks/useCelular';
 import {
   capiEventsService,
   CAPI_MANUAL_HINTS,
@@ -55,8 +56,18 @@ function formatSentAt(iso: string) {
  * paralela ao disparo automático por coluna: aqui quem decide é o atendente.
  * Marcar Qualificado manda o evento de Lead pro Meta buscar gente parecida;
  * Desqualificado manda como exclusão; Venda manda Purchase com valor.
+ *
+ * No celular a linha inteira some, com o aviso de "Pixel ou chave incompletos"
+ * junto (Raio-X do celular, 10/10/2026): é ajuste de anúncio, feito no
+ * computador. Nem pergunta o status ao servidor. No computador nada muda.
  */
-export default function CapiConversionPanel({
+export default function CapiConversionPanel(props: CapiConversionPanelProps) {
+  const ehCelular = useCelular();
+  if (ehCelular) return null;
+  return <PainelConversaoMeta {...props} />;
+}
+
+function PainelConversaoMeta({
   contactId,
   pipelineItemId,
   className,

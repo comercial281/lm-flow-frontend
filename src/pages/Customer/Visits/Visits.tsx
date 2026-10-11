@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Pagina, BaseHeader, AlternadorDeVisao } from '@/components/base';
+import { Pagina, BaseHeader, AlternadorDeVisao, BotaoMaisAcoes } from '@/components/base';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import type { OpcaoDeEscolha } from '@/components/base/escolha';
 import Carregando from '@/components/base/Carregando';
@@ -15,6 +15,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Label as UILabel,
   Textarea,
 } from '@/components/ui/ds';
@@ -44,6 +48,7 @@ import { ScheduleVisitDialog } from '@/components/visits/ScheduleVisitDialog';
 import { HorarioVisitaDialog } from '@/components/visits/HorarioVisitaDialog';
 import { FolgasDialog } from '@/components/visits/FolgasDialog';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { useCelular } from '@/hooks/useCelular';
 import { useAgendaLigada } from '@/features/visits/useAgendaLigada';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
@@ -435,10 +440,15 @@ export default function Visits() {
   const [total, setTotal]           = useState(0);
   const [loading, setLoading]       = useState(false);
   const [activeTab, setActiveTab]   = useState('');
+  // Raio-X do celular (10/10/2026): no celular a tela abre na Lista (o mês não
+  // cabe), e Horário de visita e Folgas vão pro menu ⋯. A escolha Calendário/
+  // Lista não fica guardada: trocar continua valendo só na visita.
+  const ehCelular = useCelular();
   // O estado inicial do modo respeita o link: chegando com filtro, abre na lista.
   const [viewMode, setViewMode]     = useState<ViewMode>(() => {
     const f = lerFiltroAgenda(new URLSearchParams(window.location.search));
-    return f && Object.keys(f.params).length > 0 ? 'list' : 'calendar';
+    if (f && Object.keys(f.params).length > 0) return 'list';
+    return ehCelular ? 'list' : 'calendar';
   });
   const [recusado, setRecusado]     = useState(false);
   const [erro, setErro]             = useState(false);
@@ -740,13 +750,33 @@ export default function Visits() {
                 { valor: 'list', icone: List, nome: 'Ver em lista' },
               ]}
             />
-            {agendaLigada && cargoConhecido && !soMinhas && (
+            {agendaLigada && cargoConhecido && ehCelular && (
+              // Celular: os dois ajustes da agenda moram no ⋮, não no topo.
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <BotaoMaisAcoes aria-label="Mais ações da agenda" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {!soMinhas && (
+                    <DropdownMenuItem onClick={() => setHorarioAberto(true)}>
+                      <Clock className="h-4 w-4" />
+                      Horário de visita
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => setFolgasAbertas(true)}>
+                    <CalendarOff className="h-4 w-4" />
+                    {soMinhas ? 'Minhas folgas' : 'Folgas'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {agendaLigada && cargoConhecido && !ehCelular && !soMinhas && (
               <Button variant="outline" onClick={() => setHorarioAberto(true)}>
                 <Clock className="h-4 w-4 mr-2" />
                 Horário de visita
               </Button>
             )}
-            {agendaLigada && cargoConhecido && (
+            {agendaLigada && cargoConhecido && !ehCelular && (
               <Button variant="outline" onClick={() => setFolgasAbertas(true)}>
                 <CalendarOff className="h-4 w-4 mr-2" />
                 {soMinhas ? 'Minhas folgas' : 'Folgas'}

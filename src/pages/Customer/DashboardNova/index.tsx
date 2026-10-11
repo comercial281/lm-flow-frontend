@@ -23,11 +23,12 @@ import { MinhaVez } from './blocos/MinhaVez';
 import { AtendimentoTime } from './blocos/AtendimentoTime';
 import { Funil } from './blocos/Funil';
 import { Resultados } from './blocos/Resultados';
+import { TempoNegociacao } from './blocos/TempoNegociacao';
 import { LeadsDiaSemana, LeadsHorario, LeadsSeisMeses, MapaCalor, Origem } from './blocos/Analise';
 
 const COMPONENTES: Record<BlocoId, React.FC<ContextoBloco>> = {
   imoveis: Imoveis, numeros: Numeros, pendencias: Pendencias, proximas_visitas: ProximasVisitas,
-  roleta_agora: RoletaAgora, minha_vez: MinhaVez, atendimento_time: AtendimentoTime, funil: Funil, resultados: Resultados,
+  roleta_agora: RoletaAgora, minha_vez: MinhaVez, atendimento_time: AtendimentoTime, funil: Funil, resultados: Resultados, tempo_negociacao: TempoNegociacao,
   leads_dia_semana: LeadsDiaSemana, leads_horario: LeadsHorario, leads_seis_meses: LeadsSeisMeses,
   origem: Origem, mapa_calor: MapaCalor,
 };
