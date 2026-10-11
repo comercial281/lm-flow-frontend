@@ -26,7 +26,7 @@ const PublicRoute = ({ children }: PublicRouteProps) => {
 
   // Mostrar loading enquanto verifica autenticação
   if (isLoading) {
-    return <LoadingScreen fullScreen />;
+    return <LoadingScreen fullScreen rotulo="Verificando autenticação…" />;
   }
 
   // Redirecionar para página inicial se já estiver autenticado

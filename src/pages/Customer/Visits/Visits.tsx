@@ -812,6 +812,10 @@ export default function Visits() {
         {viewMode === 'calendar' ? (
           <Card className="gap-0 p-4">
             <BarraDoCalendario visao={visaoCal} date={calDate} onVisao={trocarVisao} onNavigate={setCalDate} />
+            {/* Falha na leitura não é agenda livre: sem isto o mês vazio deixava marcar em cima de horário ocupado. */}
+            {erro && (
+              <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} className="mb-3" />
+            )}
             {visaoCal === 'mes' ? (
               <MonthGrid
                 date={calDate}

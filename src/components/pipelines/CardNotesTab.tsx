@@ -104,7 +104,7 @@ export default function CardNotesTab({ contactId }: CardNotesTabProps) {
         />
         <div className="flex items-center justify-between">
           <span className="text-[10px] text-muted-foreground">Ctrl + Enter para postar</span>
-          <Button size="sm" className="h-7 text-xs gap-1.5" onClick={handlePost} disabled={saving || !content.trim()}>
+          <Button size="sm" className="text-xs gap-1.5" onClick={handlePost} disabled={saving || !content.trim()}>
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
             Postar
           </Button>

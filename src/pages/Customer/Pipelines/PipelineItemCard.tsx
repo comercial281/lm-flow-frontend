@@ -202,7 +202,7 @@ function PipelineItemCardComponent({
 
         <div className="flex shrink-0 items-center gap-1" onClick={pararClique}>
           {arquivado && (
-            <Button type="button" size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs" onClick={() => onUnarchive(item)}>
+            <Button type="button" size="sm" variant="outline" className="gap-1 px-2 text-xs" onClick={() => onUnarchive(item)}>
               <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />
               Desarquivar
             </Button>
@@ -210,13 +210,13 @@ function PipelineItemCardComponent({
           {temWhatsApp && (
             <Button
               type="button"
-              size="sm"
+              size="icon"
               variant="outline"
               onClick={() => onOpenConversation(item)}
               disabled={openingConversation}
               aria-label="Abrir conversa no WhatsApp"
               title="Abrir conversa no WhatsApp"
-              className="h-7 w-7 border-emerald-300 p-0 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/40 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+              className="size-8 border-emerald-300 p-0 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/40 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
             >
               <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
             </Button>

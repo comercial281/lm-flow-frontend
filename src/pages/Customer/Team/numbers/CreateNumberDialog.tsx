@@ -177,10 +177,13 @@ export default function CreateNumberDialog({ member, open, onClose, onDone, link
                   hint="Abre o QR code assim que o número for criado." />
               </fieldset>
 
+              {/* Só a frase fica no Aviso: o campo dentro dele herdava o âmbar no número digitado. */}
               {needsCelular && (
-                <Aviso tom="atencao">
-                  <p>{member.name} ainda não tem celular cadastrado, e precisa de um celular para receber o link de acesso.</p>
-                  <label className="flex items-center gap-2">
+                <div className="space-y-2">
+                  <Aviso tom="atencao">
+                    <p>{member.name} ainda não tem celular cadastrado, e precisa de um celular para receber o link de acesso.</p>
+                  </Aviso>
+                  <label className="flex items-center gap-2 text-sm">
                     <input
                       type="checkbox"
                       checked={sameAsNumber}
@@ -200,7 +203,7 @@ export default function CreateNumberDialog({ member, open, onClose, onDone, link
                       />
                     </>
                   )}
-                </Aviso>
+                </div>
               )}
 
               {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

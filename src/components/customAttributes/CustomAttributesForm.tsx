@@ -608,13 +608,13 @@ export default function CustomAttributesForm({
           {value || <span className="text-muted-foreground">--</span>}
         </span>
         <Button
-          size="sm"
+          size="icon"
           variant="ghost"
           onClick={() => handleStartEdit(key, rawValue)}
           disabled={saving}
           aria-label={`Editar ${attribute.attribute_display_name}`}
           title={`Editar ${attribute.attribute_display_name}`}
-          className="h-6 w-6 shrink-0 p-0 text-muted-foreground opacity-70 transition-opacity group-hover:opacity-100 group-hover:text-foreground focus-visible:opacity-100"
+          className="size-8 shrink-0 p-0 text-muted-foreground opacity-70 transition-opacity group-hover:opacity-100 group-hover:text-foreground focus-visible:opacity-100"
         >
           <Pencil className="h-3 w-3" />
         </Button>

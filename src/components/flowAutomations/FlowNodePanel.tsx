@@ -255,6 +255,8 @@ function LabelChecklist({ selected, onChange, resources }: { selected: string[];
         {resources.labels.length === 0 && missing.length === 0 && (
           resources.loading ? (
             <p className="text-xs text-muted-foreground p-2">Carregando as etiquetas…</p>
+          ) : resources.erros?.labels ? (
+            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={resources.recarregar} className="m-2 p-3 text-xs" />
           ) : (
             <EmptyState
               tamanho="compacto"

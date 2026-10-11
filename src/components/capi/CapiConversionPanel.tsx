@@ -138,7 +138,7 @@ function PainelConversaoMeta({
   if (loading && hasTarget && variante === 'compacto' && podiaEnviar.current) {
     return (
       <div data-testid="conversao-meta-carregando" aria-hidden className={className}>
-        <div className="h-7" />
+        <div className="h-8" />
       </div>
     );
   }
@@ -176,7 +176,7 @@ function PainelConversaoMeta({
                 disabled={Boolean(sending) || travado}
                 onClick={() => handleSend(event)}
                 title={dica}
-                className="h-7 gap-1 px-2 text-xs"
+                className="gap-1 px-2 text-xs"
               >
                 {isSending ? (
                   <Loader2 className="h-3 w-3 animate-spin" />

@@ -79,7 +79,7 @@ const AIResultModal: React.FC<AIResultModalProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={handleCopy}
-                  className="h-7 px-2"
+                  className="px-2"
                 >
                   {copied ? (
                     <Check className="h-3 w-3 text-green-500" />

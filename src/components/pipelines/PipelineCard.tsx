@@ -235,16 +235,6 @@ export default function PipelineCard({
             <Edit className="h-4 w-4 mr-2" />
             {t('pipelineCard.edit')}
           </Button>
-          <div className="w-px bg-sidebar-border" />
-          <Button
-            variant="ghost"
-            className="rounded-none h-12 px-4 text-red-500 hover:text-red-400 hover:bg-red-500/10"
-            onClick={() => onDelete(pipeline)}
-            aria-label="Excluir funil"
-            title="Excluir funil"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
         </div>
       </CardContent>
     </Card>

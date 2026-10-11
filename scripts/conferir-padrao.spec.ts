@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, iconesComTamanho, rodinhasCentrais, telasEmBranco, vaziosSoltos, largurasForaDaEscala, importaJanelaDoPacote, JANELA_A_MAO, escondidosSoComMouse } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, botaoPequeno, botoesPequenos, iconesComTamanho, rodinhasCentrais, telasEmBranco, vaziosSoltos, largurasForaDaEscala, importaJanelaDoPacote, JANELA_A_MAO, escondidosSoComMouse, rodapeAMao } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -256,6 +256,10 @@ describe('soNoMouse: ação que só aparece no mouse (peça 16)', () => {
     expect(soNoMouse('className="hidden md:flex"')).toBe(false);
     expect(soNoMouse("estaAberta ? 'opacity-100' : 'opacity-0'")).toBe(false);
   });
+
+  it('toque:opacity-100 não salva na tela do cliente: o desenho é a peça 16, não o toque:', () => {
+    expect(soNoMouse('<div className="flex gap-2 opacity-0 group-hover:opacity-100 toque:opacity-100">')).toBe(true);
+  });
 });
 
 describe('menuDeitado: menu de ações com ⋯ deitado (peça 15)', () => {
@@ -284,6 +288,8 @@ describe('escondidosSoComMouse: botão que só aparece com o mouse', () => {
     expect(achados("const classe = `opacity-0 ${x} group-hover:opacity-100`;")).toHaveLength(1);
   });
 
+  // O soMouse deixa o toque: passar (vale no app inteiro: página pública, sobra). Na
+  // tela do cliente quem reprova o toque:opacity-100 é o soNoMouse (ver acima).
   it('com toque: (em qualquer pedaço do mesmo lugar) não conta', () => {
     expect(achados(`const a = <div className="opacity-0 group-hover:opacity-100 toque:opacity-100" />;`)).toEqual([]);
     expect(achados(`const a = <div className={cn('opacity-0 group-hover:opacity-100', x ? 'toque:hidden' : 'toque:opacity-100')} />;`)).toEqual([]);
@@ -372,6 +378,29 @@ describe('Janela (peça 17): larguras, import direto e janela à mão', () => {
   });
 });
 
+describe('rodapeAMao: botões finais da janela no DialogFooter', () => {
+  it('acusa janela com botão e rodapé à mão', () => {
+    const codigo = [
+      "import { Dialog, DialogContent, Button } from '@/components/ui/ds';",
+      'const X = () => (<Dialog><DialogContent>',
+      '<div className="flex justify-end"><Button>Salvar</Button></div>',
+      '</DialogContent></Dialog>);',
+    ].join('\n');
+    expect(rodapeAMao(codigo)).toMatchObject({ linha: 2, janelas: 1, rodapes: 0 });
+  });
+
+  it('passa com DialogFooter, e sem botão nenhum', () => {
+    const com = '<DialogContent><DialogFooter><Button>Salvar</Button></DialogFooter></DialogContent>';
+    expect(rodapeAMao(com)).toBeNull();
+    expect(rodapeAMao('<DialogContent><p>só leitura</p></DialogContent>')).toBeNull();
+  });
+
+  it('conta janela a janela: duas janelas e um rodapé acusa', () => {
+    const codigo = '<DialogContent><DialogFooter><Button/></DialogFooter></DialogContent><DialogContent><Button/></DialogContent>';
+    expect(rodapeAMao(codigo)).toMatchObject({ janelas: 2, rodapes: 1 });
+  });
+});
+
 describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
   let raiz: string;
 
@@ -450,8 +479,11 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     writeFileSync(join(raiz, 'src/pages/SuperAdmin/Confirma.tsx'), 'export const C = () => <AlertDialog open={x} />;');
     mkdirSync(join(raiz, 'src/hooks'), { recursive: true });
     writeFileSync(join(raiz, 'src/hooks/useConfirmacao.tsx'), 'export const D = () => <AlertDialog open={x} />;');
-    // escondido só com mouse conta no app inteiro (o portal público também); com toque:, não
+    // escondido só com mouse conta no app inteiro (o portal público também)
     writeFileSync(join(raiz, 'src/pages/Public/Foto.tsx'), 'const f = <button className="opacity-0 group-hover:opacity-100">x</button>;');
+    // o desenho certo (peça 16): à vista e apagado. Não conta em nenhuma das duas réguas
+    writeFileSync(join(raiz, 'src/pages/Customer/Apagado.tsx'), 'const f = <button className="opacity-70 group-hover:opacity-100 focus-within:opacity-100">x</button>;');
+    // toque:opacity-100 na tela do cliente: o soMouse deixa passar, o soNoMouse reprova
     writeFileSync(join(raiz, 'src/pages/Customer/ComToque.tsx'), 'const f = <button className="opacity-0 group-hover:opacity-100 toque:opacity-100">x</button>;');
     // no painel raiz, o mesmo texto NÃO conta
     writeFileSync(join(raiz, 'src/pages/SuperAdmin/Painel.tsx'), 'const x = <p>Deletar instância</p>;');
@@ -505,11 +537,12 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     expect(contagem(saida, 'selectNativo')).toBe(4);
     // Pergunta.tsx (import + <AlertDialog>) + painel raiz (Confirma.tsx)
     expect(contagem(saida, 'confirmacaoForaDaCasa')).toBe(3);
-    expect(contagem(saida, 'soMouse')).toBe(1); // Public/Foto.tsx (ComToque.tsx não conta)
+    expect(contagem(saida, 'soMouse')).toBe(1); // Public/Foto.tsx (ComToque.tsx e Apagado.tsx não contam)
+    expect(contagem(saida, 'soNoMouse')).toBe(1); // Customer/ComToque.tsx (Apagado.tsx não conta; Public/Foto.tsx não é tela do cliente)
   });
 
   it('PASSA no teto exato e REPROVA um abaixo', () => {
-    const exato = { tecnico: 1, glossario: 1, plural: 1, acento: 1, maiusculas: 1, formato: 1, chaveMao: 1, iconeSemNome: 1, selectNativo: 4, tituloAMao: 1, barraAMao: 1, foraDaMoldura: 3, soMouse: 1 };
+    const exato = { tecnico: 1, glossario: 1, plural: 1, acento: 1, maiusculas: 1, formato: 1, chaveMao: 1, iconeSemNome: 1, selectNativo: 4, tituloAMao: 1, barraAMao: 1, foraDaMoldura: 3, soMouse: 1, soNoMouse: 1 };
     expect(rodar(['--tetos', tetos(exato)]).codigo).toBe(0);
     const { saida, codigo } = rodar(['--tetos', tetos({ ...exato, glossario: 0 })]);
     expect(codigo).toBe(1);
@@ -517,6 +550,9 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     const soMouse = rodar(['--tetos', tetos({ ...exato, soMouse: 0 })]);
     expect(soMouse.codigo).toBe(1);
     expect(soMouse.saida).toContain('escondido que só aparece com mouse (app inteiro): 1, e o teto é 0');
+    const soNoMouse = rodar(['--tetos', tetos({ ...exato, soNoMouse: 0 })]);
+    expect(soNoMouse.codigo).toBe(1);
+    expect(soNoMouse.saida).toContain('ação que só aparece no mouse: 1, e o teto é 0');
   });
 
   it('--listar mostra onde', () => {
@@ -534,6 +570,21 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
 });
 
 // Peças 13 (Carregando) e 7 (Estado vazio), escolha do dono em 10/10/2026.
+// Exceção cujo trecho sumiu do arquivo é exceção morta: não perdoa nada e esconde
+// que a tela já foi consertada (achado C17 da revisão do #538, 8 mortas apagadas).
+describe('excecoes.json: toda exceção aponta pra algo que existe', () => {
+  it('o arquivo existe e contém o trecho (telaEmBranco: o fallback={null}, porque o texto é montado pela régua)', () => {
+    const raizReal = join(__dirname, '..');
+    const excecoes = JSON.parse(readFileSync(join(raizReal, 'scripts/conferir-padrao.excecoes.json'), 'utf8')) as Array<{ arquivo: string; categoria: string; trecho: string }>;
+    const mortas = excecoes.filter(e => {
+      if (!existsSync(join(raizReal, e.arquivo))) return true;
+      const codigo = readFileSync(join(raizReal, e.arquivo), 'utf8');
+      return e.categoria === 'telaEmBranco' ? !codigo.includes('fallback={null}') : !codigo.includes(e.trecho);
+    });
+    expect(mortas.map(e => `${e.categoria} · ${e.arquivo} · ${e.trecho}`)).toEqual([]);
+  });
+});
+
 describe('rodinhaCentral: rodinha no meio da tela vira esqueleto', () => {
   const conta = (codigo: string) => rodinhasCentrais(codigo).length;
   it('conta a rodinha grande e a centralizada, fora de botão', () => {
@@ -573,5 +624,27 @@ describe('vazioSolto: "Nenhum…" escrito à mão fora do EmptyState', () => {
     expect(textos('const a = <Aviso tom="atencao">Nenhum grupo apareceu.</Aviso>;')).toEqual([]);
     expect(textos('const a = <span>Nenhum</span>;')).toEqual([]);
     expect(textos("const a = <Campo hint=\"Nenhum marcado = todos\" />;")).toEqual([]);
+  });
+});
+
+describe('botaoPequeno (peça 14)', () => {
+  it('pega Button com h-4..h-7 ou size-4..size-7', () => {
+    expect(botaoPequeno('<Button size="sm" className="h-7 text-xs">')).toBe(true);
+    expect(botaoPequeno('<Button variant="ghost" className="size-6 p-0">')).toBe(true);
+    expect(botaoPequeno('<Button className="h-4 px-1">')).toBe(true);
+    expect(botaoPequeno('<Button className={cn("h-5", x)}>')).toBe(true);
+    expect(botaoPequeno('<Button className="h-6.5 w-7">')).toBe(true);
+  });
+  it('não pega o tamanho da casa nem ícone dentro do botão', () => {
+    expect(botaoPequeno('<Button size="sm">')).toBe(false);
+    expect(botaoPequeno('<Button size="icon" className="size-8">')).toBe(false);
+    expect(botaoPequeno('<Button className="sm:h-7 h-8">')).toBe(false);
+    expect(botaoPequeno('<Button className="h-10 min-h-7">')).toBe(false);
+  });
+  it('botoesPequenos lê a tag de abertura e ignora ícone passado por prop', () => {
+    const codigo = `const a = <Button className="h-7">ok <X className="h-4 w-4" /></Button>;
+const b = <Button size="sm" icon={<X className="h-4 w-4" />}>ok</Button>;
+const c = <div className="h-6"><Button className="size-8" onClick={() => a > 1}>x</Button></div>;`;
+    expect(botoesPequenos(codigo).map((x: { linha: number }) => x.linha)).toEqual([1]);
   });
 });

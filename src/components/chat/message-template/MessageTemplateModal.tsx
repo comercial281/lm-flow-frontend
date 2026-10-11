@@ -44,6 +44,7 @@ const MessageTemplateModal: React.FC<MessageTemplateModalProps> = ({
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplate | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [footerEl, setFooterEl] = useState<HTMLDivElement | null>(null);
   const [proccessOpenDialog, setProccessOpenDialog] = useState(false);
 
   // Carregar templates quando o modal abre
@@ -167,6 +168,7 @@ const MessageTemplateModal: React.FC<MessageTemplateModalProps> = ({
               onSend={handleSendMessage}
               onReset={handleResetTemplate}
               loading={isLoading}
+              footerContainer={footerEl}
             />
           ) : (
             <TemplatesPicker
@@ -176,6 +178,8 @@ const MessageTemplateModal: React.FC<MessageTemplateModalProps> = ({
             />
           )}
         </div>
+        {/* Rodapé da casa: o TemplateParser põe os botões aqui, fora da área que rola. */}
+        <div ref={setFooterEl} className={selectedTemplate ? undefined : 'hidden'} />
       </DialogContent>
     </Dialog>
   );

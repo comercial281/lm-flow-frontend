@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Button } from '@/components/ui/ds';
+import { createPortal } from 'react-dom';
+import { Button, DialogFooter } from '@/components/ui/ds';
 import { Input } from '@evoapi/design-system/input';
 import type { MessageTemplate } from '@/types/channels/inbox';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -19,9 +20,11 @@ interface TemplateParserProps {
   }) => void;
   onReset: () => void;
   loading?: boolean;
+  /** Rodapé da janela (fora da área que rola). Sem ele, os botões ficam no fim do próprio conteúdo. */
+  footerContainer?: HTMLElement | null;
 }
 
-const TemplateParser: React.FC<TemplateParserProps> = ({ template, channelType, onSend, onReset, loading }) => {
+const TemplateParser: React.FC<TemplateParserProps> = ({ template, channelType, onSend, onReset, loading, footerContainer }) => {
   const { t } = useLanguage('chat');
   const [params, setParams] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, boolean>>({});
@@ -160,6 +163,22 @@ const TemplateParser: React.FC<TemplateParserProps> = ({ template, channelType, 
     }
   };
 
+  const acoes = (
+    <>
+      <Button
+        variant="ghost"
+        onClick={onReset}
+        className="text-muted-foreground hover:text-foreground"
+        disabled={loading}
+      >
+        {t('messageTemplates.parser.goBackLabel')}
+      </Button>
+      <Button onClick={handleSend} disabled={(variables.length > 0 && touched && !isValid) || loading}>
+        {t('messageTemplates.parser.sendMessageLabel')}
+      </Button>
+    </>
+  );
+
   return (
     <div className="w-full">
       {/* Campos de variáveis */}
@@ -193,19 +212,16 @@ const TemplateParser: React.FC<TemplateParserProps> = ({ template, channelType, 
       )}
 
       {/* Botões de ação */}
-      <footer className="flex justify-end gap-2">
-        <Button
-          variant="ghost"
-          onClick={onReset}
-          className="text-muted-foreground hover:text-foreground"
-          disabled={loading}
-        >
-          {t('messageTemplates.parser.goBackLabel')}
-        </Button>
-        <Button onClick={handleSend} disabled={(variables.length > 0 && touched && !isValid) || loading}>
-          {t('messageTemplates.parser.sendMessageLabel')}
-        </Button>
-      </footer>
+      {footerContainer ? (
+        createPortal(
+          <DialogFooter>
+            {acoes}
+          </DialogFooter>,
+          footerContainer,
+        )
+      ) : (
+        <footer className="flex justify-end gap-2">{acoes}</footer>
+      )}
     </div>
   );
 };

@@ -48,7 +48,7 @@ export default function SecaoTipologias({ form: f, setF }: PropsDaSecao) {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    className="size-8 text-muted-foreground hover:text-destructive"
                     title="Remover tipologia"
                     aria-label={`Remover ${typologyName(t, i)}`}
                     onClick={() => removeTypology(i)}

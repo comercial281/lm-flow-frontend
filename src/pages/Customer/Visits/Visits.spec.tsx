@@ -303,3 +303,28 @@ describe('Agenda de Visitas no celular (Raio-X do celular, 10/10/2026)', () => {
     expect(screen.queryByRole('button', { name: 'Mais ações da agenda' })).toBeNull();
   });
 });
+
+describe('Agenda de Visitas: erro de carga no Calendário', () => {
+  beforeEach(() => {
+    try { localStorage.removeItem('lm-visitas-visao'); } catch { /* sem armazenamento */ }
+  });
+
+  // Mês vazio por falha parecia agenda livre: quem agenda marcava em cima de horário ocupado.
+  it('leitura que falha mostra Tentar de novo no Calendário, e a visita volta depois', async () => {
+    list.mockRejectedValue(Object.assign(new Error('500'), { response: { status: 500 } }));
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('radio', { name: 'Mês' }));
+    const botao = await screen.findByRole('button', { name: 'Tentar de novo' });
+
+    const hoje = new Date();
+    const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
+    list.mockResolvedValue({
+      data: [{ id: 'v9', status: 'scheduled', scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Thyago' } }],
+      meta: { total: 1, active_total: 1, only_mine: false },
+    });
+    await user.click(botao);
+    expect(await screen.findByRole('button', { name: /15:00 · Thyago/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).toBeNull();
+  });
+});

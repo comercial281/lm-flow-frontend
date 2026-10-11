@@ -290,19 +290,19 @@ function ItemEditor({
           </Seletor>
         )}
         <div className="ml-auto flex items-center gap-0.5">
-          <Button variant="ghost" size="icon" className="h-7 w-7"
+          <Button variant="ghost" size="icon" className="size-8"
                   onClick={onMoveUp} disabled={index === 0} aria-label="Mover pra cima">
             <ChevronUp className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7"
+          <Button variant="ghost" size="icon" className="size-8"
                   onClick={onMoveDown} disabled={index === totalCount - 1} aria-label="Mover pra baixo">
             <ChevronDown className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7"
+          <Button variant="ghost" size="icon" className="size-8"
                   onClick={onDuplicate} aria-label="Duplicar" title="Duplicar">
             <Copy className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"
+          <Button variant="ghost" size="icon" className="size-8 text-destructive"
                   onClick={onRemove} disabled={totalCount === 1} aria-label="Remover">
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -379,7 +379,7 @@ function ItemEditor({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-destructive"
+                className="size-8 text-destructive"
                 onClick={() => onUpdate({ media_url: null, media_filename: null, pendingFile: null })}
                 aria-label="Remover mídia"
               >
@@ -402,7 +402,7 @@ function ItemEditor({
                 <Button
                   variant="destructive"
                   size="icon"
-                  className="h-7 w-7"
+                  className="size-8"
                   onClick={stopRec}
                   aria-label="Parar gravação"
                 >
@@ -569,7 +569,7 @@ function TextVariations({ variations, variables, onChange }: TextVariationsProps
         variant="outline"
         size="sm"
         onClick={add}
-        className="gap-1 h-7 border-dashed"
+        className="gap-1 border-dashed"
         title="Adicionar outra forma de escrever a mesma mensagem"
       >
         <Plus className="h-4 w-4" /> Variação
@@ -597,7 +597,7 @@ function VariationField({ value, index, variables, onChange, onRemove }: Variati
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-destructive"
+          className="size-8 text-destructive"
           onClick={onRemove}
           aria-label="Remover variação"
         >
@@ -680,7 +680,7 @@ function AddItemButtons({ onAdd, excludeKinds }: { onAdd: (kind: FunnelItemKind)
             variant="outline"
             size="sm"
             onClick={() => onAdd(k)}
-            className="gap-1 h-7"
+            className="gap-1"
           >
             <Icon className="h-4 w-4" style={{ color: KIND_COLORS[k] }} />
             {KIND_LABELS[k]}

@@ -307,7 +307,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
                       <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
                       <span>
                         Número não criado: {result.numberFailure}
-                        <Button variant="outline" size="sm" className="ml-2 h-7" onClick={() => setRetryOpen(true)}>
+                        <Button variant="outline" size="sm" className="ml-2" onClick={() => setRetryOpen(true)}>
                           Tentar de novo
                         </Button>
                       </span>
@@ -326,7 +326,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
                           <span>
                             Link não enviado: {result.link.error || 'Não consegui enviar o link agora.'}
                             {result.link.state === 'error' && canSendAccess && (
-                              <Button variant="outline" size="sm" className="ml-2 h-7" onClick={retryLink} disabled={retryingLink}>
+                              <Button variant="outline" size="sm" className="ml-2" onClick={retryLink} disabled={retryingLink}>
                                 Tentar de novo
                               </Button>
                             )}
@@ -336,9 +336,9 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
                     </li>
                   )}
                 </ul>
-                <div className="flex justify-end">
+                <DialogFooter>
                   <Button onClick={close}>Concluir</Button>
-                </div>
+                </DialogFooter>
               </div>
             )}
           </DialogContent>
@@ -530,14 +530,14 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
           )}
         </div>
 
-        <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
-          <Button variant="ghost" onClick={() => (step === 0 ? close() : setStep(step - 1))} disabled={saving}>
+        <DialogFooter className="sm:justify-between">
+          <Button variant="outline" onClick={() => (step === 0 ? close() : setStep(step - 1))} disabled={saving}>
             {step === 0 ? 'Cancelar' : 'Voltar'}
           </Button>
           {step < STEPS.length - 1 ? (
             <Button onClick={() => setStep(step + 1)} disabled={!canAdvance() || saving}>Continuar</Button>
           ) : (
-            <div className="flex gap-2">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
               <Button variant="outline" onClick={() => finish(false)} disabled={saving || !numberReady}>
                 Só cadastrar
               </Button>

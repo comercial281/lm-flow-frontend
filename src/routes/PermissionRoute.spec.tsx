@@ -79,8 +79,8 @@ describe('PermissionRoute', () => {
   it('enquanto as permissões carregam, mostra carregando — nunca o aviso do cargo nem a tela (sem flash)', () => {
     mocks.loading = true;
     mocks.isReady = false;
-    const { container } = montar();
-    expect(container.querySelector('.animate-spin')).toBeInTheDocument();
+    montar();
+    expect(screen.getByText('Verificando permissões…')).toBeInTheDocument();
     expect(screen.queryByText(NO_ACCESS_MESSAGE)).not.toBeInTheDocument();
     expect(screen.queryByText('tela da IA')).not.toBeInTheDocument();
     expect(screen.queryByText('página genérica')).not.toBeInTheDocument();
@@ -122,8 +122,8 @@ describe('PermissionRoute', () => {
     mocks.loadFailure = 'failed';
     mocks.loading = true;
     mocks.isReady = false;
-    const { container } = montar();
-    expect(container.querySelector('.animate-spin')).toBeInTheDocument();
+    montar();
+    expect(screen.getByText('Verificando permissões…')).toBeInTheDocument();
     expect(screen.queryByText(PERMISSIONS_LOAD_FAILED_MESSAGE)).not.toBeInTheDocument();
   });
   describe('sem resource/action (entrada e Sistemas de Integrações)', () => {
@@ -139,8 +139,8 @@ describe('PermissionRoute', () => {
     it('carregando: nem a tela nem o aviso', () => {
       mocks.loading = true;
       mocks.isReady = false;
-      const { container } = montarLivre();
-      expect(container.querySelector('.animate-spin')).toBeInTheDocument();
+      montarLivre();
+      expect(screen.getByText('Verificando permissões…')).toBeInTheDocument();
       expect(screen.queryByText('tela livre')).not.toBeInTheDocument();
     });
 

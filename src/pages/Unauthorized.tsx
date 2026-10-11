@@ -3,38 +3,38 @@ import { useNavigate } from 'react-router-dom';
 import { ShieldX, ArrowLeft, Home } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import Aviso from '@/components/base/Aviso';
-import { Button } from '@/components/ui/ds';
+import { Button, Card } from '@/components/ui/ds';
 
 const Unauthorized: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useLanguage('unauthorized');
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 text-center">
         {/* Ícone */}
         <div className="flex justify-center">
-          <div className="rounded-full bg-red-100 p-6">
-            <ShieldX className="h-16 w-16 text-red-600" />
+          <div className="rounded-full bg-red-100 p-6 dark:bg-red-950/40">
+            <ShieldX className="h-16 w-16 text-red-600 dark:text-red-400" />
           </div>
         </div>
 
         {/* Título */}
         <div className="space-y-2">
-          <h1 className="text-4xl font-extrabold text-gray-900">{t('title')}</h1>
-          <p className="text-lg text-gray-600">{t('subtitle')}</p>
+          <h1 className="text-4xl font-extrabold text-foreground">{t('title')}</h1>
+          <p className="text-lg text-muted-foreground">{t('subtitle')}</p>
         </div>
 
-        {/* Descrição */}
-        <div className="bg-white shadow rounded-lg p-6 text-left space-y-4">
-          <p className="text-sm text-gray-700">
+        {/* Descrição. Segue o tema: com fundo fixo claro, o âmbar do Aviso no escuro ficava ilegível. */}
+        <Card className="gap-4 p-6 text-left">
+          <p className="text-sm text-foreground">
             {t('description')}
           </p>
 
           <Aviso tom="atencao" titulo={t('contactAdmin.title')}>
             <p>{t('contactAdmin.message')}</p>
           </Aviso>
-        </div>
+        </Card>
 
         {/* Botões de Ação */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -55,7 +55,7 @@ const Unauthorized: React.FC = () => {
         </div>
 
         {/* Informações Adicionais */}
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-muted-foreground">
           <p>{t('errorCode')}</p>
         </div>
       </div>

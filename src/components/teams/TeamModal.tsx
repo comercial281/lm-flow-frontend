@@ -3,7 +3,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  ScrollArea,
 } from '@/components/ui/ds';
 import { Team, TeamFormData } from '@/types/users';
 import TeamForm from './TeamForm';
@@ -38,22 +37,20 @@ export default function TeamModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0">
+      <DialogContent className="max-w-2xl max-h-[90dvh] gap-0 overflow-hidden p-0">
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle className="text-xl">
             {isNew ? t('modal.create') : t('modal.edit', { name: team?.name || 'Equipe' })}
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-80px)] px-6 py-4">
-          <TeamForm
-            team={team}
-            isNew={isNew}
-            loading={loading}
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-          />
-        </ScrollArea>
+        <TeamForm
+          team={team}
+          isNew={isNew}
+          loading={loading}
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+        />
       </DialogContent>
     </Dialog>
   );

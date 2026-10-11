@@ -37,7 +37,7 @@ export const ReplyModeToggle = ({
           onClick={() => onModeChange(ReplyMode.REPLY)}
           disabled={disabled || (forcedMode && forcedMode !== ReplyMode.REPLY)}
           className={`
-            h-6 px-3 text-xs font-medium transition-all duration-200 flex items-center gap-1.5
+            px-3 text-xs font-medium transition-all duration-200 flex items-center gap-1.5
             ${
               isReplyMode
                 ? 'bg-primary text-primary-foreground shadow-sm'

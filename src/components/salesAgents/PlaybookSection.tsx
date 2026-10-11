@@ -224,7 +224,7 @@ export default function PlaybookSection({
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 gap-1 text-xs"
+              className="gap-1 text-xs"
               onClick={() => setVars({ ...vars, objecoes: [...objecoes, { objecao: '', resposta: '' }] })}
             >
               <Plus className="h-3 w-3" /> Objeção
@@ -303,7 +303,7 @@ export default function PlaybookSection({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 gap-1 text-xs"
+                    className="gap-1 text-xs"
                     onClick={() => reset(block)}
                   >
                     <RotateCcw className="h-3 w-3" /> Voltar ao padrão
@@ -312,7 +312,7 @@ export default function PlaybookSection({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 gap-1 text-xs"
+                  className="gap-1 text-xs"
                   onClick={() => setEditing((e) => ({ ...e, [block.key]: !open }))}
                 >
                   {open ? <><X className="h-3 w-3" /> Fechar</> : <><Pencil className="h-3 w-3" /> Reescrever</>}

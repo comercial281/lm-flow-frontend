@@ -304,7 +304,10 @@ export default function SalesAgents() {
             ? <BaseHeader title={info.titulo} subtitle={info.frase} />
             : loading && agents.length === 0
               ? <BaseHeader title={info.titulo} subtitle={info.frase} />
-              : <BaseHeader title="IA Vendedora" subtitle="Crie a primeira IA pra atender seus leads no WhatsApp." />}
+              // Falha na leitura: frase neutra. "Crie a primeira" em cima do erro empurrava a criar outra IA.
+              : loadFailure === 'failed' && agents.length === 0
+                ? <BaseHeader title="IA Vendedora" subtitle="As IAs que atendem seus leads no WhatsApp." />
+                : <BaseHeader title="IA Vendedora" subtitle="Crie a primeira IA pra atender seus leads no WhatsApp." />}
       >
         {loading && agents.length === 0 ? (
           <Carregando className="py-2" />

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Pagina, BaseHeader } from '@/components/base';
 import Abas from '@/components/base/Abas';
@@ -76,6 +76,9 @@ export default function Disparos() {
   // Canais oficiais (WhatsApp Cloud)
   const [channels, setChannels] = useState<CloudChannelOption[]>([]);
   const [loadingChannels, setLoadingChannels] = useState(true);
+  // Canais e funis carregam em separado: o erro de um não apaga o que o outro trouxe.
+  const [erroCanais, setErroCanais] = useState(false);
+  const ultimaCargaCanais = useRef(0);
 
   // Aba Disparos
   const [pipelines, setPipelines] = useState<{ id: string; name: string }[]>([]);
@@ -91,6 +94,9 @@ export default function Disparos() {
 
   // Aba Funis (05/10/2026): os funis de conversa de Funis de mensagem.
   const [funnels, setFunnels] = useState<FlowAutomation[]>([]);
+  const [loadingFunnels, setLoadingFunnels] = useState(true);
+  const [erroFunis, setErroFunis] = useState(false);
+  const ultimaCargaFunis = useRef(0);
 
   // Aba Métricas
   const [metrics, setMetrics] = useState<CloudMetrics | null>(null);
@@ -118,15 +124,46 @@ export default function Disparos() {
     if (tab === 'metricas') loadMetrics(metricsDays);
   }, [tab, metricsDays, loadMetrics]);
 
-  useEffect(() => {
+  const carregarCanais = useCallback(() => {
+    const vez = ++ultimaCargaCanais.current;
+    setLoadingChannels(true);
+    setErroCanais(false);
     broadcastsService
       .whatsappCloudOptions()
       .then(c => {
+        if (vez !== ultimaCargaCanais.current) return;
         setChannels(c);
-        if (c[0]) setTplInboxId(c[0].inbox_id);
+        if (c[0]) setTplInboxId(atual => atual || c[0].inbox_id);
       })
-      .catch(() => setChannels([]))
-      .finally(() => setLoadingChannels(false));
+      .catch(() => {
+        if (vez !== ultimaCargaCanais.current) return;
+        setChannels([]);
+        setErroCanais(true);
+      })
+      .finally(() => { if (vez === ultimaCargaCanais.current) setLoadingChannels(false); });
+  }, []);
+
+  const carregarFunis = useCallback(() => {
+    const vez = ++ultimaCargaFunis.current;
+    setLoadingFunnels(true);
+    setErroFunis(false);
+    flowAutomationsService
+      .list({ kind: 'conversation' })
+      .then(list => {
+        if (vez !== ultimaCargaFunis.current) return;
+        setFunnels((Array.isArray(list) ? list : []).filter(f => !f.archived_at));
+      })
+      .catch(() => {
+        if (vez !== ultimaCargaFunis.current) return;
+        setFunnels([]);
+        setErroFunis(true);
+      })
+      .finally(() => { if (vez === ultimaCargaFunis.current) setLoadingFunnels(false); });
+  }, []);
+
+  useEffect(() => {
+    carregarCanais();
+    carregarFunis();
 
     pipelinesService
       .getPipelines({ include_items: false })
@@ -136,12 +173,7 @@ export default function Disparos() {
         if (list[0]) setPipelineId(list[0].id);
       })
       .catch(() => setPipelines([]));
-
-    flowAutomationsService
-      .list({ kind: 'conversation' })
-      .then(list => setFunnels((Array.isArray(list) ? list : []).filter(f => !f.archived_at)))
-      .catch(() => setFunnels([]));
-  }, []);
+  }, [carregarCanais, carregarFunis]);
 
   const loadCampaigns = useCallback((pid: string) => {
     if (!pid) {
@@ -361,6 +393,8 @@ export default function Disparos() {
         <div className="space-y-4">
           {loadingChannels ? (
             <Carregando variante="texto" linhas={4} rotulo="Carregando canais..." />
+          ) : erroCanais ? (
+            <EmptyState tipo="erro" aoTentarDeNovo={carregarCanais} />
           ) : channels.length === 0 ? (
             <EmptyState
               title="Nenhum canal WhatsApp Oficial conectado."
@@ -412,6 +446,8 @@ export default function Disparos() {
           </div>
           {loadingChannels ? (
             <Carregando rotulo="Carregando..." />
+          ) : erroCanais ? (
+            <EmptyState tipo="erro" aoTentarDeNovo={carregarCanais} />
           ) : channels.length === 0 ? (
             <EmptyState title="Nenhum canal oficial conectado ainda." />
           ) : (
@@ -449,7 +485,11 @@ export default function Disparos() {
             Os funis ficam em <strong>Funis de mensagem</strong>. No Novo disparo, use <strong>Usar funil</strong> pra
             carregar um deles na sequência de mensagens.
           </p>
-          {funnels.length === 0 ? (
+          {loadingFunnels ? (
+            <Carregando rotulo="Carregando os funis…" />
+          ) : erroFunis ? (
+            <EmptyState tipo="erro" aoTentarDeNovo={carregarFunis} />
+          ) : funnels.length === 0 ? (
             <EmptyState
               title="Nenhum funil ainda."
               action={{ label: 'Novo funil', onClick: () => navigate(FLOW_KIND_COPY.conversation.listPath), variant: 'outline' }}

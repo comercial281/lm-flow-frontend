@@ -109,7 +109,7 @@ export default function TeamDetails({
               aoTrocar={chave => setAba(chave as AbaDoTime)}
               abas={[
                 { chave: 'overview', rotulo: t('details.tabs.overview'), icone: StickyNote },
-                { chave: 'members', rotulo: t('details.tabs.members'), icone: Users },
+                { chave: 'members', rotulo: t('details.tabs.members'), icone: Users, contagem: team.members_count || 0 },
                 { chave: 'activity', rotulo: t('details.tabs.activity'), icone: History },
                 { chave: 'settings', rotulo: t('details.tabs.settings'), icone: Settings },
               ]}

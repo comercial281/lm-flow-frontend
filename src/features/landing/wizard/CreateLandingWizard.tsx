@@ -253,10 +253,14 @@ export default function CreateLandingWizard({
   };
 
   return (
-    // Janela da casa. Clique fora não fecha (como antes: perderia o que já foi
-    // escolhido nos passos); o X e o Esc fecham.
+    // Janela da casa. Nem clique fora nem Esc fecham (como antes: perderiam o que já
+    // foi escolhido nos passos); o X e o Cancelar fecham.
     <Dialog open onOpenChange={(aberta) => { if (!aberta) onClose(); }}>
-      <DialogContent className="flex flex-col gap-0 overflow-hidden p-0" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent
+        className="flex flex-col gap-0 overflow-hidden p-0"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="text-base">Criar com assistente</DialogTitle>
           <DialogDescription className="text-xs">Passo {step} de 3</DialogDescription>

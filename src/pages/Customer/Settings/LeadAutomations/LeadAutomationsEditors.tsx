@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Input, Label as UILabel, Textarea } from '@/components/ui/ds';
 import { ExternalLink } from 'lucide-react';
 
@@ -95,6 +95,12 @@ export interface AutomationResources {
   reloadFunnels: () => void;
   reloadLabels: () => void;
   loading: boolean;
+  /** Quais listas não carregaram: falha não é lista vazia (as telas mostram "Não deu pra carregar"). */
+  erros?: Partial<Record<'labels' | 'users' | 'pipelines' | 'formOrigins' | 'conversationFunnels', boolean>>;
+  /** Alguma das listas acima falhou. */
+  erro?: boolean;
+  /** Carrega tudo de novo (o "Tentar de novo"). */
+  recarregar?: () => void;
 }
 
 export function useAutomationResources(enabled: boolean): AutomationResources {
@@ -113,26 +119,37 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
   const [evolutionInstances, setEvolutionInstances] = useState<EvolutionInstance[]>([]);
   const [roletas, setRoletas] = useState<RoletaConfig[]>([]);
   const [loading, setLoading] = useState(false);
+  const [erros, setErros] = useState<NonNullable<AutomationResources['erros']>>({});
+  const ultimaCarga = useRef(0);
 
   // Recarrega a lista de funis de conversa (o "Recarregar" da ação, depois de
   // montar um funil em Funis de mensagem, noutra aba).
   const reloadFunnels = () => {
     flowAutomationsService.list({ kind: 'conversation' })
-      .then(list => setConversationFunnels((list ?? []).filter(f => !f.archived_at)))
-      .catch(() => { /* funis são opcionais — não trava a tela */ });
+      .then(list => {
+        setConversationFunnels((list ?? []).filter(f => !f.archived_at));
+        setErros(e => ({ ...e, conversationFunnels: false }));
+      })
+      .catch(() => setErros(e => ({ ...e, conversationFunnels: true })));
   };
 
   // Recarrega o catálogo de etiquetas (usado após criar uma etiqueta nova inline).
   const reloadLabels = () => {
     labelsService.getLabels()
-      .then(res => setLabels(res.data ?? []))
-      .catch(() => { /* catálogo é enriquecimento — não trava a tela */ });
+      .then(res => {
+        setLabels(res.data ?? []);
+        setErros(e => ({ ...e, labels: false }));
+      })
+      .catch(() => setErros(e => ({ ...e, labels: true })));
   };
 
-  useEffect(() => {
+  const carregar = useCallback(() => {
     if (!enabled) return;
-    let cancelled = false;
+    const vez = ++ultimaCarga.current;
+    const cancelled = () => vez !== ultimaCarga.current;
     setLoading(true);
+    // O erro da carga anterior sai já: sem isto o "Não deu pra carregar" ficava na tela durante o Tentar de novo.
+    setErros({});
 
     (async () => {
       const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes, adRes, formRes, funnelsRes, evoRes, fuFlowsRes, convRes, roletasRes] = await Promise.allSettled([
@@ -150,7 +167,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
         roletaConfigService.getAll(),
       ]);
 
-      if (cancelled) return;
+      if (cancelled()) return;
 
       if (labelsRes.status === 'fulfilled') setLabels(labelsRes.value.data ?? []);
       if (seqRes.status === 'fulfilled') setSequences(seqRes.value ?? []);
@@ -163,6 +180,13 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
       if (fuFlowsRes.status === 'fulfilled') setFollowupFlows((fuFlowsRes.value ?? []).filter(f => !f.archived_at));
       if (convRes.status === 'fulfilled') setConversationFunnels((convRes.value ?? []).filter(f => !f.archived_at));
       if (roletasRes.status === 'fulfilled') setRoletas(roletasRes.value ?? []);
+      setErros({
+        labels: labelsRes.status === 'rejected',
+        users: usersRes.status === 'rejected',
+        pipelines: pipelinesRes.status === 'rejected',
+        formOrigins: formRes.status === 'rejected',
+        conversationFunnels: convRes.status === 'rejected',
+      });
 
       if (pipelinesRes.status === 'fulfilled') {
         const list = pipelinesRes.value.data ?? [];
@@ -171,7 +195,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
         const stageResults = await Promise.allSettled(
           list.map(p => pipelinesService.getPipelineStages(p.id)),
         );
-        if (cancelled) return;
+        if (cancelled()) return;
         const map: Record<string, PipelineStage[]> = {};
         stageResults.forEach((r, i) => {
           if (r.status === 'fulfilled') map[list[i].id] = r.value.data ?? [];
@@ -181,11 +205,17 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
 
       setLoading(false);
     })();
+  }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps -- isSuperAdmin só vale na primeira carga, como antes
 
-    return () => { cancelled = true; };
-  }, [enabled]);
+  useEffect(() => {
+    carregar();
+    // Desmontou (ou `enabled` mudou): resposta da carga antiga não pinta mais.
+    return () => { ultimaCarga.current += 1; };
+  }, [carregar]);
 
-  return { labels, sequences, followupFlows, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, messageFunnels, conversationFunnels, evolutionInstances, roletas, reloadFunnels, reloadLabels, loading };
+  const erro = Object.values(erros).some(Boolean);
+
+  return { labels, sequences, followupFlows, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, messageFunnels, conversationFunnels, evolutionInstances, roletas, reloadFunnels, reloadLabels, loading, erros, erro, recarregar: carregar };
 }
 
 // ============================================================================
@@ -271,7 +301,11 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
           <div>
             <UILabel>Quais formulários? (opcional)</UILabel>
             <div className="mt-1 max-h-52 overflow-y-auto rounded-md border border-border divide-y divide-border">
-              {resources.formOrigins.length === 0 ? (
+              {resources.formOrigins.length === 0 && resources.loading ? (
+                <Carregando linhas={2} rotulo="Carregando os formulários…" className="p-2" />
+              ) : resources.erros?.formOrigins ? (
+                <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={resources.recarregar} className="rounded-none border-0 p-3" />
+              ) : resources.formOrigins.length === 0 ? (
                 <EmptyState
                   tamanho="compacto"
                   className="rounded-none border-0 p-3"
@@ -343,6 +377,8 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
           {options.length === 0 ? (
             resources.loading ? (
               <Carregando linhas={2} rotulo="Carregando a equipe…" className="p-2" />
+            ) : resources.erros?.users ? (
+              <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={resources.recarregar} className="rounded-none border-0 p-3" />
             ) : (
               <EmptyState
                 tamanho="compacto"
@@ -437,7 +473,10 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
             <option key={l.id} value={l.title}>{l.title}</option>
           ))}
         </Seletor>
-        {resources.labels.length === 0 && !resources.loading && (
+        {resources.labels.length === 0 && !resources.loading && resources.erros?.labels && (
+          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={resources.recarregar} className="mt-1 p-3" />
+        )}
+        {resources.labels.length === 0 && !resources.loading && !resources.erros?.labels && (
           <EmptyState
             tamanho="compacto"
             className="mt-1 p-3"
@@ -665,7 +704,10 @@ export function PipelineFilterEditor({
           </>
         )}
       </p>
-      {resources.pipelines.length === 0 && !resources.loading && (
+      {resources.pipelines.length === 0 && !resources.loading && resources.erros?.pipelines && (
+        <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={resources.recarregar} className="mt-1 p-3" />
+      )}
+      {resources.pipelines.length === 0 && !resources.loading && !resources.erros?.pipelines && (
         <EmptyState tamanho="compacto" className="mt-1 p-3" title="Nenhum funil cadastrado ainda." />
       )}
     </div>
@@ -790,7 +832,10 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               Recarregar a lista
             </button>
           </div>
-          {lista.length === 0 && !resources.loading && (
+          {lista.length === 0 && !resources.loading && resources.erros?.conversationFunnels && (
+            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={resources.reloadFunnels} className="mt-1 p-3" />
+          )}
+          {lista.length === 0 && !resources.loading && !resources.erros?.conversationFunnels && (
             <EmptyState
               tamanho="compacto"
               className="mt-1 p-3"
@@ -1308,7 +1353,13 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
         <>
           <Field label="Notificar quais usuários? *" hint="Recebe o push só quem ativou o Modo Plantão no app/celular.">
             <div className="mt-1 max-h-44 overflow-y-auto rounded-md border border-input bg-background divide-y divide-input">
-              {resources.users.length === 0 && (
+              {resources.users.length === 0 && resources.loading && (
+                <Carregando linhas={2} rotulo="Carregando a equipe…" className="p-2" />
+              )}
+              {resources.users.length === 0 && !resources.loading && resources.erros?.users && (
+                <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={resources.recarregar} className="rounded-none border-0 p-3" />
+              )}
+              {resources.users.length === 0 && !resources.loading && !resources.erros?.users && (
                 <EmptyState tamanho="compacto" className="rounded-none border-0 p-3" title="Nenhum usuário cadastrado." />
               )}
               {resources.users.map(u => (

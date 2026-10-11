@@ -144,7 +144,7 @@ export default function OfferPopup() {
     <Dialog open={aberto} onOpenChange={abrir => { if (!abrir && !acting) verDepois(); }}>
       {/* No celular (abaixo de 640 px) o pop-up ocupa a tela inteira. */}
       <DialogContent
-        className="max-h-[92dvh] overflow-y-auto sm:max-w-md max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none max-sm:rounded-none max-sm:border-0 max-sm:content-start max-sm:pt-[max(1.5rem,env(safe-area-inset-top))]"
+        className="max-h-[92dvh] overflow-y-auto sm:max-w-md max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none max-sm:rounded-none max-sm:border-0 max-sm:content-start max-sm:pt-[max(1.5rem,env(safe-area-inset-top))] max-sm:[&_[data-janela-alca]]:hidden"
         aria-describedby="oferta-popup-descricao"
         onOpenAutoFocus={e => {
           e.preventDefault();
@@ -152,7 +152,10 @@ export default function OfferPopup() {
         }}
         onInteractOutside={e => e.preventDefault()}
       >
-        <DialogHeader>
+        {/* Celular com o app instalado (barra de status translúcida): o topo sobe até a
+            borda (cobre a barra de status com o fundo dele) e o título fica abaixo dela.
+            Sem isto, o -mt-(--janela-p) do topo da casa punha o título na faixa do relógio. */}
+        <DialogHeader className="max-sm:-mt-[max(1.5rem,env(safe-area-inset-top))] max-sm:pt-[calc(1rem+env(safe-area-inset-top))]">
           <DialogTitle ref={tituloRef} tabIndex={-1} className="outline-none">Lead novo pra você</DialogTitle>
           {/* <p> e não DialogDescription: o DialogContent do ds já injeta uma
               descrição escondida, e as duas dividiriam o mesmo id. */}

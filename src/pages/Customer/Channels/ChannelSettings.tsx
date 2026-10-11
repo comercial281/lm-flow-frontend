@@ -669,7 +669,7 @@ export default function ChannelSettings() {
           )}
 
           {/* Tabs */}
-          <div className="flex flex-col gap-2 space-y-6">
+          <div className="flex flex-col space-y-6">
             {/* Uma aba só não é escolha: a barra viraria enfeite. */}
             {tabs.length >= 2 && (
               <Abas

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   Input,
@@ -383,7 +384,7 @@ export default function UserFormModal({ isOpen, onClose, user, onSuccess }: User
             </>
           )}
 
-          <div className="flex justify-end gap-3 pt-4">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -409,7 +410,7 @@ export default function UserFormModal({ isOpen, onClose, user, onSuccess }: User
                 t('form.actions.create')
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

@@ -120,7 +120,6 @@ export default function CardOriginTab({
             type="button"
             size="sm"
             variant="outline"
-            className="h-7"
             disabled={savingManualOrigin || manualOrigin.trim() === savedManualOrigin}
             onClick={onSaveManualOrigin}
           >
