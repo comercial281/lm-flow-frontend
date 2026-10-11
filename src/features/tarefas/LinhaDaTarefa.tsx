@@ -1,5 +1,6 @@
-import { MoreHorizontal } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/ds';
+import { Pencil, Trash2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/ds';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import { quandoAcontece } from '@/lib/formato';
 import { cn } from '@/lib/utils';
 import { TEXTOS_DE_TAREFAS as T } from './textos';
@@ -48,12 +49,17 @@ export default function LinhaDaTarefa({ tarefa, aoConcluir, aoReabrir, aoEditar,
       </button>
       {(tarefa.can_edit || tarefa.can_delete) && (
         <DropdownMenu>
-          <DropdownMenuTrigger aria-label={`Opções de ${tarefa.title}`} className="rounded p-1 text-muted-foreground hover:bg-muted">
-            <MoreHorizontal className="h-4 w-4" />
+          <DropdownMenuTrigger asChild>
+            <BotaoMaisAcoes compacto aria-label={`Opções de ${tarefa.title}`} className="shrink-0 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {tarefa.can_edit && !feita && <DropdownMenuItem onSelect={() => aoEditar(tarefa)}>{T.editar}</DropdownMenuItem>}
-            {tarefa.can_delete && <DropdownMenuItem className="text-destructive" onSelect={() => aoExcluir(tarefa)}>{T.excluir}</DropdownMenuItem>}
+            {tarefa.can_edit && !feita && <DropdownMenuItem onSelect={() => aoEditar(tarefa)}><Pencil className="h-4 w-4" />{T.editar}</DropdownMenuItem>}
+            {tarefa.can_delete && (
+              <>
+                {tarefa.can_edit && !feita && <DropdownMenuSeparator />}
+                <DropdownMenuItem variant="destructive" onSelect={() => aoExcluir(tarefa)}><Trash2 className="h-4 w-4" />{T.excluir}</DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       )}

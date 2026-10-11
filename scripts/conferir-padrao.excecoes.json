@@ -76,5 +76,8 @@
   { "arquivo": "src/pages/Customer/Roleta/AcceptLeadPage.tsx", "categoria": "avisoAMao", "trecho": "border-red-500/50 bg-red-500/10", "motivo": "botão Recusar, não é aviso" },
   { "arquivo": "src/pages/Customer/Settings/LeadAdsForms/LeadAdsForms.tsx", "categoria": "avisoAMao", "trecho": "mb-8 rounded-xl border border-amber-500/40", "motivo": "quadro \"Leads ignorados\" com lista e ação por linha, não é aviso" },
   { "arquivo": "src/components/chat/chat-sidebar/ChatSidebar.tsx", "categoria": "avisoAMao", "trecho": "bg-blue-50 text-blue-700 border-blue-200", "motivo": "selo \"Post\" da conversa, não é aviso" },
-  { "arquivo": "src/components/cannedResponses/CannedResponseModal.tsx", "categoria": "avisoAMao", "trecho": "border-blue-200 dark:border-blue-800 bg-white/70", "motivo": "botão de inserir variável na resposta pronta, não é aviso" }
+  { "arquivo": "src/components/cannedResponses/CannedResponseModal.tsx", "categoria": "avisoAMao", "trecho": "border-blue-200 dark:border-blue-800 bg-white/70", "motivo": "botão de inserir variável na resposta pronta, não é aviso" },
+  { "arquivo": "src/components/channels/ChannelCard.tsx", "categoria": "soNoMouse", "trecho": "pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full blur-2xl", "motivo": "brilho decorativo do cartão ao passar o mouse, não é ação" },
+  { "arquivo": "src/pages/Customer/Settings/Integrations/CartaoDeLink.tsx", "categoria": "soNoMouse", "trecho": "pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full opacity-0", "motivo": "brilho decorativo do cartão ao passar o mouse, não é ação" },
+  { "arquivo": "src/components/shared/attachments/SharedImageBubble.tsx", "categoria": "soNoMouse", "trecho": "absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30", "motivo": "só o widget de chat do site usa (fora da tela do cliente); clicar na foto já amplia" }
 ]

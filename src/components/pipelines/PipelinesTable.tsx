@@ -8,7 +8,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/ds';
-import { Button } from '@/components/ui/ds';
 import {
   Eye,
   Edit,
@@ -16,11 +15,11 @@ import {
   Copy,
   CopyPlus,
   Power,
-  MoreVertical,
   ChevronUp,
   ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -167,21 +166,19 @@ export default function PipelinesTable({
               <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Mais ações" title="Mais ações">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
+                    <BotaoMaisAcoes />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => onView(pipeline)}>
-                      <Eye className="h-4 w-4 mr-2" />
+                      <Eye className="h-4 w-4" />
                       {t('pipelinesTable.actions.view')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onEdit(pipeline)}>
-                      <Edit className="h-4 w-4 mr-2" />
+                      <Edit className="h-4 w-4" />
                       {t('pipelinesTable.actions.edit')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onDuplicate(pipeline)}>
-                      <CopyPlus className="h-4 w-4 mr-2" />
+                      <CopyPlus className="h-4 w-4" />
                       {t('pipelinesTable.actions.duplicate')}
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -190,19 +187,19 @@ export default function PipelinesTable({
                         toast.success(t('pipelinesTable.actions.idCopied'));
                       }}
                     >
-                      <Copy className="h-4 w-4 mr-2" />
+                      <Copy className="h-4 w-4" />
                       {t('pipelinesTable.actions.copyId')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onToggleStatus(pipeline)}>
-                      <Power className="h-4 w-4 mr-2" />
+                      <Power className="h-4 w-4" />
                       {pipeline.is_active ? t('pipelinesTable.actions.deactivate') : t('pipelinesTable.actions.activate')}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
+                      variant="destructive"
                       onClick={() => onDelete(pipeline)}
-                      className="text-destructive"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="h-4 w-4" />
                       {t('pipelinesTable.actions.delete')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>

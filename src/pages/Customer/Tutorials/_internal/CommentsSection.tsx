@@ -105,7 +105,7 @@ export default function CommentsSection({ lessonId, canModerate }: Props) {
               {(mine || canModerate) && (
                 <button
                   onClick={() => del.mutate(c.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-red-500 transition-all shrink-0"
+                  className="opacity-70 group-hover:opacity-100 focus-visible:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-all shrink-0"
                   title="Excluir comentário"
                   type="button"
                 >

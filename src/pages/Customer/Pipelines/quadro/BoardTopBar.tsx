@@ -7,13 +7,14 @@
 // O quadro é ferramenta de tela cheia (exceção do padrão de telas): só a folga
 // lateral alinha (16/24px).
 import {
-  Archive, ArrowLeft, ArrowUpDown, Copy, Download, Edit, SquareKanban, List, Megaphone, MoreVertical, Plus, Search,
+  Archive, ArrowLeft, ArrowUpDown, Copy, Download, Edit, SquareKanban, List, Megaphone, Plus, Search,
   SlidersHorizontal, Trash2, X, type LucideIcon,
 } from 'lucide-react';
 import {
   Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, Input,
 } from '@/components/ui/ds';
 import Abas from '@/components/base/Abas';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import PipelineSwitcher from '@/components/pipelines/PipelineSwitcher';
 import { numero, plural } from '@/lib/formato';
 import { cn } from '@/lib/utils';
@@ -87,39 +88,37 @@ export default function BoardTopBar({
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" aria-label="Mais ações do funil" title="Mais ações do funil">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
+              <BotaoMaisAcoes compacto aria-label="Mais ações do funil" title="Mais ações do funil" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {acoes.exportar && (
                 <DropdownMenuItem onClick={onExportar}>
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="h-4 w-4" />
                   Exportar
                 </DropdownMenuItem>
               )}
               {acoes.disparo && (
                 <DropdownMenuItem onClick={onDisparo}>
-                  <Megaphone className="mr-2 h-4 w-4" />
+                  <Megaphone className="h-4 w-4" />
                   Disparo em massa
                 </DropdownMenuItem>
               )}
               {(acoes.exportar || acoes.disparo) && <DropdownMenuSeparator />}
               <DropdownMenuItem onClick={onEditarFunil}>
-                <Edit className="mr-2 h-4 w-4" />
+                <Edit className="h-4 w-4" />
                 Editar funil
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onReordenarEtapas}>
-                <ArrowUpDown className="mr-2 h-4 w-4" />
+                <ArrowUpDown className="h-4 w-4" />
                 Reordenar etapas
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onCopiarId}>
-                <Copy className="mr-2 h-4 w-4" />
+                <Copy className="h-4 w-4" />
                 Copiar ID
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive" onClick={onExcluirFunil}>
-                <Trash2 className="mr-2 h-4 w-4" />
+              <DropdownMenuItem variant="destructive" onClick={onExcluirFunil}>
+                <Trash2 className="h-4 w-4" />
                 Excluir funil
               </DropdownMenuItem>
             </DropdownMenuContent>

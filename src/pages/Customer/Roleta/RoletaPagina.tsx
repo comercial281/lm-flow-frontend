@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Copy, Loader2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Copy, Loader2, Pencil, Trash2 } from 'lucide-react';
 import {
   Button,
   DropdownMenu,
@@ -16,6 +16,7 @@ import Pagina from '@/components/base/Pagina';
 import Chave from '@/components/base/Chave';
 import EmptyState from '@/components/base/EmptyState';
 import IconActionButton from '@/components/base/IconActionButton';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import { Secao, Secoes } from '@/components/base/Secao';
 import { useCan } from '@/hooks/useCan';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -237,13 +238,11 @@ export default function RoletaPagina() {
               {can('roleta_configs', 'destroy') && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button type="button" size="icon" variant="ghost" aria-label="Mais ações da roleta" title="Mais ações da roleta">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                    <BotaoMaisAcoes aria-label="Mais ações da roleta" title="Mais ações da roleta" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => void excluir()} className="text-destructive">
-                      <Trash2 className="mr-2 h-4 w-4" /> Excluir roleta
+                    <DropdownMenuItem variant="destructive" onClick={() => void excluir()}>
+                      <Trash2 className="h-4 w-4" /> Excluir roleta
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
