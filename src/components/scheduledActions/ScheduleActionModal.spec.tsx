@@ -120,6 +120,7 @@ vi.mock('@evoapi/design-system', () => {
     DialogTitle: passthrough,
     DialogDescription: passthrough,
     DialogFooter: passthrough,
+    DialogClose: passthrough,
     Button: ({ children }: { children?: React.ReactNode }) => <button type="button">{children}</button>,
     Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
     Label: ({

@@ -241,7 +241,8 @@ describe('Tela de Imóveis', () => {
     abrir('/properties?aba=revenda');
     fireEvent.click(await screen.findByRole('button', { name: 'Adicionar fotos' }));
     const chamadas = svc.list.mock.calls.length;
-    fireEvent.click(await screen.findByRole('button', { name: 'Fechar' }));
+    // A janela tem o X do topo e o Fechar do rodapé; o X também relê o imóvel.
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Fechar' }))[0]);
     await waitFor(() => expect(svc.get).toHaveBeenCalledWith('r1'));
     expect(await screen.findByText('Taquaral · Apartamento')).toBeInTheDocument();
     expect(svc.list.mock.calls.length).toBe(chamadas);
