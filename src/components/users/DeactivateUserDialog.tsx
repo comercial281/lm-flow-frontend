@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { AlertTriangle, Loader2, UserX } from 'lucide-react';
+import { Loader2, UserX } from 'lucide-react';
 import {
   Button,
   Dialog,
@@ -23,6 +23,7 @@ import {
   type DeactivatablePerson,
 } from '@/features/users/deactivation/deactivationRules';
 import { telefone } from '@/lib/formato';
+import Aviso from '@/components/base/Aviso';
 
 interface Props {
   open: boolean;
@@ -160,10 +161,9 @@ export default function DeactivateUserDialog({ open, user, users, onClose, onDon
           )}
 
           {leadDestination && (
-            <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-600 dark:text-amber-400">
-              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>{leadDestination}</span>
-            </div>
+            <Aviso tom="atencao" compacto>
+              {leadDestination}
+            </Aviso>
           )}
 
           <label className="block">
@@ -216,10 +216,9 @@ export default function DeactivateUserDialog({ open, user, users, onClose, onDon
           )}
 
           {blocked && (
-            <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-600 dark:text-amber-400">
-              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>{blocked}</span>
-            </div>
+            <Aviso tom="atencao" compacto>
+              {blocked}
+            </Aviso>
           )}
         </div>
 

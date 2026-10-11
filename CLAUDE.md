@@ -8181,7 +8181,14 @@ Pedido do dono: escolher o melhor jeito de cada peça e padronizar, pra que **te
 | Cartão | `Card` do pacote |
 | Gráficos | desenho do Painel, cores `--chart-*` |
 
-**Estado:** só a regra está escrita. Nenhuma tela mudou. Peça que ainda não é componente: tela nova copia o desenho escrito no glossário. A migração vai peça por peça, cada uma com componente + trava no `conferir-padrao` (teto = contagem do dia, descendo até 0), como o Seletor e a moldura de página. Ordem proposta: caixa de aviso e faixa → ações no mouse → janela no celular → o resto.
+**Caixa de aviso e Faixa: no ar (PR "Peças da casa: Aviso e Faixa", 11/10/2026).** `components/base/Aviso.tsx` e `Faixa.tsx`, trava `avisoAMao` em **0**. ~120 caixas e 8 faixas trocadas em ~75 arquivos; o `Aviso` local da IA Vendedora foi apagado (os 9 que usavam passaram pro da casa). O que a régua pega e não é aviso (selo, cor de botão, bolha de nota privada, cronômetro do aceite) está em `conferir-padrao.excecoes.json` com o motivo. Detalhes que valem lembrar:
+- Erro (`tom="erro"`) se anuncia como `role="alert"`; os outros tons, `status`. Teste que procurava `status` num erro tem que procurar `alert`.
+- Nas telas de entrar, convite e cadastro (fundo escuro fixo `#0F0520`), o aviso vai dentro de `<div className="dark">` pra usar as cores do tema escuro sem depender do tema do app.
+- A ação de faixa e de aviso é botão de contorno: saíram o âmbar cheio da Roleta, o roxo fixo do Leilão e os coloridos dos avisos de autorização do canal.
+- A faixa vermelha cheia da janela de 24h virou `Faixa` (vermelha translúcida em restrição, âmbar em atenção).
+- Ficou de fora de propósito: o resumo da IA na oferta da roleta (`OfferAiBriefing`, bloco pintado pra fundo escuro; migra junto com o bloco), o rodapé "automação rodando" (uma linha por automação) e o cartão de revisão da resposta pendente.
+
+**Estado das outras peças:** só a regra está escrita. Nenhuma tela mudou. Peça que ainda não é componente: tela nova copia o desenho escrito no glossário. A migração vai peça por peça, cada uma com componente + trava no `conferir-padrao` (teto = contagem do dia, descendo até 0), como o Seletor e a moldura de página. Ordem proposta: ~~caixa de aviso e faixa~~ → ações no mouse → janela no celular → o resto.
 
 **Achados do levantamento (backlog):** 9 janelas de Conversas importam o `Dialog` direto do pacote e pulam o ajuste de largura (Atribuir conversa pede 448 e abre com 512); 8 confirmações do `AlertDialog` mostram Excluir em roxo; `NotesHistoryModal` é branca no tema escuro e usa `window.confirm`; botões `#00ffa7` sobrados da Evolution (`BulkInviteModal`, `MacroFormModal`); a regra global `button.bg-primary` (globals.css) pinta filtro selecionado com degradê e sombra; `--chart-*` sem uso e 3 cartões de gráfico parados em `components/charts/`.
 

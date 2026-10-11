@@ -13,6 +13,7 @@ import {
   Textarea,
 } from '@/components/ui/ds';
 import { Pipeline } from '@/types/analytics';
+import Aviso from '@/components/base/Aviso';
 
 interface DuplicatePipelineModalProps {
   open: boolean;
@@ -91,25 +92,15 @@ export default function DuplicatePipelineModal({
             </div>
 
             {/* Info about what will be copied */}
-            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/30 rounded-lg p-3">
-              <div className="text-sm text-blue-800 dark:text-blue-200">
-                <div className="font-medium mb-1">ℹ️ {t('duplicatePipeline.whatWillBeCopied')}</div>
-                <div className="space-y-1 text-xs">
-                  <div>• {t('duplicatePipeline.copied.settings')}</div>
-                  <div>• {t('duplicatePipeline.copied.stages')}</div>
-                  <div>• {t('duplicatePipeline.copied.structure')}</div>
-                </div>
-              </div>
-            </div>
+            <Aviso tom="info" compacto titulo={t('duplicatePipeline.whatWillBeCopied')}>
+              <p>• {t('duplicatePipeline.copied.settings')}</p>
+              <p>• {t('duplicatePipeline.copied.stages')}</p>
+              <p>• {t('duplicatePipeline.copied.structure')}</p>
+            </Aviso>
 
-            <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/30 rounded-lg p-3">
-              <div className="text-sm text-orange-800 dark:text-orange-200">
-                <div className="font-medium mb-1">⚠️ {t('duplicatePipeline.noteLabel')}</div>
-                <div className="text-xs">
-                  {t('duplicatePipeline.noteMessage')}
-                </div>
-              </div>
-            </div>
+            <Aviso tom="atencao" compacto titulo={t('duplicatePipeline.noteLabel')}>
+              {t('duplicatePipeline.noteMessage')}
+            </Aviso>
           </div>
 
           <DialogFooter>

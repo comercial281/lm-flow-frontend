@@ -17,6 +17,7 @@ import type { PaginaId } from '../configurar/paginas';
 import { motivoSemAtendimento, pendenciasDaIa, type Situacao } from '@/features/salesAgents/situacao';
 import { SuggestionCard } from './TelaSugestoes';
 import UltimosAtendimentos from './UltimosAtendimentos';
+import Aviso from '@/components/base/Aviso';
 
 // Visão geral, números do período — o que ESTA IA produziu, pro próprio cliente ver.
 //
@@ -209,24 +210,24 @@ export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferind
         ) : (
           <ul className="space-y-2">
             {pendencias.map((p) => (
-              <li
-                key={p.chave}
-                className={`flex items-start gap-3 rounded-md border p-3 ${p.grave ? 'border-red-500/40 bg-red-500/5' : 'border-amber-500/40 bg-amber-500/5'}`}
-              >
-                <AlertTriangle className={`mt-0.5 h-4 w-4 shrink-0 ${p.grave ? 'text-red-500' : 'text-amber-500'}`} aria-hidden />
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium">{p.titulo}</div>
-                  <div className="text-xs text-muted-foreground">{p.detalhe}</div>
-                </div>
-                {/* Fora da IA (WhatsApp desconectado): link pra configuração do número. */}
-                {p.corrigir?.rota ? (
-                  <Button asChild size="sm" variant="outline"><Link to={p.corrigir.rota}>Corrigir</Link></Button>
-                ) : p.corrigir && (
-                  <Button size="sm" variant="outline"
-                    onClick={() => (p.corrigir!.pagina ? aoIr(p.corrigir!.tela, p.corrigir!.pagina) : aoIr(p.corrigir!.tela))}>
-                    Corrigir
-                  </Button>
-                )}
+              <li key={p.chave}>
+                <Aviso
+                  tom={p.grave ? 'erro' : 'atencao'}
+                  titulo={p.titulo}
+                  acao={
+                    // Fora da IA (WhatsApp desconectado): link pra configuração do número.
+                    p.corrigir?.rota ? (
+                      <Button asChild size="sm" variant="outline"><Link to={p.corrigir.rota}>Corrigir</Link></Button>
+                    ) : p.corrigir ? (
+                      <Button size="sm" variant="outline"
+                        onClick={() => (p.corrigir!.pagina ? aoIr(p.corrigir!.tela, p.corrigir!.pagina) : aoIr(p.corrigir!.tela))}>
+                        Corrigir
+                      </Button>
+                    ) : undefined
+                  }
+                >
+                  <p className="text-xs">{p.detalhe}</p>
+                </Aviso>
               </li>
             ))}
           </ul>

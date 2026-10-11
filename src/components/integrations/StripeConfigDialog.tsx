@@ -14,6 +14,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { toast } from 'sonner';
 import StripeService from '@/services/integrations/stripeService';
 import { MCPTool, StripeConfig } from '@/types/integrations';
+import Aviso from '@/components/base/Aviso';
 
 interface StripeConfigDialogProps {
   open: boolean;
@@ -244,23 +245,15 @@ const StripeConfigDialog = ({
           /* Connected - Show configuration */
           <div className="space-y-6 py-4">
             <div className="space-y-4">
-              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                <div className="flex items-center gap-2 text-green-800 dark:text-green-200">
-                  <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-                  <span className="font-medium">
-                    {t('edit.integrations.stripe.connected') || 'Conectado'}
-                  </span>
-                </div>
+              <Aviso tom="sucesso" titulo={t('edit.integrations.stripe.connected') || 'Conectado'}>
                 {config.username && (
-                  <p className="text-sm text-green-700 dark:text-green-300 mt-2">
+                  <p>
                     {t('edit.integrations.stripe.connectedAs') || 'Conectado como'}:{' '}
                     <strong>{config.username}</strong>
                   </p>
                 )}
-                {config.email && (
-                  <p className="text-sm text-green-700 dark:text-green-300">{config.email}</p>
-                )}
-              </div>
+                {config.email && <p>{config.email}</p>}
+              </Aviso>
 
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">

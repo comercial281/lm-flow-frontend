@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Megaphone, X, Send, Loader2, Check, Users, RefreshCw, Save, AlertTriangle, Search, History,
+  Megaphone, X, Send, Loader2, Check, Users, RefreshCw, Save, Search, History,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { plural } from '@/lib/formato';
@@ -22,6 +22,7 @@ import {
   type CentralInstance,
 } from '@/services/academy/academyAnnouncementsService';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
 
 interface Props {
   lesson: AnnounceLesson;
@@ -234,20 +235,16 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
         ) : (
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
             {desativado && (
-              <div className="flex items-start gap-2 rounded-lg border border-orange-500/40 bg-orange-500/10 p-3 text-xs">
-                <AlertTriangle size={14} className="text-orange-500 shrink-0 mt-0.5" />
-                <span>O aviso de aula nova está desligado. Ligue de novo para conseguir enviar.</span>
-              </div>
+              <Aviso tom="atencao" compacto>O aviso de aula nova está desligado. Ligue de novo para conseguir enviar.</Aviso>
             )}
 
             {jaAvisada && (
-              <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
-                <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
-                <span>
+              <Aviso tom="atencao" compacto>
+                <p>
                   Esta aula já foi avisada em <strong>{formatarData(jaAvisada.at)}</strong> para{' '}
                   {plural(jaAvisada.sent, 'grupo', 'grupos')}. Enviar de novo faz o cliente receber duas vezes.
-                </span>
-              </div>
+                </p>
+              </Aviso>
             )}
 
             {/* Mensagem */}

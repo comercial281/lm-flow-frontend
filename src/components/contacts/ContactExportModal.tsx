@@ -15,6 +15,7 @@ import { Download, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { BaseFilter as ContactFilter } from '@/types/core';
 import { contactsService } from '@/services/contacts/contactsService';
 import type { ContactExportColumn } from '@/types/contacts';
+import Aviso from '@/components/base/Aviso';
 
 interface ContactExportModalProps {
   open: boolean;
@@ -241,13 +242,9 @@ export default function ContactExportModal({
             </p>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <h4 className="text-sm font-medium text-blue-900 mb-1 flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              {t('export.download.title')}
-            </h4>
-            <p className="text-xs text-blue-700">{t('export.download.description')}</p>
-          </div>
+          <Aviso tom="info" compacto icone={Download} titulo={t('export.download.title')}>
+            {t('export.download.description')}
+          </Aviso>
         </div>
 
         <DialogFooter>

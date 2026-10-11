@@ -12,6 +12,7 @@ import {
 } from '@/services/siteBuilder/siteBuilderService';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import Aviso from '@/components/base/Aviso';
 const POLL_INTERVAL_MS = 15_000;
 
 const PENDING: SiteDomainStatus[] = ['pending_dns', 'pending_verification'];
@@ -172,16 +173,12 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
 
       {/* Integração desligada no servidor */}
       {state && !state.configured && (
-        <div className="flex gap-3 rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm dark:border-orange-900/40 dark:bg-orange-900/10">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" />
-          <div>
-            <p className="font-medium text-orange-900 dark:text-orange-300">Integração com a Vercel não configurada</p>
-            <p className="mt-1 text-orange-800 dark:text-orange-400">
-              O domínio próprio ainda não pode ser ligado por aqui: falta uma configuração no
-              servidor do seu LM Flow. Fale com o suporte.
-            </p>
-          </div>
-        </div>
+        <Aviso tom="atencao" titulo="Integração com a Vercel não configurada">
+          <p>
+            O domínio próprio ainda não pode ser ligado por aqui: falta uma configuração no
+            servidor do seu LM Flow. Fale com o suporte.
+          </p>
+        </Aviso>
       )}
 
       {/* Nenhum domínio ainda */}
@@ -235,33 +232,23 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
           </div>
 
           {status === 'active' && (
-            <div className="flex gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm dark:border-emerald-900/40 dark:bg-emerald-900/10">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-              <div className="min-w-0 break-words text-emerald-900 dark:text-emerald-300">
-                <p className="break-all font-medium">Ativo: o site abre em {state.domain}.</p>
-                <p className="mt-1">
-                  Nesse endereço aparece só o site, com um endereço curto para cada página. O endereço
-                  de hoje continua funcionando, e os links de
-                  imóvel que a IA manda passam a usar o domínio. O certificado de segurança é renovado
-                  sozinho: não é preciso fazer mais nada.
-                </p>
-              </div>
-            </div>
+            <Aviso tom="sucesso" icone={ShieldCheck}>
+              <p className="break-all font-medium">Ativo: o site abre em {state.domain}.</p>
+              <p>
+                Nesse endereço aparece só o site, com um endereço curto para cada página. O endereço
+                de hoje continua funcionando, e os links de
+                imóvel que a IA manda passam a usar o domínio. O certificado de segurança é renovado
+                sozinho: não é preciso fazer mais nada.
+              </p>
+            </Aviso>
           )}
 
           {status === 'not_registered' && (
-            <div className="flex flex-wrap items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm dark:border-red-900/40 dark:bg-red-900/10">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
-              <div className="min-w-0 flex-1">
-                <p className="font-medium text-red-900 dark:text-red-300">
-                  Este domínio não está mais registrado na Vercel
-                </p>
-                <p className="mt-1 text-red-800 dark:text-red-400">
-                  Provavelmente foi removido direto no painel da Vercel. O portal não responde por
-                  ele até ser registrado de novo.
-                </p>
+            <Aviso
+              tom="erro"
+              titulo="Este domínio não está mais registrado na Vercel"
+              acao={
                 <Button
-                  className="mt-3"
                   onClick={() => run(
                     () => siteBuilderService.connectDomain(siteId, state.domain as string),
                     'Domínio registrado novamente',
@@ -271,8 +258,13 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
                   {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                   Registrar novamente
                 </Button>
-              </div>
-            </div>
+              }
+            >
+              <p>
+                Provavelmente foi removido direto no painel da Vercel. O portal não responde por
+                ele até ser registrado de novo.
+              </p>
+            </Aviso>
           )}
 
           {isPending && (

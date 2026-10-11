@@ -1,6 +1,7 @@
 import React from 'react';
-import { AlertCircle } from 'lucide-react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
+import Faixa from '@/components/base/Faixa';
+import type { TomDoAviso } from '@/components/base/Aviso';
 
 interface BannerProps {
   /**
@@ -49,49 +50,42 @@ const Banner: React.FC<BannerProps> = ({
   onPrimaryAction,
   colorScheme = 'alert',
 }) => {
-  // Color scheme classes mapping
-  const colorSchemeClasses = {
-    primary: 'bg-primary text-primary-foreground',
-    secondary: 'bg-secondary text-secondary-foreground',
-    alert: 'bg-destructive/90 text-destructive-foreground',
-    warning: 'bg-orange-500 text-white dark:bg-orange-600',
+  // Faixa da casa (GLOSSARIO → As peças da casa, 12): o esquema de cor vira tom.
+  const tomDoEsquema: Record<NonNullable<BannerProps['colorScheme']>, TomDoAviso> = {
+    primary: 'info',
+    secondary: 'neutro',
+    alert: 'erro',
+    warning: 'atencao',
   };
 
   return (
-    <div
-      className={`flex items-center justify-between gap-4 px-4 py-3 text-xs rounded-lg mx-2 mt-2 ${colorSchemeClasses[colorScheme]}`}
+    <Faixa
+      tom={tomDoEsquema[colorScheme]}
+      acao={
+        hasActionButton && actionButtonLabel ? (
+          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onPrimaryAction}>
+            {actionButtonLabel}
+          </Button>
+        ) : undefined
+      }
     >
-      <div className="flex items-center gap-2 flex-1">
-        <AlertCircle className="h-4 w-4 flex-shrink-0" />
-        <span className="banner-message">
-          {bannerMessage}
-          {hrefLink && hrefLinkText && (
-            <>
-              {' '}
-              <a
-                href={hrefLink}
-                rel="noopener noreferrer nofollow"
-                target="_blank"
-                className="underline hover:opacity-80 transition-opacity"
-              >
-                {hrefLinkText}
-              </a>
-            </>
-          )}
-        </span>
-      </div>
-
-      {hasActionButton && actionButtonLabel && (
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={onPrimaryAction}
-          className="flex-shrink-0 h-8 text-xs"
-        >
-          {actionButtonLabel}
-        </Button>
-      )}
-    </div>
+      <span className="banner-message">
+        {bannerMessage}
+        {hrefLink && hrefLinkText && (
+          <>
+            {' '}
+            <a
+              href={hrefLink}
+              rel="noopener noreferrer nofollow"
+              target="_blank"
+              className="underline hover:opacity-80 transition-opacity"
+            >
+              {hrefLinkText}
+            </a>
+          </>
+        )}
+      </span>
+    </Faixa>
   );
 };
 

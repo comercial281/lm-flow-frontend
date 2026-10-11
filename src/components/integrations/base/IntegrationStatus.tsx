@@ -6,8 +6,8 @@ import {
   AlertTriangle,
   Clock,
   RefreshCw,
-  Info
 } from 'lucide-react';
+import Aviso from '@/components/base/Aviso';
 interface IntegrationConnection {
   account?: string;
   workspace?: string;
@@ -148,14 +148,9 @@ export default function IntegrationStatus({
 
           {/* Error Details */}
           {status === 'error' && errorMessage && (
-            <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-              <div className="flex items-start gap-2">
-                <Info className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-red-700 dark:text-red-300">
-                  <strong>{t('connection.errorLabel')}</strong> {errorMessage}
-                </div>
-              </div>
-            </div>
+            <Aviso tom="erro" titulo={t('connection.errorLabel')} className="mt-3">
+              {errorMessage}
+            </Aviso>
           )}
         </div>
 

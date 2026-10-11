@@ -1,9 +1,9 @@
 import React from 'react';
-import { AlertTriangle, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 
 import { Button } from '@evoapi/design-system/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@evoapi/design-system/card';
 
+import Aviso from '@/components/base/Aviso';
 import { useLanguage } from '@/hooks/useLanguage';
 
 interface ChannelDiagnosticProps {
@@ -18,39 +18,12 @@ export const ChannelDiagnostic: React.FC<ChannelDiagnosticProps> = ({
   const { t } = useLanguage('chat');
 
   return (
-    <Card className="max-w-md mx-auto mt-4 border-orange-200 bg-orange-50">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-orange-800">
-          <AlertTriangle className="h-5 w-5" />
-          {t('channelDiagnostic.title')}
-        </CardTitle>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        <div className="text-sm text-orange-700">
-          <p className="mb-3">
-            {t('channelDiagnostic.description')}
-          </p>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{t('channelDiagnostic.inboxId')}</span>
-              <span className="text-orange-600">#{inboxId}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-orange-100 p-3 rounded-lg">
-          <h4 className="font-medium text-orange-800 mb-2">{t('channelDiagnostic.possibleSolutions')}</h4>
-          <ul className="text-sm text-orange-700 space-y-1">
-            <li>• {t('channelDiagnostic.solutions.checkChannel')}</li>
-            <li>• {t('channelDiagnostic.solutions.confirmCredentials')}</li>
-            <li>• {t('channelDiagnostic.solutions.testConnectivity')}</li>
-            <li>• {t('channelDiagnostic.solutions.checkWebhooks')}</li>
-          </ul>
-        </div>
-
-        <div className="flex gap-2">
+    <Aviso
+      tom="atencao"
+      titulo={t('channelDiagnostic.title')}
+      className="max-w-md mx-auto mt-4"
+      acao={
+        <>
           <Button
             size="sm"
             variant="outline"
@@ -67,9 +40,28 @@ export const ChannelDiagnostic: React.FC<ChannelDiagnosticProps> = ({
           <Button size="sm" variant="ghost" onClick={onClose} className="flex-1">
             {t('channelDiagnostic.close')}
           </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <p>{t('channelDiagnostic.description')}</p>
+
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{t('channelDiagnostic.inboxId')}</span>
+          <span>#{inboxId}</span>
         </div>
-      </CardContent>
-    </Card>
+
+        <div>
+          <p className="font-medium mb-1">{t('channelDiagnostic.possibleSolutions')}</p>
+          <ul className="space-y-1">
+            <li>• {t('channelDiagnostic.solutions.checkChannel')}</li>
+            <li>• {t('channelDiagnostic.solutions.confirmCredentials')}</li>
+            <li>• {t('channelDiagnostic.solutions.testConnectivity')}</li>
+            <li>• {t('channelDiagnostic.solutions.checkWebhooks')}</li>
+          </ul>
+        </div>
+      </div>
+    </Aviso>
   );
 };
 

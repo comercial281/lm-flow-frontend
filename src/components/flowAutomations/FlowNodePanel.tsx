@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Button, Input, Label, Textarea } from '@/components/ui/ds';
+import Aviso from '@/components/base/Aviso';
 import { Seletor } from '@/components/base/Seletor';
 import SendFromField from '@/components/numbers/SendFromField';
 import { applySendFrom, sendFromOf } from '@/features/numbers/sendFrom';
@@ -8,7 +9,6 @@ import { ActionEditor, type AutomationResources } from '@/pages/Customer/Setting
 import { HIDDEN_BLOCK_NOTICE, blockGroup, blockLabel, isVisibleNode } from '@/features/flowAutomations/palette';
 import { blockDescription, blockIcon } from '@/features/flowAutomations/blockInfo';
 import { nodeColor } from '@/lib/flowAutomationGraph';
-import { cn } from '@/lib/utils';
 import { mesmoConteudo } from '@/hooks/useAlteracoesNaoSalvas';
 import { isFlowOnlyLeadAction, leadActionConfig, leadActionOf } from '@/features/flowAutomations/leadAction';
 import { nodeProblem } from '@/features/flowAutomations/readiness';
@@ -661,18 +661,15 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
     >
       <div className="space-y-5">
         {guide && (
-          <div
-            data-testid="dica-do-passo"
-            className={cn(
-              'rounded-md border px-3 py-2 text-sm',
-              guide.done ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-amber-400/60 bg-amber-400/10',
-            )}
-          >
-            <p className="font-semibold">
-              {guide.done ? '✓ ' : ''}{stepLabel(guide)} — {guide.title}
-            </p>
-            {guide.hint && <p className="mt-0.5 text-xs text-muted-foreground">Dica: {guide.hint}</p>}
-            {!guide.done && <p className="mt-1 text-xs text-muted-foreground">Quando terminar, clique em Salvar: o passo fica feito.</p>}
+          <div data-testid="dica-do-passo">
+            <Aviso
+              tom={guide.done ? 'sucesso' : 'atencao'}
+              compacto
+              titulo={<>{stepLabel(guide)} — {guide.title}</>}
+            >
+              {guide.hint && <p>Dica: {guide.hint}</p>}
+              {!guide.done && <p>Quando terminar, clique em Salvar: o passo fica feito.</p>}
+            </Aviso>
           </div>
         )}
         {renderFields()}

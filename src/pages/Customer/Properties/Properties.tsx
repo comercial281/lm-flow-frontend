@@ -37,6 +37,7 @@ import PropertyPhotosDialog from './PropertyPhotosDialog';
 import PropertyBookDialog from '@/components/properties/PropertyBookDialog';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { lerRecorteImoveis, type FiltroDoLink } from '@/features/dashboard/links';
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
@@ -733,15 +734,18 @@ export default function Properties() {
                 {batchResults.map(r => {
                   const prop = properties.find(p => p.id === r.id);
                   return (
-                    <div key={r.id} className={`p-3 rounded-lg border ${r.status === 'ok' ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/20' : 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20'}`}>
-                      <p className="text-sm font-medium truncate">{prop?.title ?? r.id}</p>
+                    <Aviso
+                      key={r.id}
+                      tom={r.status === 'ok' ? 'sucesso' : 'erro'}
+                      titulo={<span className="block truncate">{prop?.title ?? r.id}</span>}
+                    >
                       {r.status === 'ok' && r.description && (
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{r.description}</p>
+                        <p className="text-xs line-clamp-2">{r.description}</p>
                       )}
                       {r.status === 'error' && (
-                        <p className="text-xs text-red-600 mt-1">{r.error}</p>
+                        <p className="text-xs">{r.error}</p>
                       )}
-                    </div>
+                    </Aviso>
                   );
                 })}
               </div>

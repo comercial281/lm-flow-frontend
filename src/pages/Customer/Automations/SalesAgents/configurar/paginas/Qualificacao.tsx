@@ -17,7 +17,7 @@ import { Secao, Secoes } from '@/components/base/Secao';
 import { perguntasDoAgente, perguntasParaPatch, type Pergunta } from '@/features/salesAgents/perguntas';
 import { cn } from '@/lib/utils';
 import { useTextoNaHora } from '../TextoNaHora';
-import { Aviso } from '../Aviso';
+import Aviso from '@/components/base/Aviso';
 import type { PropsDaPagina } from '../paginas';
 
 const ULTIMA = 'Pelo menos uma pergunta precisa ser obrigatória. Sem nenhuma marcada, todas valem.';

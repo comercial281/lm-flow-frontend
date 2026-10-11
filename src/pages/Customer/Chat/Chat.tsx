@@ -15,6 +15,7 @@ import { emOfertaParaQuemVe } from '@/features/conversas/painelDoLead';
 import { usePainelDoLeadAberto } from '@/features/conversas/usePainelDoLeadAberto';
 import ClaimLeadBanner from '@/components/chat/assignment/ClaimLeadBanner';
 import OfferActions from '@/components/roleta/OfferActions';
+import Faixa from '@/components/base/Faixa';
 
 // Hooks customizados
 import { useConversationHandlers } from '@/hooks/chat/useConversationHandlers';
@@ -186,18 +187,21 @@ const Chat = () => {
   // conta da faixa de oferta, OfferActions): o painel e o topo mascaram o telefone.
   // Enquanto as ofertas não chegaram, lead sem dono conta como em oferta.
   const { offerFor, loaded: ofertasCarregadas } = usePendingOffers();
+  // Mesma busca que o OfferActions faz: decide entre a faixa da oferta e a do Leilão.
+  const temOfertaMinha = Boolean(
+    selectedConversation &&
+      offerFor({
+        contactId: selectedConversation.contact?.id ?? selectedConversation.meta?.sender?.id,
+        conversationId: String(selectedConversation.id),
+        conversationDisplayId: selectedConversation.display_id,
+      }),
+  );
   const emOferta = Boolean(
     selectedConversation &&
       emOfertaParaQuemVe({
         semDono: !selectedConversation.assignee_id,
         ofertasCarregadas,
-        temOferta: Boolean(
-          offerFor({
-            contactId: selectedConversation.contact?.id ?? selectedConversation.meta?.sender?.id,
-            conversationId: String(selectedConversation.id),
-            conversationDisplayId: selectedConversation.display_id,
-          }),
-        ),
+        temOferta: temOfertaMinha,
       }),
   );
 
@@ -802,28 +806,35 @@ const Chat = () => {
                   da oferta (Aceitar/Recusar com prazo); sem oferta minha, fica a
                   faixa do Leilão — quem assumir primeiro leva. */}
               {!selectedConversation.assignee_id && (
-                <OfferActions
-                  conversationId={String(selectedConversation.id)}
-                  conversationDisplayId={selectedConversation.display_id}
-                  contactId={selectedConversation.contact?.id ?? selectedConversation.meta?.sender?.id}
-                  className="px-4 py-2 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800"
-                  onAccepted={() => conversations.loadSpecificConversation(String(selectedConversation.id))}
-                  onRefused={() => conversations.loadSpecificConversation(String(selectedConversation.id))}
-                  fallback={(
-                    <ClaimLeadBanner
+                temOfertaMinha ? (
+                  // O selo do OfferActions já traz o relógio: a faixa vai sem ícone.
+                  <Faixa tom="atencao" icone={null}>
+                    <OfferActions
                       conversationId={String(selectedConversation.id)}
-                      onClaimed={() => conversations.loadSpecificConversation(String(selectedConversation.id))}
+                      conversationDisplayId={selectedConversation.display_id}
+                      contactId={selectedConversation.contact?.id ?? selectedConversation.meta?.sender?.id}
+                      onAccepted={() => conversations.loadSpecificConversation(String(selectedConversation.id))}
+                      onRefused={() => conversations.loadSpecificConversation(String(selectedConversation.id))}
                     />
-                  )}
-                />
+                  </Faixa>
+                ) : (
+                  <ClaimLeadBanner
+                    conversationId={String(selectedConversation.id)}
+                    onClaimed={() => conversations.loadSpecificConversation(String(selectedConversation.id))}
+                  />
+                )
               )}
 
               {/* Presença — outro agente está nessa conversa */}
               {othersPresent.length > 0 && (
-                <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-400">
-                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                  {othersPresent.map(u => u.name).join(', ')} também {othersPresent.length === 1 ? 'está' : 'estão'} nesta conversa
-                </div>
+                <Faixa tom="atencao" icone={null}>
+                  <span className="flex items-center gap-2">
+                    <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-current animate-pulse" />
+                    <span>
+                      {othersPresent.map(u => u.name).join(', ')} também {othersPresent.length === 1 ? 'está' : 'estão'} nesta conversa
+                    </span>
+                  </span>
+                </Faixa>
               )}
 
               {/* Chat Tabs - Show tabs for conversation type dashboard apps */}

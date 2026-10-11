@@ -16,8 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/ds';
-import { Upload, FileSpreadsheet, Loader2, AlertTriangle, Download, CheckCircle2 } from 'lucide-react';
+import { Upload, FileSpreadsheet, Loader2, Download, CheckCircle2 } from 'lucide-react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
+import Aviso from '@/components/base/Aviso';
 import bolsaoService, { BolsaoBatch } from '@/services/bolsao/bolsaoService';
 
 // Os destinos possíveis para uma coluna da planilha. Os rótulos são o nome que a
@@ -200,13 +201,12 @@ export default function BolsaoImportWizard({ open, onOpenChange, onImported }: P
             </div>
 
             {!phoneMapped && (
-              <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/5 p-3 text-sm">
-                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
+              <Aviso tom="atencao">
                 <p>
                   Escolha qual coluna é o <strong>telefone</strong>. Sem ele o corretor não consegue
                   falar com o lead.
                 </p>
-              </div>
+              </Aviso>
             )}
 
             {/* Tabela rola sozinha: planilha com 20 colunas não pode esticar o diálogo. */}

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { Button } from '@/components/ui/ds';
-import { Loader2, Bot, CheckCircle2, Info, AlertTriangle } from 'lucide-react';
+import { Loader2, Bot, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   noReplyRobotService,
@@ -9,6 +9,7 @@ import {
   type NoReplyAudience,
 } from '@/services/noReplyRobot/noReplyRobotService';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
 
 interface NoReplyRobotProps {
   /** Renderiza sem o cabeçalho e o padding de página, pra encaixar dentro da tela de
@@ -127,22 +128,20 @@ export function NoReplyRobot({ embedded = false }: NoReplyRobotProps = {}) {
       </div>
 
       {config && config.legacy_active_rules.length > 0 && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
-          <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
-          <span>
+        <Aviso tom="atencao">
+          <p>
             Existe regra antiga ativa fora desta tela ({config.legacy_active_rules.map(r => r.name).join(', ')}).
             Ela dispara sem os filtros daqui. Salvar nesta tela desliga essa regra.
-          </span>
-        </div>
+          </p>
+        </Aviso>
       )}
 
       {noSequences && (
-        <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-4 text-sm">
-          <Info className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
-          <span>
+        <Aviso tom="neutro">
+          <p>
             Nenhum funil de follow-up ativo. Crie um {embedded ? 'na lista abaixo' : <>em <strong>Automações → Follow-up</strong></>} antes de ligar o robô.
-          </span>
-        </div>
+          </p>
+        </Aviso>
       )}
 
       {/* Liga/desliga */}

@@ -6,9 +6,10 @@ import {
   type Node, type Edge, type NodeChange, type Connection, type ReactFlowInstance, BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { ArrowLeft, Save, Play, Loader2, Settings2, AlertTriangle, LayoutGrid, Copy, Users } from 'lucide-react';
+import { ArrowLeft, Save, Play, Loader2, Settings2, LayoutGrid, Copy, Users } from 'lucide-react';
 import { Badge, Button, Input } from '@/components/ui/ds';
 import Chave from '@/components/base/Chave';
+import Faixa from '@/components/base/Faixa';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation, FlowAutomationNode, TestRunResult } from '@/types/flowAutomations';
 import {
@@ -622,27 +623,20 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
           )}
         </div>
         {readOnly && (
-          <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-1.5 text-xs text-muted-foreground" role="status" data-testid="faixa-so-ver">
-            <Users className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span>
+          <Faixa tom="neutro" icone={Users}>
+            <span data-testid="faixa-so-ver">
               {automation.team
                 ? 'Este funil é da equipe: só o gestor edita. Você pode disparar ele nas conversas ou duplicar pra ter a sua cópia.'
                 : 'Você só pode ver este funil. Duplique pra ter a sua cópia.'}
             </span>
-          </div>
+          </Faixa>
         )}
 
         {!readOnly && !step && !automation.is_enabled && blockingProblem && nodes.length > 0 && (
-          <div className="flex items-center gap-2 border-b border-amber-500/40 bg-amber-500/10 px-4 py-1.5 text-xs text-amber-700 dark:text-amber-300" role="status">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span>{blockingProblem}</span>
-          </div>
+          <Faixa tom="atencao">{blockingProblem}</Faixa>
         )}
         {reentryAlert && (
-          <div className="flex items-center gap-2 border-b border-amber-500/40 bg-amber-500/10 px-4 py-1.5 text-xs text-amber-700 dark:text-amber-300" role="status">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span>{reentryAlert}</span>
-          </div>
+          <Faixa tom="atencao">{reentryAlert}</Faixa>
         )}
         {banner !== undefined ? (
           banner && <div data-testid="faixa-do-canvas">{banner}</div>

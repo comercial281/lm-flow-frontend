@@ -1,9 +1,9 @@
 import { useLanguage } from '@/hooks/useLanguage';
 import { FormField } from '../../shared/FormField';
-import { FormSection } from '../../shared/FormSection';
 import { FormData } from '@/hooks/channels/useChannelForm';
 import { sanitizeInboxName } from '@/utils/sanitizeName';
 import { PhoneInput } from '@/components/shared/PhoneInput';
+import Aviso from '@/components/base/Aviso';
 
 interface ZapiFormProps {
   form: FormData;
@@ -89,12 +89,8 @@ export const ZapiForm = ({ form, onFormChange }: ZapiFormProps) => {
       />
 
       {/* Help Section */}
-      <FormSection
-        title={t('zapiForm.help.title')}
-        className="bg-blue-50/10 border-blue-200/20"
-        data-tour="whatsapp-help"
-      >
-        <div className="text-sm text-sidebar-foreground/70 space-y-2">
+      <div data-tour="whatsapp-help">
+        <Aviso tom="info" titulo={t('zapiForm.help.title')}>
           <p>
             <strong>{t('zapiForm.help.instanceId.title')}:</strong>{' '}
             {t('zapiForm.help.instanceId.description')}
@@ -111,8 +107,8 @@ export const ZapiForm = ({ form, onFormChange }: ZapiFormProps) => {
             <strong>{t('zapiForm.help.phone.title')}:</strong>{' '}
             {t('zapiForm.help.phone.description')}
           </p>
-        </div>
-      </FormSection>
+        </Aviso>
+      </div>
     </div>
   );
 };

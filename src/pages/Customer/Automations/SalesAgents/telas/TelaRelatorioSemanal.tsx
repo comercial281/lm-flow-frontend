@@ -6,6 +6,7 @@ import { plural } from '@/lib/formato';
 import { salesAgentsService, type WeeklyReportCheck, type WeeklyReportConfig, type WeeklyReportPayload, type WeeklyReportTargets } from '@/services/salesAgents/salesAgentsService';
 import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
 import { WEEKDAY_OPTIONS } from './TelaSugestoes';
 
 // ---------------- Relatórios (do CLIENTE, não da IA) ----------------
@@ -281,11 +282,11 @@ export default function TelaRelatorioSemanal() {
       {/* ⚠️ Medição quebrada e semana parada produziam a MESMA tela: tudo zero, sem
           aviso. Estas linhas são o que separa uma coisa da outra. */}
       {(atual?.avisos?.length ?? 0) > 0 && (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 space-y-1">
+        <Aviso tom="atencao">
           {atual?.avisos?.map((aviso, i) => (
-            <p key={i} className="text-sm text-amber-700 dark:text-amber-400">{aviso}</p>
+            <p key={i}>{aviso}</p>
           ))}
-        </div>
+        </Aviso>
       )}
 
       {/* Sem relatório na tela, dizer o que fazer — e não deixar um vazio que parece

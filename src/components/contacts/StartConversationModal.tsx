@@ -27,6 +27,7 @@ import MessageTemplateService from '@/services/channels/messageTemplatesService'
 import { MessageTemplate } from '@/types/channels/inbox';
 import { ConversationCreateData } from '@/types/chat/api';
 import { apiErrorMessage } from '@/utils/apiHelpers';
+import Aviso from '@/components/base/Aviso';
 
 interface StartConversationModalProps {
   open: boolean;
@@ -405,13 +406,11 @@ export default function StartConversationModal({
                 </span>
               </div>
             ) : availableInboxes.length === 0 ? (
-              <div className="p-3 rounded-md border border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-800">
-                <p className="text-sm text-orange-700 dark:text-orange-400">
-                  {contact.phone_number?.trim()
-                    ? t('startConversation.empty.noChannelAccess')
-                    : t('startConversation.empty.noPhone')}
-                </p>
-              </div>
+              <Aviso tom="atencao">
+                {contact.phone_number?.trim()
+                  ? t('startConversation.empty.noChannelAccess')
+                  : t('startConversation.empty.noPhone')}
+              </Aviso>
             ) : (
               <Select value={selectedInboxId} onValueChange={setSelectedInboxId} required>
                 <SelectTrigger>
@@ -457,12 +456,10 @@ export default function StartConversationModal({
 
           {/* WhatsApp Cloud requires template */}
           {isWhatsAppCloud && messageTemplates.length === 0 && !loadingTemplates && (
-            <div className="p-3 rounded-md border border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-800">
-              <p className="text-sm text-orange-700 dark:text-orange-400">
-                ⚠️ WhatsApp Cloud requer um template aprovado para iniciar a conversa. Nenhum
-                template disponível foi encontrado.
-              </p>
-            </div>
+            <Aviso tom="atencao">
+              WhatsApp Cloud requer um template aprovado para iniciar a conversa. Nenhum template
+              disponível foi encontrado.
+            </Aviso>
           )}
 
           {/* Template Selection */}
@@ -500,12 +497,10 @@ export default function StartConversationModal({
               {useTemplate && (
                 <div className="space-y-3 p-3 border rounded-lg">
                   {messageTemplates.length === 0 ? (
-                    <div className="p-3 rounded-md border border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-800">
-                      <p className="text-sm text-orange-700 dark:text-orange-400">
-                        ⚠️ Nenhum template disponível. Desative "Usar Template" para enviar uma
-                        mensagem livre.
-                      </p>
-                    </div>
+                    <Aviso tom="atencao">
+                      Nenhum template disponível. Desative "Usar Template" para enviar uma
+                      mensagem livre.
+                    </Aviso>
                   ) : !selectedTemplate ? (
                     <>
                       <Label>Selecione um Template</Label>

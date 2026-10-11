@@ -21,6 +21,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
+import Aviso from '@/components/base/Aviso';
 import { BaseHeader, Pagina } from '@/components/base';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import bolsaoService, { BolsaoLead, BolsaoQuota } from '@/services/bolsao/bolsaoService';
@@ -213,28 +214,26 @@ function QuotaBanner({
   if (!quota) return null;
 
   return (
-    <Card className={blocked ? 'border-amber-500/50 bg-amber-500/5' : 'border-emerald-500/40 bg-emerald-500/5'}>
-      <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
-        <div className="flex items-center gap-3">
-          {blocked ? <Clock className="h-5 w-5 text-amber-600" /> : <Hand className="h-5 w-5 text-emerald-600" />}
-          <div>
-            <p className="font-medium text-foreground">
-              {blocked
-                ? 'Você atingiu o limite por enquanto'
-                : `Você pode pegar mais ${quota.remaining} ${quota.remaining === 1 ? 'lead' : 'leads'}`}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {blocked && countdown
-                ? `Próxima liberação em ${countdown}`
-                : `São ${quota.limit} ${quota.limit === 1 ? 'lead' : 'leads'} a cada ${quota.window_minutes} minutos.`}
-            </p>
-          </div>
-        </div>
+    <Aviso
+      tom={blocked ? 'atencao' : 'sucesso'}
+      icone={blocked ? Clock : Hand}
+      titulo={
+        blocked
+          ? 'Você atingiu o limite por enquanto'
+          : `Você pode pegar mais ${quota.remaining} ${quota.remaining === 1 ? 'lead' : 'leads'}`
+      }
+      acao={
         <Button variant="ghost" size="sm" onClick={onRefresh}>
           <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
         </Button>
-      </CardContent>
-    </Card>
+      }
+    >
+      <p>
+        {blocked && countdown
+          ? `Próxima liberação em ${countdown}`
+          : `São ${quota.limit} ${quota.limit === 1 ? 'lead' : 'leads'} a cada ${quota.window_minutes} minutos.`}
+      </p>
+    </Aviso>
   );
 }
 
@@ -322,16 +321,11 @@ function ClaimedCard({
   onDismiss: () => void;
 }) {
   return (
-    <Card className="border-emerald-500/50 bg-emerald-500/5">
-      <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
-        <div className="min-w-0">
-          <p className="font-medium text-foreground">{lead.name} agora é seu</p>
-          <p className="text-sm text-muted-foreground">
-            {telefone(lead.phone_number)}
-            {lead.email ? ` · ${lead.email}` : ''}
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <Aviso
+      tom="sucesso"
+      titulo={`${lead.name} agora é seu`}
+      acao={
+        <>
           {onOpen && (
             <Button size="sm" onClick={onOpen}>
               <UserRound className="h-4 w-4 mr-2" /> Abrir contato
@@ -340,8 +334,13 @@ function ClaimedCard({
           <Button size="sm" variant="ghost" onClick={onDismiss}>
             Fechar
           </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </>
+      }
+    >
+      <p>
+        {telefone(lead.phone_number)}
+        {lead.email ? ` · ${lead.email}` : ''}
+      </p>
+    </Aviso>
   );
 }

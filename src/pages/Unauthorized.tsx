@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldX, ArrowLeft, Home } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
+import Aviso from '@/components/base/Aviso';
 
 const Unauthorized: React.FC = () => {
   const navigate = useNavigate();
@@ -29,13 +30,9 @@ const Unauthorized: React.FC = () => {
             {t('description')}
           </p>
 
-          <div className="border-l-4 border-orange-400 bg-orange-50 p-4">
-            <p className="text-sm text-orange-800">
-              <strong className="font-semibold">{t('contactAdmin.title')}</strong>
-              <br />
-              {t('contactAdmin.message')}
-            </p>
-          </div>
+          <Aviso tom="atencao" titulo={t('contactAdmin.title')}>
+            <p>{t('contactAdmin.message')}</p>
+          </Aviso>
         </div>
 
         {/* Botões de Ação */}

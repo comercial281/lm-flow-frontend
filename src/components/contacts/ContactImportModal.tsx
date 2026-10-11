@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/ds';
 import { Upload, Trash2, FileText, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import Aviso from '@/components/base/Aviso';
 
 interface ContactImportModalProps {
   open: boolean;
@@ -159,14 +160,9 @@ export default function ContactImportModal({
             />
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <h4 className="text-sm font-medium text-blue-900 mb-1">
-              {t('import.formatTitle')}
-            </h4>
-            <p className="text-xs text-blue-700">
-              {t('import.formatDescription')}
-            </p>
-          </div>
+          <Aviso tom="info" compacto titulo={t('import.formatTitle')}>
+            {t('import.formatDescription')}
+          </Aviso>
         </div>
 
         <DialogFooter>

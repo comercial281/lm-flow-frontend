@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/ds';
 import { BaseHeader, Pagina } from '@/components/base';
 import { Secao, Secoes } from '@/components/base/Secao';
 import { CampoTexto } from '@/components/base/Campo';
+import Aviso from '@/components/base/Aviso';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { cvcrmService, type CvcrmStatus } from '@/services/cvcrm/cvcrmService';
@@ -193,12 +194,7 @@ export default function CvcrmConexao() {
           )}
 
           {resultado && (
-            <div
-              role="status"
-              className={`rounded-md border p-3 text-sm ${resultado.ok ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20' : 'border-red-300 bg-red-50 dark:bg-red-900/20'}`}
-            >
-              {resultado.texto}
-            </div>
+            <Aviso tom={resultado.ok ? 'sucesso' : 'erro'}>{resultado.texto}</Aviso>
           )}
         </Secao>
 

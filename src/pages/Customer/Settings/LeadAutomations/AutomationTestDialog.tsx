@@ -22,6 +22,7 @@ import {
   ORIGIN_LABELS,
 } from '@/services/leadAutomation/leadAutomationService';
 import { telefone } from '@/lib/formato';
+import Aviso from '@/components/base/Aviso';
 
 // Nome de campo do lead como a pessoa vê na tela de automação — "source" não diz
 // nada para quem escolheu "Origem do lead" num seletor.
@@ -223,18 +224,22 @@ export default function AutomationTestDialog({ rule, open, onOpenChange, users =
             </section>
 
             {!result.avisos_ligados && (
-              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-amber-700">
-                A chave <strong>Avisos das Automações de Lead</strong> está desligada para este CRM —
-                enquanto ela estiver assim, nenhum aviso de automação sai. Ela fica em
-                Configurações → Conta → Central de Notificações.
-              </div>
+              <Aviso tom="atencao">
+                <p>
+                  A chave <strong>Avisos das Automações de Lead</strong> está desligada para este CRM —
+                  enquanto ela estiver assim, nenhum aviso de automação sai. Ela fica em
+                  Configurações → Conta → Central de Notificações.
+                </p>
+              </Aviso>
             )}
 
             {!result.rule.is_active && (
-              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-amber-700">
-                Esta automação está <strong>desligada</strong>. O teste roda mesmo assim, mas ela não
-                vai disparar sozinha até ser ligada.
-              </div>
+              <Aviso tom="atencao">
+                <p>
+                  Esta automação está <strong>desligada</strong>. O teste roda mesmo assim, mas ela não
+                  vai disparar sozinha até ser ligada.
+                </p>
+              </Aviso>
             )}
           </div>
         )}

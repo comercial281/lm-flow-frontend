@@ -30,7 +30,7 @@ import {
 import type { PipelineOpt, StageOpt } from '../../configuracao/comum';
 import TextoNaHora from '../TextoNaHora';
 import JanelaDaSemana from './JanelaDaSemana';
-import { Aviso } from '../Aviso';
+import Aviso from '@/components/base/Aviso';
 import type { PropsDaPagina } from '../paginas';
 
 const ACOES = [
@@ -88,7 +88,7 @@ export default function Followup({ agent, gravar, irPara }: PropsDaPagina) {
             <li className="space-y-3 px-3.5 py-3">
               <LinhaComChave rotulo="Retomada" descricao="Repete a pergunta que ficou sem resposta." ligada={!!agent.reengagement_enabled}
                 aoMudar={(v) => gravar({ reengagement_enabled: v })}>
-                {agent.followup_only && <Aviso>Com "Só follow-up" ela não responde ao vivo, então não há pergunta pra retomar.</Aviso>}
+                {agent.followup_only && <Aviso tom="atencao">Com "Só follow-up" ela não responde ao vivo, então não há pergunta pra retomar.</Aviso>}
                 <div className="flex flex-wrap items-end gap-3">
                   <TextoNaHora id="retomada-1" tipo="numero" min={1} max={48} rotulo="1ª depois de (horas)" className="w-44"
                     salvo={String(agent.reengagement_first_hours ?? REENGAGEMENT_DEFAULT_FIRST_HOURS)}
@@ -124,7 +124,7 @@ export default function Followup({ agent, gravar, irPara }: PropsDaPagina) {
               <>
                 <EtiquetasDeEscolha rotulo="Funis" opcoes={funis.map((f) => ({ valor: f.id, rotulo: f.name }))} escolhidas={escolhidos}
                   aoMudar={(l) => void gravar({ followup_pipeline_ids: l })} />
-                {escolhidos.length === 0 && <Aviso>Marque ao menos um funil. Sem nenhum marcado, ela continua indo atrás de todos os leads que ela atendeu.</Aviso>}
+                {escolhidos.length === 0 && <Aviso tom="atencao">Marque ao menos um funil. Sem nenhum marcado, ela continua indo atrás de todos os leads que ela atendeu.</Aviso>}
               </>
             )}
           </Secao>
@@ -135,7 +135,7 @@ export default function Followup({ agent, gravar, irPara }: PropsDaPagina) {
           </Secao>
 
           <Secao titulo="Depois dela" descricao="Pra onde o lead vai quando ela sai de cena por silêncio.">
-            {motivo && <Aviso>{motivo}</Aviso>}
+            {motivo && <Aviso tom="atencao">{motivo}</Aviso>}
             <CartoesDeEscolha<SalesAgentFollowupChoice> rotulo="Depois dela" valor={acao} opcoes={ACOES} aoEscolher={(v) => void escolherAcao(v)} />
             {acao === 'sequence' && (
               <>
@@ -149,7 +149,7 @@ export default function Followup({ agent, gravar, irPara }: PropsDaPagina) {
                     {followupFlowOptions(fluxos).map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
                   </Seletor>
                 </Campo>
-                {legacySequenceNotice(agent) && <Aviso>{legacySequenceNotice(agent)}</Aviso>}
+                {legacySequenceNotice(agent) && <Aviso tom="atencao">{legacySequenceNotice(agent)}</Aviso>}
               </>
             )}
             {acao === 'pipeline' && (agent.pipeline_id ? (
@@ -170,7 +170,7 @@ export default function Followup({ agent, gravar, irPara }: PropsDaPagina) {
                 </Campo>
               </div>
             ) : (
-              <Aviso>
+              <Aviso tom="atencao">
                 <p>Escolha antes o funil em Funil: é dele que saem as colunas.</p>
                 <Button type="button" size="sm" variant="outline" className="mt-2" onClick={() => irPara('funil')}>Abrir Funil</Button>
               </Aviso>

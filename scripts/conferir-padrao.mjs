@@ -160,6 +160,18 @@ const CHAVE_DA_CASA = 'src/components/base/Chave.tsx';
 const SELECT_NATIVO = /<select(?=[\s>]|$)|<NativeSelect\b/;
 // O SeletorComAbas segue a mesma regra (lista do sistema no celular, com um
 // grupo por aba), então também pode ter o <select> dele.
+// Caixa de aviso / faixa pintada à mão (peças 11 e 12 do GLOSSARIO, escolha do
+// dono em 10/10/2026): fundo colorido claro ou translúcido + borda da mesma
+// família, na mesma linha. `hover:bg-…` não conta (é botão), pílula `rounded-full`
+// e `<Badge>` também não (é selo). A régua é por linha: classe quebrada em várias linhas
+// escapa, e a revisão de PR confere.
+const COR_DE_AVISO = '(?:amber|yellow|orange|blue|sky|red|rose|emerald|green|violet|purple|indigo|teal|lime|cyan|fuchsia|pink)';
+const FUNDO_DE_AVISO = new RegExp(`(?:^|[\\s'"\`{(]|dark:)bg-${COR_DE_AVISO}-(?:(?:50|100|950)(?:\\/\\d+)?|\\d{3}\\/\\d+)(?![\\w/])`);
+const BORDA_DE_AVISO = new RegExp(`(?:^|[\\s'"\`{(]|dark:)border(?:-[lrtbxy])?-${COR_DE_AVISO}-\\d+`);
+const AVISOS_DA_CASA = new Set(['src/components/base/Aviso.tsx', 'src/components/base/Faixa.tsx']);
+export const avisoAMao = linha =>
+  FUNDO_DE_AVISO.test(linha) && BORDA_DE_AVISO.test(linha) && !/rounded-full|<Badge\b/.test(linha);
+
 const SELETORES_DA_CASA = new Set(['src/components/base/Seletor.tsx', 'src/components/base/SeletorComAbas.tsx']);
 // Ficam com a lista do sistema DE PROPÓSITO (decisão 3 da spec do Seletor): o
 // widget de chat roda num iframe no site do cliente, que mede a própria altura,
@@ -488,6 +500,7 @@ export function varrer() {
       if (escopo && !MODULOS_DE_FORMATO.includes(rel) && FORMATO.some(re => re.test(l))) anotar('formato', rel, i + 1, 'formatação fora do módulo', l.trim());
       if (escopo && rel !== CHAVE_DA_CASA && CHAVE_A_MAO.test(l)) anotar('chaveMao', rel, i + 1, 'role="switch" feito à mão', l.trim());
       if (escopo && rel !== CABECALHO_DA_CASA && BARRA_A_MAO.test(l)) anotar('barraAMao', rel, i + 1, 'barrinha roxa copiada', l.trim());
+      if (escopo && rel.endsWith('.tsx') && !AVISOS_DA_CASA.has(rel) && avisoAMao(l)) anotar('avisoAMao', rel, i + 1, 'aviso pintado à mão', l.trim());
       // selectNativo (app inteiro): pula linhas que começam com comentário ou têm */ após a tag
       if (lista && SELECT_NATIVO.test(l) && !COMECO_DE_COMENTARIO.test(limpa)) {
         const match = SELECT_NATIVO.exec(l);
@@ -521,6 +534,7 @@ export const CATEGORIAS = {
   tituloAMao: 'título de página feito à mão',
   barraAMao: 'barrinha roxa copiada',
   foraDaMoldura: 'cabeçalho fora da moldura',
+  avisoAMao: 'aviso ou faixa pintado à mão',
 };
 
 function principal() {

@@ -7,8 +7,9 @@ import { BaseNodePanel, type NodeType, type NodeCategory } from './BaseNodePanel
 
 // Re-exportar os tipos para facilitar o uso
 export type { NodeType, NodeCategory };
-import { Button, Card, CardContent } from '@/components/ui/ds';
-import { Save, Play, Pause, RotateCcw, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/ds';
+import { Save, Play, Pause, RotateCcw } from 'lucide-react';
+import Aviso from './Aviso';
 import { cn } from '@/lib/utils';
 
 // Tipos para configuração do editor
@@ -233,16 +234,9 @@ export function BaseFlowEditor({
 
               {/* Validação */}
               {validationErrors.length > 0 && (
-                <Card className="bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800/30">
-                  <CardContent className="p-2">
-                    <div className="flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3 text-red-500" />
-                      <p className="text-xs text-red-800 dark:text-red-200">
-                        {t('base.flow.editor.errors', { count: validationErrors.length })}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <Aviso tom="erro" compacto>
+                  {t('base.flow.editor.errors', { count: validationErrors.length })}
+                </Aviso>
               )}
             </div>
           </div>

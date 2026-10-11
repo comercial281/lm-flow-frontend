@@ -1,5 +1,6 @@
 import { Loader2, Lock, Wand2 } from 'lucide-react';
 import { Button, Label as UILabel, Textarea } from '@/components/ui/ds';
+import Aviso from '@/components/base/Aviso';
 import type { Property } from '@/services/properties/propertiesService';
 import type { PropsDaSecao } from './tipos';
 
@@ -64,18 +65,12 @@ export default function SecaoDescricao({ form: f, setF, editando, podeGerar, ger
           Fica colada na Descrição de propósito — uma é o que o cliente lê, a
           outra é o que só a imobiliária vê. */}
       {notaInterna && (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
-          <div className="mb-1 flex items-center gap-2">
-            <Lock className="h-3.5 w-3.5 text-amber-600" />
-            <span className="text-sm font-medium text-amber-700 dark:text-amber-500">
-              Observações internas (importado do Kenlo)
-            </span>
-          </div>
-          <p className="whitespace-pre-wrap text-sm text-muted-foreground">{notaInterna}</p>
-          <p className="mt-2 text-xs text-muted-foreground">
+        <Aviso tom="atencao" icone={Lock} titulo="Observações internas (importado do Kenlo)">
+          <p className="whitespace-pre-wrap">{notaInterna}</p>
+          <p className="mt-2 text-xs">
             Não aparece no site, não vai para os portais e a IA Vendedora não lê.
           </p>
-        </div>
+        </Aviso>
       )}
     </div>
   );

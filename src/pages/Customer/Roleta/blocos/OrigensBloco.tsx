@@ -29,6 +29,7 @@ import {
 } from '@/services/roletaConfig/roletaConfigService';
 import { metaPagesService } from '@/services/integrations/metaPagesService';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
 import { Campo } from '@/components/base/Campo';
 import { origemTexto } from '../roletaNovaTextos';
 
@@ -349,22 +350,26 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
         )}
 
         {trazer && (
-          <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
-            <p className="text-sm font-medium">Trazer pra esta roleta?</p>
-            <p className="text-sm text-muted-foreground">
+          <Aviso
+            tom="atencao"
+            titulo="Trazer pra esta roleta?"
+            acao={
+              <>
+                <Button type="button" variant="outline" onClick={() => setTrazer(null)} disabled={salvando}>Deixar onde está</Button>
+                <Button
+                  type="button"
+                  disabled={salvando}
+                  onClick={() => void adicionar({ kind: trazer.kind as Exclude<RoletaOriginKind, 'meta_form_keyword'>, ref_id: trazer.ref_id })}
+                >
+                  {salvando ? 'Trazendo…' : 'Trazer'}
+                </Button>
+              </>
+            }
+          >
+            <p>
               "{textoDoItem(trazer)}" sai da roleta {trazer.roleta_name} e os leads dela passam a entrar aqui.
             </p>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => setTrazer(null)} disabled={salvando}>Deixar onde está</Button>
-              <Button
-                type="button"
-                disabled={salvando}
-                onClick={() => void adicionar({ kind: trazer.kind as Exclude<RoletaOriginKind, 'meta_form_keyword'>, ref_id: trazer.ref_id })}
-              >
-                {salvando ? 'Trazendo…' : 'Trazer'}
-              </Button>
-            </div>
-          </div>
+          </Aviso>
         )}
 
         {erro && <p role="alert" className="text-sm text-destructive">{erro}</p>}

@@ -1,6 +1,7 @@
-import { AlertTriangle, Smartphone, WifiOff } from 'lucide-react';
+import { Smartphone, WifiOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@evoapi/design-system/button';
+import Aviso from '@/components/base/Aviso';
 import EmptyState from '@/components/base/EmptyState';
 import {
   CONECTAR_AGORA, RECONECTAR, SEM_NUMERO_CORRETOR, SEM_NUMERO_GESTOR, SEM_NUMERO_GESTOR_SEM_CRIAR,
@@ -71,28 +72,25 @@ export function FaixaReconectar({ numeros }: { numeros: NumeroForaDoAr[] }) {
   const navigate = useNavigate();
   if (numeros.length === 0) return null;
 
+  // Caixa com margem em volta, no topo da lista lateral: Aviso compacto (não Faixa).
   return (
-    <div
-      role="status"
-      className="mx-3 mt-3 flex flex-col gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400"
+    <Aviso
+      tom="atencao"
+      compacto
+      className="mx-3 mt-3"
+      acao={numeros.map((n) => (
+        <Button
+          key={n.id}
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs"
+          onClick={() => navigate(enderecoConexao(n.id))}
+        >
+          {numeros.length === 1 ? RECONECTAR : `${RECONECTAR} ${n.nome}`}
+        </Button>
+      ))}
     >
-      <div className="flex items-start gap-2">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-        <span>{faixaReconectar(numeros)}</span>
-      </div>
-      <div className="flex flex-wrap gap-2 pl-6">
-        {numeros.map((n) => (
-          <Button
-            key={n.id}
-            size="sm"
-            variant="outline"
-            className="h-7 text-xs"
-            onClick={() => navigate(enderecoConexao(n.id))}
-          >
-            {numeros.length === 1 ? RECONECTAR : `${RECONECTAR} ${n.nome}`}
-          </Button>
-        ))}
-      </div>
-    </div>
+      {faixaReconectar(numeros)}
+    </Aviso>
   );
 }

@@ -109,16 +109,16 @@ As peças 11 a 22 (e os acréscimos em 6, 7 e 9) são as **escolhas do dono em 1
    - cinza = desligado;
    - laranja = precisa de atenção;
    - vermelho = erro, falhou ou não entregou.
-11. **Caixa de aviso:** translúcida, com ícone. Um desenho só, quatro tons.
-   - Desenho: `flex items-start gap-2 rounded-md border border-<cor>-500/40 bg-<cor>-500/10 p-3 text-sm text-<cor>-700 dark:text-<cor>-400`, ícone `h-4 w-4 mt-0.5 shrink-0`.
-   - Tons: informação = `sky` + `Info`; atenção = `amber` + `TriangleAlert`; erro = `red` + `CircleAlert`; sucesso = `emerald` + `CircleCheck`.
-   - Título, quando tem, vai em negrito no começo da frase ("**WhatsApp desconectado.** Reconecte pra…").
+11. **Caixa de aviso** (`Aviso`): translúcida, com ícone. Um desenho só.
+   - `<Aviso tom="atencao" titulo="WhatsApp desconectado.">Reconecte pra voltar a receber mensagens.</Aviso>`
+   - Tons: `info` (azul, `Info`), `atencao` (âmbar, `TriangleAlert`), `erro` (vermelho, `CircleAlert`, anunciado na hora pro leitor de tela), `sucesso` (verde, `CircleCheck`), `neutro` (cinza, recado sem urgência).
+   - `titulo` vai em negrito: abre a frase quando o texto é simples, vira a primeira linha quando o conteúdo é montado. `acao` põe botões embaixo. `icone` troca o ícone (`null` tira). `compacto` pra dentro de campo, cartão ou painel lateral.
    - **Nunca** a caixa pastel (`bg-orange-50 border-orange-200`, `bg-blue-50`…), nem borda à esquerda, nem o `Alert` do pacote base com cor por cima.
-   - Embrião do componente: `Aviso` do configurador da IA (`pages/Customer/Automations/SalesAgents/configurar/Aviso.tsx`), que vai pra `components/base/`.
-12. **Faixa no topo:** a mesma família da caixa de aviso, atravessando a tela.
-   - Desenho: `flex items-center justify-between gap-2 border-b border-<cor>-500/40 bg-<cor>-500/10 px-4 py-2 text-xs text-<cor>-700 dark:text-<cor>-400`, ícone `h-3.5 w-3.5`; a ação é botão de contorno pequeno à direita.
-   - Mesmos tons da caixa. Nada de faixa pastel com botão âmbar cheio nem faixa vermelha cheia (a da janela de 24h passa pra essa).
-   - Exceção: a faixa de acesso como administrador (só a equipe vê).
+12. **Faixa no topo** (`Faixa`): a mesma família do `Aviso`, atravessando a tela com linha embaixo.
+   - `<Faixa tom="atencao" icone={Clock} acao={<Button variant="outline" size="sm">Ver ofertas</Button>}>2 leads esperando você aceitar</Faixa>`
+   - Mesmos tons. A ação é botão de contorno pequeno à direita (no celular desce pra baixo do texto). Nada de faixa pastel com botão âmbar cheio nem faixa vermelha cheia.
+   - Exceção: a faixa de acesso como administrador (`ImpersonationBar`, só a equipe vê).
+   - **Trava:** `avisoAMao` no `conferir-padrao` conta linha com fundo colorido + borda da mesma família (fora de `Aviso.tsx` e `Faixa.tsx`). Teto só desce.
 13. **Carregando:**
    - Lista, cartão ou tela carregando = **esqueleto cinza** com a forma do que vai chegar: `bg-muted animate-pulse`, linhas `rounded`, a de baixo `bg-muted/70`. Referência: `components/chat/loading-states/ConversationSkeleton.tsx`.
    - Rodinha (`Loader2 h-4 w-4 animate-spin`) só dentro de botão ou ação pequena.

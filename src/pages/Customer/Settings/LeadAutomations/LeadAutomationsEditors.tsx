@@ -37,6 +37,7 @@ import {
   toggleAcceptedBy,
 } from './acceptedByFilter';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { VariableChipBar } from '@/components/flowAutomations/VariableChipBar';
 import { FLOW_KIND_COPY } from '@/features/flowAutomations/kind';
@@ -721,11 +722,13 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
           hint="Os funis ficam em Funis de mensagem. As mensagens saem pelo número da conversa do lead, com as esperas do funil. Desligado ou com o passo a passo pela metade, ele não dispara."
         >
           {!atual && antigoId && (
-            <p className="mb-2 rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs text-amber-800 dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-300">
-              Esta ação usa um funil do editor de antes:{' '}
-              <strong>{antigo ? antigo.name : resources.loading ? 'carregando…' : 'funil que não existe mais'}</strong>{' '}
-              (formato antigo). Ele continua disparando igual. Pra usar um funil de Funis de mensagem, escolha abaixo.
-            </p>
+            <Aviso tom="atencao" compacto className="mb-2">
+              <p>
+                Esta ação usa um funil do editor de antes:{' '}
+                <strong>{antigo ? antigo.name : resources.loading ? 'carregando…' : 'funil que não existe mais'}</strong>{' '}
+                (formato antigo). Ele continua disparando igual. Pra usar um funil de Funis de mensagem, escolha abaixo.
+              </p>
+            </Aviso>
           )}
           <Seletor
             value={atual}
@@ -1072,9 +1075,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
             {/* Lista vazia com o motivo: quase sempre é o nome da instância
                 escrito diferente do painel, ou a instância desconectada. */}
             {!loadingGroups && groups.length === 0 && groupsReason && (
-              <p className="mt-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-700">
-                Nenhum grupo apareceu: {groupsReason}
-              </p>
+              <Aviso tom="atencao" compacto className="mt-1">{`Nenhum grupo apareceu: ${groupsReason}`}</Aviso>
             )}
           </Field>
           <Field label="Mensagem *">

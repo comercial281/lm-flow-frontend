@@ -9,6 +9,7 @@ import {
   type CapiStatusKey,
 } from '@/services/capi/capiConfigService';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
 
 const VALUE_EVENTS = ['Purchase', 'UltraQualificado'];
 
@@ -332,24 +333,17 @@ export default function PixelCapiConfig() {
           </div>
 
           {testResult && (
-            <div
-              role="status"
-              className={`rounded-md border p-3 text-sm ${
+            <Aviso
+              tom={!testResult.ok ? 'erro' : testResult.can_read ? 'sucesso' : 'atencao'}
+              titulo={
                 !testResult.ok
-                  ? 'border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300'
-                  : testResult.can_read
-                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                    : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300'
-              }`}
-            >
-              <p className="font-medium">
-                {!testResult.ok
                   ? 'A Meta recusou'
                   : testResult.can_read
                     ? 'Conexão funcionando'
-                    : 'Funcionando, com uma ressalva'}
-              </p>
-              <p className="mt-1">{testResult.message}</p>
+                    : 'Funcionando, com uma ressalva'
+              }
+            >
+              <p>{testResult.message}</p>
               {!testResult.ok && (
                 <p className="mt-2 text-xs opacity-80">
                   Confira, nesta ordem: se o token não expirou, se o usuário do sistema dono do token
@@ -359,7 +353,7 @@ export default function PixelCapiConfig() {
                   novo.
                 </p>
               )}
-            </div>
+            </Aviso>
           )}
         </div>
       </section>

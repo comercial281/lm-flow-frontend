@@ -47,6 +47,7 @@ import { getModifierKey } from '@/utils/platform';
 import { normalizeAvatarUrl } from '@/utils/avatarUrl';
 import { ProfilePhotoUploader, TwoFactorSetup } from '@/components/shared/profile';
 import { BaseHeader, Pagina } from '@/components/base';
+import Aviso from '@/components/base/Aviso';
 import { PhoneInput } from '@/components/shared/PhoneInput';
 
 const Profile = () => {
@@ -435,22 +436,23 @@ const Profile = () => {
               disabled={!!userData.unconfirmed_email}
             />
             {userData.unconfirmed_email && (
-              <div className="flex items-start gap-3 p-3 border rounded-lg bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 mt-2">
-                <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-blue-800 dark:text-blue-300">
-                    {t('personalData.emailConfirmation.pendingChange', { email: userData.unconfirmed_email })}
-                  </p>
-                  <div className="flex gap-2 mt-2">
+              <Aviso
+                tom="info"
+                icone={Mail}
+                className="mt-2"
+                acao={
+                  <>
                     <Button size="sm" variant="outline" onClick={handleResendConfirmation} disabled={isResending}>
                       {isResending ? '...' : t('personalData.emailConfirmation.resend')}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={handleCancelEmailChange} disabled={isCancelling}>
                       {isCancelling ? '...' : t('personalData.emailConfirmation.cancel')}
                     </Button>
-                  </div>
-                </div>
-              </div>
+                  </>
+                }
+              >
+                <p>{t('personalData.emailConfirmation.pendingChange', { email: userData.unconfirmed_email })}</p>
+              </Aviso>
             )}
           </div>
         </div>
@@ -746,19 +748,13 @@ const Profile = () => {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Banner: instalar como app */}
-        <div className="flex items-start gap-3 p-4 border rounded-lg bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800">
-          <Smartphone className="h-5 w-5 text-violet-600 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="font-medium text-violet-900 dark:text-violet-200">Instalar como aplicativo</p>
-            <p className="text-sm text-violet-700 dark:text-violet-400 mt-1">
-              Para receber notificações no celular, primeiro instale o LM Flow como app:
-            </p>
-            <div className="mt-2 space-y-1 text-sm text-violet-700 dark:text-violet-400">
-              <p><strong>Android (Chrome):</strong> menu &gt; "Adicionar à tela inicial"</p>
-              <p><strong>iPhone (Safari):</strong> botão Compartilhar &gt; "Adicionar à Tela de Início"</p>
-            </div>
+        <Aviso tom="info" icone={Smartphone} titulo="Instalar como aplicativo">
+          <p>Para receber notificações no celular, primeiro instale o LM Flow como app:</p>
+          <div className="mt-2 space-y-1">
+            <p><strong>Android (Chrome):</strong> menu &gt; "Adicionar à tela inicial"</p>
+            <p><strong>iPhone (Safari):</strong> botão Compartilhar &gt; "Adicionar à Tela de Início"</p>
           </div>
-        </div>
+        </Aviso>
 
         {/* Permissão de notificações push */}
         <div className="flex items-center justify-between p-4 border rounded-lg">

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button, Label } from '@/components/ui/ds';
+import Aviso from '@/components/base/Aviso';
 import { Seletor } from '@/components/base/Seletor';
 import {
   ConditionEditor,
@@ -82,9 +83,9 @@ function TriggerPartEditor({
           ))}
         </Seletor>
         {event === 'lead.created' && (
-          <p className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-700">
+          <Aviso tom="atencao" compacto className="mt-2">
             {LEAD_CREATED_HINT}
-          </p>
+          </Aviso>
         )}
       </div>
 

@@ -24,6 +24,7 @@ import { esquecerAgendaLigada } from '@/features/visits/useAgendaLigada';
 import { avisoSemente, opcoesDeHora, type SeededFrom } from '@/features/visits/agenda';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { data } from '@/lib/formato';
+import Aviso from '@/components/base/Aviso';
 
 interface Props {
   open: boolean;
@@ -123,9 +124,7 @@ export function HorarioVisitaDialog({ open, onOpenChange }: Props) {
         {estado === 'pronto' && (
           <div className="space-y-5 py-2">
             {aviso && (
-              <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-                {aviso}
-              </p>
+              <Aviso tom="atencao">{aviso}</Aviso>
             )}
 
             <div role="group" aria-label="Dias da semana">

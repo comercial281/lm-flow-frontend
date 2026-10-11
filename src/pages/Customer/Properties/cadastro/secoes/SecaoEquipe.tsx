@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button, Input, Label as UILabel } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
 import { labelsService } from '@/services/contacts/labelsService';
 import {
   LEAD_DESTINATION_HELP,
@@ -107,9 +108,7 @@ export default function SecaoEquipe({ form: f, setF }: PropsDaSecao) {
           </span>
         </label>
         {avisoDeDestino && (
-          <p className="mt-1 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-600 dark:text-amber-400">
-            {avisoDeDestino}
-          </p>
+          <Aviso tom="atencao" compacto className="mt-1">{avisoDeDestino}</Aviso>
         )}
         {/* Trava de visita por imóvel (frente 4, 10/10): revenda tem uma chave,
             empreendimento recebe várias famílias no estande. Fica aqui porque

@@ -16,7 +16,7 @@ import { lerEscolhas } from '@/features/salesAgents/tresEscolhas';
 import { fraseDaPalavraAntiga } from '@/features/salesAgents/situacao';
 import { cn } from '@/lib/utils';
 import { TriggersSection } from '../blocos/TriggersSection';
-import { Aviso } from '../Aviso';
+import Aviso from '@/components/base/Aviso';
 import type { PropsDaPagina } from '../paginas';
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 
@@ -90,7 +90,7 @@ export default function Canal({ agent, inboxes, gravar, irPara, diagnostico }: P
           opcoes={[{ valor: 'vivo', rotulo: 'Ao vivo + follow-up' }, { valor: 'so_followup', rotulo: 'Só follow-up' }]}
           aoEscolher={(m) => void gravar({ followup_only: m === 'so_followup' })} />
         {agent.followup_only && !agent.followup_enabled && (
-          <Aviso>
+          <Aviso tom="atencao">
             <p>Com o follow-up desligado, ela não faz nada neste modo.</p>
             <Button type="button" size="sm" variant="outline" className="mt-2" onClick={() => irPara('followup')}>Abrir Follow-up</Button>
           </Aviso>
@@ -99,7 +99,7 @@ export default function Canal({ agent, inboxes, gravar, irPara, diagnostico }: P
 
       <Secao titulo="Público" descricao="Todos os leads que escrevem no número, ou só os que batem com as condições.">
         {frasePalavra && (
-          <Aviso>
+          <Aviso tom="atencao">
             <p>{frasePalavra}</p>
             <Button type="button" size="sm" variant="outline" className="mt-2" onClick={() => void gravar({ trigger_keyword: null })}>
               Tirar essa regra
