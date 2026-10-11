@@ -47,6 +47,7 @@ export const FORMULARIO_VAZIO: PropertyFormData = {
   on_sign: false,
   responsible_id: null,
   lead_goes_to_responsible: false,
+  accepts_concurrent_visits: null,
   captor_id: null,
   label_id: null,
   features: [],
@@ -95,6 +96,8 @@ export function formularioDoImovel(p: Property): PropertyFormData {
     // Campo ausente = servidor antigo (a coluna nasce no boot): a chave abre
     // desligada, que é o comportamento do imóvel sem exceção nenhuma.
     lead_goes_to_responsible: p.lead_goes_to_responsible === true,
+    // Nulo = segue o tipo; só vira true/false quando alguém mexe na caixinha.
+    accepts_concurrent_visits: p.accepts_concurrent_visits ?? null,
     captor_id: p.captor?.id ?? p.captor_id ?? null,
     owner_contact_id: p.owner_contact_id ?? null,
     label_id: p.label_id ?? null,

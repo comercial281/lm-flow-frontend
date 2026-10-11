@@ -2,22 +2,13 @@
 // Visitas com nota e feedback; propostas com valor e status; "Registrar
 // proposta" abre a mesma janela da tela de Propostas, já com o lead e o imóvel
 // de interesse preenchidos. Registrar NÃO move o card de etapa (decisão do dono).
-// Visita ativa (Agendada/Confirmada/Em andamento) tem "Cancelar visita", com
-// motivo opcional, igual à Agenda (desde 07/10).
-import { useCallback, useEffect, useState } from 'react';
+// Visita: Nova visita no topo e os botões da peça única AcoesDaVisita (desde 10/10).
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { toast } from 'sonner';
-import { CalendarCheck, FileText, Loader2, Plus, Star, XCircle } from 'lucide-react';
-import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Label as UILabel,
-  Textarea,
-} from '@/components/ui/ds';
+import { CalendarCheck, FileText, Loader2, Plus, Star } from 'lucide-react';
+import { Button } from '@/components/ui/ds';
+import { ScheduleVisitDialog } from '@/components/visits/ScheduleVisitDialog';
+import { AcoesDaVisita } from '@/features/visits/AcoesDaVisita';
 import ProposalFormDialog from '@/components/proposals/ProposalFormDialog';
 import { visitsService, VISIT_STATUS_COLORS, VISIT_STATUS_LABELS, type Visit } from '@/services/visits/visitsService';
 import {
@@ -37,47 +28,26 @@ import type { PipelineItem } from '@/types/analytics';
 interface VisitsProposalsTabProps {
   item: PipelineItem;
   nomeExibido: string;
+  // Sobe quando outra parte da tela cria visita (Ações rápidas do modal): a aba recarrega.
+  versao?: string | number;
 }
-
-const ATIVAS = new Set(['scheduled', 'confirmed', 'in_progress']);
 
 const dataHora = (iso: string) =>
   new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-export default function VisitsProposalsTab({ item, nomeExibido }: VisitsProposalsTabProps) {
+export default function VisitsProposalsTab({ item, nomeExibido, versao = 0 }: VisitsProposalsTabProps) {
   const contato = contatoDoCard(item);
   const contactId = contato?.id != null ? String(contato.id) : null;
   const pode = useCan();
   const podeCriarProposta = useFeature('proposals_create') && pode('proposals', 'create');
-  const podeCancelarVisita = pode('visits', 'cancel');
+  const podeCriarVisita = pode('visits', 'create');
 
   const [visitas, setVisitas] = useState<Visit[] | null>(null);
   const [propostas, setPropostas] = useState<Proposal[] | null>(null);
   const [propostasRecusadas, setPropostasRecusadas] = useState(false);
   const [registrando, setRegistrando] = useState(false);
-  const [cancelando, setCancelando] = useState<Visit | null>(null);
-  const [motivo, setMotivo] = useState('');
-  const [salvandoCancelamento, setSalvandoCancelamento] = useState(false);
-
-  const abrirCancelamento = (v: Visit) => {
-    setMotivo('');
-    setCancelando(v);
-  };
-
-  const cancelarVisita = async () => {
-    if (!cancelando) return;
-    setSalvandoCancelamento(true);
-    try {
-      const atualizada = await visitsService.cancel(cancelando.id, motivo.trim() || undefined);
-      setVisitas(prev => prev?.map(v => (v.id === atualizada.id ? atualizada : v)) ?? prev);
-      toast.success('Visita cancelada');
-      setCancelando(null);
-    } catch {
-      toast.error('Não deu para cancelar a visita');
-    } finally {
-      setSalvandoCancelamento(false);
-    }
-  };
+  const [agendando, setAgendando] = useState(false);
+  const carga = useRef(0);
 
   const carregarPropostas = useCallback(async () => {
     if (!contactId) return;
@@ -91,15 +61,23 @@ export default function VisitsProposalsTab({ item, nomeExibido }: VisitsProposal
     }
   }, [contactId]);
 
-  useEffect(() => {
+  // Só a última carga vale: respostas antigas que chegam atrasadas são descartadas.
+  const carregarVisitas = useCallback(async () => {
     if (!contactId) return;
-    let vivo = true;
-    visitsService.list({ contact_id: contactId, per_page: 50 })
-      .then(res => { if (vivo) setVisitas(visitasEmOrdem(res.data ?? [])); })
-      .catch(() => { if (vivo) setVisitas([]); });
+    const minha = ++carga.current;
+    try {
+      const res = await visitsService.list({ contact_id: contactId, per_page: 50 });
+      if (carga.current === minha) setVisitas(visitasEmOrdem(res.data ?? []));
+    } catch {
+      if (carga.current === minha) setVisitas(prev => prev ?? []);
+    }
+  }, [contactId]);
+
+  useEffect(() => {
+    void carregarVisitas();
     void carregarPropostas();
-    return () => { vivo = false; };
-  }, [contactId, carregarPropostas]);
+    return () => { carga.current++; };
+  }, [carregarVisitas, carregarPropostas, versao]);
 
   if (!contactId) {
     return <p className="text-sm text-muted-foreground">Este card não tem contato.</p>;
@@ -109,14 +87,27 @@ export default function VisitsProposalsTab({ item, nomeExibido }: VisitsProposal
     ? { id: item.primary_property.id, title: item.primary_property.title, code: item.primary_property.code }
     : null;
 
+  // A janela de visita pede título e código preenchidos; o de proposta aceita vazio.
+  const imovelParaVisita = imovelSugerido
+    ? { id: imovelSugerido.id, title: imovelSugerido.title ?? '', code: imovelSugerido.code ?? '' }
+    : null;
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       {/* Visitas */}
       <section className="rounded-xl border border-border p-4 space-y-3 min-w-0">
-        <h4 className="text-sm font-semibold flex items-center gap-2">
-          <CalendarCheck className="h-4 w-4 text-muted-foreground" />
-          Visitas
-        </h4>
+        <div className="flex items-center justify-between gap-2">
+          <h4 className="text-sm font-semibold flex items-center gap-2">
+            <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+            Visitas
+          </h4>
+          {podeCriarVisita && (
+            <Button type="button" size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setAgendando(true)}>
+              <Plus className="h-3.5 w-3.5" />
+              Nova visita
+            </Button>
+          )}
+        </div>
         {visitas === null ? (
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         ) : visitas.length === 0 ? (
@@ -146,18 +137,7 @@ export default function VisitsProposalsTab({ item, nomeExibido }: VisitsProposal
                 {visitaSemFeedback(v) && (
                   <p className="text-xs font-medium text-amber-600 dark:text-amber-400">Sem feedback</p>
                 )}
-                {podeCancelarVisita && ATIVAS.has(v.status) && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800"
-                    onClick={() => abrirCancelamento(v)}
-                  >
-                    <XCircle className="h-3.5 w-3.5 mr-1" />
-                    Cancelar visita
-                  </Button>
-                )}
+                <AcoesDaVisita visita={v} onAtualizada={() => void carregarVisitas()} />
               </li>
             ))}
           </ul>
@@ -220,37 +200,13 @@ export default function VisitsProposalsTab({ item, nomeExibido }: VisitsProposal
         </section>
       )}
 
-      <Dialog open={!!cancelando} onOpenChange={aberto => { if (!aberto) setCancelando(null); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cancelar visita</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            {cancelando && (
-              <p className="text-sm text-muted-foreground">
-                {dataHora(cancelando.scheduled_at)}
-                {cancelando.property ? ` · ${[cancelando.property.code, cancelando.property.title].filter(Boolean).join(' · ')}` : ''}
-              </p>
-            )}
-            <div>
-              <UILabel>Motivo do cancelamento</UILabel>
-              <Textarea
-                value={motivo}
-                onChange={e => setMotivo(e.target.value)}
-                rows={3}
-                placeholder="Opcional"
-                className="mt-1 resize-none"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCancelando(null)}>Voltar</Button>
-            <Button variant="destructive" onClick={() => void cancelarVisita()} disabled={salvandoCancelamento}>
-              {salvandoCancelamento ? 'Salvando...' : 'Cancelar visita'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ScheduleVisitDialog
+        open={agendando}
+        onOpenChange={setAgendando}
+        leadInicial={leadParaVisita(item, nomeExibido)}
+        imovelInicial={imovelParaVisita}
+        onCreated={() => void carregarVisitas()}
+      />
 
       <ProposalFormDialog
         open={registrando}

@@ -75,6 +75,8 @@ export interface Property {
    * como qualquer outro.
    */
   lead_goes_to_responsible?: boolean | null;
+  /** Nulo = segue o tipo (empreendimento aceita, revenda não). Ver features/properties/visitasJuntas. */
+  accepts_concurrent_visits?: boolean | null;
   captor_id?: string | null;
   owner_contact_id?: string | null;
   /** Tag do imóvel: aplicada ao lead que entra pela página deste imóvel. */
@@ -165,6 +167,8 @@ export interface PropertyFormData {
   responsible_id?: string | null;
   /** Ver Property#lead_goes_to_responsible. Exige responsável — o servidor recusa sem. */
   lead_goes_to_responsible?: boolean;
+  /** Nulo = segue o tipo; só vira true/false quando alguém mexe na caixinha. */
+  accepts_concurrent_visits?: boolean | null;
   captor_id?: string | null;
   owner_contact_id?: string | null;
   label_id?: string | null;

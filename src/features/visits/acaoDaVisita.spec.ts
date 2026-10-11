@@ -1,6 +1,6 @@
 // src/features/visits/acaoDaVisita.spec.ts
 import { describe, it, expect } from 'vitest';
-import { acaoDaVisita, temRetorno } from './acaoDaVisita';
+import { acaoDaVisita, botoesDaVisita, faseDaVisita, temRetorno } from './acaoDaVisita';
 
 const AGORA = new Date('2026-09-30T12:00:00Z');
 const ONTEM = '2026-09-29T12:00:00Z';
@@ -21,8 +21,12 @@ describe('acaoDaVisita: clique na Agenda', () => {
     }
   });
 
-  it('Cancelada, Não compareceu e Reagendada continuam só com o aviso', () => {
-    for (const s of ['cancelled', 'no_show', 'rescheduled']) {
+  it('Reagendada abre o resumo, como as outras abertas (antes ficava sem ação nenhuma)', () => {
+    expect(acaoDaVisita(visita('rescheduled', AMANHA), 'clique', AGORA)).toBe('resumo');
+  });
+
+  it('Cancelada e Não compareceu continuam só com o aviso', () => {
+    for (const s of ['cancelled', 'no_show']) {
       expect(acaoDaVisita(visita(s), 'clique', AGORA)).toBeNull();
     }
   });
@@ -59,5 +63,42 @@ describe('temRetorno', () => {
   it('nota ou comentário bastam', () => {
     expect(temRetorno({ rating: 4 })).toBe(true);
     expect(temRetorno({ rating: null, feedback_notes: 'Gostou da varanda' })).toBe(true);
+  });
+});
+
+const TUDO = { confirmar: true, remarcar: true, cancelar: true, concluir: true };
+
+describe('faseDaVisita', () => {
+  it('aberta no futuro = antes; aberta no passado = depois; encerrada = encerrada', () => {
+    expect(faseDaVisita(visita('scheduled', AMANHA), AGORA)).toBe('antes');
+    expect(faseDaVisita(visita('rescheduled', ONTEM), AGORA)).toBe('depois');
+    for (const s of ['completed', 'no_show', 'cancelled']) expect(faseDaVisita(visita(s), AGORA)).toBe('encerrada');
+  });
+
+  it('cancelada pela data também é encerrada', () => {
+    expect(faseDaVisita(visita('scheduled', AMANHA, { cancelled_at: ONTEM }), AGORA)).toBe('encerrada');
+  });
+});
+
+describe('botoesDaVisita', () => {
+  it('antes: Remarcar, Cancelar e Confirmar (só se ainda não confirmada)', () => {
+    expect(botoesDaVisita(visita('scheduled', AMANHA), TUDO, AGORA)).toEqual(['remarcar', 'cancelar', 'confirmar']);
+    expect(botoesDaVisita(visita('confirmed', AMANHA), TUDO, AGORA)).toEqual(['remarcar', 'cancelar']);
+  });
+
+  it('depois: Não compareceu, Remarcar e Realizada', () => {
+    expect(botoesDaVisita(visita('confirmed', ONTEM), TUDO, AGORA)).toEqual(['nao_compareceu', 'remarcar', 'realizada']);
+  });
+
+  it('encerrada: só Dar retorno, e só para realizada sem retorno', () => {
+    expect(botoesDaVisita(visita('completed'), TUDO, AGORA)).toEqual(['retorno']);
+    expect(botoesDaVisita(visita('completed', ONTEM, { rating: 4 }), TUDO, AGORA)).toEqual([]);
+    expect(botoesDaVisita(visita('no_show'), TUDO, AGORA)).toEqual([]);
+  });
+
+  it('respeita a permissão de cada botão', () => {
+    const soCancelar = { confirmar: false, remarcar: false, cancelar: true, concluir: false };
+    expect(botoesDaVisita(visita('scheduled', AMANHA), soCancelar, AGORA)).toEqual(['cancelar']);
+    expect(botoesDaVisita(visita('scheduled', ONTEM), soCancelar, AGORA)).toEqual([]);
   });
 });

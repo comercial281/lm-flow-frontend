@@ -8,6 +8,7 @@ import {
   LEAD_DESTINATION_LABEL,
   leadDestinationWarning,
 } from '@/features/properties/leadDestination';
+import { VISITAS_JUNTAS_HELP, VISITAS_JUNTAS_LABEL, aceitaVisitasJuntas } from '@/features/properties/visitasJuntas';
 import { CLASSE_SELETOR, type PropsDaSecao } from './tipos';
 
 type UsuarioDaLista = { id: string | number; name?: string | null; email?: string | null };
@@ -110,6 +111,21 @@ export default function SecaoEquipe({ form: f, setF }: PropsDaSecao) {
             {avisoDeDestino}
           </p>
         )}
+        {/* Trava de visita por imóvel (frente 4, 10/10): revenda tem uma chave,
+            empreendimento recebe várias famílias no estande. Fica aqui porque
+            também é sobre os corretores deste imóvel. */}
+        <label className="mt-3 flex items-start gap-2 text-xs">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={aceitaVisitasJuntas(f)}
+            onChange={e => setF({ accepts_concurrent_visits: e.target.checked })}
+          />
+          <span>
+            {VISITAS_JUNTAS_LABEL}
+            <span className="mt-0.5 block text-muted-foreground">{VISITAS_JUNTAS_HELP}</span>
+          </span>
+        </label>
       </div>
       <div>
         <UILabel>Captador</UILabel>

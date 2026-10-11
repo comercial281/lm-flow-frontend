@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -25,6 +25,15 @@ vi.mock('@/services/visits/visitsService', async (orig) => {
     },
   };
 });
+
+vi.mock('@/hooks/useCan', () => ({ useCan: () => () => true }));
+
+// A janela de agendar de verdade busca horários e corretores: aqui só importa
+// com qual dia ela abriu.
+vi.mock('@/components/visits/ScheduleVisitDialog', () => ({
+  ScheduleVisitDialog: (p: { open: boolean; diaInicial?: Date | null }) =>
+    p.open ? <div data-testid="janela" data-dia={p.diaInicial ? p.diaInicial.toDateString() : ''}>Janela de agendar</div> : null,
+}));
 
 const getSettings = vi.fn();
 const listTimeOffs = vi.fn();
@@ -134,12 +143,21 @@ describe('Agenda de Visitas: Semana e Dia', () => {
   });
 });
 
+// Relógio parado às 11h: as visitas de 15h do teste ainda não aconteceram,
+// senão o resultado dependeria da hora em que a suíte roda.
+const pararRelogio = () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(2026, 9, 10, 11, 0));
+};
+
 describe('Agenda de Visitas: clique na visita do calendário', () => {
+  afterEach(() => { vi.useRealTimers(); });
   beforeEach(() => {
+    pararRelogio();
     try { localStorage.removeItem('lm-visitas-visao'); } catch { /* sem armazenamento */ }
   });
 
-  it('visita agendada abre o resumo com Confirmar / Realizada / Cancelar, e dá para cancelar', async () => {
+  it('visita agendada abre o resumo com Confirmar / Remarcar / Cancelar, e dá para cancelar', async () => {
     const hoje = new Date();
     const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
     const visita = { id: 'v1', status: 'scheduled', scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Thyago' } };
@@ -152,12 +170,84 @@ describe('Agenda de Visitas: clique na visita do calendário', () => {
 
     const resumo = await screen.findByRole('dialog');
     expect(within(resumo).getByRole('button', { name: /Confirmar/ })).toBeInTheDocument();
-    expect(within(resumo).getByRole('button', { name: /Realizada/ })).toBeInTheDocument();
+    expect(within(resumo).getByRole('button', { name: /^Remarcar$/ })).toBeInTheDocument();
     await user.click(within(resumo).getByRole('button', { name: /Cancelar/ }));
 
-    const dialogo = await screen.findByRole('dialog');
-    expect(within(dialogo).getByText('Motivo do cancelamento')).toBeInTheDocument();
-    await user.click(within(dialogo).getByRole('button', { name: 'Cancelar visita' }));
+    // O diálogo é da peça única e vive dentro do resumo: o resumo continua aberto.
+    expect(await screen.findByText('Motivo do cancelamento')).toBeInTheDocument();
+    expect(screen.getAllByRole('dialog', { hidden: true }).length).toBeGreaterThan(1);
+    expect(resumo).toBeInTheDocument();
+    expect(within(resumo).getByRole('button', { name: /^Remarcar$/, hidden: true })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cancelar visita' }));
     expect(cancel).toHaveBeenCalledWith('v1', undefined);
+  });
+
+  it('visita Reagendada clicada no calendário abre o resumo', async () => {
+    const hoje = new Date();
+    const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
+    const visita = { id: 'v2', status: 'rescheduled', scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Thyago' } };
+    list.mockResolvedValue({ data: [visita], meta: { total: 1, active_total: 1, only_mine: false } });
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Semana' }));
+    await user.click(await screen.findByRole('button', { name: /15:00–16:00 · Thyago/ }));
+    const resumo = await screen.findByRole('dialog');
+    expect(within(resumo).getByRole('button', { name: /Cancelar/ })).toBeInTheDocument();
+  });
+});
+
+describe('Agenda de Visitas: dia que já passou', () => {
+  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    pararRelogio();
+    try { localStorage.removeItem('lm-visitas-visao'); } catch { /* sem armazenamento */ }
+  });
+
+  const ontem = () => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1, 15, 0);
+  };
+  const visitaDeOntem = () => ({ id: 'v3', status: 'scheduled', scheduled_at: ontem().toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Thyago' } });
+
+  it('clicar num dia passado no Mês abre a janela com esse dia', async () => {
+    list.mockResolvedValue({ data: [visitaDeOntem()], meta: { total: 1, active_total: 1, only_mine: false } });
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Mês' }));
+    const celula = (await screen.findByRole('button', { name: /15:00 · Thyago/ })).parentElement!;
+    fireEvent.click(celula);
+    const janela = await screen.findByTestId('janela');
+    expect(janela).toHaveAttribute('data-dia', ontem().toDateString());
+  });
+
+  it('a Lista mostra Não compareceu / Remarcar / Realizada na visita de ontem', async () => {
+    list.mockResolvedValue({ data: [visitaDeOntem()], meta: { total: 1, active_total: 1, only_mine: false } });
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Lista' }));
+    const card = (await screen.findByText('Thyago')).closest('[id^="visita-"]') as HTMLElement;
+    expect(within(card).getByRole('button', { name: /Não compareceu/ })).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: /^Remarcar$/ })).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: /Realizada/ })).toBeInTheDocument();
+  });
+});
+
+describe('Agenda de Visitas: aba Agendadas da Lista', () => {
+  it('pede Agendada e Reagendada: visita remarcada continua na aba', async () => {
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Lista' }));
+    await user.click(await screen.findByRole('button', { name: 'Agendadas' }));
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ status: ['scheduled', 'rescheduled'] })),
+    );
+  });
+
+  it('as outras abas continuam pedindo uma situação só', async () => {
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Lista' }));
+    await user.click(await screen.findByRole('button', { name: 'Confirmadas' }));
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'confirmed' })));
   });
 });

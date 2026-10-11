@@ -1,15 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { PipelineItem } from '@/types/analytics';
 
 const listVisitas = vi.fn();
-const cancelarVisita = vi.fn();
 const listPropostas = vi.fn();
 let podeCriar = true;
 let featureCriar = true;
 const dialogo = vi.fn();
+const janelaVisita = vi.fn();
+let aoAtualizar: (() => void) | null = null;
 
 vi.mock('@/services/visits/visitsService', async (orig) => {
   const real = await orig<typeof import('@/services/visits/visitsService')>();
@@ -18,7 +19,6 @@ vi.mock('@/services/visits/visitsService', async (orig) => {
     visitsService: {
       ...real.visitsService,
       list: (...a: unknown[]) => listVisitas(...a),
-      cancel: (...a: unknown[]) => cancelarVisita(...a),
     },
   };
 });
@@ -33,6 +33,19 @@ vi.mock('@/components/proposals/ProposalFormDialog', () => ({
   default: (props: { open: boolean; leadInicial?: { id: string } | null; imovelInicial?: { id: string } | null; pipelineItemId?: string | null }) => {
     dialogo(props);
     return props.open ? <div>janela de proposta</div> : null;
+  },
+}));
+
+vi.mock('@/components/visits/ScheduleVisitDialog', () => ({
+  ScheduleVisitDialog: (props: { open: boolean; leadInicial?: { id: string } | null; imovelInicial?: { id: string } | null; onCreated: () => void }) => {
+    janelaVisita(props);
+    return props.open ? <button onClick={props.onCreated}>janela de visita</button> : null;
+  },
+}));
+vi.mock('@/features/visits/AcoesDaVisita', () => ({
+  AcoesDaVisita: ({ visita, onAtualizada }: { visita: { id: string }; onAtualizada: () => void }) => {
+    aoAtualizar = onAtualizada;
+    return <div data-testid={`acoes-${visita.id}`} />;
   },
 }));
 
@@ -126,32 +139,59 @@ describe('Aba Visitas e propostas do card', () => {
     expect(screen.queryByText('Propostas')).not.toBeInTheDocument();
   });
 
-  it('visita agendada tem Cancelar visita: pede o motivo e a visita passa a Cancelada', async () => {
-    listVisitas.mockResolvedValue({
-      data: [
-        { id: 'v1', status: 'completed', scheduled_at: '2026-09-01T15:00:00Z', rating: 5, feedback_notes: 'Ok' },
-        { id: 'v3', status: 'scheduled', scheduled_at: '2026-10-20T15:00:00Z', property: { id: 'im1', title: 'Apto Lapa', code: 'AP0001' } },
-      ],
-      meta: { total: 2 },
-    });
-    cancelarVisita.mockResolvedValue({ id: 'v3', status: 'cancelled', scheduled_at: '2026-10-20T15:00:00Z' });
+  it('Nova visita abre a janela com o lead do card e o imóvel de interesse', async () => {
     abrir();
 
-    // Só a ativa ganha o botão; a realizada não.
-    const botoes = await screen.findAllByRole('button', { name: /Cancelar visita/ });
-    expect(botoes).toHaveLength(1);
-    await userEvent.click(botoes[0]);
-    await userEvent.type(screen.getByPlaceholderText('Opcional'), 'Cliente desistiu');
-    const confirmar = screen.getAllByRole('button', { name: 'Cancelar visita' }).at(-1)!;
-    await userEvent.click(confirmar);
+    await userEvent.click(await screen.findByRole('button', { name: /Nova visita/ }));
 
-    expect(cancelarVisita).toHaveBeenCalledWith('v3', 'Cliente desistiu');
-    expect(await screen.findByText('Cancelada')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Cancelar visita/ })).not.toBeInTheDocument();
+    expect(screen.getByText('janela de visita')).toBeInTheDocument();
+    expect(janelaVisita).toHaveBeenLastCalledWith(expect.objectContaining({
+      open: true,
+      leadInicial: expect.objectContaining({ id: 'c1' }),
+      imovelInicial: expect.objectContaining({ id: 'im1' }),
+    }));
   });
 
-  it('sem permissão de cancelar, a visita agendada não tem o botão', async () => {
-    podeCriar = false; // o mock do useCan responde o mesmo para toda permissão
+  it('sem permissão de criar visita, não mostra Nova visita', async () => {
+    podeCriar = false;
+    abrir();
+
+    await screen.findByText('Amou a varanda');
+    expect(screen.queryByRole('button', { name: /Nova visita/ })).not.toBeInTheDocument();
+  });
+
+  it('depois de criar a visita, a lista é buscada de novo', async () => {
+    abrir();
+    await userEvent.click(await screen.findByRole('button', { name: /Nova visita/ }));
+    expect(listVisitas).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(screen.getByText('janela de visita'));
+
+    await waitFor(() => expect(listVisitas).toHaveBeenCalledTimes(2));
+  });
+
+  it('cada visita tem a peça única de botões, e o onAtualizada recarrega a lista', async () => {
+    abrir();
+
+    expect(await screen.findByTestId('acoes-v1')).toBeInTheDocument();
+    expect(screen.getByTestId('acoes-v2')).toBeInTheDocument();
+    act(() => aoAtualizar?.());
+
+    await waitFor(() => expect(listVisitas).toHaveBeenCalledTimes(2));
+  });
+
+  it('a aba recarrega quando a versão do pai sobe', async () => {
+    const { rerender } = render(
+      <MemoryRouter><VisitsProposalsTab item={item} nomeExibido="Ana Teste" versao={0} /></MemoryRouter>,
+    );
+    await screen.findByTestId('acoes-v1');
+
+    rerender(<MemoryRouter><VisitsProposalsTab item={item} nomeExibido="Ana Teste" versao={1} /></MemoryRouter>);
+
+    await waitFor(() => expect(listVisitas).toHaveBeenCalledTimes(2));
+  });
+
+  it('o diálogo antigo de Cancelar visita não existe mais nesta aba', async () => {
     listVisitas.mockResolvedValue({
       data: [{ id: 'v3', status: 'scheduled', scheduled_at: '2026-10-20T15:00:00Z' }],
       meta: { total: 1 },

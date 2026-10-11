@@ -27,7 +27,7 @@ export function agenteDeTeste(extra: Partial<SalesAgent> = {}): SalesAgent {
     escalate_on_frustration: true, escalate_on_human_request: true, escalate_on_ai_detected: true,
     ai_limits: { address: true }, crm_policy: { cold: false, capture: false, invalid: true },
     ask_google_review: false, google_review_link: null, cross_sell_enabled: true, rich_media_enabled: true,
-    visit_config: { days: [1, 2, 3, 4, 5], start: '09:00', end: '18:00', min_advance_hours: 24, max_advance_days: 30, blocked_dates: [], avoid_double_booking: true, same_day_requires_human: true },
+    visit_config: { days: [1, 2, 3, 4, 5], start: '09:00', end: '18:00', min_advance_hours: 24, max_advance_days: 30, blocked_dates: [], same_day_requires_human: true },
     default_property_code: null, default_origin: null, intent_question: null, opening_image_url: null,
     intent_paths_default: [
       { nome: 'Moradia', como: 'Descubra pra quem é, quartos, região e prazo.' },

@@ -98,12 +98,15 @@ export function leadParaVisita(item: PipelineItem, nomeExibido: string): LeadPic
 }
 
 // Visita que já aconteceu (ou devia ter acontecido) pede o retorno do corretor.
-const STATUS_SEM_FEEDBACK_ESPERADO = new Set(['cancelled', 'rescheduled']);
+// Cancelada e "Não compareceu" não têm o que contar. Reagendada pede: o
+// remarcar mantém a mesma visita (só muda o horário), e depois que o novo
+// horário passa ela ganha o botão Realizada como qualquer agendada (frente 4).
+const STATUS_SEM_FEEDBACK_ESPERADO = new Set(['cancelled', 'no_show']);
 
 /**
- * "Sem feedback": a hora da visita já passou, ela não foi cancelada nem
- * remarcada, e ninguém registrou nota nem comentário. É o que a aba Visitas e
- * propostas destaca para o corretor completar.
+ * "Sem feedback": a hora da visita já passou, ela não foi cancelada nem marcada
+ * como "Não compareceu", e ninguém registrou nota nem comentário. É o que a aba
+ * Visitas e propostas destaca para o corretor completar.
  */
 export function visitaSemFeedback(visita: Pick<Visit, 'status' | 'scheduled_at' | 'rating' | 'feedback_notes'>, agora: Date = new Date()): boolean {
   if (STATUS_SEM_FEEDBACK_ESPERADO.has(visita.status)) return false;

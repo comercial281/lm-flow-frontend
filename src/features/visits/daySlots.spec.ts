@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  atalhosDeDia, diaISO, horariosDoDia, ocupando, porExtenso, rotuloDuracao, type BusyVisit,
+  atalhosDeDia, diaISO, diaPassado, gradeDeRegistro, horariosDoDia, horariosQueJaPassaram, ocupando, porExtenso, rotuloDuracao, type BusyVisit,
 } from './daySlots';
 
 // Quarta-feira, 30/09/2026, 14h10 (hora local).
@@ -99,5 +99,34 @@ describe('porExtenso e rotuloDuracao', () => {
 
   it('rótulos de duração', () => {
     expect([30, 60, 90, 120].map(rotuloDuracao)).toEqual(['30 min', '1 h', '1h30', '2 h']);
+  });
+});
+
+describe('passado', () => {
+  const agora = new Date(2026, 9, 10, 11, 10); // 10/10 11:10, hora local
+
+  it('diaPassado compara só o dia', () => {
+    expect(diaPassado(new Date(2026, 9, 9), agora)).toBe(true);
+    expect(diaPassado(new Date(2026, 9, 10), agora)).toBe(false);
+  });
+
+  it('horários de hoje que já passaram: 07:00 até 11:00', () => {
+    const s = horariosQueJaPassaram(new Date(2026, 9, 10), agora);
+    expect(s[0].rotulo).toBe('07:00');
+    expect(s[s.length - 1].rotulo).toBe('11:00');
+    expect(s).toHaveLength(9);
+  });
+
+  it('em outro dia não há horário "já passou"', () => {
+    expect(horariosQueJaPassaram(new Date(2026, 9, 11), agora)).toEqual([]);
+    expect(horariosQueJaPassaram(new Date(2026, 9, 9), agora)).toEqual([]);
+  });
+
+  it('grade de registro: 07:00 a 22:00, de 30 em 30, sem ocupado', () => {
+    const g = gradeDeRegistro(new Date(2026, 9, 5));
+    expect(g[0].rotulo).toBe('07:00');
+    expect(g[g.length - 1].rotulo).toBe('22:00');
+    expect(g).toHaveLength(31);
+    expect(g.every(x => x.ocupadoPor === null)).toBe(true);
   });
 });

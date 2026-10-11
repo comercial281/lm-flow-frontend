@@ -29,4 +29,11 @@ describe('formularioDoCadastro', () => {
     expect(f).toMatchObject({ builder: {}, internal_info: {}, commission: {}, accepts_fgts: null, iptu_period: null, owner_id: null,
       video_url: '', virtual_tour_url: '' });
   });
+  it('formularioDoImovel leva accepts_concurrent_visits (undefined vira null)', () => {
+    const mk = (extra: object) => formularioDoImovel({ id: '1', code: 'AP1', created_at: '', updated_at: '', ...base, ...extra } as Property);
+    expect(mk({ accepts_concurrent_visits: true }).accepts_concurrent_visits).toBe(true);
+    expect(mk({ accepts_concurrent_visits: false }).accepts_concurrent_visits).toBe(false);
+    expect(mk({ accepts_concurrent_visits: null }).accepts_concurrent_visits).toBeNull();
+    expect(mk({}).accepts_concurrent_visits).toBeNull();
+  });
 });

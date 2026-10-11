@@ -83,7 +83,12 @@ export const agendaService = {
     await api.delete(`/realtor_time_offs/${id}`);
   },
 
-  async availability(params: { realtor_id?: string; date: string; duration: number }): Promise<AvailabilityResponse> {
+  /**
+   * Horários do dia pela conta do servidor. `exclude_contact_id` (remarcar): as
+   * visitas desse cliente não contam como ocupadas, para a visita que muda de
+   * horário não bloquear a si mesma.
+   */
+  async availability(params: { realtor_id?: string; date: string; duration: number; exclude_contact_id?: string }): Promise<AvailabilityResponse> {
     const res = await api.get('/visits/availability', { params });
     return semEnvelope<AvailabilityResponse>(res.data);
   },

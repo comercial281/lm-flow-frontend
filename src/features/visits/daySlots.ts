@@ -33,6 +33,7 @@ export const DURACOES = [30, 60, 90, 120] as const;
 
 const PRIMEIRO_MINUTO = 7 * 60;
 const ULTIMO_MINUTO = 21 * 60;
+const ULTIMO_MINUTO_REGISTRO = 22 * 60;
 const PASSO = 30;
 const DURACAO_PADRAO = 60;
 const OCUPAM = new Set(['scheduled', 'confirmed', 'in_progress', 'rescheduled']);
@@ -108,4 +109,43 @@ function horaCurta(d: Date): string {
 export function porExtenso(inicio: Date, duracaoMin: number): string {
   const fim = new Date(inicio.getTime() + duracaoMin * MINUTO);
   return `${DIAS[inicio.getDay()]}, ${inicio.getDate()} de ${MESES[inicio.getMonth()]}, das ${horaCurta(inicio)} às ${horaCurta(fim)}`;
+}
+
+/** O dia (sem hora) é anterior a hoje. */
+export function diaPassado(dia: Date, agora: Date): boolean {
+  const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  return new Date(dia.getFullYear(), dia.getMonth(), dia.getDate()) < hoje;
+}
+
+/**
+ * Hoje: os horários da grade (07:00–21:00) que já passaram, para o grupo "Já
+ * passou" da janela (frente 4 de Visitas). Outro dia: nenhum. O ocupado vai
+ * só como informação: escolher um deles pergunta se a visita já aconteceu.
+ */
+export function horariosQueJaPassaram(dia: Date, agora: Date, ocupadas: BusyVisit[] = []): Slot[] {
+  if (!mesmoDia(dia, agora)) return [];
+  const base = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate());
+  const ativas = ocupando(ocupadas).map(v => {
+    const inicio = new Date(v.scheduled_at).getTime();
+    return { inicio, fim: inicio + duracaoDe(v) * MINUTO, nome: v.contact?.name || 'outro cliente' };
+  });
+  const out: Slot[] = [];
+  for (let m = PRIMEIRO_MINUTO; m <= ULTIMO_MINUTO; m += PASSO) {
+    const inicio = new Date(base.getTime() + m * MINUTO);
+    if (inicio.getTime() > agora.getTime()) break;
+    const choque = ativas.find(a => a.inicio <= inicio.getTime() && a.fim > inicio.getTime());
+    out.push({ inicio, rotulo: hora(inicio), ocupadoPor: choque ? choque.nome : null });
+  }
+  return out;
+}
+
+/** Visita registrada como realizada: 07:00–22:00, sem ocupado (registro não passa por trava). */
+export function gradeDeRegistro(dia: Date): Slot[] {
+  const base = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate());
+  const out: Slot[] = [];
+  for (let m = PRIMEIRO_MINUTO; m <= ULTIMO_MINUTO_REGISTRO; m += PASSO) {
+    const inicio = new Date(base.getTime() + m * MINUTO);
+    out.push({ inicio, rotulo: hora(inicio), ocupadoPor: null });
+  }
+  return out;
 }
