@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Input, Label } from '@/components/ui/ds';
+import { Button, DialogFooter, Input, Label } from '@/components/ui/ds';
 import { Contact, ContactFormData } from '@/types/contacts';
 import { useAccountUsers } from '@/hooks/useAccountUsers';
 import ContactLabels from './ContactLabels';
@@ -266,7 +266,7 @@ export default function ContactForm({
       </div>
 
       {/* Rodapé fixo: o Salvar fica à vista sem rolar o formulário. */}
-      <div className="flex justify-end gap-2 border-t border-border px-6 py-3">
+      <DialogFooter className="shrink-0">
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
             Cancelar
@@ -275,7 +275,7 @@ export default function ContactForm({
         <Button type="submit" disabled={loading}>
           {loading ? 'Salvando...' : isNew ? 'Salvar contato' : 'Salvar'}
         </Button>
-      </div>
+      </DialogFooter>
     </form>
   );
 }

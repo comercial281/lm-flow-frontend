@@ -3,6 +3,7 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   Button,
@@ -247,110 +248,111 @@ const AsanaConfigDialog = ({
           </div>
         ) : (
           /* Connected - Show configuration */
-          <div className="space-y-6 py-4">
-            <div className="space-y-4">
-              <Aviso tom="sucesso" titulo={t('edit.integrations.asana.connected') || 'Conectado'}>
-                {config.username && (
-                  <p>
-                    {t('edit.integrations.asana.connectedAs') || 'Conectado como'}:{' '}
-                    <strong>{config.username}</strong>
-                  </p>
-                )}
-                {config.email && <p>{config.email}</p>}
-              </Aviso>
-
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  {t('edit.integrations.asana.connectedDescription') ||
-                    'O agente agora pode acessar boards, itens e outras informações do Asana.'}
-                </p>
-              </div>
-            </div>
-
-            {/* Tools Selection */}
-            <div className="space-y-3 pt-4 border-t">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium">
-                    {t('edit.integrations.asana.toolsTitle') || 'Ferramentas Disponíveis'}
-                  </h4>
-                  {availableTools.length > 0 && (
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="select-all"
-                        checked={
-                          selectedTools.length === availableTools.length &&
-                          availableTools.length > 0
-                        }
-                        onCheckedChange={handleSelectAll}
-                      />
-                      <Label htmlFor="select-all" className="text-xs font-medium cursor-pointer">
-                        {t('edit.integrations.asana.selectAll') || 'Selecionar todas'}
-                      </Label>
-                    </div>
+          <>
+            <div className="space-y-6 py-4">
+              <div className="space-y-4">
+                <Aviso tom="sucesso" titulo={t('edit.integrations.asana.connected') || 'Conectado'}>
+                  {config.username && (
+                    <p>
+                      {t('edit.integrations.asana.connectedAs') || 'Conectado como'}:{' '}
+                      <strong>{config.username}</strong>
+                    </p>
                   )}
+                  {config.email && <p>{config.email}</p>}
+                </Aviso>
+
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    {t('edit.integrations.asana.connectedDescription') ||
+                      'O agente agora pode acessar boards, itens e outras informações do Asana.'}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mb-3">
-                  {t('edit.integrations.asana.toolsDescription') ||
-                    'Selecione quais ferramentas do Asana o agente poderá usar'}
-                </p>
               </div>
 
-              {isLoadingTools ? (
-                <Carregando linhas={3} />
-              ) : erroFerramentas ? (
-                <EmptyState
-                  tipo="erro"
-                  tamanho="compacto"
-                  aoTentarDeNovo={() => void loadAvailableTools()}
-                />
-              ) : availableTools.length > 0 ? (
-                <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-3">
-                  {availableTools.map(tool => (
-                    <div
-                      key={tool.id}
-                      className="flex items-start space-x-3 p-2 hover:bg-accent rounded-md"
-                    >
-                      <Checkbox
-                        id={tool.id}
-                        checked={selectedTools.includes(tool.name)}
-                        onCheckedChange={() => handleToolToggle(tool.name)}
-                      />
-                      <div className="flex-1">
-                        <Label htmlFor={tool.id} className="text-sm font-medium cursor-pointer">
-                          {tool.name}
+              {/* Tools Selection */}
+              <div className="space-y-3 pt-4 border-t">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-medium">
+                      {t('edit.integrations.asana.toolsTitle') || 'Ferramentas Disponíveis'}
+                    </h4>
+                    {availableTools.length > 0 && (
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="select-all"
+                          checked={
+                            selectedTools.length === availableTools.length &&
+                            availableTools.length > 0
+                          }
+                          onCheckedChange={handleSelectAll}
+                        />
+                        <Label htmlFor="select-all" className="text-xs font-medium cursor-pointer">
+                          {t('edit.integrations.asana.selectAll') || 'Selecionar todas'}
                         </Label>
-                        {tool.description && (
-                          <p className="text-xs text-muted-foreground mt-1">{tool.description}</p>
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    {t('edit.integrations.asana.toolsDescription') ||
+                      'Selecione quais ferramentas do Asana o agente poderá usar'}
+                  </p>
                 </div>
-              ) : (
-                <EmptyState
-                  tamanho="compacto"
-                  title={t('edit.integrations.asana.noTools') || 'Nenhuma ferramenta disponível'}
-                />
-              )}
+
+                {isLoadingTools ? (
+                  <Carregando linhas={3} />
+                ) : erroFerramentas ? (
+                  <EmptyState
+                    tipo="erro"
+                    tamanho="compacto"
+                    aoTentarDeNovo={() => void loadAvailableTools()}
+                  />
+                ) : availableTools.length > 0 ? (
+                  <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-3">
+                    {availableTools.map(tool => (
+                      <div
+                        key={tool.id}
+                        className="flex items-start space-x-3 p-2 hover:bg-accent rounded-md"
+                      >
+                        <Checkbox
+                          id={tool.id}
+                          checked={selectedTools.includes(tool.name)}
+                          onCheckedChange={() => handleToolToggle(tool.name)}
+                        />
+                        <div className="flex-1">
+                          <Label htmlFor={tool.id} className="text-sm font-medium cursor-pointer">
+                            {tool.name}
+                          </Label>
+                          {tool.description && (
+                            <p className="text-xs text-muted-foreground mt-1">{tool.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    tamanho="compacto"
+                    title={t('edit.integrations.asana.noTools') || 'Nenhuma ferramenta disponível'}
+                  />
+                )}
+              </div>
             </div>
 
-            <div className="flex flex-col gap-3 pt-4 border-t">
-              <Button onClick={handleSave} className="w-full">
-                {t('edit.integrations.asana.saveConfig') || 'Salvar'}
-              </Button>
-
+            <DialogFooter className={onDisconnect ? 'sm:justify-between' : undefined}>
               {onDisconnect && (
                 <Button
                   variant="ghost"
                   onClick={handleDisconnect}
-                  className="w-full text-destructive hover:text-destructive/80"
+                  className="text-destructive hover:text-destructive/80"
                 >
                   {t('edit.integrations.asana.disconnect') || 'Desconectar'}
                 </Button>
               )}
-            </div>
-          </div>
+              <Button onClick={handleSave}>
+                {t('edit.integrations.asana.saveConfig') || 'Salvar'}
+              </Button>
+            </DialogFooter>
+          </>
         )}
       </DialogContent>
     </Dialog>

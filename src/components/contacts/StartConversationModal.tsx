@@ -3,6 +3,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogDescription,
@@ -707,13 +708,12 @@ export default function StartConversationModal({
           )}
 
           {/* Actions */}
-          <div className="flex gap-3">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={handleCancel}
               disabled={loading}
-              className="flex-1"
             >
               {t('startConversation.actions.cancel')}
             </Button>
@@ -738,7 +738,6 @@ export default function StartConversationModal({
                   // Non-WhatsApp with template and variables requires all params filled
                   (!isWhatsAppInbox && useTemplate && selectedTemplate && someTemplateParams()),
               )}
-              className="flex-1"
             >
               {loading ? (
                 <>
@@ -752,7 +751,7 @@ export default function StartConversationModal({
                 </>
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

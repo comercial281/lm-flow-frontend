@@ -3,6 +3,7 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   Input,
@@ -876,23 +877,22 @@ const GoogleCalendarConfigDialog = ({
         )}
 
         {/* Action Buttons */}
-        <div className="flex flex-col gap-3 pt-4 border-t">
-          {config.connected && (
-            <Button onClick={handleSave} className="w-full">
+        {config.connected && (
+          <DialogFooter className={onDisconnect ? 'sm:justify-between' : undefined}>
+            {onDisconnect && (
+              <Button
+                variant="ghost"
+                onClick={handleDisconnect}
+                className="text-destructive hover:text-destructive/80"
+              >
+                {t('edit.integrations.googleCalendar.disconnect') || 'Desconectar'}
+              </Button>
+            )}
+            <Button onClick={handleSave}>
               {t('edit.integrations.googleCalendar.saveConfig') || 'APLICAR CONFIGURAÇÕES'}
             </Button>
-          )}
-
-          {onDisconnect && config.connected && (
-            <Button
-              variant="ghost"
-              onClick={handleDisconnect}
-              className="w-full text-destructive hover:text-destructive/80"
-            >
-              {t('edit.integrations.googleCalendar.disconnect') || 'Desconectar'}
-            </Button>
-          )}
-        </div>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

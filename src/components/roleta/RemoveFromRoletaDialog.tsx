@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogDescription,
@@ -125,7 +126,7 @@ export default function RemoveFromRoletaDialog({
           </p>
         </div>
 
-        <div className="flex justify-end gap-2 pt-1">
+        <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
@@ -133,7 +134,7 @@ export default function RemoveFromRoletaDialog({
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Tirar da roleta
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
