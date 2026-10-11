@@ -62,13 +62,17 @@ import {
 import { AcoesDaVisita } from '@/features/visits/AcoesDaVisita';
 import { acaoDaVisita, type AcaoDaVisita } from '@/features/visits/acaoDaVisita';
 
-const FILTER_TABS = [
+// "Agendadas" pede também as Reagendadas: remarcar troca a situação para
+// `rescheduled`, e a visita não pode sumir da aba depois de remarcada. O
+// servidor aceita a lista (`status[]=`) e filtra por qualquer uma delas.
+const FILTER_TABS: { key: string; label: string; status?: string | string[] }[] = [
   { key: '', label: 'Todas' },
-  { key: 'scheduled', label: 'Agendadas' },
-  { key: 'confirmed', label: 'Confirmadas' },
-  { key: 'completed', label: 'Realizadas' },
-  { key: 'cancelled', label: 'Canceladas' },
+  { key: 'scheduled', label: 'Agendadas', status: ['scheduled', 'rescheduled'] },
+  { key: 'confirmed', label: 'Confirmadas', status: 'confirmed' },
+  { key: 'completed', label: 'Realizadas', status: 'completed' },
+  { key: 'cancelled', label: 'Canceladas', status: 'cancelled' },
 ];
+const statusDaAba = (aba: string) => FILTER_TABS.find(t => t.key === aba)?.status;
 
 function groupByDate(visits: Visit[]): Map<string, Visit[]> {
   const map = new Map<string, Visit[]>();
@@ -510,7 +514,8 @@ export default function Visits() {
   // contador diz "N visitas em novembro" com o N de outubro.
   const ultimoPedido = useRef(0);
 
-  const load = useCallback(async (status = activeTab) => {
+  const load = useCallback(async (aba = activeTab) => {
+    const status = statusDaAba(aba);
     const pedido = ++ultimoPedido.current;
     const atual = () => pedido === ultimoPedido.current;
     setLoading(true);
@@ -531,7 +536,7 @@ export default function Visits() {
         })()
         : {};
       const res = await visitsService.list({
-        status: status || undefined,
+        status,
         ...doMes,
         ...(filtroLink?.params ?? {}),
         per_page: 500,

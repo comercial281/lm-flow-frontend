@@ -231,3 +231,23 @@ describe('Agenda de Visitas: dia que já passou', () => {
     expect(within(card).getByRole('button', { name: /Realizada/ })).toBeInTheDocument();
   });
 });
+
+describe('Agenda de Visitas: aba Agendadas da Lista', () => {
+  it('pede Agendada e Reagendada: visita remarcada continua na aba', async () => {
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Lista' }));
+    await user.click(await screen.findByRole('button', { name: 'Agendadas' }));
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ status: ['scheduled', 'rescheduled'] })),
+    );
+  });
+
+  it('as outras abas continuam pedindo uma situação só', async () => {
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Lista' }));
+    await user.click(await screen.findByRole('button', { name: 'Confirmadas' }));
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'confirmed' })));
+  });
+});

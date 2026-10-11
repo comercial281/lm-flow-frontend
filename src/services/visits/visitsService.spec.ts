@@ -84,3 +84,12 @@ describe('visitsService.realtors', () => {
     expect(await visitsService.realtors()).toEqual([]);
   });
 });
+
+describe('visitsService.list com mais de uma situação', () => {
+  it('o cliente de API manda a lista como status[]=, que o servidor lê como várias situações', async () => {
+    // Aqui o `api` é o de verdade: o que importa é o endereço que sai dele.
+    const { default: apiReal } = await vi.importActual<typeof import('@/services/core/api')>('@/services/core/api');
+    const url = apiReal.getUri({ url: '/visits', params: { status: ['scheduled', 'rescheduled'], per_page: 500 } });
+    expect(decodeURIComponent(url)).toContain('/visits?status[]=scheduled&status[]=rescheduled&per_page=500');
+  });
+});
