@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Labels from './Labels';
 import { labelsService } from '@/services/contacts/labelsService';
+import { useAppDataStore } from '@/store/appDataStore';
 
 vi.mock('@/hooks/useUserPermissions', () => ({
   useUserPermissions: () => ({ can: () => true, isReady: true }),
@@ -42,18 +43,46 @@ describe('Tela de Etiquetas', () => {
     render(<Labels />);
     await userEvent.click(await screen.findByRole('button', { name: /Follow-up · 1/ }));
     const linha = screen.getByText('Follow-up pausado').closest('[data-linha-etiqueta]') as HTMLElement;
-    await userEvent.click(within(linha).getByRole('button', { name: 'Mais ações' }));
+    await userEvent.click(within(linha).getByRole('button', { name: /^Mais ações/ }));
     expect(screen.getByRole('menuitem', { name: 'Trocar cor' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Excluir' })).not.toBeInTheDocument();
   });
 
-  it('trocar cor atualiza a bolinha', async () => {
-    vi.spyOn(labelsService, 'shuffleColor').mockResolvedValue({ data: lbl('1', 'cliente vip', 'own', 'Cliente vip', { color: '#3b82f6' }) } as never);
+  it('trocar cor atualiza a bolinha e o catálogo guardado, sem recarregar', async () => {
+    // Formato real: extractData já entrega a etiqueta pura.
+    vi.spyOn(labelsService, 'shuffleColor').mockResolvedValue(lbl('1', 'cliente vip', 'own', 'Cliente vip', { color: '#3b82f6' }) as never);
+    const fetchLabels = vi.fn().mockResolvedValue(undefined);
+    useAppDataStore.setState({ fetchLabels, labels: [lbl('1', 'cliente vip', 'own', 'Cliente vip')] as never });
     render(<Labels />);
     const linha = (await screen.findByText('Cliente vip')).closest('[data-linha-etiqueta]') as HTMLElement;
-    await userEvent.click(within(linha).getByRole('button', { name: 'Mais ações' }));
+    await userEvent.click(within(linha).getByRole('button', { name: /^Mais ações/ }));
     await userEvent.click(screen.getByRole('menuitem', { name: 'Trocar cor' }));
     expect(within(linha).getByTestId('bolinha')).toHaveStyle({ backgroundColor: '#3b82f6' });
+    expect(useAppDataStore.getState().labels[0].color).toBe('#3b82f6');
+    expect(fetchLabels).not.toHaveBeenCalled();
+  });
+
+  it('o nome da etiqueta própria é botão e abre a edição; o do sistema não é', async () => {
+    render(<Labels />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Cliente vip' }));
+    // Sem i18n nos testes o título aparece como chave.
+    expect(await screen.findByRole('dialog')).toHaveTextContent(/modal\.title\.edit|Editar etiqueta/);
+  });
+
+  it('nome de etiqueta do sistema não é botão', async () => {
+    render(<Labels />);
+    await userEvent.click(await screen.findByRole('button', { name: /Follow-up · 1/ }));
+    expect(screen.getByText('Follow-up pausado')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Follow-up pausado' })).not.toBeInTheDocument();
+  });
+
+  it('editar atualiza a linha', async () => {
+    vi.spyOn(labelsService, 'updateLabel').mockResolvedValue(lbl('1', 'cliente top', 'own', 'Cliente top') as never);
+    vi.spyOn(useAppDataStore.getState(), 'fetchLabels').mockResolvedValue(undefined);
+    render(<Labels />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Cliente vip' }));
+    await userEvent.click(await screen.findByRole('button', { name: /modal\.buttons\.update|Salvar/ }));
+    expect(await screen.findByText('Cliente top')).toBeInTheDocument();
   });
 
   it('busca abre a caixa certa', async () => {

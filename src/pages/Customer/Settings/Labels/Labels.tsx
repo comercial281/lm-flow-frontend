@@ -27,7 +27,7 @@ export default function Labels() {
 
   const [labels, setLabels] = useState<Label[]>([]);
   const [busca, setBusca] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
@@ -89,11 +89,13 @@ export default function Labels() {
       return;
     }
     try {
-      const response = await labelsService.shuffleColor(label.id);
-      const nova = response.data;
+      const nova = await labelsService.shuffleColor(label.id);
       // Mantém contagem e nome de exibição que a resposta pode não trazer.
       setLabels(prev => prev.map(l => (l.id === label.id ? { ...l, ...nova } : l)));
-      fetchLabels(true);
+      // Atualiza o catálogo guardado na hora, sem recarregar a lista inteira a cada troca.
+      useAppDataStore.setState(s => ({
+        labels: s.labels.map(x => (x.id === nova.id ? { ...x, color: nova.color } : x)),
+      }));
     } catch (error) {
       toast.error(apiErrorMessage(error, 'Não deu pra trocar a cor'));
     }
@@ -115,7 +117,7 @@ export default function Labels() {
       await labelsService.deleteLabel(label.id);
       toast.success(t('messages.deleteSuccess'));
       setLabels(prev => prev.filter(l => l.id !== label.id));
-      fetchLabels(true);
+      fetchLabels(true)?.catch(() => {});
     } catch (error) {
       console.error('Error deleting label:', error);
       toast.error(apiErrorMessage(error, t('messages.deleteError')));
@@ -131,15 +133,15 @@ export default function Labels() {
     setSalvando(true);
     try {
       if (editando) {
-        const response = await labelsService.updateLabel(editando.id, data);
+        const atualizada = await labelsService.updateLabel(editando.id, data);
         toast.success(t('messages.updateSuccess'));
-        setLabels(prev => prev.map(l => (l.id === editando.id ? { ...l, ...response.data } : l)));
+        setLabels(prev => prev.map(l => (l.id === editando.id ? { ...l, ...atualizada } : l)));
       } else {
         await labelsService.createLabel(data);
         toast.success(t('messages.createSuccess'));
         await loadLabels();
       }
-      fetchLabels(true);
+      fetchLabels(true)?.catch(() => {});
       setModalAberto(false);
       setEditando(null);
     } catch (error) {
@@ -207,8 +209,8 @@ export default function Labels() {
                         key={l.id}
                         label={l}
                         onEditar={handleEdit}
-                        onTrocarCor={handleTrocarCor}
-                        onExcluir={handleDelete}
+                        onTrocarCor={can('labels', 'update') ? handleTrocarCor : undefined}
+                        onExcluir={can('labels', 'delete') ? handleDelete : undefined}
                       />
                     ))}
                   </div>
@@ -233,7 +235,7 @@ export default function Labels() {
                       frase={c.frase}
                       itens={c.itens}
                       abertaPorBusca={buscando}
-                      onTrocarCor={handleTrocarCor}
+                      onTrocarCor={can('labels', 'update') ? handleTrocarCor : undefined}
                     />
                   ))}
                 </div>

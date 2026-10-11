@@ -9,7 +9,7 @@ export const CATEGORIAS_DO_SISTEMA: { id: LabelCategory; nome: string; frase: st
   { id: 'sales_agent', nome: 'IA Vendedora (antigas)', frase: 'A IA não coloca mais essas etiquetas. Elas continuam nos leads que já tinham.' },
 ];
 
-const semAcento = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const semAcento = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 const casa = (label: Label, busca: string) => {
   if (!busca) return true;

@@ -14,9 +14,9 @@ class LabelsService {
     return extractResponse<Label>(response) as LabelsResponse;
   }
 
-  async shuffleColor(labelId: string): Promise<LabelResponse> {
+  async shuffleColor(labelId: string): Promise<Label> {
     const response = await api.post(`/labels/${labelId}/shuffle_color`);
-    return extractData<LabelResponse>(response);
+    return extractData<Label>(response);
   }
 
   async createLabel(data: {
@@ -37,9 +37,9 @@ class LabelsService {
       color?: string;
       show_on_sidebar?: boolean;
     },
-  ): Promise<LabelResponse> {
+  ): Promise<Label> {
     const response = await api.patch(`/labels/${labelId}`, { label: data });
-    return extractData<LabelResponse>(response);
+    return extractData<Label>(response);
   }
 
   async deleteLabel(labelId: string): Promise<LabelDeleteResponse> {

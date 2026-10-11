@@ -11,7 +11,7 @@ interface CaixaDoSistemaProps {
   frase: string;
   itens: Label[];
   abertaPorBusca?: boolean;
-  onTrocarCor: (label: Label) => void;
+  onTrocarCor?: (label: Label) => void;
 }
 
 export default function CaixaDoSistema({ nome, frase, itens, abertaPorBusca, onTrocarCor }: CaixaDoSistemaProps) {
@@ -25,7 +25,7 @@ export default function CaixaDoSistema({ nome, frase, itens, abertaPorBusca, onT
       <button
         type="button"
         aria-expanded={visivel}
-        onClick={() => setAberta(a => !a)}
+        onClick={() => setAberta(!visivel)}
         className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium"
       >
         <span>{`${nome} · ${itens.length}`}</span>

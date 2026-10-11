@@ -26,10 +26,10 @@ interface LabelModalProps {
   }) => void;
 }
 
+// Mesma paleta de 12 cores que o servidor sorteia (sem cinzas escuros).
 const DEFAULT_COLORS = [
-  '#1f93ff', '#ff4757', '#2ed573', '#ffa502', '#5352ed',
-  '#ff6b81', '#70a1ff', '#7bed9f', '#ff9f43', '#a4b0be',
-  '#57606f', '#2f3542', '#ff3838', '#00d8ff', '#6c5ce7'
+  '#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#14b8a6',
+  '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899',
 ];
 
 const getRandomColor = () => {
@@ -48,7 +48,7 @@ export default function LabelModal({
   const { can } = useUserPermissions();
   const [formData, setFormData] = useState({
     title: '',
-    color: '#1f93ff',
+    color: DEFAULT_COLORS[7],
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
