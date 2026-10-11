@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@evoapi/design-system/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@evoapi/design-system/tooltip';
 
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, type LucideIcon } from 'lucide-react';
 import { Contact } from '@/types/chat/api';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
@@ -29,6 +29,8 @@ interface ContactAvatarProps {
   showColoredFallback?: boolean;
   channelType?: string;
   channelProvider?: string;
+  /** Ícone quando não há foto nem nome (padrão: balão de conversa, para lead). */
+  iconeSemNome?: LucideIcon;
 }
 
 const ContactAvatar: React.FC<ContactAvatarProps> = ({
@@ -38,6 +40,7 @@ const ContactAvatar: React.FC<ContactAvatarProps> = ({
   showColoredFallback = false,
   channelType,
   channelProvider,
+  iconeSemNome: IconeSemNome = MessageCircle,
 }) => {
   const { t } = useLanguage('chat');
   const [imageError, setImageError] = useState(false);
@@ -149,7 +152,7 @@ const ContactAvatar: React.FC<ContactAvatarProps> = ({
           />
         )}
         <AvatarFallback className={`${colorClass} ${textSizes[size]}`}>
-          {initials || <MessageCircle className={iconSizes[size]} />}
+          {initials || <IconeSemNome className={iconSizes[size]} />}
         </AvatarFallback>
       </Avatar>
 

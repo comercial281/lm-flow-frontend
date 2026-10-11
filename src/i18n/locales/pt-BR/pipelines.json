@@ -80,7 +80,9 @@
     "adding": "Adicionando...",
     "add": "Adicionar Lead",
     "cancel": "Cancelar",
-    "success": "Lead adicionado com sucesso ao funil",
+    "success": "Lead adicionado ao funil.",
+    "created": "Lead criado e adicionado ao funil.",
+    "reused": "Lead já existia — adicionado ao funil.",
     "error": "Erro ao adicionar lead ao funil",
     "loadError": "Erro ao carregar leads disponíveis"
   },
@@ -632,7 +634,6 @@
       "stageDeleteError": "Erro ao excluir etapa",
       "stageReordered": "Ordem das etapas atualizada com sucesso",
       "stageReorderError": "Erro ao reordenar etapas",
-      "itemAdded": "Lead adicionado com sucesso",
       "itemRemoved": "Lead removido do funil com sucesso",
       "itemRemoveError": "Erro ao remover lead do funil",
       "itemUpdated": "Lead atualizado com sucesso",

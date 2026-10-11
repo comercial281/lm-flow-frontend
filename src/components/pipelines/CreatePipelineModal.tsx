@@ -542,7 +542,7 @@ export default function CreatePipelineModal({
                       `}
                     >
                       <div className="flex items-center space-x-3 flex-1 min-w-0">
-                        <GripVertical className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <GripVertical className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 toque:opacity-100 transition-opacity" />
                         <span className="text-xs font-medium text-muted-foreground w-5 text-center">
                           {index + 1}
                         </span>
@@ -567,7 +567,7 @@ export default function CreatePipelineModal({
                         onClick={() => removeStage(index)}
                         aria-label="Remover etapa"
                         title="Remover etapa"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive p-1 h-auto"
+                        className="opacity-0 group-hover:opacity-100 toque:opacity-100 transition-opacity text-destructive hover:text-destructive p-1 h-auto"
                       >
                         <Trash2 className="w-3 h-3" />
                       </Button>

@@ -98,7 +98,7 @@ export default function CustomMCPServerCard({
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-2 opacity-0 group-hover:opacity-100 toque:opacity-100 transition-opacity">
           <Button
             variant="outline"
             size="sm"

@@ -61,3 +61,36 @@ describe('CustomAttributesForm — recusa do servidor', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
   });
 });
+
+// Raio-X de 10/10/2026: o corretor abria o card e via o aviso com a chave crua
+// `contactSidebar.customAttributes.loadError` — a leitura das definições era
+// recusada pelo cargo e a chave nem existia no pt-BR.
+describe('CustomAttributesForm — leitura das definições', () => {
+  const carregar = async (erro: unknown) => {
+    const { customAttributesService } = await import('@/services/customAttributes/customAttributesService');
+    vi.mocked(customAttributesService.getCustomAttributes).mockRejectedValueOnce(erro);
+    render(<CustomAttributesForm attributeModel={'contact_attribute' as never} attributes={{}} mode="editable" onUpdateAttributes={vi.fn()} />);
+    await waitFor(() => expect(customAttributesService.getCustomAttributes).toHaveBeenCalled());
+  };
+
+  it('recusa do cargo (403) não mostra aviso nenhum', async () => {
+    await carregar({ response: { status: 403, data: { required_permission: 'custom_attribute_definitions.read' } } });
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it('outra falha avisa com a frase do pt-BR, não com a chave', async () => {
+    await carregar({ response: { status: 500, data: {} } });
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('contactSidebar.customAttributes.loadError'));
+  });
+
+  it('a chave do aviso existe no pt-BR', async () => {
+    const chat = (await import('@/i18n/locales/pt-BR/chat.json')).default as {
+      contactSidebar: Record<string, { loadError?: string }>;
+    };
+    expect(chat.contactSidebar.customAttributes.loadError).toMatch(/campos personalizados/);
+    expect(chat.contactSidebar.conversationAttributes.loadError).toMatch(/campos da conversa/);
+  });
+});

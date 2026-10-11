@@ -2,7 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { usersService } from '@/services/users';
 import type { User } from '@/types/users';
 
-export function useAccountUsers() {
+/**
+ * `enabled: false` não busca (a lista fica vazia): quem não lê a equipe
+ * (`users.read`, o corretor) não precisa disparar um pedido que volta 403.
+ */
+export function useAccountUsers({ enabled = true }: { enabled?: boolean } = {}) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,8 +34,8 @@ export function useAccountUsers() {
   }, []);
 
   useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+    if (enabled) loadUsers();
+  }, [loadUsers, enabled]);
 
   return {
     users,

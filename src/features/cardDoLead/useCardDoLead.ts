@@ -12,6 +12,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAccountUsers } from '@/hooks/useAccountUsers';
+import { useAuthStore } from '@/store/authStore';
+import { useEhGestor } from '@/features/tarefas/useEhGestor';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -31,7 +33,7 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import type { Label as LabelType } from '@/types/settings';
 import { cardFechado, comSituacaoNova, ehColunaDeGanho, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
-import { contatoDoCard, origemCurta, podeCorrigirContato, semFunil } from './cardDoLead';
+import { contatoDoCard, origemCurta, podeCorrigirContato, responsavelNoCard, semFunil } from './cardDoLead';
 import { useVersaoDoHistorico } from './historico/useVersaoDoHistorico';
 
 // Do contato vêm {name}, da conversa {title}.
@@ -62,7 +64,12 @@ export function useCardDoLead(
   item: PipelineItem | null,
   { aberto, stages, onItemStageMoved, onLabelsChanged, onItemStatusChanged }: OpcoesDoCard,
 ) {
-  const { users } = useAccountUsers();
+  // Responsável (10/10/2026): só o gestor troca (mesma régua do servidor,
+  // useEhGestor) e só ele precisa da lista de pessoas — o corretor não lê
+  // GET /users (o 403 deixava o campo em branco). O nome vem do card.
+  const podeTrocarResponsavel = useEhGestor();
+  const meuId = useAuthStore(st => st.currentUser?.id);
+  const { users } = useAccountUsers({ enabled: podeTrocarResponsavel });
   // Juntar contatos: só gestor (corretor isolado não vê a base pra escolher o outro).
   const corretor = useCorretorLogado();
   const { can } = useUserPermissions();
@@ -440,7 +447,18 @@ export function useCardDoLead(
       rodapeSalvando,
       setRodapeSalvando,
     },
-    responsavel: { id: selectedAssigneeId, salvando: assigningUser, usuarios: users, trocar: handleAssigneeChange },
+    responsavel: {
+      id: selectedAssigneeId,
+      salvando: assigningUser,
+      usuarios: users,
+      trocar: handleAssigneeChange,
+      podeTrocar: podeTrocarResponsavel,
+      meuId: meuId != null ? String(meuId) : null,
+      // O nome do responsável que o servidor mandou no card (o do card ou o da
+      // conversa) — vale enquanto o escolhido é ele (o gestor troca e a lista
+      // passa a dar o nome).
+      nomeDoCard: responsavelNoCard(item, selectedAssigneeId)?.name ?? null,
+    },
     roleta: {
       ligadas: roletas,
       mandando: assigningRoleta,

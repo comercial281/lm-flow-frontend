@@ -20,7 +20,7 @@ import { Plus, X, Settings, Pencil, Check, Loader2 } from 'lucide-react';
 import { customAttributesService } from '@/services/customAttributes/customAttributesService';
 import { CustomAttributeDefinition, AttributeModel } from '@/types/settings';
 import { toast } from 'sonner';
-import { serverRefusalMessageOf } from '@/services/core/forbidden';
+import { isForbiddenError, serverRefusalMessageOf } from '@/services/core/forbidden';
 
 export type CustomAttributesMode = 'form' | 'editable';
 
@@ -109,6 +109,10 @@ export default function CustomAttributesForm({
         setDefinedAttributes(response.data);
         aoCarregarDefinicoes?.(response.data?.length ?? 0);
       } catch (error) {
+        // Leitura de fundo recusada pelo cargo não grita (diário: "Aviso de
+        // permissão é para o CLIQUE"): a seção só não aparece. Até 10/10/2026 o
+        // corretor abria o card e via a chave crua deste aviso.
+        if (isForbiddenError(error)) return;
         if (mode === 'editable') {
           const errorKey = translationKeys.loadError || 'contactSidebar.customAttributes.loadError';
           toast.error(t(errorKey));
@@ -610,7 +614,7 @@ export default function CustomAttributesForm({
           disabled={saving}
           aria-label={`Editar ${attribute.attribute_display_name}`}
           title={`Editar ${attribute.attribute_display_name}`}
-          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 toque:opacity-100 transition-opacity"
         >
           <Pencil className="h-3 w-3" />
         </Button>

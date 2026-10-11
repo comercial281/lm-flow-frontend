@@ -4,8 +4,8 @@ import { render, screen } from '@testing-library/react';
 import { ResponsavelComFoto } from './BlocoSituacao';
 
 vi.mock('@/components/chat/contact/ContactAvatar', () => ({
-  default: ({ contact }: { contact: { name: string; avatar_url: string | null } }) => (
-    <div data-testid="foto" data-nome={contact.name} data-url={contact.avatar_url ?? ''} />
+  default: ({ contact, iconeSemNome }: { contact: { name: string; avatar_url: string | null }; iconeSemNome?: { displayName?: string } }) => (
+    <div data-testid="foto" data-nome={contact.name} data-url={contact.avatar_url ?? ''} data-icone={iconeSemNome?.displayName ?? ''} />
   ),
 }));
 vi.mock('@/components/pipelines/card/CamposDaSituacao', () => ({
@@ -48,5 +48,33 @@ describe('ResponsavelComFoto', () => {
     const foto = screen.getByTestId('foto');
     expect(foto).toHaveAttribute('data-nome', 'Ana');
     expect(foto).toHaveAttribute('data-url', 'ana.png');
+  });
+});
+
+// Revisão de 10/10/2026: o corretor não lê a lista de pessoas; a foto usa o
+// mesmo nome do campo — o do card ou, em reserva, o da conversa.
+describe('ResponsavelComFoto sem a lista de pessoas (corretor)', () => {
+  const doCorretor = (item: unknown, id: string) => ({
+    item,
+    responsavel: { id, salvando: false, trocar: vi.fn(), usuarios: [] },
+  }) as never;
+
+  it('responsável da conversa: a foto leva o nome e a foto dele', () => {
+    render(<ResponsavelComFoto card={doCorretor({ conversation: { id: 77, assignee: { id: 'u9', name: 'Bruno Silva', avatar_url: 'b.png' } } }, 'u9')} />);
+    const foto = screen.getByTestId('foto');
+    expect(foto).toHaveAttribute('data-nome', 'Bruno Silva');
+    expect(foto).toHaveAttribute('data-url', 'b.png');
+  });
+
+  it('com responsável sem nome conhecido, nunca "Sem responsável" ao lado, e o ícone é de pessoa', () => {
+    render(<ResponsavelComFoto card={doCorretor({}, 'u9')} />);
+    const foto = screen.getByTestId('foto');
+    expect(foto).not.toHaveAttribute('data-nome', 'Sem responsável');
+    expect(foto).toHaveAttribute('data-icone', 'User');
+  });
+
+  it('sem responsável: "Sem responsável"', () => {
+    render(<ResponsavelComFoto card={doCorretor({}, '')} />);
+    expect(screen.getByTestId('foto')).toHaveAttribute('data-nome', 'Sem responsável');
   });
 });

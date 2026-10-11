@@ -4,10 +4,17 @@
 // voltas somam). Card aberto: clicar numa etapa pergunta antes de mover
 // (decisão 16). Card Ganho/Perdido: só informa — pra mexer, reabre.
 // Desenho em setas encaixadas (10/10, pedido do dono): uma etapa leva à outra.
-import type { CSSProperties } from 'react';
+//
+// Celular (10/10/2026, Raio-X 390×844): as etapas encolhiam abaixo da largura
+// mínima e encavalavam (nome cortado, "menos de 1 dia · atual" por cima da
+// vizinha). Abaixo do `md` cada seta tem a largura do próprio texto (o recorte
+// é em px, então encaixa em qualquer largura), a faixa rola de lado e abre já
+// rolada até a etapa atual. No computador, igual.
+import { useLayoutEffect, useRef, type CSSProperties } from 'react';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { ehCelular } from '@/hooks/useCelular';
 import { ETAPA_TRAVADA, ehColunaDeGanho } from '@/features/pipelines/situacao/situacao';
 import type { PipelineStage, StageDuration } from '@/types/analytics';
 import { textoDosDias } from './textoDosDias';
@@ -48,6 +55,17 @@ export default function FaixaDeEtapas({
   const porEtapa = new Map(duracoes.map(d => [String(d.stage_id), d]));
   const indiceAtual = etapas.findIndex(e => String(e.id) === String(etapaAtualId));
 
+  // Celular: a etapa atual à vista quando a faixa rola. Mexe só na rolagem
+  // lateral da própria faixa, nunca na da página.
+  const faixaRef = useRef<HTMLOListElement>(null);
+  const atualRef = useRef<HTMLLIElement>(null);
+  useLayoutEffect(() => {
+    const faixa = faixaRef.current;
+    const atual = atualRef.current;
+    if (!ehCelular() || !faixa || !atual || faixa.scrollWidth <= faixa.clientWidth) return;
+    faixa.scrollLeft = Math.max(0, atual.offsetLeft - (faixa.clientWidth - atual.offsetWidth) / 2);
+  }, [indiceAtual, etapas.length]);
+
   const escolher = async (etapa: PipelineStage) => {
     // Concluído é a coluna do Ganho (ajuste de 08/10): clicar nela é marcar Ganho.
     if (ehColunaDeGanho(etapa)) {
@@ -69,7 +87,7 @@ export default function FaixaDeEtapas({
 
   return (
     <div className="space-y-2">
-      <ol aria-label="Etapas do funil" className="flex overflow-x-auto p-px pb-1">
+      <ol ref={faixaRef} aria-label="Etapas do funil" className="relative flex overflow-x-auto p-px pb-1">
         {etapas.map((etapa, i) => {
           const atual = i === indiceAtual;
           const pintada = indiceAtual >= 0 && i <= indiceAtual;
@@ -84,7 +102,7 @@ export default function FaixaDeEtapas({
           // Arredonda só as pontas retas da faixa (o recorte respeita o arredondado).
           const cantos = cn(primeira && 'rounded-l-lg', ultima && 'rounded-r-lg');
           const classe = cn(
-            'relative w-full min-w-[120px] py-2 text-left',
+            'relative w-full min-w-[120px] py-2 text-left max-md:w-auto max-md:max-w-[220px]',
             cantos,
             primeira ? 'pl-3' : 'pl-6',
             ultima ? 'pr-3' : 'pr-5',
@@ -93,7 +111,7 @@ export default function FaixaDeEtapas({
           const conteudo = (
             <>
               <span className="block truncate text-sm font-medium" title={etapa.name}>{etapa.name}</span>
-              <span className="block text-xs opacity-80">
+              <span className="block text-xs opacity-80 max-md:whitespace-nowrap">
                 {atual ? (dias ? `${dias} · atual` : 'atual') : dias || ' '}
               </span>
             </>
@@ -101,8 +119,10 @@ export default function FaixaDeEtapas({
           return (
             <li
               key={etapa.id}
+              ref={atual ? atualRef : undefined}
               // O encaixe entra na ponta da anterior e sobra uma fresta de 4 px.
-              className={cn('relative flex min-w-0 flex-1', !primeira && '-ml-2')}
+              // Celular: largura do texto (não encolhe), a faixa rola.
+              className={cn('relative flex min-w-0 flex-1 max-md:flex-none', !primeira && '-ml-2')}
               aria-current={atual ? 'step' : undefined}
             >
               {/* O fundo da seta é uma camada própria: o contorno não pega o texto. */}

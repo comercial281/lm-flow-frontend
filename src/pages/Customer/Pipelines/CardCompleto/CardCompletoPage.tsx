@@ -12,7 +12,7 @@
 // Card fechado ou arquivado continua mexível: "Sobre o negócio" e criar tarefa
 // seguem disponíveis (checklist f3-06: agir no arquivado sem desarquivar).
 import { Suspense, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArchiveRestore, ArrowLeft, CalendarCheck, ClipboardList, Megaphone, MessageSquare, ShieldX } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Skeleton } from '@/components/ui/ds';
@@ -30,6 +30,7 @@ import { linkDoCardCompleto } from '@/features/pipelines/linkDoCard';
 import { useCardDoLead } from '@/features/cardDoLead/useCardDoLead';
 import { useCardCompleto } from '@/features/cardDoLead/pagina/useCardCompleto';
 import { SEM_ACESSO_AO_CARD } from '@/features/cardDoLead/buscarCard';
+import { voltaPeloHistorico } from '@/features/cardDoLead/paginaNoCelular';
 import FaixaDeEtapas from '@/features/cardDoLead/pagina/FaixaDeEtapas';
 import FichaDoCard from '@/features/cardDoLead/pagina/FichaDoCard';
 import { ResponsavelComFoto } from '@/features/cardDoLead/blocos/BlocoSituacao';
@@ -68,7 +69,27 @@ function Carregando() {
   );
 }
 
+const CLASSE_DA_VOLTA = 'inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground';
+
+// Aberta de dentro do app no celular (paginaNoCelular.ts): voltar faz o mesmo
+// que o voltar do navegador (quadro, Contatos, Tarefas, conversa). Vale pra
+// página pronta, carregando, erro e sem acesso.
+function useVoltaPeloHistorico(): boolean {
+  return voltaPeloHistorico(useLocation().state);
+}
+
+function BotaoVoltar() {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate(-1)} className={CLASSE_DA_VOLTA}>
+      <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Voltar
+    </button>
+  );
+}
+
 function SemAcesso({ pipelineId }: { pipelineId?: string }) {
+  const navigate = useNavigate();
+  const peloHistorico = useVoltaPeloHistorico();
   return (
     <div role="status" className="flex min-h-[320px] flex-col items-center justify-center gap-3 text-center">
       <ShieldX className="h-8 w-8 text-muted-foreground" aria-hidden />
@@ -76,7 +97,9 @@ function SemAcesso({ pipelineId }: { pipelineId?: string }) {
       <p className="max-w-md text-sm text-muted-foreground">
         Ele pode ter saído do funil ou ser atendido por outra pessoa.
       </p>
-      {pipelineId && (
+      {peloHistorico ? (
+        <Button variant="outline" onClick={() => navigate(-1)}>Voltar</Button>
+      ) : pipelineId && (
         <Button asChild variant="outline">
           <Link to={enderecoDoFunil(pipelineId)}>Voltar ao funil</Link>
         </Button>
@@ -88,6 +111,7 @@ function SemAcesso({ pipelineId }: { pipelineId?: string }) {
 export default function CardCompletoPage() {
   const { pipelineId, itemId } = useParams<{ pipelineId: string; itemId: string }>();
   const { estado, tentarDeNovo, recarregar, atualizarItem } = useCardCompleto(pipelineId, itemId);
+  const peloHistorico = useVoltaPeloHistorico();
 
   if (estado.estado === 'pronto') {
     return (
@@ -101,17 +125,16 @@ export default function CardCompletoPage() {
   }
 
   // Erro: além do "Tentar de novo", a volta ao funil (o sem-acesso tem a dele no meio).
+  // Aberta de dentro do app (celular): "← Voltar" já no carregando e no erro.
   const voltaNoErro = estado.estado === 'erro' && pipelineId ? (
-    <Link
-      to={enderecoDoFunil(pipelineId)}
-      className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-    >
+    <Link to={enderecoDoFunil(pipelineId)} className={CLASSE_DA_VOLTA}>
       <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Voltar ao funil
     </Link>
   ) : undefined;
+  const acima = peloHistorico && estado.estado !== 'sem-acesso' ? <BotaoVoltar /> : voltaNoErro;
 
   return (
-    <Pagina acima={voltaNoErro}>
+    <Pagina acima={acima}>
       {estado.estado === 'carregando' && <Carregando />}
       {estado.estado === 'sem-acesso' && <SemAcesso pipelineId={pipelineId} />}
       {estado.estado === 'erro' && <EmptyState tipo="erro" aoTentarDeNovo={() => void tentarDeNovo()} />}
@@ -126,6 +149,7 @@ function ConteudoDoCard({ dados, recarregar, atualizarItem }: {
 }) {
   const { item, pipeline, stage_durations: duracoes } = dados;
   const navigate = useNavigate();
+  const location = useLocation();
   const [params, setParams] = useSearchParams();
   const pedida = params.get('aba') ?? '';
   const aba = CHAVES_DAS_ABAS.has(pedida) ? pedida : 'ficha';
@@ -133,7 +157,9 @@ function ConteudoDoCard({ dados, recarregar, atualizarItem }: {
     const p = new URLSearchParams(params);
     if (chave === 'ficha') p.delete('aba');
     else p.set('aba', chave);
-    setParams(p, { replace: true });
+    // O estado vai junto: sem ele, trocar de aba apagava o "← Voltar" do celular
+    // (o setSearchParams do React Router 7 não leva o state sozinho).
+    setParams(p, { replace: true, state: location.state });
   };
 
   // A faixa recebe as etapas JÁ em ordem de posição (o servidor não garante a ordem).
@@ -218,6 +244,8 @@ function ConteudoDoCard({ dados, recarregar, atualizarItem }: {
   };
 
   const voltarAoFunil = () => navigate(enderecoDoFunil(pipeline.id));
+  // Pelo link ou em outra guia, continua o "← Funil <nome>".
+  const peloHistorico = voltaPeloHistorico(location.state);
   const contato = card.contato;
   // A situação mais nova (a resposta do servidor por cima do que veio).
   const itemDaSituacao = card.situacao.item ?? item;
@@ -225,12 +253,13 @@ function ConteudoDoCard({ dados, recarregar, atualizarItem }: {
   return (
     <Pagina
       acima={
-        <Link
-          to={enderecoDoFunil(pipeline.id)}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Funil {pipeline.name}
-        </Link>
+        peloHistorico ? (
+          <BotaoVoltar />
+        ) : (
+          <Link to={enderecoDoFunil(pipeline.id)} className={CLASSE_DA_VOLTA}>
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Funil {pipeline.name}
+          </Link>
+        )
       }
       cabecalho={
         <BaseHeader

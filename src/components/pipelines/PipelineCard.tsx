@@ -222,7 +222,7 @@ export default function PipelineCard({
         </div>
 
         {/* Actions */}
-        <div className="flex border-t border-sidebar-border opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className="flex border-t border-sidebar-border opacity-0 group-hover:opacity-100 toque:opacity-100 transition-opacity duration-200">
           <Button
             variant="ghost"
             className="flex-1 rounded-none h-12 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"

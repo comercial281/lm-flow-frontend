@@ -570,14 +570,16 @@
       "noAttributes": "Nenhum campo de conversa configurado",
       "updateError": "Erro ao salvar os campos da conversa",
       "updateSuccess": "Campos da conversa salvos",
-      "yes": "Sim"
+      "yes": "Sim",
+      "loadError": "Não foi possível carregar os campos da conversa"
     },
     "customAttributes": {
       "no": "Não",
       "noAttributes": "Nenhum campo personalizado configurado",
       "updateError": "Erro ao salvar os campos",
       "updateSuccess": "Campos salvos",
-      "yes": "Sim"
+      "yes": "Sim",
+      "loadError": "Não foi possível carregar os campos personalizados"
     }
   },
   "replyModeToggle": {

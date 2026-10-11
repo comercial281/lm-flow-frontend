@@ -6383,6 +6383,7 @@ Armadilhas:
    - **Pelo endereço** (`rotaComAba`, em `SupportWidget.tsx`): `/conversations` (`/conversations-old` não conta), os canvas de `flow-builder`, `follow-ups` e `message-funnels/:id`, e o cadastro de imóvel (`/properties/new` e `/properties/:id/editar`).
    - **Pela tela que ocupa o canto** (`useOcupaCanto`, em `cantoOcupado.ts`): a moldura `Pagina` com `rolagem="conteudo"` (listas com paginação no pé: Etiquetas, Contatos, Canais…) e a `BarraSalvar` enquanto aparece. Tela nova que põe coisa fixa no canto inferior direito chama `useOcupaCanto(true)`; ao desmontar, a bolinha volta sozinha.
    - Sem folga extra no fim da rolagem das páginas: o dono achou estranho o scroll a mais (10/10/2026). Não reabrir sem ele pedir.
+   - **No celular (abaixo de 768px) é sempre a aba**, em todas as telas (Raio-X do celular, 10/10/2026; ver a seção "Celular: card do lead como página…").
    O menu do avatar continua abrindo o card (`openSupport`) em qualquer tela.
 3. **Card fechado = `hidden` + `inert` + `aria-hidden`.** Nada nele recebe foco nem é lido por leitor de tela, e a busca de um chamado aberto **pausa** enquanto o card está fechado.
 4. **No celular o card respeita áreas seguras e `--keyboard-inset`** (mesma fórmula do `MainLayout`): o teclado não cobre a caixa de texto.
@@ -8190,6 +8191,96 @@ Pedido do dono: escolher o melhor jeito de cada peça e padronizar, pra que **te
 **Achados do levantamento (backlog):** 9 janelas de Conversas importam o `Dialog` direto do pacote e pulam o ajuste de largura (Atribuir conversa pede 448 e abre com 512); 8 confirmações do `AlertDialog` mostram Excluir em roxo; `NotesHistoryModal` é branca no tema escuro e usa `window.confirm`; botões `#00ffa7` sobrados da Evolution (`BulkInviteModal`, `MacroFormModal`); a regra global `button.bg-primary` (globals.css) pinta filtro selecionado com degradê e sombra; `--chart-*` sem uso e 3 cartões de gráfico parados em `components/charts/`.
 
 Não reabrir sem o dono pedir.
+
+## Telefone com países em português e um aviso só ao criar lead (10/10/2026)
+
+Relato do dono do produto: na janela **Adicionar Lead ao Funil → Criar novo lead** a lista de países do telefone vinha em inglês (Brazil, Germany…, e o leitor de tela dizia "Phone number country"), e criar o lead mostrava dois avisos ("Lead adicionado com sucesso" e "Lead criado e adicionado ao funil.").
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Lista de países em português em todo campo de telefone com bandeira.** Todos passam pelo `PhoneInput` da casa (`@/components/shared/PhoneInput`), que agora usa os rótulos pt-BR da própria biblioteca (`react-phone-number-input/locale/pt-BR`, ordem alfabética em pt-BR) e Brasil por padrão. Vale para todo campo com bandeira, por exemplo: Criar novo lead, Contatos, Disparo em massa, mensagem do funil (teste de follow-up), canais, Perfil, Lembretes, Bolsão, WhatsApp do Meu site › Dados, landing (editor), assistente de novo cliente (painel raiz) e janela de conversa do site (pré-chat). O valor gravado não muda. Usam o `BrPhoneInput` (só Brasil, sem bandeira nem lista de países): os formulários públicos do site e da landing (de propósito: não puxa o CRM pro pacote público), as telas de Equipe (ficha da pessoa, Adicionar pessoa, Novo número) e o telefone do topo/rodapé em Meu site › Dados. Campo de telefone novo com país usa o `PhoneInput`; nunca o `react-phone-number-input` direto.
+2. **Um aviso por lead na janela Adicionar Lead ao Funil.** Quem avisa é a janela: "Lead criado e adicionado ao funil." (lead novo), "Lead já existia — adicionado ao funil." (telefone/e-mail já cadastrado) ou "Lead adicionado ao funil." (lead existente). O quadro (`handleItemAdded` no `PipelineKanban`) só recarrega. Textos em `pipelines.json` › `addItem`. Conferidos e já com aviso único: Contatos › Novo contato, Colocar no funil (card e painel da conversa) e criar contato na Agenda de visitas.
+
+## Card do lead: Responsável com "Você" e campos personalizados sem aviso quebrado (desde 2026-10-10)
+
+Raio-X de 10/10/2026 (espaço Barones, logado como corretor): no card do lead o campo **Responsável** aparecia em branco, e ao abrir o card subia um aviso com o texto literal `contactSidebar.customAttributes.loadError`.
+
+O que aparece na tela:
+
+- **Responsável** (janela do card, página do card completo e o card aberto pelo painel do lead na Conversa — todos passam por `CampoResponsavel` em `components/pipelines/card/CamposDaSituacao.tsx`):
+  - **Quem não é gestor** vê só texto, sem lista: **"Você"** quando o responsável é a própria pessoa, o **nome** de quem é, ou **"Sem responsável"**. Nome que não chegou aparece "—", nunca em branco.
+  - **Gestor** continua com a lista; a própria pessoa aparece escrita **"Você"** na lista e no valor escolhido.
+- **Outras informações** (campos personalizados do card e do painel da Conversa): leitura recusada pelo cargo (403) não mostra aviso, a seção só não aparece; outra falha mostra "Não foi possível carregar os campos personalizados" (ou "...os campos da conversa").
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Quem é gestor aqui é a régua do servidor** (`Visits::Visibility.manager?`: administrador, suporte ou `conversations.read_all`), lida na tela por `useEhGestor`. Não inventar outra regra de "quem troca o responsável".
+2. **O nome vem do card** (`item.assignee` e, em reserva, `item.conversation.assignee`, com o mesmo id — `responsavelNoCard`), e a foto do cabeçalho da página usa o mesmo nome; não vem de `GET /users`: o corretor não tem `users.read`, a lista voltava 403 e o campo ficava vazio. Só o gestor busca a lista (`useAccountUsers({ enabled })`).
+3. **Esconder a lista do corretor é só visual; a tela não mudou regra do servidor sobre reatribuir.** Hoje o servidor não barra o corretor de trocar o responsável pela API (atribuição da conversa e `default_assignee_id` do contato); quem impede é a tela. Fica para a frente do acesso pela tarefa/visita (em desenho).
+4. **Leitura das definições dos campos personalizados** no servidor (lm-flow#456) aceita **qualquer uma** de duas chaves: `contacts.read` (Corretor e Gerente já têm) **ou** `custom_attribute_definitions.read`. A chave antiga continua valendo: libera a tela Configurações → Atributos e a leitura das definições (cargo personalizado que só tem ela não perdeu nada). Criar/editar/apagar seguem com as chaves de administrador. Desmarcar `custom_attribute_definitions.read` em Cargos não esconde as definições de quem tem `contacts.read`.
+
+Armadilhas:
+
+1. **A trava de i18n não pega chave passada por prop** (`translationKeys={{ loadError: '...' }}`): ela só lê `t('literal')`. Foi assim que `contactSidebar.customAttributes.loadError` e `contactSidebar.conversationAttributes.loadError` viveram sem tradução. Chave nova por prop: conferir no `pt-BR` à mão.
+2. Sem o lm-flow#456 no ar, o card só fica quieto (sem aviso) e o bloco *Outras informações* continua escondido pro corretor e pro gestor; com ele, o bloco volta a aparecer.
+
+## Celular sem o que não serve lá (Raio-X do celular, 10/10/2026)
+
+Pedido do dono depois do Raio-X do celular: tirar da tela pequena o que é de montar ou configurar e não se usa no celular. **No computador nada muda.** Esconder não é bloquear: quem abrir o endereço direto no celular ainda chega na tela (a exceção é o construtor, que vira aviso). "Celular" é o mesmo corte do menu, abaixo de 768px. **`useCelular` / `ehCelular` / `CONSULTA_CELULAR` (`src/hooks/useCelular.ts`) são o detector ÚNICO de celular da casa**: `useCelular()` acompanha o redimensionamento, `ehCelular()` lê uma vez (fora de componente ou pra decidir só na abertura da tela), `CONSULTA_CELULAR = '(max-width: 767px)'`. O `MOBILE_QUERY` do construtor aponta pra mesma constante. Ainda sobra um detector solto: `ContactSidebar.tsx` (`window.innerWidth < 768`), fora desta entrega.
+
+O que sai do celular:
+
+- **Menu do ☰**: Meu site, Campos personalizados, Variáveis de mensagem, Integrações, Listas, Funis de mensagem e Disparos. Seção que fica vazia some (o Corretor de fábrica perde "Vendas e automação", que só tinha Funis de mensagem). A sanfona e a ordem não mudam. Item marcado com `foraDoCelular: true` em `menuItems.ts`; a gaveta usa `secoesDoCelular(secoes)`. O menu do computador, a busca do menu e as abas das páginas seguem com a lista inteira.
+- **Card do lead** (janela, página completa e painel do lead em Conversas): a linha "Meta: Qualificado / Desqualificado / Venda" (e o "Conversão Meta" da página completa), junto com o aviso "Pixel ou chave do cliente incompletos". No celular o painel nem pergunta o status ao servidor. Na página completa a caixa "Follow-up e Meta" vira só "Follow-up".
+- **Meus imóveis**: o "Gerar descrições com IA" (o em lote, do topo). "Novo imóvel" e o cadastro não mudam.
+- **Contatos**: o "Exportar".
+- **Visitas**: "Horário de visita" e "Folgas"/"Minhas folgas" saem do topo e vão pro menu ⋯ ("Mais ações da agenda"). A tela abre na **Lista** (o mês não cabe); a pessoa troca pro Calendário quando quiser. A escolha Calendário/Lista não é guardada (nunca foi): só o padrão mudou. Mês/Semana/Dia continua guardado como antes.
+- **Construtor de fluxos** (Automações `/automations/flow-builder/:id`, Follow-up `/automations/follow-ups/:id`, Funis de mensagem `/automations/message-funnels/:id`): no lugar do desenho, uma página com "← Voltar", o nome do fluxo, a chave **Ligar o fluxo / Ligar o funil** e o aviso "Pra editar este fluxo (follow-up, funil), abra no computador." Sem Salvar, Blocos, Simular nem Configurações. A chave é a mesma ação do canvas (`alternarLigado`): recusa ligar com bloco incompleto ou passo do guia pendente, com a mesma frase. Funil da equipe que a pessoa só vê fica sem a chave, como no canvas. Com alteração não salva, a chave some e aparece "Há alterações não salvas: abra no computador pra salvar." (no celular não tem Salvar). A tela (`FlowBuilder/FlowCanvasCelular.tsx`) é decidida **só na abertura** (`useState(ehCelular)`): girar o celular ou encolher a janela não troca o canvas pela tela do celular, nem o contrário.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+1. **No computador nada muda.** Todo esconder é só abaixo de 768px.
+2. **Esconder não é bloquear**: a rota continua aberta no celular. Só o construtor troca o desenho pelo aviso, porque arrastar bloco numa tela pequena não funciona.
+3. **Follow-up e Automações ficam no menu do celular**: a lista serve pra ligar e desligar, e o desenho vira o aviso.
+
+Armadilhas:
+
+1. **Use `useCelular()`, não `useMediaQuery('(min-width: 768px)')`**: sem `matchMedia` (testes) o hook responde "computador", e o que já existia continua aparecendo nos specs. Pra testar o celular: `simularCelular()` de `src/test/telaDeCelular.ts` (e `restaurar()` no fim).
+2. **Item novo de montar/configurar no menu**: decidir se ganha `foraDoCelular`. O spec "gaveta do celular" trava a lista atual.
+3. **O modo celular do construtor não segue o redimensionamento, de propósito.** Trocar no meio desmontava o painel do bloco (`FlowNodePanel`/`FlowTriggerPanel`) e perdia o texto e o "não salvo" sem aviso. Não troque `modoCelular` por `useCelular()`.
+
+## Celular: card do lead como página, botões de passar o mouse e suporte na borda (desde 2026-10-10)
+
+Raio-X do celular de 10/10/2026 (tela 390×844). Três mudanças aprovadas pelo dono, **só no celular / aparelho de toque**. No computador nada muda.
+
+O que muda pra quem usa:
+
+1. **No celular, abrir um lead abre a página do card completo**, não a janela. A janela não cabia: a parte de cima ocupava ~600px e as abas ficavam num vão de 112px com rolagem dentro de rolagem. Vale pra todo caminho: cartão do quadro e lista do funil (clique e "Abrir" do ⋯), Contatos (inclusive `/contacts/:id`), "Abrir card do lead" do painel da conversa, e tudo que chega pelo `?card=` do funil (Tarefas, Bolsão, Painel, notificações, link colado). O voltar leva pra onde a pessoa estava: a página mostra **← Voltar** (igual ao voltar do navegador) quando foi aberta de dentro do app; pelo link colado continua **← Funil <nome>**.
+   - Contato em **mais de um funil**: no celular aparece "Abrir o card de qual funil?" com um botão por funil (no computador seguem as abinhas da janela).
+   - Contato **sem funil** continua na janela: a página precisa de um funil.
+   - O "← Voltar" vale também com a página carregando, com erro e no "Você não tem acesso a este lead" (aberto pelas Tarefas, volta pras Tarefas), e não some ao trocar de aba.
+   - **A lista de Contatos mora no endereço** (`?busca=&pilula=&etiqueta=&sem=&responsavel=&pagina=&por=`, `features/contatos/listaNoEndereco.ts`): voltar do card traz a mesma busca, pílula, filtros e página. No computador a tela fica igual; só o endereço muda (e F5/link mandado abrem a mesma lista). A rolagem não é guardada: a lista volta na página certa, no topo. A busca espera a pessoa parar de digitar (450 ms, de verdade: antes cada tecla buscava) e só a busca esperada vai pro endereço. `?por=` só aceita os tamanhos do seletor (10, 20, 50, 100); outro valor cai no padrão.
+   - O ↗ "abrir em nova guia" do cartão continua (de propósito).
+2. **Faixa de etapas da página no celular:** cada seta tem a largura do próprio texto (até 220px, depois corta), a faixa rola de lado e abre já rolada até a etapa atual. O desenho em setas encaixadas é o mesmo do computador (o recorte é em px, então encaixa em qualquer largura). Antes as etapas encolhiam abaixo da largura mínima e encavalavam ("menos de 1 dia · atual" por cima da vizinha).
+3. **Botão que só aparecia passando o mouse fica sempre visível em aparelho de toque.** No Tailwind 4, `hover:`/`group-hover:` só valem com mouse; o padrão `opacity-0 group-hover:opacity-100` deixava o botão invisível e ainda tocável (dava pra apertar Excluir no cartão de funil sem ver). Consertado em 25 pontos de 22 arquivos: cartões de Funis, Contatos, Equipes, Usuários, Integrações, canais MCP/ferramentas, curso da Academia, pastas de Automações e de Funis de mensagem, reordenar/criar etapas, campos personalizados, anexo do campo de mensagem, ⋯ do cartão do lead (tablet), fotos do imóvel, Tutoriais (categoria e comentário), ícone de ampliar da página pública do imóvel. Ficaram como estavam os brilhos de fundo dos cartões de canal e de link (enfeite, não recebe toque).
+   - **Exceção (sobreposição em cima de foto):** nas fotos da conversa e do visualizador compartilhado, e na foto de perfil, a camada com botões **some** no toque (`toque:hidden`): botões fixos em cima de cada foto poluíam e a camada invisível engolia o toque. Tocar na foto abre a tela cheia (que tem o baixar); na foto de perfil, o botão do lado faz o mesmo. No visualizador externo (onde a foto não abre), os botões ficam à vista.
+   - Fotos do imóvel: no toque os botões (capa, ocultar, remover) ficam à vista **sem** o fundo escuro. A camada não pega toque (`pointer-events-none`, só os botões pegam): no vídeo ela cobria os controles.
+4. **Suporte no celular é sempre a lingueta** ("?" presa no meio da borda direita), em todas as telas. No computador vale a regra de antes (`rotaComAba` + canto ocupado).
+
+Como funciona (técnico):
+
+- **Corte de celular:** o detector único da casa, `useCelular()` / `ehCelular()` (`src/hooks/useCelular.ts`, ver a seção anterior). Nos testes, `simularCelular()` (`src/test/telaDeCelular.ts`).
+- **Card como página:** `src/features/cardDoLead/paginaNoCelular.ts` (`useAbrirPaginaDoCard`, estado `voltarPeloHistorico`). Quem troca o endereço dentro da página (aba) passa o `state` adiante: o `setSearchParams` do React Router 7 não leva o estado sozinho. Ponto central do `?card=`: `useCardNoEndereco` ganhou `irParaPagina`; no celular troca o endereço pela página na hora (`replace`, sem esperar o quadro) e não liga o `foraDaAba`. `PipelineKanban` (clique), `CardDoContato` (prop `abertoPeloEndereco`, que troca o `/contacts/:id` no histórico) e `SecaoFunil` navegam com `push`. `CardCompletoPage` lê o estado e troca o "← Funil" pelo "← Voltar" (`navigate(-1)`).
+- **Variante `toque:`** em `src/styles/globals.css`: `@media (hover: none)`, o contrário exato do que o Tailwind usa pro `hover:`. Uso: `opacity-0 group-hover:opacity-100 toque:opacity-100`. Não usar `pointer-coarse:` nem `[@media(hover:none)]:` (um jeito só).
+- **`toque:` (CSS, `hover: none`) × `usePonteiroDeToque` (JS, `pointer: coarse`), diferença proposital:** o `toque:` responde "dá pra passar o mouse?" e serve pra mostrar o que só aparecia no hover (é o par exato do `hover:` do Tailwind). O `usePonteiroDeToque` responde "o dedo é o ponteiro principal?" e serve pra escolher componente pensado pro polegar (o Seletor abre a lista do sistema); sem `matchMedia` ele assume toque. Visual de hover → `toque:`; comportamento em JS pro dedo → `usePonteiroDeToque`.
+- **Trava `soMouse`** no `conferir-padrao` (teto 0, **app inteiro**, como a lista nativa: a página pública é a mais aberta no celular). Lê pelo compilador e junta as classes do mesmo lugar (um `className`, um `cn(...)` inteiro mesmo em várias linhas, uma variável, uma chave de objeto). Conta quando há um par esconde/revela no mouse (`opacity-0` ↔ `hover:opacity-N`, `invisible` ↔ `hover:visible`, `hidden` ↔ `hover:flex/block/…`) sem nenhuma classe `toque:`. Não conta peça com `pointer-events-none` (brilho de fundo, enfeite: não há o que apertar) nem `hidden sm:flex hover:opacity-90` (o hover só clareia). Limite conhecido: esconder numa variável e revelar noutra não é pego.
+
+Armadilhas:
+
+1. Tela nova com botão de passar o mouse: põe `toque:` junto, senão o build reprova (`soMouse`).
+2. Lugar novo que abre a janela do card (`EditItemModal`) precisa decidir o celular: navegar com `useAbrirPaginaDoCard`. Se abrir pelo `?card=` do funil, já cai na página sozinho.
+3. Quem chega por um endereço que só existe pra abrir o card (`?card=`, `/contacts/:id`) navega com `substituir`, senão o voltar volta pra esse endereço e abre a página de novo.
+4. "Veio de dentro do app" é `veioDeDentroDoApp()` (`paginaNoCelular.ts`): `window.history.state.idx > 0`, que o BrowserRouter grava e o replace preserva, lido **na hora de navegar**. Não usar `location.key !== 'default'`: qualquer replace troca a chave, e abrir /contacts por link e depois ir pra /contacts/:id por dentro do app ainda contava como "primeira tela". Nos testes (MemoryRouter não grava `idx`): `window.history.replaceState({ idx: 1 }, '')`.
 
 ## Visita: quem marcou e Visita remarcada (11/10/2026)
 

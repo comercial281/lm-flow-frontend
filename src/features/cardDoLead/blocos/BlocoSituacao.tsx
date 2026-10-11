@@ -7,14 +7,14 @@
 // Os campos de Etapa e Responsável são os da Parte 1 (CamposDaSituacao: nome
 // longo corta com reticências e o title mostra inteiro). Aqui só se ligam ao
 // card — nunca um segundo seletor de etapa/responsável.
-import { Shuffle } from 'lucide-react';
+import { Shuffle, User } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
 import OfferActions from '@/components/roleta/OfferActions';
 import ColocarNoFunil from '@/components/pipelines/card/ColocarNoFunil';
 import { CampoEtapa, CampoResponsavel } from '@/components/pipelines/card/CamposDaSituacao';
 import { ETAPA_TRAVADA } from '@/features/pipelines/situacao/situacao';
-import { conversaDoCard } from '../cardDoLead';
+import { conversaDoCard, responsavelNoCard } from '../cardDoLead';
 import type { CardDoLead } from '../useCardDoLead';
 
 // Card ganho/perdido não muda de etapa (Parte 3): o campo trava e diz por quê.
@@ -44,6 +44,9 @@ export function ResponsavelDoCard({ card }: { card: CardDoLead }) {
       responsavelId={responsavel.id}
       onTrocar={responsavel.trocar}
       carregando={responsavel.salvando}
+      podeTrocar={responsavel.podeTrocar}
+      meuId={responsavel.meuId}
+      nomeDoResponsavel={responsavel.nomeDoCard}
     />
   );
 }
@@ -53,16 +56,21 @@ export function ResponsavelComFoto({ card }: { card: CardDoLead }) {
   const { responsavel, item } = card;
   // A foto é a do responsável ATUAL (após "Trocar" e a foto acompanha o nome).
   const atual = responsavel.usuarios.find(u => String(u.id) === responsavel.id);
-  // Responsável que não está na lista de usuários (desligado, fora do cargo):
-  // cai na foto do assignee do card, se for o mesmo id.
-  const doCard = item?.assignee && String(item.assignee.id) === responsavel.id ? item.assignee : null;
-  const nome = atual?.name ?? doCard?.name ?? 'Sem responsável';
+  // Responsável que não está na lista de usuários (corretor, que não lê a
+  // lista; desligado; fora do cargo): cai no que veio no card — o assignee do
+  // card ou o da conversa, se for o mesmo id. É o mesmo nome do campo ao lado.
+  const doCard = responsavelNoCard(item, responsavel.id);
+  // "Sem responsável" só quando não há responsável: nunca ao lado de um nome.
+  const nome = atual?.name ?? doCard?.name ?? (responsavel.id ? '' : 'Sem responsável');
   return (
     <div className="flex min-w-0 items-end gap-2">
       <ContactAvatar
         contact={{ name: nome, avatar_url: atual?.avatar_url ?? atual?.thumbnail ?? doCard?.avatar_url ?? null }}
         size="sm"
         showColoredFallback
+        // Responsável sem nome conhecido: ícone de PESSOA (o padrão do avatar é
+        // o balão de conversa, que aqui parecia "lead", não "corretor").
+        iconeSemNome={User}
         className="mb-1 shrink-0"
       />
       <div className="min-w-0 flex-1">
