@@ -65,7 +65,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   const botao = (acao: AcaoDoEditor, titulo: string, icone: React.ReactNode, ativo = false) => (
     <Button
       key={acao}
-      variant={ativo ? 'default' : 'outline'} aria-pressed={ativo}
+      variant={ativo ? 'default' : 'outline'}
       size="icon"
       onClick={() => onAction(acao)}
       disabled={disabled}
