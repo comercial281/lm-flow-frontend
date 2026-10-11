@@ -23,6 +23,19 @@ export interface EstadoDaPaginaDoCard {
   voltarPeloHistorico?: boolean;
 }
 
+/**
+ * Há uma tela do app antes desta no histórico da guia? O BrowserRouter grava
+ * `idx` em `window.history.state` (0 na primeira tela da guia) e o replace
+ * preserva. Antes era `location.key !== 'default'`, que falhava: abrir
+ * /contacts por link/F5 e depois ir pra /contacts/:id por dentro do app ainda
+ * dava "primeira tela" (e qualquer replace trocava a chave). Lido na hora de
+ * navegar, não ao montar.
+ */
+export const veioDeDentroDoApp = (): boolean => {
+  const estado = typeof window !== 'undefined' ? (window.history.state as { idx?: number } | null) : null;
+  return (estado?.idx ?? 0) > 0;
+};
+
 export const voltaPeloHistorico = (estado: unknown): boolean =>
   !!estado && typeof estado === 'object' && (estado as EstadoDaPaginaDoCard).voltarPeloHistorico === true;
 

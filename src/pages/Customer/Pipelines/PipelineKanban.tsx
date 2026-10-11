@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef, Suspense, startTransition } from 'react';
-import { useLocation, useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 import { Plus } from 'lucide-react';
@@ -24,7 +24,7 @@ import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import { useCardForaDoQuadro } from '@/features/cardDoLead/useCardForaDoQuadro';
-import { useAbrirPaginaDoCard } from '@/features/cardDoLead/paginaNoCelular';
+import { useAbrirPaginaDoCard, veioDeDentroDoApp } from '@/features/cardDoLead/paginaNoCelular';
 import { useCelular } from '@/hooks/useCelular';
 import AvisoDoCardForaDoQuadro from '@/features/cardDoLead/AvisoDoCardForaDoQuadro';
 import { useCardNoEndereco } from './useCardNoEndereco';
@@ -310,12 +310,10 @@ export default function PipelineKanban() {
   // estava, sem passar de novo pelo quadro.
   const celular = useCelular();
   const abrirPaginaDoCard = useAbrirPaginaDoCard();
-  const location = useLocation();
-  const veioDeDentroDoApp = location.key !== 'default';
   const irParaPaginaDoCard = useCallback((id: string) => {
     if (!pipelineId) return;
-    abrirPaginaDoCard(pipelineId, id, { substituir: true, voltarPeloHistorico: veioDeDentroDoApp });
-  }, [pipelineId, abrirPaginaDoCard, veioDeDentroDoApp]);
+    abrirPaginaDoCard(pipelineId, id, { substituir: true, voltarPeloHistorico: veioDeDentroDoApp() });
+  }, [pipelineId, abrirPaginaDoCard]);
   const {
     cardId: cardDoEndereco,
     foraDaAba: cardForaDaAba,

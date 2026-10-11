@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
 import { ChevronRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/ds';
@@ -14,7 +13,7 @@ import {
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import { comSituacaoNova } from '@/features/pipelines/situacao/situacao';
 import { useCelular } from '@/hooks/useCelular';
-import { useAbrirPaginaDoCard } from '@/features/cardDoLead/paginaNoCelular';
+import { useAbrirPaginaDoCard, veioDeDentroDoApp } from '@/features/cardDoLead/paginaNoCelular';
 
 interface Props {
   contactId: string | null;
@@ -45,14 +44,10 @@ export default function CardDoContato({ contactId, onOpenChange, onMudou, aberto
   const [mudou, setMudou] = useState(false);
   const celular = useCelular();
   const abrirPaginaDoCard = useAbrirPaginaDoCard();
-  // A chave de quando a tela abriu: a lista de Contatos grava filtros no
-  // endereço (replace), e isso troca a chave depois.
-  const chaveAoAbrir = useLocation().key;
-  const [veioDeDentroDoApp] = useState(() => chaveAoAbrir !== 'default');
   const irParaPagina = (a: Atendimento) =>
     abrirPaginaDoCard(a.pipeline.id, a.item.id, {
       substituir: abertoPeloEndereco,
-      voltarPeloHistorico: abertoPeloEndereco ? veioDeDentroDoApp : true,
+      voltarPeloHistorico: abertoPeloEndereco ? veioDeDentroDoApp() : true,
     });
   const irParaPaginaRef = useRef(irParaPagina);
   irParaPaginaRef.current = irParaPagina;

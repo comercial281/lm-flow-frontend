@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-rou
 import { useEffect } from 'react';
 
 const svc = vi.hoisted(() => ({ getContacts: vi.fn(), searchContacts: vi.fn(), filterContacts: vi.fn() }));
+const enderecos = vi.hoisted(() => [] as string[]);
 vi.mock('@/services/contacts', () => ({ contactsService: svc }));
 vi.mock('@/hooks/useLanguage', () => ({ useLanguage: () => ({ t: (k: string) => k }) }));
 vi.mock('@/hooks/useUserPermissions', () => ({ useUserPermissions: () => ({ can: () => true, isReady: true }) }));
@@ -14,15 +15,21 @@ vi.mock('@/hooks/useAccountUsers', () => ({ useAccountUsers: () => ({ users: [] 
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
 vi.mock('@/features/contatos/useCorretorLogado', () => ({ useCorretorLogado: () => false }));
 vi.mock('@/tours', () => ({ ContactsTour: () => null }));
-vi.mock('@/components/contacts/ContactsFiltros', () => ({ default: () => null }));
+// Mostra o que recebeu: a restauração precisa chegar até os filtros da tela.
+vi.mock('@/components/contacts/ContactsFiltros', () => ({
+  default: (p: { pilula: string; filtros: unknown }) => <output data-testid="filtros-da-tela">{`${p.pilula}|${JSON.stringify(p.filtros)}`}</output>,
+}));
 vi.mock('@/components/contacts/ContactCartaoMovel', () => ({ default: () => null }));
 vi.mock('@/components/contacts/ContactModal', () => ({ default: () => null }));
 vi.mock('@/components/contacts/StartConversationModal', () => ({ default: () => null }));
 vi.mock('@/components/contacts/ContactExportModal', () => ({ default: () => null }));
 vi.mock('@/components/contacts/ContactMergeModal', () => ({ default: () => null }));
 vi.mock('@/components/contacts/ContactsHeader', () => ({
-  default: (p: { searchValue: string; onSearchChange: (q: string) => void }) => (
-    <input aria-label="busca" value={p.searchValue} onChange={e => p.onSearchChange(e.target.value)} />
+  default: (p: { searchValue: string; onSearchChange: (q: string) => void; filtros?: React.ReactNode }) => (
+    <>
+      <input aria-label="busca" value={p.searchValue} onChange={e => p.onSearchChange(e.target.value)} />
+      {p.filtros}
+    </>
   ),
 }));
 vi.mock('@/components/contacts/ContactsTable', () => ({
@@ -55,7 +62,10 @@ const resposta = (page: number) => ({
 });
 
 function Endereco() {
-  return <span data-testid="endereco">{useLocation().search}</span>;
+  const location = useLocation();
+  // Cada navegação (mesmo replace) cria um location novo: conta as gravações.
+  useEffect(() => { enderecos.push(location.search); }, [location]);
+  return <span data-testid="endereco">{location.search}</span>;
 }
 function PaginaDoCard() {
   const navigate = useNavigate();
@@ -63,7 +73,7 @@ function PaginaDoCard() {
 }
 
 beforeEach(() => {
-  vi.useRealTimers();
+  enderecos.length = 0;
   Object.values(svc).forEach(f => f.mockReset());
   svc.getContacts.mockResolvedValue(resposta(1));
   svc.searchContacts.mockImplementation(async (p: { page: number }) => resposta(p.page));
@@ -111,5 +121,53 @@ describe('Contatos: a lista no endereço', () => {
     await screen.findByText('Contato da página 1');
     expect(svc.getContacts).toHaveBeenCalledWith(expect.objectContaining({ page: 1, per_page: 20 }));
     expect(screen.getByTestId('endereco').textContent).toBe('');
+  });
+
+  it('digitar 5 letras rápido: 1 busca no servidor e 1 gravação no endereço', async () => {
+    render(
+      <MemoryRouter initialEntries={['/contacts']}>
+        <Routes>
+          <Route path="/contacts" element={<><Contacts /><Endereco /></>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByText('Contato da página 1');
+    const antes = enderecos.length;
+
+    const caixa = screen.getByLabelText('busca');
+    ['a', 'an', 'ana', 'anab', 'anabe'].forEach(v => fireEvent.change(caixa, { target: { value: v } }));
+    expect((caixa as HTMLInputElement).value).toBe('anabe');
+    expect(svc.searchContacts).not.toHaveBeenCalled();
+
+    await waitFor(() => expect(svc.searchContacts).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    expect(svc.searchContacts).toHaveBeenCalledWith(expect.objectContaining({ q: 'anabe', page: 1 }));
+    await waitFor(() => expect(screen.getByTestId('endereco').textContent).toBe('?busca=anabe'));
+    await new Promise(r => setTimeout(r, 600));
+    expect(svc.searchContacts).toHaveBeenCalledTimes(1);
+    expect(enderecos.slice(antes)).toEqual(['?busca=anabe']);
+  });
+
+  it('?pilula=meus&etiqueta=x: abre filtrado (filterContacts) e os filtros da tela já marcados', async () => {
+    svc.filterContacts.mockResolvedValue(resposta(1));
+    render(
+      <MemoryRouter initialEntries={['/contacts?pilula=meus&etiqueta=x']}>
+        <Routes>
+          <Route path="/contacts" element={<><Contacts /><Endereco /></>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByText('Contato da página 1');
+
+    expect(svc.getContacts).not.toHaveBeenCalled();
+    expect(svc.filterContacts).toHaveBeenCalledTimes(1);
+    expect(svc.filterContacts).toHaveBeenCalledWith({
+      page: 1,
+      payload: [
+        { attribute_key: 'labels', values: ['x'], filter_operator: 'equal_to', query_operator: null },
+        { attribute_key: 'default_assignee_id', values: ['u1'], filter_operator: 'equal_to', query_operator: 'AND' },
+      ],
+    });
+    expect(screen.getByTestId('filtros-da-tela').textContent).toBe('meus|{"comEtiqueta":"x","semEtiquetas":[],"responsavel":""}');
+    expect(screen.getByTestId('endereco').textContent).toBe('?pilula=meus&etiqueta=x');
   });
 });

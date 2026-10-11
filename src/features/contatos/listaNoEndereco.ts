@@ -7,6 +7,7 @@
 // funil faz com aba e filtros: voltar (ou F5, ou mandar o link) traz a mesma
 // lista. No computador a tela fica igual; só o endereço muda.
 
+import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/constants/pagination';
 import { FILTROS_VAZIOS, type FiltrosDoPopover, type PilulaDeContatos } from './filtros';
 
 export interface ListaDeContatosNoEndereco {
@@ -26,6 +27,9 @@ const inteiroPositivo = (valor: string | null): number | null => {
   return Number.isInteger(n) && n > 0 ? n : null;
 };
 
+const tamanhoOferecido = (n: number | null): number | null =>
+  n !== null && DEFAULT_PAGE_SIZE_OPTIONS.includes(n) ? n : null;
+
 export function lerListaDoEndereco(sp: URLSearchParams): ListaDeContatosNoEndereco {
   const pilula = sp.get('pilula') as PilulaDeContatos | null;
   return {
@@ -37,7 +41,9 @@ export function lerListaDoEndereco(sp: URLSearchParams): ListaDeContatosNoEndere
       responsavel: sp.get('responsavel') ?? FILTROS_VAZIOS.responsavel,
     },
     pagina: inteiroPositivo(sp.get('pagina')) ?? 1,
-    porPagina: inteiroPositivo(sp.get('por')),
+    // Só os tamanhos que o seletor da paginação oferece: ?por=100000 no link não
+    // vira um pedido gigante ao servidor (outro valor cai no padrão).
+    porPagina: tamanhoOferecido(inteiroPositivo(sp.get('por'))),
   };
 }
 

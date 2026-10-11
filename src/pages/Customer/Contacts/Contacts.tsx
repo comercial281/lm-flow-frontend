@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { serverRefusalMessageOf } from '@/services/core/forbidden';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -81,6 +81,8 @@ const INITIAL_STATE: ContactsState = {
 
 // Último payload por combinação de parâmetros (memória da sessão): voltar pra
 // tela de contatos pinta a lista na hora e revalida por trás.
+const ESPERA_DA_BUSCA_MS = 450;
+
 const contactsPayloadCache = new Map<string, Awaited<ReturnType<typeof contactsService.getContacts>>>();
 
 export default function Contacts() {
@@ -116,6 +118,10 @@ export default function Contacts() {
   const [activeFilters, setActiveFilters] = useState<BaseFilter[]>([]);
   // Pílula + popover (fase 4). Viram as linhas de `activeFilters`.
   const [pilula, setPilula] = useState<PilulaDeContatos>(listaInicial.pilula);
+  // A busca que já passou pela espera (é ela que vai pro endereço).
+  const [buscaEsperada, setBuscaEsperada] = useState(listaInicial.busca);
+  const esperaDaBusca = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (esperaDaBusca.current) clearTimeout(esperaDaBusca.current); }, []);
   const [filtrosPopover, setFiltrosPopover] = useState<FiltrosDoPopover>(listaInicial.filtros);
   const { users: equipe } = useAccountUsers();
   const { user: eu } = useAuth();
@@ -267,14 +273,14 @@ export default function Contacts() {
   // endereço, e o CardDoContato usa a chave pra saber se veio de dentro do app.
   useEffect(() => {
     const novo = comListaNoEndereco(searchParams, {
-      busca: state.searchQuery,
+      busca: buscaEsperada,
       pilula,
       filtros: filtrosPopover,
       pagina: paginaAtual,
       porPagina: tamanhoAtual && tamanhoAtual !== DEFAULT_PAGE_SIZE ? tamanhoAtual : null,
     });
     if (novo.toString() !== searchParams.toString()) setSearchParams(novo, { replace: true });
-  }, [state.searchQuery, pilula, filtrosPopover, paginaAtual, tamanhoAtual, searchParams, setSearchParams]);
+  }, [buscaEsperada, pilula, filtrosPopover, paginaAtual, tamanhoAtual, searchParams, setSearchParams]);
 
   // No modo "todos", paginar não pode desmarcar nada: o conjunto é a consulta,
   // não a página. Remarca as linhas recém-carregadas para o checkbox refletir o
@@ -303,16 +309,19 @@ export default function Contacts() {
       },
     }));
 
-    // Debounce search
-    const timeoutId = setTimeout(() => {
+    // Espera a pessoa parar de digitar (10/10/2026): antes cada tecla buscava
+    // depois de 500 ms (o "cancelar" devolvido nunca rodava). Só a busca que
+    // passou pela espera vai pro servidor e pro endereço.
+    if (esperaDaBusca.current) clearTimeout(esperaDaBusca.current);
+    esperaDaBusca.current = setTimeout(() => {
+      esperaDaBusca.current = null;
+      setBuscaEsperada(query);
       if (query.trim()) {
         loadContactsWithSearch(query.trim());
       } else {
         loadContacts({ page: 1 });
       }
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
+    }, ESPERA_DA_BUSCA_MS);
   };
 
   // removed unused

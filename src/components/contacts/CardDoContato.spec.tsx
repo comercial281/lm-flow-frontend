@@ -115,8 +115,8 @@ describe('CardDoContato', () => {
 
   describe('no celular', () => {
     let tela: ReturnType<typeof simularCelular>;
-    beforeEach(() => { tela = simularCelular(); });
-    afterEach(() => tela.restaurar());
+    beforeEach(() => { tela = simularCelular(); window.history.replaceState(null, ''); });
+    afterEach(() => { tela.restaurar(); window.history.replaceState(null, ''); });
 
     it('em um funil só: vai pra página do card, sem a janela', async () => {
       servicos.porContato.mockResolvedValue([funil('p1', 'Venda', 'i1', 1)]);
@@ -136,12 +136,35 @@ describe('CardDoContato', () => {
     });
 
     it('aberto pelo endereço /contacts/:id: a página TROCA esse endereço (voltar não reabre o card)', async () => {
+      window.history.replaceState({ idx: 1 }, '');
       servicos.porContato.mockResolvedValue([funil('p1', 'Venda', 'i1', 1)]);
       montarComRotas(<CardDoContato contactId="c1" onOpenChange={vi.fn()} abertoPeloEndereco />, '/contacts/c1');
 
       expect(await screen.findByTestId('endereco')).toHaveTextContent('/pipelines/p1/card/i1|{"voltarPeloHistorico":true}');
       fireEvent.click(screen.getByRole('button', { name: 'voltar do card' }));
       expect(await screen.findByText('tela de antes')).toBeInTheDocument();
+    });
+
+    // O caso que a chave do endereço errava: /contacts aberto por link (primeira
+    // tela do roteador) e depois /contacts/:id por dentro do app.
+    it('/contacts/:id por dentro do app depois de abrir /contacts por link: "← Voltar"', async () => {
+      window.history.replaceState({ idx: 1 }, '');
+      servicos.porContato.mockResolvedValue([funil('p1', 'Venda', 'i1', 1)]);
+      renderRtl(
+        <MemoryRouter initialEntries={['/contacts/c1']}>
+          <Routes>
+            <Route path="/contacts/*" element={<CardDoContato contactId="c1" onOpenChange={vi.fn()} abertoPeloEndereco />} />
+            <Route path="/pipelines/:p/card/:i" element={<Endereco />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+      expect(await screen.findByTestId('endereco')).toHaveTextContent('/pipelines/p1/card/i1|{"voltarPeloHistorico":true}');
+    });
+
+    it('/contacts/:id como primeira tela da guia (link colado): sem o voltar pelo histórico', async () => {
+      servicos.porContato.mockResolvedValue([funil('p1', 'Venda', 'i1', 1)]);
+      montarComRotas(<CardDoContato contactId="c1" onOpenChange={vi.fn()} abertoPeloEndereco />, '/contacts/c1');
+      expect(await screen.findByTestId('endereco')).toHaveTextContent('/pipelines/p1/card/i1|null');
     });
 
     it('aberto da lista: a página entra no histórico e o voltar devolve a Contatos', async () => {

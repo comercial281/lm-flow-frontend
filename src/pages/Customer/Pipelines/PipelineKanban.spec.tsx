@@ -694,7 +694,9 @@ describe('quadro do funil · exportar', () => {
 describe('quadro do funil · no celular', () => {
   beforeEach(() => {
     const tela = simularCelular();
-    return () => tela.restaurar();
+    // O BrowserRouter grava `idx` no histórico; o MemoryRouter não. Primeira tela da guia = 0.
+    window.history.replaceState(null, '');
+    return () => { tela.restaurar(); window.history.replaceState(null, ''); };
   });
 
   function PaginaDoCard() {
@@ -731,6 +733,7 @@ describe('quadro do funil · no celular', () => {
   });
 
   it('?card= vindo de outra tela (Tarefas): troca o endereço pela página e o voltar volta pras Tarefas', async () => {
+    window.history.replaceState({ idx: 1 }, '');
     montarComPagina(['/tarefas', '/pipelines/p1?card=i1']);
 
     expect(await screen.findByTestId('pagina-do-card')).toHaveTextContent('/pipelines/p1/card/i1|{"voltarPeloHistorico":true}');
