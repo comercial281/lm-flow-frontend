@@ -3,12 +3,22 @@
 // pintadas até a atual, com os dias que o lead passou em cada uma (idas e
 // voltas somam). Card aberto: clicar numa etapa pergunta antes de mover
 // (decisão 16). Card Ganho/Perdido: só informa — pra mexer, reabre.
+// Desenho em setas encaixadas (10/10, pedido do dono): uma etapa leva à outra.
+import type { CSSProperties } from 'react';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { ETAPA_TRAVADA, ehColunaDeGanho } from '@/features/pipelines/situacao/situacao';
 import type { PipelineStage, StageDuration } from '@/types/analytics';
 import { textoDosDias } from './textoDosDias';
+import { formaDaSeta } from './formaDaSeta';
+
+// O recorte come a borda do CSS: o contorno vem de sombras sem desfoque no <li>.
+const contorno = (cor: string): CSSProperties => ({
+  filter: [`1px 0`, `-1px 0`, `0 1px`, `0 -1px`].map(d => `drop-shadow(${d} 0 ${cor})`).join(' '),
+});
+const CONTORNO_NEUTRO = contorno('var(--border)');
+const CONTORNO_PINTADO = contorno('color-mix(in oklch, var(--primary) 40%, transparent)');
 
 interface FaixaDeEtapasProps {
   /** Já em ordem de posição. */
@@ -59,7 +69,7 @@ export default function FaixaDeEtapas({
 
   return (
     <div className="space-y-2">
-      <ol aria-label="Etapas do funil" className="flex gap-2 overflow-x-auto pb-1">
+      <ol aria-label="Etapas do funil" className="flex overflow-x-auto p-px pb-1">
         {etapas.map((etapa, i) => {
           const atual = i === indiceAtual;
           const pintada = indiceAtual >= 0 && i <= indiceAtual;
@@ -68,13 +78,17 @@ export default function FaixaDeEtapas({
           // Etapa já passada com menos de 1 dia (o lead só atravessou) fica só pintada (08/10).
           const soAtravessou = !atual && !!duracao && duracao.days < 1;
           const dias = ehColunaDeGanho(etapa) || soAtravessou ? '' : textoDosDias(duracao);
+          const primeira = i === 0;
+          const ultima = i === etapas.length - 1;
+          const forma: CSSProperties = { clipPath: formaDaSeta(i, etapas.length) };
+          // Arredonda só as pontas retas da faixa (o recorte respeita o arredondado).
+          const cantos = cn(primeira && 'rounded-l-lg', ultima && 'rounded-r-lg');
           const classe = cn(
-            'w-full min-w-[120px] rounded-lg border px-3 py-2 text-left',
-            atual
-              ? 'border-primary bg-primary text-primary-foreground'
-              : pintada
-                ? 'border-primary/40 bg-primary/10'
-                : 'border-border bg-background',
+            'relative w-full min-w-[120px] py-2 text-left',
+            cantos,
+            primeira ? 'pl-3' : 'pl-6',
+            ultima ? 'pr-3' : 'pr-5',
+            atual && 'text-primary-foreground',
           );
           const conteudo = (
             <>
@@ -85,13 +99,38 @@ export default function FaixaDeEtapas({
             </>
           );
           return (
-            <li key={etapa.id} className="flex min-w-0 flex-1" aria-current={atual ? 'step' : undefined}>
+            <li
+              key={etapa.id}
+              // O encaixe entra na ponta da anterior e sobra uma fresta de 4 px.
+              className={cn('relative flex min-w-0 flex-1', !primeira && '-ml-2')}
+              aria-current={atual ? 'step' : undefined}
+            >
+              {/* O fundo da seta é uma camada própria: o contorno não pega o texto. */}
+              <span
+                aria-hidden
+                className="absolute inset-0"
+                style={atual ? undefined : pintada ? CONTORNO_PINTADO : CONTORNO_NEUTRO}
+              >
+                <span
+                  className={cn(
+                    'block h-full w-full',
+                    cantos,
+                    atual ? 'bg-primary' : pintada ? 'bg-primary/10' : 'bg-card',
+                  )}
+                  style={forma}
+                />
+              </span>
               {fechado || atual ? (
-                <div className={classe}>{conteudo}</div>
+                <div className={classe} style={forma}>{conteudo}</div>
               ) : (
                 <button
                   type="button"
-                  className={cn(classe, 'hover:border-primary disabled:opacity-60')}
+                  style={forma}
+                  // O anel de foco seria recortado junto: o foco pinta o fundo.
+                  className={cn(
+                    classe,
+                    'hover:bg-primary/20 focus-visible:bg-primary/25 focus-visible:outline-none disabled:opacity-60',
+                  )}
                   disabled={movendo}
                   onClick={() => void escolher(etapa)}
                   // O rótulo leva os dias (senão o leitor de tela não os ouve); Concluído marca Ganho.
