@@ -109,7 +109,7 @@ export const Cabecalho: React.FC<Props> = ({ nome, visao, scope, carregando, fil
               </Seletor>
               <button type="button" className="lmf-select flex items-center gap-2" aria-expanded={aberto}
                 aria-controls={idPainel} onClick={() => setAberto(a => !a)}>
-                <SlidersHorizontal size={14} aria-hidden />
+                <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
                 Filtros
                 {ativos > 0 && <span className="lmfn-contador">{ativos}</span>}
               </button>
@@ -121,7 +121,7 @@ export const Cabecalho: React.FC<Props> = ({ nome, visao, scope, carregando, fil
         <div id={idPainel} className="lmf-glass lmfn-filtros" role="region" aria-label="Filtros">
           {/* Os quatro com o mesmo desenho: rótulo em cima, caixa de 40 px (CampoFiltro). */}
           {visao === 'gestor' && (
-            <CampoFiltro id={idCorretor} rotulo="Corretor" icone={<User size={14} />}>
+            <CampoFiltro id={idCorretor} rotulo="Corretor" icone={<User className="h-3.5 w-3.5" />}>
               <Seletor bare id={idCorretor} className="lmf-campo-controle" data-active={donoAplicado ? true : undefined}
                 value={donoAplicado ?? ''}
                 onChange={e => onFiltros({ ...filtros, ownerId: e.target.value || undefined })}>

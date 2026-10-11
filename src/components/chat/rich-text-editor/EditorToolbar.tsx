@@ -1,6 +1,6 @@
 import React from 'react';
 import { EditorState } from 'prosemirror-state';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { Bold, Italic, Code, Heading2, Heading3, ImagePlus, Link2, List, ListOrdered, Quote, Undo, Redo } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 
@@ -87,7 +87,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
       {tem('bold') && (
         <Button
-          variant={isMarkActive('strong') ? 'default' : 'outline'}
+          variant={isMarkActive('strong') ? 'default' : 'outline'} aria-pressed={isMarkActive('strong')}
           size="icon"
           onClick={() => onAction('bold')}
           disabled={disabled}
@@ -100,7 +100,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
       {tem('italic') && (
         <Button
-          variant={isMarkActive('em') ? 'default' : 'outline'}
+          variant={isMarkActive('em') ? 'default' : 'outline'} aria-pressed={isMarkActive('em')}
           size="icon"
           onClick={() => onAction('italic')}
           disabled={disabled}
@@ -113,7 +113,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
       {tem('code') && (
         <Button
-          variant={isMarkActive('code') ? 'default' : 'outline'}
+          variant={isMarkActive('code') ? 'default' : 'outline'} aria-pressed={isMarkActive('code')}
           size="icon"
           onClick={() => onAction('code')}
           disabled={disabled}
@@ -146,7 +146,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           do chat não tem, e o botão simplesmente não existe lá. */}
       {editorState?.schema.marks.link && (
         <Button
-          variant={isMarkActive('link') ? 'default' : 'outline'}
+          variant={isMarkActive('link') ? 'default' : 'outline'} aria-pressed={isMarkActive('link')}
           size="icon"
           onClick={() => onAction('link')}
           disabled={disabled}

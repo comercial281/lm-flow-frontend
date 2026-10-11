@@ -160,6 +160,160 @@ const CHAVE_DA_CASA = 'src/components/base/Chave.tsx';
 const SELECT_NATIVO = /<select(?=[\s>]|$)|<NativeSelect\b/;
 // O SeletorComAbas segue a mesma regra (lista do sistema no celular, com um
 // grupo por aba), então também pode ter o <select> dele.
+// Caixa de aviso / faixa pintada à mão (peças 11 e 12 do GLOSSARIO, escolha do
+// dono em 10/10/2026): fundo colorido claro ou translúcido + borda da mesma
+// família, na mesma linha. `hover:bg-…` não conta (é botão), pílula `rounded-full`
+// e `<Badge>` também não (é selo). A régua é por linha: classe quebrada em várias linhas
+// escapa, e a revisão de PR confere.
+const COR_DE_AVISO = '(?:amber|yellow|orange|blue|sky|red|rose|emerald|green|violet|purple|indigo|teal|lime|cyan|fuchsia|pink)';
+const FUNDO_DE_AVISO = new RegExp(`(?:^|[\\s'"\`{(]|dark:)bg-${COR_DE_AVISO}-(?:(?:50|100|950)(?:\\/\\d+)?|\\d{3}\\/\\d+)(?![\\w/])`);
+const BORDA_DE_AVISO = new RegExp(`(?:^|[\\s'"\`{(]|dark:)border(?:-[lrtbxy])?-${COR_DE_AVISO}-\\d+`);
+const AVISOS_DA_CASA = new Set(['src/components/base/Aviso.tsx', 'src/components/base/Faixa.tsx']);
+export const avisoAMao = linha =>
+  FUNDO_DE_AVISO.test(linha) && BORDA_DE_AVISO.test(linha) && !/rounded-full|<Badge\b/.test(linha);
+
+// Confirmação fora da casa (peça 18 do GLOSSARIO, escolha do dono em
+// 10/10/2026): toda pergunta "tem certeza?" é o `useConfirmacao`, que usa o
+// `Dialog` da casa e só pinta de vermelho com `destrutivo: true`. O
+// `AlertDialog` do pacote base mostra "Excluir" em roxo. A régua conta cada
+// `<AlertDialog` aberto e cada import direto de `@evoapi/design-system/alert-dialog`,
+// venha de onde vier (pacote ou `components/ui/ds`). Vale para o app INTEIRO,
+// como a lista nativa: no dia da migração (11/10/2026) não sobrou nenhuma em
+// tela nenhuma, nem no painel raiz nem no painel de landings. Os dois "digite o
+// nome pra excluir" (canal e conta) já são `Dialog` da casa e não contam.
+const ALERT_DIALOG = /<AlertDialog(?=[\s>]|$)|['"]@evoapi\/design-system\/alert-dialog['"]/;
+const CONFIRMACOES_DA_CASA = new Set([
+  'src/hooks/useConfirmacao.tsx',
+  'src/hooks/usePergunta.tsx',
+  'src/components/ui/ds.tsx',
+]);
+export const contaConfirmacao = rel =>
+  rel.startsWith('src/') &&
+  /\.(ts|tsx)$/.test(rel) &&
+  !/\.(spec|test)\.tsx?$/.test(rel) &&
+  !CONFIRMACOES_DA_CASA.has(rel);
+// Aba fora da casa (peça 6 do GLOSSARIO, escolha do dono em 10/10/2026): a aba
+// é o sublinhado do `Abas`. Conta (1) o `Tabs` do pacote base em JSX (`<Tabs`,
+// `<TabsList`, `<TabsTrigger`, `<TabsContent`), que desenha pílula, e (2) a aba
+// copiada à mão: `border-b-2` com `-mb-px` na mesma linha. O segmentado cinza de
+// filtro (Conversas, Contatos, SeletorComAbas) não usa nenhum dos dois e fica.
+// Régua por linha: classe quebrada em várias linhas escapa, e a revisão confere.
+const TABS_DO_PACOTE = /<Tabs(?:List|Trigger|Content)?(?=[\s>/]|$)/;
+const ABA_COPIADA = /(?=.*\bborder-b-2\b)(?=.*(?:^|[\s'"`])-mb-px\b)/;
+const ABAS_DA_CASA = 'src/components/base/Abas.tsx';
+export const abaForaDaCasa = linha => TABS_DO_PACOTE.test(linha) || ABA_COPIADA.test(linha);
+
+// Alternador de visão à mão (peça 19 do GLOSSARIO, escolha do dono em
+// 10/10/2026): o da casa é o `AlternadorDeVisao` (só ícones, colados num
+// contorno). A marca confiável é o ícone de visão desenhado em JSX
+// (`<Grid3X3`, `<LayoutGrid`, `<Kanban`…): no alternador da casa ele vai como
+// dado (`icone: Grid3X3`), nunca como tag. Ícone em dado fora do alternador
+// escapa; a revisão confere.
+const ICONE_DE_VISAO = /<(?:Grid3X3|Grid3x3|LayoutGrid|LayoutList|Kanban|SquareKanban|Columns3)(?=[\s>/]|$)/;
+const ALTERNADOR_DA_CASA = 'src/components/base/AlternadorDeVisao.tsx';
+export const alternadorAMao = linha => ICONE_DE_VISAO.test(linha);
+// Ação que só aparece com o mouse (peça 16 do GLOSSARIO, escolha do dono em
+// 10/10/2026): no celular não existe "passar o mouse", então o botão some. Conta
+// linha com `opacity-0` + `group-hover:opacity-100`, `invisible` +
+// `group-hover:visible` ou `hidden` + `group-hover:flex|block|…` (com ou sem
+// prefixo de tela, `md:opacity-0`, e com grupo nomeado, `group-hover/x:`). A ação
+// fica visível e apagada (`opacity-70`) e acende no mouse. Realce decorativo que
+// não é ação (brilho do cartão) vai pras exceções. A régua é por linha: classe
+// montada em várias linhas escapa, e a revisão de PR confere.
+const ANTES = `(?:^|[\\s'"\`{(])(?:[\\w-]+:)*`;
+const SO_NO_MOUSE = [
+  [new RegExp(`${ANTES}opacity-0(?![\\w/.-])`), /group-hover(?:\/[\w-]+)?:opacity-(?:100|[5-9]\d)\b/],
+  [new RegExp(`${ANTES}invisible(?![\\w-])`), /group-hover(?:\/[\w-]+)?:visible\b/],
+  [new RegExp(`${ANTES}hidden(?![\\w-])`), /group-hover(?:\/[\w-]+)?:(?:flex|block|inline-flex|inline-block|grid|inline)\b/],
+];
+export const soNoMouse = linha => SO_NO_MOUSE.some(([escondido, aparece]) => escondido.test(linha) && aparece.test(linha));
+
+// Menu de ações com ⋯ deitado (peça 15 do GLOSSARIO, escolha do dono em
+// 10/10/2026): o gatilho é o ⋮ em pé (`EllipsisVertical`, pela peça
+// `BotaoMaisAcoes`). Conta o ícone deitado na tela, não o import.
+export const menuDeitado = linha =>
+  /<(?:MoreHorizontal|Ellipsis)(?:Icon)?(?=[\s/>]|$)|\b[iI]con[a-z]*=\{(?:MoreHorizontal|Ellipsis)(?:Icon)?\}/.test(linha);
+// Cartão feito à mão (peça 20 do GLOSSARIO, escolha do dono em 10/10/2026): o
+// cartão da casa é o `Card` do pacote base (data-slot="card", que ganha o anel
+// violeta e a sombra da marca no globals.css). A régua é por linha: cantos
+// `rounded-lg`/`rounded-xl` + `border` solta + fundo de cartão (`bg-card`, ou o
+// `bg-sidebar` com `border-sidebar-border` que imitava os cartões de Canais).
+// Caixa tracejada (`border-dashed`) não conta: é a lista vazia compacta ou o
+// convite de criar (peça 7). Bloco dentro de cartão é `bg-muted/30` e não entra.
+// O que a régua pega e não é cartão (menu, painel flutuante, carregando, vazio,
+// linha arrastável…) vai pras exceções com o motivo.
+const FUNDO_DE_CARTAO = /(?:^|[\s'"`{(])bg-card(?![\w-])/;
+const FUNDO_DE_MENU = /(?:^|[\s'"`{(])bg-sidebar(?![\w-])/;
+// Secoes/Secao é a moldura da tela de configuração (peça própria, não cartão).
+const CARTOES_DA_CASA = new Set(['src/components/base/Secao.tsx']);
+export const cartaoAMao = linha =>
+  /(?:^|[\s'"`{(])rounded-(?:lg|xl)(?![\w-])/.test(linha) &&
+  /(?:^|[\s'"`{(])border(?=[\s'"`]|$)/.test(linha) &&
+  (FUNDO_DE_CARTAO.test(linha) || (FUNDO_DE_MENU.test(linha) && /border-sidebar-border/.test(linha))) &&
+  !/border-dashed/.test(linha);
+
+// Cor fixa em gráfico (peça 21 do GLOSSARIO, escolha do dono em 10/10/2026): as
+// séries saem de `--chart-1` a `--chart-5` (ou de components/base/grafico.ts),
+// que acompanham o tema escuro. Conta `fill`, `stroke` e `stopColor` com hex
+// direto no atributo ("#…" ou {'#…'}). Cor guardada numa constante antes
+// (`const COR = '#…'` e depois `fill={COR}`) escapa: a revisão de PR confere.
+// Logo da marca vai pras exceções.
+export const corFixaEmGrafico = linha => /\b(?:fill|stroke|stopColor)=(?:["']#|\{\s*["'`]#)/.test(linha);
+// Janela (peça 17 do GLOSSARIO, escolha do dono em 10/10/2026). O ajuste da
+// casa (`src/components/ui/ds.tsx`) é quem dá topo e rodapé fixos, rolagem por
+// dentro e o jeito do celular (sobe de baixo); janela que escapa dele não ganha
+// nada disso. Três réguas:
+// - larguraDeJanela: só quatro larguras. `DialogContent`/`AlertDialogContent` com
+//   `max-w-*` diferente de `max-w-md` (448) e `max-w-2xl` (672), com ou sem `sm:`.
+//   A padrão (512) é sem largura e a larga (1400) é `size="wide"`. Variante de
+//   celular (`max-sm:max-w-*`) não conta: é ajuste fino de tela pequena.
+// - janelaDireta: `Dialog*` importado do pacote base (`@evoapi/design-system` ou
+//   `/dialog`) fora do ajuste da casa. Vale pro app inteiro. (O `/alert-dialog`
+//   é da peça Confirmação.)
+// - janelaAMao: `fixed inset-0` na tela do cliente (janela montada à mão com uma
+//   div). O que não é janela (visualizador de foto, camada de soltar arquivo,
+//   fundo de menu de contexto, painel do construtor que vira tela cheia no
+//   celular, simulador do Testar) fica em conferir-padrao.excecoes.json.
+const AJUSTE_DA_CASA = 'src/components/ui/ds.tsx';
+const LARGURAS_DA_CASA = new Set(['md', '2xl']);
+const TAGS_DE_JANELA = new Set(['DialogContent', 'AlertDialogContent']);
+export function largurasForaDaEscala(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const achados = [];
+  const visitar = no => {
+    if ((ts.isJsxOpeningElement(no) || ts.isJsxSelfClosingElement(no)) && TAGS_DE_JANELA.has(no.tagName.getText(fonte))) {
+      const classe = no.attributes.properties.find(a => ts.isJsxAttribute(a) && a.name.getText(fonte) === 'className');
+      const texto = classe?.initializer ? classe.initializer.getText(fonte) : '';
+      for (const m of texto.matchAll(/(?:^|[\s'"`{])((?:[\w\[\]-]+:)*)!?max-w-([^\s'"`}]+)/g)) {
+        if (/(^|:)max-[\w-]*:$/.test(m[1]) || m[1].startsWith('max-')) continue;
+        if (LARGURAS_DA_CASA.has(m[2].replace(/!$/, ''))) continue;
+        const { line } = fonte.getLineAndCharacterOfPosition(no.getStart(fonte));
+        achados.push({ linha: line + 1, texto: `<${no.tagName.getText(fonte)} className=${texto.replace(/\s+/g, ' ')}`, largura: `${m[1]}max-w-${m[2]}` });
+      }
+    }
+    ts.forEachChild(no, visitar);
+  };
+  visitar(fonte);
+  return achados;
+}
+export function importaJanelaDoPacote(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const achados = [];
+  for (const no of fonte.statements) {
+    if (!ts.isImportDeclaration(no) || !ts.isStringLiteral(no.moduleSpecifier)) continue;
+    const mod = no.moduleSpecifier.text;
+    if (mod !== '@evoapi/design-system' && mod !== '@evoapi/design-system/dialog') continue;
+    const nomes = no.importClause?.namedBindings;
+    const direto = mod.endsWith('/dialog') || (nomes && ts.isNamedImports(nomes) && nomes.elements.some(e => /^Dialog/.test((e.propertyName ?? e.name).text)));
+    if (direto) {
+      const { line } = fonte.getLineAndCharacterOfPosition(no.getStart(fonte));
+      achados.push({ linha: line + 1, texto: no.getText(fonte).replace(/\s+/g, ' ') });
+    }
+  }
+  return achados;
+}
+export const JANELA_A_MAO = /(?:^|[\s'"`])fixed inset-0(?=[\s'"`]|$)/;
+
 const SELETORES_DA_CASA = new Set(['src/components/base/Seletor.tsx', 'src/components/base/SeletorComAbas.tsx']);
 // Ficam com a lista do sistema DE PROPÓSITO (decisão 3 da spec do Seletor): o
 // widget de chat roda num iframe no site do cliente, que mede a própria altura,
@@ -463,6 +617,211 @@ export function botoesSemNome(codigo, arquivo = 'x.tsx') {
   return achados;
 }
 
+// ── Botão pintado à mão (peça 14 do GLOSSARIO, escolha do dono 10/10/2026) ──
+// Botão de ação é o `Button` de `components/ui/ds` (é ele que leva o degradê do
+// principal). A régua: `<button>` com `bg-primary` FIXO na className (não
+// `bg-primary/10`, e não dentro de condição: `ativo ? 'bg-primary' : …` é o
+// estado de filtro, pílula ou alternador, que não é botão de ação), ou
+// `<button>`/`<Button>` com cor fixa `bg-[#…]`. Lê a className pelo compilador,
+// então classe quebrada em várias linhas também conta.
+const FUNDO_PRINCIPAL = /(?:^|[\s'"`])bg-primary(?![\w/-])/;
+const FUNDO_FIXO = /(?:^|[\s'"`])bg-\[#/;
+const emCondicao = (no, ate) => {
+  for (let filho = no, pai = no.parent; pai && pai !== ate; filho = pai, pai = pai.parent) {
+    if (ts.isConditionalExpression(pai) && pai.condition !== filho) return true;
+    if (ts.isBinaryExpression(pai) && pai.right === filho &&
+      [ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken].includes(pai.operatorToken.kind)) return true;
+  }
+  return false;
+};
+export function botoesPintados(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const achados = [];
+  const visitar = no => {
+    if (ts.isJsxOpeningElement(no) || ts.isJsxSelfClosingElement(no)) {
+      const tag = no.tagName.getText(fonte);
+      const cn = (tag === 'button' || tag === 'Button') &&
+        no.attributes.properties.find(a => ts.isJsxAttribute(a) && nomeDe(a.name) === 'className' && a.initializer);
+      if (cn) {
+        let pintado = false;
+        const olhar = n => {
+          if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n) || ts.isTemplateHead(n) || ts.isTemplateMiddle(n) || ts.isTemplateTail(n)) {
+            const t = ' ' + n.text;
+            if (FUNDO_FIXO.test(t) || (tag === 'button' && FUNDO_PRINCIPAL.test(t) && !emCondicao(n, cn))) pintado = true;
+          }
+          ts.forEachChild(n, olhar);
+        };
+        olhar(cn.initializer);
+        if (pintado) {
+          const { line } = fonte.getLineAndCharacterOfPosition(no.getStart(fonte));
+          achados.push({ linha: line + 1, texto: cn.initializer.getText(fonte).replace(/\s+/g, ' ') });
+        }
+      }
+    }
+    ts.forEachChild(no, visitar);
+  };
+  visitar(fonte);
+  return achados;
+}
+
+// ── Ícone com tamanho em pixel (peça 22 do GLOSSARIO, 10/10/2026) ──────────
+// Ícone é `lucide-react` em três tamanhos, por classe: `h-3.5 w-3.5` (aba,
+// etiqueta, filtro), `h-4 w-4` (botão, menu), `h-5 w-5` (título). Conta `size=`
+// em ícone: componente importado de lucide-react, ou variável de ícone
+// (`Icon`, `IconComponent`, `XxxIcon`, `item.icon`) com `size={…}`. Ícone da
+// casa que recebe tamanho por nome (`<ChannelIcon size="sm">`) não conta.
+const TAG_DE_ICONE = /(?:^|\.)(?:icon|Icon|IconComponent|[A-Z]\w*Icon)$/;
+export function iconesComTamanho(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const lucide = new Set();
+  for (const st of fonte.statements) {
+    if (ts.isImportDeclaration(st) && ts.isStringLiteral(st.moduleSpecifier) && st.moduleSpecifier.text === 'lucide-react') {
+      const nb = st.importClause?.namedBindings;
+      if (nb && ts.isNamedImports(nb)) for (const e of nb.elements) lucide.add(e.name.text);
+    }
+  }
+  const achados = [];
+  const visitar = no => {
+    if (ts.isJsxOpeningElement(no) || ts.isJsxSelfClosingElement(no)) {
+      const tag = no.tagName.getText(fonte);
+      if (lucide.has(tag) || TAG_DE_ICONE.test(tag)) {
+        const sz = no.attributes.properties.find(a => ts.isJsxAttribute(a) && nomeDe(a.name) === 'size');
+        // ícone da casa com tamanho por nome (`<ChannelIcon size="sm">`) não conta
+        if (sz && (lucide.has(tag) || (sz.initializer && ts.isJsxExpression(sz.initializer)))) {
+          const { line } = fonte.getLineAndCharacterOfPosition(no.getStart(fonte));
+          achados.push({ linha: line + 1, texto: `<${tag} size=${sz.initializer ? sz.initializer.getText(fonte) : ''}>` });
+        }
+      }
+    }
+    ts.forEachChild(no, visitar);
+  };
+  visitar(fonte);
+  return achados;
+}
+
+// ── Carregando e estado vazio (peças 13 e 7 do GLOSSARIO, escolha do dono 10/10/2026) ──
+// Três réguas, todas pelo compilador (não por linha):
+//  - rodinhaCentral: elemento com `animate-spin` FORA de botão (Button, button,
+//    *MenuItem, SelectItem, Badge, link) que é grande (h-6 pra cima, ou size={20+})
+//    ou está sozinho dentro de uma caixa `justify-center`. É a rodinha no meio da
+//    lista ou da tela, que vira o esqueleto cinza (`Carregando`). A rodinha
+//    pequena dentro de botão ou ao lado de um texto fica.
+//  - telaEmBranco: `fallback={null}` num <Suspense>: a tela some enquanto carrega.
+//    Não conta quando o que carrega é uma janela (…Modal, …Dialog).
+//  - vazioSolto: texto entre tags que começa com "Nenhum"/"Nenhuma" (fora de
+//    opção de lista e do próprio EmptyState). É a lista vazia escrita à mão,
+//    que vira `EmptyState` (grande na tela, compacto dentro de bloco). "Nenhum"
+//    sozinho é valor de seletor e não conta; frase de ajuda que começa com
+//    "Nenhum" vai pras exceções com motivo.
+export const ESTADOS_DA_CASA = new Set([
+  'src/components/base/Carregando.tsx',
+  'src/components/base/EmptyState.tsx',
+  // a tela de partida do app (antes de saber qual tela vem) fica com a rodinha
+  'src/components/LoadingScreen.tsx',
+]);
+const TAG_DE_BOTAO = /^(?:\w*Button|button|a|Link|\w*MenuItem|SelectItem|\w*Badge|CommandItem)$/;
+const RODINHA_GRANDE = /\b(?:h|size)-(?:[6-9]|1\d|2\d|3\d)\b|\bsize=\{(?:[2-9]\d)\}/;
+const percorrerJsx = (fonte, aoAbrir) => {
+  const visitar = (no, pilha) => {
+    if (ts.isJsxElement(no) || ts.isJsxSelfClosingElement(no)) {
+      const abre = ts.isJsxElement(no) ? no.openingElement : no;
+      const tag = abre.tagName.getText(fonte);
+      aoAbrir(abre, tag, pilha);
+      const nova = [...pilha, { tag, abre }];
+      ts.forEachChild(no, c => visitar(c, nova));
+      return;
+    }
+    ts.forEachChild(no, c => visitar(c, pilha));
+  };
+  visitar(fonte, []);
+};
+const atributo = (abre, nome, fonte) =>
+  abre.attributes.properties.find(a => ts.isJsxAttribute(a) && a.name.getText(fonte) === nome);
+const linhaDe = (fonte, no) => fonte.getLineAndCharacterOfPosition(no.getStart(fonte)).line + 1;
+
+export function rodinhasCentrais(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const achados = [];
+  percorrerJsx(fonte, (abre, tag, pilha) => {
+    const classe = atributo(abre, 'className', fonte)?.getText(fonte) ?? '';
+    if (!/\banimate-spin\b/.test(classe)) return;
+    if (pilha.some(p => TAG_DE_BOTAO.test(p.tag))) return;
+    const pai = pilha[pilha.length - 1];
+    const classeDoPai = pai ? atributo(pai.abre, 'className', fonte)?.getText(fonte) ?? '' : '';
+    if (RODINHA_GRANDE.test(abre.getText(fonte)) || /\bjustify-center\b/.test(classeDoPai)) {
+      achados.push({ linha: linhaDe(fonte, abre), texto: `<${tag}> ${classe}` });
+    }
+  });
+  return achados;
+}
+
+export function telasEmBranco(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const achados = [];
+  percorrerJsx(fonte, abre => {
+    const fb = atributo(abre, 'fallback', fonte);
+    const valor = fb?.initializer && ts.isJsxExpression(fb.initializer) ? fb.initializer.expression : null;
+    if (!valor || valor.kind !== ts.SyntaxKind.NullKeyword) return;
+    // O texto leva o primeiro filho (`fallback={null} → <AgendarVisitaDialog>`), pra
+    // exceção poder perdoar uma janela carregada sob demanda sem perdoar a tela.
+    const filho = ts.isJsxElement(abre.parent)
+      ? abre.parent.children.find(c => ts.isJsxElement(c) || ts.isJsxSelfClosingElement(c))
+      : null;
+    const tagDoFilho = filho ? (ts.isJsxElement(filho) ? filho.openingElement : filho).tagName.getText(fonte) : '';
+    // Janela carregada sob demanda (…Modal, …Dialog) fica: o esqueleto apareceria
+    // FORA da janela, no meio da tela de trás, no instante antes de ela abrir.
+    if (/(?:Modal|Dialog)$/.test(tagDoFilho)) return;
+    achados.push({ linha: linhaDe(fonte, abre), texto: `${fb.getText(fonte)} → <${tagDoFilho}>` });
+  });
+  return achados;
+}
+
+const TAG_DE_OPCAO = /^(?:option|SelectItem|\w*MenuItem|CommandItem|EmptyState|Aviso)$/;
+export function vaziosSoltos(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const achados = [];
+  // A tag dona do texto: a que o envolve, ou a que o recebe num atributo
+  // (`<EmptyState description={<>Nenhum… <Link/></>} />` é do EmptyState).
+  const tagDoPai = no => {
+    let a = no.parent;
+    while (a && !ts.isJsxElement(a) && !ts.isJsxSelfClosingElement(a)) a = a.parent;
+    if (!a) return '';
+    return (ts.isJsxElement(a) ? a.openingElement : a).tagName.getText(fonte);
+  };
+  // string que vira filho de tag: {vazio ? 'Nenhum…' : …}, {lista.length === 0 && 'Nenhum…'}
+  const filhoDeTag = no => {
+    let filho = no;
+    let a = no.parent;
+    while (a) {
+      if (ts.isJsxExpression(a)) return ts.isJsxElement(a.parent) || ts.isJsxFragment(a.parent);
+      const passa =
+        (ts.isConditionalExpression(a) && a.condition !== filho) ||
+        ts.isParenthesizedExpression(a) ||
+        (ts.isBinaryExpression(a) && a.right === filho) ||
+        ts.isTemplateSpan(a);
+      if (!passa) return false;
+      filho = a;
+      a = a.parent;
+    }
+    return false;
+  };
+  const visitar = no => {
+    let texto = null;
+    if (ts.isJsxText(no)) texto = no.text;
+    else if ((ts.isStringLiteral(no) || ts.isNoSubstitutionTemplateLiteral(no)) && filhoDeTag(no)) texto = no.text;
+    else if (ts.isTemplateExpression(no) && filhoDeTag(no)) texto = no.head.text;
+    if (texto !== null) {
+      const limpo = texto.replace(/\s+/g, ' ').trim();
+      if (/^Nenhuma?\b/.test(limpo) && !/^Nenhuma?\.?$/.test(limpo) && !TAG_DE_OPCAO.test(tagDoPai(no))) {
+        achados.push({ linha: linhaDe(fonte, no), texto: limpo });
+      }
+    }
+    ts.forEachChild(no, visitar);
+  };
+  visitar(fonte);
+  return achados;
+}
+
 // ── Textos dos arquivos de tradução ────────────────────────────────────────
 export function textosDoJson(obj, caminho = '') {
   const saida = [];
@@ -535,9 +894,14 @@ export function varrer() {
     const rel = relative(RAIZ, arquivo).split(sep).join('/');
     const escopo = noEscopo(rel);
     const lista = contaSelectNativo(rel);
+    const confirmacao = contaConfirmacao(rel);
+    const janela = rel.startsWith('src/') && /\.tsx?$/.test(rel) && !/\.(spec|test)\.tsx?$/.test(rel) && rel !== AJUSTE_DA_CASA;
     const soMouse = contaSoMouse(rel);
-    if (!escopo && !lista && !soMouse) continue;
+    if (!escopo && !lista && !confirmacao && !janela && !soMouse) continue;
     const codigo = readFileSync(arquivo, 'utf8');
+    if (janela && codigo.includes('@evoapi/design-system')) {
+      for (const a of importaJanelaDoPacote(codigo, rel)) anotar('janelaDireta', rel, a.linha, 'janela importada do pacote base', a.texto);
+    }
     if (escopo && (rel.endsWith('.tsx') || rel.endsWith('.ts'))) {
       for (const { linha, texto } of textosDaTela(codigo, rel)) conferirTexto(rel, linha, texto);
     }
@@ -547,10 +911,20 @@ export function varrer() {
     }
     if (escopo && rel.endsWith('.tsx')) {
       for (const { linha, texto } of botoesSemNome(codigo, rel)) anotar('iconeSemNome', rel, linha, texto, texto);
+      for (const { linha, texto } of botoesPintados(codigo, rel)) anotar('botaoPintado', rel, linha, 'botão pintado à mão', texto);
+      for (const { linha, texto } of iconesComTamanho(codigo, rel)) anotar('tamanhoDeIcone', rel, linha, 'ícone com size em pixel', texto);
+      if (!ESTADOS_DA_CASA.has(rel)) {
+        for (const { linha, texto } of rodinhasCentrais(codigo, rel)) anotar('rodinhaCentral', rel, linha, 'rodinha no meio da tela', texto);
+        for (const { linha, texto } of telasEmBranco(codigo, rel)) anotar('telaEmBranco', rel, linha, 'tela em branco carregando', texto);
+        for (const { linha, texto } of vaziosSoltos(codigo, rel)) anotar('vazioSolto', rel, linha, '"Nenhum…" solto fora do EmptyState', texto);
+      }
       const linhas = codigo.split('\n');
       const tags = tagsJsx(codigo, rel);
       if (rel !== CABECALHO_DA_CASA) {
         for (const t of tags.filter(x => x.tag === 'h1')) anotar('tituloAMao', rel, t.linha, 'título feito à mão', linhas[t.linha - 1].trim());
+      }
+      if (rel !== AJUSTE_DA_CASA) {
+        for (const a of largurasForaDaEscala(codigo, rel)) anotar('larguraDeJanela', rel, a.linha, a.largura, a.texto);
       }
       if (!embrulhos.has(rel) && rel !== CABECALHO_DA_CASA && rel !== MOLDURA_DA_CASA) {
         const cab = tags.find(x => cabecalhos.has(x.tag));
@@ -565,6 +939,15 @@ export function varrer() {
       if (escopo && !MODULOS_DE_FORMATO.includes(rel) && FORMATO.some(re => re.test(l))) anotar('formato', rel, i + 1, 'formatação fora do módulo', l.trim());
       if (escopo && rel !== CHAVE_DA_CASA && CHAVE_A_MAO.test(l)) anotar('chaveMao', rel, i + 1, 'role="switch" feito à mão', l.trim());
       if (escopo && rel !== CABECALHO_DA_CASA && BARRA_A_MAO.test(l)) anotar('barraAMao', rel, i + 1, 'barrinha roxa copiada', l.trim());
+      if (escopo && rel.endsWith('.tsx') && !AVISOS_DA_CASA.has(rel) && avisoAMao(l)) anotar('avisoAMao', rel, i + 1, 'aviso pintado à mão', l.trim());
+      if (confirmacao && ALERT_DIALOG.test(l)) anotar('confirmacaoForaDaCasa', rel, i + 1, 'confirmação fora do useConfirmacao', l.trim());
+      if (escopo && rel.endsWith('.tsx') && rel !== ABAS_DA_CASA && abaForaDaCasa(l)) anotar('abaForaDaCasa', rel, i + 1, 'aba fora da casa', l.trim());
+      if (escopo && rel.endsWith('.tsx') && rel !== ALTERNADOR_DA_CASA && alternadorAMao(l)) anotar('alternadorAMao', rel, i + 1, 'alternador de visão à mão', l.trim());
+      if (escopo && rel.endsWith('.tsx') && soNoMouse(l)) anotar('soNoMouse', rel, i + 1, 'ação que só aparece no mouse', l.trim());
+      if (escopo && rel.endsWith('.tsx') && menuDeitado(l)) anotar('menuDeitado', rel, i + 1, 'menu de ações com ⋯ deitado', l.trim());
+      if (escopo && rel.endsWith('.tsx') && !CARTOES_DA_CASA.has(rel) && cartaoAMao(l)) anotar('cartaoAMao', rel, i + 1, 'cartão feito à mão', l.trim());
+      if (escopo && rel.endsWith('.tsx') && corFixaEmGrafico(l)) anotar('corFixaEmGrafico', rel, i + 1, 'cor fixa em gráfico', l.trim());
+      if (escopo && rel.endsWith('.tsx') && JANELA_A_MAO.test(l)) anotar('janelaAMao', rel, i + 1, 'janela montada à mão', l.trim());
       // selectNativo (app inteiro): pula linhas que começam com comentário ou têm */ após a tag
       if (lista && SELECT_NATIVO.test(l) && !COMECO_DE_COMENTARIO.test(limpa)) {
         const match = SELECT_NATIVO.exec(l);
@@ -598,6 +981,22 @@ export const CATEGORIAS = {
   tituloAMao: 'título de página feito à mão',
   barraAMao: 'barrinha roxa copiada',
   foraDaMoldura: 'cabeçalho fora da moldura',
+  avisoAMao: 'aviso ou faixa pintado à mão',
+  confirmacaoForaDaCasa: 'confirmação fora do useConfirmacao (app inteiro)',
+  abaForaDaCasa: 'aba fora da casa (pílula ou à mão)',
+  alternadorAMao: 'alternador de visão à mão',
+  soNoMouse: 'ação que só aparece no mouse',
+  menuDeitado: 'menu de ações com ⋯ deitado',
+  cartaoAMao: 'cartão feito à mão (fora do Card)',
+  corFixaEmGrafico: 'cor fixa em gráfico',
+  botaoPintado: 'botão pintado à mão (fora do Button)',
+  tamanhoDeIcone: 'ícone com size em pixel',
+  rodinhaCentral: 'rodinha no meio da tela (use Carregando)',
+  telaEmBranco: 'tela em branco carregando (fallback={null})',
+  vazioSolto: '"Nenhum…" solto fora do EmptyState',
+  larguraDeJanela: 'janela com largura fora das quatro',
+  janelaDireta: 'janela importada do pacote base (app inteiro)',
+  janelaAMao: 'janela montada à mão (fixed inset-0)',
   soMouse: 'escondido que só aparece com mouse (app inteiro)',
 };
 
@@ -605,7 +1004,7 @@ function principal() {
   const achados = varrer();
   const conta = c => achados.filter(a => a.categoria === c).length;
   console.log('padrão da tela do cliente (Fase 3)\n');
-  for (const [c, nome] of Object.entries(CATEGORIAS)) console.log(`  ${c.padEnd(14)}${String(conta(c)).padStart(6)}  ${nome}`);
+  for (const [c, nome] of Object.entries(CATEGORIAS)) console.log(`  ${c.padEnd(16)}${String(conta(c)).padStart(6)}  ${nome}`);
 
   const i = process.argv.indexOf('--listar');
   if (i !== -1) {

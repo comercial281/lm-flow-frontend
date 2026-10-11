@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Button, Input } from '@/components/ui/ds';
+import { Card, Button, Input } from '@/components/ui/ds';
 import {
   portalsService,
   type PortalDisplayAddress,
@@ -128,7 +128,7 @@ export default function PortalSettingsCard({ portalKey, settings, onSaved }: Pro
   const id = (campo: string) => `portal-cfg-${portalKey}-${campo}`;
 
   return (
-    <div className="rounded-xl border bg-card p-6 space-y-6">
+    <Card className="gap-6 p-6">
       <div>
         <h2 className="font-semibold text-sm">Configurar</h2>
         <p className="text-xs text-muted-foreground mt-0.5">
@@ -279,6 +279,6 @@ export default function PortalSettingsCard({ portalKey, settings, onSaved }: Pro
           {saving ? 'Salvando...' : 'Salvar'}
         </Button>
       </div>
-    </div>
+    </Card>
   );
 }

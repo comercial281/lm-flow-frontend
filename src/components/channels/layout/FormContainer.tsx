@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { Card } from '@/components/ui/ds';
 import { ChannelIcon } from '@/components/channels';
 import { ChannelType } from '@/hooks/channels/useChannelForm';
 import { Provider as ProviderType } from '@/components/channels/ProviderGrid';
@@ -17,7 +18,7 @@ export const FormContainer = ({
   footer,
 }: FormContainerProps) => {
   return (
-    <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+    <Card className="gap-0 overflow-hidden py-0">
       {/* Header do formulário */}
       <div className="border-b border-border bg-muted/30 px-6 py-4">
         <div className="flex items-center gap-3">
@@ -44,6 +45,6 @@ export const FormContainer = ({
 
       {/* Footer */}
       {footer}
-    </div>
+    </Card>
   );
 };

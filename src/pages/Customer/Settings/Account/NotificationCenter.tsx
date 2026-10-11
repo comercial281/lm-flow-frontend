@@ -17,6 +17,7 @@ import type {
   PolicyPatch,
   ResolvedPolicy,
 } from '@/services/notifications/notificationPolicyService';
+import { Card } from '@/components/ui/ds';
 
 /**
  * Central de Notificações — o que a EQUIPE desta imobiliária recebe.
@@ -87,7 +88,7 @@ export default function NotificationCenter() {
   );
 
   return (
-    <div className="mb-6 rounded-xl border border-primary/30 bg-card overflow-hidden">
+    <Card className="mb-6 gap-0 overflow-hidden border-primary/30 py-0">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -159,6 +160,6 @@ export default function NotificationCenter() {
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

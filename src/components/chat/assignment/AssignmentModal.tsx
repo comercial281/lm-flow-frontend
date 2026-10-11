@@ -6,8 +6,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@evoapi/design-system/dialog';
-import { Button } from '@evoapi/design-system/button';
+} from '@/components/ui/ds';
+import { Button } from '@/components/ui/ds';
 import { Input } from '@evoapi/design-system/input';
 import { Badge } from '@evoapi/design-system/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@evoapi/design-system/avatar';

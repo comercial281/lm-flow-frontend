@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Copy, Loader2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Copy, Pencil, Trash2 } from 'lucide-react';
 import {
   Button,
   DropdownMenu,
@@ -14,8 +14,10 @@ import Abas from '@/components/base/Abas';
 import BaseHeader from '@/components/base/BaseHeader';
 import Pagina from '@/components/base/Pagina';
 import Chave from '@/components/base/Chave';
+import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import IconActionButton from '@/components/base/IconActionButton';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import { Secao, Secoes } from '@/components/base/Secao';
 import { useCan } from '@/hooks/useCan';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -162,9 +164,7 @@ export default function RoletaPagina() {
   if (!roleta) {
     return (
       <Pagina acima={voltar} cabecalho={<BaseHeader title="Roleta" />}>
-        <div className="flex justify-center py-16 text-muted-foreground" role="status" aria-label="Carregando a roleta">
-          <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
-        </div>
+        <Carregando variante="texto" linhas={6} rotulo="Carregando a roleta" className="py-6" />
       </Pagina>
     );
   }
@@ -237,13 +237,11 @@ export default function RoletaPagina() {
               {can('roleta_configs', 'destroy') && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button type="button" size="icon" variant="ghost" aria-label="Mais ações da roleta" title="Mais ações da roleta">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                    <BotaoMaisAcoes aria-label="Mais ações da roleta" title="Mais ações da roleta" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => void excluir()} className="text-destructive">
-                      <Trash2 className="mr-2 h-4 w-4" /> Excluir roleta
+                    <DropdownMenuItem variant="destructive" onClick={() => void excluir()}>
+                      <Trash2 className="h-4 w-4" /> Excluir roleta
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

@@ -72,11 +72,11 @@ describe('topo do funil em duas faixas', () => {
   it('na mesma faixa das abas: contador, busca, Quadro|Lista e Filtros só com ícone', async () => {
     const { onModo, onAbrirFiltros, onBusca } = montar();
     expect(screen.getByText('312 leads')).toBeInTheDocument();
-    const quadro = screen.getByRole('button', { name: 'Quadro' });
+    const quadro = screen.getByRole('button', { name: 'Ver em quadro' });
     expect(quadro).toHaveAttribute('aria-pressed', 'true');
-    expect(quadro).toHaveAttribute('title', 'Quadro');
+    expect(quadro).toHaveAttribute('title', 'Ver em quadro');
     expect(quadro).not.toHaveTextContent('Quadro');
-    await userEvent.click(screen.getByRole('button', { name: 'Lista' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ver em lista' }));
     expect(onModo).toHaveBeenCalledWith('list');
     // Filtros é só o ícone; a quantidade vai numa bolinha e no nome pro leitor de tela.
     const filtros = screen.getByRole('button', { name: 'Filtros · 3' });

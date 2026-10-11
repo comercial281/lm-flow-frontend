@@ -182,9 +182,8 @@ export function BaseFlowContextMenu({
               )}
             >
               <IconComponent
-                size={16}
                 className={cn(
-                  "mr-2 flex-shrink-0",
+                  "mr-2 h-4 w-4 flex-shrink-0",
                   action.color || "text-sidebar-foreground"
                 )}
               />

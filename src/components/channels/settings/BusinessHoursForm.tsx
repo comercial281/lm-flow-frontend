@@ -11,7 +11,7 @@ import {
   SelectValue,
   Textarea,
 } from '@/components/ui/ds';
-import { Clock, Info, AlertTriangle } from 'lucide-react';
+import { Clock, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 
@@ -27,6 +27,7 @@ import {
   getTimeZoneOptions,
   getDefaultTimezone,
 } from './helpers/businessHours';
+import Aviso from '@/components/base/Aviso';
 
 // Referência ESTÁVEL para o caso "sem horário configurado".
 //
@@ -238,20 +239,12 @@ export default function BusinessHoursForm({
                 </div>
 
                 {/* Info Box */}
-                <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <Info className="w-5 h-5 text-blue-700 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm">
-                    <h6 className="font-medium text-blue-700 dark:text-blue-300 mb-1">
-                      {t('settings.businessHours.info.title')}
-                    </h6>
-                    <div className="text-blue-600 dark:text-blue-400 space-y-1">
-                      <p>• {t('settings.businessHours.info.point1')}</p>
-                      <p>• {t('settings.businessHours.info.point2')}</p>
-                      <p>• {t('settings.businessHours.info.point3')}</p>
-                      <p>• {t('settings.businessHours.info.point4')}</p>
-                    </div>
-                  </div>
-                </div>
+                <Aviso tom="info" titulo={t('settings.businessHours.info.title')}>
+                  <p>• {t('settings.businessHours.info.point1')}</p>
+                  <p>• {t('settings.businessHours.info.point2')}</p>
+                  <p>• {t('settings.businessHours.info.point3')}</p>
+                  <p>• {t('settings.businessHours.info.point4')}</p>
+                </Aviso>
               </div>
             )}
 

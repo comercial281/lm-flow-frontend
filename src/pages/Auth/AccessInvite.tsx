@@ -13,10 +13,11 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertCircle, ArrowRight, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Input, Label, Button, Alert, AlertTitle, AlertDescription } from '@/components/ui/ds';
+import { Input, Label, Button } from '@/components/ui/ds';
+import Aviso from '@/components/base/Aviso';
 import { AppLogo } from '@/components/AppLogo';
 import { accessLinkService, AccessLinkInvite } from '@/services/auth/accessLinkService';
 import { checkNewPassword } from '@/features/auth/passwordRules';
@@ -107,20 +108,12 @@ const AccessInvite: React.FC = () => {
         )}
 
         {!carregando && erroLeitura && (
-          <Alert variant="destructive" className="border-red-500/30 bg-red-500/10">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Não consegui abrir o convite</AlertTitle>
-            <AlertDescription>{erroLeitura}</AlertDescription>
-          </Alert>
+          <div className="dark"><Aviso tom="erro" titulo="Não consegui abrir o convite">{erroLeitura}</Aviso></div>
         )}
 
         {!carregando && !erroLeitura && convite && !convite.valid && (
           <>
-            <Alert variant="destructive" className="border-red-500/30 bg-red-500/10">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Este link não vale mais</AlertTitle>
-              <AlertDescription>{convite.message}</AlertDescription>
-            </Alert>
+            <div className="dark"><Aviso tom="erro" titulo="Este link não vale mais">{convite.message}</Aviso></div>
             <Button
               type="button"
               variant="ghost"
@@ -145,11 +138,7 @@ const AccessInvite: React.FC = () => {
             </div>
 
             {erro && (
-              <Alert variant="destructive" className="mb-5 border-red-500/30 bg-red-500/10">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Confira a senha</AlertTitle>
-                <AlertDescription>{erro}</AlertDescription>
-              </Alert>
+              <div className="dark mb-5"><Aviso tom="erro" titulo="Confira a senha">{erro}</Aviso></div>
             )}
 
             <form onSubmit={concluir} className="space-y-4">

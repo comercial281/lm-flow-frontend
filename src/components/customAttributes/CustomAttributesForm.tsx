@@ -614,7 +614,7 @@ export default function CustomAttributesForm({
           disabled={saving}
           aria-label={`Editar ${attribute.attribute_display_name}`}
           title={`Editar ${attribute.attribute_display_name}`}
-          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 toque:opacity-100 transition-opacity"
+          className="h-6 w-6 shrink-0 p-0 text-muted-foreground opacity-70 transition-opacity group-hover:opacity-100 group-hover:text-foreground focus-visible:opacity-100"
         >
           <Pencil className="h-3 w-3" />
         </Button>

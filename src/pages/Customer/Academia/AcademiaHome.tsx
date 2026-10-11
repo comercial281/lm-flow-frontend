@@ -20,8 +20,11 @@ import CourseCard from './CourseCard';
 import CourseForm from './CourseForm';
 import ModuleForm from './ModuleForm';
 import { GERAL_COURSE_ID } from './_lib';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { Card, Button } from '@/components/ui/ds';
 interface Props {
   canEdit: boolean;
   embedded?: boolean; // true = dentro da aba do app (sem chrome de tela cheia)
@@ -30,8 +33,8 @@ interface Props {
 export default function AcademiaHome({ canEdit, embedded }: Props) {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const navigate = useNavigate();
-  const { data: courses = [], isLoading: loadingCourses } = useCourses();
-  const { data: modules = [], isLoading: loadingModules } = useModules();
+  const { data: courses = [], isLoading: loadingCourses, error: erroCourses, refetch: refetchCourses } = useCourses();
+  const { data: modules = [], isLoading: loadingModules, error: erroModules, refetch: refetchModules } = useModules();
   const moduleIds = useMemo(() => modules.map((m) => m.id), [modules]);
   const { data: allLessons = [] } = useAllLessons(moduleIds);
   const { data: progress = {} } = useProgress();
@@ -43,6 +46,8 @@ export default function AcademiaHome({ canEdit, embedded }: Props) {
 
   const userRef = getCurrentUserRef();
   const isLoading = loadingCourses || loadingModules;
+  // Erro nunca vira "Nenhum curso ainda": a falha da carga mostra o erro com "Tentar de novo".
+  const erroAoCarregar = erroCourses || erroModules;
 
   // Lições por módulo (ordem já vem do hook).
   const lessonsByModule = useMemo(() => {
@@ -114,20 +119,21 @@ export default function AcademiaHome({ canEdit, embedded }: Props) {
         {/* Ações admin */}
         {canEdit && (
           <div className="flex flex-wrap items-center gap-2 mb-6">
-            <button
+            <Button
+              size="sm"
               onClick={() => setCourseForm({ editing: null })}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-primary-foreground bg-primary hover:opacity-90 rounded-lg"
               type="button"
             >
-              <Plus size={13} /> Novo curso
-            </button>
-            <button
+              <Plus className="h-4 w-4" /> Novo curso
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowModuleForm(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border hover:border-primary/40"
               type="button"
             >
-              <FolderPlus size={13} /> Novo módulo
-            </button>
+              <FolderPlus className="h-4 w-4" /> Novo módulo
+            </Button>
           </div>
         )}
 
@@ -144,28 +150,36 @@ export default function AcademiaHome({ canEdit, embedded }: Props) {
             className="w-full text-left mb-8 group"
           >
             <p className="text-xs font-semibold text-muted-foreground mb-2">Continue assistindo</p>
-            <div className="flex items-center gap-4 rounded-xl border border-border bg-card hover:border-primary/40 p-4 transition-colors">
+            <Card className="flex-row items-center gap-4 p-4 transition-colors hover:border-primary/40">
               <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
-                <PlayCircle size={24} className="text-primary" />
+                <PlayCircle className="h-5 w-5 text-primary" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold truncate">{continueTarget.lessonTitle}</p>
                 <p className="text-xs text-muted-foreground truncate">{continueTarget.courseTitle}</p>
               </div>
-            </div>
+            </Card>
           </button>
         )}
 
-        {isLoading && <p className="text-sm text-muted-foreground">Carregando...</p>}
+        {isLoading && <Carregando variante="cartoes" rotulo="Carregando..." />}
 
-        {!isLoading && !hasContent && (
-          <div className="text-center py-16">
-            <GraduationCap size={44} className="mx-auto text-muted-foreground/40 mb-3" strokeWidth={1.5} />
-            <p className="text-sm text-muted-foreground">Nenhum curso ainda.</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">
-              {canEdit ? 'Crie um curso pra montar a área de membros.' : 'Em breve teremos conteúdo aqui.'}
-            </p>
-          </div>
+        {!isLoading && !hasContent && erroAoCarregar && (
+          <EmptyState
+            tipo="erro"
+            aoTentarDeNovo={() => {
+              if (erroCourses) void refetchCourses();
+              if (erroModules) void refetchModules();
+            }}
+          />
+        )}
+
+        {!isLoading && !hasContent && !erroAoCarregar && (
+          <EmptyState
+            icon={GraduationCap}
+            title="Nenhum curso ainda."
+            description={canEdit ? 'Crie um curso pra montar a área de membros.' : 'Em breve teremos conteúdo aqui.'}
+          />
         )}
 
         {/* Grade de cursos */}

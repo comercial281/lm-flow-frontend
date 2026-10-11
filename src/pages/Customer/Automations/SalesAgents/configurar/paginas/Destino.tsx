@@ -37,7 +37,7 @@ import { FRASE_SEM_DONO } from '@/features/salesAgents/pendencias';
 import SistemaDoCliente from '../SistemaDoCliente';
 import SistemaDoClienteCvcrm from '../SistemaDoClienteCvcrm';
 import type { HandoffCvcrm, SistemaDoEnvio } from '@/services/salesAgents/salesAgentsService';
-import { Aviso } from '../Aviso';
+import Aviso from '@/components/base/Aviso';
 import type { PropsDaPagina } from '../paginas';
 
 type Escolha = 'roleta' | 'user' | 'webhook';
@@ -146,7 +146,7 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
               <Button type="button" variant="outline" onClick={() => irPara('identidade')}>Mudar persona</Button>
             </div>
             {gravado !== 'number_owner' && (
-              <Aviso>
+              <Aviso tom="atencao">
                 <p>Hoje o lead vai para outro destino, e não para o dono do número.</p>
                 {agent.inbox_id && !agent.number_owner_id ? (
                   <p className="mt-2 text-destructive">{FRASE_SEM_DONO}</p>
@@ -162,7 +162,7 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
         ) : (
           <>
             {gravado === 'inbox_roleta' && !escolhendo && (
-              <Aviso>
+              <Aviso tom="atencao">
                 {roletaQueAtendia ? (
                   <>
                     <p className="font-medium">Confirme a roleta</p>

@@ -156,7 +156,9 @@ describe('OndeDivulgar', () => {
   it('sem portal conectado manda para Integrações', async () => {
     portais.list.mockResolvedValue([olx]);
     abrir();
-    expect(await screen.findByText('Nenhum portal conectado.', { exact: false })).toHaveTextContent('Nenhum portal conectado. Conecte em Integrações →');
+    // O vazio compacto: título e o link de conectar na mesma caixa.
+    const titulo = await screen.findByText('Nenhum portal conectado', { exact: false });
+    expect(titulo.closest('[role="status"], div')).toHaveTextContent('Nenhum portal conectado. Conecte em Integrações →');
     expect(screen.getByRole('link', { name: 'Conecte em Integrações →' })).toHaveAttribute('href', '/settings/portals');
   });
 

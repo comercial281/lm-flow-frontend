@@ -13,6 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/ds';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import IconActionButton from '@/components/base/IconActionButton';
 import { CampoTexto } from '@/components/base/Campo';
 import { plural } from '@/lib/formato';
@@ -29,6 +31,7 @@ import {
 } from '@/services/roletaConfig/roletaConfigService';
 import { metaPagesService } from '@/services/integrations/metaPagesService';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
 import { Campo } from '@/components/base/Campo';
 import { origemTexto } from '../roletaNovaTextos';
 
@@ -232,9 +235,7 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
     if (erroAoCarregar) return <p role="alert" className="text-sm text-destructive">Não deu pra carregar as origens. Feche e tente de novo.</p>;
     if (!opcoes) {
       return (
-        <div className="flex justify-center py-8 text-muted-foreground" role="status" aria-label="Carregando as origens">
-          <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-        </div>
+        <Carregando linhas={3} rotulo="Carregando as origens" className="py-2" />
       );
     }
     if (!definicao) {
@@ -261,10 +262,10 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
       <div className="space-y-5">
         {definicao.chave === 'meta' && (
           <div role="radiogroup" aria-label="Como escolher o formulário" className="flex flex-wrap gap-2">
-            <Button type="button" role="radio" aria-checked={!pelaPalavra} variant={!pelaPalavra ? 'default' : 'outline'} onClick={() => { setPelaPalavra(false); setErro(''); }}>
+            <Button type="button" role="radio" aria-checked={!pelaPalavra} variant={!pelaPalavra ? 'default' : 'outline'} aria-pressed={!pelaPalavra} onClick={() => { setPelaPalavra(false); setErro(''); }}>
               Um formulário
             </Button>
-            <Button type="button" role="radio" aria-checked={pelaPalavra} variant={pelaPalavra ? 'default' : 'outline'} onClick={() => { setPelaPalavra(true); setTrazer(null); setErro(''); }}>
+            <Button type="button" role="radio" aria-checked={pelaPalavra} variant={pelaPalavra ? 'default' : 'outline'} aria-pressed={pelaPalavra} onClick={() => { setPelaPalavra(true); setTrazer(null); setErro(''); }}>
               Pelo nome do formulário
             </Button>
           </div>
@@ -349,22 +350,26 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
         )}
 
         {trazer && (
-          <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
-            <p className="text-sm font-medium">Trazer pra esta roleta?</p>
-            <p className="text-sm text-muted-foreground">
+          <Aviso
+            tom="atencao"
+            titulo="Trazer pra esta roleta?"
+            acao={
+              <>
+                <Button type="button" variant="outline" onClick={() => setTrazer(null)} disabled={salvando}>Deixar onde está</Button>
+                <Button
+                  type="button"
+                  disabled={salvando}
+                  onClick={() => void adicionar({ kind: trazer.kind as Exclude<RoletaOriginKind, 'meta_form_keyword'>, ref_id: trazer.ref_id })}
+                >
+                  {salvando ? 'Trazendo…' : 'Trazer'}
+                </Button>
+              </>
+            }
+          >
+            <p>
               "{textoDoItem(trazer)}" sai da roleta {trazer.roleta_name} e os leads dela passam a entrar aqui.
             </p>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => setTrazer(null)} disabled={salvando}>Deixar onde está</Button>
-              <Button
-                type="button"
-                disabled={salvando}
-                onClick={() => void adicionar({ kind: trazer.kind as Exclude<RoletaOriginKind, 'meta_form_keyword'>, ref_id: trazer.ref_id })}
-              >
-                {salvando ? 'Trazendo…' : 'Trazer'}
-              </Button>
-            </div>
-          </div>
+          </Aviso>
         )}
 
         {erro && <p role="alert" className="text-sm text-destructive">{erro}</p>}
@@ -374,7 +379,7 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
 
   return (
     <Dialog open={aberto} onOpenChange={a => { if (!a && !salvando) aoFechar(); }}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{definicao ? definicao.rotulo : 'Adicionar origem'}</DialogTitle>
           <DialogDescription>
@@ -438,9 +443,7 @@ export default function OrigensBloco({ roletaId, origens, recarregar }: Props) {
   return (
     <div className="space-y-4">
       {origens.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
-          Nenhuma origem ainda. Sem origem, a roleta não recebe lead.
-        </p>
+        <EmptyState tamanho="compacto" title="Nenhuma origem ainda. Sem origem, a roleta não recebe lead." />
       ) : (
         <ul className="space-y-2" aria-label="Origens desta roleta">
           {origens.map(o => (

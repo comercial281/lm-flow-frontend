@@ -82,7 +82,7 @@ export default function BaseDefaultEdge({
               aria-label="Excluir conexão"
               title="Excluir conexão"
             >
-              <Trash2 className="text-red-500" size={16} />
+              <Trash2 className="h-4 w-4 text-red-500" />
             </button>
           </div>
         </EdgeLabelRenderer>

@@ -8,6 +8,11 @@ import {
   DialogHeader,
   DialogTitle,
   Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Input,
 } from '@/components/ui/ds';
 import {
@@ -15,6 +20,7 @@ import {
   Video, FileText, Pause, Archive, ArchiveRestore, Clock, Contact as ContactIcon, Sticker, Folder, FolderPlus, Pencil, Tag,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import MessageFunnelEditor from '@/components/messageFunnels/MessageFunnelEditor';
 import {
   messageFunnelsService,
@@ -51,6 +57,8 @@ export default function MessageFunnels() {
   // Por isso a etiqueta filtra a lista em vez de navegar, e o filtro é aplicado
   // pelo BACKEND — `tag_id` já existe no controller, não é filtro de tela.
   const [tags, setTags] = useState<MessageFunnelTag[]>([]);
+  // Falha ao ler as etiquetas não pode aparecer como "Nenhuma etiqueta ainda" na janela.
+  const [erroTags, setErroTags] = useState(false);
   const [tagId, setTagId] = useState<string | null>(null);
   const [gerenciandoTags, setGerenciandoTags] = useState(false);
   // undefined = mostrando a grade de pastas; null = "Sem pasta"; string = dentro de uma pasta.
@@ -100,8 +108,10 @@ export default function MessageFunnels() {
   const carregarTags = useCallback(async () => {
     try {
       setTags(await messageFunnelTagsService.list());
+      setErroTags(false);
     } catch {
       setTags([]);
+      setErroTags(true);
     }
   }, []);
 
@@ -294,7 +304,7 @@ export default function MessageFunnels() {
       <div className="flex items-center justify-between gap-4 mb-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Rocket className="text-primary" size={22} />
+            <Rocket className="h-5 w-5 text-primary" />
             Funis de Mensagem
             <span className="text-sm font-normal text-muted-foreground">({filtered.length})</span>
           </h1>
@@ -304,14 +314,14 @@ export default function MessageFunnels() {
         </div>
         {pode('message_funnels', 'create') && (
           <Button onClick={handleNew} className="gap-2">
-            <Plus size={16} /> Novo Funil
+            <Plus className="h-4 w-4" /> Novo Funil
           </Button>
         )}
       </div>
 
       {/* Busca */}
       <div className="relative mb-4 max-w-md">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -380,13 +390,22 @@ export default function MessageFunnels() {
                   <div className="text-xs text-muted-foreground">{f.funnels_count} itens · {f.enabled_count} ativos</div>
                 </div>
               </button>
-              <div className="hidden group-hover:flex toque:flex items-center gap-0.5 shrink-0">
-                <button onClick={ev => abrirRenomearPasta(f, ev)} title="Renomear" className="p-1 rounded hover:bg-accent">
-                  <Pencil className="h-3 w-3 text-muted-foreground" />
-                </button>
-                <button onClick={ev => abrirExcluirPasta(f, ev)} title="Excluir pasta" className="p-1 rounded hover:bg-accent">
-                  <Trash2 className="h-3 w-3 text-muted-foreground" />
-                </button>
+              {/* Sempre à vista (GLOSSARIO, peças 15 e 16): ⋮ apagado, acende ao passar o mouse. */}
+              <div className="shrink-0 opacity-70 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <BotaoMaisAcoes compacto aria-label={`Mais ações da pasta ${f.name}`} className="-my-1 -mr-1 text-muted-foreground group-hover:text-foreground" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={ev => abrirRenomearPasta(f, ev)}>
+                      <Pencil className="h-4 w-4" /> Renomear
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive" onClick={ev => abrirExcluirPasta(f, ev)}>
+                      <Trash2 className="h-4 w-4" /> Excluir pasta
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           ))}
@@ -455,8 +474,11 @@ export default function MessageFunnels() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-1.5 max-h-72 overflow-auto">
-            {tags.length === 0 && (
-              <p className="text-sm text-muted-foreground py-2">Nenhuma etiqueta ainda.</p>
+            {tags.length === 0 && erroTags && (
+              <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void carregarTags()} />
+            )}
+            {tags.length === 0 && !erroTags && (
+              <EmptyState tamanho="compacto" title="Nenhuma etiqueta ainda." />
             )}
             {tags.map(tag => (
               <div key={tag.id} className="flex items-center gap-2 rounded-md border border-border p-2">
@@ -637,11 +659,11 @@ function FunnelCard({ funnel, tags, onEdit, onDelete, onToggleArchive }: FunnelC
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <Rocket size={12} className="text-primary shrink-0" />
+            <Rocket className="h-3.5 w-3.5 text-primary shrink-0" />
             <span className="font-semibold text-sm truncate">{funnel.name}</span>
             {!funnel.active && (
               <span className="text-xs text-muted-foreground inline-flex items-center gap-0.5">
-                <Pause size={10} /> pausado
+                <Pause className="h-3.5 w-3.5" /> pausado
               </span>
             )}
           </div>
@@ -664,7 +686,7 @@ function FunnelCard({ funnel, tags, onEdit, onDelete, onToggleArchive }: FunnelC
         </div>
         <div className="flex items-center gap-0.5 shrink-0">
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit} aria-label="Editar">
-            <Edit2 size={13} />
+            <Edit2 className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
@@ -674,11 +696,11 @@ function FunnelCard({ funnel, tags, onEdit, onDelete, onToggleArchive }: FunnelC
             aria-label={funnel.active ? 'Arquivar' : 'Reativar'}
             title={funnel.active ? 'Arquivar (some do chat)' : 'Reativar'}
           >
-            {funnel.active ? <Archive size={13} /> : <ArchiveRestore size={13} />}
+            {funnel.active ? <Archive className="h-4 w-4" /> : <ArchiveRestore className="h-4 w-4" />}
           </Button>
           {onDelete && (
             <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={onDelete} aria-label="Excluir">
-              <Trash2 size={13} />
+              <Trash2 className="h-4 w-4" />
             </Button>
           )}
         </div>
@@ -696,7 +718,7 @@ function FunnelCard({ funnel, tags, onEdit, onDelete, onToggleArchive }: FunnelC
               style={{ background: color + '15', color }}
               title={item.text_content?.slice(0, 60) ?? item.media_filename ?? item.kind}
             >
-              <Icon size={10} />
+              <Icon className="h-3.5 w-3.5" />
               {item.delay_seconds > 0 && <span>·{item.delay_seconds}s</span>}
             </span>
           );

@@ -7,15 +7,19 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Card,
   Checkbox,
   Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/ds';
-import { MoreHorizontal, ArrowUpDown, ArrowUp, ArrowDown, LucideIcon } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, LucideIcon } from 'lucide-react';
 import EmptyState from './EmptyState';
+import BotaoMaisAcoes from './BotaoMaisAcoes';
+import { cn } from '@/lib/utils';
 
 export interface TableColumn<T> {
   key: string;
@@ -150,42 +154,37 @@ export default function BaseTable<T extends Record<string, any>>({
     return String(value);
   };
 
-  const renderActions = (item: T) => {
+  const renderActions = (registro: T) => {
     if (!actions || actions.length === 0) return null;
 
-    const visibleActions = actions.filter(action => !action.show || action.show(item));
+    const visibleActions = actions.filter(action => !action.show || action.show(registro));
 
     if (visibleActions.length === 0) return null;
+
+    // Menu ⋮ da casa (GLOSSARIO, peça 15): Excluir e afins por último, depois
+    // de um separador, com a cor do pacote. A ordem entre os comuns não muda.
+    const comuns = visibleActions.filter(action => action.variant !== 'destructive');
+    const destrutivas = visibleActions.filter(action => action.variant === 'destructive');
+    const renderItem = (action: TableAction<T>, index: number) => (
+      <DropdownMenuItem
+        key={index}
+        variant={action.variant === 'destructive' ? 'destructive' : 'default'}
+        onClick={() => action.onClick(registro)}
+      >
+        {action.icon}
+        {action.label}
+      </DropdownMenuItem>
+    );
 
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label="Mais ações"
-            title="Mais ações"
-            className="h-8 w-8 p-0 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
+          <BotaoMaisAcoes className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          className="bg-sidebar border-sidebar-border text-sidebar-foreground"
-        >
-          {visibleActions.map((action, index) => (
-            <DropdownMenuItem
-              key={index}
-              onClick={() => action.onClick(item)}
-              className={`hover:bg-sidebar-accent ${
-                action.variant === 'destructive' ? 'text-red-400' : 'text-sidebar-foreground'
-              }`}
-            >
-              {action.icon && <span className="mr-2">{action.icon}</span>}
-              {action.label}
-            </DropdownMenuItem>
-          ))}
+        <DropdownMenuContent align="end">
+          {comuns.map(renderItem)}
+          {comuns.length > 0 && destrutivas.length > 0 && <DropdownMenuSeparator />}
+          {destrutivas.map((action, index) => renderItem(action, comuns.length + index))}
         </DropdownMenuContent>
       </DropdownMenu>
     );
@@ -222,9 +221,7 @@ export default function BaseTable<T extends Record<string, any>>({
   }
 
   return (
-    <div
-      className={`rounded-lg border border-sidebar-border bg-sidebar overflow-hidden ${className}`}
-    >
+    <Card className={cn('gap-0 overflow-hidden py-0', className)}>
       <Table>
         <TableHeader>
           <TableRow className="border-sidebar-border hover:bg-sidebar-accent/50">
@@ -294,6 +291,6 @@ export default function BaseTable<T extends Record<string, any>>({
           })}
         </TableBody>
       </Table>
-    </div>
+    </Card>
   );
 }

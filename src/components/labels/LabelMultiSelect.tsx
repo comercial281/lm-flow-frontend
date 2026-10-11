@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { labelsService } from '@/services/contacts/labelsService';
 import type { Label } from '@/types/settings';
+import { Button } from '@/components/ui/ds';
+import EmptyState from '@/components/base/EmptyState';
 
 interface LabelMultiSelectProps {
   /** Catálogo global de etiquetas (nome + cor) pra sugerir/escolher. */
@@ -166,14 +168,15 @@ export default function LabelMultiSelect({
           className="flex-1 h-8 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
         />
         {canCreate && (
-          <button
+          <Button
+            size="sm"
             type="button"
             onClick={() => void createAndAdd()}
             disabled={disabled || creating}
-            className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-primary px-2 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            className="shrink-0"
           >
             <Plus className="h-3 w-3" /> {creating ? 'Criando...' : `Criar "${cleanTitle}"`}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -195,11 +198,12 @@ export default function LabelMultiSelect({
           ))}
         </div>
       ) : (
-        !canCreate && (
-          <p className="text-xs text-muted-foreground">
-            {q ? 'Nenhuma etiqueta encontrada.' : 'Digite pra buscar ou criar uma etiqueta.'}
-          </p>
-        )
+        !canCreate &&
+        (q ? (
+          <EmptyState tipo="semResultado" tamanho="compacto" title="Nenhuma etiqueta encontrada." className="p-3 text-xs" />
+        ) : (
+          <p className="text-xs text-muted-foreground">Digite pra buscar ou criar uma etiqueta.</p>
+        ))
       )}
     </div>
   );

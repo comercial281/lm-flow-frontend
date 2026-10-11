@@ -384,16 +384,17 @@ button.lmf-campo-controle[aria-pressed='true'] { color: var(--lmf-accent); backg
   border-radius: var(--lmf-radius-sm);
 }
 
+/* Esqueleto cinza da casa (GLOSSARIO.md → peça 13, escolha do dono 10/10/2026):
+   o mesmo `bg-muted animate-pulse` do resto do app, no lugar do degradê roxo.
+   `--muted` vem do tema (claro e escuro), então segue a troca de tema sozinho. */
 .lmf-skeleton {
   border-radius: var(--lmf-radius);
-  background: linear-gradient(90deg, var(--lmf-track), var(--lmf-accent-soft), var(--lmf-track));
-  background-size: 200% 100%;
-  animation: lmf-shimmer 1.4s linear infinite;
+  background: var(--muted);
+  animation: lmf-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-@keyframes lmf-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+@keyframes lmf-pulse {
+  50% { opacity: 0.5; }
 }
 
 @media (prefers-reduced-motion: reduce) {

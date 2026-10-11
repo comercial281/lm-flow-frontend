@@ -190,14 +190,14 @@ export function ScheduledActionsList({ contactId }: ScheduledActionsListProps) {
           {t('scheduledActions.filter')}
         </span>
         <Button
-          variant={statusFilter === null ? 'default' : 'outline'}
+          variant={statusFilter === null ? 'default' : 'outline'} aria-pressed={statusFilter === null}
           size="sm"
           onClick={() => setStatusFilter(null)}
         >
           {t('scheduledActions.filterAll')} ({actions.length})
         </Button>
         <Button
-          variant={statusFilter === 'pending' ? 'default' : 'outline'}
+          variant={statusFilter === 'pending' ? 'default' : 'outline'} aria-pressed={statusFilter === 'pending'}
           size="sm"
           onClick={() => setStatusFilter('pending')}
         >
@@ -205,7 +205,7 @@ export function ScheduledActionsList({ contactId }: ScheduledActionsListProps) {
           {actions.filter(a => a.status === 'scheduled' || a.status === 'executing').length})
         </Button>
         <Button
-          variant={statusFilter === 'completed' ? 'default' : 'outline'}
+          variant={statusFilter === 'completed' ? 'default' : 'outline'} aria-pressed={statusFilter === 'completed'}
           size="sm"
           onClick={() => setStatusFilter('completed')}
         >
@@ -213,7 +213,7 @@ export function ScheduledActionsList({ contactId }: ScheduledActionsListProps) {
           {actions.filter(a => a.status === 'completed').length})
         </Button>
         <Button
-          variant={statusFilter === 'cancelled' ? 'default' : 'outline'}
+          variant={statusFilter === 'cancelled' ? 'default' : 'outline'} aria-pressed={statusFilter === 'cancelled'}
           size="sm"
           onClick={() => setStatusFilter('cancelled')}
         >

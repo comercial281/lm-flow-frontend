@@ -8,10 +8,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Megaphone, X, Send, Loader2, Check, Users, RefreshCw, Save, AlertTriangle, Search, History,
+  Megaphone, Send, Loader2, Check, Users, RefreshCw, Save, Search, History,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { plural } from '@/lib/formato';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import {
   academyAnnouncementsService,
   type AnnounceConfig,
@@ -22,6 +24,16 @@ import {
   type CentralInstance,
 } from '@/services/academy/academyAnnouncementsService';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/ds';
 
 interface Props {
   lesson: AnnounceLesson;
@@ -45,6 +57,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
   const [grupos, setGrupos] = useState<AvailableGroup[]>([]);
   const [foraDaLista, setForaDaLista] = useState(0);
   const [buscandoGrupos, setBuscandoGrupos] = useState(false);
+  const [erroGrupos, setErroGrupos] = useState(false);
   const [escolhidos, setEscolhidos] = useState<string[]>([]);
   const [busca, setBusca] = useState('');
   const [previa, setPrevia] = useState('');
@@ -66,7 +79,9 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
       const r = await academyAnnouncementsService.groups(nomeInstancia);
       setGrupos(r.data.data ?? []);
       setForaDaLista(r.data.hidden ?? 0);
+      setErroGrupos(false);
     } catch {
+      setErroGrupos(true);
       toast.error('Não deu para ler os grupos do WhatsApp agora.');
     } finally {
       setBuscandoGrupos(false);
@@ -202,52 +217,32 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
   const desativado = config ? !config.enabled : false;
 
   return (
-    <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60"
-      onClick={onClose}
-      role="presentation"
-    >
-      <div
-        className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl bg-card border border-border overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        {/* Cabeçalho */}
-        <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border">
-          <div className="flex items-start gap-2.5 min-w-0">
-            <Megaphone size={18} className="text-primary shrink-0 mt-0.5" />
-            <div className="min-w-0">
-              <h2 className="text-sm font-bold">Avisar os clientes sobre esta aula</h2>
-              <p className="text-xs text-muted-foreground truncate">{lesson.titulo}</p>
-            </div>
+    <Dialog open onOpenChange={(aberta) => { if (!aberta) onClose(); }}>
+      {/* Topo e rodapé da casa; o miolo rola sozinho (p-0 + flex-col). */}
+      <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden flex flex-col">
+        <DialogHeader className="flex-row items-start gap-2.5 text-left">
+          <Megaphone className="h-5 w-5 text-primary shrink-0 mt-0.5" aria-hidden="true" />
+          <div className="min-w-0">
+            <DialogTitle className="text-sm font-bold">Avisar os clientes sobre esta aula</DialogTitle>
+            <DialogDescription className="text-xs truncate">{lesson.titulo}</DialogDescription>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground" type="button" aria-label="Fechar">
-            <X size={18} />
-          </button>
-        </div>
+        </DialogHeader>
 
         {carregando ? (
-          <div className="flex-1 flex items-center justify-center py-16">
-            <Loader2 className="animate-spin text-primary" size={22} />
-          </div>
+          <Carregando variante="texto" linhas={6} className="flex-1 px-5 py-6" />
         ) : (
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
             {desativado && (
-              <div className="flex items-start gap-2 rounded-lg border border-orange-500/40 bg-orange-500/10 p-3 text-xs">
-                <AlertTriangle size={14} className="text-orange-500 shrink-0 mt-0.5" />
-                <span>O aviso de aula nova está desligado. Ligue de novo para conseguir enviar.</span>
-              </div>
+              <Aviso tom="atencao" compacto>O aviso de aula nova está desligado. Ligue de novo para conseguir enviar.</Aviso>
             )}
 
             {jaAvisada && (
-              <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
-                <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
-                <span>
+              <Aviso tom="atencao" compacto>
+                <p>
                   Esta aula já foi avisada em <strong>{formatarData(jaAvisada.at)}</strong> para{' '}
                   {plural(jaAvisada.sent, 'grupo', 'grupos')}. Enviar de novo faz o cliente receber duas vezes.
-                </span>
-              </div>
+                </p>
+              </Aviso>
             )}
 
             {/* Mensagem */}
@@ -302,7 +297,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
             <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs font-semibold flex items-center gap-1.5">
-                  <Users size={13} /> Grupos dos clientes ({selecionados.length} de {grupos.length})
+                  <Users className="h-3.5 w-3.5" /> Grupos dos clientes ({selecionados.length} de {grupos.length})
                 </p>
                 <div className="flex items-center gap-2">
                   <button onClick={alternarTodos} className="text-[11px] text-primary hover:underline" type="button">
@@ -313,13 +308,13 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                     className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1"
                     type="button"
                   >
-                    <RefreshCw size={11} className={buscandoGrupos ? 'animate-spin' : ''} /> Atualizar
+                    <RefreshCw className={`h-3.5 w-3.5 ${buscandoGrupos ? 'animate-spin' : ''}`} /> Atualizar
                   </button>
                 </div>
               </div>
 
               <div className="relative">
-                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
@@ -347,7 +342,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                           marcado ? 'bg-primary border-primary' : 'border-border'
                         }`}
                       >
-                        {marcado && <Check size={11} className="text-primary-foreground" />}
+                        {marcado && <Check className="h-3.5 w-3.5 text-primary-foreground" />}
                       </span>
                       <span className="flex-1 min-w-0">
                         <span className="block text-xs truncate">{g.name}</span>
@@ -371,13 +366,24 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                     </button>
                   );
                 })}
-                {visiveis.length === 0 && (
-                  <p className="px-3 py-6 text-center text-[11px] text-muted-foreground">
-                    {buscandoGrupos
-                      ? 'Procurando os grupos...'
-                      : 'Nenhum grupo terminado em "Leal Mídia" neste número.'}
-                  </p>
-                )}
+                {visiveis.length === 0 &&
+                  (buscandoGrupos ? (
+                    <p className="px-3 py-6 text-center text-[11px] text-muted-foreground">Procurando os grupos...</p>
+                  ) : erroGrupos && grupos.length === 0 ? (
+                    <EmptyState
+                      tipo="erro"
+                      tamanho="compacto"
+                      className="rounded-none border-0"
+                      aoTentarDeNovo={() => void carregarGrupos(instancia)}
+                    />
+                  ) : (
+                    <EmptyState
+                      tipo={busca.trim() && grupos.length > 0 ? 'semResultado' : 'vazio'}
+                      tamanho="compacto"
+                      className="rounded-none border-0"
+                      title='Nenhum grupo terminado em "Leal Mídia" neste número.'
+                    />
+                  ))}
               </div>
               <p className="text-[11px] text-muted-foreground">
                 Só aparecem os grupos cujo nome termina em <strong>Leal Mídia</strong> — é assim que
@@ -409,7 +415,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                 className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1.5"
                 type="button"
               >
-                <History size={12} /> {verHistorico ? 'Esconder' : 'Ver'} os últimos avisos ({historico.length})
+                <History className="h-3.5 w-3.5" /> {verHistorico ? 'Esconder' : 'Ver'} os últimos avisos ({historico.length})
               </button>
               {verHistorico && (
                 <div className="mt-2 space-y-1.5">
@@ -421,9 +427,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                       </p>
                     </div>
                   ))}
-                  {historico.length === 0 && (
-                    <p className="text-[11px] text-muted-foreground">Nenhum aviso enviado ainda.</p>
-                  )}
+                  {historico.length === 0 && <EmptyState tamanho="compacto" title="Nenhum aviso enviado ainda." />}
                 </div>
               )}
             </div>
@@ -431,31 +435,32 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
         )}
 
         {/* Rodapé */}
-        <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-t border-border">
-          <button
+        <DialogFooter className="sm:flex-wrap sm:items-center sm:justify-between">
+          <Button
+            variant="outline"
+            size="sm"
             onClick={salvarPadrao}
             disabled={salvando || carregando}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg border border-border hover:border-primary/40 disabled:opacity-40"
             type="button"
           >
-            {salvando ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Salvar como padrão
-          </button>
+            {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar como padrão
+          </Button>
           <div className="flex items-center gap-2">
-            <button onClick={onClose} className="px-3 py-2 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground" type="button">
+            <Button variant="outline" size="sm" onClick={onClose} type="button">
               Fechar
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
               onClick={enviar}
               disabled={enviando || carregando || desativado || selecionados.length === 0 || !mensagem.trim()}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40"
               type="button"
             >
-              {enviando ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+              {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               Enviar para {plural(selecionados.length, 'grupo', 'grupos')}
-            </button>
+            </Button>
           </div>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

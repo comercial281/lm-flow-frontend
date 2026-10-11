@@ -12,7 +12,7 @@ import {
   Textarea,
   Badge,
 } from '@/components/ui/ds';
-import { Star, Info, X, Plus, Trash2 } from 'lucide-react';
+import { Star, X, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 
@@ -30,6 +30,7 @@ import { Label } from '@/types/settings';
 import { pipelinesService } from '@/services/pipelines';
 import type { Pipeline, PipelineStage } from '@/types/analytics/pipelines';
 import { Input } from '@evoapi/design-system/input';
+import Aviso from '@/components/base/Aviso';
 
 // API response type
 export interface APICSATConfig {
@@ -481,20 +482,12 @@ export default function CSATForm({
               </div>
 
               {/* Info Box */}
-              <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <Info className="w-5 h-5 text-blue-700 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                <div className="text-sm">
-                  <h6 className="font-medium text-blue-700 dark:text-blue-300 mb-1">
-                    {t('settings.csat.info.title')}
-                  </h6>
-                  <div className="text-blue-600 dark:text-blue-400 space-y-1">
-                    <p>• {t('settings.csat.info.point1')}</p>
-                    <p>• {t('settings.csat.info.point2')}</p>
-                    <p>• {t('settings.csat.info.point3')}</p>
-                    <p>• {t('settings.csat.info.point4')}</p>
-                  </div>
-                </div>
-              </div>
+              <Aviso tom="info" titulo={t('settings.csat.info.title')}>
+                <p>• {t('settings.csat.info.point1')}</p>
+                <p>• {t('settings.csat.info.point2')}</p>
+                <p>• {t('settings.csat.info.point3')}</p>
+                <p>• {t('settings.csat.info.point4')}</p>
+              </Aviso>
 
               {/* Save Button */}
               <div className="flex justify-end pt-4 border-t border-border">

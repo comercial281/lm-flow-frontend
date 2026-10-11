@@ -7,13 +7,15 @@
 // O quadro é ferramenta de tela cheia (exceção do padrão de telas): só a folga
 // lateral alinha (16/24px).
 import {
-  Archive, ArrowLeft, ArrowUpDown, Copy, Download, Edit, SquareKanban, List, Megaphone, MoreVertical, Plus, Search,
-  SlidersHorizontal, Trash2, X, type LucideIcon,
+  Archive, ArrowLeft, ArrowUpDown, Copy, Download, Edit, Kanban, List, Megaphone, Plus, Search,
+  SlidersHorizontal, Trash2, X,
 } from 'lucide-react';
 import {
   Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, Input,
 } from '@/components/ui/ds';
 import Abas from '@/components/base/Abas';
+import AlternadorDeVisao, { type OpcaoDeVisao } from '@/components/base/AlternadorDeVisao';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import PipelineSwitcher from '@/components/pipelines/PipelineSwitcher';
 import { numero, plural } from '@/lib/formato';
 import { cn } from '@/lib/utils';
@@ -29,9 +31,9 @@ const ABAS_COM_SITUACAO: { chave: Exclude<AbaDoQuadro, 'arquivados'>; rotulo: st
   { chave: 'todos', rotulo: 'Todos', conta: 'all' },
 ];
 
-const MODOS: { valor: ModoDoQuadro; rotulo: string; icone: LucideIcon }[] = [
-  { valor: 'board', rotulo: 'Quadro', icone: SquareKanban },
-  { valor: 'list', rotulo: 'Lista', icone: List },
+const MODOS: OpcaoDeVisao<ModoDoQuadro>[] = [
+  { valor: 'board', nome: 'Ver em quadro', icone: Kanban },
+  { valor: 'list', nome: 'Ver em lista', icone: List },
 ];
 
 export interface BoardTopBarProps {
@@ -87,39 +89,37 @@ export default function BoardTopBar({
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" aria-label="Mais ações do funil" title="Mais ações do funil">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
+              <BotaoMaisAcoes compacto aria-label="Mais ações do funil" title="Mais ações do funil" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {acoes.exportar && (
                 <DropdownMenuItem onClick={onExportar}>
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="h-4 w-4" />
                   Exportar
                 </DropdownMenuItem>
               )}
               {acoes.disparo && (
                 <DropdownMenuItem onClick={onDisparo}>
-                  <Megaphone className="mr-2 h-4 w-4" />
+                  <Megaphone className="h-4 w-4" />
                   Disparo em massa
                 </DropdownMenuItem>
               )}
               {(acoes.exportar || acoes.disparo) && <DropdownMenuSeparator />}
               <DropdownMenuItem onClick={onEditarFunil}>
-                <Edit className="mr-2 h-4 w-4" />
+                <Edit className="h-4 w-4" />
                 Editar funil
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onReordenarEtapas}>
-                <ArrowUpDown className="mr-2 h-4 w-4" />
+                <ArrowUpDown className="h-4 w-4" />
                 Reordenar etapas
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onCopiarId}>
-                <Copy className="mr-2 h-4 w-4" />
+                <Copy className="h-4 w-4" />
                 Copiar ID
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive" onClick={onExcluirFunil}>
-                <Trash2 className="mr-2 h-4 w-4" />
+              <DropdownMenuItem variant="destructive" onClick={onExcluirFunil}>
+                <Trash2 className="h-4 w-4" />
                 Excluir funil
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -172,26 +172,8 @@ export default function BoardTopBar({
               </button>
             )}
           </div>
-          <div role="group" aria-label="Visualização" className="inline-flex h-9 shrink-0 items-center rounded-md border border-input p-0.5">
-            {MODOS.map(({ valor, rotulo, icone: Icone }) => (
-              <button
-                key={valor}
-                type="button"
-                aria-pressed={modo === valor}
-                aria-label={rotulo}
-                title={rotulo}
-                onClick={() => onModo(valor)}
-                className={cn(
-                  'inline-flex h-full w-8 items-center justify-center rounded transition-colors',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                  modo === valor ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                <Icone className="h-4 w-4" aria-hidden="true" />
-              </button>
-            ))}
-          </div>
-          <Button type="button" variant={quantosFiltros > 0 ? 'default' : 'outline'} size="sm" onClick={onAbrirFiltros}
+          <AlternadorDeVisao rotulo="Visualização" valor={modo} opcoes={MODOS} aoEscolher={onModo} />
+          <Button type="button" variant={quantosFiltros > 0 ? 'default' : 'outline'} aria-pressed={quantosFiltros > 0} size="sm" onClick={onAbrirFiltros}
             aria-label={quantosFiltros > 0 ? `Filtros · ${quantosFiltros}` : 'Filtros'} title="Filtros"
             className="relative h-9 w-9 shrink-0 p-0">
             <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />

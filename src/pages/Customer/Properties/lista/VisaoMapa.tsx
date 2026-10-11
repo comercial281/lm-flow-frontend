@@ -4,10 +4,11 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Badge } from '@/components/ui/ds';
 import {
-  Building2, Bed, Bath, Car, Ruler, Loader2,
+  Bed, Bath, Car, Ruler, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { plural } from '@/lib/formato';
+import EmptyState from '@/components/base/EmptyState';
 import type { ListingKind } from '@/features/properties/listingKind';
 import {
   propertiesService,
@@ -60,14 +61,15 @@ function FitBoundsToMarkers({ markers }: { markers: PropertyMapMarker[] }) {
 export default function VisaoMapa({ kind }: { kind: ListingKind }) {
   const [markers, setMarkers] = useState<PropertyMapMarker[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState(false);
 
   useEffect(() => {
     let ativo = true;
     setLoading(true);
     propertiesService
       .mapBounds({ listing_kind: kind, max: 500 })
-      .then(data => { if (ativo) setMarkers(data); })
-      .catch(() => { if (ativo) toast.error('Erro ao carregar imóveis no mapa'); })
+      .then(data => { if (ativo) { setMarkers(data); setErro(false); } })
+      .catch(() => { if (ativo) { setErro(true); toast.error('Erro ao carregar imóveis no mapa'); } })
       .finally(() => { if (ativo) setLoading(false); });
     return () => { ativo = false; };
   }, [kind]);
@@ -90,10 +92,16 @@ export default function VisaoMapa({ kind }: { kind: ListingKind }) {
         )}
         {valid.length === 0 && !loading && (
           <div className="absolute inset-0 z-[500] flex items-center justify-center bg-background/80 pointer-events-none">
-            <div className="bg-card border border-border rounded-lg p-6 text-center max-w-md">
-              <Building2 className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-              <p className="text-sm font-medium">Nenhum imóvel desta aba tem localização no cadastro ainda.</p>
-            </div>
+            {/* Sem função de recarga aqui (a carga mora no efeito): o erro só não se passa por vazio. */}
+            {erro ? (
+              <EmptyState tipo="erro" tamanho="compacto" className="max-w-md bg-card" />
+            ) : (
+              <EmptyState
+                tamanho="compacto"
+                title="Nenhum imóvel desta aba tem localização no cadastro ainda."
+                className="max-w-md bg-card"
+              />
+            )}
           </div>
         )}
         <MapContainer

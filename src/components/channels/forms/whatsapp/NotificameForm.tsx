@@ -1,9 +1,9 @@
 import { useLanguage } from '@/hooks/useLanguage';
 import { FormField } from '../../shared/FormField';
-import { FormSection } from '../../shared/FormSection';
 import { FormData } from '@/hooks/channels/useChannelForm';
 import { sanitizeInboxName } from '@/utils/sanitizeName';
 import { PhoneInput } from '@/components/shared/PhoneInput';
+import Aviso from '@/components/base/Aviso';
 
 interface NotificameFormProps {
   form: FormData;
@@ -75,12 +75,8 @@ export const NotificameForm = ({ form, onFormChange }: NotificameFormProps) => {
       />
 
       {/* Help Section */}
-      <FormSection
-        title={t('notificameForm.help.title')}
-        className="bg-green-50/10 border-green-200/20"
-        data-tour="whatsapp-help"
-      >
-        <div className="text-sm text-sidebar-foreground/70 space-y-2">
+      <div data-tour="whatsapp-help">
+        <Aviso tom="info" titulo={t('notificameForm.help.title')}>
           <p>
             <strong>
               {t('notificameForm.help.apiToken.title')}:
@@ -103,8 +99,8 @@ export const NotificameForm = ({ form, onFormChange }: NotificameFormProps) => {
             </strong>{' '}
             {t('notificameForm.help.support.description')}
           </p>
-        </div>
-      </FormSection>
+        </Aviso>
+      </div>
     </div>
   );
 };

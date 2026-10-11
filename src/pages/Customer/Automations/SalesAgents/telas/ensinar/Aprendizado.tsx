@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Button, Input, Label, Textarea } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { Plus, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { salesAgentsService, type SalesAgent, type SalesAgentLesson, type SalesAgentLessonKind } from '@/services/salesAgents/salesAgentsService';
 
 // ---------------- Knowledge ----------------
@@ -17,6 +19,8 @@ const LESSON_KIND_LABEL: Record<SalesAgentLessonKind, string> = {
 export function LearningTab({ agent }: { agent: SalesAgent }) {
   const [lessons, setLessons] = useState<SalesAgentLesson[]>([]);
   const [loading, setLoading] = useState(true);
+  // Falha na leitura não vira "Nada ainda".
+  const [erroAoCarregar, setErroAoCarregar] = useState(false);
   const [rule, setRule] = useState('');
   const [busy, setBusy] = useState(false);
   // exemplo (bom ou ruim)
@@ -28,7 +32,9 @@ export function LearningTab({ agent }: { agent: SalesAgent }) {
     setLoading(true);
     try {
       setLessons(await salesAgentsService.listLessons(agent.id));
+      setErroAoCarregar(false);
     } catch {
+      setErroAoCarregar(true);
       toast.error('Erro ao carregar o aprendizado');
     } finally {
       setLoading(false);
@@ -127,9 +133,11 @@ export function LearningTab({ agent }: { agent: SalesAgent }) {
       <div className="pt-2 border-t border-sidebar-border">
         <Label>O que ela já aprendeu ({lessons.length})</Label>
         {loading ? (
-          <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          <Carregando linhas={3} className="mt-2" />
+        ) : lessons.length === 0 && erroAoCarregar ? (
+          <EmptyState tipo="erro" tamanho="compacto" className="mt-2" aoTentarDeNovo={() => void load()} />
         ) : lessons.length === 0 ? (
-          <p className="text-sm text-muted-foreground mt-2">Nada ainda. Ensine acima.</p>
+          <EmptyState tamanho="compacto" className="mt-2" title="Nada ainda. Ensine acima." />
         ) : (
           <ul className="space-y-2 mt-2">
             {lessons.map((l) => (

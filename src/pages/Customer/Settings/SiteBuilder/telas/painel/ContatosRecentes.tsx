@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { quandoMudou } from '@/lib/formato';
-import { Button } from '@/components/ui/ds';
+import { Card, Button } from '@/components/ui/ds';
 import { siteBuilderService, type SiteLead } from '@/services/siteBuilder/siteBuilderService';
 
 // Cinco últimos contatos. Sem a permissão de leads (403) o bloco inteiro some;
@@ -32,7 +32,7 @@ export default function ContatosRecentes({ siteId, aoVerTodos }: { siteId: strin
 
   if (semAcesso) return null;
   return (
-    <section className="space-y-3 rounded-xl border border-border bg-card p-5">
+    <Card className="gap-3 p-5">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold">Contatos recentes do site</h2>
         <Button variant="outline" size="sm" onClick={aoVerTodos}>Ver todos</Button>
@@ -55,6 +55,6 @@ export default function ContatosRecentes({ siteId, aoVerTodos }: { siteId: strin
           </li>
         ))}
       </ul>
-    </section>
+    </Card>
   );
 }

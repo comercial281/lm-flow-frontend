@@ -9,6 +9,10 @@ import {
   type CapiStatusKey,
 } from '@/services/capi/capiConfigService';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
+import { Button } from '@/components/ui/ds';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 const VALUE_EVENTS = ['Purchase', 'UltraQualificado'];
 
@@ -237,7 +241,7 @@ export default function PixelCapiConfig() {
   }
 
   if (loading) {
-    return <div className="text-sm text-muted-foreground">Carregando…</div>;
+    return <Carregando variante="texto" linhas={6} rotulo="Carregando…" />;
   }
 
   const inputCls =
@@ -332,24 +336,17 @@ export default function PixelCapiConfig() {
           </div>
 
           {testResult && (
-            <div
-              role="status"
-              className={`rounded-md border p-3 text-sm ${
+            <Aviso
+              tom={!testResult.ok ? 'erro' : testResult.can_read ? 'sucesso' : 'atencao'}
+              titulo={
                 !testResult.ok
-                  ? 'border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300'
-                  : testResult.can_read
-                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                    : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300'
-              }`}
-            >
-              <p className="font-medium">
-                {!testResult.ok
                   ? 'A Meta recusou'
                   : testResult.can_read
                     ? 'Conexão funcionando'
-                    : 'Funcionando, com uma ressalva'}
-              </p>
-              <p className="mt-1">{testResult.message}</p>
+                    : 'Funcionando, com uma ressalva'
+              }
+            >
+              <p>{testResult.message}</p>
               {!testResult.ok && (
                 <p className="mt-2 text-xs opacity-80">
                   Confira, nesta ordem: se o token não expirou, se o usuário do sistema dono do token
@@ -359,7 +356,7 @@ export default function PixelCapiConfig() {
                   novo.
                 </p>
               )}
-            </div>
+            </Aviso>
           )}
         </div>
       </section>
@@ -431,19 +428,19 @@ export default function PixelCapiConfig() {
           </div>
         ))}
 
-        {(config?.pipelines ?? []).length === 0 && (
-          <p className="text-sm text-muted-foreground">Nenhum funil encontrado para este cliente.</p>
+        {/* Sem config = a carga falhou (o erro aparece ao lado do Salvar): não vira "Nenhum funil". */}
+        {config && (config.pipelines ?? []).length === 0 && (
+          <EmptyState tamanho="compacto" title="Nenhum funil encontrado para este cliente." />
         )}
       </section>
 
       <div className="flex items-center gap-3">
-        <button
+        <Button
           onClick={handleSave}
           disabled={saving}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
         >
           {saving ? 'Salvando…' : 'Salvar'}
-        </button>
+        </Button>
         {saved && <span className="text-sm text-green-600">Salvo.</span>}
         {error && <span className="text-sm text-red-600">{error}</span>}
       </div>

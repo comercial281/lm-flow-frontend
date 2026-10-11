@@ -17,6 +17,9 @@ import type { PaginaId } from '../configurar/paginas';
 import { motivoSemAtendimento, pendenciasDaIa, type Situacao } from '@/features/salesAgents/situacao';
 import { SuggestionCard } from './TelaSugestoes';
 import UltimosAtendimentos from './UltimosAtendimentos';
+import Aviso from '@/components/base/Aviso';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 // Visão geral, números do período — o que ESTA IA produziu, pro próprio cliente ver.
 //
@@ -38,12 +41,16 @@ export function ResultsTab({ agent, motivo = null }: { agent: SalesAgent; motivo
   const [data, setData] = useState<AgentPerformance | null>(null);
   const [days, setDays] = useState(30);
   const [loading, setLoading] = useState(true);
+  // Falha na leitura não vira "Nenhum atendimento no período".
+  const [erroAoCarregar, setErroAoCarregar] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       setData(await salesAgentsService.performance(agent.id, days));
+      setErroAoCarregar(false);
     } catch {
+      setErroAoCarregar(true);
       toast.error('Não consegui carregar os resultados desta IA.');
     } finally {
       setLoading(false);
@@ -77,15 +84,18 @@ export function ResultsTab({ agent, motivo = null }: { agent: SalesAgent; motivo
       </div>
 
       {loading && !data ? (
-        <p className="text-sm text-muted-foreground flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
-        </p>
+        <Carregando variante="texto" linhas={5} rotulo="Carregando…" />
+      ) : !data && erroAoCarregar ? (
+        <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} />
       ) : !data ? (
-        <p className="text-sm text-muted-foreground rounded-lg border border-sidebar-border bg-sidebar p-4">
-          {motivo
-            ? `Nenhum atendimento no período. Motivo: ${motivo}. Os números aparecem sozinhos quando ela voltar a responder os leads.`
-            : 'Esta IA ainda não tem atendimento registrado no período. Os números aparecem sozinhos conforme ela responde os leads.'}
-        </p>
+        <EmptyState
+          tamanho="compacto"
+          title={
+            motivo
+              ? `Nenhum atendimento no período. Motivo: ${motivo}. Os números aparecem sozinhos quando ela voltar a responder os leads.`
+              : 'Esta IA ainda não tem atendimento registrado no período. Os números aparecem sozinhos conforme ela responde os leads.'
+          }
+        />
       ) : (
         // Segura o desenho anterior mais apagado ao recarregar, em vez de piscar
         // um esqueleto e fazer a tela sumir e voltar ao trocar de período.
@@ -209,24 +219,24 @@ export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferind
         ) : (
           <ul className="space-y-2">
             {pendencias.map((p) => (
-              <li
-                key={p.chave}
-                className={`flex items-start gap-3 rounded-md border p-3 ${p.grave ? 'border-red-500/40 bg-red-500/5' : 'border-amber-500/40 bg-amber-500/5'}`}
-              >
-                <AlertTriangle className={`mt-0.5 h-4 w-4 shrink-0 ${p.grave ? 'text-red-500' : 'text-amber-500'}`} aria-hidden />
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium">{p.titulo}</div>
-                  <div className="text-xs text-muted-foreground">{p.detalhe}</div>
-                </div>
-                {/* Fora da IA (WhatsApp desconectado): link pra configuração do número. */}
-                {p.corrigir?.rota ? (
-                  <Button asChild size="sm" variant="outline"><Link to={p.corrigir.rota}>Corrigir</Link></Button>
-                ) : p.corrigir && (
-                  <Button size="sm" variant="outline"
-                    onClick={() => (p.corrigir!.pagina ? aoIr(p.corrigir!.tela, p.corrigir!.pagina) : aoIr(p.corrigir!.tela))}>
-                    Corrigir
-                  </Button>
-                )}
+              <li key={p.chave}>
+                <Aviso
+                  tom={p.grave ? 'erro' : 'atencao'}
+                  titulo={p.titulo}
+                  acao={
+                    // Fora da IA (WhatsApp desconectado): link pra configuração do número.
+                    p.corrigir?.rota ? (
+                      <Button asChild size="sm" variant="outline"><Link to={p.corrigir.rota}>Corrigir</Link></Button>
+                    ) : p.corrigir ? (
+                      <Button size="sm" variant="outline"
+                        onClick={() => (p.corrigir!.pagina ? aoIr(p.corrigir!.tela, p.corrigir!.pagina) : aoIr(p.corrigir!.tela))}>
+                        Corrigir
+                      </Button>
+                    ) : undefined
+                  }
+                >
+                  <p className="text-xs">{p.detalhe}</p>
+                </Aviso>
               </li>
             ))}
           </ul>

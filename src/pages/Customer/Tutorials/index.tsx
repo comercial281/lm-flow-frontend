@@ -5,8 +5,11 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FileText, GraduationCap, AlertTriangle } from 'lucide-react';
+import { FileText, GraduationCap } from 'lucide-react';
 import { BaseHeader } from '@/components/base';
+import Aviso from '@/components/base/Aviso';
+import Abas from '@/components/base/Abas';
+import Carregando from '@/components/base/Carregando';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useCategories } from '@/hooks/useKnowledge';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
@@ -60,17 +63,9 @@ const Tutorials = () => {
           <BaseHeader title={t('title')} />
         </div>
         <div className="flex-1 flex items-center justify-center p-6">
-          <div className="max-w-md bg-card border border-orange-500/40 rounded-xl p-6 flex items-start gap-3">
-            <AlertTriangle size={20} className="text-orange-500 shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <p className="font-semibold mb-1">Tutorial indisponível</p>
-              <p className="text-muted-foreground text-xs">
-                As variáveis <code>VITE_LMHUB_SUPABASE_URL</code> e{' '}
-                <code>VITE_LMHUB_SUPABASE_ANON_KEY</code> precisam ser configuradas no deploy
-                do seu LM Flow.
-              </p>
-            </div>
-          </div>
+          <Aviso tom="atencao" titulo="Tutorial indisponível" className="max-w-md">
+            As variáveis <code>VITE_LMHUB_SUPABASE_URL</code> e <code>VITE_LMHUB_SUPABASE_ANON_KEY</code> precisam ser configuradas no deploy do seu LM Flow.
+          </Aviso>
         </div>
       </div>
     );
@@ -79,30 +74,16 @@ const Tutorials = () => {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="border-b border-border px-4 py-6 sm:px-6">
+      <div className="border-b border-border px-4 pt-6 sm:px-6">
         <BaseHeader title={t('title')} subtitle={t('description')} />
-        {/* Tabs */}
-        <div className="mt-4 flex items-center gap-1">
-          {TABS.map((x) => {
-            const Icon = x.icon;
-            const active = tab === x.key;
-            return (
-              <button
-                key={x.key}
-                onClick={() => setTab(x.key)}
-                className={`flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-lg transition-colors ${
-                  active
-                    ? 'bg-primary/15 text-primary border border-primary/40'
-                    : 'text-muted-foreground hover:text-foreground border border-transparent'
-                }`}
-                type="button"
-              >
-                <Icon size={13} />
-                {x.label}
-              </button>
-            );
-          })}
-        </div>
+        {/* A linha de baixo das abas é a do próprio cabeçalho. */}
+        <Abas
+          rotulo="Partes dos Tutoriais"
+          className="mt-4 border-b-0"
+          ativa={tab}
+          aoTrocar={chave => setTab(chave as Tab)}
+          abas={TABS.map(x => ({ chave: x.key, rotulo: x.label, icone: x.icon }))}
+        />
       </div>
 
       {/* Body */}
@@ -116,9 +97,7 @@ const Tutorials = () => {
         )}
         <Suspense
           fallback={
-            <div className="flex-1 flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-            </div>
+            <Carregando variante="texto" linhas={6} className="flex-1 p-6" />
           }
         >
           {tab === 'docs' && <DocsTab categoryId={categoryId} canEdit={canEdit} />}

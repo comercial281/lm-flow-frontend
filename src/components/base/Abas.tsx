@@ -1,3 +1,4 @@
+import { useRef, type KeyboardEvent } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -14,6 +15,9 @@ import { numero } from '@/lib/formato';
 //   - aba que é LINK (cada aba é uma rota): passe `para` em todas. Clicar com
 //     alteração não salva pergunta antes (é saída da tela).
 //   - aba de ESTADO (troca o conteúdo sem mudar a rota): passe `ativa` e `aoTrocar`.
+//     Teclado como o `BotoesDeEscolha`: só a aba ativa entra no Tab, as setas
+//     esquerda/direita andam e trocam (dando a volta), Home e End vão pra
+//     primeira e a última.
 //
 // Não usa o Tabs do kit (@evoapi/design-system): ele desenha pílula e não
 // serve pra aba que é link.
@@ -58,54 +62,80 @@ const Contagem = ({ valor }: { valor: number }) => (
 const classeDaAba = (ativa: boolean) =>
   cn(
     'flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
     ativa ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground',
   );
 
-export default function Abas({ abas, rotulo, ativa, aoTrocar, className }: AbasProps) {
+// A aba de estado não precisa do roteador (serve em janela e em teste sem
+// <MemoryRouter>); só a de link usa `useLocation` e a guarda de saída.
+export default function Abas(props: AbasProps) {
+  const saoLinks = props.abas.length > 0 && props.abas.every(a => a.para);
+  return saoLinks ? <AbasDeLink {...props} /> : <AbasDeEstado {...props} />;
+}
+
+function AbasDeLink({ abas, rotulo, className }: AbasProps) {
   const { aoClicar, dialogoDeConfirmacao } = useGuardaDeSaida();
   const { pathname } = useLocation();
-  const saoLinks = abas.length > 0 && abas.every(a => a.para);
-
-  if (saoLinks) {
-    return (
-      <nav aria-label={rotulo} onClickCapture={aoClicar} className={cn('flex items-center gap-1 overflow-x-auto', className)}>
-        {abas.map(({ chave, rotulo: nome, icone: Icone, para, exata, tambem, marcador, contagem }) => {
-          const conteudo = (
-            <>
-              {Icone && <Icone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
-              {nome}
-              {contagem != null && <Contagem valor={contagem} />}
-              {marcador && <Marcador />}
-            </>
-          );
-          // Endereço extra da aba (ficha): o NavLink não sabe que é dela, então acendemos à mão.
-          if (tambem?.some(r => r.test(pathname))) {
-            return (
-              <Link key={chave} to={para!} aria-current="page" className={classeDaAba(true)}>
-                {conteudo}
-              </Link>
-            );
-          }
+  return (
+    <nav aria-label={rotulo} onClickCapture={aoClicar} className={cn('flex items-center gap-1 overflow-x-auto', className)}>
+      {abas.map(({ chave, rotulo: nome, icone: Icone, para, exata, tambem, marcador, contagem }) => {
+        const conteudo = (
+          <>
+            {Icone && <Icone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+            {nome}
+            {contagem != null && <Contagem valor={contagem} />}
+            {marcador && <Marcador />}
+          </>
+        );
+        // Endereço extra da aba (ficha): o NavLink não sabe que é dela, então acendemos à mão.
+        if (tambem?.some(r => r.test(pathname))) {
           return (
-            <NavLink key={chave} to={para!} end={exata} className={({ isActive }) => classeDaAba(isActive)}>
+            <Link key={chave} to={para!} aria-current="page" className={classeDaAba(true)}>
               {conteudo}
-            </NavLink>
+            </Link>
           );
-        })}
-        {dialogoDeConfirmacao}
-      </nav>
-    );
-  }
+        }
+        return (
+          <NavLink key={chave} to={para!} end={exata} className={({ isActive }) => classeDaAba(isActive)}>
+            {conteudo}
+          </NavLink>
+        );
+      })}
+      {dialogoDeConfirmacao}
+    </nav>
+  );
+}
+
+function AbasDeEstado({ abas, rotulo, ativa, aoTrocar, className }: AbasProps) {
+  const botoes = useRef<(HTMLButtonElement | null)[]>([]);
+  // Tabindex móvel: só a ativa entra no Tab (sem ativa conhecida, a primeira).
+  const indiceAtivo = Math.max(0, abas.findIndex(a => a.chave === ativa));
+  const teclar = (e: KeyboardEvent, i: number) => {
+    const n = abas.length;
+    const j =
+      e.key === 'ArrowRight' ? (i + 1) % n
+      : e.key === 'ArrowLeft' ? (i - 1 + n) % n
+      : e.key === 'Home' ? 0
+      : e.key === 'End' ? n - 1
+      : -1;
+    if (j < 0) return;
+    e.preventDefault();
+    botoes.current[j]?.focus();
+    if (abas[j].chave !== ativa) aoTrocar?.(abas[j].chave);
+  };
 
   return (
     <div role="tablist" aria-label={rotulo} className={cn('flex items-center gap-1 overflow-x-auto border-b border-border', className)}>
-      {abas.map(({ chave, rotulo: nome, icone: Icone, marcador, contagem }) => (
+      {abas.map(({ chave, rotulo: nome, icone: Icone, marcador, contagem }, i) => (
         <button
           key={chave}
+          ref={el => { botoes.current[i] = el; }}
           type="button"
           role="tab"
           aria-selected={chave === ativa}
+          tabIndex={i === indiceAtivo ? 0 : -1}
           onClick={() => aoTrocar?.(chave)}
+          onKeyDown={e => teclar(e, i)}
           className={classeDaAba(chave === ativa)}
         >
           {Icone && <Icone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}

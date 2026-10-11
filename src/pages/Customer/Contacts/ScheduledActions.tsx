@@ -9,6 +9,7 @@ import { ScheduleActionModal } from '@/components/scheduledActions/ScheduleActio
 import ScheduledActionsHeader from '@/components/scheduledActions/ScheduledActionsHeader';
 import ScheduledActionsTable from '@/components/scheduledActions/ScheduledActionsTable';
 import EmptyState from '@/components/base/EmptyState';
+import Carregando from '@/components/base/Carregando';
 import { CalendarClock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -55,6 +56,8 @@ export default function ScheduledActions() {
   const [editingAction, setEditingAction] = useState<ScheduledAction | null>(null);
   const [, setUpdateTrigger] = useState(0); // Force re-render for countdown updates
   const hasLoaded = useRef(false);
+  // Falha na leitura não vira a lista vazia ("nenhuma ação agendada").
+  const [erroAoCarregar, setErroAoCarregar] = useState(false);
 
   // Load scheduled actions
   const loadActions = useCallback(
@@ -94,7 +97,9 @@ export default function ScheduledActions() {
           },
           loading: { ...prev.loading, list: false },
         }));
+        setErroAoCarregar(false);
       } catch (error: any) {
+        setErroAoCarregar(true);
         console.error('Error loading scheduled actions:', error);
         toast.error(error.response?.data?.error || t('scheduledActions.errors.loadFailed'));
         setState(prev => ({ ...prev, loading: { ...prev.loading, list: false } }));
@@ -236,12 +241,9 @@ export default function ScheduledActions() {
 
       <div data-tour="scheduled-actions-content">
       {state.loading.list && state.actions.length === 0 ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">{t('scheduledActions.loading')}</p>
-          </div>
-        </div>
+        <Carregando rotulo={t('scheduledActions.loading')} className="py-2" />
+      ) : state.actions.length === 0 && erroAoCarregar ? (
+        <EmptyState tipo="erro" aoTentarDeNovo={() => void loadActions()} />
       ) : filteredActions.length === 0 ? (
         <EmptyState
           icon={CalendarClock}

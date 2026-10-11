@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Plug, X } from 'lucide-react';
+import { Loader2, Plug } from 'lucide-react';
 import { Seletor } from '@/components/base/Seletor';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/ds';
 import { labelsService } from '@/services/contacts/labelsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import {
@@ -33,6 +41,7 @@ import {
   type PixelForm,
   type StoredPixel,
 } from './landingPixel';
+import { Button } from '@/components/ui/ds';
 
 interface Opt {
   id: string;
@@ -295,13 +304,14 @@ export default function LeadRoutingModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
-        <div className="mb-1 flex items-start justify-between">
-          <h2 className="text-base font-semibold">Roteamento de lead</h2>
-          <button type="button" aria-label="Fechar" onClick={onClose} className="text-muted-foreground"><X className="h-4 w-4" /></button>
-        </div>
-        <p className="mb-4 truncate text-xs text-muted-foreground">Landing: {page.title}</p>
+    // Janela da casa. Clique fora não fecha (como antes: perderia o que foi
+    // escolhido); o X, o Esc e o Cancelar fecham.
+    <Dialog open onOpenChange={(aberta) => { if (!aberta) onClose(); }}>
+      <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+        <DialogHeader>
+          <DialogTitle className="text-base">Roteamento de lead</DialogTitle>
+          <DialogDescription className="truncate text-xs">Landing: {page.title}</DialogDescription>
+        </DialogHeader>
 
         {loading ? (
           <div className="flex items-center gap-2 py-6 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</div>
@@ -429,16 +439,15 @@ export default function LeadRoutingModal({
               )}
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={onClose} className="rounded-md px-4 py-2 text-sm text-muted-foreground">Cancelar</button>
-              <button type="button" onClick={save} disabled={saving}
-                className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40">
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={onClose}>Cancelar</Button>
+              <Button type="button" onClick={save} disabled={saving}>
                 {saving && <Loader2 className="h-4 w-4 animate-spin" />} Salvar
-              </button>
-            </div>
+              </Button>
+            </DialogFooter>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

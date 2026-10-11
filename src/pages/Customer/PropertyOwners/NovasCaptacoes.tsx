@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ClipboardList, Loader2, RefreshCw, Search } from 'lucide-react';
+import { ClipboardList, RefreshCw, Search } from 'lucide-react';
 import {
+  Card,
   Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Textarea,
 } from '@/components/ui/ds';
 import { EmptyState } from '@/components/base';
+import Carregando from '@/components/base/Carregando';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
@@ -43,7 +45,7 @@ function Cartao({ r, ocupado, podeAprovar, aoAprovar, aoRecusar }: {
   const fotos = (r.photo_urls ?? []).slice(0, MAX_FOTOS);
 
   return (
-    <article data-testid="cartao-captacao" className="space-y-3 rounded-xl border bg-card p-4 shadow-sm">
+    <Card role="article" data-testid="cartao-captacao" className="gap-3 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="truncate font-medium">{r.owner.name || 'Sem nome'}</h3>
@@ -80,7 +82,7 @@ function Cartao({ r, ocupado, podeAprovar, aoAprovar, aoRecusar }: {
           </Button>
         )}
       </div>
-    </article>
+    </Card>
   );
 }
 
@@ -169,9 +171,7 @@ export default function NovasCaptacoes() {
         </Button>
       </div>
       {carregando ? (
-        <div className="flex h-40 items-center justify-center text-muted-foreground">
-          <Loader2 className="mr-2 h-5 w-5 animate-spin" />Carregando...
-        </div>
+        <Carregando linhas={3} rotulo="Carregando..." />
       ) : falhou ? (
         <EmptyState tipo="erro" aoTentarDeNovo={() => void carregar()} />
       ) : pedidos.length > 0 && visiveis.length === 0 ? (

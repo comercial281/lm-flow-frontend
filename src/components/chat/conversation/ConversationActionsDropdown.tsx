@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 
-import { Button } from '@evoapi/design-system/button';
 import { Badge } from '@evoapi/design-system/badge';
 import {
   DropdownMenu,
@@ -11,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from '@evoapi/design-system/dropdown-menu';
 import {
-  MoreVertical,
   Settings,
   MessageCircle,
   CheckCircle,
@@ -35,6 +33,7 @@ import { Conversation } from '@/types/chat/api';
 import { useConversations } from '@/hooks/chat/useConversations';
 import { useLanguage } from '@/hooks/useLanguage';
 import ActivateAiDialog from './ActivateAiDialog';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 
 interface ConversationActionsDropdownProps {
   conversation: Conversation | null;
@@ -175,10 +174,7 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-          <MoreVertical className="h-4 w-4" />
-          <span className="sr-only">{t('conversationActionsDropdown.srOnly')}</span>
-        </Button>
+        <BotaoMaisAcoes compacto aria-label={t('conversationActionsDropdown.srOnly')} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="flex items-center gap-2">
@@ -434,11 +430,11 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
 
         {/* Destructive Actions */}
         <DropdownMenuItem
+          variant="destructive"
           onClick={() => {
             onDeleteConversation?.(conversation);
             setOpen(false);
           }}
-          className="flex items-center gap-2 text-destructive focus:text-destructive"
         >
           <Trash2 className="h-4 w-4" />
           {t('conversationActionsDropdown.deleteConversation')}

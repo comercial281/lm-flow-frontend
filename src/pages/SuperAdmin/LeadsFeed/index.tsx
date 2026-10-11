@@ -314,7 +314,7 @@ export default function LeadsFeed() {
 
         <div className="flex items-center gap-1.5 flex-wrap">
           <Button
-            variant={soundOn ? 'default' : 'outline'}
+            variant={soundOn ? 'default' : 'outline'} aria-pressed={soundOn}
             size="icon"
             onClick={() => setSoundOn(!soundOn)}
             title={soundOn ? 'Som ligado' : 'Som desligado'}
@@ -322,7 +322,7 @@ export default function LeadsFeed() {
             {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
           </Button>
           <Button
-            variant={notifyOn ? 'default' : 'outline'}
+            variant={notifyOn ? 'default' : 'outline'} aria-pressed={notifyOn}
             size="icon"
             onClick={toggleNotify}
             title={notifyOn ? 'Notificação do navegador ligada' : 'Notificação do navegador desligada'}
@@ -330,7 +330,7 @@ export default function LeadsFeed() {
             {notifyOn ? <BellRing className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
           </Button>
           <Button
-            variant={showPhone ? 'default' : 'outline'}
+            variant={showPhone ? 'default' : 'outline'} aria-pressed={showPhone}
             size="icon"
             onClick={() => setShowPhone(!showPhone)}
             title={showPhone ? 'Escondendo telefone' : 'Mostrar telefone'}
@@ -338,7 +338,7 @@ export default function LeadsFeed() {
             {showPhone ? <Phone className="h-4 w-4" /> : <PhoneOff className="h-4 w-4" />}
           </Button>
           <Button
-            variant={showStage ? 'default' : 'outline'}
+            variant={showStage ? 'default' : 'outline'} aria-pressed={showStage}
             size="icon"
             onClick={() => setShowStage(!showStage)}
             title={showStage ? 'Escondendo funil/etapa' : 'Mostrar funil/etapa'}

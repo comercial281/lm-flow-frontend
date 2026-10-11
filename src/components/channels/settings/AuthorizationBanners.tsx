@@ -1,14 +1,7 @@
 import React, { useState } from 'react';
-import { Button, Card, CardContent, Badge } from '@/components/ui/ds';
-import {
-  AlertTriangle,
-  RefreshCw,
-  Facebook,
-  Instagram,
-  Mail,
-  MessageSquare,
-  CheckCircle,
-} from 'lucide-react';
+import { Button, Badge } from '@/components/ui/ds';
+import { RefreshCw } from 'lucide-react';
+import Aviso from '@/components/base/Aviso';
 import { useLanguage } from '@/hooks/useLanguage';
 import { toast } from 'sonner';
 import { useGlobalConfig } from '@/contexts/GlobalConfigContext';
@@ -38,33 +31,23 @@ const FacebookReauthorizeBanner: React.FC<{
   };
 
   return (
-    <Card className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/10">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5" />
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <Facebook className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <h3 className="font-semibold text-red-900 dark:text-red-200">
-                {t('settings.authorizationBanners.facebook.title')}
-              </h3>
-            </div>
-            <p className="text-sm text-red-800 dark:text-red-300 mb-3">
-              {t('settings.authorizationBanners.facebook.description')}
-            </p>
-            <Button
-              onClick={handleReauthorize}
-              loading={isReauthorizing}
-              size="sm"
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              {t('settings.authorizationBanners.facebook.button')}
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <Aviso
+      tom="erro"
+      titulo={t('settings.authorizationBanners.facebook.title')}
+      acao={
+        <Button
+          onClick={handleReauthorize}
+          loading={isReauthorizing}
+          size="sm"
+          variant="outline"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          {t('settings.authorizationBanners.facebook.button')}
+        </Button>
+      }
+    >
+      {t('settings.authorizationBanners.facebook.description')}
+    </Aviso>
   );
 };
 
@@ -83,33 +66,23 @@ const GoogleReauthorizeBanner: React.FC<{
   };
 
   return (
-    <Card className="border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/10">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-orange-700 dark:text-orange-400 mt-0.5" />
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <Mail className="w-4 h-4 text-red-600 dark:text-red-400" />
-              <h3 className="font-semibold text-orange-900 dark:text-orange-200">
-                {t('settings.authorizationBanners.google.title')}
-              </h3>
-            </div>
-            <p className="text-sm text-orange-800 dark:text-orange-300 mb-3">
-              {t('settings.authorizationBanners.google.description')}
-            </p>
-            <Button
-              onClick={handleReauthorize}
-              loading={isReauthorizing}
-              size="sm"
-              className="bg-orange-600 hover:bg-orange-700 text-white"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              {t('settings.authorizationBanners.google.button')}
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <Aviso
+      tom="atencao"
+      titulo={t('settings.authorizationBanners.google.title')}
+      acao={
+        <Button
+          onClick={handleReauthorize}
+          loading={isReauthorizing}
+          size="sm"
+          variant="outline"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          {t('settings.authorizationBanners.google.button')}
+        </Button>
+      }
+    >
+      {t('settings.authorizationBanners.google.description')}
+    </Aviso>
   );
 };
 
@@ -128,33 +101,23 @@ const MicrosoftReauthorizeBanner: React.FC<{
   };
 
   return (
-    <Card className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/10">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-blue-700 dark:text-blue-400 mt-0.5" />
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <h3 className="font-semibold text-blue-900 dark:text-blue-200">
-                {t('settings.authorizationBanners.microsoft.title')}
-              </h3>
-            </div>
-            <p className="text-sm text-blue-800 dark:text-blue-300 mb-3">
-              {t('settings.authorizationBanners.microsoft.description')}
-            </p>
-            <Button
-              onClick={handleReauthorize}
-              loading={isReauthorizing}
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              {t('settings.authorizationBanners.microsoft.button')}
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <Aviso
+      tom="info"
+      titulo={t('settings.authorizationBanners.microsoft.title')}
+      acao={
+        <Button
+          onClick={handleReauthorize}
+          loading={isReauthorizing}
+          size="sm"
+          variant="outline"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          {t('settings.authorizationBanners.microsoft.button')}
+        </Button>
+      }
+    >
+      {t('settings.authorizationBanners.microsoft.description')}
+    </Aviso>
   );
 };
 
@@ -165,40 +128,30 @@ const InstagramDuplicateBanner: React.FC<{
 }> = ({ onResolve }) => {
   const { t } = useLanguage('channels');
   return (
-    <Card className="border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/10">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-orange-700 dark:text-orange-400 mt-0.5" />
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <MessageSquare className="w-4 h-4 text-pink-600 dark:text-pink-400" />
-              <h3 className="font-semibold text-orange-900 dark:text-orange-200">
-                {t('settings.authorizationBanners.instagram.duplicate.title')}
-              </h3>
-            </div>
-            <p className="text-sm text-orange-800 dark:text-orange-300 mb-3">
-              {t('settings.authorizationBanners.instagram.duplicate.description')}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                onClick={onResolve}
-                size="sm"
-                className="bg-orange-600 hover:bg-orange-700 text-white"
-              >
-                {t('settings.authorizationBanners.instagram.duplicate.resolveButton')}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-orange-300 text-orange-700 hover:bg-orange-100"
-              >
-                {t('settings.authorizationBanners.instagram.duplicate.detailsButton')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <Aviso
+      tom="atencao"
+      titulo={t('settings.authorizationBanners.instagram.duplicate.title')}
+      acao={
+        <>
+          <Button
+            onClick={onResolve}
+            size="sm"
+            variant="outline"
+          >
+            {t('settings.authorizationBanners.instagram.duplicate.resolveButton')}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-orange-300 text-orange-700 hover:bg-orange-100"
+          >
+            {t('settings.authorizationBanners.instagram.duplicate.detailsButton')}
+          </Button>
+        </>
+      }
+    >
+      {t('settings.authorizationBanners.instagram.duplicate.description')}
+    </Aviso>
   );
 };
 
@@ -212,25 +165,6 @@ const AuthorizationSuccessBanner: React.FC<{
   const { t } = useLanguage('channels');
   const config = useGlobalConfig();
   const [isReconnecting, setIsReconnecting] = useState(false);
-
-  const getProviderIcon = () => {
-    switch (provider.toLowerCase()) {
-      case 'facebook':
-        return <Facebook className="w-4 h-4 text-blue-600" />;
-      case 'instagram':
-        return <Instagram className="w-4 h-4 text-pink-600" />;
-      case 'whatsapp':
-        return <MessageSquare className="w-4 h-4 text-green-600" />;
-      case 'google':
-      case 'gmail':
-        return <Mail className="w-4 h-4 text-red-500" />;
-      case 'microsoft':
-      case 'outlook':
-        return <Mail className="w-4 h-4 text-blue-600" />;
-      default:
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
-    }
-  };
 
   // Load Facebook SDK (same logic as FacebookChannelForm)
   async function loadFBsdk(appId: string) {
@@ -530,50 +464,42 @@ const AuthorizationSuccessBanner: React.FC<{
     isWhatsAppCloud;
 
   return (
-    <Card className="border-primary/20 dark:border-primary/30 bg-primary/5 dark:bg-primary/10">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-3">
-          <CheckCircle className="w-5 h-5 text-primary" />
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {getProviderIcon()}
-                <h3 className="font-semibold text-primary dark:text-primary">
-                  {t('settings.authorizationBanners.success.connectedWith', { provider })}
-                </h3>
-                <Badge
-                  variant="default"
-                  className="bg-primary text-primary-foreground dark:text-primary-foreground"
-                >
-                  {t('settings.authorizationBanners.success.active')}
-                </Badge>
-              </div>
-              {showReconnectButton && (
-                <Button
-                  onClick={() => {
-                    handleReconnect().catch(error => {
-                      console.error('Error in handleReconnect:', error);
-                    });
-                  }}
-                  loading={isReconnecting}
-                  size="sm"
-                  variant="outline"
-                  className="border-primary/30 text-primary hover:bg-primary/10"
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  {t('settings.authorizationBanners.success.reconnect')}
-                </Button>
-              )}
-            </div>
-            {lastConnected && (
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                {t('settings.authorizationBanners.success.lastConnection', { date: lastConnected })}
-              </p>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <Aviso
+      tom="sucesso"
+      titulo={
+        <span className="flex flex-wrap items-center gap-2">
+          {t('settings.authorizationBanners.success.connectedWith', { provider })}
+          <Badge
+            variant="default"
+            className="bg-primary text-primary-foreground dark:text-primary-foreground"
+          >
+            {t('settings.authorizationBanners.success.active')}
+          </Badge>
+        </span>
+      }
+      acao={
+        showReconnectButton && (
+          <Button
+            onClick={() => {
+              handleReconnect().catch(error => {
+                console.error('Error in handleReconnect:', error);
+              });
+            }}
+            loading={isReconnecting}
+            size="sm"
+            variant="outline"
+            className="border-primary/30 text-primary hover:bg-primary/10"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            {t('settings.authorizationBanners.success.reconnect')}
+          </Button>
+        )
+      }
+    >
+      {lastConnected && (
+        <p>{t('settings.authorizationBanners.success.lastConnection', { date: lastConnected })}</p>
+      )}
+    </Aviso>
   );
 };
 

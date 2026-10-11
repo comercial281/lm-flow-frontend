@@ -16,6 +16,7 @@ import { createPortal } from 'react-dom';
 import { Check, CheckCheck, ChevronDown, Loader2, Send } from 'lucide-react';
 import { Button, Input, Label as UILabel, Switch } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
 import { salesAgentsService, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { CENARIOS_DO_TESTAR } from '@/features/salesAgents/cenariosDeTeste';
 import {
@@ -302,9 +303,9 @@ export default function TestarJanela({ agent, aoFechar, ritmo = 1 }: { agent: Sa
           <div className="space-y-1.5">
             <h3 className={TITULO}>O que aconteceria</h3>
             {travas.length > 0 && (
-              <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-2.5 text-[13px] leading-snug text-amber-800 dark:text-amber-300">
-                <span className="font-semibold">No atendimento real ela ficaria calada:</span> {juntarTravas(travas)}. O teste respondeu mesmo assim.
-              </p>
+              <Aviso tom="atencao" compacto titulo="No atendimento real ela ficaria calada:">
+                {`${juntarTravas(travas)}. O teste respondeu mesmo assim.`}
+              </Aviso>
             )}
             {(linhas.length > 0 || travas.length === 0) && (
               <div className="space-y-1 rounded-xl border border-border p-2.5 text-[13px]">

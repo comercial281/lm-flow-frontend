@@ -18,6 +18,7 @@ import {
   Input, Label as UILabel,
 } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
+import EmptyState from '@/components/base/EmptyState';
 import { EscolhaCorretor } from '@/components/visits/EscolhaCorretor';
 import { agendaService, type TimeOff } from '@/services/visits/agendaService';
 import { visitsService, type PersonRef } from '@/services/visits/visitsService';
@@ -149,7 +150,7 @@ export function FolgasDialog({ open, onOpenChange, soMinhas }: Props) {
           ) : folgas === null ? (
             <p className="text-sm text-muted-foreground">Carregando...</p>
           ) : folgas.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma folga marcada.</p>
+            <EmptyState tamanho="compacto" title="Nenhuma folga marcada." />
           ) : (
             <ul className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
               {folgas.map(f => (

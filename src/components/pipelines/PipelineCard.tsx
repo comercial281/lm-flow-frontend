@@ -1,7 +1,7 @@
 import { useLanguage } from '@/hooks/useLanguage';
 import { Card, CardContent } from '@/components/ui/ds';
 import { Button } from '@/components/ui/ds';
-import { GitBranch, Eye, Edit, Trash2, Copy, CopyPlus, Power, MoreVertical, Star } from 'lucide-react';
+import { GitBranch, Eye, Edit, Trash2, Copy, CopyPlus, Power, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/ds';
 import { Pipeline } from '@/types/analytics';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import { cn } from '@/lib/utils';
 import { dinheiro } from '@/lib/formato';
 
@@ -113,16 +114,10 @@ export default function PipelineCard({
           {/* Actions dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+              <BotaoMaisAcoes
+                className="shrink-0 text-sidebar-foreground/70 hover:text-sidebar-foreground"
                 onClick={e => e.stopPropagation()}
-                aria-label="Mais ações"
-                title="Mais ações"
-              >
-                <MoreVertical className="h-4 w-4" />
-              </Button>
+              />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
@@ -131,7 +126,7 @@ export default function PipelineCard({
                   onEdit(pipeline);
                 }}
               >
-                <Edit className="h-4 w-4 mr-2" />
+                <Edit className="h-4 w-4" />
                 {t('pipelineCard.edit')}
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -140,7 +135,7 @@ export default function PipelineCard({
                   onDuplicate(pipeline);
                 }}
               >
-                <CopyPlus className="h-4 w-4 mr-2" />
+                <CopyPlus className="h-4 w-4" />
                 {t('pipelineCard.duplicate')}
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -150,7 +145,7 @@ export default function PipelineCard({
                   toast.success(t('pipelineCard.idCopied'));
                 }}
               >
-                <Copy className="h-4 w-4 mr-2" />
+                <Copy className="h-4 w-4" />
                 {t('pipelineCard.copyId')}
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -159,7 +154,7 @@ export default function PipelineCard({
                   onToggleStatus(pipeline);
                 }}
               >
-                <Power className="h-4 w-4 mr-2" />
+                <Power className="h-4 w-4" />
                 {pipeline.is_active ? t('pipelineCard.deactivate') : t('pipelineCard.activate')}
               </DropdownMenuItem>
               {!pipeline.is_default && (
@@ -169,19 +164,19 @@ export default function PipelineCard({
                     onSetAsDefault(pipeline);
                   }}
                 >
-                  <Star className="h-4 w-4 mr-2" />
+                  <Star className="h-4 w-4" />
                   {t('pipelineCard.setAsDefault')}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
+                variant="destructive"
                 onClick={e => {
                   e.stopPropagation();
                   onDelete(pipeline);
                 }}
-                className="text-destructive"
               >
-                <Trash2 className="h-4 w-4 mr-2" />
+                <Trash2 className="h-4 w-4" />
                 {t('pipelineCard.delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -222,7 +217,7 @@ export default function PipelineCard({
         </div>
 
         {/* Actions */}
-        <div className="flex border-t border-sidebar-border opacity-0 group-hover:opacity-100 toque:opacity-100 transition-opacity duration-200">
+        <div className="flex border-t border-sidebar-border opacity-70 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
           <Button
             variant="ghost"
             className="flex-1 rounded-none h-12 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"

@@ -232,7 +232,7 @@ export default function ProposalFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{proposta ? 'Editar Proposta' : 'Nova Proposta'}</DialogTitle>
         </DialogHeader>

@@ -6,12 +6,13 @@ import { history, undo, redo } from 'prosemirror-history';
 import { baseKeymap, lift, setBlockType, wrapIn } from 'prosemirror-commands';
 import { toggleMark } from 'prosemirror-commands';
 import { liftListItem, splitListItem, wrapInList } from 'prosemirror-schema-list';
-import type { Schema } from 'prosemirror-model';
+import type { Node as ProseMirrorNode, Schema } from 'prosemirror-model';
 import { messageSchema } from './schema';
 import { docDoConteudo, htmlDoDoc } from './conteudoDoEditor';
 import { EditorToolbar, TODAS_AS_ACOES, type AcaoDoEditor } from './EditorToolbar';
 import { atalhosDoEditor } from './atalhosDoEditor';
 import { toast } from 'sonner';
+import { usePergunta } from '@/hooks/usePergunta';
 
 const classeDoEditor = (minHeight: string, maxHeight: string) =>
   `prosemirror-editor p-3 ${minHeight} ${maxHeight} overflow-y-auto focus:outline-none resize-none text-sm leading-relaxed text-foreground`;
@@ -105,6 +106,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
     const editorRef = useRef<HTMLDivElement>(null);
     const viewRef = useRef<EditorView | null>(null);
     const [editorState, setEditorState] = useState<EditorState | null>(null);
+    const { perguntar, dialogoDePergunta } = usePergunta();
 
     const onKeyDownRef = useRef(onKeyDown);
     const onChangeRef = useRef(onChange);
@@ -260,6 +262,33 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       });
     }, [placeholder, editorMinHeightClass, editorMaxHeightClass]);
 
+    // O link entra pela janela da casa (usePergunta), não pela caixinha do
+    // navegador. Depois do `await`, o estado capturado no clique é velho:
+    // relê o `viewRef.current.state` e marca o mesmo trecho (`from`–`to`), sem
+    // depender da seleção, que pode ter mudado com o foco indo pro campo da
+    // janela. Se o texto mudou enquanto a janela estava aberta (conteúdo
+    // trocado por fora), o trecho não é mais o mesmo: desiste, sem estragar o
+    // documento.
+    const inserirLink = async (from: number, to: number, docAntes: ProseMirrorNode) => {
+      const linkMark = schema.marks.link;
+      const href = await perguntar({
+        titulo: 'Endereço do link',
+        valorInicial: 'https://',
+        rotuloDaAcao: 'Inserir',
+      });
+      const view = viewRef.current;
+      if (!href || !view || !linkMark) return;
+      // Só endereço de verdade. A página é publicada num anúncio pago, e
+      // `javascript:` gravado ali seria um buraco aberto para quem abrir.
+      if (!/^(https?:\/\/|mailto:|tel:)/i.test(href)) {
+        toast.error('Use um endereço começando com https://, mailto: ou tel:');
+        return;
+      }
+      if (view.state.doc !== docAntes) return;
+      view.dispatch(view.state.tr.addMark(from, to, linkMark.create({ href })));
+      view.focus();
+    };
+
     const handleToolbarAction = (action: string) => {
       if (!viewRef.current || !editorState) return;
 
@@ -317,26 +346,11 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
             toggleMark(linkMark)(state, dispatch);
             break;
           }
-          // Continua sendo a caixinha do navegador de propósito, e o motivo é o
-          // ProseMirror, não o desenho: o `state` acima foi capturado de forma
-          // síncrona, e o estado do editor é imutável. Depois de um `await`, ele
-          // seria um retrato velho — despachar transação em cima dele quebra o
-          // documento em vez de inserir um link.
-          //
-          // O substituto (usePergunta) é assíncrono. Trocar aqui exige reler o
-          // `viewRef.current.state` depois da resposta E conferir se a seleção
-          // sobreviveu ao foco indo pro campo do diálogo — e isso não se confere
-          // lendo código: precisa de navegador.
-          const href = window.prompt('Endereço do link', 'https://')?.trim();
-          if (!href) break;
-          // Só endereço de verdade. A página é publicada num anúncio pago, e
-          // `javascript:` gravado ali seria um buraco aberto para quem abrir.
-          if (!/^(https?:\/\/|mailto:|tel:)/i.test(href)) {
-            toast.error('Use um endereço começando com https://, mailto: ou tel:');
-            break;
-          }
-          toggleMark(linkMark, { href })(state, dispatch);
-          break;
+          // A janela é assíncrona e o estado do editor é imutável: o `state`
+          // daqui vira retrato velho depois da resposta. Quem aplica o link é o
+          // `inserirLink`, que relê o estado atual do editor.
+          void inserirLink(from, to, state.doc);
+          return;
         }
         case 'undo':
           undo(state, dispatch);
@@ -361,6 +375,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
           />
         )}
         <div ref={editorRef} className={`relative ${disabled ? 'opacity-50' : ''}`} />
+        {dialogoDePergunta}
       </div>
     );
   },

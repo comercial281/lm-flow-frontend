@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { AlertTriangle, CalendarClock, FileText, Loader2, Plus, Shuffle, Timer, Users, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, CalendarClock, FileText, Plus, Shuffle, Timer, Users, type LucideIcon } from 'lucide-react';
 import {
+  Card,
   Button,
   Dialog,
   DialogContent,
@@ -15,6 +16,7 @@ import Abas from '@/components/base/Abas';
 import Pagina from '@/components/base/Pagina';
 import BaseHeader from '@/components/base/BaseHeader';
 import BaseStatusBadge from '@/components/base/BaseStatusBadge';
+import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import { CampoTexto } from '@/components/base/Campo';
 import { useCan } from '@/hooks/useCan';
@@ -65,7 +67,7 @@ function CartaoDaRoleta({ roleta }: { roleta: RoletaConfig }) {
     ? `${ENDERECO_DA_ROLETA(roleta.id)}?aba=historico&filtro=atencao`
     : `${ENDERECO_DA_ROLETA(roleta.id)}?aba=historico`;
   return (
-    <div className="relative rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/50 hover:bg-muted/30">
+    <Card className="relative gap-0 p-5 transition-colors hover:border-primary/50 hover:bg-muted/30">
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-base font-semibold leading-snug">
           <Link
@@ -96,7 +98,7 @@ function CartaoDaRoleta({ roleta }: { roleta: RoletaConfig }) {
         <DadoDoCartao icone={CalendarClock} rotulo="Horário" valor={horarioTexto(roleta.business_hours_config)} />
         <DadoDoCartao icone={Users} rotulo="Na fila" valor={filaTexto(roleta)} />
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -119,9 +121,7 @@ function ListaDeRoletas({ aoCriar, podeCriar }: { aoCriar: () => void; podeCriar
   if (erro) return <EmptyState tipo="erro" aoTentarDeNovo={carregar} />;
   if (!roletas) {
     return (
-      <div className="flex justify-center py-16 text-muted-foreground" role="status" aria-label="Carregando as roletas">
-        <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
-      </div>
+      <Carregando variante="cartoes" linhas={3} rotulo="Carregando as roletas" className="py-2" />
     );
   }
   if (roletas.length === 0) {
@@ -222,7 +222,7 @@ export default function RoletaLista() {
           </DialogHeader>
           <form
             onSubmit={e => { e.preventDefault(); void criar(); }}
-            className="space-y-6 py-2"
+            className="space-y-6 pt-2"
           >
             <CampoTexto
               id="roleta-nova-nome"

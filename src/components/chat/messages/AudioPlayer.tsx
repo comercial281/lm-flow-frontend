@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { Play, Pause, Volume2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 

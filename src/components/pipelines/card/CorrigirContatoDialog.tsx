@@ -95,7 +95,7 @@ export default function CorrigirContatoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="max-w-md">
         <DialogTitle>{podeContato ? 'Corrigir contato' : 'Corrigir nome'}</DialogTitle>
         <DialogDescription>
           {podeContato

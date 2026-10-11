@@ -7,10 +7,6 @@ import {
   Avatar,
   AvatarFallback,
   Badge,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
   Separator,
 } from '@/components/ui/ds';
 import {
@@ -25,6 +21,10 @@ import { Team } from '@/types/users';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useLanguage } from '@/hooks/useLanguage';
+import Abas from '@/components/base/Abas';
+import { useAbaDaJanela } from '@/hooks/useAbaDaJanela';
+
+type AbaDoTime = 'overview' | 'members' | 'activity' | 'settings';
 
 interface TeamDetailsProps {
   open: boolean;
@@ -42,6 +42,7 @@ export default function TeamDetails({
   onManageUsers,
 }: TeamDetailsProps) {
   const { t } = useLanguage('teams');
+  const [aba, setAba] = useAbaDaJanela<AbaDoTime>(open, 'overview');
 
   const getInitials = (name: string) =>
     name
@@ -55,8 +56,8 @@ export default function TeamDetails({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] p-0">
-        <DialogHeader className="px-6 py-4 border-b bg-muted/30">
+      <DialogContent className="max-w-2xl max-h-[90vh] p-0">
+        <DialogHeader className="px-6 py-4 border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Avatar className="h-12 w-12">
@@ -100,27 +101,21 @@ export default function TeamDetails({
         </DialogHeader>
 
         <div className="flex-1 overflow-auto">
-          <Tabs defaultValue="overview" className="h-full">
-            <TabsList className="w-full justify-start px-6 py-0 h-12 bg-transparent border-b rounded-none">
-              <TabsTrigger value="overview" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                <StickyNote className="h-4 w-4 mr-2" />
-                {t('details.tabs.overview')}
-              </TabsTrigger>
-              <TabsTrigger value="members" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                <Users className="h-4 w-4 mr-2" />
-                {t('details.tabs.members')} ({team.members_count || 0})
-              </TabsTrigger>
-              <TabsTrigger value="activity" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                <History className="h-4 w-4 mr-2" />
-                {t('details.tabs.activity')}
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                <Settings className="h-4 w-4 mr-2" />
-                {t('details.tabs.settings')}
-              </TabsTrigger>
-            </TabsList>
+          <div className="flex h-full flex-col gap-2">
+            <Abas
+              rotulo="Partes da ficha do time"
+              className="px-6"
+              ativa={aba}
+              aoTrocar={chave => setAba(chave as AbaDoTime)}
+              abas={[
+                { chave: 'overview', rotulo: t('details.tabs.overview'), icone: StickyNote },
+                { chave: 'members', rotulo: t('details.tabs.members'), icone: Users },
+                { chave: 'activity', rotulo: t('details.tabs.activity'), icone: History },
+                { chave: 'settings', rotulo: t('details.tabs.settings'), icone: Settings },
+              ]}
+            />
 
-            <TabsContent value="overview" className="px-6 py-4 space-y-6">
+            {aba === 'overview' && <div className="px-6 py-4 space-y-6">
               {/* Description */}
               <div className="space-y-3">
                 <h3 className="font-semibold flex items-center gap-2">
@@ -181,9 +176,9 @@ export default function TeamDetails({
                   )}
                 </div>
               </div>
-            </TabsContent>
+            </div>}
 
-            <TabsContent value="members" className="px-6 py-4">
+            {aba === 'members' && <div className="px-6 py-4">
               <div className="text-center py-12 text-muted-foreground">
                 <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>{t('details.members.placeholder')}</p>
@@ -195,16 +190,16 @@ export default function TeamDetails({
                   {t('details.members.manageUsers')}
                 </Button>
               </div>
-            </TabsContent>
+            </div>}
 
-            <TabsContent value="activity" className="px-6 py-4">
+            {aba === 'activity' && <div className="px-6 py-4">
               <div className="text-center py-12 text-muted-foreground">
                 <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>{t('details.activity.placeholder')}</p>
               </div>
-            </TabsContent>
+            </div>}
 
-            <TabsContent value="settings" className="px-6 py-4 space-y-6">
+            {aba === 'settings' && <div className="px-6 py-4 space-y-6">
               <div className="space-y-4">
                 <h3 className="font-semibold flex items-center gap-2">
                   <Settings className="h-4 w-4" />
@@ -234,8 +229,8 @@ export default function TeamDetails({
                   {t('details.settings.editSettings')}
                 </Button>
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

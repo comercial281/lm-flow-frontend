@@ -9,7 +9,7 @@ import { Seletor } from '@/components/base/Seletor';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import { emBranco } from '@/features/salesAgents/situacao';
 import { type PipelineOpt, type StageOpt } from '../../configuracao/comum';
-import { Aviso } from '../Aviso';
+import Aviso from '@/components/base/Aviso';
 
 // ---------------- Gatilhos de ativação (multi) ----------------
 
@@ -194,7 +194,7 @@ export function TriggersSection({ agent, onSave, escolheuTodos }: {
       {/* ⚠️ "Só alguns" aberto sem condição completa no servidor: ela AINDA atende
           todo lead. Em destaque, pra tela não parecer que já está filtrando. */}
       {semCondicaoNoServidor ? (
-        <div className="mb-2"><Aviso><p>Sem nenhuma condição, ela atende todo lead do número.</p></Aviso></div>
+        <div className="mb-2"><Aviso tom="atencao"><p>Sem nenhuma condição, ela atende todo lead do número.</p></Aviso></div>
       ) : (
         <p className="mb-2 text-sm text-muted-foreground">Sem nenhuma condição, ela atende todo lead do número.</p>
       )}

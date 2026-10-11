@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Button, Input, Label, Textarea, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { Trash2, FileText, Upload, RefreshCw, Loader2, SlidersHorizontal, ImageIcon, Film } from 'lucide-react';
+import { Trash2, FileText, Upload, RefreshCw, SlidersHorizontal, ImageIcon, Film } from 'lucide-react';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import SendToMeButton from '../../SendToMeButton';
 import { DOC_ACCEPT, docUploadError } from '../../docUpload';
 import { salesAgentsService, type SalesAgent, type SalesAgentDocument } from '@/services/salesAgents/salesAgentsService';
@@ -16,6 +18,8 @@ const DOC_POLL_MS = 4000;
 export function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChange: () => void }) {
   const [docs, setDocs] = useState<SalesAgentDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  // Falha na leitura não vira "Nenhum arquivo ainda".
+  const [erroAoCarregar, setErroAoCarregar] = useState(false);
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -28,7 +32,9 @@ export function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCo
     setLoading(true);
     try {
       setDocs(await salesAgentsService.listDocuments(agent.id));
+      setErroAoCarregar(false);
     } catch {
+      setErroAoCarregar(true);
       toast.error('Erro ao carregar documentos');
     } finally {
       setLoading(false);
@@ -155,16 +161,18 @@ export function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCo
           />
         </label>
         {progress !== null && (
-          <div className="mt-3 h-1.5 bg-sidebar-border rounded overflow-hidden">
-            <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress}%` }} />
           </div>
         )}
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        <Carregando linhas={3} />
+      ) : docs.length === 0 && erroAoCarregar ? (
+        <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} />
       ) : docs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhum arquivo ainda.</p>
+        <EmptyState tamanho="compacto" title="Nenhum arquivo ainda." />
       ) : (
         <ul className="space-y-2">
           {docs.map((d) => (
@@ -287,7 +295,7 @@ function FileConfigDialog({
 
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Como a IA deve usar este arquivo</DialogTitle>
           <DialogDescription>

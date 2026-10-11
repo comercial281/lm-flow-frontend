@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Gavel } from 'lucide-react';
+import { Button } from '@/components/ui/ds';
+import Faixa from '@/components/base/Faixa';
 import { claimConversation } from '@/services/roletaConfig/roletaConfigService';
 
 interface ClaimLeadBannerProps {
@@ -44,19 +46,23 @@ export default function ClaimLeadBanner({ conversationId, onClaimed }: ClaimLead
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-2 bg-violet-50 dark:bg-violet-950/30 border-b border-violet-200 dark:border-violet-800">
-      <div className="flex items-center gap-2 text-xs text-violet-700 dark:text-violet-300">
-        <Gavel className="h-3.5 w-3.5 flex-shrink-0" />
-        <span>Lead sem dono. Quem assumir primeiro, fica com ele.</span>
-      </div>
-      <button
-        type="button"
-        onClick={handleClaim}
-        disabled={claiming}
-        className="flex-shrink-0 rounded-md bg-[#7c3aed] px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-[#6d28d9] disabled:opacity-60"
-      >
-        {claiming ? 'Assumindo...' : 'Assumir lead'}
-      </button>
-    </div>
+    <Faixa
+      tom="info"
+      icone={Gavel}
+      acao={
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs"
+          onClick={handleClaim}
+          disabled={claiming}
+        >
+          {claiming ? 'Assumindo...' : 'Assumir lead'}
+        </Button>
+      }
+    >
+      Lead sem dono. Quem assumir primeiro, fica com ele.
+    </Faixa>
   );
 }

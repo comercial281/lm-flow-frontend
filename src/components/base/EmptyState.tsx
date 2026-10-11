@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import PrimaryActionButton from './PrimaryActionButton';
@@ -11,13 +12,23 @@ import PrimaryActionButton from './PrimaryActionButton';
 //   sem acesso     → NÃO é aqui: é o NoAccessState (Fase 1)
 // ERRO NUNCA APARECE COMO LISTA VAZIA: "Nenhum lembrete criado ainda" em cima
 // de uma falha de rede manda o gestor criar de novo o que já existe.
+//
+// DUAS MEDIDAS (escolha do dono em 10/10/2026, GLOSSARIO.md → peça 7):
+//   'grande'   (padrão) ícone, título, explicação e botão: a lista principal da tela
+//   'compacto' caixa tracejada com a frase e a ação em link roxo ao lado: dentro
+//              de bloco, cartão, aba do card do lead, painel lateral ou janela
+// Os três tipos valem nos dois tamanhos. Substitui o "Nenhum…" solto num <p>
+// cinza, que a trava `vazioSolto` do conferir-padrao conta.
 
 interface EmptyStateProps {
   /** Padrão 'vazio'. Os outros dois já trazem título, frase e botão. */
   tipo?: 'vazio' | 'semResultado' | 'erro';
+  /** Padrão 'grande'. 'compacto' é a caixa tracejada pra dentro de bloco, aba ou janela. */
+  tamanho?: 'grande' | 'compacto';
   icon?: LucideIcon;
-  title?: string;
-  description?: string;
+  /** Texto, ou texto com um link no meio (ReactNode). */
+  title?: ReactNode;
+  description?: ReactNode;
   /** Só no 'vazio': um caso imobiliário de verdade ("Lembrar o corretor da visita de amanhã"). */
   exemplo?: string;
   action?: {
@@ -48,6 +59,7 @@ export const TEXTO_SEM_RESULTADO = {
 
 export default function EmptyState({
   tipo = 'vazio',
+  tamanho = 'grande',
   icon: Icon,
   title,
   description,
@@ -69,6 +81,50 @@ export default function EmptyState({
         : undefined);
   const comExemplo = tipo === 'vazio' && !!exemplo;
 
+  if (tamanho === 'compacto') {
+    // Na medida compacta a frase padrão do erro/sem resultado sai: o título e a
+    // ação dizem tudo ("Não deu pra carregar. Tentar de novo").
+    const fraseCompacta = description ?? (padrao ? '' : frase);
+    // Título seguido de frase ou link ganha ponto, pra não emendar ("Não deu pra carregar. Tentar de novo").
+    // O ponto fica fora do <span> do título, pra quem procura o título ache ele inteiro.
+    const pontoDoTitulo =
+      (fraseCompacta || acao) && typeof titulo === 'string' && titulo && !/[.!?…:]$/.test(titulo) ? '.' : '';
+    return (
+      <div
+        role={tipo === 'erro' ? 'alert' : undefined}
+        className={cn(
+          'rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground',
+          className,
+        )}
+      >
+        <p>
+          {titulo && <span>{titulo}</span>}
+          {pontoDoTitulo}
+          {fraseCompacta && <> <span>{fraseCompacta}</span></>}
+          {acao && (
+            <>
+              {' '}
+              <button
+                type="button"
+                onClick={acao.onClick}
+                disabled={acao.disabled}
+                title={acao.tooltip}
+                className="font-medium text-primary hover:underline disabled:pointer-events-none disabled:opacity-50"
+              >
+                {acao.label}
+              </button>
+            </>
+          )}
+        </p>
+        {comExemplo && (
+          <p className="mt-1 text-xs text-muted-foreground/80">
+            Exemplo: <span className="italic">{exemplo}</span>
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       role={tipo === 'erro' ? 'alert' : undefined}
@@ -82,7 +138,11 @@ export default function EmptyState({
 
       <h3 className="text-xl font-semibold text-foreground mb-2">{titulo}</h3>
 
-      <p className={cn('text-muted-foreground max-w-md', comExemplo ? 'mb-2' : 'mb-6')}>{frase}</p>
+      {frase ? (
+        <p className={cn('text-muted-foreground max-w-md', comExemplo ? 'mb-2' : 'mb-6')}>{frase}</p>
+      ) : (
+        (comExemplo || acao) && <div className="mb-4" />
+      )}
 
       {comExemplo && (
         <p className="text-sm text-muted-foreground/80 max-w-md mb-6">

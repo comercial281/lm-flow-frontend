@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Card, CardContent } from '@evoapi/design-system/card';
-import { Hash, Loader2, Search, Paperclip } from 'lucide-react';
+import { Hash, Search, Paperclip } from 'lucide-react';
+import Carregando from '@/components/base/Carregando';
 import type { CannedResponse } from '@/types/knowledge';
 import { useLanguage } from '@/hooks/useLanguage';
 
@@ -68,10 +69,7 @@ const CannedResponsesList: React.FC<CannedResponsesListProps> = ({
     return (
       <Card className="absolute bottom-full left-0 right-0 mb-2 shadow-lg border-border z-50 animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
         <CardContent className="p-4">
-          <div className="flex items-center justify-center gap-2 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-sm">{t('cannedResponses.loading')}</span>
-          </div>
+          <Carregando linhas={3} rotulo={t('cannedResponses.loading')} />
         </CardContent>
       </Card>
     );

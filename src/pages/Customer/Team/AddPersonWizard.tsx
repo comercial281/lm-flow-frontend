@@ -10,6 +10,7 @@ import { usersService } from '@/services/users';
 import InboxMembersService from '@/services/channels/inboxMembersService';
 import { BrPhoneInput } from '@/components/shared/BrPhoneInput';
 import { telefone } from '@/lib/formato';
+import EmptyState from '@/components/base/EmptyState';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
@@ -267,7 +268,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
     return (
       <>
         <Dialog open={open && !retryOpen} onOpenChange={o => !o && !saving && close()}>
-          <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{name.trim()} entrou na equipe</DialogTitle>
               <DialogDescription>O que ficou pronto e o que falta.</DialogDescription>
@@ -358,7 +359,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
 
   return (
     <Dialog open={open} onOpenChange={o => !o && !saving && close()}>
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Adicionar pessoa</DialogTitle>
           <DialogDescription>
@@ -487,7 +488,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Também atende números que já existem</p>
                   {inboxes.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">Nenhum número conectado ainda.</p>
+                    <EmptyState tamanho="compacto" title="Nenhum número conectado ainda." />
                   ) : (
                     <>
                       {inboxes.map(ib => {

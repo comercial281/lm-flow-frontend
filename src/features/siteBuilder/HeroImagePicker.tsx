@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Check, Loader2, Search } from 'lucide-react';
+import { ArrowLeft, Check, Search } from 'lucide-react';
 import {
   Button,
   Dialog,
@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/ds';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
 import { propertyPhotosService, type PropertyPhoto } from '@/services/propertyPhotos/propertyPhotosService';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 /**
  * Escolher a foto do banner da home entre as fotos dos imóveis PUBLICADOS no
@@ -50,6 +52,9 @@ export default function HeroImagePicker({ open, onClose, onPick, currentProperty
   const [photos, setPhotos] = useState<PropertyPhoto[]>([]);
   const [photosLoading, setPhotosLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Falha de carga não vira "Nenhum imóvel…" nem "não tem foto".
+  const [erroLista, setErroLista] = useState(false);
+  const [erroFotos, setErroFotos] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -58,6 +63,7 @@ export default function HeroImagePicker({ open, onClose, onPick, currentProperty
     setPhotos([]);
     setQ('');
     setError(null);
+    setErroLista(false);
     setLoading(true);
     (async () => {
       try {
@@ -65,7 +71,10 @@ export default function HeroImagePicker({ open, onClose, onPick, currentProperty
         if (!active) return;
         setProperties(res.data.filter(p => p.published_on_site && (p.photos_count ?? 0) > 0));
       } catch {
-        if (active) setError('Não consegui carregar a lista de imóveis.');
+        if (active) {
+          setError('Não consegui carregar a lista de imóveis.');
+          setErroLista(true);
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -87,12 +96,14 @@ export default function HeroImagePicker({ open, onClose, onPick, currentProperty
     setSelected(p);
     setPhotos([]);
     setError(null);
+    setErroFotos(false);
     setPhotosLoading(true);
     try {
       const list = await propertyPhotosService.list(p.id);
       setPhotos(list.filter(ph => ph.published && isImage(ph)));
     } catch {
       setError('Não consegui carregar as fotos deste imóvel.');
+      setErroFotos(true);
     } finally {
       setPhotosLoading(false);
     }
@@ -100,7 +111,7 @@ export default function HeroImagePicker({ open, onClose, onPick, currentProperty
 
   return (
     <Dialog open={open} onOpenChange={o => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {selected && (
@@ -117,7 +128,7 @@ export default function HeroImagePicker({ open, onClose, onPick, currentProperty
           </DialogDescription>
         </DialogHeader>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && !(selected && erroFotos) && <p className="text-sm text-destructive">{error}</p>}
 
         {!selected && (
           <>
@@ -126,13 +137,17 @@ export default function HeroImagePicker({ open, onClose, onPick, currentProperty
               <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por título, código, bairro ou cidade" className="pl-8" />
             </div>
             {loading ? (
-              <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando imóveis...</div>
-            ) : filtered.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                {properties.length === 0
-                  ? 'Nenhum imóvel publicado no site tem foto ainda. Publique um imóvel com foto em Imóveis e volte aqui.'
-                  : 'Nenhum imóvel bate com a busca.'}
-              </p>
+              <Carregando variante="cartoes" linhas={6} rotulo="Carregando imóveis..." />
+            ) : erroLista && properties.length === 0 ? null : filtered.length === 0 ? (
+              properties.length === 0 ? (
+                <EmptyState
+                  tamanho="compacto"
+                  title="Nenhum imóvel publicado no site tem foto ainda."
+                  description="Publique um imóvel com foto em Imóveis e volte aqui."
+                />
+              ) : (
+                <EmptyState tipo="semResultado" tamanho="compacto" title="Nenhum imóvel bate com a busca." />
+              )
             ) : (
               <div className="grid max-h-[60vh] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3">
                 {filtered.map(p => (
@@ -158,9 +173,16 @@ export default function HeroImagePicker({ open, onClose, onPick, currentProperty
 
         {selected && (
           photosLoading ? (
-            <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando fotos...</div>
+            <Carregando variante="cartoes" linhas={6} rotulo="Carregando fotos..." />
+          ) : erroFotos ? (
+            <EmptyState
+              tipo="erro"
+              tamanho="compacto"
+              title="Não consegui carregar as fotos deste imóvel."
+              aoTentarDeNovo={() => void openProperty(selected)}
+            />
           ) : photos.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">Este imóvel não tem foto publicada.</p>
+            <EmptyState tamanho="compacto" title="Este imóvel não tem foto publicada." />
           ) : (
             <div className="grid max-h-[60vh] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3">
               {photos.map(ph => {

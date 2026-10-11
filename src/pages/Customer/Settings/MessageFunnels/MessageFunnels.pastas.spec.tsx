@@ -67,7 +67,8 @@ describe('Pastas de funil, sem caixinha do navegador', () => {
     const usuario = userEvent.setup();
     await montar();
 
-    await usuario.click(screen.getByTitle('Excluir pasta'));
+    await usuario.click(screen.getByRole('button', { name: 'Mais ações da pasta Prospecção' }));
+    await usuario.click(await screen.findByRole('menuitem', { name: 'Excluir pasta' }));
     // O window.confirm não sabia esse número; o diálogo sabe, e é o que evita
     // a pessoa achar que vai apagar os funis junto.
     expect(await screen.findByText(/7 funis de dentro voltam/)).toBeInTheDocument();

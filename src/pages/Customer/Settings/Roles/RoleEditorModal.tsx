@@ -92,7 +92,7 @@ export default function RoleEditorModal({ open, onClose, role, catalog, onSaved 
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {isCreating ? 'Novo Cargo' : `Editar Cargo: ${role?.name}`}

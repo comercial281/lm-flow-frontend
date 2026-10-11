@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import {
   Tooltip,
   TooltipContent,
@@ -15,7 +15,6 @@ import {
   Bot,
   BotOff,
   UserCheck,
-  MoreVertical,
   ArrowUp,
   ArrowDown,
   Minus,
@@ -45,6 +44,7 @@ import {
 } from '@evoapi/design-system/dropdown-menu';
 import { Conversation } from '@/types/chat/api';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import ActivateAiDialog from '@/components/chat/conversation/ActivateAiDialog';
 import { isPendingStatus } from '@/utils/chat/conversationStatus';
 import { linhaDoTopo } from '@/features/conversas/topoDaConversa';
@@ -162,9 +162,7 @@ const ChatHeader = ({
     return (
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Mais ações" title="Mais ações">
-            <MoreVertical className="h-4 w-4" />
-          </Button>
+          <BotaoMaisAcoes compacto />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-60">
           {/* Agendar mensagem: a MESMA janela do "Agendar envio" do card do lead.
@@ -383,8 +381,8 @@ const ChatHeader = ({
           <DropdownMenuSeparator />
 
           <DropdownMenuItem
+            variant="destructive"
             onClick={() => onDeleteConversation(conversation)}
-            className="flex items-center gap-2 text-destructive focus:text-destructive"
           >
             <Trash2 className="h-4 w-4" />
             {t('chatHeader.actions.deleteConversation')}

@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, escondidosSoComMouse } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, iconesComTamanho, rodinhasCentrais, telasEmBranco, vaziosSoltos, largurasForaDaEscala, importaJanelaDoPacote, JANELA_A_MAO, escondidosSoComMouse } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -115,6 +115,37 @@ describe('botoesSemNome', () => {
   });
 });
 
+describe('botoesPintados (peça 14: botão é o Button da casa)', () => {
+  it('pega <button> com bg-primary fixo, mesmo com a classe em várias linhas', () => {
+    expect(botoesPintados('<button className="px-3 bg-primary text-white">Salvar</button>')).toHaveLength(1);
+    expect(botoesPintados('<button\n  type="button"\n  className="rounded bg-primary"\n>Criar</button>')).toHaveLength(1);
+  });
+  it('pega cor fixa bg-[#…] em <button> e em <Button>', () => {
+    expect(botoesPintados('<Button className="bg-[#00ffa7] text-black">Criar</Button>')).toHaveLength(1);
+    expect(botoesPintados('<button className="bg-[#00a884]">Enviar</button>')).toHaveLength(1);
+  });
+  it('não pega fundo translúcido, estado selecionado nem o Button com bg-primary', () => {
+    expect(botoesPintados('<button className="bg-primary/10 text-primary">Filtro</button>')).toHaveLength(0);
+    expect(botoesPintados("<button className={`px-3 ${ativo ? 'bg-primary text-white' : 'bg-muted'}`}>Todos</button>")).toHaveLength(0);
+    expect(botoesPintados("<button className={cn('px-3', ativo && 'bg-primary')}>Todos</button>")).toHaveLength(0);
+    expect(botoesPintados('<Button className="bg-primary">Salvar</Button>')).toHaveLength(0);
+    expect(botoesPintados('<div className="bg-primary">x</div>')).toHaveLength(0);
+  });
+});
+
+describe('iconesComTamanho (peça 22: ícone em três tamanhos, por classe)', () => {
+  it('pega size em ícone do lucide e em variável de ícone', () => {
+    expect(iconesComTamanho("import { Plus } from 'lucide-react';\nconst a = <Plus size={14} />;")).toHaveLength(1);
+    expect(iconesComTamanho('const a = <Icon size={12} />;')).toHaveLength(1);
+    expect(iconesComTamanho('const a = <item.icon size={16} />;')).toHaveLength(1);
+  });
+  it('não pega ícone com classe, Button com size nem ícone da casa com tamanho por nome', () => {
+    expect(iconesComTamanho("import { Plus } from 'lucide-react';\nconst a = <Plus className=\"h-4 w-4\" />;")).toHaveLength(0);
+    expect(iconesComTamanho('const a = <Button size="sm">x</Button>;')).toHaveLength(0);
+    expect(iconesComTamanho('const a = <ChannelIcon size="sm" />;')).toHaveLength(0);
+  });
+});
+
 describe('textosDoJson', () => {
   it('lê os valores e tira as {{variáveis}}, que o i18next troca antes de aparecer', () => {
     const lidos = textosDoJson({ a: { b: 'Token {{token}} inválido', c: '{{count}}' } });
@@ -178,6 +209,66 @@ describe('contaSelectNativo: a lista nativa vale para o app inteiro', () => {
   });
 });
 
+describe('contaConfirmacao: a confirmação da casa vale para o app inteiro', () => {
+  it('conta tela do cliente, painel raiz e painel de landings', () => {
+    expect(contaConfirmacao('src/pages/Customer/Bolsao/BolsaoBatches.tsx')).toBe(true);
+    expect(contaConfirmacao('src/pages/SuperAdmin/LeadsFeed/index.tsx')).toBe(true);
+    expect(contaConfirmacao('src/features/landing/manage/LandingsPanel.tsx')).toBe(true);
+  });
+
+  it('não conta os hooks da casa, o ds e os testes', () => {
+    expect(contaConfirmacao('src/hooks/useConfirmacao.tsx')).toBe(false);
+    expect(contaConfirmacao('src/hooks/usePergunta.tsx')).toBe(false);
+    expect(contaConfirmacao('src/components/ui/ds.tsx')).toBe(false);
+    expect(contaConfirmacao('src/components/chat/contact-sidebar/PipelineManagement.spec.tsx')).toBe(false);
+  });
+});
+
+describe('abaForaDaCasa e alternadorAMao (peças 6 e 19)', () => {
+  it('aba: conta o Tabs do pacote em JSX e o sublinhado copiado, não a rodinha nem o import', () => {
+    expect(abaForaDaCasa('<Tabs defaultValue="geral">')).toBe(true);
+    expect(abaForaDaCasa('<TabsList className="mb-4">')).toBe(true);
+    expect(abaForaDaCasa('<TabsTrigger value="geral">')).toBe(true);
+    expect(abaForaDaCasa('className={`px-4 py-2 border-b-2 -mb-px ${on ? "a" : "b"}`}')).toBe(true);
+    expect(abaForaDaCasa('<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />')).toBe(false);
+    expect(abaForaDaCasa("import { Tabs } from '@/components/ui/ds';")).toBe(false);
+  });
+
+  it('alternador: conta o ícone de visão em tag, não em dado', () => {
+    expect(alternadorAMao('<Grid3X3 className="h-4 w-4" />')).toBe(true);
+    expect(alternadorAMao('<LayoutGrid className="h-3.5 w-3.5" />')).toBe(true);
+    expect(alternadorAMao("{ valor: 'cards', icone: Grid3X3, nome: 'Ver em cartões' },")).toBe(false);
+    expect(alternadorAMao('<KanbanBoard />')).toBe(false);
+  });
+});
+
+describe('soNoMouse: ação que só aparece no mouse (peça 16)', () => {
+  it('pega os três jeitos de esconder, com prefixo de tela e grupo nomeado', () => {
+    expect(soNoMouse('<div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">')).toBe(true);
+    expect(soNoMouse('className="shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100"')).toBe(true);
+    expect(soNoMouse('className="invisible group-hover/linha:visible"')).toBe(true);
+    expect(soNoMouse('<div className="hidden group-hover:flex items-center gap-0.5 shrink-0">')).toBe(true);
+  });
+
+  it('não pega a ação apagada à vista nem o que não esconde nada', () => {
+    expect(soNoMouse('className="opacity-70 group-hover:opacity-100 focus-within:opacity-100"')).toBe(false);
+    expect(soNoMouse('className="bg-black bg-opacity-0 group-hover:bg-opacity-30"')).toBe(false);
+    expect(soNoMouse('className="hidden md:flex"')).toBe(false);
+    expect(soNoMouse("estaAberta ? 'opacity-100' : 'opacity-0'")).toBe(false);
+  });
+});
+
+describe('menuDeitado: menu de ações com ⋯ deitado (peça 15)', () => {
+  it('pega o ícone deitado na tela, não o import nem o ⋮', () => {
+    expect(menuDeitado('<MoreHorizontal className="h-4 w-4" />')).toBe(true);
+    expect(menuDeitado('<Ellipsis className="h-4 w-4" />')).toBe(true);
+    expect(menuDeitado('icon={MoreHorizontal}')).toBe(true);
+    expect(menuDeitado("import { MoreHorizontal } from 'lucide-react';")).toBe(false);
+    expect(menuDeitado('<EllipsisVertical className="h-4 w-4" />')).toBe(false);
+    expect(menuDeitado('<MoreVertical className="h-4 w-4" />')).toBe(false);
+  });
+});
+
 describe('escondidosSoComMouse: botão que só aparece com o mouse', () => {
   const achados = (codigo: string) => escondidosSoComMouse(codigo).map((a: { texto: string }) => a.texto);
 
@@ -216,6 +307,68 @@ describe('tagsJsx', () => {
       { tag: 'h1', linha: 3 },
       { tag: 'BaseHeader', linha: 4 },
     ]);
+  });
+});
+
+describe('cartaoAMao: caixa fazendo papel de cartão (peça 20)', () => {
+  it('pega cantos + borda + fundo de cartão na mesma linha', () => {
+    expect(cartaoAMao('<div className="rounded-xl border border-border bg-card p-5">')).toBe(true);
+    expect(cartaoAMao('<div className="rounded-lg border bg-card">')).toBe(true);
+    expect(cartaoAMao("'rounded-lg border border-sidebar-border bg-sidebar p-4'")).toBe(true);
+  });
+  it('deixa passar o bloco dentro de cartão, a caixa tracejada e o fundo de menu sem a borda dele', () => {
+    expect(cartaoAMao('<div className="rounded-lg border bg-muted/30 p-4">')).toBe(false);
+    expect(cartaoAMao('<div className="rounded-xl border border-dashed border-border bg-card p-6">')).toBe(false);
+    expect(cartaoAMao('<div className="rounded-lg border bg-sidebar p-4">')).toBe(false);
+    expect(cartaoAMao('<Card className="gap-0 p-4">')).toBe(false);
+    expect(cartaoAMao('<div className="rounded-xl bg-card-foreground border">')).toBe(false);
+  });
+});
+
+describe('corFixaEmGrafico: hex direto no gráfico (peça 21)', () => {
+  it('pega fill, stroke e stopColor com hex', () => {
+    expect(corFixaEmGrafico('<Bar dataKey="v" fill="#3b82f6" />')).toBe(true);
+    expect(corFixaEmGrafico("<Line stroke={'#059669'} />")).toBe(true);
+    expect(corFixaEmGrafico('<stop offset="0%" stopColor="#ef4444" />')).toBe(true);
+  });
+  it('deixa passar a cor do tema e a referência a degradê', () => {
+    expect(corFixaEmGrafico('<Bar fill="var(--chart-1)" />')).toBe(false);
+    expect(corFixaEmGrafico('<Area fill={`url(#${id})`} />')).toBe(false);
+    expect(corFixaEmGrafico('<Bar fill={COR} />')).toBe(false);
+  });
+});
+
+describe('Janela (peça 17): larguras, import direto e janela à mão', () => {
+  it('só passam max-w-md e max-w-2xl (com ou sem sm:); celular (max-sm:) não conta', () => {
+    const codigo = [
+      'const a = <>',
+      '<DialogContent className="max-w-md" /><DialogContent className="sm:max-w-2xl" />',
+      '<DialogContent className="max-w-lg" /><AlertDialogContent className="sm:max-w-[500px]" />',
+      '<DialogContent size="wide" className="sm:max-w-6xl max-sm:max-w-none" />',
+      '<DialogContent',
+      '  className={x ? "max-w-3xl" : "max-w-md"}',
+      '/></>;',
+    ].join('\n');
+    expect(largurasForaDaEscala(codigo, 'x.tsx').map(a => `${a.linha} ${a.largura}`)).toEqual([
+      '3 max-w-lg', '3 sm:max-w-[500px]', '4 sm:max-w-6xl', '5 max-w-3xl',
+    ]);
+  });
+
+  it('acusa Dialog* do pacote base (raiz ou /dialog), não o resto do pacote', () => {
+    const codigo = [
+      "import { Button, DialogContent } from '@evoapi/design-system';",
+      "import { Button as B } from '@evoapi/design-system';",
+      "import { Dialog } from '@evoapi/design-system/dialog';",
+      "import { AlertDialog } from '@evoapi/design-system/alert-dialog';",
+      "import { Dialog as D } from '@/components/ui/ds';",
+    ].join('\n');
+    expect(importaJanelaDoPacote(codigo, 'x.tsx').map(a => a.linha)).toEqual([1, 3]);
+  });
+
+  it('janela à mão é fixed inset-0 numa classe', () => {
+    expect(JANELA_A_MAO.test('<div className="fixed inset-0 z-50 bg-black/60">')).toBe(true);
+    expect(JANELA_A_MAO.test("isMobile ? 'fixed inset-0 z-50' : ''")).toBe(true);
+    expect(JANELA_A_MAO.test('<div className="fixed inset-x-0 bottom-0">')).toBe(false);
   });
 });
 
@@ -283,6 +436,20 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     mkdirSync(join(raiz, 'src/pages/Public'), { recursive: true });
     writeFileSync(join(raiz, 'src/pages/Public/portalShared.tsx'), 'const p = <select value="x" />;');
     writeFileSync(join(raiz, 'src/pages/Customer/Lista.spec.tsx'), 'const t = <select value="x" />;');
+    // Confirmação fora da casa: conta o <AlertDialog> aberto e o import direto
+    // do pacote, em qualquer tela; <AlertDialogContent> sozinho e o hook da casa, não.
+    writeFileSync(
+      join(raiz, 'src/pages/Customer/Pergunta.tsx'),
+      `import { AlertDialog, AlertDialogContent } from '@evoapi/design-system/alert-dialog';
+      export const P = () => (
+        <AlertDialog open>
+          <AlertDialogContent />
+        </AlertDialog>
+      );`,
+    );
+    writeFileSync(join(raiz, 'src/pages/SuperAdmin/Confirma.tsx'), 'export const C = () => <AlertDialog open={x} />;');
+    mkdirSync(join(raiz, 'src/hooks'), { recursive: true });
+    writeFileSync(join(raiz, 'src/hooks/useConfirmacao.tsx'), 'export const D = () => <AlertDialog open={x} />;');
     // escondido só com mouse conta no app inteiro (o portal público também); com toque:, não
     writeFileSync(join(raiz, 'src/pages/Public/Foto.tsx'), 'const f = <button className="opacity-0 group-hover:opacity-100">x</button>;');
     writeFileSync(join(raiz, 'src/pages/Customer/ComToque.tsx'), 'const f = <button className="opacity-0 group-hover:opacity-100 toque:opacity-100">x</button>;');
@@ -336,6 +503,8 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     expect(contagem(saida, 'foraDaMoldura')).toBe(3); // SemMoldura + DiretoSemMoldura + PaginaLocal (wrapper e ComMoldura, que importa a Pagina da casa, não contam)
     // <select> e <NativeSelect> de Lista.tsx + painel raiz (Filtro.tsx) + sobra (Herdado.tsx)
     expect(contagem(saida, 'selectNativo')).toBe(4);
+    // Pergunta.tsx (import + <AlertDialog>) + painel raiz (Confirma.tsx)
+    expect(contagem(saida, 'confirmacaoForaDaCasa')).toBe(3);
     expect(contagem(saida, 'soMouse')).toBe(1); // Public/Foto.tsx (ComToque.tsx não conta)
   });
 
@@ -361,5 +530,48 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     expect(saida).not.toContain('PreChatForm.tsx');
     expect(saida).not.toContain('portalShared.tsx');
     expect(saida).not.toContain('Lista.spec.tsx');
+  });
+});
+
+// Peças 13 (Carregando) e 7 (Estado vazio), escolha do dono em 10/10/2026.
+describe('rodinhaCentral: rodinha no meio da tela vira esqueleto', () => {
+  const conta = (codigo: string) => rodinhasCentrais(codigo).length;
+  it('conta a rodinha grande e a centralizada, fora de botão', () => {
+    expect(conta('const a = <div className="flex justify-center py-8"><Loader2 className="h-4 w-4 animate-spin" /></div>;')).toBe(1);
+    expect(conta('const a = <div><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;')).toBe(1);
+    expect(conta('const a = <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />;')).toBe(1);
+  });
+  it('não conta rodinha de botão nem a pequena ao lado de um texto', () => {
+    expect(conta('const a = <Button disabled><div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>Salvar</Button>;')).toBe(0);
+    expect(conta('const a = <button><Loader2 className="h-4 w-4 animate-spin" /></button>;')).toBe(0);
+    expect(conta('const a = <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Enviando…</span>;')).toBe(0);
+  });
+});
+
+describe('telaEmBranco: Suspense sem nada enquanto carrega', () => {
+  it('conta fallback={null} de tela ou aba e diz o que carrega', () => {
+    const achados = telasEmBranco('const a = <Suspense fallback={null}><CardConversationTab item={i} /></Suspense>;');
+    expect(achados).toHaveLength(1);
+    expect(achados[0].texto).toContain('<CardConversationTab>');
+  });
+  it('não conta janela carregada sob demanda nem fallback com esqueleto', () => {
+    expect(telasEmBranco('const a = <Suspense fallback={null}><ScheduleVisitDialog open /></Suspense>;')).toHaveLength(0);
+    expect(telasEmBranco('const a = <Suspense fallback={<Carregando />}><Aba /></Suspense>;')).toHaveLength(0);
+  });
+});
+
+describe('vazioSolto: "Nenhum…" escrito à mão fora do EmptyState', () => {
+  const textos = (codigo: string) => vaziosSoltos(codigo).map((a: { texto: string }) => a.texto);
+  it('conta texto entre tags e string que vira filho de tag', () => {
+    expect(textos('const a = <p className="text-sm text-muted-foreground">Nenhuma visita ainda.</p>;')).toEqual(['Nenhuma visita ainda.']);
+    expect(textos("const a = <div>{vazio ? 'Nenhum lead nesta aba.' : null}</div>;")).toEqual(['Nenhum lead nesta aba.']);
+  });
+  it('não conta opção de lista, o EmptyState, o Aviso nem "Nenhum" sozinho', () => {
+    expect(textos('const a = <option value="">Nenhum</option>;')).toEqual([]);
+    expect(textos('const a = <SelectItem value="x">Nenhuma etapa</SelectItem>;')).toEqual([]);
+    expect(textos('const a = <EmptyState tamanho="compacto" title="Nenhum lead" description={<>Nenhum ainda, <Link to="/x">crie</Link>.</>} />;')).toEqual([]);
+    expect(textos('const a = <Aviso tom="atencao">Nenhum grupo apareceu.</Aviso>;')).toEqual([]);
+    expect(textos('const a = <span>Nenhum</span>;')).toEqual([]);
+    expect(textos("const a = <Campo hint=\"Nenhum marcado = todos\" />;")).toEqual([]);
   });
 });

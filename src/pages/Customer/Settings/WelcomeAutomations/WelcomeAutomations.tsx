@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
+  Card,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -186,7 +187,7 @@ export default function WelcomeAutomations() {
         ) : (
           <div className="space-y-3">
             {automations.map(a => (
-              <div key={a.id} className="flex items-start gap-4 p-4 rounded-lg border border-border bg-card">
+              <Card key={a.id} className="flex-row items-start gap-4 p-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-medium text-sm">{a.name}</span>
@@ -231,7 +232,7 @@ export default function WelcomeAutomations() {
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}
@@ -239,7 +240,7 @@ export default function WelcomeAutomations() {
 
       {/* Modal create/edit */}
       <Dialog open={modalOpen} onOpenChange={open => { if (!open) { setModalOpen(false); setEditing(null); } }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>{editing ? 'Editar Automação' : 'Nova Automação de Boas-Vindas'}</DialogTitle>
           </DialogHeader>

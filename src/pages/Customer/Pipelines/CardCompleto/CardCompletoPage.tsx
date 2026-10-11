@@ -40,6 +40,7 @@ import DialogosDoCard from '@/features/cardDoLead/blocos/DialogosDoCard';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { useNomeDaAba } from '@/components/layout/nomeDaAba';
 import type { PipelineItem, PipelineItemDetail } from '@/types/analytics';
+import Carregando from '@/components/base/Carregando';
 
 const CardConversationTab = lazyWithRetry(() => import('@/components/pipelines/CardConversationTab'));
 const VisitsProposalsTab = lazyWithRetry(() => import('@/components/pipelines/card/VisitsProposalsTab'));
@@ -57,7 +58,7 @@ const CHAVES_DAS_ABAS = new Set(ABAS.map(a => a.chave));
 // O quadro do funil (o "← Funil <nome>" e o "Voltar ao funil").
 const enderecoDoFunil = (pipelineId: string): string => `/pipelines/${encodeURIComponent(pipelineId)}`;
 
-function Carregando() {
+function CarregandoOCard() {
   return (
     <div role="status" aria-label="Carregando o card" className="space-y-6">
       <Skeleton className="h-4 w-40" />
@@ -137,7 +138,7 @@ export default function CardCompletoPage() {
 
   return (
     <Pagina acima={acima}>
-      {estado.estado === 'carregando' && <Carregando />}
+      {estado.estado === 'carregando' && <CarregandoOCard />}
       {estado.estado === 'sem-acesso' && <SemAcesso pipelineId={pipelineId} />}
       {estado.estado === 'erro' && <EmptyState tipo="erro" aoTentarDeNovo={() => void tentarDeNovo()} />}
     </Pagina>
@@ -329,7 +330,7 @@ function ConteudoDoCard({ dados, recarregar, atualizarItem }: {
       )}
 
       {aba === 'conversa' && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<Carregando />}>
           <CardConversationTab
             item={item}
             onAgendarEnvio={card.recursos.agendarEnvio && contato?.id != null ? texto => card.envio.setAgendando(texto) : undefined}
@@ -338,7 +339,7 @@ function ConteudoDoCard({ dados, recarregar, atualizarItem }: {
       )}
 
       {aba === 'visitas' && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<Carregando />}>
           <VisitsProposalsTab item={item} nomeExibido={card.nomeExibido} />
         </Suspense>
       )}

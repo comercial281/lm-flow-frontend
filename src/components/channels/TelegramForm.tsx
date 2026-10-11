@@ -5,6 +5,7 @@ import { MessageSquare, Key, Shield, Bot } from 'lucide-react';
 import InboxesService from '@/services/channels/inboxesService';
 import type { TelegramChannelPayload } from '@/types/channels/inbox';
 import { useLanguage } from '@/hooks/useLanguage';
+import Aviso from '@/components/base/Aviso';
 
 interface TelegramFormProps {
   onSuccess: (channelId: string) => void;
@@ -135,48 +136,39 @@ const TelegramForm: React.FC<TelegramFormProps> = ({ onSuccess, onBack }) => {
             </div>
 
             {/* Instructions */}
-            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2 flex items-center">
-                <Shield className="h-4 w-4 mr-2" />
-                {t('newChannel.forms.telegramForm.instructions.title')}
-              </h4>
-              <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
-                <p>{t('newChannel.forms.telegramForm.instructions.step1')}</p>
-                <p>{t('newChannel.forms.telegramForm.instructions.step2')}</p>
-                <p>{t('newChannel.forms.telegramForm.instructions.step3')}</p>
-                <p>{t('newChannel.forms.telegramForm.instructions.step4')}</p>
-                <p>{t('newChannel.forms.telegramForm.instructions.step5')}</p>
-                <p>{t('newChannel.forms.telegramForm.instructions.step6')}</p>
-              </div>
-            </div>
+            <Aviso
+              tom="info"
+              icone={Shield}
+              titulo={t('newChannel.forms.telegramForm.instructions.title')}
+            >
+              <p>{t('newChannel.forms.telegramForm.instructions.step1')}</p>
+              <p>{t('newChannel.forms.telegramForm.instructions.step2')}</p>
+              <p>{t('newChannel.forms.telegramForm.instructions.step3')}</p>
+              <p>{t('newChannel.forms.telegramForm.instructions.step4')}</p>
+              <p>{t('newChannel.forms.telegramForm.instructions.step5')}</p>
+              <p>{t('newChannel.forms.telegramForm.instructions.step6')}</p>
+            </Aviso>
 
             {/* Webhook Info */}
-            <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-              <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2 flex items-center">
-                <Key className="h-4 w-4 mr-2" />
-                {t('newChannel.forms.telegramForm.webhook.title')}
-              </h4>
-              <div className="text-sm text-green-800 dark:text-green-200 space-y-2">
-                <p>{t('newChannel.forms.telegramForm.webhook.description')}</p>
-                <code className="block bg-green-100 dark:bg-green-900/50 p-2 rounded mt-1">
-                  {window.location.origin}/api/v1/webhooks/telegram
-                </code>
-                <p>{t('newChannel.forms.telegramForm.webhook.note')}</p>
-              </div>
-            </div>
+            <Aviso
+              tom="sucesso"
+              icone={Key}
+              titulo={t('newChannel.forms.telegramForm.webhook.title')}
+            >
+              <p>{t('newChannel.forms.telegramForm.webhook.description')}</p>
+              <code className="block bg-background/60 p-2 rounded mt-1">
+                {window.location.origin}/api/v1/webhooks/telegram
+              </code>
+              <p>{t('newChannel.forms.telegramForm.webhook.note')}</p>
+            </Aviso>
 
             {/* Bot Commands */}
-            <div className="bg-gray-50 dark:bg-gray-950/20 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-              <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                {t('newChannel.forms.telegramForm.commands.title')}
-              </h4>
-              <div className="text-sm text-gray-800 dark:text-gray-200 space-y-1">
-                <p>{t('newChannel.forms.telegramForm.commands.description')}</p>
-                <code className="block bg-gray-100 dark:bg-gray-900/50 p-2 rounded mt-1 whitespace-pre-line">
-                  {t('newChannel.forms.telegramForm.commands.list')}
-                </code>
-              </div>
-            </div>
+            <Aviso tom="neutro" titulo={t('newChannel.forms.telegramForm.commands.title')}>
+              <p>{t('newChannel.forms.telegramForm.commands.description')}</p>
+              <code className="block bg-background/60 p-2 rounded mt-1 whitespace-pre-line">
+                {t('newChannel.forms.telegramForm.commands.list')}
+              </code>
+            </Aviso>
           </div>
         </CardContent>
       </Card>

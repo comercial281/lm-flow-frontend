@@ -113,7 +113,7 @@ export const Funil: React.FC<ContextoBloco> = ({ dados, visao, pode, filtros, fu
           <button type="button" aria-pressed={comRelogio} onClick={() => setRelogio(r => !r)}
             aria-label="Tempo médio em cada etapa" title="Tempo médio em cada etapa"
             style={{ display: 'inline-flex', alignItems: 'center', padding: '6px 8px' }}>
-            <Clock size={15} aria-hidden />
+            <Clock className="h-4 w-4" aria-hidden />
           </button>
         </div>
       )}

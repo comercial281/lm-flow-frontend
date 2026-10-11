@@ -64,11 +64,59 @@
 // uma folga FIXA (20px no celular, 48px do tablet pra cima) mais um teto de
 // 1400px, então a folga só cresce — nunca some. Junto vai o respiro de dentro
 // (a base traz `p-6`, que é pouco para uma janela de 1400px de largura).
-import { forwardRef, type ComponentProps, type ComponentRef } from 'react';
+//
+// JANELA DA CASA (peça 17 do GLOSSARIO, escolha do dono em 10/10/2026). Três
+// coisas mudam aqui, uma vez só, e as ~190 janelas do app herdam sem ninguém
+// mexer nelas:
+//
+// 1. TOPO E RODAPÉ FIXOS, SÓ O MEIO ROLA. A caixa limita a altura (90dvh) e
+//    rola por dentro; o `DialogHeader` fica preso em cima (`sticky top-0`) e o
+//    `DialogFooter` preso embaixo (`sticky bottom-0`), cada um com fundo e linha,
+//    ocupando a largura toda da caixa. Pra ocupar a largura toda, os dois
+//    "comem" o respiro da caixa com margem negativa — e o respiro muda de janela
+//    pra janela (p-6 na padrão; p-5/p-6/p-8 na larga; `p-0` em quem cuida do
+//    próprio recheio). Por isso a caixa publica o respiro dela na variável
+//    `--janela-p`, e o topo/rodapé usam `-mx-(--janela-p)`. Janela que já tem
+//    rolagem própria (`overflow-hidden` + miolo com `overflow-y-auto`, ou
+//    `max-h-*` próprio) continua mandando: a classe dela vem depois e o
+//    tailwind-merge descarta a nossa.
+//    O X de fechar mora DENTRO do topo quando há topo (senão rolaria pra fora
+//    junto com o conteúdo). Como o topo vem antes do formulário, o X seria o
+//    primeiro botão da janela e roubaria o foco de abertura do primeiro campo:
+//    `aoAbrirFoco` refaz o que o Radix faz (foca o primeiro campo) pulando o X.
+//    O nome do X passou de "Close" pra "Fechar".
+//
+// 2. NO CELULAR (< 640px) A JANELA SOBE DE BAIXO: presa embaixo, largura
+//    inteira, cantos de cima arredondados, até 92dvh, animação subindo, alcinha
+//    cinza decorativa no topo, botões do rodapé empilhados com largura inteira
+//    (o principal em cima: o `flex-col-reverse` do pacote já faz isso) e o
+//    rodapé respeitando a barra de gestos do iPhone (`safe-area-inset-bottom`).
+//    O teto de largura inline (`style.maxWidth`, ver acima) ganharia de qualquer
+//    classe; no celular ele cai com `max-w-none!` (important ganha de inline).
+//
+// 3. QUATRO LARGURAS: pequena 448 (`max-w-md`), padrão 512 (sem largura),
+//    grande 672 (`max-w-2xl`), larga 1400 (`size="wide"`). A trava
+//    `larguraDeJanela` do conferir-padrao reprova qualquer outra.
+import {
+  createContext,
+  forwardRef,
+  useCallback,
+  useContext,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  type ComponentProps,
+  type ComponentRef,
+  type CSSProperties,
+} from 'react';
 import { XIcon } from 'lucide-react';
 import {
   DialogContent as BaseDialogContent,
+  DialogHeader as BaseDialogHeader,
+  DialogFooter as BaseDialogFooter,
   DialogDescription,
+  DialogClose,
   AlertDialogContent as BaseAlertDialogContent,
   SheetContent as BaseSheetContent,
   SheetClose,
@@ -79,8 +127,8 @@ export * from '@evoapi/design-system';
 type DialogContentProps = ComponentProps<typeof BaseDialogContent> & {
   /**
    * `wide` aplica o preset do modal grande (folga em volta + respiro interno +
-   * teto de 1400px). Quem precisar de outro teto passa `sm:max-w-*` na
-   * className, que vence porque vem depois na string.
+   * teto de 1400px). É a 4ª largura da casa (editor, prévia, tabela, duas
+   * colunas); não passe outro teto por cima.
    */
   size?: 'default' | 'wide';
 };
@@ -141,57 +189,233 @@ const WIDE = [
 // pede `p-0` para cuidar do próprio recheio (ficha do contato, testar agente)
 // acabaria com padding duplicado no computador. Por isso: se quem chama declara
 // o próprio `p-*` sem prefixo, o preset não injeta padding nenhum.
-const WIDE_PADDING = 'p-5 sm:p-6 lg:p-8';
+// A variável `--janela-p` acompanha o respiro, pro topo e o rodapé saberem
+// quanto "comer" pra encostar nas bordas.
+const WIDE_PADDING = 'p-5 sm:p-6 lg:p-8 [--janela-p:1.25rem] sm:[--janela-p:1.5rem] lg:[--janela-p:2rem]';
 // `p-` seguido de dígito ou `[`, para não casar com `px-6`/`py-4`/`pt-6`.
-const UNPREFIXED_P = /(^|\s)!?p-(\d|\[)/;
+const UNPREFIXED_P = /(^|\s)!?p-(\d+(?:\.\d+)?|\[[^\]\s]+\]|px)(?=\s|$)/;
+
+// Respiro que quem chama declarou (`p-0`, `p-4`, `p-[18px]`) em valor CSS, pra
+// virar `--janela-p` inline. `null` quando a tela não declarou nenhum.
+function respiroPedido(className: string): string | null {
+  const m = className.match(UNPREFIXED_P);
+  if (!m) return null;
+  const v = m[2];
+  if (v === 'px') return '1px';
+  if (v.startsWith('[')) return v.slice(1, -1).replace(/_/g, ' ');
+  return `${Number(v) * 0.25}rem`;
+}
+
+// Altura limitada + rolagem por dentro (o topo e o rodapé grudam nas bordas
+// dessa rolagem). Quem pede `max-h-*` ou `overflow-*` próprio vence.
+const ROLAGEM = 'max-h-[90dvh] overflow-y-auto';
+// Respiro padrão da caixa do pacote (`p-6`), publicado pro topo e o rodapé.
+const RESPIRO_PADRAO = '[--janela-p:1.5rem]';
+
+// No celular (< 640px) a janela sobe de baixo. Tudo com `max-sm:`, então do
+// `sm` pra cima nada muda. `max-w-none!` derruba o teto inline (`style`), que
+// num aparelho entre 448 e 640px deixaria a janela estreita e colada à esquerda.
+// A animação `janela-sobe` mora no globals.css (o pacote base usa as classes do
+// tw-animate, que este app não carrega: a janela do computador aparece seca).
+const CELULAR = [
+  'max-sm:top-auto max-sm:bottom-0 max-sm:left-0',
+  'max-sm:translate-x-0 max-sm:translate-y-0',
+  'max-sm:w-full max-sm:max-w-none!',
+  'max-sm:max-h-[92dvh]',
+  'max-sm:rounded-t-2xl max-sm:rounded-b-none',
+  'max-sm:border-x-0 max-sm:border-b-0',
+  // sem rodapé fixo, o fim da janela não pode ficar embaixo da barra de gestos
+  'max-sm:pb-[max(var(--janela-p),env(safe-area-inset-bottom))]',
+  'max-sm:data-[state=open]:motion-safe:animate-janela-sobe',
+].join(' ');
+
+// Alcinha cinza no topo da janela do celular. Só enfeite (o arrastar pra
+// fechar não existe): `aria-hidden` e sem clique.
+function Alca() {
+  return (
+    <div
+      aria-hidden="true"
+      data-janela-alca=""
+      className="pointer-events-none absolute top-2 left-1/2 z-20 h-1.5 w-10 -translate-x-1/2 rounded-full bg-muted-foreground/30 sm:hidden"
+    />
+  );
+}
+
+// O X de fechar da casa (mesmo desenho do X do pacote, com nome em português).
+// `data-janela-fechar` marca o X pra `aoAbrirFoco` pular ele.
+const CLASSE_DO_X =
+  'ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 z-20 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none';
+function BotaoFechar() {
+  return (
+    <DialogClose data-janela-fechar="" className={CLASSE_DO_X}>
+      <XIcon className="size-4" aria-hidden="true" />
+      <span className="sr-only">Fechar</span>
+    </DialogClose>
+  );
+}
+
+// Foco de abertura sem o X. O Radix foca o primeiro elemento tabulável da
+// janela; com o X no topo, esse elemento passaria a ser o X (e no computador
+// quem abre "Novo lead" quer digitar o nome direto). Mesma régua do Radix
+// (FocusScope): tabIndex >= 0, sem desabilitado, sem `input hidden`, sem link,
+// visível. Nada focável além do X → foca o X; nem ele → a própria caixa.
+function escondido(el: HTMLElement, caixa: HTMLElement): boolean {
+  if (getComputedStyle(el).visibility === 'hidden') return true;
+  for (let no: HTMLElement | null = el; no && no !== caixa; no = no.parentElement) {
+    if (no.hidden || getComputedStyle(no).display === 'none') return true;
+  }
+  return false;
+}
+function focarPrimeiroCampo(caixa: HTMLElement) {
+  const candidatos: HTMLElement[] = [];
+  const andador = document.createTreeWalker(caixa, NodeFilter.SHOW_ELEMENT, {
+    acceptNode: no => {
+      const el = no as HTMLElement & { disabled?: boolean; type?: string };
+      if (el.closest('[data-janela-fechar]')) return NodeFilter.FILTER_SKIP;
+      if (el.disabled || (el.tagName === 'INPUT' && el.type === 'hidden')) return NodeFilter.FILTER_SKIP;
+      return el.tabIndex >= 0 ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+    },
+  });
+  while (andador.nextNode()) candidatos.push(andador.currentNode as HTMLElement);
+  for (const el of candidatos) {
+    if (el.tagName === 'A' || escondido(el, caixa)) continue;
+    el.focus({ preventScroll: true });
+    if (document.activeElement === el) {
+      if (el instanceof HTMLInputElement) el.select();
+      return;
+    }
+  }
+  const x = caixa.querySelector<HTMLElement>('[data-janela-fechar]');
+  (x ?? caixa).focus({ preventScroll: true });
+}
+
+// O DialogContent avisa o topo (se pode pôr o X) e o rodapé (que estão numa
+// janela da casa). Fora dele (`ctx` nulo), DialogHeader/DialogFooter são os do
+// pacote, sem nada fixo.
+type Janela = { fechar: boolean; topo: string | null; registrar: (id: string) => () => void };
+const JanelaContexto = createContext<Janela | null>(null);
 
 export const DialogContent = forwardRef<ComponentRef<typeof BaseDialogContent>, DialogContentProps>(
-  ({ children, className, style, size = 'default', ...props }, ref) => {
+  ({ children, className, style, size = 'default', showCloseButton = true, onOpenAutoFocus, ...props }, ref) => {
+    const cls = typeof className === 'string' ? className : '';
+    const respiro = respiroPedido(cls);
     // O preset entra ANTES da className de quem chama: serve de padrão e nunca
     // atropela a tela que tem necessidade própria (`p-0`, outro teto, `h-*`).
-    let injected = '';
+    let injected = `${ROLAGEM} ${CELULAR}`;
     let maxWidth: string | null = null;
     if (size === 'wide') {
-      injected = typeof className === 'string' && UNPREFIXED_P.test(className)
-        ? WIDE
-        : `${WIDE} ${WIDE_PADDING}`;
-    } else if (typeof className === 'string') {
-      const uncap = uncapAt640(className);
-      injected = uncap.extraClassName;
+      injected += respiro ? ` ${WIDE}` : ` ${WIDE} ${WIDE_PADDING}`;
+    } else {
+      const uncap = uncapAt640(cls);
+      if (uncap.extraClassName) injected += ` ${uncap.extraClassName}`;
       maxWidth = uncap.maxWidth;
+      if (!respiro) injected += ` ${RESPIRO_PADRAO}`;
     }
+    const estilo: CSSProperties = { ...(maxWidth ? { maxWidth } : {}), ...(respiro ? { '--janela-p': respiro } : {}), ...style } as CSSProperties;
+
+    // Quem é o topo da janela (o primeiro DialogHeader montado): é nele que o X
+    // mora. Sem topo, o X fica solto no canto, como antes.
+    const [topos, setTopos] = useState<string[]>([]);
+    const registrar = useCallback((id: string) => {
+      setTopos(t => [...t, id]);
+      return () => setTopos(t => t.filter(x => x !== id));
+    }, []);
+    const topo = topos[0] ?? null;
+    const janela = useMemo(() => ({ fechar: showCloseButton, topo, registrar }), [showCloseButton, topo, registrar]);
+
+    const aoAbrirFoco = (e: Event) => {
+      onOpenAutoFocus?.(e);
+      if (e.defaultPrevented) return;
+      e.preventDefault();
+      focarPrimeiroCampo(e.target as HTMLElement);
+    };
+
     return (
       <BaseDialogContent
         ref={ref}
-        className={injected ? `${injected} ${className ?? ''}` : className}
-        style={maxWidth ? { maxWidth, ...style } : style}
+        className={`${injected} ${cls}`}
+        style={Object.keys(estilo).length ? estilo : undefined}
+        showCloseButton={false}
+        onOpenAutoFocus={aoAbrirFoco}
         {...props}
       >
         <DialogDescription className="sr-only">Conteúdo do diálogo</DialogDescription>
-        {children}
+        <JanelaContexto.Provider value={janela}>{children}</JanelaContexto.Provider>
+        {showCloseButton && !topo && <BotaoFechar />}
+        <Alca />
       </BaseDialogContent>
     );
   },
 );
 DialogContent.displayName = 'DialogContent';
 
+// Topo fixo: largura toda da caixa (come o respiro dela), fundo e linha embaixo.
+// `pr-12` vem DEPOIS da classe de quem chama, pra o título nunca passar por
+// baixo do X (um `px-6` da tela derrubaria o recuo).
+// O recuo do texto acompanha o da caixa (24px na padrão, até 32px na larga) e
+// nunca fica abaixo de 24px (janela `p-0` que usa o topo da casa).
+const RECUO = 'px-[max(var(--janela-p),1.5rem)]';
+const TOPO = `sticky top-0 z-10 -mx-(--janela-p) -mt-(--janela-p) border-b bg-background ${RECUO} py-4`;
+
+export function DialogHeader({ className, children, ...props }: ComponentProps<typeof BaseDialogHeader>) {
+  const janela = useContext(JanelaContexto);
+  const id = useId();
+  const registrar = janela?.registrar;
+  useLayoutEffect(() => registrar?.(id), [registrar, id]);
+  if (!janela) {
+    return (
+      <BaseDialogHeader className={className} {...props}>
+        {children}
+      </BaseDialogHeader>
+    );
+  }
+  const comX = janela.fechar && janela.topo === id;
+  return (
+    <BaseDialogHeader className={`${TOPO} ${className ?? ''}${comX ? ' pr-12' : ''}`} {...props}>
+      {children}
+      {comX && <BotaoFechar />}
+    </BaseDialogHeader>
+  );
+}
+
+// Rodapé fixo: largura toda, fundo e linha em cima. No celular os botões ficam
+// empilhados com largura inteira (o `flex-col-reverse` do pacote estica os
+// filhos e põe o último, a ação principal, em cima) e o rodapé desce até o fim
+// da tela, com a barra de gestos do iPhone por dentro.
+const RODAPE = [
+  `sticky bottom-0 z-10 -mx-(--janela-p) -mb-(--janela-p) border-t bg-background ${RECUO} py-4`,
+  'max-sm:-mb-[max(var(--janela-p),env(safe-area-inset-bottom))]',
+  'max-sm:pb-[calc(1rem+env(safe-area-inset-bottom))]',
+].join(' ');
+
+export function DialogFooter({ className, ...props }: ComponentProps<typeof BaseDialogFooter>) {
+  const janela = useContext(JanelaContexto);
+  return <BaseDialogFooter className={janela ? `${RODAPE} ${className ?? ''}` : className} {...props} />;
+}
+
 // Mesmo teto (`max-w-md` etc), mesmo bug: o AlertDialog do design system tem
 // o MESMO `sm:max-w-lg` de base que o Dialog. Reusa o mesmo mecanismo — sem
 // `size="wide"` aqui porque nenhum confirm-dialog do app pede modal grande.
+// Ganha também a rolagem e o jeito do celular (sobe de baixo, com alcinha). O
+// topo e o rodapé dela não ficam fixos: confirmação é curta.
 type AlertDialogContentProps = ComponentProps<typeof BaseAlertDialogContent>;
 
 export const AlertDialogContent = forwardRef<ComponentRef<typeof BaseAlertDialogContent>, AlertDialogContentProps>(
-  ({ className, style, ...props }, ref) => {
+  ({ className, style, children, ...props }, ref) => {
     const { extraClassName, maxWidth } = typeof className === 'string'
       ? uncapAt640(className)
       : { extraClassName: '', maxWidth: null };
+    const injected = `${ROLAGEM} ${CELULAR} ${RESPIRO_PADRAO}${extraClassName ? ` ${extraClassName}` : ''}`;
     return (
       <BaseAlertDialogContent
         ref={ref}
-        className={extraClassName ? `${extraClassName} ${className ?? ''}` : className}
+        className={`${injected} ${className ?? ''}`}
         style={maxWidth ? { maxWidth, ...style } : style}
         {...props}
-      />
+      >
+        {children}
+        <Alca />
+      </BaseAlertDialogContent>
     );
   },
 );
@@ -217,3 +441,39 @@ export const SheetContent = forwardRef<ComponentRef<typeof BaseSheetContent>, Sh
   ),
 );
 SheetContent.displayName = 'SheetContent';
+
+// ── Botão (peça 14 do GLOSSARIO, escolha do dono em 10/10/2026) ─────────────
+// Bloco separado do Dialog de propósito: quem mexer na janela não esbarra aqui.
+//
+// O degradê roxo com sombra é do botão PRINCIPAL. A regra antiga do globals.css
+// pintava qualquer `<button>` com `bg-primary` (filtro selecionado, pílula,
+// alternador) e não alcançava o principal com `asChild` (vira `<a>`). O Button
+// do pacote não marca a variante no HTML, então este embrulho marca:
+// `data-slot="button"` e `data-variant` (sem variante = `default`). O CSS mira
+// `[data-slot='button'][data-variant='default'].bg-primary`: quem trocou o fundo
+// pela className (o tailwind-merge tira o `bg-primary`) também não ganha degradê.
+// Botão de ligar/selecionar (`aria-pressed`) fica sem degradê mesmo em `default`.
+//
+// Use sempre `Button` daqui (`@/components/ui/ds`), nunca de
+// `@evoapi/design-system/button`: o de lá não tem a marca e sai sem degradê.
+import { Button as BaseButton } from '@evoapi/design-system';
+
+// Tipado como o do pacote (`typeof BaseButton`): quem chama continua com a mesma
+// inferência de antes (o `e` do onClick, por exemplo).
+const ButtonDaCasa = forwardRef<HTMLButtonElement, ComponentProps<typeof BaseButton>>(({ variant, ...props }, ref) => (
+  <BaseButton ref={ref} data-slot="button" data-variant={variant ?? 'default'} variant={variant} {...props} />
+));
+ButtonDaCasa.displayName = 'Button';
+export const Button: typeof BaseButton = ButtonDaCasa;
+
+// ── Esqueleto (Skeleton) cinza ───────────────────────────────────────────────
+// O Skeleton do pacote nasce `bg-accent` (lavanda). A peça 13 do GLOSSARIO
+// (escolha do dono em 10/10/2026) é o esqueleto CINZA: `bg-muted animate-pulse`,
+// parado pra quem pediu menos movimento. A classe de quem chama vem depois e
+// continua mandando (altura, largura, canto). Pra lista, cartão ou texto
+// inteiro, prefira o `Carregando` de `@/components/base`, que já tem a forma.
+import { Skeleton as SkeletonDoPacote } from '@evoapi/design-system';
+
+export function Skeleton({ className, ...props }: ComponentProps<typeof SkeletonDoPacote>) {
+  return <SkeletonDoPacote className={`bg-muted motion-reduce:animate-none ${className ?? ''}`} {...props} />;
+}

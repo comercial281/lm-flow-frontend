@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/ds';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import JanelaDaTarefa from './JanelaDaTarefa';
@@ -39,6 +41,8 @@ export default function TarefasDoLead({ pipelineItemIds, criarNoCard, aoContar, 
   const [totalFeitas, setTotalFeitas] = useState(0);
   const [verFeitas, setVerFeitas] = useState(false);
   const [janela, setJanela] = useState<Janela>(null);
+  // null = ainda carregando; 'erro' = não carregou (nunca vira "Nenhuma tarefa aberta").
+  const [situacao, setSituacao] = useState<'pronto' | 'erro' | null>(null);
   const chave = pipelineItemIds.join(',');
   const contar = useRef(aoContar);
   contar.current = aoContar;
@@ -49,6 +53,7 @@ export default function TarefasDoLead({ pipelineItemIds, criarNoCard, aoContar, 
       setFeitas([]);
       setTotalFeitas(0);
       contar.current?.({ abertas: 0, atrasadas: 0 });
+      setSituacao('pronto');
       return;
     }
     const ids = chave.split(',');
@@ -62,10 +67,12 @@ export default function TarefasDoLead({ pipelineItemIds, criarNoCard, aoContar, 
       setFeitas(f.data as TarefaAtividade[]);
       setTotalFeitas(f.meta.total);
       contar.current?.({ abertas: lista.length, atrasadas: lista.filter(t => t.overdue).length });
+      setSituacao('pronto');
     } catch {
       setAbertas([]);
       setFeitas([]);
       setTotalFeitas(0);
+      setSituacao('erro');
     }
   }, [chave]);
 
@@ -117,8 +124,12 @@ export default function TarefasDoLead({ pipelineItemIds, criarNoCard, aoContar, 
           {T.novaTarefa}
         </Button>
       )}
-      {abertas.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{T.semAbertas}</p>
+      {situacao === null ? (
+        <Carregando linhas={2} rotulo="Carregando tarefas…" />
+      ) : situacao === 'erro' ? (
+        <EmptyState tamanho="compacto" tipo="erro" aoTentarDeNovo={() => void carregar()} />
+      ) : abertas.length === 0 ? (
+        <EmptyState tamanho="compacto" title={T.semAbertas} />
       ) : (
         <ul className="divide-y divide-border/60">{abertas.map(t => <LinhaDaTarefa key={t.id} tarefa={t} {...acoes} />)}</ul>
       )}

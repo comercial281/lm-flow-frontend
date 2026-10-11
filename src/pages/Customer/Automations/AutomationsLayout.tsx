@@ -10,6 +10,7 @@ import {
 } from '@/components/layout/config/menuItems';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import PaginaComAbas from '@/components/base/PaginaComAbas';
+import EmptyState from '@/components/base/EmptyState';
 
 // Moldura das telas em /automations/*. Até a fase 4 era UMA página com 7 abas
 // (regras, funis, construtor, origem, follow-up, lembretes, roleta). No menu
@@ -63,11 +64,7 @@ export default function AutomationsLayout() {
     if (porPlano.length === 0) {
       // Nenhuma tela sobrevive nem antes do cargo — é o plano/feature do
       // cliente que não tem automação nenhuma, não o cargo da pessoa.
-      return (
-        <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
-          Nenhuma automação disponível neste plano.
-        </div>
-      );
+      return <EmptyState className="h-full" title="Nenhuma automação disponível neste plano." />;
     }
     if (porCargo.length === 0) {
       // Havia tela pelo plano, mas o cargo não lê nenhuma — é o aviso do

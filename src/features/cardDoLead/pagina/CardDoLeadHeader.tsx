@@ -16,6 +16,7 @@
 // termina em Header.tsx pra trava `foraDaMoldura` tratar o cartão como embrulho
 // do cabeçalho da casa: a página que o usa tem de estar na Pagina.
 import type { ReactNode } from 'react';
+import { Card } from '@/components/ui/ds';
 import BaseHeader from '@/components/base/BaseHeader';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
 import { VAZIO, dataCurta, tempoDesde } from '@/lib/formato';
@@ -42,9 +43,11 @@ interface CardDoLeadHeaderProps {
 export default function CardDoLeadHeader({ card, criadoEm, aoLadoDoTitulo, acoes }: CardDoLeadHeaderProps) {
   return (
     <div className="@container">
-      <section
+      {/* Cartão da casa (GLOSSARIO, peça 20): o Card traz o anel violeta e a sombra. */}
+      <Card
+        role="region"
         aria-label="Quem é o lead"
-        className="grid grid-cols-[minmax(0,1fr)] gap-4 rounded-xl border border-border bg-card p-4 @xl:grid-cols-[minmax(0,1fr)_16rem] @xl:p-5 @5xl:grid-cols-[fit-content(22rem)_minmax(0,1fr)_16rem] @5xl:items-center @5xl:gap-6"
+        className="grid grid-cols-[minmax(0,1fr)] gap-4 p-4 @xl:grid-cols-[minmax(0,1fr)_16rem] @xl:p-5 @5xl:grid-cols-[fit-content(22rem)_minmax(0,1fr)_16rem] @5xl:items-center @5xl:gap-6"
       >
         <BaseHeader
           title={card.nomeExibido}
@@ -60,7 +63,7 @@ export default function CardDoLeadHeader({ card, criadoEm, aoLadoDoTitulo, acoes
           className="border-t border-border pt-4 @xl:col-span-2 @xl:row-start-2 @5xl:col-span-1 @5xl:col-start-2 @5xl:row-start-1 @5xl:border-l @5xl:border-t-0 @5xl:pl-5 @5xl:pt-0"
         />
         <div className="grid min-w-0 gap-2 @xl:col-start-2 @xl:row-start-1 @5xl:col-start-3">{acoes}</div>
-      </section>
+      </Card>
     </div>
   );
 }

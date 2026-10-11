@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import NotificationItem from './NotificationItem';
+import Carregando from '@/components/base/Carregando';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { Notification } from '@/services/notifications/NotificationsService';
@@ -167,10 +168,7 @@ export default function NotificationPanel({
       {/* Notifications List */}
       <div className="flex-1 overflow-y-auto">
         {state.uiFlags.isFetching ? (
-          <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-            <div className="w-8 h-8 animate-spin rounded-full border-2 border-primary border-t-transparent mb-4" />
-            <p className="text-muted-foreground">{t('notifications.panel.loading')}</p>
-          </div>
+          <Carregando linhas={5} rotulo={t('notifications.panel.loading')} className="px-4 py-2" />
         ) : totalUnreadCount === 0 ? (
           <div className="flex flex-col items-center justify-center h-full p-8 text-center">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">

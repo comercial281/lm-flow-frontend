@@ -7,6 +7,7 @@ import { FormField } from '../../shared/FormField';
 import { FormSection } from '../../shared/FormSection';
 import { sanitizeInboxName } from '@/utils/sanitizeName';
 import { PhoneInput } from '@/components/shared/PhoneInput';
+import Aviso from '@/components/base/Aviso';
 
 // FB in window
 declare global {
@@ -255,7 +256,6 @@ export const CloudWhatsappForm = ({ form, onFormChange, canFB }: CloudWhatsappFo
       {canFB && !isAutoFilled && (
         <FormSection
           title={t('cloudWhatsappForm.facebookIntegration.title')}
-          className="bg-blue-50/10 border-blue-200/20"
           data-tour="whatsapp-cloud-connect"
         >
           <div className="flex flex-col items-center justify-center text-center">
@@ -326,25 +326,21 @@ export const CloudWhatsappForm = ({ form, onFormChange, canFB }: CloudWhatsappFo
 
       {/* Auto-filled notice */}
       {isAutoFilled && (
-        <FormSection
-          title={t('cloudWhatsappForm.autoFilled.title')}
-          className="bg-green-50/10 border-green-200/20"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-sm text-sidebar-foreground/70">
-                {t('cloudWhatsappForm.autoFilled.description')}
-              </p>
-            </div>
+        <Aviso
+          tom="sucesso"
+          titulo={t('cloudWhatsappForm.autoFilled.title')}
+          acao={
             <button
               type="button"
               onClick={handleClearFields}
-              className="ml-4 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+              className="px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
             >
               {t('cloudWhatsappForm.autoFilled.clearButton')}
             </button>
-          </div>
-        </FormSection>
+          }
+        >
+          {t('cloudWhatsappForm.autoFilled.description')}
+        </Aviso>
       )}
 
       {/* Basic Information */}

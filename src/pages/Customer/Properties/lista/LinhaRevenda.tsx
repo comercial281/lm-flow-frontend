@@ -8,6 +8,7 @@ import FotoDoImovel from './FotoDoImovel';
 import Selo from './SeloSituacao';
 import MenuDoImovel, { estaNoSite, type AcoesDoImovel, type Permissoes } from './MenuDoImovel';
 import TituloDoImovel from './TituloDoImovel';
+import { Card } from '@/components/ui/ds';
 
 const FINALIDADE: Record<string, string> = { sale: 'Venda', rent: 'Locação', sale_rent: 'Venda e locação', season: 'Temporada' };
 const reais = (v?: number | null) => (v ? dinheiro(v, { centavos: false }) : null);
@@ -27,7 +28,7 @@ export default function LinhaRevenda({ p, acoes, permissoes, forca }: {
   const semPreco = !p.sale_price && !p.rent_price && !p.condo_fee && !p.iptu;
 
   return (
-    <article className="grid grid-cols-[110px_minmax(0,1fr)_40px] overflow-hidden rounded-xl border bg-card shadow-sm transition-colors hover:border-primary/40 sm:grid-cols-[200px_minmax(0,1fr)_220px_40px]">
+    <Card role="article" className="grid grid-cols-[110px_minmax(0,1fr)_40px] gap-0 overflow-hidden py-0 transition-colors hover:border-primary/40 sm:grid-cols-[200px_minmax(0,1fr)_220px_40px]">
       <FotoDoImovel p={p} aoAdicionar={() => acoes.fotos(p)} />
       <div className="flex min-w-0 flex-col gap-1.5 px-4 py-3">
         <div className="flex flex-wrap gap-1.5">
@@ -66,6 +67,6 @@ export default function LinhaRevenda({ p, acoes, permissoes, forca }: {
       <div className="col-start-3 row-start-1 flex justify-center pt-2 sm:col-start-4">
         <MenuDoImovel p={p} acoes={acoes} permissoes={permissoes} forca={forca} />
       </div>
-    </article>
+    </Card>
   );
 }

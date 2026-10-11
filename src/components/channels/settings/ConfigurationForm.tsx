@@ -36,6 +36,7 @@ import {
 import { EvolutionApiService, ZapiService } from '@/services/channels/channelConfigurationService';
 import InboxesService from '@/services/channels/inboxesService';
 import { telefone } from '@/lib/formato';
+import Carregando from '@/components/base/Carregando';
 
 interface ConfigurationFormProps {
   inboxId: string;
@@ -2269,12 +2270,7 @@ const ZapiWhatsAppConfig: React.FC<{
           </DialogHeader>
           <div className="flex flex-col items-center gap-4 p-4">
             {isLoading ? (
-              <div className="flex flex-col items-center gap-2">
-                <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-                <span className="text-sm text-slate-600 dark:text-slate-400">
-                  Gerando QR Code...
-                </span>
-              </div>
+              <Carregando variante="texto" linhas={5} rotulo="Gerando QR Code..." className="w-64" />
             ) : qrCode ? (
               <>
                 <img

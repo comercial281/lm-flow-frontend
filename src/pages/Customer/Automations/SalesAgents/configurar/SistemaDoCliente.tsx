@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Copy, Loader2, Send } from 'lucide-react';
 import { Button, Input, Label } from '@/components/ui/ds';
+import Aviso from '@/components/base/Aviso';
 import { salesAgentsService, type WebhookTestResult } from '@/services/salesAgents/salesAgentsService';
 import { fraseDaResposta, problemaNoEndereco, segundos } from '@/features/salesAgents/sistemaDoCliente';
 import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
@@ -115,15 +116,21 @@ export default function SistemaDoCliente({ agentId, url, urlSalva, chaveGerada, 
         </p>
 
         {chaveNova ? (
-          <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 p-3 dark:bg-amber-900/20">
+          <Aviso
+            tom="atencao"
+            compacto
+            className="mt-2"
+            acao={
+              <Button type="button" size="sm" variant="outline" onClick={copiar}>
+                <Copy className="h-3 w-3 mr-1" /> Copiar
+              </Button>
+            }
+          >
             <code className="block break-all text-xs">{chaveNova}</code>
-            <p className="text-xs mt-2">
+            <p className="mt-2">
               Copie agora e entregue a quem cuida do sistema do cliente. Por segurança, ela não aparece de novo.
             </p>
-            <Button type="button" size="sm" variant="outline" className="mt-2" onClick={copiar}>
-              <Copy className="h-3 w-3 mr-1" /> Copiar
-            </Button>
-          </div>
+          </Aviso>
         ) : chaveGerada ? (
           confirmandoOutra ? (
             <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -166,15 +173,12 @@ export default function SistemaDoCliente({ agentId, url, urlSalva, chaveGerada, 
           </p>
         )}
         {teste && (
-          <div
-            role="status"
-            className={`mt-2 rounded-md border p-3 ${teste.ok ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20' : 'border-red-300 bg-red-50 dark:bg-red-900/20'}`}
-          >
-            <p className="text-xs font-medium">{fraseDoTeste(teste)}</p>
+          <Aviso tom={teste.ok ? 'sucesso' : 'erro'} compacto className="mt-2">
+            <p className="font-medium">{fraseDoTeste(teste)}</p>
             {teste.response_excerpt && (
               <pre className="mt-1 whitespace-pre-wrap break-all text-[11px]">{cortarTrecho(teste.response_excerpt)}</pre>
             )}
-          </div>
+          </Aviso>
         )}
       </div>
     </div>

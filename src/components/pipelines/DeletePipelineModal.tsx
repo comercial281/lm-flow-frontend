@@ -43,19 +43,10 @@ export default function DeletePipelineModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent>
         <DialogHeader>
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-destructive" />
-            </div>
-            <div>
-              <DialogTitle>{t('deletePipeline.title')}</DialogTitle>
-              <DialogDescription className="mt-1">
-                {t('deletePipeline.description')}
-              </DialogDescription>
-            </div>
-          </div>
+          <DialogTitle>{t('deletePipeline.title')}</DialogTitle>
+          <DialogDescription>{t('deletePipeline.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="py-4">

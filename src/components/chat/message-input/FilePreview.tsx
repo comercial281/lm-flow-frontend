@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { X, Send, File, FileText, Image, Music, Video, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 
@@ -94,7 +94,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({
                 disabled={isSending}
                 aria-label="Remover anexo"
                 title="Remover anexo"
-                className="absolute -top-2 -right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 toque:opacity-100 transition-opacity"
+                className="absolute -top-2 -right-2 h-6 w-6 p-0 opacity-80 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
               >
                 <X className="h-3 w-3" />
               </Button>

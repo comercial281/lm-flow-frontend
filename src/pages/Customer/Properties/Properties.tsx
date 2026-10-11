@@ -19,10 +19,9 @@ import {
   Wand2,
   Loader2,
   List,
-  LayoutGrid,
+  Grid3X3,
   Map as MapIcon,
   SlidersHorizontal,
-  type LucideIcon,
 } from 'lucide-react';
 import {
   propertiesService,
@@ -38,12 +37,13 @@ import PropertyPhotosDialog from './PropertyPhotosDialog';
 import PropertyBookDialog from '@/components/properties/PropertyBookDialog';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { lerRecorteImoveis, type FiltroImoveis } from '@/features/dashboard/links';
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
 import { getTenantSlug } from '@/services/core/tenant';
 import Abas from '@/components/base/Abas';
-import { BaseHeader, EmptyState, Pagina } from '@/components/base';
+import { BaseHeader, EmptyState, Pagina, AlternadorDeVisao, type OpcaoDeVisao } from '@/components/base';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import {
   ABA_NA_URL,
@@ -69,10 +69,10 @@ import { lerVisao, paramsDaLista, type Ordem, type Visao } from './lista/estadoD
 // O mapa (Leaflet) só baixa quando a pessoa abre a visão Mapa.
 const VisaoMapa = lazy(() => import('./lista/VisaoMapa'));
 
-const VISOES: { valor: Visao; rotulo: string; icone: LucideIcon }[] = [
-  { valor: 'lista', rotulo: 'Lista', icone: List },
-  { valor: 'grade', rotulo: 'Grade', icone: LayoutGrid },
-  { valor: 'mapa', rotulo: 'Mapa', icone: MapIcon },
+const VISOES: OpcaoDeVisao<Visao>[] = [
+  { valor: 'lista', nome: 'Ver em lista', icone: List },
+  { valor: 'grade', nome: 'Ver em grade', icone: Grid3X3 },
+  { valor: 'mapa', nome: 'Ver no mapa', icone: MapIcon },
 ];
 
 export default function Properties() {
@@ -568,20 +568,7 @@ export default function Properties() {
                   </Seletor>
                 </>
               )}
-              <div role="group" aria-label="Visão" className="inline-flex rounded-md border border-input p-0.5">
-                {VISOES.map(({ valor, rotulo, icone: Icone }) => (
-                  <button
-                    key={valor}
-                    type="button"
-                    aria-pressed={visao === valor}
-                    onClick={() => trocarVisao(valor)}
-                    className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium ${visao === valor ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
-                    <Icone className="h-3.5 w-3.5" aria-hidden="true" />
-                    {rotulo}
-                  </button>
-                ))}
-              </div>
+              <AlternadorDeVisao valor={visao} opcoes={VISOES} aoEscolher={trocarVisao} />
               {recorte && visao !== 'mapa' && <ChipDaDashboard rotulo={recorte.rotulo} onTirar={tirarRecorte} />}
             </div>
 
@@ -677,7 +664,7 @@ export default function Properties() {
 
       {/* Batch generate dialog */}
       <Dialog open={batchModalOpen} onOpenChange={open => { if (!batchRunning) setBatchModalOpen(open); }}>
-        <DialogContent className="max-w-xl max-h-[80vh] flex flex-col">
+        <DialogContent className="max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Wand2 className="h-5 w-5 text-primary" />
@@ -736,15 +723,18 @@ export default function Properties() {
                 {batchResults.map(r => {
                   const prop = properties.find(p => p.id === r.id);
                   return (
-                    <div key={r.id} className={`p-3 rounded-lg border ${r.status === 'ok' ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/20' : 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20'}`}>
-                      <p className="text-sm font-medium truncate">{prop?.title ?? r.id}</p>
+                    <Aviso
+                      key={r.id}
+                      tom={r.status === 'ok' ? 'sucesso' : 'erro'}
+                      titulo={<span className="block truncate">{prop?.title ?? r.id}</span>}
+                    >
                       {r.status === 'ok' && r.description && (
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{r.description}</p>
+                        <p className="text-xs line-clamp-2">{r.description}</p>
                       )}
                       {r.status === 'error' && (
-                        <p className="text-xs text-red-600 mt-1">{r.error}</p>
+                        <p className="text-xs">{r.error}</p>
                       )}
-                    </div>
+                    </Aviso>
                   );
                 })}
               </div>

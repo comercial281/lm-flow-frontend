@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/ds';
-import { MessageSquare, Info, Settings, Eye } from 'lucide-react';
+import { MessageSquare, Settings, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
 import PreChatFields from './PreChatFields';
@@ -22,6 +22,8 @@ import {
   getDefaultPreChatFields,
   getFormattedPreChatFields,
 } from './helpers/preChatHelpers';
+import Aviso from '@/components/base/Aviso';
+import EmptyState from '@/components/base/EmptyState';
 
 interface PreChatFormProps {
   inboxId: string;
@@ -243,9 +245,7 @@ export default function PreChatForm({
                   </div>
 
                   {enabledFieldsCount === 0 && (
-                    <div className="text-center py-4 text-muted-foreground">
-                      Nenhum campo ativo para exibir
-                    </div>
+                    <EmptyState tamanho="compacto" title="Nenhum campo ativo para exibir" />
                   )}
                 </div>
               )}
@@ -256,20 +256,12 @@ export default function PreChatForm({
               </div>
 
               {/* Info Box */}
-              <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <Info className="w-5 h-5 text-blue-700 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                <div className="text-sm">
-                  <h6 className="font-medium text-blue-700 dark:text-blue-300 mb-1">
-                    Como funciona o formulário pré-chat
-                  </h6>
-                  <div className="text-blue-600 dark:text-blue-400 space-y-1">
-                    <p>• O formulário é exibido antes do cliente iniciar a conversa</p>
-                    <p>• Informações coletadas são anexadas ao perfil do contato</p>
-                    <p>• Campos obrigatórios devem ser preenchidos para continuar</p>
-                    <p>• Use a função arrastar para reordenar os campos</p>
-                  </div>
-                </div>
-              </div>
+              <Aviso tom="info" titulo="Como funciona o formulário pré-chat">
+                <p>• O formulário é exibido antes do cliente iniciar a conversa</p>
+                <p>• Informações coletadas são anexadas ao perfil do contato</p>
+                <p>• Campos obrigatórios devem ser preenchidos para continuar</p>
+                <p>• Use a função arrastar para reordenar os campos</p>
+              </Aviso>
             </div>
           )}
 

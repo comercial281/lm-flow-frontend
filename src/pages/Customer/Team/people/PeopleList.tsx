@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Plus, Search } from 'lucide-react';
-import { Input } from '@/components/ui/ds';
+import { Card, Input } from '@/components/ui/ds';
 import { telefone } from '@/lib/formato';
+import EmptyState from '@/components/base/EmptyState';
 import NumberChip, { DOT_CLASS, STATE_TEXT } from './NumberChip';
 import { TONE_CLASS, accessStatus } from './accessStatus';
 import { PEOPLE_FILTERS, applyPeopleFilters, filterCounts, type PeopleFilter } from './peopleFilters';
@@ -73,9 +74,10 @@ export default function PeopleList({ members, canCreateNumber, canActOn, onOpen,
       </div>
 
       {visible.length === 0 ? (
-        <div className="py-16 text-center text-sm text-muted-foreground">Nenhuma pessoa encontrada.</div>
+        <EmptyState tipo="semResultado" title="Nenhuma pessoa encontrada." />
       ) : (
-        <ul className="divide-y divide-border/60 overflow-hidden rounded-xl border bg-card">
+        <Card className="gap-0 overflow-hidden py-0">
+        <ul className="divide-y divide-border/60">
           {visible.map(member => {
             const access = accessStatus(member, now);
             const numbers = member.all_numbers ?? [];
@@ -147,6 +149,7 @@ export default function PeopleList({ members, canCreateNumber, canActOn, onOpen,
             );
           })}
         </ul>
+        </Card>
       )}
 
       <ul aria-label="Legenda" className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">

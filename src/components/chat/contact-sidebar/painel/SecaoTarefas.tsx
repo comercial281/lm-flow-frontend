@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ListTodo } from 'lucide-react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import TarefasDoLead from '@/features/tarefas/TarefasDoLead';
 import { TEXTOS_DE_TAREFAS as T } from '@/features/tarefas/textos';
 import { TEXTOS_DO_PAINEL } from '@/features/conversas/painelDoLead';

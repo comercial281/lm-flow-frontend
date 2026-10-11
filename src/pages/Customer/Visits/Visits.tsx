@@ -1,8 +1,13 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Pagina, BaseHeader } from '@/components/base';
+import { Pagina, BaseHeader, AlternadorDeVisao, BotaoMaisAcoes } from '@/components/base';
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import type { OpcaoDeEscolha } from '@/components/base/escolha';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { toast } from 'sonner';
 import {
+  Card,
   Button,
   Badge,
   Dialog,
@@ -31,7 +36,6 @@ import {
   CalendarDays,
   List,
   CalendarOff,
-  MoreHorizontal,
 } from 'lucide-react';
 import {
   visitsService,
@@ -247,29 +251,15 @@ function BarraDoCalendario({ visao, date, onVisao, onNavigate }: {
         <div className="w-1 h-6 rounded-full shrink-0 ml-1" style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }} />
         <h2 className="text-base font-bold truncate">{tituloDaVisao(visao, date)}</h2>
       </div>
-      <div className="inline-flex rounded-md border border-border bg-background p-0.5" role="group" aria-label="Visão do calendário">
-        {VISOES.map(v => (
-          <button
-            key={v.key}
-            type="button"
-            aria-pressed={visao === v.key}
-            onClick={() => onVisao(v.key)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
-              visao === v.key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {v.label}
-          </button>
-        ))}
-      </div>
+      <BotoesDeEscolha rotulo="Visão do calendário" valor={visao} opcoes={VISOES} aoEscolher={onVisao} />
     </div>
   );
 }
 
-const VISOES: { key: VisaoCalendario; label: string }[] = [
-  { key: 'mes', label: 'Mês' },
-  { key: 'semana', label: 'Semana' },
-  { key: 'dia', label: 'Dia' },
+const VISOES: OpcaoDeEscolha<VisaoCalendario>[] = [
+  { valor: 'mes', rotulo: 'Mês' },
+  { valor: 'semana', rotulo: 'Semana' },
+  { valor: 'dia', rotulo: 'Dia' },
 ];
 
 const mesmoDiaQue = (a: Date, b: Date) => a.toDateString() === b.toDateString();
@@ -461,6 +451,7 @@ export default function Visits() {
     return ehCelular ? 'list' : 'calendar';
   });
   const [recusado, setRecusado]     = useState(false);
+  const [erro, setErro]             = useState(false);
 
   const [calDate, setCalDate]       = useState<Date>(new Date());
   const [visaoCal, setVisaoCal]     = useState<VisaoCalendario>(lerVisao);
@@ -554,6 +545,7 @@ export default function Visits() {
       });
       if (!atual()) return;
       setVisits(res.data ?? []);
+      setErro(false);
       setCarregadoPara(viewMode === 'calendar' && !temFiltroNoLink ? chaveDoPeriodo(visaoCal, calDate) : null);
       const contador = lerContador(res.meta, {
         mesInteiro: viewMode === 'calendar' && !temFiltroNoLink && !status,
@@ -565,7 +557,10 @@ export default function Visits() {
     } catch (e) {
       if (!atual()) return;
       if (isForbiddenError(e)) setRecusado(true);
-      else toast.error('Erro ao carregar visitas');
+      else {
+        setErro(true);
+        toast.error('Erro ao carregar visitas');
+      }
     } finally {
       if (atual()) setLoading(false);
     }
@@ -742,48 +737,34 @@ export default function Visits() {
             aDireita={
               <>
             {/* View toggle */}
-            <div className="inline-flex rounded-md border border-border bg-background p-0.5">
-              <button
-                onClick={() => {
-                  // O calendário sempre mostra o mês visível inteiro — um filtro
-                  // da Dashboard ativo (ex.: "A confirmar") não sobrevive à troca.
-                  if (temFiltroNoLink) tirarFiltroLink();
-                  setViewMode('calendar');
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
-                  viewMode === 'calendar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <CalendarDays className="h-3.5 w-3.5" />
-                Calendário
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
-                  viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <List className="h-3.5 w-3.5" />
-                Lista
-              </button>
-            </div>
+            <AlternadorDeVisao
+              valor={viewMode}
+              aoEscolher={v => {
+                // O calendário sempre mostra o mês visível inteiro — um filtro
+                // da Dashboard ativo (ex.: "A confirmar") não sobrevive à troca.
+                if (v === 'calendar' && temFiltroNoLink) tirarFiltroLink();
+                setViewMode(v);
+              }}
+              opcoes={[
+                { valor: 'calendar', icone: CalendarDays, nome: 'Ver no calendário' },
+                { valor: 'list', icone: List, nome: 'Ver em lista' },
+              ]}
+            />
             {agendaLigada && cargoConhecido && ehCelular && (
-              // Celular: os dois ajustes da agenda moram no ⋯, não no topo.
+              // Celular: os dois ajustes da agenda moram no ⋮, não no topo.
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" aria-label="Mais ações da agenda" title="Mais ações da agenda">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
+                  <BotaoMaisAcoes aria-label="Mais ações da agenda" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {!soMinhas && (
                     <DropdownMenuItem onClick={() => setHorarioAberto(true)}>
-                      <Clock className="h-4 w-4 mr-2" />
+                      <Clock className="h-4 w-4" />
                       Horário de visita
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem onClick={() => setFolgasAbertas(true)}>
-                    <CalendarOff className="h-4 w-4 mr-2" />
+                    <CalendarOff className="h-4 w-4" />
                     {soMinhas ? 'Minhas folgas' : 'Folgas'}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -829,7 +810,7 @@ export default function Visits() {
         }
       >
         {viewMode === 'calendar' ? (
-          <div className="rounded-xl border bg-card p-4">
+          <Card className="gap-0 p-4">
             <BarraDoCalendario visao={visaoCal} date={calDate} onVisao={trocarVisao} onNavigate={setCalDate} />
             {visaoCal === 'mes' ? (
               <MonthGrid
@@ -853,22 +834,17 @@ export default function Visits() {
                 destacadaId={visitaDestacada}
               />
             )}
-          </div>
+          </Card>
         ) : loading ? (
-          <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-            Carregando visitas...
-          </div>
+          <Carregando linhas={6} rotulo="Carregando visitas..." className="max-w-3xl" />
+        ) : erro ? (
+          <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />
         ) : visits.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <CalendarClock className="h-12 w-12 mb-3" />
-            <p className="text-sm font-medium">Nenhuma visita encontrada</p>
-            {canCreate && (
-              <Button className="mt-4" onClick={() => openScheduleModal()}>
-                <Plus className="h-4 w-4 mr-2" />
-                Agendar primeira visita
-              </Button>
-            )}
-          </div>
+          <EmptyState
+            icon={CalendarClock}
+            title="Nenhuma visita encontrada"
+            action={canCreate ? { label: 'Agendar primeira visita', onClick: () => openScheduleModal() } : undefined}
+          />
         ) : (
           <div className="space-y-6 max-w-3xl">
             {Array.from(grouped.entries()).map(([date, dayVisits]) => (
@@ -1021,9 +997,9 @@ function VisitCard({
   const isActive = ['scheduled', 'confirmed', 'in_progress', 'rescheduled'].includes(visit.status);
 
   return (
-    <div id={ancorada ? `visita-${visit.id}` : undefined} className={`flex gap-4 p-4 rounded-xl border border-border bg-card transition-shadow ${
+    <Card id={ancorada ? `visita-${visit.id}` : undefined} className={`flex-row gap-4 p-4 transition-shadow ${
       isPastVisit && isActive ? 'border-orange-300 dark:border-orange-700' : ''
-    } ${destacada ? 'ring-2 ring-primary' : ''}`}>
+    } ${destacada ? 'outline-2 outline-primary' : ''}`}>
       {/* Time column */}
       <div className="flex-shrink-0 w-16 text-center">
         <div className="text-lg font-bold text-foreground">
@@ -1098,6 +1074,6 @@ function VisitCard({
           <AcoesDaVisita visita={visit} onAtualizada={onAtualizada} />
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

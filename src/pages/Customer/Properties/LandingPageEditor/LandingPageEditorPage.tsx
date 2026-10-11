@@ -20,6 +20,7 @@ import {
 } from '@/services/propertyPhotos/propertyPhotosService';
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
 import PublishLandingButton from '@/features/landing/manage/PublishLandingButton';
+import { Button } from '@/components/ui/ds';
 
 // Landing de imóvel nova nasce com um esqueleto pronto (não em branco): as seções
 // já renderizam com os dados reais do imóvel (preço, ficha, fotos, mapa). O corretor
@@ -153,13 +154,12 @@ export default function LandingPageEditorPage() {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center text-foreground">
         <p className="max-w-md">{error}</p>
-        <button
+        <Button
           type="button"
           onClick={() => navigate('/properties')}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
         >
           Voltar para Imóveis
-        </button>
+        </Button>
       </div>
     );
   }

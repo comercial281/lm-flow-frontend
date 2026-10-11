@@ -15,6 +15,7 @@ import { Download, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { BaseFilter as ContactFilter } from '@/types/core';
 import { contactsService } from '@/services/contacts/contactsService';
 import type { ContactExportColumn } from '@/types/contacts';
+import Aviso from '@/components/base/Aviso';
 
 interface ContactExportModalProps {
   open: boolean;
@@ -142,7 +143,7 @@ export default function ContactExportModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('export.title')}</DialogTitle>
           <DialogDescription>{getExportDescription()}</DialogDescription>
@@ -155,7 +156,7 @@ export default function ContactExportModal({
             <div className="flex gap-3">
               <Button
                 type="button"
-                variant={format === 'xlsx' ? 'default' : 'outline'}
+                variant={format === 'xlsx' ? 'default' : 'outline'} aria-pressed={format === 'xlsx'}
                 size="sm"
                 onClick={() => setFormat('xlsx')}
                 className="flex-1"
@@ -165,7 +166,7 @@ export default function ContactExportModal({
               </Button>
               <Button
                 type="button"
-                variant={format === 'csv' ? 'default' : 'outline'}
+                variant={format === 'csv' ? 'default' : 'outline'} aria-pressed={format === 'csv'}
                 size="sm"
                 onClick={() => setFormat('csv')}
                 className="flex-1"
@@ -241,13 +242,9 @@ export default function ContactExportModal({
             </p>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <h4 className="text-sm font-medium text-blue-900 mb-1 flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              {t('export.download.title')}
-            </h4>
-            <p className="text-xs text-blue-700">{t('export.download.description')}</p>
-          </div>
+          <Aviso tom="info" compacto icone={Download} titulo={t('export.download.title')}>
+            {t('export.download.description')}
+          </Aviso>
         </div>
 
         <DialogFooter>

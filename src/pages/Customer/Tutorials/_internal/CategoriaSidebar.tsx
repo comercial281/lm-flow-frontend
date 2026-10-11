@@ -9,7 +9,6 @@ import {
   Plus,
   ChevronRight,
   ChevronDown,
-  MoreVertical,
   Pencil,
   Trash2,
 } from 'lucide-react';
@@ -22,6 +21,16 @@ import {
 } from '@/hooks/useKnowledge';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/ds';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
+import EmptyState from '@/components/base/EmptyState';
+
 interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -48,7 +57,7 @@ function buildTree(items: KnowledgeCategory[]): TreeNode[] {
 
 export default function CategoriaSidebar({ selectedId, onSelect, canEdit }: Props) {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
-  const { data: cats = [], isLoading } = useCategories();
+  const { data: cats = [], isLoading, error, refetch } = useCategories();
   const createMut = useCreateCategory();
   const updateMut = useUpdateCategory();
   const deleteMut = useDeleteCategory();
@@ -109,12 +118,12 @@ export default function CategoriaSidebar({ selectedId, onSelect, canEdit }: Prop
               className="p-0.5 text-muted-foreground hover:text-foreground"
               type="button"
             >
-              {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             </button>
           ) : (
             <span className="w-4" />
           )}
-          {isOpen ? <FolderOpen size={14} /> : <Folder size={14} />}
+          {isOpen ? <FolderOpen className="h-3.5 w-3.5" /> : <Folder className="h-3.5 w-3.5" />}
           {editingId === node.id ? (
             <input
               autoFocus
@@ -132,46 +141,37 @@ export default function CategoriaSidebar({ selectedId, onSelect, canEdit }: Prop
             <span className="flex-1 text-xs truncate">{node.nome}</span>
           )}
           {canEdit && editingId !== node.id && (
-            <div className="relative opacity-0 group-hover:opacity-100 toque:opacity-100">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenuOpen(menuOpen === node.id ? null : node.id);
-                }}
-                aria-label="Mais ações"
-                title="Mais ações"
-                className="p-0.5 text-muted-foreground hover:text-foreground"
-              >
-                <MoreVertical size={12} />
-              </button>
-              {menuOpen === node.id && (
-                <div
-                  className="absolute right-0 top-5 z-20 bg-card border border-border rounded-lg shadow-xl min-w-[140px] py-1"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    onClick={() => {
+            // Sempre à vista (GLOSSARIO, peça 16), apagado até passar o mouse na linha.
+            <div className="opacity-70 transition-opacity group-hover:opacity-100 focus-within:opacity-100" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu open={menuOpen === node.id} onOpenChange={(aberto) => setMenuOpen(aberto ? node.id : null)}>
+                <DropdownMenuTrigger asChild>
+                  <BotaoMaisAcoes compacto className="-my-1.5 text-muted-foreground hover:text-foreground" />
+                </DropdownMenuTrigger>
+                {/* Sem devolver o foco ao ⋮: o campo de renomear/subcategoria abre com o foco nele. */}
+                <DropdownMenuContent align="end" className="min-w-[140px]" onCloseAutoFocus={(e) => e.preventDefault()}>
+                  <DropdownMenuItem
+                    onSelect={() => {
                       setEditingId(node.id);
                       setEditName(node.nome);
                       setMenuOpen(null);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-muted text-left"
                   >
-                    <Pencil size={11} /> Renomear
-                  </button>
-                  <button
-                    onClick={() => {
+                    <Pencil className="h-4 w-4" /> Renomear
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => {
                       setCreatingParent(node.id);
                       setMenuOpen(null);
                       setExpanded((p) => new Set(p).add(node.id));
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-muted text-left"
                   >
-                    <Plus size={11} /> Subcategoria
-                  </button>
-                  <button
-                    onClick={async () => {
+                    <Plus className="h-4 w-4" /> Subcategoria
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onSelect={async () => {
+                      setMenuOpen(null);
                       if (
                         await confirmar({
                           titulo: 'Excluir categoria',
@@ -187,14 +187,12 @@ export default function CategoriaSidebar({ selectedId, onSelect, canEdit }: Prop
                       ) {
                         deleteMut.mutate(node.id);
                       }
-                      setMenuOpen(null);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10 text-left"
                   >
-                    <Trash2 size={11} /> Excluir
-                  </button>
-                </div>
-              )}
+                    <Trash2 className="h-4 w-4" /> Excluir
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
         </div>
@@ -239,14 +237,17 @@ export default function CategoriaSidebar({ selectedId, onSelect, canEdit }: Prop
             title="Nova categoria"
             type="button"
           >
-            <Plus size={14} />
+            <Plus className="h-3.5 w-3.5" />
           </button>
         )}
       </div>
       <div className="flex-1 overflow-y-auto py-2 space-y-0.5">
         {isLoading && <p className="px-3 py-2 text-xs text-muted-foreground">Carregando...</p>}
-        {!isLoading && tree.length === 0 && creatingParent !== null && (
-          <p className="px-3 py-2 text-xs text-muted-foreground">Nenhuma categoria ainda.</p>
+        {!isLoading && error && (
+          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void refetch()} className="mx-2 p-4" />
+        )}
+        {!isLoading && !error && tree.length === 0 && creatingParent !== null && (
+          <EmptyState tamanho="compacto" title="Nenhuma categoria ainda." className="mx-2 p-4" />
         )}
         {creatingParent === null && (
           <div className="px-2 py-1">

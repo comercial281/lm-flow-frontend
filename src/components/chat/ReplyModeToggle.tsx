@@ -1,5 +1,5 @@
 import { MessageSquareIcon } from 'lucide-react';
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { ReplyMode } from '@/types/chat/api';
 import { useLanguage } from '@/hooks/useLanguage';
 
@@ -32,7 +32,7 @@ export const ReplyModeToggle = ({
     <div className="flex items-center justify-start shrink-0">
       <div className="flex items-center gap-1 p-0.5 bg-muted rounded-lg border w-fit">
         <Button
-          variant={isReplyMode ? 'default' : 'ghost'}
+          variant={isReplyMode ? 'default' : 'ghost'} aria-pressed={isReplyMode}
           size="sm"
           onClick={() => onModeChange(ReplyMode.REPLY)}
           disabled={disabled || (forcedMode && forcedMode !== ReplyMode.REPLY)}

@@ -3,6 +3,7 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import { plural } from '@/lib/formato';
 import {
+  Card,
   Button,
   Dialog,
   DialogContent,
@@ -14,12 +15,14 @@ import {
   Badge,
 } from '@/components/ui/ds';
 import {
-  RefreshCw, Edit, ToggleLeft, ToggleRight, AlertTriangle, ArrowRight, Download,
+  RefreshCw, Edit, ToggleLeft, ToggleRight, ArrowRight, Download,
   Stethoscope, Check, X, Copy, Eye, EyeOff, Trash2, Loader2, Ban,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Pagina, BaseHeader } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
+import Carregando from '@/components/base/Carregando';
+import Aviso from '@/components/base/Aviso';
 import IconActionButton from '@/components/base/IconActionButton';
 import {
   leadAdsFormsService,
@@ -653,7 +656,7 @@ export default function LeadAdsForms() {
 
       {/* Modal: diagnóstico do token da Meta (app, permissões, página e o token salvo) */}
       <Dialog open={debugOpen} onOpenChange={setDebugOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Diagnóstico da conexão com o Meta</DialogTitle>
             <DialogDescription>
@@ -665,9 +668,7 @@ export default function LeadAdsForms() {
           {debugBusy ? (
             <div className="py-8 text-center text-sm text-muted-foreground">Consultando o Facebook...</div>
           ) : debugError ? (
-            <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-400">
-              {debugError}
-            </div>
+            <Aviso tom="erro">{debugError}</Aviso>
           ) : debug ? (
             // Cap explícito de altura no CORPO (não no DialogContent): o componente
             // base do design-system sobrescreve o max-h externo, então garantimos o
@@ -699,10 +700,9 @@ export default function LeadAdsForms() {
                 </div>
               )}
               {debug.token_error && (
-                <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-400">
-                  <p className="font-medium">O Facebook recusou esta conexão</p>
-                  <p className="mt-0.5">{debug.token_error}</p>
-                </div>
+                <Aviso tom="erro" titulo="O Facebook recusou esta conexão">
+                  <p>{debug.token_error}</p>
+                </Aviso>
               )}
               <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5">
                 <div className="flex justify-between gap-3">
@@ -732,77 +732,60 @@ export default function LeadAdsForms() {
               </div>
 
               {/* Página: o teste que revela o #100 (token não enxerga a página) */}
-              <div className={`rounded-lg border p-3 flex items-start gap-2 ${
-                debug.page_ok ? 'border-green-500/40 bg-green-500/10' : 'border-amber-500/40 bg-amber-500/10'
-              }`}>
-                {debug.page_ok
-                  ? <Check className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                  : <X className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />}
-                <div>
-                  {debug.page_ok ? (
-                    <p>A conexão <strong>enxerga a página</strong>: {debug.page_name} ({debug.page_id})</p>
-                  ) : (
-                    <>
-                      <p className="font-medium">A conexão NÃO enxerga a página {debug.page_id}</p>
-                      {debug.page_error && <p className="text-muted-foreground mt-0.5">{debug.page_error}</p>}
-                    </>
-                  )}
-                </div>
-              </div>
+              <Aviso tom={debug.page_ok ? 'sucesso' : 'atencao'} icone={debug.page_ok ? Check : X}>
+                {debug.page_ok ? (
+                  <p>A conexão <strong>enxerga a página</strong>: {debug.page_name} ({debug.page_id})</p>
+                ) : (
+                  <>
+                    <p className="font-medium">A conexão NÃO enxerga a página {debug.page_id}</p>
+                    {debug.page_error && <p>{debug.page_error}</p>}
+                  </>
+                )}
+              </Aviso>
 
               {/* Token de página derivável = a página está atribuída ao System User
                   para Leads. É o sinal REAL: sem isso, os formulários não carregam
                   mesmo com token válido e página "vista". */}
               {typeof debug.page_token_ok === 'boolean' && (
-                <div className={`rounded-lg border p-3 flex items-start gap-2 ${
-                  debug.page_token_ok ? 'border-green-500/40 bg-green-500/10' : 'border-amber-500/40 bg-amber-500/10'
-                }`}>
-                  {debug.page_token_ok
-                    ? <Check className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                    : <X className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />}
-                  <div>
-                    {debug.page_token_ok ? (
-                      <p>Página <strong>atribuída ao Usuário do Sistema</strong> para Leads (acesso à página OK) — os formulários devem carregar.</p>
-                    ) : (
-                      <>
-                        <p className="font-medium">A página não está atribuída ao Usuário do Sistema para Leads</p>
-                        {debug.page_token_error && <p className="text-muted-foreground mt-0.5">{debug.page_token_error}</p>}
-                      </>
-                    )}
-                  </div>
-                </div>
+                <Aviso tom={debug.page_token_ok ? 'sucesso' : 'atencao'} icone={debug.page_token_ok ? Check : X}>
+                  {debug.page_token_ok ? (
+                    <p>Página <strong>atribuída ao Usuário do Sistema</strong> para Leads (acesso à página OK) — os formulários devem carregar.</p>
+                  ) : (
+                    <>
+                      <p className="font-medium">A página não está atribuída ao Usuário do Sistema para Leads</p>
+                      {debug.page_token_error && <p>{debug.page_token_error}</p>}
+                    </>
+                  )}
+                </Aviso>
               )}
 
               {/* Recebimento em tempo real: a página está inscrita no app p/ leadgen?
                   É isso que faz o Facebook ENVIAR os leads pro webhook — sem isso, o
                   lead cai no Gerenciador de Leads mas nunca chega no LM Flow. */}
               {typeof debug.webhook_subscribed === 'boolean' && (
-                <div className={`rounded-lg border p-3 flex items-start gap-2 ${
-                  debug.webhook_subscribed ? 'border-green-500/40 bg-green-500/10' : 'border-amber-500/40 bg-amber-500/10'
-                }`}>
-                  {debug.webhook_subscribed
-                    ? <Check className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                    : <X className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />}
-                  <div className="flex-1">
-                    {debug.webhook_subscribed ? (
-                      <p><strong>Recebimento em tempo real ativo</strong> — a página está inscrita no app para leads. Novos leads caem sozinhos.</p>
-                    ) : (
-                      <>
-                        <p className="font-medium">Recebimento em tempo real NÃO está ativo</p>
-                        {debug.webhook_error && <p className="text-muted-foreground mt-0.5">{debug.webhook_error}</p>}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="mt-2"
-                          onClick={subscribeWebhook}
-                          disabled={subscribing}
-                        >
-                          {subscribing ? 'Ativando…' : 'Ativar recebimento em tempo real'}
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
+                <Aviso
+                  tom={debug.webhook_subscribed ? 'sucesso' : 'atencao'}
+                  icone={debug.webhook_subscribed ? Check : X}
+                  acao={debug.webhook_subscribed ? undefined : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={subscribeWebhook}
+                      disabled={subscribing}
+                    >
+                      {subscribing ? 'Ativando…' : 'Ativar recebimento em tempo real'}
+                    </Button>
+                  )}
+                >
+                  {debug.webhook_subscribed ? (
+                    <p><strong>Recebimento em tempo real ativo</strong> — a página está inscrita no app para leads. Novos leads caem sozinhos.</p>
+                  ) : (
+                    <>
+                      <p className="font-medium">Recebimento em tempo real NÃO está ativo</p>
+                      {debug.webhook_error && <p>{debug.webhook_error}</p>}
+                    </>
+                  )}
+                </Aviso>
               )}
 
               {/* Diagnóstico de roteamento em linguagem simples: os leads recentes
@@ -813,48 +796,41 @@ export default function LeadAdsForms() {
                   dizer "entrou sem etiqueta" quando o lead nem entrou seria mentira. */}
               {typeof debug.total_recent_leads === 'number' && (
                 debug.total_recent_leads === 0 ? (
-                  <div className="rounded-lg border border-border p-3 text-xs text-muted-foreground">
-                    Nenhum lead recebido por esta página ainda — quando chegar, este quadro mostra se ele entrou.
-                  </div>
+                  <EmptyState
+                    tamanho="compacto"
+                    title="Nenhum lead recebido por esta página ainda — quando chegar, este quadro mostra se ele entrou."
+                  />
                 ) : debug.routing_ok ? (
-                  <div className="rounded-lg border border-green-500/40 bg-green-500/10 p-3 flex items-start gap-2">
-                    <Check className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm">
-                      <strong>Tudo certo.</strong> Os últimos leads vieram de formulários cadastrados e entraram com as etiquetas deles.
-                    </p>
-                  </div>
+                  <Aviso tom="sucesso" icone={Check} titulo="Tudo certo.">
+                    Os últimos leads vieram de formulários cadastrados e entraram com as etiquetas deles.
+                  </Aviso>
                 ) : (
-                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium">
-                          {debug.unmatched_blocked
-                            ? <>{debug.unmatched_leads} lead{(debug.unmatched_leads ?? 0) > 1 ? 's' : ''} não {(debug.unmatched_leads ?? 0) > 1 ? 'entraram' : 'entrou'}</>
-                            : <>{debug.unmatched_leads} lead{(debug.unmatched_leads ?? 0) > 1 ? 's' : ''} entr{(debug.unmatched_leads ?? 0) > 1 ? 'aram' : 'ou'} sem a etiqueta do imóvel</>}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {debug.unmatched_blocked ? 'Vieram de' : 'Vieram de'} formulário{(debug.unmatched_forms?.length ?? 0) > 1 ? 's' : ''} que <strong>não</strong> {(debug.unmatched_forms?.length ?? 0) > 1 ? 'estão' : 'está'} cadastrado{(debug.unmatched_forms?.length ?? 0) > 1 ? 's' : ''} aqui:
-                        </p>
-                      </div>
-                    </div>
+                  <Aviso
+                    tom="atencao"
+                    titulo={debug.unmatched_blocked
+                      ? <>{debug.unmatched_leads} lead{(debug.unmatched_leads ?? 0) > 1 ? 's' : ''} não {(debug.unmatched_leads ?? 0) > 1 ? 'entraram' : 'entrou'}</>
+                      : <>{debug.unmatched_leads} lead{(debug.unmatched_leads ?? 0) > 1 ? 's' : ''} entr{(debug.unmatched_leads ?? 0) > 1 ? 'aram' : 'ou'} sem a etiqueta do imóvel</>}
+                  >
+                    <p className="text-xs">
+                      {debug.unmatched_blocked ? 'Vieram de' : 'Vieram de'} formulário{(debug.unmatched_forms?.length ?? 0) > 1 ? 's' : ''} que <strong>não</strong> {(debug.unmatched_forms?.length ?? 0) > 1 ? 'estão' : 'está'} cadastrado{(debug.unmatched_forms?.length ?? 0) > 1 ? 's' : ''} aqui:
+                    </p>
                     <ul className="mt-2 space-y-1">
                       {(debug.unmatched_forms ?? []).map((f, i) => (
-                        <li key={i} className="text-sm flex items-center gap-2">
-                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+                        <li key={i} className="flex items-center gap-2">
+                          <span className="h-1.5 w-1.5 rounded-full bg-current flex-shrink-0" />
                           <span className="font-medium">{f.name}</span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs">
                             ({f.lead_count} lead{f.lead_count > 1 ? 's' : ''})
                           </span>
                         </li>
                       ))}
                     </ul>
-                    <p className="text-xs text-muted-foreground mt-2">
+                    <p className="text-xs mt-2">
                       👉 {debug.unmatched_blocked
                         ? <>Se {(debug.unmatched_forms?.length ?? 0) > 1 ? 'esses formulários são seus' : 'esse formulário é seu'}, cadastre {(debug.unmatched_forms?.length ?? 0) > 1 ? 'eles' : 'ele'} no quadro <strong>Leads ignorados</strong> desta tela. A partir daí os leads entram.</>
                         : <>Ache {(debug.unmatched_forms?.length ?? 0) > 1 ? 'esses formulários' : 'esse formulário'} na lista e configure a etiqueta do imóvel. A partir daí os leads dele entram certos.</>}
                     </p>
-                  </div>
+                  </Aviso>
                 )
               )}
 
@@ -960,18 +936,13 @@ export default function LeadAdsForms() {
       {metaPageErrors.length > 0 && metaForms.length > 0 && (
         <div className="mb-6 space-y-2">
           {metaPageErrors.map((pe, i) => (
-            <div
+            <Aviso
               key={`${pe.page_id ?? 'page'}-${i}`}
-              className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 flex items-start gap-3"
+              tom="atencao"
+              titulo={`${pe.page_name || pe.page_id || 'Página'}: não foi possível carregar os formulários`}
             >
-              <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-foreground">
-                  {pe.page_name || pe.page_id || 'Página'}: não foi possível carregar os formulários
-                </p>
-                <p className="text-muted-foreground mt-0.5">{pe.error}</p>
-              </div>
-            </div>
+              <p>{pe.error}</p>
+            </Aviso>
           ))}
         </div>
       )}
@@ -980,20 +951,16 @@ export default function LeadAdsForms() {
           permissão de leadgen, page_id que não bate...) em vez de um texto fixo,
           pra dar pro cliente o que corrigir na conexão da página. */}
       {metaError && (
-        <div className="mb-6 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <p className="font-medium text-foreground">Não foi possível carregar os formulários da Meta</p>
-            <p className="text-muted-foreground mt-0.5">{metaError}</p>
-            <p className="text-muted-foreground mt-2">
-              Revise a conexão da página em{' '}
-              <Link to="/settings/facebook" className="text-primary underline">
-                Integrações → Facebook
-              </Link>{' '}
-              e sincronize de novo.
-            </p>
-          </div>
-        </div>
+        <Aviso tom="atencao" titulo="Não foi possível carregar os formulários da Meta" className="mb-6">
+          <p>{metaError}</p>
+          <p className="mt-2">
+            Revise a conexão da página em{' '}
+            <Link to="/settings/facebook" className="text-primary underline">
+              Integrações → Facebook
+            </Link>{' '}
+            e sincronize de novo.
+          </p>
+        </Aviso>
       )}
 
       {/* Filtro por página — só faz sentido com mais de uma conectada. */}
@@ -1115,7 +1082,7 @@ export default function LeadAdsForms() {
           Formulários configurados
         </h2>
         {loading ? (
-          <div className="text-center py-12 text-muted-foreground text-sm">Carregando...</div>
+          <Carregando linhas={3} />
         ) : visibleConfigs.length === 0 ? (
           <EmptyState
             title={configs.length === 0 ? 'Nenhum formulário configurado' : 'Nenhum formulário desta página'}
@@ -1128,7 +1095,7 @@ export default function LeadAdsForms() {
         ) : (
           <div className="space-y-3">
             {visibleConfigs.map(cfg => (
-              <div key={cfg.id} className="border border-border rounded-xl bg-card overflow-hidden">
+              <Card key={cfg.id} className="gap-0 overflow-hidden py-0">
                 <div className="flex items-center gap-4 px-5 py-4">
                   <button
                     onClick={() => handleToggle(cfg)}
@@ -1181,7 +1148,7 @@ export default function LeadAdsForms() {
                     <Edit className="h-4 w-4" />
                   </Button>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}
@@ -1257,7 +1224,7 @@ export default function LeadAdsForms() {
 
       {/* Create / Edit Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? 'Editar destino do formulário' : 'Configurar destino'}</DialogTitle>
             <DialogDescription>

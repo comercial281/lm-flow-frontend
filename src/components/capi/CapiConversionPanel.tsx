@@ -172,7 +172,7 @@ function PainelConversaoMeta({
                 key={event.event_name}
                 type="button"
                 size="sm"
-                variant={sent ? 'default' : 'outline'}
+                variant={sent ? 'default' : 'outline'} aria-pressed={sent}
                 disabled={Boolean(sending) || travado}
                 onClick={() => handleSend(event)}
                 title={dica}
@@ -228,7 +228,7 @@ function PainelConversaoMeta({
               key={event.event_name}
               type="button"
               size="sm"
-              variant={sent ? 'default' : 'outline'}
+              variant={sent ? 'default' : 'outline'} aria-pressed={sent}
               disabled={Boolean(sending) || travado}
               onClick={() => handleSend(event)}
               title={CAPI_MANUAL_HINTS[event.event_name] ?? ''}

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Home, Loader2, MessageCircle, MoreHorizontal, Plus } from 'lucide-react';
+import { ArrowLeft, Home, Loader2, MessageCircle, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
+  Card,
   Button, Dialog, DialogContent, DialogHeader, DialogTitle, DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuTrigger, Label, Textarea,
 } from '@/components/ui/ds';
-import { BaseHeader, EmptyState, Pagina } from '@/components/base';
+import { BaseHeader, BotaoMaisAcoes, EmptyState, Pagina } from '@/components/base';
 import { useCan } from '@/hooks/useCan';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { cn } from '@/lib/utils';
@@ -60,10 +61,14 @@ function Cartao({ imovel, gestor, aoAbrirDados }: { imovel: ImovelDoProprietario
       </div>
     </>
   );
-  const classe = 'block overflow-hidden rounded-xl border bg-card text-left shadow-sm transition-colors hover:border-primary/40';
-  return gestor
-    ? <Link to={`/properties/${imovel.id}/editar`} className={classe}>{corpo}</Link>
-    : <button type="button" onClick={aoAbrirDados} className={classe}>{corpo}</button>;
+  const classe = 'block w-full text-left';
+  return (
+    <Card className="gap-0 overflow-hidden py-0 transition-colors hover:border-primary/40">
+      {gestor
+        ? <Link to={`/properties/${imovel.id}/editar`} className={classe}>{corpo}</Link>
+        : <button type="button" onClick={aoAbrirDados} className={classe}>{corpo}</button>}
+    </Card>
+  );
 }
 
 /** O que o corretor vê do imóvel: só os dados internos (a página de cadastro é do gestor). */
@@ -219,10 +224,10 @@ export default function FichaDoProprietario() {
               {gestor && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" aria-label="Mais ações"><MoreHorizontal className="h-4 w-4" /></Button>
+                    <BotaoMaisAcoes />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem className="text-destructive" onClick={() => void excluir()}>Excluir proprietário</DropdownMenuItem>
+                    <DropdownMenuItem variant="destructive" onClick={() => void excluir()}><Trash2 className="h-4 w-4" />Excluir proprietário</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -244,7 +249,7 @@ export default function FichaDoProprietario() {
           )}
         </div>
         {dono.properties.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum imóvel ligado a este proprietário.</p>
+          <EmptyState tamanho="compacto" title="Nenhum imóvel ligado a este proprietário." />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {dono.properties.map(p => <Cartao key={p.id} imovel={p} gestor={gestor} aoAbrirDados={() => setImovelAberto(p)} />)}
@@ -291,7 +296,7 @@ export default function FichaDoProprietario() {
       <section className="space-y-2">
         <h2 className="text-base font-semibold">Histórico de status</h2>
         {dono.history.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma troca ainda.</p>
+          <EmptyState tamanho="compacto" title="Nenhuma troca ainda." />
         ) : (
           <ul className="space-y-1 text-sm">
             {[...dono.history].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).map((h, i) => (

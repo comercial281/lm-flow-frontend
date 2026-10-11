@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 import { Card, CardContent } from '@evoapi/design-system/card';
 import {
   Tooltip,
@@ -663,7 +663,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             <div className="order-3 ml-auto md:ml-0 flex-shrink-0 flex items-center gap-1.5 md:pb-1">
               {canSendAudio && replyMode === ReplyMode.REPLY && !isPendingConversation && (
                 <Button
-                  variant={isRecordingAudio ? 'default' : 'ghost'}
+                  variant={isRecordingAudio ? 'default' : 'ghost'} aria-pressed={isRecordingAudio}
                   size="icon"
                   disabled={isDisabled || isSending}
                   className={

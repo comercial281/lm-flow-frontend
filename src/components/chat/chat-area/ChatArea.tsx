@@ -8,7 +8,7 @@ import { useConversationModerations } from '@/hooks/chat/useConversationModerati
 import { useAppDataStore } from '@/store/appDataStore';
 
 
-import { Button } from '@evoapi/design-system/button';
+import { Button } from '@/components/ui/ds';
 
 import { MessageSkeleton } from '../loading-states';
 import { NoMessages } from '../empty-states';

@@ -6,13 +6,14 @@
 import { Suspense, type ComponentType } from 'react';
 import type { PipelineItem } from '@/types/analytics';
 import { lazyWithRetry } from '@/utils/chunkReload';
+import Carregando from '@/components/base/Carregando';
 
 export type BlocoDoCard = ComponentType<{ item: PipelineItem }>;
 
 const TarefasDoLead = lazyWithRetry(() => import('@/features/tarefas/TarefasDoLead'));
 
 export const BlocoDeTarefas: BlocoDoCard | null = ({ item }) => (
-  <Suspense fallback={null}>
+  <Suspense fallback={<Carregando linhas={2} />}>
     <TarefasDoLead pipelineItemIds={[String(item.id)]} criarNoCard={String(item.id)} />
   </Suspense>
 );

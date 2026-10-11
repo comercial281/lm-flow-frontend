@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Button } from '@/components/ui/ds';
+import { Card, Button } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { Loader2, Check, Lightbulb, Users, MessageSquare, Sparkles, X } from 'lucide-react';
 import { dolar, plural } from '@/lib/formato';
 import { salesAgentsService, type SalesAgent, type SalesAgentSuggestion, type SuggestionsPayload } from '@/services/salesAgents/salesAgentsService';
 import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
 import { Seletor } from '@/components/base/Seletor';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 
 // ---------------- Sugestões (a IA relê as conversas e propõe melhorias) ----------------
 
@@ -26,6 +28,8 @@ const SUGGESTION_STYLE: Record<string, string> = {
 export default function TelaSugestoes({ agent }: { agent: SalesAgent }) {
   const [data, setData] = useState<SuggestionsPayload | null>(null);
   const [loading, setLoading] = useState(true);
+  // Falha na leitura não vira "Nenhuma sugestão ainda".
+  const [erroAoCarregar, setErroAoCarregar] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [days, setDays] = useState(30);
   const [mostrarDescartadas, setMostrarDescartadas] = useState(false);
@@ -35,7 +39,9 @@ export default function TelaSugestoes({ agent }: { agent: SalesAgent }) {
     setLoading(true);
     try {
       setData(await salesAgentsService.listSuggestions(agent.id));
+      setErroAoCarregar(false);
     } catch {
+      setErroAoCarregar(true);
       // Leitura que a própria tela dispara ao abrir não grita: o pedaço
       // simplesmente não aparece. Aviso é para quando a pessoa clicou.
     } finally {
@@ -181,7 +187,7 @@ export default function TelaSugestoes({ agent }: { agent: SalesAgent }) {
       </div>
 
       {/* Automático */}
-      <div className="rounded-lg border border-sidebar-border bg-sidebar p-4 space-y-2">
+      <Card className="gap-2 p-4">
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
             type="checkbox"
@@ -215,16 +221,24 @@ export default function TelaSugestoes({ agent }: { agent: SalesAgent }) {
             </Seletor>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Lista */}
       {loading && !data ? (
-        <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        <Carregando className="py-2" />
+      ) : !data && erroAoCarregar ? (
+        <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />
       ) : visiveis.length === 0 ? (
-        <p className="text-sm text-muted-foreground rounded-lg border border-sidebar-border bg-sidebar p-4">
-          Nenhuma sugestão ainda. Clique em <span className="font-medium">Analisar agora</span> — a IA
-          precisa de conversas atendidas no período para encontrar um padrão.
-        </p>
+        <EmptyState
+          icon={Lightbulb}
+          title="Nenhuma sugestão ainda."
+          description={
+            <>
+              Clique em <span className="font-medium">Analisar agora</span> — a IA precisa de conversas atendidas no
+              período para encontrar um padrão.
+            </>
+          }
+        />
       ) : (
         <ul className="space-y-3">
           {visiveis.map((s) => (

@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import LoadingScreen from '@/components/LoadingScreen';
 
 interface PrivateRouteProps {
   children: ReactNode;
@@ -12,14 +13,7 @@ const PrivateRoute = ({ children }: PrivateRouteProps) => {
 
   // Mostrar loading enquanto verifica autenticação
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-sm text-muted-foreground">Verificando autenticação...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen fullScreen />;
   }
 
   // Redirecionar para login se não estiver autenticado, preservando o destino.

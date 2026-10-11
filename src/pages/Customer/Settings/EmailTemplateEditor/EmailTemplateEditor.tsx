@@ -19,6 +19,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 import EmailEditorComponent, { EditorRef } from 'react-email-editor';
 import { useLanguage } from '@/hooks/useLanguage';
 import BaseHeader from '@/components/base/BaseHeader';
+import Carregando from '@/components/base/Carregando';
 import MessageTemplateService, {
   getChannelTemplateConfig,
 } from '@/services/channels/messageTemplatesService';
@@ -273,14 +274,12 @@ const EmailTemplateEditor: React.FC = () => {
           }
           subtitle={t('settings.messageTemplates.editor.subtitle')}
         />
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-            <p className="text-sidebar-foreground/60">
-              {t('settings.messageTemplates.editor.loadingTemplate')}
-            </p>
-          </div>
-        </div>
+        <Carregando
+          variante="texto"
+          linhas={6}
+          rotulo={t('settings.messageTemplates.editor.loadingTemplate')}
+          className="p-4"
+        />
       </div>
     );
   }
@@ -428,13 +427,12 @@ const EmailTemplateEditor: React.FC = () => {
           style={{ position: 'relative', minHeight: 0 }}
         >
           {!isEditorReady && !isLegacyHtml && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background z-10 rounded-lg">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-4 text-sidebar-foreground/60">
-                  {t('settings.messageTemplates.editor.loadingEditor')}
-                </p>
-              </div>
+            <div className="absolute inset-0 bg-background z-10 rounded-lg p-6">
+              <Carregando
+                variante="texto"
+                linhas={8}
+                rotulo={t('settings.messageTemplates.editor.loadingEditor')}
+              />
             </div>
           )}
           {isLegacyHtml && isEditorReady ? (

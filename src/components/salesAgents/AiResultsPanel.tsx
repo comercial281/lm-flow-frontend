@@ -1,6 +1,6 @@
 import { useId, useState, type ReactNode } from 'react';
 import {
-  Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import {
   ArrowRight, BarChart3, CalendarCheck, Clock, Moon, MessageSquare,
@@ -8,7 +8,10 @@ import {
 } from 'lucide-react';
 
 import type { PerformanceCounts, PerformancePoint } from '@/types/aiResults';
+import EmptyState from '@/components/base/EmptyState';
 import { COLOR_LEADS, COLOR_VISITS, dayLabel, int, latency, pct } from './aiResultsFormat';
+import { Card } from '@/components/ui/ds';
+import { CANTOS_DA_BARRA, CLASSE_DA_DICA, COR_DO_EIXO, EIXO_DO_GRAFICO } from '@/components/base/grafico';
 
 // O painel de Resultados da IA, usado em DOIS lugares: na Área do Admin (todos os
 // clientes, ou um escolhido) e na aba Resultados da IA dentro do CRM do cliente.
@@ -27,11 +30,9 @@ import { COLOR_LEADS, COLOR_VISITS, dayLabel, int, latency, pct } from './aiResu
 //    cento acusa a IA de um fracasso que não houve, e seria exatamente o que
 //    estaria projetado no cliente que acabou de ligar a IA.
 
-// Cinza dos eixos e da grade: recessivo o bastante pra não competir com os dados
-// e legível sobre fundo claro e escuro, sem depender de variável de tema.
-const AXIS = '#94a3b8';
-
-const axisTick = { fill: AXIS, fontSize: 11 };
+// Os gráficos seguem o desenho do Painel (peça 21 do GLOSSARIO): sem grade, eixo
+// cinza de 11 px sem linha, barra com cantos de 4 px no topo e dica com cantos
+// de 10 px. As medidas e as cores moram em components/base/grafico.ts.
 
 interface Props {
   counts: PerformanceCounts;
@@ -82,9 +83,7 @@ export default function AiResultsPanel({ counts, series, caption, seriesTitle }:
         </div>
 
         {!hasMovement ? (
-          <p className="text-sm text-muted-foreground rounded-lg border border-sidebar-border bg-sidebar p-4">
-            Nenhum atendimento registrado neste período.
-          </p>
+          <EmptyState tamanho="compacto" title="Nenhum atendimento registrado neste período." />
         ) : asTable ? (
           <DailyTable series={series} />
         ) : (
@@ -102,12 +101,11 @@ export default function AiResultsPanel({ counts, series, caption, seriesTitle }:
                       <stop offset="100%" stopColor={COLOR_LEADS} stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid stroke={AXIS} strokeOpacity={0.2} vertical={false} />
-                  <XAxis dataKey="day" tickFormatter={(value) => dayLabel(value)} tick={axisTick} tickLine={false} axisLine={false} minTickGap={22} />
-                  <YAxis tick={axisTick} tickLine={false} axisLine={false} allowDecimals={false} width={40} />
+                  <XAxis dataKey="day" tickFormatter={(value) => dayLabel(value)} {...EIXO_DO_GRAFICO} minTickGap={22} />
+                  <YAxis {...EIXO_DO_GRAFICO} allowDecimals={false} width={40} />
                   <Tooltip
                     content={<ChartTip title="Leads atendidos" color={COLOR_LEADS} dataKey="leads" />}
-                    cursor={{ stroke: AXIS, strokeOpacity: 0.5, strokeWidth: 1 }}
+                    cursor={{ stroke: COR_DO_EIXO, strokeOpacity: 0.5, strokeWidth: 1 }}
                   />
                   <Area type="monotone" dataKey="leads" stroke={COLOR_LEADS} strokeWidth={2} fill={`url(#${gradientId})`} />
                 </AreaChart>
@@ -117,14 +115,13 @@ export default function AiResultsPanel({ counts, series, caption, seriesTitle }:
             <ChartCard title="Visitas agendadas pela IA" hint="Visitas que a própria IA marcou na conversa, sem corretor.">
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={series} margin={{ top: 8, right: 8, left: -20, bottom: 0 }} barCategoryGap="25%">
-                  <CartesianGrid stroke={AXIS} strokeOpacity={0.2} vertical={false} />
-                  <XAxis dataKey="day" tickFormatter={(value) => dayLabel(value)} tick={axisTick} tickLine={false} axisLine={false} minTickGap={22} />
-                  <YAxis tick={axisTick} tickLine={false} axisLine={false} allowDecimals={false} width={40} />
+                  <XAxis dataKey="day" tickFormatter={(value) => dayLabel(value)} {...EIXO_DO_GRAFICO} minTickGap={22} />
+                  <YAxis {...EIXO_DO_GRAFICO} allowDecimals={false} width={40} />
                   <Tooltip
                     content={<ChartTip title="Visitas agendadas" color={COLOR_VISITS} dataKey="visits" />}
-                    cursor={{ fill: AXIS, fillOpacity: 0.12 }}
+                    cursor={{ fill: COR_DO_EIXO, fillOpacity: 0.12 }}
                   />
-                  <Bar dataKey="visits" fill={COLOR_VISITS} radius={[4, 4, 0, 0]} maxBarSize={28} />
+                  <Bar dataKey="visits" fill={COLOR_VISITS} radius={CANTOS_DA_BARRA} maxBarSize={28} />
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
@@ -143,7 +140,7 @@ export default function AiResultsPanel({ counts, series, caption, seriesTitle }:
 // independentes que por acaso ficaram lado a lado.
 function Funnel({ counts, caption }: { counts: PerformanceCounts; caption: string }) {
   return (
-    <div className="rounded-lg border border-sidebar-border bg-sidebar p-5">
+    <Card className="gap-0 p-5">
       <div className="flex items-baseline gap-2 mb-4">
         <Users className="h-4 w-4 text-muted-foreground self-center" />
         <span className="text-xs text-muted-foreground">{caption}</span>
@@ -179,7 +176,7 @@ function Funnel({ counts, caption }: { counts: PerformanceCounts; caption: strin
           color={COLOR_VISITS}
         />
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -217,12 +214,12 @@ function Small({
   hint?: string;
 }) {
   return (
-    <div className="rounded-lg border border-sidebar-border bg-sidebar p-3" title={hint}>
+    <Card className="gap-0 p-3" title={hint}>
       <div className="text-xs text-muted-foreground flex items-center gap-1.5">
         <Icon className="h-3.5 w-3.5" /> {label}
       </div>
       <div className="text-lg font-semibold mt-1">{value}</div>
-    </div>
+    </Card>
   );
 }
 
@@ -230,13 +227,13 @@ function Small({
 
 function ChartCard({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-sidebar-border bg-sidebar p-4">
+    <Card className="gap-0 p-4">
       <div className="mb-3">
         <div className="text-sm font-medium">{title}</div>
         <div className="text-xs text-muted-foreground">{hint}</div>
       </div>
       {children}
-    </div>
+    </Card>
   );
 }
 
@@ -260,8 +257,8 @@ function ChartTip({
   const point = payload[0].payload;
 
   return (
-    <div className="rounded-lg border border-sidebar-border bg-popover text-popover-foreground px-3 py-2 shadow-lg">
-      <div className="text-xs text-muted-foreground">{dayLabel(point.day, true)}</div>
+    <div className={CLASSE_DA_DICA}>
+      <div className="text-muted-foreground">{dayLabel(point.day, true)}</div>
       <div className="text-sm font-semibold flex items-center gap-1.5 mt-0.5">
         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
         {int(point[dataKey])} <span className="font-normal text-muted-foreground">{title.toLowerCase()}</span>
@@ -272,7 +269,7 @@ function ChartTip({
 
 function DailyTable({ series }: { series: PerformancePoint[] }) {
   return (
-    <div className="rounded-lg border border-sidebar-border bg-sidebar overflow-x-auto">
+    <Card className="gap-0 overflow-x-auto py-0">
       <table className="w-full text-sm">
         <thead>
           <tr className="text-xs text-muted-foreground border-b border-sidebar-border">
@@ -293,6 +290,6 @@ function DailyTable({ series }: { series: PerformancePoint[] }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </Card>
   );
 }

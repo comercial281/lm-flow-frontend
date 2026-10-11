@@ -6,6 +6,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button, Switch } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
+import EmptyState from '@/components/base/EmptyState';
 import { plural } from '@/lib/formato';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
 import {
@@ -225,9 +227,9 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
   return (
     <div className="space-y-4">
       {rascunho && (
-        <p role="status" className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-500">
+        <Aviso tom="atencao">
           Este imóvel está em rascunho: nada sai no site, nos portais nem na IA até a situação mudar para Disponível.
-        </p>
+        </Aviso>
       )}
       <div className="space-y-3">
         {MARCAS.map(({ campo, rotulo }) => (
@@ -248,7 +250,7 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
         ) : estados === null ? (
           <p className="pt-3 text-sm text-muted-foreground">Carregando portais...</p>
         ) : estados.length === 0 ? (
-          <p className="pt-3 text-sm text-muted-foreground">Nenhum portal conectado. {linkConectar}</p>
+          <EmptyState tamanho="compacto" title="Nenhum portal conectado." description={linkConectar} className="mt-3" />
         ) : (
           <>
             {estados.map(linhaDoPortal)}

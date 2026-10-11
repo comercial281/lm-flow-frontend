@@ -201,4 +201,29 @@ describe('Aba Visitas e propostas do card', () => {
     await screen.findByText('Agendada');
     expect(screen.queryByRole('button', { name: /Cancelar visita/ })).not.toBeInTheDocument();
   });
+  it('visitas e propostas que não carregaram mostram erro com Tentar de novo, não a lista vazia', async () => {
+    listVisitas.mockRejectedValueOnce(new Error('Network Error'));
+    listPropostas.mockRejectedValueOnce(new Error('Network Error'));
+    abrir();
+
+    expect(await screen.findAllByRole('alert')).toHaveLength(2);
+    expect(screen.queryByText(/Nenhuma visita com este lead/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nenhuma proposta deste lead/)).not.toBeInTheDocument();
+
+    const [tentarVisitas, tentarPropostas] = screen.getAllByRole('button', { name: 'Tentar de novo' });
+    await userEvent.click(tentarVisitas);
+    expect(await screen.findByText('Amou a varanda')).toBeInTheDocument();
+    await userEvent.click(tentarPropostas);
+    expect(await screen.findByText('R$ 500.000,00')).toBeInTheDocument();
+  });
+
+  it('sem visita nem proposta, mostra os vazios', async () => {
+    listVisitas.mockResolvedValue({ data: [], meta: { total: 0 } });
+    listPropostas.mockResolvedValue({ data: [], meta: { total: 0 } });
+    abrir();
+
+    expect(await screen.findByText('Nenhuma visita com este lead ainda.')).toBeInTheDocument();
+    expect(await screen.findByText(/Nenhuma proposta deste lead/)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { AlertTriangle, Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 import {
   Button,
   Dialog,
@@ -14,6 +14,7 @@ import { usersService } from '@/services/users';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import type { DeactivationPreview } from '@/types/users';
 import { eraseVerdict, type DeactivatablePerson } from '@/features/users/deactivation/deactivationRules';
+import Aviso from '@/components/base/Aviso';
 
 interface Props {
   open: boolean;
@@ -91,15 +92,12 @@ export default function EraseUserDialog({ open, user, onClose, onDone }: Props) 
               Conferindo se ele já foi usado...
             </div>
           ) : verdict.allowed ? (
-            <div className="rounded-md border border-border bg-muted/30 p-3">
+            <Aviso tom="neutro">
               Ninguém encontrou lead, conversa, mensagem ou oferta no nome dele. Pode excluir: o e-mail
               fica livre para um cadastro novo.
-            </div>
+            </Aviso>
           ) : (
-            <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{verdict.reason}</span>
-            </div>
+            <Aviso tom="atencao">{verdict.reason}</Aviso>
           )}
         </div>
 
