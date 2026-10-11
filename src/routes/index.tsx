@@ -154,6 +154,7 @@ const AdminClientePagina = lazyWithRetry(() => import('@/pages/SuperAdmin/Pooled
 const AdminNumeros = lazyWithRetry(() => import('@/pages/SuperAdmin/NumberOwnership'));
 const AdminUsuarios = lazyWithRetry(() => import('@/pages/SuperAdmin/Usuarios'));
 const AdminFichaDoUsuario = lazyWithRetry(() => import('@/pages/SuperAdmin/Usuarios/Ficha'));
+const AdminChavesMcp = lazyWithRetry(() => import('@/pages/SuperAdmin/ChavesMcp'));
 const AdminLogs = lazyWithRetry(() => import('@/pages/SuperAdmin/Logs'));
 const AdminMensagemDeAcesso = lazyWithRetry(() => import('@/pages/SuperAdmin/MensagemDeAcesso'));
 const AdminAvisosNaTela = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral/NotificationsTab'));
@@ -1373,6 +1374,7 @@ const AppRouter = () => {
               <Route path="/admin/academia" element={<AdminAcademia />} />
               <Route path="/admin/plataforma" element={<AdminPlataforma />} />
               <Route path="/admin/plataforma/kit-boas-vindas" element={<AdminKitBoasVindas />} />
+              <Route path="/admin/plataforma/mcp" element={<AdminConteudo><AdminChavesMcp /></AdminConteudo>} />
               <Route path="/admin/plataforma/menus-arquivados" element={<AdminConteudo><AdminMenusArquivados /></AdminConteudo>} />
               <Route path="/admin/plataforma/sugestoes-e-bugs" element={<Navigate to="/admin/suporte" replace />} />
               {/* IA Vendedora */}

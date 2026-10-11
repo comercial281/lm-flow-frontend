@@ -13,6 +13,8 @@ export interface LogItem {
   actor_email: string | null;
   actor_type: string | null;
   sensitive: boolean;
+  source?: string | null;
+  mcp_key_name?: string | null;
 }
 
 export interface LogsPage {
