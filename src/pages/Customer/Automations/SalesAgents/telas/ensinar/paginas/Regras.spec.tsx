@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
@@ -41,7 +41,7 @@ describe('Regras', () => {
     await userEvent.click(botao);
     expect(criar).toHaveBeenCalledTimes(1);
     expect(criar).toHaveBeenCalledWith('rule', 'Não prometa aprovação');
-    soltar(true);
+    await act(async () => { soltar(true); });
   });
 
   it('a chave pausa', async () => {
