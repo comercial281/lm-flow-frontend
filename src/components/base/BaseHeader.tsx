@@ -69,6 +69,8 @@ export interface BaseHeaderProps {
   aoLadoDaBusca?: ReactNode;
   /** Na linha do título, logo depois dele (tela de detalhe: o selo da situação). */
   aoLadoDoTitulo?: ReactNode;
+  /** Tela de detalhe de uma pessoa (página do card): a foto no lugar da barrinha. */
+  foto?: ReactNode;
   className?: string;
   children?: ReactNode;
 }
@@ -93,6 +95,7 @@ export default function BaseHeader({
   bulkActions = [],
   aoLadoDaBusca,
   aoLadoDoTitulo,
+  foto,
   aDireita,
   className = '',
   children,
@@ -115,11 +118,13 @@ export default function BaseHeader({
       <div data-linha-do-titulo className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         {title !== undefined && (
           <div className="min-w-0 flex-1">
-            <div className="flex items-start gap-3">
-              <div
-                className="w-1 h-8 rounded-full shrink-0 mt-0.5"
-                style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
-              />
+            <div className={`flex gap-3 ${foto ? 'items-center sm:gap-4' : 'items-start'}`}>
+              {foto ?? (
+                <div
+                  className="w-1 h-8 rounded-full shrink-0 mt-0.5"
+                  style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
+                />
+              )}
               <div className="min-w-0">
                 {aoLadoDoTitulo ? (
                   <div className="flex flex-wrap items-center gap-2">

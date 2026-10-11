@@ -32,7 +32,7 @@ export type FlowTriggerEvent =
   | 'lead.created' | 'lead.campaign_received'
   | 'lead.roleta_accepted' | 'lead.message_received'
   | 'lead.stage_changed' | 'lead.tag_added'
-  | 'lead.visit_scheduled' | 'lead.visit_completed'
+  | 'lead.visit_scheduled' | 'lead.visit_rescheduled' | 'lead.visit_completed'
   | 'lead.visit_reminder_24h' | 'lead.visit_reminder_1h' | 'lead.visit_reminder_15min'
   | 'lead.interest_created' | 'lead.book_requested'
   | 'flow_called';

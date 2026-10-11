@@ -29,6 +29,22 @@ export function contatoDoCard(item: PipelineItem | null | undefined): ContatoDoC
 }
 
 /**
+ * O responsável que VEIO NO CARD com este id (nome e foto), sem depender da
+ * lista de pessoas — que o corretor não lê. É o `assignee` do card (conversa OU
+ * dono do contato, resolvido pelo servidor) e, em reserva, o da conversa: o
+ * card guarda o id de um ou do outro (`useCardDoLead`). Id que não bate com
+ * nenhum dos dois (o gestor acabou de trocar) devolve null: aí vale a lista.
+ */
+export function responsavelNoCard(
+  item: PipelineItem | null | undefined,
+  id: string | null | undefined,
+): { name: string; avatar_url?: string | null } | null {
+  if (!item || !id) return null;
+  const candidatos = [item.assignee, item.conversation?.assignee];
+  return candidatos.find(p => p && String(p.id) === id && p.name) ?? null;
+}
+
+/**
  * A conversa de WhatsApp do lead: a do card, ou a que o servidor achou para o
  * lead de formulário (`whatsapp_conversation_id`).
  */

@@ -104,8 +104,10 @@ describe('Formulário de contato · cadastro enxuto', () => {
   it('não pergunta empresa, redes sociais, tipo, país nem cidade', () => {
     abrir(null, true);
 
+    // A lista de países do telefone (em português desde 10/10/2026: "Países
+    // Baixos", "Cidade do Vaticano"…) não é pergunta do formulário: fica de fora.
     for (const fora of [/empresa/i, /linkedin/i, /instagram/i, /pa[ií]s/i, /cidade/i, /pessoa f[ií]sica/i]) {
-      expect(screen.queryByText(fora)).not.toBeInTheDocument();
+      expect(screen.queryByText(fora, { ignore: 'script, style, option' })).not.toBeInTheDocument();
     }
   });
 

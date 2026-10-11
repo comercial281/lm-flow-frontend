@@ -1,9 +1,11 @@
 // src/features/cardDoLead/blocos/BlocoIdentidade.tsx
 // Quem é o lead. Na janela: foto, nome grande, telefone, e-mail e o selo da
-// origem, com os botões do topo ao lado. Na página o nome já é o título: o
-// bloco vira "Dados da pessoa". O lápis só aparece com o que o servidor libera:
-// nome (`name_editable`: responsável ou gestor, 11/10) e telefone/e-mail
-// (`identity_correctable`: gestor em lead cadastrado à mão, 02/10).
+// origem, com os botões do topo ao lado. Na página (11/10/2026, "cartão da
+// pessoa") os dados vão pro cartão do topo (`DadosDaPessoa`, no
+// CardDoLeadHeader) e a Ficha não tem mais a caixa "Dados da pessoa". O lápis só
+// aparece com o que o servidor libera: nome (`name_editable`: responsável ou
+// gestor, 11/10) e telefone/e-mail (`identity_correctable`: gestor em lead
+// cadastrado à mão, 02/10).
 import type { ReactNode } from 'react';
 import { Mail, Pencil, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
@@ -13,62 +15,87 @@ import SeloSituacao from '@/features/pipelines/situacao/SeloSituacao';
 import { detalheDaSituacao, situacaoDe } from '@/features/pipelines/situacao/situacao';
 import { classeDaOrigem } from '../cardDoLead';
 import type { CardDoLead } from '../useCardDoLead';
-import CaixaDoCard from './CaixaDoCard';
 
-interface BlocoIdentidadeProps {
-  card: CardDoLead;
-  variante?: 'janela' | 'pagina';
-  /** Janela: os botões do topo (Ver card completo e ⋯). */
-  acoes?: ReactNode;
-}
-
-export default function BlocoIdentidade({ card, variante = 'janela', acoes }: BlocoIdentidadeProps) {
-  const { contato, avatarContact, nomeExibido, origem, dadosDaOrigem, corrigivel, nomeEditavel, identidade, situacao } = card;
-
-  const tituloDoLapis = corrigivel && nomeEditavel
+function LapisDeCorrigir({ card }: { card: CardDoLead }) {
+  const { corrigivel, nomeEditavel, contato, identidade } = card;
+  if (!(corrigivel || nomeEditavel) || contato?.id == null) return null;
+  const titulo = corrigivel && nomeEditavel
     ? 'Corrigir nome, telefone ou e-mail'
     : corrigivel ? 'Corrigir telefone ou e-mail' : 'Corrigir nome';
-  const lapis = (corrigivel || nomeEditavel) && contato?.id != null ? (
+  return (
     <Button
       type="button"
       variant="ghost"
       size="sm"
-      className="h-8 w-8 p-0"
-      aria-label={tituloDoLapis}
-      title={tituloDoLapis}
+      className="h-8 w-8 shrink-0 p-0"
+      aria-label={titulo}
+      title={titulo}
       onClick={() => identidade.setCorrigindo(true)}
     >
       <Pencil className="h-3.5 w-3.5" />
     </Button>
-  ) : null;
+  );
+}
 
-  // Origem como selo, junto de quem é o lead.
-  const seloDaOrigem = origem ? (
+function SeloDaOrigem({ card, className = '' }: { card: CardDoLead; className?: string }) {
+  const { origem, dadosDaOrigem } = card;
+  if (!origem) return null;
+  return (
     <span
-      className={`mt-2 inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-xs font-medium ${classeDaOrigem(dadosDaOrigem)}`}
+      className={`inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-xs font-medium ${classeDaOrigem(dadosDaOrigem)} ${className}`}
       title={origem}
     >
       <span className="truncate">{origem}</span>
     </span>
-  ) : null;
+  );
+}
 
-  if (variante === 'pagina') {
-    return (
-      <CaixaDoCard titulo="Dados da pessoa" acao={lapis}>
-        <dl className="grid gap-2 text-sm sm:grid-cols-2">
-          <div className="min-w-0">
-            <dt className="text-xs text-muted-foreground">Telefone</dt>
-            <dd className="lm-redact">{identidade.telefone ? telefone(identidade.telefone) : VAZIO}</dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-xs text-muted-foreground">E-mail</dt>
-            <dd className="truncate" title={identidade.email || undefined}>{identidade.email || VAZIO}</dd>
-          </div>
-        </dl>
-        {seloDaOrigem}
-      </CaixaDoCard>
-    );
-  }
+function Campo({ rotulo, title, className = '', children }: {
+  rotulo: string;
+  title?: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={`min-w-0 ${className}`}>
+      <dt className="text-xs text-muted-foreground">{rotulo}</dt>
+      <dd className="truncate font-medium" title={title}>{children}</dd>
+    </div>
+  );
+}
+
+/**
+ * Página do card: telefone, origem, e-mail e roleta no cartão do topo. Com o
+ * cartão estreito (celular) o e-mail ocupa a linha inteira (não corta); a
+ * roleta só aparece quando o lead veio por uma.
+ */
+export function DadosDaPessoa({ card, className = '' }: { card: CardDoLead; className?: string }) {
+  const { identidade, roletaDoLead } = card;
+  return (
+    <div role="group" aria-label="Dados da pessoa" className={`flex min-w-0 items-start gap-2 ${className}`}>
+      <dl className="grid min-w-0 flex-1 grid-cols-2 gap-x-5 gap-y-3 text-sm">
+        <Campo rotulo="Telefone">
+          <span className="lm-redact">{identidade.telefone ? telefone(identidade.telefone) : VAZIO}</span>
+        </Campo>
+        <Campo rotulo="Origem">{card.origem ? <SeloDaOrigem card={card} className="py-0.5" /> : VAZIO}</Campo>
+        <Campo rotulo="E-mail" title={identidade.email || undefined} className="col-span-2 @xl:col-span-1">
+          {identidade.email || VAZIO}
+        </Campo>
+        {roletaDoLead && <Campo rotulo="Roleta" title={roletaDoLead}>{roletaDoLead}</Campo>}
+      </dl>
+      <LapisDeCorrigir card={card} />
+    </div>
+  );
+}
+
+interface BlocoIdentidadeProps {
+  card: CardDoLead;
+  /** Os botões do topo da janela (Ver card completo e ⋯). */
+  acoes?: ReactNode;
+}
+
+export default function BlocoIdentidade({ card, acoes }: BlocoIdentidadeProps) {
+  const { avatarContact, nomeExibido, identidade, situacao } = card;
 
   return (
     <div className="flex items-start gap-3 pr-6">
@@ -95,10 +122,10 @@ export default function BlocoIdentidade({ card, variante = 'janela', acoes }: Bl
             <Mail className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{identidade.email}</span>
           </p>
         )}
-        {seloDaOrigem}
+        <SeloDaOrigem card={card} className="mt-2" />
       </div>
       <div className="flex items-center gap-0.5 shrink-0">
-        {lapis}
+        <LapisDeCorrigir card={card} />
         {acoes}
       </div>
     </div>

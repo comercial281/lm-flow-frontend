@@ -5,19 +5,20 @@
 // lateral (GRUPO A das rotas, decisão 15).
 //
 // Moldura da casa (Pagina, padrão de telas 07/10) no esqueleto de tela de
-// detalhe da Roleta: "← Funil <nome>" em cima e o nome do lead como título
-// (BaseHeader, com a barrinha), o selo da situação ao lado e, à direita,
-// Responsável, Ganho | Perdido (ou Reabrir) e o ⋯.
+// detalhe da Roleta: "← Funil <nome>" em cima e, desde 11/10 ("cartão da
+// pessoa", escolha do dono), o topo é um cartão (CardDoLeadHeader): a foto no
+// lugar da barrinha, o nome com o selo da situação, desde quando está no funil,
+// telefone, origem, e-mail e roleta, e as ações Responsável, Ganho | Perdido
+// (ou Reabrir) e o ⋯, no tamanho grande.
 //
 // Card fechado ou arquivado continua mexível: "Sobre o negócio" e criar tarefa
 // seguem disponíveis (checklist f3-06: agir no arquivado sem desarquivar).
 import { Suspense, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArchiveRestore, ArrowLeft, CalendarCheck, ClipboardList, Megaphone, MessageSquare, ShieldX } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Skeleton } from '@/components/ui/ds';
 import Abas from '@/components/base/Abas';
-import BaseHeader from '@/components/base/BaseHeader';
 import EmptyState from '@/components/base/EmptyState';
 import Pagina from '@/components/base/Pagina';
 import { lazyWithRetry } from '@/utils/chunkReload';
@@ -30,8 +31,10 @@ import { linkDoCardCompleto } from '@/features/pipelines/linkDoCard';
 import { useCardDoLead } from '@/features/cardDoLead/useCardDoLead';
 import { useCardCompleto } from '@/features/cardDoLead/pagina/useCardCompleto';
 import { SEM_ACESSO_AO_CARD } from '@/features/cardDoLead/buscarCard';
+import { voltaPeloHistorico } from '@/features/cardDoLead/paginaNoCelular';
 import FaixaDeEtapas from '@/features/cardDoLead/pagina/FaixaDeEtapas';
 import FichaDoCard from '@/features/cardDoLead/pagina/FichaDoCard';
+import CardDoLeadHeader from '@/features/cardDoLead/pagina/CardDoLeadHeader';
 import { ResponsavelComFoto } from '@/features/cardDoLead/blocos/BlocoSituacao';
 import DialogosDoCard from '@/features/cardDoLead/blocos/DialogosDoCard';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
@@ -68,7 +71,27 @@ function Carregando() {
   );
 }
 
+const CLASSE_DA_VOLTA = 'inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground';
+
+// Aberta de dentro do app no celular (paginaNoCelular.ts): voltar faz o mesmo
+// que o voltar do navegador (quadro, Contatos, Tarefas, conversa). Vale pra
+// página pronta, carregando, erro e sem acesso.
+function useVoltaPeloHistorico(): boolean {
+  return voltaPeloHistorico(useLocation().state);
+}
+
+function BotaoVoltar() {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate(-1)} className={CLASSE_DA_VOLTA}>
+      <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Voltar
+    </button>
+  );
+}
+
 function SemAcesso({ pipelineId }: { pipelineId?: string }) {
+  const navigate = useNavigate();
+  const peloHistorico = useVoltaPeloHistorico();
   return (
     <div role="status" className="flex min-h-[320px] flex-col items-center justify-center gap-3 text-center">
       <ShieldX className="h-8 w-8 text-muted-foreground" aria-hidden />
@@ -76,7 +99,9 @@ function SemAcesso({ pipelineId }: { pipelineId?: string }) {
       <p className="max-w-md text-sm text-muted-foreground">
         Ele pode ter saído do funil ou ser atendido por outra pessoa.
       </p>
-      {pipelineId && (
+      {peloHistorico ? (
+        <Button variant="outline" onClick={() => navigate(-1)}>Voltar</Button>
+      ) : pipelineId && (
         <Button asChild variant="outline">
           <Link to={enderecoDoFunil(pipelineId)}>Voltar ao funil</Link>
         </Button>
@@ -88,6 +113,7 @@ function SemAcesso({ pipelineId }: { pipelineId?: string }) {
 export default function CardCompletoPage() {
   const { pipelineId, itemId } = useParams<{ pipelineId: string; itemId: string }>();
   const { estado, tentarDeNovo, recarregar, atualizarItem } = useCardCompleto(pipelineId, itemId);
+  const peloHistorico = useVoltaPeloHistorico();
 
   if (estado.estado === 'pronto') {
     return (
@@ -101,17 +127,16 @@ export default function CardCompletoPage() {
   }
 
   // Erro: além do "Tentar de novo", a volta ao funil (o sem-acesso tem a dele no meio).
+  // Aberta de dentro do app (celular): "← Voltar" já no carregando e no erro.
   const voltaNoErro = estado.estado === 'erro' && pipelineId ? (
-    <Link
-      to={enderecoDoFunil(pipelineId)}
-      className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-    >
+    <Link to={enderecoDoFunil(pipelineId)} className={CLASSE_DA_VOLTA}>
       <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Voltar ao funil
     </Link>
   ) : undefined;
+  const acima = peloHistorico && estado.estado !== 'sem-acesso' ? <BotaoVoltar /> : voltaNoErro;
 
   return (
-    <Pagina acima={voltaNoErro}>
+    <Pagina acima={acima}>
       {estado.estado === 'carregando' && <Carregando />}
       {estado.estado === 'sem-acesso' && <SemAcesso pipelineId={pipelineId} />}
       {estado.estado === 'erro' && <EmptyState tipo="erro" aoTentarDeNovo={() => void tentarDeNovo()} />}
@@ -126,6 +151,7 @@ function ConteudoDoCard({ dados, recarregar, atualizarItem }: {
 }) {
   const { item, pipeline, stage_durations: duracoes } = dados;
   const navigate = useNavigate();
+  const location = useLocation();
   const [params, setParams] = useSearchParams();
   const pedida = params.get('aba') ?? '';
   const aba = CHAVES_DAS_ABAS.has(pedida) ? pedida : 'ficha';
@@ -133,7 +159,9 @@ function ConteudoDoCard({ dados, recarregar, atualizarItem }: {
     const p = new URLSearchParams(params);
     if (chave === 'ficha') p.delete('aba');
     else p.set('aba', chave);
-    setParams(p, { replace: true });
+    // O estado vai junto: sem ele, trocar de aba apagava o "← Voltar" do celular
+    // (o setSearchParams do React Router 7 não leva o state sozinho).
+    setParams(p, { replace: true, state: location.state });
   };
 
   // A faixa recebe as etapas JÁ em ordem de posição (o servidor não garante a ordem).
@@ -218,6 +246,8 @@ function ConteudoDoCard({ dados, recarregar, atualizarItem }: {
   };
 
   const voltarAoFunil = () => navigate(enderecoDoFunil(pipeline.id));
+  // Pelo link ou em outra guia, continua o "← Funil <nome>".
+  const peloHistorico = voltaPeloHistorico(location.state);
   const contato = card.contato;
   // A situação mais nova (a resposta do servidor por cima do que veio).
   const itemDaSituacao = card.situacao.item ?? item;
@@ -225,47 +255,49 @@ function ConteudoDoCard({ dados, recarregar, atualizarItem }: {
   return (
     <Pagina
       acima={
-        <Link
-          to={enderecoDoFunil(pipeline.id)}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Funil {pipeline.name}
-        </Link>
+        peloHistorico ? (
+          <BotaoVoltar />
+        ) : (
+          <Link to={enderecoDoFunil(pipeline.id)} className={CLASSE_DA_VOLTA}>
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Funil {pipeline.name}
+          </Link>
+        )
       }
       cabecalho={
-        <BaseHeader
-          title={card.nomeExibido}
+        <CardDoLeadHeader
+          card={card}
+          criadoEm={item.created_at}
           // Selo da situação (Parte 3): nada em "open"; data e motivo ao passar o mouse.
           aoLadoDoTitulo={<SeloSituacao status={situacaoDe(itemDaSituacao)} detalhe={detalheDaSituacao(itemDaSituacao)} />}
-          aDireita={
-            <div className="flex flex-wrap items-end gap-3">
-              {(item.conversation?.id || contato?.id) && (
-                <div className="w-56">
-                  <ResponsavelComFoto card={card} />
+          acoes={
+            <>
+              {(item.conversation?.id || contato?.id) && <ResponsavelComFoto card={card} />}
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  {/* Ganho | Perdido ou Reabrir (Parte 3), com a trava cruzada da Etapa (P3-T5). */}
+                  <CardResultFooter
+                    item={itemDaSituacao}
+                    onMudou={aoMudarSituacao}
+                    bloqueado={card.etapa.movendo || ganhando}
+                    onSalvando={card.situacao.setRodapeSalvando}
+                    tamanho="grande"
+                  />
                 </div>
-              )}
-              <div className="w-56">
-                {/* Ganho | Perdido ou Reabrir (Parte 3), com a trava cruzada da Etapa (P3-T5). */}
-                <CardResultFooter
-                  item={itemDaSituacao}
-                  onMudou={aoMudarSituacao}
-                  bloqueado={card.etapa.movendo || ganhando}
-                  onSalvando={card.situacao.setRodapeSalvando}
+                <CardMoreMenu
+                  item={item}
+                  roletas={card.roleta.ligadas}
+                  trocandoRoleta={card.roleta.mandando}
+                  onTrocarRoleta={card.roleta.mandar}
+                  onTirarDaRoleta={card.roleta.ofertasAbertas.length > 0 ? () => card.roleta.setTirando(true) : undefined}
+                  onRemovido={voltarAoFunil}
+                  onJuntar={card.juntar.pode && contato?.id != null ? () => card.juntar.setJuntando(true) : undefined}
+                  linkDoCard={linkDoCardCompleto(pipeline.id, item.id)}
+                  onArquivar={arquivado ? undefined : () => void alternarArquivo()}
+                  onDesarquivar={arquivado ? () => void alternarArquivo() : undefined}
+                  grande
                 />
               </div>
-              <CardMoreMenu
-                item={item}
-                roletas={card.roleta.ligadas}
-                trocandoRoleta={card.roleta.mandando}
-                onTrocarRoleta={card.roleta.mandar}
-                onTirarDaRoleta={card.roleta.ofertasAbertas.length > 0 ? () => card.roleta.setTirando(true) : undefined}
-                onRemovido={voltarAoFunil}
-                onJuntar={card.juntar.pode && contato?.id != null ? () => card.juntar.setJuntando(true) : undefined}
-                linkDoCard={linkDoCardCompleto(pipeline.id, item.id)}
-                onArquivar={arquivado ? undefined : () => void alternarArquivo()}
-                onDesarquivar={arquivado ? () => void alternarArquivo() : undefined}
-              />
-            </div>
+            </>
           }
         />
       }

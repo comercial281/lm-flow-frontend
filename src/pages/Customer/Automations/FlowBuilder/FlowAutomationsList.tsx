@@ -213,7 +213,7 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
                   <div className="text-xs text-muted-foreground">{f.automations_count} itens · {f.enabled_count} ligados</div>
                 </div>
               </button>
-              <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+              <div className="hidden group-hover:flex toque:flex items-center gap-0.5 shrink-0">
                 <button onClick={ev => renameFolder(f, ev)} title="Renomear" className="p-1 rounded hover:bg-accent">
                   <Pencil className="h-3 w-3 text-muted-foreground" />
                 </button>

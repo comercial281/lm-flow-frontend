@@ -65,3 +65,17 @@ describe('ContactAvatar', () => {
     expect(foto.getAttribute('src')).toBe('https://exemplo.com/caio.jpg');
   });
 });
+
+describe('ContactAvatar sem foto nem nome', () => {
+  it('mostra o balão de conversa por padrão (lead)', () => {
+    const { container } = render(<ContactAvatar contact={{ id: 'x', name: '' }} />);
+    expect(container.querySelector('.lucide-message-circle')).not.toBeNull();
+  });
+
+  it('com iconeSemNome mostra o ícone pedido (ex.: pessoa, no responsável do card)', async () => {
+    const { User } = await import('lucide-react');
+    const { container } = render(<ContactAvatar contact={{ id: 'x', name: '' }} iconeSemNome={User} />);
+    expect(container.querySelector('.lucide-user')).not.toBeNull();
+    expect(container.querySelector('.lucide-message-circle')).toBeNull();
+  });
+});

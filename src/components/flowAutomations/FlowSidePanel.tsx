@@ -2,6 +2,7 @@ import { useId, type ReactNode } from 'react';
 import { X, type LucideIcon } from 'lucide-react';
 import IconActionButton from '@/components/base/IconActionButton';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { CONSULTA_CELULAR } from '@/hooks/useCelular';
 import { cn } from '@/lib/utils';
 
 // Painel lateral do construtor (sprint 4, spec 04/10/2026, A.4): fica à direita
@@ -13,7 +14,8 @@ import { cn } from '@/lib/utils';
 // É só a moldura: o rascunho, a validação e a pergunta de "descartar?" ficam
 // com quem usa (FlowNodePanel, FlowTriggerPanel) e com o canvas.
 
-export const MOBILE_QUERY = '(max-width: 767px)';
+/** O mesmo corte de celular do resto do app (`useCelular`). */
+export const MOBILE_QUERY = CONSULTA_CELULAR;
 
 interface Props {
   title: string;

@@ -27,7 +27,7 @@ import { TourFab } from '@/components/TourFab';
 import MenuItem from './MenuItem';
 import MenuSecoes from './MenuSecoes';
 import { useGuardaDeSaida } from '@/hooks/useAlteracoesNaoSalvas';
-import { itemAtivo, type MenuItem as MenuItemType, type MenuSection } from '../config/menuItems';
+import { itemAtivo, secoesDoCelular, type MenuItem as MenuItemType, type MenuSection } from '../config/menuItems';
 import { ThemeToggle } from '../../ThemeToggle';
 import { DemoModeToggle } from '../../DemoModeToggle';
 import AdminAreaButton from './AdminAreaButton';
@@ -108,8 +108,9 @@ export default function Header({
 
               <ScrollArea className="flex-1 min-h-0 overflow-hidden p-4">
                 <nav onClickCapture={guardarSaida} className="space-y-1">
-                  {/* Mesmas seções do computador: uma aberta por vez. */}
-                  <MenuSecoes secoes={secoes} mobile aoNavegar={() => setIsMobileMenuOpen(false)} />
+                  {/* Mesmas seções do computador (uma aberta por vez), sem as
+                      telas de montar/configurar (Raio-X do celular, 10/10/2026). */}
+                  <MenuSecoes secoes={secoesDoCelular(secoes)} mobile aoNavegar={() => setIsMobileMenuOpen(false)} />
                   <div className="mt-3 pt-3 border-t border-sidebar-border space-y-1">
                     {rodape.map(item => (
                       <MenuItem

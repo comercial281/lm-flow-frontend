@@ -1,6 +1,37 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest';
+import { act, fireEvent, render as renderRtl, screen } from '@testing-library/react';
+import { useState, type ReactElement } from 'react';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import CardDoContato from './CardDoContato';
+import { simularCelular } from '@/test/telaDeCelular';
+
+// No celular o card navega pra página (useNavigate): precisa do roteador.
+const render = (ui: ReactElement) => renderRtl(ui, { wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
+
+function Endereco() {
+  const l = useLocation();
+  const navigate = useNavigate();
+  return (
+    <>
+      <span data-testid="endereco">{l.pathname}|{JSON.stringify(l.state)}</span>
+      <button onClick={() => navigate(-1)}>voltar do card</button>
+    </>
+  );
+}
+
+const arvore = (ui: ReactElement, inicio: string) => (
+  <MemoryRouter initialEntries={['/antes', inicio]} initialIndex={1}>
+    <Routes>
+      <Route path="/antes" element={<p>tela de antes</p>} />
+      <Route path="/contacts/*" element={ui} />
+      <Route path="/pipelines/:p/card/:i" element={<Endereco />} />
+    </Routes>
+  </MemoryRouter>
+);
+
+function montarComRotas(ui: ReactElement, inicio = '/contacts') {
+  return renderRtl(arvore(ui, inicio));
+}
 
 // O card da pessoa (spec 2026-10-02-fase-4-card-do-contato): um atendimento →
 // o card direto; vários → abinhas no topo; nenhum → card sem funil.
@@ -80,5 +111,103 @@ describe('CardDoContato', () => {
     expect(await screen.findByTestId('card')).toHaveTextContent('sem-funil');
     expect(screen.getByTestId('conversa')).toHaveTextContent('55');
     expect(screen.getByText('colocar no funil')).toBeInTheDocument();
+  });
+
+  describe('no celular', () => {
+    let tela: ReturnType<typeof simularCelular>;
+    beforeEach(() => { tela = simularCelular(); window.history.replaceState(null, ''); });
+    afterEach(() => { tela.restaurar(); window.history.replaceState(null, ''); });
+
+    it('em um funil só: vai pra página do card, sem a janela', async () => {
+      servicos.porContato.mockResolvedValue([funil('p1', 'Venda', 'i1', 1)]);
+      montarComRotas(<CardDoContato contactId="c1" onOpenChange={vi.fn()} />);
+
+      expect(await screen.findByTestId('endereco')).toHaveTextContent('/pipelines/p1/card/i1|{"voltarPeloHistorico":true}');
+      expect(screen.queryByTestId('card')).not.toBeInTheDocument();
+    });
+
+    it('em dois funis: pergunta qual e abre a página do escolhido', async () => {
+      servicos.porContato.mockResolvedValue([funil('p1', 'Venda', 'i1', 1), funil('p2', 'Locação', 'i2', 9)]);
+      montarComRotas(<CardDoContato contactId="c1" onOpenChange={vi.fn()} />);
+
+      expect(await screen.findByText('Abrir o card de qual funil?')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /Venda/ }));
+      expect(await screen.findByTestId('endereco')).toHaveTextContent('/pipelines/p1/card/i1');
+    });
+
+    it('aberto pelo endereço /contacts/:id: a página TROCA esse endereço (voltar não reabre o card)', async () => {
+      window.history.replaceState({ idx: 1 }, '');
+      servicos.porContato.mockResolvedValue([funil('p1', 'Venda', 'i1', 1)]);
+      montarComRotas(<CardDoContato contactId="c1" onOpenChange={vi.fn()} abertoPeloEndereco />, '/contacts/c1');
+
+      expect(await screen.findByTestId('endereco')).toHaveTextContent('/pipelines/p1/card/i1|{"voltarPeloHistorico":true}');
+      fireEvent.click(screen.getByRole('button', { name: 'voltar do card' }));
+      expect(await screen.findByText('tela de antes')).toBeInTheDocument();
+    });
+
+    // O caso que a chave do endereço errava: /contacts aberto por link (primeira
+    // tela do roteador) e depois /contacts/:id por dentro do app.
+    it('/contacts/:id por dentro do app depois de abrir /contacts por link: "← Voltar"', async () => {
+      window.history.replaceState({ idx: 1 }, '');
+      servicos.porContato.mockResolvedValue([funil('p1', 'Venda', 'i1', 1)]);
+      renderRtl(
+        <MemoryRouter initialEntries={['/contacts/c1']}>
+          <Routes>
+            <Route path="/contacts/*" element={<CardDoContato contactId="c1" onOpenChange={vi.fn()} abertoPeloEndereco />} />
+            <Route path="/pipelines/:p/card/:i" element={<Endereco />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+      expect(await screen.findByTestId('endereco')).toHaveTextContent('/pipelines/p1/card/i1|{"voltarPeloHistorico":true}');
+    });
+
+    it('/contacts/:id como primeira tela da guia (link colado): sem o voltar pelo histórico', async () => {
+      servicos.porContato.mockResolvedValue([funil('p1', 'Venda', 'i1', 1)]);
+      montarComRotas(<CardDoContato contactId="c1" onOpenChange={vi.fn()} abertoPeloEndereco />, '/contacts/c1');
+      expect(await screen.findByTestId('endereco')).toHaveTextContent('/pipelines/p1/card/i1|null');
+    });
+
+    it('aberto da lista: a página entra no histórico e o voltar devolve a Contatos', async () => {
+      servicos.porContato.mockResolvedValue([funil('p1', 'Venda', 'i1', 1)]);
+      // Como em Contatos: o id do card mora na memória da lista (volta vazio).
+      function ListaFalsa() {
+        const [id, setId] = useState<string | null>(null);
+        return (
+          <>
+            <button onClick={() => setId('c1')}>abrir contato</button>
+            <p>lista de contatos</p>
+            <CardDoContato contactId={id} onOpenChange={() => setId(null)} />
+          </>
+        );
+      }
+      montarComRotas(<ListaFalsa />);
+      fireEvent.click(screen.getByRole('button', { name: 'abrir contato' }));
+
+      await screen.findByTestId('endereco');
+      fireEvent.click(screen.getByRole('button', { name: 'voltar do card' }));
+      expect(await screen.findByText('lista de contatos')).toBeInTheDocument();
+    });
+
+    it('fechou antes de carregar: a resposta atrasada não navega', async () => {
+      let responder: (v: unknown) => void = () => {};
+      servicos.porContato.mockReturnValue(new Promise(r => { responder = r; }));
+      const { rerender } = montarComRotas(<CardDoContato contactId="c1" onOpenChange={vi.fn()} />);
+      expect(await screen.findByText('Abrindo o contato…')).toBeInTheDocument();
+
+      rerender(arvore(<><CardDoContato contactId={null} onOpenChange={vi.fn()} /><p>lista de contatos</p></>, '/contacts'));
+      await act(async () => { responder([funil('p1', 'Venda', 'i1', 1)]); });
+
+      expect(screen.getByText('lista de contatos')).toBeInTheDocument();
+      expect(screen.queryByTestId('endereco')).not.toBeInTheDocument();
+    });
+
+    it('sem funil: continua na janela (a página precisa de um funil)', async () => {
+      servicos.porContato.mockResolvedValue([]);
+      servicos.contato.mockResolvedValue({ id: 'c1', name: 'Ana' });
+      servicos.conversas.mockResolvedValue({ data: [] });
+      montarComRotas(<CardDoContato contactId="c1" onOpenChange={vi.fn()} />);
+
+      expect(await screen.findByTestId('card')).toHaveTextContent('sem-funil');
+    });
   });
 });

@@ -132,7 +132,7 @@ export default function CategoriaSidebar({ selectedId, onSelect, canEdit }: Prop
             <span className="flex-1 text-xs truncate">{node.nome}</span>
           )}
           {canEdit && editingId !== node.id && (
-            <div className="relative opacity-0 group-hover:opacity-100">
+            <div className="relative opacity-0 group-hover:opacity-100 toque:opacity-100">
               <button
                 type="button"
                 onClick={(e) => {

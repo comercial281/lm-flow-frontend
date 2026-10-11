@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   getCustomerMenuSections, getFooterMenuItems, shouldShowMenuItem, filterMenuSections,
   itensDoMenu, donoDoEndereco, itemAtivo, MENU_FREE_BY_DESIGN, ENTRADA_INTEGRACOES, SISTEMAS_INTEGRACOES,
+  secoesDoCelular,
   type MenuItem, type SubMenuItem,
 } from './menuItems';
 import { permissionForPath } from '@/routes/permissionRoutes';
@@ -291,5 +292,34 @@ describe('Listas da casa (E1 do funil, 07/10/2026)', () => {
   it('o Gerente (pipelines.update) vê Listas', () => {
     const itens = comCargo(new Set(['pipelines.read', 'pipelines.update'])).flatMap(s => s.itens).map(i => i.name);
     expect(itens).toContain('Listas');
+  });
+});
+
+describe('gaveta do celular (Raio-X do celular, 10/10/2026)', () => {
+  const FORA_DO_CELULAR = [
+    'Meu site', 'Campos personalizados', 'Variáveis de mensagem', 'Integrações', 'Listas',
+    'Funis de mensagem', 'Disparos',
+  ];
+  const nomes = (lista: typeof secoes) => lista.flatMap(s => s.itens.map(i => i.name));
+
+  it('tira só as telas de montar/configurar, e o menu do computador continua inteiro', () => {
+    const celular = nomes(secoesDoCelular(secoes));
+    for (const n of FORA_DO_CELULAR) expect(celular).not.toContain(n);
+    // Computador: a mesma lista de antes, com tudo.
+    expect(nomes(secoes).filter(n => !celular.includes(n)).sort()).toEqual([...FORA_DO_CELULAR].sort());
+    // Ordem e seções preservadas no que fica.
+    expect(celular).toEqual(nomes(secoes).filter(n => !FORA_DO_CELULAR.includes(n)));
+    expect(secoesDoCelular(secoes).map(s => s.id)).toEqual(secoes.map(s => s.id));
+  });
+
+  it('a seção que fica vazia some: o Corretor perde Vendas e automação no celular', () => {
+    const vistas = comCargo(CORRETOR);
+    expect(vistas.map(s => s.id)).toContain('vendas');
+    expect(secoesDoCelular(vistas).map(s => s.id)).toEqual(['principal', 'atividades', 'imoveis', 'leads']);
+  });
+
+  it('as telas continuam com dono no menu inteiro (abrem pelo endereço e a busca acha)', () => {
+    expect(donoDoEndereco(secoes, '/settings/attributes')?.item.name).toBe('Campos personalizados');
+    expect(itensDoMenu(secoes).map(i => i.name)).toContain('Disparos');
   });
 });

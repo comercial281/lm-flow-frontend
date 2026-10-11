@@ -3,7 +3,7 @@
 // (F5, link colado), abre arquivado e de outra aba, e sem acesso avisa —
 // nunca tela em branco.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import CardCompletoPage from './CardCompletoPage';
@@ -42,6 +42,12 @@ vi.mock('@/features/cardDoLead/useCardDoLead', () => ({
     item,
     contato: item.contact ?? null,
     nomeExibido: item.contact?.name ?? 'Lead sem nome',
+    avatarContact: item.contact ? { id: item.contact.id, name: item.contact.name } : null,
+    corrigivel: false,
+    identidade: { telefone: '5511987654321', email: 'maria@email.com', setCorrigindo: vi.fn() },
+    origem: 'Meta · Formulário',
+    dadosDaOrigem: null,
+    roletaDoLead: null,
     foraDoFunil: false,
     etapa: {
       id: item.stage_id,
@@ -73,6 +79,7 @@ vi.mock('@/features/cardDoLead/pagina/FichaDoCard', () => ({
   },
 }));
 vi.mock('@/features/cardDoLead/blocos/DialogosDoCard', () => ({ default: () => null }));
+vi.mock('@/components/chat/contact/ContactAvatar', () => ({ default: () => <span data-testid="foto-do-lead" /> }));
 vi.mock('@/features/cardDoLead/blocos/BlocoSituacao', () => ({ ResponsavelComFoto: () => <div data-testid="responsavel" /> }));
 // As peças de situação são da Parte 3 (com a bateria delas).
 vi.mock('@/components/pipelines/card/CardResultFooter', () => ({
@@ -152,6 +159,82 @@ describe('CardCompletoPage', () => {
     expect(screen.getByTestId('responsavel')).toBeInTheDocument();
     expect(screen.getByTestId('ganho-perdido')).toBeInTheDocument();
     expect(screen.getByTestId('ficha')).toBeInTheDocument();
+  });
+
+  it('aberta de dentro do app no celular: "← Voltar" volta pra onde a pessoa estava', async () => {
+    render(
+      <MemoryRouter
+        initialEntries={['/contacts', { pathname: '/pipelines/p1/card/i1', state: { voltarPeloHistorico: true } }]}
+        initialIndex={1}
+      >
+        <Routes>
+          <Route path="/pipelines/:pipelineId/card/:itemId" element={<CardCompletoPage />} />
+          <Route path="/contacts" element={<p>Lista de contatos</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { level: 1, name: 'Maria Souza' });
+    expect(screen.queryByRole('link', { name: /Funil Leads/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+    expect(await screen.findByText('Lista de contatos')).toBeInTheDocument();
+  });
+
+  // Aberta de dentro do app no celular, vindo das Tarefas.
+  function abrirVindoDasTarefas() {
+    render(
+      <MemoryRouter
+        initialEntries={['/tarefas', { pathname: '/pipelines/p1/card/i1', state: { voltarPeloHistorico: true } }]}
+        initialIndex={1}
+      >
+        <Routes>
+          <Route path="/pipelines/:pipelineId/card/:itemId" element={<CardCompletoPage />} />
+          <Route path="/tarefas" element={<p>Tela de tarefas</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  it('trocar de aba não apaga o "← Voltar" (o estado vai junto)', async () => {
+    abrirVindoDasTarefas();
+    await screen.findByRole('heading', { level: 1, name: 'Maria Souza' });
+    await userEvent.click(screen.getByRole('tab', { name: 'Origem' }));
+    expect(await screen.findByTestId('aba-origem')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Voltar' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'Ficha' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+    expect(await screen.findByText('Tela de tarefas')).toBeInTheDocument();
+  });
+
+  it('sem acesso, aberto pelas Tarefas: "Voltar" volta pras Tarefas', async () => {
+    s.getPipelineItem.mockRejectedValue(erroHttp(404));
+    abrirVindoDasTarefas();
+    expect(await screen.findByText('Você não tem acesso a este lead')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Voltar ao funil' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+    expect(await screen.findByText('Tela de tarefas')).toBeInTheDocument();
+  });
+
+  it('carregando, aberto de dentro do app: o "← Voltar" já aparece', () => {
+    s.getPipelineItem.mockReturnValue(new Promise(() => {}));
+    abrirVindoDasTarefas();
+    expect(screen.getByRole('status', { name: 'Carregando o card' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Voltar' })).toBeInTheDocument();
+  });
+
+  // 11/10 ("cartão da pessoa"): foto, dados da pessoa e as ações no mesmo cartão,
+  // com Ganho | Perdido e o ⋯ no tamanho grande.
+  it('topo: cartão com a foto, os dados da pessoa e as ações grandes', async () => {
+    abrirPagina();
+    const topo = await screen.findByRole('region', { name: 'Quem é o lead' });
+
+    expect(within(topo).getByRole('heading', { level: 1, name: 'Maria Souza' })).toBeInTheDocument();
+    expect(within(topo).getByTestId('foto-do-lead')).toBeInTheDocument();
+    expect(within(topo).getByText('(11) 98765-4321')).toBeInTheDocument();
+    expect(within(topo).getByText('maria@email.com')).toBeInTheDocument();
+    expect(within(topo).getByTestId('responsavel')).toBeInTheDocument();
+    expect(within(topo).getByTestId('ganho-perdido')).toBeInTheDocument();
+    expect(s.rodape.mock.calls.at(-1)![0]).toMatchObject({ tamanho: 'grande' });
+    expect(s.menu.mock.calls.at(-1)![0]).toMatchObject({ grande: true });
   });
 
   it('Ganho | Perdido recebe a trava cruzada com a Etapa (P3-T5)', async () => {

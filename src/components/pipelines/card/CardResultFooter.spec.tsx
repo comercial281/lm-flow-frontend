@@ -82,4 +82,22 @@ describe('rodapé Ganho | Perdido do card', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Ganho' }));
     expect(onSalvando).toHaveBeenLastCalledWith(true);
   });
+
+  // Página do card (11/10): Ganho e Perdido do tamanho dos outros botões do topo;
+  // a janela continua com os pequenos.
+  it('tamanho grande na página, pequeno na janela', () => {
+    const { unmount } = render(<CardResultFooter item={card()} />);
+    expect(screen.getByRole('button', { name: 'Ganho' })).toHaveClass('h-8');
+    unmount();
+
+    render(<CardResultFooter item={card()} tamanho="grande" />);
+    expect(screen.getByRole('button', { name: 'Ganho' })).toHaveClass('h-10');
+    expect(screen.getByRole('button', { name: 'Perdido' })).toHaveClass('h-10');
+  });
+
+  it('fechado na página: só o Reabrir (o selo já está ao lado do nome)', () => {
+    render(<CardResultFooter item={card({ status: 'lost' })} tamanho="grande" />);
+    expect(screen.getByRole('button', { name: 'Reabrir' })).toHaveClass('h-10', 'w-full');
+    expect(screen.queryByText('PERDIDO')).toBeNull();
+  });
 });

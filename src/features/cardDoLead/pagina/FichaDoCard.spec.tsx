@@ -22,8 +22,9 @@ vi.mock('@/features/tarefas/TarefasDoLead', () => ({
     <div data-testid="tarefas">tarefas de {p.pipelineItemIds.join(',')} · nova em {p.criarNoCard}</div>
   ),
 }));
-vi.mock('../blocos/BlocoIdentidade', () => ({ default: (p: { variante?: string }) => <div data-testid={`dados-${p.variante}`} /> }));
-vi.mock('../blocos/BlocoSituacao', () => ({ AvisosDaRoleta: () => <div data-testid="roleta" /> }));
+vi.mock('../blocos/BlocoSituacao', () => ({
+  AvisosDaRoleta: (p: { semDeOnde?: boolean }) => <div data-testid="roleta" data-sem-de-onde={String(!!p.semDeOnde)} />,
+}));
 vi.mock('../blocos/BlocoSobreONegocio', () => ({ default: () => <div data-testid="negocio" /> }));
 vi.mock('../blocos/BlocoEtiquetas', () => ({ default: () => <div data-testid="etiquetas" /> }));
 vi.mock('../blocos/BlocoOQueAIAEntendeu', () => ({ default: () => <div data-testid="ia" /> }));
@@ -43,19 +44,24 @@ const cardFalso = (recursos = { imoveis: true, notas: true, agendarEnvio: true }
 }) as never;
 
 describe('FichaDoCard', () => {
+  // 11/10: os dados da pessoa subiram pro cartão do topo, e a Meta saiu do
+  // Follow-up pra Ações rápidas (o Qualificado depende de alguém apertar).
   it('esquerda na ordem da spec, direita com o Histórico', async () => {
     render(<FichaDoCard card={cardFalso()} item={item} aoMudarNegocio={vi.fn()} />);
     await screen.findByTestId('tarefas');
     const ordem = screen.getAllByTestId(/.+/).map(el => el.dataset.testid);
 
     expect(ordem).toEqual([
-      'atalhos', 'tarefas', 'dados-pagina', 'roleta', 'negocio', 'etiquetas', 'followup', 'meta',
+      'atalhos', 'meta', 'tarefas', 'roleta', 'negocio', 'etiquetas', 'followup',
       'ia', 'imoveis', 'respostas', 'outras', 'coluna-historico',
     ]);
     expect(screen.getByRole('heading', { name: 'Ações rápidas' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Etiquetas' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Follow-up e Meta' })).toBeInTheDocument();
-    expect(screen.getByTestId('meta')).toHaveAttribute('data-variante', 'completo');
+    expect(screen.getByRole('heading', { name: 'Follow-up' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Dados da pessoa' })).toBeNull();
+    expect(screen.getByTestId('meta')).toHaveAttribute('data-variante', 'compacto');
+    // "veio pela Roleta X" já está no topo: a Ficha fica só com a oferta e o sorteio.
+    expect(screen.getByTestId('roleta')).toHaveAttribute('data-sem-de-onde', 'true');
   });
 
   it('com blocoDeTarefas={null}: nada no lugar', () => {

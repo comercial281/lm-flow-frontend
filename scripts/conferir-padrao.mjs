@@ -367,6 +367,78 @@ export function importaPaginaDaCasa(codigo, arquivo = 'x.tsx') {
   });
 }
 
+// ── Escondido que só aparece com o mouse (10/10/2026, Raio-X do celular) ──
+// No Tailwind 4, `hover:` e `group-hover:` só valem em aparelho com mouse
+// (@media (hover: hover)). Então `opacity-0 group-hover:opacity-100` deixa o
+// botão INVISÍVEL e ainda assim tocável no celular: dava pra apertar Excluir
+// sem ver. A alternativa da casa é a variante `toque:` (globals.css,
+// @media (hover: none)): `opacity-0 group-hover:opacity-100 toque:opacity-100`.
+//
+// Como lê: pelo compilador, junta as classes de um mesmo lugar (um className,
+// um cn(...) inteiro, mesmo quebrado em várias linhas, uma variável ou uma
+// chave de objeto) e conta quando há uma classe que ESCONDE (opacity-0,
+// invisible, hidden) + uma que REVELA no passar do mouse + nenhuma `toque:`.
+// Vale para o app inteiro (como a lista nativa): página pública é a mais aberta
+// no celular.
+// Cada jeito de esconder tem o seu jeito de revelar: opacity-0 ↔ opacity-N,
+// invisible ↔ visible, hidden ↔ flex/block/… (`hidden sm:flex hover:opacity-90`
+// não é revelar no mouse: o hover ali só clareia um botão que já aparece).
+const VARIANTES = String.raw`(?:[\w[\]()/.&-]+:)*`;
+const NO_MOUSE = String.raw`${VARIANTES}(?:group-hover|peer-hover|hover)(?:\/[\w-]+)?:${VARIANTES}!?`;
+const PARES_DE_ESCONDER = [
+  [new RegExp(String.raw`^${VARIANTES}!?opacity-0!?$`), new RegExp(String.raw`^${NO_MOUSE}opacity-[1-9]\d*!?$`)],
+  [new RegExp(String.raw`^${VARIANTES}!?invisible!?$`), new RegExp(String.raw`^${NO_MOUSE}visible!?$`)],
+  [
+    new RegExp(String.raw`^${VARIANTES}!?hidden!?$`),
+    new RegExp(String.raw`^${NO_MOUSE}(?:flex|block|inline-flex|inline-block|inline|grid|inline-grid|table|contents)!?$`),
+  ],
+];
+// Peça que não recebe toque (brilho de fundo, ícone de enfeite) pode ficar
+// escondida no celular: não há o que apertar sem ver.
+const NAO_RECEBE_TOQUE = /^pointer-events-none$/;
+const TEM_TOQUE = /(?:^|:)toque:/;
+export const contaSoMouse = rel => rel.startsWith('src/') && /\.(ts|tsx)$/.test(rel) && !/\.(spec|test)\.tsx?$/.test(rel);
+
+const ehTextoDeClasse = no =>
+  ts.isStringLiteral(no) || ts.isNoSubstitutionTemplateLiteral(no) || ts.isTemplateHead(no) || ts.isTemplateMiddle(no) || ts.isTemplateTail(no);
+
+// O "lugar" de uma classe: sobe até o atributo, a variável, a chave de objeto
+// (fora de um cn({...})), o return ou a instrução. Tudo que está dentro dele
+// conta junto: cn('opacity-0', cond && 'group-hover:opacity-100') é um lugar só.
+function lugarDaClasse(no) {
+  let atual = no.parent;
+  while (atual && !ts.isSourceFile(atual)) {
+    if (ts.isJsxAttribute(atual) || ts.isVariableDeclaration(atual) || ts.isReturnStatement(atual) || ts.isExpressionStatement(atual)) return atual;
+    if (ts.isPropertyAssignment(atual) && !(atual.parent?.parent && ts.isCallExpression(atual.parent.parent))) return atual;
+    atual = atual.parent;
+  }
+  return atual;
+}
+
+export function escondidosSoComMouse(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const lugares = new Map();
+  const visitar = no => {
+    if (ehTextoDeClasse(no)) {
+      const lugar = lugarDaClasse(no);
+      if (!lugares.has(lugar)) lugares.set(lugar, []);
+      lugares.get(lugar).push(...no.text.split(/\s+/).filter(Boolean));
+    }
+    ts.forEachChild(no, visitar);
+  };
+  visitar(fonte);
+  const achados = [];
+  for (const [lugar, classes] of lugares) {
+    if (classes.some(c => TEM_TOQUE.test(c) || NAO_RECEBE_TOQUE.test(c))) continue;
+    const par = PARES_DE_ESCONDER.find(([esconde, revela]) => classes.some(c => esconde.test(c)) && classes.some(c => revela.test(c)));
+    if (!par) continue;
+    const revela = classes.find(c => par[1].test(c));
+    const { line } = fonte.getLineAndCharacterOfPosition(lugar.getStart(fonte));
+    achados.push({ linha: line + 1, texto: revela });
+  }
+  return achados;
+}
+
 export function botoesSemNome(codigo, arquivo = 'x.tsx') {
   const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
   const achados = [];
@@ -463,10 +535,15 @@ export function varrer() {
     const rel = relative(RAIZ, arquivo).split(sep).join('/');
     const escopo = noEscopo(rel);
     const lista = contaSelectNativo(rel);
-    if (!escopo && !lista) continue;
+    const soMouse = contaSoMouse(rel);
+    if (!escopo && !lista && !soMouse) continue;
     const codigo = readFileSync(arquivo, 'utf8');
     if (escopo && (rel.endsWith('.tsx') || rel.endsWith('.ts'))) {
       for (const { linha, texto } of textosDaTela(codigo, rel)) conferirTexto(rel, linha, texto);
+    }
+    if (soMouse) {
+      const linhas = codigo.split('\n');
+      for (const { linha, texto } of escondidosSoComMouse(codigo, rel)) anotar('soMouse', rel, linha, texto, linhas[linha - 1].trim());
     }
     if (escopo && rel.endsWith('.tsx')) {
       for (const { linha, texto } of botoesSemNome(codigo, rel)) anotar('iconeSemNome', rel, linha, texto, texto);
@@ -521,6 +598,7 @@ export const CATEGORIAS = {
   tituloAMao: 'título de página feito à mão',
   barraAMao: 'barrinha roxa copiada',
   foraDaMoldura: 'cabeçalho fora da moldura',
+  soMouse: 'escondido que só aparece com mouse (app inteiro)',
 };
 
 function principal() {

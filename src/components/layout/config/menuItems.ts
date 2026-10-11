@@ -99,6 +99,12 @@ export interface MenuItem {
    * nova (ver `aplicarProprietariosNoMenu`).
    */
   marcador?: boolean;
+  /**
+   * Some da gaveta do celular (Raio-X do celular, 10/10/2026): tela de montar ou
+   * configurar, que não se usa numa tela pequena. No computador nada muda, e a
+   * rota continua aberta pelo endereço. Ver `secoesDoCelular`.
+   */
+  foraDoCelular?: boolean;
 }
 
 export interface SubMenuItem {
@@ -245,7 +251,7 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       // proprietário liberado para ele. A bolinha é captação nova não vista.
       { id: 'proprietarios', name: 'Gestão de proprietários', href: '/property-owners', icon: UserRoundCheck, ...permissionFromRoute('/property-owners'), featureKey: 'properties' },
       // Gestão do site: pede `sites.update` além da leitura (ver `gestao`).
-      { name: 'Meu site', href: '/settings/site-builder', icon: Globe, ...gestao('/settings/site-builder', 'sites.update'), featureKey: 'site_builder' },
+      { name: 'Meu site', href: '/settings/site-builder', icon: Globe, ...gestao('/settings/site-builder', 'sites.update'), featureKey: 'site_builder', foraDoCelular: true },
     ],
   },
   {
@@ -286,8 +292,8 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       // no construtor a partir de modelos. O Corretor de fábrica tem
       // `message_funnels.read` (backend lm-flow#388) e vê este item: é o único da
       // seção pra quem não tem acesso às Automações.
-      { name: 'Funis de mensagem', href: '/automations/message-funnels', icon: Rocket, ...permissionFromRoute('/automations/message-funnels'), featureKey: 'message_funnels' },
-      { name: 'Disparos', href: '/disparos', icon: Megaphone, ...permissionFromRoute('/disparos'), featureKey: 'disparos' },
+      { name: 'Funis de mensagem', href: '/automations/message-funnels', icon: Rocket, ...permissionFromRoute('/automations/message-funnels'), featureKey: 'message_funnels', foraDoCelular: true },
+      { name: 'Disparos', href: '/disparos', icon: Megaphone, ...permissionFromRoute('/disparos'), featureKey: 'disparos', foraDoCelular: true },
       // Feature gerenciada pela Leal Mídia: super-admin SEMPRE vê; cliente só se ligar o toggle.
       { name: 'IA Vendedora', href: '/ia-vendedora', icon: Bot, ...permissionFromRoute('/ia-vendedora'), clientToggleKey: 'client_manage_automations' },
       { name: 'Follow-up', href: '/automations/follow-ups', icon: Repeat, ...permissionFromRoute('/automations/follow-ups'), featureKey: 'follow_ups' },
@@ -310,7 +316,7 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       // Integrações em cartões (07/10/2026): o item abre a página de entrada e as
       // telas abaixo são os cartões dela (`cartao`). As travas continuam aqui,
       // tela a tela: a entrada, o Facebook e Sistemas leem ESTA lista já filtrada.
-      itemComAbas({ name: 'Integrações', icon: Plug, entrada: ENTRADA_INTEGRACOES }, [
+      itemComAbas({ name: 'Integrações', icon: Plug, entrada: ENTRADA_INTEGRACOES, foraDoCelular: true }, [
         // A aba pede `inboxes.update` além da chave da rota: o Corretor tem
         // `channels.read` (religa o número em que ELE atende, desde 04/09/2026)
         // e, sem isto, ganharia a seção Minha Imobiliária inteira só por causa
@@ -338,13 +344,13 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       // Listas da casa (E1 do funil, 07/10/2026): motivos de perda e categorias de
       // tarefa. A rota abre pra quem lê o funil; o menu pede também
       // `pipelines.update`, a mesma chave que o servidor exige pra mudar uma opção.
-      { name: 'Listas', href: '/settings/listas', icon: ListOrdered, ...gestao('/settings/listas', 'pipelines.update') },
-      { name: 'Campos personalizados', href: '/settings/attributes', icon: SlidersHorizontal, ...permissionFromRoute('/settings/attributes') },
+      { name: 'Listas', href: '/settings/listas', icon: ListOrdered, ...gestao('/settings/listas', 'pipelines.update'), foraDoCelular: true },
+      { name: 'Campos personalizados', href: '/settings/attributes', icon: SlidersHorizontal, ...permissionFromRoute('/settings/attributes'), foraDoCelular: true },
       // As variáveis ({{empreendimento}}…) que a imobiliária cria pros textos. Era
       // aba de Campos personalizados e dos Funis de mensagem; desde a sprint 4
       // das Automações (04/10/2026) é item próprio. No construtor elas viram
       // botõezinhos na caixa de mensagem.
-      { name: 'Variáveis de mensagem', href: '/settings/template-variables', icon: Braces, ...gestao('/settings/template-variables', 'canned_responses.create') },
+      { name: 'Variáveis de mensagem', href: '/settings/template-variables', icon: Braces, ...gestao('/settings/template-variables', 'canned_responses.create'), foraDoCelular: true },
     ],
   },
 ];
@@ -354,6 +360,18 @@ export const getFooterMenuItems = (): MenuItem[] => [
   // Sem cargo: ver MENU_FREE_BY_DESIGN.
   { name: 'Guia do LM Flow', href: '/tutorials', icon: GraduationCap, featureKey: 'tutorials' },
 ];
+
+/**
+ * O menu da gaveta do celular (☰): as mesmas seções, sem os itens marcados
+ * `foraDoCelular` (Raio-X do celular, 10/10/2026). Seção que fica vazia some.
+ * Só a gaveta usa: o menu do computador, a busca e as abas das páginas seguem
+ * com a lista inteira, e a tela abre pelo endereço no celular também.
+ */
+export function secoesDoCelular(secoes: MenuSection[]): MenuSection[] {
+  return secoes
+    .map(secao => ({ ...secao, itens: secao.itens.filter(item => !item.foraDoCelular) }))
+    .filter(secao => secao.itens.length > 0);
+}
 
 /** Todo item e toda aba do menu, numa lista só (busca, testes). */
 export function itensDoMenu(secoes: MenuSection[], rodape: MenuItem[] = []): (MenuItem | SubMenuItem)[] {

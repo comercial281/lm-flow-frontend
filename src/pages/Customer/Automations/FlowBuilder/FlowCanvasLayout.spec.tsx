@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
@@ -9,9 +9,10 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 const get = vi.hoisted(() => vi.fn());
 const testRun = vi.hoisted(() => vi.fn());
 const variablesList = vi.hoisted(() => vi.fn());
+const toggle = vi.hoisted(() => vi.fn());
 
 vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
-  flowAutomationsService: { get, testRun, update: vi.fn(), saveFlow: vi.fn(), toggle: vi.fn(), movePositions: vi.fn() },
+  flowAutomationsService: { get, testRun, update: vi.fn(), saveFlow: vi.fn(), toggle, movePositions: vi.fn() },
   flowAutomationFoldersService: {},
 }));
 vi.mock('@/services/messageFunnels/messageFunnelsService', () => ({
@@ -33,6 +34,9 @@ vi.mock('@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors', asyn
 });
 
 import FlowAutomationCanvas from './FlowAutomationCanvas';
+import { simularCelular } from '@/test/telaDeCelular';
+import FlowCanvasCelular, { AVISO_NAO_SALVO_NO_CELULAR } from './FlowCanvasCelular';
+import { act } from '@testing-library/react';
 
 beforeAll(() => {
   // O React Flow mede os blocos; o jsdom não tem estas duas. Sem medida, os
@@ -198,5 +202,124 @@ describe('extensões pro guia', () => {
     expect(await screen.findByText('Passo 1 de 2')).toBeTruthy();
     const cartao = screen.getByLabelText('Editar Mandar WhatsApp').closest('[data-highlighted]');
     expect(cartao?.getAttribute('data-highlighted')).toBe('true');
+  });
+});
+
+describe('celular (Raio-X do celular, 10/10/2026)', () => {
+  let tela: ReturnType<typeof simularCelular> | null = null;
+  beforeEach(() => toggle.mockReset());
+  afterEach(() => {
+    tela?.restaurar();
+    tela = null;
+  });
+
+  const abrirNoCelular = () =>
+    render(
+      <MemoryRouter initialEntries={['/automations/fa1']}>
+        <Routes>
+          <Route path="/automations/:id" element={<FlowAutomationCanvas />} />
+          <Route path="/automations/flow-builder" element={<p>lista de fluxos</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+  it('mostra o nome, a chave e o aviso; sem desenho, Salvar, Blocos nem Simular', async () => {
+    tela = simularCelular();
+    get.mockResolvedValue(flow());
+    abrirNoCelular();
+    expect(await screen.findByRole('heading', { name: 'Boas-vindas' })).toBeTruthy();
+    expect(screen.getByText('Pra editar este fluxo, abra no computador.')).toBeTruthy();
+    expect(screen.getByRole('switch', { name: 'Ligar o fluxo' })).toBeTruthy();
+    expect(screen.queryByTestId('bloco-inicio')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Salvar/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Blocos/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Simular/ })).toBeNull();
+  });
+
+  it('a chave liga pelo mesmo caminho do canvas', async () => {
+    tela = simularCelular();
+    get.mockResolvedValue(flow());
+    toggle.mockResolvedValue({ is_enabled: true });
+    abrirNoCelular();
+    const chave = await screen.findByRole('switch', { name: 'Ligar o fluxo' });
+    fireEvent.click(chave);
+    await waitFor(() => expect(toggle).toHaveBeenCalledWith('fa1'));
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Ligar o fluxo' }).getAttribute('aria-checked')).toBe('true'));
+  });
+
+  it('a chave recusa ligar fluxo com bloco incompleto, como no canvas', async () => {
+    tela = simularCelular();
+    get.mockResolvedValue(flow({
+      nodes: [{
+        id: 'n1', kind: 'send_whatsapp', label: null, config: { text: '' },
+        next_node_id: null, next_yes_node_id: null, next_no_node_id: null, pos_x: null, pos_y: null, steps: [],
+      }],
+    }));
+    abrirNoCelular();
+    fireEvent.click(await screen.findByRole('switch', { name: 'Ligar o fluxo' }));
+    await new Promise(r => setTimeout(r, 0));
+    expect(toggle).not.toHaveBeenCalled();
+  });
+
+  it('o voltar leva pra lista', async () => {
+    tela = simularCelular();
+    get.mockResolvedValue(flow());
+    abrirNoCelular();
+    fireEvent.click(await screen.findByRole('button', { name: 'Voltar' }));
+    expect(await screen.findByText('lista de fluxos')).toBeTruthy();
+  });
+
+  it('funil da equipe só pra ver: aviso sem a chave', async () => {
+    tela = simularCelular();
+    get.mockResolvedValue(flow({ kind: 'conversation', team: true, permissions: { can_edit: false, guided: false } }));
+    abrirNoCelular();
+    expect(await screen.findByText('Pra editar este funil, abra no computador.')).toBeTruthy();
+    expect(screen.queryByRole('switch')).toBeNull();
+  });
+
+  it('abrir no computador e encolher pra celular não troca a tela (o painel aberto fica)', async () => {
+    tela = simularCelular(false);
+    get.mockResolvedValue(flow());
+    abrirNoCelular();
+    fireEvent.click(await screen.findByLabelText(/Início\. Quando:/));
+    expect(await screen.findByTestId('painel-do-inicio')).toBeTruthy();
+    act(() => tela!.mudar(true));
+    expect(screen.getByTestId('painel-do-inicio')).toBeTruthy();
+    expect(screen.getByTestId('bloco-inicio')).toBeTruthy();
+    expect(screen.queryByText('Pra editar este fluxo, abra no computador.')).toBeNull();
+  });
+
+  it('abrir no celular e alargar a tela continua na tela do celular', async () => {
+    tela = simularCelular();
+    get.mockResolvedValue(flow());
+    abrirNoCelular();
+    expect(await screen.findByText('Pra editar este fluxo, abra no computador.')).toBeTruthy();
+    act(() => tela!.mudar(false));
+    expect(screen.getByText('Pra editar este fluxo, abra no computador.')).toBeTruthy();
+    expect(screen.queryByTestId('bloco-inicio')).toBeNull();
+  });
+
+  it('com alteração não salva: sem a chave, com a linha de abrir no computador', () => {
+    const aoMudarLigado = vi.fn();
+    render(
+      <MemoryRouter>
+        <FlowCanvasCelular
+          kind="automation" nome="Boas-vindas" ligado={false} soVer={false} naoSalvo
+          aoMudarLigado={aoMudarLigado} aoVoltar={() => {}}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('status').textContent).toContain(AVISO_NAO_SALVO_NO_CELULAR);
+    expect(screen.queryByRole('switch')).toBeNull();
+    expect(screen.getByText('Pra editar este fluxo, abra no computador.')).toBeTruthy();
+  });
+
+  it('computador: o canvas continua igual', async () => {
+    tela = simularCelular(false);
+    get.mockResolvedValue(flow());
+    abrirNoCelular();
+    expect(await screen.findByTestId('bloco-inicio')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Simular/ })).toBeTruthy();
+    expect(screen.queryByText('Pra editar este fluxo, abra no computador.')).toBeNull();
   });
 });

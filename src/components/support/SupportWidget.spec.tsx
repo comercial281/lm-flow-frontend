@@ -15,6 +15,7 @@ vi.mock('@/services/support/supportService', async orig => ({
 }));
 
 import SupportWidget from './SupportWidget';
+import { simularCelular } from '@/test/telaDeCelular';
 import { openSupport } from './openSupport';
 import { avisarSuporte } from './aoVivo';
 import { useOcupaCanto } from './cantoOcupado';
@@ -66,6 +67,18 @@ describe('SupportWidget', () => {
     expect(aba.className).not.toContain('bottom-4');
     act(() => openSupport());
     expect(await screen.findByText('Como podemos ajudar?')).toBeInTheDocument();
+  });
+
+  it('em tela de celular é sempre a aba, em qualquer tela', () => {
+    const tela = simularCelular();
+    try {
+      montar('/dashboard');
+      const aba = screen.getByRole('button', { name: 'Abrir ajuda e suporte' });
+      expect(aba.className).toContain('top-1/2');
+      expect(aba.className).not.toContain('bottom-4');
+    } finally {
+      tela.restaurar();
+    }
   });
 
   it('em /conversations-old a bolinha continua', () => {

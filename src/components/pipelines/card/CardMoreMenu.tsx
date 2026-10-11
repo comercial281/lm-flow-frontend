@@ -51,6 +51,8 @@ interface CardMoreMenuProps {
   /** Página do card (spec §5.3): Arquivar / Desarquivar no ⋯. */
   onArquivar?: () => void;
   onDesarquivar?: () => void;
+  /** Página do card (11/10): o ⋯ com contorno, na altura do Ganho | Perdido. */
+  grande?: boolean;
 }
 
 export default function CardMoreMenu({
@@ -64,6 +66,7 @@ export default function CardMoreMenu({
   linkDoCard,
   onArquivar,
   onDesarquivar,
+  grande = false,
 }: CardMoreMenuProps) {
   const navigate = useNavigate();
   // Card de quem não está em funil (aberto de Contatos): o link é o do contato
@@ -101,7 +104,14 @@ export default function CardMoreMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Mais ações do card" title="Mais ações">
+          <Button
+            type="button"
+            variant={grande ? 'outline' : 'ghost'}
+            size="sm"
+            className={grande ? 'h-10 w-10 shrink-0 p-0' : 'h-8 w-8 p-0'}
+            aria-label="Mais ações do card"
+            title="Mais ações"
+          >
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>

@@ -140,7 +140,7 @@ function PipelineItemCardComponent({
         </div>
 
         <div onClick={pararClique}
-          className="shrink-0 opacity-100 transition-opacity focus-within:opacity-100 md:opacity-0 md:group-hover:opacity-100">
+          className="shrink-0 opacity-100 transition-opacity focus-within:opacity-100 md:opacity-0 md:group-hover:opacity-100 toque:opacity-100">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-auto p-1 hover:bg-muted" aria-label="Mais ações" title="Mais ações">
