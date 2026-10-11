@@ -302,7 +302,7 @@ export const propertiesService = {
    * "só os meus"). Usa a própria lista com 1 por página: a contagem bate com a
    * lista por construção e não depende da permissão de estatísticas.
    */
-  async contarPorTipo(extra: Record<string, string> = {}): Promise<{ development: number; resale: number }> {
+  async contarPorTipo(extra: Record<string, string | string[]> = {}): Promise<{ development: number; resale: number }> {
     const [dev, rev] = await Promise.all([
       api.get('/properties', { params: { ...extra, listing_kind: 'development', per_page: 1 } }),
       api.get('/properties', { params: { ...extra, listing_kind: 'resale', per_page: 1 } }),

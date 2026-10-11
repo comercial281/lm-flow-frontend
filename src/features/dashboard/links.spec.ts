@@ -53,6 +53,23 @@ describe('links da Dashboard', () => {
     expect(f?.visita).toBeNull();
   });
 
+  // Frente 5 da Nova 27: fases dos empreendimentos e visitas realizadas.
+  it('Imóveis: a fase abre Empreendimentos com a lista de fases do servidor', () => {
+    const url = linkImoveis('na_planta', { desde: '2026-09-24', ate: '2026-09-30' });
+    expect(url).toBe('/properties?aba=empreendimentos&recorte=na_planta');
+    expect(lerRecorteImoveis(sp(url))).toEqual({
+      rotulo: 'Na planta',
+      params: { status: 'active', 'stage[]': ['pre_launch', 'launch'] },
+    });
+  });
+
+  it('Agenda: Realizadas filtra pela situação da visita, no período', () => {
+    const url = linkAgenda({ situacao: 'realizadas', desde: '2026-09-24', ate: '2026-09-30' });
+    const f = lerFiltroAgenda(sp(url));
+    expect(f?.params).toEqual({ status: 'completed', since: '2026-09-24', until: '2026-09-30' });
+    expect(f?.rotulo).toBe('Realizadas · 24/09 a 30/09');
+  });
+
   it('Agenda: abrir uma visita só pelo link', () => {
     const f = lerFiltroAgenda(sp(linkAgenda({ visita: 'v1' })));
     expect(f).toEqual({ rotulo: '', params: {}, visita: 'v1' });

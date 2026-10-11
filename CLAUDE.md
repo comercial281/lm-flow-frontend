@@ -4449,7 +4449,7 @@ Fase 4, jornada 1. Spec: `LM FLOW/specs/2026-09-30-fase-4-jornada-dashboard-desi
   `GET /dashboard/list`), das mesmas fontes que o número.
 - **Número sem link quando o recorte não bate com o destino.** A Agenda,
   Propostas e o funil não recebem time, corretor, número, etiqueta nem IA pelo
-  link. Então Visitas agendadas, Propostas e as etapas do Funil só levam ao
+  link. Então Visitas realizadas, Propostas e as etapas do Funil só levam ao
   destino na imobiliária inteira sem filtro, ou para o corretor travado sem
   filtro (o destino já recorta por ele, mas não por Número, Etiqueta nem IA:
   com um desses ligado, o corretor travado também fica sem link):
@@ -4460,7 +4460,8 @@ Fase 4, jornada 1. Spec: `LM FLOW/specs/2026-09-30-fase-4-jornada-dashboard-desi
   `meus=1`). O conserto de vez é o servidor aceitar `owner_ids` nas telas de
   destino; aí os links voltam.
 - **O corretor não vê Propostas na Dashboard** (decisão do dono, 01/10/2026):
-  os números dele são três (leads recebidos, conversas, visitas agendadas).
+  os números dele são três (leads recebidos, conversas, visitas realizadas;
+  eram "agendadas" até 11/10/2026).
 - **Pendências = abertas agora**, não seguem o período.
 - **Roleta agora** reaproveita `GET /roleta_configs/queue`, a cada 30 s com a aba
   visível; some para quem não tem `roleta_configs.queue`. **Compacto (pedido do
@@ -8320,3 +8321,16 @@ Origem: a automação "Visita agendada" disparava pra qualquer visita, da IA ou 
 - **O modelo "Avisar o grupo quando a IA marcar visita" vem do servidor** (lista de modelos do backend); a tela não tem cópia dele.
 - **Pendente (envio separado):** o aviso fixo de visita da IA, configurado no painel raiz, vai sair depois que o único cliente que usa o aviso fixo estiver migrado pro modelo acima. Quando sair, some também a tela dele no painel raiz.
 - Não reabrir sem o dono pedir.
+
+## Painel: frente 5 da Nova 27 (desde 2026-10-11)
+
+Pedido do Cleverson (Nova 27) na call de 07/10, desenho aprovado pelo dono em 11/10. Servidor: seção "Painel: frente 5" no `backend/CLAUDE.md`.
+
+- **"Visitas realizadas" no lugar de "Visitas agendadas"** (Números, `kpis.visits_done`). Realizada = marcada Realizada, pelo dia da visita; o mesmo número de Resultados e do Atendimento do time. Segue o PERÍODO (não a janela do calendário, que era das agendadas). Clicar abre a Agenda com `situacao=realizadas` (`status=completed` no servidor), chip "Realizadas".
+- **Cartão "Tempo médio de negociação"** (`blocos/TempoNegociacao.tsx`, bloco `tempo_negociacao` → `negotiation_time`): estreito ao lado de Resultados, no molde do "Sua vez na fila" (linha `lateral`). Até o ganho e até a perda, da criação do card até fechar, todos os funis. Só gestão: sem a chave, não desenha. Tempo escrito como se fala (`tempoEmDias`: "18 dias", "5 h", "menos de 1 h").
+- **Funil: Lista | Funil** (`.lmfn-seg` no `action` do cartão). A Lista é a de antes. O Funil é desenho FIXO: faixas que estreitam sempre igual (`clip-path`), com nome e número dentro; a largura não segue o número, porque "agora" não afunila de verdade (Atendimento costuma ter mais que Novo Lead). Clicar na faixa abre o quadro na etapa. A escolha fica no `localStorage` (`lmf.painel.funil.forma`), com try/catch. Ganhos/Perdidos embaixo nas duas formas.
+- **Relógio do Funil**: troca o número de cada etapa por "~N dias", a média de há quanto tempo os cards abertos de agora estão nela (`avg_seconds_in_stage`, desde a última entrada). Servidor sem o campo: sem relógio. Não é a soma de idas e voltas da faixa da página do card.
+- **Imóveis por fase**: Na planta (com pré-lançamento) · Em obra · Prontos, só empreendimento ativo, sem período, acima dos recortes. Some quando os três são zero. Cada um abre Imóveis na aba Empreendimentos com `stage[]` (recortes `na_planta`/`em_obra`/`prontos`; o recorte de Imóveis aceita lista: `FiltroImoveis`).
+- **Fica pra depois**: funil de passagem (quantos do período chegaram até cada etapa, com % entre etapas). Depende de conferir o histórico de movimentação.
+
+Não reabrir sem o dono pedir.

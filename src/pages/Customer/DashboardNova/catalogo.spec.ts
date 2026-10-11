@@ -11,7 +11,7 @@ describe('catálogo da Dashboard', () => {
       'imoveis', 'numeros', 'pendencias',
       'proximas_visitas', 'roleta_agora',
       'atendimento_time', 'funil',
-      'resultados',
+      'resultados', 'tempo_negociacao',
       'leads_dia_semana', 'leads_horario', 'leads_seis_meses', 'origem',
     ]);
   });
@@ -20,6 +20,7 @@ describe('catálogo da Dashboard', () => {
     const corretor = ids('corretor');
     expect(corretor[0]).toBe('pendencias');
     expect(corretor).not.toContain('resultados');
+    expect(corretor).not.toContain('tempo_negociacao');
     expect(corretor).not.toContain('atendimento_time');
     expect(corretor).not.toContain('roleta_agora');
   });
