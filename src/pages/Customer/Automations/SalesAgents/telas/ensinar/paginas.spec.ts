@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arquivosSemQuando, casosDe, paginaDoEnsinarDaUrl, regrasForaDoLimite, textoDosCasos } from './paginas';
+import { arquivosSemQuando, casosDe, conversasReais, paginaDoEnsinarDaUrl, regrasForaDoLimite, textoDosCasos } from './paginas';
 import type { SalesAgentDocument, SalesAgentLesson } from '@/services/salesAgents/salesAgentsService';
 
 const licao = (p: Partial<SalesAgentLesson>) => ({ id: 'x', kind: 'rule', content: 'c', context: null, enabled: true, created_at: '', origin: 'manual', in_use: true, ...p }) as SalesAgentLesson;
@@ -19,6 +19,25 @@ describe('registro do Ensinar', () => {
   it('arquivo que manda sem "quando" é pendência', () => {
     const d = (p: Partial<SalesAgentDocument>) => ({ sendable: true, send_when: 'x', ...p }) as SalesAgentDocument;
     expect(arquivosSemQuando([d({ send_when: '  ' }), d({ send_when: null }), d({ sendable: false, send_when: null }), d({})])).toBe(2);
+  });
+
+  it('conversas reais espelham o servidor: resposta vazia sai, texto solto vale, reply só sem resposta', () => {
+    expect(conversasReais([
+      { lead: 'a', resposta: '  ' },
+      { lead: ' b ', resposta: ' ok ' },
+      'solto',
+      '   ',
+      { lead: 'c', reply: 'pelo reply' },
+      { lead: 'd', resposta: '', reply: 'não cai pro reply' },
+      42,
+      null,
+    ])).toEqual([
+      { indice: 1, lead: 'b', resposta: 'ok' },
+      { indice: 2, lead: '', resposta: 'solto' },
+      { indice: 4, lead: 'c', resposta: 'pelo reply' },
+    ]);
+    expect(conversasReais(null)).toEqual([]);
+    expect(conversasReais(undefined)).toEqual([]);
   });
 
   it('prova social: divide por linha sem caso vazio e junta de volta', () => {

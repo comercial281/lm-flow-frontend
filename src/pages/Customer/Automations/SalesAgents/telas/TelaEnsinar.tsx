@@ -9,7 +9,7 @@ import { useConfirmacao } from '@/hooks/useConfirmacao';
 import PaginasComTrilho from '../moldura/PaginasComTrilho';
 import { useGravarNaHora } from '../configurar/useGravarNaHora';
 import {
-  GRUPOS_DO_ENSINAR, PAGINAS_DO_ENSINAR, PAGINA_INICIAL_DO_ENSINAR, arquivosSemQuando, casosDe, paginaDoEnsinarDaUrl, regrasForaDoLimite,
+  GRUPOS_DO_ENSINAR, PAGINAS_DO_ENSINAR, PAGINA_INICIAL_DO_ENSINAR, arquivosSemQuando, casosDe, conversasReais, paginaDoEnsinarDaUrl, regrasForaDoLimite,
   type PaginaDoEnsinar,
 } from './ensinar/paginas';
 import { useLicoes } from './ensinar/useLicoes';
@@ -49,7 +49,8 @@ export default function TelaEnsinar({ agent, onCountChange, aoSalvo }: { agent: 
   const irPara = useCallback((p: PaginaDoEnsinar) => { if (p !== atual) escrever(p, false); }, [atual, escrever]);
 
   const regras = licoes.licoes.filter((l) => l.kind === 'rule').length;
-  const exemplos = licoes.licoes.filter((l) => l.kind !== 'rule').length + (agent.example_conversations?.length ?? 0);
+  // Conversas reais: só as que o servidor lê (resposta vazia não conta), igual à página.
+  const exemplos = licoes.licoes.filter((l) => l.kind !== 'rule').length + conversasReais(agent.example_conversations).length;
   const contagem: Record<PaginaDoEnsinar, number | undefined> = {
     instrucoes: undefined, regras, exemplos, arquivos: arquivos.docs.length, prova: casosDe(agent.social_proof).length,
   };

@@ -1,7 +1,8 @@
 // Ensinar · Exemplos: "Responda assim" (lições good_example + conversas reais gravadas
 // na IA) e "Não responda assim" (lições bad_example). Cartão = balão do lead à esquerda,
 // balão dela à direita, rodapé com selo e ⋮. O servidor diz quais lições valem (`in_use`);
-// a conversa real vale se o índice < limites.conversations.
+// a conversa real vale se a POSIÇÃO entre as que o servidor lê (`conversasReais`, que
+// descarta resposta vazia) < limites.conversations. Editar/excluir usa o índice cru.
 import { useMemo, useState } from 'react';
 import { MessageSquareText, MoreVertical, Plus } from 'lucide-react';
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/ds';
@@ -10,7 +11,8 @@ import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
 import Abas from '@/components/base/Abas';
 import EmptyState from '@/components/base/EmptyState';
 import { cn } from '@/lib/utils';
-import type { SalesAgentExample, SalesAgentLesson } from '@/services/salesAgents/salesAgentsService';
+import type { SalesAgentLesson } from '@/services/salesAgents/salesAgentsService';
+import { conversasReais, type ConversaReal } from '../paginas';
 import { SeloDeOrigem, dataCurta } from './LinhaDaLicao';
 import type { PropsDaPaginaDoEnsinar } from './tipos';
 
@@ -20,14 +22,15 @@ type ItemDeExemplo =
   | { chave: string; fonte: 'licao'; licao: SalesAgentLesson; lead: string | null; resposta: string; valendo: boolean }
   | { chave: string; fonte: 'conversa'; indice: number; lead: string | null; resposta: string; valendo: boolean };
 
-function itensDaAba(aba: Aba, licoes: SalesAgentLesson[], conversas: SalesAgentExample[], limiteDeConversas: number): ItemDeExemplo[] {
+function itensDaAba(aba: Aba, licoes: SalesAgentLesson[], conversas: ConversaReal[], limiteDeConversas: number): ItemDeExemplo[] {
   const kind = aba === 'bom' ? 'good_example' : 'bad_example';
   const deLicoes: ItemDeExemplo[] = licoes.filter((l) => l.kind === kind).map((l) => ({
     chave: `l-${l.id}`, fonte: 'licao', licao: l, lead: l.context, resposta: l.content, valendo: l.enabled && l.in_use,
   }));
   if (aba === 'ruim') return deLicoes;
-  const deConversas: ItemDeExemplo[] = conversas.map((c, i) => ({
-    chave: `c-${i}`, fonte: 'conversa', indice: i, lead: c.lead || null, resposta: c.resposta, valendo: i < limiteDeConversas,
+  // `posicao` entre as que o servidor lê (é o que o limite conta); `indice` é o cru.
+  const deConversas: ItemDeExemplo[] = conversas.map((c, posicao) => ({
+    chave: `c-${c.indice}`, fonte: 'conversa', indice: c.indice, lead: c.lead || null, resposta: c.resposta, valendo: posicao < limiteDeConversas,
   }));
   return [...deLicoes, ...deConversas];
 }
@@ -49,9 +52,11 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
   const [compor, setCompor] = useState<Composicao | null>(null);
   const [gravando, setGravando] = useState(false);
 
-  const conversas = agent.example_conversations ?? [];
-  const bons = useMemo(() => itensDaAba('bom', L.licoes, conversas, L.limites.conversations), [L.licoes, conversas, L.limites.conversations]);
-  const ruins = useMemo(() => itensDaAba('ruim', L.licoes, conversas, L.limites.conversations), [L.licoes, conversas, L.limites.conversations]);
+  // Cru: é o que se grava de volta (as que o servidor descarta continuam lá, intactas).
+  const conversas = useMemo(() => agent.example_conversations ?? [], [agent.example_conversations]);
+  const reais = useMemo(() => conversasReais(conversas), [conversas]);
+  const bons = useMemo(() => itensDaAba('bom', L.licoes, reais, L.limites.conversations), [L.licoes, reais, L.limites.conversations]);
+  const ruins = useMemo(() => itensDaAba('ruim', L.licoes, reais, L.limites.conversations), [L.licoes, reais, L.limites.conversations]);
   const itens = aba === 'bom' ? bons : ruins;
 
   const trocarAba = (a: Aba) => { setAba(a); setCompor(null); };

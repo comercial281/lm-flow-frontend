@@ -32,6 +32,33 @@ describe('Exemplos', () => {
     expect(screen.getAllByText('Não está valendo')).toHaveLength(1);
   });
 
+  it('conversa com resposta vazia (o servidor descarta) não aparece nem ocupa vaga do limite', () => {
+    abrir([], [{ lead: 'vazia', resposta: '   ' }, { lead: 'x', resposta: 'primeira' }, { lead: 'y', resposta: 'segunda' }]);
+    expect(screen.queryByText('vazia')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Conversa real')).toHaveLength(2);
+    // Limite 1: a "primeira" vale (a vazia não conta), só a "segunda" fica de fora.
+    const naoValendo = screen.getAllByText('Não está valendo');
+    expect(naoValendo).toHaveLength(1);
+    expect(naoValendo[0].closest('li')).toHaveTextContent('segunda');
+    expect(screen.getByText('primeira').closest('li')).not.toHaveTextContent('Não está valendo');
+  });
+
+  it('com conversa vazia no meio, editar e excluir acertam o índice cru', async () => {
+    const cru = [{ lead: 'x', resposta: 'primeira' }, { lead: 'vazia', resposta: '' }, { lead: 'z', resposta: 'terceira' }];
+    const { gravar } = abrir([], cru);
+    await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[1]);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
+    const resp = screen.getByLabelText('Como ela deve responder');
+    await userEvent.clear(resp);
+    await userEvent.type(resp, 'trocada');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar exemplo' }));
+    expect(gravar).toHaveBeenLastCalledWith({ example_conversations: [cru[0], cru[1], { lead: 'z', resposta: 'trocada' }] });
+
+    await userEvent.click(screen.getAllByRole('button', { name: /Ações do exemplo/ })[1]);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Excluir' }));
+    expect(gravar).toHaveBeenLastCalledWith({ example_conversations: [cru[0], cru[1]] });
+  });
+
   it('lição pausada não ganha selo de não valendo', () => {
     abrir([L('a', 'good_example', { enabled: false, in_use: false }), L('b', 'good_example', { in_use: false })], []);
     expect(screen.getAllByText('Não está valendo')).toHaveLength(1);

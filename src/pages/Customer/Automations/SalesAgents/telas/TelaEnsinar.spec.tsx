@@ -12,9 +12,9 @@ vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), err
 import TelaEnsinar from './TelaEnsinar';
 
 function Endereco() { return <output aria-label="endereço">{useLocation().search}</output>; }
-function abrir(url = '/ia-vendedora?ia=ia-1&tela=ensinar') {
+function abrir(url = '/ia-vendedora?ia=ia-1&tela=ensinar', agent = agenteDeTeste()) {
   render(<MemoryRouter initialEntries={[url]}><Routes><Route path="/ia-vendedora" element={<>
-    <TelaEnsinar agent={agenteDeTeste()} onCountChange={vi.fn()} aoSalvo={vi.fn()} /><Endereco /></>} /></Routes></MemoryRouter>);
+    <TelaEnsinar agent={agent} onCountChange={vi.fn()} aoSalvo={vi.fn()} /><Endereco /></>} /></Routes></MemoryRouter>);
 }
 
 beforeEach(() => {
@@ -33,6 +33,11 @@ describe('TelaEnsinar', () => {
     abrir();
     expect(screen.getAllByRole('group')).toHaveLength(2);
     expect(await screen.findByRole('button', { name: /Regras.*tem pendência/ })).toBeInTheDocument();
+  });
+
+  it('a contagem de Exemplos ignora conversa real com resposta vazia (o servidor descarta)', async () => {
+    abrir(undefined, agenteDeTeste({ example_conversations: [{ lead: 'a', resposta: 'ok' }, { lead: 'b', resposta: '  ' }] }));
+    expect(await screen.findByRole('button', { name: /^Exemplos/ })).toHaveTextContent(/^Exemplos.*1$/);
   });
 
   it('trocar de página empurra no endereço', async () => {

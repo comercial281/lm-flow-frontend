@@ -50,3 +50,31 @@ export function textoDosCasos(casos: string[]): string | null {
   const limpos = casos.map((s) => s.trim()).filter(Boolean);
   return limpos.length ? limpos.join('\n') : null;
 }
+
+/** Conversa real como o servidor a lê, com o índice CRU no `example_conversations` (pra editar/excluir a certa). */
+export interface ConversaReal { indice: number; lead: string; resposta: string }
+
+/**
+ * Espelho de `SalesAgent#example_conversations_list` (servidor): o comando só vê as
+ * conversas que sobram dessa leitura, e o limite (`limites.conversations`) conta só
+ * elas. Objeto: `resposta` (senão `reply`; como o `||` do Ruby, texto vazio NÃO cai pro
+ * `reply`), sem espaço nas pontas; resposta vazia sai. Texto solto: vira a resposta,
+ * sem lead. Qualquer outra coisa sai.
+ */
+export function conversasReais(cru: unknown): ConversaReal[] {
+  if (!Array.isArray(cru)) return [];
+  const texto = (v: unknown) => (v === null || v === undefined || v === false ? '' : String(v)).trim();
+  const ou = (a: unknown, b: unknown) => (a === null || a === undefined || a === false ? b : a);
+  const lidas: ConversaReal[] = [];
+  cru.forEach((ex, indice) => {
+    if (typeof ex === 'string') {
+      const resposta = ex.trim();
+      if (resposta) lidas.push({ indice, lead: '', resposta });
+    } else if (ex && typeof ex === 'object' && !Array.isArray(ex)) {
+      const o = ex as Record<string, unknown>;
+      const resposta = texto(ou(o.resposta, o.reply));
+      if (resposta) lidas.push({ indice, lead: texto(o.lead), resposta });
+    }
+  });
+  return lidas;
+}
