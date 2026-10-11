@@ -143,7 +143,6 @@ const InstagramDuplicateBanner: React.FC<{
           <Button
             variant="outline"
             size="sm"
-            className="border-orange-300 text-orange-700 hover:bg-orange-100"
           >
             {t('settings.authorizationBanners.instagram.duplicate.detailsButton')}
           </Button>
