@@ -4,7 +4,9 @@
  * lição "está valendo" é o servidor (`in_use`), nunca a tela.
  *
  * ⚠️ Resposta atrasada de OUTRA IA é descartada (`vigente`): trocar de IA com a lista
- * carregando não pode mostrar as lições da anterior.
+ * carregando não pode mostrar as lições da anterior. E só a leitura MAIS NOVA entra
+ * (`pedido`): duas releituras seguidas (editar duas vezes rápido) podem voltar fora de
+ * ordem, e a antiga chegando por último mostraria a lista de antes da segunda mudança.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -39,16 +41,20 @@ export function useLicoes(agentId: string): Licoes {
   const atuais = useRef(licoes);
   atuais.current = licoes;
 
+  const pedido = useRef(0);
+
   const carregar = useCallback(async () => {
     const pedida = agentId;
+    const n = ++pedido.current;
+    const valeAinda = () => vigente.current === pedida && pedido.current === n;
     try {
       const r = await salesAgentsService.listLessons(pedida);
-      if (vigente.current !== pedida) return;
+      if (!valeAinda()) return;
       setLicoes(r.licoes);
       setLimites(r.limites);
       setEstado('pronto');
     } catch {
-      if (vigente.current === pedida) setEstado('erro');
+      if (valeAinda()) setEstado('erro');
     }
   }, [agentId]);
 

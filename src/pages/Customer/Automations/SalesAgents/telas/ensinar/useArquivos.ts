@@ -2,6 +2,9 @@
  * Os arquivos da IA aberta no Ensinar. Relê sozinho a cada 4 s enquanto algum está
  * "Processando" (sem isto o "Lendo o arquivo…" ficava pra sempre: o upload relê a
  * lista milissegundos depois de criar o item, quando ele AINDA está pendente).
+ *
+ * ⚠️ Só a leitura mais nova entra (`vigente` = mesma IA, `pedido` = último pedido): a
+ * releitura do relógio e a de depois de excluir podem voltar fora de ordem.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -26,15 +29,19 @@ export function useArquivos(agentId: string, aoMudarContagem: () => void): Arqui
   const vigente = useRef(agentId);
   vigente.current = agentId;
 
+  const pedido = useRef(0);
+
   const carregar = useCallback(async () => {
     const pedida = agentId;
+    const n = ++pedido.current;
+    const valeAinda = () => vigente.current === pedida && pedido.current === n;
     try {
       const lista = await salesAgentsService.listDocuments(pedida);
-      if (vigente.current !== pedida) return;
+      if (!valeAinda()) return;
       setDocs(lista);
       setEstado('pronto');
     } catch {
-      if (vigente.current === pedida) setEstado('erro');
+      if (valeAinda()) setEstado('erro');
     }
   }, [agentId]);
 

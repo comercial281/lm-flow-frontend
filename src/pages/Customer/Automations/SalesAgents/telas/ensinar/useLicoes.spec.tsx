@@ -42,6 +42,24 @@ describe('useLicoes', () => {
     expect(result.current.licoes.map((l) => l.id)).toEqual(['da-b']);
   });
 
+  it('duas releituras fora de ordem: a antiga chegando por último não entra', async () => {
+    listLessons.mockResolvedValueOnce({ licoes: [L('inicial')], limites: { per_kind: 12, conversations: 6 } });
+    const { result } = renderHook(() => useLicoes('ia-1'));
+    await waitFor(() => expect(result.current.estado).toBe('pronto'));
+    let soltarAntiga!: (v: unknown) => void;
+    let soltarNova!: (v: unknown) => void;
+    listLessons.mockReturnValueOnce(new Promise((r) => { soltarAntiga = r; }))
+      .mockReturnValueOnce(new Promise((r) => { soltarNova = r; }));
+    let antiga!: Promise<void>;
+    let nova!: Promise<void>;
+    act(() => { antiga = result.current.carregar(); nova = result.current.carregar(); });
+    await act(async () => { soltarNova({ licoes: [L('nova')], limites: { per_kind: 12, conversations: 6 } }); await nova; });
+    expect(result.current.licoes.map((l) => l.id)).toEqual(['nova']);
+    await act(async () => { soltarAntiga({ licoes: [L('antiga')], limites: { per_kind: 12, conversations: 3 } }); await antiga; });
+    expect(result.current.licoes.map((l) => l.id)).toEqual(['nova']);
+    expect(result.current.limites.conversations).toBe(6);
+  });
+
   it('falha ao criar avisa e devolve false', async () => {
     listLessons.mockResolvedValue({ licoes: [], limites: { per_kind: 12, conversations: 6 } });
     createLesson.mockRejectedValue(new Error('x'));
