@@ -105,3 +105,17 @@ describe('detalhes da lista', () => {
     expect(screen.queryByRole('button', { name: 'Abrir no site' })).toBeNull();
   });
 });
+
+describe('Está em dia (f2-07)', () => {
+  it('mostra Está em dia quando pedido e chama a ação', () => {
+    const emDia = vi.fn();
+    render(<LinhaRevenda p={base} acoes={{ ...acoes, emDia }} permissoes={{ editar: true, excluir: false }} emDia />);
+    fireEvent.click(screen.getByRole('button', { name: 'Está em dia' }));
+    expect(emDia).toHaveBeenCalledWith(base);
+  });
+
+  it('sem emDia não mostra o botão', () => {
+    render(<LinhaRevenda p={base} acoes={acoes} permissoes={{ editar: true, excluir: false }} />);
+    expect(screen.queryByRole('button', { name: 'Está em dia' })).toBeNull();
+  });
+});

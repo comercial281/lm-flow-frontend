@@ -59,6 +59,7 @@ import {
 } from '@/features/properties/listingKind';
 import PainelDeFiltros, { type Facetas } from './lista/PainelDeFiltros';
 import EtiquetasDosFiltros from './lista/EtiquetasDosFiltros';
+import { vencido } from '@/features/properties/emDia';
 import LinhaRevenda from './lista/LinhaRevenda';
 import LinhaEmpreendimento from './lista/LinhaEmpreendimento';
 import CartaoGrade from './lista/CartaoGrade';
@@ -330,6 +331,20 @@ export default function Properties() {
     }
   };
 
+  // "Está em dia" (f2-07): na lista de Desatualizados (ou aberta pela Atividades)
+  // o imóvel sai; fora dela, só atualiza o "Atualizado".
+  const handleEmDia = async (p: Property) => {
+    try {
+      const novo = await propertiesService.confirmarEmDia(p.id);
+      toast.success(`${p.code} está em dia. O prazo recomeça a contar hoje.`);
+      if (recorte?.params.vence || recorte?.params.stale) setProperties(prev => prev.filter(x => x.id !== p.id));
+      else setProperties(prev => prev.map(x => (x.id === novo.id ? novo : x)));
+      recontar();
+    } catch {
+      toast.error('Não consegui marcar o imóvel como em dia. Tente de novo.');
+    }
+  };
+
   const handleDelete = async () => {
     if (!toDelete) return;
     setDeleting(true);
@@ -426,10 +441,13 @@ export default function Properties() {
     site: abrirNoSite,
     forca: p => handleCalculateScore(p.id),
     situacao: p => setSituacaoDe(p),
+    emDia: p => void handleEmDia(p),
     mover: moverDeAba,
     excluir: p => { setToDelete(p); setDeleteDialogOpen(true); },
   };
   const permissoes: Permissoes = { editar: pode('properties', 'update'), excluir: canDelete };
+  const pelaAtividade = Boolean(recorte?.params.vence);
+  const mostrarEmDia = (p: Property) => permissoes.editar && p.status === 'active' && (pelaAtividade || vencido(p));
 
   if (recusado) return <NoAccessState />;
 
@@ -485,8 +503,8 @@ export default function Properties() {
         ) : (
           <div aria-busy={loading} className={`flex flex-col gap-2.5 ${loading ? 'opacity-60' : ''}`}>
             {properties.map(p => (tipoDoImovel(p) === 'development'
-              ? <LinhaEmpreendimento key={p.id} p={p} acoes={acoesDoImovel} permissoes={permissoes} forca={propertyScores[p.id]} />
-              : <LinhaRevenda key={p.id} p={p} acoes={acoesDoImovel} permissoes={permissoes} forca={propertyScores[p.id]} />))}
+              ? <LinhaEmpreendimento key={p.id} p={p} acoes={acoesDoImovel} permissoes={permissoes} forca={propertyScores[p.id]} emDia={mostrarEmDia(p)} />
+              : <LinhaRevenda key={p.id} p={p} acoes={acoesDoImovel} permissoes={permissoes} forca={propertyScores[p.id]} emDia={mostrarEmDia(p)} />))}
           </div>
         )}
         <div className="mt-4 flex flex-col items-center gap-2 text-xs text-muted-foreground">

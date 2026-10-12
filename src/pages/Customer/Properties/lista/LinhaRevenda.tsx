@@ -13,8 +13,8 @@ import { Card } from '@/components/ui/ds';
 const FINALIDADE: Record<string, string> = { sale: 'Venda', rent: 'Locação', sale_rent: 'Venda e locação', season: 'Temporada' };
 const reais = (v?: number | null) => (v ? dinheiro(v, { centavos: false }) : null);
 
-export default function LinhaRevenda({ p, acoes, permissoes, forca }: {
-  p: Property; acoes: AcoesDoImovel; permissoes: Permissoes; forca?: number;
+export default function LinhaRevenda({ p, acoes, permissoes, forca, emDia }: {
+  p: Property; acoes: AcoesDoImovel; permissoes: Permissoes; forca?: number; emDia?: boolean;
 }) {
   const tipo = PROPERTY_TYPE_LABELS[p.property_type] ?? p.property_type;
   // Sem bairro, o título do cadastro diz mais do que só o tipo.
@@ -45,7 +45,15 @@ export default function LinhaRevenda({ p, acoes, permissoes, forca }: {
           {area > 0 && <span><b className="text-base">{numero(area, 2)}</b> m² {tipoDeArea}</span>}
         </p>
         <p className="mt-auto flex flex-wrap gap-x-3 gap-y-0.5 pt-1 text-xs text-muted-foreground">
-          <span>Atualizado {tempoDesde(p.updated_at)}</span>
+          <span className="inline-flex items-center gap-2">
+            Atualizado {tempoDesde(p.updated_at)}
+            {emDia && (
+              <button type="button" onClick={() => acoes.emDia(p)}
+                className="rounded-md border border-emerald-600/40 bg-emerald-500/10 px-2 py-0.5 font-semibold text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-400">
+                Está em dia
+              </button>
+            )}
+          </span>
           {p.captor?.name && <span>Captador: {p.captor.name}</span>}
           {p.lead_goes_to_responsible && (
             <span className="inline-flex items-center gap-1 font-semibold text-primary">
