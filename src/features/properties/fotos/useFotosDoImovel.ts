@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { propertyPhotosService, type PropertyPhoto } from '@/services/propertyPhotos/propertyPhotosService';
 import {
-  idDaCapa, juntar, moverNoGrupo, moverParaCapa, posicoes, separar, separarCapaDoLote, validarArquivos,
+  idDaCapa, juntar, moverNoGrupo, moverParaCapa, posicoes, separar, separarCapaDoLote, tipoPeloEndereco, validarArquivos,
 } from './regrasDasFotos';
 
 type Lote = 'ocultar' | 'mostrar' | 'excluir';
@@ -14,7 +14,15 @@ const jaEstaArrumada = (fotos: PropertyPhoto[]) => {
 };
 
 export function useFotosDoImovel(propertyId: string) {
-  const [fotos, setFotos] = useState<PropertyPhoto[]>([]);
+  const [fotos, setFotosEstado] = useState<PropertyPhoto[]>([]);
+  // Cópia sempre atual da lista: o fim de um envio lento parte da lista de AGORA,
+  // não da que existia quando o envio começou.
+  const fotosRef = useRef<PropertyPhoto[]>([]);
+  const enviandoRef = useRef(false);
+  const setFotos = useCallback((v: PropertyPhoto[] | ((prev: PropertyPhoto[]) => PropertyPhoto[])) => {
+    fotosRef.current = typeof v === 'function' ? v(fotosRef.current) : v;
+    setFotosEstado(fotosRef.current);
+  }, []);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(false);
   const [enviando, setEnviando] = useState<number | null>(null);
@@ -35,7 +43,7 @@ export function useFotosDoImovel(propertyId: string) {
     } finally {
       if (meu === pedido.current) setCarregando(false);
     }
-  }, [propertyId]);
+  }, [propertyId, setFotos]);
 
   useEffect(() => { void carregar(); }, [carregar]);
 
@@ -50,42 +58,49 @@ export function useFotosDoImovel(propertyId: string) {
     } finally {
       setSalvandoOrdem(false);
     }
-  }, [propertyId, carregar]);
+  }, [propertyId, carregar, setFotos]);
 
   const mover = useCallback(async (grupo: 'imagens' | 'midias', deId: string, paraId: string) => {
-    const sep = separar(fotos);
+    const sep = separar(fotosRef.current);
     const movido = moverNoGrupo(sep[grupo], deId, paraId);
     if (!movido) return;
     await gravarOrdem(grupo === 'imagens' ? juntar(movido, sep.midias) : juntar(sep.imagens, movido));
-  }, [fotos, gravarOrdem]);
+  }, [gravarOrdem]);
 
   // Põe as novas no fim e, se a ordem gravada ficaria fora de "fotos, depois mídias", regrava.
   const acrescentar = useCallback(async (novas: PropertyPhoto[]) => {
-    const todas = [...fotos, ...novas];
+    const todas = [...fotosRef.current, ...novas];
     if (jaEstaArrumada(todas)) setFotos(todas);
     else { const { imagens, midias } = separar(todas); await gravarOrdem(juntar(imagens, midias)); }
-  }, [fotos, gravarOrdem]);
+  }, [setFotos, gravarOrdem]);
 
   const enviar = useCallback(async (files: File[]) => {
     const { ok, recusados } = validarArquivos(files);
     recusados.forEach(msg => toast.error(msg));
     if (!ok.length) return;
+    if (enviandoRef.current) { toast.info('Espere o envio terminar'); return; }
+    enviandoRef.current = true;
     setEnviando(0);
     try {
-      // Sem tipo: o servidor descobre vídeo e áudio pelo arquivo (inferred_photo_type).
+      // Sem tipo: no envio de arquivo o servidor descobre vídeo e áudio (inferred_photo_type).
       const criadas = await propertyPhotosService.upload(propertyId, ok, { published: true, onProgress: setEnviando });
       toast.success(criadas.length === 1 ? '1 arquivo enviado' : `${criadas.length} arquivos enviados`);
       await acrescentar(criadas);
     } catch {
       toast.error('Não deu pra enviar. Confira a internet e tente de novo.');
     } finally {
+      enviandoRef.current = false;
       setEnviando(null);
     }
   }, [propertyId, acrescentar]);
 
   const adicionarPorEndereco = useCallback(async (url: string) => {
     try {
-      const nova = await propertyPhotosService.create(propertyId, { file_url: url.trim(), published: true });
+      // O servidor só descobre vídeo e áudio no envio de arquivo; por endereço o tipo sai da extensão.
+      const tipo = tipoPeloEndereco(url);
+      const nova = await propertyPhotosService.create(propertyId, {
+        file_url: url.trim(), ...(tipo ? { photo_type: tipo } : {}), published: true,
+      });
       await acrescentar([nova]);
       toast.success('Foto adicionada');
       return true;
@@ -103,10 +118,10 @@ export function useFotosDoImovel(propertyId: string) {
     } catch {
       toast.error('Não deu pra trocar a capa.');
     }
-  }, [propertyId]);
+  }, [propertyId, setFotos]);
 
   const alternarVisivel = useCallback(async (id: string) => {
-    const atual = fotos.find(p => p.id === id);
+    const atual = fotosRef.current.find(p => p.id === id);
     if (!atual) return;
     try {
       const nova = await propertyPhotosService.update(propertyId, id, { published: !atual.published });
@@ -115,7 +130,7 @@ export function useFotosDoImovel(propertyId: string) {
     } catch {
       toast.error('Não deu pra mudar. Tente de novo.');
     }
-  }, [propertyId, fotos]);
+  }, [propertyId, setFotos]);
 
   const excluir = useCallback(async (id: string) => {
     try {
@@ -125,10 +140,10 @@ export function useFotosDoImovel(propertyId: string) {
     } catch {
       toast.error('Não deu pra excluir. Tente de novo.');
     }
-  }, [propertyId]);
+  }, [propertyId, setFotos]);
 
   const emLote = useCallback(async (ids: string[], acao: Lote) => {
-    const capaId = idDaCapa(fotos);
+    const capaId = idDaCapa(fotosRef.current);
     const alvo = acao === 'ocultar' ? separarCapaDoLote(ids, capaId) : { ids, pulouCapa: false };
     let feitos = 0;
     let falhas = 0;
@@ -145,7 +160,7 @@ export function useFotosDoImovel(propertyId: string) {
     }
     await carregar();
     return { feitos, falhas, pulouCapa: alvo.pulouCapa };
-  }, [propertyId, fotos, carregar]);
+  }, [propertyId, carregar]);
 
   return {
     fotos, carregando, erro, enviando, salvandoOrdem,

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { PropertyPhoto } from '@/services/propertyPhotos/propertyPhotosService';
 import {
   contagens, daAba, destinoDaVolta, iaNoVideo, juntar, linkDasFotos, LIMITE_DO_VIDEO_DA_IA,
-  moverNoGrupo, podeOcultar, separar, separarCapaDoLote, validarArquivos,
+  moverNoGrupo, podeOcultar, separar, separarCapaDoLote, tipoPeloEndereco, validarArquivos,
 } from './regrasDasFotos';
 
 const foto = (id: string, extra: Partial<PropertyPhoto> = {}) =>
@@ -86,5 +86,17 @@ describe('regrasDasFotos', () => {
     expect(podeOcultar(foto('a', { published: false }), 'a')).toBe(true);
     expect(separarCapaDoLote(['a', 'b'], 'a')).toEqual({ ids: ['b'], pulouCapa: true });
     expect(separarCapaDoLote(['b'], 'a')).toEqual({ ids: ['b'], pulouCapa: false });
+  });
+
+  it('tipo pelo endereço: extensão sem query/hash, sem caixa', () => {
+    expect(tipoPeloEndereco('https://x/tour.MP4?x=1')).toBe('video');
+    expect(tipoPeloEndereco('https://x/a.webm#t=3')).toBe('video');
+    expect(tipoPeloEndereco('https://x/a.mov')).toBe('video');
+    expect(tipoPeloEndereco('https://x/a.m4v')).toBe('video');
+    expect(tipoPeloEndereco('https://x/a.Mp3')).toBe('audio');
+    expect(tipoPeloEndereco('https://x/a.opus?z=.jpg')).toBe('audio');
+    expect(tipoPeloEndereco('https://x/a.jpg')).toBeUndefined();
+    expect(tipoPeloEndereco('https://x/semextensao')).toBeUndefined();
+    expect(tipoPeloEndereco('https://x/a.mp4.jpg')).toBeUndefined();
   });
 });

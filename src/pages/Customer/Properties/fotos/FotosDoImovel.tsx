@@ -85,9 +85,14 @@ export default function FotosDoImovel() {
       setLoteEmAndamento(false);
     }
     const feito = { ocultar: r.feitos === 1 ? 'oculta' : 'ocultas', mostrar: r.feitos === 1 ? 'visível' : 'visíveis', excluir: r.feitos === 1 ? 'excluída' : 'excluídas' }[acao];
+    if (r.feitos === 0 && r.pulouCapa && !r.falhas) {
+      toast.info('A capa não se oculta. Escolha outra capa antes.');
+      sairDaSelecao();
+      return;
+    }
     const partes = [`${r.feitos} ${feito}.`];
     if (r.pulouCapa) partes.push('A capa não foi ocultada.');
-    if (r.falhas) partes.push(`${r.falhas} não deu certo. Tente de novo.`);
+    if (r.falhas) partes.push(`${r.falhas === 1 ? '1 não deu certo.' : `${r.falhas} não deram certo.`} Tente de novo.`);
     (r.falhas ? toast.error : toast.success)(partes.join(' '));
     sairDaSelecao();
   };
@@ -102,6 +107,7 @@ export default function FotosDoImovel() {
     if (!pode.subir || !temArquivos(e)) return;
     e.preventDefault();
     setSoltando(false);
+    if (dados.enviando !== null) { toast.info('Espere o envio terminar'); return; }
     void dados.enviar(Array.from(e.dataTransfer.files));
   };
 
@@ -111,7 +117,11 @@ export default function FotosDoImovel() {
     let vivo = true;
     propertiesService.get(id)
       .then(p => { if (vivo) setImovel(p); })
-      .catch(e => { if (vivo && isForbiddenError(e)) setSemAcesso(true); });
+      .catch(e => {
+        // 404: imóvel que não existe ou de outra imobiliária; o servidor responde assim em vez de 403.
+        const status = (e as { response?: { status?: number } } | null)?.response?.status;
+        if (vivo && (isForbiddenError(e) || status === 404)) setSemAcesso(true);
+      });
     return () => { vivo = false; };
   }, [id]);
 
@@ -226,7 +236,7 @@ export default function FotosDoImovel() {
               className="mb-5"
             />
             <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
-              <CartaoDaCapa capa={capa} />
+              <CartaoDaCapa capa={capa} podeTrocar={pode.ordem || pode.capa} />
               <div className="flex min-w-0 flex-col gap-8">
                 {visiveis.imagens.length > 0 && (
                   <section aria-labelledby="titulo-fotos" className="flex flex-col gap-3">
@@ -275,6 +285,12 @@ export default function FotosDoImovel() {
                     />
                   </section>
                 )}
+                {aba === 'fotos' && !visiveis.imagens.length && (
+                  <EmptyState tamanho="compacto" title="Nenhuma foto" />
+                )}
+                {aba === 'midias' && !visiveis.midias.length && (
+                  <EmptyState tamanho="compacto" title="Nenhum vídeo ou áudio" />
+                )}
                 {aba === 'ocultas' && !visiveis.imagens.length && !visiveis.midias.length && (
                   <EmptyState tamanho="compacto" title="Nenhuma foto oculta" />
                 )}
@@ -285,7 +301,7 @@ export default function FotosDoImovel() {
       </div>
       <FotoAmpliada
         fotos={visiveis.imagens}
-        todas={dados.fotos}
+        todas={separar(dados.fotos).imagens}
         abertaId={ampliada}
         capaId={dados.capaId}
         pode={pode}

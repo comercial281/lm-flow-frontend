@@ -122,3 +122,15 @@ export function separarCapaDoLote(ids: string[], capaId: string | null): { ids: 
   const sem = ids.filter(id => id !== capaId);
   return { ids: sem, pulouCapa: sem.length !== ids.length };
 }
+
+// Por endereço o servidor não descobre o tipo (só no envio de arquivo): sai da extensão.
+const EXT_VIDEO = ['mp4', 'mov', 'webm', 'm4v'];
+const EXT_AUDIO = ['mp3', 'm4a', 'ogg', 'wav', 'aac', 'opus'];
+
+export function tipoPeloEndereco(url: string): 'video' | 'audio' | undefined {
+  const caminho = url.trim().split(/[?#]/)[0].toLowerCase();
+  const ext = caminho.includes('.') ? caminho.slice(caminho.lastIndexOf('.') + 1) : '';
+  if (EXT_VIDEO.includes(ext)) return 'video';
+  if (EXT_AUDIO.includes(ext)) return 'audio';
+  return undefined;
+}

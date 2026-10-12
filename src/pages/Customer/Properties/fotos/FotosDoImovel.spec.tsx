@@ -22,6 +22,7 @@ vi.mock('@/hooks/useCan', () => ({ useCan: () => (r: string, a: string) => permi
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 
 import FotosDoImovel from './FotosDoImovel';
+import { NO_ACCESS_MESSAGE } from '@/components/permissions/noAccessCopy';
 
 const foto = (id: string, extra: Partial<PropertyPhoto> = {}) =>
   ({ id, property_id: 'p1', file_url: `https://x/${id}.jpg`, photo_type: 'main', content_type: 'image/jpeg',
@@ -214,5 +215,52 @@ describe('FotosDoImovel', () => {
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Mostrar' }));
     await userEvent.click(await screen.findByRole('tab', { name: /^Tudo/ }));
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('imóvel que não existe (404) mostra a tela de sem acesso', async () => {
+    svc.list.mockResolvedValue([]);
+    props.get.mockRejectedValue({ response: { status: 404 } });
+    render(
+      <MemoryRouter initialEntries={['/properties/p1/fotos']}>
+        <Routes><Route path="/properties/:id/fotos" element={<FotosDoImovel />} /></Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText(NO_ACCESS_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma foto ainda')).not.toBeInTheDocument();
+  });
+
+  it('aba Fotos sem foto e aba Vídeos sem mídia mostram vazio compacto', async () => {
+    abrir([video('v')]);
+    await userEvent.click(await screen.findByRole('tab', { name: 'Fotos 0' }));
+    expect(screen.getByText('Nenhuma foto')).toBeInTheDocument();
+  });
+
+  it('aba Vídeos e áudios sem mídia mostra vazio compacto', async () => {
+    abrir([foto('a')]);
+    await userEvent.click(await screen.findByRole('tab', { name: 'Vídeos e áudios 0' }));
+    expect(screen.getByText('Nenhum vídeo ou áudio')).toBeInTheDocument();
+  });
+
+  it('vídeo sozinho: "Foto N de M" conta só fotos', async () => {
+    abrir([video('v'), foto('a'), foto('b')]);
+    await userEvent.click(await screen.findByRole('button', { name: 'Abrir a 3ª foto' }));
+    expect(within(screen.getByRole('dialog')).getByText('Foto 2 de 2')).toBeInTheDocument();
+  });
+
+  it('a frase de trocar a capa some pra quem não ordena nem escolhe capa', async () => {
+    permitido.fn = (_r, a) => a === 'read';
+    abrir([foto('a'), foto('b')]);
+    await screen.findByRole('region', { name: 'Capa' });
+    expect(screen.queryByText(/Para trocar, arraste/)).not.toBeInTheDocument();
+  });
+
+  it('ocultar só a capa não diz "0 ocultas"', async () => {
+    const { toast } = await import('sonner');
+    abrir([foto('a'), foto('b')]);
+    await userEvent.click(await screen.findByRole('button', { name: 'Selecionar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Selecionar a 1ª foto' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ocultar' }));
+    await waitFor(() => expect(toast.info).toHaveBeenCalledWith('A capa não se oculta. Escolha outra capa antes.'));
+    expect(svc.update).not.toHaveBeenCalled();
   });
 });

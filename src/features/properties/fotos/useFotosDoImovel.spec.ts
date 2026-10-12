@@ -109,6 +109,49 @@ describe('useFotosDoImovel', () => {
     expect(h.result.current.fotos.map(p => p.id)).toEqual(['a', 'n']);
   });
 
+  it('mover durante o envio: o fim do envio respeita a ordem nova e acrescenta a foto', async () => {
+    const h = await montar([foto('a'), foto('b'), video('v')]);
+    let soltar!: (l: PropertyPhoto[]) => void;
+    svc.upload.mockReturnValue(new Promise<PropertyPhoto[]>(r => { soltar = r; }));
+    let envio!: Promise<void>;
+    act(() => { envio = h.result.current.enviar([new File(['x'], 'n.jpg', { type: 'image/jpeg' })]); });
+    svc.reorder.mockResolvedValueOnce([foto('b'), foto('a'), video('v')]);
+    await act(() => h.result.current.mover('imagens', 'b', 'a'));
+    svc.reorder.mockResolvedValueOnce([foto('b'), foto('a'), foto('n'), video('v')]);
+    await act(async () => { soltar([foto('n')]); await envio; });
+    expect(svc.reorder).toHaveBeenLastCalledWith('p1', [
+      { id: 'b', position: 0 }, { id: 'a', position: 1 }, { id: 'n', position: 2 }, { id: 'v', position: 3 },
+    ]);
+    expect(h.result.current.fotos.map(p => p.id)).toEqual(['b', 'a', 'n', 'v']);
+  });
+
+  it('segundo enviar com um em andamento não sobe de novo', async () => {
+    const h = await montar([foto('a')]);
+    let soltar!: (l: PropertyPhoto[]) => void;
+    svc.upload.mockReturnValue(new Promise<PropertyPhoto[]>(r => { soltar = r; }));
+    const arq = () => new File(['x'], 'n.jpg', { type: 'image/jpeg' });
+    let p1!: Promise<void>;
+    act(() => { p1 = h.result.current.enviar([arq()]); });
+    await act(() => h.result.current.enviar([arq()]));
+    expect(svc.upload).toHaveBeenCalledTimes(1);
+    expect(toast.info).toHaveBeenCalledWith('Espere o envio terminar');
+    await act(async () => { soltar([foto('n')]); await p1; });
+  });
+
+  it('adicionar por endereço de vídeo manda photo_type video', async () => {
+    const h = await montar([foto('a')]);
+    svc.create.mockResolvedValue(video('n'));
+    await act(async () => { await h.result.current.adicionarPorEndereco('https://x/tour.MP4?x=1'); });
+    expect(svc.create).toHaveBeenCalledWith('p1', { file_url: 'https://x/tour.MP4?x=1', photo_type: 'video', published: true });
+  });
+
+  it('adicionar por endereço de imagem não manda photo_type', async () => {
+    const h = await montar([foto('a')]);
+    svc.create.mockResolvedValue(foto('n'));
+    await act(async () => { await h.result.current.adicionarPorEndereco('https://x/n.jpg'); });
+    expect(svc.create).toHaveBeenCalledWith('p1', { file_url: 'https://x/n.jpg', published: true });
+  });
+
   it('emLote ocultar pula a capa', async () => {
     const h = await montar([foto('a'), foto('b'), foto('c')]);
     svc.update.mockImplementation(async (_p: string, id: string) => foto(id, { published: false }));

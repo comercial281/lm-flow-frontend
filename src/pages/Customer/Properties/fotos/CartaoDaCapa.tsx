@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/ds';
 import { Aviso } from '@/components/base';
 import type { PropertyPhoto } from '@/services/propertyPhotos/propertyPhotosService';
 
-export default function CartaoDaCapa({ capa }: { capa: PropertyPhoto | null }) {
+export default function CartaoDaCapa({ capa, podeTrocar }: { capa: PropertyPhoto | null; podeTrocar: boolean }) {
   return (
     <Card role="region" aria-labelledby="titulo-capa" className="gap-3 p-4 lg:sticky lg:top-0">
       <h2 id="titulo-capa" className="flex items-center gap-2 text-base font-semibold">
@@ -21,9 +21,11 @@ export default function CartaoDaCapa({ capa }: { capa: PropertyPhoto | null }) {
       <p className="text-sm text-muted-foreground">
         É a primeira coisa que o lead vê: no site, nos portais e na primeira foto que a IA manda.
       </p>
-      <p className="text-sm text-muted-foreground">
-        Para trocar, arraste outra foto para o 1º lugar ou clique na coroa dela.
-      </p>
+      {podeTrocar && (
+        <p className="text-sm text-muted-foreground">
+          Para trocar, arraste outra foto para o 1º lugar ou clique na coroa dela.
+        </p>
+      )}
       {capa && !capa.published && (
         <Aviso tom="atencao" compacto>A capa está oculta. No site e nos portais aparece a próxima foto visível.</Aviso>
       )}

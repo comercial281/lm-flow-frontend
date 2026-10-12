@@ -1,4 +1,7 @@
-import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import {
+  DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors,
+  type Announcements, type DragEndEvent, type ScreenReaderInstructions,
+} from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { AlertTriangle, CheckCircle2, Eye, EyeOff, GripVertical, Music, Trash2 } from 'lucide-react';
@@ -8,6 +11,21 @@ import { numero } from '@/lib/formato';
 import type { PropertyPhoto } from '@/services/propertyPhotos/propertyPhotosService';
 import type { Permissoes } from '@/features/properties/fotos/usePermissoesDasFotos';
 import { TEXTO_DO_VIDEO, ehVideo, iaNoVideo, type SituacaoDoVideo } from '@/features/properties/fotos/regrasDasFotos';
+
+// O leitor de tela fala português (o dnd-kit vem com as frases em inglês).
+const INSTRUCOES: ScreenReaderInstructions = {
+  draggable: 'Pra mudar a ordem, aperte espaço, use as setas e aperte espaço de novo pra soltar. Esc cancela.',
+};
+
+function anuncios(todas: PropertyPhoto[]): Announcements {
+  const pos = (id: unknown) => `${Math.max(0, todas.findIndex(p => p.id === id)) + 1}ª`;
+  return {
+    onDragStart: ({ active }) => `Vídeo ou áudio pego, na posição ${pos(active.id)}.`,
+    onDragOver: ({ over }) => (over ? `Sobre a posição ${pos(over.id)}.` : 'Fora da lista.'),
+    onDragEnd: ({ over }) => (over ? `Vídeo ou áudio solto na posição ${pos(over.id)}.` : 'Vídeo ou áudio solto. A ordem não mudou.'),
+    onDragCancel: ({ active }) => `Cancelado. O vídeo ou áudio voltou pra posição ${pos(active.id)}.`,
+  };
+}
 
 interface Props {
   midias: PropertyPhoto[];
@@ -126,7 +144,12 @@ export default function ListaDeMidias(props: Props) {
     if (over && active.id !== over.id) props.aoMover(String(active.id), String(over.id));
   };
   return (
-    <DndContext sensors={sensores} collisionDetection={closestCenter} onDragEnd={aoSoltar}>
+    <DndContext
+      sensors={sensores}
+      collisionDetection={closestCenter}
+      onDragEnd={aoSoltar}
+      accessibility={{ screenReaderInstructions: INSTRUCOES, announcements: anuncios(props.todasAsMidias) }}
+    >
       <SortableContext items={props.midias.map(m => m.id)} strategy={rectSortingStrategy}>
         <ul className="grid gap-3 sm:grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
           {props.midias.map(m => <Item key={m.id} m={m} situacao={ia.get(m.id)} props={props} />)}
