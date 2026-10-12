@@ -83,4 +83,11 @@ describe('AcademiaHome', () => {
     expect(screen.queryByText('Nenhum curso ainda.')).toBeNull();
     expect(screen.getByText('Como usar o LM Flow')).toBeTruthy();
   });
+
+  it('embutida na aba Aulas: saudação sem título de página (o Tutorial já tem o dele)', () => {
+    render(<MemoryRouter><AcademiaHome embedded /></MemoryRouter>);
+    expect(screen.queryByRole('heading', { name: 'Olá, Marina' })).toBeNull();
+    expect(screen.getByText('Olá, Marina')).toBeTruthy();
+    expect(screen.getByText('1 de 2 aulas')).toBeTruthy();
+  });
 });
