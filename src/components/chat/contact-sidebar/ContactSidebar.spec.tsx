@@ -388,3 +388,50 @@ describe('ContactSidebar — painel do lead em seções', () => {
     expect(screen.queryByText('lead.ficticio@exemplo.com')).toBeNull();
   });
 });
+
+// Mensagens prontas na lateral (12/10/2026): o foguete troca o painel do lead
+// por elas, deslizando; a camada escondida fica inerte (sem foco nem leitor de tela).
+describe('ContactSidebar — Mensagens prontas no lugar do lead', () => {
+  beforeEach(() => {
+    getPipelinesByConversation.mockReset();
+    getContactConversations.mockReset();
+    getPipelinesByConversation.mockResolvedValue([]);
+    getContactConversations.mockResolvedValue({ data: [] });
+    listarAgendados.mockReset();
+    listarAgendados.mockResolvedValue([]);
+  });
+
+  const comProntas = (mostrar: boolean) => (
+    <MemoryRouter>
+      <ContactSidebar
+        isOpen
+        onClose={vi.fn()}
+        contact={contact as never}
+        conversation={conversation as never}
+        prontas={<button type="button">Enviar "Link do book"</button>}
+        mostrarProntas={mostrar}
+      />
+    </MemoryRouter>
+  );
+
+  it('sem prontas montadas, só existe a camada do lead', () => {
+    renderPainel();
+    expect(screen.queryByTestId('camada-das-prontas')).toBeNull();
+    expect(screen.getByTestId('camada-do-lead').hasAttribute('inert')).toBe(false);
+  });
+
+  it('troca de camada: a que sai fica inerte e desliza pra fora', () => {
+    const { rerender } = render(comProntas(true));
+    const lead = screen.getByTestId('camada-do-lead');
+    const prontas = screen.getByTestId('camada-das-prontas');
+    expect(lead.hasAttribute('inert')).toBe(true);
+    expect(lead.className).toContain('-translate-x-8');
+    expect(prontas.hasAttribute('inert')).toBe(false);
+    expect(prontas.className).toContain('translate-x-0');
+
+    rerender(comProntas(false));
+    expect(lead.hasAttribute('inert')).toBe(false);
+    expect(prontas.hasAttribute('inert')).toBe(true);
+    expect(prontas.className).toContain('translate-x-full');
+  });
+});

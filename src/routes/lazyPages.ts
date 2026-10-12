@@ -31,6 +31,8 @@ export const SiteBuilder = lazyWithRetry(() => import('@/pages/Customer/Settings
 export const Properties = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.Properties })));
 // Cadastro de imóvel (/properties/new e /properties/:id/editar): abre a partir da lista de Imóveis.
 export const CadastroDoImovel = lazyWithRetry(() => import('@/pages/Customer/Properties/cadastro/CadastroDoImovel'));
+// Fotos e vídeos do imóvel (/properties/:id/fotos): abre pelo ⋮ da lista e pelo cadastro.
+export const FotosDoImovel = lazyWithRetry(() => import('@/pages/Customer/Properties/fotos/FotosDoImovel'));
 // Gestão de proprietários (lista + Novas captações) e a ficha de cada um.
 export const GestaoDeProprietarios = lazyWithRetry(() => import('@/pages/Customer/PropertyOwners/GestaoDeProprietarios'));
 export const FichaDoProprietario = lazyWithRetry(() => import('@/pages/Customer/PropertyOwners/FichaDoProprietario'));

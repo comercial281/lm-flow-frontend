@@ -235,18 +235,12 @@ describe('Tela de Imóveis', () => {
     expect(screen.getByRole('textbox', { name: 'Buscar' })).toBeInTheDocument();
   });
 
-  it('fechar as fotos relê só aquele imóvel, sem voltar à página 1', async () => {
+  it('Adicionar fotos leva pra página de fotos do imóvel', async () => {
     svc.contarPorTipo.mockResolvedValue({ development: 0, resale: 1 });
     svc.list.mockResolvedValue(resposta([imovel({ id: 'r1', code: 'AP0461', cover_photo_url: null })], 1));
-    svc.get.mockResolvedValue(imovel({ id: 'r1', code: 'AP0461', cover_photo_url: null, address_neighborhood: 'Taquaral' }));
     abrir('/properties?aba=revenda');
     fireEvent.click(await screen.findByRole('button', { name: 'Adicionar fotos' }));
-    const chamadas = svc.list.mock.calls.length;
-    // A janela tem o X do topo e o Fechar do rodapé; o X também relê o imóvel.
-    fireEvent.click((await screen.findAllByRole('button', { name: 'Fechar' }))[0]);
-    await waitFor(() => expect(svc.get).toHaveBeenCalledWith('r1'));
-    expect(await screen.findByText('Taquaral · Apartamento')).toBeInTheDocument();
-    expect(svc.list.mock.calls.length).toBe(chamadas);
+    await waitFor(() => expect(screen.getByTestId('onde')).toHaveTextContent('/properties/r1/fotos'));
   });
 
   it('excluir usa Excluir, não Remover', async () => {

@@ -7361,7 +7361,7 @@ Armadilha: a contagem por tipo lê o que vem antes do " · " na frase que o serv
 Pedido do dono: ajustar a ordem em que as fotos aparecem. Decisão dele: **a primeira foto é
 sempre a capa.**
 
-- Em **Fotos e vídeos** (o mesmo gerenciador da lista de Imóveis e do cadastro), cada foto tem
+- Na página **Fotos e vídeos** do imóvel (ver *Página de fotos e vídeos do imóvel*, 12/10/2026), cada foto tem
   uma alça de arrastar no canto, sempre visível (no celular não existe passar o mouse). Também
   dá pelo teclado (espaço + setas). A ordem vale para a galeria do site, a landing, os portais
   e o pacote de fotos que a IA Vendedora manda.
@@ -8336,7 +8336,7 @@ O que muda pra quem usa:
    - O ↗ "abrir em nova guia" do cartão continua (de propósito).
 2. **Faixa de etapas da página no celular:** cada seta tem a largura do próprio texto (até 220px, depois corta), a faixa rola de lado e abre já rolada até a etapa atual. O desenho em setas encaixadas é o mesmo do computador (o recorte é em px, então encaixa em qualquer largura). Antes as etapas encolhiam abaixo da largura mínima e encavalavam ("menos de 1 dia · atual" por cima da vizinha).
 3. **Botão que só aparecia passando o mouse fica sempre visível em aparelho de toque.** No Tailwind 4, `hover:`/`group-hover:` só valem com mouse; o padrão `opacity-0 group-hover:opacity-100` deixava o botão invisível e ainda tocável (dava pra apertar Excluir no cartão de funil sem ver). Consertado em 25 pontos de 22 arquivos: cartões de Funis, Contatos, Equipes, Usuários, Integrações, canais MCP/ferramentas, curso da Academia, pastas de Automações e de Funis de mensagem, reordenar/criar etapas, campos personalizados, anexo do campo de mensagem, ⋯ do cartão do lead (tablet), fotos do imóvel, Tutoriais (categoria e comentário), ícone de ampliar da página pública do imóvel. Ficaram como estavam os brilhos de fundo dos cartões de canal e de link (enfeite, não recebe toque).
-   - **Atualizado em 11/10/2026 (revisão do #538, peça 16 do GLOSSARIO):** a regra da casa é a ação **sempre à vista, apagada** (`opacity-70 group-hover:opacity-100 focus-within:opacity-100`), e não mais o `toque:opacity-100`. As fotos da conversa (`MessageImage`) e do imóvel (`PropertyPhotosDialog`) já estão assim: botões sempre à vista, com fundo (`bg-background/80 rounded-md`).
+   - **Atualizado em 11/10/2026 (revisão do #538, peça 16 do GLOSSARIO):** a regra da casa é a ação **sempre à vista, apagada** (`opacity-70 group-hover:opacity-100 focus-within:opacity-100`), e não mais o `toque:opacity-100`. As fotos da conversa (`MessageImage`) e do imóvel (a janela `PropertyPhotosDialog` foi substituída em 12/10/2026 pela página `src/pages/Customer/Properties/fotos/`) já estão assim: botões sempre à vista, com fundo (`bg-background/80 rounded-md`).
    - **Os únicos `toque:` que sobram** (não acrescentar outro sem motivo igual): `toque:hidden` na camada sobre foto do visualizador compartilhado (`SharedImageBubble`; no visualizador externo, onde a foto não abre, `toque:opacity-100`) e na foto de perfil (`ProfilePhotoUploader`), onde a camada some e o toque cai na foto; e `toque:opacity-100` fora da tela do cliente: cartões de ferramentas e de servidores MCP (`CustomToolCard`, `CustomMCPServerCard`, sobra do fork) e o ícone de ampliar da página pública do imóvel (`ImovelPublicPage`).
 4. **Suporte no celular é sempre a lingueta** ("?" presa no meio da borda direita), em todas as telas. No computador vale a regra de antes (`rotaComAba` + canto ocupado).
 
@@ -8520,6 +8520,51 @@ Pedido do dono: deixar a janela de Modelos mais refinada. Ele escolheu, entre du
 - `PreviewStepLine` continua no `FunnelTemplatePicker` porque o *Disparar funil* da conversa usa.
 
 Testes: `TemplatePickerDialog.spec.tsx`, `ConversationFunnels.spec.tsx`, `templates.spec.ts`.
+
+## Mensagens prontas na lateral da conversa (12/10/2026)
+
+Pedido do dono do produto (modelo Zap Voice): a janela do "Disparar funil" abria **por cima da conversa** e cobria metade das mensagens, justamente quando o corretor precisa ler o que o lead disse pra escolher o que mandar. É a "entrega própria" de Funis de mensagem que o campo enxuto (08/10) deixou pra depois. Depende do backend `lm-flow#476` (`with_nodes=1`), mas funciona sem ele (ver armadilha 2).
+
+O que aparece na tela:
+
+- **O foguete do campo de mensagem virou "Mensagens prontas".** Em Conversas, com a tela a partir de 1280 px (o mesmo corte do painel do lead abrir sozinho; abaixo disso a lateral espremeria a conversa), ele **troca o painel do lead pelas Mensagens prontas, na lateral**: o lead sai deslizando pra esquerda e some, as prontas entram da direita (200 ms; sem animação pra quem pede menos movimento no sistema). No topo, **← Voltar pro lead** e **X**. Clicar no foguete de novo também fecha. Lateral fechada quando o foguete foi clicado: ela abre só pra isso, e o X fecha a lateral de novo.
+- **Separadas por tipo:** **Textos · Áudios · Mídias · Funis**, cada um com ícone e cor. Funil de **um passo só**, que é uma mensagem, cai no tipo dele (texto, áudio, foto/vídeo/documento/figurinha/book); o resto é Funil, com o resumo "💬 ⏱ 🎤 · 3 mensagens · 2 dias". **Abas** da casa, sem ícone nem contagem (as cinco cabem numa linha da lateral; decisão do Tony em 12/10): Tudo · Textos · Áudios · Mídias · Funis (só com dois tipos ou mais; tipo é categoria, então é aba, não botão de escolha: regra no GLOSSARIO, item 6). Sem filtro de dono (ocupava espaço demais na lateral): o item da equipe leva "· Da equipe".
+- **Ver e Enviar na própria linha** (apagados, acendem no mouse). **Ver abre a prévia ali mesmo, embaixo do item**, deslizando pra baixo; não é mais uma tela à parte. **Enviar sai na hora**, sem a prévia, pelo servidor e pelo número da conversa, como o Disparar de antes. Na lateral o painel fica aberto depois de enviar (dá pra mandar texto e depois áudio); na janela ele fecha.
+- **Conversa em que o campo está travado** (pendente, em oferta da roleta, número desconectado, janela de 24 h fechada): a lateral continua aberta, com o aviso "Nesta conversa não dá pra enviar agora" e o Enviar travado, igual ao foguete.
+- **Esc** fecha a prévia aberta e depois o painel; na lateral, só com o cursor dentro dela (o Esc de outra janela, do emoji ou do campo não fecha as prontas).
+- **Clicar no nome do lead no topo da conversa** volta pro painel do lead.
+- **Tela abaixo de 1280 px, celular e aba Conversa do card:** continua a janela em cima do campo, com a altura limitada ao espaço livre acima do campo (no celular o topo da conversa cobria o título e o X), com o conteúdo novo (`DispararFunilPanel` embrulha o `MensagensProntas`).
+- Funil com o passo a passo pela metade: **Termine de montar** (leva pro canvas). Desligado: apagado, sem Ver nem Enviar. Nenhum: "Nenhuma mensagem pronta ainda" com **Abrir Funis de mensagem**.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Mensagem pronta = funil de conversa.** As respostas rápidas antigas não voltam pra conversa; o "item único" do Zap Voice é o funil de um passo.
+2. **Botõezinhos fixos em cima do campo (favoritos ⭐) ficaram pra uma segunda entrega**, se o pessoal usar.
+
+Armadilhas:
+
+1. **Quem decide lateral × janela é o `Chat.tsx`** (`telaLarga`, 1280 px): com tela larga passa `onToggleProntas` pro `ChatArea` → `MessageInput`, e aí o campo não monta a janela. Sem `onToggleProntas`, tudo como antes. Envio pela lateral relê a faixa "automação rodando" por `enviosDaLateral` (contador) no `ChatArea`; o `ChatArea` devolve o campo travado por `onCampoTravado`, que vira `bloqueado` nas prontas junto com pendente e oferta. A lateral aberta por outro caminho que não o foguete (nome do lead, troca de conversa) abre no lead (`abrindoPeloFoguete`).
+2. **A lista pede `with_nodes=1`** (`flowAutomationsService.list({ withNodes: true })`). Servidor sem o `#476`: a lista vem sem blocos, tudo cai em Funil (com `message_count`) e o Ver busca o funil (`get`).
+3. **As duas camadas da lateral são absolutas e de largura fixa** (`md:w-[calc(24rem-1px)]`, a lateral menos a borda), pra não se espremerem quando a lateral abre/fecha (ela anima a largura). A escondida fica `inert`. As prontas só montam depois da primeira abertura; `mostrarProntas` segue `lateral` (não o aberto/fechado), pra o lead não aparecer de relance enquanto a lateral encolhe, e a lateral fechada volta pro lead depois de 300 ms. Como ficam montadas, cada abertura zera busca e filtros e põe o cursor na busca (efeito em `ativo`, não `autoFocus`).
+4. **A prévia fechada fica montada quando a sequência já é conhecida** (o grid `0fr → 1fr` precisa do conteúdo pra animar a volta); ela é `aria-hidden`.
+5. **Tarefas e Agendados continuam relendo escondidos atrás das prontas** (a lateral segue `isOpen`). Custa só requisição; desmontar faria buscar de novo a cada troca.
+6. **Tailwind 4: `translate-x-*` mexe na propriedade `translate`, não em `transform`.** A troca de camada usa `transition-[translate,opacity]`; com `transition-[transform,opacity]` só a opacidade anima. A transição só vale com a lateral aberta (`isOpen`), e o foguete com a lateral fechada troca a camada antes e abre a lateral no quadro seguinte (`requestAnimationFrame`); a primeira abertura com a lateral aberta monta as prontas fora da tela e desliza dois quadros depois.
+7. **A janela mede o espaço livre** (`DispararFunilPanel`, `espacoLivre`): do topo do campo até o primeiro contêiner que corta (rolagem) ou o fundo do `.wa-header` dentro dele, menos 16 px, mínimo 200 px. Relê ao redimensionar.
+
+## Página de fotos e vídeos do imóvel (12/10/2026)
+
+Pedido do Tony: a janela de fotos era "meio zuada"; tinha que ser uma página, separar foto de vídeo e escolher a primeira imagem. Spec: `LM FLOW/specs/2026-10-12-pagina-de-fotos-design.md`.
+
+- **Página `/properties/:id/fotos`** (`?de=cadastro` vindo do cadastro), na moldura da casa com `rolagem="conteudo"`. Abre pelo ⋮ "Fotos e vídeos" da lista e pelo *Gerenciar fotos e vídeos* do cadastro (que pergunta antes se há alteração não salva). A janela `PropertyPhotosDialog` foi apagada.
+- **Capa em destaque** num cartão à esquerda. **A capa não se oculta** ("Escolha outra capa antes de ocultar esta."); ocultar em lote pula a capa e avisa. Capa antiga já oculta ganha aviso no cartão.
+- **Fotos e "Vídeos e áudios" em seções separadas**, com as abas Tudo · Fotos · Vídeos e áudios · Ocultas. **A ordem gravada passa a ser "todas as fotos, depois vídeos e áudios"** (decisão do Tony): só quando alguém mexe na ordem ou sobe arquivo.
+- **Selo da IA em cada vídeo**, espelho de `SalesAgents::PropertyPhotoPack#video`: a IA manda UM vídeo, o primeiro visível em MP4 com tamanho conhecido de até 16 MB. Mudou lá, muda em `features/properties/fotos/regrasDasFotos.ts` (`iaNoVideo`).
+- **Selecionar várias** pela barra de seleção do `BaseHeader` (Mostrar · Ocultar · Excluir). Um pedido por item, um de cada vez (não existe rota de lote); no fim relê do servidor.
+- **Foto ampliada** na janela larga, com setas e ← →.
+- **Saiu a lista "Categorizar como"** e o selo de tipo nas fotos. No envio de arquivo o servidor descobre vídeo e áudio (`inferred_photo_type`); ao adicionar por endereço da internet a tela manda o tipo pela extensão (`tipoPeloEndereco`: .mp4 .mov .webm .m4v = vídeo; .mp3 .m4a .ogg .wav .aac .opus = áudio; o resto, foto). O tipo antigo fica gravado.
+- **Quem pode o quê é o cargo** (`usePermissoesDasFotos`): subir `property_photos.upload`, por endereço `.create`, capa `.set_as_cover`, ordem `.reorder`, ocultar `.update`, excluir `.delete`. O Corretor de fábrica vê, ordena e escolhe capa.
+
+Não reabrir sem o dono pedir: a linha "1º pacote da IA" na grade (ele cortou), avisar foto que a IA pula, separar foto por ambiente.
 
 ## Área de Membros: quem assiste e tela nova (desde 2026-10-12)
 

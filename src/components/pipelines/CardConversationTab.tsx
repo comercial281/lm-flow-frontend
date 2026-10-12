@@ -611,8 +611,8 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
             </button>
             <button
               type="button"
-              title="Disparar funil"
-              aria-label="Disparar funil"
+              title="Mensagens prontas"
+              aria-label="Mensagens prontas"
               onClick={() => setFunnelOpen(v => !v)}
               className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
             >

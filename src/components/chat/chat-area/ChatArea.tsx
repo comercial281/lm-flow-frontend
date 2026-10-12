@@ -74,6 +74,13 @@ interface ChatAreaProps {
   onLoadMore: () => void;
   onRetryMessage: (messageId: string) => void;
   isPendingConversation?: boolean;
+  /** Mensagens prontas na lateral (computador): o foguete abre/fecha por aqui. */
+  onToggleProntas?: () => void;
+  prontasAbertas?: boolean;
+  /** Muda a cada envio feito pela lateral: relê a faixa "automação rodando". */
+  enviosDaLateral?: number;
+  /** Campo travado (número desconectado, janela de 24 h fechada): a lateral não envia. */
+  onCampoTravado?: (travado: boolean) => void;
 }
 
 const ChatArea = ({
@@ -85,6 +92,10 @@ const ChatArea = ({
   onLoadMore,
   onRetryMessage,
   isPendingConversation = false,
+  onToggleProntas,
+  prontasAbertas,
+  enviosDaLateral = 0,
+  onCampoTravado,
 }: ChatAreaProps) => {
   const { t } = useLanguage('chat');
   const { messages, websocket } = useChatContext();
@@ -109,6 +120,14 @@ const ChatArea = ({
     atualizarQuando: selectedMessages.length,
   });
   const { perguntarAntesDeEnviar, pararTudo } = automacao;
+
+  // Envio pelas Mensagens prontas da lateral: a faixa do funil rodando aparece na hora.
+  // (Pela ref: trocar de conversa troca o `atualizar` e não pode reler à toa.)
+  const atualizarAutomacao = useRef(automacao.atualizar);
+  atualizarAutomacao.current = automacao.atualizar;
+  useEffect(() => {
+    if (enviosDaLateral > 0) atualizarAutomacao.current();
+  }, [enviosDaLateral]);
 
   const handleSendMessage = useCallback(
     async (options: SendMessageOptions) => {
@@ -257,6 +276,9 @@ const ChatArea = ({
     isWhatsAppChannel || isInstagramChannel || isMessengerChannel;
   const janelaFechada = !canReply && hasMessagingWindowRestriction && !isWhatsAppFreeTextChannel;
   const shouldShowRestrictionBanner = janelaFechada || isDisconnected;
+  useEffect(() => {
+    onCampoTravado?.(shouldShowRestrictionBanner);
+  }, [shouldShowRestrictionBanner, onCampoTravado]);
 
   // Mensagem do banner quando não pode responder
   const getBannerMessage = () => {
@@ -417,6 +439,8 @@ const ChatArea = ({
           channelProvider={channelProvider}
           selectedConversation={selectedConversation}
           onFunnelStarted={automacao.atualizar}
+          onToggleProntas={onToggleProntas}
+          prontasAbertas={prontasAbertas}
         />
       </div>
     </div>

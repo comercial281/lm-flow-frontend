@@ -25,6 +25,7 @@ import {
   SiteBuilder,
   Properties,
   CadastroDoImovel,
+  FotosDoImovel,
   GestaoDeProprietarios,
   FichaDoProprietario,
   Visits,
@@ -1191,6 +1192,16 @@ const AppRouter = () => {
               element={
                 <PermissionRoute resource="properties" action="update">
                   <CadastroDoImovel />
+                </PermissionRoute>
+              }
+            />
+
+            {/* Fotos e vídeos do imóvel em página (era a janela da lista e do cadastro). */}
+            <Route
+              path="/properties/:id/fotos"
+              element={
+                <PermissionRoute resource="property_photos" action="read">
+                  <FotosDoImovel />
                 </PermissionRoute>
               }
             />

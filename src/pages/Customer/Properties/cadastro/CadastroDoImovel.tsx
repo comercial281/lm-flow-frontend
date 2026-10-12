@@ -19,6 +19,7 @@ import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { plural } from '@/lib/formato';
 import { ABA_NA_URL, tipoDoImovel, type ListingKind } from '@/features/properties/listingKind';
+import { linkDasFotos } from '@/features/properties/fotos/regrasDasFotos';
 import { formularioNovo } from '@/features/properties/formularioPorTipo';
 import { cleanTypologies } from '@/features/properties/typologies';
 import { secoesDoCadastro, tipoDaUrl, type SecaoId } from '@/features/properties/cadastro/secoesDoCadastro';
@@ -135,10 +136,11 @@ function Cadastro() {
   }, [editandoId]);
   useEffect(() => { carregar(); }, [carregar]);
 
-  // O gerenciador de fotos fechou: relê só o imóvel (contagem de fotos), sem mexer no formulário.
-  const releFotos = () => {
+  // Fotos moram numa página própria (12/10/2026). Com alteração não salva, pergunta antes.
+  const gerenciarFotos = async () => {
     if (!editandoId) return;
-    propertiesService.get(editandoId).then(setImovel).catch(() => { /* leitura de fundo */ });
+    if (temAlteracao && !(await confirmar({ ...PEDIDO_SAIR_SEM_SALVAR, rotuloDaAcao: 'Sair' }))) return;
+    navigate(linkDasFotos(editandoId, 'cadastro'));
   };
 
   // "Onde divulgar" grava na hora e devolve só a marca mexida; junta no imóvel que a
@@ -269,7 +271,7 @@ function Cadastro() {
       case 'detalhesVenda': return <SecaoDetalhesDaVenda {...props} />;
       case 'caracteristicas': return <SecaoCaracteristicas {...props} />;
       case 'midia':
-        return <SecaoMidia {...props} arquivos={arquivos} aoMudarArquivos={setArquivos} enviando={enviandoMidia || salvando} aoFecharFotos={releFotos}
+        return <SecaoMidia {...props} arquivos={arquivos} aoMudarArquivos={setArquivos} enviando={enviandoMidia || salvando} aoGerenciarFotos={() => void gerenciarFotos()}
           book={book} aoMudarBook={setBook} aoMudarImovel={aoMudarImovel} />;
       case 'descricao':
         return <SecaoDescricao {...props} podeGerar={canAiDesc} gerando={gerandoDescricao} aoGerar={gerarDescricao} />;
