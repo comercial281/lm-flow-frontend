@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { TEXTO_ENVIO_NA_PREVIA, cabecalhosDoSite, ehPrevia, envioFoiPrevia } from '@/features/siteBuilder/public/previa';
 import { ehPreviaDoModelo } from '@/features/siteBuilder/public/previaDoModelo';
+import { TEXTO_FALHA_DE_ENVIO, textoDoErroDeEnvio } from '@/features/siteBuilder/public/limiteDeEnvios';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import {
@@ -77,7 +78,8 @@ export default function PortalAnunciePage() {
   // Envio feito na prévia: o servidor não criou nada, e a tela não finge que criou.
   const [enviadoNaPrevia, setEnviadoNaPrevia] = useState(false);
   const [sending, setSending] = useState(false);
-  const [failed, setFailed] = useState(false);
+  // Frase do envio que falhou (null = sem erro). No limite de envios é a do servidor.
+  const [failed, setFailed] = useState<string | null>(null);
 
   // Passo 1 — o imóvel
   const [finalidade, setFinalidade] = useState('');
@@ -133,7 +135,7 @@ export default function PortalAnunciePage() {
     if (!isValidBrPhone(telefone)) { setTelefoneErr(true); return; }
     // Prévia do modelo: o servidor não sabe dela, então nada é enviado.
     if (ehPreviaDoModelo(site)) {
-      setFailed(false);
+      setFailed(null);
       setEnviadoNaPrevia(true);
       setSent(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -141,7 +143,7 @@ export default function PortalAnunciePage() {
     }
 
     setSending(true);
-    setFailed(false);
+    setFailed(null);
     try {
       const res = await fetch(`${API}/api/public/v1/site/anuncie`, {
         method: 'POST',
@@ -166,14 +168,17 @@ export default function PortalAnunciePage() {
           },
         }),
       });
-      if (!res.ok) throw new Error('falhou');
+      if (!res.ok) {
+        setFailed(await textoDoErroDeEnvio(res, TEXTO_FALHA_DE_ENVIO));
+        return;
+      }
       setEnviadoNaPrevia(ehPrevia(site) || (await envioFoiPrevia(res)));
       setSent(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
       // A ficha é longa: some com ela e a pessoa não preenche de novo. O erro
       // aparece e o botão volta, com tudo o que ela escreveu no lugar.
-      setFailed(true);
+      setFailed(TEXTO_FALHA_DE_ENVIO);
     } finally {
       setSending(false);
     }
@@ -312,8 +317,8 @@ export default function PortalAnunciePage() {
                   <Field label="E-mail" value={email} onChange={setEmail} type="email" placeholder="seu@email.com" />
 
                   {failed && (
-                    <p className="rounded-xl bg-red-50 px-4 py-3 text-[14px] text-red-600">
-                      Não consegui enviar agora. Tente de novo em instantes — o que você preencheu continua aqui.
+                    <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-[14px] text-red-600">
+                      {failed} O que você preencheu continua aqui.
                     </p>
                   )}
 
