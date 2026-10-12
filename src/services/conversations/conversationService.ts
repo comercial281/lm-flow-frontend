@@ -13,6 +13,9 @@ import type {
   ConversationsResponse,
 } from '@/types/chat/api';
 
+/** Resposta do transcrever do anexo de áudio: pronto (com texto) ou ainda na fila. */
+export type RespostaDaTranscricao = { attachment_id: string; status: 'done' | 'pending'; transcribed_text?: string };
+
 export const conversationAPI = {
   // Create new conversation
   async create(data: ConversationCreateData): Promise<Conversation> {
@@ -73,12 +76,12 @@ export const conversationAPI = {
     messageId: string,
     attachmentId: string,
     start: boolean,
-  ): Promise<{ attachment_id: string; status: 'done' | 'pending'; transcribed_text?: string }> {
+  ): Promise<RespostaDaTranscricao> {
     const response = await api.post(`/conversations/${conversationId}/messages/${messageId}/transcribe`, {
       attachment_id: attachmentId,
       ...(start ? { start: true } : {}),
     });
-    return extractData<{ attachment_id: string; status: 'done' | 'pending'; transcribed_text?: string }>(response);
+    return extractData<RespostaDaTranscricao>(response);
   },
 
   // Send message

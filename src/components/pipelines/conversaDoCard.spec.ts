@@ -46,6 +46,11 @@ describe('aplicarPaginaRecente', () => {
     expect(ids(aplicarPaginaRecente(atuais, [m(1, 100), m(3, 300)]))).toEqual(['1', '3']);
   });
 
+  it('mesmo segundo da mais antiga da página (rajada cortada) fica', () => {
+    const atuais = [m(1, 100), m(2, 200), m(3, 200), m(4, 300)];
+    expect(ids(aplicarPaginaRecente(atuais, [m(3, 200), m(4, 300)]))).toEqual(['1', '2', '3', '4']);
+  });
+
   it('mensagem mais nova que a página (chegou pelo tempo real) fica', () => {
     const atuais = [m(1, 100), m(5, 500)];
     expect(ids(aplicarPaginaRecente(atuais, [m(1, 100), m(2, 200)]))).toEqual(['1', '2', '5']);
