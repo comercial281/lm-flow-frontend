@@ -44,9 +44,11 @@ export function juntarMensagens(atuais: Message[], novas: Message[]): Message[] 
  * A página mais recente manda no trecho dela: o que está depois da mais antiga e
  * até a mais nova da página e não veio nela foi apagado. O que é mais antigo (carregado
  * rolando pra cima) ou mais novo (chegou pelo tempo real depois do pedido) fica.
- * O mesmo segundo da mais antiga também fica: a página de 20 pode cortar no meio de
- * uma rajada de bolhas (IA/funil), e a que ficou de fora não voltaria rolando pra cima.
- * Custo aceito: mensagem apagada exatamente nesse segundo continua até recarregar.
+ * Os dois limites ficam: no da mais antiga, a página de 20 pode cortar no meio de uma
+ * rajada de bolhas (IA/funil) e a que ficou de fora não voltaria rolando pra cima; no da
+ * mais nova, mensagem do tempo real criada depois do pedido, no mesmo segundo, sumiria e
+ * voltaria 8 s depois. Custo aceito: mensagem apagada exatamente no segundo de um limite
+ * continua até recarregar.
  */
 export function aplicarPaginaRecente(atuais: Message[], pagina: Message[]): Message[] {
   if (pagina.length === 0) return [];
@@ -57,7 +59,7 @@ export function aplicarPaginaRecente(atuais: Message[], pagina: Message[]): Mess
   const fora = atuais.filter(msg => {
     if (naPagina.has(String(msg.id))) return false;
     const t = instanteDaMensagem(msg);
-    return t <= inicio || t > fim;
+    return t <= inicio || t >= fim;
   });
   return juntarMensagens(fora, pagina);
 }

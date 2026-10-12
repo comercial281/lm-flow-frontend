@@ -41,6 +41,12 @@ describe('aplicarPaginaRecente', () => {
     expect(ids(aplicarPaginaRecente(atuais, [m(3, 300), m(4, 400)]))).toEqual(['1', '2', '3', '4']);
   });
 
+  it('mesmo segundo da mais nova da página (chegou pelo tempo real depois do pedido) fica', () => {
+    const atuais = [m(1, 100), m(3, 300)];
+    // mesmo segundo: a ordem entre as duas é indiferente, o que importa é a 3 não sumir
+    expect(ids(aplicarPaginaRecente(atuais, [m(1, 100), m(2, 300)])).sort()).toEqual(['1', '2', '3']);
+  });
+
   it('mensagem apagada dentro do trecho da página some', () => {
     const atuais = [m(1, 100), m(2, 200), m(3, 300)];
     expect(ids(aplicarPaginaRecente(atuais, [m(1, 100), m(3, 300)]))).toEqual(['1', '3']);

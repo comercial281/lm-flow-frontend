@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
+import { memo, useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { Button, Textarea } from '@/components/ui/ds';
 import { MessageCircle, Send, Loader2, RefreshCw, Paperclip, Rocket, Clock, X, Mic, Archive, ArchiveX, ArrowDown } from 'lucide-react';
 import { toast } from 'sonner';
@@ -170,7 +170,7 @@ function MessageAttachments({ attachments, conversationId, messageId }: { attach
   }
 }
 
-function MessageBubble({ m, isOutgoing, conversationId }: { m: Message; isOutgoing: boolean; conversationId: string }) {
+const MessageBubble = memo(function MessageBubble({ m, isOutgoing, conversationId }: { m: Message; isOutgoing: boolean; conversationId: string }) {
   const attachments = m.attachments ?? [];
   return (
     <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${
@@ -186,7 +186,7 @@ function MessageBubble({ m, isOutgoing, conversationId }: { m: Message; isOutgoi
       </div>
     </div>
   );
-}
+});
 
 export default function CardConversationTab({ item, onAgendarEnvio }: CardConversationTabProps) {
   // conversationId: prioriza conversa direta do item, depois whatsapp_conversation_id
@@ -519,7 +519,7 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
           ref={caixaRef}
           onScroll={aoRolar}
           data-testid="caixa-da-conversa"
-          className="h-full space-y-2 overflow-y-auto rounded-lg border bg-muted/30 p-3"
+          className="absolute inset-0 space-y-2 overflow-y-auto [overflow-anchor:none] rounded-lg border bg-muted/30 p-3"
         >
           {erroAnteriores && (
             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
@@ -539,13 +539,13 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
           ) : messages.length === 0 ? (
             <EmptyState tamanho="compacto" title="Nenhuma mensagem ainda." />
           ) : (
-            messages.map((m, index) => {
+            messages.map(m => {
               // Eventos do sistema (atribuição, mudança de status/etiqueta, etc)
               // não são mensagem de ninguém — iam parar num balão como se o
               // LEAD tivesse escrito "Assigned to X, inherited from...". Vira
               // uma etiqueta central, igual à tela de Conversas.
               if (m.message_type === MESSAGE_TYPE.ACTIVITY || m.message_type === MESSAGE_TYPE.TEMPLATE) {
-                return <SystemMessage key={`system-${m.id}-${index}`} message={m} />;
+                return <SystemMessage key={`system-${m.id}`} message={m} />;
               }
               const isOutgoing = m.message_type === MESSAGE_TYPE.OUTGOING;
               const senderName = !isOutgoing
