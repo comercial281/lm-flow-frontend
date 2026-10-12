@@ -8448,6 +8448,7 @@ Pedido da Nova 27 (f2-07). Desenho: `LM FLOW/specs/2026-10-11-imovel-desatualiza
 - O clique leva a Imóveis com `recorte=desatualizados&vence=<aba>` (+ `meus=1` ou `pessoa`). "Amanhã" e as semanas ainda não venceram: o filtro é a faixa, não o `stale`.
 - **"Está em dia"** renova só a hora de alteração (servidor `confirm_current`, permissão de editar imóvel). Aparece em imóvel vencido e em qualquer imóvel da lista aberta pela Atividades. Efeito aceito: o imóvel sobe em "Atualizados recentemente".
 - Decidido com o dono: não virar tarefa gravada (imóvel não tem card). Não reabrir sem o dono pedir.
+- **Corretor marca os imóveis dele (12/10/2026, pedido do dono):** "Está em dia" vale pra quem edita imóvel OU pro captador/responsável daquele imóvel (o corretor padrão só tem `properties.read`). O servidor responde por imóvel em `can_confirm_current`; a tela usa `podeMarcarEmDia(p, permissoes.editar)` (servidor antigo sem o campo: só quem edita).
 
 ## Meu site · domínio próprio com prova de posse (desde 2026-10-11)
 
