@@ -23,6 +23,13 @@ describe('Mensagens prontas: tipo', () => {
     expect(tipoDaSequencia([])).toBe('funil');
   });
 
+  it('funil cujo único passo dispara outro funil é Funil, não Mensagem', () => {
+    const f = funil([no('a', 'lead_action', { action_type: 'send_message_funnel', params: { funnel_id: 'x' } })]);
+    expect(itemPronto(f).tipo).toBe('funil');
+    const foto = funil([no('a', 'lead_action', { action_type: 'send_image', params: { caption: 'Fachada' } })]);
+    expect(itemPronto(foto).tipo).toBe('midia');
+  });
+
   it('lê os blocos do funil; sem blocos na lista, é funil e a prévia fica pra depois', () => {
     expect(itemPronto(funil([no('a', 'send_whatsapp', { media_kind: 'audio' })])).tipo).toBe('audio');
     expect(itemPronto(funil())).toMatchObject({ tipo: 'funil', passos: null });

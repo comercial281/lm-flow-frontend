@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -6,6 +6,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Button, Input } from '@/components/ui/ds';
+import Aviso from '@/components/base/Aviso';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
@@ -54,10 +55,21 @@ interface Props {
   /** Lateral: "Voltar pro lead" no topo e fica aberta depois de enviar. Janela: fecha ao enviar. */
   onde: 'lateral' | 'janela';
   aoVoltar?: () => void;
+  /**
+   * A conversa não aceita envio agora (pendente, em oferta, número
+   * desconectado, janela de 24 h fechada): a mesma trava do foguete. A
+   * lateral fica aberta ao trocar de conversa, então precisa saber disso.
+   */
+  bloqueado?: boolean;
 }
 
-export function MensagensProntas({ ativo, conversationId, onStarted, aoFechar, onde, aoVoltar }: Props) {
+export function MensagensProntas({ ativo, conversationId, onStarted, aoFechar, onde, aoVoltar, bloqueado = false }: Props) {
   const navigate = useNavigate();
+  const raiz = useRef<HTMLDivElement>(null);
+  const campoBusca = useRef<HTMLInputElement>(null);
+  // A conversa de agora: o envio que volta depois da troca não fala "este lead" do lead errado.
+  const conversaAtual = useRef(conversationId);
+  conversaAtual.current = conversationId;
   const [itens, setItens] = useState<ItemPronto[] | null>(null);
   const [falhou, setFalhou] = useState(false);
   const [busca, setBusca] = useState('');
@@ -79,39 +91,53 @@ export function MensagensProntas({ ativo, conversationId, onStarted, aoFechar, o
     }
   }, []);
 
+  // Cada abertura começa limpa e com o cursor na busca (a lateral fica montada:
+  // o autoFocus só valeria na primeira vez).
   useEffect(() => {
     if (!ativo) return;
     setAberto(null);
     setBusca('');
+    setTipo('todos');
+    setDono('todos');
+    campoBusca.current?.focus();
     void carregar();
   }, [ativo, carregar]);
 
-  // Esc fecha a prévia aberta; sem prévia, fecha o painel.
+  // Trocou de conversa no meio de um envio: o botão destrava na conversa nova.
+  useEffect(() => { setEnviando(null); }, [conversationId]);
+
+  // Esc fecha a prévia aberta; sem prévia, fecha o painel. Na lateral (que fica
+  // aberta enquanto se conversa) só com o cursor dentro dela: o Esc de outra
+  // janela, do emoji ou do campo de mensagem não é pra cá.
   useEffect(() => {
     if (!ativo) return undefined;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape' || e.defaultPrevented || e.isComposing) return;
+      if (onde === 'lateral' && !raiz.current?.contains(document.activeElement)) return;
       if (aberto) setAberto(null);
       else aoFechar();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [ativo, aberto, aoFechar]);
+  }, [ativo, aberto, aoFechar, onde]);
 
   const todos = itens ?? [];
   const temMeus = todos.some(i => !i.funil.team);
   const temEquipe = todos.some(i => i.funil.team);
   const tiposComItem = TIPOS_PRONTOS.filter(t => todos.some(i => i.tipo === t.tipo));
+  // Filtro escolhido que deixou de existir na tela (o seletor some) não filtra escondido.
+  const tipoValendo: FiltroTipo = tiposComItem.length > 1 && tiposComItem.some(t => t.tipo === tipo) ? tipo : 'todos';
+  const donoValendo: FiltroDono = temMeus && temEquipe ? dono : 'todos';
 
   const visiveis = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     return todos.filter(i =>
       (!termo || i.funil.name.toLowerCase().includes(termo)) &&
-      (tipo === 'todos' || i.tipo === tipo) &&
-      (dono === 'todos' || (dono === 'equipe') === Boolean(i.funil.team)));
-  }, [todos, busca, tipo, dono]);
+      (tipoValendo === 'todos' || i.tipo === tipoValendo) &&
+      (donoValendo === 'todos' || (donoValendo === 'equipe') === Boolean(i.funil.team)));
+  }, [todos, busca, tipoValendo, donoValendo]);
 
-  const filtrando = Boolean(busca.trim()) || tipo !== 'todos' || dono !== 'todos';
+  const filtrando = Boolean(busca.trim()) || tipoValendo !== 'todos' || donoValendo !== 'todos';
   const limparFiltros = () => { setBusca(''); setTipo('todos'); setDono('todos'); };
 
   const verOuEsconder = async (item: ItemPronto) => {
@@ -129,13 +155,16 @@ export function MensagensProntas({ ativo, conversationId, onStarted, aoFechar, o
   };
 
   const enviar = async (funil: FlowAutomation) => {
-    if (!conversationId || enviando) return;
+    if (!conversationId || enviando || bloqueado) return;
+    const conversa = conversationId;
     setEnviando(funil.id);
     try {
-      const r = await flowAutomationInstancesService.start({ conversationId: String(conversationId) }, funil.id);
-      if (r.started) toast.success(r.message || `"${funil.name}" enviado pra este lead.`);
+      const r = await flowAutomationInstancesService.start({ conversationId: String(conversa) }, funil.id);
+      const mesmaConversa = String(conversaAtual.current) === String(conversa);
+      if (!mesmaConversa) toast.success(`"${funil.name}" enviado pro lead da conversa anterior.`);
+      else if (r.started) toast.success(r.message || `"${funil.name}" enviado pra este lead.`);
       else toast.info(r.message || `Este lead já está em "${funil.name}".`);
-      onStarted?.();
+      if (mesmaConversa) onStarted?.();
       if (onde === 'janela') aoFechar();
     } catch (e) {
       toast.error(serverMessage(e, 'Não deu pra enviar agora. Tente de novo.'));
@@ -156,7 +185,7 @@ export function MensagensProntas({ ativo, conversationId, onStarted, aoFechar, o
       passos={item.passos ?? buscadas[item.funil.id] ?? null}
       aberto={aberto === item.funil.id}
       enviando={enviando === item.funil.id}
-      podeEnviar={Boolean(conversationId) && !enviando}
+      podeEnviar={Boolean(conversationId) && !enviando && !bloqueado}
       aoVer={() => void verOuEsconder(item)}
       aoEnviar={() => void enviar(item.funil)}
       aoTerminar={() => abrirCanvas(item.funil)}
@@ -164,7 +193,8 @@ export function MensagensProntas({ ativo, conversationId, onStarted, aoFechar, o
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    // flex-1 (e não h-full): na janela a altura acompanha o conteúdo até o teto.
+    <div ref={raiz} className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center gap-2 border-b border-border px-3 py-2">
         {onde === 'lateral' && aoVoltar ? (
           <IconActionButton
@@ -190,13 +220,13 @@ export function MensagensProntas({ ativo, conversationId, onStarted, aoFechar, o
             value={busca}
             onChange={e => setBusca(e.target.value)}
             aria-label="Buscar mensagem pronta"
-            autoFocus
+            ref={campoBusca}
           />
         </div>
         {tiposComItem.length > 1 && (
           <BotoesDeEscolha<FiltroTipo>
             rotulo="Tipo"
-            valor={tipo}
+            valor={tipoValendo}
             aoEscolher={setTipo}
             opcoes={[{ valor: 'todos', rotulo: 'Tudo' }, ...tiposComItem.map(t => ({ valor: t.tipo, rotulo: t.rotulo }))]}
             className="w-full"
@@ -205,10 +235,15 @@ export function MensagensProntas({ ativo, conversationId, onStarted, aoFechar, o
         {temMeus && temEquipe && (
           <BotoesDeEscolha<FiltroDono>
             rotulo="De quem"
-            valor={dono}
+            valor={donoValendo}
             aoEscolher={setDono}
             opcoes={[{ valor: 'todos', rotulo: 'Todos' }, { valor: 'meus', rotulo: 'Meus' }, { valor: 'equipe', rotulo: 'Da equipe' }]}
           />
+        )}
+        {bloqueado && (
+          <Aviso tom="atencao" compacto>
+            Nesta conversa não dá pra enviar agora. Assuma o lead ou confira o número.
+          </Aviso>
         )}
       </div>
 
@@ -223,11 +258,12 @@ export function MensagensProntas({ ativo, conversationId, onStarted, aoFechar, o
             icon={Rocket}
             title="Nenhuma mensagem pronta ainda"
             description="Crie a sua em Funis de mensagem, a partir de um modelo pronto."
+            exemplo="Mandar o book do imóvel com uma frase de abertura, num clique."
             action={{ label: 'Abrir Funis de mensagem', onClick: () => { aoFechar(); navigate(FLOW_KIND_COPY.conversation.listPath); }, variant: 'outline' }}
           />
         ) : visiveis.length === 0 ? (
           <EmptyState tipo="semResultado" tamanho="compacto" aoLimparFiltros={filtrando ? limparFiltros : undefined} />
-        ) : tipo !== 'todos' ? (
+        ) : tipoValendo !== 'todos' ? (
           <ul className="space-y-0.5">{visiveis.map(linha)}</ul>
         ) : (
           TIPOS_PRONTOS.map(({ tipo: t, rotulo }) => {
@@ -330,7 +366,7 @@ function LinhaPronta({ item, passos, aberto, enviando, podeEnviar, aoVer, aoEnvi
           // Ações à vista (peça da casa): apagadas, acendem no mouse.
           <div className="flex shrink-0 items-center gap-0.5 opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             <IconActionButton
-              label={aberto ? 'Esconder' : 'Ver'}
+              label={aberto ? `Esconder "${funil.name}"` : `Ver "${funil.name}"`}
               icon={<Eye className="h-4 w-4" />}
               variant="ghost"
               className={cn('h-8 w-8', aberto && 'bg-muted text-primary')}

@@ -21,6 +21,7 @@ vi.mock('@/services/flowAutomations/flowAutomationInstancesService', () => ({
 vi.mock('sonner', () => ({ toast }));
 
 import { DispararFunilPanel } from './DispararFunilPanel';
+import { MensagensProntas } from './MensagensProntas';
 
 const no = (id: string, kind: string, config: Record<string, unknown>, next: string | null = null) => ({
   id, kind, label: null, config, next_node_id: next, next_yes_node_id: null, next_no_node_id: null, pos_x: null, pos_y: null, steps: [],
@@ -101,11 +102,11 @@ describe('Mensagens prontas (janela)', () => {
   it('Ver abre a prévia no próprio item, sem pedir o funil de novo', async () => {
     list.mockResolvedValue([comBlocos('f1', 'Reaquecer lead parado', sequencia)]);
     renderPanel();
-    fireEvent.click(await screen.findByRole('button', { name: 'Ver' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Ver "Reaquecer lead parado"' }));
     const linhas = within(screen.getByRole('list', { name: 'Sequência do funil' })).getAllByRole('listitem').map(li => li.textContent);
     expect(linhas).toEqual(['Oi {{nome}}, tudo bem?', 'Espera 10 segundos', 'Você ainda procura imóvel?']);
     expect(get).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Esconder' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Esconder "Reaquecer lead parado"' }));
     expect(screen.queryByRole('list', { name: 'Sequência do funil' })).toBeNull();
   });
 
@@ -114,7 +115,7 @@ describe('Mensagens prontas (janela)', () => {
     get.mockResolvedValue({ ...funnel('f1', 'Reaquecer lead parado'), initial_node_id: 'm1', nodes: sequencia });
     renderPanel();
     expect(await screen.findByText('2 mensagens')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Ver' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ver "Reaquecer lead parado"' }));
     await waitFor(() => expect(get).toHaveBeenCalledWith('f1'));
     expect(await screen.findByRole('list', { name: 'Sequência do funil' })).toBeTruthy();
   });
@@ -153,9 +154,10 @@ describe('Mensagens prontas (janela)', () => {
       funnel('f1', 'Apresentação do imóvel', { is_enabled: false, guide_pending: [{ node_id: 'n', step: 2, total: 3, title: 'x' }] }),
     ]);
     renderPanel();
-    fireEvent.click(await screen.findByRole('button', { name: 'Termine de montar' }));
+    const termine = await screen.findByRole('button', { name: 'Termine de montar' });
+    expect(screen.queryByRole('button', { name: /Enviar/ })).toBeNull();
+    fireEvent.click(termine);
     expect(await screen.findByText('canvas do funil')).toBeTruthy();
-    expect(get).not.toHaveBeenCalled();
   });
 
   it('desligado aparece apagado e sem Enviar', async () => {
@@ -189,5 +191,76 @@ describe('Mensagens prontas (janela)', () => {
     renderPanel();
     fireEvent.click(await screen.findByRole('button', { name: 'Tentar de novo' }));
     expect(await screen.findByText('Voltou')).toBeTruthy();
+  });
+});
+
+describe('Mensagens prontas (lateral)', () => {
+  const renderLateral = (props: Partial<Parameters<typeof MensagensProntas>[0]> = {}) => {
+    const aoFechar = vi.fn();
+    const onStarted = vi.fn();
+    const utils = render(
+      <MemoryRouter>
+        <MensagensProntas ativo onde="lateral" conversationId={7} aoFechar={aoFechar} aoVoltar={vi.fn()} onStarted={onStarted} {...props} />
+        <button type="button">fora do painel</button>
+      </MemoryRouter>,
+    );
+    return { aoFechar, onStarted, ...utils };
+  };
+
+  it('enviar não fecha a lateral (dá pra mandar outra em seguida)', async () => {
+    list.mockResolvedValue([comBlocos('f1', 'Link do book', [no('a', 'send_whatsapp', { text: 'Segue o book' })])]);
+    start.mockResolvedValue({ started: true, message: 'ok' });
+    const { aoFechar, onStarted } = renderLateral();
+    fireEvent.click(await screen.findByRole('button', { name: 'Enviar "Link do book"' }));
+    await waitFor(() => expect(onStarted).toHaveBeenCalled());
+    expect(aoFechar).not.toHaveBeenCalled();
+  });
+
+  it('Esc só fecha com o cursor dentro do painel; Esc já tratado por outra janela é ignorado', async () => {
+    list.mockResolvedValue([comBlocos('f1', 'Link do book', [no('a', 'send_whatsapp', { text: 'Segue o book' })])]);
+    const { aoFechar } = renderLateral();
+    await screen.findByText('Link do book');
+    const busca = screen.getByLabelText('Buscar mensagem pronta');
+    expect(document.activeElement).toBe(busca); // abre com o cursor na busca
+
+    screen.getByRole('button', { name: 'fora do painel' }).focus();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(aoFechar).not.toHaveBeenCalled();
+
+    busca.focus();
+    const tratado = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true, bubbles: true });
+    tratado.preventDefault();
+    document.dispatchEvent(tratado);
+    expect(aoFechar).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(busca, { key: 'Escape' });
+    expect(aoFechar).toHaveBeenCalled();
+  });
+
+  it('conversa travada: aviso e Enviar desligado', async () => {
+    list.mockResolvedValue([comBlocos('f1', 'Link do book', [no('a', 'send_whatsapp', { text: 'Segue o book' })])]);
+    renderLateral({ bloqueado: true });
+    const enviar = await screen.findByRole('button', { name: 'Enviar "Link do book"' });
+    expect(enviar.hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText(/Nesta conversa não dá pra enviar agora/)).toBeTruthy();
+  });
+
+  it('envio que volta depois da troca de conversa não fala "este lead" do lead novo', async () => {
+    list.mockResolvedValue([comBlocos('f1', 'Link do book', [no('a', 'send_whatsapp', { text: 'Segue o book' })])]);
+    let responder: (v: unknown) => void = () => {};
+    start.mockReturnValue(new Promise(r => { responder = r; }));
+    const { rerender, onStarted } = renderLateral();
+    fireEvent.click(await screen.findByRole('button', { name: 'Enviar "Link do book"' }));
+    rerender(
+      <MemoryRouter>
+        <MensagensProntas ativo onde="lateral" conversationId={8} aoFechar={vi.fn()} aoVoltar={vi.fn()} onStarted={onStarted} />
+        <button type="button">fora do painel</button>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('button', { name: 'Enviar "Link do book"' }).hasAttribute('disabled')).toBe(false);
+    responder({ started: true, message: '"Link do book" iniciado para este lead.' });
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('"Link do book" enviado pro lead da conversa anterior.'));
+    expect(start).toHaveBeenCalledWith({ conversationId: '7' }, 'f1');
+    expect(onStarted).not.toHaveBeenCalled();
   });
 });

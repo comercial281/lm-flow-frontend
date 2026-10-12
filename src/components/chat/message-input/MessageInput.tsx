@@ -599,12 +599,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 <IconActionButton
                   label="Mensagens prontas"
                   icon={<Rocket className="h-4 w-4" />}
-                  variant={showFunnels || prontasAbertas ? 'default' : 'ghost'}
+                  variant={(onToggleProntas ? prontasAbertas : showFunnels) ? 'default' : 'ghost'}
                   disabled={isDisabled || isSending || isPendingConversation}
                   className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
                   onClick={() => {
                     if (!onToggleProntas) return togglePanel('funnel');
                     closePanel('emoji');
+                    closePanel('funnel');
                     onToggleProntas();
                   }}
                   side="top"

@@ -41,7 +41,8 @@ interface ContactSidebarProps {
 // A troca lead ⇄ Mensagens prontas desliza (pedido do Tony: "não pode só
 // sobrepor do nada"): o lead sai um pouco pra esquerda e some; as prontas
 // entram da direita. Rápido (200 ms) pra não atrasar quem está atendendo.
-const CAMADA = 'absolute inset-y-0 left-0 flex w-full md:w-96 flex-col bg-background transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none';
+// Largura = a da lateral menos a borda da esquerda (1 px).
+const CAMADA = 'absolute inset-y-0 left-0 flex w-full md:w-[calc(24rem-1px)] flex-col bg-background transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none';
 
 type Objeto = Record<string, unknown>;
 

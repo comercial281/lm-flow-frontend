@@ -25,7 +25,7 @@ export function DispararFunilPanel({ isOpen, onClose, conversationId, onStarted 
       aria-label="Mensagens prontas"
       data-testid="painel-disparar-funil"
     >
-      <CardContent className="p-0 flex flex-col h-[min(75vh,36rem)]">
+      <CardContent className="p-0 flex flex-col max-h-[min(70vh,32rem)]">
         <MensagensProntas
           ativo={isOpen}
           onde="janela"

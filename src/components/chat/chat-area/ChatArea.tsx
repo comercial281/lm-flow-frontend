@@ -79,6 +79,8 @@ interface ChatAreaProps {
   prontasAbertas?: boolean;
   /** Muda a cada envio feito pela lateral: relê a faixa "automação rodando". */
   enviosDaLateral?: number;
+  /** Campo travado (número desconectado, janela de 24 h fechada): a lateral não envia. */
+  onCampoTravado?: (travado: boolean) => void;
 }
 
 const ChatArea = ({
@@ -93,6 +95,7 @@ const ChatArea = ({
   onToggleProntas,
   prontasAbertas,
   enviosDaLateral = 0,
+  onCampoTravado,
 }: ChatAreaProps) => {
   const { t } = useLanguage('chat');
   const { messages, websocket } = useChatContext();
@@ -273,6 +276,9 @@ const ChatArea = ({
     isWhatsAppChannel || isInstagramChannel || isMessengerChannel;
   const janelaFechada = !canReply && hasMessagingWindowRestriction && !isWhatsAppFreeTextChannel;
   const shouldShowRestrictionBanner = janelaFechada || isDisconnected;
+  useEffect(() => {
+    onCampoTravado?.(shouldShowRestrictionBanner);
+  }, [shouldShowRestrictionBanner, onCampoTravado]);
 
   // Mensagem do banner quando não pode responder
   const getBannerMessage = () => {
