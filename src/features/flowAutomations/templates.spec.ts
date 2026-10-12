@@ -31,6 +31,23 @@ describe('modelos de fluxo', () => {
     expect(templatesFrom(null)).toEqual([]);
   });
 
+  it('lê grupo, ícone, "quando começa", o que ajustar e os detalhes da prévia', () => {
+    const [t] = templatesFrom([{
+      key: 'roleta', name: 'Roleta', description: 'x', category: 'distribuicao', category_label: 'Distribuição',
+      icon: 'shuffle', when: 'Lead chama no WhatsApp pelo anúncio',
+      adjust: [{ title: 'Escolha a roleta', hint: 'A fila.', pending: true }, { title: '' }, { title: 'Sem dica' }],
+      preview: [{ kind: 'wait_for_reply', minutes: 30 }, { kind: 'send_whatsapp', send_from: 'owner', branch: 'no_reply' },
+        { kind: 'lead_action', action_type: 'assign_via_roleta', label: 'Oferece pela roleta' }],
+    }]);
+    expect(t).toMatchObject({ category: 'distribuicao', category_label: 'Distribuição', icon: 'shuffle', when: 'Lead chama no WhatsApp pelo anúncio' });
+    expect(t.adjust).toEqual([{ title: 'Escolha a roleta', hint: 'A fila.', pending: true }, { title: 'Sem dica', pending: false }]);
+    expect(t.preview).toEqual([
+      { kind: 'wait_for_reply', minutes: 30 },
+      { kind: 'send_whatsapp', send_from: 'owner', branch: 'no_reply' },
+      { kind: 'lead_action', action_type: 'assign_via_roleta', label: 'Oferece pela roleta' },
+    ]);
+  });
+
   it('usar o modelo: POST /flow_automations/templates/:key/apply devolve o fluxo criado', async () => {
     const criado = { id: 'f1', name: MODELO.name, is_enabled: false };
     api.post.mockResolvedValueOnce({ data: { data: criado } });

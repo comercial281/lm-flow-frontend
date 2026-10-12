@@ -1,17 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
-import { Clock, FileText, Image as ImageIcon, Loader2, MessageSquare, Mic, Sticker, Video, Zap, Contact as ContactIcon } from 'lucide-react';
-import {
-  Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/ds';
+import { Clock, FileText, Image as ImageIcon, Loader2, MessageSquare, Mic, Plus, Sticker, Video, Zap, Contact as ContactIcon } from 'lucide-react';
+import { Button } from '@/components/ui/ds';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation } from '@/types/flowAutomations';
-import type { FlowTemplate, FlowTemplatePreviewStep } from '@/features/flowAutomations/templates';
+import type { FlowTemplatePreviewStep } from '@/features/flowAutomations/templates';
 import { describeSeconds } from '@/features/flowAutomations/waitTime';
 import { serverMessage } from '@/features/flowAutomations/guide';
 import { BOOK_SOURCE, BOOK_SUMMARY } from '@/features/flowAutomations/book';
-import { cn } from '@/lib/utils';
-import EmptyState from '@/components/base/EmptyState';
+import { TemplatePickerDialog } from './TemplatePickerDialog';
 
 // "+ Novo funil" (Automações · sprint 4, parte B): o corretor não cria funil do
 // zero, escolhe um MODELO pronto e ganha a cópia dele, que abre no canvas com o
@@ -77,127 +74,39 @@ interface Props {
   canCreateBlank?: boolean;
 }
 
+// Desde 12/10/2026 a escolha é a lista com prévia (TemplatePickerDialog), a
+// mesma janela dos modelos das Automações.
 export function FunnelTemplatePicker({ open, onClose, onCreated, canCreateBlank = false }: Props) {
-  const [templates, setTemplates] = useState<FlowTemplate[] | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-
-  const load = () => {
-    setFailed(false);
-    setTemplates(null);
-    flowAutomationsService
-      .templates('conversation')
-      .then(list => {
-        setTemplates(list);
-        setSelected(list[0]?.key ?? null);
-      })
-      .catch(() => setFailed(true));
-  };
-
-  useEffect(() => {
-    if (open) load();
-  }, [open]);
-
-  const apply = async (template: FlowTemplate) => {
-    if (busy) return;
-    setBusy(template.key);
-    try {
-      onCreated(await flowAutomationsService.applyTemplate(template.key));
-    } catch (e) {
-      toast.error(serverMessage(e, 'Não deu pra criar o funil pelo modelo. Tente de novo.'));
-    } finally {
-      setBusy(null);
-    }
-  };
+  const [creatingBlank, setCreatingBlank] = useState(false);
 
   const createBlank = async () => {
-    if (busy) return;
-    setBusy('__blank__');
+    if (creatingBlank) return;
+    setCreatingBlank(true);
     try {
       onCreated(await flowAutomationsService.create({ name: 'Novo funil', kind: 'conversation' }));
     } catch (e) {
       toast.error(serverMessage(e, 'Não deu pra criar o funil. Tente de novo.'));
     } finally {
-      setBusy(null);
+      setCreatingBlank(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={o => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Novo funil</DialogTitle>
-          <DialogDescription>
-            Escolha um modelo. Ele vira o seu funil, e um passo a passo mostra o que ajustar em cada mensagem.
-          </DialogDescription>
-        </DialogHeader>
-
-        {failed && (
-          <p className="text-sm text-muted-foreground">
-            Não deu pra carregar os modelos.{' '}
-            <button type="button" className="underline" onClick={load}>Tentar de novo</button>
-          </p>
-        )}
-        {!failed && !templates && (
-          <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Carregando os modelos…
-          </p>
-        )}
-        {templates && templates.length === 0 && <EmptyState tamanho="compacto" title="Nenhum modelo disponível agora." />}
-
-        {templates && templates.length > 0 && (
-          <ul className="space-y-2" aria-label="Modelos de funil">
-            {templates.map(t => {
-              const isOpen = selected === t.key;
-              return (
-                <li
-                  key={t.key}
-                  className={cn('rounded-lg border transition-colors', isOpen ? 'border-primary bg-primary/5' : 'border-border')}
-                >
-                  <button
-                    type="button"
-                    className="w-full px-3 py-2.5 text-left"
-                    aria-expanded={isOpen}
-                    onClick={() => setSelected(isOpen ? null : t.key)}
-                  >
-                    <span className="block text-base font-semibold">{t.name}</span>
-                    {t.description && <span className="mt-0.5 block text-xs text-muted-foreground">{t.description}</span>}
-                  </button>
-                  {isOpen && (
-                    <div className="space-y-3 border-t border-border px-3 py-3">
-                      {t.preview && t.preview.length > 0 && (
-                        <ol className="space-y-1.5" aria-label={`Sequência do modelo ${t.name}`}>
-                          {t.preview.map((p, i) => <PreviewStepLine key={i} step={p} />)}
-                        </ol>
-                      )}
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        {t.guide_steps ? (
-                          <span className="text-xs text-muted-foreground">{t.guide_steps} passos pra deixar do seu jeito</span>
-                        ) : <span />}
-                        <Button size="sm" onClick={() => apply(t)} disabled={!!busy}>
-                          {busy === t.key && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" aria-hidden="true" />}
-                          Usar este modelo
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        {canCreateBlank && (
-          <DialogFooter className="sm:justify-between">
-            <p className="text-xs text-muted-foreground self-center">Gestor: dá pra montar um funil do zero, bloco a bloco.</p>
-            <Button variant="outline" onClick={createBlank} disabled={!!busy}>
-              {busy === '__blank__' && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" aria-hidden="true" />}
-              Começar do zero
-            </Button>
-          </DialogFooter>
-        )}
-      </DialogContent>
-    </Dialog>
+    <TemplatePickerDialog
+      open={open}
+      onClose={onClose}
+      kind="conversation"
+      title="Novo funil"
+      description="Escolha um modelo e veja a sequência antes de criar. Ele vira o seu funil, e um passo a passo mostra o que ajustar em cada mensagem."
+      applyError="Não deu pra criar o funil pelo modelo. Tente de novo."
+      onApplied={onCreated}
+      busy={creatingBlank}
+      footerStart={canCreateBlank ? (
+        <Button variant="outline" onClick={createBlank} disabled={creatingBlank} title="Gestor: monte o funil do zero, bloco a bloco">
+          {creatingBlank ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />}
+          Começar do zero
+        </Button>
+      ) : undefined}
+    />
   );
 }
