@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCan } from '@/hooks/useCan';
 import EmptyState from '@/components/base/EmptyState';
 import { Pagina } from '@/components/base';
+import BannerDaDashboard from './BannerDaDashboard';
 import { GlassCard, Skeleton } from './base/primitives';
 import './base/lmf.css';
 import './dashboard-nova.css';
@@ -167,8 +168,11 @@ const DashboardNova: React.FC = () => {
           </div>
         )}
 
-        {/* Espaço do banner de campanhas da Leal Mídia (spec própria). Vazio. */}
-        <div data-slot="banner" className="empty:hidden" />
+        {/* Banner da Leal Mídia (spec 2026-10-12-banner-dashboard-design.md). Sem
+            banner, o componente não desenha nada e o espaço some. */}
+        <div data-slot="banner" className="empty:hidden">
+          <BannerDaDashboard />
+        </div>
 
         {/* Filtro novo pedido e a resposta ainda não chegou: os blocos são da última
             resposta, então a área avisa que está ocupada e fica esmaecida. */}
