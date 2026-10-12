@@ -14,7 +14,8 @@ import {
 } from '@/services/portals/portalsService';
 import { extractError } from '@/utils/apiHelpers';
 import { useLeadDestinationOptions } from '@/components/pipelines/useLeadDestinationOptions';
-import LeadDestinationFields, { hasAnyDestinationOption, type LeadDestinationValue } from '@/components/pipelines/LeadDestinationFields';
+import { hasAnyDestinationOption, type LeadDestinationValue } from '@/components/pipelines/LeadDestinationFields';
+import SaleRentDestination from '@/components/pipelines/SaleRentDestination';
 
 interface Props {
   portalKey: string;
@@ -77,8 +78,8 @@ const conheceLocacao = (s: PortalSettings | null | undefined) => typeof s?.rent_
  * endereço no anúncio, leads e destino do lead — tudo gravado num *Salvar*
  * só (uma requisição, `PUT /portals/:key/settings`), pela BarraSalvar.
  *
- * Venda e Locação são duas seções, não abas: a página do portal já tem abas e
- * a regra da casa é um nível só (redesenho de 12/10/2026).
+ * Venda e Locação são duas seções (o `SaleRentDestination`, o mesmo bloco do
+ * site), não abas: a página do portal já tem abas e a regra é um nível só.
  *
  * Os seletores de destino são leitura de fundo: cargo sem acesso a funis,
  * roletas ou usuários só não vê aquele seletor — nada de aviso vermelho. E o
@@ -212,56 +213,23 @@ export default function PortalSettingsCard({ portalKey, settings, onSaved }: Pro
           )}
         </Secao>
 
-        {temDestino && !locacao && (
-          <Secao
-            titulo="Destino do lead"
-            descricao="Para onde vai o lead que chega deste portal. Em branco, ele entra como sempre entrou: no funil padrão, sem responsável."
-          >
-            <LeadDestinationFields
-              value={form.sale}
-              onChange={patch => setForm(prev => ({ ...prev, sale: { ...prev.sale, ...patch } }))}
-              options={options}
-            />
-          </Secao>
-        )}
-
-        {temDestino && locacao && (
-          <>
-            <Secao
-              titulo="Destino do lead de venda"
-              descricao="Para onde vai o lead de imóvel à venda. Em branco, ele entra como sempre entrou: no funil padrão, sem responsável. Imóvel de Venda + Locação segue o que o portal informar; sem informação, vai para venda."
-            >
-              <LeadDestinationFields
-                key="venda"
-                value={form.sale}
-                onChange={patch => setForm(prev => ({ ...prev, sale: { ...prev.sale, ...patch } }))}
-                options={options}
-              />
-            </Secao>
-            <Secao titulo="Destino do lead de locação" descricao="Para onde vai o lead de imóvel para alugar.">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.rent_same_as_sale}
-                  onChange={e => set('rent_same_as_sale', e.target.checked)}
-                  className="h-4 w-4 accent-primary"
-                />
-                Mesmo destino da venda
-              </label>
-              {form.rent_same_as_sale ? (
-                <p className="text-sm text-muted-foreground">
-                  O lead de imóvel para alugar vai para o mesmo funil, roleta e responsável da venda.
-                </p>
-              ) : (
-                <LeadDestinationFields
-                  key="locacao"
-                  value={form.rent}
-                  onChange={patch => setForm(prev => ({ ...prev, rent: { ...prev.rent, ...patch } }))}
-                  options={options}
-                />
-              )}
-            </Secao>
-          </>
+        {temDestino && (
+          <SaleRentDestination
+            sale={form.sale}
+            rent={form.rent}
+            rentSameAsSale={form.rent_same_as_sale}
+            onSale={patch => setForm(prev => ({ ...prev, sale: { ...prev.sale, ...patch } }))}
+            onRent={patch => setForm(prev => ({ ...prev, rent: { ...prev.rent, ...patch } }))}
+            onRentSameAsSale={v => set('rent_same_as_sale', v)}
+            options={options}
+            showRent={locacao}
+            titulos={{ unico: 'Destino do lead', venda: 'Destino do lead de venda', locacao: 'Destino do lead de locação' }}
+            descricoes={{
+              unico: 'Para onde vai o lead que chega deste portal. Em branco, ele entra como sempre entrou: no funil padrão, sem responsável.',
+              venda: 'Para onde vai o lead de imóvel à venda. Em branco, ele entra como sempre entrou: no funil padrão, sem responsável. Imóvel de Venda + Locação segue o que o portal informar; sem informação, vai para venda.',
+              locacao: 'Para onde vai o lead de imóvel para alugar.',
+            }}
+          />
         )}
       </Secoes>
       <BarraSalvar visivel={temAlteracao} salvando={saving} aoSalvar={save} aoDescartar={() => setForm(gravado)} />
