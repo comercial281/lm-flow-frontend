@@ -59,7 +59,7 @@ import {
 } from '@/features/properties/listingKind';
 import PainelDeFiltros, { type Facetas } from './lista/PainelDeFiltros';
 import EtiquetasDosFiltros from './lista/EtiquetasDosFiltros';
-import { vencido } from '@/features/properties/emDia';
+import { podeMarcarEmDia, vencido } from '@/features/properties/emDia';
 import LinhaRevenda from './lista/LinhaRevenda';
 import LinhaEmpreendimento from './lista/LinhaEmpreendimento';
 import CartaoGrade from './lista/CartaoGrade';
@@ -449,7 +449,7 @@ export default function Properties() {
   };
   const permissoes: Permissoes = { editar: pode('properties', 'update'), excluir: canDelete };
   const pelaAtividade = Boolean(recorte?.params.vence);
-  const mostrarEmDia = (p: Property) => permissoes.editar && p.status === 'active' && (pelaAtividade || vencido(p));
+  const mostrarEmDia = (p: Property) => podeMarcarEmDia(p, permissoes.editar) && p.status === 'active' && (pelaAtividade || vencido(p));
 
   if (recusado) return <NoAccessState />;
 
