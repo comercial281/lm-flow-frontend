@@ -50,17 +50,17 @@ type AgenteLido = Pick<SalesAgent, 'enabled' | 'inbox_id' | 'triggers' | 'trigge
   & Partial<Pick<SalesAgent, 'followup_only' | 'followup_enabled' | 'followup_action' | 'followup_flow_id' | 'followup_sequence_slug'
     | 'persona_kind' | 'reach' | 'transfer_config' | 'booking_enabled' | 'handoff_target' | 'handoff_roleta_config_id'
     | 'handoff_user_id' | 'handoff_webhook_url' | 'handoff_webhook_secret_state' | 'handoff_webhook_system' | 'handoff_cvcrm_connected'
-    | 'lead_facing_name' | 'number_owner_id' | 'qualification_questions'>>;
+    | 'lead_facing_name' | 'number_owner_id' | 'qualification_questions' | 'hidden_warnings'>>;
 
 /** A página do Configurar que corrige cada coisa (onda 3). */
 const PAGINA = (pagina: PaginaId): Corrigir => ({ tela: 'configurar', pagina });
 
 // Item do Diagnóstico com erro que PARA a IA, e a frase do selo. Os outros erros
 // (base de conhecimento, imóvel padrão) viram pendência, não veredito: ela
-// continua respondendo, só pior.
+// continua respondendo, só pior. "Só follow-up" (item `mode`) saiu daqui em
+// 11/10/2026: é escolha do gestor, não parada (vira restrição em `situacaoDaIa`).
 const PARADA_POR_ITEM: Record<string, { frase: string; corrigir?: Corrigir }> = {
   inbox: { frase: 'Parada: o número desta IA não existe mais', corrigir: PAGINA('canal') },
-  mode: { frase: 'Parada: está em "só follow-up" e não responde quem escreve', corrigir: PAGINA('canal') },
   // ⚠️ Era a tela Diagnóstico, que saiu do menu (só equipe). O "Corrigir" sai de
   // `corrigirDoItem`: a configuração do número, onde se religa (revisão da onda 3, M6).
   credentials: { frase: 'Parada: o WhatsApp do número está desconectado', corrigir: PAGINA('canal') },
@@ -165,12 +165,11 @@ export function restricaoDosGatilhos(agent: AgenteLido): { frase: string; parada
   return { frase: `só ${juntar(restritivos.map(descricao), 'e')}`, parada: false };
 }
 
-export function situacaoDaIa(agent: AgenteLido, diagnostics?: HealthReport | null): Situacao {
+export function situacaoDaIa(agent: AgenteLido, diagnostics?: HealthReport | null, ocultas: string[] = []): Situacao {
   if (!agent.enabled && !agent.inbox_id) return { tipo: 'rascunho', frase: 'Rascunho: falta escolher o número', corrigir: PAGINA('canal') };
   // Desligada: sem botão, liga na chave da barra.
   if (!agent.enabled) return { tipo: 'desligada', frase: 'Desligada' };
   if (!agent.inbox_id) return { tipo: 'parada', frase: 'Parada: falta o número', corrigir: PAGINA('canal') };
-  if (agent.followup_only) return { tipo: 'parada', ...PARADA_POR_ITEM.mode };
 
   const erro = (diagnostics?.items ?? []).find((i) => i.status === 'error' && PARADA_POR_ITEM[i.key]);
   if (erro) {
@@ -179,9 +178,14 @@ export function situacaoDaIa(agent: AgenteLido, diagnostics?: HealthReport | nul
     return { tipo: 'parada', frase: parada.frase, ...(corrigir ? { corrigir } : {}) };
   }
 
+  // "Só follow-up" é escolha (11/10/2026): era "Parada" vermelho. Vem depois do erro
+  // que para (número apagado, WhatsApp caído), que continua ganhando.
+  if (agent.followup_only) return { tipo: 'restricao', frase: 'Só follow-up: ela não responde ao vivo, só retoma quem sumiu', corrigir: PAGINA('canal') };
+
   const restricao = restricaoDosGatilhos(agent);
   if (restricao?.parada) return { tipo: 'parada', frase: `Parada: ${restricao.frase}`, corrigir: PAGINA('canal') };
-  if (restricao) return { tipo: 'restricao', frase: `Atendendo com restrição: ${restricao.frase}`, corrigir: PAGINA('canal') };
+  // Restrição escolhida de propósito e ocultada no Painel não pinta a bolinha.
+  if (restricao && !ocultas.includes('triggers')) return { tipo: 'restricao', frase: `Atendendo com restrição: ${restricao.frase}`, corrigir: PAGINA('canal') };
 
   return { tipo: 'atendendo', frase: 'Atendendo' };
 }
@@ -227,16 +231,27 @@ const TITULO_NO_PAINEL: Record<string, string> = {
   followup_sem_fluxo: 'O que ela faz quando o lead some',
 };
 
+// O que o servidor diz e a tela já diz melhor (11/10/2026): "triggers" (a tela
+// calcula quem ela atende, palavra antiga inclusa) e o "client_system" de
+// configuração quando a pendência do Destino já está na lista (era o mesmo aviso
+// duas vezes).
+const DESTINO_DO_SISTEMA = ['destino_cvcrm_desconectado', 'destino_sem_endereco', 'destino_sem_chave'];
+
 export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | null): Pendencia[] {
+  const daPagina = pendenciasDasPaginas(agent);
+  const destinoNaTela = daPagina.some((p) => DESTINO_DO_SISTEMA.includes(p.chave));
   // "IA ligada" desligada já é o veredito; repetir na lista é ruído.
-  const lista = (diagnostics?.items ?? []).filter((i) => i.status !== 'ok' && i.key !== 'enabled').map((i) => daItem(i, agent));
+  const lista = (diagnostics?.items ?? [])
+    .filter((i) => i.status !== 'ok' && i.key !== 'enabled' && i.key !== 'triggers')
+    .filter((i) => !(i.key === 'client_system' && destinoNaTela))
+    .map((i) => daItem(i, agent));
 
   if (!diagnostics && agent.enabled && !agent.inbox_id) {
     lista.push({ chave: 'inbox', titulo: 'Número de WhatsApp', detalhe: 'Nenhum número escolhido. Sem ele a IA não recebe nem responde ninguém.', grave: true, corrigir: PAGINA('canal') });
   }
 
   const restricao = restricaoDosGatilhos(agent);
-  if (restricao && !lista.some((p) => p.chave === 'triggers')) {
+  if (restricao) {
     lista.push({
       chave: 'triggers',
       titulo: 'Quem ela atende',
@@ -250,13 +265,20 @@ export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | n
   // corrige. É aqui que aparece a IA antiga que fala como o corretor e entrega pra
   // um corretor fixo que não é o dono do número. O nome que o lead vê não entra no
   // Painel (é pendência de Identidade e trava o Ligar, mas não para quem já atende).
-  for (const p of pendenciasDasPaginas(agent)) {
+  for (const p of daPagina) {
     const titulo = TITULO_NO_PAINEL[p.chave];
     if (!titulo || lista.some((x) => x.chave === p.chave)) continue;
     lista.push({ chave: p.chave, titulo, detalhe: p.frase, grave: p.impedeLigar, corrigir: PAGINA(p.pagina) });
   }
 
   return [...lista.filter((p) => p.grave), ...lista.filter((p) => !p.grave)];
+}
+
+/** Pendências AMARELAS cuja chave o gestor ocultou. Vermelho nunca some (11/10/2026). */
+export function separarOcultas(pendencias: Pendencia[], ocultas: string[] | undefined): { visiveis: Pendencia[]; ocultas: Pendencia[] } {
+  const lista = new Set(ocultas ?? []);
+  const oculta = (p: Pendencia) => !p.grave && lista.has(p.chave);
+  return { visiveis: pendencias.filter((p) => !oculta(p)), ocultas: pendencias.filter(oculta) };
 }
 
 /**

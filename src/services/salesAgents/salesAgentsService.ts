@@ -145,6 +145,8 @@ export interface SalesAgent {
   reach: AlcanceDaIa;
   /** Nome que o lead vê (o roteiro de hoje já o diz). Separado do `name`, que é o nome da IA no LM Flow. */
   lead_facing_name: string | null;
+  /** Chaves dos avisos amarelos que o gestor ocultou no Painel (11/10/2026). */
+  hidden_warnings?: string[];
   /** Tom e emoji: gravados desde a entrega 2, sem controle na tela até a entrega 4 (roteiro novo). */
   tone?: TomDaIa | null;
   emoji_use?: EmojiDaIa | null;
@@ -613,6 +615,8 @@ export interface SalesAgentPayload {
   persona_kind?: PersonaGravavel;
   reach?: AlcanceDaIa;
   lead_facing_name?: string | null;
+  /** Chaves dos avisos amarelos que o gestor ocultou no Painel (11/10/2026). */
+  hidden_warnings?: string[];
   tone?: TomDaIa | null;
   emoji_use?: EmojiDaIa | null;
   audio_enabled?: boolean;

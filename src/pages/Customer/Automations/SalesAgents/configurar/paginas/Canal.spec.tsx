@@ -50,4 +50,23 @@ describe('Canal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Tirar essa regra' }));
     expect(gravar).toHaveBeenCalledWith({ trigger_keyword: null });
   });
+
+  describe('situação do número (11/10/2026)', () => {
+    const com = (status: string, detail = '') => ({ items: [{ key: 'credentials', label: 'WhatsApp', status, detail }] } as never);
+
+    it('número novo, sem conversa ainda (ok): Conectado', () => {
+      abrir(agenteDeTeste(), com('ok', 'Sem conversa neste canal ainda para conferir.'));
+      expect(screen.getByText('Conectado')).toBeInTheDocument();
+    });
+
+    it('aviso (warning) não mostra Desconectado', () => {
+      abrir(agenteDeTeste(), com('warning'));
+      expect(screen.queryByText('Desconectado')).not.toBeInTheDocument();
+    });
+
+    it('erro de verdade mostra Desconectado', () => {
+      abrir(agenteDeTeste(), com('error'));
+      expect(screen.getByText('Desconectado')).toBeInTheDocument();
+    });
+  });
 });

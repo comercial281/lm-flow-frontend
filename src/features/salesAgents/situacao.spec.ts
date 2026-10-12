@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { HealthReport, SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
-import { motivoSemAtendimento, pendenciasDaIa, restricaoDosGatilhos, situacaoDaIa } from './situacao';
+import { motivoSemAtendimento, pendenciasDaIa, restricaoDosGatilhos, separarOcultas, situacaoDaIa } from './situacao';
 
 // O veredito é LEITURA: o que o servidor faria com esta configuração. Cada caso
 // aqui é uma IA real do levantamento de 05/10/2026 ou um item do checklist §6.
@@ -48,7 +48,7 @@ describe('situacaoDaIa', () => {
   });
 
   it('"só follow-up" para a resposta ao vivo, mesmo sem Diagnóstico', () => {
-    expect(situacaoDaIa(ia({ followup_only: true })).tipo).toBe('parada');
+    expect(situacaoDaIa(ia({ followup_only: true })).tipo).toBe('restricao');
   });
 
   it('erro que não para a IA (base de conhecimento) não muda o veredito', () => {
@@ -196,5 +196,64 @@ describe('fraseDaPalavraAntiga (§6.11: a tela dizia "sempre restringe")', () =>
   });
   it('sem palavra, nada', () => {
     expect(fraseDaPalavraAntiga(ia({ trigger_keyword: null }))).toBeNull();
+  });
+});
+
+describe('limpeza dos avisos (11/10/2026)', () => {
+  it('só follow-up é restrição (amarela), não "Parada"', () => {
+    expect(situacaoDaIa(ia({ followup_only: true }))).toEqual({
+      tipo: 'restricao', frase: 'Só follow-up: ela não responde ao vivo, só retoma quem sumiu', corrigir: { tela: 'configurar', pagina: 'canal' },
+    });
+  });
+
+  it('item "mode" do servidor não para a IA', () => {
+    expect(situacaoDaIa(ia(), diag(['mode', 'error'])).tipo).toBe('atendendo');
+  });
+
+  it('o item "triggers" do servidor não entra no Painel: a tela diz quem ela atende', () => {
+    const lista = pendenciasDaIa(ia({ trigger_keyword: 'quero' }), diag(['triggers', 'warning', 'texto do servidor']));
+    expect(lista.filter((p) => p.chave === 'triggers')).toHaveLength(1);
+    expect(lista[0].titulo).toBe('Quem ela atende');
+    expect(lista[0].detalhe).toContain('quero');
+  });
+
+  it('client_system do servidor some quando a tela já mostra a pendência do destino', () => {
+    const agente = ia({ handoff_target: 'webhook', handoff_webhook_system: 'generic', handoff_webhook_url: 'https://x', handoff_webhook_secret_state: 'missing' } as Partial<SalesAgent>);
+    const lista = pendenciasDaIa(agente, diag(['client_system', 'error', 'Falta gerar a chave']));
+    expect(lista.map((p) => p.chave)).not.toContain('client_system');
+    expect(lista.map((p) => p.chave)).toContain('destino_sem_chave');
+  });
+
+  it('client_system do servidor fica quando é sobre os envios (falhas hoje)', () => {
+    const agente = ia({ handoff_target: 'webhook', handoff_webhook_system: 'generic', handoff_webhook_url: 'https://x', handoff_webhook_secret_state: 'ready' } as Partial<SalesAgent>);
+    const lista = pendenciasDaIa(agente, diag(['client_system', 'warning', '2 falhas hoje']));
+    expect(lista.map((p) => p.chave)).toEqual(['client_system']);
+  });
+});
+
+describe('ocultar avisos', () => {
+  const amarela = { chave: 'knowledge', titulo: 'Base', detalhe: 'x', grave: false };
+  const vermelha = { chave: 'conflict', titulo: 'Outros', detalhe: 'y', grave: true };
+
+  it('separa só as amarelas que estão na lista', () => {
+    expect(separarOcultas([vermelha, amarela], ['knowledge'])).toEqual({ visiveis: [vermelha], ocultas: [amarela] });
+  });
+
+  it('vermelho nunca oculta, mesmo com a chave na lista', () => {
+    expect(separarOcultas([vermelha], ['conflict'])).toEqual({ visiveis: [vermelha], ocultas: [] });
+  });
+
+  it('lista ausente = nada oculto', () => {
+    expect(separarOcultas([amarela], undefined)).toEqual({ visiveis: [amarela], ocultas: [] });
+  });
+
+  it('restrição de gatilho oculta: a bolinha diz "Atendendo"', () => {
+    const agente = ia({ triggers: [{ type: 'form', form_ids: ['f1'] }] });
+    expect(situacaoDaIa(agente, null, ['triggers'])).toEqual({ tipo: 'atendendo', frase: 'Atendendo' });
+  });
+
+  it('gatilho em branco (parada) não oculta', () => {
+    const agente = ia({ triggers: [{ type: 'keyword', value: '' }] });
+    expect(situacaoDaIa(agente, null, ['triggers']).tipo).toBe('parada');
   });
 });
