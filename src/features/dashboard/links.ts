@@ -33,6 +33,21 @@ export type RecorteImoveis =
 /** Fases: empreendimento ativo, sem período (frente 5 da Nova 27). Abrem na aba Empreendimentos. */
 const RECORTES_DE_FASE: RecorteImoveis[] = ['na_planta', 'em_obra', 'prontos'];
 
+/** Aba da Atividades que abriu a lista (f2-07): em que faixa os imóveis vencem. */
+export type FaixaDeVencimento = 'para_fazer' | 'hoje' | 'amanha' | 'atrasadas' | 'semana' | 'proxima_semana';
+
+const FAIXAS: Record<FaixaDeVencimento, string> = {
+  para_fazer: 'vencidos até hoje',
+  hoje: 'vencem hoje',
+  amanha: 'vencem amanhã',
+  atrasadas: 'venceram antes de hoje',
+  semana: 'vencem esta semana',
+  proxima_semana: 'vencem semana que vem',
+};
+// hasOwnProperty, não `in`: `in` aceitaria "toString" e outros nomes herdados do objeto.
+const ehFaixa = (v: string | null): v is FaixaDeVencimento =>
+  !!v && Object.prototype.hasOwnProperty.call(FAIXAS, v);
+
 const RECORTES_IMOVEIS: Record<RecorteImoveis, FiltroImoveis> = {
   ativos:         { rotulo: 'Ativos',         params: { status: 'active' } },
   novos:          { rotulo: 'Novos',          params: {} },
@@ -71,14 +86,18 @@ function rotuloPeriodo(desde: string | null, ate: string | null): string {
 // ── Imóveis ─────────────────────────────────────────────────────────────────
 export function linkImoveis(
   recorte: RecorteImoveis,
-  opcoes: { desde?: string; ate?: string; meus?: boolean } = {},
+  opcoes: { desde?: string; ate?: string; meus?: boolean; vence?: FaixaDeVencimento; pessoa?: { id: string; name: string } } = {},
 ): string {
+  const desatualizados = recorte === 'desatualizados';
   return `/properties${query({
     aba: RECORTES_DE_FASE.includes(recorte) ? ABA_NA_URL.development : null,
     recorte,
+    vence: desatualizados ? opcoes.vence : null,
     desde: recorte === 'novos' ? diaValido(opcoes.desde) : null,
     ate: recorte === 'novos' ? diaValido(opcoes.ate) : null,
     meus: opcoes.meus ? '1' : null,
+    pessoa: desatualizados && !opcoes.meus ? opcoes.pessoa?.id : null,
+    pessoa_nome: desatualizados && !opcoes.meus ? opcoes.pessoa?.name : null,
   })}`;
 }
 
@@ -94,7 +113,20 @@ export function lerRecorteImoveis(sp: URLSearchParams): FiltroImoveis | null {
   if (recorte === 'novos' && ate) params.created_until = ate;
   const meus = sp.get('meus') === '1';
   if (meus) params.mine = '1';
-  return { rotulo: meus ? `${base.rotulo} (seus)` : base.rotulo, params };
+  let rotulo = base.rotulo;
+  const vence = sp.get('vence');
+  if (recorte === 'desatualizados' && ehFaixa(vence)) {
+    // A faixa já diz quais imóveis; "amanhã" ainda não venceu, então sem stale.
+    delete params.stale;
+    params.vence = vence;
+    rotulo = `${rotulo} · ${FAIXAS[vence]}`;
+  }
+  const pessoa = sp.get('pessoa');
+  if (recorte === 'desatualizados' && pessoa && !meus) {
+    params.of_user = pessoa;
+    rotulo = `${rotulo} · ${sp.get('pessoa_nome') || 'uma pessoa'}`;
+  }
+  return { rotulo: meus ? `${rotulo} (seus)` : rotulo, params };
 }
 
 // ── Agenda ──────────────────────────────────────────────────────────────────

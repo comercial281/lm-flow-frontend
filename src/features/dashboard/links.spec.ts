@@ -92,3 +92,32 @@ describe('links da Dashboard', () => {
     expect(linkAceite('o1')).toBe('/roleta/aceite/o1');
   });
 });
+
+describe('Desatualizados pela Atividades (f2-07)', () => {
+  it('leva a faixa e os meus, sem exigir que já tenha vencido', () => {
+    const url = linkImoveis('desatualizados', { vence: 'amanha', meus: true });
+    expect(url).toBe('/properties?recorte=desatualizados&vence=amanha&meus=1');
+    expect(lerRecorteImoveis(sp(url))).toEqual({
+      rotulo: 'Desatualizados · vencem amanhã (seus)',
+      params: { status: 'active', vence: 'amanha', mine: '1' },
+    });
+  });
+
+  it('leva a pessoa escolhida pelo gestor', () => {
+    const url = linkImoveis('desatualizados', { vence: 'atrasadas', pessoa: { id: 'u1', name: 'Bruno Castro' } });
+    expect(lerRecorteImoveis(sp(url))).toEqual({
+      rotulo: 'Desatualizados · venceram antes de hoje · Bruno Castro',
+      params: { status: 'active', vence: 'atrasadas', of_user: 'u1' },
+    });
+  });
+
+  it('faixa inválida cai no Desatualizados de sempre', () => {
+    expect(lerRecorteImoveis(sp('/properties?recorte=desatualizados&vence=ontem'))).toEqual({
+      rotulo: 'Desatualizados', params: { status: 'active', stale: '1' },
+    });
+  });
+
+  it('vence só vale pro recorte desatualizados', () => {
+    expect(linkImoveis('ativos', { vence: 'hoje' })).toBe('/properties?recorte=ativos');
+  });
+});

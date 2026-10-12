@@ -278,7 +278,7 @@ export default function Properties() {
     setRecorte(null);
     setSearchParams(prev => {
       const novo = new URLSearchParams(prev);
-      ['recorte', 'desde', 'ate', 'meus'].forEach(c => novo.delete(c));
+      ['recorte', 'desde', 'ate', 'meus', 'vence', 'pessoa', 'pessoa_nome'].forEach(c => novo.delete(c));
       return novo;
     }, { replace: true });
   };
