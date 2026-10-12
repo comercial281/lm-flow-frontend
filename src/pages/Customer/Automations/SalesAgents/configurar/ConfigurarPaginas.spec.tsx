@@ -126,7 +126,7 @@ describe('ConfigurarPaginas', () => {
   });
 
   it('pendência aparece como bolinha com texto pro leitor de tela', () => {
-    abrir(completa({ lead_facing_name: null }), '/ia-vendedora?ia=ia-1&tela=configurar&pagina=canal');
+    abrir(completa({ persona_kind: 'broker', number_owner_id: null, handoff_target: 'number_owner' }), '/ia-vendedora?ia=ia-1&tela=configurar&pagina=canal');
     expect(screen.getByRole('button', { name: /Identidade.*tem pendência/ })).toBeInTheDocument();
   });
 

@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { AlertTriangle, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, EyeOff, RefreshCw, Loader2 } from 'lucide-react';
 import AiResultsPanel from '@/components/salesAgents/AiResultsPanel';
 import { type AgentPerformance } from '@/types/aiResults';
 import {
@@ -15,7 +15,7 @@ import { plural } from '@/lib/formato';
 import type { TelaId } from '@/features/salesAgents/iaMenu';
 import type { PaginaId } from '../configurar/paginas';
 import type { PaginaDoEnsinar } from './ensinar/paginas';
-import { motivoSemAtendimento, pendenciasDaIa, type Situacao } from '@/features/salesAgents/situacao';
+import { motivoSemAtendimento, NUNCA_OCULTA, pendenciasDaIa, separarOcultas, type Situacao } from '@/features/salesAgents/situacao';
 import { SuggestionCard } from './TelaSugestoes';
 import UltimosAtendimentos from './UltimosAtendimentos';
 import Aviso from '@/components/base/Aviso';
@@ -198,16 +198,36 @@ export interface TelaVisaoGeralProps {
   equipe: boolean;
   /** `pagina`: a página do Configurar (onda 3) ou do Ensinar que corrige a pendência. */
   aoIr: (tela: TelaId, pagina?: PaginaId | PaginaDoEnsinar) => void;
+  /** Devolve a IA gravada ao ocultar/mostrar um aviso. */
+  aoSalvo?: (a: SalesAgent) => void;
+  /** Quem edita a IA oculta aviso amarelo do Painel (11/10/2026). */
+  podeOcultar?: boolean;
 }
 
-export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferindo, falhou = false, mostrarSugestoes, equipe, aoIr }: TelaVisaoGeralProps) {
-  const pendencias = pendenciasDaIa(agent, diagnostico);
+export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferindo, falhou = false, mostrarSugestoes, equipe, aoIr, aoSalvo, podeOcultar = false }: TelaVisaoGeralProps) {
+  const { visiveis, ocultas } = separarOcultas(pendenciasDaIa(agent, diagnostico), agent.hidden_warnings);
+  const [verOcultas, setVerOcultas] = useState(false);
+  const [gravando, setGravando] = useState<string | null>(null);
+
+  // Grava a lista inteira (o servidor limpa). Só quem edita a IA chega aqui.
+  const mudarOcultas = async (chave: string, ocultar: boolean) => {
+    const atual = agent.hidden_warnings ?? [];
+    const nova = ocultar ? [...new Set([...atual, chave])] : atual.filter((k) => k !== chave);
+    setGravando(chave);
+    try {
+      aoSalvo?.(await salesAgentsService.update(agent.id, { hidden_warnings: nova }));
+    } catch {
+      toast.error(ocultar ? 'Não consegui ocultar o aviso.' : 'Não consegui mostrar o aviso de novo.');
+    } finally {
+      setGravando(null);
+    }
+  };
 
   return (
     <div className="space-y-8">
       <section aria-labelledby="vg-pendencias" className="space-y-2">
         <h2 id="vg-pendencias" className="text-sm font-medium">O que precisa de atenção</h2>
-        {pendencias.length === 0 ? (
+        {visiveis.length === 0 ? (
           <p className="flex items-center gap-2 rounded-lg border border-sidebar-border bg-sidebar p-4 text-sm text-muted-foreground">
             {conferindo ? (
               <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Conferindo a situação desta IA…</>
@@ -219,20 +239,29 @@ export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferind
           </p>
         ) : (
           <ul className="space-y-2">
-            {pendencias.map((p) => (
+            {visiveis.map((p) => (
               <li key={p.chave}>
                 <Aviso
                   tom={p.grave ? 'erro' : 'atencao'}
                   titulo={p.titulo}
                   acao={
-                    // Fora da IA (WhatsApp desconectado): link pra configuração do número.
-                    p.corrigir?.rota ? (
-                      <Button asChild size="sm" variant="outline"><Link to={p.corrigir.rota}>Corrigir</Link></Button>
-                    ) : p.corrigir ? (
-                      <Button size="sm" variant="outline"
-                        onClick={() => (p.corrigir!.pagina ? aoIr(p.corrigir!.tela, p.corrigir!.pagina) : aoIr(p.corrigir!.tela))}>
-                        Corrigir
-                      </Button>
+                    (p.corrigir || (podeOcultar && !p.grave && !NUNCA_OCULTA.has(p.chave))) ? (
+                      <>
+                        {/* Fora da IA (WhatsApp desconectado): link pra configuração do número. */}
+                        {p.corrigir?.rota ? (
+                          <Button asChild size="sm" variant="outline"><Link to={p.corrigir.rota}>Corrigir</Link></Button>
+                        ) : p.corrigir ? (
+                          <Button size="sm" variant="outline"
+                            onClick={() => (p.corrigir!.pagina ? aoIr(p.corrigir!.tela, p.corrigir!.pagina) : aoIr(p.corrigir!.tela))}>
+                            Corrigir
+                          </Button>
+                        ) : null}
+                        {podeOcultar && !p.grave && !NUNCA_OCULTA.has(p.chave) && (
+                          <Button size="sm" variant="ghost" disabled={gravando !== null} onClick={() => void mudarOcultas(p.chave, true)}>
+                            <EyeOff className="h-3.5 w-3.5" aria-hidden /> Ocultar
+                          </Button>
+                        )}
+                      </>
                     ) : undefined
                   }
                 >
@@ -241,6 +270,28 @@ export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferind
               </li>
             ))}
           </ul>
+        )}
+        {ocultas.length > 0 && (
+          <div className="space-y-2">
+            <button type="button" className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+              aria-expanded={verOcultas} onClick={() => setVerOcultas((v) => !v)}>
+              {plural(ocultas.length, 'aviso oculto', 'avisos ocultos')} · {verOcultas ? 'Esconder' : 'Mostrar'}
+            </button>
+            {verOcultas && (
+              <ul className="space-y-2">
+                {ocultas.map((p) => (
+                  <li key={p.chave}>
+                    <Aviso tom="neutro" titulo={p.titulo}
+                      acao={podeOcultar ? (
+                        <Button size="sm" variant="ghost" disabled={gravando !== null} onClick={() => void mudarOcultas(p.chave, false)}>Mostrar de novo</Button>
+                      ) : undefined}>
+                      <p className="text-xs">{p.detalhe}</p>
+                    </Aviso>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </section>
 

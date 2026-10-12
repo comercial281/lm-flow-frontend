@@ -46,7 +46,8 @@ export default function Canal({ agent, inboxes, gravar, irPara, diagnostico }: P
   useEffect(() => { if (publico === 'alguns') escolheuTodos.current = false; }, [publico]);
   const numero = inboxes.find((i) => String(i.id) === String(agent.inbox_id ?? ''))?.name ?? agent.inbox_name ?? null;
   const credencial = diagnostico?.items.find((i) => i.key === 'credentials');
-  const situacao = !agent.inbox_id || !credencial ? null : credencial.status === 'ok' ? 'Conectado' : 'Desconectado';
+  // Só "Desconectado" com erro de verdade: número novo, sem conversa ainda, não é queda (11/10/2026).
+  const situacao = !agent.inbox_id || !credencial ? null : credencial.status === 'error' ? 'Desconectado' : 'Conectado';
   const corretor = lerEscolhas(agent).persona === 'broker';
   const frasePalavra = fraseDaPalavraAntiga(agent);
 

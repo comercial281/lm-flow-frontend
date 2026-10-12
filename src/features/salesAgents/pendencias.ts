@@ -10,8 +10,8 @@
  *
  * Trava o Ligar: sem número, a persona corretor num número sem dono (o servidor
  * também recusa este), o Sistema do cliente sem chave pronta e o CVCRM sem conexão. O nome que o lead vê
- * só AVISA (decisão do dono do produto, 05/10): sem ele o roteiro sai igual ao de
- * antes, e as IAs que já atendem não têm esse nome.
+ * é opcional e não aparece como pendência (11/10/2026): sem ele o roteiro sai igual
+ * ao de antes, e as IAs que já atendem não têm esse nome.
  */
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { ORDEM_DAS_PAGINAS, type PaginaId } from '@/pages/Customer/Automations/SalesAgents/configurar/paginas';
@@ -49,11 +49,6 @@ export function pendenciasDasPaginas(agent: Lido): PendenciaDaPagina[] {
   const lista: PendenciaDaPagina[] = [];
   const { persona } = lerEscolhas(agent);
 
-  if (!(agent.lead_facing_name ?? '').trim()) {
-    // Só aviso, não trava o Ligar (decisão do dono do produto, 05/10): vazio, ela se
-    // apresenta sem nome, como sempre fez.
-    lista.push({ chave: 'nome_visivel', pagina: 'identidade', frase: 'Falta o nome que o lead vê.', impedeLigar: false });
-  }
   if (persona === 'broker' && agent.inbox_id && !agent.number_owner_id) {
     lista.push({ chave: 'persona_sem_dono', pagina: 'identidade', frase: FRASE_SEM_DONO, impedeLigar: true });
   }
@@ -107,7 +102,7 @@ export function pendenciasDasPaginas(agent: Lido): PendenciaDaPagina[] {
   }
   const palavra = (agent.trigger_keyword ?? '').trim();
   if (palavra) {
-    lista.push({ chave: 'palavra_antiga', pagina: 'canal', frase: `Ela só entra quando o lead escreve "${palavra}" (regra antiga).`, impedeLigar: false });
+    lista.push({ chave: 'palavra_antiga', pagina: 'canal', frase: `Ainda vale a regra antiga da palavra "${palavra}".`, impedeLigar: false });
   }
   // Desde 06/10/2026 a IA não escreve mais o follow-up ('ai' é só valor antigo). O
   // aviso de "sem limite de tentativas" saiu junto: entregando o lead ela age uma

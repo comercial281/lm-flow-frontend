@@ -8394,6 +8394,32 @@ Origem: o dono quer conectar o LM Flow no Claude (Conectores) e no Claude Code p
 - **Logs:** ação feita pelo MCP aparece com "MCP · nome da chave" no lugar de quem fez, e há a categoria **MCP** no filtro (`formatoLogs.ts` em `SuperAdmin/Logs/`).
 - Não reabrir sem o dono pedir.
 
+## IA Vendedora · avisos limpos e "Ocultar" (11/10/2026)
+
+Pedido do dono: o Painel da IA acusava amarelo e vermelho toda noite por coisa que não era problema (horário, "canal errado", "nenhum arquivo liberado"). Desenho aprovado em 11/10. Servidor: coluna `sales_agents.hidden_warnings` (migration `99990101000321`) (a limpeza dos avisos é do `HealthCheck` no servidor). PRs: servidor (lm-flow) #467 e tela (lm-flow-frontend) #543; o do servidor entra primeiro. **Reabre a decisão 3 de 05/10 ("mode para a IA") por pedido do dono.**
+
+- **O que muda pra quem usa:** o Painel da IA só mostra o que pede ação. Cada pendência AMARELA ganha o botão **Ocultar** (quem tem `sales_agents.update`); no fim da lista aparece "N avisos ocultos · Mostrar", que abre os ocultos em tom neutro, com **Mostrar de novo**. "Configurar → Objetivo" passou a se chamar "Configurar → Destino" (inclusive no Diagnóstico, `EnviosSistemaCliente.tsx`).
+- **1. Horário de atendimento** sai do Painel: fora do horário é normal. O texto "Fora do horário agora" segue no Diagnóstico.
+- **2. Outros agentes neste canal** só acusa conflito de verdade, em vermelho: esta IA sem gatilho e outra IA ligada no mesmo número, sem gatilho, que vem antes na ordem (prioridade maior, ou igual e criada antes). Qualquer outro caso: sem item.
+- **3. Movimento no canal** nunca mais é vermelho (amarelo, só IA ligada há 7+ dias). **Acionamentos** é informativo, salvo IA ligada há 7+ dias, sem gatilho, com mensagem de lead chegando e zero acionamentos.
+- **4. Conexão do canal** sem conversa ainda é ok; a página Canal só mostra "Desconectado" quando o status é erro.
+- **5. Base de conhecimento:** vazia e processando são ok; falhou é amarelo.
+- **6. Arquivos que ela pode enviar:** "nenhum liberado" é ok. Segue amarelo: arquivo grande sem link, book ligado sem book salvo e cliente sem a atualização.
+- **7. Só follow-up** deixa de ser "Parada" vermelho: o servidor marca ok e a bolinha vira `restricao` (amarela), com "Só follow-up: ela não responde ao vivo, só retoma quem sumiu".
+- **8. Nome que o lead vê** sai das pendências (some a bolinha; o Configurar não abre mais em Identidade por causa dele).
+- **9. Repetidos e textos velhos:** o `client_system` do servidor não entra quando a tela já mostra `destino_cvcrm_desconectado`, `destino_sem_endereco` ou `destino_sem_chave`; o `triggers` do servidor não entra (a tela calcula "Quem ela atende" sozinha, palavra antiga inclusa); o texto da palavra antiga foi reescrito.
+- **10. Ocultar** é guardado no servidor, por IA (vale pra conta inteira). Oculto não conta na bolinha ("Atendendo com restrição" vira "Atendendo" se `triggers` estiver oculta).
+- **Desvio do plano no conflito:** também conta como conflito uma IA "só follow-up" sem gatilho que vem antes na ordem, porque o seletor (`SalesAgents::AgentSelector#call` → `catch_all`) não pula `followup_only`: ela pega e segura o lead novo e nunca responde ao vivo. Aparece em vermelho com texto próprio. Quando ESTA IA é "só follow-up", não há item de conflito. Ver o item no `_MELHORIAS`.
+- **Armadilhas:**
+  - **Vermelho nunca oculta.** Não tem botão e aparece mesmo com a chave em `hidden_warnings` (ex.: `conflict`).
+  - **`hidden_warnings` é a lista inteira:** a tela manda a lista completa a cada Ocultar/Mostrar de novo, e o servidor normaliza (chaves `[a-z0-9_]{1,40}`, sem repetição, até 30; lixo vira lista vazia). Cliente sem a coluna ainda: o servidor devolve `[]` e o `update` não estoura.
+  - **`client_system` e `triggers` do servidor ficam fora do Painel**, e a pendência da tela que os substitui herda a gravidade do `client_system` (erro no servidor = vermelho na tela, sem "Ocultar").
+  - **`client_system` nunca oculta**, nem amarelo: falha de envio é lead perdido (`NUNCA_OCULTA` em `situacao.ts`).
+  - **O Diagnóstico da equipe mostra tudo**, sem ocultar nada.
+  - **"Só follow-up" agora é `restricao`** (amarela), não neutra e não "Parada". Quem ler o tipo da bolinha deve contar com isso.
+  - **A Visão geral sem números** deixou de explicar o "só follow-up" (`motivoSemAtendimento` devolve null pra `restricao`). Pendência no `_MELHORIAS`.
+- Não reabrir sem o dono pedir.
+
 ## Formulários públicos: limite de envios e "Quero ajuda" que só confirma o que chegou (desde 2026-10-11)
 
 Desde 11/10 o servidor (`comercial281/lm-flow#451`) aceita 10 envios a cada 10 minutos por visitante em `site/leads`, `site/anuncie` e `landing/:slug/leads`; passou disso, responde 429 com a frase em `error.message` e o cabeçalho `Retry-After`. Nenhuma tela lia isso.

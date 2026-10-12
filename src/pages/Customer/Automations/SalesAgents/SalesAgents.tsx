@@ -265,7 +265,7 @@ export default function SalesAgents() {
   // ⚠️ O relatório é de UMA IA: ao trocar A→B, o de A não vale pra B (o selo
   // mentiria até o de B chegar). Só relido por `updated_at` mantém, sem piscar.
   const diagnosticoDaIa = selected && diagnostico?.id === selected.id ? diagnostico.report : null;
-  const situacao = selected ? situacaoDaIa(selected, diagnosticoDaIa) : null;
+  const situacao = selected ? situacaoDaIa(selected, diagnosticoDaIa, selected.hidden_warnings ?? []) : null;
   const info = telaInfo(tela);
   const trilha = trilhaDe(tela);
 
@@ -335,6 +335,8 @@ export default function SalesAgents() {
                 mostrarSugestoes={insightsLiberado}
                 equipe={isSuper}
                 aoIr={irPara}
+                aoSalvo={aoSalvo}
+                podeOcultar={pode('sales_agents', 'update')}
               />
             )}
             {tela === 'sugestoes' && insightsLiberado && <TelaSugestoes agent={selected} />}
