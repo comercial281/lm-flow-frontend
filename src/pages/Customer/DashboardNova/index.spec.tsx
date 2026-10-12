@@ -89,6 +89,14 @@ describe('DashboardNova', () => {
     expect(container.querySelector('[data-slot="banner"]')).toBeEmptyDOMElement();
   });
 
+  it('o banner fica ACIMA da saudação e dos filtros (dono, 12/10)', () => {
+    hook.dados = base('all');
+    const { container } = tela();
+    const banner = container.querySelector('[data-slot="banner"]')!;
+    const saudacao = screen.getByRole('heading', { level: 1 });
+    expect(banner.compareDocumentPosition(saudacao) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('Roleta agora fica nas linhas do gestor, não nas do corretor', () => {
     hook.dados = base('all');
     const { unmount } = tela();
