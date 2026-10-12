@@ -7361,7 +7361,7 @@ Armadilha: a contagem por tipo lê o que vem antes do " · " na frase que o serv
 Pedido do dono: ajustar a ordem em que as fotos aparecem. Decisão dele: **a primeira foto é
 sempre a capa.**
 
-- Em **Fotos e vídeos** (o mesmo gerenciador da lista de Imóveis e do cadastro), cada foto tem
+- Na página **Fotos e vídeos** do imóvel (ver *Página de fotos e vídeos do imóvel*, 12/10/2026), cada foto tem
   uma alça de arrastar no canto, sempre visível (no celular não existe passar o mouse). Também
   dá pelo teclado (espaço + setas). A ordem vale para a galeria do site, a landing, os portais
   e o pacote de fotos que a IA Vendedora manda.
@@ -8520,3 +8520,18 @@ Pedido do dono: deixar a janela de Modelos mais refinada. Ele escolheu, entre du
 - `PreviewStepLine` continua no `FunnelTemplatePicker` porque o *Disparar funil* da conversa usa.
 
 Testes: `TemplatePickerDialog.spec.tsx`, `ConversationFunnels.spec.tsx`, `templates.spec.ts`.
+
+## Página de fotos e vídeos do imóvel (12/10/2026)
+
+Pedido do Tony: a janela de fotos era "meio zuada"; tinha que ser uma página, separar foto de vídeo e escolher a primeira imagem. Spec: `LM FLOW/specs/2026-10-12-pagina-de-fotos-design.md`.
+
+- **Página `/properties/:id/fotos`** (`?de=cadastro` vindo do cadastro), na moldura da casa com `rolagem="conteudo"`. Abre pelo ⋮ "Fotos e vídeos" da lista e pelo *Gerenciar fotos e vídeos* do cadastro (que pergunta antes se há alteração não salva). A janela `PropertyPhotosDialog` foi apagada.
+- **Capa em destaque** num cartão à esquerda. **A capa não se oculta** ("Escolha outra capa antes de ocultar esta."); ocultar em lote pula a capa e avisa. Capa antiga já oculta ganha aviso no cartão.
+- **Fotos e "Vídeos e áudios" em seções separadas**, com as abas Tudo · Fotos · Vídeos e áudios · Ocultas. **A ordem gravada passa a ser "todas as fotos, depois vídeos e áudios"** (decisão do Tony): só quando alguém mexe na ordem ou sobe arquivo.
+- **Selo da IA em cada vídeo**, espelho de `SalesAgents::PropertyPhotoPack#video`: a IA manda UM vídeo, o primeiro visível em MP4 com tamanho conhecido de até 16 MB. Mudou lá, muda em `features/properties/fotos/regrasDasFotos.ts` (`iaNoVideo`).
+- **Selecionar várias** pela barra de seleção do `BaseHeader` (Mostrar · Ocultar · Excluir). Um pedido por item, um de cada vez (não existe rota de lote); no fim relê do servidor.
+- **Foto ampliada** na janela larga, com setas e ← →.
+- **Saiu a lista "Categorizar como"** e o selo de tipo nas fotos. O servidor descobre vídeo e áudio pelo arquivo (`inferred_photo_type`); o tipo antigo fica gravado.
+- **Quem pode o quê é o cargo** (`usePermissoesDasFotos`): subir `property_photos.upload`, por endereço `.create`, capa `.set_as_cover`, ordem `.reorder`, ocultar `.update`, excluir `.delete`. O Corretor de fábrica vê, ordena e escolhe capa.
+
+Não reabrir sem o dono pedir: a linha "1º pacote da IA" na grade (ele cortou), avisar foto que a IA pula, separar foto por ambiente.

@@ -1,9 +1,9 @@
-import { useRef, useState } from 'react';
-import { Film, Image, Loader2, Megaphone, Upload, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronRight, Film, Image, Loader2, Megaphone, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
-import { ACCEPTED_MIME_TYPES } from '@/services/propertyPhotos/propertyPhotosService';
+import { ACCEPTED_MIME_TYPES, propertyPhotosService, type PropertyPhoto } from '@/services/propertyPhotos/propertyPhotosService';
+import { separar } from '@/features/properties/fotos/regrasDasFotos';
 import { numero, plural } from '@/lib/formato';
-import PropertyPhotosDialog from '../../PropertyPhotosDialog';
 import { CampoTexto } from './campos';
 import type { Property } from '@/services/properties/propertiesService';
 import BlocoDoBook from './BlocoDoBook';
@@ -14,8 +14,8 @@ interface Props extends PropsDaSecao {
   arquivos: File[];
   aoMudarArquivos: (arquivos: File[]) => void;
   enviando: boolean;
-  /** Edição: o gerenciador de fotos fechou (a página relê a contagem). */
-  aoFecharFotos: () => void;
+  /** Edição: abre a página de fotos (quem chama pergunta se há alteração não salva). */
+  aoGerenciarFotos: () => void;
   /** Criação: book (PDF) escolhido, que sobe depois de criar o imóvel. */
   book: File | null;
   aoMudarBook: (f: File | null) => void;
@@ -23,31 +23,50 @@ interface Props extends PropsDaSecao {
   aoMudarImovel: (p: Property) => void;
 }
 
-function Arquivos({ editando, arquivos, aoMudarArquivos, enviando, aoFecharFotos }: Props) {
-  const mediaInputRef = useRef<HTMLInputElement>(null);
-  const [fotosAbertas, setFotosAbertas] = useState(false);
+const NA_FAIXA = 6;
 
-  // Edição: o mesmo gerenciador que a lista abre em "Fotos e vídeos".
-  if (editando) {
-    const total = editando.photos_count ?? 0;
-    return (
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {total ? plural(total, 'foto ou vídeo', 'fotos e vídeos') : 'Nenhuma foto ainda'}
-        </p>
-        <Button type="button" variant="outline" onClick={() => setFotosAbertas(true)} className="gap-2">
-          <Image className="h-4 w-4" />
-          Gerenciar fotos
+// Edição: as primeiras fotos visíveis, na ordem do site, e o link pra página.
+function FaixaDeFotos({ imovelId, total, aoGerenciar }: { imovelId: string; total: number; aoGerenciar: () => void }) {
+  const [fotos, setFotos] = useState<PropertyPhoto[] | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    propertyPhotosService.list(imovelId)
+      .then(l => { if (vivo) setFotos(separar(l).imagens.filter(p => p.published)); })
+      .catch(() => { if (vivo) setFotos([]); });
+    return () => { vivo = false; };
+  }, [imovelId]);
+  const mostradas = (fotos ?? []).slice(0, NA_FAIXA);
+  const resto = (fotos?.length ?? 0) - mostradas.length;
+  return (
+    <div className="mt-4 flex flex-col gap-3">
+      <p className="text-sm text-muted-foreground">
+        {total ? plural(total, 'foto ou vídeo', 'fotos e vídeos') : 'Nenhuma foto ainda'}
+      </p>
+      {mostradas.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto">
+          {mostradas.map(p => (
+            <img key={p.id} src={p.thumbnail_url || p.file_url} alt="" className="aspect-[4/3] w-24 shrink-0 rounded-md object-cover" loading="lazy" />
+          ))}
+          {resto > 0 && (
+            <span className="flex aspect-[4/3] w-24 shrink-0 items-center justify-center rounded-md bg-muted text-sm font-semibold text-muted-foreground">
+              +{resto}
+            </span>
+          )}
+        </div>
+      )}
+      <div>
+        <Button type="button" variant="outline" onClick={aoGerenciar} className="gap-2">
+          <Image className="h-4 w-4" />Gerenciar fotos e vídeos<ChevronRight className="h-4 w-4" />
         </Button>
-        {fotosAbertas && (
-          <PropertyPhotosDialog
-            property={editando}
-            onClose={() => { setFotosAbertas(false); aoFecharFotos(); }}
-          />
-        )}
       </div>
-    );
-  }
+    </div>
+  );
+}
+
+function Arquivos({ editando, arquivos, aoMudarArquivos, enviando, aoGerenciarFotos }: Props) {
+  const mediaInputRef = useRef<HTMLInputElement>(null);
+
+  if (editando) return <FaixaDeFotos imovelId={editando.id} total={editando.photos_count ?? 0} aoGerenciar={aoGerenciarFotos} />;
 
   // Criação: fotos, vídeos e áudios escolhidos aqui sobem logo depois de criar.
   return (
