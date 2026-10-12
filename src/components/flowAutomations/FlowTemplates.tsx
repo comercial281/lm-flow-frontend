@@ -1,18 +1,25 @@
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
-import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Button,
-} from '@/components/ui/ds';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChevronRight } from 'lucide-react';
+import { Card } from '@/components/ui/ds';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation } from '@/types/flowAutomations';
 import type { FlowTemplate } from '@/features/flowAutomations/templates';
 import { cn } from '@/lib/utils';
-import EmptyState from '@/components/base/EmptyState';
+import { TemplatePickerDialog } from './TemplatePickerDialog';
 
 // MODELOS (sprint 2, spec 03/10/2026, seção 4): a mesma lista no botão
 // "Modelos" e no estado vazio da tela Automações. "Usar este modelo" cria o
 // fluxo desligado no servidor e devolve o fluxo pra tela abrir.
+//
+// Desde 12/10/2026 a janela é a lista com prévia (TemplatePickerDialog). No
+// estado vazio os modelos aparecem em cartões; tocar num abre a janela com ele
+// escolhido.
+
+const TITLE = 'Modelos de automação';
+const DESCRIPTION = 'Escolha um modelo e veja o que ele faz antes de criar. O fluxo nasce desligado: ajuste o que estiver em branco e ligue quando estiver pronto.';
+const APPLY_ERROR = 'Não deu pra criar o fluxo pelo modelo. Tente de novo.';
 
 interface ListProps {
   onApplied: (flow: FlowAutomation) => void;
@@ -22,65 +29,55 @@ interface ListProps {
 export function FlowTemplateList({ onApplied, className }: ListProps) {
   const [templates, setTemplates] = useState<FlowTemplate[] | null>(null);
   const [failed, setFailed] = useState(false);
-  const [applying, setApplying] = useState<string | null>(null);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const loadId = useRef(0);
 
-  const load = () => {
+  const load = useCallback(() => {
+    const id = ++loadId.current;
     setFailed(false);
     setTemplates(null);
     flowAutomationsService
       .templates()
-      .then(setTemplates)
-      .catch(() => setFailed(true));
-  };
+      .then(list => { if (id === loadId.current) setTemplates(list); })
+      .catch(() => { if (id === loadId.current) setFailed(true); });
+  }, []);
 
-  useEffect(load, []);
+  useEffect(load, [load]);
 
-  const apply = async (template: FlowTemplate) => {
-    if (applying) return;
-    setApplying(template.key);
-    try {
-      onApplied(await flowAutomationsService.applyTemplate(template.key));
-    } catch {
-      toast.error('Não deu pra criar o fluxo pelo modelo. Tente de novo.');
-    } finally {
-      setApplying(null);
-    }
-  };
-
-  if (failed) {
-    return (
-      <div className={cn('text-sm text-muted-foreground', className)}>
-        Não deu pra carregar os modelos.{' '}
-        <button type="button" className="underline" onClick={load}>Tentar de novo</button>
-      </div>
-    );
-  }
-  if (!templates) {
-    return (
-      <div className={cn('flex items-center gap-2 text-sm text-muted-foreground', className)}>
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Carregando os modelos…
-      </div>
-    );
-  }
-  if (templates.length === 0) {
-    return <EmptyState tamanho="compacto" title="Nenhum modelo disponível agora." className={className} />;
-  }
+  if (failed) return <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={load} className={className} />;
+  if (!templates) return <Carregando variante="lista" linhas={3} rotulo="Carregando os modelos…" className={className} />;
+  if (templates.length === 0) return null;
 
   return (
-    <ul className={cn('space-y-2', className)}>
-      {templates.map(t => (
-        <li key={t.key} className="flex items-start justify-between gap-3 rounded-lg border border-border p-3 text-left">
-          <div className="min-w-0">
-            <div className="text-sm font-semibold">{t.name}</div>
-            {t.description && <p className="text-xs text-muted-foreground mt-0.5">{t.description}</p>}
-          </div>
-          <Button size="sm" variant="outline" className="shrink-0" onClick={() => apply(t)} disabled={!!applying}>
-            {applying === t.key && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" aria-hidden="true" />}
-            Usar este modelo
-          </Button>
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className={cn('grid gap-2 sm:grid-cols-2', className)} aria-label="Modelos de automação">
+        {templates.map(t => (
+          <li key={t.key}>
+            <button type="button" className="group block h-full w-full text-left" onClick={() => setOpenKey(t.key)}>
+              <Card className="flex h-full items-center gap-3 p-3 transition-colors group-hover:border-primary/40">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold">{t.name}</span>
+                  {t.when && <span className="block truncate text-xs text-muted-foreground">{t.when}</span>}
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              </Card>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <TemplatePickerDialog
+        open={openKey !== null}
+        initialKey={openKey}
+        onClose={() => setOpenKey(null)}
+        title={TITLE}
+        description={DESCRIPTION}
+        applyError={APPLY_ERROR}
+        onApplied={flow => {
+          setOpenKey(null);
+          onApplied(flow);
+        }}
+      />
+    </>
   );
 }
 
@@ -91,16 +88,13 @@ interface DialogProps extends ListProps {
 
 export function FlowTemplatesDialog({ open, onClose, onApplied }: DialogProps) {
   return (
-    <Dialog open={open} onOpenChange={o => !o && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Modelos</DialogTitle>
-          <DialogDescription>
-            O modelo cria o fluxo desligado. Ajuste os textos e o que estiver em branco, e ligue quando estiver pronto.
-          </DialogDescription>
-        </DialogHeader>
-        {open && <FlowTemplateList onApplied={onApplied} />}
-      </DialogContent>
-    </Dialog>
+    <TemplatePickerDialog
+      open={open}
+      onClose={onClose}
+      title={TITLE}
+      description={DESCRIPTION}
+      applyError={APPLY_ERROR}
+      onApplied={onApplied}
+    />
   );
 }

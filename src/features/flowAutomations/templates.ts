@@ -4,7 +4,7 @@
 // no botão "Modelos" e no estado vazio. Cada modelo cria o fluxo DESLIGADO, com
 // o nome do modelo; o cliente ajusta e liga. Os modelos moram no servidor
 // (definidos em código, sem tabela):
-//   GET  /flow_automations/templates             → [{ key, name, description }]
+//   GET  /flow_automations/templates             → [{ key, name, description, category, icon, when, preview, adjust }]
 //   POST /flow_automations/templates/:key/apply  → o fluxo criado
 // As rotas aceitam com ou sem o envelope `{ data }`.
 
@@ -20,6 +20,22 @@ export interface FlowTemplatePreviewStep {
   /** `property_book`: o arquivo é o book do imóvel de interesse (sem `media_kind`). */
   media_source?: string;
   seconds?: number;
+  /** "Ação de lead": qual ação (`notify_group`, `assign_via_roleta`…). */
+  action_type?: string;
+  /** "Mandar WhatsApp": `owner` = pelo número do responsável. */
+  send_from?: string;
+  /** "Aguardar resposta": por quantos minutos. */
+  minutes?: number;
+  /** `no_reply`: o bloco só roda quando o lead não respondeu. */
+  branch?: string;
+}
+
+/** Um passo do que a pessoa ajusta antes de ligar (o guia do modelo). */
+export interface FlowTemplateAdjust {
+  title: string;
+  hint?: string;
+  /** O modelo traz o campo obrigatório em branco: não liga sem preencher. */
+  pending: boolean;
 }
 
 export interface FlowTemplate {
@@ -30,6 +46,14 @@ export interface FlowTemplate {
   guide_steps?: number;
   /** Sprint 4: os blocos em ordem (ausente/vazio no modelo montado na hora). */
   preview?: FlowTemplatePreviewStep[];
+  /** Lista com prévia (12/10/2026): o grupo da lista, na ordem que o servidor manda. */
+  category?: string;
+  category_label?: string;
+  /** Nome do ícone (lucide, em kebab-case). */
+  icon?: string;
+  /** O "quando começa", em português. */
+  when?: string;
+  adjust?: FlowTemplateAdjust[];
 }
 
 function previewFrom(raw: unknown): FlowTemplatePreviewStep[] {
@@ -45,7 +69,24 @@ function previewFrom(raw: unknown): FlowTemplatePreviewStep[] {
     if (str(r.media_kind)) step.media_kind = str(r.media_kind);
     if (str(r.media_source)) step.media_source = str(r.media_source);
     if (typeof r.seconds === 'number') step.seconds = r.seconds;
+    if (str(r.action_type)) step.action_type = str(r.action_type);
+    if (str(r.send_from)) step.send_from = str(r.send_from);
+    if (typeof r.minutes === 'number') step.minutes = r.minutes;
+    if (str(r.branch)) step.branch = str(r.branch);
     return [step];
+  });
+}
+
+function adjustFrom(raw: unknown): FlowTemplateAdjust[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap(item => {
+    if (!item || typeof item !== 'object') return [];
+    const r = item as Record<string, unknown>;
+    const title = str(r.title).trim();
+    if (!title) return [];
+    const a: FlowTemplateAdjust = { title, pending: r.pending === true };
+    if (str(r.hint).trim()) a.hint = str(r.hint).trim();
+    return [a];
   });
 }
 
@@ -68,6 +109,11 @@ export function templatesFrom(body: unknown): FlowTemplate[] {
     if (typeof raw.guide_steps === 'number') template.guide_steps = raw.guide_steps;
     const preview = previewFrom(raw.preview);
     if (preview.length) template.preview = preview;
+    for (const k of ['category', 'category_label', 'icon', 'when'] as const) {
+      if (str(raw[k]).trim()) template[k] = str(raw[k]).trim();
+    }
+    const adjust = adjustFrom(raw.adjust);
+    if (adjust.length) template.adjust = adjust;
     return [template];
   });
 }

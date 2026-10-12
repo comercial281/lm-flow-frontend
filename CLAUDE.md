@@ -8508,3 +8508,15 @@ Armadilhas:
 2. Toda escrita na lista passa por `definirMensagens` (espelho em ref): duas respostas juntas não podem se apagar.
 3. Resposta que chega depois de trocar de lead é descartada (`conversaAtual`).
 4. Transcrever: o clique só começa; perguntar (sem `start`) nunca paga de novo — não trocar a pergunta por um novo clique em laço.
+
+## Modelos: lista com prévia (desde 2026-10-12)
+
+Pedido do dono: deixar a janela de Modelos mais refinada. Ele escolheu, entre duas versões desenhadas lado a lado (galeria de cartões × lista com prévia), a **lista com prévia**.
+
+- **Uma janela só, `TemplatePickerDialog`**, usada pelos Modelos das Automações (`FlowTemplatesDialog`) e pelo "+ Novo funil" dos Funis de mensagem (`FunnelTemplatePicker`). Larga (`size="wide"`), com a rolagem por dentro: à esquerda a lista agrupada (ícone colorido por grupo, nome, "quando começa", bolinha âmbar quando há algo obrigatório pra escolher); à direita o modelo escolhido inteiro: "Como funciona" (o gatilho e cada bloco, com o texto real da mensagem num balão, as esperas e o "Se não responder") e "Antes de ligar, você ajusta" (os passos do guia, com "Obrigatório" no que nasce em branco). Rodapé da casa: *Cancelar* e *Usar este modelo*; o gestor dos funis tem *Começar do zero* do lado esquerdo.
+- **No celular** a janela mostra a lista; tocar num modelo abre a prévia, com *Todos os modelos* pra voltar.
+- **Grupo, ícone e "quando começa" vêm do servidor** (`category`, `category_label`, `icon`, `when`, `adjust` em `/flow_automations/templates`). Sem eles (servidor antigo) a lista sai sem grupo e com o ícone de raio, e a janela continua funcionando. A cor por grupo mora no mapa `TONES`; grupo novo sem cor cai no roxo.
+- **O estado vazio das Automações** virou cartões compactos (nome + "quando começa"); tocar num abre a janela com ele escolhido. Antes o próprio cartão criava o fluxo.
+- `PreviewStepLine` continua no `FunnelTemplatePicker` porque o *Disparar funil* da conversa usa.
+
+Testes: `TemplatePickerDialog.spec.tsx`, `ConversationFunnels.spec.tsx`, `templates.spec.ts`.

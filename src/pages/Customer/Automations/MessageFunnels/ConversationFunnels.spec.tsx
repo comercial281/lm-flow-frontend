@@ -110,16 +110,17 @@ describe('+ Novo funil', () => {
     renderPage();
     // O "+ Novo funil" do topo (o estado vazio tem outro igual).
     fireEvent.click((await screen.findAllByRole('button', { name: /Novo funil/ }))[0]);
-    const modelos = await screen.findByRole('list', { name: 'Modelos de funil' });
-    expect(within(modelos).getByText('Apresentação do imóvel')).toBeTruthy();
+    const modelos = await screen.findByRole('listbox', { name: 'Modelos' });
+    expect(within(modelos).getByRole('option', { name: /Apresentação do imóvel/ })).toBeTruthy();
     expect(templates).toHaveBeenCalledWith('conversation');
-    const sequencia = within(modelos).getByRole('list', { name: /Sequência do modelo/ });
+    // O primeiro modelo já vem escolhido, com a sequência à mostra.
+    const sequencia = screen.getByRole('list', { name: /Sequência do modelo/ });
     expect(sequencia.textContent).toContain('Oi {{nome}}, separei um imóvel');
     expect(sequencia.textContent).toContain('Espera 5 segundos');
     expect(sequencia.textContent).toContain('Foto');
     // Corretor não começa do zero.
     expect(screen.queryByRole('button', { name: 'Começar do zero' })).toBeNull();
-    fireEvent.click(within(modelos).getByRole('button', { name: 'Usar este modelo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Usar este modelo' }));
     await waitFor(() => expect(applyTemplate).toHaveBeenCalledWith('funil_apresentacao_imovel'));
     expect(await screen.findByText('canvas do funil')).toBeTruthy();
   });
