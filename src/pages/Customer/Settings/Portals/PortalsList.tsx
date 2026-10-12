@@ -1,139 +1,148 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
 import { BaseHeader, Pagina } from '@/components/base';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { Home, Star, Clock, ChevronRight } from 'lucide-react';
+import BaseStatusBadge from '@/components/base/BaseStatusBadge';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
+import { Card } from '@/components/ui/ds';
+import { plural } from '@/lib/formato';
+import { cn } from '@/lib/utils';
 import { portalsService, Portal } from '@/services/portals/portalsService';
 import { PortalLogo } from '@/components/portals/PortalLogo';
-import { PortalStatusBadge, PortalTypeCounters } from '@/components/portals/PortalBadges';
 import { temTiposDeAnuncio } from '@/features/portals/adPlan';
+import { resumoDaCota, situacaoDoPortal } from '@/features/portals/situacao';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
-import { Card } from '@/components/ui/ds';
+import CartaoDeLink from '../Integrations/CartaoDeLink';
 
-function lastUpdateLabel(portal: Portal): string {
-  if (!portal.last_accessed_at) return 'aguardando portal';
-  const date = new Date(portal.last_accessed_at);
-  return date.toLocaleString('pt-BR', {
-    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-  });
+const COR_DA_COTA = { neutro: 'text-muted-foreground', atencao: 'text-amber-700 dark:text-amber-400', erro: 'text-destructive' } as const;
+
+const rotaDoPortal = (portal: Portal) => `/settings/portals/${portal.portal_key}`;
+
+/** Uma linha de portal conectado: quem é, a situação, e os números que importam. */
+function LinhaConectado({ portal }: { portal: Portal }) {
+  const situacao = situacaoDoPortal(portal);
+  const cota = temTiposDeAnuncio(portal) ? resumoDaCota(portal.ad_types ?? []) : null;
+  return (
+    <li>
+      <Link
+        to={rotaDoPortal(portal)}
+        className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
+      >
+        <PortalLogo portalKey={portal.portal_key} className="w-11 h-11" />
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold">{portal.name}</span>
+            <BaseStatusBadge status={situacao.selo} text={situacao.rotulo} />
+          </div>
+          <p className={cn('text-sm', situacao.chave === 'parou' ? 'text-destructive' : 'text-muted-foreground')}>
+            {situacao.detalhe}
+          </p>
+        </div>
+        <div className="hidden shrink-0 text-right sm:block">
+          <p className="font-semibold">{plural(portal.sent_count, 'imóvel', 'imóveis')}</p>
+          {cota && <p className={cn('text-xs', COR_DA_COTA[cota.tom])}>{cota.texto}</p>}
+        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      </Link>
+    </li>
+  );
 }
 
-// Painel de portais imobiliários — cards com contadores de imóveis enviados,
-// destaques e última leitura do feed pelo portal (estilo Tecimob/Jetimob).
+// Portais (redesenho de 12/10/2026, opção A): os conectados em cima, numa lista
+// com UMA situação por portal; embaixo, os que dá pra conectar, em cartões.
+// Antes eram 11 cartões iguais, com quatro sinais de estado e seis contadores
+// zerados cada. Conectar é dentro da página do portal (o passo a passo).
 export default function PortalsList() {
-  const navigate = useNavigate();
   const [portals, setPortals] = useState<Portal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState(false);
   const [recusado, setRecusado] = useState(false);
+  const carga = useRef(0);
 
-  const load = useCallback(async () => {
+  const carregar = useCallback(async () => {
+    const minha = ++carga.current;
     setLoading(true);
+    setErro(false);
     setRecusado(false);
     try {
-      setPortals(await portalsService.list());
+      const lista = await portalsService.list();
+      if (minha === carga.current) setPortals(lista);
     } catch (e) {
+      if (minha !== carga.current) return;
       if (isForbiddenError(e)) setRecusado(true);
-      else toast.error('Erro ao carregar portais');
+      else setErro(true);
     } finally {
-      setLoading(false);
+      if (minha === carga.current) setLoading(false);
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void carregar(); }, [carregar]);
+
+  const conectados = portals.filter(p => p.connected);
+  const disponiveis = portals.filter(p => !p.connected);
 
   return (
-    // Moldura e cabeçalho da casa: a Pagina rola, a lista não precisa rolar sozinha.
     <Pagina
       cabecalho={
         <BaseHeader
           title="Portais"
-          subtitle="Publique seus imóveis automaticamente nos portais e receba os leads direto no funil. Cada portal lê o feed do LM Flow algumas vezes por dia."
+          subtitle="Seus imóveis nos portais e os leads direto no funil."
         />
       }
     >
-      <div>
-        {recusado ? (
-          <NoAccessState />
-        ) : loading ? (
-          <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-            Carregando...
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {portals.map(portal => (
-              <button
-                key={portal.portal_key}
-                onClick={() => navigate(`/settings/portals/${portal.portal_key}`)}
-                className="group block w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-              >
-                <Card className="gap-0 p-5 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:border-primary/40">
-                {/* Linha 1: quem é o portal e em que estado está. O nome tem prioridade
-                    de largura — os contadores moram na linha de baixo, senão com seis
-                    tipos de anúncio eles tomavam a linha inteira e o nome sumia. */}
-                <div className="flex items-center gap-4">
-                  <PortalLogo portalKey={portal.portal_key} className="w-12 h-12" />
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold truncate">{portal.name}</p>
-                      <PortalStatusBadge portal={portal} />
-                    </div>
-                    {!portal.connected && (
-                      <p className="text-xs text-muted-foreground">Não conectado — clique para configurar</p>
-                    )}
-                  </div>
-
-                  <div className="hidden sm:block text-center shrink-0">
-                    <div className="flex items-center justify-center gap-1.5 text-primary text-sm font-semibold">
-                      <Clock className="h-4 w-4" />
-                      {portal.connected ? lastUpdateLabel(portal) : '—'}
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">última atualização</p>
-                  </div>
-
-                  <span
-                    className={`shrink-0 text-xs font-bold tracking-wide ${
-                      portal.active
-                        ? 'text-green-600 dark:text-green-400'
-                        : portal.connected
-                          ? 'text-amber-600 dark:text-amber-400'
-                          : 'text-muted-foreground'
-                    }`}
-                  >
-                    {portal.active ? 'ATIVO' : portal.connected ? 'AGUARDANDO' : 'INATIVO'}
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                </div>
-
-                {/* Linha 2: os números, alinhados com o texto (logo + gap = 4rem). Os
-                    contadores por tipo quebram linha em vez de espremer o resto. */}
-                <div className="mt-3 sm:pl-16 flex flex-wrap items-center gap-x-6 gap-y-2">
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <Home className="h-4 w-4 text-primary" />
-                    <span className="font-bold text-primary">{portal.sent_count}</span>
-                    <span className="text-muted-foreground">imóveis enviados</span>
-                  </div>
-                  {temTiposDeAnuncio(portal) ? (
-                    // Um contador por tipo de anúncio, com o estourado em vermelho.
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                      <PortalTypeCounters adTypes={portal.ad_types ?? []} className="font-semibold text-primary" />
-                      <span className="text-muted-foreground text-[11px]">por tipo de anúncio</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <Star className="h-4 w-4 text-primary" />
-                      <span className="font-bold text-primary">{portal.featured_count}</span>
-                      <span className="text-muted-foreground">em destaque</span>
-                    </div>
-                  )}
-                </div>
+      {recusado ? (
+        <NoAccessState />
+      ) : loading ? (
+        <Carregando linhas={4} rotulo="Carregando portais…" />
+      ) : erro ? (
+        <EmptyState tipo="erro" aoTentarDeNovo={() => void carregar()} />
+      ) : (
+        <div className="space-y-8">
+          {conectados.length > 0 && (
+            <section className="space-y-3" aria-labelledby="portais-conectados">
+              <h2 id="portais-conectados" className="text-base font-semibold">
+                Conectados <span className="font-medium text-muted-foreground">· {conectados.length}</span>
+              </h2>
+              <Card className="gap-0 overflow-hidden py-0">
+                <ul className="divide-y divide-border">
+                  {conectados.map(p => <LinhaConectado key={p.portal_key} portal={p} />)}
+                </ul>
               </Card>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+            </section>
+          )}
+
+          {disponiveis.length > 0 && (
+            <section className="space-y-3" aria-labelledby="portais-disponiveis">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 id="portais-disponiveis" className="text-base font-semibold">Adicionar portal</h2>
+                <p className="text-sm text-muted-foreground">
+                  Você contrata o plano com o portal; aqui só liga o envio dos imóveis.
+                </p>
+              </div>
+              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {disponiveis.map(p => (
+                  <li key={p.portal_key}>
+                    <CartaoDeLink para={rotaDoPortal(p)}>
+                      <span className="flex items-center gap-3">
+                        <PortalLogo portalKey={p.portal_key} className="w-10 h-10" />
+                        <span className="min-w-0">
+                          <span className="block font-semibold text-sidebar-foreground">{p.name}</span>
+                          {p.integration_status === 'adapted' && (
+                            <span className="block text-xs text-sidebar-foreground/70">Formato a confirmar</span>
+                          )}
+                        </span>
+                      </span>
+                      <span className="text-sm font-semibold text-primary">Conectar</span>
+                    </CartaoDeLink>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
+      )}
     </Pagina>
   );
 }

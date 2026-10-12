@@ -1,6 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Card, Button, Input } from '@/components/ui/ds';
+import { Input } from '@/components/ui/ds';
+import { Secao, Secoes } from '@/components/base/Secao';
+import BarraSalvar from '@/components/base/BarraSalvar';
+import Aviso from '@/components/base/Aviso';
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
+import { mesmoConteudo, useAlteracoesNaoSalvas } from '@/hooks/useAlteracoesNaoSalvas';
 import {
   portalsService,
   type PortalDisplayAddress,
@@ -8,20 +14,24 @@ import {
 } from '@/services/portals/portalsService';
 import { extractError } from '@/utils/apiHelpers';
 import { useLeadDestinationOptions } from '@/components/pipelines/useLeadDestinationOptions';
-import { hasAnyDestinationOption, type LeadDestinationValue } from '@/components/pipelines/LeadDestinationFields';
-import SaleRentDestination from '@/components/pipelines/SaleRentDestination';
+import LeadDestinationFields, { hasAnyDestinationOption, type LeadDestinationValue } from '@/components/pipelines/LeadDestinationFields';
 
 interface Props {
   portalKey: string;
-  /** Ausente no servidor antigo: o card abre com os padrões. */
+  /** Ausente no servidor antigo: a aba abre com os padrões. */
   settings?: PortalSettings | null;
   onSaved?: () => void;
 }
 
-const ENDERECOS: Array<{ value: PortalDisplayAddress; label: string; hint: string }> = [
-  { value: 'neighborhood', label: 'Só o bairro', hint: 'O anúncio mostra bairro e cidade.' },
-  { value: 'street', label: 'Rua, sem número', hint: 'Mostra a rua, sem o número do imóvel.' },
-  { value: 'all', label: 'Endereço completo', hint: 'Rua e número, como está no cadastro.' },
+const ENDERECOS: Array<{ valor: PortalDisplayAddress; rotulo: string; descricao: string }> = [
+  { valor: 'neighborhood', rotulo: 'Só o bairro', descricao: 'O anúncio mostra bairro e cidade.' },
+  { valor: 'street', rotulo: 'Rua, sem número', descricao: 'Mostra a rua, sem o número do imóvel.' },
+  { valor: 'all', rotulo: 'Endereço completo', descricao: 'Rua e número, como está no cadastro.' },
+];
+
+const RECEBER_LEADS = [
+  { valor: 'sim' as const, rotulo: 'Sim' },
+  { valor: 'nao' as const, rotulo: 'Não' },
 ];
 
 const texto = (v: string | null | undefined) => v ?? '';
@@ -63,9 +73,12 @@ const formDe = (s: PortalSettings | null | undefined): Form => ({
 const conheceLocacao = (s: PortalSettings | null | undefined) => typeof s?.rent_same_as_sale === 'boolean';
 
 /**
- * A tela *Configurar* do portal, no modelo do Kenlo: dados do anunciante,
+ * A aba *Configurar* do portal, no modelo do Kenlo: dados do anunciante,
  * endereço no anúncio, leads e destino do lead — tudo gravado num *Salvar*
- * só (uma requisição, `PUT /portals/:key/settings`).
+ * só (uma requisição, `PUT /portals/:key/settings`), pela BarraSalvar.
+ *
+ * Venda e Locação são duas seções, não abas: a página do portal já tem abas e
+ * a regra da casa é um nível só (redesenho de 12/10/2026).
  *
  * Os seletores de destino são leitura de fundo: cargo sem acesso a funis,
  * roletas ou usuários só não vê aquele seletor — nada de aviso vermelho. E o
@@ -73,12 +86,16 @@ const conheceLocacao = (s: PortalSettings | null | undefined) => typeof s?.rent_
  * está gravado ali fica como está.
  */
 export default function PortalSettingsCard({ portalKey, settings, onSaved }: Props) {
-  const [form, setForm] = useState<Form>(() => formDe(settings));
+  const gravado = useMemo(() => formDe(settings), [settings]);
+  const [form, setForm] = useState<Form>(gravado);
   const [saving, setSaving] = useState(false);
 
-  // O servidor é a fonte: depois do salvar (e de qualquer recarga) o card volta
+  // O servidor é a fonte: depois do salvar (e de qualquer recarga) a aba volta
   // a mostrar o que ficou gravado.
-  useEffect(() => { setForm(formDe(settings)); }, [settings]);
+  useEffect(() => { setForm(gravado); }, [gravado]);
+
+  const temAlteracao = !mesmoConteudo(form, gravado);
+  useAlteracoesNaoSalvas(temAlteracao);
 
   const set = <K extends keyof Form>(key: K, value: Form[K]) =>
     setForm(prev => ({ ...prev, [key]: value }));
@@ -128,157 +145,126 @@ export default function PortalSettingsCard({ portalKey, settings, onSaved }: Pro
   const id = (campo: string) => `portal-cfg-${portalKey}-${campo}`;
 
   return (
-    <Card className="gap-6 p-6">
-      <div>
-        <h2 className="font-semibold text-sm">Configurar</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Como a imobiliária aparece no portal, o que sai no anúncio e o que acontece com o lead
-          que chega de lá.
-        </p>
-      </div>
-
-      {/* Dados do anunciante */}
-      <section className="space-y-3">
-        <div>
-          <h3 className="text-sm font-medium">Dados do anunciante</h3>
-          <p className="text-xs text-muted-foreground">
-            O portal exige nome e e-mail para importar os anúncios.
-          </p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5 sm:col-span-2">
-            <label htmlFor={id('provider_name')} className="text-sm font-medium">
-              Nome da imobiliária no portal
-            </label>
-            <Input
-              id={id('provider_name')}
-              value={form.provider_name}
-              onChange={e => set('provider_name', e.target.value)}
-              placeholder="Como o anunciante aparece nos anúncios"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor={id('contact_email')} className="text-sm font-medium">E-mail de contato</label>
-            <Input
-              id={id('contact_email')}
-              type="email"
-              value={form.contact_email}
-              onChange={e => set('contact_email', e.target.value)}
-              placeholder="contato@imobiliaria.com.br"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor={id('contact_name')} className="text-sm font-medium">Nome do contato</label>
-            <Input
-              id={id('contact_name')}
-              value={form.contact_name}
-              onChange={e => set('contact_name', e.target.value)}
-              placeholder="Quem responde pelo anúncio"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Endereço no anúncio */}
-      <section className="space-y-3">
-        <div>
-          <h3 className="text-sm font-medium">Endereço no anúncio</h3>
-          <p className="text-xs text-muted-foreground">
-            O quanto do endereço do imóvel o portal mostra para quem vê o anúncio.
-          </p>
-        </div>
-        <div role="radiogroup" aria-label="Endereço no anúncio" className="grid gap-2 sm:grid-cols-3">
-          {ENDERECOS.map(opt => (
-            <label
-              key={opt.value}
-              className={`flex items-start gap-2 rounded-md border p-3 text-sm cursor-pointer ${
-                form.display_address === opt.value ? 'border-primary bg-primary/5' : 'border-border'
-              }`}
-            >
-              <input
-                type="radio"
-                name={id('display_address')}
-                value={opt.value}
-                checked={form.display_address === opt.value}
-                onChange={() => set('display_address', opt.value)}
-                className="mt-0.5"
+    <>
+      <Secoes>
+        <Secao titulo="Dados do anunciante" descricao="O portal exige nome e e-mail para importar os anúncios.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5 sm:col-span-2">
+              <label htmlFor={id('provider_name')} className="text-sm font-medium">
+                Nome da imobiliária no portal
+              </label>
+              <Input
+                id={id('provider_name')}
+                value={form.provider_name}
+                onChange={e => set('provider_name', e.target.value)}
+                placeholder="Como o anunciante aparece nos anúncios"
               />
-              <span>
-                <span className="block font-medium">{opt.label}</span>
-                <span className="block text-xs text-muted-foreground">{opt.hint}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-      </section>
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor={id('contact_email')} className="text-sm font-medium">E-mail de contato</label>
+              <Input
+                id={id('contact_email')}
+                type="email"
+                value={form.contact_email}
+                onChange={e => set('contact_email', e.target.value)}
+                placeholder="contato@imobiliaria.com.br"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor={id('contact_name')} className="text-sm font-medium">Nome do contato</label>
+              <Input
+                id={id('contact_name')}
+                value={form.contact_name}
+                onChange={e => set('contact_name', e.target.value)}
+                placeholder="Quem responde pelo anúncio"
+              />
+            </div>
+          </div>
+        </Secao>
 
-      {/* Leads */}
-      <section className="space-y-3">
-        <div>
-          <h3 className="text-sm font-medium">Leads</h3>
-          <p className="text-xs text-muted-foreground">
-            O portal manda o lead para a URL de recebimento acima. Aqui você decide se ele vira contato.
-          </p>
-        </div>
-        <div role="radiogroup" aria-label="Receber leads automaticamente" className="space-y-2">
-          <p className="text-sm font-medium">Receber leads automaticamente</p>
-          <div className="flex items-center gap-4 text-sm">
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input
-                type="radio"
-                name={id('leads_enabled')}
-                checked={form.leads_enabled}
-                onChange={() => set('leads_enabled', true)}
-              />
-              Sim
-            </label>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input
-                type="radio"
-                name={id('leads_enabled')}
-                checked={!form.leads_enabled}
-                onChange={() => set('leads_enabled', false)}
-              />
-              Não
-            </label>
+        <Secao titulo="Endereço no anúncio" descricao="O quanto do endereço do imóvel o portal mostra para quem vê o anúncio.">
+          <CartoesDeEscolha
+            rotulo="Endereço no anúncio"
+            valor={form.display_address}
+            opcoes={ENDERECOS}
+            aoEscolher={v => set('display_address', v)}
+            colunas={3}
+          />
+        </Secao>
+
+        <Secao
+          titulo="Leads"
+          descricao="O portal manda o lead para o endereço de recebimento (aba Conexão). Aqui você decide se ele vira contato."
+        >
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Receber leads automaticamente</p>
+            <BotoesDeEscolha
+              rotulo="Receber leads automaticamente"
+              valor={form.leads_enabled ? 'sim' : 'nao'}
+              opcoes={RECEBER_LEADS}
+              aoEscolher={v => set('leads_enabled', v === 'sim')}
+            />
           </div>
           {!form.leads_enabled && (
-            <p className="text-xs text-amber-700 dark:text-amber-400">
+            <Aviso tom="atencao" compacto>
               Desligado, o lead que o portal mandar fica guardado e não vira contato.
-            </p>
+            </Aviso>
           )}
-        </div>
-      </section>
+        </Secao>
 
-      {/* Destino do lead */}
-      {temDestino && (
-        <section className="space-y-3">
-          <div>
-            <h3 className="text-sm font-medium">Destino do lead</h3>
-            <p className="text-xs text-muted-foreground">
-              Para onde vai o lead que chega deste portal. Em branco, ele entra como sempre entrou:
-              no funil padrão, sem responsável.
-              {locacao && ' O imóvel do anúncio decide se o lead é de Venda ou de Locação; imóvel de Venda + Locação segue o que o portal informar, e sem informação vai para Venda.'}
-            </p>
-          </div>
-          <SaleRentDestination
-            sale={form.sale}
-            rent={form.rent}
-            rentSameAsSale={form.rent_same_as_sale}
-            onSale={patch => setForm(prev => ({ ...prev, sale: { ...prev.sale, ...patch } }))}
-            onRent={patch => setForm(prev => ({ ...prev, rent: { ...prev.rent, ...patch } }))}
-            onRentSameAsSale={v => set('rent_same_as_sale', v)}
-            options={options}
-            showRent={locacao}
-          />
-        </section>
-      )}
+        {temDestino && !locacao && (
+          <Secao
+            titulo="Destino do lead"
+            descricao="Para onde vai o lead que chega deste portal. Em branco, ele entra como sempre entrou: no funil padrão, sem responsável."
+          >
+            <LeadDestinationFields
+              value={form.sale}
+              onChange={patch => setForm(prev => ({ ...prev, sale: { ...prev.sale, ...patch } }))}
+              options={options}
+            />
+          </Secao>
+        )}
 
-      <div className="flex justify-end">
-        <Button className="text-xs" onClick={save} disabled={saving}>
-          {saving ? 'Salvando...' : 'Salvar'}
-        </Button>
-      </div>
-    </Card>
+        {temDestino && locacao && (
+          <>
+            <Secao
+              titulo="Destino do lead de venda"
+              descricao="Para onde vai o lead de imóvel à venda. Em branco, ele entra como sempre entrou: no funil padrão, sem responsável. Imóvel de Venda + Locação segue o que o portal informar; sem informação, vai para venda."
+            >
+              <LeadDestinationFields
+                key="venda"
+                value={form.sale}
+                onChange={patch => setForm(prev => ({ ...prev, sale: { ...prev.sale, ...patch } }))}
+                options={options}
+              />
+            </Secao>
+            <Secao titulo="Destino do lead de locação" descricao="Para onde vai o lead de imóvel para alugar.">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.rent_same_as_sale}
+                  onChange={e => set('rent_same_as_sale', e.target.checked)}
+                  className="h-4 w-4 accent-primary"
+                />
+                Mesmo destino da venda
+              </label>
+              {form.rent_same_as_sale ? (
+                <p className="text-sm text-muted-foreground">
+                  O lead de imóvel para alugar vai para o mesmo funil, roleta e responsável da venda.
+                </p>
+              ) : (
+                <LeadDestinationFields
+                  key="locacao"
+                  value={form.rent}
+                  onChange={patch => setForm(prev => ({ ...prev, rent: { ...prev.rent, ...patch } }))}
+                  options={options}
+                />
+              )}
+            </Secao>
+          </>
+        )}
+      </Secoes>
+      <BarraSalvar visivel={temAlteracao} salvando={saving} aoSalvar={save} aoDescartar={() => setForm(gravado)} />
+    </>
   );
 }
