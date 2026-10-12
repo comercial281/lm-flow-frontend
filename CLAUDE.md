@@ -7361,7 +7361,7 @@ Armadilha: a contagem por tipo lê o que vem antes do " · " na frase que o serv
 Pedido do dono: ajustar a ordem em que as fotos aparecem. Decisão dele: **a primeira foto é
 sempre a capa.**
 
-- Em **Fotos e vídeos** (o mesmo gerenciador da lista de Imóveis e do cadastro), cada foto tem
+- Na página **Fotos e vídeos** do imóvel (ver *Página de fotos e vídeos do imóvel*, 12/10/2026), cada foto tem
   uma alça de arrastar no canto, sempre visível (no celular não existe passar o mouse). Também
   dá pelo teclado (espaço + setas). A ordem vale para a galeria do site, a landing, os portais
   e o pacote de fotos que a IA Vendedora manda.
@@ -8336,7 +8336,7 @@ O que muda pra quem usa:
    - O ↗ "abrir em nova guia" do cartão continua (de propósito).
 2. **Faixa de etapas da página no celular:** cada seta tem a largura do próprio texto (até 220px, depois corta), a faixa rola de lado e abre já rolada até a etapa atual. O desenho em setas encaixadas é o mesmo do computador (o recorte é em px, então encaixa em qualquer largura). Antes as etapas encolhiam abaixo da largura mínima e encavalavam ("menos de 1 dia · atual" por cima da vizinha).
 3. **Botão que só aparecia passando o mouse fica sempre visível em aparelho de toque.** No Tailwind 4, `hover:`/`group-hover:` só valem com mouse; o padrão `opacity-0 group-hover:opacity-100` deixava o botão invisível e ainda tocável (dava pra apertar Excluir no cartão de funil sem ver). Consertado em 25 pontos de 22 arquivos: cartões de Funis, Contatos, Equipes, Usuários, Integrações, canais MCP/ferramentas, curso da Academia, pastas de Automações e de Funis de mensagem, reordenar/criar etapas, campos personalizados, anexo do campo de mensagem, ⋯ do cartão do lead (tablet), fotos do imóvel, Tutoriais (categoria e comentário), ícone de ampliar da página pública do imóvel. Ficaram como estavam os brilhos de fundo dos cartões de canal e de link (enfeite, não recebe toque).
-   - **Atualizado em 11/10/2026 (revisão do #538, peça 16 do GLOSSARIO):** a regra da casa é a ação **sempre à vista, apagada** (`opacity-70 group-hover:opacity-100 focus-within:opacity-100`), e não mais o `toque:opacity-100`. As fotos da conversa (`MessageImage`) e do imóvel (`PropertyPhotosDialog`) já estão assim: botões sempre à vista, com fundo (`bg-background/80 rounded-md`).
+   - **Atualizado em 11/10/2026 (revisão do #538, peça 16 do GLOSSARIO):** a regra da casa é a ação **sempre à vista, apagada** (`opacity-70 group-hover:opacity-100 focus-within:opacity-100`), e não mais o `toque:opacity-100`. As fotos da conversa (`MessageImage`) e do imóvel (a janela `PropertyPhotosDialog` foi substituída em 12/10/2026 pela página `src/pages/Customer/Properties/fotos/`) já estão assim: botões sempre à vista, com fundo (`bg-background/80 rounded-md`).
    - **Os únicos `toque:` que sobram** (não acrescentar outro sem motivo igual): `toque:hidden` na camada sobre foto do visualizador compartilhado (`SharedImageBubble`; no visualizador externo, onde a foto não abre, `toque:opacity-100`) e na foto de perfil (`ProfilePhotoUploader`), onde a camada some e o toque cai na foto; e `toque:opacity-100` fora da tela do cliente: cartões de ferramentas e de servidores MCP (`CustomToolCard`, `CustomMCPServerCard`, sobra do fork) e o ícone de ampliar da página pública do imóvel (`ImovelPublicPage`).
 4. **Suporte no celular é sempre a lingueta** ("?" presa no meio da borda direita), em todas as telas. No computador vale a regra de antes (`rotaComAba` + canto ocupado).
 
@@ -8550,3 +8550,18 @@ Armadilhas:
 5. **Tarefas e Agendados continuam relendo escondidos atrás das prontas** (a lateral segue `isOpen`). Custa só requisição; desmontar faria buscar de novo a cada troca.
 6. **Tailwind 4: `translate-x-*` mexe na propriedade `translate`, não em `transform`.** A troca de camada usa `transition-[translate,opacity]`; com `transition-[transform,opacity]` só a opacidade anima. A transição só vale com a lateral aberta (`isOpen`), e o foguete com a lateral fechada troca a camada antes e abre a lateral no quadro seguinte (`requestAnimationFrame`); a primeira abertura com a lateral aberta monta as prontas fora da tela e desliza dois quadros depois.
 7. **A janela mede o espaço livre** (`DispararFunilPanel`, `espacoLivre`): do topo do campo até o primeiro contêiner que corta (rolagem) ou o fundo do `.wa-header` dentro dele, menos 16 px, mínimo 200 px. Relê ao redimensionar.
+
+## Página de fotos e vídeos do imóvel (12/10/2026)
+
+Pedido do Tony: a janela de fotos era "meio zuada"; tinha que ser uma página, separar foto de vídeo e escolher a primeira imagem. Spec: `LM FLOW/specs/2026-10-12-pagina-de-fotos-design.md`.
+
+- **Página `/properties/:id/fotos`** (`?de=cadastro` vindo do cadastro), na moldura da casa com `rolagem="conteudo"`. Abre pelo ⋮ "Fotos e vídeos" da lista e pelo *Gerenciar fotos e vídeos* do cadastro (que pergunta antes se há alteração não salva). A janela `PropertyPhotosDialog` foi apagada.
+- **Capa em destaque** num cartão à esquerda. **A capa não se oculta** ("Escolha outra capa antes de ocultar esta."); ocultar em lote pula a capa e avisa. Capa antiga já oculta ganha aviso no cartão.
+- **Fotos e "Vídeos e áudios" em seções separadas**, com as abas Tudo · Fotos · Vídeos e áudios · Ocultas. **A ordem gravada passa a ser "todas as fotos, depois vídeos e áudios"** (decisão do Tony): só quando alguém mexe na ordem ou sobe arquivo.
+- **Selo da IA em cada vídeo**, espelho de `SalesAgents::PropertyPhotoPack#video`: a IA manda UM vídeo, o primeiro visível em MP4 com tamanho conhecido de até 16 MB. Mudou lá, muda em `features/properties/fotos/regrasDasFotos.ts` (`iaNoVideo`).
+- **Selecionar várias** pela barra de seleção do `BaseHeader` (Mostrar · Ocultar · Excluir). Um pedido por item, um de cada vez (não existe rota de lote); no fim relê do servidor.
+- **Foto ampliada** na janela larga, com setas e ← →.
+- **Saiu a lista "Categorizar como"** e o selo de tipo nas fotos. No envio de arquivo o servidor descobre vídeo e áudio (`inferred_photo_type`); ao adicionar por endereço da internet a tela manda o tipo pela extensão (`tipoPeloEndereco`: .mp4 .mov .webm .m4v = vídeo; .mp3 .m4a .ogg .wav .aac .opus = áudio; o resto, foto). O tipo antigo fica gravado.
+- **Quem pode o quê é o cargo** (`usePermissoesDasFotos`): subir `property_photos.upload`, por endereço `.create`, capa `.set_as_cover`, ordem `.reorder`, ocultar `.update`, excluir `.delete`. O Corretor de fábrica vê, ordena e escolhe capa.
+
+Não reabrir sem o dono pedir: a linha "1º pacote da IA" na grade (ele cortou), avisar foto que a IA pula, separar foto por ambiente.

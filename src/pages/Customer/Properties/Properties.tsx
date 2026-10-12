@@ -33,7 +33,7 @@ import { useCan } from '@/hooks/useCan';
 import { useCelular } from '@/hooks/useCelular';
 import { propertiesActionGates } from './propertiesActionGates';
 import PropertyImportDialog from './PropertyImportDialog';
-import PropertyPhotosDialog from './PropertyPhotosDialog';
+import { linkDasFotos } from '@/features/properties/fotos/regrasDasFotos';
 import PropertyBookDialog from '@/components/properties/PropertyBookDialog';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { Seletor } from '@/components/base/Seletor';
@@ -121,7 +121,6 @@ export default function Properties() {
   const [toDelete, setToDelete]                 = useState<Property | null>(null);
   const [propertyScores, setPropertyScores]     = useState<Record<string, number>>({});
 
-  const [photosProperty, setPhotosProperty] = useState<Property | null>(null);
   const [bookProperty, setBookProperty] = useState<Property | null>(null);
 
   // Batch generate
@@ -364,15 +363,6 @@ export default function Properties() {
     }
   };
 
-  // Relê um imóvel e troca no lugar (contagens ficam como estão). Falha não avisa:
-  // a linha só fica com a capa antiga até a próxima recarga.
-  const atualizarImovel = async (id: string) => {
-    try {
-      const novo = await propertiesService.get(id);
-      setProperties(prev => prev.map(p => (p.id === novo.id ? novo : p)));
-    } catch { /* leitura de fundo */ }
-  };
-
   const handleCalculateScore = async (id: string) => {
     try {
       const result = await propertiesService.calculateScore(id);
@@ -437,7 +427,7 @@ export default function Properties() {
 
   const acoesDoImovel: AcoesDoImovel = {
     editar: openEdit,
-    fotos: p => setPhotosProperty(p),
+    fotos: p => navigate(linkDasFotos(p.id)),
     book: p => setBookProperty(p),
     landing: p => navigate(`/properties/${p.id}/landing`),
     site: abrirNoSite,
@@ -640,16 +630,6 @@ export default function Properties() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Photos dialog */}
-      {photosProperty && (
-        <PropertyPhotosDialog
-          property={photosProperty}
-          // Ao fechar, relê só este imóvel: trocar a capa (ou subir/apagar foto) tem
-          // que refletir na miniatura, sem perder as páginas do "Mostrar mais" e a rolagem.
-          onClose={() => { const id = photosProperty.id; setPhotosProperty(null); atualizarImovel(id); }}
-        />
-      )}
 
       {/* Book dialog — ver/baixar o PDF do book salvo no imóvel */}
       {bookProperty && (
