@@ -67,7 +67,7 @@ export default function IaBarra({
             {agents.map((a) => (
               <DropdownMenuItem key={a.id} onSelect={() => aoTrocarIa(a.id)} className="flex items-center justify-between gap-3">
                 <span className={`truncate text-sm ${a.id === selecionada?.id ? 'font-semibold' : ''}`}>{a.name}</span>
-                <SeloSituacao compacto situacao={a.id === selecionada?.id && situacao ? situacao : situacaoDaIa(a)} />
+                <SeloSituacao compacto situacao={a.id === selecionada?.id && situacao ? situacao : situacaoDaIa(a, null, a.hidden_warnings ?? [])} />
               </DropdownMenuItem>
             ))}
             {podeCriar && (

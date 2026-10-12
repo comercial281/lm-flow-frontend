@@ -6,9 +6,10 @@ import { MemoryRouter } from 'react-router-dom';
 const performance = vi.hoisted(() => vi.fn());
 const listSuggestions = vi.hoisted(() => vi.fn());
 const applySuggestion = vi.hoisted(() => vi.fn());
+const update = vi.hoisted(() => vi.fn());
 const runs = vi.hoisted(() => vi.fn().mockResolvedValue({ runs: [], totals: {} }));
 vi.mock('@/services/salesAgents/salesAgentsService', () => ({
-  salesAgentsService: { performance, listSuggestions, applySuggestion, runs, dismissSuggestion: vi.fn() },
+  salesAgentsService: { performance, listSuggestions, applySuggestion, runs, dismissSuggestion: vi.fn(), update },
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -123,5 +124,54 @@ describe('Painel → Visão geral', () => {
   it('sem a chave de sugestões, nem pergunta ao servidor', () => {
     abrir({ mostrarSugestoes: false });
     expect(listSuggestions).not.toHaveBeenCalled();
+  });
+});
+
+describe('ocultar avisos', () => {
+  const amarelo = { status: 'warning' as const, items: [{ key: 'knowledge', label: 'Base de conhecimento', status: 'warning' as const, detail: 'Falhou 1.' }] };
+
+  it('aviso amarelo tem "Ocultar", que grava a lista e some da tela', async () => {
+    const aoSalvo = vi.fn();
+    update.mockResolvedValue({ ...agente, hidden_warnings: ['knowledge'] });
+    abrir({ diagnostico: amarelo, podeOcultar: true, aoSalvo });
+    await userEvent.click(screen.getByRole('button', { name: 'Ocultar' }));
+    expect(update).toHaveBeenCalledWith('ia-1', { hidden_warnings: ['knowledge'] });
+    expect(aoSalvo).toHaveBeenCalledWith(expect.objectContaining({ hidden_warnings: ['knowledge'] }));
+  });
+
+  it('aviso vermelho não tem "Ocultar"', () => {
+    abrir({ podeOcultar: true, diagnostico: { status: 'error', items: [{ key: 'conflict', label: 'Outros agentes', status: 'error', detail: 'x' }] } });
+    expect(screen.queryByRole('button', { name: 'Ocultar' })).not.toBeInTheDocument();
+  });
+
+  it('sem permissão de editar, sem "Ocultar"', () => {
+    abrir({ diagnostico: amarelo, podeOcultar: false });
+    expect(screen.queryByRole('button', { name: 'Ocultar' })).not.toBeInTheDocument();
+  });
+
+  it('oculto vira "1 aviso oculto · Mostrar" e "Mostrar de novo" tira da lista', async () => {
+    update.mockResolvedValue({ ...agente, hidden_warnings: [] });
+    abrir({ agent: { ...agente, hidden_warnings: ['knowledge'] } as SalesAgent, diagnostico: amarelo, podeOcultar: true, aoSalvo: vi.fn() });
+    expect(screen.queryByText('Falhou 1.')).not.toBeInTheDocument();
+    expect(screen.getByText(/Nada pendente/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /1 aviso oculto/ }));
+    expect(screen.getByText('Falhou 1.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Mostrar de novo' }));
+    expect(update).toHaveBeenCalledWith('ia-1', { hidden_warnings: [] });
+  });
+
+  it('vermelho com a chave na lista continua aparecendo (piorou, voltou)', () => {
+    abrir({
+      agent: { ...agente, hidden_warnings: ['conflict'] } as SalesAgent, podeOcultar: true,
+      diagnostico: { status: 'error', items: [{ key: 'conflict', label: 'Outros agentes', status: 'error', detail: 'Nunca é escolhida.' }] },
+    });
+    expect(screen.getByText('Nunca é escolhida.')).toBeInTheDocument();
+  });
+
+  it('falha ao gravar: avisa e o aviso continua na tela', async () => {
+    update.mockRejectedValue(new Error('x'));
+    abrir({ diagnostico: amarelo, podeOcultar: true, aoSalvo: vi.fn() });
+    await userEvent.click(screen.getByRole('button', { name: 'Ocultar' }));
+    expect(await screen.findByText('Falhou 1.')).toBeInTheDocument();
   });
 });
