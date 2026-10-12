@@ -72,6 +72,13 @@ interface MessageInputProps {
   selectedConversation?: Conversation | null;
   /** Depois de disparar um funil: relê a faixa "automação rodando" (sprint 4). */
   onFunnelStarted?: () => void;
+  /**
+   * Mensagens prontas na LATERAL (12/10/2026, Conversas no computador): o
+   * foguete chama isto em vez de abrir a janela em cima do campo. Sem ele
+   * (celular), continua a janela.
+   */
+  onToggleProntas?: () => void;
+  prontasAbertas?: boolean;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
@@ -88,6 +95,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
   channelType,
   channelProvider,
   onFunnelStarted,
+  onToggleProntas,
+  prontasAbertas = false,
 }) => {
   const { t } = useLanguage('chat');
   const { user } = useAuth();
@@ -529,8 +538,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
             sem a variável) a conta resolve para calc(0.5rem + safe-area) — a
             mesma expressão de antes, não só parecida. */}
         <CardContent className="px-3 py-2 pb-[calc(0.5rem+max(0px,env(safe-area-inset-bottom)-var(--keyboard-inset,0px)))] relative">
-          {/* 🚀 DISPARAR FUNIL (sprint 4): o funil roda no servidor, pelo número da conversa. */}
-          {canMessageFunnel && (
+          {/* 🚀 MENSAGENS PRONTAS em janela (celular): o funil roda no servidor, pelo número da conversa. */}
+          {canMessageFunnel && !onToggleProntas && (
             <DispararFunilPanel
               isOpen={showFunnels}
               onClose={() => closePanel('funnel')}
@@ -584,15 +593,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 </div>
               )}
 
-              {/* 🚀 Funis de Mensagem (substitui Canned Responses + Quick Replies) */}
+              {/* 🚀 Mensagens prontas (os funis de conversa): na lateral quando há
+                  `onToggleProntas`, senão na janela em cima do campo. */}
               {canMessageFunnel && (
                 <IconActionButton
-                  label="Funis de mensagem"
+                  label="Mensagens prontas"
                   icon={<Rocket className="h-4 w-4" />}
-                  variant={showFunnels ? 'default' : 'ghost'}
+                  variant={showFunnels || prontasAbertas ? 'default' : 'ghost'}
                   disabled={isDisabled || isSending || isPendingConversation}
                   className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
-                  onClick={() => togglePanel('funnel')}
+                  onClick={() => {
+                    if (!onToggleProntas) return togglePanel('funnel');
+                    closePanel('emoji');
+                    onToggleProntas();
+                  }}
                   side="top"
                 />
               )}

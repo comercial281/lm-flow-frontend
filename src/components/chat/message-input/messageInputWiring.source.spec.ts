@@ -19,7 +19,7 @@ describe('MessageInput → campo enxuto', () => {
 
   it('os botões só-ícone têm tooltip de verdade', () => {
     expect(codigo).not.toContain('title="Funis de Mensagem"');
-    expect(codigo).toContain('label="Funis de mensagem"');
+    expect(codigo).toContain('label="Mensagens prontas"');
     expect(codigo).toContain('label="Modelos de mensagem"');
   });
 

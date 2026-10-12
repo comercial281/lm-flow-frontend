@@ -8520,3 +8520,27 @@ Pedido do dono: deixar a janela de Modelos mais refinada. Ele escolheu, entre du
 - `PreviewStepLine` continua no `FunnelTemplatePicker` porque o *Disparar funil* da conversa usa.
 
 Testes: `TemplatePickerDialog.spec.tsx`, `ConversationFunnels.spec.tsx`, `templates.spec.ts`.
+
+## Mensagens prontas na lateral da conversa (12/10/2026)
+
+Pedido do dono do produto (modelo Zap Voice): a janela do "Disparar funil" abria **por cima da conversa** e cobria metade das mensagens, justamente quando o corretor precisa ler o que o lead disse pra escolher o que mandar. É a "entrega própria" de Funis de mensagem que o campo enxuto (08/10) deixou pra depois. Depende do backend `lm-flow#476` (`with_nodes=1`), mas funciona sem ele (ver armadilha 2).
+
+O que aparece na tela:
+
+- **O foguete do campo de mensagem virou "Mensagens prontas".** No computador (Conversas) ele **troca o painel do lead pelas Mensagens prontas, na lateral**: o lead sai deslizando pra esquerda e some, as prontas entram da direita (200 ms; sem animação pra quem pede menos movimento no sistema). No topo, **← Voltar pro lead** e **X**. Clicar no foguete de novo também fecha. Lateral fechada quando o foguete foi clicado: ela abre só pra isso, e o X fecha a lateral de novo.
+- **Separadas por tipo:** **Mensagens · Áudios · Mídias · Funis**, cada um com ícone e cor. Funil de **um passo só**, que é uma mensagem, cai no tipo dele (texto, áudio, foto/vídeo/documento/figurinha/book); o resto é Funil, com o resumo "💬 ⏱ 🎤 · 3 mensagens · 2 dias". Filtro de tipo (só com dois tipos ou mais) e **Todos / Meus / Da equipe** (só quando há dos dois). Item da equipe leva "· Da equipe".
+- **Ver e Enviar na própria linha** (apagados, acendem no mouse). **Ver abre a prévia ali mesmo, embaixo do item**, deslizando pra baixo; não é mais uma tela à parte. **Enviar sai na hora**, sem a prévia, pelo servidor e pelo número da conversa, como o Disparar de antes. Na lateral o painel fica aberto depois de enviar (dá pra mandar texto e depois áudio); na janela ele fecha.
+- **Celular e aba Conversa do card:** continua a janela em cima do campo, com o conteúdo novo (`DispararFunilPanel` embrulha o `MensagensProntas`).
+- Funil com o passo a passo pela metade: **Termine de montar** (leva pro canvas). Desligado: apagado, sem Enviar. Nenhum: "Nenhuma mensagem pronta ainda" com **Abrir Funis de mensagem**.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Mensagem pronta = funil de conversa.** As respostas rápidas antigas não voltam pra conversa; o "item único" do Zap Voice é o funil de um passo.
+2. **Botõezinhos fixos em cima do campo (favoritos ⭐) ficaram pra uma segunda entrega**, se o pessoal usar.
+
+Armadilhas:
+
+1. **Quem decide lateral × janela é o `Chat.tsx`** (`useCelular`): no computador passa `onToggleProntas` pro `ChatArea` → `MessageInput`, e aí o campo não monta a janela. Sem `onToggleProntas`, tudo como antes. Envio pela lateral relê a faixa "automação rodando" por `enviosDaLateral` (contador) no `ChatArea`.
+2. **A lista pede `with_nodes=1`** (`flowAutomationsService.list({ withNodes: true })`). Servidor sem o `#476`: a lista vem sem blocos, tudo cai em Funil (com `message_count`) e o Ver busca o funil (`get`).
+3. **As duas camadas da lateral são absolutas e de largura fixa** (`md:w-96`), pra não se espremerem quando a lateral abre/fecha (ela anima a largura). A escondida fica `inert`. As prontas só montam depois da primeira abertura; a lateral fechada volta pro lead depois de 300 ms (a animação de fechar).
+4. **A prévia fechada fica montada quando a sequência já é conhecida** (o grid `0fr → 1fr` precisa do conteúdo pra animar a volta); ela é `aria-hidden`.

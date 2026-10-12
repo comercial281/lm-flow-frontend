@@ -11,6 +11,8 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { useConversationPresence } from '@/hooks/useConversationPresence';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useCelular } from '@/hooks/useCelular';
+import { MensagensProntas } from '@/components/chat/message-funnels/MensagensProntas';
 import { usePendingOffers } from '@/contexts/PendingOffersContext';
 import { emOfertaParaQuemVe } from '@/features/conversas/painelDoLead';
 import { usePainelDoLeadAberto } from '@/features/conversas/usePainelDoLeadAberto';
@@ -172,6 +174,47 @@ const Chat = () => {
     selectedConversationIdStr,
     telaLarga,
   );
+
+  // MENSAGENS PRONTAS NA LATERAL (12/10/2026): no computador, o foguete do campo
+  // de mensagem troca o painel do lead por elas (com animação) em vez de abrir a
+  // janela por cima da conversa. No celular continua a janela. Lateral fechada
+  // quando o foguete foi clicado: ela abre só pra isso, e fechar as prontas
+  // fecha a lateral de novo.
+  const celular = useCelular();
+  const [lateral, setLateral] = useState<'lead' | 'prontas'>('lead');
+  const [prontasMontadas, setProntasMontadas] = useState(false);
+  const [enviosDaLateral, setEnviosDaLateral] = useState(0);
+  const abriuSoPraProntas = useRef(false);
+  const prontasAbertas = !celular && isContactSidebarOpen && lateral === 'prontas';
+
+  // Lateral fechada (X do lead, conversa fechada): volta pro lead depois da animação de fechar.
+  useEffect(() => {
+    if (isContactSidebarOpen) return undefined;
+    abriuSoPraProntas.current = false;
+    const t = setTimeout(() => setLateral('lead'), 300);
+    return () => clearTimeout(t);
+  }, [isContactSidebarOpen]);
+
+  const voltarProLead = useCallback(() => {
+    abriuSoPraProntas.current = false;
+    setLateral('lead');
+  }, []);
+  const fecharProntas = useCallback(() => {
+    if (abriuSoPraProntas.current) setIsContactSidebarOpen(false);
+    else setLateral('lead');
+    abriuSoPraProntas.current = false;
+  }, [setIsContactSidebarOpen]);
+  const alternarProntas = useCallback(() => {
+    if (prontasAbertas) {
+      fecharProntas();
+      return;
+    }
+    abriuSoPraProntas.current = !isContactSidebarOpen;
+    setProntasMontadas(true);
+    setLateral('prontas');
+    setIsContactSidebarOpen(true);
+  }, [prontasAbertas, fecharProntas, isContactSidebarOpen, setIsContactSidebarOpen]);
+  const aposEnviarNaLateral = useCallback(() => setEnviosDaLateral(n => n + 1), []);
 
   // A roleta ofertou este lead a quem está vendo e ainda não houve aceite (a mesma
   // conta da faixa de oferta, OfferActions): o painel e o topo mascaram o telefone.
@@ -861,6 +904,9 @@ const Chat = () => {
                   onRetryMessage={handleRetryMessage}
                   isPendingConversation={selectedConversation?.status === 'pending'}
                   labels={etiquetasDaConta}
+                  onToggleProntas={celular ? undefined : alternarProntas}
+                  prontasAbertas={prontasAbertas}
+                  enviosDaLateral={enviosDaLateral}
                 />
               ) : (
                 // Show Dashboard App iframe when an app tab is active
@@ -920,6 +966,19 @@ const Chat = () => {
             conversation={selectedConversation}
             onFilterReload={reloadCurrentFilters}
             emOferta={emOferta}
+            mostrarProntas={prontasAbertas}
+            prontas={
+              !celular && prontasMontadas ? (
+                <MensagensProntas
+                  ativo={prontasAbertas}
+                  onde="lateral"
+                  conversationId={selectedConversation?.id ?? null}
+                  onStarted={aposEnviarNaLateral}
+                  aoVoltar={voltarProLead}
+                  aoFechar={fecharProntas}
+                />
+              ) : undefined
+            }
           />
         </Suspense>
 
