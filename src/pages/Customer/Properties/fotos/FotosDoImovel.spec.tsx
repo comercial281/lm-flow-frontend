@@ -131,4 +131,28 @@ describe('FotosDoImovel', () => {
     expect(screen.queryByText(/Categorizar como/)).not.toBeInTheDocument();
     expect(screen.queryByText('Principal')).not.toBeInTheDocument();
   });
+
+  it('cada vídeo diz se a IA manda', async () => {
+    abrir([
+      foto('a'),
+      video('certo'),
+      video('mov', { content_type: 'video/quicktime', file_name: 'mov.mov' }),
+      video('grande', { file_size_bytes: 40 * 1024 * 1024 }),
+    ]);
+    expect(await screen.findByText('Este é o vídeo que a IA manda')).toBeInTheDocument();
+    expect(screen.getByText('A IA não manda: o WhatsApp só toca MP4. No site aparece normal.')).toBeInTheDocument();
+    expect(screen.getByText('A IA não manda: passa de 16 MB. No site aparece normal.')).toBeInTheDocument();
+  });
+
+  it('vídeo não tem coroa de capa', async () => {
+    abrir([foto('a'), video('v')]);
+    await screen.findByText('Este é o vídeo que a IA manda');
+    expect(screen.getAllByRole('button', { name: 'Usar como capa' })).toHaveLength(1);
+  });
+
+  it('a aba Fotos esconde os vídeos', async () => {
+    abrir([foto('a'), video('v')]);
+    await userEvent.click(await screen.findByRole('tab', { name: 'Fotos 1' }));
+    expect(screen.queryByText('Este é o vídeo que a IA manda')).not.toBeInTheDocument();
+  });
 });

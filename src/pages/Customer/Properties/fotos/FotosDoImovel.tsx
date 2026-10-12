@@ -20,6 +20,7 @@ import {
 } from '@/features/properties/fotos/regrasDasFotos';
 import CartaoDaCapa from './CartaoDaCapa';
 import GradeDeFotos from './GradeDeFotos';
+import ListaDeMidias from './ListaDeMidias';
 import JanelaPorEndereco from './JanelaPorEndereco';
 
 const ROTULO_DA_ABA: Record<AbaDasFotos, string> = {
@@ -205,8 +206,30 @@ export default function FotosDoImovel() {
                     />
                   </section>
                 )}
-                {/* Task 5: <ListaDeMidias/> */}
-                <span hidden>{visiveis.midias.length}</span>
+                {visiveis.midias.length > 0 && (
+                  <section aria-labelledby="titulo-midias" className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                      <h2 id="titulo-midias" className="text-base font-semibold">Vídeos e áudios</h2>
+                      <p className="text-sm text-muted-foreground">Aparecem no site depois das fotos. Vídeo e áudio nunca viram capa.</p>
+                    </div>
+                    <ListaDeMidias
+                      midias={visiveis.midias}
+                      todasAsMidias={separar(dados.fotos).midias}
+                      pode={pode}
+                      arrastavel={pode.ordem && aba !== 'ocultas'}
+                      ocupado={dados.salvandoOrdem}
+                      selecionando={selecionando}
+                      selecionadas={selecionadas}
+                      aoAlternarSelecao={alternarSelecao}
+                      aoMover={(de, para) => void dados.mover('midias', de, para)}
+                      aoAlternarVisivel={fid => void dados.alternarVisivel(fid)}
+                      aoExcluir={fid => void excluirUma(fid)}
+                    />
+                  </section>
+                )}
+                {aba === 'ocultas' && !visiveis.imagens.length && !visiveis.midias.length && (
+                  <EmptyState tamanho="compacto" title="Nenhuma foto oculta" />
+                )}
               </div>
             </div>
           </>
