@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, Radio, Building2, Smartphone, Wallet, Users, ScrollText, MessageCircle,
   Megaphone, Bell, BellRing, Landmark, GraduationCap, Archive, Globe, LifeBuoy,
-  Bot, Sparkles, Brain, CalendarCheck, UsersRound, Gift, TrendingUp, Package, Scale, KeyRound,
+  Bot, Sparkles, Brain, CalendarCheck, UsersRound, Gift, TrendingUp, Package, Scale, KeyRound, GalleryHorizontal,
 } from 'lucide-react';
 import { enderecoCasa } from './menuItems';
 
@@ -98,11 +98,12 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     name: 'Comunicação',
     href: '/admin/comunicacao',
     icon: Megaphone,
-    description: 'Falar com os clientes: avisos na tela, push e WhatsApp',
+    description: 'Falar com os clientes: avisos na tela, push, WhatsApp e banner',
     abas: [
       { name: 'Avisos na tela', href: '/admin/comunicacao', icon: Bell, exata: true },
       { name: 'Push', href: '/admin/push', icon: BellRing },
       { name: 'WhatsApp', href: '/admin/comunicacao/whatsapp', icon: MessageCircle },
+      { name: 'Banner', href: '/admin/comunicacao/banner', icon: GalleryHorizontal },
     ],
   },
   {

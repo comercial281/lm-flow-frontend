@@ -53,6 +53,8 @@ vi.mock('./ListaRapida', () => ({
   ListaRapida: (p: PropsLista) => { lista.props = p; return null; },
 }));
 vi.mock('./blocos/RoletaAgora', () => ({ RoletaAgora: () => <div>Bloco Roleta agora</div> }));
+// Sem banner no ar o componente não desenha nada (os casos dele moram em BannerDaDashboard.spec).
+vi.mock('./BannerDaDashboard', () => ({ default: () => null }));
 
 import DashboardNova from './index';
 import { paramsDaApi } from './useDashboardNova';
@@ -80,7 +82,7 @@ describe('DashboardNova', () => {
     lista.props = null;
   });
 
-  it('gestor vê a análise; o espaço do banner existe e está vazio', () => {
+  it('gestor vê a análise; sem banner no ar, o espaço do banner fica vazio', () => {
     hook.dados = base('all');
     const { container } = tela();
     expect(screen.getByText('Análise do período')).toBeInTheDocument();
