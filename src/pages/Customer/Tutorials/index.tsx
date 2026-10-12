@@ -101,7 +101,7 @@ const Tutorials = () => {
           }
         >
           {tab === 'docs' && <DocsTab categoryId={categoryId} canEdit={canEdit} />}
-          {tab === 'aulas' && <AulasTab canEdit={canEdit} />}
+          {tab === 'aulas' && <AulasTab />}
         </Suspense>
       </div>
     </div>
