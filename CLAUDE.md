@@ -4049,11 +4049,13 @@ distribuir pela roleta, como o portal.
 
 O que aparece na tela:
 
-- **Portal → Configurar → Destino do lead**: abas **Venda** e **Locação**. Locação
-  começa em **Mesmo destino da venda** ligado; desligado, tem funil, coluna, roleta
-  e responsável próprios.
-- **Site Builder → Destino do lead** (antes "Roteamento de leads"): as mesmas abas,
-  com etiqueta, e agora **Roleta** e **Responsável**.
+- **Portal → Configurar → Destino do lead**: **Venda** e **Locação** (desde 12/10/2026
+  são duas seções, uma embaixo da outra; antes eram abas em pílula). Locação começa em
+  **Mesmo destino da venda** ligado; desligado, tem funil, coluna, roleta e responsável
+  próprios.
+- **Site Builder → Destino do lead** (antes "Roteamento de leads"): as mesmas duas
+  seções ("Destino do contato de venda" / "de locação"), com etiqueta, e agora
+  **Roleta** e **Responsável**.
 - **Site público**: o formulário "Não achou? A gente encontra pra você" pergunta
   **Quero comprar / Quero alugar**, marcado pela aba da busca. Na página do imóvel,
   a pergunta só aparece em imóvel de **Venda + Locação**, marcada pela aba de onde a
@@ -4076,11 +4078,14 @@ Armadilhas:
 
 1. **O bloco é um só** (`LeadDestinationFields` + `SaleRentDestination` +
    `useLeadDestinationOptions`, em `src/components/pipelines/`). Portal e site
-   usam o mesmo; regra nova de destino entra ali, não numa tela.
+   usam o mesmo; regra nova de destino entra ali, não numa tela. O
+   `SaleRentDestination` desenha `Secao`s (títulos e frases vêm de quem chama) e
+   mora dentro de `Secoes`: nunca voltar às abas em pílula (aba fora da casa, e as
+   duas telas já estão dentro de abas ou do menu de telas do Meu site).
 2. **Só viaja o que a pessoa pôde ver.** Seletor escondido por recusa de cargo não
    manda a chave, e o servidor grava parcial. Mandar `null` "por completude"
    apagaria a roleta que outra pessoa escolheu.
-3. **Servidor antigo = sem abas.** O portal sabe pela presença de
+3. **Servidor antigo = uma seção só** (título `unico`). O portal sabe pela presença de
    `rent_same_as_sale` no `settings`; o site pela presença de `lead_routing`. O
    merge aqui é só DEPOIS do backend.
 4. **Não é `featureKey` nem `clientToggleKey`**: é configuração de portal e de site.
@@ -8638,7 +8643,8 @@ Decisões do dono (não reabrir sem ele pedir):
 - **Uma situação só por portal.** O selo de formato validado/adaptado saiu da lista (é
   informação nossa); fica como "Formato a confirmar" nos cartões e na aba Conexão.
 - **Venda e Locação no Configurar são duas seções**, não abas: a página já tem abas e a
-  regra é um nível só. O `SaleRentDestination` (pílula roxa) continua no site.
+  regra é um nível só. O site passou a usar as mesmas duas seções (mesmo bloco,
+  `SaleRentDestination`) em 12/10/2026.
 - **Agrupar por contrato (Canal Pro) ficou de fora** até confirmar se o plano do Canal Pro é
   um só pros três portais.
 
