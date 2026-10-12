@@ -231,7 +231,8 @@ export type SiteDomainStatus =
   | 'none'                  // nenhum domínio conectado
   | 'not_registered'        // salvo aqui, mas ausente na Vercel (removido por fora)
   | 'pending_dns'           // domínio registrado, DNS ainda não aponta pra cá
-  | 'pending_verification'  // falta provar a posse do domínio (registro TXT)
+  | 'pending_verification'  // falta a prova de posse (código TXT do site) ou, já provado, a prova da Vercel
+  | 'taken'                 // outro site do LM Flow comprovou este domínio antes
   | 'active';               // no ar, com SSL
 
 export interface SiteDomainDnsRecord {
@@ -248,6 +249,21 @@ export interface SiteDomainVerification {
   reason?: string | null;
 }
 
+/**
+ * Prova de posse do domínio (11/10/2026): o registro TXT que o site pede
+ * (Passo 1) e o estado da prova. Servidor anterior não manda: a tela sai como antes.
+ */
+export interface SiteDomainOwnership {
+  type: string;           // 'TXT'
+  name: string;           // '_lmflow' (o que se digita no painel do DNS)
+  host: string;           // '_lmflow.imobiliaria.com.br'
+  value: string;          // 'lmflow-site=<código>'
+  verified: boolean;      // código achado no DNS
+  verified_at?: string | null;
+  checked_at?: string | null;        // última conferência automática
+  auto_check_until?: string | null;  // depois disso o LM Flow para de conferir sozinho
+}
+
 export interface SiteDomainState {
   configured: boolean;
   domain?: string | null;
@@ -257,6 +273,9 @@ export interface SiteDomainState {
   dns_records: SiteDomainDnsRecord[];
   verification: SiteDomainVerification[];
   checked_at: string;
+  ownership?: SiteDomainOwnership | null;
+  /** Desde quando o domínio parou de apontar pro site (ativo ou que voltou pro endereço lmflow). */
+  dns_missing_since?: string | null;
 }
 
 export interface SitePage {
