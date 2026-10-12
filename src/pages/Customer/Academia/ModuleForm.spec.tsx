@@ -44,4 +44,25 @@ describe('ModuleForm (janela)', () => {
     expect(screen.getByRole('button', { name: /Avançado/ }).getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByText('Livre (todos abrem)')).toBeNull();
   });
+
+  const existente = { id: 'm1', titulo: 'Velho', descricao: null, capa_url: null, course_id: 'c1', tenant_slug: 'moeda', access: 'free' } as never;
+
+  it('com cliente no endereço, "Todos os clientes" tira o cliente salvo', async () => {
+    m.tenant = 'moeda';
+    render(<ModuleForm editing={existente} onClose={() => {}} />);
+    await userEvent.click(screen.getByRole('radio', { name: /Todos os clientes/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(m.update).toHaveBeenCalledWith(expect.objectContaining({ id: 'm1', tenant_slug: null }));
+  });
+
+  it('sem cliente no endereço, mantém o cliente já salvo', async () => {
+    render(<ModuleForm editing={existente} onClose={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(m.update).toHaveBeenCalledWith(expect.objectContaining({ tenant_slug: 'moeda' }));
+  });
+
+  it('módulo sem audience abre com "Todos" marcado', () => {
+    render(<ModuleForm editing={existente} onClose={() => {}} />);
+    expect(screen.getByRole('radio', { name: /^Todos/ }).getAttribute('aria-checked')).toBe('true');
+  });
 });

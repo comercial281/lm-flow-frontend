@@ -51,7 +51,7 @@ export default function ModuleForm({ editing, defaultCourseId, onClose }: {
       capa_url: capaUrl.trim() || null,
       course_id: courseId || null,
       audience,
-      tenant_slug: scope === 'tenant' && temCliente ? TENANT_SLUG : editing?.tenant_slug ?? null,
+      tenant_slug: temCliente ? (scope === 'tenant' ? TENANT_SLUG : null) : (editing?.tenant_slug ?? null),
       access: lock.access,
       lock_cta_type: lock.lock_cta_type,
       lock_cta_label: lock.lock_cta_label.trim() || null,
@@ -64,7 +64,7 @@ export default function ModuleForm({ editing, defaultCourseId, onClose }: {
   }
 
   return (
-    <Dialog open onOpenChange={(aberto) => { if (!aberto) onClose(); }}>
+    <Dialog open onOpenChange={(aberto) => { if (!aberto && !busy) onClose(); }}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader><DialogTitle>{editing ? 'Editar módulo' : 'Novo módulo'}</DialogTitle></DialogHeader>
         <div className="grid gap-5">

@@ -91,7 +91,7 @@ export default function JanelaDaAula({ moduleId, editing, onClose }: { moduleId:
         <DialogFooter className="gap-2">
           <Button variant="outline" type="button" onClick={onClose} disabled={busy}>Cancelar</Button>
           <Button type="button" onClick={salvar} disabled={busy}>
-            {busy ? (file ? 'Enviando vídeo...' : 'Salvando...') : editing ? 'Salvar' : 'Criar aula'}
+            {busy ? (video === 'arquivo' && file ? 'Enviando vídeo...' : 'Salvando...') : editing ? 'Salvar' : 'Criar aula'}
           </Button>
         </DialogFooter>
       </DialogContent>
