@@ -8598,6 +8598,7 @@ Decisões do dono (não reabrir sem ele pedir): **só na Dashboard**; vários no
 - **Banner novo só nasce no servidor no primeiro Salvar ou no primeiro envio de arte**: abrir e cancelar não deixa rascunho.
 - **Publicar** salva, pede ao servidor a conta do público e confirma com ela ("Mostrar para 340 pessoas de 31 imobiliárias?"). Se o servidor responder 409 (o público mudou), a pergunta volta com o número novo.
 - A medida da arte é regra do servidor: a tela só mostra o motivo que ele devolve.
+- **Destino do clique escolhido pela tela, não pelo endereço** (pedido do dono, 12/10): "Ir pra uma tela" (era "Abrir link") e o botão Ver agora usam um `Seletor` com as telas do menu do cliente, agrupadas como no menu e com o nome dele (item com abas vira "Integrações · WhatsApp"). A lista é lida do próprio `menuItems.ts` (`telasDoMenu` em `regras.ts`): tela nova no menu aparece sozinha. "Outro endereço ou site" abre a caixa de digitar (site de fora ou tela fora do menu). O que se grava continua sendo o endereço.
 - Testes: `BannerDaDashboard.spec.tsx`, `Banners.spec.tsx`, `regras.spec.ts`.
 ## Portais redesenhados: uma situação por portal e a página em abas (12/10/2026)
 

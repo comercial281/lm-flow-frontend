@@ -18,7 +18,13 @@ import { dashboardBannersService as svc } from '@/services/superAdmin/dashboardB
 import type {
   AcaoDoBanner, ArteDoBanner, BannerAdmin, CamposDoBanner, CargoDoBanner, ImobiliariaDoBanner,
 } from '@/types/admin/dashboardBanners';
-import { CARGOS, MEDIDA_DA_ARTE, doCampo, paraOCampo, perguntaDoPublico } from './regras';
+import { Seletor } from '@/components/base/Seletor';
+import { getCustomerMenuSections, getFooterMenuItems } from '@/components/layout/config/menuItems';
+import { CARGOS, MEDIDA_DA_ARTE, doCampo, nomeDaTela, paraOCampo, perguntaDoPublico, telasDoMenu } from './regras';
+
+// Lidas uma vez: o menu do cliente é fixo no código.
+const TELAS = telasDoMenu(getCustomerMenuSections(), getFooterMenuItems());
+const OUTRO = '__outro';
 
 interface Props {
   aberto: boolean;
@@ -218,7 +224,7 @@ export default function EditorDoBanner({ aberto, banner, imobiliarias, aoMudar, 
                   aoEscolher={(v) => muda('click_action', v)}
                   opcoes={[
                     { valor: 'details', rotulo: 'Abrir detalhes' },
-                    { valor: 'link', rotulo: 'Abrir link' },
+                    { valor: 'link', rotulo: 'Ir pra uma tela' },
                     { valor: 'none', rotulo: 'Nada' },
                   ]}
                 />
@@ -237,21 +243,25 @@ export default function EditorDoBanner({ aberto, banner, imobiliarias, aoMudar, 
                     <CampoDeArte arte="details" titulo="Imagem ou gif (opcional)" medida="Qualquer medida, até 5 MB"
                       url={atual?.details_image_url ?? null} ocupado={ocupado === 'details'} aoEscolher={enviarArte}
                       aoTirar={atual?.details_image_url ? () => void tirarArte('details') : undefined} />
-                    <div>
-                      <Label htmlFor="banner-ver-agora">Endereço do botão Ver agora (opcional)</Label>
-                      <Input id="banner-ver-agora" placeholder="/conversations" value={form.details_button_path}
-                        onChange={(e) => muda('details_button_path', e.target.value)} />
-                      <p className="mt-1 text-xs text-muted-foreground">Vazio, a janela sai sem o botão.</p>
-                    </div>
+                    <DestinoDoClique
+                      id="banner-ver-agora"
+                      rotulo="Botão Ver agora leva pra"
+                      vazio="Sem botão"
+                      ajuda="Sem botão, a janela só tem o Fechar."
+                      valor={form.details_button_path}
+                      aoMudar={(v) => muda('details_button_path', v)}
+                    />
                   </div>
                 )}
                 {form.click_action === 'link' && (
-                  <div>
-                    <Label htmlFor="banner-link">Endereço</Label>
-                    <Input id="banner-link" placeholder="/academia ou https://…" value={form.link_url}
-                      onChange={(e) => muda('link_url', e.target.value)} />
-                    <p className="mt-1 text-xs text-muted-foreground">Endereço do LM Flow abre na mesma aba; de fora, em aba nova.</p>
-                  </div>
+                  <DestinoDoClique
+                    id="banner-link"
+                    rotulo="Leva pra"
+                    vazio="Escolha uma tela"
+                    ajuda="Tela do LM Flow abre na mesma aba; site de fora, em aba nova."
+                    valor={form.link_url}
+                    aoMudar={(v) => muda('link_url', v)}
+                  />
                 )}
               </div>
 
@@ -399,6 +409,59 @@ function Previa({ banner, form }: { banner: BannerAdmin | null; form: Formulario
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+interface DestinoDoCliqueProps {
+  id: string;
+  rotulo: string;
+  /** Rótulo da opção vazia ("Sem botão", "Escolha uma tela"). */
+  vazio: string;
+  ajuda: string;
+  valor: string;
+  aoMudar: (valor: string) => void;
+}
+
+// Pra onde o clique leva: uma tela do menu do cliente, escolhida pelo nome que
+// aparece no menu, ou um endereço digitado (site de fora, tela que não está no
+// menu). Quem salva é o servidor, que só aceita "/…" ou "https://…".
+function DestinoDoClique({ id, rotulo, vazio, ajuda, valor, aoMudar }: DestinoDoCliqueProps) {
+  const ehTela = nomeDaTela(TELAS, valor) !== null;
+  const [digitando, setDigitando] = useState(!!valor && !ehTela);
+  // O valor muda por fora (outro banner aberto, resposta do servidor): a caixa acompanha.
+  useEffect(() => {
+    if (ehTela) setDigitando(false);
+    else if (valor) setDigitando(true);
+  }, [valor, ehTela]);
+  const escolha = digitando ? OUTRO : ehTela ? valor : '';
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>{rotulo}</Label>
+      <Seletor
+        id={id}
+        value={escolha}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === OUTRO) { setDigitando(true); if (ehTela) aoMudar(''); return; }
+          setDigitando(false);
+          aoMudar(v);
+        }}
+        className="w-full"
+      >
+        <option value="">{vazio}</option>
+        {TELAS.map((g) => (
+          <optgroup key={g.secao} label={g.secao}>
+            {g.telas.map((t) => <option key={t.endereco} value={t.endereco}>{t.rotulo}</option>)}
+          </optgroup>
+        ))}
+        <option value={OUTRO}>Outro endereço ou site</option>
+      </Seletor>
+      {digitando && (
+        <Input aria-label={`${rotulo}: endereço`} placeholder="https://… ou /…" value={valor}
+          onChange={(e) => aoMudar(e.target.value)} />
+      )}
+      <p className="text-xs text-muted-foreground">{ajuda}</p>
     </div>
   );
 }

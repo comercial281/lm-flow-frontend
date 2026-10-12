@@ -16,3 +16,17 @@ describe('regras do Banner', () => {
     expect(doCampo('')).toBeNull();
   });
 });
+
+describe('telas do menu pro destino do clique', () => {
+  it('lê o menu do cliente com o nome da tela, aba por aba, sem repetir endereço', async () => {
+    const { getCustomerMenuSections, getFooterMenuItems } = await import('@/components/layout/config/menuItems');
+    const { telasDoMenu, nomeDaTela } = await import('./regras');
+    const grupos = telasDoMenu(getCustomerMenuSections(), getFooterMenuItems());
+    expect(nomeDaTela(grupos, '/conversations')).toBe('Conversas');
+    expect(nomeDaTela(grupos, '/channels')).toBe('Integrações · WhatsApp');
+    expect(nomeDaTela(grupos, '/tutorials')).toBe('Guia do LM Flow');
+    expect(nomeDaTela(grupos, 'https://lealmidia.com.br')).toBeNull();
+    const enderecos = grupos.flatMap((g) => g.telas.map((t) => t.endereco));
+    expect(new Set(enderecos).size).toBe(enderecos.length);
+  });
+});
