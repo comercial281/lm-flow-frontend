@@ -8492,3 +8492,19 @@ Pedido da gestora da Pinot: desde a roleta nova (06/10) ela só recebia "Fulano 
 - Dois textos novos em *Personalizar textos*: *Gestor: lead novo na roleta* e *Gestor: lead repassado pro próximo*.
 - Gestor que também está no grupo recebe duas vezes se as duas chaves estiverem ligadas: aceito pelo dono, desliga-se uma das duas no cliente.
 - Servidor: `comercial281/lm-flow` (migration 323, `RoletaSettings` + `Roleta::Notices`). Testes: `AvisosAba.spec.tsx` (chaves do gestor sem depender do grupo).
+
+## Card do lead: conversa com mensagens antigas e Transcrever pelo servidor (desde 2026-10-12)
+
+Origem: "Conversas no celular (rolagem que não sobe)" do raio-X de 10/10. A tela Conversas subia; o defeito era a aba **Conversa do card** (janela e página completa, que é por onde o celular abre o lead). Spec `LM FLOW/specs/2026-10-12-conversa-do-card-design.md`.
+
+- **Antigas sozinhas no topo:** chegou a 80 px do topo da caixa, pede `GET .../messages?before=<id da mais antiga>` (20 por vez, `TAMANHO_DA_PAGINA` casado com `MessageFinder#limit_for_params` do servidor). "Carregando mensagens anteriores…" por cima, "Início da conversa" quando veio menos de 20. Erro: "Não deu pra carregar as anteriores · Tentar de novo" e as mensagens ficam. Conversa que não enche a caixa carrega sozinha.
+- **Releitura de 8 s junta, não troca:** `aplicarPaginaRecente` — a página mais recente manda só no trecho dela (apagada some), o mais antigo e o mais novo ficam.
+- **Rolagem só na caixa:** nenhum `scrollIntoView` (rolava a página do card junto). Abre no fim; mensagem nova desce sozinha se a pessoa está a até 100 px do fim, senão aparece **Nova mensagem**; a própria mensagem enviada sempre desce. Posição ao entrar antigas = distância do fim guardada e reaplicada (o Safari não segura sozinho).
+- **Transcrever pelo servidor:** `POST /conversations/:cid/messages/:id/transcribe` (lm-flow). O clique manda `start` e o servidor transcreve fora da requisição (202 `pending`); a tela pergunta sem `start` de 3 em 3 s, até 2 min, até vir 200 `done` ou 422. A tela chamava a OpenAI com `VITE_OPENAI_API_KEY` no código publicado; a chave saiu do frontend e não volta.
+- Regras puras e testadas em `src/components/pipelines/conversaDoCard.ts`.
+
+Armadilhas:
+1. Não voltar a substituir a lista na releitura: as antigas carregadas somem a cada 8 s.
+2. Toda escrita na lista passa por `definirMensagens` (espelho em ref): duas respostas juntas não podem se apagar.
+3. Resposta que chega depois de trocar de lead é descartada (`conversaAtual`).
+4. Transcrever: o clique só começa; perguntar (sem `start`) nunca paga de novo — não trocar a pergunta por um novo clique em laço.
