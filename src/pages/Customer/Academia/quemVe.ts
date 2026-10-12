@@ -20,7 +20,7 @@ export function podeAssistir(m: { audience?: string | null }, cargo: CargoNaAcad
 export function agruparAulas(aulas: KnowledgeLesson[]): Record<string, KnowledgeLesson[]> {
   const mapa: Record<string, KnowledgeLesson[]> = {};
   for (const l of aulas) (mapa[l.module_id] ??= []).push(l);
-  for (const k of Object.keys(mapa)) mapa[k].sort((a, b) => a.ordem - b.ordem);
+  for (const k of Object.keys(mapa)) mapa[k].sort((a, b) => a.ordem - b.ordem || a.created_at.localeCompare(b.created_at));
   return mapa;
 }
 
@@ -40,6 +40,15 @@ export function modulosVisiveis(
     if (cargo === 'admin' || !aulasCarregadas) return true;
     return (aulasPorModulo[m.id]?.length ?? 0) > 0;
   });
+}
+
+/** Nova ordem depois de trocar o item `i` com o vizinho (`dir`): só o que muda de `ordem` (= índice). */
+export function trocarOrdem<T extends { id: string; ordem: number }>(lista: T[], i: number, dir: -1 | 1): { id: string; ordem: number }[] {
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= lista.length) return [];
+  const novo = lista.slice();
+  [novo[i], novo[j]] = [novo[j], novo[i]];
+  return novo.map((x, idx) => ({ id: x.id, ordem: idx, antes: x.ordem })).filter((x) => x.antes !== x.ordem).map(({ id, ordem }) => ({ id, ordem }));
 }
 
 export function contarAulas(

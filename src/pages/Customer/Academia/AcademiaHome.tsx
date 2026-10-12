@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, FolderPlus, GraduationCap, Pencil, Plus } from 'lucide-react';
+import { ChevronRight, FolderPlus, GraduationCap, Lock, Pencil, Plus } from 'lucide-react';
 import {
   useCourses, useDeleteCourse, useModules, useAllLessons, useProgress, useEntitlements,
   computeLocked, getCurrentUserRef, TENANT_SLUG,
@@ -23,6 +23,7 @@ import ModuleForm from './ModuleForm';
 import CapaGerada from './CapaGerada';
 import AnelDeProgresso from './AnelDeProgresso';
 import BarraDaLealMidia from './BarraDaLealMidia';
+import { LockCta } from './LockOverlay';
 import { GERAL_COURSE_ID } from './_lib';
 import { useCargoNaAcademia } from './useCargoNaAcademia';
 import { agruparAulas, contarAulas, modulosVisiveis, quemAssiste, soParaGestores } from './quemVe';
@@ -41,7 +42,10 @@ export default function AcademiaHome({ embedded }: Props) {
   const { data: courses = [], isLoading: loadingCourses, error: erroCourses, refetch: refetchCourses } = useCourses();
   const { data: modules = [], isLoading: loadingModules, error: erroModules, refetch: refetchModules } = useModules();
   const moduleIds = useMemo(() => modules.map((m) => m.id), [modules]);
-  const { data: allLessons = [], isLoading: loadingLessons } = useAllLessons(moduleIds);
+  const { data: aulasCruas, isLoading: loadingLessons } = useAllLessons(moduleIds);
+  // Desligado (ainda sem módulos) ou buscando, `data` é undefined: só decide "vazio" depois que as aulas chegaram.
+  const aulasCarregadas = !loadingLessons && aulasCruas !== undefined;
+  const allLessons = useMemo(() => aulasCruas ?? [], [aulasCruas]);
   const { data: progress = {} } = useProgress();
   const { data: entitlements = [] } = useEntitlements();
   const deleteCourse = useDeleteCourse();
@@ -56,8 +60,8 @@ export default function AcademiaHome({ embedded }: Props) {
 
   const aulasPorModulo = useMemo(() => agruparAulas(allLessons), [allLessons]);
   const visiveis = useMemo(
-    () => modulosVisiveis(modules, aulasPorModulo, cargo, !loadingLessons),
-    [modules, aulasPorModulo, cargo, loadingLessons],
+    () => modulosVisiveis(modules, aulasPorModulo, cargo, aulasCarregadas),
+    [modules, aulasPorModulo, cargo, aulasCarregadas],
   );
   const modulosLiberados = useMemo(
     () => visiveis.filter((m) => !(soLeitura && computeLocked(m, 'module', m.id, entitlements, TENANT_SLUG, userRef))),
@@ -75,13 +79,13 @@ export default function AcademiaHome({ embedded }: Props) {
 
   const liberadosDoCurso = (key: string) => modulosLiberados.filter((m) => (m.course_id ?? GERAL_COURSE_ID) === key);
   const geral = contarAulas(
-    modulosLiberados.filter((m) => !m.course_id || !courses.some((c) => c.id === m.course_id && courseLocked(c))),
+    modulosLiberados.filter((m) => !m.course_id || courses.some((c) => c.id === m.course_id && !courseLocked(c))),
     aulasPorModulo,
     progress,
   );
 
   // "Continue assistindo": 1ª aula não vista, em ordem de curso → módulo → aula.
-  const continuar = useMemo(() => {
+  const continuar = (() => {
     const chaves = [...cursos.filter((c) => !courseLocked(c)).map((c) => c.id), GERAL_COURSE_ID];
     for (const key of chaves) {
       const mods = liberadosDoCurso(key);
@@ -95,8 +99,7 @@ export default function AcademiaHome({ embedded }: Props) {
       }
     }
     return null;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cursos, modulosLiberados, aulasPorModulo, progress]);
+  })();
 
   function abrir(courseKey: string, lessonId?: string) {
     navigate(`/academia/curso/${courseKey}${lessonId ? `?lesson=${lessonId}` : ''}`);
@@ -175,11 +178,13 @@ export default function AcademiaHome({ embedded }: Props) {
           <div className="grid gap-2.5">
             {avulsos.map((m) => {
               const aulas = aulasPorModulo[m.id] ?? [];
-              const conta = contarAulas([m], aulasPorModulo, progress);
-              const vazio = aulas.length === 0;
+              const preso = soLeitura && computeLocked(m, 'module', m.id, entitlements, TENANT_SLUG, userRef);
+              const conta = contarAulas(preso ? [] : [m], aulasPorModulo, progress);
+              const vazio = aulasCarregadas && aulas.length === 0;
+              const inerte = vazio || preso;
               return (
-                <Card key={m.id} className={`flex-row items-center gap-4 p-3 ${vazio ? 'border-dashed opacity-80' : 'hover:border-primary/40'}`}>
-                  <button type="button" disabled={vazio} onClick={() => abrir(GERAL_COURSE_ID, aulas[0]?.id)}
+                <Card key={m.id} className={`flex-row items-center gap-4 p-3 ${vazio && !preso ? 'border-dashed opacity-80' : 'hover:border-primary/40'}`}>
+                  <button type="button" disabled={inerte} onClick={() => abrir(GERAL_COURSE_ID, aulas[0]?.id)}
                     className="flex min-w-0 flex-1 items-center gap-4 text-left disabled:cursor-default">
                     <div className="aspect-video w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
                       {m.capa_url ? <img src={m.capa_url} alt="" className="h-full w-full object-cover" /> : <CapaGerada titulo="" semente={m.id} />}
@@ -190,12 +195,16 @@ export default function AcademiaHome({ embedded }: Props) {
                         {quemAssiste(m) === 'managers' && <span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">Gestores</span>}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {vazio ? 'Sem aulas ainda. Só a Leal Mídia vê este módulo.'
-                          : [`${conta.total} ${conta.total === 1 ? 'aula' : 'aulas'}`, formatDuration(conta.minutos)].filter(Boolean).join(' · ')}
+                        {preso ? (m.lock_message?.trim() || 'Conteúdo exclusivo. Libere pra assistir.')
+                          : vazio ? 'Sem aulas ainda. Só a Leal Mídia vê este módulo.'
+                          : aulasCarregadas ? [`${conta.total} ${conta.total === 1 ? 'aula' : 'aulas'}`, formatDuration(conta.minutos)].filter(Boolean).join(' · ')
+                          : ''}
                       </p>
                     </div>
-                    {!vazio && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                    {preso ? <Lock className="h-4 w-4 text-muted-foreground" aria-label="Bloqueado" />
+                      : !vazio && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                   </button>
+                  {preso && <LockCta lock={m} />}
                   {podeEditar && (
                     <button type="button" onClick={() => setModuleForm({ editing: m })} aria-label="Editar módulo" title="Editar módulo"
                       className="rounded-lg p-1.5 text-muted-foreground hover:text-primary">

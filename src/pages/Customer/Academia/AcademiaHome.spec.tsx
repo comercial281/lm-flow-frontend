@@ -5,10 +5,11 @@ import { MemoryRouter } from 'react-router-dom';
 const m = vi.hoisted(() => ({
   cargo: 'corretor' as 'admin' | 'gestor' | 'corretor',
   aulasCarregando: false,
+  aulasDesligado: false,
 }));
 
 vi.mock('./useCargoNaAcademia', () => ({
-  useCargoNaAcademia: () => ({ cargo: m.cargo, podeEditar: m.cargo === 'admin', ehLealMidia: m.cargo === 'admin' }),
+  useCargoNaAcademia: () => ({ cargo: m.cargo, podeEditar: m.cargo === 'admin', ehLealMidia: m.cargo === 'admin', pronto: true }),
 }));
 vi.mock('@/store/authStore', () => ({
   useAuthStore: (sel: (s: { currentUser: { name: string } }) => unknown) => sel({ currentUser: { name: 'Marina Souza' } }),
@@ -33,7 +34,7 @@ vi.mock('@/hooks/useKnowledge', () => ({
   TENANT_SLUG: '',
   useCourses: () => ({ data: cursos, isLoading: false, error: null, refetch: vi.fn() }),
   useModules: () => ({ data: modulos, isLoading: false, error: null, refetch: vi.fn() }),
-  useAllLessons: () => ({ data: m.aulasCarregando ? [] : aulas, isLoading: m.aulasCarregando }),
+  useAllLessons: () => ({ data: m.aulasDesligado ? undefined : m.aulasCarregando ? [] : aulas, isLoading: m.aulasCarregando }),
   useProgress: () => ({ data: { a1: true } }),
   useEntitlements: () => ({ data: [] }),
   useDeleteCourse: () => ({ mutate: vi.fn() }),
@@ -47,7 +48,7 @@ import AcademiaHome from './AcademiaHome';
 
 const abrir = () => render(<MemoryRouter><AcademiaHome /></MemoryRouter>);
 
-beforeEach(() => { m.cargo = 'corretor'; m.aulasCarregando = false; });
+beforeEach(() => { m.cargo = 'corretor'; m.aulasCarregando = false; m.aulasDesligado = false; });
 
 describe('AcademiaHome', () => {
   it('corretor: não vê curso nem módulo de gestor, nem módulo vazio; conta só as aulas dele', () => {
@@ -82,6 +83,14 @@ describe('AcademiaHome', () => {
     abrir();
     expect(screen.queryByText('Nenhum curso ainda.')).toBeNull();
     expect(screen.getByText('Como usar o LM Flow')).toBeTruthy();
+  });
+
+  it('aulas ainda não buscadas (data undefined): não pisca "Nenhum curso ainda." nem "Sem aulas ainda…" pro corretor', () => {
+    m.aulasDesligado = true;
+    abrir();
+    expect(screen.queryByText('Nenhum curso ainda.')).toBeNull();
+    expect(screen.queryByText(/Sem aulas ainda/)).toBeNull();
+    expect(screen.getByText('Como vender pelo WhatsApp')).toBeTruthy();
   });
 
   it('embutida na aba Aulas: saudação sem título de página (o Tutorial já tem o dele)', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { KnowledgeLesson, KnowledgeModule } from '@/hooks/useKnowledge';
-import { agruparAulas, contarAulas, modulosVisiveis, podeAssistir, quemAssiste, soParaGestores } from './quemVe';
+import { trocarOrdem, agruparAulas, contarAulas, modulosVisiveis, podeAssistir, quemAssiste, soParaGestores } from './quemVe';
 
 const mod = (id: string, audience?: 'all' | 'managers'): KnowledgeModule => ({
   id, course_id: 'c1', titulo: id, descricao: null, capa_url: null, tenant_slug: null, ordem: 0,
@@ -51,6 +51,16 @@ describe('agruparAulas e contarAulas', () => {
   it('agrupa por módulo, na ordem', () => {
     const g = agruparAulas([aula('b', 'm', 2), aula('a', 'm', 1)]);
     expect(g.m.map((l) => l.id)).toEqual(['a', 'b']);
+  });
+  it('ordem empatada: desempata por created_at', () => {
+    const x = { ...aula('x', 'm', 0), created_at: '2026-10-02' };
+    const y = { ...aula('y', 'm', 0), created_at: '2026-10-01' };
+    expect(agruparAulas([x, y]).m.map((l) => l.id)).toEqual(['y', 'x']);
+  });
+  it('trocarOrdem regrava o índice de todos que mudam (tudo 0: só regrava quem muda de posição)', () => {
+    const lista = [aula('a', 'm', 0), aula('b', 'm', 0), aula('c', 'm', 0)];
+    expect(trocarOrdem(lista, 1, -1)).toEqual([{ id: 'a', ordem: 1 }, { id: 'c', ordem: 2 }]);
+    expect(trocarOrdem(lista, 2, 1)).toEqual([]);
   });
   it('conta total, feitas e minutos só dos módulos passados', () => {
     const aulas = agruparAulas([aula('a', 'x', 1, 6), aula('b', 'x', 2, null), aula('c', 'y', 1, 9)]);

@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
-const m = vi.hoisted(() => ({ cargo: 'corretor' as 'admin' | 'gestor' | 'corretor' }));
+const m = vi.hoisted(() => ({ cargo: 'corretor' as 'admin' | 'gestor' | 'corretor', aulasDesligado: false, pronto: true }));
 vi.mock('./useCargoNaAcademia', () => ({
-  useCargoNaAcademia: () => ({ cargo: m.cargo, podeEditar: m.cargo === 'admin', ehLealMidia: m.cargo === 'admin' }),
+  useCargoNaAcademia: () => ({ cargo: m.cargo, podeEditar: m.cargo === 'admin', ehLealMidia: m.cargo === 'admin', pronto: m.pronto }),
 }));
 const base = { tenant_slug: null, ordem: 0, access: 'free', lock_cta_type: 'none', lock_cta_label: null, lock_cta_value: null, lock_message: null, created_at: '', updated_at: '', descricao: null, capa_url: null };
 const aula = (id: string, module_id: string, ordem: number) => ({ id, module_id, titulo: `Aula ${id}`, descricao_md: '', video_url: '', video_provider: 'youtube', video_id: 'x', storage_path: null, capa_url: null, duracao_min: 5, ordem, created_at: '', updated_at: '' });
@@ -16,7 +16,7 @@ vi.mock('@/hooks/useKnowledge', () => ({
     { ...base, id: 'm2', course_id: 'c1', titulo: 'Para gestores', audience: 'managers', ordem: 2 },
     { ...base, id: 'm3', course_id: 'c2', titulo: 'Roleta', audience: 'managers', ordem: 1 },
   ], isLoading: false, error: null, refetch: vi.fn() }),
-  useAllLessons: () => ({ data: [aula('a1', 'm1', 1), aula('a2', 'm1', 2), aula('g1', 'm2', 1), aula('r1', 'm3', 1)], isLoading: false }),
+  useAllLessons: () => ({ data: m.aulasDesligado ? undefined : [aula('a1', 'm1', 1), aula('a2', 'm1', 2), aula('g1', 'm2', 1), aula('r1', 'm3', 1)], isLoading: false }),
   useProgress: () => ({ data: {} }),
   useToggleProgress: () => ({ mutate: vi.fn(), isPending: false }),
   useEntitlements: () => ({ data: [] }),
@@ -41,7 +41,7 @@ const abrir = (url: string) => render(
   </MemoryRouter>,
 );
 
-beforeEach(() => { m.cargo = 'corretor'; });
+beforeEach(() => { m.cargo = 'corretor'; m.aulasDesligado = false; m.pronto = true; });
 
 describe('CourseView', () => {
   it('corretor não vê o módulo de gestor na lista', () => {
@@ -65,6 +65,22 @@ describe('CourseView', () => {
   it('corretor com link de curso só de gestor vê o aviso do curso', () => {
     abrir('/academia/curso/c2');
     expect(screen.getByText('Este curso é só para gestores')).toBeTruthy();
+  });
+
+  it('aulas ainda não buscadas: não decide "só para gestores" nem "Nenhuma aula"', () => {
+    m.aulasDesligado = true;
+    abrir('/academia/curso/c2');
+    expect(screen.queryByText('Este curso é só para gestores')).toBeNull();
+    expect(screen.queryByText('Nenhuma aula neste curso ainda.')).toBeNull();
+  });
+
+  it('permissões ainda carregando: não mostra o aviso de gestor', () => {
+    m.pronto = false;
+    abrir('/academia/curso/c1?lesson=g1');
+    expect(screen.queryByText('Esta aula é só para gestores')).toBeNull();
+    m.pronto = false;
+    abrir('/academia/curso/c2');
+    expect(screen.queryByText('Este curso é só para gestores')).toBeNull();
   });
 
   it('mostra a trilha e os botões de assistir', () => {

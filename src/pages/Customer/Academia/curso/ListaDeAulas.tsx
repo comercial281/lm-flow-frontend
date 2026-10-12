@@ -21,6 +21,8 @@ interface Props {
   aoExcluirModulo: (m: KnowledgeModule) => void;
   aoMoverModulo: (m: KnowledgeModule, direcao: -1 | 1) => void;
   aoNovaAula: (m: KnowledgeModule) => void;
+  /** Gravando a nova ordem: trava as setas dos módulos. */
+  travarSetas?: boolean;
 }
 
 export default function ListaDeAulas(p: Props) {
@@ -41,7 +43,7 @@ export default function ListaDeAulas(p: Props) {
   );
 }
 
-function Modulo({ m, primeiro, ultimo, aulasPorModulo, progresso, selecionada, travado, podeEditar, aoEscolher, aoEditarModulo, aoExcluirModulo, aoMoverModulo, aoNovaAula }: Props & { m: KnowledgeModule; primeiro: boolean; ultimo: boolean }) {
+function Modulo({ m, primeiro, ultimo, aulasPorModulo, progresso, selecionada, travado, podeEditar, aoEscolher, aoEditarModulo, aoExcluirModulo, aoMoverModulo, aoNovaAula, travarSetas }: Props & { m: KnowledgeModule; primeiro: boolean; ultimo: boolean }) {
   const [aberto, setAberto] = useState(true);
   const aulas = aulasPorModulo[m.id] ?? [];
   const preso = travado(m);
@@ -54,12 +56,17 @@ function Modulo({ m, primeiro, ultimo, aulasPorModulo, progresso, selecionada, t
           {preso ? <Lock className="h-4 w-4 shrink-0 text-muted-foreground" /> : aberto ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
           <span className="truncate">{m.titulo}</span>
           {quemAssiste(m) === 'managers' && <span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">Gestores</span>}
+          {!preso && m.access === 'restricted' && (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
+              <Lock className="h-3 w-3" /> Restrito
+            </span>
+          )}
         </button>
         <span className="shrink-0 text-xs text-muted-foreground">{preso ? 'bloqueado' : `${feitas}/${aulas.length}`}</span>
         {podeEditar && (
           <div className="flex shrink-0 items-center">
-            <button type="button" disabled={primeiro} onClick={() => aoMoverModulo(m, -1)} aria-label="Subir módulo" title="Subir módulo" className="p-1 text-muted-foreground hover:text-primary disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button>
-            <button type="button" disabled={ultimo} onClick={() => aoMoverModulo(m, 1)} aria-label="Descer módulo" title="Descer módulo" className="p-1 text-muted-foreground hover:text-primary disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button>
+            <button type="button" disabled={primeiro || travarSetas} onClick={() => aoMoverModulo(m, -1)} aria-label="Subir módulo" title="Subir módulo" className="p-1 text-muted-foreground hover:text-primary disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button>
+            <button type="button" disabled={ultimo || travarSetas} onClick={() => aoMoverModulo(m, 1)} aria-label="Descer módulo" title="Descer módulo" className="p-1 text-muted-foreground hover:text-primary disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button>
             <button type="button" onClick={() => aoEditarModulo(m)} aria-label="Editar módulo" title="Editar módulo" className="p-1 text-muted-foreground hover:text-primary"><Pencil className="h-4 w-4" /></button>
             <button type="button" onClick={() => aoExcluirModulo(m)} aria-label="Excluir módulo" title="Excluir módulo" className="p-1 text-muted-foreground hover:text-red-400"><Trash2 className="h-4 w-4" /></button>
           </div>

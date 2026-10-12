@@ -7,6 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Megaphone, Pencil, Trash2 } from 'lucide-react';
 import { useDeleteLesson, useProgress, useRatings, useSetRating, useToggleProgress, useUpdateLesson, type KnowledgeLesson, type KnowledgeModule } from '@/hooks/useKnowledge';
+import { quemAssiste, trocarOrdem } from '../quemVe';
 import { formatDuration } from '@/pages/Customer/Tutorials/_internal/lib';
 import VideoEmbed from '@/pages/Customer/Tutorials/_internal/VideoEmbed';
 import CommentsSection from '@/pages/Customer/Tutorials/_internal/CommentsSection';
@@ -79,7 +80,7 @@ export default function PainelDaAula({ aula, modulo, aulasDoModulo, proxima, ant
       )}
 
       {podeEditar && (
-        <AcoesDaLealMidia aula={aula} aulas={aulasDoModulo} cursoId={cursoId} cursoTitulo={cursoTitulo} moduloTitulo={modulo.titulo} aoEditar={aoEditar} aoExcluida={aoExcluida} />
+        <AcoesDaLealMidia aula={aula} aulas={aulasDoModulo} soGestores={quemAssiste(modulo) === 'managers'} cursoId={cursoId} cursoTitulo={cursoTitulo} moduloTitulo={modulo.titulo} aoEditar={aoEditar} aoExcluida={aoExcluida} />
       )}
 
       {aula.descricao_md && (
@@ -101,8 +102,8 @@ export default function PainelDaAula({ aula, modulo, aulasDoModulo, proxima, ant
   );
 }
 
-function AcoesDaLealMidia({ aula, aulas, cursoId, cursoTitulo, moduloTitulo, aoEditar, aoExcluida }: {
-  aula: KnowledgeLesson; aulas: KnowledgeLesson[]; cursoId: string; cursoTitulo: string; moduloTitulo: string; aoEditar: () => void; aoExcluida: () => void;
+function AcoesDaLealMidia({ aula, aulas, soGestores, cursoId, cursoTitulo, moduloTitulo, aoEditar, aoExcluida }: {
+  aula: KnowledgeLesson; aulas: KnowledgeLesson[]; soGestores: boolean; cursoId: string; cursoTitulo: string; moduloTitulo: string; aoEditar: () => void; aoExcluida: () => void;
 }) {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const del = useDeleteLesson();
@@ -110,21 +111,31 @@ function AcoesDaLealMidia({ aula, aulas, cursoId, cursoTitulo, moduloTitulo, aoE
   const [avisando, setAvisando] = useState(false);
   const idx = aulas.findIndex((l) => l.id === aula.id);
 
+  const [movendo, setMovendo] = useState(false);
   async function mover(dir: -1 | 1) {
-    const j = idx + dir;
-    if (j < 0 || j >= aulas.length) return;
-    const a = aulas[idx];
-    const b = aulas[j];
-    await update.mutateAsync({ id: a.id, ordem: b.ordem });
-    await update.mutateAsync({ id: b.id, ordem: a.ordem });
+    if (movendo) return;
+    // Ordem empatada (tudo 0) não troca nada: regrava o índice de cada aula que mudou.
+    const mudancas = trocarOrdem(aulas, idx, dir);
+    if (mudancas.length === 0) return;
+    setMovendo(true);
+    try {
+      for (const c of mudancas) await update.mutateAsync(c);
+    } catch {
+      /* o hook já avisa o erro */
+    } finally {
+      setMovendo(false);
+    }
   }
 
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-primary/50 bg-primary/5 p-2.5">
       <Button size="sm" variant="outline" type="button" onClick={aoEditar}><Pencil className="h-4 w-4" /> Editar aula</Button>
-      <Button size="sm" variant="outline" type="button" disabled={idx <= 0} onClick={() => mover(-1)}><ChevronUp className="h-4 w-4" /> Subir</Button>
-      <Button size="sm" variant="outline" type="button" disabled={idx >= aulas.length - 1} onClick={() => mover(1)}><ChevronDown className="h-4 w-4" /> Descer</Button>
+      <Button size="sm" variant="outline" type="button" disabled={idx <= 0 || movendo} onClick={() => mover(-1)}><ChevronUp className="h-4 w-4" /> Subir</Button>
+      <Button size="sm" variant="outline" type="button" disabled={idx >= aulas.length - 1 || movendo} onClick={() => mover(1)}><ChevronDown className="h-4 w-4" /> Descer</Button>
       <Button size="sm" variant="outline" type="button" onClick={() => setAvisando(true)}><Megaphone className="h-4 w-4" /> Avisar clientes</Button>
+      {soGestores && (
+        <p className="text-xs text-muted-foreground">Esta aula é só para gestores: o corretor que abrir o link vai ver o aviso.</p>
+      )}
       <Button size="sm" variant="outline" type="button" className="text-destructive" onClick={async () => {
         if (await confirmar({ titulo: 'Excluir aula', descricao: <>Excluir a aula <strong>{aula.titulo}</strong>?</>, rotuloDaAcao: 'Excluir', destrutivo: true })) {
           del.mutate(aula.id);
