@@ -195,4 +195,14 @@ describe('FotosDoImovel', () => {
     terminar(foto('b', { published: false }));
     await screen.findByRole('button', { name: 'Selecionar' });
   });
+
+  it('clicar na foto abre ela grande, com setas pelo teclado', async () => {
+    abrir([foto('a'), foto('b')]);
+    await userEvent.click(await screen.findByRole('button', { name: 'Abrir a 1ª foto' }));
+    const janela = screen.getByRole('dialog');
+    expect(within(janela).getByText('Foto 1 de 2')).toBeInTheDocument();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(within(janela).getByText('Foto 2 de 2')).toBeInTheDocument();
+    expect(within(janela).getByRole('button', { name: 'Usar como capa' })).toBeEnabled();
+  });
 });

@@ -24,6 +24,7 @@ import CartaoDaCapa from './CartaoDaCapa';
 import GradeDeFotos from './GradeDeFotos';
 import ListaDeMidias from './ListaDeMidias';
 import JanelaPorEndereco from './JanelaPorEndereco';
+import FotoAmpliada from './FotoAmpliada';
 
 const ROTULO_DA_ABA: Record<AbaDasFotos, string> = {
   tudo: 'Tudo', fotos: 'Fotos', midias: 'Vídeos e áudios', ocultas: 'Ocultas',
@@ -43,12 +44,10 @@ export default function FotosDoImovel() {
   const campoDeArquivo = useRef<HTMLInputElement>(null);
   const [porEndereco, setPorEndereco] = useState(false);
   const [soltando, setSoltando] = useState(false);
-  // A Task 7 usa a ampliada:
   const [selecionando, setSelecionando] = useState(false);
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
   const [loteEmAndamento, setLoteEmAndamento] = useState(false);
   const [ampliada, setAmpliada] = useState<string | null>(null);
-  void ampliada; // até a Task 7 ler
 
   const alternarSelecao = (fid: string) => setSelecionadas(prev => {
     const nova = new Set(prev);
@@ -279,6 +278,16 @@ export default function FotosDoImovel() {
           </>
         )}
       </div>
+      <FotoAmpliada
+        fotos={visiveis.imagens}
+        todas={dados.fotos}
+        abertaId={ampliada}
+        capaId={dados.capaId}
+        pode={pode}
+        aoTrocar={setAmpliada}
+        aoUsarComoCapa={fid => void dados.usarComoCapa(fid)}
+        aoAlternarVisivel={fid => void dados.alternarVisivel(fid)}
+      />
       <JanelaPorEndereco aberta={porEndereco} aoFechar={() => setPorEndereco(false)} aoAdicionar={dados.adicionarPorEndereco} />
       {dialogoDeConfirmacao}
     </Pagina>
