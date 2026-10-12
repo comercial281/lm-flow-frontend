@@ -61,7 +61,7 @@ export default function EnviosSistemaCliente({ agentId }: { agentId: string }) {
           tamanho="compacto"
           className="mt-2"
           title="Nenhum envio ainda."
-          description='Use "Mandar um lead de teste" em Configurar → Objetivo.'
+          description='Use "Mandar um lead de teste" em Configurar → Destino.'
         />
       )}
 

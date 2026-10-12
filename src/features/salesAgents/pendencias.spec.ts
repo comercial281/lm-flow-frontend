@@ -11,10 +11,16 @@ describe('pendenciasDasPaginas', () => {
     expect(podeLigar(a)).toEqual({ pode: false, motivo: 'Falta o número de WhatsApp.', pagina: 'canal' });
   });
 
-  it('nome que o lead vê só avisa, em Identidade', () => {
+  it('nome que o lead vê é opcional: sem ele não há pendência (11/10/2026)', () => {
     const a = agenteDeTeste({ lead_facing_name: null });
-    expect(chaves(a)).toContain('identidade:nome_visivel');
+    expect(chaves(a)).not.toContain('identidade:nome_visivel');
+    expect(pendenciasDasPaginas(a).map((p) => p.chave)).not.toContain('nome_visivel');
     expect(podeLigar(a).pode).toBe(true);
+  });
+
+  it('palavra antiga usa a frase nova', () => {
+    const p = pendenciasDasPaginas(agenteDeTeste({ trigger_keyword: 'mcmv' })).find((x) => x.chave === 'palavra_antiga');
+    expect(p?.frase).toBe('Ainda vale a regra antiga da palavra "mcmv".');
   });
 
   it('corretor sem dono do número trava, em Identidade', () => {
@@ -43,8 +49,11 @@ describe('pendenciasDasPaginas', () => {
       inbox_id: null, lead_facing_name: null, trigger_keyword: 'x',
       persona_kind: 'assistant', handoff_target: 'roleta', handoff_roleta_config_id: 'r1',
     });
-    expect(pendenciasDasPaginas(a).map((p) => p.pagina)).toEqual(['canal', 'canal', 'identidade']);
-    expect([...paginasComPendencia(a)]).toEqual(['canal', 'identidade']);
+    expect(pendenciasDasPaginas(a).map((p) => p.pagina)).toEqual(['canal', 'canal']);
+    expect([...paginasComPendencia(a)]).toEqual(['canal']);
+    const b = agenteDeTeste({ persona_kind: 'broker', number_owner_id: null, handoff_target: 'number_owner', inbox_id: 'i1', trigger_keyword: 'x' });
+    expect(pendenciasDasPaginas(b).map((p) => p.pagina)).toEqual(['canal', 'identidade']);
+    expect([...paginasComPendencia(b)]).toEqual(['canal', 'identidade']);
   });
 });
 

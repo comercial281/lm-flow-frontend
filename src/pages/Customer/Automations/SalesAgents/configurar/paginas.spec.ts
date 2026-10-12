@@ -63,7 +63,8 @@ describe('paginas', () => {
 
   it('abre na primeira página com pendência, senão em Canal', () => {
     expect(paginaInicial(agenteDeTeste({ lead_facing_name: 'Bia', inbox_id: null }))).toBe('canal');
-    expect(paginaInicial(agenteDeTeste({ lead_facing_name: null }))).toBe('identidade');
+    expect(paginaInicial(agenteDeTeste({ lead_facing_name: null }))).not.toBe('identidade');
+    expect(paginaInicial(agenteDeTeste({ persona_kind: 'broker', number_owner_id: null, handoff_target: 'number_owner' }))).toBe('identidade');
     expect(paginaInicial(agenteDeTeste({ lead_facing_name: 'Bia', persona_kind: 'assistant', handoff_target: 'roleta', handoff_roleta_config_id: 'r1', transfer_config: { mode: 'checklist', required_questions: ['Renda'] } }))).toBe('canal');
   });
 

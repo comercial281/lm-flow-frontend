@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Bath,
   BedDouble,
@@ -854,6 +854,11 @@ export function LeadFormBlock({
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [sendErr, setSendErr] = useState(false);
+  // Limite de envios do servidor (429): a frase dele no lugar da de conexão, e
+  // o botão desligado enquanto durar o Retry-After. Insistir só prolongava o
+  // bloqueio, então nesse caso o botão não diz "Tentar de novo".
+  const [limitMsg, setLimitMsg] = useState<string | null>(null);
+  const [waitSeconds, setWaitSeconds] = useState<number | null>(null);
   const [done, setDone] = useState(false);
   const [resultQual, setResultQual] = useState<string | undefined>();
 
@@ -915,12 +920,15 @@ export function LeadFormBlock({
     if (!isValidBrPhone(phone)) { setPhoneErr(true); return; }
     setSending(true);
     setSendErr(false);
+    setLimitMsg(null);
     try {
       const res = await onSubmitLead?.({ name: name.trim(), phone, email: email.trim() || undefined, answers });
       // Falha de envio NÃO pode virar tela de agradecimento: o lead de anúncio
       // se perdia em silêncio, sem erro e sem chance de tentar de novo.
       if (res?.failed) {
         setSendErr(true);
+        setLimitMsg(res.failedMessage || null);
+        if (res.retryAfterSeconds && res.retryAfterSeconds > 0) setWaitSeconds(res.retryAfterSeconds);
         return;
       }
       setResultQual(forcedScreen === 'disqualified' ? 'disqualified' : res?.qualification);
@@ -931,6 +939,13 @@ export function LeadFormBlock({
       setSending(false);
     }
   };
+
+  // Fim do Retry-After: o botão volta a valer.
+  useEffect(() => {
+    if (!waitSeconds) return;
+    const t = window.setTimeout(() => setWaitSeconds(null), waitSeconds * 1000);
+    return () => window.clearTimeout(t);
+  }, [waitSeconds]);
 
   const whatsappPhone = (config.whatsappPhone ?? '').replace(/\D/g, '');
 
@@ -1045,13 +1060,13 @@ export function LeadFormBlock({
                 </div>
                 {sendErr && (
                   <div className="mt-3 rounded-xl border px-3 py-2 text-xs" style={{ borderColor: '#f87171', color: '#f87171' }}>
-                    {config.sendErrorMessage}
+                    {limitMsg ?? config.sendErrorMessage}
                   </div>
                 )}
-                <button type="button" onClick={submit} disabled={sending || !name.trim() || !phone.trim()}
+                <button type="button" onClick={submit} disabled={sending || waitSeconds !== null || !name.trim() || !phone.trim()}
                   className="mt-4 flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 font-semibold text-white disabled:opacity-40"
                   style={{ background: '#16A34A' }}>
-                  <WhatsAppIcon size={18} /> {sending ? config.sendingLabel : sendErr ? config.retryLabel : config.ctaLabel}
+                  <WhatsAppIcon size={18} /> {sending ? config.sendingLabel : sendErr && !limitMsg ? config.retryLabel : config.ctaLabel}
                 </button>
                 {canGoBack && (
                   <button type="button" onClick={back} className="mt-3 text-xs opacity-60">{config.backLabel}</button>

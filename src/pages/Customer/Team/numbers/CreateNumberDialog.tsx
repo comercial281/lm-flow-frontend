@@ -54,6 +54,12 @@ export default function CreateNumberDialog({ member, open, onClose, onDone, link
   const [name, setName] = useState(member.name);
   const [phone, setPhone] = useState(memberPhone);
   const [who, setWho] = useState<Who>(canSendAccess ? 'first' : 'now');
+  // A permissão chega um instante DEPOIS de a janela abrir (até lá o `can` diz
+  // não). Sem isto a escolha nascia em "Agora, nesta tela" e ficava lá quando a
+  // opção do primeiro acesso aparecia. Só segue a permissão enquanto ninguém
+  // escolheu na mão.
+  const whoChosen = useRef(false);
+  const chooseWho = (w: Who) => { whoChosen.current = true; setWho(w); };
   const [sameAsNumber, setSameAsNumber] = useState(true);
   const [otherCelular, setOtherCelular] = useState('');
   const [busy, setBusy] = useState(false);
@@ -68,6 +74,7 @@ export default function CreateNumberDialog({ member, open, onClose, onDone, link
     setName(member.name);
     setPhone(national(member.whatsapp_number));
     setWho(canSendAccess ? 'first' : 'now');
+    whoChosen.current = false;
     setSameAsNumber(true);
     setOtherCelular('');
     setBusy(false);
@@ -76,6 +83,10 @@ export default function CreateNumberDialog({ member, open, onClose, onDone, link
     setCreated(null);
     setLink({ state: 'sent' });
   }, [open, member.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!whoChosen.current) setWho(canSendAccess ? 'first' : 'now');
+  }, [canSendAccess]);
 
   const needsCelular = who === 'first' && !hasCelular && !linkAlreadySent;
   // Celular que recebe o link: o que a pessoa já tem; sem ele, o pedido no bloco amarelo.
@@ -168,12 +179,12 @@ export default function CreateNumberDialog({ member, open, onClose, onDone, link
               <fieldset className="space-y-2" disabled={busy}>
                 <legend className="text-sm font-medium">Quem lê o QR code</legend>
                 {canSendAccess && (
-                  <Option checked={who === 'first'} onSelect={() => setWho('first')} label={`${member.name}, no primeiro acesso`}
+                  <Option checked={who === 'first'} onSelect={() => chooseWho('first')} label={`${member.name}, no primeiro acesso`}
                     hint={linkAlreadySent
                       ? `O link de acesso já foi enviado para o celular de ${member.name}, que conecta o número ao entrar.`
                       : `O link de acesso vai para o celular de ${member.name}, que conecta o número ao entrar.`} />
                 )}
-                <Option checked={who === 'now'} onSelect={() => setWho('now')} label="Agora, nesta tela"
+                <Option checked={who === 'now'} onSelect={() => chooseWho('now')} label="Agora, nesta tela"
                   hint="Abre o QR code assim que o número for criado." />
               </fieldset>
 
@@ -193,15 +204,15 @@ export default function CreateNumberDialog({ member, open, onClose, onDone, link
                     <span>É o mesmo telefone do número</span>
                   </label>
                   {!sameAsNumber && (
-                    <>
-                      <Label htmlFor="new-number-celular" className="sr-only">Celular de {member.name}</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="new-number-celular">Celular de {member.name}</Label>
                       <BrPhoneInput
                         id="new-number-celular"
                         value={otherCelular}
                         onChange={setOtherCelular}
                         className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
                       />
-                    </>
+                    </div>
                   )}
                 </div>
               )}

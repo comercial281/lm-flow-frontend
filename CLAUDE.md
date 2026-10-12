@@ -8394,6 +8394,51 @@ Origem: o dono quer conectar o LM Flow no Claude (Conectores) e no Claude Code p
 - **Logs:** ação feita pelo MCP aparece com "MCP · nome da chave" no lugar de quem fez, e há a categoria **MCP** no filtro (`formatoLogs.ts` em `SuperAdmin/Logs/`).
 - Não reabrir sem o dono pedir.
 
+## IA Vendedora · avisos limpos e "Ocultar" (11/10/2026)
+
+Pedido do dono: o Painel da IA acusava amarelo e vermelho toda noite por coisa que não era problema (horário, "canal errado", "nenhum arquivo liberado"). Desenho aprovado em 11/10. Servidor: coluna `sales_agents.hidden_warnings` (migration `99990101000321`) (a limpeza dos avisos é do `HealthCheck` no servidor). PRs: servidor (lm-flow) #467 e tela (lm-flow-frontend) #543; o do servidor entra primeiro. **Reabre a decisão 3 de 05/10 ("mode para a IA") por pedido do dono.**
+
+- **O que muda pra quem usa:** o Painel da IA só mostra o que pede ação. Cada pendência AMARELA ganha o botão **Ocultar** (quem tem `sales_agents.update`); no fim da lista aparece "N avisos ocultos · Mostrar", que abre os ocultos em tom neutro, com **Mostrar de novo**. "Configurar → Objetivo" passou a se chamar "Configurar → Destino" (inclusive no Diagnóstico, `EnviosSistemaCliente.tsx`).
+- **1. Horário de atendimento** sai do Painel: fora do horário é normal. O texto "Fora do horário agora" segue no Diagnóstico.
+- **2. Outros agentes neste canal** só acusa conflito de verdade, em vermelho: esta IA sem gatilho e outra IA ligada no mesmo número, sem gatilho, que vem antes na ordem (prioridade maior, ou igual e criada antes). Qualquer outro caso: sem item.
+- **3. Movimento no canal** nunca mais é vermelho (amarelo, só IA ligada há 7+ dias). **Acionamentos** é informativo, salvo IA ligada há 7+ dias, sem gatilho, com mensagem de lead chegando e zero acionamentos.
+- **4. Conexão do canal** sem conversa ainda é ok; a página Canal só mostra "Desconectado" quando o status é erro.
+- **5. Base de conhecimento:** vazia e processando são ok; falhou é amarelo.
+- **6. Arquivos que ela pode enviar:** "nenhum liberado" é ok. Segue amarelo: arquivo grande sem link, book ligado sem book salvo e cliente sem a atualização.
+- **7. Só follow-up** deixa de ser "Parada" vermelho: o servidor marca ok e a bolinha vira `restricao` (amarela), com "Só follow-up: ela não responde ao vivo, só retoma quem sumiu".
+- **8. Nome que o lead vê** sai das pendências (some a bolinha; o Configurar não abre mais em Identidade por causa dele).
+- **9. Repetidos e textos velhos:** o `client_system` do servidor não entra quando a tela já mostra `destino_cvcrm_desconectado`, `destino_sem_endereco` ou `destino_sem_chave`; o `triggers` do servidor não entra (a tela calcula "Quem ela atende" sozinha, palavra antiga inclusa); o texto da palavra antiga foi reescrito.
+- **10. Ocultar** é guardado no servidor, por IA (vale pra conta inteira). Oculto não conta na bolinha ("Atendendo com restrição" vira "Atendendo" se `triggers` estiver oculta).
+- **Desvio do plano no conflito:** também conta como conflito uma IA "só follow-up" sem gatilho que vem antes na ordem, porque o seletor (`SalesAgents::AgentSelector#call` → `catch_all`) não pula `followup_only`: ela pega e segura o lead novo e nunca responde ao vivo. Aparece em vermelho com texto próprio. Quando ESTA IA é "só follow-up", não há item de conflito. Ver o item no `_MELHORIAS`.
+- **Armadilhas:**
+  - **Vermelho nunca oculta.** Não tem botão e aparece mesmo com a chave em `hidden_warnings` (ex.: `conflict`).
+  - **`hidden_warnings` é a lista inteira:** a tela manda a lista completa a cada Ocultar/Mostrar de novo, e o servidor normaliza (chaves `[a-z0-9_]{1,40}`, sem repetição, até 30; lixo vira lista vazia). Cliente sem a coluna ainda: o servidor devolve `[]` e o `update` não estoura.
+  - **`client_system` e `triggers` do servidor ficam fora do Painel**, e a pendência da tela que os substitui herda a gravidade do `client_system` (erro no servidor = vermelho na tela, sem "Ocultar").
+  - **`client_system` nunca oculta**, nem amarelo: falha de envio é lead perdido (`NUNCA_OCULTA` em `situacao.ts`).
+  - **O Diagnóstico da equipe mostra tudo**, sem ocultar nada.
+  - **"Só follow-up" agora é `restricao`** (amarela), não neutra e não "Parada". Quem ler o tipo da bolinha deve contar com isso.
+  - **A Visão geral sem números** deixou de explicar o "só follow-up" (`motivoSemAtendimento` devolve null pra `restricao`). Pendência no `_MELHORIAS`.
+- Não reabrir sem o dono pedir.
+
+## Formulários públicos: limite de envios e "Quero ajuda" que só confirma o que chegou (desde 2026-10-11)
+
+Desde 11/10 o servidor (`comercial281/lm-flow#451`) aceita 10 envios a cada 10 minutos por visitante em `site/leads`, `site/anuncie` e `landing/:slug/leads`; passou disso, responde 429 com a frase em `error.message` e o cabeçalho `Retry-After`. Nenhuma tela lia isso.
+
+- **Ajudante único** `features/siteBuilder/public/limiteDeEnvios.ts` (sem imports, entra no pacote enxuto do site e da landing): `lerLimiteDeEnvios(res)` devolve frase + espera só no 429 (não lê o corpo de outra resposta); `textoDoErroDeEnvio(res, textoDaTela)` é o atalho das telas. Reserva fixa igual à do servidor: "Muitos envios seguidos. Tente de novo em alguns minutos." `Retry-After` em segundos ou data HTTP, com teto de 15 min.
+- **No 429 vale a frase do servidor; qualquer outro erro continua com a frase de cada tela.** Página do imóvel (interesse e book) e página inicial: "Não consegui enviar agora. Tente de novo em instantes." (`TEXTO_FALHA_DE_ENVIO`). Anuncie: a frase + "O que você preencheu continua aqui."
+- **Landing de anúncio:** no 429, a frase do servidor no lugar de "Confira sua conexão…" (que o gestor edita no formulário), o botão volta a dizer o texto normal (nada de "Tentar de novo") e fica desligado enquanto durar o `Retry-After`. Sem o cabeçalho, só a frase muda. Outro erro: igual a antes, com "Tentar de novo". Vai pelo `LeadSubmitResult` (`failedMessage`, `retryAfterSeconds`).
+- **Página inicial ("Quero ajuda pra encontrar") só confirma quando o servidor aceitou.** Antes ela mostrava "Recebemos seu contato!" em QUALQUER erro (não conferia a resposta) e ficava calada se a rede caía: o lead se perdia sem ninguém saber. Agora o erro aparece embaixo do botão e o que a pessoa digitou fica no lugar, como na página do imóvel. Prévia segue com o aviso próprio.
+- Testes: `limiteDeEnvios.spec.ts`, `pages/Public/limiteDeEnviosNoSite.spec.tsx`, `LandingPublicView.spec.tsx` (limite de envios).
+
+## Janela da casa: topo e rodapé encaixados + Criar número (11/10/2026)
+
+Revisão no navegador da janela "Criar número para {pessoa}" (Equipe), pedida pelo dono depois das peças da casa.
+
+- **Topo e rodapé fixos cobriam o miolo em TODAS as janelas.** O navegador mede o `sticky` a partir de dentro do respiro da caixa que rola: com `top-0`/`bottom-0` o topo descia 24 px e o rodapé subia 24 px, comendo 8 px do miolo em cada ponta ("Nome do número" cortado em cima, caixinha e link do fim escondidos atrás do rodapé, faixa vazia acima do título e abaixo dos botões). Agora grudam em `-(--janela-p)` (no celular, o mesmo `max(respiro, barra de gestos)` do fundo da caixa). Correção em `ds.tsx`, vale pras ~190 janelas.
+- **"Quem lê o QR code" abria sempre em "Agora, nesta tela".** O `can()` responde não até a régua de permissões chegar (cada montagem baixa a sua), então a escolha nascia errada e não voltava quando a opção do primeiro acesso aparecia. Agora segue a permissão até a pessoa escolher na mão. Varredura no código: era o único estado que nascia de permissão.
+- **Celular de {pessoa} ganhou título visível** quando "É o mesmo telefone do número" é desmarcado (antes era só o exemplo "(11) 99999-9999"). Varredura: era o único campo com rótulo só pra leitor de tela sem título de bloco em cima.
+- Testes: `ds.dialog.spec.tsx` (classes do topo/rodapé), `CreateNumberDialog.spec.tsx` (permissão chegando depois; escolha na mão não é desfeita).
+
 ## Imóvel desatualizado em Atividades (11/10/2026)
 
 Pedido da Nova 27 (f2-07). Desenho: `LM FLOW/specs/2026-10-11-imovel-desatualizado-em-atividades-design.md`.
