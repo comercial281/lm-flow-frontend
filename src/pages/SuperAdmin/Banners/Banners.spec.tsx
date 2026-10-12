@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { BannerAdmin } from '@/types/admin/dashboardBanners';
@@ -84,5 +84,29 @@ describe('Comunicação → Banner', () => {
     svc.listar.mockRejectedValue(new Error('x'));
     abrir();
     expect(await screen.findByText('Não deu para carregar os banners')).toBeInTheDocument();
+  });
+});
+
+describe('Comunicação → Banner · destino do clique', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    svc.listar.mockResolvedValue({ banners: [rascunho], imobiliarias: [] });
+  });
+
+  it('Ver agora escolhe a tela pelo nome do menu; outro endereço abre a caixa de digitar', async () => {
+    svc.salvar.mockImplementation(async (_id: string, campos: Record<string, unknown>) => ({ ...rascunho, ...campos }));
+    abrir();
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Atualização · Mensagens prontas' }));
+    const destino = screen.getByLabelText('Botão Ver agora leva pra') as HTMLSelectElement;
+    expect(destino.value).toBe('/conversations');
+
+    fireEvent.change(destino, { target: { value: '/visits' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await waitFor(() => expect(svc.salvar).toHaveBeenCalledWith('b1', expect.objectContaining({ details_button_path: '/visits' })));
+
+    fireEvent.change(destino, { target: { value: '__outro' } });
+    await userEvent.type(screen.getByLabelText('Botão Ver agora leva pra: endereço'), 'https://lealmidia.com.br');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await waitFor(() => expect(svc.salvar).toHaveBeenLastCalledWith('b1', expect.objectContaining({ details_button_path: 'https://lealmidia.com.br' })));
   });
 });
