@@ -337,8 +337,10 @@ export default function Properties() {
     try {
       const novo = await propertiesService.confirmarEmDia(p.id);
       toast.success(`${p.code} está em dia. O prazo recomeça a contar hoje.`);
-      if (recorte?.params.vence || recorte?.params.stale) setProperties(prev => prev.filter(x => x.id !== p.id));
-      else setProperties(prev => prev.map(x => (x.id === novo.id ? novo : x)));
+      if (recorte?.params.vence || recorte?.params.stale) {
+        setProperties(prev => prev.filter(x => x.id !== p.id));
+        setTotal(t => Math.max(0, t - 1));
+      } else setProperties(prev => prev.map(x => (x.id === novo.id ? novo : x)));
       recontar();
     } catch {
       toast.error('Não consegui marcar o imóvel como em dia. Tente de novo.');

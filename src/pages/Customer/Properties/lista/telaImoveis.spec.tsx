@@ -14,6 +14,7 @@ const svc = vi.hoisted(() => ({
   update: vi.fn(),
   get: vi.fn(),
   create: vi.fn(),
+  confirmarEmDia: vi.fn(),
 }));
 
 vi.mock('@/services/properties/propertiesService', async importOriginal => {
@@ -256,5 +257,16 @@ describe('Tela de Imóveis', () => {
     expect(await screen.findByText('Excluir imóvel')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Excluir' })).toBeInTheDocument();
     expect(screen.queryByText('Remover imóvel')).toBeNull();
+  });
+
+  it('Está em dia na lista de desatualizados tira o imóvel e baixa o total (sem Mostrar mais à toa)', async () => {
+    svc.contarPorTipo.mockResolvedValue({ development: 0, resale: 2 });
+    svc.list.mockResolvedValue(resposta([imovel({ id: 'a', code: 'AP1' }), imovel({ id: 'b', code: 'AP2' })], 2));
+    svc.confirmarEmDia.mockResolvedValue(imovel({ id: 'a', code: 'AP1' }));
+    abrir('/properties?aba=revenda&recorte=desatualizados&vence=hoje');
+    expect(await screen.findByText('Mostrando 2 de 2')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Está em dia' })[0]);
+    expect(await screen.findByText('Mostrando 1 de 1')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mostrar mais' })).toBeNull();
   });
 });

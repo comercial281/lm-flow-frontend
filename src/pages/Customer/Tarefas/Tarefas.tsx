@@ -10,6 +10,7 @@ import Abas from '@/components/base/Abas';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
+import { useCan } from '@/hooks/useCan';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { visitsService, type PersonRef } from '@/services/visits/visitsService';
@@ -85,6 +86,7 @@ export default function Tarefas() {
     return () => window.removeEventListener(EVENTO_TAREFAS_MUDARAM, aoMudar);
   }, [carregar]);
 
+  const podeVerImoveis = useCan()('properties', 'read');
   const somenteMinhas = resposta?.meta.only_mine ?? true;
   const contagem = (b: Balde) => resposta?.meta.counts[b] ?? 0;
   const itens = resposta?.data ?? [];
@@ -92,7 +94,7 @@ export default function Tarefas() {
   const imoveis = pagina === 1 ? resposta?.meta.stale_properties ?? null : null;
   const pessoaEscolhida = pessoas.find(p => p.id === pessoa);
   const abrirImoveis = () => navigate(linkImoveis('desatualizados', {
-    vence: balde === 'concluidas' ? undefined : balde,
+    vence: !imoveis || imoveis.bucket === 'concluidas' ? undefined : imoveis.bucket,
     meus: somenteMinhas,
     pessoa: !somenteMinhas && pessoaEscolhida ? { id: pessoaEscolhida.id, name: pessoaEscolhida.name } : undefined,
   }));
@@ -136,8 +138,8 @@ export default function Tarefas() {
             <Seletor aria-label="Categoria" value={categoria} onChange={e => mudarFiltro({ categoria: e.target.value })} className="w-48">
               <option value="">Todas as categorias</option>
               {categorias.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-              <option disabled>──────────</option>
-              <option value={CATEGORIA_IMOVEL}>Imóvel desatualizado</option>
+              {podeVerImoveis && <option disabled>──────────</option>}
+              {podeVerImoveis && <option value={CATEGORIA_IMOVEL}>Imóvel desatualizado</option>}
             </Seletor>
             {!somenteMinhas && (
               <Seletor aria-label="Pessoa" value={pessoa} onChange={e => mudarFiltro({ pessoa: e.target.value })} className="w-48">
@@ -163,7 +165,7 @@ export default function Tarefas() {
           <EmptyState title={balde === 'hoje' ? 'Nada pra hoje.' : 'Nada por aqui.'} />
         ) : (
           <ul className="divide-y divide-border/60">
-            {imoveis && <LinhaDosImoveis balde={balde} quantidade={imoveis.count} deQuem={deQuem} aoAbrir={abrirImoveis} />}
+            {imoveis && <LinhaDosImoveis balde={imoveis.bucket} quantidade={imoveis.count} deQuem={deQuem} aoAbrir={abrirImoveis} />}
             {itens.map(t => <LinhaDaTarefa key={t.id} tarefa={t} mostrarLead {...acoes} />)}
           </ul>
         )}
