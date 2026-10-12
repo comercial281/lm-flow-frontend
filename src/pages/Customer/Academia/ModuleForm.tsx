@@ -1,26 +1,23 @@
-// Form de criar/editar MÓDULO (admin). Vincula a um curso, capa, escopo,
-// bloqueio + CTA e (ao editar) acessos por cliente/usuário.
+// Janela de criar/editar MÓDULO (Leal Mídia): nome, curso, capa, quem assiste,
+// em quais clientes aparece (só com cliente no endereço) e Avançado.
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
-import {
-  useCreateModule,
-  useUpdateModule,
-  useCourses,
-  TENANT_SLUG,
-  type KnowledgeModule,
-} from '@/hooks/useKnowledge';
-import CoverPicker from './CoverPicker';
-import LockConfigFields, { type LockConfig } from './LockConfigFields';
-import EntitlementsEditor from './EntitlementsEditor';
+import { useCreateModule, useUpdateModule, useCourses, TENANT_SLUG, type KnowledgeModule, type QuemAssiste } from '@/hooks/useKnowledge';
+import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/ds';
+import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
+import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
 import { Seletor } from '@/components/base/Seletor';
-import { Card, Button } from '@/components/ui/ds';
+import CoverPicker from './CoverPicker';
+import AvancadoDoBloqueio from './AvancadoDoBloqueio';
+import type { LockConfig } from './LockConfigFields';
+import { quemAssiste } from './quemVe';
 
-export default function ModuleForm({
-  editing,
-  defaultCourseId,
-  onClose,
-}: {
+const OPCOES_QUEM: { valor: QuemAssiste; rotulo: string; descricao: string }[] = [
+  { valor: 'all', rotulo: 'Todos', descricao: 'Corretores, gestores e administradores' },
+  { valor: 'managers', rotulo: 'Só gestores e administradores', descricao: 'Some da tela do corretor' },
+];
+
+export default function ModuleForm({ editing, defaultCourseId, onClose }: {
   editing: KnowledgeModule | null;
   defaultCourseId?: string | null;
   onClose: () => void;
@@ -33,6 +30,7 @@ export default function ModuleForm({
   const [descricao, setDescricao] = useState(editing?.descricao ?? '');
   const [capaUrl, setCapaUrl] = useState(editing?.capa_url ?? '');
   const [courseId, setCourseId] = useState<string>(editing?.course_id ?? defaultCourseId ?? '');
+  const [audience, setAudience] = useState<QuemAssiste>(editing ? quemAssiste(editing) : 'all');
   const [scope, setScope] = useState<'global' | 'tenant'>(editing?.tenant_slug ? 'tenant' : 'global');
   const [lock, setLock] = useState<LockConfig>({
     access: editing?.access ?? 'free',
@@ -43,7 +41,7 @@ export default function ModuleForm({
   });
 
   const busy = createModule.isPending || updateModule.isPending;
-  const canScopeTenant = Boolean(TENANT_SLUG);
+  const temCliente = Boolean(TENANT_SLUG);
 
   async function submit() {
     if (!titulo.trim()) return;
@@ -52,7 +50,8 @@ export default function ModuleForm({
       descricao: descricao.trim() || null,
       capa_url: capaUrl.trim() || null,
       course_id: courseId || null,
-      tenant_slug: scope === 'tenant' && canScopeTenant ? TENANT_SLUG : null,
+      audience,
+      tenant_slug: scope === 'tenant' && temCliente ? TENANT_SLUG : editing?.tenant_slug ?? null,
       access: lock.access,
       lock_cta_type: lock.lock_cta_type,
       lock_cta_label: lock.lock_cta_label.trim() || null,
@@ -65,95 +64,45 @@ export default function ModuleForm({
   }
 
   return (
-    <Card className="mb-6 max-w-2xl gap-4 p-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold">{editing ? 'Editar módulo' : 'Novo módulo'}</p>
-        <button onClick={onClose} type="button" aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      <input
-        autoFocus
-        value={titulo}
-        onChange={(e) => setTitulo(e.target.value)}
-        placeholder="Nome do módulo (ex.: Biblioteca de Formatos)"
-        className="w-full bg-background border border-border rounded px-3 py-2 text-sm"
-      />
-      <textarea
-        value={descricao}
-        onChange={(e) => setDescricao(e.target.value)}
-        placeholder="Descrição (opcional)"
-        rows={2}
-        className="w-full bg-background border border-border rounded px-3 py-2 text-sm resize-y"
-      />
-
-      <div>
-        <p className="text-[11px] text-muted-foreground mb-1">Curso</p>
-        <Seletor
-          value={courseId}
-          onChange={(e) => setCourseId(e.target.value)}
-          className="w-full bg-background border border-border rounded px-3 py-2 text-sm"
-        >
-          <option value="">Geral (sem curso)</option>
-          {courses.map((c) => (
-            <option key={c.id} value={c.id}>{c.titulo}</option>
-          ))}
-        </Seletor>
-      </div>
-
-      <CoverPicker value={capaUrl} onChange={setCapaUrl} />
-
-      <div>
-        <p className="text-[11px] text-muted-foreground mb-1">Quem vê este módulo</p>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setScope('global')}
-            className={`px-3 py-1.5 text-[11px] rounded-lg border ${
-              scope === 'global' ? 'bg-primary/15 text-primary border-primary/40' : 'border-border text-muted-foreground'
-            }`}
-          >
-            Global (todos os clientes)
-          </button>
-          <button
-            type="button"
-            onClick={() => canScopeTenant && setScope('tenant')}
-            disabled={!canScopeTenant}
-            className={`px-3 py-1.5 text-[11px] rounded-lg border disabled:opacity-40 ${
-              scope === 'tenant' ? 'bg-primary/15 text-primary border-primary/40' : 'border-border text-muted-foreground'
-            }`}
-            title={canScopeTenant ? '' : 'Disponível só dentro do painel de um cliente'}
-          >
-            Só este cliente{TENANT_SLUG ? ` (${TENANT_SLUG})` : ''}
-          </button>
+    <Dialog open onOpenChange={(aberto) => { if (!aberto) onClose(); }}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader><DialogTitle>{editing ? 'Editar módulo' : 'Novo módulo'}</DialogTitle></DialogHeader>
+        <div className="grid gap-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <CampoTexto id="modulo-nome" rotulo="Nome do módulo" valor={titulo} aoMudar={setTitulo} />
+            <div className="grid gap-1.5">
+              <label htmlFor="modulo-curso" className="text-sm font-medium">Curso</label>
+              <Seletor id="modulo-curso" value={courseId} onChange={(e) => setCourseId(e.target.value)} className="w-full">
+                <option value="">Fora de curso (aula avulsa)</option>
+                {courses.map((c) => <option key={c.id} value={c.id}>{c.titulo}</option>)}
+              </Seletor>
+            </div>
+          </div>
+          <CampoTextoLongo id="modulo-descricao" rotulo="Descrição (opcional)" valor={descricao} aoMudar={setDescricao} rows={2} />
+          <CoverPicker value={capaUrl} onChange={setCapaUrl} />
+          <div className="grid gap-2">
+            <p className="text-sm font-medium">Quem assiste</p>
+            <CartoesDeEscolha rotulo="Quem assiste" valor={audience} opcoes={OPCOES_QUEM} aoEscolher={setAudience} />
+          </div>
+          {temCliente && (
+            <div className="grid gap-2">
+              <p className="text-sm font-medium">Em quais clientes aparece</p>
+              <CartoesDeEscolha rotulo="Em quais clientes aparece" valor={scope} aoEscolher={setScope} opcoes={[
+                { valor: 'global', rotulo: 'Todos os clientes', descricao: 'Aparece em todas as imobiliárias' },
+                { valor: 'tenant', rotulo: 'Só este cliente', descricao: TENANT_SLUG },
+              ]} />
+            </div>
+          )}
+          <AvancadoDoBloqueio lock={lock} onChange={(patch) => setLock((v) => ({ ...v, ...patch }))}
+            alvo={editing ? { tipo: 'module', id: editing.id } : null} />
         </div>
-      </div>
-
-      <LockConfigFields value={lock} onChange={(patch) => setLock((v) => ({ ...v, ...patch }))} />
-
-      {editing && lock.access === 'restricted' && (
-        <EntitlementsEditor targetType="module" targetId={editing.id} />
-      )}
-      {!editing && lock.access === 'restricted' && (
-        <p className="text-[11px] text-muted-foreground">
-          Salve o módulo primeiro pra liberar clientes/usuários específicos.
-        </p>
-      )}
-
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={onClose} type="button">
-          Cancelar
-        </Button>
-        <Button
-          size="sm"
-          onClick={submit}
-          disabled={busy}
-          type="button"
-        >
-          {busy ? 'Salvando...' : editing ? 'Salvar' : 'Criar módulo'}
-        </Button>
-      </div>
-    </Card>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" type="button" onClick={onClose} disabled={busy}>Cancelar</Button>
+          <Button type="button" onClick={submit} disabled={busy || !titulo.trim()}>
+            {busy ? 'Salvando...' : editing ? 'Salvar' : 'Criar módulo'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
