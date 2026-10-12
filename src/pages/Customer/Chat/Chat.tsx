@@ -11,6 +11,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { useConversationPresence } from '@/hooks/useConversationPresence';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { MensagensProntas } from '@/components/chat/message-funnels/MensagensProntas';
 import { usePendingOffers } from '@/contexts/PendingOffersContext';
 import { emOfertaParaQuemVe } from '@/features/conversas/painelDoLead';
 import { usePainelDoLeadAberto } from '@/features/conversas/usePainelDoLeadAberto';
@@ -172,6 +173,79 @@ const Chat = () => {
     selectedConversationIdStr,
     telaLarga,
   );
+
+  // MENSAGENS PRONTAS NA LATERAL (12/10/2026): em tela larga (o mesmo corte de
+  // 1280 px do painel do lead: abaixo disso a lateral espremeria a conversa), o
+  // foguete do campo de mensagem troca o painel do lead por elas (com animação)
+  // em vez de abrir a janela por cima da conversa. Abaixo, continua a janela.
+  // Lateral fechada quando o foguete foi clicado: ela abre só pra isso, e
+  // fechar as prontas fecha a lateral de novo.
+  const prontasNaLateral = telaLarga;
+  const [lateral, setLateral] = useState<'lead' | 'prontas'>('lead');
+  const [prontasMontadas, setProntasMontadas] = useState(false);
+  const [enviosDaLateral, setEnviosDaLateral] = useState(0);
+  const [campoTravado, setCampoTravado] = useState(false);
+  const abriuSoPraProntas = useRef(false);
+  // A lateral que abre agora é pelo foguete? Senão (nome do lead no topo, troca
+  // de conversa), ela abre no lead.
+  const abrindoPeloFoguete = useRef(false);
+  const voltaAoLead = useRef<number | undefined>(undefined);
+  const prontasAbertas = prontasNaLateral && isContactSidebarOpen && lateral === 'prontas';
+
+  // Lateral fechada (X do lead, conversa fechada): volta pro lead depois da
+  // animação de fechar. Aberta por outro caminho que não o foguete: lead.
+  useEffect(() => {
+    if (isContactSidebarOpen) {
+      if (!abrindoPeloFoguete.current) setLateral('lead');
+      abrindoPeloFoguete.current = false;
+      return undefined;
+    }
+    abriuSoPraProntas.current = false;
+    voltaAoLead.current = window.setTimeout(() => setLateral('lead'), 300);
+    return () => window.clearTimeout(voltaAoLead.current);
+  }, [isContactSidebarOpen]);
+
+  // Trocou de conversa: a lateral passa a seguir a regra do painel do lead.
+  useEffect(() => {
+    abriuSoPraProntas.current = false;
+  }, [selectedConversationIdStr]);
+
+  const voltarProLead = useCallback(() => {
+    abriuSoPraProntas.current = false;
+    setLateral('lead');
+  }, []);
+  const fecharProntas = useCallback(() => {
+    if (abriuSoPraProntas.current) setIsContactSidebarOpen(false);
+    else setLateral('lead');
+    abriuSoPraProntas.current = false;
+  }, [setIsContactSidebarOpen]);
+  const alternarProntas = useCallback(() => {
+    if (prontasAbertas) {
+      fecharProntas();
+      return;
+    }
+    window.clearTimeout(voltaAoLead.current);
+    if (!isContactSidebarOpen) {
+      // Lateral fechada: troca por baixo (sem animação, ninguém vê) e abre no
+      // quadro seguinte, já nas prontas.
+      abriuSoPraProntas.current = true;
+      abrindoPeloFoguete.current = true;
+      setProntasMontadas(true);
+      setLateral('prontas');
+      requestAnimationFrame(() => setIsContactSidebarOpen(true));
+      return;
+    }
+    abriuSoPraProntas.current = false;
+    if (!prontasMontadas) {
+      // Primeira vez: monta fora da tela e desliza no quadro seguinte (montar
+      // já no lugar não anima).
+      setProntasMontadas(true);
+      requestAnimationFrame(() => requestAnimationFrame(() => setLateral('prontas')));
+      return;
+    }
+    setLateral('prontas');
+  }, [prontasAbertas, fecharProntas, isContactSidebarOpen, setIsContactSidebarOpen, prontasMontadas]);
+  const aposEnviarNaLateral = useCallback(() => setEnviosDaLateral(n => n + 1), []);
 
   // A roleta ofertou este lead a quem está vendo e ainda não houve aceite (a mesma
   // conta da faixa de oferta, OfferActions): o painel e o topo mascaram o telefone.
@@ -785,7 +859,10 @@ const Chat = () => {
                 conversation={selectedConversation}
                 onBackClick={() => setMobileView('list')}
                 onCloseConversation={handleCloseConversation}
-                onContactSidebarOpen={() => setIsContactSidebarOpen(true)}
+                onContactSidebarOpen={() => {
+                  voltarProLead();
+                  setIsContactSidebarOpen(true);
+                }}
                 onMarkAsRead={handleMarkAsRead}
                 onMarkAsUnread={handleMarkAsUnread}
                 onMarkAsOpen={handleMarkAsOpen}
@@ -861,6 +938,10 @@ const Chat = () => {
                   onRetryMessage={handleRetryMessage}
                   isPendingConversation={selectedConversation?.status === 'pending'}
                   labels={etiquetasDaConta}
+                  onToggleProntas={prontasNaLateral ? alternarProntas : undefined}
+                  prontasAbertas={prontasAbertas}
+                  enviosDaLateral={enviosDaLateral}
+                  onCampoTravado={setCampoTravado}
                 />
               ) : (
                 // Show Dashboard App iframe when an app tab is active
@@ -920,6 +1001,21 @@ const Chat = () => {
             conversation={selectedConversation}
             onFilterReload={reloadCurrentFilters}
             emOferta={emOferta}
+            // Segue mostrando as prontas enquanto a lateral encolhe (sem o lead de relance).
+            mostrarProntas={prontasNaLateral && lateral === 'prontas'}
+            prontas={
+              prontasNaLateral && prontasMontadas ? (
+                <MensagensProntas
+                  ativo={prontasAbertas}
+                  onde="lateral"
+                  conversationId={selectedConversation?.id ?? null}
+                  onStarted={aposEnviarNaLateral}
+                  aoVoltar={voltarProLead}
+                  aoFechar={fecharProntas}
+                  bloqueado={selectedConversation?.status === 'pending' || emOferta || campoTravado}
+                />
+              ) : undefined
+            }
           />
         </Suspense>
 

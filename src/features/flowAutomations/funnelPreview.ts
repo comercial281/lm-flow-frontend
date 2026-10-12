@@ -32,6 +32,10 @@ function stepOf(node: FlowAutomationNode): FlowTemplatePreviewStep {
     case 'lead_action': {
       const action = String(cfg.action_type ?? '');
       const params = (cfg.params ?? {}) as Record<string, unknown>;
+      // Disparar outro funil não é uma mensagem: aparece pelo nome (e o funil
+      // que o tem cai em Funil nas Mensagens prontas).
+      if (action === 'send_message_funnel') return { kind: 'other', label: node.label || blockLabel(node) };
+      if (action === 'send_quick_reply') return { kind: 'send_whatsapp', text: node.label || 'Resposta rápida' };
       if (action.startsWith('send_')) {
         const text = String(params.message ?? params.caption ?? params.text ?? '').trim();
         const media = LEAD_ACTION_MEDIA[action];

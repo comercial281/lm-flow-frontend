@@ -8520,3 +8520,33 @@ Pedido do dono: deixar a janela de Modelos mais refinada. Ele escolheu, entre du
 - `PreviewStepLine` continua no `FunnelTemplatePicker` porque o *Disparar funil* da conversa usa.
 
 Testes: `TemplatePickerDialog.spec.tsx`, `ConversationFunnels.spec.tsx`, `templates.spec.ts`.
+
+## Mensagens prontas na lateral da conversa (12/10/2026)
+
+Pedido do dono do produto (modelo Zap Voice): a janela do "Disparar funil" abria **por cima da conversa** e cobria metade das mensagens, justamente quando o corretor precisa ler o que o lead disse pra escolher o que mandar. É a "entrega própria" de Funis de mensagem que o campo enxuto (08/10) deixou pra depois. Depende do backend `lm-flow#476` (`with_nodes=1`), mas funciona sem ele (ver armadilha 2).
+
+O que aparece na tela:
+
+- **O foguete do campo de mensagem virou "Mensagens prontas".** Em Conversas, com a tela a partir de 1280 px (o mesmo corte do painel do lead abrir sozinho; abaixo disso a lateral espremeria a conversa), ele **troca o painel do lead pelas Mensagens prontas, na lateral**: o lead sai deslizando pra esquerda e some, as prontas entram da direita (200 ms; sem animação pra quem pede menos movimento no sistema). No topo, **← Voltar pro lead** e **X**. Clicar no foguete de novo também fecha. Lateral fechada quando o foguete foi clicado: ela abre só pra isso, e o X fecha a lateral de novo.
+- **Separadas por tipo:** **Textos · Áudios · Mídias · Funis**, cada um com ícone e cor. Funil de **um passo só**, que é uma mensagem, cai no tipo dele (texto, áudio, foto/vídeo/documento/figurinha/book); o resto é Funil, com o resumo "💬 ⏱ 🎤 · 3 mensagens · 2 dias". **Abas** da casa, sem ícone nem contagem (as cinco cabem numa linha da lateral; decisão do Tony em 12/10): Tudo · Textos · Áudios · Mídias · Funis (só com dois tipos ou mais; tipo é categoria, então é aba, não botão de escolha: regra no GLOSSARIO, item 6). Sem filtro de dono (ocupava espaço demais na lateral): o item da equipe leva "· Da equipe".
+- **Ver e Enviar na própria linha** (apagados, acendem no mouse). **Ver abre a prévia ali mesmo, embaixo do item**, deslizando pra baixo; não é mais uma tela à parte. **Enviar sai na hora**, sem a prévia, pelo servidor e pelo número da conversa, como o Disparar de antes. Na lateral o painel fica aberto depois de enviar (dá pra mandar texto e depois áudio); na janela ele fecha.
+- **Conversa em que o campo está travado** (pendente, em oferta da roleta, número desconectado, janela de 24 h fechada): a lateral continua aberta, com o aviso "Nesta conversa não dá pra enviar agora" e o Enviar travado, igual ao foguete.
+- **Esc** fecha a prévia aberta e depois o painel; na lateral, só com o cursor dentro dela (o Esc de outra janela, do emoji ou do campo não fecha as prontas).
+- **Clicar no nome do lead no topo da conversa** volta pro painel do lead.
+- **Tela abaixo de 1280 px, celular e aba Conversa do card:** continua a janela em cima do campo, com a altura limitada ao espaço livre acima do campo (no celular o topo da conversa cobria o título e o X), com o conteúdo novo (`DispararFunilPanel` embrulha o `MensagensProntas`).
+- Funil com o passo a passo pela metade: **Termine de montar** (leva pro canvas). Desligado: apagado, sem Ver nem Enviar. Nenhum: "Nenhuma mensagem pronta ainda" com **Abrir Funis de mensagem**.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Mensagem pronta = funil de conversa.** As respostas rápidas antigas não voltam pra conversa; o "item único" do Zap Voice é o funil de um passo.
+2. **Botõezinhos fixos em cima do campo (favoritos ⭐) ficaram pra uma segunda entrega**, se o pessoal usar.
+
+Armadilhas:
+
+1. **Quem decide lateral × janela é o `Chat.tsx`** (`telaLarga`, 1280 px): com tela larga passa `onToggleProntas` pro `ChatArea` → `MessageInput`, e aí o campo não monta a janela. Sem `onToggleProntas`, tudo como antes. Envio pela lateral relê a faixa "automação rodando" por `enviosDaLateral` (contador) no `ChatArea`; o `ChatArea` devolve o campo travado por `onCampoTravado`, que vira `bloqueado` nas prontas junto com pendente e oferta. A lateral aberta por outro caminho que não o foguete (nome do lead, troca de conversa) abre no lead (`abrindoPeloFoguete`).
+2. **A lista pede `with_nodes=1`** (`flowAutomationsService.list({ withNodes: true })`). Servidor sem o `#476`: a lista vem sem blocos, tudo cai em Funil (com `message_count`) e o Ver busca o funil (`get`).
+3. **As duas camadas da lateral são absolutas e de largura fixa** (`md:w-[calc(24rem-1px)]`, a lateral menos a borda), pra não se espremerem quando a lateral abre/fecha (ela anima a largura). A escondida fica `inert`. As prontas só montam depois da primeira abertura; `mostrarProntas` segue `lateral` (não o aberto/fechado), pra o lead não aparecer de relance enquanto a lateral encolhe, e a lateral fechada volta pro lead depois de 300 ms. Como ficam montadas, cada abertura zera busca e filtros e põe o cursor na busca (efeito em `ativo`, não `autoFocus`).
+4. **A prévia fechada fica montada quando a sequência já é conhecida** (o grid `0fr → 1fr` precisa do conteúdo pra animar a volta); ela é `aria-hidden`.
+5. **Tarefas e Agendados continuam relendo escondidos atrás das prontas** (a lateral segue `isOpen`). Custa só requisição; desmontar faria buscar de novo a cada troca.
+6. **Tailwind 4: `translate-x-*` mexe na propriedade `translate`, não em `transform`.** A troca de camada usa `transition-[translate,opacity]`; com `transition-[transform,opacity]` só a opacidade anima. A transição só vale com a lateral aberta (`isOpen`), e o foguete com a lateral fechada troca a camada antes e abre a lateral no quadro seguinte (`requestAnimationFrame`); a primeira abertura com a lateral aberta monta as prontas fora da tela e desliza dois quadros depois.
+7. **A janela mede o espaço livre** (`DispararFunilPanel`, `espacoLivre`): do topo do campo até o primeiro contêiner que corta (rolagem) ou o fundo do `.wa-header` dentro dele, menos 16 px, mínimo 200 px. Relê ao redimensionar.
