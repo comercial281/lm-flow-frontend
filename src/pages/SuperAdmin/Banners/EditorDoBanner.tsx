@@ -1,0 +1,404 @@
+// Editor do banner (janela larga: formulário à esquerda, prévia à direita).
+//
+// O banner novo só nasce no servidor no primeiro Salvar ou no primeiro envio de
+// arte: abrir e cancelar não deixa rascunho sobrando. Publicar salva, conta o
+// público no servidor e confirma com o número ("Mostrar para 340 pessoas de 31
+// imobiliárias?"); se a conta mudar entre a pergunta e o clique, o servidor
+// recusa e a pergunta volta com o número novo.
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import {
+  Button, Checkbox, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Label, Textarea,
+} from '@/components/ui/ds';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { plural } from '@/lib/formato';
+import { dashboardBannersService as svc } from '@/services/superAdmin/dashboardBannersService';
+import type {
+  AcaoDoBanner, ArteDoBanner, BannerAdmin, CamposDoBanner, CargoDoBanner, ImobiliariaDoBanner,
+} from '@/types/admin/dashboardBanners';
+import { CARGOS, MEDIDA_DA_ARTE, doCampo, paraOCampo, perguntaDoPublico } from './regras';
+
+interface Props {
+  aberto: boolean;
+  banner: BannerAdmin | null;
+  imobiliarias: ImobiliariaDoBanner[];
+  aoMudar: (banner: BannerAdmin) => void;
+  aoFechar: () => void;
+}
+
+interface Formulario {
+  name: string;
+  click_action: AcaoDoBanner;
+  details_title: string;
+  details_body: string;
+  details_button_path: string;
+  link_url: string;
+  roles: CargoDoBanner[];
+  todas: boolean;
+  tenant_slugs: string[];
+  starts_at: string;
+  ends_at: string;
+}
+
+function formularioDe(b: BannerAdmin | null): Formulario {
+  return {
+    name: b?.name ?? '',
+    click_action: b?.click_action ?? 'details',
+    details_title: b?.details_title ?? '',
+    details_body: b?.details_body ?? '',
+    details_button_path: b?.details_button_path ?? '',
+    link_url: b?.link_url ?? '',
+    roles: b?.roles ?? ['admin', 'manager', 'agent'],
+    todas: (b?.tenant_slugs ?? []).length === 0,
+    tenant_slugs: b?.tenant_slugs ?? [],
+    starts_at: paraOCampo(b?.starts_at),
+    ends_at: paraOCampo(b?.ends_at),
+  };
+}
+
+function camposDe(f: Formulario): CamposDoBanner {
+  return {
+    name: f.name.trim(),
+    click_action: f.click_action,
+    details_title: f.details_title,
+    details_body: f.details_body,
+    details_button_path: f.details_button_path,
+    link_url: f.link_url,
+    roles: f.roles,
+    tenant_slugs: f.todas ? [] : f.tenant_slugs,
+    starts_at: doCampo(f.starts_at),
+    // Banner novo sem fim escolhido: o servidor põe 14 dias.
+    ...(f.ends_at ? { ends_at: doCampo(f.ends_at) } : {}),
+  };
+}
+
+const motivo = (e: unknown, padrao: string) =>
+  (e as { response?: { data?: { error?: string } } })?.response?.data?.error || padrao;
+
+export default function EditorDoBanner({ aberto, banner, imobiliarias, aoMudar, aoFechar }: Props) {
+  const [atual, setAtual] = useState<BannerAdmin | null>(banner);
+  const [form, setForm] = useState<Formulario>(() => formularioDe(banner));
+  const [inicial, setInicial] = useState<Formulario>(() => formularioDe(banner));
+  const [ocupado, setOcupado] = useState<null | 'salvar' | 'publicar' | ArteDoBanner>(null);
+  const [busca, setBusca] = useState('');
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+
+  useEffect(() => {
+    if (!aberto) return;
+    setAtual(banner);
+    setForm(formularioDe(banner));
+    setInicial(formularioDe(banner));
+    setBusca('');
+  }, [aberto, banner]);
+
+  const mudou = JSON.stringify(form) !== JSON.stringify(inicial);
+  const publicado = atual?.status === 'published';
+  const muda = <K extends keyof Formulario>(chave: K, valor: Formulario[K]) => setForm((f) => ({ ...f, [chave]: valor }));
+
+  const guardar = (b: BannerAdmin) => {
+    setAtual(b);
+    aoMudar(b);
+    const novo = formularioDe(b);
+    setForm(novo);
+    setInicial(novo);
+    return b;
+  };
+
+  // Cria (se ainda não existe) ou salva o que está no formulário.
+  const salvarNoServidor = async (): Promise<BannerAdmin> => {
+    const campos = camposDe(form);
+    return guardar(atual ? await svc.salvar(atual.id, campos) : await svc.criar(campos));
+  };
+
+  const salvar = async () => {
+    setOcupado('salvar');
+    try { await salvarNoServidor(); toast.success('Banner salvo.'); }
+    catch (e) { toast.error(motivo(e, 'Não deu pra salvar o banner.')); }
+    finally { setOcupado(null); }
+  };
+
+  const publicar = async () => {
+    setOcupado('publicar');
+    try {
+      const salvo = await salvarNoServidor();
+      let publico = await svc.contarPublico(salvo.roles, salvo.tenant_slugs);
+      for (let tentativa = 0; tentativa < 2; tentativa += 1) {
+        const sim = await confirmar({
+          titulo: perguntaDoPublico(publico),
+          descricao: publico.unreadable.length
+            ? `Não consegui contar: ${publico.unreadable.join(', ')}. Eles recebem mesmo assim.`
+            : 'O banner aparece na Dashboard de cada pessoa a partir do início escolhido.',
+          rotuloDaAcao: 'Publicar',
+        });
+        if (!sim) return;
+        try {
+          guardar(await svc.publicar(salvo.id, publico.people));
+          toast.success('Banner publicado.');
+          aoFechar();
+          return;
+        } catch (e) {
+          const novo = (e as { response?: { status?: number; data?: { audience?: typeof publico } } })?.response;
+          if (novo?.status !== 409 || !novo.data?.audience) throw e;
+          publico = novo.data.audience;
+        }
+      }
+    } catch (e) {
+      toast.error(motivo(e, 'Não deu pra publicar o banner.'));
+    } finally {
+      setOcupado(null);
+    }
+  };
+
+  const enviarArte = async (arte: ArteDoBanner, arquivo: File | undefined) => {
+    if (!arquivo) return;
+    setOcupado(arte);
+    try {
+      const salvo = atual ?? (await salvarNoServidor());
+      guardar(await svc.enviarArte(salvo.id, arte, arquivo));
+    } catch (e) {
+      toast.error(motivo(e, 'Não deu pra enviar a arte.'));
+    } finally {
+      setOcupado(null);
+    }
+  };
+
+  const tirarArte = async (arte: ArteDoBanner) => {
+    if (!atual) return;
+    setOcupado(arte);
+    try { guardar(await svc.tirarArte(atual.id, arte)); }
+    catch (e) { toast.error(motivo(e, 'Não deu pra tirar a imagem.')); }
+    finally { setOcupado(null); }
+  };
+
+  const fechar = async () => {
+    if (ocupado) return;
+    if (mudou && !(await confirmar({ titulo: 'Sair sem salvar?', descricao: 'As alterações deste banner se perdem.', rotuloDaAcao: 'Sair sem salvar', destrutivo: true }))) return;
+    aoFechar();
+  };
+
+  const imobiliariasFiltradas = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    return termo ? imobiliarias.filter((i) => i.name.toLowerCase().includes(termo)) : imobiliarias;
+  }, [busca, imobiliarias]);
+
+  const alternarCargo = (cargo: CargoDoBanner, sim: boolean) =>
+    muda('roles', sim ? [...form.roles, cargo] : form.roles.filter((c) => c !== cargo));
+  const alternarImobiliaria = (slug: string, sim: boolean) =>
+    muda('tenant_slugs', sim ? [...form.tenant_slugs, slug] : form.tenant_slugs.filter((s) => s !== slug));
+
+  return (
+    <>
+      <Dialog open={aberto} onOpenChange={(sim) => { if (!sim) void fechar(); }}>
+        <DialogContent size="wide">
+          <DialogHeader><DialogTitle>{atual ? atual.name : 'Novo banner'}</DialogTitle></DialogHeader>
+
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div className="flex flex-col gap-6">
+              <div>
+                <Label htmlFor="banner-nome">Nome interno</Label>
+                <Input id="banner-nome" placeholder="Atualização · Mensagens prontas" value={form.name}
+                  onChange={(e) => muda('name', e.target.value)} />
+                <p className="mt-1 text-xs text-muted-foreground">Só a Leal Mídia vê.</p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <CampoDeArte arte="desktop" titulo="Arte do computador" medida={MEDIDA_DA_ARTE.desktop}
+                  url={atual?.desktop_url ?? null} ocupado={ocupado === 'desktop'} aoEscolher={enviarArte} />
+                <CampoDeArte arte="mobile" titulo="Arte do celular" medida={MEDIDA_DA_ARTE.mobile}
+                  url={atual?.mobile_url ?? null} ocupado={ocupado === 'mobile'} aoEscolher={enviarArte} />
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <Label>Ao clicar</Label>
+                <BotoesDeEscolha<AcaoDoBanner>
+                  rotulo="Ao clicar"
+                  valor={form.click_action}
+                  aoEscolher={(v) => muda('click_action', v)}
+                  opcoes={[
+                    { valor: 'details', rotulo: 'Abrir detalhes' },
+                    { valor: 'link', rotulo: 'Abrir link' },
+                    { valor: 'none', rotulo: 'Nada' },
+                  ]}
+                />
+                {form.click_action === 'details' && (
+                  <div className="flex flex-col gap-4 rounded-lg border bg-muted/30 p-4">
+                    <div>
+                      <Label htmlFor="banner-titulo">Título</Label>
+                      <Input id="banner-titulo" placeholder="Mensagens prontas agora ficam do lado da conversa"
+                        value={form.details_title} onChange={(e) => muda('details_title', e.target.value)} />
+                    </div>
+                    <div>
+                      <Label htmlFor="banner-texto">Texto</Label>
+                      <Textarea id="banner-texto" rows={6} value={form.details_body}
+                        onChange={(e) => muda('details_body', e.target.value)} />
+                    </div>
+                    <CampoDeArte arte="details" titulo="Imagem ou gif (opcional)" medida="Qualquer medida, até 5 MB"
+                      url={atual?.details_image_url ?? null} ocupado={ocupado === 'details'} aoEscolher={enviarArte}
+                      aoTirar={atual?.details_image_url ? () => void tirarArte('details') : undefined} />
+                    <div>
+                      <Label htmlFor="banner-ver-agora">Endereço do botão Ver agora (opcional)</Label>
+                      <Input id="banner-ver-agora" placeholder="/conversations" value={form.details_button_path}
+                        onChange={(e) => muda('details_button_path', e.target.value)} />
+                      <p className="mt-1 text-xs text-muted-foreground">Vazio, a janela sai sem o botão.</p>
+                    </div>
+                  </div>
+                )}
+                {form.click_action === 'link' && (
+                  <div>
+                    <Label htmlFor="banner-link">Endereço</Label>
+                    <Input id="banner-link" placeholder="/academia ou https://…" value={form.link_url}
+                      onChange={(e) => muda('link_url', e.target.value)} />
+                    <p className="mt-1 text-xs text-muted-foreground">Endereço do LM Flow abre na mesma aba; de fora, em aba nova.</p>
+                  </div>
+                )}
+              </div>
+
+              <fieldset className="flex flex-col gap-3">
+                <legend className="mb-2 text-sm font-medium">Para quem</legend>
+                <div className="flex flex-wrap gap-x-6 gap-y-2">
+                  {CARGOS.map((c) => (
+                    <label key={c.valor} className="flex items-center gap-2 text-sm">
+                      <Checkbox checked={form.roles.includes(c.valor)} onCheckedChange={(v) => alternarCargo(c.valor, v === true)} />
+                      {c.rotulo}
+                    </label>
+                  ))}
+                </div>
+                <BotoesDeEscolha<'todas' | 'escolher'>
+                  rotulo="Imobiliárias"
+                  valor={form.todas ? 'todas' : 'escolher'}
+                  aoEscolher={(v) => muda('todas', v === 'todas')}
+                  opcoes={[{ valor: 'todas', rotulo: 'Todas as imobiliárias' }, { valor: 'escolher', rotulo: 'Escolher' }]}
+                />
+                {!form.todas && (
+                  <div className="rounded-lg border bg-muted/30 p-3">
+                    <Input aria-label="Buscar imobiliária" placeholder="Buscar imobiliária" value={busca}
+                      onChange={(e) => setBusca(e.target.value)} />
+                    <div className="mt-2 max-h-56 overflow-y-auto">
+                      {imobiliariasFiltradas.map((i) => (
+                        <label key={i.slug} className="flex items-center gap-2 py-1.5 text-sm">
+                          <Checkbox checked={form.tenant_slugs.includes(i.slug)}
+                            onCheckedChange={(v) => alternarImobiliaria(i.slug, v === true)} />
+                          {i.name}
+                        </label>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {plural(form.tenant_slugs.length, 'imobiliária escolhida', 'imobiliárias escolhidas')}
+                    </p>
+                  </div>
+                )}
+              </fieldset>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="banner-inicio">Início</Label>
+                  <Input id="banner-inicio" type="datetime-local" value={form.starts_at}
+                    onChange={(e) => muda('starts_at', e.target.value)} />
+                  <p className="mt-1 text-xs text-muted-foreground">Vazio: assim que publicar.</p>
+                </div>
+                <div>
+                  <Label htmlFor="banner-fim">Fim</Label>
+                  <Input id="banner-fim" type="datetime-local" value={form.ends_at}
+                    onChange={(e) => muda('ends_at', e.target.value)} />
+                  <p className="mt-1 text-xs text-muted-foreground">Banner novo nasce com 14 dias.</p>
+                </div>
+              </div>
+            </div>
+
+            <Previa banner={atual} form={form} />
+          </div>
+
+          <DialogFooter className="sm:justify-between">
+            <Button variant="outline" onClick={() => void fechar()} disabled={!!ocupado}>Cancelar</Button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              {!publicado && (
+                <Button variant="outline" onClick={() => void salvar()} disabled={!!ocupado}>
+                  {ocupado === 'salvar' && <Loader2 className="h-4 w-4 animate-spin" />}Salvar rascunho
+                </Button>
+              )}
+              {publicado ? (
+                <Button onClick={() => void salvar()} disabled={!!ocupado || !mudou}>
+                  {ocupado === 'salvar' && <Loader2 className="h-4 w-4 animate-spin" />}Salvar
+                </Button>
+              ) : (
+                <Button onClick={() => void publicar()} disabled={!!ocupado}>
+                  {ocupado === 'publicar' && <Loader2 className="h-4 w-4 animate-spin" />}Publicar
+                </Button>
+              )}
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {dialogoDeConfirmacao}
+    </>
+  );
+}
+
+interface CampoDeArteProps {
+  arte: ArteDoBanner;
+  titulo: string;
+  medida: string;
+  url: string | null;
+  ocupado: boolean;
+  aoEscolher: (arte: ArteDoBanner, arquivo: File | undefined) => void;
+  aoTirar?: () => void;
+}
+
+function CampoDeArte({ arte, titulo, medida, url, ocupado, aoEscolher, aoTirar }: CampoDeArteProps) {
+  const entrada = useRef<HTMLInputElement>(null);
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm font-medium">{titulo}</p>
+      <p className="text-xs text-muted-foreground">{medida}</p>
+      {url && <img src={url} alt={titulo} className="w-full rounded-md border" />}
+      <input
+        ref={entrada}
+        type="file"
+        accept={arte === 'details' ? 'image/png,image/jpeg,image/webp,image/gif' : 'image/png,image/jpeg,image/webp'}
+        className="sr-only"
+        aria-label={`Escolher arquivo: ${titulo}`}
+        onChange={(e) => { aoEscolher(arte, e.target.files?.[0]); e.target.value = ''; }}
+      />
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" disabled={ocupado} onClick={() => entrada.current?.click()}>
+          {ocupado && <Loader2 className="h-4 w-4 animate-spin" />}{url ? 'Trocar' : 'Enviar'}
+        </Button>
+        {aoTirar && <Button variant="ghost" size="sm" disabled={ocupado} onClick={aoTirar}>Tirar</Button>}
+      </div>
+    </div>
+  );
+}
+
+function Previa({ banner, form }: { banner: BannerAdmin | null; form: Formulario }) {
+  return (
+    <div className="flex flex-col gap-6 lg:sticky lg:top-0 lg:self-start">
+      <div>
+        <p className="mb-2 text-sm font-medium">Prévia no computador</p>
+        {banner?.desktop_url
+          ? <img src={banner.desktop_url} alt="Prévia no computador" className="aspect-[5/1] w-full rounded-xl object-cover" />
+          : <div className="grid aspect-[5/1] w-full place-items-center rounded-xl border border-dashed text-xs text-muted-foreground">Envie a arte do computador</div>}
+      </div>
+      <div>
+        <p className="mb-2 text-sm font-medium">Prévia no celular</p>
+        <div className="w-[360px] max-w-full">
+          {banner?.mobile_url
+            ? <img src={banner.mobile_url} alt="Prévia no celular" className="aspect-[2/1] w-full rounded-xl object-cover" />
+            : <div className="grid aspect-[2/1] w-full place-items-center rounded-xl border border-dashed text-xs text-muted-foreground">Envie a arte do celular</div>}
+        </div>
+      </div>
+      {form.click_action === 'details' && (
+        <div>
+          <p className="mb-2 text-sm font-medium">Janela ao clicar</p>
+          <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-4">
+            <p className="text-base font-semibold">{form.details_title || 'Título'}</p>
+            {banner?.details_image_url && <img src={banner.details_image_url} alt="" className="w-full rounded-lg" />}
+            <p className="whitespace-pre-line text-sm leading-relaxed">{form.details_body || 'Texto dos detalhes.'}</p>
+            {form.details_button_path && <p className="self-end text-sm font-medium text-primary">Ver agora →</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

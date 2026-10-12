@@ -160,6 +160,7 @@ const AdminLogs = lazyWithRetry(() => import('@/pages/SuperAdmin/Logs'));
 const AdminMensagemDeAcesso = lazyWithRetry(() => import('@/pages/SuperAdmin/MensagemDeAcesso'));
 const AdminAvisosNaTela = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral/NotificationsTab'));
 const AdminComunicadoWhatsapp = lazyWithRetry(() => import('@/pages/SuperAdmin/ComunicadoWhatsapp'));
+const AdminBanners = lazyWithRetry(() => import('@/pages/SuperAdmin/Banners'));
 const AdminMenusArquivados = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClients/ArchivedFeaturesView'));
 const AdminSuporteLista = lazyWithRetry(() => import('@/pages/SuperAdmin/Suporte/SuporteLista'));
 const AdminSuporteChamado = lazyWithRetry(() => import('@/pages/SuperAdmin/Suporte/SuporteChamado'));
@@ -1381,6 +1382,7 @@ const AppRouter = () => {
               <Route path="/admin/comunicacao" element={<AdminConteudo><AdminAvisosNaTela /></AdminConteudo>} />
               <Route path="/admin/push" element={<PushCentral />} />
               <Route path="/admin/comunicacao/whatsapp" element={<AdminComunicadoWhatsapp />} />
+              <Route path="/admin/comunicacao/banner" element={<AdminConteudo><AdminBanners /></AdminConteudo>} />
               {/* Plataforma */}
               <Route path="/admin/academia" element={<AdminAcademia />} />
               <Route path="/admin/plataforma" element={<AdminPlataforma />} />

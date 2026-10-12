@@ -8586,6 +8586,19 @@ Armadilhas:
 
 Não reabrir sem o dono pedir.
 
+## Banner da Dashboard (12/10/2026)
+
+Pedido do dono: avisar a carteira das atualizações sem pop-up que ninguém lê. Ele trocou a ideia de "aba de atualizações com pop-up" pelo banner que já estava planejado: a atualização é um banner padrão que, ao clicar, abre os detalhes. Spec: `LM FLOW/specs/2026-10-12-banner-dashboard-design.md`. Servidor: lm-flow #477 (no ar).
+
+Decisões do dono (não reabrir sem ele pedir): **só na Dashboard**; vários no ar = **carrossel**; a **arte é sempre subida pela Leal Mídia** (computador 2800 × 560, celular 1080 × 540); **nada abre sozinho**.
+
+- **Dashboard** (`DashboardNova/BannerDaDashboard.tsx`, dentro do `data-slot="banner"`): sem banner ou com falha, não desenha nada e o espaço some. A caixa tem a proporção da arte (`aspect-[2/1] md:aspect-[5/1]`, troca abaixo de 768 px) e a arte nunca é cortada (o servidor recusa medida errada). Carrossel por rolagem com encaixe (arrastar no celular é nativo), passa a cada 7 s, para com mouse, foco ou dedo e não passa sozinho pra quem pediu menos movimento. Bolinhas embaixo, nunca por cima da arte. Ao clicar: detalhes (janela grande, texto com quebra de linha, imagem ou gif opcional, Ver agora), link (de fora em aba nova) ou nada.
+- **Números**: o banner registra "apareceu" na primeira vez que fica à vista (uma vez por montagem) e o clique; o servidor guarda uma vez por pessoa e ignora a Leal Mídia.
+- **Admin → Comunicação → Banner** (`/admin/comunicacao/banner`, `SuperAdmin/Banners/`): lista com miniatura, situação (Rascunho, Agendado, No ar, Encerrado) e "Apareceu para N · M clicaram"; ⋮ com Editar, Tirar do ar e Excluir (os dois confirmam). Editor em janela larga: formulário à esquerda, prévia no computador, no celular (360 px) e da janela de detalhes à direita.
+- **Banner novo só nasce no servidor no primeiro Salvar ou no primeiro envio de arte**: abrir e cancelar não deixa rascunho.
+- **Publicar** salva, pede ao servidor a conta do público e confirma com ela ("Mostrar para 340 pessoas de 31 imobiliárias?"). Se o servidor responder 409 (o público mudou), a pergunta volta com o número novo.
+- A medida da arte é regra do servidor: a tela só mostra o motivo que ele devolve.
+- Testes: `BannerDaDashboard.spec.tsx`, `Banners.spec.tsx`, `regras.spec.ts`.
 ## Portais redesenhados: uma situação por portal e a página em abas (12/10/2026)
 
 Pedido do dono: a aba *Integrações → Portais* estava poluída. Eram 11 cartões iguais, cada um
