@@ -45,6 +45,10 @@ export interface KnowledgeDoc {
 export type KnowledgeAccess = 'free' | 'restricted';
 export type LockCtaType = 'whatsapp' | 'link' | 'text' | 'none';
 
+// Quem assiste o módulo: 'all' = todos (padrão) · 'managers' = só gestores e
+// administradores. Opcional porque servidor/linha antiga pode não mandar.
+export type QuemAssiste = 'all' | 'managers';
+
 export interface KnowledgeCourse {
   id: string;
   titulo: string;
@@ -71,6 +75,7 @@ export interface KnowledgeModule {
   tenant_slug: string | null; // null = global (todos os tenants); slug = só aquele cliente
   ordem: number;
   access: KnowledgeAccess;
+  audience?: QuemAssiste;
   lock_cta_type: LockCtaType;
   lock_cta_label: string | null;
   lock_cta_value: string | null;
@@ -446,6 +451,7 @@ export interface ModuleInput {
   tenant_slug?: string | null;
   course_id?: string | null;
   access?: KnowledgeAccess;
+  audience?: QuemAssiste;
   lock_cta_type?: LockCtaType;
   lock_cta_label?: string | null;
   lock_cta_value?: string | null;
@@ -462,6 +468,7 @@ export function useCreateModule() {
         tenant_slug: input.tenant_slug ?? null,
         course_id: input.course_id ?? null,
         access: input.access ?? 'free',
+        audience: input.audience ?? 'all',
         lock_cta_type: input.lock_cta_type ?? 'whatsapp',
         lock_cta_label: input.lock_cta_label ?? null,
         lock_cta_value: input.lock_cta_value ?? null,
