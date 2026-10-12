@@ -6,11 +6,7 @@ import { Maximize2 } from 'lucide-react';
 import AcademiaHome from '@/pages/Customer/Academia/AcademiaHome';
 import { Button } from '@/components/ui/ds';
 
-interface Props {
-  canEdit: boolean;
-}
-
-export default function AulasTab({ canEdit }: Props) {
+export default function AulasTab() {
   const navigate = useNavigate();
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -24,7 +20,7 @@ export default function AulasTab({ canEdit }: Props) {
           <Maximize2 className="h-4 w-4" /> Abrir em tela cheia
         </Button>
       </div>
-      <AcademiaHome canEdit={canEdit} embedded />
+      <AcademiaHome embedded />
     </div>
   );
 }

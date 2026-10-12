@@ -1,650 +1,196 @@
-// Área de membros — visão de um curso estilo Kiwify:
-// player central + sidebar de módulos (sanfona) com aulas numeradas e progresso.
-// Módulos bloqueados aparecem com cadeado + CTA. Aluno: assiste, marca visto,
-// baixa anexos, avalia e comenta. Admin: cria módulo/aula, edita, reordena, anexa.
+// Área de membros — tela do curso: aula à esquerda, lista à direita.
+// Quem vê o quê: quemVe.ts. Corretor que abre link de aula/curso de gestor vê o aviso.
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { ArrowLeft, FolderPlus, Pencil, PlayCircle } from 'lucide-react';
 import {
-  ArrowLeft, PlayCircle, CheckCircle2, Circle, Clock, ChevronLeft, ChevronRight,
-  Lock, Plus, Pencil, Trash2, ChevronUp, ChevronDown, X, Link2, Upload, FolderPlus, Megaphone,
-} from 'lucide-react';
-import {
-  useCourses, useModules, useAllLessons, useProgress, useToggleProgress,
-  useCreateLesson, useUploadLessonVideo, useReplaceLessonVideo, useDeleteLesson, useUpdateLesson,
-  useDeleteModule, useEntitlements, useRatings, useSetRating, computeLocked,
-  getCurrentUserRef, TENANT_SLUG,
-  type KnowledgeModule, type KnowledgeLesson, type KnowledgeCourse,
+  useCourses, useModules, useAllLessons, useProgress, useEntitlements, useDeleteModule, useUpdateModule,
+  computeLocked, getCurrentUserRef, TENANT_SLUG,
+  type KnowledgeLesson, type KnowledgeModule, type KnowledgeCourse,
 } from '@/hooks/useKnowledge';
-import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
-import { parseVideoUrl, formatDuration } from '@/pages/Customer/Tutorials/_internal/lib';
-import VideoEmbed from '@/pages/Customer/Tutorials/_internal/VideoEmbed';
-import CommentsSection from '@/pages/Customer/Tutorials/_internal/CommentsSection';
-import LockOverlay, { LockCta } from './LockOverlay';
-import LessonAttachments from './LessonAttachments';
-import StarRating from './StarRating';
-import ModuleForm from './ModuleForm';
-import AnnounceLessonModal from './AnnounceLessonModal';
-import CourseForm from './CourseForm';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
-import CoverPicker from './CoverPicker';
-import { GERAL_COURSE_ID } from './_lib';
-import { toast } from 'sonner';
-
+import Aviso from '@/components/base/Aviso';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
-import { Card, Button } from '@/components/ui/ds';
-interface Props {
-  onBack: () => void;
-}
+import { Button } from '@/components/ui/ds';
+import LockOverlay from './LockOverlay';
+import ModuleForm from './ModuleForm';
+import CourseForm from './CourseForm';
+import BarraDaLealMidia from './BarraDaLealMidia';
+import JanelaDaAula from './curso/JanelaDaAula';
+import ListaDeAulas from './curso/ListaDeAulas';
+import PainelDaAula from './curso/PainelDaAula';
+import { GERAL_COURSE_ID } from './_lib';
+import { useCargoNaAcademia } from './useCargoNaAcademia';
+import { agruparAulas, modulosVisiveis, podeAssistir, trocarOrdem } from './quemVe';
 
-export default function CourseView({ onBack }: Props) {
+export default function CourseView({ onBack }: { onBack: () => void }) {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const { courseId = '' } = useParams();
   const [params, setParams] = useSearchParams();
-  const canEdit = useIsSuperAdmin();
+  const { cargo, podeEditar, pronto } = useCargoNaAcademia();
+  const soLeitura = cargo !== 'admin';
 
   const { data: courses = [] } = useCourses();
   const { data: allModules = [], isLoading: carregandoModulos, error: erroModulos, refetch: recarregarModulos } = useModules();
   const { data: entitlements = [] } = useEntitlements();
   const { data: progress = {} } = useProgress();
-
+  const deleteModule = useDeleteModule();
+  const updateModule = useUpdateModule();
   const userRef = getCurrentUserRef();
+
   const isGeral = courseId === GERAL_COURSE_ID;
   const course: KnowledgeCourse | null = isGeral ? null : courses.find((c) => c.id === courseId) ?? null;
+  const titulo = isGeral ? 'Aulas avulsas' : course?.titulo ?? 'Curso';
 
-  const modules = useMemo(
-    () =>
-      allModules
-        .filter((m) => (isGeral ? m.course_id == null : m.course_id === courseId))
-        .sort((a, b) => a.ordem - b.ordem),
+  const doCurso = useMemo(
+    () => allModules.filter((m) => (isGeral ? m.course_id == null : m.course_id === courseId))
+      .sort((a, b) => a.ordem - b.ordem || a.created_at.localeCompare(b.created_at)),
     [allModules, courseId, isGeral],
   );
-  const moduleIds = useMemo(() => modules.map((m) => m.id), [modules]);
-  const { data: allLessons = [] } = useAllLessons(moduleIds);
+  const { data: aulasCruas, isLoading: carregandoAulas } = useAllLessons(useMemo(() => doCurso.map((m) => m.id), [doCurso]));
+  // Desligado (ainda sem módulos) ou buscando, `data` é undefined: só decide "vazio" depois que as aulas chegaram.
+  const aulasCarregadas = !carregandoAulas && aulasCruas !== undefined;
+  const allLessons = useMemo(() => aulasCruas ?? [], [aulasCruas]);
+  const aulasPorModulo = useMemo(() => agruparAulas(allLessons), [allLessons]);
+  const modulos = useMemo(() => modulosVisiveis(doCurso, aulasPorModulo, cargo, aulasCarregadas), [doCurso, aulasPorModulo, cargo, aulasCarregadas]);
 
-  const lessonsByModule = useMemo(() => {
-    const map: Record<string, KnowledgeLesson[]> = {};
-    for (const l of allLessons) (map[l.module_id] ??= []).push(l);
-    for (const k of Object.keys(map)) map[k].sort((a, b) => a.ordem - b.ordem);
-    return map;
-  }, [allLessons]);
-
-  // Admin (super-admin) fura o cadeado: vê e gerencia tudo, com selo "Restrito".
-  const moduleLocked = (m: KnowledgeModule) =>
-    !canEdit && computeLocked(m, 'module', m.id, entitlements, TENANT_SLUG, userRef);
-
-  // Aulas "abertas" (de módulos desbloqueados), em ordem — pra prev/next e continue.
-  const openLessons = useMemo(() => {
-    const out: KnowledgeLesson[] = [];
-    for (const m of modules) {
-      if (moduleLocked(m)) continue;
-      out.push(...(lessonsByModule[m.id] ?? []));
-    }
-    return out;
+  const travado = (m: KnowledgeModule) => soLeitura && computeLocked(m, 'module', m.id, entitlements, TENANT_SLUG, userRef);
+  const abertas: KnowledgeLesson[] = useMemo(
+    () => modulos.filter((m) => !travado(m)).flatMap((m) => aulasPorModulo[m.id] ?? []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modules, lessonsByModule, entitlements, userRef]);
+    [modulos, aulasPorModulo, entitlements, userRef, soLeitura],
+  );
 
-  const [selectedId, setSelectedId] = useState<string | null>(params.get('lesson'));
+  const pedida = params.get('lesson');
+  const [selecionada, setSelecionada] = useState<string | null>(pedida);
+  const aulaPedidaDeGestor = useMemo(() => {
+    if (!pedida || cargo !== 'corretor') return false;
+    const l = allLessons.find((x) => x.id === pedida);
+    const m = l && doCurso.find((x) => x.id === l.module_id);
+    return !!m && !podeAssistir(m, cargo);
+  }, [pedida, cargo, allLessons, doCurso]);
 
-  // Seleção default: ?lesson válido, senão 1ª aula não concluída, senão a 1ª.
   useEffect(() => {
-    if (selectedId && openLessons.some((l) => l.id === selectedId)) return;
-    if (openLessons.length === 0) return;
-    const next = openLessons.find((l) => !progress[l.id]) ?? openLessons[0];
-    setSelectedId(next.id);
+    if (aulaPedidaDeGestor) return;
+    if (selecionada && abertas.some((l) => l.id === selecionada)) return;
+    if (abertas.length === 0) return;
+    setSelecionada((abertas.find((l) => !progress[l.id]) ?? abertas[0]).id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openLessons]);
+  }, [abertas, aulaPedidaDeGestor]);
 
-  // Sincroniza ?lesson na URL.
   useEffect(() => {
-    if (!selectedId) return;
+    if (!selecionada) return;
     const next = new URLSearchParams(params);
-    next.set('lesson', selectedId);
+    next.set('lesson', selecionada);
     setParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId]);
+  }, [selecionada]);
 
-  const selected = openLessons.find((l) => l.id === selectedId) ?? null;
-  const selectedIdx = openLessons.findIndex((l) => l.id === selectedId);
+  const [cursoForm, setCursoForm] = useState(false);
+  const [moduloForm, setModuloForm] = useState<{ editing: KnowledgeModule | null } | null>(null);
+  const [aulaForm, setAulaForm] = useState<{ moduleId: string; editing: KnowledgeLesson | null } | null>(null);
 
-  // Admin state
-  const [showCourseForm, setShowCourseForm] = useState(false);
-  const [moduleForm, setModuleForm] = useState<{ editing: KnowledgeModule | null } | null>(null);
-  const deleteModule = useDeleteModule();
+  const [movendo, setMovendo] = useState(false);
+  async function moverModulo(m: KnowledgeModule, dir: -1 | 1) {
+    if (movendo) return;
+    // Ordem empatada (tudo 0) não troca nada: regrava o índice de cada módulo que mudou.
+    const mudancas = trocarOrdem(modulos, modulos.findIndex((x) => x.id === m.id), dir);
+    if (mudancas.length === 0) return;
+    setMovendo(true);
+    try {
+      for (const c of mudancas) await updateModule.mutateAsync(c);
+    } catch {
+      /* o hook já avisa o erro */
+    } finally {
+      setMovendo(false);
+    }
+  }
 
-  // Curso bloqueado (guarda extra) — admin fura o cadeado.
-  if (course && !canEdit && computeLocked(course, 'course', course.id, entitlements, TENANT_SLUG, userRef)) {
+  const barra = (
+    <div className="flex items-center gap-3 border-b border-border px-5 py-3 md:px-8">
+      <button onClick={onBack} type="button" className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-4 w-4 shrink-0" /><span className="truncate font-semibold text-foreground">{titulo}</span>
+      </button>
+    </div>
+  );
+
+  // Curso inteiro sem nada que esta pessoa possa assistir (ex.: corretor num curso só de gestor).
+  if (!carregandoModulos && aulasCarregadas && cargo !== 'admin' && doCurso.length > 0 && modulos.length === 0) {
+    const deGestor = doCurso.some((m) => !podeAssistir(m, cargo));
     return (
-      <div className="flex-1 flex flex-col min-h-0">
-        <TopBar title={course.titulo} onBack={onBack} />
-        <LockOverlay lock={course} />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <BarraDaLealMidia />
+        {barra}
+        {deGestor && !pronto ? (
+          <Carregando variante="texto" linhas={6} className="p-10" />
+        ) : (
+          <div className="mx-auto max-w-md p-8">
+            <Aviso tom="neutro" titulo={deGestor ? 'Este curso é só para gestores' : 'Nenhuma aula neste curso ainda.'}>
+              {deGestor ? 'Peça a um gestor da sua imobiliária se precisar deste conteúdo.' : 'Volte em breve.'}
+            </Aviso>
+          </div>
+        )}
       </div>
     );
   }
 
-  const title = isGeral ? 'Geral' : course?.titulo ?? 'Curso';
+  if (course && soLeitura && computeLocked(course, 'course', course.id, entitlements, TENANT_SLUG, userRef)) {
+    return (<div className="flex min-h-0 flex-1 flex-col"><BarraDaLealMidia />{barra}<LockOverlay lock={course} /></div>);
+  }
+
+  const aula = abertas.find((l) => l.id === selecionada) ?? null;
+  const idx = aula ? abertas.findIndex((l) => l.id === aula.id) : -1;
+  const moduloDaAula = aula ? modulos.find((m) => m.id === aula.module_id) ?? null : null;
 
   return (
     <>
-    <div className="flex-1 flex flex-col min-h-0">
-      <TopBar
-        title={title}
-        onBack={onBack}
-        right={
-          canEdit ? (
-            <div className="flex items-center gap-2">
-              {course && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCourseForm(true)}
-                  type="button"
-                >
-                  <Pencil className="h-4 w-4" /> Editar curso
-                </Button>
-              )}
-              <Button
-                size="sm"
-                onClick={() => setModuleForm({ editing: null })}
-                type="button"
-              >
-                <FolderPlus className="h-4 w-4" /> Novo módulo
-              </Button>
-            </div>
-          ) : undefined
-        }
-      />
-
-      {(showCourseForm || moduleForm) && (
-        <div className="px-5 md:px-8 pt-4 overflow-y-auto">
-          {showCourseForm && course && (
-            <CourseForm editing={course} onClose={() => setShowCourseForm(false)} />
-          )}
-          {moduleForm && (
-            <ModuleForm
-              editing={moduleForm.editing}
-              defaultCourseId={isGeral ? null : courseId}
-              onClose={() => setModuleForm(null)}
-            />
-          )}
-        </div>
-      )}
-
-      <div className="flex-1 flex flex-col md:flex-row min-h-0">
-        {/* Player + conteúdo — sempre no topo no mobile, à esquerda no desktop */}
-        <div className="flex-1 overflow-y-auto min-w-0 order-1">
-          {selected ? (
-            <LessonPanel
-              key={selected.id}
-              lesson={selected}
-              lessons={openLessons}
-              index={selectedIdx}
-              canEdit={canEdit}
-              courseId={courseId}
-              courseTitle={title}
-              moduleTitle={modules.find((m) => m.id === selected.module_id)?.titulo ?? ''}
-              onSelect={setSelectedId}
-              onDeleted={() => setSelectedId(null)}
-            />
-          ) : modules.length === 0 && carregandoModulos ? (
-            <Carregando variante="texto" linhas={6} className="p-10" />
-          ) : modules.length === 0 && erroModulos ? (
-            <EmptyState tipo="erro" className="h-full min-h-[280px]" aoTentarDeNovo={() => void recarregarModulos()} />
-          ) : modules.length === 0 ? (
-            <EmptyState icon={PlayCircle} title="Nenhum módulo neste curso ainda." className="h-full min-h-[280px]" />
-          ) : (
-            <div className="h-full min-h-[280px] flex items-center justify-center text-center p-10">
-              <div>
-                <PlayCircle className="h-11 w-11 mx-auto text-muted-foreground/40 mb-3" strokeWidth={1.5} />
-                <p className="text-sm text-muted-foreground">Escolha uma aula na lista.</p>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <BarraDaLealMidia>
+          {course && <Button variant="outline" size="sm" type="button" onClick={() => setCursoForm(true)}><Pencil className="h-4 w-4" /> Editar curso</Button>}
+          <Button size="sm" type="button" onClick={() => setModuloForm({ editing: null })}><FolderPlus className="h-4 w-4" /> Novo módulo</Button>
+        </BarraDaLealMidia>
+        {barra}
+        <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+          <div className="order-1 min-w-0 flex-1 overflow-y-auto">
+            {aulaPedidaDeGestor && !pronto ? (
+              <Carregando variante="texto" linhas={6} className="p-10" />
+            ) : aulaPedidaDeGestor ? (
+              <div className="mx-auto max-w-md p-8">
+                <Aviso tom="neutro" titulo="Esta aula é só para gestores">Escolha outra aula na lista.</Aviso>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Sidebar de módulos/aulas */}
-        <aside className="w-full md:w-80 shrink-0 border-t md:border-t-0 md:border-l border-border bg-card/40 overflow-y-auto order-2 max-h-[55vh] md:max-h-none">
-          <div className="px-4 py-3 border-b border-border">
-            <p className="text-xs font-semibold text-muted-foreground">
-              {modules.length} módulo{modules.length === 1 ? '' : 's'}
-            </p>
+            ) : aula && moduloDaAula ? (
+              <PainelDaAula key={aula.id} aula={aula} modulo={moduloDaAula} aulasDoModulo={aulasPorModulo[moduloDaAula.id] ?? []}
+                proxima={abertas[idx + 1] ?? null} anterior={abertas[idx - 1] ?? null}
+                cursoId={courseId} cursoTitulo={titulo} podeEditar={podeEditar}
+                aoIr={setSelecionada} aoExcluida={() => setSelecionada(null)}
+                aoEditar={() => setAulaForm({ moduleId: aula.module_id, editing: aula })} />
+            ) : modulos.length === 0 && carregandoModulos ? (
+              <Carregando variante="texto" linhas={6} className="p-10" />
+            ) : modulos.length === 0 && erroModulos ? (
+              <EmptyState tipo="erro" className="h-full min-h-[280px]" aoTentarDeNovo={() => void recarregarModulos()} />
+            ) : modulos.length === 0 ? (
+              <EmptyState icon={PlayCircle} title="Nenhum módulo neste curso ainda." className="h-full min-h-[280px]" />
+            ) : (
+              <EmptyState icon={PlayCircle} title="Escolha uma aula na lista." className="h-full min-h-[280px]" />
+            )}
           </div>
-          {modules.map((m) => (
-            <ModuleSection
-              key={m.id}
-              module={m}
-              lessons={lessonsByModule[m.id] ?? []}
-              locked={moduleLocked(m)}
-              progress={progress}
-              selectedId={selectedId}
-              canEdit={canEdit}
-              onSelectLesson={setSelectedId}
-              onEditModule={() => setModuleForm({ editing: m })}
-              onDeleteModule={async () => {
-                if (await confirmar({
-                  titulo: 'Excluir módulo',
-                  descricao: <>Excluir o módulo <strong>{m.titulo}</strong> e todas as aulas dentro?</>,
-                  rotuloDaAcao: 'Excluir',
-                  destrutivo: true,
-                })) {
-                  deleteModule.mutate(m.id);
-                }
-              }}
-            />
-          ))}
-          {modules.length === 0 && (
-            <p className="px-4 py-6 text-xs text-muted-foreground text-center">Sem módulos ainda.</p>
-          )}
-        </aside>
+          <ListaDeAulas titulo={titulo} modulos={modulos} aulasPorModulo={aulasPorModulo} progresso={progress}
+            selecionada={aulaPedidaDeGestor ? null : selecionada} travado={travado} podeEditar={podeEditar}
+            aoEscolher={(id) => { setSelecionada(id); if (aulaPedidaDeGestor) setParams(new URLSearchParams({ lesson: id }), { replace: true }); }}
+            aoEditarModulo={(m) => setModuloForm({ editing: m })}
+            aoExcluirModulo={async (m) => {
+              if (await confirmar({ titulo: 'Excluir módulo', descricao: <>Excluir o módulo <strong>{m.titulo}</strong> e todas as aulas dentro?</>, rotuloDaAcao: 'Excluir', destrutivo: true })) deleteModule.mutate(m.id);
+            }}
+            aoMoverModulo={moverModulo} travarSetas={movendo}
+            aoNovaAula={(m) => setAulaForm({ moduleId: m.id, editing: null })} />
+        </div>
       </div>
-    </div>
+      {cursoForm && course && <CourseForm editing={course} onClose={() => setCursoForm(false)} />}
+      {moduloForm && <ModuleForm editing={moduloForm.editing} defaultCourseId={isGeral ? null : courseId} onClose={() => setModuloForm(null)} />}
+      {aulaForm && <JanelaDaAula moduleId={aulaForm.moduleId} editing={aulaForm.editing} onClose={() => setAulaForm(null)} />}
       {dialogoDeConfirmacao}
     </>
-  );
-}
-
-// ── Barra de topo ────────────────────────────────────────────────────────────
-function TopBar({ title, onBack, right }: { title: string; onBack: () => void; right?: ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-3 px-5 md:px-8 py-3 border-b border-border">
-      <button onClick={onBack} className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground min-w-0" type="button">
-        <ArrowLeft className="h-4 w-4 shrink-0" />
-        <span className="font-semibold text-foreground truncate">{title}</span>
-      </button>
-      {right}
-    </div>
-  );
-}
-
-// ── Seção de módulo na sidebar (sanfona) ─────────────────────────────────────
-function ModuleSection({
-  module: m, lessons, locked, progress, selectedId, canEdit,
-  onSelectLesson, onEditModule, onDeleteModule,
-}: {
-  module: KnowledgeModule;
-  lessons: KnowledgeLesson[];
-  locked: boolean;
-  progress: Record<string, boolean>;
-  selectedId: string | null;
-  canEdit: boolean;
-  onSelectLesson: (id: string) => void;
-  onEditModule: () => void;
-  onDeleteModule: () => void;
-}) {
-  const [open, setOpen] = useState(true);
-  const [adding, setAdding] = useState(false);
-  const done = lessons.filter((l) => progress[l.id]).length;
-
-  return (
-    <div className="border-b border-border/70">
-      <div className="w-full flex items-center gap-2 px-4 py-2.5">
-        <button onClick={() => setOpen((v) => !v)} className="flex-1 min-w-0 flex items-center gap-2 text-left" type="button">
-          {locked ? <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : open ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
-          <span className="text-xs font-semibold truncate">{m.titulo}</span>
-          {!locked && m.access === 'restricted' && (
-            <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-semibold rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
-              <Lock className="h-3.5 w-3.5" /> Restrito
-            </span>
-          )}
-        </button>
-        <span className="text-[10px] text-muted-foreground shrink-0">
-          {locked ? 'bloqueado' : `${done}/${lessons.length}`}
-        </span>
-        {canEdit && (
-          <div className="flex items-center gap-0.5 shrink-0">
-            <button onClick={onEditModule} className="p-1 text-muted-foreground hover:text-primary" title="Editar módulo" type="button"><Pencil className="h-3.5 w-3.5" /></button>
-            <button onClick={onDeleteModule} className="p-1 text-muted-foreground hover:text-red-400" title="Excluir módulo" type="button"><Trash2 className="h-3.5 w-3.5" /></button>
-          </div>
-        )}
-      </div>
-
-      {open && (
-        <div className="pb-1.5">
-          {locked ? (
-            <div className="px-4 pb-3">
-              <p className="text-[11px] text-muted-foreground mb-2">
-                {m.lock_message?.trim() || 'Conteúdo exclusivo. Libere pra assistir.'}
-              </p>
-              <LockCta lock={m} />
-            </div>
-          ) : (
-            <>
-              {lessons.map((l, idx) => {
-                const isDone = !!progress[l.id];
-                const active = l.id === selectedId;
-                return (
-                  <button
-                    key={l.id}
-                    onClick={() => onSelectLesson(l.id)}
-                    className={`w-full text-left flex items-center gap-2.5 pl-4 pr-3 py-2 text-xs transition-colors ${
-                      active ? 'bg-primary/10 border-l-2 border-primary' : 'border-l-2 border-transparent hover:bg-muted/40'
-                    }`}
-                    type="button"
-                  >
-                    {isDone ? <CheckCircle2 className="h-4 w-4 text-primary shrink-0" /> : <Circle className="h-4 w-4 text-muted-foreground/50 shrink-0" />}
-                    <span className="shrink-0 text-muted-foreground tabular-nums">{String(idx + 1).padStart(2, '0')}</span>
-                    {l.capa_url && (
-                      <img src={l.capa_url} alt="" className="w-10 h-6 shrink-0 rounded object-cover border border-border" />
-                    )}
-                    <span className={`flex-1 min-w-0 truncate ${active ? 'font-semibold' : 'text-foreground/80'}`}>{l.titulo}</span>
-                    {l.duracao_min ? <span className="text-[10px] text-muted-foreground shrink-0">{formatDuration(l.duracao_min)}</span> : null}
-                  </button>
-                );
-              })}
-              {lessons.length === 0 && <p className="px-4 py-2 text-[11px] text-muted-foreground">Sem aulas ainda.</p>}
-              {canEdit && (
-                adding ? (
-                  <div className="px-4 py-2">
-                    <AddLessonForm moduleId={m.id} onDone={() => setAdding(false)} />
-                  </div>
-                ) : (
-                  <Button variant="outline" size="sm" onClick={() => setAdding(true)} className="mx-4 my-1.5" type="button">
-                    <Plus className="h-4 w-4" /> Nova aula
-                  </Button>
-                )
-              )}
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Painel da aula selecionada (player + ações + anexos + avaliação + comentários) ─
-function LessonPanel({
-  lesson, lessons, index, canEdit, courseId, courseTitle, moduleTitle, onSelect, onDeleted,
-}: {
-  lesson: KnowledgeLesson;
-  lessons: KnowledgeLesson[];
-  index: number;
-  canEdit: boolean;
-  courseId: string;
-  courseTitle: string;
-  moduleTitle: string;
-  onSelect: (id: string) => void;
-  onDeleted: () => void;
-}) {
-  const { data: progress = {} } = useProgress();
-  const toggleProgress = useToggleProgress();
-  const { data: rating } = useRatings(lesson.id);
-  const setRating = useSetRating();
-
-  function goTo(offset: number) {
-    const next = lessons[index + offset];
-    if (next) onSelect(next.id);
-  }
-
-  return (
-    <div className="p-5 md:p-6 max-w-4xl mx-auto w-full">
-      <VideoEmbed provider={lesson.video_provider} videoId={lesson.video_id} videoUrl={lesson.video_url} className="mb-5" />
-
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-        <button
-          onClick={() => toggleProgress.mutate({ lesson_id: lesson.id, done: !progress[lesson.id] })}
-          disabled={toggleProgress.isPending}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-lg border transition-colors ${
-            progress[lesson.id] ? 'bg-primary/15 text-primary border-primary/40' : 'bg-card text-foreground border-border hover:border-primary/40'
-          }`}
-          type="button"
-        >
-          {progress[lesson.id] ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
-          {progress[lesson.id] ? 'Aula concluída' : 'Marcar como visto'}
-        </button>
-
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => goTo(-1)} disabled={index <= 0} type="button">
-            <ChevronLeft className="h-4 w-4" /> Anterior
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => goTo(1)} disabled={index >= lessons.length - 1} type="button">
-            Próximo <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold mb-1">{lesson.titulo}</h1>
-          {lesson.duracao_min ? (
-            <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {formatDuration(lesson.duracao_min)}</p>
-          ) : null}
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          <StarRating value={rating?.mine ?? 0} onRate={(stars) => setRating.mutate({ lesson_id: lesson.id, stars })} />
-          {rating && rating.count > 0 && (
-            <span className="text-[11px] text-muted-foreground">média {rating.avg.toFixed(1)} · {rating.count}</span>
-          )}
-        </div>
-      </div>
-
-      {canEdit && (
-        <LessonAdminActions
-          lesson={lesson}
-          lessons={lessons}
-          courseId={courseId}
-          courseTitle={courseTitle}
-          moduleTitle={moduleTitle}
-          onDeleted={onDeleted}
-        />
-      )}
-
-      {lesson.descricao_md && (
-        <article className="prose prose-sm max-w-none dark:prose-invert mt-4">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{lesson.descricao_md}</ReactMarkdown>
-        </article>
-      )}
-
-      <LessonAttachments lessonId={lesson.id} canEdit={canEdit} />
-
-      <CommentsSection lessonId={lesson.id} canModerate={canEdit} />
-    </div>
-  );
-}
-
-// ── Ações admin por aula (editar / reordenar / avisar clientes / excluir) ────
-function LessonAdminActions({
-  lesson, lessons, courseId, courseTitle, moduleTitle, onDeleted,
-}: {
-  lesson: KnowledgeLesson;
-  lessons: KnowledgeLesson[];
-  courseId: string;
-  courseTitle: string;
-  moduleTitle: string;
-  onDeleted: () => void;
-}) {
-  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
-  const del = useDeleteLesson();
-  const update = useUpdateLesson();
-  const [editing, setEditing] = useState(false);
-  const [announcing, setAnnouncing] = useState(false);
-  const idx = lessons.findIndex((l) => l.id === lesson.id);
-
-  async function move(dir: -1 | 1) {
-    const j = idx + dir;
-    if (j < 0 || j >= lessons.length) return;
-    const a = lessons[idx];
-    const b = lessons[j];
-    await update.mutateAsync({ id: a.id, ordem: b.ordem });
-    await update.mutateAsync({ id: b.id, ordem: a.ordem });
-  }
-
-  return (
-    <div className="mt-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <button onClick={() => setEditing((v) => !v)} className={`flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border ${editing ? 'border-primary/40 text-primary bg-primary/10' : 'border-primary/40 text-primary hover:bg-primary/10'}`} type="button"><Pencil className="h-3.5 w-3.5" /> Editar aula</button>
-        <button onClick={() => move(-1)} disabled={idx <= 0} className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-border hover:border-primary/40 disabled:opacity-30" type="button"><ChevronUp className="h-3.5 w-3.5" /> Subir</button>
-        <button onClick={() => move(1)} disabled={idx >= lessons.length - 1} className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-border hover:border-primary/40 disabled:opacity-30" type="button"><ChevronDown className="h-3.5 w-3.5" /> Descer</button>
-        <button onClick={() => setAnnouncing(true)} className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10" type="button" title="Manda no WhatsApp dos grupos dos clientes que saiu aula nova"><Megaphone className="h-3.5 w-3.5" /> Avisar clientes</button>
-        <button
-          onClick={async () => {
-            if (await confirmar({
-              titulo: 'Excluir aula',
-              descricao: <>Excluir a aula <strong>{lesson.titulo}</strong>?</>,
-              rotuloDaAcao: 'Excluir',
-              destrutivo: true,
-            })) { del.mutate(lesson.id); onDeleted(); }
-          }}
-          className="flex items-center gap-1 px-2 py-1 text-[11px] text-red-500 rounded-md border border-red-500/30 hover:bg-red-500/10"
-          type="button"
-        ><Trash2 className="h-3.5 w-3.5" /> Excluir aula</button>
-      </div>
-      {editing && <EditLessonForm lesson={lesson} onClose={() => setEditing(false)} />}
-      {announcing && (
-        <AnnounceLessonModal
-          lesson={{
-            id: lesson.id,
-            titulo: lesson.titulo,
-            curso: courseTitle,
-            modulo: moduleTitle,
-            descricao: lesson.descricao_md ?? '',
-            duracao: lesson.duracao_min,
-          }}
-          courseId={courseId}
-          onClose={() => setAnnouncing(false)}
-        />
-      )}
-      {dialogoDeConfirmacao}
-    </div>
-  );
-}
-
-// ── Form de editar aula (título, thumb, vídeo, duração, texto) ────────────────
-function EditLessonForm({ lesson, onClose }: { lesson: KnowledgeLesson; onClose: () => void }) {
-  const update = useUpdateLesson();
-  const replaceVideo = useReplaceLessonVideo();
-  const [titulo, setTitulo] = useState(lesson.titulo);
-  const [descricao, setDescricao] = useState(lesson.descricao_md ?? '');
-  const [duracao, setDuracao] = useState(lesson.duracao_min ? String(lesson.duracao_min) : '');
-  const [capaUrl, setCapaUrl] = useState(lesson.capa_url ?? '');
-  const [videoMode, setVideoMode] = useState<'keep' | 'link' | 'upload'>('keep');
-  const [videoUrl, setVideoUrl] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const busy = update.isPending || replaceVideo.isPending;
-
-  async function submit() {
-    if (!titulo.trim()) { toast.error('Dê um título à aula.'); return; }
-    const dur = duracao ? parseInt(duracao, 10) : null;
-
-    // Valida o vídeo ANTES de qualquer escrita.
-    let videoPatch: Record<string, unknown> = {};
-    if (videoMode === 'link') {
-      const parsed = parseVideoUrl(videoUrl);
-      if (!videoUrl.trim() || !parsed) { toast.error('Cole um link válido do YouTube ou Vimeo.'); return; }
-      videoPatch = { video_url: videoUrl.trim(), video_provider: parsed.provider, video_id: parsed.id, storage_path: null };
-    }
-    if (videoMode === 'upload' && !file) { toast.error('Selecione o novo arquivo de vídeo.'); return; }
-
-    if (videoMode === 'upload' && file) {
-      await replaceVideo.mutateAsync({ id: lesson.id, file });
-    }
-    await update.mutateAsync({
-      id: lesson.id,
-      titulo: titulo.trim(),
-      descricao_md: descricao,
-      duracao_min: dur,
-      capa_url: capaUrl.trim() || null,
-      ...videoPatch,
-    });
-    onClose();
-  }
-
-  return (
-    <Card className="mt-3 max-w-2xl gap-3 p-4">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold">Editar aula</p>
-        <button onClick={onClose} type="button" aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
-      </div>
-
-      <div>
-        <p className="text-[11px] text-muted-foreground mb-1">Título da aula</p>
-        <input autoFocus value={titulo} onChange={(e) => setTitulo(e.target.value)} className="w-full bg-background border border-border rounded px-3 py-2 text-sm" />
-      </div>
-
-      <CoverPicker value={capaUrl} onChange={setCapaUrl} />
-
-      <div>
-        <p className="text-[11px] text-muted-foreground mb-1">Vídeo</p>
-        <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5 w-fit mb-2">
-          <button onClick={() => setVideoMode('keep')} className={`px-2.5 py-1 text-[10px] rounded-md ${videoMode === 'keep' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} type="button">Manter atual</button>
-          <button onClick={() => setVideoMode('link')} className={`flex items-center gap-1 px-2.5 py-1 text-[10px] rounded-md ${videoMode === 'link' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} type="button"><Link2 className="h-3.5 w-3.5" /> Trocar por link</button>
-          <button onClick={() => setVideoMode('upload')} className={`flex items-center gap-1 px-2.5 py-1 text-[10px] rounded-md ${videoMode === 'upload' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} type="button"><Upload className="h-3.5 w-3.5" /> Trocar por arquivo</button>
-        </div>
-        {videoMode === 'link' && (
-          <input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="URL YouTube ou Vimeo" className="w-full bg-background border border-border rounded px-3 py-2 text-sm" />
-        )}
-        {videoMode === 'upload' && (
-          <input type="file" accept="video/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full text-[11px] file:mr-2 file:px-2 file:py-1 file:rounded file:border-0 file:bg-primary file:text-primary-foreground" />
-        )}
-      </div>
-
-      <div>
-        <p className="text-[11px] text-muted-foreground mb-1">Duração (min, opcional)</p>
-        <input value={duracao} onChange={(e) => setDuracao(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Ex.: 12" className="w-full bg-background border border-border rounded px-3 py-2 text-sm" />
-      </div>
-
-      <div>
-        <p className="text-[11px] text-muted-foreground mb-1">Texto da aula (markdown, aparece abaixo do vídeo)</p>
-        <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={4} placeholder="Descrição, passo a passo, links..." className="w-full bg-background border border-border rounded px-3 py-2 text-sm resize-y" />
-      </div>
-
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={onClose} type="button">Cancelar</Button>
-        <Button size="sm" onClick={submit} disabled={busy} type="button">
-          {busy ? 'Salvando...' : 'Salvar'}
-        </Button>
-      </div>
-    </Card>
-  );
-}
-
-// ── Form inline de nova aula (embed ou upload) ───────────────────────────────
-function AddLessonForm({ moduleId, onDone }: { moduleId: string; onDone: () => void }) {
-  const createLesson = useCreateLesson();
-  const uploadLesson = useUploadLessonVideo();
-  const [mode, setMode] = useState<'embed' | 'upload'>('embed');
-  const [titulo, setTitulo] = useState('');
-  const [videoUrl, setVideoUrl] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [duracao, setDuracao] = useState('');
-  const busy = createLesson.isPending || uploadLesson.isPending;
-
-  async function submit() {
-    if (!titulo.trim()) return;
-    const dur = duracao ? parseInt(duracao, 10) : undefined;
-    if (mode === 'embed') {
-      if (!videoUrl.trim() || !parseVideoUrl(videoUrl)) { toast.error('Cole um link válido do YouTube ou Vimeo.'); return; }
-      await createLesson.mutateAsync({ module_id: moduleId, titulo: titulo.trim(), video_url: videoUrl.trim(), duracao_min: dur });
-    } else {
-      if (!file) { toast.error('Selecione um arquivo de vídeo.'); return; }
-      await uploadLesson.mutateAsync({ module_id: moduleId, titulo: titulo.trim(), file, duracao_min: dur });
-    }
-    onDone();
-  }
-
-  return (
-    <div className="space-y-2 rounded-lg border border-border bg-background/60 p-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
-          <button onClick={() => setMode('embed')} className={`flex items-center gap-1 px-2 py-1 text-[10px] rounded-md ${mode === 'embed' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} type="button"><Link2 className="h-3.5 w-3.5" /> Link</button>
-          <button onClick={() => setMode('upload')} className={`flex items-center gap-1 px-2 py-1 text-[10px] rounded-md ${mode === 'upload' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} type="button"><Upload className="h-3.5 w-3.5" /> Arquivo</button>
-        </div>
-        <button onClick={onDone} type="button" aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
-      </div>
-      <input autoFocus value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Título da aula" className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs" />
-      {mode === 'embed' ? (
-        <input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="URL YouTube ou Vimeo" className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs" />
-      ) : (
-        <input type="file" accept="video/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full text-[11px] file:mr-2 file:px-2 file:py-1 file:rounded file:border-0 file:bg-primary file:text-primary-foreground" />
-      )}
-      <input value={duracao} onChange={(e) => setDuracao(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Duração (min, opcional)" className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs" />
-      <div className="flex justify-end">
-        <Button size="sm" onClick={submit} disabled={busy} type="button">
-          {busy ? (mode === 'upload' ? 'Enviando vídeo...' : 'Salvando...') : 'Adicionar'}
-        </Button>
-      </div>
-    </div>
   );
 }

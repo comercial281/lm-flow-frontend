@@ -1,23 +1,16 @@
-// Form de criar/editar CURSO (admin). Capa, escopo (global/cliente),
-// bloqueio + CTA e, ao editar, o editor de acessos (entitlements).
+// Janela de criar/editar CURSO (Leal Mídia): nome, capa,
+// em quais clientes aparece (só com cliente no endereço) e Avançado.
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
-import {
-  useCreateCourse,
-  useUpdateCourse,
-  TENANT_SLUG,
-  type KnowledgeCourse,
-} from '@/hooks/useKnowledge';
+import { useCreateCourse, useUpdateCourse, TENANT_SLUG, type KnowledgeCourse } from '@/hooks/useKnowledge';
+import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/ds';
+import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
+import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
 import CoverPicker from './CoverPicker';
-import LockConfigFields, { type LockConfig } from './LockConfigFields';
-import EntitlementsEditor from './EntitlementsEditor';
-import { Card, Button } from '@/components/ui/ds';
+import AvancadoDoBloqueio from './AvancadoDoBloqueio';
+import type { LockConfig } from './LockConfigFields';
 
-export default function CourseForm({
-  editing,
-  onClose,
-}: {
+export default function CourseForm({ editing, onClose }: {
   editing: KnowledgeCourse | null;
   onClose: () => void;
 }) {
@@ -37,7 +30,7 @@ export default function CourseForm({
   });
 
   const busy = createCourse.isPending || updateCourse.isPending;
-  const canScopeTenant = Boolean(TENANT_SLUG);
+  const temCliente = Boolean(TENANT_SLUG);
 
   async function submit() {
     if (!titulo.trim()) return;
@@ -45,94 +38,49 @@ export default function CourseForm({
       titulo: titulo.trim(),
       descricao: descricao.trim() || null,
       capa_url: capaUrl.trim() || null,
-      tenant_slug: scope === 'tenant' && canScopeTenant ? TENANT_SLUG : null,
+      tenant_slug: temCliente ? (scope === 'tenant' ? TENANT_SLUG : null) : (editing?.tenant_slug ?? null),
       access: lock.access,
       lock_cta_type: lock.lock_cta_type,
       lock_cta_label: lock.lock_cta_label.trim() || null,
       lock_cta_value: lock.lock_cta_value.trim() || null,
       lock_message: lock.lock_message.trim() || null,
     };
-    if (editing) await updateCourse.mutateAsync({ id: editing.id, ...base });
-    else await createCourse.mutateAsync(base);
-    onClose();
+    try {
+      if (editing) await updateCourse.mutateAsync({ id: editing.id, ...base });
+      else await createCourse.mutateAsync(base);
+      onClose();
+    } catch {
+      /* o hook já avisa o erro; a janela continua aberta */
+    }
   }
 
   return (
-    <Card className="mb-6 max-w-2xl gap-4 p-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold">{editing ? 'Editar curso' : 'Novo curso'}</p>
-        <button onClick={onClose} type="button" aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      <input
-        autoFocus
-        value={titulo}
-        onChange={(e) => setTitulo(e.target.value)}
-        placeholder="Nome do curso (ex.: Anúncios Perfeitos)"
-        className="w-full bg-background border border-border rounded px-3 py-2 text-sm"
-      />
-      <textarea
-        value={descricao}
-        onChange={(e) => setDescricao(e.target.value)}
-        placeholder="Descrição (opcional)"
-        rows={2}
-        className="w-full bg-background border border-border rounded px-3 py-2 text-sm resize-y"
-      />
-
-      <CoverPicker value={capaUrl} onChange={setCapaUrl} />
-
-      <div>
-        <p className="text-[11px] text-muted-foreground mb-1">Quem vê este curso</p>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setScope('global')}
-            className={`px-3 py-1.5 text-[11px] rounded-lg border ${
-              scope === 'global' ? 'bg-primary/15 text-primary border-primary/40' : 'border-border text-muted-foreground'
-            }`}
-          >
-            Global (todos os clientes)
-          </button>
-          <button
-            type="button"
-            onClick={() => canScopeTenant && setScope('tenant')}
-            disabled={!canScopeTenant}
-            className={`px-3 py-1.5 text-[11px] rounded-lg border disabled:opacity-40 ${
-              scope === 'tenant' ? 'bg-primary/15 text-primary border-primary/40' : 'border-border text-muted-foreground'
-            }`}
-            title={canScopeTenant ? '' : 'Disponível só dentro do painel de um cliente'}
-          >
-            Só este cliente{TENANT_SLUG ? ` (${TENANT_SLUG})` : ''}
-          </button>
+    <Dialog open onOpenChange={(aberto) => { if (!aberto && !busy) onClose(); }}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader><DialogTitle>{editing ? 'Editar curso' : 'Novo curso'}</DialogTitle></DialogHeader>
+        <div className="grid gap-5">
+          <CampoTexto id="curso-nome" rotulo="Nome do curso" valor={titulo} aoMudar={setTitulo} />
+          <CampoTextoLongo id="curso-descricao" rotulo="Descrição (opcional)" valor={descricao} aoMudar={setDescricao} rows={2} />
+          <CoverPicker value={capaUrl} onChange={setCapaUrl} />
+          {temCliente && (
+            <div className="grid gap-2">
+              <p className="text-sm font-medium">Em quais clientes aparece</p>
+              <CartoesDeEscolha rotulo="Em quais clientes aparece" valor={scope} aoEscolher={setScope} opcoes={[
+                { valor: 'global', rotulo: 'Todos os clientes', descricao: 'Aparece em todas as imobiliárias' },
+                { valor: 'tenant', rotulo: 'Só este cliente', descricao: TENANT_SLUG },
+              ]} />
+            </div>
+          )}
+          <AvancadoDoBloqueio lock={lock} onChange={(patch) => setLock((v) => ({ ...v, ...patch }))}
+            alvo={editing ? { tipo: 'course', id: editing.id } : null} />
         </div>
-      </div>
-
-      <LockConfigFields value={lock} onChange={(patch) => setLock((v) => ({ ...v, ...patch }))} />
-
-      {editing && lock.access === 'restricted' && (
-        <EntitlementsEditor targetType="course" targetId={editing.id} />
-      )}
-      {!editing && lock.access === 'restricted' && (
-        <p className="text-[11px] text-muted-foreground">
-          Salve o curso primeiro pra liberar clientes/usuários específicos.
-        </p>
-      )}
-
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={onClose} type="button">
-          Cancelar
-        </Button>
-        <Button
-          size="sm"
-          onClick={submit}
-          disabled={busy}
-          type="button"
-        >
-          {busy ? 'Salvando...' : editing ? 'Salvar' : 'Criar curso'}
-        </Button>
-      </div>
-    </Card>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" type="button" onClick={onClose} disabled={busy}>Cancelar</Button>
+          <Button type="button" onClick={submit} disabled={busy || !titulo.trim()}>
+            {busy ? 'Salvando...' : editing ? 'Salvar' : 'Criar curso'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

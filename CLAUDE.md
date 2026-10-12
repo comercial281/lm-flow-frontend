@@ -8565,3 +8565,23 @@ Pedido do Tony: a janela de fotos era "meio zuada"; tinha que ser uma página, s
 - **Quem pode o quê é o cargo** (`usePermissoesDasFotos`): subir `property_photos.upload`, por endereço `.create`, capa `.set_as_cover`, ordem `.reorder`, ocultar `.update`, excluir `.delete`. O Corretor de fábrica vê, ordena e escolhe capa.
 
 Não reabrir sem o dono pedir: a linha "1º pacote da IA" na grade (ele cortou), avisar foto que a IA pula, separar foto por ambiente.
+
+## Área de Membros: quem assiste e tela nova (desde 2026-10-12)
+
+Pedido do Tony: separar aulas só pra gerentes e administradores das aulas pra todos, e reformar a tela. Spec: `LM FLOW/specs/2026-10-12-area-de-membros-design.md`.
+
+- **Quem assiste fica no módulo** (`knowledge_modules.audience`: `all` | `managers`, no Supabase antigo). Corretor não vê o módulo de gestor (some da lista, da contagem e do "Continue assistindo"); curso só de gestor some inteiro. Gestor = `conversations.read_all` (`useCargoNaAcademia`); carregando = corretor.
+- **A trava é de tela.** O conteúdo segue legível pela chave pública. Treinamento, não segredo.
+- **Módulo sem aula não aparece** pra quem assiste (só a Leal Mídia vê, com "Sem aulas ainda").
+- **"Geral" virou Aulas avulsas** (lista). A rota `/academia/curso/__geral__` continua.
+- **Ver como** (Administrador · Gestor · Corretor) só pra Leal Mídia, na faixa do topo (`verComo.ts`, por aba). Fora de Administrador, sem botão de editar.
+- **Curso, módulo e aula em janela**; cadeado de venda em *Avançado*. *Em quais clientes aparece* só aparece com `VITE_TENANT_SLUG` (na produção é vazio).
+- **A função `tutorial-admin` só aceita `X-Tenant-API-URL` da lista** (`api.lmflow.com.br` + `ALLOWED_TENANT_API_HOSTS`). Cópia em `LM FLOW/specs/registros/2026-10-12-tutorial-admin/`.
+
+Armadilhas:
+1. Regra de quem vê só em `quemVe.ts`. Tela nova da Área de Membros filtra por `modulosVisiveis`, nunca pelo `audience` cru.
+2. `modulosVisiveis` precisa saber se as aulas carregaram (senão a home pisca vazia).
+3. **audience só viaja quando importa.** Criar manda a chave só com 'managers' (o banco tem padrão 'all'); editar manda só quando mudou. Assim salvar não quebra se a coluna faltar num banco antigo.
+4. **A ordem empata nos dados reais** (todos com ordem 0): aulas e módulos desempatam por created_at, e reordenar regrava todos os índices (`trocarOrdem` em quemVe.ts).
+
+Não reabrir sem o dono pedir.
