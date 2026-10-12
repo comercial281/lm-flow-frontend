@@ -15,3 +15,13 @@ describe('formatoLogs', () => {
     expect(quemFez({ actor_name: 'Chave SaaS', actor_email: null, actor_type: 'ChaveSaaS' })).toBe('Chave SaaS');
   });
 });
+
+
+describe('Logs: MCP', () => {
+  it('quem fez mostra a chave do MCP', () => {
+    expect(quemFez({ actor_name: null, actor_email: null, actor_type: null, source: 'mcp', mcp_key_name: 'Claude do Tony' }))
+      .toBe('MCP · Claude do Tony');
+    expect(quemFez({ actor_name: 'Ana', actor_email: null, actor_type: null, source: 'user', mcp_key_name: null })).toBe('Ana');
+  });
+  it('categoria mcp tem rótulo', () => { expect(rotuloCategoria('mcp')).toBe('MCP'); });
+});
