@@ -468,7 +468,8 @@ export function useCreateModule() {
         tenant_slug: input.tenant_slug ?? null,
         course_id: input.course_id ?? null,
         access: input.access ?? 'free',
-        audience: input.audience ?? 'all',
+        // Só manda quando é "gestores": o banco tem padrão 'all' e produção pode ainda não ter a coluna.
+        ...(input.audience === 'managers' ? { audience: 'managers' } : {}),
         lock_cta_type: input.lock_cta_type ?? 'whatsapp',
         lock_cta_label: input.lock_cta_label ?? null,
         lock_cta_value: input.lock_cta_value ?? null,
@@ -528,7 +529,8 @@ export function useAllLessons(moduleIds: string[]) {
         .from('knowledge_lessons')
         .select('*')
         .in('module_id', moduleIds)
-        .order('ordem', { ascending: true });
+        .order('ordem', { ascending: true })
+        .order('created_at', { ascending: true });
       if (error) throw error;
       return (data ?? []) as KnowledgeLesson[];
     },

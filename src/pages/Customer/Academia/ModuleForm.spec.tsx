@@ -28,6 +28,14 @@ describe('ModuleForm (janela)', () => {
     expect(m.create).toHaveBeenCalledWith(expect.objectContaining({ titulo: 'Para gestores', audience: 'managers', course_id: 'c1' }));
   });
 
+  it('cria com Todos: não manda a chave audience (produção pode não ter a coluna)', async () => {
+    render(<ModuleForm editing={null} onClose={() => {}} />);
+    await userEvent.type(screen.getByLabelText('Nome do módulo'), 'Aberto');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar módulo' }));
+    expect(m.create).toHaveBeenCalledTimes(1);
+    expect(m.create.mock.calls[0][0]).not.toHaveProperty('audience');
+  });
+
   it('sem cliente no endereço, não mostra "Em quais clientes aparece"', () => {
     render(<ModuleForm editing={null} onClose={() => {}} />);
     expect(screen.queryByText('Em quais clientes aparece')).toBeNull();
@@ -59,6 +67,17 @@ describe('ModuleForm (janela)', () => {
     render(<ModuleForm editing={existente} onClose={() => {}} />);
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(m.update).toHaveBeenCalledWith(expect.objectContaining({ tenant_slug: 'moeda' }));
+  });
+
+  it('editar sem mudar quem assiste: não manda audience; mudando, manda', async () => {
+    const { unmount } = render(<ModuleForm editing={existente} onClose={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(m.update.mock.calls[0][0]).not.toHaveProperty('audience');
+    unmount();
+    render(<ModuleForm editing={existente} onClose={() => {}} />);
+    await userEvent.click(screen.getByRole('radio', { name: 'Só gestores e administradores' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(m.update.mock.calls[1][0]).toHaveProperty('audience', 'managers');
   });
 
   it('módulo sem audience abre com "Todos" marcado', () => {

@@ -2,7 +2,7 @@
 // soltos (um espremido na lista lateral, outro empurrando o vídeo pra baixo).
 
 import { useState } from 'react';
-import { Link2, Upload } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCreateLesson, useUploadLessonVideo, useUpdateLesson, useReplaceLessonVideo, type KnowledgeLesson } from '@/hooks/useKnowledge';
 import { parseVideoUrl } from '@/pages/Customer/Tutorials/_internal/lib';
@@ -41,22 +41,26 @@ export default function JanelaDaAula({ moduleId, editing, onClose }: { moduleId:
     if (video === 'link' && (!videoUrl.trim() || !parsed)) { toast.error('Cole um link válido do YouTube ou Vimeo.'); return; }
     if (video === 'arquivo' && !file) { toast.error('Selecione o arquivo de vídeo.'); return; }
 
-    if (!editing) {
-      if (video === 'link') await createLesson.mutateAsync({ module_id: moduleId, titulo: titulo.trim(), video_url: videoUrl.trim(), duracao_min: dur ?? undefined });
-      else if (file) await uploadLesson.mutateAsync({ module_id: moduleId, titulo: titulo.trim(), file, duracao_min: dur ?? undefined });
+    try {
+      if (!editing) {
+        if (video === 'link') await createLesson.mutateAsync({ module_id: moduleId, titulo: titulo.trim(), video_url: videoUrl.trim(), duracao_min: dur ?? undefined });
+        else if (file) await uploadLesson.mutateAsync({ module_id: moduleId, titulo: titulo.trim(), file, duracao_min: dur ?? undefined });
+        onClose();
+        return;
+      }
+      if (video === 'arquivo' && file) await replaceVideo.mutateAsync({ id: editing.id, file });
+      await update.mutateAsync({
+        id: editing.id,
+        titulo: titulo.trim(),
+        descricao_md: descricao,
+        duracao_min: dur,
+        capa_url: capaUrl.trim() || null,
+        ...(video === 'link' && parsed ? { video_url: videoUrl.trim(), video_provider: parsed.provider, video_id: parsed.id, storage_path: null } : {}),
+      });
       onClose();
-      return;
+    } catch {
+      /* o hook já avisa o erro; a janela continua aberta */
     }
-    if (video === 'arquivo' && file) await replaceVideo.mutateAsync({ id: editing.id, file });
-    await update.mutateAsync({
-      id: editing.id,
-      titulo: titulo.trim(),
-      descricao_md: descricao,
-      duracao_min: dur,
-      capa_url: capaUrl.trim() || null,
-      ...(video === 'link' && parsed ? { video_url: videoUrl.trim(), video_provider: parsed.provider, video_id: parsed.id, storage_path: null } : {}),
-    });
-    onClose();
   }
 
   return (
@@ -71,11 +75,8 @@ export default function JanelaDaAula({ moduleId, editing, onClose }: { moduleId:
             <p className="text-sm font-medium">Vídeo</p>
             <BotoesDeEscolha rotulo="Vídeo" valor={video} opcoes={opcoesVideo} aoEscolher={setVideo} />
             {video === 'link' && (
-              <div className="flex items-center gap-2">
-                <Link2 className="h-4 w-4 text-muted-foreground" />
-                <input aria-label="Link do vídeo" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)}
-                  placeholder="https://youtube.com/..." className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm" />
-              </div>
+              <CampoTexto id="aula-link" rotulo="Link do YouTube ou Vimeo" valor={videoUrl} aoMudar={setVideoUrl}
+                placeholder="https://youtube.com/..." />
             )}
             {video === 'arquivo' && (
               <label className="flex cursor-pointer items-center gap-2 text-sm">

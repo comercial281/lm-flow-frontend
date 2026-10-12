@@ -45,9 +45,13 @@ export default function CourseForm({ editing, onClose }: {
       lock_cta_value: lock.lock_cta_value.trim() || null,
       lock_message: lock.lock_message.trim() || null,
     };
-    if (editing) await updateCourse.mutateAsync({ id: editing.id, ...base });
-    else await createCourse.mutateAsync(base);
-    onClose();
+    try {
+      if (editing) await updateCourse.mutateAsync({ id: editing.id, ...base });
+      else await createCourse.mutateAsync(base);
+      onClose();
+    } catch {
+      /* o hook já avisa o erro; a janela continua aberta */
+    }
   }
 
   return (

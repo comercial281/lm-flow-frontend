@@ -50,7 +50,6 @@ export default function ModuleForm({ editing, defaultCourseId, onClose }: {
       descricao: descricao.trim() || null,
       capa_url: capaUrl.trim() || null,
       course_id: courseId || null,
-      audience,
       tenant_slug: temCliente ? (scope === 'tenant' ? TENANT_SLUG : null) : (editing?.tenant_slug ?? null),
       access: lock.access,
       lock_cta_type: lock.lock_cta_type,
@@ -58,9 +57,18 @@ export default function ModuleForm({ editing, defaultCourseId, onClose }: {
       lock_cta_value: lock.lock_cta_value.trim() || null,
       lock_message: lock.lock_message.trim() || null,
     };
-    if (editing) await updateModule.mutateAsync({ id: editing.id, ...base });
-    else await createModule.mutateAsync(base);
-    onClose();
+    try {
+      if (editing) {
+        // Só manda "quem assiste" se mudou: produção pode ainda não ter a coluna.
+        const mudouQuem = audience !== quemAssiste(editing);
+        await updateModule.mutateAsync({ id: editing.id, ...base, ...(mudouQuem ? { audience } : {}) });
+      } else {
+        await createModule.mutateAsync({ ...base, ...(audience === 'managers' ? { audience } : {}) });
+      }
+      onClose();
+    } catch {
+      /* o hook já avisa o erro; a janela continua aberta */
+    }
   }
 
   return (
