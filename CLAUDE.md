@@ -6280,7 +6280,7 @@ Armadilhas:
 - **No site:** na prévia, a faixa "Prévia: o site ainda não está publicado." no bloco que gruda no topo; formulário enviado na prévia mostra "Prévia: o contato não foi enviado de verdade." no lugar do obrigado.
 
 **Decisões (não reabrir sem o dono pedir):**
-1. **Domínio só vale ativo pela Vercel.** Só o domínio verificado (ativo em `public.site_domains`) abre o site; cadastrado e pendente, ou removido, mostra "Site não encontrado", nunca o login. **Cliente suspenso dá 404 no domínio** (`resolve`, `head` e `sitemap`): o domínio dele mostra "Site não encontrado". No `/site` público e no admin, `domain` é o ATIVO (ou null); `primary_domain` é o configurado, pode estar pendente, e só muda pela tela de domínio.
+1. **Domínio só vale ativo com o código de posse no DNS e a Vercel confirmando** (desde 11/10/2026, ver "Meu site · domínio próprio com prova de posse"). Antes era só a Vercel. Só o domínio verificado (ativo em `public.site_domains`) abre o site; cadastrado e pendente, ou removido, mostra "Site não encontrado", nunca o login. **Cliente suspenso dá 404 no domínio** (`resolve`, `head` e `sitemap`): o domínio dele mostra "Site não encontrado". No `/site` público e no admin, `domain` é o ATIVO (ou null); `primary_domain` é o configurado, pode estar pendente, e só muda pela tela de domínio.
 2. **Só o site no domínio do cliente.** `src/main.tsx` decide pelo endereço: endereço do sistema (`lmflow.com.br` e subdomínios, `*.vercel.app`, localhost, IP) sobe o CRM (`mainDoSistema`); qualquer outro sobe só o site (`mainDoSite`), sem login, sessão, websocket, service worker, i18n nem "Instalar LM Flow". Tela do CRM aberta no domínio cai no início do site.
 3. **Caminhos limpos via `caminhoDoSite`.** No domínio: `/`, `/imoveis`, `/imovel/:codigo`, `/blog`, `/blog/:slug`, `/p/:slug`, `/financiamento`, `/anuncie`, `/lp/:slug`; o resto vai para `/`, e o endereço antigo (`/portal/<c>/…`, `/imovel/<c>/<código>`, `/lp/<c>/<slug>`) redireciona para o limpo. Todo link do site passa por `caminhoDoSite(ctx, rota)` (`features/siteBuilder/public/dominioDoSite.ts`), que no endereço lmflow devolve os caminhos de sempre. Link novo no site: sempre por ele.
 4. **O middleware monta o `<head>` e o `robots.txt`.** `middleware.ts` (borda da Vercel) + `middleware/headDoSite.ts` (funções puras): título, descrição, `og:*` (com `og:site_name`), `canonical`, `robots` e, no domínio ativo, `window.__LMF_SITE__` (o site não pergunta o `resolve` de novo); também o `robots.txt` e o `sitemap.xml` de cada endereço. **`og:url` = canonical** (o `url` do servidor é o endereço pedido, que pode ser o app.lmflow.com.br; só sem canonical ele vale). O `head` tem **teto de 1,2 s** (página e `robots.txt`; landing e sitemap, 2,5 s). Qualquer falha devolve o HTML de hoje (`noindex`); o `robots.txt` em falha é `Disallow: /` com `no-store` (**sem cache** na borda, para a falha não ficar guardada).
@@ -8449,3 +8449,36 @@ Pedido da Nova 27 (f2-07). Desenho: `LM FLOW/specs/2026-10-11-imovel-desatualiza
 - **"Está em dia"** renova só a hora de alteração (servidor `confirm_current`, permissão de editar imóvel). Aparece em imóvel vencido e em qualquer imóvel da lista aberta pela Atividades. Efeito aceito: o imóvel sobe em "Atualizados recentemente".
 - Decidido com o dono: não virar tarefa gravada (imóvel não tem card). Não reabrir sem o dono pedir.
 - **Corretor marca os imóveis dele (12/10/2026, pedido do dono):** "Está em dia" vale pra quem edita imóvel OU pro captador/responsável daquele imóvel (o corretor padrão só tem `properties.read`). O servidor responde por imóvel em `can_confirm_current`; a tela usa `podeMarcarEmDia(p, permissoes.editar)` (servidor antigo sem o campo: só quem edita).
+
+## Meu site · domínio próprio com prova de posse (desde 2026-10-11)
+
+> Desenho em `LM FLOW/specs/2026-10-11-dominio-proprio-prova-de-posse-design.md` (pasta do Tony). Servidor no `lm-flow` (`saas-multitenant`): `Sites::DomainOwnership`, `Sites::DomainManager`, `Sites::DomainCheckJob` e a migration 322. **O servidor entra PRIMEIRO.**
+
+Antes, quem cadastrava um domínio primeiro ficava com ele: a Vercel é um projeto só pra todos os clientes, então pra ela não existia disputa, e um domínio abandonado (site excluído com o DNS ainda apontando) podia ser tomado por qualquer outro cliente. Agora o domínio só é do site quando o código do site aparece no DNS.
+
+**O que o cliente vê** (Meu site › Configurações › Endereço do site › cartão Domínio próprio):
+1. **Antes de conectar:** "Depois de conectar, você cria dois registros no DNS: um prova que o domínio é seu, o outro aponta pro site."
+2. **Depois de Conectar domínio:** selo "Aguardando a prova de posse" e os dois passos juntos (pra quem cuida do DNS fazer tudo numa visita só):
+   - **Passo 1 · Provar que o domínio é seu:** registro TXT, nome `_lmflow`, valor `lmflow-site=<código>`, com o endereço completo (`_lmflow.<domínio>`) no rótulo e o botão de copiar. "Esse código é só deste site. Pode deixar o registro lá depois: ele não atrapalha nada."
+   - **Passo 2 · Apontar o domínio pro site:** os registros A e CNAME de antes, com o aviso dos MX.
+   - Frase de cima: "O LM Flow confere sozinho, mesmo com esta tela fechada. Quando tudo bater, o site abre no domínio." Rodapé: "Esta tela também confere a cada 15s enquanto estiver aberta."
+3. **Código achado:** o Passo 1 vira "✓ Domínio comprovado" e o selo vira "Aguardando o DNS apontar".
+4. **Tudo certo:** "Domínio ativo" com o aviso verde de antes.
+5. **Em uso por outro site** (selo vermelho): "Esse domínio foi comprovado por outro site do LM Flow. Se ele é seu, fale com o suporte." Sem passos e sem Verificar agora (esse cadastro não é mais conferido); o Desconectar fica.
+6. **Depois de 30 dias sem prova:** "Paramos de conferir sozinhos. Depois de criar o registro, clique em Verificar agora."
+7. **Domínio que parou de apontar:** "Seu domínio parou de apontar pro site em DD/MM." Ainda ativo: "Se continuar assim por 24 horas, o site e os links de imóvel voltam pro endereço lmflow…". Já voltou (selo "Aguardando o DNS apontar"): "Enquanto isso, o site e os links de imóvel usam o endereço lmflow. Quando o DNS voltar a apontar, o domínio volta sozinho, sem precisar provar de novo."
+8. O texto "Este domínio já está cadastrado em outra conta Vercel" só aparece quando a Vercel pede a prova DELA (`verification` não vazio, já comprovado; selo "Aguardando a verificação da Vercel").
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **Código por site, calculado, que não vence.** O mesmo pra sempre naquele site e inútil pra qualquer outro: não existe "gerar código novo". Uma prova vale pro domínio e pro par com/sem www; o TXT fica no domínio registrável (subdomínio que não é www também aceita no próprio nome, mas a tela mostra só o registrável).
+2. **Cadastro sem prova não segura nada e não vai pra Vercel.** Dois sites podem tentar o mesmo domínio; fica com quem provar primeiro. O "já está em uso" no Conectar só aparece quando outro site JÁ comprovou.
+3. **Domínio comprovado muda de dono só pelo suporte** (comando no servidor `site_domains:release`), sem troca automática.
+4. **Ativo que para de apontar por mais de 24 h volta sozinho pro endereço lmflow** (mantém a prova; reativa sozinho quando o DNS volta).
+5. **Depois de ativo, o TXT não é conferido de novo:** apagar o registro não derruba o site.
+6. **Sem chave por cliente:** é trava de segurança e vale pra todos. O domínio já cadastrado antes disso (pendente) passa a pedir o código.
+
+**Armadilhas:**
+1. **Servidor anterior não manda `ownership`:** a tela sai igual à de antes ("Falta o cliente apontar o domínio", sem passos). Teste em `DomainSettings.spec.tsx`.
+2. Status novo `taken` no `SiteDomainStatus`; `pending_verification` agora é "falta a prova de posse" (com `ownership.verified = false`) ou, já provado, "a Vercel pediu a prova dela". Quem decide o texto é o `ownership.verified`, não o status sozinho.
+3. A data do "parou de apontar" passa pelo `dataCurta` de `lib/formato.ts` (a trava `formato` do `conferir-padrao` não aceita `toLocaleDateString` na tela).
+

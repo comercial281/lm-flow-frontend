@@ -4,7 +4,7 @@ import { Input, Badge, Label as UILabel } from '@evoapi/design-system';
 import { Button } from '@/components/ui/ds';
 import {
   Globe, Copy, Check, RefreshCw, Trash2, AlertTriangle,
-  Loader2, ExternalLink, ShieldCheck,
+  Loader2, ExternalLink, ShieldCheck, CircleCheck,
 } from 'lucide-react';
 import {
   siteBuilderService,
@@ -15,6 +15,7 @@ import {
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import Aviso from '@/components/base/Aviso';
 import { Card } from '@/components/ui/ds';
+import { dataCurta, VAZIO } from '@/lib/formato';
 const POLL_INTERVAL_MS = 15_000;
 
 const PENDING: SiteDomainStatus[] = ['pending_dns', 'pending_verification'];
@@ -25,8 +26,15 @@ const STATUS_BADGE: Record<SiteDomainStatus, string> = {
   not_registered: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   pending_dns: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   pending_verification: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  taken: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
 };
+
+function jaPassou(iso?: string | null): boolean {
+  if (!iso) return false;
+  const data = new Date(iso);
+  return !Number.isNaN(data.getTime()) && data.getTime() < Date.now();
+}
 
 function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
@@ -75,6 +83,18 @@ function RecordRow({ label, type, name, value }: { label: string; type: string; 
   );
 }
 
+function AvisoDoMx() {
+  return (
+    <p className="mt-2 flex gap-2 text-xs text-orange-700 dark:text-orange-400">
+      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+      <span>
+        Se o cliente usa e-mail nesse domínio, <strong>não mexa nos registros MX</strong>.
+        Alterar MX derruba o e-mail dele.
+      </span>
+    </p>
+  );
+}
+
 export default function DomainSettings({ siteId }: { siteId: string }) {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [state, setState] = useState<SiteDomainState | null>(null);
@@ -107,13 +127,16 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
     return () => clearInterval(timer);
   }, [load]);
 
-  const run = async (fn: () => Promise<SiteDomainState>, okMessage: string) => {
+  const run = async (
+    fn: () => Promise<SiteDomainState>,
+    okMessage: string | ((data: SiteDomainState) => string),
+  ) => {
     setBusy(true);
     try {
       const data = await fn();
       setState(data);
       statusRef.current = data.status;
-      toast.success(okMessage);
+      toast.success(typeof okMessage === 'function' ? okMessage(data) : okMessage);
     } catch (err) {
       const message = (err as { response?: { data?: { error?: { message?: string } } } })
         ?.response?.data?.error?.message;
@@ -129,7 +152,12 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
       toast.error('Digite o domínio do cliente');
       return;
     }
-    run(() => siteBuilderService.connectDomain(siteId, domain), 'Domínio conectado — agora aponte o DNS');
+    run(
+      () => siteBuilderService.connectDomain(siteId, domain),
+      data => (data.ownership && !data.ownership.verified
+        ? 'Domínio conectado. Agora crie os dois registros no DNS'
+        : 'Domínio conectado — agora aponte o DNS'),
+    );
   };
 
   const disconnect = async () => {
@@ -156,6 +184,47 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
 
   const status = state?.status ?? 'none';
   const isPending = PENDING.includes(status);
+  // Servidor com a prova de posse (11/10/2026). Sem `ownership`, a tela sai como antes.
+  const ownership = state?.ownership ?? null;
+  const taken = status === 'taken';
+  const paramosDeConferir = !!ownership && isPending && jaPassou(ownership.auto_check_until);
+  // "09/10": o dia em que o domínio parou de apontar.
+  const diaQueParou = state?.dns_missing_since ? dataCurta(state.dns_missing_since) : VAZIO;
+  const parouDeApontar = diaQueParou === VAZIO ? '' : diaQueParou;
+
+  const registrosDeApontamento = state && state.dns_records.length > 0 && (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {state.dns_records.map(r => (
+        <RecordRow
+          key={`${r.domain}-${r.type}`}
+          label={r.domain}
+          type={r.type}
+          name={r.name}
+          value={r.value}
+        />
+      ))}
+    </div>
+  );
+
+  const provaDaVercel = state && state.verification.length > 0 && (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Este domínio já está cadastrado em outra conta Vercel. Para provar que é seu,
+        adicione também:
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {state.verification.map(v => (
+          <RecordRow
+            key={`${v.name}-${v.value}`}
+            label="Verificação de propriedade"
+            type={v.type}
+            name={v.name}
+            value={v.value}
+          />
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -166,7 +235,7 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
           Domínio próprio
         </h2>
         {state && (
-          <Badge className={STATUS_BADGE[status]}>
+          <Badge className={STATUS_BADGE[status] ?? STATUS_BADGE.none}>
             {status === 'active' && <ShieldCheck className="mr-1 inline h-3 w-3" />}
             {state.status_label}
           </Badge>
@@ -212,6 +281,10 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
               Digite sem <span className="font-mono">https://</span> e sem <span className="font-mono">www</span> —
               o www é configurado junto, automaticamente.
             </p>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Depois de conectar, você cria dois registros no DNS: um prova que o domínio é seu, o
+              outro aponta pro site.
+            </p>
           </div>
         </div>
       )}
@@ -245,6 +318,30 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
             </Aviso>
           )}
 
+          {parouDeApontar && (status === 'active' || status === 'pending_dns') && (
+            <Aviso tom="atencao" titulo={`Seu domínio parou de apontar pro site em ${parouDeApontar}.`}>
+              {status === 'active' ? (
+                <p>
+                  Confira o apontamento no DNS. Se continuar assim por 24 horas, o site e os links de
+                  imóvel voltam pro endereço lmflow até o domínio voltar a apontar.
+                </p>
+              ) : (
+                <p>
+                  Enquanto isso, o site e os links de imóvel usam o endereço lmflow. Quando o DNS voltar
+                  a apontar, o domínio volta sozinho, sem precisar provar de novo.
+                </p>
+              )}
+            </Aviso>
+          )}
+
+          {taken && (
+            <Aviso tom="erro" titulo="Em uso por outro site">
+              <p>
+                Esse domínio foi comprovado por outro site do LM Flow. Se ele é seu, fale com o suporte.
+              </p>
+            </Aviso>
+          )}
+
           {status === 'not_registered' && (
             <Aviso
               tom="erro"
@@ -269,7 +366,62 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
             </Aviso>
           )}
 
-          {isPending && (
+          {/* Servidor com a prova de posse: os dois passos juntos, pra quem cuida do
+              DNS fazer tudo numa visita só. */}
+          {isPending && ownership && (
+            <>
+              <div className="rounded-lg border border-border bg-muted/40 p-4">
+                <p className="text-sm font-medium">Falta criar os registros no DNS</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Entre onde o domínio foi registrado (Registro.br, GoDaddy, Cloudflare...), abra a
+                  área de <strong>DNS</strong> e cadastre os registros dos dois passos abaixo, de uma
+                  vez. O LM Flow confere sozinho, mesmo com esta tela fechada. Quando tudo bater, o
+                  site abre no domínio.
+                </p>
+              </div>
+
+              {paramosDeConferir && (
+                <Aviso tom="atencao">
+                  Paramos de conferir sozinhos. Depois de criar o registro, clique em Verificar agora.
+                </Aviso>
+              )}
+
+              <section className="space-y-3" aria-label="Passo 1">
+                <h3 className="text-sm font-semibold">Passo 1 · Provar que o domínio é seu</h3>
+                {ownership.verified ? (
+                  <p className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                    <CircleCheck className="h-4 w-4" />
+                    Domínio comprovado
+                  </p>
+                ) : (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <RecordRow
+                        label={ownership.host}
+                        type={ownership.type}
+                        name={ownership.name}
+                        value={ownership.value}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Esse código é só deste site. Pode deixar o registro lá depois: ele não atrapalha nada.
+                    </p>
+                  </>
+                )}
+              </section>
+
+              <section className="space-y-3" aria-label="Passo 2">
+                <h3 className="text-sm font-semibold">Passo 2 · Apontar o domínio pro site</h3>
+                {registrosDeApontamento}
+                <AvisoDoMx />
+              </section>
+
+              {provaDaVercel}
+            </>
+          )}
+
+          {/* Servidor anterior à prova de posse: a tela de antes. */}
+          {isPending && !ownership && (
             <>
               <div className="rounded-lg border border-border bg-muted/40 p-4">
                 <p className="text-sm font-medium">Falta o cliente apontar o domínio</p>
@@ -278,60 +430,26 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
                   área de <strong>DNS</strong> e cadastre os registros abaixo. Depois é só esperar —
                   esta tela confirma sozinha quando propagar.
                 </p>
-                <p className="mt-2 flex gap-2 text-xs text-orange-700 dark:text-orange-400">
-                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <span>
-                    Se o cliente usa e-mail nesse domínio, <strong>não mexa nos registros MX</strong>.
-                    Alterar MX derruba o e-mail dele.
-                  </span>
-                </p>
+                <AvisoDoMx />
               </div>
 
-              {state.dns_records.length > 0 && (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {state.dns_records.map(r => (
-                    <RecordRow
-                      key={`${r.domain}-${r.type}`}
-                      label={r.domain}
-                      type={r.type}
-                      name={r.name}
-                      value={r.value}
-                    />
-                  ))}
-                </div>
-              )}
+              {registrosDeApontamento}
 
-              {state.verification.length > 0 && (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Este domínio já está cadastrado em outra conta Vercel. Para provar que é seu,
-                    adicione também:
-                  </p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {state.verification.map(v => (
-                      <RecordRow
-                        key={`${v.name}-${v.value}`}
-                        label="Verificação de propriedade"
-                        type={v.type}
-                        name={v.name}
-                        value={v.value}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
+              {provaDaVercel}
             </>
           )}
 
           <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-            <Button
-              variant="outline"
-              onClick={() => run(() => siteBuilderService.verifyDomain(siteId), 'Verificação atualizada')}
-              disabled={busy}
-            >
-              {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-              Verificar agora
-            </Button>
+            {!taken && (
+              <Button
+                variant="outline"
+                onClick={() => run(() => siteBuilderService.verifyDomain(siteId), 'Verificação atualizada')}
+                disabled={busy}
+              >
+                {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                Verificar agora
+              </Button>
+            )}
             <Button variant="outline" onClick={disconnect} disabled={busy}
               className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20">
               <Trash2 className="mr-2 h-4 w-4" />
@@ -339,7 +457,9 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
             </Button>
             {isPending && (
               <span className="text-xs text-muted-foreground">
-                Verificando sozinho a cada 15s — pode deixar esta tela aberta.
+                {ownership
+                  ? 'Esta tela também confere a cada 15s enquanto estiver aberta.'
+                  : 'Verificando sozinho a cada 15s — pode deixar esta tela aberta.'}
               </span>
             )}
           </div>
