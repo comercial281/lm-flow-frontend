@@ -2,13 +2,15 @@
 // cadastro). Spec: LM FLOW/specs/2026-10-12-pagina-de-fotos-design.md.
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Link as LinkIcon, Plus, Upload } from 'lucide-react';
+import { ArrowLeft, CheckSquare, Eye, EyeOff, Link as LinkIcon, Plus, Trash2, Upload } from 'lucide-react';
+import { toast } from 'sonner';
 import Abas from '@/components/base/Abas';
 import { Aviso, BaseHeader, Carregando, EmptyState, Pagina } from '@/components/base';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { useNomeDaAba } from '@/components/layout/nomeDaAba';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { cn } from '@/lib/utils';
+import { plural } from '@/lib/formato';
 import { ACCEPTED_MIME_TYPES } from '@/services/propertyPhotos/propertyPhotosService';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
@@ -41,11 +43,11 @@ export default function FotosDoImovel() {
   const campoDeArquivo = useRef<HTMLInputElement>(null);
   const [porEndereco, setPorEndereco] = useState(false);
   const [soltando, setSoltando] = useState(false);
-  // Tasks 6 e 7 usam estes dois:
+  // A Task 7 usa a ampliada:
   const [selecionando, setSelecionando] = useState(false);
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
   const [ampliada, setAmpliada] = useState<string | null>(null);
-  void setSelecionando; void ampliada; // até as Tasks 6 e 7 lerem estes dois
+  void ampliada; // até a Task 7 ler
 
   const alternarSelecao = (fid: string) => setSelecionadas(prev => {
     const nova = new Set(prev);
@@ -62,6 +64,26 @@ export default function FotosDoImovel() {
       destrutivo: true,
     }))) return;
     await dados.excluir(fid);
+  };
+
+  const sairDaSelecao = () => { setSelecionando(false); setSelecionadas(new Set()); };
+
+  const loteDe = async (acao: 'ocultar' | 'mostrar' | 'excluir') => {
+    const ids = [...selecionadas];
+    if (!ids.length) return;
+    if (acao === 'excluir' && !(await confirmar({
+      titulo: `Excluir ${plural(ids.length, 'item', 'itens')}?`,
+      descricao: 'Saem do site, dos portais e da IA. Não dá para desfazer.',
+      rotuloDaAcao: 'Excluir',
+      destrutivo: true,
+    }))) return;
+    const r = await dados.emLote(ids, acao);
+    const feito = { ocultar: r.feitos === 1 ? 'oculta' : 'ocultas', mostrar: r.feitos === 1 ? 'visível' : 'visíveis', excluir: r.feitos === 1 ? 'excluída' : 'excluídas' }[acao];
+    const partes = [`${r.feitos} ${feito}.`];
+    if (r.pulouCapa) partes.push('A capa não foi ocultada.');
+    if (r.falhas) partes.push(`${r.falhas} não deu certo. Tente de novo.`);
+    (r.falhas ? toast.error : toast.success)(partes.join(' '));
+    sairDaSelecao();
   };
 
   const temArquivos = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files');
@@ -130,6 +152,20 @@ export default function FotosDoImovel() {
             icon: <LinkIcon className="h-4 w-4" />,
             onClick: () => setPorEndereco(true),
           }] : []}
+          secondaryActions={(pode.ocultar || pode.excluir) && dados.fotos.length ? [{
+            label: selecionando ? 'Concluir seleção' : 'Selecionar',
+            icon: <CheckSquare className="h-4 w-4" />,
+            onClick: () => (selecionando ? sairDaSelecao() : setSelecionando(true)),
+          }] : []}
+          selectedCount={selecionadas.size}
+          onClearSelection={sairDaSelecao}
+          bulkActions={[
+            ...(pode.ocultar ? [
+              { label: 'Mostrar', icon: <Eye className="h-4 w-4" />, onClick: () => void loteDe('mostrar') },
+              { label: 'Ocultar', icon: <EyeOff className="h-4 w-4" />, onClick: () => void loteDe('ocultar') },
+            ] : []),
+            ...(pode.excluir ? [{ label: 'Excluir', icon: <Trash2 className="h-4 w-4" />, onClick: () => void loteDe('excluir'), variant: 'destructive' as const }] : []),
+          ]}
         />
       }
     >
@@ -171,7 +207,7 @@ export default function FotosDoImovel() {
             <Abas
               rotulo="O que mostrar"
               ativa={aba}
-              aoTrocar={c => setAba(c as AbaDasFotos)}
+              aoTrocar={c => { setAba(c as AbaDasFotos); sairDaSelecao(); }}
               abas={(Object.keys(ROTULO_DA_ABA) as AbaDasFotos[]).map(chave => ({
                 chave, rotulo: ROTULO_DA_ABA[chave], contagem: total[chave],
               }))}

@@ -155,4 +155,28 @@ describe('FotosDoImovel', () => {
     await userEvent.click(await screen.findByRole('tab', { name: 'Fotos 1' }));
     expect(screen.queryByText('Este é o vídeo que a IA manda')).not.toBeInTheDocument();
   });
+
+  it('ocultar várias pula a capa e avisa', async () => {
+    const { toast } = await import('sonner');
+    svc.update.mockImplementation(async (_p: string, fid: string) => foto(fid, { published: false }));
+    abrir([foto('a'), foto('b'), foto('c')]);
+    await userEvent.click(await screen.findByRole('button', { name: 'Selecionar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Selecionar a 1ª foto' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Selecionar a 2ª foto' }));
+    svc.list.mockResolvedValue([foto('a'), foto('b', { published: false }), foto('c')]);
+    await userEvent.click(screen.getByRole('button', { name: 'Ocultar' }));
+    await waitFor(() => expect(svc.update).toHaveBeenCalledTimes(1));
+    expect(svc.update).toHaveBeenCalledWith('p1', 'b', { published: false });
+    expect(toast.success).toHaveBeenCalledWith('1 oculta. A capa não foi ocultada.');
+  });
+
+  it('excluir várias pergunta antes', async () => {
+    svc.delete.mockResolvedValue(undefined);
+    abrir([foto('a'), foto('b')]);
+    await userEvent.click(await screen.findByRole('button', { name: 'Selecionar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Selecionar a 2ª foto' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir' }));
+    expect(svc.delete).not.toHaveBeenCalled();
+    expect(within(screen.getByRole('dialog')).getByText('Excluir 1 item?')).toBeInTheDocument();
+  });
 });
