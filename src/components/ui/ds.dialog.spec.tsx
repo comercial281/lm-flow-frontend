@@ -71,13 +71,13 @@ describe('Janela da casa: topo e rodapé fixos, só o meio rola', () => {
 
   it('o topo fica preso em cima, com fundo e linha, ocupando a largura toda', () => {
     render(<Janela />);
-    expect(topo()).toHaveClass('sticky', 'top-0', 'z-10', 'border-b', 'bg-background', 'px-[max(var(--janela-p),1.5rem)]', 'py-4');
+    expect(topo()).toHaveClass('sticky', '-top-(--janela-p)', 'z-10', 'border-b', 'bg-background', 'px-[max(var(--janela-p),1.5rem)]', 'py-4');
     expect(topo()).toHaveClass('-mx-(--janela-p)', '-mt-(--janela-p)');
   });
 
   it('o rodapé fica preso embaixo, com fundo e linha, e respeita a barra de gestos do celular', () => {
     render(<Janela />);
-    expect(rodape()).toHaveClass('sticky', 'bottom-0', 'z-10', 'border-t', 'bg-background', 'px-[max(var(--janela-p),1.5rem)]', 'py-4');
+    expect(rodape()).toHaveClass('sticky', '-bottom-(--janela-p)', 'z-10', 'border-t', 'bg-background', 'px-[max(var(--janela-p),1.5rem)]', 'py-4');
     expect(rodape()).toHaveClass('-mx-(--janela-p)', '-mb-(--janela-p)');
     expect(rodape()).toHaveClass('max-sm:pb-[calc(1rem+env(safe-area-inset-bottom))]');
   });
