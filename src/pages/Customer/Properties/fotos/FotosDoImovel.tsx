@@ -138,15 +138,18 @@ export default function FotosDoImovel() {
         onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setSoltando(false); }}
         onDrop={aoSoltarArquivos}
       >
-        <input
-          ref={campoDeArquivo}
-          type="file"
-          multiple
-          accept={ACCEPTED_MIME_TYPES.join(',')}
-          aria-label="Escolher fotos e vídeos"
-          className="sr-only"
-          onChange={e => { const fs = Array.from(e.target.files ?? []); e.target.value = ''; if (fs.length) void dados.enviar(fs); }}
-        />
+        {pode.subir && (
+          <input
+            ref={campoDeArquivo}
+            type="file"
+            multiple
+            accept={ACCEPTED_MIME_TYPES.join(',')}
+            aria-label="Escolher fotos e vídeos"
+            tabIndex={-1}
+            className="sr-only"
+            onChange={e => { const fs = Array.from(e.target.files ?? []); e.target.value = ''; if (fs.length) void dados.enviar(fs); }}
+          />
+        )}
         {soltando && <Aviso tom="info" icone={Upload} className="mb-4">Solte para adicionar ao imóvel</Aviso>}
         {dados.enviando !== null && (
           <Aviso tom="info" icone={Upload} className="mb-4">

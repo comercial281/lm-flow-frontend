@@ -105,6 +105,7 @@ describe('FotosDoImovel', () => {
     expect(screen.queryByRole('button', { name: 'Excluir' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Adicionar fotos e vídeos' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Selecionar' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Escolher fotos e vídeos')).not.toBeInTheDocument();
   });
 
   it('excluir pergunta antes', async () => {
