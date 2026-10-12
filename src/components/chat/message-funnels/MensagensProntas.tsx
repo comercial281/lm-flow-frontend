@@ -43,7 +43,6 @@ const TONS: Record<TipoPronto, string> = {
 const ICONES: Record<TipoPronto, LucideIcon> = { mensagem: MessageSquare, audio: Mic, midia: ImageIcon, funil: Rocket };
 
 type FiltroTipo = 'todos' | TipoPronto;
-type FiltroDono = 'todos' | 'meus' | 'equipe';
 
 interface Props {
   /** Carrega a lista quando abre (e de novo a cada abertura). */
@@ -74,7 +73,6 @@ export function MensagensProntas({ ativo, conversationId, onStarted, aoFechar, o
   const [falhou, setFalhou] = useState(false);
   const [busca, setBusca] = useState('');
   const [tipo, setTipo] = useState<FiltroTipo>('todos');
-  const [dono, setDono] = useState<FiltroDono>('todos');
   const [aberto, setAberto] = useState<string | null>(null);
   // Prévia buscada na hora (lista sem os blocos): id do funil → passos.
   const [buscadas, setBuscadas] = useState<Record<string, FlowTemplatePreviewStep[]>>({});
@@ -98,7 +96,6 @@ export function MensagensProntas({ ativo, conversationId, onStarted, aoFechar, o
     setAberto(null);
     setBusca('');
     setTipo('todos');
-    setDono('todos');
     campoBusca.current?.focus();
     void carregar();
   }, [ativo, carregar]);
@@ -122,23 +119,19 @@ export function MensagensProntas({ ativo, conversationId, onStarted, aoFechar, o
   }, [ativo, aberto, aoFechar, onde]);
 
   const todos = itens ?? [];
-  const temMeus = todos.some(i => !i.funil.team);
-  const temEquipe = todos.some(i => i.funil.team);
   const tiposComItem = TIPOS_PRONTOS.filter(t => todos.some(i => i.tipo === t.tipo));
   // Filtro escolhido que deixou de existir na tela (o seletor some) não filtra escondido.
   const tipoValendo: FiltroTipo = tiposComItem.length > 1 && tiposComItem.some(t => t.tipo === tipo) ? tipo : 'todos';
-  const donoValendo: FiltroDono = temMeus && temEquipe ? dono : 'todos';
 
   const visiveis = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     return todos.filter(i =>
       (!termo || i.funil.name.toLowerCase().includes(termo)) &&
-      (tipoValendo === 'todos' || i.tipo === tipoValendo) &&
-      (donoValendo === 'todos' || (donoValendo === 'equipe') === Boolean(i.funil.team)));
-  }, [todos, busca, tipoValendo, donoValendo]);
+      (tipoValendo === 'todos' || i.tipo === tipoValendo));
+  }, [todos, busca, tipoValendo]);
 
-  const filtrando = Boolean(busca.trim()) || tipoValendo !== 'todos' || donoValendo !== 'todos';
-  const limparFiltros = () => { setBusca(''); setTipo('todos'); setDono('todos'); };
+  const filtrando = Boolean(busca.trim()) || tipoValendo !== 'todos';
+  const limparFiltros = () => { setBusca(''); setTipo('todos'); };
 
   const verOuEsconder = async (item: ItemPronto) => {
     const id = item.funil.id;
@@ -232,14 +225,6 @@ export function MensagensProntas({ ativo, conversationId, onStarted, aoFechar, o
             className="w-full"
           />
         )}
-        {temMeus && temEquipe && (
-          <BotoesDeEscolha<FiltroDono>
-            rotulo="De quem"
-            valor={donoValendo}
-            aoEscolher={setDono}
-            opcoes={[{ valor: 'todos', rotulo: 'Todos' }, { valor: 'meus', rotulo: 'Meus' }, { valor: 'equipe', rotulo: 'Da equipe' }]}
-          />
-        )}
         {bloqueado && (
           <Aviso tom="atencao" compacto>
             Nesta conversa não dá pra enviar agora. Assuma o lead ou confira o número.
@@ -247,7 +232,8 @@ export function MensagensProntas({ ativo, conversationId, onStarted, aoFechar, o
         )}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 scrollbar-thin">
+      {/* Na lateral, folga à direita: a aba "?" do suporte fica na borda da tela. */}
+      <div className={cn('flex-1 min-h-0 overflow-y-auto py-2 scrollbar-thin', onde === 'lateral' ? 'pl-2 pr-7' : 'px-2')}>
         {falhou ? (
           <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void carregar()} />
         ) : !itens ? (
@@ -308,14 +294,14 @@ function IconesDaSequencia({ passos }: { passos: FlowTemplatePreviewStep[] }) {
 function Subtitulo({ item, passos }: { item: ItemPronto; passos: FlowTemplatePreviewStep[] | null }) {
   const { funil, tipo } = item;
   const pendente = (funil.guide_pending ?? []).length > 0;
-  if (pendente) return <span className="text-amber-700 dark:text-amber-300">Falta terminar o passo a passo</span>;
-  if (!funil.is_enabled) return <span>Desligado: ligue em Funis de mensagem</span>;
-  const equipe = funil.team ? <span className="shrink-0">· Da equipe</span> : null;
+  if (pendente) return <span className="block truncate text-amber-700 dark:text-amber-300">Falta terminar o passo a passo</span>;
+  if (!funil.is_enabled) return <span className="block truncate">Desligado: ligue em Funis de mensagem</span>;
+  const equipe = funil.team ? <span className="min-w-0 truncate">· Da equipe</span> : null;
   if (tipo === 'funil') {
     return (
       <span className="flex items-center gap-1.5">
         {passos && <IconesDaSequencia passos={passos} />}
-        <span className="truncate">{resumoDoFunil(passos, funil.message_count)}</span>
+        <span className="shrink-0 whitespace-nowrap">{resumoDoFunil(passos, funil.message_count)}</span>
         {equipe}
       </span>
     );
@@ -325,7 +311,7 @@ function Subtitulo({ item, passos }: { item: ItemPronto; passos: FlowTemplatePre
   const midia = tipo === 'audio' ? 'Áudio' : tipo === 'midia' ? (passo?.media_source ? 'Book do imóvel' : 'Mídia') : '';
   return (
     <span className="flex items-center gap-1">
-      <span className="truncate">{texto || midia || 'Mensagem'}</span>
+      <span className="min-w-0 truncate">{texto || midia || 'Mensagem'}</span>
       {equipe}
     </span>
   );

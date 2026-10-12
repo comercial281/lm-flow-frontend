@@ -41,8 +41,12 @@ interface ContactSidebarProps {
 // A troca lead ⇄ Mensagens prontas desliza (pedido do Tony: "não pode só
 // sobrepor do nada"): o lead sai um pouco pra esquerda e some; as prontas
 // entram da direita. Rápido (200 ms) pra não atrasar quem está atendendo.
-// Largura = a da lateral menos a borda da esquerda (1 px).
-const CAMADA = 'absolute inset-y-0 left-0 flex w-full md:w-[calc(24rem-1px)] flex-col bg-background transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none';
+// Largura = a da lateral menos a borda da esquerda (1 px). No Tailwind 4 o
+// translate-x-* mexe na propriedade `translate` (não em `transform`): é ela que
+// anima. Com a lateral fechada a troca é sem animação (ninguém vê, e abrir já
+// nas prontas não mostra o lead de relance).
+const CAMADA = 'absolute inset-y-0 left-0 flex w-full md:w-[calc(24rem-1px)] flex-col bg-background';
+const DESLIZA = 'transition-[translate,opacity] duration-200 ease-out motion-reduce:transition-none';
 
 type Objeto = Record<string, unknown>;
 
@@ -219,7 +223,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
             inert={mostrarProntas}
             aria-hidden={mostrarProntas || undefined}
             data-testid="camada-do-lead"
-            className={cn(CAMADA, mostrarProntas ? '-translate-x-8 opacity-0 pointer-events-none' : 'translate-x-0 opacity-100')}
+            className={cn(CAMADA, isOpen && DESLIZA, mostrarProntas ? '-translate-x-8 opacity-0 pointer-events-none' : 'translate-x-0 opacity-100')}
           >
             <div className="border-b flex-shrink-0">
               <TopoDoLead
@@ -314,7 +318,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
               inert={!mostrarProntas}
               aria-hidden={!mostrarProntas || undefined}
               data-testid="camada-das-prontas"
-              className={cn(CAMADA, mostrarProntas ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none')}
+              className={cn(CAMADA, isOpen && DESLIZA, mostrarProntas ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none')}
             >
               {prontas}
             </div>

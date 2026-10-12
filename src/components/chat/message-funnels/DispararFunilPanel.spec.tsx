@@ -167,16 +167,16 @@ describe('Mensagens prontas (janela)', () => {
     expect(screen.queryByRole('button', { name: /Enviar/ })).toBeNull();
   });
 
-  it('com meus e da equipe, filtra por dono', async () => {
+  it('os da equipe aparecem junto, marcados "Da equipe" (sem filtro de dono, pra caber)', async () => {
     list.mockResolvedValue([
       comBlocos('f1', 'Meu funil', sequencia),
       comBlocos('f3', 'Pedir documentos', sequencia, { team: true, owner_name: 'Gestor' }),
     ]);
     renderPanel();
-    await screen.findByText('Meu funil');
-    fireEvent.click(screen.getByRole('radio', { name: 'Da equipe' }));
-    expect(screen.queryByText('Meu funil')).toBeNull();
+    expect(await screen.findByText('Meu funil')).toBeTruthy();
     expect(screen.getByText('Pedir documentos')).toBeTruthy();
+    expect(screen.getByText('· Da equipe')).toBeTruthy();
+    expect(screen.queryByRole('radiogroup', { name: 'De quem' })).toBeNull();
   });
 
   it('sem nenhuma, leva pra Funis de mensagem', async () => {

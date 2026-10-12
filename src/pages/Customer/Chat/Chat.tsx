@@ -189,6 +189,7 @@ const Chat = () => {
   // A lateral que abre agora é pelo foguete? Senão (nome do lead no topo, troca
   // de conversa), ela abre no lead.
   const abrindoPeloFoguete = useRef(false);
+  const voltaAoLead = useRef<number | undefined>(undefined);
   const prontasAbertas = prontasNaLateral && isContactSidebarOpen && lateral === 'prontas';
 
   // Lateral fechada (X do lead, conversa fechada): volta pro lead depois da
@@ -200,8 +201,8 @@ const Chat = () => {
       return undefined;
     }
     abriuSoPraProntas.current = false;
-    const t = setTimeout(() => setLateral('lead'), 300);
-    return () => clearTimeout(t);
+    voltaAoLead.current = window.setTimeout(() => setLateral('lead'), 300);
+    return () => window.clearTimeout(voltaAoLead.current);
   }, [isContactSidebarOpen]);
 
   // Trocou de conversa: a lateral passa a seguir a regra do painel do lead.
@@ -223,12 +224,27 @@ const Chat = () => {
       fecharProntas();
       return;
     }
-    abriuSoPraProntas.current = !isContactSidebarOpen;
-    abrindoPeloFoguete.current = !isContactSidebarOpen;
-    setProntasMontadas(true);
+    window.clearTimeout(voltaAoLead.current);
+    if (!isContactSidebarOpen) {
+      // Lateral fechada: troca por baixo (sem animação, ninguém vê) e abre no
+      // quadro seguinte, já nas prontas.
+      abriuSoPraProntas.current = true;
+      abrindoPeloFoguete.current = true;
+      setProntasMontadas(true);
+      setLateral('prontas');
+      requestAnimationFrame(() => setIsContactSidebarOpen(true));
+      return;
+    }
+    abriuSoPraProntas.current = false;
+    if (!prontasMontadas) {
+      // Primeira vez: monta fora da tela e desliza no quadro seguinte (montar
+      // já no lugar não anima).
+      setProntasMontadas(true);
+      requestAnimationFrame(() => requestAnimationFrame(() => setLateral('prontas')));
+      return;
+    }
     setLateral('prontas');
-    setIsContactSidebarOpen(true);
-  }, [prontasAbertas, fecharProntas, isContactSidebarOpen, setIsContactSidebarOpen]);
+  }, [prontasAbertas, fecharProntas, isContactSidebarOpen, setIsContactSidebarOpen, prontasMontadas]);
   const aposEnviarNaLateral = useCallback(() => setEnviosDaLateral(n => n + 1), []);
 
   // A roleta ofertou este lead a quem está vendo e ainda não houve aceite (a mesma
