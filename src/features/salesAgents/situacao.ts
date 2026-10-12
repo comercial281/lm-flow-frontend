@@ -237,9 +237,16 @@ const TITULO_NO_PAINEL: Record<string, string> = {
 // duas vezes).
 const DESTINO_DO_SISTEMA = ['destino_cvcrm_desconectado', 'destino_sem_endereco', 'destino_sem_chave'];
 
+// Avisos que nunca se ocultam, nem amarelos: falha de envio ao sistema do cliente
+// é lead que não chegou (ruling de 11/10/2026).
+export const NUNCA_OCULTA = new Set(['client_system']);
+
 export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | null): Pendencia[] {
   const daPagina = pendenciasDasPaginas(agent);
   const destinoNaTela = daPagina.some((p) => DESTINO_DO_SISTEMA.includes(p.chave));
+  // A pendência da tela substitui o item do servidor, então herda a gravidade dele
+  // (senão "todo lead fica sem ninguém" aparece amarelo e com "Ocultar").
+  const sistemaGrave = destinoNaTela && (diagnostics?.items ?? []).some((i) => i.key === 'client_system' && i.status === 'error');
   // "IA ligada" desligada já é o veredito; repetir na lista é ruído.
   const lista = (diagnostics?.items ?? [])
     .filter((i) => i.status !== 'ok' && i.key !== 'enabled' && i.key !== 'triggers')
@@ -268,16 +275,17 @@ export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | n
   for (const p of daPagina) {
     const titulo = TITULO_NO_PAINEL[p.chave];
     if (!titulo || lista.some((x) => x.chave === p.chave)) continue;
-    lista.push({ chave: p.chave, titulo, detalhe: p.frase, grave: p.impedeLigar, corrigir: PAGINA(p.pagina) });
+    const herda = sistemaGrave && DESTINO_DO_SISTEMA.includes(p.chave);
+    lista.push({ chave: p.chave, titulo, detalhe: p.frase, grave: p.impedeLigar || herda, corrigir: PAGINA(p.pagina) });
   }
 
   return [...lista.filter((p) => p.grave), ...lista.filter((p) => !p.grave)];
 }
 
-/** Pendências AMARELAS cuja chave o gestor ocultou. Vermelho nunca some (11/10/2026). */
+/** Pendências AMARELAS cuja chave o gestor ocultou. Vermelho e `NUNCA_OCULTA` nunca somem (11/10/2026). */
 export function separarOcultas(pendencias: Pendencia[], ocultas: string[] | undefined): { visiveis: Pendencia[]; ocultas: Pendencia[] } {
   const lista = new Set(ocultas ?? []);
-  const oculta = (p: Pendencia) => !p.grave && lista.has(p.chave);
+  const oculta = (p: Pendencia) => !p.grave && !NUNCA_OCULTA.has(p.chave) && lista.has(p.chave);
   return { visiveis: pendencias.filter((p) => !oculta(p)), ocultas: pendencias.filter(oculta) };
 }
 

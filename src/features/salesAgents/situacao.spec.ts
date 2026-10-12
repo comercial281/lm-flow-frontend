@@ -224,6 +224,13 @@ describe('limpeza dos avisos (11/10/2026)', () => {
     expect(lista.map((p) => p.chave)).toContain('destino_sem_chave');
   });
 
+  it('client_system com erro some, mas a pendência da tela herda o vermelho', () => {
+    const agente = ia({ handoff_target: 'webhook', handoff_webhook_system: 'generic', handoff_webhook_url: '', handoff_webhook_secret_state: 'ready' } as Partial<SalesAgent>);
+    const lista = pendenciasDaIa(agente, diag(['client_system', 'error', 'Todo lead fica sem ninguém']));
+    expect(lista.map((p) => p.chave)).not.toContain('client_system');
+    expect(lista.find((p) => p.chave === 'destino_sem_endereco')?.grave).toBe(true);
+  });
+
   it('client_system do servidor fica quando é sobre os envios (falhas hoje)', () => {
     const agente = ia({ handoff_target: 'webhook', handoff_webhook_system: 'generic', handoff_webhook_url: 'https://x', handoff_webhook_secret_state: 'ready' } as Partial<SalesAgent>);
     const lista = pendenciasDaIa(agente, diag(['client_system', 'warning', '2 falhas hoje']));
@@ -241,6 +248,11 @@ describe('ocultar avisos', () => {
 
   it('vermelho nunca oculta, mesmo com a chave na lista', () => {
     expect(separarOcultas([vermelha], ['conflict'])).toEqual({ visiveis: [vermelha], ocultas: [] });
+  });
+
+  it('client_system nunca oculta, nem amarelo (falha de envio é lead perdido)', () => {
+    const envio = { chave: 'client_system', titulo: 'Sistema', detalhe: 'z', grave: false };
+    expect(separarOcultas([envio], ['client_system'])).toEqual({ visiveis: [envio], ocultas: [] });
   });
 
   it('lista ausente = nada oculto', () => {

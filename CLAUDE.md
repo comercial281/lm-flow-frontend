@@ -8396,7 +8396,7 @@ Origem: o dono quer conectar o LM Flow no Claude (Conectores) e no Claude Code p
 
 ## IA Vendedora · avisos limpos e "Ocultar" (11/10/2026)
 
-Pedido do dono: o Painel da IA acusava amarelo e vermelho toda noite por coisa que não era problema (horário, "canal errado", "nenhum arquivo liberado"). Desenho aprovado em 11/10. Servidor: coluna `sales_agents.hidden_warnings` (migration `99990101000321`) e a limpeza dos avisos no `backend/CLAUDE.md`. PRs: servidor (lm-flow) #? e tela (lm-flow-frontend) #?; o do servidor entra primeiro. **Reabre a decisão 3 de 05/10 ("mode para a IA") por pedido do dono.**
+Pedido do dono: o Painel da IA acusava amarelo e vermelho toda noite por coisa que não era problema (horário, "canal errado", "nenhum arquivo liberado"). Desenho aprovado em 11/10. Servidor: coluna `sales_agents.hidden_warnings` (migration `99990101000321`) (a limpeza dos avisos é do `HealthCheck` no servidor). PRs: servidor (lm-flow) #? e tela (lm-flow-frontend) #?; o do servidor entra primeiro. **Reabre a decisão 3 de 05/10 ("mode para a IA") por pedido do dono.**
 
 - **O que muda pra quem usa:** o Painel da IA só mostra o que pede ação. Cada pendência AMARELA ganha o botão **Ocultar** (quem tem `sales_agents.update`); no fim da lista aparece "N avisos ocultos · Mostrar", que abre os ocultos em tom neutro, com **Mostrar de novo**. "Configurar → Objetivo" passou a se chamar "Configurar → Destino" (inclusive no Diagnóstico, `EnviosSistemaCliente.tsx`).
 - **1. Horário de atendimento** sai do Painel: fora do horário é normal. O texto "Fora do horário agora" segue no Diagnóstico.
@@ -8413,6 +8413,8 @@ Pedido do dono: o Painel da IA acusava amarelo e vermelho toda noite por coisa q
 - **Armadilhas:**
   - **Vermelho nunca oculta.** Não tem botão e aparece mesmo com a chave em `hidden_warnings` (ex.: `conflict`).
   - **`hidden_warnings` é a lista inteira:** a tela manda a lista completa a cada Ocultar/Mostrar de novo, e o servidor normaliza (chaves `[a-z0-9_]{1,40}`, sem repetição, até 30; lixo vira lista vazia). Cliente sem a coluna ainda: o servidor devolve `[]` e o `update` não estoura.
+  - **`client_system` e `triggers` do servidor ficam fora do Painel**, e a pendência da tela que os substitui herda a gravidade do `client_system` (erro no servidor = vermelho na tela, sem "Ocultar").
+  - **`client_system` nunca oculta**, nem amarelo: falha de envio é lead perdido (`NUNCA_OCULTA` em `situacao.ts`).
   - **O Diagnóstico da equipe mostra tudo**, sem ocultar nada.
   - **"Só follow-up" agora é `restricao`** (amarela), não neutra e não "Parada". Quem ler o tipo da bolinha deve contar com isso.
   - **A Visão geral sem números** deixou de explicar o "só follow-up" (`motivoSemAtendimento` devolve null pra `restricao`). Pendência no `_MELHORIAS`.

@@ -144,6 +144,12 @@ describe('ocultar avisos', () => {
     expect(screen.queryByRole('button', { name: 'Ocultar' })).not.toBeInTheDocument();
   });
 
+  it('client_system amarelo não tem "Ocultar"', () => {
+    abrir({ podeOcultar: true, diagnostico: { status: 'warning', items: [{ key: 'client_system', label: 'Sistema do cliente', status: 'warning', detail: '2 falhas hoje' }] } });
+    expect(screen.getByText('2 falhas hoje')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ocultar' })).not.toBeInTheDocument();
+  });
+
   it('sem permissão de editar, sem "Ocultar"', () => {
     abrir({ diagnostico: amarelo, podeOcultar: false });
     expect(screen.queryByRole('button', { name: 'Ocultar' })).not.toBeInTheDocument();

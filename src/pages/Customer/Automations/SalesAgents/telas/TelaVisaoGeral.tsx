@@ -15,7 +15,7 @@ import { plural } from '@/lib/formato';
 import type { TelaId } from '@/features/salesAgents/iaMenu';
 import type { PaginaId } from '../configurar/paginas';
 import type { PaginaDoEnsinar } from './ensinar/paginas';
-import { motivoSemAtendimento, pendenciasDaIa, separarOcultas, type Situacao } from '@/features/salesAgents/situacao';
+import { motivoSemAtendimento, NUNCA_OCULTA, pendenciasDaIa, separarOcultas, type Situacao } from '@/features/salesAgents/situacao';
 import { SuggestionCard } from './TelaSugestoes';
 import UltimosAtendimentos from './UltimosAtendimentos';
 import Aviso from '@/components/base/Aviso';
@@ -245,7 +245,7 @@ export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferind
                   tom={p.grave ? 'erro' : 'atencao'}
                   titulo={p.titulo}
                   acao={
-                    (p.corrigir || (podeOcultar && !p.grave)) ? (
+                    (p.corrigir || (podeOcultar && !p.grave && !NUNCA_OCULTA.has(p.chave))) ? (
                       <>
                         {/* Fora da IA (WhatsApp desconectado): link pra configuração do número. */}
                         {p.corrigir?.rota ? (
@@ -256,8 +256,8 @@ export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferind
                             Corrigir
                           </Button>
                         ) : null}
-                        {podeOcultar && !p.grave && (
-                          <Button size="sm" variant="ghost" disabled={gravando === p.chave} onClick={() => void mudarOcultas(p.chave, true)}>
+                        {podeOcultar && !p.grave && !NUNCA_OCULTA.has(p.chave) && (
+                          <Button size="sm" variant="ghost" disabled={gravando !== null} onClick={() => void mudarOcultas(p.chave, true)}>
                             <EyeOff className="h-3.5 w-3.5" aria-hidden /> Ocultar
                           </Button>
                         )}
@@ -283,7 +283,7 @@ export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferind
                   <li key={p.chave}>
                     <Aviso tom="neutro" titulo={p.titulo}
                       acao={podeOcultar ? (
-                        <Button size="sm" variant="ghost" disabled={gravando === p.chave} onClick={() => void mudarOcultas(p.chave, false)}>Mostrar de novo</Button>
+                        <Button size="sm" variant="ghost" disabled={gravando !== null} onClick={() => void mudarOcultas(p.chave, false)}>Mostrar de novo</Button>
                       ) : undefined}>
                       <p className="text-xs">{p.detalhe}</p>
                     </Aviso>
