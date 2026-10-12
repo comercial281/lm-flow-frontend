@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import PortalsList from './PortalsList';
 import type { Portal } from '@/services/portals/portalsService';
@@ -7,7 +8,6 @@ import { NO_ACCESS_MESSAGE } from '@/components/permissions/noAccessCopy';
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
-  toastError: vi.fn(),
 }));
 
 vi.mock('@/services/portals/portalsService', async () => {
@@ -18,10 +18,6 @@ vi.mock('@/services/portals/portalsService', async () => {
   };
 });
 
-vi.mock('sonner', () => ({
-  toast: { error: (...a: unknown[]) => mocks.toastError(...a), success: vi.fn(), warning: vi.fn() },
-}));
-
 const portal = (over: Partial<Portal>): Portal => ({
   portal_key: 'portal_zap',
   name: 'ZAP Imóveis (Canal Pro)',
@@ -31,117 +27,111 @@ const portal = (over: Partial<Portal>): Portal => ({
   connected: true,
   is_enabled: true,
   integration_id: 'int-1',
-  sent_count: 396,
-  featured_count: 41,
+  sent_count: 395,
+  featured_count: 44,
   last_accessed_at: null,
   active: false,
   feed_url: null,
   lead_webhook_url: null,
+  integration_status: 'validated',
   ...over,
 });
 
 const montar = () => render(<MemoryRouter><PortalsList /></MemoryRouter>);
 
-/** A lista de portais: selo de formato e contadores por tipo, com o estourado em vermelho. */
+const zapComCota = portal({
+  active: true,
+  last_accessed_at: new Date(Date.now() - 2 * 3_600_000).toISOString(),
+  ad_types: [
+    { key: 'standard', label: 'Padrão', feed_value: 'STANDARD', limit: 456, count: 351 },
+    { key: 'premium', label: 'Destaque', feed_value: 'PREMIUM', limit: 40, count: 40 },
+    { key: 'super_premium', label: 'Super Destaque', feed_value: 'SUPER_PREMIUM', limit: null, count: 0 },
+  ],
+});
+
+/** Lista de Portais (redesenho de 12/10): conectados em cima, uma situação por portal; o resto pra conectar. */
 describe('PortalsList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('mostra o selo de formato validado/adaptado e os contadores por tipo', async () => {
+  it('separa conectados de disponíveis, cada um com uma situação só', async () => {
     mocks.list.mockResolvedValue([
+      zapComCota,
       portal({
-        integration_status: 'validated',
-        ad_types: [
-          { key: 'standard', label: 'Padrão', feed_value: 'STANDARD', limit: 456, count: 350 },
-          { key: 'premium', label: 'Destaque', feed_value: 'PREMIUM', limit: 40, count: 41 },
-        ],
+        portal_key: 'portal_vivareal', name: 'Viva Real (Canal Pro)',
+        last_accessed_at: new Date(Date.now() - 13 * 86_400_000).toISOString(),
       }),
-      portal({
-        portal_key: 'portal_buskaza',
-        name: 'Buskaza',
-        integration_status: 'adapted',
-        status_note: 'Formato adaptado — confirme com o portal antes do primeiro envio',
-        connected: false,
-        ad_types: [{ key: 'standard', label: 'Padrão', feed_value: 'STANDARD', limit: null, count: 0 }],
-      }),
+      portal({ portal_key: 'portal_olx', name: 'OLX (Canal Pro)' }),
+      portal({ portal_key: 'portal_buskaza', name: 'Buskaza', connected: false, integration_id: null, sent_count: 0, integration_status: 'adapted' }),
+      portal({ portal_key: 'portal_imovelweb', name: 'Imóvel Web', connected: false, integration_id: null, sent_count: 0 }),
     ]);
     montar();
 
-    const zap = await screen.findByRole('button', { name: /ZAP Imóveis/ });
-    expect(within(zap).getByText('Formato validado')).toBeInTheDocument();
-    expect(within(zap).getByText('Padrão 350/456')).toBeInTheDocument();
-    const destaque = within(zap).getByText('Destaque 41/40');
-    expect(destaque.className).toContain('text-destructive');
-    expect(within(zap).getByText('por tipo de anúncio')).toBeInTheDocument();
-    expect(within(zap).queryByText('em destaque')).toBeNull();
+    const conectados = await screen.findByRole('region', { name: /Conectados/ });
+    const zap = within(conectados).getByRole('link', { name: /ZAP Imóveis/ });
+    expect(zap).toHaveAttribute('href', '/settings/portals/portal_zap');
+    expect(within(zap).getByText('Recebendo')).toBeInTheDocument();
+    expect(within(zap).getByText('Leu o feed há 2 h')).toBeInTheDocument();
+    expect(within(zap).getByText('395 imóveis')).toBeInTheDocument();
+    expect(within(zap).getByText('Destaque no limite')).toBeInTheDocument();
 
-    const buskaza = screen.getByRole('button', { name: /Buskaza/ });
-    expect(within(buskaza).getByText('Formato adaptado')).toBeInTheDocument();
-    expect(within(buskaza).getByText('Não conectado — clique para configurar')).toBeInTheDocument();
-    // Sem cota, o contador mostra só a contagem.
-    expect(within(buskaza).getByText('Padrão 0')).toBeInTheDocument();
+    const vr = within(conectados).getByRole('link', { name: /Viva Real/ });
+    expect(within(vr).getByText('Parou de ler')).toBeInTheDocument();
+    expect(within(vr).getByText('Última leitura há 13 dias')).toBeInTheDocument();
+
+    const olx = within(conectados).getByRole('link', { name: /OLX/ });
+    expect(within(olx).getByText('Esperando 1ª leitura')).toBeInTheDocument();
+
+    const adicionar = screen.getByRole('region', { name: 'Adicionar portal' });
+    const buskaza = within(adicionar).getByRole('link', { name: /Buskaza/ });
+    expect(within(buskaza).getByText('Formato a confirmar')).toBeInTheDocument();
+    expect(within(buskaza).getByText('Conectar')).toBeInTheDocument();
+    const iw = within(adicionar).getByRole('link', { name: /Imóvel Web/ });
+    expect(within(iw).queryByText('Formato a confirmar')).toBeNull();
   });
 
-  it('portal com seis tipos: o nome continua no DOM e os seis rótulos aparecem', async () => {
-    // Era o caso da tela em produção: com seis contadores numa linha só, o
-    // bloco do nome ficava sem largura. Hoje os contadores moram na segunda linha.
+  it('não mostra mais os sinais antigos: selo de formato, INATIVO e contadores zerados', async () => {
     mocks.list.mockResolvedValue([
-      portal({
-        integration_status: 'validated',
-        ad_types: [
-          { key: 'standard', label: 'Padrão', feed_value: 'STANDARD', limit: 456, count: 350 },
-          { key: 'premium', label: 'Destaque', feed_value: 'PREMIUM', limit: 40, count: 12 },
-          { key: 'super_premium', label: 'Super Destaque', feed_value: 'SUPER_PREMIUM', limit: 10, count: 3 },
-          { key: 'premiere_1', label: 'Destaque Exclusivo', feed_value: 'PREMIERE_1', limit: null, count: 0 },
-          { key: 'premiere_2', label: 'Destaque Superior', feed_value: 'PREMIERE_2', limit: null, count: 0 },
-          { key: 'triple', label: 'Destaque Triplo', feed_value: 'TRIPLE', limit: null, count: 0 },
-        ],
-      }),
+      zapComCota,
+      portal({ portal_key: 'portal_homer', name: 'Homer', connected: false, integration_id: null }),
     ]);
     montar();
-
-    const zap = await screen.findByRole('button', { name: /ZAP Imóveis/ });
-    expect(within(zap).getByText('ZAP Imóveis (Canal Pro)')).toBeInTheDocument();
-    expect(within(zap).getByText('Formato validado')).toBeInTheDocument();
-    for (const rotulo of ['Padrão 350/456', 'Destaque 12/40', 'Super Destaque 3/10',
-      'Destaque Exclusivo 0', 'Destaque Superior 0', 'Destaque Triplo 0']) {
-      expect(within(zap).getByText(rotulo)).toBeInTheDocument();
-    }
-    expect(within(zap).getByText('imóveis enviados')).toBeInTheDocument();
+    await screen.findByRole('region', { name: /Conectados/ });
+    expect(screen.queryByText('Formato validado')).toBeNull();
+    expect(screen.queryByText('INATIVO')).toBeNull();
+    expect(screen.queryByText(/Super Destaque/)).toBeNull();
+    expect(screen.queryByText('Não conectado — clique para configurar')).toBeNull();
   });
 
-  it('servidor antigo (sem ad_types): os dois contadores de sempre e nenhum selo', async () => {
-    mocks.list.mockResolvedValue([portal({})]);
+  it('cliente sem portal conectado vê só "Adicionar portal"', async () => {
+    mocks.list.mockResolvedValue([portal({ connected: false, integration_id: null })]);
     montar();
-
-    const zap = await screen.findByRole('button', { name: /ZAP Imóveis/ });
-    expect(within(zap).getByText('396')).toBeInTheDocument();
-    expect(within(zap).getByText('imóveis enviados')).toBeInTheDocument();
-    expect(within(zap).getByText('41')).toBeInTheDocument();
-    expect(within(zap).getByText('em destaque')).toBeInTheDocument();
-    expect(within(zap).queryByText('por tipo de anúncio')).toBeNull();
-    expect(within(zap).queryByText(/Formato/)).toBeNull();
+    expect(await screen.findByRole('region', { name: 'Adicionar portal' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /Conectados/ })).toBeNull();
   });
 
-  it('erro ao carregar a lista avisa — é a tela inteira que não abre', async () => {
-    mocks.list.mockRejectedValue(new Error('boom'));
+  it('servidor antigo (sem ad_types): a linha mostra os imóveis e nenhuma frase de cota', async () => {
+    mocks.list.mockResolvedValue([portal({ integration_status: undefined })]);
     montar();
-    await screen.findByText('Portais');
-    await vi.waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Erro ao carregar portais'));
+    const zap = await screen.findByRole('link', { name: /ZAP Imóveis/ });
+    expect(within(zap).getByText('395 imóveis')).toBeInTheDocument();
+    expect(within(zap).queryByText(/limite|cota/)).toBeNull();
   });
 
-  it('recusa do servidor mostra o aviso do cargo, sem toast e sem lista', async () => {
+  it('erro ao carregar não vira lista vazia: mostra o erro e tenta de novo', async () => {
+    mocks.list.mockRejectedValueOnce(new Error('Network Error')).mockResolvedValueOnce([zapComCota]);
+    montar();
+    expect(await screen.findByText('Não deu pra carregar')).toBeInTheDocument();
+    expect(screen.queryByText(NO_ACCESS_MESSAGE)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    expect(await screen.findByRole('link', { name: /ZAP Imóveis/ })).toBeInTheDocument();
+  });
+
+  it('recusa do servidor mostra o aviso do cargo, sem lista', async () => {
     mocks.list.mockRejectedValue({ response: { status: 403, data: { required_permission: 'portals.read' } } });
     montar();
     expect(await screen.findByText(NO_ACCESS_MESSAGE)).toBeInTheDocument();
-    expect(mocks.toastError).not.toHaveBeenCalled();
-  });
-
-  it('queda de rede NÃO culpa o cargo', async () => {
-    mocks.list.mockRejectedValue(new Error('Network Error'));
-    montar();
-    await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Erro ao carregar portais'));
-    expect(screen.queryByText(NO_ACCESS_MESSAGE)).not.toBeInTheDocument();
+    expect(screen.queryByText('Não deu pra carregar')).toBeNull();
   });
 });

@@ -61,7 +61,7 @@ describe('PortalAdPlanCard', () => {
     await usuario.type(screen.getByLabelText('Padrão'), '0');
     await usuario.type(screen.getByLabelText('Valor mensal do investimento (R$)'), '3.593,45');
 
-    await usuario.click(screen.getByRole('button', { name: 'Salvar plano' }));
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
     expect(mocks.updateSettings).toHaveBeenCalledWith('portal_zap', {
@@ -77,7 +77,7 @@ describe('PortalAdPlanCard', () => {
     render(<PortalAdPlanCard portalKey="portal_zap" adTypes={tipos} settings={{ monthly_investment: '100.00' }} />);
 
     await usuario.clear(screen.getByLabelText('Valor mensal do investimento (R$)'));
-    await usuario.click(screen.getByRole('button', { name: 'Salvar plano' }));
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
     expect(mocks.updateSettings.mock.calls[0][1]).toMatchObject({ monthly_investment: null });
@@ -88,7 +88,7 @@ describe('PortalAdPlanCard', () => {
     render(<PortalAdPlanCard portalKey="portal_zap" adTypes={tipos} />);
 
     await usuario.type(screen.getByLabelText('Valor mensal do investimento (R$)'), 'mil reais');
-    await usuario.click(screen.getByRole('button', { name: 'Salvar plano' }));
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Valor mensal inválido — use números, como 3.593,45'));
     expect(mocks.updateSettings).not.toHaveBeenCalled();
@@ -105,11 +105,27 @@ describe('PortalAdPlanCard', () => {
       });
     render(<PortalAdPlanCard portalKey="portal_zap" adTypes={tipos} />);
 
-    await usuario.click(screen.getByRole('button', { name: 'Salvar plano' }));
+    await usuario.type(screen.getByLabelText('Padrão'), '10');
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Cota inválida para Destaque'));
 
-    await usuario.click(screen.getByRole('button', { name: 'Salvar plano' }));
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Seu cargo não permite esta ação'));
     expect(mocks.toastSuccess).not.toHaveBeenCalled();
+  });
+
+  it('a barra de salvar só aparece com alteração, e Descartar volta ao gravado', async () => {
+    const usuario = userEvent.setup();
+    render(<PortalAdPlanCard portalKey="portal_zap" adTypes={tipos} settings={{ monthly_investment: '3593.45' }} />);
+
+    expect(screen.queryByRole('region', { name: 'Alterações não salvas' })).toBeNull();
+    await usuario.clear(screen.getByLabelText('Destaque'));
+    await usuario.type(screen.getByLabelText('Destaque'), '9');
+    expect(screen.getByRole('region', { name: 'Alterações não salvas' })).toBeInTheDocument();
+
+    await usuario.click(screen.getByRole('button', { name: 'Descartar' }));
+    expect(screen.getByLabelText('Destaque')).toHaveValue(5);
+    expect(screen.queryByRole('region', { name: 'Alterações não salvas' })).toBeNull();
+    expect(mocks.updateSettings).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Card, Button, Input } from '@/components/ui/ds';
+import { Input } from '@/components/ui/ds';
+import { Secao, Secoes } from '@/components/base/Secao';
+import BarraSalvar from '@/components/base/BarraSalvar';
+import { mesmoConteudo, useAlteracoesNaoSalvas } from '@/hooks/useAlteracoesNaoSalvas';
 import {
   portalsService,
   PortalAdType,
@@ -25,27 +28,38 @@ const limitesDe = (adTypes: PortalAdType[]) =>
   Object.fromEntries(adTypes.map(t => [t.key, t.limit === null || t.limit === undefined ? '' : String(t.limit)]));
 
 /**
- * *Plano de anúncios*: a cota contratada com o portal, por tipo de anúncio, e
- * o valor mensal do investimento. É a cota que o seletor de imóveis compara
- * para avisar do estouro — o portal não manda o plano dele para cá, então
- * quem digita é o gestor, olhando o contrato.
+ * Aba *Plano* do portal: a cota contratada com o portal, por tipo de anúncio, e
+ * o valor mensal do investimento. É a cota que a aba Imóveis compara para
+ * avisar do estouro — o portal não manda o plano dele para cá, então quem
+ * digita é o gestor, olhando o contrato.
  *
- * 0 (ou vazio) = ilimitado, que é como o servidor grava "sem cota".
+ * 0 (ou vazio) = ilimitado, que é como o servidor grava "sem cota". Campo espera
+ * o Salvar da BarraSalvar (padrão da casa desde o redesenho de 12/10/2026).
  */
 export default function PortalAdPlanCard({ portalKey, adTypes, settings, onSaved }: Props) {
-  const [limites, setLimites] = useState<Record<string, string>>(() => limitesDe(adTypes));
-  const [investimento, setInvestimento] = useState(() => investimentoParaTela(settings?.monthly_investment));
+  const limitesGravados = useMemo(() => limitesDe(adTypes), [adTypes]);
+  const investimentoGravado = investimentoParaTela(settings?.monthly_investment);
+  const [limites, setLimites] = useState<Record<string, string>>(limitesGravados);
+  const [investimento, setInvestimento] = useState(investimentoGravado);
   const [saving, setSaving] = useState(false);
 
-  // O servidor é a fonte: depois do salvar (e de qualquer recarga) o card
+  // O servidor é a fonte: depois do salvar (e de qualquer recarga) a aba
   // volta a mostrar o que ficou gravado, não o que a pessoa digitou.
-  useEffect(() => { setLimites(limitesDe(adTypes)); }, [adTypes]);
-  useEffect(() => { setInvestimento(investimentoParaTela(settings?.monthly_investment)); }, [settings?.monthly_investment]);
+  useEffect(() => { setLimites(limitesGravados); }, [limitesGravados]);
+  useEffect(() => { setInvestimento(investimentoGravado); }, [investimentoGravado]);
+
+  const temAlteracao = !mesmoConteudo(limites, limitesGravados) || investimento !== investimentoGravado;
+  useAlteracoesNaoSalvas(temAlteracao);
 
   const ilimitados = useMemo(
     () => new Set(adTypes.filter(t => limiteNormalizado(limites[t.key] ?? '') === null).map(t => t.key)),
     [adTypes, limites],
   );
+
+  const descartar = () => {
+    setLimites(limitesGravados);
+    setInvestimento(investimentoGravado);
+  };
 
   const save = async () => {
     const valor = investimentoNormalizado(investimento);
@@ -69,62 +83,57 @@ export default function PortalAdPlanCard({ portalKey, adTypes, settings, onSaved
   };
 
   return (
-    <Card className="gap-5 p-6">
-      <div>
-        <h2 className="font-semibold text-sm">Plano de anúncios</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Quantos imóveis o seu plano no portal permite em cada tipo de anúncio. Passar da cota
-          não trava o envio — a tela avisa e o portal rebaixa os que sobrarem para o tipo abaixo.
-        </p>
-      </div>
+    <>
+      <Secoes>
+        <Secao
+          titulo="Cota por tipo de anúncio"
+          descricao="Quantos imóveis o seu plano no portal permite em cada tipo de anúncio. Passar da cota não trava o envio: a aba Imóveis avisa e o portal rebaixa os que sobrarem para o tipo abaixo."
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            {adTypes.map(t => {
+              const id = `plano-${portalKey}-${t.key}`;
+              return (
+                <div key={t.key} className="space-y-1.5">
+                  <label htmlFor={id} className="text-sm font-medium">{t.label}</label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id={id}
+                      type="number"
+                      min={0}
+                      step={1}
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={limites[t.key] ?? ''}
+                      onChange={e => setLimites(prev => ({ ...prev, [t.key]: e.target.value }))}
+                      className="w-32"
+                    />
+                    {ilimitados.has(t.key) && (
+                      <span className="text-xs text-muted-foreground">0 = ilimitado</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Secao>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {adTypes.map(t => {
-          const id = `plano-${portalKey}-${t.key}`;
-          return (
-            <div key={t.key} className="space-y-1.5">
-              <label htmlFor={id} className="text-sm font-medium">{t.label}</label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id={id}
-                  type="number"
-                  min={0}
-                  step={1}
-                  inputMode="numeric"
-                  placeholder="0"
-                  value={limites[t.key] ?? ''}
-                  onChange={e => setLimites(prev => ({ ...prev, [t.key]: e.target.value }))}
-                  className="w-32"
-                />
-                {ilimitados.has(t.key) && (
-                  <span className="text-xs text-muted-foreground">0 = ilimitado</span>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="space-y-1.5 max-w-xs">
-        <label htmlFor={`investimento-${portalKey}`} className="text-sm font-medium">
-          Valor mensal do investimento (R$)
-        </label>
-        <Input
-          id={`investimento-${portalKey}`}
-          type="text"
-          inputMode="decimal"
-          placeholder="3.593,45"
-          value={investimento}
-          onChange={e => setInvestimento(e.target.value)}
-        />
-        <p className="text-xs text-muted-foreground">Só para o seu controle — não vai para o portal.</p>
-      </div>
-
-      <div className="flex justify-end">
-        <Button className="text-xs" onClick={save} disabled={saving}>
-          {saving ? 'Salvando...' : 'Salvar plano'}
-        </Button>
-      </div>
-    </Card>
+        <Secao titulo="Investimento" descricao="Só para o seu controle: não vai para o portal.">
+          <div className="space-y-1.5 max-w-xs">
+            <label htmlFor={`investimento-${portalKey}`} className="text-sm font-medium">
+              Valor mensal do investimento (R$)
+            </label>
+            <Input
+              id={`investimento-${portalKey}`}
+              type="text"
+              inputMode="decimal"
+              placeholder="3.593,45"
+              value={investimento}
+              onChange={e => setInvestimento(e.target.value)}
+            />
+          </div>
+        </Secao>
+      </Secoes>
+      <BarraSalvar visivel={temAlteracao} salvando={saving} aoSalvar={save} aoDescartar={descartar} />
+    </>
   );
 }

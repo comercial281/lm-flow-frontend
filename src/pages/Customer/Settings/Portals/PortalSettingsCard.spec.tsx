@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PortalSettingsCard from './PortalSettingsCard';
 import type { PortalSettings } from '@/services/portals/portalsService';
@@ -58,6 +58,12 @@ const erro403 = {
 
 const montar = (settings?: PortalSettings | null, onSaved?: () => void) =>
   render(<PortalSettingsCard portalKey="portal_zap" settings={settings} onSaved={onSaved} />);
+
+/** O Salvar mora na BarraSalvar, que só aparece com alteração: mexe num campo que não interfere no que o exemplo confere. */
+const mexer = (usuario: ReturnType<typeof userEvent.setup>) => usuario.type(screen.getByLabelText('Nome do contato'), 'X');
+
+/** A seção pelo título (Venda e Locação são duas seções, cada uma com o seu Funil). */
+const secao = (titulo: string) => screen.getByRole('heading', { name: titulo }).closest('section') as HTMLElement;
 
 /**
  * A tela *Configurar* do portal: quatro blocos, UM salvar. O que estes
@@ -161,13 +167,16 @@ describe('PortalSettingsCard', () => {
   });
 
   // Gravado com os dois (a tela antiga deixava): a lista mostra o corretor, que é
-  // quem o servidor usa, e salvar SEM MEXER no campo manda os dois como estavam.
-  it('gravado com roleta e responsável: mostra o corretor e salvar sem mexer não muda nada', async () => {
+  // quem o servidor usa; abrir não conta como alteração, e salvar outro campo
+  // SEM MEXER no destino manda os dois como estavam.
+  it('gravado com roleta e responsável: mostra o corretor e salvar sem mexer no destino não muda nada', async () => {
     const usuario = userEvent.setup();
     montar({ pipeline_id: 'pipe-1', roleta_config_id: 'rol-1', default_assignee_id: 'u-1' });
     const quem = await screen.findByRole('combobox', { name: 'Quem assume o lead' });
     await waitFor(() => expect(quem).toHaveValue('corretor:u-1'));
+    expect(screen.queryByRole('region', { name: 'Alterações não salvas' })).toBeNull();
 
+    await mexer(usuario);
     await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
     expect(mocks.updateSettings.mock.calls[0][1]).toMatchObject({ roleta_config_id: 'rol-1', default_assignee_id: 'u-1' });
@@ -207,6 +216,7 @@ describe('PortalSettingsCard', () => {
     montar(undefined);
     await screen.findByRole('combobox', { name: 'Funil' });
 
+    await mexer(usuario);
     await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Seu cargo não permite esta ação'));
@@ -226,6 +236,7 @@ describe('PortalSettingsCard', () => {
     expect(screen.getByRole('option', { name: 'Ana' })).toBeInTheDocument();
     expect(mocks.toastError).not.toHaveBeenCalled();
 
+    await mexer(usuario);
     await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
@@ -240,18 +251,19 @@ describe('PortalSettingsCard', () => {
     mocks.getAllRoletas.mockRejectedValueOnce(erro403);
     mocks.getUsers.mockRejectedValueOnce(erro403);
     montar(undefined);
-    await screen.findByRole('button', { name: 'Salvar' });
+    await screen.findByLabelText('Nome do contato');
 
     await waitFor(() => expect(mocks.getUsers).toHaveBeenCalled());
-    expect(screen.queryByText('Destino do lead')).toBeNull();
+    expect(screen.queryByText(/Destino do lead/)).toBeNull();
     expect(mocks.toastError).not.toHaveBeenCalled();
 
+    await mexer(usuario);
     await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
     expect(mocks.updateSettings).toHaveBeenCalledWith('portal_zap', {
       provider_name: null,
       contact_email: null,
-      contact_name: null,
+      contact_name: 'X',
       display_address: 'neighborhood',
       leads_enabled: true,
     });
@@ -264,11 +276,20 @@ describe('PortalSettingsCard', () => {
       rent_roleta_config_id: null, rent_default_assignee_id: null,
     };
 
-    it('servidor antigo não mostra as abas', async () => {
+    it('servidor antigo mostra um destino só, sem a seção de locação', async () => {
       montar({ pipeline_id: 'pipe-1' });
       await screen.findByRole('combobox', { name: 'Funil' });
 
-      expect(screen.queryByRole('tab', { name: 'Locação' })).toBeNull();
+      expect(screen.getByRole('heading', { name: 'Destino do lead' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Destino do lead de locação' })).toBeNull();
+    });
+
+    it('Venda e Locação são duas seções, não abas (a página já tem abas)', async () => {
+      montar(novo);
+      await screen.findByRole('combobox', { name: 'Funil' });
+      expect(screen.queryByRole('tab')).toBeNull();
+      expect(secao('Destino do lead de venda')).toBeInTheDocument();
+      expect(within(secao('Destino do lead de locação')).getByRole('checkbox', { name: 'Mesmo destino da venda' })).toBeChecked();
     });
 
     it('"Mesmo destino da venda" ligado viaja sozinho, sem as chaves de locação', async () => {
@@ -276,8 +297,8 @@ describe('PortalSettingsCard', () => {
       montar(novo);
       await screen.findByRole('combobox', { name: 'Funil' });
 
-      await usuario.click(screen.getByRole('tab', { name: 'Locação' }));
       expect(screen.getByRole('checkbox', { name: 'Mesmo destino da venda' })).toBeChecked();
+      await mexer(usuario);
       await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
       await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
@@ -291,10 +312,10 @@ describe('PortalSettingsCard', () => {
       montar(novo);
       await screen.findByRole('combobox', { name: 'Funil' });
 
-      await usuario.click(screen.getByRole('tab', { name: 'Locação' }));
       await usuario.click(screen.getByRole('checkbox', { name: 'Mesmo destino da venda' }));
-      await usuario.selectOptions(screen.getByRole('combobox', { name: 'Funil' }), 'pipe-2');
-      await usuario.selectOptions(await screen.findByRole('combobox', { name: 'Coluna' }), 'st-9');
+      const locacao = secao('Destino do lead de locação');
+      await usuario.selectOptions(within(locacao).getByRole('combobox', { name: 'Funil' }), 'pipe-2');
+      await usuario.selectOptions(await within(locacao).findByRole('combobox', { name: 'Coluna' }), 'st-9');
       await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
       await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
@@ -306,23 +327,22 @@ describe('PortalSettingsCard', () => {
     });
 
     it('abre a Locação com o que está gravado', async () => {
-      const usuario = userEvent.setup();
       montar({ ...novo, rent_same_as_sale: false, rent_pipeline_id: 'pipe-2', rent_stage_id: 'st-9' });
-      await screen.findByRole('combobox', { name: 'Funil' });
+      await screen.findAllByRole('combobox', { name: 'Funil' });
 
-      await usuario.click(screen.getByRole('tab', { name: 'Locação' }));
-
-      expect(screen.getByRole('checkbox', { name: 'Mesmo destino da venda' })).not.toBeChecked();
-      expect(screen.getByRole('combobox', { name: 'Funil' })).toHaveValue('pipe-2');
-      await waitFor(() => expect(screen.getByRole('combobox', { name: 'Coluna' })).toHaveValue('st-9'));
+      const locacao = secao('Destino do lead de locação');
+      expect(within(locacao).getByRole('checkbox', { name: 'Mesmo destino da venda' })).not.toBeChecked();
+      expect(within(locacao).getByRole('combobox', { name: 'Funil' })).toHaveValue('pipe-2');
+      await waitFor(() => expect(within(locacao).getByRole('combobox', { name: 'Coluna' })).toHaveValue('st-9'));
     });
 
     it('cargo sem acesso às roletas não apaga a roleta de locação gravada', async () => {
       const usuario = userEvent.setup();
       mocks.getAllRoletas.mockRejectedValueOnce(erro403);
       montar({ ...novo, rent_same_as_sale: false, rent_pipeline_id: 'pipe-2', rent_roleta_config_id: 'rol-1' });
-      await screen.findByRole('combobox', { name: 'Funil' });
+      await screen.findAllByRole('combobox', { name: 'Funil' });
 
+      await mexer(usuario);
       await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
       await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));

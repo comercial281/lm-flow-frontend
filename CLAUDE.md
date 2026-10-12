@@ -8585,3 +8585,57 @@ Armadilhas:
 4. **A ordem empata nos dados reais** (todos com ordem 0): aulas e módulos desempatam por created_at, e reordenar regrava todos os índices (`trocarOrdem` em quemVe.ts).
 
 Não reabrir sem o dono pedir.
+
+## Portais redesenhados: uma situação por portal e a página em abas (12/10/2026)
+
+Pedido do dono: a aba *Integrações → Portais* estava poluída. Eram 11 cartões iguais, cada um
+com quatro sinais de estado ("Formato validado", "Não conectado — clique para configurar",
+relógio com "—", ATIVO/AGUARDANDO/INATIVO) e até seis contadores zerados. A página do portal
+era uma rolagem de seis blocos com três Salvar. O dono escolheu, num quadro com seis
+protótipos, a **lista A** (conectados em cima, o resto pra conectar) e a **página D** (abas).
+
+O que aparece na tela:
+
+- **Lista:** *Conectados · N* numa lista com nome, **uma situação** (selo da casa), a frase
+  ("Leu o feed há 2 h"), quantos imóveis e uma frase de cota ("Destaque no limite",
+  "395 de 500"). Embaixo, *Adicionar portal* em cartões (`CartaoDeLink`): nome, "Formato a
+  confirmar" quando é formato adaptado, e "Conectar", que abre a página do portal.
+- **Situação** (`src/features/portals/situacao.ts`, com teste): *Recebendo* (verde, o
+  `active` do servidor: leu nas últimas 48 h), *Parou de ler* (vermelho: já leu, mas não
+  nas últimas 48 h), *Esperando 1ª leitura* (laranja: conectado e nunca lido), *Não
+  conectado* (cinza).
+- **Página do portal:** nome + selo no título, frase + imóveis no subtítulo, logo no começo
+  do conteúdo. *Parou de ler* abre um `Aviso` de erro com "Copiar endereço do feed";
+  *Esperando* abre um de atenção. Quatro abas de estado: **Imóveis** (abre primeiro),
+  **Plano** (só com tipos de anúncio), **Configurar** e **Conexão** (endereços, como ativar,
+  histórico de leituras, rotacionar chave e **Desconectar**, que saiu do topo e agora pede
+  confirmação). A aba aberta fica em `?aba=`.
+- **Imóveis:** contadores só dos tipos com cota ou com imóvel marcado ("+N tipos sem uso"
+  mostra o resto); cheio em atenção, estourado em erro; filtro *Todos · No portal · Fora*
+  (`BotoesDeEscolha`); busca sem resultado é `EmptyState semResultado`.
+- **Portal não conectado:** só *Como conectar* (o passo a passo do servidor) e o botão
+  "Conectar <portal>", sem abas.
+- **Salvar:** Imóveis, Plano e Configurar usam a `BarraSalvar` + `useAlteracoesNaoSalvas`.
+  Trocar de aba com alteração pendente pergunta (*Sair sem salvar?*): a aba que sai é
+  desmontada.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **Uma situação só por portal.** O selo de formato validado/adaptado saiu da lista (é
+  informação nossa); fica como "Formato a confirmar" nos cartões e na aba Conexão.
+- **Venda e Locação no Configurar são duas seções**, não abas: a página já tem abas e a
+  regra é um nível só. O `SaleRentDestination` (pílula roxa) continua no site.
+- **Agrupar por contrato (Canal Pro) ficou de fora** até confirmar se o plano do Canal Pro é
+  um só pros três portais.
+
+Armadilhas:
+
+1. **Publicação de imóvel que saiu de Ativo não acende a BarraSalvar.** Ela continua sendo
+   pausada no próximo salvar, mas sozinha não é alteração da pessoa. A comparação é do mapa
+   de publicações (ordenado) contra o gravado.
+2. **"Parou de ler" depende do `active` do servidor** (48 h). Mudou a janela lá, muda o que
+   a tela chama de parado; a regra não é copiada aqui.
+3. **O esqueleto só aparece na primeira leitura.** Depois de salvar, a página recarrega sem
+   desmontar a aba (senão a rolagem voltava ao topo e o seletor rebuscava a carteira).
+4. **Erro de carga não é lista vazia** nas duas telas: `EmptyState tipo="erro"` com Tentar
+   de novo (antes era toast + lista vazia, e a página ficava em "Carregando..." pra sempre).

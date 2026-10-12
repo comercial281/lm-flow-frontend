@@ -117,18 +117,22 @@ describe('PortalPropertiesSelector — tipo de anúncio e cota', () => {
     const chip = screen.getByTestId('contador-premium');
     expect(chip).toHaveTextContent('2 / 1');
     expect(chip.className).toContain('text-destructive');
-    expect(screen.getByRole('button', { name: 'Salvar publicações' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
   });
+
+  /** Marca o imóvel `b` como Destaque: com `a` já em Destaque, a cota de 1 estoura. */
+  const marcarBEmDestaque = async (usuario: ReturnType<typeof userEvent.setup>) => {
+    await usuario.click(screen.getByRole('checkbox', { name: 'Publicar COD-b' }));
+    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Tipo de anúncio de COD-b' }), 'premium');
+  };
 
   it('com estouro, Salvar abre o diálogo e só envia confirmado depois do clique', async () => {
     const usuario = userEvent.setup();
-    montar(tipos, [
-      { property_id: 'a', ad_type: 'premium' },
-      { property_id: 'b', ad_type: 'premium' },
-    ]);
+    montar(tipos, [{ property_id: 'a', ad_type: 'premium' }]);
     await screen.findByText('Imóvel a');
+    await marcarBEmDestaque(usuario);
 
-    await usuario.click(screen.getByRole('button', { name: 'Salvar publicações' }));
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
     const dialogo = await screen.findByRole('dialog');
     expect(within(dialogo).getByText('Plano de anúncios estourado')).toBeInTheDocument();
@@ -151,13 +155,11 @@ describe('PortalPropertiesSelector — tipo de anúncio e cota', () => {
 
   it('cancelar o diálogo não envia nada', async () => {
     const usuario = userEvent.setup();
-    montar(tipos, [
-      { property_id: 'a', ad_type: 'premium' },
-      { property_id: 'b', ad_type: 'premium' },
-    ]);
+    montar(tipos, [{ property_id: 'a', ad_type: 'premium' }]);
     await screen.findByText('Imóvel a');
+    await marcarBEmDestaque(usuario);
 
-    await usuario.click(screen.getByRole('button', { name: 'Salvar publicações' }));
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
     const dialogo = await screen.findByRole('dialog');
     await usuario.click(within(dialogo).getByRole('button', { name: 'Cancelar' }));
 
@@ -167,10 +169,12 @@ describe('PortalPropertiesSelector — tipo de anúncio e cota', () => {
 
   it('sem estouro envia direto, sem confirmação', async () => {
     const usuario = userEvent.setup();
-    montar(tipos, [{ property_id: 'a', ad_type: 'premium' }]);
+    montar(tipos, []);
     await screen.findByText('Imóvel a');
+    await usuario.click(screen.getByRole('checkbox', { name: 'Publicar COD-a' }));
+    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Tipo de anúncio de COD-a' }), 'premium');
 
-    await usuario.click(screen.getByRole('button', { name: 'Salvar publicações' }));
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(updatePublications).toHaveBeenCalledTimes(1));
     expect(updatePublications).toHaveBeenCalledWith(
@@ -188,10 +192,12 @@ describe('PortalPropertiesSelector — tipo de anúncio e cota', () => {
     updatePublications
       .mockRejectedValueOnce(erro422([{ key: 'premium', label: 'Destaque', limit: 0, count: 1, excess: 1 }]))
       .mockResolvedValueOnce({});
-    montar(tipos, [{ property_id: 'a', ad_type: 'premium' }]);
+    montar(tipos, []);
     await screen.findByText('Imóvel a');
+    await usuario.click(screen.getByRole('checkbox', { name: 'Publicar COD-a' }));
+    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Tipo de anúncio de COD-a' }), 'premium');
 
-    await usuario.click(screen.getByRole('button', { name: 'Salvar publicações' }));
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
     const dialogo = await screen.findByRole('dialog');
     expect(within(dialogo).getByText('Destaque: 1 de 0 — o portal rebaixa 1 imóvel para o tipo abaixo')).toBeInTheDocument();
@@ -212,10 +218,11 @@ describe('PortalPropertiesSelector — tipo de anúncio e cota', () => {
     updatePublications.mockRejectedValueOnce({
       response: { status: 403, data: { error: 'Seu cargo não permite esta ação' } },
     });
-    montar(tipos, [{ property_id: 'a', ad_type: 'standard' }]);
+    montar(tipos, []);
     await screen.findByText('Imóvel a');
+    await usuario.click(screen.getByRole('checkbox', { name: 'Publicar COD-a' }));
 
-    await usuario.click(screen.getByRole('button', { name: 'Salvar publicações' }));
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('Seu cargo não permite esta ação'));
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -227,7 +234,7 @@ describe('PortalPropertiesSelector — tipo de anúncio e cota', () => {
     await screen.findByText('Imóvel a');
 
     await usuario.click(screen.getByRole('button', { name: 'Selecionar todos' }));
-    await usuario.click(screen.getByRole('button', { name: 'Salvar publicações' }));
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(updatePublications).toHaveBeenCalledTimes(1));
     expect(updatePublications.mock.calls[0][1]).toEqual([
@@ -245,10 +252,67 @@ describe('PortalPropertiesSelector — tipo de anúncio e cota', () => {
     expect(screen.queryByTestId('contadores-por-tipo')).toBeNull();
     // A estrela existe em toda linha (desabilitada em quem não está marcado); a primeira é a do imóvel `a`.
     await usuario.click(screen.getAllByTitle('Destacar neste portal')[0]);
-    await usuario.click(screen.getByRole('button', { name: 'Salvar publicações' }));
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(updatePublicationsLegacy).toHaveBeenCalledWith('portal_zap', ['a'], ['a']));
     expect(updatePublications).not.toHaveBeenCalled();
+  });
+
+  it('sem mexer não há barra de salvar; Descartar volta ao gravado', async () => {
+    const usuario = userEvent.setup();
+    montar(tipos, [{ property_id: 'a', ad_type: 'standard' }]);
+    await screen.findByText('Imóvel a');
+    expect(screen.queryByRole('region', { name: 'Alterações não salvas' })).toBeNull();
+
+    await usuario.click(screen.getByRole('checkbox', { name: 'Publicar COD-b' }));
+    expect(screen.getByRole('region', { name: 'Alterações não salvas' })).toBeInTheDocument();
+    await usuario.click(screen.getByRole('button', { name: 'Descartar' }));
+
+    expect(screen.getByRole('checkbox', { name: 'Publicar COD-b' })).not.toBeChecked();
+    expect(screen.queryByRole('region', { name: 'Alterações não salvas' })).toBeNull();
+    expect(updatePublications).not.toHaveBeenCalled();
+  });
+
+  it('o filtro mostra só os do portal ou só os de fora', async () => {
+    const usuario = userEvent.setup();
+    montar(tipos, [{ property_id: 'a', ad_type: 'standard' }]);
+    await screen.findByText('Imóvel a');
+
+    await usuario.click(screen.getByRole('radio', { name: 'No portal' }));
+    expect(screen.getByText('Imóvel a')).toBeInTheDocument();
+    expect(screen.queryByText('Imóvel b')).toBeNull();
+
+    await usuario.click(screen.getByRole('radio', { name: 'Fora' }));
+    expect(screen.queryByText('Imóvel a')).toBeNull();
+    expect(screen.getByText('Imóvel b')).toBeInTheDocument();
+  });
+
+  it('busca sem resultado oferece limpar, e limpar volta a lista inteira', async () => {
+    const usuario = userEvent.setup();
+    montar(tipos, []);
+    await screen.findByText('Imóvel a');
+
+    await usuario.type(screen.getByRole('textbox', { name: 'Buscar imóvel' }), 'não existe');
+    expect(screen.getByText('Nada encontrado')).toBeInTheDocument();
+    await usuario.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(screen.getByText('Imóvel b')).toBeInTheDocument();
+  });
+
+  it('tipo sem cota e sem imóvel fica escondido atrás de "+N tipos sem uso"', async () => {
+    const usuario = userEvent.setup();
+    const seis: PortalAdType[] = [
+      ...tipos,
+      { key: 'super_premium', label: 'Super Destaque', feed_value: 'SUPER_PREMIUM', limit: null, count: 0 },
+      { key: 'triple', label: 'Destaque Triplo', feed_value: 'TRIPLE', limit: null, count: 0 },
+    ];
+    montar(seis, [{ property_id: 'a', ad_type: 'standard' }]);
+    await screen.findByText('Imóvel a');
+
+    expect(screen.getByTestId('contador-standard')).toBeInTheDocument();
+    expect(screen.getByTestId('contador-premium')).toBeInTheDocument();
+    expect(screen.queryByTestId('contador-triple')).toBeNull();
+    await usuario.click(screen.getByRole('button', { name: '+ 2 tipos sem uso' }));
+    expect(screen.getByTestId('contador-triple')).toBeInTheDocument();
   });
 });
 
@@ -289,7 +353,7 @@ describe('PortalPropertiesSelector — carteira completa, só ativos', () => {
     expect(screen.getByText('201 selecionados')).toBeInTheDocument();
   });
 
-  it('publicação de imóvel que saiu de Ativo não conta, não gasta cota e é pausada ao salvar', async () => {
+  it('publicação de imóvel que saiu de Ativo não conta, não gasta cota, não acende a barra e é pausada ao salvar', async () => {
     const usuario = userEvent.setup();
     list.mockResolvedValue({ data: [imovel('a')], meta: { total: 1, page: 1, per_page: 200 } });
     montar([
@@ -300,12 +364,15 @@ describe('PortalPropertiesSelector — carteira completa, só ativos', () => {
 
     expect(screen.getByText('1 selecionado')).toBeInTheDocument();
     expect(screen.getByTestId('contador-premium')).toHaveTextContent('0 / 1');
+    // A pausa do vendido acontece no próximo salvar, mas sozinha não é alteração da pessoa.
+    expect(screen.queryByRole('region', { name: 'Alterações não salvas' })).toBeNull();
 
-    await usuario.click(screen.getByRole('button', { name: 'Salvar publicações' }));
+    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Tipo de anúncio de COD-a' }), 'premium');
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(updatePublications).toHaveBeenCalledTimes(1));
     expect(updatePublications).toHaveBeenCalledWith(
       'portal_zap',
-      [{ property_id: 'a', ad_type: 'standard' }],
+      [{ property_id: 'a', ad_type: 'premium' }],
       { confirmOverflow: false },
     );
   });
