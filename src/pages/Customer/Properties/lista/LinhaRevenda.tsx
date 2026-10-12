@@ -8,7 +8,7 @@ import FotoDoImovel from './FotoDoImovel';
 import Selo from './SeloSituacao';
 import MenuDoImovel, { estaNoSite, type AcoesDoImovel, type Permissoes } from './MenuDoImovel';
 import TituloDoImovel from './TituloDoImovel';
-import { Card } from '@/components/ui/ds';
+import { Button, Card } from '@/components/ui/ds';
 
 const FINALIDADE: Record<string, string> = { sale: 'Venda', rent: 'Locação', sale_rent: 'Venda e locação', season: 'Temporada' };
 const reais = (v?: number | null) => (v ? dinheiro(v, { centavos: false }) : null);
@@ -48,10 +48,10 @@ export default function LinhaRevenda({ p, acoes, permissoes, forca, emDia }: {
           <span className="inline-flex items-center gap-2">
             Atualizado {tempoDesde(p.updated_at)}
             {emDia && (
-              <button type="button" onClick={() => acoes.emDia(p)}
-                className="rounded-md border border-emerald-600/40 bg-emerald-500/10 px-2 py-0.5 font-semibold text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-400">
+              <Button type="button" variant="outline" size="sm" onClick={() => acoes.emDia(p)}
+                className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                 Está em dia
-              </button>
+              </Button>
             )}
           </span>
           {p.captor?.name && <span>Captador: {p.captor.name}</span>}
