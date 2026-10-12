@@ -138,6 +138,14 @@ const DashboardNova: React.FC = () => {
   return (
     <div className="lmf lmfn h-full">
       <Pagina
+        // Banner da Leal Mídia (spec 2026-10-12-banner-dashboard-design.md) ACIMA da
+        // saudação: no meio, separava os filtros dos números que eles mudam (dono,
+        // 12/10). Sem banner, o componente não desenha nada e o espaço some.
+        acima={(
+          <div data-slot="banner" className="empty:hidden">
+            <BannerDaDashboard />
+          </div>
+        )}
         cabecalho={(
           <Cabecalho
             nome={`${saudacao()}${primeiroNome ? `, ${primeiroNome}` : ''}`}
@@ -168,11 +176,6 @@ const DashboardNova: React.FC = () => {
           </div>
         )}
 
-        {/* Banner da Leal Mídia (spec 2026-10-12-banner-dashboard-design.md). Sem
-            banner, o componente não desenha nada e o espaço some. */}
-        <div data-slot="banner" className="empty:hidden">
-          <BannerDaDashboard />
-        </div>
 
         {/* Filtro novo pedido e a resposta ainda não chegou: os blocos são da última
             resposta, então a área avisa que está ocupada e fica esmaecida. */}
