@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -63,16 +63,28 @@ export default function VisaoMapa({ kind }: { kind: ListingKind }) {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
 
-  useEffect(() => {
-    let ativo = true;
+  const ultimaCarga = useRef(0);
+
+  const carregar = useCallback(() => {
+    const vez = ++ultimaCarga.current;
     setLoading(true);
+    setErro(false);
     propertiesService
       .mapBounds({ listing_kind: kind, max: 500 })
-      .then(data => { if (ativo) { setMarkers(data); setErro(false); } })
-      .catch(() => { if (ativo) { setErro(true); toast.error('Erro ao carregar imóveis no mapa'); } })
-      .finally(() => { if (ativo) setLoading(false); });
-    return () => { ativo = false; };
+      .then(data => { if (vez === ultimaCarga.current) setMarkers(data); })
+      .catch(() => {
+        if (vez !== ultimaCarga.current) return;
+        setMarkers([]);
+        setErro(true);
+        toast.error('Erro ao carregar imóveis no mapa');
+      })
+      .finally(() => { if (vez === ultimaCarga.current) setLoading(false); });
   }, [kind]);
+
+  useEffect(() => {
+    carregar();
+    return () => { ultimaCarga.current += 1; };
+  }, [carregar]);
 
   const valid = useMemo(() => markers.filter(m => m.lat != null && m.lng != null), [markers]);
   const withoutCoords = markers.length - valid.length;
@@ -92,9 +104,9 @@ export default function VisaoMapa({ kind }: { kind: ListingKind }) {
         )}
         {valid.length === 0 && !loading && (
           <div className="absolute inset-0 z-[500] flex items-center justify-center bg-background/80 pointer-events-none">
-            {/* Sem função de recarga aqui (a carga mora no efeito): o erro só não se passa por vazio. */}
+            {/* A camada é pointer-events-none (deixa o mapa arrastar); o aviso de erro precisa do clique. */}
             {erro ? (
-              <EmptyState tipo="erro" tamanho="compacto" className="max-w-md bg-card" />
+              <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregar} className="pointer-events-auto max-w-md bg-card" />
             ) : (
               <EmptyState
                 tamanho="compacto"

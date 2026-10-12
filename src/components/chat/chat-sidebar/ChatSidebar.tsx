@@ -727,7 +727,7 @@ const ChatSidebar = ({
             {selectedConversations.size} selecionada{selectedConversations.size !== 1 ? 's' : ''}
           </span>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={handleBulkResolve} className="h-7 text-xs">
+            <Button size="sm" variant="outline" onClick={handleBulkResolve} className="text-xs">
               <CheckCircle className="h-3 w-3 mr-1" />
               Resolver todas
             </Button>
@@ -735,7 +735,7 @@ const ChatSidebar = ({
               size="sm"
               variant="ghost"
               onClick={() => setSelectedConversations(new Set())}
-              className="h-7 text-xs"
+              className="text-xs"
               aria-label="Limpar seleção"
               title="Limpar seleção"
             >

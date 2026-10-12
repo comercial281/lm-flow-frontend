@@ -20,6 +20,7 @@
   "cartaoAMao": 0,
   "corFixaEmGrafico": 0,
   "botaoPintado": 0,
+  "botaoPequeno": 0,
   "tamanhoDeIcone": 0,
   "rodinhaCentral": 0,
   "telaEmBranco": 0,
@@ -27,5 +28,6 @@
   "larguraDeJanela": 0,
   "janelaDireta": 0,
   "janelaAMao": 0,
+  "rodapeAMao": 0,
   "soMouse": 0
 }

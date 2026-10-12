@@ -7,9 +7,11 @@
 /*
  * `toque:` = aparelho sem mouse (celular, tablet). É o contrário exato do que o
  * Tailwind 4 usa pra ligar `hover:`/`group-hover:` (@media (hover: hover)).
- * Botão que só aparece passando o mouse (`opacity-0 group-hover:opacity-100`)
- * ganha `toque:opacity-100`: no celular fica sempre visível, com mouse fica como
- * era. O `conferir-padrao` (categoria soMouse) reprova quem esquece. 10/10/2026.
+ * Ação que só aparecia passando o mouse NÃO usa isto: segue a peça 16 do
+ * GLOSSARIO (sempre à vista, apagada: `opacity-70 group-hover:opacity-100
+ * focus-within:opacity-100`). `toque:` só vale como `toque:hidden` (camada sobre
+ * foto que some no toque) e, fora da tela do cliente (página pública, sobra),
+ * `toque:opacity-100`. Travas `soMouse` e `soNoMouse` do conferir-padrao.
  */
 @custom-variant toque {
   @media (hover: none) {

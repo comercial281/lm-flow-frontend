@@ -337,7 +337,7 @@ export default function BaseHeader({
                 variant="ghost"
                 size="sm"
                 onClick={onClearSelection}
-                className="h-7 px-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                className="px-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
               >
                 <X className="h-3 w-3 mr-1" />
                 {t('base.header.clear')}
@@ -381,7 +381,7 @@ export default function BaseHeader({
                     size="sm"
                     onClick={action.onClick}
                     disabled={action.disabled}
-                    className="h-7 bg-sidebar-accent border-sidebar-border text-sidebar-foreground hover:bg-sidebar"
+                    className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground hover:bg-sidebar"
                   >
                     {renderBulkIcon()}
                     {action.label}
@@ -422,11 +422,11 @@ export default function BaseHeader({
               {filter.label}: {filter.value}
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={filter.onRemove}
                 aria-label="Remover filtro"
                 title="Remover filtro"
-                className="ml-1 h-4 w-4 p-0 hover:bg-transparent text-sidebar-foreground/60 hover:text-sidebar-foreground"
+                className="ml-1 -my-1.5 size-8 p-0 hover:bg-transparent text-sidebar-foreground/60 hover:text-sidebar-foreground"
               >
                 <X className="h-3 w-3" />
               </Button>

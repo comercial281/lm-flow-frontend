@@ -237,6 +237,8 @@ export default function TelaRelatorioSemanal() {
   const alternar = (lista: string[], valor: string) =>
     lista.includes(valor) ? lista.filter((v) => v !== valor) : [...lista, valor];
 
+  const semDados = !payload && erroAoCarregar;
+
   if (loading && !payload) {
     return <Carregando variante="texto" linhas={6} className="py-2" />;
   }
@@ -393,104 +395,110 @@ export default function TelaRelatorioSemanal() {
         </>
       )}
 
-      {/* Destinos */}
-      <div className="pt-2 border-t border-sidebar-border space-y-3">
-        <Label>Para quem vai</Label>
+      {/* Leitura que falhou: sem dados não se afirma "Nenhum grupo"/"Nenhum gestor" nem se
+          mostra o automático desmarcado (ele pode estar ligado). O erro já está acima. */}
+      {!semDados && (
+        <>
+        {/* Destinos */}
+        <div className="pt-2 border-t border-sidebar-border space-y-3">
+          <Label>Para quem vai</Label>
 
-        <div>
-          <p className="text-xs text-muted-foreground mb-1">Grupos de WhatsApp desta imobiliária</p>
-          {targets.groups.length === 0 && erroAlvos ? (
-            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void recarregarAlvos()} />
-          ) : targets.groups.length === 0 ? (
-            <EmptyState
-              tamanho="compacto"
-              title="Nenhum grupo desta imobiliária foi encontrado no número operacional."
-              description="Você ainda pode mandar para os gestores abaixo."
-            />
-          ) : (
-            targets.groups.map((g) => (
-              <label key={g.jid} className="flex items-center gap-2 text-sm cursor-pointer py-0.5">
-                <input
-                  type="checkbox"
-                  checked={config?.group_jids.includes(g.jid) ?? false}
-                  onChange={() => void salvarConfig({ group_jids: alternar(config?.group_jids ?? [], g.jid) }, { quiet: true })}
-                />
-                {g.name}
-              </label>
-            ))
-          )}
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Grupos de WhatsApp desta imobiliária</p>
+            {targets.groups.length === 0 && erroAlvos ? (
+              <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void recarregarAlvos()} />
+            ) : targets.groups.length === 0 ? (
+              <EmptyState
+                tamanho="compacto"
+                title="Nenhum grupo desta imobiliária foi encontrado no número operacional."
+                description="Você ainda pode mandar para os gestores abaixo."
+              />
+            ) : (
+              targets.groups.map((g) => (
+                <label key={g.jid} className="flex items-center gap-2 text-sm cursor-pointer py-0.5">
+                  <input
+                    type="checkbox"
+                    checked={config?.group_jids.includes(g.jid) ?? false}
+                    onChange={() => void salvarConfig({ group_jids: alternar(config?.group_jids ?? [], g.jid) }, { quiet: true })}
+                  />
+                  {g.name}
+                </label>
+              ))
+            )}
+          </div>
+
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Gestores</p>
+            {targets.managers.length === 0 && erroAlvos ? (
+              <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void recarregarAlvos()} />
+            ) : targets.managers.length === 0 ? (
+              <EmptyState
+                tamanho="compacto"
+                title="Nenhum gestor com WhatsApp cadastrado."
+                description="O número sai do cadastro da pessoa, em Configurações → Equipe."
+              />
+            ) : (
+              targets.managers.map((m) => (
+                <label key={m.id} className="flex items-center gap-2 text-sm cursor-pointer py-0.5">
+                  <input
+                    type="checkbox"
+                    checked={config?.user_ids.includes(String(m.id)) ?? false}
+                    onChange={() => void salvarConfig({ user_ids: alternar(config?.user_ids ?? [], String(m.id)) }, { quiet: true })}
+                  />
+                  {m.name} <span className="text-xs text-muted-foreground">{m.phone_masked}</span>
+                </label>
+              ))
+            )}
+          </div>
+
+          {/* A contagem fica embaixo do dedo: disparo em grupo de cliente é irreversível. */}
+          <Button onClick={() => void enviar()} disabled={busy !== null || !atual || jaEnviado || destinos === 0}>
+            {busy === 'send' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}
+            Enviar agora {destinos > 0 && `(${destinos})`}
+          </Button>
         </div>
 
-        <div>
-          <p className="text-xs text-muted-foreground mb-1">Gestores</p>
-          {targets.managers.length === 0 && erroAlvos ? (
-            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void recarregarAlvos()} />
-          ) : targets.managers.length === 0 ? (
-            <EmptyState
-              tamanho="compacto"
-              title="Nenhum gestor com WhatsApp cadastrado."
-              description="O número sai do cadastro da pessoa, em Configurações → Equipe."
+        {/* Automático */}
+        <div className="pt-2 border-t border-sidebar-border space-y-2">
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={config?.enabled ?? false}
+              onChange={(e) => void salvarConfig({ enabled: e.target.checked })}
             />
-          ) : (
-            targets.managers.map((m) => (
-              <label key={m.id} className="flex items-center gap-2 text-sm cursor-pointer py-0.5">
-                <input
-                  type="checkbox"
-                  checked={config?.user_ids.includes(String(m.id)) ?? false}
-                  onChange={() => void salvarConfig({ user_ids: alternar(config?.user_ids ?? [], String(m.id)) }, { quiet: true })}
-                />
-                {m.name} <span className="text-xs text-muted-foreground">{m.phone_masked}</span>
-              </label>
-            ))
+            Enviar toda semana, sozinho
+          </label>
+          {config?.enabled && (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                <Seletor
+                  value={config.weekday}
+                  onChange={(e) => void salvarConfig({ weekday: Number(e.target.value) })}
+                  className="w-28 rounded-md border border-sidebar-border bg-background px-3 py-1.5 text-sm"
+                >
+                  {WEEKDAY_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </Seletor>
+                <span className="text-sm text-muted-foreground">às</span>
+                <Seletor
+                  value={config.hour}
+                  onChange={(e) => void salvarConfig({ hour: Number(e.target.value) })}
+                  className="w-24 rounded-md border border-sidebar-border bg-background px-3 py-1.5 text-sm"
+                >
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+                  ))}
+                </Seletor>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                O relatório sempre cobre a semana fechada anterior (segunda a domingo), para uma
+                semana poder ser comparada com a outra. Sai uma vez só, mesmo que o horário passe batido.
+              </p>
+            </>
           )}
         </div>
-
-        {/* A contagem fica embaixo do dedo: disparo em grupo de cliente é irreversível. */}
-        <Button onClick={() => void enviar()} disabled={busy !== null || !atual || jaEnviado || destinos === 0}>
-          {busy === 'send' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}
-          Enviar agora {destinos > 0 && `(${destinos})`}
-        </Button>
-      </div>
-
-      {/* Automático */}
-      <div className="pt-2 border-t border-sidebar-border space-y-2">
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={config?.enabled ?? false}
-            onChange={(e) => void salvarConfig({ enabled: e.target.checked })}
-          />
-          Enviar toda semana, sozinho
-        </label>
-        {config?.enabled && (
-          <>
-            <div className="flex flex-wrap items-center gap-2">
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
-              <Seletor
-                value={config.weekday}
-                onChange={(e) => void salvarConfig({ weekday: Number(e.target.value) })}
-                className="w-28 rounded-md border border-sidebar-border bg-background px-3 py-1.5 text-sm"
-              >
-                {WEEKDAY_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </Seletor>
-              <span className="text-sm text-muted-foreground">às</span>
-              <Seletor
-                value={config.hour}
-                onChange={(e) => void salvarConfig({ hour: Number(e.target.value) })}
-                className="w-24 rounded-md border border-sidebar-border bg-background px-3 py-1.5 text-sm"
-              >
-                {Array.from({ length: 24 }, (_, h) => (
-                  <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
-                ))}
-              </Seletor>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              O relatório sempre cobre a semana fechada anterior (segunda a domingo), para uma
-              semana poder ser comparada com a outra. Sai uma vez só, mesmo que o horário passe batido.
-            </p>
-          </>
-        )}
-      </div>
+        </>
+      )}
 
       {/* Histórico */}
       {(payload?.history.length ?? 0) > 0 && (

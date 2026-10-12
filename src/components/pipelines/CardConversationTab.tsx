@@ -28,6 +28,7 @@ import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import { chatService } from '@/services/chat/chatService';
+import { httpStatusOf } from '@/services/leadFollowup/leadFollowupService';
 import { DispararFunilPanel } from '@/components/chat/message-funnels/DispararFunilPanel';
 import { useWebSocketContext } from '@/contexts/chat/WebSocketContext';
 
@@ -186,6 +187,9 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
     (item.type === 'conversation' ? item.item_id : null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  // Falha que não é 404 (rede, 5xx, 401). Só aparece com a lista vazia: com mensagens
+  // na tela, a releitura de 8 em 8 s que falha fica calada (não pisca erro em cima da conversa).
+  const [erro, setErro] = useState(false);
   const [sending, setSending] = useState(false);
   const [text, setText] = useState('');
   const [funnelOpen, setFunnelOpen] = useState(false);
@@ -233,8 +237,12 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
         : (((raw as { data?: Message[]; payload?: Message[] })?.data
             ?? (raw as { payload?: Message[] })?.payload) ?? []);
       setMessages(msgs);
-    } catch {
-      // silent — conversation may not exist yet
+      setErro(false);
+    } catch (e) {
+      // 404: o servidor não acha a conversa (ainda não existe) — o vazio é honesto.
+      // Qualquer outra falha não pode virar "Nenhuma mensagem ainda.": o corretor
+      // concluiria que nunca falou com o lead e mandaria a primeira mensagem de novo.
+      setErro(httpStatusOf(e) !== 404);
     } finally {
       setLoading(false);
     }
@@ -361,8 +369,10 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
 
       {/* messages list */}
       <div className="flex-1 space-y-2 overflow-y-auto rounded-lg border bg-muted/30 p-3">
-        {loading && messages.length === 0 ? (
+        {loading && messages.length === 0 && !erro ? (
           <Carregando linhas={3} />
+        ) : messages.length === 0 && erro ? (
+          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} />
         ) : messages.length === 0 ? (
           <EmptyState tamanho="compacto" title="Nenhuma mensagem ainda." />
         ) : (

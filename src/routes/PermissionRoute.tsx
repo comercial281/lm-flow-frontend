@@ -4,7 +4,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import PermissionsRetryState from '@/components/permissions/PermissionsRetryState';
-import LoadingScreen from '@/components/LoadingScreen';
+import Carregando from '@/components/base/Carregando';
 import { permissionGate } from './permissionGate';
 
 interface PermissionRouteProps {
@@ -105,7 +105,7 @@ const PermissionRoute: React.FC<PermissionRouteProps> = ({
 
   // Mostrar loading enquanto carrega permissões
   if (permissionCheck.gate === 'loading') {
-    return <LoadingScreen className="min-h-screen" />;
+    return <Carregando variante="texto" rotulo="Verificando permissões…" className="p-6" />;
   }
 
   // A leitura das permissões caiu: tentar de novo, nunca o aviso do cargo.

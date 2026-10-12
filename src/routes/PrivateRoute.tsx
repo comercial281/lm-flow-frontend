@@ -13,7 +13,7 @@ const PrivateRoute = ({ children }: PrivateRouteProps) => {
 
   // Mostrar loading enquanto verifica autenticação
   if (isLoading) {
-    return <LoadingScreen fullScreen />;
+    return <LoadingScreen fullScreen rotulo="Verificando autenticação…" />;
   }
 
   // Redirecionar para login se não estiver autenticado, preservando o destino.

@@ -34,6 +34,13 @@
 .lmfn-linha-principal { grid-template-columns: minmax(0, 1fr) minmax(0, 2.1fr); }
 @media (max-width: 1024px) { .lmfn-linha-principal { grid-template-columns: minmax(0, 1fr); } }
 .lmfn-coluna { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+/* Cartões da mesma linha com a mesma altura, seja qual for o mais alto: a linha
+ * já estica as colunas, e o último cartão de cada coluna estica até o fundo dela.
+ * Vale para todo bloco, sem conserto por cartão. O Funil vem numa caixa própria
+ * (.lmfn-celula, por causa do esmaecido dele), que passa o esticar adiante. */
+.lmfn-coluna > :last-child { flex: 1 1 auto; }
+.lmfn-celula { display: flex; flex-direction: column; }
+.lmfn-celula > .lmf-glass { flex: 1 1 auto; }
 /* Bloco que não desenha nada (Roleta agora sem roleta ativa): a coluna sai e a vizinha ocupa a largura. */
 .lmfn-coluna:empty { display: none; }
 .lmfn-secao { margin-top: 30px; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
@@ -95,7 +102,7 @@ button.lmfn-numero:focus-visible { outline: 2px solid var(--lmf-accent); outline
 /* Sua vez na fila: cartão quase quadrado, número grande no meio, setas embaixo.
  * Arrastar para o lado troca de roleta, então o toque na horizontal é da tela e a
  * rolagem vertical continua da página. */
-.lmfn-vez-card { flex: 1; display: flex; flex-direction: column; min-height: 240px; }
+.lmfn-vez-card { display: flex; flex-direction: column; min-height: 240px; }
 .lmfn-vez-corpo { flex: 1; display: flex; flex-direction: column; }
 .lmfn-vez { flex: 1; display: flex; flex-direction: column; touch-action: pan-y; user-select: none; }
 .lmfn-vez-centro { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; }
@@ -119,14 +126,12 @@ button.lmfn-funil-faixa { cursor: pointer; }
 button.lmfn-funil-faixa:hover { filter: brightness(1.08); }
 .lmfn-funil-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lmfn-funil-valor { font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; }
-/* Tempo médio de negociação: estica até a altura de Resultados (sem altura mínima própria). */
-.lmfn-negociacao-card { flex: 1; display: flex; flex-direction: column; }
+/* Tempo médio de negociação: o número desce para o pé do cartão (sem altura mínima própria). */
+.lmfn-negociacao-card { display: flex; flex-direction: column; }
 .lmfn-negociacao { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; }
 /* Troca compacta ao lado do título; a coluna estreita ganha espaço pra ela caber. */
 .lmfn-seg-mini { flex-shrink: 0; }
 .lmfn-seg-mini button { padding: 4px 9px; font-size: 12px; }
 .lmfn-linha-lateral > .lmfn-coluna:has(.lmfn-negociacao-card) { flex-basis: 340px; }
-/* Os dois cartões da linha com a mesma altura, seja qual for o mais alto. */
-.lmfn-estica { flex: 1; }
 .lmfn-vez .lmfn-carrossel { padding-top: 14px; justify-content: center; }
 .lmfn-blocos > :first-child { margin-top: 0; }

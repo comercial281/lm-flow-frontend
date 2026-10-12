@@ -74,7 +74,7 @@ export default function TeamAccessPage() {
 
   return (
     <Pagina cabecalho={<BaseHeader title="Equipe" subtitle="Quem atende, por qual número e em qual time" />}>
-      <div className="flex flex-col gap-2 space-y-6">
+      <div className="flex flex-col space-y-6">
         <Abas
           rotulo="Partes da Equipe"
           ativa={activeTab}

@@ -304,10 +304,14 @@ export default function LeadRoutingModal({
   };
 
   return (
-    // Janela da casa. Clique fora não fecha (como antes: perderia o que foi
-    // escolhido); o X, o Esc e o Cancelar fecham.
+    // Janela da casa. Nem clique fora nem Esc fecham (como antes: perderiam o que
+    // foi escolhido e não salvo); o X e o Cancelar fecham.
     <Dialog open onOpenChange={(aberta) => { if (!aberta) onClose(); }}>
-      <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent
+        className="max-w-md"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="text-base">Roteamento de lead</DialogTitle>
           <DialogDescription className="truncate text-xs">Landing: {page.title}</DialogDescription>

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AddPersonWizard from './AddPersonWizard';
 import type { CustomRole } from '@/types/customRoles';
@@ -271,5 +271,33 @@ describe('AddPersonWizard', () => {
     s.createNumber.mockRejectedValueOnce(new Error('x'));
     await userEvent.click(screen.getByRole('button', { name: 'Só cadastrar' }));
     expect(await screen.findByText('Ana Souza entrou na equipe')).toBeInTheDocument();
+  });
+
+  it('o rodapé do assistente é o da casa e acompanha o passo', async () => {
+    open();
+    const rodape = screen.getByRole('button', { name: 'Continuar' }).closest('[data-slot="dialog-footer"]') as HTMLElement;
+    expect(rodape).not.toBeNull();
+    expect(rodape.className).toContain('sm:justify-between');
+    // no celular empilha com a ação principal em cima (flex-col-reverse da casa, sem trocar por flex-col)
+    expect(rodape.className).not.toMatch(/(^|\s)flex-col(\s|$)/);
+    expect(within(rodape).getByRole('button', { name: 'Cancelar' })).toBeInTheDocument();
+    expect(within(rodape).queryByRole('button', { name: 'Voltar' })).toBeNull();
+    await userEvent.type(screen.getByPlaceholderText('Ex: Ana Souza'), 'Ana Souza');
+    await userEvent.type(screen.getByPlaceholderText('ana@imobiliaria.com.br'), 'ana@x.com');
+    await userEvent.type(screen.getByPlaceholderText('Ex: 11 94087 1974'), '11940871974');
+    await userEvent.click(within(rodape).getByRole('button', { name: 'Continuar' }));
+    // mesmo rodapé, outros botões: Voltar no lugar de Cancelar
+    expect(within(rodape).getByRole('button', { name: 'Voltar' })).toBeInTheDocument();
+    expect(within(rodape).queryByRole('button', { name: 'Cancelar' })).toBeNull();
+    expect(within(rodape).getByRole('button', { name: 'Continuar' })).toBeInTheDocument();
+  });
+
+  it('no último passo o rodapé troca Continuar pelos botões finais', async () => {
+    open();
+    await preencher();
+    const rodape = screen.getByRole('button', { name: 'Só cadastrar' }).closest('[data-slot="dialog-footer"]') as HTMLElement;
+    expect(rodape).not.toBeNull();
+    expect(within(rodape).queryByRole('button', { name: 'Continuar' })).toBeNull();
+    expect(within(rodape).getByRole('button', { name: 'Voltar' })).toBeInTheDocument();
   });
 });

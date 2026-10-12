@@ -113,3 +113,28 @@ describe('Assistente: modelos prontos', () => {
     expect(createForProperty.mock.calls[0][1].theme.fontFamily).toContain('Nunito');
   });
 });
+
+// Esc fechava e jogava fora modelo, imóvel, nome, funil e tag. Volta ao de antes:
+// nem Esc nem clique fora fecham; o X e o Cancelar continuam fechando.
+describe('Assistente: Esc não descarta o que foi escolhido', () => {
+  it('Esc no passo 2 não fecha; o X fecha', async () => {
+    const onClose = vi.fn();
+    render(<MemoryRouter><CreateLandingWizard siteId="s1" onClose={onClose} /></MemoryRouter>);
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.type(screen.getByPlaceholderText(/Campanha Lançamento/), 'Teste');
+    await userEvent.keyboard('{Escape}');
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('Esc no passo 1 também não fecha; o Cancelar fecha', async () => {
+    const onClose = vi.fn();
+    render(<MemoryRouter><CreateLandingWizard siteId="s1" onClose={onClose} /></MemoryRouter>);
+    await userEvent.keyboard('{Escape}');
+    expect(onClose).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});

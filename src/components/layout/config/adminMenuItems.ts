@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, Radio, Building2, Smartphone, Wallet, Users, ScrollText, MessageCircle,
   Megaphone, Bell, BellRing, Landmark, GraduationCap, Archive, Globe, LifeBuoy,
-  Bot, Sparkles, Brain, CalendarCheck, UsersRound, Gift, TrendingUp, Package, Scale,
+  Bot, Sparkles, Brain, CalendarCheck, UsersRound, Gift, TrendingUp, Package, Scale, KeyRound,
 } from 'lucide-react';
 import { enderecoCasa } from './menuItems';
 
@@ -115,6 +115,7 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
       { name: 'Menus arquivados', href: '/admin/plataforma/menus-arquivados', icon: Archive },
       { name: 'Site', href: '/admin/plataforma', icon: Globe, exata: true },
       { name: 'Kit de boas-vindas', href: '/admin/plataforma/kit-boas-vindas', icon: Gift },
+      { name: 'Chaves do MCP', href: '/admin/plataforma/mcp', icon: KeyRound },
     ],
   },
   {

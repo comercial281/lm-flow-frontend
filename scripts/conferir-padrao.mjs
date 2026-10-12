@@ -314,6 +314,30 @@ export function importaJanelaDoPacote(codigo, arquivo = 'x.tsx') {
 }
 export const JANELA_A_MAO = /(?:^|[\s'"`])fixed inset-0(?=[\s'"`]|$)/;
 
+// Rodapé à mão (peça 17 do GLOSSARIO, escolha do dono em 10/10/2026): os botões
+// finais de toda janela moram no `DialogFooter` da casa (fica parado embaixo
+// enquanto o meio rola; no celular empilha com a ação principal em cima).
+// Janela com botão e sem `DialogFooter` tem o rodapé feito à mão (um `div flex
+// justify-end` dentro do miolo), que rola junto com o conteúdo. A régua é por
+// ARQUIVO: um achado quando há mais `<DialogContent` do que `<DialogFooter` e o
+// arquivo tem `<Button`. Janela sem botão final (paleta de comando, conteúdo só
+// de leitura, rodapé num componente filho que já usa o DialogFooter) vai pras
+// exceções com o motivo (trecho = `<DialogContent`).
+// PONTO CEGO: a régua lê um arquivo por vez. Janela cujo rodapé mora num
+// componente FILHO (o formulário que a janela renderiza, ex.: o botão Salvar
+// dentro do `XxxForm`) não aparece: a janela não tem `<Button` e o filho não tem
+// `<DialogContent`. O rodapé do filho tem que ser `DialogFooter` na mão, e a
+// revisão de PR confere. Também não vê 'Cancelar/Salvar' escritos fora de
+// `<Button` (botão de outro componente).
+export function rodapeAMao(codigo) {
+  const conta = re => (codigo.match(re) || []).length;
+  const janelas = conta(/<DialogContent(?=[\s>/]|$)/g);
+  const rodapes = conta(/<DialogFooter(?=[\s>/]|$)/g);
+  if (janelas <= rodapes || !/<Button(?=[\s>/]|$)/.test(codigo)) return null;
+  const i = codigo.search(/<DialogContent(?=[\s>/]|$)/);
+  return { linha: codigo.slice(0, i).split('\n').length, janelas, rodapes };
+}
+
 const SELETORES_DA_CASA = new Set(['src/components/base/Seletor.tsx', 'src/components/base/SeletorComAbas.tsx']);
 // Ficam com a lista do sistema DE PROPÓSITO (decisão 3 da spec do Seletor): o
 // widget de chat roda num iframe no site do cliente, que mede a própria altura,
@@ -525,8 +549,18 @@ export function importaPaginaDaCasa(codigo, arquivo = 'x.tsx') {
 // No Tailwind 4, `hover:` e `group-hover:` só valem em aparelho com mouse
 // (@media (hover: hover)). Então `opacity-0 group-hover:opacity-100` deixa o
 // botão INVISÍVEL e ainda assim tocável no celular: dava pra apertar Excluir
-// sem ver. A alternativa da casa é a variante `toque:` (globals.css,
-// @media (hover: none)): `opacity-0 group-hover:opacity-100 toque:opacity-100`.
+// sem ver. O conserto é a peça 16 do GLOSSARIO (escolha do dono em 10/10/2026):
+// a ação fica SEMPRE à vista, apagada, e acende no mouse ou no foco:
+// `opacity-70 group-hover:opacity-100 focus-within:opacity-100`.
+// A variante `toque:` (globals.css, @media (hover: none)) NÃO é a saída
+// recomendada. Ela só vale em dois casos:
+//   - `toque:hidden`: camada sobre foto que some no toque e deixa o toque cair
+//     na foto (SharedImageBubble, ProfilePhotoUploader);
+//   - `toque:opacity-100` fora da tela do cliente (página pública, sobra do fork).
+// Na tela do cliente quem manda é a `soNoMouse` (linha a linha), que reprova
+// `opacity-0 group-hover:opacity-100` mesmo com `toque:opacity-100`. As duas
+// réguas ficam: esta vale no app inteiro e lê pelo compilador (pega cn(...)
+// quebrado em linhas); a `soNoMouse` só na tela do cliente.
 //
 // Como lê: pelo compilador, junta as classes de um mesmo lugar (um className,
 // um cn(...) inteiro, mesmo quebrado em várias linhas, uma variável ou uma
@@ -656,6 +690,41 @@ export function botoesPintados(codigo, arquivo = 'x.tsx') {
           const { line } = fonte.getLineAndCharacterOfPosition(no.getStart(fonte));
           achados.push({ linha: line + 1, texto: cn.initializer.getText(fonte).replace(/\s+/g, ' ') });
         }
+      }
+    }
+    ts.forEachChild(no, visitar);
+  };
+  visitar(fonte);
+  return achados;
+}
+
+// ── Botão com no mínimo 32 px (peça 14 do GLOSSARIO, 12/10/2026) ───────────
+// `Button` nunca abaixo de 32 px: texto usa `size="sm"` (h-8); só-ícone usa
+// `size="icon"` com `size-8`. Régua: na tag de abertura de `<Button`, uma classe
+// `h-4..h-7` ou `size-4..size-7` (com ou sem `.5`), sem prefixo de tela/estado
+// (`sm:h-7` não conta). JSX aninhado dentro de um atributo (ícone passado como
+// prop) é apagado antes, pra o `h-4 w-4` do ícone não contar pro botão.
+export const botaoPequeno = tag => /(?<![\w:/\-.])(?:h|size)-[4-7](?:\.5)?(?![\w.\-/])/.test(tag);
+export function botoesPequenos(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const achados = [];
+  const visitar = no => {
+    if ((ts.isJsxOpeningElement(no) || ts.isJsxSelfClosingElement(no)) && no.tagName.getText(fonte) === 'Button') {
+      const ini = no.getStart(fonte);
+      let texto = no.getText(fonte);
+      const buracos = [];
+      const aninhado = n => {
+        if (n !== no && (ts.isJsxElement(n) || ts.isJsxSelfClosingElement(n) || ts.isJsxFragment(n))) {
+          buracos.push([n.getStart(fonte) - ini, n.getEnd() - ini]);
+          return;
+        }
+        ts.forEachChild(n, aninhado);
+      };
+      ts.forEachChild(no.attributes, aninhado);
+      for (const [a, b] of buracos.sort((x, y) => y[0] - x[0])) texto = texto.slice(0, a) + ' ' + texto.slice(b);
+      if (botaoPequeno(texto)) {
+        const { line } = fonte.getLineAndCharacterOfPosition(ini);
+        achados.push({ linha: line + 1, texto: no.getText(fonte).replace(/\s+/g, ' ') });
       }
     }
     ts.forEachChild(no, visitar);
@@ -912,6 +981,7 @@ export function varrer() {
     if (escopo && rel.endsWith('.tsx')) {
       for (const { linha, texto } of botoesSemNome(codigo, rel)) anotar('iconeSemNome', rel, linha, texto, texto);
       for (const { linha, texto } of botoesPintados(codigo, rel)) anotar('botaoPintado', rel, linha, 'botão pintado à mão', texto);
+      for (const { linha, texto } of botoesPequenos(codigo, rel)) anotar('botaoPequeno', rel, linha, 'botão abaixo de 32 px', texto);
       for (const { linha, texto } of iconesComTamanho(codigo, rel)) anotar('tamanhoDeIcone', rel, linha, 'ícone com size em pixel', texto);
       if (!ESTADOS_DA_CASA.has(rel)) {
         for (const { linha, texto } of rodinhasCentrais(codigo, rel)) anotar('rodinhaCentral', rel, linha, 'rodinha no meio da tela', texto);
@@ -924,6 +994,8 @@ export function varrer() {
         for (const t of tags.filter(x => x.tag === 'h1')) anotar('tituloAMao', rel, t.linha, 'título feito à mão', linhas[t.linha - 1].trim());
       }
       if (rel !== AJUSTE_DA_CASA) {
+        const r = rodapeAMao(codigo);
+        if (r) anotar('rodapeAMao', rel, r.linha, `${r.janelas} janelas, ${r.rodapes} DialogFooter`, linhas[r.linha - 1].trim());
         for (const a of largurasForaDaEscala(codigo, rel)) anotar('larguraDeJanela', rel, a.linha, a.largura, a.texto);
       }
       if (!embrulhos.has(rel) && rel !== CABECALHO_DA_CASA && rel !== MOLDURA_DA_CASA) {
@@ -990,6 +1062,7 @@ export const CATEGORIAS = {
   cartaoAMao: 'cartão feito à mão (fora do Card)',
   corFixaEmGrafico: 'cor fixa em gráfico',
   botaoPintado: 'botão pintado à mão (fora do Button)',
+  botaoPequeno: 'botão abaixo de 32 px (Button h-4..h-7)',
   tamanhoDeIcone: 'ícone com size em pixel',
   rodinhaCentral: 'rodinha no meio da tela (use Carregando)',
   telaEmBranco: 'tela em branco carregando (fallback={null})',
@@ -997,6 +1070,7 @@ export const CATEGORIAS = {
   larguraDeJanela: 'janela com largura fora das quatro',
   janelaDireta: 'janela importada do pacote base (app inteiro)',
   janelaAMao: 'janela montada à mão (fixed inset-0)',
+  rodapeAMao: 'janela com botões fora do DialogFooter',
   soMouse: 'escondido que só aparece com mouse (app inteiro)',
 };
 

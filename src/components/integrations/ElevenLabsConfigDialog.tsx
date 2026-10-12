@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   Input,
@@ -283,28 +284,22 @@ const ElevenLabsConfigDialog = ({
               />
             </div>
           )}
-
-          {/* Botões de ação */}
-          <div className="flex flex-col gap-3 pt-4">
-            <Button
-              onClick={handleSave}
-              disabled={!config.apiKey}
-              className="w-full"
-            >
-              {t('edit.integrations.elevenlabs.applyConfig') || 'APLICAR CONFIGURAÇÕES'}
-            </Button>
-
-            {onDeactivate && (
-              <Button
-                variant="ghost"
-                onClick={handleDeactivate}
-                className="w-full text-destructive hover:text-destructive/80"
-              >
-                {t('edit.integrations.elevenlabs.deactivate') || 'Desativar integração'}
-              </Button>
-            )}
-          </div>
         </div>
+
+        <DialogFooter className={onDeactivate ? 'sm:justify-between' : undefined}>
+          {onDeactivate && (
+            <Button
+              variant="ghost"
+              onClick={handleDeactivate}
+              className="text-destructive hover:text-destructive/80"
+            >
+              {t('edit.integrations.elevenlabs.deactivate') || 'Desativar integração'}
+            </Button>
+          )}
+          <Button onClick={handleSave} disabled={!config.apiKey}>
+            {t('edit.integrations.elevenlabs.applyConfig') || 'APLICAR CONFIGURAÇÕES'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

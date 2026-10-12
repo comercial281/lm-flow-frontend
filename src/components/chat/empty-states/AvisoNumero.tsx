@@ -83,7 +83,7 @@ export function FaixaReconectar({ numeros }: { numeros: NumeroForaDoAr[] }) {
           key={n.id}
           size="sm"
           variant="outline"
-          className="h-7 text-xs"
+          className="text-xs"
           onClick={() => navigate(enderecoConexao(n.id))}
         >
           {numeros.length === 1 ? RECONECTAR : `${RECONECTAR} ${n.nome}`}

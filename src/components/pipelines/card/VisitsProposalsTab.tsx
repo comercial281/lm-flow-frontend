@@ -115,7 +115,7 @@ export default function VisitsProposalsTab({ item, nomeExibido, versao = 0 }: Vi
             Visitas
           </h4>
           {podeCriarVisita && (
-            <Button type="button" size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setAgendando(true)}>
+            <Button type="button" size="sm" variant="outline" className="gap-1 text-xs" onClick={() => setAgendando(true)}>
               <Plus className="h-3.5 w-3.5" />
               Nova visita
             </Button>
