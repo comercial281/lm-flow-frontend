@@ -8396,7 +8396,7 @@ Origem: o dono quer conectar o LM Flow no Claude (Conectores) e no Claude Code p
 
 ## IA Vendedora · avisos limpos e "Ocultar" (11/10/2026)
 
-Pedido do dono: o Painel da IA acusava amarelo e vermelho toda noite por coisa que não era problema (horário, "canal errado", "nenhum arquivo liberado"). Desenho aprovado em 11/10. Servidor: coluna `sales_agents.hidden_warnings` (migration `99990101000321`) (a limpeza dos avisos é do `HealthCheck` no servidor). PRs: servidor (lm-flow) #? e tela (lm-flow-frontend) #?; o do servidor entra primeiro. **Reabre a decisão 3 de 05/10 ("mode para a IA") por pedido do dono.**
+Pedido do dono: o Painel da IA acusava amarelo e vermelho toda noite por coisa que não era problema (horário, "canal errado", "nenhum arquivo liberado"). Desenho aprovado em 11/10. Servidor: coluna `sales_agents.hidden_warnings` (migration `99990101000321`) (a limpeza dos avisos é do `HealthCheck` no servidor). PRs: servidor (lm-flow) #467 e tela (lm-flow-frontend) #543; o do servidor entra primeiro. **Reabre a decisão 3 de 05/10 ("mode para a IA") por pedido do dono.**
 
 - **O que muda pra quem usa:** o Painel da IA só mostra o que pede ação. Cada pendência AMARELA ganha o botão **Ocultar** (quem tem `sales_agents.update`); no fim da lista aparece "N avisos ocultos · Mostrar", que abre os ocultos em tom neutro, com **Mostrar de novo**. "Configurar → Objetivo" passou a se chamar "Configurar → Destino" (inclusive no Diagnóstico, `EnviosSistemaCliente.tsx`).
 - **1. Horário de atendimento** sai do Painel: fora do horário é normal. O texto "Fora do horário agora" segue no Diagnóstico.
