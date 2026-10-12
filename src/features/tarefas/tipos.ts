@@ -1,7 +1,7 @@
 // Formato da lista `GET /api/v1/activities` (Frente 2, 07/10/2026).
 
 export type Balde = 'para_fazer' | 'hoje' | 'amanha' | 'atrasadas' | 'semana' | 'proxima_semana' | 'concluidas';
-export type TipoDeAtividade = 'all' | 'task' | 'visit';
+export type TipoDeAtividade = 'all' | 'task' | 'visit' | 'imoveis';
 
 export interface Pessoa {
   id: string;
@@ -63,7 +63,10 @@ export interface ContextoDaTarefa {
 
 export interface RespostaDeAtividades {
   data: TarefaAtividade[];
-  meta: { counts: Partial<Record<Balde, number>>; total: number; page: number; per_page: number; only_mine: boolean };
+  meta: { counts: Partial<Record<Balde, number>>; total: number; page: number; per_page: number; only_mine: boolean;
+    /** Imóveis desatualizados da aba (f2-07): uma linha, calculada; null sem imóvel. */
+    stale_properties?: { count: number; bucket: Balde } | null;
+  };
 }
 
 export interface ParametrosDaLista {

@@ -15,6 +15,8 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import { visitsService, type PersonRef } from '@/services/visits/visitsService';
 import JanelaDaTarefa from '@/features/tarefas/JanelaDaTarefa';
 import LinhaDaTarefa from '@/features/tarefas/LinhaDaTarefa';
+import LinhaDosImoveis, { CATEGORIA_IMOVEL } from '@/features/tarefas/LinhaDosImoveis';
+import { linkImoveis } from '@/features/dashboard/links';
 import { BALDES, TEXTOS_DE_TAREFAS as T } from '@/features/tarefas/textos';
 import { EVENTO_TAREFAS_MUDARAM, tarefasService } from '@/features/tarefas/tarefasService';
 import { useCategoriasDeTarefa } from '@/features/tarefas/useCategoriasDeTarefa';
@@ -56,10 +58,11 @@ export default function Tarefas() {
   const carregar = useCallback(async () => {
     const meu = ++ultimoPedido.current;
     try {
+      const soImoveis = categoria === CATEGORIA_IMOVEL;
       const nova = await tarefasService.listar({
-        bucket: balde, kind: 'task', page: pagina, per_page: POR_PAGINA,
+        bucket: balde, kind: soImoveis ? 'imoveis' : 'task', page: pagina, per_page: POR_PAGINA,
         ...(pessoa ? { assigned_to_id: pessoa } : {}),
-        ...(categoria ? { category_option_id: categoria } : {}),
+        ...(categoria && !soImoveis ? { category_option_id: categoria } : {}),
         ...(buscaFirme ? { q: buscaFirme } : {}),
       });
       // Só o pedido mais recente vale: resposta atrasada não sobrescreve.
@@ -86,6 +89,14 @@ export default function Tarefas() {
   const contagem = (b: Balde) => resposta?.meta.counts[b] ?? 0;
   const itens = resposta?.data ?? [];
   const total = resposta?.meta.total ?? 0;
+  const imoveis = pagina === 1 ? resposta?.meta.stale_properties ?? null : null;
+  const pessoaEscolhida = pessoas.find(p => p.id === pessoa);
+  const abrirImoveis = () => navigate(linkImoveis('desatualizados', {
+    vence: balde === 'concluidas' ? undefined : balde,
+    meus: somenteMinhas,
+    pessoa: !somenteMinhas && pessoaEscolhida ? { id: pessoaEscolhida.id, name: pessoaEscolhida.name } : undefined,
+  }));
+  const deQuem = somenteMinhas ? 'seus' : pessoaEscolhida?.name ?? 'todas as pessoas';
 
   const acoes = {
     aoConcluir: async (t: TarefaAtividade) => {
@@ -125,6 +136,8 @@ export default function Tarefas() {
             <Seletor aria-label="Categoria" value={categoria} onChange={e => mudarFiltro({ categoria: e.target.value })} className="w-48">
               <option value="">Todas as categorias</option>
               {categorias.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+              <option disabled>──────────</option>
+              <option value={CATEGORIA_IMOVEL}>Imóvel desatualizado</option>
             </Seletor>
             {!somenteMinhas && (
               <Seletor aria-label="Pessoa" value={pessoa} onChange={e => mudarFiltro({ pessoa: e.target.value })} className="w-48">
@@ -146,10 +159,13 @@ export default function Tarefas() {
           <EmptyState tipo="erro" aoTentarDeNovo={() => void carregar()} />
         ) : !resposta ? (
           <Carregando linhas={5} rotulo="Carregando tarefas…" />
-        ) : itens.length === 0 ? (
+        ) : itens.length === 0 && !imoveis ? (
           <EmptyState title={balde === 'hoje' ? 'Nada pra hoje.' : 'Nada por aqui.'} />
         ) : (
-          <ul className="divide-y divide-border/60">{itens.map(t => <LinhaDaTarefa key={t.id} tarefa={t} mostrarLead {...acoes} />)}</ul>
+          <ul className="divide-y divide-border/60">
+            {imoveis && <LinhaDosImoveis balde={balde} quantidade={imoveis.count} deQuem={deQuem} aoAbrir={abrirImoveis} />}
+            {itens.map(t => <LinhaDaTarefa key={t.id} tarefa={t} mostrarLead {...acoes} />)}
+          </ul>
         )}
       </div>
 

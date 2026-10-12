@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
+const navegar = vi.fn();
+vi.mock('react-router-dom', async () => ({ ...(await vi.importActual<object>('react-router-dom')), useNavigate: () => navegar }));
+
 const listar = vi.fn();
 const concluir = vi.fn();
 // A janela de verdade tem teste próprio: aqui só interessa com que dados abre.
@@ -30,6 +33,7 @@ const resposta = (data: unknown[], onlyMine = false) => ({
 beforeEach(() => {
   listar.mockReset();
   concluir.mockReset();
+  navegar.mockReset();
 });
 
 describe('Tarefas', () => {
@@ -136,5 +140,27 @@ describe('Tarefas', () => {
     render(<MemoryRouter><Tarefas /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('tab', { name: /Atrasadas/ }));
     await waitFor(() => expect(listar).toHaveBeenLastCalledWith(expect.objectContaining({ bucket: 'atrasadas', kind: 'task' })));
+  });
+
+  it('mostra a linha dos imóveis no topo e o clique abre a lista filtrada', async () => {
+    const base = resposta([
+      { kind: 'task', id: 't1', title: 'Ligar', due_at: new Date().toISOString(), status: 'pending', overdue: false, pipeline_item_id: 'c1', pipeline_id: 'p1', contact: null, assignee: null, created_by_id: 'u1', can_edit: true, can_delete: true },
+    ], true);
+    listar.mockResolvedValue({ ...base, meta: { ...base.meta, stale_properties: { count: 3, bucket: 'hoje' } } });
+    render(<MemoryRouter><Tarefas /></MemoryRouter>);
+    const linha = await screen.findByText('3 imóveis vencem hoje');
+    const tarefa = await screen.findByText('Ligar');
+    expect(linha.compareDocumentPosition(tarefa) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(linha);
+    expect(navegar).toHaveBeenCalledWith('/properties?recorte=desatualizados&vence=hoje&meus=1');
+  });
+
+  it('categoria Imóvel desatualizado pede só os imóveis', async () => {
+    listar.mockResolvedValue(resposta([]));
+    render(<MemoryRouter><Tarefas /></MemoryRouter>);
+    await screen.findByRole('option', { name: 'Imóvel desatualizado' });
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: '__imovel_desatualizado' } });
+    await waitFor(() => expect(listar).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'imoveis' })));
+    expect(listar.mock.calls.at(-1)?.[0]).not.toHaveProperty('category_option_id');
   });
 });
