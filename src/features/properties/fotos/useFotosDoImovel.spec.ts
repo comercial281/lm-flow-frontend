@@ -86,6 +86,29 @@ describe('useFotosDoImovel', () => {
     expect(svc.reorder).not.toHaveBeenCalled();
   });
 
+  it('adicionar por endereço leva a foto antes dos vídeos', async () => {
+    const h = await montar([foto('a'), video('v')]);
+    svc.create.mockResolvedValue(foto('n'));
+    svc.reorder.mockResolvedValue([foto('a'), foto('n'), video('v')]);
+    let ok = false;
+    await act(async () => { ok = await h.result.current.adicionarPorEndereco('https://x/n.jpg'); });
+    expect(ok).toBe(true);
+    expect(svc.reorder).toHaveBeenCalledWith('p1', [
+      { id: 'a', position: 0 }, { id: 'n', position: 1 }, { id: 'v', position: 2 },
+    ]);
+    expect(h.result.current.fotos.map(p => p.id)).toEqual(['a', 'n', 'v']);
+  });
+
+  it('adicionar por endereço já arrumado não grava ordem', async () => {
+    const h = await montar([foto('a')]);
+    svc.create.mockResolvedValue(foto('n'));
+    let ok = false;
+    await act(async () => { ok = await h.result.current.adicionarPorEndereco('https://x/n.jpg'); });
+    expect(ok).toBe(true);
+    expect(svc.reorder).not.toHaveBeenCalled();
+    expect(h.result.current.fotos.map(p => p.id)).toEqual(['a', 'n']);
+  });
+
   it('emLote ocultar pula a capa', async () => {
     const h = await montar([foto('a'), foto('b'), foto('c')]);
     svc.update.mockImplementation(async (_p: string, id: string) => foto(id, { published: false }));

@@ -59,6 +59,13 @@ export function useFotosDoImovel(propertyId: string) {
     await gravarOrdem(grupo === 'imagens' ? juntar(movido, sep.midias) : juntar(sep.imagens, movido));
   }, [fotos, gravarOrdem]);
 
+  // Põe as novas no fim e, se a ordem gravada ficaria fora de "fotos, depois mídias", regrava.
+  const acrescentar = useCallback(async (novas: PropertyPhoto[]) => {
+    const todas = [...fotos, ...novas];
+    if (jaEstaArrumada(todas)) setFotos(todas);
+    else { const { imagens, midias } = separar(todas); await gravarOrdem(juntar(imagens, midias)); }
+  }, [fotos, gravarOrdem]);
+
   const enviar = useCallback(async (files: File[]) => {
     const { ok, recusados } = validarArquivos(files);
     recusados.forEach(msg => toast.error(msg));
@@ -67,28 +74,26 @@ export function useFotosDoImovel(propertyId: string) {
     try {
       // Sem tipo: o servidor descobre vídeo e áudio pelo arquivo (inferred_photo_type).
       const criadas = await propertyPhotosService.upload(propertyId, ok, { published: true, onProgress: setEnviando });
-      const todas = [...fotos, ...criadas];
       toast.success(criadas.length === 1 ? '1 arquivo enviado' : `${criadas.length} arquivos enviados`);
-      if (jaEstaArrumada(todas)) setFotos(todas);
-      else { const { imagens, midias } = separar(todas); await gravarOrdem(juntar(imagens, midias)); }
+      await acrescentar(criadas);
     } catch {
       toast.error('Não deu pra enviar. Confira a internet e tente de novo.');
     } finally {
       setEnviando(null);
     }
-  }, [propertyId, fotos, gravarOrdem]);
+  }, [propertyId, acrescentar]);
 
   const adicionarPorEndereco = useCallback(async (url: string) => {
     try {
       const nova = await propertyPhotosService.create(propertyId, { file_url: url.trim(), published: true });
-      setFotos(prev => [...prev, nova]);
+      await acrescentar([nova]);
       toast.success('Foto adicionada');
       return true;
     } catch {
       toast.error('Não deu pra adicionar. Confira o endereço.');
       return false;
     }
-  }, [propertyId]);
+  }, [propertyId, acrescentar]);
 
   const usarComoCapa = useCallback(async (id: string) => {
     try {
