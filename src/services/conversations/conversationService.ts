@@ -13,6 +13,9 @@ import type {
   ConversationsResponse,
 } from '@/types/chat/api';
 
+/** Resposta do transcrever do anexo de áudio: pronto (com texto) ou ainda na fila. */
+export type RespostaDaTranscricao = { attachment_id: string; status: 'done' | 'pending'; transcribed_text?: string };
+
 export const conversationAPI = {
   // Create new conversation
   async create(data: ConversationCreateData): Promise<Conversation> {
@@ -58,10 +61,27 @@ export const conversationAPI = {
     return extractData<any>(response);
   },
 
-  // Get conversation messages
-  async getMessages(conversationId: string): Promise<{ data: Message[] }> {
-    const response = await api.get(`/conversations/${conversationId}/messages`);
+  // Get conversation messages. `before` = id da mensagem mais antiga que já está
+  // na tela: o servidor devolve as 20 anteriores a ela (sem cursor, as 20 últimas).
+  async getMessages(conversationId: string, params?: { before?: string }): Promise<{ data: Message[] }> {
+    const response = await api.get(`/conversations/${conversationId}/messages`, params ? { params } : undefined);
     return extractData<any>(response);
+  },
+
+  // "Transcrever" do áudio no card: o servidor transcreve com a chave dele, fora da
+  // requisição (regra da casa: rack-timeout de 15 s). `start` = clique (começa);
+  // sem `start` = a tela perguntando como foi ('pending' até ficar 'done'; falha = 422).
+  async transcribeAttachment(
+    conversationId: string,
+    messageId: string,
+    attachmentId: string,
+    start: boolean,
+  ): Promise<RespostaDaTranscricao> {
+    const response = await api.post(`/conversations/${conversationId}/messages/${messageId}/transcribe`, {
+      attachment_id: attachmentId,
+      ...(start ? { start: true } : {}),
+    });
+    return extractData<RespostaDaTranscricao>(response);
   },
 
   // Send message
