@@ -35,6 +35,7 @@ import {
   PERTO_DO_FIM_PX,
   PERTO_DO_TOPO_PX,
   aplicarPaginaRecente,
+  instanteDaMensagem,
   juntarMensagens,
   paginaDaResposta,
   temMaisAntigas,
@@ -199,7 +200,8 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
   // na tela, a releitura de 8 em 8 s que falha fica calada (não pisca erro em cima da conversa).
   const [erro, setErro] = useState(false);
   // Mensagens antigas (spec 2026-10-12): o servidor manda 20 por vez.
-  const [temMais, setTemMais] = useState(false);
+  // null = ainda não chegou a primeira página do servidor (não dá pra saber).
+  const [temMais, setTemMais] = useState<boolean | null>(null);
   const [carregandoAnteriores, setCarregandoAnteriores] = useState(false);
   const [erroAnteriores, setErroAnteriores] = useState(false);
   // Chegou mensagem enquanto a pessoa lia o histórico: a caixa não pula, aparece o botão.
@@ -218,7 +220,9 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
   const messagesRef = useRef<Message[]>([]);
   // O que fazer com a rolagem depois do próximo desenho da lista.
   const rolagemPendente = useRef<{ tipo: 'fim' } | { tipo: 'manter'; distanciaDoFim: number } | null>(null);
-  const primeiraCargaFeita = useRef(false);
+  // A primeira página do servidor chegou. Só o load liga: mensagem do tempo real que
+  // chega antes dela (ou depois de uma falha) não decide se há anteriores.
+  const paginaRecenteRecebida = useRef(false);
   const carregandoAnterioresRef = useRef(false);
   // Conversa de agora: resposta que chega depois de trocar de lead é jogada fora.
   const conversaAtual = useRef<string | null>(conversationId);
@@ -239,17 +243,18 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
   }, []);
 
   // Mensagens novas no fim (primeira carga, releitura, tempo real, envio).
+  // irProFim: desce de qualquer jeito (primeira página do servidor, mensagem que a pessoa enviou).
   const receberRecentes = useCallback(
-    (proxima: Message[], opcoes?: { minha?: boolean }) => {
+    (proxima: Message[], opcoes?: { minha?: boolean; irProFim?: boolean }) => {
       const anterior = messagesRef.current;
       const ultima = (lista: Message[]) => (lista.length ? String(lista[lista.length - 1].id) : null);
       const chegouNoFim = ultima(proxima) !== ultima(anterior);
-      if (!primeiraCargaFeita.current || (chegouNoFim && (opcoes?.minha || estaPertoDoFim()))) {
+      if (opcoes?.irProFim || anterior.length === 0 || (chegouNoFim && (opcoes?.minha || estaPertoDoFim()))) {
         rolagemPendente.current = { tipo: 'fim' };
+        setNovaMensagem(false);
       } else if (chegouNoFim) {
         setNovaMensagem(true);
       }
-      primeiraCargaFeita.current = true;
       definirMensagens(proxima);
     },
     [definirMensagens, estaPertoDoFim],
@@ -258,12 +263,12 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
   // Trocou de lead: começa do zero (antes da primeira carga, pela ordem dos efeitos).
   useEffect(() => {
     conversaAtual.current = conversationId;
-    primeiraCargaFeita.current = false;
+    paginaRecenteRecebida.current = false;
     rolagemPendente.current = null;
     carregandoAnterioresRef.current = false;
     messagesRef.current = [];
     setMessages([]);
-    setTemMais(false);
+    setTemMais(null);
     setErro(false);
     setErroAnteriores(false);
     setCarregandoAnteriores(false);
@@ -295,8 +300,13 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
       try {
         const pagina = paginaDaResposta(await conversationAPI.getMessages(conversationId));
         if (conversaAtual.current !== conversationId) return;
-        if (!primeiraCargaFeita.current) setTemMais(temMaisAntigas(pagina));
-        receberRecentes(aplicarPaginaRecente(messagesRef.current, pagina), opcoes);
+        const primeiraPagina = !paginaRecenteRecebida.current;
+        paginaRecenteRecebida.current = true;
+        if (primeiraPagina) setTemMais(temMaisAntigas(pagina));
+        receberRecentes(aplicarPaginaRecente(messagesRef.current, pagina), {
+          ...opcoes,
+          irProFim: primeiraPagina,
+        });
         setErro(false);
       } catch (e) {
         if (conversaAtual.current !== conversationId) return;
@@ -305,7 +315,8 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
         // concluiria que nunca falou com o lead e mandaria a primeira mensagem de novo.
         setErro(httpStatusOf(e) !== 404);
       } finally {
-        setLoading(false);
+        // Resposta da conversa anterior não mexe no "carregando" da de agora.
+        if (conversaAtual.current === conversationId) setLoading(false);
       }
     },
     [conversationId, receberRecentes],
@@ -322,6 +333,15 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
         await conversationAPI.getMessages(conversationId, { before: String(maisAntiga.id) }),
       );
       if (conversaAtual.current !== conversationId) return;
+      // Não avançou (a mais antiga foi apagada e o servidor ignora o before, devolvendo
+      // as últimas de novo): para aqui, senão a caixa pede a mesma página pra sempre.
+      const naTela = new Set(messagesRef.current.map(msg => String(msg.id)));
+      const limite = instanteDaMensagem(maisAntiga);
+      const avancou = pagina.some(msg => !naTela.has(String(msg.id)) && instanteDaMensagem(msg) <= limite);
+      if (!avancou) {
+        setTemMais(false);
+        return;
+      }
       const caixa = caixaRef.current;
       // Guarda a distância do FIM, não do topo: o que entra é em cima. O Safari não
       // segura a posição sozinho quando o conteúdo cresce pra cima.
@@ -380,11 +400,18 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
 
   const doSend = async (content: string, files?: File[]) => {
     if (!conversationId) return;
-    await conversationAPI.sendMessage(conversationId, {
+    const enviada = await conversationAPI.sendMessage(conversationId, {
       content,
       message_type: 'outgoing',
       attachments: files,
     });
+    if (conversaAtual.current !== conversationId) return;
+    // Quem enviou vai pro fim, mesmo lendo o histórico. O eco do tempo real costuma
+    // chegar antes desta resposta (e aí a releitura não vê mensagem nova no fim).
+    const lista = enviada && (enviada as Message).id != null
+      ? juntarMensagens(messagesRef.current, [enviada])
+      : [...messagesRef.current];
+    receberRecentes(lista, { irProFim: true });
     await load({ minha: true });
   };
 
@@ -500,7 +527,7 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
               </Button>
             </div>
           )}
-          {!temMais && messages.length > 0 && (
+          {temMais === false && messages.length > 0 && (
             <p className="py-1 text-center text-[10px] text-muted-foreground">Início da conversa</p>
           )}
           {loading && messages.length === 0 && !erro ? (
