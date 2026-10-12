@@ -127,6 +127,8 @@ export interface Property {
   updated_at: string;
   /** Dia (AAAA-MM-DD) em que o imóvel vira Desatualizado (f2-07). */
   stale_due_on?: string | null;
+  /** Se quem está logado pode marcar "Está em dia" neste imóvel (12/10/2026). */
+  can_confirm_current?: boolean;
 }
 
 export interface PropertyFormData {

@@ -4,7 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import type { Property } from '@/services/properties/propertiesService';
 import { tipoDoImovel } from '@/features/properties/listingKind';
-import { vencido } from '@/features/properties/emDia';
+import { podeMarcarEmDia, vencido } from '@/features/properties/emDia';
 
 export interface AcoesDoImovel {
   editar: (p: Property) => void;
@@ -46,7 +46,7 @@ export default function MenuDoImovel({ p, acoes, permissoes, forca }: {
           {forca != null ? `Força do anúncio: ${forca}%` : 'Calcular força do anúncio'}
         </DropdownMenuItem>
         {permissoes.editar && <DropdownMenuItem onClick={() => acoes.situacao(p)}><CircleDot className="h-4 w-4" />Mudar situação…</DropdownMenuItem>}
-        {permissoes.editar && p.status === 'active' && vencido(p) && (
+        {podeMarcarEmDia(p, permissoes.editar) && p.status === 'active' && vencido(p) && (
           <DropdownMenuItem onClick={() => acoes.emDia(p)}><CheckCheck className="h-4 w-4" />Marcar como em dia</DropdownMenuItem>
         )}
         {permissoes.editar && <DropdownMenuItem onClick={() => acoes.mover(p)}><ArrowRightLeft className="h-4 w-4" />{emp ? 'Mover para Revenda' : 'Mover para Empreendimentos'}</DropdownMenuItem>}
