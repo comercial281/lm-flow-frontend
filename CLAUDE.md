@@ -8448,3 +8448,13 @@ Pedido da Nova 27 (f2-07). Desenho: `LM FLOW/specs/2026-10-11-imovel-desatualiza
 - O clique leva a Imóveis com `recorte=desatualizados&vence=<aba>` (+ `meus=1` ou `pessoa`). "Amanhã" e as semanas ainda não venceram: o filtro é a faixa, não o `stale`.
 - **"Está em dia"** renova só a hora de alteração (servidor `confirm_current`, permissão de editar imóvel). Aparece em imóvel vencido e em qualquer imóvel da lista aberta pela Atividades. Efeito aceito: o imóvel sobe em "Atualizados recentemente".
 - Decidido com o dono: não virar tarefa gravada (imóvel não tem card). Não reabrir sem o dono pedir.
+
+## Roleta: o gestor volta a ver o lead chegar e o tempo do aceite (12/10/2026)
+
+Pedido da gestora da Pinot: desde a roleta nova (06/10) ela só recebia "Fulano aceitou o lead", sem o aviso de lead esperando aceite e sem o tempo que o corretor levou. Na D7 o lead novo e o repasse ficaram só no Grupo, e o grupo da Pinot é o interno da Leal Mídia.
+
+- **Avisos › Gestor** ganhou as mesmas duas chaves do Grupo: *Lead novo na roleta* e *Lead repassado pro próximo*. Nascem desligadas e não dependem de grupo escolhido. Saem pelo Operacional para cada gestor com WhatsApp no cadastro, com nome e telefone do lead (quem não vê o telefone antes do aceite é o corretor ofertado, não o gestor).
+- **"Corretor aceitou"** passou a dizer *Ofertado: 13:04 | Aceito: 13:07 (3 min)* no texto de fábrica. Variáveis novas no servidor: `{{ofertado_em}}`, `{{aceito_em}}`, `{{tempo_aceite}}` ("menos de 1 min", "3 min", "1h 05min"); a tela oferece o botão *+ Tempo do aceite*.
+- Dois textos novos em *Personalizar textos*: *Gestor: lead novo na roleta* e *Gestor: lead repassado pro próximo*.
+- Gestor que também está no grupo recebe duas vezes se as duas chaves estiverem ligadas: aceito pelo dono, desliga-se uma das duas no cliente.
+- Servidor: `comercial281/lm-flow` (migration 323, `RoletaSettings` + `Roleta::Notices`). Testes: `AvisosAba.spec.tsx` (chaves do gestor sem depender do grupo).
