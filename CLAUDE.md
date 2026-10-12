@@ -8438,3 +8438,13 @@ Revisão no navegador da janela "Criar número para {pessoa}" (Equipe), pedida p
 - **"Quem lê o QR code" abria sempre em "Agora, nesta tela".** O `can()` responde não até a régua de permissões chegar (cada montagem baixa a sua), então a escolha nascia errada e não voltava quando a opção do primeiro acesso aparecia. Agora segue a permissão até a pessoa escolher na mão. Varredura no código: era o único estado que nascia de permissão.
 - **Celular de {pessoa} ganhou título visível** quando "É o mesmo telefone do número" é desmarcado (antes era só o exemplo "(11) 99999-9999"). Varredura: era o único campo com rótulo só pra leitor de tela sem título de bloco em cima.
 - Testes: `ds.dialog.spec.tsx` (classes do topo/rodapé), `CreateNumberDialog.spec.tsx` (permissão chegando depois; escolha na mão não é desfeita).
+
+## Imóvel desatualizado em Atividades (11/10/2026)
+
+Pedido da Nova 27 (f2-07). Desenho: `LM FLOW/specs/2026-10-11-imovel-desatualizado-em-atividades-design.md`.
+- Atividades › Tarefas mostra **uma linha por aba** com os imóveis que vencem o prazo do Desatualizado naquela faixa (vencimento = última alteração + prazo da Conta). Calculada, nunca gravada; conta 1 no número da aba e fica fora da paginação. Sem caixinha.
+- Corretor conta os imóveis em que é captador ou responsável; gestor vê todos e filtra por pessoa. Não aparece no card, na Conversa nem na agenda do dia.
+- Categoria **"Imóvel desatualizado"** é fixa no filtro (`CATEGORIA_IMOVEL`), fora das Listas da casa e fora da janela de nova tarefa. Não confundir com "Atualização de imóvel", que é tarefa de lead.
+- O clique leva a Imóveis com `recorte=desatualizados&vence=<aba>` (+ `meus=1` ou `pessoa`). "Amanhã" e as semanas ainda não venceram: o filtro é a faixa, não o `stale`.
+- **"Está em dia"** renova só a hora de alteração (servidor `confirm_current`, permissão de editar imóvel). Aparece em imóvel vencido e em qualquer imóvel da lista aberta pela Atividades. Efeito aceito: o imóvel sobe em "Atualizados recentemente".
+- Decidido com o dono: não virar tarefa gravada (imóvel não tem card). Não reabrir sem o dono pedir.

@@ -125,6 +125,8 @@ export interface Property {
   commission?: Comissao | null;
   created_at: string;
   updated_at: string;
+  /** Dia (AAAA-MM-DD) em que o imóvel vira Desatualizado (f2-07). */
+  stale_due_on?: string | null;
 }
 
 export interface PropertyFormData {
@@ -391,6 +393,12 @@ export const propertiesService = {
   async calculateScore(id: string): Promise<{ score: number; label: string; breakdown: Record<string, number> }> {
     const res = await api.post(`/properties/${id}/calculate_score`);
     return (res.data as { data: { score: number; label: string; breakdown: Record<string, number> } }).data;
+  },
+
+  /** "Está em dia": renova o prazo do Desatualizado sem mudar nada no imóvel. */
+  async confirmarEmDia(id: string): Promise<Property> {
+    const res = await api.post(`/properties/${id}/confirm_current`);
+    return (res.data as { data: Property }).data;
   },
 
   async cepLookup(cep: string): Promise<CepAchado> {

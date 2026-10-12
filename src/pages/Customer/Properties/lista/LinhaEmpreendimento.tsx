@@ -7,7 +7,7 @@ import FotoDoImovel from './FotoDoImovel';
 import Selo, { TOM_DA_FASE } from './SeloSituacao';
 import MenuDoImovel, { estaNoSite, type AcoesDoImovel, type Permissoes } from './MenuDoImovel';
 import TituloDoImovel from './TituloDoImovel';
-import { Card } from '@/components/ui/ds';
+import { Button, Card } from '@/components/ui/ds';
 
 export function faixaDePreco(p: Property): { de: number | null; ate: number | null } {
   const precos = (p.typologies ?? []).map(t => Number(t.sale_price)).filter(n => n > 0);
@@ -17,8 +17,8 @@ export function faixaDePreco(p: Property): { de: number | null; ate: number | nu
   return { de, ate: ate > de ? ate : null };
 }
 
-export default function LinhaEmpreendimento({ p, acoes, permissoes, forca }: {
-  p: Property; acoes: AcoesDoImovel; permissoes: Permissoes; forca?: number;
+export default function LinhaEmpreendimento({ p, acoes, permissoes, forca, emDia }: {
+  p: Property; acoes: AcoesDoImovel; permissoes: Permissoes; forca?: number; emDia?: boolean;
 }) {
   const { de, ate } = faixaDePreco(p);
   const tipologias = linhaDasTipologias(p.typologies);
@@ -39,7 +39,15 @@ export default function LinhaEmpreendimento({ p, acoes, permissoes, forca }: {
         {tipologias && <p className="text-[13px]">{tipologias}</p>}
         {unidades && <p className="text-[13px] font-medium">{unidades}</p>}
         <p className="mt-auto flex flex-wrap gap-x-3 gap-y-0.5 pt-1 text-xs text-muted-foreground">
-          <span>Atualizado {tempoDesde(p.updated_at)}</span>
+          <span className="inline-flex items-center gap-2">
+            Atualizado {tempoDesde(p.updated_at)}
+            {emDia && (
+              <Button type="button" variant="outline" size="sm" onClick={() => acoes.emDia(p)}
+                className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                Está em dia
+              </Button>
+            )}
+          </span>
           <span>{p.responsible?.name ? `Responsável: ${p.responsible.name}` : 'Sem responsável'}</span>
           {p.lead_goes_to_responsible && (
             <span className="inline-flex items-center gap-1 font-semibold text-primary">

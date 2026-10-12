@@ -43,6 +43,13 @@ const fmtData = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-dig
 const fmtDataCurta = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' });
 const fmtHora = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false });
 
+const fmtDiaIso = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' });
+
+/** 2026-10-11 — o dia de hoje em São Paulo, no formato do servidor (AAAA-MM-DD). */
+export function hojeEmSaoPaulo(): string {
+  return fmtDiaIso.format(new Date());
+}
+
 /** 30/09/2026 */
 export function data(valor: unknown): string {
   const d = toDate(valor);
