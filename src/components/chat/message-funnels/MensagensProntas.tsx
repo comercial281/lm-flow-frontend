@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { Button, Input } from '@/components/ui/ds';
 import Aviso from '@/components/base/Aviso';
-import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import Abas from '@/components/base/Abas';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import IconActionButton from '@/components/base/IconActionButton';
@@ -216,21 +216,28 @@ export function MensagensProntas({ ativo, conversationId, onStarted, aoFechar, o
             ref={campoBusca}
           />
         </div>
-        {tiposComItem.length > 1 && (
-          <BotoesDeEscolha<FiltroTipo>
-            rotulo="Tipo"
-            valor={tipoValendo}
-            aoEscolher={setTipo}
-            opcoes={[{ valor: 'todos', rotulo: 'Tudo' }, ...tiposComItem.map(t => ({ valor: t.tipo, rotulo: t.rotulo }))]}
-            className="w-full"
-          />
-        )}
         {bloqueado && (
           <Aviso tom="atencao" compacto>
             Nesta conversa não dá pra enviar agora. Assuma o lead ou confira o número.
           </Aviso>
         )}
       </div>
+
+      {/* O tipo é CATEGORIA (cada aba mostra outra coisa): menu da casa, as Abas
+          de estado. Filtro que só recorta a mesma lista seria BotoesDeEscolha. */}
+      {tiposComItem.length > 1 && (
+        <Abas
+          rotulo="Tipo de mensagem pronta"
+          ativa={tipoValendo}
+          aoTrocar={chave => setTipo(chave as FiltroTipo)}
+          abas={[
+            // Sem ícone nem contagem: as cinco abas cabem numa linha da lateral (as seções já têm ícone).
+            { chave: 'todos', rotulo: 'Tudo' },
+            ...tiposComItem.map(t => ({ chave: t.tipo, rotulo: t.rotulo })),
+          ]}
+          className="mt-2 px-3"
+        />
+      )}
 
       {/* Na lateral, folga à direita: a aba "?" do suporte fica na borda da tela. */}
       <div className={cn('flex-1 min-h-0 overflow-y-auto py-2 scrollbar-thin', onde === 'lateral' ? 'pl-2 pr-7' : 'px-2')}>

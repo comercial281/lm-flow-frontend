@@ -14,7 +14,8 @@ import { describeSeconds } from './waitTime';
 export type TipoPronto = 'mensagem' | 'audio' | 'midia' | 'funil';
 
 export const TIPOS_PRONTOS: { tipo: TipoPronto; rotulo: string }[] = [
-  { tipo: 'mensagem', rotulo: 'Mensagens' },
+  // "Textos" e não "Mensagens": as cinco abas cabem na lateral (Tony, 12/10).
+  { tipo: 'mensagem', rotulo: 'Textos' },
   { tipo: 'audio', rotulo: 'Áudios' },
   { tipo: 'midia', rotulo: 'Mídias' },
   { tipo: 'funil', rotulo: 'Funis' },

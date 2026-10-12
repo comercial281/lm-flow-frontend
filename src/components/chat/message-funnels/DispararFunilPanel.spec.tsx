@@ -76,13 +76,14 @@ describe('Mensagens prontas (janela)', () => {
     expect(list).toHaveBeenCalledWith({ kind: 'conversation', withNodes: true });
     const nomes = (rotulo: string) =>
       within(screen.getByRole('region', { name: rotulo })).getAllByRole('listitem').map(li => li.querySelector('p')?.textContent);
-    expect(nomes('Mensagens')).toEqual(['Link do book']);
+    expect(nomes('Textos')).toEqual(['Link do book']);
     expect(nomes('Áudios')).toEqual(['É confiável?']);
     expect(nomes('Mídias')).toEqual(['Fachada']);
     expect(nomes('Funis')).toEqual(['Reaquecer lead']);
     expect(screen.getByText('2 mensagens · 10 segundos')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('radio', { name: 'Áudios' }));
+    expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Tudo', 'Textos', 'Áudios', 'Mídias', 'Funis']);
+    fireEvent.click(screen.getByRole('tab', { name: 'Áudios' }));
     expect(screen.queryByText('Link do book')).toBeNull();
     expect(screen.getByText('É confiável?')).toBeTruthy();
   });
