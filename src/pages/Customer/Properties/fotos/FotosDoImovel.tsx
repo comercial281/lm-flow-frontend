@@ -115,6 +115,11 @@ export default function FotosDoImovel() {
     return () => { vivo = false; };
   }, [id]);
 
+  // A foto ampliada que saiu da lista (ocultou/mostrou/excluiu/trocou de aba) não pode reabrir sozinha depois.
+  useEffect(() => {
+    if (ampliada && !daAba(separar(dados.fotos), aba).imagens.some(p => p.id === ampliada)) setAmpliada(null);
+  }, [ampliada, aba, dados.fotos]);
+
   if (semAcesso) return <NoAccessState />;
 
   const volta = destinoDaVolta({
@@ -214,7 +219,7 @@ export default function FotosDoImovel() {
             <Abas
               rotulo="O que mostrar"
               ativa={aba}
-              aoTrocar={c => { setAba(c as AbaDasFotos); sairDaSelecao(); }}
+              aoTrocar={c => { setAba(c as AbaDasFotos); setAmpliada(null); sairDaSelecao(); }}
               abas={(Object.keys(ROTULO_DA_ABA) as AbaDasFotos[]).map(chave => ({
                 chave, rotulo: ROTULO_DA_ABA[chave], contagem: total[chave],
               }))}

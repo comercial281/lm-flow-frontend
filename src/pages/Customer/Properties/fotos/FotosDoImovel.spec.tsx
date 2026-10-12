@@ -205,4 +205,14 @@ describe('FotosDoImovel', () => {
     expect(within(janela).getByText('Foto 2 de 2')).toBeInTheDocument();
     expect(within(janela).getByRole('button', { name: 'Usar como capa' })).toBeEnabled();
   });
+
+  it('foto que sai da lista não reabre sozinha ao trocar de aba', async () => {
+    svc.update.mockResolvedValue(foto('b', { published: true }));
+    abrir([foto('a'), foto('b', { published: false })]);
+    await userEvent.click(await screen.findByRole('tab', { name: 'Ocultas 1' }));
+    await userEvent.click(await screen.findByRole('button', { name: /^Abrir a \d/ }));
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Mostrar' }));
+    await userEvent.click(await screen.findByRole('tab', { name: /^Tudo/ }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
 });
