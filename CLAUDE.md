@@ -8393,3 +8393,13 @@ Origem: o dono quer conectar o LM Flow no Claude (Conectores) e no Claude Code p
 - **A chave de admin entra em todos os clientes.** O aviso está na tela, antes e depois de gerar. Chave limitada a um cliente fica pra depois, não existe ainda.
 - **Logs:** ação feita pelo MCP aparece com "MCP · nome da chave" no lugar de quem fez, e há a categoria **MCP** no filtro (`formatoLogs.ts` em `SuperAdmin/Logs/`).
 - Não reabrir sem o dono pedir.
+
+## Imóvel desatualizado em Atividades (11/10/2026)
+
+Pedido da Nova 27 (f2-07). Desenho: `LM FLOW/specs/2026-10-11-imovel-desatualizado-em-atividades-design.md`.
+- Atividades › Tarefas mostra **uma linha por aba** com os imóveis que vencem o prazo do Desatualizado naquela faixa (vencimento = última alteração + prazo da Conta). Calculada, nunca gravada; conta 1 no número da aba e fica fora da paginação. Sem caixinha.
+- Corretor conta os imóveis em que é captador ou responsável; gestor vê todos e filtra por pessoa. Não aparece no card, na Conversa nem na agenda do dia.
+- Categoria **"Imóvel desatualizado"** é fixa no filtro (`CATEGORIA_IMOVEL`), fora das Listas da casa e fora da janela de nova tarefa. Não confundir com "Atualização de imóvel", que é tarefa de lead.
+- O clique leva a Imóveis com `recorte=desatualizados&vence=<aba>` (+ `meus=1` ou `pessoa`). "Amanhã" e as semanas ainda não venceram: o filtro é a faixa, não o `stale`.
+- **"Está em dia"** renova só a hora de alteração (servidor `confirm_current`, permissão de editar imóvel). Aparece em imóvel vencido e em qualquer imóvel da lista aberta pela Atividades. Efeito aceito: o imóvel sobe em "Atualizados recentemente".
+- Decidido com o dono: não virar tarefa gravada (imóvel não tem card). Não reabrir sem o dono pedir.
