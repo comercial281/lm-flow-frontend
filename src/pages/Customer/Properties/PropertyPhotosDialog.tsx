@@ -41,7 +41,7 @@ import { Seletor } from '@/components/base/Seletor';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import { cn } from '@/lib/utils';
-import { ehVideoOuAudio, idDaCapa, moverParaCapa, posicoes } from './ordemDasFotos';
+import { ehVideoOuAudio, idDaCapa, moverParaCapa, posicoes } from '@/features/properties/fotos/ordemDasFotos';
 
 // O leitor de tela fala português (o dnd-kit vem com as frases em inglês).
 const INSTRUCOES_DE_ARRASTAR: ScreenReaderInstructions = {
