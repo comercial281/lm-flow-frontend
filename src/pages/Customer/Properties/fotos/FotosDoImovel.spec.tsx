@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { PropertyPhoto } from '@/services/propertyPhotos/propertyPhotosService';
@@ -86,5 +86,48 @@ describe('FotosDoImovel', () => {
   it('capa oculta mostra o aviso', async () => {
     abrir([foto('a', { is_cover: true, published: false }), foto('b')]);
     expect(await screen.findByText('A capa está oculta. No site e nos portais aparece a próxima foto visível.')).toBeInTheDocument();
+  });
+
+  it('a capa não se oculta e as outras sim', async () => {
+    abrir([foto('a'), foto('b')]);
+    const ocultar = await screen.findAllByRole('button', { name: 'Ocultar' });
+    expect(ocultar[0]).toBeDisabled();
+    expect(ocultar[0]).toHaveAttribute('title', 'Escolha outra capa antes de ocultar esta.');
+    expect(ocultar[1]).toBeEnabled();
+  });
+
+  it('corretor só ordena e escolhe capa', async () => {
+    permitido.fn = (_r, a) => ['read', 'reorder', 'set_as_cover'].includes(a);
+    abrir([foto('a'), foto('b')]);
+    expect(await screen.findAllByRole('button', { name: /Arrastar a/ })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Usar como capa' })).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: 'Ocultar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Excluir' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Adicionar fotos e vídeos' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Selecionar' })).not.toBeInTheDocument();
+  });
+
+  it('excluir pergunta antes', async () => {
+    svc.delete.mockResolvedValue(undefined);
+    abrir([foto('a'), foto('b')]);
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Excluir' }))[1]);
+    expect(svc.delete).not.toHaveBeenCalled();
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Excluir' }));
+    await waitFor(() => expect(svc.delete).toHaveBeenCalledWith('p1', 'b'));
+  });
+
+  it('subir arquivo pelo botão', async () => {
+    svc.upload.mockResolvedValue([foto('n')]);
+    abrir([foto('a')]);
+    const campo = await screen.findByLabelText('Escolher fotos e vídeos');
+    await userEvent.upload(campo, new File(['x'], 'n.jpg', { type: 'image/jpeg' }));
+    await waitFor(() => expect(svc.upload).toHaveBeenCalled());
+  });
+
+  it('a lista Categorizar como não existe mais', async () => {
+    abrir([foto('a')]);
+    await screen.findAllByRole('button', { name: 'Excluir' });
+    expect(screen.queryByText(/Categorizar como/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Principal')).not.toBeInTheDocument();
   });
 });

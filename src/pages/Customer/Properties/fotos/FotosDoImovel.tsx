@@ -1,12 +1,15 @@
 // Página de fotos e vídeos do imóvel (12/10/2026; era a janela da lista e do
 // cadastro). Spec: LM FLOW/specs/2026-10-12-pagina-de-fotos-design.md.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Link as LinkIcon, Plus, Upload } from 'lucide-react';
 import Abas from '@/components/base/Abas';
-import { BaseHeader, Carregando, EmptyState, Pagina } from '@/components/base';
+import { Aviso, BaseHeader, Carregando, EmptyState, Pagina } from '@/components/base';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { useNomeDaAba } from '@/components/layout/nomeDaAba';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { cn } from '@/lib/utils';
+import { ACCEPTED_MIME_TYPES } from '@/services/propertyPhotos/propertyPhotosService';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
 import { tipoDoImovel } from '@/features/properties/listingKind';
@@ -16,6 +19,8 @@ import {
   contagens, daAba, destinoDaVolta, separar, type AbaDasFotos,
 } from '@/features/properties/fotos/regrasDasFotos';
 import CartaoDaCapa from './CartaoDaCapa';
+import GradeDeFotos from './GradeDeFotos';
+import JanelaPorEndereco from './JanelaPorEndereco';
 
 const ROTULO_DA_ABA: Record<AbaDasFotos, string> = {
   tudo: 'Tudo', fotos: 'Fotos', midias: 'Vídeos e áudios', ocultas: 'Ocultas',
@@ -31,6 +36,45 @@ export default function FotosDoImovel() {
   const [imovel, setImovel] = useState<Property | null>(null);
   const [semAcesso, setSemAcesso] = useState(false);
   const [aba, setAba] = useState<AbaDasFotos>('tudo');
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+  const campoDeArquivo = useRef<HTMLInputElement>(null);
+  const [porEndereco, setPorEndereco] = useState(false);
+  const [soltando, setSoltando] = useState(false);
+  // Tasks 6 e 7 usam estes dois:
+  const [selecionando, setSelecionando] = useState(false);
+  const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
+  const [ampliada, setAmpliada] = useState<string | null>(null);
+  void setSelecionando; void ampliada; // até as Tasks 6 e 7 lerem estes dois
+
+  const alternarSelecao = (fid: string) => setSelecionadas(prev => {
+    const nova = new Set(prev);
+    if (nova.has(fid)) nova.delete(fid); else nova.add(fid);
+    return nova;
+  });
+
+  const excluirUma = async (fid: string) => {
+    const ehMidia = dados.fotos.find(p => p.id === fid)?.content_type?.match(/^(video|audio)\//);
+    if (!(await confirmar({
+      titulo: ehMidia ? 'Excluir este arquivo?' : 'Excluir esta foto?',
+      descricao: 'Sai do site, dos portais e da IA. Não dá para desfazer.',
+      rotuloDaAcao: 'Excluir',
+      destrutivo: true,
+    }))) return;
+    await dados.excluir(fid);
+  };
+
+  const temArquivos = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files');
+  const aoArrastarPorCima = (e: DragEvent) => {
+    if (!pode.subir || !temArquivos(e)) return;
+    e.preventDefault();
+    setSoltando(true);
+  };
+  const aoSoltarArquivos = (e: DragEvent) => {
+    if (!pode.subir || !temArquivos(e)) return;
+    e.preventDefault();
+    setSoltando(false);
+    void dados.enviar(Array.from(e.dataTransfer.files));
+  };
 
   useNomeDaAba(imovel ? (imovel.code || imovel.title) : null);
 
@@ -69,9 +113,46 @@ export default function FotosDoImovel() {
     <Pagina
       rolagem="conteudo"
       acima={voltar}
-      cabecalho={<BaseHeader title="Fotos e vídeos" subtitle={subtitulo} />}
+      cabecalho={
+        <BaseHeader
+          title="Fotos e vídeos"
+          subtitle={subtitulo}
+          primaryAction={{
+            label: 'Adicionar fotos e vídeos',
+            icon: <Plus className="h-4 w-4" />,
+            onClick: () => campoDeArquivo.current?.click(),
+            show: pode.subir,
+            disabled: dados.enviando !== null,
+          }}
+          moreActions={pode.porEndereco ? [{
+            label: 'Adicionar por endereço da internet',
+            icon: <LinkIcon className="h-4 w-4" />,
+            onClick: () => setPorEndereco(true),
+          }] : []}
+        />
+      }
     >
-      <div className="flex-1 overflow-auto pb-24">
+      <div
+        className={cn('flex-1 overflow-auto pb-24', soltando && 'rounded-xl ring-2 ring-primary ring-offset-2')}
+        onDragOver={aoArrastarPorCima}
+        onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setSoltando(false); }}
+        onDrop={aoSoltarArquivos}
+      >
+        <input
+          ref={campoDeArquivo}
+          type="file"
+          multiple
+          accept={ACCEPTED_MIME_TYPES.join(',')}
+          aria-label="Escolher fotos e vídeos"
+          className="sr-only"
+          onChange={e => { const fs = Array.from(e.target.files ?? []); e.target.value = ''; if (fs.length) void dados.enviar(fs); }}
+        />
+        {soltando && <Aviso tom="info" icone={Upload} className="mb-4">Solte para adicionar ao imóvel</Aviso>}
+        {dados.enviando !== null && (
+          <Aviso tom="info" icone={Upload} className="mb-4">
+            {dados.enviando >= 100 ? 'Guardando os arquivos…' : `Enviando… ${dados.enviando}%`}
+          </Aviso>
+        )}
         {dados.carregando && !dados.fotos.length ? (
           <Carregando variante="cartoes" linhas={3} rotulo="Carregando fotos..." />
         ) : dados.erro ? (
@@ -95,13 +176,41 @@ export default function FotosDoImovel() {
             <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
               <CartaoDaCapa capa={capa} />
               <div className="flex min-w-0 flex-col gap-8">
-                {/* Task 4: <GradeDeFotos/> · Task 5: <ListaDeMidias/> */}
-                <span hidden>{visiveis.imagens.length + visiveis.midias.length}</span>
+                {visiveis.imagens.length > 0 && (
+                  <section aria-labelledby="titulo-fotos" className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                      <h2 id="titulo-fotos" className="text-base font-semibold">Fotos</h2>
+                      {pode.ordem && aba !== 'ocultas' && (
+                        <p className="text-sm text-muted-foreground">Arraste pela alça para mudar a ordem. A primeira foto é sempre a capa.</p>
+                      )}
+                    </div>
+                    <GradeDeFotos
+                      fotos={visiveis.imagens}
+                      todas={dados.fotos}
+                      capaId={dados.capaId}
+                      pode={pode}
+                      arrastavel={pode.ordem && aba !== 'ocultas'}
+                      ocupado={dados.salvandoOrdem}
+                      selecionando={selecionando}
+                      selecionadas={selecionadas}
+                      aoAlternarSelecao={alternarSelecao}
+                      aoAbrir={setAmpliada}
+                      aoMover={(de, para) => void dados.mover('imagens', de, para)}
+                      aoUsarComoCapa={fid => void dados.usarComoCapa(fid)}
+                      aoAlternarVisivel={fid => void dados.alternarVisivel(fid)}
+                      aoExcluir={fid => void excluirUma(fid)}
+                    />
+                  </section>
+                )}
+                {/* Task 5: <ListaDeMidias/> */}
+                <span hidden>{visiveis.midias.length}</span>
               </div>
             </div>
           </>
         )}
       </div>
+      <JanelaPorEndereco aberta={porEndereco} aoFechar={() => setPorEndereco(false)} aoAdicionar={dados.adicionarPorEndereco} />
+      {dialogoDeConfirmacao}
     </Pagina>
   );
 }

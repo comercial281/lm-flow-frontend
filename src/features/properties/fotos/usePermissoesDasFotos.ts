@@ -13,3 +13,4 @@ export function usePermissoesDasFotos() {
     excluir: can('property_photos', 'delete'),
   };
 }
+export type Permissoes = ReturnType<typeof usePermissoesDasFotos>;
