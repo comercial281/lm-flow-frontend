@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react';
 
 import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import { pipelinesService } from '@/services/pipelines';
@@ -8,6 +8,7 @@ import { useNumerosDaConversa } from '@/features/numbers/useNumerosDaConversa';
 import type { Pipeline } from '@/types/analytics';
 import type { ContactConversation } from '@/types/contacts';
 import type { Contact, Conversation } from '@/types/chat/api';
+import { cn } from '@/lib/utils';
 
 import AiUnderstandingPanel from './AiUnderstandingPanel';
 import TopoDoLead from './painel/TopoDoLead';
@@ -28,7 +29,24 @@ interface ContactSidebarProps {
   onFilterReload?: () => Promise<void>;
   /** A roleta ofertou este lead a quem está vendo e ainda não houve aceite. */
   emOferta?: boolean;
+  /**
+   * Mensagens prontas (12/10/2026): o painel que o foguete do campo de
+   * mensagem põe no lugar do painel do lead, deslizando. Montado só depois da
+   * primeira abertura; `mostrarProntas` decide qual dos dois aparece.
+   */
+  prontas?: ReactNode;
+  mostrarProntas?: boolean;
 }
+
+// A troca lead ⇄ Mensagens prontas desliza (pedido do Tony: "não pode só
+// sobrepor do nada"): o lead sai um pouco pra esquerda e some; as prontas
+// entram da direita. Rápido (200 ms) pra não atrasar quem está atendendo.
+// Largura = a da lateral menos a borda da esquerda (1 px). No Tailwind 4 o
+// translate-x-* mexe na propriedade `translate` (não em `transform`): é ela que
+// anima. Com a lateral fechada a troca é sem animação (ninguém vê, e abrir já
+// nas prontas não mostra o lead de relance).
+const CAMADA = 'absolute inset-y-0 left-0 flex w-full md:w-[calc(24rem-1px)] flex-col bg-background';
+const DESLIZA = 'transition-[translate,opacity] duration-200 ease-out motion-reduce:transition-none';
 
 type Objeto = Record<string, unknown>;
 
@@ -51,6 +69,8 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
   conversation,
   onFilterReload,
   emOferta = false,
+  prontas,
+  mostrarProntas = false,
 }) => {
   const [isMobile, setIsMobile] = useState(false);
   // Cada lista guarda de quem ela é: logo depois de trocar de conversa, a da
@@ -198,91 +218,111 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
           height: isMobile ? 'calc(100vh - var(--header-height, 60px))' : '100%',
         }}
       >
-        <div className="border-b flex-shrink-0">
-          <TopoDoLead
-            contact={contact}
-            emOferta={emOferta}
-            atalhos={
-              <AtalhosDoLead
-                key={`atalhos-${conversaId ?? contatoId}`}
+        <div className="relative flex-1 min-h-0 overflow-hidden">
+          <div
+            inert={mostrarProntas}
+            aria-hidden={mostrarProntas || undefined}
+            data-testid="camada-do-lead"
+            className={cn(CAMADA, isOpen && DESLIZA, mostrarProntas ? '-translate-x-8 opacity-0 pointer-events-none' : 'translate-x-0 opacity-100')}
+          >
+            <div className="border-b flex-shrink-0">
+              <TopoDoLead
                 contact={contact}
-                conversation={conversation}
-                pipelines={conversationPipelines}
-                nome={nomeNaTela(contact?.name, emOferta) || TEXTOS_DO_PAINEL.semNome}
                 emOferta={emOferta}
+                atalhos={
+                  <AtalhosDoLead
+                    key={`atalhos-${conversaId ?? contatoId}`}
+                    contact={contact}
+                    conversation={conversation}
+                    pipelines={conversationPipelines}
+                    nome={nomeNaTela(contact?.name, emOferta) || TEXTOS_DO_PAINEL.semNome}
+                    emOferta={emOferta}
+                  />
+                }
+                selos={
+                  <FaixaDeSelos
+                    pipelines={conversationPipelines}
+                    temperatura={temperatura}
+                    origem={origem}
+                    conversa={conversation}
+                  />
+                }
+                outra={outra}
+                onClose={onClose}
               />
-            }
-            selos={
-              <FaixaDeSelos
-                pipelines={conversationPipelines}
-                temperatura={temperatura}
-                origem={origem}
-                conversa={conversation}
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
+              {/* Conversão Meta (Pixel/CAPI), uma linha logo abaixo do resumo. Some
+                  sozinha quando o cliente não usa CAPI. */}
+              <CapiConversionPanel
+                contactId={contact?.id ?? null}
+                variante="compacto"
+                className="px-4 py-2 border-b border-border/60"
               />
-            }
-            outra={outra}
-            onClose={onClose}
-          />
-        </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
-          {/* Conversão Meta (Pixel/CAPI), uma linha logo abaixo do resumo. Some
-              sozinha quando o cliente não usa CAPI. */}
-          <CapiConversionPanel
-            contactId={contact?.id ?? null}
-            variante="compacto"
-            className="px-4 py-2 border-b border-border/60"
-          />
+              {conversation && (
+                <SecaoFunil
+                  key={`funil-${conversation.id}`}
+                  conversationId={String(conversation.id)}
+                  pipelines={conversationPipelines}
+                  carregando={isLoadingPipelines}
+                  onAtualizado={handlePipelineUpdated}
+                  emOferta={emOferta}
+                />
+              )}
 
-          {conversation && (
-            <SecaoFunil
-              key={`funil-${conversation.id}`}
-              conversationId={String(conversation.id)}
-              pipelines={conversationPipelines}
-              carregando={isLoadingPipelines}
-              onAtualizado={handlePipelineUpdated}
-              emOferta={emOferta}
-            />
+              {/* Mensagens agendadas que ainda não saíram; some sem nenhuma. Só com o
+                  painel aberto (não relê a cada minuto escondido) e fora da oferta
+                  da roleta (editar abre a janela com o telefone do lead). */}
+              {contact && isOpen && !emOferta && (
+                <SecaoAgendados
+                  key={`agendados-${contact.id}`}
+                  contactId={String(contact.id)}
+                  atualizarQuando={conversation?.last_activity_at}
+                />
+              )}
+
+              {conversation && isOpen && !emOferta && (
+                <SecaoTarefas
+                  key={`tarefas-${conversation.id}`}
+                  conversationId={String(conversation.id)}
+                  pipelines={conversationPipelines}
+                  carregando={isLoadingPipelines}
+                  onAtualizado={handlePipelineUpdated}
+                />
+              )}
+
+              {/* Some sozinho em conversa sem IA. */}
+              <AiUnderstandingPanel key={`ia-${conversaId}`} conversation={conversation} embutido />
+
+              {contact && (
+                <SecaoEtiquetas
+                  key={`etiquetas-${contact.id}`}
+                  contactId={String(contact.id)}
+                  conversationId={conversation ? String(conversation.id) : undefined}
+                  initialLabels={(contact as { labels?: Array<{ name?: string; title?: string; color?: string }> }).labels}
+                  onUpdated={onFilterReload}
+                />
+              )}
+
+              {contact && <SecaoNotas key={`notas-${contact.id}`} contactId={String(contact.id)} />}
+
+              {/* Formulário de lead costuma trazer telefone e e-mail: na oferta, a seção some. */}
+              {contact && !emOferta && <SecaoRespostas key={`respostas-${contact.id}`} contact={contact} />}
+            </div>
+          </div>
+
+          {prontas && (
+            <div
+              inert={!mostrarProntas}
+              aria-hidden={!mostrarProntas || undefined}
+              data-testid="camada-das-prontas"
+              className={cn(CAMADA, isOpen && DESLIZA, mostrarProntas ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none')}
+            >
+              {prontas}
+            </div>
           )}
-
-          {/* Mensagens agendadas que ainda não saíram; some sem nenhuma. Só com o
-              painel aberto (não relê a cada minuto escondido) e fora da oferta
-              da roleta (editar abre a janela com o telefone do lead). */}
-          {contact && isOpen && !emOferta && (
-            <SecaoAgendados
-              key={`agendados-${contact.id}`}
-              contactId={String(contact.id)}
-              atualizarQuando={conversation?.last_activity_at}
-            />
-          )}
-
-          {conversation && isOpen && !emOferta && (
-            <SecaoTarefas
-              key={`tarefas-${conversation.id}`}
-              conversationId={String(conversation.id)}
-              pipelines={conversationPipelines}
-              carregando={isLoadingPipelines}
-              onAtualizado={handlePipelineUpdated}
-            />
-          )}
-
-          {/* Some sozinho em conversa sem IA. */}
-          <AiUnderstandingPanel key={`ia-${conversaId}`} conversation={conversation} embutido />
-
-          {contact && (
-            <SecaoEtiquetas
-              key={`etiquetas-${contact.id}`}
-              contactId={String(contact.id)}
-              conversationId={conversation ? String(conversation.id) : undefined}
-              initialLabels={(contact as { labels?: Array<{ name?: string; title?: string; color?: string }> }).labels}
-              onUpdated={onFilterReload}
-            />
-          )}
-
-          {contact && <SecaoNotas key={`notas-${contact.id}`} contactId={String(contact.id)} />}
-
-          {/* Formulário de lead costuma trazer telefone e e-mail: na oferta, a seção some. */}
-          {contact && !emOferta && <SecaoRespostas key={`respostas-${contact.id}`} contact={contact} />}
         </div>
       </div>
     </>

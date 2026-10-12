@@ -86,6 +86,13 @@ As peças 11 a 22 (e os acréscimos em 6, 7 e 9) são as **escolhas do dono em 1
    - Sem `para`, é aba de estado: setas esquerda/direita andam e trocam, Home/End vão às pontas, só a ativa entra no Tab. Não precisa do roteador (serve em janela). Em janela, `useAbaDaJanela(aberta, inicial)` faz a aba voltar pra primeira ao abrir.
    - Não usar como aba: pílula do pacote base (`Tabs`/`TabsList`), pílula roxa cheia nem botão fazendo papel de aba.
    - **Filtro rápido não é aba.** O segmentado cinza de Conversas e Contatos (Todas · Minhas · Sem resposta · Arquivadas) continua como está.
+   - **Categoria é aba, mesmo dentro de painel ou janela** (Tony, 12/10/2026). Se cada opção mostra *outro tipo de coisa*, é `Abas`: Textos · Áudios · Mídias · Funis nas Mensagens prontas, Meus funis · Da equipe. Ícone da categoria e contagem quando ajudam e cabem; "Tudo" primeiro quando existe a visão junta. **Aba não rola de lado:** se não cabe numa linha, encurte o nome ou tire ícone/contagem antes (a lateral de 384 px comporta umas cinco abas curtas, sem ícone nem contagem).
+   - **Como escolher entre as peças parecidas** (pergunte nesta ordem):
+     1. Muda a *forma* de ver a mesma coisa (cartões, lista, mapa, calendário)? → `AlternadorDeVisao`.
+     2. Cada opção mostra *outra coisa* (outro tipo, outra seção, outra tela)? → `Abas`.
+     3. *Recorta* a mesma lista (situação, dono, período: Todas · Minhas · Sem resposta, Mês · Semana · Dia)? → segmentado cinza / `BotoesDeEscolha`.
+     4. É um *valor* de formulário ou configuração, de 2 a 5 opções curtas? → `BotoesDeEscolha`; com frase de explicação, `CartoesDeEscolha`; lista comprida, `Seletor`.
+     5. Liga/desliga com efeito na hora? → `Chave`.
    - **Trava:** `abaForaDaCasa` conta o `Tabs` do pacote em JSX e o sublinhado copiado (`border-b-2` + `-mb-px`) fora de `Abas.tsx`.
 7. **Estado vazio** (`EmptyState`): os tipos nunca se confundem.
    - `vazio` explica pra que serve, dá o botão de criar e um **exemplo imobiliário**.
@@ -156,7 +163,7 @@ As peças 11 a 22 (e os acréscimos em 6, 7 e 9) são as **escolhas do dono em 1
 19. **Alternador de visão** (`AlternadorDeVisao`): só ícones, colados num contorno, o selecionado em roxo liso (sem degradê).
    - `<AlternadorDeVisao valor={visao} aoEscolher={setVisao} opcoes={[{ valor: 'cards', icone: Grid3X3, nome: 'Ver em cartões' }, { valor: 'table', icone: List, nome: 'Ver em lista' }]} />`
    - Ícones: `Grid3X3` cartões, `List` lista, `Map` mapa, `CalendarDays` calendário, `Kanban` quadro. `nome` é o efeito e vira `aria-label` + `title`. 40 px no celular, 32 no computador.
-   - Período (Mês/Semana/Dia) e filtro não são visão: são `BotoesDeEscolha`.
+   - Período (Mês/Semana/Dia) e filtro não são visão: são `BotoesDeEscolha`. Categoria também não é visão: é `Abas` (ver "Como escolher" no item 6).
    - **Trava:** `alternadorAMao` (ícone de visão em tag fora do componente).
 20. **Cartão:** `Card` de `components/ui/ds` (é o que tem o anel violeta e a sombra da marca).
    - Bloco dentro de um cartão: `rounded-lg border bg-muted/30 p-4`. Tela de configuração continua em `Secoes`/`Secao`.

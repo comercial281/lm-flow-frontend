@@ -35,10 +35,12 @@ class FlowAutomationsService {
 
   // `kind` (sprint 3): o servidor devolve só as automações quando não vem; a aba
   // Follow-up pede `followup`.
-  async list(params: { search?: string; folderId?: string | null; kind?: FlowAutomationKind } = {}): Promise<FlowAutomation[]> {
+  /** `withNodes` (só funil de conversa): a lista vem com os blocos (Mensagens prontas da conversa). */
+  async list(params: { search?: string; folderId?: string | null; kind?: FlowAutomationKind; withNodes?: boolean } = {}): Promise<FlowAutomation[]> {
     const response = await api.get(this.baseUrl, {
       params: {
         ...(params.kind ? { kind: params.kind } : {}),
+        ...(params.withNodes ? { with_nodes: 1 } : {}),
         ...(params.search ? { search: params.search } : {}),
         ...(params.folderId !== undefined ? { folder_id: params.folderId ?? '' } : {}),
       },
