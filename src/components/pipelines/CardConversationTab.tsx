@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { Button, Textarea } from '@/components/ui/ds';
-import { MessageCircle, Send, Loader2, RefreshCw, Paperclip, Rocket, Clock, X, Mic, Archive, ArchiveX } from 'lucide-react';
+import { MessageCircle, Send, Loader2, RefreshCw, Paperclip, Rocket, Clock, X, Mic, Archive, ArchiveX, ArrowDown } from 'lucide-react';
 
 const OPENAI_KEY = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
 
@@ -31,6 +31,14 @@ import { chatService } from '@/services/chat/chatService';
 import { httpStatusOf } from '@/services/leadFollowup/leadFollowupService';
 import { DispararFunilPanel } from '@/components/chat/message-funnels/DispararFunilPanel';
 import { useWebSocketContext } from '@/contexts/chat/WebSocketContext';
+import {
+  PERTO_DO_FIM_PX,
+  PERTO_DO_TOPO_PX,
+  aplicarPaginaRecente,
+  juntarMensagens,
+  paginaDaResposta,
+  temMaisAntigas,
+} from './conversaDoCard';
 
 // Hook seguro — não lança se o WebSocketProvider não estiver na árvore acima.
 function useSafeWsHandlers() {
@@ -190,6 +198,12 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
   // Falha que não é 404 (rede, 5xx, 401). Só aparece com a lista vazia: com mensagens
   // na tela, a releitura de 8 em 8 s que falha fica calada (não pisca erro em cima da conversa).
   const [erro, setErro] = useState(false);
+  // Mensagens antigas (spec 2026-10-12): o servidor manda 20 por vez.
+  const [temMais, setTemMais] = useState(false);
+  const [carregandoAnteriores, setCarregandoAnteriores] = useState(false);
+  const [erroAnteriores, setErroAnteriores] = useState(false);
+  // Chegou mensagem enquanto a pessoa lia o histórico: a caixa não pula, aparece o botão.
+  const [novaMensagem, setNovaMensagem] = useState(false);
   const [sending, setSending] = useState(false);
   const [text, setText] = useState('');
   const [funnelOpen, setFunnelOpen] = useState(false);
@@ -198,11 +212,63 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
     Boolean(item.conversation?.custom_attributes?.archived)
   );
   const [archiving, setArchiving] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const caixaRef = useRef<HTMLDivElement>(null);
+  // Espelho da lista: quem escreve passa por definirMensagens, então duas respostas
+  // que chegam juntas (releitura + anteriores) não apagam uma à outra.
+  const messagesRef = useRef<Message[]>([]);
+  // O que fazer com a rolagem depois do próximo desenho da lista.
+  const rolagemPendente = useRef<{ tipo: 'fim' } | { tipo: 'manter'; distanciaDoFim: number } | null>(null);
+  const primeiraCargaFeita = useRef(false);
+  const carregandoAnterioresRef = useRef(false);
+  // Conversa de agora: resposta que chega depois de trocar de lead é jogada fora.
+  const conversaAtual = useRef<string | null>(conversationId);
   const pollRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const contactName = resolveContactName(item);
+
+  const definirMensagens = useCallback((proxima: Message[]) => {
+    messagesRef.current = proxima;
+    setMessages(proxima);
+  }, []);
+
+  const estaPertoDoFim = useCallback(() => {
+    const caixa = caixaRef.current;
+    if (!caixa) return true;
+    return caixa.scrollHeight - caixa.scrollTop - caixa.clientHeight <= PERTO_DO_FIM_PX;
+  }, []);
+
+  // Mensagens novas no fim (primeira carga, releitura, tempo real, envio).
+  const receberRecentes = useCallback(
+    (proxima: Message[], opcoes?: { minha?: boolean }) => {
+      const anterior = messagesRef.current;
+      const ultima = (lista: Message[]) => (lista.length ? String(lista[lista.length - 1].id) : null);
+      const chegouNoFim = ultima(proxima) !== ultima(anterior);
+      if (!primeiraCargaFeita.current || (chegouNoFim && (opcoes?.minha || estaPertoDoFim()))) {
+        rolagemPendente.current = { tipo: 'fim' };
+      } else if (chegouNoFim) {
+        setNovaMensagem(true);
+      }
+      primeiraCargaFeita.current = true;
+      definirMensagens(proxima);
+    },
+    [definirMensagens, estaPertoDoFim],
+  );
+
+  // Trocou de lead: começa do zero (antes da primeira carga, pela ordem dos efeitos).
+  useEffect(() => {
+    conversaAtual.current = conversationId;
+    primeiraCargaFeita.current = false;
+    rolagemPendente.current = null;
+    carregandoAnterioresRef.current = false;
+    messagesRef.current = [];
+    setMessages([]);
+    setTemMais(false);
+    setErro(false);
+    setErroAnteriores(false);
+    setCarregandoAnteriores(false);
+    setNovaMensagem(false);
+  }, [conversationId]);
 
   // WebSocket — recebe mensagens em tempo real sem esperar o poll.
   const registerHandlers = useSafeWsHandlers();
@@ -212,54 +278,105 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
     registerHandlers({
       onMessageCreated: (msg: Message) => {
         if (String((msg as any).conversation_id) !== conversationId) return;
-        setMessages(prev => {
-          if (prev.some(m => String(m.id) === String(msg.id))) return prev;
-          return [...prev, msg];
-        });
+        if (messagesRef.current.some(m => String(m.id) === String(msg.id))) return;
+        receberRecentes(juntarMensagens(messagesRef.current, [msg]));
       },
     });
     return () => {
       // Limpa o handler ao desmontar
       registerHandlers({ onMessageCreated: undefined as any });
     };
-  }, [registerHandlers, conversationId]);
+  }, [registerHandlers, conversationId, receberRecentes]);
 
-  const load = useCallback(async () => {
-    if (!conversationId) return;
-    setLoading(true);
+  const load = useCallback(
+    async (opcoes?: { minha?: boolean }) => {
+      if (!conversationId) return;
+      setLoading(true);
+      try {
+        const pagina = paginaDaResposta(await conversationAPI.getMessages(conversationId));
+        if (conversaAtual.current !== conversationId) return;
+        if (!primeiraCargaFeita.current) setTemMais(temMaisAntigas(pagina));
+        receberRecentes(aplicarPaginaRecente(messagesRef.current, pagina), opcoes);
+        setErro(false);
+      } catch (e) {
+        if (conversaAtual.current !== conversationId) return;
+        // 404: o servidor não acha a conversa (ainda não existe) — o vazio é honesto.
+        // Qualquer outra falha não pode virar "Nenhuma mensagem ainda.": o corretor
+        // concluiria que nunca falou com o lead e mandaria a primeira mensagem de novo.
+        setErro(httpStatusOf(e) !== 404);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [conversationId, receberRecentes],
+  );
+
+  const carregarAnteriores = useCallback(async () => {
+    const maisAntiga = messagesRef.current[0];
+    if (!conversationId || !maisAntiga || carregandoAnterioresRef.current) return;
+    carregandoAnterioresRef.current = true;
+    setCarregandoAnteriores(true);
+    setErroAnteriores(false);
     try {
-      // getMessages já vem desembrulhado pra Message[] (extractData devolve
-      // response.data.data). O código antigo lia res.data — que num array é
-      // undefined — e zerava SEMPRE as mensagens (o famoso "0 mensagens").
-      const raw = (await conversationAPI.getMessages(conversationId)) as unknown;
-      const msgs: Message[] = Array.isArray(raw)
-        ? (raw as Message[])
-        : (((raw as { data?: Message[]; payload?: Message[] })?.data
-            ?? (raw as { payload?: Message[] })?.payload) ?? []);
-      setMessages(msgs);
-      setErro(false);
-    } catch (e) {
-      // 404: o servidor não acha a conversa (ainda não existe) — o vazio é honesto.
-      // Qualquer outra falha não pode virar "Nenhuma mensagem ainda.": o corretor
-      // concluiria que nunca falou com o lead e mandaria a primeira mensagem de novo.
-      setErro(httpStatusOf(e) !== 404);
+      const pagina = paginaDaResposta(
+        await conversationAPI.getMessages(conversationId, { before: String(maisAntiga.id) }),
+      );
+      if (conversaAtual.current !== conversationId) return;
+      const caixa = caixaRef.current;
+      // Guarda a distância do FIM, não do topo: o que entra é em cima. O Safari não
+      // segura a posição sozinho quando o conteúdo cresce pra cima.
+      if (caixa) rolagemPendente.current = { tipo: 'manter', distanciaDoFim: caixa.scrollHeight - caixa.scrollTop };
+      definirMensagens(juntarMensagens(messagesRef.current, pagina));
+      setTemMais(temMaisAntigas(pagina));
+    } catch {
+      if (conversaAtual.current === conversationId) setErroAnteriores(true);
     } finally {
-      setLoading(false);
+      if (conversaAtual.current === conversationId) {
+        carregandoAnterioresRef.current = false;
+        setCarregandoAnteriores(false);
+      }
     }
-  }, [conversationId]);
+  }, [conversationId, definirMensagens]);
 
   useEffect(() => {
     if (!conversationId) return;
     load();
-    pollRef.current = window.setInterval(load, POLL_INTERVAL_MS);
+    pollRef.current = window.setInterval(() => load(), POLL_INTERVAL_MS);
     return () => {
       if (pollRef.current) window.clearInterval(pollRef.current);
     };
   }, [conversationId, load]);
 
+  // Rolagem só dentro da caixa. Nada de scrollIntoView: ele rola também a página
+  // do card (e a janela) pra mostrar o fim da conversa.
+  useLayoutEffect(() => {
+    const caixa = caixaRef.current;
+    const pendente = rolagemPendente.current;
+    if (!caixa || !pendente) return;
+    rolagemPendente.current = null;
+    caixa.scrollTop =
+      pendente.tipo === 'fim' ? caixa.scrollHeight : caixa.scrollHeight - pendente.distanciaDoFim;
+  }, [messages]);
+
+  // Conversa que não enche a caixa não tem como rolar pra cima: carrega sozinha.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length]);
+    const caixa = caixaRef.current;
+    if (!caixa || !temMais || erroAnteriores || carregandoAnteriores || messages.length === 0) return;
+    if (caixa.scrollHeight <= caixa.clientHeight) void carregarAnteriores();
+  }, [messages, temMais, erroAnteriores, carregandoAnteriores, carregarAnteriores]);
+
+  const aoRolar = () => {
+    const caixa = caixaRef.current;
+    if (!caixa) return;
+    if (novaMensagem && estaPertoDoFim()) setNovaMensagem(false);
+    if (caixa.scrollTop < PERTO_DO_TOPO_PX && temMais && !erroAnteriores) void carregarAnteriores();
+  };
+
+  const irProFim = () => {
+    const caixa = caixaRef.current;
+    if (caixa) caixa.scrollTop = caixa.scrollHeight;
+    setNovaMensagem(false);
+  };
 
   const doSend = async (content: string, files?: File[]) => {
     if (!conversationId) return;
@@ -268,7 +385,7 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
       message_type: 'outgoing',
       attachments: files,
     });
-    await load();
+    await load({ minha: true });
   };
 
   const send = async () => {
@@ -361,44 +478,74 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
             )}
             {isArchived ? 'Desarquivar' : 'Arquivar'}
           </button>
-          <Button variant="ghost" size="sm" onClick={load} disabled={loading} aria-label="Atualizar" title="Atualizar">
+          <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading} aria-label="Atualizar" title="Atualizar">
             <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>
 
-      {/* messages list */}
-      <div className="flex-1 space-y-2 overflow-y-auto rounded-lg border bg-muted/30 p-3">
-        {loading && messages.length === 0 && !erro ? (
-          <Carregando linhas={3} />
-        ) : messages.length === 0 && erro ? (
-          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} />
-        ) : messages.length === 0 ? (
-          <EmptyState tamanho="compacto" title="Nenhuma mensagem ainda." />
-        ) : (
-          messages.map((m, index) => {
-            // Eventos do sistema (atribuição, mudança de status/etiqueta, etc)
-            // não são mensagem de ninguém — iam parar num balão como se o
-            // LEAD tivesse escrito "Assigned to X, inherited from...". Vira
-            // uma etiqueta central, igual à tela de Conversas.
-            if (m.message_type === MESSAGE_TYPE.ACTIVITY || m.message_type === MESSAGE_TYPE.TEMPLATE) {
-              return <SystemMessage key={`system-${m.id}-${index}`} message={m} />;
-            }
-            const isOutgoing = m.message_type === MESSAGE_TYPE.OUTGOING;
-            const senderName = !isOutgoing
-              ? (m.sender?.name && !isPhoneNumber(m.sender.name) ? m.sender.name : contactName)
-              : null;
-            return (
-              <div key={m.id} className={`flex flex-col ${isOutgoing ? 'items-end' : 'items-start'}`}>
-                {senderName && (
-                  <span className="mb-0.5 px-1 text-[10px] text-muted-foreground">{senderName}</span>
-                )}
-                <MessageBubble m={m} isOutgoing={isOutgoing} />
-              </div>
-            );
-          })
+      {/* messages list: rola só aqui dentro; avisos por cima não empurram o conteúdo */}
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={caixaRef}
+          onScroll={aoRolar}
+          data-testid="caixa-da-conversa"
+          className="h-full space-y-2 overflow-y-auto rounded-lg border bg-muted/30 p-3"
+        >
+          {erroAnteriores && (
+            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <span>Não deu pra carregar as anteriores</span>
+              <Button variant="link" size="sm" onClick={() => void carregarAnteriores()}>
+                Tentar de novo
+              </Button>
+            </div>
+          )}
+          {!temMais && messages.length > 0 && (
+            <p className="py-1 text-center text-[10px] text-muted-foreground">Início da conversa</p>
+          )}
+          {loading && messages.length === 0 && !erro ? (
+            <Carregando linhas={3} />
+          ) : messages.length === 0 && erro ? (
+            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} />
+          ) : messages.length === 0 ? (
+            <EmptyState tamanho="compacto" title="Nenhuma mensagem ainda." />
+          ) : (
+            messages.map((m, index) => {
+              // Eventos do sistema (atribuição, mudança de status/etiqueta, etc)
+              // não são mensagem de ninguém — iam parar num balão como se o
+              // LEAD tivesse escrito "Assigned to X, inherited from...". Vira
+              // uma etiqueta central, igual à tela de Conversas.
+              if (m.message_type === MESSAGE_TYPE.ACTIVITY || m.message_type === MESSAGE_TYPE.TEMPLATE) {
+                return <SystemMessage key={`system-${m.id}-${index}`} message={m} />;
+              }
+              const isOutgoing = m.message_type === MESSAGE_TYPE.OUTGOING;
+              const senderName = !isOutgoing
+                ? (m.sender?.name && !isPhoneNumber(m.sender.name) ? m.sender.name : contactName)
+                : null;
+              return (
+                <div key={m.id} className={`flex flex-col ${isOutgoing ? 'items-end' : 'items-start'}`}>
+                  {senderName && (
+                    <span className="mb-0.5 px-1 text-[10px] text-muted-foreground">{senderName}</span>
+                  )}
+                  <MessageBubble m={m} isOutgoing={isOutgoing} />
+                </div>
+              );
+            })
+          )}
+        </div>
+        {carregandoAnteriores && (
+          <p className="pointer-events-none absolute inset-x-0 top-2 mx-auto w-fit rounded-full bg-background/90 px-2 py-0.5 text-[10px] text-muted-foreground shadow-sm">
+            Carregando mensagens anteriores…
+          </p>
         )}
-        <div ref={bottomRef} />
+        {novaMensagem && (
+          <div className="absolute inset-x-0 bottom-2 flex justify-center">
+            <Button size="sm" onClick={irProFim}>
+              <ArrowDown className="h-4 w-4" aria-hidden="true" />
+              Nova mensagem
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* pending files preview */}
