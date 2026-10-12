@@ -70,8 +70,8 @@
 // mexer nelas:
 //
 // 1. TOPO E RODAPÉ FIXOS, SÓ O MEIO ROLA. A caixa limita a altura (90dvh) e
-//    rola por dentro; o `DialogHeader` fica preso em cima (`sticky top-0`) e o
-//    `DialogFooter` preso embaixo (`sticky bottom-0`), cada um com fundo e linha,
+//    rola por dentro; o `DialogHeader` fica preso em cima e o `DialogFooter`
+//    preso embaixo (`sticky`), cada um com fundo e linha,
 //    ocupando a largura toda da caixa. Pra ocupar a largura toda, os dois
 //    "comem" o respiro da caixa com margem negativa — e o respiro muda de janela
 //    pra janela (p-6 na padrão; p-5/p-6/p-8 na larga; `p-0` em quem cuida do
@@ -80,6 +80,11 @@
 //    rolagem própria (`overflow-hidden` + miolo com `overflow-y-auto`, ou
 //    `max-h-*` próprio) continua mandando: a classe dela vem depois e o
 //    tailwind-merge descarta a nossa.
+//    O ponto onde grudam é `-(--janela-p)`, NÃO 0: o navegador mede o `sticky`
+//    a partir de DENTRO do respiro da caixa que rola. Com `top-0`/`bottom-0` o
+//    topo descia 24px e o rodapé subia 24px, cobrindo 8px do miolo em cada
+//    ponta (rótulo do 1º campo e último item cortados, faixa vazia sobrando
+//    acima do título e abaixo dos botões). Achado 11/10/2026 na Criar número.
 //    O X de fechar mora DENTRO do topo quando há topo (senão rolaria pra fora
 //    junto com o conteúdo). Como o topo vem antes do formulário, o X seria o
 //    primeiro botão da janela e roubaria o foco de abertura do primeiro campo:
@@ -355,7 +360,7 @@ DialogContent.displayName = 'DialogContent';
 // O recuo do texto acompanha o da caixa (24px na padrão, até 32px na larga) e
 // nunca fica abaixo de 24px (janela `p-0` que usa o topo da casa).
 const RECUO = 'px-[max(var(--janela-p),1.5rem)]';
-const TOPO = `sticky top-0 z-10 -mx-(--janela-p) -mt-(--janela-p) border-b bg-background ${RECUO} py-4`;
+const TOPO = `sticky -top-(--janela-p) z-10 -mx-(--janela-p) -mt-(--janela-p) border-b bg-background ${RECUO} py-4`;
 
 export function DialogHeader({ className, children, ...props }: ComponentProps<typeof BaseDialogHeader>) {
   const janela = useContext(JanelaContexto);
@@ -383,7 +388,9 @@ export function DialogHeader({ className, children, ...props }: ComponentProps<t
 // filhos e põe o último, a ação principal, em cima) e o rodapé desce até o fim
 // da tela, com a barra de gestos do iPhone por dentro.
 const RODAPE = [
-  `sticky bottom-0 z-10 -mx-(--janela-p) -mb-(--janela-p) border-t bg-background ${RECUO} py-4`,
+  `sticky -bottom-(--janela-p) z-10 -mx-(--janela-p) -mb-(--janela-p) border-t bg-background ${RECUO} py-4`,
+  // no celular o respiro de baixo da caixa é o maior entre ele e a barra de gestos
+  'max-sm:-bottom-[max(var(--janela-p),env(safe-area-inset-bottom))]',
   'max-sm:-mb-[max(var(--janela-p),env(safe-area-inset-bottom))]',
   'max-sm:pb-[calc(1rem+env(safe-area-inset-bottom))]',
 ].join(' ');

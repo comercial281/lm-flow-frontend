@@ -8403,3 +8403,12 @@ Desde 11/10 o servidor (`comercial281/lm-flow#451`) aceita 10 envios a cada 10 m
 - **Landing de anúncio:** no 429, a frase do servidor no lugar de "Confira sua conexão…" (que o gestor edita no formulário), o botão volta a dizer o texto normal (nada de "Tentar de novo") e fica desligado enquanto durar o `Retry-After`. Sem o cabeçalho, só a frase muda. Outro erro: igual a antes, com "Tentar de novo". Vai pelo `LeadSubmitResult` (`failedMessage`, `retryAfterSeconds`).
 - **Página inicial ("Quero ajuda pra encontrar") só confirma quando o servidor aceitou.** Antes ela mostrava "Recebemos seu contato!" em QUALQUER erro (não conferia a resposta) e ficava calada se a rede caía: o lead se perdia sem ninguém saber. Agora o erro aparece embaixo do botão e o que a pessoa digitou fica no lugar, como na página do imóvel. Prévia segue com o aviso próprio.
 - Testes: `limiteDeEnvios.spec.ts`, `pages/Public/limiteDeEnviosNoSite.spec.tsx`, `LandingPublicView.spec.tsx` (limite de envios).
+
+## Janela da casa: topo e rodapé encaixados + Criar número (11/10/2026)
+
+Revisão no navegador da janela "Criar número para {pessoa}" (Equipe), pedida pelo dono depois das peças da casa.
+
+- **Topo e rodapé fixos cobriam o miolo em TODAS as janelas.** O navegador mede o `sticky` a partir de dentro do respiro da caixa que rola: com `top-0`/`bottom-0` o topo descia 24 px e o rodapé subia 24 px, comendo 8 px do miolo em cada ponta ("Nome do número" cortado em cima, caixinha e link do fim escondidos atrás do rodapé, faixa vazia acima do título e abaixo dos botões). Agora grudam em `-(--janela-p)` (no celular, o mesmo `max(respiro, barra de gestos)` do fundo da caixa). Correção em `ds.tsx`, vale pras ~190 janelas.
+- **"Quem lê o QR code" abria sempre em "Agora, nesta tela".** O `can()` responde não até a régua de permissões chegar (cada montagem baixa a sua), então a escolha nascia errada e não voltava quando a opção do primeiro acesso aparecia. Agora segue a permissão até a pessoa escolher na mão. Varredura no código: era o único estado que nascia de permissão.
+- **Celular de {pessoa} ganhou título visível** quando "É o mesmo telefone do número" é desmarcado (antes era só o exemplo "(11) 99999-9999"). Varredura: era o único campo com rótulo só pra leitor de tela sem título de bloco em cima.
+- Testes: `ds.dialog.spec.tsx` (classes do topo/rodapé), `CreateNumberDialog.spec.tsx` (permissão chegando depois; escolha na mão não é desfeita).

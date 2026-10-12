@@ -152,6 +152,28 @@ describe('CreateNumberDialog', () => {
     expect(s.sendAccess).not.toHaveBeenCalled();
   });
 
+  it('permissão chega depois de abrir: passa a marcar "no primeiro acesso"', () => {
+    s.can.mockReturnValue(false);
+    const props = { member: member(), open: true, onClose: vi.fn(), onDone: vi.fn() };
+    const { rerender } = render(<CreateNumberDialog {...props} />);
+    expect(screen.getByRole('radio', { name: 'Agora, nesta tela' })).toBeChecked();
+    s.can.mockReturnValue(true);
+    rerender(<CreateNumberDialog {...props} />);
+    expect(screen.getByRole('radio', { name: 'Ana Souza, no primeiro acesso' })).toBeChecked();
+  });
+
+  it('permissão chegando depois não desfaz a escolha feita na mão', async () => {
+    s.can.mockReturnValue(true);
+    const props = { member: member(), open: true, onClose: vi.fn(), onDone: vi.fn() };
+    const { rerender } = render(<CreateNumberDialog {...props} />);
+    await userEvent.click(screen.getByRole('radio', { name: 'Agora, nesta tela' }));
+    s.can.mockReturnValue(false);
+    rerender(<CreateNumberDialog {...props} />);
+    s.can.mockReturnValue(true);
+    rerender(<CreateNumberDialog {...props} />);
+    expect(screen.getByRole('radio', { name: 'Agora, nesta tela' })).toBeChecked();
+  });
+
   it('link sem motivo do servidor: texto claro, não "motivo desconhecido"', async () => {
     s.sendAccess.mockResolvedValueOnce({ user: {}, whatsapp: {} });
     abrir();
