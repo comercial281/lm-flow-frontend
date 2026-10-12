@@ -46,6 +46,7 @@ export default function FotosDoImovel() {
   // A Task 7 usa a ampliada:
   const [selecionando, setSelecionando] = useState(false);
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
+  const [loteEmAndamento, setLoteEmAndamento] = useState(false);
   const [ampliada, setAmpliada] = useState<string | null>(null);
   void ampliada; // até a Task 7 ler
 
@@ -70,14 +71,20 @@ export default function FotosDoImovel() {
 
   const loteDe = async (acao: 'ocultar' | 'mostrar' | 'excluir') => {
     const ids = [...selecionadas];
-    if (!ids.length) return;
+    if (!ids.length || loteEmAndamento) return;
     if (acao === 'excluir' && !(await confirmar({
       titulo: `Excluir ${plural(ids.length, 'item', 'itens')}?`,
       descricao: 'Saem do site, dos portais e da IA. Não dá para desfazer.',
       rotuloDaAcao: 'Excluir',
       destrutivo: true,
     }))) return;
-    const r = await dados.emLote(ids, acao);
+    setLoteEmAndamento(true);
+    let r: Awaited<ReturnType<typeof dados.emLote>>;
+    try {
+      r = await dados.emLote(ids, acao);
+    } finally {
+      setLoteEmAndamento(false);
+    }
     const feito = { ocultar: r.feitos === 1 ? 'oculta' : 'ocultas', mostrar: r.feitos === 1 ? 'visível' : 'visíveis', excluir: r.feitos === 1 ? 'excluída' : 'excluídas' }[acao];
     const partes = [`${r.feitos} ${feito}.`];
     if (r.pulouCapa) partes.push('A capa não foi ocultada.');
@@ -156,15 +163,16 @@ export default function FotosDoImovel() {
             label: selecionando ? 'Concluir seleção' : 'Selecionar',
             icon: <CheckSquare className="h-4 w-4" />,
             onClick: () => (selecionando ? sairDaSelecao() : setSelecionando(true)),
+            disabled: loteEmAndamento,
           }] : []}
           selectedCount={selecionadas.size}
           onClearSelection={sairDaSelecao}
           bulkActions={[
             ...(pode.ocultar ? [
-              { label: 'Mostrar', icon: <Eye className="h-4 w-4" />, onClick: () => void loteDe('mostrar') },
-              { label: 'Ocultar', icon: <EyeOff className="h-4 w-4" />, onClick: () => void loteDe('ocultar') },
+              { label: 'Mostrar', icon: <Eye className="h-4 w-4" />, onClick: () => void loteDe('mostrar'), disabled: loteEmAndamento },
+              { label: 'Ocultar', icon: <EyeOff className="h-4 w-4" />, onClick: () => void loteDe('ocultar'), disabled: loteEmAndamento },
             ] : []),
-            ...(pode.excluir ? [{ label: 'Excluir', icon: <Trash2 className="h-4 w-4" />, onClick: () => void loteDe('excluir'), variant: 'destructive' as const }] : []),
+            ...(pode.excluir ? [{ label: 'Excluir', icon: <Trash2 className="h-4 w-4" />, onClick: () => void loteDe('excluir'), disabled: loteEmAndamento, variant: 'destructive' as const }] : []),
           ]}
         />
       }

@@ -179,4 +179,20 @@ describe('FotosDoImovel', () => {
     expect(svc.delete).not.toHaveBeenCalled();
     expect(within(screen.getByRole('dialog')).getByText('Excluir 1 item?')).toBeInTheDocument();
   });
+
+  it('lote em andamento não deixa começar outro', async () => {
+    let terminar: (v: PropertyPhoto) => void = () => {};
+    svc.update.mockImplementation(() => new Promise<PropertyPhoto>(res => { terminar = res; }));
+    abrir([foto('a'), foto('b')]);
+    await userEvent.click(await screen.findByRole('button', { name: 'Selecionar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Selecionar a 2ª foto' }));
+    const ocultar = screen.getByRole('button', { name: 'Ocultar' });
+    await userEvent.click(ocultar);
+    await userEvent.click(ocultar);
+    expect(svc.update).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Ocultar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Concluir seleção' })).toBeDisabled();
+    terminar(foto('b', { published: false }));
+    await screen.findByRole('button', { name: 'Selecionar' });
+  });
 });
