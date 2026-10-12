@@ -5,6 +5,7 @@ import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { TEXTO_ENVIO_NA_PREVIA, cabecalhosDoSite, ehPrevia, envioFoiPrevia } from '@/features/siteBuilder/public/previa';
 import { comModeloDaPrevia, ehPreviaDoModelo } from '@/features/siteBuilder/public/previaDoModelo';
 import { trackLead } from '@/features/siteBuilder/public/siteTracking';
+import { TEXTO_FALHA_DE_ENVIO, textoDoErroDeEnvio } from '@/features/siteBuilder/public/limiteDeEnvios';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import { labelsFor } from '@/features/properties/amenities';
@@ -130,7 +131,7 @@ export default function ImovelPublicPage() {
   // Trava de duplo envio (ref: vale já no segundo clique) e aviso de falha.
   const enviandoRef = useRef(false);
   const [enviando, setEnviando] = useState(false);
-  const [falhouEnvio, setFalhouEnvio] = useState(false);
+  const [falhouEnvio, setFalhouEnvio] = useState<string | null>(null);
   // Pedido do book: o mesmo formulário de nome e telefone, em outro modo. O
   // endereço do PDF nunca passa por aqui: a página só sabe SE o imóvel tem book.
   const [pedindoBook, setPedindoBook] = useState(false);
@@ -242,11 +243,11 @@ export default function ImovelPublicPage() {
     if (!tenant || !code || !name.trim()) return;
     if (!isValidBrPhone(phone)) { setPhoneErr(true); return; }
     // Prévia do modelo: o servidor não sabe dela, então nada é enviado.
-    if (ehPreviaDoModelo(site)) { setFalhouEnvio(false); setEnviadoNaPrevia(true); setSent(true); return; }
+    if (ehPreviaDoModelo(site)) { setFalhouEnvio(null); setEnviadoNaPrevia(true); setSent(true); return; }
     if (enviandoRef.current) return;
     enviandoRef.current = true;
     setEnviando(true);
-    setFalhouEnvio(false);
+    setFalhouEnvio(null);
     const params = new URLSearchParams(window.location.search);
     try {
       const res = await fetch(`${API}/api/public/v1/site/leads`, {
@@ -262,12 +263,12 @@ export default function ImovelPublicPage() {
       });
       const naPrevia = ehPrevia(site) || (res.ok && (await envioFoiPrevia(res)));
       // Só confirma quando o servidor aceitou (na prévia nada é enviado, e o aviso próprio aparece).
-      if (!res.ok && !naPrevia) { setFalhouEnvio(true); return; }
+      if (!res.ok && !naPrevia) { setFalhouEnvio(await textoDoErroDeEnvio(res, TEXTO_FALHA_DE_ENVIO)); return; }
       setEnviadoNaPrevia(naPrevia);
       setSent(true);
       // Conversão só conta quando o servidor aceitou o contato (e nunca na prévia).
       if (res.ok && !naPrevia) trackLead();
-    } catch { setFalhouEnvio(true); } finally { enviandoRef.current = false; setEnviando(false); }
+    } catch { setFalhouEnvio(TEXTO_FALHA_DE_ENVIO); } finally { enviandoRef.current = false; setEnviando(false); }
   };
 
   if (state === 'loading') return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
@@ -362,7 +363,7 @@ export default function ImovelPublicPage() {
           className={`w-full rounded-xl border px-4 py-3 text-[15px] outline-none focus:border-[var(--brand)] ${phoneErr ? 'border-red-400' : 'border-black/10'}`}
         />
         {phoneErr && <p className="-mt-1 text-[13px] text-red-500">Digite um telefone válido com DDD.</p>}
-        {falhouEnvio && <p role="alert" className="text-[13px] text-red-500">Não consegui enviar agora. Tente de novo em instantes.</p>}
+        {falhouEnvio && <p role="alert" className="text-[13px] text-red-500">{falhouEnvio}</p>}
         <button type="submit" disabled={enviando} className="w-full rounded-xl py-3.5 text-[15px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--brand)' }}>{pedindoBook ? 'Receber o book' : 'Tenho interesse'}</button>
         {pedindoBook && <button type="button" onClick={() => setPedindoBook(false)} className="w-full text-center text-[13px] text-neutral-500 underline">Voltar</button>}
         {mostraBook && !pedindoBook && (

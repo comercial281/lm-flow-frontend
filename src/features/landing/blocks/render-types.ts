@@ -222,6 +222,11 @@ export interface LeadSubmitResult {
    *  de novo, em vez da tela de agradecimento — antes uma falha de rede virava
    *  "Recebemos suas informações!" e o lead de anúncio sumia calado. */
   failed?: boolean;
+  /** Com `failed`: frase que substitui a de erro do formulário. Vem no limite
+   *  de envios do servidor (429), e aí o botão não oferece "Tentar de novo". */
+  failedMessage?: string;
+  /** Com `failed`: segundos em que o botão fica desligado (o `Retry-After`). */
+  retryAfterSeconds?: number;
 }
 
 export interface BlockComponentProps<T extends BlockType = BlockType> {

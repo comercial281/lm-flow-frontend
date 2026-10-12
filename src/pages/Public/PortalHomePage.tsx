@@ -12,6 +12,7 @@ import { finalidadeInicial, type Finalidade } from './finalidade';
 import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 import { trackLead } from '@/features/siteBuilder/public/siteTracking';
+import { TEXTO_FALHA_DE_ENVIO, textoDoErroDeEnvio } from '@/features/siteBuilder/public/limiteDeEnvios';
 import HomeCapa from './home/HomeCapa';
 import HomeVitrines from './home/HomeVitrines';
 import HomeComoFunciona from './home/HomeComoFunciona';
@@ -48,6 +49,10 @@ export default function PortalHomePage() {
   const [leadSent, setLeadSent] = useState(false);
   // Envio feito na prévia: o servidor não criou nada, e a tela não finge que criou.
   const [enviadoNaPrevia, setEnviadoNaPrevia] = useState(false);
+  // Envio que falhou: a frase aparece embaixo do botão e o formulário fica com
+  // o que a pessoa digitou. Antes a confirmação aparecia mesmo com erro, e o
+  // lead se perdia calado.
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null);
   // "Quero comprar / Quero alugar" (spec venda/locação, D3): marcado pela aba da
   // busca do topo, e a pessoa troca se quiser. Sem escolha ainda, segue a aba
   // em que a capa abre (a primeira visível).
@@ -59,7 +64,8 @@ export default function PortalHomePage() {
     if (!tenant || !leadName.trim()) return;
     if (!isValidBrPhone(leadPhone)) { setLeadPhoneErr(true); return; }
     // Prévia do modelo: o servidor não sabe dela, então nada é enviado.
-    if (ehPreviaDoModelo(site)) { setEnviadoNaPrevia(true); setLeadSent(true); return; }
+    if (ehPreviaDoModelo(site)) { setErroEnvio(null); setEnviadoNaPrevia(true); setLeadSent(true); return; }
+    setErroEnvio(null);
     try {
       const res = await fetch(`${API}/api/public/v1/site/leads`, {
         method: 'POST',
@@ -67,11 +73,13 @@ export default function PortalHomePage() {
         body: JSON.stringify({ lead: { name: leadName, phone: leadPhone, source: 'portal', form_type: 'home', finalidade: leadFinalidade, message: 'Quero ajuda pra encontrar um imóvel (portal home).' } }),
       });
       const naPrevia = ehPrevia(site) || (res.ok && (await envioFoiPrevia(res)));
+      // Só confirma quando o servidor aceitou (na prévia nada é enviado, e o aviso próprio aparece).
+      if (!res.ok && !naPrevia) { setErroEnvio(await textoDoErroDeEnvio(res, TEXTO_FALHA_DE_ENVIO)); return; }
       setEnviadoNaPrevia(naPrevia);
       setLeadSent(true);
       // Conversão só conta quando o servidor aceitou o contato (e nunca na prévia).
       if (res.ok && !naPrevia) trackLead();
-    } catch { /* silencioso */ }
+    } catch { setErroEnvio(TEXTO_FALHA_DE_ENVIO); }
   };
 
   if (state === 'loading') {
@@ -155,6 +163,7 @@ export default function PortalHomePage() {
                   ? <p className="mt-1 mb-4 text-[13px] text-red-500">Digite um telefone válido com DDD.</p>
                   : <div className="mb-4" />}
                 <button type="submit" className="w-full rounded-xl py-3.5 text-[15px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--brand)' }}>Quero ajuda pra encontrar</button>
+                {erroEnvio && <p role="alert" className="mt-3 text-[13px] text-red-500">{erroEnvio}</p>}
               </form>
             )}
           </div>
