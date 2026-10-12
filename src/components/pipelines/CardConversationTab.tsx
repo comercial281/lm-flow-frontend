@@ -1,28 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { Button, Textarea } from '@/components/ui/ds';
 import { MessageCircle, Send, Loader2, RefreshCw, Paperclip, Rocket, Clock, X, Mic, Archive, ArchiveX, ArrowDown } from 'lucide-react';
-
-const OPENAI_KEY = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
-
-async function transcribeAudioUrl(audioUrl: string): Promise<string> {
-  const resp = await fetch(audioUrl);
-  if (!resp.ok) throw new Error('Erro ao baixar áudio');
-  const blob = await resp.blob();
-  const ext = audioUrl.split('?')[0].split('.').pop() ?? 'ogg';
-  const file = new File([blob], `audio.${ext}`, { type: blob.type || 'audio/ogg' });
-  const form = new FormData();
-  form.append('file', file);
-  form.append('model', 'whisper-1');
-  form.append('language', 'pt');
-  const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${OPENAI_KEY}` },
-    body: form,
-  });
-  if (!res.ok) throw new Error('Erro na transcrição');
-  const data = await res.json();
-  return data.text as string;
-}
 import { toast } from 'sonner';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
@@ -37,9 +15,18 @@ import {
   aplicarPaginaRecente,
   instanteDaMensagem,
   juntarMensagens,
+  mensagemDoErro,
   paginaDaResposta,
   temMaisAntigas,
 } from './conversaDoCard';
+import MessageImage from '@/components/chat/messages/MessageImage';
+import MessageVideo from '@/components/chat/messages/MessageVideo';
+import MessageFile from '@/components/chat/messages/MessageFile';
+import MessageLocation from '@/components/chat/messages/MessageLocation';
+import SystemMessage from '@/components/chat/messages/SystemMessage';
+import type { PipelineItem } from '@/types/analytics';
+import { MESSAGE_TYPE } from '@/types/chat/api';
+import type { Message, Attachment } from '@/types/chat/api';
 
 // Hook seguro — não lança se o WebSocketProvider não estiver na árvore acima.
 function useSafeWsHandlers() {
@@ -51,14 +38,6 @@ function useSafeWsHandlers() {
     return undefined;
   }
 }
-import MessageImage from '@/components/chat/messages/MessageImage';
-import MessageVideo from '@/components/chat/messages/MessageVideo';
-import MessageFile from '@/components/chat/messages/MessageFile';
-import MessageLocation from '@/components/chat/messages/MessageLocation';
-import SystemMessage from '@/components/chat/messages/SystemMessage';
-import type { PipelineItem } from '@/types/analytics';
-import { MESSAGE_TYPE } from '@/types/chat/api';
-import type { Message, Attachment } from '@/types/chat/api';
 
 interface CardConversationTabProps {
   item: PipelineItem;
@@ -71,6 +50,10 @@ interface CardConversationTabProps {
 }
 
 const POLL_INTERVAL_MS = 8_000;
+
+// Transcrever: pergunta ao servidor de 3 em 3 s, por até 2 minutos.
+const ESPERA_DA_TRANSCRICAO_MS = 3_000;
+const TENTATIVAS_DA_TRANSCRICAO = 40;
 
 function formatTs(raw: string | number): string {
   const ts = typeof raw === 'number' ? raw * 1000 : Date.parse(String(raw));
@@ -96,27 +79,41 @@ function resolveContactName(item: PipelineItem): string | null {
   return null;
 }
 
-// Áudio com transcrição: mostra a transcrição já gravada pelo backend
-// (attachment.transcribed_text/meta) quando existe; senão oferece transcrever
-// na hora via Whisper (client-side), pra não deixar o corretor sem o texto.
-function AudioAttachment({ att }: { att: Attachment }) {
+// Áudio com transcrição: mostra a que o servidor já gravou (attachment.transcribed_text/meta);
+// senão oferece "Transcrever", que pede ao SERVIDOR (a chave fica lá; até 12/10/2026 a tela
+// chamava a OpenAI do navegador com a chave no código publicado).
+function AudioAttachment({ att, conversationId, messageId }: { att: Attachment; conversationId: string; messageId: string }) {
   const url = att.data_url;
   const existing = att.transcribed_text || (att.meta as any)?.transcribed_text || null;
   const [transcribing, setTranscribing] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(existing);
+  const [erroTranscricao, setErroTranscricao] = useState<string | null>(null);
+  // A pergunta de 3 em 3 s para se o card fechar no meio.
+  const montado = useRef(true);
+  useEffect(() => () => { montado.current = false; }, []);
 
   if (!url) return null;
 
+  // O clique só COMEÇA (o servidor transcreve fora da requisição); a tela pergunta
+  // como foi até ficar pronto. Perguntar nunca paga de novo: só um novo clique tenta.
   const handleTranscribe = async () => {
-    if (!OPENAI_KEY) { setTranscription('Chave OpenAI não configurada.'); return; }
     setTranscribing(true);
+    setErroTranscricao(null);
     try {
-      const text = await transcribeAudioUrl(url);
-      setTranscription(text);
-    } catch {
-      setTranscription('Erro ao transcrever.');
+      const attachmentId = String(att.id);
+      let res = await conversationAPI.transcribeAttachment(conversationId, messageId, attachmentId, true);
+      for (let i = 0; res.status === 'pending' && i < TENTATIVAS_DA_TRANSCRICAO; i++) {
+        await new Promise(resolve => setTimeout(resolve, ESPERA_DA_TRANSCRICAO_MS));
+        if (!montado.current) return;
+        res = await conversationAPI.transcribeAttachment(conversationId, messageId, attachmentId, false);
+      }
+      if (!montado.current) return;
+      if (res.status === 'done' && res.transcribed_text) setTranscription(res.transcribed_text);
+      else setErroTranscricao('Não deu pra transcrever este áudio.');
+    } catch (e) {
+      if (montado.current) setErroTranscricao(mensagemDoErro(e, 'Não deu pra transcrever este áudio.'));
     } finally {
-      setTranscribing(false);
+      if (montado.current) setTranscribing(false);
     }
   };
 
@@ -128,15 +125,18 @@ function AudioAttachment({ att }: { att: Attachment }) {
           {transcription}
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={handleTranscribe}
-          disabled={transcribing}
-          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-        >
-          {transcribing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mic className="h-3 w-3" />}
-          {transcribing ? 'Transcrevendo...' : 'Transcrever'}
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={handleTranscribe}
+            disabled={transcribing}
+            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          >
+            {transcribing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mic className="h-3 w-3" />}
+            {transcribing ? 'Transcrevendo...' : 'Transcrever'}
+          </button>
+          {erroTranscricao && <p className="text-[10px] text-destructive">{erroTranscricao}</p>}
+        </>
       )}
     </div>
   );
@@ -147,7 +147,7 @@ function AudioAttachment({ att }: { att: Attachment }) {
 // `data_url`; a imagem/vídeo nunca tinha src e a mídia simplesmente sumia.
 // Reusar os componentes reais elimina essa classe de bug de vez (fica
 // idêntico ao que o corretor vê na tela de Conversas, garantido).
-function MessageAttachments({ attachments }: { attachments: Attachment[] }) {
+function MessageAttachments({ attachments, conversationId, messageId }: { attachments: Attachment[]; conversationId: string; messageId: string }) {
   if (attachments.length === 0) return null;
   const fileType = attachments[0]?.file_type;
   switch (fileType) {
@@ -160,7 +160,9 @@ function MessageAttachments({ attachments }: { attachments: Attachment[] }) {
     case 'audio':
       return (
         <>
-          {attachments.map(att => <AudioAttachment key={att.id} att={att} />)}
+          {attachments.map(att => (
+            <AudioAttachment key={att.id} att={att} conversationId={conversationId} messageId={messageId} />
+          ))}
         </>
       );
     default:
@@ -168,14 +170,14 @@ function MessageAttachments({ attachments }: { attachments: Attachment[] }) {
   }
 }
 
-function MessageBubble({ m, isOutgoing }: { m: Message; isOutgoing: boolean }) {
+function MessageBubble({ m, isOutgoing, conversationId }: { m: Message; isOutgoing: boolean; conversationId: string }) {
   const attachments = m.attachments ?? [];
   return (
     <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${
       isOutgoing ? 'bg-primary text-primary-foreground' : 'bg-card border'
     }`}>
       {m.content && <p className="whitespace-pre-wrap break-words">{m.content}</p>}
-      <MessageAttachments attachments={attachments} />
+      <MessageAttachments attachments={attachments} conversationId={conversationId} messageId={String(m.id)} />
       {!m.content && attachments.length === 0 && (
         <em className="text-xs opacity-70">[mídia]</em>
       )}
@@ -554,7 +556,7 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
                   {senderName && (
                     <span className="mb-0.5 px-1 text-[10px] text-muted-foreground">{senderName}</span>
                   )}
-                  <MessageBubble m={m} isOutgoing={isOutgoing} />
+                  <MessageBubble m={m} isOutgoing={isOutgoing} conversationId={conversationId} />
                 </div>
               );
             })

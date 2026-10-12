@@ -427,3 +427,71 @@ describe('Card do lead → Conversa · tempo real e envio', () => {
     expect(screen.queryByRole('button', { name: /Nova mensagem/ })).toBeNull();
   });
 });
+
+describe('Card do lead → Conversa · Transcrever', () => {
+  const comAudio = {
+    id: 5, content: '', message_type: 0, created_at: 1_760_000_000, sender: { name: 'Ana' },
+    attachments: [{ id: 7, file_type: 'audio', data_url: 'https://exemplo.com/a.ogg' }],
+  };
+
+  it('clique começa no servidor, a tela pergunta até ficar pronto; nunca chama a OpenAI do navegador', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    getMessages.mockResolvedValue([comAudio]);
+    transcribeAttachment
+      .mockResolvedValueOnce({ attachment_id: '7', status: 'pending' })
+      .mockResolvedValueOnce({ attachment_id: '7', status: 'done', transcribed_text: 'Oi, quero visitar.' });
+    render(<CardConversationTab item={item} />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Transcrever/ }));
+    expect(await screen.findByText('Transcrevendo...')).toBeInTheDocument();
+    await act(async () => { await vi.advanceTimersByTimeAsync(3_000); });
+
+    expect(await screen.findByText('Oi, quero visitar.')).toBeInTheDocument();
+    expect(transcribeAttachment).toHaveBeenNthCalledWith(1, '10', '5', '7', true);
+    expect(transcribeAttachment).toHaveBeenNthCalledWith(2, '10', '5', '7', false);
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('openai'))).toBe(false);
+    fetchSpy.mockRestore();
+  });
+
+  it('pronto já no clique (áudio transcrito por outro caminho): mostra direto, sem perguntar', async () => {
+    getMessages.mockResolvedValue([comAudio]);
+    transcribeAttachment.mockResolvedValue({ attachment_id: '7', status: 'done', transcribed_text: 'Já tinha.' });
+    render(<CardConversationTab item={item} />);
+    await userEvent.click(await screen.findByRole('button', { name: /Transcrever/ }));
+    expect(await screen.findByText('Já tinha.')).toBeInTheDocument();
+    expect(transcribeAttachment).toHaveBeenCalledTimes(1);
+  });
+
+  it('servidor nunca termina: depois de 40 perguntas desiste com o aviso e o link volta', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    getMessages.mockResolvedValue([comAudio]);
+    transcribeAttachment.mockResolvedValue({ attachment_id: '7', status: 'pending' });
+    render(<CardConversationTab item={item} />);
+    await userEvent.click(await screen.findByRole('button', { name: /Transcrever/ }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(3_000 * 41); });
+    expect(await screen.findByText('Não deu pra transcrever este áudio.')).toBeInTheDocument();
+    expect(transcribeAttachment).toHaveBeenCalledTimes(41);
+    expect(screen.getByRole('button', { name: /Transcrever/ })).toBeInTheDocument();
+  });
+
+  it('erro do servidor aparece embaixo do áudio e o link volta', async () => {
+    getMessages.mockResolvedValue([comAudio]);
+    transcribeAttachment.mockRejectedValue({ response: { data: { error: { message: 'Transcrição não configurada.' } } } });
+    render(<CardConversationTab item={item} />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Transcrever/ }));
+
+    expect(await screen.findByText('Transcrição não configurada.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Transcrever/ })).toBeInTheDocument();
+  });
+
+  it('áudio que já veio transcrito mostra o texto sem link', async () => {
+    getMessages.mockResolvedValue([
+      { ...comAudio, attachments: [{ ...comAudio.attachments[0], transcribed_text: 'Já transcrito.' }] },
+    ]);
+    render(<CardConversationTab item={item} />);
+    expect(await screen.findByText('Já transcrito.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Transcrever/ })).toBeNull();
+  });
+});
