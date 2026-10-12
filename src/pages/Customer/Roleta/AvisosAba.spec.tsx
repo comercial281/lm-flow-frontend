@@ -22,6 +22,10 @@ beforeAll(() => {
 });
 
 const enviado = () => settings.update.mock.calls.at(-1)?.[0];
+// "Lead novo na roleta" e "Lead repassado pro próximo" existem no Gestor e no
+// Grupo, nessa ordem na tela.
+const chaveDoGestor = async (nome: string) => (await screen.findAllByRole('switch', { name: nome }))[0];
+const chaveDoGrupo = async (nome: string) => (await screen.findAllByRole('switch', { name: nome })).at(-1)!;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -70,12 +74,22 @@ describe('Avisos da roleta', () => {
 
   it('grupo da lista do Operacional; sem grupo, as chaves do grupo travam', async () => {
     render(<AvisosAba />);
-    expect(await screen.findByRole('switch', { name: 'Lead novo na roleta' })).toBeDisabled();
+    expect(await chaveDoGrupo('Lead novo na roleta')).toBeDisabled();
     const grupo = screen.getByLabelText('Grupo que recebe');
     await waitFor(() => expect(grupo).toBeEnabled());
     await userEvent.selectOptions(grupo, 'g1@g.us');
     await waitFor(() => expect(enviado()).toMatchObject({ group_jid: 'g1@g.us', group_name: 'Imobiliária Exemplo - Leads' }));
-    expect(await screen.findByRole('switch', { name: 'Lead novo na roleta' })).toBeEnabled();
+    expect(await chaveDoGrupo('Lead novo na roleta')).toBeEnabled();
+  });
+
+  it('gestor tem as mesmas chaves de lead novo e repasse, sem depender do grupo', async () => {
+    render(<AvisosAba />);
+    const novo = await chaveDoGestor('Lead novo na roleta');
+    expect(novo).toBeEnabled();
+    await userEvent.click(novo);
+    await waitFor(() => expect(enviado()).toMatchObject({ notify_gestor_offer: true, notify_group_offer: false }));
+    await userEvent.click(await chaveDoGestor('Lead repassado pro próximo'));
+    await waitFor(() => expect(enviado()).toMatchObject({ notify_gestor_repass: true, notify_group_repass: false }));
   });
 
   it('Personalizar textos abre fechado; o texto espera o Salvar e vai com a variável', async () => {
@@ -87,7 +101,7 @@ describe('Avisos da roleta', () => {
     const campo = screen.getByLabelText('Gestor: corretor aceitou');
     await userEvent.type(campo, 'Aceito por ');
     const barras = screen.getAllByRole('button', { name: '+ Corretor' });
-    await userEvent.click(barras[3]);
+    await userEvent.click(barras[5]);
     expect(settings.update).not.toHaveBeenCalled();
     await userEvent.click(within(screen.getByRole('region', { name: 'Alterações não salvas' })).getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(settings.update).toHaveBeenCalled());

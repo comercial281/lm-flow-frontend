@@ -44,11 +44,14 @@ const VARIAVEIS_DOS_AVISOS = [
   { token: '{{link_aceite}}', label: '+ Link pra aceitar' },
   { token: '{{origem}}', label: '+ Origem' },
   { token: '{{roleta}}', label: '+ Roleta' },
+  { token: '{{tempo_aceite}}', label: '+ Tempo do aceite' },
 ];
 
 const TEXTOS: { chave: RoletaTemplateKey; rotulo: string }[] = [
   { chave: 'template_broker_offer', rotulo: 'Corretor: lead novo esperando o aceite' },
   { chave: 'template_broker_won', rotulo: 'Corretor: "O lead é seu"' },
+  { chave: 'template_gestor_offer', rotulo: 'Gestor: lead novo na roleta' },
+  { chave: 'template_gestor_repass', rotulo: 'Gestor: lead repassado pro próximo' },
   { chave: 'template_gestor_exhausted', rotulo: 'Gestor: ninguém aceitou o lead' },
   { chave: 'template_gestor_accepted', rotulo: 'Gestor: corretor aceitou' },
   { chave: 'template_group_offer', rotulo: 'Grupo: lead novo na roleta' },
@@ -248,8 +251,10 @@ export default function AvisosAba() {
               {paraAdicionar.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
             </Seletor>
           </div>
+          {chave('notify_gestor_offer', 'Lead novo na roleta', 'No WhatsApp, com o nome e o telefone do lead')}
+          {chave('notify_gestor_repass', 'Lead repassado pro próximo', 'No WhatsApp')}
           {chave('notify_gestor_exhausted', 'Ninguém aceitou o lead', 'No WhatsApp')}
-          {chave('notify_gestor_accepted', 'Corretor aceitou', 'No WhatsApp')}
+          {chave('notify_gestor_accepted', 'Corretor aceitou', 'No WhatsApp, com o tempo que levou pra aceitar')}
           {chave('notify_gestor_morning', 'Resumo da manhã', 'No WhatsApp, às 8h: o que chegou fora do horário')}
         </Secao>
 

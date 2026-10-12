@@ -21,6 +21,8 @@ export interface RoletaSettingsFields {
   group_name: string | null;
   notify_broker_offer: boolean;
   notify_broker_won: boolean;
+  notify_gestor_offer: boolean;
+  notify_gestor_repass: boolean;
   notify_gestor_exhausted: boolean;
   notify_gestor_accepted: boolean;
   notify_gestor_morning: boolean;
@@ -28,6 +30,8 @@ export interface RoletaSettingsFields {
   notify_group_repass: boolean;
   template_broker_offer: string | null;
   template_broker_won: string | null;
+  template_gestor_offer: string | null;
+  template_gestor_repass: string | null;
   template_gestor_exhausted: string | null;
   template_gestor_accepted: string | null;
   template_group_offer: string | null;
@@ -44,9 +48,11 @@ export type RoletaTemplateKey = Extract<keyof RoletaSettingsFields, `template_${
 export const CAMPOS_DOS_AVISOS: (keyof RoletaSettingsFields)[] = [
   'gestor_user_ids', 'group_jid', 'group_name',
   'notify_broker_offer', 'notify_broker_won',
+  'notify_gestor_offer', 'notify_gestor_repass',
   'notify_gestor_exhausted', 'notify_gestor_accepted', 'notify_gestor_morning',
   'notify_group_offer', 'notify_group_repass',
   'template_broker_offer', 'template_broker_won',
+  'template_gestor_offer', 'template_gestor_repass',
   'template_gestor_exhausted', 'template_gestor_accepted',
   'template_group_offer', 'template_group_repass',
 ];
@@ -62,6 +68,8 @@ export function normalizarAvisos(bruto: Partial<RoletaSettings> | null | undefin
     group_name: b.group_name || null,
     notify_broker_offer: chave('notify_broker_offer'),
     notify_broker_won: chave('notify_broker_won'),
+    notify_gestor_offer: chave('notify_gestor_offer'),
+    notify_gestor_repass: chave('notify_gestor_repass'),
     notify_gestor_exhausted: chave('notify_gestor_exhausted'),
     notify_gestor_accepted: chave('notify_gestor_accepted'),
     notify_gestor_morning: chave('notify_gestor_morning'),
@@ -69,6 +77,8 @@ export function normalizarAvisos(bruto: Partial<RoletaSettings> | null | undefin
     notify_group_repass: chave('notify_group_repass'),
     template_broker_offer: texto('template_broker_offer'),
     template_broker_won: texto('template_broker_won'),
+    template_gestor_offer: texto('template_gestor_offer'),
+    template_gestor_repass: texto('template_gestor_repass'),
     template_gestor_exhausted: texto('template_gestor_exhausted'),
     template_gestor_accepted: texto('template_gestor_accepted'),
     template_group_offer: texto('template_group_offer'),

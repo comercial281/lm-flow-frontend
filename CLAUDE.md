@@ -8482,3 +8482,13 @@ Antes, quem cadastrava um domínio primeiro ficava com ele: a Vercel é um proje
 2. Status novo `taken` no `SiteDomainStatus`; `pending_verification` agora é "falta a prova de posse" (com `ownership.verified = false`) ou, já provado, "a Vercel pediu a prova dela". Quem decide o texto é o `ownership.verified`, não o status sozinho.
 3. A data do "parou de apontar" passa pelo `dataCurta` de `lib/formato.ts` (a trava `formato` do `conferir-padrao` não aceita `toLocaleDateString` na tela).
 
+
+## Roleta: o gestor volta a ver o lead chegar e o tempo do aceite (12/10/2026)
+
+Pedido da gestora da Pinot: desde a roleta nova (06/10) ela só recebia "Fulano aceitou o lead", sem o aviso de lead esperando aceite e sem o tempo que o corretor levou. Na D7 o lead novo e o repasse ficaram só no Grupo, e o grupo da Pinot é o interno da Leal Mídia.
+
+- **Avisos › Gestor** ganhou as mesmas duas chaves do Grupo: *Lead novo na roleta* e *Lead repassado pro próximo*. Nascem desligadas e não dependem de grupo escolhido. Saem pelo Operacional para cada gestor com WhatsApp no cadastro, com nome e telefone do lead (quem não vê o telefone antes do aceite é o corretor ofertado, não o gestor).
+- **"Corretor aceitou"** passou a dizer *Ofertado: 13:04 | Aceito: 13:07 (3 min)* no texto de fábrica. Variáveis novas no servidor: `{{ofertado_em}}`, `{{aceito_em}}`, `{{tempo_aceite}}` ("menos de 1 min", "3 min", "1h 05min"); a tela oferece o botão *+ Tempo do aceite*.
+- Dois textos novos em *Personalizar textos*: *Gestor: lead novo na roleta* e *Gestor: lead repassado pro próximo*.
+- Gestor que também está no grupo recebe duas vezes se as duas chaves estiverem ligadas: aceito pelo dono, desliga-se uma das duas no cliente.
+- Servidor: `comercial281/lm-flow` (migration 323, `RoletaSettings` + `Roleta::Notices`). Testes: `AvisosAba.spec.tsx` (chaves do gestor sem depender do grupo).
