@@ -8659,3 +8659,20 @@ Armadilhas:
    desmontar a aba (senão a rolagem voltava ao topo e o seletor rebuscava a carteira).
 4. **Erro de carga não é lista vazia** nas duas telas: `EmptyState tipo="erro"` com Tentar
    de novo (antes era toast + lista vazia, e a página ficava em "Carregando..." pra sempre).
+
+## Caixa só de campanha ligada por padrão (13/10/2026)
+
+Pedido do dono: a *Caixa só de campanha* vem ligada em todo cliente. Leitura no servidor
+em 13/10: os 15 clientes reais já estavam ligados na mão e com as origens *Anúncio*,
+*Captação/site* e *Manual* (sem *WhatsApp orgânico*); só a Demo estava sem a chave. O padrão
+virou o que a casa já usa.
+
+- **Servidor (lm-flow):** `Tenant#campaign_only_inbox?` lê chave ausente como ligada (mesmo
+  jeito do *Isolamento por corretor*); o cliente novo sem origens escolhidas nasce sem o
+  WhatsApp orgânico.
+- **Tela:** a chave na aba Operação do admin mostra ligada quando nunca foi gravada, e o
+  *Novo cliente* já abre com o *WhatsApp orgânico* desmarcado.
+
+Armadilha: **as duas chaves andam juntas.** Com o orgânico entrando no funil, a conversa de
+conhecido vira card e a caixa não esconde nada. Desligar a caixa num cliente grava `false`
+explícito, e o padrão não volta a ligar sozinho.

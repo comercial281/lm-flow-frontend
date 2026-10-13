@@ -50,7 +50,8 @@ export default function NewTenantWizard({ onClose, onCreated }: { onClose: () =>
   const [state, setState] = useState<WizardState>({
     name: '', admin_name: '', admin_email: '', phone: '', slug: '',
     extra_users: [], notify_email: true, notify_whatsapp: false,
-    pipe_entry_sources: ['ads', 'organic', 'form', 'manual'], whatsapp_reminder_group_jid: '', whatsapp_logs_group_jid: '',
+    // Sem o WhatsApp orgânico por padrão (13/10/2026): par da "Caixa só de campanha", que nasce ligada.
+    pipe_entry_sources: ['ads', 'form', 'manual'], whatsapp_reminder_group_jid: '', whatsapp_logs_group_jid: '',
     max_whatsapp_channels: 5,
     template_ids: [], package_id: '',
   });

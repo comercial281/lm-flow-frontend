@@ -85,6 +85,12 @@ describe('Aba Operação', () => {
     expect(api.patch.mock.calls[0][1]).toEqual({ name: '016', campaign_only_inbox: true });
   });
 
+  it('caixa só de campanha aparece ligada quando nunca foi configurada', async () => {
+    const semChave = { ...cliente, campaign_only_inbox: undefined };
+    render(<MemoryRouter><AbaOperacao cliente={semChave as any} aoMudar={vi.fn()} recarregar={vi.fn()} /></MemoryRouter>);
+    expect(await screen.findByRole('switch', { name: 'Caixa só de campanha' })).toHaveAttribute('aria-checked', 'true');
+  });
+
   it('demonstração: liga só depois de confirmar, sem mandar grupo', async () => {
     api.patch.mockResolvedValue({ data: { data: cliente } });
     const user = userEvent.setup();
