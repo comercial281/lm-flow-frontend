@@ -32,6 +32,8 @@ describe('Novo cliente (assistente)', () => {
     await user.click(screen.getByRole('button', { name: /Proximo/ }));
     await user.click(screen.getByRole('button', { name: /Criar CRM/ }));
     await waitFor(() => expect(api.post).toHaveBeenCalledWith('/super/pooled_tenants', expect.objectContaining({ package_id: 'p1', max_whatsapp_channels: undefined })));
+    // Cliente novo nasce sem o WhatsApp orgânico no funil (par da caixa só de campanha).
+    expect(api.post.mock.calls[0][1].pipe_entry_sources).toEqual(['ads', 'form', 'manual']);
   });
 
   it('sem pacote mostra o máximo de números e manda package_id vazio', async () => {

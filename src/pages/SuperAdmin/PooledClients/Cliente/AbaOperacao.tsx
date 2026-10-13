@@ -261,8 +261,8 @@ export default function AbaOperacao({ cliente, aoMudar }: PropsDaAba) {
           ligada={cliente.broker_isolation ?? (s.broker_isolation !== false)}
           aoMudar={async (v) => { await patch({ broker_isolation: v }); }} />
         <Chave rotulo="Caixa só de campanha"
-          descricao="A caixa mostra só conversas que entraram em algum funil ou iniciadas na mão pelo painel. Quem foi barrado pelas origens acima (WhatsApp orgânico, form do site) some da caixa também, não só do funil. Ligue para o corretor não ver mensagem de conhecido; deixe desligado para ele ver tudo e só o funil filtrar."
-          ligada={cliente.campaign_only_inbox === true}
+          descricao="A caixa mostra só conversas que entraram em algum funil ou iniciadas na mão pelo painel. Quem foi barrado pelas origens acima (WhatsApp orgânico, form do site) some da caixa também, não só do funil. Já vem ligada, para o corretor não ver mensagem de conhecido. Desligue só se ele precisa ver tudo e só o funil filtrar."
+          ligada={cliente.campaign_only_inbox ?? (s.campaign_only_inbox !== false)}
           aoMudar={async (v) => { await patch({ campaign_only_inbox: v }); }} />
       </section>
 
