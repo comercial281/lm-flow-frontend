@@ -18,7 +18,7 @@ function casaRegra(p: PortalProperty, r: RegrasVitrine): boolean {
   const cidades = textos(r.cities), bairros = textos(r.neighborhoods);
   if (r.transaction === 'rent' && !['rent', 'season', 'sale_rent'].includes(p.transaction_type)) return false;
   if (r.transaction === 'sale' && ['rent', 'season'].includes(p.transaction_type)) return false;
-  if (r.listing_kind && (p.listing_kind ?? 'resale') !== r.listing_kind) return false;
+  if (r.listing_kind && (p.listing_kind === 'development' ? 'development' : 'resale') !== r.listing_kind) return false;
   if (r.property_types.length && !r.property_types.some(t => rotuloTipo(t) === rotuloTipo(p.property_type))) return false;
   if (cidades.length && !cidades.includes(normalizarTexto(p.address?.city))) return false;
   if (bairros.length && !bairros.includes(normalizarTexto(p.address?.neighborhood))) return false;

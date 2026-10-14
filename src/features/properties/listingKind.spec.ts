@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  FILTROS_VAZIOS, subtituloDosImoveis, totalDeCadastros, abasVisiveis, destinosDeMover, rotuloDaOcupacao, rotuloDeMover, textoDoDesconto, tomDaOcupacao, abaPadrao, anosDaPrevisao, filtrosAtivos, juntarMesAno, lerAba, linhaDasTipologias, linkNaLista,
+  FILTROS_VAZIOS, subtituloDosImoveis, totalDeCadastros, abasVisiveis, destinosDeMover, rotuloDaOcupacao, rotuloDeMover, textoDoDesconto, tomDaOcupacao, abaPadrao, anosDaPrevisao, filtrosAtivos, juntarMesAno, lerAba, linhaDasTipologias, linkNaLista, descontoDaAvaliacao,
   mesAno, paraCampoMes, paramsDosFiltros, separarMesAno, rotuloDaFase, rotuloDaSituacao, seloDaFase, textoDasUnidades, tipoDoImovel, tirarFiltro,
 } from './listingKind';
 
@@ -157,6 +157,17 @@ describe('Leilão', () => {
     expect(textoDoDesconto(69)).toBe('69% abaixo da avaliação');
     expect(textoDoDesconto(0)).toBeNull();
     expect(textoDoDesconto(null)).toBeNull();
+  });
+
+  it('descontoDaAvaliacao: piso, só com os dois valores e venda abaixo da avaliação', () => {
+    expect(descontoDaAvaliacao(310000, 1000000)).toBe(69);
+    expect(descontoDaAvaliacao(999, 1000)).toBeNull();
+    expect(descontoDaAvaliacao(500, 1000)).toBe(50);
+    expect(descontoDaAvaliacao(1000, 1000)).toBeNull();
+    expect(descontoDaAvaliacao(1200, 1000)).toBeNull();
+    expect(descontoDaAvaliacao(null, 1000)).toBeNull();
+    expect(descontoDaAvaliacao(500, undefined)).toBeNull();
+    expect(descontoDaAvaliacao(0, 1000)).toBeNull();
   });
 
   it('situação do Leilão', () => {

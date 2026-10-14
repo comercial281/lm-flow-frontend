@@ -1,14 +1,15 @@
 import { Input, Label as UILabel } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
-import { OCUPACOES, type Ocupacao } from '@/features/properties/listingKind';
+import { OCUPACOES, descontoDaAvaliacao, textoDoDesconto, type Ocupacao } from '@/features/properties/listingKind';
 import { Pilulas } from './campos';
 import { numeroOuNulo, type PropsDaSecao } from './tipos';
 
 // Revenda. O preço que aparece segue a finalidade (o backend exige o do tipo de negócio).
 export default function SecaoValores({ form: f, setF }: PropsDaSecao) {
   const leilao = f.listing_kind === 'auction';
-  const venda = f.transaction_type === 'sale' || f.transaction_type === 'sale_rent';
+  const venda = leilao || f.transaction_type === 'sale' || f.transaction_type === 'sale_rent';
   const aluguel = f.transaction_type === 'rent' || f.transaction_type === 'sale_rent' || f.transaction_type === 'season';
+  const desconto = leilao ? textoDoDesconto(descontoDaAvaliacao(f.sale_price, f.appraisal_value)) : null;
   return (
     <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
       {venda && (
@@ -25,6 +26,7 @@ export default function SecaoValores({ form: f, setF }: PropsDaSecao) {
             <Input id="campo-valor-avaliacao" type="number" value={f.appraisal_value ?? ''}
               onChange={e => setF({ appraisal_value: numeroOuNulo(e.target.value) })} className="mt-1" />
           </div>
+          {desconto && <p data-testid="desconto-leilao" className="text-sm font-medium text-emerald-700 dark:text-emerald-300 sm:col-span-2">{desconto}</p>}
           <Pilulas rotulo="Ocupação" valor={f.occupancy ?? ''} opcoes={OCUPACOES.map(o => ({ valor: o.valor, rotulo: o.rotulo }))}
             aoMudar={v => setF({ occupancy: v as Ocupacao })} />
         </>

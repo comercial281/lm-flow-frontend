@@ -31,6 +31,20 @@ describe('seções novas', () => {
     expect(setF).toHaveBeenCalledWith({ occupancy: 'occupied' });
   });
 
+  it('Valores do Leilão: mostra o valor de venda mesmo com finalidade de aluguel no formulário', () => {
+    render(<SecaoValores form={{ ...form, transaction_type: 'rent', listing_kind: 'auction' }} setF={vi.fn()} editando={null} />);
+    expect(screen.getByLabelText(/Valor de venda/)).toBeInTheDocument();
+  });
+
+  it('Valores do Leilão: desconto ao vivo sob os dois valores', () => {
+    const { rerender } = render(<SecaoValores form={{ ...form, listing_kind: 'auction', sale_price: 310000, appraisal_value: 1000000 }} setF={vi.fn()} editando={null} />);
+    expect(screen.getByTestId('desconto-leilao')).toHaveTextContent('69% abaixo da avaliação');
+    rerender(<SecaoValores form={{ ...form, listing_kind: 'auction', sale_price: 310000, appraisal_value: null }} setF={vi.fn()} editando={null} />);
+    expect(screen.queryByTestId('desconto-leilao')).toBeNull();
+    rerender(<SecaoValores form={{ ...form, listing_kind: 'resale', sale_price: 310000, appraisal_value: 1000000 }} setF={vi.fn()} editando={null} />);
+    expect(screen.queryByTestId('desconto-leilao')).toBeNull();
+  });
+
   it('Sim/Não/Não informado grava booleano ou nulo', async () => {
     const setF = vi.fn();
     render(<SecaoDetalhesDaVenda form={{ ...form, listing_kind: 'resale', accepts_fgts: true }} setF={setF} editando={null} />);

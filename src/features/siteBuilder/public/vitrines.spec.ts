@@ -65,6 +65,14 @@ describe('vitrines', () => {
     expect(itensDaVitrine(items, v).map(x => x.code)).toEqual(['D']);
     expect(itensDaVitrine(Array.from({ length: 9 }, (_, i) => p(`Z${i}`, { featured: true })), resolverHome(null).showcases[1]).length).toBe(6);
   });
+  it('Leilão publicado na mão aparece com Revenda, não com Empreendimento', () => {
+    const v = (listing_kind: 'resale' | 'development') => ({ id: 'k', kind: 'custom' as const, enabled: true, title: 'k',
+      rules: { transaction: null, listing_kind, property_types: [], cities: [], neighborhoods: [],
+               price_min: null, price_max: null, stages: [], featured_only: false, mcmv: false } });
+    const leilao = p('L1', { listing_kind: 'auction' as never });
+    expect(itensDaVitrine([leilao], v('resale')).map(x => x.code)).toEqual(['L1']);
+    expect(itensDaVitrine([leilao], v('development'))).toEqual([]);
+  });
   it('regra de tipo casa pelo nome: cobertura = penthouse', () => {
     const v = { id: 'c', kind: 'custom' as const, enabled: true, title: 'Coberturas',
       rules: { transaction: null, listing_kind: null, property_types: ['cobertura'], cities: [], neighborhoods: [],
