@@ -83,6 +83,13 @@ export function textoDoDesconto(pct?: number | null): string | null {
   return pct && pct > 0 ? `${pct}% abaixo da avaliação` : null;
 }
 
+/** Desconto do Leilão no cadastro, ao vivo: piso de (1 − venda/avaliação) × 100. Sem os dois valores, ou sem desconto, null. */
+export function descontoDaAvaliacao(venda?: number | null, avaliacao?: number | null): number | null {
+  if (!venda || !avaliacao || venda <= 0 || avaliacao <= 0 || venda >= avaliacao) return null;
+  const pct = Math.floor((1 - venda / avaliacao) * 100);
+  return pct > 0 ? pct : null;
+}
+
 export const FASES: { valor: Stage; rotulo: string }[] = [
   { valor: 'pre_launch', rotulo: 'Pré-lançamento' },
   { valor: 'launch', rotulo: 'Na planta' },

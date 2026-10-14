@@ -7,9 +7,9 @@ export interface Proprietario {
   id: string; name: string; phone: string | null; phone_secondary: string | null; email: string | null;
   document: string | null; status: StatusDoProprietario; source: OrigemDoProprietario; notes: string | null;
   captor: Pessoa | null; authorized_users: Pessoa[]; status_changed_at: string | null; status_changed_by: Pessoa | null;
-  properties: { id: string; code: string }[]; created_at: string; updated_at: string;
+  properties: { id: string; code: string; listing_kind?: 'development' | 'resale' | 'auction' }[]; created_at: string; updated_at: string;
 }
-export interface ImovelDoProprietario { id: string; code: string; title: string; listing_kind: 'development' | 'resale'; status: string; display_price: string | null; cover_photo_url: string | null }
+export interface ImovelDoProprietario { id: string; code: string; title: string; listing_kind: 'development' | 'resale' | 'auction'; status: string; display_price: string | null; cover_photo_url: string | null }
 export interface MudancaDeStatus { from: StatusDoProprietario | null; to: StatusDoProprietario; user: Pessoa | null; at: string }
 export interface ProprietarioCompleto extends Omit<Proprietario, 'properties'> { properties: ImovelDoProprietario[]; history: MudancaDeStatus[] }
 export interface DadosDoProprietario { name: string; phone?: string; phone_secondary?: string; email?: string; document?: string; notes?: string; captor_id?: string | null; authorized_user_ids?: string[] }

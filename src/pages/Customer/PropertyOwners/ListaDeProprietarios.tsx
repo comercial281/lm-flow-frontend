@@ -44,7 +44,7 @@ function Linha({ o, aoAbrir, aoMudarStatus }: {
         {o.properties.length > 0 && (
           <div onClick={naoAbreAFicha} className="flex flex-wrap gap-1.5">
             {o.properties.map(p => (
-              <Link key={p.id} to={linkNaLista({ code: p.code, listing_kind: 'resale' })}
+              <Link key={p.id} to={linkNaLista({ code: p.code, listing_kind: p.listing_kind })}
                 className="rounded-md border px-1.5 py-0.5 text-xs font-medium text-primary hover:bg-primary/10">
                 {p.code}
               </Link>

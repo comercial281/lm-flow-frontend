@@ -32,6 +32,13 @@ beforeEach(() => {
   useAuthStore.setState({ currentUser: null });
 });
 
+it('imóvel de Leilão do proprietário abre a aba Leilão', async () => {
+  own.list.mockResolvedValue({ data: [{ ...maria, properties: [{ id: 'p9', code: 'LE0001', listing_kind: 'auction' }] }], meta: { total: 1 } });
+  abrir();
+  const linha = (await screen.findByText('Maria Souza')).closest('[data-testid="linha-proprietario"]') as HTMLElement;
+  expect(within(linha).getByRole('link', { name: 'LE0001' })).toHaveAttribute('href', '/properties?aba=leilao&q=LE0001');
+});
+
 function Onde() { return <p data-testid="onde">{useLocation().pathname}</p>; }
 const abrir = (url = '/property-owners') => render(
   <MemoryRouter initialEntries={[url]}>
