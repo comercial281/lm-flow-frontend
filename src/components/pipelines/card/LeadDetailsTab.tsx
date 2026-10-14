@@ -4,15 +4,19 @@
 //     Histórico e Observações (só com a função de Observações do cliente: sem ela,
 //     duas colunas, sem faixa vazia);
 //   embaixo — Imóveis de interesse, na largura toda, com o cartão compacto.
-// A linha de cima tem 236 px com imóveis: é o que deixa a caixa de imóveis
-// (título + busca + cartão compacto) caber na janela de 1366 × 768 sem rolar.
+// A linha de cima fica com a sobra da janela (flex-1, mín. 240 px) e a caixa de imóveis
+// com a altura do próprio conteúdo (cartões em fileira não pedem mais).
+// O ↻ do Histórico sobe pro cabeçalho da caixa (acao); o Histórico recarrega pela versão.
 // Histórico e Observações NÃO se juntam na janela: um o sistema escreve sozinho,
 // o outro é o comentário que o corretor escolheu deixar (decisão do dono, 02/10).
 // O Histórico é o novo (E5 do funil, 07/10), em modo compacto, e o título
 // "Histórico" é o da caixa (semTitulo). Os pedaços são os blocos de
 // features/cardDoLead/blocos (E4); a página do card usa os mesmos, sem caixa da janela.
+import { useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import type { PipelineItem } from '@/types/analytics';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/ds';
 import { CaixaDaJanela } from '@/components/base/janela';
 import { contatoDoCard } from '@/features/cardDoLead/cardDoLead';
 import BlocoOQueAIAEntendeu from '@/features/cardDoLead/blocos/BlocoOQueAIAEntendeu';
@@ -47,6 +51,9 @@ export default function LeadDetailsTab({
 }: LeadDetailsTabProps) {
   const contato = contatoDoCard(item);
   const contactId = contato?.id != null ? String(contato.id) : null;
+  // O ↻ mora no cabeçalho da caixa: ele soma na versão e o Histórico recarrega sozinho.
+  const [recargas, setRecargas] = useState(0);
+  const [carregandoHistorico, setCarregandoHistorico] = useState(false);
 
   return (
     <div className="flex min-h-0 flex-col gap-3 lg:h-full">
@@ -57,7 +64,8 @@ export default function LeadDetailsTab({
           mostrarObservacoes ? 'lg:grid-cols-[1fr_1.2fr_1.2fr]' : 'lg:grid-cols-[1fr_1.4fr]',
           // Celular: cada caixa com altura própria, a aba rola inteira. Computador: altura dada pela linha.
           '[&>section]:max-lg:h-80',
-          mostrarImoveis ? 'shrink-0 lg:h-[236px]' : 'flex-1',
+          // Sobra da janela (mín. 240 px); os imóveis ficam com a altura do conteúdo.
+          'flex-1 lg:min-h-[240px]',
         )}
       >
         <CaixaDaJanela titulo="Sobre o lead" corpoClassName="grid content-start gap-4">
@@ -73,15 +81,40 @@ export default function LeadDetailsTab({
         </CaixaDaJanela>
 
         {/* O Histórico rola por dentro: o corpo da caixa só segura. */}
-        <CaixaDaJanela titulo="Histórico" corpoClassName="flex flex-col overflow-hidden">
-          <HistoricoDoLead modo="compacto" contactId={contactId} funilAtual={funilAtual} versao={versaoHistorico} semTitulo />
+        <CaixaDaJanela
+          titulo="Histórico"
+          corpoClassName="flex flex-col overflow-hidden"
+          acao={
+            contactId != null && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => setRecargas(n => n + 1)}
+                disabled={carregandoHistorico}
+                aria-label="Atualizar histórico"
+                title="Atualizar histórico"
+              >
+                <RefreshCw className={cn('h-3.5 w-3.5', carregandoHistorico && 'animate-spin')} />
+              </Button>
+            )
+          }
+        >
+          <HistoricoDoLead
+            modo="compacto"
+            contactId={contactId}
+            funilAtual={funilAtual}
+            versao={`${versaoHistorico}:${recargas}`}
+            aoCarregando={setCarregandoHistorico}
+            semTitulo
+          />
         </CaixaDaJanela>
 
         {mostrarObservacoes && <BlocoObservacoes contactId={contactId} comoCaixa />}
       </div>
 
       {mostrarImoveis && (
-        <BlocoImoveisDeInteresse item={item} nomeExibido={nomeExibido} onVisitaCriada={onVisitaCriada} className="min-h-[200px] lg:flex-1" compacto />
+        <BlocoImoveisDeInteresse item={item} nomeExibido={nomeExibido} onVisitaCriada={onVisitaCriada} className="shrink-0" compacto />
       )}
     </div>
   );
