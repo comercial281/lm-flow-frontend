@@ -1,6 +1,7 @@
 // src/components/pipelines/card/LeadDetailsTab.spec.tsx
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Suspense } from 'react';
 import LeadDetailsTab from './LeadDetailsTab';
 
@@ -82,10 +83,15 @@ describe('LeadDetailsTab › caixas da mesma altura', () => {
     expect(screen.getByTestId('linha-de-cima').className).toContain('lg:grid-cols-[1fr_1.2fr_1.2fr]');
   });
 
-  it('com imóveis, a linha de cima tem 236 px e a janela pede o cartão compacto', async () => {
+  it('com imóveis, a linha de cima fica com a sobra (mín. 240 px) e os imóveis têm a altura do conteúdo', async () => {
     render(<Suspense fallback={null}><LeadDetailsTab {...props} /></Suspense>);
-    expect(screen.getByTestId('linha-de-cima').className).toContain('lg:h-[236px]');
-    expect(await screen.findByTestId('imoveis')).toHaveAttribute('data-compacto', 'true');
+    const linha = screen.getByTestId('linha-de-cima');
+    expect(linha.className).toContain('flex-1');
+    expect(linha.className).toContain('lg:min-h-[240px]');
+    expect(linha.className).not.toContain('lg:h-[236px]');
+    const imoveis = await screen.findByTestId('imoveis');
+    expect(imoveis).toHaveAttribute('data-compacto', 'true');
+    expect(imoveis.parentElement?.className ?? '').not.toContain('lg:flex-1');
   });
 
   it('sem imóveis, a linha de cima ocupa a altura toda', () => {
@@ -100,5 +106,50 @@ describe('LeadDetailsTab › caixas da mesma altura', () => {
     const sobre = screen.getByRole('heading', { name: /Sobre o lead/ }).closest('section') as HTMLElement;
     expect(within(sobre).getByText('Este lead não respondeu formulário.')).toBeInTheDocument();
     expect(within(sobre).queryByText(/Ver todas/)).not.toBeInTheDocument();
+  });
+});
+
+describe('LeadDetailsTab › cabeçalhos enxutos', () => {
+  const props = { item, mostrarImoveis: false, mostrarObservacoes: true, versaoHistorico: '0' };
+
+  it('o botão de atualizar fica no cabeçalho da caixa Histórico e recarrega', async () => {
+    render(<LeadDetailsTab {...props} />);
+    await screen.findByText('Mudou de etapa');
+    const caixa = screen.getByRole('heading', { name: 'Histórico' }).closest('section') as HTMLElement;
+    const cabecalho = screen.getByRole('heading', { name: 'Histórico' }).parentElement as HTMLElement;
+    const botao = within(cabecalho).getByRole('button', { name: 'Atualizar histórico' });
+    expect(within(caixa).getAllByRole('button', { name: 'Atualizar histórico' })).toHaveLength(1);
+    const antes = list.mock.calls.length;
+    await userEvent.click(botao);
+    expect(list.mock.calls.length).toBeGreaterThan(antes);
+  });
+
+  it('os filtros do Histórico ficam numa linha só (sem quebrar)', async () => {
+    render(<LeadDetailsTab {...props} />);
+    const grupo = await screen.findByRole('group', { name: 'Filtrar o histórico' });
+    expect(grupo.className).toContain('flex-nowrap');
+    expect(grupo.className).toContain('overflow-x-auto');
+    expect(grupo.className).not.toContain('flex-wrap');
+  });
+
+  it('Observações na janela: sem a linha do atalho, botão Postar com nome, Ctrl+Enter ainda posta', async () => {
+    const { notesService } = await import('@/services/notes/notesService');
+    (notesService.create as ReturnType<typeof vi.fn>).mockReset().mockResolvedValue({ id: 'n1', content: 'oi', created_at: '2026-10-14T10:00:00Z' });
+    render(<LeadDetailsTab {...props} />);
+    const caixa = screen.getByRole('heading', { name: 'Observações' }).closest('section') as HTMLElement;
+    expect(within(caixa).queryByText(/Ctrl \+ Enter/)).not.toBeInTheDocument();
+    const postar = within(caixa).getByRole('button', { name: 'Postar' });
+    expect(postar).toBeDisabled();
+    const campo = within(caixa).getByRole('textbox');
+    expect(campo).toHaveAttribute('rows', '1');
+    await userEvent.type(campo, 'oi');
+    await userEvent.keyboard('{Control>}{Enter}{/Control}');
+    expect(notesService.create).toHaveBeenCalledWith('c1', { content: 'oi' });
+  });
+
+  it('Observações na janela: o vazio é compacto', async () => {
+    render(<LeadDetailsTab {...props} />);
+    expect(await screen.findByText('Nenhum comentário ainda.')).toBeInTheDocument();
+    expect(screen.queryByText('Seja o primeiro a postar.')).not.toBeInTheDocument();
   });
 });
