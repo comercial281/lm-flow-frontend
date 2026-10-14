@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, existsSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, botaoPequeno, botoesPequenos, iconesComTamanho, rodinhasCentrais, telasEmBranco, vaziosSoltos, largurasForaDaEscala, importaJanelaDoPacote, JANELA_A_MAO, escondidosSoComMouse, rodapeAMao, topoCentralizado } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, botaoPequeno, botoesPequenos, iconesComTamanho, rodinhasCentrais, telasEmBranco, vaziosSoltos, largurasForaDaEscala, importaJanelaDoPacote, JANELA_A_MAO, escondidosSoComMouse, rodapeAMao, topoCentralizado, escolhaRoxaCheia, escolhasRoxasCheias, avisosSoltosNaJanela } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -653,4 +653,27 @@ describe('topoCentralizado: topo de janela não centraliza', () => {
   it('acha text-center no DialogHeader', () => { expect(topoCentralizado('<DialogHeader className="text-center">')).toBe(true); });
   it('acha no DialogDescription', () => { expect(topoCentralizado('<DialogDescription className="mt-1 text-center">')).toBe(true); });
   it('deixa passar text-left e outras tags', () => { expect(topoCentralizado('<DialogHeader className="text-left">')).toBe(false); expect(topoCentralizado('<p className="text-center">')).toBe(false); });
+});
+
+describe('escolhaRoxaCheia: escolha marcada não usa o roxo do botão final', () => {
+  it('acha Button com aria-pressed e variant default condicional', () => {
+    expect(escolhaRoxaCheia(`<Button size="sm" variant={ligado ? 'default' : 'outline'} aria-pressed={ligado}>`)).toBe(true);
+  });
+  it('acha variant="default" literal com aria-pressed', () => {
+    expect(escolhaRoxaCheia(`<Button variant="default" aria-pressed={x}>`)).toBe(true);
+  });
+  it('deixa passar outline + ESCOLHA', () => {
+    expect(escolhaRoxaCheia(`<Button variant="outline" aria-pressed={x} className={ESCOLHA}>`)).toBe(false);
+  });
+  it('lê a tag multilinha e ignora Button sem aria-pressed', () => {
+    const codigo = `<Button\n  size="sm"\n  variant={on ? 'default' : 'outline'}\n  aria-pressed={on}\n>\n  x\n</Button>\n<Button variant="default">Salvar</Button>`;
+    expect(escolhasRoxasCheias(codigo).map((x: { linha: number }) => x.linha)).toEqual([1]);
+  });
+});
+
+describe('avisoSoltoNaJanela: aviso em texto colorido dentro de janela', () => {
+  it('acha <p> laranja num arquivo com DialogContent', () => {
+    expect(avisosSoltosNaJanela('<DialogContent>\n<p className="text-sm text-orange-600">x</p>')).toHaveLength(1);
+  });
+  it('ignora arquivo sem janela', () => { expect(avisosSoltosNaJanela('<p className="text-amber-600">x</p>')).toHaveLength(0); });
 });
