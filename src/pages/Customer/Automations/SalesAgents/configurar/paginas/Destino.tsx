@@ -21,7 +21,9 @@
 // Aviso de teste (14/10/2026): com roleta, corretor fixo ou dono do número JÁ
 // gravados, "Mandar um aviso de teste" manda o aviso de oferta pra quem receberia,
 // com cópia pra quem clicou. Escolha pela metade não mostra o botão: o servidor
-// testa o destino gravado.
+// testa o destino gravado. O `key` é o destino: trocar de roleta ou corretor
+// zera o resultado do teste anterior (senão "o próximo da fila é a Ana" ficava
+// debaixo da roleta nova).
 // ⚠️ O resumo grava só a subchave briefing_enabled: o hook monta o jsonb sobre o
 // último salvo, então o critério gravado em outra página não é pisado.
 import { useEffect, useRef, useState } from 'react';
@@ -195,7 +197,7 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
                 </Seletor>
               </Campo>
             )}
-            {atual === 'roleta' && gravado === 'roleta' && agent.handoff_roleta_config_id && <AvisoDeTeste agentId={agent.id} />}
+            {atual === 'roleta' && gravado === 'roleta' && agent.handoff_roleta_config_id && <AvisoDeTeste key={agent.handoff_roleta_config_id} agentId={agent.id} />}
             {atual === 'user' && (
               <Campo id="destino-corretor" rotulo="Qual corretor">
                 <Seletor id="destino-corretor" className={`${CLASSE_DO_CAMPO} w-full`} value={gravado === 'user' ? agent.handoff_user_id ?? '' : ''}
@@ -205,7 +207,7 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
                 </Seletor>
               </Campo>
             )}
-            {atual === 'user' && gravado === 'user' && agent.handoff_user_id && <AvisoDeTeste agentId={agent.id} />}
+            {atual === 'user' && gravado === 'user' && agent.handoff_user_id && <AvisoDeTeste key={agent.handoff_user_id} agentId={agent.id} />}
             {atual === 'webhook' && (
               <>
                 <CartoesDeEscolha<SistemaDoEnvio> rotulo="Qual sistema" colunas={2} valor={sistema} opcoes={SISTEMAS}

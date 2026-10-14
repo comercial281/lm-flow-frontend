@@ -8869,8 +8869,9 @@ Decisões (não reabrir sem o dono pedir):
    histórico. A vez da fila é derivada da última oferta gravada: oferta de
    teste faria o próximo corretor perder a vez.
 2. **Fiel às chaves do atendimento real.** Aviso desligado (aba Avisos da
-   roleta; Notificações no corretor fixo), corretor que silenciou o aviso ou
-   sem WhatsApp na Equipe NÃO recebem o teste, e a tela diz por quê. É isso
+   roleta; Notificações no corretor fixo), corretor que silenciou o aviso (só
+   na roleta) ou sem WhatsApp na Equipe NÃO recebem o teste, e a tela diz por
+   quê. Verde só quando o CORRETOR recebeu: a cópia sozinha não conta. É isso
    que o gestor precisa descobrir antes de ligar a IA.
 3. **Só o WhatsApp.** O sininho e o push apontam pra uma oferta gravada, e o
    teste não grava oferta.
@@ -8886,10 +8887,15 @@ Armadilhas:
    o botão.
 2. **O link usa `?prazo=` e `?destino=`** (`roleta` | `fixo`). Sem eles a tela
    de teste mostra sem prazo e a recusa do corretor fixo.
-3. **`teste` é palavra reservada em `/roleta/aceite/:assignmentId`**: o id de
+3. **O resultado é do destino da hora**: o `AvisoDeTeste` leva `key` = roleta
+   ou corretor gravado. Sem ele, trocar de roleta deixava "o próximo da fila é
+   a Ana" (da roleta anterior) debaixo da nova (`Destino.spec`).
+4. **`teste` é palavra reservada em `/roleta/aceite/:assignmentId`**: o id de
    oferta é UUID, então não colide.
-4. Backend: `SalesAgents::HandoffTestNotice` (`POST
+5. Backend: `SalesAgents::HandoffTestNotice` (`POST
    /sales_agents/:id/handoff_test_notice`, permissão `sales_agents.update`,
    bloqueado pro MCP). O texto do corretor fixo sai do
    `SalesAgents::DirectOffer.whatsapp_text` e o da roleta do
-   `Roleta::Notices.preview_offer`: mexeu no aviso de verdade, o teste segue.
+   `Roleta::Notices#offer_text`, e a decisão "sai ou não sai" da mesma regra do
+   envio de verdade: mexeu no aviso de verdade, o teste segue. O "silenciar" do
+   Perfil só vale na roleta (a oferta direta de verdade não lê).

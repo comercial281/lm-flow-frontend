@@ -184,6 +184,14 @@ describe('Destino', () => {
       expect(screen.getByText('Pela roleta «Roleta Centro», o próximo da fila agora é Ana Paula.')).toBeInTheDocument();
     });
 
+    it('trocar de roleta apaga o resultado do teste da roleta anterior', async () => {
+      const { gravar, rerender } = await abrir(consultora());
+      await userEvent.click(screen.getByRole('button', { name: 'Mandar um aviso de teste' }));
+      expect(await screen.findByText(/o próximo da fila agora é Ana Paula/)).toBeInTheDocument();
+      rerender(<Destino agent={consultora({ handoff_roleta_config_id: 'r2' })} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} />);
+      expect(screen.queryByText(/o próximo da fila agora é Ana Paula/)).toBeNull();
+    });
+
     it('escolha pela metade não mostra o botão: o servidor testa o destino gravado', async () => {
       await abrir(consultora());
       await userEvent.click(screen.getByRole('radio', { name: 'Corretor fixo' }));
