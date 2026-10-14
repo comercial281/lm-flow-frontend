@@ -31,6 +31,17 @@ describe('LinhaRevenda', () => {
     expect(screen.getByText('69% abaixo da avaliação')).toBeInTheDocument();
   });
 
+  it('imóvel do site mostra Vem do site', () => {
+    render(<LinhaRevenda p={{ ...base, feed: { source_id: 's', external_url: 'https://x.com/1', locked_fields: ['title'] } } as Property}
+      acoes={acoes} permissoes={{ editar: true, excluir: true }} />);
+    expect(screen.getByText('Vem do site')).toBeInTheDocument();
+  });
+
+  it('imóvel que não vem do site não mostra o selo', () => {
+    render(<LinhaRevenda p={base} acoes={acoes} permissoes={{ editar: true, excluir: true }} />);
+    expect(screen.queryByText('Vem do site')).not.toBeInTheDocument();
+  });
+
   it('sem foto oferece Adicionar fotos', () => {
     const fotos = vi.fn();
     render(<LinhaRevenda p={{ ...base, cover_photo_url: null }} acoes={{ ...acoes, fotos }} permissoes={{ editar: true, excluir: false }} />);

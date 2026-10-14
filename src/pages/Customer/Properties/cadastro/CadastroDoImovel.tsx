@@ -14,13 +14,14 @@ import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useCan } from '@/hooks/useCan';
 import { useAlteracoesNaoSalvas, mesmoConteudo, PEDIDO_SAIR_SEM_SALVAR } from '@/hooks/useAlteracoesNaoSalvas';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
-import { BaseHeader, EmptyState, Pagina } from '@/components/base';
+import { Aviso, BaseHeader, EmptyState, Pagina } from '@/components/base';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { plural } from '@/lib/formato';
 import { ABA_NA_URL, tipoDoImovel, type ListingKind } from '@/features/properties/listingKind';
 import { linkDasFotos } from '@/features/properties/fotos/regrasDasFotos';
 import { formularioNovo } from '@/features/properties/formularioPorTipo';
+import { AVISO_DO_SITE, secaoTravada } from '@/features/properties/cadastro/travasDoSite';
 import { cleanTypologies } from '@/features/properties/typologies';
 import { secoesDoCadastro, tipoDaUrl, type SecaoId } from '@/features/properties/cadastro/secoesDoCadastro';
 import {
@@ -259,6 +260,7 @@ function Cadastro() {
 
   if (recusado || (!editandoId && !podeCriar)) return <NoAccessState />;
 
+  const travados = imovel?.feed?.locked_fields ?? [];
   const props = { form, setF, editando: imovel };
   const conteudoDa = (secao: SecaoId): ReactNode => {
     switch (secao) {
@@ -323,11 +325,19 @@ function Cadastro() {
                 aoEscolher={secao => { setSecaoComErro(null); rolarAte(secao); }}
               />
               <div className="mt-4 space-y-4 lg:mt-0">
+                {imovel?.feed && (
+                  <Aviso tom="info">
+                    {AVISO_DO_SITE}
+                    {imovel.feed.external_url && <> <a href={imovel.feed.external_url} target="_blank" rel="noreferrer" className="text-primary underline">Ver no site</a></>}
+                  </Aviso>
+                )}
                 {!editandoId && <PreencherPorTexto form={form} setF={setF} texto={texto} aoMudarTexto={setTexto} temBook={!!book} aoEscolherBook={setBook} />}
                 {secoes.map(s => (
                   <Card role="region" key={s.id} id={`secao-${s.id}`} aria-labelledby={`titulo-${s.id}`} className="scroll-mt-24 gap-0 p-5">
                     <h2 id={`titulo-${s.id}`} className="text-base font-semibold">{s.titulo}</h2>
-                    {conteudoDa(s.id)}
+                    <fieldset disabled={secaoTravada(s.id, travados)} className={`min-w-0 border-0 p-0 m-0 ${secaoTravada(s.id, travados) ? 'opacity-70' : ''}`}>
+                      {conteudoDa(s.id)}
+                    </fieldset>
                   </Card>
                 ))}
               </div>

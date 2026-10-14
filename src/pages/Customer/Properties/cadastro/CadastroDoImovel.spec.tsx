@@ -379,4 +379,23 @@ describe('CadastroDoImovel: índice e erros', () => {
     abrir('/properties/e1/editar');
     expect(await screen.findByRole('heading', { name: 'Editar imóvel' })).toBeInTheDocument();
   });
+
+  it('imóvel do site: avisa, linka o site, trava as seções do site e deixa a Equipe livre', async () => {
+    svc.get.mockResolvedValue({ id: 'f1', code: 'AP9', title: 'Apê do site', transaction_type: 'sale', category_type: 'residential',
+      property_type: 'apartment', status: 'active', stage: 'ready', listing_kind: 'resale', sale_price: 1, created_at: '', updated_at: '',
+      feed: { source_id: 's1', external_url: 'https://exemplo.com.br/imovel/1', locked_fields: ['title', 'description', 'sale_price'] } });
+    abrir('/properties/f1/editar');
+    expect(await screen.findByText(/vem do site da imobiliária/)).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: 'Ver no site' });
+    expect(link).toHaveAttribute('href', 'https://exemplo.com.br/imovel/1');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noreferrer');
+    expect(screen.getByLabelText(/^Título/)).toBeDisabled();
+    const equipe = screen.getByRole('region', { name: 'Equipe' });
+    expect(equipe.querySelector('fieldset')).toBeEnabled();
+    expect(screen.getByRole('region', { name: 'Descrição' }).querySelector('fieldset')).toBeDisabled();
+    expect(screen.getByRole('region', { name: 'Valores' }).querySelector('fieldset')).toBeDisabled();
+    const checkboxDaEquipe = equipe.querySelector('input[type=checkbox], [role=switch]');
+    if (checkboxDaEquipe) expect(checkboxDaEquipe).toBeEnabled();
+  });
 });

@@ -41,6 +41,7 @@ export default function LinhaRevenda({ p, acoes, permissoes, forca, emDia }: {
           ) : (
             <Selo tom="neutro">{FINALIDADE[p.transaction_type] ?? p.transaction_type}</Selo>
           )}
+          {p.feed && <Selo tom="info">Vem do site</Selo>}
         </div>
         <TituloDoImovel texto={titulo || tipo} podeEditar={permissoes.editar} aoAbrir={() => acoes.editar(p)}
           aoAbrirNoSite={estaNoSite(p) ? () => acoes.site(p) : undefined} className="font-semibold text-[15px] sm:text-base" />
