@@ -81,6 +81,47 @@ describe('CardPropertyInterests', () => {
     expect(await screen.findByTestId('fileira-de-imoveis')).toBeInTheDocument();
   });
 
+  describe('lista de resultados da busca', () => {
+    const abrir = async () => {
+      mocks.listByContact.mockResolvedValue({ data: [interesse(1)] });
+      mocks.listProps.mockResolvedValue({ data: [{ id: 'p9', code: 'AP9', title: 'Imóvel 9', address_neighborhood: 'Centro', display_price: 'R$ 1' }] });
+      const user = userEvent.setup();
+      montar();
+      await screen.findByText('Imóvel 1');
+      const busca = screen.getByPlaceholderText(/Buscar imóvel/);
+      await user.click(busca);
+      const lista = await screen.findByTestId('lista-de-busca-de-imoveis');
+      return { user, lista, busca };
+    };
+
+    it('aparece num portal, fora da fileira de cartões', async () => {
+      const { lista } = await abrir();
+      expect(document.body).toContainElement(lista);
+      expect(screen.getByTestId('fileira-de-imoveis')).not.toContainElement(lista);
+      expect(lista.closest('[data-testid="fileira-de-imoveis"]')).toBeNull();
+    });
+
+    it('Esc fecha', async () => {
+      const { user } = await abrir();
+      await user.keyboard('{Escape}');
+      await waitFor(() => expect(screen.queryByTestId('lista-de-busca-de-imoveis')).not.toBeInTheDocument());
+    });
+
+    it('o botão Fechar a lista fecha', async () => {
+      const { user } = await abrir();
+      await user.click(screen.getByRole('button', { name: 'Fechar a lista' }));
+      await waitFor(() => expect(screen.queryByTestId('lista-de-busca-de-imoveis')).not.toBeInTheDocument());
+    });
+
+    it('clicar fora fecha, mas clicar no campo não', async () => {
+      const { user, busca } = await abrir();
+      await user.click(busca);
+      expect(screen.getByTestId('lista-de-busca-de-imoveis')).toBeInTheDocument();
+      await user.click(document.body);
+      await waitFor(() => expect(screen.queryByTestId('lista-de-busca-de-imoveis')).not.toBeInTheDocument());
+    });
+  });
+
   it('sem nenhum imóvel: estado vazio compacto', async () => {
     mocks.listByContact.mockResolvedValue({ data: [] });
     montar();
