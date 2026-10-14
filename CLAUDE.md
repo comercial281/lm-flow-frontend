@@ -8715,6 +8715,20 @@ Armadilha: **as duas chaves andam juntas.** Com o orgânico entrando no funil, a
 conhecido vira card e a caixa não esconde nada. Desligar a caixa num cliente grava `false`
 explícito, e o padrão não volta a ligar sozinho.
 
+## Editar contato pela conversa não apaga o dono (14/10/2026)
+
+Salvar o *Editar contato* aberto pelo painel da conversa apagava o responsável do lead. A
+causa: o contato da conversa não traz o dono (nem `name_editable` e `identity_correctable`),
+o formulário abria com "Sem responsável" e, ao salvar, mandava `default_assignee_id: null`,
+que o servidor entende como "tirar o dono".
+
+- **Formulário:** guarda a escolha inicial do responsável e só manda `default_assignee_id`
+  quando ela mudou (ou no cadastro novo). Corretor editando nunca manda.
+- **Painel:** o lápis busca o contato completo no servidor antes de abrir a janela, e fica
+  desligado enquanto busca. Se a busca falhar, avisa "Não deu pra abrir o contato".
+
+Não reabrir sem o dono pedir.
+
 ## Topo das janelas à esquerda (14/10/2026)
 
 O pacote traz o topo da janela com `text-center sm:text-left`. O CSS do app só gera as classes escritas em `src`: existia `text-center` e não existia `sm:text-left`, então o centralizado vencia em qualquer largura. Os títulos com `flex` ficavam à esquerda (flex ignora `text-align`), mas a frase do topo ficava no centro. Conserto: o topo da casa (`TOPO` e o ramo sem janela do `DialogHeader`, em `ds.tsx`) ganhou `text-left!` (importante, forma do Tailwind v4). Trava nova `topoCentralizado` (teto 0) barra `text-center` em `DialogHeader`/`DialogTitle`/`DialogDescription`/`AlertDialogHeader`. Não reabrir sem o dono pedir.

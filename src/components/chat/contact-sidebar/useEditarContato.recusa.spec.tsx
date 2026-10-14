@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render } from '@testing-library/react';
 import { toast } from 'sonner';
 
@@ -13,14 +13,20 @@ vi.mock('@/hooks/useLanguage', () => ({ useLanguage: () => ({ t: (k: string) => 
 vi.mock('@/hooks/chat/useConversations', () => ({ useConversations: () => ({ updateContactInConversations: vi.fn() }) }));
 
 const updateContact = vi.fn();
+const getContact = vi.fn();
 vi.mock('@/services/contacts/contactsService', () => ({
-  contactsService: { updateContact: (...a: unknown[]) => updateContact(...a) },
+  contactsService: {
+    updateContact: (...a: unknown[]) => updateContact(...a),
+    getContact: (...a: unknown[]) => getContact(...a),
+  },
 }));
 
 let enviar: ((d: unknown) => Promise<void>) | undefined;
+let contatoDaJanela: { default_assignee_id?: number | null } | undefined;
 vi.mock('@/components/contacts/ContactModal', () => ({
-  default: (p: { onSubmit: (d: unknown) => Promise<void> }) => {
+  default: (p: { onSubmit: (d: unknown) => Promise<void>; contact: { default_assignee_id?: number | null } }) => {
     enviar = p.onSubmit;
+    contatoDaJanela = p.contact;
     return null;
   },
 }));
@@ -40,11 +46,16 @@ function Host() {
 const salvarComErro = async (erro: unknown) => {
   updateContact.mockRejectedValue(erro);
   const { getByText } = render(<Host />);
-  act(() => getByText('abrir').click());
+  await act(async () => getByText('abrir').click());
   await act(async () => {
     await enviar!({});
   });
 };
+
+beforeEach(() => {
+  getContact.mockResolvedValue({ id: 'c1', name: 'Ana', default_assignee_id: 7 });
+  contatoDaJanela = undefined;
+});
 
 afterEach(() => {
   cleanup();
@@ -68,5 +79,22 @@ describe('useEditarContato — recusa do servidor', () => {
     await salvarComErro({ response: { status: 500, data: {} } });
 
     expect(toast.error).toHaveBeenCalledTimes(1);
+  });
+
+  it('abre com o contato completo do servidor (traz o responsável)', async () => {
+    const { getByText } = render(<Host />);
+    await act(async () => getByText('abrir').click());
+
+    expect(getContact).toHaveBeenCalledWith('c1', false);
+    expect(contatoDaJanela?.default_assignee_id).toBe(7);
+  });
+
+  it('falha ao buscar o contato: avisa e não abre a janela', async () => {
+    getContact.mockRejectedValue(new Error('rede'));
+    const { getByText } = render(<Host />);
+    await act(async () => getByText('abrir').click());
+
+    expect(toast.error).toHaveBeenCalledWith('contactSidebar.contactDetails.actions.loadError');
+    expect(contatoDaJanela).toBeUndefined();
   });
 });
