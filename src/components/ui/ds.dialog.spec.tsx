@@ -189,4 +189,9 @@ describe('Janela da casa no celular: sobe de baixo', () => {
     expect(confirmacao.style.maxWidth).toBe('28rem');
     expect(confirmacao.querySelector('[data-janela-alca]')).not.toBeNull();
   });
+
+  it('o topo da janela alinha título e frase à esquerda', () => {
+    render(<Dialog open><DialogContent><DialogHeader><DialogTitle>T</DialogTitle><DialogDescription>D</DialogDescription></DialogHeader></DialogContent></Dialog>);
+    expect(screen.getByText('T').closest('[data-slot="dialog-header"]')!.className).toContain('text-left!');
+  });
 });

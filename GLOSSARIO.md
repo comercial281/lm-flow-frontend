@@ -154,7 +154,8 @@ As peças 11 a 22 (e os acréscimos em 6, 7 e 9) são as **escolhas do dono em 1
    - Janela com trabalho em andamento (assistente de página de captura, roteamento de lead, avisar os clientes da Academia): Esc e clique fora **não** fecham (`onEscapeKeyDown`/`onInteractOutside` com `preventDefault`); fecha pelo X ou pelo Cancelar.
    - **Quatro larguras:** pequena 448 px (`max-w-md`: confirmação, pergunta curta), padrão 512 px (sem largura), grande 672 px (`max-w-2xl`: formulário longo), larga 1400 px (`size="wide"`: duas colunas, tabela, editor, prévia). Nenhuma outra.
    - **No celular a janela sobe de baixo**: largura inteira, cantos de cima, alcinha, botões do rodapé empilhados (o principal em cima). Vale também pra confirmação. Tudo mora no ajuste da casa (`ds.tsx`).
-   - **Trava:** `larguraDeJanela`, `janelaDireta`, `janelaAMao` e `rodapeAMao` (arquivo com mais `DialogContent` que `DialogFooter` e com `<Button`; pontos cegos: rodapé dentro de componente filho, e a exceção vale para o arquivo inteiro, então janela nova num arquivo com exceção passa sem a trava).
+   - **Topo à esquerda:** título e frase alinhados à esquerda, em todas as janelas (`text-left!` no topo da casa).
+   - **Trava:** `larguraDeJanela`, `janelaDireta`, `janelaAMao`, `topoCentralizado` e `rodapeAMao` (arquivo com mais `DialogContent` que `DialogFooter` e com `<Button`; pontos cegos: rodapé dentro de componente filho, e a exceção vale para o arquivo inteiro, então janela nova num arquivo com exceção passa sem a trava).
 18. **Confirmação:** `useConfirmacao`. Vermelho só com `destrutivo: true` (arquivar, executar e mover não são vermelhos).
    - Janela com conteúdo a mais (lista do que vai ser apagado, campo, escolha) fica `Dialog` da casa, título simples, sem círculo com ícone, botão `variant="destructive"`.
    - "Digite o nome pra confirmar" só em excluir canal e excluir conta.

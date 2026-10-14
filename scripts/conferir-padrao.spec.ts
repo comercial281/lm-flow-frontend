@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, existsSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, botaoPequeno, botoesPequenos, iconesComTamanho, rodinhasCentrais, telasEmBranco, vaziosSoltos, largurasForaDaEscala, importaJanelaDoPacote, JANELA_A_MAO, escondidosSoComMouse, rodapeAMao } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, botaoPequeno, botoesPequenos, iconesComTamanho, rodinhasCentrais, telasEmBranco, vaziosSoltos, largurasForaDaEscala, importaJanelaDoPacote, JANELA_A_MAO, escondidosSoComMouse, rodapeAMao, topoCentralizado } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -647,4 +647,10 @@ const b = <Button size="sm" icon={<X className="h-4 w-4" />}>ok</Button>;
 const c = <div className="h-6"><Button className="size-8" onClick={() => a > 1}>x</Button></div>;`;
     expect(botoesPequenos(codigo).map((x: { linha: number }) => x.linha)).toEqual([1]);
   });
+});
+
+describe('topoCentralizado: topo de janela não centraliza', () => {
+  it('acha text-center no DialogHeader', () => { expect(topoCentralizado('<DialogHeader className="text-center">')).toBe(true); });
+  it('acha no DialogDescription', () => { expect(topoCentralizado('<DialogDescription className="mt-1 text-center">')).toBe(true); });
+  it('deixa passar text-left e outras tags', () => { expect(topoCentralizado('<DialogHeader className="text-left">')).toBe(false); expect(topoCentralizado('<p className="text-center">')).toBe(false); });
 });

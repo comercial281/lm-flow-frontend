@@ -323,6 +323,11 @@ export const JANELA_A_MAO = /(?:^|[\s'"`])fixed inset-0(?=[\s'"`]|$)/;
 // arquivo tem `<Button`. Janela sem botão final (paleta de comando, conteúdo só
 // de leitura, rodapé num componente filho que já usa o DialogFooter) vai pras
 // exceções com o motivo (trecho = `<DialogContent`).
+// Topo de janela não centraliza: a casa alinha título e frase à esquerda (text-left!
+// no TOPO do ds.tsx). Pega text-center na mesma linha da tag do topo.
+export const TOPO_CENTRALIZADO = /<(?:DialogHeader|DialogTitle|DialogDescription|AlertDialogHeader)\b[^>]*\btext-center\b/;
+export function topoCentralizado(linha) { return TOPO_CENTRALIZADO.test(linha); }
+
 // PONTO CEGO: a régua lê um arquivo por vez. Janela cujo rodapé mora num
 // componente FILHO (o formulário que a janela renderiza, ex.: o botão Salvar
 // dentro do `XxxForm`) não aparece: a janela não tem `<Button` e o filho não tem
@@ -1020,6 +1025,7 @@ export function varrer() {
       if (escopo && rel.endsWith('.tsx') && !CARTOES_DA_CASA.has(rel) && cartaoAMao(l)) anotar('cartaoAMao', rel, i + 1, 'cartão feito à mão', l.trim());
       if (escopo && rel.endsWith('.tsx') && corFixaEmGrafico(l)) anotar('corFixaEmGrafico', rel, i + 1, 'cor fixa em gráfico', l.trim());
       if (escopo && rel.endsWith('.tsx') && JANELA_A_MAO.test(l)) anotar('janelaAMao', rel, i + 1, 'janela montada à mão', l.trim());
+      if (escopo && rel.endsWith('.tsx') && topoCentralizado(l)) anotar('topoCentralizado', rel, i + 1, 'topo de janela centralizado', l.trim());
       // selectNativo (app inteiro): pula linhas que começam com comentário ou têm */ após a tag
       if (lista && SELECT_NATIVO.test(l) && !COMECO_DE_COMENTARIO.test(limpa)) {
         const match = SELECT_NATIVO.exec(l);
@@ -1071,6 +1077,7 @@ export const CATEGORIAS = {
   janelaDireta: 'janela importada do pacote base (app inteiro)',
   janelaAMao: 'janela montada à mão (fixed inset-0)',
   rodapeAMao: 'janela com botões fora do DialogFooter',
+  topoCentralizado: 'topo de janela centralizado (a casa alinha à esquerda)',
   soMouse: 'escondido que só aparece com mouse (app inteiro)',
 };
 
