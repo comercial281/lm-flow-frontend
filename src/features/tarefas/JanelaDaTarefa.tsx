@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Briefcase, Building2, Search, Trash2 } from 'lucide-react';
-import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Label, Textarea } from '@/components/ui/ds';
+import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Textarea } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
+import { CampoDaJanela, ESCOLHA, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { visitsService, type LeadPickerItem, type PersonRef } from '@/services/visits/visitsService';
 import { propertiesService } from '@/services/properties/propertiesService';
 import { useAuthStore } from '@/store/authStore';
@@ -85,9 +87,8 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
   const [observacao, setObservacao] = useState('');
   const [imovel, setImovel] = useState<ImovelDaTarefa | null>(null);
   const [imovelMexido, setImovelMexido] = useState(false);
-  const [buscandoImovel, setBuscandoImovel] = useState(false);
   const [busca, setBusca] = useState('');
-  const [leads, setLeads] = useState<LeadPickerItem[]>([]);
+  const [leads, setLeads] = useState<LeadPickerItem[] | null>(null);
   const [lead, setLead] = useState<LeadPickerItem | null>(null);
   const [contexto, setContexto] = useState<ContextoDaTarefa | null>(null);
   const [semCard, setSemCard] = useState(false);
@@ -111,7 +112,6 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
     setObservacao(tarefa?.description ?? '');
     setImovel(tarefa?.property ?? null);
     setImovelMexido(false);
-    setBuscandoImovel(false);
     setLead(null);
     setBusca('');
     setContexto(null);
@@ -152,10 +152,13 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
 
   useEffect(() => {
     if (!aberta || !escolherLead || lead) return;
+    // Lista fechada até digitar: sem texto não busca.
+    if (!busca.trim()) { setLeads(null); return; }
+    let vivo = true;
     const id = window.setTimeout(() => {
-      visitsService.leadPickerPage(busca, 1, 8).then(r => setLeads(r.data)).catch(() => setLeads([]));
+      visitsService.leadPickerPage(busca.trim(), 1, 8).then(r => { if (vivo) setLeads(r.data); }).catch(() => { if (vivo) setLeads([]); });
     }, 300);
-    return () => window.clearTimeout(id);
+    return () => { vivo = false; window.clearTimeout(id); };
   }, [aberta, escolherLead, busca, lead]);
 
   const idDaTarefa = tarefa?.category_option_id ?? (tarefa?.category ? SO_NOME : '');
@@ -258,168 +261,171 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
         </DialogHeader>
 
         <div className="grid gap-8 md:grid-cols-2">
-          <div className="grid min-w-0 content-start gap-5">
-            {/* Tipo de tarefa */}
-            <div className="grid gap-2">
-              <Label id="tarefa-tipo">{T.tipoDeTarefa}</Label>
-              {ativas.length === 0 && !atual && !carregando ? (
-                <p className="text-sm text-muted-foreground">{T.semCategoriasCadastradas}</p>
-              ) : (
-                <div role="group" aria-labelledby="tarefa-tipo" className="flex gap-2 overflow-x-auto pb-1">
-                  {atual && (
-                    <Button type="button" size="sm" variant={categoria === atual.valor ? 'default' : 'outline'} aria-pressed={categoria === atual.valor} className="shrink-0" onClick={() => setEscolha(null)}>
-                      {atual.rotulo}
-                    </Button>
-                  )}
-                  {ativas.map(o => {
-                    const Icone = iconeDaCategoria(o.label);
-                    const ligado = categoria === o.id;
-                    return (
-                      <Button key={o.id} type="button" size="sm" variant={ligado ? 'default' : 'outline'} aria-pressed={ligado} className="shrink-0" onClick={() => escolherTipo(o.id)}>
-                        <Icone className="mr-1.5 h-4 w-4" />
-                        {o.label}
-                      </Button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Título + prioridade */}
-            <div className="grid grid-cols-[minmax(0,1fr)_8rem] gap-3">
-              <div className="grid gap-1">
-                <Label htmlFor="tarefa-titulo">{T.tituloDaTarefa}</Label>
-                <Input id="tarefa-titulo" value={titulo} maxLength={255} onChange={e => setTitulo(e.target.value)} placeholder={T.exemploDeTitulo} />
-              </div>
-              <div className="grid gap-1">
-                <Label htmlFor="tarefa-prioridade">{T.prioridade}</Label>
-                <Seletor id="tarefa-prioridade" value={prioridade} onChange={e => setPrioridade(e.target.value as Prioridade)}>
-                  {PRIORIDADES.map(p => <option key={p.valor} value={p.valor}>{p.rotulo}</option>)}
-                  {prioridade === 'urgent' && <option value="urgent">Urgente</option>}
-                </Seletor>
-              </div>
-            </div>
-
-            {/* Data, hora, duração */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="grid gap-1">
-                <Label htmlFor="tarefa-data">{T.data}</Label>
-                <Input id="tarefa-data" type="date" value={data} onChange={e => mudarData(e.target.value)} />
-              </div>
-              <div className="grid gap-1">
-                <Label htmlFor="tarefa-hora">{T.hora}</Label>
-                <Seletor id="tarefa-hora" value={hora} onChange={e => setHora(e.target.value)}>
-                  {!hora && <option value="">--:--</option>}
-                  {horas.map(h => <option key={h} value={h}>{h}</option>)}
-                </Seletor>
-              </div>
-              <div className="grid gap-1">
-                <Label htmlFor="tarefa-duracao">{T.duracao}</Label>
-                <Seletor id="tarefa-duracao" value={String(duracao)} onChange={e => setDuracao(Number(e.target.value))}>
-                  {duracoes.map(d => <option key={d} value={String(d)}>{rotuloDaDuracao(d)}</option>)}
-                </Seletor>
-              </div>
-            </div>
-
-            {/* Corretor responsável: só o gestor troca */}
-            <div className="grid gap-1">
-              <Label htmlFor="tarefa-responsavel">{T.corretorResponsavel}</Label>
-              {podeEscolherResponsavel ? (
-                <Seletor id="tarefa-responsavel" value={responsavel} onChange={e => setResponsavel(e.target.value)}>
-                  {!responsavel && <option value="">{T.responsavelDoLead}</option>}
-                  {responsavel && !pessoas.some(p => p.id === responsavel) && <option value={responsavel}>{nomeDe(responsavel) || T.manterResponsavel}</option>}
-                  {pessoas.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </Seletor>
-              ) : (
-                <div id="tarefa-responsavel" className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm">
-                  <Iniciais nome={nomeDoResponsavel} className="h-7 w-7" />
-                  <span className="truncate font-medium">{nomeDoResponsavel}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Vincular */}
-            <div className="grid gap-2">
-              <Label id="tarefa-vincular">{T.vincular}</Label>
-              {buscandoImovel ? (
-                <BuscaDeImovel aoEscolher={p => { setImovel(p); setImovelMexido(true); setBuscandoImovel(false); }} aoDesistir={() => setBuscandoImovel(false)} />
-              ) : (
-                <div>
-                  <Button type="button" size="sm" variant="outline" onClick={() => setBuscandoImovel(true)}>
-                    <Building2 className="mr-1.5 h-4 w-4" />
-                    {imovel ? T.trocarImovel : T.imovel}
-                  </Button>
-                </div>
-              )}
-
-              <div role="group" aria-labelledby="tarefa-vincular" className="grid gap-2 rounded-lg border border-border bg-muted/30 p-3">
+          <div className="grid min-w-0 content-start gap-6">
+            {/* Sobre quem: lead, atendimento e imóvel */}
+            <GrupoDaJanela titulo={T.grupoSobreQuem}>
+              <GradeDaJanela>
                 {escolherLead && !tarefa && !lead ? (
-                  <div className="grid gap-1">
-                    <Label htmlFor="tarefa-lead">{T.lead}</Label>
-                    <Input id="tarefa-lead" value={busca} onChange={e => setBusca(e.target.value)} placeholder={T.buscarLead} />
-                    <ul className="max-h-40 overflow-y-auto">
-                      {leads.map(l => (
-                        <li key={l.id}>
-                          <button type="button" className="w-full rounded px-2 py-1.5 text-left text-sm hover:bg-muted" onClick={() => setLead(l)}>
-                            {l.name}
-                            {l.phone_number && <span className="ml-2 text-xs text-muted-foreground">{l.phone_number}</span>}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : nomeDoLead ? (
-                  <div className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-2">
-                    <Iniciais nome={nomeDoLead} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{nomeDoLead}</p>
-                      <p className="text-xs text-muted-foreground">{T.contato}</p>
+                  <CampoDaJanela rotulo={T.lead} htmlFor="tarefa-lead" colunas={2}>
+                    <div className="relative">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input id="tarefa-lead" value={busca} onChange={e => setBusca(e.target.value)} placeholder={T.buscarLead} className="pl-9" />
                     </div>
-                    {escolherLead && !tarefa && lead && (
-                      <button type="button" className="text-xs text-primary" onClick={() => { setLead(null); setContexto(null); setSemCard(false); }}>{T.trocar}</button>
+                    {busca.trim() && leads && (
+                      leads.length === 0 ? (
+                        <p className="px-2 text-sm text-muted-foreground">{T.nenhumLead}</p>
+                      ) : (
+                        <ul className="max-h-40 overflow-y-auto rounded-md border border-border">
+                          {leads.map(l => (
+                            <li key={l.id}>
+                              <button type="button" className="w-full border-b border-border px-3 py-2 text-left text-sm last:border-0 hover:bg-muted/50" onClick={() => setLead(l)}>
+                                {l.name}
+                                {l.phone_number && <span className="ml-2 text-xs text-muted-foreground">{l.phone_number}</span>}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )
                     )}
-                  </div>
+                  </CampoDaJanela>
+                ) : nomeDoLead ? (
+                  <CampoDaJanela rotulo={T.lead} colunas={2}>
+                    <div className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-2">
+                      <Iniciais nome={nomeDoLead} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{nomeDoLead}</p>
+                        <p className="text-xs text-muted-foreground">{T.contato}</p>
+                      </div>
+                      {escolherLead && !tarefa && lead && (
+                        <button type="button" className="text-xs text-primary" onClick={() => { setLead(null); setContexto(null); setSemCard(false); }}>{T.trocar}</button>
+                      )}
+                    </div>
+                  </CampoDaJanela>
                 ) : null}
 
-                {semCard && <p className="text-sm text-destructive">{T.semCardAtividades}</p>}
-
                 {contexto && (
-                  <div className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-2">
-                    <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                      <Briefcase className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{[T.atendimento, contexto.pipeline_name].filter(Boolean).join(' · ')}</p>
-                      <p className="truncate text-xs text-primary">{contexto.contact?.name}</p>
+                  <CampoDaJanela rotulo={T.atendimento} colunas={2}>
+                    <div className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-2">
+                      <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                        <Briefcase className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{[T.atendimento, contexto.pipeline_name].filter(Boolean).join(' · ')}</p>
+                        <p className="truncate text-xs text-primary">{contexto.contact?.name}</p>
+                      </div>
                     </div>
-                  </div>
+                  </CampoDaJanela>
                 )}
 
-                {imovel && (
-                  <div className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-2">
-                    <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                      <Building2 className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{imovel.title}</p>
-                      <p className="text-xs text-muted-foreground">{imovel.code}</p>
+                <CampoDaJanela rotulo={T.imovel} htmlFor="tarefa-imovel" colunas={2}>
+                  {imovel ? (
+                    <div className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-2">
+                      <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                        <Building2 className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{imovel.title}</p>
+                        <p className="text-xs text-muted-foreground">{imovel.code}</p>
+                      </div>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" aria-label={T.tirarImovel} onClick={() => { setImovel(null); setImovelMexido(true); }}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" aria-label={T.tirarImovel} onClick={() => { setImovel(null); setImovelMexido(true); }}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
+                  ) : (
+                    <BuscaDeImovel aoEscolher={p => { setImovel(p); setImovelMexido(true); }} />
+                  )}
+                </CampoDaJanela>
+
+                {semCard && <Aviso tom="erro" compacto className="sm:col-span-4">{T.semCardAtividades}</Aviso>}
+              </GradeDaJanela>
+            </GrupoDaJanela>
+
+            {/* O quê: tipo, título e prioridade */}
+            <GrupoDaJanela titulo={T.grupoOQue}>
+              <GradeDaJanela>
+                <CampoDaJanela rotulo={T.tipoDeTarefa} colunas={4}>
+                  {ativas.length === 0 && !atual && !carregando ? (
+                    <p className="text-sm text-muted-foreground">{T.semCategoriasCadastradas}</p>
+                  ) : (
+                    <div role="group" aria-label={T.tipoDeTarefa} className="flex flex-wrap gap-2">
+                      {atual && (
+                        <Button type="button" size="sm" variant="outline" aria-pressed={categoria === atual.valor} className={cn('shrink-0', ESCOLHA)} onClick={() => setEscolha(null)}>
+                          {atual.rotulo}
+                        </Button>
+                      )}
+                      {ativas.map(o => {
+                        const Icone = iconeDaCategoria(o.label);
+                        const ligado = categoria === o.id;
+                        return (
+                          <Button key={o.id} type="button" size="sm" variant="outline" aria-pressed={ligado} className={cn('shrink-0', ESCOLHA)} onClick={() => escolherTipo(o.id)}>
+                            <Icone className="mr-1.5 h-4 w-4" />
+                            {o.label}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CampoDaJanela>
+                <CampoDaJanela rotulo={T.tituloDaTarefa} htmlFor="tarefa-titulo" colunas={3}>
+                  <Input id="tarefa-titulo" value={titulo} maxLength={255} onChange={e => setTitulo(e.target.value)} placeholder={T.exemploDeTitulo} />
+                </CampoDaJanela>
+                <CampoDaJanela rotulo={T.prioridade} htmlFor="tarefa-prioridade">
+                  <Seletor id="tarefa-prioridade" className="w-full" value={prioridade} onChange={e => setPrioridade(e.target.value as Prioridade)}>
+                    {PRIORIDADES.map(p => <option key={p.valor} value={p.valor}>{p.rotulo}</option>)}
+                    {prioridade === 'urgent' && <option value="urgent">Urgente</option>}
+                  </Seletor>
+                </CampoDaJanela>
+              </GradeDaJanela>
+            </GrupoDaJanela>
+
+            {/* Quando: data, hora e duração */}
+            <GrupoDaJanela titulo={T.grupoQuando}>
+              <GradeDaJanela>
+                <CampoDaJanela rotulo={T.data} htmlFor="tarefa-data" colunas={2}>
+                  <Input id="tarefa-data" type="date" value={data} onChange={e => mudarData(e.target.value)} />
+                </CampoDaJanela>
+                <CampoDaJanela rotulo={T.hora} htmlFor="tarefa-hora">
+                  <Seletor id="tarefa-hora" className="w-full" value={hora} onChange={e => setHora(e.target.value)}>
+                    {!hora && <option value="">--:--</option>}
+                    {horas.map(h => <option key={h} value={h}>{h}</option>)}
+                  </Seletor>
+                </CampoDaJanela>
+                <CampoDaJanela rotulo={T.duracao} htmlFor="tarefa-duracao">
+                  <Seletor id="tarefa-duracao" className="w-full" value={String(duracao)} onChange={e => setDuracao(Number(e.target.value))}>
+                    {duracoes.map(d => <option key={d} value={String(d)}>{rotuloDaDuracao(d)}</option>)}
+                  </Seletor>
+                </CampoDaJanela>
+              </GradeDaJanela>
+            </GrupoDaJanela>
+
+            {/* Quem faz: só o gestor troca o corretor */}
+            <GrupoDaJanela titulo={T.grupoQuemFaz}>
+              <GradeDaJanela>
+                <CampoDaJanela rotulo={T.corretorResponsavel} htmlFor="tarefa-responsavel" colunas={2}>
+                  {podeEscolherResponsavel ? (
+                    <Seletor id="tarefa-responsavel" className="w-full" value={responsavel} onChange={e => setResponsavel(e.target.value)}>
+                      {!responsavel && <option value="">{T.responsavelDoLead}</option>}
+                      {responsavel && !pessoas.some(p => p.id === responsavel) && <option value={responsavel}>{nomeDe(responsavel) || T.manterResponsavel}</option>}
+                      {pessoas.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </Seletor>
+                  ) : (
+                    <div id="tarefa-responsavel" className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm">
+                      <Iniciais nome={nomeDoResponsavel} className="h-7 w-7" />
+                      <span className="truncate font-medium">{nomeDoResponsavel}</span>
+                    </div>
+                  )}
+                </CampoDaJanela>
+              </GradeDaJanela>
+            </GrupoDaJanela>
 
             {/* Observação */}
-            <div className="grid gap-1">
-              <Label htmlFor="tarefa-observacao">{T.observacao}</Label>
-              <Textarea id="tarefa-observacao" rows={3} value={observacao} onChange={e => setObservacao(e.target.value)} />
-              <p className="text-xs text-muted-foreground">{T.observacaoDica}</p>
-            </div>
+            <GradeDaJanela>
+              <CampoDaJanela rotulo={T.observacao} htmlFor="tarefa-observacao" ajuda={T.observacaoDica} colunas={4}>
+                <Textarea id="tarefa-observacao" rows={3} value={observacao} onChange={e => setObservacao(e.target.value)} />
+              </CampoDaJanela>
+            </GradeDaJanela>
 
-            {erro && <p className="text-sm text-destructive">{erro}</p>}
+            {erro && <Aviso tom="erro" compacto>{erro}</Aviso>}
           </div>
 
           <AgendaDoDia className="hidden md:flex" dia={diaDaAgenda} aoMudarDia={setDiaDaAgenda} responsavel={donoDaAgenda} />
@@ -441,7 +447,7 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
 }
 
 /** Busca no catálogo de imóveis (título ou código), como no Agendar visita. */
-function BuscaDeImovel({ aoEscolher, aoDesistir }: { aoEscolher: (p: ImovelDaTarefa) => void; aoDesistir: () => void }) {
+function BuscaDeImovel({ aoEscolher }: { aoEscolher: (p: ImovelDaTarefa) => void }) {
   const [texto, setTexto] = useState('');
   const [lista, setLista] = useState<ImovelDaTarefa[] | null>(null);
 
@@ -458,13 +464,10 @@ function BuscaDeImovel({ aoEscolher, aoDesistir }: { aoEscolher: (p: ImovelDaTar
   }, [texto]);
 
   return (
-    <div className="grid gap-1">
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input autoFocus aria-label={T.imovel} value={texto} onChange={e => setTexto(e.target.value)} placeholder={T.buscarImovel} className="pl-9" />
-        </div>
-        <Button type="button" size="sm" variant="ghost" onClick={aoDesistir}>{T.cancelar}</Button>
+    <div className="grid gap-1.5">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input id="tarefa-imovel" value={texto} onChange={e => setTexto(e.target.value)} placeholder={T.buscarImovel} className="pl-9" />
       </div>
       {lista && (
         lista.length === 0 ? (
