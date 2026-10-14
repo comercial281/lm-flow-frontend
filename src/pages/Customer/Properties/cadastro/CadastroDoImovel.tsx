@@ -175,8 +175,9 @@ function Cadastro() {
   const formLimpo = () => ({ ...form, typologies: cleanTypologies(form.typologies) });
 
   const criar = async (rascunho: boolean) => {
-    // Rascunho só exige o título: o servidor aceita rascunho sem preço.
-    const erros = errosDoCadastro(form, travados).filter(e => !rascunho || e.secao === 'basico');
+    // Rascunho só exige o título: o servidor aceita rascunho sem preço. O Link pro
+    // lead inválido o servidor recusa até no rascunho, então ele também barra.
+    const erros = errosDoCadastro(form, travados).filter(e => !rascunho || e.secao === 'basico' || e.secao === 'midia');
     if (erros.length) { irParaErro(erros[0]); return; }
     setSalvando(true);
     try {

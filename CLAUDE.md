@@ -8818,6 +8818,6 @@ Não reabrir sem o dono pedir.
 
 - **Campo *Link pro lead*** na seção *Fotos e vídeos* do cadastro, largura inteira, embaixo de vídeo e tour. A frase de ajuda diz o efeito: a IA Vendedora e o follow-up mandam este link no lugar da página do imóvel no site do LM Flow.
 - **Por imóvel, não na IA:** cada empreendimento tem a página dele (decisão do dono, 14/10).
-- **Mesma regra do servidor** (`linkProLeadValido`): vazio vale; senão http(s), com domínio de verdade, sem espaço, até 500 caracteres. Fora disso: aviso âmbar no campo e o Salvar aponta *Fotos e vídeos* (o servidor recusaria o cadastro inteiro).
+- **Mesma regra do servidor** (`linkProLeadValido`): vazio vale; senão http(s), com domínio de verdade, sem espaço, até 500 caracteres. Fora disso: aviso âmbar no campo e o Salvar aponta *Fotos e vídeos* (o servidor recusaria o cadastro inteiro). Vale também no *Salvar rascunho* (o servidor recusa até no rascunho).
 - **No servidor, junto:** sem o link do cliente, a IA só manda a nossa página se ela abre (imóvel publicado no site, fora de rascunho, cliente com site). Antes mandava página de imóvel fora do site, que não abre.
 - `CampoTexto` ganhou `ajuda` e `aviso` (texto embaixo do campo, amarrado por `aria-describedby`).
