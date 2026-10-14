@@ -50,6 +50,8 @@ import {
   FILTROS_VAZIOS,
   abaPadrao,
   abasVisiveis,
+  subtituloDosImoveis,
+  totalDeCadastros,
   filtrosAtivos,
   lerAba,
   type Contagem,
@@ -535,8 +537,8 @@ export default function Properties() {
           title="Meus imóveis"
           // Com recorte da Dashboard a soma seria do recorte; o chip já diz o que está filtrado.
           subtitle={contagem && !recorte
-            ? `Empreendimentos e imóveis de revenda da imobiliária. · ${plural(contagem.development + contagem.resale, 'cadastro', 'cadastros')}`
-            : 'Empreendimentos e imóveis de revenda da imobiliária.'}
+            ? `${subtituloDosImoveis(contagem)} · ${plural(totalDeCadastros(contagem), 'cadastro', 'cadastros')}`
+            : subtituloDosImoveis(contagem)}
           aDireita={kind && canAiBatch && !ehCelular && (
             <Button variant="outline" onClick={() => { setBatchSelected(new Set()); setBatchResults(null); setBatchModalOpen(true); }}>
               <Wand2 className="h-4 w-4 mr-2" />

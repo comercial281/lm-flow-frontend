@@ -54,6 +54,15 @@ export function abasVisiveis(c: Contagem | null, ativa: ListingKind | null): Lis
   return comLeilao ? TIPOS : ['development', 'resale'];
 }
 
+/** Subtítulo do topo de Imóveis: cita o Leilão só quando há leilão cadastrado. */
+export function subtituloDosImoveis(c: Contagem | null): string {
+  return (c?.auction ?? 0) > 0
+    ? 'Empreendimentos, imóveis de revenda e de leilão da imobiliária.'
+    : 'Empreendimentos e imóveis de revenda da imobiliária.';
+}
+/** Total de cadastros das três abas. */
+export function totalDeCadastros(c: Contagem): number { return c.development + c.resale + (c.auction ?? 0); }
+
 const NOME_DO_TIPO: Record<ListingKind, string> = { development: 'Empreendimentos', resale: 'Revenda', auction: 'Leilão' };
 export function destinosDeMover(k: ListingKind): ListingKind[] { return TIPOS.filter(t => t !== k); }
 export function rotuloDeMover(k: ListingKind): string { return `Mover para ${NOME_DO_TIPO[k]}`; }

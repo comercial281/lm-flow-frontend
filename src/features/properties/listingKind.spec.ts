@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  FILTROS_VAZIOS, abasVisiveis, destinosDeMover, rotuloDaOcupacao, rotuloDeMover, textoDoDesconto, tomDaOcupacao, abaPadrao, anosDaPrevisao, filtrosAtivos, juntarMesAno, lerAba, linhaDasTipologias, linkNaLista,
+  FILTROS_VAZIOS, subtituloDosImoveis, totalDeCadastros, abasVisiveis, destinosDeMover, rotuloDaOcupacao, rotuloDeMover, textoDoDesconto, tomDaOcupacao, abaPadrao, anosDaPrevisao, filtrosAtivos, juntarMesAno, lerAba, linhaDasTipologias, linkNaLista,
   mesAno, paraCampoMes, paramsDosFiltros, separarMesAno, rotuloDaFase, rotuloDaSituacao, seloDaFase, textoDasUnidades, tipoDoImovel, tirarFiltro,
 } from './listingKind';
 
@@ -176,5 +176,16 @@ describe('Leilão', () => {
     expect(destinosDeMover('auction')).toEqual(['development', 'resale']);
     expect(rotuloDeMover('auction')).toBe('Mover para Leilão');
     expect(rotuloDeMover('development')).toBe('Mover para Empreendimentos');
+  });
+});
+
+describe('topo de Imóveis', () => {
+  it('subtítulo cita o Leilão só quando há leilão', () => {
+    expect(subtituloDosImoveis(null)).toBe('Empreendimentos e imóveis de revenda da imobiliária.');
+    expect(subtituloDosImoveis({ development: 1, resale: 2, auction: 0 })).toBe('Empreendimentos e imóveis de revenda da imobiliária.');
+    expect(subtituloDosImoveis({ development: 1, resale: 2, auction: 3 })).toBe('Empreendimentos, imóveis de revenda e de leilão da imobiliária.');
+  });
+  it('total soma as três abas', () => {
+    expect(totalDeCadastros({ development: 0, resale: 40, auction: 10 })).toBe(50);
   });
 });
