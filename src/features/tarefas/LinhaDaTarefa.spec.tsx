@@ -10,7 +10,7 @@ const base: TarefaAtividade = {
   created_by_id: 'u', can_edit: true, can_delete: true,
 };
 const acoes = { aoConcluir: vi.fn(), aoReabrir: vi.fn(), aoEditar: vi.fn(), aoExcluir: vi.fn() };
-const desenhar = (extra: Partial<TarefaAtividade> = {}, props: { mostrarLead?: boolean; aoAbrir?: () => void } = {}) =>
+const desenhar = (extra: Partial<TarefaAtividade> = {}, props: { mostrarLead?: boolean; abrirCard?: boolean } = {}) =>
   render(<ul><LinhaDaTarefa tarefa={{ ...base, ...extra }} {...acoes} {...props} /></ul>);
 
 describe('LinhaDaTarefa (cartão C, 14/10/2026)', () => {
@@ -55,10 +55,15 @@ describe('LinhaDaTarefa (cartão C, 14/10/2026)', () => {
     expect(screen.getByRole('checkbox', { name: /Concluir Ligar/ })).toBeDisabled();
   });
 
-  it('clicar no texto abre o card', () => {
-    const aoAbrir = vi.fn();
-    desenhar({}, { aoAbrir });
-    fireEvent.click(screen.getByText('Ligar pra confirmar documentos'));
-    expect(aoAbrir).toHaveBeenCalled();
+  it('com abrirCard, o texto é link pra página do card em outra guia', () => {
+    desenhar({}, { abrirCard: true });
+    const link = screen.getByRole('link', { name: /Ligar pra confirmar documentos/ });
+    expect(link).toHaveAttribute('href', '/pipelines/p1/card/card-1');
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  it('sem funil (ou dentro do card) não vira link', () => {
+    desenhar({ pipeline_id: null }, { abrirCard: true });
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 });

@@ -2,6 +2,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { Checkbox, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/ds';
 import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import { cn } from '@/lib/utils';
+import { linkDoCardCompleto } from '@/features/pipelines/linkDoCard';
 import { iconeDaCategoria } from './iconeDaCategoria';
 import { prazoDaTarefa } from './prazos';
 import { TEXTOS_DE_TAREFAS as T } from './textos';
@@ -15,7 +16,8 @@ interface Props {
   aoExcluir: (t: TarefaAtividade) => void;
   /** Atividades mostra de quem é o lead; dentro do card não precisa. */
   mostrarLead?: boolean;
-  aoAbrir?: (t: TarefaAtividade) => void;
+  /** Tela Tarefas: o texto vira link pra página do card, em outra guia (14/10/2026). */
+  abrirCard?: boolean;
 }
 
 const mesmoNome = (a?: string | null, b?: string | null) => !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -26,7 +28,7 @@ const mesmoNome = (a?: string | null, b?: string | null) => !!a && !!b && a.trim
  * tarefa"), título e, embaixo, o lead em destaque; prazo alinhado à direita.
  * Serve a tela Tarefas e o bloco de tarefas do card.
  */
-export default function LinhaDaTarefa({ tarefa, aoConcluir, aoReabrir, aoEditar, aoExcluir, mostrarLead, aoAbrir }: Props) {
+export default function LinhaDaTarefa({ tarefa, aoConcluir, aoReabrir, aoEditar, aoExcluir, mostrarLead, abrirCard }: Props) {
   const feita = tarefa.status === 'completed';
   const prazo = prazoDaTarefa(tarefa.due_at);
   const atrasada = tarefa.overdue && !feita;
@@ -39,6 +41,24 @@ export default function LinhaDaTarefa({ tarefa, aoConcluir, aoReabrir, aoEditar,
     tarefa.assignee?.name,
   ].filter(Boolean).join(' · ');
   const lead = mostrarLead ? tarefa.contact?.name : null;
+  const link = abrirCard && tarefa.pipeline_id ? linkDoCardCompleto(tarefa.pipeline_id, tarefa.pipeline_item_id) : null;
+  const texto = (
+    <>
+      {/* Título em até duas linhas: na lateral da Conversa a coluna é estreita. */}
+      <span className={cn('line-clamp-2 break-words font-semibold', feita && 'text-muted-foreground line-through')}>{tarefa.title}</span>
+      {(mostrarAlta || lead || detalhes) && (
+        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+          {/* No começo da linha: o corte do fim nunca esconde a prioridade. */}
+          {mostrarAlta && (
+            <span className="mr-1.5 inline-block rounded-full bg-amber-500/15 px-2 py-px text-[11px] font-medium text-amber-700 dark:text-amber-400">{T.alta}</span>
+          )}
+          {lead && <span className="font-medium text-foreground">{lead}</span>}
+          {lead && detalhes && ' · '}
+          {detalhes}
+        </span>
+      )}
+    </>
+  );
 
   return (
     <li className="flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm transition-colors hover:bg-muted/60">
@@ -59,25 +79,11 @@ export default function LinhaDaTarefa({ tarefa, aoConcluir, aoReabrir, aoEditar,
       >
         <Icone className="h-4 w-4" />
       </span>
-      <button
-        type="button"
-        className={cn('min-w-0 flex-1 text-left', !aoAbrir && 'cursor-default')}
-        onClick={aoAbrir ? () => aoAbrir(tarefa) : undefined}
-      >
-        {/* Título em até duas linhas: na lateral da Conversa a coluna é estreita. */}
-        <span className={cn('line-clamp-2 break-words font-semibold', feita && 'text-muted-foreground line-through')}>{tarefa.title}</span>
-        {(mostrarAlta || lead || detalhes) && (
-          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-            {/* No começo da linha: o corte do fim nunca esconde a prioridade. */}
-            {mostrarAlta && (
-              <span className="mr-1.5 inline-block rounded-full bg-amber-500/15 px-2 py-px text-[11px] font-medium text-amber-700 dark:text-amber-400">{T.alta}</span>
-            )}
-            {lead && <span className="font-medium text-foreground">{lead}</span>}
-            {lead && detalhes && ' · '}
-            {detalhes}
-          </span>
-        )}
-      </button>
+      {link ? (
+        <a href={link} target="_blank" rel="noopener" title="Abrir o card em outra guia" className="min-w-0 flex-1 text-left">{texto}</a>
+      ) : (
+        <div className="min-w-0 flex-1">{texto}</div>
+      )}
       <span className="flex shrink-0 flex-col items-end gap-0.5 text-right">
         {prazo.hora && (
           <span className={cn('font-mono text-[13px] font-medium tabular-nums', atrasada && 'text-destructive')}>{prazo.hora}</span>

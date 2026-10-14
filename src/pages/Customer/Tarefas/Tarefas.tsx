@@ -29,7 +29,7 @@ const POR_PAGINA = 30;
 /**
  * Atividades › Tarefas (08/10/2026): só tarefas por prazo, no modelo da tela
  * Atividades do Praedium. Visita não aparece aqui: mora em Atividades › Visitas.
- * Clicar na tarefa abre o card do lead no Funil.
+ * Clicar na tarefa abre a página do card do lead em outra guia (14/10/2026).
  */
 export default function Tarefas() {
   const navigate = useNavigate();
@@ -114,7 +114,6 @@ export default function Tarefas() {
       if (!ok) return;
       try { await tarefasService.excluir(t.id); toast.success(T.excluida); } catch (e) { toast.error(apiErrorMessage(e, T.erro)); }
     },
-    aoAbrir: (t: TarefaAtividade) => t.pipeline_id && navigate(`/pipelines/${t.pipeline_id}?card=${t.pipeline_item_id}`),
   };
 
   return (
@@ -166,7 +165,7 @@ export default function Tarefas() {
         ) : (
           <ul className="divide-y divide-border/60">
             {imoveis && <LinhaDosImoveis balde={imoveis.bucket} quantidade={imoveis.count} deQuem={deQuem} aoAbrir={abrirImoveis} />}
-            {itens.map(t => <LinhaDaTarefa key={t.id} tarefa={t} mostrarLead {...acoes} />)}
+            {itens.map(t => <LinhaDaTarefa key={t.id} tarefa={t} mostrarLead abrirCard {...acoes} />)}
           </ul>
         )}
       </Card>
