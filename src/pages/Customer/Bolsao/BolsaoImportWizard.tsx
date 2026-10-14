@@ -67,7 +67,7 @@ export default function BolsaoImportWizard({ open, onOpenChange, onImported }: P
   };
 
   const handleClose = (next: boolean) => {
-    if (uploading) return;
+    if (uploading || step === 'importing') return;
     if (!next) reset();
     onOpenChange(next);
   };

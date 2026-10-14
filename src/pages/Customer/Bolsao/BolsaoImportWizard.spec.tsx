@@ -46,4 +46,17 @@ describe('Nova lista no Bolsão', () => {
     expect(janela.className).not.toContain('max-w-2xl');
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeInTheDocument();
   });
+
+  it('durante a importação, Esc não fecha a janela e Cancelar fica desligado', async () => {
+    vi.mocked(bolsaoService.confirm).mockReturnValue(new Promise(() => {}) as never);
+    const aoMudar = vi.fn();
+    const { container } = render(<BolsaoImportWizard open onOpenChange={aoMudar} onImported={() => {}} />);
+    const arquivo = new File(['Nome,Telefone'], 'lista.csv', { type: 'text/csv' });
+    await userEvent.upload(container.ownerDocument.querySelector('input[type="file"]') as HTMLInputElement, arquivo);
+    await userEvent.click(await screen.findByRole('button', { name: /Está certo, importar/ }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled());
+    await userEvent.keyboard('{Escape}');
+    expect(aoMudar).not.toHaveBeenCalled();
+  });
 });
