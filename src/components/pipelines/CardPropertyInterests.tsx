@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
-import { Button, Input } from '@/components/ui/ds';
+import { Button, Input, Popover, PopoverContent, PopoverTrigger } from '@/components/ui/ds';
 import { Plus, Loader2, Search, Home, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -135,13 +135,19 @@ export default function CardPropertyInterests({ item, nomeExibido, onVisitaCriad
   return (
     <div className="@container grid gap-3">
       {/* Search */}
+      <Popover open={searchOpen && searchResults.length > 0} onOpenChange={aberto => { if (!aberto) setSearchOpen(false); }}>
       <div className="relative">
         <div className="flex gap-2">
-          <div className="relative flex-1">
+          {/* O gatilho só ancora a lista no campo: clicar nele não alterna, só abre. */}
+          <PopoverTrigger asChild>
+          <div
+            className="relative flex-1"
+            onClick={e => { e.preventDefault(); setSearchOpen(true); }}
+          >
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               value={searchQuery}
-              onChange={e => handleSearch(e.target.value)}
+              onChange={e => { setSearchOpen(true); handleSearch(e.target.value); }}
               onFocus={() => { setSearchOpen(true); handleSearch(searchQuery); }}
               placeholder="Buscar imóvel por código ou título..."
               className="pl-8 h-9 text-sm"
@@ -150,6 +156,7 @@ export default function CardPropertyInterests({ item, nomeExibido, onVisitaCriad
               <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
             )}
           </div>
+          </PopoverTrigger>
           {searchQuery && (
             <Button
               size="sm"
@@ -164,9 +171,29 @@ export default function CardPropertyInterests({ item, nomeExibido, onVisitaCriad
           )}
         </div>
 
-        {/* Search dropdown */}
-        {searchOpen && searchResults.length > 0 && (
-          <div className="mt-1 max-h-64 overflow-y-auto rounded-lg border border-border bg-background">
+        {/* Lista flutuante (portal): fica por cima, sem empurrar os cartões nem ser cortada pela caixa da janela */}
+        <PopoverContent
+          align="start"
+          sideOffset={4}
+          className="w-[var(--radix-popover-trigger-width)] min-w-64 p-0"
+          onOpenAutoFocus={e => e.preventDefault()}
+          onCloseAutoFocus={e => e.preventDefault()}
+          data-testid="lista-de-busca-de-imoveis"
+        >
+          <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1">
+            <span className="text-xs text-muted-foreground">Resultados</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 px-2"
+              aria-label="Fechar a lista"
+              title="Fechar a lista"
+              onClick={() => setSearchOpen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="max-h-64 overflow-y-auto">
             {searchResults.map(p => {
               const alreadyAdded = interests.some(i => i.property_id === p.id);
               return (
@@ -198,8 +225,9 @@ export default function CardPropertyInterests({ item, nomeExibido, onVisitaCriad
               );
             })}
           </div>
-        )}
+        </PopoverContent>
       </div>
+      </Popover>
 
       {/* List */}
       {loading ? (
