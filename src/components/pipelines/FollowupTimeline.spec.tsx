@@ -244,3 +244,25 @@ describe('Follow-up do card — acesso e lead sem referência', () => {
     expect(running).not.toHaveBeenCalled();
   });
 });
+
+describe('Follow-up do card — compacto', () => {
+  it('estado e botão na mesma linha, botão de contorno', async () => {
+    startable = [flow()];
+    const { container } = render(<FollowupTimeline contactId="c-1" compacto />);
+    const iniciar = await screen.findByRole('button', { name: /Iniciar follow-up/ });
+    const linha = screen.getByText('Sem follow-up').parentElement as HTMLElement;
+    expect(linha.contains(iniciar)).toBe(true);
+    expect(iniciar.className).not.toContain('bg-primary ');
+    expect(iniciar.className).toContain('border');
+    expect(container.querySelector('.rounded-full')).toBeNull();
+  });
+
+  it('rodando: a linha do fluxo e o Parar ficam juntos', async () => {
+    running.mockResolvedValue([instance()]);
+    render(<FollowupTimeline contactId="c-1" compacto />);
+    const parar = await screen.findByRole('button', { name: /Parar o follow-up/ });
+    const texto = screen.getByText(/aguardando resposta, sem limite/);
+    expect((texto.closest('[data-linha-followup]') as HTMLElement).contains(parar)).toBe(true);
+    expect(screen.queryByText('Rodando')).not.toBeInTheDocument();
+  });
+});

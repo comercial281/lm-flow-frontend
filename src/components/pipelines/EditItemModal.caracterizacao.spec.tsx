@@ -232,6 +232,30 @@ describe('janela do card · caracterização (E4)', () => {
     expect(within(janela).getByRole('button', { name: 'Mais ações do card' })).toBeInTheDocument();
   });
 
+  it('coluna da esquerda em grupos com título; Ganho/Perdido fora do miolo que rola', async () => {
+    abrir();
+    const janela = await screen.findByRole('dialog', { name: 'Maria Souza' });
+    const grupo = (nome: string) => within(janela).getByRole('group', { name: nome });
+
+    expect(within(grupo('Situação')).getByText('Etapa')).toBeInTheDocument();
+    expect(within(grupo('Ações')).getByTestId('atalhos')).toBeInTheDocument();
+    expect(within(grupo('Follow-up')).getByTestId('followup')).toBeInTheDocument();
+    expect(within(grupo('Meta')).getByTestId('meta')).toBeInTheDocument();
+    expect(grupo('Etiquetas')).toBeInTheDocument();
+
+    const rodape = within(janela).getByTestId('ganho-perdido');
+    const meio = grupo('Situação').parentElement as HTMLElement;
+    expect(meio.className).toContain('overflow-y-auto');
+    expect(meio.contains(rodape)).toBe(false);
+  });
+
+  it('card fora do funil não tem o grupo Meta', async () => {
+    abrir({ item: semFunil });
+    const janela = await screen.findByRole('dialog', { name: 'Ana Prado' });
+    expect(within(janela).queryByRole('group', { name: 'Meta' })).toBeNull();
+    expect(within(janela).getByRole('group', { name: 'Ações' })).toBeInTheDocument();
+  });
+
   it('etapa muda na hora, avisa o quadro e recarrega o histórico', async () => {
     const { onItemStageMoved } = abrir();
     await waitFor(() => expect(s.timeline).toHaveBeenCalledTimes(1));

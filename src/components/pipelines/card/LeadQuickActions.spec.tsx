@@ -72,3 +72,37 @@ describe('LeadQuickActions: etiqueta da visita', () => {
     expect(onVisitaCriada).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('LeadQuickActions: modo compacto', () => {
+  const comIa = (status: 'active' | 'idle' | 'handoff' | 'none') =>
+    ({ ...item, sales_agent: { status, label: '' } }) as unknown as PipelineItem;
+  const montar = (it: PipelineItem, compacto = true) =>
+    render(<LeadQuickActions item={it} nomeExibido="Maria Teste" abrindoConversa={false} onAbrirConversa={vi.fn()} compacto={compacto} />);
+
+  it('IA que dá pra ligar mostra "IA: ligar" sem cara de desligado', () => {
+    montar(comIa('idle'));
+    const botao = screen.getByRole('button', { name: /IA: ligar/ });
+    expect(botao).not.toBeDisabled();
+    expect(botao.className).not.toMatch(/(^|\s)opacity-50/);
+    expect(botao).toHaveAttribute('aria-pressed', 'false');
+    expect(botao.className).toContain('aria-pressed:bg-primary/10');
+  });
+
+  it('IA ligada: "IA ligada" marcada; sem IA no número: desligado com o motivo', () => {
+    const { unmount } = montar(comIa('active'));
+    expect(screen.getByRole('button', { name: /IA ligada/ })).toHaveAttribute('aria-pressed', 'true');
+    unmount();
+    montar(comIa('none'));
+    const sem = screen.getByRole('button', { name: /Sem IA/ });
+    expect(sem).toBeDisabled();
+    expect(sem).toHaveAttribute('title', 'Nenhuma IA ligada no número deste lead.');
+  });
+
+  it('fileira baixa de 3 botões (h-10); sem compacto continuam os tijolos da página', () => {
+    const { unmount } = montar(comIa('idle'));
+    expect(screen.getByRole('button', { name: /Agendar visita/ }).className).toContain('h-10');
+    unmount();
+    montar(comIa('idle'), false);
+    expect(screen.getByRole('button', { name: /Agendar visita/ }).className).toContain('aspect-square');
+  });
+});

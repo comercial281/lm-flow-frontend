@@ -8,8 +8,8 @@ import type { CardDoLead } from '../useCardDoLead';
 export default function BlocoFollowup({ card }: { card: CardDoLead }) {
   const { contato, item } = card;
   return (
-    <div className="space-y-1">
-      <span className="text-xs font-medium text-muted-foreground">Follow-up</span>
+    // O título "Follow-up" é do grupo da janela.
+    <div>
       <FollowupTimeline
         contactId={contato?.id != null ? String(contato.id) : null}
         conversationId={conversaDoCard(item)}

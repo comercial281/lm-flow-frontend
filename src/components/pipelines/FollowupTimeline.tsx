@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Loader2, StopCircle, Rocket, ChevronDown, ChevronRight } from 'lucide-react';
 import { plural } from '@/lib/formato';
 import { toast } from 'sonner';
@@ -83,7 +83,7 @@ const failMessage = (e: unknown) =>
   || (httpStatusOf(e) === 403 ? 'Seu cargo não permite mexer no follow-up deste lead.' : null)
   || 'Não consegui falar com o servidor. Tente de novo.';
 
-export default function FollowupTimeline({ contactId, conversationId, leadName, readOnly }: Props) {
+export default function FollowupTimeline({ contactId, conversationId, leadName, readOnly, compacto }: Props) {
   const [flows, setFlows] = useState<RunningFlow[]>([]);
   const [legacyJobs, setLegacyJobs] = useState<LeadFollowupJob[]>([]);
   const [legacy, setLegacy] = useState<LeadFollowupState>(EMPTY_LEAD_FOLLOWUP_STATE);
@@ -230,6 +230,84 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
       )}
     </div>
   );
+
+  // Janela do card (versão A): o estado à esquerda e o botão de contorno à
+  // direita, numa linha por follow-up. Sem selo colorido nem roxo cheio.
+  if (compacto) {
+    const linhas: Array<{ chave: string; texto: string; parar?: () => ReactNode }> = [
+      ...flows.map(flow => ({
+        chave: flow.id,
+        texto: linhaDoFluxo(flow).texto,
+        parar: () => stopButton(
+          () => void act(() => flowAutomationInstancesService.stop(flow.id), 'Follow-up parado'),
+          `Parar o follow-up ${flow.flow_name ?? ''}`.trim(),
+        ),
+      })),
+      ...(legacyLine ? [{
+        chave: 'antigo',
+        texto: `${legacyLine.texto} · formato antigo`,
+        parar: legacy.can_stop
+          ? () => stopButton(
+            () => void act(async () => ({ message: (await leadFollowupService.stop(ref)).message }), 'Follow-up parado'),
+            'Parar o follow-up do formato antigo',
+          )
+          : undefined,
+      }] : []),
+    ];
+    return (
+      <div className="grid gap-2">
+        {linhas.map(l => (
+          <div key={l.chave} data-linha-followup className="flex items-center gap-2">
+            <span className="min-w-0 flex-1 text-xs text-foreground line-clamp-2">{l.texto}</span>
+            {canAct && l.parar?.()}
+          </div>
+        ))}
+        {linhas.length === 0 && (
+          <div data-linha-followup className="flex items-center gap-2">
+            <span className="min-w-0 flex-1 text-xs text-muted-foreground">{headline.label}</span>
+            {canAct && options.length > 0 && (
+              <>
+                {options.length > 1 && (
+                  <Seletor
+                    className="h-8 text-xs rounded-md border border-border bg-background px-2 max-w-[140px]"
+                    value={chosenId}
+                    disabled={busy}
+                    onChange={e => setChosenId(e.target.value)}
+                    aria-label="Qual follow-up"
+                  >
+                    <option value="">Escolha…</option>
+                    {options.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                  </Seletor>
+                )}
+                <Button size="sm" variant="outline" className="text-xs gap-1.5 shrink-0" disabled={busy || !chosen}
+                  aria-label="Iniciar follow-up"
+                  onClick={() => void act(() => flowAutomationInstancesService.start(ref, chosen), 'Follow-up iniciado')}>
+                  {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
+                  Iniciar
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+        {legacyJobs.length > 0 && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button type="button" className="justify-self-start text-xs text-primary hover:underline">Ver mensagens</button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-80 max-h-96 overflow-y-auto space-y-2">
+              {legacy.sequence?.name && (
+                <p className="text-xs font-medium text-foreground">{legacy.sequence.name} (formato antigo)</p>
+              )}
+              {legacyTimeline}
+            </PopoverContent>
+          </Popover>
+        )}
+        {erroFluxos && !running && (
+          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} className="p-3 text-xs" />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-1.5">
