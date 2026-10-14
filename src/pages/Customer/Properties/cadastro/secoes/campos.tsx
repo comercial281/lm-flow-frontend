@@ -92,13 +92,14 @@ export function CampoNumero({ rotulo, valor, aoMudar, placeholder }: {
 }
 
 /** Campo de texto simples, com o rótulo amarrado ao campo. */
-export function CampoTexto({ rotulo, valor, aoMudar, placeholder, type = 'text', multilinha = false }: {
+export function CampoTexto({ rotulo, valor, aoMudar, placeholder, type = 'text', multilinha = false, desabilitado = false }: {
   rotulo: string;
   valor: string | null | undefined;
   aoMudar: (v: string) => void;
   placeholder?: string;
   type?: string;
   multilinha?: boolean;
+  desabilitado?: boolean;
 }) {
   const id = useId();
   return (
@@ -110,11 +111,12 @@ export function CampoTexto({ rotulo, valor, aoMudar, placeholder, type = 'text',
           value={valor ?? ''}
           onChange={e => aoMudar(e.target.value)}
           placeholder={placeholder}
+          disabled={desabilitado}
           rows={3}
           className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
       ) : (
-        <Input id={id} type={type} value={valor ?? ''} placeholder={placeholder}
+        <Input id={id} type={type} value={valor ?? ''} placeholder={placeholder} disabled={desabilitado}
           onChange={e => aoMudar(e.target.value)} className="mt-1" />
       )}
     </div>

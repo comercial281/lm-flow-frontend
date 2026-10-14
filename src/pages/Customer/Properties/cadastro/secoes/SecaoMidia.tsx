@@ -138,7 +138,8 @@ export default function SecaoMidia(props: Props) {
     <>
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <CampoTexto rotulo="Link do vídeo (YouTube)" type="url" valor={f.video_url} placeholder="https://www.youtube.com/watch?v=..."
-          aoMudar={v => setF({ video_url: v || null })} />
+          aoMudar={v => setF({ video_url: v || null })}
+          desabilitado={!!props.editando?.feed?.locked_fields.includes('video_url')} />
         <CampoTexto rotulo="Link do tour virtual" type="url" valor={f.virtual_tour_url}
           aoMudar={v => setF({ virtual_tour_url: v || null })} />
       </div>

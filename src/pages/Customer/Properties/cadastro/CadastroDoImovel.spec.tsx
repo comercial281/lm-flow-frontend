@@ -395,7 +395,6 @@ describe('CadastroDoImovel: índice e erros', () => {
     expect(equipe.querySelector('fieldset')).toBeEnabled();
     expect(screen.getByRole('region', { name: 'Descrição' }).querySelector('fieldset')).toBeDisabled();
     expect(screen.getByRole('region', { name: 'Valores' }).querySelector('fieldset')).toBeDisabled();
-    const checkboxDaEquipe = equipe.querySelector('input[type=checkbox], [role=switch]');
-    if (checkboxDaEquipe) expect(checkboxDaEquipe).toBeEnabled();
+    expect(within(equipe).getAllByRole('combobox')[0]).toBeEnabled();
   });
 });

@@ -19,8 +19,9 @@ describe('seções travadas pelo site', () => {
   it('sem campos travados (fonte desligada), nada trava', () => {
     expect(secaoTravada('basico', [])).toBe(false);
   });
-  it('vídeo vindo do site trava Fotos e vídeos; financiamento trava Detalhes da venda', () => {
-    expect(secaoTravada('midia', ['video_url'])).toBe(true);
+  it('Fotos e vídeos nunca trava a seção (só o link do vídeo); financiamento trava Detalhes da venda', () => {
+    expect(secaoTravada('midia', ['video_url'])).toBe(false);
+    expect(secaoTravada('localizacao', ['address_zip'])).toBe(true);
     expect(secaoTravada('detalhesVenda', ['accepts_financing'])).toBe(true);
     expect(secaoTravada('midia', ['title'])).toBe(false);
   });
