@@ -8754,3 +8754,14 @@ Armadilhas:
 4. Conferência visual pendente com o dono na prévia: lead com 5 imóveis, 1366×768 com menu aberto e 1440×900, Ganho/Perdido visíveis, Detalhes sem rolar inteira, fileira de imóveis rolando, grupo Meta sumindo com o painel vazio, capa num cliente com fotos.
 
 Não reabrir sem o dono pedir.
+
+## Miolo da janela vira regra (14/10/2026)
+
+A hierarquia de dentro da janela agora está escrita no GLOSSARIO (item 23) e tem peças e travas.
+
+- **Peças** em `src/components/base/janela`: `GrupoDaJanela` (título pequeno em caixa alta), `CampoDaJanela` (rótulo, obrigatório, ajuda, erro e quantas colunas ocupa), `GradeDaJanela` (4 colunas no computador, 1 no celular), `CaixaDaJanela` e `ESCOLHA`.
+- **Travas novas** no `conferir-padrao`: `escolhaRoxaCheia` (botão com `aria-pressed` pintado com o roxo do botão final) e `avisoSoltoNaJanela` (`<p>` laranja/âmbar/amarelo solto em arquivo com janela). Tetos iniciais: 51 e 14. As levas seguintes baixam até 0. Ao lado da `topoCentralizado`, que já está em 0.
+- Ponto cego: grupo sem título e larguras soltas não são medidos; aviso só é visto em `<p>` com a cor na mesma linha.
+- Não muda tela nenhuma neste passo.
+
+Não reabrir sem o dono pedir.

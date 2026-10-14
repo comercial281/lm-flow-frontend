@@ -738,6 +738,42 @@ export function botoesPequenos(codigo, arquivo = 'x.tsx') {
   return achados;
 }
 
+// ── Miolo da janela (peça 23 do GLOSSARIO, 14/10/2026) ─────────────────────
+// Escolha marcada (`aria-pressed`) nunca usa o roxo cheio do botão final: a regra é
+// `variant="outline"` + `ESCOLHA` (ou o `BotoesDeEscolha`). Roda pela tag `<Button …>`
+// inteira (multilinha), como o botoesPequenos. PONTO CEGO: botão cuja variante vem
+// de uma variável fora da tag, ou escolha marcada por `data-state`, não é visto.
+export function escolhaRoxaCheia(tag) {
+  return /<Button\b/.test(tag) && /aria-pressed/.test(tag) && /variant=(?:\{[^}]*)?['"]default['"]/.test(tag);
+}
+export function escolhasRoxasCheias(codigo, arquivo = 'x.tsx') {
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
+  const achados = [];
+  const visitar = no => {
+    if ((ts.isJsxOpeningElement(no) || ts.isJsxSelfClosingElement(no)) && no.tagName.getText(fonte) === 'Button') {
+      const texto = no.getText(fonte);
+      if (escolhaRoxaCheia(texto)) {
+        const { line } = fonte.getLineAndCharacterOfPosition(no.getStart(fonte));
+        achados.push({ linha: line + 1, texto: texto.replace(/\s+/g, ' ') });
+      }
+    }
+    ts.forEachChild(no, visitar);
+  };
+  visitar(fonte);
+  return achados;
+}
+// Aviso em texto laranja/âmbar/amarelo solto num arquivo com janela (o certo é o
+// `Aviso`). Roda por arquivo, como o rodapeAMao. PONTO CEGO: só vê `<p>` com a cor
+// na mesma linha da tag; `<span>`/`<div>` coloridos e cor montada por variável não.
+export function avisosSoltosNaJanela(codigo) {
+  if (!/<DialogContent(?=[\s>/]|$)/.test(codigo)) return [];
+  const achados = [];
+  codigo.split('\n').forEach((l, i) => {
+    if (/<p\b[^>]*\btext-(?:orange|amber|yellow)-\d00\b/.test(l)) achados.push({ linha: i + 1, texto: l.trim() });
+  });
+  return achados;
+}
+
 // ── Ícone com tamanho em pixel (peça 22 do GLOSSARIO, 10/10/2026) ──────────
 // Ícone é `lucide-react` em três tamanhos, por classe: `h-3.5 w-3.5` (aba,
 // etiqueta, filtro), `h-4 w-4` (botão, menu), `h-5 w-5` (título). Conta `size=`
@@ -987,6 +1023,8 @@ export function varrer() {
       for (const { linha, texto } of botoesSemNome(codigo, rel)) anotar('iconeSemNome', rel, linha, texto, texto);
       for (const { linha, texto } of botoesPintados(codigo, rel)) anotar('botaoPintado', rel, linha, 'botão pintado à mão', texto);
       for (const { linha, texto } of botoesPequenos(codigo, rel)) anotar('botaoPequeno', rel, linha, 'botão abaixo de 32 px', texto);
+      for (const { linha, texto } of escolhasRoxasCheias(codigo, rel)) anotar('escolhaRoxaCheia', rel, linha, 'escolha marcada com o roxo do botão final', texto);
+      for (const { linha, texto } of avisosSoltosNaJanela(codigo)) anotar('avisoSoltoNaJanela', rel, linha, 'aviso em texto colorido solto dentro de janela', texto);
       for (const { linha, texto } of iconesComTamanho(codigo, rel)) anotar('tamanhoDeIcone', rel, linha, 'ícone com size em pixel', texto);
       if (!ESTADOS_DA_CASA.has(rel)) {
         for (const { linha, texto } of rodinhasCentrais(codigo, rel)) anotar('rodinhaCentral', rel, linha, 'rodinha no meio da tela', texto);
@@ -1078,6 +1116,8 @@ export const CATEGORIAS = {
   janelaAMao: 'janela montada à mão (fixed inset-0)',
   rodapeAMao: 'janela com botões fora do DialogFooter',
   topoCentralizado: 'topo de janela centralizado (a casa alinha à esquerda)',
+  escolhaRoxaCheia: 'escolha marcada com o roxo do botão final',
+  avisoSoltoNaJanela: 'aviso em texto colorido solto dentro de janela',
   soMouse: 'escondido que só aparece com mouse (app inteiro)',
 };
 

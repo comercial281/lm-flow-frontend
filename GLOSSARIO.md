@@ -178,6 +178,15 @@ As peças 11 a 22 (e os acréscimos em 6, 7 e 9) são as **escolhas do dono em 1
 22. **Ícones:** só `lucide-react`, em três tamanhos.
    - `h-3.5 w-3.5` em aba, etiqueta e filtro; `h-4 w-4` em botão e menu (dentro de `Button` é sempre 16 px); `h-5 w-5` em título. Ilustração de estado vazio fica com o tamanho dela, em classe.
    - Nada de `size={N}` em pixel. **Trava:** `tamanhoDeIcone`.
+23. **Miolo da janela** (`components/base/janela`: `GrupoDaJanela`, `CampoDaJanela`, `GradeDaJanela`, `CaixaDaJanela`, `ESCOLHA`): a hierarquia dentro da janela.
+   - **Três degraus de texto:** título de grupo pequeno em caixa alta (cinza); rótulo do campo médio e mais apagado; o conteúdo escuro.
+   - **Espaço:** curto dentro do grupo (12 px), maior entre grupos; caixas a 12 px uma da outra e 14 px por dentro; a borda é o respiro da janela.
+   - **Grade de 4 colunas:** cada campo ocupa 1, 2 ou 4; a borda direita fica alinhada.
+   - **Caixas lado a lado com a mesma altura;** o conteúdo rola por dentro, título e contagem parados.
+   - **Roxo cheio só no botão final.** Escolha marcada: contorno + roxo claro (`ESCOLHA`) ou `BotoesDeEscolha`.
+   - Lista de busca fechada até digitar; nenhuma caixa com borda dentro de outra; aviso sempre no `Aviso`; rótulo com maiúscula só na primeira letra.
+   - Modelo: a janela do card do lead (14/10/2026) e "Por que este lead foi perdido?".
+   - **Trava:** `escolhaRoxaCheia`, `avisoSoltoNaJanela` e `topoCentralizado` (ponto cego: grupo sem título e larguras soltas não são medidos).
 
 **As telas de referência são Configurações → Conta e Automações → Lembretes.** Foram as duas pilotos, já na base.
 
