@@ -125,6 +125,8 @@ export interface Property {
   iptu_period?: 'monthly' | 'yearly' | null;
   video_url?: string | null;
   virtual_tour_url?: string | null;
+  /** Página do empreendimento no site do próprio cliente: a IA manda esta, e não a nossa, quando o lead pede link. */
+  lead_link_url?: string | null;
   builder?: Construtora;
   /** Dados internos e comissão NÃO vão para site, portal nem IA. */
   internal_info?: DadosInternos | null;
@@ -200,6 +202,8 @@ export interface PropertyFormData {
   iptu_period?: 'monthly' | 'yearly' | null;
   video_url?: string | null;
   virtual_tour_url?: string | null;
+  /** Página do empreendimento no site do próprio cliente: a IA manda esta, e não a nossa, quando o lead pede link. */
+  lead_link_url?: string | null;
   builder?: Construtora;
   /** Dados internos e comissão NÃO vão para site, portal nem IA. */
   internal_info?: DadosInternos | null;

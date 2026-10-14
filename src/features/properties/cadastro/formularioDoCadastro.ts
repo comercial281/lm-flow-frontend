@@ -122,6 +122,7 @@ export function formularioDoImovel(p: Property): PropertyFormData {
     iptu_period: p.iptu_period ?? null,
     video_url: p.video_url ?? '',
     virtual_tour_url: p.virtual_tour_url ?? '',
+    lead_link_url: p.lead_link_url ?? '',
     builder: p.builder ?? {},
     internal_info: p.internal_info ?? {},
     commission: p.commission ?? {},
@@ -147,8 +148,18 @@ export function errosDoCadastro(form: PropertyFormData, travados: readonly strin
   // Chave de destino próprio ligada sem responsável: o servidor recusa o cadastro inteiro.
   const destino = leadDestinationWarning(form);
   if (destino) erros.push({ secao: 'equipe', mensagem: destino });
+  // O servidor recusa o cadastro inteiro com um link que não abre no navegador.
+  if (!linkProLeadValido(form.lead_link_url)) erros.push({ secao: 'midia', mensagem: AVISO_LINK_PRO_LEAD });
   return erros;
 }
+
+/** Mesma regra do servidor: vazio vale; senão, http(s) com um domínio de verdade e sem espaço. */
+export function linkProLeadValido(raw: string | null | undefined): boolean {
+  const v = (raw ?? '').trim();
+  return !v || (v.length <= 500 && /^https?:\/\/[^\s/?#.]+\.\S+$/i.test(v));
+}
+
+export const AVISO_LINK_PRO_LEAD = 'O Link pro lead precisa começar com https:// (ex.: https://www.seusite.com.br/empreendimento).';
 
 export function payloadDoCadastro(form: PropertyFormData, { rascunho }: { rascunho: boolean }): PropertyFormData {
   const base = payloadDoFormulario(form);
