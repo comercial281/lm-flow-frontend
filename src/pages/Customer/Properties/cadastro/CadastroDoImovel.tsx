@@ -1,7 +1,7 @@
 // Cadastro de imóvel em página (Fase 4, Imóveis, entrega 3). Era a janela de
 // Properties.tsx; os campos são os mesmos, agora em seções por tipo, com
 // índice que acompanha a rolagem e barra fixa embaixo.
-//   /properties/new?tipo=empreendimento|revenda   criar
+//   /properties/new?tipo=empreendimento|empreendimentos|revenda|leilao   criar
 //   /properties/:id/editar[?de=lote]               editar (do lote, volta para ele)
 // Quais seções cada tipo tem mora em `secoesDoCadastro`; a validação e o que
 // vai para o servidor, em `formularioDoCadastro`.
@@ -290,7 +290,9 @@ function Cadastro() {
 
   const titulo = kind === 'development'
     ? (editandoId ? 'Editar empreendimento' : 'Novo empreendimento')
-    : (editandoId ? 'Editar imóvel' : 'Novo imóvel');
+    : kind === 'auction'
+      ? (editandoId ? 'Editar imóvel de leilão' : 'Novo imóvel de leilão')
+      : (editandoId ? 'Editar imóvel' : 'Novo imóvel');
 
   return (
     <div className="flex h-full flex-col">

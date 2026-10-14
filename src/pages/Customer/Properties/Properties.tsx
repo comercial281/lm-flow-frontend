@@ -49,8 +49,10 @@ import {
   ABA_NA_URL,
   FILTROS_VAZIOS,
   abaPadrao,
+  abasVisiveis,
   filtrosAtivos,
   lerAba,
+  type Contagem,
   rotuloDaSituacao,
   tipoDoImovel,
   tirarFiltro,
@@ -75,6 +77,14 @@ const VISOES: OpcaoDeVisao<Visao>[] = [
   { valor: 'grade', nome: 'Ver em grade', icone: Grid3X3 },
   { valor: 'mapa', nome: 'Ver no mapa', icone: MapIcon },
 ];
+
+const ROTULO_DA_ABA: Record<ListingKind, string> = { development: 'Empreendimentos', resale: 'Revenda', auction: 'Leilão' };
+
+const TEXTO_DE_MOVER: Record<ListingKind, string> = {
+  resale: 'Ele passa a aparecer em Comprar e Alugar no site. Fase da obra, previsão de entrega e tipologias ficam guardadas, mas não aparecem mais.',
+  development: 'Ele passa a aparecer em Lançamentos no site e ganha fase da obra e tipologias para preencher.',
+  auction: 'Ele passa a ser um imóvel de leilão e ganha ocupação e valor de avaliação para preencher. O desconto é calculado sozinho.',
+};
 
 export default function Properties() {
   const navigate = useNavigate();
@@ -101,8 +111,8 @@ export default function Properties() {
   // ── Lista nova: abas Empreendimentos/Revenda, filtro retrátil, linhas ──────
   // `kind` nulo = ainda não sabemos a aba (a padrão é a com mais cadastros).
   const [kind, setKind]               = useState<ListingKind | null>(() => lerAba(searchParams));
-  const [contagem, setContagem]       = useState<{ development: number; resale: number } | null>(null);
-  const [filtros, setFiltros]         = useState<{ development: Filtros; resale: Filtros }>(FILTROS_VAZIOS);
+  const [contagem, setContagem]       = useState<Contagem | null>(null);
+  const [filtros, setFiltros]         = useState<Record<ListingKind, Filtros>>(FILTROS_VAZIOS);
   const [painelAberto, setPainelAberto] = useState(false);
   const [ordem, setOrdem]             = useState<Ordem>('recent');
   const [visao, setVisao]             = useState<Visao>(() => lerVisao(searchParams));
@@ -406,12 +416,9 @@ export default function Properties() {
     window.open(`${window.location.origin}/imovel/${slug}/${p.code}`, '_blank', 'noopener');
   };
 
-  const moverDeAba = async (p: Property) => {
-    const outro: ListingKind = tipoDoImovel(p) === 'development' ? 'resale' : 'development';
-    const destino = outro === 'resale' ? 'Revenda' : 'Empreendimentos';
-    const texto = outro === 'resale'
-      ? 'Ele passa a aparecer em Comprar e Alugar no site. Fase da obra, previsão de entrega e tipologias ficam guardadas, mas não aparecem mais.'
-      : 'Ele passa a aparecer em Lançamentos no site e ganha fase da obra e tipologias para preencher.';
+  const moverDeAba = async (p: Property, outro: ListingKind) => {
+    const destino = ROTULO_DA_ABA[outro];
+    const texto = TEXTO_DE_MOVER[outro];
     if (!(await confirmar({ titulo: `Mover ${p.code} para ${destino}?`, descricao: texto, rotuloDaAcao: 'Mover' }))) return;
     try {
       await propertiesService.update(p.id, { listing_kind: outro });
@@ -450,7 +457,9 @@ export default function Properties() {
   const totalDaAba = kind && contagem ? contagem[kind] : null;
   const nomeDaAba = (n: number) => (kind === 'development'
     ? plural(n, 'empreendimento', 'empreendimentos')
-    : plural(n, 'imóvel de revenda', 'imóveis de revenda'));
+    : kind === 'auction'
+      ? plural(n, 'imóvel de leilão', 'imóveis de leilão')
+      : plural(n, 'imóvel de revenda', 'imóveis de revenda'));
   const abaVazia = totalDaAba === 0 && !temFiltro && !recorte && properties.length === 0;
 
   const esqueleto = (
@@ -473,6 +482,13 @@ export default function Properties() {
           title="Você ainda não tem empreendimento cadastrado"
           description="Empreendimento é lançamento ou prédio com várias plantas. Ele aparece em Lançamentos no seu site e a IA apresenta as tipologias."
           action={canCreate ? { label: 'Cadastrar o primeiro empreendimento', onClick: () => setImportOpen(true) } : undefined}
+        />
+      ) : kind === 'auction' ? (
+        <EmptyState
+          icon={Building2}
+          title="Nenhum imóvel de leilão"
+          description="Cadastre um imóvel de leilão ou mova um imóvel pelo menu ⋮ (Mover para Leilão)."
+          action={canCreate ? { label: 'Novo imóvel de leilão', onClick: () => openCreate('auction') } : undefined}
         />
       ) : (
         <EmptyState
@@ -528,7 +544,9 @@ export default function Properties() {
             </Button>
           )}
           primaryAction={kind && canCreate
-            ? { label: kind === 'development' ? 'Novo empreendimento' : 'Novo imóvel', icon: <Plus className="h-4 w-4" />, onClick: () => setImportOpen(true) }
+            ? { label: kind === 'development' ? 'Novo empreendimento' : kind === 'auction' ? 'Novo imóvel de leilão' : 'Novo imóvel', icon: <Plus className="h-4 w-4" />,
+              // A leitura com IA não faz parte do Leilão: vai direto para o cadastro.
+              onClick: () => (kind === 'auction' ? openCreate('auction') : setImportOpen(true)) }
             : undefined}
         />
       }
@@ -540,10 +558,10 @@ export default function Properties() {
               rotulo="Tipo de cadastro"
               ativa={kind}
               aoTrocar={k => trocarAba(k as ListingKind)}
-              abas={[
-                { chave: 'development', rotulo: `Empreendimentos (${contagem ? numero(contagem.development) : '…'})` },
-                { chave: 'resale', rotulo: `Revenda (${contagem ? numero(contagem.resale) : '…'})` },
-              ]}
+              abas={abasVisiveis(contagem, kind).map(k => ({
+                chave: k,
+                rotulo: `${ROTULO_DA_ABA[k]} (${contagem ? numero(contagem[k]) : '…'})`,
+              }))}
             />
 
             {/* Barra: busca, filtros, ordem e visão. O mapa mostra a aba inteira (não

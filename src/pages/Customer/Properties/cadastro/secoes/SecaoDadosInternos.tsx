@@ -21,7 +21,9 @@ export default function SecaoDadosInternos({ form: f, setF }: PropsDaSecao) {
         <CampoTexto rotulo="Matrícula" valor={info?.registration_number} aoMudar={v => mudar({ registration_number: v })} />
         <CampoTexto rotulo="Código do IPTU" valor={info?.iptu_code} aoMudar={v => mudar({ iptu_code: v })} />
         <CampoTexto rotulo="Cartório" valor={info?.notary} aoMudar={v => mudar({ notary: v })} />
-        <CampoReais rotulo="Valor de avaliação (R$)" valor={info?.appraised_value} aoMudar={v => mudar({ appraised_value: v })} />
+        {f.listing_kind !== 'auction' && (
+          <CampoReais rotulo="Valor de avaliação (R$)" valor={info?.appraised_value} aoMudar={v => mudar({ appraised_value: v })} />
+        )}
         <div className="sm:col-span-2">
           <CampoTexto rotulo="Comentários internos" multilinha valor={info?.notes} aoMudar={v => mudar({ notes: v })} />
         </div>

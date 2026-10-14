@@ -24,6 +24,13 @@ describe('LinhaRevenda', () => {
     expect(screen.getByText('Captador: Ivan Luiz')).toBeInTheDocument();
   });
 
+  it('linha do Leilão mostra ocupação e desconto', () => {
+    render(<LinhaRevenda p={{ ...base, listing_kind: 'auction', occupancy: 'vacant', discount_percent: 69 } as Property}
+      acoes={acoes} permissoes={{ editar: true, excluir: true }} />);
+    expect(screen.getByText('Desocupado')).toBeInTheDocument();
+    expect(screen.getByText('69% abaixo da avaliação')).toBeInTheDocument();
+  });
+
   it('sem foto oferece Adicionar fotos', () => {
     const fotos = vi.fn();
     render(<LinhaRevenda p={{ ...base, cover_photo_url: null }} acoes={{ ...acoes, fotos }} permissoes={{ editar: true, excluir: false }} />);

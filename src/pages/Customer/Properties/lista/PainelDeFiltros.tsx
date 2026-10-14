@@ -9,8 +9,8 @@ import { Seletor } from '@/components/base/Seletor';
 import { PROPERTY_TYPE_LABELS } from '@/services/properties/propertiesService';
 import { numero } from '@/lib/formato';
 import {
-  FASES, SITUACOES,
-  type Filtros, type FiltrosEmpreendimento, type FiltrosRevenda, type ListingKind,
+  FASES, OCUPACOES, SITUACOES,
+  type Filtros, type FiltrosEmpreendimento, type FiltrosLeilao, type FiltrosRevenda, type ListingKind,
 } from '@/features/properties/listingKind';
 
 export interface Facetas {
@@ -139,6 +139,35 @@ export default function PainelDeFiltros({ kind, filtros, facetas, aoMudar, aoLim
             <button type="button" aria-pressed={f.comBook} onClick={() => set({ comBook: !f.comBook })}
               className={`rounded-full border px-3 py-1 text-xs ${f.comBook ? 'border-primary bg-primary text-primary-foreground font-semibold' : 'border-input bg-background'}`}>Só com book</button>
           </div></div>
+      </>
+    );
+  })() : kind === 'auction' ? (() => {
+    const f = filtros as FiltrosLeilao;
+    const set = (p: Partial<FiltrosLeilao>) => aoMudar({ ...(atuais.current as FiltrosLeilao), ...p });
+    return (
+      <>
+        <div className="flex flex-col gap-1.5"><span id={`${id}-ocupacao`} className={rotulo}>Ocupação</span>
+          <div role="group" aria-labelledby={`${id}-ocupacao`} className="flex flex-wrap gap-1.5">
+            {([{ valor: '', rotulo: 'Todas' }, ...OCUPACOES] as { valor: FiltrosLeilao['ocupacao']; rotulo: string }[]).map(o => (
+              <button key={o.valor} type="button" aria-pressed={f.ocupacao === o.valor} onClick={() => set({ ocupacao: o.valor })}
+                className={`rounded-full border px-3 py-1 text-xs ${f.ocupacao === o.valor ? 'border-primary bg-primary text-primary-foreground font-semibold' : 'border-input bg-background'}`}>{o.rotulo}</button>
+            ))}
+          </div></div>
+        <label className="flex flex-col gap-1.5"><span className={rotulo}>Bairro</span>
+          <Seletor className={campo} value={f.bairro} onChange={e => set({ bairro: e.target.value })}>
+            <option value="">Todos</option>{bairros.map(b => <option key={b}>{b}</option>)}
+          </Seletor></label>
+        <label className="flex flex-col gap-1.5"><span className={rotulo}>Situação</span>
+          <Seletor className={campo} value={f.situacao} onChange={e => set({ situacao: e.target.value })}>
+            <option value="">Todas</option>{situacoes.map(s => <option key={s.valor} value={s.valor}>{s.rotulo}</option>)}
+          </Seletor></label>
+        <div className="flex flex-col gap-1.5 sm:col-span-2"><span className={rotulo}>Preço de venda</span>
+          <div className="grid grid-cols-2 gap-2">
+            <CampoDePreco aria-label="Preço de" placeholder="De R$" valor={f.precoMin} aoConfirmar={precoMin => set({ precoMin })} />
+            <CampoDePreco aria-label="Preço até" placeholder="Até R$" valor={f.precoMax} aoConfirmar={precoMax => set({ precoMax })} />
+          </div></div>
+        <div className="flex flex-col gap-1.5"><span id={`${id}-dorms`} className={rotulo}>Dormitórios</span>
+          <Pilulas rotuloId={`${id}-dorms`} opcoes={QUARTOS} marcadas={f.quartos} aoTrocar={quartos => set({ quartos })} /></div>
       </>
     );
   })() : (() => {

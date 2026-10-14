@@ -27,8 +27,8 @@ export default function SecaoBasico({ form: f, setF }: PropsDaSecao) {
         />
       </div>
 
-      {/* Empreendimento é sempre venda: o tipo de negócio só aparece na revenda. */}
-      {kind !== 'development' && (
+      {/* Empreendimento e Leilão são sempre venda: o tipo de negócio só aparece na revenda. */}
+      {kind === 'resale' && (
         <div className="sm:col-span-2">
           <Pilulas rotulo="Finalidade" valor={f.transaction_type} opcoes={FINALIDADES}
             aoMudar={v => setF({ transaction_type: v })} />
