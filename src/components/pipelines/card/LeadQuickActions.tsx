@@ -2,22 +2,16 @@
 // e IA. A lógica da IA veio do antigo CardActionsPanel sem mudar de fonte: o
 // estado chega pronto no card (`item.sales_agent`) e o liga/desliga é o mesmo
 // endpoint da conversa.
-import { useCallback, useState, Suspense } from 'react';
+import { useCallback, useState } from 'react';
 import { Bot, BotOff, CalendarPlus, HelpCircle, Loader2, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/ds';
 import { chatService } from '@/services/chat/chatService';
-import { conversationAPI } from '@/services/conversations/conversationService';
-import { lazyWithRetry } from '@/utils/chunkReload';
+import { useAgendarVisitaDoCard } from '@/features/cardDoLead/useAgendarVisitaDoCard';
 import { conversaDoCard, leadParaVisita } from '@/features/cardDoLead/cardDoLead';
 import type { PipelineItem } from '@/types/analytics';
 import type { SalesAgentCardState, SalesAgentLeadReport } from '@/types/analytics/pipelines';
 
-const ScheduleVisitDialog = lazyWithRetry(() =>
-  import('@/components/visits/ScheduleVisitDialog').then(m => ({ default: m.ScheduleVisitDialog })),
-);
-
-const VISIT_SCHEDULED_LABEL = 'visita-agendada';
 
 // Botão quadrado, ícone em cima e nome embaixo: é o que o corretor mais clica no
 // card, tem que ser alvo grande.
@@ -56,8 +50,7 @@ export default function LeadQuickActions({
 }: LeadQuickActionsProps) {
   const convId = conversaDoCard(item);
   const lead = leadParaVisita(item, nomeExibido);
-
-  const [visitaAberta, setVisitaAberta] = useState(false);
+  const visita = useAgendarVisitaDoCard(item, nomeExibido, onVisitaCriada);
 
   const [aiState, setAiState] = useState<SalesAgentCardState | null>(item.sales_agent ?? null);
   const [trocandoIa, setTrocandoIa] = useState(false);
@@ -104,7 +97,7 @@ export default function LeadQuickActions({
           type="button"
           className={TILE}
           disabled={!lead}
-          onClick={() => setVisitaAberta(true)}
+          onClick={() => visita.abrir()}
         >
           <CalendarPlus className="h-6 w-6" />
           Agendar visita
@@ -174,24 +167,7 @@ export default function LeadQuickActions({
         </Popover>
       )}
 
-      {visitaAberta && (
-        <Suspense fallback={null}>
-          <ScheduleVisitDialog
-            open={visitaAberta}
-            onOpenChange={setVisitaAberta}
-            leadInicial={lead}
-            onCreated={v => {
-              setVisitaAberta(false);
-              // Visita registrada como realizada (dia que já passou) não está
-              // agendada: a etiqueta mentiria na conversa.
-              if (convId && v.status !== 'completed') {
-                conversationAPI.addLabels(convId, [VISIT_SCHEDULED_LABEL]).catch(() => {});
-              }
-              onVisitaCriada?.();
-            }}
-          />
-        </Suspense>
-      )}
+      {visita.janela}
     </div>
   );
 }
