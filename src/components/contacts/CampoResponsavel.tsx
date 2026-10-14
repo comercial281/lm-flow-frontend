@@ -30,6 +30,10 @@ export function paraResponsavel(escolha: EscolhaComAbas | null): Responsavel {
   return { default_assignee_id: null };
 }
 
+export function mesmoResponsavel(a: EscolhaComAbas | null, b: EscolhaComAbas | null): boolean {
+  return (a?.aba ?? null) === (b?.aba ?? null) && (a?.valor ?? null) === (b?.valor ?? null);
+}
+
 // Responsável do Novo contato / Editar contato (decisão do dono, 02/10/2026):
 // corretor cadastra pra si mesmo, sem roleta nem escolha — ele cria e entra em
 // contato. Gestor escolhe um corretor ou manda pra uma roleta, na mesma lista,

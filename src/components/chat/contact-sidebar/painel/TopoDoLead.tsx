@@ -35,7 +35,7 @@ interface TopoDoLeadProps {
  */
 export default function TopoDoLead({ contact, emOferta, atalhos, selos, outra, onClose }: TopoDoLeadProps) {
   const navigate = useNavigate();
-  const { abrir: editar, modal } = useEditarContato(contact);
+  const { abrir: editar, abrindo, modal } = useEditarContato(contact);
 
   const fone = emOferta ? mascararTelefone(contact?.phone_number) : telefone(contact?.phone_number);
   const email = emOferta ? '' : (contact?.email ?? '').trim();
@@ -83,6 +83,7 @@ export default function TopoDoLead({ contact, emOferta, atalhos, selos, outra, o
               label={T.editarContato}
               icon={<Pencil className="h-4 w-4" />}
               onClick={editar}
+              disabled={abrindo}
               variant="ghost"
               className="h-8 w-8"
             />
