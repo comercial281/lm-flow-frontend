@@ -381,7 +381,10 @@
       "custom": "Personalizado",
       "sales": "Vendas",
       "support": "Suporte",
-      "marketing": "Marketing"
+      "marketing": "Marketing",
+      "sale": "Venda",
+      "rental": "Locação",
+      "onboarding": "Implantação"
     },
     "visibility": "Visibilidade",
     "selectVisibility": "Selecione a visibilidade",
