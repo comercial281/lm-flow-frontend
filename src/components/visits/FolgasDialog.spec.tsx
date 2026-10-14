@@ -95,6 +95,9 @@ describe('Folgas', () => {
     abrir(false);
     const lista = await screen.findByLabelText('De quem é a folga');
     expect(lista.tagName).toBe('SELECT');
+    // O rótulo visível do campo fica ligado à lista.
+    expect(lista.id).not.toBe('');
+    expect(document.querySelector(`label[for="${lista.id}"]`)).toHaveTextContent(/De quem é a folga/);
     expect(screen.queryByRole('button', { name: 'Ana Teste' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeInTheDocument();
   });

@@ -96,6 +96,15 @@ describe('Agendar visita', () => {
     expect(screen.queryByLabelText('Corretor responsável')).not.toBeInTheDocument();
   });
 
+  it('gestor: o rótulo visível "Corretor responsável" fica ligado à lista (htmlFor + id)', async () => {
+    comoGestor();
+    abrir();
+
+    const lista = await listaCorretor();
+    expect(lista.id).not.toBe('');
+    expect(document.querySelector(`label[for="${lista.id}"]`)).toHaveTextContent(/Corretor responsável/);
+  });
+
   it('é a janela larga da casa (duas colunas: size="wide", teto de 1400px)', async () => {
     comoGestor();
     abrir();

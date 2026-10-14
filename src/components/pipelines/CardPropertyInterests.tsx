@@ -23,9 +23,11 @@ interface CardPropertyInterestsProps {
   onVisitaCriada?: () => void;
   /** Chamado quando a lista carrega ou muda (título da caixa mostra a contagem). */
   aoContar?: (n: number) => void;
+  /** Janela do card: cartões compactos (a página do card usa os normais). */
+  compacto?: boolean;
 }
 
-export default function CardPropertyInterests({ item, nomeExibido, onVisitaCriada, aoContar }: CardPropertyInterestsProps) {
+export default function CardPropertyInterests({ item, nomeExibido, onVisitaCriada, aoContar, compacto }: CardPropertyInterestsProps) {
   const contactId = item.contact?.id ?? (item.conversation as any)?.contact?.id;
   const { can } = useUserPermissions();
   const podeEditar = can('properties', 'update');
@@ -220,6 +222,7 @@ export default function CardPropertyInterests({ item, nomeExibido, onVisitaCriad
               aoMudarSituacao={handleChangeStage}
               aoRemover={handleRemove}
               removendo={removing === i.id}
+              compacto={compacto}
             />
           ))}
         </div>

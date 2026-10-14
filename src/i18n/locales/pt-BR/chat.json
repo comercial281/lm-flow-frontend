@@ -387,7 +387,8 @@
       "actions": {
         "edit": "Editar",
         "updateSuccess": "Contato atualizado com sucesso",
-        "updateError": "Erro ao atualizar contato"
+        "updateError": "Erro ao atualizar contato",
+        "loadError": "Não deu pra abrir o contato. Tente de novo."
       },
       "sections": {
         "basicInfo": "Informações Básicas",

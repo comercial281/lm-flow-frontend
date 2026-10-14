@@ -14,7 +14,7 @@ import type { Contact as FullContact, ContactFormData } from '@/types/contacts';
  * A edição do contato no painel do lead: a mesma janela de Contatos, salvando
  * pelo mesmo serviço e atualizando o contato nas conversas abertas.
  */
-export function useEditarContato(contact: Contact | null): { abrir: () => void; modal: ReactNode } {
+export function useEditarContato(contact: Contact | null): { abrir: () => Promise<void>; abrindo: boolean; modal: ReactNode } {
   const { t } = useLanguage('chat');
   const { updateContactInConversations } = useConversations();
   const [aberto, setAberto] = useState(false);
@@ -22,10 +22,22 @@ export function useEditarContato(contact: Contact | null): { abrir: () => void; 
   // contato muda, e uma atualização do servidor no meio apagaria o que se digitou.
   const [emEdicao, setEmEdicao] = useState<Contact | null>(null);
 
-  const abrir = () => {
-    if (!contact) return;
-    setEmEdicao({ ...contact });
-    setAberto(true);
+  const [abrindo, setAbrindo] = useState(false);
+
+  // O contato da conversa não traz o responsável, nem `name_editable` e
+  // `identity_correctable`: busca o contato completo antes de abrir.
+  const abrir = async () => {
+    if (!contact?.id || abrindo) return;
+    setAbrindo(true);
+    try {
+      const completo = await contactsService.getContact(String(contact.id), false);
+      setEmEdicao(completo as unknown as Contact);
+      setAberto(true);
+    } catch {
+      toast.error(t('contactSidebar.contactDetails.actions.loadError'));
+    } finally {
+      setAbrindo(false);
+    }
   };
 
   const salvar = async (data: ContactFormData) => {
@@ -76,5 +88,5 @@ export function useEditarContato(contact: Contact | null): { abrir: () => void; 
     />
   ) : null;
 
-  return { abrir, modal };
+  return { abrir, abrindo, modal };
 }

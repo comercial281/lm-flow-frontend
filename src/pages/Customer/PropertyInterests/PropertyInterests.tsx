@@ -38,10 +38,10 @@ import { telefone } from '@/lib/formato';
 const STAGE_FILTERS = [
   { key: '', label: 'Todos' },
   { key: 'interested', label: 'Interessados' },
-  { key: 'visit_scheduled', label: 'Visita Agendada' },
+  { key: 'visit_scheduled', label: 'Visita agendada' },
   { key: 'visited', label: 'Visitados' },
-  { key: 'proposal_sent', label: 'Proposta Enviada' },
-  { key: 'negotiating', label: 'Em Negociação' },
+  { key: 'proposal_sent', label: 'Proposta enviada' },
+  { key: 'negotiating', label: 'Em negociação' },
   { key: 'closed_won', label: 'Ganhos' },
   { key: 'closed_lost', label: 'Perdidos' },
 ];
@@ -123,7 +123,7 @@ export default function PropertyInterests() {
     try {
       const updated = await propertyInterestsService.closeWon(interest.id);
       setInterests(prev => prev.map(i => i.id === updated.id ? updated : i));
-      toast.success('Marcado como Fechado (Ganho)');
+      toast.success('Marcado como Fechado (ganho)');
     } catch {
       toast.error('Erro ao fechar como ganho');
     }

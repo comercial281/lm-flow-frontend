@@ -11,7 +11,9 @@ vi.mock('@/services/notes/notesService', () => ({
 }));
 vi.mock('@/components/chat/contact-sidebar/AiUnderstandingPanel', () => ({ default: () => null }));
 vi.mock('./OutrasInformacoes', () => ({ default: () => null }));
-vi.mock('@/components/pipelines/CardPropertyInterests', () => ({ default: () => <div data-testid="imoveis" /> }));
+vi.mock('@/components/pipelines/CardPropertyInterests', () => ({
+  default: ({ compacto }: { compacto?: boolean }) => <div data-testid="imoveis" data-compacto={String(Boolean(compacto))} />,
+}));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const item = {
@@ -65,6 +67,25 @@ describe('LeadDetailsTab › caixas da mesma altura', () => {
     expect(within(linha).getByRole('heading', { name: /Histórico/ })).toBeInTheDocument();
     expect(within(linha).getByRole('heading', { name: /Observações/ })).toBeInTheDocument();
     expect((await screen.findByTestId('imoveis')).closest('[data-testid="linha-de-cima"]')).toBeNull();
+  });
+
+  it('sem Observações, a linha de cima fica com duas colunas (sem faixa vazia)', () => {
+    render(<LeadDetailsTab {...props} mostrarImoveis={false} mostrarObservacoes={false} />);
+    const linha = screen.getByTestId('linha-de-cima');
+    expect(linha.className).toContain('lg:grid-cols-[1fr_1.4fr]');
+    expect(linha.className).not.toContain('lg:grid-cols-[1fr_1.2fr_1.2fr]');
+    expect(linha.querySelectorAll(':scope > section')).toHaveLength(2);
+  });
+
+  it('com Observações, três colunas', () => {
+    render(<LeadDetailsTab {...props} mostrarImoveis={false} />);
+    expect(screen.getByTestId('linha-de-cima').className).toContain('lg:grid-cols-[1fr_1.2fr_1.2fr]');
+  });
+
+  it('com imóveis, a linha de cima tem 236 px e a janela pede o cartão compacto', async () => {
+    render(<Suspense fallback={null}><LeadDetailsTab {...props} /></Suspense>);
+    expect(screen.getByTestId('linha-de-cima').className).toContain('lg:h-[236px]');
+    expect(await screen.findByTestId('imoveis')).toHaveAttribute('data-compacto', 'true');
   });
 
   it('sem imóveis, a linha de cima ocupa a altura toda', () => {
