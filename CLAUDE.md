@@ -8796,8 +8796,7 @@ As janelas medianas passaram para as peças do miolo (grupos, grade, `Aviso`, `E
 
 - **Ativar IA:** aviso único e campos no padrão do miolo.
 - **Atribuir:** a frase agora cita o lead (antes não dizia a quem se referia: era defeito). Lista sem borda por pessoa.
-- **Editar e Novo contato:** modelo de mensagem em caixinha e textos da casa.
-- **Iniciar conversa:** textos da casa e aviso único.
+- **Iniciar conversa:** "Usar modelo de mensagem" vira caixinha (antes era botão), "template" vira "modelo", o canal por API fica sem selo, textos da casa e aviso único. (Editar e Novo contato não mudaram nesta leva.)
 - **Exportar contatos:** mesmo padrão do miolo.
 - **Filtros de Conversas e de Contatos:** título único pelo `TituloDoFiltro`.
 - **Criar funil:** campos em grupos e grade 2+2, listas de escolha na largura toda.
@@ -8809,6 +8808,6 @@ As janelas medianas passaram para as peças do miolo (grupos, grade, `Aviso`, `E
 - **Nova etiqueta:** sai o código da cor; ficam as 12 cores com nome e "Outra cor".
 - **Datas por extenso:** `capitalizar()` em `formato.ts`, usado no calendário e na lista de Visitas; saem os `capitalize` de CSS que punham maiúscula em toda palavra.
 
-**Tetos novos (só descem):** `maiusculas` 955 para 923 e `escolhaRoxaCheia` 41 para 40. `avisoSoltoNaJanela` segue em 12.
+**Tetos novos (só descem):** `maiusculas` 955 para 921 e `escolhaRoxaCheia` 41 para 40. `avisoSoltoNaJanela` segue em 12.
 
 Não reabrir sem o dono pedir.

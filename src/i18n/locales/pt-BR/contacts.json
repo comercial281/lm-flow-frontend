@@ -662,8 +662,7 @@
       "whatsapp": "WhatsApp",
       "email": "Email",
       "sms": "SMS",
-      "webWidget": "Chat Web",
-      "api": "API"
+      "webWidget": "Chat Web"
     },
     "loading": {
       "channels": "Carregando canais..."

@@ -27,8 +27,7 @@
     },
     "placeholders": {
       "name": "Digite o nome da etiqueta",
-      "description": "Digite uma descrição (opcional)",
-      "color": "#3b82f6"
+      "description": "Digite uma descrição (opcional)"
     },
     "validation": {
       "nameRequired": "Nome é obrigatório",
