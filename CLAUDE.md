@@ -5849,6 +5849,26 @@ Armadilhas:
 2. **`mascaraReais`:** o PR #421 (máscara de preço dos filtros) cria um `mascaraReais`; `cadastro/secoes/campos.tsx` tem um helper local equivalente. Unificar depois que os dois entrarem.
 3. **Pendências conhecidas:** histórico de captações aprovadas/recusadas, abrir WhatsApp dentro do LM Flow, ficha da construtora e funil de captação com IA ficaram fora. O servidor ainda substitui a lista inteira do portal (endpoint por imóvel fecharia a corrida de vez).
 
+## Imóveis: tipo de cadastro Leilão (desde 2026-10-13)
+
+Pedido do dono (imóvel retomado / pós-leilão). Spec: `LM FLOW/specs/2026-10-13-importar-lista-externa-design.md` (Parte 1). Servidor: lm-flow#481.
+
+- **3ª aba Leilão** em Imóveis (`?aba=leilao`), só quando o cliente tem imóvel de leilão (ou a aba veio pelo endereço): `abasVisiveis`. Sem nenhum Leilão a aba fica escondida; o primeiro vem de "Mover para Leilão" no menu ⋮ ou da importação do site (Parte 2).
+- **Cadastro**: seções da revenda; em Valores, **Ocupação** (Desocupado · Ocupado · Locado) e **Valor de avaliação**; Valor de venda **não é obrigatório**; sempre Venda (sem Finalidade).
+- **Desconto** vem pronto do servidor (`discount_percent`, arredondado pra baixo): "69% abaixo da avaliação", selo na linha e no cartão.
+- **Mover para…** vira um item por tipo de destino (os outros dois).
+- **A IA** lê ocupação, avaliação e desconto e conduz como Leilão (ocupado → nunca promete visita por dentro).
+- O "Valor de avaliação" dos Dados internos some no Leilão (lá é interno; no Leilão é público).
+- **Cabeçalho de Imóveis** conta o Leilão e o cita no subtítulo quando há pelo menos um (`subtituloDosImoveis`, `totalDeCadastros`).
+- **"Novo imóvel de leilão"** (na aba Leilão) abre o cadastro direto (`/properties/new?tipo=leilao`), sem a janela de importação; o "upload de imóveis com IA" trata Leilão como Revenda.
+- **Correção de defeito antigo**: `tipoDaUrl` agora aceita o plural `empreendimentos`. Até aqui o botão "Novo empreendimento" mandava `?tipo=empreendimentos` e o cadastro abria como Revenda.
+
+Decisões do dono (não reabrir sem ele pedir): Leilão é **tipo de cadastro**, não tipo de venda da IA (o roteiro do cliente de imóvel retomado continua no Motor); sem data do leilão, lance mínimo nem edital por enquanto; sem vitrine própria no Meu Site.
+
+1. Regras em `listingKind.ts` (`OCUPACOES`, `textoDoDesconto`, `abasVisiveis`, `destinosDeMover`) e `formularioPorTipo.ts`, com spec.
+2. `contarPorTipo` faz 3 contagens; servidor sem Leilão (ignora o filtro) → Leilão 0.
+3. Nas telas do site e da landing, Leilão se comporta como Revenda.
+
 ## Custos do admin (03/10/2026)
 
 Clientes → Custos (`/admin/clientes/custos`, `src/pages/SuperAdmin/Custos/`). Spec: `LM FLOW/specs/2026-10-03-admin-registro-custos-usuarios-design.md`.
