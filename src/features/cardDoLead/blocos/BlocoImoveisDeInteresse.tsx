@@ -9,13 +9,13 @@ import Carregando from '@/components/base/Carregando';
 const CardPropertyInterests = lazyWithRetry(() => import('@/components/pipelines/CardPropertyInterests'));
 
 export default function BlocoImoveisDeInteresse({
-  item, nomeExibido, onVisitaCriada, className,
-}: { item: PipelineItem; nomeExibido?: string; onVisitaCriada?: () => void; className?: string }) {
+  item, nomeExibido, onVisitaCriada, className, compacto,
+}: { item: PipelineItem; nomeExibido?: string; onVisitaCriada?: () => void; className?: string; compacto?: boolean }) {
   const [total, setTotal] = useState<number | undefined>(undefined);
   return (
     <CaixaDaJanela titulo="Imóveis de interesse" contagem={total} className={className}>
       <Suspense fallback={<Carregando linhas={2} />}>
-        <CardPropertyInterests item={item} nomeExibido={nomeExibido} onVisitaCriada={onVisitaCriada} aoContar={setTotal} />
+        <CardPropertyInterests item={item} nomeExibido={nomeExibido} onVisitaCriada={onVisitaCriada} aoContar={setTotal} compacto={compacto} />
       </Suspense>
     </CaixaDaJanela>
   );
