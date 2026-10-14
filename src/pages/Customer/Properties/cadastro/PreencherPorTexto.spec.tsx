@@ -70,6 +70,23 @@ describe('Preencher pelo texto só preenche vazio', () => {
     await waitFor(() => expect(p.setF).toHaveBeenCalled());
     expect(p.setF.mock.calls[0][0]).not.toHaveProperty('property_type');
   });
+  it('Leilão novo: a finalidade do texto não troca a venda (só a revenda aceita)', async () => {
+    servico.parseText.mockResolvedValue({ transaction_type: 'rent', bedrooms: 2 });
+    const p = montar(({ ...FORMULARIO_VAZIO, ...formularioNovo('auction') }) as never);
+    await abrirEPreencher();
+    await userEvent.click(screen.getByRole('button', { name: /^Preencher$/ }));
+    await waitFor(() => expect(p.setF).toHaveBeenCalled());
+    expect(p.setF.mock.calls[0][0]).not.toHaveProperty('transaction_type');
+    expect(p.setF.mock.calls[0][0].bedrooms).toBe(2);
+  });
+  it('revenda nova: a finalidade do texto entra', async () => {
+    servico.parseText.mockResolvedValue({ transaction_type: 'rent' });
+    const p = montar(novo('resale'));
+    await abrirEPreencher();
+    await userEvent.click(screen.getByRole('button', { name: /^Preencher$/ }));
+    await waitFor(() => expect(p.setF).toHaveBeenCalled());
+    expect(p.setF.mock.calls[0][0].transaction_type).toBe('rent');
+  });
   it('tudo já preenchido: aviso informativo, sem setF', async () => {
     servico.parseText.mockResolvedValue({ sale_price: 500000 });
     const p = montar(novo('resale', { sale_price: 400000 }));

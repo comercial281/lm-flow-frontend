@@ -1,5 +1,6 @@
 import api from '@/services/core/api';
 import type { PropertyTypology, TypologySummary } from '@/features/properties/typologies';
+import type { ListingKind, Ocupacao, Contagem } from '@/features/properties/listingKind';
 
 export type { PropertyTypology, TypologySummary };
 
@@ -26,7 +27,10 @@ export interface Property {
   status: 'draft' | 'active' | 'reserved' | 'sold' | 'rented' | 'inactive';
   stage: 'ready' | 'in_construction' | 'launch' | 'pre_launch';
   /** Empreendimento ou Revenda. Ausente = servidor antigo (trate como revenda). */
-  listing_kind?: 'development' | 'resale';
+  listing_kind?: ListingKind;
+  occupancy?: Ocupacao | null;
+  appraisal_value?: number | null;
+  discount_percent?: number | null;
   /** Previsão de entrega, 'AAAA-MM-DD' (sempre dia 1). */
   delivery_forecast?: string | null;
   /** Soma das unidades disponíveis das tipologias; null = ninguém informou. */
@@ -140,7 +144,9 @@ export interface PropertyFormData {
   property_type: string;
   status: string;
   stage: string;
-  listing_kind?: 'development' | 'resale';
+  listing_kind?: ListingKind;
+  occupancy?: Ocupacao | null;
+  appraisal_value?: number | null;
   /** 'AAAA-MM' do campo de mês; vazio = sem previsão. */
   delivery_forecast?: string | null;
   sale_price?: number | null;
@@ -242,7 +248,8 @@ export interface PropertiesListParams {
   mine?: string;
   page?: number;
   per_page?: number;
-  listing_kind?: 'development' | 'resale';
+  listing_kind?: ListingKind;
+  occupancy?: string;
   neighborhood?: string;
   captor_id?: string;
   min_price?: string;
@@ -294,7 +301,7 @@ export const propertiesService = {
   },
 
   /** Bairros, tipos e captadores que existem naquele tipo, para os seletores do filtro. */
-  async facets(kind: 'development' | 'resale', opts: { mine?: boolean } = {}): Promise<{
+  async facets(kind: ListingKind, opts: { mine?: boolean } = {}): Promise<{
     neighborhoods: string[]; property_types: string[]; captors: { id: string; name: string }[];
   }> {
     const res = await api.get('/properties/facets', { params: { listing_kind: kind, mine: opts.mine ? '1' : undefined } });
@@ -306,18 +313,21 @@ export const propertiesService = {
    * "só os meus"). Usa a própria lista com 1 por página: a contagem bate com a
    * lista por construção e não depende da permissão de estatísticas.
    */
-  async contarPorTipo(extra: Record<string, string | string[]> = {}): Promise<{ development: number; resale: number }> {
-    const [dev, rev] = await Promise.all([
-      api.get('/properties', { params: { ...extra, listing_kind: 'development', per_page: 1 } }),
-      api.get('/properties', { params: { ...extra, listing_kind: 'resale', per_page: 1 } }),
-    ]);
+  async contarPorTipo(extra: Record<string, string | string[]> = {}): Promise<Contagem> {
+    const pedir = (k: ListingKind) => api.get('/properties', { params: { ...extra, listing_kind: k, per_page: 1 } });
+    const [dev, rev, lei] = await Promise.all([pedir('development'), pedir('resale'), pedir('auction')]);
     const total = (r: { data: unknown }) => (r.data as PropertiesResponse).meta?.total ?? 0;
+    const primeiro = (r: { data: unknown }) => (r.data as PropertiesResponse).data?.[0];
     // Servidor antigo ignora o listing_kind e devolve tudo, sem o campo no
-    // imóvel. Aí tudo é Revenda (como na tela) e Empreendimentos fica 0, senão
-    // as duas abas empatariam e a tela abriria em Empreendimentos com tudo dentro.
-    const primeiro = (dev.data as PropertiesResponse).data?.[0];
-    const servidorAntigo = !!primeiro && primeiro.listing_kind == null;
-    return { development: servidorAntigo ? 0 : total(dev), resale: total(rev) };
+    // imóvel: tudo é Revenda. Servidor sem Leilão ignora `auction` e devolve
+    // imóvel de outro tipo: Leilão fica 0, senão a aba mostraria a lista inteira.
+    const servidorAntigo = !!primeiro(dev) && primeiro(dev)!.listing_kind == null;
+    const semLeilao = !!primeiro(lei) && primeiro(lei)!.listing_kind !== 'auction';
+    return {
+      development: servidorAntigo ? 0 : total(dev),
+      resale: total(rev),
+      auction: servidorAntigo || semLeilao ? 0 : total(lei),
+    };
   },
 
   async get(id: string): Promise<Property> {

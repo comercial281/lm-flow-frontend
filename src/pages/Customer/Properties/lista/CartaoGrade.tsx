@@ -2,7 +2,7 @@
 import type { Property } from '@/services/properties/propertiesService';
 import { PROPERTY_TYPE_LABELS } from '@/services/properties/propertiesService';
 import { dinheiro } from '@/lib/formato';
-import { linhaDasTipologias, rotuloDaSituacao, seloDaFase, tipoDoImovel, tomDaSituacao } from '@/features/properties/listingKind';
+import { linhaDasTipologias, rotuloDaOcupacao, rotuloDaSituacao, seloDaFase, textoDoDesconto, tipoDoImovel, tomDaOcupacao, tomDaSituacao } from '@/features/properties/listingKind';
 import FotoDoImovel from './FotoDoImovel';
 import Selo, { TOM_DA_FASE } from './SeloSituacao';
 import MenuDoImovel, { estaNoSite, type AcoesDoImovel, type Permissoes } from './MenuDoImovel';
@@ -29,7 +29,13 @@ export default function CartaoGrade({ p, acoes, permissoes, forca }: {
               <Selo tom={TOM_DA_FASE[p.stage] ?? 'neutro'}>{seloDaFase(p.stage, p.delivery_forecast)}</Selo>
               {p.status !== 'active' && <Selo tom={tomDaSituacao('development', p.status)}>{rotuloDaSituacao('development', p.status)}</Selo>}
             </>
-          ) : <Selo tom={tomDaSituacao('resale', p.status)}>{rotuloDaSituacao('resale', p.status)}</Selo>}
+          ) : (
+            <>
+              <Selo tom={tomDaSituacao(tipoDoImovel(p), p.status)}>{rotuloDaSituacao(tipoDoImovel(p), p.status)}</Selo>
+              {tipoDoImovel(p) === 'auction' && rotuloDaOcupacao(p.occupancy) && <Selo tom={tomDaOcupacao(p.occupancy)}>{rotuloDaOcupacao(p.occupancy)}</Selo>}
+              {tipoDoImovel(p) === 'auction' && textoDoDesconto(p.discount_percent) && <Selo tom="marca">{textoDoDesconto(p.discount_percent)}</Selo>}
+            </>
+          )}
         </div>
         <TituloDoImovel texto={titulo || p.title} podeEditar={permissoes.editar} aoAbrir={() => acoes.editar(p)}
           aoAbrirNoSite={estaNoSite(p) ? () => acoes.site(p) : undefined} className="text-[15px] font-semibold" />

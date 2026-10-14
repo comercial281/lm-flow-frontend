@@ -3,7 +3,7 @@ import { ArrowRightLeft, BookOpen, CheckCheck, CircleDot, Gauge, Globe, Images, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/ds';
 import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import type { Property } from '@/services/properties/propertiesService';
-import { tipoDoImovel } from '@/features/properties/listingKind';
+import { destinosDeMover, rotuloDeMover, tipoDoImovel, type ListingKind } from '@/features/properties/listingKind';
 import { podeMarcarEmDia, vencido } from '@/features/properties/emDia';
 
 export interface AcoesDoImovel {
@@ -15,7 +15,7 @@ export interface AcoesDoImovel {
   forca: (p: Property) => void;
   situacao: (p: Property) => void;
   emDia: (p: Property) => void;
-  mover: (p: Property) => void;
+  mover: (p: Property, destino: ListingKind) => void;
   excluir: (p: Property) => void;
 }
 
@@ -36,7 +36,7 @@ export default function MenuDoImovel({ p, acoes, permissoes, forca }: {
         <BotaoMaisAcoes aria-label={`Ações do ${p.code}`} className="text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">
-        {permissoes.editar && <DropdownMenuItem onClick={() => acoes.editar(p)}><Pencil className="h-4 w-4" />{emp ? 'Editar empreendimento' : 'Editar imóvel'}</DropdownMenuItem>}
+        {permissoes.editar && <DropdownMenuItem onClick={() => acoes.editar(p)}><Pencil className="h-4 w-4" />{emp ? 'Editar empreendimento' : tipoDoImovel(p) === 'auction' ? 'Editar imóvel de leilão' : 'Editar imóvel'}</DropdownMenuItem>}
         <DropdownMenuItem onClick={() => acoes.fotos(p)}><Images className="h-4 w-4" />Fotos e vídeos</DropdownMenuItem>
         {p.has_book && <DropdownMenuItem onClick={() => acoes.book(p)}><BookOpen className="h-4 w-4" />Ver book</DropdownMenuItem>}
         {noSite && <DropdownMenuItem onClick={() => acoes.site(p)}><Globe className="h-4 w-4" />Ver página no site</DropdownMenuItem>}
@@ -49,7 +49,9 @@ export default function MenuDoImovel({ p, acoes, permissoes, forca }: {
         {podeMarcarEmDia(p, permissoes.editar) && p.status === 'active' && vencido(p) && (
           <DropdownMenuItem onClick={() => acoes.emDia(p)}><CheckCheck className="h-4 w-4" />Marcar como em dia</DropdownMenuItem>
         )}
-        {permissoes.editar && <DropdownMenuItem onClick={() => acoes.mover(p)}><ArrowRightLeft className="h-4 w-4" />{emp ? 'Mover para Revenda' : 'Mover para Empreendimentos'}</DropdownMenuItem>}
+        {permissoes.editar && destinosDeMover(tipoDoImovel(p)).map(destino => (
+          <DropdownMenuItem key={destino} onClick={() => acoes.mover(p, destino)}><ArrowRightLeft className="h-4 w-4" />{rotuloDeMover(destino)}</DropdownMenuItem>
+        ))}
         {permissoes.excluir && (
           <>
             <DropdownMenuSeparator />

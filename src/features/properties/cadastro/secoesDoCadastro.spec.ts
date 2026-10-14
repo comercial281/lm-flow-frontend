@@ -23,4 +23,10 @@ describe('secoesDoCadastro', () => {
     expect([tipoDaUrl('empreendimento'), tipoDaUrl('revenda'), tipoDaUrl('x'), tipoDaUrl(null)])
       .toEqual(['development', 'resale', null, null]);
   });
+  it('leilão tem as seções da revenda e abre pelo endereço', () => {
+    expect(secoesDoCadastro('auction', { editando: false }).map(s => s.id))
+      .toEqual(secoesDoCadastro('resale', { editando: false }).map(s => s.id));
+    expect(tipoDaUrl('leilao')).toBe('auction');
+    expect(tipoDaUrl('empreendimentos')).toBe('development');
+  });
 });

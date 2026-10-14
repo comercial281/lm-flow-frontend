@@ -36,4 +36,7 @@ describe('formularioDoCadastro', () => {
     expect(mk({ accepts_concurrent_visits: null }).accepts_concurrent_visits).toBeNull();
     expect(mk({}).accepts_concurrent_visits).toBeNull();
   });
+  it('leilão à venda sem preço não trava o cadastro', () => {
+    expect(errosDoCadastro({ ...base, ...formularioNovo('auction') } as never)).toEqual([]);
+  });
 });

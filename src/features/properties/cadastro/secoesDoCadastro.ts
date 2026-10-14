@@ -21,6 +21,9 @@ const ORDEM: Record<ListingKind, SecaoId[]> = {
     'midia', 'descricao', 'equipe', 'comissao'],
   resale: ['basico', 'proprietario', 'localizacao', 'valores', 'composicao', 'detalhesVenda', 'caracteristicas',
     'midia', 'descricao', 'equipe', 'comissao', 'dadosInternos'],
+  // Leilão = seções da revenda; a ocupação e a avaliação moram em Valores.
+  auction: ['basico', 'proprietario', 'localizacao', 'valores', 'composicao', 'detalhesVenda', 'caracteristicas',
+    'midia', 'descricao', 'equipe', 'comissao', 'dadosInternos'],
 };
 
 export function secoesDoCadastro(kind: ListingKind, { editando }: { editando: boolean }): Secao[] {
@@ -29,7 +32,9 @@ export function secoesDoCadastro(kind: ListingKind, { editando }: { editando: bo
 }
 
 export function tipoDaUrl(valor: string | null): ListingKind | null {
-  if (valor === 'empreendimento') return 'development';
+  // Aceita o singular (link antigo) e o plural da aba (ABA_NA_URL).
+  if (valor === 'empreendimento' || valor === 'empreendimentos') return 'development';
   if (valor === 'revenda') return 'resale';
+  if (valor === 'leilao') return 'auction';
   return null;
 }

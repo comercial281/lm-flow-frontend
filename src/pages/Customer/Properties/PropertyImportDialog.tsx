@@ -173,7 +173,8 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
     try {
       const b = await propertyImportsService.createBatch(files, {
         onProgress: setUploadProgress,
-        listingKind,
+        // A leitura com IA não tem Leilão: ali ele entra como revenda.
+        listingKind: listingKind === 'auction' ? 'resale' : listingKind,
       });
       setBatch(b);
       setFiles([]);

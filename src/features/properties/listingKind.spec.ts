@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  FILTROS_VAZIOS, abaPadrao, anosDaPrevisao, filtrosAtivos, juntarMesAno, lerAba, linhaDasTipologias, linkNaLista,
+  FILTROS_VAZIOS, subtituloDosImoveis, totalDeCadastros, abasVisiveis, destinosDeMover, rotuloDaOcupacao, rotuloDeMover, textoDoDesconto, tomDaOcupacao, abaPadrao, anosDaPrevisao, filtrosAtivos, juntarMesAno, lerAba, linhaDasTipologias, linkNaLista, descontoDaAvaliacao,
   mesAno, paraCampoMes, paramsDosFiltros, separarMesAno, rotuloDaFase, rotuloDaSituacao, seloDaFase, textoDasUnidades, tipoDoImovel, tirarFiltro,
 } from './listingKind';
 
@@ -125,5 +125,78 @@ describe('previsão de entrega em mês e ano', () => {
     expect(anosDaPrevisao(2026)).toEqual(['2025', '2026', '2027', '2028', '2029', '2030', '2031', '2032', '2033', '2034']);
     expect(anosDaPrevisao(2026, '2020')[0]).toBe('2020');
     expect(anosDaPrevisao(2026, '2027')).toHaveLength(10);
+  });
+});
+
+describe('Leilão', () => {
+  it('tipo, aba do endereço e link da busca', () => {
+    expect(tipoDoImovel({ listing_kind: 'auction' })).toBe('auction');
+    expect(tipoDoImovel({ listing_kind: 'qualquer' })).toBe('resale');
+    expect(lerAba(new URLSearchParams('aba=leilao'))).toBe('auction');
+    expect(linkNaLista({ listing_kind: 'auction', code: '105794' })).toBe('/properties?aba=leilao&q=105794');
+  });
+
+  it('aba padrão: a com mais cadastros; empate fica com Empreendimentos', () => {
+    expect(abaPadrao({ development: 0, resale: 0, auction: 210 })).toBe('auction');
+    expect(abaPadrao({ development: 3, resale: 3, auction: 3 })).toBe('development');
+    expect(abaPadrao({ development: 0, resale: 0 })).toBe('development');
+  });
+
+  it('a aba Leilão só aparece com leilão cadastrado, ou se já está aberta', () => {
+    expect(abasVisiveis({ development: 1, resale: 2, auction: 0 }, 'resale')).toEqual(['development', 'resale']);
+    expect(abasVisiveis({ development: 1, resale: 2, auction: 4 }, 'resale')).toEqual(['development', 'resale', 'auction']);
+    expect(abasVisiveis({ development: 1, resale: 2, auction: 0 }, 'auction')).toEqual(['development', 'resale', 'auction']);
+    expect(abasVisiveis(null, null)).toEqual(['development', 'resale']);
+  });
+
+  it('ocupação e desconto', () => {
+    expect(rotuloDaOcupacao('vacant')).toBe('Desocupado');
+    expect(rotuloDaOcupacao('rented')).toBe('Locado');
+    expect(rotuloDaOcupacao(null)).toBeNull();
+    expect(tomDaOcupacao('occupied')).toBe('alerta');
+    expect(textoDoDesconto(69)).toBe('69% abaixo da avaliação');
+    expect(textoDoDesconto(0)).toBeNull();
+    expect(textoDoDesconto(null)).toBeNull();
+  });
+
+  it('descontoDaAvaliacao: piso, só com os dois valores e venda abaixo da avaliação', () => {
+    expect(descontoDaAvaliacao(310000, 1000000)).toBe(69);
+    expect(descontoDaAvaliacao(999, 1000)).toBeNull();
+    expect(descontoDaAvaliacao(500, 1000)).toBe(50);
+    expect(descontoDaAvaliacao(1000, 1000)).toBeNull();
+    expect(descontoDaAvaliacao(1200, 1000)).toBeNull();
+    expect(descontoDaAvaliacao(null, 1000)).toBeNull();
+    expect(descontoDaAvaliacao(500, undefined)).toBeNull();
+    expect(descontoDaAvaliacao(0, 1000)).toBeNull();
+  });
+
+  it('situação do Leilão', () => {
+    expect(rotuloDaSituacao('auction', 'active')).toBe('Disponível');
+    expect(rotuloDaSituacao('auction', 'sold')).toBe('Vendido');
+  });
+
+  it('filtros da aba Leilão: só os dela, com ocupação', () => {
+    const f = { ...FILTROS_VAZIOS.auction, ocupacao: 'vacant' as const, quartos: [2] };
+    expect(paramsDosFiltros('auction', f)).toEqual({ occupancy: 'vacant', 'bedrooms[]': ['2'] });
+    expect(filtrosAtivos('auction', f).map(x => x.rotulo)).toEqual(['Ocupação: Desocupado', 'Dorms: 2']);
+    expect(tirarFiltro('auction', f, 'ocupacao')).toMatchObject({ ocupacao: '' });
+  });
+
+  it('mover para: os outros dois tipos', () => {
+    expect(destinosDeMover('resale')).toEqual(['development', 'auction']);
+    expect(destinosDeMover('auction')).toEqual(['development', 'resale']);
+    expect(rotuloDeMover('auction')).toBe('Mover para Leilão');
+    expect(rotuloDeMover('development')).toBe('Mover para Empreendimentos');
+  });
+});
+
+describe('topo de Imóveis', () => {
+  it('subtítulo cita o Leilão só quando há leilão', () => {
+    expect(subtituloDosImoveis(null)).toBe('Empreendimentos e imóveis de revenda da imobiliária.');
+    expect(subtituloDosImoveis({ development: 1, resale: 2, auction: 0 })).toBe('Empreendimentos e imóveis de revenda da imobiliária.');
+    expect(subtituloDosImoveis({ development: 1, resale: 2, auction: 3 })).toBe('Empreendimentos, imóveis de revenda e de leilão da imobiliária.');
+  });
+  it('total soma as três abas', () => {
+    expect(totalDeCadastros({ development: 0, resale: 40, auction: 10 })).toBe(50);
   });
 });

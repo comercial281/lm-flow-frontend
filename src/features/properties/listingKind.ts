@@ -1,11 +1,15 @@
-// ── IMÓVEIS: EMPREENDIMENTO OU REVENDA (Fase 4, 02/10/2026) ─────────────────
+// ── IMÓVEIS: EMPREENDIMENTO, REVENDA OU LEILÃO (Fase 4, 02/10/2026; Leilão 13/10/2026) ─────────────────
 // Regras puras da lista nova de Imóveis: aba, fase, situação por tipo,
 // tipologias e filtros. A tela só desenha; nada de regra no JSX.
 // Spec: LM FLOW/specs/2026-10-02-fase-4-imoveis-empreendimento-revenda-design.md
 import { dinheiro, numero, plural } from '@/lib/formato';
 import type { PropertyTypology } from './typologies';
 
-export type ListingKind = 'development' | 'resale';
+export type ListingKind = 'development' | 'resale' | 'auction';
+export type Ocupacao = 'vacant' | 'occupied' | 'rented';
+export type Contagem = { development: number; resale: number; auction: number };
+
+const TIPOS: ListingKind[] = ['development', 'resale', 'auction'];
 export type Stage = 'pre_launch' | 'launch' | 'in_construction' | 'ready';
 export type Tom = 'ok' | 'alerta' | 'neutro' | 'info' | 'marca';
 
@@ -20,16 +24,14 @@ export const TONS: Record<Tom, string> = {
 
 /** Servidor antigo não manda o campo: tudo cai em Revenda, sem tela em branco. */
 export function tipoDoImovel(p: { listing_kind?: string | null }): ListingKind {
-  return p.listing_kind === 'development' ? 'development' : 'resale';
+  return p.listing_kind === 'development' || p.listing_kind === 'auction' ? p.listing_kind : 'resale';
 }
 
-export const ABA_NA_URL: Record<ListingKind, string> = { development: 'empreendimentos', resale: 'revenda' };
+export const ABA_NA_URL: Record<ListingKind, string> = { development: 'empreendimentos', resale: 'revenda', auction: 'leilao' };
 
 export function lerAba(sp: URLSearchParams): ListingKind | null {
   const v = sp.get('aba');
-  if (v === ABA_NA_URL.development) return 'development';
-  if (v === ABA_NA_URL.resale) return 'resale';
-  return null;
+  return TIPOS.find(k => ABA_NA_URL[k] === v) ?? null;
 }
 
 /**
@@ -40,9 +42,52 @@ export function linkNaLista(p: { listing_kind?: string | null; code?: string | n
   return `/properties?aba=${ABA_NA_URL[tipoDoImovel(p)]}&q=${encodeURIComponent(p.code || p.title || '')}`;
 }
 
-/** Abre na aba com mais cadastros; empate abre Empreendimentos. */
-export function abaPadrao(c: { development: number; resale: number }): ListingKind {
-  return c.resale > c.development ? 'resale' : 'development';
+/** Abre na aba com mais cadastros; empate vai na ordem Empreendimentos, Revenda, Leilão. */
+export function abaPadrao(c: { development: number; resale: number; auction?: number }): ListingKind {
+  const n = (k: ListingKind) => (k === 'auction' ? c.auction ?? 0 : c[k]);
+  return TIPOS.reduce((melhor, k) => (n(k) > n(melhor) ? k : melhor), 'development' as ListingKind);
+}
+
+/** Leilão é de poucos clientes: a aba só aparece com leilão cadastrado (ou aberta pelo endereço). */
+export function abasVisiveis(c: Contagem | null, ativa: ListingKind | null): ListingKind[] {
+  const comLeilao = (c?.auction ?? 0) > 0 || ativa === 'auction';
+  return comLeilao ? TIPOS : ['development', 'resale'];
+}
+
+/** Subtítulo do topo de Imóveis: cita o Leilão só quando há leilão cadastrado. */
+export function subtituloDosImoveis(c: Contagem | null): string {
+  return (c?.auction ?? 0) > 0
+    ? 'Empreendimentos, imóveis de revenda e de leilão da imobiliária.'
+    : 'Empreendimentos e imóveis de revenda da imobiliária.';
+}
+/** Total de cadastros das três abas. */
+export function totalDeCadastros(c: Contagem): number { return c.development + c.resale + (c.auction ?? 0); }
+
+const NOME_DO_TIPO: Record<ListingKind, string> = { development: 'Empreendimentos', resale: 'Revenda', auction: 'Leilão' };
+export function destinosDeMover(k: ListingKind): ListingKind[] { return TIPOS.filter(t => t !== k); }
+export function rotuloDeMover(k: ListingKind): string { return `Mover para ${NOME_DO_TIPO[k]}`; }
+
+export const OCUPACOES: { valor: Ocupacao; rotulo: string; tom: Tom }[] = [
+  { valor: 'vacant', rotulo: 'Desocupado', tom: 'ok' },
+  { valor: 'occupied', rotulo: 'Ocupado', tom: 'alerta' },
+  { valor: 'rented', rotulo: 'Locado', tom: 'alerta' },
+];
+export function rotuloDaOcupacao(v?: string | null): string | null {
+  return OCUPACOES.find(o => o.valor === v)?.rotulo ?? null;
+}
+export function tomDaOcupacao(v?: string | null): Tom {
+  return OCUPACOES.find(o => o.valor === v)?.tom ?? 'neutro';
+}
+/** O desconto vem pronto do servidor (discount_percent). */
+export function textoDoDesconto(pct?: number | null): string | null {
+  return pct && pct > 0 ? `${pct}% abaixo da avaliação` : null;
+}
+
+/** Desconto do Leilão no cadastro, ao vivo: piso de (1 − venda/avaliação) × 100. Sem os dois valores, ou sem desconto, null. */
+export function descontoDaAvaliacao(venda?: number | null, avaliacao?: number | null): number | null {
+  if (!venda || !avaliacao || venda <= 0 || avaliacao <= 0 || venda >= avaliacao) return null;
+  const pct = Math.floor((1 - venda / avaliacao) * 100);
+  return pct > 0 ? pct : null;
 }
 
 export const FASES: { valor: Stage; rotulo: string }[] = [
@@ -112,6 +157,13 @@ export const SITUACOES: Record<ListingKind, { valor: string; rotulo: string; tom
     { valor: 'inactive', rotulo: 'Inativo', tom: 'neutro' },
     { valor: 'draft', rotulo: 'Rascunho', tom: 'neutro' },
   ],
+  auction: [
+    { valor: 'active', rotulo: 'Disponível', tom: 'ok' },
+    { valor: 'reserved', rotulo: 'Reservado', tom: 'alerta' },
+    { valor: 'sold', rotulo: 'Vendido', tom: 'neutro' },
+    { valor: 'inactive', rotulo: 'Inativo', tom: 'neutro' },
+    { valor: 'draft', rotulo: 'Rascunho', tom: 'neutro' },
+  ],
 };
 
 export function rotuloDaSituacao(kind: ListingKind, status: string): string {
@@ -173,11 +225,21 @@ export interface FiltrosEmpreendimento {
   comBook: boolean;
 }
 
-export type Filtros = FiltrosRevenda | FiltrosEmpreendimento;
+export interface FiltrosLeilao {
+  ocupacao: '' | Ocupacao;
+  bairro: string;
+  situacao: string;
+  precoMin: string;
+  precoMax: string;
+  quartos: number[];
+}
 
-export const FILTROS_VAZIOS: { development: FiltrosEmpreendimento; resale: FiltrosRevenda } = {
+export type Filtros = FiltrosRevenda | FiltrosEmpreendimento | FiltrosLeilao;
+
+export const FILTROS_VAZIOS: { development: FiltrosEmpreendimento; resale: FiltrosRevenda; auction: FiltrosLeilao } = {
   development: { fases: [], bairro: '', situacao: '', precoMin: '', precoMax: '', quartos: [], entregaAte: '', comBook: false },
   resale: { finalidade: '', tipo: '', bairro: '', situacao: '', precoMin: '', precoMax: '', quartos: [], vagas: [], captador: '' },
+  auction: { ocupacao: '', bairro: '', situacao: '', precoMin: '', precoMax: '', quartos: [] },
 };
 
 export function paramsDosFiltros(kind: ListingKind, f: Filtros): Record<string, string | string[]> {
@@ -193,6 +255,9 @@ export function paramsDosFiltros(kind: ListingKind, f: Filtros): Record<string, 
     if (e.fases.length) p['stage[]'] = e.fases;
     if (e.entregaAte) p.delivery_until = e.entregaAte;
     if (e.comBook) p.has_book = '1';
+  } else if (kind === 'auction') {
+    const l = f as FiltrosLeilao;
+    if (l.ocupacao) p.occupancy = l.ocupacao;
   } else {
     const r = f as FiltrosRevenda;
     // Imóvel de Venda e locação aparece nos dois filtros, como no site.
@@ -226,6 +291,15 @@ export function filtrosAtivos(
     if (e.quartos.length) out.push({ chave: 'quartos', rotulo: `Dorms: ${quartosTexto(e.quartos)}` });
     if (e.entregaAte) out.push({ chave: 'entregaAte', rotulo: `Entrega até ${e.entregaAte}` });
     if (e.comBook) out.push({ chave: 'comBook', rotulo: 'Com book' });
+    return out;
+  }
+  if (kind === 'auction') {
+    const l = f as FiltrosLeilao;
+    if (l.ocupacao) out.push({ chave: 'ocupacao', rotulo: `Ocupação: ${rotuloDaOcupacao(l.ocupacao)}` });
+    if (l.bairro) out.push({ chave: 'bairro', rotulo: `Bairro: ${l.bairro}` });
+    if (l.situacao) out.push({ chave: 'situacao', rotulo: `Situação: ${rotuloDaSituacao('auction', l.situacao)}` });
+    if (l.precoMin || l.precoMax) out.push({ chave: 'preco', rotulo: `Preço: ${preco(l.precoMin, l.precoMax)}` });
+    if (l.quartos.length) out.push({ chave: 'quartos', rotulo: `Dorms: ${quartosTexto(l.quartos)}` });
     return out;
   }
   const r = f as FiltrosRevenda;

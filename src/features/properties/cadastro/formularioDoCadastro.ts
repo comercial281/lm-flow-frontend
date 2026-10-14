@@ -19,6 +19,8 @@ export const FORMULARIO_VAZIO: PropertyFormData = {
   status: 'active',
   stage: 'ready',
   listing_kind: 'resale',
+  occupancy: null,
+  appraisal_value: null,
   delivery_forecast: '',
   sale_price: null,
   rent_price: null,
@@ -60,12 +62,14 @@ export function formularioDoImovel(p: Property): PropertyFormData {
     title: p.title,
     description: p.description ?? '',
     // Empreendimento é sempre venda: o campo some da tela, então o valor salvo não pode mandar nos preços.
-    transaction_type: tipoDoImovel(p) === 'development' ? 'sale' : p.transaction_type,
+    transaction_type: tipoDoImovel(p) === 'resale' ? p.transaction_type : 'sale',
     category_type: p.category_type,
     property_type: p.property_type,
     status: p.status,
     stage: p.stage,
     listing_kind: tipoDoImovel(p),
+    occupancy: p.occupancy ?? null,
+    appraisal_value: p.appraisal_value ?? null,
     delivery_forecast: paraCampoMes(p.delivery_forecast),
     sale_price: p.sale_price,
     rent_price: p.rent_price,
@@ -131,7 +135,9 @@ export function errosDoCadastro(form: PropertyFormData): ErroDoCadastro[] {
   const p = payloadDoFormulario(form);
   // Valor de venda é obrigatório p/ Venda/Venda e Locação (regra do backend).
   // Rascunho (criado ou editado) pode ficar sem preço: o servidor aceita.
-  if (form.status !== 'draft' && (p.transaction_type === 'sale' || p.transaction_type === 'sale_rent') && !form.sale_price) {
+  // Leilão pode ficar sem valor de venda (o servidor aceita).
+  if (form.status !== 'draft' && form.listing_kind !== 'auction'
+    && (p.transaction_type === 'sale' || p.transaction_type === 'sale_rent') && !form.sale_price) {
     erros.push({ secao: form.listing_kind === 'development' ? 'tipologias' : 'valores',
       mensagem: 'Informe o Valor de venda (obrigatório para imóveis à venda).' });
   }

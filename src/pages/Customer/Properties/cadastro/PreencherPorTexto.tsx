@@ -60,7 +60,8 @@ export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto, tem
         achou++;
         if (campoVazio(atual, k)) patch[k] = v;
       };
-      if (atual.listing_kind !== 'development') put('transaction_type', r.transaction_type);
+      // Só a revenda aceita a finalidade do texto: empreendimento e Leilão são sempre venda.
+      if (atual.listing_kind === 'resale') put('transaction_type', r.transaction_type);
       put('property_type', r.property_type);
       put('sale_price', r.sale_price);
       put('rent_price', r.rent_price);

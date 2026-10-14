@@ -19,4 +19,11 @@ describe('formulário por tipo', () => {
     const base = { title: 'x', category_type: 'residential', property_type: 'apartment', status: 'active' };
     expect(payloadDoFormulario({ ...base, listing_kind: 'resale', transaction_type: 'sale', stage: 'ready', delivery_forecast: '2027-12' } as never).delivery_forecast).toBe('2027-12');
   });
+
+  it('leilão nasce venda e pronto, e sempre grava venda', () => {
+    expect(formularioNovo('auction')).toMatchObject({ listing_kind: 'auction', transaction_type: 'sale', stage: 'ready' });
+    const base = { title: 'x', category_type: 'residential', property_type: 'apartment', status: 'active' };
+    expect(payloadDoFormulario({ ...base, listing_kind: 'auction', transaction_type: 'rent', stage: 'ready', delivery_forecast: '' } as never))
+      .toMatchObject({ transaction_type: 'sale', delivery_forecast: null });
+  });
 });

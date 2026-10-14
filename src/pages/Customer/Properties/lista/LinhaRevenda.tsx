@@ -3,7 +3,7 @@ import { UserCheck } from 'lucide-react';
 import type { Property } from '@/services/properties/propertiesService';
 import { PROPERTY_TYPE_LABELS } from '@/services/properties/propertiesService';
 import { dinheiro, numero, tempoDesde } from '@/lib/formato';
-import { rotuloDaSituacao, tomDaSituacao } from '@/features/properties/listingKind';
+import { rotuloDaOcupacao, rotuloDaSituacao, textoDoDesconto, tipoDoImovel, tomDaOcupacao, tomDaSituacao } from '@/features/properties/listingKind';
 import FotoDoImovel from './FotoDoImovel';
 import Selo from './SeloSituacao';
 import MenuDoImovel, { estaNoSite, type AcoesDoImovel, type Permissoes } from './MenuDoImovel';
@@ -32,8 +32,15 @@ export default function LinhaRevenda({ p, acoes, permissoes, forca, emDia }: {
       <FotoDoImovel p={p} aoAdicionar={() => acoes.fotos(p)} />
       <div className="flex min-w-0 flex-col gap-1.5 px-4 py-3">
         <div className="flex flex-wrap gap-1.5">
-          <Selo tom={tomDaSituacao('resale', p.status)}>{rotuloDaSituacao('resale', p.status)}</Selo>
-          <Selo tom="neutro">{FINALIDADE[p.transaction_type] ?? p.transaction_type}</Selo>
+          <Selo tom={tomDaSituacao(tipoDoImovel(p), p.status)}>{rotuloDaSituacao(tipoDoImovel(p), p.status)}</Selo>
+          {tipoDoImovel(p) === 'auction' ? (
+            <>
+              {rotuloDaOcupacao(p.occupancy) && <Selo tom={tomDaOcupacao(p.occupancy)}>{rotuloDaOcupacao(p.occupancy)}</Selo>}
+              {textoDoDesconto(p.discount_percent) && <Selo tom="marca">{textoDoDesconto(p.discount_percent)}</Selo>}
+            </>
+          ) : (
+            <Selo tom="neutro">{FINALIDADE[p.transaction_type] ?? p.transaction_type}</Selo>
+          )}
         </div>
         <TituloDoImovel texto={titulo || tipo} podeEditar={permissoes.editar} aoAbrir={() => acoes.editar(p)}
           aoAbrirNoSite={estaNoSite(p) ? () => acoes.site(p) : undefined} className="font-semibold text-[15px] sm:text-base" />
