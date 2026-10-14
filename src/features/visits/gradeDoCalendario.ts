@@ -4,6 +4,8 @@
 // o calendário da Lais). Fora do JSX, com spec: a tela de Visitas já passa de
 // 800 linhas.
 
+import { capitalizar } from '@/lib/formato';
+
 export type VisaoCalendario = 'mes' | 'semana' | 'dia';
 
 const MESES = [
@@ -51,8 +53,6 @@ export function navegar(visao: VisaoCalendario, d: Date, passo: 1 | -1): Date {
   const dias = visao === 'semana' ? 7 : 1;
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + passo * dias);
 }
-
-const capitalizar = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
  * Título da barra do calendário.

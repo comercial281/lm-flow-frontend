@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { data, dataCurta, hora, dataHora, numero, porcentagem, dinheiro, dolar, plural, telefone, tempoDesde, quandoMudou, quandoAcontece, toDate, VAZIO, moedaValida } from './formato';
+import { data, dataCurta, hora, dataHora, numero, porcentagem, dinheiro, dolar, plural, telefone, capitalizar, tempoDesde, quandoMudou, quandoAcontece, toDate, VAZIO, moedaValida } from './formato';
 
 // Espaço não-quebrável: é o que o Intl põe entre "R$" e o número (não quebra linha).
 const NB = ' ';
@@ -174,5 +174,12 @@ describe('quandoAcontece', () => {
   });
   it('vazio vira travessão', () => {
     expect(quandoAcontece(null, agora)).toBe(VAZIO);
+  });
+});
+
+describe('capitalizar', () => {
+  it('capitaliza só a primeira letra', () => {
+    expect(capitalizar('terça-feira, 13 de outubro')).toBe('Terça-feira, 13 de outubro');
+    expect(capitalizar('')).toBe('');
   });
 });

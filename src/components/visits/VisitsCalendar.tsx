@@ -25,6 +25,7 @@ import type { View, SlotInfo } from 'react-big-calendar';
 
 import './visits-calendar.css';
 
+import { capitalizar } from '@/lib/formato';
 import type { Visit } from '@/services/visits/visitsService';
 
 export interface CalendarEvent {
@@ -59,7 +60,6 @@ interface Props {
 /* ───────────────────────── helpers ───────────────────────── */
 
 const weekStart = (d: Date) => startOfWeek(d, { locale: ptBR, weekStartsOn: 1 });
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function toEvent(v: Visit): CalendarEvent {
   const start = new Date(v.scheduled_at);
@@ -107,10 +107,10 @@ export function VisitsCalendar({
   /* título do range no header */
   const headerLabel = useMemo(() => {
     if (view === 'day') {
-      return cap(format(date, "EEEE',' d 'de' MMMM", { locale: ptBR }));
+      return capitalizar(format(date, "EEEE',' d 'de' MMMM", { locale: ptBR }));
     }
     if (view === 'month') {
-      return cap(format(date, "MMMM", { locale: ptBR }));
+      return capitalizar(format(date, "MMMM", { locale: ptBR }));
     }
     const start = weekStart(date);
     const end = addDays(start, 6);

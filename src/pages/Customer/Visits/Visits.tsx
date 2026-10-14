@@ -52,7 +52,7 @@ import { useCelular } from '@/hooks/useCelular';
 import { useAgendaLigada } from '@/features/visits/useAgendaLigada';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
-import { telefone, hora } from '@/lib/formato';
+import { telefone, hora, capitalizar } from '@/lib/formato';
 import { lerFiltroAgenda, type FiltroAgenda } from '@/features/dashboard/links';
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
 import { intervaloDosDias, rotuloContador, lerContador } from '@/features/visits/contagem';
@@ -854,10 +854,10 @@ export default function Visits() {
             {Array.from(grouped.entries()).map(([date, dayVisits]) => (
               <div key={date}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`text-sm font-semibold capitalize ${
+                  <div className={`text-sm font-semibold ${
                     dayVisits.some(v => isToday(v.scheduled_at)) ? 'text-primary' : 'text-foreground'
                   }`}>
-                    {date}
+                    {capitalizar(date)}
                   </div>
                   {dayVisits.some(v => isToday(v.scheduled_at)) && (
                     <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">Hoje</Badge>
@@ -902,10 +902,10 @@ export default function Visits() {
       <Dialog open={!!visitaDoResumo} onOpenChange={aberto => { if (!aberto) setResumoId(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="capitalize">
-              {visitaDoResumo && new Date(visitaDoResumo.scheduled_at).toLocaleDateString('pt-BR', {
+            <DialogTitle>
+              {visitaDoResumo && capitalizar(new Date(visitaDoResumo.scheduled_at).toLocaleDateString('pt-BR', {
                 weekday: 'long', day: 'numeric', month: 'long',
-              })}
+              }))}
             </DialogTitle>
           </DialogHeader>
           {visitaDoResumo && (
