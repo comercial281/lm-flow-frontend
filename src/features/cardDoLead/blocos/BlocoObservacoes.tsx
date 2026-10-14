@@ -13,7 +13,7 @@ export default function BlocoObservacoes({ contactId, comoCaixa = false }: { con
   if (comoCaixa) {
     return (
       <CaixaDaJanela titulo="Observações" corpoClassName="flex flex-col overflow-hidden">
-        <CardNotesTab contactId={contactId} />
+        <CardNotesTab contactId={contactId} compacto />
       </CaixaDaJanela>
     );
   }

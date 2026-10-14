@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Button, Textarea } from '@/components/ui/ds';
 import { Loader2, Send, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { notesService, Note } from '@/services/notes/notesService';
@@ -9,6 +10,8 @@ import EmptyState from '@/components/base/EmptyState';
 
 interface CardNotesTabProps {
   contactId: string | null;
+  /** Dentro da caixa da janela: campo de uma linha com botão de ícone, sem a linha do atalho (Ctrl+Enter segue valendo). */
+  compacto?: boolean;
 }
 
 function initials(name?: string) {
@@ -22,7 +25,7 @@ function initials(name?: string) {
     .toUpperCase();
 }
 
-export default function CardNotesTab({ contactId }: CardNotesTabProps) {
+export default function CardNotesTab({ contactId, compacto = false }: CardNotesTabProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(false);
@@ -88,6 +91,34 @@ export default function CardNotesTab({ contactId }: CardNotesTabProps) {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Composer */}
+      {compacto ? (
+        <div className="flex shrink-0 items-end gap-2">
+          <Textarea
+            aria-label="Escrever comentário"
+            placeholder="Escreva um comentário..."
+            value={content}
+            onChange={e => setContent(e.target.value)}
+            onKeyDown={e => {
+              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                e.preventDefault();
+                handlePost();
+              }
+            }}
+            rows={1}
+            className="max-h-[4.5rem] min-h-8 flex-1 resize-none py-1.5 text-sm [field-sizing:content]"
+          />
+          <Button
+            size="sm"
+            className="h-8 w-8 shrink-0 p-0"
+            onClick={handlePost}
+            disabled={saving || !content.trim()}
+            aria-label="Postar"
+            title="Postar (Ctrl + Enter)"
+          >
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+          </Button>
+        </div>
+      ) : (
       <div className="shrink-0 space-y-2">
         <Textarea
           placeholder="Escreva um comentário e poste para a equipe..."
@@ -110,15 +141,16 @@ export default function CardNotesTab({ contactId }: CardNotesTabProps) {
           </Button>
         </div>
       </div>
+      )}
 
       {/* Feed */}
-      <div className="flex-1 overflow-y-auto mt-4 space-y-3">
+      <div className={cn('flex-1 overflow-y-auto space-y-3', compacto ? 'mt-2' : 'mt-4')}>
         {loading ? (
           <Carregando linhas={3} />
         ) : erro ? (
           <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} />
         ) : notes.length === 0 ? (
-          <EmptyState tamanho="compacto" title="Nenhum comentário ainda." description="Seja o primeiro a postar." />
+          <EmptyState tamanho="compacto" title="Nenhum comentário ainda." description={compacto ? undefined : 'Seja o primeiro a postar.'} />
         ) : (
           notes.map(note => (
             <div key={note.id} className="flex gap-2.5">
