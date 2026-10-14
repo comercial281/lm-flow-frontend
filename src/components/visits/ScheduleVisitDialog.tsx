@@ -469,13 +469,13 @@ export function ScheduleVisitDialog({
             )}
 
             <div>
-              <UILabel>Corretor responsável{travado ? '' : ' *'}</UILabel>
+              <UILabel htmlFor={travado ? undefined : 'visita_corretor'}>Corretor responsável{travado ? '' : ' *'}</UILabel>
               {travado ? (
                 <p className="mt-1 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">{travado.name}</p>
               ) : verificandoCargo ? (
                 <p className="mt-1 text-sm text-muted-foreground">Carregando...</p>
               ) : (
-                <EscolhaCorretor corretores={corretores} erro={erroCorretores} valor={corretor} onEscolher={setCorretor} />
+                <EscolhaCorretor id="visita_corretor" corretores={corretores} erro={erroCorretores} valor={corretor} onEscolher={setCorretor} />
               )}
             </div>
 

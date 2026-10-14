@@ -188,8 +188,9 @@ export function FolgasDialog({ open, onOpenChange, soMinhas }: Props) {
 
         <GrupoDaJanela titulo="Nova folga" className="border-t border-border pt-4">
           {!soMinhas && (
-            <CampoDaJanela rotulo="De quem é a folga" obrigatorio>
+            <CampoDaJanela rotulo="De quem é a folga" htmlFor="folga_corretor" obrigatorio>
               <EscolhaCorretor
+                id="folga_corretor"
                 corretores={corretores}
                 erro={erroCorretores}
                 valor={corretor}

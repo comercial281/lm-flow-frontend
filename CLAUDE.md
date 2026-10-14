@@ -8771,8 +8771,8 @@ Não reabrir sem o dono pedir.
 As nove janelas mais confusas passaram a usar as peças do miolo (`GrupoDaJanela`, `CampoDaJanela`, `GradeDaJanela`, `ESCOLHA`, `Aviso`), com texto em português, maiúscula só na primeira letra e seletores com largura total.
 
 - **Agendar tarefa:** grupos Sobre quem, O quê, Quando e Quem faz. O lead só é buscado quando a pessoa digita. Agenda vazia fica compacta.
-- **Agendar visita:** corretor numa lista de escolha, escolhas sem roxo cheio, Resumo em caixa. Volta a checagem de corretor desmarcado.
-- **Folgas:** mesma lista de escolha de corretor, escolhas sem roxo cheio e Resumo em caixa.
+- **Agendar visita:** corretor numa lista de escolha (o rótulo "Corretor responsável" ligado à lista), escolhas sem roxo cheio, Resumo em caixa. Volta a checagem de corretor desmarcado.
+- **Folgas:** grupos Próximas folgas e Nova folga, a mesma lista de escolha de corretor do Agendar visita (com o rótulo "De quem é a folga" ligado à lista) e o rodapé com Cancelar no lugar de Fechar. Não tem Resumo nem escolhas em botão.
 - **Nova ação agendada (Agendar mensagem):** textos em português, campos na grade, e o aviso separa "cargo sem permissão" de "sem número".
 - **Adicionar lead ao funil:** grupos Etapa e Lead, modo em botões de escolha e lista de leads com seleção acessível.
 - **Descrições em lote:** vira `JanelaDescricoesEmLote` (mesmo comportamento), com aviso de que a descrição antiga é trocada, caixinhas da casa e selo cinza "já tem descrição".

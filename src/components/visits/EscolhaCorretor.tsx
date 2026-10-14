@@ -4,12 +4,15 @@
  * Agendar visita e nas Folgas.
  *
  * `corretores === null` = ainda carregando; `erro` = a lista não veio.
+ * `id` liga a lista ao rótulo visível do campo (`htmlFor`); o `aria-label`
+ * fica com o mesmo texto do rótulo, sem o asterisco.
  */
 import { Seletor } from '@/components/base/Seletor';
 import type { PersonRef } from '@/services/visits/visitsService';
 import EmptyState from '@/components/base/EmptyState';
 
-export function EscolhaCorretor({ corretores, erro, valor, onEscolher, rotulo = 'Corretor responsável' }: {
+export function EscolhaCorretor({ id, corretores, erro, valor, onEscolher, rotulo = 'Corretor responsável' }: {
+  id?: string;
   corretores: PersonRef[] | null;
   erro: boolean;
   valor: PersonRef | null;
@@ -28,6 +31,7 @@ export function EscolhaCorretor({ corretores, erro, valor, onEscolher, rotulo = 
   }
   return (
     <Seletor
+      id={id}
       aria-label={rotulo}
       className="w-full"
       value={valor ? String(valor.id) : ''}
