@@ -7912,7 +7912,7 @@ setinha); preço e data só na página (depois viram filtro); mover pela faixa p
 confirmação; a página abre com o menu lateral. Topo de 11/10: **cartão da pessoa** (não a
 linha da pessoa nem o Responsável na linha), **Ganho verde cheio e Perdido só no contorno**
 (não os dois cheios nem a peça colada) e **a Meta dentro de Ações rápidas** (não caixa
-própria nem aba Origem). A janela do quadro continua igual (só a página mudou).
+própria nem aba Origem). A janela do quadro continua igual (só a página mudou). — reaberta em 14/10, ver 'Janela do card: coluna em grupos e imóveis detalhados'.
 
 Armadilhas:
 
@@ -8732,3 +8732,25 @@ Não reabrir sem o dono pedir.
 ## Topo das janelas à esquerda (14/10/2026)
 
 O pacote traz o topo da janela com `text-center sm:text-left`. O CSS do app só gera as classes escritas em `src`: existia `text-center` e não existia `sm:text-left`, então o centralizado vencia em qualquer largura. Os títulos com `flex` ficavam à esquerda (flex ignora `text-align`), mas a frase do topo ficava no centro. Conserto: o topo da casa (`TOPO` e o ramo sem janela do `DialogHeader`, em `ds.tsx`) ganhou `text-left!` (importante, forma do Tailwind v4). Trava nova `topoCentralizado` (teto 0) barra `text-center` em `DialogHeader`/`DialogTitle`/`DialogDescription`/`AlertDialogHeader`. Não reabrir sem o dono pedir.
+
+## Janela do card: coluna em grupos e imóveis detalhados (14/10/2026)
+
+A decisão de 11/10 "a janela do quadro não muda" foi **reaberta a pedido do dono em 13/10**, e a versão A foi a escolhida.
+
+O que mudou na janela (`EditItemModal`):
+
+- **Coluna da esquerda em grupos:** Situação · Ações · Follow-up · Meta · Etiquetas, com Ganho/Perdido no pé da coluna (sempre visíveis).
+- **Aba Detalhes:** Sobre o lead, Histórico e Observações com a mesma altura, sem rolar a aba inteira; os imóveis do lead ficam embaixo, em cartões numa fileira que rola pro lado. Cliente sem a função de Observações: duas colunas (Sobre o lead e Histórico), sem faixa vazia.
+- **Cartão do imóvel:** capa, situação, preço/m², características (área no formato brasileiro, "72,45 m²"), botões Abrir e Agendar visita. Sem foto, quem pode editar vê o atalho *Adicionar fotos* pra página de fotos do imóvel (como em Meus imóveis); quem não pode vê "Sem foto".
+- **Cartão compacto na janela:** capa mais baixa (h-20), a situação em cima da capa, o título divide a linha com o ⋮ e a linha "bairro · cidade" sai. A linha de cima da aba Detalhes tem 236 px. Conta pra 1366 × 768 (janela de 92dvh ≈ 706 px): 706 − 48 (respiro da coluna) − 38 (abas) − 16 (respiro das abas) − 236 − 12 (vão) = 356 px pra caixa de imóveis; título 42 + busca 36 + vão 12 + cartão compacto ~215 + respiro 18 ≈ 323 px, sem rolar. A página do card usa o cartão normal.
+- **Follow-up compacto:** cada fluxo rodando diz "mensagem N enviada"; sem follow-up pra iniciar, a caixa "Nenhum follow-up pra iniciar. Crie e ligue um em Automações → Follow-up." (como antes).
+- **Peças novas** em `src/components/base/janela` (`CaixaDaJanela`, `GrupoDaJanela`, `escolha`).
+
+Armadilhas:
+
+1. O servidor do PR `lm-flow#485` precisa estar no ar antes, para o cartão ter foto e características. Sem ele o cartão mostra o que tiver (sem capa, sem características), sem quebrar.
+2. A página do card só mudou no bloco de imóveis e no aviso da Meta; o resto dela continua como em 11/10. O aviso do Pixel (`CapiConversionPanel`) mudou também no **painel da conversa** (`ContactSidebar`), que usa o mesmo painel: conferir lá também.
+3. `LeadQuickActions` com `compacto` vale só na janela; `HistoricoDoLead` com `semTitulo` vale só na janela. Não propagar pra página.
+4. Conferência visual pendente com o dono na prévia: lead com 5 imóveis, 1366×768 com menu aberto e 1440×900, Ganho/Perdido visíveis, Detalhes sem rolar inteira, fileira de imóveis rolando, grupo Meta sumindo com o painel vazio, capa num cliente com fotos.
+
+Não reabrir sem o dono pedir.

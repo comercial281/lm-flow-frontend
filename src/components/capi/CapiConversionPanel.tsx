@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import Aviso from '@/components/base/Aviso';
+import { useCan } from '@/hooks/useCan';
 import { Badge, Button } from '@/components/ui/ds';
 import { Check, Info, Loader2, TrendingUp } from 'lucide-react';
 import IconActionButton from '@/components/base/IconActionButton';
@@ -65,6 +68,21 @@ export default function CapiConversionPanel(props: CapiConversionPanelProps) {
   const ehCelular = useCelular();
   if (ehCelular) return null;
   return <PainelConversaoMeta {...props} />;
+}
+
+// Pixel ou chave faltando: aviso da casa. O link só vai pra quem lê a
+// configuração (a rota barra os outros), os demais ficam só com o texto.
+function AvisoDoPixel({ compacto = false }: { compacto?: boolean }) {
+  const can = useCan();
+  return (
+    <Aviso
+      tom="atencao"
+      compacto={compacto}
+      acao={can('capi_configs', 'read') ? <Link to="/settings/pixel-capi" className="underline">Configurar</Link> : undefined}
+    >
+      Pixel ou chave do cliente incompletos.
+    </Aviso>
+  );
 }
 
 function PainelConversaoMeta({
@@ -197,11 +215,7 @@ function PainelConversaoMeta({
             tooltipClassName="max-w-64"
           />
         </div>
-        {!status.client_ready && (
-          <p className="text-[11px] text-amber-600 dark:text-amber-400">
-            Pixel ou chave do cliente incompletos em Automações, Pixel/CAPI.
-          </p>
-        )}
+        {!status.client_ready && <AvisoDoPixel compacto />}
       </div>
     );
   }
@@ -256,11 +270,7 @@ function PainelConversaoMeta({
           </p>
         ))}
 
-      {!status.client_ready && (
-        <p className="text-[11px] text-amber-600">
-          Pixel ou chave do cliente incompletos em Automações, Pixel/CAPI.
-        </p>
-      )}
+      {!status.client_ready && <AvisoDoPixel />}
     </div>
   );
 }

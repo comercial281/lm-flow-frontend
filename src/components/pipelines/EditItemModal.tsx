@@ -6,13 +6,16 @@
 // janela não muda de cara (decisão 13 da spec do funil; a rede é o
 // EditItemModal.caracterizacao.spec.tsx).
 //
-// Duas colunas: ESQUERDA fixa e sem rolagem (quem é, situação, atalhos,
-// etiquetas, follow-up, Meta, Ganho | Perdido); DIREITA com as abas Detalhes ·
+// Duas colunas: ESQUERDA em grupos com título (Situação, Ações, Follow-up,
+// Meta, Etiquetas), com Ganho | Perdido presos no pé; o meio rola quando não
+// cabe (versão A, 14/10/2026); DIREITA com as abas Detalhes ·
 // Conversa · Tarefas · Visitas e propostas · Origem. Tudo grava na hora.
+import { cn } from '@/lib/utils';
 import { Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { ArrowUpRight, CalendarCheck, ClipboardList, ListTodo, Megaphone, MessageSquare } from 'lucide-react';
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/ds';
 import Abas from '@/components/base/Abas';
+import { GrupoDaJanela } from '@/components/base/janela';
 import type { Pipeline, PipelineItem, PipelineStage } from '@/types/analytics';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import { rotuloDaAbaTarefas } from '@/features/tarefas/abaDoCard';
@@ -108,8 +111,8 @@ export default function EditItemModal({
         )}
 
         <div className="flex-1 min-h-0 flex flex-col md:grid md:grid-cols-[380px_minmax(0,1fr)] overflow-y-auto md:overflow-hidden">
-          {/* ESQUERDA — fixa, nunca rola (tem de caber em 1366×768) */}
-          <aside className="flex flex-col gap-4 border-b md:border-b-0 md:border-r border-border p-5 md:min-h-0">
+          {/* ESQUERDA — identidade fixa no topo, grupos no meio (rola se não couber) e Ganho | Perdido no pé */}
+          <aside className="flex min-h-0 flex-col border-b md:border-b-0 md:border-r border-border p-6">
             <BlocoIdentidade
               card={card}
               acoes={
@@ -139,34 +142,49 @@ export default function EditItemModal({
               }
             />
 
-            <BlocoSituacao card={card} onColocadoNoFunil={onColocadoNoFunil} />
+            <div className="mt-5 min-h-0 flex-1 overflow-y-auto -mx-6 px-6 grid content-start gap-5">
+              <GrupoDaJanela titulo="Situação">
+                <BlocoSituacao card={card} onColocadoNoFunil={onColocadoNoFunil} />
+              </GrupoDaJanela>
 
-            <LeadQuickActions
-              item={item}
-              nomeExibido={card.nomeExibido}
-              abrindoConversa={card.conversa.abrindo}
-              onAbrirConversa={() => card.conversa.abrir(item)}
-              onVisitaCriada={card.historico.recarregar}
-            />
+              <GrupoDaJanela titulo="Ações">
+                <LeadQuickActions
+                  compacto
+                  item={item}
+                  nomeExibido={card.nomeExibido}
+                  abrindoConversa={card.conversa.abrindo}
+                  onAbrirConversa={() => card.conversa.abrir(item)}
+                  onVisitaCriada={card.historico.recarregar}
+                />
+              </GrupoDaJanela>
 
-            <BlocoEtiquetas card={card} />
+              <GrupoDaJanela titulo="Follow-up">
+                <BlocoFollowup card={card} />
+              </GrupoDaJanela>
 
-            <BlocoFollowup card={card} />
+              {/* O painel devolve nada sem destino (e no celular): o corpo fica vazio e o grupo some. */}
+              {!card.foraDoFunil && (
+                <GrupoDaJanela titulo="Meta" className="has-[>[data-corpo-meta]:empty]:hidden">
+                  <div data-corpo-meta className="empty:hidden">
+                    <CapiConversionPanel key={situacaoDe(card.situacao.item)} contactId={contato?.id ?? null} pipelineItemId={item.id} variante="compacto" />
+                  </div>
+                </GrupoDaJanela>
+              )}
+
+              <GrupoDaJanela titulo="Etiquetas">
+                <BlocoEtiquetas card={card} />
+              </GrupoDaJanela>
+            </div>
 
             {!card.foraDoFunil && (
-              <>
-                <CapiConversionPanel key={situacaoDe(card.situacao.item)} contactId={contato?.id ?? null} pipelineItemId={item.id} variante="compacto" />
-
-                {/* Rodapé fixo da coluna */}
-                <div className="mt-auto pt-2 border-t border-border">
-                  <CardResultFooter item={card.situacao.item ?? item} onMudou={aoMudarSituacao} bloqueado={card.etapa.movendo} onSalvando={card.situacao.setRodapeSalvando} />
-                </div>
-              </>
+              <div className="mt-3 shrink-0 border-t border-border pt-3">
+                <CardResultFooter item={card.situacao.item ?? item} onMudou={aoMudarSituacao} bloqueado={card.etapa.movendo} onSalvando={card.situacao.setRodapeSalvando} />
+              </div>
             )}
           </aside>
 
           {/* DIREITA — abas da casa (sublinhado com ícone), a faixa inteira no topo */}
-          <section className="flex flex-col min-h-0 px-5 pt-3 pb-4">
+          <section className="flex flex-col min-h-0 p-6">
             <Abas
               rotulo="Seções do card do lead"
               abas={[
@@ -181,7 +199,7 @@ export default function EditItemModal({
               className="shrink-0 pr-8"
             />
 
-            <div className="flex-1 min-h-0 overflow-y-auto pt-4">
+            <div className={cn('flex-1 min-h-0 pt-4', activeTab === 'overview' ? 'overflow-y-auto lg:overflow-hidden' : 'overflow-y-auto')}>
               {activeTab === 'overview' && (
                 <LeadDetailsTab
                   item={item}
@@ -189,6 +207,8 @@ export default function EditItemModal({
                   mostrarObservacoes={card.recursos.notas}
                   versaoHistorico={card.historico.versao}
                   funilAtual={pipeline?.name ?? null}
+                  nomeExibido={card.nomeExibido}
+                  onVisitaCriada={card.historico.recarregar}
                 />
               )}
 

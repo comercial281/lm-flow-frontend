@@ -244,3 +244,45 @@ describe('Follow-up do card — acesso e lead sem referência', () => {
     expect(running).not.toHaveBeenCalled();
   });
 });
+
+describe('Follow-up do card — compacto', () => {
+  it('estado e botão na mesma linha, botão de contorno', async () => {
+    startable = [flow()];
+    const { container } = render(<FollowupTimeline contactId="c-1" compacto />);
+    const iniciar = await screen.findByRole('button', { name: /Iniciar follow-up/ });
+    const linha = screen.getByText('Sem follow-up').parentElement as HTMLElement;
+    expect(linha.contains(iniciar)).toBe(true);
+    expect(iniciar.className).not.toContain('bg-primary ');
+    expect(iniciar.className).toContain('border');
+    expect(container.querySelector('.rounded-full')).toBeNull();
+  });
+
+  it('rodando: a linha do fluxo e o Parar ficam juntos', async () => {
+    running.mockResolvedValue([instance()]);
+    render(<FollowupTimeline contactId="c-1" compacto />);
+    const parar = await screen.findByRole('button', { name: /Parar o follow-up/ });
+    const texto = screen.getByText(/aguardando resposta, sem limite/);
+    expect((texto.closest('[data-linha-followup]') as HTMLElement).contains(parar)).toBe(true);
+    expect(screen.queryByText('Rodando')).not.toBeInTheDocument();
+  });
+
+  it('rodando: a linha diz quantas mensagens o fluxo já mandou', async () => {
+    running.mockResolvedValue([instance({ progress_step: 2 })]);
+    render(<FollowupTimeline contactId="c-1" compacto />);
+    await screen.findByRole('button', { name: /Parar o follow-up/ });
+    expect(screen.getByText(/mensagem 2 enviada/)).toBeInTheDocument();
+  });
+
+  it('sem follow-up ligado, diz onde criar', async () => {
+    render(<FollowupTimeline contactId="c-1" compacto />);
+    expect(await screen.findByText(/Nenhum follow-up pra iniciar/)).toBeInTheDocument();
+    expect(screen.getByText(/Automações → Follow-up/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Iniciar follow-up/ })).not.toBeInTheDocument();
+  });
+
+  it('somente leitura sem follow-up: só "Sem follow-up", sem a orientação', async () => {
+    render(<FollowupTimeline contactId="c-1" compacto readOnly />);
+    expect(await screen.findByText('Sem follow-up')).toBeInTheDocument();
+    expect(screen.queryByText(/Nenhum follow-up pra iniciar/)).not.toBeInTheDocument();
+  });
+});

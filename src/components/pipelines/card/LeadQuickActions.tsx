@@ -2,27 +2,29 @@
 // e IA. A lógica da IA veio do antigo CardActionsPanel sem mudar de fonte: o
 // estado chega pronto no card (`item.sales_agent`) e o liga/desliga é o mesmo
 // endpoint da conversa.
-import { useCallback, useState, Suspense } from 'react';
+import { useCallback, useState } from 'react';
 import { Bot, BotOff, CalendarPlus, HelpCircle, Loader2, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { ESCOLHA } from '@/components/base/janela';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/ds';
 import { chatService } from '@/services/chat/chatService';
-import { conversationAPI } from '@/services/conversations/conversationService';
-import { lazyWithRetry } from '@/utils/chunkReload';
+import { useAgendarVisitaDoCard } from '@/features/cardDoLead/useAgendarVisitaDoCard';
 import { conversaDoCard, leadParaVisita } from '@/features/cardDoLead/cardDoLead';
 import type { PipelineItem } from '@/types/analytics';
 import type { SalesAgentCardState, SalesAgentLeadReport } from '@/types/analytics/pipelines';
 
-const ScheduleVisitDialog = lazyWithRetry(() =>
-  import('@/components/visits/ScheduleVisitDialog').then(m => ({ default: m.ScheduleVisitDialog })),
-);
-
-const VISIT_SCHEDULED_LABEL = 'visita-agendada';
 
 // Botão quadrado, ícone em cima e nome embaixo: é o que o corretor mais clica no
 // card, tem que ser alvo grande.
 const TILE =
   'flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border border-border bg-background ' +
+  'text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50 disabled:pointer-events-none';
+
+// Janela do card (versão A): fileira baixa, ícone e nome lado a lado. A página
+// do card segue com os tijolos acima.
+const FAIXA =
+  'flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-2 ' +
   'text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50 disabled:pointer-events-none';
 
 interface LeadQuickActionsProps {
@@ -32,11 +34,14 @@ interface LeadQuickActionsProps {
   onAbrirConversa: () => void;
   /** Visita criada: o card recarrega o histórico. */
   onVisitaCriada?: () => void;
+  /** Janela do card: fileira baixa de 3 botões (a página usa os tijolos). */
+  compacto?: boolean;
 }
 
-function rotuloDaIa(state: SalesAgentCardState | null): string {
+function rotuloDaIa(state: SalesAgentCardState | null, compacto = false): string {
   if (!state || state.status === 'none') return 'Sem IA';
-  return state.status === 'active' ? 'IA ligada' : 'IA desligada';
+  if (state.status === 'active') return 'IA ligada';
+  return compacto ? 'IA: ligar' : 'IA desligada';
 }
 
 function porQueDaIa(state: SalesAgentCardState | null, temConversa: boolean): string | null {
@@ -53,11 +58,11 @@ export default function LeadQuickActions({
   abrindoConversa,
   onAbrirConversa,
   onVisitaCriada,
+  compacto = false,
 }: LeadQuickActionsProps) {
   const convId = conversaDoCard(item);
   const lead = leadParaVisita(item, nomeExibido);
-
-  const [visitaAberta, setVisitaAberta] = useState(false);
+  const visita = useAgendarVisitaDoCard(item, nomeExibido, onVisitaCriada);
 
   const [aiState, setAiState] = useState<SalesAgentCardState | null>(item.sales_agent ?? null);
   const [trocandoIa, setTrocandoIa] = useState(false);
@@ -97,43 +102,52 @@ export default function LeadQuickActions({
 
   const motivo = porQueDaIa(aiState, Boolean(convId));
 
+  const base = compacto ? FAIXA : TILE;
+  const icone = compacto ? 'h-4 w-4 shrink-0' : 'h-6 w-6';
+  // Compacto: o botão da IA é de escolha (ligada = marcada); sem IA, apagado.
+  const classeDaIa = compacto
+    ? cn(base, ESCOLHA)
+    : `${base} ${iaLigada ? 'border-primary bg-primary/10 text-primary' : ''}`;
+
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-3 gap-2">
         <button
           type="button"
-          className={TILE}
+          className={base}
           disabled={!lead}
-          onClick={() => setVisitaAberta(true)}
+          aria-label="Agendar visita"
+          title={compacto ? 'Agendar visita' : undefined}
+          onClick={() => visita.abrir()}
         >
-          <CalendarPlus className="h-6 w-6" />
-          Agendar visita
+          <CalendarPlus className={icone} />
+          {compacto ? 'Visita' : 'Agendar visita'}
         </button>
         <button
           type="button"
-          className={`${TILE} text-emerald-700 dark:text-emerald-400`}
+          className={`${base} text-emerald-700 dark:text-emerald-400`}
           disabled={abrindoConversa}
           onClick={onAbrirConversa}
         >
-          {abrindoConversa ? <Loader2 className="h-6 w-6 animate-spin" /> : <MessageSquare className="h-6 w-6" />}
+          {abrindoConversa ? <Loader2 className={`${icone} animate-spin`} /> : <MessageSquare className={icone} />}
           Conversa
         </button>
         <button
           type="button"
-          className={`${TILE} ${iaLigada ? 'border-primary bg-primary/10 text-primary' : ''}`}
+          className={classeDaIa}
           disabled={trocandoIa || iaIndisponivel}
           title={motivo ?? (iaLigada ? 'Desligar a IA neste lead' : 'Ligar a IA neste lead')}
           aria-pressed={iaLigada}
           onClick={trocarIa}
         >
           {trocandoIa ? (
-            <Loader2 className="h-6 w-6 animate-spin" />
+            <Loader2 className={`${icone} animate-spin`} />
           ) : iaLigada ? (
-            <Bot className="h-6 w-6" />
+            <Bot className={icone} />
           ) : (
-            <BotOff className="h-6 w-6" />
+            <BotOff className={icone} />
           )}
-          {rotuloDaIa(aiState)}
+          {rotuloDaIa(aiState, compacto)}
         </button>
       </div>
 
@@ -174,24 +188,7 @@ export default function LeadQuickActions({
         </Popover>
       )}
 
-      {visitaAberta && (
-        <Suspense fallback={null}>
-          <ScheduleVisitDialog
-            open={visitaAberta}
-            onOpenChange={setVisitaAberta}
-            leadInicial={lead}
-            onCreated={v => {
-              setVisitaAberta(false);
-              // Visita registrada como realizada (dia que já passou) não está
-              // agendada: a etiqueta mentiria na conversa.
-              if (convId && v.status !== 'completed') {
-                conversationAPI.addLabels(convId, [VISIT_SCHEDULED_LABEL]).catch(() => {});
-              }
-              onVisitaCriada?.();
-            }}
-          />
-        </Suspense>
-      )}
+      {visita.janela}
     </div>
   );
 }

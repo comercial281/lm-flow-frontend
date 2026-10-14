@@ -1,32 +1,38 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
-import { Button, Input } from '@/components/ui/ds';
-import { Plus, Trash2, Loader2, Search, Home, X, ChevronDown } from 'lucide-react';
+import { Button, Input, Popover, PopoverContent, PopoverTrigger } from '@/components/ui/ds';
+import { Plus, Loader2, Search, Home, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   propertyInterestsService,
   type PropertyInterest,
-  INTEREST_STAGE_LABELS,
-  INTEREST_STAGE_COLORS,
 } from '@/services/propertyInterests/propertyInterestsService';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
 import type { PipelineItem } from '@/types/analytics';
-import { dinheiro } from '@/lib/formato';
-import { Seletor } from '@/components/base/Seletor';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { useAgendarVisitaDoCard } from '@/features/cardDoLead/useAgendarVisitaDoCard';
+import CartaoDoImovelDeInteresse from './card/CartaoDoImovelDeInteresse';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 
 interface CardPropertyInterestsProps {
   item: PipelineItem;
-  onValueChange?: (value: number, formatted: string) => void;
+  /** Nome do lead na janela de visita. Sem ele, usa o nome do contato do item. */
+  nomeExibido?: string;
+  /** Chamado quando uma visita é criada pelo cartão (o card recarrega o histórico). */
+  onVisitaCriada?: () => void;
+  /** Chamado quando a lista carrega ou muda (título da caixa mostra a contagem). */
+  aoContar?: (n: number) => void;
+  /** Janela do card: cartões compactos (a página do card usa os normais). */
+  compacto?: boolean;
 }
 
-function formatBRL(n?: number | null) {
-  return n ? dinheiro(n) : '';
-}
-
-export default function CardPropertyInterests({ item, onValueChange }: CardPropertyInterestsProps) {
+export default function CardPropertyInterests({ item, nomeExibido, onVisitaCriada, aoContar, compacto }: CardPropertyInterestsProps) {
   const contactId = item.contact?.id ?? (item.conversation as any)?.contact?.id;
+  const { can } = useUserPermissions();
+  const podeEditar = can('properties', 'update');
+  const nome = nomeExibido ?? item.contact?.name ?? (item.conversation as any)?.contact?.name ?? '';
+  const visita = useAgendarVisitaDoCard(item, nome, onVisitaCriada);
 
   const [interests, setInterests] = useState<PropertyInterest[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,6 +45,29 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
   const [searching, setSearching] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
+  const campoRef = useRef<HTMLDivElement>(null);
+  const resultadosRef = useRef<HTMLDivElement>(null);
+
+  const voltandoAoCampo = useRef(false);
+  // Foco devolvido ao campo (Esc / seta pra cima) não deve reabrir a lista.
+  const focarCampo = (semReabrir = false) => {
+    voltandoAoCampo.current = semReabrir;
+    campoRef.current?.querySelector('input')?.focus();
+    voltandoAoCampo.current = false;
+  };
+  const botoesDeResultado = () =>
+    Array.from(resultadosRef.current?.querySelectorAll<HTMLButtonElement>('button[data-resultado]:not(:disabled)') ?? []);
+  // Teclado: a lista está num portal, então o Tab não chega nela. Setas ligam campo e resultados.
+  const navegarNosResultados = (e: React.KeyboardEvent) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const botoes = botoesDeResultado();
+    if (botoes.length === 0) return;
+    e.preventDefault();
+    const atual = botoes.indexOf(document.activeElement as HTMLButtonElement);
+    if (e.key === 'ArrowDown') botoes[Math.min(atual + 1, botoes.length - 1)]?.focus();
+    else if (atual <= 0) focarCampo();
+    else botoes[atual - 1]?.focus();
+  };
 
   const load = useCallback(async () => {
     if (!contactId) return;
@@ -48,14 +77,7 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
       const list = res.data ?? [];
       setInterests(list);
 
-      // Notify parent with total value
-      const total = list.reduce((sum, i) => {
-        const price = i.property?.display_price ?? '';
-        // Try to extract numeric from display_price, fall back to 0
-        const num = parseFloat(price.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-        return sum + num;
-      }, 0);
-      onValueChange?.(total, formatBRL(total));
+      aoContar?.(list.length);
       setErro(false);
     } catch {
       setInterests([]);
@@ -63,7 +85,7 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
     } finally {
       setLoading(false);
     }
-  }, [contactId, onValueChange]);
+  }, [contactId, aoContar]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -102,7 +124,7 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
     }
   }, [contactId, load]);
 
-  const handleChangeStage = useCallback(async (interestId: string, stage: string) => {
+  const handleChangeStage = useCallback(async (interestId: string, stage: PropertyInterest['interest_stage']) => {
     try {
       await propertyInterestsService.update(interestId, { interest_stage: stage });
       await load();
@@ -124,14 +146,6 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
     }
   }, [load]);
 
-  // Compute total value from sale/rent prices fetched in interests
-  const totalValue = interests.reduce((sum, i) => {
-    if (!i.property) return sum;
-    // display_price is a formatted string — try to parse, or fall back 0
-    const raw = (i.property as any).sale_price ?? (i.property as any).rent_price ?? 0;
-    return sum + (typeof raw === 'number' ? raw : 0);
-  }, 0);
-
   if (!contactId) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
@@ -142,16 +156,24 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
   }
 
   return (
-    <div className="space-y-4">
+    <div className="@container grid gap-3">
       {/* Search */}
+      <Popover open={searchOpen && searchResults.length > 0} onOpenChange={aberto => { if (!aberto) setSearchOpen(false); }}>
       <div className="relative">
         <div className="flex gap-2">
-          <div className="relative flex-1">
+          {/* O gatilho só ancora a lista no campo: clicar nele não alterna, só abre. */}
+          <PopoverTrigger asChild>
+          <div
+            ref={campoRef}
+            className="relative flex-1"
+            onKeyDown={e => { if (e.key === 'ArrowDown') navegarNosResultados(e); }}
+            onClick={e => { e.preventDefault(); setSearchOpen(true); }}
+          >
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               value={searchQuery}
-              onChange={e => handleSearch(e.target.value)}
-              onFocus={() => { setSearchOpen(true); handleSearch(searchQuery); }}
+              onChange={e => { setSearchOpen(true); handleSearch(e.target.value); }}
+              onFocus={() => { if (voltandoAoCampo.current) return; setSearchOpen(true); handleSearch(searchQuery); }}
               placeholder="Buscar imóvel por código ou título..."
               className="pl-8 h-9 text-sm"
             />
@@ -159,6 +181,7 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
               <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
             )}
           </div>
+          </PopoverTrigger>
           {searchQuery && (
             <Button
               size="sm"
@@ -173,9 +196,32 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
           )}
         </div>
 
-        {/* Search dropdown */}
-        {searchOpen && searchResults.length > 0 && (
-          <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-border bg-background shadow-lg">
+        {/* Lista flutuante (portal): fica por cima, sem empurrar os cartões nem ser cortada pela caixa da janela */}
+        <PopoverContent
+          align="start"
+          sideOffset={4}
+          className="w-[var(--radix-popover-trigger-width)] min-w-64 p-0"
+          aria-label="Resultados da busca"
+          onKeyDown={e => { if (e.key === 'Escape') focarCampo(true); else navegarNosResultados(e); }}
+          onOpenAutoFocus={e => e.preventDefault()}
+          onCloseAutoFocus={e => e.preventDefault()}
+          data-testid="lista-de-busca-de-imoveis"
+        >
+          <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1">
+            <span className="text-xs text-muted-foreground">Resultados</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 px-2"
+              aria-label="Fechar a lista"
+              title="Fechar a lista"
+              onClick={() => setSearchOpen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          {/* onWheel stopPropagation + overscroll-contain: igual ao BlocoEtiquetas, senão a roda não rola a lista dentro da janela modal. */}
+          <div ref={resultadosRef} className="max-h-64 overflow-y-auto overscroll-contain" onWheel={e => e.stopPropagation()}>
             {searchResults.map(p => {
               const alreadyAdded = interests.some(i => i.property_id === p.id);
               return (
@@ -197,6 +243,8 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
                     size="sm"
                     variant={alreadyAdded ? 'ghost' : 'outline'}
                     className="text-xs shrink-0"
+                    data-resultado=""
+                    aria-label={alreadyAdded ? 'Imóvel já adicionado' : 'Adicionar imóvel'}
                     disabled={alreadyAdded || adding === p.id}
                     onClick={() => !alreadyAdded && handleAdd(p)}
                   >
@@ -206,16 +254,9 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
               );
             })}
           </div>
-        )}
+        </PopoverContent>
       </div>
-
-      {/* Total value */}
-      {interests.length > 0 && totalValue > 0 && (
-        <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 dark:border-green-900/30 dark:bg-green-900/10 px-3 py-2">
-          <span className="text-xs text-muted-foreground font-medium">Valor total do lead</span>
-          <span className="text-sm font-bold text-green-600 dark:text-green-400">{formatBRL(totalValue)}</span>
-        </div>
-      )}
+      </Popover>
 
       {/* List */}
       {loading ? (
@@ -223,65 +264,27 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
       ) : erro ? (
         <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} />
       ) : interests.length === 0 ? (
-        <EmptyState tamanho="compacto" title="Nenhum imóvel vinculado ainda." description="Use a busca acima para adicionar." />
+        <EmptyState tamanho="compacto" title="Nenhum imóvel vinculado ainda." description="Busque acima pelo código ou título." />
       ) : (
-        // Scroll só dentro da lista: com muitos imóveis o card não empurra
-        // o resto do Detalhes pra baixo (~3 imóveis visíveis por vez).
-        <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
-          {interests.map(interest => (
-            <div key={interest.id} className="flex items-start gap-3 rounded-lg border border-border p-3">
-              <Home className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {interest.property?.code && (
-                    <span className="text-[10px] font-mono text-muted-foreground">{interest.property.code}</span>
-                  )}
-                  <span className="text-sm font-medium truncate">{interest.property?.title ?? '—'}</span>
-                </div>
-                {(interest.property?.city || interest.property?.neighborhood) && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {[interest.property?.neighborhood, interest.property?.city].filter(Boolean).join(', ')}
-                  </p>
-                )}
-                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  {interest.property?.display_price && (
-                    <span className="text-xs font-semibold text-green-600 dark:text-green-400">
-                      {interest.property.display_price}
-                    </span>
-                  )}
-                  {/* Status do interesse — dropdown pra mudar direto (chevron
-                      explícito porque a seta nativa some no modo escuro). */}
-                  <div className="relative inline-flex items-center">
-                    <Seletor
-                      bare
-                      value={interest.interest_stage}
-                      onChange={e => handleChangeStage(interest.id, e.target.value)}
-                      className={`appearance-none cursor-pointer text-[10px] rounded-md border border-input pl-1.5 pr-5 py-0.5 font-medium ${INTEREST_STAGE_COLORS[interest.interest_stage] ?? ''}`}
-                      title="Status do interesse neste imóvel"
-                    >
-                      {Object.entries(INTEREST_STAGE_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </Seletor>
-                    <ChevronDown className="pointer-events-none absolute right-1 h-3 w-3 opacity-70" />
-                  </div>
-                </div>
-              </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="size-8 p-0 shrink-0 text-muted-foreground hover:text-destructive"
-                onClick={() => handleRemove(interest.id)}
-                disabled={removing === interest.id}
-                aria-label="Remover interesse"
-                title="Remover interesse"
-              >
-                {removing === interest.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-              </Button>
-            </div>
+        <div
+          data-testid="fileira-de-imoveis"
+          className="grid grid-flow-col auto-cols-[85%] @2xl:auto-cols-[calc((100%-1.5rem)/3)] gap-3 overflow-x-auto pb-1"
+        >
+          {interests.map(i => (
+            <CartaoDoImovelDeInteresse
+              key={i.id}
+              interesse={i}
+              podeEditar={podeEditar}
+              aoAgendarVisita={visita.abrir}
+              aoMudarSituacao={handleChangeStage}
+              aoRemover={handleRemove}
+              removendo={removing === i.id}
+              compacto={compacto}
+            />
           ))}
         </div>
       )}
+      {visita.janela}
     </div>
   );
 }

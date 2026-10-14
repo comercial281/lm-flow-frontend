@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+
+const podeLerCapi = vi.hoisted(() => ({ valor: true }));
+vi.mock('@/hooks/useCan', () => ({ useCan: () => (r: string, a: string) => (r === 'capi_configs' && a === 'read' ? podeLerCapi.valor : true) }));
 const toastInfo = vi.fn();
 const toastSuccess = vi.fn();
 vi.mock('sonner', () => ({
@@ -173,10 +177,25 @@ describe('CapiConversionPanel', () => {
     status.mockResolvedValue({ ...pronto, client_ready: false });
     const tela = simularCelular(false);
     try {
-      render(<CapiConversionPanel contactId="c1" />);
+      render(<MemoryRouter><CapiConversionPanel contactId="c1" /></MemoryRouter>);
       expect(await screen.findByText(/Pixel ou chave do cliente incompletos/)).toBeTruthy();
     } finally {
       tela.restaurar();
     }
+  });
+
+  it.each(['compacto', 'completo'] as const)('%s: aviso na caixa da casa, com link só pra quem lê a configuração', async variante => {
+    status.mockResolvedValue({ ...pronto, client_ready: false });
+    podeLerCapi.valor = true;
+    const { unmount } = render(<MemoryRouter><CapiConversionPanel contactId="c1" variante={variante} /></MemoryRouter>);
+    const texto = await screen.findByText(/Pixel ou chave do cliente incompletos/);
+    expect(texto.closest('[role="status"]')).not.toBeNull();
+    expect(screen.getByRole('link', { name: 'Configurar' })).toHaveAttribute('href', '/settings/pixel-capi');
+    unmount();
+    podeLerCapi.valor = false;
+    render(<MemoryRouter><CapiConversionPanel contactId="c1" variante={variante} /></MemoryRouter>);
+    expect(await screen.findByText(/Pixel ou chave do cliente incompletos/)).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Configurar' })).toBeNull();
+    podeLerCapi.valor = true;
   });
 });

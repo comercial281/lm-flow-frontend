@@ -1,19 +1,22 @@
 // src/features/cardDoLead/blocos/BlocoImoveisDeInteresse.tsx
-// Imóveis de interesse (rola por dentro, ~3 imóveis).
-import { Suspense } from 'react';
+// Imóveis de interesse: busca no topo e cartões numa fileira que rola pro lado.
+import { Suspense, useState } from 'react';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import type { PipelineItem } from '@/types/analytics';
-import CaixaDoCard from './CaixaDoCard';
+import { CaixaDaJanela } from '@/components/base/janela';
 import Carregando from '@/components/base/Carregando';
 
 const CardPropertyInterests = lazyWithRetry(() => import('@/components/pipelines/CardPropertyInterests'));
 
-export default function BlocoImoveisDeInteresse({ item }: { item: PipelineItem }) {
+export default function BlocoImoveisDeInteresse({
+  item, nomeExibido, onVisitaCriada, className, compacto,
+}: { item: PipelineItem; nomeExibido?: string; onVisitaCriada?: () => void; className?: string; compacto?: boolean }) {
+  const [total, setTotal] = useState<number | undefined>(undefined);
   return (
-    <CaixaDoCard titulo="Imóveis de interesse">
+    <CaixaDaJanela titulo="Imóveis de interesse" contagem={total} className={className}>
       <Suspense fallback={<Carregando linhas={2} />}>
-        <CardPropertyInterests item={item} />
+        <CardPropertyInterests item={item} nomeExibido={nomeExibido} onVisitaCriada={onVisitaCriada} aoContar={setTotal} compacto={compacto} />
       </Suspense>
-    </CaixaDoCard>
+    </CaixaDaJanela>
   );
 }

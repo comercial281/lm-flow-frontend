@@ -102,7 +102,7 @@ export default function FichaDoCard({
         </CaixaDoCard>
 
         <BlocoOQueAIAEntendeu item={item} />
-        {card.recursos.imoveis && <BlocoImoveisDeInteresse item={item} />}
+        {card.recursos.imoveis && <BlocoImoveisDeInteresse item={item} nomeExibido={card.nomeExibido} onVisitaCriada={card.historico.recarregar} />}
         <BlocoRespostasDoFormulario item={item} />
         {contato?.id != null && (
           <OutrasInformacoes

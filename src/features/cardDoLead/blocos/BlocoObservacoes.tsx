@@ -2,9 +2,21 @@
 // Observações: o comentário que o corretor escolheu deixar. Separado do
 // Histórico de propósito (decisão de 02/10).
 import { MessageSquare } from 'lucide-react';
+import { CaixaDaJanela } from '@/components/base/janela';
 import CardNotesTab from '@/components/pipelines/CardNotesTab';
 
-export default function BlocoObservacoes({ contactId }: { contactId: string | null }) {
+/**
+ * `comoCaixa`: caixa da janela (14 px dentro, altura dada pelo pai). O campo de
+ * escrever e as notas dividem estado no CardNotesTab, então ficam juntos no corpo.
+ */
+export default function BlocoObservacoes({ contactId, comoCaixa = false }: { contactId: string | null; comoCaixa?: boolean }) {
+  if (comoCaixa) {
+    return (
+      <CaixaDaJanela titulo="Observações" corpoClassName="flex flex-col overflow-hidden">
+        <CardNotesTab contactId={contactId} compacto />
+      </CaixaDaJanela>
+    );
+  }
   return (
     <div className="flex flex-col min-h-0 flex-1 rounded-xl border border-border p-4">
       <h4 className="text-sm font-semibold flex items-center gap-2 mb-3 shrink-0">

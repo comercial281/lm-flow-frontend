@@ -64,6 +64,11 @@ export interface HistoricoDoLeadProps {
   versao?: string | number;
   /** Só no completo: caixa de escrever e filtro Observações (chave `card_notes` do cliente). */
   comObservacoes?: boolean;
+  /** Dentro de uma caixa que já tem o título "Histórico" (janela do card): sem linha de cabeçalho própria
+   *  (o ↻ sobe pro cabeçalho da caixa, via `aoCarregando` + `versao`) e filtros compactos numa linha só. */
+  semTitulo?: boolean;
+  /** Avisa quando começa/termina uma carga (o ↻ do cabeçalho da caixa gira e desliga). */
+  aoCarregando?: (carregando: boolean) => void;
 }
 
 type Estado = 'carregando' | 'pronto' | 'erro';
@@ -78,6 +83,8 @@ export default function HistoricoDoLead({
   funilAtual = null,
   versao = 0,
   comObservacoes = true,
+  semTitulo = false,
+  aoCarregando,
 }: HistoricoDoLeadProps) {
   const completo = modo === 'completo';
   const escreve = completo && comObservacoes;
@@ -91,6 +98,9 @@ export default function HistoricoDoLead({
   const [falhouMais, setFalhouMais] = useState(false);
   const [texto, setTexto] = useState('');
   const [postando, setPostando] = useState(false);
+  useEffect(() => {
+    aoCarregando?.(estado === 'carregando');
+  }, [estado, aoCarregando]);
   // Resposta velha (trocou de filtro no meio) não pinta por cima da nova.
   const pedido = useRef(0);
   const pulos = useRef(0);
@@ -179,27 +189,30 @@ export default function HistoricoDoLead({
 
   return (
     <section aria-label="Histórico do lead" className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex shrink-0 items-center justify-between">
-        <h4 className="flex items-center gap-2 text-sm font-semibold">
-          <History className="h-4 w-4 text-muted-foreground" aria-hidden />
-          Histórico
-        </h4>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="px-2"
-          onClick={() => void carregar()}
-          disabled={estado === 'carregando'}
-          aria-label="Atualizar histórico"
-          title="Atualizar histórico"
-        >
-          <RefreshCw className={cn('h-3.5 w-3.5', estado === 'carregando' && 'animate-spin')} />
-        </Button>
-      </div>
+      {!semTitulo && (
+        <div className="flex shrink-0 items-center justify-between">
+          <h4 className="flex items-center gap-2 text-sm font-semibold">
+            <History className="h-4 w-4 text-muted-foreground" aria-hidden />
+            Histórico
+          </h4>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="px-2"
+            onClick={() => void carregar()}
+            disabled={estado === 'carregando'}
+            aria-label="Atualizar histórico"
+            title="Atualizar histórico"
+          >
+            <RefreshCw className={cn('h-3.5 w-3.5', estado === 'carregando' && 'animate-spin')} />
+          </Button>
+        </div>
+      )}
 
       <div className="shrink-0">
         <EtiquetasDeEscolha
           rotulo="Filtrar o histórico"
+          compacta={semTitulo}
           opcoes={filtros}
           escolhidas={[categoria]}
           aoMudar={escolhidas =>
