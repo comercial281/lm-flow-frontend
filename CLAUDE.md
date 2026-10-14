@@ -8749,3 +8749,27 @@ A hierarquia de dentro da janela agora está escrita no GLOSSARIO (item 23) e te
 - Não muda tela nenhuma neste passo.
 
 Não reabrir sem o dono pedir.
+
+## Leva 1 das janelas: as 9 confusas (14/10/2026)
+
+As nove janelas mais confusas passaram a usar as peças do miolo (`GrupoDaJanela`, `CampoDaJanela`, `GradeDaJanela`, `ESCOLHA`, `Aviso`), com texto em português, maiúscula só na primeira letra e seletores com largura total.
+
+- **Agendar tarefa:** grupos Sobre quem, O quê, Quando e Quem faz. O lead só é buscado quando a pessoa digita. Agenda vazia fica compacta.
+- **Agendar visita:** corretor numa lista de escolha, escolhas sem roxo cheio, Resumo em caixa. Volta a checagem de corretor desmarcado.
+- **Folgas:** mesma lista de escolha de corretor, escolhas sem roxo cheio e Resumo em caixa.
+- **Nova ação agendada (Agendar mensagem):** textos em português, campos na grade, e o aviso separa "cargo sem permissão" de "sem número".
+- **Adicionar lead ao funil:** grupos Etapa e Lead, modo em botões de escolha e lista de leads com seleção acessível.
+- **Descrições em lote:** vira `JanelaDescricoesEmLote` (mesmo comportamento), com aviso de que a descrição antiga é trocada, caixinhas da casa e selo cinza "já tem descrição".
+- **Editar funil:** campos da aba Detalhes na grade, "Funil ativo" vira Checkbox da casa, o texto âmbar da aba Entrada de leads vira `Aviso`.
+- **Campo personalizado:** títulos "Novo/Editar campo personalizado", "Chave do atributo" vira "Código interno" (com ajuda curta), "Validação com Regex" vira "Validar o formato (avançado)". Campos na grade e gatilho dos seletores mostrando só o nome do item.
+- **Nova lista no Bolsão:** a largura acompanha o passo e o rodapé sempre tem Cancelar.
+
+**Consertos de defeito (únicos comportamentos que mudaram):**
+- Editar funil: o campo Tipo de funil abria vazio nos funis de imóvel. Agora tem Venda e Locação; Implantação só aparece se o funil já for desse tipo; salvar sem mexer mantém o tipo.
+- Campo personalizado: o código interno tira acentos ("Média" vira `media`), não muda ao editar o nome de um campo existente e para de ser sobrescrito depois de editado à mão.
+- Agendar mensagem: o aviso de cargo sem permissão deixou de ser confundido com falta de número.
+- Bolsão: a janela não fecha durante a importação, e a importação concluída fecha sem passar pela trava de "importando".
+
+**Tetos novos (só descem):** `escolhaRoxaCheia` 51 para 41, `avisoSoltoNaJanela` 13 para 12, `maiusculas` 964 para 955. As levas seguintes baixam até 0.
+
+Não reabrir sem o dono pedir.
