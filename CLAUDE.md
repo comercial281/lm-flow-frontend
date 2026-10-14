@@ -8773,3 +8773,26 @@ As nove janelas mais confusas passaram a usar as peças do miolo (`GrupoDaJanela
 **Tetos novos (só descem):** `escolhaRoxaCheia` 51 para 41, `avisoSoltoNaJanela` 13 para 12, `maiusculas` 964 para 955. As levas seguintes baixam até 0.
 
 Não reabrir sem o dono pedir.
+
+## Leva 2 das janelas: as medianas (14/10/2026)
+
+As janelas medianas passaram para as peças do miolo (grupos, grade, `Aviso`, `ESCOLHA`), com texto em português e maiúscula só na primeira letra.
+
+- **Ativar IA:** aviso único e campos no padrão do miolo.
+- **Atribuir:** a frase agora cita o lead (antes não dizia a quem se referia: era defeito). Lista sem borda por pessoa.
+- **Editar e Novo contato:** modelo de mensagem em caixinha e textos da casa.
+- **Iniciar conversa:** textos da casa e aviso único.
+- **Exportar contatos:** mesmo padrão do miolo.
+- **Filtros de Conversas e de Contatos:** título único pelo `TituloDoFiltro`.
+- **Criar funil:** campos em grupos e grade 2+2, listas de escolha na largura toda.
+- **Duplicar funil:** um aviso só.
+- **Editar etapa:** Cor e Tipo lado a lado.
+- **Importar imóveis:** título vira "Importar imóveis com IA".
+- **Novo proprietário:** grade de 4 colunas e aviso compacto de telefone repetido.
+- **Adicionar pessoa:** rótulos no tamanho padrão ligados aos campos, rodapé com os botões juntos à direita.
+- **Nova etiqueta:** sai o código da cor; ficam as 12 cores com nome e "Outra cor".
+- **Datas por extenso:** `capitalizar()` em `formato.ts`, usado no calendário e na lista de Visitas; saem os `capitalize` de CSS que punham maiúscula em toda palavra.
+
+**Tetos novos (só descem):** `maiusculas` 955 para 923 e `escolhaRoxaCheia` 41 para 40. `avisoSoltoNaJanela` segue em 12.
+
+Não reabrir sem o dono pedir.
