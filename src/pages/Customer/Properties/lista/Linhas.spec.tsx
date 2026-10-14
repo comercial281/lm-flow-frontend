@@ -113,6 +113,38 @@ describe('detalhes da lista', () => {
     expect(screen.queryByText('Ver página no site')).toBeNull();
   });
 
+  it('Mudar situação some quando a situação vem do site; aparece nos outros', async () => {
+    const doSite = { ...base, feed: { source_id: 's', external_url: null, locked_fields: ['title', 'status'] } } as Property;
+    const { unmount } = render(<MenuDoImovel p={doSite} acoes={acoes} permissoes={pode} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Ações do AP0461' }));
+    expect(await screen.findByText('Fotos e vídeos')).toBeInTheDocument();
+    expect(screen.queryByText('Mudar situação…')).toBeNull();
+    unmount();
+    // Fonte desligada (lista vazia) ou situação fora da lista: o item volta.
+    const fonteDesligada = { ...base, feed: { source_id: 's', external_url: null, locked_fields: [] } } as Property;
+    const { unmount: fechar } = render(<MenuDoImovel p={fonteDesligada} acoes={acoes} permissoes={pode} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Ações do AP0461' }));
+    expect(await screen.findByText('Mudar situação…')).toBeInTheDocument();
+    fechar();
+    render(<MenuDoImovel p={base} acoes={acoes} permissoes={pode} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Ações do AP0461' }));
+    expect(await screen.findByText('Mudar situação…')).toBeInTheDocument();
+  });
+
+  it('Mover para… lista os outros dois tipos', async () => {
+    const { unmount } = render(<MenuDoImovel p={base} acoes={acoes} permissoes={pode} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Ações do AP0461' }));
+    expect(await screen.findByText('Mover para Empreendimentos')).toBeInTheDocument();
+    expect(screen.getByText('Mover para Leilão')).toBeInTheDocument();
+    expect(screen.queryByText('Mover para Revenda')).toBeNull();
+    unmount();
+    render(<MenuDoImovel p={{ ...base, listing_kind: 'auction' } as Property} acoes={acoes} permissoes={pode} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Ações do AP0461' }));
+    expect(await screen.findByText('Mover para Empreendimentos')).toBeInTheDocument();
+    expect(screen.getByText('Mover para Revenda')).toBeInTheDocument();
+    expect(screen.queryByText('Mover para Leilão')).toBeNull();
+  });
+
   it('setinha ao lado do nome abre o site, só para quem está no site', () => {
     const site = vi.fn();
     const { unmount } = render(<LinhaRevenda p={{ ...base, published_on_site: true }} acoes={{ ...acoes, site }} permissoes={pode} />);

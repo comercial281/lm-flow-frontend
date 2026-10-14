@@ -21,7 +21,7 @@ import { plural } from '@/lib/formato';
 import { ABA_NA_URL, tipoDoImovel, type ListingKind } from '@/features/properties/listingKind';
 import { linkDasFotos } from '@/features/properties/fotos/regrasDasFotos';
 import { formularioNovo } from '@/features/properties/formularioPorTipo';
-import { AVISO_DO_SITE, secaoTravada } from '@/features/properties/cadastro/travasDoSite';
+import { AVISO_DO_SITE, CamposTravadosContext, campoTravado } from '@/features/properties/cadastro/travasDoSite';
 import { cleanTypologies } from '@/features/properties/typologies';
 import { secoesDoCadastro, tipoDaUrl, type SecaoId } from '@/features/properties/cadastro/secoesDoCadastro';
 import {
@@ -66,6 +66,9 @@ function mensagemDoErro(e: unknown, reserva: string): string {
 // rolagem suave anda. Passado esse tempo, a primeira mudança de seção visível
 // (a pessoa rolou) devolve o índice ao acompanhamento da rolagem.
 const ESPERA_DA_ROLAGEM_MS = 800;
+
+// Lista estável para o contexto (imóvel que não vem do site, ou fonte desligada).
+const SEM_TRAVAS: readonly string[] = [];
 
 const rolarAte = (secao: SecaoId) =>
   document.getElementById(`secao-${secao}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -116,6 +119,9 @@ function Cadastro() {
   const [gerandoDescricao, setGerandoDescricao] = useState(false);
 
   const pronto = !editandoId || !!imovel;
+  // Imóvel do site com a fonte ligada: o que vem de lá fica travado, campo por campo.
+  // Fonte desligada = lista vazia = tudo livre (o selo "Vem do site" da lista continua).
+  const travados = imovel?.feed?.locked_fields ?? SEM_TRAVAS;
   const secoes = secoesDoCadastro(kind, { editando: !!editandoId });
   const [secaoComErro, setSecaoComErro] = useState<SecaoId | null>(null);
   const visivel = useSecaoVisivel(pronto ? secoes.map(s => s.id) : []);
@@ -170,7 +176,7 @@ function Cadastro() {
 
   const criar = async (rascunho: boolean) => {
     // Rascunho só exige o título: o servidor aceita rascunho sem preço.
-    const erros = errosDoCadastro(form).filter(e => !rascunho || e.secao === 'basico');
+    const erros = errosDoCadastro(form, travados).filter(e => !rascunho || e.secao === 'basico');
     if (erros.length) { irParaErro(erros[0]); return; }
     setSalvando(true);
     try {
@@ -213,7 +219,7 @@ function Cadastro() {
 
   const salvar = async () => {
     if (!imovel) return;
-    const erros = errosDoCadastro(form);
+    const erros = errosDoCadastro(form, travados);
     if (erros.length) { irParaErro(erros[0]); return; }
     setSalvando(true);
     try {
@@ -247,8 +253,8 @@ function Cadastro() {
       const result = await propertiesService.generateDescriptionPreview(form, { text: texto.trim() || undefined });
       setForm(prev => ({
         ...prev,
-        description: result.description,
-        title: (!prev.title && result.headline) ? result.headline : prev.title,
+        description: campoTravado('description', travados) ? prev.description : result.description,
+        title: (!prev.title && result.headline && !campoTravado('title', travados)) ? result.headline : prev.title,
       }));
       toast.success('Descrição gerada com IA');
     } catch {
@@ -260,7 +266,6 @@ function Cadastro() {
 
   if (recusado || (!editandoId && !podeCriar)) return <NoAccessState />;
 
-  const travados = imovel?.feed?.locked_fields ?? [];
   const props = { form, setF, editando: imovel };
   const conteudoDa = (secao: SecaoId): ReactNode => {
     switch (secao) {
@@ -317,6 +322,7 @@ function Cadastro() {
             <OndeDivulgar imovel={imovel} modo="passo" aoMudarImovel={aoMudarImovelDivulgado} />
           </div>
         ) : (
+          <CamposTravadosContext.Provider value={travados}>
           <div className="max-w-6xl">
             <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8">
               <IndiceDoCadastro
@@ -325,24 +331,23 @@ function Cadastro() {
                 aoEscolher={secao => { setSecaoComErro(null); rolarAte(secao); }}
               />
               <div className="mt-4 space-y-4 lg:mt-0">
-                {imovel?.feed && (
+                {travados.length > 0 && (
                   <Aviso tom="info">
                     {AVISO_DO_SITE}
-                    {imovel.feed.external_url && <> <a href={imovel.feed.external_url} target="_blank" rel="noreferrer" className="text-primary underline">Ver no site</a></>}
+                    {imovel?.feed?.external_url && <> <a href={imovel.feed.external_url} target="_blank" rel="noreferrer" className="text-primary underline">Ver no site</a></>}
                   </Aviso>
                 )}
                 {!editandoId && <PreencherPorTexto form={form} setF={setF} texto={texto} aoMudarTexto={setTexto} temBook={!!book} aoEscolherBook={setBook} />}
                 {secoes.map(s => (
                   <Card role="region" key={s.id} id={`secao-${s.id}`} aria-labelledby={`titulo-${s.id}`} className="scroll-mt-24 gap-0 p-5">
                     <h2 id={`titulo-${s.id}`} className="text-base font-semibold">{s.titulo}</h2>
-                    <fieldset disabled={secaoTravada(s.id, travados)} className={`min-w-0 border-0 p-0 m-0 ${secaoTravada(s.id, travados) ? 'opacity-70' : ''}`}>
-                      {conteudoDa(s.id)}
-                    </fieldset>
+                    {conteudoDa(s.id)}
                   </Card>
                 ))}
               </div>
             </div>
           </div>
+          </CamposTravadosContext.Provider>
         )}
       </Pagina>
       </div>

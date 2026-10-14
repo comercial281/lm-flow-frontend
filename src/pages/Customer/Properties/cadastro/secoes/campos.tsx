@@ -2,19 +2,22 @@
 import { useId } from 'react';
 import { Input, Label as UILabel } from '@/components/ui/ds';
 import { numero } from '@/lib/formato';
+import { dicaSe } from '@/features/properties/cadastro/travasDoSite';
 
 interface OpcaoDePilula<V extends string> { valor: V; rotulo: string }
 
-/** Escolha única em pílulas (radiogroup). `valor` fora das opções = nenhuma marcada. */
-export function Pilulas<V extends string>({ rotulo, valor, opcoes, aoMudar }: {
+/** Escolha única em pílulas (radiogroup). `valor` fora das opções = nenhuma marcada.
+ *  `desabilitado`: campo que vem do site (travado). */
+export function Pilulas<V extends string>({ rotulo, valor, opcoes, aoMudar, desabilitado = false }: {
   rotulo: string;
   valor: V | null | undefined;
   opcoes: OpcaoDePilula<V>[];
   aoMudar: (v: V) => void;
+  desabilitado?: boolean;
 }) {
   const idDoRotulo = useId();
   return (
-    <div>
+    <div title={dicaSe(desabilitado)}>
       <p id={idDoRotulo} className="mb-1 block text-sm font-medium">{rotulo}</p>
       <div role="radiogroup" aria-label={rotulo} className="flex flex-wrap gap-2">
         {opcoes.map(o => {
@@ -25,8 +28,9 @@ export function Pilulas<V extends string>({ rotulo, valor, opcoes, aoMudar }: {
               type="button"
               role="radio"
               aria-checked={on}
+              disabled={desabilitado}
               onClick={() => aoMudar(o.valor)}
-              className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${on ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border text-muted-foreground hover:bg-muted'}`}
+              className={`rounded-full border px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${on ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border text-muted-foreground hover:bg-muted'}`}
             >
               {o.rotulo}
             </button>
@@ -45,10 +49,11 @@ const OPCOES_SIM_NAO: OpcaoDePilula<SimNaoNulo>[] = [
 ];
 
 /** Sim · Não · Não informado. Grava `true`, `false` ou `null`. */
-export function CampoSimNao({ rotulo, valor, aoMudar }: {
+export function CampoSimNao({ rotulo, valor, aoMudar, desabilitado = false }: {
   rotulo: string;
   valor: boolean | null | undefined;
   aoMudar: (v: boolean | null) => void;
+  desabilitado?: boolean;
 }) {
   const atual: SimNaoNulo = valor === true ? 'sim' : valor === false ? 'nao' : 'nulo';
   return (
@@ -56,6 +61,7 @@ export function CampoSimNao({ rotulo, valor, aoMudar }: {
       rotulo={rotulo}
       valor={atual}
       opcoes={OPCOES_SIM_NAO}
+      desabilitado={desabilitado}
       aoMudar={v => aoMudar(v === 'sim' ? true : v === 'nao' ? false : null)}
     />
   );
@@ -103,7 +109,7 @@ export function CampoTexto({ rotulo, valor, aoMudar, placeholder, type = 'text',
 }) {
   const id = useId();
   return (
-    <div>
+    <div title={dicaSe(desabilitado)}>
       <UILabel htmlFor={id}>{rotulo}</UILabel>
       {multilinha ? (
         <textarea

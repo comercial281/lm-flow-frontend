@@ -380,7 +380,7 @@ describe('CadastroDoImovel: índice e erros', () => {
     expect(await screen.findByRole('heading', { name: 'Editar imóvel' })).toBeInTheDocument();
   });
 
-  it('imóvel do site: avisa, linka o site, trava as seções do site e deixa a Equipe livre', async () => {
+  it('imóvel do site: avisa, linka o site, trava só os campos do site e deixa Equipe e Comissão livres', async () => {
     svc.get.mockResolvedValue({ id: 'f1', code: 'AP9', title: 'Apê do site', transaction_type: 'sale', category_type: 'residential',
       property_type: 'apartment', status: 'active', stage: 'ready', listing_kind: 'resale', sale_price: 1, created_at: '', updated_at: '',
       feed: { source_id: 's1', external_url: 'https://exemplo.com.br/imovel/1', locked_fields: ['title', 'description', 'sale_price'] } });
@@ -391,10 +391,37 @@ describe('CadastroDoImovel: índice e erros', () => {
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noreferrer');
     expect(screen.getByLabelText(/^Título/)).toBeDisabled();
+    expect(screen.getByRole('textbox', { name: 'Descrição' })).toBeDisabled();
+    expect(screen.getByLabelText(/Valor de venda/)).toBeDisabled();
+    // Mesma seção, campo que o site não manda: livre.
+    expect(screen.getByLabelText('Condomínio (R$/mês)')).toBeEnabled();
+    expect(screen.getByLabelText('Bairro')).toBeEnabled();
+    expect(screen.getByLabelText('Quartos')).toBeEnabled();
     const equipe = screen.getByRole('region', { name: 'Equipe' });
-    expect(equipe.querySelector('fieldset')).toBeEnabled();
-    expect(screen.getByRole('region', { name: 'Descrição' }).querySelector('fieldset')).toBeDisabled();
-    expect(screen.getByRole('region', { name: 'Valores' }).querySelector('fieldset')).toBeDisabled();
     expect(within(equipe).getAllByRole('combobox')[0]).toBeEnabled();
+    expect(within(screen.getByRole('region', { name: 'Comissão' })).getByLabelText('Percentual')).toBeEnabled();
+    expect(screen.getByRole('region', { name: 'Valores' }).querySelector('fieldset')).toBeNull();
+  });
+
+  it('imóvel do site com o título travado e vazio: o salvar não barra no título', async () => {
+    svc.get.mockResolvedValue({ id: 'f3', code: 'AP8', title: '', transaction_type: 'sale', category_type: 'residential',
+      property_type: 'apartment', status: 'active', stage: 'ready', listing_kind: 'resale', sale_price: 1, created_at: '', updated_at: '',
+      feed: { source_id: 's1', external_url: null, locked_fields: ['title'] } });
+    svc.update.mockResolvedValue({ id: 'f3' });
+    abrir('/properties/f3/editar');
+    await screen.findByText(/vem do site da imobiliária/);
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(svc.update).toHaveBeenCalled());
+    expect(toast.error).not.toHaveBeenCalledWith('Título é obrigatório');
+  });
+
+  it('imóvel do site com a fonte desligada: sem aviso de trava e tudo livre', async () => {
+    svc.get.mockResolvedValue({ id: 'f2', code: 'AP7', title: 'Apê do site', transaction_type: 'sale', category_type: 'residential',
+      property_type: 'apartment', status: 'active', stage: 'ready', listing_kind: 'resale', sale_price: 1, created_at: '', updated_at: '',
+      feed: { source_id: 's1', external_url: 'https://exemplo.com.br/imovel/1', locked_fields: [] } });
+    abrir('/properties/f2/editar');
+    expect(await screen.findByLabelText(/^Título/)).toBeEnabled();
+    expect(screen.queryByText(/vem do site da imobiliária/)).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Descrição' })).toBeEnabled();
   });
 });

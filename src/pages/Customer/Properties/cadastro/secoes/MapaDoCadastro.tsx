@@ -37,6 +37,8 @@ interface Props {
   lng: number | null;
   zoom: number;
   aoArrastar: (lat: number, lng: number) => void;
+  /** O ponto vem do site da imobiliária: o alfinete não arrasta. */
+  travado?: boolean;
 }
 
 // Recentraliza quando o ponto (ou o zoom) muda por fora — busca pelo endereço,
@@ -56,7 +58,7 @@ function Recentralizar({ centro, zoom, arrastado }: {
 
 // Sem ponto (lat/lng nulos): o mapa abre no Brasil, sem alfinete — um arraste sem
 // querer, nesse zoom, gravaria um ponto qualquer.
-export default function MapaDoCadastro({ lat, lng, zoom, aoArrastar }: Props) {
+export default function MapaDoCadastro({ lat, lng, zoom, aoArrastar, travado = false }: Props) {
   const temPonto = lat != null && lng != null;
   const centro = useMemo<[number, number]>(
     () => (lat != null && lng != null ? [lat, lng] : CENTRO_DO_BRASIL), [lat, lng],
@@ -81,7 +83,7 @@ export default function MapaDoCadastro({ lat, lng, zoom, aoArrastar }: Props) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <Recentralizar centro={centro} zoom={zoom} arrastado={arrastado} />
-        {temPonto && <Marker position={centro} icon={alfinete} draggable eventHandlers={eventos} />}
+        {temPonto && <Marker position={centro} icon={alfinete} draggable={!travado} eventHandlers={eventos} />}
       </MapContainer>
     </div>
   );

@@ -1,28 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { secaoTravada } from './travasDoSite';
+import { campoTravado, dicaSe, DICA_DO_CAMPO } from './travasDoSite';
 
-const VRSYNC = ['title', 'description', 'sale_price', 'address_city', 'bedrooms', 'features', 'status', 'property_type', 'transaction_type'];
+const LISTA_COMBINADA = ['title', 'description', 'sale_price', 'address_neighborhood', 'address_city', 'bedrooms', 'occupancy', 'accepts_financing'];
 
-describe('seções travadas pelo site', () => {
-  it('trava as seções com campo do site; deixa equipe, comissão e dados internos livres', () => {
-    expect(secaoTravada('basico', VRSYNC)).toBe(true);
-    expect(secaoTravada('valores', VRSYNC)).toBe(true);
-    expect(secaoTravada('localizacao', VRSYNC)).toBe(true);
-    expect(secaoTravada('composicao', VRSYNC)).toBe(true);
-    expect(secaoTravada('caracteristicas', VRSYNC)).toBe(true);
-    expect(secaoTravada('descricao', VRSYNC)).toBe(true);
-    expect(secaoTravada('equipe', VRSYNC)).toBe(false);
-    expect(secaoTravada('comissao', VRSYNC)).toBe(false);
-    expect(secaoTravada('dadosInternos', VRSYNC)).toBe(false);
-    expect(secaoTravada('tipologias', VRSYNC)).toBe(false);
+describe('campos travados pelo site (campo por campo)', () => {
+  it('trava só o que está na lista; o resto da mesma seção fica livre', () => {
+    expect(campoTravado('address_neighborhood', LISTA_COMBINADA)).toBe(true);
+    expect(campoTravado('bedrooms', LISTA_COMBINADA)).toBe(true);
+    expect(campoTravado('address_street', LISTA_COMBINADA)).toBe(false);
+    expect(campoTravado('bathrooms', LISTA_COMBINADA)).toBe(false);
+    expect(campoTravado('condo_fee', LISTA_COMBINADA)).toBe(false);
+  });
+  it('o CEP do formulário (address_zip) segue o nome do servidor (address_cep)', () => {
+    expect(campoTravado('address_zip', ['address_cep'])).toBe(true);
+    expect(campoTravado('address_zip', LISTA_COMBINADA)).toBe(false);
   });
   it('sem campos travados (fonte desligada), nada trava', () => {
-    expect(secaoTravada('basico', [])).toBe(false);
+    expect(campoTravado('title', [])).toBe(false);
   });
-  it('Fotos e vídeos nunca trava a seção (só o link do vídeo); financiamento trava Detalhes da venda', () => {
-    expect(secaoTravada('midia', ['video_url'])).toBe(false);
-    expect(secaoTravada('localizacao', ['address_zip'])).toBe(true);
-    expect(secaoTravada('detalhesVenda', ['accepts_financing'])).toBe(true);
-    expect(secaoTravada('midia', ['title'])).toBe(false);
+  it('dica só no campo travado', () => {
+    expect(dicaSe(true)).toBe(DICA_DO_CAMPO);
+    expect(dicaSe(false)).toBeUndefined();
   });
 });

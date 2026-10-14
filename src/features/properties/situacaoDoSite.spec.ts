@@ -14,11 +14,15 @@ describe('situacaoDoSite', () => {
   });
   it('arquivo com problema: laranja, com o motivo', () => {
     expect(situacaoDoSite({ ...base, state: 'problem', last_error: 'O arquivo veio vazio.' }, agora))
-      .toEqual({ chave: 'problem', rotulo: 'Arquivo com problema', selo: 'warning', detalhe: 'O arquivo veio vazio. Nenhum imóvel foi inativado.' });
+      .toEqual({ chave: 'problem', rotulo: 'Arquivo com problema', selo: 'warning', detalhe: 'O arquivo veio vazio. Nenhum imóvel foi inativado. Assim que o arquivo voltar ao normal, a leitura segue sozinha.' });
   });
   it('parou de ler: vermelho, com o motivo', () => {
     expect(situacaoDoSite({ ...base, state: 'stopped', last_error: 'o site demorou demais pra responder' }, agora))
       .toMatchObject({ rotulo: 'Parou de ler', selo: 'error', detalhe: 'Motivo: o site demorou demais pra responder' });
+  });
+  it('parou de ler: diz há quanto tempo foi a última leitura boa', () => {
+    expect(situacaoDoSite({ ...base, state: 'stopped', last_error: 'o site não respondeu', last_success_at: '2026-10-12T15:00:00-03:00' }, agora).detalhe)
+      .toBe('Motivo: o site não respondeu · última leitura boa há 2 dias');
   });
   it('desligado e não configurado', () => {
     expect(situacaoDoSite({ ...base, state: 'off', enabled: false }, agora)).toMatchObject({ rotulo: 'Desligado', selo: 'inactive' });

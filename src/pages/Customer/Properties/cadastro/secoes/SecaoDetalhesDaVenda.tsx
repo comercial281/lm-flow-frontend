@@ -1,6 +1,7 @@
 import { Label as UILabel } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import type { PadraoDoImovel } from '@/services/properties/propertiesService';
+import { useCampoTravado } from '@/features/properties/cadastro/travasDoSite';
 import { CampoSimNao } from './campos';
 import { CLASSE_SELETOR, type PropsDaSecao } from './tipos';
 
@@ -14,9 +15,11 @@ const PADROES: { valor: PadraoDoImovel; rotulo: string }[] = [
 // Os dois tipos. Destaque, Publicar no site e IA moram em "Onde divulgar".
 export default function SecaoDetalhesDaVenda({ form: f, setF }: PropsDaSecao) {
   const revenda = (f.listing_kind ?? 'resale') === 'resale';
+  // Do site só vem o financiamento (Leilão); FGTS, MCMV, padrão e exclusividade seguem livres.
+  const financiamentoTravado = useCampoTravado('accepts_financing');
   return (
     <div className="mt-4 space-y-4">
-      <CampoSimNao rotulo="Aceita financiamento" valor={f.accepts_financing} aoMudar={v => setF({ accepts_financing: v })} />
+      <CampoSimNao rotulo="Aceita financiamento" valor={f.accepts_financing} desabilitado={financiamentoTravado} aoMudar={v => setF({ accepts_financing: v })} />
       <CampoSimNao rotulo="Aceita FGTS" valor={f.accepts_fgts} aoMudar={v => setF({ accepts_fgts: v })} />
       <CampoSimNao rotulo="Minha Casa Minha Vida" valor={f.mcmv} aoMudar={v => setF({ mcmv: v })} />
       <div className="max-w-xs">

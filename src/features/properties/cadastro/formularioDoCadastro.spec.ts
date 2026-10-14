@@ -17,6 +17,11 @@ describe('formularioDoCadastro', () => {
     expect(errosDoCadastro({ ...base, ...formularioNovo('development'), typologies: [{ sale_price: 500000 }] } as never)
       .map(e => e.secao)).toEqual(['tipologias']);
   });
+  it('campo que vem do site (travado) não barra o salvar: título e valor de venda', () => {
+    expect(errosDoCadastro({ ...base, title: '', sale_price: null } as never, ['title', 'sale_price'])).toEqual([]);
+    // Só o título travado: o valor de venda ainda é pedido.
+    expect(errosDoCadastro({ ...base, title: '', sale_price: null } as never, ['title']).map(e => e.secao)).toEqual(['valores']);
+  });
   it('responsável obrigatório quando o lead vai pro responsável', () => {
     expect(errosDoCadastro({ ...base, sale_price: 1, lead_goes_to_responsible: true }).map(e => e.secao)).toEqual(['equipe']);
   });

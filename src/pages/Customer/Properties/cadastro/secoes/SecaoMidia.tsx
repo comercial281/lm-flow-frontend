@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/ds';
 import { ACCEPTED_MIME_TYPES, propertyPhotosService, type PropertyPhoto } from '@/services/propertyPhotos/propertyPhotosService';
 import { separar } from '@/features/properties/fotos/regrasDasFotos';
 import { numero, plural } from '@/lib/formato';
+import { useCampoTravado } from '@/features/properties/cadastro/travasDoSite';
 import { CampoTexto } from './campos';
 import type { Property } from '@/services/properties/propertiesService';
 import BlocoDoBook from './BlocoDoBook';
@@ -134,12 +135,14 @@ function Arquivos({ editando, arquivos, aoMudarArquivos, enviando, aoGerenciarFo
 // Links de vídeo e tour virtual, mais o envio de fotos e vídeos.
 export default function SecaoMidia(props: Props) {
   const { form: f, setF } = props;
+  // Do site só trava o link do vídeo; tour, fotos e book seguem livres.
+  const videoTravado = useCampoTravado('video_url');
   return (
     <>
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <CampoTexto rotulo="Link do vídeo (YouTube)" type="url" valor={f.video_url} placeholder="https://www.youtube.com/watch?v=..."
           aoMudar={v => setF({ video_url: v || null })}
-          desabilitado={!!props.editando?.feed?.locked_fields.includes('video_url')} />
+          desabilitado={videoTravado} />
         <CampoTexto rotulo="Link do tour virtual" type="url" valor={f.virtual_tour_url}
           aoMudar={v => setF({ virtual_tour_url: v || null })} />
       </div>

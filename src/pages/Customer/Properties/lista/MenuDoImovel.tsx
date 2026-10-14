@@ -30,6 +30,8 @@ export default function MenuDoImovel({ p, acoes, permissoes, forca }: {
 }) {
   const emp = tipoDoImovel(p) === 'development';
   const noSite = estaNoSite(p);
+  // Situação que vem do site (fonte ligada): o servidor ignora a troca, então o item some.
+  const situacaoDoSite = !!p.feed?.locked_fields.includes('status');
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -45,7 +47,7 @@ export default function MenuDoImovel({ p, acoes, permissoes, forca }: {
           <Gauge className="h-4 w-4" />
           {forca != null ? `Força do anúncio: ${forca}%` : 'Calcular força do anúncio'}
         </DropdownMenuItem>
-        {permissoes.editar && <DropdownMenuItem onClick={() => acoes.situacao(p)}><CircleDot className="h-4 w-4" />Mudar situação…</DropdownMenuItem>}
+        {permissoes.editar && !situacaoDoSite && <DropdownMenuItem onClick={() => acoes.situacao(p)}><CircleDot className="h-4 w-4" />Mudar situação…</DropdownMenuItem>}
         {podeMarcarEmDia(p, permissoes.editar) && p.status === 'active' && vencido(p) && (
           <DropdownMenuItem onClick={() => acoes.emDia(p)}><CheckCheck className="h-4 w-4" />Marcar como em dia</DropdownMenuItem>
         )}
