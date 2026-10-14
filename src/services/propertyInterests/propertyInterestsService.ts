@@ -19,6 +19,16 @@ export interface PropertyInterest {
     display_price: string;
     city?: string;
     neighborhood?: string;
+    // Campos novos do servidor (14/10/2026): ausentes num servidor antigo.
+    status?: string;
+    transaction_type?: string;
+    cover_photo_url?: string | null;
+    photos_count?: number;
+    bedrooms?: number;
+    suites?: number;
+    parking_spaces?: number;
+    useful_area_m2?: number | null;
+    price_per_m2?: number | null;
   } | null;
   contact?: {
     id: string;
@@ -91,11 +101,11 @@ export const INTEREST_STAGE_LABELS: Record<string, string> = {
   suggested:        'Sugerido',
   seen:             'Visualizado',
   interested:       'Interessado',
-  visit_scheduled:  'Visita Agendada',
+  visit_scheduled:  'Visita agendada',
   visited:          'Visitado',
-  proposal_sent:    'Proposta Enviada',
-  negotiating:      'Em Negociação',
-  closed_won:       'Fechado (Ganho)',
+  proposal_sent:    'Proposta enviada',
+  negotiating:      'Em negociação',
+  closed_won:       'Fechado (ganho)',
   closed_lost:      'Descartado',
 };
 
