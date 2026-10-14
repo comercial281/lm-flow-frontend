@@ -22,7 +22,7 @@
       "attributes": "Atributos"
     },
     "actions": {
-      "startConversation": "Iniciar Conversa",
+      "startConversation": "Iniciar conversa",
       "edit": "Editar"
     },
     "conversations": "conversas",
@@ -221,7 +221,7 @@
     }
   },
   "export": {
-    "title": "Exportar Contatos",
+    "title": "Exportar contatos",
     "description": "Exportar contatos filtrados ({{count}} contatos)",
     "descriptionAll": "Exportar todos os contatos ({{count}} contatos)",
     "format": {
@@ -429,7 +429,7 @@
     "bulk": "Processando..."
   },
   "actions": {
-    "startConversation": "Iniciar Conversa",
+    "startConversation": "Iniciar conversa",
     "edit": "Editar",
     "delete": "Excluir",
     "viewEvents": "Ver Eventos",
@@ -591,7 +591,7 @@
     "next": "Próximo"
   },
   "labels": {
-    "add": "Adicionar Etiqueta",
+    "add": "Adicionar etiqueta",
     "search": "Buscar etiquetas...",
     "empty": "Nenhuma etiqueta encontrada."
   },
@@ -641,11 +641,11 @@
     "bulkDeleteAll": "Excluir todos os {{count}}"
   },
   "startConversation": {
-    "title": "Iniciar Conversa",
+    "title": "Iniciar conversa",
     "description": "Inicie uma nova conversa com {{name}}",
     "fields": {
       "channel": {
-        "label": "Canal de Comunicação",
+        "label": "Canal",
         "placeholder": "Selecione um canal"
       },
       "message": {
@@ -677,7 +677,7 @@
     "recommended": "Número do lead",
     "actions": {
       "cancel": "Cancelar",
-      "send": "Iniciar Conversa",
+      "send": "Iniciar conversa",
       "sending": "Enviando..."
     },
     "errors": {

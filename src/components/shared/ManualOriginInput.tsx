@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Input, Label } from '@/components/ui/ds';
-import { Megaphone } from 'lucide-react';
 import {
   MANUAL_ORIGIN_LABEL,
   MANUAL_ORIGIN_MAX_LENGTH,
@@ -56,8 +55,7 @@ export function ManualOriginInput({
     const outraMarcada = outraAberta || (!!value.trim() && !ehSugestao(value));
     return (
       <div className="grid gap-2">
-        <Label id={`${id}-rotulo`} className="flex items-center gap-1.5">
-          <Megaphone className="h-3.5 w-3.5 text-muted-foreground" />
+        <Label id={`${id}-rotulo`}>
           {label}
         </Label>
         <div role="group" aria-labelledby={`${id}-rotulo`} className="flex flex-wrap gap-1.5">
@@ -110,8 +108,7 @@ export function ManualOriginInput({
 
   return (
     <div className="grid gap-2">
-      <Label htmlFor={id} className="flex items-center gap-1.5">
-        <Megaphone className="h-3.5 w-3.5 text-muted-foreground" />
+      <Label htmlFor={id}>
         {label}
       </Label>
       <Input
