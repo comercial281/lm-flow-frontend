@@ -34,6 +34,7 @@ vi.mock('@/components/visits/ScheduleVisitDialog', () => ({
 }));
 
 import CardPropertyInterests from './CardPropertyInterests';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/ds';
 
 const item = {
   id: 'i1',
@@ -119,6 +120,65 @@ describe('CardPropertyInterests', () => {
       expect(screen.getByTestId('lista-de-busca-de-imoveis')).toBeInTheDocument();
       await user.click(document.body);
       await waitFor(() => expect(screen.queryByTestId('lista-de-busca-de-imoveis')).not.toBeInTheDocument());
+    });
+  });
+
+  describe('teclado e janela modal', () => {
+    const doisResultados = () => {
+      mocks.listByContact.mockResolvedValue({ data: [interesse(1)] });
+      mocks.listProps.mockResolvedValue({ data: [
+        { id: 'p8', code: 'AP8', title: 'Imóvel 8' },
+        { id: 'p9', code: 'AP9', title: 'Imóvel 9' },
+      ] });
+    };
+
+    it('seta pra baixo vai do campo ao primeiro resultado, setas navegam e Esc volta ao campo e fecha', async () => {
+      doisResultados();
+      const user = userEvent.setup();
+      montar();
+      await screen.findByText('Imóvel 1');
+      const busca = screen.getByPlaceholderText(/Buscar imóvel/);
+      await user.click(busca);
+      const botoes = await screen.findAllByRole('button', { name: 'Adicionar imóvel' });
+      await user.keyboard('{ArrowDown}');
+      expect(botoes[0]).toHaveFocus();
+      await user.keyboard('{ArrowDown}');
+      expect(botoes[1]).toHaveFocus();
+      await user.keyboard('{ArrowUp}');
+      expect(botoes[0]).toHaveFocus();
+      await user.keyboard('{ArrowUp}');
+      expect(busca).toHaveFocus();
+      await user.keyboard('{ArrowDown}');
+      await user.keyboard('{Escape}');
+      await waitFor(() => expect(screen.queryByTestId('lista-de-busca-de-imoveis')).not.toBeInTheDocument());
+      expect(busca).toHaveFocus();
+    });
+
+    it('dentro de um Dialog: Esc fecha só a lista e clicar num resultado não fecha a janela', async () => {
+      doisResultados();
+      mocks.create.mockResolvedValue({});
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <Dialog open onOpenChange={() => undefined}>
+            <DialogContent>
+              <DialogTitle>Janela</DialogTitle>
+              <CardPropertyInterests item={item} />
+            </DialogContent>
+          </Dialog>
+        </MemoryRouter>,
+      );
+      await screen.findByText('Imóvel 1');
+      await user.click(screen.getByPlaceholderText(/Buscar imóvel/));
+      await screen.findByTestId('lista-de-busca-de-imoveis');
+      await user.keyboard('{Escape}');
+      await waitFor(() => expect(screen.queryByTestId('lista-de-busca-de-imoveis')).not.toBeInTheDocument());
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      await user.click(screen.getByPlaceholderText(/Buscar imóvel/));
+      const botoes = await screen.findAllByRole('button', { name: 'Adicionar imóvel' });
+      await user.click(botoes[0]);
+      await waitFor(() => expect(mocks.create).toHaveBeenCalled());
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
   });
 

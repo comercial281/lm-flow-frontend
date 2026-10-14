@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { Button, Input, Popover, PopoverContent, PopoverTrigger } from '@/components/ui/ds';
 import { Plus, Loader2, Search, Home, X } from 'lucide-react';
@@ -45,6 +45,29 @@ export default function CardPropertyInterests({ item, nomeExibido, onVisitaCriad
   const [searching, setSearching] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
+  const campoRef = useRef<HTMLDivElement>(null);
+  const resultadosRef = useRef<HTMLDivElement>(null);
+
+  const voltandoAoCampo = useRef(false);
+  // Foco devolvido ao campo (Esc / seta pra cima) não deve reabrir a lista.
+  const focarCampo = (semReabrir = false) => {
+    voltandoAoCampo.current = semReabrir;
+    campoRef.current?.querySelector('input')?.focus();
+    voltandoAoCampo.current = false;
+  };
+  const botoesDeResultado = () =>
+    Array.from(resultadosRef.current?.querySelectorAll<HTMLButtonElement>('button[data-resultado]:not(:disabled)') ?? []);
+  // Teclado: a lista está num portal, então o Tab não chega nela. Setas ligam campo e resultados.
+  const navegarNosResultados = (e: React.KeyboardEvent) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const botoes = botoesDeResultado();
+    if (botoes.length === 0) return;
+    e.preventDefault();
+    const atual = botoes.indexOf(document.activeElement as HTMLButtonElement);
+    if (e.key === 'ArrowDown') botoes[Math.min(atual + 1, botoes.length - 1)]?.focus();
+    else if (atual <= 0) focarCampo();
+    else botoes[atual - 1]?.focus();
+  };
 
   const load = useCallback(async () => {
     if (!contactId) return;
@@ -141,14 +164,16 @@ export default function CardPropertyInterests({ item, nomeExibido, onVisitaCriad
           {/* O gatilho só ancora a lista no campo: clicar nele não alterna, só abre. */}
           <PopoverTrigger asChild>
           <div
+            ref={campoRef}
             className="relative flex-1"
+            onKeyDown={e => { if (e.key === 'ArrowDown') navegarNosResultados(e); }}
             onClick={e => { e.preventDefault(); setSearchOpen(true); }}
           >
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               value={searchQuery}
               onChange={e => { setSearchOpen(true); handleSearch(e.target.value); }}
-              onFocus={() => { setSearchOpen(true); handleSearch(searchQuery); }}
+              onFocus={() => { if (voltandoAoCampo.current) return; setSearchOpen(true); handleSearch(searchQuery); }}
               placeholder="Buscar imóvel por código ou título..."
               className="pl-8 h-9 text-sm"
             />
@@ -176,6 +201,8 @@ export default function CardPropertyInterests({ item, nomeExibido, onVisitaCriad
           align="start"
           sideOffset={4}
           className="w-[var(--radix-popover-trigger-width)] min-w-64 p-0"
+          aria-label="Resultados da busca"
+          onKeyDown={e => { if (e.key === 'Escape') focarCampo(true); else navegarNosResultados(e); }}
           onOpenAutoFocus={e => e.preventDefault()}
           onCloseAutoFocus={e => e.preventDefault()}
           data-testid="lista-de-busca-de-imoveis"
@@ -193,7 +220,8 @@ export default function CardPropertyInterests({ item, nomeExibido, onVisitaCriad
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <div className="max-h-64 overflow-y-auto">
+          {/* onWheel stopPropagation + overscroll-contain: igual ao BlocoEtiquetas, senão a roda não rola a lista dentro da janela modal. */}
+          <div ref={resultadosRef} className="max-h-64 overflow-y-auto overscroll-contain" onWheel={e => e.stopPropagation()}>
             {searchResults.map(p => {
               const alreadyAdded = interests.some(i => i.property_id === p.id);
               return (
@@ -215,6 +243,7 @@ export default function CardPropertyInterests({ item, nomeExibido, onVisitaCriad
                     size="sm"
                     variant={alreadyAdded ? 'ghost' : 'outline'}
                     className="text-xs shrink-0"
+                    data-resultado=""
                     aria-label={alreadyAdded ? 'Imóvel já adicionado' : 'Adicionar imóvel'}
                     disabled={alreadyAdded || adding === p.id}
                     onClick={() => !alreadyAdded && handleAdd(p)}
