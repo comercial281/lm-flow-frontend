@@ -7486,6 +7486,24 @@ Como funciona por dentro:
 - O `SettingsIntegrationsTour` cita `/settings/integrations` mas não está montado
   em tela nenhuma; a entrada não o monta.
 
+## Integrações: Site da imobiliária (desde 2026-10-13)
+
+Pedido do dono: a IA só conhece o que está em Imóveis, e o cliente já mantém os imóveis no site dele (um cliente com 220 imóveis no site e 1 no LM Flow). Spec: `LM FLOW/specs/2026-10-13-importar-lista-externa-design.md` (Parte 2). Servidor: lm-flow#483.
+
+O que aparece na tela:
+- **Integrações → Sistemas → Site da imobiliária** (`/settings/site-da-imobiliaria`): um campo, *Endereço do arquivo de imóveis*; **Ler arquivo** mostra a prévia (criar · atualizar · reativar · inativar · pular, avisos, 5 imóveis de amostra com o tipo); **Confirmar e importar** grava e lê na hora. Se algum imóvel vai ficar Inativo, pede confirmação (plural correto). Depois: situação (*Lendo* · *Lendo pela primeira vez* · *Arquivo com problema* · *Parou de ler* · *Desligado*), *Última mudança*, **Atualizar agora**, **Trocar endereço** (com *Cancelar*), **Desligar**.
+- No imóvel: selo **Vem do site** na lista e no cartão; no cadastro, aviso com *Ver no site* e as seções com campo do site travadas.
+- Cartão de Sistemas mostra "Lendo · 220 imóveis".
+
+Decisões do dono (não reabrir sem ele pedir): **o site sempre ganha** (campo do site trava); fotos só como link; sumiu do arquivo → Inativo, voltou → Ativo, nunca apaga; gestor também configura (por isso a prévia); leitura de hora em hora; características = as do arquivo + leitor de texto; a lista própria de um cliente de imóvel retomado entra como Leilão.
+
+Como funciona por dentro:
+1. Quem vê e age: a rota exige `properties.read`; a aba do menu e os botões/formulário exigem `properties.read` + `properties.create` + `properties.update` (Gerente/Administrador). Sem elas, só a situação aparece.
+2. A leitura roda no servidor; depois de confirmar/atualizar a tela confere a cada 4 s (até 15 vezes), num laço só.
+3. Formulário que grava configuração não aparece quando a carga falha (só o erro com *Tentar de novo*).
+4. Trava por seção (`travasDoSite.ts`): seção com qualquer campo do site fica inteira desligada (`fieldset disabled`), EXCETO "Fotos e vídeos": ali só o *Link do vídeo* trava; fotos, tour e book ficam livres. Consequência na lista combinada (Leilão): "Detalhes da venda" trava inteira, porque "aceita financiamento" vem do site (FGTS/MCMV/padrão/exclusivo travam juntos). Aceito. Fonte desligada → `locked_fields` vem vazio → nada trava.
+5. Do servidor (#483): um imóvel com dado ruim nunca para a leitura; imóvel sem mudança continua "em dia" (não vira Desatualizado); *Última mudança* guarda a última leitura que mudou algo; o alerta vai UMA vez ao grupo de logs do cliente e é repetido se o envio falhou.
+
 ## Painel do lead: fileira de atalhos (07/10/2026)
 
 Pedido do dono, com um print do CRM do LM Hub: botões redondos de atalho logo abaixo do
