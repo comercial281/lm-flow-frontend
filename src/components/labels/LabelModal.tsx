@@ -32,6 +32,13 @@ const DEFAULT_COLORS = [
   '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899',
 ];
 
+// Nomes das cores da paleta, pro leitor de tela e pro "title" de cada bolinha.
+const NOMES_DAS_CORES: Record<string, string> = {
+  '#ef4444': 'Vermelho', '#f97316': 'Laranja', '#f59e0b': 'Âmbar', '#84cc16': 'Lima',
+  '#22c55e': 'Verde', '#14b8a6': 'Verde-água', '#06b6d4': 'Ciano', '#3b82f6': 'Azul',
+  '#6366f1': 'Índigo', '#8b5cf6': 'Roxo', '#d946ef': 'Fúcsia', '#ec4899': 'Rosa',
+};
+
 const getRandomColor = () => {
   return DEFAULT_COLORS[Math.floor(Math.random() * DEFAULT_COLORS.length)];
 };
@@ -146,41 +153,36 @@ export default function LabelModal({
           </div>
 
           <div className="space-y-2">
-            <UILabel htmlFor="color">
+            <UILabel>
               {t('modal.labels.color')} <span className="text-destructive">*</span>
             </UILabel>
-            <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded border border-input"
-                style={{ backgroundColor: formData.color }}
-              />
-              <Input
-                id="color"
-                type="text"
-                value={formData.color}
-                onChange={(e) => handleInputChange('color', e.target.value)}
-                placeholder={t('modal.placeholders.color')}
-                className={`font-mono ${errors.color ? 'border-destructive' : ''}`}
-              />
-            </div>
-            {errors.color && (
-              <p className="text-sm text-destructive">{errors.color}</p>
-            )}
-
-            {/* Color presets */}
-            <div className="flex flex-wrap gap-2 mt-2">
+            <div className="flex flex-wrap items-center gap-2">
               {DEFAULT_COLORS.map((color) => (
                 <button
                   key={color}
                   type="button"
+                  aria-label={NOMES_DAS_CORES[color]}
+                  aria-pressed={formData.color.toLowerCase() === color}
+                  title={NOMES_DAS_CORES[color]}
                   className={`w-6 h-6 rounded border-2 ${
-                    formData.color === color ? 'border-primary' : 'border-input'
+                    formData.color.toLowerCase() === color ? 'border-primary' : 'border-input'
                   }`}
                   style={{ backgroundColor: color }}
                   onClick={() => handleInputChange('color', color)}
                 />
               ))}
+              <input
+                type="color"
+                aria-label="Outra cor"
+                title="Outra cor"
+                value={/^#[0-9a-f]{6}$/i.test(formData.color) ? formData.color : '#000000'}
+                onChange={(e) => handleInputChange('color', e.target.value)}
+                className="h-6 w-8 cursor-pointer rounded border border-input bg-transparent p-0"
+              />
             </div>
+            {errors.color && (
+              <p className="text-sm text-destructive">{errors.color}</p>
+            )}
           </div>
         </form>
 

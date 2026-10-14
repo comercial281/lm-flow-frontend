@@ -96,10 +96,7 @@ export default function DuplicatePipelineModal({
               <p>• {t('duplicatePipeline.copied.settings')}</p>
               <p>• {t('duplicatePipeline.copied.stages')}</p>
               <p>• {t('duplicatePipeline.copied.structure')}</p>
-            </Aviso>
-
-            <Aviso tom="atencao" compacto titulo={t('duplicatePipeline.noteLabel')}>
-              {t('duplicatePipeline.noteMessage')}
+              <p className="mt-1">{t('duplicatePipeline.noteMessage')}</p>
             </Aviso>
           </div>
 

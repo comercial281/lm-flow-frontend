@@ -175,14 +175,14 @@ export default function ContactExportModal({
                 {t('export.format.csv')}
               </Button>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               {format === 'xlsx' ? t('export.format.excelHint') : t('export.format.csvHint')}
             </p>
           </div>
 
           {/* Filtros da tela */}
           {activeFilters.length > 0 && (
-            <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
               <Checkbox
                 id="include-filters"
                 checked={includeFilters}
@@ -201,7 +201,7 @@ export default function ContactExportModal({
               <button
                 type="button"
                 onClick={handleReset}
-                className="text-xs text-blue-600 hover:underline"
+                className="text-xs text-primary hover:underline"
               >
                 {t('export.fields.reset')}
               </button>
@@ -209,7 +209,7 @@ export default function ContactExportModal({
 
             <div className="space-y-3 max-h-64 overflow-y-auto border rounded-lg p-3">
               {loadingColumns && (
-                <p className="flex items-center gap-2 text-xs text-gray-500">
+                <p className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Loader2 className="h-3 w-3 animate-spin" />
                   {t('export.fields.loading')}
                 </p>
@@ -217,7 +217,7 @@ export default function ContactExportModal({
 
               {groups.map(({ group, items }) => (
                 <div key={group} className="space-y-2">
-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{group}</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{group}</p>
                   {items.map(column => (
                     <div key={column.key} className="flex items-center space-x-2">
                       <Checkbox
@@ -237,7 +237,7 @@ export default function ContactExportModal({
               ))}
             </div>
 
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               {t('export.fields.selected', { count: selectedFields.length })}
             </p>
           </div>

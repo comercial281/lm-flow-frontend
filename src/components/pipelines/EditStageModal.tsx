@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
   Button,
-  Label,
   Input,
   Textarea,
   Select,
@@ -17,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/ds';
+import { CampoDaJanela, GradeDaJanela } from '@/components/base/janela';
 import Abas from '@/components/base/Abas';
 import { useAbaDaJanela } from '@/hooks/useAbaDaJanela';
 import { PipelineStage } from '@/types/analytics';
@@ -178,10 +178,9 @@ export default function EditStageModal({
             ]}
           />
 
-          {aba === 'details' && <div className="py-4 space-y-4 overflow-y-auto flex-1">
+          {aba === 'details' && <GradeDaJanela className="py-4 overflow-y-auto flex-1 content-start">
           {/* Stage Name */}
-          <div className="grid gap-2">
-            <Label htmlFor="stage-name">{t('editStage.name')}</Label>
+          <CampoDaJanela rotulo={t('editStage.name')} htmlFor="stage-name" colunas={4}>
             <Input
               id="stage-name"
               placeholder={t('editStage.namePlaceholder')}
@@ -189,13 +188,12 @@ export default function EditStageModal({
               onChange={(e) => setName(e.target.value)}
               maxLength={100}
             />
-          </div>
+          </CampoDaJanela>
 
           {/* Stage Color */}
-          <div className="grid gap-2">
-            <Label>{t('editStage.color')}</Label>
+          <CampoDaJanela rotulo={t('editStage.color')} htmlFor="stage-color" colunas={2}>
             <Select value={color} onValueChange={setColor}>
-              <SelectTrigger>
+              <SelectTrigger id="stage-color" className="w-full">
                 <SelectValue>
                   <div className="flex items-center gap-2">
                     <div
@@ -220,13 +218,12 @@ export default function EditStageModal({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </CampoDaJanela>
 
           {/* Stage Type */}
-          <div className="grid gap-2">
-            <Label>{t('editStage.stageType')}</Label>
+          <CampoDaJanela rotulo={t('editStage.stageType')} htmlFor="stage-type" colunas={2}>
             <Select value={stageType} onValueChange={setStageType}>
-              <SelectTrigger>
+              <SelectTrigger id="stage-type" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -235,11 +232,15 @@ export default function EditStageModal({
                 <SelectItem value="cancelled">{t('editStage.stageTypes.cancelled')}</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </CampoDaJanela>
 
           {/* Description */}
-          <div className="grid gap-2">
-            <Label htmlFor="stage-description">{t('editStage.descriptionLabel')}</Label>
+          <CampoDaJanela
+            rotulo={t('editStage.descriptionLabel')}
+            htmlFor="stage-description"
+            colunas={4}
+            ajuda={t('editStage.characterCount', { current: description.length, max: 500 })}
+          >
             <Textarea
               id="stage-description"
               placeholder={t('editStage.descriptionPlaceholder')}
@@ -248,14 +249,10 @@ export default function EditStageModal({
               rows={3}
               maxLength={500}
             />
-            <p className="text-xs text-muted-foreground">
-              {t('editStage.characterCount', { current: description.length, max: 500 })}
-            </p>
-          </div>
+          </CampoDaJanela>
 
           {/* Preview */}
-          <div className="grid gap-2">
-            <Label>{t('editStage.preview')}</Label>
+          <CampoDaJanela rotulo={t('editStage.preview')} colunas={4}>
             <div className="p-3 bg-muted/50 rounded-lg border border-border">
               <div className="flex items-center space-x-3">
                 <div
@@ -274,16 +271,13 @@ export default function EditStageModal({
                 </div>
               </div>
             </div>
-          </div>
-          </div>}
+          </CampoDaJanela>
+          </GradeDaJanela>}
 
           {aba === 'attributes' && <div className="py-4 overflow-y-auto flex-1">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold mb-2">{t('editStage.customAttributes')}</h3>
-              <p className="text-sm text-muted-foreground">
-                {t('editStage.attributesDescription')}
-              </p>
-            </div>
+            <p className="mb-4 text-sm text-muted-foreground">
+              {t('editStage.attributesDescription')}
+            </p>
             <PipelineStageCustomAttributes
               attributes={customAttributes}
               onAttributesChange={setCustomAttributes}

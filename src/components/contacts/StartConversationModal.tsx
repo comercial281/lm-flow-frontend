@@ -29,6 +29,8 @@ import { MessageTemplate } from '@/types/channels/inbox';
 import { ConversationCreateData } from '@/types/chat/api';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import Aviso from '@/components/base/Aviso';
+import CampoDaJanela from '@/components/base/janela/CampoDaJanela';
+import { Checkbox } from '@evoapi/design-system/checkbox';
 
 interface StartConversationModalProps {
   open: boolean;
@@ -206,7 +208,7 @@ export default function StartConversationModal({
       case 'Channel::WebWidget':
         return t('startConversation.channels.webWidget');
       case 'Channel::Api':
-        return t('startConversation.channels.api');
+        return ''; // canal por API não leva selo
       default:
         return channelType.replace('Channel::', '');
     }
@@ -397,8 +399,7 @@ export default function StartConversationModal({
           </div>
 
           {/* Inbox Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="inbox">{t('startConversation.fields.channel.label')} *</Label>
+          <CampoDaJanela rotulo={t('startConversation.fields.channel.label')} htmlFor="inbox" obrigatorio>
             {loadingInboxes ? (
               <div className="flex items-center gap-2 p-3 rounded-md border">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -435,12 +436,14 @@ export default function StartConversationModal({
                               {t('startConversation.recommended')}
                             </Badge>
                           )}
-                          <Badge
-                            variant={inbox.available ? 'default' : 'secondary'}
-                            className="ml-auto"
-                          >
-                            {getChannelLabel(inbox.channel_type)}
-                          </Badge>
+                          {getChannelLabel(inbox.channel_type) && (
+                            <Badge
+                              variant={inbox.available ? 'default' : 'secondary'}
+                              className="ml-auto"
+                            >
+                              {getChannelLabel(inbox.channel_type)}
+                            </Badge>
+                          )}
                           {!inbox.can_create_conversation && (
                             <span className="text-xs text-muted-foreground">
                               ({t('startConversation.unavailable')})
@@ -453,58 +456,54 @@ export default function StartConversationModal({
                 </SelectContent>
               </Select>
             )}
-          </div>
+          </CampoDaJanela>
 
           {/* WhatsApp Cloud requires template */}
           {isWhatsAppCloud && messageTemplates.length === 0 && !loadingTemplates && (
             <Aviso tom="atencao">
-              WhatsApp Cloud requer um template aprovado para iniciar a conversa. Nenhum template
+              O WhatsApp Cloud exige um modelo aprovado para iniciar a conversa. Nenhum modelo
               disponível foi encontrado.
             </Aviso>
           )}
 
-          {/* Template Selection */}
+          {/* Seleção de modelo */}
           {/* Always show template toggle for non-WhatsApp Cloud, even if no templates */}
           {(!isWhatsAppCloud || messageTemplates.length > 0) && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="usar-modelo"
+                  checked={useTemplate}
+                  disabled={isWhatsAppCloud || loadingTemplates}
+                  onCheckedChange={checked => {
+                    const ligado = checked === true;
+                    setUseTemplate(ligado);
+                    if (!ligado) {
+                      setSelectedTemplate(null);
+                      setTemplateParams({});
+                    }
+                  }}
+                />
                 <div className="flex-1">
-                  <Label>{'Usar Template'}</Label>
+                  <Label htmlFor="usar-modelo">Usar modelo de mensagem</Label>
                   {isWhatsAppCloud && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      WhatsApp Cloud Requer template para iniciar conversa
+                      O WhatsApp Cloud exige um modelo de mensagem para iniciar a conversa
                     </p>
                   )}
                 </div>
-                {!isWhatsAppCloud && (
-                  <Button
-                    type="button"
-                    variant={useTemplate ? 'default' : 'outline'} aria-pressed={useTemplate}
-                    size="sm"
-                    onClick={() => {
-                      setUseTemplate(!useTemplate);
-                      if (useTemplate) {
-                        setSelectedTemplate(null);
-                        setTemplateParams({});
-                      }
-                    }}
-                    disabled={loadingTemplates}
-                  >
-                    {useTemplate ? 'Usando Template' : 'Usar Template'}
-                  </Button>
-                )}
               </div>
 
               {useTemplate && (
                 <div className="space-y-3 p-3 border rounded-lg">
                   {messageTemplates.length === 0 ? (
                     <Aviso tom="atencao">
-                      Nenhum template disponível. Desative "Usar Template" para enviar uma
+                      Nenhum modelo disponível. Desmarque "Usar modelo de mensagem" para enviar uma
                       mensagem livre.
                     </Aviso>
                   ) : !selectedTemplate ? (
                     <>
-                      <Label>Selecione um Template</Label>
+                      <Label>Selecione um modelo</Label>
                       <div className="space-y-2 max-h-48 overflow-y-auto">
                         {messageTemplates.map(template => {
                           let previewText = '';
@@ -524,7 +523,7 @@ export default function StartConversationModal({
                               previewText =
                                 tempDiv.textContent ||
                                 tempDiv.innerText ||
-                                'Template de email visual';
+                                'Modelo de e-mail visual';
                             } else if (template.content) {
                               const content = template.content.trim();
                               if (
@@ -535,9 +534,9 @@ export default function StartConversationModal({
                                 const tempDiv = document.createElement('div');
                                 tempDiv.innerHTML = content;
                                 previewText =
-                                  tempDiv.textContent || tempDiv.innerText || 'Template de email';
+                                  tempDiv.textContent || tempDiv.innerText || 'Modelo de e-mail';
                               } else {
-                                previewText = 'Template de email visual';
+                                previewText = 'Modelo de e-mail visual';
                               }
                             }
                           } else {
@@ -577,7 +576,7 @@ export default function StartConversationModal({
                   ) : (
                     <>
                       <div className="flex items-center justify-between">
-                        <Label>Template: {selectedTemplate.name}</Label>
+                        <Label>Modelo: {selectedTemplate.name}</Label>
                         <Button
                           type="button"
                           variant="ghost"
@@ -587,7 +586,7 @@ export default function StartConversationModal({
                             setTemplateParams({});
                           }}
                         >
-                          Trocar Template
+                          Trocar modelo
                         </Button>
                       </div>
 
@@ -616,7 +615,7 @@ export default function StartConversationModal({
 
                       {/* Preview of processed message */}
                       <div className="mt-3 p-3 bg-muted/30 rounded-lg">
-                        <Label className="text-xs text-muted-foreground mb-1 block">Preview</Label>
+                        <Label className="text-xs text-muted-foreground mb-1 block">Prévia</Label>
                         {isEmailInbox ? (
                           <div className="text-sm">
                             {(() => {
@@ -642,7 +641,7 @@ export default function StartConversationModal({
                                 } else {
                                   // JSON format - show message that HTML will be generated
                                   html =
-                                    '<p style="color: #666;">Template de email visual. O HTML será gerado automaticamente.</p>';
+                                    '<p style="color: #666;">Modelo de e-mail visual. O HTML será gerado automaticamente.</p>';
                                 }
                               }
 
@@ -690,8 +689,12 @@ export default function StartConversationModal({
 
           {/* Message (hidden when using WhatsApp template or WhatsApp Cloud) */}
           {enableMessage && (
-            <div className="space-y-2">
-              <Label htmlFor="message">{t('startConversation.fields.message.label')} *</Label>
+            <CampoDaJanela
+              rotulo={t('startConversation.fields.message.label')}
+              htmlFor="message"
+              obrigatorio
+              ajuda={t('startConversation.fields.message.characters', { count: message.length })}
+            >
               <Textarea
                 id="message"
                 value={message}
@@ -701,10 +704,7 @@ export default function StartConversationModal({
                 required={!(isWhatsAppInbox && useTemplate)}
                 disabled={loading}
               />
-              <p className="text-xs text-muted-foreground">
-                {t('startConversation.fields.message.characters', { count: message.length })}
-              </p>
-            </div>
+            </CampoDaJanela>
           )}
 
           {/* Actions */}

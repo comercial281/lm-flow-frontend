@@ -121,8 +121,7 @@ const AssignmentModal: React.FC<AssignmentModalProps> = ({
     return (
       <div
         key={option.id}
-        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all hover:bg-accent ${isSelected ? 'bg-accent border-primary' : 'border-border'
-          }`}
+        className={`flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer transition-all hover:bg-accent ${isSelected ? 'bg-accent' : ''}`}
         onClick={() => handleToggleSelection(option.id)}
       >
         {multiSelect && (

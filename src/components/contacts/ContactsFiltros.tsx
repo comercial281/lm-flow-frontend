@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@evoapi/design-system/popover';
-import { Badge, Button, Checkbox, Label } from '@/components/ui/ds';
+import { Badge, Button, Checkbox } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import EmptyState from '@/components/base/EmptyState';
+import TituloDoFiltro from '@/components/base/TituloDoFiltro';
 import { labelsService } from '@/services/contacts/labelsService';
 import type { User } from '@/types/users';
 import {
@@ -90,7 +91,7 @@ export default function ContactsFiltros({ pilula, onPilula, filtros, onFiltros, 
         </PopoverTrigger>
         <PopoverContent align="start" className="w-72 space-y-4 p-4">
           <div className="space-y-1.5">
-            <Label htmlFor="filtro-com-etiqueta" className="text-xs">Com a etiqueta</Label>
+            <TituloDoFiltro htmlFor="filtro-com-etiqueta">Com a etiqueta</TituloDoFiltro>
             <Seletor
               id="filtro-com-etiqueta"
               className="w-full"
@@ -102,8 +103,8 @@ export default function ContactsFiltros({ pilula, onPilula, filtros, onFiltros, 
             </Seletor>
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">Sem as etiquetas</Label>
+          <div className="space-y-1.5 border-t pt-2">
+            <TituloDoFiltro>Sem as etiquetas</TituloDoFiltro>
             {erroEtiquetas ? (
               <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregar} className="p-3 text-xs" />
             ) : etiquetas.length === 0 ? (
@@ -127,8 +128,8 @@ export default function ContactsFiltros({ pilula, onPilula, filtros, onFiltros, 
           </div>
 
           {daEquipe && (
-            <div className="space-y-1.5">
-              <Label htmlFor="filtro-responsavel" className="text-xs">Responsável</Label>
+            <div className="space-y-1.5 border-t pt-2">
+              <TituloDoFiltro htmlFor="filtro-responsavel">Responsável</TituloDoFiltro>
               <Seletor
                 id="filtro-responsavel"
                 className="w-full"

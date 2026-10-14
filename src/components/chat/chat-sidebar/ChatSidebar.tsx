@@ -168,10 +168,9 @@ const ChatSidebar = ({
   const inboxOptions = useMemo(
     () =>
       (inboxes ?? []).map((i: Inbox) => {
-        const ch = i.channel_type?.split('::')[1] || '';
         return {
           id: String(i.id),
-          label: ch ? `${i.name} (${ch})` : i.name,
+          label: i.name,
           iaAtiva: Boolean(i.has_active_agent_bot),
         };
       }),

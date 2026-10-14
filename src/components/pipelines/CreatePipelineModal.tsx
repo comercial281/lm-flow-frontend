@@ -9,7 +9,6 @@ import {
   DialogTitle,
   Button,
   Input,
-  Label,
   Textarea,
   Select,
   SelectContent,
@@ -22,6 +21,7 @@ import { CreatePipelineData, PipelineStage } from '@/types/analytics';
 import TeamsService from '@/services/teams/teamsService';
 import { Team } from '@/types/users/teams';
 import Carregando from '@/components/base/Carregando';
+import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 
 interface StageFormData {
   name: string;
@@ -369,13 +369,9 @@ export default function CreatePipelineModal({
           <div className="mt-4 flex-1 overflow-hidden">
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 h-full">
               {/* Coluna da Esquerda - Informações Básicas (2/5) */}
-              <div className="lg:col-span-2 space-y-4">
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">{t('createPipeline.basicInfo')}</h3>
-
-                  {/* Nome */}
-                  <div className="space-y-2 mb-4">
-                    <Label htmlFor="name">{t('createPipeline.pipelineName')}</Label>
+              <GrupoDaJanela titulo={t('createPipeline.basicInfo')} className="lg:col-span-2 content-start">
+                <GradeDaJanela>
+                  <CampoDaJanela rotulo={t('createPipeline.pipelineName')} htmlFor="name" colunas={4}>
                     <Input
                       id="name"
                       value={formData.name}
@@ -384,11 +380,9 @@ export default function CreatePipelineModal({
                       required
                       disabled={loading}
                     />
-                  </div>
+                  </CampoDaJanela>
 
-                  {/* Descrição */}
-                  <div className="space-y-2 mb-4">
-                    <Label htmlFor="description">{t('createPipeline.descriptionLabel')}</Label>
+                  <CampoDaJanela rotulo={t('createPipeline.descriptionLabel')} htmlFor="description" colunas={4}>
                     <Textarea
                       id="description"
                       value={formData.description}
@@ -397,55 +391,50 @@ export default function CreatePipelineModal({
                       rows={2}
                       disabled={loading}
                     />
-                  </div>
+                  </CampoDaJanela>
 
-                  {/* Tipo e Visibilidade */}
-                  <div className="grid grid-cols-1 gap-3 mb-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="type">{t('createPipeline.type')}</Label>
-                      <Select
-                        value={formData.pipeline_type}
-                        onValueChange={(value: 'custom' | 'sales' | 'support' | 'marketing') =>
-                          setFormData({ ...formData, pipeline_type: value })
-                        }
-                        disabled={loading}
-                      >
-                        <SelectTrigger id="type">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="custom">{t('createPipeline.types.custom')}</SelectItem>
-                          <SelectItem value="sales">{t('createPipeline.types.sales')}</SelectItem>
-                          <SelectItem value="support">{t('createPipeline.types.support')}</SelectItem>
-                          <SelectItem value="marketing">{t('createPipeline.types.marketing')}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <CampoDaJanela rotulo={t('createPipeline.type')} htmlFor="type" colunas={2}>
+                    <Select
+                      value={formData.pipeline_type}
+                      onValueChange={(value: 'custom' | 'sales' | 'support' | 'marketing') =>
+                        setFormData({ ...formData, pipeline_type: value })
+                      }
+                      disabled={loading}
+                    >
+                      <SelectTrigger id="type" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="custom">{t('createPipeline.types.custom')}</SelectItem>
+                        <SelectItem value="sales">{t('createPipeline.types.sales')}</SelectItem>
+                        <SelectItem value="support">{t('createPipeline.types.support')}</SelectItem>
+                        <SelectItem value="marketing">{t('createPipeline.types.marketing')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </CampoDaJanela>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="visibility">{t('createPipeline.visibility')}</Label>
-                      <Select
-                        value={formData.visibility}
-                        onValueChange={(value: 'private' | 'public' | 'team') =>
-                          setFormData({ ...formData, visibility: value })
-                        }
-                        disabled={loading}
-                      >
-                        <SelectTrigger id="visibility">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="private">{t('createPipeline.visibilities.private')}</SelectItem>
-                          <SelectItem value="public">{t('createPipeline.visibilities.public')}</SelectItem>
-                          <SelectItem value="team">{t('createPipeline.visibilities.team')}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <CampoDaJanela rotulo={t('createPipeline.visibility')} htmlFor="visibility" colunas={2}>
+                    <Select
+                      value={formData.visibility}
+                      onValueChange={(value: 'private' | 'public' | 'team') =>
+                        setFormData({ ...formData, visibility: value })
+                      }
+                      disabled={loading}
+                    >
+                      <SelectTrigger id="visibility" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="private">{t('createPipeline.visibilities.private')}</SelectItem>
+                        <SelectItem value="public">{t('createPipeline.visibilities.public')}</SelectItem>
+                        <SelectItem value="team">{t('createPipeline.visibilities.team')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </CampoDaJanela>
 
                     {/* Team Selection - conditional on visibility === 'team' */}
                     {formData.visibility === 'team' && (
-                      <div className="space-y-2">
-                        <Label>{t('createPipeline.teamSelection.label')}</Label>
+                      <CampoDaJanela rotulo={t('createPipeline.teamSelection.label')} colunas={4}>
                         {teamIds.length > 0 && (
                           <div className="flex flex-wrap gap-1.5">
                             {teamIds.map(id => {
@@ -498,16 +487,16 @@ export default function CreatePipelineModal({
                         {teamIds.length === 0 && (
                           <p className="text-xs text-destructive">{t('createPipeline.teamSelection.required')}</p>
                         )}
-                      </div>
+                      </CampoDaJanela>
                     )}
-                  </div>
-                </div>
-              </div>
+                </GradeDaJanela>
+              </GrupoDaJanela>
 
               {/* Coluna da Direita - Etapas (3/5) */}
-              <div className="lg:col-span-3 flex flex-col h-full">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">{t('createPipeline.stages')}</h3>
+              <GrupoDaJanela
+                titulo={t('createPipeline.stages')}
+                className="lg:col-span-3 h-full min-h-0 grid-rows-[auto_minmax(0,1fr)]"
+                acao={
                   <div className="flex items-center gap-2">
                     {hasManualStageChanges && (
                       <Button
@@ -524,8 +513,8 @@ export default function CreatePipelineModal({
                       {t('createPipeline.stagesCount', { count: formData.stages?.length || 0 })}
                     </span>
                   </div>
-                </div>
-
+                }
+              >
                 <div className="flex-1 overflow-y-auto space-y-2 pr-2">
                   {formData.stages?.map((stage, index) => (
                     <div
@@ -624,7 +613,7 @@ export default function CreatePipelineModal({
                     </div>
                   )}
                 </div>
-              </div>
+              </GrupoDaJanela>
             </div>
           </div>
 

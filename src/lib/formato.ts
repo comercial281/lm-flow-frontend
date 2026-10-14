@@ -12,6 +12,11 @@
 // Valor vazio ou inválido vira '—' (travessão), nunca "NaN", "Invalid date",
 // "R$ 0,00" inventado ou string vazia que some com o rótulo.
 
+/** Só a primeira letra maiúscula ("terça-feira, 13 de outubro" → "Terça-feira, 13 de outubro"). */
+export function capitalizar(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
 export const VAZIO = '—';
 const NBSP = ' ';
 

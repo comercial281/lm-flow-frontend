@@ -6,6 +6,7 @@ import EmptyState from '@/components/base/EmptyState';
 import chatService from '@/services/chat/chatService';
 import usersService from '@/services/users/usersService';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
+import TituloDoFiltro from '@/components/base/TituloDoFiltro';
 import type { Label } from '@/types/chat/api';
 import type { BaseFilter } from '@/types/core';
 import type { User } from '@/types/users';
@@ -335,9 +336,9 @@ export default function QuickFilters({
               (pedido do Giovani, 19/08: "não faz sentido esticar esse
               menu"). Um <Seletor> mostra uma linha só, fechado. */}
           <section>
-            <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <TituloDoFiltro>
               Etiquetas
-            </p>
+            </TituloDoFiltro>
             {loadingLabels ? (
               <p className="px-0.5 py-1.5 text-xs text-muted-foreground">Carregando…</p>
             ) : erroLabels ? (
@@ -364,9 +365,9 @@ export default function QuickFilters({
               aqui como toggle na lista em vez de botão solto na barra: é
               binário, não uma lista de opções pra escolher. */}
           <section className="mt-2 border-t pt-2">
-            <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <TituloDoFiltro>
               Atendimento
-            </p>
+            </TituloDoFiltro>
             <button
               type="button"
               onClick={() => applyAiOnly(!aiOnly)}
@@ -384,9 +385,9 @@ export default function QuickFilters({
           {/* INSTÂNCIA — só com 2+, uma só não é filtro, é a caixa inteira */}
           {inboxOptions.length > 1 && (
             <section className="mt-2 border-t pt-2">
-              <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              <TituloDoFiltro>
                 Número
-              </p>
+              </TituloDoFiltro>
               <div className="max-h-40 space-y-0.5 overflow-y-auto">
                 {inboxOptions.map(i => {
                   const active = activeInboxId === i.id;
@@ -423,9 +424,9 @@ export default function QuickFilters({
               corretores via roleta, então filtrar por número não isola o
               atendimento de uma pessoa (pedido do Giovani, 19/08). */}
           <section className="mt-2 border-t pt-2">
-            <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <TituloDoFiltro>
               Responsável
-            </p>
+            </TituloDoFiltro>
             {loadingAgents ? (
               <p className="px-0.5 py-1.5 text-xs text-muted-foreground">Carregando…</p>
             ) : erroAgents ? (
@@ -455,9 +456,9 @@ export default function QuickFilters({
               lista vazia) — nada a filtrar aqui. */}
           {(loadingRoletas || roletas.length > 0 || erroRoletas) && (
             <section className="mt-2 border-t pt-2">
-              <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              <TituloDoFiltro>
                 Roleta
-              </p>
+              </TituloDoFiltro>
               {loadingRoletas ? (
                 <p className="px-0.5 py-1.5 text-xs text-muted-foreground">Carregando…</p>
               ) : erroRoletas ? (
@@ -483,9 +484,9 @@ export default function QuickFilters({
               coluna `last_activity_at` (última mensagem), que é o que
               importa numa caixa de conversa — não `created_at`. */}
           <section className="mt-2 border-t pt-2">
-            <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <TituloDoFiltro>
               Período
-            </p>
+            </TituloDoFiltro>
             <div className="mb-2 flex gap-1.5">
               <button
                 type="button"
