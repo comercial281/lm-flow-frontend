@@ -7912,7 +7912,7 @@ setinha); preço e data só na página (depois viram filtro); mover pela faixa p
 confirmação; a página abre com o menu lateral. Topo de 11/10: **cartão da pessoa** (não a
 linha da pessoa nem o Responsável na linha), **Ganho verde cheio e Perdido só no contorno**
 (não os dois cheios nem a peça colada) e **a Meta dentro de Ações rápidas** (não caixa
-própria nem aba Origem). A janela do quadro continua igual (só a página mudou).
+própria nem aba Origem). A janela do quadro continua igual (só a página mudou). — reaberta em 14/10, ver 'Janela do card: coluna em grupos e imóveis detalhados'.
 
 Armadilhas:
 
@@ -8718,3 +8718,23 @@ explícito, e o padrão não volta a ligar sozinho.
 ## Topo das janelas à esquerda (14/10/2026)
 
 O pacote traz o topo da janela com `text-center sm:text-left`. O CSS do app só gera as classes escritas em `src`: existia `text-center` e não existia `sm:text-left`, então o centralizado vencia em qualquer largura. Os títulos com `flex` ficavam à esquerda (flex ignora `text-align`), mas a frase do topo ficava no centro. Conserto: o topo da casa (`TOPO` e o ramo sem janela do `DialogHeader`, em `ds.tsx`) ganhou `text-left!` (importante, forma do Tailwind v4). Trava nova `topoCentralizado` (teto 0) barra `text-center` em `DialogHeader`/`DialogTitle`/`DialogDescription`/`AlertDialogHeader`. Não reabrir sem o dono pedir.
+
+## Janela do card: coluna em grupos e imóveis detalhados (14/10/2026)
+
+A decisão de 11/10 "a janela do quadro não muda" foi **reaberta a pedido do dono em 13/10**, e a versão A foi a escolhida.
+
+O que mudou na janela (`EditItemModal`):
+
+- **Coluna da esquerda em grupos:** Situação · Ações · Follow-up · Meta · Etiquetas, com Ganho/Perdido no pé da coluna (sempre visíveis).
+- **Aba Detalhes:** Sobre o lead, Histórico e Observações com a mesma altura, sem rolar a aba inteira; os imóveis do lead ficam embaixo, em cartões numa fileira que rola pro lado.
+- **Cartão do imóvel:** capa, situação, preço/m², características, botões Abrir e Agendar visita.
+- **Peças novas** em `src/components/base/janela` (`CaixaDaJanela`, `GrupoDaJanela`, `escolha`).
+
+Armadilhas:
+
+1. O servidor do PR `lm-flow#485` precisa estar no ar antes, para o cartão ter foto e características. Sem ele o cartão mostra o que tiver (sem capa, sem características), sem quebrar.
+2. A página do card só mudou no bloco de imóveis e no aviso da Meta; o resto dela continua como em 11/10.
+3. `LeadQuickActions` com `compacto` vale só na janela; `HistoricoDoLead` com `semTitulo` vale só na janela. Não propagar pra página.
+4. Conferência visual pendente com o dono na prévia: lead com 5 imóveis, 1366×768 com menu aberto e 1440×900, Ganho/Perdido visíveis, Detalhes sem rolar inteira, fileira de imóveis rolando, grupo Meta sumindo com o painel vazio, capa num cliente com fotos.
+
+Não reabrir sem o dono pedir.
