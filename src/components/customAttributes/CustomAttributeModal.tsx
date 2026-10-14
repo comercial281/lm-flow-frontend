@@ -20,6 +20,7 @@ import {
   Badge,
 } from '@/components/ui/ds';
 import { X, Plus } from 'lucide-react';
+import { CampoDaJanela, GradeDaJanela } from '@/components/base/janela';
 import {
   CustomAttributeDefinition,
   CustomAttributeFormData,
@@ -69,13 +70,18 @@ export default function CustomAttributeModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [regexEnabled, setRegexEnabled] = useState(false);
   const [listValue, setListValue] = useState('');
+  // Depois que a pessoa mexe no código interno à mão, o nome para de sobrescrevê-lo.
+  const [chaveEditadaAMao, setChaveEditadaAMao] = useState(false);
 
-  // Auto-generate attribute key from display name
+  // O código interno é gerado do nome só em campo novo e enquanto ninguém o editou à mão.
+  // Editar um campo existente nunca troca o código (outros lugares usam ele).
   const handleDisplayNameChange = (value: string) => {
     setFormData(prev => ({
       ...prev,
       attribute_display_name: value,
-      attribute_key: customAttributesService.generateAttributeKey(value),
+      ...(isNew && !chaveEditadaAMao
+        ? { attribute_key: customAttributesService.generateAttributeKey(value) }
+        : {}),
     }));
 
     if (errors.attribute_display_name) {
@@ -115,6 +121,7 @@ export default function CustomAttributeModal({
       }
       setErrors({});
       setListValue('');
+      setChaveEditadaAMao(false);
     }
   }, [open, attribute, isNew, defaultAttributeModel]);
 
@@ -186,6 +193,12 @@ export default function CustomAttributeModal({
     onSubmit(submitData);
   };
 
+  const handleKeyChange = (value: string) => {
+    // Limpar o campo devolve a geração automática a partir do nome.
+    setChaveEditadaAMao(value !== '');
+    handleInputChange('attribute_key', value);
+  };
+
   const handleInputChange = (field: keyof CustomAttributeFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -221,6 +234,10 @@ export default function CustomAttributeModal({
   const isListType = formData.attribute_display_type === AttributeDisplayType.LIST;
   const isTextType = formData.attribute_display_type === AttributeDisplayType.TEXT;
 
+  const modeloAtual = ATTRIBUTE_MODEL_OPTIONS.find(o => o.value === formData.attribute_model);
+  const funilAtual = PIPELINE_TYPE_OPTIONS.find(o => o.value === formData.pipeline_type);
+  const tipoAtual = ATTRIBUTE_TYPE_OPTIONS.find(o => o.value === formData.attribute_display_type);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -231,55 +248,32 @@ export default function CustomAttributeModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Attribute Model */}
-          <div className="space-y-2">
-            <UILabel htmlFor="attribute_model">
-              {t('modal.fields.attributeModel.label')} <span className="text-destructive">*</span>
-            </UILabel>
-            <Select
-              value={formData.attribute_model}
-              onValueChange={value => {
-                handleInputChange('attribute_model', value as AttributeModel);
-                // Reset pipeline_type when changing attribute_model
-                if (value !== 'pipeline_attribute') {
-                  handleInputChange('pipeline_type', undefined);
-                }
-              }}
-              disabled={!isNew} // Can't change model when editing
+        <form onSubmit={handleSubmit}>
+          <GradeDaJanela>
+            {/* Attribute Model */}
+            <CampoDaJanela
+              rotulo={t('modal.fields.attributeModel.label')}
+              htmlFor="attribute_model"
+              obrigatorio
+              colunas={4}
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ATTRIBUTE_MODEL_OPTIONS.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    <div>
-                      <div className="font-medium">{option.label}</div>
-                      <div className="text-xs text-muted-foreground">{option.description}</div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Pipeline Type - Only shown when attribute_model is pipeline_attribute */}
-          {formData.attribute_model === 'pipeline_attribute' && (
-            <div className="space-y-2">
-              <UILabel htmlFor="pipeline_type">
-                {t('modal.fields.pipelineType.label')} <span className="text-destructive">*</span>
-              </UILabel>
               <Select
-                value={formData.pipeline_type || ''}
-                onValueChange={value => handleInputChange('pipeline_type', value as PipelineType)}
-                disabled={!isNew} // Can't change type when editing
+                value={formData.attribute_model}
+                onValueChange={value => {
+                  handleInputChange('attribute_model', value as AttributeModel);
+                  // Reset pipeline_type when changing attribute_model
+                  if (value !== 'pipeline_attribute') {
+                    handleInputChange('pipeline_type', undefined);
+                  }
+                }}
+                disabled={!isNew} // Can't change model when editing
               >
-                <SelectTrigger className={errors.pipeline_type ? 'border-destructive' : ''}>
-                  <SelectValue placeholder={t('modal.fields.pipelineType.placeholder')} />
+                <SelectTrigger id="attribute_model" className="w-full">
+                  {/* O item tem duas linhas; o gatilho mostra só o nome. */}
+                  <SelectValue>{modeloAtual?.label}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {PIPELINE_TYPE_OPTIONS.map(option => (
+                  {ATTRIBUTE_MODEL_OPTIONS.map(option => (
                     <SelectItem key={option.value} value={option.value}>
                       <div>
                         <div className="font-medium">{option.label}</div>
@@ -289,190 +283,232 @@ export default function CustomAttributeModal({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.pipeline_type && (
-                <p className="text-sm text-destructive">{errors.pipeline_type}</p>
-              )}
-              <p className="text-xs text-muted-foreground">{t('modal.fields.pipelineType.hint')}</p>
-            </div>
-          )}
+            </CampoDaJanela>
 
-          {/* Display Name */}
-          <div className="space-y-2">
-            <UILabel htmlFor="attribute_display_name">
-              {t('modal.fields.displayName.label')} <span className="text-destructive">*</span>
-            </UILabel>
-            <Input
-              id="attribute_display_name"
-              value={formData.attribute_display_name}
-              onChange={e => handleDisplayNameChange(e.target.value)}
-              placeholder={t('modal.fields.displayName.placeholder')}
-              className={errors.attribute_display_name ? 'border-destructive' : ''}
-            />
-            {errors.attribute_display_name && (
-              <p className="text-sm text-destructive">{errors.attribute_display_name}</p>
+            {/* Pipeline Type - Only shown when attribute_model is pipeline_attribute */}
+            {formData.attribute_model === 'pipeline_attribute' && (
+              <CampoDaJanela
+                rotulo={t('modal.fields.pipelineType.label')}
+                htmlFor="pipeline_type"
+                obrigatorio
+                colunas={4}
+                erro={errors.pipeline_type}
+                ajuda={t('modal.fields.pipelineType.hint')}
+              >
+                <Select
+                  value={formData.pipeline_type || ''}
+                  onValueChange={value => handleInputChange('pipeline_type', value as PipelineType)}
+                  disabled={!isNew} // Can't change type when editing
+                >
+                  <SelectTrigger
+                    id="pipeline_type"
+                    className={`w-full ${errors.pipeline_type ? 'border-destructive' : ''}`}
+                  >
+                    <SelectValue placeholder={t('modal.fields.pipelineType.placeholder')}>
+                      {funilAtual?.label}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PIPELINE_TYPE_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        <div>
+                          <div className="font-medium">{option.label}</div>
+                          <div className="text-xs text-muted-foreground">{option.description}</div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CampoDaJanela>
             )}
-          </div>
 
-          {/* Attribute Key */}
-          <div className="space-y-2">
-            <UILabel htmlFor="attribute_key">
-              {t('modal.fields.attributeKey.label')} <span className="text-destructive">*</span>
-            </UILabel>
-            <Input
-              id="attribute_key"
-              value={formData.attribute_key}
-              onChange={e => handleInputChange('attribute_key', e.target.value)}
-              placeholder={t('modal.fields.attributeKey.placeholder')}
-              className={`font-mono ${errors.attribute_key ? 'border-destructive' : ''}`}
-              disabled={!isNew} // Can't change key when editing
-            />
-            {errors.attribute_key && (
-              <p className="text-sm text-destructive">{errors.attribute_key}</p>
-            )}
-            <p className="text-xs text-muted-foreground">{t('modal.fields.attributeKey.hint')}</p>
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <UILabel htmlFor="attribute_description">
-              {t('modal.fields.description.label')} <span className="text-destructive">*</span>
-            </UILabel>
-            <Textarea
-              id="attribute_description"
-              value={formData.attribute_description}
-              onChange={e => handleInputChange('attribute_description', e.target.value)}
-              placeholder={t('modal.fields.description.placeholder')}
-              className={`resize-none ${errors.attribute_description ? 'border-destructive' : ''}`}
-              rows={3}
-            />
-            {errors.attribute_description && (
-              <p className="text-sm text-destructive">{errors.attribute_description}</p>
-            )}
-          </div>
-
-          {/* Attribute Type */}
-          <div className="space-y-2">
-            <UILabel htmlFor="attribute_display_type">
-              {t('modal.fields.displayType.label')} <span className="text-destructive">*</span>
-            </UILabel>
-            <Select
-              value={formData.attribute_display_type}
-              onValueChange={value =>
-                handleInputChange('attribute_display_type', value as AttributeDisplayType)
-              }
+            {/* Display Name */}
+            <CampoDaJanela
+              rotulo={t('modal.fields.displayName.label')}
+              htmlFor="attribute_display_name"
+              obrigatorio
+              colunas={2}
+              erro={errors.attribute_display_name}
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ATTRIBUTE_TYPE_OPTIONS.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    <div>
-                      <div className="font-medium">
-                        {t(option.labelKey, { defaultValue: option.defaultLabel })}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {t(option.descriptionKey, { defaultValue: option.defaultDescription })}
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <Input
+                id="attribute_display_name"
+                value={formData.attribute_display_name}
+                onChange={e => handleDisplayNameChange(e.target.value)}
+                placeholder={t('modal.fields.displayName.placeholder')}
+                className={errors.attribute_display_name ? 'border-destructive' : ''}
+              />
+            </CampoDaJanela>
 
-          {/* List Values */}
-          {isListType && (
-            <div className="space-y-2">
-              <UILabel>
-                {t('modal.fields.listValues.label')} <span className="text-destructive">*</span>
-              </UILabel>
-              <div className="flex gap-2">
-                <Input
-                  value={listValue}
-                  onChange={e => setListValue(e.target.value)}
-                  onKeyPress={handleListValueKeyPress}
-                  placeholder={t('modal.fields.listValues.placeholder')}
-                />
-                <Button type="button" onClick={addListValue} size="sm" aria-label="Adicionar valor" title="Adicionar valor">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              {errors.attribute_values && (
-                <p className="text-sm text-destructive">{errors.attribute_values}</p>
-              )}
+            {/* Attribute Key (código interno) */}
+            <CampoDaJanela
+              rotulo={t('modal.fields.attributeKey.label')}
+              htmlFor="attribute_key"
+              obrigatorio
+              colunas={2}
+              erro={errors.attribute_key}
+              ajuda={t('modal.fields.attributeKey.hint')}
+            >
+              <Input
+                id="attribute_key"
+                value={formData.attribute_key}
+                onChange={e => handleKeyChange(e.target.value)}
+                placeholder={t('modal.fields.attributeKey.placeholder')}
+                className={`font-mono ${errors.attribute_key ? 'border-destructive' : ''}`}
+                disabled={!isNew} // Can't change key when editing
+              />
+            </CampoDaJanela>
 
-              {/* Show current values */}
-              {formData.attribute_values && formData.attribute_values.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.attribute_values.map((value, index) => (
-                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                      {value}
-                      <Button
-                        type="button"
-                        onClick={() => removeListValue(index)}
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Remover valor"
-                        title="Remover valor"
-                        className="-my-1.5 size-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </Badge>
+            {/* Description */}
+            <CampoDaJanela
+              rotulo={t('modal.fields.description.label')}
+              htmlFor="attribute_description"
+              obrigatorio
+              colunas={4}
+              erro={errors.attribute_description}
+            >
+              <Textarea
+                id="attribute_description"
+                value={formData.attribute_description}
+                onChange={e => handleInputChange('attribute_description', e.target.value)}
+                placeholder={t('modal.fields.description.placeholder')}
+                className={`resize-none ${errors.attribute_description ? 'border-destructive' : ''}`}
+                rows={3}
+              />
+            </CampoDaJanela>
+
+            {/* Attribute Type */}
+            <CampoDaJanela
+              rotulo={t('modal.fields.displayType.label')}
+              htmlFor="attribute_display_type"
+              obrigatorio
+              colunas={4}
+            >
+              <Select
+                value={formData.attribute_display_type}
+                onValueChange={value =>
+                  handleInputChange('attribute_display_type', value as AttributeDisplayType)
+                }
+              >
+                <SelectTrigger id="attribute_display_type" className="w-full">
+                  <SelectValue>
+                    {tipoAtual && t(tipoAtual.labelKey, { defaultValue: tipoAtual.defaultLabel })}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {ATTRIBUTE_TYPE_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div>
+                        <div className="font-medium">
+                          {t(option.labelKey, { defaultValue: option.defaultLabel })}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {t(option.descriptionKey, { defaultValue: option.defaultDescription })}
+                        </div>
+                      </div>
+                    </SelectItem>
                   ))}
-                </div>
-              )}
-            </div>
-          )}
+                </SelectContent>
+              </Select>
+            </CampoDaJanela>
 
-          {/* Regex Pattern for Text Types */}
-          {isTextType && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <UILabel htmlFor="regex_enabled">{t('modal.fields.regexEnabled.label')}</UILabel>
-                  <p className="text-sm text-muted-foreground">
-                    {t('modal.fields.regexEnabled.description')}
-                  </p>
+            {/* List Values */}
+            {isListType && (
+              <CampoDaJanela
+                rotulo={t('modal.fields.listValues.label')}
+                htmlFor="list_value"
+                obrigatorio
+                colunas={4}
+                erro={errors.attribute_values}
+              >
+                <div className="flex gap-2">
+                  <Input
+                    id="list_value"
+                    value={listValue}
+                    onChange={e => setListValue(e.target.value)}
+                    onKeyPress={handleListValueKeyPress}
+                    placeholder={t('modal.fields.listValues.placeholder')}
+                  />
+                  <Button type="button" onClick={addListValue} size="sm" aria-label="Adicionar valor" title="Adicionar valor">
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Switch
-                  id="regex_enabled"
-                  checked={regexEnabled}
-                  onCheckedChange={setRegexEnabled}
-                />
+
+                {/* Show current values */}
+                {formData.attribute_values && formData.attribute_values.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.attribute_values.map((value, index) => (
+                      <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                        {value}
+                        <Button
+                          type="button"
+                          onClick={() => removeListValue(index)}
+                          size="icon"
+                          variant="ghost"
+                          aria-label="Remover valor"
+                          title="Remover valor"
+                          className="-my-1.5 size-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </CampoDaJanela>
+            )}
+
+            {/* Regex Pattern for Text Types */}
+            {isTextType && (
+              <div className="grid gap-3 sm:col-span-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <UILabel htmlFor="regex_enabled">{t('modal.fields.regexEnabled.label')}</UILabel>
+                    <p className="text-xs text-muted-foreground">
+                      {t('modal.fields.regexEnabled.description')}
+                    </p>
+                  </div>
+                  <Switch
+                    id="regex_enabled"
+                    checked={regexEnabled}
+                    onCheckedChange={setRegexEnabled}
+                  />
+                </div>
+
+                {regexEnabled && (
+                  <GradeDaJanela className="pl-4 border-l-2 border-blue-200 dark:border-blue-800">
+                    <CampoDaJanela
+                      rotulo={t('modal.fields.regexPattern.label')}
+                      htmlFor="regex_pattern"
+                      colunas={4}
+                      erro={errors.regex_pattern}
+                    >
+                      <Input
+                        id="regex_pattern"
+                        value={formData.regex_pattern}
+                        onChange={e => handleInputChange('regex_pattern', e.target.value)}
+                        placeholder={t('modal.fields.regexPattern.placeholder')}
+                        className={`font-mono ${errors.regex_pattern ? 'border-destructive' : ''}`}
+                      />
+                    </CampoDaJanela>
+
+                    <CampoDaJanela
+                      rotulo={t('modal.fields.regexCue.label')}
+                      htmlFor="regex_cue"
+                      colunas={4}
+                      ajuda={t('modal.fields.regexCue.hint')}
+                    >
+                      <Input
+                        id="regex_cue"
+                        value={formData.regex_cue}
+                        onChange={e => handleInputChange('regex_cue', e.target.value)}
+                        placeholder={t('modal.fields.regexCue.placeholder')}
+                      />
+                    </CampoDaJanela>
+                  </GradeDaJanela>
+                )}
               </div>
-
-              {regexEnabled && (
-                <div className="space-y-4 pl-4 border-l-2 border-blue-200 dark:border-blue-800">
-                  <div className="space-y-2">
-                    <UILabel htmlFor="regex_pattern">{t('modal.fields.regexPattern.label')}</UILabel>
-                    <Input
-                      id="regex_pattern"
-                      value={formData.regex_pattern}
-                      onChange={e => handleInputChange('regex_pattern', e.target.value)}
-                      placeholder={t('modal.fields.regexPattern.placeholder')}
-                      className={`font-mono ${errors.regex_pattern ? 'border-destructive' : ''}`}
-                    />
-                    {errors.regex_pattern && (
-                      <p className="text-sm text-destructive">{errors.regex_pattern}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <UILabel htmlFor="regex_cue">{t('modal.fields.regexCue.label')}</UILabel>
-                    <Input
-                      id="regex_cue"
-                      value={formData.regex_cue}
-                      onChange={e => handleInputChange('regex_cue', e.target.value)}
-                      placeholder={t('modal.fields.regexCue.placeholder')}
-                    />
-                    <p className="text-xs text-muted-foreground">{t('modal.fields.regexCue.hint')}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+            )}
+          </GradeDaJanela>
         </form>
 
         <DialogFooter>

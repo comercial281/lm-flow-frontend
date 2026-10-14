@@ -57,6 +57,8 @@ class CustomAttributesService {
   // Helper method to generate attribute key from display name
   generateAttributeKey(displayName: string): string {
     return displayName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '_')
       .replace(/_{2,}/g, '_')
