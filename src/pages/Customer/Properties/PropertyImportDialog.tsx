@@ -292,7 +292,7 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            Importar imóveis em lote (IA)
+            Importar imóveis com IA
           </DialogTitle>
           <DialogDescription>
             Suba até {IMPORT_MAX_FILES} books (PDF, foto, Word ou TXT — 1 arquivo = 1 imóvel). A IA lê cada material e cria o imóvel como <strong>rascunho</strong> pra você revisar e ativar.

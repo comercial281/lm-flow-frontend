@@ -1,6 +1,8 @@
 import { useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
-import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label } from '@/components/ui/ds';
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input } from '@/components/ui/ds';
+import Aviso from '@/components/base/Aviso';
+import { CampoDaJanela, GradeDaJanela } from '@/components/base/janela';
 import {
   propertyOwnersService,
   type DadosDoProprietario,
@@ -23,15 +25,14 @@ const dosDados = (p?: Existente | null): Campos => ({
   document: p?.document ?? '',
 });
 
-function Campo({ rotulo, valor, aoMudar, type = 'text' }: {
-  rotulo: string; valor: string; aoMudar: (v: string) => void; type?: string;
+function Campo({ rotulo, valor, aoMudar, type = 'text', colunas, erro }: {
+  rotulo: string; valor: string; aoMudar: (v: string) => void; type?: string; colunas: 2 | 4; erro?: string;
 }) {
   const id = useId();
   return (
-    <div className="space-y-1">
-      <Label htmlFor={id}>{rotulo}</Label>
+    <CampoDaJanela rotulo={rotulo} htmlFor={id} colunas={colunas} erro={erro}>
       <Input id={id} type={type} value={valor} onChange={e => aoMudar(e.target.value)} />
-    </div>
+    </CampoDaJanela>
   );
 }
 
@@ -102,20 +103,21 @@ export default function JanelaDoProprietario({ aberta, proprietario, aoFechar, a
 
   return (
     <Dialog open={aberta} onOpenChange={o => { if (!o && !salvando) aoFechar(); }}>
-      <DialogContent className="max-w-md">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{editando ? 'Editar dados' : 'Novo proprietário'}</DialogTitle>
           <DialogDescription>Só a equipe vê. Nada daqui vai para o site, portais ou IA.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <Campo rotulo="Nome" valor={campos.name} aoMudar={mudar('name')} />
-          {erro && <p role="alert" className="text-xs text-destructive">{erro}</p>}
-          <Campo rotulo="Telefone" type="tel" valor={campos.phone} aoMudar={mudar('phone')} />
-          {repetido && <p className="rounded-md bg-muted p-2 text-sm">Já existe um proprietário com esse telefone</p>}
-          <Campo rotulo="Outro telefone" type="tel" valor={campos.phone_secondary} aoMudar={mudar('phone_secondary')} />
-          <Campo rotulo="E-mail" type="email" valor={campos.email} aoMudar={mudar('email')} />
-          <Campo rotulo="CPF ou CNPJ" valor={campos.document} aoMudar={mudar('document')} />
-        </div>
+        <GradeDaJanela>
+          <Campo rotulo="Nome" colunas={4} valor={campos.name} aoMudar={mudar('name')} erro={erro} />
+          <Campo rotulo="Telefone" colunas={2} type="tel" valor={campos.phone} aoMudar={mudar('phone')} />
+          <Campo rotulo="Outro telefone" colunas={2} type="tel" valor={campos.phone_secondary} aoMudar={mudar('phone_secondary')} />
+          {repetido && (
+            <Aviso tom="atencao" compacto className="sm:col-span-4">Já existe um proprietário com esse telefone</Aviso>
+          )}
+          <Campo rotulo="E-mail" colunas={2} type="email" valor={campos.email} aoMudar={mudar('email')} />
+          <Campo rotulo="CPF ou CNPJ" colunas={2} valor={campos.document} aoMudar={mudar('document')} />
+        </GradeDaJanela>
         <DialogFooter>
           <Button variant="outline" onClick={aoFechar} disabled={salvando}>Cancelar</Button>
           <Button onClick={salvar} disabled={salvando}>Salvar</Button>
