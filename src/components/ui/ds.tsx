@@ -360,7 +360,9 @@ DialogContent.displayName = 'DialogContent';
 // O recuo do texto acompanha o da caixa (24px na padrão, até 32px na larga) e
 // nunca fica abaixo de 24px (janela `p-0` que usa o topo da casa).
 const RECUO = 'px-[max(var(--janela-p),1.5rem)]';
-const TOPO = `sticky -top-(--janela-p) z-10 -mx-(--janela-p) -mt-(--janela-p) border-b bg-background ${RECUO} py-4`;
+// text-left! porque o text-center do pacote vence o sm:text-left dele (o CSS do
+// app só gera o text-center, e vem depois). Título e frase do topo à esquerda.
+const TOPO = `sticky -top-(--janela-p) z-10 -mx-(--janela-p) -mt-(--janela-p) border-b bg-background ${RECUO} py-4 text-left!`;
 
 export function DialogHeader({ className, children, ...props }: ComponentProps<typeof BaseDialogHeader>) {
   const janela = useContext(JanelaContexto);
@@ -369,7 +371,7 @@ export function DialogHeader({ className, children, ...props }: ComponentProps<t
   useLayoutEffect(() => registrar?.(id), [registrar, id]);
   if (!janela) {
     return (
-      <BaseDialogHeader className={className} {...props}>
+      <BaseDialogHeader className={`text-left! ${className ?? ''}`} {...props}>
         {children}
       </BaseDialogHeader>
     );
