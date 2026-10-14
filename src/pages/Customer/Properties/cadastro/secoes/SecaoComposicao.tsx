@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useId, useState } from 'react';
 import { Input, Label as UILabel } from '@/components/ui/ds';
+import { campoTravado, CamposTravadosContext, dicaSe } from '@/features/properties/cadastro/travasDoSite';
 import { numeroOuNulo, type PropsDaSecao } from './tipos';
 
 const CAMPOS = [
@@ -13,16 +14,22 @@ const CAMPOS = [
 
 // Quartos, suítes, banheiros, vagas e áreas. A revenda usa na seção Composição;
 // o empreendimento, como resumo, em Tipologias e valores.
+// Imóvel do site: cada campo que o site manda fica travado; os outros seguem livres.
 export function GradeDeComposicao({ form: f, setF }: Pick<PropsDaSecao, 'form' | 'setF'>) {
+  const travados = useContext(CamposTravadosContext);
+  const base = useId();
   return (
     <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
-      {CAMPOS.map(({ label, key }) => (
-        <div key={key}>
-          <UILabel>{label}</UILabel>
-          <Input type="number" value={f[key] ?? ''} onChange={e => setF({ [key]: numeroOuNulo(e.target.value) })}
-            min={0} className="mt-1" />
-        </div>
-      ))}
+      {CAMPOS.map(({ label, key }) => {
+        const travado = campoTravado(key, travados);
+        return (
+          <div key={key} title={dicaSe(travado)}>
+            <UILabel htmlFor={`${base}-${key}`}>{label}</UILabel>
+            <Input id={`${base}-${key}`} type="number" value={f[key] ?? ''} onChange={e => setF({ [key]: numeroOuNulo(e.target.value) })}
+              min={0} disabled={travado} className="mt-1" />
+          </div>
+        );
+      })}
     </div>
   );
 }

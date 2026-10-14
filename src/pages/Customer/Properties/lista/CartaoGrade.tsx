@@ -36,6 +36,7 @@ export default function CartaoGrade({ p, acoes, permissoes, forca }: {
               {tipoDoImovel(p) === 'auction' && textoDoDesconto(p.discount_percent) && <Selo tom="marca">{textoDoDesconto(p.discount_percent)}</Selo>}
             </>
           )}
+          {p.feed && <Selo tom="info">Vem do site</Selo>}
         </div>
         <TituloDoImovel texto={titulo || p.title} podeEditar={permissoes.editar} aoAbrir={() => acoes.editar(p)}
           aoAbrirNoSite={estaNoSite(p) ? () => acoes.site(p) : undefined} className="text-[15px] font-semibold" />

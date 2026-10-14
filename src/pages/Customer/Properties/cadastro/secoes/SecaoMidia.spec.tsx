@@ -10,6 +10,7 @@ vi.mock('@/services/propertyPhotos/propertyPhotosService', async orig => ({
 }));
 
 import SecaoMidia from './SecaoMidia';
+import { CamposTravadosContext } from '@/features/properties/cadastro/travasDoSite';
 
 const foto = (id: string, extra: Partial<PropertyPhoto> = {}) =>
   ({ id, file_url: `https://x/${id}.jpg`, photo_type: 'main', content_type: 'image/jpeg', published: true, is_cover: false, ...extra }) as PropertyPhoto;
@@ -20,6 +21,19 @@ const base = {
   arquivos: [], aoMudarArquivos: vi.fn(), enviando: false,
   book: null, aoMudarBook: vi.fn(), aoMudarImovel: vi.fn(),
 };
+
+describe('SecaoMidia com vídeo vindo do site', () => {
+  it('trava só o link do vídeo; tour, fotos e book seguem livres', async () => {
+    svc.list.mockResolvedValue([]);
+    render(<CamposTravadosContext.Provider value={['video_url']}>
+      <SecaoMidia {...base} editando={{ id: 'p1', photos_count: 0, feed: { source_id: 's', external_url: null, locked_fields: ['video_url'] } } as never}
+        aoGerenciarFotos={vi.fn()} />
+    </CamposTravadosContext.Provider>);
+    expect(screen.getByLabelText('Link do vídeo (YouTube)')).toBeDisabled();
+    expect(screen.getByLabelText('Link do tour virtual')).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Gerenciar fotos e vídeos/ })).toBeEnabled();
+  });
+});
 
 describe('SecaoMidia na edição', () => {
   it('mostra as primeiras fotos visíveis e leva pra página de fotos', async () => {

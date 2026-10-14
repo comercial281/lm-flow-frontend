@@ -17,6 +17,7 @@ import {
   podeProcurarPonto,
   textoDoPonto,
 } from '@/features/properties/localizacao';
+import { dicaSe, useCampoTravado } from '@/features/properties/cadastro/travasDoSite';
 import type { PropsDaSecao } from './tipos';
 
 // O Leaflet só baixa quando o mapa aparece.
@@ -78,6 +79,20 @@ export default function SecaoLocalizacao({ form: f, setF }: PropsDaSecao) {
   const formRef = useRef(f);
   formRef.current = f;
 
+  // Imóvel do site: só trava o que o site manda (o resto segue livre).
+  const trava = {
+    cep: useCampoTravado('address_zip'),
+    rua: useCampoTravado('address_street'),
+    numero: useCampoTravado('address_number'),
+    bairro: useCampoTravado('address_neighborhood'),
+    cidade: useCampoTravado('address_city'),
+    uf: useCampoTravado('address_state'),
+  };
+  // O ponto vem do site: o alfinete não arrasta nem pula sozinho.
+  const latitudeTravada = useCampoTravado('latitude');
+  const longitudeTravada = useCampoTravado('longitude');
+  const pontoTravado = latitudeTravada || longitudeTravada;
+
   const [cepLoading, setCepLoading] = useState(false);
   const [cepNaoAchado, setCepNaoAchado] = useState(false);
   const cepEmBusca = useRef<string | null>(null);
@@ -108,7 +123,7 @@ export default function SecaoLocalizacao({ form: f, setF }: PropsDaSecao) {
   if (!manual && enderecoDoAlfinete !== null) setEnderecoDoAlfinete(null);
 
   const procurarPonto = async (alvo: PropertyFormData, { reposicionar = false } = {}) => {
-    if (!podeProcurarPonto(alvo)) return;
+    if (pontoTravado || !podeProcurarPonto(alvo)) return;
     if (!reposicionar && !alfinetePodePular(origemDo(alvo))) return;
     const chave = chaveDaBusca(alvo);
     if (!reposicionar && chave === ultimaBusca.current) return;
@@ -149,10 +164,11 @@ export default function SecaoLocalizacao({ form: f, setF }: PropsDaSecao) {
       const data = await propertiesService.cepLookup(cep);
       if (!valeAinda()) return;
       const patch: Partial<PropertyFormData> = {};
-      if (data.address_street) patch.address_street = data.address_street;
-      if (data.address_neighborhood) patch.address_neighborhood = data.address_neighborhood;
-      if (data.address_city) patch.address_city = data.address_city;
-      if (data.address_state) patch.address_state = data.address_state;
+      // Campo que vem do site não é trocado pelo CEP.
+      if (data.address_street && !trava.rua) patch.address_street = data.address_street;
+      if (data.address_neighborhood && !trava.bairro) patch.address_neighborhood = data.address_neighborhood;
+      if (data.address_city && !trava.cidade) patch.address_city = data.address_city;
+      if (data.address_state && !trava.uf) patch.address_state = data.address_state;
       if (Object.keys(patch).length) {
         setF(patch);
         void procurarPonto({ ...formRef.current, ...patch });
@@ -172,7 +188,7 @@ export default function SecaoLocalizacao({ form: f, setF }: PropsDaSecao) {
   const arrastar = (latitude: number, longitude: number) => setF({ latitude, longitude, location_source: 'manual' });
 
   const mostraMapa = !!ponto || podeProcurarPonto(f);
-  const podeReposicionar = manual && enderecoDoAlfinete !== null && enderecoDoAlfinete !== chaveDoEndereco(f) && podeProcurarPonto(f);
+  const podeReposicionar = !pontoTravado && manual && enderecoDoAlfinete !== null && enderecoDoAlfinete !== chaveDoEndereco(f) && podeProcurarPonto(f);
   // Alfinete só no ponto ou na cidade: no Brasil inteiro, um arraste sem querer gravaria um ponto qualquer.
   const alvoDoMapa = ponto ?? centroDaCidade;
   const zoom = ponto
@@ -186,7 +202,7 @@ export default function SecaoLocalizacao({ form: f, setF }: PropsDaSecao) {
 
   return (
     <div className="mt-4 grid grid-cols-2 gap-3">
-      <div className="col-span-2">
+      <div className="col-span-2" title={dicaSe(trava.cep)}>
         <UILabel htmlFor="campo-cep">CEP</UILabel>
         <div className="flex gap-2 mt-1">
           <Input
@@ -195,6 +211,7 @@ export default function SecaoLocalizacao({ form: f, setF }: PropsDaSecao) {
             onChange={e => { setCepNaoAchado(false); setF({ address_zip: e.target.value }); }}
             onBlur={e => buscarCep(e.target.value)}
             placeholder="01310-100"
+            disabled={trava.cep}
             className="flex-1"
             aria-invalid={cepNaoAchado || undefined}
             aria-describedby={cepNaoAchado ? 'campo-cep-erro' : undefined}
@@ -203,7 +220,7 @@ export default function SecaoLocalizacao({ form: f, setF }: PropsDaSecao) {
             type="button"
             variant="outline"
             size="sm"
-            disabled={cepLoading}
+            disabled={cepLoading || trava.cep}
             onClick={() => buscarCep(f.address_zip ?? '')}
             className="shrink-0"
           >
@@ -212,14 +229,14 @@ export default function SecaoLocalizacao({ form: f, setF }: PropsDaSecao) {
         </div>
         {cepNaoAchado && <p id="campo-cep-erro" className="mt-1 text-xs text-destructive">CEP não encontrado</p>}
       </div>
-      <div className="col-span-2">
+      <div className="col-span-2" title={dicaSe(trava.rua)}>
         <UILabel htmlFor="campo-rua">Rua</UILabel>
-        <Input id="campo-rua" value={f.address_street} onChange={e => setF({ address_street: e.target.value })}
+        <Input id="campo-rua" disabled={trava.rua} value={f.address_street} onChange={e => setF({ address_street: e.target.value })}
           onBlur={aoSairDoEndereco} placeholder="Av. Paulista" className="mt-1" />
       </div>
-      <div>
+      <div title={dicaSe(trava.numero)}>
         <UILabel htmlFor="campo-numero">Número</UILabel>
-        <Input id="campo-numero" value={f.address_number} onChange={e => setF({ address_number: e.target.value })}
+        <Input id="campo-numero" disabled={trava.numero} value={f.address_number} onChange={e => setF({ address_number: e.target.value })}
           onBlur={aoSairDoEndereco} placeholder="1578" className="mt-1" />
       </div>
       <div>
@@ -227,19 +244,19 @@ export default function SecaoLocalizacao({ form: f, setF }: PropsDaSecao) {
         <Input id="campo-complemento" value={f.address_complement ?? ''} onChange={e => setF({ address_complement: e.target.value })}
           placeholder="Apto 102" className="mt-1" />
       </div>
-      <div>
+      <div title={dicaSe(trava.bairro)}>
         <UILabel htmlFor="campo-bairro">Bairro</UILabel>
-        <Input id="campo-bairro" value={f.address_neighborhood} onChange={e => setF({ address_neighborhood: e.target.value })}
+        <Input id="campo-bairro" disabled={trava.bairro} value={f.address_neighborhood} onChange={e => setF({ address_neighborhood: e.target.value })}
           placeholder="Bela Vista" className="mt-1" />
       </div>
-      <div>
+      <div title={dicaSe(trava.cidade)}>
         <UILabel htmlFor="campo-cidade">Cidade</UILabel>
-        <Input id="campo-cidade" value={f.address_city} onChange={e => setF({ address_city: e.target.value })}
+        <Input id="campo-cidade" disabled={trava.cidade} value={f.address_city} onChange={e => setF({ address_city: e.target.value })}
           onBlur={aoSairDoEndereco} placeholder="São Paulo" className="mt-1" />
       </div>
-      <div>
+      <div title={dicaSe(trava.uf)}>
         <UILabel htmlFor="campo-uf">Estado (UF)</UILabel>
-        <Input id="campo-uf" value={f.address_state} onChange={e => setF({ address_state: e.target.value })}
+        <Input id="campo-uf" disabled={trava.uf} value={f.address_state} onChange={e => setF({ address_state: e.target.value })}
           onBlur={aoSairDoEndereco} placeholder="SP" maxLength={2} className="mt-1" />
       </div>
 
@@ -247,9 +264,11 @@ export default function SecaoLocalizacao({ form: f, setF }: PropsDaSecao) {
         {mostraMapa ? (
           <>
             <Suspense fallback={<div className="h-[240px] animate-pulse rounded-xl border bg-muted/40" />}>
-              <MapaDoCadastro lat={alvoDoMapa?.[0] ?? null} lng={alvoDoMapa?.[1] ?? null} zoom={zoom} aoArrastar={arrastar} />
+              <MapaDoCadastro lat={alvoDoMapa?.[0] ?? null} lng={alvoDoMapa?.[1] ?? null} zoom={zoom} aoArrastar={arrastar} travado={pontoTravado} />
             </Suspense>
-            {aviso && <p className="text-xs text-muted-foreground">{aviso}</p>}
+            {pontoTravado
+              ? <p className="text-xs text-muted-foreground">O ponto no mapa vem do site da imobiliária.</p>
+              : aviso && <p className="text-xs text-muted-foreground">{aviso}</p>}
             {podeReposicionar && (
               <Button type="button" variant="outline" size="sm" onClick={() => { void procurarPonto(f, { reposicionar: true }); }}>
                 Reposicionar pelo endereço

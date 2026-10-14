@@ -159,7 +159,7 @@ describe('menu novo: seções (fase 4)', () => {
   it('a Página do Facebook é aba de Integrações, e Formulários fica sozinho em Minha imobiliária', () => {
     const imobiliaria = secoes.find(s => s.id === 'imobiliaria')!;
     const integracoes = imobiliaria.itens.find(i => i.name === 'Integrações')!;
-    expect(integracoes.abas?.map(a => a.name)).toEqual(['WhatsApp', 'Facebook', 'Pixel', 'Portais', 'CVCRM']);
+    expect(integracoes.abas?.map(a => a.name)).toEqual(['WhatsApp', 'Facebook', 'Pixel', 'Portais', 'CVCRM', 'Site da imobiliária']);
     expect(imobiliaria.itens.find(i => i.href === '/automations/origem')?.name).toBe('Formulários');
   });
 
@@ -241,6 +241,7 @@ describe('Integrações em cartões (07/10/2026)', () => {
       ['/settings/pixel-capi', 'facebook'],
       ['/settings/portals', 'portais'],
       ['/settings/cvcrm', 'sistemas'],
+      ['/settings/site-da-imobiliaria', 'sistemas'],
     ]);
     expect(SISTEMAS_INTEGRACOES).toBe('/settings/integrations/sistemas');
   });

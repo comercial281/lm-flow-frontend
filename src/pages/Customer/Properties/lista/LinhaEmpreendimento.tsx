@@ -32,6 +32,7 @@ export default function LinhaEmpreendimento({ p, acoes, permissoes, forca, emDia
         <div className="flex flex-wrap gap-1.5">
           <Selo tom={TOM_DA_FASE[p.stage] ?? 'neutro'}>{seloDaFase(p.stage, p.delivery_forecast)}</Selo>
           {p.status !== 'active' && <Selo tom={tomDaSituacao('development', p.status)}>{rotuloDaSituacao('development', p.status)}</Selo>}
+          {p.feed && <Selo tom="info">Vem do site</Selo>}
         </div>
         <TituloDoImovel texto={p.title} podeEditar={permissoes.editar} aoAbrir={() => acoes.editar(p)}
           aoAbrirNoSite={estaNoSite(p) ? () => acoes.site(p) : undefined} className="font-semibold text-[15px] sm:text-base" />

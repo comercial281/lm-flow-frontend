@@ -72,6 +72,7 @@ describe('toda rota do CRM confere o cargo', () => {
     ['/settings/portals/:portalKey', 'portals', 'read'],
     ['/settings/facebook', 'lead_ads_form_configs', 'read'],
     ['/settings/cvcrm', 'integrations', 'read'],
+    ['/settings/site-da-imobiliaria', 'properties', 'read'],
     ['message-funnels', 'message_funnels', 'read'],
     // Sprint 4 das Automações: o canvas do funil de conversa abre pra quem lê os funis (o corretor).
     ['message-funnels/:id', 'message_funnels', 'read'],
@@ -191,7 +192,7 @@ describe('Integrações em cartões (07/10/2026)', () => {
     const i = src.indexOf('<Route element={<MolduraDeIntegracao />}>');
     expect(i).toBeGreaterThan(-1);
     const bloco = src.slice(i, src.indexOf('</Route>\n', src.indexOf('path="/channels"', i)));
-    for (const path of ['/settings/integrations', '/settings/integrations/sistemas', '/settings/facebook', '/settings/pixel-capi', '/settings/portals', '/settings/cvcrm', '/channels']) {
+    for (const path of ['/settings/integrations', '/settings/integrations/sistemas', '/settings/facebook', '/settings/pixel-capi', '/settings/portals', '/settings/cvcrm', '/settings/site-da-imobiliaria', '/channels']) {
       expect(bloco, path).toContain(`path="${path}"`);
     }
   });

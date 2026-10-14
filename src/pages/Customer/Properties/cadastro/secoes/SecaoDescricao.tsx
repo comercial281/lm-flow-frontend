@@ -2,6 +2,7 @@ import { Loader2, Lock, Wand2 } from 'lucide-react';
 import { Button, Label as UILabel, Textarea } from '@/components/ui/ds';
 import Aviso from '@/components/base/Aviso';
 import type { Property } from '@/services/properties/propertiesService';
+import { dicaSe, useCampoTravado } from '@/features/properties/cadastro/travasDoSite';
 import type { PropsDaSecao } from './tipos';
 
 /*
@@ -35,12 +36,14 @@ interface Props extends PropsDaSecao {
 
 export default function SecaoDescricao({ form: f, setF, editando, podeGerar, gerando, aoGerar }: Props) {
   const notaInterna = internalNoteOf(editando);
+  // Descrição que vem do site fica travada; a IA também não reescreve por cima.
+  const travada = useCampoTravado('description');
   return (
     <div className="mt-4 space-y-4">
-      <div>
+      <div title={dicaSe(travada)}>
         <div className="flex items-center justify-between mb-1">
           <UILabel htmlFor="campo-descricao">Descrição</UILabel>
-          {podeGerar && (
+          {podeGerar && !travada && (
             <Button
               type="button"
               variant="outline"
@@ -57,7 +60,7 @@ export default function SecaoDescricao({ form: f, setF, editando, podeGerar, ger
             </Button>
           )}
         </div>
-        <Textarea id="campo-descricao" value={f.description} onChange={e => setF({ description: e.target.value })}
+        <Textarea id="campo-descricao" value={f.description} disabled={travada} onChange={e => setF({ description: e.target.value })}
           rows={5} placeholder="Descreva o imóvel..." className="resize-none" />
       </div>
 

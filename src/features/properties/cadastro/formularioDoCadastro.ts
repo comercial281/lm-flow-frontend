@@ -5,6 +5,7 @@ import { leadDestinationWarning } from '../leadDestination';
 import { paraCampoMes, tipoDoImovel } from '../listingKind';
 import { payloadDoFormulario } from '../formularioPorTipo';
 import type { SecaoId } from './secoesDoCadastro';
+import { campoTravado } from './travasDoSite';
 
 export interface ErroDoCadastro { secao: SecaoId; mensagem: string }
 
@@ -129,14 +130,16 @@ export function formularioDoImovel(p: Property): PropertyFormData {
 
 // Mesmas regras que o handleSave tinha. Quem chama decide quais valem: o
 // "Salvar rascunho" checa só o título, o "Criar"/"Salvar" chama tudo.
-export function errosDoCadastro(form: PropertyFormData): ErroDoCadastro[] {
+// `travados`: campos que vêm do site (imóvel do site). Esses o servidor ignora e
+// a pessoa não consegue mexer, então não podem barrar o salvar.
+export function errosDoCadastro(form: PropertyFormData, travados: readonly string[] = []): ErroDoCadastro[] {
   const erros: ErroDoCadastro[] = [];
-  if (!form.title?.trim()) erros.push({ secao: 'basico', mensagem: 'Título é obrigatório' });
+  if (!campoTravado('title', travados) && !form.title?.trim()) erros.push({ secao: 'basico', mensagem: 'Título é obrigatório' });
   const p = payloadDoFormulario(form);
   // Valor de venda é obrigatório p/ Venda/Venda e Locação (regra do backend).
   // Rascunho (criado ou editado) pode ficar sem preço: o servidor aceita.
   // Leilão pode ficar sem valor de venda (o servidor aceita).
-  if (form.status !== 'draft' && form.listing_kind !== 'auction'
+  if (!campoTravado('sale_price', travados) && form.status !== 'draft' && form.listing_kind !== 'auction'
     && (p.transaction_type === 'sale' || p.transaction_type === 'sale_rent') && !form.sale_price) {
     erros.push({ secao: form.listing_kind === 'development' ? 'tipologias' : 'valores',
       mensagem: 'Informe o Valor de venda (obrigatório para imóveis à venda).' });

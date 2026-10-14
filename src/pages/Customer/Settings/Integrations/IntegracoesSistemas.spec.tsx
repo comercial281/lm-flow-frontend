@@ -7,6 +7,8 @@ import IntegracoesSistemas, { estadoDoCvcrm } from './IntegracoesSistemas';
 
 const servico = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('@/services/cvcrm/cvcrmService', () => ({ cvcrmService: servico }));
+const site = vi.hoisted(() => ({ get: vi.fn() }));
+vi.mock('@/services/properties/siteFeedService', () => ({ siteFeedService: site }));
 const suporte = vi.hoisted(() => ({ openSupport: vi.fn() }));
 vi.mock('@/components/support/openSupport', () => suporte);
 
@@ -42,6 +44,13 @@ describe('Integrações → Sistemas', () => {
     expect(screen.getByText('Leve os leads direto pro sistema que sua imobiliária já usa.')).toBeInTheDocument();
     expect(await screen.findByText('Conectado · habras.cvcrm.com.br')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /CVCRM/ })).toHaveAttribute('href', '/settings/cvcrm');
+  });
+
+  it('cartão do Site da imobiliária com o estado', async () => {
+    site.get.mockResolvedValue({ configured: true, state: 'ok', last_count: 220 });
+    abrir(secoes(['/settings/site-da-imobiliaria']));
+    expect(await screen.findByText('Lendo · 220 imóveis')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Site da imobiliária/ })).toHaveAttribute('href', '/settings/site-da-imobiliaria');
   });
 
   it('consulta falhou: cartão sem estado, sem erro, ainda clicável', async () => {

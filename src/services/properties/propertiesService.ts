@@ -17,6 +17,8 @@ export type PrecisaoDoPonto = 'number' | 'street' | 'neighborhood' | 'city';
 export interface PontoAchado { lat: number | null; lng: number | null; precision: PrecisaoDoPonto | null; failed: boolean }
 
 export interface Property {
+  /** Imóvel que veio do site do cliente (Integrações → Sistemas → Site da imobiliária). */
+  feed?: { source_id: string; external_url: string | null; locked_fields: string[] } | null;
   id: string;
   code: string;
   title: string;
