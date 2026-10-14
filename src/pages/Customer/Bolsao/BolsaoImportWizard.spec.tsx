@@ -59,4 +59,31 @@ describe('Nova lista no Bolsão', () => {
     await userEvent.keyboard('{Escape}');
     expect(aoMudar).not.toHaveBeenCalled();
   });
+
+  it('importação que termina fecha a janela e avisa a lista', async () => {
+    vi.mocked(bolsaoService.confirm).mockResolvedValue({} as never);
+    const aoMudar = vi.fn();
+    const aoImportar = vi.fn();
+    const { container } = render(<BolsaoImportWizard open onOpenChange={aoMudar} onImported={aoImportar} />);
+    const arquivo = new File(['Nome,Telefone'], 'lista.csv', { type: 'text/csv' });
+    await userEvent.upload(container.ownerDocument.querySelector('input[type="file"]') as HTMLInputElement, arquivo);
+    await userEvent.click(await screen.findByRole('button', { name: /Está certo, importar/ }));
+
+    await waitFor(() => expect(aoMudar).toHaveBeenCalledWith(false));
+    expect(aoImportar).toHaveBeenCalledTimes(1);
+  });
+
+  it('importação que falha volta pro passo de conferir e deixa fechar', async () => {
+    vi.mocked(bolsaoService.confirm).mockRejectedValue(new Error('falhou'));
+    const aoMudar = vi.fn();
+    const { container } = render(<BolsaoImportWizard open onOpenChange={aoMudar} onImported={() => {}} />);
+    const arquivo = new File(['Nome,Telefone'], 'lista.csv', { type: 'text/csv' });
+    await userEvent.upload(container.ownerDocument.querySelector('input[type="file"]') as HTMLInputElement, arquivo);
+    await userEvent.click(await screen.findByRole('button', { name: /Está certo, importar/ }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Cancelar' })).toBeEnabled());
+    expect(screen.getByRole('button', { name: /Está certo, importar/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(aoMudar).toHaveBeenCalledWith(false);
+  });
 });

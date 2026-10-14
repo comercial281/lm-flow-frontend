@@ -107,7 +107,9 @@ export default function BolsaoImportWizard({ open, onOpenChange, onImported }: P
       await bolsaoService.confirm(batch.id, mapping);
       toast.success('Importação começou. Os leads aparecem no Bolsão em instantes.');
       onImported();
-      handleClose(false);
+      // Terminou: fecha direto, sem passar pela trava de "importando".
+      reset();
+      onOpenChange(false);
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Não consegui importar.'));
       setStep('map');
