@@ -8,7 +8,7 @@
  *
  * Corretor (`soMinhas`, o `meta.only_mine` da Agenda): vê e cria só as dele,
  * sem escolher ninguém — o servidor força ele mesmo. Gestor: vê as de todos e
- * escolhe o corretor com os mesmos botões do Agendar visita.
+ * escolhe o corretor na mesma lista de escolha do Agendar visita.
  * Spec: specs/2026-10-01-fase-4-agenda-do-corretor-design.md (pasta LM FLOW).
  */
 import { useCallback, useEffect, useId, useState } from 'react';
@@ -18,6 +18,7 @@ import {
   Input, Label as UILabel,
 } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
+import { GrupoDaJanela, CampoDaJanela } from '@/components/base/janela';
 import EmptyState from '@/components/base/EmptyState';
 import { EscolhaCorretor } from '@/components/visits/EscolhaCorretor';
 import { agendaService, type TimeOff } from '@/services/visits/agendaService';
@@ -140,8 +141,7 @@ export function FolgasDialog({ open, onOpenChange, soMinhas }: Props) {
           <DialogDescription>Na folga, ninguém marca visita para o corretor: nem a IA, nem quem marca à mão.</DialogDescription>
         </DialogHeader>
 
-        <section aria-label="Próximas folgas" className="space-y-2 py-2">
-          <h3 className="text-sm font-medium">Próximas folgas</h3>
+        <GrupoDaJanela titulo="Próximas folgas" className="py-2">
           {erroLista ? (
             <div className="space-y-2">
               <p className="text-sm text-destructive">Não deu para carregar as folgas.</p>
@@ -184,22 +184,20 @@ export function FolgasDialog({ open, onOpenChange, soMinhas }: Props) {
               ))}
             </ul>
           )}
-        </section>
+        </GrupoDaJanela>
 
-        <section aria-label="Nova folga" className="space-y-4 border-t border-border pt-4">
-          <h3 className="text-sm font-medium">Nova folga</h3>
-
+        <GrupoDaJanela titulo="Nova folga" className="border-t border-border pt-4">
           {!soMinhas && (
-            <div>
-              <span className="text-sm text-muted-foreground">De quem é a folga *</span>
+            <CampoDaJanela rotulo="De quem é a folga" htmlFor="folga_corretor" obrigatorio>
               <EscolhaCorretor
+                id="folga_corretor"
                 corretores={corretores}
                 erro={erroCorretores}
                 valor={corretor}
                 onEscolher={setCorretor}
                 rotulo="De quem é a folga"
               />
-            </div>
+            </CampoDaJanela>
           )}
 
           <div className="flex flex-wrap items-end gap-3">
@@ -264,10 +262,10 @@ export function FolgasDialog({ open, onOpenChange, soMinhas }: Props) {
           </div>
 
           {erro && <p role="alert" className="text-sm text-destructive">{erro}</p>}
-        </section>
+        </GrupoDaJanela>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={criar} disabled={salvando}>{salvando ? 'Salvando...' : 'Criar folga'}</Button>
         </DialogFooter>
       </DialogContent>

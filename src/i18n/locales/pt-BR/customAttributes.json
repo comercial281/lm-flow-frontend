@@ -64,8 +64,8 @@
   },
   "modal": {
     "title": {
-      "new": "Novo Atributo Personalizado",
-      "edit": "Editar Atributo Personalizado"
+      "new": "Novo campo personalizado",
+      "edit": "Editar campo personalizado"
     },
     "description": {
       "new": "Crie um novo atributo personalizado para coletar informações específicas.",
@@ -86,13 +86,13 @@
         }
       },
       "attributeKey": {
-        "label": "Chave do atributo",
+        "label": "Código interno",
         "placeholder": "Ex.: prioridade_do_cliente",
         "required": true,
-        "hint": "A chave será usada para identificar este atributo na API. Use apenas letras minúsculas, números e sublinhados.",
+        "hint": "Gerado a partir do nome. Só letras minúsculas, números e _.",
         "errors": {
-          "required": "Chave do atributo é obrigatória",
-          "invalid": "Chave deve conter apenas letras minúsculas, números e sublinhados",
+          "required": "Código interno é obrigatório",
+          "invalid": "Use só letras minúsculas, números e _",
           "duplicate": "Já existe um campo com esta chave"
         }
       },
@@ -117,7 +117,7 @@
         }
       },
       "regexEnabled": {
-        "label": "Validação com Regex",
+        "label": "Validar o formato (avançado)",
         "description": "Adicione um padrão regex para validar os valores deste atributo"
       },
       "regexPattern": {

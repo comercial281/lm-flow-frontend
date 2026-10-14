@@ -91,14 +91,16 @@ export default function AgendaDoDia({ dia, aoMudarDia, responsavel, className }:
           </Button>
         </div>
       </div>
+      {itens !== null && itens.length === 0 ? (
+        // Dia vazio: só uma linha, sem a caixa grande.
+        <p className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+          <Moon className="h-4 w-4" />
+          {T.semTarefasNoDia}
+        </p>
+      ) : (
       <div className="min-h-[16rem] flex-1 space-y-2 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3">
         {itens === null ? (
           <p className="text-sm text-muted-foreground">Carregando...</p>
-        ) : itens.length === 0 ? (
-          <p className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-            <Moon className="h-4 w-4" />
-            {T.semTarefasNoDia}
-          </p>
         ) : (
           <ul className="space-y-2">
             {itens.map(item => {
@@ -119,6 +121,7 @@ export default function AgendaDoDia({ dia, aoMudarDia, responsavel, className }:
           </ul>
         )}
       </div>
+      )}
     </section>
   );
 }

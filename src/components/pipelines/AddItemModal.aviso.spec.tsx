@@ -65,7 +65,7 @@ beforeEach(() => {
 describe('Adicionar Lead ao Funil · um aviso só', () => {
   it('Criar novo lead: só "Lead criado e adicionado ao funil."', async () => {
     const { onItemAdded } = abrir();
-    await userEvent.click(screen.getByRole('button', { name: /Criar novo lead/ }));
+    await userEvent.click(screen.getByRole('radio', { name: /Criar novo lead/ }));
     await userEvent.type(screen.getByPlaceholderText('Nome do lead'), 'Ana Lima');
     await userEvent.click(screen.getByRole('button', { name: 'Criar e adicionar' }));
 
@@ -80,7 +80,7 @@ describe('Adicionar Lead ao Funil · um aviso só', () => {
       data: [{ id: 'k5', name: 'Ana Lima', email: 'ana@exemplo.com' }],
     } as never);
     const { onItemAdded } = abrir();
-    await userEvent.click(screen.getByRole('button', { name: /Criar novo lead/ }));
+    await userEvent.click(screen.getByRole('radio', { name: /Criar novo lead/ }));
     await userEvent.type(screen.getByPlaceholderText('Nome do lead'), 'Ana Lima');
     await userEvent.type(screen.getByPlaceholderText('email@exemplo.com'), 'ana@exemplo.com');
     await userEvent.click(screen.getByRole('button', { name: 'Criar e adicionar' }));
@@ -100,5 +100,18 @@ describe('Adicionar Lead ao Funil · um aviso só', () => {
     await waitFor(() => expect(onItemAdded).toHaveBeenCalledTimes(1));
     expect(toast.success).toHaveBeenCalledTimes(1);
     expect(toast.success).toHaveBeenCalledWith('addItem.success');
+  });
+
+  it('escolher Criar novo lead troca o formulário', async () => {
+    abrir();
+    expect(screen.getByRole('radio', { name: 'Lead existente' })).toHaveAttribute('aria-checked', 'true');
+    expect(await screen.findByRole('option', { name: /Maria Souza/ })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.queryByPlaceholderText('Nome do lead')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Criar novo lead' }));
+
+    expect(screen.getByRole('radio', { name: 'Criar novo lead' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByPlaceholderText('Nome do lead')).toBeInTheDocument();
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 });

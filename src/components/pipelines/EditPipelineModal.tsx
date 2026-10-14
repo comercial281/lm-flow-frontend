@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   Button,
+  Checkbox,
   Input,
   Label,
   Textarea,
@@ -24,6 +25,8 @@ import { Pipeline, UpdatePipelineData } from '@/types/analytics';
 import TeamsService from '@/services/teams/teamsService';
 import { Team } from '@/types/users/teams';
 import Carregando from '@/components/base/Carregando';
+import Aviso from '@/components/base/Aviso';
+import { CampoDaJanela, GradeDaJanela } from '@/components/base/janela';
 import { LocalAttributeDefinition, LocalAttributeDefinitionPayload } from '@/types/pipelines/localAttributeDefinition';
 import PipelineCustomAttributes from './PipelineCustomAttributes';
 import { PIPE_ENTRY_SOURCES } from '@/constants/pipeEntrySources';
@@ -188,10 +191,9 @@ export default function EditPipelineModal({
             />
 
             {aba === 'details' && <div className="py-4 overflow-y-auto flex-1">
-              <div className="grid gap-4">
+              <GradeDaJanela>
             {/* Name */}
-            <div className="grid gap-2">
-              <Label htmlFor="edit-name">{t('editPipeline.name')}</Label>
+            <CampoDaJanela rotulo={t('editPipeline.name')} htmlFor="edit-name" colunas={4}>
               <Input
                 id="edit-name"
                 value={formData.name}
@@ -200,11 +202,10 @@ export default function EditPipelineModal({
                 required
                 disabled={loading}
               />
-            </div>
+            </CampoDaJanela>
 
             {/* Description */}
-            <div className="grid gap-2">
-              <Label htmlFor="edit-description">{t('editPipeline.descriptionLabel')}</Label>
+            <CampoDaJanela rotulo={t('editPipeline.descriptionLabel')} htmlFor="edit-description" colunas={4}>
               <Textarea
                 id="edit-description"
                 value={formData.description}
@@ -213,19 +214,18 @@ export default function EditPipelineModal({
                 rows={3}
                 disabled={loading}
               />
-            </div>
+            </CampoDaJanela>
 
             {/* Pipeline Type */}
-            <div className="grid gap-2">
-              <Label htmlFor="edit-type">{t('editPipeline.pipelineType')}</Label>
+            <CampoDaJanela rotulo={t('editPipeline.pipelineType')} htmlFor="edit-type" colunas={2}>
               <Select
                 value={formData.pipeline_type}
-                onValueChange={(value: 'custom' | 'sales' | 'support' | 'marketing') =>
-                  setFormData({ ...formData, pipeline_type: value })
+                onValueChange={(value) =>
+                  setFormData({ ...formData, pipeline_type: value as UpdatePipelineData['pipeline_type'] })
                 }
                 disabled={loading}
               >
-                <SelectTrigger id="edit-type">
+                <SelectTrigger id="edit-type" className="w-full">
                   <SelectValue placeholder={t('editPipeline.selectType')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -233,13 +233,19 @@ export default function EditPipelineModal({
                   <SelectItem value="sales">{t('editPipeline.types.sales')}</SelectItem>
                   <SelectItem value="support">{t('editPipeline.types.support')}</SelectItem>
                   <SelectItem value="marketing">{t('editPipeline.types.marketing')}</SelectItem>
+                  {/* Funis de imóvel: sem estas opções o campo abria vazio. */}
+                  <SelectItem value="sale">{t('editPipeline.types.sale')}</SelectItem>
+                  <SelectItem value="rental">{t('editPipeline.types.rental')}</SelectItem>
+                  {/* Implantação só aparece em funil que já tem esse tipo. */}
+                  {pipeline.pipeline_type === 'onboarding' && (
+                    <SelectItem value="onboarding">{t('editPipeline.types.onboarding')}</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
-            </div>
+            </CampoDaJanela>
 
             {/* Visibility */}
-            <div className="grid gap-2">
-              <Label htmlFor="edit-visibility">{t('editPipeline.visibility')}</Label>
+            <CampoDaJanela rotulo={t('editPipeline.visibility')} htmlFor="edit-visibility" colunas={2}>
               <Select
                 value={formData.visibility}
                 onValueChange={(value: 'private' | 'public' | 'team') =>
@@ -247,7 +253,7 @@ export default function EditPipelineModal({
                 }
                 disabled={loading}
               >
-                <SelectTrigger id="edit-visibility">
+                <SelectTrigger id="edit-visibility" className="w-full">
                   <SelectValue placeholder={t('editPipeline.selectVisibility')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -256,12 +262,11 @@ export default function EditPipelineModal({
                   <SelectItem value="team">{t('editPipeline.visibilityOptions.team')}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </CampoDaJanela>
 
             {/* Team Selection - conditional on visibility === 'team' */}
             {formData.visibility === 'team' && (
-              <div className="grid gap-2">
-                <Label>{t('editPipeline.teamSelection.label')}</Label>
+              <CampoDaJanela rotulo={t('editPipeline.teamSelection.label')} colunas={4}>
                 {teamIds.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {teamIds.map(id => {
@@ -315,24 +320,22 @@ export default function EditPipelineModal({
                 {teamIds.length === 0 && (
                   <p className="text-xs text-destructive">{t('editPipeline.teamSelection.required')}</p>
                 )}
-              </div>
+              </CampoDaJanela>
             )}
 
-            {/* Active Status */}
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
+            {/* Active Status (espera o Salvar, por isso Checkbox e não Chave) */}
+            <div className="flex items-center gap-2 sm:col-span-4">
+              <Checkbox
                 id="edit-is_active"
-                checked={formData.is_active}
-                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                checked={!!formData.is_active}
+                onCheckedChange={(marcado) => setFormData({ ...formData, is_active: marcado === true })}
                 disabled={loading}
-                className="rounded border-gray-300"
               />
               <Label htmlFor="edit-is_active" className="cursor-pointer">
                 {t('editPipeline.pipelineActive')}
               </Label>
             </div>
-              </div>
+              </GradeDaJanela>
             </div>}
 
             {aba === 'entry' && <div className="py-4 overflow-y-auto flex-1">
@@ -383,10 +386,10 @@ export default function EditPipelineModal({
                     </label>
                   ))}
                   {entrySources.length === 0 && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400 pt-1">
+                    <Aviso tom="atencao" compacto className="mt-1">
                       Nenhuma origem marcada: nada entra sozinho neste funil. Você ainda pode
                       adicionar cards na mão.
-                    </p>
+                    </Aviso>
                   )}
                 </div>
               )}

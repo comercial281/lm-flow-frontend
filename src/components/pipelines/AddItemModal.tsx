@@ -9,7 +9,6 @@ import {
   DialogTitle,
   Button,
   Input,
-  Label,
   Textarea,
   Select,
   SelectContent,
@@ -17,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/ds';
-import { Search, User, Phone, Mail, MessageSquare, ListChecks, UserPlus } from 'lucide-react';
+import { Search, User, Phone, Mail, MessageSquare } from 'lucide-react';
 import { ConversationForModal, PipelineStage } from '@/types/analytics';
 import { pipelinesService } from '@/services/pipelines';
 import { contactsService } from '@/services/contacts';
@@ -29,6 +28,8 @@ import '@/components/shared/PhoneInput.css';
 import { contactSaveError } from '@/utils/contactErrors';
 import { telefone } from '@/lib/formato';
 import Carregando from '@/components/base/Carregando';
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import { GrupoDaJanela, CampoDaJanela } from '@/components/base/janela';
 
 // Normaliza telefone para E.164 (backend exige). Limpa tudo que não é dígito e prefixa "+".
 function normalizePhoneE164(raw: string): string {
@@ -358,10 +359,10 @@ export default function AddItemModal({
           <DialogDescription>{t('addItem.description')}</DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4 flex-1 overflow-y-auto">
+        <div className="grid content-start gap-6 py-4 flex-1 overflow-y-auto">
           {/* Stage Selection */}
-          <div className="grid gap-2">
-            <Label>{t('addItem.selectStage')}</Label>
+          <GrupoDaJanela titulo={t('addItem.groupStage')}>
+            <CampoDaJanela rotulo={t('addItem.selectStage')}>
             <Select
               value={selectedStage?.id.toString()}
               onValueChange={value => {
@@ -369,7 +370,7 @@ export default function AddItemModal({
                 setSelectedStage(stage || null);
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder={t('addItem.chooseStage')} />
               </SelectTrigger>
               <SelectContent>
@@ -386,59 +387,47 @@ export default function AddItemModal({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </CampoDaJanela>
+          </GrupoDaJanela>
 
-          {/* Mode toggle: pegar existente x criar novo */}
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant={mode === 'existing' ? 'default' : 'outline'} aria-pressed={mode === 'existing'}
-              onClick={() => setMode('existing')}
-              className="justify-center"
-            >
-              <ListChecks className="mr-2 h-4 w-4" />
-              Lead existente
-            </Button>
-            <Button
-              type="button"
-              variant={mode === 'new' ? 'default' : 'outline'} aria-pressed={mode === 'new'}
-              onClick={() => setMode('new')}
-              className="justify-center"
-            >
-              <UserPlus className="mr-2 h-4 w-4" />
-              Criar novo lead
-            </Button>
-          </div>
+          <GrupoDaJanela titulo={t('addItem.groupLead')}>
+          {/* Modo: pegar existente x criar novo */}
+          <BotoesDeEscolha
+            rotulo={t('addItem.groupLead')}
+            valor={mode}
+            opcoes={[
+              { valor: 'existing', rotulo: 'Lead existente' },
+              { valor: 'new', rotulo: 'Criar novo lead' },
+            ]}
+            aoEscolher={setMode}
+          />
 
           {/* MODO: CRIAR LEAD NOVO */}
           {mode === 'new' && (
             <div className="grid gap-3">
-              <div className="grid gap-2">
-                <Label>Nome *</Label>
+              <CampoDaJanela rotulo="Nome" obrigatorio>
                 <Input
                   placeholder="Nome do lead"
                   value={newLead.name}
                   onChange={e => setNewLead(p => ({ ...p, name: e.target.value }))}
                 />
-              </div>
-              <div className="grid gap-2">
-                <Label>Telefone (WhatsApp)</Label>
+              </CampoDaJanela>
+              <CampoDaJanela rotulo="Telefone (WhatsApp)">
                 <PhoneInput
                   value={newLead.phone}
                   onChange={value => setNewLead(p => ({ ...p, phone: value }))}
                   placeholder="(11) 99999-9999"
                   defaultCountry="BR"
                 />
-              </div>
-              <div className="grid gap-2">
-                <Label>E-mail</Label>
+              </CampoDaJanela>
+              <CampoDaJanela rotulo="E-mail">
                 <Input
                   type="email"
                   placeholder="email@exemplo.com"
                   value={newLead.email}
                   onChange={e => setNewLead(p => ({ ...p, email: e.target.value }))}
                 />
-              </div>
+              </CampoDaJanela>
               {/* Lead cadastrado na mão não tem anúncio pra rastrear — quem sabe
                   de onde ele veio é quem está cadastrando. */}
               <ManualOriginInput
@@ -454,8 +443,7 @@ export default function AddItemModal({
           {mode === 'existing' && (
           <>
           {/* Item Type Selection */}
-          <div className="grid gap-2">
-            <Label>{t('addItem.itemType')}</Label>
+          <CampoDaJanela rotulo={t('addItem.itemType')}>
             <Select
               value={itemType}
               onValueChange={(value: 'conversation' | 'contact') => {
@@ -466,7 +454,7 @@ export default function AddItemModal({
                 setNotes('');
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder={t('addItem.chooseItemType')} />
               </SelectTrigger>
               <SelectContent>
@@ -474,11 +462,10 @@ export default function AddItemModal({
                 <SelectItem value="contact">{t('addItem.itemTypes.contact')}</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </CampoDaJanela>
 
           {/* Search */}
-          <div className="grid gap-2">
-            <Label>{t('addItem.searchItems')}</Label>
+          <CampoDaJanela rotulo={t('addItem.searchItems')}>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -488,12 +475,11 @@ export default function AddItemModal({
                 className="pl-9"
               />
             </div>
-          </div>
+          </CampoDaJanela>
 
           {/* Items List */}
-          <div className="grid gap-2">
-            <Label>{t('addItem.availableItems')}</Label>
-            <div className="border rounded-lg h-48 overflow-y-auto">
+          <CampoDaJanela rotulo={t('addItem.availableItems')}>
+            <div role="listbox" aria-label={t('addItem.availableItems')} className="border rounded-lg h-48 overflow-y-auto">
               {isLoadingItems ? (
                 <Carregando linhas={3} className="px-3" />
               ) : availableItems.length === 0 ? (
@@ -510,6 +496,8 @@ export default function AddItemModal({
                   {availableItems.map(item => (
                     <div
                       key={item.id}
+                      role="option"
+                      aria-selected={selectedItem?.id === item.id}
                       className={`p-3 rounded-lg border cursor-pointer transition-colors ${
                         selectedItem?.id === item.id
                           ? 'border-primary bg-primary/5'
@@ -580,20 +568,20 @@ export default function AddItemModal({
                 </div>
               )}
             </div>
-          </div>
+          </CampoDaJanela>
           </>
           )}
 
           {/* Notes */}
-          <div className="grid gap-2">
-            <Label>{t('addItem.notes')}</Label>
+          <CampoDaJanela rotulo={t('addItem.notes')}>
             <Textarea
               placeholder={t('addItem.notesPlaceholder')}
               value={notes}
               onChange={e => setNotes(e.target.value)}
               rows={3}
             />
-          </div>
+          </CampoDaJanela>
+          </GrupoDaJanela>
         </div>
 
         <DialogFooter className="flex-shrink-0 mt-4">

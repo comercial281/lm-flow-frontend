@@ -37,7 +37,7 @@ import { linkDasFotos } from '@/features/properties/fotos/regrasDasFotos';
 import PropertyBookDialog from '@/components/properties/PropertyBookDialog';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { Seletor } from '@/components/base/Seletor';
-import Aviso from '@/components/base/Aviso';
+import JanelaDescricoesEmLote from './lista/JanelaDescricoesEmLote';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { lerRecorteImoveis, type FiltroImoveis } from '@/features/dashboard/links';
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
@@ -402,14 +402,6 @@ export default function Properties() {
     }
   };
 
-  const toggleBatchSelect = (id: string) => {
-    setBatchSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
   // ── Ações do menu ⋮ de cada linha ─────────────────────────────────────────
   // Página pública do imóvel, no site da própria imobiliária.
   const abrirNoSite = (p: Property) => {
@@ -683,88 +675,16 @@ export default function Properties() {
 
 
       {/* Batch generate dialog */}
-      <Dialog open={batchModalOpen} onOpenChange={open => { if (!batchRunning) setBatchModalOpen(open); }}>
-        <DialogContent className="max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Wand2 className="h-5 w-5 text-primary" />
-              Geração de descrições em lote
-            </DialogTitle>
-            <DialogDescription>
-              Selecione os imóveis e gere descrições com IA para todos de uma vez.
-            </DialogDescription>
-          </DialogHeader>
-
-          {!batchResults ? (
-            <>
-              <div className="flex items-center justify-between mb-2 mt-1">
-                <span className="text-xs text-muted-foreground">{batchSelected.size} selecionado{batchSelected.size !== 1 ? 's' : ''}</span>
-                <button
-                  className="text-xs text-primary hover:underline"
-                  onClick={() => setBatchSelected(
-                    batchSelected.size === properties.length
-                      ? new Set()
-                      : new Set(properties.map(p => p.id))
-                  )}
-                >
-                  {batchSelected.size === properties.length ? 'Desselecionar todos' : 'Selecionar todos'}
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto space-y-1 pr-1">
-                {properties.map(p => (
-                  <label key={p.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={batchSelected.has(p.id)}
-                      onChange={() => toggleBatchSelect(p.id)}
-                      className="rounded flex-shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{p.title}</p>
-                      <p className="text-xs text-muted-foreground">{p.code} · {PROPERTY_TYPE_LABELS[p.property_type] ?? p.property_type}</p>
-                    </div>
-                    {p.description && <span className="text-xs text-emerald-600 flex-shrink-0">desc</span>}
-                  </label>
-                ))}
-              </div>
-              <DialogFooter className="mt-3">
-                <Button variant="outline" onClick={() => setBatchModalOpen(false)}>Cancelar</Button>
-                <Button onClick={handleBatchGenerate} disabled={batchRunning || batchSelected.size === 0}>
-                  {batchRunning
-                    ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Gerando...</>
-                    : <><Wand2 className="h-4 w-4 mr-2" />Gerar {batchSelected.size > 0 ? batchSelected.size : ''} descriç{batchSelected.size !== 1 ? 'ões' : 'ão'}</>
-                  }
-                </Button>
-              </DialogFooter>
-            </>
-          ) : (
-            <>
-              <div className="flex-1 overflow-y-auto space-y-2 mt-1 pr-1">
-                {batchResults.map(r => {
-                  const prop = properties.find(p => p.id === r.id);
-                  return (
-                    <Aviso
-                      key={r.id}
-                      tom={r.status === 'ok' ? 'sucesso' : 'erro'}
-                      titulo={<span className="block truncate">{prop?.title ?? r.id}</span>}
-                    >
-                      {r.status === 'ok' && r.description && (
-                        <p className="text-xs line-clamp-2">{r.description}</p>
-                      )}
-                      {r.status === 'error' && (
-                        <p className="text-xs">{r.error}</p>
-                      )}
-                    </Aviso>
-                  );
-                })}
-              </div>
-              <DialogFooter className="mt-3">
-                <Button onClick={() => setBatchModalOpen(false)}>Fechar</Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <JanelaDescricoesEmLote
+        aberta={batchModalOpen}
+        aoMudarAberta={setBatchModalOpen}
+        imoveis={properties}
+        selecionados={batchSelected}
+        aoMudarSelecao={setBatchSelected}
+        gerando={batchRunning}
+        resultados={batchResults}
+        aoGerar={handleBatchGenerate}
+      />
     </Pagina>
   );
 }

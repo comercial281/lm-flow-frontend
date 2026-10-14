@@ -67,7 +67,7 @@ export default function BolsaoImportWizard({ open, onOpenChange, onImported }: P
   };
 
   const handleClose = (next: boolean) => {
-    if (uploading) return;
+    if (uploading || step === 'importing') return;
     if (!next) reset();
     onOpenChange(next);
   };
@@ -107,7 +107,9 @@ export default function BolsaoImportWizard({ open, onOpenChange, onImported }: P
       await bolsaoService.confirm(batch.id, mapping);
       toast.success('Importação começou. Os leads aparecem no Bolsão em instantes.');
       onImported();
-      handleClose(false);
+      // Terminou: fecha direto, sem passar pela trava de "importando".
+      reset();
+      onOpenChange(false);
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Não consegui importar.'));
       setStep('map');
@@ -116,7 +118,7 @@ export default function BolsaoImportWizard({ open, onOpenChange, onImported }: P
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent size="wide">
+      <DialogContent size={step === 'map' ? 'wide' : 'default'} className={step === 'map' ? undefined : 'max-w-2xl'}>
         <DialogHeader>
           <DialogTitle>Nova lista no Bolsão</DialogTitle>
           <DialogDescription>
@@ -267,15 +269,13 @@ export default function BolsaoImportWizard({ open, onOpenChange, onImported }: P
         )}
 
         <DialogFooter>
+          <Button variant="outline" onClick={() => handleClose(false)} disabled={step === 'importing'}>
+            Cancelar
+          </Button>
           {step === 'map' && (
-            <>
-              <Button variant="ghost" onClick={() => handleClose(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleConfirm} disabled={!phoneMapped}>
-                <CheckCircle2 className="h-4 w-4 mr-2" /> Está certo, importar
-              </Button>
-            </>
+            <Button onClick={handleConfirm} disabled={!phoneMapped}>
+              <CheckCircle2 className="h-4 w-4 mr-2" /> Está certo, importar
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>

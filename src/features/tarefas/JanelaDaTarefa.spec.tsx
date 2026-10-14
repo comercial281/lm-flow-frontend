@@ -21,7 +21,8 @@ vi.mock('./tarefasService', async () => {
     },
   };
 });
-vi.mock('@/services/visits/visitsService', () => ({ visitsService: { realtors: async () => [{ id: 'u1', name: 'Ana' }, { id: 'u2', name: 'Bruno' }], leadPickerPage: async () => ({ data: [{ id: 'l1', name: 'Carla', phone_number: '11999990000', in_pipeline: true }], meta: {} }) } }));
+const leadPicker = vi.hoisted(() => vi.fn());
+vi.mock('@/services/visits/visitsService', () => ({ visitsService: { realtors: async () => [{ id: 'u1', name: 'Ana' }, { id: 'u2', name: 'Bruno' }], leadPickerPage: (...a: unknown[]) => leadPicker(...a) } }));
 vi.mock('@/services/properties/propertiesService', () => ({ propertiesService: { list: async () => ({ data: [{ id: 'p1', title: 'Apto Centro', code: 'AP0001' }] }) } }));
 const lista = vi.hoisted(() => ({ opcoes: [] as unknown[] }));
 vi.mock('@/services/listOptions/listOptionsService', () => ({ listOptionsService: { list: async () => lista.opcoes } }));
@@ -46,6 +47,8 @@ beforeEach(() => {
   contexto.mockResolvedValue({ pipeline_item_id: 'c1', pipeline_name: 'Funil de Vendas', contact: { id: 'ct1', name: 'Jucilene Barbosa' }, owner: { id: 'u1', name: 'Ana' } });
   agendaDoDia.mockResolvedValue([]);
   gestor.valor = false;
+  leadPicker.mockReset();
+  leadPicker.mockResolvedValue({ data: [{ id: 'l1', name: 'Carla', phone_number: '11999990000', in_pipeline: true }], meta: {} });
 });
 
 describe('JanelaDaTarefa', () => {
@@ -189,7 +192,6 @@ describe('JanelaDaTarefa', () => {
       criar.mockResolvedValue({ id: 't1' });
       noCard();
       await waitFor(() => expect(titulo().value).toBe('Follow-up'));
-      fireEvent.click(screen.getByRole('button', { name: 'Imóvel' }));
       fireEvent.change(screen.getByRole('textbox', { name: 'Imóvel' }), { target: { value: 'centro' } });
       fireEvent.click(await screen.findByRole('button', { name: /Apto Centro/ }));
       expect(screen.getByText('AP0001')).toBeInTheDocument();
@@ -251,15 +253,40 @@ describe('JanelaDaTarefa', () => {
   it('na escolha de lead mostra o telefone e o link pra mudar diz "Trocar"', async () => {
     contexto.mockResolvedValue({ pipeline_item_id: 'c7', pipeline_name: 'Funil', contact: { id: 'l1', name: 'Carla' }, owner: null });
     render(<JanelaDaTarefa aberta aoFechar={() => {}} aoSalvar={() => {}} escolherLead />);
+    fireEvent.change(screen.getByLabelText('Lead'), { target: { value: 'carla' } });
     const linha = await screen.findByText('11999990000');
     fireEvent.click(linha);
     expect(await screen.findByRole('button', { name: 'Trocar' })).toBeInTheDocument();
     expect(contexto).toHaveBeenCalledWith({ contact_id: 'l1' });
   });
 
+  it('a lista de leads só abre depois de digitar', async () => {
+    render(<JanelaDaTarefa aberta aoFechar={() => {}} aoSalvar={() => {}} escolherLead />);
+    await new Promise(r => setTimeout(r, 450));
+    expect(leadPicker).not.toHaveBeenCalled();
+    expect(screen.queryByText('11999990000')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Lead'), { target: { value: 'carla' } });
+    expect(await screen.findByText('11999990000')).toBeInTheDocument();
+    expect(leadPicker).toHaveBeenCalledWith('carla', 1, 8);
+    leadPicker.mockResolvedValue({ data: [], meta: {} });
+    fireEvent.change(screen.getByLabelText('Lead'), { target: { value: 'zzz' } });
+    expect(await screen.findByText('Nenhum lead encontrado.')).toBeInTheDocument();
+  });
+
+  it('os campos seguem a ordem Sobre quem → O quê → Quando → Quem faz → Observação', async () => {
+    noCard();
+    await waitFor(() => expect(titulo().value).toBe('Follow-up'));
+    const grupos = screen.getAllByRole('group').map(g => g.getAttribute('aria-labelledby') && document.getElementById(g.getAttribute('aria-labelledby')!)?.textContent);
+    expect(grupos.filter(Boolean)).toEqual(['Sobre quem', 'O quê', 'Quando', 'Quem faz']);
+    const pos = (el: HTMLElement) => el.compareDocumentPosition.bind(el);
+    const ordem = [screen.getByLabelText('Imóvel'), screen.getByLabelText('Título da tarefa'), screen.getByLabelText('Data'), document.getElementById('tarefa-responsavel')!, screen.getByLabelText('Observação')] as HTMLElement[];
+    for (let i = 0; i < ordem.length - 1; i++) expect(pos(ordem[i])(ordem[i + 1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('lead escolhido fora do funil avisa na hora', async () => {
     contexto.mockRejectedValue({ response: { data: { error: { details: { motivo: 'lead_sem_card' } } } } });
     render(<JanelaDaTarefa aberta aoFechar={() => {}} aoSalvar={() => {}} escolherLead />);
+    fireEvent.change(screen.getByLabelText('Lead'), { target: { value: 'carla' } });
     fireEvent.click(await screen.findByText('11999990000'));
     expect(await screen.findByText(/ainda não está no funil/)).toBeInTheDocument();
   });

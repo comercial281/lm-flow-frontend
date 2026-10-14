@@ -59,7 +59,7 @@ describe('Folgas', () => {
     expect(itens[1]).toHaveTextContent('dia inteiro');
   });
 
-  it('corretor não vê os botões de corretor e cria a folga sem escolher ninguém', async () => {
+  it('corretor não vê a lista de corretor e cria a folga sem escolher ninguém', async () => {
     const user = userEvent.setup();
     abrir(true);
     await screen.findAllByRole('listitem');
@@ -74,21 +74,32 @@ describe('Folgas', () => {
     expect(toastSuccess).toHaveBeenCalledWith('Folga criada');
   });
 
-  it('gestor vê os botões de corretor e precisa escolher um', async () => {
+  it('gestor vê a lista de corretor e precisa escolher um', async () => {
     const user = userEvent.setup();
     abrir(false);
-    const grupo = await screen.findByRole('group', { name: 'De quem é a folga' });
-    expect(within(grupo).getByRole('button', { name: 'Ana Teste' })).toBeInTheDocument();
+    const lista = await screen.findByLabelText('De quem é a folga');
+    expect(within(lista).getByRole('option', { name: 'Ana Teste' })).toBeInTheDocument();
 
     preencherDatas('2026-10-07', '2026-10-07');
     await user.click(screen.getByRole('button', { name: 'Criar folga' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Escolha o corretor');
     expect(createTimeOff).not.toHaveBeenCalled();
 
-    await user.click(within(grupo).getByRole('button', { name: 'Bruno Teste' }));
+    await user.selectOptions(lista, 'Bruno Teste');
     await user.click(screen.getByRole('button', { name: 'Criar folga' }));
     await waitFor(() => expect(createTimeOff).toHaveBeenCalledTimes(1));
     expect(createTimeOff.mock.calls[0][0]).toMatchObject({ user_id: 'u-bruno' });
+  });
+
+  it('o corretor vem numa lista de escolha, não em botões; o rodapé tem Cancelar', async () => {
+    abrir(false);
+    const lista = await screen.findByLabelText('De quem é a folga');
+    expect(lista.tagName).toBe('SELECT');
+    // O rótulo visível do campo fica ligado à lista.
+    expect(lista.id).not.toBe('');
+    expect(document.querySelector(`label[for="${lista.id}"]`)).toHaveTextContent(/De quem é a folga/);
+    expect(screen.queryByRole('button', { name: 'Ana Teste' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeInTheDocument();
   });
 
   it('dia inteiro manda os horários nulos', async () => {

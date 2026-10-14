@@ -65,7 +65,8 @@ const trocarCliente = async (nomeAtual: RegExp, novo: string) => {
   await userEvent.click(screen.getByDisplayValue(nomeAtual));
   await userEvent.click(await screen.findByText(novo));
 };
-const botaoCorretor = (nome: string) => screen.findByRole('button', { name: nome });
+const listaCorretor = () => screen.findByLabelText('Corretor responsável') as Promise<HTMLSelectElement>;
+const corretorEscolhido = async () => { const l = await listaCorretor(); return l.options[l.selectedIndex].text; };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -75,26 +76,33 @@ beforeEach(() => {
 });
 
 describe('Agendar visita', () => {
-  it('corretor: o responsável é ele, sem botões de corretor', async () => {
+  it('corretor: o responsável é ele, sem lista de corretor', async () => {
     comoCorretor();
     realtors.mockResolvedValue([{ id: 'u-ana', name: 'Ana' }]);
     abrir();
 
     expect(await screen.findByText('Ana')).toBeInTheDocument();
-    expect(screen.queryByRole('group', { name: 'Corretor responsável' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Ana' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Corretor responsável')).not.toBeInTheDocument();
     expect(screen.queryByText('Criar contato novo')).not.toBeInTheDocument();
     expect(leadPickerPage).toHaveBeenCalledWith('', 1, 1);
   });
 
-  it('enquanto confere o cargo, não mostra os botões e não deixa agendar', async () => {
+  it('enquanto confere o cargo, não mostra a lista e não deixa agendar', async () => {
     leadPickerPage.mockImplementation(() => new Promise(() => {}));
     realtors.mockImplementation(() => new Promise(() => {}));
     abrir();
 
     expect(screen.getByRole('button', { name: 'Agendar' })).toBeDisabled();
-    expect(screen.queryByRole('group', { name: 'Corretor responsável' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Bruno' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Corretor responsável')).not.toBeInTheDocument();
+  });
+
+  it('gestor: o rótulo visível "Corretor responsável" fica ligado à lista (htmlFor + id)', async () => {
+    comoGestor();
+    abrir();
+
+    const lista = await listaCorretor();
+    expect(lista.id).not.toBe('');
+    expect(document.querySelector(`label[for="${lista.id}"]`)).toHaveTextContent(/Corretor responsável/);
   });
 
   it('é a janela larga da casa (duas colunas: size="wide", teto de 1400px)', async () => {
@@ -104,20 +112,19 @@ describe('Agendar visita', () => {
     expect(await screen.findByRole('dialog')).toHaveClass('sm:max-w-[1400px]');
   });
 
-  it('gestor: vê os corretores em botões e escolher o cliente marca o dono do lead', async () => {
+  it('gestor: vê os corretores na lista e escolher o cliente marca o dono do lead', async () => {
     comoGestor();
     abrir();
 
-    const bruno = await botaoCorretor('Bruno');
-    const carla = await botaoCorretor('Carla');
-    expect(bruno).toHaveAttribute('aria-pressed', 'false');
-    expect(carla).toHaveAttribute('aria-pressed', 'false');
+    const lista = await listaCorretor();
+    expect(within(lista).getByRole('option', { name: 'Bruno' })).toBeInTheDocument();
+    expect(within(lista).getByRole('option', { name: 'Carla' })).toBeInTheDocument();
+    expect(lista).toHaveValue('');
     expect(screen.queryByPlaceholderText('Buscar corretor por nome')).not.toBeInTheDocument();
 
     await escolherCliente('Leonardo Teste');
 
-    expect(await botaoCorretor('Bruno')).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Carla' })).toHaveAttribute('aria-pressed', 'false');
+    expect(await corretorEscolhido()).toBe('Bruno');
     expect(realtors).toHaveBeenCalledTimes(1);
   });
 
@@ -180,7 +187,7 @@ describe('Agendar visita', () => {
     await escolherCliente('Leonardo Teste');
     await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
 
-    const resumo = await screen.findByRole('region', { name: 'Resumo da visita' });
+    const resumo = await screen.findByTestId('resumo-da-visita');
     expect(within(resumo).getByText(/das 10h às 11h/)).toBeInTheDocument();
     expect(within(resumo).getByText('Nenhuma outra visita sua nesse dia.')).toBeInTheDocument();
     const quando = screen.getByRole('region', { name: 'Quando' });
@@ -204,13 +211,23 @@ describe('Agendar visita', () => {
     expect(payload.duration_minutes).toBe(60);
   });
 
+  it('o corretor vem numa lista de escolha, não em botões', async () => {
+    comoGestor();
+    abrir();
+
+    const lista = await listaCorretor();
+    expect(lista.tagName).toBe('SELECT');
+    expect(screen.queryByRole('button', { name: 'Bruno' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Carla' })).not.toBeInTheDocument();
+  });
+
   it('gestor: o payload manda o dono do lead como realtor_id', async () => {
     comoGestor();
     create.mockResolvedValue({ id: 'v10' });
     abrir();
 
     await escolherCliente('Leonardo Teste');
-    expect(await botaoCorretor('Bruno')).toHaveAttribute('aria-pressed', 'true');
+    expect(await corretorEscolhido()).toBe('Bruno');
     await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
     await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
 
@@ -218,15 +235,14 @@ describe('Agendar visita', () => {
     expect(create.mock.calls[0][0].realtor_id).toBe('u-bruno');
   });
 
-  it('gestor: o payload manda o corretor do botão escolhido', async () => {
+  it('gestor: o payload manda o corretor escolhido na lista', async () => {
     comoGestor();
     create.mockResolvedValue({ id: 'v11' });
     abrir();
 
     await escolherCliente('Leonardo Teste');
-    await userEvent.click(await botaoCorretor('Carla'));
-    expect(screen.getByRole('button', { name: 'Carla' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Bruno' })).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.selectOptions(await listaCorretor(), 'Carla');
+    expect(await corretorEscolhido()).toBe('Carla');
     expect(await screen.findByText('Nenhuma outra visita de Carla nesse dia.')).toBeInTheDocument();
 
     await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
@@ -242,12 +258,10 @@ describe('Agendar visita', () => {
     abrir();
 
     await escolherCliente('Leonardo Teste');
-    expect(await botaoCorretor('Bruno')).toHaveAttribute('aria-pressed', 'true');
+    expect(await corretorEscolhido()).toBe('Bruno');
 
     await trocarCliente(/Leonardo Teste/, 'Marcos Teste');
-
-    expect(screen.getByRole('button', { name: 'Bruno' })).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByRole('button', { name: 'Carla' })).toHaveAttribute('aria-pressed', 'false');
+    expect(await listaCorretor()).toHaveValue('');
 
     await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
     await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
@@ -262,13 +276,11 @@ describe('Agendar visita', () => {
     abrir();
 
     await escolherCliente('Leonardo Teste');
-    await userEvent.click(await botaoCorretor('Carla'));
-    expect(screen.getByRole('button', { name: 'Carla' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.selectOptions(await listaCorretor(), 'Carla');
+    expect(await corretorEscolhido()).toBe('Carla');
 
     await trocarCliente(/Leonardo Teste/, 'Marcos Teste');
-
-    expect(screen.getByRole('button', { name: 'Carla' })).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByRole('button', { name: 'Bruno' })).toHaveAttribute('aria-pressed', 'false');
+    expect(await listaCorretor()).toHaveValue('');
   });
 
   it('gestor: dono do lead fora da lista de corretores não fica marcado escondido', async () => {
@@ -325,7 +337,7 @@ describe('Agendar visita · aberto pelo card do lead', () => {
     );
 
     expect(await screen.findByDisplayValue(/Leonardo Teste/)).toBeInTheDocument();
-    expect(await botaoCorretor('Bruno')).toHaveAttribute('aria-pressed', 'true');
+    expect(await corretorEscolhido()).toBe('Bruno');
   });
 
   it('corretor: o cliente já vem escolhido e o corretor continua sendo ele', async () => {
@@ -337,6 +349,6 @@ describe('Agendar visita · aberto pelo card do lead', () => {
 
     expect(await screen.findByDisplayValue(/Leonardo Teste/)).toBeInTheDocument();
     expect(await screen.findByText('Ana')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Bruno' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Corretor responsável')).not.toBeInTheDocument();
   });
 });
