@@ -252,7 +252,7 @@ describe('Agendar visita', () => {
     expect(await corretorEscolhido()).toBe('Bruno');
 
     await trocarCliente(/Leonardo Teste/, 'Marcos Teste');
-
+    expect(await listaCorretor()).toHaveValue('');
 
     await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
     await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
@@ -271,7 +271,7 @@ describe('Agendar visita', () => {
     expect(await corretorEscolhido()).toBe('Carla');
 
     await trocarCliente(/Leonardo Teste/, 'Marcos Teste');
-
+    expect(await listaCorretor()).toHaveValue('');
   });
 
   it('gestor: dono do lead fora da lista de corretores não fica marcado escondido', async () => {

@@ -8,7 +8,7 @@
  *
  * Corretor (`soMinhas`, o `meta.only_mine` da Agenda): vê e cria só as dele,
  * sem escolher ninguém — o servidor força ele mesmo. Gestor: vê as de todos e
- * escolhe o corretor com os mesmos botões do Agendar visita.
+ * escolhe o corretor na mesma lista de escolha do Agendar visita.
  * Spec: specs/2026-10-01-fase-4-agenda-do-corretor-design.md (pasta LM FLOW).
  */
 import { useCallback, useEffect, useId, useState } from 'react';
