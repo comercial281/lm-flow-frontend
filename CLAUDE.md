@@ -4118,7 +4118,7 @@ Spec: `LM FLOW/specs/2026-10-07-frente-2-tarefas-e-atividades-design.md`. Plano:
 - **Excluir:** gestor qualquer uma; corretor só a que criou (sem permissão nova: cargo editado não recebe chave nova).
 - **Avisos de tarefa (vence em 1h / venceu):** o mecanismo do servidor está em decisão do dono (07/10) — ver o PR do servidor. O atrasado na tela é sempre calculado pelo prazo.
 - **Filtro do Funil (08/10/2026):** o grupo Tarefas do painel ganha "Vence amanhã" e abaixo vem "Categoria da tarefa" (só as ativas; `categ=` no endereço). Prazo e categoria valem na MESMA tarefa aberta (`tasks_info.open_tasks`); sem `open_tasks` (servidor antigo) usa as contagens e a categoria deixa passar (`features/tarefas/filtroDoFunil.ts`).
-- **Tela Tarefas:** clicar na tarefa abre o card no Funil (`/pipelines/<id>?card=<item>`); a janela da próxima tarefa já vem com a próxima hora cheia sugerida.
+- **Tela Tarefas:** clicar na tarefa abre a **página do card em outra guia** (`linkDoCardCompleto`, link de verdade com `target="_blank"`; pedido do dono em 14/10/2026, antes abria a janela no Funil); a janela da próxima tarefa já vem com a próxima hora cheia sugerida.
 
 Não reabrir sem o dono pedir.
 
@@ -4130,10 +4130,21 @@ Spec: `LM FLOW/specs/2026-10-08-janela-da-tarefa-design.md`. Arquivos: `features
 - **Tipo de tarefa em botões com ícone**, um por categoria ativa. O ícone sai do NOME (a lista não guarda ícone): follow/retorno → pessoa, oferta → megafone, visita → calendário, imóvel/atualiza → casa, liga → telefone, resto → etiqueta. Ao criar, o título nasce com o nome do tipo padrão; trocar o tipo troca o título só enquanto ele ainda é o nome automático.
 - **Prioridade** Baixa/Média/Alta (coluna `priority` que já existia); **Hora** de 15 em 15 min; **Duração** de 15 min a 4 h (padrão 1 h, em `metadata.duration_minutes`).
 - **Corretor responsável:** gestor escolhe na lista, já vindo com o responsável do lead (`GET /tasks/context`); só vai pro servidor se mudar. Corretor vê o próprio nome, travado.
-- **Vincular:** lead e atendimento (card + nome do funil) vêm do card; pela tela Tarefas, busca o lead e avisa na hora se ele não está no funil. **Um** imóvel por tarefa (`metadata.property_id`), buscado por título ou código; a lixeira tira. A linha da tarefa mostra o código do imóvel e "Prioridade alta".
+- **Vincular:** lead e atendimento (card + nome do funil) vêm do card; pela tela Tarefas, busca o lead e avisa na hora se ele não está no funil. **Um** imóvel por tarefa (`metadata.property_id`), buscado por título ou código; a lixeira tira. A linha da tarefa mostra o código do imóvel e o selo "Alta" (ver Cartão da tarefa, 14/10).
 - **Agenda do dia (coluna direita):** tarefas e visitas do responsável no dia (`GET /activities?day=`), abertas e feitas, por horário. Mudar a data leva a agenda junto; as setas só mudam o dia que se vê.
 - **Marcar como concluída:** ao criar, nasce concluída (`completed: true`); ao editar, salva e conclui.
 - **Fora, de propósito (decisão do dono):** colaboradores (mexe em quem vê e em quem recebe aviso) e vários contatos/atendimentos por tarefa (tarefa continua presa a um card).
+
+### Cartão da tarefa (14/10/2026 — opção C escolhida pelo dono: "muito fraco, feio, sem padrão")
+
+Página de escolha com as três opções (A linha da agenda, B cartão por tarefa, C compacta com ícone do tipo): artefato "Cartão da tarefa" na conta do dono. Arquivo: `features/tarefas/LinhaDaTarefa.tsx`; vale na tela Tarefas e no bloco de tarefas do card (`TarefasDoLead`: aba Tarefas, Conversa, Ficha).
+
+- **Da esquerda pra direita:** bolinha de concluir (`Checkbox` do pacote, redonda) · quadradinho com o ícone do tipo (`iconeDaCategoria`, o mesmo da janela; vermelho se atrasada, cinza se feita) · título em até duas linhas · prazo · ⋮.
+- **Segunda linha:** selo "Alta" (sempre no começo, pro corte não esconder) · lead em destaque (só na tela Tarefas) · tipo · código do imóvel · responsável. **O tipo não se repete quando o título é o próprio tipo** (a tarefa nasce com o nome do tipo).
+- **Prazo à direita:** hora em cima; embaixo o dia ("Hoje", "Amanhã", "Ontem", "Sex 16/10", ano só se for outro) ou, se atrasada, o selo "Atrasada há 5 h" (`prazoDaTarefa` em `prazos.ts`, sobre o `tempoDesde` da casa). Sem prazo: "Sem prazo". Concluída nunca aparece como atrasada.
+- **Tarefa sem menu (sem permissão)** guarda o lugar do ⋮, pra coluna do prazo não desalinhar. A linha de imóveis desatualizados segue o mesmo desenho (sem bolinha, seta no lugar do ⋮).
+- **Clique:** na tela Tarefas o texto é link pra página do card, em outra guia (`abrirCard`). Dentro do card não é link (já se está nele).
+- A lista da tela Tarefas é o `Card` da casa. As abas de prazo (Para fazer, Vence hoje…) ficam como estavam (pedido do dono).
 
 ## Base de design e linguagem (desde 30/09/2026, Fase 3) — não reabrir sem o dono pedir
 

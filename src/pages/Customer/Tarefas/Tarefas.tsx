@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/ds';
+import { Button, Card } from '@/components/ui/ds';
 import BaseHeader from '@/components/base/BaseHeader';
 import Pagina from '@/components/base/Pagina';
 import Abas from '@/components/base/Abas';
@@ -29,7 +29,7 @@ const POR_PAGINA = 30;
 /**
  * Atividades › Tarefas (08/10/2026): só tarefas por prazo, no modelo da tela
  * Atividades do Praedium. Visita não aparece aqui: mora em Atividades › Visitas.
- * Clicar na tarefa abre o card do lead no Funil.
+ * Clicar na tarefa abre a página do card do lead em outra guia (14/10/2026).
  */
 export default function Tarefas() {
   const navigate = useNavigate();
@@ -114,7 +114,6 @@ export default function Tarefas() {
       if (!ok) return;
       try { await tarefasService.excluir(t.id); toast.success(T.excluida); } catch (e) { toast.error(apiErrorMessage(e, T.erro)); }
     },
-    aoAbrir: (t: TarefaAtividade) => t.pipeline_id && navigate(`/pipelines/${t.pipeline_id}?card=${t.pipeline_item_id}`),
   };
 
   return (
@@ -156,20 +155,20 @@ export default function Tarefas() {
         </BaseHeader>
       }
     >
-      <div className="rounded-lg border border-border bg-background px-4">
+      <Card className="gap-0 p-1">
         {!resposta && falhou ? (
           <EmptyState tipo="erro" aoTentarDeNovo={() => void carregar()} />
         ) : !resposta ? (
-          <Carregando linhas={5} rotulo="Carregando tarefas…" />
+          <div className="p-3"><Carregando linhas={5} rotulo="Carregando tarefas…" /></div>
         ) : itens.length === 0 && !imoveis ? (
           <EmptyState title={balde === 'hoje' ? 'Nada pra hoje.' : 'Nada por aqui.'} />
         ) : (
           <ul className="divide-y divide-border/60">
             {imoveis && <LinhaDosImoveis balde={imoveis.bucket} quantidade={imoveis.count} deQuem={deQuem} aoAbrir={abrirImoveis} />}
-            {itens.map(t => <LinhaDaTarefa key={t.id} tarefa={t} mostrarLead {...acoes} />)}
+            {itens.map(t => <LinhaDaTarefa key={t.id} tarefa={t} mostrarLead abrirCard {...acoes} />)}
           </ul>
         )}
-      </div>
+      </Card>
 
       {total > POR_PAGINA && (
         <div className="flex items-center justify-end gap-2 text-sm">

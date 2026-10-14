@@ -77,6 +77,16 @@ describe('Tarefas', () => {
     expect(listar).toHaveBeenCalledWith(expect.objectContaining({ bucket: 'atrasadas', page: 1 }));
   });
 
+  it('clicar na tarefa abre a página do card em outra guia', async () => {
+    listar.mockResolvedValue(resposta([
+      { kind: 'task', id: 't1', title: 'Ligar', due_at: new Date().toISOString(), status: 'pending', overdue: false, pipeline_item_id: 'c1', pipeline_id: 'p1', contact: { id: 'x', name: 'Carla' }, assignee: null, created_by_id: 'u1', can_edit: true, can_delete: true },
+    ]));
+    render(<MemoryRouter><Tarefas /></MemoryRouter>);
+    const link = await screen.findByRole('link', { name: /Ligar/ });
+    expect(link).toHaveAttribute('href', '/pipelines/p1/card/c1');
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+
   it('resposta lenta que chega depois da nova não sobrescreve a tela', async () => {
     const tarefa = (id: string, title: string) => ({ kind: 'task', id, title, due_at: new Date().toISOString(), status: 'pending', overdue: false, pipeline_item_id: 'c1', pipeline_id: 'p1', contact: null, assignee: null, created_by_id: 'u1', can_edit: true, can_delete: true });
     let soltarPrimeira: (v: unknown) => void = () => {};
