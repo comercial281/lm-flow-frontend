@@ -335,7 +335,7 @@ export const getCustomerMenuSections = (): MenuSection[] => [
         // do cliente". Mesma liberação das automações de lead (Facebook, Pixel).
         { name: 'CVCRM', href: '/settings/cvcrm', icon: Building2, ...permissionFromRoute('/settings/cvcrm'), featureKey: 'lead_automations', cartao: 'sistemas' },
         // Imóveis pelo site do cliente (13/10/2026): o arquivo de imóveis que o site gera.
-        { name: 'Site da imobiliária', href: '/settings/site-da-imobiliaria', icon: Globe, ...gestao('/settings/site-da-imobiliaria', 'properties.create'), featureKey: 'properties', cartao: 'sistemas' },
+        { name: 'Site da imobiliária', href: '/settings/site-da-imobiliaria', icon: Globe, permissions: ['properties.read', 'properties.create', 'properties.update'], requireAll: true, featureKey: 'properties', cartao: 'sistemas' },
       ]),
       // Tela única de distribuição: modo + quem participa + prazo + gestor.
       { name: 'Roleta de leads', href: '/automations/roleta-config', icon: Shuffle, ...permissionFromRoute('/automations/roleta-config'), featureKey: 'lead_automations' },

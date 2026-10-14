@@ -16,14 +16,14 @@ import { useCan } from '@/hooks/useCan';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { siteFeedService, type FonteDoSite, type Previa } from '@/services/properties/siteFeedService';
 import { resumoDaMudanca, situacaoDoSite } from '@/features/properties/situacaoDoSite';
-import PreviaDaImportacao from './PreviaDaImportacao';
+import PreviaDaImportacao, { fraseDeInativar } from './PreviaDaImportacao';
 
 const ESPERA_MS = 4000;
 const TENTATIVAS = 15;
 
 export default function SiteDaImobiliaria() {
   const pode = useCan();
-  const podeMexer = pode('properties', 'create');
+  const podeMexer = pode('properties', 'create') && pode('properties', 'update');
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [fonte, setFonte] = useState<FonteDoSite | null>(null);
   const [falhou, setFalhou] = useState(false);
@@ -34,7 +34,7 @@ export default function SiteDaImobiliaria() {
   const [erro, setErro] = useState<string | null>(null);
   const pedido = useRef(0);
   const timer = useRef<number | null>(null);
-  const vivo = useRef(true);
+  const geracao = useRef(0);
 
   const carregar = useCallback(async () => {
     const meu = ++pedido.current;
@@ -50,26 +50,28 @@ export default function SiteDaImobiliaria() {
   }, []);
 
   useEffect(() => { void carregar(); }, [carregar]);
-  useEffect(() => {
-    vivo.current = true;
-    return () => { vivo.current = false; if (timer.current != null) window.clearTimeout(timer.current); };
+  useEffect(() => () => {
+    geracao.current += 1;
+    if (timer.current != null) window.clearTimeout(timer.current);
   }, []);
 
   // Depois de confirmar/atualizar, a leitura roda no servidor: confere a cada 4 s até a data mudar.
   const acompanhar = useCallback((antes?: string | null) => {
-    let n = 0;
+    const meu = ++geracao.current;
     if (timer.current != null) window.clearTimeout(timer.current);
+    let n = 0;
     const agendar = () => { timer.current = window.setTimeout(passo, ESPERA_MS); };
     const passo = async () => {
-      if (!vivo.current) return;
+      if (meu !== geracao.current) return;
       n += 1;
       try {
         const f = await siteFeedService.get();
-        if (!vivo.current) return;
+        if (meu !== geracao.current) return;
         setFonte(f);
         if (f.last_checked_at !== antes && f.state !== 'waiting') return;
       } catch { /* tenta de novo */ }
-      if (n < TENTATIVAS && vivo.current) agendar();
+      if (meu !== geracao.current) return;
+      if (n < TENTATIVAS) agendar();
     };
     agendar();
   }, []);
@@ -91,7 +93,7 @@ export default function SiteDaImobiliaria() {
     if (previa.counts.inactivate > 0) {
       const ok = await confirmar({
         titulo: 'Confirmar a importação',
-        descricao: `${previa.counts.inactivate} imóveis que não estão no arquivo vão ficar Inativos (a IA para de oferecer). Nada é excluído.`,
+        descricao: fraseDeInativar(previa.counts.inactivate),
         rotuloDaAcao: 'Confirmar e importar',
       });
       if (!ok) return;
@@ -182,6 +184,12 @@ export default function SiteDaImobiliaria() {
               <Button type="button" onClick={() => { void lerArquivo(); }} disabled={lendo || !endereco.trim()}>
                 {lendo && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} Ler arquivo
               </Button>
+              {fonte.configured && editando && (
+                <Button type="button" variant="ghost" className="ml-2"
+                  onClick={() => { setEditando(false); setPrevia(null); setErro(null); setEndereco(fonte.url ?? ''); }}>
+                  Cancelar
+                </Button>
+              )}
             </div>
             {erro && <Aviso tom="erro">{erro}</Aviso>}
             {previa && <PreviaDaImportacao previa={previa} aoConfirmar={() => { void importar(); }} />}
