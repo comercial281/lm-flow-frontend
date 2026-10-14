@@ -1,7 +1,7 @@
 {
   "title": "Funis",
   "header": {
-    "newPipeline": "Criar Funil",
+    "newPipeline": "Criar funil",
     "searchPlaceholder": "Buscar funis..."
   },
   "stats": {
@@ -19,7 +19,7 @@
     "noResultsDescription": "Tente ajustar sua busca para encontrar o funil desejado.",
     "noPipelines": "Nenhum funil criado",
     "noPipelinesDescription": "Crie um funil para organizar e acompanhar suas conversas através de diferentes etapas.",
-    "createPipeline": "Criar Funil"
+    "createPipeline": "Criar funil"
   },
   "loading": {
     "pipelines": "Carregando funis...",
@@ -89,10 +89,10 @@
     "loadError": "Erro ao carregar leads disponíveis"
   },
   "createPipeline": {
-    "title": "Criar Novo Funil",
+    "title": "Criar novo funil",
     "description": "Configure um novo funil e suas etapas para organizar suas conversas.",
-    "basicInfo": "Informações Básicas",
-    "pipelineName": "Nome do Funil",
+    "basicInfo": "Informações básicas",
+    "pipelineName": "Nome do funil",
     "pipelineNamePlaceholder": "Ex: Funil de Vendas",
     "descriptionLabel": "Descrição",
     "descriptionPlaceholder": "Descreva o objetivo deste funil...",
@@ -115,7 +115,7 @@
       "required": "Selecione pelo menos uma equipe",
       "noTeams": "Nenhuma equipe disponível"
     },
-    "stages": "Etapas do Funil",
+    "stages": "Etapas do funil",
     "stagesCount": "{{count}} etapas",
     "reset": "Resetar",
     "addStage": "Adicionar Ação",
@@ -124,7 +124,7 @@
     "addStageMessage": "Adicione pelo menos uma etapa para o funil",
     "cancel": "Cancelar",
     "creating": "Criando...",
-    "create": "Criar Funil",
+    "create": "Criar funil",
     "templates": {
       "sales": {
         "newLead": {
@@ -199,11 +199,11 @@
   "createStage": {
     "title": "Criar Nova Etapa",
     "description": "Adicione uma nova etapa ao funil para organizar suas conversas.",
-    "name": "Nome da Etapa",
+    "name": "Nome da etapa",
     "namePlaceholder": "Ex: Leads Qualificados",
     "descriptionLabel": "Descrição",
     "descriptionPlaceholder": "Descreva o propósito desta etapa...",
-    "color": "Cor da Etapa",
+    "color": "Cor da etapa",
     "colorSelected": "Cor selecionada",
     "stageType": "Tipo de Etapa",
     "stageTypes": {
@@ -276,30 +276,23 @@
     "importantLabel": "Atenção"
   },
   "duplicatePipeline": {
-    "title": "Duplicar Funil",
+    "title": "Duplicar funil",
     "description": "Crie uma cópia do funil \"{{name}}\" com as mesmas configurações e etapas.",
     "name": "Nome",
     "namePlaceholder": "Ex: Funil de Vendas (Cópia)",
     "copyDefault": "{{name}} (Cópia)",
     "descriptionLabel": "Descrição",
     "descriptionPlaceholder": "Descreva o objetivo deste funil...",
-    "whatCopied": "O que será copiado:",
-    "settings": "Configurações do funil (tipo, visibilidade)",
-    "allStages": "Todas as etapas do funil",
-    "structure": "Estrutura e organização",
-    "observation": "Observação:",
-    "noConversations": "As conversas não serão copiadas. O novo funil iniciará vazio.",
     "cancel": "Cancelar",
     "duplicating": "Duplicando...",
-    "duplicate": "Duplicar Funil",
+    "duplicate": "Duplicar funil",
     "copied": {
       "settings": "As configurações do funil",
       "stages": "Todas as etapas, na mesma ordem",
       "structure": "A estrutura completa"
     },
     "copySuffix": "(cópia)",
-    "noteLabel": "Observação",
-    "noteMessage": "Os cards não são copiados — a cópia nasce vazia, só com a estrutura.",
+    "noteMessage": "Os cards não são copiados: a cópia nasce vazia.",
     "whatWillBeCopied": "O que vai ser copiado:"
   },
   "editItem": {
@@ -405,14 +398,14 @@
     "save": "Salvar"
   },
   "editStage": {
-    "title": "Editar Etapa",
+    "title": "Editar etapa",
     "description": "Edite as informações desta etapa do funil.",
     "details": "Detalhes",
     "customAttributes": "Atributos",
     "attributesDescription": "Configure atributos para esta etapa",
-    "name": "Nome da Etapa",
+    "name": "Nome da etapa",
     "namePlaceholder": "Ex: Prospecção, Negociação, Fechamento...",
-    "color": "Cor da Etapa",
+    "color": "Cor da etapa",
     "customColor": "Personalizada",
     "colors": {
       "red": "Vermelho",
@@ -426,7 +419,7 @@
       "pink": "Rosa",
       "gray": "Cinza"
     },
-    "stageType": "Tipo da Etapa",
+    "stageType": "Tipo da etapa",
     "stageTypes": {
       "active": "Ativa",
       "completed": "Completa",
@@ -582,7 +575,7 @@
     "stage": {
       "addStage": "Adicionar Etapa",
       "addStageDescription": "Clique para criar uma nova etapa neste funil",
-      "editStage": "Editar Etapa",
+      "editStage": "Editar etapa",
       "deleteStage": "Excluir Etapa",
       "noConversations": "Nenhuma conversa nesta etapa",
       "noStages": "Nenhuma etapa encontrada para este funil",
