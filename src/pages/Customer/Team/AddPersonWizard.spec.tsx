@@ -277,7 +277,8 @@ describe('AddPersonWizard', () => {
     open();
     const rodape = screen.getByRole('button', { name: 'Continuar' }).closest('[data-slot="dialog-footer"]') as HTMLElement;
     expect(rodape).not.toBeNull();
-    expect(rodape.className).toContain('sm:justify-between');
+    expect(rodape.className).toContain('sm:justify-end');
+    expect(rodape.className).not.toContain('sm:justify-between');
     // no celular empilha com a ação principal em cima (flex-col-reverse da casa, sem trocar por flex-col)
     expect(rodape.className).not.toMatch(/(^|\s)flex-col(\s|$)/);
     expect(within(rodape).getByRole('button', { name: 'Cancelar' })).toBeInTheDocument();

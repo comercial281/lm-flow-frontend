@@ -396,16 +396,16 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
           {step === 0 && (
             <div className="space-y-3">
               <div>
-                <UILabel className="text-xs">Nome</UILabel>
-                <Input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Ana Souza" className="mt-1" />
+                <UILabel htmlFor="wizard-name">Nome</UILabel>
+                <Input id="wizard-name" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Ana Souza" className="mt-1" />
               </div>
               <div>
-                <UILabel className="text-xs">E-mail (vira o login)</UILabel>
-                <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="ana@imobiliaria.com.br" className="mt-1" />
+                <UILabel htmlFor="wizard-email">E-mail (vira o login)</UILabel>
+                <Input id="wizard-email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ana@imobiliaria.com.br" className="mt-1" />
               </div>
               <div>
-                <UILabel className="text-xs">Celular com DDD</UILabel>
-                <Input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="Ex: 11 94087 1974" className="mt-1" />
+                <UILabel htmlFor="wizard-whatsapp">Celular com DDD</UILabel>
+                <Input id="wizard-whatsapp" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="Ex: 11 94087 1974" className="mt-1" />
                 <p className="mt-1 text-xs text-muted-foreground">
                   É para onde vai o link de acesso, no último passo. Quem cria a senha é a própria
                   pessoa, ao abrir o link.
@@ -459,11 +459,11 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
                   {makeNumber && (
                     <div className="space-y-2 pl-6">
                       <div>
-                        <UILabel htmlFor="wizard-number-name" className="text-xs">Nome do número</UILabel>
+                        <UILabel htmlFor="wizard-number-name">Nome do número</UILabel>
                         <Input id="wizard-number-name" value={numberName} onChange={e => setNumberNameEdit(e.target.value)} className="mt-1" />
                       </div>
                       <div>
-                        <UILabel htmlFor="wizard-number-phone" className="text-xs">Telefone do número</UILabel>
+                        <UILabel htmlFor="wizard-number-phone">Telefone do número</UILabel>
                         <BrPhoneInput
                           id="wizard-number-phone"
                           value={numberPhone}
@@ -530,7 +530,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
           )}
         </div>
 
-        <DialogFooter className="sm:justify-between">
+        <DialogFooter>
           <Button variant="outline" onClick={() => (step === 0 ? close() : setStep(step - 1))} disabled={saving}>
             {step === 0 ? 'Cancelar' : 'Voltar'}
           </Button>
