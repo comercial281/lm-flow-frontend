@@ -98,7 +98,7 @@ export function CampoNumero({ rotulo, valor, aoMudar, placeholder }: {
 }
 
 /** Campo de texto simples, com o rótulo amarrado ao campo. */
-export function CampoTexto({ rotulo, valor, aoMudar, placeholder, type = 'text', multilinha = false, desabilitado = false }: {
+export function CampoTexto({ rotulo, valor, aoMudar, placeholder, type = 'text', multilinha = false, desabilitado = false, ajuda, aviso }: {
   rotulo: string;
   valor: string | null | undefined;
   aoMudar: (v: string) => void;
@@ -106,8 +106,13 @@ export function CampoTexto({ rotulo, valor, aoMudar, placeholder, type = 'text',
   type?: string;
   multilinha?: boolean;
   desabilitado?: boolean;
+  /** Frase curta embaixo do campo dizendo o que ele faz. */
+  ajuda?: string;
+  /** Aviso âmbar embaixo do campo (o que não vai ser salvo). */
+  aviso?: string | null;
 }) {
   const id = useId();
+  const idDaAjuda = useId();
   return (
     <div title={dicaSe(desabilitado)}>
       <UILabel htmlFor={id}>{rotulo}</UILabel>
@@ -123,7 +128,14 @@ export function CampoTexto({ rotulo, valor, aoMudar, placeholder, type = 'text',
         />
       ) : (
         <Input id={id} type={type} value={valor ?? ''} placeholder={placeholder} disabled={desabilitado}
+          aria-describedby={ajuda || aviso ? idDaAjuda : undefined}
           onChange={e => aoMudar(e.target.value)} className="mt-1" />
+      )}
+      {(ajuda || aviso) && (
+        <div id={idDaAjuda}>
+          {ajuda && <p className="mt-1 text-xs text-muted-foreground">{ajuda}</p>}
+          {aviso && <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">{aviso}</p>}
+        </div>
       )}
     </div>
   );

@@ -50,3 +50,29 @@ describe('SecaoMidia na edição', () => {
     expect(aoGerenciarFotos).toHaveBeenCalled();
   });
 });
+
+describe('SecaoMidia: Link pro lead', () => {
+  it('diz o que o campo faz e grava o que a pessoa cola', async () => {
+    svc.list.mockResolvedValue([]);
+    const setF = vi.fn();
+    render(<SecaoMidia {...base} setF={setF} editando={null as never} aoGerenciarFotos={vi.fn()} />);
+    const campo = screen.getByLabelText('Link pro lead');
+    expect(campo).toHaveAccessibleDescription(/a IA Vendedora e o follow-up mandam este/);
+    await userEvent.type(campo, 'h');
+    expect(setF).toHaveBeenLastCalledWith({ lead_link_url: 'h' });
+  });
+
+  it('avisa quando o link não começa com https://', () => {
+    svc.list.mockResolvedValue([]);
+    render(<SecaoMidia {...base} form={{ ...base.form as object, lead_link_url: 'www.ibi4.com.br/arte' } as never}
+      editando={null as never} aoGerenciarFotos={vi.fn()} />);
+    expect(screen.getByText(/precisa começar com https:\/\//)).toBeInTheDocument();
+  });
+
+  it('link certo não mostra aviso', () => {
+    svc.list.mockResolvedValue([]);
+    render(<SecaoMidia {...base} form={{ ...base.form as object, lead_link_url: 'https://www.ibi4.com.br/arte' } as never}
+      editando={null as never} aoGerenciarFotos={vi.fn()} />);
+    expect(screen.queryByText(/precisa começar com https:\/\//)).not.toBeInTheDocument();
+  });
+});

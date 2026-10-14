@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Property } from '@/services/properties/propertiesService';
-import { errosDoCadastro, formularioDoImovel, payloadDoCadastro } from './formularioDoCadastro';
+import { errosDoCadastro, formularioDoImovel, linkProLeadValido, payloadDoCadastro } from './formularioDoCadastro';
 import { formularioNovo } from '../formularioPorTipo';
 
 const base = { title: 'Casa', transaction_type: 'sale', category_type: 'residential', property_type: 'house',
@@ -32,7 +32,7 @@ describe('formularioDoCadastro', () => {
   it('imóvel antigo sem os campos novos vira formulário com padrões vazios', () => {
     const f = formularioDoImovel({ id: '1', code: 'AP1', created_at: '', updated_at: '', ...base } as Property);
     expect(f).toMatchObject({ builder: {}, internal_info: {}, commission: {}, accepts_fgts: null, iptu_period: null, owner_id: null,
-      video_url: '', virtual_tour_url: '' });
+      video_url: '', virtual_tour_url: '', lead_link_url: '' });
   });
   it('formularioDoImovel leva accepts_concurrent_visits (undefined vira null)', () => {
     const mk = (extra: object) => formularioDoImovel({ id: '1', code: 'AP1', created_at: '', updated_at: '', ...base, ...extra } as Property);
@@ -40,6 +40,17 @@ describe('formularioDoCadastro', () => {
     expect(mk({ accepts_concurrent_visits: false }).accepts_concurrent_visits).toBe(false);
     expect(mk({ accepts_concurrent_visits: null }).accepts_concurrent_visits).toBeNull();
     expect(mk({}).accepts_concurrent_visits).toBeNull();
+  });
+  it('Link pro lead que não abre no navegador aponta Fotos e vídeos (o servidor recusaria o cadastro)', () => {
+    expect(errosDoCadastro({ ...base, sale_price: 1, lead_link_url: 'www.ibi4.com.br/arte' }).map(e => e.secao)).toEqual(['midia']);
+    expect(errosDoCadastro({ ...base, sale_price: 1, lead_link_url: 'https://www.ibi4.com.br/arte' })).toEqual([]);
+    expect(errosDoCadastro({ ...base, sale_price: 1, lead_link_url: '' })).toEqual([]);
+  });
+  it('linkProLeadValido segue a regra do servidor', () => {
+    for (const ok of ['', null, undefined, '  https://ibi4.com.br/arte  ', 'http://ibi4.com.br/a?b=1']) expect(linkProLeadValido(ok)).toBe(true);
+    for (const ruim of ['ibi4.com.br', 'https://localhost/x', 'https://ibi4 .com.br', 'javascript:alert(1)', `https://a.com/${'x'.repeat(500)}`]) {
+      expect(linkProLeadValido(ruim)).toBe(false);
+    }
   });
   it('leilão à venda sem preço não trava o cadastro', () => {
     expect(errosDoCadastro({ ...base, ...formularioNovo('auction') } as never)).toEqual([]);

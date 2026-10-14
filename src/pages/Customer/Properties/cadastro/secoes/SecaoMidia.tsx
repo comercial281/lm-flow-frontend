@@ -5,6 +5,7 @@ import { ACCEPTED_MIME_TYPES, propertyPhotosService, type PropertyPhoto } from '
 import { separar } from '@/features/properties/fotos/regrasDasFotos';
 import { numero, plural } from '@/lib/formato';
 import { useCampoTravado } from '@/features/properties/cadastro/travasDoSite';
+import { AVISO_LINK_PRO_LEAD, linkProLeadValido } from '@/features/properties/cadastro/formularioDoCadastro';
 import { CampoTexto } from './campos';
 import type { Property } from '@/services/properties/propertiesService';
 import BlocoDoBook from './BlocoDoBook';
@@ -132,7 +133,7 @@ function Arquivos({ editando, arquivos, aoMudarArquivos, enviando, aoGerenciarFo
   );
 }
 
-// Links de vídeo e tour virtual, mais o envio de fotos e vídeos.
+// Links de vídeo, tour virtual e o link pro lead, mais o envio de fotos e vídeos.
 export default function SecaoMidia(props: Props) {
   const { form: f, setF } = props;
   // Do site só trava o link do vídeo; tour, fotos e book seguem livres.
@@ -145,6 +146,13 @@ export default function SecaoMidia(props: Props) {
           desabilitado={videoTravado} />
         <CampoTexto rotulo="Link do tour virtual" type="url" valor={f.virtual_tour_url}
           aoMudar={v => setF({ virtual_tour_url: v || null })} />
+        <div className="sm:col-span-2">
+          <CampoTexto rotulo="Link pro lead" type="url" valor={f.lead_link_url}
+            placeholder="https://www.seusite.com.br/empreendimento"
+            ajuda="Quando o lead pedir o link do imóvel, a IA Vendedora e o follow-up mandam este, no lugar da página do imóvel no seu site do LM Flow."
+            aviso={linkProLeadValido(f.lead_link_url) ? null : AVISO_LINK_PRO_LEAD}
+            aoMudar={v => setF({ lead_link_url: v || null })} />
+        </div>
       </div>
       <Arquivos {...props} />
       <BlocoDoBook

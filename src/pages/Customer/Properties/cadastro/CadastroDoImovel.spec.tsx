@@ -172,6 +172,14 @@ describe('CadastroDoImovel', () => {
     expect(own.get).not.toHaveBeenCalled();
   });
 
+  it('rascunho com Link pro lead inválido não vai pro servidor (ele recusaria)', async () => {
+    abrir('/properties/new?tipo=revenda');
+    await userEvent.type(await screen.findByLabelText('Título'), 'Rascunho');
+    await userEvent.type(screen.getByLabelText('Link pro lead'), 'www.ibi4.com.br/arte');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    expect(svc.create).not.toHaveBeenCalled();
+  });
+
   it('salvar rascunho cria como draft e volta para a lista', async () => {
     svc.create.mockResolvedValue({ id: 'n2', listing_kind: 'resale' });
     abrir('/properties/new?tipo=revenda');
