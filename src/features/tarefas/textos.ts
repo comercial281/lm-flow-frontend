@@ -30,6 +30,7 @@ export const TEXTOS_DE_TAREFAS = {
   atendimento: 'Atendimento',
   tirarImovel: 'Tirar o imóvel',
   prioridadeAlta: 'Prioridade alta',
+  alta: 'Alta',
   buscarImovel: 'Buscar por título ou código',
   nenhumImovel: 'Nenhum imóvel encontrado.',
   observacao: 'Observação',

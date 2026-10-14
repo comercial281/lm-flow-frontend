@@ -47,6 +47,7 @@ export function toDate(value: unknown): Date | null {
 const fmtData = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 const fmtDataCurta = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' });
 const fmtHora = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false });
+const fmtDiaDaSemana = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' });
 
 const fmtDiaIso = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' });
 
@@ -65,6 +66,12 @@ export function data(valor: unknown): string {
 export function dataCurta(valor: unknown): string {
   const d = toDate(valor);
   return d ? fmtDataCurta.format(d) : VAZIO;
+}
+
+/** Sex — dia da semana curto, com maiúscula e sem ponto. */
+export function diaDaSemanaCurto(valor: unknown): string {
+  const d = toDate(valor);
+  return d ? capitalizar(fmtDiaDaSemana.format(d).replace('.', '')) : VAZIO;
 }
 
 /** 14:32 — sempre 24h. */

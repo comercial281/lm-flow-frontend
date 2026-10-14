@@ -1,4 +1,5 @@
-import { Home } from 'lucide-react';
+import { ChevronRight, Home } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { Balde } from './tipos';
 
 /** Valor fixo do filtro de categoria: não é opção das Listas da casa (f2-07). */
@@ -31,16 +32,22 @@ export default function LinhaDosImoveis({ balde, quantidade, deQuem, aoAbrir }: 
   const { titulo, periodo } = textoDosImoveis(balde, quantidade);
   const vencida = balde === 'atrasadas' || balde === 'para_fazer';
   return (
-    <li className="-mx-4 flex items-start gap-2 bg-gradient-to-r from-accent to-transparent px-4 py-2 text-sm">
-      <Home className="mt-0.5 h-4 w-4 shrink-0 text-accent-foreground" aria-hidden />
+    <li className="flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm transition-colors hover:bg-muted/60">
+      {/* Sem bolinha (não se conclui daqui), mas com o lugar dela: alinha com as tarefas. */}
+      <span className="size-5 shrink-0" aria-hidden />
+      <span
+        className={cn('grid size-8 shrink-0 place-items-center rounded-[10px] sm:size-9', vencida ? 'bg-destructive/10 text-destructive' : 'bg-accent text-accent-foreground')}
+        aria-hidden
+      >
+        <Home className="h-4 w-4" />
+      </span>
       <button type="button" className="min-w-0 flex-1 text-left" onClick={aoAbrir}>
-        <p className="truncate font-medium hover:underline">{titulo}</p>
-        <p className="truncate text-xs text-muted-foreground">
-          {['Imóvel desatualizado', periodo, deQuem].join(' · ')}
-          {vencida && <span className="ml-1 font-semibold text-destructive">Atrasada</span>}
-        </p>
+        <span className="block truncate font-semibold hover:underline">{titulo}</span>
+        <span className="mt-0.5 block truncate text-xs text-muted-foreground">{['Imóvel desatualizado', periodo, deQuem].join(' · ')}</span>
       </button>
-      <span className="hidden shrink-0 self-center text-xs font-semibold text-accent-foreground sm:inline" aria-hidden>Ver imóveis →</span>
+      {vencida && <span className="shrink-0 whitespace-nowrap rounded-full bg-destructive/10 px-2 py-px text-[11px] font-medium text-destructive">Atrasada</span>}
+      {/* No lugar do menu das tarefas, pra direita ficar alinhada. */}
+      <ChevronRight className="mx-2 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
     </li>
   );
 }

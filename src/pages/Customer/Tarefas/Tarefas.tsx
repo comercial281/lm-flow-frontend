@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/ds';
+import { Button, Card } from '@/components/ui/ds';
 import BaseHeader from '@/components/base/BaseHeader';
 import Pagina from '@/components/base/Pagina';
 import Abas from '@/components/base/Abas';
@@ -156,11 +156,11 @@ export default function Tarefas() {
         </BaseHeader>
       }
     >
-      <div className="rounded-lg border border-border bg-background px-4">
+      <Card className="gap-0 p-1">
         {!resposta && falhou ? (
           <EmptyState tipo="erro" aoTentarDeNovo={() => void carregar()} />
         ) : !resposta ? (
-          <Carregando linhas={5} rotulo="Carregando tarefas…" />
+          <div className="p-3"><Carregando linhas={5} rotulo="Carregando tarefas…" /></div>
         ) : itens.length === 0 && !imoveis ? (
           <EmptyState title={balde === 'hoje' ? 'Nada pra hoje.' : 'Nada por aqui.'} />
         ) : (
@@ -169,7 +169,7 @@ export default function Tarefas() {
             {itens.map(t => <LinhaDaTarefa key={t.id} tarefa={t} mostrarLead {...acoes} />)}
           </ul>
         )}
-      </div>
+      </Card>
 
       {total > POR_PAGINA && (
         <div className="flex items-center justify-end gap-2 text-sm">
