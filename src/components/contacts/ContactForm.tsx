@@ -4,7 +4,7 @@ import { Contact, ContactFormData } from '@/types/contacts';
 import { useAccountUsers } from '@/hooks/useAccountUsers';
 import ContactLabels from './ContactLabels';
 import CustomAttributes from './CustomAttributes';
-import CampoResponsavel, { paraResponsavel } from './CampoResponsavel';
+import CampoResponsavel, { mesmoResponsavel, paraResponsavel } from './CampoResponsavel';
 import type { EscolhaComAbas } from '@/components/base/SeletorComAbas';
 import { labelsService } from '@/services/contacts';
 import { Label as LabelType } from '@/types/settings';
@@ -55,6 +55,7 @@ export default function ContactForm({
   onCancel,
 }: ContactFormProps) {
   const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [responsavelInicial, setResponsavelInicial] = useState<EscolhaComAbas | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [availableLabels, setAvailableLabels] = useState<LabelType[]>([]);
   const [customAttributes, setCustomAttributes] = useState<Record<string, unknown>>({});
@@ -71,18 +72,21 @@ export default function ContactForm({
 
   useEffect(() => {
     if (contact && !isNew) {
+      const dono: EscolhaComAbas | null = contact.default_assignee_id
+        ? { aba: 'corretor', valor: String(contact.default_assignee_id) }
+        : null;
+      setResponsavelInicial(dono);
       setFormData({
         name: contact.name || '',
         email: contact.email || '',
         phoneNumber: contact.phone_number || '',
         labels: contact.labels || [],
         leadOriginNote: readManualOrigin(contact.additional_attributes?.lead_origin),
-        responsavel: contact.default_assignee_id
-          ? { aba: 'corretor', valor: String(contact.default_assignee_id) }
-          : null,
+        responsavel: dono,
       });
       setCustomAttributes(contact.custom_attributes || {});
     } else {
+      setResponsavelInicial(null);
       setFormData(initialFormData);
       setCustomAttributes({});
     }
@@ -124,9 +128,13 @@ export default function ContactForm({
     if (!validateForm()) return;
 
     // Corretor não manda responsável: o servidor grava ele mesmo como dono.
+    // Só manda o responsável quando ele mudou: o contato que vem da conversa não
+    // traz o dono, e mandar null apagaria o dono no servidor.
     const responsavel = corretor
-      ? isNew ? {} : { default_assignee_id: contact?.default_assignee_id ?? null }
-      : paraResponsavel(formData.responsavel);
+      ? {}
+      : isNew || !mesmoResponsavel(formData.responsavel, responsavelInicial)
+        ? paraResponsavel(formData.responsavel)
+        : {};
 
     onSubmit({
       name: formData.name.trim(),

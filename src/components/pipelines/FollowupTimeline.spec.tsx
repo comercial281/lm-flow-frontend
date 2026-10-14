@@ -265,4 +265,24 @@ describe('Follow-up do card — compacto', () => {
     expect((texto.closest('[data-linha-followup]') as HTMLElement).contains(parar)).toBe(true);
     expect(screen.queryByText('Rodando')).not.toBeInTheDocument();
   });
+
+  it('rodando: a linha diz quantas mensagens o fluxo já mandou', async () => {
+    running.mockResolvedValue([instance({ progress_step: 2 })]);
+    render(<FollowupTimeline contactId="c-1" compacto />);
+    await screen.findByRole('button', { name: /Parar o follow-up/ });
+    expect(screen.getByText(/mensagem 2 enviada/)).toBeInTheDocument();
+  });
+
+  it('sem follow-up ligado, diz onde criar', async () => {
+    render(<FollowupTimeline contactId="c-1" compacto />);
+    expect(await screen.findByText(/Nenhum follow-up pra iniciar/)).toBeInTheDocument();
+    expect(screen.getByText(/Automações → Follow-up/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Iniciar follow-up/ })).not.toBeInTheDocument();
+  });
+
+  it('somente leitura sem follow-up: só "Sem follow-up", sem a orientação', async () => {
+    render(<FollowupTimeline contactId="c-1" compacto readOnly />);
+    expect(await screen.findByText('Sem follow-up')).toBeInTheDocument();
+    expect(screen.queryByText(/Nenhum follow-up pra iniciar/)).not.toBeInTheDocument();
+  });
 });

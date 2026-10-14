@@ -233,11 +233,14 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
 
   // Janela do card (versão A): o estado à esquerda e o botão de contorno à
   // direita, numa linha por follow-up. Sem selo colorido nem roxo cheio.
+  // Mantém o que a versão de antes dizia: "mensagem N enviada" de cada fluxo e,
+  // sem follow-up pra iniciar, onde criar um.
   if (compacto) {
+    const semOpcao = canAct && options.length === 0 && !erroFluxos;
     const linhas: Array<{ chave: string; texto: string; parar?: () => ReactNode }> = [
       ...flows.map(flow => ({
         chave: flow.id,
-        texto: linhaDoFluxo(flow).texto,
+        texto: linhaDoFluxo(flow).texto + (flow.progress_step ? ` · mensagem ${flow.progress_step} enviada` : ''),
         parar: () => stopButton(
           () => void act(() => flowAutomationInstancesService.stop(flow.id), 'Follow-up parado'),
           `Parar o follow-up ${flow.flow_name ?? ''}`.trim(),
@@ -262,7 +265,15 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
             {canAct && l.parar?.()}
           </div>
         ))}
-        {linhas.length === 0 && (
+        {linhas.length === 0 && semOpcao && (
+          <EmptyState
+            tamanho="compacto"
+            title="Nenhum follow-up pra iniciar."
+            description={<>Crie e ligue um em <em>Automações → Follow-up</em>.</>}
+            className="p-3 text-xs"
+          />
+        )}
+        {linhas.length === 0 && !semOpcao && (
           <div data-linha-followup className="flex items-center gap-2">
             <span className="min-w-0 flex-1 text-xs text-muted-foreground">{headline.label}</span>
             {canAct && options.length > 0 && (

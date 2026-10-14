@@ -1,8 +1,11 @@
 // Aba Detalhes do card do lead (Hierarquia das janelas, 2b.5):
 //   linha de cima — três caixas da mesma altura, cada uma rola por dentro:
 //     Sobre o lead (o que a IA entendeu + respostas do formulário + outras informações),
-//     Histórico e Observações;
-//   embaixo — Imóveis de interesse, na largura toda.
+//     Histórico e Observações (só com a função de Observações do cliente: sem ela,
+//     duas colunas, sem faixa vazia);
+//   embaixo — Imóveis de interesse, na largura toda, com o cartão compacto.
+// A linha de cima tem 236 px com imóveis: é o que deixa a caixa de imóveis
+// (título + busca + cartão compacto) caber na janela de 1366 × 768 sem rolar.
 // Histórico e Observações NÃO se juntam na janela: um o sistema escreve sozinho,
 // o outro é o comentário que o corretor escolheu deixar (decisão do dono, 02/10).
 // O Histórico é o novo (E5 do funil, 07/10), em modo compacto, e o título
@@ -50,10 +53,11 @@ export default function LeadDetailsTab({
       <div
         data-testid="linha-de-cima"
         className={cn(
-          'grid min-h-0 gap-3 lg:grid-cols-[1fr_1.2fr_1.2fr]',
+          'grid min-h-0 gap-3',
+          mostrarObservacoes ? 'lg:grid-cols-[1fr_1.2fr_1.2fr]' : 'lg:grid-cols-[1fr_1.4fr]',
           // Celular: cada caixa com altura própria, a aba rola inteira. Computador: altura dada pela linha.
           '[&>section]:max-lg:h-80',
-          mostrarImoveis ? 'shrink-0 lg:h-[274px]' : 'flex-1',
+          mostrarImoveis ? 'shrink-0 lg:h-[236px]' : 'flex-1',
         )}
       >
         <CaixaDaJanela titulo="Sobre o lead" corpoClassName="grid content-start gap-4">
@@ -77,7 +81,7 @@ export default function LeadDetailsTab({
       </div>
 
       {mostrarImoveis && (
-        <BlocoImoveisDeInteresse item={item} nomeExibido={nomeExibido} onVisitaCriada={onVisitaCriada} className="min-h-[200px] lg:flex-1" />
+        <BlocoImoveisDeInteresse item={item} nomeExibido={nomeExibido} onVisitaCriada={onVisitaCriada} className="min-h-[200px] lg:flex-1" compacto />
       )}
     </div>
   );
