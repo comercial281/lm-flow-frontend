@@ -35,6 +35,7 @@ import {
   Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
   Input, Label as UILabel, Textarea,
 } from '@/components/ui/ds';
+import { CaixaDaJanela, ESCOLHA } from '@/components/base/janela';
 import { LeadCombobox } from '@/components/visits/LeadCombobox';
 import { EscolhaCorretor } from '@/components/visits/EscolhaCorretor';
 import {
@@ -44,6 +45,7 @@ import { propertiesService, type Property } from '@/services/properties/properti
 import { agendaService, type AvailabilitySlot } from '@/services/visits/agendaService';
 import { useAgendaLigada } from '@/features/visits/useAgendaLigada';
 import { apiErrorMessage } from '@/utils/apiHelpers';
+import { cn } from '@/lib/utils';
 import { hora } from '@/lib/formato';
 import {
   DURACOES, atalhosDeDia, diaISO, diaPassado, gradeDeRegistro, horariosDoDia, horariosQueJaPassaram,
@@ -419,13 +421,13 @@ export function ScheduleVisitDialog({
         key={s.rotulo}
         type="button"
         size="sm"
-        variant={inicio?.getTime() === s.inicio.getTime() ? 'default' : 'outline'} aria-pressed={inicio?.getTime() === s.inicio.getTime()}
+        variant="outline" aria-pressed={inicio?.getTime() === s.inicio.getTime()}
         disabled={bloqueado}
         title={extra?.passado
           ? (s.ocupadoPor ? `Visita com ${s.ocupadoPor} nesse horário` : undefined)
           : s.ocupadoPor ? `Ocupado: visita com ${s.ocupadoPor}` : s.folga ? 'Folga do corretor' : undefined}
         aria-label={bloqueado ? (s.ocupadoPor ? `${s.rotulo} · ocupado, ${s.ocupadoPor}` : `${s.rotulo} · folga`) : undefined}
-        className={extra?.passado ? 'opacity-70' : bloqueado ? 'line-through' : undefined}
+        className={cn(ESCOLHA, extra?.passado ? 'opacity-70' : bloqueado ? 'line-through' : undefined)}
         onClick={() => { setInicio(s.inicio); setJaAconteceu(null); }}
       >
         {s.rotulo}
@@ -447,7 +449,7 @@ export function ScheduleVisitDialog({
           <DialogDescription>{textos.descricao}</DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-8 py-2 md:grid-cols-2 md:grid-rows-[auto_1fr]">
+        <div className="grid gap-8 py-2 md:grid-cols-2 md:grid-rows-[auto_1fr] md:items-stretch">
           {/* Quem */}
           <section className="space-y-5 md:col-start-1 md:row-start-1" aria-label="Quem">
             {remarcando ? (
@@ -543,7 +545,7 @@ export function ScheduleVisitDialog({
                       key={a.rotulo}
                       type="button"
                       size="sm"
-                      variant={atalhoAtivo?.rotulo === a.rotulo ? 'default' : 'outline'} aria-pressed={atalhoAtivo?.rotulo === a.rotulo}
+                      variant="outline" className={ESCOLHA} aria-pressed={atalhoAtivo?.rotulo === a.rotulo}
                       disabled={!!motivo}
                       title={motivo ?? undefined}
                       onClick={() => setDia(a.dia)}
@@ -577,7 +579,7 @@ export function ScheduleVisitDialog({
                     key={min}
                     type="button"
                     size="sm"
-                    variant={duracao === min ? 'default' : 'outline'} aria-pressed={duracao === min}
+                    variant="outline" className={ESCOLHA} aria-pressed={duracao === min}
                     onClick={() => setDuracao(min)}
                   >
                     {rotuloDuracao(min)}
@@ -595,7 +597,7 @@ export function ScheduleVisitDialog({
               ) : (<>
               {passados.length > 0 && (
                 <div className="mt-1 mb-3">
-                  <UILabel className="text-muted-foreground">Já passou</UILabel>
+                  <p className="text-xs text-muted-foreground">Já passou</p>
                   <div className="mt-1 grid max-h-32 grid-cols-3 gap-1.5 overflow-y-auto pr-1 md:grid-cols-4">
                     {passados.map(s => botaoHorario({ ...s, folga: false }, { passado: true }))}
                   </div>
@@ -628,8 +630,8 @@ export function ScheduleVisitDialog({
                 <div className="mt-2 rounded-md border border-border bg-muted/40 p-3 text-sm" role="group" aria-label="Essa visita já aconteceu?">
                   <p className="font-medium">Essa visita já aconteceu?</p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <Button type="button" size="sm" variant={jaAconteceu === true ? 'default' : 'outline'} aria-pressed={jaAconteceu === true} onClick={() => setJaAconteceu(true)}>Sim, já aconteceu</Button>
-                    <Button type="button" size="sm" variant={jaAconteceu === false ? 'default' : 'outline'} aria-pressed={jaAconteceu === false} onClick={() => setJaAconteceu(false)}>Não, ainda vai acontecer</Button>
+                    <Button type="button" size="sm" variant="outline" className={ESCOLHA} aria-pressed={jaAconteceu === true} onClick={() => setJaAconteceu(true)}>Sim, já aconteceu</Button>
+                    <Button type="button" size="sm" variant="outline" className={ESCOLHA} aria-pressed={jaAconteceu === false} onClick={() => setJaAconteceu(false)}>Não, ainda vai acontecer</Button>
                   </div>
                 </div>
               )}
@@ -639,7 +641,7 @@ export function ScheduleVisitDialog({
 
           {/* Resumo: embaixo de Imóvel no computador; no celular, depois dos horários */}
           {(inicio || corretor) && (
-            <section className="space-y-4 self-start rounded-lg border border-border bg-muted/30 p-4 md:col-start-1 md:row-start-2" aria-label="Resumo da visita">
+            <CaixaDaJanela titulo="Resumo" data-testid="resumo-da-visita" className="md:col-start-1 md:row-start-2" corpoClassName="space-y-4">
               {inicio && <p className="text-sm font-medium">{porExtenso(inicio, duracao)}</p>}
 
               {corretor && (
@@ -673,7 +675,7 @@ export function ScheduleVisitDialog({
                   )}
                 </div>
               )}
-            </section>
+            </CaixaDaJanela>
           )}
         </div>
 
@@ -737,7 +739,7 @@ function BuscaImovel({ valor, onEscolher }: { valor: ImovelEscolhido | null; onE
         </div>
       )}
       {valor && (
-        <div className="mt-1 flex items-center gap-1 text-xs font-medium text-emerald-600">
+        <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
           <Building2 className="h-3 w-3" />
           {valor.code} escolhido
         </div>

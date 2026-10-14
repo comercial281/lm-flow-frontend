@@ -1,11 +1,11 @@
 /**
- * Corretor em botões, para o gestor: todos os corretores ativos da imobiliária
- * (`GET /visits/realtors`), sem digitar, com rolagem se forem muitos. Usado no
+ * Corretor numa lista de escolha, para o gestor: todos os corretores ativos da imobiliária
+ * (`GET /visits/realtors`), sem digitar. Usado no
  * Agendar visita e nas Folgas.
  *
  * `corretores === null` = ainda carregando; `erro` = a lista não veio.
  */
-import { Button } from '@/components/ui/ds';
+import { Seletor } from '@/components/base/Seletor';
 import type { PersonRef } from '@/services/visits/visitsService';
 import EmptyState from '@/components/base/EmptyState';
 
@@ -14,7 +14,7 @@ export function EscolhaCorretor({ corretores, erro, valor, onEscolher, rotulo = 
   erro: boolean;
   valor: PersonRef | null;
   onEscolher: (p: PersonRef) => void;
-  /** Nome do grupo de botões para o leitor de tela. */
+  /** Nome da lista para o leitor de tela. */
   rotulo?: string;
 }) {
   if (erro) {
@@ -27,22 +27,17 @@ export function EscolhaCorretor({ corretores, erro, valor, onEscolher, rotulo = 
     return <EmptyState tamanho="compacto" title="Nenhum corretor ativo na equipe." className="mt-1 p-3" />;
   }
   return (
-    <div role="group" aria-label={rotulo} className="mt-1 flex max-h-40 flex-wrap gap-2 overflow-y-auto pr-1">
-      {corretores.map(c => {
-        const escolhido = valor?.id === c.id;
-        return (
-          <Button
-            key={c.id}
-            type="button"
-            size="sm"
-            variant={escolhido ? 'default' : 'outline'}
-            aria-pressed={escolhido}
-            onClick={() => onEscolher(c)}
-          >
-            {c.name}
-          </Button>
-        );
-      })}
-    </div>
+    <Seletor
+      aria-label={rotulo}
+      className="w-full"
+      value={valor ? String(valor.id) : ''}
+      onChange={e => {
+        const c = corretores.find(x => String(x.id) === e.target.value);
+        if (c) onEscolher(c);
+      }}
+    >
+      <option value="">Escolha o corretor</option>
+      {corretores.map(c => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
+    </Seletor>
   );
 }

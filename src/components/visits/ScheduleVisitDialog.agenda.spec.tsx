@@ -232,7 +232,7 @@ describe('Agendar visita · servidor com a agenda ligada', () => {
     expect(availability).toHaveBeenCalledWith({ realtor_id: undefined, date: diaISO(d), duration: 60 });
     expect(listTimeOffs).not.toHaveBeenCalled();
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Carla' }));
+    await userEvent.selectOptions(await screen.findByLabelText('Corretor responsável'), 'Carla');
     await waitFor(() => expect(availability).toHaveBeenLastCalledWith({ realtor_id: 'u-carla', date: diaISO(d), duration: 60 }));
     await waitFor(() => expect(listTimeOffs).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'u-carla' })));
   });
