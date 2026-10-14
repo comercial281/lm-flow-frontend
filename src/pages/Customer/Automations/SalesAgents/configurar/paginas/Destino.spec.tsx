@@ -19,6 +19,10 @@ vi.mock('@/services/salesAgents/salesAgentsService', async (original) => {
     ...real,
     salesAgentsService: {
       ...real.salesAgentsService,
+      testNotice: vi.fn().mockResolvedValue({
+        ok: true, recipient: 'Ana Paula', sent_to: ['Ana Paula', 'Gestora'],
+        lines: ['Pela roleta «Roleta Centro», o próximo da fila agora é Ana Paula.'],
+      }),
       cvcrmOptions: vi.fn().mockResolvedValue({
         connected: true, subdomain: 'aurora', empreendimentos: [{ id: 7, nome: 'Residencial Aurora' }], filas: [], errors: {},
       }),
@@ -27,6 +31,7 @@ vi.mock('@/services/salesAgents/salesAgentsService', async (original) => {
 });
 import Destino from './Destino';
 import { roletaConfigService } from '@/services/roletaConfig/roletaConfigService';
+import { salesAgentsService } from '@/services/salesAgents/salesAgentsService';
 
 const consultora = (extra: Partial<SalesAgent> = {}) => agenteDeTeste({ persona_kind: 'assistant', transfer_config: { mode: 'checklist' }, handoff_target: 'roleta', handoff_roleta_config_id: 'r1', handoff_user_id: null, ...extra });
 
@@ -168,5 +173,33 @@ describe('Destino', () => {
     await userEvent.tab();
     expect(gravar).not.toHaveBeenCalled();
     expect(screen.getAllByText(/https/i).filter((e) => e.className.includes('amber') || e.className.includes('destructive'))).toHaveLength(1);
+  });
+
+  describe('Mandar um aviso de teste', () => {
+    it('com a roleta gravada, manda e mostra pra quem foi e o que aconteceria', async () => {
+      await abrir(consultora());
+      await userEvent.click(screen.getByRole('button', { name: 'Mandar um aviso de teste' }));
+      expect(salesAgentsService.testNotice).toHaveBeenCalledWith('ia-1');
+      expect(await screen.findByText('Aviso de teste enviado pra Ana Paula e Gestora.')).toBeInTheDocument();
+      expect(screen.getByText('Pela roleta «Roleta Centro», o próximo da fila agora é Ana Paula.')).toBeInTheDocument();
+    });
+
+    it('escolha pela metade não mostra o botão: o servidor testa o destino gravado', async () => {
+      await abrir(consultora());
+      await userEvent.click(screen.getByRole('radio', { name: 'Corretor fixo' }));
+      expect(screen.queryByRole('button', { name: 'Mandar um aviso de teste' })).toBeNull();
+    });
+
+    it('sem pra quem mandar, mostra o motivo do servidor', async () => {
+      vi.mocked(salesAgentsService.testNotice).mockResolvedValueOnce({ ok: false, error: 'No atendimento real, o lead ficaria sem ninguém: a roleta «Centro» está desativada.' });
+      await abrir(consultora());
+      await userEvent.click(screen.getByRole('button', { name: 'Mandar um aviso de teste' }));
+      expect(await screen.findByText(/ficaria sem ninguém/)).toBeInTheDocument();
+    });
+
+    it('persona O corretor com dono do número: o botão aparece no cartão travado', async () => {
+      await abrir(agenteDeTeste({ handoff_target: 'number_owner', handoff_user_id: null, number_owner_id: 'u1' }));
+      expect(screen.getByRole('button', { name: 'Mandar um aviso de teste' })).toBeInTheDocument();
+    });
   });
 });

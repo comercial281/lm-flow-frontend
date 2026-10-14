@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Check, X, Clock, User, Phone, Loader2 } from 'lucide-react';
 import { brokerAssignmentsService, BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
@@ -14,7 +14,14 @@ function fmtMMSS(totalSec: number): string {
   return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
 }
 
+// `/roleta/aceite/teste` é o link do "Mandar um aviso de teste" da IA: o mesmo
+// cartão, com um lead de exemplo e sem oferta nenhuma por trás.
 export default function AcceptLeadPage() {
+  const { assignmentId } = useParams<{ assignmentId: string }>();
+  return assignmentId === 'teste' ? <AceiteDeTeste /> : <AceiteDeVerdade />;
+}
+
+function AceiteDeVerdade() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const navigate = useNavigate();
   const [data, setData] = useState<BrokerAssignmentDetail | null>(null);
@@ -196,6 +203,96 @@ export default function AcceptLeadPage() {
                 className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
               >
                 {acting === 'accept' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />} Aceitar
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// O aviso de teste (14/10/2026): o corretor vê a tela que vai abrir quando um lead
+// de verdade chegar. `?prazo=` é o prazo da roleta (0 = sem prazo, como o corretor
+// fixo) e `?destino=` diz o que a recusa faria. Os botões não chamam o servidor:
+// explicam o que aconteceria.
+function AceiteDeTeste() {
+  const [params] = useSearchParams();
+  const prazo = Math.max(0, Number(params.get('prazo')) || 0);
+  const roleta = params.get('destino') === 'roleta';
+  const [secsLeft, setSecsLeft] = useState(prazo * 60);
+  const [escolha, setEscolha] = useState<null | 'accept' | 'refuse'>(null);
+
+  useEffect(() => {
+    if (!prazo || escolha) return;
+    const t = setInterval(() => setSecsLeft((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [prazo, escolha]);
+
+  return (
+    <div className="min-h-dvh flex items-center justify-center bg-[#0F0520] px-3 py-6 sm:p-4">
+      <div className="w-full max-w-md rounded-2xl border border-[#2a1a45] bg-[#1A0A2E] p-5 shadow-2xl sm:p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-2xl">🔔</span>
+          <h1 className="text-lg font-semibold text-white">Lead novo pra você</h1>
+          <span className="ml-auto rounded-full bg-amber-400/20 px-2 py-0.5 text-xs font-semibold text-amber-300">TESTE</span>
+        </div>
+        <p className="mb-4 text-sm text-white/70">
+          É assim que você recebe um lead. Este é só um exemplo: nenhum lead de verdade, nada muda no LM Flow.
+        </p>
+
+        {escolha ? (
+          <div className="space-y-3 py-4 text-center">
+            <p className="text-white/90">
+              {escolha === 'accept'
+                ? 'No atendimento de verdade, o lead vira seu agora: o telefone dele aparece e a conversa abre pra você continuar.'
+                : roleta
+                  ? 'No atendimento de verdade, o lead passaria pro próximo corretor da fila da roleta.'
+                  : 'No atendimento de verdade, o lead sairia da sua fila e ficaria pra gestão decidir quem atende.'}
+            </p>
+            <button onClick={() => { setEscolha(null); setSecsLeft(prazo * 60); }} className="text-[#9333EA] hover:underline">
+              Ver de novo
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="mb-5 rounded-xl border border-[#7C3AED]/40 bg-[#7C3AED]/10 p-4 text-center">
+              <div className="flex items-center justify-center gap-2 text-white/70 text-xs mb-1">
+                <Clock className="h-4 w-4" />
+                {prazo ? 'Aceite em até' : 'Sem prazo de aceite'}
+              </div>
+              {!!prazo && <div className="text-4xl font-bold tabular-nums text-white">{fmtMMSS(secsLeft)}</div>}
+              <div className="text-white/50 text-xs mt-1">
+                Ao aceitar, o lead é seu.
+                {prazo
+                  ? ' Se não aceitar a tempo, ele vai pro próximo corretor.'
+                  : ' Ele espera você aceitar ou recusar e não passa pra outro corretor sozinho.'}
+              </div>
+            </div>
+
+            <div className="space-y-2 mb-5">
+              <div className="flex items-start gap-2 text-white">
+                <User className="mt-0.5 h-4 w-4 shrink-0 text-[#9333EA]" />
+                <span className="font-medium">Lead de teste</span>
+              </div>
+              <div className="flex items-start gap-2 text-sm text-white/60">
+                <Phone className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>O telefone aparece quando você aceitar.</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setEscolha('refuse')}
+                className="flex items-center justify-center gap-2 rounded-xl border border-red-500/50 bg-red-500/10 py-3 font-medium text-red-300 hover:bg-red-500/20"
+              >
+                <X className="h-5 w-5" /> Recusar
+              </button>
+              <button
+                onClick={() => setEscolha('accept')}
+                className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 font-semibold text-white hover:bg-emerald-600"
+              >
+                <Check className="h-5 w-5" /> Aceitar
               </button>
             </div>
           </>
