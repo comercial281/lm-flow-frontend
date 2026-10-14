@@ -243,4 +243,22 @@ describe('ScheduleActionModal', () => {
     expect(await screen.findByDisplayValue('2026-10-05T09:00')).toBeTruthy();
     expect(await screen.findByText('Oi, tudo certo pra visita?')).toBeTruthy();
   });
+
+  it('403 nos números avisa o cargo, não diz que não há número', async () => {
+    mockedInboxesService.list.mockRejectedValue({ response: { status: 403, data: { required_permission: 'inboxes.read' } } });
+
+    render(<ScheduleActionModal open onClose={vi.fn()} contactId="c1" />);
+
+    expect(await screen.findByText('scheduledActions.messages.noChannelsPermission')).toBeTruthy();
+    expect(screen.queryByText('scheduledActions.messages.noChannelsConfigured')).toBeNull();
+  });
+
+  it('lista vazia de verdade diz que não há número', async () => {
+    mockedInboxesService.list.mockResolvedValue({ success: true, data: [], meta: {} as never, message: '' });
+
+    render(<ScheduleActionModal open onClose={vi.fn()} contactId="c1" />);
+
+    expect(await screen.findByText('scheduledActions.messages.noChannelsConfigured')).toBeTruthy();
+    expect(screen.queryByText('scheduledActions.messages.noChannelsPermission')).toBeNull();
+  });
 });

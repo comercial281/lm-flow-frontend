@@ -40,6 +40,9 @@ import {
   type ChannelOption,
 } from './scheduledActionChannelUtils';
 import { Seletor } from '@/components/base/Seletor';
+import { CampoDaJanela, GradeDaJanela } from '@/components/base/janela';
+import Aviso from '@/components/base/Aviso';
+import { isForbiddenError } from '@/services/core/forbidden';
 
 interface ScheduleActionModalProps {
   open: boolean;
@@ -117,6 +120,7 @@ export function ScheduleActionModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [availableInboxes, setAvailableInboxes] = useState<Inbox[]>([]);
   const [loadingInboxes, setLoadingInboxes] = useState(false);
+  const [inboxesForbidden, setInboxesForbidden] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | undefined>(initialContactId);
   const [contactSearchQuery, setContactSearchQuery] = useState('');
   const [contactSearchResults, setContactSearchResults] = useState<Contact[]>([]);
@@ -187,12 +191,15 @@ export function ScheduleActionModal({
     const fetchInboxes = async () => {
       if (!open) return;
       setLoadingInboxes(true);
+      setInboxesForbidden(false);
       try {
         const response = await InboxesService.list();
         const inboxes = response.data || [];
         setAvailableInboxes(getMessagingInboxes(inboxes));
       } catch (error) {
-        console.error('Error fetching inboxes:', error);
+        // 403 = o cargo não lê os números (inboxes.read); não é "sem número".
+        if (isForbiddenError(error)) setInboxesForbidden(true);
+        else console.error('Error fetching inboxes:', error);
       } finally {
         setLoadingInboxes(false);
       }
@@ -489,166 +496,188 @@ export function ScheduleActionModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {!initialContactId && !action?.contact_id && (
-            <div className="space-y-2 contact-selector-container">
-              <Label htmlFor="contact">{t('scheduledActions.contact')}</Label>
-              <div className="relative">
+          <GradeDaJanela>
+            {!initialContactId && !action?.contact_id && (
+              <CampoDaJanela
+                rotulo={t('scheduledActions.contact')}
+                htmlFor="contact"
+                colunas={4}
+                erro={errors.contact_id || undefined}
+                className="contact-selector-container"
+              >
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="contact"
-                    value={selectedContact ? selectedContact.name : contactSearchQuery}
-                    onChange={e => {
-                      setContactSearchQuery(e.target.value);
-                      setShowContactDropdown(true);
-                      if (selectedContact) {
-                        setSelectedContact(null);
-                        setSelectedContactId(undefined);
-                      }
-                    }}
-                    onFocus={() => {
-                      if (contactSearchQuery.length >= 2 || contactSearchResults.length > 0) {
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="contact"
+                      value={selectedContact ? selectedContact.name : contactSearchQuery}
+                      onChange={e => {
+                        setContactSearchQuery(e.target.value);
                         setShowContactDropdown(true);
-                      }
-                    }}
-                    placeholder={t('scheduledActions.contactPlaceholder')}
-                    className={`pl-10 ${errors.contact_id ? 'border-red-500' : ''}`}
-                  />
-                  {loadingContacts && (
-                    <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                  )}
-                  {selectedContact && !showContactDropdown && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedContact(null);
-                        setSelectedContactId(undefined);
-                        setContactSearchQuery('');
+                        if (selectedContact) {
+                          setSelectedContact(null);
+                          setSelectedContactId(undefined);
+                        }
                       }}
-                      aria-label="Limpar contato selecionado"
-                      title="Limpar contato selecionado"
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      ×
-                    </button>
+                      onFocus={() => {
+                        if (contactSearchQuery.length >= 2 || contactSearchResults.length > 0) {
+                          setShowContactDropdown(true);
+                        }
+                      }}
+                      placeholder={t('scheduledActions.contactPlaceholder')}
+                      className={`pl-10 ${errors.contact_id ? 'border-red-500' : ''}`}
+                    />
+                    {loadingContacts && (
+                      <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                    )}
+                    {selectedContact && !showContactDropdown && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedContact(null);
+                          setSelectedContactId(undefined);
+                          setContactSearchQuery('');
+                        }}
+                        aria-label="Limpar contato selecionado"
+                        title="Limpar contato selecionado"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                  {showContactDropdown && contactSearchResults.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto">
+                      {contactSearchResults.map(contact => (
+                        <div
+                          key={contact.id}
+                          className="px-4 py-2 hover:bg-accent cursor-pointer border-b border-border last:border-b-0"
+                          onClick={() => {
+                            setSelectedContact(contact);
+                            setSelectedContactId(contact.id);
+                            setContactSearchQuery('');
+                            setShowContactDropdown(false);
+                            if (errors.contact_id) setErrors({ ...errors, contact_id: '' });
+                          }}
+                        >
+                          <div className="font-medium">{contact.name}</div>
+                          {contact.email && <div className="text-sm text-muted-foreground">{contact.email}</div>}
+                          {contact.phone_number && (
+                            <div className="text-sm text-muted-foreground">{telefone(contact.phone_number)}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {showContactDropdown && contactSearchQuery.length >= 2 && !loadingContacts && contactSearchResults.length === 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg p-4 text-sm text-muted-foreground">
+                      {t('scheduledActions.noContactsFound')}
+                    </div>
                   )}
                 </div>
-                {showContactDropdown && contactSearchResults.length > 0 && (
-                  <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto">
-                    {contactSearchResults.map(contact => (
-                      <div
-                        key={contact.id}
-                        className="px-4 py-2 hover:bg-accent cursor-pointer border-b border-border last:border-b-0"
-                        onClick={() => {
-                          setSelectedContact(contact);
-                          setSelectedContactId(contact.id);
-                          setContactSearchQuery('');
-                          setShowContactDropdown(false);
-                          if (errors.contact_id) setErrors({ ...errors, contact_id: '' });
-                        }}
-                      >
-                        <div className="font-medium">{contact.name}</div>
-                        {contact.email && <div className="text-sm text-muted-foreground">{contact.email}</div>}
-                        {contact.phone_number && (
-                          <div className="text-sm text-muted-foreground">{telefone(contact.phone_number)}</div>
-                        )}
-                      </div>
-                    ))}
+              </CampoDaJanela>
+            )}
+
+            <CampoDaJanela
+              rotulo={t('scheduledActions.dateTime')}
+              htmlFor="scheduled_for"
+              colunas={2}
+              erro={errors.scheduled_for || undefined}
+            >
+              <Input
+                id="scheduled_for"
+                type="datetime-local"
+                value={formData.scheduled_for}
+                min={getMinDateTime()}
+                onChange={e => {
+                  setFormData({ ...formData, scheduled_for: e.target.value });
+                  if (errors.scheduled_for) setErrors({ ...errors, scheduled_for: '' });
+                }}
+                required
+                className={errors.scheduled_for ? 'border-red-500' : ''}
+              />
+            </CampoDaJanela>
+
+            <CampoDaJanela rotulo={t('scheduledActions.recurrence')} htmlFor="recurrence_type">
+              <Select
+                value={formData.recurrence_type}
+                onValueChange={value => setFormData({ ...formData, recurrence_type: value })}
+              >
+                <SelectTrigger id="recurrence_type" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="once">{t('scheduledActions.recurrenceOnce')}</SelectItem>
+                  <SelectItem value="daily">{t('scheduledActions.recurrenceDaily')}</SelectItem>
+                  <SelectItem value="weekly">{t('scheduledActions.recurrenceWeekly')}</SelectItem>
+                  <SelectItem value="monthly">{t('scheduledActions.recurrenceMonthly')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </CampoDaJanela>
+
+            <CampoDaJanela rotulo={t('scheduledActions.actionType')} htmlFor="action_type">
+              <Select
+                value={formData.action_type}
+                onValueChange={value =>
+                  setFormData({ ...formData, action_type: value, message: '', webhook_url: '', task_title: '' })
+                }
+              >
+                <SelectTrigger id="action_type" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="send_message">{t('scheduledActions.actions.send_message')}</SelectItem>
+                  <SelectItem value="execute_webhook">{t('scheduledActions.actions.execute_webhook')}</SelectItem>
+                  <SelectItem value="create_task">{t('scheduledActions.actions.create_task')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </CampoDaJanela>
+
+            {formData.action_type === 'send_message' && (
+              <>
+                <CampoDaJanela
+                  rotulo={t('scheduledActions.channel.label')}
+                  htmlFor="channel"
+                  colunas={2}
+                  erro={errors.channel || undefined}
+                >
+                  <Select
+                    value={formData.channel}
+                    onValueChange={value => setFormData({ ...formData, channel: value })}
+                    disabled={loadingInboxes || channelOptions.length === 0}
+                  >
+                    <SelectTrigger id="channel" className="w-full">
+                      <SelectValue
+                        placeholder={loadingInboxes ? t('scheduledActions.channel.loading') : t('scheduledActions.channel.placeholder')}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {channelOptions.length === 0 && !loadingInboxes && (
+                        <div className="px-2 py-1.5 text-sm text-muted-foreground">{t('scheduledActions.channel.empty')}</div>
+                      )}
+                      {channelOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CampoDaJanela>
+                {channelOptions.length === 0 && !loadingInboxes && (
+                  <div className="sm:col-span-4">
+                    <Aviso tom="atencao" compacto>
+                      {inboxesForbidden
+                        ? t('scheduledActions.messages.noChannelsPermission')
+                        : t('scheduledActions.messages.noChannelsConfigured')}
+                    </Aviso>
                   </div>
                 )}
-                {showContactDropdown && contactSearchQuery.length >= 2 && !loadingContacts && contactSearchResults.length === 0 && (
-                  <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg p-4 text-sm text-muted-foreground">
-                    {t('scheduledActions.noContactsFound')}
-                  </div>
-                )}
-              </div>
-              {errors.contact_id && <p className="text-sm text-red-500">{errors.contact_id}</p>}
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="scheduled_for">{t('scheduledActions.dateTime')}</Label>
-            <Input
-              id="scheduled_for"
-              type="datetime-local"
-              value={formData.scheduled_for}
-              min={getMinDateTime()}
-              onChange={e => {
-                setFormData({ ...formData, scheduled_for: e.target.value });
-                if (errors.scheduled_for) setErrors({ ...errors, scheduled_for: '' });
-              }}
-              required
-              className={errors.scheduled_for ? 'border-red-500' : ''}
-            />
-            {errors.scheduled_for && <p className="text-sm text-red-500">{errors.scheduled_for}</p>}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="recurrence_type">{t('scheduledActions.recurrence')}</Label>
-            <Select
-              value={formData.recurrence_type}
-              onValueChange={value => setFormData({ ...formData, recurrence_type: value })}
-            >
-              <SelectTrigger id="recurrence_type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="once">{t('scheduledActions.recurrenceOnce')}</SelectItem>
-                <SelectItem value="daily">{t('scheduledActions.recurrenceDaily')}</SelectItem>
-                <SelectItem value="weekly">{t('scheduledActions.recurrenceWeekly')}</SelectItem>
-                <SelectItem value="monthly">{t('scheduledActions.recurrenceMonthly')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="action_type">{t('scheduledActions.actionType')}</Label>
-            <Select
-              value={formData.action_type}
-              onValueChange={value =>
-                setFormData({ ...formData, action_type: value, message: '', webhook_url: '', task_title: '' })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="send_message">{t('scheduledActions.actions.send_message')}</SelectItem>
-                <SelectItem value="execute_webhook">{t('scheduledActions.actions.execute_webhook')}</SelectItem>
-                <SelectItem value="create_task">{t('scheduledActions.actions.create_task')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              </>
+            )}
+          </GradeDaJanela>
 
           {formData.action_type === 'send_message' && (
             <>
-              <div className="space-y-2">
-                <Label htmlFor="channel">{t('scheduledActions.channel')}</Label>
-                <Select
-                  value={formData.channel}
-                  onValueChange={value => setFormData({ ...formData, channel: value })}
-                  disabled={loadingInboxes || channelOptions.length === 0}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={loadingInboxes ? 'Loading channels...' : 'Select a channel'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {channelOptions.length === 0 && !loadingInboxes && (
-                      <div className="px-2 py-1.5 text-sm text-gray-500">No channels configured</div>
-                    )}
-                    {channelOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {channelOptions.length === 0 && !loadingInboxes && (
-                  <p className="text-sm text-orange-600">{t('scheduledActions.messages.noChannelsConfigured')}</p>
-                )}
-                {errors.channel && <p className="text-sm text-red-500">{errors.channel}</p>}
-              </div>
-
               {isRichChannel && (
                 <div className="space-y-3">
                   {blocks.map((b, i) => (
