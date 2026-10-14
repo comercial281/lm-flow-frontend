@@ -5,17 +5,19 @@ import { contactsService } from '@/services/contacts/contactsService';
 interface Props {
   contactId: string;
   atributos: Record<string, unknown> | null | undefined;
+  /** Só o conteúdo, sem a borda: pra dentro da caixa "Sobre o lead". */
+  semCaixa?: boolean;
 }
 
 // Campos extras que o gestor criou pro contato, editados na hora (mesmo modo do
 // painel de Conversas). Veio da aba "Atributos" da antiga Detalhes do Contato.
 // Sem campo criado, o bloco nem aparece.
-export default function OutrasInformacoes({ contactId, atributos }: Props) {
+export default function OutrasInformacoes({ contactId, atributos, semCaixa = false }: Props) {
   const [temCampos, setTemCampos] = useState(false);
 
   return (
-    <div className={temCampos ? 'rounded-xl border border-border p-4 space-y-3' : 'hidden'}>
-      <h4 className="text-sm font-semibold">Outras informações</h4>
+    <div className={temCampos ? (semCaixa ? 'space-y-2' : 'rounded-xl border border-border p-4 space-y-3') : 'hidden'}>
+      <h4 className={semCaixa ? 'text-xs font-semibold' : 'text-sm font-semibold'}>Outras informações</h4>
       <CustomAttributesForm
         attributeModel="contact_attribute"
         attributes={atributos}

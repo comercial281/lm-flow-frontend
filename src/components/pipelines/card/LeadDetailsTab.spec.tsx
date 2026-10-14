@@ -1,6 +1,7 @@
 // src/components/pipelines/card/LeadDetailsTab.spec.tsx
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import { Suspense } from 'react';
 import LeadDetailsTab from './LeadDetailsTab';
 
 const list = vi.hoisted(() => vi.fn());
@@ -10,6 +11,7 @@ vi.mock('@/services/notes/notesService', () => ({
 }));
 vi.mock('@/components/chat/contact-sidebar/AiUnderstandingPanel', () => ({ default: () => null }));
 vi.mock('./OutrasInformacoes', () => ({ default: () => null }));
+vi.mock('@/components/pipelines/CardPropertyInterests', () => ({ default: () => <div data-testid="imoveis" /> }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const item = {
@@ -50,5 +52,32 @@ describe('LeadDetailsTab › Histórico da janela', () => {
 
     await screen.findByRole('region', { name: 'Histórico do lead' });
     expect(screen.queryByRole('heading', { name: 'Observações' })).not.toBeInTheDocument();
+  });
+});
+
+describe('LeadDetailsTab › caixas da mesma altura', () => {
+  const props = { item, mostrarImoveis: true, mostrarObservacoes: true, versaoHistorico: '0' };
+
+  it('linha de cima com três caixas: Sobre o lead, Histórico e Observações; imóveis embaixo na largura toda', async () => {
+    render(<Suspense fallback={null}><LeadDetailsTab {...props} /></Suspense>);
+    const linha = screen.getByTestId('linha-de-cima');
+    expect(within(linha).getByRole('heading', { name: /Sobre o lead/ })).toBeInTheDocument();
+    expect(within(linha).getByRole('heading', { name: /Histórico/ })).toBeInTheDocument();
+    expect(within(linha).getByRole('heading', { name: /Observações/ })).toBeInTheDocument();
+    expect((await screen.findByTestId('imoveis')).closest('[data-testid="linha-de-cima"]')).toBeNull();
+  });
+
+  it('sem imóveis, a linha de cima ocupa a altura toda', () => {
+    render(<LeadDetailsTab {...props} mostrarImoveis={false} />);
+    const linha = screen.getByTestId('linha-de-cima');
+    expect(linha.className).toContain('flex-1');
+    expect(screen.queryByRole('heading', { name: /Imóveis de interesse/ })).not.toBeInTheDocument();
+  });
+
+  it('Sobre o lead junta Respostas do formulário com o aviso de quando não há resposta', () => {
+    render(<LeadDetailsTab {...props} mostrarImoveis={false} />);
+    const sobre = screen.getByRole('heading', { name: /Sobre o lead/ }).closest('section') as HTMLElement;
+    expect(within(sobre).getByText('Este lead não respondeu formulário.')).toBeInTheDocument();
+    expect(within(sobre).queryByText(/Ver todas/)).not.toBeInTheDocument();
   });
 });

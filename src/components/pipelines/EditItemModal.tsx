@@ -10,6 +10,7 @@
 // Meta, Etiquetas), com Ganho | Perdido presos no pé; o meio rola quando não
 // cabe (versão A, 14/10/2026); DIREITA com as abas Detalhes ·
 // Conversa · Tarefas · Visitas e propostas · Origem. Tudo grava na hora.
+import { cn } from '@/lib/utils';
 import { Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { ArrowUpRight, CalendarCheck, ClipboardList, ListTodo, Megaphone, MessageSquare } from 'lucide-react';
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/ds';
@@ -183,7 +184,7 @@ export default function EditItemModal({
           </aside>
 
           {/* DIREITA — abas da casa (sublinhado com ícone), a faixa inteira no topo */}
-          <section className="flex flex-col min-h-0 px-5 pt-3 pb-4">
+          <section className="flex flex-col min-h-0 p-6">
             <Abas
               rotulo="Seções do card do lead"
               abas={[
@@ -198,7 +199,7 @@ export default function EditItemModal({
               className="shrink-0 pr-8"
             />
 
-            <div className="flex-1 min-h-0 overflow-y-auto pt-4">
+            <div className={cn('flex-1 min-h-0 pt-4', activeTab === 'overview' ? 'overflow-y-auto lg:overflow-hidden' : 'overflow-y-auto')}>
               {activeTab === 'overview' && (
                 <LeadDetailsTab
                   item={item}
@@ -206,6 +207,8 @@ export default function EditItemModal({
                   mostrarObservacoes={card.recursos.notas}
                   versaoHistorico={card.historico.versao}
                   funilAtual={pipeline?.name ?? null}
+                  nomeExibido={card.nomeExibido}
+                  onVisitaCriada={card.historico.recarregar}
                 />
               )}
 

@@ -5,10 +5,30 @@ import type { PipelineItem } from '@/types/analytics';
 import { RESPOSTAS_VISIVEIS, contatoDoCard, respostasDoLead } from '../cardDoLead';
 import CaixaDoCard from './CaixaDoCard';
 
-export default function BlocoRespostasDoFormulario({ item }: { item: PipelineItem }) {
+/** `semCaixa`: só o conteúdo, inteiro (sem "Ver todas"), pra dentro da caixa "Sobre o lead" da janela. */
+export default function BlocoRespostasDoFormulario({ item, semCaixa = false }: { item: PipelineItem; semCaixa?: boolean }) {
   const respostas = respostasDoLead(contatoDoCard(item));
   const [todas, setTodas] = useState(false);
-  const visiveis = todas ? respostas : respostas.slice(0, RESPOSTAS_VISIVEIS);
+  const visiveis = todas || semCaixa ? respostas : respostas.slice(0, RESPOSTAS_VISIVEIS);
+  if (semCaixa) {
+    return (
+      <div>
+        <h5 className="mb-2 text-xs font-semibold text-foreground">Respostas do formulário</h5>
+        {respostas.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Este lead não respondeu formulário.</p>
+        ) : (
+          <dl className="space-y-2.5">
+            {respostas.map((r, i) => (
+              <div key={`${r.label}-${i}`} className="space-y-0.5">
+                <dt className="text-xs text-muted-foreground capitalize">{r.label}</dt>
+                <dd className="text-sm break-words">{r.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
+    );
+  }
   return (
     <CaixaDoCard titulo="Respostas do formulário">
       {respostas.length === 0 ? (

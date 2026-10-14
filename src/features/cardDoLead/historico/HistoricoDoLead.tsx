@@ -64,6 +64,8 @@ export interface HistoricoDoLeadProps {
   versao?: string | number;
   /** Só no completo: caixa de escrever e filtro Observações (chave `card_notes` do cliente). */
   comObservacoes?: boolean;
+  /** Dentro de uma caixa que já tem o título "Histórico" (janela do card): só o botão de atualizar fica na linha. */
+  semTitulo?: boolean;
 }
 
 type Estado = 'carregando' | 'pronto' | 'erro';
@@ -78,6 +80,7 @@ export default function HistoricoDoLead({
   funilAtual = null,
   versao = 0,
   comObservacoes = true,
+  semTitulo = false,
 }: HistoricoDoLeadProps) {
   const completo = modo === 'completo';
   const escreve = completo && comObservacoes;
@@ -179,11 +182,13 @@ export default function HistoricoDoLead({
 
   return (
     <section aria-label="Histórico do lead" className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex shrink-0 items-center justify-between">
-        <h4 className="flex items-center gap-2 text-sm font-semibold">
-          <History className="h-4 w-4 text-muted-foreground" aria-hidden />
-          Histórico
-        </h4>
+      <div className={cn('flex shrink-0 items-center', semTitulo ? 'justify-end' : 'justify-between')}>
+        {!semTitulo && (
+          <h4 className="flex items-center gap-2 text-sm font-semibold">
+            <History className="h-4 w-4 text-muted-foreground" aria-hidden />
+            Histórico
+          </h4>
+        )}
         <Button
           variant="ghost"
           size="sm"

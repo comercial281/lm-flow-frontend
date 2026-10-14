@@ -1,14 +1,16 @@
-// Aba Detalhes do card do lead (spec 2026-10-02):
-//   1. "O que sabemos do lead": o que a IA entendeu + respostas do formulário;
-//   2. Imóveis de interesse;
-//   3. Histórico | Observações, lado a lado, cada um com a sua rolagem.
+// Aba Detalhes do card do lead (Hierarquia das janelas, 2b.5):
+//   linha de cima — três caixas da mesma altura, cada uma rola por dentro:
+//     Sobre o lead (o que a IA entendeu + respostas do formulário + outras informações),
+//     Histórico e Observações;
+//   embaixo — Imóveis de interesse, na largura toda.
 // Histórico e Observações NÃO se juntam na janela: um o sistema escreve sozinho,
 // o outro é o comentário que o corretor escolheu deixar (decisão do dono, 02/10).
-// O Histórico é o novo (E5 do funil, 07/10), em modo compacto: sem o filtro
-// Observações e sem linha de nota. Na página do card completo ele vem inteiro
-// (features/cardDoLead/pagina/ColunaDoHistorico). Os pedaços são os blocos de
-// features/cardDoLead/blocos (E4).
+// O Histórico é o novo (E5 do funil, 07/10), em modo compacto, e o título
+// "Histórico" é o da caixa (semTitulo). Os pedaços são os blocos de
+// features/cardDoLead/blocos (E4); a página do card usa os mesmos, sem caixa da janela.
 import type { PipelineItem } from '@/types/analytics';
+import { cn } from '@/lib/utils';
+import { CaixaDaJanela } from '@/components/base/janela';
 import { contatoDoCard } from '@/features/cardDoLead/cardDoLead';
 import BlocoOQueAIAEntendeu from '@/features/cardDoLead/blocos/BlocoOQueAIAEntendeu';
 import BlocoRespostasDoFormulario from '@/features/cardDoLead/blocos/BlocoRespostasDoFormulario';
@@ -25,6 +27,10 @@ interface LeadDetailsTabProps {
   versaoHistorico: string;
   /** Nome do funil do card: evento de outro funil do lead diz de qual veio. */
   funilAtual?: string | null;
+  /** Nome pro agendamento de visita a partir do imóvel. */
+  nomeExibido?: string;
+  /** Visita criada pelo imóvel: recarrega o Histórico. */
+  onVisitaCriada?: () => void;
 }
 
 export default function LeadDetailsTab({
@@ -33,32 +39,46 @@ export default function LeadDetailsTab({
   mostrarObservacoes,
   versaoHistorico,
   funilAtual = null,
+  nomeExibido,
+  onVisitaCriada,
 }: LeadDetailsTabProps) {
   const contato = contatoDoCard(item);
   const contactId = contato?.id != null ? String(contato.id) : null;
 
   return (
-    <div className="grid h-full min-h-0 gap-4 lg:grid-cols-2">
-      {/* Esquerda: o que sabemos do lead + imóveis, em caixas */}
-      <div className="flex flex-col gap-4 min-w-0">
-        <BlocoOQueAIAEntendeu item={item} />
-        <BlocoRespostasDoFormulario item={item} />
-        {mostrarImoveis && <BlocoImoveisDeInteresse item={item} />}
-        {contactId != null && (
-          <OutrasInformacoes
-            contactId={contactId}
-            atributos={contato?.custom_attributes as Record<string, unknown> | null | undefined}
-          />
+    <div className="flex min-h-0 flex-col gap-3 lg:h-full">
+      <div
+        data-testid="linha-de-cima"
+        className={cn(
+          'grid min-h-0 gap-3 lg:grid-cols-[1fr_1.2fr_1.2fr]',
+          // Celular: cada caixa com altura própria, a aba rola inteira. Computador: altura dada pela linha.
+          '[&>section]:max-lg:h-80',
+          mostrarImoveis ? 'shrink-0 lg:h-[274px]' : 'flex-1',
         )}
+      >
+        <CaixaDaJanela titulo="Sobre o lead" corpoClassName="grid content-start gap-4">
+          <BlocoOQueAIAEntendeu item={item} semCaixa />
+          <BlocoRespostasDoFormulario item={item} semCaixa />
+          {contactId != null && (
+            <OutrasInformacoes
+              contactId={contactId}
+              atributos={contato?.custom_attributes as Record<string, unknown> | null | undefined}
+              semCaixa
+            />
+          )}
+        </CaixaDaJanela>
+
+        {/* O Histórico rola por dentro: o corpo da caixa só segura. */}
+        <CaixaDaJanela titulo="Histórico" corpoClassName="flex flex-col overflow-hidden">
+          <HistoricoDoLead modo="compacto" contactId={contactId} funilAtual={funilAtual} versao={versaoHistorico} semTitulo />
+        </CaixaDaJanela>
+
+        {mostrarObservacoes && <BlocoObservacoes contactId={contactId} comoCaixa />}
       </div>
 
-      {/* Direita: Histórico em cima, Observações embaixo — separados de propósito. */}
-      <div className="flex flex-col gap-4 min-h-[480px] lg:min-h-0">
-        <div className="flex flex-col min-h-0 flex-1 rounded-xl border border-border p-4">
-          <HistoricoDoLead modo="compacto" contactId={contactId} funilAtual={funilAtual} versao={versaoHistorico} />
-        </div>
-        {mostrarObservacoes && <BlocoObservacoes contactId={contactId} />}
-      </div>
+      {mostrarImoveis && (
+        <BlocoImoveisDeInteresse item={item} nomeExibido={nomeExibido} onVisitaCriada={onVisitaCriada} className="min-h-[200px] lg:flex-1" />
+      )}
     </div>
   );
 }
