@@ -20,6 +20,7 @@ import { salesAgentsService, type SalesAgent } from '@/services/salesAgents/sale
 import { chatService } from '@/services/chat/chatService';
 import type { SalesAgentLeadReport } from '@/types/analytics/pipelines';
 import EmptyState from '@/components/base/EmptyState';
+import Aviso from '@/components/base/Aviso';
 
 interface Props {
   conversation: Conversation | null;
@@ -115,7 +116,11 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
         ) : erro ? (
           <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregar} />
         ) : !agent ? (
-          <div className="text-sm text-muted-foreground py-4 space-y-2">
+          report ? (
+            <Aviso tom="info" compacto titulo={report.why}>
+              {report.next_step || undefined}
+            </Aviso>
+          ) : (
             <EmptyState
               tamanho="compacto"
               title="Nenhuma IA Vendedora ativa neste canal."
@@ -126,9 +131,7 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
                 </>
               }
             />
-            {report && <p className="text-foreground">{report.why}</p>}
-            {report?.next_step && <p>{report.next_step}</p>}
-          </div>
+          )
         ) : (
           <div className="space-y-4 py-2">
             <div className="text-sm">

@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { nomeDaFraseDoAtribuir } from './nomeDaFraseDoAtribuir';
 import { Suspense, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 
 import { useParams, useNavigate } from 'react-router-dom';
@@ -703,7 +704,7 @@ const Chat = () => {
         return {
           title: t('assignment.agent.title'),
           description: t('assignment.agent.description', {
-            name: conversationToAssign.assignee?.name || t('assignment.agent.contactFallback'),
+            name: nomeDaFraseDoAtribuir(conversationToAssign, t('assignment.agent.contactFallback')),
           }),
           options: assignmentHandlers.users.map(
             (user): AssignmentOption => ({
@@ -724,7 +725,7 @@ const Chat = () => {
         return {
           title: t('assignment.team.title'),
           description: t('assignment.team.description', {
-            name: conversationToAssign?.team?.name || t('assignment.team.contactFallback'),
+            name: nomeDaFraseDoAtribuir(conversationToAssign, t('assignment.team.contactFallback')),
           }),
           options: assignmentHandlers.teams.map(
             (team): AssignmentOption => ({
@@ -742,9 +743,7 @@ const Chat = () => {
         return {
           title: t('assignment.label.title'),
           description: t('assignment.label.description', {
-            name:
-              conversationToAssign?.labels?.map(label => label.title).join(', ') ||
-              t('assignment.label.contactFallback'),
+            name: nomeDaFraseDoAtribuir(conversationToAssign, t('assignment.label.contactFallback')),
           }),
           options: assignmentHandlers.labels.map(
             (label): AssignmentOption => ({

@@ -111,19 +111,19 @@
   },
   "assignment": {
     "agent": {
-      "title": "Atribuir Atendente",
+      "title": "Atribuir atendente",
       "description": "Selecione um atendente para a conversa com {{name}}",
       "contactFallback": "este contato",
       "searchPlaceholder": "Buscar atendentes..."
     },
     "team": {
-      "title": "Atribuir Time",
+      "title": "Atribuir time",
       "description": "Selecione um time para a conversa com {{name}}",
       "contactFallback": "este contato",
       "searchPlaceholder": "Buscar times..."
     },
     "label": {
-      "title": "Atribuir Etiquetas",
+      "title": "Atribuir etiquetas",
       "description": "Selecione etiquetas para a conversa com {{name}}",
       "contactFallback": "este contato",
       "searchPlaceholder": "Buscar etiquetas..."
@@ -287,7 +287,7 @@
       "priorityMedium": "Prioridade Média",
       "priorityLow": "Prioridade Baixa",
       "removePriority": "Remover Prioridade",
-      "assignAgent": "Atribuir Atendente",
+      "assignAgent": "Atribuir atendente",
       "assignTeam": "Atribuir time",
       "assignTag": "Atribuir etiqueta",
       "unassignAgent": "Desvincular corretor",
