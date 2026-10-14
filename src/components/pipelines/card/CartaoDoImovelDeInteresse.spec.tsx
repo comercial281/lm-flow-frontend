@@ -43,11 +43,43 @@ describe('CartaoDoImovelDeInteresse', () => {
     }
   });
 
-  it('sem foto: espaço da capa com "Sem foto" e sem contagem de fotos', () => {
-    montar(com({ ...base.property, cover_photo_url: null, photos_count: 0 }));
-    expect(screen.getByText('Sem foto')).toBeInTheDocument();
+  it('sem foto: quem pode editar ganha o atalho "Adicionar fotos" pra página de fotos do imóvel', () => {
+    montar(com({ ...base.property, cover_photo_url: null, photos_count: 0 }), { podeEditar: true });
+    expect(screen.getByRole('link', { name: 'Adicionar fotos' })).toHaveAttribute('href', '/properties/p1/fotos');
+    expect(screen.queryByText('Sem foto')).toBeNull();
     expect(screen.queryByRole('img')).toBeNull();
     expect(screen.queryByText(/^\d+ fotos?$/)).toBeNull();
+  });
+
+  it('sem foto e sem poder editar: só o aviso "Sem foto", sem atalho', () => {
+    montar(com({ ...base.property, cover_photo_url: null, photos_count: 0 }));
+    expect(screen.getByText('Sem foto')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Adicionar fotos' })).toBeNull();
+  });
+
+  it('área no formato brasileiro: vírgula nas casas e inteiro sem casa', () => {
+    montar(com({ ...base.property, useful_area_m2: 72.45 }));
+    expect(screen.getByText(/72,45 m²/)).toBeInTheDocument();
+    expect(screen.queryByText(/72\.45/)).toBeNull();
+  });
+
+  it('compacto (janela do card): capa mais baixa, sem a linha do lugar, com situação, título, preço e ações', () => {
+    montar(base, { compacto: true });
+    const capa = screen.getByRole('img').parentElement as HTMLElement;
+    expect(capa.className).toContain('h-20');
+    expect(capa.className).not.toContain('h-28');
+    expect(screen.queryByText('Nova Campinas · Campinas')).toBeNull();
+    expect(screen.getByText('Interessado')).toBeInTheDocument();
+    expect(screen.getByText('Apartamento no Nova Campinas')).toBeInTheDocument();
+    expect(screen.getByText('R$ 1.000.000')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mais ações do imóvel' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Agendar visita/ })).toBeInTheDocument();
+  });
+
+  it('normal (página do card): capa h-28 e a linha do lugar', () => {
+    montar();
+    expect((screen.getByRole('img').parentElement as HTMLElement).className).toContain('h-28');
+    expect(screen.getByText('Nova Campinas · Campinas')).toBeInTheDocument();
   });
 
   it('servidor antigo (sem os campos novos): mostra título e preço e esconde características e preço/m²', () => {
