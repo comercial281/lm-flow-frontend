@@ -1062,6 +1062,19 @@ export interface CvcrmRetorno {
   existing?: boolean;
 }
 
+/**
+ * A resposta do "Mandar um aviso de teste" (destino Roleta, Corretor fixo ou dono
+ * do número). `error` = não havia pra quem mandar (o motivo do atendimento real);
+ * `lines` = o que aconteceria, frase a frase, já em português.
+ */
+export interface TestNoticeResult {
+  ok: boolean;
+  error?: string;
+  recipient?: string;
+  lines?: string[];
+  sent_to?: string[];
+}
+
 /** A resposta do "Mandar um lead de teste": o que o sistema do cliente respondeu. */
 export interface WebhookTestResult {
   ok: boolean;
@@ -1242,6 +1255,12 @@ export const salesAgentsService = {
   async testWebhook(id: string): Promise<WebhookTestResult> {
     const res = await api.post(`${BASE}/${id}/handoff_webhook_test`);
     return (res.data as { data: WebhookTestResult }).data;
+  },
+
+  /** "Mandar um aviso de teste": o aviso de oferta no WhatsApp de quem receberia, com cópia pra quem clicou. Não grava nada. */
+  async testNotice(id: string): Promise<TestNoticeResult> {
+    const res = await api.post(`${BASE}/${id}/handoff_test_notice`);
+    return (res.data as { data: TestNoticeResult }).data;
   },
 
   /** As listas de empreendimentos e filas do CVCRM do cliente (e se ele está conectado). */

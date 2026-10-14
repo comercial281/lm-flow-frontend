@@ -18,6 +18,12 @@
 // sem endereço nem chave na IA) e o Outro sistema de sempre. Mesma regra da casa:
 // trocar o sistema não grava; o botão "Usar" só acende com o sistema pronto.
 // Empreendimento e fila gravam na hora (não mudam o destino sozinhos).
+// Aviso de teste (14/10/2026): com roleta, corretor fixo ou dono do número JÁ
+// gravados, "Mandar um aviso de teste" manda o aviso de oferta pra quem receberia,
+// com cópia pra quem clicou. Escolha pela metade não mostra o botão: o servidor
+// testa o destino gravado. O `key` é o destino: trocar de roleta ou corretor
+// zera o resultado do teste anterior (senão "o próximo da fila é a Ana" ficava
+// debaixo da roleta nova).
 // ⚠️ O resumo grava só a subchave briefing_enabled: o hook monta o jsonb sobre o
 // último salvo, então o critério gravado em outra página não é pisado.
 import { useEffect, useRef, useState } from 'react';
@@ -36,6 +42,7 @@ import { problemaNoEndereco } from '@/features/salesAgents/sistemaDoCliente';
 import { FRASE_SEM_DONO } from '@/features/salesAgents/pendencias';
 import SistemaDoCliente from '../SistemaDoCliente';
 import SistemaDoClienteCvcrm from '../SistemaDoClienteCvcrm';
+import AvisoDeTeste from '../AvisoDeTeste';
 import type { HandoffCvcrm, SistemaDoEnvio } from '@/services/salesAgents/salesAgentsService';
 import Aviso from '@/components/base/Aviso';
 import type { PropsDaPagina } from '../paginas';
@@ -145,6 +152,7 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
               </div>
               <Button type="button" variant="outline" onClick={() => irPara('identidade')}>Mudar persona</Button>
             </div>
+            {gravado === 'number_owner' && agent.number_owner_id && <AvisoDeTeste agentId={agent.id} />}
             {gravado !== 'number_owner' && (
               <Aviso tom="atencao">
                 <p>Hoje o lead vai para outro destino, e não para o dono do número.</p>
@@ -189,6 +197,7 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
                 </Seletor>
               </Campo>
             )}
+            {atual === 'roleta' && gravado === 'roleta' && agent.handoff_roleta_config_id && <AvisoDeTeste key={agent.handoff_roleta_config_id} agentId={agent.id} />}
             {atual === 'user' && (
               <Campo id="destino-corretor" rotulo="Qual corretor">
                 <Seletor id="destino-corretor" className={`${CLASSE_DO_CAMPO} w-full`} value={gravado === 'user' ? agent.handoff_user_id ?? '' : ''}
@@ -198,6 +207,7 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
                 </Seletor>
               </Campo>
             )}
+            {atual === 'user' && gravado === 'user' && agent.handoff_user_id && <AvisoDeTeste key={agent.handoff_user_id} agentId={agent.id} />}
             {atual === 'webhook' && (
               <>
                 <CartoesDeEscolha<SistemaDoEnvio> rotulo="Qual sistema" colunas={2} valor={sistema} opcoes={SISTEMAS}

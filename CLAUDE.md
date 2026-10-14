@@ -8832,3 +8832,70 @@ Não reabrir sem o dono pedir.
 - **Mesma regra do servidor** (`linkProLeadValido`): vazio vale; senão http(s), com domínio de verdade, sem espaço, até 500 caracteres. Fora disso: aviso âmbar no campo e o Salvar aponta *Fotos e vídeos* (o servidor recusaria o cadastro inteiro). Vale também no *Salvar rascunho* (o servidor recusa até no rascunho).
 - **No servidor, junto:** sem o link do cliente, a IA só manda a nossa página se ela abre (imóvel publicado no site, fora de rascunho, cliente com site). Antes mandava página de imóvel fora do site, que não abre.
 - `CampoTexto` ganhou `ajuda` e `aviso` (texto embaixo do campo, amarrado por `aria-describedby`).
+
+## IA Vendedora · Aviso de teste no Destino (desde 2026-10-14)
+
+Pedido do dono do produto: um botão no destino da IA, pra roleta e pro corretor
+fixo, que dispara o aviso do lead "só pro cara entender como vai funcionar". O
+gestor e o corretor precisam ver o fluxo antes do primeiro lead de verdade.
+Escolhido o **aviso de teste**, e não um lead de teste de ponta a ponta: o lead
+de teste entraria na roleta de verdade (vez da fila, histórico, card, automação
+do aceite falando com o telefone do lead).
+
+O que aparece na tela:
+
+- **Configurar → Destino**, com a roleta, o corretor fixo ou o dono do número
+  (persona *O corretor*) JÁ gravados: botão **Mandar um aviso de teste** e a
+  frase *Quem receberia o lead ganha o aviso no WhatsApp, marcado como teste, e
+  você recebe uma cópia. Nenhum lead é criado e a vez da roleta não anda.*
+- O resultado em seguida: *Aviso de teste enviado pra Ana e Gestora.* e as
+  frases do que aconteceria (*Pela roleta «Centro», o próximo da fila agora é
+  Ana.*, *A roleta está fechada agora…*, *No atendimento real, o aviso de cada
+  lead novo também vai pros gestores…*). Sem pra quem mandar, o motivo do
+  atendimento real (*No atendimento real, o lead ficaria sem ninguém: …*).
+- **No WhatsApp** (pelo Operacional): o MESMO aviso de oferta de verdade (o
+  modelo da aba Avisos da roleta, ou o texto da oferta direta), com o cabeçalho
+  *🧪 TESTE: nenhum lead de verdade…* e o lead *Lead de teste*. Quem clicou
+  recebe *🧪 TESTE: cópia do aviso que foi pra Ana…*.
+- **O link de aceitar** abre `/roleta/aceite/teste`: o mesmo cartão escuro da
+  tela de aceite, com o selo TESTE, o cronômetro do prazo da roleta (ou *Sem
+  prazo de aceite*) e os botões explicando o que aconteceria (aceitar: o lead
+  vira seu; recusar: vai pro próximo da fila, ou fica pra gestão no corretor
+  fixo). Os botões não chamam o servidor.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Nada é gravado.** Nem contato, nem card, nem oferta, nem linha no
+   histórico. A vez da fila é derivada da última oferta gravada: oferta de
+   teste faria o próximo corretor perder a vez.
+2. **Fiel às chaves do atendimento real.** Aviso desligado (aba Avisos da
+   roleta; Notificações no corretor fixo), corretor que silenciou o aviso (só
+   na roleta) ou sem WhatsApp na Equipe NÃO recebem o teste, e a tela diz por
+   quê. Verde só quando o CORRETOR recebeu: a cópia sozinha não conta. É isso
+   que o gestor precisa descobrir antes de ligar a IA.
+3. **Só o WhatsApp.** O sininho e o push apontam pra uma oferta gravada, e o
+   teste não grava oferta.
+4. **Cópia pra quem clicou**, a não ser que seja o próprio corretor (ou o mesmo
+   número): uma mensagem só.
+5. Um teste por IA a cada 20 s (duplo clique não vira dois avisos no celular
+   do corretor).
+
+Armadilhas:
+
+1. **O botão só aparece com o destino GRAVADO** (o servidor testa o que está
+   salvo). Escolha pela metade (cartão trocado, pessoa não escolhida) não mostra
+   o botão.
+2. **O link usa `?prazo=` e `?destino=`** (`roleta` | `fixo`). Sem eles a tela
+   de teste mostra sem prazo e a recusa do corretor fixo.
+3. **O resultado é do destino da hora**: o `AvisoDeTeste` leva `key` = roleta
+   ou corretor gravado. Sem ele, trocar de roleta deixava "o próximo da fila é
+   a Ana" (da roleta anterior) debaixo da nova (`Destino.spec`).
+4. **`teste` é palavra reservada em `/roleta/aceite/:assignmentId`**: o id de
+   oferta é UUID, então não colide.
+5. Backend: `SalesAgents::HandoffTestNotice` (`POST
+   /sales_agents/:id/handoff_test_notice`, permissão `sales_agents.update`,
+   bloqueado pro MCP). O texto do corretor fixo sai do
+   `SalesAgents::DirectOffer.whatsapp_text` e o da roleta do
+   `Roleta::Notices#offer_text`, e a decisão "sai ou não sai" da mesma regra do
+   envio de verdade: mexeu no aviso de verdade, o teste segue. O "silenciar" do
+   Perfil só vale na roleta (a oferta direta de verdade não lê).
