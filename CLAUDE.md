@@ -8714,3 +8714,17 @@ virou o que a casa já usa.
 Armadilha: **as duas chaves andam juntas.** Com o orgânico entrando no funil, a conversa de
 conhecido vira card e a caixa não esconde nada. Desligar a caixa num cliente grava `false`
 explícito, e o padrão não volta a ligar sozinho.
+
+## Editar contato pela conversa não apaga o dono (14/10/2026)
+
+Salvar o *Editar contato* aberto pelo painel da conversa apagava o responsável do lead. A
+causa: o contato da conversa não traz o dono (nem `name_editable` e `identity_correctable`),
+o formulário abria com "Sem responsável" e, ao salvar, mandava `default_assignee_id: null`,
+que o servidor entende como "tirar o dono".
+
+- **Formulário:** guarda a escolha inicial do responsável e só manda `default_assignee_id`
+  quando ela mudou (ou no cadastro novo). Corretor editando nunca manda.
+- **Painel:** o lápis busca o contato completo no servidor antes de abrir a janela, e fica
+  desligado enquanto busca. Se a busca falhar, avisa "Não deu pra abrir o contato".
+
+Não reabrir sem o dono pedir.
