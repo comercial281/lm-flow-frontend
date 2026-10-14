@@ -3,14 +3,16 @@ import { BaseHeader, Pagina } from '@/components/base';
 import { useMenuSecoes } from '@/contexts/MenuContext';
 import { openSupport } from '@/components/support/openSupport';
 import { cvcrmService, type CvcrmStatus } from '@/services/cvcrm/cvcrmService';
+import { siteFeedService } from '@/services/properties/siteFeedService';
+import { estadoNoCartao } from '@/features/properties/situacaoDoSite';
 import type { SubMenuItem } from '@/components/layout/config/menuItems';
 import { itemDeIntegracoes, NENHUMA_INTEGRACAO } from './cartoes';
 import SeloDoCartao from './SeloDoCartao';
 import CartaoDeLink from './CartaoDeLink';
 
 // Integrações → Sistemas (07/10/2026): os sistemas do cliente pra onde a IA manda
-// o lead. Um cartão por tela marcada `cartao: 'sistemas'` no menu (hoje só o
-// CVCRM). Sistema novo = mais uma tela no menu, nada muda aqui além do estado.
+// o lead. Um cartão por tela marcada `cartao: 'sistemas'` no menu (hoje o
+// CVCRM e o Site da imobiliária). Sistema novo = mais uma tela no menu, nada muda aqui além do estado.
 // Sem "em breve" com nome de sistema (decisão do dono, 07/10): vira promessa.
 
 export function estadoDoCvcrm(s: CvcrmStatus): string {
@@ -23,11 +25,12 @@ export function estadoDoCvcrm(s: CvcrmStatus): string {
 function useEstado(href: string): string | null {
   const [estado, setEstado] = useState<string | null>(null);
   useEffect(() => {
-    if (href !== '/settings/cvcrm') return;
     let vivo = true;
-    cvcrmService.get()
-      .then((s) => { if (vivo) setEstado(estadoDoCvcrm(s)); })
-      .catch(() => {});
+    if (href === '/settings/cvcrm') {
+      cvcrmService.get().then((s) => { if (vivo) setEstado(estadoDoCvcrm(s)); }).catch(() => {});
+    } else if (href === '/settings/site-da-imobiliaria') {
+      siteFeedService.get().then((f) => { if (vivo) setEstado(estadoNoCartao(f)); }).catch(() => {});
+    }
     return () => { vivo = false; };
   }, [href]);
   return estado;

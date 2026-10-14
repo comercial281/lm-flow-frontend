@@ -82,6 +82,8 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/settings/facebook', resource: 'lead_ads_form_configs', action: 'read' },
   // Mesmas chaves do servidor (Api::V1::CvcrmConnectionController: integrations.*).
   { path: '/settings/cvcrm', resource: 'integrations', action: 'read' },
+  // Mesmas chaves do servidor (Api::V1::PropertyFeedSourceController: properties.*).
+  { path: '/settings/site-da-imobiliaria', resource: 'properties', action: 'read' },
   { path: '/settings/roleta-config', resource: 'roleta_configs', action: 'read' },
 
   { path: '/dashboard-app/:appId', resource: 'integrations', action: 'read' },

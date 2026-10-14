@@ -180,6 +180,7 @@ const AssignmentSettingsPage = lazyWithRetry(() => import('@/pages/Customer/Sett
 const FacebookIntegracao = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/FacebookIntegracao'));
 const IntegracoesSistemas = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/IntegracoesSistemas'));
 const CvcrmConexao = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/Cvcrm/CvcrmConexao'));
+const SiteDaImobiliaria = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/SiteDaImobiliaria/SiteDaImobiliaria'));
 const Macros = lazyWithRetry(() => import('@/pages/Customer/Settings/Macros').then(m => ({ default: m.Macros })));
 const WhatsappReminders = lazyWithRetry(() => import('@/pages/Customer/Settings/WhatsappReminders'));
 const EmailTemplateEditor = lazyWithRetry(() => import('@/pages/Customer/Settings/EmailTemplateEditor'));
@@ -1016,6 +1017,15 @@ const AppRouter = () => {
                 element={
                   <PermissionRoute resource="integrations" action="read">
                     <CvcrmConexao />
+                  </PermissionRoute>
+                }
+              />
+              {/* Site da imobiliária (13/10/2026): os imóveis do site entram e se atualizam sozinhos. */}
+              <Route
+                path="/settings/site-da-imobiliaria"
+                element={
+                  <PermissionRoute resource="properties" action="read">
+                    <SiteDaImobiliaria />
                   </PermissionRoute>
                 }
               />
