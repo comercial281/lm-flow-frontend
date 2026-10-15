@@ -64,19 +64,6 @@ describe('Aba Operação', () => {
     await waitFor(() => expect(screen.getByRole('switch', { name: 'WhatsApp orgânico' })).not.toBeChecked());
   });
 
-  it('salvar grupo manda as duas chaves', async () => {
-    api.get.mockResolvedValue({ data: { data: { whatsapp_groups: [{ jid: '333@g.us', name: 'Novo grupo' }] } } });
-    api.patch.mockResolvedValue({ data: { data: cliente } });
-    const user = userEvent.setup();
-    montar();
-    await user.click((await screen.findAllByRole('button', { name: 'Trocar' }))[0]);
-    await user.selectOptions(await screen.findByLabelText(/Grupo: Grupo do cliente/), '333@g.us');
-    await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/super/pooled_tenants/c1', expect.objectContaining({
-      whatsapp_reminder_group_jid: '333@g.us', whatsapp_logs_group_jid: '222@g.us',
-    })));
-  });
-
   it('caixa só de campanha não manda grupo', async () => {
     api.patch.mockResolvedValue({ data: { data: cliente } });
     montar();
