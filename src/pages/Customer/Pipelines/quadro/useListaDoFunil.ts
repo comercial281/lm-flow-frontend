@@ -20,6 +20,8 @@ export function useListaDoFunil({ pipelineId, params, assinatura, ordem, ativo, 
   const [carregando, setCarregando] = useState(false);
   const [carregandoMais, setCarregandoMais] = useState(false);
   const [erro, setErro] = useState(false);
+  // Falha do "Carregar mais" com linhas na tela: aviso no rodapé, não a tela de erro.
+  const [erroAoCarregarMais, setErroAoCarregarMais] = useState(false);
   const [tentativa, setTentativa] = useState(0);
   const pedido = useRef(0);
   const paramsRef = useRef(params);
@@ -27,7 +29,8 @@ export function useListaDoFunil({ pipelineId, params, assinatura, ordem, ativo, 
   const itensRef = useRef(itens);
   itensRef.current = itens;
   const sort = ordem === 'asc' ? 'arrival_asc' : 'arrival_desc';
-  const chave = `${assinatura}|${sort}`;
+  // Trocar de funil com a Lista aberta volta pros 30 primeiros do funil novo.
+  const chave = `${pipelineId}|${assinatura}|${sort}`;
   const chaveRef = useRef(chave);
 
   useEffect(() => {
@@ -39,6 +42,7 @@ export function useListaDoFunil({ pipelineId, params, assinatura, ordem, ativo, 
     if (!mesmaLista) setItens([]);
     setCarregando(!mesmaLista || itensRef.current.length === 0);
     setErro(false);
+    setErroAoCarregarMais(false);
     pipelinesService.getBoardItems(pipelineId, paramsRef.current, { offset: 0, limit: limite, sort })
       .then(p => { if (meu === pedido.current) { setItens(p.items); setTotal(p.total); } })
       .catch(() => { if (meu === pedido.current) setErro(true); })
@@ -49,12 +53,13 @@ export function useListaDoFunil({ pipelineId, params, assinatura, ordem, ativo, 
     if (!pipelineId || carregandoMais || itensRef.current.length >= total) return;
     const meu = pedido.current;
     setCarregandoMais(true);
+    setErroAoCarregarMais(false);
     pipelinesService.getBoardItems(pipelineId, paramsRef.current, { offset: itensRef.current.length, limit: POR_COLUNA, sort })
       .then(p => { if (meu === pedido.current) { setItens(atual => juntarSemRepetir(atual, p.items)); setTotal(p.total); } })
-      .catch(() => { if (meu === pedido.current) setErro(true); })
+      .catch(() => { if (meu === pedido.current) setErroAoCarregarMais(true); })
       .finally(() => setCarregandoMais(false));
   }, [pipelineId, carregandoMais, total, sort]);
 
   const tentarDeNovo = useCallback(() => setTentativa(n => n + 1), []);
-  return { itens, total, carregando, carregandoMais, erro, temMais: itens.length < total, carregarMais, tentarDeNovo };
+  return { itens, total, carregando, carregandoMais, erro, erroAoCarregarMais, temMais: itens.length < total, carregarMais, tentarDeNovo };
 }

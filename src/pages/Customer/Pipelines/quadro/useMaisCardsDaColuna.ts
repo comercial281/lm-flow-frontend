@@ -47,7 +47,12 @@ export function useMaisCardsDaColuna({ pipelineId, params, assinatura, setStages
     pipelinesService.getBoardItems(pipelineId, paramsRef.current, { stageId: id, offset: ja, limit: POR_COLUNA })
       .then(pagina => {
         if (minha !== assinaturaRef.current) return;
-        if (juntarSemRepetir(stage.items ?? [], pagina.items).length <= ja) esgotadas.current.set(id, ja);
+        if (juntarSemRepetir(stage.items ?? [], pagina.items).length <= ja) {
+          esgotadas.current.set(id, ja);
+          // O servidor diz que há mais e a página não trouxe nenhum: a coluna não para
+          // muda, mostra o aviso com "Tentar de novo" (o clique limpa a marca).
+          if (pagina.total > ja) setErro(e => ({ ...e, [id]: true }));
+        }
         setStages(prev => prev.map(s => (String(s.id) !== id ? s : {
           ...s, items: juntarSemRepetir(s.items ?? [], pagina.items), items_total: pagina.total,
         })));

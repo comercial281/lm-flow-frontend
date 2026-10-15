@@ -11,7 +11,7 @@ import type { Pipeline, PipelineItem, PipelineStage } from '@/types/analytics';
 import PipelineKanban from './PipelineKanban';
 import { simularCelular } from '@/test/telaDeCelular';
 
-const mocks = vi.hoisted(() => ({ abrirConversa: vi.fn(), fetchLabels: vi.fn(), getPipelineItem: vi.fn() }));
+const mocks = vi.hoisted(() => ({ abrirConversa: vi.fn(), fetchLabels: vi.fn(), getPipelineItem: vi.fn(), guardado: vi.fn() }));
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), message: vi.fn() } }));
 vi.mock('@/hooks/useLanguage', () => ({
@@ -64,7 +64,7 @@ vi.mock('@/components/roleta/OfferActions', () => ({
   default: ({ fallback }: { fallback?: React.ReactNode }) => <>{fallback ?? null}</>,
 }));
 vi.mock('@/pages/Customer/Pipelines/pipelinePayloadCache', () => ({
-  getCachedPipeline: () => undefined,
+  getCachedPipeline: (id: string) => mocks.guardado(id),
   setCachedPipeline: vi.fn(),
   prefetchPipeline: vi.fn(),
   // Sem o dedupe: cada carga da aba Abertos vai direto ao serviço (simulado),
@@ -195,6 +195,7 @@ beforeEach(() => {
     unobserve() {}
     disconnect() {}
   } as unknown as typeof ResizeObserver;
+  mocks.guardado.mockReset().mockReturnValue(undefined);
   mocks.getPipelineItem.mockReset().mockRejectedValue(Object.assign(new Error('404'), { response: { status: 404 } }));
   arquivadosAgora.clear();
   desarquivadosAgora.clear();
@@ -204,9 +205,9 @@ beforeEach(() => {
   // O auto-rolar do arraste pergunta qual elemento está sob o cursor; o jsdom não sabe.
   document.elementFromPoint = (() => null) as typeof document.elementFromPoint;
   vi.mocked(pipelinesService.getPipelines).mockResolvedValue({ data: [] } as never);
-  // No jsdom a coluna nunca "enche": toda coluna com mais cards no servidor do que na
-  // tela (items_total > cards) pede o próximo lote ao montar. Por padrão esse pedido
-  // fica no ar (sem mudar a tela); o teste do lote fixa a resposta que quer.
+  // No jsdom a coluna não tem altura (clientHeight 0), então não pede lote sozinha ao
+  // montar; o pedido vem do scroll ou de um teste que dá altura à coluna. Por padrão
+  // ele fica no ar (sem mudar a tela); o teste do lote fixa a resposta que quer.
   vi.mocked(pipelinesService.getBoardItems).mockReturnValue(new Promise(() => {}));
   vi.mocked(pipelinesService.getPipeline).mockImplementation(async (_id, opts) => FUNIL(opts?.status));
   vi.mocked(pipelinesService.getBoard).mockImplementation(async (_id, params) => comTotais(FUNIL(params.status as string)));
@@ -318,16 +319,91 @@ describe('quadro do funil · o que continua igual', () => {
     const muitos = Array.from({ length: 45 }, (_, n) => card(`x${n}`, `Lead ${n}`, 's1'));
     vi.mocked(pipelinesService.getBoard).mockImplementation(async (_id, _p, n) => ({
       ...comTotais(FUNIL('open')),
-      stages: [{ ...etapa('s1', 'Novo', muitos.slice(0, n as number)), items_total: 45 }],
+      stages: [{ ...etapa('s1', 'Novo', muitos.slice(0, n as number)), items_total: 45 }, { ...etapa('s2', 'Proposta', [JOAO]), items_total: 1 }],
     }) as unknown as Pipeline);
-    vi.mocked(pipelinesService.getBoardItems).mockResolvedValue({ items: muitos.slice(30), total: 45, has_more: false });
+    vi.mocked(pipelinesService.getBoardItems).mockImplementation(async (_id, _p, o) => ({
+      items: muitos.slice(o.offset ?? 0, (o.offset ?? 0) + (o.limit ?? 30)), total: 45, has_more: false,
+    }));
     montar();
     await screen.findByText('Lead 0');
     fireEvent.scroll(colunaDe('s1'));
     await screen.findByText('Lead 44');
+    vi.mocked(pipelinesService.getBoard).mockClear();
+    vi.mocked(pipelinesService.getBoardItems).mockClear();
     act(() => { window.dispatchEvent(new Event('focus')); });
-    await waitFor(() => expect(pipelinesService.getBoard).toHaveBeenLastCalledWith('p1', expect.anything(), 45));
+    // O funil vem com o 1º lote; só a coluna rolada é relida, até onde a pessoa foi.
+    await waitFor(() => expect(pipelinesService.getBoardItems).toHaveBeenCalledWith('p1', expect.anything(), { stageId: 's1', offset: 0, limit: 45 }));
+    expect(pipelinesService.getBoard).toHaveBeenLastCalledWith('p1', expect.anything(), 30);
+    expect(pipelinesService.getBoardItems).toHaveBeenCalledTimes(1);
+    await esvaziar();
     expect(screen.getByText('Lead 44')).toBeInTheDocument();
+    expect(screen.getByText('Lead 0')).toBeInTheDocument();
+  });
+
+  it('recarga por trás: a coluna cuja releitura falha fica com o 1º lote, as outras seguem', async () => {
+    const muitos = Array.from({ length: 45 }, (_, n) => card(`x${n}`, `Lead ${n}`, 's1'));
+    vi.mocked(pipelinesService.getBoard).mockImplementation(async () => ({
+      ...comTotais(FUNIL('open')),
+      stages: [{ ...etapa('s1', 'Novo', muitos.slice(0, 30)), items_total: 45 }, { ...etapa('s2', 'Proposta', [JOAO]), items_total: 1 }],
+    }) as unknown as Pipeline);
+    vi.mocked(pipelinesService.getBoardItems).mockResolvedValueOnce({ items: muitos.slice(30), total: 45, has_more: false });
+    montar();
+    await screen.findByText('Lead 0');
+    fireEvent.scroll(colunaDe('s1'));
+    await screen.findByText('Lead 44');
+    vi.mocked(pipelinesService.getBoardItems).mockRejectedValueOnce(new Error('caiu'));
+    act(() => { window.dispatchEvent(new Event('focus')); });
+    await waitFor(() => expect(screen.queryByText('Lead 44')).toBeNull());
+    expect(screen.getByText('Lead 29')).toBeInTheDocument();
+    expect(screen.getByText('João Lima')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).toBeNull();
+  });
+
+  it('coluna sem altura (escondida, sem layout) não pede lote sozinha', async () => {
+    vi.mocked(pipelinesService.getBoard).mockImplementation(async () => {
+      const p = comTotais(FUNIL('open'));
+      return { ...p, stages: p.stages!.map(s => (s.id === 's1' ? { ...s, items_total: 50 } : s)) } as Pipeline;
+    });
+    montar();
+    await screen.findByText('Maria Souza');
+    await esvaziar();
+    expect(pipelinesService.getBoardItems).not.toHaveBeenCalled();
+  });
+
+  it('coluna que não enche a altura pede o próximo lote sozinha', async () => {
+    vi.mocked(pipelinesService.getBoard).mockImplementation(async () => {
+      const p = comTotais(FUNIL('open'));
+      return { ...p, stages: p.stages!.map(s => (s.id === 's1' ? { ...s, items_total: 50 } : s)) } as Pipeline;
+    });
+    // A coluna com altura de verdade (no jsdom ela é 0): 1 card não a enche.
+    const altura = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight');
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+      configurable: true,
+      get() { return (this as HTMLElement).hasAttribute('data-col-scroll') ? 600 : 0; },
+    });
+    try {
+      montar();
+      await screen.findByText('Maria Souza');
+      await waitFor(() => expect(pipelinesService.getBoardItems).toHaveBeenCalledWith('p1', expect.anything(), { stageId: 's1', offset: 1, limit: 30 }));
+    } finally {
+      if (altura) Object.defineProperty(HTMLElement.prototype, 'clientHeight', altura);
+    }
+  });
+
+  it('arrastar pro fim de uma coluna com cards não carregados põe o card logo abaixo do último visível', async () => {
+    const ANA = card('i7', 'Ana Dias', 's1', { position: 7 });
+    vi.mocked(pipelinesService.getBoard).mockImplementation(async () => {
+      const p = comTotais(FUNIL('open'));
+      return { ...p, stages: p.stages!.map(s => (s.id === 's1' ? { ...s, items: [ANA, MARIA], items_total: 50 } : s)) } as Pipeline;
+    });
+    montar();
+    await screen.findByText('Ana Dias');
+    fireEvent.dragStart(cardDe('Ana Dias'));
+    fireEvent.dragOver(colunaDe('s1'));
+    fireEvent.drop(colunaDe('s1'));
+    await waitFor(() => expect(pipelinesService.reorderItem).toHaveBeenCalled());
+    // Maria (a última na tela) tem position 1: o card fica colado nela, não abaixo dos 48 não carregados.
+    expect(vi.mocked(pipelinesService.reorderItem).mock.calls[0][2].position).toBeCloseTo(1 - 1e-4, 8);
   });
 
   it('arrastar um card para outra coluna grava a etapa nova e move na hora', async () => {
@@ -428,6 +504,31 @@ describe('quadro do funil · o que continua igual', () => {
     await userEvent.type(screen.getByPlaceholderText(BUSCA), 'maria');
     expect(screen.getByTestId('endereco').textContent).not.toContain('maria');
     expect(endereco().has('maria')).toBe(false);
+  });
+  it('limpar a busca não pinta o payload guardado por cima do quadro (foto de antes das ações)', async () => {
+    const velho = comTotais({ ...FUNIL('open'), stages: [etapa('s1', 'Novo', [card('i8', 'Lead Velho', 's1')])] } as Pipeline);
+    mocks.guardado.mockReturnValue(velho);
+    let soltarAbertura: (p: Pipeline) => void = () => {};
+    vi.mocked(pipelinesService.getBoard).mockImplementationOnce(() => new Promise<Pipeline>(r => { soltarAbertura = r; }));
+    montar();
+    // Abrir o funil pinta o guardado na hora, e a resposta nova toma o lugar.
+    expect(await screen.findByText('Lead Velho')).toBeInTheDocument();
+    act(() => { soltarAbertura(comTotais(FUNIL('open'))); });
+    await screen.findByText('Maria Souza');
+    expect(screen.queryByText('Lead Velho')).toBeNull();
+
+    fireEvent.change(screen.getByPlaceholderText(BUSCA), { target: { value: 'maria' } });
+    await waitFor(() => expect(pipelinesService.getBoard).toHaveBeenLastCalledWith('p1', expect.objectContaining({ q: 'maria' }), 30));
+    await esvaziar();
+    let soltar: (p: Pipeline) => void = () => {};
+    vi.mocked(pipelinesService.getBoard).mockImplementation(() => new Promise<Pipeline>(r => { soltar = r; }));
+    fireEvent.change(screen.getByPlaceholderText(BUSCA), { target: { value: '' } });
+    await waitFor(() => expect(pipelinesService.getBoard).toHaveBeenLastCalledWith('p1', { status: 'open' }, 30));
+    expect(screen.queryByText('Lead Velho')).toBeNull();
+    expect(screen.getByText('Maria Souza')).toBeInTheDocument();
+    act(() => { soltar(comTotais(FUNIL('open'))); });
+    await waitFor(() => expect(screen.getByText('João Lima')).toBeInTheDocument());
+    expect(screen.queryByText('Lead Velho')).toBeNull();
   });
 });
 

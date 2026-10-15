@@ -7,6 +7,7 @@ import { AlarmClock, ArrowDown, ArrowUp, ArrowUpRight, CalendarClock, ChevronRig
 import { useLanguage } from '@/hooks/useLanguage';
 import EmptyState from '@/components/base/EmptyState';
 import Carregando from '@/components/base/Carregando';
+import Aviso from '@/components/base/Aviso';
 import { Button } from '@/components/ui/ds';
 import OfferActions from '@/components/roleta/OfferActions';
 import SeloSituacao from '@/features/pipelines/situacao/SeloSituacao';
@@ -39,6 +40,8 @@ export interface PipelineListViewProps {
   erro: boolean;
   temMais: boolean;
   carregandoMais: boolean;
+  /** O "Carregar mais" falhou: aviso no rodapé com "Tentar de novo" (as linhas ficam). */
+  erroAoCarregarMais: boolean;
   aoCarregarMais: () => void;
   aoTentarDeNovo: () => void;
   ordem: 'asc' | 'desc';
@@ -48,7 +51,7 @@ export interface PipelineListViewProps {
 }
 
 export default function PipelineListView({
-  stages, itens, carregando, erro, temMais, carregandoMais, aoCarregarMais, aoTentarDeNovo,
+  stages, itens, carregando, erro, temMais, carregandoMais, erroAoCarregarMais, aoCarregarMais, aoTentarDeNovo,
   ordem, aoTrocarOrdem, onOpenItem, visitsByContact,
 }: PipelineListViewProps) {
   const { t } = useLanguage('pipelines');
@@ -163,7 +166,13 @@ export default function PipelineListView({
               );
             })}
           </div>
-          {temMais && (
+          {temMais && erroAoCarregarMais && !carregandoMais ? (
+            <div className="border-t border-border p-3">
+              <Aviso tom="erro" compacto acao={<Button variant="outline" size="sm" onClick={aoCarregarMais}>Tentar de novo</Button>}>
+                Não deu pra carregar mais leads.
+              </Aviso>
+            </div>
+          ) : temMais && (
             <div className="flex justify-center border-t border-border py-3">
               <Button variant="outline" size="sm" onClick={aoCarregarMais} disabled={carregandoMais}>
                 {carregandoMais ? 'Carregando…' : 'Carregar mais'}

@@ -1,7 +1,7 @@
 // src/pages/Customer/Pipelines/quadro/paramsDoQuadro.ts
 // Quadro em lotes (spec 2026-10-15-funil-em-lotes): a aba, a busca e os filtros
 // viram parâmetros do servidor (PipelineItems::BoardQuery), e as contas que a
-// tela faz com os lotes: até onde reler, totais nas ações locais, sem repetir card.
+// tela faz com os lotes: o que reler, totais nas ações locais, sem repetir card.
 import type { BoardQueryParams, PipelineItem, PipelineStage } from '@/types/analytics';
 import { STATUS_DA_ABA, type AbaDoQuadro, type FiltrosDoFunil } from './enderecoDoQuadro';
 import { motivoNaAba } from './filtrosDoFunil';
@@ -35,16 +35,30 @@ export function semFiltroNaAberta(p: BoardQueryParams): boolean {
   return p.status === 'open' && Object.keys(p).length === 1;
 }
 
-/** Recarga por trás relê até onde a pessoa já rolou (teto 200), pra não sumir card. */
-export function limiteDaRecarga(stages: PipelineStage[]): number {
-  const maior = Math.max(0, ...stages.map(s => s.items?.length ?? 0));
-  return Math.min(TETO_DA_RECARGA, Math.max(POR_COLUNA, maior));
+/**
+ * Recarga por trás: o funil vem com o 1º lote de cada coluna e só as colunas que a
+ * pessoa rolou além dele são relidas, cada uma até onde ela foi (teto 200). Reler
+ * todas até a mais rolada trazia de volta os ~11 s do funil de 2 mil cards.
+ */
+export function colunasParaReler(stages: PipelineStage[]): Array<{ stageId: string; limite: number }> {
+  return stages.flatMap(s => {
+    const carregados = s.items?.length ?? 0;
+    return carregados > POR_COLUNA ? [{ stageId: String(s.id), limite: Math.min(TETO_DA_RECARGA, carregados) }] : [];
+  });
+}
+
+const valorDe = (i: PipelineItem) => Number(i.value) || 0;
+
+/** Soma o valor dos cards de `de` que não estão em `em` (os que saíram ou entraram). */
+function valorQueMudou(de: PipelineItem[], em: PipelineItem[]): number {
+  const ids = new Set(em.map(i => String(i.id)));
+  return de.reduce((soma, i) => (ids.has(String(i.id)) ? soma : soma + valorDe(i)), 0);
 }
 
 /**
  * Ação local (arrastar, arquivar, ganhar, remover) mexe nos cards da coluna:
- * o total acompanha a diferença. Se quem mexeu já trouxe outro total (o
- * desfazer do arraste), ele vale como veio.
+ * o número e o valor da coluna acompanham a diferença. Se quem mexeu já trouxe
+ * outro total (o desfazer do arraste), ele vale como veio.
  */
 export function ajustarTotais(antes: PipelineStage[], depois: PipelineStage[]): PipelineStage[] {
   // Quem mexeu não mudou nada (devolveu o mesmo array): nada a refazer na tela.
@@ -53,11 +67,20 @@ export function ajustarTotais(antes: PipelineStage[], depois: PipelineStage[]): 
   let ajustou = false;
   const ajustadas = depois.map(s => {
     const a = antigas.get(String(s.id));
-    if (!a || s.items_total == null || s.items_total !== a.items_total) return s;
-    const diferenca = (s.items?.length ?? 0) - (a.items?.length ?? 0);
-    if (diferenca === 0) return s;
-    ajustou = true;
-    return { ...s, items_total: Math.max(0, s.items_total + diferenca) };
+    if (!a || s.items === a.items) return s;
+    const agora = s.items ?? [];
+    const eram = a.items ?? [];
+    let nova = s;
+    if (s.items_total != null && s.items_total === a.items_total) {
+      const diferenca = agora.length - eram.length;
+      if (diferenca !== 0) nova = { ...nova, items_total: Math.max(0, s.items_total + diferenca) };
+    }
+    if (s.value_total != null && s.value_total === a.value_total) {
+      const diferenca = valorQueMudou(agora, eram) - valorQueMudou(eram, agora);
+      if (diferenca !== 0) nova = { ...nova, value_total: Math.max(0, s.value_total + diferenca) };
+    }
+    if (nova !== s) ajustou = true;
+    return nova;
   });
   return ajustou ? ajustadas : depois;
 }

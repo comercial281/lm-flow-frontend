@@ -77,4 +77,24 @@ describe('useMaisCardsDaColuna', () => {
     act(() => result.current.carregarMais(result.current.stages[0], { manual: true }));
     expect(pipelinesService.getBoardItems).toHaveBeenCalledTimes(2);
   });
+
+  it('coluna esgotada com mais no servidor mostra o erro (com Tentar de novo), não para muda', async () => {
+    vi.mocked(pipelinesService.getBoardItems).mockResolvedValueOnce({ items: [item('i0')], total: 90, has_more: true })
+      .mockResolvedValueOnce({ items: [item('i30')], total: 90, has_more: true });
+    const { result } = usar([coluna(30, 90)]);
+    act(() => result.current.carregarMais(result.current.stages[0]));
+    await waitFor(() => expect(result.current.erro.s1).toBe(true));
+    act(() => result.current.carregarMais(result.current.stages[0], { manual: true }));
+    await waitFor(() => expect(result.current.stages[0].items).toHaveLength(31));
+    expect(result.current.erro.s1).toBe(false);
+  });
+
+  it('página vazia com a coluna completa no servidor não é erro', async () => {
+    vi.mocked(pipelinesService.getBoardItems).mockResolvedValue({ items: [], total: 30, has_more: false });
+    const { result } = usar([coluna(30, 31)]);
+    act(() => result.current.carregarMais(result.current.stages[0]));
+    await waitFor(() => expect(result.current.carregando.s1).toBe(false));
+    expect(result.current.erro.s1).toBe(false);
+    expect(result.current.stages[0].items_total).toBe(30);
+  });
 });

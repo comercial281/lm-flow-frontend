@@ -12,6 +12,14 @@ import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import { comSituacaoNova, ehColunaDeGanho, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
 import { itemPos } from '../pipelineItemHelpers';
 
+// Position logo abaixo do último card visível. Na coluna com cards ainda não
+// carregados (quadro em lotes), "- 1" podia passar por baixo deles: o card ia
+// parar no meio dos que a pessoa nem vê. Um passo mínimo o deixa colado no último.
+function abaixoDoUltimo(coluna: PipelineStage | undefined, ultimo: PipelineItem): number {
+  const temNaoCarregados = (coluna?.items_total ?? 0) > (coluna?.items?.length ?? 0);
+  return itemPos(ultimo) - (temNaoCarregados ? 1e-4 : 1);
+}
+
 interface OpcoesDoArraste {
   pipelineId?: string;
   stages: PipelineStage[];
@@ -255,7 +263,7 @@ export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, po
         return;
       }
       // fundo da coluna: position menor que a do último card
-      const newPos = itemPos(items[items.length - 1]) - 1;
+      const newPos = abaixoDoUltimo(targetStage, items[items.length - 1]);
       void commitReorder(targetStageId, newPos, items.length);
       return;
     }
@@ -297,7 +305,7 @@ export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, po
     const below = arr[insertIdx];
     let newPos: number;
     if (!above) newPos = itemPos(below) + 1;
-    else if (!below) newPos = itemPos(above) - 1;
+    else if (!below) newPos = abaixoDoUltimo(targetStage, above);
     else newPos = (itemPos(above) + itemPos(below)) / 2;
     void commitReorder(targetStageId, newPos, insertIdx);
   }, [draggedItem, stages, commitReorder, finishDrag]);

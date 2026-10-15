@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import { FILTROS_VAZIOS } from './enderecoDoQuadro';
 import {
-  POR_COLUNA, TETO_DA_RECARGA, ajustarTotais, assinaturaDoQuadro, juntarSemRepetir, limiteDaRecarga,
+  TETO_DA_RECARGA, ajustarTotais, assinaturaDoQuadro, colunasParaReler, juntarSemRepetir,
   paramsDoQuadro, semFiltroNaAberta,
 } from './paramsDoQuadro';
 
@@ -38,11 +38,12 @@ describe('paramsDoQuadro', () => {
   });
 });
 
-describe('limiteDaRecarga', () => {
-  it('relê até onde a pessoa rolou, entre 30 e 200', () => {
-    expect(limiteDaRecarga([etapa('s1', ['a'])])).toBe(POR_COLUNA);
-    expect(limiteDaRecarga([etapa('s1', Array.from({ length: 90 }, (_, i) => `i${i}`))])).toBe(90);
-    expect(limiteDaRecarga([etapa('s1', Array.from({ length: 450 }, (_, i) => `i${i}`))])).toBe(TETO_DA_RECARGA);
+describe('colunasParaReler', () => {
+  const ids = (n: number) => Array.from({ length: n }, (_, i) => `i${i}`);
+  it('só as colunas roladas além do 1º lote, cada uma até onde foi (teto 200)', () => {
+    expect(colunasParaReler([etapa('s1', ids(30)), etapa('s2', ids(45)), etapa('s3', ['a']), etapa('s4', ids(450))]))
+      .toEqual([{ stageId: 's2', limite: 45 }, { stageId: 's4', limite: TETO_DA_RECARGA }]);
+    expect(colunasParaReler([etapa('s1', ids(30))])).toEqual([]);
   });
 });
 
@@ -57,6 +58,24 @@ describe('ajustarTotais', () => {
     const antes = [etapa('s1', ['a', 'b'], 40), etapa('s2', [], 3)];
     const mexido = ajustarTotais(antes, [{ ...antes[0], items: [item('b')] }, { ...antes[1], items: [item('a')] }]);
     expect(ajustarTotais(mexido, antes).map(s => s.items_total)).toEqual([40, 3]);
+  });
+
+  it('o valor da coluna acompanha o valor dos cards que saíram e entraram', () => {
+    const comValor = (id: string, value: number) => ({ id, value }) as unknown as PipelineItem;
+    const antes = [
+      { ...etapa('s1', [], 40), items: [comValor('a', 1000), comValor('b', 500)], value_total: 90000 },
+      { ...etapa('s2', [], 3), items: [], value_total: 2000 },
+    ] as PipelineStage[];
+    const depois = [{ ...antes[0], items: [antes[0].items![1]] }, { ...antes[1], items: [antes[0].items![0]] }];
+    const mexido = ajustarTotais(antes, depois);
+    expect(mexido.map(s => s.value_total)).toEqual([89000, 3000]);
+    // O desfazer (que já traz os valores de antes) não é ajustado de novo.
+    expect(ajustarTotais(mexido, antes).map(s => s.value_total)).toEqual([90000, 2000]);
+  });
+
+  it('sem valor do servidor não inventa valor', () => {
+    const antes = [{ ...etapa('s1', [], 4), items: [({ id: 'a', value: 10 }) as unknown as PipelineItem] }] as PipelineStage[];
+    expect(ajustarTotais(antes, [{ ...antes[0], items: [] }])[0].value_total).toBeUndefined();
   });
 
   it('sem total do servidor (servidor antigo) não inventa total', () => {

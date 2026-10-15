@@ -27,7 +27,7 @@ const ITENS = [
 
 const montarLista = (extra: Partial<Parameters<typeof PipelineListView>[0]> = {}) => {
   const props = {
-    stages: STAGES, itens: ITENS, carregando: false, erro: false, temMais: false, carregandoMais: false,
+    stages: STAGES, itens: ITENS, carregando: false, erro: false, temMais: false, carregandoMais: false, erroAoCarregarMais: false,
     aoCarregarMais: vi.fn(), aoTentarDeNovo: vi.fn(),
     ordem: 'desc' as const, aoTrocarOrdem: vi.fn(), onOpenItem: vi.fn(), visitsByContact: {}, ...extra,
   };
@@ -84,6 +84,18 @@ describe('Lista do funil enxuta', () => {
     montarLista({ temMais: true, aoCarregarMais });
     fireEvent.click(screen.getByRole('button', { name: 'Carregar mais' }));
     expect(aoCarregarMais).toHaveBeenCalled();
+  });
+
+  it('"Carregar mais" que falhou: as linhas ficam e o rodapé avisa, com Tentar de novo', () => {
+    const aoCarregarMais = vi.fn();
+    const aoTentarDeNovo = vi.fn();
+    montarLista({ temMais: true, erroAoCarregarMais: true, aoCarregarMais, aoTentarDeNovo });
+    expect(screen.getByText('Maria Souza')).toBeInTheDocument();
+    expect(screen.getByText('Não deu pra carregar mais leads.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Carregar mais' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    expect(aoCarregarMais).toHaveBeenCalled();
+    expect(aoTentarDeNovo).not.toHaveBeenCalled();
   });
 
   it('erro mostra Tentar de novo, não "Nenhum lead"', () => {

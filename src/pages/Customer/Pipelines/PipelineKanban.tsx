@@ -13,6 +13,7 @@ import {
   PipelineItem,
   UpdatePipelineData,
   CreateStageData,
+  type BoardQueryParams,
 } from '@/types/analytics';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useCan } from '@/hooks/useCan';
@@ -41,7 +42,7 @@ import {
   paramsDoQuadro,
   assinaturaDoQuadro,
   semFiltroNaAberta,
-  limiteDaRecarga,
+  colunasParaReler,
   ajustarTotais,
   POR_COLUNA,
 } from './quadro/paramsDoQuadro';
@@ -80,6 +81,36 @@ function EsqueletoDoQuadro({ rotulo }: { rotulo: string }) {
       ))}
     </div>
   );
+}
+
+// Recarga por trás do quadro em lotes: troca, nas colunas que a pessoa rolou além do
+// 1º lote, os cards pelos relidos do servidor (do topo até onde ela foi). Pedido por
+// coluna, em paralelo; a que falhar fica com o 1º lote que já veio.
+async function releColunasRoladas(
+  pipelineId: string,
+  params: BoardQueryParams,
+  primeiroLote: Pipeline,
+  naTela: PipelineStage[],
+): Promise<Pipeline> {
+  const reler = colunasParaReler(naTela);
+  if (!reler.length) return primeiroLote;
+  const relidas = new Map<string, { items: PipelineItem[]; total: number }>();
+  await Promise.all(reler.map(async ({ stageId, limite }) => {
+    try {
+      const r = await pipelinesService.getBoardItems(pipelineId, params, { stageId, offset: 0, limit: limite });
+      relidas.set(stageId, { items: r.items, total: r.total });
+    } catch {
+      /* fica o 1º lote desta coluna */
+    }
+  }));
+  if (!relidas.size) return primeiroLote;
+  return {
+    ...primeiroLote,
+    stages: (primeiroLote.stages || []).map(s => {
+      const r = relidas.get(String(s.id));
+      return r ? { ...s, items: r.items, items_total: r.total } : s;
+    }),
+  };
 }
 
 export default function PipelineKanban() {
@@ -216,14 +247,16 @@ export default function PipelineKanban() {
     const meu = ++pedidoRef.current;
     const params = paramsRef.current;
     const semFiltro = semFiltroNaAberta(params);
-    // Recarga por trás relê até onde a pessoa rolou; a abertura pede o 1º lote.
-    const porColuna = silent ? limiteDaRecarga(stagesRef.current) : POR_COLUNA;
     const cached = semFiltro ? getCachedPipeline(pipelineId) : undefined;
     const quadroPedido = `${pipelineId}|${String(params.status)}`;
     const mesmoQuadro = Boolean(pipelineRef.current) && quadroNaTelaRef.current === quadroPedido;
+    // O payload guardado só pinta quando o quadro na tela é outro (abrir o funil, voltar
+    // pra Abertos). Com este funil e aba já na tela (limpar a busca), ele é uma foto de
+    // antes das ações da pessoa: os cards ficam até a resposta chegar.
+    const pintaGuardado = !silent && Boolean(cached) && !mesmoQuadro;
     const mostrarEspera = !silent && !cached && !mesmoQuadro;
-    if (!silent) setAtualizandoQuadro(!cached && mesmoQuadro);
-    if (!silent && cached) {
+    if (!silent) setAtualizandoQuadro(mesmoQuadro);
+    if (pintaGuardado && cached) {
       quadroNaTelaRef.current = quadroPedido;
       setPipeline(cached);
       setStages(cached.stages || []);
@@ -237,13 +270,18 @@ export default function PipelineKanban() {
       else setLoading(true);
     }
     try {
-      // Abertos sem filtro, no 1º lote, passa pelo cache, que grava o payload guardado. Só a abertura
-      // do quadro reaproveita o pedido que o hover já disparou; recarga depois
-      // de ação pede de novo (senão traria o quadro de antes da ação).
-      const pipelineData =
-        semFiltro && porColuna === POR_COLUNA
-          ? await loadOpenPipeline(pipelineId, { reaproveitar })
-          : await pipelinesService.getBoard(pipelineId, params, porColuna);
+      // Sempre o 1º lote de cada coluna. Abertos sem filtro passa pelo cache, que grava o
+      // payload guardado. Só a abertura do quadro reaproveita o pedido que o hover já
+      // disparou; recarga depois de ação pede de novo (senão traria o quadro de antes da ação).
+      const primeiroLote = semFiltro
+        ? await loadOpenPipeline(pipelineId, { reaproveitar })
+        : await pipelinesService.getBoard(pipelineId, params, POR_COLUNA);
+      if (meu !== pedidoRef.current) return;
+      // Recarga por trás: só as colunas que a pessoa rolou além do 1º lote são relidas,
+      // cada uma até onde ela foi (teto 200). A coluna cuja releitura falha fica com o 1º lote.
+      const pipelineData = silent && quadroNaTelaRef.current === quadroPedido
+        ? await releColunasRoladas(pipelineId, params, primeiroLote, stagesRef.current)
+        : primeiroLote;
       if (meu !== pedidoRef.current) return;
       quadroNaTelaRef.current = quadroPedido;
       setPipeline(pipelineData);
@@ -265,7 +303,7 @@ export default function PipelineKanban() {
       // Pedido que a pessoa fez (troca de aba, busca, filtro) e falhou: some o
       // quadro e mostra o erro (nunca cards que não batem com o pedido). Com o
       // payload guardado na tela, os cards dele continuam valendo.
-      if (!silent && !cached && meu === pedidoRef.current) {
+      if (!silent && !pintaGuardado && meu === pedidoRef.current) {
         toast.error(t('kanban.messages.loadDataError'));
         if (pipelineRef.current) {
           quadroNaTelaRef.current = null;
@@ -965,6 +1003,7 @@ export default function PipelineKanban() {
             erro={lista.erro}
             temMais={lista.temMais}
             carregandoMais={lista.carregandoMais}
+            erroAoCarregarMais={lista.erroAoCarregarMais}
             aoCarregarMais={lista.carregarMais}
             aoTentarDeNovo={lista.tentarDeNovo}
             ordem={listSortOrder}

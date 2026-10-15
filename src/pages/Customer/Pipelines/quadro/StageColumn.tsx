@@ -68,8 +68,12 @@ export default function StageColumn({
     if (el.scrollHeight - el.scrollTop - el.clientHeight <= PERTO_DO_FIM) onCarregarMais(stage);
   }, [temMais, carregandoMais, erroAoCarregarMais, onCarregarMais, stage]);
 
-  // Coluna que não enche a altura não rola: pede o próximo lote sozinha.
-  useEffect(() => { conferirFim(); }, [carregados, conferirFim]);
+  // Coluna que não enche a altura não rola: pede o próximo lote sozinha. Coluna sem
+  // altura (escondida, ainda sem layout) não conta: 0 - 0 - 0 cairia sempre "no fim"
+  // e ela pediria lote atrás de lote até trazer a coluna inteira.
+  useEffect(() => {
+    if ((rolagemRef.current?.clientHeight ?? 0) > 0) conferirFim();
+  }, [carregados, conferirFim]);
 
   return (
     <div
