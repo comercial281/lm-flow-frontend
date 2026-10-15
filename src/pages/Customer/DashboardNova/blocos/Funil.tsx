@@ -35,7 +35,7 @@ const gravarForma = (f: Forma) => {
 /** O desenho afunila sempre no mesmo formato: a última faixa fica com esta largura (%). */
 const LARGURA_FINAL = 44;
 /** Força da cor da última faixa (%): no claro o funil clareia até aqui, sem perder o contraste do texto branco. */
-const FORCA_FINAL = 72;
+const FORCA_FINAL = 78;
 
 export const Funil: React.FC<ContextoBloco> = ({ dados, visao, pode, filtros, funil, mudarFunil }) => {
   const navigate = useNavigate();

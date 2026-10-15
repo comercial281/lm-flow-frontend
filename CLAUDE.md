@@ -8917,20 +8917,21 @@ Armadilhas:
 4. A regra de cada filtro mora só no servidor (`PipelineItems::BoardQuery`); `filtrosDoFunil.ts` ficou com as contas da tela (colunas visíveis, contagem de filtros, opções do painel).
 5. O backend vem PRIMEIRO. Contra o servidor antigo a tela recebe o funil inteiro, sem lotes e sem filtro.
 
-## Dashboard: tema claro "neutro grafite" (15/10/2026)
+## Dashboard: tema claro sem o degradê rosado (15/10/2026)
 
-Pedido do dono: no tema claro a Dashboard tinha um degradê rosado em todo cartão (véu roxo do "vidro" sobre fundo lavanda) e tudo era roxo (ícones, funil, gráficos, origem). Ele escolheu, entre duas propostas lado a lado, a **Neutro grafite** (a outra era "cor com significado", uma cor por número).
+Pedido do dono: no tema claro a Dashboard tinha um degradê rosado em todo cartão (véu roxo do "vidro" sobre fundo lavanda) e tudo era roxo forte (ícones, funil, gráficos, origem). Ele escolheu o "neutro grafite" entre duas propostas e, vendo na prévia, pediu o roxo de volta "em alguns detalhes".
 
 - **Cartão branco chapado** sobre fundo cinza neutro (`#f6f6f7`), borda cinza, sombra leve, sem véu nem brilho no topo. Texto e bordas em cinza neutro (eram arroxeados).
-- **Dado em grafite** (`--lmf-data`): barras do funil, faixas da forma Funil (clareiam de faixa em faixa, de 100% a 72%), dia da semana, horário, origem, mapa de calor.
-- **Roxo só pra ação e pra um destaque:** botões, links, foco, contador de filtros, segmento ligado; o mês atual no gráfico de 6 meses e o número de Ganhos no período.
-- **Tema escuro não mudou:** no `.dark .lmf` os tokens de dado voltam ao roxo (`--lmf-data`, `--lmf-data-muted`, `--lmf-data-fade` = `#7c3aed`).
+- **Gráficos em roxo claro** (`--lmf-data-muted`, `#c4b5fd`) e **roxo forte** (`--lmf-data`) só no que se destaca: o melhor dia da semana, o mês atual, a maior origem, a linha do horário, as barras do funil, os ícones e o número de Ganhos no período. A forma Funil vai do `#6d28d9` clareando até 78% (`--lmf-funil`).
+- **Botões, links e foco** continuam no roxo da casa (`--lmf-accent`). Hover, segmento e aviso usam fundo cinza (`--lmf-accent-soft` no claro = `#f1f1f3`).
+- **Tema escuro não mudou:** no `.dark .lmf` os tokens de dado são todos o roxo de sempre.
 
 Armadilhas:
 
-1. **Gráfico novo na Dashboard usa `--lmf-data`** (série) e `--lmf-accent` só no destaque. Nunca `--lmf-accent` como cor de série: volta o "tudo roxo".
-2. `--lmf-accent-soft` no claro virou cinza (`#f1f1f3`): é fundo de hover, segmento e aviso, não cor de dado.
-3. O texto branco da forma Funil depende do piso de 72% (`FORCA_FINAL` em `Funil.tsx`): abaixo disso perde contraste.
+1. **Gráfico novo na Dashboard:** série em `--lmf-data-muted`, destaque em `--lmf-data`. Tudo em `--lmf-data` volta o "tudo roxo forte".
+2. `--lmf-accent-soft` no claro é cinza: fundo de hover, segmento e aviso, não cor de dado.
+3. O texto branco da forma Funil depende do `--lmf-funil` mais escuro e do piso de 78% (`FORCA_FINAL` em `Funil.tsx`).
 4. Trava em `base/lmf.source.spec.ts`.
+5. Prévia da Vercel: entrar SEM `?tenant=` (cai no `public`, como o app.lmflow.com.br) ou com o slug de um cliente que existe. Slug inexistente faz o login responder 406 e parecer senha errada.
 
 Não reabrir sem o dono pedir.

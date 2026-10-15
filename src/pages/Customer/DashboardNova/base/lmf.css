@@ -15,10 +15,10 @@
  * Escuro: --bg #0A0416 · --surface #150A29 · --border #2A1B49 · --text #F2EFFA
  * Comum:  accent #7C3AED / #9333EA · Inter · raio 16px
  *
- * Claro "neutro grafite" (pedido do dono, 15/10/2026): cartão branco chapado,
- * fundo cinza neutro, dado em grafite (--lmf-data). O roxo (--lmf-accent) fica
- * pra ação (botão, link, foco) e pro destaque de um dado só. No escuro os
- * tokens de dado voltam ao roxo: o tema escuro não mudou.
+ * Claro (pedido do dono, 15/10/2026): cartão branco chapado e fundo cinza
+ * neutro, sem o véu roxo. Gráfico em roxo claro (--lmf-data-muted) e roxo
+ * forte (--lmf-data) só no detalhe que se destaca. No escuro os tokens de
+ * dado são os de sempre.
  */
 
 .lmf {
@@ -40,13 +40,16 @@
   --lmf-down: #dc2626;
   --lmf-warn: #b45309;
 
-  /* Dado (gráficos, barras, funil, mapa de calor). --lmf-data-muted é a série
-     que não é destaque; --lmf-data-fade é pra onde o funil clareia. */
-  --lmf-data: #3f3f46;
-  --lmf-data-muted: #d4d4d8;
-  --lmf-data-soft: rgba(63, 63, 70, 0.08);
+  /* Dado (gráficos, barras, funil, mapa de calor) em roxo sólido, sem degradê.
+     --lmf-data-muted é a série que não é destaque; --lmf-data-fade é pra onde
+     o funil clareia. */
+  --lmf-data: #7c3aed;
+  --lmf-data-muted: #c4b5fd;
+  --lmf-data-soft: rgba(124, 58, 237, 0.08);
   --lmf-data-fade: #ffffff;
-  --lmf-heat-rgb: 63 63 70;
+  /* Faixas da forma Funil: um tom abaixo, pro texto branco ler mesmo na faixa mais clara. */
+  --lmf-funil: #6d28d9;
+  --lmf-heat-rgb: 124 58 237;
   /* Número em destaque (ex.: ganhos no período). */
   --lmf-highlight-text: #7c3aed;
 
@@ -95,6 +98,7 @@
   --lmf-data-muted: #7c3aed;
   --lmf-data-soft: rgba(168, 85, 247, 0.15);
   --lmf-data-fade: #7c3aed;
+  --lmf-funil: #7c3aed;
   --lmf-heat-rgb: 124 58 237;
   --lmf-highlight-text: inherit;
 }
@@ -149,7 +153,7 @@
   width: 30px;
   height: 30px;
   border-radius: var(--lmf-radius-sm);
-  background: var(--lmf-accent-soft);
+  background: var(--lmf-data-soft);
   color: var(--lmf-data);
   flex: none;
 }
@@ -368,8 +372,7 @@ button.lmf-campo-controle[aria-pressed='true'] { color: var(--lmf-accent); backg
   align-items: center;
 }
 
-/* Só a opacidade varia com o valor; a base é o dado do tema (grafite no
-   claro, violeta no escuro). */
+/* Só a opacidade varia com o valor; a base é o violeta do dado nos dois temas. */
 .lmf-heat-cell {
   aspect-ratio: 1;
   border-radius: 4px;
