@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Copy, Loader2 } from 'lucide-react';
 import {
-  Button, Input, Label,
+  Button, Input,
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/ds';
 import {
@@ -13,6 +13,8 @@ import {
 import { defaultCopyName, duplicateSummary } from '@/features/salesAgents/duplicateAgent';
 import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
+import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 
 interface Props {
   agent: SalesAgent;
@@ -58,41 +60,41 @@ export default function DuplicateAgentDialog({ agent, inboxes, onClose, onDuplic
           <DialogTitle>Duplicar IA</DialogTitle>
           <DialogDescription>
             Cria uma cópia de <strong>{agent.name}</strong> com toda a configuração, as lições do
-            Aprendizado e a Base de Conhecimento. O histórico de conversas não vai junto.
+            aprendizado e a base de conhecimento. O histórico de conversas não vai junto.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="dup_name">Nome da cópia</Label>
-            <Input id="dup_name" value={name} onChange={(e) => setName(e.target.value)} maxLength={200} />
-          </div>
+        <div className="grid gap-5">
+          <GrupoDaJanela titulo="A cópia">
+            <CampoDaJanela rotulo="Nome da cópia" htmlFor="dup_name">
+              <Input id="dup_name" className="w-full" value={name} onChange={(e) => setName(e.target.value)} maxLength={200} />
+            </CampoDaJanela>
 
-          <div>
-            <Label htmlFor="dup_inbox">Número em que a cópia vai atender</Label>
-            <Seletor
-              id="dup_inbox"
-              value={inboxId}
-              onChange={(e) => setInboxId(e.target.value)}
-              className="mt-1 w-full rounded-md border border-sidebar-border bg-background px-3 py-2 text-sm"
-            >
-              <option value="">— Escolher depois —</option>
-              {inboxes.map((i) => (
-                <option key={i.id} value={String(i.id)}>{i.name}</option>
-              ))}
-            </Seletor>
+            <CampoDaJanela rotulo="Número em que a cópia vai atender" htmlFor="dup_inbox">
+              <Seletor
+                id="dup_inbox"
+                value={inboxId}
+                onChange={(e) => setInboxId(e.target.value)}
+                className="w-full rounded-md border border-sidebar-border bg-background px-3 py-2 text-sm"
+              >
+                <option value="">— Escolher depois —</option>
+                {inboxes.map((i) => (
+                  <option key={i.id} value={String(i.id)}>{i.name}</option>
+                ))}
+              </Seletor>
+            </CampoDaJanela>
             {sameNumber && (
-              <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+              <Aviso tom="atencao" compacto>
                 É o mesmo número da IA original. Se as duas ficarem ligadas nele, quem atende
                 cada lead depende dos gatilhos e da prioridade de cada uma.
-              </p>
+              </Aviso>
             )}
-          </div>
+          </GrupoDaJanela>
 
-          <p className="text-xs text-muted-foreground">
-            A cópia nasce <strong>desligada</strong>. Confira principalmente <em>Para quem ela passa o lead</em> e
-            o follow-up — se a original entrega para uma roleta específica, a cópia entrega para a mesma.
-          </p>
+          <Aviso tom="info" compacto>
+            A cópia nasce <strong>desligada</strong>. Confira principalmente para quem ela passa o lead e
+            o follow-up: se a original entrega para uma roleta específica, a cópia entrega para a mesma.
+          </Aviso>
         </div>
 
         <DialogFooter>

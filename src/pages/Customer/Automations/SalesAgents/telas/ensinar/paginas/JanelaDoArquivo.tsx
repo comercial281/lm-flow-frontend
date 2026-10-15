@@ -6,8 +6,9 @@
 // são estado local até o Salvar, que manda tudo de uma vez no mesmo pacote de antes.
 import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/ds';
-import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Textarea } from '@/components/ui/ds';
+import Aviso from '@/components/base/Aviso';
+import { CampoDaJanela, ESCOLHA, GrupoDaJanela } from '@/components/base/janela';
 import LinhaComChave from '@/components/base/LinhaComChave';
 import { cn } from '@/lib/utils';
 import { salesAgentsService, type SalesAgentDocument } from '@/services/salesAgents/salesAgentsService';
@@ -29,7 +30,7 @@ function Janela({ titulo, descricao, aoFechar, rodape, children }: {
           <DialogTitle>{titulo}</DialogTitle>
           <DialogDescription>{descricao}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-6">{children}</div>
+        <div className="grid gap-5">{children}</div>
         <DialogFooter>{rodape}</DialogFooter>
       </DialogContent>
     </Dialog>
@@ -91,78 +92,88 @@ export default function JanelaDoArquivo({ agentId, doc, aoFechar, aoSalvar }: {
         </>
       )}
     >
-      <CampoTexto id="arq-nome" rotulo="Nome" valor={title} aoMudar={setTitle}
-        placeholder="Ex.: Planta do 2 dormitórios - Residencial Exemplo"
-        ajuda="É por este nome que ela se refere ao arquivo." />
+      <GrupoDaJanela titulo="Arquivo">
+        <CampoDaJanela rotulo="Nome" htmlFor="arq-nome" ajuda="É por este nome que ela se refere ao arquivo.">
+          <Input id="arq-nome" className="w-full" value={title} onChange={(e) => setTitle(e.target.value)}
+            placeholder="Ex.: Planta do 2 dormitórios - Residencial Exemplo" />
+        </CampoDaJanela>
 
-      <LinhaComChave rotulo="Ela aprende com o conteúdo" descricao="Ela consulta o que está escrito pra responder."
-        ligada={learnable} aoMudar={local(setLearnable)} genero="a" />
-      {/* Arquivo íntegro, só sem texto: o envio funciona. Não é erro. */}
-      {doc.status === 'no_text' && (
-        <p className="-mt-3 text-sm text-amber-700 dark:text-amber-400">
-          Este arquivo não tem texto pra aprender (parece escaneado ou é imagem). O envio funciona normalmente.
-        </p>
-      )}
-
-      <LinhaComChave rotulo="Ela pode mandar pro lead" descricao="Desligado, o arquivo serve só pra ela aprender."
-        ligada={sendable} aoMudar={local(setSendable)} genero="a">
-        <CampoTextoLongo id="arq-quando" rotulo="Quando mandar" rows={2} valor={when} aoMudar={setWhen}
-          placeholder="Ex.: quando o lead pedir a planta ou perguntar como são divididos os cômodos" />
-        <CampoTextoLongo id="arq-quando-nao" rotulo="Quando não mandar" rows={2} valor={whenNot} aoMudar={setWhenNot}
-          placeholder="Ex.: antes de o lead dizer o que procura; se ele só quer alugar" />
-        <CampoTexto id="arq-mensagem" rotulo="Mensagem que vai junto" valor={caption} aoMudar={setCaption}
-          placeholder="Ex.: segue a planta do 2 dormitórios, qualquer dúvida me chama" />
-
-        <div className="space-y-2">
-          <p id="arq-assunto" className="text-sm font-medium">Assunto</p>
-          <div role="group" aria-labelledby="arq-assunto" className="flex flex-wrap gap-1.5">
-            {DOCUMENT_TOPICS.map((t) => {
-              const marcado = topics.includes(t.slug);
-              return (
-                <button
-                  key={t.slug} type="button" aria-pressed={marcado} onClick={() => toggleTopic(t.slug)}
-                  className={cn('rounded-full border px-2.5 py-1 text-xs transition-colors',
-                    marcado ? 'border-primary bg-primary/10 font-medium text-primary' : 'border-border text-muted-foreground hover:border-primary/50')}
-                >
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <CampoTexto id="arq-imoveis" rotulo="Vale pra quais imóveis" valor={codes} aoMudar={setCodes}
-          placeholder="Ex.: AP123, AP124"
-          ajuda="Códigos separados por vírgula. Em branco, vale pra qualquer conversa." />
-
-        <LinhaComChave rotulo="No máximo uma vez por conversa" descricao="Evita mandar o mesmo arquivo de novo."
-          ligada={sendOnce} aoMudar={local(setSendOnce)} />
-
-        {doc.send_mode === 'link' && (
-          <p className="text-sm text-amber-700 dark:text-amber-400">
-            Arquivo grande ({doc.size_label}). Ela manda o link em vez do arquivo.
-          </p>
+        <LinhaComChave rotulo="Ela aprende com o conteúdo" descricao="Ela consulta o que está escrito pra responder."
+          ligada={learnable} aoMudar={local(setLearnable)} genero="a" />
+        {/* Arquivo íntegro, só sem texto: o envio funciona. Não é erro. */}
+        {doc.status === 'no_text' && (
+          <Aviso tom="info" compacto>
+            Este arquivo não tem texto pra aprender (parece escaneado ou é imagem). O envio funciona normalmente.
+          </Aviso>
         )}
-        {doc.send_mode === 'blocked' && (
-          <p className="text-sm text-red-700 dark:text-red-400">
-            Arquivo grande demais ({doc.size_label}) e sem endereço público pra oferecer. Reduza o arquivo.
-          </p>
-        )}
-        {/* "Ver como chega": manda ESTE arquivo pro WhatsApp do próprio dono,
-            pela mesma rota do lead real — sem isso, só dá pra saber como ele
-            chega esperando um lead de verdade pedir. Some quando o arquivo
-            está BLOQUEADO (grande demais e sem link): não tem como sair,
-            então não tem o que testar. */}
-        {doc.send_mode !== 'blocked' && (
-          <div className="space-y-1">
-            <SendToMeButton
-              label="Ver como chega no meu WhatsApp"
-              onSend={(phone) => salesAgentsService.testSend(agentId, { phone, document_id: doc.id }).then((r) => r.message)}
-            />
-            <p className="text-xs text-muted-foreground">O teste usa o que está salvo. Salve antes pra ver a mensagem nova.</p>
-          </div>
-        )}
-      </LinhaComChave>
+      </GrupoDaJanela>
+
+      <GrupoDaJanela titulo="Envio">
+        <LinhaComChave rotulo="Ela pode mandar pro lead" descricao="Desligado, o arquivo serve só pra ela aprender."
+          ligada={sendable} aoMudar={local(setSendable)} genero="a">
+          <CampoDaJanela rotulo="Quando mandar" htmlFor="arq-quando">
+            <Textarea id="arq-quando" className="w-full" rows={2} value={when} onChange={(e) => setWhen(e.target.value)}
+              placeholder="Ex.: quando o lead pedir a planta ou perguntar como são divididos os cômodos" />
+          </CampoDaJanela>
+          <CampoDaJanela rotulo="Quando não mandar" htmlFor="arq-quando-nao">
+            <Textarea id="arq-quando-nao" className="w-full" rows={2} value={whenNot} onChange={(e) => setWhenNot(e.target.value)}
+              placeholder="Ex.: antes de o lead dizer o que procura; se ele só quer alugar" />
+          </CampoDaJanela>
+          <CampoDaJanela rotulo="Mensagem que vai junto" htmlFor="arq-mensagem">
+            <Input id="arq-mensagem" className="w-full" value={caption} onChange={(e) => setCaption(e.target.value)}
+              placeholder="Ex.: segue a planta do 2 dormitórios, qualquer dúvida me chama" />
+          </CampoDaJanela>
+
+          <CampoDaJanela rotulo="Assunto">
+            <div role="group" aria-label="Assunto" className="flex flex-wrap gap-1.5">
+              {DOCUMENT_TOPICS.map((t) => {
+                const marcado = topics.includes(t.slug);
+                return (
+                  <Button
+                    key={t.slug} type="button" variant="outline" size="sm" aria-pressed={marcado}
+                    className={cn('rounded-full', ESCOLHA)} onClick={() => toggleTopic(t.slug)}
+                  >
+                    {t.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </CampoDaJanela>
+
+          <CampoDaJanela rotulo="Vale pra quais imóveis" htmlFor="arq-imoveis"
+            ajuda="Códigos separados por vírgula. Em branco, vale pra qualquer conversa.">
+            <Input id="arq-imoveis" className="w-full" value={codes} onChange={(e) => setCodes(e.target.value)} placeholder="Ex.: AP123, AP124" />
+          </CampoDaJanela>
+
+          <LinhaComChave rotulo="No máximo uma vez por conversa" descricao="Evita mandar o mesmo arquivo de novo."
+            ligada={sendOnce} aoMudar={local(setSendOnce)} />
+
+          {doc.send_mode === 'link' && (
+            <Aviso tom="atencao" compacto>
+              Arquivo grande ({doc.size_label}). Ela manda o link em vez do arquivo.
+            </Aviso>
+          )}
+          {doc.send_mode === 'blocked' && (
+            <Aviso tom="erro" compacto>
+              Arquivo grande demais ({doc.size_label}) e sem endereço público pra oferecer. Reduza o arquivo.
+            </Aviso>
+          )}
+          {/* "Ver como chega": manda ESTE arquivo pro WhatsApp do próprio dono,
+              pela mesma rota do lead real — sem isso, só dá pra saber como ele
+              chega esperando um lead de verdade pedir. Some quando o arquivo
+              está BLOQUEADO (grande demais e sem link): não tem como sair,
+              então não tem o que testar. */}
+          {doc.send_mode !== 'blocked' && (
+            <div className="space-y-1">
+              <SendToMeButton
+                label="Ver como chega no meu WhatsApp"
+                onSend={(phone) => salesAgentsService.testSend(agentId, { phone, document_id: doc.id }).then((r) => r.message)}
+              />
+              <p className="text-xs text-muted-foreground">O teste usa o que está salvo. Salve antes pra ver a mensagem nova.</p>
+            </div>
+          )}
+        </LinhaComChave>
+      </GrupoDaJanela>
     </Janela>
   );
 }
@@ -199,11 +210,17 @@ export function JanelaDeTexto({ agentId, aoFechar, aoCriado }: { agentId: string
         </>
       )}
     >
-      <CampoTexto id="txt-nome" rotulo="Nome" valor={title} aoMudar={setTitle} placeholder="Ex.: Formas de pagamento" />
-      <CampoTextoLongo id="txt-texto" rotulo="Texto" rows={8} valor={text} aoMudar={setText}
-        placeholder="Escreva como explicaria pra um corretor novo." />
-      <LinhaComChave rotulo="Ela aprende com o conteúdo" descricao="Ela consulta o que está escrito pra responder."
-        ligada desabilitada aoMudar={() => Promise.resolve(false)} genero="a" />
+      <GrupoDaJanela titulo="Conteúdo">
+        <CampoDaJanela rotulo="Nome" htmlFor="txt-nome">
+          <Input id="txt-nome" className="w-full" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Formas de pagamento" />
+        </CampoDaJanela>
+        <CampoDaJanela rotulo="Texto" htmlFor="txt-texto">
+          <Textarea id="txt-texto" className="w-full" rows={8} value={text} onChange={(e) => setText(e.target.value)}
+            placeholder="Escreva como explicaria pra um corretor novo." />
+        </CampoDaJanela>
+        <LinhaComChave rotulo="Ela aprende com o conteúdo" descricao="Ela consulta o que está escrito pra responder."
+          ligada desabilitada aoMudar={() => Promise.resolve(false)} genero="a" />
+      </GrupoDaJanela>
     </Janela>
   );
 }

@@ -119,6 +119,9 @@ describe('Arquivos', () => {
     abrir([D('a')]);
     await userEvent.click(screen.getByRole('button', { name: /Como ela usa: Arquivo a/ }));
     expect(screen.getByRole('dialog', { name: 'Como ela usa este arquivo' })).toBeInTheDocument();
+    // Miolo da janela: grupos com título.
+    expect(screen.getByRole('group', { name: 'Arquivo' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Envio' })).toBeInTheDocument();
     // X da casa no topo da janela.
     expect(screen.getByRole('button', { name: 'Fechar' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
