@@ -171,7 +171,7 @@ export default function PipelineKanban() {
   const [carregandoQuadro, setCarregandoQuadro] = useState(false);
   // A aba pedida não carregou: o quadro mostra o erro (nunca os cards da aba anterior).
   const [erroDaAba, setErroDaAba] = useState(false);
-  const loadPipelineData = useCallback(async (silent = false) => {
+  const loadPipelineData = useCallback(async (silent = false, reaproveitar = false) => {
     if (!pipelineId) return;
     const meu = ++pedidoRef.current;
     const cached = statusDaAba === 'open' ? getCachedPipeline(pipelineId) : undefined;
@@ -189,11 +189,12 @@ export default function PipelineKanban() {
       else setLoading(true);
     }
     try {
-      // Abertos passa pelo cache: reaproveita o pedido que o hover já disparou
-      // (e já grava o payload guardado).
+      // Abertos passa pelo cache, que grava o payload guardado. Só a abertura
+      // do quadro reaproveita o pedido que o hover já disparou; recarga depois
+      // de ação pede de novo (senão traria o quadro de antes da ação).
       const pipelineData =
         statusDaAba === 'open'
-          ? await loadOpenPipeline(pipelineId)
+          ? await loadOpenPipeline(pipelineId, { reaproveitar })
           : await pipelinesService.getPipeline(pipelineId, { status: statusDaAba });
       if (meu !== pedidoRef.current) return;
       setPipeline(pipelineData);
@@ -259,7 +260,7 @@ export default function PipelineKanban() {
   }, []);
 
   useEffect(() => {
-    loadPipelineData();
+    loadPipelineData(false, true);
   }, [loadPipelineData]);
 
   useEffect(() => {
