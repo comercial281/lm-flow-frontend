@@ -21,7 +21,8 @@ vi.mock('@/services/landingPages/landingPageService', () => ({
     getOrCreateForProperty: (...a: unknown[]) => getOrCreateForProperty(...a),
   },
 }));
-vi.mock('@/services/landingPages/landingTemplatesService', () => ({ landingTemplatesService: { list: vi.fn().mockResolvedValue([]) } }));
+const modelosSalvos = vi.hoisted(() => ({ lista: [] as unknown[] }));
+vi.mock('@/services/landingPages/landingTemplatesService', () => ({ landingTemplatesService: { list: vi.fn().mockImplementation(async () => modelosSalvos.lista) } }));
 const imoveis = vi.hoisted(() => ({ lista: [] as unknown[] }));
 vi.mock('@/services/properties/propertiesService', () => ({
   propertiesService: { list: vi.fn().mockImplementation(async () => ({ data: imoveis.lista })) },
@@ -31,6 +32,7 @@ beforeEach(() => {
   createForProperty.mockClear();
   getOrCreateForProperty.mockClear();
   imoveis.lista = [];
+  modelosSalvos.lista = [];
   Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture ?? (() => false);
   Element.prototype.releasePointerCapture = Element.prototype.releasePointerCapture ?? (() => {});
   Element.prototype.scrollIntoView = Element.prototype.scrollIntoView ?? (() => {});
@@ -82,6 +84,14 @@ describe('Assistente: modelos prontos', () => {
     expect(screen.getByRole('group', { name: 'Imóvel' })).toBeInTheDocument();
     await userEvent.type(screen.getByPlaceholderText(/Buscar imóvel/), 'Apto');
     expect(await screen.findByText('Apto Centro')).toBeInTheDocument();
+  });
+
+  it('modelos salvos: sem digitar, só a dica; nenhum modelo listado', async () => {
+    modelosSalvos.lista = [{ id: 't1', name: 'Meu modelo' }, { id: 't2', name: 'Outro' }];
+    render(tela());
+    await userEvent.click(screen.getByText('De um modelo salvo'));
+    expect(await screen.findByText('2 modelos salvos. Digite pra buscar.')).toBeInTheDocument();
+    expect(screen.queryByText('Meu modelo')).not.toBeInTheDocument();
   });
 
   it('sem imóvel, o Próximo fica desligado com um modelo escolhido', async () => {

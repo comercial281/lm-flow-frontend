@@ -255,7 +255,7 @@ export default function CreateLandingWizard({
             lead_stage_id: stageId || null,
             lead_label_id: labelId || null,
           })
-          .catch(() => toast.error('Página criada, mas o o destino do lead não foi salvo. Ajuste na lista.'));
+          .catch(() => toast.error('Página criada, mas o destino do lead não foi salvo. Ajuste na lista.'));
       }
 
       toast.success('Página criada! Abrindo o editor…');
@@ -347,6 +347,9 @@ export default function CreateLandingWizard({
                         <div className="flex items-center justify-between gap-2 text-sm">
                           <span className="flex min-w-0 items-center gap-2"><Check className="h-4 w-4 flex-none text-primary" /><span className="truncate">{modeloSalvo.name}</span></span>
                         </div>
+                      )}
+                      {!templateQuery.trim() && (
+                        <p className="text-xs text-muted-foreground">{templates.length} {templates.length === 1 ? 'modelo salvo' : 'modelos salvos'}. Digite pra buscar.</p>
                       )}
                       <CampoDaJanela rotulo={modeloSalvo ? 'Escolher outro modelo' : 'Buscar modelo'} htmlFor="assistente-busca-modelo">
                         <Input id="assistente-busca-modelo" value={templateQuery} onChange={(e) => setTemplateQuery(e.target.value)}

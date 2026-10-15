@@ -322,7 +322,7 @@ export default function TelaPaginas({ site, versaoDasPaginas = 0, aoMudarPagina 
                 </Button>
               </div>
             )}
-            {avisoDoModelo && <Aviso tom="atencao">{avisoDoModelo}</Aviso>}
+            {avisoDoModelo && <Aviso tom="erro">{avisoDoModelo}</Aviso>}
           </div>
         </DialogContent>
       </Dialog>
@@ -385,7 +385,7 @@ export default function TelaPaginas({ site, versaoDasPaginas = 0, aoMudarPagina 
               <p className="text-xs text-muted-foreground">
                 Texto colado do Word, do Google Docs ou de outro site é arrumado ao salvar: fica o título, o subtítulo, as listas, a citação, os links e as imagens.
               </p>
-              {avisoDoConteudo && <Aviso tom="atencao">{avisoDoConteudo}</Aviso>}
+              {avisoDoConteudo && <Aviso tom="erro">{avisoDoConteudo}</Aviso>}
             </GrupoDaJanela>
 
             <GrupoDaJanela titulo="Aparência">

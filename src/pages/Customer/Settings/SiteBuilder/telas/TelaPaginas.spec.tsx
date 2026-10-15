@@ -115,7 +115,7 @@ describe('TelaPaginas', () => {
     await abrirEdicao();
     await userEvent.click(screen.getByRole('button', { name: 'Título' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await screen.findByRole('status')).toHaveProperty('textContent',
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent',
       'O conteúdo da página passou do limite de 200 KB. Divida em mais de uma página.');
     expect(screen.getByRole('dialog', { name: 'Editar página' })).toBeTruthy();
   });
@@ -126,7 +126,7 @@ describe('TelaPaginas', () => {
     await abrirEdicao();
     await userEvent.click(screen.getByRole('button', { name: 'Título' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect((await screen.findByRole('status')).textContent).toMatch(/estrutura que não dá pra salvar/);
+    expect((await screen.findByRole('alert')).textContent).toMatch(/estrutura que não dá pra salvar/);
   });
 
   it('salvar avisa o pai (o menu acompanha), com o endereço antigo', async () => {
@@ -226,7 +226,7 @@ describe('TelaPaginas', () => {
       await screen.findByText('Sobre nós');
       await userEvent.click(screen.getByRole('button', { name: 'Nova página' }));
       await userEvent.click(screen.getByRole('button', { name: /Sobre nós/ }));
-      expect((await screen.findByRole('status')).textContent).toBe(
+      expect((await screen.findByRole('alert')).textContent).toBe(
         'Outra página acabou de ser criada com o mesmo endereço. Tente de novo em instantes.');
     });
   });

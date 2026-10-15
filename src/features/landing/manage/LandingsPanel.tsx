@@ -72,7 +72,7 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
         const list = await landingPageService.listLandings(siteId);
         if (active) setLandings(list);
       } catch {
-        if (active) toast.error('Erro ao carregar as landings');
+        if (active) toast.error('Não consegui carregar as páginas de anúncio');
       } finally {
         if (active) setLoading(false);
       }
@@ -89,7 +89,7 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
       const lp = await landingPageService.createBlank(siteId, newName.trim());
       navigate(`/landings/${lp.dto.id}`);
     } catch {
-      toast.error('Erro ao criar a landing page');
+      toast.error('Não consegui criar a página de anúncio');
       setCreating(false);
     }
   };
@@ -147,7 +147,7 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
           : 'Template salvo — já aparece no assistente',
       );
     } catch {
-      toast.error('Erro ao salvar o template');
+      toast.error('Não consegui salvar o modelo');
     }
   };
 
@@ -164,7 +164,7 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
     try {
       await siteBuilderService.deletePage(siteId, page.id);
       setLandings((prev) => prev.filter((l) => l.id !== page.id));
-      toast.success('Landing excluída');
+      toast.success('Página de anúncio excluída.');
     } catch {
       toast.error('Erro ao excluir');
     }
