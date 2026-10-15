@@ -2,6 +2,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Button, Input, Label as UILabel } from '@/components/ui/ds';
 import { EMPTY_TYPOLOGY, typologyName, type PropertyTypology } from '@/features/properties/typologies';
 import { GradeDeComposicao } from './SecaoComposicao';
+import { CampoDeDinheiro } from './campos';
 import { numeroOuNulo, type PropsDaSecao } from './tipos';
 
 // Empreendimento. As várias plantas do mesmo empreendimento e, abaixo da
@@ -87,8 +88,6 @@ export default function SecaoTipologias({ form: f, setF }: PropsDaSecao) {
                   {([
                     ['useful_area_m2', 'Área útil (m²)'],
                     ['total_area_m2', 'Área total (m²)'],
-                    ['sale_price', 'Valor de venda (R$)'],
-                    ['rent_price', 'Aluguel (R$)'],
                   ] as Array<[keyof PropertyTypology, string]>).map(([key, label]) => (
                     <div key={key} className="col-span-1 sm:col-span-1 lg:col-span-1">
                       <UILabel className="text-xs text-muted-foreground">{label}</UILabel>
@@ -98,6 +97,20 @@ export default function SecaoTipologias({ form: f, setF }: PropsDaSecao) {
                         step="any"
                         value={(t[key] as number | null | undefined) ?? ''}
                         onChange={e => setTypology(i, { [key]: numeroOuNulo(e.target.value) })}
+                        className="mt-1"
+                      />
+                    </div>
+                  ))}
+                  {([
+                    ['sale_price', 'Valor de venda (R$)'],
+                    ['rent_price', 'Aluguel (R$)'],
+                  ] as const).map(([key, label]) => (
+                    <div key={key} className="col-span-1 sm:col-span-1 lg:col-span-1">
+                      <UILabel className="text-xs text-muted-foreground">{label}</UILabel>
+                      <CampoDeDinheiro
+                        aria-label={`${label} da ${typologyName(t, i)}`}
+                        valor={t[key]}
+                        aoMudar={v => setTypology(i, { [key]: v })}
                         className="mt-1"
                       />
                     </div>
@@ -121,18 +134,18 @@ export default function SecaoTipologias({ form: f, setF }: PropsDaSecao) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
           <UILabel htmlFor="campo-valor-venda">Valor de venda</UILabel><span aria-hidden="true" className="text-sm"> (R$) *</span>
-          <Input id="campo-valor-venda" type="number" value={f.sale_price ?? ''} onChange={e => setF({ sale_price: numeroOuNulo(e.target.value) })}
-            placeholder="450000" className="mt-1" />
+          <CampoDeDinheiro id="campo-valor-venda" valor={f.sale_price} aoMudar={v => setF({ sale_price: v })}
+            placeholder="450.000" className="mt-1" />
         </div>
         <div>
           <UILabel>Condomínio (R$/mês)</UILabel>
-          <Input type="number" value={f.condo_fee ?? ''} onChange={e => setF({ condo_fee: numeroOuNulo(e.target.value) })}
+          <CampoDeDinheiro aria-label="Condomínio (R$/mês)" valor={f.condo_fee} aoMudar={v => setF({ condo_fee: v })}
             placeholder="800" className="mt-1" />
         </div>
         <div>
           <UILabel>IPTU (R$/ano)</UILabel>
-          <Input type="number" value={f.iptu ?? ''} onChange={e => setF({ iptu: numeroOuNulo(e.target.value) })}
-            placeholder="1200" className="mt-1" />
+          <CampoDeDinheiro aria-label="IPTU (R$/ano)" valor={f.iptu} aoMudar={v => setF({ iptu: v })}
+            placeholder="1.200" className="mt-1" />
         </div>
       </div>
 

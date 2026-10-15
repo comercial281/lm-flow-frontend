@@ -1,8 +1,9 @@
 // Peças pequenas reutilizadas pelas seções do cadastro de imóvel.
-import { useId } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Input, Label as UILabel } from '@/components/ui/ds';
 import { numero } from '@/lib/formato';
 import { dicaSe } from '@/features/properties/cadastro/travasDoSite';
+import { lerDinheiro, textoDoDinheiro } from '@/features/properties/dinheiro';
 
 interface OpcaoDePilula<V extends string> { valor: V; rotulo: string }
 
@@ -63,6 +64,37 @@ export function CampoSimNao({ rotulo, valor, aoMudar, desabilitado = false }: {
       opcoes={OPCOES_SIM_NAO}
       desabilitado={desabilitado}
       aoMudar={v => aoMudar(v === 'sim' ? true : v === 'nao' ? false : null)}
+    />
+  );
+}
+
+/** Dinheiro: aceita 244630, 244.630 e 244.630,00 e mostra com milhar. Vazio vira nulo.
+ *  Nunca `type="number"`: o navegador apaga "244.630,00" e lê "244.630" errado. */
+export function CampoDeDinheiro({ valor, aoMudar, ...resto }: {
+  valor: number | null | undefined;
+  aoMudar: (v: number | null) => void;
+  id?: string;
+  disabled?: boolean;
+  placeholder?: string;
+  className?: string;
+  'aria-label'?: string;
+}) {
+  const [texto, setTexto] = useState(() => textoDoDinheiro(valor));
+  // Valor trocado por fora (Preencher com IA, "a partir de" recalculado): a caixa acompanha.
+  // Digitando, o valor que volta é o da própria caixa e o texto fica como a pessoa escreveu.
+  useEffect(() => {
+    setTexto(atual => (lerDinheiro(atual).valor === (valor ?? null) ? atual : textoDoDinheiro(valor)));
+  }, [valor]);
+  return (
+    <Input
+      {...resto}
+      inputMode="decimal"
+      value={texto}
+      onChange={e => {
+        const lido = lerDinheiro(e.target.value);
+        setTexto(lido.texto);
+        aoMudar(lido.valor);
+      }}
     />
   );
 }
