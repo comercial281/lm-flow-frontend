@@ -8932,3 +8932,20 @@ Armadilhas:
 3. **O contorno entra num `requestAnimationFrame` depois do dragstart**: o navegador tira a foto do card que segue o cursor ao fim do dragstart, e ela tem que ser a do card normal.
 4. **No vão entre dois cards, a coluna acha o card abaixo do cursor** (`[data-card-id]`), senão o esqueleto pularia pro topo a cada vão e voltaria. O esqueleto segura o próprio dragover (`stopPropagation`).
 5. **O esqueleto some quando o card já foi pro destino** (`limparEsqueleto` no `commitReorder`/`ganhar`), não quando o servidor responde: senão o card movido ficaria tracejado durante o pedido.
+
+## Funil: mini card ao passar o mouse (desde 2026-10-15)
+
+Pedido do dono: com o mouse parado em cima de um card do quadro, abre um resumo ao lado, sem abrir a janela. Ele escolheu a versão **Enxuto** numa página de comparação (Enxuto, Com etiquetas, Completo) e tirou a última mensagem.
+
+- **Quando abre:** mouse parado 0,8 s em cima do card, só no Quadro. Fecha ao sair do card e do resumo (folga de 150 ms pra levar o mouse até ele), ao rolar, redimensionar e no Esc. **Apertou o card (clique, arrasto, menu ⋯), não abre** até sair e voltar. Só mouse: dedo e caneta não abrem.
+- **Onde:** à direita do card; na última coluna, ou sem espaço, à esquerda. Nunca sai da tela.
+- **O que mostra:** nome e etapa; telefone com **Copiar**; "Nesta etapa há N dias" (some no ganho/perdido); a próxima tarefa pelo prazo, em vermelho com "Atrasada" quando venceu, ou "Sem tarefa marcada".
+- **Oferta da roleta não aceita:** telefone mascarado, sem Copiar, com "O telefone aparece quando você aceitar o lead". Mesma régua de Conversas (`emOfertaParaQuemVe`), inclusive com a lista de ofertas ainda chegando.
+
+Decisões do dono (não reabrir sem ele pedir): versão Enxuto, sem última mensagem, 0,8 s, sem resumo ao pegar o card.
+
+Armadilhas:
+
+1. **Um mini card só pro quadro** (`quadro/useMiniCard.ts` + `quadro/MiniCardDoLead.tsx`, portal no body). O card só avisa `entrou`/`saiu`/`apertou` por um callback estável (`onPassarMouse`): o card é memo e o quadro pode ter 2 mil cards.
+2. **O título da tarefa só é pedido com o resumo aberto** (`/activities`, `para_fazer`, 1 item, ordenado por prazo no servidor) e só se o card tem tarefa aberta. Fica guardado por card + prazos abertos e é esquecido no `EVENTO_TAREFAS_MUDARAM`. Falhou: "Tarefa marcada · prazo". Não há mudança no servidor.
+3. **Regras e frases em `quadro/miniCard.ts`**, com spec. O dia da tarefa usa o `quandoAcontece` da casa, com a primeira letra minúscula no meio da frase.
