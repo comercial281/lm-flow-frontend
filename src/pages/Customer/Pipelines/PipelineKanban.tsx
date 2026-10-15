@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef, Suspense, startTransition } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense, startTransition, type Dispatch, type SetStateAction } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -13,6 +13,7 @@ import {
   PipelineItem,
   UpdatePipelineData,
   CreateStageData,
+  type BoardQueryParams,
 } from '@/types/analytics';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useCan } from '@/hooks/useCan';
@@ -34,6 +35,17 @@ import { STATUS_DA_ABA, pertenceAAba, podeArrastarNaAba } from './quadro/enderec
 import { comSituacaoNova, situacaoDe } from '@/features/pipelines/situacao/situacao';
 import { useBoardDrag } from './quadro/useBoardDrag';
 import { usePipelineFilters } from './quadro/usePipelineFilters';
+import { useFacetasDoQuadro } from './quadro/useFacetasDoQuadro';
+import { useMaisCardsDaColuna } from './quadro/useMaisCardsDaColuna';
+import { useListaDoFunil } from './quadro/useListaDoFunil';
+import {
+  paramsDoQuadro,
+  assinaturaDoQuadro,
+  semFiltroNaAberta,
+  colunasParaReler,
+  ajustarTotais,
+  POR_COLUNA,
+} from './quadro/paramsDoQuadro';
 import PainelDeFiltrosDoFunil from './quadro/PainelDeFiltrosDoFunil';
 import StageColumn from './quadro/StageColumn';
 import PipelineListView from './quadro/PipelineListView';
@@ -71,6 +83,36 @@ function EsqueletoDoQuadro({ rotulo }: { rotulo: string }) {
   );
 }
 
+// Recarga por trás do quadro em lotes: troca, nas colunas que a pessoa rolou além do
+// 1º lote, os cards pelos relidos do servidor (do topo até onde ela foi). Pedido por
+// coluna, em paralelo; a que falhar fica com o 1º lote que já veio.
+async function releColunasRoladas(
+  pipelineId: string,
+  params: BoardQueryParams,
+  primeiroLote: Pipeline,
+  naTela: PipelineStage[],
+): Promise<Pipeline> {
+  const reler = colunasParaReler(naTela);
+  if (!reler.length) return primeiroLote;
+  const relidas = new Map<string, { items: PipelineItem[]; total: number }>();
+  await Promise.all(reler.map(async ({ stageId, limite }) => {
+    try {
+      const r = await pipelinesService.getBoardItems(pipelineId, params, { stageId, offset: 0, limit: limite });
+      relidas.set(stageId, { items: r.items, total: r.total });
+    } catch {
+      /* fica o 1º lote desta coluna */
+    }
+  }));
+  if (!relidas.size) return primeiroLote;
+  return {
+    ...primeiroLote,
+    stages: (primeiroLote.stages || []).map(s => {
+      const r = relidas.get(String(s.id));
+      return r ? { ...s, items: r.items, items_total: r.total } : s;
+    }),
+  };
+}
+
 export default function PipelineKanban() {
   const { t } = useLanguage('pipelines');
   const { pipelineId } = useParams<{ pipelineId: string }>();
@@ -95,9 +137,25 @@ export default function PipelineKanban() {
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [allPipelines, setAllPipelines] = useState<Pipeline[]>([]);
   // Aba e filtros no endereço; busca na tela (quadro/usePipelineFilters).
-  const { aba, setAba, filtros, aplicar, busca, setBusca, filteredStages, totalVisivel, quantosFiltros } = usePipelineFilters(stages);
+  const {
+    aba, setAba, filtros, aplicar, busca, setBusca, buscaAplicada, filteredStages, totalVisivel, quantosFiltros,
+  } = usePipelineFilters(stages);
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const statusDaAba = STATUS_DA_ABA[aba];
+  // Aba, busca e filtros vão pro servidor (quadro em lotes, spec 2026-10-15).
+  const paramsAtuais = useMemo(() => paramsDoQuadro(aba, filtros, buscaAplicada), [aba, filtros, buscaAplicada]);
+  const assinatura = assinaturaDoQuadro(paramsAtuais);
+  const paramsRef = useRef(paramsAtuais);
+  paramsRef.current = paramsAtuais;
+  const stagesRef = useRef(stages);
+  stagesRef.current = stages;
+  // Ação local mexe nos cards: o número da coluna acompanha (ajustarTotais).
+  const setStagesLocal = useCallback<Dispatch<SetStateAction<PipelineStage[]>>>(acao => {
+    setStages(prev => ajustarTotais(prev, typeof acao === 'function' ? acao(prev) : acao));
+  }, []);
+  // Rolar a coluna pede mais 30: o total vem do servidor, então setStages cru (não o local).
+  const maisCards = useMaisCardsDaColuna({ pipelineId, params: paramsAtuais, assinatura, setStages });
+  const { facetas, erro: erroDasFacetas, tentarDeNovo: tentarFacetas } = useFacetasDoQuadro(pipelineId, statusDaAba, filtrosAbertos);
   // A aba decide se o card arrasta (Ganhos, Perdidos e Arquivados não).
   const podeArrastarCard = useCallback((item: PipelineItem) => podeArrastarNaAba(aba, item), [aba]);
 
@@ -112,7 +170,7 @@ export default function PipelineKanban() {
     handleBoardDragOver, handleBoardMouseDown, handleBoardWheel,
     handleDragStart, handleDragOver, handleDrop, handleCardDragOver, handleCardDrop, handleDragEnd,
   } = useBoardDrag({
-    pipelineId, stages, setStages, mensagemDeErro: t('kanban.messages.itemMoveError'), podeArrastar: podeArrastarCard,
+    pipelineId, stages, setStages: setStagesLocal, mensagemDeErro: t('kanban.messages.itemMoveError'), podeArrastar: podeArrastarCard,
     aoGanhar: aoGanharNoQuadro,
   });
 
@@ -146,6 +204,11 @@ export default function PipelineKanban() {
   // o funil inteiro sem ficar rolando colunas).
   const [viewMode, setViewMode] = useState<ModoDoQuadro>('board');
   const [listSortOrder, setListSortOrder] = useState<'desc' | 'asc'>('desc');
+  // Sobe a cada resposta do servidor aplicada no quadro: a Lista relê junto.
+  const [versaoDaLista, setVersaoDaLista] = useState(0);
+  const lista = useListaDoFunil({
+    pipelineId, params: paramsAtuais, assinatura, ordem: listSortOrder, ativo: viewMode === 'list', versao: versaoDaLista,
+  });
 
   // Função do cliente (super-admin liga/desliga) E cargo. Os literais do
   // useFeature ficam: os scanners do catálogo leem o código por regex.
@@ -161,22 +224,40 @@ export default function PipelineKanban() {
   const canBulkDispatch = acoesDoQuadro.bulkDispatch;
   const canAddItem = useFeature('pipeline_add_item');
 
-  // Carrega a ABA aberta (?status= no servidor: há funil com milhares de
-  // cards). silent=true: refresh por trás (foco, poll de 60 s, tempo real), sem
-  // espera na tela. Só Abertos usa o payload guardado (é o que o seletor de
-  // funis pré-carrega). Resposta de uma aba que já não está aberta é jogada fora.
+  // Carrega a ABA aberta em lotes (?status=, busca e filtros no servidor, 30
+  // cards por coluna: há funil com milhares de cards). silent=true: refresh por
+  // trás (foco, poll de 60 s, tempo real), sem espera na tela. Só Abertos sem
+  // busca nem filtro usa o payload guardado (é o que o seletor de funis
+  // pré-carrega). Resposta de um pedido que já não é o atual é jogada fora.
   const pedidoRef = useRef(0);
   const pipelineRef = useRef<Pipeline | null>(null);
   pipelineRef.current = pipeline;
   const [carregandoQuadro, setCarregandoQuadro] = useState(false);
   // A aba pedida não carregou: o quadro mostra o erro (nunca os cards da aba anterior).
   const [erroDaAba, setErroDaAba] = useState(false);
+  // Funil e aba do quadro que está na tela. Busca ou filtro na MESMA aba mantém
+  // os cards até a resposta chegar (só aria-busy); troca de aba ou de funil
+  // mostra o esqueleto (nunca os cards da aba anterior).
+  const quadroNaTelaRef = useRef<string | null>(null);
+  const [atualizandoQuadro, setAtualizandoQuadro] = useState(false);
+  // Depende da assinatura (aba, busca e filtros): quando ela troca, o efeito de
+  // abertura relê sozinho. Os parâmetros em si vêm da ref (sempre os atuais).
   const loadPipelineData = useCallback(async (silent = false, reaproveitar = false) => {
     if (!pipelineId) return;
     const meu = ++pedidoRef.current;
-    const cached = statusDaAba === 'open' ? getCachedPipeline(pipelineId) : undefined;
-    const mostrarEspera = !silent && !cached;
-    if (!silent && cached) {
+    const params = paramsRef.current;
+    const semFiltro = semFiltroNaAberta(params);
+    const cached = semFiltro ? getCachedPipeline(pipelineId) : undefined;
+    const quadroPedido = `${pipelineId}|${String(params.status)}`;
+    const mesmoQuadro = Boolean(pipelineRef.current) && quadroNaTelaRef.current === quadroPedido;
+    // O payload guardado só pinta quando o quadro na tela é outro (abrir o funil, voltar
+    // pra Abertos). Com este funil e aba já na tela (limpar a busca), ele é uma foto de
+    // antes das ações da pessoa: os cards ficam até a resposta chegar.
+    const pintaGuardado = !silent && Boolean(cached) && !mesmoQuadro;
+    const mostrarEspera = !silent && !cached && !mesmoQuadro;
+    if (!silent) setAtualizandoQuadro(mesmoQuadro);
+    if (pintaGuardado && cached) {
+      quadroNaTelaRef.current = quadroPedido;
       setPipeline(cached);
       setStages(cached.stages || []);
       setLoading(false);
@@ -189,16 +270,23 @@ export default function PipelineKanban() {
       else setLoading(true);
     }
     try {
-      // Abertos passa pelo cache, que grava o payload guardado. Só a abertura
-      // do quadro reaproveita o pedido que o hover já disparou; recarga depois
-      // de ação pede de novo (senão traria o quadro de antes da ação).
-      const pipelineData =
-        statusDaAba === 'open'
-          ? await loadOpenPipeline(pipelineId, { reaproveitar })
-          : await pipelinesService.getPipeline(pipelineId, { status: statusDaAba });
+      // Sempre o 1º lote de cada coluna. Abertos sem filtro passa pelo cache, que grava o
+      // payload guardado. Só a abertura do quadro reaproveita o pedido que o hover já
+      // disparou; recarga depois de ação pede de novo (senão traria o quadro de antes da ação).
+      const primeiroLote = semFiltro
+        ? await loadOpenPipeline(pipelineId, { reaproveitar })
+        : await pipelinesService.getBoard(pipelineId, params, POR_COLUNA);
       if (meu !== pedidoRef.current) return;
+      // Recarga por trás: só as colunas que a pessoa rolou além do 1º lote são relidas,
+      // cada uma até onde ela foi (teto 200). A coluna cuja releitura falha fica com o 1º lote.
+      const pipelineData = silent && quadroNaTelaRef.current === quadroPedido
+        ? await releColunasRoladas(pipelineId, params, primeiroLote, stagesRef.current)
+        : primeiroLote;
+      if (meu !== pedidoRef.current) return;
+      quadroNaTelaRef.current = quadroPedido;
       setPipeline(pipelineData);
       setStages(pipelineData.stages || []);
+      setVersaoDaLista(v => v + 1);
       setErroDaAba(false);
       // Janela aberta num card que mudou de situação ou etapa por fora (outra
       // guia, automação): a janela acompanha. Sem mudança, o card fica o mesmo
@@ -212,10 +300,13 @@ export default function PipelineKanban() {
       });
     } catch (error) {
       console.error('Error loading pipeline data:', error);
-      if (mostrarEspera && meu === pedidoRef.current) {
+      // Pedido que a pessoa fez (troca de aba, busca, filtro) e falhou: some o
+      // quadro e mostra o erro (nunca cards que não batem com o pedido). Com o
+      // payload guardado na tela, os cards dele continuam valendo.
+      if (!silent && !pintaGuardado && meu === pedidoRef.current) {
         toast.error(t('kanban.messages.loadDataError'));
-        // Troca de aba que falhou: some o quadro da aba anterior e mostra o erro.
         if (pipelineRef.current) {
+          quadroNaTelaRef.current = null;
           setStages([]);
           setErroDaAba(true);
         }
@@ -224,9 +315,10 @@ export default function PipelineKanban() {
       if (meu === pedidoRef.current) {
         setLoading(false);
         setCarregandoQuadro(false);
+        setAtualizandoQuadro(false);
       }
     }
-  }, [pipelineId, statusDaAba]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pipelineId, assinatura]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Próximas visitas por contato (pra mostrar dia/hora no card).
   const [visitsByContact, setVisitsByContact] = useState<Record<string, string>>({});
@@ -512,8 +604,8 @@ export default function PipelineKanban() {
   // ("Lead criado e adicionado ao funil." ou "Lead adicionado ao funil.").
   // Avisar aqui também dava dois avisos pro mesmo lead.
   const handleItemAdded = async () => {
-    // Reload pipeline data to show new item
-    await loadPipelineData();
+    // Recarga por trás: sem esqueleto e relendo até onde a pessoa rolou.
+    await loadPipelineData(true);
   };
 
   const handleRemoveItem = useCallback((item: PipelineItem) => {
@@ -523,13 +615,13 @@ export default function PipelineKanban() {
 
   // Remove o card do board no estado (otimista), sem reload — usado ao arquivar.
   const removeItemFromBoardLocal = useCallback((itemId: string) => {
-    setStages(prev =>
+    setStagesLocal(prev =>
       prev.map(stage => ({
         ...stage,
         items: (stage.items || []).filter(i => String(i.id) !== String(itemId)),
       })),
     );
-  }, []);
+  }, [setStagesLocal]);
 
   // Arquivar = soft-hide: some do board na hora, fica em "Arquivados".
   const handleArchiveItem = useCallback(async (item: PipelineItem) => {
@@ -568,8 +660,8 @@ export default function PipelineKanban() {
       toast.success(t('kanban.messages.itemRemoved'));
       setShowRemoveItemModal(false);
       setItemToRemove(null);
-      // Reload pipeline data to reflect changes
-      await loadPipelineData();
+      // Recarga por trás: sem esqueleto e relendo até onde a pessoa rolou.
+      await loadPipelineData(true);
     } catch (error) {
       console.error('Error removing item from pipeline:', error);
       toast.error(t('kanban.messages.itemRemoveError'));
@@ -597,7 +689,7 @@ export default function PipelineKanban() {
   // de dados acontece em segundo plano (silencioso), sem piscar a tela.
   const moveItemToStageLocal = useCallback((itemId: string, toStageId: string) => {
     if (!toStageId) return;
-    setStages(prev => {
+    setStagesLocal(prev => {
       let moved: PipelineItem | undefined;
       const without = prev.map(stage => ({
         ...stage,
@@ -622,7 +714,7 @@ export default function PipelineKanban() {
         ? ({ ...prev, stage_id: toStageId, pipeline_stage_id: toStageId } as PipelineItem)
         : prev,
     );
-  }, []);
+  }, [setStagesLocal]);
 
   // Ganho/Perdido/Reabrir pela janela (e o Ganho de soltar em Concluído, P3-T17A):
   // o card pega a situação nova na hora; se a situação mudou a coluna (Ganho →
@@ -630,7 +722,7 @@ export default function PipelineKanban() {
   // desta aba (marcou Ganho em Abertos), some do quadro. Os números das abas se
   // refazem em silêncio. A janela continua aberta.
   const handleItemStatusChanged = useCallback((novo: PipelineItem) => {
-    setStages(prev => {
+    setStagesLocal(prev => {
       const antigo = prev.flatMap(stage => stage.items || []).find(i => String(i.id) === String(novo.id));
       if (!antigo) return prev;
       const junto = comSituacaoNova(antigo, novo);
@@ -647,7 +739,7 @@ export default function PipelineKanban() {
     });
     setItemToEdit(prev => (prev && String(prev.id) === String(novo.id) ? comSituacaoNova(prev, novo) : prev));
     void loadPipelineData(true);
-  }, [aba, loadPipelineData]);
+  }, [aba, loadPipelineData, setStagesLocal]);
   aoGanharRef.current = handleItemStatusChanged;
 
   const handleUpdateItem = async (data: {
@@ -826,6 +918,7 @@ export default function PipelineKanban() {
         <div className="flex-1 overflow-hidden relative">
           <div
             ref={boardScrollRef}
+            aria-busy={atualizandoQuadro || undefined}
             className="h-full overflow-x-auto overflow-y-hidden px-4 sm:px-6 py-6 cursor-grab"
             onDragOver={handleBoardDragOver}
             onMouseDown={handleBoardMouseDown}
@@ -861,6 +954,9 @@ export default function PipelineKanban() {
                   openingConversation={openingConversation}
                   onEditStage={handleEditStage}
                   onDeleteStage={handleDeleteStage}
+                  carregandoMais={Boolean(maisCards.carregando[String(stage.id)])}
+                  erroAoCarregarMais={Boolean(maisCards.erro[String(stage.id)])}
+                  onCarregarMais={maisCards.carregarMais}
                 />
               ))}
 
@@ -895,13 +991,21 @@ export default function PipelineKanban() {
         </div>
         )}
 
-        {/* Lista: todos os leads do funil, por ordem de chegada */}
+        {/* Lista: todos os leads do funil, por ordem de chegada, 30 por vez */}
         {viewMode === 'list' && carregandoQuadro && (
           <Carregando linhas={6} rotulo="Carregando a aba" className="px-4 py-2 sm:px-6" />
         )}
         {viewMode === 'list' && !carregandoQuadro && !erroDaAba && (
           <PipelineListView
-            stages={filteredStages}
+            stages={stages}
+            itens={lista.itens}
+            carregando={lista.carregando}
+            erro={lista.erro}
+            temMais={lista.temMais}
+            carregandoMais={lista.carregandoMais}
+            erroAoCarregarMais={lista.erroAoCarregarMais}
+            aoCarregarMais={lista.carregarMais}
+            aoTentarDeNovo={lista.tentarDeNovo}
             ordem={listSortOrder}
             aoTrocarOrdem={() => setListSortOrder(o => (o === 'asc' ? 'desc' : 'asc'))}
             onOpenItem={handleEditItem}
@@ -918,6 +1022,9 @@ export default function PipelineKanban() {
         aoFiltrar={aplicar}
         stages={stages}
         etiquetas={allTags}
+        facetas={facetas}
+        erroDasFacetas={erroDasFacetas}
+        aoTentarDeNovo={tentarFacetas}
       />
 
       {/* Edit Pipeline Modal */}

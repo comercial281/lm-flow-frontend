@@ -22,6 +22,10 @@ import type {
   PipelineBoardStatus,
   PipelineItemDetail,
   OpenCardOfContact,
+  BoardQueryParams,
+  BoardItemsPage,
+  BoardFacets,
+  BoardSort,
 } from '@/types/analytics';
 import { Contact } from '@/types';
 
@@ -40,6 +44,31 @@ class PipelinesService {
     const url = `/pipelines/${pipelineId}`;
     const response = opts.status ? await api.get(url, { params: { status: opts.status } }) : await api.get(url);
     return extractData<Pipeline>(response);
+  }
+
+  // Quadro em lotes: as etapas com os primeiros `perStage` cards e o total real
+  // de cada coluna (aba, busca e filtros no servidor). Spec 2026-10-15.
+  async getBoard(pipelineId: string, params: BoardQueryParams, perStage: number): Promise<Pipeline> {
+    const response = await api.get(`/pipelines/${pipelineId}`, { params: { ...params, per_stage: perStage } });
+    return extractData<Pipeline>(response);
+  }
+
+  // Mais cards de uma coluna (stageId) ou da Lista (sem stageId).
+  async getBoardItems(
+    pipelineId: string,
+    params: BoardQueryParams,
+    opts: { stageId?: string; offset: number; limit: number; sort?: BoardSort },
+  ): Promise<BoardItemsPage> {
+    const response = await api.get(`/pipelines/${pipelineId}/board_items`, {
+      params: { ...params, ...(opts.stageId ? { stage_id: opts.stageId } : {}), offset: opts.offset, limit: opts.limit, sort: opts.sort ?? 'position' },
+    });
+    return extractData<BoardItemsPage>(response);
+  }
+
+  // Opções de Origem e Responsável do painel: a aba inteira, sem os filtros.
+  async getBoardFacets(pipelineId: string, status: PipelineBoardStatus): Promise<BoardFacets> {
+    const response = await api.get(`/pipelines/${pipelineId}/board_facets`, { params: { status } });
+    return extractData<BoardFacets>(response);
   }
 
   // Get all pipelines filtered by contact (optimized - single request)

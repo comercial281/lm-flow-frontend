@@ -8899,3 +8899,20 @@ Armadilhas:
    `Roleta::Notices#offer_text`, e a decisão "sai ou não sai" da mesma regra do
    envio de verdade: mexeu no aviso de verdade, o teste segue. O "silenciar" do
    Perfil só vale na roleta (a oferta direta de verdade não lê).
+
+## Funil em lotes (desde 2026-10-15)
+
+Funil de 2 mil cards levava ~11 s pra abrir: vinham todos os cards da aba e a busca e os filtros rodavam no navegador. Spec: `LM FLOW/specs/2026-10-15-funil-em-lotes-design.md`. Decisão do Tony: opção A (busca e filtros no servidor).
+
+- Cada coluna abre com 30 cards e carrega mais 30 ao rolar. O número da coluna e o valor são o total real (com aba, busca e filtros).
+- A busca e os 9 filtros do painel vão pro servidor (`quadro/paramsDoQuadro.ts`); a busca espera 400 ms. As opções de Origem e Responsável vêm do servidor (`useFacetasDoQuadro`), só com o painel aberto.
+- A Lista vem do servidor por chegada, 30 por vez, com "Carregar mais".
+- Recarga por trás (60 s, tempo real, volta pra aba, depois de ação) pede o funil com os 30 primeiros de cada coluna e relê só as colunas que a pessoa rolou além disso, cada uma até onde ela foi (teto de 200). Reler todas até a mais rolada trazia de volta os ~11 s.
+- Exportar continua baixando tudo (`getPipeline(..., { status: 'all' })`), só no clique.
+
+Armadilhas:
+1. Ação local que mexe em card usa `setStagesLocal` (o número da coluna acompanha via `ajustarTotais`); recarga do servidor usa `setStages` cru.
+2. O payload guardado no navegador (`lmflow:pipeline-payloads:v3`) é só de Abertos sem busca nem filtro.
+3. Arrastar pro fim de uma coluna que ainda tem cards no servidor põe o card logo abaixo do último card visível (acima dos não carregados): `abaixoDoUltimo` em `useBoardDrag.ts`.
+4. A regra de cada filtro mora só no servidor (`PipelineItems::BoardQuery`); `filtrosDoFunil.ts` ficou com as contas da tela (colunas visíveis, contagem de filtros, opções do painel).
+5. O backend vem PRIMEIRO. Contra o servidor antigo a tela recebe o funil inteiro, sem lotes e sem filtro.

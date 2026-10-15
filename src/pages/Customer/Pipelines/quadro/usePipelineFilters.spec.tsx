@@ -1,5 +1,5 @@
 // src/pages/Customer/Pipelines/quadro/usePipelineFilters.spec.tsx
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -28,9 +28,9 @@ const idsVisiveis = (stages: PipelineStage[]) => stages.flatMap(s => (s.items ||
 describe('usePipelineFilters (aba e filtros no endereço)', () => {
   // Review Focus 5: F5 e link mandado abrem igual.
   it('F5: a aba e os filtros do endereço já valem, e o card continua no endereço', () => {
-    const { result } = renderHook(usar, { wrapper: emEndereco('/pipelines/p1?aba=perdidos&etapas=s2&card=i3') });
+    const { result } = renderHook(usar, { wrapper: emEndereco('/pipelines/p1?aba=perdidos&colunas=s2&card=i3') });
     expect(result.current.aba).toBe('perdidos');
-    expect(result.current.filtros.etapas).toEqual(['s2']);
+    expect(result.current.filtros.colunas).toEqual(['s2']);
     expect(idsVisiveis(result.current.filteredStages)).toEqual(['b']);
     expect(result.current.totalVisivel).toBe(1);
     expect(result.current.quantosFiltros).toBe(1);
@@ -57,10 +57,28 @@ describe('usePipelineFilters (aba e filtros no endereço)', () => {
     expect(result.current.endereco.toString()).toBe('card=i3&aba=todos');
   });
 
-  it('a busca filtra e não vai pro endereço', () => {
+  it('a busca não vai pro endereço', () => {
     const { result } = renderHook(usar, { wrapper: emEndereco('/pipelines/p1') });
     act(() => result.current.setBusca('joão'));
-    expect(idsVisiveis(result.current.filteredStages)).toEqual(['b']);
+    expect(idsVisiveis(result.current.filteredStages)).toEqual(['a', 'b']);
     expect(result.current.endereco.toString()).toBe('');
+  });
+
+  it('a busca vai pro servidor 400 ms depois de parar de digitar', () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => usePipelineFilters([]), { wrapper: emEndereco('/pipelines/p1') });
+    act(() => result.current.setBusca('mar'));
+    expect(result.current.buscaAplicada).toBe('');
+    act(() => { vi.advanceTimersByTime(400); });
+    expect(result.current.buscaAplicada).toBe('mar');
+    vi.useRealTimers();
+  });
+
+  it('o total visível é o total do servidor das colunas que aparecem', () => {
+    const etapas = [
+      { id: 's1', items: [], items_total: 40 }, { id: 's2', items: [], items_total: 5 },
+    ] as unknown as PipelineStage[];
+    const { result } = renderHook(() => usePipelineFilters(etapas), { wrapper: emEndereco('/pipelines/p1?colunas=s2') });
+    expect(result.current.totalVisivel).toBe(5);
   });
 });
