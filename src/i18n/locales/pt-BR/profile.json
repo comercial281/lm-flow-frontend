@@ -182,7 +182,7 @@
       "qr": "Código QR",
       "manual": "Sem câmera",
       "verify": "Confirmação",
-      "backup": "Seus códigos"
+      "backup": "Códigos de reserva"
     },
     "setup": {
       "title": "Ativar autenticação de dois fatores",
@@ -281,7 +281,7 @@
   },
   "photoUploader": {
     "changePhoto": "Alterar foto",
-    "zoom": "Zoom",
+    "zoom": "Aproximar",
     "removePhoto": "Remover",
     "uploading": "Carregando...",
     "fileTypeError": "Por favor, selecione apenas arquivos de imagem",
