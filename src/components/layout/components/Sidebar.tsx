@@ -29,9 +29,9 @@ function CartaoDaConta() {
   if (!account?.name) return null;
   const cargo = user?.role?.name;
   return (
-    // "Vidro roxo": gradiente da marca bem vazado + borda e sombra roxas suaves.
-    // Fica abaixo do item ativo do menu (gradiente cheio) na hierarquia.
-    <div className="mb-4 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent px-3 py-2.5 shadow-[0_6px_16px_-8px_rgba(124,58,237,0.45)]">
+    // Claro: cartão neutro, sem o véu roxo (pedido do dono, 15/10/2026, junto com a
+    // Dashboard). Escuro: o "vidro roxo" de antes (gradiente vazado + borda e sombra roxas).
+    <div className="mb-4 rounded-xl border border-sidebar-border px-3 py-2.5 shadow-sm dark:border-primary/20 dark:bg-gradient-to-br dark:from-primary/15 dark:via-primary/5 dark:to-transparent dark:shadow-[0_6px_16px_-8px_rgba(124,58,237,0.45)]">
       <p className="lm-redact text-sm font-semibold text-sidebar-foreground truncate" title={account.name}>
         {account.name}
       </p>

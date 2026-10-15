@@ -4158,7 +4158,7 @@ Spec e plano: `LM FLOW/specs/2026-09-29-fase-3-base-de-design-e-linguagem-design
   - Fora do escopo: o painel raiz, as páginas públicas, as landings, o widget e a **sobra** do Evolution (listas `SOBRA`/`NAMESPACES_SOBRA`). A fase 4 decide se a sobra some.
   - **Teto só desce.**
 - **Decisões do Tony (30/09):**
-  - **D1:** cada tema num PR pequeno, com prévia (`?tenant=lealmidia`) e antes/depois, e merge um por vez com o ok dele.
+  - **D1:** cada tema num PR pequeno, com prévia da Vercel (sem `?tenant=`, ou com o slug de um cliente que existe) e antes/depois, e merge um por vez com o ok dele.
   - **D2:** chave desligada é cinza.
   - **D3:** o glossário acima.
   - **D4:** as telas piloto são Conta e Lembretes.
@@ -8947,3 +8947,24 @@ Pedido do dono, "por enquanto". A barra do topo fica só com Área do Admin, Pla
 - **? do tour:** saiu do topo e do menu do celular. O tour automático da primeira visita segue igual; o que se perde é rever o tour de uma página já vista. Se fizer falta, o caminho proposto é um "Ver tour desta página" no menu do perfil (o `TourFab` continua no código).
 - **Tema e modo demo (olhinho):** foram pro rodapé do menu lateral, depois de "Falar com o suporte". Menu aberto: lado a lado. Recolhido: um embaixo do outro, no centro. No celular continuam no menu hambúrguer.
 - Área do Admin (`AdminLayout`) e Área de Membros têm topo próprio e não mudaram.
+
+## Dashboard: tema claro sem o degradê rosado (15/10/2026)
+
+Pedido do dono: no tema claro a Dashboard tinha um degradê rosado em todo cartão (véu roxo do "vidro" sobre fundo lavanda) e tudo era roxo forte (ícones, funil, gráficos, origem). Ele escolheu o "neutro grafite" entre duas propostas e, vendo na prévia, pediu o roxo de volta "em alguns detalhes".
+
+- **Cartão branco chapado** sobre fundo cinza neutro (`#f6f6f7`), contorno de 1px em degradê roxo bem leve (`.lmf .lmf-glass`), sombra leve, sem véu nem brilho no topo. Texto e bordas em cinza neutro (eram arroxeados).
+- **Gráficos em roxo claro** (`--lmf-data-muted`, `#c4b5fd`) e **roxo forte** (`--lmf-data`) só no que se destaca: o melhor dia da semana, o mês atual, a maior origem, a linha do horário, as barras do funil, os ícones e o número de Ganhos no período. A forma Funil vai do `#6d28d9` clareando até 78% (`--lmf-funil`).
+- **Botões, links e foco** continuam no roxo da casa (`--lmf-accent`). Hover, segmento e aviso usam fundo cinza (`--lmf-accent-soft` no claro = `#f1f1f3`).
+- **Cartão da conta no topo do menu** (desfaz o "vidro roxo" de 01/10 no claro): borda cinza e sombra leve, sem degradê. No escuro continua o vidro roxo.
+- **Tema escuro não mudou:** no `.dark .lmf` os tokens de dado são todos o roxo de sempre.
+
+Armadilhas:
+
+1. **Gráfico novo na Dashboard:** série em `--lmf-data-muted`, destaque em `--lmf-data`. Tudo em `--lmf-data` volta o "tudo roxo forte".
+2. `--lmf-accent-soft` no claro é cinza: fundo de hover, segmento e aviso, não cor de dado.
+3. O texto branco da forma Funil depende do `--lmf-funil` mais escuro e do piso de 78% (`FORCA_FINAL` em `Funil.tsx`).
+4. Trava em `base/lmf.source.spec.ts`.
+5. O contorno em degradê é fundo no `border-box` sob o branco do `padding-box`: só funciona com cartão opaco. No escuro (vidro translúcido) o `.dark .lmf .lmf-glass` volta a borda sólida.
+6. Prévia da Vercel: entrar SEM `?tenant=` (cai no `public`, como o app.lmflow.com.br) ou com o slug de um cliente que existe. Slug inexistente faz o login responder 406 e parecer senha errada.
+
+Não reabrir sem o dono pedir.
