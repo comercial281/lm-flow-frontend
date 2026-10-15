@@ -38,6 +38,9 @@ import {
 } from './acceptedByFilter';
 import { Seletor } from '@/components/base/Seletor';
 import Aviso from '@/components/base/Aviso';
+import {
+  AVISO_TRAVADO, ROTULO_TRAVADO, destinoTravado, instanciaDoModo, modoDoNumero, type ModoDoNumero,
+} from '@/features/whatsappGroups/destinoDoGrupo';
 import EmptyState from '@/components/base/EmptyState';
 import Carregando from '@/components/base/Carregando';
 import { BOOKED_BY_OPTIONS, BOOKED_BY_TRIGGERS, bookedByCondition, bookedByOf, bookedBySummary, type BookedBy } from './bookedByFilter';
@@ -1087,7 +1090,13 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
 
     // ----- notify_group -----
     // Backend: HTTParty.post envia { number: group_jid, text: message } pro Evolution.
-    case 'notify_group':
+    case 'notify_group': {
+      const destino = String(params.group_jid ?? '');
+      // Destino que o cliente não enxerga (ex.: grupo interno escolhido pela Leal) fica travado.
+      const travado = destinoTravado({
+        destino, grupos: groups, ehEquipe: isSuperAdmin, carregando: loadingGroups,
+        numerosDeUsuarios: usersWithWhatsapp.map(u => String(u.whatsapp_number)),
+      });
       return (
         <>
           {/* Instância: LISTA, não campo digitado. O nome tem de bater caractere a
@@ -1096,7 +1105,9 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               (cliente) continua com o campo livre. */}
           <Field
             label="Número"
-            hint="De qual WhatsApp sai o aviso — e de onde os grupos são listados. Para grupo de cliente use a central Operacional (LM01)."
+            hint={isSuperAdmin
+              ? 'De qual WhatsApp sai o aviso — e de onde os grupos são listados. Para grupo de cliente use a central Operacional (LM01).'
+              : 'De qual WhatsApp sai o aviso. Na central da Leal Mídia aparecem só os grupos liberados pra este CRM.'}
           >
             {resources.evolutionInstances.length > 0 ? (
               <Seletor
@@ -1120,18 +1131,22 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
                 )}
               </Seletor>
             ) : (
-              <Input
-                value={String(params.instance ?? '')}
-                onChange={e => setParam('instance', e.target.value)}
-                placeholder="Operacional (LM01)"
-                className="mt-1"
-              />
+              <Seletor
+                value={modoDoNumero(params.instance)}
+                onChange={e => setParam('instance', instanciaDoModo(e.target.value as ModoDoNumero))}
+                disabled={travado}
+                className={baseSelectClass}
+              >
+                <option value="proprio">WhatsApp deste CRM</option>
+                <option value="central">Central da Leal Mídia</option>
+              </Seletor>
             )}
           </Field>
           <Field label="Destino do lembrete *" hint={loadingGroups ? 'Carregando…' : 'O grupo do cliente, ou um usuário (vai no WhatsApp privado dele).'}>
             <Seletor
               value={String(params.group_jid ?? '')}
               onChange={e => setParam('group_jid', e.target.value)}
+              disabled={travado}
               className={baseSelectClass}
             >
               <option value="">{loadingGroups ? 'Carregando…' : 'Selecione o destino'}</option>
@@ -1152,13 +1167,16 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               {params.group_jid
                 && !groups.some(g => g.id === params.group_jid)
                 && !usersWithWhatsapp.some(u => String(u.whatsapp_number) === params.group_jid) && (
-                <option value={String(params.group_jid)}>{String(params.group_jid)}</option>
+                <option value={String(params.group_jid)}>{isSuperAdmin ? String(params.group_jid) : ROTULO_TRAVADO}</option>
               )}
             </Seletor>
+            {travado && <Aviso tom="neutro" compacto className="mt-1">{AVISO_TRAVADO}</Aviso>}
             {/* Lista vazia com o motivo: quase sempre é o nome da instância
                 escrito diferente do painel, ou a instância desconectada. */}
             {!loadingGroups && groups.length === 0 && groupsReason && (
-              <Aviso tom="atencao" compacto className="mt-1">{`Nenhum grupo apareceu: ${groupsReason}`}</Aviso>
+              <Aviso tom="atencao" compacto className="mt-1">
+                {modoDoNumero(params.instance) === 'central' ? groupsReason : `Nenhum grupo apareceu: ${groupsReason}`}
+              </Aviso>
             )}
           </Field>
           <Field label="Mensagem *">
@@ -1172,6 +1190,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
           </Field>
         </>
       );
+    }
 
     // ----- notify_user -----
     // Backend: notify_user(user_id, message) -> manda no WhatsApp cadastrado do usuário.
