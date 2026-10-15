@@ -201,8 +201,8 @@ export default function CardMoreMenu({
       </Dialog>
 
       <Dialog open={removerAberto} onOpenChange={setRemoverAberto}>
-        <DialogContent className="max-w-md">
-          <DialogTitle>Remover do funil?</DialogTitle>
+        <DialogContent compacta>
+          <DialogTitle className="pr-6">Remover do funil?</DialogTitle>
           <DialogDescription>
             O lead sai deste funil. A conversa e o contato continuam existindo.
           </DialogDescription>

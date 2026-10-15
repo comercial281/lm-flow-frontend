@@ -494,7 +494,7 @@ const TwoFactorSetup = ({ onUpdate }: TwoFactorSetupProps) => {
 
       {/* Disable Dialog */}
       <Dialog open={disableDialogOpen} onOpenChange={setDisableDialogOpen}>
-        <DialogContent>
+        <DialogContent compacta>
           <DialogHeader>
             <DialogTitle>{t('twoFactor.disable.title')}</DialogTitle>
             <DialogDescription>
