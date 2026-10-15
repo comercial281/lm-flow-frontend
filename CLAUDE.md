@@ -8924,3 +8924,12 @@ Armadilhas:
 - **Quem usa:** `useConfirmacao` e as confirmações só de título, frase e botões fora dele (Excluir contato(s), imóvel, automação, macro(s), equipe(s), atributo(s), variável, Remover do funil no card, Excluir cadastro, Excluir template, Revogar chave do MCP, Sair no menu do usuário e no admin, Desativar 2FA). Confirmação com prévia ou campo (Excluir funil/etapa, Remover lead do funil, digitar o nome) fica na janela comum.
 - **Concluir tarefa:** a pergunta virou "Criar a próxima tarefa pra este lead?", com a frase `"<título>" foi concluída.`; botões "Agora não" e "Nova tarefa".
 - **Não reabrir sem o dono pedir.**
+
+## Topo enxuto (15/10/2026)
+
+Pedido do dono, "por enquanto". A barra do topo fica só com Área do Admin, Plantão, sininho e perfil.
+
+- **Busca:** a barra "Buscar... Ctrl K" (computador) e a lupa (celular) saíram. O **Ctrl+K continua** abrindo a busca (o atalho mora no `MainLayout`, não no `Header`).
+- **? do tour:** saiu do topo e do menu do celular. O tour automático da primeira visita segue igual; o que se perde é rever o tour de uma página já vista. Se fizer falta, o caminho proposto é um "Ver tour desta página" no menu do perfil (o `TourFab` continua no código).
+- **Tema e modo demo (olhinho):** foram pro rodapé do menu lateral, depois de "Falar com o suporte". Menu aberto: lado a lado. Recolhido: um embaixo do outro, no centro. No celular continuam no menu hambúrguer.
+- Área do Admin (`AdminLayout`) e Área de Membros têm topo próprio e não mudaram.
