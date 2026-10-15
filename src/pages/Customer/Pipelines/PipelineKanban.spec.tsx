@@ -289,6 +289,18 @@ describe('quadro do funil · o que continua igual', () => {
     expect(within(document.getElementById('etapa-s1')!).getByText('412')).toBeInTheDocument();
   });
 
+  it('o valor da coluna é o do servidor, não a soma dos cards carregados', async () => {
+    vi.mocked(pipelinesService.getBoard).mockImplementation(async () => {
+      const p = comTotais(FUNIL('open'));
+      return { ...p, stages: p.stages!.map(s => (s.id === 's1' ? { ...s, value_total: 98765 } : s)) } as Pipeline;
+    });
+    montar();
+    await screen.findByText('Maria Souza');
+    // Os cards não têm preço: sem o value_total do servidor a etiqueta de valor nem apareceria.
+    expect(within(document.getElementById('etapa-s1')!).getByText('kanban.stage.totalValue')).toBeInTheDocument();
+    expect(within(document.getElementById('etapa-s2')!).queryByText('kanban.stage.totalValue')).toBeNull();
+  });
+
   it('arquivar tira o card e desconta 1 do número da coluna na hora', async () => {
     vi.mocked(pipelinesService.getBoard).mockImplementation(async () => {
       const p = comTotais(FUNIL('open'));

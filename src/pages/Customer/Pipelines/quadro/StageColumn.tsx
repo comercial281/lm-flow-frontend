@@ -44,7 +44,7 @@ export interface StageColumnProps {
   carregandoMais: boolean;
   erroAoCarregarMais: boolean;
   /** Coluna perto do fim (ou sem rolagem e com mais no servidor): pede o próximo lote. */
-  onCarregarMais: (stage: PipelineStage) => void;
+  onCarregarMais: (stage: PipelineStage, opcoes?: { manual?: boolean }) => void;
 }
 
 export default function StageColumn({
@@ -54,7 +54,7 @@ export default function StageColumn({
   carregandoMais, erroAoCarregarMais, onCarregarMais,
 }: StageColumnProps) {
   const { t } = useLanguage('pipelines');
-  const total = calculateStageTotal(stage.items);
+  const total = stage.value_total ?? calculateStageTotal(stage.items);
   const carregados = stage.items?.length ?? 0;
   // Total do servidor (quadro em lotes), não só os cards carregados.
   const naColuna = stage.items_total ?? carregados;
@@ -163,7 +163,7 @@ export default function StageColumn({
 
           {carregandoMais && <Carregando variante="lista" linhas={2} rotulo="Carregando mais leads…" />}
           {erroAoCarregarMais && (
-            <Aviso tom="erro" compacto acao={<Button variant="outline" size="sm" onClick={() => onCarregarMais(stage)}>Tentar de novo</Button>}>
+            <Aviso tom="erro" compacto acao={<Button variant="outline" size="sm" onClick={() => onCarregarMais(stage, { manual: true })}>Tentar de novo</Button>}>
               Não deu pra carregar mais leads.
             </Aviso>
           )}

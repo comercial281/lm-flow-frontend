@@ -65,4 +65,16 @@ describe('useMaisCardsDaColuna', () => {
     await waitFor(() => expect(result.current.stages[0].items).toHaveLength(31));
     expect(result.current.erro.s1).toBe(false);
   });
+
+  it('página sem card novo esgota a coluna: nada automático repete, só o clique da pessoa', async () => {
+    vi.mocked(pipelinesService.getBoardItems).mockResolvedValue({ items: [], total: 90, has_more: true });
+    const { result } = usar([coluna(30, 90)]);
+    act(() => result.current.carregarMais(result.current.stages[0]));
+    await waitFor(() => expect(result.current.carregando.s1).toBe(false));
+    act(() => result.current.carregarMais(result.current.stages[0]));
+    act(() => result.current.carregarMais(result.current.stages[0]));
+    expect(pipelinesService.getBoardItems).toHaveBeenCalledTimes(1);
+    act(() => result.current.carregarMais(result.current.stages[0], { manual: true }));
+    expect(pipelinesService.getBoardItems).toHaveBeenCalledTimes(2);
+  });
 });
