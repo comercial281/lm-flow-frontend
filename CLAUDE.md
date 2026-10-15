@@ -8916,3 +8916,21 @@ Armadilhas:
 3. Arrastar pro fim de uma coluna que ainda tem cards no servidor põe o card logo abaixo do último card visível (acima dos não carregados): `abaixoDoUltimo` em `useBoardDrag.ts`.
 4. A regra de cada filtro mora só no servidor (`PipelineItems::BoardQuery`); `filtrosDoFunil.ts` ficou com as contas da tela (colunas visíveis, contagem de filtros, opções do painel).
 5. O backend vem PRIMEIRO. Contra o servidor antigo a tela recebe o funil inteiro, sem lotes e sem filtro.
+
+## Dashboard: tema claro "neutro grafite" (15/10/2026)
+
+Pedido do dono: no tema claro a Dashboard tinha um degradê rosado em todo cartão (véu roxo do "vidro" sobre fundo lavanda) e tudo era roxo (ícones, funil, gráficos, origem). Ele escolheu, entre duas propostas lado a lado, a **Neutro grafite** (a outra era "cor com significado", uma cor por número).
+
+- **Cartão branco chapado** sobre fundo cinza neutro (`#f6f6f7`), borda cinza, sombra leve, sem véu nem brilho no topo. Texto e bordas em cinza neutro (eram arroxeados).
+- **Dado em grafite** (`--lmf-data`): barras do funil, faixas da forma Funil (clareiam de faixa em faixa, de 100% a 72%), dia da semana, horário, origem, mapa de calor.
+- **Roxo só pra ação e pra um destaque:** botões, links, foco, contador de filtros, segmento ligado; o mês atual no gráfico de 6 meses e o número de Ganhos no período.
+- **Tema escuro não mudou:** no `.dark .lmf` os tokens de dado voltam ao roxo (`--lmf-data`, `--lmf-data-muted`, `--lmf-data-fade` = `#7c3aed`).
+
+Armadilhas:
+
+1. **Gráfico novo na Dashboard usa `--lmf-data`** (série) e `--lmf-accent` só no destaque. Nunca `--lmf-accent` como cor de série: volta o "tudo roxo".
+2. `--lmf-accent-soft` no claro virou cinza (`#f1f1f3`): é fundo de hover, segmento e aviso, não cor de dado.
+3. O texto branco da forma Funil depende do piso de 72% (`FORCA_FINAL` em `Funil.tsx`): abaixo disso perde contraste.
+4. Trava em `base/lmf.source.spec.ts`.
+
+Não reabrir sem o dono pedir.

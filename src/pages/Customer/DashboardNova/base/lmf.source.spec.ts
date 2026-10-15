@@ -20,3 +20,25 @@ describe('lmf.css e o Seletor', () => {
     expect(css).toMatch(/\.lmf-campo-controle\[data-slot='select-trigger'\]\s*\{\s*box-shadow:\s*none/);
   });
 });
+
+// Tema claro "neutro grafite" (pedido do dono, 15/10/2026): sem o véu roxo nos
+// cartões e com o dado em grafite. O escuro continua roxo.
+describe('lmf.css e o tema claro neutro', () => {
+  const claro = css.slice(css.indexOf('.lmf {'), css.indexOf('.dark .lmf {'));
+  const escuro = css.slice(css.indexOf('.dark .lmf {'), css.indexOf('.lmf-glass {'));
+
+  it('no claro o cartão é branco chapado, sem véu roxo', () => {
+    expect(claro).toMatch(/--lmf-glass-from:\s*#ffffff/);
+    expect(claro).not.toMatch(/124,\s*58,\s*237/);
+  });
+
+  it('no claro o dado é grafite e o roxo fica pra ação', () => {
+    expect(claro).toMatch(/--lmf-data:\s*#3f3f46/);
+    expect(claro).toMatch(/--lmf-accent:\s*#7c3aed/);
+  });
+
+  it('no escuro o dado continua roxo', () => {
+    expect(escuro).toMatch(/--lmf-data:\s*#7c3aed/);
+    expect(escuro).toMatch(/--lmf-data-fade:\s*#7c3aed/);
+  });
+});
