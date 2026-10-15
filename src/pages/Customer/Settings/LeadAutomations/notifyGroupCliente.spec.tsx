@@ -42,6 +42,24 @@ describe('Avisar no grupo, na tela do cliente', () => {
     expect(screen.getByText(/definido pela Leal Mídia\. Pra trocar/)).toBeInTheDocument();
   });
 
+  it('pelo número próprio, grupo salvo fora da lista não trava nem fala da Leal', async () => {
+    svc.getGroupsResult.mockResolvedValue({ groups: [{ id: '9@g.us', name: 'Outro grupo' }], reason: null, instance: null });
+    render(<ActionEditor action={acao({ instance: '', group_jid: '7@g.us' })} onChange={() => {}} resources={resources} />);
+
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Grupo já escolhido (não apareceu na lista)' })).toBeInTheDocument());
+    expect(screen.queryByRole('option', { name: 'Grupo definido pela Leal Mídia' })).toBeNull();
+    expect(screen.queryByText(/definido pela Leal Mídia\. Pra trocar/)).toBeNull();
+    screen.getAllByRole('combobox').forEach(c => expect(c).not.toBeDisabled());
+  });
+
+  it('número próprio escolhido pela equipe aparece como WhatsApp deste CRM', async () => {
+    svc.getGroupsResult.mockResolvedValue({ groups: [], reason: null, instance: 'lmf_apto_01' });
+    render(<ActionEditor action={acao({ instance: 'lmf_apto_01', group_jid: '7@g.us' })} onChange={() => {}} resources={resources} />);
+
+    expect((screen.getAllByRole('combobox')[0] as HTMLSelectElement).value).toBe('proprio');
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Grupo já escolhido (não apareceu na lista)' })).toBeInTheDocument());
+  });
+
   it('central sem grupo liberado mostra o motivo do servidor', async () => {
     svc.getGroupsResult.mockResolvedValue({ groups: [], reason: 'Nenhum grupo liberado pra este CRM. Fale com a Leal Mídia.', instance: 'Operacional (LM01)' });
     render(<ActionEditor action={acao({ instance: 'Operacional (LM01)' })} onChange={() => {}} resources={resources} />);

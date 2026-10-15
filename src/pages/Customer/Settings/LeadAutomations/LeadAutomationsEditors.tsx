@@ -39,7 +39,7 @@ import {
 import { Seletor } from '@/components/base/Seletor';
 import Aviso from '@/components/base/Aviso';
 import {
-  AVISO_TRAVADO, ROTULO_TRAVADO, destinoTravado, instanciaDoModo, modoDoNumero, type ModoDoNumero,
+  AVISO_TRAVADO, ROTULO_FORA_DA_LISTA, ROTULO_TRAVADO, destinoTravado, instanciaDoModo, modoDoNumero, type ModoDoNumero,
 } from '@/features/whatsappGroups/destinoDoGrupo';
 import EmptyState from '@/components/base/EmptyState';
 import Carregando from '@/components/base/Carregando';
@@ -1095,9 +1095,11 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     // Backend: HTTParty.post envia { number: group_jid, text: message } pro Evolution.
     case 'notify_group': {
       const destino = String(params.group_jid ?? '');
-      // Destino que o cliente não enxerga (ex.: grupo interno escolhido pela Leal) fica travado.
+      const modo = modoDoNumero(params.instance);
+      // Destino pela central que o cliente não enxerga (ex.: grupo interno
+      // escolhido pela Leal) fica travado. Pelo número próprio, nunca.
       const travado = destinoTravado({
-        destino, grupos: groups, ehEquipe: isSuperAdmin, carregando: loadingGroups || !gruposCarregados,
+        destino, modo, grupos: groups, ehEquipe: isSuperAdmin, carregando: loadingGroups || !gruposCarregados,
         numerosDeUsuarios: usersWithWhatsapp.map(u => String(u.whatsapp_number)),
       });
       return (
@@ -1142,7 +1144,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               />
             )) : (
               <Seletor
-                value={modoDoNumero(params.instance)}
+                value={modo}
                 onChange={e => onChange({
                   ...action,
                   // troca de número zera o destino na mesma gravação (senão o grupo antigo trava)
@@ -1181,7 +1183,9 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               {params.group_jid
                 && !groups.some(g => g.id === params.group_jid)
                 && !usersWithWhatsapp.some(u => String(u.whatsapp_number) === params.group_jid) && (
-                <option value={String(params.group_jid)}>{isSuperAdmin ? String(params.group_jid) : ROTULO_TRAVADO}</option>
+                <option value={String(params.group_jid)}>
+                  {isSuperAdmin ? String(params.group_jid) : (modo === 'central' ? ROTULO_TRAVADO : ROTULO_FORA_DA_LISTA)}
+                </option>
               )}
             </Seletor>
             {travado && <Aviso tom="neutro" compacto className="mt-1">{AVISO_TRAVADO}</Aviso>}
@@ -1189,7 +1193,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
                 escrito diferente do painel, ou a instância desconectada. */}
             {!loadingGroups && groups.length === 0 && groupsReason && (
               <Aviso tom="atencao" compacto className="mt-1">
-                {modoDoNumero(params.instance) === 'central' ? groupsReason : `Nenhum grupo apareceu: ${groupsReason}`}
+                {modo === 'central' ? groupsReason : `Nenhum grupo apareceu: ${groupsReason}`}
               </Aviso>
             )}
           </Field>
