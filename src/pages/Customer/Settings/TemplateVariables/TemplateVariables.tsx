@@ -476,7 +476,7 @@ export default function TemplateVariables() {
 
       {/* Delete confirm */}
       <Dialog open={!!toDelete} onOpenChange={v => !v && setToDelete(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent compacta>
           <DialogHeader>
             <DialogTitle>Remover variável?</DialogTitle>
             <DialogDescription>

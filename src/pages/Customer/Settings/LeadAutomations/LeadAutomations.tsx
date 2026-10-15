@@ -865,7 +865,7 @@ export default function LeadAutomations() {
 
       {/* Delete confirmation */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent compacta>
           <DialogHeader>
             <DialogTitle>Remover automação</DialogTitle>
             <DialogDescription>

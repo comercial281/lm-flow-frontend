@@ -108,7 +108,7 @@ export default function ChavesMcp() {
       </Dialog>
 
       <Dialog open={revogar !== null} onOpenChange={(aberto) => { if (!aberto) setRevogar(null); }}>
-        <DialogContent>
+        <DialogContent compacta>
           <DialogHeader><DialogTitle>Revogar {revogar?.name}?</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">A chave para na hora. Quem estiver usando perde o acesso.</p>
           <DialogFooter><Button variant="destructive" onClick={() => void confirmarRevogar()}>Revogar</Button></DialogFooter>

@@ -333,7 +333,7 @@ export default function WelcomeAutomations() {
 
       {/* Delete dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent compacta>
           <DialogHeader>
             <DialogTitle>Excluir automação</DialogTitle>
             <DialogDescription>

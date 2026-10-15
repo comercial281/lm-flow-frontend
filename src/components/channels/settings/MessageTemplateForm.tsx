@@ -950,7 +950,7 @@ const MessageTemplateForm: React.FC<MessageTemplateFormProps> = ({
 
       {/* Delete Confirmation Modal */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent>
+        <DialogContent compacta>
           <DialogHeader>
             <DialogTitle>{t('settings.messageTemplates.deleteDialog.title')}</DialogTitle>
           </DialogHeader>

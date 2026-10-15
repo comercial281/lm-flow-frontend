@@ -627,7 +627,7 @@ export default function Properties() {
 
       {/* Delete dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent compacta>
           <DialogHeader>
             <DialogTitle>Excluir imóvel</DialogTitle>
             <DialogDescription>
