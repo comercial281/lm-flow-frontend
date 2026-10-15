@@ -8921,7 +8921,7 @@ Armadilhas:
 
 Pedido do dono: no tema claro a Dashboard tinha um degradê rosado em todo cartão (véu roxo do "vidro" sobre fundo lavanda) e tudo era roxo forte (ícones, funil, gráficos, origem). Ele escolheu o "neutro grafite" entre duas propostas e, vendo na prévia, pediu o roxo de volta "em alguns detalhes".
 
-- **Cartão branco chapado** sobre fundo cinza neutro (`#f6f6f7`), borda cinza, sombra leve, sem véu nem brilho no topo. Texto e bordas em cinza neutro (eram arroxeados).
+- **Cartão branco chapado** sobre fundo cinza neutro (`#f6f6f7`), contorno de 1px em degradê roxo bem leve (`.lmf .lmf-glass`), sombra leve, sem véu nem brilho no topo. Texto e bordas em cinza neutro (eram arroxeados).
 - **Gráficos em roxo claro** (`--lmf-data-muted`, `#c4b5fd`) e **roxo forte** (`--lmf-data`) só no que se destaca: o melhor dia da semana, o mês atual, a maior origem, a linha do horário, as barras do funil, os ícones e o número de Ganhos no período. A forma Funil vai do `#6d28d9` clareando até 78% (`--lmf-funil`).
 - **Botões, links e foco** continuam no roxo da casa (`--lmf-accent`). Hover, segmento e aviso usam fundo cinza (`--lmf-accent-soft` no claro = `#f1f1f3`).
 - **Tema escuro não mudou:** no `.dark .lmf` os tokens de dado são todos o roxo de sempre.
@@ -8932,6 +8932,7 @@ Armadilhas:
 2. `--lmf-accent-soft` no claro é cinza: fundo de hover, segmento e aviso, não cor de dado.
 3. O texto branco da forma Funil depende do `--lmf-funil` mais escuro e do piso de 78% (`FORCA_FINAL` em `Funil.tsx`).
 4. Trava em `base/lmf.source.spec.ts`.
-5. Prévia da Vercel: entrar SEM `?tenant=` (cai no `public`, como o app.lmflow.com.br) ou com o slug de um cliente que existe. Slug inexistente faz o login responder 406 e parecer senha errada.
+5. O contorno em degradê é fundo no `border-box` sob o branco do `padding-box`: só funciona com cartão opaco. No escuro (vidro translúcido) o `.dark .lmf .lmf-glass` volta a borda sólida.
+6. Prévia da Vercel: entrar SEM `?tenant=` (cai no `public`, como o app.lmflow.com.br) ou com o slug de um cliente que existe. Slug inexistente faz o login responder 406 e parecer senha errada.
 
 Não reabrir sem o dono pedir.

@@ -114,6 +114,23 @@
   overflow: hidden;
 }
 
+/* Contorno do cartão no claro (pedido do dono, 15/10/2026): 1px em degradê roxo
+   bem leve, no lugar da borda cinza. Feito com duas camadas de fundo: o branco
+   recortado no padding-box e o degradê no border-box, aparecendo só na borda
+   transparente. O hover dos números (border-color roxo) pinta por cima. No
+   escuro o vidro é translúcido (o degradê vazaria): volta o de antes. */
+.lmf .lmf-glass {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--lmf-surface), var(--lmf-surface)) padding-box,
+    linear-gradient(135deg, rgba(124, 58, 237, 0.34), rgba(124, 58, 237, 0.07) 45%, rgba(147, 51, 234, 0.24)) border-box;
+}
+
+.dark .lmf .lmf-glass {
+  border-color: var(--lmf-border);
+  background: linear-gradient(180deg, var(--lmf-glass-from), var(--lmf-glass-to));
+}
+
 /* Brilho de 1px no topo — é ele que faz ler como vidro, não o blur. */
 .lmf-glass::before {
   content: '';

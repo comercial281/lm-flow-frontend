@@ -37,6 +37,11 @@ describe('lmf.css e o tema claro neutro', () => {
     expect(claro).toMatch(/--lmf-data:\s*#7c3aed/);
   });
 
+  it('no claro o cartão tem contorno em degradê roxo leve; no escuro, o de antes', () => {
+    expect(css).toMatch(/\.lmf \.lmf-glass \{[^}]*border-color: transparent[^}]*border-box/s);
+    expect(css).toMatch(/\.dark \.lmf \.lmf-glass \{[^}]*border-color: var\(--lmf-border\)/s);
+  });
+
   it('no escuro o dado continua roxo', () => {
     expect(escuro).toMatch(/--lmf-data:\s*#7c3aed/);
     expect(escuro).toMatch(/--lmf-data-fade:\s*#7c3aed/);
