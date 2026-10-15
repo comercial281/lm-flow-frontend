@@ -3,6 +3,8 @@ import { LifeBuoy } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/ds';
 import { cn } from '@/lib/utils';
 import MenuItem from './MenuItem';
+import { ThemeToggle } from '../../ThemeToggle';
+import { DemoModeToggle } from '../../DemoModeToggle';
 import MenuRecolhido from './MenuRecolhido';
 import MenuSecoes from './MenuSecoes';
 import { useGuardaDeSaida } from '@/hooks/useAlteracoesNaoSalvas';
@@ -97,7 +99,7 @@ export default function Sidebar({ isCollapsed, secoes, rodape }: SidebarProps) {
                 <MenuSecoes secoes={secoes} />
               )}
 
-            {/* Rodapé: Guia do LM Flow e suporte, depois de um divisor. */}
+            {/* Rodapé: Guia do LM Flow, suporte, tema e modo demo, depois de um divisor. */}
             <div className="mt-3 pt-3 space-y-1 border-t border-sidebar-border">
               {rodape.map(item => (
                 <MenuItem key={item.href} item={item} isCollapsed={recolhido} isActive={itemAtivo(item, pathname)} />
@@ -115,6 +117,12 @@ export default function Sidebar({ isCollapsed, secoes, rodape }: SidebarProps) {
                 <LifeBuoy className="flex-shrink-0" style={{ width: '1.125rem', height: '1.125rem' }} aria-hidden="true" />
                 {recolhido ? <span className="sr-only">Falar com o suporte</span> : <span className="font-medium text-sm min-w-0 truncate">Falar com o suporte</span>}
               </a>
+              {/* Tema e modo demo (olhinho): saíram do topo em 15/10/2026. Aberto,
+                  lado a lado; recolhido, um embaixo do outro no centro. */}
+              <div className={cn('flex gap-1 pt-1', recolhido ? 'flex-col items-center' : 'items-center px-2')}>
+                <ThemeToggle />
+                <DemoModeToggle />
+              </div>
             </div>
             </div>
           </nav>
