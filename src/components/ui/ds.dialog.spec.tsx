@@ -195,3 +195,33 @@ describe('Janela da casa no celular: sobe de baixo', () => {
     expect(screen.getByText('T').closest('[data-slot="dialog-header"]')!.className).toContain('text-left!');
   });
 });
+
+describe('Janela compacta (confirmação curta)', () => {
+  const compacta = () => screen.getByRole('dialog', { name: 'Excluir imóvel' });
+
+  it('não tem topo nem rodapé fixos com linha, e tem a largura pequena', () => {
+    render(
+      <Dialog open>
+        <DialogContent compacta>
+          <DialogHeader><DialogTitle>Excluir imóvel</DialogTitle><DialogDescription>Sem volta.</DialogDescription></DialogHeader>
+          <DialogFooter><button type="button">Cancelar</button><button type="button">Excluir</button></DialogFooter>
+        </DialogContent>
+      </Dialog>,
+    );
+    const topo = compacta().querySelector('[data-slot="dialog-header"]') as HTMLElement;
+    const rodape = compacta().querySelector('[data-slot="dialog-footer"]') as HTMLElement;
+    expect(compacta()).toHaveClass('max-w-md');
+    expect(topo).not.toHaveClass('sticky');
+    expect(topo).not.toHaveClass('border-b');
+    expect(rodape).not.toHaveClass('sticky');
+    expect(rodape).not.toHaveClass('border-t');
+    expect(topo).toHaveClass('text-left!', 'pr-8');
+    expect(screen.getAllByRole('button', { name: 'Fechar' })).toHaveLength(1);
+  });
+
+  it('sem o pedido, a janela comum segue com topo e rodapé fixos', () => {
+    render(<Janela />);
+    expect(topo()).toHaveClass('sticky', 'border-b');
+    expect(rodape()).toHaveClass('sticky', 'border-t');
+  });
+});

@@ -11,10 +11,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Label as UILabel,
   Textarea,
   Input,
 } from '@/components/ui/ds';
+import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import {
   TrendingUp, Building2, User, ChevronRight, Trophy, XCircle,
   Plus, Search,
@@ -373,16 +373,16 @@ export default function PropertyInterests() {
               Informe o motivo pelo qual este interesse foi descartado.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-2">
-            <UILabel>Motivo *</UILabel>
+          <CampoDaJanela rotulo="Motivo" htmlFor="interesse-motivo" obrigatorio>
             <Textarea
+              id="interesse-motivo"
               value={lostReason}
               onChange={e => setLostReason(e.target.value)}
               rows={3}
-              placeholder="Ex: lead desistiu, preço acima do orçamento..."
-              className="mt-1 resize-none"
+              placeholder="Ex.: o lead desistiu, preço acima do orçamento..."
+              className="resize-none"
             />
-          </div>
+          </CampoDaJanela>
           <DialogFooter>
             <Button variant="outline" onClick={() => setLostTarget(null)}>Cancelar</Button>
             <Button variant="destructive" onClick={handleCloseLost} disabled={lostLoading}>
@@ -399,94 +399,98 @@ export default function PropertyInterests() {
             <DialogTitle>Registrar interesse</DialogTitle>
             <DialogDescription>Vincule um contato a um imóvel</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <GrupoDaJanela titulo="Interesse">
             {/* Property search */}
-            <div className="relative">
-              <UILabel>Imóvel *</UILabel>
-              <div className="relative mt-1">
+            <CampoDaJanela
+              rotulo="Imóvel" htmlFor="interesse-imovel" obrigatorio
+              ajuda={selectedProperty && (
+                <span className="flex items-center gap-1">
+                  <Building2 className="h-3 w-3" /> {selectedProperty.code} selecionado
+                </span>
+              )}
+            >
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
+                  id="interesse-imovel"
                   value={propertyQuery}
                   onChange={e => { setPropertyQuery(e.target.value); searchProperties(e.target.value); }}
                   placeholder="Buscar por título ou código..."
                   className="pl-9"
                 />
+                {showPropDrop && propertyResults.length > 0 && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-44 overflow-y-auto">
+                    {propertyResults.map(p => (
+                      <button
+                        key={p.id}
+                        className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0 text-sm"
+                        onClick={() => {
+                          setSelectedProperty(p);
+                          setCreateForm(f => ({ ...f, property_id: p.id }));
+                          setPropertyQuery(p.title);
+                          setShowPropDrop(false);
+                        }}
+                      >
+                        <div className="font-medium truncate">{p.title}</div>
+                        <div className="text-xs text-muted-foreground">{p.code} · {p.address_city}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              {showPropDrop && propertyResults.length > 0 && (
-                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-44 overflow-y-auto">
-                  {propertyResults.map(p => (
-                    <button
-                      key={p.id}
-                      className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0 text-sm"
-                      onClick={() => {
-                        setSelectedProperty(p);
-                        setCreateForm(f => ({ ...f, property_id: p.id }));
-                        setPropertyQuery(p.title);
-                        setShowPropDrop(false);
-                      }}
-                    >
-                      <div className="font-medium truncate">{p.title}</div>
-                      <div className="text-xs text-muted-foreground">{p.code} · {p.address_city}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {selectedProperty && (
-                <div className="mt-1 text-xs text-emerald-600 font-medium flex items-center gap-1">
-                  <Building2 className="h-3 w-3" /> {selectedProperty.code} selecionado
-                </div>
-              )}
-            </div>
+            </CampoDaJanela>
 
             {/* Contact search */}
-            <div className="relative">
-              <UILabel>Contato *</UILabel>
-              <div className="relative mt-1">
+            <CampoDaJanela
+              rotulo="Contato" htmlFor="interesse-contato" obrigatorio
+              ajuda={selectedContact && (
+                <span className="flex items-center gap-1">
+                  <User className="h-3 w-3" /> {selectedContact.name} selecionado
+                </span>
+              )}
+            >
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
+                  id="interesse-contato"
                   value={contactQuery}
                   onChange={e => { setContactQuery(e.target.value); searchContacts(e.target.value); }}
                   placeholder="Buscar por nome ou telefone..."
                   className="pl-9"
                 />
+                {showContactDrop && contactResults.length > 0 && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-44 overflow-y-auto">
+                    {contactResults.map(c => (
+                      <button
+                        key={c.id}
+                        className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0 text-sm"
+                        onClick={() => {
+                          setSelectedContact(c);
+                          setCreateForm(f => ({ ...f, contact_id: String(c.id) }));
+                          setContactQuery(c.name);
+                          setShowContactDrop(false);
+                        }}
+                      >
+                        <div className="font-medium truncate">{c.name}</div>
+                        <div className="text-xs text-muted-foreground">{telefone(c.phone_number)}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              {showContactDrop && contactResults.length > 0 && (
-                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-44 overflow-y-auto">
-                  {contactResults.map(c => (
-                    <button
-                      key={c.id}
-                      className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0 text-sm"
-                      onClick={() => {
-                        setSelectedContact(c);
-                        setCreateForm(f => ({ ...f, contact_id: String(c.id) }));
-                        setContactQuery(c.name);
-                        setShowContactDrop(false);
-                      }}
-                    >
-                      <div className="font-medium truncate">{c.name}</div>
-                      <div className="text-xs text-muted-foreground">{telefone(c.phone_number)}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {selectedContact && (
-                <div className="mt-1 text-xs text-emerald-600 font-medium flex items-center gap-1">
-                  <User className="h-3 w-3" /> {selectedContact.name} selecionado
-                </div>
-              )}
-            </div>
+            </CampoDaJanela>
 
-            <div className="flex flex-col gap-1.5">
-              <UILabel>Observações (opcional)</UILabel>
+            <CampoDaJanela rotulo="Observações" htmlFor="interesse-observacoes">
               <Textarea
+                id="interesse-observacoes"
                 value={createForm.notes ?? ''}
                 onChange={e => setCreateForm(f => ({ ...f, notes: e.target.value }))}
                 rows={2}
-                placeholder="Preferências, budget, observações..."
+                placeholder="Preferências, orçamento, observações..."
                 className="resize-none"
               />
-            </div>
-          </div>
+            </CampoDaJanela>
+          </GrupoDaJanela>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
             <Button onClick={handleCreate} disabled={createLoading}>

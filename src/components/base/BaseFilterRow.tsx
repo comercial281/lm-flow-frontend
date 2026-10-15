@@ -66,7 +66,7 @@ export default function BaseFilterRow<T extends BaseFilter>({
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="w-full justify-start text-left font-normal bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent truncate min-w-0"
+                className="w-full justify-start text-left font-normal truncate min-w-0"
               >
                 <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
                 <span className="truncate">
@@ -76,13 +76,12 @@ export default function BaseFilterRow<T extends BaseFilter>({
                 </span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-sidebar border-sidebar-border" align="start">
+            <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
                 selected={filter.values ? new Date(filter.values as string) : undefined}
                 onSelect={handleDateSelect}
                 initialFocus
-                className="bg-sidebar text-sidebar-foreground"
               />
             </PopoverContent>
           </Popover>
@@ -93,10 +92,10 @@ export default function BaseFilterRow<T extends BaseFilter>({
             value={filter.values as string}
             onValueChange={value => onUpdate(index, 'values' as keyof T, value)}
           >
-            <SelectTrigger className="w-full bg-sidebar border-sidebar-border text-sidebar-foreground truncate min-w-0">
+            <SelectTrigger className="w-full truncate min-w-0">
               <SelectValue placeholder={tCommon('base.filter.selectOption')} className="truncate" />
             </SelectTrigger>
-            <SelectContent className="bg-sidebar border-sidebar-border">
+            <SelectContent>
               {currentFilterType.options?.map(option => {
                 // Check if label is a translation key (contains a dot, indicating namespace.key format)
                 const isTranslationKey = typeof option.label === 'string' && option.label.includes('.');
@@ -105,7 +104,7 @@ export default function BaseFilterRow<T extends BaseFilter>({
                   <SelectItem
                     key={option.value}
                     value={option.value.toString()}
-                    className="text-sidebar-foreground focus:bg-sidebar-accent truncate"
+                    className="truncate"
                   >
                     {displayLabel}
                   </SelectItem>
@@ -121,7 +120,7 @@ export default function BaseFilterRow<T extends BaseFilter>({
             value={filter.values as string}
             onChange={e => onUpdate(index, 'values' as keyof T, e.target.value)}
             placeholder={tCommon('base.filter.enterNumber')}
-            className="w-full bg-sidebar border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-foreground/50 truncate min-w-0"
+            className="w-full truncate min-w-0"
           />
         );
       default:
@@ -131,7 +130,7 @@ export default function BaseFilterRow<T extends BaseFilter>({
             value={filter.values as string}
             onChange={e => onUpdate(index, 'values' as keyof T, e.target.value)}
             placeholder={tCommon('base.filter.enterValue')}
-            className="w-full bg-sidebar border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-foreground/50 truncate min-w-0"
+            className="w-full truncate min-w-0"
           />
         );
     }
@@ -139,7 +138,7 @@ export default function BaseFilterRow<T extends BaseFilter>({
 
   return (
     <div
-      className={`flex items-center gap-3 p-4 rounded-lg bg-sidebar-accent/30 border border-sidebar-border min-w-0 overflow-hidden ${className}`}
+      className={`flex items-center gap-3 p-4 rounded-lg border border-border min-w-0 overflow-hidden ${className}`}
     >
       {/* Query Operator */}
       {showQueryOperator && (
@@ -150,14 +149,14 @@ export default function BaseFilterRow<T extends BaseFilter>({
               onUpdate(index, 'queryOperator' as keyof T, value)
             }
           >
-            <SelectTrigger className="w-20 bg-sidebar border-sidebar-border text-sidebar-foreground">
+            <SelectTrigger className="w-20">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-sidebar border-sidebar-border">
-              <SelectItem value="and" className="text-sidebar-foreground focus:bg-sidebar-accent">
+            <SelectContent>
+              <SelectItem value="and">
                 {tCommon('base.filter.and')}
               </SelectItem>
-              <SelectItem value="or" className="text-sidebar-foreground focus:bg-sidebar-accent">
+              <SelectItem value="or">
                 {tCommon('base.filter.or')}
               </SelectItem>
             </SelectContent>
@@ -171,15 +170,14 @@ export default function BaseFilterRow<T extends BaseFilter>({
           value={filter.attributeKey}
           onValueChange={value => onUpdate(index, 'attributeKey' as keyof T, value)}
         >
-          <SelectTrigger className="w-full bg-sidebar border-sidebar-border text-sidebar-foreground">
+          <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="bg-sidebar border-sidebar-border">
+          <SelectContent>
             {filterTypes.map(filterType => (
               <SelectItem
                 key={filterType.attributeKey}
                 value={filterType.attributeKey}
-                className="text-sidebar-foreground focus:bg-sidebar-accent"
               >
                 {t(filterType.attributeI18nKey)}
               </SelectItem>
@@ -194,15 +192,14 @@ export default function BaseFilterRow<T extends BaseFilter>({
           value={filter.filterOperator}
           onValueChange={value => onUpdate(index, 'filterOperator' as keyof T, value)}
         >
-          <SelectTrigger className="w-full bg-sidebar border-sidebar-border text-sidebar-foreground">
+          <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="bg-sidebar border-sidebar-border">
+          <SelectContent>
             {currentFilterType?.filterOperators.map(operator => (
               <SelectItem
                 key={operator.key}
                 value={operator.key}
-                className="text-sidebar-foreground focus:bg-sidebar-accent"
               >
                 {t(operator.label)}
               </SelectItem>
@@ -221,7 +218,7 @@ export default function BaseFilterRow<T extends BaseFilter>({
         onClick={() => onRemove(index)}
         aria-label="Remover filtro"
         title="Remover filtro"
-        className="flex-shrink-0 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+        className="flex-shrink-0"
       >
         <X className="h-4 w-4" />
       </Button>

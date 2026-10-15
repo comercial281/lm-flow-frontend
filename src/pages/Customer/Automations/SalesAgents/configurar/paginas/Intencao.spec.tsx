@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
 import { gravarDeTeste } from '@/test/salesAgents/gravarDeTeste';
@@ -114,6 +114,12 @@ describe('Intenção', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Editar o caminho Já mora no Castelo' }));
     await userEvent.click(screen.getByRole('button', { name: 'Remover caminho' }));
     expect(listaGravada(gravar).map((c) => c.nome)).toEqual(['Moradia', 'Investimento', 'Primeiro imóvel', 'Trocar de imóvel']);
+  });
+
+  it('a janela do caminho tem o grupo Caminho (miolo da janela)', async () => {
+    abrir();
+    await userEvent.click(screen.getByRole('button', { name: /Novo caminho/ }));
+    expect(within(screen.getByRole('dialog')).getByRole('group', { name: 'Caminho' })).toBeInTheDocument();
   });
 
   it('"Novo caminho" abre vazio e Salvar entra no fim, desmarcado', async () => {

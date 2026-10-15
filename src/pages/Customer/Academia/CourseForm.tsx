@@ -6,6 +6,7 @@ import { useCreateCourse, useUpdateCourse, TENANT_SLUG, type KnowledgeCourse } f
 import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/ds';
 import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
 import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
+import { GrupoDaJanela } from '@/components/base/janela';
 import CoverPicker from './CoverPicker';
 import AvancadoDoBloqueio from './AvancadoDoBloqueio';
 import type { LockConfig } from './LockConfigFields';
@@ -58,21 +59,24 @@ export default function CourseForm({ editing, onClose }: {
     <Dialog open onOpenChange={(aberto) => { if (!aberto && !busy) onClose(); }}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader><DialogTitle>{editing ? 'Editar curso' : 'Novo curso'}</DialogTitle></DialogHeader>
-        <div className="grid gap-5">
-          <CampoTexto id="curso-nome" rotulo="Nome do curso" valor={titulo} aoMudar={setTitulo} />
-          <CampoTextoLongo id="curso-descricao" rotulo="Descrição (opcional)" valor={descricao} aoMudar={setDescricao} rows={2} />
-          <CoverPicker value={capaUrl} onChange={setCapaUrl} />
+        <div className="grid gap-6">
+          <GrupoDaJanela titulo="Curso">
+            <CampoTexto id="curso-nome" rotulo="Nome do curso" valor={titulo} aoMudar={setTitulo} />
+            <CampoTextoLongo id="curso-descricao" rotulo="Descrição (opcional)" valor={descricao} aoMudar={setDescricao} rows={2} />
+            <CoverPicker value={capaUrl} onChange={setCapaUrl} />
+          </GrupoDaJanela>
           {temCliente && (
-            <div className="grid gap-2">
-              <p className="text-sm font-medium">Em quais clientes aparece</p>
+            <GrupoDaJanela titulo="Quem vê">
               <CartoesDeEscolha rotulo="Em quais clientes aparece" valor={scope} aoEscolher={setScope} opcoes={[
                 { valor: 'global', rotulo: 'Todos os clientes', descricao: 'Aparece em todas as imobiliárias' },
                 { valor: 'tenant', rotulo: 'Só este cliente', descricao: TENANT_SLUG },
               ]} />
-            </div>
+            </GrupoDaJanela>
           )}
-          <AvancadoDoBloqueio lock={lock} onChange={(patch) => setLock((v) => ({ ...v, ...patch }))}
-            alvo={editing ? { tipo: 'course', id: editing.id } : null} />
+          <GrupoDaJanela titulo="Avançado">
+            <AvancadoDoBloqueio lock={lock} onChange={(patch) => setLock((v) => ({ ...v, ...patch }))}
+              alvo={editing ? { tipo: 'course', id: editing.id } : null} />
+          </GrupoDaJanela>
         </div>
         <DialogFooter className="gap-2">
           <Button variant="outline" type="button" onClick={onClose} disabled={busy}>Cancelar</Button>

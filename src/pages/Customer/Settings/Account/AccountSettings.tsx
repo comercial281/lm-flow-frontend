@@ -32,6 +32,7 @@ import { accountService } from '@/services/account/accountService';
 import { useAppDataStore } from '@/store/appDataStore';
 import type { Account, FormDataOptions, UpdateAccount } from '@/types/settings';
 import { Copy, Users2 } from 'lucide-react';
+import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { useNavigate } from 'react-router-dom';
 
 import { SettingsTour } from '@/tours';
@@ -739,10 +740,14 @@ export default function AccountSettings() {
               Fechar conversas paradas há quanto tempo? A mensagem, se tiver, vai pro lead quando a conversa fechar.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="tempoAoLigar">{t('fields.autoResolveTime.label')}</Label>
-              <div className="flex gap-2 items-center">
+          <GrupoDaJanela titulo="Resolução automática" className="py-2">
+            <CampoDaJanela
+              rotulo={t('fields.autoResolveTime.label')}
+              htmlFor="tempoAoLigar"
+              ajuda="Por exemplo, 1440 minutos são 24 horas."
+              erro={tempoAoLigarValido ? undefined : t('validation.minAutoResolveTime')}
+            >
+              <div className="flex items-center gap-2">
                 <Input
                   id="tempoAoLigar"
                   type="number"
@@ -751,12 +756,10 @@ export default function AccountSettings() {
                   onChange={e => setTempoAoLigar(parseInt(e.target.value) || 0)}
                   className="w-32"
                 />
-                <span className="text-sm text-muted-foreground">{t('fields.autoResolveTime.unit')} (1440 = 24 horas)</span>
+                <span className="text-sm text-muted-foreground">{t('fields.autoResolveTime.unit')}</span>
               </div>
-              {!tempoAoLigarValido && <p className="text-sm text-red-500">{t('validation.minAutoResolveTime')}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="mensagemAoLigar">{t('fields.autoResolveMessage.label')}</Label>
+            </CampoDaJanela>
+            <CampoDaJanela rotulo={t('fields.autoResolveMessage.label')} htmlFor="mensagemAoLigar">
               <Textarea
                 id="mensagemAoLigar"
                 value={mensagemAoLigar}
@@ -764,8 +767,8 @@ export default function AccountSettings() {
                 placeholder={t('fields.autoResolveMessage.placeholder')}
                 rows={3}
               />
-            </div>
-          </div>
+            </CampoDaJanela>
+          </GrupoDaJanela>
           <DialogFooter>
             <Button variant="outline" onClick={() => responderPedido(null)}>Cancelar</Button>
             <Button

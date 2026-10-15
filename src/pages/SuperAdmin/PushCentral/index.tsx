@@ -15,7 +15,9 @@ import {
   Label,
   Textarea,
 } from '@/components/ui/ds';
+import Aviso from '@/components/base/Aviso';
 import Chave from '@/components/base/Chave';
+import { CaixaDaJanela, CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -530,25 +532,35 @@ export default function PushCentral() {
             <DialogTitle>{editing ? 'Editar regra' : 'Nova regra'}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div>
-              <Label htmlFor="regra-nome">Nome da regra</Label>
-              <Input
-                id="regra-nome"
-                className="mt-1"
-                autoFocus
-                value={form.name}
-                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Ex.: Lead de tráfego chegou"
-              />
-            </div>
+          <div className="grid gap-6 py-2">
+            <GrupoDaJanela titulo="Identificação">
+              <CampoDaJanela rotulo="Nome da regra" htmlFor="regra-nome">
+                <Input
+                  id="regra-nome"
+                  autoFocus
+                  value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="Ex.: Lead de tráfego chegou"
+                />
+              </CampoDaJanela>
+              {/* Opção de formulário (espera o Salvar): caixinha, nunca chave. */}
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="regra-ligada"
+                  checked={!!form.is_active}
+                  onCheckedChange={v => setForm(f => ({ ...f, is_active: v === true }))}
+                />
+                <Label htmlFor="regra-ligada">Regra ligada</Label>
+              </div>
+            </GrupoDaJanela>
 
-            <div>
-              <Label>Quando disparar</Label>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Marque um ou mais. A regra dispara quando qualquer um acontecer.
-              </p>
-              <div className="mt-1 max-h-44 space-y-2 overflow-auto rounded-md border p-3">
+            <GrupoDaJanela titulo="Quando e onde">
+              <CaixaDaJanela
+                titulo="Quando disparar"
+                contagem={form.triggers.length}
+                fixo={<p className="text-xs text-muted-foreground">Marque um ou mais. A regra dispara quando qualquer um acontecer.</p>}
+                corpoClassName="max-h-44 space-y-2"
+              >
                 {options?.triggers.map(o => {
                   const id = `regra-gatilho-${o.value}`;
                   return (
@@ -569,64 +581,64 @@ export default function PushCentral() {
                     </div>
                   );
                 })}
-              </div>
-            </div>
+              </CaixaDaJanela>
 
-            <div>
-              <Label htmlFor="regra-escopo">De quais clientes</Label>
-              <Seletor
-                id="regra-escopo"
-                className="mt-1 w-full"
-                value={form.tenant_scope}
-                onChange={e => setForm(f => ({ ...f, tenant_scope: e.target.value as PushTenantScope }))}
-              >
-                {options?.tenant_scopes.map(o => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </Seletor>
-            </div>
+              <CampoDaJanela rotulo="De quais clientes" htmlFor="regra-escopo">
+                <Seletor
+                  id="regra-escopo"
+                  className="w-full"
+                  value={form.tenant_scope}
+                  onChange={e => setForm(f => ({ ...f, tenant_scope: e.target.value as PushTenantScope }))}
+                >
+                  {options?.tenant_scopes.map(o => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </Seletor>
+              </CampoDaJanela>
 
-            {form.tenant_scope === 'selected' && (
-              <div className="max-h-40 space-y-2 overflow-auto rounded-md border p-3">
-                {options?.tenants.map(t => {
-                  const id = `regra-cliente-${t.slug}`;
-                  return (
-                    <div key={t.slug} className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        id={id}
-                        checked={form.tenant_slugs.includes(t.slug)}
-                        onCheckedChange={v =>
-                          setForm(f => ({
-                            ...f,
-                            tenant_slugs: v === true ? [...f.tenant_slugs, t.slug] : f.tenant_slugs.filter(s => s !== t.slug),
-                          }))
-                        }
-                      />
-                      <label htmlFor={id} className="cursor-pointer">
-                        {t.name}
-                      </label>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+              {form.tenant_scope === 'selected' && (
+                <CaixaDaJanela titulo="Clientes" contagem={form.tenant_slugs.length} corpoClassName="max-h-40 space-y-2">
+                  {options?.tenants.map(t => {
+                    const id = `regra-cliente-${t.slug}`;
+                    return (
+                      <div key={t.slug} className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                          id={id}
+                          checked={form.tenant_slugs.includes(t.slug)}
+                          onCheckedChange={v =>
+                            setForm(f => ({
+                              ...f,
+                              tenant_slugs: v === true ? [...f.tenant_slugs, t.slug] : f.tenant_slugs.filter(s => s !== t.slug),
+                            }))
+                          }
+                        />
+                        <label htmlFor={id} className="cursor-pointer">
+                          {t.name}
+                        </label>
+                      </div>
+                    );
+                  })}
+                </CaixaDaJanela>
+              )}
+            </GrupoDaJanela>
 
-            <div>
-              <Label htmlFor="regra-publico">Para quem</Label>
-              <Seletor
-                id="regra-publico"
-                className="mt-1 w-full"
-                value={form.audience}
-                onChange={e => setForm(f => ({ ...f, audience: e.target.value as PushAudience }))}
-              >
-                {options?.audiences.map(o => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </Seletor>
+            <GrupoDaJanela titulo="Mensagem">
+              <CampoDaJanela rotulo="Para quem" htmlFor="regra-publico">
+                <Seletor
+                  id="regra-publico"
+                  className="w-full"
+                  value={form.audience}
+                  onChange={e => setForm(f => ({ ...f, audience: e.target.value as PushAudience }))}
+                >
+                  {options?.audiences.map(o => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </Seletor>
+              </CampoDaJanela>
               {/*
                 A opção continua na lista porque as regras antigas ainda a usam e
                 precisam abrir para edição. Mas criar uma nova assim não avisa
@@ -634,45 +646,36 @@ export default function PushCentral() {
                 título e o corpo achando que vai funcionar.
               */}
               {form.audience === 'client' && (
-                <p className="mt-1 text-xs text-muted-foreground">
+                <Aviso tom="atencao">
                   Regra automática para a equipe do cliente não dispara mais: esses avisos vivem em{' '}
-                  <strong>Avisos na tela</strong>. Aqui só continua valendo o push para a Leal Mídia — e o
+                  <strong>Avisos na tela</strong>. Aqui só continua valendo o aviso para a Leal Mídia — e o
                   disparo manual, logo abaixo das regras.
-                </p>
+                </Aviso>
               )}
-            </div>
 
-            <div>
-              <Label htmlFor="regra-titulo">Título do aviso</Label>
-              <Input
-                id="regra-titulo"
-                className="mt-1"
-                value={form.title}
-                onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="regra-mensagem">Mensagem do aviso</Label>
-              <Textarea
-                id="regra-mensagem"
-                className="mt-1"
-                rows={3}
-                value={form.body}
-                onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
-              />
-              <p className="mt-1 text-xs text-muted-foreground">Variáveis: {options?.variables.join(' · ')}</p>
-            </div>
-
-            {/* Opção de formulário (espera o Salvar): caixinha, nunca chave. */}
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="regra-ligada"
-                checked={!!form.is_active}
-                onCheckedChange={v => setForm(f => ({ ...f, is_active: v === true }))}
-              />
-              <Label htmlFor="regra-ligada">Regra ligada</Label>
-            </div>
+              <GradeDaJanela>
+                <CampoDaJanela rotulo="Título do aviso" htmlFor="regra-titulo" colunas={4}>
+                  <Input
+                    id="regra-titulo"
+                    value={form.title}
+                    onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                  />
+                </CampoDaJanela>
+                <CampoDaJanela
+                  rotulo="Mensagem do aviso"
+                  htmlFor="regra-mensagem"
+                  colunas={4}
+                  ajuda={`Trechos trocados pelo sistema: ${options?.variables.join(' · ') ?? ''}`}
+                >
+                  <Textarea
+                    id="regra-mensagem"
+                    rows={3}
+                    value={form.body}
+                    onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
+                  />
+                </CampoDaJanela>
+              </GradeDaJanela>
+            </GrupoDaJanela>
           </div>
 
           <DialogFooter>

@@ -14,6 +14,8 @@ interface CampoProps {
   /** O mesmo `id` vai no controle (children): é ele que liga o rótulo. */
   id: string;
   rotulo: ReactNode;
+  /** Põe a marca de obrigatório no rótulo (igual à CampoDaJanela). */
+  obrigatorio?: boolean;
   ajuda?: ReactNode;
   /** Aviso que não impede salvar (âmbar). */
   aviso?: ReactNode;
@@ -29,10 +31,18 @@ export function descricaoDoCampo(id: string, p: { ajuda?: ReactNode; aviso?: Rea
   return ids.length ? ids.join(' ') : undefined;
 }
 
-export function Campo({ id, rotulo, ajuda, aviso, erro, className, children }: CampoProps) {
+export function Campo({ id, rotulo, obrigatorio, ajuda, aviso, erro, className, children }: CampoProps) {
   return (
     <div className={cn('space-y-2', className)}>
-      <UILabel htmlFor={id} className="text-sm font-medium">{rotulo}</UILabel>
+      <UILabel htmlFor={id} className="text-sm font-medium">
+        {rotulo}
+        {obrigatorio && (
+          <>
+            <span aria-hidden="true" className="ml-0.5 text-destructive">*</span>
+            <span className="sr-only"> (obrigatório)</span>
+          </>
+        )}
+      </UILabel>
       {children}
       {ajuda && <p id={`${id}-ajuda`} className="text-sm text-muted-foreground">{ajuda}</p>}
       {aviso && <p id={`${id}-aviso`} className="text-sm text-amber-700 dark:text-amber-400">{aviso}</p>}
@@ -51,9 +61,9 @@ interface CampoTextoProps extends Omit<CampoProps, 'children'>, PropsDoInput {
 }
 
 /** Campo de uma linha. */
-export function CampoTexto({ id, rotulo, ajuda, aviso, erro, className, classeDoControle, valor, aoMudar, ...input }: CampoTextoProps) {
+export function CampoTexto({ id, rotulo, obrigatorio, ajuda, aviso, erro, className, classeDoControle, valor, aoMudar, ...input }: CampoTextoProps) {
   return (
-    <Campo id={id} rotulo={rotulo} ajuda={ajuda} aviso={aviso} erro={erro} className={className}>
+    <Campo id={id} rotulo={rotulo} obrigatorio={obrigatorio} ajuda={ajuda} aviso={aviso} erro={erro} className={className}>
       <Input
         {...input}
         id={id}
@@ -76,9 +86,9 @@ interface CampoTextoLongoProps extends Omit<CampoProps, 'children'>, PropsDoText
 }
 
 /** Campo de várias linhas. */
-export function CampoTextoLongo({ id, rotulo, ajuda, aviso, erro, className, classeDoControle, valor, aoMudar, ...area }: CampoTextoLongoProps) {
+export function CampoTextoLongo({ id, rotulo, obrigatorio, ajuda, aviso, erro, className, classeDoControle, valor, aoMudar, ...area }: CampoTextoLongoProps) {
   return (
-    <Campo id={id} rotulo={rotulo} ajuda={ajuda} aviso={aviso} erro={erro} className={className}>
+    <Campo id={id} rotulo={rotulo} obrigatorio={obrigatorio} ajuda={ajuda} aviso={aviso} erro={erro} className={className}>
       <Textarea
         {...area}
         id={id}

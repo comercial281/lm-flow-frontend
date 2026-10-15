@@ -25,5 +25,5 @@ export async function concluirEPerguntar(t: TarefaAtividade, confirmar: Confirma
     toast.error(apiErrorMessage(e, T.erro));
     return false;
   }
-  return confirmar({ titulo: T.proxima, descricao: t.title, rotuloDaAcao: T.novaTarefa, rotuloDeCancelar: T.agoraNao });
+  return confirmar({ titulo: T.proxima, descricao: T.foiConcluida(t.title), rotuloDaAcao: T.novaTarefa, rotuloDeCancelar: T.agoraNao });
 }

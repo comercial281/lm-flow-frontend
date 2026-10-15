@@ -15,6 +15,7 @@ import {
   type ArticleFormData, type Site, type SiteArticle,
 } from '@/services/siteBuilder/siteBuilderService';
 import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
+import { CaixaDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 
@@ -272,18 +273,24 @@ export default function TelaBlog({ site }: { site: Site }) {
 
           <div className="grid gap-6 py-2 md:grid-cols-[1fr_260px]">
             {/* Coluna principal — formulário */}
-            <div className="space-y-5 min-w-0">
-              <CampoTexto id="artigo-titulo" rotulo="Título *" valor={articleForm.title}
-                placeholder="Ex: Como financiar um imóvel?"
+            <div className="grid min-w-0 gap-6">
+              <GrupoDaJanela titulo="Artigo">
+              <CampoTexto id="artigo-titulo" rotulo="Título do artigo" obrigatorio valor={articleForm.title}
+                placeholder="Ex.: Como financiar um imóvel?"
                 ajuda="Aparece no topo do artigo e na lista do blog. Também é o que o Google mostra."
                 aoMudar={title => setArticleForm(f => ({ ...f, title }))} />
 
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Capa</p>
-                <p className="text-sm text-muted-foreground">A foto do topo do artigo e da lista do blog.</p>
+              <CampoTextoLongo id="artigo-resumo" rotulo="Resumo" valor={articleForm.excerpt ?? ''}
+                rows={2} placeholder="Breve descrição exibida na listagem..." classeDoControle="resize-none"
+                ajuda="Duas linhas que aparecem embaixo do título, na lista de artigos do blog."
+                aoMudar={excerpt => setArticleForm(f => ({ ...f, excerpt }))} />
+              </GrupoDaJanela>
+
+              <GrupoDaJanela titulo="Capa">
+                <p className="text-xs text-muted-foreground">A foto do topo do artigo e da lista do blog.</p>
                 <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverFile} />
                 {articleForm.cover_image_url ? (
-                  <div className="relative w-full overflow-hidden rounded-lg border border-border">
+                  <div className="relative w-full overflow-hidden rounded-lg">
                     <img src={articleForm.cover_image_url} alt="Capa"
                       className="h-40 w-full object-cover"
                       onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
@@ -306,15 +313,9 @@ export default function TelaBlog({ site }: { site: Site }) {
                       : <><ImageIcon className="h-6 w-6" /> <span className="text-sm">Enviar imagem de capa</span></>}
                   </button>
                 )}
-              </div>
+              </GrupoDaJanela>
 
-              <CampoTextoLongo id="artigo-resumo" rotulo="Resumo" valor={articleForm.excerpt ?? ''}
-                rows={2} placeholder="Breve descrição exibida na listagem..." classeDoControle="resize-none"
-                ajuda="Duas linhas que aparecem embaixo do título, na lista de artigos do blog."
-                aoMudar={excerpt => setArticleForm(f => ({ ...f, excerpt }))} />
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Conteúdo</p>
+              <GrupoDaJanela titulo="Conteúdo">
                 <div className="relative">
                   <RichTextEditor ref={articleEditorRef} showToolbar
                     placeholder="Escreva o conteúdo do artigo... (use a barra para negrito, itálico e listas)" />
@@ -324,25 +325,22 @@ export default function TelaBlog({ site }: { site: Site }) {
                     </div>
                   )}
                 </div>
-              </div>
+              </GrupoDaJanela>
             </div>
 
             {/* Coluna lateral — sugestões de pauta */}
-            <aside className="md:border-l md:border-border md:pl-5">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Lightbulb className="h-4 w-4 text-amber-500" /> Ideias de artigo
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">Clique para usar como título e comece a escrever.</p>
-              <div className="mt-3 space-y-1.5">
-                {ARTICLE_IDEAS.map(idea => (
-                  <button key={idea} type="button"
-                    onClick={() => setArticleForm(f => ({ ...f, title: idea }))}
-                    className="w-full rounded-md border border-border bg-card px-3 py-2 text-left text-xs leading-snug text-muted-foreground transition-colors hover:border-primary hover:text-foreground">
-                    {idea}
-                  </button>
-                ))}
-              </div>
-            </aside>
+            <CaixaDaJanela titulo="Ideias de artigo" contagem={ARTICLE_IDEAS.length}
+              acao={<Lightbulb aria-hidden className="h-4 w-4 text-muted-foreground" />}
+              fixo={<p className="text-xs text-muted-foreground">Clique para usar como título e comece a escrever.</p>}
+              className="self-start md:max-h-[520px]" corpoClassName="grid content-start gap-1.5">
+              {ARTICLE_IDEAS.map(idea => (
+                <Button key={idea} type="button" variant="outline"
+                  onClick={() => setArticleForm(f => ({ ...f, title: idea }))}
+                  className="h-auto justify-start whitespace-normal px-3 py-2 text-left text-xs font-normal leading-snug text-muted-foreground hover:text-foreground">
+                  {idea}
+                </Button>
+              ))}
+            </CaixaDaJanela>
           </div>
 
           <DialogFooter>

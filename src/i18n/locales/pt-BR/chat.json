@@ -748,11 +748,11 @@
     }
   },
   "conversationsFilter": {
-    "title": "Filtrar Conversas",
+    "title": "Filtrar conversas",
     "description": "Configure os filtros para encontrar as conversas que você procura",
-    "applyFilters": "Aplicar Filtros",
-    "clearFilters": "Limpar Filtros",
-    "addFilter": "Adicionar Filtro",
+    "applyFilters": "Aplicar filtros",
+    "clearFilters": "Limpar filtros",
+    "addFilter": "Adicionar filtro",
     "operators": {
       "equal_to": "É igual a",
       "not_equal_to": "É diferente de",
@@ -767,11 +767,11 @@
       "status": "Status",
       "assignee_type": "Responsável",
       "inbox_id": "Canal",
-      "channel_type": "Tipo de Canal",
+      "channel_type": "Tipo de canal",
       "team_id": "Equipe",
       "labels": "Etiquetas",
-      "created_at": "Data de Criação",
-      "last_activity_at": "Última Atividade",
+      "created_at": "Data de criação",
+      "last_activity_at": "Última atividade",
       "priority": "Prioridade",
       "pipeline_id": "Funil",
       "pipeline_stage_id": "Etapa (Coluna)"

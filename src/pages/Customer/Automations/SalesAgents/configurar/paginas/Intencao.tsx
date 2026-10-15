@@ -13,8 +13,8 @@
 // igual ao catálogo NA ORDEM do catálogo (mapeia no lugar, próprio novo vai ao fim).
 import { useState } from 'react';
 import { Check, Pencil, Plus } from 'lucide-react';
-import { Button, Checkbox, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/ds';
-import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
+import { Button, Checkbox, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Textarea } from '@/components/ui/ds';
+import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { Secao, Secoes } from '@/components/base/Secao';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import type { CaminhoDaIntencao, ForaDosCaminhos, IntentQuestionMode, PlaybookVars } from '@/services/salesAgents/salesAgentsService';
@@ -81,21 +81,26 @@ function JanelaDoCaminho({ inicial, outrosNomes, nomesDoCatalogo, podeMarcar, ao
   };
   return (
     <Dialog open onOpenChange={(aberto) => { if (!aberto) aoFechar(); }}>
-      <DialogContent size="wide">
+      <DialogContent>
         <DialogHeader><DialogTitle>{inicial ? 'Editar caminho' : 'Novo caminho'}</DialogTitle></DialogHeader>
-        <div className="flex flex-col gap-4">
-          <CampoTexto id="caminho-nome" rotulo="Nome do caminho" valor={nome} aoMudar={setNome} maxLength={40}
-            erro={erroDoNome} />
-          <CampoTextoLongo id="caminho-sinais" rotulo="Como reconhecer" valor={sinais} aoMudar={setSinais} rows={3} maxLength={300}
-            ajuda="Pistas na fala do lead que mostram este caminho." />
-          <CampoTextoLongo id="caminho-como" rotulo="Como ela conduz" valor={como} aoMudar={setComo} rows={6} maxLength={700}
-            ajuda={!como.trim() ? 'Escreva como ela conduz quem segue este caminho. Escreva corrido, num parágrafo só.' : 'Escreva corrido, num parágrafo só.'} />
+        <GrupoDaJanela titulo="Caminho">
+          <CampoDaJanela rotulo="Nome do caminho" htmlFor="caminho-nome" erro={erroDoNome}>
+            <Input id="caminho-nome" className="w-full" value={nome} onChange={(e) => setNome(e.target.value)} maxLength={40}
+              aria-invalid={erroDoNome ? true : undefined} />
+          </CampoDaJanela>
+          <CampoDaJanela rotulo="Como reconhecer" htmlFor="caminho-sinais" ajuda="Pistas na fala do lead que mostram este caminho.">
+            <Textarea id="caminho-sinais" className="w-full" value={sinais} onChange={(e) => setSinais(e.target.value)} rows={3} maxLength={300} />
+          </CampoDaJanela>
+          <CampoDaJanela rotulo="Como ela conduz" htmlFor="caminho-como"
+            ajuda={!como.trim() ? 'Escreva como ela conduz quem segue este caminho. Escreva corrido, num parágrafo só.' : 'Escreva corrido, num parágrafo só.'}>
+            <Textarea id="caminho-como" className="w-full" value={como} onChange={(e) => setComo(e.target.value)} rows={6} maxLength={700} />
+          </CampoDaJanela>
           <div className="flex items-center gap-2">
             <Checkbox id="caminho-marcado" checked={ativo} disabled={!ativo && !podeMarcar} onCheckedChange={(v) => setAtivo(v === true)} />
             <label htmlFor="caminho-marcado" className="text-sm">Marcado</label>
             {!ativo && !podeMarcar && <span className="text-xs text-muted-foreground">Já são {MAXIMO_MARCADOS} marcados</span>}
           </div>
-        </div>
+        </GrupoDaJanela>
         <DialogFooter className="gap-2 sm:justify-between">
           <div>
             {aoRemover && <Button type="button" variant="outline" className="text-destructive" onClick={() => void terminar(aoRemover)} disabled={gravando}>Remover caminho</Button>}

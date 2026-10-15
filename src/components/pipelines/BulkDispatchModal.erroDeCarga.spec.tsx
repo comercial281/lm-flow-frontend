@@ -72,12 +72,32 @@ describe('BulkDispatchModal · erro de carga', () => {
     s.canais.mockRejectedValueOnce(new Error('rede'));
     abrir();
     await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
-    await userEvent.click(await screen.findByRole('button', { name: /WhatsApp Oficial/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /WhatsApp oficial/ }));
     expect(await screen.findByText('Não deu pra carregar')).toBeInTheDocument();
-    expect(screen.queryByText(/Nenhum canal WhatsApp Oficial/)).toBeNull();
+    expect(screen.queryByText(/Nenhum canal WhatsApp oficial/)).toBeNull();
     s.canais.mockResolvedValueOnce([canal]);
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
     await waitFor(() => expect(screen.queryByText('Não deu pra carregar')).toBeNull());
-    expect(screen.queryByText(/Nenhum canal WhatsApp Oficial/)).toBeNull();
+    expect(screen.queryByText(/Nenhum canal WhatsApp oficial/)).toBeNull();
+  });
+});
+
+describe('BulkDispatchModal · miolo em grupos', () => {
+  it('a primeira etapa tem o grupo "Quem recebe" e as abas Novo e Disparos usam aria-pressed', async () => {
+    s.etiquetas.mockResolvedValue({ data: [] });
+    abrir();
+    expect(await screen.findByRole('group', { name: 'Quem recebe' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Novo' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /^Disparos/ })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('o passo da mensagem tem os grupos Canal de envio e Sequência de mensagens', async () => {
+    s.etiquetas.mockResolvedValue({ data: [] });
+    abrir();
+    await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
+    for (const nome of ['Canal de envio', 'Sequência de mensagens']) {
+      expect(await screen.findByRole('group', { name: nome })).toBeInTheDocument();
+    }
+    expect(screen.getByRole('button', { name: /WhatsApp por código QR/ })).toHaveAttribute('aria-pressed', 'true');
   });
 });

@@ -10,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-  Label as UILabel,
 } from '@/components/ui/ds';
 import { Building2, Copy, ExternalLink, GitBranch, LayoutTemplate, Loader2, Megaphone, Plus, Rocket, Sparkles, Trash2 } from 'lucide-react';
 import {
@@ -23,6 +22,9 @@ import { getTenantSlug } from '@/services/core/tenant';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import LeadRoutingModal from './LeadRoutingModal';
+import JanelaPublicarLanding from './JanelaPublicarLanding';
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import CreateLandingWizard from '@/features/landing/wizard/CreateLandingWizard';
 import { landingPublicUrl, slugifyLandingName } from './landingUrl';
 
@@ -70,7 +72,7 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
         const list = await landingPageService.listLandings(siteId);
         if (active) setLandings(list);
       } catch {
-        if (active) toast.error('Erro ao carregar as landings');
+        if (active) toast.error('Não consegui carregar as páginas de anúncio');
       } finally {
         if (active) setLoading(false);
       }
@@ -87,7 +89,7 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
       const lp = await landingPageService.createBlank(siteId, newName.trim());
       navigate(`/landings/${lp.dto.id}`);
     } catch {
-      toast.error('Erro ao criar a landing page');
+      toast.error('Não consegui criar a página de anúncio');
       setCreating(false);
     }
   };
@@ -141,11 +143,11 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
       await landingTemplatesService.createFromPage(page.id, templateName.trim(), scope);
       toast.success(
         scope === 'global'
-          ? 'Template GLOBAL salvo (todos os clientes)'
-          : 'Template salvo — já aparece no assistente',
+          ? 'Modelo salvo pra todos os clientes'
+          : 'Modelo salvo. Já aparece no assistente.',
       );
     } catch {
-      toast.error('Erro ao salvar o template');
+      toast.error('Não consegui salvar o modelo');
     }
   };
 
@@ -153,8 +155,8 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
     const ok = await confirmar({
       titulo: `Excluir “${page.title}”?`,
       descricao: page.active
-        ? 'Esta landing está PUBLICADA. Excluir derruba o link que já está no ar — quem clicar no anúncio cai numa página que não existe mais. Os leads já capturados continuam no CRM.'
-        : 'A landing e as seções montadas nela são apagadas. Os leads já capturados continuam no CRM.',
+        ? 'Esta página de anúncio está PUBLICADA. Excluir derruba o link que já está no ar — quem clicar no anúncio cai numa página que não existe mais. Os leads já capturados continuam no CRM.'
+        : 'A página de anúncio e as seções montadas nela são apagadas. Os leads já capturados continuam no CRM.',
       rotuloDaAcao: 'Excluir',
       destrutivo: true,
     });
@@ -162,7 +164,7 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
     try {
       await siteBuilderService.deletePage(siteId, page.id);
       setLandings((prev) => prev.filter((l) => l.id !== page.id));
-      toast.success('Landing excluída');
+      toast.success('Página de anúncio excluída.');
     } catch {
       toast.error('Erro ao excluir');
     }
@@ -180,7 +182,7 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-          placeholder="Nome da nova landing (ex: Campanha Lançamento Setembro)"
+          placeholder="Nome da nova página de anúncio (ex.: Campanha Lançamento Setembro)"
           className="min-w-[260px] flex-1"
         />
         <Button variant="outline" onClick={handleCreate} disabled={creating || !newName.trim()}>
@@ -200,7 +202,7 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
       ) : landings.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
           <Megaphone className="h-10 w-10 mb-2 opacity-30" />
-          <p className="text-sm">Nenhuma landing de anúncio ainda</p>
+          <p className="text-sm">Nenhuma página de anúncio ainda</p>
           <Button size="sm" className="mt-3" onClick={() => setShowWizard(true)}>
             <Sparkles className="h-4 w-4 mr-1" />
             Criar a primeira
@@ -239,7 +241,7 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
                   {isSuper && (
                     <button type="button" onClick={() => openTemplate(l)}
                       className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary">
-                      <LayoutTemplate className="h-3.5 w-3.5" /> Salvar como template
+                      <LayoutTemplate className="h-3.5 w-3.5" /> Salvar como modelo
                     </button>
                   )}
                   <button type="button" onClick={() => confirmDelete(l)}
@@ -282,74 +284,46 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
 
       {/* Publicar — mostra o endereço final enquanto digita, porque o nome é
           convertido (acento, espaço, corte em 60) e o resultado surpreende. */}
-      <Dialog open={!!publishing} onOpenChange={(v) => (v ? null : setPublishing(null))}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Publicar landing</DialogTitle>
-            <DialogDescription>
-              O nome vira o endereço da página. É esse link que você cola no anúncio.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <UILabel htmlFor="lp-publish-name">Nome da página</UILabel>
-            <Input
-              id="lp-publish-name"
-              value={publishName}
-              onChange={(e) => setPublishName(e.target.value)}
-              placeholder="Ex: Lançamento Jardim Europa"
-              autoFocus
-            />
-            <p className="break-all font-mono text-xs text-muted-foreground">
-              {slugifyLandingName(publishName)
-                ? publicUrl(slugifyLandingName(publishName))
-                : 'Digite um nome para ver o endereço'}
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPublishing(null)}>Cancelar</Button>
-            <Button onClick={confirmPublish} disabled={!slugifyLandingName(publishName)}>
-              Publicar e copiar link
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <JanelaPublicarLanding
+        aberta={!!publishing}
+        aoFechar={() => setPublishing(null)}
+        nome={publishName}
+        aoMudarNome={setPublishName}
+        endereco={slugifyLandingName(publishName) ? publicUrl(slugifyLandingName(publishName)) : ''}
+        aoPublicar={confirmPublish}
+        idDoCampo="lp-publish-name"
+      />
 
-      {/* Salvar como template */}
+      {/* Salvar como modelo */}
       <Dialog open={!!templating} onOpenChange={(v) => (v ? null : setTemplating(null))}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Salvar como template</DialogTitle>
+            <DialogTitle>Salvar como modelo</DialogTitle>
             <DialogDescription>
-              O template guarda as seções e as cores desta landing, para começar outras a partir dela.
+              O modelo guarda as seções e as cores desta página, para começar outras a partir dela.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <UILabel htmlFor="lp-template-name">Nome do template</UILabel>
+          <GrupoDaJanela titulo="Modelo">
+            <CampoDaJanela rotulo="Nome do modelo" htmlFor="lp-template-name" obrigatorio>
               <Input
                 id="lp-template-name"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
                 autoFocus
               />
-            </div>
-            <div className="space-y-2">
-              <UILabel>Quem pode usar</UILabel>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="radio" name="lp-template-scope" checked={templateScope === 'tenant'}
-                  onChange={() => setTemplateScope('tenant')} />
-                Só esta conta
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="radio" name="lp-template-scope" checked={templateScope === 'global'}
-                  onChange={() => setTemplateScope('global')} />
-                Todos os clientes
-              </label>
-            </div>
-          </div>
+            </CampoDaJanela>
+            <CampoDaJanela rotulo="Quem pode usar">
+              <BotoesDeEscolha rotulo="Quem pode usar" semNome valor={templateScope}
+                opcoes={[
+                  { valor: 'tenant', rotulo: 'Só esta conta' },
+                  { valor: 'global', rotulo: 'Todos os clientes' },
+                ]}
+                aoEscolher={setTemplateScope} />
+            </CampoDaJanela>
+          </GrupoDaJanela>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTemplating(null)}>Cancelar</Button>
-            <Button onClick={confirmTemplate} disabled={!templateName.trim()}>Salvar template</Button>
+            <Button onClick={confirmTemplate} disabled={!templateName.trim()}>Salvar modelo</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
