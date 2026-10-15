@@ -14,6 +14,7 @@ import {
   Input,
   Label as UILabel,
   Textarea,
+  Checkbox,
   Badge,
   DropdownMenu,
   DropdownMenuTrigger,
@@ -60,6 +61,9 @@ import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
+import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
+import { cn } from '@/lib/utils';
 
 const TRIGGERS = Object.entries(TRIGGER_LABELS)
   .filter(([value]) => !FLOW_ONLY_TRIGGERS.includes(value))
@@ -78,13 +82,13 @@ const actionTypesFor = (current: string) =>
 
 // Explica quando cada gatilho dispara — tira a confusão entre "todo lead" e "lead de anúncio".
 const TRIGGER_HINTS: Record<string, string> = {
-  'lead.created': 'Dispara pra TODO lead novo. Use o filtro de Origem abaixo pra valer só pra anúncio (formulário ou WhatsApp).',
-  'lead.campaign_received': 'Dispara SÓ quando o lead clica num anúncio e cai direto no WhatsApp (Click-to-WhatsApp).',
+  'lead.created': 'Dispara pra todo lead novo. Use o filtro de origem abaixo pra valer só pra anúncio (formulário ou WhatsApp).',
+  'lead.campaign_received': 'Dispara só quando o lead clica num anúncio e cai direto no WhatsApp.',
   'lead.tag_added': 'Dispara quando uma etiqueta é adicionada. Escolha qual etiqueta abaixo.',
   'lead.message_received': 'Dispara quando o lead manda uma mensagem. Filtre por palavra-chave abaixo (opcional).',
   'lead.stage_changed': 'Dispara quando o lead muda de etapa no funil.',
-  'lead.no_reply_after': 'Dispara quando o lead não responde após X minutos da última mensagem enviada. Define o tempo na condição abaixo.',
-  'lead.roleta_accepted': 'Dispara quando o corretor clica em Aceitar na oferta da roleta (ou em Assumir lead, no Leilão). NÃO dispara quando o aceite acontece porque ele já respondeu ao lead — ali a mensagem chegaria depois da fala dele. A mensagem sai pelo número do corretor que aceitou.',
+  'lead.no_reply_after': 'Dispara quando o lead não responde após X minutos da última mensagem enviada. Defina o tempo na condição abaixo.',
+  'lead.roleta_accepted': 'Dispara quando o corretor clica em Aceitar na oferta da roleta (ou em Assumir lead, no Leilão). Não dispara quando o aceite acontece porque ele já respondeu ao lead — ali a mensagem chegaria depois da fala dele. A mensagem sai pelo número do corretor que aceitou.',
 };
 
 const EMPTY_FORM: LeadAutomationRuleFormData = {
@@ -727,93 +731,96 @@ export default function LeadAutomations() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <UILabel>Nome *</UILabel>
-                <Input
-                  value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="Ex: Boas-vindas para lead de venda"
-                  className="mt-1"
-                />
-              </div>
+          <div className="grid gap-5 py-2">
+            <GrupoDaJanela titulo="Identificação">
+              <GradeDaJanela>
+                <CampoDaJanela rotulo="Nome" htmlFor="automacao-nome" obrigatorio colunas={4}>
+                  <Input
+                    id="automacao-nome"
+                    value={form.name}
+                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="Ex.: Boas-vindas para lead de venda"
+                  />
+                </CampoDaJanela>
+                <CampoDaJanela rotulo="Descrição" htmlFor="automacao-descricao" colunas={4}>
+                  <Textarea
+                    id="automacao-descricao"
+                    value={form.description}
+                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                    placeholder="O que essa automação faz?"
+                    rows={2}
+                    className="resize-none"
+                  />
+                </CampoDaJanela>
+              </GradeDaJanela>
+            </GrupoDaJanela>
 
-              <div className="col-span-2">
-                <UILabel>Descrição</UILabel>
-                <Textarea
-                  value={form.description}
-                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  placeholder="O que essa automação faz?"
-                  rows={2}
-                  className="mt-1 resize-none"
-                />
-              </div>
-
-              <div>
-                <UILabel>Gatilho *</UILabel>
-                <Seletor
-                  value={form.trigger}
-                  onChange={e => setTrigger(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  {TRIGGERS.map(t => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </Seletor>
+            <GrupoDaJanela titulo="Quando">
+              <GradeDaJanela>
+                <CampoDaJanela rotulo="Gatilho" htmlFor="automacao-gatilho" obrigatorio colunas={3}>
+                  <Seletor
+                    id="automacao-gatilho"
+                    value={form.trigger}
+                    onChange={e => setTrigger(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    {TRIGGERS.map(t => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </Seletor>
+                </CampoDaJanela>
+                <CampoDaJanela rotulo="Prioridade" htmlFor="automacao-prioridade">
+                  <Input
+                    id="automacao-prioridade"
+                    type="number"
+                    value={form.priority}
+                    onChange={e => setForm(f => ({ ...f, priority: parseInt(e.target.value) || 0 }))}
+                    min={0}
+                  />
+                </CampoDaJanela>
                 {TRIGGER_HINTS[form.trigger] && (
-                  <p className="text-xs text-muted-foreground mt-1">{TRIGGER_HINTS[form.trigger]}</p>
+                  <Aviso tom="info" compacto className="sm:col-span-4">{TRIGGER_HINTS[form.trigger]}</Aviso>
                 )}
-              </div>
+              </GradeDaJanela>
 
-              <div>
-                <UILabel>Prioridade</UILabel>
-                <Input
-                  type="number"
-                  value={form.priority}
-                  onChange={e => setForm(f => ({ ...f, priority: parseInt(e.target.value) || 0 }))}
-                  min={0}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            {/* Condição do gatilho (dinâmica) + filtro de funil */}
-            {(triggerNeedsCondition(form.trigger) || triggerAcceptsPipelineFilter(form.trigger)) && (
-              <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-3">
-                {triggerNeedsCondition(form.trigger) && (
-                  <ConditionEditor
+              {/* Condição do gatilho (dinâmica) + filtro de funil */}
+              {(triggerNeedsCondition(form.trigger) || triggerAcceptsPipelineFilter(form.trigger)) && (
+                <div className="space-y-3">
+                  {triggerNeedsCondition(form.trigger) && (
+                    <ConditionEditor
+                      trigger={form.trigger}
+                      condition={form.conditions.find(c => !isPipelineCondition(c)) ?? null}
+                      onChange={setCondition}
+                      resources={resources}
+                    />
+                  )}
+                  <PipelineFilterEditor
                     trigger={form.trigger}
-                    condition={form.conditions.find(c => !isPipelineCondition(c)) ?? null}
-                    onChange={setCondition}
+                    condition={form.conditions.find(isPipelineCondition) ?? null}
+                    onChange={setPipelineCondition}
                     resources={resources}
                   />
-                )}
-                <PipelineFilterEditor
-                  trigger={form.trigger}
-                  condition={form.conditions.find(isPipelineCondition) ?? null}
-                  onChange={setPipelineCondition}
-                  resources={resources}
-                />
-              </div>
-            )}
+                </div>
+              )}
+            </GrupoDaJanela>
 
-            {/* Actions */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <UILabel>Ações *</UILabel>
+            <GrupoDaJanela
+              titulo="O que fazer"
+              acao={
                 <Button variant="outline" size="sm" onClick={addAction}>
                   <Plus className="h-3.5 w-3.5 mr-1" />
                   Adicionar ação
                 </Button>
-              </div>
-              <div className="space-y-2">
+              }
+            >
+              <div className="space-y-4">
                 {form.actions.map((action, i) => (
-                  <div key={i} className="p-3 rounded-lg border border-border bg-muted/20 space-y-2">
+                  <div key={i} className={cn('space-y-2', i > 0 && 'border-t border-border pt-4')}>
                     <div className="flex items-center gap-2">
                       <Seletor
                         value={action.type}
                         onChange={e => updateActionType(i, e.target.value)}
+                        aria-label={`Ação ${i + 1}`}
                         className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
                         {actionTypesFor(action.type).map(a => (
@@ -840,18 +847,18 @@ export default function LeadAutomations() {
                   </div>
                 ))}
               </div>
-            </div>
+            </GrupoDaJanela>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="is_active"
-                checked={form.is_active}
-                onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))}
-                className="rounded border-input"
-              />
-              <UILabel htmlFor="is_active" className="cursor-pointer">Ativa</UILabel>
-            </div>
+            <GrupoDaJanela titulo="Estado">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="is_active"
+                  checked={form.is_active}
+                  onCheckedChange={v => setForm(f => ({ ...f, is_active: v === true }))}
+                />
+                <UILabel htmlFor="is_active" className="cursor-pointer">Ativa</UILabel>
+              </div>
+            </GrupoDaJanela>
           </div>
 
           <DialogFooter>

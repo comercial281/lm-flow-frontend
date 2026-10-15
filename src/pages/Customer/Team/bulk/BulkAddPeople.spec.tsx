@@ -18,7 +18,7 @@ function open() {
   return p;
 }
 const colar = async (texto: string) => {
-  await userEvent.click(screen.getByLabelText('Colar da planilha'));
+  await userEvent.click(screen.getByLabelText('Linhas da planilha'));
   await userEvent.paste(texto);
   await userEvent.click(screen.getByRole('button', { name: 'Adicionar as linhas coladas' }));
 };
@@ -99,6 +99,13 @@ describe('BulkAddPeople', () => {
     await colar('Ana;ana@x.com;');
     await userEvent.click(screen.getByRole('button', { name: 'Só cadastrar' }));
     expect(await screen.findByText(/Seu cargo não pode dar um cargo/)).toBeInTheDocument();
-    expect(screen.getByLabelText('Colar da planilha')).toBeInTheDocument();
+    expect(screen.getByLabelText('Linhas da planilha')).toBeInTheDocument();
+  });
+
+  it('a janela tem os três grupos: Colar da planilha, Pessoas e Cargo de todas', () => {
+    open();
+    for (const nome of ['Colar da planilha', 'Pessoas', 'Cargo de todas']) {
+      expect(screen.getByRole('group', { name: nome })).toBeInTheDocument();
+    }
   });
 });

@@ -35,7 +35,7 @@ function Campo({ paginated = true }: { paginated?: boolean }) {
     <LeadCombobox
       value={valor}
       onChange={setValor}
-      label="Cliente *"
+      label="Cliente"
       placeholder="Buscar cliente por nome ou telefone"
       allowCreate={false}
       paginated={paginated}

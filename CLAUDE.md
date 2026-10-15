@@ -8823,6 +8823,20 @@ As janelas medianas passaram para as peças do miolo (grupos, grade, `Aviso`, `E
 
 Não reabrir sem o dono pedir.
 
+## Leva 3 das janelas (15/10/2026)
+
+A regra do miolo (grupos, grade, `Aviso`, `ESCOLHA`, texto em português, maiúscula só na primeira letra) chegou a cerca de 55 janelas. Só mudou disposição e letra: o que é gravado e o que os botões fazem ficaram como estavam.
+
+- **Peças novas:** `MioloDaAcaoDaVisita` (miolo único de Realizada, Não compareceu, Remarcar e Cancelar visita), `JanelaPublicarLanding`, a prop `semNome` (nas escolhas e no `EscolhaComBusca`, quando o grupo em volta já dá o nome), o `naJanela` do `CampoDeMidia` e as áreas de permissão recolhíveis no editor de cargo. O `LeadCombobox` e o `Campo` ganharam a prop `obrigatorio`, com a marca igual à do `CampoDaJanela`.
+- **Meu site e Academia** mantêm o `Campo` próprio (controles maiores), só com a letra e os grupos do miolo.
+- **#59/#61 e #139/#143:** unificados só no visual. Cada chamador mantém o comportamento e quem grava.
+- **Listas com mais de 8 opções** só abrem ao digitar (Roleta, modelos salvos do assistente de página de anúncio). Até 8, mostram todas.
+- **Nomes na tela:** o template do WhatsApp oficial é "modelo de mensagem"; landing é "página de anúncio"; QR é "código QR". O nome sugerido "(template)" ao salvar uma página como modelo continua, porque vai gravado.
+
+**Tetos novos (só descem):** `maiusculas` 921 para 856, `escolhaRoxaCheia` 40 para 36 e `avisoSoltoNaJanela` 12 para 3.
+
+Não reabrir sem o dono pedir.
+
 ## Imóvel · Link pro lead (desde 2026-10-14)
 
 > Pedido do IBI4 (14/10): quando o lead pede o link, a IA manda a página do empreendimento no site DELES, não a nossa. Servidor: `lm-flow` #486 (entra primeiro).

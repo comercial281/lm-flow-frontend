@@ -95,4 +95,14 @@ describe('Lembretes na base da Fase 3', () => {
     expect(await screen.findByRole('button', { name: 'Mandar agora' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Editar' })).toBeInTheDocument();
   });
+  it('a janela de novo lembrete tem os grupos do miolo e o aviso na caixa Aviso', async () => {
+    mocks.list.mockResolvedValue({ data: [] });
+    render(<WhatsappReminders />);
+    await userEvent.click(await screen.findByRole('button', { name: /Novo lembrete/ }));
+    const dialogo = await screen.findByRole('dialog');
+    for (const nome of ['Identificação', 'Quando', 'Para quem', 'Mensagem']) {
+      expect(within(dialogo).getByRole('group', { name: nome })).toBeInTheDocument();
+    }
+    expect(within(dialogo).getByRole('group', { name: 'Para quem' })).toHaveTextContent('Quem recebe');
+  });
 });

@@ -287,13 +287,13 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
             <option value="">Qualquer origem</option>
             <option value="formulario">Formulário (Meta Lead Ads)</option>
             <option value="formulario_site">Formulário do site / landing</option>
-            <option value="lead_whats_meta">Lead Whats Meta (anúncio no WhatsApp)</option>
+            <option value="lead_whats_meta">Lead de anúncio no WhatsApp</option>
             <option value="organico">Orgânico (sem anúncio)</option>
           </Seletor>
           <p className="text-xs text-muted-foreground mt-1">
             Em branco = qualquer lead novo. <strong>Formulário</strong>: veio de um formulário de anúncio.{' '}
             <strong>Formulário do site</strong>: preencheu um formulário do site ou de uma landing.{' '}
-            <strong>Lead Whats Meta</strong>: clicou no anúncio e caiu direto no WhatsApp.
+            <strong>Lead de anúncio no WhatsApp</strong>: clicou no anúncio e caiu direto no WhatsApp.
           </p>
         </div>
 
@@ -1504,7 +1504,7 @@ export function formatConditionSummary(
     }
     const labels: Record<string, string> = {
       formulario: 'Formulário (Meta Lead Ads)',
-      lead_whats_meta: 'Lead Whats Meta (anúncio no WhatsApp)',
+      lead_whats_meta: 'Lead de anúncio no WhatsApp',
       organico: 'Orgânico (sem anúncio)',
     };
     return `Origem: ${labels[String(condition.value)] ?? condition.value}`;

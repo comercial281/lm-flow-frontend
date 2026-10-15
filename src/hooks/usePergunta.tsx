@@ -8,8 +8,8 @@ import {
   DialogTitle,
   Button,
   Input,
-  Label,
 } from '@/components/ui/ds';
+import { CampoDaJanela } from '@/components/base/janela';
 
 // ── SUBSTITUTO DO window.prompt ──────────────────────────────────────────────
 //
@@ -99,6 +99,23 @@ export function usePergunta(): Retorno {
 
   const aparado = texto.trim();
 
+  const entrada = (
+    <Input
+      id="campo-da-pergunta"
+      autoFocus
+      value={texto}
+      placeholder={pedido?.placeholder}
+      aria-label={pedido?.rotuloDoCampo ?? pedido?.titulo}
+      onChange={evento => setTexto(evento.target.value)}
+    />
+  );
+  // Com rótulo, o campo entra no miolo da janela; sem rótulo, fica só o campo (o título já diz).
+  const campo = pedido?.rotuloDoCampo ? (
+    <CampoDaJanela rotulo={pedido.rotuloDoCampo} htmlFor="campo-da-pergunta" obrigatorio>
+      {entrada}
+    </CampoDaJanela>
+  ) : entrada;
+
   const dialogoDePergunta = (
     <Dialog open={!!pedido} onOpenChange={aberto => { if (!aberto) fechar(null); }}>
       <DialogContent>
@@ -118,18 +135,8 @@ export function usePergunta(): Retorno {
             )}
           </DialogHeader>
 
-          <div className="grid gap-2 py-4">
-            {pedido?.rotuloDoCampo && (
-              <Label htmlFor="campo-da-pergunta">{pedido.rotuloDoCampo}</Label>
-            )}
-            <Input
-              id="campo-da-pergunta"
-              autoFocus
-              value={texto}
-              placeholder={pedido?.placeholder}
-              aria-label={pedido?.rotuloDoCampo ?? pedido?.titulo}
-              onChange={evento => setTexto(evento.target.value)}
-            />
+          <div className="py-4">
+            {campo}
           </div>
 
           <DialogFooter>

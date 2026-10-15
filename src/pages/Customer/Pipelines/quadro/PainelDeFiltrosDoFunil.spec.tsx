@@ -34,6 +34,10 @@ function abrir(aba: AbaDoQuadro = 'abertos', filtros: FiltrosDoFunil = FILTROS_V
   return { aoFiltrar, aoFechar, painel: screen.getByRole('dialog', { name: 'Filtros do funil' }) };
 }
 
+// Título de cada bloco: o <p> que dá nome ao grupo do miolo (a caixa alta é só CSS).
+const titulos = (painel: HTMLElement) =>
+  Array.from(painel.querySelectorAll('[role="group"] > div > p[id]')).map(p => p.textContent);
+
 const SECOES = ['Criado em', 'Etapas', 'Origem', 'Responsável', 'Etiquetas', 'Motivo da perda', 'Largados', 'Tarefas', 'Categoria da tarefa', 'Colunas visíveis'];
 
 describe('PainelDeFiltrosDoFunil', () => {
@@ -54,7 +58,7 @@ describe('PainelDeFiltrosDoFunil', () => {
   it('as dez seções, na ordem da spec; Motivo da perda só em Perdidos e Todos', async () => {
     const { painel } = abrir('perdidos');
     await within(painel).findByRole('button', { name: 'Follow-up' });
-    expect(within(painel).getAllByRole('heading', { level: 3 }).map(h => h.textContent)).toEqual(SECOES);
+    expect(titulos(painel)).toEqual(SECOES);
     expect(listOptionsService.list).toHaveBeenCalledWith('loss_reasons', { includeInactive: true });
     expect(await within(painel).findByRole('button', { name: 'Preço (arquivado)' })).toBeInTheDocument();
   });
@@ -62,7 +66,7 @@ describe('PainelDeFiltrosDoFunil', () => {
   it('em Abertos não tem Motivo da perda nem pede a lista', async () => {
     const { painel } = abrir('abertos');
     await within(painel).findByRole('button', { name: 'Follow-up' });
-    expect(within(painel).getAllByRole('heading', { level: 3 }).map(h => h.textContent)).toEqual(SECOES.filter(s => s !== 'Motivo da perda'));
+    expect(titulos(painel)).toEqual(SECOES.filter(s => s !== 'Motivo da perda'));
     expect(listOptionsService.list).not.toHaveBeenCalledWith('loss_reasons', expect.anything());
   });
 

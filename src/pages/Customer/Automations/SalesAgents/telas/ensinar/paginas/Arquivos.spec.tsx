@@ -119,6 +119,9 @@ describe('Arquivos', () => {
     abrir([D('a')]);
     await userEvent.click(screen.getByRole('button', { name: /Como ela usa: Arquivo a/ }));
     expect(screen.getByRole('dialog', { name: 'Como ela usa este arquivo' })).toBeInTheDocument();
+    // Miolo da janela: grupos com título.
+    expect(screen.getByRole('group', { name: 'Arquivo' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Quando mandar' })).toBeInTheDocument();
     // X da casa no topo da janela.
     expect(screen.getByRole('button', { name: 'Fechar' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
@@ -132,8 +135,8 @@ describe('Arquivos', () => {
     await userEvent.click(screen.getByRole('switch', { name: 'No máximo uma vez por conversa' }));
     await userEvent.click(screen.getByRole('switch', { name: 'Ela aprende com o conteúdo' }));
     expect(S.updateDocument).not.toHaveBeenCalled();
-    await userEvent.clear(screen.getByLabelText('Quando mandar'));
-    await userEvent.type(screen.getByLabelText('Quando mandar'), '  quando pedir a planta  ');
+    await userEvent.clear(screen.getByLabelText('Em que situação mandar'));
+    await userEvent.type(screen.getByLabelText('Em que situação mandar'), '  quando pedir a planta  ');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(S.updateDocument).toHaveBeenCalledWith('ia-1', 'a', {
@@ -147,10 +150,10 @@ describe('Arquivos', () => {
   it('desligar "Ela pode mandar pro lead" esconde as perguntas de envio', async () => {
     abrir([D('a')]);
     await userEvent.click(screen.getByRole('button', { name: /Como ela usa: Arquivo a/ }));
-    expect(screen.getByLabelText('Quando mandar')).toBeInTheDocument();
+    expect(screen.getByLabelText('Em que situação mandar')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Ver como chega no meu WhatsApp/ })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('switch', { name: 'Ela pode mandar pro lead' }));
-    expect(screen.queryByLabelText('Quando mandar')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Em que situação mandar')).not.toBeInTheDocument();
     expect(S.updateDocument).not.toHaveBeenCalled();
   });
 

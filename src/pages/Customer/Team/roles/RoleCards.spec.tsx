@@ -103,7 +103,7 @@ describe('RoleCards', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Criar cargo personalizado/ }));
     expect(screen.getByLabelText('Começar igual a')).toHaveValue('3');
     expect(screen.queryByTestId('editor')).toBeNull();
-    await userEvent.type(screen.getByLabelText('Nome do cargo'), 'SDR novo');
+    await userEvent.type(screen.getByLabelText(/^Nome do cargo/), 'SDR novo');
     await userEvent.click(screen.getByRole('button', { name: 'Criar cargo' }));
     await waitFor(() => expect(s.clone).toHaveBeenCalledWith('3', 'SDR novo'));
     await waitFor(() => expect(s.capabilities).toHaveBeenCalledTimes(2));
@@ -115,7 +115,7 @@ describe('RoleCards', () => {
     abrir();
     await userEvent.click(await screen.findByRole('button', { name: /Criar cargo personalizado/ }));
     await userEvent.selectOptions(screen.getByLabelText('Começar igual a'), '2');
-    await userEvent.type(screen.getByLabelText('Nome do cargo'), 'Coordenação');
+    await userEvent.type(screen.getByLabelText(/^Nome do cargo/), 'Coordenação');
     await userEvent.click(screen.getByRole('button', { name: 'Criar cargo' }));
     await waitFor(() => expect(s.clone).toHaveBeenCalledWith('2', 'Coordenação'));
   });

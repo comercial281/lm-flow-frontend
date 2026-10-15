@@ -226,7 +226,7 @@ export interface FormOrigin {
 export const ORIGIN_LABELS: Record<string, string> = {
   formulario:      'Formulário (Meta Lead Ads)',
   formulario_site: 'Formulário do site / landing',
-  lead_whats_meta: 'Lead Whats Meta (anúncio no WhatsApp)',
+  lead_whats_meta: 'Lead de anúncio no WhatsApp',
   organico:        'Orgânico (sem anúncio)',
 };
 
@@ -238,9 +238,9 @@ export const TRIGGER_LABELS: Record<string, string> = {
   'lead.visit_scheduled':      'Visita agendada',
   'lead.visit_rescheduled':    'Visita remarcada',
   'lead.visit_completed':      'Visita realizada',
-  'lead.visit_reminder_24h':   'Lembrete — 1 dia antes da visita',
-  'lead.visit_reminder_1h':    'Lembrete — 1 hora antes da visita',
-  'lead.visit_reminder_15min': 'Lembrete — 15 minutos antes da visita',
+  'lead.visit_reminder_24h':   'Lembrete 1 dia antes da visita',
+  'lead.visit_reminder_1h':    'Lembrete 1 hora antes da visita',
+  'lead.visit_reminder_15min': 'Lembrete 15 minutos antes da visita',
   'lead.interest_created':     'Interesse em imóvel',
   'lead.book_requested':       'Pediu o book no site',
   'lead.inactive_7d':          'Inativo há 7 dias',
@@ -248,7 +248,7 @@ export const TRIGGER_LABELS: Record<string, string> = {
   'lead.property_matched':     'Imóvel compatível encontrado',
   'lead.tag_added':            'Etiqueta adicionada',
   'lead.message_received':     'Mensagem recebida do lead',
-  'lead.campaign_received':    'Lead Whats Meta (anúncio no WhatsApp)',
+  'lead.campaign_received':    'Lead de anúncio no WhatsApp',
   'lead.no_reply_after':       'Sem resposta após X minutos',
   'lead.roleta_accepted':      'Corretor aceitou o lead (roleta)',
 };
@@ -259,7 +259,7 @@ export const FLOW_ONLY_TRIGGERS: string[] = ['lead.book_requested', 'lead.visit_
 
 // Actions processadas pelo LeadAutomation::Executor.
 export const ACTION_TYPE_LABELS: Record<string, string> = {
-  send_whatsapp_message:   'Enviar mensagem WhatsApp',
+  send_whatsapp_message:   'Enviar mensagem no WhatsApp',
   send_audio:              'Enviar áudio',
   send_image:              'Enviar imagem',
   send_video:              'Enviar vídeo',
@@ -278,9 +278,9 @@ export const ACTION_TYPE_LABELS: Record<string, string> = {
   notify_user:             'Avisar usuário no WhatsApp (lembrete)',
   notify_broker:           'Notificar corretor (WhatsApp pessoal)',
   notify_gestor:           'Notificar gestor (WhatsApp)',
-  notify_push:             'Notificação no app (push / Modo Plantão)',
+  notify_push:             'Aviso no app (Modo Plantão)',
   send_quick_reply:        'Enviar resposta rápida',
-  wait:                    'Aguardar (delay)',
+  wait:                    'Aguardar um tempo',
 };
 
 // Ações que não aparecem mais na lista pra regra nova. "Aguardar (delay)"
