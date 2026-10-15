@@ -4158,7 +4158,7 @@ Spec e plano: `LM FLOW/specs/2026-09-29-fase-3-base-de-design-e-linguagem-design
   - Fora do escopo: o painel raiz, as páginas públicas, as landings, o widget e a **sobra** do Evolution (listas `SOBRA`/`NAMESPACES_SOBRA`). A fase 4 decide se a sobra some.
   - **Teto só desce.**
 - **Decisões do Tony (30/09):**
-  - **D1:** cada tema num PR pequeno, com prévia (`?tenant=lealmidia`) e antes/depois, e merge um por vez com o ok dele.
+  - **D1:** cada tema num PR pequeno, com prévia da Vercel (sem `?tenant=`, ou com o slug de um cliente que existe) e antes/depois, e merge um por vez com o ok dele.
   - **D2:** chave desligada é cinza.
   - **D3:** o glossário acima.
   - **D4:** as telas piloto são Conta e Lembretes.
