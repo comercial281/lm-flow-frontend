@@ -98,9 +98,6 @@ export const itemTagInfos = (item: PipelineItem): Array<{ name: string; color: s
   return out;
 };
 
-export const itemTagNames = (item: PipelineItem): string[] =>
-  itemTagInfos(item).map(t => t.name);
-
 export const getContactColor = (name?: string): string => {
   if (!name) return '#6B7280';
   const colors = ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#F97316'];
