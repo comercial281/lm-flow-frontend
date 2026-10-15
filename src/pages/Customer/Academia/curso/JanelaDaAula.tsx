@@ -78,7 +78,7 @@ export default function JanelaDaAula({ moduleId, editing, onClose }: { moduleId:
             {editing && <CampoTextoLongo id="aula-texto" rotulo="Texto da aula (aparece abaixo do vídeo)" valor={descricao} aoMudar={setDescricao} rows={5} />}
           </GrupoDaJanela>
           <GrupoDaJanela titulo="Vídeo">
-            <BotoesDeEscolha rotulo="Vídeo" valor={video} opcoes={opcoesVideo} aoEscolher={setVideo} />
+            <BotoesDeEscolha rotulo="Vídeo" semNome valor={video} opcoes={opcoesVideo} aoEscolher={setVideo} />
             {video === 'link' && (
               <CampoTexto id="aula-link" rotulo="Link do YouTube ou Vimeo" valor={videoUrl} aoMudar={setVideoUrl}
                 placeholder="https://youtube.com/..." />

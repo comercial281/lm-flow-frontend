@@ -383,7 +383,7 @@ export default function LeadRoutingModal({
                 <CampoDaJanela rotulo="Número do pixel" htmlFor="rota-pixel-id"
                   ajuda="O envio pelo servidor usa a chave de acesso cadastrada em Pixel e CAPI. Se ela não tiver acesso a este pixel, a Meta recusa: teste antes de subir o anúncio.">
                   <Input id="rota-pixel-id" value={pixel.pixelId} onChange={(e) => setPixelField('pixelId', e.target.value)}
-                    placeholder="Ex: 123456789012345" />
+                    placeholder="Ex.: 123456789012345" />
                 </CampoDaJanela>
               )}
 

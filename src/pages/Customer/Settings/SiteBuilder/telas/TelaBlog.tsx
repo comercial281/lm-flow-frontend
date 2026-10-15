@@ -275,8 +275,8 @@ export default function TelaBlog({ site }: { site: Site }) {
             {/* Coluna principal — formulário */}
             <div className="grid min-w-0 gap-6">
               <GrupoDaJanela titulo="Artigo">
-              <CampoTexto id="artigo-titulo" rotulo="Título do artigo" valor={articleForm.title}
-                placeholder="Ex: Como financiar um imóvel?"
+              <CampoTexto id="artigo-titulo" rotulo="Título do artigo" obrigatorio valor={articleForm.title}
+                placeholder="Ex.: Como financiar um imóvel?"
                 ajuda="Aparece no topo do artigo e na lista do blog. Também é o que o Google mostra."
                 aoMudar={title => setArticleForm(f => ({ ...f, title }))} />
 

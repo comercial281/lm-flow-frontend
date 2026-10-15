@@ -7,8 +7,7 @@ import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle 
 import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
 import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
 import { Seletor } from '@/components/base/Seletor';
-import { CampoDaJanela, GradeDaJanela } from '@/components/base/janela';
-import { GrupoDaJanela } from '@/components/base/janela';
+import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import CoverPicker from './CoverPicker';
 import AvancadoDoBloqueio from './AvancadoDoBloqueio';
 import type { LockConfig } from './LockConfigFields';

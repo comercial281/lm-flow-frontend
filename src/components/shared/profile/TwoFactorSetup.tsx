@@ -241,7 +241,7 @@ const TwoFactorSetup = ({ onUpdate }: TwoFactorSetupProps) => {
                     />
                   </div>
                 ) : (
-                  <Aviso tom="atencao" titulo={t('twoFactor.configure.qrCodeLoading')}>
+                  <Aviso tom="info" titulo={t('twoFactor.configure.qrCodeLoading')}>
                     {t('twoFactor.configure.qrCodeError')}
                   </Aviso>
                 )}

@@ -98,6 +98,6 @@ describe('BulkDispatchModal · miolo em grupos', () => {
     for (const nome of ['Canal de envio', 'Sequência de mensagens']) {
       expect(await screen.findByRole('group', { name: nome })).toBeInTheDocument();
     }
-    expect(screen.getByRole('button', { name: /WhatsApp por QR code/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /WhatsApp por código QR/ })).toHaveAttribute('aria-pressed', 'true');
   });
 });

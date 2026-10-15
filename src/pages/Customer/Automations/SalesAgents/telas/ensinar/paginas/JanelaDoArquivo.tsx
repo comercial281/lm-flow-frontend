@@ -4,7 +4,7 @@
 //
 // As chaves aqui dentro NÃO gravam na hora (exceção da janela, decisão 6 do spec):
 // são estado local até o Salvar, que manda tudo de uma vez no mesmo pacote de antes.
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Textarea } from '@/components/ui/ds';
 import Aviso from '@/components/base/Aviso';
@@ -44,6 +44,7 @@ function Janela({ titulo, descricao, aoFechar, rodape, children }: {
 export default function JanelaDoArquivo({ agentId, doc, aoFechar, aoSalvar }: {
   agentId: string; doc: SalesAgentDocument; aoFechar: () => void; aoSalvar: () => void;
 }) {
+  const idAssunto = useId();
   const [title, setTitle] = useState(doc.title);
   const [sendable, setSendable] = useState(doc.sendable);
   const [learnable, setLearnable] = useState(doc.learnable);
@@ -108,14 +109,14 @@ export default function JanelaDoArquivo({ agentId, doc, aoFechar, aoSalvar }: {
         )}
       </GrupoDaJanela>
 
-      <GrupoDaJanela titulo="Envio">
+      <GrupoDaJanela titulo="Quando mandar">
         <LinhaComChave rotulo="Ela pode mandar pro lead" descricao="Desligado, o arquivo serve só pra ela aprender."
           ligada={sendable} aoMudar={local(setSendable)} genero="a">
-          <CampoDaJanela rotulo="Quando mandar" htmlFor="arq-quando">
+          <CampoDaJanela rotulo="Em que situação mandar" htmlFor="arq-quando">
             <Textarea id="arq-quando" className="w-full" rows={2} value={when} onChange={(e) => setWhen(e.target.value)}
               placeholder="Ex.: quando o lead pedir a planta ou perguntar como são divididos os cômodos" />
           </CampoDaJanela>
-          <CampoDaJanela rotulo="Quando não mandar" htmlFor="arq-quando-nao">
+          <CampoDaJanela rotulo="Em que situação não mandar" htmlFor="arq-quando-nao">
             <Textarea id="arq-quando-nao" className="w-full" rows={2} value={whenNot} onChange={(e) => setWhenNot(e.target.value)}
               placeholder="Ex.: antes de o lead dizer o que procura; se ele só quer alugar" />
           </CampoDaJanela>
@@ -124,8 +125,8 @@ export default function JanelaDoArquivo({ agentId, doc, aoFechar, aoSalvar }: {
               placeholder="Ex.: segue a planta do 2 dormitórios, qualquer dúvida me chama" />
           </CampoDaJanela>
 
-          <CampoDaJanela rotulo="Assunto">
-            <div role="group" aria-label="Assunto" className="flex flex-wrap gap-1.5">
+          <CampoDaJanela rotulo="Assunto" idDoRotulo={idAssunto}>
+            <div role="group" aria-labelledby={idAssunto} className="flex flex-wrap gap-1.5">
               {DOCUMENT_TOPICS.map((t) => {
                 const marcado = topics.includes(t.slug);
                 return (

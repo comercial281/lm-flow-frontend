@@ -38,7 +38,7 @@ export default function JanelaPublicarLanding({
               id={idDoCampo}
               value={nome}
               onChange={(e) => aoMudarNome(e.target.value)}
-              placeholder="Ex: Lançamento Jardim Europa"
+              placeholder="Ex.: Lançamento Jardim Europa"
               autoFocus
             />
           </CampoDaJanela>

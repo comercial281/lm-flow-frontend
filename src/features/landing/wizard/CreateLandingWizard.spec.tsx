@@ -86,12 +86,23 @@ describe('Assistente: modelos prontos', () => {
     expect(await screen.findByText('Apto Centro')).toBeInTheDocument();
   });
 
-  it('modelos salvos: sem digitar, só a dica; nenhum modelo listado', async () => {
+  it('modelos salvos: até 8, lista todos sem precisar digitar', async () => {
     modelosSalvos.lista = [{ id: 't1', name: 'Meu modelo' }, { id: 't2', name: 'Outro' }];
     render(tela());
     await userEvent.click(screen.getByText('De um modelo salvo'));
-    expect(await screen.findByText('2 modelos salvos. Digite pra buscar.')).toBeInTheDocument();
-    expect(screen.queryByText('Meu modelo')).not.toBeInTheDocument();
+    expect(await screen.findByText('Meu modelo')).toBeInTheDocument();
+    expect(screen.getByText('Outro')).toBeInTheDocument();
+    expect(screen.queryByText(/Digite pra buscar/)).not.toBeInTheDocument();
+  });
+
+  it('modelos salvos: mais de 8, lista fechada com a dica até digitar', async () => {
+    modelosSalvos.lista = Array.from({ length: 9 }, (_, i) => ({ id: `t${i}`, name: `Modelo ${i}` }));
+    render(tela());
+    await userEvent.click(screen.getByText('De um modelo salvo'));
+    expect(await screen.findByText('9 modelos salvos. Digite pra buscar.')).toBeInTheDocument();
+    expect(screen.queryByText('Modelo 3')).not.toBeInTheDocument();
+    await userEvent.type(screen.getByPlaceholderText('Digite o nome do modelo'), 'Modelo 3');
+    expect(await screen.findByText('Modelo 3')).toBeInTheDocument();
   });
 
   it('sem imóvel, o Próximo fica desligado com um modelo escolhido', async () => {

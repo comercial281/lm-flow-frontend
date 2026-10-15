@@ -250,17 +250,15 @@ export default function MacroFormModal({ isOpen, onClose, macro, onSuccess }: Ma
             </CampoDaJanela>
 
             {/* Visibilidade */}
-            <CampoDaJanela rotulo={t('modal.form.visibility')}>
-              <CartoesDeEscolha
-                rotulo={t('modal.form.visibility')}
-                valor={formData.visibility}
-                aoEscolher={valor => handleFieldChange('visibility', valor)}
-                opcoes={[
-                  { valor: 'personal', rotulo: t('modal.form.visibilityPersonal'), descricao: t('modal.form.visibilityPersonalDesc') },
-                  { valor: 'global', rotulo: t('modal.form.visibilityGlobal'), descricao: t('modal.form.visibilityGlobalDesc') },
-                ]}
-              />
-            </CampoDaJanela>
+            <CartoesDeEscolha
+              rotulo={t('modal.form.visibility')}
+              valor={formData.visibility}
+              aoEscolher={valor => handleFieldChange('visibility', valor)}
+              opcoes={[
+                { valor: 'personal', rotulo: t('modal.form.visibilityPersonal'), descricao: t('modal.form.visibilityPersonalDesc') },
+                { valor: 'global', rotulo: t('modal.form.visibilityGlobal'), descricao: t('modal.form.visibilityGlobalDesc') },
+              ]}
+            />
           </GrupoDaJanela>
 
           {/* Ações */}

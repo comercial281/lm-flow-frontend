@@ -23,6 +23,17 @@ describe('FlowSettingsDialog', () => {
     expect(aoSalvar).toHaveBeenCalledWith({ reentry: { mode: 'hours', hours: 48 }, businessHoursOnly: true });
   });
 
+  it('o campo de horas aparece ao escolher "Depois de um tempo" partindo de outro modo', async () => {
+    const aoSalvar = vi.fn();
+    render(<FlowSettingsDialog open settings={{ reentry: { mode: 'always', hours: 24 }, businessHoursOnly: false }}
+      triggerEvent="lead.created" onClose={vi.fn()} onSave={aoSalvar} />);
+    expect(screen.queryByLabelText('Quantas horas')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('radio', { name: 'Depois de um tempo' }));
+    expect(screen.getByLabelText('Quantas horas')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(aoSalvar).toHaveBeenCalledWith({ reentry: { mode: 'hours', hours: 24 }, businessHoursOnly: false });
+  });
+
   it('"Sempre" com mensagem recebida mostra o aviso e esconde as horas', async () => {
     render(<FlowSettingsDialog open settings={base} triggerEvent="lead.message_received" onClose={vi.fn()} onSave={vi.fn()} />);
     await userEvent.click(screen.getByRole('radio', { name: 'Sempre que o gatilho acontecer' }));

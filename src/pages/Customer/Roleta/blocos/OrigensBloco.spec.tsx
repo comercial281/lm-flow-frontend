@@ -94,7 +94,7 @@ describe('De onde vem o lead', () => {
   it('item de outra roleta pergunta "Trazer pra esta roleta?" antes', async () => {
     abrir();
     await userEvent.click(screen.getByRole('button', { name: 'Adicionar origem' }));
-    await userEvent.click(await screen.findByRole('button', { name: /^Landing/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /^Página de anúncio/ }));
     await userEvent.click(screen.getByRole('button', { name: /Lançamento Alma/ }));
     expect(screen.getByText('Trazer pra esta roleta?')).toBeInTheDocument();
     expect(svc.addOrigin).not.toHaveBeenCalled();

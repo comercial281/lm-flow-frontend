@@ -169,7 +169,11 @@ export default function BulkAddPeople({ open, roles, members, onClose, onDone }:
               {lines.map(l => (
                 <li key={l.key} className="flex flex-wrap justify-between gap-2 py-2">
                   <span className="font-medium">{l.who}</span>
-                  <span className={l.bad ? 'text-destructive' : 'text-muted-foreground'}>{l.text}</span>
+                  {l.bad ? (
+                    <Aviso tom="erro" compacto>{l.text}</Aviso>
+                  ) : (
+                    <span className="text-muted-foreground">{l.text}</span>
+                  )}
                 </li>
               ))}
             </ul>

@@ -116,7 +116,7 @@ export default function AddMetaPageDialog({ open, onOpenChange, onAdded }: Props
 
         {mode === 'list' ? (
           <div className="space-y-3">
-            {listError && <Aviso tom="atencao" compacto>{listError}</Aviso>}
+            {listError && <Aviso tom="erro" compacto>{listError}</Aviso>}
             {!list && !listError && (
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" /> Buscando as páginas no Facebook…

@@ -35,7 +35,7 @@ import {
   Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
   Input, Label as UILabel, Textarea,
 } from '@/components/ui/ds';
-import { CaixaDaJanela, ESCOLHA } from '@/components/base/janela';
+import { CaixaDaJanela, CampoDaJanela, ESCOLHA } from '@/components/base/janela';
 import { LeadCombobox } from '@/components/visits/LeadCombobox';
 import { EscolhaCorretor } from '@/components/visits/EscolhaCorretor';
 import {
@@ -461,15 +461,14 @@ export function ScheduleVisitDialog({
               <LeadCombobox
                 value={lead}
                 onChange={escolherLead}
-                label="Cliente *"
+                label="Cliente"
                 placeholder="Buscar cliente por nome ou telefone"
                 allowCreate={false}
                 paginated
               />
             )}
 
-            <div>
-              <UILabel htmlFor={travado ? undefined : 'visita_corretor'}>Corretor responsável{travado ? '' : ' *'}</UILabel>
+            <CampoDaJanela rotulo="Corretor responsável" htmlFor={travado ? undefined : 'visita_corretor'} obrigatorio={!travado}>
               {travado ? (
                 <p className="mt-1 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">{travado.name}</p>
               ) : verificandoCargo ? (
@@ -477,7 +476,7 @@ export function ScheduleVisitDialog({
               ) : (
                 <EscolhaCorretor id="visita_corretor" corretores={corretores} erro={erroCorretores} valor={corretor} onEscolher={setCorretor} />
               )}
-            </div>
+            </CampoDaJanela>
 
             {remarcando ? (
               imovel && (
@@ -491,16 +490,16 @@ export function ScheduleVisitDialog({
               )
             ) : (
               <>
-                <div>
-                  <UILabel>Observações</UILabel>
+                <CampoDaJanela rotulo="Observações" htmlFor="visita_observacoes">
                   <Textarea
+                    id="visita_observacoes"
                     value={observacoes}
                     onChange={e => setObservacoes(e.target.value)}
                     rows={2}
                     placeholder="Detalhes da visita"
-                    className="mt-1 resize-none"
+                    className="resize-none"
                   />
-                </div>
+                </CampoDaJanela>
 
                 {modo === 'registrar' && (
                   <div>

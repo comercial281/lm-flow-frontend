@@ -58,6 +58,7 @@ export function FlowSettingsDialog({ open, settings, triggerEvent, onClose, onSa
           <GrupoDaJanela titulo="Pode rodar de novo pro mesmo lead">
             <BotoesDeEscolha
               rotulo="Pode rodar de novo pro mesmo lead"
+              semNome
               valor={draft.mode}
               opcoes={REENTRY_OPTIONS.map(o => ({ valor: o.value, rotulo: o.label }))}
               aoEscolher={pick}

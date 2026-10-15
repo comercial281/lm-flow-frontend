@@ -42,7 +42,7 @@
       "placeholder": "suporte@exemplo.com"
     },
     "autoResolveTime": {
-      "label": "Tempo para resolver sozinha (minutos)",
+      "label": "Tempo para resolver sozinha",
       "unit": "minutos",
       "description": "Conversas inativas serão resolvidas automaticamente após este período"
     },

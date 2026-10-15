@@ -57,6 +57,7 @@ import EmptyState from '@/components/base/EmptyState';
 import Aviso from '@/components/base/Aviso';
 import { CaixaDaJanela, CampoDaJanela, ESCOLHA, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { cn } from '@/lib/utils';
+import type { LucideIcon, LucideProps } from 'lucide-react';
 interface BulkDispatchModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -91,6 +92,11 @@ const KIND_LABEL: Record<SequenceDraftItem['kind'], string> = {
 };
 
 // Preview substituindo {{nome}} por um exemplo só na revisão.
+// Aviso não gira ícone sozinho: este gira durante a contagem.
+const IconeGirando = ((props: LucideProps) => (
+  <Loader2 {...props} className={cn(props.className, 'animate-spin')} />
+)) as unknown as LucideIcon;
+
 function preview(text: string, name = 'Giovani') {
   return text.replace(/\{\{?\s*nome\s*\}?\}/gi, name);
 }
@@ -379,7 +385,7 @@ export default function BulkDispatchModal({
     }
     if (cloudMode) {
       if (!step2Ok) {
-        toast.error('Escolha um template aprovado e preencha as variáveis.');
+        toast.error('Escolha um modelo aprovado e preencha as variáveis.');
         return;
       }
     } else if (!itemsValid) {
@@ -585,7 +591,7 @@ export default function BulkDispatchModal({
             {step === 'audience' && (
               <div className="grid gap-5">
                 <GrupoDaJanela titulo="Quem recebe">
-                  <CampoDaJanela rotulo="Quem vai receber" htmlFor="disparo-quem-recebe">
+                  <CampoDaJanela rotulo="Enviar para" htmlFor="disparo-quem-recebe">
                     <Select value={audienceMode} onValueChange={v => setAudienceMode(v as AudienceMode)}>
                       <SelectTrigger id="disparo-quem-recebe" className="w-full">
                         <SelectValue />
@@ -655,7 +661,7 @@ export default function BulkDispatchModal({
                   )}
                 </GrupoDaJanela>
 
-                <Aviso tom="info" icone={countingAudience ? Loader2 : Users}>
+                <Aviso tom="info" icone={countingAudience ? IconeGirando : Users}>
                   {countingAudience ? (
                     <>Contando destinatários...</>
                   ) : recipientCount === null ? (
@@ -692,7 +698,7 @@ export default function BulkDispatchModal({
                     >
                       <Zap className="mt-0.5 h-4 w-4 shrink-0" />
                       <span className="text-sm">
-                        <span className="block font-medium">WhatsApp por QR code</span>
+                        <span className="block font-medium">WhatsApp por código QR</span>
                         <span className="text-xs font-normal text-muted-foreground">Mensagem livre (sequência)</span>
                       </span>
                     </Button>
@@ -706,7 +712,7 @@ export default function BulkDispatchModal({
                       <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
                       <span className="text-sm">
                         <span className="block font-medium">WhatsApp oficial</span>
-                        <span className="text-xs font-normal text-muted-foreground">Template aprovado pela Meta</span>
+                        <span className="text-xs font-normal text-muted-foreground">Modelo aprovado pela Meta</span>
                       </span>
                     </Button>
                   </div>
@@ -752,9 +758,9 @@ export default function BulkDispatchModal({
                   </GrupoDaJanela>
                 )}
 
-                {/* ---- WhatsApp oficial: template aprovado ---- */}
+                {/* ---- WhatsApp oficial: modelo aprovado ---- */}
                 {cloudMode && (
-                  <GrupoDaJanela titulo="Template aprovado">
+                  <GrupoDaJanela titulo="Modelo aprovado">
                     {erroCanais ? (
                       <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregarCanais} className="p-4" />
                     ) : cloudOptions.length === 0 ? (
@@ -763,7 +769,7 @@ export default function BulkDispatchModal({
                         title="Nenhum canal WhatsApp oficial conectado."
                         description={
                           <>
-                            Conecte um número em <strong>Canais → WhatsApp Oficial</strong> e aprove um template pra
+                            Conecte um número em <strong>Canais → WhatsApp oficial</strong> e aprove um modelo pra
                             disparar por aqui.
                           </>
                         }
@@ -795,10 +801,10 @@ export default function BulkDispatchModal({
                           </CampoDaJanela>
                         )}
 
-                        <CampoDaJanela rotulo="Template" htmlFor="disparo-template">
+                        <CampoDaJanela rotulo="Modelo" htmlFor="disparo-template">
                           {(selectedCloudInbox?.templates.length ?? 0) === 0 ? (
                             <p className="text-xs text-muted-foreground">
-                              Esse número não tem template ainda. Crie e aprove um template na Meta primeiro.
+                              Esse número não tem modelo ainda. Crie e aprove um modelo de mensagem na Meta primeiro.
                             </p>
                           ) : (
                             <Select
@@ -809,7 +815,7 @@ export default function BulkDispatchModal({
                               }}
                             >
                               <SelectTrigger id="disparo-template" className="w-full">
-                                <SelectValue placeholder="Escolher template" />
+                                <SelectValue placeholder="Escolher modelo" />
                               </SelectTrigger>
                               <SelectContent>
                                 {selectedCloudInbox?.templates.map(t => (
@@ -831,7 +837,7 @@ export default function BulkDispatchModal({
 
                         {selectedCloudTemplate && selectedCloudTemplate.variables.length > 0 && (
                           <CampoDaJanela
-                            rotulo="Variáveis do template"
+                            rotulo="Variáveis do modelo"
                             ajuda={<>Use {'{{nome}}'} pra puxar o nome do lead.</>}
                           >
                             <div className="grid gap-2">
@@ -842,7 +848,7 @@ export default function BulkDispatchModal({
                                     value={cloudVars[v] ?? ''}
                                     onChange={e => setCloudVars(prev => ({ ...prev, [v]: e.target.value }))}
                                     placeholder="{{nome}} ou texto fixo"
-                                    aria-label={`Variável ${i + 1} do template`}
+                                    aria-label={`Variável ${i + 1} do modelo`}
                                     className="h-9"
                                   />
                                 </div>
@@ -852,7 +858,7 @@ export default function BulkDispatchModal({
                         )}
 
                         <Aviso tom="info" compacto>
-                          Fora da janela de 24h, a Meta só entrega template aprovado. As variáveis são preenchidas por lead.
+                          Fora da janela de 24h, a Meta só entrega modelo aprovado. As variáveis são preenchidas por lead.
                         </Aviso>
                       </>
                     )}
@@ -1050,10 +1056,10 @@ export default function BulkDispatchModal({
                     </div>
                     <div className="flex justify-between py-2">
                       <span className="text-muted-foreground">Canal</span>
-                      <strong>{cloudMode ? 'WhatsApp oficial (template)' : 'WhatsApp por QR code'}</strong>
+                      <strong>{cloudMode ? 'WhatsApp oficial (modelo)' : 'WhatsApp por código QR'}</strong>
                     </div>
                     <div className="flex justify-between py-2">
-                      <span className="text-muted-foreground">{cloudMode ? 'Template' : 'Itens na sequência'}</span>
+                      <span className="text-muted-foreground">{cloudMode ? 'Modelo' : 'Itens na sequência'}</span>
                       <strong>{cloudMode ? selectedCloudTemplate?.name ?? '—' : items.length}</strong>
                     </div>
                     <div className="flex justify-between py-2">
@@ -1099,7 +1105,7 @@ export default function BulkDispatchModal({
                   <GrupoDaJanela titulo="Mensagem">
                     <div className="p-3 rounded-lg bg-muted/50 text-sm whitespace-pre-wrap">
                       <span className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
-                        <ShieldCheck className="w-3 h-3" /> Template {selectedCloudTemplate.name} · {selectedCloudTemplate.language}
+                        <ShieldCheck className="w-3 h-3" /> Modelo {selectedCloudTemplate.name} · {selectedCloudTemplate.language}
                       </span>
                       {preview(
                         selectedCloudTemplate.variables.reduce(
@@ -1116,7 +1122,7 @@ export default function BulkDispatchModal({
                   <CampoDaJanela
                     rotulo="Enviar teste pra um número"
                     ajuda={cloudMode
-                      ? 'Manda o template só pra esse número, sem tocar nos leads.'
+                      ? 'Manda o modelo só pra esse número, sem tocar nos leads.'
                       : 'Manda a sequência inteira só pra esse número, sem tocar nos leads.'}
                   >
                     <div className="flex items-center gap-2">

@@ -166,7 +166,7 @@ describe('TelaPaginas', () => {
         expect(within(escolha).getByRole('button', { name: nome })).toBeTruthy();
       }
       await userEvent.click(within(escolha).getByRole('button', { name: /Em branco/ }));
-      await userEvent.type(screen.getByLabelText('Título da página'), 'Nova');
+      await userEvent.type(screen.getByLabelText(/Título da página/), 'Nova');
       await userEvent.click(screen.getByRole('button', { name: 'Criar' }));
       await waitFor(() => expect(siteBuilderService.createPage).toHaveBeenCalled());
       const enviado = vi.mocked(siteBuilderService.createPage).mock.calls[0][1];

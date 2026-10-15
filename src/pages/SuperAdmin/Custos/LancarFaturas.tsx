@@ -73,7 +73,7 @@ export default function LancarFaturas({ month, aberta, aoFechar, aoSalvar }: { m
             </GradeDaJanela>
             {linhas.length === 0 && !erro && <p className="text-sm text-muted-foreground" role="status">Carregando faturas…</p>}
           </GrupoDaJanela>
-          {erro && <Aviso tom="erro"><span role="alert">{erro}</span></Aviso>}
+          {erro && <Aviso tom="erro">{erro}</Aviso>}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={aoFechar} disabled={salvando}>Cancelar</Button>

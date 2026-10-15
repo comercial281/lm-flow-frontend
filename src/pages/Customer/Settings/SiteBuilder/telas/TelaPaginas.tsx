@@ -336,7 +336,7 @@ export default function TelaPaginas({ site, versaoDasPaginas = 0, aoMudarPagina 
           </DialogHeader>
           <div className="grid gap-6 py-2">
             <GrupoDaJanela titulo="Página">
-              <CampoTexto id="pagina-titulo" rotulo="Título da página" valor={pageForm.title} placeholder="Ex: Sobre nós"
+              <CampoTexto id="pagina-titulo" rotulo="Título da página" obrigatorio valor={pageForm.title} placeholder="Ex.: Sobre nós"
                 ajuda="Aparece no alto da página e é o nome dela no menu (dá pra trocar o nome do menu na tela Menus)."
                 aoMudar={title => setPageForm(f => ({ ...f, title }))} />
               <CampoTexto id="pagina-endereco" rotulo="Endereço da página" valor={pageForm.slug ?? ''} placeholder="sobre-nos"
@@ -362,7 +362,7 @@ export default function TelaPaginas({ site, versaoDasPaginas = 0, aoMudarPagina 
                     </div>
                     <div className="sm:col-span-2">
                       <CampoTexto id="pagina-imagem-descricao" rotulo="Descrição da imagem" valor={imagemAlt}
-                        placeholder="Ex: Fachada da imobiliária" ajuda="Lida por quem não enxerga a imagem e pelo Google."
+                        placeholder="Ex.: Fachada da imobiliária" ajuda="Lida por quem não enxerga a imagem e pelo Google."
                         aoMudar={setImagemAlt} />
                     </div>
                   </GradeDaJanela>

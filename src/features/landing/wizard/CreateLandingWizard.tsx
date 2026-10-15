@@ -73,6 +73,9 @@ const LINHA = 'h-auto w-full justify-between gap-2 whitespace-normal px-3 py-2 t
  * (quiz+qualificação, automação/roleta/lembrete/instância, Pixel/CAPI, páginas
  * de resultado, templates) entram nas próximas fatias.
  */
+/** Até quantos modelos salvos aparecem todos de uma vez; acima disso, só ao digitar. */
+const MODELOS_SEM_BUSCA_ATE = 8;
+
 export default function CreateLandingWizard({
   siteId,
   onClose,
@@ -194,12 +197,14 @@ export default function CreateLandingWizard({
     if (!name.trim()) setName(p.title);
   };
 
-  // Modelos salvos: só aparecem quando a pessoa digita, e poucos de cada vez.
+  // Modelos salvos: até 8, mostra todos; acima disso a lista só abre ao digitar (poucos por vez).
+  const listaPedeBusca = templates.length > MODELOS_SEM_BUSCA_ATE;
   const modelosSalvos = useMemo(() => {
+    if (!listaPedeBusca) return templates;
     const q = templateQuery.trim().toLowerCase();
     if (!q) return [];
     return templates.filter((t) => t.name.toLowerCase().includes(q)).slice(0, 6);
-  }, [templates, templateQuery]);
+  }, [templates, templateQuery, listaPedeBusca]);
   const modeloSalvo = templates.find((t) => t.id === templateId) ?? null;
 
   const sugerido = property ? modeloSugerido(property) : null;
@@ -348,13 +353,15 @@ export default function CreateLandingWizard({
                           <span className="flex min-w-0 items-center gap-2"><Check className="h-4 w-4 flex-none text-primary" /><span className="truncate">{modeloSalvo.name}</span></span>
                         </div>
                       )}
-                      {!templateQuery.trim() && (
-                        <p className="text-xs text-muted-foreground">{templates.length} {templates.length === 1 ? 'modelo salvo' : 'modelos salvos'}. Digite pra buscar.</p>
+                      {listaPedeBusca && !templateQuery.trim() && (
+                        <p className="text-xs text-muted-foreground">{templates.length} modelos salvos. Digite pra buscar.</p>
                       )}
-                      <CampoDaJanela rotulo={modeloSalvo ? 'Escolher outro modelo' : 'Buscar modelo'} htmlFor="assistente-busca-modelo">
-                        <Input id="assistente-busca-modelo" value={templateQuery} onChange={(e) => setTemplateQuery(e.target.value)}
-                          placeholder="Digite o nome do modelo" />
-                      </CampoDaJanela>
+                      {listaPedeBusca && (
+                        <CampoDaJanela rotulo={modeloSalvo ? 'Escolher outro modelo' : 'Buscar modelo'} htmlFor="assistente-busca-modelo">
+                          <Input id="assistente-busca-modelo" value={templateQuery} onChange={(e) => setTemplateQuery(e.target.value)}
+                            placeholder="Digite o nome do modelo" />
+                        </CampoDaJanela>
+                      )}
                       {modelosSalvos.length > 0 && (
                         <div className="grid gap-1.5">
                           {modelosSalvos.map((t) => (
@@ -365,7 +372,7 @@ export default function CreateLandingWizard({
                           ))}
                         </div>
                       )}
-                      {templateQuery.trim() && modelosSalvos.length === 0 && (
+                      {listaPedeBusca && templateQuery.trim() && modelosSalvos.length === 0 && (
                         <p className="text-sm text-muted-foreground">Nenhum modelo com esse nome.</p>
                       )}
                     </>
@@ -440,7 +447,7 @@ export default function CreateLandingWizard({
                   id="assistente-nome"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Campanha Lançamento Setembro"
+                  placeholder="Ex.: Campanha Lançamento Setembro"
                 />
               </CampoDaJanela>
             </GrupoDaJanela>

@@ -22,6 +22,8 @@ interface Props {
   onChange: (lead: LeadPickerItem) => void;
   placeholder?: string;
   label?: string;
+  /** Marca o rótulo como obrigatório (padrão: sim). */
+  obrigatorio?: boolean;
   /** "Criar contato novo" no fim da lista. A visita não cadastra cliente (decisão do dono, 30/09). */
   allowCreate?: boolean;
   /**
@@ -63,7 +65,7 @@ const POR_PAGINA = 50;
 const PERTO_DO_FIM = 80;
 
 export function LeadCombobox({
-  value, onChange, placeholder = 'Buscar lead ou contato...', label = 'Contato *', allowCreate = true,
+  value, onChange, placeholder = 'Buscar lead ou contato...', label = 'Contato', obrigatorio = true, allowCreate = true,
   paginated = false,
 }: Props) {
   const idDoCampo = useId();
@@ -196,7 +198,7 @@ export function LeadCombobox({
 
   return (
     <>
-      <CampoDaJanela rotulo={label.replace(/\s\*$/, '')} htmlFor={idDoCampo} obrigatorio={/\s\*$/.test(label)}>
+      <CampoDaJanela rotulo={label} htmlFor={idDoCampo} obrigatorio={obrigatorio}>
         <div className="relative" ref={wrapperRef}>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />

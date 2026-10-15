@@ -283,7 +283,7 @@ export default function ProposalFormDialog({
             <LeadCombobox
               value={selectedLead}
               onChange={handleLeadChange}
-              label="Lead *"
+              label="Lead"
               placeholder="Buscar lead ou contato por nome/telefone..."
             />
 

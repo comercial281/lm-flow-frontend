@@ -75,7 +75,7 @@ export default function DuplicateAgentDialog({ agent, inboxes, onClose, onDuplic
                 id="dup_inbox"
                 value={inboxId}
                 onChange={(e) => setInboxId(e.target.value)}
-                className="w-full rounded-md border border-sidebar-border bg-background px-3 py-2 text-sm"
+                className="w-full"
               >
                 <option value="">— Escolher depois —</option>
                 {inboxes.map((i) => (

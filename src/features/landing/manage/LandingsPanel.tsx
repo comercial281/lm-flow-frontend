@@ -143,8 +143,8 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
       await landingTemplatesService.createFromPage(page.id, templateName.trim(), scope);
       toast.success(
         scope === 'global'
-          ? 'Template GLOBAL salvo (todos os clientes)'
-          : 'Template salvo — já aparece no assistente',
+          ? 'Modelo salvo pra todos os clientes'
+          : 'Modelo salvo. Já aparece no assistente.',
       );
     } catch {
       toast.error('Não consegui salvar o modelo');
@@ -155,8 +155,8 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
     const ok = await confirmar({
       titulo: `Excluir “${page.title}”?`,
       descricao: page.active
-        ? 'Esta landing está PUBLICADA. Excluir derruba o link que já está no ar — quem clicar no anúncio cai numa página que não existe mais. Os leads já capturados continuam no CRM.'
-        : 'A landing e as seções montadas nela são apagadas. Os leads já capturados continuam no CRM.',
+        ? 'Esta página de anúncio está PUBLICADA. Excluir derruba o link que já está no ar — quem clicar no anúncio cai numa página que não existe mais. Os leads já capturados continuam no CRM.'
+        : 'A página de anúncio e as seções montadas nela são apagadas. Os leads já capturados continuam no CRM.',
       rotuloDaAcao: 'Excluir',
       destrutivo: true,
     });
@@ -182,7 +182,7 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-          placeholder="Nome da nova landing (ex: Campanha Lançamento Setembro)"
+          placeholder="Nome da nova página de anúncio (ex.: Campanha Lançamento Setembro)"
           className="min-w-[260px] flex-1"
         />
         <Button variant="outline" onClick={handleCreate} disabled={creating || !newName.trim()}>
@@ -202,7 +202,7 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
       ) : landings.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
           <Megaphone className="h-10 w-10 mb-2 opacity-30" />
-          <p className="text-sm">Nenhuma landing de anúncio ainda</p>
+          <p className="text-sm">Nenhuma página de anúncio ainda</p>
           <Button size="sm" className="mt-3" onClick={() => setShowWizard(true)}>
             <Sparkles className="h-4 w-4 mr-1" />
             Criar a primeira
