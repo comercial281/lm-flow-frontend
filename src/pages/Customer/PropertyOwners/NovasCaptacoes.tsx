@@ -4,10 +4,11 @@ import { toast } from 'sonner';
 import { ClipboardList, RefreshCw, Search } from 'lucide-react';
 import {
   Card,
-  Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Textarea,
+  Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Textarea,
 } from '@/components/ui/ds';
 import { EmptyState } from '@/components/base';
 import Carregando from '@/components/base/Carregando';
+import { CampoDaJanela } from '@/components/base/janela';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
@@ -201,11 +202,10 @@ export default function NovasCaptacoes() {
             <DialogTitle>Recusar pedido</DialogTitle>
             <DialogDescription>O pedido sai da fila de novas captações.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-1">
-            <Label htmlFor="motivo-recusa">Motivo</Label>
+          <CampoDaJanela rotulo="Motivo" htmlFor="motivo-recusa" obrigatorio>
             <Textarea id="motivo-recusa" rows={3} placeholder="Informe o motivo..." value={motivo}
               onChange={e => setMotivo(e.target.value)} />
-          </div>
+          </CampoDaJanela>
           <DialogFooter>
             <Button variant="outline" onClick={fecharRecusa} disabled={!!agindo}>Cancelar</Button>
             <Button variant="destructive" onClick={() => void recusar()} disabled={!motivo.trim() || !!agindo}>

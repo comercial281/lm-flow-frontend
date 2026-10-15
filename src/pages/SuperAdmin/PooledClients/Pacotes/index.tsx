@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import Aviso from '@/components/base/Aviso';
 import EmptyState from '@/components/base/EmptyState';
+import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { Seletor } from '@/components/base/Seletor';
-import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Label } from '@/components/ui/ds';
+import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input } from '@/components/ui/ds';
 import { clientesService } from '@/services/superAdmin/clientesService';
 import { pacotesService } from '@/services/superAdmin/pacotesService';
 import type { ClientePooled } from '@/types/admin/clientes';
@@ -64,15 +66,19 @@ export default function Pacotes() {
       <Dialog open={novo} onOpenChange={setNovo}>
         <DialogContent>
           <DialogHeader><DialogTitle>Novo pacote</DialogTitle></DialogHeader>
-          <div><Label htmlFor="np-nome">Nome</Label><Input id="np-nome" value={nome} onChange={(e) => setNome(e.target.value)} /></div>
-          <div><Label htmlFor="np-origem">Começar de</Label>
-            <Seletor id="np-origem" aria-label="Começar de" value={origem} onChange={(e) => setOrigem(e.target.value)}>
-              <option value="">Padrão do sistema</option>
-              {(pacotes ?? []).map((p) => <option key={p.id} value={`pacote:${p.id}`}>Pacote {p.name}</option>)}
-              {clientes.map((c) => <option key={c.id} value={`cliente:${c.id}`}>Cliente {c.name}</option>)}
-            </Seletor>
-            {erroClientes && <p role="alert" className="mt-1 text-xs text-destructive">Não deu pra carregar os clientes.</p>}
-          </div>
+          <GrupoDaJanela titulo="Pacote">
+            <CampoDaJanela rotulo="Nome" htmlFor="np-nome" obrigatorio>
+              <Input id="np-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+            </CampoDaJanela>
+            <CampoDaJanela rotulo="Começar de" htmlFor="np-origem">
+              <Seletor id="np-origem" aria-label="Começar de" value={origem} onChange={(e) => setOrigem(e.target.value)} className="w-full">
+                <option value="">Padrão do sistema</option>
+                {(pacotes ?? []).map((p) => <option key={p.id} value={`pacote:${p.id}`}>Pacote {p.name}</option>)}
+                {clientes.map((c) => <option key={c.id} value={`cliente:${c.id}`}>Cliente {c.name}</option>)}
+              </Seletor>
+            </CampoDaJanela>
+            {erroClientes && <Aviso tom="erro"><span role="alert">Não deu pra carregar os clientes.</span></Aviso>}
+          </GrupoDaJanela>
           <DialogFooter><Button disabled={!nome.trim() || criando} onClick={() => void criar()}>Criar</Button></DialogFooter>
         </DialogContent>
       </Dialog>

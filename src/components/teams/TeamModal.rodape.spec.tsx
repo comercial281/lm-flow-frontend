@@ -23,4 +23,10 @@ describe('TeamModal: rodapé da casa', () => {
     await userEvent.click(enviar);
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ name: 'Time A' }));
   });
+
+  it('o miolo tem os dois grupos com título', () => {
+    render(<TeamModal open onOpenChange={vi.fn()} isNew onSubmit={vi.fn()} />);
+    expect(screen.getByRole('group', { name: 'form.basicInfo' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'form.configuration' })).toBeInTheDocument();
+  });
 });

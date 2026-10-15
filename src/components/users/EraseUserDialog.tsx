@@ -73,7 +73,7 @@ export default function EraseUserDialog({ open, user, onClose, onDone }: Props) 
 
   return (
     <Dialog open={open} onOpenChange={o => !o && onClose()}>
-      <DialogContent>
+      <DialogContent compacta>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Trash2 className="h-4 w-4" />

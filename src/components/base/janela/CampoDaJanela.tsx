@@ -10,9 +10,11 @@ const COLUNAS = {
   4: 'sm:col-span-4',
 } as const;
 
-export default function CampoDaJanela({ rotulo, htmlFor, obrigatorio, ajuda, erro, colunas = 1, className, children }: {
+export default function CampoDaJanela({ rotulo, htmlFor, idDoRotulo, obrigatorio, ajuda, erro, colunas = 1, className, children }: {
   rotulo: string;
   htmlFor?: string;
+  /** Id do rótulo, pra um grupo de botões ligar o `aria-labelledby` a ele. */
+  idDoRotulo?: string;
   obrigatorio?: boolean;
   ajuda?: ReactNode;
   erro?: string;
@@ -22,7 +24,7 @@ export default function CampoDaJanela({ rotulo, htmlFor, obrigatorio, ajuda, err
 }) {
   return (
     <div className={cn('grid content-start gap-1.5 text-sm', COLUNAS[colunas], className)}>
-      <label htmlFor={htmlFor} className="text-[13px] font-medium text-foreground/80">
+      <label id={idDoRotulo} htmlFor={htmlFor} className="text-[13px] font-medium text-foreground/80">
         {rotulo}
         {obrigatorio && (
           <>

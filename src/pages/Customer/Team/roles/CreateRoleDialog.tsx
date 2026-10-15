@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Button, Input, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-  DialogDescription, Label as UILabel,
+  DialogDescription,
 } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
+import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { customRolesService } from '@/services/customRoles/customRolesService';
 import type { RoleCapabilities } from '@/types/customRoles';
@@ -60,18 +61,16 @@ export default function CreateRoleDialog({ open, bases, onClose, onCreated }: Pr
           <DialogTitle>Criar cargo personalizado</DialogTitle>
           <DialogDescription>O cargo novo começa com as permissões do cargo escolhido. Depois você ajusta na aba Permissões.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <UILabel htmlFor="novo-cargo-nome" className="text-xs">Nome do cargo</UILabel>
-            <Input id="novo-cargo-nome" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: SDR" className="mt-1" />
-          </div>
-          <div>
-            <UILabel htmlFor="novo-cargo-base" className="text-xs">Começar igual a</UILabel>
-            <Seletor id="novo-cargo-base" value={baseId} onChange={e => setBaseId(e.target.value)} className="mt-1 w-full">
+        <GrupoDaJanela titulo="Cargo novo">
+          <CampoDaJanela rotulo="Nome do cargo" htmlFor="novo-cargo-nome" obrigatorio>
+            <Input id="novo-cargo-nome" value={name} onChange={e => setName(e.target.value)} placeholder="Ex.: Pré-vendas" />
+          </CampoDaJanela>
+          <CampoDaJanela rotulo="Começar igual a" htmlFor="novo-cargo-base">
+            <Seletor id="novo-cargo-base" value={baseId} onChange={e => setBaseId(e.target.value)} className="w-full">
               {bases.map(b => <option key={b.id} value={String(b.id)}>{b.name}</option>)}
             </Seletor>
-          </div>
-        </div>
+          </CampoDaJanela>
+        </GrupoDaJanela>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
           <Button onClick={() => void submit()} disabled={saving || !name.trim() || !baseId}>{saving ? 'Criando...' : 'Criar cargo'}</Button>

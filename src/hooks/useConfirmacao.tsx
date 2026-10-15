@@ -98,7 +98,7 @@ export function useConfirmacao(): Retorno {
 
   const dialogoDeConfirmacao = (
     <Dialog open={!!pedido} onOpenChange={aberto => { if (!aberto) fechar(false); }}>
-      <DialogContent>
+      <DialogContent compacta>
         <DialogHeader>
           <DialogTitle>{pedido?.titulo}</DialogTitle>
           {pedido?.descricao !== undefined && (

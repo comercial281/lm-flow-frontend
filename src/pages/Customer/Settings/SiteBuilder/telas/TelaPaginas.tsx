@@ -17,6 +17,8 @@ import {
   siteBuilderService, type ModeloDePagina, type PageFormData, type Site, type SitePage,
 } from '@/services/siteBuilder/siteBuilderService';
 import { CampoTexto } from '@/components/base/Campo';
+import Aviso from '@/components/base/Aviso';
+import { GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 
@@ -309,7 +311,7 @@ export default function TelaPaginas({ site, versaoDasPaginas = 0, aoMudarPagina 
               frase="O texto da LGPD com o nome, o CPF ou CNPJ e o contato do site."
               onClick={() => setPedindoDocumento(true)} disabled={!!criandoModelo} aberta={pedindoDocumento} />
             {pedindoDocumento && (
-              <div className="space-y-3 rounded-lg border border-dashed border-border p-4">
+              <div className="space-y-3 pl-1">
                 <CampoTexto id="pagina-documento" rotulo="CPF ou CNPJ" valor={documento} inputMode="text" autoComplete="off"
                   placeholder="00.000.000/0000-00"
                   ajuda="Aparece no texto da política, junto do nome do site. Corretor autônomo pode usar o CPF."
@@ -320,7 +322,7 @@ export default function TelaPaginas({ site, versaoDasPaginas = 0, aoMudarPagina 
                 </Button>
               </div>
             )}
-            {avisoDoModelo && <p role="alert" className="text-sm text-amber-700 dark:text-amber-400">{avisoDoModelo}</p>}
+            {avisoDoModelo && <Aviso tom="erro">{avisoDoModelo}</Aviso>}
           </div>
         </DialogContent>
       </Dialog>
@@ -332,35 +334,40 @@ export default function TelaPaginas({ site, versaoDasPaginas = 0, aoMudarPagina 
             <DialogTitle>{editingPage ? 'Editar página' : 'Nova página'}</DialogTitle>
             <DialogDescription>O texto da página e se ela aparece no site e no menu.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-5 py-2">
-            <CampoTexto id="pagina-titulo" rotulo="Título *" valor={pageForm.title} placeholder="Ex: Sobre nós"
-              ajuda="Aparece no alto da página e é o nome dela no menu (dá pra trocar o nome do menu na tela Menus)."
-              aoMudar={title => setPageForm(f => ({ ...f, title }))} />
-            <CampoTexto id="pagina-endereco" rotulo="Endereço da página (URL)" valor={pageForm.slug ?? ''} placeholder="sobre-nos"
-              classeDoControle="font-mono"
-              ajuda={editingPage
-                ? 'O final do endereço da página, sem espaço nem acento. Se trocar, a página perde o nome e a posição que você deu a ela na tela Menus.'
-                : 'O final do endereço da página, sem espaço nem acento.'}
-              aoMudar={slug => setPageForm(f => ({ ...f, slug }))} />
+          <div className="grid gap-6 py-2">
+            <GrupoDaJanela titulo="Página">
+              <CampoTexto id="pagina-titulo" rotulo="Título da página" obrigatorio valor={pageForm.title} placeholder="Ex.: Sobre nós"
+                ajuda="Aparece no alto da página e é o nome dela no menu (dá pra trocar o nome do menu na tela Menus)."
+                aoMudar={title => setPageForm(f => ({ ...f, title }))} />
+              <CampoTexto id="pagina-endereco" rotulo="Endereço da página" valor={pageForm.slug ?? ''} placeholder="sobre-nos"
+                classeDoControle="font-mono"
+                ajuda={editingPage
+                  ? 'O final do endereço da página, sem espaço nem acento. Se trocar, a página perde o nome e a posição que você deu a ela na tela Menus.'
+                  : 'O final do endereço da página, sem espaço nem acento.'}
+                aoMudar={slug => setPageForm(f => ({ ...f, slug }))} />
+            </GrupoDaJanela>
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Conteúdo</p>
+            <GrupoDaJanela titulo="Conteúdo">
               <RichTextEditor key={semente.nonce} ref={editorRef} conteudoInicial={semente.html}
                 showToolbar schema={paginaDoSiteSchema} acoes={ACOES_DA_PAGINA}
                 editorMinHeightClass="min-h-[400px]" editorMaxHeightClass="max-h-[65vh]"
                 aoPedirImagem={() => setImagemAberta(true)}
                 placeholder="Escreva o texto da página. Use a barra para título, listas, link e imagem." />
               {imagemAberta && (
-                <div className="space-y-3 rounded-lg border border-dashed border-border p-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <CampoTexto id="pagina-imagem-endereco" rotulo="Endereço da imagem" valor={imagemUrl} inputMode="url"
-                      placeholder="https://..." aviso={avisoDaImagem} aoMudar={setImagemUrl} />
-                    <CampoTexto id="pagina-imagem-descricao" rotulo="Descrição da imagem" valor={imagemAlt}
-                      placeholder="Ex: Fachada da imobiliária" ajuda="Lida por quem não enxerga a imagem e pelo Google."
-                      aoMudar={setImagemAlt} />
-                  </div>
+                <div className="grid gap-3">
+                  <GradeDaJanela>
+                    <div className="sm:col-span-2">
+                      <CampoTexto id="pagina-imagem-endereco" rotulo="Endereço da imagem" valor={imagemUrl} inputMode="url"
+                        placeholder="https://..." aviso={avisoDaImagem} aoMudar={setImagemUrl} />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <CampoTexto id="pagina-imagem-descricao" rotulo="Descrição da imagem" valor={imagemAlt}
+                        placeholder="Ex.: Fachada da imobiliária" ajuda="Lida por quem não enxerga a imagem e pelo Google."
+                        aoMudar={setImagemAlt} />
+                    </div>
+                  </GradeDaJanela>
                   <div className="flex flex-wrap gap-2">
-                    <Button type="button" onClick={() => inserirImagem(imagemUrl, imagemAlt)}
+                    <Button type="button" variant="outline" onClick={() => inserirImagem(imagemUrl, imagemAlt)}
                       disabled={!ehHttp(imagemUrl) || enviandoImagem}>
                       Pôr a imagem
                     </Button>
@@ -375,27 +382,29 @@ export default function TelaPaginas({ site, versaoDasPaginas = 0, aoMudarPagina 
                   </div>
                 </div>
               )}
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Texto colado do Word, do Google Docs ou de outro site é arrumado ao salvar: fica o título, o subtítulo, as listas, a citação, os links e as imagens.
               </p>
-              {avisoDoConteudo && <p role="alert" className="text-sm text-amber-700 dark:text-amber-400">{avisoDoConteudo}</p>}
-            </div>
+              {avisoDoConteudo && <Aviso tom="erro">{avisoDoConteudo}</Aviso>}
+            </GrupoDaJanela>
 
-            <div className="flex flex-wrap gap-x-8 gap-y-3">
-              <div className="flex items-center gap-2">
-                <Checkbox id="page_active" checked={pageForm.active ?? true}
-                  onCheckedChange={c => setPageForm(f => ({ ...f, active: c === true }))} />
-                <UILabel htmlFor="page_active" className="cursor-pointer text-base font-normal">Ativa</UILabel>
+            <GrupoDaJanela titulo="Aparência">
+              <div className="flex flex-wrap gap-x-8 gap-y-3">
+                <div className="flex items-center gap-2">
+                  <Checkbox id="page_active" checked={pageForm.active ?? true}
+                    onCheckedChange={c => setPageForm(f => ({ ...f, active: c === true }))} />
+                  <UILabel htmlFor="page_active" className="cursor-pointer text-sm font-normal">Ativa</UILabel>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox id="page_menu" checked={pageForm.in_menu ?? true}
+                    onCheckedChange={c => setPageForm(f => ({ ...f, in_menu: c === true }))} />
+                  <UILabel htmlFor="page_menu" className="cursor-pointer text-sm font-normal">Mostrar no menu</UILabel>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Checkbox id="page_menu" checked={pageForm.in_menu ?? true}
-                  onCheckedChange={c => setPageForm(f => ({ ...f, in_menu: c === true }))} />
-                <UILabel htmlFor="page_menu" className="cursor-pointer text-base font-normal">Exibir no menu</UILabel>
-              </div>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Desmarcada, a página sai do ar. Com Exibir no menu, o link dela aparece no menu do site; é a mesma caixinha Mostrar da tela Menus.
-            </p>
+              <p className="text-xs text-muted-foreground">
+                Desmarcada, a página sai do ar. Com Mostrar no menu, o link dela aparece no menu do site; é a mesma caixinha Mostrar da tela Menus.
+              </p>
+            </GrupoDaJanela>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPageModal(false)}>Cancelar</Button>

@@ -39,6 +39,21 @@ describe('useConfirmacao', () => {
     await waitFor(() => expect(aoConfirmar).toHaveBeenCalledTimes(1));
   });
 
+  it('é uma janela compacta: sem topo e rodapé fixos com linha, na largura pequena', async () => {
+    const usuario = userEvent.setup();
+    render(<TelaDeExemplo />);
+    await usuario.click(screen.getByText('Excluir imóvel agora'));
+    const caixa = await screen.findByRole('dialog');
+    expect(caixa).toHaveClass('max-w-md');
+    const topo = caixa.querySelector('[data-slot="dialog-header"]') as HTMLElement;
+    const rodape = caixa.querySelector('[data-slot="dialog-footer"]') as HTMLElement;
+    expect(topo).not.toHaveClass('sticky');
+    expect(topo).not.toHaveClass('border-b');
+    expect(rodape).not.toHaveClass('sticky');
+    expect(rodape).not.toHaveClass('border-t');
+    expect(topo).toHaveClass('text-left!');
+  });
+
   it('cancelar não executa a ação e fecha o diálogo', async () => {
     const usuario = userEvent.setup();
     aoConfirmar.mockClear();

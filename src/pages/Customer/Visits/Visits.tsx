@@ -19,8 +19,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  Label as UILabel,
-  Textarea,
 } from '@/components/ui/ds';
 import {
   Plus,
@@ -70,6 +68,7 @@ import {
   tituloDaVisao,
 } from '@/features/visits/gradeDoCalendario';
 import { AcoesDaVisita } from '@/features/visits/AcoesDaVisita';
+import { MioloDoCancelamentoDaVisita, MioloDoRetornoDaVisita } from '@/features/visits/MioloDaAcaoDaVisita';
 import { acaoDaVisita, type AcaoDaVisita } from '@/features/visits/acaoDaVisita';
 
 // "Agendadas" pede também as Reagendadas: remarcar troca a situação para
@@ -929,39 +928,9 @@ export default function Visits() {
             </DialogTitle>
           </DialogHeader>
           {actionModal?.action === 'complete' || actionModal?.action === 'retorno' ? (
-            <div className="space-y-4 py-2">
-              <div>
-                <UILabel>Avaliação (1-5)</UILabel>
-                <div className="flex gap-1 mt-2">
-                  {[1,2,3,4,5].map(n => (
-                    <button key={n} onClick={() => setRating(n)} aria-label={`Avaliar com ${n} ${n === 1 ? 'estrela' : 'estrelas'}`} title={`Avaliar com ${n} ${n === 1 ? 'estrela' : 'estrelas'}`}>
-                      <Star className={`h-6 w-6 ${n <= rating ? 'text-violet-400 fill-violet-400' : 'text-muted-foreground'}`} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <UILabel>Feedback do cliente</UILabel>
-                <Textarea
-                  value={feedback}
-                  onChange={e => setFeedback(e.target.value)}
-                  rows={3}
-                  placeholder="Como foi a visita? Interesse do cliente?"
-                  className="mt-1 resize-none"
-                />
-              </div>
-            </div>
+            <MioloDoRetornoDaVisita nota={rating} aoMudarNota={setRating} comentario={feedback} aoMudarComentario={setFeedback} />
           ) : (
-            <div className="py-2">
-              <UILabel>Motivo do cancelamento</UILabel>
-              <Textarea
-                value={cancelReason}
-                onChange={e => setCancelReason(e.target.value)}
-                rows={3}
-                placeholder="Opcional"
-                className="mt-1 resize-none"
-              />
-            </div>
+            <MioloDoCancelamentoDaVisita motivo={cancelReason} aoMudarMotivo={setCancelReason} />
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setActionModal(null)}>Voltar</Button>

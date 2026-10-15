@@ -51,13 +51,23 @@ describe('Roteamento de lead no computador', () => {
   it('a lista aberta continua aberta quando a janela redesenha', async () => {
     const props = { siteId: 's1', page, onClose: () => {}, onSaved: () => {} };
     const { rerender } = render(<LeadRoutingModal {...props} />);
-    const tags = await screen.findAllByRole('combobox', { name: /Tag/ });
+    const tags = await screen.findAllByRole('combobox', { name: /Etiqueta/ });
     await userEvent.click(tags[0]);
     expect(await screen.findByRole('listbox')).toBeInTheDocument();
     rerender(<LeadRoutingModal {...props} onSaved={() => {}} />);
     expect(screen.getByRole('listbox')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('option', { name: 'quente' }));
-    expect(screen.getAllByRole('combobox', { name: /Tag/ })[0]).toHaveTextContent('quente');
+    expect(screen.getAllByRole('combobox', { name: /Etiqueta/ })[0]).toHaveTextContent('quente');
+  });
+});
+
+describe('Destino do lead: grupos', () => {
+  it('a janela tem os quatro grupos com título', async () => {
+    render(<LeadRoutingModal siteId="s1" page={page} onClose={() => {}} onSaved={() => {}} />);
+    await screen.findAllByRole('combobox', { name: /Etiqueta/ });
+    for (const nome of ['Para onde vai o lead', 'Quem assume', 'Se for desqualificado', 'Rastreio']) {
+      expect(screen.getByRole('group', { name: nome })).toBeInTheDocument();
+    }
   });
 });
 
@@ -131,7 +141,7 @@ describe('Roteamento de lead: Esc não descarta', () => {
   it('Esc não fecha; Cancelar fecha', async () => {
     const onClose = vi.fn();
     render(<LeadRoutingModal siteId="s1" page={page} onClose={onClose} onSaved={() => {}} />);
-    await screen.findAllByRole('combobox', { name: /Tag/ });
+    await screen.findAllByRole('combobox', { name: /Etiqueta/ });
     await userEvent.keyboard('{Escape}');
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog')).toBeInTheDocument();

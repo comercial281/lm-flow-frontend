@@ -94,7 +94,7 @@ describe('De onde vem o lead', () => {
   it('item de outra roleta pergunta "Trazer pra esta roleta?" antes', async () => {
     abrir();
     await userEvent.click(screen.getByRole('button', { name: 'Adicionar origem' }));
-    await userEvent.click(await screen.findByRole('button', { name: /^Landing/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /^Página de anúncio/ }));
     await userEvent.click(screen.getByRole('button', { name: /Lançamento Alma/ }));
     expect(screen.getByText('Trazer pra esta roleta?')).toBeInTheDocument();
     expect(svc.addOrigin).not.toHaveBeenCalled();
@@ -184,5 +184,20 @@ describe('De onde vem o lead', () => {
     expect(screen.getByText('ZAP (venda)')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Voltar' }));
     expect(screen.getByRole('button', { name: /^Site/ })).toBeInTheDocument();
+  });
+
+  it('com muitas opções, a lista só abre quando a pessoa digita, e a escolha do Meta não é roxa cheia', async () => {
+    const muitas = Array.from({ length: 10 }, (_, k) => ({ kind: 'meta_form', ref_id: `m${k}`, label: `Form ${k} Casa`, roleta_config_id: null, roleta_name: null }));
+    svc.getOriginOptions.mockResolvedValue([...muitas, { kind: 'meta_form', ref_id: 'zz', label: 'Alma Garden', roleta_config_id: null, roleta_name: null }]);
+    abrir();
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar origem' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Formulário do Meta/ }));
+    expect(within(screen.getByRole('dialog')).getAllByRole('group').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByRole('button', { name: /Form 1 Casa/ })).toBeNull();
+    expect(screen.getByRole('radio', { name: 'Um formulário' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('radio', { name: 'Um formulário' }).className).not.toMatch(/bg-primary(\s|$)/);
+    await userEvent.type(screen.getByLabelText('Buscar'), 'alma');
+    expect(await screen.findByRole('button', { name: /Alma Garden/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Form 1 Casa/ })).toBeNull();
   });
 });

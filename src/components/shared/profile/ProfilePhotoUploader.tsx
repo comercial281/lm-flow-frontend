@@ -16,6 +16,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { normalizeAvatarUrl } from '@/utils/avatarUrl';
 import { getCroppedImage } from '@/utils/cropImage';
 import Cropper, { Area } from 'react-easy-crop';
+import { CampoDaJanela } from '@/components/base/janela';
 
 interface ProfilePhotoUploaderProps {
   initialPhoto?: string;
@@ -235,16 +236,18 @@ export default function ProfilePhotoUploader({
             )}
           </div>
 
-          <input
-            type="range"
-            min={1}
-            max={3}
-            step={0.1}
-            value={zoom}
-            onChange={event => setZoom(Number(event.target.value))}
-            className="w-full"
-            aria-label={t('photoUploader.changePhoto')}
-          />
+          <CampoDaJanela rotulo={t('photoUploader.zoom')} htmlFor="foto-zoom">
+            <input
+              id="foto-zoom"
+              type="range"
+              min={1}
+              max={3}
+              step={0.1}
+              value={zoom}
+              onChange={event => setZoom(Number(event.target.value))}
+              className="w-full"
+            />
+          </CampoDaJanela>
 
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={handleCropCancel}>
