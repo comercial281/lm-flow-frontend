@@ -7,7 +7,6 @@ import {
   CardTitle,
   Button,
   Input,
-  Label,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -16,11 +15,12 @@ import {
   DialogTitle,
   Alert,
   AlertDescription,
-  RadioGroup,
-  RadioGroupItem,
   Badge,
 } from '@/components/ui/ds';
-import { Shield, Smartphone, Mail, AlertTriangle, Check, Copy, RefreshCw } from 'lucide-react';
+import { Shield, AlertTriangle, Check, Copy, RefreshCw } from 'lucide-react';
+import Aviso from '@/components/base/Aviso';
+import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
+import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { toast } from 'sonner';
 import { twoFactorService } from '@/services/profile/twoFactorService';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -195,37 +195,18 @@ const TwoFactorSetup = ({ onUpdate }: TwoFactorSetupProps) => {
                 {t('twoFactor.setup.description')}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-3">
-                <Label>{t('twoFactor.setup.methodSelection')}</Label>
-                <RadioGroup value={selectedMethod} onValueChange={(value) => setSelectedMethod(value as 'totp' | 'email')}>
-                  <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50">
-                    <RadioGroupItem value="totp" id="totp" />
-                    <Label htmlFor="totp" className="flex-1 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <Smartphone className="h-4 w-4" />
-                        <span className="font-medium">{t('twoFactor.setup.totp.title')}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {t('twoFactor.setup.totp.description')}
-                      </p>
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50">
-                    <RadioGroupItem value="email" id="email" />
-                    <Label htmlFor="email" className="flex-1 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4" />
-                        <span className="font-medium">{t('twoFactor.setup.email.title')}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {t('twoFactor.setup.email.description')}
-                      </p>
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            </div>
+            <GrupoDaJanela titulo={t('twoFactor.groups.method')} className="py-4">
+              <CartoesDeEscolha<'totp' | 'email'>
+                rotulo={t('twoFactor.setup.methodSelection')}
+                valor={selectedMethod}
+                aoEscolher={setSelectedMethod}
+                colunas={2}
+                opcoes={[
+                  { valor: 'totp', rotulo: t('twoFactor.setup.totp.title'), descricao: t('twoFactor.setup.totp.description') },
+                  { valor: 'email', rotulo: t('twoFactor.setup.email.title'), descricao: t('twoFactor.setup.email.description') },
+                ]}
+              />
+            </GrupoDaJanela>
             <DialogFooter>
               <Button variant="outline" onClick={() => {
                 setSetupDialogOpen(false);
@@ -249,46 +230,48 @@ const TwoFactorSetup = ({ onUpdate }: TwoFactorSetupProps) => {
                 {t('twoFactor.configure.description')}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              {qrCode ? (
-                <div className="flex justify-center p-4 bg-white rounded-lg border">
-                  <div
-                    dangerouslySetInnerHTML={{ __html: qrCode }}
-                    className="flex justify-center items-center"
-                    style={{ minHeight: '200px', minWidth: '200px' }}
-                  />
-                </div>
-              ) : (
-                <div className="flex justify-center p-4 bg-gray-100 rounded-lg border">
-                  <div className="text-center">
-                    <p className="text-gray-500">{t('twoFactor.configure.qrCodeLoading')}</p>
-                    <p className="text-sm text-gray-400">{t('twoFactor.configure.qrCodeError')}</p>
+            <div className="grid gap-5 py-4">
+              <GrupoDaJanela titulo={t('twoFactor.groups.qr')}>
+                {qrCode ? (
+                  <div className="flex justify-center rounded-lg border bg-white p-4">
+                    <div
+                      dangerouslySetInnerHTML={{ __html: qrCode }}
+                      className="flex justify-center items-center"
+                      style={{ minHeight: '200px', minWidth: '200px' }}
+                    />
                   </div>
-                </div>
-              )}
+                ) : (
+                  <Aviso tom="info" titulo={t('twoFactor.configure.qrCodeLoading')}>
+                    {t('twoFactor.configure.qrCodeError')}
+                  </Aviso>
+                )}
+              </GrupoDaJanela>
 
-              <div className="space-y-2">
-                <Label>{t('twoFactor.configure.manualKey')}</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={secretKey || ''}
-                    readOnly
-                    className="font-mono text-sm"
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => copyToClipboard(secretKey)}
-                    aria-label="Copiar chave"
-                    title="Copiar chave"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {t('twoFactor.configure.manualKeyDescription')}
-                </p>
-              </div>
+              <GrupoDaJanela titulo={t('twoFactor.groups.manual')}>
+                <CampoDaJanela
+                  rotulo={t('twoFactor.configure.manualKey')}
+                  htmlFor="chave-manual"
+                  ajuda={t('twoFactor.configure.manualKeyDescription')}
+                >
+                  <div className="flex gap-2">
+                    <Input
+                      id="chave-manual"
+                      value={secretKey || ''}
+                      readOnly
+                      className="font-mono text-sm"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(secretKey)}
+                      aria-label="Copiar chave"
+                      title="Copiar chave"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CampoDaJanela>
+              </GrupoDaJanela>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => {
@@ -315,9 +298,8 @@ const TwoFactorSetup = ({ onUpdate }: TwoFactorSetupProps) => {
                   : t('twoFactor.verify.descriptionEmail')}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="verification-code">{t('twoFactor.verify.codeLabel')}</Label>
+            <GrupoDaJanela titulo={t('twoFactor.groups.verify')} className="py-4">
+              <CampoDaJanela rotulo={t('twoFactor.verify.codeLabel')} htmlFor="verification-code">
                 <Input
                   id="verification-code"
                   type="text"
@@ -327,7 +309,7 @@ const TwoFactorSetup = ({ onUpdate }: TwoFactorSetupProps) => {
                   maxLength={6}
                   className="text-center text-2xl font-mono tracking-widest"
                 />
-              </div>
+              </CampoDaJanela>
 
               {selectedMethod === 'email' && (
                 <Button
@@ -340,7 +322,7 @@ const TwoFactorSetup = ({ onUpdate }: TwoFactorSetupProps) => {
                   {t('twoFactor.verify.resendEmail')}
                 </Button>
               )}
-            </div>
+            </GrupoDaJanela>
             <DialogFooter>
               <Button variant="outline" onClick={() => setSetupStep(selectedMethod === 'totp' ? 'configure' : 'method')}>
                 {t('twoFactor.verify.actions.back')}
@@ -361,31 +343,28 @@ const TwoFactorSetup = ({ onUpdate }: TwoFactorSetupProps) => {
                 {t('twoFactor.backupCodes.description')}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  {t('twoFactor.backupCodes.warning')}
-                </AlertDescription>
-              </Alert>
+            <div className="grid gap-5 py-4">
+              <Aviso tom="atencao">{t('twoFactor.backupCodes.warning')}</Aviso>
 
-              <div className="grid grid-cols-2 gap-2 p-4 bg-muted rounded-lg">
-                {backupCodes.map((code, index) => (
-                  <div key={index} className="font-mono text-sm flex items-center gap-2">
-                    <span className="text-muted-foreground">{index + 1}.</span>
-                    <span>{code}</span>
-                  </div>
-                ))}
-              </div>
+              <GrupoDaJanela titulo={t('twoFactor.groups.backup')}>
+                <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-3.5">
+                  {backupCodes.map((code, index) => (
+                    <div key={index} className="font-mono text-sm flex items-center gap-2">
+                      <span className="text-muted-foreground">{index + 1}.</span>
+                      <span>{code}</span>
+                    </div>
+                  ))}
+                </div>
 
-              <Button
-                variant="outline"
-                onClick={copyAllBackupCodes}
-                className="w-full"
-              >
-                <Copy className="h-4 w-4 mr-2" />
-                {t('twoFactor.backupCodes.copyAll')}
-              </Button>
+                <Button
+                  variant="outline"
+                  onClick={copyAllBackupCodes}
+                  className="w-full"
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  {t('twoFactor.backupCodes.copyAll')}
+                </Button>
+              </GrupoDaJanela>
             </div>
             <DialogFooter>
               <Button onClick={() => {
@@ -494,7 +473,7 @@ const TwoFactorSetup = ({ onUpdate }: TwoFactorSetupProps) => {
 
       {/* Disable Dialog */}
       <Dialog open={disableDialogOpen} onOpenChange={setDisableDialogOpen}>
-        <DialogContent>
+        <DialogContent compacta>
           <DialogHeader>
             <DialogTitle>{t('twoFactor.disable.title')}</DialogTitle>
             <DialogDescription>

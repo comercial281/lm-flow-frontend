@@ -11,10 +11,11 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-  Label as UILabel,
 } from '@/components/ui/ds';
 import { apiErrorMessage, isErrorCode } from '@/utils/apiHelpers';
 import EmptyState from '@/components/base/EmptyState';
+import Aviso from '@/components/base/Aviso';
+import { CampoDaJanela, GradeDaJanela } from '@/components/base/janela';
 import {
   metaPagesService,
   type AvailableMetaPage,
@@ -91,7 +92,7 @@ export default function AddMetaPageDialog({ open, onOpenChange, onAdded }: Props
   const addManual = () => {
     const page_id = manual.page_id.trim();
     if (!page_id) {
-      toast.error('Informe o Page ID da página.');
+      toast.error('Informe o código da página.');
       return;
     }
     return create('manual', {
@@ -109,15 +110,13 @@ export default function AddMetaPageDialog({ open, onOpenChange, onAdded }: Props
           <DialogDescription>
             {mode === 'list'
               ? 'Escolha a página deste cliente entre as que o acesso da Leal Mídia enxerga.'
-              : 'Informe a página na mão. Só é preciso quando ela está fora do Business Manager da Leal Mídia.'}
+              : 'Informe a página na mão. Só é preciso quando ela está fora da conta de negócios da Leal Mídia no Facebook.'}
           </DialogDescription>
         </DialogHeader>
 
         {mode === 'list' ? (
           <div className="space-y-3">
-            {listError && (
-              <p className="text-sm text-amber-600" role="alert">{listError}</p>
-            )}
+            {listError && <Aviso tom="erro" compacto>{listError}</Aviso>}
             {!list && !listError && (
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" /> Buscando as páginas no Facebook…
@@ -127,7 +126,7 @@ export default function AddMetaPageDialog({ open, onOpenChange, onAdded }: Props
               <EmptyState tamanho="compacto" title="Nenhuma página visível para este acesso." />
             )}
             {list && list.length > 0 && (
-              <ul className="max-h-72 overflow-y-auto divide-y rounded-md border">
+              <ul className="max-h-72 overflow-y-auto divide-y divide-border" aria-label="Páginas">
                 {list.map(p => (
                   <li key={p.page_id} className="flex items-center gap-3 px-3 py-2">
                     <div className="flex-1 min-w-0">
@@ -145,7 +144,7 @@ export default function AddMetaPageDialog({ open, onOpenChange, onAdded }: Props
                     </div>
                     <Button
                       size="sm"
-                      variant={p.already_added ? 'outline' : 'default'}
+                      variant="outline"
                       disabled={p.already_added || saving !== null}
                       onClick={() => addFromList(p)}
                     >
@@ -161,42 +160,43 @@ export default function AddMetaPageDialog({ open, onOpenChange, onAdded }: Props
               className="text-xs text-primary underline underline-offset-2"
               onClick={() => setMode('manual')}
             >
-              Não está na lista? Informar Page ID e chave
+              Não está na lista? Informar o código da página e a chave
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
-            <div>
-              <UILabel htmlFor="meta-page-id">Page ID (Facebook)</UILabel>
-              <Input
-                id="meta-page-id"
-                placeholder="123456789012345"
-                value={manual.page_id}
-                onChange={e => setManual(m => ({ ...m, page_id: e.target.value }))}
-              />
-            </div>
-            <div>
-              <UILabel htmlFor="meta-page-name">Nome da página</UILabel>
-              <Input
-                id="meta-page-name"
-                placeholder="Como aparece no Facebook"
-                value={manual.page_name}
-                onChange={e => setManual(m => ({ ...m, page_name: e.target.value }))}
-              />
-            </div>
-            <div>
-              <UILabel htmlFor="meta-page-token">Chave de acesso (Meta)</UILabel>
-              <Input
-                id="meta-page-token"
-                type="password"
-                placeholder="EAAxxxxx…"
-                value={manual.access_token}
-                onChange={e => setManual(m => ({ ...m, access_token: e.target.value }))}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Em branco, usa a chave de sistema da Leal Mídia.
-              </p>
-            </div>
+          <div className="grid gap-3">
+            <GradeDaJanela>
+              <CampoDaJanela rotulo="Código da página" htmlFor="meta-page-id" obrigatorio colunas={2}>
+                <Input
+                  id="meta-page-id"
+                  placeholder="123456789012345"
+                  value={manual.page_id}
+                  onChange={e => setManual(m => ({ ...m, page_id: e.target.value }))}
+                />
+              </CampoDaJanela>
+              <CampoDaJanela rotulo="Nome da página" htmlFor="meta-page-name" colunas={2}>
+                <Input
+                  id="meta-page-name"
+                  placeholder="Como aparece no Facebook"
+                  value={manual.page_name}
+                  onChange={e => setManual(m => ({ ...m, page_name: e.target.value }))}
+                />
+              </CampoDaJanela>
+              <CampoDaJanela
+                rotulo="Chave de acesso"
+                htmlFor="meta-page-token"
+                colunas={4}
+                ajuda="Em branco, usa a chave de sistema da Leal Mídia."
+              >
+                <Input
+                  id="meta-page-token"
+                  type="password"
+                  placeholder="Cole aqui a chave da página"
+                  value={manual.access_token}
+                  onChange={e => setManual(m => ({ ...m, access_token: e.target.value }))}
+                />
+              </CampoDaJanela>
+            </GradeDaJanela>
             {list && (
               <button
                 type="button"

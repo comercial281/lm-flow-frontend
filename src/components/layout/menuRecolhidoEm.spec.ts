@@ -39,6 +39,11 @@ describe('ROTA_RECOLHE_MENU', () => {
     for (const url of ['/properties', '/properties/map', '/property-owners']) expect(ROTA_RECOLHE_MENU.test(url)).toBe(false);
   });
 
+  it('funil aberto recolhe; a lista de funis não', () => {
+    for (const url of ['/pipelines/abc', '/pipelines/abc/card/42']) expect(ROTA_RECOLHE_MENU.test(url)).toBe(true);
+    for (const url of ['/pipelines', '/pipelines/']) expect(ROTA_RECOLHE_MENU.test(url)).toBe(false);
+  });
+
   it('continua recolhendo em Conversas', () => {
     expect(ROTA_RECOLHE_MENU.test('/conversations')).toBe(true);
     expect(ROTA_RECOLHE_MENU.test('/conversations/123')).toBe(true);

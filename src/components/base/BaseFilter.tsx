@@ -135,8 +135,8 @@ export default function BaseFilter<T extends BaseFilterType>({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`max-w-2xl ${className}`}>
         <DialogHeader>
-          <DialogTitle className="text-sidebar-foreground">{finalTitle}</DialogTitle>
-          <DialogDescription className="text-sidebar-foreground/70">
+          <DialogTitle>{finalTitle}</DialogTitle>
+          <DialogDescription>
             {finalDescription}
           </DialogDescription>
         </DialogHeader>
@@ -159,7 +159,7 @@ export default function BaseFilter<T extends BaseFilterType>({
             type="button"
             variant="outline"
             onClick={addFilter}
-            className="w-full bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
+            className="w-full"
           >
             <Plus className="h-4 w-4 mr-2" />
             {finalAddText}
@@ -170,7 +170,6 @@ export default function BaseFilter<T extends BaseFilterType>({
           <Button
             variant="outline"
             onClick={handleClear}
-            className="bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
           >
             {finalClearText}
           </Button>
@@ -178,7 +177,6 @@ export default function BaseFilter<T extends BaseFilterType>({
             <Button
               variant="outline"
               onClick={handleClose}
-              className="bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
             >
               {translations.cancel}
             </Button>

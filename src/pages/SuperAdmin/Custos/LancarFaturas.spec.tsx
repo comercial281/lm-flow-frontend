@@ -21,8 +21,8 @@ describe('LancarFaturas', () => {
     const aoSalvar = vi.fn();
     render(<LancarFaturas month="2026-10" aberta aoFechar={vi.fn()} aoSalvar={aoSalvar} />);
 
-    await waitFor(() => expect(screen.getByLabelText('Railway (US$)')).toHaveValue('80'));
-    fireEvent.change(screen.getByLabelText('Vercel (US$)'), { target: { value: '43,72' } });
+    await waitFor(() => expect(screen.getByLabelText('Railway')).toHaveValue('80'));
+    fireEvent.change(screen.getByLabelText('Vercel'), { target: { value: '43,72' } });
     fireEvent.click(screen.getByRole('button', { name: /salvar/i }));
 
     await waitFor(() => expect(apiPut).toHaveBeenCalled());
@@ -36,7 +36,7 @@ describe('LancarFaturas', () => {
     apiGet.mockResolvedValue(resposta('2026-10', 80));
     apiPut.mockRejectedValue({ response: { data: { success: false, error: 'Railway: o valor não pode ser negativo' } } });
     render(<LancarFaturas month="2026-10" aberta aoFechar={vi.fn()} aoSalvar={vi.fn()} />);
-    await waitFor(() => expect(screen.getByLabelText('Railway (US$)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByLabelText('Railway')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: /salvar/i }));
     await waitFor(() => expect(screen.getByText('Railway: o valor não pode ser negativo')).toBeInTheDocument());
   });
@@ -44,16 +44,16 @@ describe('LancarFaturas', () => {
   it('reabrir com outro mês mostra os valores desse mês, não os do anterior', async () => {
     apiGet.mockResolvedValueOnce(resposta('2026-10', 80));
     const { rerender } = render(<LancarFaturas month="2026-10" aberta aoFechar={vi.fn()} aoSalvar={vi.fn()} />);
-    await waitFor(() => expect(screen.getByLabelText('Railway (US$)')).toHaveValue('80'));
+    await waitFor(() => expect(screen.getByLabelText('Railway')).toHaveValue('80'));
 
     rerender(<LancarFaturas month="2026-10" aberta={false} aoFechar={vi.fn()} aoSalvar={vi.fn()} />);
     let liberar: (v: unknown) => void = () => {};
     apiGet.mockReturnValueOnce(new Promise((r) => { liberar = r; }));
     rerender(<LancarFaturas month="2026-09" aberta aoFechar={vi.fn()} aoSalvar={vi.fn()} />);
     // Enquanto o mês novo carrega, nada do mês antigo aparece.
-    expect(screen.queryByLabelText('Railway (US$)')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Railway')).not.toBeInTheDocument();
     liberar(resposta('2026-09', 12.5));
-    await waitFor(() => expect(screen.getByLabelText('Railway (US$)')).toHaveValue('12,5'));
+    await waitFor(() => expect(screen.getByLabelText('Railway')).toHaveValue('12,5'));
   });
 
   it('descarta resposta atrasada de um mês que já não é o aberto', async () => {
@@ -62,9 +62,9 @@ describe('LancarFaturas', () => {
     const { rerender } = render(<LancarFaturas month="2026-10" aberta aoFechar={vi.fn()} aoSalvar={vi.fn()} />);
     apiGet.mockResolvedValueOnce(resposta('2026-09', 12));
     rerender(<LancarFaturas month="2026-09" aberta aoFechar={vi.fn()} aoSalvar={vi.fn()} />);
-    await waitFor(() => expect(screen.getByLabelText('Railway (US$)')).toHaveValue('12'));
+    await waitFor(() => expect(screen.getByLabelText('Railway')).toHaveValue('12'));
     liberarVelha(resposta('2026-10', 999));
     await new Promise((r) => setTimeout(r, 20));
-    expect(screen.getByLabelText('Railway (US$)')).toHaveValue('12');
+    expect(screen.getByLabelText('Railway')).toHaveValue('12');
   });
 });

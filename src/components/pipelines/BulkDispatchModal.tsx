@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
   Button,
-  Label,
   Input,
   Select,
   SelectContent,
@@ -20,16 +19,12 @@ import {
 import {
   Megaphone,
   Users,
-  MessageSquareText,
-  Clock,
-  ListChecks,
   Loader2,
   CheckCircle2,
   Pause,
   Play,
   Ban,
   ChevronLeft,
-  Send,
   Paperclip,
   ShieldCheck,
   Zap,
@@ -59,6 +54,10 @@ import MessageSequenceEditor, {
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { PhoneInput } from '@/components/shared/PhoneInput';
 import EmptyState from '@/components/base/EmptyState';
+import Aviso from '@/components/base/Aviso';
+import { CaixaDaJanela, CampoDaJanela, ESCOLHA, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
+import { cn } from '@/lib/utils';
+import type { LucideIcon, LucideProps } from 'lucide-react';
 interface BulkDispatchModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -93,6 +92,11 @@ const KIND_LABEL: Record<SequenceDraftItem['kind'], string> = {
 };
 
 // Preview substituindo {{nome}} por um exemplo só na revisão.
+// Aviso não gira ícone sozinho: este gira durante a contagem.
+const IconeGirando = ((props: LucideProps) => (
+  <Loader2 {...props} className={cn(props.className, 'animate-spin')} />
+)) as unknown as LucideIcon;
+
 function preview(text: string, name = 'Giovani') {
   return text.replace(/\{\{?\s*nome\s*\}?\}/gi, name);
 }
@@ -381,7 +385,7 @@ export default function BulkDispatchModal({
     }
     if (cloudMode) {
       if (!step2Ok) {
-        toast.error('Escolha um template aprovado e preencha as variáveis.');
+        toast.error('Escolha um modelo aprovado e preencha as variáveis.');
         return;
       }
     } else if (!itemsValid) {
@@ -438,9 +442,9 @@ export default function BulkDispatchModal({
       });
       await refreshList();
       setStep('done');
-      toast.success('Disparo criado! Mensagens saindo em lotes.');
+      toast.success('Disparo criado. As mensagens saem em lotes.');
     } catch (err: any) {
-      const msg = err?.response?.data?.errors?.[0] || err?.message || 'Erro ao criar disparo';
+      const msg = err?.response?.data?.errors?.[0] || err?.message || 'Não consegui criar o disparo';
       toast.error(msg);
       setStep('review');
     } finally {
@@ -479,7 +483,7 @@ export default function BulkDispatchModal({
             </DialogTitle>
             <div className="flex items-center gap-1 mr-6">
               <Button
-                variant={view === 'new' ? 'default' : 'ghost'} aria-pressed={view === 'new'}
+                variant="outline" aria-pressed={view === 'new'} className={ESCOLHA}
                 size="sm"
                 onClick={() => {
                   setView('new');
@@ -488,7 +492,7 @@ export default function BulkDispatchModal({
               >
                 Novo
               </Button>
-              <Button variant={view === 'list' ? 'default' : 'ghost'} aria-pressed={view === 'list'} size="sm" onClick={() => setView('list')}>
+              <Button variant="outline" aria-pressed={view === 'list'} className={ESCOLHA} size="sm" onClick={() => setView('list')}>
                 Disparos {campaigns.length > 0 && `(${campaigns.length})`}
               </Button>
             </div>
@@ -585,156 +589,140 @@ export default function BulkDispatchModal({
 
             {/* STEP 1 — Audiência */}
             {step === 'audience' && (
-              <div className="space-y-4 py-2">
-                <div className="space-y-2">
-                  <Label className="text-sm flex items-center gap-1.5">
-                    <Users className="w-4 h-4" /> Quem vai receber
-                  </Label>
-                  <Select value={audienceMode} onValueChange={v => setAudienceMode(v as AudienceMode)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pipeline">Todos os leads do funil</SelectItem>
-                      <SelectItem value="stage">Uma etapa específica</SelectItem>
-                      <SelectItem value="tag">Por etiqueta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {audienceMode === 'tag' && (
-                  <div className="space-y-1.5">
-                    <Label className="text-sm">Etiquetas</Label>
-                    {erroEtiquetas ? (
-                      <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregarEtiquetas} className="p-3" />
-                    ) : availableLabels.length === 0 ? (
-                      <EmptyState tamanho="compacto" title="Nenhuma etiqueta cadastrada ainda." className="p-3" />
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {availableLabels.map(l => {
-                          const active = selectedLabels.includes(l.title);
-                          const color = l.color || '#7c3aed';
-                          return (
-                            <button
-                              key={l.title}
-                              type="button"
-                              onClick={() =>
-                                setSelectedLabels(prev =>
-                                  prev.includes(l.title) ? prev.filter(t => t !== l.title) : [...prev, l.title],
-                                )
-                              }
-                              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium border transition-colors ${
-                                active ? 'text-white' : 'text-foreground hover:bg-muted'
-                              }`}
-                              style={
-                                active
-                                  ? { backgroundColor: color, borderColor: color }
-                                  : { borderColor: `${color}66` }
-                              }
-                            >
-                              {l.title}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                    <p className="text-[11px] text-muted-foreground">
-                      Recebe quem tem qualquer uma das etiquetas marcadas.
-                    </p>
-                  </div>
-                )}
-
-                {audienceMode === 'stage' && (
-                  <div className="space-y-1.5">
-                    <Label className="text-sm">Etapa</Label>
-                    <Select value={stageId} onValueChange={setStageId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Escolher etapa" />
+              <div className="grid gap-5">
+                <GrupoDaJanela titulo="Quem recebe">
+                  <CampoDaJanela rotulo="Enviar para" htmlFor="disparo-quem-recebe">
+                    <Select value={audienceMode} onValueChange={v => setAudienceMode(v as AudienceMode)}>
+                      <SelectTrigger id="disparo-quem-recebe" className="w-full">
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {stages.map(s => (
-                          <SelectItem key={s.id} value={s.id}>
-                            {s.name}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="pipeline">Todos os leads do funil</SelectItem>
+                        <SelectItem value="stage">Uma etapa específica</SelectItem>
+                        <SelectItem value="tag">Por etiqueta</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-                )}
+                  </CampoDaJanela>
 
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-sm">
+                  {audienceMode === 'tag' && (
+                    <CampoDaJanela rotulo="Etiquetas" ajuda="Recebe quem tem qualquer uma das etiquetas marcadas.">
+                      {erroEtiquetas ? (
+                        <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregarEtiquetas} className="p-3" />
+                      ) : availableLabels.length === 0 ? (
+                        <EmptyState tamanho="compacto" title="Nenhuma etiqueta cadastrada ainda." className="p-3" />
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {availableLabels.map(l => {
+                            const active = selectedLabels.includes(l.title);
+                            const color = l.color || '#7c3aed';
+                            return (
+                              <button
+                                key={l.title}
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() =>
+                                  setSelectedLabels(prev =>
+                                    prev.includes(l.title) ? prev.filter(t => t !== l.title) : [...prev, l.title],
+                                  )
+                                }
+                                className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium border transition-colors ${
+                                  active ? 'text-white' : 'text-foreground hover:bg-muted'
+                                }`}
+                                style={
+                                  active
+                                    ? { backgroundColor: color, borderColor: color }
+                                    : { borderColor: `${color}66` }
+                                }
+                              >
+                                {l.title}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </CampoDaJanela>
+                  )}
+
+                  {audienceMode === 'stage' && (
+                    <CampoDaJanela rotulo="Etapa" htmlFor="disparo-etapa">
+                      <Select value={stageId} onValueChange={setStageId}>
+                        <SelectTrigger id="disparo-etapa" className="w-full">
+                          <SelectValue placeholder="Escolher etapa" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stages.map(s => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </CampoDaJanela>
+                  )}
+                </GrupoDaJanela>
+
+                <Aviso tom="info" icone={countingAudience ? IconeGirando : Users}>
                   {countingAudience ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" /> Contando destinatários...
-                    </>
+                    <>Contando destinatários...</>
                   ) : recipientCount === null ? (
-                    <span className="text-muted-foreground">
+                    <>
                       {audienceMode === 'tag'
                         ? 'Marque ao menos uma etiqueta pra contar os destinatários.'
                         : 'Escolha a etapa pra contar os destinatários.'}
-                    </span>
+                    </>
                   ) : (
                     <>
-                      <Users className="w-4 h-4 text-primary" />
-                      <span>
-                        <strong>{numero(recipientCount ?? 0)}</strong>{' '}
-                        {(recipientCount ?? 0) === 1
-                          ? 'contato com telefone vai receber'
-                          : 'contatos com telefone vão receber'}
-                        .
-                      </span>
+                      <strong>{numero(recipientCount ?? 0)}</strong>{' '}
+                      {(recipientCount ?? 0) === 1
+                        ? 'contato com telefone vai receber'
+                        : 'contatos com telefone vão receber'}
+                      . Contatos sem telefone são ignorados automaticamente.
                     </>
                   )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Contatos sem telefone são ignorados automaticamente.
-                </p>
+                </Aviso>
               </div>
             )}
 
             {/* STEP 2 — Mensagem (canal + conteúdo) */}
             {step === 'messages' && (
-              <div className="space-y-4 py-2">
+              <div className="grid gap-5">
                 {/* Seletor de canal */}
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Canal de envio</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
+                <GrupoDaJanela titulo="Canal de envio">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <Button
                       type="button"
+                      variant="outline"
+                      aria-pressed={!cloudMode}
                       onClick={() => setChannelKind('evolution')}
-                      className={`flex items-start gap-2 rounded-lg border p-3 text-left transition-colors ${
-                        !cloudMode ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted'
-                      }`}
+                      className={cn(ESCOLHA, 'h-auto items-start justify-start gap-2 whitespace-normal p-3 text-left')}
                     >
-                      <Zap className={`w-4 h-4 mt-0.5 ${!cloudMode ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <Zap className="mt-0.5 h-4 w-4 shrink-0" />
                       <span className="text-sm">
-                        <span className="font-medium block">WhatsApp por QR code</span>
-                        <span className="text-xs text-muted-foreground">Mensagem livre (sequência)</span>
+                        <span className="block font-medium">WhatsApp por código QR</span>
+                        <span className="text-xs font-normal text-muted-foreground">Mensagem livre (sequência)</span>
                       </span>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="outline"
+                      aria-pressed={cloudMode}
                       onClick={() => setChannelKind('whatsapp_cloud')}
-                      className={`flex items-start gap-2 rounded-lg border p-3 text-left transition-colors ${
-                        cloudMode ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted'
-                      }`}
+                      className={cn(ESCOLHA, 'h-auto items-start justify-start gap-2 whitespace-normal p-3 text-left')}
                     >
-                      <ShieldCheck className={`w-4 h-4 mt-0.5 ${cloudMode ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
                       <span className="text-sm">
-                        <span className="font-medium block">WhatsApp Oficial</span>
-                        <span className="text-xs text-muted-foreground">Template aprovado (WhatsApp oficial)</span>
+                        <span className="block font-medium">WhatsApp oficial</span>
+                        <span className="text-xs font-normal text-muted-foreground">Modelo aprovado pela Meta</span>
                       </span>
-                    </button>
+                    </Button>
                   </div>
-                </div>
+                </GrupoDaJanela>
 
-                {/* ---- Evolution: sequência livre ---- */}
+                {/* ---- Sessão por QR code: sequência livre ---- */}
                 {!cloudMode && (
-                  <>
-                    <div className="flex items-center justify-between gap-2">
-                      <Label className="text-sm flex items-center gap-1.5">
-                        <MessageSquareText className="w-4 h-4" /> Sequência de mensagens
-                      </Label>
+                  <GrupoDaJanela
+                    titulo="Sequência de mensagens"
+                    acao={(
                       <div className="flex items-center gap-2">
                         {/* "Usar funil" (05/10/2026): os funis de conversa de Funis de
                             mensagem. Contato e figurinha não saem no disparo em massa. */}
@@ -753,8 +741,8 @@ export default function BulkDispatchModal({
                           Montar funil
                         </a>
                       </div>
-                    </div>
-
+                    )}
+                  >
                     <MessageSequenceEditor
                       items={items}
                       onChange={setItems}
@@ -765,23 +753,23 @@ export default function BulkDispatchModal({
                     />
 
                     <p className="text-xs text-muted-foreground">
-                      Use as variáveis pra personalizar (ex: {'{{nome}}'}); a mídia é anexada na hora.
+                      Use as variáveis pra personalizar (ex.: {'{{nome}}'}); a mídia é anexada na hora.
                     </p>
-                  </>
+                  </GrupoDaJanela>
                 )}
 
-                {/* ---- WhatsApp Oficial: template aprovado ---- */}
+                {/* ---- WhatsApp oficial: modelo aprovado ---- */}
                 {cloudMode && (
-                  <div className="space-y-3">
+                  <GrupoDaJanela titulo="Modelo aprovado">
                     {erroCanais ? (
                       <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregarCanais} className="p-4" />
                     ) : cloudOptions.length === 0 ? (
                       <EmptyState
                         tamanho="compacto"
-                        title="Nenhum canal WhatsApp Oficial conectado."
+                        title="Nenhum canal WhatsApp oficial conectado."
                         description={
                           <>
-                            Conecte um número em <strong>Canais → WhatsApp Oficial</strong> e aprove um template pra
+                            Conecte um número em <strong>Canais → WhatsApp oficial</strong> e aprove um modelo pra
                             disparar por aqui.
                           </>
                         }
@@ -790,8 +778,7 @@ export default function BulkDispatchModal({
                     ) : (
                       <>
                         {cloudOptions.length > 1 && (
-                          <div className="space-y-1.5">
-                            <Label className="text-sm">Número (canal oficial)</Label>
+                          <CampoDaJanela rotulo="Número do canal oficial" htmlFor="disparo-numero-oficial">
                             <Select
                               value={selectedCloudInbox?.inbox_id ?? ''}
                               onValueChange={v => {
@@ -800,7 +787,7 @@ export default function BulkDispatchModal({
                                 setCloudVars({});
                               }}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger id="disparo-numero-oficial" className="w-full">
                                 <SelectValue placeholder="Escolher número" />
                               </SelectTrigger>
                               <SelectContent>
@@ -811,16 +798,13 @@ export default function BulkDispatchModal({
                                 ))}
                               </SelectContent>
                             </Select>
-                          </div>
+                          </CampoDaJanela>
                         )}
 
-                        <div className="space-y-1.5">
-                          <Label className="text-sm flex items-center gap-1.5">
-                            <ShieldCheck className="w-4 h-4" /> Template aprovado
-                          </Label>
+                        <CampoDaJanela rotulo="Modelo" htmlFor="disparo-template">
                           {(selectedCloudInbox?.templates.length ?? 0) === 0 ? (
                             <p className="text-xs text-muted-foreground">
-                              Esse número não tem template ainda. Crie e aprove um template na Meta primeiro.
+                              Esse número não tem modelo ainda. Crie e aprove um modelo de mensagem na Meta primeiro.
                             </p>
                           ) : (
                             <Select
@@ -830,8 +814,8 @@ export default function BulkDispatchModal({
                                 setCloudVars({});
                               }}
                             >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Escolher template" />
+                              <SelectTrigger id="disparo-template" className="w-full">
+                                <SelectValue placeholder="Escolher modelo" />
                               </SelectTrigger>
                               <SelectContent>
                                 {selectedCloudInbox?.templates.map(t => (
@@ -843,7 +827,7 @@ export default function BulkDispatchModal({
                               </SelectContent>
                             </Select>
                           )}
-                        </div>
+                        </CampoDaJanela>
 
                         {selectedCloudTemplate && (
                           <div className="rounded-lg bg-muted/50 p-3 text-sm whitespace-pre-wrap">
@@ -852,128 +836,139 @@ export default function BulkDispatchModal({
                         )}
 
                         {selectedCloudTemplate && selectedCloudTemplate.variables.length > 0 && (
-                          <div className="space-y-2">
-                            <Label className="text-xs text-muted-foreground">
-                              Preencha as variáveis do template (use {'{{nome}}'} pra puxar o nome do lead)
-                            </Label>
-                            {selectedCloudTemplate.variables.map((v, i) => (
-                              <div key={v} className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground w-14 shrink-0">{`{{${i + 1}}}`}</span>
-                                <Input
-                                  value={cloudVars[v] ?? ''}
-                                  onChange={e => setCloudVars(prev => ({ ...prev, [v]: e.target.value }))}
-                                  placeholder="{{nome}} ou texto fixo"
-                                  className="h-9"
-                                />
-                              </div>
-                            ))}
-                          </div>
+                          <CampoDaJanela
+                            rotulo="Variáveis do modelo"
+                            ajuda={<>Use {'{{nome}}'} pra puxar o nome do lead.</>}
+                          >
+                            <div className="grid gap-2">
+                              {selectedCloudTemplate.variables.map((v, i) => (
+                                <div key={v} className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground w-14 shrink-0">{`{{${i + 1}}}`}</span>
+                                  <Input
+                                    value={cloudVars[v] ?? ''}
+                                    onChange={e => setCloudVars(prev => ({ ...prev, [v]: e.target.value }))}
+                                    placeholder="{{nome}} ou texto fixo"
+                                    aria-label={`Variável ${i + 1} do modelo`}
+                                    className="h-9"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </CampoDaJanela>
                         )}
 
-                        <p className="text-xs text-muted-foreground">
-                          Fora da janela de 24h, a Meta só entrega template aprovado. As variáveis são preenchidas por lead.
-                        </p>
+                        <Aviso tom="info" compacto>
+                          Fora da janela de 24h, a Meta só entrega modelo aprovado. As variáveis são preenchidas por lead.
+                        </Aviso>
                       </>
                     )}
-                  </div>
+                  </GrupoDaJanela>
                 )}
               </div>
             )}
 
             {/* STEP 3 — Cadência */}
             {step === 'cadence' && (
-              <div className="space-y-4 py-2">
-                <Label className="text-sm flex items-center gap-1.5">
-                  <Clock className="w-4 h-4" /> Ritmo de envio
-                </Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Intervalo mínimo (seg)</Label>
-                    <Input
-                      type="number"
-                      min={2}
-                      value={minS}
-                      onChange={e => setMinS(Math.max(2, Number(e.target.value) || 2))}
-                      className="h-9"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Intervalo máximo (seg)</Label>
-                    <Input
-                      type="number"
-                      min={2}
-                      value={maxS}
-                      onChange={e => setMaxS(Math.max(2, Number(e.target.value) || 2))}
-                      className="h-9"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Mensagens por lote</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={50}
-                      value={batchSize}
-                      onChange={e => setBatchSize(Math.min(50, Math.max(1, Number(e.target.value) || 1)))}
-                      className="h-9"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Pausa entre lotes (seg)</Label>
-                    <Input
-                      type="number"
-                      min={10}
-                      value={pauseS}
-                      onChange={e => setPauseS(Math.max(10, Number(e.target.value) || 10))}
-                      className="h-9"
-                    />
-                  </div>
-                </div>
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={businessHours}
-                    onChange={e => setBusinessHours(e.target.checked)}
-                    className="rounded border-border"
-                  />
-                  Só enviar em horário comercial (seg-sex 08-20h, sáb 09-18h)
-                </label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={respectOptOut}
-                    onChange={e => setRespectOptOut(e.target.checked)}
-                    className="rounded border-border"
-                  />
-                  Não enviar pra quem pediu PARAR (opt-out)
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Não reenviar nos últimos (dias)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={frequencyCapDays}
-                      onChange={e => setFrequencyCapDays(Math.max(0, Number(e.target.value) || 0))}
-                      className="h-9"
-                      placeholder="0 = sem limite"
-                    />
-                  </div>
-                  {channelKind === 'whatsapp_cloud' && (
-                    <div className="space-y-1">
-                      <Label className="text-xs">Teto de gasto (R$)</Label>
+              <div className="grid gap-5">
+                <GrupoDaJanela titulo="Intervalo entre mensagens">
+                  <GradeDaJanela>
+                    <CampoDaJanela rotulo="Intervalo mínimo (segundos)" htmlFor="disparo-min" colunas={2}>
                       <Input
+                        id="disparo-min"
+                        type="number"
+                        min={2}
+                        value={minS}
+                        onChange={e => setMinS(Math.max(2, Number(e.target.value) || 2))}
+                        className="h-9"
+                      />
+                    </CampoDaJanela>
+                    <CampoDaJanela rotulo="Intervalo máximo (segundos)" htmlFor="disparo-max" colunas={2}>
+                      <Input
+                        id="disparo-max"
+                        type="number"
+                        min={2}
+                        value={maxS}
+                        onChange={e => setMaxS(Math.max(2, Number(e.target.value) || 2))}
+                        className="h-9"
+                      />
+                    </CampoDaJanela>
+                  </GradeDaJanela>
+                </GrupoDaJanela>
+
+                <GrupoDaJanela titulo="Lote">
+                  <GradeDaJanela>
+                    <CampoDaJanela rotulo="Mensagens por lote" htmlFor="disparo-lote" colunas={2}>
+                      <Input
+                        id="disparo-lote"
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={batchSize}
+                        onChange={e => setBatchSize(Math.min(50, Math.max(1, Number(e.target.value) || 1)))}
+                        className="h-9"
+                      />
+                    </CampoDaJanela>
+                    <CampoDaJanela rotulo="Pausa entre lotes (segundos)" htmlFor="disparo-pausa" colunas={2}>
+                      <Input
+                        id="disparo-pausa"
+                        type="number"
+                        min={10}
+                        value={pauseS}
+                        onChange={e => setPauseS(Math.max(10, Number(e.target.value) || 10))}
+                        className="h-9"
+                      />
+                    </CampoDaJanela>
+                  </GradeDaJanela>
+                </GrupoDaJanela>
+
+                <GrupoDaJanela titulo="Limites">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={businessHours}
+                      onChange={e => setBusinessHours(e.target.checked)}
+                      className="rounded border-border"
+                    />
+                    Só enviar em horário comercial (seg-sex 08-20h, sáb 09-18h)
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={respectOptOut}
+                      onChange={e => setRespectOptOut(e.target.checked)}
+                      className="rounded border-border"
+                    />
+                    Não enviar pra quem pediu pra parar
+                  </label>
+                  <GradeDaJanela>
+                    <CampoDaJanela rotulo="Não reenviar nos últimos (dias)" htmlFor="disparo-frequencia" colunas={channelKind === 'whatsapp_cloud' ? 2 : 4}>
+                      <Input
+                        id="disparo-frequencia"
                         type="number"
                         min={0}
-                        step="0.01"
-                        value={maxSpend}
-                        onChange={e => setMaxSpend(e.target.value)}
+                        value={frequencyCapDays}
+                        onChange={e => setFrequencyCapDays(Math.max(0, Number(e.target.value) || 0))}
                         className="h-9"
-                        placeholder="opcional"
+                        placeholder="0 = sem limite"
                       />
-                    </div>
-                  )}
-                </div>
+                    </CampoDaJanela>
+                    {channelKind === 'whatsapp_cloud' && (
+                      <CampoDaJanela rotulo="Teto de gasto (R$)" htmlFor="disparo-teto" colunas={2}>
+                        <Input
+                          id="disparo-teto"
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={maxSpend}
+                          onChange={e => setMaxSpend(e.target.value)}
+                          className="h-9"
+                          placeholder="opcional"
+                        />
+                      </CampoDaJanela>
+                    )}
+                  </GradeDaJanela>
+                </GrupoDaJanela>
+
                 {costEstimate && (
                   <p className="text-xs text-muted-foreground">
                     Custo estimado: <strong className="text-foreground">
@@ -983,9 +978,9 @@ export default function BulkDispatchModal({
                   </p>
                 )}
                 {!step3Ok && (
-                  <p className="text-xs text-amber-600">
-                    Máximo deve ser ≥ mínimo (≥2s), lote entre 1 e 50, pausa ≥ 10s.
-                  </p>
+                  <Aviso tom="atencao" compacto>
+                    O máximo deve ser maior ou igual ao mínimo (a partir de 2 segundos), o lote fica entre 1 e 50 e a pausa é de pelo menos 10 segundos.
+                  </Aviso>
                 )}
                 {recipientCount ? (
                   <p className="text-xs text-muted-foreground">
@@ -997,28 +992,25 @@ export default function BulkDispatchModal({
 
             {/* STEP 4 — Revisão */}
             {step === 'review' && (
-              <div className="space-y-3 py-2">
-                <Label className="text-sm flex items-center gap-1.5">
-                  <ListChecks className="w-4 h-4" /> Revisar e disparar
-                </Label>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Nome do envio (aparece no registro/LOG)</Label>
-                  <Input
-                    value={campaignName}
-                    onChange={e => setCampaignName(e.target.value)}
-                    placeholder="Ex: Oferta lançamento — base quente"
-                    maxLength={120}
-                    className="h-9"
-                  />
-                </div>
+              <div className="grid gap-5">
+                <GrupoDaJanela titulo="Envio">
+                  <CampoDaJanela rotulo="Nome do envio" htmlFor="disparo-nome" ajuda="Aparece no registro dos disparos.">
+                    <Input
+                      id="disparo-nome"
+                      value={campaignName}
+                      onChange={e => setCampaignName(e.target.value)}
+                      placeholder="Ex.: oferta de lançamento, base quente"
+                      maxLength={120}
+                      className="h-9"
+                    />
+                  </CampoDaJanela>
+                </GrupoDaJanela>
 
                 {/* Após o envio (opcional): mover pra etapa + criar/aplicar tag */}
-                <div className="space-y-2 rounded-lg border border-dashed border-border p-3">
-                  <Label className="text-xs font-medium">Após o envio (opcional)</Label>
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] text-muted-foreground">Mover quem recebeu para a etapa</Label>
+                <GrupoDaJanela titulo="Após o envio (opcional)">
+                  <CampoDaJanela rotulo="Mover quem recebeu para a etapa" htmlFor="disparo-etapa-depois">
                     <Select value={postStageId || 'none'} onValueChange={v => setPostStageId(v === 'none' ? '' : v)}>
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger id="disparo-etapa-depois" className="h-9 w-full">
                         <SelectValue placeholder="Não mover" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1028,13 +1020,13 @@ export default function BulkDispatchModal({
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] text-muted-foreground">Aplicar etiqueta (cria se não existir)</Label>
+                  </CampoDaJanela>
+                  <CampoDaJanela rotulo="Aplicar etiqueta" htmlFor="disparo-etiqueta-depois" ajuda="Cria a etiqueta se ela não existir.">
                     <Input
+                      id="disparo-etiqueta-depois"
                       value={postLabel}
                       onChange={e => setPostLabel(e.target.value)}
-                      placeholder="Ex: recebeu-oferta"
+                      placeholder="Ex.: recebeu-oferta"
                       maxLength={60}
                       className="h-9"
                     />
@@ -1053,35 +1045,38 @@ export default function BulkDispatchModal({
                         ))}
                       </div>
                     )}
-                  </div>
-                </div>
+                  </CampoDaJanela>
+                </GrupoDaJanela>
 
-                <div className="rounded-lg border border-border divide-y divide-border text-sm">
-                  <div className="flex justify-between p-2.5">
-                    <span className="text-muted-foreground">Destinatários</span>
-                    <strong>{recipientCount}</strong>
+                <CaixaDaJanela titulo="Resumo">
+                  <div className="divide-y divide-border text-sm">
+                    <div className="flex justify-between py-2">
+                      <span className="text-muted-foreground">Destinatários</span>
+                      <strong>{recipientCount}</strong>
+                    </div>
+                    <div className="flex justify-between py-2">
+                      <span className="text-muted-foreground">Canal</span>
+                      <strong>{cloudMode ? 'WhatsApp oficial (modelo)' : 'WhatsApp por código QR'}</strong>
+                    </div>
+                    <div className="flex justify-between py-2">
+                      <span className="text-muted-foreground">{cloudMode ? 'Modelo' : 'Itens na sequência'}</span>
+                      <strong>{cloudMode ? selectedCloudTemplate?.name ?? '—' : items.length}</strong>
+                    </div>
+                    <div className="flex justify-between py-2">
+                      <span className="text-muted-foreground">Ritmo</span>
+                      <strong>
+                        {minS}-{maxS}s · lotes de {batchSize} · pausa {pauseS}s
+                      </strong>
+                    </div>
+                    <div className="flex justify-between py-2">
+                      <span className="text-muted-foreground">Horário comercial</span>
+                      <strong>{businessHours ? 'Sim' : 'Não'}</strong>
+                    </div>
                   </div>
-                  <div className="flex justify-between p-2.5">
-                    <span className="text-muted-foreground">Canal</span>
-                    <strong>{cloudMode ? 'WhatsApp Oficial (template)' : 'WhatsApp por QR code'}</strong>
-                  </div>
-                  <div className="flex justify-between p-2.5">
-                    <span className="text-muted-foreground">{cloudMode ? 'Template' : 'Itens na sequência'}</span>
-                    <strong>{cloudMode ? selectedCloudTemplate?.name ?? '—' : items.length}</strong>
-                  </div>
-                  <div className="flex justify-between p-2.5">
-                    <span className="text-muted-foreground">Ritmo</span>
-                    <strong>
-                      {minS}-{maxS}s · lotes de {batchSize} · pausa {pauseS}s
-                    </strong>
-                  </div>
-                  <div className="flex justify-between p-2.5">
-                    <span className="text-muted-foreground">Horário comercial</span>
-                    <strong>{businessHours ? 'Sim' : 'Não'}</strong>
-                  </div>
-                </div>
+                </CaixaDaJanela>
+
                 {!cloudMode && (
-                  <div className="space-y-2">
+                  <GrupoDaJanela titulo="Mensagens">
                     {items.map((it, i) => (
                       <div key={it.uiKey} className="p-3 rounded-lg bg-muted/50 text-sm whitespace-pre-wrap">
                         <span className="text-xs text-muted-foreground block mb-1">
@@ -1103,52 +1098,53 @@ export default function BulkDispatchModal({
                             : <span className="text-muted-foreground italic">(sem legenda)</span>}
                       </div>
                     ))}
-                  </div>
+                  </GrupoDaJanela>
                 )}
 
                 {cloudMode && selectedCloudTemplate && (
-                  <div className="p-3 rounded-lg bg-muted/50 text-sm whitespace-pre-wrap">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
-                      <ShieldCheck className="w-3 h-3" /> Template {selectedCloudTemplate.name} · {selectedCloudTemplate.language}
-                    </span>
-                    {preview(
-                      selectedCloudTemplate.variables.reduce(
-                        (txt, v, i) => txt.replace(`{{${i + 1}}}`, cloudVars[v] || `{{${i + 1}}}`),
-                        selectedCloudTemplate.content,
-                      ),
-                    )}
-                  </div>
+                  <GrupoDaJanela titulo="Mensagem">
+                    <div className="p-3 rounded-lg bg-muted/50 text-sm whitespace-pre-wrap">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                        <ShieldCheck className="w-3 h-3" /> Modelo {selectedCloudTemplate.name} · {selectedCloudTemplate.language}
+                      </span>
+                      {preview(
+                        selectedCloudTemplate.variables.reduce(
+                          (txt, v, i) => txt.replace(`{{${i + 1}}}`, cloudVars[v] || `{{${i + 1}}}`),
+                          selectedCloudTemplate.content,
+                        ),
+                      )}
+                    </div>
+                  </GrupoDaJanela>
                 )}
 
                 {/* Enviar teste pra um número antes de disparar pros leads */}
-                <div className="border-t border-border pt-3 space-y-2">
-                  <Label className="text-xs flex items-center gap-1.5">
-                    <Send className="w-3.5 h-3.5" /> Enviar teste pra um número (opcional)
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <PhoneInput
-                      value={testPhone}
-                      onChange={setTestPhone}
-                      placeholder="(11) 99999-9999"
-                      valueFormat="digits"
-                      className="flex-1"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleTest}
-                      disabled={testing}
-                      className="whitespace-nowrap"
-                    >
-                      {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Enviar teste'}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {cloudMode
-                      ? 'Manda o template só pra esse número, sem tocar nos leads.'
+                <GrupoDaJanela titulo="Teste (opcional)">
+                  <CampoDaJanela
+                    rotulo="Enviar teste pra um número"
+                    ajuda={cloudMode
+                      ? 'Manda o modelo só pra esse número, sem tocar nos leads.'
                       : 'Manda a sequência inteira só pra esse número, sem tocar nos leads.'}
-                  </p>
-                </div>
+                  >
+                    <div className="flex items-center gap-2">
+                      <PhoneInput
+                        value={testPhone}
+                        onChange={setTestPhone}
+                        placeholder="(11) 99999-9999"
+                        valueFormat="digits"
+                        className="flex-1"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleTest}
+                        disabled={testing}
+                        className="whitespace-nowrap"
+                      >
+                        {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Enviar teste'}
+                      </Button>
+                    </div>
+                  </CampoDaJanela>
+                </GrupoDaJanela>
               </div>
             )}
 

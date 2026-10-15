@@ -67,7 +67,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   // Estados do layout
   // `salvo` é a preferência da pessoa (gravada). Em Conversas (e no cadastro de
-  // imóvel, ver ROTA_RECOLHE_MENU) o menu recolhe
+  // imóvel e no funil aberto, ver ROTA_RECOLHE_MENU) o menu recolhe
   // sozinho, sem mexer nela; `escolhaNaVisita` guarda só o clique da visita.
   const [salvo, setSalvo] = useState(false);
   const [escolhaNaVisita, setEscolhaNaVisita] = useState<boolean | null>(null);
@@ -198,7 +198,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
         toggleSidebar={toggleSidebar}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
         setLogoutDialogOpen={setLogoutDialogOpen}
-        onOpenSearch={() => setCommandOpen(true)}
       />
 
       {/* Main Layout Container */}
@@ -238,7 +237,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
       {/* Logout Dialog */}
       <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent compacta>
           <DialogHeader className="text-left space-y-2">
             <DialogTitle className="text-lg font-semibold">{t('logout.title')}</DialogTitle>
             <DialogDescription className="text-muted-foreground">

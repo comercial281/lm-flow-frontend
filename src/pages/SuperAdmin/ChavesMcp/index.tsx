@@ -1,8 +1,10 @@
 // src/pages/SuperAdmin/ChavesMcp/index.tsx
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import Aviso from '@/components/base/Aviso';
 import EmptyState from '@/components/base/EmptyState';
-import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Label } from '@/components/ui/ds';
+import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
+import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input } from '@/components/ui/ds';
 import { dataHora } from '@/lib/formato';
 import { mcpKeysService } from '@/services/superAdmin/mcpKeysService';
 import type { ChaveMcp } from '@/types/admin/mcpKeys';
@@ -89,8 +91,11 @@ export default function ChavesMcp() {
       <Dialog open={gerando} onOpenChange={setGerando}>
         <DialogContent>
           <DialogHeader><DialogTitle>Gerar chave do MCP</DialogTitle></DialogHeader>
-          <div><Label htmlFor="mcp-nome">Nome da chave</Label>
-            <Input id="mcp-nome" placeholder="Claude do Tony" value={nome} onChange={(e) => setNome(e.target.value)} /></div>
+          <GrupoDaJanela titulo="Chave">
+            <CampoDaJanela rotulo="Nome da chave" htmlFor="mcp-nome" obrigatorio>
+              <Input id="mcp-nome" placeholder="Ex.: Claude do time" value={nome} onChange={(e) => setNome(e.target.value)} />
+            </CampoDaJanela>
+          </GrupoDaJanela>
           <DialogFooter><Button disabled={!nome.trim() || salvando} onClick={() => void gerar()}>Gerar</Button></DialogFooter>
         </DialogContent>
       </Dialog>
@@ -98,7 +103,7 @@ export default function ChavesMcp() {
       <Dialog open={endereco !== null} onOpenChange={(aberto) => { if (!aberto) setEndereco(null); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Guarde o endereço agora</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Ele não aparece de novo. Quem tiver esse endereço entra como admin em todos os clientes.</p>
+          <Aviso tom="atencao">Ele não aparece de novo. Quem tiver esse endereço entra como admin em todos os clientes.</Aviso>
           <Input readOnly aria-label="Endereço do MCP" value={endereco ?? ''} onFocus={(e) => e.currentTarget.select()} />
           <DialogFooter>
             <Button variant="outline" onClick={() => void copiar()}>Copiar</Button>
@@ -108,7 +113,7 @@ export default function ChavesMcp() {
       </Dialog>
 
       <Dialog open={revogar !== null} onOpenChange={(aberto) => { if (!aberto) setRevogar(null); }}>
-        <DialogContent>
+        <DialogContent compacta>
           <DialogHeader><DialogTitle>Revogar {revogar?.name}?</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">A chave para na hora. Quem estiver usando perde o acesso.</p>
           <DialogFooter><Button variant="destructive" onClick={() => void confirmarRevogar()}>Revogar</Button></DialogFooter>

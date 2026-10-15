@@ -171,7 +171,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </div>
 
       <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent compacta>
           <DialogHeader className="text-left space-y-2">
             <DialogTitle className="text-lg font-semibold">Sair da conta</DialogTitle>
             <DialogDescription className="text-muted-foreground">

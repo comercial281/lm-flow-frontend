@@ -20,10 +20,12 @@ export interface BotoesDeEscolhaProps<T extends string> {
   aoEscolher: (valor: T) => void;
   desabilitado?: boolean;
   className?: string;
+  /** Já está dentro de um grupo com o mesmo nome (ex.: GrupoDaJanela): não repete o nome. */
+  semNome?: boolean;
 }
 
 export default function BotoesDeEscolha<T extends string>({
-  rotulo, valor, opcoes, aoEscolher, desabilitado = false, className,
+  rotulo, valor, opcoes, aoEscolher, desabilitado = false, className, semNome = false,
 }: BotoesDeEscolhaProps<T>) {
   const botoes = useRef<(HTMLButtonElement | null)[]>([]);
   const marcada = opcoes.findIndex((o) => o.valor === valor);
@@ -45,7 +47,7 @@ export default function BotoesDeEscolha<T extends string>({
   };
 
   return (
-    <div role="radiogroup" aria-label={rotulo} aria-disabled={desabilitado || undefined}
+    <div role="radiogroup" aria-label={semNome ? undefined : rotulo} aria-disabled={desabilitado || undefined}
       className={cn('inline-flex max-w-full flex-wrap gap-1 rounded-xl bg-muted p-1', className)}>
       {opcoes.map((o, i) => {
         const on = o.valor === valor;

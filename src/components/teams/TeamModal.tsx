@@ -37,9 +37,9 @@ export default function TeamModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90dvh] gap-0 overflow-hidden p-0">
-        <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle className="text-xl">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
             {isNew ? t('modal.create') : t('modal.edit', { name: team?.name || 'Equipe' })}
           </DialogTitle>
         </DialogHeader>

@@ -21,7 +21,8 @@ vi.mock('@/services/landingPages/landingPageService', () => ({
     getOrCreateForProperty: (...a: unknown[]) => getOrCreateForProperty(...a),
   },
 }));
-vi.mock('@/services/landingPages/landingTemplatesService', () => ({ landingTemplatesService: { list: vi.fn().mockResolvedValue([]) } }));
+const modelosSalvos = vi.hoisted(() => ({ lista: [] as unknown[] }));
+vi.mock('@/services/landingPages/landingTemplatesService', () => ({ landingTemplatesService: { list: vi.fn().mockImplementation(async () => modelosSalvos.lista) } }));
 const imoveis = vi.hoisted(() => ({ lista: [] as unknown[] }));
 vi.mock('@/services/properties/propertiesService', () => ({
   propertiesService: { list: vi.fn().mockImplementation(async () => ({ data: imoveis.lista })) },
@@ -31,6 +32,7 @@ beforeEach(() => {
   createForProperty.mockClear();
   getOrCreateForProperty.mockClear();
   imoveis.lista = [];
+  modelosSalvos.lista = [];
   Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture ?? (() => false);
   Element.prototype.releasePointerCapture = Element.prototype.releasePointerCapture ?? (() => {});
   Element.prototype.scrollIntoView = Element.prototype.scrollIntoView ?? (() => {});
@@ -52,12 +54,12 @@ describe('Assistente de landing no computador', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
     await userEvent.type(screen.getByPlaceholderText(/Campanha Lançamento/), 'Teste');
     await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
-    await userEvent.click(await screen.findByRole('combobox', { name: /Tag/ }));
+    await userEvent.click(await screen.findByRole('combobox', { name: /Etiqueta/ }));
     expect(await screen.findByRole('listbox')).toBeInTheDocument();
     rerender(tela(() => {}));
     expect(screen.getByRole('listbox')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('option', { name: 'quente' }));
-    expect(screen.getByRole('combobox', { name: /Tag/ })).toHaveTextContent('quente');
+    expect(screen.getByRole('combobox', { name: /Etiqueta/ })).toHaveTextContent('quente');
   });
 });
 
@@ -73,11 +75,42 @@ describe('Assistente: modelos prontos', () => {
     expect(nomes[2].compareDocumentPosition(nomes[3]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it('a lista de imóveis fica fechada até a pessoa digitar, e o passo tem grupos com título', async () => {
+    imoveis.lista = [apto];
+    render(tela());
+    await userEvent.click(screen.getByText('Aluguel'));
+    expect(screen.queryByText('Apto Centro')).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Modelos prontos' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Imóvel' })).toBeInTheDocument();
+    await userEvent.type(screen.getByPlaceholderText(/Buscar imóvel/), 'Apto');
+    expect(await screen.findByText('Apto Centro')).toBeInTheDocument();
+  });
+
+  it('modelos salvos: até 8, lista todos sem precisar digitar', async () => {
+    modelosSalvos.lista = [{ id: 't1', name: 'Meu modelo' }, { id: 't2', name: 'Outro' }];
+    render(tela());
+    await userEvent.click(screen.getByText('De um modelo salvo'));
+    expect(await screen.findByText('Meu modelo')).toBeInTheDocument();
+    expect(screen.getByText('Outro')).toBeInTheDocument();
+    expect(screen.queryByText(/Digite pra buscar/)).not.toBeInTheDocument();
+  });
+
+  it('modelos salvos: mais de 8, lista fechada com a dica até digitar', async () => {
+    modelosSalvos.lista = Array.from({ length: 9 }, (_, i) => ({ id: `t${i}`, name: `Modelo ${i}` }));
+    render(tela());
+    await userEvent.click(screen.getByText('De um modelo salvo'));
+    expect(await screen.findByText('9 modelos salvos. Digite pra buscar.')).toBeInTheDocument();
+    expect(screen.queryByText('Modelo 3')).not.toBeInTheDocument();
+    await userEvent.type(screen.getByPlaceholderText('Digite o nome do modelo'), 'Modelo 3');
+    expect(await screen.findByText('Modelo 3')).toBeInTheDocument();
+  });
+
   it('sem imóvel, o Próximo fica desligado com um modelo escolhido', async () => {
     imoveis.lista = [apto];
     render(tela());
     await userEvent.click(screen.getByText('Aluguel'));
     expect(screen.getByRole('button', { name: 'Próximo' })).toBeDisabled();
+    await userEvent.type(screen.getByPlaceholderText(/Buscar imóvel/), 'Apto');
     await userEvent.click(await screen.findByText('Apto Centro'));
     expect(screen.getByRole('button', { name: 'Próximo' })).toBeEnabled();
   });
@@ -86,10 +119,11 @@ describe('Assistente: modelos prontos', () => {
     imoveis.lista = [apto];
     render(tela());
     await userEvent.click(screen.getByText('Aluguel'));
+    await userEvent.type(screen.getByPlaceholderText(/Buscar imóvel/), 'Apto');
     await userEvent.click(await screen.findByText('Apto Centro'));
     await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
     await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
-    await userEvent.click(await screen.findByRole('button', { name: /Criar landing/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Criar página/ }));
     expect(getOrCreateForProperty).not.toHaveBeenCalled();
     expect(createForProperty).toHaveBeenCalledTimes(1);
     const [siteId, input] = createForProperty.mock.calls[0];
@@ -103,13 +137,14 @@ describe('Assistente: modelos prontos', () => {
     imoveis.lista = [apto];
     render(tela());
     await userEvent.click(screen.getByText('Lançamento'));
+    await userEvent.type(screen.getByPlaceholderText(/Buscar imóvel/), 'Apto');
     await userEvent.click(await screen.findByText('Apto Centro'));
     expect(screen.getByText(/Este imóvel é de aluguel\. O modelo Aluguel combina mais\./)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Trocar' }));
     expect(screen.queryByText(/combina mais/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
     await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
-    await userEvent.click(await screen.findByRole('button', { name: /Criar landing/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Criar página/ }));
     expect(createForProperty.mock.calls[0][1].theme.fontFamily).toContain('Nunito');
   });
 });

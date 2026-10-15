@@ -4158,7 +4158,7 @@ Spec e plano: `LM FLOW/specs/2026-09-29-fase-3-base-de-design-e-linguagem-design
   - Fora do escopo: o painel raiz, as páginas públicas, as landings, o widget e a **sobra** do Evolution (listas `SOBRA`/`NAMESPACES_SOBRA`). A fase 4 decide se a sobra some.
   - **Teto só desce.**
 - **Decisões do Tony (30/09):**
-  - **D1:** cada tema num PR pequeno, com prévia (`?tenant=lealmidia`) e antes/depois, e merge um por vez com o ok dele.
+  - **D1:** cada tema num PR pequeno, com prévia da Vercel (sem `?tenant=`, ou com o slug de um cliente que existe) e antes/depois, e merge um por vez com o ok dele.
   - **D2:** chave desligada é cinza.
   - **D3:** o glossário acima.
   - **D4:** as telas piloto são Conta e Lembretes.
@@ -8823,6 +8823,20 @@ As janelas medianas passaram para as peças do miolo (grupos, grade, `Aviso`, `E
 
 Não reabrir sem o dono pedir.
 
+## Leva 3 das janelas (15/10/2026)
+
+A regra do miolo (grupos, grade, `Aviso`, `ESCOLHA`, texto em português, maiúscula só na primeira letra) chegou a cerca de 55 janelas. Só mudou disposição e letra: o que é gravado e o que os botões fazem ficaram como estavam.
+
+- **Peças novas:** `MioloDaAcaoDaVisita` (miolo único de Realizada, Não compareceu, Remarcar e Cancelar visita), `JanelaPublicarLanding`, a prop `semNome` (nas escolhas e no `EscolhaComBusca`, quando o grupo em volta já dá o nome), o `naJanela` do `CampoDeMidia` e as áreas de permissão recolhíveis no editor de cargo. O `LeadCombobox` e o `Campo` ganharam a prop `obrigatorio`, com a marca igual à do `CampoDaJanela`.
+- **Meu site e Academia** mantêm o `Campo` próprio (controles maiores), só com a letra e os grupos do miolo.
+- **#59/#61 e #139/#143:** unificados só no visual. Cada chamador mantém o comportamento e quem grava.
+- **Listas com mais de 8 opções** só abrem ao digitar (Roleta, modelos salvos do assistente de página de anúncio). Até 8, mostram todas.
+- **Nomes na tela:** o template do WhatsApp oficial é "modelo de mensagem"; landing é "página de anúncio"; QR é "código QR". O nome sugerido "(template)" ao salvar uma página como modelo continua, porque vai gravado.
+
+**Tetos novos (só descem):** `maiusculas` 921 para 856, `escolhaRoxaCheia` 40 para 36 e `avisoSoltoNaJanela` 12 para 3.
+
+Não reabrir sem o dono pedir.
+
 ## Imóvel · Link pro lead (desde 2026-10-14)
 
 > Pedido do IBI4 (14/10): quando o lead pede o link, a IA manda a página do empreendimento no site DELES, não a nossa. Servidor: `lm-flow` #486 (entra primeiro).
@@ -8916,6 +8930,106 @@ Armadilhas:
 3. Arrastar pro fim de uma coluna que ainda tem cards no servidor põe o card logo abaixo do último card visível (acima dos não carregados): `abaixoDoUltimo` em `useBoardDrag.ts`.
 4. A regra de cada filtro mora só no servidor (`PipelineItems::BoardQuery`); `filtrosDoFunil.ts` ficou com as contas da tela (colunas visíveis, contagem de filtros, opções do painel).
 5. O backend vem PRIMEIRO. Contra o servidor antigo a tela recebe o funil inteiro, sem lotes e sem filtro.
+
+## Confirmação compacta (15/10/2026)
+
+- **O quê:** a confirmação da casa (`useConfirmacao`) deixou de herdar topo e rodapé fixos com linha, que eram pensados pras janelas grandes. Agora é um bloco só (título, frase, botões), na largura pequena (`max-w-md`), título à esquerda, botões à direita no computador e empilhados no celular.
+- **Como:** `DialogContent` ganhou a opção `compacta` (`src/components/ui/ds.tsx`). Ela desliga o fixo/borda só de quem pede; nenhuma outra janela muda. O `DialogFooter` continua existindo (trava `rodapeAMao`).
+- **Quem usa:** `useConfirmacao` e as confirmações só de título, frase e botões fora dele (Excluir contato(s), imóvel, automação, macro(s), equipe(s), atributo(s), variável, Remover do funil no card, Excluir cadastro, Excluir template, Revogar chave do MCP, Sair no menu do usuário e no admin, Desativar 2FA). Confirmação com prévia ou campo (Excluir funil/etapa, Remover lead do funil, digitar o nome) fica na janela comum.
+- **Concluir tarefa:** a pergunta virou "Criar a próxima tarefa pra este lead?", com a frase `"<título>" foi concluída.`; botões "Agora não" e "Nova tarefa".
+- **Não reabrir sem o dono pedir.**
+
+## Topo enxuto (15/10/2026)
+
+Pedido do dono, "por enquanto". A barra do topo fica só com Área do Admin, Plantão, sininho e perfil.
+
+- **Busca:** a barra "Buscar... Ctrl K" (computador) e a lupa (celular) saíram. O **Ctrl+K continua** abrindo a busca (o atalho mora no `MainLayout`, não no `Header`).
+- **? do tour:** saiu do topo e do menu do celular. O tour automático da primeira visita segue igual; o que se perde é rever o tour de uma página já vista. Se fizer falta, o caminho proposto é um "Ver tour desta página" no menu do perfil (o `TourFab` continua no código).
+- **Tema e modo demo (olhinho):** foram pro rodapé do menu lateral (ver "Rodapé do menu em ícones", abaixo).
+- Área do Admin (`AdminLayout`) e Área de Membros têm topo próprio e não mudaram.
+
+### Rodapé do menu em ícones (15/10/2026)
+
+Pedido do dono, depois de ver o tema e o olhinho "soltos" embaixo do suporte. O rodapé do menu virou **uma fileira de ícones**, com um tracinho no meio separando as duas famílias: o que leva pra outro lugar (**Guia do LM Flow**, **Falar com o suporte**) | o que muda a tela (**Tema**, **Modo demo**).
+
+- O nome aparece ao passar o mouse. O estado aparece sem passar: o tema mostra lua no claro e sol no escuro (o nome diz o que o clique faz: "Tema escuro"/"Tema claro"); o modo demo ligado vira olho riscado em roxo ("Modo demo: ligado (dados borrados)").
+- O Guia fica roxo quando a tela aberta é ele, como os itens do menu.
+- Menu recolhido: os quatro empilhados, com o tracinho deitado entre os pares. No celular, a mesma fileira dentro do menu hambúrguer (no lugar do Guia em linha e dos dois botões soltos).
+- Conta sem o Guia liberado: três ícones.
+- Peça única: `layout/components/RodapeDoMenu.tsx` (com spec), usada pelo `Sidebar` e pelo `Header` (celular). O endereço do suporte mora nela e continua exportado pelo `Sidebar` (o chat de suporte importa de lá).
+- Não usa o `ThemeToggle`/`DemoModeToggle` (que seguem na Área do Admin e na Área de Membros): desenha os próprios botões com `useDarkMode`/`useDemoMode`. Teste que monta o `Sidebar` precisa simular esses dois hooks (o `Sidebar.spec` faz isso).
+- Decisões do dono: quatro ícones (não linhas com nome) e um tracinho só, no meio. Não reabrir sem ele pedir.
+
+## Dashboard: tema claro sem o degradê rosado (15/10/2026)
+
+Pedido do dono: no tema claro a Dashboard tinha um degradê rosado em todo cartão (véu roxo do "vidro" sobre fundo lavanda) e tudo era roxo forte (ícones, funil, gráficos, origem). Ele escolheu o "neutro grafite" entre duas propostas e, vendo na prévia, pediu o roxo de volta "em alguns detalhes".
+
+- **Cartão branco chapado** sobre fundo cinza neutro (`#f6f6f7`), contorno de 1px em degradê roxo bem leve (`.lmf .lmf-glass`), sombra leve, sem véu nem brilho no topo. Texto e bordas em cinza neutro (eram arroxeados).
+- **Gráficos em roxo claro** (`--lmf-data-muted`, `#c4b5fd`) e **roxo forte** (`--lmf-data`) só no que se destaca: o melhor dia da semana, o mês atual, a maior origem, a linha do horário, as barras do funil, os ícones e o número de Ganhos no período. A forma Funil vai do `#6d28d9` clareando até 78% (`--lmf-funil`).
+- **Botões, links e foco** continuam no roxo da casa (`--lmf-accent`). Hover, segmento e aviso usam fundo cinza (`--lmf-accent-soft` no claro = `#f1f1f3`).
+- **Cartão da conta no topo do menu** (desfaz o "vidro roxo" de 01/10 no claro): borda cinza e sombra leve, sem degradê. No escuro continua o vidro roxo.
+- **Tema escuro não mudou:** no `.dark .lmf` os tokens de dado são todos o roxo de sempre.
+
+Armadilhas:
+
+1. **Gráfico novo na Dashboard:** série em `--lmf-data-muted`, destaque em `--lmf-data`. Tudo em `--lmf-data` volta o "tudo roxo forte".
+2. `--lmf-accent-soft` no claro é cinza: fundo de hover, segmento e aviso, não cor de dado.
+3. O texto branco da forma Funil depende do `--lmf-funil` mais escuro e do piso de 78% (`FORCA_FINAL` em `Funil.tsx`).
+4. Trava em `base/lmf.source.spec.ts`.
+5. O contorno em degradê é fundo no `border-box` sob o branco do `padding-box`: só funciona com cartão opaco. No escuro (vidro translúcido) o `.dark .lmf .lmf-glass` volta a borda sólida.
+6. Prévia da Vercel: entrar SEM `?tenant=` (cai no `public`, como o app.lmflow.com.br) ou com o slug de um cliente que existe. Slug inexistente faz o login responder 406 e parecer senha errada.
+
+Não reabrir sem o dono pedir.
+
+## Funil: o menu recolhe ao entrar e o arrasto mostra o esqueleto (desde 2026-10-15)
+
+Pedido do dono: entrar num funil fecha o menu com o mesmo movimento de Conversas, e arrastar um card pro lado tem que parecer que ele está sendo arrastado de verdade.
+
+- **Menu:** `/pipelines/:id` (quadro) e `/pipelines/:id/card/:itemId` (card completo) entraram na `ROTA_RECOLHE_MENU`. A lista de funis (`/pipelines`) não recolhe. Mesma regra de Conversas: o botão do topo reabre, a escolha vale só pra visita e não mexe na preferência salva.
+- **Arrasto:** o card pego vira um contorno tracejado da mesma altura no lugar de onde saiu, e a coluna sob o cursor mostra um card-esqueleto cinza no ponto exato onde ele vai cair (anda com o mouse). Soltar no mesmo lugar não mostra esqueleto. Soltou, Esc ou soltou fora: tudo volta ao normal. Card fechado não arrasta, então não tem esqueleto.
+- **Espaço vazio de outra coluna continua sendo o topo** (decisão do dono, 15/10): o esqueleto aparece no topo quando o cursor está abaixo dos cards. Mesma coluna, espaço vazio = fundo.
+
+Armadilhas:
+
+1. **A regra de onde o card cai é uma só** (`quadro/ondeOCardCai.ts`, com spec): desenha o esqueleto e decide a position ao soltar. Os três drops (coluna, card, esqueleto) caem no `alvoRef` do `useBoardDrag`, nunca recalculam pelo evento do drop.
+2. **O alvo mora num ref além do estado**: o dragover não é evento discreto e o estado pode não ter assentado quando o drop chega.
+3. **O contorno entra num `requestAnimationFrame` depois do dragstart**: o navegador tira a foto do card que segue o cursor ao fim do dragstart, e ela tem que ser a do card normal.
+4. **No vão entre dois cards, a coluna acha o card abaixo do cursor** (`[data-card-id]`), senão o esqueleto pularia pro topo a cada vão e voltaria. O esqueleto segura o próprio dragover (`stopPropagation`).
+5. **O esqueleto some quando o card já foi pro destino** (`limparEsqueleto` no `commitReorder`/`ganhar`), não quando o servidor responde: senão o card movido ficaria tracejado durante o pedido.
+
+## Funil: mini card ao passar o mouse (desde 2026-10-15)
+
+Pedido do dono: com o mouse parado em cima de um card do quadro, abre um resumo ao lado, sem abrir a janela. Ele escolheu a versão **Enxuto** numa página de comparação (Enxuto, Com etiquetas, Completo) e tirou a última mensagem.
+
+- **Quando abre:** mouse parado 0,8 s em cima do card, só no Quadro. Fecha ao sair do card e do resumo (folga de 150 ms pra levar o mouse até ele), ao rolar, redimensionar e no Esc. **Apertou o card (clique, arrasto, menu ⋯), não abre** até sair e voltar. Só mouse: dedo e caneta não abrem.
+- **Onde:** à direita do card; na última coluna, ou sem espaço, à esquerda. Nunca sai da tela.
+- **O que mostra:** nome e etapa; telefone com **Copiar**; "Nesta etapa há N dias" (some no ganho/perdido); a próxima tarefa pelo prazo, em vermelho com "Atrasada" quando venceu, ou "Sem tarefa marcada".
+- **Oferta da roleta não aceita:** telefone mascarado, sem Copiar, com "O telefone aparece quando você aceitar o lead". Mesma régua de Conversas (`emOfertaParaQuemVe`), inclusive com a lista de ofertas ainda chegando.
+
+Decisões do dono (não reabrir sem ele pedir): versão Enxuto, sem última mensagem, 0,8 s, sem resumo ao pegar o card.
+
+Armadilhas:
+
+1. **Um mini card só pro quadro** (`quadro/useMiniCard.ts` + `quadro/MiniCardDoLead.tsx`, portal no body). O card só avisa `entrou`/`saiu`/`apertou` por um callback estável (`onPassarMouse`): o card é memo e o quadro pode ter 2 mil cards.
+2. **O título da tarefa só é pedido com o resumo aberto** (`/activities`, `para_fazer`, 1 item, ordenado por prazo no servidor) e só se o card tem tarefa aberta. Fica guardado por card + prazos abertos e é esquecido no `EVENTO_TAREFAS_MUDARAM`. Falhou: "Tarefa marcada · prazo". Não há mudança no servidor.
+3. **Regras e frases em `quadro/miniCard.ts`**, com spec. O dia da tarefa usa o `quandoAcontece` da casa, com a primeira letra minúscula no meio da frase.
+
+## Funil: setas ‹ › para ir pro lado no quadro (desde 2026-10-15)
+
+Pedido do dono: no Funil de vendas, com mouse, não dava pra ir pras colunas da direita. A roda já andava pro lado, mas só fora das colunas (vão entre elas, título, fundo); em cima dos cards ela desce a lista da coluna, e os cards ocupam quase o quadro inteiro. Arrastar o fundo e Shift + roda funcionavam, mas ninguém descobria.
+
+- **Duas setas redondas presas nas bordas esquerda e direita do quadro**, por cima das colunas, na altura do meio. Cada clique anda uma coluna, com movimento suave.
+- **Só aparecem quando tem coluna escondida daquele lado**: no começo do quadro, só a ›; no fim, só a ‹; sem colunas sobrando, nenhuma.
+- **A roda continua como estava**: em cima dos cards desce a coluna, fora deles anda pro lado.
+- **No celular não aparecem** (o dedo já arrasta o quadro). Na Lista não existem.
+
+Decisões do dono (não reabrir sem ele pedir): setas em vez de a roda andar sempre pro lado dentro do quadro (isso tiraria a rolagem da lista de cards da coluna).
+
+Armadilhas:
+
+1. **`quadro/SetasDoQuadro.tsx`** mede o próprio quadro (`boardScrollRef` do `useBoardDrag`): escuta o `scroll` e um `ResizeObserver` no quadro e na faixa das colunas, porque a largura muda com a janela, com filtro, etapa nova e troca de aba.
+2. **O passo é fixo em 344 px** (`PASSO_DA_SETA`: coluna `w-80` + `gap-6`). Mudou a largura da coluna ou o vão, muda aqui junto.
+3. **As setas ficam fora do quadro que rola** (irmãs dele dentro do embrulho `relative`), então o arrastar do fundo nunca pega o clique delas.
 
 ## Imóveis · Preço do empreendimento mora na tipologia (desde 2026-10-15)
 

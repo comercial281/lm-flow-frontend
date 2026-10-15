@@ -6,6 +6,8 @@ import {
   DialogTitle,
   DialogFooter,
   Button,
+  Input,
+  Textarea,
 } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { customRolesService } from '@/services/customRoles/customRolesService';
@@ -14,6 +16,7 @@ import type {
   PermissionSection,
   RoleFormData,
 } from '@/types/customRoles';
+import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import PermissionMatrix from './PermissionMatrix';
 
 interface Props {
@@ -28,6 +31,10 @@ const COLORS = [
   '#7B2CFF', '#4A148C', '#3B82F6', '#10B981',
   '#F59E0B', '#EF4444', '#EC4899', '#6B7280',
 ];
+const NOME_DA_COR: Record<string, string> = {
+  '#7B2CFF': 'Roxo', '#4A148C': 'Roxo escuro', '#3B82F6': 'Azul', '#10B981': 'Verde',
+  '#F59E0B': 'Âmbar', '#EF4444': 'Vermelho', '#EC4899': 'Rosa', '#6B7280': 'Cinza',
+};
 
 export default function RoleEditorModal({ open, onClose, role, catalog, onSaved }: Props) {
   const isCreating = !role;
@@ -95,7 +102,7 @@ export default function RoleEditorModal({ open, onClose, role, catalog, onSaved 
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            {isCreating ? 'Novo Cargo' : `Editar Cargo: ${role?.name}`}
+            {isCreating ? 'Novo cargo' : `Editar cargo: ${role?.name}`}
             {role?.system && (
               <span className="ml-2 rounded bg-primary/20 px-2 py-0.5 text-xs text-primary">
                 Sistema
@@ -104,57 +111,51 @@ export default function RoleEditorModal({ open, onClose, role, catalog, onSaved 
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-5 px-1 py-2">
-          {/* Identificação */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium">Nome *</label>
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="Ex: Gerente Comercial"
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Cor</label>
-              <div className="flex flex-wrap gap-2">
-                {COLORS.map(c => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setColor(c)}
-                    className={`h-7 w-7 rounded-full border-2 transition-all ${
-                      color === c ? 'border-white ring-2 ring-primary' : 'border-transparent'
-                    }`}
-                    style={{ background: c }}
-                    title={c}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
+        <div className="flex-1 space-y-5 overflow-y-auto px-1 py-2">
+          <GrupoDaJanela titulo="Identificação">
+            <GradeDaJanela>
+              <CampoDaJanela rotulo="Nome" htmlFor="cargo-nome" obrigatorio colunas={3}>
+                <Input
+                  id="cargo-nome"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Ex.: Gerente comercial"
+                />
+              </CampoDaJanela>
+              <CampoDaJanela rotulo="Cor" colunas={1}>
+                <div role="group" aria-label="Cor" className="flex flex-wrap gap-2 pt-1">
+                  {COLORS.map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setColor(c)}
+                      aria-label={NOME_DA_COR[c] ?? c}
+                      aria-pressed={color === c}
+                      className={`h-7 w-7 rounded-full border-2 transition-all ${
+                        color === c ? 'border-white ring-2 ring-primary' : 'border-transparent'
+                      }`}
+                      style={{ background: c }}
+                      title={NOME_DA_COR[c] ?? c}
+                    />
+                  ))}
+                </div>
+              </CampoDaJanela>
+              <CampoDaJanela rotulo="Descrição" htmlFor="cargo-descricao" colunas={4}>
+                <Textarea
+                  id="cargo-descricao"
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  rows={2}
+                  placeholder="Descreva pra que serve este cargo"
+                />
+              </CampoDaJanela>
+            </GradeDaJanela>
+          </GrupoDaJanela>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">Descrição</label>
-            <textarea
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              rows={2}
-              placeholder="Descreva pra que serve este cargo"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-            />
-          </div>
-
-          {/* Permissões */}
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold">Permissões ({selected.size})</h3>
-              <span className="text-xs text-muted-foreground">
-                Quais funções deste cargo podem ver e executar
-              </span>
-            </div>
+          <GrupoDaJanela titulo={`Permissões · ${selected.size}`}>
+            <p className="text-xs text-muted-foreground">
+              Quais funções deste cargo podem ver e executar
+            </p>
             <PermissionMatrix
               catalog={catalog}
               selected={selected}
@@ -162,7 +163,7 @@ export default function RoleEditorModal({ open, onClose, role, catalog, onSaved 
               onBulkToggle={bulkToggle}
               disabled={saving}
             />
-          </div>
+          </GrupoDaJanela>
         </div>
 
         <DialogFooter>

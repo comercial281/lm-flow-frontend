@@ -17,6 +17,8 @@ export interface EscolhaComBuscaProps {
   placeholder: string;
   /** Até quantas opções mostra todas, sem busca. */
   semBuscaAte?: number;
+  /** Já está dentro de um grupo com o mesmo nome (ex.: GrupoDaJanela): não repete o nome. */
+  semNome?: boolean;
 }
 
 const LIMITE = 5;
@@ -24,7 +26,7 @@ const LIMITE = 5;
 const normal = (t: string) => t.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 
 export default function EscolhaComBusca({
-  rotulo, opcoes, escolhidas, aoMudar, placeholder, semBuscaAte = 5,
+  rotulo, opcoes, escolhidas, aoMudar, placeholder, semBuscaAte = 5, semNome = false,
 }: EscolhaComBuscaProps) {
   const [busca, setBusca] = useState('');
   const termo = normal(busca.trim());
@@ -35,7 +37,7 @@ export default function EscolhaComBusca({
   );
 
   if (opcoes.length <= semBuscaAte) {
-    return <EtiquetasDeEscolha rotulo={rotulo} opcoes={opcoes} escolhidas={escolhidas} aoMudar={aoMudar} />;
+    return <EtiquetasDeEscolha rotulo={rotulo} opcoes={opcoes} escolhidas={escolhidas} aoMudar={aoMudar} semNome={semNome} />;
   }
 
   const porValor = new Map(opcoes.map(o => [o.valor, o.rotulo]));
@@ -75,7 +77,7 @@ export default function EscolhaComBusca({
         <p className="text-sm text-muted-foreground">Nada encontrado.</p>
       ) : (
         <>
-          <EtiquetasDeEscolha rotulo={rotulo} opcoes={achadas.slice(0, LIMITE)} escolhidas={[]} aoMudar={v => escolher(v[0])} />
+          <EtiquetasDeEscolha rotulo={rotulo} opcoes={achadas.slice(0, LIMITE)} escolhidas={[]} aoMudar={v => escolher(v[0])} semNome={semNome} />
           {achadas.length > LIMITE && (
             <p className="text-xs text-muted-foreground">Mais {achadas.length - LIMITE}. Continue digitando para achar.</p>
           )}

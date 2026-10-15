@@ -13,6 +13,8 @@ import {
   DialogTitle,
   Label as UILabel,
   Badge,
+  Input,
+  Checkbox,
 } from '@/components/ui/ds';
 import {
   RefreshCw, Edit, ToggleLeft, ToggleRight, ArrowRight, Download,
@@ -23,6 +25,7 @@ import { Pagina, BaseHeader } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
 import Carregando from '@/components/base/Carregando';
 import Aviso from '@/components/base/Aviso';
+import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import IconActionButton from '@/components/base/IconActionButton';
 import {
   leadAdsFormsService,
@@ -49,8 +52,8 @@ import { Seletor } from '@/components/base/Seletor';
 // Etiqueta de marketing padrão de todo lead de formulário (igual ao backend).
 const PAID_TAG = 'tráfego pago';
 
-const baseSelectClass =
-  'mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
+// Campo dentro da janela: o espaço entre rótulo e campo é do CampoDaJanela.
+const campoDaJanelaClass = 'w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
 
 interface FormState {
   form_id: string;
@@ -598,46 +601,47 @@ export default function LeadAdsForms() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div>
-              <UILabel htmlFor="bf_days">Período (dias)</UILabel>
+          <div className="grid gap-4 py-2">
+            <CampoDaJanela rotulo="Período" htmlFor="bf_days" obrigatorio>
               <Seletor id="bf_days" value={backfillDays}
                 onChange={e => { setBackfillDays(Number(e.target.value)); setBackfillPreview(null); }}
-                className={baseSelectClass}>
+                className={campoDaJanelaClass}>
                 <option value={1}>Último 1 dia</option>
                 <option value={3}>Últimos 3 dias</option>
                 <option value={7}>Últimos 7 dias</option>
                 <option value={15}>Últimos 15 dias</option>
                 <option value={30}>Últimos 30 dias</option>
               </Seletor>
-            </div>
+            </CampoDaJanela>
 
             {backfillPreview && (
-              <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm space-y-1">
+              <Aviso tom="info" compacto>
                 <p>Encontrados: <strong>{backfillPreview.total_leads}</strong></p>
                 <p>Já no CRM: <strong>{backfillPreview.ja_no_crm}</strong></p>
-                <p className="text-primary">Faltam entrar: <strong>{backfillPreview.faltavam}</strong></p>
-                {backfillPreview.dry_run === false && (
-                  <p className="text-green-600">Importados agora: <strong>{backfillPreview.importados}</strong></p>
-                )}
-              </div>
+                <p>Faltam entrar: <strong>{backfillPreview.faltavam}</strong></p>
+              </Aviso>
+            )}
+            {backfillPreview && backfillPreview.dry_run === false && (
+              <Aviso tom="sucesso" compacto>
+                Importados agora: <strong>{backfillPreview.importados}</strong>
+              </Aviso>
             )}
 
-            <p className="text-xs text-muted-foreground">
-              Dica: confira primeiro. Ao importar, os leads entram no funil e podem disparar as
-              automações de entrada — desative o primeiro contato antes se não quiser avisar leads antigos.
-            </p>
-          </div>
+            {/* Passo 1 (Conferir) libera o passo 2 (Importar). Sem esse aviso o botão
+                roxo "Importar" nasce desabilitado e parece quebrado — o cliente não
+                descobre que precisa conferir antes. */}
+            {!backfillPreview && !backfillBusy && (
+              <Aviso tom="info" compacto>
+                Passo 1: clique em <strong>Conferir</strong> para ver quantos leads faltam.
+                Isso libera o botão <strong>Importar</strong>.
+              </Aviso>
+            )}
 
-          {/* Passo 1 (Conferir) libera o passo 2 (Importar). Sem esse aviso o botão
-              roxo "Importar" nasce desabilitado e parece quebrado — o cliente não
-              descobre que precisa conferir antes. */}
-          {!backfillPreview && !backfillBusy && (
-            <p className="text-xs text-primary">
-              Passo 1: clique em <strong>Conferir</strong> para ver quantos leads faltam.
-              Isso libera o botão <strong>Importar</strong>.
-            </p>
-          )}
+            <Aviso tom="neutro" compacto>
+              Dica: confira primeiro. Ao importar, os leads entram no funil e podem disparar as
+              automações de entrada. Desative o primeiro contato antes se não quiser avisar leads antigos.
+            </Aviso>
+          </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => runBackfill(true)} disabled={backfillBusy}>
@@ -1238,76 +1242,70 @@ export default function LeadAdsForms() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div>
-              <UILabel>Funil *</UILabel>
-              <Seletor
-                value={form.pipeline_id}
-                onChange={e =>
-                  setForm(f => ({ ...f, pipeline_id: e.target.value, pipeline_stage_id: '' }))
-                }
-                className={baseSelectClass}
-              >
-                <option value="">Selecione um funil</option>
-                {resources.pipelines.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </Seletor>
-            </div>
+          <div className="grid gap-5 py-2">
+            <GrupoDaJanela titulo="Para onde vai">
+              <GradeDaJanela>
+                <CampoDaJanela rotulo="Funil" htmlFor="destino_funil" obrigatorio colunas={form.pipeline_id ? 2 : 4}>
+                  <Seletor
+                    id="destino_funil"
+                    value={form.pipeline_id}
+                    onChange={e =>
+                      setForm(f => ({ ...f, pipeline_id: e.target.value, pipeline_stage_id: '' }))
+                    }
+                    className={campoDaJanelaClass}
+                  >
+                    <option value="">Escolha um funil</option>
+                    {resources.pipelines.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </Seletor>
+                </CampoDaJanela>
 
-            {form.pipeline_id && (
-              <div>
-                <UILabel>Etapa *</UILabel>
-                <Seletor
-                  value={form.pipeline_stage_id}
-                  onChange={e => setForm(f => ({ ...f, pipeline_stage_id: e.target.value }))}
-                  className={baseSelectClass}
-                >
-                  <option value="">Selecione uma etapa</option>
-                  {(resources.stagesByPipeline[form.pipeline_id] ?? []).map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </Seletor>
-              </div>
-            )}
-
-            <div>
-              <UILabel>Etiquetas</UILabel>
-              <LabelMultiSelect
-                labels={resources.labels}
-                selectedIds={form.label_ids}
-                onChange={ids => setForm(f => ({ ...f, label_ids: ids }))}
-                onLabelCreated={() => resources.reloadLabels()}
-                disabled={saving}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Já vem com <strong>tráfego pago</strong> por padrão. Busque ou crie a etiqueta do imóvel deste formulário.
-              </p>
-            </div>
+                {form.pipeline_id && (
+                  <CampoDaJanela rotulo="Etapa" htmlFor="destino_etapa" obrigatorio colunas={2}>
+                    <Seletor
+                      id="destino_etapa"
+                      value={form.pipeline_stage_id}
+                      onChange={e => setForm(f => ({ ...f, pipeline_stage_id: e.target.value }))}
+                      className={campoDaJanelaClass}
+                    >
+                      <option value="">Escolha uma etapa</option>
+                      {(resources.stagesByPipeline[form.pipeline_id] ?? []).map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </Seletor>
+                  </CampoDaJanela>
+                )}
+              </GradeDaJanela>
+            </GrupoDaJanela>
 
             {/* Palavra-chave do imóvel: casa TODAS as campanhas desse imóvel. O Meta
                 cria um formulário novo por campanha (nome com data/versão diferente),
                 então casar pelo nome do imóvel evita reconfigurar toda campanha. */}
-            <div>
-              <UILabel htmlFor="match_keyword">Nome do imóvel pra casar os formulários</UILabel>
-              <input
-                id="match_keyword"
-                type="text"
-                className={baseSelectClass}
-                placeholder="ex.: capri, torres dos topázios"
-                value={form.match_keyword}
-                onChange={e => setForm(f => ({ ...f, match_keyword: e.target.value }))}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Todo formulário cujo nome <strong>contiver</strong> isto entra com esta config — cobre <strong>todas as campanhas</strong> do imóvel (datas/versões diferentes), sem reconfigurar. Deixe curto (só o nome do imóvel).
-              </p>
-            </div>
+            <GrupoDaJanela titulo="Como identificar">
+              <CampoDaJanela
+                rotulo="Nome do imóvel para reconhecer os formulários"
+                htmlFor="match_keyword"
+                ajuda={<>Todo formulário cujo nome <strong>contiver</strong> isto entra com esta configuração. Cobre <strong>todas as campanhas</strong> do imóvel (datas e versões diferentes), sem configurar de novo. Deixe curto, só o nome do imóvel.</>}
+              >
+                <Input
+                  id="match_keyword"
+                  type="text"
+                  placeholder="Ex.: capri, torres dos topázios"
+                  value={form.match_keyword}
+                  onChange={e => setForm(f => ({ ...f, match_keyword: e.target.value }))}
+                />
+              </CampoDaJanela>
+            </GrupoDaJanela>
 
             {/* Quem assume o lead na entrada: corretor fixo OU roleta, numa lista
                 só com as abas Corretores | Roleta. A tela só ESCOLHE a roleta. */}
-            <div>
-              <UILabel htmlFor="quem_assume">Quem assume o lead</UILabel>
-              <div className="mt-1">
+            <GrupoDaJanela titulo="Quem assume">
+              <CampoDaJanela
+                rotulo="Quem assume o lead"
+                htmlFor="quem_assume"
+                ajuda="O corretor recebe todo lead deste formulário. A roleta oferece cada lead ao próximo da fila."
+              >
                 <CampoQuemAssume
                   id="quem_assume"
                   aria-label="Quem assume o lead"
@@ -1317,38 +1315,49 @@ export default function LeadAdsForms() {
                   roletas={roletas}
                   disabled={saving}
                 />
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                O corretor recebe todo lead deste formulário. A roleta oferece cada lead ao próximo da fila.
-              </p>
-            </div>
+              </CampoDaJanela>
+            </GrupoDaJanela>
 
-            {/* Imóvel vinculado a todo lead desse formulário */}
-            <div>
-              <UILabel htmlFor="property_id">Imóvel vinculado (opcional)</UILabel>
-              <Seletor
-                id="property_id"
-                className={baseSelectClass}
-                value={form.property_id}
-                onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))}
+            <GrupoDaJanela titulo="Complemento">
+              <CampoDaJanela
+                rotulo="Etiquetas"
+                ajuda={<>Já vem com <strong>tráfego pago</strong> por padrão. Busque ou crie a etiqueta do imóvel deste formulário.</>}
               >
-                <option value="">Nenhum</option>
-                {properties.map(p => (
-                  <option key={p.id} value={p.id}>{p.title || p.code || 'Imóvel'}</option>
-                ))}
-              </Seletor>
-            </div>
+                <LabelMultiSelect
+                  labels={resources.labels}
+                  selectedIds={form.label_ids}
+                  onChange={ids => setForm(f => ({ ...f, label_ids: ids }))}
+                  onLabelCreated={() => resources.reloadLabels()}
+                  disabled={saving}
+                />
+              </CampoDaJanela>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="is_active"
-                checked={form.is_active}
-                onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))}
-                className="rounded border-input"
-              />
-              <UILabel htmlFor="is_active" className="cursor-pointer">Ativo</UILabel>
-            </div>
+              {/* Imóvel vinculado a todo lead desse formulário */}
+              <CampoDaJanela rotulo="Imóvel vinculado" htmlFor="property_id">
+                <Seletor
+                  id="property_id"
+                  className={campoDaJanelaClass}
+                  value={form.property_id}
+                  onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))}
+                >
+                  <option value="">Nenhum</option>
+                  {properties.map(p => (
+                    <option key={p.id} value={p.id}>{p.title || p.code || 'Imóvel'}</option>
+                  ))}
+                </Seletor>
+              </CampoDaJanela>
+            </GrupoDaJanela>
+
+            <GrupoDaJanela titulo="Estado">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="is_active"
+                  checked={form.is_active}
+                  onCheckedChange={v => setForm(f => ({ ...f, is_active: v === true }))}
+                />
+                <UILabel htmlFor="is_active" className="cursor-pointer">Ativo</UILabel>
+              </div>
+            </GrupoDaJanela>
           </div>
 
           <DialogFooter>

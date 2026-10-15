@@ -8,8 +8,8 @@ import {
   DialogTitle,
   Button,
   Input,
-  Label as UILabel,
   Textarea,
+  Checkbox,
 } from '@/components/ui/ds';
 import { Code, Lock, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -18,6 +18,7 @@ import type { TemplateVariable, TenantTemplateVariable } from '@/types/messageFu
 import { BaseHeader, Pagina } from '@/components/base';
 import { plural } from '@/lib/formato';
 import { Seletor } from '@/components/base/Seletor';
+import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 
@@ -35,14 +36,14 @@ const SOURCE_PRESETS: SourcePreset[] = [
   {
     key: 'contact_email',
     label: 'E-mail do contato',
-    description: 'Lê do campo email do lead',
+    description: 'Usa o e-mail do lead',
     template: 'contact.email',
     needsExtra: null,
   },
   {
     key: 'contact_phone',
     label: 'Telefone do contato',
-    description: 'Lê do campo phone_number do lead (com código do país, ex.: +5511999999999)',
+    description: 'Usa o telefone do lead, com o código do país (ex.: +5511999999999)',
     template: 'contact.phone_number',
     needsExtra: null,
   },
@@ -55,15 +56,15 @@ const SOURCE_PRESETS: SourcePreset[] = [
   },
   {
     key: 'contact_custom_attr',
-    label: 'Atributo customizado do contato',
-    description: 'Lê de contact.custom_attributes.<chave> que você definiu',
+    label: 'Campo personalizado do contato',
+    description: 'Usa um campo personalizado do lead que você criou',
     template: 'contact.custom_attributes.',
     needsExtra: 'attr',
   },
   {
     key: 'literal',
     label: 'Valor fixo (texto)',
-    description: 'Sempre devolve o mesmo texto, independente do lead',
+    description: 'Sempre o mesmo texto, para qualquer lead',
     template: 'literal:',
     needsExtra: 'literal',
   },
@@ -169,12 +170,12 @@ export default function TemplateVariables() {
     }
     const builtinHit = builtin.some(b => b.token === form.token);
     if (builtinHit) return `O nome "${form.token}" já é usado pelo sistema`;
-    if (!form.label.trim()) return 'Rótulo é obrigatório';
+    if (!form.label.trim()) return 'O nome na lista é obrigatório';
     const preset = SOURCE_PRESETS.find(p => p.key === form.presetKey);
     if (!preset) return 'Selecione uma fonte de valor';
     if (preset.needsExtra && !form.extraValue.trim()) {
       return preset.needsExtra === 'attr'
-        ? 'Informe a chave do atributo customizado'
+        ? 'Informe o nome do campo personalizado'
         : 'Informe o valor fixo';
     }
     return null;
@@ -358,108 +359,114 @@ export default function TemplateVariables() {
           <DialogHeader>
             <DialogTitle>{editing ? 'Editar variável' : 'Nova variável'}</DialogTitle>
             <DialogDescription>
-              Variáveis customizadas viram chips disponíveis no editor de funis e são
-              interpoladas no momento do envio.
+              A variável fica disponível para escolher no editor de funis e vira o valor real do lead na hora de enviar a mensagem.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <UILabel htmlFor="var-token">
-                Nome da variável <span className="text-muted-foreground text-xs">(sem chaves duplas)</span>
-              </UILabel>
-              <Input
-                id="var-token"
-                value={form.token}
-                onChange={e => setForm(f => ({ ...f, token: e.target.value.toLowerCase() }))}
-                placeholder="ex: empreendimento_atual"
-                disabled={!!editing}
-                maxLength={64}
-              />
-              {form.token && (
-                <p className="text-xs text-muted-foreground">
-                  Vai aparecer como <code className="text-primary">{`{{${form.token}}}`}</code> no editor
-                </p>
-              )}
-            </div>
+          <div className="grid gap-5 py-2">
+            <GrupoDaJanela titulo="Identificação">
+              <GradeDaJanela>
+                <CampoDaJanela
+                  rotulo="Nome da variável"
+                  htmlFor="var-token"
+                  colunas={2}
+                  obrigatorio
+                  ajuda={form.token
+                    ? <>Vai aparecer como <code className="text-primary">{`{{${form.token}}}`}</code> no editor</>
+                    : 'Sem chaves, só o nome'}
+                >
+                  <Input
+                    id="var-token"
+                    value={form.token}
+                    onChange={e => setForm(f => ({ ...f, token: e.target.value.toLowerCase() }))}
+                    placeholder="Ex.: empreendimento_atual"
+                    disabled={!!editing}
+                    maxLength={64}
+                  />
+                </CampoDaJanela>
 
-            <div className="space-y-1.5">
-              <UILabel htmlFor="var-label">Rótulo (mostra no chip)</UILabel>
-              <Input
-                id="var-label"
-                value={form.label}
-                onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
-                placeholder="ex: Empreendimento Atual"
-                maxLength={120}
-              />
-            </div>
+                <CampoDaJanela rotulo="Nome na lista" htmlFor="var-label" colunas={2} obrigatorio ajuda="Como a variável aparece para escolher">
+                  <Input
+                    id="var-label"
+                    value={form.label}
+                    onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
+                    placeholder="Ex.: Empreendimento atual"
+                    maxLength={120}
+                  />
+                </CampoDaJanela>
 
-            <div className="space-y-1.5">
-              <UILabel htmlFor="var-desc">Descrição (opcional)</UILabel>
-              <Textarea
-                id="var-desc"
-                value={form.description}
-                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="Quando esta variável é usada"
-                rows={2}
-              />
-            </div>
+                <CampoDaJanela rotulo="Descrição" htmlFor="var-desc" colunas={4}>
+                  <Textarea
+                    id="var-desc"
+                    value={form.description}
+                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                    placeholder="Quando esta variável é usada"
+                    rows={2}
+                  />
+                </CampoDaJanela>
+              </GradeDaJanela>
+            </GrupoDaJanela>
 
-            <div className="space-y-1.5">
-              <UILabel htmlFor="var-source">De onde vem o valor</UILabel>
-              <Seletor
-                id="var-source"
-                value={form.presetKey}
-                onChange={e => setForm(f => ({ ...f, presetKey: e.target.value }))}
-                className="w-full h-10 px-3 py-2 bg-background border border-input rounded-md text-sm"
-              >
-                {SOURCE_PRESETS.map(p => (
-                  <option key={p.key} value={p.key}>
-                    {p.label}
-                  </option>
-                ))}
-              </Seletor>
-              <p className="text-xs text-muted-foreground">
-                {SOURCE_PRESETS.find(p => p.key === form.presetKey)?.description}
-              </p>
-            </div>
+            <GrupoDaJanela titulo="De onde vem o valor">
+              <GradeDaJanela>
+                <CampoDaJanela
+                  rotulo="Origem do valor"
+                  htmlFor="var-source"
+                  colunas={4}
+                  ajuda={SOURCE_PRESETS.find(p => p.key === form.presetKey)?.description}
+                >
+                  <Seletor
+                    id="var-source"
+                    value={form.presetKey}
+                    onChange={e => setForm(f => ({ ...f, presetKey: e.target.value }))}
+                    className="w-full h-10 px-3 py-2 bg-background border border-input rounded-md text-sm"
+                  >
+                    {SOURCE_PRESETS.map(p => (
+                      <option key={p.key} value={p.key}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </Seletor>
+                </CampoDaJanela>
 
-            {SOURCE_PRESETS.find(p => p.key === form.presetKey)?.needsExtra === 'attr' && (
-              <div className="space-y-1.5">
-                <UILabel htmlFor="var-attr">Chave do atributo customizado</UILabel>
-                <Input
-                  id="var-attr"
-                  value={form.extraValue}
-                  onChange={e => setForm(f => ({ ...f, extraValue: e.target.value }))}
-                  placeholder="ex: empreendimento_atual"
+                {SOURCE_PRESETS.find(p => p.key === form.presetKey)?.needsExtra === 'attr' && (
+                  <CampoDaJanela
+                    rotulo="Nome do campo personalizado"
+                    htmlFor="var-attr"
+                    colunas={4}
+                    ajuda="Escreva o nome do campo igual ao que está no cadastro do lead"
+                  >
+                    <Input
+                      id="var-attr"
+                      value={form.extraValue}
+                      onChange={e => setForm(f => ({ ...f, extraValue: e.target.value }))}
+                      placeholder="Ex.: empreendimento_atual"
+                    />
+                  </CampoDaJanela>
+                )}
+
+                {SOURCE_PRESETS.find(p => p.key === form.presetKey)?.needsExtra === 'literal' && (
+                  <CampoDaJanela rotulo="Texto fixo" htmlFor="var-literal" colunas={4}>
+                    <Input
+                      id="var-literal"
+                      value={form.extraValue}
+                      onChange={e => setForm(f => ({ ...f, extraValue: e.target.value }))}
+                      placeholder="Ex.: Imobiliária X"
+                    />
+                  </CampoDaJanela>
+                )}
+              </GradeDaJanela>
+            </GrupoDaJanela>
+
+            <GrupoDaJanela titulo="Estado">
+              <label className="flex items-center gap-2 cursor-pointer text-sm">
+                <Checkbox
+                  checked={form.active}
+                  onCheckedChange={v => setForm(f => ({ ...f, active: v === true }))}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Resultado: <code>contact.custom_attributes.{form.extraValue || '<chave>'}</code>
-                </p>
-              </div>
-            )}
-
-            {SOURCE_PRESETS.find(p => p.key === form.presetKey)?.needsExtra === 'literal' && (
-              <div className="space-y-1.5">
-                <UILabel htmlFor="var-literal">Texto fixo</UILabel>
-                <Input
-                  id="var-literal"
-                  value={form.extraValue}
-                  onChange={e => setForm(f => ({ ...f, extraValue: e.target.value }))}
-                  placeholder="ex: Imobiliária X"
-                />
-              </div>
-            )}
-
-            <label className="flex items-center gap-2 cursor-pointer pt-1">
-              <input
-                type="checkbox"
-                checked={form.active}
-                onChange={e => setForm(f => ({ ...f, active: e.target.checked }))}
-                className="h-4 w-4 rounded border-border"
-              />
-              <span className="text-sm">Ativa (chip aparece no editor)</span>
-            </label>
+                Ativa (aparece para escolher no editor)
+              </label>
+            </GrupoDaJanela>
           </div>
 
           <DialogFooter>
@@ -476,7 +483,7 @@ export default function TemplateVariables() {
 
       {/* Delete confirm */}
       <Dialog open={!!toDelete} onOpenChange={v => !v && setToDelete(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent compacta>
           <DialogHeader>
             <DialogTitle>Remover variável?</DialogTitle>
             <DialogDescription>

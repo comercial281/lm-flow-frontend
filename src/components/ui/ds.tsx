@@ -136,6 +136,11 @@ type DialogContentProps = ComponentProps<typeof BaseDialogContent> & {
    * colunas); não passe outro teto por cima.
    */
   size?: 'default' | 'wide';
+  /**
+   * Confirmação curta (só título, frase e botões): sem topo e rodapé fixos com
+   * linha, tudo num bloco só, na largura pequena (`max-w-md`). Só quem pede.
+   */
+  compacta?: boolean;
 };
 
 // `max-w-*` sem `sm:`/`md:`/`lg:`/`!` na frente, capturando o valor (lg, 2xl,
@@ -299,10 +304,14 @@ function focarPrimeiroCampo(caixa: HTMLElement) {
 // pacote, sem nada fixo.
 type Janela = { fechar: boolean; topo: string | null; registrar: (id: string) => () => void };
 const JanelaContexto = createContext<Janela | null>(null);
+// Janela compacta: o topo não é fixo, mas o X mora no canto; o título desvia dele.
+const CompactaContexto = createContext(false);
 
 export const DialogContent = forwardRef<ComponentRef<typeof BaseDialogContent>, DialogContentProps>(
-  ({ children, className, style, size = 'default', showCloseButton = true, onOpenAutoFocus, ...props }, ref) => {
-    const cls = typeof className === 'string' ? className : '';
+  ({ children, className, style, size = 'default', compacta = false, showCloseButton = true, onOpenAutoFocus, ...props }, ref) => {
+    const clsPedida = typeof className === 'string' ? className : '';
+    // A compacta traz a largura pequena (448px), a menos que a tela peça outra.
+    const cls = compacta && !/(^|\s)max-w-/.test(clsPedida) ? `max-w-md ${clsPedida}` : clsPedida;
     const respiro = respiroPedido(cls);
     // O preset entra ANTES da className de quem chama: serve de padrão e nunca
     // atropela a tela que tem necessidade própria (`p-0`, outro teto, `h-*`).
@@ -345,8 +354,10 @@ export const DialogContent = forwardRef<ComponentRef<typeof BaseDialogContent>, 
         {...props}
       >
         <DialogDescription className="sr-only">Conteúdo do diálogo</DialogDescription>
-        <JanelaContexto.Provider value={janela}>{children}</JanelaContexto.Provider>
-        {showCloseButton && !topo && <BotaoFechar />}
+        <CompactaContexto.Provider value={compacta}>
+          <JanelaContexto.Provider value={compacta ? null : janela}>{children}</JanelaContexto.Provider>
+        </CompactaContexto.Provider>
+        {showCloseButton && (compacta || !topo) && <BotaoFechar />}
         <Alca />
       </BaseDialogContent>
     );
@@ -366,12 +377,13 @@ const TOPO = `sticky -top-(--janela-p) z-10 -mx-(--janela-p) -mt-(--janela-p) bo
 
 export function DialogHeader({ className, children, ...props }: ComponentProps<typeof BaseDialogHeader>) {
   const janela = useContext(JanelaContexto);
+  const compacta = useContext(CompactaContexto);
   const id = useId();
   const registrar = janela?.registrar;
   useLayoutEffect(() => registrar?.(id), [registrar, id]);
   if (!janela) {
     return (
-      <BaseDialogHeader className={`text-left! ${className ?? ''}`} {...props}>
+      <BaseDialogHeader className={`text-left! ${compacta ? 'pr-8 ' : ''}${className ?? ''}`} {...props}>
         {children}
       </BaseDialogHeader>
     );

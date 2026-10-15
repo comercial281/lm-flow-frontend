@@ -98,7 +98,7 @@ export const proposalsService = {
 export const PROPOSAL_STATUS_LABELS: Record<string, string> = {
   draft:          'Rascunho',
   sent:           'Enviada',
-  counter_offered:'Contra-proposta',
+  counter_offered:'Contraproposta',
   accepted:       'Aceita',
   rejected:       'Rejeitada',
   withdrawn:      'Desistência',

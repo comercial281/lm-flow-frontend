@@ -12,11 +12,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  Input,
 } from '@/components/ui/ds';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import IconActionButton from '@/components/base/IconActionButton';
-import { CampoTexto } from '@/components/base/Campo';
 import { plural } from '@/lib/formato';
 import { cn } from '@/lib/utils';
 import {
@@ -32,7 +32,7 @@ import {
 import { metaPagesService } from '@/services/integrations/metaPagesService';
 import { Seletor } from '@/components/base/Seletor';
 import Aviso from '@/components/base/Aviso';
-import { Campo } from '@/components/base/Campo';
+import { CampoDaJanela, ESCOLHA, GrupoDaJanela } from '@/components/base/janela';
 import { origemTexto } from '../roletaNovaTextos';
 
 // ── DE ONDE VEM O LEAD (roleta nova, D2/D3/D9) ──────────────────────────────
@@ -62,7 +62,7 @@ type TipoDeOrigem = 'meta' | 'sales_agent' | 'landing' | 'portal' | 'site';
 const TIPOS: { chave: TipoDeOrigem; rotulo: string; descricao: string; kinds: RoletaOriginKind[]; icone: LucideIcon; vazio: string }[] = [
   { chave: 'meta', rotulo: 'Formulário do Meta', descricao: 'Lead Ads do Facebook e do Instagram', kinds: ['meta_form'], icone: FileText, vazio: 'Nenhum formulário do Meta ainda.' },
   { chave: 'sales_agent', rotulo: 'IA Vendedora', descricao: 'Quando a IA passa o lead pra um corretor', kinds: ['sales_agent'], icone: Bot, vazio: 'Nenhuma IA Vendedora ainda.' },
-  { chave: 'landing', rotulo: 'Landing', descricao: 'O formulário das páginas de anúncio', kinds: ['landing'], icone: LayoutTemplate, vazio: 'Nenhuma landing ainda.' },
+  { chave: 'landing', rotulo: 'Página de anúncio', descricao: 'O formulário das páginas de anúncio', kinds: ['landing'], icone: LayoutTemplate, vazio: 'Nenhuma página de anúncio ainda.' },
   { chave: 'portal', rotulo: 'Portal', descricao: 'Os leads dos portais de imóveis', kinds: ['portal_sale', 'portal_rent'], icone: Building2, vazio: 'Nenhum portal ligado ainda.' },
   { chave: 'site', rotulo: 'Site', descricao: 'Os formulários do seu site', kinds: ['site_sale', 'site_rent'], icone: Globe, vazio: 'O site ainda não está no ar.' },
 ];
@@ -133,6 +133,11 @@ function fraseDoConflito(c: { form_name: string; roleta_name: string }): string 
   return `O formulário "${c.form_name}" já é pego por outra regra "nome contém", na roleta ${c.roleta_name}. Use uma palavra que não pegue ele, ou escolha o formulário exato.`;
 }
 
+/** Até quantas opções mostra todas sem pedir a busca; acima disso a lista só abre ao digitar. */
+const LISTA_SEM_BUSCA_ATE = 8;
+
+const semAcento = (t: string) => t.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
 /** Espera de digitação antes de pedir a prévia ao servidor. */
 const ESPERA_DA_PREVIA_MS = 400;
 
@@ -147,6 +152,7 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
   const [trazer, setTrazer] = useState<RoletaOriginOption | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
+  const [busca, setBusca] = useState('');
   // Páginas do Facebook do cliente: com mais de uma, a regra "nome contém" diz
   // de qual página (sem isso o servidor usa a principal e o gestor nem sabe).
   const [paginas, setPaginas] = useState<{ id: string; nome: string }[]>([]);
@@ -190,7 +196,7 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
 
   useEffect(() => {
     if (!aberto) return;
-    setTipo(null); setPelaPalavra(false); setPalavra(''); setTrazer(null); setErro('');
+    setTipo(null); setPelaPalavra(false); setPalavra(''); setTrazer(null); setErro(''); setBusca('');
     let vivo = true;
     setOpcoes(null);
     setErroAoCarregar(false);
@@ -205,6 +211,14 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
     () => (definicao ? (opcoes ?? []).filter(o => definicao.kinds.includes(o.kind)) : []),
     [definicao, opcoes],
   );
+
+  const listaPedeBusca = itens.length > LISTA_SEM_BUSCA_ATE;
+  const termoDaBusca = semAcento(busca.trim());
+  const itensVisiveis = useMemo(() => {
+    if (!listaPedeBusca) return itens;
+    if (!termoDaBusca) return [];
+    return itens.filter(o => semAcento(textoDoItem(o)).includes(termoDaBusca));
+  }, [itens, listaPedeBusca, termoDaBusca]);
 
   const adicionar = async (origem: NovaOrigem) => {
     if (salvando) return;
@@ -232,7 +246,7 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
   };
 
   const conteudo = () => {
-    if (erroAoCarregar) return <p role="alert" className="text-sm text-destructive">Não deu pra carregar as origens. Feche e tente de novo.</p>;
+    if (erroAoCarregar) return <Aviso tom="erro">Não deu pra carregar as origens. Feche e tente de novo.</Aviso>;
     if (!opcoes) {
       return (
         <Carregando linhas={3} rotulo="Carregando as origens" className="py-2" />
@@ -245,8 +259,8 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
             <button
               key={t.chave}
               type="button"
-              onClick={() => setTipo(t.chave)}
-              className="flex items-start gap-3 rounded-lg border border-border p-4 text-left transition-colors hover:border-primary/50 hover:bg-muted/30"
+              onClick={() => { setTipo(t.chave); setBusca(''); }}
+              className="flex items-start gap-3 rounded-lg border border-border p-3.5 text-left transition-colors hover:border-primary/50 hover:bg-muted/30"
             >
               <t.icone className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
               <span>
@@ -261,14 +275,16 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
     return (
       <div className="space-y-5">
         {definicao.chave === 'meta' && (
+          <GrupoDaJanela titulo="Como escolher o formulário">
           <div role="radiogroup" aria-label="Como escolher o formulário" className="flex flex-wrap gap-2">
-            <Button type="button" role="radio" aria-checked={!pelaPalavra} variant={!pelaPalavra ? 'default' : 'outline'} aria-pressed={!pelaPalavra} onClick={() => { setPelaPalavra(false); setErro(''); }}>
+            <Button type="button" role="radio" aria-checked={!pelaPalavra} variant="outline" className={ESCOLHA} aria-pressed={!pelaPalavra} onClick={() => { setPelaPalavra(false); setErro(''); }}>
               Um formulário
             </Button>
-            <Button type="button" role="radio" aria-checked={pelaPalavra} variant={pelaPalavra ? 'default' : 'outline'} aria-pressed={pelaPalavra} onClick={() => { setPelaPalavra(true); setTrazer(null); setErro(''); }}>
+            <Button type="button" role="radio" aria-checked={pelaPalavra} variant="outline" className={ESCOLHA} aria-pressed={pelaPalavra} onClick={() => { setPelaPalavra(true); setTrazer(null); setErro(''); }}>
               Pelo nome do formulário
             </Button>
           </div>
+          </GrupoDaJanela>
         )}
 
         {pelaPalavra ? (
@@ -281,38 +297,44 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
             }}
           >
             {paginas.length > 1 && (
-              <Campo id="origem-pagina" rotulo="Página do Facebook">
-                <Seletor id="origem-pagina" value={pagina} onChange={e => { setPagina(e.target.value); setErro(''); }} className="w-full sm:w-80">
+              <CampoDaJanela rotulo="Página do Facebook" htmlFor="origem-pagina">
+                <Seletor id="origem-pagina" value={pagina} onChange={e => { setPagina(e.target.value); setErro(''); }} className="w-full">
                   {paginas.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                 </Seletor>
-              </Campo>
+              </CampoDaJanela>
             )}
-            <CampoTexto
-              id="origem-palavra"
+            <CampoDaJanela
               rotulo="O nome do formulário contém"
-              placeholder="Ex.: ALMA"
-              valor={palavra}
-              aoMudar={v => { setPalavra(v); setErro(''); }}
+              htmlFor="origem-palavra"
               ajuda="Formulário novo com essa palavra no nome entra sozinho. O formulário escolhido pelo nome exato vence esta regra."
-            />
+            >
+              <Input
+                id="origem-palavra"
+                placeholder="Ex.: ALMA"
+                value={palavra}
+                onChange={e => { setPalavra(e.target.value); setErro(''); }}
+              />
+            </CampoDaJanela>
             {palavraLimpa && (
-              <div className="space-y-2 rounded-lg bg-muted/40 p-3 text-sm" aria-live="polite">
-                {conferindo ? (
-                  <p className="text-muted-foreground">Conferindo quais formulários ela pega…</p>
-                ) : previaFalhou ? (
-                  <p className="text-muted-foreground">Não deu pra conferir agora. Ao adicionar, a regra é conferida de novo.</p>
-                ) : previa && previa.matches.length === 0 ? (
-                  <p className="text-muted-foreground">Não pega nenhum formulário hoje.</p>
-                ) : previa ? (
-                  <>
-                    <p className="font-medium">Pega {plural(previa.matches.length, 'formulário', 'formulários')} hoje:</p>
-                    <ul className="space-y-0.5 text-muted-foreground">
-                      {previa.matches.map(f => <li key={f.form_id}>{f.form_name}</li>)}
-                    </ul>
-                  </>
-                ) : null}
+              <div aria-live="polite" className="space-y-3">
+                <Aviso tom="info">
+                  {conferindo ? (
+                    <p>Conferindo quais formulários ela pega…</p>
+                  ) : previaFalhou ? (
+                    <p>Não deu pra conferir agora. Ao adicionar, a regra é conferida de novo.</p>
+                  ) : previa && previa.matches.length === 0 ? (
+                    <p>Não pega nenhum formulário hoje.</p>
+                  ) : previa ? (
+                    <>
+                      <p className="font-medium">Pega {plural(previa.matches.length, 'formulário', 'formulários')} hoje:</p>
+                      <ul className="space-y-0.5">
+                        {previa.matches.map(f => <li key={f.form_id}>{f.form_name}</li>)}
+                      </ul>
+                    </>
+                  ) : null}
+                </Aviso>
                 {!conferindo && previa?.conflict && (
-                  <p className="font-medium text-destructive">{fraseDoConflito(previa.conflict)}</p>
+                  <Aviso tom="erro">{fraseDoConflito(previa.conflict)}</Aviso>
                 )}
               </div>
             )}
@@ -323,8 +345,18 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
         ) : itens.length === 0 ? (
           <p className="text-sm text-muted-foreground">{definicao.vazio}</p>
         ) : (
+          <GrupoDaJanela titulo={listaPedeBusca ? 'Buscar a origem' : 'Escolha a origem'}>
+          {listaPedeBusca && (
+            <CampoDaJanela
+              rotulo="Buscar"
+              htmlFor="origem-busca"
+              ajuda={termoDaBusca && itensVisiveis.length === 0 ? 'Nada com esse nome.' : 'Digite parte do nome pra ver as opções.'}
+            >
+              <Input id="origem-busca" placeholder="Nome da origem" value={busca} onChange={e => setBusca(e.target.value)} />
+            </CampoDaJanela>
+          )}
           <ul className="max-h-80 space-y-2 overflow-y-auto pr-1">
-            {itens.map(op => {
+            {itensVisiveis.map(op => {
               const nesta = op.roleta_config_id === roletaId || origens.some(o => mesmaOrigem(o, op));
               const emOutra = !nesta && !!op.roleta_config_id;
               return (
@@ -334,19 +366,20 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
                     disabled={nesta || salvando}
                     onClick={() => escolher(op)}
                     className={cn(
-                      'w-full rounded-lg border border-border px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-muted/30 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent',
-                      trazer && mesmaOrigem(trazer, op) && 'border-primary bg-primary/5',
+                      'w-full rounded-lg border border-border px-3.5 py-3 text-left transition-colors hover:border-primary/50 hover:bg-muted/30 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent',
+                      trazer && mesmaOrigem(trazer, op) && 'border-primary bg-primary/10',
                     )}
                   >
                     <span className="block text-sm font-medium">{textoDoItem(op)}</span>
                     {op.detail && <span className="mt-0.5 block text-sm text-muted-foreground">{op.detail}</span>}
                     {nesta && <span className="mt-1 block text-sm text-muted-foreground">Já está nesta roleta</span>}
-                    {emOutra && <span className="mt-1 block text-sm text-amber-700 dark:text-amber-400">Está na roleta {op.roleta_name}</span>}
+                    {emOutra && <span className="mt-1 block text-sm font-medium">Está na roleta {op.roleta_name}</span>}
                   </button>
                 </li>
               );
             })}
           </ul>
+          </GrupoDaJanela>
         )}
 
         {trazer && (
@@ -372,7 +405,7 @@ function AdicionarOrigem({ aberto, aoFechar, roletaId, origens, aoAdicionar }: D
           </Aviso>
         )}
 
-        {erro && <p role="alert" className="text-sm text-destructive">{erro}</p>}
+        {erro && <Aviso tom="erro">{erro}</Aviso>}
       </div>
     );
   };

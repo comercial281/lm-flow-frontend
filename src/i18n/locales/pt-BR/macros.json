@@ -22,20 +22,21 @@
   },
   "modal": {
     "title": {
-      "create": "Nova Macro",
-      "edit": "Editar Macro"
+      "create": "Nova macro",
+      "edit": "Editar macro"
     },
     "form": {
       "name": "Nome",
       "namePlaceholder": "Digite o nome da macro",
       "visibility": "Visibilidade",
       "visibilityPersonal": "Privada",
-      "visibilityPersonalDesc": "Esta macro será privada e disponível apenas para você",
+      "visibilityPersonalDesc": "Só você vê e usa esta macro",
       "visibilityGlobal": "Pública",
-      "visibilityGlobalDesc": "Esta macro será pública e disponível para todos os agentes",
+      "visibilityGlobalDesc": "Todos da equipe veem e usam esta macro",
       "actionsTitle": "Ações",
-      "actionsSubtitle": "As macros executarão as ações na ordem definida",
-      "addAction": "Adicionar Ação",
+      "actionsSubtitle": "A macro faz as ações na ordem da lista",
+      "addAction": "Adicionar ação",
+      "groupIdentification": "Identificação",
       "actionLabel": "Ação",
       "configLabel": "Configuração"
     },
@@ -62,7 +63,7 @@
     "hoursPlaceholder": "Horas para adiamento",
     "emailPlaceholder": "Digite o email",
     "urlPlaceholder": "Digite a URL do aviso automático",
-    "fileSelectButton": "Selecionar Arquivo",
+    "fileSelectButton": "Selecionar arquivo",
     "fileUploading": "Carregando...",
     "fileSelected": "Arquivo selecionado: {{filename}}",
     "noConfig": "Esta ação não requer configuração adicional."
