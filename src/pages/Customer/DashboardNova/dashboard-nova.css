@@ -119,9 +119,11 @@ button.lmfn-fase:hover { background: var(--lmf-accent-soft); }
 .lmfn-fase-valor { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .lmfn-fase-rotulo { font-size: 12px; color: var(--lmf-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 /* Funil em formato de funil: faixas que estreitam sempre no mesmo desenho (o
- * número não decide a largura: "agora" não afunila de verdade). */
+ * número não decide a largura: "agora" não afunila de verdade). No claro a cor
+ * clareia de faixa em faixa (--lmfn-forca, de 100% a 78%: abaixo disso o texto
+ * branco perde contraste); no escuro o fade é o próprio roxo e nada muda. */
 .lmfn-funil { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
-.lmfn-funil-faixa { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 38px; border: 0; background: var(--lmf-accent); color: #fff; font: inherit; font-size: 13px; text-align: left; }
+.lmfn-funil-faixa { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 38px; border: 0; background: color-mix(in srgb, var(--lmf-funil) var(--lmfn-forca, 100%), var(--lmf-data-fade)); color: #fff; font: inherit; font-size: 13px; text-align: left; }
 button.lmfn-funil-faixa { cursor: pointer; }
 button.lmfn-funil-faixa:hover { filter: brightness(1.08); }
 .lmfn-funil-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

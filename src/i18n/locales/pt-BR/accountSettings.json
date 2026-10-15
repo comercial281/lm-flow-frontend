@@ -42,12 +42,12 @@
       "placeholder": "suporte@exemplo.com"
     },
     "autoResolveTime": {
-      "label": "Tempo para Auto-Resolução (minutos)",
+      "label": "Tempo para resolver sozinha",
       "unit": "minutos",
       "description": "Conversas inativas serão resolvidas automaticamente após este período"
     },
     "autoResolveMessage": {
-      "label": "Mensagem de Auto-Resolução",
+      "label": "Mensagem ao resolver sozinha",
       "placeholder": "Mensagem opcional enviada quando a conversa for resolvida automaticamente"
     },
     "ignoreWaiting": {

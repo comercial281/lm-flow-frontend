@@ -11,39 +11,58 @@
  * dentro de um app branco. Por isso o padrão aqui é o CLARO e o escuro entra
  * por `.dark`, com os valores copiados do protótipo, não inventados.
  *
- * Claro:  --bg #F4F2FB · --surface #FFFFFF · --border #EBE8F5 · --text #191233
+ * Claro:  --bg #F6F6F7 · --surface #FFFFFF · --border #E6E6E9 · --text #18181B
  * Escuro: --bg #0A0416 · --surface #150A29 · --border #2A1B49 · --text #F2EFFA
  * Comum:  accent #7C3AED / #9333EA · Inter · raio 16px
+ *
+ * Claro (pedido do dono, 15/10/2026): cartão branco chapado e fundo cinza
+ * neutro, sem o véu roxo. Gráfico em roxo claro (--lmf-data-muted) e roxo
+ * forte (--lmf-data) só no detalhe que se destaca. No escuro os tokens de
+ * dado são os de sempre.
  */
 
 .lmf {
-  --lmf-bg: #f4f2fb;
+  --lmf-bg: #f6f6f7;
   --lmf-surface: #ffffff;
-  --lmf-surface-2: #faf9fe;
+  --lmf-surface-2: #fafafa;
   --lmf-accent: #7c3aed;
   --lmf-accent-2: #9333ea;
-  --lmf-accent-soft: rgba(124, 58, 237, 0.09);
-  --lmf-text: #191233;
-  --lmf-muted: #615c7c;
-  --lmf-faint: #9c97b2;
-  --lmf-border: #ebe8f5;
-  --lmf-border-strong: #ded9ee;
+  /* Fundo claro de hover, segmento e aviso: neutro no claro (era véu roxo). */
+  --lmf-accent-soft: #f1f1f3;
+  --lmf-text: #18181b;
+  --lmf-muted: #71717a;
+  --lmf-faint: #a1a1aa;
+  --lmf-border: #e6e6e9;
+  --lmf-border-strong: #d4d4d8;
   --lmf-radius: 16px;
   --lmf-radius-sm: 10px;
-  --lmf-up: #059669;
-  --lmf-down: #e11d48;
+  --lmf-up: #16a34a;
+  --lmf-down: #dc2626;
   --lmf-warn: #b45309;
 
-  /* Vidro no claro: branco translúcido com véu violeta e sombra suave. No
-     claro o blur sozinho some — quem dá volume é a sombra. */
-  --lmf-glass-from: rgba(124, 58, 237, 0.05);
-  --lmf-glass-to: rgba(255, 255, 255, 0.9);
-  --lmf-glass-top: rgba(124, 58, 237, 0.22);
-  --lmf-shadow: 0 1px 2px rgba(16, 10, 40, 0.04), 0 8px 24px -12px rgba(16, 10, 40, 0.1);
-  --lmf-track: rgba(124, 58, 237, 0.12);
+  /* Dado (gráficos, barras, funil, mapa de calor) em roxo sólido, sem degradê.
+     --lmf-data-muted é a série que não é destaque; --lmf-data-fade é pra onde
+     o funil clareia. */
+  --lmf-data: #7c3aed;
+  --lmf-data-muted: #c4b5fd;
+  --lmf-data-soft: rgba(124, 58, 237, 0.08);
+  --lmf-data-fade: #ffffff;
+  /* Faixas da forma Funil: um tom abaixo, pro texto branco ler mesmo na faixa mais clara. */
+  --lmf-funil: #6d28d9;
+  --lmf-heat-rgb: 124 58 237;
+  /* Número em destaque (ex.: ganhos no período). */
+  --lmf-highlight-text: #7c3aed;
+
+  /* Cartão no claro: branco chapado, sem véu e sem brilho no topo. Quem dá
+     volume é a sombra leve. */
+  --lmf-glass-from: #ffffff;
+  --lmf-glass-to: #ffffff;
+  --lmf-glass-top: transparent;
+  --lmf-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 14px -10px rgba(0, 0, 0, 0.1);
+  --lmf-track: #f1f1f3;
   --lmf-control-bg: #ffffff;
   --lmf-tooltip-bg: rgba(255, 255, 255, 0.98);
-  --lmf-grid-line: #e6e2f2;
+  --lmf-grid-line: #ececef;
 
   background: var(--lmf-bg);
   color: var(--lmf-text);
@@ -74,6 +93,14 @@
   --lmf-control-bg: rgba(21, 10, 41, 0.8);
   --lmf-tooltip-bg: rgba(12, 5, 26, 0.96);
   --lmf-grid-line: #2a1b49;
+
+  --lmf-data: #7c3aed;
+  --lmf-data-muted: #7c3aed;
+  --lmf-data-soft: rgba(168, 85, 247, 0.15);
+  --lmf-data-fade: #7c3aed;
+  --lmf-funil: #7c3aed;
+  --lmf-heat-rgb: 124 58 237;
+  --lmf-highlight-text: inherit;
 }
 
 .lmf-glass {
@@ -85,6 +112,23 @@
   border-radius: var(--lmf-radius);
   box-shadow: var(--lmf-shadow);
   overflow: hidden;
+}
+
+/* Contorno do cartão no claro (pedido do dono, 15/10/2026): 1px em degradê roxo
+   bem leve, no lugar da borda cinza. Feito com duas camadas de fundo: o branco
+   recortado no padding-box e o degradê no border-box, aparecendo só na borda
+   transparente. O hover dos números (border-color roxo) pinta por cima. No
+   escuro o vidro é translúcido (o degradê vazaria): volta o de antes. */
+.lmf .lmf-glass {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--lmf-surface), var(--lmf-surface)) padding-box,
+    linear-gradient(135deg, rgba(124, 58, 237, 0.34), rgba(124, 58, 237, 0.07) 45%, rgba(147, 51, 234, 0.24)) border-box;
+}
+
+.dark .lmf .lmf-glass {
+  border-color: var(--lmf-border);
+  background: linear-gradient(180deg, var(--lmf-glass-from), var(--lmf-glass-to));
 }
 
 /* Brilho de 1px no topo — é ele que faz ler como vidro, não o blur. */
@@ -126,8 +170,8 @@
   width: 30px;
   height: 30px;
   border-radius: var(--lmf-radius-sm);
-  background: var(--lmf-accent-soft);
-  color: var(--lmf-accent);
+  background: var(--lmf-data-soft);
+  color: var(--lmf-data);
   flex: none;
 }
 
@@ -335,7 +379,7 @@ button.lmf-campo-controle[aria-pressed='true'] { color: var(--lmf-accent); backg
 .lmf-bar-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--lmf-accent), var(--lmf-accent-2));
+  background: var(--lmf-data);
 }
 
 .lmf-heat {
@@ -345,12 +389,11 @@ button.lmf-campo-controle[aria-pressed='true'] { color: var(--lmf-accent); backg
   align-items: center;
 }
 
-/* Só a opacidade varia com o valor; a base é a mesma nos dois temas porque o
-   violeta translúcido funciona sobre branco e sobre obsidiana. */
+/* Só a opacidade varia com o valor; a base é o violeta do dado nos dois temas. */
 .lmf-heat-cell {
   aspect-ratio: 1;
   border-radius: 4px;
-  background: rgba(124, 58, 237, calc(var(--i) * 0.85 + 0.06));
+  background: rgb(var(--lmf-heat-rgb) / calc(var(--i) * 0.85 + 0.06));
   cursor: default;
   transition: transform 0.12s ease, outline-color 0.12s ease;
   outline: 1px solid transparent;
@@ -358,7 +401,7 @@ button.lmf-campo-controle[aria-pressed='true'] { color: var(--lmf-accent); backg
 
 .lmf-heat-cell:hover {
   transform: scale(1.35);
-  outline-color: var(--lmf-accent);
+  outline-color: var(--lmf-data);
   position: relative;
   z-index: 2;
 }

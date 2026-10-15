@@ -96,7 +96,7 @@ describe('NovasCaptacoes', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Recusar' }));
     const enviar = screen.getByRole('button', { name: 'Recusar pedido' });
     expect(enviar).toBeDisabled();
-    await userEvent.type(screen.getByLabelText('Motivo'), 'fora da região');
+    await userEvent.type(screen.getByLabelText(/^Motivo/), 'fora da região');
     await userEvent.click(enviar);
     await waitFor(() => expect(cap.reject).toHaveBeenCalledWith('c1', 'fora da região'));
     expect(screen.queryByText('Maria')).toBeNull();

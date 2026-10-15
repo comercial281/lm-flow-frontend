@@ -4158,7 +4158,7 @@ Spec e plano: `LM FLOW/specs/2026-09-29-fase-3-base-de-design-e-linguagem-design
   - Fora do escopo: o painel raiz, as páginas públicas, as landings, o widget e a **sobra** do Evolution (listas `SOBRA`/`NAMESPACES_SOBRA`). A fase 4 decide se a sobra some.
   - **Teto só desce.**
 - **Decisões do Tony (30/09):**
-  - **D1:** cada tema num PR pequeno, com prévia (`?tenant=lealmidia`) e antes/depois, e merge um por vez com o ok dele.
+  - **D1:** cada tema num PR pequeno, com prévia da Vercel (sem `?tenant=`, ou com o slug de um cliente que existe) e antes/depois, e merge um por vez com o ok dele.
   - **D2:** chave desligada é cinza.
   - **D3:** o glossário acima.
   - **D4:** as telas piloto são Conta e Lembretes.
@@ -8823,6 +8823,20 @@ As janelas medianas passaram para as peças do miolo (grupos, grade, `Aviso`, `E
 
 Não reabrir sem o dono pedir.
 
+## Leva 3 das janelas (15/10/2026)
+
+A regra do miolo (grupos, grade, `Aviso`, `ESCOLHA`, texto em português, maiúscula só na primeira letra) chegou a cerca de 55 janelas. Só mudou disposição e letra: o que é gravado e o que os botões fazem ficaram como estavam.
+
+- **Peças novas:** `MioloDaAcaoDaVisita` (miolo único de Realizada, Não compareceu, Remarcar e Cancelar visita), `JanelaPublicarLanding`, a prop `semNome` (nas escolhas e no `EscolhaComBusca`, quando o grupo em volta já dá o nome), o `naJanela` do `CampoDeMidia` e as áreas de permissão recolhíveis no editor de cargo. O `LeadCombobox` e o `Campo` ganharam a prop `obrigatorio`, com a marca igual à do `CampoDaJanela`.
+- **Meu site e Academia** mantêm o `Campo` próprio (controles maiores), só com a letra e os grupos do miolo.
+- **#59/#61 e #139/#143:** unificados só no visual. Cada chamador mantém o comportamento e quem grava.
+- **Listas com mais de 8 opções** só abrem ao digitar (Roleta, modelos salvos do assistente de página de anúncio). Até 8, mostram todas.
+- **Nomes na tela:** o template do WhatsApp oficial é "modelo de mensagem"; landing é "página de anúncio"; QR é "código QR". O nome sugerido "(template)" ao salvar uma página como modelo continua, porque vai gravado.
+
+**Tetos novos (só descem):** `maiusculas` 921 para 856, `escolhaRoxaCheia` 40 para 36 e `avisoSoltoNaJanela` 12 para 3.
+
+Não reabrir sem o dono pedir.
+
 ## Imóvel · Link pro lead (desde 2026-10-14)
 
 > Pedido do IBI4 (14/10): quando o lead pede o link, a IA manda a página do empreendimento no site DELES, não a nossa. Servidor: `lm-flow` #486 (entra primeiro).
@@ -8917,6 +8931,14 @@ Armadilhas:
 4. A regra de cada filtro mora só no servidor (`PipelineItems::BoardQuery`); `filtrosDoFunil.ts` ficou com as contas da tela (colunas visíveis, contagem de filtros, opções do painel).
 5. O backend vem PRIMEIRO. Contra o servidor antigo a tela recebe o funil inteiro, sem lotes e sem filtro.
 
+## Confirmação compacta (15/10/2026)
+
+- **O quê:** a confirmação da casa (`useConfirmacao`) deixou de herdar topo e rodapé fixos com linha, que eram pensados pras janelas grandes. Agora é um bloco só (título, frase, botões), na largura pequena (`max-w-md`), título à esquerda, botões à direita no computador e empilhados no celular.
+- **Como:** `DialogContent` ganhou a opção `compacta` (`src/components/ui/ds.tsx`). Ela desliga o fixo/borda só de quem pede; nenhuma outra janela muda. O `DialogFooter` continua existindo (trava `rodapeAMao`).
+- **Quem usa:** `useConfirmacao` e as confirmações só de título, frase e botões fora dele (Excluir contato(s), imóvel, automação, macro(s), equipe(s), atributo(s), variável, Remover do funil no card, Excluir cadastro, Excluir template, Revogar chave do MCP, Sair no menu do usuário e no admin, Desativar 2FA). Confirmação com prévia ou campo (Excluir funil/etapa, Remover lead do funil, digitar o nome) fica na janela comum.
+- **Concluir tarefa:** a pergunta virou "Criar a próxima tarefa pra este lead?", com a frase `"<título>" foi concluída.`; botões "Agora não" e "Nova tarefa".
+- **Não reabrir sem o dono pedir.**
+
 ## Topo enxuto (15/10/2026)
 
 Pedido do dono, "por enquanto". A barra do topo fica só com Área do Admin, Plantão, sininho e perfil.
@@ -8937,3 +8959,24 @@ Pedido do dono, depois de ver o tema e o olhinho "soltos" embaixo do suporte. O 
 - Peça única: `layout/components/RodapeDoMenu.tsx` (com spec), usada pelo `Sidebar` e pelo `Header` (celular). O endereço do suporte mora nela e continua exportado pelo `Sidebar` (o chat de suporte importa de lá).
 - Não usa o `ThemeToggle`/`DemoModeToggle` (que seguem na Área do Admin e na Área de Membros): desenha os próprios botões com `useDarkMode`/`useDemoMode`. Teste que monta o `Sidebar` precisa simular esses dois hooks (o `Sidebar.spec` faz isso).
 - Decisões do dono: quatro ícones (não linhas com nome) e um tracinho só, no meio. Não reabrir sem ele pedir.
+
+## Dashboard: tema claro sem o degradê rosado (15/10/2026)
+
+Pedido do dono: no tema claro a Dashboard tinha um degradê rosado em todo cartão (véu roxo do "vidro" sobre fundo lavanda) e tudo era roxo forte (ícones, funil, gráficos, origem). Ele escolheu o "neutro grafite" entre duas propostas e, vendo na prévia, pediu o roxo de volta "em alguns detalhes".
+
+- **Cartão branco chapado** sobre fundo cinza neutro (`#f6f6f7`), contorno de 1px em degradê roxo bem leve (`.lmf .lmf-glass`), sombra leve, sem véu nem brilho no topo. Texto e bordas em cinza neutro (eram arroxeados).
+- **Gráficos em roxo claro** (`--lmf-data-muted`, `#c4b5fd`) e **roxo forte** (`--lmf-data`) só no que se destaca: o melhor dia da semana, o mês atual, a maior origem, a linha do horário, as barras do funil, os ícones e o número de Ganhos no período. A forma Funil vai do `#6d28d9` clareando até 78% (`--lmf-funil`).
+- **Botões, links e foco** continuam no roxo da casa (`--lmf-accent`). Hover, segmento e aviso usam fundo cinza (`--lmf-accent-soft` no claro = `#f1f1f3`).
+- **Cartão da conta no topo do menu** (desfaz o "vidro roxo" de 01/10 no claro): borda cinza e sombra leve, sem degradê. No escuro continua o vidro roxo.
+- **Tema escuro não mudou:** no `.dark .lmf` os tokens de dado são todos o roxo de sempre.
+
+Armadilhas:
+
+1. **Gráfico novo na Dashboard:** série em `--lmf-data-muted`, destaque em `--lmf-data`. Tudo em `--lmf-data` volta o "tudo roxo forte".
+2. `--lmf-accent-soft` no claro é cinza: fundo de hover, segmento e aviso, não cor de dado.
+3. O texto branco da forma Funil depende do `--lmf-funil` mais escuro e do piso de 78% (`FORCA_FINAL` em `Funil.tsx`).
+4. Trava em `base/lmf.source.spec.ts`.
+5. O contorno em degradê é fundo no `border-box` sob o branco do `padding-box`: só funciona com cartão opaco. No escuro (vidro translúcido) o `.dark .lmf .lmf-glass` volta a borda sólida.
+6. Prévia da Vercel: entrar SEM `?tenant=` (cai no `public`, como o app.lmflow.com.br) ou com o slug de um cliente que existe. Slug inexistente faz o login responder 406 e parecer senha errada.
+
+Não reabrir sem o dono pedir.

@@ -128,7 +128,7 @@ describe('MetaPagesPanel', () => {
     expect(mocks.toastWarning).not.toHaveBeenCalled();
   });
 
-  it('sem token de sistema, a janela abre direto no caminho manual (Page ID + token)', async () => {
+  it('sem token de sistema, a janela abre direto no caminho manual (código da página + chave)', async () => {
     mocks.isSuper = true;
     mocks.available.mockRejectedValue(apiError('NO_TOKEN', 'Nenhum token de sistema disponível para listar páginas.'));
     mocks.create.mockResolvedValue(page({ id: 'uuid-d', page_id: '444', page_name: 'Manual', webhook_subscribed: false, last_error: 'sem acesso' }));
@@ -137,9 +137,9 @@ describe('MetaPagesPanel', () => {
 
     await usuario.click(await screen.findByRole('button', { name: /Adicionar página/ }));
 
-    await usuario.type(await screen.findByLabelText('Page ID (Facebook)'), '444');
+    await usuario.type(await screen.findByLabelText(/^Código da página/), '444');
     await usuario.type(screen.getByLabelText('Nome da página'), 'Manual');
-    await usuario.type(screen.getByLabelText('Chave de acesso (Meta)'), 'EAAtoken');
+    await usuario.type(screen.getByLabelText('Chave de acesso'), 'EAAtoken');
     await usuario.click(screen.getByRole('button', { name: 'Conectar página' }));
 
     await waitFor(() =>

@@ -3,7 +3,7 @@
 // e a origem. Os baldes (dia, hora, mês) já chegam no fuso da conta: a tela
 // nunca recalcula data, só desenha.
 import React from 'react';
-import { Area, AreaChart, Bar, BarChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, Cell, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { VAZIO, numero, porcentagem } from '@/lib/formato';
 import { EmptyBlock, GlassCard, Skeleton, tooltipStyle } from '../base/primitives';
 import { Heatmap } from '../base/Heatmap';
@@ -83,6 +83,8 @@ export const LeadsDiaSemana: React.FC<ContextoBloco> = ({ dados, carregando, vis
   }
   const dia = melhorDia(bloco.days);
   const linhas = bloco.days.map(d => ({ nome: DIAS_CURTOS[d.day], leads: d.leads }));
+  const maior = Math.max(0, ...linhas.map(l => l.leads));
+  const topo = maior > 0 ? linhas.findIndex(l => l.leads === maior) : -1;
   return (
     <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)}>
       <Destaque valor={dia ?? VAZIO} legenda={dia ? 'é o dia que mais chega lead no período' : 'Nenhum lead no período'} />
@@ -92,7 +94,12 @@ export const LeadsDiaSemana: React.FC<ContextoBloco> = ({ dados, carregando, vis
             <XAxis dataKey="nome" tick={eixo} tickLine={false} axisLine={false} />
             <YAxis tick={eixo} allowDecimals={false} tickLine={false} axisLine={false} width={28} />
             <Tooltip {...tooltipStyle} formatter={formatoLeads} />
-            <Bar dataKey="leads" fill="var(--lmf-accent)" radius={[4, 4, 0, 0]} />
+            {/* O melhor dia em roxo forte; os outros em roxo claro. */}
+            <Bar dataKey="leads" radius={[4, 4, 0, 0]}>
+              {linhas.map((l, i) => (
+                <Cell key={l.nome} fill={i === topo ? 'var(--lmf-data)' : 'var(--lmf-data-muted)'} />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </Grafico>
@@ -126,7 +133,7 @@ export const LeadsHorario: React.FC<ContextoBloco> = ({ dados, carregando, nivel
             <XAxis dataKey="hora" interval={3} tick={eixo} tickLine={false} axisLine={false} />
             <YAxis tick={eixo} allowDecimals={false} tickLine={false} axisLine={false} width={28} />
             <Tooltip {...tooltipStyle} formatter={formatoLeads} />
-            <Area type="monotone" dataKey="leads" stroke="var(--lmf-accent)" fill="var(--lmf-accent-soft)" strokeWidth={2} />
+            <Area type="monotone" dataKey="leads" stroke="var(--lmf-data)" fill="var(--lmf-data-soft)" strokeWidth={2} />
           </AreaChart>
         </ResponsiveContainer>
       </Grafico>
@@ -151,7 +158,12 @@ export const LeadsSeisMeses: React.FC<ContextoBloco> = ({ dados, carregando, niv
               <XAxis dataKey="mes" tick={eixo} tickLine={false} axisLine={false} />
               <YAxis tick={eixo} allowDecimals={false} tickLine={false} axisLine={false} width={32} />
               <Tooltip {...tooltipStyle} formatter={formatoLeads} />
-              <Bar dataKey="leads" fill="var(--lmf-accent)" radius={[4, 4, 0, 0]} />
+              {/* Mês atual (o último) em roxo forte; os outros em roxo claro. */}
+              <Bar dataKey="leads" radius={[4, 4, 0, 0]}>
+                {linhas.map((l, i) => (
+                  <Cell key={l.mes + i} fill={i === linhas.length - 1 ? 'var(--lmf-data)' : 'var(--lmf-data-muted)'} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </Grafico>
@@ -173,11 +185,11 @@ export const Origem: React.FC<ContextoBloco> = ({ dados, carregando, nivelTitulo
     <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)} subtitle="Contatos captados no período, pela primeira origem">
       <Destaque valor={numero(bloco.total)} legenda="contatos captados no período" />
       {bloco.items.length === 0 && <EmptyBlock text="Nenhuma origem registrada no período." />}
-      {bloco.items.map(i => (
+      {bloco.items.map((i, n) => (
         <div key={i.source} className="lmfn-item">
           <span className="lmfn-item-texto" style={{ flex: '0 0 40%' }}>{i.label}</span>
           <span style={{ flex: 1, height: 10, borderRadius: 5, background: 'var(--lmf-track)', overflow: 'hidden' }}>
-            <span style={{ display: 'block', height: '100%', width: `${(i.count / max) * 100}%`, background: 'var(--lmf-accent)' }} />
+            <span style={{ display: 'block', height: '100%', width: `${(i.count / max) * 100}%`, background: n === bloco.items.findIndex(x => x.count === max) ? 'var(--lmf-data)' : 'var(--lmf-data-muted)' }} />
           </span>
           <span style={{ width: 40, textAlign: 'right', fontWeight: 600 }}>{numero(i.count)}</span>
         </div>
