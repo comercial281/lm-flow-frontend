@@ -35,6 +35,7 @@ import { comSituacaoNova, situacaoDe } from '@/features/pipelines/situacao/situa
 import { useBoardDrag } from './quadro/useBoardDrag';
 import { usePipelineFilters } from './quadro/usePipelineFilters';
 import { useFacetasDoQuadro } from './quadro/useFacetasDoQuadro';
+import { useMaisCardsDaColuna } from './quadro/useMaisCardsDaColuna';
 import {
   paramsDoQuadro,
   assinaturaDoQuadro,
@@ -120,6 +121,8 @@ export default function PipelineKanban() {
   const setStagesLocal = useCallback<Dispatch<SetStateAction<PipelineStage[]>>>(acao => {
     setStages(prev => ajustarTotais(prev, typeof acao === 'function' ? acao(prev) : acao));
   }, []);
+  // Rolar a coluna pede mais 30: o total vem do servidor, então setStages cru (não o local).
+  const maisCards = useMaisCardsDaColuna({ pipelineId, params: paramsAtuais, assinatura, setStages });
   const { facetas, erro: erroDasFacetas, tentarDeNovo: tentarFacetas } = useFacetasDoQuadro(pipelineId, statusDaAba, filtrosAbertos);
   // A aba decide se o card arrasta (Ganhos, Perdidos e Arquivados não).
   const podeArrastarCard = useCallback((item: PipelineItem) => podeArrastarNaAba(aba, item), [aba]);
@@ -906,6 +909,9 @@ export default function PipelineKanban() {
                   openingConversation={openingConversation}
                   onEditStage={handleEditStage}
                   onDeleteStage={handleDeleteStage}
+                  carregandoMais={Boolean(maisCards.carregando[String(stage.id)])}
+                  erroAoCarregarMais={Boolean(maisCards.erro[String(stage.id)])}
+                  onCarregarMais={maisCards.carregarMais}
                 />
               ))}
 

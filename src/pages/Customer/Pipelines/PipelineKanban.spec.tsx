@@ -204,6 +204,10 @@ beforeEach(() => {
   // O auto-rolar do arraste pergunta qual elemento está sob o cursor; o jsdom não sabe.
   document.elementFromPoint = (() => null) as typeof document.elementFromPoint;
   vi.mocked(pipelinesService.getPipelines).mockResolvedValue({ data: [] } as never);
+  // No jsdom a coluna nunca "enche": toda coluna com mais cards no servidor do que na
+  // tela (items_total > cards) pede o próximo lote ao montar. Por padrão esse pedido
+  // fica no ar (sem mudar a tela); o teste do lote fixa a resposta que quer.
+  vi.mocked(pipelinesService.getBoardItems).mockReturnValue(new Promise(() => {}));
   vi.mocked(pipelinesService.getPipeline).mockImplementation(async (_id, opts) => FUNIL(opts?.status));
   vi.mocked(pipelinesService.getBoard).mockImplementation(async (_id, params) => comTotais(FUNIL(params.status as string)));
   vi.mocked(pipelinesService.getBoardFacets).mockResolvedValue({ origins: [], assignees: [], unassigned: false });
@@ -258,7 +262,7 @@ describe('quadro do funil · o que continua igual', () => {
     expect(colunaDe('s1').closest('[aria-busy="true"]')).not.toBeNull();
 
     const f = comTotais(FUNIL('open'));
-    act(() => { soltar({ ...f, stages: f.stages!.map(st => ({ ...st, items: (st.items ?? []).filter(i => i.id === 'i1') })) } as Pipeline); });
+    act(() => { soltar({ ...f, stages: f.stages!.map(st => { const items = (st.items ?? []).filter(i => i.id === 'i1'); return { ...st, items, items_total: items.length }; }) } as Pipeline); });
     await waitFor(() => expect(screen.queryByText('João Lima')).toBeNull());
     expect(screen.getByText('Maria Souza')).toBeInTheDocument();
     expect(colunaDe('s1').closest('[aria-busy="true"]')).toBeNull();
@@ -298,21 +302,21 @@ describe('quadro do funil · o que continua igual', () => {
     expect(within(document.getElementById('etapa-s1')!).getByText('49')).toBeInTheDocument();
   });
 
-  // Depende da F4 (rolar a coluna carrega mais). Na F4 vira `it`, com este corpo:
-  //   const muitos = Array.from({ length: 45 }, (_, n) => card(`x${n}`, `Lead ${n}`, 's1'));
-  //   vi.mocked(pipelinesService.getBoard).mockImplementation(async (_id, _p, n) => ({
-  //     ...comTotais(FUNIL('open')),
-  //     stages: [{ ...etapa('s1', 'Novo', muitos.slice(0, n as number)), items_total: 45 }],
-  //   }) as unknown as Pipeline);
-  //   vi.mocked(pipelinesService.getBoardItems).mockResolvedValue({ items: muitos.slice(30), total: 45, has_more: false });
-  //   montar();
-  //   await screen.findByText('Lead 0');
-  //   fireEvent.scroll(colunaDe('s1'));
-  //   await screen.findByText('Lead 44');
-  //   act(() => { window.dispatchEvent(new Event('focus')); });
-  //   await waitFor(() => expect(pipelinesService.getBoard).toHaveBeenLastCalledWith('p1', expect.anything(), 45));
-  //   expect(screen.getByText('Lead 44')).toBeInTheDocument();
-  it.todo('a recarga por trás relê até onde a pessoa rolou');
+  it('a recarga por trás relê até onde a pessoa rolou', async () => {
+    const muitos = Array.from({ length: 45 }, (_, n) => card(`x${n}`, `Lead ${n}`, 's1'));
+    vi.mocked(pipelinesService.getBoard).mockImplementation(async (_id, _p, n) => ({
+      ...comTotais(FUNIL('open')),
+      stages: [{ ...etapa('s1', 'Novo', muitos.slice(0, n as number)), items_total: 45 }],
+    }) as unknown as Pipeline);
+    vi.mocked(pipelinesService.getBoardItems).mockResolvedValue({ items: muitos.slice(30), total: 45, has_more: false });
+    montar();
+    await screen.findByText('Lead 0');
+    fireEvent.scroll(colunaDe('s1'));
+    await screen.findByText('Lead 44');
+    act(() => { window.dispatchEvent(new Event('focus')); });
+    await waitFor(() => expect(pipelinesService.getBoard).toHaveBeenLastCalledWith('p1', expect.anything(), 45));
+    expect(screen.getByText('Lead 44')).toBeInTheDocument();
+  });
 
   it('arrastar um card para outra coluna grava a etapa nova e move na hora', async () => {
     montar();

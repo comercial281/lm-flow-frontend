@@ -2,16 +2,18 @@
 // Uma coluna (etapa) do quadro do funil: cabeçalho com nome, contagem, valor e
 // menu da etapa, e a lista de cards que recebe o arraste. Saiu do
 // PipelineKanban.tsx sem mudar comportamento (spec funil §4.5).
-import type { DragEvent, MutableRefObject } from 'react';
+import { useCallback, useEffect, useRef, type DragEvent, type MutableRefObject } from 'react';
 import { toast } from 'sonner';
 import { Copy, Edit, Trash2 } from 'lucide-react';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+  Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
 import { dinheiro } from '@/lib/formato';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
+import Aviso from '@/components/base/Aviso';
+import Carregando from '@/components/base/Carregando';
 // Card do board, sempre visível de cara — import estático de propósito.
 import PipelineItemCard from '../PipelineItemCard';
 import { calculateStageTotal } from '../pipelineItemHelpers';
@@ -39,15 +41,35 @@ export interface StageColumnProps {
   openingConversation: boolean;
   onEditStage: (stage: PipelineStage) => void;
   onDeleteStage: (stage: PipelineStage) => void;
+  carregandoMais: boolean;
+  erroAoCarregarMais: boolean;
+  /** Coluna perto do fim (ou sem rolagem e com mais no servidor): pede o próximo lote. */
+  onCarregarMais: (stage: PipelineStage) => void;
 }
 
 export default function StageColumn({
   stage, destacada, visitsByContact, isDraggingRef, suppressClickUntilRef, onDragOver, onDrop,
   onCardDragStart, onCardDragEnd, onCardDragOver, onCardDrop, onOpenItem, onArchive, onRemove,
   podeArrastar, arquivado, onUnarchive, onOpenConversation, openingConversation, onEditStage, onDeleteStage,
+  carregandoMais, erroAoCarregarMais, onCarregarMais,
 }: StageColumnProps) {
   const { t } = useLanguage('pipelines');
   const total = calculateStageTotal(stage.items);
+  const carregados = stage.items?.length ?? 0;
+  // Total do servidor (quadro em lotes), não só os cards carregados.
+  const naColuna = stage.items_total ?? carregados;
+  const temMais = carregados < naColuna;
+  const rolagemRef = useRef<HTMLDivElement>(null);
+  const PERTO_DO_FIM = 160;
+
+  const conferirFim = useCallback(() => {
+    const el = rolagemRef.current;
+    if (!el || !temMais || carregandoMais || erroAoCarregarMais) return;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight <= PERTO_DO_FIM) onCarregarMais(stage);
+  }, [temMais, carregandoMais, erroAoCarregarMais, onCarregarMais, stage]);
+
+  // Coluna que não enche a altura não rola: pede o próximo lote sozinha.
+  useEffect(() => { conferirFim(); }, [carregados, conferirFim]);
 
   return (
     <div
@@ -68,8 +90,7 @@ export default function StageColumn({
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
               <h3 className="text-sm font-medium text-foreground">{stage.name}</h3>
               <span className="bg-muted text-muted-foreground text-xs px-2 py-1 rounded-full">
-                {/* Total do servidor (quadro em lotes), não só os cards carregados. */}
-                {stage.items_total ?? (stage.items || []).length}
+                {naColuna}
               </span>
               {/* Stage Total Value */}
               {total > 0 && (
@@ -111,6 +132,8 @@ export default function StageColumn({
         {/* Items Drop Zone */}
         <div
           data-col-scroll
+          ref={rolagemRef}
+          onScroll={conferirFim}
           className="flex-1 overflow-y-auto p-4 space-y-3"
           onDragOver={onDragOver}
           onDrop={e => onDrop(e, stage.id)}
@@ -138,8 +161,15 @@ export default function StageColumn({
             />
           ))}
 
+          {carregandoMais && <Carregando variante="lista" linhas={2} rotulo="Carregando mais leads…" />}
+          {erroAoCarregarMais && (
+            <Aviso tom="erro" compacto acao={<Button variant="outline" size="sm" onClick={() => onCarregarMais(stage)}>Tentar de novo</Button>}>
+              Não deu pra carregar mais leads.
+            </Aviso>
+          )}
+
           {/* Empty state */}
-          {(!stage.items || stage.items.length === 0) && (
+          {naColuna === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <div className="text-sm">{t('kanban.stage.noConversations')}</div>
             </div>
