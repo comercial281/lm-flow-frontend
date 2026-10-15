@@ -373,7 +373,7 @@ export default function Macros() {
 
       {/* Delete Macro Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent compacta>
           <DialogHeader>
             <DialogTitle>{t('dialog.delete.title')}</DialogTitle>
             <DialogDescription>
@@ -401,7 +401,7 @@ export default function Macros() {
 
       {/* Bulk Delete Dialog */}
       <Dialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent compacta>
           <DialogHeader>
             <DialogTitle>{t('dialog.bulkDelete.title')}</DialogTitle>
             <DialogDescription>

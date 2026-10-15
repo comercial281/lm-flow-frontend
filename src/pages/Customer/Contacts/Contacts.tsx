@@ -977,7 +977,7 @@ export default function Contacts() {
 
       {/* Delete Contact Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent compacta>
           <DialogHeader>
             <DialogTitle>{t('dialog.deleteContact.title')}</DialogTitle>
             <DialogDescription>
@@ -1007,7 +1007,7 @@ export default function Contacts() {
 
       {/* Bulk Delete Dialog */}
       <Dialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent compacta>
           <DialogHeader>
             <DialogTitle>{t('dialog.bulkDelete.title')}</DialogTitle>
             <DialogDescription>
