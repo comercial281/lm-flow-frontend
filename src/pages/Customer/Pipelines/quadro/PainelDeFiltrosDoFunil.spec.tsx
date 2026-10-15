@@ -34,6 +34,10 @@ function abrir(aba: AbaDoQuadro = 'abertos', filtros: FiltrosDoFunil = FILTROS_V
   return { aoFiltrar, aoFechar, painel: screen.getByRole('dialog', { name: 'Filtros do funil' }) };
 }
 
+// Título de cada bloco: o <p> que dá nome ao grupo do miolo (a caixa alta é só CSS).
+const titulos = (painel: HTMLElement) =>
+  Array.from(painel.querySelectorAll('[role="group"] > div > p[id]')).map(p => p.textContent);
+
 const SECOES = ['Criado em', 'Etapas', 'Origem', 'Responsável', 'Etiquetas', 'Motivo da perda', 'Largados', 'Tarefas', 'Categoria da tarefa', 'Colunas visíveis'];
 
 describe('PainelDeFiltrosDoFunil', () => {
@@ -54,7 +58,7 @@ describe('PainelDeFiltrosDoFunil', () => {
   it('as dez seções, na ordem da spec; Motivo da perda só em Perdidos e Todos', async () => {
     const { painel } = abrir('perdidos');
     await within(painel).findByRole('button', { name: 'Follow-up' });
-    expect(within(painel).getAllByRole('heading', { level: 3 }).map(h => h.textContent)).toEqual(SECOES);
+    expect(titulos(painel)).toEqual(SECOES);
     expect(listOptionsService.list).toHaveBeenCalledWith('loss_reasons', { includeInactive: true });
     expect(await within(painel).findByRole('button', { name: 'Preço (arquivado)' })).toBeInTheDocument();
   });
@@ -62,16 +66,16 @@ describe('PainelDeFiltrosDoFunil', () => {
   it('em Abertos não tem Motivo da perda nem pede a lista', async () => {
     const { painel } = abrir('abertos');
     await within(painel).findByRole('button', { name: 'Follow-up' });
-    expect(within(painel).getAllByRole('heading', { level: 3 }).map(h => h.textContent)).toEqual(SECOES.filter(s => s !== 'Motivo da perda'));
+    expect(titulos(painel)).toEqual(SECOES.filter(s => s !== 'Motivo da perda'));
     expect(listOptionsService.list).not.toHaveBeenCalledWith('loss_reasons', expect.anything());
   });
 
   it('Tarefas tem Vence amanhã; Categoria da tarefa lista só as ativas e vai no Filtrar', async () => {
     const { painel, aoFiltrar } = abrir('abertos');
-    const tarefas = within(painel).getByRole('group', { name: 'Tarefas' });
+    const tarefas = within(painel).getAllByRole('group', { name: 'Tarefas' })[0];
     expect(within(tarefas).getAllByRole('button').map(b => b.textContent)).toEqual(['Vence hoje', 'Vence amanhã', 'Atrasadas']);
     await userEvent.click(within(tarefas).getByRole('button', { name: 'Vence amanhã' }));
-    const categoria = within(painel).getByRole('group', { name: 'Categoria da tarefa' });
+    const categoria = within(painel).getAllByRole('group', { name: 'Categoria da tarefa' })[0];
     expect(await within(categoria).findByRole('button', { name: 'Follow-up' })).toBeInTheDocument();
     expect(within(categoria).queryByRole('button', { name: 'Antiga' })).not.toBeInTheDocument();
     await userEvent.click(within(categoria).getByRole('button', { name: 'Follow-up' }));
@@ -89,10 +93,10 @@ describe('PainelDeFiltrosDoFunil', () => {
 
   it('escolhe e só aplica no Filtrar (e fecha)', async () => {
     const { painel, aoFiltrar, aoFechar } = abrir('perdidos');
-    await userEvent.click(within(within(painel).getByRole('group', { name: 'Etapas' })).getByRole('button', { name: 'Proposta' }));
-    await userEvent.click(within(within(painel).getByRole('group', { name: 'Responsável' })).getByRole('button', { name: 'Ana' }));
+    await userEvent.click(within(within(painel).getAllByRole('group', { name: 'Etapas' })[0]).getByRole('button', { name: 'Proposta' }));
+    await userEvent.click(within(within(painel).getAllByRole('group', { name: 'Responsável' })[0]).getByRole('button', { name: 'Ana' }));
     await userEvent.click(await within(painel).findByRole('button', { name: 'Adiou a compra' }));
-    await userEvent.click(within(within(painel).getByRole('group', { name: 'Tarefas' })).getByRole('button', { name: 'Atrasadas' }));
+    await userEvent.click(within(within(painel).getAllByRole('group', { name: 'Tarefas' })[0]).getByRole('button', { name: 'Atrasadas' }));
     expect(aoFiltrar).not.toHaveBeenCalled();
 
     await userEvent.click(within(painel).getByRole('button', { name: 'Filtrar' }));
@@ -114,7 +118,7 @@ describe('PainelDeFiltrosDoFunil', () => {
 
   it('Colunas visíveis: desmarcar esconde; marcar todas volta ao padrão (vazio)', async () => {
     const { painel, aoFiltrar } = abrir();
-    const colunas = within(painel).getByRole('group', { name: 'Colunas visíveis' });
+    const colunas = within(painel).getAllByRole('group', { name: 'Colunas visíveis' })[0];
     expect(within(colunas).getByRole('button', { name: 'Novo' })).toHaveAttribute('aria-pressed', 'true');
     await userEvent.click(within(colunas).getByRole('button', { name: 'Novo' }));
     await userEvent.click(within(painel).getByRole('button', { name: 'Filtrar' }));

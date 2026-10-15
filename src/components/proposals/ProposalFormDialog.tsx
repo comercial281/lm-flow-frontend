@@ -12,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-  Label,
   Select,
   SelectContent,
   SelectItem,
@@ -24,6 +23,8 @@ import { proposalsService, type Proposal, type ProposalFormData } from '@/servic
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
 import { LeadCombobox } from '@/components/visits/LeadCombobox';
 import { Seletor } from '@/components/base/Seletor';
+import Aviso from '@/components/base/Aviso';
+import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import type { OpenCardOfContact } from '@/types/analytics';
 import { formatDateBR } from '@/utils/dateUtils';
@@ -234,156 +235,161 @@ export default function ProposalFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{proposta ? 'Editar Proposta' : 'Nova Proposta'}</DialogTitle>
+          <DialogTitle>{proposta ? 'Editar proposta' : 'Nova proposta'}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-2">
-          {/* Imóvel */}
-          <div className="relative" ref={propertyWrapperRef}>
-            <Label>Imóvel *</Label>
-            <div className="relative mt-1">
-              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input
-                placeholder="Buscar imóvel por título, código ou bairro..."
-                value={propertyQuery}
-                onChange={e => searchProperties(e.target.value)}
-                onFocus={() => { if (propertyResults.length) setShowPropertyDropdown(true); }}
-                className="pl-9"
-              />
-              {propertySearching && (
-                <RefreshCw className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+        <div className="grid gap-5">
+          <GrupoDaJanela titulo="Quem e o quê">
+            {/* Imóvel */}
+            <CampoDaJanela
+              rotulo="Imóvel" htmlFor="proposta-imovel" obrigatorio
+              ajuda={selectedProperty && (
+                <>Selecionado: <span className="font-medium text-foreground">{selectedProperty.code}</span> · {selectedProperty.title}</>
               )}
-            </div>
-            {showPropertyDropdown && propertyResults.length > 0 && (
-              <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-64 overflow-y-auto">
-                {propertyResults.map(p => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0"
-                    onClick={() => selectProperty(p)}
-                  >
-                    <div className="font-medium text-sm truncate">{p.title}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {[p.code, p.address_neighborhood, p.address_city].filter(Boolean).join(' · ') || '—'}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-            {selectedProperty && (
-              <div className="text-xs text-muted-foreground mt-1">
-                Selecionado: <span className="font-medium text-foreground">{selectedProperty.code}</span> · {selectedProperty.title}
-              </div>
-            )}
-          </div>
-
-          {/* Lead */}
-          <LeadCombobox
-            value={selectedLead}
-            onChange={handleLeadChange}
-            label="Lead *"
-            placeholder="Buscar lead ou contato por nome/telefone..."
-          />
-
-          {perguntaAtendimento && cardsAbertos && (
-            <div className="grid gap-1.5">
-              <Label htmlFor="atendimento-da-proposta">De qual atendimento é esta proposta?</Label>
-              <Seletor
-                id="atendimento-da-proposta"
-                value={cardEscolhido}
-                onChange={e => setCardEscolhido(e.target.value)}
-                className="w-full"
-              >
-                <option value="" disabled>Escolha o atendimento</option>
-                {cardsAbertos.map(c => (
-                  <option key={c.id} value={c.id}>{[c.pipeline_name, c.stage_name, c.created_at ? formatDateBR(c.created_at) : null].filter(Boolean).join(' · ') || 'Atendimento aberto'}</option>
-                ))}
-              </Seletor>
-            </div>
-          )}
-          {cardsAbertos?.length === 1 && (
-            <p className="text-xs text-muted-foreground">
-              {[cardsAbertos[0].pipeline_name, cardsAbertos[0].stage_name].filter(Boolean).join(' · ') ? `Atendimento: ${[cardsAbertos[0].pipeline_name, cardsAbertos[0].stage_name].filter(Boolean).join(' · ')}` : 'Atendimento aberto'}
-            </p>
-          )}
-          {erroCards && (
-            <p className="text-xs text-destructive">
-              Não consegui carregar os atendimentos deste lead. Se salvar assim, a proposta fica com o atendimento mais recente.{' '}
-              <button type="button" className="underline" onClick={() => setTentativa(n => n + 1)}>Tentar de novo</button>
-            </p>
-          )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Tipo *</Label>
-              <Select
-                value={form.proposal_type}
-                onValueChange={(v: 'purchase' | 'rent') => setForm(f => ({ ...f, proposal_type: v }))}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="purchase">Compra</SelectItem>
-                  <SelectItem value="rent">Locação</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Valor Ofertado (R$) *</Label>
-              <Input
-                type="number"
-                placeholder="0,00"
-                value={form.offered_value}
-                onChange={e => setForm(f => ({ ...f, offered_value: e.target.value }))}
-              />
-            </div>
-          </div>
-
-          {form.proposal_type === 'purchase' && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Entrada (R$)</Label>
+            >
+              <div className="relative" ref={propertyWrapperRef}>
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
+                  id="proposta-imovel"
+                  placeholder="Buscar imóvel por título, código ou bairro..."
+                  value={propertyQuery}
+                  onChange={e => searchProperties(e.target.value)}
+                  onFocus={() => { if (propertyResults.length) setShowPropertyDropdown(true); }}
+                  className="pl-9"
+                />
+                {propertySearching && (
+                  <RefreshCw className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+                )}
+                {showPropertyDropdown && propertyResults.length > 0 && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-64 overflow-y-auto">
+                    {propertyResults.map(p => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0"
+                        onClick={() => selectProperty(p)}
+                      >
+                        <div className="font-medium text-sm truncate">{p.title}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {[p.code, p.address_neighborhood, p.address_city].filter(Boolean).join(' · ') || '—'}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CampoDaJanela>
+
+            {/* Lead */}
+            <LeadCombobox
+              value={selectedLead}
+              onChange={handleLeadChange}
+              label="Lead *"
+              placeholder="Buscar lead ou contato por nome/telefone..."
+            />
+
+            {perguntaAtendimento && cardsAbertos && (
+              <CampoDaJanela rotulo="De qual atendimento é esta proposta?" htmlFor="atendimento-da-proposta">
+                <Seletor
+                  id="atendimento-da-proposta"
+                  value={cardEscolhido}
+                  onChange={e => setCardEscolhido(e.target.value)}
+                  className="w-full"
+                >
+                  <option value="" disabled>Escolha o atendimento</option>
+                  {cardsAbertos.map(c => (
+                    <option key={c.id} value={c.id}>{[c.pipeline_name, c.stage_name, c.created_at ? formatDateBR(c.created_at) : null].filter(Boolean).join(' · ') || 'Atendimento aberto'}</option>
+                  ))}
+                </Seletor>
+              </CampoDaJanela>
+            )}
+            {cardsAbertos?.length === 1 && (
+              <p className="text-xs text-muted-foreground">
+                {[cardsAbertos[0].pipeline_name, cardsAbertos[0].stage_name].filter(Boolean).join(' · ') ? `Atendimento: ${[cardsAbertos[0].pipeline_name, cardsAbertos[0].stage_name].filter(Boolean).join(' · ')}` : 'Atendimento aberto'}
+              </p>
+            )}
+            {erroCards && (
+              <Aviso
+                tom="erro"
+                compacto
+                acao={<Button type="button" variant="outline" size="sm" onClick={() => setTentativa(n => n + 1)}>Tentar de novo</Button>}
+              >
+                Não consegui carregar os atendimentos deste lead. Se salvar assim, a proposta fica com o atendimento mais recente.
+              </Aviso>
+            )}
+          </GrupoDaJanela>
+
+          <GrupoDaJanela titulo="Valores">
+            <GradeDaJanela>
+              <CampoDaJanela rotulo="Tipo" htmlFor="proposta-tipo" obrigatorio colunas={2}>
+                <Select
+                  value={form.proposal_type}
+                  onValueChange={(v: 'purchase' | 'rent') => setForm(f => ({ ...f, proposal_type: v }))}
+                >
+                  <SelectTrigger id="proposta-tipo" className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="purchase">Compra</SelectItem>
+                    <SelectItem value="rent">Locação</SelectItem>
+                  </SelectContent>
+                </Select>
+              </CampoDaJanela>
+              <CampoDaJanela rotulo="Valor ofertado (R$)" htmlFor="proposta-valor" obrigatorio colunas={2}>
+                <Input
+                  id="proposta-valor"
                   type="number"
                   placeholder="0,00"
-                  value={form.down_payment}
-                  onChange={e => setForm(f => ({ ...f, down_payment: e.target.value }))}
+                  value={form.offered_value}
+                  onChange={e => setForm(f => ({ ...f, offered_value: e.target.value }))}
                 />
-              </div>
-              <div>
-                <Label>Parcelas</Label>
-                <Input
-                  type="number"
-                  placeholder="360"
-                  value={form.installments}
-                  onChange={e => setForm(f => ({ ...f, installments: e.target.value }))}
-                />
-              </div>
-            </div>
-          )}
+              </CampoDaJanela>
+              {form.proposal_type === 'purchase' && (
+                <>
+                  <CampoDaJanela rotulo="Entrada (R$)" htmlFor="proposta-entrada" colunas={2}>
+                    <Input
+                      id="proposta-entrada"
+                      type="number"
+                      placeholder="0,00"
+                      value={form.down_payment}
+                      onChange={e => setForm(f => ({ ...f, down_payment: e.target.value }))}
+                    />
+                  </CampoDaJanela>
+                  <CampoDaJanela rotulo="Parcelas" htmlFor="proposta-parcelas" colunas={2}>
+                    <Input
+                      id="proposta-parcelas"
+                      type="number"
+                      placeholder="360"
+                      value={form.installments}
+                      onChange={e => setForm(f => ({ ...f, installments: e.target.value }))}
+                    />
+                  </CampoDaJanela>
+                </>
+              )}
+            </GradeDaJanela>
+          </GrupoDaJanela>
 
-          <div>
-            <Label>Forma de Pagamento</Label>
-            <Input
-              placeholder="Ex: Financiamento bancário, FGTS..."
-              value={form.payment_method}
-              onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}
-            />
-          </div>
-
-          <div>
-            <Label>Condições / Observações</Label>
-            <Textarea
-              placeholder="Condições específicas da proposta..."
-              value={form.conditions}
-              onChange={e => setForm(f => ({ ...f, conditions: e.target.value }))}
-              rows={3}
-            />
-          </div>
+          <GrupoDaJanela titulo="Condições">
+            <CampoDaJanela rotulo="Forma de pagamento" htmlFor="proposta-forma">
+              <Input
+                id="proposta-forma"
+                placeholder="Ex.: financiamento bancário, FGTS..."
+                value={form.payment_method}
+                onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}
+              />
+            </CampoDaJanela>
+            <CampoDaJanela rotulo="Condições e observações" htmlFor="proposta-condicoes">
+              <Textarea
+                id="proposta-condicoes"
+                placeholder="Condições específicas da proposta..."
+                value={form.conditions}
+                onChange={e => setForm(f => ({ ...f, conditions: e.target.value }))}
+                rows={3}
+              />
+            </CampoDaJanela>
+          </GrupoDaJanela>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={handleSave} disabled={saving || !form.property_id || !form.contact_id || !form.offered_value || (!proposta && (carregandoCards || (perguntaAtendimento && !cardEscolhido)))}>
-            {saving ? 'Salvando...' : proposta ? 'Salvar' : 'Criar Rascunho'}
+            {saving ? 'Salvando...' : proposta ? 'Salvar' : 'Criar rascunho'}
           </Button>
         </DialogFooter>
       </DialogContent>

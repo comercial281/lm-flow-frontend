@@ -9,7 +9,6 @@ import {
   DialogTitle,
   Button,
   Input,
-  Label,
   Textarea,
   Select,
   SelectContent,
@@ -17,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/ds';
+import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { CreateStageData } from '@/types/analytics';
 
 interface CreateStageModalProps {
@@ -81,10 +81,8 @@ export default function CreateStageModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            {/* Stage Name */}
-            <div className="grid gap-2">
-              <Label htmlFor="stage-name">{t('createStage.name')}</Label>
+          <GrupoDaJanela titulo={t('createStage.group')} className="py-4">
+            <CampoDaJanela rotulo={t('createStage.name')} htmlFor="stage-name" obrigatorio>
               <Input
                 id="stage-name"
                 value={formData.name}
@@ -93,11 +91,9 @@ export default function CreateStageModal({
                 required
                 disabled={loading}
               />
-            </div>
+            </CampoDaJanela>
 
-            {/* Description */}
-            <div className="grid gap-2">
-              <Label htmlFor="stage-description">{t('createStage.descriptionLabel')}</Label>
+            <CampoDaJanela rotulo={t('createStage.descriptionLabel')} htmlFor="stage-description">
               <Textarea
                 id="stage-description"
                 value={formData.automation_rules?.description || ''}
@@ -112,11 +108,9 @@ export default function CreateStageModal({
                 rows={3}
                 disabled={loading}
               />
-            </div>
+            </CampoDaJanela>
 
-            {/* Color */}
-            <div className="grid gap-2">
-              <Label>{t('createStage.color')}</Label>
+            <CampoDaJanela rotulo={t('createStage.color')}>
               <div className="grid grid-cols-4 gap-2">
                 {colorOptions.map((colorOption) => (
                   <button
@@ -131,6 +125,8 @@ export default function CreateStageModal({
                     onClick={() => setFormData({ ...formData, color: colorOption.value })}
                     disabled={loading}
                     title={colorOption.label}
+                    aria-label={colorOption.label}
+                    aria-pressed={formData.color === colorOption.value}
                   />
                 ))}
               </div>
@@ -141,11 +137,9 @@ export default function CreateStageModal({
                 />
                 {t('createStage.colorSelected')}
               </div>
-            </div>
+            </CampoDaJanela>
 
-            {/* Stage Type */}
-            <div className="grid gap-2">
-              <Label htmlFor="stage-type">{t('createStage.stageType')}</Label>
+            <CampoDaJanela rotulo={t('createStage.stageType')} htmlFor="stage-type">
               <Select
                 value={formData.stage_type}
                 onValueChange={(value: 'active' | 'completed' | 'cancelled') =>
@@ -153,7 +147,7 @@ export default function CreateStageModal({
                 }
                 disabled={loading}
               >
-                <SelectTrigger id="stage-type">
+                <SelectTrigger id="stage-type" className="w-full">
                   <SelectValue placeholder={t('createStage.selectType')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -162,8 +156,8 @@ export default function CreateStageModal({
                   <SelectItem value="cancelled">{t('createStage.stageTypes.cancelled')}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          </div>
+            </CampoDaJanela>
+          </GrupoDaJanela>
 
           <DialogFooter>
             <Button

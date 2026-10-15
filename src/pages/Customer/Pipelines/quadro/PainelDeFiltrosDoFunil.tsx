@@ -4,13 +4,14 @@
 // só vale no Filtrar. Filtrar e Limpar filtros ficam fixos embaixo.
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
-import { Button, Input, Label, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/ds';
+import { Button, Input, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/ds';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import EtiquetasDeEscolha from '@/components/base/EtiquetasDeEscolha';
 import EscolhaComBusca from '@/components/base/EscolhaComBusca';
 import EmptyState from '@/components/base/EmptyState';
 import Aviso from '@/components/base/Aviso';
 import Carregando from '@/components/base/Carregando';
+import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { listOptionsService, type ListOption } from '@/services/listOptions/listOptionsService';
 import { ROTULOS_DO_FILTRO_DE_TAREFAS } from '@/features/tarefas/filtroDoFunil';
 import { useCategoriasDeTarefa } from '@/features/tarefas/useCategoriasDeTarefa';
@@ -58,13 +59,9 @@ function OpcoesDoServidor({ carregando, erro, aoTentarDeNovo, vazio, children }:
   return <>{children}</>;
 }
 
-function Secao({ id, titulo, children }: { id: string; titulo: string; children: ReactNode }) {
-  return (
-    <section aria-labelledby={id} className="space-y-2">
-      <h3 id={id} className="text-sm font-semibold text-foreground">{titulo}</h3>
-      {children}
-    </section>
-  );
+// Cada bloco do painel é um grupo com título do miolo da janela (o `id` antigo não é mais usado).
+function Secao({ titulo, children }: { id?: string; titulo: string; children: ReactNode }) {
+  return <GrupoDaJanela titulo={titulo}>{children}</GrupoDaJanela>;
 }
 
 export interface PainelDeFiltrosDoFunilProps {
@@ -161,18 +158,16 @@ export default function PainelDeFiltrosDoFunil({
               <Button type="button" size="sm" variant="outline" onClick={() => atalho(7)}>Últimos 7 dias</Button>
               <Button type="button" size="sm" variant="outline" onClick={() => atalho(30)}>Últimos 30 dias</Button>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-1">
-                <Label htmlFor="filtro-de">De</Label>
+            <GradeDaJanela>
+              <CampoDaJanela rotulo="De" htmlFor="filtro-de" colunas={2}>
                 <Input id="filtro-de" type="date" value={rascunho.de} max={rascunho.ate || undefined}
                   onChange={e => mudar('de', e.target.value)} />
-              </div>
-              <div className="grid gap-1">
-                <Label htmlFor="filtro-ate">Até</Label>
+              </CampoDaJanela>
+              <CampoDaJanela rotulo="Até" htmlFor="filtro-ate" colunas={2}>
                 <Input id="filtro-ate" type="date" value={rascunho.ate} min={rascunho.de || undefined}
                   onChange={e => mudar('ate', e.target.value)} />
-              </div>
-            </div>
+              </CampoDaJanela>
+            </GradeDaJanela>
           </Secao>
 
           <Secao id="filtro-etapas" titulo="Etapas">

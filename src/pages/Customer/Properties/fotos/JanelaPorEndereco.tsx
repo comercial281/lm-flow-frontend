@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import {
-  Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label,
+  Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input,
 } from '@/components/ui/ds';
+import { CampoDaJanela } from '@/components/base/janela';
 
 export default function JanelaPorEndereco({ aberta, aoFechar, aoAdicionar }: {
   aberta: boolean; aoFechar: () => void; aoAdicionar: (url: string) => Promise<boolean>;
@@ -22,10 +23,9 @@ export default function JanelaPorEndereco({ aberta, aoFechar, aoAdicionar }: {
           <DialogTitle>Adicionar por endereço da internet</DialogTitle>
           <DialogDescription>Cole o endereço de uma foto ou vídeo que já está na internet.</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-2">
-          <Label htmlFor="foto-endereco">Endereço</Label>
-          <Input id="foto-endereco" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." />
-        </div>
+        <CampoDaJanela rotulo="Endereço" htmlFor="foto-endereco" obrigatorio ajuda="Comece com https://">
+          <Input id="foto-endereco" value={url} onChange={e => setUrl(e.target.value)} />
+        </CampoDaJanela>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={aoFechar}>Cancelar</Button>
           <Button type="button" onClick={() => void enviar()} disabled={!valido || enviando}>Adicionar</Button>

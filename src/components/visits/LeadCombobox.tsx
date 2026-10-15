@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState, type UIEvent } from 'react';
+import { useEffect, useId, useRef, useState, type UIEvent } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   Input,
   Button,
-  Label as UILabel,
   Dialog,
   DialogContent,
   DialogHeader,
@@ -16,6 +15,7 @@ import { visitsService, LeadPickerItem } from '@/services/visits/visitsService';
 import { numero, telefone } from '@/lib/formato';
 import { PhoneInput } from '@/components/shared/PhoneInput';
 import EmptyState from '@/components/base/EmptyState';
+import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 
 interface Props {
   value: LeadPickerItem | null;
@@ -66,6 +66,7 @@ export function LeadCombobox({
   value, onChange, placeholder = 'Buscar lead ou contato...', label = 'Contato *', allowCreate = true,
   paginated = false,
 }: Props) {
+  const idDoCampo = useId();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<LeadPickerItem[]>([]);
@@ -195,92 +196,94 @@ export function LeadCombobox({
 
   return (
     <>
-      <div className="relative" ref={wrapperRef}>
-        <UILabel>{label}</UILabel>
-        <div className="relative mt-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input
-            value={value && !open ? textoEscolhido(value) : query}
-            onChange={e => { setQuery(e.target.value); setOpen(true); }}
-            onFocus={() => setOpen(true)}
-            placeholder={placeholder}
-            className="pl-9"
-          />
-          {loading && (
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
-          )}
-        </div>
-
-        {open && (
-          <div
-            role="group"
-            aria-label="Resultados da busca"
-            onScroll={aoRolar}
-            className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-72 overflow-y-auto"
-          >
-            {items.length === 0 && !loading && (
-              erro ? (
-                <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => fetchList(query)} className="m-2 p-4" />
-              ) : (
-                <EmptyState
-                  tipo={query ? 'semResultado' : 'vazio'}
-                  tamanho="compacto"
-                  title={allowCreate ? 'Nenhum lead encontrado' : 'Nenhum cliente seu com esse nome ou telefone'}
-                  className="m-2 p-4"
-                />
-              )
-            )}
-            {items.map(item => {
-              const { nome, ehTelefone } = nomeDoCliente(item);
-              const abaixo = linhaDeBaixo(item);
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0"
-                  onClick={() => { onChange(item); setOpen(false); setQuery(''); }}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="font-medium text-sm truncate flex items-center gap-1.5">
-                      <UserIcon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                      {nome}
-                    </div>
-                    {item.in_pipeline && (
-                      <span className="text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary flex items-center gap-1 flex-shrink-0">
-                        <KanbanSquare className="h-2.5 w-2.5" />
-                        {item.stage_name ?? 'kanban'}
-                      </span>
-                    )}
-                  </div>
-                  {(abaixo || !ehTelefone) && (
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {abaixo || '—'}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-
-            {paginated && total !== null && items.length > 0 && (
-              <div className="sticky bottom-0 bg-popover border-t border-border px-3 py-2 text-xs text-muted-foreground">
-                Mostrando {numero(items.length)} de {numero(total)}{temMais ? ' — digite para buscar' : ''}
-              </div>
-            )}
-
-            {/* Sticky "criar novo" */}
-            {allowCreate && (
-              <button
-                type="button"
-                className="w-full text-left px-3 py-2.5 hover:bg-primary/5 border-t border-border text-sm font-medium text-primary flex items-center gap-2 sticky bottom-0 bg-popover"
-                onClick={() => { setQuickOpen(true); setOpen(false); }}
-              >
-                <UserPlus className="h-4 w-4" />
-                Criar contato novo
-              </button>
+      <CampoDaJanela rotulo={label.replace(/\s\*$/, '')} htmlFor={idDoCampo} obrigatorio={/\s\*$/.test(label)}>
+        <div className="relative" ref={wrapperRef}>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              id={idDoCampo}
+              value={value && !open ? textoEscolhido(value) : query}
+              onChange={e => { setQuery(e.target.value); setOpen(true); }}
+              onFocus={() => setOpen(true)}
+              placeholder={placeholder}
+              className="pl-9"
+            />
+            {loading && (
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
             )}
           </div>
-        )}
-      </div>
+
+          {open && (
+            <div
+              role="group"
+              aria-label="Resultados da busca"
+              onScroll={aoRolar}
+              className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-72 overflow-y-auto"
+            >
+              {items.length === 0 && !loading && (
+                erro ? (
+                  <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => fetchList(query)} className="m-2 p-4" />
+                ) : (
+                  <EmptyState
+                    tipo={query ? 'semResultado' : 'vazio'}
+                    tamanho="compacto"
+                    title={allowCreate ? 'Nenhum lead encontrado' : 'Nenhum cliente seu com esse nome ou telefone'}
+                    className="m-2 p-4"
+                  />
+                )
+              )}
+              {items.map(item => {
+                const { nome, ehTelefone } = nomeDoCliente(item);
+                const abaixo = linhaDeBaixo(item);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0"
+                    onClick={() => { onChange(item); setOpen(false); setQuery(''); }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-medium text-sm truncate flex items-center gap-1.5">
+                        <UserIcon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                        {nome}
+                      </div>
+                      {item.in_pipeline && (
+                        <span className="text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary flex items-center gap-1 flex-shrink-0">
+                          <KanbanSquare className="h-2.5 w-2.5" />
+                          {item.stage_name ?? 'kanban'}
+                        </span>
+                      )}
+                    </div>
+                    {(abaixo || !ehTelefone) && (
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {abaixo || '—'}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+
+              {paginated && total !== null && items.length > 0 && (
+                <div className="sticky bottom-0 bg-popover border-t border-border px-3 py-2 text-xs text-muted-foreground">
+                  Mostrando {numero(items.length)} de {numero(total)}{temMais ? ' — digite para buscar' : ''}
+                </div>
+              )}
+
+              {/* Sticky "criar novo" */}
+              {allowCreate && (
+                <button
+                  type="button"
+                  className="w-full text-left px-3 py-2.5 hover:bg-primary/5 border-t border-border text-sm font-medium text-primary flex items-center gap-2 sticky bottom-0 bg-popover"
+                  onClick={() => { setQuickOpen(true); setOpen(false); }}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Criar contato novo
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </CampoDaJanela>
 
       {/* Quick create modal */}
       {allowCreate && (
@@ -289,21 +292,21 @@ export function LeadCombobox({
             <DialogHeader>
               <DialogTitle>Criar contato novo</DialogTitle>
             </DialogHeader>
-            <div className="space-y-3 py-2">
-              <div>
-                <UILabel>Nome *</UILabel>
-                <Input value={quickName} onChange={e => setQuickName(e.target.value)} className="mt-1" />
-              </div>
-              <div>
-                <UILabel>Telefone *</UILabel>
-                <PhoneInput
-                  value={quickPhone}
-                  onChange={setQuickPhone}
-                  placeholder="(11) 99999-9999"
-                  className="mt-1"
-                />
-              </div>
-            </div>
+            <GrupoDaJanela titulo="Dados do contato">
+              <GradeDaJanela>
+                <CampoDaJanela rotulo="Nome" htmlFor="contato-novo-nome" obrigatorio colunas={2}>
+                  <Input id="contato-novo-nome" value={quickName} onChange={e => setQuickName(e.target.value)} />
+                </CampoDaJanela>
+                <CampoDaJanela rotulo="Telefone" htmlFor="contato-novo-telefone" obrigatorio colunas={2}>
+                  <PhoneInput
+                    id="contato-novo-telefone"
+                    value={quickPhone}
+                    onChange={setQuickPhone}
+                    placeholder="(11) 99999-9999"
+                  />
+                </CampoDaJanela>
+              </GradeDaJanela>
+            </GrupoDaJanela>
             <DialogFooter>
               <Button variant="outline" onClick={() => setQuickOpen(false)}>Cancelar</Button>
               <Button onClick={handleQuickCreate} disabled={quickSaving}>
