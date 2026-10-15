@@ -112,6 +112,10 @@ export interface PipelineStage {
   item_count?: number;
   conversations_count?: number;
   items?: PipelineItem[]; // Items already included in the stage
+  /** Quadro em lotes: total da coluna no servidor (com aba, busca e filtros). */
+  items_total?: number;
+  /** Quadro em lotes: soma do valor dos serviços da coluna inteira. */
+  value_total?: number;
   created_at: string | number;
   updated_at: string | number;
 }
@@ -153,6 +157,8 @@ export interface Pipeline {
   team_ids?: string[];
   /** Números das abas do quadro; só vem no `GET /pipelines/:id`. */
   status_counts?: PipelineStatusCounts;
+  /** Quadro em lotes: tamanho do lote por coluna que o servidor aplicou. */
+  per_stage?: number;
 }
 
 export interface PipelineStats {
@@ -244,6 +250,12 @@ export interface PipelineStatusCounts {
   all: number;
   archived: number;
 }
+
+/** Parâmetros do quadro em lotes (aba, busca e filtros), como o servidor lê. */
+export type BoardQueryParams = Record<string, string | string[]>;
+export type BoardSort = 'position' | 'arrival_desc' | 'arrival_asc';
+export interface BoardItemsPage { items: PipelineItem[]; total: number; has_more: boolean; }
+export interface BoardFacets { origins: string[]; assignees: { id: string; name: string }[]; unassigned: boolean; }
 
 /** Corpo do PATCH de situação. Perdido exige o motivo (opção ativa de `loss_reasons`). */
 export interface SetItemStatusData {
