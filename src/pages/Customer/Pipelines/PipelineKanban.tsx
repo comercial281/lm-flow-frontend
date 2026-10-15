@@ -195,6 +195,11 @@ export default function PipelineKanban() {
   const [carregandoQuadro, setCarregandoQuadro] = useState(false);
   // A aba pedida não carregou: o quadro mostra o erro (nunca os cards da aba anterior).
   const [erroDaAba, setErroDaAba] = useState(false);
+  // Funil e aba do quadro que está na tela. Busca ou filtro na MESMA aba mantém
+  // os cards até a resposta chegar (só aria-busy); troca de aba ou de funil
+  // mostra o esqueleto (nunca os cards da aba anterior).
+  const quadroNaTelaRef = useRef<string | null>(null);
+  const [atualizandoQuadro, setAtualizandoQuadro] = useState(false);
   // Depende da assinatura (aba, busca e filtros): quando ela troca, o efeito de
   // abertura relê sozinho. Os parâmetros em si vêm da ref (sempre os atuais).
   const loadPipelineData = useCallback(async (silent = false, reaproveitar = false) => {
@@ -205,8 +210,12 @@ export default function PipelineKanban() {
     // Recarga por trás relê até onde a pessoa rolou; a abertura pede o 1º lote.
     const porColuna = silent ? limiteDaRecarga(stagesRef.current) : POR_COLUNA;
     const cached = semFiltro ? getCachedPipeline(pipelineId) : undefined;
-    const mostrarEspera = !silent && !cached;
+    const quadroPedido = `${pipelineId}|${String(params.status)}`;
+    const mesmoQuadro = Boolean(pipelineRef.current) && quadroNaTelaRef.current === quadroPedido;
+    const mostrarEspera = !silent && !cached && !mesmoQuadro;
+    if (!silent) setAtualizandoQuadro(!cached && mesmoQuadro);
     if (!silent && cached) {
+      quadroNaTelaRef.current = quadroPedido;
       setPipeline(cached);
       setStages(cached.stages || []);
       setLoading(false);
@@ -227,6 +236,7 @@ export default function PipelineKanban() {
           ? await loadOpenPipeline(pipelineId, { reaproveitar })
           : await pipelinesService.getBoard(pipelineId, params, porColuna);
       if (meu !== pedidoRef.current) return;
+      quadroNaTelaRef.current = quadroPedido;
       setPipeline(pipelineData);
       setStages(pipelineData.stages || []);
       setErroDaAba(false);
@@ -242,10 +252,13 @@ export default function PipelineKanban() {
       });
     } catch (error) {
       console.error('Error loading pipeline data:', error);
-      if (mostrarEspera && meu === pedidoRef.current) {
+      // Pedido que a pessoa fez (troca de aba, busca, filtro) e falhou: some o
+      // quadro e mostra o erro (nunca cards que não batem com o pedido). Com o
+      // payload guardado na tela, os cards dele continuam valendo.
+      if (!silent && !cached && meu === pedidoRef.current) {
         toast.error(t('kanban.messages.loadDataError'));
-        // Troca de aba que falhou: some o quadro da aba anterior e mostra o erro.
         if (pipelineRef.current) {
+          quadroNaTelaRef.current = null;
           setStages([]);
           setErroDaAba(true);
         }
@@ -254,6 +267,7 @@ export default function PipelineKanban() {
       if (meu === pedidoRef.current) {
         setLoading(false);
         setCarregandoQuadro(false);
+        setAtualizandoQuadro(false);
       }
     }
   }, [pipelineId, assinatura]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -542,8 +556,8 @@ export default function PipelineKanban() {
   // ("Lead criado e adicionado ao funil." ou "Lead adicionado ao funil.").
   // Avisar aqui também dava dois avisos pro mesmo lead.
   const handleItemAdded = async () => {
-    // Reload pipeline data to show new item
-    await loadPipelineData();
+    // Recarga por trás: sem esqueleto e relendo até onde a pessoa rolou.
+    await loadPipelineData(true);
   };
 
   const handleRemoveItem = useCallback((item: PipelineItem) => {
@@ -598,8 +612,8 @@ export default function PipelineKanban() {
       toast.success(t('kanban.messages.itemRemoved'));
       setShowRemoveItemModal(false);
       setItemToRemove(null);
-      // Reload pipeline data to reflect changes
-      await loadPipelineData();
+      // Recarga por trás: sem esqueleto e relendo até onde a pessoa rolou.
+      await loadPipelineData(true);
     } catch (error) {
       console.error('Error removing item from pipeline:', error);
       toast.error(t('kanban.messages.itemRemoveError'));
@@ -856,6 +870,7 @@ export default function PipelineKanban() {
         <div className="flex-1 overflow-hidden relative">
           <div
             ref={boardScrollRef}
+            aria-busy={atualizandoQuadro || undefined}
             className="h-full overflow-x-auto overflow-y-hidden px-4 sm:px-6 py-6 cursor-grab"
             onDragOver={handleBoardDragOver}
             onMouseDown={handleBoardMouseDown}

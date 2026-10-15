@@ -244,6 +244,37 @@ describe('quadro do funil · o que continua igual', () => {
     expect(screen.getByText('Maria Souza')).toBeInTheDocument();
   });
 
+  it('a busca não troca o quadro pelo esqueleto (os cards ficam até a resposta chegar)', async () => {
+    montar();
+    await screen.findByText('Maria Souza');
+    let soltar: (p: Pipeline) => void = () => {};
+    vi.mocked(pipelinesService.getBoard).mockImplementation(() => new Promise<Pipeline>(r => { soltar = r; }));
+    fireEvent.change(screen.getByPlaceholderText(BUSCA), { target: { value: 'maria' } });
+    await waitFor(() => expect(pipelinesService.getBoard).toHaveBeenLastCalledWith('p1', expect.objectContaining({ q: 'maria' }), 30));
+    // Pedido em voo: os cards de antes continuam, sem esqueleto, e o quadro avisa que está ocupado.
+    expect(screen.getByText('Maria Souza')).toBeInTheDocument();
+    expect(screen.getByText('João Lima')).toBeInTheDocument();
+    expect(screen.queryByText('Carregando a aba')).toBeNull();
+    expect(colunaDe('s1').closest('[aria-busy="true"]')).not.toBeNull();
+
+    const f = comTotais(FUNIL('open'));
+    act(() => { soltar({ ...f, stages: f.stages!.map(st => ({ ...st, items: (st.items ?? []).filter(i => i.id === 'i1') })) } as Pipeline); });
+    await waitFor(() => expect(screen.queryByText('João Lima')).toBeNull());
+    expect(screen.getByText('Maria Souza')).toBeInTheDocument();
+    expect(colunaDe('s1').closest('[aria-busy="true"]')).toBeNull();
+  });
+
+  it('busca que falha mostra o erro, nunca os cards sem o filtro', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    montar();
+    await screen.findByText('Maria Souza');
+    vi.mocked(pipelinesService.getBoard).mockRejectedValue(new Error('falhou'));
+    fireEvent.change(screen.getByPlaceholderText(BUSCA), { target: { value: 'maria' } });
+    expect(await screen.findByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
+    expect(screen.queryByText('João Lima')).toBeNull();
+    expect(toast.error).toHaveBeenCalledWith('kanban.messages.loadDataError');
+  });
+
   it('o número da coluna é o total do servidor, não os cards carregados', async () => {
     vi.mocked(pipelinesService.getBoard).mockImplementation(async () => {
       const p = comTotais(FUNIL('open'));

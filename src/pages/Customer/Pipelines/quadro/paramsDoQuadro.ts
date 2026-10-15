@@ -47,13 +47,19 @@ export function limiteDaRecarga(stages: PipelineStage[]): number {
  * desfazer do arraste), ele vale como veio.
  */
 export function ajustarTotais(antes: PipelineStage[], depois: PipelineStage[]): PipelineStage[] {
+  // Quem mexeu não mudou nada (devolveu o mesmo array): nada a refazer na tela.
+  if (depois === antes) return antes;
   const antigas = new Map(antes.map(s => [String(s.id), s]));
-  return depois.map(s => {
+  let ajustou = false;
+  const ajustadas = depois.map(s => {
     const a = antigas.get(String(s.id));
     if (!a || s.items_total == null || s.items_total !== a.items_total) return s;
     const diferenca = (s.items?.length ?? 0) - (a.items?.length ?? 0);
-    return diferenca === 0 ? s : { ...s, items_total: Math.max(0, s.items_total + diferenca) };
+    if (diferenca === 0) return s;
+    ajustou = true;
+    return { ...s, items_total: Math.max(0, s.items_total + diferenca) };
   });
+  return ajustou ? ajustadas : depois;
 }
 
 export function juntarSemRepetir(atuais: PipelineItem[], novos: PipelineItem[]): PipelineItem[] {

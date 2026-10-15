@@ -63,6 +63,13 @@ describe('ajustarTotais', () => {
     const antes = [etapa('s1', ['a'])];
     expect(ajustarTotais(antes, [{ ...antes[0], items: [] }])[0].items_total).toBeUndefined();
   });
+
+  it('quem não mudou nada recebe o mesmo array (a tela não se refaz à toa)', () => {
+    const antes = [etapa('s1', ['a'], 40)];
+    expect(ajustarTotais(antes, antes)).toBe(antes);
+    const depois = [{ ...antes[0] }];
+    expect(ajustarTotais(antes, depois)).toBe(depois);
+  });
 });
 
 describe('juntarSemRepetir', () => {
