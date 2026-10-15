@@ -8980,3 +8980,19 @@ Armadilhas:
 6. Prévia da Vercel: entrar SEM `?tenant=` (cai no `public`, como o app.lmflow.com.br) ou com o slug de um cliente que existe. Slug inexistente faz o login responder 406 e parecer senha errada.
 
 Não reabrir sem o dono pedir.
+
+## Funil: o menu recolhe ao entrar e o arrasto mostra o esqueleto (desde 2026-10-15)
+
+Pedido do dono: entrar num funil fecha o menu com o mesmo movimento de Conversas, e arrastar um card pro lado tem que parecer que ele está sendo arrastado de verdade.
+
+- **Menu:** `/pipelines/:id` (quadro) e `/pipelines/:id/card/:itemId` (card completo) entraram na `ROTA_RECOLHE_MENU`. A lista de funis (`/pipelines`) não recolhe. Mesma regra de Conversas: o botão do topo reabre, a escolha vale só pra visita e não mexe na preferência salva.
+- **Arrasto:** o card pego vira um contorno tracejado da mesma altura no lugar de onde saiu, e a coluna sob o cursor mostra um card-esqueleto cinza no ponto exato onde ele vai cair (anda com o mouse). Soltar no mesmo lugar não mostra esqueleto. Soltou, Esc ou soltou fora: tudo volta ao normal. Card fechado não arrasta, então não tem esqueleto.
+- **Espaço vazio de outra coluna continua sendo o topo** (decisão do dono, 15/10): o esqueleto aparece no topo quando o cursor está abaixo dos cards. Mesma coluna, espaço vazio = fundo.
+
+Armadilhas:
+
+1. **A regra de onde o card cai é uma só** (`quadro/ondeOCardCai.ts`, com spec): desenha o esqueleto e decide a position ao soltar. Os três drops (coluna, card, esqueleto) caem no `alvoRef` do `useBoardDrag`, nunca recalculam pelo evento do drop.
+2. **O alvo mora num ref além do estado**: o dragover não é evento discreto e o estado pode não ter assentado quando o drop chega.
+3. **O contorno entra num `requestAnimationFrame` depois do dragstart**: o navegador tira a foto do card que segue o cursor ao fim do dragstart, e ela tem que ser a do card normal.
+4. **No vão entre dois cards, a coluna acha o card abaixo do cursor** (`[data-card-id]`), senão o esqueleto pularia pro topo a cada vão e voltaria. O esqueleto segura o próprio dragover (`stopPropagation`).
+5. **O esqueleto some quando o card já foi pro destino** (`limparEsqueleto` no `commitReorder`/`ganhar`), não quando o servidor responde: senão o card movido ficaria tracejado durante o pedido.

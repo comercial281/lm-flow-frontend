@@ -56,9 +56,12 @@ interface PipelineItemCardProps {
   arquivado: boolean;
   isDraggingRef: MutableRefObject<boolean>;
   suppressClickUntilRef: MutableRefObject<number>;
-  onDragStart: (item: PipelineItem) => void;
+  /** A altura vai junto: o esqueleto do destino tem o tamanho do card pego. */
+  onDragStart: (item: PipelineItem, altura?: number) => void;
   onDragEnd: () => void;
-  onCardDragOver: (e: DragEvent) => void;
+  onCardDragOver: (e: DragEvent, item: PipelineItem, stageId: string) => void;
+  /** Este é o card pego: no lugar dele fica só o contorno tracejado. */
+  arrastando?: boolean;
   onCardDrop: (e: DragEvent, item: PipelineItem, stageId: string) => void;
   onOpenItem: (item: PipelineItem) => void;
   onArchive: (item: PipelineItem) => void;
@@ -71,7 +74,7 @@ interface PipelineItemCardProps {
 }
 
 function PipelineItemCardComponent({
-  item, stageId, visitsByContact, podeArrastar, arquivado, isDraggingRef, suppressClickUntilRef,
+  item, stageId, visitsByContact, podeArrastar, arquivado, isDraggingRef, suppressClickUntilRef, arrastando = false,
   onDragStart, onDragEnd, onCardDragOver, onCardDrop, onOpenItem, onArchive, onUnarchive, onRemove,
   onOpenConversation, openingConversation,
 }: PipelineItemCardProps) {
@@ -98,11 +101,14 @@ function PipelineItemCardComponent({
 
   return (
     <div
-      className="group relative cursor-pointer select-none rounded-xl border border-border bg-background p-3 shadow-sm transition-all duration-200 hover:border-primary/30 hover:shadow-md"
+      data-card-id={item.id}
+      className={arrastando
+        ? 'relative select-none rounded-xl border-2 border-dashed border-primary/40 bg-transparent p-3 [&>*]:invisible'
+        : 'group relative cursor-pointer select-none rounded-xl border border-border bg-background p-3 shadow-sm transition-all duration-200 hover:border-primary/30 hover:shadow-md'}
       draggable={podeArrastar}
-      onDragStart={() => { if (podeArrastar) onDragStart(item); }}
+      onDragStart={e => { if (podeArrastar) onDragStart(item, e.currentTarget.offsetHeight); }}
       onDragEnd={onDragEnd}
-      onDragOver={onCardDragOver}
+      onDragOver={e => onCardDragOver(e, item, stageId)}
       onDrop={e => onCardDrop(e, item, stageId)}
       onClick={() => {
         if (!isDraggingRef.current && Date.now() > suppressClickUntilRef.current) onOpenItem(item);

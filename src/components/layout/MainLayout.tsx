@@ -67,7 +67,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   // Estados do layout
   // `salvo` é a preferência da pessoa (gravada). Em Conversas (e no cadastro de
-  // imóvel, ver ROTA_RECOLHE_MENU) o menu recolhe
+  // imóvel e no funil aberto, ver ROTA_RECOLHE_MENU) o menu recolhe
   // sozinho, sem mexer nela; `escolhaNaVisita` guarda só o clique da visita.
   const [salvo, setSalvo] = useState(false);
   const [escolhaNaVisita, setEscolhaNaVisita] = useState<boolean | null>(null);

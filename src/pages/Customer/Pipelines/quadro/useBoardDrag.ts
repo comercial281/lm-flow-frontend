@@ -11,6 +11,7 @@ import { pipelinesService } from '@/services/pipelines';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import { comSituacaoNova, ehColunaDeGanho, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
 import { itemPos } from '../pipelineItemHelpers';
+import { indiceDoArraste, type AlvoDoArraste } from './ondeOCardCai';
 
 // Position logo abaixo do último card visível. Na coluna com cards ainda não
 // carregados (quadro em lotes), "- 1" podia passar por baixo deles: o card ia
@@ -144,33 +145,97 @@ export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, po
     el.scrollLeft += e.deltaY;
   }, []);
 
+  // Esqueleto do arraste: o card pego vira contorno tracejado no lugar dele
+  // (`arraste`) e a coluna sob o cursor ganha um card-esqueleto onde ele vai cair
+  // (`alvo`). O ref do alvo é o que o drop lê: o dragover não é evento discreto e
+  // o estado pode não ter assentado quando o drop chega.
+  const [arraste, setArraste] = useState<{ id: string; altura: number } | null>(null);
+  const [alvo, setAlvo] = useState<AlvoDoArraste | null>(null);
+  const alvoRef = useRef<AlvoDoArraste | null>(null);
+  const arrastadoRef = useRef<PipelineItem | null>(null);
+  const stagesRef = useRef(stages);
+  stagesRef.current = stages;
+  const rafRef = useRef<number | null>(null);
+
+  const limparEsqueleto = useCallback(() => {
+    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+    alvoRef.current = null;
+    arrastadoRef.current = null;
+    setArraste(null);
+    setAlvo(null);
+  }, []);
+
+  // Só troca o estado quando o ponto de queda muda (o dragover dispara sem parar).
+  const marcarAlvo = useCallback((stageId: string, sobre?: { id: string; metade: 'above' | 'below' }) => {
+    const arrastado = arrastadoRef.current;
+    if (!arrastado) return;
+    const coluna = stagesRef.current.find(s => s.id === stageId);
+    if (!coluna) return;
+    const indice = indiceDoArraste({
+      itens: coluna.items || [],
+      arrastadoId: arrastado.id,
+      mesmaColuna: arrastado.stage_id === stageId,
+      colunaDeGanho: ehColunaDeGanho(coluna),
+      sobre,
+    });
+    const novo = indice == null ? null : { stageId, indice };
+    const atual = alvoRef.current;
+    if (atual?.stageId === novo?.stageId && atual?.indice === novo?.indice) return;
+    alvoRef.current = novo;
+    setAlvo(novo);
+  }, []);
+
   // Viram useCallback (referência estável) porque handleDragStart/handleCardDragOver/
   // handleCardDrop/handleDragEnd são passados como prop pro PipelineItemCard
   // memoizado — sem isso, cada render do board recriava a função e quebrava o
   // memo (card inteiro re-renderizava mesmo sem o item mudar).
-  const handleDragStart = useCallback((item: PipelineItem) => {
+  const handleDragStart = useCallback((item: PipelineItem, altura?: number) => {
     // Card que a aba não deixa arrastar: nem começa (o dragstart sintético dispara mesmo com draggable="false").
     if (!podeArrastar(item)) return;
     setDraggedItem(item);
+    arrastadoRef.current = item;
+    alvoRef.current = null;
     isDraggingRef.current = true;
     suppressClickUntilRef.current = Date.now() + 200;
     startAutoScroll();
+    // O contorno entra no quadro seguinte: o navegador tira a foto do card que
+    // segue o cursor ao fim do dragstart, e ela tem que ser a do card normal.
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      if (arrastadoRef.current?.id === item.id) setArraste({ id: item.id, altura: altura || 88 });
+    });
   }, [startAutoScroll, podeArrastar]);
 
-  const handleDragOver = useCallback((e: DragEvent) => {
+  // Dragover no espaço da coluna (fora de um card): acha o card logo abaixo do
+  // cursor, pra o vão entre dois cards não jogar o esqueleto pro topo e voltar.
+  // Abaixo de todos é o espaço vazio da coluna (outra coluna = topo, mesma = fundo).
+  const handleDragOver = useCallback((e: DragEvent, stageId?: string) => {
     e.preventDefault();
-  }, []);
+    const arrastado = arrastadoRef.current;
+    if (!arrastado || !stageId) return;
+    const cards = (e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('[data-card-id]');
+    let sobre: { id: string; metade: 'above' | 'below' } | undefined;
+    for (const card of Array.from(cards)) {
+      const id = card.dataset.cardId;
+      if (!id || id === arrastado.id) continue;
+      const r = card.getBoundingClientRect();
+      if (e.clientY < r.top + r.height / 2) {
+        sobre = { id, metade: 'above' };
+        break;
+      }
+    }
+    marcarAlvo(stageId, sobre);
+  }, [marcarAlvo]);
 
   // Limpa o estado de arraste (reuso entre drop em coluna e em card).
   const finishDrag = useCallback(() => {
     setDraggedItem(null);
+    limparEsqueleto();
     isDraggingRef.current = false;
     suppressClickUntilRef.current = Date.now() + 200;
     stopAutoScroll();
-  }, [stopAutoScroll]);
-
-  // Onde o cursor está sobre o card alvo (metade de cima = acima, baixo = abaixo).
-  const dragOverPosRef = useRef<'above' | 'below'>('above');
+  }, [stopAutoScroll, limparEsqueleto]);
 
   // Concluído é a coluna do Ganho (ajuste de 08/10): soltar o card nela marca
   // Ganho pela mesma rota do botão. O card vai na hora para Concluído, já ganho;
@@ -188,6 +253,8 @@ export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, po
       const items = (stage.items || []).filter(i => i.id !== draggedItem.id);
       return stage.id === targetStageId ? { ...stage, items: [ganho, ...items] } : { ...stage, items };
     }));
+    // O card já está no destino: some o esqueleto agora, não quando o servidor responder.
+    limparEsqueleto();
     try {
       const resposta = await pipelinesService.setItemStatus(pipelineId, draggedItem.id, { status: 'won' });
       toast.success('Lead marcado como ganho.');
@@ -198,7 +265,7 @@ export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, po
     } finally {
       finishDrag();
     }
-  }, [draggedItem, pipelineId, stages, setStages, finishDrag, aoGanhar]);
+  }, [draggedItem, pipelineId, stages, setStages, finishDrag, aoGanhar, limparEsqueleto]);
 
   // Move/reordena o card arrastado para targetStageId na position newPos,
   // inserindo no índice insertIdx (no array já SEM o card arrastado).
@@ -230,6 +297,7 @@ export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, po
       return { ...stage, items };
     });
     setStages(next);
+    limparEsqueleto();
 
     try {
       await pipelinesService.reorderItem(pipelineId, draggedItem.id, {
@@ -244,80 +312,58 @@ export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, po
     } finally {
       finishDrag();
     }
-  }, [draggedItem, pipelineId, stages, setStages, mensagemDeErro, finishDrag, ganhar]);
+  }, [draggedItem, pipelineId, stages, setStages, mensagemDeErro, finishDrag, ganhar, limparEsqueleto]);
 
-  // Drop na área da coluna (fora de um card):
-  // - outra coluna: lead vai pro TOPO da coluna destino.
-  // - mesma coluna (área vazia abaixo dos cards): manda o card pro FUNDO.
-  //   Sem isso, arrastar pro espaço vazio embaixo não fazia nada e dava a
-  //   impressão de que o card "não desce".
-  const handleDrop = useCallback((e: DragEvent, targetStageId: string) => {
+  // Soltar: o card cai onde o esqueleto mostrou (`alvoRef`, regra em ondeOCardCai).
+  // A position fica entre os vizinhos do índice (ou topo+1 / fundo-1 nas pontas).
+  // Sem alvo (soltou onde já estava), nada muda.
+  const soltar = useCallback((e: DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!draggedItem) return;
-    const targetStage = stages.find(s => s.id === targetStageId);
-    const items = (targetStage?.items || []).filter(i => i.id !== draggedItem.id);
-    if (draggedItem.stage_id === targetStageId) {
-      // mesma coluna: já está sozinho na coluna → nada a fazer
-      if (!items.length) {
-        finishDrag();
-        return;
-      }
-      // fundo da coluna: position menor que a do último card
-      const newPos = abaixoDoUltimo(targetStage, items[items.length - 1]);
-      void commitReorder(targetStageId, newPos, items.length);
-      return;
-    }
-    const newPos = items.length ? itemPos(items[0]) + 1 : Date.now() / 1000;
-    void commitReorder(targetStageId, newPos, 0);
-  }, [draggedItem, stages, commitReorder, finishDrag]);
-
-  // Marca acima/abaixo conforme a metade do card sob o cursor.
-  const handleCardDragOver = useCallback((e: DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    dragOverPosRef.current = e.clientY < rect.top + rect.height / 2 ? 'above' : 'below';
-  }, []);
-
-  // Drop em cima de um card: insere acima/abaixo dele e grava a position no
-  // ponto médio entre os vizinhos (ou topo+1 / fundo-1 nas pontas).
-  const handleCardDrop = useCallback((e: DragEvent, targetItem: PipelineItem, targetStageId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!draggedItem || draggedItem.id === targetItem.id) {
-      finishDrag();
-      return;
-    }
-    const where = dragOverPosRef.current;
-    const targetStage = stages.find(s => s.id === targetStageId);
-    if (!targetStage) {
+    const destino = alvoRef.current;
+    const targetStage = destino ? stages.find(s => s.id === destino.stageId) : undefined;
+    if (!destino || !targetStage) {
       finishDrag();
       return;
     }
     const arr = (targetStage.items || []).filter(i => i.id !== draggedItem.id);
-    const at = arr.findIndex(i => i.id === targetItem.id);
-    if (at < 0) {
-      finishDrag();
-      return;
-    }
-    const insertIdx = where === 'above' ? at : at + 1;
-    const above = arr[insertIdx - 1];
-    const below = arr[insertIdx];
+    const above = arr[destino.indice - 1];
+    const below = arr[destino.indice];
     let newPos: number;
-    if (!above) newPos = itemPos(below) + 1;
+    if (!above && !below) newPos = Date.now() / 1000;
+    else if (!above) newPos = itemPos(below) + 1;
     else if (!below) newPos = abaixoDoUltimo(targetStage, above);
     else newPos = (itemPos(above) + itemPos(below)) / 2;
-    void commitReorder(targetStageId, newPos, insertIdx);
+    void commitReorder(destino.stageId, newPos, destino.indice);
   }, [draggedItem, stages, commitReorder, finishDrag]);
 
+  // Drop na área da coluna, num card ou no esqueleto: todos caem no mesmo ponto.
+  const handleDrop = soltar;
+  const handleCardDrop = soltar;
+
+  // Marca acima/abaixo conforme a metade do card sob o cursor.
+  const handleCardDragOver = useCallback((e: DragEvent, item?: PipelineItem, stageId?: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!item || !stageId) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    marcarAlvo(stageId, { id: item.id, metade: e.clientY < rect.top + rect.height / 2 ? 'above' : 'below' });
+  }, [marcarAlvo]);
+
+  // Esc ou soltou fora do quadro: o dragend chega sem drop. Tudo volta ao normal.
   const handleDragEnd = useCallback(() => {
     isDraggingRef.current = false;
     suppressClickUntilRef.current = Date.now() + 200;
     stopAutoScroll();
-  }, [stopAutoScroll]);
+    limparEsqueleto();
+  }, [stopAutoScroll, limparEsqueleto]);
 
   // Garante que o auto-scroll do drag pare se o quadro desmontar no meio.
-  useEffect(() => stopAutoScroll, [stopAutoScroll]);
+  useEffect(() => () => {
+    stopAutoScroll();
+    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+  }, [stopAutoScroll]);
 
   return {
     boardScrollRef,
@@ -332,5 +378,7 @@ export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, po
     handleCardDragOver,
     handleCardDrop,
     handleDragEnd,
+    arraste,
+    alvo,
   };
 }
