@@ -54,10 +54,10 @@
     }
   },
   "form": {
-    "basicInfo": "Informações Básicas",
+    "basicInfo": "Informações básicas",
     "name": {
-      "label": "Nome da Equipe *",
-      "placeholder": "Ex: Atendimento VIP, Suporte Técnico...",
+      "label": "Nome da equipe",
+      "placeholder": "Ex.: Atendimento VIP, Suporte técnico",
       "required": "Nome da equipe é obrigatório",
       "minLength": "Nome deve ter pelo menos 2 caracteres"
     },
@@ -69,18 +69,18 @@
     },
     "configuration": "Configurações",
     "autoAssign": {
-      "label": "Auto-atribuição de conversas",
+      "label": "Atribuição automática de conversas",
       "description": "Permite que conversas sejam automaticamente atribuídas aos membros desta equipe"
     },
     "actions": {
       "cancel": "Cancelar",
       "saving": "Salvando...",
-      "create": "Criar Equipe",
+      "create": "Criar equipe",
       "save": "Salvar"
     }
   },
   "modal": {
-    "create": "Criar Nova Equipe",
+    "create": "Criar nova equipe",
     "edit": "Editar {{name}}"
   },
   "header": {

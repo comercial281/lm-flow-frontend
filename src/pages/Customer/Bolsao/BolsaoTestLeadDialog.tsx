@@ -9,13 +9,14 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-  Label,
 } from '@/components/ui/ds';
 import { FlaskConical, Loader2, Wand2 } from 'lucide-react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import bolsaoService from '@/services/bolsao/bolsaoService';
 import { useAuth } from '@/contexts/AuthContext';
 import { PhoneInput } from '@/components/shared/PhoneInput';
+import Aviso from '@/components/base/Aviso';
+import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 
 const SAMPLE = {
   name: 'Lead de Teste',
@@ -74,67 +75,58 @@ export default function BolsaoTestLeadDialog({ open, onOpenChange, onCreated }: 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="test-phone">Telefone com DDD *</Label>
-            <PhoneInput
-              id="test-phone"
-              className="mt-1"
-              placeholder="(11) 98888-7777"
-              value={form.phone_number}
-              onChange={phone_number => setForm(f => ({ ...f, phone_number }))}
-            />
-            {/* Número inventado é o número de alguém de verdade — o teste terminaria
-                com um estranho recebendo mensagem de corretor. */}
-            <p className="text-xs text-muted-foreground mt-1">
-              Use o <strong>seu</strong> número. Quem puxar esse lead vai mandar mensagem para ele de
-              verdade.
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="test-name">Nome</Label>
+        <GrupoDaJanela titulo="Dados do lead">
+          <GradeDaJanela>
+            <CampoDaJanela rotulo="Telefone com DDD" htmlFor="test-phone" obrigatorio colunas={4}>
+              <PhoneInput
+                id="test-phone"
+                placeholder="(11) 98888-7777"
+                value={form.phone_number}
+                onChange={phone_number => setForm(f => ({ ...f, phone_number }))}
+              />
+              {/* Número inventado é o número de alguém de verdade — o teste terminaria
+                  com um estranho recebendo mensagem de corretor. */}
+              <Aviso tom="atencao" compacto>
+                Use o <strong>seu</strong> número. Quem puxar esse lead vai mandar mensagem para ele de
+                verdade.
+              </Aviso>
+            </CampoDaJanela>
+            <CampoDaJanela rotulo="Nome" htmlFor="test-name" colunas={2}>
               <Input
                 id="test-name"
-                className="mt-1"
                 placeholder={SAMPLE.name}
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               />
-            </div>
-            <div>
-              <Label htmlFor="test-city">Cidade</Label>
+            </CampoDaJanela>
+            <CampoDaJanela rotulo="Cidade" htmlFor="test-city" colunas={2}>
               <Input
                 id="test-city"
-                className="mt-1"
                 placeholder={SAMPLE.city}
                 value={form.city}
                 onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
               />
-            </div>
-          </div>
-
+            </CampoDaJanela>
+            <CampoDaJanela rotulo="Interesse" htmlFor="test-interest" colunas={4}>
+              <Input
+                id="test-interest"
+                placeholder={SAMPLE.interest}
+                value={form.interest}
+                onChange={e => setForm(f => ({ ...f, interest: e.target.value }))}
+              />
+            </CampoDaJanela>
+          </GradeDaJanela>
           <div>
-            <Label htmlFor="test-interest">Interesse</Label>
-            <Input
-              id="test-interest"
-              className="mt-1"
-              placeholder={SAMPLE.interest}
-              value={form.interest}
-              onChange={e => setForm(f => ({ ...f, interest: e.target.value }))}
-            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setForm(f => ({ ...f, ...SAMPLE }))}
+            >
+              <Wand2 className="h-4 w-4 mr-2" /> Preencher com exemplo
+            </Button>
           </div>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setForm(f => ({ ...f, ...SAMPLE }))}
-          >
-            <Wand2 className="h-4 w-4 mr-2" /> Preencher com exemplo
-          </Button>
-        </div>
+        </GrupoDaJanela>
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>

@@ -4,6 +4,8 @@ import {
   Button, Input, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/ds';
 import { usersService } from '@/services/users';
+import Aviso from '@/components/base/Aviso';
+import { CampoDaJanela, CaixaDaJanela, ESCOLHA, GrupoDaJanela } from '@/components/base/janela';
 import { plural } from '@/lib/formato';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -162,14 +164,16 @@ export default function BulkAddPeople({ open, roles, members, onClose, onDone }:
               {lines.length > data.invited.length ? ` de ${plural(lines.length, 'enviada', 'enviadas')}` : ''}.
             </DialogDescription>
           </DialogHeader>
-          <ul className="divide-y divide-border rounded-lg border border-border text-sm">
-            {lines.map(l => (
-              <li key={l.key} className="flex flex-wrap justify-between gap-2 px-3 py-2">
-                <span className="font-medium">{l.who}</span>
-                <span className={l.bad ? 'text-destructive' : 'text-muted-foreground'}>{l.text}</span>
-              </li>
-            ))}
-          </ul>
+          <CaixaDaJanela titulo="Pessoas" contagem={lines.length}>
+            <ul className="divide-y divide-border text-sm">
+              {lines.map(l => (
+                <li key={l.key} className="flex flex-wrap justify-between gap-2 py-2">
+                  <span className="font-medium">{l.who}</span>
+                  <span className={l.bad ? 'text-destructive' : 'text-muted-foreground'}>{l.text}</span>
+                </li>
+              ))}
+            </ul>
+          </CaixaDaJanela>
           <DialogFooter><Button onClick={close}>Concluir</Button></DialogFooter>
         </DialogContent>
       </Dialog>
@@ -186,31 +190,33 @@ export default function BulkAddPeople({ open, roles, members, onClose, onDone }:
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-2">
-          <label htmlFor="bulk-paste" className="text-xs font-medium">Colar da planilha</label>
-          <textarea
-            id="bulk-paste"
-            value={pasted}
-            onChange={e => setPasted(e.target.value)}
-            placeholder={'Nome;E-mail;Celular\nAna Souza;ana@x.com;11 94087-1974'}
-            rows={3}
-            className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-          />
-          <div className="flex items-center gap-3">
+        <GrupoDaJanela titulo="Colar da planilha">
+          <CampoDaJanela rotulo="Linhas da planilha" htmlFor="bulk-paste" ajuda="Nome, e-mail e celular, nessa ordem.">
+            <textarea
+              id="bulk-paste"
+              value={pasted}
+              onChange={e => setPasted(e.target.value)}
+              placeholder={'Nome;E-mail;Celular\nAna Souza;ana@x.com;11 94087-1974'}
+              rows={3}
+              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+            />
+          </CampoDaJanela>
+          <div>
             <Button type="button" variant="outline" size="sm" onClick={addPasted} disabled={!pasted.trim()}>
               Adicionar as linhas coladas
             </Button>
-            <span className="text-xs text-muted-foreground">Nome, e-mail e celular, nessa ordem.</span>
           </div>
           {parseErrors.length > 0 && (
-            <ul className="space-y-0.5 text-xs text-destructive" role="alert">
-              {parseErrors.map(e => <li key={e.line}>{e.message}</li>)}
-            </ul>
+            <Aviso tom="erro">
+              <ul className="space-y-0.5">
+                {parseErrors.map(e => <li key={e.line}>{e.message}</li>)}
+              </ul>
+            </Aviso>
           )}
-        </div>
+        </GrupoDaJanela>
 
-        <div className="space-y-1.5">
-          <div className="grid grid-cols-[1fr_1.2fr_0.9fr_2rem] gap-2 text-xs text-muted-foreground">
+        <GrupoDaJanela titulo="Pessoas">
+          <div className="grid grid-cols-[1fr_1.2fr_0.9fr_2rem] gap-2 text-[13px] font-medium text-foreground/80">
             <span>Nome</span><span>E-mail</span><span>Celular</span><span />
           </div>
           {rows.map((r, i) => {
@@ -232,34 +238,36 @@ export default function BulkAddPeople({ open, roles, members, onClose, onDone }:
               </div>
             );
           })}
-          <Button type="button" variant="ghost" size="sm" className="gap-1" onClick={() => setRows(rs => [...rs, emptyRow(nextId.current++)])}>
-            <Plus className="h-3.5 w-3.5" /> Adicionar linha
-          </Button>
-        </div>
+          <div>
+            <Button type="button" variant="ghost" size="sm" className="gap-1" onClick={() => setRows(rs => [...rs, emptyRow(nextId.current++)])}>
+              <Plus className="h-3.5 w-3.5" /> Adicionar linha
+            </Button>
+          </div>
+        </GrupoDaJanela>
 
-        <div className="space-y-1.5">
-          <span className="text-xs font-medium">Cargo de todas</span>
-          <div className="grid gap-2 sm:grid-cols-2">
+        <GrupoDaJanela titulo="Cargo de todas">
+          <div className="grid gap-3 sm:grid-cols-2">
             {cargoOptions.map(o => {
               const selected = selectedCargo?.key === o.key;
               return (
-                <button
+                <Button
                   key={o.key}
                   type="button"
+                  variant="outline"
                   aria-pressed={selected}
                   onClick={() => setCargoKey(o.key)}
-                  className={`rounded-lg border p-2 text-left text-sm transition-colors ${selected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                  className={`h-auto flex-col items-start justify-start whitespace-normal p-3 text-left text-sm ${ESCOLHA}`}
                 >
                   <span className="block font-medium">{o.label}</span>
-                  {o.description && <span className="block text-xs text-muted-foreground">{o.description}</span>}
-                </button>
+                  {o.description && <span className="block text-xs font-normal text-muted-foreground">{o.description}</span>}
+                </Button>
               );
             })}
           </div>
-        </div>
+        </GrupoDaJanela>
 
-        {failure && <p role="alert" className="text-sm text-destructive">{failure}</p>}
-        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+        {failure && <Aviso tom="erro">{failure}</Aviso>}
+        {hint && <Aviso tom="info">{hint}</Aviso>}
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={close} disabled={saving}>Cancelar</Button>
