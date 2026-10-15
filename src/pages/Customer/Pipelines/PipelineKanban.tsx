@@ -169,6 +169,7 @@ export default function PipelineKanban() {
     boardScrollRef, isDraggingRef, suppressClickUntilRef,
     handleBoardDragOver, handleBoardMouseDown, handleBoardWheel,
     handleDragStart, handleDragOver, handleDrop, handleCardDragOver, handleCardDrop, handleDragEnd,
+    arraste, alvo,
   } = useBoardDrag({
     pipelineId, stages, setStages: setStagesLocal, mensagemDeErro: t('kanban.messages.itemMoveError'), podeArrastar: podeArrastarCard,
     aoGanhar: aoGanharNoQuadro,
@@ -944,6 +945,8 @@ export default function PipelineKanban() {
                   onCardDragEnd={handleDragEnd}
                   onCardDragOver={handleCardDragOver}
                   onCardDrop={handleCardDrop}
+                  arrastandoId={arraste?.id ?? null}
+                  esqueleto={arraste && alvo?.stageId === stage.id ? { indice: alvo.indice, altura: arraste.altura } : null}
                   onOpenItem={handleEditItem}
                   onArchive={handleArchiveItem}
                   onRemove={handleRemoveItem}

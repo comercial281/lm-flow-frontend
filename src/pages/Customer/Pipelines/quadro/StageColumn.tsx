@@ -2,7 +2,7 @@
 // Uma coluna (etapa) do quadro do funil: cabeçalho com nome, contagem, valor e
 // menu da etapa, e a lista de cards que recebe o arraste. Saiu do
 // PipelineKanban.tsx sem mudar comportamento (spec funil §4.5).
-import { useCallback, useEffect, useRef, type DragEvent, type MutableRefObject } from 'react';
+import { Fragment, useCallback, useEffect, useRef, type DragEvent, type MutableRefObject } from 'react';
 import { toast } from 'sonner';
 import { Copy, Edit, Trash2 } from 'lucide-react';
 import {
@@ -14,6 +14,7 @@ import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import Aviso from '@/components/base/Aviso';
 import Carregando from '@/components/base/Carregando';
+import { Skeleton } from '@/components/ui/ds';
 // Card do board, sempre visível de cara — import estático de propósito.
 import PipelineItemCard from '../PipelineItemCard';
 import { calculateStageTotal } from '../pipelineItemHelpers';
@@ -24,11 +25,15 @@ export interface StageColumnProps {
   visitsByContact: Record<string, string>;
   isDraggingRef: MutableRefObject<boolean>;
   suppressClickUntilRef: MutableRefObject<number>;
-  onDragOver: (e: DragEvent) => void;
+  onDragOver: (e: DragEvent, stageId: string) => void;
   onDrop: (e: DragEvent, stageId: string) => void;
-  onCardDragStart: (item: PipelineItem) => void;
+  onCardDragStart: (item: PipelineItem, altura?: number) => void;
   onCardDragEnd: () => void;
-  onCardDragOver: (e: DragEvent) => void;
+  onCardDragOver: (e: DragEvent, item: PipelineItem, stageId: string) => void;
+  /** Card pego agora (fica só o contorno no lugar dele). */
+  arrastandoId: string | null;
+  /** Onde o card pego cai nesta coluna (índice sem ele) e a altura dele; null = não cai aqui. */
+  esqueleto: { indice: number; altura: number } | null;
   onCardDrop: (e: DragEvent, item: PipelineItem, stageId: string) => void;
   onOpenItem: (item: PipelineItem) => void;
   onArchive: (item: PipelineItem) => void;
@@ -49,7 +54,7 @@ export interface StageColumnProps {
 
 export default function StageColumn({
   stage, destacada, visitsByContact, isDraggingRef, suppressClickUntilRef, onDragOver, onDrop,
-  onCardDragStart, onCardDragEnd, onCardDragOver, onCardDrop, onOpenItem, onArchive, onRemove,
+  onCardDragStart, onCardDragEnd, onCardDragOver, onCardDrop, arrastandoId, esqueleto, onOpenItem, onArchive, onRemove,
   podeArrastar, arquivado, onUnarchive, onOpenConversation, openingConversation, onEditStage, onDeleteStage,
   carregandoMais, erroAoCarregarMais, onCarregarMais,
 }: StageColumnProps) {
@@ -61,6 +66,14 @@ export default function StageColumn({
   const temMais = carregados < naColuna;
   const rolagemRef = useRef<HTMLDivElement>(null);
   const PERTO_DO_FIM = 160;
+  // O esqueleto entra antes do card que hoje ocupa o índice de queda (sem contar
+  // o card pego); índice no fim = depois de todos.
+  const itens = stage.items || [];
+  const semArrastado = arrastandoId ? itens.filter(i => i.id !== arrastandoId) : itens;
+  const esqueletoAntesDe = esqueleto ? semArrastado[esqueleto.indice]?.id ?? null : undefined;
+  const desenharEsqueleto = esqueleto
+    ? <EsqueletoDoCard altura={esqueleto.altura} onDrop={e => onDrop(e, stage.id)} />
+    : null;
 
   const conferirFim = useCallback(() => {
     const el = rolagemRef.current;
@@ -139,12 +152,13 @@ export default function StageColumn({
           ref={rolagemRef}
           onScroll={conferirFim}
           className="flex-1 overflow-y-auto p-4 space-y-3"
-          onDragOver={onDragOver}
+          onDragOver={e => onDragOver(e, stage.id)}
           onDrop={e => onDrop(e, stage.id)}
         >
-          {(stage.items || []).map(item => (
+          {itens.map(item => (
+            <Fragment key={item.id}>
+            {esqueletoAntesDe === item.id && desenharEsqueleto}
             <PipelineItemCard
-              key={item.id}
               item={item}
               stageId={stage.id}
               visitsByContact={visitsByContact}
@@ -162,8 +176,11 @@ export default function StageColumn({
               onUnarchive={onUnarchive}
               onOpenConversation={onOpenConversation}
               openingConversation={openingConversation}
+              arrastando={arrastandoId === item.id}
             />
+            </Fragment>
           ))}
+          {esqueletoAntesDe === null && desenharEsqueleto}
 
           {carregandoMais && <Carregando variante="lista" linhas={2} rotulo="Carregando mais leads…" />}
           {erroAoCarregarMais && (
@@ -178,6 +195,29 @@ export default function StageColumn({
               <div className="text-sm">{t('kanban.stage.noConversations')}</div>
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Onde o card pego vai cair: um card cinza do mesmo tamanho. Segura o dragover
+// (senão a coluna recalcula o ponto por baixo dele) e aceita o drop no lugar.
+function EsqueletoDoCard({ altura, onDrop }: { altura: number; onDrop: (e: DragEvent) => void }) {
+  return (
+    <div
+      data-esqueleto-do-card
+      aria-hidden="true"
+      style={{ height: altura }}
+      className="rounded-xl border border-primary/30 bg-background/70 p-3 shadow-sm"
+      onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+      onDrop={onDrop}
+    >
+      <div className="flex items-start gap-2">
+        <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+        <div className="flex-1 space-y-2 pt-1">
+          <Skeleton className="h-3 w-1/3" />
+          <Skeleton className="h-4 w-2/3" />
         </div>
       </div>
     </div>

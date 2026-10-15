@@ -2,11 +2,13 @@
 export const ROTA_CONVERSAS = /^\/conversations(\/|$)/;
 
 /**
- * Rotas em que o menu nasce recolhido: Conversas e o cadastro de imóvel
+ * Rotas em que o menu nasce recolhido: Conversas, o cadastro de imóvel
  * (/properties/new e /properties/:id/editar), que precisa da largura para o
- * índice e as seções. Mesma regra: a escolha vale só para a visita.
+ * índice e as seções, e o funil aberto (/pipelines/:id e o card completo), que
+ * precisa da largura para as colunas. A lista de funis (/pipelines) não recolhe.
+ * Mesma regra: a escolha vale só para a visita.
  */
-export const ROTA_RECOLHE_MENU = /^\/(conversations|properties\/new|properties\/[^/]+\/editar)(\/|$)/;
+export const ROTA_RECOLHE_MENU = /^\/(conversations|properties\/new|properties\/[^/]+\/editar|pipelines\/[^/]+)(\/|$)/;
 
 interface EntradaMenuRecolhido {
   /** Preferência salva da pessoa (localStorage). */

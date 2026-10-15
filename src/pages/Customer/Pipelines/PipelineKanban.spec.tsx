@@ -418,6 +418,38 @@ describe('quadro do funil · o que continua igual', () => {
     expect(within(document.getElementById('etapa-s2')!).getByText('Maria Souza')).toBeInTheDocument();
   });
 
+  it('arrastando: o lugar de origem vira contorno e a coluna sob o cursor mostra o esqueleto; Esc tira os dois', async () => {
+    montar();
+    await screen.findByText('Maria Souza');
+    const maria = cardDe('Maria Souza');
+    fireEvent.dragStart(maria);
+    fireEvent.dragOver(colunaDe('s2'));
+    await waitFor(() => expect(maria.className).toContain('border-dashed'));
+    expect(document.getElementById('etapa-s2')!.querySelector('[data-esqueleto-do-card]')).not.toBeNull();
+    expect(document.getElementById('etapa-s1')!.querySelector('[data-esqueleto-do-card]')).toBeNull();
+    fireEvent.dragEnd(maria);
+    await waitFor(() => expect(document.querySelector('[data-esqueleto-do-card]')).toBeNull());
+    expect(cardDe('Maria Souza').className).not.toContain('border-dashed');
+    expect(pipelinesService.reorderItem).not.toHaveBeenCalled();
+  });
+
+  it('soltar no esqueleto grava no ponto que ele mostrava', async () => {
+    montar();
+    await screen.findByText('Maria Souza');
+    fireEvent.dragStart(cardDe('Maria Souza'));
+    fireEvent.dragOver(colunaDe('s2'));
+    const esqueleto = await waitFor(() => {
+      const el = document.getElementById('etapa-s2')!.querySelector('[data-esqueleto-do-card]');
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+    fireEvent.drop(esqueleto);
+    await waitFor(() =>
+      expect(pipelinesService.reorderItem).toHaveBeenCalledWith('p1', 'i1', expect.objectContaining({ new_stage_id: 's2' })),
+    );
+    expect(document.querySelector('[data-esqueleto-do-card]')).toBeNull();
+  });
+
   it('arrastar card que outra guia fechou: volta e mostra a frase do servidor', async () => {
     vi.mocked(pipelinesService.reorderItem).mockRejectedValueOnce({
       response: { data: { success: false, error: { code: 'BUSINESS_RULE_VIOLATION', message: 'Lead fechado não muda de etapa. Reabra para mexer.' } } },
