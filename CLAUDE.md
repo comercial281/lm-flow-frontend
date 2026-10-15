@@ -8923,5 +8923,17 @@ Pedido do dono, "por enquanto". A barra do topo fica só com Área do Admin, Pla
 
 - **Busca:** a barra "Buscar... Ctrl K" (computador) e a lupa (celular) saíram. O **Ctrl+K continua** abrindo a busca (o atalho mora no `MainLayout`, não no `Header`).
 - **? do tour:** saiu do topo e do menu do celular. O tour automático da primeira visita segue igual; o que se perde é rever o tour de uma página já vista. Se fizer falta, o caminho proposto é um "Ver tour desta página" no menu do perfil (o `TourFab` continua no código).
-- **Tema e modo demo (olhinho):** foram pro rodapé do menu lateral, depois de "Falar com o suporte". Menu aberto: lado a lado. Recolhido: um embaixo do outro, no centro. No celular continuam no menu hambúrguer.
+- **Tema e modo demo (olhinho):** foram pro rodapé do menu lateral (ver "Rodapé do menu em ícones", abaixo).
 - Área do Admin (`AdminLayout`) e Área de Membros têm topo próprio e não mudaram.
+
+### Rodapé do menu em ícones (15/10/2026)
+
+Pedido do dono, depois de ver o tema e o olhinho "soltos" embaixo do suporte. O rodapé do menu virou **uma fileira de ícones**, com um tracinho no meio separando as duas famílias: o que leva pra outro lugar (**Guia do LM Flow**, **Falar com o suporte**) | o que muda a tela (**Tema**, **Modo demo**).
+
+- O nome aparece ao passar o mouse. O estado aparece sem passar: o tema mostra lua no claro e sol no escuro (o nome diz o que o clique faz: "Tema escuro"/"Tema claro"); o modo demo ligado vira olho riscado em roxo ("Modo demo: ligado (dados borrados)").
+- O Guia fica roxo quando a tela aberta é ele, como os itens do menu.
+- Menu recolhido: os quatro empilhados, com o tracinho deitado entre os pares. No celular, a mesma fileira dentro do menu hambúrguer (no lugar do Guia em linha e dos dois botões soltos).
+- Conta sem o Guia liberado: três ícones.
+- Peça única: `layout/components/RodapeDoMenu.tsx` (com spec), usada pelo `Sidebar` e pelo `Header` (celular). O endereço do suporte mora nela e continua exportado pelo `Sidebar` (o chat de suporte importa de lá).
+- Não usa o `ThemeToggle`/`DemoModeToggle` (que seguem na Área do Admin e na Área de Membros): desenha os próprios botões com `useDarkMode`/`useDemoMode`. Teste que monta o `Sidebar` precisa simular esses dois hooks (o `Sidebar.spec` faz isso).
+- Decisões do dono: quatro ícones (não linhas com nome) e um tracinho só, no meio. Não reabrir sem ele pedir.
