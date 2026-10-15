@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { ActionEditor } from './LeadAutomationsEditors';
+import { fireEvent } from '@testing-library/react';
+import { ActionEditor, formatActionSummary } from './LeadAutomationsEditors';
 
 const svc = vi.hoisted(() => ({ getGroupsResult: vi.fn() }));
 vi.mock('@/services/leadAutomation/leadAutomationService', async importOriginal => {
@@ -46,5 +47,40 @@ describe('Avisar no grupo, na tela do cliente', () => {
     render(<ActionEditor action={acao({ instance: 'Operacional (LM01)' })} onChange={() => {}} resources={resources} />);
 
     await waitFor(() => expect(screen.getByText('Nenhum grupo liberado pra este CRM. Fale com a Leal Mídia.')).toBeInTheDocument());
+  });
+
+  it('trocar o número zera o destino na mesma gravação e não trava nada', async () => {
+    svc.getGroupsResult.mockResolvedValue({ groups: [{ id: '1@g.us', name: 'Meu grupo' }], reason: null, instance: null });
+    const onChange = vi.fn();
+    render(<ActionEditor action={acao({ group_jid: '1@g.us' })} onChange={onChange} resources={resources} />);
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Meu grupo' })).toBeInTheDocument());
+
+    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'central' } });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0].params).toMatchObject({ instance: 'Operacional (LM01)', group_jid: '' });
+    expect(screen.queryByRole('option', { name: 'Grupo definido pela Leal Mídia' })).toBeNull();
+  });
+
+  it('erro ao carregar os grupos não trava o destino salvo', async () => {
+    svc.getGroupsResult.mockRejectedValue(new Error('rede'));
+    render(<ActionEditor action={acao({ group_jid: '8@g.us' })} onChange={() => {}} resources={resources} />);
+
+    await waitFor(() => expect(screen.getByText(/Não foi possível carregar os grupos/)).toBeInTheDocument());
+    expect(screen.queryByText(/definido pela Leal Mídia\. Pra trocar/)).toBeNull();
+    screen.getAllByRole('combobox').forEach(c => expect(c).not.toBeDisabled());
+  });
+
+  it('equipe sem lista de números mantém o campo livre', async () => {
+    equipe.valor = true;
+    svc.getGroupsResult.mockResolvedValue({ groups: [], reason: null, instance: null });
+    render(<ActionEditor action={acao({ instance: 'Outra' })} onChange={() => {}} resources={resources} />);
+
+    expect(screen.getByPlaceholderText('Operacional (LM01)')).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Central da Leal Mídia' })).toBeNull();
+  });
+
+  it('o resumo da ação não mostra o JID do grupo', () => {
+    expect(formatActionSummary(acao({ group_jid: '8@g.us' }), resources)).toBe('Grupo escolhido');
+    expect(formatActionSummary(acao({}), resources)).toBe('(sem grupo)');
   });
 });

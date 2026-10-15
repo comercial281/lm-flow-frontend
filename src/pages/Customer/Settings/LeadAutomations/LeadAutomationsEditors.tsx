@@ -744,7 +744,9 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
 
   // Grupos de WhatsApp pro dropdown do "Notificar grupo" (carrega da instância escolhida).
   const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
-  const [loadingGroups, setLoadingGroups] = useState(false);
+  const [loadingGroups, setLoadingGroups] = useState(action.type === 'notify_group');
+  // true só depois de uma carga bem-sucedida: erro de rede não pode travar destino salvo.
+  const [gruposCarregados, setGruposCarregados] = useState(false);
   // Por que a lista veio vazia (instância errada, fora do ar, sem grupo). Sem
   // isso o seletor só ficava sem opção, e não dava pra saber o que consertar.
   const [groupsReason, setGroupsReason] = useState<string | null>(null);
@@ -753,9 +755,10 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     if (action.type !== 'notify_group') return;
     let cancelled = false;
     setLoadingGroups(true);
+    setGruposCarregados(false);
     leadAutomationService
       .getGroupsResult(instanceParam || undefined)
-      .then(r => { if (!cancelled) { setGroups(r.groups); setGroupsReason(r.reason); } })
+      .then(r => { if (!cancelled) { setGroups(r.groups); setGroupsReason(r.reason); setGruposCarregados(true); } })
       .catch(() => {
         if (!cancelled) {
           setGroups([]);
@@ -1094,7 +1097,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
       const destino = String(params.group_jid ?? '');
       // Destino que o cliente não enxerga (ex.: grupo interno escolhido pela Leal) fica travado.
       const travado = destinoTravado({
-        destino, grupos: groups, ehEquipe: isSuperAdmin, carregando: loadingGroups,
+        destino, grupos: groups, ehEquipe: isSuperAdmin, carregando: loadingGroups || !gruposCarregados,
         numerosDeUsuarios: usersWithWhatsapp.map(u => String(u.whatsapp_number)),
       });
       return (
@@ -1109,7 +1112,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               ? 'De qual WhatsApp sai o aviso — e de onde os grupos são listados. Para grupo de cliente use a central Operacional (LM01).'
               : 'De qual WhatsApp sai o aviso. Na central da Leal Mídia aparecem só os grupos liberados pra este CRM.'}
           >
-            {resources.evolutionInstances.length > 0 ? (
+            {isSuperAdmin ? (resources.evolutionInstances.length > 0 ? (
               <Seletor
                 value={String(params.instance ?? '')}
                 onChange={e => setParam('instance', e.target.value)}
@@ -1131,9 +1134,20 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
                 )}
               </Seletor>
             ) : (
+              <Input
+                value={String(params.instance ?? '')}
+                onChange={e => setParam('instance', e.target.value)}
+                placeholder="Operacional (LM01)"
+                className="mt-1"
+              />
+            )) : (
               <Seletor
                 value={modoDoNumero(params.instance)}
-                onChange={e => setParam('instance', instanciaDoModo(e.target.value as ModoDoNumero))}
+                onChange={e => onChange({
+                  ...action,
+                  // troca de número zera o destino na mesma gravação (senão o grupo antigo trava)
+                  params: { ...params, instance: instanciaDoModo(e.target.value as ModoDoNumero), group_jid: '' },
+                })}
                 disabled={travado}
                 className={baseSelectClass}
               >
@@ -1609,7 +1623,7 @@ export function formatActionSummary(
     case 'create_task':
       return p.title ? `Tarefa: ${p.title}` : '(tarefa sem título)';
     case 'notify_group':
-      return p.group_jid ? `Grupo: ${String(p.group_jid).slice(0, 30)}…` : '(sem grupo)';
+      return p.group_jid ? 'Grupo escolhido' : '(sem grupo)';
     case 'notify_user': {
       const u = resources.users.find(x => x.id === p.user_id);
       return u ? `Avisar: ${u.name}` : 'Avisar usuário: (não definido)';
