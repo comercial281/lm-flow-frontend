@@ -36,7 +36,7 @@
     "title": "Alterar Senha",
     "description": "Mantenha sua conta segura com uma senha forte",
     "fields": {
-      "currentPassword": "Senha Atual",
+      "currentPassword": "Senha atual",
       "newPassword": "Nova Senha",
       "confirmPassword": "Confirmar Senha",
       "currentPlaceholder": "Digite sua senha atual",
@@ -174,22 +174,29 @@
       "pending": "Configuração pendente"
     },
     "methods": {
-      "totp": "App Autenticador",
-      "email": "Email"
+      "totp": "Aplicativo autenticador",
+      "email": "E-mail"
+    },
+    "groups": {
+      "method": "Método",
+      "qr": "Código QR",
+      "manual": "Sem câmera",
+      "verify": "Confirmação",
+      "backup": "Seus códigos"
     },
     "setup": {
-      "title": "Ativar Autenticação de Dois Fatores",
+      "title": "Ativar autenticação de dois fatores",
       "description": "Escolha o método de autenticação e confirme sua senha para continuar.",
-      "methodSelection": "Método de Autenticação",
+      "methodSelection": "Método de autenticação",
       "totp": {
-        "title": "Aplicativo Autenticador",
-        "description": "Use um app como Google Authenticator ou Authy"
+        "title": "Aplicativo autenticador",
+        "description": "Use um aplicativo como Google Authenticator ou Authy"
       },
       "email": {
-        "title": "Email",
-        "description": "Receba códigos de verificação por email"
+        "title": "E-mail",
+        "description": "Receba códigos de verificação por e-mail"
       },
-      "currentPassword": "Senha Atual",
+      "currentPassword": "Senha atual",
       "currentPasswordPlaceholder": "Digite sua senha atual",
       "actions": {
         "cancel": "Cancelar",
@@ -198,24 +205,24 @@
       }
     },
     "configure": {
-      "title": "Configure seu Aplicativo Autenticador",
-      "description": "Escaneie o QR code abaixo com seu aplicativo autenticador ou insira a chave manualmente.",
-      "qrCodeLoading": "Gerando QR Code...",
+      "title": "Configure seu aplicativo autenticador",
+      "description": "Escaneie o código QR abaixo com seu aplicativo autenticador ou insira a chave manualmente.",
+      "qrCodeLoading": "Gerando o código QR...",
       "qrCodeError": "Se o problema persistir, use a chave manual abaixo",
-      "manualKey": "Chave Manual",
-      "manualKeyDescription": "Use esta chave se não conseguir escanear o QR code",
+      "manualKey": "Chave manual",
+      "manualKeyDescription": "Use esta chave se não conseguir escanear o código QR",
       "actions": {
         "cancel": "Cancelar",
-        "configured": "Já Configurei"
+        "configured": "Já configurei"
       }
     },
     "verify": {
-      "title": "Verificar Configuração",
+      "title": "Verificar configuração",
       "descriptionTotp": "Digite o código de 6 dígitos do seu aplicativo autenticador.",
-      "descriptionEmail": "Digite o código de 6 dígitos enviado para seu email.",
-      "codeLabel": "Código de Verificação",
+      "descriptionEmail": "Digite o código de 6 dígitos enviado para seu e-mail.",
+      "codeLabel": "Código de verificação",
       "codePlaceholder": "000000",
-      "resendEmail": "Reenviar Código",
+      "resendEmail": "Reenviar código",
       "actions": {
         "back": "Voltar",
         "verify": "Verificar",
@@ -227,14 +234,14 @@
       }
     },
     "backupCodes": {
-      "title": "Códigos de Backup",
+      "title": "Códigos de reserva",
       "description": "Guarde estes códigos em um local seguro. Cada código pode ser usado apenas uma vez para fazer login caso você perca acesso ao seu dispositivo.",
-      "warning": "Estes códigos não serão mostrados novamente. Certifique-se de salvá-los agora!",
-      "copyAll": "Copiar Todos os Códigos",
-      "complete": "Concluir Configuração",
+      "warning": "Estes códigos não serão mostrados de novo. Salve-os agora.",
+      "copyAll": "Copiar todos os códigos",
+      "complete": "Concluir configuração",
       "remaining": "{{count}} códigos restantes",
       "regenerate": "Regenerar",
-      "regenerated": "Novos códigos de backup gerados",
+      "regenerated": "Novos códigos de reserva gerados",
       "regenerateDescription": "Gerar novos códigos invalida os anteriores. Guarde os novos em lugar seguro."
     },
     "disable": {
@@ -252,15 +259,15 @@
     "notifications": {
       "enabled": "Autenticação de dois fatores ativada com sucesso!",
       "disabled": "Autenticação de dois fatores desativada",
-      "emailCodeSent": "Código de verificação enviado para seu email",
-      "emailCodeResent": "Novo código enviado para seu email",
+      "emailCodeSent": "Código de verificação enviado para seu e-mail",
+      "emailCodeResent": "Novo código enviado para seu e-mail",
       "emailCodeError": "Erro ao enviar código",
       "emailCodeRateLimit": "Por favor, aguarde antes de solicitar um novo código",
       "passwordRequired": "Por favor, insira sua senha",
       "passwordIncorrect": "Senha incorreta",
       "enableError": "Erro ao ativar autenticação de dois fatores",
       "disableError": "Erro ao desativar autenticação de dois fatores",
-      "backupCodesError": "Erro ao gerar novos códigos de backup"
+      "backupCodesError": "Erro ao gerar novos códigos de reserva"
     },
     "actions": {
       "enable": "Ativar Autenticação de Dois Fatores",
@@ -273,7 +280,8 @@
     "save": "Salvar"
   },
   "photoUploader": {
-    "changePhoto": "Alterar Foto",
+    "changePhoto": "Alterar foto",
+    "zoom": "Zoom",
     "removePhoto": "Remover",
     "uploading": "Carregando...",
     "fileTypeError": "Por favor, selecione apenas arquivos de imagem",
