@@ -9,10 +9,12 @@ import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import EtiquetasDeEscolha from '@/components/base/EtiquetasDeEscolha';
 import EscolhaComBusca from '@/components/base/EscolhaComBusca';
 import EmptyState from '@/components/base/EmptyState';
+import Aviso from '@/components/base/Aviso';
+import Carregando from '@/components/base/Carregando';
 import { listOptionsService, type ListOption } from '@/services/listOptions/listOptionsService';
 import { ROTULOS_DO_FILTRO_DE_TAREFAS } from '@/features/tarefas/filtroDoFunil';
 import { useCategoriasDeTarefa } from '@/features/tarefas/useCategoriasDeTarefa';
-import type { PipelineStage } from '@/types/analytics';
+import type { BoardFacets, PipelineStage } from '@/types/analytics';
 import { FILTROS_VAZIOS, type AbaDoQuadro, type FiltrosDoFunil, type TarefaDoFiltro } from './enderecoDoQuadro';
 import { motivoNaAba, opcoesDeOrigem, opcoesDeResponsavel } from './filtrosDoFunil';
 
@@ -40,6 +42,22 @@ const diaLocal = (d: Date) =>
 const escolhaDe = (largados: number | null): EscolhaDeLargados =>
   largados == null ? 'nenhum' : largados === 7 || largados === 14 || largados === 30 ? (String(largados) as EscolhaDeLargados) : 'outro';
 
+// Origem e Responsável vêm do servidor: carregando, erro (com Tentar de novo) ou vazio.
+function OpcoesDoServidor({ carregando, erro, aoTentarDeNovo, vazio, children }: {
+  carregando: boolean; erro: boolean; aoTentarDeNovo: () => void; vazio: boolean; children: ReactNode;
+}) {
+  if (erro) {
+    return (
+      <Aviso tom="erro" compacto acao={<Button variant="outline" size="sm" onClick={aoTentarDeNovo}>Tentar de novo</Button>}>
+        Não deu pra carregar as opções.
+      </Aviso>
+    );
+  }
+  if (carregando) return <Carregando variante="texto" linhas={2} rotulo="Carregando opções…" />;
+  if (vazio) return <EmptyState tamanho="compacto" title="Nenhum lead nesta aba." />;
+  return <>{children}</>;
+}
+
 function Secao({ id, titulo, children }: { id: string; titulo: string; children: ReactNode }) {
   return (
     <section aria-labelledby={id} className="space-y-2">
@@ -55,14 +73,18 @@ export interface PainelDeFiltrosDoFunilProps {
   aba: AbaDoQuadro;
   filtros: FiltrosDoFunil;
   aoFiltrar: (filtros: FiltrosDoFunil) => void;
-  /** Etapas do funil com os cards da aba (sem filtro): dão as opções de Origem e Responsável. */
+  /** Etapas do funil (dão Etapas e Colunas visíveis). */
   stages: PipelineStage[];
+  /** Opções de Origem e Responsável, do servidor (null enquanto carrega). */
+  facetas: BoardFacets | null;
+  erroDasFacetas: boolean;
+  aoTentarDeNovo: () => void;
   /** Etiquetas da conta (o catálogo inteiro, não só as que aparecem nos cards). */
   etiquetas: { name: string; color: string }[];
 }
 
 export default function PainelDeFiltrosDoFunil({
-  aberto, aoFechar, aba, filtros, aoFiltrar, stages, etiquetas,
+  aberto, aoFechar, aba, filtros, aoFiltrar, stages, facetas, erroDasFacetas, aoTentarDeNovo, etiquetas,
 }: PainelDeFiltrosDoFunilProps) {
   const [rascunho, setRascunho] = useState<FiltrosDoFunil>(filtros);
   const [largados, setLargados] = useState<EscolhaDeLargados>(escolhaDe(filtros.largados));
@@ -99,8 +121,8 @@ export default function PainelDeFiltrosDoFunil({
 
   const idsDasEtapas = useMemo(() => stages.map(s => String(s.id)), [stages]);
   const opcoesDeEtapa = useMemo(() => stages.map(s => ({ valor: String(s.id), rotulo: s.name })), [stages]);
-  const origens = useMemo(() => opcoesDeOrigem(stages), [stages]);
-  const responsaveis = useMemo(() => opcoesDeResponsavel(stages), [stages]);
+  const origens = useMemo(() => (facetas ? opcoesDeOrigem(facetas.origins) : []), [facetas]);
+  const responsaveis = useMemo(() => (facetas ? opcoesDeResponsavel(facetas) : []), [facetas]);
 
   const atalho = (diasAtras: number) => {
     const hoje = new Date();
@@ -158,15 +180,15 @@ export default function PainelDeFiltrosDoFunil({
           </Secao>
 
           <Secao id="filtro-origem" titulo="Origem">
-            {origens.length === 0
-              ? <EmptyState tamanho="compacto" title="Nenhum lead nesta aba." />
-              : <EtiquetasDeEscolha rotulo="Origem" opcoes={origens} escolhidas={rascunho.origens} aoMudar={v => mudar('origens', v)} />}
+            <OpcoesDoServidor carregando={!facetas} erro={erroDasFacetas} aoTentarDeNovo={aoTentarDeNovo} vazio={origens.length === 0}>
+              <EtiquetasDeEscolha rotulo="Origem" opcoes={origens} escolhidas={rascunho.origens} aoMudar={v => mudar('origens', v)} />
+            </OpcoesDoServidor>
           </Secao>
 
           <Secao id="filtro-resp" titulo="Responsável">
-            {responsaveis.length === 0
-              ? <EmptyState tamanho="compacto" title="Nenhum lead nesta aba." />
-              : <EtiquetasDeEscolha rotulo="Responsável" opcoes={responsaveis} escolhidas={rascunho.resp} aoMudar={v => mudar('resp', v)} />}
+            <OpcoesDoServidor carregando={!facetas} erro={erroDasFacetas} aoTentarDeNovo={aoTentarDeNovo} vazio={responsaveis.length === 0}>
+              <EtiquetasDeEscolha rotulo="Responsável" opcoes={responsaveis} escolhidas={rascunho.resp} aoMudar={v => mudar('resp', v)} />
+            </OpcoesDoServidor>
           </Secao>
 
           <Secao id="filtro-etiq" titulo="Etiquetas">

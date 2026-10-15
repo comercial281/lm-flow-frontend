@@ -3,11 +3,14 @@
 // §4.3): F5 mantém, link mandado abre igual, ?card= e ?etapa= passam intactos.
 // Trocar de aba entra no histórico (o Voltar volta de aba); filtro não. A busca
 // fica só na tela.
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { PipelineStage } from '@/types/analytics';
 import { FILTROS_VAZIOS, escreverNoEndereco, lerAba, lerFiltros, type AbaDoQuadro, type FiltrosDoFunil } from './enderecoDoQuadro';
-import { contarFiltros, filtrarEtapas } from './filtrosDoFunil';
+import { colunasVisiveis, contarFiltros } from './filtrosDoFunil';
+
+/** A busca só vai pro servidor depois que a pessoa para de digitar. */
+export const ESPERA_DA_BUSCA_MS = 400;
 
 export function usePipelineFilters(stages: PipelineStage[]) {
   const [params, setParams] = useSearchParams();
@@ -25,8 +28,17 @@ export function usePipelineFilters(stages: PipelineStage[]) {
 
   const limpar = useCallback(() => aplicar(FILTROS_VAZIOS), [aplicar]);
 
-  const filteredStages = useMemo(() => filtrarEtapas(stages, filtros, busca, aba), [stages, filtros, busca, aba]);
-  const totalVisivel = useMemo(() => filteredStages.reduce((n, s) => n + (s.items?.length ?? 0), 0), [filteredStages]);
+  const [buscaAplicada, setBuscaAplicada] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setBuscaAplicada(busca.trim()), ESPERA_DA_BUSCA_MS);
+    return () => clearTimeout(t);
+  }, [busca]);
+
+  const filteredStages = useMemo(() => colunasVisiveis(stages, filtros.colunas), [stages, filtros.colunas]);
+  const totalVisivel = useMemo(
+    () => filteredStages.reduce((n, s) => n + (s.items_total ?? s.items?.length ?? 0), 0),
+    [filteredStages],
+  );
 
   return {
     aba,
@@ -36,6 +48,7 @@ export function usePipelineFilters(stages: PipelineStage[]) {
     limpar,
     busca,
     setBusca,
+    buscaAplicada,
     filteredStages,
     totalVisivel,
     quantosFiltros: contarFiltros(filtros, aba),

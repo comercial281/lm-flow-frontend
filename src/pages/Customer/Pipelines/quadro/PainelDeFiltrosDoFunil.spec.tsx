@@ -1,26 +1,36 @@
 // src/pages/Customer/Pipelines/quadro/PainelDeFiltrosDoFunil.spec.tsx
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { listOptionsService } from '@/services/listOptions/listOptionsService';
-import type { PipelineStage } from '@/types/analytics';
+import type { BoardFacets, PipelineStage } from '@/types/analytics';
 import { FILTROS_VAZIOS, type AbaDoQuadro, type FiltrosDoFunil } from './enderecoDoQuadro';
 import PainelDeFiltrosDoFunil from './PainelDeFiltrosDoFunil';
 
 vi.mock('@/services/listOptions/listOptionsService', () => ({ listOptionsService: { list: vi.fn() } }));
 
 const STAGES = [
-  { id: 's1', name: 'Novo', items: [{ id: 'a', lead_origin: { source: 'meta_lead_ads' }, assignee: { id: 'u1', name: 'Ana' } }] },
-  { id: 's2', name: 'Proposta', items: [{ id: 'b' }] },
+  { id: 's1', name: 'Novo', items: [] },
+  { id: 's2', name: 'Proposta', items: [] },
 ] as unknown as PipelineStage[];
+
+const FACETAS: BoardFacets = { origins: ['meta_lead_ads'], assignees: [{ id: 'u1', name: 'Ana' }], unassigned: true };
+
+function Painel({ aba = 'abertos', filtros = FILTROS_VAZIOS, aoFiltrar = vi.fn(), aoFechar = vi.fn(), facetas = FACETAS, erroDasFacetas = false, aoTentarDeNovo = vi.fn() }: {
+  aba?: AbaDoQuadro; filtros?: FiltrosDoFunil; aoFiltrar?: () => void; aoFechar?: () => void;
+  facetas?: BoardFacets | null; erroDasFacetas?: boolean; aoTentarDeNovo?: () => void;
+}) {
+  return (
+    <PainelDeFiltrosDoFunil aberto aoFechar={aoFechar} aba={aba} filtros={filtros} aoFiltrar={aoFiltrar}
+      stages={STAGES} etiquetas={[{ name: 'Meta', color: '#000000' }]}
+      facetas={facetas} erroDasFacetas={erroDasFacetas} aoTentarDeNovo={aoTentarDeNovo} />
+  );
+}
 
 function abrir(aba: AbaDoQuadro = 'abertos', filtros: FiltrosDoFunil = FILTROS_VAZIOS) {
   const aoFiltrar = vi.fn();
   const aoFechar = vi.fn();
-  render(
-    <PainelDeFiltrosDoFunil aberto aoFechar={aoFechar} aba={aba} filtros={filtros} aoFiltrar={aoFiltrar}
-      stages={STAGES} etiquetas={[{ name: 'Meta', color: '#000000' }]} />,
-  );
+  render(<Painel aba={aba} filtros={filtros} aoFiltrar={aoFiltrar} aoFechar={aoFechar} />);
   return { aoFiltrar, aoFechar, painel: screen.getByRole('dialog', { name: 'Filtros do funil' }) };
 }
 
@@ -115,5 +125,14 @@ describe('PainelDeFiltrosDoFunil', () => {
     const { painel, aoFiltrar } = abrir('abertos', { ...FILTROS_VAZIOS, etapas: ['s1'], largados: 7 });
     await userEvent.click(within(painel).getByRole('button', { name: 'Limpar filtros' }));
     expect(aoFiltrar).toHaveBeenCalledWith(FILTROS_VAZIOS);
+  });
+
+  it('enquanto as opções carregam, Origem e Responsável mostram carregando; com erro, Tentar de novo', () => {
+    const tentar = vi.fn();
+    const { rerender } = render(<Painel facetas={null} erroDasFacetas={false} aoTentarDeNovo={tentar} />);
+    expect(screen.getAllByText('Carregando opções…')).toHaveLength(2);
+    rerender(<Painel facetas={null} erroDasFacetas aoTentarDeNovo={tentar} />);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Tentar de novo' })[0]);
+    expect(tentar).toHaveBeenCalled();
   });
 });
