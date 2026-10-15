@@ -47,9 +47,14 @@ describe('ModuleForm (janela)', () => {
     expect(screen.getByText('Em quais clientes aparece')).toBeTruthy();
   });
 
+  it('a janela tem os grupos Módulo, Quem vê e Avançado', () => {
+    render(<ModuleForm editing={null} onClose={() => {}} />);
+    for (const nome of ['Módulo', 'Quem vê', 'Avançado']) expect(screen.getByRole('group', { name: nome })).toBeTruthy();
+  });
+
   it('Avançado começa fechado', () => {
     render(<ModuleForm editing={null} onClose={() => {}} />);
-    expect(screen.getByRole('button', { name: /Avançado/ }).getAttribute('aria-expanded')).toBe('false');
+    expect(screen.getByRole('button', { name: /Cadeado de venda/ }).getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByText('Livre (todos abrem)')).toBeNull();
   });
 

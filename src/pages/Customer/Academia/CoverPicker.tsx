@@ -1,4 +1,4 @@
-// Seletor de capa (thumbnail) — upload de imagem pro bucket ou colar URL.
+// Seletor de capa — upload de imagem pro bucket ou colar URL.
 
 import { useRef } from 'react';
 import { PlayCircle, ImagePlus, Loader2, X } from 'lucide-react';
@@ -33,7 +33,7 @@ export default function CoverPicker({ value, onChange }: Props) {
 
   return (
     <div>
-      <p className="text-[11px] text-muted-foreground mb-1.5">Capa (thumbnail)</p>
+      <p className="mb-1.5 text-[13px] font-medium text-foreground/80">Capa</p>
       <div className="flex items-start gap-3">
         <div className="relative w-32 shrink-0 aspect-video rounded-lg border border-border overflow-hidden bg-gradient-to-br from-primary/20 via-purple-500/10 to-muted flex items-center justify-center">
           {value ? (
@@ -70,7 +70,7 @@ export default function CoverPicker({ value, onChange }: Props) {
           <input
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="ou cole uma URL"
+            placeholder="ou cole o endereço da imagem"
             className="w-full bg-background border border-border rounded px-3 py-2 text-sm"
           />
         </div>

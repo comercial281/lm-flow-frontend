@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input } from '@/components/ui/ds';
+import Aviso from '@/components/base/Aviso';
+import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { costsService } from '@/services/superAdmin/costsService';
 import type { Invoice, InvoiceInput } from '@/types/admin/costs';
 import { rotuloMes } from './formatoCustos';
@@ -54,21 +56,24 @@ export default function LancarFaturas({ month, aberta, aoFechar, aoSalvar }: { m
           <DialogTitle>Faturas de {rotuloMes(month)}</DialogTitle>
           <DialogDescription>Valor de cada fatura em US$. Vazio apaga o lançamento.</DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-3">
-          {linhas.map((l, idx) => (
-            <label key={l.provider} className="flex items-center justify-between gap-3 text-sm">
-              <span>{l.label} (US$)</span>
-              <Input
-                aria-label={`${l.label} (US$)`}
-                inputMode="decimal"
-                className="w-40 text-right"
-                value={l.amount_usd}
-                onChange={(e) => setLinhas((ls) => ls.map((x, i) => (i === idx ? { ...x, amount_usd: e.target.value } : x)))}
-              />
-            </label>
-          ))}
-          {linhas.length === 0 && !erro && <p className="text-sm text-muted-foreground" role="status">Carregando faturas…</p>}
-          {erro && <p className="text-sm text-destructive" role="alert">{erro}</p>}
+        <div className="grid gap-3">
+          <GrupoDaJanela titulo="Faturas">
+            <GradeDaJanela>
+              {linhas.map((l, idx) => (
+                <CampoDaJanela key={l.provider} rotulo={l.label} htmlFor={`fatura-${l.provider}`} ajuda="Valor em US$" colunas={2}>
+                  <Input
+                    id={`fatura-${l.provider}`}
+                    inputMode="decimal"
+                    className="w-full"
+                    value={l.amount_usd}
+                    onChange={(e) => setLinhas((ls) => ls.map((x, i) => (i === idx ? { ...x, amount_usd: e.target.value } : x)))}
+                  />
+                </CampoDaJanela>
+              ))}
+            </GradeDaJanela>
+            {linhas.length === 0 && !erro && <p className="text-sm text-muted-foreground" role="status">Carregando faturas…</p>}
+          </GrupoDaJanela>
+          {erro && <Aviso tom="erro"><span role="alert">{erro}</span></Aviso>}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={aoFechar} disabled={salvando}>Cancelar</Button>

@@ -9,6 +9,7 @@ import { parseVideoUrl } from '@/pages/Customer/Tutorials/_internal/lib';
 import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/ds';
 import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import { GrupoDaJanela } from '@/components/base/janela';
 import CoverPicker from '../CoverPicker';
 
 type Video = 'manter' | 'link' | 'arquivo';
@@ -69,10 +70,14 @@ export default function JanelaDaAula({ moduleId, editing, onClose }: { moduleId:
         onEscapeKeyDown={(e) => { if (busy) e.preventDefault(); }}
         onInteractOutside={(e) => { if (busy) e.preventDefault(); }}>
         <DialogHeader><DialogTitle>{editing ? 'Editar aula' : 'Nova aula'}</DialogTitle></DialogHeader>
-        <div className="grid gap-5">
-          <CampoTexto id="aula-titulo" rotulo="Título da aula" valor={titulo} aoMudar={setTitulo} />
-          <div className="grid gap-2">
-            <p className="text-sm font-medium">Vídeo</p>
+        <div className="grid gap-6">
+          <GrupoDaJanela titulo="Aula">
+            <CampoTexto id="aula-titulo" rotulo="Título da aula" valor={titulo} aoMudar={setTitulo} />
+            <CampoTexto id="aula-duracao" rotulo="Duração em minutos (opcional)" valor={duracao} aoMudar={(v) => setDuracao(v.replace(/[^0-9]/g, ''))} />
+            {editing && <CoverPicker value={capaUrl} onChange={setCapaUrl} />}
+            {editing && <CampoTextoLongo id="aula-texto" rotulo="Texto da aula (aparece abaixo do vídeo)" valor={descricao} aoMudar={setDescricao} rows={5} />}
+          </GrupoDaJanela>
+          <GrupoDaJanela titulo="Vídeo">
             <BotoesDeEscolha rotulo="Vídeo" valor={video} opcoes={opcoesVideo} aoEscolher={setVideo} />
             {video === 'link' && (
               <CampoTexto id="aula-link" rotulo="Link do YouTube ou Vimeo" valor={videoUrl} aoMudar={setVideoUrl}
@@ -84,10 +89,7 @@ export default function JanelaDaAula({ moduleId, editing, onClose }: { moduleId:
                 <input type="file" accept="video/*" aria-label="Arquivo de vídeo" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
               </label>
             )}
-          </div>
-          <CampoTexto id="aula-duracao" rotulo="Duração em minutos (opcional)" valor={duracao} aoMudar={(v) => setDuracao(v.replace(/[^0-9]/g, ''))} />
-          {editing && <CoverPicker value={capaUrl} onChange={setCapaUrl} />}
-          {editing && <CampoTextoLongo id="aula-texto" rotulo="Texto da aula (aparece abaixo do vídeo)" valor={descricao} aoMudar={setDescricao} rows={5} />}
+          </GrupoDaJanela>
         </div>
         <DialogFooter className="gap-2">
           <Button variant="outline" type="button" onClick={onClose} disabled={busy}>Cancelar</Button>
