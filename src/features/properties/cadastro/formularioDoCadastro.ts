@@ -140,8 +140,9 @@ export function errosDoCadastro(form: PropertyFormData, travados: readonly strin
   // Valor de venda é obrigatório p/ Venda/Venda e Locação (regra do backend).
   // Rascunho (criado ou editado) pode ficar sem preço: o servidor aceita.
   // Leilão pode ficar sem valor de venda (o servidor aceita).
+  // Empreendimento com preço nas plantas já tem o "a partir de" no payload.
   if (!campoTravado('sale_price', travados) && form.status !== 'draft' && form.listing_kind !== 'auction'
-    && (p.transaction_type === 'sale' || p.transaction_type === 'sale_rent') && !form.sale_price) {
+    && (p.transaction_type === 'sale' || p.transaction_type === 'sale_rent') && !p.sale_price) {
     erros.push({ secao: form.listing_kind === 'development' ? 'tipologias' : 'valores',
       mensagem: 'Informe o Valor de venda (obrigatório para imóveis à venda).' });
   }

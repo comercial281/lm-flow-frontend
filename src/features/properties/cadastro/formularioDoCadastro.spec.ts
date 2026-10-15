@@ -13,8 +13,11 @@ describe('formularioDoCadastro', () => {
   it('revenda à venda sem preço aponta Valores', () => {
     expect(errosDoCadastro({ ...base, ...formularioNovo('resale') }).map(e => e.secao)).toEqual(['valores']);
   });
-  it('empreendimento sem preço aponta Tipologias (hoje o preço só nas tipologias não vale)', () => {
-    expect(errosDoCadastro({ ...base, ...formularioNovo('development'), typologies: [{ sale_price: 500000 }] } as never)
+  it('empreendimento com preço só nas plantas passa: o Valor de venda é o "a partir de"', () => {
+    expect(errosDoCadastro({ ...base, ...formularioNovo('development'), typologies: [{ sale_price: 500000 }] } as never)).toEqual([]);
+  });
+  it('empreendimento sem preço nas plantas nem no Valor de venda aponta Tipologias', () => {
+    expect(errosDoCadastro({ ...base, ...formularioNovo('development'), typologies: [{ bedrooms: 2 }] } as never)
       .map(e => e.secao)).toEqual(['tipologias']);
   });
   it('campo que vem do site (travado) não barra o salvar: título e valor de venda', () => {

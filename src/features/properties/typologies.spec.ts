@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   cleanTypologies,
+  menorPrecoDasTipologias,
   typologyHeadline,
   typologyName,
   typologyPrice,
@@ -49,5 +50,16 @@ describe('typologies', () => {
     const linhaVazia: PropertyTypology = { name: '  ', bedrooms: null, notes: '' };
     expect(cleanTypologies([tipoA, linhaVazia])).toEqual([tipoA]);
     expect(cleanTypologies(undefined)).toEqual([]);
+  });
+});
+
+describe('menorPrecoDasTipologias', () => {
+  it('menor preço positivo; planta sem preço não conta', () => {
+    expect(menorPrecoDasTipologias([{ sale_price: 267818.06 }, { sale_price: 244633 }, { sale_price: null }, { bedrooms: 2 }]))
+      .toBe(244633);
+  });
+  it('sem preço nenhum, nulo', () => {
+    expect(menorPrecoDasTipologias([{ bedrooms: 2 }])).toBeNull();
+    expect(menorPrecoDasTipologias(null)).toBeNull();
   });
 });
