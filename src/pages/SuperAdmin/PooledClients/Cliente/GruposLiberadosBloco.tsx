@@ -5,6 +5,7 @@ import { Seletor } from '@/components/base/Seletor';
 import { Button } from '@/components/ui/ds';
 import { SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 import { clientesService } from '@/services/superAdmin/clientesService';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 import type { ClientePooled } from '@/types/admin/clientes';
 import {
   ALLOWED_KIND_LABEL, addAllowedGroup, allowedGroupsFrom, allowedGroupsPatch, allowedRow, groupsPatch,
@@ -32,6 +33,7 @@ export function GruposLiberadosBloco({ cliente, groupJids, patch }: Props) {
   const [tipo, setTipo] = useState<AllowedKind>('cliente');
   const [gravando, setGravando] = useState(false);
   const [mudou, setMudou] = useState(false);
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   // Devolve null quando a leitura falha (distinto de lista vazia).
   const carregarCentral = async (): Promise<WaGroup[] | null> => {
@@ -89,6 +91,14 @@ export function GruposLiberadosBloco({ cliente, groupJids, patch }: Props) {
 
   const salvar = async () => {
     if (!lista) return;
+    // Lista vazia não é "sem mapeamento": marca o cliente como mapeado sem grupo
+    // nenhum, e com a trava ligada todo aviso em grupo pela central para.
+    if (lista.length === 0 && !(await confirmar({
+      titulo: 'Salvar sem nenhum grupo?',
+      descricao: 'Este cliente deixa de ver qualquer grupo da central.',
+      rotuloDaAcao: 'Salvar sem grupo',
+      destrutivo: true,
+    }))) return;
     setGravando(true);
     try {
       await patch({ ...allowedGroupsPatch(lista), ...groupsPatch(groupJids) });
@@ -164,6 +174,7 @@ export function GruposLiberadosBloco({ cliente, groupJids, patch }: Props) {
           <Button size="sm" onClick={() => void salvar()} disabled={gravando || !mudou}>Salvar lista</Button>
         </div>
       )}
+      {dialogoDeConfirmacao}
     </section>
   );
 }

@@ -50,6 +50,25 @@ describe('bloco Grupos WhatsApp (lista liberada)', () => {
     })));
   });
 
+  it('lista vazia pede confirmação: cancelar não grava, confirmar grava []', async () => {
+    const patch = vi.fn().mockResolvedValue({});
+    const settings = { allowed_whatsapp_groups: [{ jid: '222@g.us', name: 'APTO PREMIUM x Leal Mídia', kind: 'cliente' }] };
+    render(<GruposLiberadosBloco cliente={{ ...base, settings }} groupJids={legado} patch={patch} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remover APTO PREMIUM x Leal Mídia' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar lista' }));
+    expect(await screen.findByText('Salvar sem nenhum grupo?')).toBeInTheDocument();
+    expect(screen.getByText('Este cliente deixa de ver qualquer grupo da central.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByText('Salvar sem nenhum grupo?')).toBeNull());
+    expect(patch).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar lista' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Salvar sem grupo' }));
+    await waitFor(() => expect(patch).toHaveBeenCalledWith(expect.objectContaining({ allowed_whatsapp_groups: [] })));
+  });
+
   it('falha ao listar a central: mantém não mapeado, mostra o erro e não oferece salvar', async () => {
     svc.dadosDeProvisionamento.mockRejectedValue(new Error('x'));
     const patch = vi.fn();
