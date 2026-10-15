@@ -10,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-  Label as UILabel,
 } from '@/components/ui/ds';
 import { Building2, Copy, ExternalLink, GitBranch, LayoutTemplate, Loader2, Megaphone, Plus, Rocket, Sparkles, Trash2 } from 'lucide-react';
 import {
@@ -23,6 +22,9 @@ import { getTenantSlug } from '@/services/core/tenant';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import LeadRoutingModal from './LeadRoutingModal';
+import JanelaPublicarLanding from './JanelaPublicarLanding';
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import CreateLandingWizard from '@/features/landing/wizard/CreateLandingWizard';
 import { landingPublicUrl, slugifyLandingName } from './landingUrl';
 
@@ -239,7 +241,7 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
                   {isSuper && (
                     <button type="button" onClick={() => openTemplate(l)}
                       className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary">
-                      <LayoutTemplate className="h-3.5 w-3.5" /> Salvar como template
+                      <LayoutTemplate className="h-3.5 w-3.5" /> Salvar como modelo
                     </button>
                   )}
                   <button type="button" onClick={() => confirmDelete(l)}
@@ -282,74 +284,46 @@ export default function LandingsPanel({ siteId, siteSlug }: { siteId: string; si
 
       {/* Publicar — mostra o endereço final enquanto digita, porque o nome é
           convertido (acento, espaço, corte em 60) e o resultado surpreende. */}
-      <Dialog open={!!publishing} onOpenChange={(v) => (v ? null : setPublishing(null))}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Publicar landing</DialogTitle>
-            <DialogDescription>
-              O nome vira o endereço da página. É esse link que você cola no anúncio.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <UILabel htmlFor="lp-publish-name">Nome da página</UILabel>
-            <Input
-              id="lp-publish-name"
-              value={publishName}
-              onChange={(e) => setPublishName(e.target.value)}
-              placeholder="Ex: Lançamento Jardim Europa"
-              autoFocus
-            />
-            <p className="break-all font-mono text-xs text-muted-foreground">
-              {slugifyLandingName(publishName)
-                ? publicUrl(slugifyLandingName(publishName))
-                : 'Digite um nome para ver o endereço'}
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPublishing(null)}>Cancelar</Button>
-            <Button onClick={confirmPublish} disabled={!slugifyLandingName(publishName)}>
-              Publicar e copiar link
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <JanelaPublicarLanding
+        aberta={!!publishing}
+        aoFechar={() => setPublishing(null)}
+        nome={publishName}
+        aoMudarNome={setPublishName}
+        endereco={slugifyLandingName(publishName) ? publicUrl(slugifyLandingName(publishName)) : ''}
+        aoPublicar={confirmPublish}
+        idDoCampo="lp-publish-name"
+      />
 
-      {/* Salvar como template */}
+      {/* Salvar como modelo */}
       <Dialog open={!!templating} onOpenChange={(v) => (v ? null : setTemplating(null))}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Salvar como template</DialogTitle>
+            <DialogTitle>Salvar como modelo</DialogTitle>
             <DialogDescription>
-              O template guarda as seções e as cores desta landing, para começar outras a partir dela.
+              O modelo guarda as seções e as cores desta página, para começar outras a partir dela.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <UILabel htmlFor="lp-template-name">Nome do template</UILabel>
+          <GrupoDaJanela titulo="Modelo">
+            <CampoDaJanela rotulo="Nome do modelo" htmlFor="lp-template-name" obrigatorio>
               <Input
                 id="lp-template-name"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
                 autoFocus
               />
-            </div>
-            <div className="space-y-2">
-              <UILabel>Quem pode usar</UILabel>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="radio" name="lp-template-scope" checked={templateScope === 'tenant'}
-                  onChange={() => setTemplateScope('tenant')} />
-                Só esta conta
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="radio" name="lp-template-scope" checked={templateScope === 'global'}
-                  onChange={() => setTemplateScope('global')} />
-                Todos os clientes
-              </label>
-            </div>
-          </div>
+            </CampoDaJanela>
+            <CampoDaJanela rotulo="Quem pode usar">
+              <BotoesDeEscolha rotulo="Quem pode usar" semNome valor={templateScope}
+                opcoes={[
+                  { valor: 'tenant', rotulo: 'Só esta conta' },
+                  { valor: 'global', rotulo: 'Todos os clientes' },
+                ]}
+                aoEscolher={setTemplateScope} />
+            </CampoDaJanela>
+          </GrupoDaJanela>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTemplating(null)}>Cancelar</Button>
-            <Button onClick={confirmTemplate} disabled={!templateName.trim()}>Salvar template</Button>
+            <Button onClick={confirmTemplate} disabled={!templateName.trim()}>Salvar modelo</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

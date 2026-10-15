@@ -102,13 +102,20 @@ describe('TelaPaginas', () => {
     await waitFor(() => expect(editor().querySelector('img')?.getAttribute('src')).toBe('https://cdn.x/enviada.png'));
   });
 
+  it('a janela da página tem grupos com título', async () => {
+    await abrirEdicao();
+    for (const nome of ['Página', 'Conteúdo', 'Aparência']) {
+      expect(screen.getByRole('group', { name: nome })).toBeTruthy();
+    }
+  });
+
   it('passou de 200 KB: o aviso aparece na janela e ela continua aberta', async () => {
     vi.mocked(siteBuilderService.updatePage).mockRejectedValue(
       erroDaApi(422, 'O conteúdo da página passou do limite de 200 KB. Divida em mais de uma página.'));
     await abrirEdicao();
     await userEvent.click(screen.getByRole('button', { name: 'Título' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await screen.findByRole('alert')).toHaveProperty('textContent',
+    expect(await screen.findByRole('status')).toHaveProperty('textContent',
       'O conteúdo da página passou do limite de 200 KB. Divida em mais de uma página.');
     expect(screen.getByRole('dialog', { name: 'Editar página' })).toBeTruthy();
   });
@@ -119,7 +126,7 @@ describe('TelaPaginas', () => {
     await abrirEdicao();
     await userEvent.click(screen.getByRole('button', { name: 'Título' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect((await screen.findByRole('alert')).textContent).toMatch(/estrutura que não dá pra salvar/);
+    expect((await screen.findByRole('status')).textContent).toMatch(/estrutura que não dá pra salvar/);
   });
 
   it('salvar avisa o pai (o menu acompanha), com o endereço antigo', async () => {
@@ -159,7 +166,7 @@ describe('TelaPaginas', () => {
         expect(within(escolha).getByRole('button', { name: nome })).toBeTruthy();
       }
       await userEvent.click(within(escolha).getByRole('button', { name: /Em branco/ }));
-      await userEvent.type(screen.getByLabelText('Título *'), 'Nova');
+      await userEvent.type(screen.getByLabelText('Título da página'), 'Nova');
       await userEvent.click(screen.getByRole('button', { name: 'Criar' }));
       await waitFor(() => expect(siteBuilderService.createPage).toHaveBeenCalled());
       const enviado = vi.mocked(siteBuilderService.createPage).mock.calls[0][1];
@@ -219,7 +226,7 @@ describe('TelaPaginas', () => {
       await screen.findByText('Sobre nós');
       await userEvent.click(screen.getByRole('button', { name: 'Nova página' }));
       await userEvent.click(screen.getByRole('button', { name: /Sobre nós/ }));
-      expect((await screen.findByRole('alert')).textContent).toBe(
+      expect((await screen.findByRole('status')).textContent).toBe(
         'Outra página acabou de ser criada com o mesmo endereço. Tente de novo em instantes.');
     });
   });

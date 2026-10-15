@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Building2, Check, LayoutTemplate, Loader2, Megaphone, Search } from 'lucide-react';
+import { Building2, Check, LayoutTemplate, Loader2, Megaphone } from 'lucide-react';
 import { labelsService } from '@/services/contacts/labelsService';
 import { landingPageService } from '@/services/landingPages/landingPageService';
 import { landingTemplatesService, type LandingTemplateDTO } from '@/services/landingPages/landingTemplatesService';
@@ -21,7 +21,9 @@ import {
   DialogTitle,
 } from '@/components/ui/ds';
 import { MODELOS_DE_ANUNCIO, modeloSugerido, type ModeloDeAnuncioId } from '@/features/landing/modelos/modelosDeAnuncio';
-import { Button } from '@/components/ui/ds';
+import { Button, Input } from '@/components/ui/ds';
+import { CampoDaJanela, ESCOLHA, GrupoDaJanela } from '@/components/base/janela';
+import { cn } from '@/lib/utils';
 
 interface Opt {
   id: string;
@@ -44,25 +46,25 @@ const FRASE_SUGESTAO: Record<ModeloDeAnuncioId, string> = {
  * aberta fechava sozinha. Não se chama `Select` para não confundir com o Select
  * do design system.
  */
-function CampoDeLista({ label, value, onChange, options, placeholder }: {
-  label: string; value: string; onChange: (v: string) => void; options: Opt[]; placeholder: string;
+function CampoDeLista({ id, label, value, onChange, options, placeholder }: {
+  id: string; label: string; value: string; onChange: (v: string) => void; options: Opt[]; placeholder: string;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-xs text-muted-foreground">{label}</span>
-      <Seletor
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-      >
+    <CampoDaJanela rotulo={label} htmlFor={id}>
+      <Seletor id={id} value={value} onChange={(e) => onChange(e.target.value)} className="w-full">
         <option value="">{placeholder}</option>
         {options.map((o) => (
           <option key={o.id} value={o.id}>{o.label}</option>
         ))}
       </Seletor>
-    </label>
+    </CampoDaJanela>
   );
 }
+
+/** Cartão de escolha do passo 1: contorno + roxo claro quando marcado. */
+const CARTAO = 'h-auto flex-col items-start justify-start gap-1 whitespace-normal p-3 text-left font-normal';
+/** Linha de resultado da busca (imóvel, modelo salvo). */
+const LINHA = 'h-auto w-full justify-between gap-2 whitespace-normal px-3 py-2 text-left font-normal';
 
 /**
  * Assistente de criação de landing (Fatia 1): monta a landing já reusando o que
@@ -94,6 +96,7 @@ export default function CreateLandingWizard({
   const [templates, setTemplates] = useState<LandingTemplateDTO[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [templateId, setTemplateId] = useState('');
+  const [templateQuery, setTemplateQuery] = useState('');
 
   // Passo 2 — nome
   const [name, setName] = useState('');
@@ -112,11 +115,13 @@ export default function CreateLandingWizard({
   // Busca de imóveis (debounce simples) quando base = property.
   useEffect(() => {
     if (base !== 'property' && base !== 'modelo') return;
+    // Lista fechada até a pessoa digitar: sem texto, nem busca.
+    if (!propQuery.trim()) { setPropResults([]); setPropLoading(false); return; }
     let active = true;
     setPropLoading(true);
     const t = setTimeout(async () => {
       try {
-        const res = await propertiesService.list({ q: propQuery || undefined, per_page: 8 });
+        const res = await propertiesService.list({ q: propQuery.trim(), per_page: 8 });
         if (active) setPropResults(res.data);
       } finally {
         if (active) setPropLoading(false);
@@ -185,8 +190,17 @@ export default function CreateLandingWizard({
 
   const pickProperty = (p: Property) => {
     setProperty(p);
+    setPropQuery('');
     if (!name.trim()) setName(p.title);
   };
+
+  // Modelos salvos: só aparecem quando a pessoa digita, e poucos de cada vez.
+  const modelosSalvos = useMemo(() => {
+    const q = templateQuery.trim().toLowerCase();
+    if (!q) return [];
+    return templates.filter((t) => t.name.toLowerCase().includes(q)).slice(0, 6);
+  }, [templates, templateQuery]);
+  const modeloSalvo = templates.find((t) => t.id === templateId) ?? null;
 
   const sugerido = property ? modeloSugerido(property) : null;
 
@@ -241,13 +255,13 @@ export default function CreateLandingWizard({
             lead_stage_id: stageId || null,
             lead_label_id: labelId || null,
           })
-          .catch(() => toast.error('Landing criada, mas o roteamento falhou — ajuste na lista.'));
+          .catch(() => toast.error('Página criada, mas o o destino do lead não foi salvo. Ajuste na lista.'));
       }
 
-      toast.success('Landing criada! Abrindo o editor…');
+      toast.success('Página criada! Abrindo o editor…');
       navigate(`/landings/${lp.dto.id}`);
     } catch {
-      toast.error('Erro ao criar a landing');
+      toast.error('Erro ao criar a página');
       setCreating(false);
     }
   };
@@ -262,102 +276,102 @@ export default function CreateLandingWizard({
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle className="text-base">Criar com assistente</DialogTitle>
-          <DialogDescription className="text-xs">Passo {step} de 3</DialogDescription>
+          <DialogTitle>Criar com assistente</DialogTitle>
+          <DialogDescription>Passo {step} de 3</DialogDescription>
         </DialogHeader>
 
         {/* body */}
-        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+        <div className="min-h-0 flex-1 overflow-y-auto p-6">
           {step === 1 && (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">Como você quer começar?</p>
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Modelos prontos</p>
+            <div className="grid gap-6">
+              <GrupoDaJanela titulo="Modelos prontos">
                 <div className="grid grid-cols-3 gap-3">
                   {MODELOS_DE_ANUNCIO.map((m) => {
                     const ativo = base === 'modelo' && modeloId === m.id;
                     const cores = [m.tema.bgStart, m.tema.primary, m.tema.accent, m.tema.cardBg];
                     return (
-                      <button
+                      <Button
                         key={m.id}
                         type="button"
+                        variant="outline"
                         aria-pressed={ativo}
                         onClick={() => { setBase('modelo'); setModeloId(m.id); }}
-                        className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left ${ativo ? 'border-primary bg-primary/5' : 'border-border'}`}
+                        className={cn(CARTAO, ESCOLHA)}
                       >
-                        <span className="flex h-2 w-full overflow-hidden rounded-full border border-border">
+                        <span className="flex h-2 w-full overflow-hidden rounded-full">
                           {cores.map((c, i) => (
                             <span key={i} className="h-full flex-1" style={{ backgroundColor: c }} />
                           ))}
                         </span>
                         <span className="text-sm font-medium">{m.nome}</span>
                         <span className="text-xs text-muted-foreground">{m.frase}</span>
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setBase('blank')}
-                  className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left ${base === 'blank' ? 'border-primary bg-primary/5' : 'border-border'}`}
-                >
-                  <Megaphone className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-medium">Em branco</span>
-                  <span className="text-xs text-muted-foreground">Blocos padrão.</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBase('property')}
-                  className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left ${base === 'property' ? 'border-primary bg-primary/5' : 'border-border'}`}
-                >
-                  <Building2 className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-medium">De um imóvel</span>
-                  <span className="text-xs text-muted-foreground">Dados do imóvel.</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBase('template')}
-                  className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left ${base === 'template' ? 'border-primary bg-primary/5' : 'border-border'}`}
-                >
-                  <LayoutTemplate className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-medium">De um template</span>
-                  <span className="text-xs text-muted-foreground">Um modelo salvo.</span>
-                </button>
-              </div>
+              </GrupoDaJanela>
+
+              <GrupoDaJanela titulo="Ou comece de">
+                <div className="grid grid-cols-3 gap-3">
+                  <Button type="button" variant="outline" aria-pressed={base === 'blank'} onClick={() => setBase('blank')} className={cn(CARTAO, ESCOLHA)}>
+                    <Megaphone className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-medium">Em branco</span>
+                    <span className="text-xs text-muted-foreground">Blocos padrão.</span>
+                  </Button>
+                  <Button type="button" variant="outline" aria-pressed={base === 'property'} onClick={() => setBase('property')} className={cn(CARTAO, ESCOLHA)}>
+                    <Building2 className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-medium">De um imóvel</span>
+                    <span className="text-xs text-muted-foreground">Dados do imóvel.</span>
+                  </Button>
+                  <Button type="button" variant="outline" aria-pressed={base === 'template'} onClick={() => setBase('template')} className={cn(CARTAO, ESCOLHA)}>
+                    <LayoutTemplate className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-medium">De um modelo salvo</span>
+                    <span className="text-xs text-muted-foreground">Uma página que você guardou.</span>
+                  </Button>
+                </div>
+              </GrupoDaJanela>
 
               {base === 'template' && (
-                <div className="max-h-56 space-y-1 overflow-y-auto">
+                <GrupoDaJanela titulo="Modelo salvo">
                   {templatesLoading ? (
-                    <div className="flex items-center gap-2 px-1 py-3 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Carregando templates…
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Carregando modelos…
                     </div>
                   ) : templates.length === 0 ? (
-                    <p className="px-1 py-3 text-sm text-muted-foreground">
-                      Nenhum template ainda. Salve uma landing como template pela lista (botão "Salvar como template").
+                    <p className="text-sm text-muted-foreground">
+                      Nenhum modelo salvo ainda. Salve uma página pela lista (botão "Salvar como modelo").
                     </p>
                   ) : (
-                    templates.map((t) => {
-                      const active = templateId === t.id;
-                      return (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => setTemplateId(t.id)}
-                          className={`flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left ${active ? 'border-primary bg-primary/5' : 'border-border'}`}
-                        >
-                          <span className="min-w-0 truncate text-sm">{t.name}</span>
-                          {active && <Check className="h-4 w-4 flex-none text-primary" />}
-                        </button>
-                      );
-                    })
+                    <>
+                      {modeloSalvo && (
+                        <div className="flex items-center justify-between gap-2 text-sm">
+                          <span className="flex min-w-0 items-center gap-2"><Check className="h-4 w-4 flex-none text-primary" /><span className="truncate">{modeloSalvo.name}</span></span>
+                        </div>
+                      )}
+                      <CampoDaJanela rotulo={modeloSalvo ? 'Escolher outro modelo' : 'Buscar modelo'} htmlFor="assistente-busca-modelo">
+                        <Input id="assistente-busca-modelo" value={templateQuery} onChange={(e) => setTemplateQuery(e.target.value)}
+                          placeholder="Digite o nome do modelo" />
+                      </CampoDaJanela>
+                      {modelosSalvos.length > 0 && (
+                        <div className="grid gap-1.5">
+                          {modelosSalvos.map((t) => (
+                            <Button key={t.id} type="button" variant="outline" aria-pressed={templateId === t.id}
+                              onClick={() => { setTemplateId(t.id); setTemplateQuery(''); }} className={cn(LINHA, ESCOLHA)}>
+                              <span className="min-w-0 truncate text-sm">{t.name}</span>
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                      {templateQuery.trim() && modelosSalvos.length === 0 && (
+                        <p className="text-sm text-muted-foreground">Nenhum modelo com esse nome.</p>
+                      )}
+                    </>
                   )}
-                </div>
+                </GrupoDaJanela>
               )}
 
               {(base === 'property' || base === 'modelo') && (
-                <div className="space-y-2">
+                <GrupoDaJanela titulo="Imóvel">
                   {base === 'modelo' && sugerido && sugerido !== modeloId && (
                     <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       <span>{FRASE_SUGESTAO[sugerido]}</span>
@@ -370,31 +384,34 @@ export default function CreateLandingWizard({
                       </button>
                     </p>
                   )}
-                  <div className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2">
-                    <Search className="h-4 w-4 flex-none text-muted-foreground" />
-                    <input
-                      value={propQuery}
-                      onChange={(e) => setPropQuery(e.target.value)}
-                      placeholder="Buscar imóvel por título ou código"
-                      className="w-full bg-transparent text-sm outline-none"
-                    />
-                  </div>
-                  <div className="max-h-56 space-y-1 overflow-y-auto">
-                    {propLoading ? (
-                      <div className="flex items-center gap-2 px-1 py-3 text-sm text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" /> Buscando…
-                      </div>
-                    ) : propResults.length === 0 ? (
-                      <p className="px-1 py-3 text-sm text-muted-foreground">Nenhum imóvel encontrado.</p>
-                    ) : (
-                      propResults.map((p) => {
-                        const active = property?.id === p.id;
-                        return (
-                          <button
+                  {property && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Check className="h-4 w-4 flex-none text-primary" />
+                      <span className="min-w-0 truncate">{property.title}</span>
+                      <span className="flex-none font-mono text-xs text-muted-foreground">{property.code}</span>
+                    </div>
+                  )}
+                  <CampoDaJanela rotulo={property ? 'Escolher outro imóvel' : 'Buscar imóvel'} htmlFor="assistente-busca-imovel">
+                    <Input id="assistente-busca-imovel" value={propQuery} onChange={(e) => setPropQuery(e.target.value)}
+                      placeholder="Buscar imóvel por título ou código" />
+                  </CampoDaJanela>
+                  {propQuery.trim() && (
+                    <div className="grid gap-1.5">
+                      {propLoading ? (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" /> Buscando…
+                        </div>
+                      ) : propResults.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Nenhum imóvel encontrado.</p>
+                      ) : (
+                        propResults.map((p) => (
+                          <Button
                             key={p.id}
                             type="button"
+                            variant="outline"
+                            aria-pressed={property?.id === p.id}
                             onClick={() => pickProperty(p)}
-                            className={`flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left ${active ? 'border-primary bg-primary/5' : 'border-border'}`}
+                            className={cn(LINHA, ESCOLHA)}
                           >
                             <span className="min-w-0">
                               <span className="block truncate text-sm">{p.title}</span>
@@ -402,52 +419,47 @@ export default function CreateLandingWizard({
                                 {p.code}{p.address_city ? ` · ${p.address_city}` : ''}{p.display_price ? ` · ${p.display_price}` : ''}
                               </span>
                             </span>
-                            {active && <Check className="h-4 w-4 flex-none text-primary" />}
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
+                          </Button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </GrupoDaJanela>
               )}
             </div>
           )}
 
           {step === 2 && (
-            <div className="space-y-3">
-              <label className="block">
-                <span className="mb-1 block text-xs text-muted-foreground">Nome da landing</span>
-                <input
+            <GrupoDaJanela titulo="Nome da página">
+              <CampoDaJanela rotulo="Nome da página" htmlFor="assistente-nome" obrigatorio
+                ajuda={<>O endereço da página vai terminar em <span className="font-mono">/{slug || '...'}</span>. Você confirma o nome final ao publicar.</>}>
+                <Input
+                  id="assistente-nome"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ex: Campanha Lançamento Setembro"
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
                 />
-              </label>
-              <p className="text-xs text-muted-foreground">
-                Link provável: <span className="font-mono">/lp/&lt;cliente&gt;/{slug || '...'}</span>
-                {' '}— você confirma o nome final ao publicar.
-              </p>
-            </div>
+              </CampoDaJanela>
+            </GrupoDaJanela>
           )}
 
           {step === 3 && (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Para onde vai o lead dessa landing? (opcional, dá pra ajustar depois)</p>
+            <GrupoDaJanela titulo="Para onde vai o lead">
+              <p className="text-xs text-muted-foreground">Opcional. Dá pra ajustar depois.</p>
               {routingLoading ? (
                 <div className="flex items-center gap-2 py-4 text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
                 </div>
               ) : (
                 <>
-                  <CampoDeLista label="Pipeline" value={pipelineId} onChange={onPipeline} options={pipelines} placeholder="Sem pipeline (só vira contato)" />
+                  <CampoDeLista id="assistente-funil" label="Funil" value={pipelineId} onChange={onPipeline} options={pipelines} placeholder="Sem funil (só vira contato)" />
                   {pipelineId && (
-                    <CampoDeLista label="Coluna (estágio)" value={stageId} onChange={setStageId} options={stages} placeholder="Escolha a coluna" />
+                    <CampoDeLista id="assistente-etapa" label="Etapa" value={stageId} onChange={setStageId} options={stages} placeholder="Escolha a etapa" />
                   )}
-                  <CampoDeLista label="Tag" value={labelId} onChange={setLabelId} options={labels} placeholder="Sem tag" />
+                  <CampoDeLista id="assistente-etiqueta" label="Etiqueta" value={labelId} onChange={setLabelId} options={labels} placeholder="Sem etiqueta" />
                 </>
               )}
-            </div>
+            </GrupoDaJanela>
           )}
         </div>
 
@@ -474,7 +486,7 @@ export default function CreateLandingWizard({
               disabled={creating || !name.trim()}
               onClick={handleCreate}
             >
-              {creating && <Loader2 className="h-4 w-4 animate-spin" />} Criar landing
+              {creating && <Loader2 className="h-4 w-4 animate-spin" />} Criar página
             </Button>
           )}
         </DialogFooter>

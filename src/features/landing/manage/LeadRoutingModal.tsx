@@ -41,7 +41,9 @@ import {
   type PixelForm,
   type StoredPixel,
 } from './landingPixel';
-import { Button } from '@/components/ui/ds';
+import { Button, Checkbox, Input, Label as UILabel } from '@/components/ui/ds';
+import Aviso from '@/components/base/Aviso';
+import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 
 interface Opt {
   id: string;
@@ -53,37 +55,32 @@ interface Opt {
 // montava de novo, e a lista do produto aberta fechava sozinha (e o foco sumia).
 
 /** Lista de evento do Pixel: "Não disparar nada" + os eventos oferecidos. */
-function EventField({ label, value, onChange, options, hint }: {
-  label: string; value: string; onChange: (v: string) => void; options: string[]; hint?: string;
+function EventField({ id, label, value, onChange, options, hint }: {
+  id: string; label: string; value: string; onChange: (v: string) => void; options: string[]; hint?: string;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-xs text-muted-foreground">{label}</span>
-      <Seletor value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary">
+    <CampoDaJanela rotulo={label} htmlFor={id} ajuda={hint}>
+      <Seletor id={id} className="w-full" value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">Não disparar nada</option>
         {options.map((ev) => (
           <option key={ev} value={ev}>{CAPI_EVENT_LABELS[ev] ?? ev}</option>
         ))}
       </Seletor>
-      {hint && <span className="mt-1 block text-[11px] text-muted-foreground">{hint}</span>}
-    </label>
+    </CampoDaJanela>
   );
 }
 
 /** Lista com a opção vazia (o texto de `placeholder`) + as opções. */
-function Field({ label, value, onChange, options, placeholder }: {
-  label: string; value: string; onChange: (v: string) => void; options: Opt[]; placeholder: string;
+function Field({ id, label, value, onChange, options, placeholder }: {
+  id: string; label: string; value: string; onChange: (v: string) => void; options: Opt[]; placeholder: string;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-xs text-muted-foreground">{label}</span>
-      <Seletor value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary">
+    <CampoDaJanela rotulo={label} htmlFor={id}>
+      <Seletor id={id} className="w-full" value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">{placeholder}</option>
         {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
       </Seletor>
-    </label>
+    </CampoDaJanela>
   );
 }
 
@@ -313,135 +310,115 @@ export default function LeadRoutingModal({
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle className="text-base">Roteamento de lead</DialogTitle>
-          <DialogDescription className="truncate text-xs">Landing: {page.title}</DialogDescription>
+          <DialogTitle>Destino do lead</DialogTitle>
+          <DialogDescription className="truncate">Página: {page.title}</DialogDescription>
         </DialogHeader>
 
         {loading ? (
           <div className="flex items-center gap-2 py-6 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</div>
         ) : (
-          <div className="space-y-3">
-            <Field label="Pipeline" value={pipelineId} onChange={onPipeline} options={pipelines} placeholder="Sem pipeline (só vira contato)" />
-            {pipelineId && (
-              <Field label="Coluna (estágio)" value={stageId} onChange={setStageId} options={stages} placeholder="Escolha a coluna" />
-            )}
-            <Field label="Tag" value={labelId} onChange={setLabelId} options={labels} placeholder="Sem tag" />
-
-            <div className="mt-2 border-t border-border pt-3">
-              <p className="mb-0.5 text-sm font-medium">Quem assume o lead (opcional)</p>
-              <p className="mb-2 text-xs text-muted-foreground">
-                Escolhendo um corretor, todo lead desta landing vai pra ele. Escolhendo uma
-                roleta, o lead é oferecido a um corretor assim que chega — ele recebe o aviso
-                no WhatsApp e no app, e vira o responsável quando aceita. Deixando vazio, nada
-                muda: o lead entra no funil sem responsável e a gestão distribui na mão.
-              </p>
-              <span className="mb-1 block text-xs text-muted-foreground">Corretor ou roleta</span>
-              <CampoQuemAssume
-                aria-label="Quem assume o lead"
-                value={quem}
-                onChange={setQuem}
-                pessoas={pessoas}
-                roletas={roletas}
-                nenhum="Ninguém (entra sem responsável)"
-              />
-              {roletaId && (
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  Lead que já tem responsável não volta para o sorteio — continua com quem já o
-                  atende.{' '}
-                  Fora do horário da roleta, o lead espera e é oferecido quando ela abrir.
-                </p>
+          <div className="grid gap-6">
+            <GrupoDaJanela titulo="Para onde vai o lead">
+              <Field id="rota-funil" label="Funil" value={pipelineId} onChange={onPipeline} options={pipelines} placeholder="Sem funil (só vira contato)" />
+              {pipelineId && (
+                <Field id="rota-etapa" label="Etapa" value={stageId} onChange={setStageId} options={stages} placeholder="Escolha a etapa" />
               )}
-            </div>
+              <Field id="rota-etiqueta" label="Etiqueta" value={labelId} onChange={setLabelId} options={labels} placeholder="Sem etiqueta" />
+            </GrupoDaJanela>
 
-            <div className="mt-2 border-t border-border pt-3">
-              <p className="mb-0.5 text-sm font-medium">Se o lead for desqualificado (opcional)</p>
-              <p className="mb-2 text-xs text-muted-foreground">Deixe vazio para usar o mesmo roteamento acima.</p>
-              <div className="space-y-3">
-                <Field label="Pipeline" value={disqPipelineId} onChange={onDisqPipeline} options={pipelines} placeholder="Mesmo de cima" />
-                {disqPipelineId && (
-                  <Field label="Coluna (estágio)" value={disqStageId} onChange={setDisqStageId} options={disqStages} placeholder="Escolha a coluna" />
-                )}
-                <Field label="Tag" value={disqLabelId} onChange={setDisqLabelId} options={labels} placeholder="Sem tag" />
-              </div>
-            </div>
+            <GrupoDaJanela titulo="Quem assume">
+              <CampoDaJanela rotulo="Corretor ou roleta"
+                ajuda="Opcional. Escolhendo um corretor, todo lead desta página vai pra ele. Escolhendo uma roleta, o lead é oferecido a um corretor assim que chega: ele recebe o aviso no WhatsApp e no app, e vira o responsável quando aceita. Deixando vazio, nada muda: o lead entra no funil sem responsável e a gestão distribui na mão.">
+                <CampoQuemAssume
+                  aria-label="Quem assume o lead"
+                  value={quem}
+                  onChange={setQuem}
+                  pessoas={pessoas}
+                  roletas={roletas}
+                  nenhum="Ninguém (entra sem responsável)"
+                />
+              </CampoDaJanela>
+              {roletaId && (
+                <Aviso tom="info" compacto>
+                  {'Lead que já tem responsável não volta para o sorteio: continua com quem já o atende. Fora do horário da roleta, o lead espera e é oferecido quando ela abrir.'}
+                </Aviso>
+              )}
+            </GrupoDaJanela>
 
-            <div className="mt-2 border-t border-border pt-3">
-              <p className="mb-0.5 text-sm font-medium">Rastreio (Pixel Meta)</p>
-              <p className="mb-2 text-xs text-muted-foreground">
-                Cada evento sai duas vezes — pelo navegador do lead e pelo servidor (API de
-                Conversões) — com o mesmo identificador, então a Meta conta uma conversão só.
-                O servidor é o que continua chegando quando o navegador do lead bloqueia o Pixel.
+            <GrupoDaJanela titulo="Se for desqualificado">
+              <p className="text-xs text-muted-foreground">Opcional. Deixe vazio para usar o mesmo destino de cima.</p>
+              <Field id="rota-desq-funil" label="Funil" value={disqPipelineId} onChange={onDisqPipeline} options={pipelines} placeholder="Mesmo de cima" />
+              {disqPipelineId && (
+                <Field id="rota-desq-etapa" label="Etapa" value={disqStageId} onChange={setDisqStageId} options={disqStages} placeholder="Escolha a etapa" />
+              )}
+              <Field id="rota-desq-etiqueta" label="Etiqueta" value={disqLabelId} onChange={setDisqLabelId} options={labels} placeholder="Sem etiqueta" />
+            </GrupoDaJanela>
+
+            <GrupoDaJanela titulo="Rastreio">
+              <p className="text-xs text-muted-foreground">
+                Cada evento sai duas vezes, pelo navegador de quem preenche e pelo servidor, com o
+                mesmo identificador. Assim a Meta conta uma conversão só, e o envio continua
+                chegando quando o navegador bloqueia o pixel.
               </p>
 
-              <label className="block">
-                <span className="mb-1 block text-xs text-muted-foreground">Enviar para</span>
-                <Seletor value={pixel.mode} onChange={(e) => setPixelField('mode', e.target.value as PixelForm['mode'])}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary">
-                  <option value="off">Não rastrear esta landing</option>
+              <CampoDaJanela rotulo="Enviar para" htmlFor="rota-pixel-modo">
+                <Seletor id="rota-pixel-modo" className="w-full" value={pixel.mode} onChange={(e) => setPixelField('mode', e.target.value as PixelForm['mode'])}>
+                  <option value="off">Não rastrear esta página</option>
                   <option value="crm">
                     {crmPixelId
-                      ? `Pixel do CRM — ${crmPixelId}`
-                      : 'Pixel do CRM (nenhum cadastrado ainda)'}
+                      ? `Pixel da conta — ${crmPixelId}`
+                      : 'Pixel da conta (nenhum cadastrado ainda)'}
                   </option>
-                  <option value="custom">Outro pixel (só desta landing)</option>
+                  <option value="custom">Outro pixel (só desta página)</option>
                 </Seletor>
-              </label>
+              </CampoDaJanela>
 
               {pixel.mode === 'crm' && !crmPixelId && (
-                <p className="mt-1 text-[11px] text-amber-600">
-                  Cadastre o Pixel e o Token em Automações → Pixel e CAPI. Sem isso nada é enviado.
-                </p>
+                <Aviso tom="atencao" compacto>
+                  Cadastre o pixel e a chave de acesso em Automações, na tela Pixel e CAPI. Sem isso nada é enviado.
+                </Aviso>
               )}
 
               {pixel.mode === 'custom' && (
-                <>
-                  <label className="mt-2 block">
-                    <span className="mb-1 block text-xs text-muted-foreground">ID do Pixel</span>
-                    <input value={pixel.pixelId} onChange={(e) => setPixelField('pixelId', e.target.value)}
-                      placeholder="Ex: 123456789012345"
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
-                  </label>
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    O envio pelo servidor usa o Token cadastrado em Pixel e CAPI. Se ele não tiver
-                    acesso a este conjunto, a Meta recusa — teste antes de subir o anúncio.
-                  </p>
-                </>
+                <CampoDaJanela rotulo="Número do pixel" htmlFor="rota-pixel-id"
+                  ajuda="O envio pelo servidor usa a chave de acesso cadastrada em Pixel e CAPI. Se ela não tiver acesso a este pixel, a Meta recusa: teste antes de subir o anúncio.">
+                  <Input id="rota-pixel-id" value={pixel.pixelId} onChange={(e) => setPixelField('pixelId', e.target.value)}
+                    placeholder="Ex: 123456789012345" />
+                </CampoDaJanela>
               )}
 
               {pixel.mode !== 'off' && (
-                <div className="mt-3 space-y-2">
-                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <input type="checkbox" checked={pixel.pageView}
-                      onChange={(e) => setPixelField('pageView', e.target.checked)} />
-                    Contar quem abre a página (PageView)
-                  </label>
-                  <EventField options={eventOptions} label="Quando o formulário é enviado" value={pixel.submitEvent}
+                <>
+                  <div className="flex items-center gap-2">
+                    <Checkbox id="rota-pageview" checked={pixel.pageView}
+                      onCheckedChange={(c) => setPixelField('pageView', c === true)} />
+                    <UILabel htmlFor="rota-pageview" className="cursor-pointer text-sm font-normal">Contar quem abre a página</UILabel>
+                  </div>
+                  <EventField id="rota-evento-envio" options={eventOptions} label="Quando o formulário é enviado" value={pixel.submitEvent}
                     onChange={(v) => setPixelField('submitEvent', v)} />
-                  <EventField options={eventOptions} label="Quando a régua do formulário aprova" value={pixel.qualifiedEvent}
+                  <EventField id="rota-evento-aprova" options={eventOptions} label="Quando a régua do formulário aprova" value={pixel.qualifiedEvent}
                     onChange={(v) => setPixelField('qualifiedEvent', v)}
                     hint="Escolher o mesmo evento que o corretor usa no card faz o mesmo lead contar duas vezes como qualificado." />
-                  <EventField options={eventOptions} label="Quando a régua do formulário reprova" value={pixel.disqualifiedEvent}
+                  <EventField id="rota-evento-reprova" options={eventOptions} label="Quando a régua do formulário reprova" value={pixel.disqualifiedEvent}
                     onChange={(v) => setPixelField('disqualifiedEvent', v)} />
 
-                  <div className="pt-1">
-                    <button type="button" onClick={testConnection} disabled={testing || !activePixelId}
-                      className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium disabled:opacity-40">
-                      {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plug className="h-3.5 w-3.5" />}
+                  <div className="grid justify-items-start gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={testConnection} disabled={testing || !activePixelId}>
+                      {testing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Plug className="mr-1.5 h-3.5 w-3.5" />}
                       Testar conexão
-                    </button>
-                    {!activePixelId && (
-                      <p className="mt-1 text-[11px] text-muted-foreground">Escolha um pixel para poder testar.</p>
-                    )}
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      {activePixelId ? 'O teste envia um evento de teste à Meta.' : 'Escolha um pixel para poder testar.'}
+                    </p>
                     {testResult && (
-                      <p className={`mt-2 text-[11px] ${testResult.ok ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {testResult.ok ? 'Consegui enviar o lead. ' : 'Não consegui enviar. '}
-                        {testResult.message}
-                      </p>
+                      <Aviso tom={testResult.ok ? 'sucesso' : 'erro'} compacto className="w-full">
+                        {`${testResult.ok ? 'Consegui enviar o lead. ' : 'Não consegui enviar. '}${testResult.message ?? ''}`}
+                      </Aviso>
                     )}
                   </div>
-                </div>
+                </>
               )}
-            </div>
+            </GrupoDaJanela>
 
             <DialogFooter>
               <Button variant="outline" type="button" onClick={onClose}>Cancelar</Button>
