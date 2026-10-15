@@ -9,10 +9,11 @@ import {
   Input,
   Textarea,
   Button,
-  Label,
 } from '@/components/ui/ds';
 import { Upload, X } from 'lucide-react';
 import { MACRO_ACTION_TYPES } from '@/types/automation';
+import { cn } from '@/lib/utils';
+import { CampoDaJanela, GradeDaJanela } from '@/components/base/janela';
 
 interface ActionRowProps {
   action: {
@@ -113,12 +114,12 @@ export default function MacroActionRow({
             onValueChange={value => handleParamsChange([parseInt(value) || value])}
             disabled={disabled}
           >
-            <SelectTrigger className="w-full bg-sidebar border-sidebar-border text-sidebar-foreground">
+            <SelectTrigger className="w-full">
               <SelectValue placeholder={t('actionRow.selectPlaceholder')} />
             </SelectTrigger>
-            <SelectContent className="bg-sidebar border-sidebar-border">
+            <SelectContent>
               {selectOptions.length === 0 ? (
-                <SelectItem value="loading" disabled className="text-sidebar-foreground">
+                <SelectItem value="loading" disabled>
                   {t('actionRow.loadingOptions')}
                 </SelectItem>
               ) : (
@@ -126,7 +127,6 @@ export default function MacroActionRow({
                   <SelectItem
                     key={option.value || option.id}
                     value={(option.value || option.id).toString()}
-                    className="text-sidebar-foreground"
                   >
                     {option.label || option.name || option.title}
                   </SelectItem>
@@ -160,12 +160,12 @@ export default function MacroActionRow({
               }}
               disabled={disabled}
             >
-              <SelectTrigger className="w-full bg-sidebar border-sidebar-border text-sidebar-foreground">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder={t('actionRow.multiSelectPlaceholder')} />
               </SelectTrigger>
-              <SelectContent className="bg-sidebar border-sidebar-border">
+              <SelectContent>
                 {multiSelectOptions.length === 0 ? (
-                  <SelectItem value="loading" disabled className="text-sidebar-foreground">
+                  <SelectItem value="loading" disabled>
                     {t('actionRow.loadingOptions')}
                   </SelectItem>
                 ) : (
@@ -173,7 +173,6 @@ export default function MacroActionRow({
                     <SelectItem
                       key={option.value || option.id}
                       value={(option.value || option.id).toString()}
-                      className="text-sidebar-foreground"
                     >
                       {option.label || option.name || option.title}
                     </SelectItem>
@@ -192,14 +191,14 @@ export default function MacroActionRow({
                   return (
                     <div
                       key={paramValue}
-                      className="flex items-center gap-1 px-2 py-1 bg-sidebar-accent text-sidebar-foreground rounded text-sm"
+                      className="flex items-center gap-1 px-2 py-1 bg-muted rounded text-sm"
                     >
                       {option?.label || option?.name || option?.title || paramValue}
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="-my-1.5 size-8 p-0 hover:bg-transparent text-sidebar-foreground/60"
+                        className="-my-1.5 size-8 p-0 hover:bg-transparent text-muted-foreground"
                         onClick={() =>
                           handleParamsChange(action.action_params.filter(p => p !== paramValue))
                         }
@@ -223,7 +222,7 @@ export default function MacroActionRow({
             value={action.action_params[0] || ''}
             onChange={e => handleParamsChange([e.target.value])}
             placeholder={t('actionRow.textareaPlaceholder')}
-            className="w-full bg-sidebar border-sidebar-border text-sidebar-foreground"
+            className="w-full"
             disabled={disabled}
             rows={3}
           />
@@ -240,7 +239,7 @@ export default function MacroActionRow({
                 ? t('actionRow.hoursPlaceholder')
                 : t('actionRow.textPlaceholder')
             }
-            className="w-full bg-sidebar border-sidebar-border text-sidebar-foreground"
+            className="w-full"
             disabled={disabled}
           />
         );
@@ -252,7 +251,7 @@ export default function MacroActionRow({
             value={action.action_params[0] || ''}
             onChange={e => handleParamsChange([e.target.value])}
             placeholder={t('actionRow.emailPlaceholder')}
-            className="w-full bg-sidebar border-sidebar-border text-sidebar-foreground"
+            className="w-full"
             disabled={disabled}
           />
         );
@@ -264,7 +263,7 @@ export default function MacroActionRow({
             value={action.action_params[0] || ''}
             onChange={e => handleParamsChange([e.target.value])}
             placeholder={t('actionRow.urlPlaceholder')}
-            className="w-full bg-sidebar border-sidebar-border text-sidebar-foreground"
+            className="w-full"
             disabled={disabled}
           />
         );
@@ -278,7 +277,6 @@ export default function MacroActionRow({
                 variant="outline"
                 size="sm"
                 disabled={disabled || uploadingFile}
-                className="bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
                 onClick={() => document.getElementById(`file-${index}`)?.click()}
               >
                 <Upload className="h-4 w-4 mr-2" />
@@ -295,7 +293,7 @@ export default function MacroActionRow({
             </div>
 
             {action.action_params.length > 0 && (
-              <div className="text-sm text-sidebar-foreground/70">
+              <div className="text-sm text-muted-foreground">
                 {t('actionRow.fileSelected', { filename: action.action_params[0] })}
               </div>
             )}
@@ -304,42 +302,34 @@ export default function MacroActionRow({
 
       default:
         return (
-          <div className="text-sm text-sidebar-foreground/70 italic">{t('actionRow.noConfig')}</div>
+          <div className="text-sm text-muted-foreground italic">{t('actionRow.noConfig')}</div>
         );
     }
   };
 
   return (
-    <div className="p-4 border border-sidebar-border rounded-lg bg-sidebar-accent/30">
-      {/* Layout horizontal com ação e configuração na mesma linha */}
-      <div className="flex items-end gap-4">
-        {/* Ação */}
-        <div className="flex-1 space-y-2">
-          <Label className="text-sm text-sidebar-foreground/70">
-            {t('modal.form.actionLabel')}
-          </Label>
+    <div className={cn('flex items-end gap-3', index > 0 && 'border-t border-border pt-4')}>
+      <GradeDaJanela className="min-w-0 flex-1">
+        <CampoDaJanela rotulo={t('modal.form.actionLabel')} colunas={selectedActionConfig?.inputType ? 2 : 4} erro={errors[`action_${index}_name`]}>
           <Select
             value={action.action_name}
             onValueChange={value => handleFieldChange('action_name', value)}
             disabled={disabled}
           >
             <SelectTrigger
-              className={`w-full bg-sidebar border-sidebar-border text-sidebar-foreground ${
-                errors[`action_${index}_name`] ? 'border-red-500' : ''
-              }`}
+              className={cn('w-full', errors[`action_${index}_name`] && 'border-destructive')}
             >
               <SelectValue placeholder={t('actionRow.selectPlaceholder')} />
             </SelectTrigger>
-            <SelectContent className="bg-sidebar border-sidebar-border">
+            <SelectContent>
               {MACRO_ACTION_TYPES.map(actionConfig => (
                 <SelectItem
                   key={actionConfig.key}
                   value={actionConfig.key}
-                  className="text-sidebar-foreground"
                 >
                   <div>
                     <div className="font-medium">{actionConfig.name}</div>
-                    <div className="text-xs text-sidebar-foreground/60">
+                    <div className="text-xs text-muted-foreground">
                       {actionConfig.description}
                     </div>
                   </div>
@@ -347,39 +337,31 @@ export default function MacroActionRow({
               ))}
             </SelectContent>
           </Select>
-          {errors[`action_${index}_name`] && (
-            <p className="text-sm text-red-500">{errors[`action_${index}_name`]}</p>
-          )}
-        </div>
+        </CampoDaJanela>
 
         {/* Configuração da ação */}
         {selectedActionConfig && selectedActionConfig.inputType && (
-          <div className="flex-1 space-y-2">
-            <Label className="text-sm text-sidebar-foreground/70">
-              {t('modal.form.configLabel')}
-            </Label>
+          <CampoDaJanela rotulo={t('modal.form.configLabel')} colunas={2}>
             {renderActionInput()}
-          </div>
+          </CampoDaJanela>
         )}
+      </GradeDaJanela>
 
-        {/* Botão de remover */}
-        {canRemove && (
-          <div className="pb-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onRemove(index)}
-              disabled={disabled}
-              aria-label="Remover ação"
-              title="Remover ação"
-              className="bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-red-500/10 hover:border-red-500 hover:text-red-500"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-      </div>
+      {/* Botão de remover */}
+      {canRemove && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onRemove(index)}
+          disabled={disabled}
+          aria-label="Remover ação"
+          title="Remover ação"
+          className="shrink-0 hover:border-destructive hover:bg-destructive/10 hover:text-destructive"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 }

@@ -72,25 +72,25 @@ export type WhatsappReminderResponse = StandardResponse<WhatsappReminder>;
 export const TRIGGER_LABELS: Record<ReminderTriggerType, string> = {
   lead_via_webhook: 'Lead chegou por formulário ou integração',
   tag_added: 'Etiqueta adicionada ao lead',
-  card_moved_to_column: 'Card movido pra coluna',
-  no_response_after: 'Sem resposta por X tempo',
+  card_moved_to_column: 'Lead movido pra outra etapa',
+  no_response_after: 'Lead sem resposta depois de um tempo',
   manual_macro: 'Disparo manual (botão)'
 };
 
 export const DELIVERY_LABELS: Record<ReminderDeliveryMode, string> = {
   immediate: 'Imediato',
-  delayed: 'Com delay',
-  recurring: 'Recorrente (cron)'
+  delayed: 'Depois de um tempo',
+  recurring: 'Repetido num horário'
 };
 
 export const DESTINATION_LABELS: Record<ReminderDestinationType, string> = {
-  number: 'Número WhatsApp específico',
-  group: 'Grupo WhatsApp',
-  lead_dm: 'DM pro lead da automação',
-  assigned_member: 'DM pro atendente atribuído'
+  number: 'Um número de WhatsApp',
+  group: 'Um grupo de WhatsApp',
+  lead_dm: 'Mensagem direta pro lead da automação',
+  assigned_member: 'Mensagem direta pro corretor responsável'
 };
 
 export const CONTENT_LABELS: Record<ReminderContentMode, string> = {
-  editor_vars: 'Editor com variáveis ({{nome}} etc.)',
-  fixed_card: 'Card visual fixo com dados do lead'
+  editor_vars: 'Mensagem escrita por você, com os dados do lead',
+  fixed_card: 'Cartão pronto com os dados do lead'
 };

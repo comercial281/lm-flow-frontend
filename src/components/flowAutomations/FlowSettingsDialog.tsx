@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, Button, Input,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, Button, Input, Checkbox,
 } from '@/components/ui/ds';
 import {
   REENTRY_OPTIONS,
@@ -9,6 +9,8 @@ import {
   type ReentrySetting,
 } from '@/features/flowAutomations/reentry';
 import Aviso from '@/components/base/Aviso';
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { BUSINESS_HOURS_FLOW_HELP, BUSINESS_HOURS_LABEL } from '@/features/flowAutomations/businessHours';
 
 // Configurações do fluxo: "Pode rodar de novo pro mesmo lead" (sprint 2,
@@ -52,59 +54,42 @@ export function FlowSettingsDialog({ open, settings, triggerEvent, onClose, onSa
           <DialogDescription>Quando o mesmo lead pode passar por este fluxo outra vez, e em que horário as mensagens saem.</DialogDescription>
         </DialogHeader>
 
-        <fieldset className="space-y-3 py-2">
-          <legend className="text-sm font-medium mb-1">Pode rodar de novo pro mesmo lead</legend>
-          {REENTRY_OPTIONS.map(option => (
-            <div key={option.value}>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="radio"
-                  name="flow-reentry"
-                  checked={draft.mode === option.value}
-                  onChange={() => pick(option.value)}
-                  className="h-4 w-4 accent-primary"
-                  aria-label={option.label}
-                />
-                {option.value === 'hours' ? (
-                  <span className="flex items-center gap-2">
-                    Depois de
-                    <Input
-                      type="number"
-                      min={1}
-                      className="h-8 w-20"
-                      value={draft.hours}
-                      onFocus={() => pick('hours')}
-                      onChange={e => setDraft({ mode: 'hours', hours: Math.max(1, Math.floor(Number(e.target.value) || 1)) })}
-                      aria-label="Quantas horas"
-                    />
-                    horas
-                  </span>
-                ) : (
-                  option.label
-                )}
-              </label>
-              {option.value === 'always' && warning && (
-                <Aviso tom="atencao" compacto className="mt-1 ml-6">
-                  {warning}
-                </Aviso>
-              )}
-            </div>
-          ))}
-        </fieldset>
-
-        <fieldset className="space-y-1 border-t border-border pt-3">
-          <legend className="sr-only">Horário</legend>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={businessHoursOnly}
-              onChange={e => setBusinessHoursOnly(e.target.checked)}
-              className="h-4 w-4 accent-primary"
+        <div className="grid gap-5 py-2">
+          <GrupoDaJanela titulo="Pode rodar de novo pro mesmo lead">
+            <BotoesDeEscolha
+              rotulo="Pode rodar de novo pro mesmo lead"
+              valor={draft.mode}
+              opcoes={REENTRY_OPTIONS.map(o => ({ valor: o.value, rotulo: o.label }))}
+              aoEscolher={pick}
+              className="w-full"
             />
-            {BUSINESS_HOURS_LABEL}
-          </label>
-          <p className="ml-6 text-xs text-muted-foreground">{BUSINESS_HOURS_FLOW_HELP}</p>
-        </fieldset>
+            {draft.mode === 'hours' && (
+              <CampoDaJanela rotulo="Depois de quantas horas" htmlFor="flow-reentry-horas">
+                <Input
+                  id="flow-reentry-horas"
+                  type="number"
+                  min={1}
+                  className="w-full"
+                  value={draft.hours}
+                  onChange={e => setDraft({ mode: 'hours', hours: Math.max(1, Math.floor(Number(e.target.value) || 1)) })}
+                  aria-label="Quantas horas"
+                />
+              </CampoDaJanela>
+            )}
+            {warning && <Aviso tom="atencao" compacto>{warning}</Aviso>}
+          </GrupoDaJanela>
+
+          <GrupoDaJanela titulo="Horário">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={businessHoursOnly}
+                onCheckedChange={v => setBusinessHoursOnly(v === true)}
+              />
+              {BUSINESS_HOURS_LABEL}
+            </label>
+            <p className="text-xs text-muted-foreground">{BUSINESS_HOURS_FLOW_HELP}</p>
+          </GrupoDaJanela>
+        </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>

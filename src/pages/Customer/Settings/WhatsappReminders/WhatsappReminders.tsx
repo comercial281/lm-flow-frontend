@@ -46,6 +46,8 @@ import EmptyState from '@/components/base/EmptyState';
 import Chave from '@/components/base/Chave';
 import IconActionButton from '@/components/base/IconActionButton';
 import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
+import Aviso from '@/components/base/Aviso';
+import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { PhoneInput } from '@/components/shared/PhoneInput';
 
 // Tela piloto da Fase 3 (base de design e linguagem). O que mudou aqui é a
@@ -342,213 +344,222 @@ export default function WhatsappReminders() {
             <DialogTitle>{editing ? 'Editar lembrete' : 'Novo lembrete'}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div>
-              <Label htmlFor="lembrete-nome">Nome *</Label>
-              <Input
-                id="lembrete-nome"
-                value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })}
-                placeholder="Ex.: Avisar o comercial sobre um lead novo"
-              />
-            </div>
+          <div className="grid gap-5 py-2">
+            <GrupoDaJanela titulo="Identificação">
+              <CampoDaJanela rotulo="Nome" htmlFor="lembrete-nome" obrigatorio>
+                <Input
+                  id="lembrete-nome"
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  placeholder="Ex.: Avisar o comercial sobre um lead novo"
+                />
+              </CampoDaJanela>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="lembrete-ligado"
+                  checked={form.enabled}
+                  onCheckedChange={v => setForm({ ...form, enabled: v === true })}
+                />
+                <Label htmlFor="lembrete-ligado">Ligado</Label>
+              </div>
+            </GrupoDaJanela>
 
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="lembrete-ligado"
-                checked={form.enabled}
-                onCheckedChange={v => setForm({ ...form, enabled: v === true })}
-              />
-              <Label htmlFor="lembrete-ligado">Ligado</Label>
-            </div>
+            <GrupoDaJanela titulo="Quando">
+              <GradeDaJanela>
+                <CampoDaJanela rotulo="Quando mandar" colunas={2}>
+                  <Select
+                    value={form.trigger_type}
+                    onValueChange={v => setForm({ ...form, trigger_type: v as ReminderTriggerType })}
+                  >
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(TRIGGER_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CampoDaJanela>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Quando mandar</Label>
-                <Select
-                  value={form.trigger_type}
-                  onValueChange={v => setForm({ ...form, trigger_type: v as ReminderTriggerType })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(TRIGGER_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CampoDaJanela rotulo="Quando entregar" colunas={2}>
+                  <Select
+                    value={form.delivery_mode}
+                    onValueChange={v => setForm({ ...form, delivery_mode: v as ReminderDeliveryMode })}
+                  >
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(DELIVERY_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CampoDaJanela>
+
                 {form.trigger_type !== 'manual_macro' && (
-                  <p className="text-xs text-amber-600 mt-1">
+                  <Aviso tom="atencao" compacto className="sm:col-span-4">
                     Por enquanto só o disparo manual funciona.
-                  </p>
+                  </Aviso>
                 )}
-              </div>
-
-              <div>
-                <Label>Quando entregar</Label>
-                <Select
-                  value={form.delivery_mode}
-                  onValueChange={v => setForm({ ...form, delivery_mode: v as ReminderDeliveryMode })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(DELIVERY_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
                 {form.delivery_mode !== 'immediate' && (
-                  <p className="text-xs text-amber-600 mt-1">
+                  <Aviso tom="atencao" compacto className="sm:col-span-4">
                     Por enquanto só a entrega na hora funciona.
-                  </p>
+                  </Aviso>
                 )}
-              </div>
-            </div>
 
-            {showDelayField && (
-              <div>
-                <Label htmlFor="lembrete-espera">Esperar quantos minutos</Label>
-                <Input
-                  id="lembrete-espera"
-                  type="number"
-                  value={form.delivery_config?.delay_minutes || 0}
-                  onChange={e =>
-                    setForm({
-                      ...form,
-                      delivery_config: { ...(form.delivery_config || {}), delay_minutes: parseInt(e.target.value, 10) || 0 }
-                    })
-                  }
-                />
-              </div>
-            )}
-
-            {showCronField && (
-              <div>
-                <Label htmlFor="lembrete-cron">Repetição (ex.: 0 9 * * * = todo dia às 9h)</Label>
-                <Input
-                  id="lembrete-cron"
-                  value={form.delivery_config?.cron || ''}
-                  onChange={e =>
-                    setForm({ ...form, delivery_config: { ...(form.delivery_config || {}), cron: e.target.value } })
-                  }
-                  placeholder="0 9 * * *"
-                />
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Número de WhatsApp que manda *</Label>
-                <Select
-                  value={form.inbox_id ? String(form.inbox_id) : ''}
-                  onValueChange={v => setForm({ ...form, inbox_id: v ? parseInt(v, 10) : null })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Escolha o número" /></SelectTrigger>
-                  <SelectContent>
-                    {inboxes.map(i => (
-                      <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Para quem</Label>
-                <Select
-                  value={form.destination_type}
-                  onValueChange={v => setForm({ ...form, destination_type: v as ReminderDestinationType, destination_value: {} })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(DESTINATION_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {showNumberField && (
-              <div>
-                <Label htmlFor="lembrete-destino">Número de quem recebe</Label>
-                <PhoneInput
-                  id="lembrete-destino"
-                  value={form.destination_value?.number || ''}
-                  onChange={number => setForm({ ...form, destination_value: { number } })}
-                  placeholder="(11) 99999-9999"
-                  valueFormat="digits"
-                />
-              </div>
-            )}
-
-            {showGroupField && (
-              <div>
-                <Label>
-                  Grupo do WhatsApp{' '}
-                  {groupsLoading && <Loader2 className="w-3 h-3 inline animate-spin ml-1" />}
-                </Label>
-                <Select
-                  value={form.destination_value?.group_jid || ''}
-                  onValueChange={v => {
-                    const g = groups.find(x => x.id === v);
-                    setForm({
-                      ...form,
-                      destination_value: { group_jid: v, group_name: g?.name || '' }
-                    });
-                  }}
-                  disabled={!form.inbox_id || groupsLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={!form.inbox_id ? 'Escolha o número primeiro' : 'Escolha um grupo'}
+                {showDelayField && (
+                  <CampoDaJanela rotulo="Esperar quantos minutos" htmlFor="lembrete-espera" colunas={2}>
+                    <Input
+                      id="lembrete-espera"
+                      type="number"
+                      value={form.delivery_config?.delay_minutes || 0}
+                      onChange={e =>
+                        setForm({
+                          ...form,
+                          delivery_config: { ...(form.delivery_config || {}), delay_minutes: parseInt(e.target.value, 10) || 0 }
+                        })
+                      }
                     />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups.map(g => (
-                      <SelectItem key={g.id} value={g.id}>
-                        {g.name} {g.participants_count ? `(${g.participants_count})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+                  </CampoDaJanela>
+                )}
 
-            <div>
-              <Label>Conteúdo</Label>
-              <Select
-                value={form.content_mode}
-                onValueChange={v => setForm({ ...form, content_mode: v as ReminderContentMode })}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(CONTENT_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                {showCronField && (
+                  <CampoDaJanela
+                    rotulo="Quando repetir"
+                    htmlFor="lembrete-cron"
+                    colunas={4}
+                    ajuda="Escreva no formato de agenda. Exemplo: 0 9 * * * repete todo dia às 9h."
+                  >
+                    <Input
+                      id="lembrete-cron"
+                      value={form.delivery_config?.cron || ''}
+                      onChange={e =>
+                        setForm({ ...form, delivery_config: { ...(form.delivery_config || {}), cron: e.target.value } })
+                      }
+                      placeholder="0 9 * * *"
+                    />
+                  </CampoDaJanela>
+                )}
+              </GradeDaJanela>
+            </GrupoDaJanela>
 
-            {form.content_mode === 'editor_vars' && (
-              <div>
-                <Label htmlFor="lembrete-mensagem">Mensagem (use {'{{nome}}'}, {'{{telefone}}'}, {'{{cidade}}'}, {'{{tipo_pretensao}}'}…)</Label>
-                <Textarea
-                  id="lembrete-mensagem"
-                  rows={5}
-                  value={form.content_template || ''}
-                  onChange={e => setForm({ ...form, content_template: e.target.value })}
-                  placeholder="Olá {{nome}}, novo lead chegou! Telefone: {{telefone}}"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Pode usar: nome, nome_completo, telefone, email, tipo_pretensao, cidade, orcamento
-                </p>
-              </div>
-            )}
+            <GrupoDaJanela titulo="Para quem">
+              <GradeDaJanela>
+                <CampoDaJanela rotulo="Número de WhatsApp que manda" obrigatorio colunas={2}>
+                  <Select
+                    value={form.inbox_id ? String(form.inbox_id) : ''}
+                    onValueChange={v => setForm({ ...form, inbox_id: v ? parseInt(v, 10) : null })}
+                  >
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Escolha o número" /></SelectTrigger>
+                    <SelectContent>
+                      {inboxes.map(i => (
+                        <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CampoDaJanela>
 
-            {form.content_mode === 'fixed_card' && (
-              <div className="text-xs text-muted-foreground bg-muted/40 rounded p-3">
-                Cartão pronto: manda nome, telefone, e-mail e cidade do lead.
-              </div>
-            )}
+                <CampoDaJanela rotulo="Quem recebe" colunas={2}>
+                  <Select
+                    value={form.destination_type}
+                    onValueChange={v => setForm({ ...form, destination_type: v as ReminderDestinationType, destination_value: {} })}
+                  >
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(DESTINATION_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CampoDaJanela>
+
+                {showNumberField && (
+                  <CampoDaJanela rotulo="Número de quem recebe" htmlFor="lembrete-destino" colunas={4}>
+                    <PhoneInput
+                      id="lembrete-destino"
+                      value={form.destination_value?.number || ''}
+                      onChange={number => setForm({ ...form, destination_value: { number } })}
+                      placeholder="(11) 99999-9999"
+                      valueFormat="digits"
+                    />
+                  </CampoDaJanela>
+                )}
+
+                {showGroupField && (
+                  <CampoDaJanela
+                    rotulo="Grupo do WhatsApp"
+                    colunas={4}
+                  >
+                    <Select
+                      value={form.destination_value?.group_jid || ''}
+                      onValueChange={v => {
+                        const g = groups.find(x => x.id === v);
+                        setForm({
+                          ...form,
+                          destination_value: { group_jid: v, group_name: g?.name || '' }
+                        });
+                      }}
+                      disabled={!form.inbox_id || groupsLoading}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue
+                          placeholder={
+                            groupsLoading ? 'Carregando os grupos…'
+                              : !form.inbox_id ? 'Escolha o número primeiro' : 'Escolha um grupo'
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {groups.map(g => (
+                          <SelectItem key={g.id} value={g.id}>
+                            {g.name} {g.participants_count ? `(${g.participants_count})` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </CampoDaJanela>
+                )}
+              </GradeDaJanela>
+            </GrupoDaJanela>
+
+            <GrupoDaJanela titulo="Mensagem">
+              <GradeDaJanela>
+                <CampoDaJanela rotulo="Conteúdo" colunas={4}>
+                  <Select
+                    value={form.content_mode}
+                    onValueChange={v => setForm({ ...form, content_mode: v as ReminderContentMode })}
+                  >
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(CONTENT_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CampoDaJanela>
+
+                {form.content_mode === 'editor_vars' && (
+                  <CampoDaJanela
+                    rotulo="Mensagem"
+                    htmlFor="lembrete-mensagem"
+                    colunas={4}
+                    ajuda="Onde quiser um dado do lead, escreva o nome entre chaves duplas: {{nome}}, {{nome_completo}}, {{telefone}}, {{email}}, {{tipo_pretensao}}, {{cidade}} ou {{orcamento}}."
+                  >
+                    <Textarea
+                      id="lembrete-mensagem"
+                      rows={5}
+                      value={form.content_template || ''}
+                      onChange={e => setForm({ ...form, content_template: e.target.value })}
+                      placeholder="Olá {{nome}}, novo lead chegou! Telefone: {{telefone}}"
+                    />
+                  </CampoDaJanela>
+                )}
+
+                {form.content_mode === 'fixed_card' && (
+                  <Aviso tom="neutro" compacto className="sm:col-span-4">
+                    Cartão pronto: manda nome, telefone, e-mail e cidade do lead.
+                  </Aviso>
+                )}
+              </GradeDaJanela>
+            </GrupoDaJanela>
           </div>
 
           <DialogFooter>

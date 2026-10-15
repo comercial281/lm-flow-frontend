@@ -38,7 +38,7 @@ describe('a lista de gatilhos é a das Automações', () => {
   });
 
   it('o nome da tela não fala CTWA', () => {
-    expect(flowTriggerLabel('lead.campaign_received')).toBe('Lead Whats Meta (anúncio no WhatsApp)');
+    expect(flowTriggerLabel('lead.campaign_received')).toBe('Lead de anúncio no WhatsApp');
   });
 });
 

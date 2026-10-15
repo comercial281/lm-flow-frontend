@@ -12,6 +12,7 @@ import {
   Input,
   Label as UILabel,
   Textarea,
+  Checkbox,
 } from '@/components/ui/ds';
 import { Zap, Plus, Edit, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
@@ -21,16 +22,18 @@ import {
   WelcomeAutomationFormData,
 } from '@/services/welcomeAutomations/welcomeAutomationsService';
 import { Seletor } from '@/components/base/Seletor';
+import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 
 const TRIGGERS = [
-  { value: 'new_conversation', label: 'Nova conversa (qualquer)' },
+  { value: 'new_conversation', label: 'Qualquer conversa nova' },
   { value: 'first_inbound_message', label: 'Primeira mensagem recebida' },
 ];
 
+// O botão mostra o nome humano; o que entra no texto (e é gravado) continua a variável.
 const VARIABLE_CHIPS = [
-  { label: '{{lead_name}}', value: '{{lead_name}}' },
-  { label: '{{lead_phone}}', value: '{{lead_phone}}' },
-  { label: '{{conversation_id}}', value: '{{conversation_id}}' },
+  { label: 'Nome do lead', value: '{{lead_name}}' },
+  { label: 'Telefone do lead', value: '{{lead_phone}}' },
+  { label: 'Número da conversa', value: '{{conversation_id}}' },
 ];
 
 const EMPTY_FORM: WelcomeAutomationFormData = {
@@ -242,82 +245,93 @@ export default function WelcomeAutomations() {
       <Dialog open={modalOpen} onOpenChange={open => { if (!open) { setModalOpen(false); setEditing(null); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? 'Editar Automação' : 'Nova Automação de Boas-Vindas'}</DialogTitle>
+            <DialogTitle>{editing ? 'Editar automação' : 'Nova automação de boas-vindas'}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <UILabel htmlFor="wa-name">Nome</UILabel>
-              <Input
-                id="wa-name"
-                value={formData.name}
-                onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
-                placeholder="Ex: Boas-vindas WhatsApp"
-              />
-              {formErrors.name && <p className="text-xs text-destructive">{formErrors.name}</p>}
-            </div>
+          <div className="grid gap-5 py-2">
+            <GrupoDaJanela titulo="Automação">
+              <GradeDaJanela>
+                <CampoDaJanela rotulo="Nome" htmlFor="wa-name" obrigatorio colunas={4} erro={formErrors.name}>
+                  <Input
+                    id="wa-name"
+                    value={formData.name}
+                    onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
+                    placeholder="Ex.: Boas-vindas WhatsApp"
+                  />
+                </CampoDaJanela>
 
-            <div className="space-y-1.5">
-              <UILabel htmlFor="wa-trigger">Gatilho</UILabel>
-              <Seletor
-                id="wa-trigger"
-                value={formData.trigger}
-                onChange={e => setFormData(p => ({ ...p, trigger: e.target.value as WelcomeAutomationFormData['trigger'] }))}
-                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-              >
-                {TRIGGERS.map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </Seletor>
-            </div>
-
-            <div className="space-y-1.5">
-              <UILabel htmlFor="wa-delay">Delay (segundos)</UILabel>
-              <Input
-                id="wa-delay"
-                type="number"
-                min={0}
-                max={3600}
-                value={formData.delay_seconds}
-                onChange={e => setFormData(p => ({ ...p, delay_seconds: parseInt(e.target.value) || 0 }))}
-              />
-              <p className="text-xs text-muted-foreground">0 = enviada imediatamente após a criação da conversa</p>
-            </div>
-
-            <div className="space-y-1.5">
-              <UILabel htmlFor="wa-body">Mensagem</UILabel>
-              <div className="flex flex-wrap gap-1 mb-1.5">
-                {VARIABLE_CHIPS.map(chip => (
-                  <button
-                    key={chip.value}
-                    type="button"
-                    onClick={() => insertVariable(chip.value)}
-                    className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-mono"
+                <CampoDaJanela rotulo="Gatilho" htmlFor="wa-trigger" colunas={2}>
+                  <Seletor
+                    id="wa-trigger"
+                    value={formData.trigger}
+                    onChange={e => setFormData(p => ({ ...p, trigger: e.target.value as WelcomeAutomationFormData['trigger'] }))}
+                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                   >
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
-              <Textarea
-                id="wa-body"
-                value={formData.template_body}
-                onChange={e => setFormData(p => ({ ...p, template_body: e.target.value }))}
-                placeholder="Olá {{lead_name}}! Obrigado por entrar em contato..."
-                rows={5}
-              />
-              {formErrors.template_body && <p className="text-xs text-destructive">{formErrors.template_body}</p>}
-            </div>
+                    {TRIGGERS.map(t => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </Seletor>
+                </CampoDaJanela>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="wa-active"
-                checked={formData.is_active}
-                onChange={e => setFormData(p => ({ ...p, is_active: e.target.checked }))}
-                className="h-4 w-4 rounded border-border"
-              />
-              <UILabel htmlFor="wa-active" className="cursor-pointer font-normal">Ativada</UILabel>
-            </div>
+                <CampoDaJanela
+                  rotulo="Esperar quantos segundos"
+                  htmlFor="wa-delay"
+                  colunas={2}
+                  ajuda="Com 0, a mensagem sai logo depois que a conversa começa"
+                >
+                  <Input
+                    id="wa-delay"
+                    type="number"
+                    min={0}
+                    max={3600}
+                    value={formData.delay_seconds}
+                    onChange={e => setFormData(p => ({ ...p, delay_seconds: parseInt(e.target.value) || 0 }))}
+                  />
+                </CampoDaJanela>
+              </GradeDaJanela>
+            </GrupoDaJanela>
+
+            <GrupoDaJanela titulo="Mensagem">
+              <CampoDaJanela
+                rotulo="Texto da mensagem"
+                htmlFor="wa-body"
+                obrigatorio
+                erro={formErrors.template_body}
+                ajuda="Use os botões acima do texto para colocar o nome ou o telefone do lead na mensagem"
+              >
+                <div className="flex flex-wrap gap-1.5">
+                  {VARIABLE_CHIPS.map(chip => (
+                    <Button
+                      key={chip.value}
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => insertVariable(chip.value)}
+                    >
+                      {chip.label}
+                    </Button>
+                  ))}
+                </div>
+                <Textarea
+                  id="wa-body"
+                  value={formData.template_body}
+                  onChange={e => setFormData(p => ({ ...p, template_body: e.target.value }))}
+                  placeholder="Olá! Obrigado por entrar em contato..."
+                  rows={5}
+                />
+              </CampoDaJanela>
+            </GrupoDaJanela>
+
+            <GrupoDaJanela titulo="Estado">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="wa-active"
+                  checked={formData.is_active}
+                  onCheckedChange={v => setFormData(p => ({ ...p, is_active: v === true }))}
+                />
+                <UILabel htmlFor="wa-active" className="cursor-pointer font-normal">Ativada</UILabel>
+              </div>
+            </GrupoDaJanela>
           </div>
 
           <DialogFooter>
