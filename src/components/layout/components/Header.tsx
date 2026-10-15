@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Menu,
   PanelRightClose,
@@ -22,12 +22,10 @@ import { useLanguage } from '../../../hooks/useLanguage';
 import NotificationBell from '../NotificationBell';
 import PlantaoToggle from './PlantaoToggle';
 import ProfileMenu from './ProfileMenu';
-import MenuItem from './MenuItem';
 import MenuSecoes from './MenuSecoes';
 import { useGuardaDeSaida } from '@/hooks/useAlteracoesNaoSalvas';
-import { itemAtivo, secoesDoCelular, type MenuItem as MenuItemType, type MenuSection } from '../config/menuItems';
-import { ThemeToggle } from '../../ThemeToggle';
-import { DemoModeToggle } from '../../DemoModeToggle';
+import { secoesDoCelular, type MenuItem as MenuItemType, type MenuSection } from '../config/menuItems';
+import RodapeDoMenu from './RodapeDoMenu';
 import AdminAreaButton from './AdminAreaButton';
 import { AppLogo } from '../../AppLogo';
 import { useAppDataStore } from '@/store/appDataStore';
@@ -68,7 +66,6 @@ export default function Header({
   setLogoutDialogOpen,
 }: HeaderProps) {
   const { t } = useLanguage('layout');
-  const { pathname } = useLocation();
   const account = useAppDataStore(state => state.account);
   const fetchAccount = useAppDataStore(state => state.fetchAccount);
   // Fase 3: menu mobile também pergunta antes de sair com alteração não salva.
@@ -107,27 +104,12 @@ export default function Header({
                   {/* Mesmas seções do computador (uma aberta por vez), sem as
                       telas de montar/configurar (Raio-X do celular, 10/10/2026). */}
                   <MenuSecoes secoes={secoesDoCelular(secoes)} mobile aoNavegar={() => setIsMobileMenuOpen(false)} />
-                  <div className="mt-3 pt-3 border-t border-sidebar-border space-y-1">
-                    {rodape.map(item => (
-                      <MenuItem
-                        key={item.href}
-                        item={item}
-                        mobile
-                        isActive={itemAtivo(item, pathname)}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      />
-                    ))}
+                  {/* Mesma fileira de ícones do rodapé do computador. */}
+                  <div className="mt-3 pt-3 border-t border-sidebar-border">
+                    <RodapeDoMenu itens={rodape} aoNavegar={() => setIsMobileMenuOpen(false)} />
                   </div>
                 </nav>
               </ScrollArea>
-
-              {/* Ações que saíram da barra do topo no mobile (ver comentário no
-                  bloco "Right" abaixo): não são urgentes, então moram aqui. O botão
-                  de rever o tour (?) saiu em 15/10/2026 junto com o do computador. */}
-              <div className="p-4 border-t border-sidebar-border flex items-center gap-2">
-                <ThemeToggle />
-                <DemoModeToggle />
-              </div>
 
               {/* Mobile User Menu */}
               <ProfileMenu
