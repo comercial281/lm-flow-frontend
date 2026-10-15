@@ -32,7 +32,7 @@ describe('Chaves do MCP', () => {
     abrir();
     await screen.findByText('Claude do Tony');
     await userEvent.click(screen.getByRole('button', { name: 'Gerar chave' }));
-    await userEvent.type(screen.getByLabelText('Nome da chave'), 'Celular');
+    await userEvent.type(screen.getByLabelText(/Nome da chave/), 'Celular');
     await userEvent.click(screen.getByRole('button', { name: 'Gerar' }));
     expect(svc.gerar).toHaveBeenCalledWith('Celular');
     expect(await screen.findByDisplayValue('https://api.x/mcp/lmf_segredo')).toBeInTheDocument();

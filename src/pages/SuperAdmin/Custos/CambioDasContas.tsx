@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
-  Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label,
+  Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input,
 } from '@/components/ui/ds';
+import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { costsService } from '@/services/superAdmin/costsService';
 import type { AccountingRate } from '@/types/admin/costs';
 
@@ -80,18 +81,17 @@ export default function CambioDasContas({ aoMudar }: { aoMudar: () => void }) {
               Quanto vale um dólar nas contas do admin. Muda de uma vez Custos, Margem, Visão Geral e o uso de IA na lista de Clientes.
             </DialogDescription>
           </DialogHeader>
-          <div>
-            <Label htmlFor="cambio-valor">Reais por dólar</Label>
-            <Input id="cambio-valor" inputMode="decimal" value={texto} aria-invalid={!valido}
-              aria-describedby={!valido ? 'cambio-valor-erro' : undefined} onChange={(e) => setTexto(e.target.value)} />
-            {!valido && <p id="cambio-valor-erro" className="mt-1 text-xs text-destructive">{msgErro}</p>}
-            {cambio && valido && (
-              <p className="mt-1 text-xs text-muted-foreground">Hoje: {reais(cambio.value)}. Todas as contas passam a usar {reais(novo)}.</p>
-            )}
-            {cambio && (
-              <p className="mt-1 text-xs text-muted-foreground">Padrão: {reais(cambio.default_value)} (dólar 5,20 + 5%).</p>
-            )}
-          </div>
+          <GrupoDaJanela titulo="Câmbio">
+            <CampoDaJanela rotulo="Reais por dólar" htmlFor="cambio-valor" erro={!valido ? msgErro : undefined}
+              ajuda={cambio ? (
+                <>
+                  {valido && <span className="block">Hoje: {reais(cambio.value)}. Todas as contas passam a usar {reais(novo)}.</span>}
+                  <span className="block">Padrão: {reais(cambio.default_value)} (dólar 5,20 + 5%).</span>
+                </>
+              ) : undefined}>
+              <Input id="cambio-valor" inputMode="decimal" value={texto} aria-invalid={!valido} onChange={(e) => setTexto(e.target.value)} />
+            </CampoDaJanela>
+          </GrupoDaJanela>
           <DialogFooter>
             <Button variant="outline" disabled={salvando} onClick={() => setAberto(false)}>Cancelar</Button>
             <Button disabled={!valido || salvando} onClick={() => void salvar()}>Salvar</Button>

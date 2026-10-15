@@ -12,16 +12,16 @@
  */
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { CalendarClock, CheckCircle2, MessageSquare, Star, UserX, XCircle } from 'lucide-react';
+import { CalendarClock, CheckCircle2, MessageSquare, UserX, XCircle } from 'lucide-react';
 import {
   Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-  Label as UILabel, Textarea,
 } from '@/components/ui/ds';
 import { ScheduleVisitDialog } from '@/components/visits/ScheduleVisitDialog';
 import { visitsService, type Visit } from '@/services/visits/visitsService';
 import { useCan } from '@/hooks/useCan';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { dataCurta, hora } from '@/lib/formato';
+import { MioloDoCancelamentoDaVisita, MioloDoRetornoDaVisita } from './MioloDaAcaoDaVisita';
 import { botoesDaVisita, type BotaoDaVisita } from './acaoDaVisita';
 
 type Dialogo = null | 'realizada' | 'retorno' | 'cancelar' | 'nao_compareceu' | 'remarcar_agora';
@@ -182,47 +182,11 @@ export function AcoesDaVisita({ visita, onAtualizada }: { visita: Visit; onAtual
           </DialogHeader>
 
           {comEstrelas && (
-            <div className="space-y-4 py-2">
-              <div>
-                <UILabel>Avaliação (1-5)</UILabel>
-                <div className="flex gap-1 mt-2">
-                  {[1, 2, 3, 4, 5].map(n => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setNota(n)}
-                      aria-label={`Avaliar com ${n} ${n === 1 ? 'estrela' : 'estrelas'}`}
-                      title={`Avaliar com ${n} ${n === 1 ? 'estrela' : 'estrelas'}`}
-                    >
-                      <Star className={`h-6 w-6 ${n <= nota ? 'text-violet-400 fill-violet-400' : 'text-muted-foreground'}`} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <UILabel>Feedback do cliente</UILabel>
-                <Textarea
-                  value={comentario}
-                  onChange={e => setComentario(e.target.value)}
-                  rows={3}
-                  placeholder="Como foi a visita? Interesse do cliente?"
-                  className="mt-1 resize-none"
-                />
-              </div>
-            </div>
+            <MioloDoRetornoDaVisita nota={nota} aoMudarNota={setNota} comentario={comentario} aoMudarComentario={setComentario} />
           )}
 
           {dialogo === 'cancelar' && (
-            <div className="py-2">
-              <UILabel>Motivo do cancelamento</UILabel>
-              <Textarea
-                value={motivo}
-                onChange={e => setMotivo(e.target.value)}
-                rows={3}
-                placeholder="Opcional"
-                className="mt-1 resize-none"
-              />
-            </div>
+            <MioloDoCancelamentoDaVisita motivo={motivo} aoMudarMotivo={setMotivo} />
           )}
 
           <DialogFooter>

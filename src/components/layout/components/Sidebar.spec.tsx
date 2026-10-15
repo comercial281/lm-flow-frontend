@@ -6,6 +6,8 @@ import Sidebar from './Sidebar';
 import type { MenuSection } from '../config/menuItems';
 
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: null }) }));
+vi.mock('@/hooks/useDarkMode', () => ({ useDarkMode: () => ({ theme: 'light', toggleTheme: () => {} }) }));
+vi.mock('@/hooks/useDemoMode', () => ({ useDemoMode: () => ({ demoMode: false, toggleDemoMode: () => {} }) }));
 
 const SECOES: MenuSection[] = [
   { id: 'principal', rotulo: 'Principal', fixa: true, itens: [{ name: 'Dashboard', href: '/dashboard', icon: PieChart }] },

@@ -11,10 +11,11 @@ import {
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
   DialogTitle,
   Input,
-  Label,
 } from '@/components/ui/ds';
+import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { contactsService } from '@/services/contacts/contactsService';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 
@@ -96,32 +97,33 @@ export default function CorrigirContatoDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
-        <DialogTitle>{podeContato ? 'Corrigir contato' : 'Corrigir nome'}</DialogTitle>
-        <DialogDescription>
-          {podeContato
-            ? 'Telefone e e-mail só para erro de digitação em lead cadastrado à mão. A correção fica no histórico do lead.'
-            : 'A troca fica no histórico do lead.'}
-        </DialogDescription>
-        <div className="space-y-3">
-          {podeNome && (
-            <div className="space-y-1">
-              <Label htmlFor="corrigir-nome" className="text-xs">Nome</Label>
-              <Input id="corrigir-nome" value={nome} onChange={e => setNome(e.target.value)} disabled={salvando} />
-            </div>
-          )}
-          {podeContato && (
-            <>
-              <div className="space-y-1">
-                <Label htmlFor="corrigir-telefone" className="text-xs">Telefone (com DDD)</Label>
-                <Input id="corrigir-telefone" value={telefone} onChange={e => setTelefone(e.target.value)} disabled={salvando} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="corrigir-email" className="text-xs">E-mail</Label>
-                <Input id="corrigir-email" type="email" value={email} onChange={e => setEmail(e.target.value)} disabled={salvando} />
-              </div>
-            </>
-          )}
-        </div>
+        <DialogHeader>
+          <DialogTitle>{podeContato ? 'Corrigir contato' : 'Corrigir nome'}</DialogTitle>
+          <DialogDescription>
+            {podeContato
+              ? 'Telefone e e-mail só para erro de digitação em lead cadastrado à mão. A correção fica no histórico do lead.'
+              : 'A troca fica no histórico do lead.'}
+          </DialogDescription>
+        </DialogHeader>
+        <GrupoDaJanela titulo="Dados do lead">
+          <GradeDaJanela>
+            {podeNome && (
+              <CampoDaJanela rotulo="Nome" htmlFor="corrigir-nome" colunas={4}>
+                <Input id="corrigir-nome" value={nome} onChange={e => setNome(e.target.value)} disabled={salvando} />
+              </CampoDaJanela>
+            )}
+            {podeContato && (
+              <>
+                <CampoDaJanela rotulo="Telefone (com DDD)" htmlFor="corrigir-telefone" colunas={2}>
+                  <Input id="corrigir-telefone" value={telefone} onChange={e => setTelefone(e.target.value)} disabled={salvando} />
+                </CampoDaJanela>
+                <CampoDaJanela rotulo="E-mail" htmlFor="corrigir-email" colunas={2}>
+                  <Input id="corrigir-email" type="email" value={email} onChange={e => setEmail(e.target.value)} disabled={salvando} />
+                </CampoDaJanela>
+              </>
+            )}
+          </GradeDaJanela>
+        </GrupoDaJanela>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button type="button" disabled={salvando} onClick={salvar}>

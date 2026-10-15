@@ -8,19 +8,15 @@ import {
   DialogFooter,
   Button,
   Input,
-  Label,
-  Separator,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/ds';
-import { Plus, Globe, Lock } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Macro, MACRO_ACTION_TYPES } from '@/types/automation';
 import { macrosService } from '@/services/macros';
 import MacroActionRow from './MacroActionRow';
+import Aviso from '@/components/base/Aviso';
+import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
+import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 
 interface MacroFormModalProps {
   isOpen: boolean;
@@ -235,113 +231,57 @@ export default function MacroFormModal({ isOpen, onClose, macro, onSuccess }: Ma
         className="overflow-y-auto"
       >
         <DialogHeader>
-          <DialogTitle className="text-sidebar-foreground">
+          <DialogTitle>
             {isEditing ? t('modal.title.edit') : t('modal.title.create')}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Informações básicas */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-sidebar-foreground">
-                {t('modal.form.name')} *
-              </Label>
+        <form onSubmit={handleSubmit} className="grid gap-5">
+          <GrupoDaJanela titulo={t('modal.form.groupIdentification')}>
+            <CampoDaJanela rotulo={t('modal.form.name')} htmlFor="name" obrigatorio erro={errors.name}>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={e => handleFieldChange('name', e.target.value)}
                 placeholder={t('modal.form.namePlaceholder')}
-                className={`w-full bg-sidebar border-sidebar-border text-sidebar-foreground ${
-                  errors.name ? 'border-red-500' : ''
-                }`}
+                className={errors.name ? 'border-destructive' : ''}
                 disabled={loading}
               />
-              {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
-            </div>
+            </CampoDaJanela>
 
             {/* Visibilidade */}
-            <div className="space-y-4">
-              <Label className="text-sidebar-foreground">{t('modal.form.visibility')}</Label>
-              <div className="grid grid-cols-2 gap-4">
-                <Card
-                  className={`cursor-pointer transition-all ${
-                    formData.visibility === 'personal'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-sidebar-border hover:border-sidebar-accent'
-                  }`}
-                  onClick={() => handleFieldChange('visibility', 'personal')}
-                >
-                  <CardHeader className="p-4">
-                    <div className="flex items-center gap-2">
-                      <Lock className="h-5 w-5 text-blue-600" />
-                      <CardTitle className="text-base">
-                        {t('modal.form.visibilityPersonal')}
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <CardDescription className="text-sm">
-                      {t('modal.form.visibilityPersonalDesc')}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-
-                <Card
-                  className={`cursor-pointer transition-all ${
-                    formData.visibility === 'global'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-sidebar-border hover:border-sidebar-accent'
-                  }`}
-                  onClick={() => handleFieldChange('visibility', 'global')}
-                >
-                  <CardHeader className="p-4">
-                    <div className="flex items-center gap-2">
-                      <Globe className="h-5 w-5 text-green-600" />
-                      <CardTitle className="text-base">
-                        {t('modal.form.visibilityGlobal')}
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <CardDescription className="text-sm">
-                      {t('modal.form.visibilityGlobalDesc')}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </div>
-
-          <Separator className="bg-sidebar-border" />
+            <CartoesDeEscolha
+              rotulo={t('modal.form.visibility')}
+              valor={formData.visibility}
+              aoEscolher={valor => handleFieldChange('visibility', valor)}
+              opcoes={[
+                { valor: 'personal', rotulo: t('modal.form.visibilityPersonal'), descricao: t('modal.form.visibilityPersonalDesc') },
+                { valor: 'global', rotulo: t('modal.form.visibilityGlobal'), descricao: t('modal.form.visibilityGlobalDesc') },
+              ]}
+            />
+          </GrupoDaJanela>
 
           {/* Ações */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-medium text-sidebar-foreground">
-                  {t('modal.form.actionsTitle')}
-                </h3>
-                <p className="text-sm text-sidebar-foreground/60">
-                  {t('modal.form.actionsSubtitle')}
-                </p>
-              </div>
+          <GrupoDaJanela
+            titulo={t('modal.form.actionsTitle')}
+            acao={
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={addAction}
                 disabled={loading}
-                className="bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 {t('modal.form.addAction')}
               </Button>
-            </div>
+            }
+          >
+            <p className="text-xs text-muted-foreground">{t('modal.form.actionsSubtitle')}</p>
 
-            {errors.actions && <p className="text-sm text-red-500">{errors.actions}</p>}
+            {errors.actions && <Aviso tom="erro" compacto>{errors.actions}</Aviso>}
 
-            <div className="space-y-4">
+            <div className="grid gap-4">
               {formData.actions.map((action, index) => (
                 <MacroActionRow
                   key={index}
@@ -356,7 +296,7 @@ export default function MacroFormModal({ isOpen, onClose, macro, onSuccess }: Ma
                 />
               ))}
             </div>
-          </div>
+          </GrupoDaJanela>
         </form>
 
         <DialogFooter>
@@ -365,7 +305,6 @@ export default function MacroFormModal({ isOpen, onClose, macro, onSuccess }: Ma
             variant="outline"
             onClick={onClose}
             disabled={loading}
-            className="bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
           >
             {t('modal.buttons.cancel')}
           </Button>

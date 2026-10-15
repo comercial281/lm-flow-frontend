@@ -26,7 +26,7 @@ import {
   DialogFooter,
   Textarea,
   Skeleton,
-  Switch,
+  Checkbox,
 } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
@@ -46,6 +46,8 @@ import MessageTemplateService, {
   getChannelTemplateConfig,
 } from '@/services/channels/messageTemplatesService';
 import { TemplatePreview } from './TemplatePreview';
+import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
+import { cn } from '@/lib/utils';
 import { MessageTemplate, TemplateFormData } from '@/types';
 
 interface MessageTemplateFormProps {
@@ -165,182 +167,175 @@ const TemplateFormModal: React.FC<{
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-y-auto max-h-[calc(90vh-8rem)]">
           {/* Form */}
-          <div className="space-y-4">
-            {/* Basic Fields */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  {t('settings.messageTemplates.form.name')}
-                </label>
-                <Input
-                  value={formData.name}
-                  onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder={t('settings.messageTemplates.form.namePlaceholder')}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  {t('settings.messageTemplates.form.category')}
-                </label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value: string) =>
-                    setFormData(prev => ({
-                      ...prev,
-                      category: value as TemplateFormData['category'],
-                    }))
-                  }
+          <div className="grid content-start gap-5">
+            <GrupoDaJanela titulo={t('settings.messageTemplates.form.groupIdentification')}>
+              <GradeDaJanela>
+                <CampoDaJanela
+                  rotulo={t('settings.messageTemplates.form.name')}
+                  htmlFor="modelo-nome"
+                  obrigatorio
+                  colunas={2}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {channelConfig.categories.map((cat: string) => (
-                      <SelectItem key={cat} value={cat}>
-                        {t(`settings.messageTemplates.form.categories.${cat.toLowerCase()}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  {t('settings.messageTemplates.form.language')}
-                </label>
-                <Select
-                  value={formData.language}
-                  onValueChange={value => setFormData(prev => ({ ...prev, language: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pt_BR">Português (BR)</SelectItem>
-                    <SelectItem value="en_US">English (US)</SelectItem>
-                    <SelectItem value="es_ES">Español</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  {t('settings.messageTemplates.form.templateType')}
-                </label>
-                <Select
-                  value={formData.template_type}
-                  onValueChange={(value: string) =>
-                    setFormData(prev => ({
-                      ...prev,
-                      template_type: value as TemplateFormData['template_type'],
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {channelConfig.templateTypes.map((type: string) => (
-                      <SelectItem key={type} value={type}>
-                        {t(`settings.messageTemplates.form.templateTypes.${type}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+                  <Input
+                    id="modelo-nome"
+                    value={formData.name}
+                    onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder={t('settings.messageTemplates.form.namePlaceholder')}
+                  />
+                </CampoDaJanela>
+                <CampoDaJanela rotulo={t('settings.messageTemplates.form.category')} htmlFor="modelo-categoria">
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value: string) =>
+                      setFormData(prev => ({
+                        ...prev,
+                        category: value as TemplateFormData['category'],
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="modelo-categoria" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {channelConfig.categories.map((cat: string) => (
+                        <SelectItem key={cat} value={cat}>
+                          {t(`settings.messageTemplates.form.categories.${cat.toLowerCase()}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CampoDaJanela>
+                <CampoDaJanela rotulo={t('settings.messageTemplates.form.language')} htmlFor="modelo-idioma">
+                  <Select
+                    value={formData.language}
+                    onValueChange={value => setFormData(prev => ({ ...prev, language: value }))}
+                  >
+                    <SelectTrigger id="modelo-idioma" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pt_BR">Português (Brasil)</SelectItem>
+                      <SelectItem value="en_US">Inglês (EUA)</SelectItem>
+                      <SelectItem value="es_ES">Espanhol</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </CampoDaJanela>
+                <CampoDaJanela rotulo={t('settings.messageTemplates.form.templateType')} htmlFor="modelo-tipo" colunas={2}>
+                  <Select
+                    value={formData.template_type}
+                    onValueChange={(value: string) =>
+                      setFormData(prev => ({
+                        ...prev,
+                        template_type: value as TemplateFormData['template_type'],
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="modelo-tipo" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {channelConfig.templateTypes.map((type: string) => (
+                        <SelectItem key={type} value={type}>
+                          {t(`settings.messageTemplates.form.templateTypes.${type}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CampoDaJanela>
+              </GradeDaJanela>
+            </GrupoDaJanela>
 
             {/* Structured Components (WhatsApp, Facebook, Instagram) */}
             {isStructured && channelConfig.supportsStructured && (
               <>
                 {/* Header */}
                 {channelConfig.supportsMedia && (
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="col-span-1">
-                      <label className="block text-sm font-medium mb-2">
-                        {t('settings.messageTemplates.form.headerFormat')}
-                      </label>
-                      <Select
-                        value={formData.headerFormat}
-                        onValueChange={(value: string) =>
-                          setFormData(prev => ({
-                            ...prev,
-                            headerFormat: value as TemplateFormData['headerFormat'],
-                          }))
-                        }
+                  <GrupoDaJanela titulo={t('settings.messageTemplates.form.groupHeader')}>
+                    <GradeDaJanela>
+                      <CampoDaJanela
+                        rotulo={t('settings.messageTemplates.form.headerFormat')}
+                        htmlFor="modelo-cabecalho-formato"
+                        colunas={formData.headerFormat === 'TEXT' ? 1 : 4}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="TEXT">
-                            {t('settings.messageTemplates.form.headerFormats.text')}
-                          </SelectItem>
-                          <SelectItem value="IMAGE">
-                            {t('settings.messageTemplates.form.headerFormats.image')}
-                          </SelectItem>
-                          <SelectItem value="VIDEO">
-                            {t('settings.messageTemplates.form.headerFormats.video')}
-                          </SelectItem>
-                          <SelectItem value="DOCUMENT">
-                            {t('settings.messageTemplates.form.headerFormats.document')}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {formData.headerFormat === 'TEXT' && (
-                      <div className="col-span-2">
-                        <label className="block text-sm font-medium mb-2">
-                          {t('settings.messageTemplates.form.headerText')}
-                        </label>
-                        <Input
-                          value={formData.headerText}
-                          onChange={e =>
-                            setFormData(prev => ({ ...prev, headerText: e.target.value }))
+                        <Select
+                          value={formData.headerFormat}
+                          onValueChange={(value: string) =>
+                            setFormData(prev => ({
+                              ...prev,
+                              headerFormat: value as TemplateFormData['headerFormat'],
+                            }))
                           }
-                          placeholder={t('settings.messageTemplates.form.headerTextPlaceholder')}
-                        />
-                      </div>
-                    )}
-                  </div>
+                        >
+                          <SelectTrigger id="modelo-cabecalho-formato" className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="TEXT">
+                              {t('settings.messageTemplates.form.headerFormats.text')}
+                            </SelectItem>
+                            <SelectItem value="IMAGE">
+                              {t('settings.messageTemplates.form.headerFormats.image')}
+                            </SelectItem>
+                            <SelectItem value="VIDEO">
+                              {t('settings.messageTemplates.form.headerFormats.video')}
+                            </SelectItem>
+                            <SelectItem value="DOCUMENT">
+                              {t('settings.messageTemplates.form.headerFormats.document')}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </CampoDaJanela>
+                      {formData.headerFormat === 'TEXT' && (
+                        <CampoDaJanela
+                          rotulo={t('settings.messageTemplates.form.headerText')}
+                          htmlFor="modelo-cabecalho-texto"
+                          colunas={3}
+                        >
+                          <Input
+                            id="modelo-cabecalho-texto"
+                            value={formData.headerText}
+                            onChange={e =>
+                              setFormData(prev => ({ ...prev, headerText: e.target.value }))
+                            }
+                            placeholder={t('settings.messageTemplates.form.headerTextPlaceholder')}
+                          />
+                        </CampoDaJanela>
+                      )}
+                    </GradeDaJanela>
+                  </GrupoDaJanela>
                 )}
 
-                {/* Body */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    {t('settings.messageTemplates.form.bodyText')}
-                  </label>
-                  <Textarea
-                    value={formData.bodyText}
-                    onChange={e => setFormData(prev => ({ ...prev, bodyText: e.target.value }))}
-                    placeholder={t('settings.messageTemplates.form.bodyTextPlaceholder')}
-                    rows={4}
-                  />
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    {t('settings.messageTemplates.form.variablesHelp')}
-                  </p>
-                </div>
-
-                {/* Footer */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    {t('settings.messageTemplates.form.footerText')}
-                  </label>
-                  <Input
-                    value={formData.footerText}
-                    onChange={e => setFormData(prev => ({ ...prev, footerText: e.target.value }))}
-                    placeholder={t('settings.messageTemplates.form.footerTextPlaceholder')}
-                  />
-                </div>
+                {/* Body + Footer */}
+                <GrupoDaJanela titulo={t('settings.messageTemplates.form.groupBody')}>
+                  <CampoDaJanela
+                    rotulo={t('settings.messageTemplates.form.bodyText')}
+                    htmlFor="modelo-corpo"
+                    obrigatorio
+                    ajuda={t('settings.messageTemplates.form.variablesHelp')}
+                  >
+                    <Textarea
+                      id="modelo-corpo"
+                      value={formData.bodyText}
+                      onChange={e => setFormData(prev => ({ ...prev, bodyText: e.target.value }))}
+                      placeholder={t('settings.messageTemplates.form.bodyTextPlaceholder')}
+                      rows={4}
+                    />
+                  </CampoDaJanela>
+                  <CampoDaJanela rotulo={t('settings.messageTemplates.form.footerText')} htmlFor="modelo-rodape">
+                    <Input
+                      id="modelo-rodape"
+                      value={formData.footerText}
+                      onChange={e => setFormData(prev => ({ ...prev, footerText: e.target.value }))}
+                      placeholder={t('settings.messageTemplates.form.footerTextPlaceholder')}
+                    />
+                  </CampoDaJanela>
+                </GrupoDaJanela>
 
                 {/* Buttons */}
                 {channelConfig.supportsButtons && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium">
-                        {t('settings.messageTemplates.form.buttons')}
-                      </label>
+                  <GrupoDaJanela
+                    titulo={t('settings.messageTemplates.form.buttons')}
+                    acao={
                       <Button
                         type="button"
                         variant="outline"
@@ -351,121 +346,134 @@ const TemplateFormModal: React.FC<{
                         <Plus className="w-4 h-4 mr-2" />
                         {t('settings.messageTemplates.form.addButton')}
                       </Button>
-                    </div>
-
+                    }
+                  >
                     {formData.buttons?.map((button, index) => (
-                      <Card key={index} className="p-3 mb-2">
-                        <div className="grid grid-cols-2 gap-2 mb-2">
-                          <Select
-                            value={button.type}
-                            onValueChange={(value: string) => updateButton(index, 'type', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="QUICK_REPLY">
-                                {t('settings.messageTemplates.form.buttonTypes.quickReply')}
-                              </SelectItem>
-                              <SelectItem value="URL">
-                                {t('settings.messageTemplates.form.buttonTypes.url')}
-                              </SelectItem>
-                              <SelectItem value="PHONE_NUMBER">
-                                {t('settings.messageTemplates.form.buttonTypes.phone')}
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeButton(index)}
-                            aria-label="Remover botão"
-                            title="Remover botão"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                      <div key={index} className={cn('grid gap-3', index > 0 && 'border-t border-border pt-3')}>
+                        <GradeDaJanela>
+                          <CampoDaJanela rotulo={t('settings.messageTemplates.form.buttonType')} colunas={2}>
+                            <Select
+                              value={button.type}
+                              onValueChange={(value: string) => updateButton(index, 'type', value)}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="QUICK_REPLY">
+                                  {t('settings.messageTemplates.form.buttonTypes.quickReply')}
+                                </SelectItem>
+                                <SelectItem value="URL">
+                                  {t('settings.messageTemplates.form.buttonTypes.url')}
+                                </SelectItem>
+                                <SelectItem value="PHONE_NUMBER">
+                                  {t('settings.messageTemplates.form.buttonTypes.phone')}
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </CampoDaJanela>
+                          <CampoDaJanela rotulo={t('settings.messageTemplates.form.buttonText')} colunas={2}>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={button.text}
+                                onChange={e => updateButton(index, 'text', e.target.value)}
+                                placeholder={t('settings.messageTemplates.form.buttonTextPlaceholder')}
+                                aria-label={t('settings.messageTemplates.form.buttonText')}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="shrink-0"
+                                onClick={() => removeButton(index)}
+                                aria-label="Remover botão"
+                                title="Remover botão"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </CampoDaJanela>
 
-                        <Input
-                          value={button.text}
-                          onChange={e => updateButton(index, 'text', e.target.value)}
-                          placeholder={t('settings.messageTemplates.form.buttonTextPlaceholder')}
-                          className="mb-2"
-                        />
+                          {button.type === 'URL' && (
+                            <CampoDaJanela rotulo={t('settings.messageTemplates.form.buttonTypes.url')} colunas={4}>
+                              <Input
+                                value={button.url || ''}
+                                onChange={e => updateButton(index, 'url', e.target.value)}
+                                placeholder={t('settings.messageTemplates.form.urlPlaceholder')}
+                                aria-label={t('settings.messageTemplates.form.buttonTypes.url')}
+                              />
+                            </CampoDaJanela>
+                          )}
 
-                        {button.type === 'URL' && (
-                          <Input
-                            value={button.url || ''}
-                            onChange={e => updateButton(index, 'url', e.target.value)}
-                            placeholder={t('settings.messageTemplates.form.urlPlaceholder')}
-                          />
-                        )}
-
-                        {button.type === 'PHONE_NUMBER' && (
-                          <Input
-                            value={button.phone_number || ''}
-                            onChange={e => updateButton(index, 'phoneNumber', e.target.value)}
-                            placeholder={t('settings.messageTemplates.form.phonePlaceholder')}
-                          />
-                        )}
-                      </Card>
+                          {button.type === 'PHONE_NUMBER' && (
+                            <CampoDaJanela rotulo={t('settings.messageTemplates.form.buttonTypes.phone')} colunas={4}>
+                              <Input
+                                value={button.phone_number || ''}
+                                onChange={e => updateButton(index, 'phoneNumber', e.target.value)}
+                                placeholder={t('settings.messageTemplates.form.phonePlaceholder')}
+                                aria-label={t('settings.messageTemplates.form.buttonTypes.phone')}
+                              />
+                            </CampoDaJanela>
+                          )}
+                        </GradeDaJanela>
+                      </div>
                     ))}
-                  </div>
+                  </GrupoDaJanela>
                 )}
               </>
             )}
 
             {/* Email-specific fields */}
             {channelType === 'Channel::Email' && (
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  {t('settings.messageTemplates.form.subject')}
-                </label>
-                <Input
-                  value={formData.subject || ''}
-                  onChange={e => setFormData(prev => ({ ...prev, subject: e.target.value }))}
-                  placeholder={t('settings.messageTemplates.form.subjectPlaceholder')}
-                />
-              </div>
+              <GrupoDaJanela titulo={t('settings.messageTemplates.form.groupEmail')}>
+                <CampoDaJanela rotulo={t('settings.messageTemplates.form.subject')} htmlFor="modelo-assunto">
+                  <Input
+                    id="modelo-assunto"
+                    value={formData.subject || ''}
+                    onChange={e => setFormData(prev => ({ ...prev, subject: e.target.value }))}
+                    placeholder={t('settings.messageTemplates.form.subjectPlaceholder')}
+                  />
+                </CampoDaJanela>
+              </GrupoDaJanela>
             )}
 
             {/* Simple Text Content (SMS, API, Telegram, Line) */}
             {/* Note: Email templates are edited in a dedicated page, not in this modal */}
             {!isStructured && (
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  {t('settings.messageTemplates.form.content')}
-                </label>
-                <Textarea
-                  value={formData.content}
-                  onChange={e => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                  placeholder={t('settings.messageTemplates.form.contentPlaceholder')}
-                  rows={6}
-                />
-                {channelConfig.usesLiquid && (
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    {t('settings.messageTemplates.form.liquidHelp')}
-                  </p>
-                )}
-              </div>
+              <GrupoDaJanela titulo={t('settings.messageTemplates.form.content')}>
+                <CampoDaJanela
+                  rotulo={t('settings.messageTemplates.form.content')}
+                  htmlFor="modelo-conteudo"
+                  obrigatorio
+                  ajuda={channelConfig.usesLiquid ? t('settings.messageTemplates.form.liquidHelp') : undefined}
+                >
+                  <Textarea
+                    id="modelo-conteudo"
+                    value={formData.content}
+                    onChange={e => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                    placeholder={t('settings.messageTemplates.form.contentPlaceholder')}
+                    rows={6}
+                  />
+                </CampoDaJanela>
+              </GrupoDaJanela>
             )}
 
             {/* Active toggle */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800 rounded-lg">
-              <div>
-                <label className="block text-sm font-medium">
-                  {t('settings.messageTemplates.form.active')}
-                </label>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  {t('settings.messageTemplates.form.activeHelp')}
-                </p>
-              </div>
-              <Switch
-                checked={formData.active !== false}
-                onCheckedChange={checked => setFormData(prev => ({ ...prev, active: checked }))}
-              />
-            </div>
+            <GrupoDaJanela titulo={t('settings.messageTemplates.form.groupState')}>
+              <label className="flex items-start gap-2 text-sm">
+                <Checkbox
+                  className="mt-0.5"
+                  checked={formData.active !== false}
+                  onCheckedChange={checked => setFormData(prev => ({ ...prev, active: checked === true }))}
+                />
+                <span>
+                  <span className="font-medium">{t('settings.messageTemplates.form.active')}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {t('settings.messageTemplates.form.activeHelp')}
+                  </span>
+                </span>
+              </label>
+            </GrupoDaJanela>
           </div>
 
           {/* Preview - Sticky on larger screens */}
@@ -950,7 +958,7 @@ const MessageTemplateForm: React.FC<MessageTemplateFormProps> = ({
 
       {/* Delete Confirmation Modal */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent>
+        <DialogContent compacta>
           <DialogHeader>
             <DialogTitle>{t('settings.messageTemplates.deleteDialog.title')}</DialogTitle>
           </DialogHeader>

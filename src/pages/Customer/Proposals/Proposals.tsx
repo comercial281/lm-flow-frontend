@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { formatDateBR } from '@/utils/dateUtils';
+import { CampoDaJanela } from '@/components/base/janela';
 import { toast } from 'sonner';
 import {
   Search, Plus, FileText, Building2, User, TrendingUp,
@@ -21,7 +22,6 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Label,
   Textarea,
 } from '@/components/ui/ds';
 import {
@@ -56,7 +56,7 @@ const STATUS_TABS = [
   { key: '', label: 'Todas' },
   { key: 'draft', label: 'Rascunhos' },
   { key: 'sent', label: 'Enviadas' },
-  { key: 'counter_offered', label: 'Contra-propostas' },
+  { key: 'counter_offered', label: 'Contrapropostas' },
   { key: 'accepted', label: 'Aceitas' },
   { key: 'rejected', label: 'Rejeitadas' },
 ];
@@ -174,11 +174,11 @@ export default function Proposals() {
     if (!counterModal.value) return;
     try {
       await proposalsService.counter(counterModal.proposalId, parseFloat(counterModal.value));
-      toast.success('Contra-proposta enviada');
+      toast.success('Contraproposta enviada');
       setCounterModal({ open: false, proposalId: '', value: '' });
       load();
     } catch {
-      toast.error('Erro ao enviar contra-proposta');
+      toast.error('Erro ao enviar contraproposta');
     }
   };
 
@@ -347,18 +347,17 @@ export default function Proposals() {
       <Dialog open={rejectModal.open} onOpenChange={(o: boolean) => setRejectModal(s => ({ ...s, open: o }))}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Rejeitar Proposta</DialogTitle>
+            <DialogTitle>Rejeitar proposta</DialogTitle>
           </DialogHeader>
-          <div className="py-2">
-            <Label>Motivo da rejeição *</Label>
+          <CampoDaJanela rotulo="Motivo da rejeição" htmlFor="proposta-motivo-rejeicao" obrigatorio>
             <Textarea
+              id="proposta-motivo-rejeicao"
               placeholder="Informe o motivo..."
               value={rejectModal.reason}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setRejectModal(s => ({ ...s, reason: e.target.value }))}
               rows={3}
-              className="mt-1"
             />
-          </div>
+          </CampoDaJanela>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectModal({ open: false, proposalId: '', reason: '' })}>
               Cancelar
@@ -374,24 +373,23 @@ export default function Proposals() {
       <Dialog open={counterModal.open} onOpenChange={(o: boolean) => setCounterModal(s => ({ ...s, open: o }))}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Enviar Contra-proposta</DialogTitle>
+            <DialogTitle>Enviar contraproposta</DialogTitle>
           </DialogHeader>
-          <div className="py-2">
-            <Label>Valor da contra-proposta (R$) *</Label>
+          <CampoDaJanela rotulo="Valor da contraproposta (R$)" htmlFor="proposta-valor-contra" obrigatorio>
             <Input
+              id="proposta-valor-contra"
               type="number"
               placeholder="0,00"
               value={counterModal.value}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCounterModal(s => ({ ...s, value: e.target.value }))}
-              className="mt-1"
             />
-          </div>
+          </CampoDaJanela>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCounterModal({ open: false, proposalId: '', value: '' })}>
               Cancelar
             </Button>
             <Button onClick={handleCounter} disabled={!counterModal.value}>
-              Enviar Contra-proposta
+              Enviar contraproposta
             </Button>
           </DialogFooter>
         </DialogContent>

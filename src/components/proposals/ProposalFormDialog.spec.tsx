@@ -1,7 +1,7 @@
 // Proposta registrada pelo card do lead (E4): vai ligada ao card, para a
 // proposta aceita marcar ESTE card como Ganho (Parte 2, Proposals::MarkCardWon).
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ProposalFormDialog from './ProposalFormDialog';
 
@@ -35,11 +35,24 @@ beforeEach(() => {
   s.cards.mockReset().mockResolvedValue([]);
 });
 
+describe('ProposalFormDialog · miolo em grupos', () => {
+  it('três grupos com título: Quem e o quê, Valores e Condições', () => {
+    abrir();
+    for (const nome of ['Quem e o quê', 'Valores', 'Condições']) {
+      expect(screen.getByRole('group', { name: nome })).toBeInTheDocument();
+    }
+    const valores = screen.getByRole('group', { name: 'Valores' });
+    expect(within(valores).getByLabelText(/Valor ofertado/)).toBeInTheDocument();
+    expect(within(valores).getByLabelText(/Entrada/)).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Condições' })).getByLabelText('Forma de pagamento')).toBeInTheDocument();
+  });
+});
+
 describe('ProposalFormDialog · proposta ligada ao card', () => {
   it('registrada pelo card: manda o id do card em metadata.pipeline_item_id', async () => {
     abrir({ pipelineItemId: 'i1' });
     await userEvent.type(screen.getAllByPlaceholderText('0,00')[0], '500000');
-    await userEvent.click(screen.getByRole('button', { name: 'Criar Rascunho' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
 
     await waitFor(() => expect(s.create).toHaveBeenCalledTimes(1));
     expect(s.create.mock.calls[0][0]).toMatchObject({
@@ -53,7 +66,7 @@ describe('ProposalFormDialog · proposta ligada ao card', () => {
   it('fora do card, lead sem card aberto: sem metadata', async () => {
     abrir();
     await userEvent.type(screen.getAllByPlaceholderText('0,00')[0], '500000');
-    await userEvent.click(screen.getByRole('button', { name: 'Criar Rascunho' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
 
     await waitFor(() => expect(s.create).toHaveBeenCalledTimes(1));
     expect(s.create.mock.calls[0][0]).not.toHaveProperty('metadata');
@@ -84,10 +97,10 @@ describe('ProposalFormDialog · tela Propostas pergunta o atendimento', () => {
 
     const pergunta = await screen.findByRole('combobox', { name: 'De qual atendimento é esta proposta?' });
     expect(s.cards).toHaveBeenCalledWith('c1');
-    expect(screen.getByRole('button', { name: 'Criar Rascunho' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Criar rascunho' })).toBeDisabled();
 
     await userEvent.selectOptions(pergunta, 'i2');
-    await userEvent.click(screen.getByRole('button', { name: 'Criar Rascunho' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
 
     await waitFor(() => expect(s.create).toHaveBeenCalledTimes(1));
     expect(s.create.mock.calls[0][0]).toMatchObject({ metadata: { pipeline_item_id: 'i2' } });
@@ -100,7 +113,7 @@ describe('ProposalFormDialog · tela Propostas pergunta o atendimento', () => {
     expect(await screen.findByText('Atendimento: Vendas · Proposta')).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'De qual atendimento é esta proposta?' })).toBeNull();
     await userEvent.type(screen.getAllByPlaceholderText('0,00')[0], '500000');
-    await userEvent.click(screen.getByRole('button', { name: 'Criar Rascunho' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
 
     await waitFor(() => expect(s.create).toHaveBeenCalledTimes(1));
     expect(s.create.mock.calls[0][0]).toMatchObject({ metadata: { pipeline_item_id: 'i7' } });
@@ -109,7 +122,7 @@ describe('ProposalFormDialog · tela Propostas pergunta o atendimento', () => {
   it('registrada pelo card: não pergunta (o card já diz)', async () => {
     abrir({ pipelineItemId: 'i1' });
     await userEvent.type(screen.getAllByPlaceholderText('0,00')[0], '500000');
-    await userEvent.click(screen.getByRole('button', { name: 'Criar Rascunho' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
 
     await waitFor(() => expect(s.create).toHaveBeenCalledTimes(1));
     expect(s.cards).not.toHaveBeenCalled();
@@ -130,11 +143,11 @@ describe('ProposalFormDialog · lista de atendimentos (correções)', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'trocar lead' }));
     expect(screen.queryByText(/Atendimento: Vendas/)).toBeNull();
-    expect(screen.getByRole('button', { name: 'Criar Rascunho' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Criar rascunho' })).toBeDisabled();
 
     resolveB([card('iB')]);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Criar Rascunho' })).toBeEnabled());
-    await userEvent.click(screen.getByRole('button', { name: 'Criar Rascunho' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Criar rascunho' })).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
     await waitFor(() => expect(s.create).toHaveBeenCalledTimes(1));
     expect(s.create.mock.calls[0][0]).toMatchObject({ contact_id: 'c2', metadata: { pipeline_item_id: 'iB' } });
   });
@@ -144,7 +157,7 @@ describe('ProposalFormDialog · lista de atendimentos (correções)', () => {
     abrir();
     expect(await screen.findByText(/Não consegui carregar os atendimentos deste lead/)).toBeInTheDocument();
     await userEvent.type(screen.getAllByPlaceholderText('0,00')[0], '500000');
-    expect(screen.getByRole('button', { name: 'Criar Rascunho' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Criar rascunho' })).toBeEnabled();
 
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
     expect(await screen.findByRole('combobox', { name: 'De qual atendimento é esta proposta?' })).toBeInTheDocument();

@@ -1,17 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Copy, ExternalLink, Loader2, Rocket } from 'lucide-react';
-import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Input,
-  Label as UILabel,
-} from '@/components/ui/ds';
+import JanelaPublicarLanding from './JanelaPublicarLanding';
 import { landingPageService } from '@/services/landingPages/landingPageService';
 import { getTenantSlug } from '@/services/core/tenant';
 import { useLandingEditorStore } from '@/features/landing/editor';
@@ -132,36 +122,17 @@ export default function PublishLandingButton({
         Publicar e gerar link
       </button>
 
-      <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : setOpen(false))}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Publicar landing</DialogTitle>
-            <DialogDescription>
-              O nome vira o endereço da página. É esse link que você cola no anúncio.
-              {dirty && ' As alterações abertas são salvas antes de publicar.'}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <UILabel htmlFor="lp-editor-publish-name">Nome da página</UILabel>
-            <Input
-              id="lp-editor-publish-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Lançamento Jardim Europa"
-              autoFocus
-            />
-            <p className="break-all font-mono text-xs text-muted-foreground">
-              {previewSlug ? landingPublicUrl(tenant, previewSlug) : 'Digite um nome para ver o endereço'}
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={confirm} disabled={busy || !previewSlug}>
-              {busy ? 'Publicando…' : 'Publicar e copiar link'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <JanelaPublicarLanding
+        aberta={open}
+        aoFechar={() => setOpen(false)}
+        nome={name}
+        aoMudarNome={setName}
+        endereco={previewSlug ? landingPublicUrl(tenant, previewSlug) : ''}
+        aoPublicar={confirm}
+        ocupado={busy}
+        salvaAntes={dirty}
+        idDoCampo="lp-editor-publish-name"
+      />
     </>
   );
 }

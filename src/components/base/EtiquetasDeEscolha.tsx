@@ -20,6 +20,8 @@ export interface EtiquetasDeEscolhaProps {
   grande?: boolean;
   /** Janela: etiquetas pequenas (h-7) numa linha só, com rolagem horizontal sem barra. */
   compacta?: boolean;
+  /** Já está dentro de um grupo com o mesmo nome (ex.: GrupoDaJanela): não repete o nome. */
+  semNome?: boolean;
 }
 
 const CLASSE = 'inline-flex min-h-9 items-center gap-1.5 rounded-full border-[1.5px] px-3.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
@@ -27,7 +29,7 @@ const CLASSE = 'inline-flex min-h-9 items-center gap-1.5 rounded-full border-[1.
 const CLASSE_COMPACTA = 'h-7 min-h-0 shrink-0 whitespace-nowrap px-2.5 py-0 text-xs';
 
 export default function EtiquetasDeEscolha({
-  rotulo, opcoes, escolhidas, aoMudar, proprias = [], aoTirarPropria, adicionar, grande = false, compacta = false,
+  rotulo, opcoes, escolhidas, aoMudar, proprias = [], aoTirarPropria, adicionar, grande = false, compacta = false, semNome = false,
 }: EtiquetasDeEscolhaProps) {
   const [texto, setTexto] = useState('');
   const existentes = new Set([...opcoes.map((o) => o.rotulo), ...proprias].map((t) => t.trim().toLowerCase()));
@@ -44,7 +46,7 @@ export default function EtiquetasDeEscolha({
 
   return (
     <div className="space-y-3">
-      <div role="group" aria-label={rotulo}
+      <div role="group" aria-label={semNome ? undefined : rotulo}
         className={cn('flex gap-2', compacta ? 'flex-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden' : 'flex-wrap')}>
         {opcoes.map((o) => {
           const on = escolhidas.includes(o.valor);

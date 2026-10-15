@@ -197,15 +197,16 @@
     }
   },
   "createStage": {
-    "title": "Criar Nova Etapa",
+    "group": "Etapa",
+    "title": "Criar nova etapa",
     "description": "Adicione uma nova etapa ao funil para organizar suas conversas.",
     "name": "Nome da etapa",
-    "namePlaceholder": "Ex: Leads Qualificados",
+    "namePlaceholder": "Ex.: Leads qualificados",
     "descriptionLabel": "Descrição",
     "descriptionPlaceholder": "Descreva o propósito desta etapa...",
     "color": "Cor da etapa",
     "colorSelected": "Cor selecionada",
-    "stageType": "Tipo de Etapa",
+    "stageType": "Tipo de etapa",
     "stageTypes": {
       "active": "Ativa",
       "completed": "Finalizada",
@@ -214,16 +215,16 @@
     "selectType": "Selecione o tipo",
     "cancel": "Cancelar",
     "creating": "Criando...",
-    "create": "Criar Etapa",
+    "create": "Criar etapa",
     "colors": {
       "blue": "Azul",
       "green": "Verde",
       "orange": "Laranja",
       "red": "Vermelho",
       "purple": "Roxo",
-      "darkOrange": "Laranja Escuro",
+      "darkOrange": "Laranja escuro",
       "cyan": "Ciano",
-      "lime": "Verde Lima"
+      "lime": "Verde lima"
     }
   },
   "deletePipeline": {
