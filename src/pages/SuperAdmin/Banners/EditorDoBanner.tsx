@@ -9,11 +9,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import { CampoDaJanela, CaixaDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import {
-  Button, Checkbox, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Label, Textarea,
+  Button, Checkbox, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Textarea,
 } from '@/components/ui/ds';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
-import { plural } from '@/lib/formato';
 import { dashboardBannersService as svc } from '@/services/superAdmin/dashboardBannersService';
 import type {
   AcaoDoBanner, ArteDoBanner, BannerAdmin, CamposDoBanner, CargoDoBanner, ImobiliariaDoBanner,
@@ -202,22 +202,23 @@ export default function EditorDoBanner({ aberto, banner, imobiliarias, aoMudar, 
 
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <div className="flex flex-col gap-6">
-              <div>
-                <Label htmlFor="banner-nome">Nome interno</Label>
-                <Input id="banner-nome" placeholder="Atualização · Mensagens prontas" value={form.name}
-                  onChange={(e) => muda('name', e.target.value)} />
-                <p className="mt-1 text-xs text-muted-foreground">Só a Leal Mídia vê.</p>
-              </div>
+              <GrupoDaJanela titulo="Identificação">
+                <CampoDaJanela rotulo="Nome interno" htmlFor="banner-nome" ajuda="Só a Leal Mídia vê.">
+                  <Input id="banner-nome" placeholder="Ex.: Atualização de mensagens prontas" value={form.name}
+                    onChange={(e) => muda('name', e.target.value)} />
+                </CampoDaJanela>
+              </GrupoDaJanela>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <CampoDeArte arte="desktop" titulo="Arte do computador" medida={MEDIDA_DA_ARTE.desktop}
-                  url={atual?.desktop_url ?? null} ocupado={ocupado === 'desktop'} aoEscolher={enviarArte} />
-                <CampoDeArte arte="mobile" titulo="Arte do celular" medida={MEDIDA_DA_ARTE.mobile}
-                  url={atual?.mobile_url ?? null} ocupado={ocupado === 'mobile'} aoEscolher={enviarArte} />
-              </div>
+              <GrupoDaJanela titulo="Arte">
+                <GradeDaJanela>
+                  <CampoDeArte arte="desktop" titulo="Arte do computador" medida={MEDIDA_DA_ARTE.desktop}
+                    url={atual?.desktop_url ?? null} ocupado={ocupado === 'desktop'} aoEscolher={enviarArte} className="sm:col-span-2" />
+                  <CampoDeArte arte="mobile" titulo="Arte do celular" medida={MEDIDA_DA_ARTE.mobile}
+                    url={atual?.mobile_url ?? null} ocupado={ocupado === 'mobile'} aoEscolher={enviarArte} className="sm:col-span-2" />
+                </GradeDaJanela>
+              </GrupoDaJanela>
 
-              <div className="flex flex-col gap-3">
-                <Label>Ao clicar</Label>
+              <GrupoDaJanela titulo="Ao clicar">
                 <BotoesDeEscolha<AcaoDoBanner>
                   rotulo="Ao clicar"
                   valor={form.click_action}
@@ -229,18 +230,16 @@ export default function EditorDoBanner({ aberto, banner, imobiliarias, aoMudar, 
                   ]}
                 />
                 {form.click_action === 'details' && (
-                  <div className="flex flex-col gap-4 rounded-lg border bg-muted/30 p-4">
-                    <div>
-                      <Label htmlFor="banner-titulo">Título</Label>
+                  <GrupoDaJanela titulo="Janela de detalhes">
+                    <CampoDaJanela rotulo="Título" htmlFor="banner-titulo">
                       <Input id="banner-titulo" placeholder="Mensagens prontas agora ficam do lado da conversa"
                         value={form.details_title} onChange={(e) => muda('details_title', e.target.value)} />
-                    </div>
-                    <div>
-                      <Label htmlFor="banner-texto">Texto</Label>
+                    </CampoDaJanela>
+                    <CampoDaJanela rotulo="Texto" htmlFor="banner-texto">
                       <Textarea id="banner-texto" rows={6} value={form.details_body}
                         onChange={(e) => muda('details_body', e.target.value)} />
-                    </div>
-                    <CampoDeArte arte="details" titulo="Imagem ou gif (opcional)" medida="Qualquer medida, até 5 MB"
+                    </CampoDaJanela>
+                    <CampoDeArte arte="details" titulo="Imagem (opcional)" medida="Qualquer medida, até 5 MB"
                       url={atual?.details_image_url ?? null} ocupado={ocupado === 'details'} aoEscolher={enviarArte}
                       aoTirar={atual?.details_image_url ? () => void tirarArte('details') : undefined} />
                     <DestinoDoClique
@@ -251,22 +250,21 @@ export default function EditorDoBanner({ aberto, banner, imobiliarias, aoMudar, 
                       valor={form.details_button_path}
                       aoMudar={(v) => muda('details_button_path', v)}
                     />
-                  </div>
+                  </GrupoDaJanela>
                 )}
                 {form.click_action === 'link' && (
                   <DestinoDoClique
                     id="banner-link"
                     rotulo="Leva pra"
                     vazio="Escolha uma tela"
-                    ajuda="Tela do LM Flow abre na mesma aba; site de fora, em aba nova."
+                    ajuda="Tela do sistema abre na mesma aba; site de fora, em aba nova."
                     valor={form.link_url}
                     aoMudar={(v) => muda('link_url', v)}
                   />
                 )}
-              </div>
+              </GrupoDaJanela>
 
-              <fieldset className="flex flex-col gap-3">
-                <legend className="mb-2 text-sm font-medium">Para quem</legend>
+              <GrupoDaJanela titulo="Para quem">
                 <div className="flex flex-wrap gap-x-6 gap-y-2">
                   {CARGOS.map((c) => (
                     <label key={c.valor} className="flex items-center gap-2 text-sm">
@@ -282,39 +280,36 @@ export default function EditorDoBanner({ aberto, banner, imobiliarias, aoMudar, 
                   opcoes={[{ valor: 'todas', rotulo: 'Todas as imobiliárias' }, { valor: 'escolher', rotulo: 'Escolher' }]}
                 />
                 {!form.todas && (
-                  <div className="rounded-lg border bg-muted/30 p-3">
-                    <Input aria-label="Buscar imobiliária" placeholder="Buscar imobiliária" value={busca}
-                      onChange={(e) => setBusca(e.target.value)} />
-                    <div className="mt-2 max-h-56 overflow-y-auto">
-                      {imobiliariasFiltradas.map((i) => (
-                        <label key={i.slug} className="flex items-center gap-2 py-1.5 text-sm">
-                          <Checkbox checked={form.tenant_slugs.includes(i.slug)}
-                            onCheckedChange={(v) => alternarImobiliaria(i.slug, v === true)} />
-                          {i.name}
-                        </label>
-                      ))}
-                    </div>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {plural(form.tenant_slugs.length, 'imobiliária escolhida', 'imobiliárias escolhidas')}
-                    </p>
-                  </div>
+                  <CaixaDaJanela
+                    titulo="Imobiliárias"
+                    contagem={form.tenant_slugs.length}
+                    fixo={<Input aria-label="Buscar imobiliária" placeholder="Buscar imobiliária" value={busca}
+                      onChange={(e) => setBusca(e.target.value)} />}
+                    corpoClassName="max-h-56"
+                  >
+                    {imobiliariasFiltradas.map((i) => (
+                      <label key={i.slug} className="flex items-center gap-2 py-1.5 text-sm">
+                        <Checkbox checked={form.tenant_slugs.includes(i.slug)}
+                          onCheckedChange={(v) => alternarImobiliaria(i.slug, v === true)} />
+                        {i.name}
+                      </label>
+                    ))}
+                  </CaixaDaJanela>
                 )}
-              </fieldset>
+              </GrupoDaJanela>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="banner-inicio">Início</Label>
-                  <Input id="banner-inicio" type="datetime-local" value={form.starts_at}
-                    onChange={(e) => muda('starts_at', e.target.value)} />
-                  <p className="mt-1 text-xs text-muted-foreground">Vazio: assim que publicar.</p>
-                </div>
-                <div>
-                  <Label htmlFor="banner-fim">Fim</Label>
-                  <Input id="banner-fim" type="datetime-local" value={form.ends_at}
-                    onChange={(e) => muda('ends_at', e.target.value)} />
-                  <p className="mt-1 text-xs text-muted-foreground">Banner novo nasce com 14 dias.</p>
-                </div>
-              </div>
+              <GrupoDaJanela titulo="Quando">
+                <GradeDaJanela>
+                  <CampoDaJanela rotulo="Início" htmlFor="banner-inicio" ajuda="Vazio: assim que publicar." colunas={2}>
+                    <Input id="banner-inicio" type="datetime-local" value={form.starts_at}
+                      onChange={(e) => muda('starts_at', e.target.value)} />
+                  </CampoDaJanela>
+                  <CampoDaJanela rotulo="Fim" htmlFor="banner-fim" ajuda="Banner novo nasce com 14 dias." colunas={2}>
+                    <Input id="banner-fim" type="datetime-local" value={form.ends_at}
+                      onChange={(e) => muda('ends_at', e.target.value)} />
+                  </CampoDaJanela>
+                </GradeDaJanela>
+              </GrupoDaJanela>
             </div>
 
             <Previa banner={atual} form={form} />
@@ -354,13 +349,14 @@ interface CampoDeArteProps {
   ocupado: boolean;
   aoEscolher: (arte: ArteDoBanner, arquivo: File | undefined) => void;
   aoTirar?: () => void;
+  className?: string;
 }
 
-function CampoDeArte({ arte, titulo, medida, url, ocupado, aoEscolher, aoTirar }: CampoDeArteProps) {
+function CampoDeArte({ arte, titulo, medida, url, ocupado, aoEscolher, aoTirar, className }: CampoDeArteProps) {
   const entrada = useRef<HTMLInputElement>(null);
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-sm font-medium">{titulo}</p>
+    <div className={`flex flex-col gap-1.5 ${className ?? ''}`}>
+      <p className="text-[13px] font-medium text-foreground/80">{titulo}</p>
       <p className="text-xs text-muted-foreground">{medida}</p>
       {url && <img src={url} alt={titulo} className="w-full rounded-md border" />}
       <input
@@ -436,8 +432,7 @@ function DestinoDoClique({ id, rotulo, vazio, ajuda, valor, aoMudar }: DestinoDo
   }, [valor, ehTela]);
   const escolha = digitando ? OUTRO : ehTela ? valor : '';
   return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{rotulo}</Label>
+    <CampoDaJanela rotulo={rotulo} htmlFor={id} ajuda={ajuda}>
       <Seletor
         id={id}
         value={escolha}
@@ -461,7 +456,6 @@ function DestinoDoClique({ id, rotulo, vazio, ajuda, valor, aoMudar }: DestinoDo
         <Input aria-label={`${rotulo}: endereço`} placeholder="https://… ou /…" value={valor}
           onChange={(e) => aoMudar(e.target.value)} />
       )}
-      <p className="text-xs text-muted-foreground">{ajuda}</p>
-    </div>
+    </CampoDaJanela>
   );
 }

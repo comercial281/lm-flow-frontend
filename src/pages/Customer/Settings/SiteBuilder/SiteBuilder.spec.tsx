@@ -589,7 +589,7 @@ describe('SiteBuilder (casca do Meu site)', () => {
       mocks.updatePage.mockResolvedValue({ ...PAGINA, in_menu: false });
       abrir('/settings/site-builder?tela=paginas');
       await userEvent.click(await screen.findByRole('button', { name: 'Editar página' }));
-      await userEvent.click(screen.getByRole('checkbox', { name: 'Exibir no menu' }));
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Mostrar no menu' }));
       await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
       await waitFor(() => expect(mocks.updatePage).toHaveBeenCalled());
       expect(mocks.updatePage.mock.calls[0][2]).toMatchObject({ in_menu: false });

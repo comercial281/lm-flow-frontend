@@ -34,6 +34,8 @@ const gravarForma = (f: Forma) => {
 
 /** O desenho afunila sempre no mesmo formato: a última faixa fica com esta largura (%). */
 const LARGURA_FINAL = 44;
+/** Força da cor da última faixa (%): no claro o funil clareia até aqui, sem perder o contraste do texto branco. */
+const FORCA_FINAL = 78;
 
 export const Funil: React.FC<ContextoBloco> = ({ dados, visao, pode, filtros, funil, mudarFunil }) => {
   const navigate = useNavigate();
@@ -142,7 +144,12 @@ export const Funil: React.FC<ContextoBloco> = ({ dados, visao, pode, filtros, fu
                   <span className="lmfn-funil-valor">{rotulo(s)}</span>
                 </>
               );
-              const estilo = { clipPath: `polygon(${a}% 0, ${100 - a}% 0, ${100 - b}% 100%, ${b}% 100%)`, paddingInline: `${b + 3}%` };
+              const forca = n <= 1 ? 100 : 100 - ((100 - FORCA_FINAL) * i) / (n - 1);
+              const estilo = {
+                clipPath: `polygon(${a}% 0, ${100 - a}% 0, ${100 - b}% 100%, ${b}% 100%)`,
+                paddingInline: `${b + 3}%`,
+                '--lmfn-forca': `${forca}%`,
+              } as React.CSSProperties;
               return abreEtapa ? (
                 <button key={s.id} type="button" className="lmfn-funil-faixa" style={estilo} onClick={() => abrir(s.id)}>{corpo}</button>
               ) : (
@@ -156,7 +163,7 @@ export const Funil: React.FC<ContextoBloco> = ({ dados, visao, pode, filtros, fu
             <>
               <span className="lmfn-item-texto" style={{ flex: '0 0 40%' }}>{s.name}</span>
               <span style={{ flex: 1, height: 10, borderRadius: 5, background: 'var(--lmf-track)', overflow: 'hidden' }}>
-                <span style={{ display: 'block', height: '100%', width: `${(medida(s) / max) * 100}%`, background: 'var(--lmf-accent)' }} />
+                <span style={{ display: 'block', height: '100%', width: `${(medida(s) / max) * 100}%`, background: 'var(--lmf-data)' }} />
               </span>
               <span style={{ minWidth: 40, textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>{rotulo(s)}</span>
             </>
@@ -172,7 +179,7 @@ export const Funil: React.FC<ContextoBloco> = ({ dados, visao, pode, filtros, fu
           <>
             <div className="lmfn-item">
               <span className="lmfn-item-texto" style={{ flex: 1 }}>Ganhos no período</span>
-              <span style={{ width: 40, textAlign: 'right', fontWeight: 600 }}>{numero(bloco.outcomes.won)}</span>
+              <span style={{ width: 40, textAlign: 'right', fontWeight: 600, color: 'var(--lmf-highlight-text)' }}>{numero(bloco.outcomes.won)}</span>
             </div>
             <div className="lmfn-item">
               <span className="lmfn-item-texto" style={{ flex: 1 }}>Perdidos no período</span>

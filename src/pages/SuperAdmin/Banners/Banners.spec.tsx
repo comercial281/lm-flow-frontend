@@ -93,6 +93,14 @@ describe('Comunicação → Banner · destino do clique', () => {
     svc.listar.mockResolvedValue({ banners: [rascunho], imobiliarias: [] });
   });
 
+  it('o editor separa o formulário em grupos com título', async () => {
+    abrir();
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Atualização · Mensagens prontas' }));
+    for (const nome of ['Identificação', 'Arte', 'Ao clicar', 'Para quem', 'Quando']) {
+      expect(screen.getByRole('group', { name: nome })).toBeInTheDocument();
+    }
+  });
+
   it('Ver agora escolhe a tela pelo nome do menu; outro endereço abre a caixa de digitar', async () => {
     svc.salvar.mockImplementation(async (_id: string, campos: Record<string, unknown>) => ({ ...rascunho, ...campos }));
     abrir();

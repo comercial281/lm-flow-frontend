@@ -6,9 +6,9 @@ import {
   Label,
   Textarea,
   Switch,
-  Separator,
 } from '@/components/ui/ds';
-import { Users, Settings, Save, X } from 'lucide-react';
+import { Save, X } from 'lucide-react';
+import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { Team, TeamFormData } from '@/types/users';
 import { useLanguage } from '@/hooks/useLanguage';
 
@@ -97,88 +97,64 @@ export default function TeamForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-h-[calc(90dvh-4.5rem)] flex-col">
-      <div className="flex-1 space-y-6 overflow-y-auto px-6 py-4">
-      {/* Basic Information */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-lg font-semibold">
-          <Users className="h-5 w-5" />
-          {t('form.basicInfo')}
-        </div>
+    <form onSubmit={handleSubmit} className="grid gap-5">
+      <GrupoDaJanela titulo={t('form.basicInfo')}>
+        <CampoDaJanela
+          rotulo={t('form.name.label')}
+          htmlFor="name"
+          obrigatorio
+          erro={errors.name}
+        >
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => handleInputChange('name', e.target.value)}
+            placeholder={t('form.name.placeholder')}
+            aria-invalid={!!errors.name}
+            disabled={loading}
+          />
+        </CampoDaJanela>
 
-        <div className="grid gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="name" className="text-sm font-medium">
-              {t('form.name.label')}
-            </Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              placeholder={t('form.name.placeholder')}
-              className={errors.name ? 'border-red-500' : ''}
-              disabled={loading}
-            />
-            {errors.name && (
-              <p className="text-sm text-red-500">{errors.name}</p>
-            )}
-          </div>
+        <CampoDaJanela
+          rotulo={t('form.description.label')}
+          htmlFor="description"
+          erro={errors.description}
+          ajuda={t('form.description.counter', { current: formData.description.length })}
+        >
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => handleInputChange('description', e.target.value)}
+            placeholder={t('form.description.placeholder')}
+            className="resize-none"
+            aria-invalid={!!errors.description}
+            rows={3}
+            disabled={loading}
+          />
+        </CampoDaJanela>
+      </GrupoDaJanela>
 
-          <div className="space-y-2">
-            <Label htmlFor="description" className="text-sm font-medium">
-              {t('form.description.label')}
+      <GrupoDaJanela titulo={t('form.configuration')}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="space-y-0.5">
+            <Label htmlFor="allow-auto-assign" className="text-[13px] font-medium text-foreground/80">
+              {t('form.autoAssign.label')}
             </Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder={t('form.description.placeholder')}
-              className={`resize-none ${errors.description ? 'border-red-500' : ''}`}
-              rows={3}
-              disabled={loading}
-            />
-            {errors.description && (
-              <p className="text-sm text-red-500">{errors.description}</p>
-            )}
             <p className="text-xs text-muted-foreground">
-              {t('form.description.counter', { current: formData.description.length })}
+              {t('form.autoAssign.description')}
             </p>
           </div>
+          <Switch
+            id="allow-auto-assign"
+            checked={formData.allow_auto_assign}
+            onCheckedChange={(checked) => handleInputChange('allow_auto_assign', checked)}
+            disabled={loading}
+          />
         </div>
-      </div>
-
-      <Separator />
-
-      {/* Configuration */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-lg font-semibold">
-          <Settings className="h-5 w-5" />
-          {t('form.configuration')}
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-medium">
-                {t('form.autoAssign.label')}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {t('form.autoAssign.description')}
-              </p>
-            </div>
-            <Switch
-              checked={formData.allow_auto_assign}
-              onCheckedChange={(checked) => handleInputChange('allow_auto_assign', checked)}
-              disabled={loading}
-            />
-          </div>
-        </div>
-      </div>
-
-      </div>
+      </GrupoDaJanela>
 
       {/* Form Actions */}
-      <DialogFooter className="shrink-0">
+      <DialogFooter>
         {onCancel && (
           <Button
             type="button"

@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
+import Aviso from '@/components/base/Aviso';
 import LockConfigFields, { type LockConfig } from './LockConfigFields';
 import EntitlementsEditor from './EntitlementsEditor';
 
@@ -16,18 +17,18 @@ interface Props {
 export default function AvancadoDoBloqueio({ lock, onChange, alvo }: Props) {
   const [aberto, setAberto] = useState(lock.access === 'restricted');
   return (
-    <div className="border-t border-border pt-3">
+    <div>
       <button type="button" aria-expanded={aberto} onClick={() => setAberto((v) => !v)}
         className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
         <ChevronRight className={`h-4 w-4 transition-transform ${aberto ? 'rotate-90' : ''}`} />
-        Avançado <span className="font-normal">(cadeado de venda e liberação por e-mail)</span>
+        Cadeado de venda e liberação por e-mail
       </button>
       {aberto && (
         <div className="mt-3 grid gap-3">
           <LockConfigFields value={lock} onChange={onChange} />
           {lock.access === 'restricted' && (alvo
             ? <EntitlementsEditor targetType={alvo.tipo} targetId={alvo.id} />
-            : <p className="text-xs text-muted-foreground">Salve primeiro pra liberar clientes ou e-mails específicos.</p>)}
+            : <Aviso tom="neutro" compacto>Salve primeiro pra liberar clientes ou e-mails específicos.</Aviso>)}
         </div>
       )}
     </div>

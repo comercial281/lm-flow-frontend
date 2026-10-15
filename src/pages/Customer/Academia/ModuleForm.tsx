@@ -7,6 +7,7 @@ import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle 
 import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
 import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
 import { Seletor } from '@/components/base/Seletor';
+import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import CoverPicker from './CoverPicker';
 import AvancadoDoBloqueio from './AvancadoDoBloqueio';
 import type { LockConfig } from './LockConfigFields';
@@ -75,34 +76,35 @@ export default function ModuleForm({ editing, defaultCourseId, onClose }: {
     <Dialog open onOpenChange={(aberto) => { if (!aberto && !busy) onClose(); }}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader><DialogTitle>{editing ? 'Editar módulo' : 'Novo módulo'}</DialogTitle></DialogHeader>
-        <div className="grid gap-5">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <CampoTexto id="modulo-nome" rotulo="Nome do módulo" valor={titulo} aoMudar={setTitulo} />
-            <div className="grid gap-1.5">
-              <label htmlFor="modulo-curso" className="text-sm font-medium">Curso</label>
-              <Seletor id="modulo-curso" value={courseId} onChange={(e) => setCourseId(e.target.value)} className="w-full">
-                <option value="">Fora de curso (aula avulsa)</option>
-                {courses.map((c) => <option key={c.id} value={c.id}>{c.titulo}</option>)}
-              </Seletor>
-            </div>
-          </div>
-          <CampoTextoLongo id="modulo-descricao" rotulo="Descrição (opcional)" valor={descricao} aoMudar={setDescricao} rows={2} />
-          <CoverPicker value={capaUrl} onChange={setCapaUrl} />
-          <div className="grid gap-2">
-            <p className="text-sm font-medium">Quem assiste</p>
+        <div className="grid gap-6">
+          <GrupoDaJanela titulo="Módulo">
+            <GradeDaJanela>
+              <CampoTexto id="modulo-nome" rotulo="Nome do módulo" valor={titulo} aoMudar={setTitulo} className="sm:col-span-2" />
+              <CampoDaJanela rotulo="Curso" htmlFor="modulo-curso" colunas={2}>
+                <Seletor id="modulo-curso" value={courseId} onChange={(e) => setCourseId(e.target.value)} className="w-full">
+                  <option value="">Fora de curso (aula avulsa)</option>
+                  {courses.map((c) => <option key={c.id} value={c.id}>{c.titulo}</option>)}
+                </Seletor>
+              </CampoDaJanela>
+            </GradeDaJanela>
+            <CampoTextoLongo id="modulo-descricao" rotulo="Descrição (opcional)" valor={descricao} aoMudar={setDescricao} rows={2} />
+            <CoverPicker value={capaUrl} onChange={setCapaUrl} />
+          </GrupoDaJanela>
+          <GrupoDaJanela titulo="Quem vê">
             <CartoesDeEscolha rotulo="Quem assiste" valor={audience} opcoes={OPCOES_QUEM} aoEscolher={setAudience} />
-          </div>
+          </GrupoDaJanela>
           {temCliente && (
-            <div className="grid gap-2">
-              <p className="text-sm font-medium">Em quais clientes aparece</p>
+            <GrupoDaJanela titulo="Em quais clientes aparece">
               <CartoesDeEscolha rotulo="Em quais clientes aparece" valor={scope} aoEscolher={setScope} opcoes={[
                 { valor: 'global', rotulo: 'Todos os clientes', descricao: 'Aparece em todas as imobiliárias' },
                 { valor: 'tenant', rotulo: 'Só este cliente', descricao: TENANT_SLUG },
               ]} />
-            </div>
+            </GrupoDaJanela>
           )}
-          <AvancadoDoBloqueio lock={lock} onChange={(patch) => setLock((v) => ({ ...v, ...patch }))}
-            alvo={editing ? { tipo: 'module', id: editing.id } : null} />
+          <GrupoDaJanela titulo="Avançado">
+            <AvancadoDoBloqueio lock={lock} onChange={(patch) => setLock((v) => ({ ...v, ...patch }))}
+              alvo={editing ? { tipo: 'module', id: editing.id } : null} />
+          </GrupoDaJanela>
         </div>
         <DialogFooter className="gap-2">
           <Button variant="outline" type="button" onClick={onClose} disabled={busy}>Cancelar</Button>

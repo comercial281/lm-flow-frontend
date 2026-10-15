@@ -153,4 +153,11 @@ describe('Formulários do Meta · formulário pego por regra "nome contém"', ()
     expect(await screen.findByText('Vai pra Ana Corretora pela regra "alma"')).toBeInTheDocument();
     expect(screen.queryByText(/Cai na Roleta/)).toBeNull();
   });
+  it('a janela do destino tem os grupos do miolo', async () => {
+    svc.getAll.mockResolvedValue([cadastro()]);
+    const dialogo = await abrirEdicao();
+    for (const nome of ['Para onde vai', 'Como identificar', 'Quem assume', 'Complemento', 'Estado']) {
+      expect(within(dialogo).getByRole('group', { name: nome })).toBeInTheDocument();
+    }
+  });
 });

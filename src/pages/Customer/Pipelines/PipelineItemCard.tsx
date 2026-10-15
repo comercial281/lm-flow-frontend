@@ -25,6 +25,7 @@ import { contatoDoCard, conversaDoCard } from '@/features/cardDoLead/cardDoLead'
 import type { PipelineItem } from '@/types/analytics';
 import { getContactColor, resolveItemName } from './pipelineItemHelpers';
 import { sinalDoCard, type TipoDoSinal, type TomDoSinal } from './quadro/sinalDoCard';
+import type { EventoDoMouse } from './quadro/useMiniCard';
 
 // Referências estáveis, fora do componente.
 const pararClique = (e: MouseEvent) => e.stopPropagation();
@@ -56,9 +57,14 @@ interface PipelineItemCardProps {
   arquivado: boolean;
   isDraggingRef: MutableRefObject<boolean>;
   suppressClickUntilRef: MutableRefObject<number>;
-  onDragStart: (item: PipelineItem) => void;
+  /** A altura vai junto: o esqueleto do destino tem o tamanho do card pego. */
+  onDragStart: (item: PipelineItem, altura?: number) => void;
   onDragEnd: () => void;
-  onCardDragOver: (e: DragEvent) => void;
+  onCardDragOver: (e: DragEvent, item: PipelineItem, stageId: string) => void;
+  /** Este é o card pego: no lugar dele fica só o contorno tracejado. */
+  arrastando?: boolean;
+  /** Mini card do quadro: o card só avisa o mouse (useMiniCard). Só mouse, nunca dedo. */
+  onPassarMouse?: (evento: EventoDoMouse, item: PipelineItem, el: HTMLElement) => void;
   onCardDrop: (e: DragEvent, item: PipelineItem, stageId: string) => void;
   onOpenItem: (item: PipelineItem) => void;
   onArchive: (item: PipelineItem) => void;
@@ -71,8 +77,8 @@ interface PipelineItemCardProps {
 }
 
 function PipelineItemCardComponent({
-  item, stageId, visitsByContact, podeArrastar, arquivado, isDraggingRef, suppressClickUntilRef,
-  onDragStart, onDragEnd, onCardDragOver, onCardDrop, onOpenItem, onArchive, onUnarchive, onRemove,
+  item, stageId, visitsByContact, podeArrastar, arquivado, isDraggingRef, suppressClickUntilRef, arrastando = false,
+  onPassarMouse, onDragStart, onDragEnd, onCardDragOver, onCardDrop, onOpenItem, onArchive, onUnarchive, onRemove,
   onOpenConversation, openingConversation,
 }: PipelineItemCardProps) {
   const { t } = useLanguage('pipelines');
@@ -98,11 +104,17 @@ function PipelineItemCardComponent({
 
   return (
     <div
-      className="group relative cursor-pointer select-none rounded-xl border border-border bg-background p-3 shadow-sm transition-all duration-200 hover:border-primary/30 hover:shadow-md"
+      data-card-id={item.id}
+      className={arrastando
+        ? 'relative select-none rounded-xl border-2 border-dashed border-primary/40 bg-transparent p-3 [&>*]:invisible'
+        : 'group relative cursor-pointer select-none rounded-xl border border-border bg-background p-3 shadow-sm transition-all duration-200 hover:border-primary/30 hover:shadow-md'}
       draggable={podeArrastar}
-      onDragStart={() => { if (podeArrastar) onDragStart(item); }}
+      onDragStart={e => { if (podeArrastar) onDragStart(item, e.currentTarget.offsetHeight); }}
       onDragEnd={onDragEnd}
-      onDragOver={onCardDragOver}
+      onDragOver={e => onCardDragOver(e, item, stageId)}
+      onPointerEnter={e => { if (e.pointerType === 'mouse') onPassarMouse?.('entrou', item, e.currentTarget); }}
+      onPointerLeave={e => { if (e.pointerType === 'mouse') onPassarMouse?.('saiu', item, e.currentTarget); }}
+      onPointerDown={e => onPassarMouse?.('apertou', item, e.currentTarget)}
       onDrop={e => onCardDrop(e, item, stageId)}
       onClick={() => {
         if (!isDraggingRef.current && Date.now() > suppressClickUntilRef.current) onOpenItem(item);

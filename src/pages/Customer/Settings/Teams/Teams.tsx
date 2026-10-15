@@ -437,7 +437,7 @@ export default function Teams({ embutido = false }: { embutido?: boolean }) {
 
       {/* Delete Team Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent compacta>
           <DialogHeader>
             <DialogTitle>{t('dialog.delete.title')}</DialogTitle>
             <DialogDescription>
@@ -465,7 +465,7 @@ export default function Teams({ embutido = false }: { embutido?: boolean }) {
 
       {/* Bulk Delete Dialog */}
       <Dialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent compacta>
           <DialogHeader>
             <DialogTitle>{t('dialog.bulkDelete.title')}</DialogTitle>
             <DialogDescription>

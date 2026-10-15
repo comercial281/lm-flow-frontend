@@ -63,6 +63,16 @@ describe('Comunicação → Push', () => {
     expect(svc.list).toHaveBeenCalledTimes(2);
   });
 
+  it('a janela da regra tem os grupos Identificação, Quando e onde e Mensagem', async () => {
+    const user = userEvent.setup();
+    render(<PushCentral />);
+    await user.click(await screen.findByRole('button', { name: 'Editar Lead de campanha' }));
+    const dialogo = await screen.findByRole('dialog');
+    for (const nome of ['Identificação', 'Quando e onde', 'Mensagem']) {
+      expect(within(dialogo).getByRole('group', { name: nome })).toBeInTheDocument();
+    }
+  });
+
   it('liga/desliga da regra é a chave da casa', async () => {
     const user = userEvent.setup();
     render(<PushCentral />);

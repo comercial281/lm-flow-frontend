@@ -4,7 +4,7 @@
   "formato": 46,
   "plural": 0,
   "acento": 0,
-  "maiusculas": 921,
+  "maiusculas": 856,
   "chaveMao": 2,
   "iconeSemNome": 0,
   "selectNativo": 0,
@@ -30,7 +30,7 @@
   "janelaAMao": 0,
   "rodapeAMao": 0,
   "topoCentralizado": 0,
-  "escolhaRoxaCheia": 40,
-  "avisoSoltoNaJanela": 12,
+  "escolhaRoxaCheia": 36,
+  "avisoSoltoNaJanela": 3,
   "soMouse": 0
 }

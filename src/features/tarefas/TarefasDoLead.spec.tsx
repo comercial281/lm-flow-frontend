@@ -43,7 +43,10 @@ describe('TarefasDoLead', () => {
     render(<TarefasDoLead pipelineItemIds={['c1']} criarNoCard="c1" />);
     fireEvent.click(await screen.findByRole('checkbox', { name: /concluir tarefa a/i }));
     await waitFor(() => expect(concluir).toHaveBeenCalledWith('a'));
-    expect(await screen.findByText('Criar a próxima tarefa deste lead?')).toBeInTheDocument();
+    expect(await screen.findByText('Criar a próxima tarefa pra este lead?')).toBeInTheDocument();
+    expect(screen.getByText('"Tarefa a" foi concluída.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Agora não' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Nova tarefa' })).toBeInTheDocument();
   });
 
   it('sem card pra criar, não mostra o botão Nova tarefa', async () => {
@@ -58,7 +61,7 @@ describe('TarefasDoLead', () => {
     criar.mockResolvedValue(tarefa('n'));
     render(<TarefasDoLead pipelineItemIds={['c1', 'outro-card']} criarNoCard="c1" />);
     fireEvent.click(await screen.findByRole('checkbox', { name: /concluir tarefa a/i }));
-    await screen.findByText('Criar a próxima tarefa deste lead?');
+    await screen.findByText('Criar a próxima tarefa pra este lead?');
     fireEvent.click(await screen.findByRole('button', { name: 'Nova tarefa' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Oferta ativa' })).toHaveAttribute('aria-pressed', 'true'));
     fireEvent.change(await screen.findByLabelText('Título da tarefa'), { target: { value: 'Seguir' } });
