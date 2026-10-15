@@ -9013,3 +9013,20 @@ Armadilhas:
 1. **Um mini card só pro quadro** (`quadro/useMiniCard.ts` + `quadro/MiniCardDoLead.tsx`, portal no body). O card só avisa `entrou`/`saiu`/`apertou` por um callback estável (`onPassarMouse`): o card é memo e o quadro pode ter 2 mil cards.
 2. **O título da tarefa só é pedido com o resumo aberto** (`/activities`, `para_fazer`, 1 item, ordenado por prazo no servidor) e só se o card tem tarefa aberta. Fica guardado por card + prazos abertos e é esquecido no `EVENTO_TAREFAS_MUDARAM`. Falhou: "Tarefa marcada · prazo". Não há mudança no servidor.
 3. **Regras e frases em `quadro/miniCard.ts`**, com spec. O dia da tarefa usa o `quandoAcontece` da casa, com a primeira letra minúscula no meio da frase.
+
+## Funil: setas ‹ › para ir pro lado no quadro (desde 2026-10-15)
+
+Pedido do dono: no Funil de vendas, com mouse, não dava pra ir pras colunas da direita. A roda já andava pro lado, mas só fora das colunas (vão entre elas, título, fundo); em cima dos cards ela desce a lista da coluna, e os cards ocupam quase o quadro inteiro. Arrastar o fundo e Shift + roda funcionavam, mas ninguém descobria.
+
+- **Duas setas redondas presas nas bordas esquerda e direita do quadro**, por cima das colunas, na altura do meio. Cada clique anda uma coluna, com movimento suave.
+- **Só aparecem quando tem coluna escondida daquele lado**: no começo do quadro, só a ›; no fim, só a ‹; sem colunas sobrando, nenhuma.
+- **A roda continua como estava**: em cima dos cards desce a coluna, fora deles anda pro lado.
+- **No celular não aparecem** (o dedo já arrasta o quadro). Na Lista não existem.
+
+Decisões do dono (não reabrir sem ele pedir): setas em vez de a roda andar sempre pro lado dentro do quadro (isso tiraria a rolagem da lista de cards da coluna).
+
+Armadilhas:
+
+1. **`quadro/SetasDoQuadro.tsx`** mede o próprio quadro (`boardScrollRef` do `useBoardDrag`): escuta o `scroll` e um `ResizeObserver` no quadro e na faixa das colunas, porque a largura muda com a janela, com filtro, etapa nova e troca de aba.
+2. **O passo é fixo em 344 px** (`PASSO_DA_SETA`: coluna `w-80` + `gap-6`). Mudou a largura da coluna ou o vão, muda aqui junto.
+3. **As setas ficam fora do quadro que rola** (irmãs dele dentro do embrulho `relative`), então o arrastar do fundo nunca pega o clique delas.

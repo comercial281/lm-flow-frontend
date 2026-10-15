@@ -48,6 +48,7 @@ import {
 } from './quadro/paramsDoQuadro';
 import PainelDeFiltrosDoFunil from './quadro/PainelDeFiltrosDoFunil';
 import StageColumn from './quadro/StageColumn';
+import SetasDoQuadro from './quadro/SetasDoQuadro';
 import MiniCardDoLead from './quadro/MiniCardDoLead';
 import { useMiniCard } from './quadro/useMiniCard';
 import PipelineListView from './quadro/PipelineListView';
@@ -1003,6 +1004,7 @@ export default function PipelineKanban() {
               )}
             </div>
           </div>
+          {!celular && <SetasDoQuadro quadro={boardScrollRef} />}
         </div>
         )}
 
