@@ -198,7 +198,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
         toggleSidebar={toggleSidebar}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
         setLogoutDialogOpen={setLogoutDialogOpen}
-        onOpenSearch={() => setCommandOpen(true)}
       />
 
       {/* Main Layout Container */}

@@ -5,7 +5,6 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Building2,
-  Search,
 } from 'lucide-react';
 import {
   Button,
@@ -23,7 +22,6 @@ import { useLanguage } from '../../../hooks/useLanguage';
 import NotificationBell from '../NotificationBell';
 import PlantaoToggle from './PlantaoToggle';
 import ProfileMenu from './ProfileMenu';
-import { TourFab } from '@/components/TourFab';
 import MenuItem from './MenuItem';
 import MenuSecoes from './MenuSecoes';
 import { useGuardaDeSaida } from '@/hooks/useAlteracoesNaoSalvas';
@@ -57,7 +55,6 @@ interface HeaderProps {
   toggleSidebar: () => void;
   setIsMobileMenuOpen: (open: boolean) => void;
   setLogoutDialogOpen: (open: boolean) => void;
-  onOpenSearch?: () => void;
 }
 
 export default function Header({
@@ -69,7 +66,6 @@ export default function Header({
   toggleSidebar,
   setIsMobileMenuOpen,
   setLogoutDialogOpen,
-  onOpenSearch,
 }: HeaderProps) {
   const { t } = useLanguage('layout');
   const { pathname } = useLocation();
@@ -126,10 +122,10 @@ export default function Header({
               </ScrollArea>
 
               {/* Ações que saíram da barra do topo no mobile (ver comentário no
-                  bloco "Right" abaixo): não são urgentes, então moram aqui. */}
+                  bloco "Right" abaixo): não são urgentes, então moram aqui. O botão
+                  de rever o tour (?) saiu em 15/10/2026 junto com o do computador. */}
               <div className="p-4 border-t border-sidebar-border flex items-center gap-2">
                 <ThemeToggle />
-                <TourFab />
                 <DemoModeToggle />
               </div>
 
@@ -163,19 +159,9 @@ export default function Header({
             logo (print do iPhone, 16/07/2026). shrink-0 nas laterais + min-w-0 no
             centro faz o centro ceder espaço em vez de ser invadido.
             TourFab e DemoModeToggle saíram daqui pro menu hambúrguer: não são
-            ações urgentes e eram 2 dos 6 ícones brigando por espaço. */}
+            ações urgentes e eram 2 dos 6 ícones brigando por espaço.
+            A lupa saiu em 15/10/2026 (topo enxuto, pedido do dono). */}
         <div className="shrink-0 flex justify-end items-center gap-1">
-          {onOpenSearch && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onOpenSearch}
-              className="text-sidebar-foreground cursor-pointer"
-            >
-              <Search className="h-5 w-5" />
-              <span className="sr-only">Buscar</span>
-            </Button>
-          )}
           <PlantaoToggle compact />
           <NotificationBell />
           <ProfileMenu
@@ -240,28 +226,13 @@ export default function Header({
           )}
         </div>
 
-        {/* Right side */}
+        {/* Right side
+            Topo enxuto (15/10/2026, pedido do dono, "por enquanto"): a barra
+            "Buscar... Ctrl K" e o ? do tour saíram; tema e modo demo foram pro
+            rodapé do menu lateral (Sidebar). O Ctrl+K continua no MainLayout. */}
         <div className="flex items-center gap-2 px-4">
-          {onOpenSearch && (
-            <button
-              type="button"
-              onClick={onOpenSearch}
-              className="hidden lg:flex items-center gap-2 rounded-md border border-sidebar-border bg-background/50 px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent transition-colors cursor-pointer"
-            >
-              <Search className="h-4 w-4" />
-              <span>Buscar...</span>
-              <kbd className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium tracking-wide">
-                Ctrl K
-              </kbd>
-            </button>
-          )}
-          <TourFab />
           {/* Área do Admin (só super-admin no host raiz) */}
           <AdminAreaButton />
-          {/* Theme Toggle */}
-          <ThemeToggle />
-          {/* Modo Demo (borra dados sensíveis p/ gravar tutoriais) */}
-          <DemoModeToggle />
           {/* Modo Plantão (push de lead novo) */}
           <PlantaoToggle />
           {/* Notifications */}

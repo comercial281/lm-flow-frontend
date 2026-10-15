@@ -8916,3 +8916,12 @@ Armadilhas:
 3. Arrastar pro fim de uma coluna que ainda tem cards no servidor põe o card logo abaixo do último card visível (acima dos não carregados): `abaixoDoUltimo` em `useBoardDrag.ts`.
 4. A regra de cada filtro mora só no servidor (`PipelineItems::BoardQuery`); `filtrosDoFunil.ts` ficou com as contas da tela (colunas visíveis, contagem de filtros, opções do painel).
 5. O backend vem PRIMEIRO. Contra o servidor antigo a tela recebe o funil inteiro, sem lotes e sem filtro.
+
+## Topo enxuto (15/10/2026)
+
+Pedido do dono, "por enquanto". A barra do topo fica só com Área do Admin, Plantão, sininho e perfil.
+
+- **Busca:** a barra "Buscar... Ctrl K" (computador) e a lupa (celular) saíram. O **Ctrl+K continua** abrindo a busca (o atalho mora no `MainLayout`, não no `Header`).
+- **? do tour:** saiu do topo e do menu do celular. O tour automático da primeira visita segue igual; o que se perde é rever o tour de uma página já vista. Se fizer falta, o caminho proposto é um "Ver tour desta página" no menu do perfil (o `TourFab` continua no código).
+- **Tema e modo demo (olhinho):** foram pro rodapé do menu lateral, depois de "Falar com o suporte". Menu aberto: lado a lado. Recolhido: um embaixo do outro, no centro. No celular continuam no menu hambúrguer.
+- Área do Admin (`AdminLayout`) e Área de Membros têm topo próprio e não mudaram.
