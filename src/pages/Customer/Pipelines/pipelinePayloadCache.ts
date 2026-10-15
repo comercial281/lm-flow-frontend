@@ -52,24 +52,43 @@ export function setCachedPipeline(pipelineId: string, data: Pipeline) {
   persist();
 }
 
-// Prefetch no hover: passou o mouse no card, o payload já começa a descer.
-// Dedupe em voo + TTL pra não virar rajada de requests.
-const inflight = new Map<string, Promise<void>>();
+// Aba Abertos de um funil, com dedupe em voo: o hover (prefetch) e o quadro
+// que abre logo depois dividem o MESMO pedido. Antes eram dois GET pesados ao
+// mesmo tempo (um sem status, outro com status=open), o servidor montava o
+// funil inteiro duas vezes.
+// reaproveitar=false (recarga depois de uma ação, poll, tempo real) SEMPRE pede
+// de novo: juntar-se a um pedido que começou antes da ação traria o quadro de
+// antes dela (o card movido voltava pra coluna antiga).
+const inflight = new Map<string, Promise<Pipeline>>();
 
+export function loadOpenPipeline(pipelineId: string, { reaproveitar = true } = {}): Promise<Pipeline> {
+  const emVoo = inflight.get(pipelineId);
+  if (emVoo && reaproveitar) return emVoo;
+
+  const p: Promise<Pipeline> = pipelinesService
+    .getPipeline(pipelineId, { status: 'open' })
+    .then(data => {
+      // Resposta de um pedido que já foi substituído por um mais novo não
+      // regrava o cache por cima do mais novo.
+      if (inflight.get(pipelineId) === p) setCachedPipeline(pipelineId, data);
+      return data;
+    })
+    .finally(() => {
+      if (inflight.get(pipelineId) === p) inflight.delete(pipelineId);
+    });
+  inflight.set(pipelineId, p);
+  return p;
+}
+
+// Prefetch no hover: passou o mouse no card, o payload já começa a descer.
+// TTL pra não virar rajada de requests.
 export function prefetchPipeline(pipelineId: string): void {
   if (!pipelineId) return;
   const cached = entries.get(pipelineId);
   if (cached && Date.now() - cached.at < PREFETCH_TTL) return;
-  if (inflight.has(pipelineId)) return;
 
-  const p = pipelinesService
-    .getPipeline(pipelineId)
-    .then(data => setCachedPipeline(pipelineId, data))
-    .catch(() => {
-      /* prefetch é oportunista: falhou, o clique busca normal */
-    })
-    .finally(() => {
-      inflight.delete(pipelineId);
-    });
-  inflight.set(pipelineId, p);
+  loadOpenPipeline(pipelineId).catch(() => {
+    /* prefetch é oportunista: se o clique se juntou a ele, o quadro mostra o
+       erro com "Tentar de novo" */
+  });
 }

@@ -22,7 +22,7 @@ import { csvDoFunil } from './quadro/csvDoFunil';
 import EmptyState from '@/components/base/EmptyState';
 import Carregando from '@/components/base/Carregando';
 import { Skeleton } from '@/components/ui/ds';
-import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
+import { getCachedPipeline, loadOpenPipeline } from './pipelinePayloadCache';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import { useCardForaDoQuadro } from '@/features/cardDoLead/useCardForaDoQuadro';
@@ -171,7 +171,7 @@ export default function PipelineKanban() {
   const [carregandoQuadro, setCarregandoQuadro] = useState(false);
   // A aba pedida não carregou: o quadro mostra o erro (nunca os cards da aba anterior).
   const [erroDaAba, setErroDaAba] = useState(false);
-  const loadPipelineData = useCallback(async (silent = false) => {
+  const loadPipelineData = useCallback(async (silent = false, reaproveitar = false) => {
     if (!pipelineId) return;
     const meu = ++pedidoRef.current;
     const cached = statusDaAba === 'open' ? getCachedPipeline(pipelineId) : undefined;
@@ -189,9 +189,14 @@ export default function PipelineKanban() {
       else setLoading(true);
     }
     try {
-      const pipelineData = await pipelinesService.getPipeline(pipelineId, { status: statusDaAba });
+      // Abertos passa pelo cache, que grava o payload guardado. Só a abertura
+      // do quadro reaproveita o pedido que o hover já disparou; recarga depois
+      // de ação pede de novo (senão traria o quadro de antes da ação).
+      const pipelineData =
+        statusDaAba === 'open'
+          ? await loadOpenPipeline(pipelineId, { reaproveitar })
+          : await pipelinesService.getPipeline(pipelineId, { status: statusDaAba });
       if (meu !== pedidoRef.current) return;
-      if (statusDaAba === 'open') setCachedPipeline(pipelineId, pipelineData);
       setPipeline(pipelineData);
       setStages(pipelineData.stages || []);
       setErroDaAba(false);
@@ -255,7 +260,7 @@ export default function PipelineKanban() {
   }, []);
 
   useEffect(() => {
-    loadPipelineData();
+    loadPipelineData(false, true);
   }, [loadPipelineData]);
 
   useEffect(() => {

@@ -67,6 +67,9 @@ vi.mock('@/pages/Customer/Pipelines/pipelinePayloadCache', () => ({
   getCachedPipeline: () => undefined,
   setCachedPipeline: vi.fn(),
   prefetchPipeline: vi.fn(),
+  // Sem o dedupe: cada carga da aba Abertos vai direto ao serviço (simulado).
+  loadOpenPipeline: async (id: string) =>
+    (await import('@/services/pipelines')).pipelinesService.getPipeline(id, { status: 'open' }),
 }));
 vi.mock('@/services/listOptions/listOptionsService', () => ({ listOptionsService: { list: vi.fn().mockResolvedValue([]) } }));
 vi.mock('@/services/pipelines', () => ({
