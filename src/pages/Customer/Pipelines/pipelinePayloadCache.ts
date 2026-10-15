@@ -52,24 +52,37 @@ export function setCachedPipeline(pipelineId: string, data: Pipeline) {
   persist();
 }
 
-// Prefetch no hover: passou o mouse no card, o payload já começa a descer.
-// Dedupe em voo + TTL pra não virar rajada de requests.
-const inflight = new Map<string, Promise<void>>();
+// Aba Abertos de um funil, com dedupe em voo: o hover (prefetch) e o quadro
+// que abre logo depois dividem o MESMO pedido. Antes eram dois GET pesados ao
+// mesmo tempo (um sem status, outro com status=open), o servidor montava o
+// funil inteiro duas vezes.
+const inflight = new Map<string, Promise<Pipeline>>();
 
-export function prefetchPipeline(pipelineId: string): void {
-  if (!pipelineId) return;
-  const cached = entries.get(pipelineId);
-  if (cached && Date.now() - cached.at < PREFETCH_TTL) return;
-  if (inflight.has(pipelineId)) return;
+export function loadOpenPipeline(pipelineId: string): Promise<Pipeline> {
+  const emVoo = inflight.get(pipelineId);
+  if (emVoo) return emVoo;
 
   const p = pipelinesService
-    .getPipeline(pipelineId)
-    .then(data => setCachedPipeline(pipelineId, data))
-    .catch(() => {
-      /* prefetch é oportunista: falhou, o clique busca normal */
+    .getPipeline(pipelineId, { status: 'open' })
+    .then(data => {
+      setCachedPipeline(pipelineId, data);
+      return data;
     })
     .finally(() => {
       inflight.delete(pipelineId);
     });
   inflight.set(pipelineId, p);
+  return p;
+}
+
+// Prefetch no hover: passou o mouse no card, o payload já começa a descer.
+// TTL pra não virar rajada de requests.
+export function prefetchPipeline(pipelineId: string): void {
+  if (!pipelineId) return;
+  const cached = entries.get(pipelineId);
+  if (cached && Date.now() - cached.at < PREFETCH_TTL) return;
+
+  loadOpenPipeline(pipelineId).catch(() => {
+    /* prefetch é oportunista: falhou, o clique busca normal */
+  });
 }

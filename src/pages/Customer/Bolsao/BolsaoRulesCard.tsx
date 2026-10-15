@@ -63,8 +63,9 @@ export default function BolsaoRulesCard() {
       return;
     }
     pipelinesService
-      .getPipeline(id)
-      .then(p => setStages(p.stages ?? []))
+      // Só o nome das etapas: o funil inteiro (com todos os cards) é pesado.
+      .getPipelineStages(id)
+      .then(r => setStages(r.data ?? []))
       .catch(() => setStages([]));
   }, [rules.target_pipeline_id]);
 

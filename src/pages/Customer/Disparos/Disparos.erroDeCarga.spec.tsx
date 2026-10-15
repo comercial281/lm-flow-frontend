@@ -21,7 +21,7 @@ vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
 vi.mock('@/services/pipelines/pipelinesService', () => ({
   pipelinesService: {
     getPipelines: vi.fn().mockResolvedValue({ data: [] }),
-    getPipeline: vi.fn().mockResolvedValue({ stages: [] }),
+    getPipelineStages: vi.fn().mockResolvedValue({ data: [] }),
   },
 }));
 vi.mock('@/hooks/useCan', () => ({ useCan: () => () => true }));

@@ -22,7 +22,7 @@ import { csvDoFunil } from './quadro/csvDoFunil';
 import EmptyState from '@/components/base/EmptyState';
 import Carregando from '@/components/base/Carregando';
 import { Skeleton } from '@/components/ui/ds';
-import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
+import { getCachedPipeline, loadOpenPipeline } from './pipelinePayloadCache';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import { useCardForaDoQuadro } from '@/features/cardDoLead/useCardForaDoQuadro';
@@ -189,9 +189,13 @@ export default function PipelineKanban() {
       else setLoading(true);
     }
     try {
-      const pipelineData = await pipelinesService.getPipeline(pipelineId, { status: statusDaAba });
+      // Abertos passa pelo cache: reaproveita o pedido que o hover já disparou
+      // (e já grava o payload guardado).
+      const pipelineData =
+        statusDaAba === 'open'
+          ? await loadOpenPipeline(pipelineId)
+          : await pipelinesService.getPipeline(pipelineId, { status: statusDaAba });
       if (meu !== pedidoRef.current) return;
-      if (statusDaAba === 'open') setCachedPipeline(pipelineId, pipelineData);
       setPipeline(pipelineData);
       setStages(pipelineData.stages || []);
       setErroDaAba(false);

@@ -195,8 +195,9 @@ export default function Disparos() {
       return;
     }
     pipelinesService
-      .getPipeline(pipelineId)
-      .then(p => setStages(p.stages || []))
+      // Só o nome das etapas: o funil inteiro (com todos os cards) é pesado.
+      .getPipelineStages(pipelineId)
+      .then(r => setStages(r.data || []))
       .catch(() => setStages([]));
     loadCampaigns(pipelineId);
   }, [pipelineId, loadCampaigns]);
