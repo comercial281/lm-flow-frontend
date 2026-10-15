@@ -171,25 +171,25 @@ export default function PainelDeFiltrosDoFunil({
           </Secao>
 
           <Secao id="filtro-etapas" titulo="Etapas">
-            <EtiquetasDeEscolha rotulo="Etapas" opcoes={opcoesDeEtapa} escolhidas={rascunho.etapas} aoMudar={v => mudar('etapas', v)} />
+            <EtiquetasDeEscolha semNome rotulo="Etapas" opcoes={opcoesDeEtapa} escolhidas={rascunho.etapas} aoMudar={v => mudar('etapas', v)} />
           </Secao>
 
           <Secao id="filtro-origem" titulo="Origem">
             <OpcoesDoServidor carregando={!facetas} erro={erroDasFacetas} aoTentarDeNovo={aoTentarDeNovo} vazio={origens.length === 0}>
-              <EtiquetasDeEscolha rotulo="Origem" opcoes={origens} escolhidas={rascunho.origens} aoMudar={v => mudar('origens', v)} />
+              <EtiquetasDeEscolha semNome rotulo="Origem" opcoes={origens} escolhidas={rascunho.origens} aoMudar={v => mudar('origens', v)} />
             </OpcoesDoServidor>
           </Secao>
 
           <Secao id="filtro-resp" titulo="Responsável">
             <OpcoesDoServidor carregando={!facetas} erro={erroDasFacetas} aoTentarDeNovo={aoTentarDeNovo} vazio={responsaveis.length === 0}>
-              <EtiquetasDeEscolha rotulo="Responsável" opcoes={responsaveis} escolhidas={rascunho.resp} aoMudar={v => mudar('resp', v)} />
+              <EtiquetasDeEscolha semNome rotulo="Responsável" opcoes={responsaveis} escolhidas={rascunho.resp} aoMudar={v => mudar('resp', v)} />
             </OpcoesDoServidor>
           </Secao>
 
           <Secao id="filtro-etiq" titulo="Etiquetas">
             {etiquetas.length === 0
               ? <EmptyState tamanho="compacto" title="Nenhuma etiqueta cadastrada." />
-              : <EscolhaComBusca rotulo="Etiquetas" placeholder="Buscar etiqueta"
+              : <EscolhaComBusca semNome rotulo="Etiquetas" placeholder="Buscar etiqueta"
                   opcoes={etiquetas.map(e => ({ valor: e.name, rotulo: e.name }))}
                   escolhidas={rascunho.etiq} aoMudar={v => mudar('etiq', v)} />}
           </Secao>
@@ -202,6 +202,7 @@ export default function PainelDeFiltrosDoFunil({
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Carregando os motivos" />
               ) : (
                 <EtiquetasDeEscolha
+                  semNome
                   rotulo="Motivo da perda"
                   opcoes={motivos.map(m => ({ valor: m.id, rotulo: m.active ? m.label : `${m.label} (arquivado)` }))}
                   escolhidas={rascunho.motivos}
@@ -212,7 +213,7 @@ export default function PainelDeFiltrosDoFunil({
           )}
 
           <Secao id="filtro-largados" titulo="Largados">
-            <BotoesDeEscolha rotulo="Sem contato há" valor={largados} opcoes={OPCOES_DE_LARGADOS} aoEscolher={setLargados} />
+            <BotoesDeEscolha semNome rotulo="Sem contato há" valor={largados} opcoes={OPCOES_DE_LARGADOS} aoEscolher={setLargados} />
             {largados === 'outro' && (
               <div className="flex items-center gap-2">
                 <Input aria-label="Dias sem contato" type="number" min={1} value={outrosDias}
@@ -223,13 +224,13 @@ export default function PainelDeFiltrosDoFunil({
           </Secao>
 
           <Secao id="filtro-tarefas" titulo="Tarefas">
-            <EtiquetasDeEscolha rotulo="Tarefas" opcoes={OPCOES_DE_TAREFA} escolhidas={rascunho.tarefas}
+            <EtiquetasDeEscolha semNome rotulo="Tarefas" opcoes={OPCOES_DE_TAREFA} escolhidas={rascunho.tarefas}
               aoMudar={v => mudar('tarefas', v as TarefaDoFiltro[])} />
           </Secao>
 
           {categoriasDeTarefa.length > 0 && (
             <Secao id="filtro-categoria-tarefa" titulo="Categoria da tarefa">
-              <EtiquetasDeEscolha rotulo="Categoria da tarefa"
+              <EtiquetasDeEscolha semNome rotulo="Categoria da tarefa"
                 opcoes={categoriasDeTarefa.map(c => ({ valor: c.id, rotulo: c.label }))}
                 escolhidas={rascunho.categ} aoMudar={v => mudar('categ', v)} />
             </Secao>
@@ -237,6 +238,7 @@ export default function PainelDeFiltrosDoFunil({
 
           <Secao id="filtro-colunas" titulo="Colunas visíveis">
             <EtiquetasDeEscolha
+              semNome
               rotulo="Colunas visíveis"
               opcoes={opcoesDeEtapa}
               escolhidas={rascunho.colunas.length ? rascunho.colunas : idsDasEtapas}

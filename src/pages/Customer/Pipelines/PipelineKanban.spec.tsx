@@ -547,7 +547,7 @@ describe('quadro do funil · filtros', () => {
     await screen.findByText('Maria Souza');
     await userEvent.click(screen.getByRole('button', { name: /^Filtros/ }));
     const painel = await screen.findByRole('dialog', { name: 'Filtros do funil' });
-    await userEvent.click(within(within(painel).getAllByRole('group', { name: 'Etapas' })[0]).getByRole('button', { name: 'Novo' }));
+    await userEvent.click(within(within(painel).getByRole('group', { name: 'Etapas' })).getByRole('button', { name: 'Novo' }));
     await userEvent.click(within(painel).getByRole('button', { name: 'Filtrar' }));
     expect(endereco().getAll('etapas')).toEqual(['s1']);
     await waitFor(() => expect(pipelinesService.getBoard).toHaveBeenLastCalledWith('p1', expect.objectContaining({ etapas: ['s1'] }), 30));

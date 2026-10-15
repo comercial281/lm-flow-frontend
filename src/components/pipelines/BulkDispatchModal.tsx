@@ -932,7 +932,7 @@ export default function BulkDispatchModal({
                       onChange={e => setRespectOptOut(e.target.checked)}
                       className="rounded border-border"
                     />
-                    Não enviar pra quem pediu PARAR (opt-out)
+                    Não enviar pra quem pediu pra parar
                   </label>
                   <GradeDaJanela>
                     <CampoDaJanela rotulo="Não reenviar nos últimos (dias)" htmlFor="disparo-frequencia" colunas={channelKind === 'whatsapp_cloud' ? 2 : 4}>
