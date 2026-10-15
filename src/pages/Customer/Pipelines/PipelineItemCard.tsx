@@ -25,6 +25,7 @@ import { contatoDoCard, conversaDoCard } from '@/features/cardDoLead/cardDoLead'
 import type { PipelineItem } from '@/types/analytics';
 import { getContactColor, resolveItemName } from './pipelineItemHelpers';
 import { sinalDoCard, type TipoDoSinal, type TomDoSinal } from './quadro/sinalDoCard';
+import type { EventoDoMouse } from './quadro/useMiniCard';
 
 // Referências estáveis, fora do componente.
 const pararClique = (e: MouseEvent) => e.stopPropagation();
@@ -62,6 +63,8 @@ interface PipelineItemCardProps {
   onCardDragOver: (e: DragEvent, item: PipelineItem, stageId: string) => void;
   /** Este é o card pego: no lugar dele fica só o contorno tracejado. */
   arrastando?: boolean;
+  /** Mini card do quadro: o card só avisa o mouse (useMiniCard). Só mouse, nunca dedo. */
+  onPassarMouse?: (evento: EventoDoMouse, item: PipelineItem, el: HTMLElement) => void;
   onCardDrop: (e: DragEvent, item: PipelineItem, stageId: string) => void;
   onOpenItem: (item: PipelineItem) => void;
   onArchive: (item: PipelineItem) => void;
@@ -75,7 +78,7 @@ interface PipelineItemCardProps {
 
 function PipelineItemCardComponent({
   item, stageId, visitsByContact, podeArrastar, arquivado, isDraggingRef, suppressClickUntilRef, arrastando = false,
-  onDragStart, onDragEnd, onCardDragOver, onCardDrop, onOpenItem, onArchive, onUnarchive, onRemove,
+  onPassarMouse, onDragStart, onDragEnd, onCardDragOver, onCardDrop, onOpenItem, onArchive, onUnarchive, onRemove,
   onOpenConversation, openingConversation,
 }: PipelineItemCardProps) {
   const { t } = useLanguage('pipelines');
@@ -109,6 +112,9 @@ function PipelineItemCardComponent({
       onDragStart={e => { if (podeArrastar) onDragStart(item, e.currentTarget.offsetHeight); }}
       onDragEnd={onDragEnd}
       onDragOver={e => onCardDragOver(e, item, stageId)}
+      onPointerEnter={e => { if (e.pointerType === 'mouse') onPassarMouse?.('entrou', item, e.currentTarget); }}
+      onPointerLeave={e => { if (e.pointerType === 'mouse') onPassarMouse?.('saiu', item, e.currentTarget); }}
+      onPointerDown={e => onPassarMouse?.('apertou', item, e.currentTarget)}
       onDrop={e => onCardDrop(e, item, stageId)}
       onClick={() => {
         if (!isDraggingRef.current && Date.now() > suppressClickUntilRef.current) onOpenItem(item);

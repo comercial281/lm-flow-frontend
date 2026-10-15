@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/ds';
 // Card do board, sempre visível de cara — import estático de propósito.
 import PipelineItemCard from '../PipelineItemCard';
 import { calculateStageTotal } from '../pipelineItemHelpers';
+import type { EventoDoMouse } from './useMiniCard';
 
 export interface StageColumnProps {
   stage: PipelineStage;
@@ -34,6 +35,8 @@ export interface StageColumnProps {
   arrastandoId: string | null;
   /** Onde o card pego cai nesta coluna (índice sem ele) e a altura dele; null = não cai aqui. */
   esqueleto: { indice: number; altura: number } | null;
+  /** Mini card do quadro (useMiniCard). Referência estável. */
+  onPassarMouse?: (evento: EventoDoMouse, item: PipelineItem, el: HTMLElement) => void;
   onCardDrop: (e: DragEvent, item: PipelineItem, stageId: string) => void;
   onOpenItem: (item: PipelineItem) => void;
   onArchive: (item: PipelineItem) => void;
@@ -54,7 +57,7 @@ export interface StageColumnProps {
 
 export default function StageColumn({
   stage, destacada, visitsByContact, isDraggingRef, suppressClickUntilRef, onDragOver, onDrop,
-  onCardDragStart, onCardDragEnd, onCardDragOver, onCardDrop, arrastandoId, esqueleto, onOpenItem, onArchive, onRemove,
+  onCardDragStart, onCardDragEnd, onCardDragOver, onCardDrop, arrastandoId, esqueleto, onPassarMouse, onOpenItem, onArchive, onRemove,
   podeArrastar, arquivado, onUnarchive, onOpenConversation, openingConversation, onEditStage, onDeleteStage,
   carregandoMais, erroAoCarregarMais, onCarregarMais,
 }: StageColumnProps) {
@@ -177,6 +180,7 @@ export default function StageColumn({
               onOpenConversation={onOpenConversation}
               openingConversation={openingConversation}
               arrastando={arrastandoId === item.id}
+              onPassarMouse={onPassarMouse}
             />
             </Fragment>
           ))}

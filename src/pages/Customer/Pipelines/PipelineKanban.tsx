@@ -48,6 +48,8 @@ import {
 } from './quadro/paramsDoQuadro';
 import PainelDeFiltrosDoFunil from './quadro/PainelDeFiltrosDoFunil';
 import StageColumn from './quadro/StageColumn';
+import MiniCardDoLead from './quadro/MiniCardDoLead';
+import { useMiniCard } from './quadro/useMiniCard';
 import PipelineListView from './quadro/PipelineListView';
 import { useAppDataStore } from '@/store/appDataStore';
 import { useNomeDaAba } from '@/components/layout/nomeDaAba';
@@ -174,6 +176,8 @@ export default function PipelineKanban() {
     pipelineId, stages, setStages: setStagesLocal, mensagemDeErro: t('kanban.messages.itemMoveError'), podeArrastar: podeArrastarCard,
     aoGanhar: aoGanharNoQuadro,
   });
+  // Mini card ao passar o mouse (um só pro quadro; o card só avisa o mouse).
+  const miniCard = useMiniCard(isDraggingRef);
 
   // Modal states
   const [showEditPipelineModal, setShowEditPipelineModal] = useState(false);
@@ -925,6 +929,13 @@ export default function PipelineKanban() {
             onMouseDown={handleBoardMouseDown}
             onWheel={handleBoardWheel}
           >
+            {/* Resumo do lead ao passar o mouse (portal no body). */}
+            <MiniCardDoLead
+              alvo={miniCard.alvo}
+              nomeDaEtapa={stages.find(s => s.id === miniCard.alvo?.item.stage_id)?.name ?? null}
+              onEntrar={miniCard.aoEntrarNoMini}
+              onSair={miniCard.aoSairDoMini}
+            />
             {/* Kanban Content */}
             <div
               className="flex gap-6 h-full pb-6"
@@ -947,6 +958,7 @@ export default function PipelineKanban() {
                   onCardDrop={handleCardDrop}
                   arrastandoId={arraste?.id ?? null}
                   esqueleto={arraste && alvo?.stageId === stage.id ? { indice: alvo.indice, altura: arraste.altura } : null}
+                  onPassarMouse={miniCard.aoPassarMouse}
                   onOpenItem={handleEditItem}
                   onArchive={handleArchiveItem}
                   onRemove={handleRemoveItem}
