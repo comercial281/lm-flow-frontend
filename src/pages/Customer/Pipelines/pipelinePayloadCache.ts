@@ -1,12 +1,14 @@
 import { pipelinesService } from '@/services/pipelines';
 import type { Pipeline } from '@/types/analytics';
+import { POR_COLUNA } from './quadro/paramsDoQuadro';
 
 // Último payload de cada pipeline. Reabrir um pipe pinta o board NA HORA com o
 // dado anterior enquanto a versão fresca chega por trás (stale-while-revalidate).
 // Persistido em sessionStorage pra sobreviver ao F5; cap de entradas pra não
 // estourar a cota (~5MB) com boards grandes.
 
-const STORAGE_KEY = 'lmflow:pipeline-payloads:v2';
+// v3: o payload virou o 1º lote de cada coluna, com o total (quadro em lotes).
+const STORAGE_KEY = 'lmflow:pipeline-payloads:v3';
 const MAX_ENTRIES = 5;
 const PREFETCH_TTL = 60_000; // hover repetido no mesmo card não re-busca por 60s
 
@@ -52,7 +54,7 @@ export function setCachedPipeline(pipelineId: string, data: Pipeline) {
   persist();
 }
 
-// Aba Abertos de um funil, com dedupe em voo: o hover (prefetch) e o quadro
+// Aba Abertos de um funil (o 1º lote de cada coluna), com dedupe em voo: o hover (prefetch) e o quadro
 // que abre logo depois dividem o MESMO pedido. Antes eram dois GET pesados ao
 // mesmo tempo (um sem status, outro com status=open), o servidor montava o
 // funil inteiro duas vezes.
@@ -66,7 +68,7 @@ export function loadOpenPipeline(pipelineId: string, { reaproveitar = true } = {
   if (emVoo && reaproveitar) return emVoo;
 
   const p: Promise<Pipeline> = pipelinesService
-    .getPipeline(pipelineId, { status: 'open' })
+    .getBoard(pipelineId, { status: 'open' }, POR_COLUNA)
     .then(data => {
       // Resposta de um pedido que já foi substituído por um mais novo não
       // regrava o cache por cima do mais novo.
