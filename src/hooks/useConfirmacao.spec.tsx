@@ -47,8 +47,10 @@ describe('useConfirmacao', () => {
     expect(caixa).toHaveClass('max-w-md');
     const topo = caixa.querySelector('[data-slot="dialog-header"]') as HTMLElement;
     const rodape = caixa.querySelector('[data-slot="dialog-footer"]') as HTMLElement;
-    expect(topo).not.toHaveClass('sticky', 'border-b');
-    expect(rodape).not.toHaveClass('sticky', 'border-t');
+    expect(topo).not.toHaveClass('sticky');
+    expect(topo).not.toHaveClass('border-b');
+    expect(rodape).not.toHaveClass('sticky');
+    expect(rodape).not.toHaveClass('border-t');
     expect(topo).toHaveClass('text-left!');
   });
 

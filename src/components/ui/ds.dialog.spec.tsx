@@ -211,8 +211,10 @@ describe('Janela compacta (confirmação curta)', () => {
     const topo = compacta().querySelector('[data-slot="dialog-header"]') as HTMLElement;
     const rodape = compacta().querySelector('[data-slot="dialog-footer"]') as HTMLElement;
     expect(compacta()).toHaveClass('max-w-md');
-    expect(topo).not.toHaveClass('sticky', 'border-b');
-    expect(rodape).not.toHaveClass('sticky', 'border-t');
+    expect(topo).not.toHaveClass('sticky');
+    expect(topo).not.toHaveClass('border-b');
+    expect(rodape).not.toHaveClass('sticky');
+    expect(rodape).not.toHaveClass('border-t');
     expect(topo).toHaveClass('text-left!', 'pr-8');
     expect(screen.getAllByRole('button', { name: 'Fechar' })).toHaveLength(1);
   });

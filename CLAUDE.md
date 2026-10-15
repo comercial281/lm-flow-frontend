@@ -8921,6 +8921,6 @@ Armadilhas:
 
 - **O quê:** a confirmação da casa (`useConfirmacao`) deixou de herdar topo e rodapé fixos com linha, que eram pensados pras janelas grandes. Agora é um bloco só (título, frase, botões), na largura pequena (`max-w-md`), título à esquerda, botões à direita no computador e empilhados no celular.
 - **Como:** `DialogContent` ganhou a opção `compacta` (`src/components/ui/ds.tsx`). Ela desliga o fixo/borda só de quem pede; nenhuma outra janela muda. O `DialogFooter` continua existindo (trava `rodapeAMao`).
-- **Quem usa:** `useConfirmacao` e as confirmações só de título, frase e botões fora dele (Excluir contato(s), imóvel, automação, macro(s), equipe(s), atributo(s), variável, Remover do funil no card, Excluir cadastro, Desativar 2FA). Confirmação com prévia ou campo (Excluir funil/etapa, Remover lead do funil, digitar o nome) fica na janela comum.
+- **Quem usa:** `useConfirmacao` e as confirmações só de título, frase e botões fora dele (Excluir contato(s), imóvel, automação, macro(s), equipe(s), atributo(s), variável, Remover do funil no card, Excluir cadastro, Excluir template, Revogar chave do MCP, Sair no menu do usuário e no admin, Desativar 2FA). Confirmação com prévia ou campo (Excluir funil/etapa, Remover lead do funil, digitar o nome) fica na janela comum.
 - **Concluir tarefa:** a pergunta virou "Criar a próxima tarefa pra este lead?", com a frase `"<título>" foi concluída.`; botões "Agora não" e "Nova tarefa".
 - **Não reabrir sem o dono pedir.**

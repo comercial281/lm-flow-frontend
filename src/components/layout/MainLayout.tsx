@@ -238,7 +238,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
       {/* Logout Dialog */}
       <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent compacta>
           <DialogHeader className="text-left space-y-2">
             <DialogTitle className="text-lg font-semibold">{t('logout.title')}</DialogTitle>
             <DialogDescription className="text-muted-foreground">
