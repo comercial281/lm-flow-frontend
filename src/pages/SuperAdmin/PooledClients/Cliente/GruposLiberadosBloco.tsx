@@ -33,7 +33,8 @@ export function GruposLiberadosBloco({ cliente, groupJids, patch }: Props) {
   const [gravando, setGravando] = useState(false);
   const [mudou, setMudou] = useState(false);
 
-  const carregarCentral = async (): Promise<WaGroup[]> => {
+  // Devolve null quando a leitura falha (distinto de lista vazia).
+  const carregarCentral = async (): Promise<WaGroup[] | null> => {
     if (central) return central;
     setCarregando(true);
     setErro(null);
@@ -44,7 +45,7 @@ export function GruposLiberadosBloco({ cliente, groupJids, patch }: Props) {
       return grupos;
     } catch {
       setErro('Não consegui listar os grupos do número operacional agora.');
-      return [];
+      return null;
     } finally {
       setCarregando(false);
     }
@@ -52,12 +53,22 @@ export function GruposLiberadosBloco({ cliente, groupJids, patch }: Props) {
 
   const montarLista = async () => {
     const grupos = await carregarCentral();
+    if (grupos === null) return;
+    if (grupos.length === 0) {
+      setErro('O número operacional não devolveu grupo nenhum.');
+      return;
+    }
     setLista(suggestAllowedGroups(grupos, cliente.name, groupJids));
     setMudou(true);
   };
 
   const abrirAdicionar = async () => {
-    await carregarCentral();
+    const grupos = await carregarCentral();
+    if (grupos === null) return;
+    if (grupos.length === 0) {
+      setErro('O número operacional não devolveu grupo nenhum.');
+      return;
+    }
     setAdicionando(true);
   };
 
@@ -105,7 +116,7 @@ export function GruposLiberadosBloco({ cliente, groupJids, patch }: Props) {
           <p className="text-sm italic text-muted-foreground">
             Ainda não mapeado: vale o grupo reconhecido pelo nome ("{cliente.name} x Leal Mídia").
           </p>
-          <Button size="sm" variant="outline" onClick={() => void montarLista()} disabled={carregando}>Montar lista</Button>
+          <Button size="sm" variant="outline" onClick={() => void montarLista()} disabled={carregando || gravando}>Montar lista</Button>
         </div>
       ) : (
         <div className="mt-3 space-y-2">
@@ -120,8 +131,8 @@ export function GruposLiberadosBloco({ cliente, groupJids, patch }: Props) {
                   {ALLOWED_KIND_LABEL[g.kind]}
                 </span>
                 <span className="text-sm" title={g.jid}>{linha.text}</span>
-                {linha.warning && <span className="w-full text-xs text-amber-600">{linha.warning}</span>}
-                <Button size="sm" variant="ghost" className="ml-auto" aria-label={`Remover ${linha.text}`} onClick={() => remover(g.jid)}>
+                {linha.warning && <span className="w-full text-xs text-amber-600 dark:text-amber-400">{linha.warning}</span>}
+                <Button size="sm" variant="ghost" className="ml-auto" aria-label={`Remover ${linha.text}`} onClick={() => remover(g.jid)} disabled={gravando}>
                   Remover
                 </Button>
               </div>
@@ -138,16 +149,16 @@ export function GruposLiberadosBloco({ cliente, groupJids, patch }: Props) {
                 <option value="cliente">{ALLOWED_KIND_LABEL.cliente}</option>
                 <option value="logs">{ALLOWED_KIND_LABEL.logs}</option>
               </Seletor>
-              <Button size="sm" onClick={incluir} disabled={!escolhido}>Incluir</Button>
+              <Button size="sm" onClick={incluir} disabled={!escolhido || gravando}>Incluir</Button>
               <Button size="sm" variant="ghost" onClick={() => setAdicionando(false)}>Cancelar</Button>
             </div>
           ) : (
-            <Button size="sm" variant="outline" onClick={() => void abrirAdicionar()} disabled={carregando}>Adicionar grupo</Button>
+            <Button size="sm" variant="outline" onClick={() => void abrirAdicionar()} disabled={carregando || gravando}>Adicionar grupo</Button>
           )}
         </div>
       )}
 
-      {erro && <p className="mt-2 text-xs text-amber-600">{erro}</p>}
+      {erro && <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">{erro}</p>}
       {lista !== null && (
         <div className="mt-3">
           <Button size="sm" onClick={() => void salvar()} disabled={gravando || !mudou}>Salvar lista</Button>

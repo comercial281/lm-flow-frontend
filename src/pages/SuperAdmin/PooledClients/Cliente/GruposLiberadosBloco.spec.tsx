@@ -49,4 +49,23 @@ describe('bloco Grupos WhatsApp (lista liberada)', () => {
       allowed_whatsapp_groups: [{ jid: '333@g.us', name: 'LM FLOW LOGS', kind: 'logs' }],
     })));
   });
+
+  it('falha ao listar a central: mantém não mapeado, mostra o erro e não oferece salvar', async () => {
+    svc.dadosDeProvisionamento.mockRejectedValue(new Error('x'));
+    const patch = vi.fn();
+    render(<GruposLiberadosBloco cliente={{ ...base, settings: {} }} groupJids={legado} patch={patch} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Montar lista' }));
+    await waitFor(() => expect(screen.getByText('Não consegui listar os grupos do número operacional agora.')).toBeInTheDocument());
+    expect(screen.getByText(/Ainda não mapeado/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Salvar lista' })).toBeNull();
+  });
+
+  it('central sem grupo nenhum: mantém não mapeado e avisa', async () => {
+    svc.dadosDeProvisionamento.mockResolvedValue({ whatsapp_groups: [], templates: [] });
+    render(<GruposLiberadosBloco cliente={{ ...base, settings: {} }} groupJids={legado} patch={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Montar lista' }));
+    await waitFor(() => expect(screen.getByText('O número operacional não devolveu grupo nenhum.')).toBeInTheDocument());
+    expect(screen.getByText(/Ainda não mapeado/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Salvar lista' })).toBeNull();
+  });
 });
