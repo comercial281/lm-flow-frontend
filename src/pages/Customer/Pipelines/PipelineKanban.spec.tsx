@@ -373,7 +373,10 @@ describe('quadro do funil · o que continua igual', () => {
   it('a Lista mostra os leads sem as colunas do quadro', async () => {
     montar();
     await screen.findByText('Maria Souza');
+    vi.mocked(pipelinesService.getBoardItems).mockResolvedValue({ items: [MARIA, JOAO], total: 2, has_more: false });
     await userEvent.click(screen.getByRole('button', { name: 'Ver em lista' }));
+    expect(await screen.findAllByTestId('nome-na-lista')).toHaveLength(2);
+    expect(pipelinesService.getBoardItems).toHaveBeenCalledWith('p1', expect.objectContaining({ status: 'open' }), expect.objectContaining({ offset: 0, limit: 30, sort: 'arrival_desc' }));
     expect(document.getElementById('etapa-s1')).toBeNull();
     expect(screen.getByText('Maria Souza')).toBeInTheDocument();
     expect(screen.getAllByText('Proposta').length).toBeGreaterThan(0);

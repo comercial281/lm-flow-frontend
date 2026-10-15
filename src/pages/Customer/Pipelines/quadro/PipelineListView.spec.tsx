@@ -1,8 +1,8 @@
 // src/pages/Customer/Pipelines/quadro/PipelineListView.spec.tsx
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { PipelineStage } from '@/types/analytics';
+import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import PipelineListView from './PipelineListView';
 
 vi.mock('@/hooks/useLanguage', () => ({
@@ -13,22 +13,28 @@ vi.mock('@/components/roleta/OfferActions', () => ({
 }));
 
 const STAGES = [
-  { id: 's1', name: 'Novo', color: '#3b82f6', items: [
-    { id: 'i1', pipeline_id: 'p1', status: 'lost', entered_at: 1_791_298_800,
-      contact: { id: 'c1', name: 'Maria Souza', phone_number: '+5511999990000', labels: [{ name: 'Meta', color: '#000000' }] },
-      assignee: { id: 'u1', name: 'Ana Paula' }, roleta: { id: 'r1', name: 'Zona Sul' },
-      tasks_info: { overdue_count: 1 } },
-  ] },
-  { id: 's2', name: 'Proposta', color: '#8b5cf6', items: [
-    { id: 'i2', pipeline_id: 'p1', status: 'open', entered_at: 1_790_866_800, contact: { id: 'c2', name: 'João Lima' }, tasks_info: {} },
-  ] },
+  { id: 's1', name: 'Novo', color: '#3b82f6' },
+  { id: 's2', name: 'Proposta', color: '#8b5cf6' },
 ] as unknown as PipelineStage[];
 
-const montar = (extra: Partial<Parameters<typeof PipelineListView>[0]> = {}) => {
-  const props = { stages: STAGES, ordem: 'desc' as const, aoTrocarOrdem: vi.fn(), onOpenItem: vi.fn(), visitsByContact: {}, ...extra };
+const ITENS = [
+  { id: 'i1', pipeline_id: 'p1', stage_id: 's1', status: 'lost', entered_at: 1_791_298_800,
+    contact: { id: 'c1', name: 'Maria Souza', phone_number: '+5511999990000', labels: [{ name: 'Meta', color: '#000000' }] },
+    assignee: { id: 'u1', name: 'Ana Paula' }, roleta: { id: 'r1', name: 'Zona Sul' },
+    tasks_info: { overdue_count: 1 } },
+  { id: 'i2', pipeline_id: 'p1', stage_id: 's2', status: 'open', entered_at: 1_790_866_800, contact: { id: 'c2', name: 'João Lima' }, tasks_info: {} },
+] as unknown as PipelineItem[];
+
+const montarLista = (extra: Partial<Parameters<typeof PipelineListView>[0]> = {}) => {
+  const props = {
+    stages: STAGES, itens: ITENS, carregando: false, erro: false, temMais: false, carregandoMais: false,
+    aoCarregarMais: vi.fn(), aoTentarDeNovo: vi.fn(),
+    ordem: 'desc' as const, aoTrocarOrdem: vi.fn(), onOpenItem: vi.fn(), visitsByContact: {}, ...extra,
+  };
   render(<PipelineListView {...props} />);
   return props;
 };
+const montar = montarLista;
 
 describe('Lista do funil enxuta', () => {
   it('cabeçalho com Etapa (não Coluna) e as colunas novas', () => {
@@ -69,7 +75,25 @@ describe('Lista do funil enxuta', () => {
   });
 
   it('vazia: diz que não há lead', () => {
-    montar({ stages: [{ ...STAGES[0], items: [] }] as unknown as PipelineStage[] });
+    montar({ itens: [] });
     expect(screen.getByText('Nenhum lead nesta aba com esses filtros.')).toBeInTheDocument();
+  });
+
+  it('com mais no servidor, mostra Carregar mais', () => {
+    const aoCarregarMais = vi.fn();
+    montarLista({ temMais: true, aoCarregarMais });
+    fireEvent.click(screen.getByRole('button', { name: 'Carregar mais' }));
+    expect(aoCarregarMais).toHaveBeenCalled();
+  });
+
+  it('erro mostra Tentar de novo, não "Nenhum lead"', () => {
+    montarLista({ itens: [], erro: true });
+    expect(screen.queryByText('Nenhum lead nesta aba com esses filtros.')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
+  });
+
+  it('mantém a ordem que veio do servidor', () => {
+    montarLista({ itens: [ITENS[1], ITENS[0]] });
+    expect(screen.getAllByTestId('nome-na-lista').map(n => n.textContent)).toEqual(['João Lima', 'Maria Souza']);
   });
 });

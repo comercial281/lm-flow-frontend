@@ -36,6 +36,7 @@ import { useBoardDrag } from './quadro/useBoardDrag';
 import { usePipelineFilters } from './quadro/usePipelineFilters';
 import { useFacetasDoQuadro } from './quadro/useFacetasDoQuadro';
 import { useMaisCardsDaColuna } from './quadro/useMaisCardsDaColuna';
+import { useListaDoFunil } from './quadro/useListaDoFunil';
 import {
   paramsDoQuadro,
   assinaturaDoQuadro,
@@ -172,6 +173,11 @@ export default function PipelineKanban() {
   // o funil inteiro sem ficar rolando colunas).
   const [viewMode, setViewMode] = useState<ModoDoQuadro>('board');
   const [listSortOrder, setListSortOrder] = useState<'desc' | 'asc'>('desc');
+  // Sobe a cada resposta do servidor aplicada no quadro: a Lista relê junto.
+  const [versaoDaLista, setVersaoDaLista] = useState(0);
+  const lista = useListaDoFunil({
+    pipelineId, params: paramsAtuais, assinatura, ordem: listSortOrder, ativo: viewMode === 'list', versao: versaoDaLista,
+  });
 
   // Função do cliente (super-admin liga/desliga) E cargo. Os literais do
   // useFeature ficam: os scanners do catálogo leem o código por regex.
@@ -242,6 +248,7 @@ export default function PipelineKanban() {
       quadroNaTelaRef.current = quadroPedido;
       setPipeline(pipelineData);
       setStages(pipelineData.stages || []);
+      setVersaoDaLista(v => v + 1);
       setErroDaAba(false);
       // Janela aberta num card que mudou de situação ou etapa por fora (outra
       // guia, automação): a janela acompanha. Sem mudança, o card fica o mesmo
@@ -946,13 +953,20 @@ export default function PipelineKanban() {
         </div>
         )}
 
-        {/* Lista: todos os leads do funil, por ordem de chegada */}
+        {/* Lista: todos os leads do funil, por ordem de chegada, 30 por vez */}
         {viewMode === 'list' && carregandoQuadro && (
           <Carregando linhas={6} rotulo="Carregando a aba" className="px-4 py-2 sm:px-6" />
         )}
         {viewMode === 'list' && !carregandoQuadro && !erroDaAba && (
           <PipelineListView
-            stages={filteredStages}
+            stages={stages}
+            itens={lista.itens}
+            carregando={lista.carregando}
+            erro={lista.erro}
+            temMais={lista.temMais}
+            carregandoMais={lista.carregandoMais}
+            aoCarregarMais={lista.carregarMais}
+            aoTentarDeNovo={lista.tentarDeNovo}
             ordem={listSortOrder}
             aoTrocarOrdem={() => setListSortOrder(o => (o === 'asc' ? 'desc' : 'asc'))}
             onOpenItem={handleEditItem}

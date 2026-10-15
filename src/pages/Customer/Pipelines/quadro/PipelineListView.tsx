@@ -1,17 +1,19 @@
 // src/pages/Customer/Pipelines/quadro/PipelineListView.tsx
-// Visão em Lista do funil: os cards da aba (já filtrados), por ordem de
-// chegada, com o mesmo enxugamento do card do quadro (spec funil §4.4): selo,
+// Visão em Lista do funil: os cards da aba (já filtrados e ordenados pelo
+// servidor, 30 por vez), por ordem de chegada, com o mesmo enxugamento do card do quadro (spec funil §4.4): selo,
 // nome com ↗, etapa, responsável, o único sinal e a chegada.
 import { useMemo, type MouseEvent } from 'react';
 import { AlarmClock, ArrowDown, ArrowUp, ArrowUpRight, CalendarClock, ChevronRight, Clock } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import EmptyState from '@/components/base/EmptyState';
+import Carregando from '@/components/base/Carregando';
+import { Button } from '@/components/ui/ds';
 import OfferActions from '@/components/roleta/OfferActions';
 import SeloSituacao from '@/features/pipelines/situacao/SeloSituacao';
 import { detalheDaSituacao, situacaoDe } from '@/features/pipelines/situacao/situacao';
 import { linkDoCardCompleto } from '@/features/pipelines/linkDoCard';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
-import { formatArrivalDate, itemArrivalMs, resolveItemName } from '../pipelineItemHelpers';
+import { formatArrivalDate, resolveItemName } from '../pipelineItemHelpers';
 import { sinalDoCard, type TipoDoSinal, type TomDoSinal } from './sinalDoCard';
 
 const pararClique = (e: MouseEvent) => e.stopPropagation();
@@ -29,28 +31,42 @@ const ICONE_DO_SINAL: Record<TipoDoSinal, typeof Clock> = {
 };
 
 export interface PipelineListViewProps {
-  /** Etapas já filtradas (mesmos filtros do quadro). */
+  /** Etapas do funil: só pra mostrar a etapa de cada card. */
   stages: PipelineStage[];
+  /** Cards da Lista, já na ordem do servidor (chegada). */
+  itens: PipelineItem[];
+  carregando: boolean;
+  erro: boolean;
+  temMais: boolean;
+  carregandoMais: boolean;
+  aoCarregarMais: () => void;
+  aoTentarDeNovo: () => void;
   ordem: 'asc' | 'desc';
   aoTrocarOrdem: () => void;
   onOpenItem: (item: PipelineItem) => void;
   visitsByContact: Record<string, string>;
 }
 
-export default function PipelineListView({ stages, ordem, aoTrocarOrdem, onOpenItem, visitsByContact }: PipelineListViewProps) {
+export default function PipelineListView({
+  stages, itens, carregando, erro, temMais, carregandoMais, aoCarregarMais, aoTentarDeNovo,
+  ordem, aoTrocarOrdem, onOpenItem, visitsByContact,
+}: PipelineListViewProps) {
   const { t } = useLanguage('pipelines');
   const linhas = useMemo(() => {
-    const rows = stages.flatMap(stage => (stage.items || []).map(item => ({ item, stage })));
-    rows.sort((a, b) => {
-      const diff = itemArrivalMs(a.item) - itemArrivalMs(b.item);
-      return ordem === 'asc' ? diff : -diff;
+    const porId = new Map(stages.map(s => [String(s.id), s]));
+    return itens.flatMap(item => {
+      const stage = porId.get(String(item.stage_id));
+      return stage ? [{ item, stage }] : [];
     });
-    return rows;
-  }, [stages, ordem]);
+  }, [itens, stages]);
 
   return (
     <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
-      {linhas.length === 0 ? (
+      {erro && linhas.length === 0 ? (
+        <EmptyState tipo="erro" aoTentarDeNovo={aoTentarDeNovo} />
+      ) : carregando ? (
+        <Carregando variante="lista" linhas={6} />
+      ) : linhas.length === 0 ? (
         <EmptyState title="Nenhum lead nesta aba com esses filtros." />
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-background">
@@ -147,6 +163,13 @@ export default function PipelineListView({ stages, ordem, aoTrocarOrdem, onOpenI
               );
             })}
           </div>
+          {temMais && (
+            <div className="flex justify-center border-t border-border py-3">
+              <Button variant="outline" size="sm" onClick={aoCarregarMais} disabled={carregandoMais}>
+                {carregandoMais ? 'Carregando…' : 'Carregar mais'}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
