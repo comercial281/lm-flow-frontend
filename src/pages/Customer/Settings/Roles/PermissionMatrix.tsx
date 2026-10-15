@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import type { PermissionSection } from '@/types/customRoles';
 import { CaixaDaJanela } from '@/components/base/janela';
 
@@ -34,15 +35,48 @@ export default function PermissionMatrix({
 
   return (
     <div className="space-y-3">
-      {catalog.map(section => {
+      {catalog.map(section => (
+        <AreaDePermissoes
+          key={section.key}
+          section={section}
+          state={sectionStates[section.key]}
+          selected={selected}
+          onToggle={onToggle}
+          onBulkToggle={onBulkToggle}
+          disabled={disabled}
+        />
+      ))}
+    </div>
+  );
+}
+
+function AreaDePermissoes({ section, state, selected, onToggle, onBulkToggle, disabled }: {
+  section: PermissionSection;
+  state: { on: number; total: number };
+  selected: Set<string>;
+  onToggle: Props['onToggle'];
+  onBulkToggle: Props['onBulkToggle'];
+  disabled?: boolean;
+}) {
+  const [aberto, setAberto] = useState(state.on > 0);
+  const temMarcada = state.on > 0;
+  // O cargo chega depois da primeira montagem: área com permissão marcada abre.
+  useEffect(() => { if (temMarcada) setAberto(true); }, [temMarcada]);
         const allPerms = section.resources.flatMap(r => r.actions.map(a => a.permission));
-        const state = sectionStates[section.key];
         return (
           <CaixaDaJanela
-            key={section.key}
             titulo={section.label}
             acao={
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-expanded={aberto}
+                  aria-label={`${aberto ? 'Recolher' : 'Abrir'} ${section.label}`}
+                  onClick={() => setAberto(a => !a)}
+                  className="rounded p-1 text-muted-foreground hover:bg-muted"
+                >
+                  <ChevronDown aria-hidden className={`h-4 w-4 transition-transform ${aberto ? 'rotate-180' : ''}`} />
+                </button>
                 <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                   {state.on}/{state.total}
                 </span>
@@ -64,9 +98,9 @@ export default function PermissionMatrix({
                 </button>
               </div>
             }
-            corpoClassName="space-y-3 overflow-visible"
+            corpoClassName={aberto ? 'space-y-3 overflow-visible' : 'hidden'}
           >
-            {section.resources.map(resource => {
+            {aberto && section.resources.map(resource => {
               const resourcePerms = resource.actions.map(a => a.permission);
               const resOn = resourcePerms.filter(p => selected.has(p)).length;
               return (
@@ -125,8 +159,4 @@ export default function PermissionMatrix({
               );
             })}
           </CaixaDaJanela>
-        );
-      })}
-    </div>
-  );
-}
+        );}

@@ -32,4 +32,18 @@ describe('RoleEditorModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(svc.create).toHaveBeenCalledWith(expect.objectContaining({ name: 'SDR', permissions: ['leads.read', 'leads.update'] }));
   });
+
+  it('cargo novo abre com as áreas fechadas; o botão abre; cargo com permissão marcada abre a área', async () => {
+    const { unmount } = render(<RoleEditorModal open onClose={vi.fn()} role={null} catalog={catalog} onSaved={vi.fn()} />);
+    const botao = screen.getByRole('button', { name: 'Abrir Leads' });
+    expect(botao).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: 'Marcar tudo' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Ver')).toBeNull();
+    await userEvent.click(botao);
+    expect(screen.getByRole('button', { name: 'Recolher Leads' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByLabelText('Ver')).toBeVisible();
+    unmount();
+    render(<RoleEditorModal open onClose={vi.fn()} role={{ id: 2, name: 'X', permissions: ['leads.read'] } as any} catalog={catalog} onSaved={vi.fn()} />);
+    expect(await screen.findByRole('button', { name: 'Recolher Leads' })).toHaveAttribute('aria-expanded', 'true');
+  });
 });
