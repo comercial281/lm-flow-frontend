@@ -8924,6 +8924,7 @@ Pedido do dono: no tema claro a Dashboard tinha um degradê rosado em todo cart�
 - **Cartão branco chapado** sobre fundo cinza neutro (`#f6f6f7`), contorno de 1px em degradê roxo bem leve (`.lmf .lmf-glass`), sombra leve, sem véu nem brilho no topo. Texto e bordas em cinza neutro (eram arroxeados).
 - **Gráficos em roxo claro** (`--lmf-data-muted`, `#c4b5fd`) e **roxo forte** (`--lmf-data`) só no que se destaca: o melhor dia da semana, o mês atual, a maior origem, a linha do horário, as barras do funil, os ícones e o número de Ganhos no período. A forma Funil vai do `#6d28d9` clareando até 78% (`--lmf-funil`).
 - **Botões, links e foco** continuam no roxo da casa (`--lmf-accent`). Hover, segmento e aviso usam fundo cinza (`--lmf-accent-soft` no claro = `#f1f1f3`).
+- **Cartão da conta no topo do menu** (desfaz o "vidro roxo" de 01/10 no claro): borda cinza e sombra leve, sem degradê. No escuro continua o vidro roxo.
 - **Tema escuro não mudou:** no `.dark .lmf` os tokens de dado são todos o roxo de sempre.
 
 Armadilhas:
