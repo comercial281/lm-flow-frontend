@@ -9030,3 +9030,21 @@ Armadilhas:
 1. **`quadro/SetasDoQuadro.tsx`** mede o próprio quadro (`boardScrollRef` do `useBoardDrag`): escuta o `scroll` e um `ResizeObserver` no quadro e na faixa das colunas, porque a largura muda com a janela, com filtro, etapa nova e troca de aba.
 2. **O passo é fixo em 344 px** (`PASSO_DA_SETA`: coluna `w-80` + `gap-6`). Mudou a largura da coluna ou o vão, muda aqui junto.
 3. **As setas ficam fora do quadro que rola** (irmãs dele dentro do embrulho `relative`), então o arrastar do fundo nunca pega o clique delas.
+
+## Imóveis · Preço do empreendimento mora na tipologia (desde 2026-10-15)
+
+Pedido do dono: "coloco o valor no empreendimento e não fica salvo" (Arte Campo Limpo, Grupo IBI4). Spec: `LM FLOW/specs/2026-10-15-preco-da-tipologia-design.md` (pasta do Tony). Metade do servidor: `lm-flow` (`before_validation :sale_price_from_typologies`).
+
+O que aparece na tela:
+
+- **Campos de dinheiro aceitam o jeito brasileiro.** `244630`, `244.630`, `244.630,00` e `R$ 244.630,00` viram o mesmo número, e a caixa mostra `244.630` (ou `267.818,06` com centavos) enquanto a pessoa digita. Vale para Valores (venda, avaliação, aluguel, condomínio, IPTU) e para Tipologias e valores (preço e aluguel de cada planta, condomínio, IPTU). Antes o campo era número do navegador: `244.630,00` virava vazio e o preço da planta sumia sem aviso; `244.630` gravava errado.
+- **Com preço nas plantas, o "Valor de venda" do empreendimento é o "a partir de".** Ele aparece travado com o menor preço das plantas e a dica *"A partir de: o menor preço das tipologias. Para mudar, edite o preço da planta."*, sem o asterisco. Sem preço em nenhuma planta, o campo é digitado e obrigatório, como antes.
+- A IA Vendedora passa a dizer "a partir de R$ X" nesse caso (servidor).
+
+Decisões do dono (não reabrir sem ele pedir): o preço mora na planta; o campo solto é só o resumo "a partir de" e não se digita quando há preço nas plantas.
+
+Armadilhas:
+
+1. **Dinheiro nunca volta a ser `type="number"`.** Use `CampoDeDinheiro` (`cadastro/secoes/campos.tsx`), com a leitura em `src/features/properties/dinheiro.ts` (spec). Áreas e quantidades seguem número (vírgula decimal funciona no campo do navegador).
+2. **A regra do "a partir de" mora em `menorPrecoDasTipologias` (`features/properties/typologies.ts`) e no servidor.** `payloadDoFormulario` manda o mínimo no empreendimento, e `errosDoCadastro` valida o valor do payload (não o digitado). Mudou um lado, muda o outro.
+3. **O `CampoDeDinheiro` acompanha valor trocado por fora** (Preencher com IA, plantas recalculadas) só quando o número muda: digitando, o texto fica como a pessoa escreveu (`244.630,` com a vírgula pendente).

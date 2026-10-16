@@ -26,4 +26,18 @@ describe('formulário por tipo', () => {
     expect(payloadDoFormulario({ ...base, listing_kind: 'auction', transaction_type: 'rent', stage: 'ready', delivery_forecast: '' } as never))
       .toMatchObject({ transaction_type: 'sale', delivery_forecast: null });
   });
+  it('empreendimento com preço nas plantas manda o menor como Valor de venda (a partir de)', () => {
+    const base = { title: 'x', category_type: 'residential', property_type: 'apartment', status: 'active', stage: 'launch' };
+    const p = payloadDoFormulario({ ...base, listing_kind: 'development', transaction_type: 'sale', sale_price: 1,
+      typologies: [{ sale_price: 300000 }, { sale_price: 244633 }, { bedrooms: 2 }] } as never);
+    expect(p.sale_price).toBe(244633);
+  });
+
+  it('empreendimento sem preço nas plantas e revenda mantêm o Valor de venda digitado', () => {
+    const base = { title: 'x', category_type: 'residential', property_type: 'apartment', status: 'active', stage: 'ready' };
+    expect(payloadDoFormulario({ ...base, listing_kind: 'development', transaction_type: 'sale', sale_price: 450000,
+      typologies: [{ bedrooms: 2 }] } as never).sale_price).toBe(450000);
+    expect(payloadDoFormulario({ ...base, listing_kind: 'resale', transaction_type: 'sale', sale_price: 500000,
+      typologies: [{ sale_price: 1 }] } as never).sale_price).toBe(500000);
+  });
 });
