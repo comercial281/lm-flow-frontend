@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import { useState } from 'react';
 import type { TemplateVariable } from '@/types/messageFunnels';
 import { BOOK_HELP } from '@/features/flowAutomations/book';
@@ -150,8 +150,35 @@ describe('MessageSequenceEditor', () => {
     expect(within(tipos[0]).queryByRole('option', { name: 'Aguardar' })).not.toBeInTheDocument();
     fireEvent.change(tipos[0], { target: { value: 'image' } });
     const next = onItems.mock.calls.at(-1)![0] as SequenceDraftItem[];
-    expect(next[0]).toMatchObject({ uiKey: 't', kind: 'image', media_url: null });
+    // O texto vira a legenda da foto (não se perde na troca).
+    expect(next[0]).toMatchObject({ uiKey: 't', kind: 'image', media_url: null, media_caption: 'Oi' });
     expect(screen.getByRole('button', { name: /Anexar imagem/ })).toBeInTheDocument();
+  });
+
+  it('o arquivo que termina de subir não apaga o que foi digitado em outro item enquanto subia', async () => {
+    const onItems = vi.fn();
+    let finish!: (value: { url: string }) => void;
+    const uploadMedia = vi.fn(() => new Promise<{ url: string }>(resolve => { finish = resolve; }));
+    const { container } = render(
+      <Harness
+        initial={[
+          item({ uiKey: 't', text_content: 'Oi' }),
+          item({ uiKey: 'f', kind: 'image', text_content: null }),
+        ]}
+        onItems={onItems}
+        extra={{ uploadMedia }}
+      />,
+    );
+    const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
+    fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [file] } });
+    expect(uploadMedia).toHaveBeenCalledWith(file);
+    fireEvent.change(screen.getByLabelText('Mensagem'), { target: { value: 'Oi, tudo bem?' } });
+    await act(async () => {
+      finish({ url: 'https://cdn/foto.jpg' });
+    });
+    const last = onItems.mock.calls.at(-1)![0] as SequenceDraftItem[];
+    expect(last[0]).toMatchObject({ uiKey: 't', text_content: 'Oi, tudo bem?' });
+    expect(last[1]).toMatchObject({ uiKey: 'f', media_url: 'https://cdn/foto.jpg', media_filename: 'foto.jpg' });
   });
 
   it('guided: a última mensagem não sai (o servidor recusa bloco só com espera)', () => {

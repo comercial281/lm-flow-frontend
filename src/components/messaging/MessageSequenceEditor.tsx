@@ -107,6 +107,8 @@ const KIND_COLORS: Record<SequenceItemKind, string> = {
 
 const MEDIA_KINDS: SequenceItemKind[] = ['audio', 'image', 'video', 'document', 'sticker'];
 const isMediaKind = (kind: SequenceItemKind) => MEDIA_KINDS.includes(kind);
+/** Mídias que levam legenda. */
+const CAPTION_KINDS: SequenceItemKind[] = ['image', 'video', 'document'];
 
 /** Barra de variáveis de quem chama (o construtor tem a dele). */
 export type VariableBarRender = (p: {
@@ -144,8 +146,17 @@ interface Props {
 export default function MessageSequenceEditor({
   items, onChange, variables, uploadMedia, allowTextVariations, excludeKinds, extraKinds, variableBar, guided,
 }: Props) {
+  // A lista e o onChange mais novos. O arquivo que termina de subir chega
+  // depois de outras edições: aplicar sobre a lista de quando ele foi escolhido
+  // apagaria o que foi digitado nos outros itens enquanto ele subia.
+  const latest = useRef({ items, onChange });
+  latest.current = { items, onChange };
+
   const updateItem = (uiKey: string, patch: Partial<SequenceDraftItem>) => {
-    onChange(items.map(it => (it.uiKey === uiKey ? { ...it, ...patch } : it)));
+    const next = latest.current.items.map(it => (it.uiKey === uiKey ? { ...it, ...patch } : it));
+    // Duas mudanças antes do pai desenhar de novo não se atropelam.
+    latest.current = { ...latest.current, items: next };
+    latest.current.onChange(next);
   };
 
   const removeItem = (uiKey: string) => {
@@ -268,18 +279,20 @@ function ItemEditor({
       : <VariableChips variables={variables} targetRef={targetRef} currentValue={value} onChange={change} />;
 
   // Troca de tipo. Entre mídias, como sempre: some o arquivo e fica a legenda.
-  // Entre famílias (texto, contato, book, mídia), só no guiado: começa vazio.
+  // Entre famílias (texto, contato, book, mídia), só no guiado: começa vazio,
+  // menos o texto que vira foto, vídeo ou documento: ele passa a ser a legenda.
   function switchKind(kind: SequenceItemKind) {
     if (isMedia && isMediaKind(kind)) {
       onUpdate({ kind, media_url: null, media_filename: null, pendingFile: null });
       return;
     }
+    const caption = item.kind === 'text' && CAPTION_KINDS.includes(kind) ? item.text_content || null : null;
     onUpdate({
       kind,
       text_content: kind === 'text' ? '' : null,
       media_url: null,
       media_filename: null,
-      media_caption: null,
+      media_caption: caption,
       config: {},
       pendingFile: null,
     });
@@ -401,6 +414,7 @@ function ItemEditor({
         <>
           <Textarea
             ref={textareaRef}
+            aria-label="Mensagem"
             value={item.text_content ?? ''}
             onChange={e => onUpdate({ text_content: e.target.value })}
             placeholder="Digite a mensagem... Use {{nome}} para inserir o nome do lead."
@@ -537,7 +551,7 @@ function ItemEditor({
           )}
 
           {/* Legenda pra imagem/vídeo/doc */}
-          {(item.kind === 'image' || item.kind === 'video' || item.kind === 'document') && item.media_url && (
+          {CAPTION_KINDS.includes(item.kind) && item.media_url && (
             <>
               <Input
                 ref={captionRef}
