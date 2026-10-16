@@ -27,18 +27,22 @@ import {
 export const HIDDEN_BLOCK_NOTICE = 'Este bloco volta na próxima versão';
 
 export const PALETTE_GROUP_LABELS: Record<FlowNodeGroup, string> = {
-  message: 'Mensagem pro lead',
+  message: 'Mensagem',
   contact: 'Lead',
-  notify: 'Avisos',
+  ai: 'IA',
+  distribution: 'Distribuição',
+  notify: 'Notificação',
   control: 'Controle',
 };
 
-const GROUP_ORDER: FlowNodeGroup[] = ['message', 'contact', 'notify', 'control'];
+const GROUP_ORDER: FlowNodeGroup[] = ['message', 'contact', 'ai', 'distribution', 'notify', 'control'];
 
 // Os blocos da sprint 1 de cada grupo vêm antes das ações (ordem da spec).
 const NATIVE_BY_GROUP: Record<FlowNodeGroup, FlowNodeKind[]> = {
   message: ['send_whatsapp'],
-  contact: ['add_label', 'remove_label', 'move_stage', 'followup_recovered', 'hand_to_ai', 'disable_ai'],
+  contact: ['add_label', 'remove_label', 'move_stage', 'followup_recovered'],
+  ai: ['hand_to_ai', 'disable_ai'],
+  distribution: [],
   notify: [],
   control: ['wait', 'wait_for_reply', 'condition', 'filter_label'],
 };

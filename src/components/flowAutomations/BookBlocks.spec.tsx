@@ -66,9 +66,9 @@ describe('blocos da IA', () => {
   it.each([
     ['hand_to_ai', 'Passar para a IA', 'A IA Vendedora do número da conversa passa a responder este lead, mesmo sem os gatilhos dela. Vale o horário de atendimento dela.'],
     ['disable_ai', 'Desligar a IA', "A IA para de responder este lead (igual a 'IA desligada' no card)."],
-  ] as const)('%s está na paleta, grupo Lead, com a ajuda', (kind, label, help) => {
+  ] as const)('%s está na paleta, grupo IA, com a ajuda', (kind, label, help) => {
     const item = paletteItems().find(i => i.kind === kind);
-    expect(item).toMatchObject({ label, group: 'contact', config: {} });
+    expect(item).toMatchObject({ label, group: 'ai', config: {} });
     expect(blockDescription({ kind })).toBe(help);
   });
 

@@ -10,18 +10,19 @@ const node = (kind: string, config: Record<string, unknown> = {}) => ({
 });
 
 describe('paleta da sprint 2', () => {
-  it('os blocos da spec, nos quatro grupos e na ordem da tabela', () => {
+  it('os blocos da spec, nos seis grupos e na ordem da tabela', () => {
     expect(paletteGroups().map(g => [g.label, g.items.map(i => i.label)])).toEqual([
-      ['Mensagem pro lead', [
+      ['Mensagem', [
         'Mandar WhatsApp', 'Mandar áudio', 'Mandar imagem', 'Mandar vídeo', 'Mandar documento',
         'Mandar figurinha', 'Mandar resposta rápida', 'Disparar funil de mensagens',
       ]],
       ['Lead', [
         'Aplicar etiqueta', 'Tirar etiqueta', 'Mover de etapa', 'Marcar como recuperado pelo follow-up',
-        'Passar para a IA', 'Desligar a IA',
-        'Definir corretor', 'Distribuir pela roleta', 'Criar tarefa', 'Iniciar follow-up',
+        'Criar tarefa', 'Iniciar follow-up',
       ]],
-      ['Avisos', ['Avisar no grupo', 'Avisar pessoa', 'Avisar corretor', 'Avisar gestor', 'Notificação no celular']],
+      ['IA', ['Passar para a IA', 'Desligar a IA']],
+      ['Distribuição', ['Definir corretor', 'Distribuir pela roleta']],
+      ['Notificação', ['Avisar no grupo', 'Avisar pessoa', 'Avisar corretor', 'Avisar gestor', 'Notificação no celular']],
       ['Controle', ['Esperar', 'Aguardar resposta', 'Se / senão', 'Só continuar se']],
     ]);
   });

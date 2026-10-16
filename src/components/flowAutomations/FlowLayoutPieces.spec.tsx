@@ -29,9 +29,9 @@ afterEach(() => {
 });
 
 describe('painel Blocos', () => {
-  it('mostra as quatro seções e filtra pela busca, sem ligar pra acento', () => {
+  it('mostra as seis seções e filtra pela busca, sem ligar pra acento', () => {
     render(<FlowBlocksPanel onPick={() => {}} onClose={() => {}} />);
-    ['Mensagem pro lead', 'Lead', 'Avisos', 'Controle'].forEach(section => {
+    ['Mensagem', 'Lead', 'IA', 'Distribuição', 'Notificação', 'Controle'].forEach(section => {
       expect(screen.getByRole('region', { name: section })).toBeTruthy();
     });
     fireEvent.change(screen.getByLabelText('Buscar blocos'), { target: { value: 'audio' } });

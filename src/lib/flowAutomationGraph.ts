@@ -240,6 +240,8 @@ export function newTempId(): string {
 export const GROUP_COLORS: Record<string, string> = {
   message: '#7C3AED',
   contact: '#0891B2',
+  ai: '#4F46E5',
+  distribution: '#EA580C',
   control: '#D97706',
   notify: '#DB2777',
 };
