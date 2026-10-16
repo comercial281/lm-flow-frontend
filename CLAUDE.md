@@ -9096,3 +9096,33 @@ Armadilhas:
 3. **O `mouseover` do Leaflet também chega no toque.** O tipo do ponteiro é lido no `pointermove`/`pointerdown` da caixa do mapa (caneta conta como dedo, igual ao funil) e só o mouse abre por espera.
 4. **A página do site** sai de `paginaNoSite` (a mesma do *Ver página no site* da lista).
 
+## Automações por cargo (desde 2026-10-15)
+
+*"Temos que limitar as funções que cada um dos cargos vai poder fazer dentro do construtor... o corretor ... só pode aparecer pra ele o número dele pra enviar."* O corretor passa a montar as próprias automações, só com o que cabe no cargo dele e sempre saindo pelo WhatsApp dele. O gestor continua vendo e mexendo em tudo. O servidor decide (lm-flow, branch `claude/automacoes-por-cargo`); a tela só esconde, deixa cinza e avisa.
+
+O que aparece na tela:
+
+- **Menu → Automações** abre para o corretor que tem "Automações próprias" (`flow_automations.own`), mesmo com a chave do cliente "Gerenciar automações" desligada. O gestor (`flow_automations.update`) continua dependendo da chave do cliente, mesmo tendo a `.own`. O flag de catálogo `lead_automations` continua valendo.
+- **Lista de automações:** o corretor vê as abas **Minhas** e **Da equipe**; a da equipe é só leitura (com **Ver** e **Duplicar pra ter a sua cópia**, sem chave Ligado, Excluir nem Arquivar). Duplicar uma da equipe cria a cópia pessoal e leva pra **Minhas**. O gestor vê **Todas**, **Minhas**, **Da equipe** e **Dos corretores** (com o selo "De <nome>"), o botão **Nova da equipe** e a opção de marcar uma automação como da equipe. Desligar **Da equipe** pergunta antes: *"Tirar da equipe? Esta automação passa a valer só pros seus leads e a mandar pelo seu WhatsApp."* (com outro dono: *"...só pros leads de <nome> e a mandar pelo WhatsApp de <nome>."*). A lista fica com o que o servidor devolveu: a automação sem dono passa a ser de quem tirou.
+- **Cabeçalho do construtor:** o gestor tem a chave **Da equipe** ali também (quando `permissions.can_mark_team`), com a mesma pergunta ao desligar. Quem não marca vê o selo **Da equipe**. Na automação, o selo segue `permissions.personal` (sem dono também é da equipe), não só a marca `team`.
+- **Modelos:** o corretor aplica modelo e o servidor força pessoal. O gestor aplicando pela aba **Da equipe** cria da equipe; pela aba **Minhas** cria pessoal; em **Todas** e **Dos corretores** o servidor decide (gestor = equipe).
+- **Construtor do corretor:** o seletor de gatilho mostra só os 14 gatilhos do cargo (grupos vazios somem). Automação antiga com gatilho fora do cargo mostra "(Indisponível)" no seletor e o aviso *"Este gatilho não está disponível pro seu cargo."* Na paleta, só os blocos do cargo; os que dependem de número ou de IA aparecem como **Indisponível** quando o corretor não tem número próprio (ou IA Vendedora). Nos blocos de mensagem, no lugar de "Enviar pelo número" aparece **Sai pelo seu WhatsApp (número)**.
+- **Gestor na automação pessoal DELE** (16/10/2026): todos os blocos e gatilhos, mas os blocos de mensagem ficam **Indisponível** sem número próprio e "Passar pra IA" sem IA Vendedora; a mensagem mostra **Sai pelo seu WhatsApp (número)**. **Na pessoal de outra pessoa:** o bloco de mensagem só avisa **Sai pelo WhatsApp de <nome>** (no cartão, "Pelo WhatsApp de <nome>"), sem escolher número e sem "Indisponível". Regra em `modoPessoal` (`personal.ts`): `corretor`, `dono`, `de_outro`.
+- **"Da equipe" travada** (16/10/2026): automação da equipe com bloco preso a número específico (`permissions.fixed_number`, do servidor) mostra a chave desligável apagada, com *"Esta automação manda por um número específico. Pra virar pessoal, troque o número nos blocos."*, na lista e no cabeçalho. Ligar "Da equipe" numa pessoal segue livre.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Corretor só cria automação pessoal**, só dos leads dele e só pelo número dele.
+2. **"Da equipe" = a imobiliária toda**, e só o gestor marca.
+3. **Automação sem dono é da equipe.** Gestor que cria sem escolher cria da equipe.
+4. **Gestor vê todas**, as dele, as da equipe e as dos corretores.
+5. **Corretor vê as dele em todo cliente**, mesmo com a chave do cliente desligada. O que ele não faz é o que não é do cargo: bloco ou gatilho fora da lista fica **Indisponível**.
+
+Armadilhas:
+
+1. **O backend vem PRIMEIRO** (lm-flow `claude/automacoes-por-cargo`, base `saas-multitenant`). Contra o servidor antigo não existem `permissions`, dono nem equipe, e o corretor ficaria sem lista. Merge é deploy: só com ok do Tony, backend antes.
+2. **Quem pode o quê vem do servidor** (`permissions.personal`, `can_edit`, `can_mark_team` em cada automação). O corretor fecha por padrão: só edita com `can_edit === true`; o gestor só perde quando vem `false`.
+3. **As regras do cargo estão espelhadas em `src/features/flowAutomations/personal.ts`** (gatilhos, blocos nativos, ações de lead). Mudou a lista no servidor (`PersonalPolicy`), muda aqui, com o spec.
+4. **Menu:** a chave do cliente só barra quem entra por `flow_automations.read` (`clientToggleSoPara`), e quem tem `flow_automations.update` (`clientToggleGestor`) segue a chave mesmo com a `.own`. As rotas usam `permissions={[...]}` (várias chaves, `permissionsFromRoute`) e o spec de fonte `permissionRoutes.source.spec.ts` confere mapa, rota e menu juntos.
+5. **`usePersonalCapabilities` lê `GET /flow_automations/personal_capabilities`** (`{ tem_numero, numero, tem_ia }`), a MESMA regra do envio no servidor: só o número que a pessoa tem, nunca o compartilhado em que ela atende. Não voltar a deduzir pelos "Meus números" e pelo cartão do número (o compartilhado aparecia como dele). Fecha por padrão enquanto carrega ou com erro (sem número, sem IA): nada de bloco liberado antes da resposta.
+6. **Modelo: `team` só vai quando o gestor está em Minhas ou Da equipe.** Corretor nunca manda `team`; o `applyTemplate` sem opção deixa o servidor decidir.

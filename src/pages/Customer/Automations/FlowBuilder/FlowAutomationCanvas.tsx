@@ -35,12 +35,17 @@ import {
   useAutomationResources,
 } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
 import {
-  LEAD_CREATED_HINT, normalizeTrigger, serializeTrigger, triggerEvents, triggerOneLine, triggerProblem,
+  FLOW_TRIGGER_GROUPS, LEAD_CREATED_HINT, normalizeTrigger, serializeTrigger, triggerEvents, triggerOneLine, triggerProblem,
   type FlowTrigger,
 } from '@/features/flowAutomations/trigger';
 import { businessHoursOnlyOf } from '@/features/flowAutomations/businessHours';
 import { FLOW_KIND_COPY, kindOf } from '@/features/flowAutomations/kind';
-import { paletteItems, type PaletteItem } from '@/features/flowAutomations/palette';
+import { paletteItems, podeSoltarBloco, type PaletteItem } from '@/features/flowAutomations/palette';
+import {
+  modoPessoal, NUMERO_FIXO_NA_EQUIPE, personalAvailabilityState, personalBlockState, personalTriggerGroups,
+  presaNaEquipe, tirarDaEquipe, useEhCorretorDeAutomacao,
+} from '@/features/flowAutomations/personal';
+import { usePersonalCapabilities } from '@/features/flowAutomations/usePersonalCapabilities';
 import { readBlocksOpen, saveBlocksOpen } from '@/features/flowAutomations/blocksPanelState';
 import { enableProblem, nodeProblem } from '@/features/flowAutomations/readiness';
 import {
@@ -50,6 +55,7 @@ import {
   useAlteracoesNaoSalvas, mesmoConteudo, limparPendentes, PEDIDO_SAIR_SEM_SALVAR,
 } from '@/hooks/useAlteracoesNaoSalvas';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { useAuthStore } from '@/store/authStore';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { ehCelular } from '@/hooks/useCelular';
 import FlowCanvasCelular from './FlowCanvasCelular';
@@ -114,6 +120,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const messageVariables = useTenantMessageVariables();
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const sidePanel = useSidePanel(confirmar);
+  const meId = String(useAuthStore(s => s.currentUser?.id) ?? '');
   const isMobile = useMediaQuery(MOBILE_QUERY);
   // Raio-X do celular (10/10/2026): a tela do celular (sem o desenho) é decidida
   // SÓ na abertura. Seguir o redimensionamento trocaria o canvas no meio da
@@ -181,6 +188,24 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const kind = kindOf(automation);
   const isConversation = kind === 'conversation';
   const readOnly = isReadOnly(automation);
+  // Automação PESSOAL: o corretor monta com os gatilhos e blocos do cargo; o
+  // gestor na pessoal DELE tem tudo, mas a mensagem sai pelo número dele
+  // ("Indisponível" sem número ou sem IA); na pessoal de outra pessoa, o bloco
+  // de mensagem só avisa por qual WhatsApp sai (o servidor força o do dono).
+  const ehCorretor = useEhCorretorDeAutomacao();
+  const modo = modoPessoal(automation, { ehCorretor, meId });
+  const pessoal = modo === 'corretor';
+  const peloMeuNumero = modo === 'corretor' || modo === 'dono';
+  // '' = de outra pessoa sem nome conhecido; null = não é o caso.
+  const donoDoEnvio = modo === 'de_outro' ? automation?.owner_name ?? '' : null;
+  const capacidades = usePersonalCapabilities(peloMeuNumero);
+  const estadoDoBloco = useMemo(() => {
+    const ctx = { temNumero: capacidades.temNumero, temIA: capacidades.temIA };
+    if (modo === 'corretor') return (item: PaletteItem) => personalBlockState(item, ctx);
+    if (modo === 'dono') return (item: PaletteItem) => personalAvailabilityState(item, ctx);
+    return undefined;
+  }, [modo, capacidades.temNumero, capacidades.temIA]);
+  const gatilhosDoCargo = useMemo(() => (pessoal ? personalTriggerGroups(FLOW_TRIGGER_GROUPS) : undefined), [pessoal]);
   const guided = isGuided(automation);
   const builderTools = !readOnly && !guided;
 
@@ -375,10 +400,10 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     if (!key) return;
     e.preventDefault();
     const item = paletteItems().find(i => i.key === key);
-    if (!item) return;
+    if (!item || !podeSoltarBloco(item, estadoDoBloco)) return;
     const position = flowInstance.current?.screenToFlowPosition({ x: e.clientX, y: e.clientY }) ?? null;
     insertNode(item, pendingSource, position);
-  }, [insertNode, pendingSource]);
+  }, [insertNode, pendingSource, estadoDoBloco]);
 
   const onConnect = useCallback((connection: Connection) => {
     if (!builderTools) return;
@@ -477,7 +502,8 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
         draggable: builderTools,
         connectable: builderTools,
         data: {
-          node: n, lookups, problem: problems[n.id] ?? null,
+          node: n, lookups, pessoal: peloMeuNumero, donoDoEnvio,
+          problem: problems[n.id] ?? null,
           editing: openPanel?.type === 'node' && openPanel.id === n.id,
           highlighted: highlighted === n.id,
           guideMark: st ? { step: st.step, state: st.done ? 'done' : step?.nodeId === n.id ? 'current' : 'pending' } : null,
@@ -487,7 +513,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
       };
     });
     return [startNode, ...rest];
-  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, addFrom]);
+  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, addFrom, peloMeuNumero, donoDoEnvio]);
 
   const reactFlowEdges: Edge[] = useMemo(
     () => graphEdges.map(e => ({
@@ -557,6 +583,34 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     return <Carregando variante="texto" linhas={6} className="p-6" />;
   }
 
+  // "Da equipe" na automação: sem dono também é da equipe, então vale o que o
+  // servidor diz (`personal`), não só a marca. Funil e follow-up seguem a marca.
+  const ehAutomacao = kind === 'automation';
+  const daEquipe = ehAutomacao && automation.permissions && 'personal' in automation.permissions
+    ? automation.permissions.personal !== true
+    : !!automation.team;
+  // O gestor marca e desmarca "Da equipe" no cabeçalho também (a mesma pergunta da lista).
+  const podeMarcarEquipe = ehAutomacao && !readOnly && automation.permissions?.can_mark_team === true;
+  // Bloco preso a número específico: "Da equipe" não sai (o servidor recusa).
+  const presa = ehAutomacao && presaNaEquipe(automation);
+
+  async function marcarEquipe(next: boolean): Promise<boolean> {
+    if (!automation) return false;
+    if (!next && !(await confirmar(tirarDaEquipe(automation, meId)))) return false;
+    try {
+      const atualizada = await flowAutomationsService.update(automation.id, { team: next });
+      // Só dono e equipe: o resto da tela pode ter edição ainda não salva.
+      setAutomation(a => (a ? {
+        ...a, team: atualizada.team, owner_user_id: atualizada.owner_user_id,
+        owner_name: atualizada.owner_name, permissions: atualizada.permissions,
+      } : a));
+      return true;
+    } catch (e) {
+      toast.error(serverMessage(e, 'Não deu pra mudar agora. Tente de novo.'));
+      return false;
+    }
+  }
+
   // A chave de ligar: a mesma no canvas e na tela do celular.
   async function alternarLigado(): Promise<boolean> {
     if (!automation) return false;
@@ -622,7 +676,16 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
             aria-label={isConversation ? 'Nome do funil' : 'Nome do fluxo'}
             disabled={readOnly}
           />
-          {automation.team && (
+          {podeMarcarEquipe ? (
+            <Chave
+              rotulo="Da equipe"
+              className={presa ? 'ml-2 max-w-xs' : 'ml-2 shrink-0'}
+              ligada={daEquipe}
+              aoMudar={marcarEquipe}
+              desabilitada={presa}
+              descricao={presa ? NUMERO_FIXO_NA_EQUIPE : undefined}
+            />
+          ) : daEquipe && (
             <Badge variant="secondary" className="shrink-0 gap-1 text-[10px]">
               <Users className="h-3 w-3" aria-hidden="true" /> Da equipe
             </Badge>
@@ -688,6 +751,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
             <FlowBlocksPanel
               onPick={item => insertNode(item, pendingSource)}
               onClose={() => setBlocksOpen(false)}
+              estadoDoBloco={estadoDoBloco}
             />
           )}
 
@@ -791,6 +855,10 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
               flowKind={kind}
               guided={guided}
               saving={saving}
+              pessoal={peloMeuNumero}
+              numeroPessoal={capacidades.principalPhone}
+              numeroPessoalCarregando={capacidades.loading}
+              donoDoEnvio={donoDoEnvio}
             />
           )}
           {openPanel?.type === 'trigger' && !isConversation && (
@@ -803,6 +871,8 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
                 replacePanel(null);
               }}
               onDirtyChange={sidePanel.setDirty}
+              soGatilhos={gatilhosDoCargo}
+              semFiltroDeQuemAceitou={pessoal}
             />
           )}
         </div>

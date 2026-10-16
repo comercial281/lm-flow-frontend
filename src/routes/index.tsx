@@ -686,7 +686,7 @@ const AppRouter = () => {
                 path="flow-builder"
                 element={
                   <Suspense fallback={outletSuspenseFallback}>
-                    <PermissionRoute resource="flow_automations" action="read">
+                    <PermissionRoute permissions={['flow_automations.read', 'flow_automations.own']}>
                       <FlowAutomationsList />
                     </PermissionRoute>
                   </Suspense>
@@ -696,7 +696,7 @@ const AppRouter = () => {
                 path="flow-builder/:id"
                 element={
                   <Suspense fallback={outletSuspenseFallback}>
-                    <PermissionRoute resource="flow_automations" action="read">
+                    <PermissionRoute permissions={['flow_automations.read', 'flow_automations.own']}>
                       <FlowAutomationCanvas />
                     </PermissionRoute>
                   </Suspense>

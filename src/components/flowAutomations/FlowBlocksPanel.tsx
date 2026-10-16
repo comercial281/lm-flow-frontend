@@ -8,6 +8,7 @@ import { paletteGroups, type PaletteItem } from '@/features/flowAutomations/pale
 import { blockDescription, blockIcon } from '@/features/flowAutomations/blockInfo';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
+import { INDISPONIVEL } from '@/features/flowAutomations/personal';
 import { MOBILE_QUERY } from './FlowSidePanel';
 
 // Painel "Blocos" (sprint 4, spec 04/10/2026, A.2): abre e fecha pelo botão no
@@ -21,11 +22,19 @@ export const BLOCK_DRAG_TYPE = 'application/x-lmflow-bloco';
 interface Props {
   onPick: (item: PaletteItem) => void;
   onClose: () => void;
+  /** Corretor: 'fora' some da lista, 'indisponivel' fica cinza e sem clique nem arraste. */
+  estadoDoBloco?: (item: PaletteItem) => 'ok' | 'indisponivel' | 'fora';
 }
 
-export function FlowBlocksPanel({ onPick, onClose }: Props) {
+export function FlowBlocksPanel({ onPick, onClose, estadoDoBloco }: Props) {
   const [query, setQuery] = useState('');
-  const groups = useMemo(() => paletteGroups(query), [query]);
+  const groups = useMemo(() => {
+    const all = paletteGroups(query);
+    if (!estadoDoBloco) return all;
+    return all
+      .map(g => ({ ...g, items: g.items.filter(i => estadoDoBloco(i) !== 'fora') }))
+      .filter(g => g.items.length > 0);
+  }, [query, estadoDoBloco]);
   const isMobile = useMediaQuery(MOBILE_QUERY);
 
   return (
@@ -74,6 +83,28 @@ export function FlowBlocksPanel({ onPick, onClose }: Props) {
               {items.map(item => {
                 const Icon = blockIcon(item);
                 const color = nodeColor(item.kind, item.group);
+                if (estadoDoBloco?.(item) === 'indisponivel') {
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      disabled
+                      draggable={false}
+                      title={INDISPONIVEL}
+                      className="flex w-full items-center gap-2 text-left text-xs rounded-md border border-border px-2 py-1.5 cursor-not-allowed"
+                    >
+                      <span
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-white opacity-50"
+                        style={{ backgroundColor: color }}
+                        aria-hidden="true"
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                      </span>
+                      <span className="truncate opacity-50">{item.label}</span>
+                      <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">{INDISPONIVEL}</span>
+                    </button>
+                  );
+                }
                 return (
                   <button
                     key={item.key}

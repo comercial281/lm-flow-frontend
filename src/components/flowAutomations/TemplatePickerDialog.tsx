@@ -72,11 +72,13 @@ interface Props {
   footerStart?: ReactNode;
   /** Outra ação da janela em andamento: trava o "Usar este modelo". */
   busy?: boolean;
+  /** Gestor: `true` cria da equipe, `false` pessoal; sem valor o servidor decide. Corretor não passa. */
+  team?: boolean;
 }
 
 export function TemplatePickerDialog({
   open, onClose, kind, title, description, onApplied, initialKey, applyError = 'Não deu pra criar pelo modelo. Tente de novo.',
-  footerStart, busy = false,
+  footerStart, busy = false, team,
 }: Props) {
   const [templates, setTemplates] = useState<FlowTemplate[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -132,7 +134,9 @@ export function TemplatePickerDialog({
     if (!current || applying || busy) return;
     setApplying(true);
     try {
-      onApplied(await flowAutomationsService.applyTemplate(current.key));
+      onApplied(team === undefined
+        ? await flowAutomationsService.applyTemplate(current.key)
+        : await flowAutomationsService.applyTemplate(current.key, { team }));
     } catch (e) {
       toast.error(serverMessage(e, applyError));
     } finally {

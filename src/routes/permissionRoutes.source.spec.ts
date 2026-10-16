@@ -49,6 +49,12 @@ describe('roleta (a nova é a única desde 06/10/2026)', () => {
   });
 });
 
+describe('construtor de automações (Automações próprias, 15/10/2026)', () => {
+  it.each(['flow-builder', 'flow-builder/:id'])('%s abre com flow_automations.read OU flow_automations.own', path => {
+    expect(trecho(path)).toContain(`<PermissionRoute permissions={['flow_automations.read', 'flow_automations.own']}>`);
+  });
+});
+
 describe('toda rota do CRM confere o cargo', () => {
   it.each([
     ['/ia-vendedora', 'sales_agents', 'read'],
@@ -77,8 +83,6 @@ describe('toda rota do CRM confere o cargo', () => {
     // Sprint 4 das Automações: o canvas do funil de conversa abre pra quem lê os funis (o corretor).
     ['message-funnels/:id', 'message_funnels', 'read'],
     ['origem', 'lead_ads_form_configs', 'read'],
-    ['flow-builder', 'flow_automations', 'read'],
-    ['flow-builder/:id', 'flow_automations', 'read'],
     // Roleta: a lista e a página da roleta pedem roleta_configs.read.
     ['roleta-config', 'roleta_configs', 'read'],
     ['roleta-config/:id', 'roleta_configs', 'read'],
@@ -115,14 +119,18 @@ describe('permissionRoutes.ts não diverge de index.tsx (mapa único da Fase 1 C
   // documenta. Pega o caso de alguém editar a chave só num dos dois lados.
   it.each(ROUTE_PERMISSIONS)(
     'mapa → rota: "$path" exige $resource.$action em index.tsx',
-    ({ path, resource, action }) => {
+    ({ path, resource, action, permissions }) => {
       const trechoDoArquivo = SHARED_ELEMENT_PATHS.includes(path)
         ? chatRouteElementBlock()
         : trecho(path);
+      // Rota que abre com qualquer uma de várias chaves usa a forma `permissions={[...]}`.
+      const esperado = permissions
+        ? `<PermissionRoute permissions={[${permissions.map(p => `'${p}'`).join(', ')}]}>`
+        : `<PermissionRoute resource="${resource}" action="${action}">`;
       expect(
         trechoDoArquivo,
-        `a rota "${path}" não usa <PermissionRoute resource="${resource}" action="${action}"> em index.tsx`,
-      ).toContain(`<PermissionRoute resource="${resource}" action="${action}">`);
+        `a rota "${path}" não usa ${esperado} em index.tsx`,
+      ).toContain(esperado);
     },
   );
 
@@ -146,6 +154,10 @@ describe('permissionRoutes.ts não diverge de index.tsx (mapa único da Fase 1 C
       if (permMatch) {
         foundKeys.add(`${path}::${permMatch[1]}.${permMatch[2]}`);
       }
+      const multiMatch = slice.match(/<PermissionRoute permissions=\{\[([^\]]+)\]\}>/);
+      if (multiMatch) {
+        foundKeys.add(`${path}::${multiMatch[1].replace(/['\s]/g, '').split(',').join('|')}`);
+      }
     }
 
     const chatMatch = chatRouteElementBlock().match(/<PermissionRoute resource="([^"]+)" action="([^"]+)">/);
@@ -154,7 +166,9 @@ describe('permissionRoutes.ts não diverge de index.tsx (mapa único da Fase 1 C
       foundKeys.add(`${path}::${chatMatch![1]}.${chatMatch![2]}`);
     }
 
-    const mapKeys = new Set(ROUTE_PERMISSIONS.map(e => `${e.path}::${e.resource}.${e.action}`));
+    const mapKeys = new Set(
+      ROUTE_PERMISSIONS.map(e => `${e.path}::${e.permissions ? e.permissions.join('|') : `${e.resource}.${e.action}`}`),
+    );
     const missing = [...foundKeys].filter(k => !mapKeys.has(k));
     expect(
       missing,

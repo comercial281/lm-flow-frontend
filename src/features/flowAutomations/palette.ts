@@ -112,3 +112,11 @@ export function paletteGroups(query = ''): Array<{ group: FlowNodeGroup; label: 
     .map(group => ({ group, label: PALETTE_GROUP_LABELS[group], items: visible.filter(i => i.group === group) }))
     .filter(g => g.items.length > 0);
 }
+
+/** Guarda do arraste: só solta no canvas o bloco que a paleta deixa usar. */
+export function podeSoltarBloco(
+  item: Pick<PaletteItem, 'key'>,
+  estadoDoBloco?: (item: PaletteItem) => 'ok' | 'indisponivel' | 'fora',
+): boolean {
+  return !estadoDoBloco || estadoDoBloco(item as PaletteItem) === 'ok';
+}

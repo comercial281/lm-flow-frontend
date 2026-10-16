@@ -48,6 +48,16 @@ class FlowAutomationsService {
     return unwrap<FlowAutomation[]>(response);
   }
 
+  /**
+   * O número PRÓPRIO de quem pede e se ele tem IA Vendedora (a mesma regra do
+   * envio da automação pessoal no servidor). `numero`: o telefone, ou null.
+   */
+  async personalCapabilities(): Promise<{ tem_numero: boolean; numero: string | null; tem_ia: boolean }> {
+    return unwrap<{ tem_numero: boolean; numero: string | null; tem_ia: boolean }>(
+      await api.get(`${this.baseUrl}/personal_capabilities`),
+    );
+  }
+
   async get(id: string): Promise<FlowAutomation> {
     return unwrap<FlowAutomation>(await api.get(`${this.baseUrl}/${id}`));
   }
@@ -75,8 +85,11 @@ class FlowAutomationsService {
     return templatesFrom((kind ? await api.get(url, { params: { kind } }) : await api.get(url)).data);
   }
 
-  async applyTemplate(key: string): Promise<FlowAutomation> {
-    return appliedFlowFrom<FlowAutomation>((await api.post(`${this.baseUrl}/templates/${encodeURIComponent(key)}/apply`)).data);
+  // `team` (automações por cargo): só o gestor; sem ele o servidor decide (gestor = da equipe).
+  async applyTemplate(key: string, opts?: { team?: boolean }): Promise<FlowAutomation> {
+    const url = `${this.baseUrl}/templates/${encodeURIComponent(key)}/apply`;
+    const res = opts?.team === undefined ? await api.post(url) : await api.post(url, { team: opts.team });
+    return appliedFlowFrom<FlowAutomation>(res.data);
   }
 
   // `team` (sprint 4): "Da equipe", só no funil de conversa e só o gestor.
