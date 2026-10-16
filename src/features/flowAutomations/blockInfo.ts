@@ -1,7 +1,7 @@
 // ÍCONE E FRASE DE CADA BLOCO (sprint 4, spec 04/10/2026, seção A).
 //
-// O painel Blocos mostra ícone + nome, e o painel lateral do bloco abre com o
-// ícone, o nome e uma linha dizendo o que o bloco faz. Os dois leem daqui pra
+// A lista Blocos mostra ícone + nome, e a janela do bloco abre com o ícone, o
+// nome e uma linha dizendo o que o bloco faz. Os dois leem daqui pra
 // falarem a mesma coisa. O NOME continua em `blockLabel` (palette.ts); aqui só
 // o que vai junto dele.
 
@@ -93,7 +93,7 @@ const DESCRIPTIONS: Record<string, string> = {
   'lead_action:followup_ended': 'Fim do follow-up sem resposta: o lead sai do alerta "Sem contato do corretor há mais de 3 dias" até escrever de novo.',
 };
 
-/** Ícone do bloco no painel Blocos e no topo do painel lateral. */
+/** Ícone do bloco na lista Blocos e no topo da janela do bloco. */
 export function blockIcon(node: { kind: FlowNodeKind; config?: FlowNodeConfig | null }): LucideIcon {
   return ICONS[blockKey(node)] ?? (node.kind === 'lead_action' ? Bell : Zap);
 }
