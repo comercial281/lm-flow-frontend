@@ -9048,3 +9048,29 @@ Armadilhas:
 1. **Dinheiro nunca volta a ser `type="number"`.** Use `CampoDeDinheiro` (`cadastro/secoes/campos.tsx`), com a leitura em `src/features/properties/dinheiro.ts` (spec). Áreas e quantidades seguem número (vírgula decimal funciona no campo do navegador).
 2. **A regra do "a partir de" mora em `menorPrecoDasTipologias` (`features/properties/typologies.ts`) e no servidor.** `payloadDoFormulario` manda o mínimo no empreendimento, e `errosDoCadastro` valida o valor do payload (não o digitado). Mudou um lado, muda o outro.
 3. **O `CampoDeDinheiro` acompanha valor trocado por fora** (Preencher com IA, plantas recalculadas) só quando o número muda: digitando, o texto fica como a pessoa escreveu (`244.630,` com a vírgula pendente).
+
+## Grupos WhatsApp liberados por cliente (desde 2026-10-15)
+
+*"Precisamos colocar nas configurações os grupos que ele pode visualizar."* Cada cliente do CRM passa a ter uma lista de grupos de WhatsApp liberados pela Leal Mídia. Spec: `LM FLOW/specs/2026-10-15-grupos-whatsapp-por-cliente-design.md`. Nota: o bloco de grupos da seção "O grupo de WhatsApp do cliente pode ser definido depois de criado" (2026-09-22) saiu da aba Funções e agora mora na aba **Operação**, como lista.
+
+O que aparece na tela:
+
+- **Painel raiz → página do cliente → aba Operação → Grupos WhatsApp** (só a equipe da Leal): lista com selo **Com o cliente** ou **Interno da Leal**, botão **Adicionar grupo** (a central só é consultada no clique, com as sugestões pelo nome do cliente no topo), **Remover** e **Salvar lista**. Cliente sem lista aparece como **Ainda não mapeado**, com o botão **Montar lista**, que sugere pelo nome. Se a central falha ou vem vazia, não monta nada. **Salvar a lista vazia pede confirmação** ("Salvar sem nenhum grupo?"): lista vazia não volta a "não mapeado", ela marca o cliente como mapeado sem grupo nenhum, e com a trava ligada todo aviso em grupo pela central para. O salvar reenvia as duas chaves antigas (grupo do cliente e grupo de logs), pra não quebrar quem ainda lê elas.
+- **Avisar no grupo (cliente):** sem campo livre de número. O envio sai por **WhatsApp deste CRM** ou **Central da Leal Mídia**; trocar o número limpa o destino. Destino salvo que não está na lista aparece como **Grupo definido pela Leal Mídia**, travado, com o aviso, sem nome nem JID. Só trava com a lista carregada com sucesso e **só pela Central da Leal Mídia**: pelo **WhatsApp deste CRM** o grupo é do próprio cliente (o servidor filtra esses grupos pelo nome do CRM e um deles pode não vir na lista), então aparece como **Grupo já escolhido (não apareceu na lista)**, sem trava. Só nome da central (`Operacional (LM01)` ou `Nova Instancia`) conta como Central; qualquer outro número gravado pela equipe aparece como WhatsApp deste CRM. O resumo da ação mostra **Grupo escolhido**, sem o JID, pra todos. A equipe da Leal mantém a lista de números e o campo livre.
+- **Roleta → Avisos:** o seletor lista só os grupos liberados (sem `all=true`). Grupo gravado fora da lista aparece travado, sem nome pro cliente. Falha ao carregar a lista não trava nada.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Só a Leal monta a lista.** O cliente não adiciona nem remove grupo.
+2. **Só a lista vale.** Grupo que não está nela não aparece pra escolher.
+3. **Interno da Leal é só pra equipe.** O cliente não vê esses grupos.
+4. **Destino gravado fora da lista fica travado e sem nome**, pra o cliente não ver nem apagar o que a Leal definiu.
+
+Armadilhas:
+
+1. **O backend vem PRIMEIRO** (lm-flow `claude/grupos-por-cliente`, base `saas-multitenant`). Contra o servidor antigo a lista não existe e a tela não monta. Merge de backend e de frontend é deploy: só com ok do Tony.
+2. **O tipo (cliente ou logs) vem do servidor.** A tela não adivinha pelo nome do grupo.
+3. **O bloco saiu de Funções e mora em Operação.** A seção de 2026-09-22 ainda diz Funções, e foi mantida como estava.
+4. **As regras ficam fora do JSX, com spec:** `PooledClients/clientGroups.ts` (montar a lista, sugestão, payload) e `src/features/whatsappGroups/destinoDoGrupo.ts` (como o destino aparece e quando trava).
+5. **Escape de acento no `clientGroups.ts`:** a ferramenta de edição já converteu 5 vezes o intervalo de acentos (`̀-ͯ`) no caractere literal. O spec pega; não "arrumar" na mão.
+6. **Ambiente sem pnpm:** instalar com `npm ci --legacy-peer-deps` e não commitar `yarn.lock` nem lockfile alterado.

@@ -2,6 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { groupJidsFrom, groupsPatch, groupLabel, isGroupJid, sortGroupsForPicker, nameRuleHint } from './clientGroups';
+import {
+  allowedGroupsFrom, allowedGroupsPatch, addAllowedGroup, removeAllowedGroup,
+  suggestAllowedGroups, allowedRow, ALLOWED_KIND_LABEL,
+} from './clientGroups';
 
 // O bloco *Grupos WhatsApp* da janela Funções é o único lugar onde o grupo de um
 // cliente que JÁ EXISTE pode ser definido ou trocado. O que estes casos protegem:
@@ -83,5 +87,54 @@ describe('grupos de WhatsApp do cliente (painel raiz)', () => {
   it('o intervalo de acentos é escrito como escape unicode no fonte', () => {
     const fonte = readFileSync(resolve(__dirname, 'clientGroups.ts'), 'utf8');
     expect(fonte).toContain('\\u0300-\\u036f');
+  });
+});
+
+describe('lista de grupos liberados (painel raiz)', () => {
+  const central = [
+    { jid: '111@g.us', name: 'Leal Mídia x Fornecedor' },
+    { jid: '222@g.us', name: 'APTO PREMIUM x Leal Mídia' },
+    { jid: '333@g.us', name: 'Time interno' },
+  ];
+
+  it('sem a chave é "não mapeado" (null); com [] é lista vazia', () => {
+    expect(allowedGroupsFrom({})).toBeNull();
+    expect(allowedGroupsFrom({ allowed_whatsapp_groups: [] })).toEqual([]);
+  });
+
+  it('lê a lista e descarta o que não é grupo nem tipo conhecido', () => {
+    expect(allowedGroupsFrom({ allowed_whatsapp_groups: [
+      { jid: '222@g.us', name: 'APTO', kind: 'cliente' },
+      { jid: '5511@s.whatsapp.net', name: 'x', kind: 'cliente' },
+      { jid: '333@g.us', name: 'y', kind: 'outro' },
+    ] })).toEqual([{ jid: '222@g.us', name: 'APTO', kind: 'cliente' }]);
+  });
+
+  it('adicionar não repete; remover tira pelo jid', () => {
+    const um = addAllowedGroup([], central[1], 'cliente');
+    expect(addAllowedGroup(um, central[1], 'logs')).toEqual(um);
+    expect(removeAllowedGroup(um, '222@g.us')).toEqual([]);
+  });
+
+  it('o PATCH leva a lista inteira, saneada', () => {
+    expect(allowedGroupsPatch([{ jid: ' 222@g.us ', name: 'APTO', kind: 'cliente' }]))
+      .toEqual({ allowed_whatsapp_groups: [{ jid: '222@g.us', name: 'APTO', kind: 'cliente' }] });
+  });
+
+  it('sugere o grupo pelo nome do cliente e os dois cadastros antigos', () => {
+    expect(suggestAllowedGroups(central, 'APTO PREMIUM', { reminder: '', logs: '333@g.us' })).toEqual([
+      { jid: '222@g.us', name: 'APTO PREMIUM x Leal Mídia', kind: 'cliente' },
+      { jid: '333@g.us', name: 'Time interno', kind: 'logs' },
+    ]);
+  });
+
+  it('linha avisa quando a central não lista mais o grupo', () => {
+    expect(allowedRow({ jid: '222@g.us', name: 'velho', kind: 'cliente' }, central).text).toBe('APTO PREMIUM x Leal Mídia');
+    expect(allowedRow({ jid: '999@g.us', name: 'Sumido', kind: 'logs' }, central).warning).toMatch(/não aparece/);
+    expect(allowedRow({ jid: '999@g.us', name: 'Sumido', kind: 'logs' }, null)).toEqual({ text: 'Sumido' });
+  });
+
+  it('rótulos dos tipos', () => {
+    expect(ALLOWED_KIND_LABEL).toEqual({ cliente: 'Com o cliente', logs: 'Interno da Leal' });
   });
 });

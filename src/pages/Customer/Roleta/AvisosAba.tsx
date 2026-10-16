@@ -12,6 +12,9 @@ import { Secao, Secoes } from '@/components/base/Secao';
 import { Seletor } from '@/components/base/Seletor';
 import { VariableChipBar } from '@/components/flowAutomations/VariableChipBar';
 import { mesmoConteudo, useAlteracoesNaoSalvas } from '@/hooks/useAlteracoesNaoSalvas';
+import Aviso from '@/components/base/Aviso';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import { AVISO_TRAVADO, ROTULO_TRAVADO } from '@/features/whatsappGroups/destinoDoGrupo';
 import usersService from '@/services/users/usersService';
 import type { User } from '@/types/users';
 import { leadAutomationService, type WaGroup } from '@/services/leadAutomation/leadAutomationService';
@@ -93,7 +96,10 @@ export default function AvisosAba() {
   const salvoRef = useRef<RoletaSettings | null>(null);
   const fila = useRef<Promise<unknown>>(Promise.resolve());
   const [equipe, setEquipe] = useState<User[]>([]);
+  const ehEquipe = useIsSuperAdmin();
   const [grupos, setGrupos] = useState<WaGroup[] | null>(null);
+  // Lista que falhou ao carregar não prova nada: não pode travar o grupo gravado.
+  const [gruposFalhou, setGruposFalhou] = useState(false);
   const [personalizando, setPersonalizando] = useState(false);
   const [textos, setTextos] = useState<Textos | null>(null);
   const [salvandoTextos, setSalvandoTextos] = useState(false);
@@ -117,9 +123,9 @@ export default function AvisosAba() {
   useEffect(() => {
     let vivo = true;
     usersService.getUsers({ per_page: 200 }).then(r => { if (vivo) setEquipe(r.data ?? []); }).catch(() => {});
-    leadAutomationService.getGroups(CENTRAL_DOS_GRUPOS, true)
+    leadAutomationService.getGroups(CENTRAL_DOS_GRUPOS)
       .then(g => { if (vivo) setGrupos([...g].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))); })
-      .catch(() => { if (vivo) setGrupos([]); });
+      .catch(() => { if (vivo) { setGruposFalhou(true); setGrupos([]); } });
     return () => { vivo = false; };
   }, []);
 
@@ -182,6 +188,10 @@ export default function AvisosAba() {
 
   const grupoGravado = avisos.group_jid ?? '';
   const listaDeGrupos = grupos ?? [];
+  // Grupo gravado que o servidor não devolveu pro cliente (ex.: interno da Leal):
+  // fica travado e sem nome. Só vale com a lista carregada de verdade.
+  const travado = !ehEquipe && grupos !== null && !gruposFalhou && !!grupoGravado
+    && !listaDeGrupos.some(g => g.id === grupoGravado);
 
   const salvarTextos = async () => {
     if (salvandoTextos) return;
@@ -258,12 +268,12 @@ export default function AvisosAba() {
           {chave('notify_gestor_morning', 'Resumo da manhã', 'No WhatsApp, às 8h: o que chegou fora do horário')}
         </Secao>
 
-        <Secao titulo="Grupo" descricao="Um grupo de WhatsApp, se quiser. A lista é a dos grupos do Operacional.">
+        <Secao titulo="Grupo" descricao="Um grupo de WhatsApp, se quiser. A lista traz os grupos liberados pela Leal Mídia pra este CRM.">
           <Campo id="avisos-grupo" rotulo="Grupo que recebe">
             <Seletor
               id="avisos-grupo"
               value={grupoGravado}
-              disabled={ocupado || grupos === null}
+              disabled={ocupado || grupos === null || travado}
               onChange={e => {
                 const jid = e.target.value;
                 const g = listaDeGrupos.find(x => x.id === jid);
@@ -279,11 +289,12 @@ export default function AvisosAba() {
             >
               <option value="">Nenhum</option>
               {grupoGravado && !listaDeGrupos.some(g => g.id === grupoGravado) && (
-                <option value={grupoGravado}>{avisos.group_name || 'Grupo escolhido antes'}</option>
+                <option value={grupoGravado}>{ehEquipe || !travado ? (avisos.group_name || 'Grupo escolhido antes') : ROTULO_TRAVADO}</option>
               )}
               {listaDeGrupos.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
             </Seletor>
           </Campo>
+          {travado && <Aviso tom="neutro" compacto>{AVISO_TRAVADO}</Aviso>}
           {chave('notify_group_offer', 'Lead novo na roleta', grupoGravado ? 'No grupo' : 'Escolha o grupo primeiro', !grupoGravado && !avisos.notify_group_offer)}
           {chave('notify_group_repass', 'Lead repassado pro próximo', grupoGravado ? 'No grupo' : 'Escolha o grupo primeiro', !grupoGravado && !avisos.notify_group_repass)}
         </Secao>

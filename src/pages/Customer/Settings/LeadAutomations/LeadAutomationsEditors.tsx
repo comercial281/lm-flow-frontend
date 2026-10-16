@@ -38,6 +38,9 @@ import {
 } from './acceptedByFilter';
 import { Seletor } from '@/components/base/Seletor';
 import Aviso from '@/components/base/Aviso';
+import {
+  AVISO_TRAVADO, ROTULO_FORA_DA_LISTA, ROTULO_TRAVADO, destinoTravado, instanciaDoModo, modoDoNumero, type ModoDoNumero,
+} from '@/features/whatsappGroups/destinoDoGrupo';
 import EmptyState from '@/components/base/EmptyState';
 import Carregando from '@/components/base/Carregando';
 import { BOOKED_BY_OPTIONS, BOOKED_BY_TRIGGERS, bookedByCondition, bookedByOf, bookedBySummary, type BookedBy } from './bookedByFilter';
@@ -741,7 +744,9 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
 
   // Grupos de WhatsApp pro dropdown do "Notificar grupo" (carrega da instância escolhida).
   const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
-  const [loadingGroups, setLoadingGroups] = useState(false);
+  const [loadingGroups, setLoadingGroups] = useState(action.type === 'notify_group');
+  // true só depois de uma carga bem-sucedida: erro de rede não pode travar destino salvo.
+  const [gruposCarregados, setGruposCarregados] = useState(false);
   // Por que a lista veio vazia (instância errada, fora do ar, sem grupo). Sem
   // isso o seletor só ficava sem opção, e não dava pra saber o que consertar.
   const [groupsReason, setGroupsReason] = useState<string | null>(null);
@@ -750,9 +755,10 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     if (action.type !== 'notify_group') return;
     let cancelled = false;
     setLoadingGroups(true);
+    setGruposCarregados(false);
     leadAutomationService
       .getGroupsResult(instanceParam || undefined)
-      .then(r => { if (!cancelled) { setGroups(r.groups); setGroupsReason(r.reason); } })
+      .then(r => { if (!cancelled) { setGroups(r.groups); setGroupsReason(r.reason); setGruposCarregados(true); } })
       .catch(() => {
         if (!cancelled) {
           setGroups([]);
@@ -1087,7 +1093,15 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
 
     // ----- notify_group -----
     // Backend: HTTParty.post envia { number: group_jid, text: message } pro Evolution.
-    case 'notify_group':
+    case 'notify_group': {
+      const destino = String(params.group_jid ?? '');
+      const modo = modoDoNumero(params.instance);
+      // Destino pela central que o cliente não enxerga (ex.: grupo interno
+      // escolhido pela Leal) fica travado. Pelo número próprio, nunca.
+      const travado = destinoTravado({
+        destino, modo, grupos: groups, ehEquipe: isSuperAdmin, carregando: loadingGroups || !gruposCarregados,
+        numerosDeUsuarios: usersWithWhatsapp.map(u => String(u.whatsapp_number)),
+      });
       return (
         <>
           {/* Instância: LISTA, não campo digitado. O nome tem de bater caractere a
@@ -1096,9 +1110,11 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               (cliente) continua com o campo livre. */}
           <Field
             label="Número"
-            hint="De qual WhatsApp sai o aviso — e de onde os grupos são listados. Para grupo de cliente use a central Operacional (LM01)."
+            hint={isSuperAdmin
+              ? 'De qual WhatsApp sai o aviso — e de onde os grupos são listados. Para grupo de cliente use a central Operacional (LM01).'
+              : 'De qual WhatsApp sai o aviso. Na central da Leal Mídia aparecem só os grupos liberados pra este CRM.'}
           >
-            {resources.evolutionInstances.length > 0 ? (
+            {isSuperAdmin ? (resources.evolutionInstances.length > 0 ? (
               <Seletor
                 value={String(params.instance ?? '')}
                 onChange={e => setParam('instance', e.target.value)}
@@ -1126,12 +1142,27 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
                 placeholder="Operacional (LM01)"
                 className="mt-1"
               />
+            )) : (
+              <Seletor
+                value={modo}
+                onChange={e => onChange({
+                  ...action,
+                  // troca de número zera o destino na mesma gravação (senão o grupo antigo trava)
+                  params: { ...params, instance: instanciaDoModo(e.target.value as ModoDoNumero), group_jid: '' },
+                })}
+                disabled={travado}
+                className={baseSelectClass}
+              >
+                <option value="proprio">WhatsApp deste CRM</option>
+                <option value="central">Central da Leal Mídia</option>
+              </Seletor>
             )}
           </Field>
           <Field label="Destino do lembrete *" hint={loadingGroups ? 'Carregando…' : 'O grupo do cliente, ou um usuário (vai no WhatsApp privado dele).'}>
             <Seletor
               value={String(params.group_jid ?? '')}
               onChange={e => setParam('group_jid', e.target.value)}
+              disabled={travado}
               className={baseSelectClass}
             >
               <option value="">{loadingGroups ? 'Carregando…' : 'Selecione o destino'}</option>
@@ -1152,13 +1183,18 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               {params.group_jid
                 && !groups.some(g => g.id === params.group_jid)
                 && !usersWithWhatsapp.some(u => String(u.whatsapp_number) === params.group_jid) && (
-                <option value={String(params.group_jid)}>{String(params.group_jid)}</option>
+                <option value={String(params.group_jid)}>
+                  {isSuperAdmin ? String(params.group_jid) : (modo === 'central' ? ROTULO_TRAVADO : ROTULO_FORA_DA_LISTA)}
+                </option>
               )}
             </Seletor>
+            {travado && <Aviso tom="neutro" compacto className="mt-1">{AVISO_TRAVADO}</Aviso>}
             {/* Lista vazia com o motivo: quase sempre é o nome da instância
                 escrito diferente do painel, ou a instância desconectada. */}
             {!loadingGroups && groups.length === 0 && groupsReason && (
-              <Aviso tom="atencao" compacto className="mt-1">{`Nenhum grupo apareceu: ${groupsReason}`}</Aviso>
+              <Aviso tom="atencao" compacto className="mt-1">
+                {modo === 'central' ? groupsReason : `Nenhum grupo apareceu: ${groupsReason}`}
+              </Aviso>
             )}
           </Field>
           <Field label="Mensagem *">
@@ -1172,6 +1208,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
           </Field>
         </>
       );
+    }
 
     // ----- notify_user -----
     // Backend: notify_user(user_id, message) -> manda no WhatsApp cadastrado do usuário.
@@ -1590,7 +1627,7 @@ export function formatActionSummary(
     case 'create_task':
       return p.title ? `Tarefa: ${p.title}` : '(tarefa sem título)';
     case 'notify_group':
-      return p.group_jid ? `Grupo: ${String(p.group_jid).slice(0, 30)}…` : '(sem grupo)';
+      return p.group_jid ? 'Grupo escolhido' : '(sem grupo)';
     case 'notify_user': {
       const u = resources.users.find(x => x.id === p.user_id);
       return u ? `Avisar: ${u.name}` : 'Avisar usuário: (não definido)';

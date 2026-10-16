@@ -6,6 +6,8 @@ const settings = vi.hoisted(() => ({ get: vi.fn(), update: vi.fn() }));
 const users = vi.hoisted(() => ({ getUsers: vi.fn() }));
 const grupos = vi.hoisted(() => ({ getGroups: vi.fn() }));
 const toasts = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+const equipe = vi.hoisted(() => ({ valor: false }));
+vi.mock('@/hooks/useIsSuperAdmin', () => ({ useIsSuperAdmin: () => equipe.valor }));
 vi.mock('sonner', () => ({ toast: toasts }));
 vi.mock('@/services/users/usersService', () => ({ default: users }));
 vi.mock('@/services/leadAutomation/leadAutomationService', () => ({ leadAutomationService: grupos }));
@@ -29,6 +31,7 @@ const chaveDoGrupo = async (nome: string) => (await screen.findAllByRole('switch
 
 beforeEach(() => {
   vi.clearAllMocks();
+  equipe.valor = false;
   limparPendentes();
   settings.get.mockResolvedValue(normalizarAvisos({
     gestor_user_ids: ['u1'], gestores: [{ id: 'u1', name: 'Ana Gestora', whatsapp_present: false }],
@@ -45,7 +48,34 @@ describe('Avisos da roleta', () => {
     expect(screen.getByRole('heading', { name: 'Gestor' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Grupo' })).toBeInTheDocument();
     for (const s of screen.getAllByRole('switch')) expect(s).not.toBeChecked();
-    expect(grupos.getGroups).toHaveBeenCalledWith('Operacional (LM01)', true);
+    expect(grupos.getGroups).toHaveBeenCalledWith('Operacional (LM01)');
+  });
+
+  it('grupo gravado que o cliente não vê aparece travado, sem nome', async () => {
+    settings.get.mockResolvedValue(normalizarAvisos({ group_jid: '8@g.us', group_name: null }));
+    grupos.getGroups.mockResolvedValue([{ id: '9@g.us', name: 'ALI x Leal Mídia' }]);
+    render(<AvisosAba />);
+    expect(await screen.findByRole('option', { name: 'Grupo definido pela Leal Mídia' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Grupo que recebe')).toBeDisabled();
+    expect(screen.getByText(/definido pela Leal Mídia\. Pra trocar/)).toBeInTheDocument();
+  });
+
+  it('equipe da Leal não vê o grupo travado e segue com o nome gravado', async () => {
+    equipe.valor = true;
+    settings.get.mockResolvedValue(normalizarAvisos({ group_jid: '8@g.us', group_name: 'Grupo interno' }));
+    grupos.getGroups.mockResolvedValue([{ id: '9@g.us', name: 'ALI x Leal Mídia' }]);
+    render(<AvisosAba />);
+    expect(await screen.findByRole('option', { name: 'Grupo interno' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText('Grupo que recebe')).toBeEnabled());
+  });
+
+  it('falha ao carregar a lista não trava o grupo gravado', async () => {
+    settings.get.mockResolvedValue(normalizarAvisos({ group_jid: '8@g.us', group_name: 'Meu grupo' }));
+    grupos.getGroups.mockRejectedValue(new Error('rede'));
+    render(<AvisosAba />);
+    expect(await screen.findByRole('option', { name: 'Meu grupo' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText('Grupo que recebe')).toBeEnabled());
+    expect(screen.queryByRole('option', { name: 'Grupo definido pela Leal Mídia' })).toBeNull();
   });
 
   it('chave vale na hora e manda o registro inteiro', async () => {

@@ -122,15 +122,86 @@ export function nameRuleHint(clientName: string): string {
   return `Sem cadastro, vale o grupo do número operacional cujo nome é "${nome} x Leal Mídia" (o nome precisa bater com o cadastro do cliente, e não pode existir outro cliente com o mesmo nome).`;
 }
 
+/** Texto sem acento, minúsculo, espaço único e sem sobra no fim: base de toda comparação de nome de grupo. */
+export function normalizeGroupName(t: string): string {
+  return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').replace(/[^a-z0-9]+$/, '').trim();
+}
+
 /** Os grupos que já têm cara de grupo de cliente vão primeiro na lista, ordenados; o resto depois. */
 export function sortGroupsForPicker(groups: WaGroup[], clientName: string): WaGroup[] {
-  const norm = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').replace(/[^a-z0-9]+$/, '').trim();
-  const alvo = norm(clientName);
+  const alvo = normalizeGroupName(clientName);
   const score = (g: WaGroup) => {
-    const n = norm(g.name);
+    const n = normalizeGroupName(g.name);
     if (alvo && n.startsWith(alvo)) return 0;
     if (n.endsWith('leal midia')) return 1;
     return 2;
   };
   return [...groups].sort((a, b) => score(a) - score(b) || a.name.localeCompare(b.name, 'pt-BR'));
+}
+
+// ── Lista de grupos liberados (desde 2026-10-15) ─────────────────────────────
+// A Leal monta, por cliente, os grupos da central que ele pode ver e usar.
+// Chave AUSENTE = cliente ainda não mapeado (vale a regra do nome); chave com
+// lista, mesmo vazia, = só a lista vale. O tipo vem gravado, nunca do nome.
+export type AllowedKind = 'cliente' | 'logs';
+export interface AllowedGroup { jid: string; name: string; kind: AllowedKind }
+export const ALLOWED_KEY = 'allowed_whatsapp_groups';
+export const ALLOWED_KIND_LABEL: Record<AllowedKind, string> = { cliente: 'Com o cliente', logs: 'Interno da Leal' };
+
+function sanitizeAllowed(list: unknown): AllowedGroup[] {
+  if (!Array.isArray(list)) return [];
+  const vistos = new Set<string>();
+  const out: AllowedGroup[] = [];
+  for (const raw of list) {
+    const g = (raw ?? {}) as Record<string, unknown>;
+    const jid = typeof g.jid === 'string' ? g.jid.trim() : '';
+    const kind = g.kind === 'cliente' || g.kind === 'logs' ? g.kind : null;
+    if (!isGroupJid(jid) || !kind || vistos.has(jid)) continue;
+    vistos.add(jid);
+    out.push({ jid, name: typeof g.name === 'string' ? g.name.trim() : '', kind });
+  }
+  return out;
+}
+
+export function allowedGroupsFrom(settings: Record<string, unknown> | undefined | null): AllowedGroup[] | null {
+  const s = settings || {};
+  if (!Object.prototype.hasOwnProperty.call(s, ALLOWED_KEY)) return null;
+  return sanitizeAllowed(s[ALLOWED_KEY]);
+}
+
+export function allowedGroupsPatch(list: AllowedGroup[]) {
+  return { [ALLOWED_KEY]: sanitizeAllowed(list) } as { allowed_whatsapp_groups: AllowedGroup[] };
+}
+
+export function addAllowedGroup(list: AllowedGroup[], group: WaGroup, kind: AllowedKind): AllowedGroup[] {
+  if (list.some(g => g.jid === group.jid)) return list;
+  return [...list, { jid: group.jid, name: group.name, kind }];
+}
+
+export function removeAllowedGroup(list: AllowedGroup[], jid: string): AllowedGroup[] {
+  return list.filter(g => g.jid !== jid);
+}
+
+/** Pré-preenchimento de quem ainda não foi mapeado: o grupo "Cliente x Leal Mídia" + os dois cadastros antigos. */
+export function suggestAllowedGroups(central: WaGroup[], clientName: string, legacy: ClientGroupJids): AllowedGroup[] {
+  const alvo = normalizeGroupName(clientName);
+  let lista: AllowedGroup[] = [];
+  for (const g of central) {
+    const n = normalizeGroupName(g.name);
+    if (alvo && n.startsWith(alvo) && n.endsWith('leal midia')) lista = addAllowedGroup(lista, g, 'cliente');
+  }
+  const nomeDe = (jid: string) => central.find(g => g.jid === jid)?.name ?? jid;
+  if (legacy.reminder) lista = addAllowedGroup(lista, { jid: legacy.reminder, name: nomeDe(legacy.reminder) }, 'cliente');
+  if (legacy.logs) lista = addAllowedGroup(lista, { jid: legacy.logs, name: nomeDe(legacy.logs) }, 'logs');
+  return lista;
+}
+
+export function allowedRow(g: AllowedGroup, central: WaGroup[] | null): { text: string; warning?: string } {
+  if (central === null) return { text: g.name || g.jid };
+  const vivo = central.find(c => c.jid === g.jid);
+  if (vivo) return { text: vivo.name };
+  return {
+    text: g.name || g.jid,
+    warning: 'Este grupo está na lista, mas não aparece entre os grupos do número operacional (foi apagado, ou o número saiu dele). Remova ou troque.',
+  };
 }

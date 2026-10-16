@@ -1,18 +1,14 @@
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { MessageCircle } from 'lucide-react';
 import api from '@/services/core/api';
 import Chave from '@/components/base/Chave';
-import { Seletor } from '@/components/base/Seletor';
 import { Button } from '@/components/ui/ds';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { clientesService } from '@/services/superAdmin/clientesService';
 import ConfirmarDigitando from '../ConfirmarDigitando';
 import KitBoasVindasBloco from '../KitBoasVindasBloco';
-import {
-  GROUP_KIND_LABEL, groupJidsFrom, groupLabel, groupsPatch, nameRuleHint, sortGroupsForPicker,
-  type ClientGroupJids, type ClientGroupKind, type WaGroup,
-} from '../clientGroups';
+import { groupJidsFrom, groupsPatch, type ClientGroupJids } from '../clientGroups';
+import { GruposLiberadosBloco } from './GruposLiberadosBloco';
 import { pedidoLigarDemo, pedidoSemearDemo } from '../confirmacoes';
 import { SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 import type { PropsDaAba } from './Pagina';
@@ -42,7 +38,7 @@ const motivoDoErro = (e: unknown): string | undefined =>
 export default function AbaOperacao({ cliente, aoMudar }: PropsDaAba) {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const s = cliente.settings ?? {};
-  const [groupJids, setGroupJids] = useState<ClientGroupJids>(groupJidsFrom(s));
+  const [groupJids] = useState<ClientGroupJids>(groupJidsFrom(s));
   // Legado only_ad_leads=true barrava SÓ o WhatsApp orgânico. Espelha LeadOrigin::PipeEntry::LEGACY_ONLY_ADS.
   // Ref síncrona: dois cliques seguidos, antes do 1º PATCH voltar, partem do mesmo valor atual (otimista).
   const fontes = useRef<string[]>(
@@ -52,14 +48,6 @@ export default function AbaOperacao({ cliente, aoMudar }: PropsDaAba) {
   );
   const [, redesenhar] = useState(0);
   const [demo, setDemo] = useState(s.demo_mode === true);
-
-  // Grupos de WhatsApp: a lista do número operacional é uma ida à Evolution, só carrega ao clicar em Trocar.
-  const [waGroups, setWaGroups] = useState<WaGroup[] | null>(null);
-  const [carregandoGrupos, setCarregandoGrupos] = useState(false);
-  const [erroDeGrupos, setErroDeGrupos] = useState<string | null>(null);
-  const [editando, setEditando] = useState<ClientGroupKind | null>(null);
-  const [escolhido, setEscolhido] = useState('');
-  const [gravandoGrupo, setGravandoGrupo] = useState(false);
 
   // Demonstração
   const [semeando, setSemeando] = useState(false);
@@ -89,37 +77,6 @@ export default function AbaOperacao({ cliente, aoMudar }: PropsDaAba) {
       redesenhar((n) => n + 1);
       throw e;
     }
-  };
-
-  const carregarGrupos = async () => {
-    if (waGroups !== null || carregandoGrupos) return;
-    setCarregandoGrupos(true);
-    setErroDeGrupos(null);
-    try {
-      const d = await clientesService.dadosDeProvisionamento();
-      setWaGroups((d.whatsapp_groups as WaGroup[]) || []);
-    } catch {
-      setErroDeGrupos('Não consegui listar os grupos do número operacional agora.');
-    } finally { setCarregandoGrupos(false); }
-  };
-
-  const editarGrupo = (kind: ClientGroupKind) => {
-    setEditando(kind);
-    setEscolhido(groupJids[kind]);
-    void carregarGrupos();
-  };
-
-  const gravarGrupo = async (kind: ClientGroupKind, jid: string) => {
-    const proximo = { ...groupJids, [kind]: jid };
-    setGravandoGrupo(true);
-    try {
-      await patch({ ...groupsPatch(proximo) });
-      setGroupJids(proximo);
-      setEditando(null);
-      toast.success(jid ? 'Grupo gravado.' : 'Cadastro do grupo limpo — volta a valer o nome do grupo.');
-    } catch {
-      toast.error('Falha ao gravar o grupo de WhatsApp.');
-    } finally { setGravandoGrupo(false); }
   };
 
   const mudarDemo = async (ligar: boolean) => {
@@ -193,64 +150,7 @@ export default function AbaOperacao({ cliente, aoMudar }: PropsDaAba) {
         </div>
       </section>
 
-      <section aria-labelledby="grupos" className={SECAO}>
-        <h2 id="grupos" className={`flex items-center gap-2 ${TITULO_SECAO}`}><MessageCircle className="h-4 w-4" /> Grupos WhatsApp</h2>
-        <p className="mb-4 mt-1 text-xs text-muted-foreground">
-          {nameRuleHint(cliente.name)} Cadastrar aqui só é preciso quando o nome do grupo foge desse padrão — e o cadastro vence o nome.
-        </p>
-        <div className="flex flex-col gap-2">
-          {(['reminder', 'logs'] as ClientGroupKind[]).map((kind) => {
-            const meta = GROUP_KIND_LABEL[kind];
-            const atual = groupLabel(groupJids[kind], waGroups, kind);
-            const emEdicao = editando === kind;
-            const lista = waGroups ? sortGroupsForPicker(waGroups, cliente.name) : [];
-            const foraDaLista = !!groupJids[kind] && waGroups !== null && !waGroups.some((g) => g.jid === groupJids[kind]);
-            return (
-              <div key={kind} className="rounded-md bg-muted/50 px-2.5 py-2">
-                <div className="flex items-start gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium">{meta.label}</div>
-                    <div className="text-xs text-muted-foreground">{meta.hint}</div>
-                    {!emEdicao && (
-                      <div className={`mt-1 truncate text-xs ${atual.source === 'nome' ? 'italic text-muted-foreground' : atual.source === 'fora' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}
-                        title={groupJids[kind] || undefined}>
-                        {atual.text}
-                      </div>
-                    )}
-                    {!emEdicao && atual.warning && <div className="mt-0.5 text-[11px] text-amber-600 dark:text-amber-400">{atual.warning}</div>}
-                  </div>
-                  {!emEdicao && (
-                    <Button size="sm" variant="outline" onClick={() => editarGrupo(kind)} disabled={gravandoGrupo}>
-                      {groupJids[kind] ? 'Trocar' : 'Definir'}
-                    </Button>
-                  )}
-                </div>
-                {emEdicao && (
-                  <div className="mt-2 flex flex-col gap-1.5">
-                    {erroDeGrupos && <div className="text-xs text-amber-600 dark:text-amber-400">{erroDeGrupos}</div>}
-                    <Seletor aria-label={`Grupo: ${meta.label}`} value={escolhido} onChange={(e) => setEscolhido(e.target.value)} disabled={carregandoGrupos} className="w-full">
-                      <option value="">
-                        {carregandoGrupos ? 'Carregando grupos do número operacional...'
-                          : kind === 'reminder' ? '— sem cadastro (reconhecer pelo nome do grupo) —' : '— sem cadastro —'}
-                      </option>
-                      {/* O grupo gravado que sumiu da lista continua escolhível: sumir com ele faria o Salvar gravar vazio sem ninguém ver. */}
-                      {foraDaLista && <option value={groupJids[kind]}>{groupJids[kind]} (gravado, fora da lista)</option>}
-                      {lista.map((g) => <option key={g.jid} value={g.jid}>{g.name}</option>)}
-                    </Seletor>
-                    {waGroups !== null && waGroups.length === 0 && !carregandoGrupos && (
-                      <div className="text-xs text-amber-600 dark:text-amber-400">O número operacional não devolveu grupo nenhum.</div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" onClick={() => void gravarGrupo(kind, escolhido)} disabled={gravandoGrupo || carregandoGrupos}>Salvar</Button>
-                      <Button size="sm" variant="outline" onClick={() => setEditando(null)} disabled={gravandoGrupo}>Cancelar</Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
+      <GruposLiberadosBloco cliente={cliente} groupJids={groupJids} patch={patch} />
 
       <KitBoasVindasBloco tenantId={cliente.id} />
 
