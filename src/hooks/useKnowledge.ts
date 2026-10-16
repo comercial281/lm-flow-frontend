@@ -13,6 +13,7 @@ import {
   LMHUB_SUPABASE_URL,
 } from '@/lib/supabaseLmHub';
 import { useAuthStore } from '@/store/authStore';
+import { getTenantSlug } from '@/services/core/tenant';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -188,9 +189,11 @@ function errMsg(e: unknown): string {
 export const TENANT_SLUG = ((import.meta.env.VITE_TENANT_SLUG as string | undefined) ?? '').trim();
 
 // Escopo pras ações do aluno (progresso/avaliação/comentários), que exigem um
-// tenant não-vazio. No deploy raiz (admin, sem tenant) cai pra 'root' — assim o
-// super-admin consegue testar/usar sem erro. Em deploy de cliente, = TENANT_SLUG.
-export const SCOPE_SLUG = TENANT_SLUG || 'root';
+// tenant não-vazio. É o cliente do endereço (fulano.lmflow.com.br -> "fulano"):
+// o deploy é um só, então o VITE_TENANT_SLUG de build fica só de legado. Sem
+// cliente (app raiz) cai pra 'root' — assim o super-admin testa sem erro.
+const ADDRESS_TENANT = getTenantSlug();
+export const SCOPE_SLUG = ADDRESS_TENANT || TENANT_SLUG || 'root';
 
 // Identidade do usuário logado (auth Rails) — usada pra filtrar progresso e
 // marcar autoria de comentários no lado da leitura. A escrita real é carimbada
@@ -209,6 +212,8 @@ function tenantApiUrl(): string {
   );
 }
 
+const LEARNER_RESOURCES = new Set(['progress', 'comments', 'ratings']);
+
 async function callAdmin(
   resource:
     | 'categories' | 'docs' | 'modules' | 'lessons' | 'links'
@@ -222,13 +227,19 @@ async function callAdmin(
   const apiUrl = tenantApiUrl();
   if (!apiUrl) throw new Error('Não achei o servidor desta conta. Recarregue a página e tente de novo.');
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+    'X-Tenant-API-URL': apiUrl,
+  };
+  // Ações do aluno: o usuário vive no schema do cliente, então a função precisa
+  // saber qual é pra confirmar quem ele é (sem isso o servidor responde 401).
+  // A edição das aulas segue sem: super-admin só é reconhecido fora de cliente.
+  if (ADDRESS_TENANT && LEARNER_RESOURCES.has(resource)) headers['X-Tenant'] = ADDRESS_TENANT;
+
   const res = await fetch(`${LMHUB_SUPABASE_URL}/functions/v1/tutorial-admin`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      'X-Tenant-API-URL': apiUrl,
-    },
+    headers,
     body: JSON.stringify({ resource, op, payload }),
   });
 
