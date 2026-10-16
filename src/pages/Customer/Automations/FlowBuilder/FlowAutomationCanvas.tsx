@@ -492,7 +492,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
         draggable: builderTools,
         connectable: builderTools,
         data: {
-          node: n, lookups, problem: problems[n.id] ?? null,
+          node: n, lookups, pessoal, problem: problems[n.id] ?? null,
           editing: openPanel?.type === 'node' && openPanel.id === n.id,
           highlighted: highlighted === n.id,
           guideMark: st ? { step: st.step, state: st.done ? 'done' : step?.nodeId === n.id ? 'current' : 'pending' } : null,
@@ -502,7 +502,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
       };
     });
     return [startNode, ...rest];
-  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, addFrom]);
+  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, addFrom, pessoal]);
 
   const reactFlowEdges: Edge[] = useMemo(
     () => graphEdges.map(e => ({
@@ -807,6 +807,9 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
               flowKind={kind}
               guided={guided}
               saving={saving}
+              pessoal={pessoal}
+              numeroPessoal={capacidades.principalPhone}
+              numeroPessoalCarregando={capacidades.loading}
             />
           )}
           {openPanel?.type === 'trigger' && !isConversation && (

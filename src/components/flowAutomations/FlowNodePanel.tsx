@@ -4,6 +4,7 @@ import Aviso from '@/components/base/Aviso';
 import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
 import SendFromField from '@/components/numbers/SendFromField';
+import { SaiPeloSeuWhatsApp } from './SaiPeloSeuWhatsApp';
 import { applySendFrom, sendFromOf } from '@/features/numbers/sendFrom';
 import type { FlowAutomationKind, FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
 import { ActionEditor, type AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
@@ -59,6 +60,12 @@ interface Props {
   guided?: boolean;
   /** Salvando no servidor (o passo do guia grava na hora). */
   saving?: boolean;
+  /** Automação pessoal do corretor: a mensagem sai pelo WhatsApp dele. */
+  pessoal?: boolean;
+  /** Telefone do número principal do corretor (de usePersonalCapabilities). */
+  numeroPessoal?: string | null;
+  /** O número do corretor ainda está carregando. */
+  numeroPessoalCarregando?: boolean;
 }
 
 // "Por um tempo, saindo só em horário comercial" (o modo `schedule`) virou a
@@ -284,7 +291,23 @@ function LabelChecklist({ selected, onChange, resources }: { selected: string[];
 // Painel lateral de um bloco (sprint 4; antes era uma janela): rascunho local,
 // só aplica em "Salvar". O fluxo inteiro só vai pro servidor no Salvar do topo
 // do canvas.
-export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false }: Props) {
+const OWNER_SEND = { send_from: 'owner', send_from_inbox_id: '' } as const;
+// Ações de lead que mandam mensagem: no pessoal, todas saem pelo número do dono.
+const SENDING_LEAD_ACTIONS = new Set([
+  'send_whatsapp_message', 'send_audio', 'send_image', 'send_video', 'send_document', 'send_sticker', 'send_quick_reply',
+]);
+
+/** Corretor: o bloco que manda mensagem grava `send_from: 'owner'` (o servidor também força). */
+function withOwnerSendFrom(kind: string, config: FlowNodeConfig): FlowNodeConfig {
+  if (kind === 'send_whatsapp') return applySendFrom(config, OWNER_SEND);
+  if (kind === 'lead_action' && SENDING_LEAD_ACTIONS.has(String(config.action_type))) {
+    const params = (config.params ?? {}) as Record<string, unknown>;
+    return { ...config, params: applySendFrom(params, OWNER_SEND) } as FlowNodeConfig;
+  }
+  return config;
+}
+
+export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false }: Props) {
   const [label, setLabel] = useState(node?.label || '');
   const [config, setConfig] = useState<FlowNodeConfig>(node?.config || {});
   const [problem, setProblem] = useState<string | null>(null);
@@ -391,6 +414,15 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
     switch (activeNode.kind) {
       case 'send_whatsapp': {
         const envio = sendFromOf(config);
+        const sendFromField = pessoal
+          ? <SaiPeloSeuWhatsApp phone={numeroPessoal} loading={numeroPessoalCarregando} />
+          : (
+            <SendFromField
+              scope="lead_automation_rules"
+              value={envio}
+              onChange={v => setConfig(c => applySendFrom(c, v))}
+            />
+          );
         // Funil de conversa (sprint 4): texto, mídia ou contato, pelo número da conversa.
         if (isConversation) {
           return <FunnelMessageFields config={config} onChange={setConfig} conversation />;
@@ -399,11 +431,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
           return (
             <>
               <FunnelMessageFields config={config} onChange={setConfig} />
-              <SendFromField
-                scope="lead_automation_rules"
-                value={envio}
-                onChange={v => setConfig(c => applySendFrom(c, v))}
-              />
+              {sendFromField}
             </>
           );
         }
@@ -440,11 +468,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
               </label>
               <p className="pl-6 text-xs text-muted-foreground">{BOOK_HELP}</p>
             </div>
-            <SendFromField
-              scope="lead_automation_rules"
-              value={envio}
-              onChange={v => setConfig(c => applySendFrom(c, v))}
-            />
+            {sendFromField}
             <ProgressFields config={config} onChange={setConfig} />
             <p className="text-xs text-muted-foreground">A mensagem sai marcada como automática, igual o Follow-up.</p>
           </>
@@ -630,6 +654,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
             action={leadActionOf(config)}
             onChange={next => setConfig(leadActionConfig(next))}
             resources={resources}
+            pessoal={pessoal}
           />
         );
       default:
@@ -640,9 +665,10 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
   const save = () => {
     // "Mover de etapa" com o `stage_slug` dos modelos antigos: salvar grava
     // como `stage_name`, que é o que o motor lê.
-    const finalConfig = activeNode.kind === 'move_stage' && moveStageModeOf(config) === 'name'
+    const baseConfig = activeNode.kind === 'move_stage' && moveStageModeOf(config) === 'name'
       ? withStageName(config, stageNameOf(config))
       : config;
+    const finalConfig = pessoal ? withOwnerSendFrom(activeNode.kind, baseConfig) : baseConfig;
     // Mesma régua do cartão e da chave de ligar (readiness.ts), e o que o passo
     // do guia pede (sprint 4).
     const issue = nodeProblem({ kind: activeNode.kind, config: finalConfig }) ?? guideRequiredProblem(guide, finalConfig);

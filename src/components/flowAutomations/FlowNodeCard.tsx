@@ -28,6 +28,8 @@ export interface FlowLookups extends ConditionLookups {
 export interface FlowNodeCardData {
   node: FlowAutomationNode;
   lookups: FlowLookups;
+  /** Fluxo pessoal do corretor: a mensagem sai pelo WhatsApp dele. */
+  pessoal?: boolean;
   /** O que falta preencher no bloco (readiness.ts), ou null. */
   problem?: string | null;
   /** O bloco está aberto no painel lateral. */
@@ -80,7 +82,8 @@ const own = (fn: () => void) => (e: MouseEvent) => {
 
 const HIGHLIGHT_CLASS = 'ring-4 ring-amber-400/80 animate-pulse';
 
-function sendFromLine(config: Record<string, unknown>): string | null {
+export function sendFromLine(config: Record<string, unknown>, pessoal = false): string | null {
+  if (pessoal) return 'Pelo seu WhatsApp';
   const envio = sendFromOf(config);
   if (envio.send_from === 'owner') return 'Pelo número do responsável pelo lead';
   if (envio.send_from === 'number') return 'Por um número específico';
@@ -200,7 +203,7 @@ export function FlowStartNode({ data }: NodeProps) {
 }
 
 export function FlowNodeCard({ id, data, selected }: NodeProps) {
-  const { node, lookups, problem, editing, highlighted, guideMark, allow, onEdit, onDuplicate, onRemove, onAddFrom } = data as unknown as FlowNodeCardData;
+  const { node, lookups, pessoal, problem, editing, highlighted, guideMark, allow, onEdit, onDuplicate, onRemove, onAddFrom } = data as unknown as FlowNodeCardData;
   const can = allow ?? { edit: true, duplicate: true, remove: true, add: true };
   const hidden = !isVisibleNode(node);
   const color = hidden ? '#94a3b8' : nodeColor(node.kind, blockGroup(node));
@@ -208,7 +211,7 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
   const branching = isBranching(node);
   const branches = branchHandles(node);
   const title = node.label || blockLabel(node);
-  const envio = node.kind === 'send_whatsapp' ? sendFromLine(node.config || {}) : null;
+  const envio = node.kind === 'send_whatsapp' ? sendFromLine(node.config || {}, !!pessoal) : null;
   const progresso = node.kind === 'send_whatsapp' ? progressLine(node.config) : null;
 
   return (

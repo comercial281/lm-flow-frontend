@@ -728,6 +728,8 @@ interface ActionEditorProps {
   action: LeadAutomationAction;
   onChange: (next: LeadAutomationAction) => void;
   resources: AutomationResources;
+  /** Automação pessoal do corretor: sem "Enviar pelo número" nem "Número de envio (admin)". */
+  pessoal?: boolean;
 }
 
 // Chips de variável: 1 clique insere o token no fim do campo. A lista é a
@@ -737,7 +739,7 @@ function VariableChips({ onInsert }: { onInsert: (token: string) => void }) {
   return <VariableChipBar onInsert={onInsert} />;
 }
 
-export function ActionEditor({ action, onChange, resources }: ActionEditorProps) {
+export function ActionEditor({ action, onChange, resources, pessoal = false }: ActionEditorProps) {
   const params = (action.params ?? {}) as Record<string, string | number>;
   const setParam = (key: string, value: string | number) =>
     onChange({ ...action, params: { ...params, [key]: value } });
@@ -927,12 +929,14 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
             <VariableChips onInsert={tok => appendToParam('message', tok)} />
             {avisoNome && <p className="text-xs text-amber-600 mt-1">{avisoNome}</p>}
           </Field>
-          <SendFromField
-            scope="lead_automation_rules"
-            value={envio}
-            onChange={v => onChange({ ...action, params: applySendFrom(params, v) })}
-          />
-          {isSuperAdmin && resources.evolutionInstances.length > 0 && !envio.send_from && (
+          {!pessoal && (
+            <SendFromField
+              scope="lead_automation_rules"
+              value={envio}
+              onChange={v => onChange({ ...action, params: applySendFrom(params, v) })}
+            />
+          )}
+          {!pessoal && isSuperAdmin && resources.evolutionInstances.length > 0 && !envio.send_from && (
             <Field
               label="Número de envio (admin)"
               hint="Só você vê este campo. Deixe em branco para usar o número padrão do cliente."
