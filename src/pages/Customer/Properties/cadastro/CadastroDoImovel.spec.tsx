@@ -288,7 +288,7 @@ describe('CadastroDoImovel: campos por tipo (herdados da janela)', () => {
     abrir('/properties/new?tipo=empreendimento');
     fireEvent.change(await screen.findByRole('combobox', { name: 'Mês da previsão de entrega' }), { target: { value: '12' } });
     fireEvent.change(screen.getByRole('combobox', { name: 'Ano da previsão de entrega' }), { target: { value: '2027' } });
-    fireEvent.change(screen.getByPlaceholderText('450000'), { target: { value: '389900' } });
+    fireEvent.change(screen.getByPlaceholderText('450.000'), { target: { value: '389900' } });
     fireEvent.change(screen.getByPlaceholderText('Ex: Apartamento 3 quartos - Jardim Europa'), { target: { value: 'Vista Taquaral' } });
     fireEvent.click(screen.getByRole('button', { name: 'Criar e escolher onde divulgar →' }));
     await waitFor(() => expect(svc.create).toHaveBeenCalledWith(expect.objectContaining({ delivery_forecast: '2027-12', stage: 'launch' })));
@@ -300,7 +300,7 @@ describe('CadastroDoImovel: campos por tipo (herdados da janela)', () => {
     const mes = await screen.findByRole('combobox', { name: 'Mês da previsão de entrega' });
     fireEvent.change(mes, { target: { value: '12' } });
     expect(mes).toHaveValue('12');
-    fireEvent.change(screen.getByPlaceholderText('450000'), { target: { value: '389900' } });
+    fireEvent.change(screen.getByPlaceholderText('450.000'), { target: { value: '389900' } });
     fireEvent.change(screen.getByPlaceholderText('Ex: Apartamento 3 quartos - Jardim Europa'), { target: { value: 'Vista Taquaral' } });
     fireEvent.click(screen.getByRole('button', { name: 'Criar e escolher onde divulgar →' }));
     await waitFor(() => expect(svc.create).toHaveBeenCalledWith(expect.objectContaining({ delivery_forecast: null })));
@@ -310,7 +310,7 @@ describe('CadastroDoImovel: campos por tipo (herdados da janela)', () => {
     svc.create.mockResolvedValue({ id: 'n1', listing_kind: 'development' });
     abrir('/properties/new?tipo=empreendimento');
     await userEvent.click(await screen.findByRole('button', { name: /Adicionar tipologia/ }));
-    fireEvent.change(screen.getByPlaceholderText('450000'), { target: { value: '389900' } });
+    fireEvent.change(screen.getByPlaceholderText('450.000'), { target: { value: '389900' } });
     fireEvent.change(screen.getByPlaceholderText('Ex: Apartamento 3 quartos - Jardim Europa'), { target: { value: 'Vista Taquaral' } });
     fireEvent.click(screen.getByRole('button', { name: 'Criar e escolher onde divulgar →' }));
     await waitFor(() => expect(svc.create).toHaveBeenCalledWith(expect.objectContaining({ typologies: [] })));

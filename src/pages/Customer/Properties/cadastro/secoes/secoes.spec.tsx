@@ -11,6 +11,7 @@ import SecaoDadosInternos from './SecaoDadosInternos';
 import SecaoComissao from './SecaoComissao';
 import SecaoObra from './SecaoObra';
 import SecaoValores from './SecaoValores';
+import SecaoTipologias from './SecaoTipologias';
 
 const form = { title: '', transaction_type: 'sale', category_type: 'residential', property_type: 'house', status: 'active', stage: 'ready' } as PropertyFormData;
 
@@ -144,5 +145,22 @@ describe('seções novas', () => {
     render(<SecaoComissao form={{ ...form, commission: { notes: 'n' } }} setF={setF} editando={null} />);
     await userEvent.type(screen.getByLabelText('Percentual'), '5');
     expect(setF).toHaveBeenLastCalledWith({ commission: { notes: 'n', percent: '5' } });
+  });
+  it('Tipologias: com preço nas plantas, o Valor de venda é o "a partir de" travado', () => {
+    render(<SecaoTipologias form={{ ...form, listing_kind: 'development', sale_price: 244.63,
+      typologies: [{ name: '2 dorms', sale_price: 267818.06 }, { name: '1 dorm', sale_price: 244633 }] }} setF={vi.fn()} editando={null} />);
+    const campo = screen.getByLabelText('Valor de venda');
+    expect(campo).toBeDisabled();
+    expect(campo).toHaveValue('244.633');
+    expect(screen.getByText(/A partir de: o menor preço das tipologias/)).toBeInTheDocument();
+  });
+
+  it('Tipologias: sem preço nas plantas, o Valor de venda é digitado', () => {
+    render(<SecaoTipologias form={{ ...form, listing_kind: 'development', sale_price: 450000,
+      typologies: [{ name: '2 dorms', bedrooms: 2 }] }} setF={vi.fn()} editando={null} />);
+    const campo = screen.getByLabelText('Valor de venda');
+    expect(campo).toBeEnabled();
+    expect(campo).toHaveValue('450.000');
+    expect(screen.queryByText(/A partir de: o menor preço das tipologias/)).toBeNull();
   });
 });

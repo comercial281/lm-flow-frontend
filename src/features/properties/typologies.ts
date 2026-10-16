@@ -105,6 +105,13 @@ export function typologyHeadline(list?: PropertyTypology[] | null): string | nul
   return parts.length ? parts.join(' · ') : null;
 }
 
+/** "A partir de": menor preço de venda entre as plantas; nulo se nenhuma tem preço.
+ *  Mesma regra do servidor (`Property#typology_min_sale_price`): mudou um, muda o outro. */
+export function menorPrecoDasTipologias(list?: PropertyTypology[] | null): number | null {
+  const precos = (list ?? []).map(t => Number(t.sale_price ?? 0)).filter(v => v > 0);
+  return precos.length ? Math.min(...precos) : null;
+}
+
 /** Descarta as linhas em branco antes de mandar pro backend (ele faria o mesmo). */
 export function cleanTypologies(list?: PropertyTypology[] | null): PropertyTypology[] {
   if (!list?.length) return [];
