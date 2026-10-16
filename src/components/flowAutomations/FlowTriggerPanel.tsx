@@ -203,7 +203,6 @@ export function FlowTriggerPanel({
               resources={resources}
               groups={soGatilhos}
               restrito={restrito}
-          restrito={restrito}
               semQuemAceitou={semFiltroDeQuemAceitou}
               label="Ou quando"
               ariaLabel={`Ou quando ${i + 1}`}
