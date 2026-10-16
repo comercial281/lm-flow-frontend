@@ -9074,3 +9074,31 @@ Armadilhas:
 4. **As regras ficam fora do JSX, com spec:** `PooledClients/clientGroups.ts` (montar a lista, sugestão, payload) e `src/features/whatsappGroups/destinoDoGrupo.ts` (como o destino aparece e quando trava).
 5. **Escape de acento no `clientGroups.ts`:** a ferramenta de edição já converteu 5 vezes o intervalo de acentos (`̀-ͯ`) no caractere literal. O spec pega; não "arrumar" na mão.
 6. **Ambiente sem pnpm:** instalar com `npm ci --legacy-peer-deps` e não commitar `yarn.lock` nem lockfile alterado.
+
+## Automações por cargo (desde 2026-10-15)
+
+*"Temos que limitar as funções que cada um dos cargos vai poder fazer dentro do construtor... o corretor ... só pode aparecer pra ele o número dele pra enviar."* O corretor passa a montar as próprias automações, só com o que cabe no cargo dele e sempre saindo pelo WhatsApp dele. O gestor continua vendo e mexendo em tudo. O servidor decide (lm-flow, branch `claude/automacoes-por-cargo`); a tela só esconde, deixa cinza e avisa.
+
+O que aparece na tela:
+
+- **Menu → Automações** abre para o corretor que tem "Automações próprias" (`flow_automations.own`), mesmo com a chave do cliente "Gerenciar automações" desligada. O flag de catálogo `lead_automations` continua valendo.
+- **Lista de automações:** o corretor vê as abas **Minhas** e **Da equipe**; a da equipe é só leitura (com **Ver** e **Duplicar pra ter a sua cópia**, sem chave Ligado, Excluir nem Arquivar). Duplicar uma da equipe cria a cópia pessoal e leva pra **Minhas**. O gestor vê **Todas**, **Minhas**, **Da equipe** e **Dos corretores** (com o selo "De <nome>"), o botão **Nova da equipe** e a opção de marcar uma automação como da equipe.
+- **Modelos:** o corretor aplica modelo e o servidor força pessoal. O gestor aplicando pela aba **Da equipe** cria da equipe; pela aba **Minhas** cria pessoal; em **Todas** e **Dos corretores** o servidor decide (gestor = equipe).
+- **Construtor do corretor:** o seletor de gatilho mostra só os 14 gatilhos do cargo (grupos vazios somem). Automação antiga com gatilho fora do cargo mostra "(Indisponível)" no seletor e o aviso *"Este gatilho não está disponível pro seu cargo."* Na paleta, só os blocos do cargo; os que dependem de número ou de IA aparecem como **Indisponível** quando o corretor não tem número próprio (ou IA Vendedora). Nos blocos de mensagem, no lugar de "Enviar pelo número" aparece **Sai pelo seu WhatsApp (número)**.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Corretor só cria automação pessoal**, só dos leads dele e só pelo número dele.
+2. **"Da equipe" = a imobiliária toda**, e só o gestor marca.
+3. **Automação sem dono é da equipe.** Gestor que cria sem escolher cria da equipe.
+4. **Gestor vê todas**, as dele, as da equipe e as dos corretores.
+5. **Corretor vê as dele em todo cliente**, mesmo com a chave do cliente desligada. O que ele não faz é o que não é do cargo: bloco ou gatilho fora da lista fica **Indisponível**.
+
+Armadilhas:
+
+1. **O backend vem PRIMEIRO** (lm-flow `claude/automacoes-por-cargo`, base `saas-multitenant`). Contra o servidor antigo não existem `permissions`, dono nem equipe, e o corretor ficaria sem lista. Merge é deploy: só com ok do Tony, backend antes.
+2. **Quem pode o quê vem do servidor** (`permissions.personal`, `can_edit`, `can_mark_team` em cada automação). O corretor fecha por padrão: só edita com `can_edit === true`; o gestor só perde quando vem `false`.
+3. **As regras do cargo estão espelhadas em `src/features/flowAutomations/personal.ts`** (gatilhos, blocos nativos, ações de lead). Mudou a lista no servidor (`PersonalPolicy`), muda aqui, com o spec.
+4. **Menu:** a chave do cliente só barra quem entra por `flow_automations.read` (`clientToggleSoPara`). As rotas usam `permissions={[...]}` (várias chaves, `permissionsFromRoute`) e o spec de fonte `permissionRoutes.source.spec.ts` confere mapa, rota e menu juntos.
+5. **`usePersonalCapabilities` fecha por padrão enquanto carrega** (sem número, sem IA): nada de bloco liberado antes da resposta.
+6. **Modelo: `team` só vai quando o gestor está em Minhas ou Da equipe.** Corretor nunca manda `team`; o `applyTemplate` sem opção deixa o servidor decidir.
