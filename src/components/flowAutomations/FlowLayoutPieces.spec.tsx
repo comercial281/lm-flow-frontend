@@ -24,8 +24,9 @@ describe('lista de blocos', () => {
     ['Mensagem', 'Lead', 'IA', 'Distribuição', 'Notificação', 'Controle'].forEach(section => {
       expect(screen.getByRole('region', { name: section })).toBeTruthy();
     });
-    fireEvent.change(screen.getByLabelText('Buscar blocos'), { target: { value: 'audio' } });
-    expect(screen.getByRole('button', { name: /Mandar áudio/ })).toBeTruthy();
+    // "Mandar áudio" saiu da lista no PR 8 (virou item do bloco Mensagem).
+    fireEvent.change(screen.getByLabelText('Buscar blocos'), { target: { value: 'rapida' } });
+    expect(screen.getByRole('button', { name: /Mandar resposta rápida/ })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Esperar/ })).toBeNull();
     fireEvent.change(screen.getByLabelText('Buscar blocos'), { target: { value: 'xyz' } });
     expect(screen.getByText('Nenhum bloco com esse nome.')).toBeTruthy();
@@ -85,7 +86,7 @@ describe('janela do bloco', () => {
   });
 
   it('size 2xl alarga a janela', () => {
-    render(<FlowBlockDialog title="Mandar WhatsApp" size="2xl" onClose={vi.fn()}><p>x</p></FlowBlockDialog>);
+    render(<FlowBlockDialog title="Mensagem" size="2xl" onClose={vi.fn()}><p>x</p></FlowBlockDialog>);
     expect(screen.getByRole('dialog').className).toContain('max-w-2xl');
   });
 

@@ -11,10 +11,11 @@ const saveFlow = vi.hoisted(() => vi.fn());
 const update = vi.hoisted(() => vi.fn());
 const toggle = vi.hoisted(() => vi.fn());
 const duplicate = vi.hoisted(() => vi.fn());
+const uploadMedia = vi.hoisted(() => vi.fn());
 const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn(), info: vi.fn() }));
 
 vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
-  flowAutomationsService: { get, saveFlow, update, toggle, duplicate, testRun: vi.fn(), movePositions: vi.fn(), uploadMedia: vi.fn() },
+  flowAutomationsService: { get, saveFlow, update, toggle, duplicate, testRun: vi.fn(), movePositions: vi.fn(), uploadMedia },
   flowAutomationFoldersService: {},
 }));
 vi.mock('@/services/messageFunnels/messageFunnelsService', () => ({
@@ -96,6 +97,7 @@ beforeEach(() => {
   update.mockReset();
   toggle.mockReset();
   duplicate.mockReset();
+  uploadMedia.mockReset();
   Object.values(toast).forEach(fn => fn.mockReset());
   try {
     window.localStorage.clear();
@@ -142,7 +144,9 @@ describe('construção guiada', () => {
     const [, payload] = saveFlow.mock.calls[0];
     const m1 = payload.nodes.find((n: { id: string }) => n.id === 'm1');
     expect(m1.guide_done).toBe(true);
-    expect(m1.config.text).toBe('Oi {{nome}}, separei um imóvel');
+    // PR 8: a mensagem vai como sequência de 1 item, com o id do formato antigo.
+    expect(m1.config.items).toEqual([{ id: 'legado', kind: 'text', text_content: 'Oi {{nome}}, separei um imóvel' }]);
+    expect(m1.config.text).toBe('');
     expect(m1.guide).toBeUndefined();
     // Os outros blocos não confirmam passo.
     expect(payload.nodes.find((n: { id: string }) => n.id === 'm2').guide_done).toBeUndefined();
@@ -151,6 +155,32 @@ describe('construção guiada', () => {
 
     await waitFor(() => expect(screen.getByTestId('faixa-do-guia').textContent).toContain('Passo 2 de 2:'));
     await waitFor(() => expect(screen.queryByTestId('painel-do-bloco')).toBeNull());
+  });
+
+  // PR 8 (16/10/2026): a Peça 0 no formato novo.
+  it('no modo guiado a sequência não tem + Adicionar, e trocar texto por foto sem legenda salva o passo', async () => {
+    get.mockResolvedValue(funnel());
+    saveFlow.mockResolvedValue(funnel({ doneSteps: [1] }));
+    uploadMedia.mockResolvedValue('https://cdn/foto.jpg');
+    renderCanvas();
+    fireEvent.click(await screen.findByRole('button', { name: 'Abrir o bloco' }));
+    const painel = await screen.findByTestId('painel-do-bloco');
+    expect(within(painel).queryByText('+ Adicionar:')).toBeNull();
+    expect(within(painel).queryByRole('button', { name: 'Duplicar' })).toBeNull();
+    // Sem legenda: apaga o texto antes de trocar (o texto iria pra legenda da foto).
+    fireEvent.change(within(painel).getByLabelText('Mensagem'), { target: { value: '' } });
+    fireEvent.change(within(painel).getByRole('combobox', { name: 'Tipo do item' }), { target: { value: 'image' } });
+    const file = new File(['x'], 'fachada.jpg', { type: 'image/jpeg' });
+    fireEvent.change(painel.querySelector('input[type="file"]')!, { target: { files: [file] } });
+    await waitFor(() => expect(within(painel).getByText('fachada.jpg')).toBeTruthy());
+    fireEvent.click(within(painel).getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(saveFlow).toHaveBeenCalledTimes(1));
+    const [, payload] = saveFlow.mock.calls[0];
+    const m1 = payload.nodes.find((n: { id: string }) => n.id === 'm1');
+    expect(m1.guide_done).toBe(true);
+    expect(m1.config.items).toEqual([
+      { id: 'legado', kind: 'image', media_url: 'https://cdn/foto.jpg', media_filename: 'fachada.jpg', media_caption: '' },
+    ]);
   });
 
   it('o passo não salva com o campo obrigatório em branco', async () => {

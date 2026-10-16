@@ -91,10 +91,21 @@ describe('janela do bloco', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledWith('n1', expect.objectContaining({ config: expect.objectContaining({ minutes: 120 }) })));
   });
 
-  it('Mandar WhatsApp tem "Enviar pelo número"', async () => {
+  it('Mensagem tem "Enviar pelo número"', async () => {
     render(<FlowNodePanel node={node({ kind: 'send_whatsapp', config: { text: 'Oi' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
     expect(await screen.findByText('Enviar pelo número')).toBeTruthy();
     expect(screen.getByText('O número do responsável pelo lead')).toBeTruthy();
+    expect(screen.getByLabelText('Marcar progresso')).toBeTruthy();
+    expect(screen.getByText('A mensagem sai marcada como automática, igual o Follow-up.')).toBeTruthy();
+  });
+
+  it('Mensagem no funil de conversa: a sequência sem book, e só a frase do número da conversa', () => {
+    render(<FlowNodePanel node={node({ kind: 'send_whatsapp', config: { text: 'Oi' } })} resources={resources} onClose={() => {}} onSave={() => {}} flowKind="conversation" />);
+    expect(screen.getByText('Itens em sequência (1)')).toBeTruthy();
+    expect(screen.getByText('Sai pelo número da conversa em que você disparar o funil.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Book do imóvel' })).toBeNull();
+    expect(screen.queryByText('Enviar pelo número')).toBeNull();
+    expect(screen.queryByLabelText('Marcar progresso')).toBeNull();
   });
 
   it('ação das Automações: o editor da regra, gravando { action_type, params }', async () => {

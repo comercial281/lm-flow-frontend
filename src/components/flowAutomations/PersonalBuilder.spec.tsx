@@ -74,10 +74,10 @@ describe('construtor do corretor', () => {
     expect(screen.getByText('Esperar')).toBeTruthy();
   });
 
-  it('"Mandar WhatsApp" indisponível: desabilitado, com texto, e clique não chama onPick', () => {
+  it('"Mensagem" indisponível: desabilitado, com texto, e clique não chama onPick', () => {
     const onPick = vi.fn();
     render(<FlowBlocksMenu open onOpenChange={() => {}} onPick={onPick} estadoDoBloco={estado} trigger={<button>Blocos</button>} />);
-    const btn = screen.getByRole('button', { name: /Mandar WhatsApp/ }) as HTMLButtonElement;
+    const btn = screen.getByRole('button', { name: /^Mensagem/ }) as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
     expect(btn.draggable).toBe(false);
     expect(within(btn).getByText('Indisponível')).toBeTruthy();

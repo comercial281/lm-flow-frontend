@@ -90,7 +90,7 @@ export const LEAD_ACTION_GROUP: Record<string, FlowNodeGroup> = {
 
 /**
  * As ações que entram na PALETA, na ordem da spec. Ficam fora as que já têm
- * bloco próprio da sprint 1, que continua sendo o oferecido: Mandar WhatsApp
+ * bloco próprio da sprint 1, que continua sendo o oferecido: Mensagem
  * (`send_whatsapp`), Aplicar/Tirar etiqueta (`add_label`/`remove_label`, por
  * título, várias de uma vez) e Mover de etapa (`move_stage`). Um fluxo
  * convertido de regra pode trazer essas ações como `lead_action`: o canvas abre
@@ -101,7 +101,8 @@ export const LEAD_ACTION_GROUP: Record<string, FlowNodeGroup> = {
  * é mais oferecido.
  */
 export const PALETTE_LEAD_ACTIONS: string[] = [
-  'send_audio', 'send_image', 'send_video', 'send_document', 'send_sticker',
+  // Áudio, imagem, vídeo, documento e figurinha saíram (PR 8, 16/10/2026): são
+  // itens do bloco Mensagem. Os blocos antigos continuam abrindo pelo ActionEditor.
   'send_quick_reply', 'send_message_funnel',
   'assign_broker', 'assign_via_roleta', 'create_task', 'start_followup_flow',
   'notify_group', 'notify_user', 'notify_broker', 'notify_gestor', 'notify_push',

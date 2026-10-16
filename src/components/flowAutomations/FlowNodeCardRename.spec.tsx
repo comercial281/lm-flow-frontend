@@ -4,8 +4,8 @@ import { ReactFlowProvider } from '@xyflow/react';
 import type { FlowAutomationNode } from '@/types/flowAutomations';
 import { FlowNodeCard, type FlowNodeCardData } from './FlowNodeCard';
 
-// O nome padrão de send_whatsapp hoje é "Mandar WhatsApp" (vira "Mensagem" só mais adiante).
-const PADRAO = 'Mandar WhatsApp';
+// O nome padrão de send_whatsapp é "Mensagem" (PR 8, 16/10/2026; antes "Mandar WhatsApp").
+const PADRAO = 'Mensagem';
 
 const msg = (over: Partial<FlowAutomationNode> = {}): FlowAutomationNode => ({
   id: 'n1', kind: 'send_whatsapp', label: null, config: { message: 'Oi' },

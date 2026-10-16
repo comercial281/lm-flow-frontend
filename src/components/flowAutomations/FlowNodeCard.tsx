@@ -17,6 +17,7 @@ import { progressLine } from '@/features/flowAutomations/progress';
 import { blockDescription } from '@/features/flowAutomations/blockInfo';
 import { RECOVERED_SUMMARY } from '@/features/flowAutomations/recovered';
 import { BOOK_SOURCE, BOOK_SUMMARY } from '@/features/flowAutomations/book';
+import { hasStoredItems, messageItemsOf, type StoredMessageItem } from '@/features/flowAutomations/messageItems';
 import { moveStageModeOf, stageNameOf } from '@/features/flowAutomations/moveStage';
 import { cn } from '@/lib/utils';
 
@@ -100,8 +101,32 @@ const MEDIA_LINE: Record<string, string> = {
   image: 'Foto', video: 'Vídeo', document: 'Documento', audio: 'Áudio', sticker: 'Figurinha',
 };
 
-/** A linha da mensagem (sprint 4: mídia e contato do funil de conversa). */
+/** A linha de um item da sequência (a mesma frase do formato antigo, por tipo). */
+function itemLine(item: StoredMessageItem): string {
+  if (item.kind === 'property_book') return BOOK_SUMMARY;
+  if (MEDIA_LINE[item.kind]) {
+    const caption = String(item.media_caption ?? '').trim();
+    if (!String(item.media_url ?? '').trim()) return `${MEDIA_LINE[item.kind]} (escolha o arquivo)`;
+    return caption ? `${MEDIA_LINE[item.kind]}: ${caption}` : MEDIA_LINE[item.kind];
+  }
+  if (item.kind === 'contact') {
+    const contact = String(item.config?.contact_name ?? '').trim() || String(item.config?.contact_phone ?? '').trim();
+    return contact ? `Contato: ${contact}` : 'Contato (escreva o telefone)';
+  }
+  return String(item.text_content ?? '').trim() || '(mensagem vazia)';
+}
+
+/**
+ * A linha da mensagem. Em sequência (PR 8): com uma mensagem, a linha dela;
+ * com mais, quantas são (as esperas não contam).
+ */
 export function messageLine(cfg: Record<string, unknown>): string {
+  if (hasStoredItems(cfg)) {
+    const messages = messageItemsOf(cfg);
+    if (messages.length === 0) return '(mensagem vazia)';
+    return messages.length === 1 ? itemLine(messages[0]) : `${messages.length} mensagens`;
+  }
+  // Formato antigo (sprint 4: mídia e contato do funil de conversa).
   const text = String(cfg.text ?? '').trim();
   if (cfg.media_source === BOOK_SOURCE) return BOOK_SUMMARY;
   const media = String(cfg.media_kind ?? '').trim();

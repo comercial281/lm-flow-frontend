@@ -62,11 +62,32 @@ function legacyItem(config: FlowNodeConfig): StoredMessageItem {
   return { id: LEGACY_ITEM_ID, kind: 'text', text_content: text };
 }
 
+/**
+ * O bloco já guarda a sequência (`items` não vazio). Sem isso é o formato
+ * antigo, que os leitores de antes (e o `usesBook`) continuam lendo.
+ */
+export function hasStoredItems(config: FlowNodeConfig): boolean {
+  return Array.isArray(config.items) && config.items.length > 0;
+}
+
 /** Os itens do bloco: `items`, ou um item montado do formato antigo. */
 export function itemsOf(config: FlowNodeConfig): StoredMessageItem[] {
-  const items = config.items;
-  if (Array.isArray(items) && items.length > 0) return items as StoredMessageItem[];
+  if (hasStoredItems(config)) return config.items as StoredMessageItem[];
   return [legacyItem(config)];
+}
+
+/**
+ * Quanto a espera de dentro do bloco segura, em segundos. Com sorteio, o maior
+ * tempo possível (a prévia e o "Usar funil" contam o pior caso).
+ */
+export function delayItemSeconds(item: StoredMessageItem): number {
+  const seconds = item.config?.random_interval ? item.config.max_seconds : item.delay_seconds;
+  return Math.max(0, Math.round(Number(seconds) || 0));
+}
+
+/** Algum item é o book do imóvel. */
+export function hasBookItem(config: FlowNodeConfig): boolean {
+  return itemsOf(config).some(item => item.kind === 'property_book');
 }
 
 /** Os itens que mandam algo (sem as esperas). */

@@ -9178,3 +9178,23 @@ PR 6 do redesenho do construtor. Spec: `LM FLOW/specs/2026-10-16-flow-builder-re
 - **Grupo de cada variável** mora em `messageVariables.ts` (`group`: lead, visita, anuncio). Variável nova pronta precisa de `group`; sem ele cai em "Do lead".
 
 Código: `VariableChipBar.tsx`, `messageVariables.ts`, `FlowAutomationCanvas.tsx`. Testes: "variáveis em botõezinhos" em `FlowLayoutPieces.spec.tsx` e o teste das variáveis da imobiliária em `FlowCanvasLayout.spec.tsx`.
+
+## Construtor: o bloco Mensagem é uma sequência, no editor do Disparo em massa (desde 2026-10-16)
+
+PR 8 do redesenho do construtor. Spec: `LM FLOW/specs/2026-10-16-flow-builder-redesenho-design.md`. **O PR do backend (lm-flow, `config.items` no `send_whatsapp`, PR 7) entra PRIMEIRO**: com a tela nova contra o servidor antigo, o bloco salva `items` que o servidor não lê e a mensagem sai vazia. Merge é deploy: só com ok do Tony, backend antes.
+
+- **Um bloco, várias mensagens.** O bloco "Mandar WhatsApp" virou **Mensagem**. Ele guarda uma sequência (texto, foto, vídeo, áudio, documento, figurinha, contato, espera) no MESMO editor do Disparo em massa (`MessageSequenceEditor`), com a barra de variáveis do construtor. O arquivo sobe na hora (`flowAutomationsService.uploadMedia`). Bloco novo nasce com 1 texto vazio.
+- **Book do imóvel é um item** ("+ Book do imóvel", só a legenda), no lugar da caixinha "Book do imóvel de interesse". No funil de conversa o book não é oferecido e o bloco só diz "Sai pelo número da conversa em que você disparar o funil."; fora dele seguem o "por qual número sai", o "Marcar progresso" e a linha "A mensagem sai marcada como automática".
+- **Saíram da lista de Blocos** "Mandar áudio", "Mandar imagem", "Mandar vídeo", "Mandar documento" e "Mandar figurinha" (viraram itens da Mensagem). Fluxo antigo que já tem esses blocos continua abrindo, editando e rodando como estava.
+- **Bloco antigo (sem `items`) abre como sequência de 1 item** (texto, foto, contato ou book, montado dos campos soltos) e só é regravado em `items` quando a pessoa mexe nele e salva. Os campos soltos ficam com texto vazio (não somem: no modo guiado o servidor junta o que chega com o gravado).
+- **Cartão:** com 1 mensagem, a linha dela ("Foto: Olha a fachada"); com mais, "N mensagens" (as esperas não contam).
+- **O que falta no bloco** (`nodeProblem`), na ordem: mídia sem arquivo, texto vazio, contato sem telefone, nenhuma mensagem. Com book, só o número e o progresso.
+- **Modo guiado (corretor):** sem "+ Adicionar", duplicar e mover; a mensagem troca de tipo e a espera só muda o tempo. Texto que vira foto, vídeo ou documento leva o texto pra legenda.
+- **Arquivo subindo não apaga o que foi digitado:** o editor aplica o resultado do envio sobre a lista mais nova (vale também pro Disparo em massa e pro Agendar envio).
+
+Armadilhas:
+
+1. **Leitor único.** Bloco com `items` se lê pelo `src/features/flowAutomations/messageItems.ts` (`itemsOf`, `messageItemsOf`, `hasMessageContent`, `hasMessageMedia`, `hasStoredItems`). O `media_source: 'property_book'` do bloco antigo pode sobrar depois de converter: `usesBook` só vale pro formato antigo. Leitores: `readiness.ts`, `guide.ts` (régua do passo do guia), `FlowNodeCard.tsx`, `funnelPreview.ts` (um passo por item, e daí as Mensagens prontas) e `conversationFunnelDraft.ts` ("Usar funil": um item por item, a espera de dentro soma com a do bloco Esperar, o book fica de fora).
+2. **O `id` do item faz ida e volta** (`uiKey` = `id`): o modo guiado do servidor casa os itens por ele. Bloco antigo usa o id fixo `legado`.
+
+Código: `src/components/flowAutomations/MessageBlockFields.tsx` (com o `ProgressFields`, que saiu do `FlowNodePanel`); saiu o `FunnelMessageFields.tsx`. Testes: `readiness.spec.ts`, `guide.spec.ts`, `BookBlocks.spec.tsx`, `FlowBlocks.spec.tsx`, `FlowCanvasLayout.spec.tsx`, `FlowGuide.spec.tsx`, `MessageSequenceEditor.spec.tsx`.

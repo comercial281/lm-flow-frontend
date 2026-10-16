@@ -7,16 +7,43 @@ import type { FlowAutomation, FlowAutomationNode } from '@/types/flowAutomations
 import type { FlowTemplatePreviewStep } from './templates';
 import { waitTotalSeconds } from './waitTime';
 import { BOOK_SOURCE, usesBook } from './book';
+import { delayItemSeconds, hasStoredItems, itemsOf, type StoredMessageItem } from './messageItems';
 import { blockLabel } from './palette';
 
 const LEAD_ACTION_MEDIA: Record<string, string> = {
   send_image: 'image', send_video: 'video', send_document: 'document', send_audio: 'audio', send_sticker: 'sticker',
 };
 
+/** Um passo por item do bloco Mensagem em sequência (PR 8); a espera de dentro vira espera. */
+function itemStep(item: StoredMessageItem): FlowTemplatePreviewStep {
+  const text = (value: unknown) => (String(value ?? '').trim() ? { text: String(value) } : {});
+  switch (item.kind) {
+    case 'delay':
+      return { kind: 'wait', seconds: delayItemSeconds(item) };
+    case 'contact': {
+      const contact = String(item.config?.contact_name ?? '').trim() || String(item.config?.contact_phone ?? '').trim();
+      return { kind: 'contact', text: contact ? `Contato: ${contact}` : 'Contato' };
+    }
+    case 'property_book':
+      return { kind: 'send_whatsapp', ...text(item.media_caption), media_source: BOOK_SOURCE };
+    case 'text':
+      return { kind: 'send_whatsapp', ...text(item.text_content) };
+    default:
+      return { kind: 'send_whatsapp', ...text(item.media_caption), media_kind: item.kind };
+  }
+}
+
+function stepsOf(node: FlowAutomationNode): FlowTemplatePreviewStep[] {
+  const cfg = node.config ?? {};
+  if (node.kind === 'send_whatsapp' && hasStoredItems(cfg)) return itemsOf(cfg).map(itemStep);
+  return [stepOf(node)];
+}
+
 function stepOf(node: FlowAutomationNode): FlowTemplatePreviewStep {
   const cfg = node.config ?? {};
   switch (node.kind) {
     case 'send_whatsapp': {
+      // Formato antigo (sem `items`).
       const media = String(cfg.media_kind ?? '').trim();
       const contact = String(cfg.contact_name ?? '').trim() || String(cfg.contact_phone ?? '').trim();
       if (!media && contact) return { kind: 'contact', text: `Contato: ${contact}` };
@@ -58,7 +85,7 @@ export function funnelPreview(flow: Pick<FlowAutomation, 'initial_node_id' | 'no
   while (current && byId.has(current) && !seen.has(current)) {
     seen.add(current);
     const node = byId.get(current)!;
-    out.push(stepOf(node));
+    out.push(...stepsOf(node));
     // Bloco de duas saídas: segue pelo "Sim"/"Respondeu" (o caminho que a prévia conta).
     current = node.next_node_id ?? node.next_yes_node_id ?? null;
   }

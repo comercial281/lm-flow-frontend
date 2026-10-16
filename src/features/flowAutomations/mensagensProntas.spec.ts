@@ -34,6 +34,23 @@ describe('Mensagens prontas: tipo', () => {
     expect(itemPronto(funil([no('a', 'send_whatsapp', { media_kind: 'audio' })])).tipo).toBe('audio');
     expect(itemPronto(funil())).toMatchObject({ tipo: 'funil', passos: null });
   });
+
+  // PR 8 (16/10/2026): o bloco Mensagem guarda uma sequência; cada item é um passo.
+  it('bloco em sequência: uma foto só é Mídia; texto, espera e foto num bloco é Funil', () => {
+    const umaFoto = funil([no('a', 'send_whatsapp', { text: '', items: [{ id: 'x', kind: 'image', media_url: 'https://x/f.jpg' }] })]);
+    expect(itemPronto(umaFoto).tipo).toBe('midia');
+    const sequencia = funil([no('a', 'send_whatsapp', {
+      text: '',
+      items: [
+        { id: 'x', kind: 'text', text_content: 'Oi' },
+        { id: 'y', kind: 'delay', delay_seconds: 5 },
+        { id: 'z', kind: 'image', media_url: 'https://x/f.jpg' },
+      ],
+    })]);
+    const pronto = itemPronto(sequencia);
+    expect(pronto.tipo).toBe('funil');
+    expect(resumoDoFunil(pronto.passos)).toBe('2 mensagens · 5 segundos');
+  });
 });
 
 describe('Mensagens prontas: resumo do funil', () => {

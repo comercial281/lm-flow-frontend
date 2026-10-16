@@ -64,6 +64,18 @@ describe('passos do guia', () => {
     expect(guideRequiredProblem({ required: ['text'] }, foto, 'lead_action')).toBe('Escreva a mensagem.');
     expect(guideRequiredProblem({ required: ['text'] }, foto)).toBe('Escreva a mensagem.');
   });
+
+  // PR 8 (16/10/2026): o bloco Mensagem em sequência lê os itens, não os campos soltos.
+  it('no bloco em sequência, o "text" vale com qualquer item que manda algo, e o "media_url" com algum arquivo', () => {
+    const fotoSemLegenda = { text: '', media_url: '', items: [{ id: 'legado', kind: 'image', media_url: 'https://x/y.jpg', media_caption: '' }] };
+    expect(guideRequiredProblem({ required: ['text'] }, fotoSemLegenda, 'send_whatsapp')).toBeNull();
+    expect(guideRequiredProblem({ required: ['media_url'] }, fotoSemLegenda, 'send_whatsapp')).toBeNull();
+    const soEspera = { text: 'sobra antiga', items: [{ id: 'a', kind: 'delay', delay_seconds: 5 }] };
+    expect(guideRequiredProblem({ required: ['text'] }, soEspera, 'send_whatsapp')).toBe('Escreva a mensagem.');
+    const soTexto = { media_url: 'https://sobra/antiga.jpg', items: [{ id: 'a', kind: 'text', text_content: 'Oi' }] };
+    expect(guideRequiredProblem({ required: ['media_url'] }, soTexto, 'send_whatsapp')).toBe('Escolha o arquivo pra mandar.');
+    expect(guideRequiredProblem({ required: ['text'] }, { items: [{ id: 'a', kind: 'property_book' }] }, 'send_whatsapp')).toBeNull();
+  });
 });
 
 describe('modo guiado', () => {
@@ -131,5 +143,39 @@ describe('prévia do funil (Disparar funil)', () => {
       nodes: [node('m1', { config: { text: '', media_source: 'property_book' }, next_node_id: null })],
     });
     expect(steps).toEqual([{ kind: 'send_whatsapp', media_source: 'property_book' }]);
+  });
+
+  it('bloco em sequência: um passo por item, e a espera de dentro vira espera', () => {
+    const steps = funnelPreview({
+      initial_node_id: 'm1',
+      nodes: [node('m1', {
+        config: {
+          text: '', media_source: 'property_book',
+          items: [
+            { id: 'a', kind: 'text', text_content: 'Oi {{nome}}' },
+            { id: 'b', kind: 'delay', delay_seconds: 5 },
+            { id: 'c', kind: 'image', media_url: 'https://x/f.jpg', media_caption: 'Fachada' },
+            { id: 'd', kind: 'contact', config: { contact_name: 'Ana', contact_phone: '5511999990000' } },
+            { id: 'e', kind: 'property_book', media_caption: '' },
+          ],
+        },
+        next_node_id: null,
+      })],
+    });
+    expect(steps).toEqual([
+      { kind: 'send_whatsapp', text: 'Oi {{nome}}' },
+      { kind: 'wait', seconds: 5 },
+      { kind: 'send_whatsapp', text: 'Fachada', media_kind: 'image' },
+      { kind: 'contact', text: 'Contato: Ana' },
+      { kind: 'send_whatsapp', media_source: 'property_book' },
+    ]);
+  });
+
+  it('o media_source antigo que sobrou não vira book quando os itens não têm book', () => {
+    const steps = funnelPreview({
+      initial_node_id: 'm1',
+      nodes: [node('m1', { config: { text: '', media_source: 'property_book', items: [{ id: 'legado', kind: 'text', text_content: 'Oi' }] }, next_node_id: null })],
+    });
+    expect(steps).toEqual([{ kind: 'send_whatsapp', text: 'Oi' }]);
   });
 });

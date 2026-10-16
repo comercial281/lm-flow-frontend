@@ -40,3 +40,74 @@ describe('o fluxo pode ser ligado?', () => {
     expect(nodeProblem(b('send_whatsapp', { text: '  ' }))).toBe('Escreva a mensagem.');
   });
 });
+
+// Redesenho, PR 8 (16/10/2026): o bloco Mensagem guarda uma sequência em `items`.
+describe('bloco Mensagem em sequência (items)', () => {
+  const msg = (items: Array<Record<string, unknown>>, extra: Record<string, unknown> = {}) =>
+    b('send_whatsapp', { text: '', items, ...extra });
+
+  it('mídia sem arquivo pede o arquivo', () => {
+    expect(nodeProblem(msg([
+      { id: 'a', kind: 'text', text_content: 'Oi' },
+      { id: 'b', kind: 'image', media_url: '', media_caption: 'Fachada' },
+    ]))).toBe('Escolha o arquivo pra mandar.');
+  });
+
+  it('texto vazio pede a mensagem', () => {
+    expect(nodeProblem(msg([
+      { id: 'a', kind: 'text', text_content: 'Oi' },
+      { id: 'b', kind: 'delay', delay_seconds: 5 },
+      { id: 'c', kind: 'text', text_content: '  ' },
+    ]))).toBe('Escreva a mensagem.');
+  });
+
+  it('contato sem telefone pede o telefone', () => {
+    expect(nodeProblem(msg([{ id: 'a', kind: 'contact', config: { contact_name: 'Ana', contact_phone: '' } }])))
+      .toBe('Escreva o telefone do contato.');
+  });
+
+  it('só espera, sem mensagem, pede a mensagem', () => {
+    expect(nodeProblem(msg([{ id: 'a', kind: 'delay', delay_seconds: 5 }]))).toBe('Escreva a mensagem.');
+  });
+
+  it('a primeira falta que valer, na ordem: arquivo antes de texto', () => {
+    expect(nodeProblem(msg([
+      { id: 'a', kind: 'text', text_content: '' },
+      { id: 'b', kind: 'video', media_url: '' },
+    ]))).toBe('Escolha o arquivo pra mandar.');
+  });
+
+  it('tudo preenchido: sobra o número e o progresso', () => {
+    const pronto = [
+      { id: 'a', kind: 'text', text_content: 'Oi' },
+      { id: 'b', kind: 'delay', delay_seconds: 5 },
+      { id: 'c', kind: 'image', media_url: 'https://cdn/f.jpg', media_caption: '' },
+      { id: 'd', kind: 'contact', config: { contact_name: '', contact_phone: '5511999990000' } },
+    ];
+    expect(nodeProblem(msg(pronto))).toBeNull();
+    expect(nodeProblem(msg(pronto, { progress_tag_prefix: '', progress_step: 1 }))).toBe('Escreva o nome da etiqueta de progresso.');
+  });
+
+  it('com book, só valem o número e o progresso', () => {
+    expect(nodeProblem(msg([
+      { id: 'a', kind: 'property_book', media_caption: '' },
+      { id: 'b', kind: 'text', text_content: '' },
+    ]))).toBeNull();
+    expect(nodeProblem(msg([{ id: 'a', kind: 'property_book' }], { progress_tag_prefix: '', progress_step: 1 })))
+      .toBe('Escreva o nome da etiqueta de progresso.');
+  });
+
+  it('o media_source antigo que sobrou não conta como book quando os itens não têm book', () => {
+    expect(nodeProblem(msg([{ id: 'legado', kind: 'text', text_content: '' }], { media_source: 'property_book' })))
+      .toBe('Escreva a mensagem.');
+  });
+
+  it('o formato antigo (sem items) segue igual', () => {
+    expect(nodeProblem(b('send_whatsapp', { text: 'Oi' }))).toBeNull();
+    expect(nodeProblem(b('send_whatsapp', { text: '' }))).toBe('Escreva a mensagem.');
+    expect(nodeProblem(b('send_whatsapp', { text: '', media_kind: 'image', media_url: '' }))).toBe('Escolha o arquivo pra mandar.');
+    expect(nodeProblem(b('send_whatsapp', { text: '', contact_phone: '5511999990000' }))).toBeNull();
+    expect(nodeProblem(b('send_whatsapp', { text: '', media_source: 'property_book' }))).toBeNull();
+    expect(nodeProblem(b('send_whatsapp', { text: 'Oi', items: [] }))).toBeNull();
+  });
+});

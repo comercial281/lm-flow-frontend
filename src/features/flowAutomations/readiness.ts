@@ -5,9 +5,10 @@
 // bloco não salva com falta, o cartão no canvas mostra o que falta e a chave
 // recusa ligar enquanto faltar.
 
-import type { FlowAutomationKind, FlowAutomationNode } from '@/types/flowAutomations';
+import type { FlowAutomationKind, FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
 import { sendFromOf, sendFromProblem } from '@/features/numbers/sendFrom';
 import { usesBook } from './book';
+import { hasBookItem, hasStoredItems, messageItemsOf } from './messageItems';
 import { conditionProblem } from './conditions';
 import { leadActionProblem } from './leadAction';
 import { moveStageProblem } from './moveStage';
@@ -17,14 +18,34 @@ import { triggerProblem, type FlowTrigger } from './trigger';
 
 type BlockLike = Pick<FlowAutomationNode, 'kind' | 'config'>;
 
+const blank = (value: unknown) => String(value ?? '').trim() === '';
+const MEDIA_KINDS = new Set(['image', 'video', 'audio', 'document', 'sticker']);
+
+/**
+ * O bloco Mensagem em sequência (PR 8, 16/10/2026). Com book, o servidor acha
+ * o arquivo e nada mais é conferido. Sem book, a primeira falta que valer:
+ * mídia sem arquivo, texto vazio, contato sem telefone, nenhuma mensagem.
+ */
+function sequenceProblem(config: FlowNodeConfig): string | null {
+  const ending = () => sendFromProblem(sendFromOf(config)) ?? progressProblem(config);
+  if (hasBookItem(config)) return ending();
+  const messages = messageItemsOf(config);
+  if (messages.some(item => MEDIA_KINDS.has(item.kind) && blank(item.media_url))) return 'Escolha o arquivo pra mandar.';
+  if (messages.some(item => item.kind === 'text' && blank(item.text_content))) return 'Escreva a mensagem.';
+  if (messages.some(item => item.kind === 'contact' && blank(item.config?.contact_phone))) return 'Escreva o telefone do contato.';
+  if (messages.length === 0) return 'Escreva a mensagem.';
+  return ending();
+}
+
 /** O que falta no bloco, em português, ou null. Bloco escondido não é conferido. */
 export function nodeProblem(node: BlockLike): string | null {
   if (!isVisibleNode(node)) return null;
   const config = node.config ?? {};
   switch (node.kind) {
     case 'send_whatsapp': {
-      // Sprint 4 (funil de conversa): a mensagem pode ser mídia (o texto vira
-      // legenda, opcional) ou cartão de contato.
+      if (hasStoredItems(config)) return sequenceProblem(config);
+      // Formato antigo (sem `items`). Sprint 4 (funil de conversa): a mensagem
+      // pode ser mídia (o texto vira legenda, opcional) ou cartão de contato.
       const mediaKind = String(config.media_kind ?? '').trim();
       const hasMedia = String(config.media_url ?? '').trim() !== '';
       const isContact = String(config.contact_phone ?? '').trim() !== '';

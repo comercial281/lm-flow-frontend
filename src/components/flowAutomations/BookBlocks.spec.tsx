@@ -33,32 +33,74 @@ const node = (patch: Partial<FlowAutomationNode>): FlowAutomationNode => ({
   ...patch,
 });
 
-describe('Enviar WhatsApp: "Book do imóvel de interesse"', () => {
-  it('marcar grava media_source e limpa media_url', async () => {
+// PR 8 (16/10/2026): o book virou item da sequência do bloco Mensagem.
+describe('Mensagem: o book do imóvel é um item', () => {
+  it('"+ Book do imóvel" põe o item na sequência e grava em items', async () => {
     const onSave = vi.fn();
     render(<FlowNodePanel node={node({ config: { text: 'Oi {{nome}}' } })} resources={resources} onClose={() => {}} onSave={onSave} />);
+    expect(screen.queryByLabelText('Book do imóvel de interesse')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Book do imóvel' }));
     expect(screen.getByText('Pega sozinho o book (PDF) do empreendimento do lead. Acima de 16 MB vai como link.')).toBeTruthy();
-    fireEvent.click(screen.getByLabelText('Book do imóvel de interesse'));
     fireEvent.click(screen.getByText('Salvar'));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
-    expect(onSave.mock.calls[0][1].config).toMatchObject({ text: 'Oi {{nome}}', media_source: 'property_book', media_url: '' });
+    const cfg = onSave.mock.calls[0][1].config;
+    expect(cfg.text).toBe('');
+    expect(cfg.items).toEqual([
+      { id: 'legado', kind: 'text', text_content: 'Oi {{nome}}' },
+      expect.objectContaining({ kind: 'property_book', media_caption: '' }),
+    ]);
   });
 
-  it('desmarcar volta pro texto comum', async () => {
+  it('o bloco antigo de book abre como 1 item de book, com o texto na legenda', async () => {
     const onSave = vi.fn();
     render(<FlowNodePanel node={node({ config: { text: 'Oi', media_source: 'property_book', media_url: '' } })} resources={resources} onClose={() => {}} onSave={onSave} />);
-    const box = screen.getByLabelText('Book do imóvel de interesse') as HTMLInputElement;
-    expect(box.checked).toBe(true);
-    fireEvent.click(box);
+    expect(screen.getByText('Book do imóvel', { selector: 'span' })).toBeTruthy();
+    const legenda = screen.getByPlaceholderText('Legenda (opcional)') as HTMLInputElement;
+    expect(legenda.value).toBe('Oi');
+    fireEvent.change(legenda, { target: { value: 'Segue o book' } });
     fireEvent.click(screen.getByText('Salvar'));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
-    expect(onSave.mock.calls[0][1].config.media_source).toBe('');
+    expect(onSave.mock.calls[0][1].config.items).toEqual([{ id: 'legado', kind: 'property_book', media_caption: 'Segue o book' }]);
   });
 
   it('o cartão mostra o resumo e o bloco não pede texto', () => {
     expect(summaryLine(node({ config: { media_source: 'property_book', text: '' } }))).toBe('Manda o book do imóvel de interesse');
     expect(nodeProblem({ kind: 'send_whatsapp', config: { media_source: 'property_book', text: '' } })).toBeNull();
     expect(nodeProblem({ kind: 'send_whatsapp', config: { text: '' } })).toBe('Escreva a mensagem.');
+  });
+});
+
+describe('cartão do bloco Mensagem em sequência', () => {
+  it('com 1 mensagem, a linha dela; com mais de uma, quantas (as esperas não contam)', () => {
+    expect(summaryLine(node({ config: { text: '', items: [{ id: 'a', kind: 'image', media_url: 'https://x/f.jpg', media_caption: 'Olha a fachada' }] } })))
+      .toBe('Foto: Olha a fachada');
+    expect(summaryLine(node({ config: { text: '', items: [{ id: 'a', kind: 'delay', delay_seconds: 5 }, { id: 'b', kind: 'text', text_content: 'Oi' }] } })))
+      .toBe('Oi');
+    expect(summaryLine(node({
+      config: {
+        text: '',
+        items: [
+          { id: 'a', kind: 'text', text_content: 'Oi' },
+          { id: 'b', kind: 'delay', delay_seconds: 5 },
+          { id: 'c', kind: 'image', media_url: 'https://x/f.jpg' },
+          { id: 'd', kind: 'property_book' },
+        ],
+      },
+    }))).toBe('3 mensagens');
+  });
+
+  it('cada tipo de item tem a sua linha', () => {
+    const um = (item: Record<string, unknown>) => summaryLine(node({ config: { text: '', items: [{ id: 'a', ...item }] } }));
+    expect(um({ kind: 'text', text_content: '' })).toBe('(mensagem vazia)');
+    expect(um({ kind: 'video', media_url: '' })).toBe('Vídeo (escolha o arquivo)');
+    expect(um({ kind: 'document', media_url: 'https://x/d.pdf', media_caption: '' })).toBe('Documento');
+    expect(um({ kind: 'contact', config: { contact_name: 'Ana', contact_phone: '5511' } })).toBe('Contato: Ana');
+    expect(um({ kind: 'property_book', media_caption: 'Segue' })).toBe('Manda o book do imóvel de interesse');
+  });
+
+  it('o media_source antigo que sobrou não vira book quando os itens não têm book', () => {
+    expect(summaryLine(node({ config: { text: '', media_source: 'property_book', items: [{ id: 'legado', kind: 'text', text_content: 'Oi' }] } })))
+      .toBe('Oi');
   });
 });
 
