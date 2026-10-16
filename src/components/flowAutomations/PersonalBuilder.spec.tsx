@@ -3,7 +3,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { FlowTriggerPanel } from './FlowTriggerPanel';
 import { FlowBlocksPanel } from './FlowBlocksPanel';
 import { FLOW_TRIGGER_GROUPS } from '@/features/flowAutomations/trigger';
-import { personalTriggerGroups, personalBlockState } from '@/features/flowAutomations/personal';
+import { personalTriggerGroups, personalBlockState, PERSONAL_TRIGGERS } from '@/features/flowAutomations/personal';
 import { podeSoltarBloco } from '@/features/flowAutomations/palette';
 import type { AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
 
@@ -16,17 +16,41 @@ const resources: AutomationResources = {
 const trig = (event: string) => ({ event, conditions: [] }) as never;
 
 describe('construtor do corretor', () => {
-  it('o seletor do gatilho só oferece os gatilhos do cargo', () => {
+  it('o seletor do gatilho oferece exatamente os gatilhos do cargo', () => {
     render(
       <FlowTriggerPanel trigger={trig('lead.created')} resources={resources} onClose={() => {}} onSave={() => {}}
-        soGatilhos={personalTriggerGroups(FLOW_TRIGGER_GROUPS).filter(g => g.label === 'Atendimento')} />,
+        soGatilhos={personalTriggerGroups(FLOW_TRIGGER_GROUPS)} />,
     );
     const sel = screen.getByLabelText('Gatilho') as HTMLSelectElement;
-    const values = Array.from(sel.options).map(o => o.value);
+    const values = Array.from(sel.options).map(o => o.value).filter(Boolean);
+    expect([...values].sort()).toEqual([...PERSONAL_TRIGGERS].sort());
     expect(values).not.toContain('flow_called');
-    expect(values).toContain('lead.roleta_accepted');
-    expect(values).not.toContain('lead.visit_scheduled');
-    expect(values).not.toContain('lead.stage_changed');
+  });
+
+  it('gatilho salvo fora da lista: opção marcada Indisponível e aviso (principal)', () => {
+    render(
+      <FlowTriggerPanel trigger={trig('flow_called')} resources={resources} onClose={() => {}} onSave={() => {}}
+        soGatilhos={personalTriggerGroups(FLOW_TRIGGER_GROUPS)} />,
+    );
+    const sel = screen.getByLabelText('Gatilho') as HTMLSelectElement;
+    expect(Array.from(sel.options).some(o => o.value === 'flow_called' && /\(Indisponível\)$/.test(o.text))).toBe(true);
+    expect(screen.getByText('Este gatilho não está disponível pro seu cargo. Escolha outro.')).toBeTruthy();
+  });
+
+  it('gatilho salvo fora da lista em "Ou quando": mesma marca e aviso', () => {
+    const t = { event: 'lead.created', conditions: [], alternatives: [{ event: 'flow_called', conditions: [] }] } as never;
+    render(
+      <FlowTriggerPanel trigger={t} resources={resources} onClose={() => {}} onSave={() => {}}
+        soGatilhos={personalTriggerGroups(FLOW_TRIGGER_GROUPS)} />,
+    );
+    const sel = screen.getByLabelText('Ou quando 1') as HTMLSelectElement;
+    expect(Array.from(sel.options).some(o => /\(Indisponível\)$/.test(o.text))).toBe(true);
+    expect(screen.getAllByText('Este gatilho não está disponível pro seu cargo. Escolha outro.')).toHaveLength(1);
+  });
+
+  it('sem restrição (gestor): gatilho fora da lista não ganha aviso', () => {
+    render(<FlowTriggerPanel trigger={trig('flow_called')} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.queryByText(/não está disponível pro seu cargo/)).toBeNull();
   });
 
   it('semFiltroDeQuemAceitou esconde "Só quando quem aceitou for"', () => {

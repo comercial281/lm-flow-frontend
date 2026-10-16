@@ -89,19 +89,18 @@ export function FlowBlocksPanel({ onPick, onClose, estadoDoBloco }: Props) {
                       key={item.key}
                       type="button"
                       disabled
-                      aria-disabled="true"
                       draggable={false}
                       title={INDISPONIVEL}
-                      className="flex w-full items-center gap-2 text-left text-xs rounded-md border border-border px-2 py-1.5 opacity-50 cursor-not-allowed"
+                      className="flex w-full items-center gap-2 text-left text-xs rounded-md border border-border px-2 py-1.5 cursor-not-allowed"
                     >
                       <span
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-white"
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-white opacity-50"
                         style={{ backgroundColor: color }}
                         aria-hidden="true"
                       >
                         <Icon className="h-3.5 w-3.5" />
                       </span>
-                      <span className="truncate">{item.label}</span>
+                      <span className="truncate opacity-50">{item.label}</span>
                       <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">{INDISPONIVEL}</span>
                     </button>
                   );

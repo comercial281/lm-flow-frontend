@@ -57,8 +57,9 @@ interface Props {
 // Declarado fora do render: componente com Seletor criado dentro do render
 // fecha a lista aberta a cada redesenho (armadilha 9 do Seletor).
 function TriggerPartEditor({
-  part, onChange, resources, label, ariaLabel, groups, semQuemAceitou,
+  part, onChange, resources, label, ariaLabel, groups, semQuemAceitou, restrito,
 }: {
+  restrito?: boolean;
   groups: FlowTriggerGroup[];
   semQuemAceitou?: boolean;
   part: FlowTriggerPart;
@@ -80,7 +81,9 @@ function TriggerPartEditor({
           aria-label={ariaLabel}
         >
           <option value="">Escolha o gatilho</option>
-          {event && !known && <option value={event}>{flowTriggerLabel(event)}</option>}
+          {event && !known && (
+            <option value={event}>{flowTriggerLabel(event)}{restrito ? ' (Indisponível)' : ''}</option>
+          )}
           {groups.map(g => (
             <optgroup key={g.label} label={g.label}>
               {g.events.map(ev => (
@@ -89,6 +92,11 @@ function TriggerPartEditor({
             </optgroup>
           ))}
         </Seletor>
+        {restrito && event && !known && (
+          <Aviso tom="atencao" compacto className="mt-2">
+            Este gatilho não está disponível pro seu cargo. Escolha outro.
+          </Aviso>
+        )}
         {event === 'lead.created' && (
           <Aviso tom="atencao" compacto className="mt-2">
             {LEAD_CREATED_HINT}
@@ -132,6 +140,7 @@ export function FlowTriggerPanel({
   }, [dirty]); // eslint-disable-line react-hooks/exhaustive-deps -- só quando muda
   React.useEffect(() => () => onDirtyChange?.(false), []); // eslint-disable-line react-hooks/exhaustive-deps -- ao fechar
 
+  const restrito = soGatilhos !== FLOW_TRIGGER_GROUPS;
   const alternatives = draft.alternatives ?? [];
   // "Quando outro fluxo chama este" é interno: não combina com "Ou quando".
   const canAddAlternative = !!draft.event && draft.event !== 'flow_called';
@@ -171,6 +180,7 @@ export function FlowTriggerPanel({
           onChange={next => edit({ ...draft, event: next.event, conditions: next.conditions })}
           resources={resources}
           groups={soGatilhos}
+          restrito={restrito}
           semQuemAceitou={semFiltroDeQuemAceitou}
           label="Quando"
           ariaLabel="Gatilho"
@@ -192,6 +202,8 @@ export function FlowTriggerPanel({
               onChange={next => edit(updateAlternative(draft, i, next))}
               resources={resources}
               groups={soGatilhos}
+              restrito={restrito}
+          restrito={restrito}
               semQuemAceitou={semFiltroDeQuemAceitou}
               label="Ou quando"
               ariaLabel={`Ou quando ${i + 1}`}
