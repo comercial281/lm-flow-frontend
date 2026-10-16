@@ -5466,7 +5466,7 @@ O que aparece na tela:
 - **Filtro retrátil no topo** (botão *Filtros* com o número de ativos), que rola junto com a página; campos diferentes por aba; etiquetas dos ativos embaixo da busca. A lista atualiza na hora. *Ordenar* e as listas de escolha dos filtros usam o `Seletor`.
 - **Finalidade:** *Venda* traz os imóveis de venda e os de *Venda e locação*; *Locação* traz locação, *Venda e locação* e temporada. Um imóvel *Venda e locação* aparece nos dois filtros.
 - **Linhas largas** (estilo Kenlo), com visão em Grade e Mapa (`?visao=`). `/properties/map` redireciona para a visão Mapa. *Ver página no site* abre `/imovel/<slug>/<código>` e só aparece para imóvel que está no site (marcado para o site e *Disponível*/*Reservado*). A mesma página abre pela setinha ↗ ao lado do nome (07/10/26), com a mesma regra. O nome do imóvel só abre o cadastro para quem pode editar.
-- **O Mapa mostra a aba inteira:** na visão Mapa somem busca, *Filtros*, *Ordenar*, etiquetas e contador (o mapa não usa nenhum deles), e a lista não recarrega por trás. Ficam as abas e a troca de visão. O mapa tem `isolate`: as camadas do Leaflet (z 400 a 1000) não pintam por cima das janelas.
+- **O Mapa mostra a aba inteira:** na visão Mapa somem busca, *Filtros*, *Ordenar*, etiquetas e contador (o mapa não usa nenhum deles), e a lista não recarrega por trás. Ficam as abas e a troca de visão. O mapa tem `isolate`: as camadas do Leaflet (z 400 a 1000) não pintam por cima das janelas. Desde 16/10 o mapa ocupa a tela e o alfinete abre um card (ver "Mapa de Imóveis: card no alfinete").
 - **Situação só no menu ⋮**, com janela e efeito escrito. *Mover para Revenda/Empreendimentos* com confirmação. *Força do anúncio* é item do menu ⋮ de cada imóvel (mostra o número depois de calculado). *Gerar descrições com IA* é botão com nome (contorno) no topo, sem menu *Mais ações*. Exclusão é *Excluir imóvel* (glossário: some de vez).
 - **O cadastro de hoje abre com o tipo da aba.** Empreendimento fixa *Venda* (também ao editar um cadastro antigo de locação) e mostra *Fase da obra*, *Previsão de entrega* (some em *Pronto para morar*) e *Tipologias*. A previsão é escolhida em duas listas, **Mês** e **Ano** (do ano passado a 8 à frente), que compõem o mesmo `AAAA-MM`: o `<input type="month">` vira texto livre no Firefox e no Safari do computador, o servidor descartava e a previsão salva sumia. Mês sem ano (ou o contrário) é sem previsão. Revenda esconde os três, mas **guarda a previsão que já estava salva**. Situação antiga (*Reservado*/*Alugado* num empreendimento) aparece como opção extra, para não sumir ao editar. O tipo só é enviado na criação: trocar de tipo é só por *Mover para…*.
 
@@ -9074,3 +9074,25 @@ Armadilhas:
 4. **As regras ficam fora do JSX, com spec:** `PooledClients/clientGroups.ts` (montar a lista, sugestão, payload) e `src/features/whatsappGroups/destinoDoGrupo.ts` (como o destino aparece e quando trava).
 5. **Escape de acento no `clientGroups.ts`:** a ferramenta de edição já converteu 5 vezes o intervalo de acentos (`̀-ͯ`) no caractere literal. O spec pega; não "arrumar" na mão.
 6. **Ambiente sem pnpm:** instalar com `npm ci --legacy-peer-deps` e não commitar `yarn.lock` nem lockfile alterado.
+
+## Mapa de Imóveis: card no alfinete (desde 2026-10-16)
+
+Pedido do dono: mapa maior e, com o mouse no alfinete, a prévia do imóvel (como o mini card do funil), com clique levando ao imóvel.
+
+O que aparece na tela:
+
+- **O mapa ocupa a tela** abaixo das abas (`100dvh - 13rem`, piso de 480px). Antes era uma caixa de 480px.
+- **Mouse parado 0,3 s no alfinete abre o card** em cima dele (sem espaço, embaixo; nunca sai da tela): foto de capa, código, nome, preço, tipo e finalidade, quartos/banheiros/vagas/m² e bairro. O balão de texto que abria no clique saiu.
+- **Pra onde o clique leva** (no alfinete com mouse, ou no card): imóvel marcado pro site → *Ver página no site* (aba nova); fora do site e a pessoa pode editar → *Abrir cadastro*; fora do site sem poder editar → o card diz "Este imóvel não está no site" e não abre nada.
+- **No dedo** (sem passar o mouse): o toque no alfinete abre o card, o toque no card leva ao imóvel.
+- Fecha ao sair do alfinete e do card (folga de 150 ms), ao arrastar/dar zoom/clicar no mapa, rolar, redimensionar e no Esc.
+
+Decisões do dono (não reabrir sem ele pedir): 0,3 s (o funil é 0,8 s; o alfinete é pequeno); destino site → cadastro → nada. A página do imóvel dentro do LM Flow, sem depender do site, está no backlog (`LM FLOW/_MELHORIAS.md`, 16/10).
+
+Armadilhas:
+
+1. **Depende do servidor** (`lm-flow`, `saas-multitenant`): `/properties/map` passou a mandar `cover_photo_url` e `published_on_site`. Contra o servidor antigo o card sai sem foto e todo imóvel conta como fora do site (abrir página que não existe é pior que abrir o cadastro).
+2. **Regras em `lista/pinoDoMapa.ts`** (com spec), quando abrir/fechar em `lista/useCardNoMapa.ts`, a peça em `lista/CardNoMapa.tsx` (portal no body). **Não renomear `pinoDoMapa.ts` pra `cardNoMapa.ts`:** no disco do Mac (sem diferença de maiúscula) o `import './CardNoMapa'` cai no `.ts` e o componente vira `undefined`.
+3. **O `mouseover` do Leaflet também chega no toque.** O tipo do ponteiro é lido no `pointermove`/`pointerdown` da caixa do mapa (caneta conta como dedo, igual ao funil) e só o mouse abre por espera.
+4. **A página do site** sai de `paginaNoSite` (a mesma do *Ver página no site* da lista).
+

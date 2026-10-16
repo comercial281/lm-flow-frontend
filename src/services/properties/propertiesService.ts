@@ -227,6 +227,10 @@ export interface PropertyMapMarker {
     parking: number;
     useful_area_m2: number;
   };
+  /** Capa do mini card do mapa (mesma regra da lista). */
+  cover_photo_url?: string | null;
+  /** Marcado pra aparecer no site; o mapa já só traz Disponível/Reservado. */
+  published_on_site?: boolean;
 }
 
 export interface PropertiesListParams {

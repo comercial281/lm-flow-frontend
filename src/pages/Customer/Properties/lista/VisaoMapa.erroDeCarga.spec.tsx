@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import VisaoMapa from './VisaoMapa';
 
 const mapBounds = vi.hoisted(() => vi.fn());
@@ -11,9 +12,9 @@ vi.mock('@/services/properties/propertiesService', async orig => {
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="mapa">{children}</div>,
   TileLayer: () => null,
-  Marker: ({ children }: { children: React.ReactNode }) => <div data-testid="pino">{children}</div>,
-  Popup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Marker: () => <div data-testid="pino" />,
   useMap: () => ({ fitBounds: vi.fn() }),
+  useMapEvents: () => null,
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -24,7 +25,7 @@ beforeEach(() => mapBounds.mockReset());
 describe('VisaoMapa · erro de carga', () => {
   it('carga que falha mostra o erro com Tentar de novo, não o vazio', async () => {
     mapBounds.mockRejectedValueOnce(new Error('rede'));
-    render(<VisaoMapa kind={'venda' as never} />);
+    render(<VisaoMapa kind={'venda' as never} />, { wrapper: MemoryRouter });
     expect(await screen.findByText('Não deu pra carregar')).toBeInTheDocument();
     expect(screen.queryByText(/Nenhum imóvel desta aba/)).toBeNull();
     mapBounds.mockResolvedValueOnce([pino]);
@@ -35,7 +36,7 @@ describe('VisaoMapa · erro de carga', () => {
 
   it('Tentar de novo duas vezes seguidas não duplica os pinos', async () => {
     mapBounds.mockRejectedValueOnce(new Error('rede'));
-    render(<VisaoMapa kind={'venda' as never} />);
+    render(<VisaoMapa kind={'venda' as never} />, { wrapper: MemoryRouter });
     const botao = await screen.findByRole('button', { name: 'Tentar de novo' });
     mapBounds.mockResolvedValue([pino]);
     await userEvent.dblClick(botao);
