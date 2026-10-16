@@ -68,9 +68,9 @@ describe('construtor do corretor', () => {
   const estado = (item: Parameters<typeof personalBlockState>[0]) =>
     personalBlockState(item, { temNumero: false, temIA: false });
 
-  it('a paleta não mostra "Avisar no grupo" (fora)', () => {
+  it('a paleta não mostra "Notificação" (fora)', () => {
     render(<FlowBlocksMenu open onOpenChange={() => {}} onPick={() => {}} estadoDoBloco={estado} trigger={<button>Blocos</button>} />);
-    expect(screen.queryByText('Avisar no grupo')).toBeNull();
+    expect(screen.queryByText('Notificação')).toBeNull();
     expect(screen.getByText('Esperar')).toBeTruthy();
   });
 

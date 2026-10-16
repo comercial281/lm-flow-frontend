@@ -9199,3 +9199,15 @@ Armadilhas:
 3. **Piso de rollback do backend: #497** (`config.items` no servidor). Num servidor mais antigo que ele, bloco Mensagem com 2+ itens ou com espera **não manda nada** (o servidor antigo ignora `items` e os campos soltos estão vazios), sem erro. Bloco de uma mensagem só continua mandando, pelo espelho nos campos soltos (`looseFieldsOf` em `messageItems.ts`). Voltar o backend pra antes do #497 = aceitar isso ou voltar a tela junto.
 
 Código: `src/components/flowAutomations/MessageBlockFields.tsx` (com o `ProgressFields`, que saiu do `FlowNodePanel`); saiu o `FunnelMessageFields.tsx`. Testes: `readiness.spec.ts`, `guide.spec.ts`, `BookBlocks.spec.tsx`, `FlowBlocks.spec.tsx`, `FlowCanvasLayout.spec.tsx`, `FlowGuide.spec.tsx`, `MessageSequenceEditor.spec.tsx`.
+
+## Construtor: um bloco Notificação, "Avisar quem" e "Por onde" (desde 2026-10-16)
+
+PR 9 do redesenho do construtor. Os cinco avisos (grupo, pessoa, corretor, gestor, notificação no celular) viraram UM bloco na lista de Blocos, "Notificação". O servidor não mudou: continua recebendo um dos cinco `action_type`.
+
+- **Janela do bloco:** "Avisar quem" (O grupo do WhatsApp, Uma pessoa da equipe, O corretor do lead, O gestor), "Por onde" (WhatsApp ou Aviso no app, só aparece pra "Uma pessoa da equipe") e, embaixo, os campos do tipo escolhido (o mesmo `ActionEditor` das regras).
+- **Mapa:** grupo+WhatsApp = `notify_group`; pessoa+WhatsApp = `notify_user`; pessoa+app = `notify_push`; corretor = `notify_broker`; gestor = `notify_gestor`. Código em `src/features/flowAutomations/notification.ts`, tela em `NotificationFields.tsx`.
+- **Trocar a escolha mantém a mensagem** e zera o resto com `''` ou `[]` (nunca apaga a chave, por causa do merge do modo guiado). Pessoa WhatsApp <-> app leva a pessoa junto (`user_id` <-> `user_ids`). O título só existe no aviso no app.
+- **Nome e cartão:** os cinco tipos se chamam "Notificação" no cartão e na janela; a linha de resumo do cartão continua dizendo o destino. Blocos antigos abrem já com a escolha marcada.
+- **Lista de Blocos:** só um item, que nasce como `notify_group`. A chave `lead_action:notify_group` continua fora de `PERSONAL_LEAD_ACTIONS`, então o corretor segue sem ver a Notificação.
+
+Código: `notification.ts`, `NotificationFields.tsx`, `leadAction.ts`, `blockInfo.ts`, `FlowNodePanel.tsx`. Testes: `notification.spec.ts`, `FlowBlocks.spec.tsx`, `palette.spec.ts`.

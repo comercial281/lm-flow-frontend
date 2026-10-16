@@ -101,7 +101,7 @@ describe('gestor na automação pessoal DELE', () => {
     const mandar = await screen.findByRole('button', { name: /^Mensagem.*Indisponível/ });
     expect((mandar as HTMLButtonElement).disabled).toBe(true);
     // Bloco fora da lista do corretor continua disponível pro gestor.
-    const avisar = screen.getByRole('button', { name: /Avisar no grupo/ });
+    const avisar = screen.getByRole('button', { name: /^Notificação/ });
     expect((avisar as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -120,7 +120,7 @@ describe('gestor na automação pessoal de OUTRA pessoa', () => {
     get.mockResolvedValue(flow({ owner_user_id: 'u2', owner_name: 'Ana' }));
     renderCanvas();
     await abrirBlocos();
-    expect(await screen.findByRole('button', { name: /Avisar no grupo/ })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /^Notificação/ })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Indisponível/ })).toBeNull();
     expect(personalCapabilities).not.toHaveBeenCalled();
   });

@@ -42,7 +42,7 @@ describe('bloco "ação das Automações" (lead_action)', () => {
 
   it('nome do bloco: o da spec, e o da regra quando não tem um próprio', () => {
     expect(leadActionLabel('assign_via_roleta')).toBe('Distribuir pela roleta');
-    expect(leadActionLabel('notify_user')).toBe('Avisar pessoa');
+    expect(leadActionLabel('notify_user')).toBe('Notificação');
   });
 
   it('o que falta usa o MESMO mapa de obrigatórios da regra, em português', () => {

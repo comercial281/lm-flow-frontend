@@ -37,6 +37,8 @@ import { RECOVERED_EFFECTS } from '@/features/flowAutomations/recovered';
 import { moveStageModeOf, stageNameOf, withMoveStageMode, withStageName } from '@/features/flowAutomations/moveStage';
 import { FormAnswerPicker } from './FormAnswerPicker';
 import { FlowBlockDialog } from './FlowBlockDialog';
+import { NotificationFields } from './NotificationFields';
+import { isNotifyAction } from '@/features/flowAutomations/notification';
 import { LinhaDoEnvio, MessageBlockFields } from './MessageBlockFields';
 
 interface Props {
@@ -559,6 +561,9 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
         // por vazio (o servidor recusa o fluxo inteiro). A config volta intacta.
         if (isFlowOnlyLeadAction(config.action_type)) {
           return <p className="text-xs text-muted-foreground">Sem configuração adicional.</p>;
+        }
+        if (isNotifyAction(config.action_type)) {
+          return <NotificationFields config={config} onChange={setConfig} resources={resources} />;
         }
         return (
           <>
