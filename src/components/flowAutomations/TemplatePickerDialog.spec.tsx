@@ -99,6 +99,19 @@ describe('TemplatePickerDialog', () => {
     expect(templates).toHaveBeenCalledWith('automation');
   });
 
+  it('gestor na aba Da equipe: aplica com { team: true }; em Minhas, { team: false }', async () => {
+    templates.mockResolvedValue(MODELOS);
+    applyTemplate.mockResolvedValue({ id: 'f1' });
+    for (const team of [true, false]) {
+      applyTemplate.mockClear();
+      const { unmount } = render(<TemplatePickerDialog open onClose={vi.fn()} title="Modelos de automação" description="Escolha." onApplied={vi.fn()} team={team} />);
+      const botoes = await screen.findAllByRole('button', { name: 'Usar este modelo' });
+      fireEvent.click(botoes[botoes.length - 1]);
+      await waitFor(() => expect(applyTemplate).toHaveBeenCalledWith('nova_tentativa', { team }));
+      unmount();
+    }
+  });
+
   it('falha ao criar mostra o motivo e não fecha', async () => {
     templates.mockResolvedValue(MODELOS);
     applyTemplate.mockRejectedValue(new Error('x'));

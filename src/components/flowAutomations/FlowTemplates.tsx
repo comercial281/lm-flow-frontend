@@ -24,9 +24,11 @@ const APPLY_ERROR = 'Não deu pra criar o fluxo pelo modelo. Tente de novo.';
 interface ListProps {
   onApplied: (flow: FlowAutomation) => void;
   className?: string;
+  /** Só o gestor: aba "Da equipe" = true, "Minhas" = false, outras = sem valor. */
+  team?: boolean;
 }
 
-export function FlowTemplateList({ onApplied, className }: ListProps) {
+export function FlowTemplateList({ onApplied, className, team }: ListProps) {
   const [templates, setTemplates] = useState<FlowTemplate[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [openKey, setOpenKey] = useState<string | null>(null);
@@ -72,6 +74,7 @@ export function FlowTemplateList({ onApplied, className }: ListProps) {
         title={TITLE}
         description={DESCRIPTION}
         applyError={APPLY_ERROR}
+        team={team}
         onApplied={flow => {
           setOpenKey(null);
           onApplied(flow);
@@ -86,7 +89,7 @@ interface DialogProps extends ListProps {
   onClose: () => void;
 }
 
-export function FlowTemplatesDialog({ open, onClose, onApplied }: DialogProps) {
+export function FlowTemplatesDialog({ open, onClose, onApplied, team }: DialogProps) {
   return (
     <TemplatePickerDialog
       open={open}
@@ -94,6 +97,7 @@ export function FlowTemplatesDialog({ open, onClose, onApplied }: DialogProps) {
       title={TITLE}
       description={DESCRIPTION}
       applyError={APPLY_ERROR}
+      team={team}
       onApplied={onApplied}
     />
   );

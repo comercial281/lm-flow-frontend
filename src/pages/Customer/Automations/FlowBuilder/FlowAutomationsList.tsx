@@ -96,6 +96,10 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
     }
   };
 
+  // Gestor aplicando modelo: "Da equipe" cria da equipe, "Minhas" cria pessoal;
+  // em "Todas"/"Dos corretores" o servidor decide (gestor = equipe). Corretor não passa nada.
+  const teamDoModelo = ehGestor ? (abaAtiva === 'equipe' ? true : abaAtiva === 'minhas' ? false : undefined) : undefined;
+
   // Modelos: o servidor cria o fluxo desligado e a tela abre ele no canvas.
   const [templatesOpen, setTemplatesOpen] = useState(false);
 
@@ -331,7 +335,7 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
             description={copy.emptyDescription}
             className="pb-6"
           />
-          <FlowTemplateList onApplied={openFlow} className="w-full max-w-xl" />
+          <FlowTemplateList onApplied={openFlow} team={teamDoModelo} className="w-full max-w-xl" />
         </div>
       )}
       {!loading && automations.length === 0 && !search && isFollowup && (
@@ -425,7 +429,7 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
         })}
       </ul>
     </Pagina>
-      {!isFollowup && <FlowTemplatesDialog open={templatesOpen} onClose={() => setTemplatesOpen(false)} onApplied={openFlow} />}
+      {!isFollowup && <FlowTemplatesDialog open={templatesOpen} onClose={() => setTemplatesOpen(false)} onApplied={openFlow} team={teamDoModelo} />}
       {dialogoDeConfirmacao}
       {dialogoDePergunta}
     </>

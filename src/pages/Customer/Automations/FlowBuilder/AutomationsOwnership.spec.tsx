@@ -16,9 +16,13 @@ vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
   flowAutomationsService: { list, create, update, duplicate, toggle: vi.fn(), get: vi.fn(), archive: vi.fn(), destroy: vi.fn() },
   flowAutomationFoldersService: { list: foldersList },
 }));
+const modelosTeam = vi.hoisted(() => ({ last: 'nunca' as unknown }));
 vi.mock('@/components/flowAutomations/FlowTemplates', () => ({
   FlowTemplateList: () => null,
-  FlowTemplatesDialog: () => null,
+  FlowTemplatesDialog: ({ open, team }: { open: boolean; team?: boolean }) => {
+    if (open) modelosTeam.last = team;
+    return null;
+  },
 }));
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() } }));
 vi.mock('@/hooks/useCan', () => ({
@@ -159,5 +163,40 @@ describe('gestor', () => {
     await screen.findByText('Minha');
     fireEvent.click(screen.getByRole('button', { name: /Nova pessoal/ }));
     await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ team: false })));
+  });
+});
+
+describe('modelos: o gestor leva a aba pro servidor', () => {
+  const abrirModelos = async (aba?: RegExp) => {
+    modelosTeam.last = 'nunca';
+    list.mockResolvedValue([flow('a1', 'Minha'), teamFlow('a2', 'Da casa')]);
+    renderPage();
+    await screen.findByRole('tab', { name: /Minhas/ });
+    if (aba) fireEvent.click(screen.getByRole('tab', { name: aba }));
+    fireEvent.click(await screen.findByRole('button', { name: /Modelos/ }));
+  };
+
+  it('aba Da equipe = team true; Minhas = false; Todas = sem valor', async () => {
+    can.manager = true;
+    await abrirModelos(/Da equipe/);
+    expect(modelosTeam.last).toBe(true);
+  });
+
+  it('Minhas = team false', async () => {
+    can.manager = true;
+    await abrirModelos(/Minhas/);
+    expect(modelosTeam.last).toBe(false);
+  });
+
+  it('Todas = sem valor (o servidor decide)', async () => {
+    can.manager = true;
+    await abrirModelos();
+    expect(modelosTeam.last).toBeUndefined();
+  });
+
+  it('corretor nunca manda team', async () => {
+    can.manager = false;
+    await abrirModelos();
+    expect(modelosTeam.last).toBeUndefined();
   });
 });
