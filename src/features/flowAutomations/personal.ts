@@ -4,6 +4,7 @@
 // cinza ("Indisponível") e o que esconder no construtor do corretor.
 
 import { useCan } from '@/hooks/useCan';
+import type { PedidoDeConfirmacao } from '@/hooks/useConfirmacao';
 import type { FlowAutomation, FlowNodeKind, FlowTriggerEvent } from '@/types/flowAutomations';
 import type { PaletteItem } from './palette';
 import type { FlowTriggerGroup } from './trigger';
@@ -102,4 +103,25 @@ export function isPersonalFlow(flow: Pick<FlowAutomation, 'permissions'>): boole
 export function useEhCorretorDeAutomacao(): boolean {
   const can = useCan();
   return !can('flow_automations', 'update') && can('flow_automations', 'own');
+}
+
+/**
+ * A pergunta antes de tirar "Da equipe" (lista e construtor). Sem dono ou dona
+ * de quem tira: a automação passa a ser dele. Com outro dono: fica do dono.
+ */
+export function tirarDaEquipe(
+  flow: Pick<FlowAutomation, 'owner_user_id' | 'owner_name'>,
+  meId: string,
+): PedidoDeConfirmacao {
+  const dono = flow.owner_user_id == null || String(flow.owner_user_id) === '' ? null : String(flow.owner_user_id);
+  const deOutro = dono !== null && dono !== meId;
+  const nome = flow.owner_name?.trim();
+  const deQuem = nome ? `de ${nome}` : 'do dono';
+  return {
+    titulo: 'Tirar da equipe?',
+    descricao: deOutro
+      ? `Esta automação passa a valer só pros leads ${deQuem} e a mandar pelo WhatsApp ${deQuem}.`
+      : 'Esta automação passa a valer só pros seus leads e a mandar pelo seu WhatsApp.',
+    rotuloDaAcao: 'Tirar da equipe',
+  };
 }

@@ -22,7 +22,7 @@ import { enableProblem } from '@/features/flowAutomations/readiness';
 import { serverMessage } from '@/features/flowAutomations/guide';
 import { FlowTemplateList, FlowTemplatesDialog } from '@/components/flowAutomations/FlowTemplates';
 
-import { isPersonalFlow, useEhCorretorDeAutomacao } from '@/features/flowAutomations/personal';
+import { isPersonalFlow, tirarDaEquipe, useEhCorretorDeAutomacao } from '@/features/flowAutomations/personal';
 import { useAuthStore } from '@/store/authStore';
 import { useCan } from '@/hooks/useCan';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -133,13 +133,15 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
     }
   };
 
+  // Tirar "Da equipe" muda de quem são os leads e por qual WhatsApp sai: pergunta
+  // antes. A lista fica com o que o servidor devolveu (sem dono, a automação
+  // passa a ser de quem tirou).
   const markTeam = async (a: FlowAutomation, next: boolean): Promise<boolean> => {
+    if (!next && !(await confirmar(tirarDaEquipe(a, meId)))) return false;
     try {
-      await flowAutomationsService.update(a.id, { team: next });
-      setAutomations(list => list.map(x => (x.id === a.id
-        ? { ...x, team: next, permissions: x.permissions ? { ...x.permissions, personal: !next } : x.permissions }
-        : x)));
-      toast.success(next ? `"${a.name}" agora é da equipe: todo mundo vê.` : `"${a.name}" voltou a ser só do dono.`);
+      const atualizada = await flowAutomationsService.update(a.id, { team: next });
+      setAutomations(list => list.map(x => (x.id === a.id ? { ...x, ...atualizada } : x)));
+      toast.success(next ? `"${a.name}" agora é da equipe: todo mundo vê.` : `"${a.name}" saiu da equipe.`);
       return true;
     } catch (e) {
       toast.error(serverMessage(e, 'Não deu pra mudar agora. Tente de novo.'));

@@ -155,6 +155,48 @@ describe('gestor', () => {
     await waitFor(() => expect(update).toHaveBeenCalledWith('a1', { team: true }));
   });
 
+  // Revisão final (I3): tirar "Da equipe" pergunta antes, e a lista fica com o
+  // que o servidor devolveu (sem dono, a automação passa a ser de quem tirou).
+  it('desliga "Da equipe": pergunta antes e usa a resposta do servidor', async () => {
+    can.manager = true;
+    list.mockResolvedValue([teamFlow('a3', 'Da casa', { permissions: { ...mgrPerms, personal: false } })]);
+    update.mockResolvedValue(flow('a3', 'Da casa', { team: false, owner_user_id: 'u1', owner_name: 'Eu',
+                                                    permissions: { ...mgrPerms, personal: true } }));
+    renderPage();
+    await screen.findByText('Da casa');
+    fireEvent.click(screen.getByRole('switch', { name: 'Da equipe' }));
+    expect(await screen.findByText('Tirar da equipe?')).toBeTruthy();
+    expect(screen.getByText('Esta automação passa a valer só pros seus leads e a mandar pelo seu WhatsApp.')).toBeTruthy();
+    expect(update).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tirar da equipe' }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith('a3', { team: false }));
+    await waitFor(() => expect(screen.getByRole('tab', { name: /Minhas \(1\)/ })).toBeTruthy());
+    expect(screen.getByRole('tab', { name: /Da equipe \(0\)/ })).toBeTruthy();
+  });
+
+  it('desliga "Da equipe" da automação de outro dono: o aviso fala dos leads dele', async () => {
+    can.manager = true;
+    list.mockResolvedValue([flow('a2', 'Da Ana', { team: true, owner_user_id: 'u2', owner_name: 'Ana',
+                                                    permissions: { ...mgrPerms, personal: false } })]);
+    renderPage();
+    await screen.findByText('Da Ana');
+    fireEvent.click(screen.getByRole('switch', { name: 'Da equipe' }));
+    expect(await screen.findByText('Esta automação passa a valer só pros leads de Ana e a mandar pelo WhatsApp de Ana.')).toBeTruthy();
+  });
+
+  it('cancelar a pergunta não muda nada', async () => {
+    can.manager = true;
+    list.mockResolvedValue([teamFlow('a3', 'Da casa', { permissions: { ...mgrPerms, personal: false } })]);
+    renderPage();
+    await screen.findByText('Da casa');
+    fireEvent.click(screen.getByRole('switch', { name: 'Da equipe' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByText('Tirar da equipe?')).toBeNull());
+    expect(update).not.toHaveBeenCalled();
+    expect(screen.getByRole('switch', { name: 'Da equipe' }).getAttribute('aria-checked')).toBe('true');
+  });
+
   it('cria Pessoal (team false) ou Da equipe (team true)', async () => {
     can.manager = true;
     list.mockResolvedValue([flow('a1', 'Minha', { permissions: { ...mgrPerms, personal: true } })]);

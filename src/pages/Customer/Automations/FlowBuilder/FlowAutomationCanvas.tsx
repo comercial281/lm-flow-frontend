@@ -42,7 +42,7 @@ import { businessHoursOnlyOf } from '@/features/flowAutomations/businessHours';
 import { FLOW_KIND_COPY, kindOf } from '@/features/flowAutomations/kind';
 import { paletteItems, podeSoltarBloco, type PaletteItem } from '@/features/flowAutomations/palette';
 import {
-  isPersonalFlow, personalBlockState, personalTriggerGroups, useEhCorretorDeAutomacao,
+  isPersonalFlow, personalBlockState, personalTriggerGroups, tirarDaEquipe, useEhCorretorDeAutomacao,
 } from '@/features/flowAutomations/personal';
 import { usePersonalCapabilities } from '@/features/flowAutomations/usePersonalCapabilities';
 import { readBlocksOpen, saveBlocksOpen } from '@/features/flowAutomations/blocksPanelState';
@@ -54,6 +54,7 @@ import {
   useAlteracoesNaoSalvas, mesmoConteudo, limparPendentes, PEDIDO_SAIR_SEM_SALVAR,
 } from '@/hooks/useAlteracoesNaoSalvas';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { useAuthStore } from '@/store/authStore';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { ehCelular } from '@/hooks/useCelular';
 import FlowCanvasCelular from './FlowCanvasCelular';
@@ -118,6 +119,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const messageVariables = useTenantMessageVariables();
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const sidePanel = useSidePanel(confirmar);
+  const meId = String(useAuthStore(s => s.currentUser?.id) ?? '');
   const isMobile = useMediaQuery(MOBILE_QUERY);
   // Raio-X do celular (10/10/2026): a tela do celular (sem o desenho) é decidida
   // SÓ na abertura. Seguir o redimensionamento trocaria o canvas no meio da
@@ -572,6 +574,32 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     return <Carregando variante="texto" linhas={6} className="p-6" />;
   }
 
+  // "Da equipe" na automação: sem dono também é da equipe, então vale o que o
+  // servidor diz (`personal`), não só a marca. Funil e follow-up seguem a marca.
+  const ehAutomacao = kind === 'automation';
+  const daEquipe = ehAutomacao && automation.permissions && 'personal' in automation.permissions
+    ? automation.permissions.personal !== true
+    : !!automation.team;
+  // O gestor marca e desmarca "Da equipe" no cabeçalho também (a mesma pergunta da lista).
+  const podeMarcarEquipe = ehAutomacao && !readOnly && automation.permissions?.can_mark_team === true;
+
+  async function marcarEquipe(next: boolean): Promise<boolean> {
+    if (!automation) return false;
+    if (!next && !(await confirmar(tirarDaEquipe(automation, meId)))) return false;
+    try {
+      const atualizada = await flowAutomationsService.update(automation.id, { team: next });
+      // Só dono e equipe: o resto da tela pode ter edição ainda não salva.
+      setAutomation(a => (a ? {
+        ...a, team: atualizada.team, owner_user_id: atualizada.owner_user_id,
+        owner_name: atualizada.owner_name, permissions: atualizada.permissions,
+      } : a));
+      return true;
+    } catch (e) {
+      toast.error(serverMessage(e, 'Não deu pra mudar agora. Tente de novo.'));
+      return false;
+    }
+  }
+
   // A chave de ligar: a mesma no canvas e na tela do celular.
   async function alternarLigado(): Promise<boolean> {
     if (!automation) return false;
@@ -637,7 +665,9 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
             aria-label={isConversation ? 'Nome do funil' : 'Nome do fluxo'}
             disabled={readOnly}
           />
-          {automation.team && (
+          {podeMarcarEquipe ? (
+            <Chave rotulo="Da equipe" className="ml-2 shrink-0" ligada={daEquipe} aoMudar={marcarEquipe} />
+          ) : daEquipe && (
             <Badge variant="secondary" className="shrink-0 gap-1 text-[10px]">
               <Users className="h-3 w-3" aria-hidden="true" /> Da equipe
             </Badge>

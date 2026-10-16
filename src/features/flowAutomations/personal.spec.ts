@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FLOW_TRIGGER_GROUPS } from './trigger';
 import type { PaletteItem } from './palette';
-import { isPersonalFlow, personalBlockState, personalTriggerGroups } from './personal';
+import { isPersonalFlow, personalBlockState, personalTriggerGroups, tirarDaEquipe } from './personal';
 
 const item = (key: string): PaletteItem => ({ key } as PaletteItem);
 const sem = { temNumero: false, temIA: false };
@@ -35,5 +35,20 @@ describe('personal', () => {
   it('isPersonalFlow', () => {
     expect(isPersonalFlow({ permissions: { personal: true } as never })).toBe(true);
     expect(isPersonalFlow({})).toBe(false);
+  });
+});
+
+describe('tirarDaEquipe (revisão final)', () => {
+  it('sem dono ou dono = quem tira: fala dos seus leads', () => {
+    expect(tirarDaEquipe({ owner_user_id: null, owner_name: null }, 'u1').descricao)
+      .toBe('Esta automação passa a valer só pros seus leads e a mandar pelo seu WhatsApp.');
+    expect(tirarDaEquipe({ owner_user_id: 'u1', owner_name: 'Eu' }, 'u1').titulo).toBe('Tirar da equipe?');
+  });
+
+  it('outro dono: fala dos leads dele; sem nome, "do dono"', () => {
+    expect(tirarDaEquipe({ owner_user_id: 7, owner_name: 'Ana' }, 'u1').descricao)
+      .toBe('Esta automação passa a valer só pros leads de Ana e a mandar pelo WhatsApp de Ana.');
+    expect(tirarDaEquipe({ owner_user_id: 7, owner_name: null }, 'u1').descricao)
+      .toBe('Esta automação passa a valer só pros leads do dono e a mandar pelo WhatsApp do dono.');
   });
 });
