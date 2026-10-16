@@ -15,10 +15,15 @@ const QUEM: Array<[NotifyWho, string]> = [
 ];
 const VIA: Array<[NotifyVia, string]> = [['whatsapp', 'WhatsApp'], ['app', 'Aviso no app']];
 
-export function NotificationFields({ config, onChange, resources }: {
+// Modo guiado (corretor): trocar o destino troca o `action_type`, que o servidor
+// recusa (422). Os dois seletores ficam travados; os campos do tipo seguem.
+export function NotificationFields({ config, onChange, resources, guided = false, storedConfig }: {
   config: FlowNodeConfig;
   onChange(next: FlowNodeConfig): void;
   resources: AutomationResources;
+  guided?: boolean;
+  /** A config gravada do bloco: voltar pro tipo dela devolve os campos dela. */
+  storedConfig?: FlowNodeConfig;
 }) {
   const action = leadActionOf(config);
   const choice = notifyChoiceOf(action.type);
@@ -29,7 +34,8 @@ export function NotificationFields({ config, onChange, resources }: {
         <Label>Avisar quem</Label>
         <Seletor
           value={choice.quem}
-          onChange={e => onChange(withNotifyChoice(config, { quem: e.target.value as NotifyWho, onde: choice.onde }))}
+          onChange={e => onChange(withNotifyChoice(config, { quem: e.target.value as NotifyWho, onde: choice.onde }, storedConfig))}
+          disabled={guided}
           className="mt-1 w-full"
           aria-label="Avisar quem"
         >
@@ -41,7 +47,8 @@ export function NotificationFields({ config, onChange, resources }: {
           <Label>Por onde</Label>
           <Seletor
             value={choice.onde}
-            onChange={e => onChange(withNotifyChoice(config, { quem: choice.quem, onde: e.target.value as NotifyVia }))}
+            onChange={e => onChange(withNotifyChoice(config, { quem: choice.quem, onde: e.target.value as NotifyVia }, storedConfig))}
+            disabled={guided}
             className="mt-1 w-full"
             aria-label="Por onde"
           >

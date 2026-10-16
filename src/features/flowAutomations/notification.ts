@@ -40,14 +40,24 @@ export function viasFor(quem: NotifyWho): NotifyVia[] {
 }
 
 /**
- * Troca a escolha mantendo a mensagem. Pessoa WhatsApp <-> app leva o destinatário
- * junto; o resto zera ('' ou []), nunca apaga chave (convenção do guided-merge).
+ * Troca a escolha mantendo a mensagem. Os campos do tipo novo nascem vazios
+ * ('' ou []) e os do tipo anterior saem; pessoa WhatsApp <-> app leva o
+ * destinatário junto. Voltar pro tipo GRAVADO no bloco (`stored`, a config de
+ * quando a janela abriu) devolve os campos gravados (grupo, número, título…),
+ * com a mensagem de agora: ir e voltar não perde nada.
+ * No modo guiado a escolha não muda (a janela trava os dois seletores).
  */
-export function withNotifyChoice(config: FlowNodeConfig, choice: NotifyChoice): FlowNodeConfig {
+export function withNotifyChoice(config: FlowNodeConfig, choice: NotifyChoice, stored?: FlowNodeConfig): FlowNodeConfig {
   const atual = leadActionOf(config);
   const params = atual.params as Record<string, unknown>;
   const type = notifyActionFor(choice);
   const message = String(params.message ?? '');
+  if (stored) {
+    const gravado = leadActionOf(stored);
+    if (gravado.type === type && isNotifyAction(gravado.type)) {
+      return leadActionConfig({ type, params: { ...structuredClone(gravado.params), message } });
+    }
+  }
   const ids = Array.isArray(params.user_ids) ? (params.user_ids as unknown[]).map(String) : [];
   const userId = String(params.user_id ?? '') || ids[0] || '';
   let next: Record<string, unknown>;

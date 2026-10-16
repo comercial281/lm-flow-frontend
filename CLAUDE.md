@@ -9206,7 +9206,8 @@ PR 9 do redesenho do construtor. Os cinco avisos (grupo, pessoa, corretor, gesto
 
 - **Janela do bloco:** "Avisar quem" (O grupo do WhatsApp, Uma pessoa da equipe, O corretor do lead, O gestor), "Por onde" (WhatsApp ou Aviso no app, só aparece pra "Uma pessoa da equipe") e, embaixo, os campos do tipo escolhido (o mesmo `ActionEditor` das regras).
 - **Mapa:** grupo+WhatsApp = `notify_group`; pessoa+WhatsApp = `notify_user`; pessoa+app = `notify_push`; corretor = `notify_broker`; gestor = `notify_gestor`. Código em `src/features/flowAutomations/notification.ts`, tela em `NotificationFields.tsx`.
-- **Trocar a escolha mantém a mensagem** e zera o resto com `''` ou `[]` (nunca apaga a chave, por causa do merge do modo guiado). Pessoa WhatsApp <-> app leva a pessoa junto (`user_id` <-> `user_ids`). O título só existe no aviso no app.
+- **Trocar a escolha mantém a mensagem.** Os campos do tipo novo nascem vazios (`''` ou `[]`) e os do tipo anterior saem dos `params`. Pessoa WhatsApp <-> app leva a pessoa junto (`user_id` <-> `user_ids`). O título só existe no aviso no app. **Voltar pro tipo gravado no bloco** (o de quando a janela abriu) devolve os campos gravados (grupo, número, título, pessoas), com a mensagem de agora: grupo -> pessoa -> grupo não perde o grupo.
+- **Modo guiado (corretor):** "Avisar quem" e "Por onde" aparecem travados (trocar o destino troca o `action_type`, que o servidor recusa com 422); os campos do tipo continuam editáveis.
 - **Nome e cartão:** os cinco tipos se chamam "Notificação" no cartão e na janela; a linha de resumo do cartão continua dizendo o destino. Blocos antigos abrem já com a escolha marcada.
 - **Lista de Blocos:** só um item, que nasce como `notify_group`. A chave `lead_action:notify_group` continua fora de `PERSONAL_LEAD_ACTIONS`, então o corretor segue sem ver a Notificação.
 

@@ -52,4 +52,29 @@ describe('bloco Notificação: Avisar quem + Por onde', () => {
     const cfg = { action_type: 'notify_group', params: { message: 'Oi' } };
     expect(withNotifyChoice(cfg, { quem: 'gestor', onde: 'app' }).action_type).toBe('notify_gestor');
   });
+
+  it('voltar pro tipo gravado devolve os campos gravados, com a mensagem de agora', () => {
+    const gravado = { action_type: 'notify_group', params: { group_jid: 'g1@g.us', instance: 'inst-1', message: 'Oi' } };
+    const pessoa = withNotifyChoice(gravado, { quem: 'pessoa', onde: 'whatsapp' }, gravado);
+    expect(pessoa).toEqual({ action_type: 'notify_user', params: { user_id: '', message: 'Oi' } });
+    const editada = { ...pessoa, params: { ...pessoa.params, message: 'Oi de novo' } };
+    expect(withNotifyChoice(editada, { quem: 'grupo', onde: 'whatsapp' }, gravado)).toEqual({
+      action_type: 'notify_group', params: { group_jid: 'g1@g.us', instance: 'inst-1', message: 'Oi de novo' },
+    });
+  });
+
+  it('push gravado: app -> WhatsApp -> app devolve título e destinatários gravados', () => {
+    const gravado = { action_type: 'notify_push', params: { user_ids: ['u1', 'u2'], title: 'Lead quente', message: 'Oi' } };
+    const zap = withNotifyChoice(gravado, { quem: 'pessoa', onde: 'whatsapp' }, gravado);
+    const volta = withNotifyChoice(zap, { quem: 'pessoa', onde: 'app' }, gravado);
+    expect(volta).toEqual(gravado);
+    expect((volta.params as { user_ids: string[] }).user_ids).not.toBe(gravado.params.user_ids);
+  });
+
+  it('sem config gravada (ou indo pra outro tipo), segue zerando', () => {
+    const gravado = { action_type: 'notify_group', params: { group_jid: 'g1', message: 'Oi' } };
+    expect(withNotifyChoice(gravado, { quem: 'gestor', onde: 'whatsapp' }, gravado)).toEqual({
+      action_type: 'notify_gestor', params: { message: 'Oi' },
+    });
+  });
 });

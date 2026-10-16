@@ -132,6 +132,26 @@ describe('janela do bloco', () => {
     })));
   });
 
+  it('Notificação: grupo -> pessoa -> grupo devolve o grupo e o número gravados', async () => {
+    const onSave = vi.fn();
+    const config = { action_type: 'notify_group', params: { group_jid: 'g1@g.us', instance: 'inst-1', message: 'Lead novo' } };
+    render(<FlowNodePanel node={node({ kind: 'lead_action', config })} resources={resources} onClose={() => {}} onSave={onSave} />);
+    fireEvent.change(screen.getByLabelText('Avisar quem'), { target: { value: 'pessoa' } });
+    fireEvent.change(screen.getByLabelText('Avisar quem'), { target: { value: 'grupo' } });
+    fireEvent.click(screen.getByText('Salvar'));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith('n1', expect.objectContaining({
+      config: { action_type: 'notify_group', params: { group_jid: 'g1@g.us', instance: 'inst-1', message: 'Lead novo' } },
+    })));
+  });
+
+  it('Notificação no modo guiado: "Avisar quem" e "Por onde" travados, os campos seguem', () => {
+    render(<FlowNodePanel guided node={node({ kind: 'lead_action', config: { action_type: 'notify_push', params: { user_ids: ['u1'], title: 'T', message: 'Oi' } } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect((screen.getByLabelText('Avisar quem') as HTMLSelectElement).disabled).toBe(true);
+    expect((screen.getByLabelText('Por onde') as HTMLSelectElement).disabled).toBe(true);
+    const mensagem = screen.getByDisplayValue('Oi') as HTMLTextAreaElement | HTMLInputElement;
+    expect(mensagem.disabled).toBe(false);
+  });
+
   it('bloco antigo notify_push abre com Uma pessoa da equipe + Aviso no app', () => {
     render(<FlowNodePanel node={node({ kind: 'lead_action', config: { action_type: 'notify_push', params: { user_ids: ['u1'], message: 'Oi' } } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
     expect((screen.getByLabelText('Avisar quem') as HTMLSelectElement).value).toBe('pessoa');

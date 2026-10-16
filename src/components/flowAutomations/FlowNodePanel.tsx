@@ -563,7 +563,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
           return <p className="text-xs text-muted-foreground">Sem configuração adicional.</p>;
         }
         if (isNotifyAction(config.action_type)) {
-          return <NotificationFields config={config} onChange={setConfig} resources={resources} />;
+          return <NotificationFields config={config} onChange={setConfig} resources={resources} guided={guided} storedConfig={activeNode.config || {}} />;
         }
         return (
           <>
