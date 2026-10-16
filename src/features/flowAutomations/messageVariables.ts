@@ -18,35 +18,40 @@ export interface MessageVariable {
   description?: string;
   /** Criada pela imobiliária (e não uma das prontas). */
   custom?: boolean;
+  /** Em qual grupo aparece sob "Mais variáveis" (as da imobiliária ficam em "Da imobiliária"). */
+  group?: 'lead' | 'visita' | 'anuncio';
 }
 
+/** As três que ficam à vista no construtor; o resto vai em "Mais variáveis". */
+export const FEATURED_VARIABLE_TOKENS = ['{{nome}}', '{{corretor}}', '{{imovel_titulo}}'];
+
 export const BUILTIN_MESSAGE_VARIABLES: MessageVariable[] = [
-  { label: 'Nome', token: '{{nome}}' },
-  { label: 'Nome completo', token: '{{nome_completo}}' },
+  { label: 'Nome', token: '{{nome}}', group: 'lead' },
+  { label: 'Nome completo', token: '{{nome_completo}}', group: 'lead' },
   // Responsável pelo lead. Vazio até alguém assumir — no gatilho do aceite da
   // roleta já é o corretor que acabou de aceitar.
-  { label: 'Corretor', token: '{{corretor}}' },
-  { label: 'Corretor (completo)', token: '{{corretor_completo}}' },
-  { label: 'Telefone', token: '{{telefone}}' },
-  { label: 'E-mail', token: '{{email}}' },
-  { label: 'Data', token: '{{data}}' },
-  { label: 'Hora', token: '{{hora}}' },
-  { label: 'Link do card', token: '{{link_do_card}}' },
-  { label: 'Imóvel', token: '{{imovel_titulo}}', description: 'O imóvel pelo qual o lead chegou' },
-  { label: 'Link do imóvel', token: '{{imovel_link}}' },
+  { label: 'Corretor', token: '{{corretor}}', group: 'lead' },
+  { label: 'Corretor (completo)', token: '{{corretor_completo}}', group: 'lead' },
+  { label: 'Telefone', token: '{{telefone}}', group: 'lead' },
+  { label: 'E-mail', token: '{{email}}', group: 'lead' },
+  { label: 'Data', token: '{{data}}', group: 'lead' },
+  { label: 'Hora', token: '{{hora}}', group: 'lead' },
+  { label: 'Link do card', token: '{{link_do_card}}', group: 'lead' },
+  { label: 'Imóvel', token: '{{imovel_titulo}}', description: 'O imóvel pelo qual o lead chegou', group: 'lead' },
+  { label: 'Link do imóvel', token: '{{imovel_link}}', group: 'lead' },
   // Da visita: preenchidas nos gatilhos de visita (agendada, remarcada, realizada, lembretes).
-  { label: 'Data da visita', token: '{{visita_data}}', description: 'Só nos gatilhos de visita' },
-  { label: 'Hora da visita', token: '{{visita_hora}}', description: 'Só nos gatilhos de visita' },
-  { label: 'Horário anterior', token: '{{visita_horario_anterior}}', description: 'Só na Visita remarcada: o dia e a hora de antes' },
-  { label: 'Imóvel da visita', token: '{{imovel}}', description: 'Só nos gatilhos de visita: o imóvel da visita marcada (pode ser outro que o imóvel pelo qual o lead chegou)' },
-  { label: 'Corretor da visita', token: '{{visita_corretor}}', description: 'Só nos gatilhos de visita: quem vai fazer a visita (pode ser diferente do responsável pelo lead)' },
-  { label: 'Origem', token: '{{origem}}' },
-  { label: 'Campanha', token: '{{campanha}}' },
-  { label: 'Conjunto', token: '{{conjunto}}' },
-  { label: 'Anúncio', token: '{{anuncio}}' },
-  { label: 'Título anúncio', token: '{{titulo_anuncio}}' },
-  { label: 'Plataforma', token: '{{plataforma}}' },
-  { label: 'Respostas form', token: '{{respostas}}' },
+  { label: 'Data da visita', token: '{{visita_data}}', description: 'Só nos gatilhos de visita', group: 'visita' },
+  { label: 'Hora da visita', token: '{{visita_hora}}', description: 'Só nos gatilhos de visita', group: 'visita' },
+  { label: 'Horário anterior', token: '{{visita_horario_anterior}}', description: 'Só na Visita remarcada: o dia e a hora de antes', group: 'visita' },
+  { label: 'Imóvel da visita', token: '{{imovel}}', description: 'Só nos gatilhos de visita: o imóvel da visita marcada (pode ser outro que o imóvel pelo qual o lead chegou)', group: 'visita' },
+  { label: 'Corretor da visita', token: '{{visita_corretor}}', description: 'Só nos gatilhos de visita: quem vai fazer a visita (pode ser diferente do responsável pelo lead)', group: 'visita' },
+  { label: 'Origem', token: '{{origem}}', group: 'anuncio' },
+  { label: 'Campanha', token: '{{campanha}}', group: 'anuncio' },
+  { label: 'Conjunto', token: '{{conjunto}}', group: 'anuncio' },
+  { label: 'Anúncio', token: '{{anuncio}}', group: 'anuncio' },
+  { label: 'Título anúncio', token: '{{titulo_anuncio}}', group: 'anuncio' },
+  { label: 'Plataforma', token: '{{plataforma}}', group: 'anuncio' },
+  { label: 'Respostas form', token: '{{respostas}}', group: 'anuncio' },
 ];
 
 const normalizeToken = (token: string) => token.replace(/[{}\s]/g, '').toLowerCase();

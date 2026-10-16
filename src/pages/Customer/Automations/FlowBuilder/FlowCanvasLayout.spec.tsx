@@ -264,8 +264,11 @@ describe('painel do bloco', () => {
     await screen.findByTestId('bloco-inicio');
     fireEvent.click(screen.getByLabelText('Editar Mandar WhatsApp'));
     const painel = await screen.findByTestId('painel-do-bloco');
-    expect(within(painel).getByRole('button', { name: 'Corretor' })).toBeTruthy();
-    expect(await within(painel).findByRole('button', { name: 'Empreendimento' })).toBeTruthy();
+    expect(within(painel).getByRole('button', { name: /^Corretor/ })).toBeTruthy();
+    // A da imobiliária fica recolhida em "Mais variáveis" > "Da imobiliária".
+    expect(within(painel).queryByRole('button', { name: /Empreendimento/ })).toBeNull();
+    fireEvent.click(within(painel).getByRole('button', { name: 'Mais variáveis' }));
+    expect(await within(painel).findByRole('button', { name: /Empreendimento/ })).toBeTruthy();
   });
 });
 

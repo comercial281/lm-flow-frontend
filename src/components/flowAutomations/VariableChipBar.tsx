@@ -2,10 +2,12 @@ import { createContext, useContext, useEffect, useState, type RefObject } from '
 import { tenantTemplateVariablesService } from '@/services/messageFunnels/messageFunnelsService';
 import {
   BUILTIN_MESSAGE_VARIABLES,
+  FEATURED_VARIABLE_TOKENS,
   insertAtCursor,
   withTenantVariables,
   type MessageVariable,
 } from '@/features/flowAutomations/messageVariables';
+import { Button } from '@/components/ui/ds';
 import { cn } from '@/lib/utils';
 
 // Botõezinhos de variável embaixo de uma caixa de mensagem (sprint 4, A.4).
@@ -14,6 +16,20 @@ import { cn } from '@/lib/utils';
 // bloco; fora dele (tela de regras), só as prontas.
 
 export const MessageVariablesContext = createContext<MessageVariable[]>(BUILTIN_MESSAGE_VARIABLES);
+
+/**
+ * No construtor (PR 6 do redesenho, 16/10/2026) só Nome, Corretor e Imóvel ficam à
+ * vista e o resto vai em "Mais variáveis". Fora dele (regras, Roleta, Book) o
+ * padrão é `false`: todas à vista, como sempre.
+ */
+export const RecolherVariaveisContext = createContext(false);
+
+const GRUPOS: { key: 'lead' | 'visita' | 'anuncio' | 'imobiliaria'; titulo: string }[] = [
+  { key: 'lead', titulo: 'Do lead' },
+  { key: 'visita', titulo: 'Da visita (só nos gatilhos de visita)' },
+  { key: 'anuncio', titulo: 'Do anúncio' },
+  { key: 'imobiliaria', titulo: 'Da imobiliária' },
+];
 
 /** As prontas + as da imobiliária. Erro de leitura = só as prontas (nunca trava a tela). */
 export function useTenantMessageVariables(): MessageVariable[] {
@@ -50,6 +66,8 @@ type Props = InsertMode & {
 export function VariableChipBar(props: Props) {
   const fromContext = useContext(MessageVariablesContext);
   const variables = props.variables ?? fromContext;
+  const recolher = useContext(RecolherVariaveisContext);
+  const [maisAberto, setMaisAberto] = useState(false);
 
   const insert = (token: string) => {
     if (props.onInsert) {
@@ -68,27 +86,71 @@ export function VariableChipBar(props: Props) {
   };
 
   if (variables.length === 0) return null;
+
+  const chip = (v: MessageVariable, comCodigo: boolean) => (
+    <button
+      key={v.token}
+      type="button"
+      // Não tira o foco da caixa: é o que mantém a posição do cursor.
+      onMouseDown={e => e.preventDefault()}
+      onClick={() => insert(v.token)}
+      title={v.description ? `${v.description} · ${v.token}` : v.token}
+      className={cn(
+        'text-xs px-2 py-0.5 rounded-full border transition-colors',
+        v.custom
+          ? 'border-primary/40 bg-primary/10 text-primary hover:bg-primary/20'
+          : 'border-input bg-muted/40 hover:bg-muted',
+      )}
+    >
+      {comCodigo ? `${v.label} ${v.token}` : v.label}
+    </button>
+  );
+
+  if (!recolher) {
+    return (
+      <div className={cn('flex flex-wrap items-center gap-1 mt-1.5', props.className)}>
+        <span className="text-xs text-muted-foreground mr-1">Inserir variável:</span>
+        {variables.map(v => chip(v, false))}
+      </div>
+    );
+  }
+
+  // Ordem à vista = ordem de FEATURED_VARIABLE_TOKENS.
+  const destaque = FEATURED_VARIABLE_TOKENS.flatMap(t => variables.filter(v => v.token === t));
+  const resto = variables.filter(v => !FEATURED_VARIABLE_TOKENS.includes(v.token));
+  const grupoDe = (v: MessageVariable) => (v.custom ? 'imobiliaria' : (v.group ?? 'lead'));
   return (
-    <div className={cn('flex flex-wrap items-center gap-1 mt-1.5', props.className)}>
-      <span className="text-xs text-muted-foreground mr-1">Inserir variável:</span>
-      {variables.map(v => (
-        <button
-          key={v.token}
-          type="button"
-          // Não tira o foco da caixa: é o que mantém a posição do cursor.
-          onMouseDown={e => e.preventDefault()}
-          onClick={() => insert(v.token)}
-          title={v.description ? `${v.description} · ${v.token}` : v.token}
-          className={cn(
-            'text-xs px-2 py-0.5 rounded-full border transition-colors',
-            v.custom
-              ? 'border-primary/40 bg-primary/10 text-primary hover:bg-primary/20'
-              : 'border-input bg-muted/40 hover:bg-muted',
-          )}
-        >
-          {v.label}
-        </button>
-      ))}
+    <div className={cn('mt-1.5', props.className)}>
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="text-xs text-muted-foreground mr-1">Inserir variável:</span>
+        {destaque.map(v => chip(v, true))}
+        {resto.length > 0 && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-expanded={maisAberto}
+            onClick={() => setMaisAberto(o => !o)}
+            className="h-8 px-2 text-xs"
+          >
+            Mais variáveis
+          </Button>
+        )}
+      </div>
+      {maisAberto && (
+        <div className="mt-1.5 space-y-2">
+          {GRUPOS.map(g => {
+            const itens = resto.filter(v => grupoDe(v) === g.key);
+            if (itens.length === 0) return null;
+            return (
+              <div key={g.key}>
+                <div className="text-xs font-medium text-muted-foreground mb-1">{g.titulo}</div>
+                <div className="flex flex-wrap gap-1">{itens.map(v => chip(v, true))}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
