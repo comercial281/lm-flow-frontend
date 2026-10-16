@@ -54,6 +54,16 @@ describe('passos do guia', () => {
     expect(guideRequiredProblem({ required: ['media_url'] }, { media_url: 'https://x/y.jpg' })).toBeNull();
     expect(guideRequiredProblem(null, {})).toBeNull();
   });
+
+  it('no bloco de mensagem, foto ou contato cumprem o "text" do guia', () => {
+    const foto = { text: '', media_kind: 'image', media_url: 'https://x/y.jpg' };
+    expect(guideRequiredProblem({ required: ['text'] }, foto, 'send_whatsapp')).toBeNull();
+    expect(guideRequiredProblem({ required: ['text'] }, { text: '', contact_phone: '5511999990000' }, 'send_whatsapp')).toBeNull();
+    expect(guideRequiredProblem({ required: ['text'] }, { text: '  ', media_url: '' }, 'send_whatsapp')).toBe('Escreva a mensagem.');
+    expect(guideRequiredProblem({ required: ['text'] }, { text: '', media_kind: 'image', media_url: '' }, 'send_whatsapp')).toBe('Escreva a mensagem.');
+    expect(guideRequiredProblem({ required: ['text'] }, foto, 'lead_action')).toBe('Escreva a mensagem.');
+    expect(guideRequiredProblem({ required: ['text'] }, foto)).toBe('Escreva a mensagem.');
+  });
 });
 
 describe('modo guiado', () => {

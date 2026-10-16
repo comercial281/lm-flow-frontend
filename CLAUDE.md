@@ -9127,3 +9127,14 @@ Armadilhas:
 4. **Menu:** a chave do cliente só barra quem entra por `flow_automations.read` (`clientToggleSoPara`), e quem tem `flow_automations.update` (`clientToggleGestor`) segue a chave mesmo com a `.own`. As rotas usam `permissions={[...]}` (várias chaves, `permissionsFromRoute`) e o spec de fonte `permissionRoutes.source.spec.ts` confere mapa, rota e menu juntos.
 5. **`usePersonalCapabilities` lê `GET /flow_automations/personal_capabilities`** (`{ tem_numero, numero, tem_ia }`), a MESMA regra do envio no servidor: só o número que a pessoa tem, nunca o compartilhado em que ela atende. Não voltar a deduzir pelos "Meus números" e pelo cartão do número (o compartilhado aparecia como dele). Fecha por padrão enquanto carrega ou com erro (sem número, sem IA): nada de bloco liberado antes da resposta.
 6. **Modelo: `team` só vai quando o gestor está em Minhas ou Da equipe.** Corretor nunca manda `team`; o `applyTemplate` sem opção deixa o servidor decidir.
+
+## Foto sem legenda salva no passo do guia (desde 2026-10-16)
+
+Num bloco de mensagem cujo passo do guia pede a "mensagem" (`text`), trocar o texto por uma foto, um arquivo ou um contato, sem legenda, agora **salva**. Antes o Salvar do bloco barrava com *"Escreva a mensagem."* mesmo com a foto escolhida. Vale pra automação criada por modelo, onde o guia exige o texto.
+
+Regra: no bloco **Enviar mensagem** (`send_whatsapp`), o "text" obrigatório do guia vale com texto, arquivo ou contato preenchido (em branco, só espaço, não conta). Os outros blocos seguem como estavam (`lead_action` com foto sem texto continua pedindo a mensagem). Código: `fieldFilled`/`guideRequiredProblem` ganharam o `kind` opcional em `src/features/flowAutomations/guide.ts` (campos em `MESSAGE_CONTENT_FIELDS`), e o `save` do `FlowNodePanel` passa `activeNode.kind`.
+
+Armadilhas:
+
+1. **O backend vem PRIMEIRO.** A mesma régua mora no servidor (lm-flow, PR gêmeo da validação do guia). Com a tela nova contra o servidor antigo, o Salvar passa e o servidor ainda recusa. Merge é deploy: só com ok do Tony, backend antes.
+2. **Régua espelhada:** mudou a lista de campos no servidor, muda `MESSAGE_CONTENT_FIELDS` aqui, com o spec.
