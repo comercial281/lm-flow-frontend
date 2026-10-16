@@ -122,7 +122,7 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
     try {
       await flowAutomationsService.duplicate(a.id);
       toast.success(ehCorretor && !isPersonalFlow(a) ? 'Fluxo duplicado: a cópia é sua.' : 'Fluxo duplicado');
-      if (ehCorretor) setAba('minhas');
+      if (ehCorretor && !isPersonalFlow(a)) setAba('minhas');
       load();
     } catch {
       toast.error('Erro ao duplicar');
@@ -217,14 +217,13 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
     }
   };
 
-  const doMeu = (a: FlowAutomation) => isPersonalFlow(a) && String(a.owner_user_id ?? '') === meId;
-  const dosCorretores = (a: FlowAutomation) => isPersonalFlow(a) && String(a.owner_user_id ?? '') !== meId;
+  const doMeu = useCallback((a: FlowAutomation) => isPersonalFlow(a) && String(a.owner_user_id ?? '') === meId, [meId]);
+  const dosCorretores = useCallback((a: FlowAutomation) => isPersonalFlow(a) && String(a.owner_user_id ?? '') !== meId, [meId]);
   const grupos = useMemo(() => ({
     minhas: automations.filter(doMeu),
     equipe: automations.filter(a => !isPersonalFlow(a)),
     corretores: automations.filter(dosCorretores),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [automations, meId]);
+  }), [automations, doMeu, dosCorretores]);
   const comAbas = ehCorretor || ehGestor;
   const mostradas = !comAbas || abaAtiva === 'todas' ? automations : grupos[abaAtiva];
   const abas = ehCorretor
@@ -358,7 +357,7 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
 
       <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-auto" aria-label="Automações">
         {mostradas.map(a => {
-          const canEdit = a.permissions?.can_edit !== false;
+          const canEdit = ehCorretor ? a.permissions?.can_edit === true : a.permissions?.can_edit !== false;
           const canMarkTeam = !isFollowup && a.permissions?.can_mark_team === true;
           const selo = isFollowup ? null : !isPersonalFlow(a) ? 'equipe' : dosCorretores(a) && a.owner_name ? `De ${a.owner_name}` : null;
           return (

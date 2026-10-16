@@ -90,6 +90,37 @@ describe('corretor', () => {
   });
 });
 
+describe('permissions ausente ou negada', () => {
+  it('corretor: item sem permissions não ganha Ligar/Arquivar/Excluir', async () => {
+    list.mockResolvedValue([flow('a1', 'Sem perms', { permissions: undefined, team: true })]);
+    renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: /Da equipe/ }));
+    const item = (await screen.findByText('Sem perms')).closest('li')!;
+    expect(within(item).getByRole('button', { name: 'Ver' })).toBeTruthy();
+    expect(within(item).getByLabelText('Duplicar pra ter a sua cópia')).toBeTruthy();
+    for (const t of ['Ligar', 'Desligar', 'Arquivar', 'Excluir']) expect(within(item).queryByTitle(t)).toBeNull();
+  });
+
+  it('gestor: can_edit false não mostra botões de edição', async () => {
+    can.manager = true;
+    list.mockResolvedValue([flow('a1', 'Travada', { permissions: { can_edit: false, guided: false, can_mark_team: false, can_create_blank: true, personal: false } })]);
+    renderPage();
+    const item = (await screen.findByText('Travada')).closest('li')!;
+    expect(within(item).getByRole('button', { name: 'Ver' })).toBeTruthy();
+    for (const t of ['Ligar', 'Desligar', 'Arquivar', 'Excluir']) expect(within(item).queryByTitle(t)).toBeNull();
+  });
+
+  it('gestor: item sem permissions segue editável e cai em Da equipe', async () => {
+    can.manager = true;
+    list.mockResolvedValue([flow('a1', 'Antiga', { permissions: undefined })]);
+    renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: /Da equipe \(1\)/ }));
+    const item = (await screen.findByText('Antiga')).closest('li')!;
+    expect(within(item).getByTitle('Arquivar')).toBeTruthy();
+    expect(within(item).getByTitle('Excluir')).toBeTruthy();
+  });
+});
+
 describe('gestor', () => {
   const mgrPerms = { can_edit: true, guided: false, can_mark_team: true, can_create_blank: true };
 
