@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/ds';
-import { Zap, Plus, Folder, FolderPlus, Pencil, Play, Pause, Copy, Archive, Trash2, LayoutTemplate, Repeat } from 'lucide-react';
+import { Zap, Plus, Folder, FolderPlus, Pencil, Play, Pause, Copy, Archive, Trash2, LayoutTemplate, Repeat, Users } from 'lucide-react';
 import { BaseHeader, Pagina } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
+import Abas from '@/components/base/Abas';
+import Chave from '@/components/base/Chave';
+import IconActionButton from '@/components/base/IconActionButton';
 import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import { flowAutomationsService, flowAutomationFoldersService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation, FlowAutomationFolder, FlowAutomationKind } from '@/types/flowAutomations';
@@ -19,6 +22,9 @@ import { enableProblem } from '@/features/flowAutomations/readiness';
 import { serverMessage } from '@/features/flowAutomations/guide';
 import { FlowTemplateList, FlowTemplatesDialog } from '@/components/flowAutomations/FlowTemplates';
 
+import { isPersonalFlow, useEhCorretorDeAutomacao } from '@/features/flowAutomations/personal';
+import { useAuthStore } from '@/store/authStore';
+import { useCan } from '@/hooks/useCan';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { usePergunta } from '@/hooks/usePergunta';
 // A página Automações (sprint 2, 03/10/2026): a lista de fluxos do construtor.
@@ -29,12 +35,21 @@ import { usePergunta } from '@/hooks/usePergunta';
 // novo nasce montado com o modelo "Follow-up padrão" (o servidor monta), então
 // lá não há "Modelos" nem pastas; no topo fica a faixa dos funis antigos que
 // ainda têm fila.
+type Aba = 'todas' | 'minhas' | 'equipe' | 'corretores';
+
 export default function FlowAutomationsList({ kind = 'automation' }: { kind?: FlowAutomationKind }) {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const { perguntar, dialogoDePergunta } = usePergunta();
   const navigate = useNavigate();
   const copy = FLOW_KIND_COPY[kind];
   const isFollowup = kind === 'followup';
+  // Dono e equipe (automações por cargo): só na lista de automações, não no follow-up.
+  const pode = useCan();
+  const ehCorretor = useEhCorretorDeAutomacao() && !isFollowup;
+  const ehGestor = !isFollowup && pode('flow_automations', 'update');
+  const meId = String(useAuthStore(s => s.currentUser?.id) ?? '');
+  const [aba, setAba] = useState<Aba | null>(null);
+  const abaAtiva: Aba = aba ?? (ehCorretor ? 'minhas' : 'todas');
   const [automations, setAutomations] = useState<FlowAutomation[]>([]);
   const [folders, setFolders] = useState<FlowAutomationFolder[]>([]);
   const [folderId, setFolderId] = useState<string | null | undefined>(undefined); // undefined = "todas"
@@ -47,7 +62,7 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
     try {
       const [list, fldrs] = await Promise.all([
         flowAutomationsService.list({ search: search || undefined, folderId, ...(isFollowup ? { kind } : {}) }),
-        isFollowup ? Promise.resolve([]) : flowAutomationFoldersService.list(),
+        isFollowup || ehCorretor ? Promise.resolve([]) : flowAutomationFoldersService.list(),
       ]);
       setAutomations(list);
       setFolders(fldrs);
@@ -58,7 +73,7 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
     } finally {
       setLoading(false);
     }
-  }, [search, folderId, isFollowup, kind]);
+  }, [search, folderId, isFollowup, ehCorretor, kind]);
 
   useEffect(() => {
     load();
@@ -66,10 +81,14 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
 
   const openFlow = (flow: Pick<FlowAutomation, 'id'>) => navigate(`${copy.listPath}/${flow.id}`);
 
-  const handleCreate = async () => {
+  // `team` só vai quando o gestor escolhe (Pessoal = false, Da equipe = true);
+  // o corretor cria sempre pessoal e o servidor ignora o parâmetro.
+  const handleCreate = async (team?: boolean) => {
     try {
       const created = await flowAutomationsService.create(
-        isFollowup ? { name: copy.newName, kind } : { name: copy.newName, folder_id: folderId ?? null },
+        isFollowup
+          ? { name: copy.newName, kind }
+          : { name: copy.newName, folder_id: folderId ?? null, ...(ehGestor && team !== undefined ? { team } : {}) },
       );
       openFlow(created);
     } catch {
@@ -102,10 +121,25 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
   const duplicate = async (a: FlowAutomation) => {
     try {
       await flowAutomationsService.duplicate(a.id);
-      toast.success('Fluxo duplicado');
+      toast.success(ehCorretor && !isPersonalFlow(a) ? 'Fluxo duplicado: a cópia é sua.' : 'Fluxo duplicado');
+      if (ehCorretor) setAba('minhas');
       load();
     } catch {
       toast.error('Erro ao duplicar');
+    }
+  };
+
+  const markTeam = async (a: FlowAutomation, next: boolean): Promise<boolean> => {
+    try {
+      await flowAutomationsService.update(a.id, { team: next });
+      setAutomations(list => list.map(x => (x.id === a.id
+        ? { ...x, team: next, permissions: x.permissions ? { ...x.permissions, personal: !next } : x.permissions }
+        : x)));
+      toast.success(next ? `"${a.name}" agora é da equipe: todo mundo vê.` : `"${a.name}" voltou a ser só do dono.`);
+      return true;
+    } catch (e) {
+      toast.error(serverMessage(e, 'Não deu pra mudar agora. Tente de novo.'));
+      return false;
     }
   };
 
@@ -183,6 +217,28 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
     }
   };
 
+  const doMeu = (a: FlowAutomation) => isPersonalFlow(a) && String(a.owner_user_id ?? '') === meId;
+  const dosCorretores = (a: FlowAutomation) => isPersonalFlow(a) && String(a.owner_user_id ?? '') !== meId;
+  const grupos = useMemo(() => ({
+    minhas: automations.filter(doMeu),
+    equipe: automations.filter(a => !isPersonalFlow(a)),
+    corretores: automations.filter(dosCorretores),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [automations, meId]);
+  const comAbas = ehCorretor || ehGestor;
+  const mostradas = !comAbas || abaAtiva === 'todas' ? automations : grupos[abaAtiva];
+  const abas = ehCorretor
+    ? [
+        { chave: 'minhas', rotulo: `Minhas (${grupos.minhas.length})` },
+        { chave: 'equipe', rotulo: `Da equipe (${grupos.equipe.length})`, icone: Users },
+      ]
+    : [
+        { chave: 'todas', rotulo: `Todas (${automations.length})` },
+        { chave: 'minhas', rotulo: `Minhas (${grupos.minhas.length})` },
+        { chave: 'equipe', rotulo: `Da equipe (${grupos.equipe.length})`, icone: Users },
+        { chave: 'corretores', rotulo: `Dos corretores (${grupos.corretores.length})` },
+      ];
+
   if (recusado) return <NoAccessState />;
 
   return (
@@ -197,15 +253,33 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
           onSearchChange={setSearch}
           searchPlaceholder={copy.searchPlaceholder}
           aDireita={!isFollowup && (
-            <Button variant="outline" onClick={() => setTemplatesOpen(true)}><LayoutTemplate className="h-4 w-4 mr-1" /> Modelos</Button>
+            <>
+              {ehGestor && (
+                <Button variant="outline" onClick={() => handleCreate(false)}><Plus className="h-4 w-4 mr-1" /> Nova pessoal</Button>
+              )}
+              <Button variant="outline" onClick={() => setTemplatesOpen(true)}><LayoutTemplate className="h-4 w-4 mr-1" /> Modelos</Button>
+            </>
           )}
-          primaryAction={{ label: copy.newButton, icon: <Plus className="h-4 w-4" />, onClick: handleCreate }}
+          primaryAction={{
+            label: ehGestor ? 'Nova da equipe' : copy.newButton,
+            icon: <Plus className="h-4 w-4" />,
+            onClick: () => handleCreate(ehGestor ? true : undefined),
+          }}
         />
       }
     >
       {isFollowup && <LegacyFollowupStrip />}
 
-      {!isFollowup && folderId === undefined && (
+      {comAbas && (
+        <Abas
+          rotulo="Automações"
+          ativa={abaAtiva}
+          aoTrocar={chave => setAba(chave as Aba)}
+          abas={abas}
+        />
+      )}
+
+      {!isFollowup && !ehCorretor && folderId === undefined && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
           {folders.map(f => (
             <div key={f.id} className="group relative flex items-center gap-2 rounded-lg border border-border p-3 hover:border-primary transition-colors">
@@ -266,47 +340,91 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
           icon={Repeat}
           title={copy.emptyTitle}
           description={copy.emptyDescription}
-          action={{ label: copy.newButton, onClick: handleCreate }}
+          action={{ label: copy.newButton, onClick: () => handleCreate() }}
+        />
+      )}
+      {comAbas && !loading && automations.length > 0 && mostradas.length === 0 && !search && (
+        <EmptyState
+          icon={abaAtiva === 'equipe' ? Users : Zap}
+          title={abaAtiva === 'equipe' ? 'Nenhuma automação da equipe' : abaAtiva === 'corretores' ? 'Nenhuma automação dos corretores' : 'Nenhuma automação aqui'}
+          description={abaAtiva === 'equipe'
+            ? 'Automação marcada como "Da equipe" aparece pra todo mundo, só leitura pros corretores.'
+            : 'Quando houver, aparece nesta aba.'}
         />
       )}
       {!loading && automations.length === 0 && search && (
         <EmptyState tipo="semResultado" aoLimparFiltros={() => setSearch('')} />
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-auto">
-        {automations.map(a => (
-          <div key={a.id} className="rounded-lg border border-border overflow-hidden flex">
+      <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-auto" aria-label="Automações">
+        {mostradas.map(a => {
+          const canEdit = a.permissions?.can_edit !== false;
+          const canMarkTeam = !isFollowup && a.permissions?.can_mark_team === true;
+          const selo = isFollowup ? null : !isPersonalFlow(a) ? 'equipe' : dosCorretores(a) && a.owner_name ? `De ${a.owner_name}` : null;
+          return (
+          <li key={a.id} className="rounded-lg border border-border overflow-hidden flex">
             <div className="w-1.5 shrink-0" style={{ backgroundColor: a.archived_at ? '#94a3b8' : a.is_enabled ? '#059669' : '#dc2626' }} />
             <div className="flex-1 p-3 min-w-0">
               <div className="flex items-start justify-between gap-2 mb-1">
                 <button className="text-sm font-semibold truncate hover:underline text-left" onClick={() => openFlow(a)}>
                   {a.name}
                 </button>
-                <Badge variant={a.archived_at ? 'secondary' : a.is_enabled ? 'default' : 'outline'} className="shrink-0 text-[10px]">
-                  {a.archived_at ? 'ARQUIVADO' : a.is_enabled ? 'ATIVO' : 'DESLIGADO'}
-                </Badge>
+                <div className="flex shrink-0 items-center gap-1">
+                  {selo === 'equipe' && (
+                    <Badge variant="secondary" className="shrink-0 gap-1 text-[10px]">
+                      <Users className="h-3 w-3" aria-hidden="true" /> Da equipe
+                    </Badge>
+                  )}
+                  {selo && selo !== 'equipe' && (
+                    <Badge variant="outline" className="shrink-0 text-[10px]">{selo}</Badge>
+                  )}
+                  <Badge variant={a.archived_at ? 'secondary' : a.is_enabled ? 'default' : 'outline'} className="shrink-0 text-[10px]">
+                    {a.archived_at ? 'ARQUIVADO' : a.is_enabled ? 'ATIVO' : 'DESLIGADO'}
+                  </Badge>
+                </div>
               </div>
               <div className="text-xs text-muted-foreground mb-3 truncate" title={flowTriggerSummary(normalizeTrigger(a.trigger))}>
                 {triggerEvents(normalizeTrigger(a.trigger)).length ? flowTriggerSummary(normalizeTrigger(a.trigger)) : 'Sem gatilho definido'}
               </div>
-              <div className="flex items-center gap-1">
-                <Button size="sm" variant="ghost" onClick={() => toggle(a)} title={a.is_enabled ? 'Desligar' : 'Ligar'}>
-                  {a.is_enabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => duplicate(a)} title="Duplicar">
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => archive(a)} title="Arquivar">
-                  <Archive className="h-3.5 w-3.5" />
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => destroy(a)} title="Excluir">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+              <div className="flex flex-wrap items-center gap-1">
+                {canEdit ? (
+                  <>
+                    <Button size="sm" variant="ghost" onClick={() => toggle(a)} title={a.is_enabled ? 'Desligar' : 'Ligar'}>
+                      {a.is_enabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => duplicate(a)} title="Duplicar">
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => archive(a)} title="Arquivar">
+                      <Archive className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => destroy(a)} title="Excluir">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => openFlow(a)}>Ver</Button>
+                    <IconActionButton
+                      label="Duplicar pra ter a sua cópia"
+                      icon={<Copy className="h-3.5 w-3.5" />}
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={() => void duplicate(a)}
+                    />
+                  </>
+                )}
+                {canMarkTeam && (
+                  <div className="ml-auto">
+                    <Chave rotulo="Da equipe" ligada={!isPersonalFlow(a)} aoMudar={next => markTeam(a, next)} />
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          </li>
+          );
+        })}
+      </ul>
     </Pagina>
       {!isFollowup && <FlowTemplatesDialog open={templatesOpen} onClose={() => setTemplatesOpen(false)} onApplied={openFlow} />}
       {dialogoDeConfirmacao}

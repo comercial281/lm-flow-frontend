@@ -75,8 +75,11 @@ class FlowAutomationsService {
     return templatesFrom((kind ? await api.get(url, { params: { kind } }) : await api.get(url)).data);
   }
 
-  async applyTemplate(key: string): Promise<FlowAutomation> {
-    return appliedFlowFrom<FlowAutomation>((await api.post(`${this.baseUrl}/templates/${encodeURIComponent(key)}/apply`)).data);
+  // `team` (automações por cargo): só o gestor; sem ele o servidor decide (gestor = da equipe).
+  async applyTemplate(key: string, opts?: { team?: boolean }): Promise<FlowAutomation> {
+    const url = `${this.baseUrl}/templates/${encodeURIComponent(key)}/apply`;
+    const res = opts?.team === undefined ? await api.post(url) : await api.post(url, { team: opts.team });
+    return appliedFlowFrom<FlowAutomation>(res.data);
   }
 
   // `team` (sprint 4): "Da equipe", só no funil de conversa e só o gestor.
