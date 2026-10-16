@@ -26,6 +26,7 @@ import {
   withPipelineFilter,
   withTriggerCondition,
   type FlowTrigger,
+  type FlowTriggerGroup,
   type FlowTriggerPart,
 } from '@/features/flowAutomations/trigger';
 
@@ -47,13 +48,19 @@ interface Props {
   onSave: (next: FlowTrigger) => void;
   /** Avisa o canvas quando o rascunho difere do gatilho (pra perguntar antes de descartar). */
   onDirtyChange?: (dirty: boolean) => void;
+  /** Corretor: só estes gatilhos (padrão: todos). */
+  soGatilhos?: FlowTriggerGroup[];
+  /** Corretor: esconde "Só quando quem aceitou for". */
+  semFiltroDeQuemAceitou?: boolean;
 }
 
 // Declarado fora do render: componente com Seletor criado dentro do render
 // fecha a lista aberta a cada redesenho (armadilha 9 do Seletor).
 function TriggerPartEditor({
-  part, onChange, resources, label, ariaLabel,
+  part, onChange, resources, label, ariaLabel, groups, semQuemAceitou,
 }: {
+  groups: FlowTriggerGroup[];
+  semQuemAceitou?: boolean;
   part: FlowTriggerPart;
   onChange: (next: FlowTriggerPart) => void;
   resources: AutomationResources;
@@ -61,7 +68,7 @@ function TriggerPartEditor({
   ariaLabel: string;
 }) {
   const event = part.event;
-  const known = FLOW_TRIGGER_GROUPS.some(g => (g.events as string[]).includes(event));
+  const known = groups.some(g => (g.events as string[]).includes(event));
   return (
     <div className="space-y-3">
       <div>
@@ -74,7 +81,7 @@ function TriggerPartEditor({
         >
           <option value="">Escolha o gatilho</option>
           {event && !known && <option value={event}>{flowTriggerLabel(event)}</option>}
-          {FLOW_TRIGGER_GROUPS.map(g => (
+          {groups.map(g => (
             <optgroup key={g.label} label={g.label}>
               {g.events.map(ev => (
                 <option key={ev} value={ev}>{flowTriggerLabel(ev)}</option>
@@ -97,6 +104,7 @@ function TriggerPartEditor({
               condition={triggerConditionOf(part)}
               onChange={next => onChange(withTriggerCondition(part, next))}
               resources={resources}
+              semQuemAceitou={semQuemAceitou}
             />
           )}
           <PipelineFilterEditor
@@ -111,7 +119,9 @@ function TriggerPartEditor({
   );
 }
 
-export function FlowTriggerPanel({ trigger, resources, onClose, onSave, onDirtyChange }: Props) {
+export function FlowTriggerPanel({
+  trigger, resources, onClose, onSave, onDirtyChange, soGatilhos = FLOW_TRIGGER_GROUPS, semFiltroDeQuemAceitou,
+}: Props) {
   // O canvas monta o painel ao abrir: o rascunho nasce do gatilho atual.
   const [draft, setDraft] = useState<FlowTrigger>(trigger);
   const [problem, setProblem] = useState<string | null>(null);
@@ -160,6 +170,8 @@ export function FlowTriggerPanel({ trigger, resources, onClose, onSave, onDirtyC
           part={draft}
           onChange={next => edit({ ...draft, event: next.event, conditions: next.conditions })}
           resources={resources}
+          groups={soGatilhos}
+          semQuemAceitou={semFiltroDeQuemAceitou}
           label="Quando"
           ariaLabel="Gatilho"
         />
@@ -179,6 +191,8 @@ export function FlowTriggerPanel({ trigger, resources, onClose, onSave, onDirtyC
               part={alt}
               onChange={next => edit(updateAlternative(draft, i, next))}
               resources={resources}
+              groups={soGatilhos}
+              semQuemAceitou={semFiltroDeQuemAceitou}
               label="Ou quando"
               ariaLabel={`Ou quando ${i + 1}`}
             />

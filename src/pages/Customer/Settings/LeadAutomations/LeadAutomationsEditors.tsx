@@ -230,6 +230,8 @@ interface ConditionEditorProps {
   condition: LeadAutomationCondition | null;
   onChange: (next: LeadAutomationCondition | null) => void;
   resources: AutomationResources;
+  /** Corretor: sem o filtro "Só quando quem aceitou for". */
+  semQuemAceitou?: boolean;
 }
 
 const baseSelectClass =
@@ -246,8 +248,9 @@ function instanceStatusLabel(status: string): string {
   }
 }
 
-export function ConditionEditor({ trigger, condition, onChange, resources }: ConditionEditorProps) {
+export function ConditionEditor({ trigger, condition, onChange, resources, semQuemAceitou }: ConditionEditorProps) {
   if (!triggerNeedsCondition(trigger)) return null;
+  if (semQuemAceitou && trigger === 'lead.roleta_accepted') return null;
 
   // --- lead.created ---
   // Origem do lead (opcional). Backend resolve 'source' do ad_referral no Executor:

@@ -35,12 +35,16 @@ import {
   useAutomationResources,
 } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
 import {
-  LEAD_CREATED_HINT, normalizeTrigger, serializeTrigger, triggerEvents, triggerOneLine, triggerProblem,
+  FLOW_TRIGGER_GROUPS, LEAD_CREATED_HINT, normalizeTrigger, serializeTrigger, triggerEvents, triggerOneLine, triggerProblem,
   type FlowTrigger,
 } from '@/features/flowAutomations/trigger';
 import { businessHoursOnlyOf } from '@/features/flowAutomations/businessHours';
 import { FLOW_KIND_COPY, kindOf } from '@/features/flowAutomations/kind';
-import { paletteItems, type PaletteItem } from '@/features/flowAutomations/palette';
+import { paletteItems, podeSoltarBloco, type PaletteItem } from '@/features/flowAutomations/palette';
+import {
+  isPersonalFlow, personalBlockState, personalTriggerGroups, useEhCorretorDeAutomacao,
+} from '@/features/flowAutomations/personal';
+import { usePersonalCapabilities } from '@/features/flowAutomations/usePersonalCapabilities';
 import { readBlocksOpen, saveBlocksOpen } from '@/features/flowAutomations/blocksPanelState';
 import { enableProblem, nodeProblem } from '@/features/flowAutomations/readiness';
 import {
@@ -181,6 +185,17 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const kind = kindOf(automation);
   const isConversation = kind === 'conversation';
   const readOnly = isReadOnly(automation);
+  // Corretor editando a automação PESSOAL dele: gatilhos e blocos do cargo.
+  const ehCorretor = useEhCorretorDeAutomacao();
+  const pessoal = ehCorretor && !!automation && isPersonalFlow(automation);
+  const capacidades = usePersonalCapabilities(pessoal);
+  const estadoDoBloco = useMemo(
+    () => (pessoal
+      ? (item: PaletteItem) => personalBlockState(item, { temNumero: capacidades.temNumero, temIA: capacidades.temIA })
+      : undefined),
+    [pessoal, capacidades.temNumero, capacidades.temIA],
+  );
+  const gatilhosDoCargo = useMemo(() => (pessoal ? personalTriggerGroups(FLOW_TRIGGER_GROUPS) : undefined), [pessoal]);
   const guided = isGuided(automation);
   const builderTools = !readOnly && !guided;
 
@@ -375,10 +390,10 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     if (!key) return;
     e.preventDefault();
     const item = paletteItems().find(i => i.key === key);
-    if (!item) return;
+    if (!item || !podeSoltarBloco(item, estadoDoBloco)) return;
     const position = flowInstance.current?.screenToFlowPosition({ x: e.clientX, y: e.clientY }) ?? null;
     insertNode(item, pendingSource, position);
-  }, [insertNode, pendingSource]);
+  }, [insertNode, pendingSource, estadoDoBloco]);
 
   const onConnect = useCallback((connection: Connection) => {
     if (!builderTools) return;
@@ -688,6 +703,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
             <FlowBlocksPanel
               onPick={item => insertNode(item, pendingSource)}
               onClose={() => setBlocksOpen(false)}
+              estadoDoBloco={estadoDoBloco}
             />
           )}
 
@@ -803,6 +819,8 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
                 replacePanel(null);
               }}
               onDirtyChange={sidePanel.setDirty}
+              soGatilhos={gatilhosDoCargo}
+              semFiltroDeQuemAceitou={pessoal}
             />
           )}
         </div>
