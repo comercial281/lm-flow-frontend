@@ -69,6 +69,7 @@ import LinhaEmpreendimento from './lista/LinhaEmpreendimento';
 import CartaoGrade from './lista/CartaoGrade';
 import JanelaSituacao from './lista/JanelaSituacao';
 import type { AcoesDoImovel, Permissoes } from './lista/MenuDoImovel';
+import { paginaNoSite } from './lista/pinoDoMapa';
 import { lerVisao, paramsDaLista, type Ordem, type Visao } from './lista/estadoDaLista';
 
 // O mapa (Leaflet) só baixa quando a pessoa abre a visão Mapa.
@@ -407,7 +408,7 @@ export default function Properties() {
   const abrirNoSite = (p: Property) => {
     const slug = getTenantSlug();
     if (!slug) { toast.error('Não achei o endereço do seu site'); return; }
-    window.open(`${window.location.origin}/imovel/${slug}/${p.code}`, '_blank', 'noopener');
+    window.open(paginaNoSite(window.location.origin, slug, p.code), '_blank', 'noopener');
   };
 
   const moverDeAba = async (p: Property, outro: ListingKind) => {
@@ -465,7 +466,7 @@ export default function Properties() {
 
   const conteudo = !kind ? null
     : visao === 'mapa' ? (
-      <Suspense fallback={esqueleto}><VisaoMapa kind={kind} /></Suspense>
+      <Suspense fallback={esqueleto}><VisaoMapa kind={kind} podeEditar={permissoes.editar} /></Suspense>
     ) : erroDeCarga ? (
       <EmptyState tipo="erro" aoTentarDeNovo={() => load(1)} />
     ) : loading && properties.length === 0 ? esqueleto

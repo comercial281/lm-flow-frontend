@@ -1,21 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { useNavigate } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Badge } from '@/components/ui/ds';
-import {
-  Bed, Bath, Car, Ruler, Loader2,
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { plural } from '@/lib/formato';
 import EmptyState from '@/components/base/EmptyState';
 import type { ListingKind } from '@/features/properties/listingKind';
-import {
-  propertiesService,
-  PropertyMapMarker,
-  TRANSACTION_TYPE_LABELS,
-  PROPERTY_TYPE_LABELS,
-} from '@/services/properties/propertiesService';
+import { getTenantSlug } from '@/services/core/tenant';
+import { propertiesService, PropertyMapMarker } from '@/services/properties/propertiesService';
+import CardNoMapa from './CardNoMapa';
+import { destinoDoPino } from './pinoDoMapa';
+import { useCardNoMapa } from './useCardNoMapa';
 
 // Marker icon padrão do Leaflet quebra em bundlers — re-importar via CDN-style icon.
 const customIcon = L.divIcon({
@@ -58,7 +55,13 @@ function FitBoundsToMarkers({ markers }: { markers: PropertyMapMarker[] }) {
   return null;
 }
 
-export default function VisaoMapa({ kind }: { kind: ListingKind }) {
+// Arrastar, dar zoom ou clicar fora do alfinete fecha o card.
+function FecharAoMexer({ fechar }: { fechar: () => void }) {
+  useMapEvents({ movestart: fechar, zoomstart: fechar, click: fechar });
+  return null;
+}
+
+export default function VisaoMapa({ kind, podeEditar = false }: { kind: ListingKind; podeEditar?: boolean }) {
   const [markers, setMarkers] = useState<PropertyMapMarker[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
@@ -89,6 +92,26 @@ export default function VisaoMapa({ kind }: { kind: ListingKind }) {
   const valid = useMemo(() => markers.filter(m => m.lat != null && m.lng != null), [markers]);
   const withoutCoords = markers.length - valid.length;
 
+  const navigate = useNavigate();
+  const destinoDe = useCallback((m: PropertyMapMarker) =>
+    destinoDoPino(m, { podeEditar, slug: getTenantSlug(), origem: window.location.origin }), [podeEditar]);
+  const irPara = useCallback((m: PropertyMapMarker) => {
+    const destino = destinoDe(m);
+    if (!destino) return false;
+    if (destino.tipo === 'site') window.open(destino.endereco, '_blank', 'noopener');
+    else navigate(destino.endereco);
+    return true;
+  }, [destinoDe, navigate]);
+  const card = useCardNoMapa(irPara);
+  const { aoEntrarNoPino, aoSairDoPino, aoClicarNoPino } = card;
+
+  // Um jogo de eventos por alfinete, estável enquanto a lista não muda (até 500).
+  const eventosDoPino = useMemo(() => new Map(valid.map(m => [m.id, {
+    mouseover: (e: L.LeafletMouseEvent) => aoEntrarNoPino(m, (e.target as L.Marker).getElement() as HTMLElement),
+    mouseout: () => aoSairDoPino(),
+    click: (e: L.LeafletMouseEvent) => aoClicarNoPino(m, (e.target as L.Marker).getElement() as HTMLElement),
+  }])), [valid, aoEntrarNoPino, aoSairDoPino, aoClicarNoPino]);
+
   return (
     <div className="space-y-2">
       {withoutCoords > 0 && !loading && (
@@ -97,8 +120,13 @@ export default function VisaoMapa({ kind }: { kind: ListingKind }) {
         </p>
       )}
       {/* `isolate`: as camadas do Leaflet (z-index 400 a 1000) ficam presas aqui
-          dentro e não pintam por cima das janelas da casa (Novo imóvel, menus). */}
-      <div className="relative isolate h-[480px] rounded-xl border overflow-hidden">
+          dentro e não pintam por cima das janelas da casa (Novo imóvel, menus).
+          Ocupa a tela abaixo das abas (pedido de 16/10), com piso de 480px. */}
+      <div
+        className="relative isolate h-[calc(100dvh-13rem)] min-h-[480px] rounded-xl border overflow-hidden"
+        onPointerMoveCapture={e => card.aoVerPonteiro(e.pointerType)}
+        onPointerDownCapture={e => card.aoVerPonteiro(e.pointerType)}
+      >
         {loading && (
           <Loader2 className="absolute right-3 top-3 z-[500] h-4 w-4 animate-spin text-muted-foreground" />
         )}
@@ -127,44 +155,24 @@ export default function VisaoMapa({ kind }: { kind: ListingKind }) {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <FitBoundsToMarkers markers={valid} />
+          <FecharAoMexer fechar={card.fechar} />
           {valid.map(m => (
-            <Marker key={m.id} position={[m.lat as number, m.lng as number]} icon={customIcon}>
-              <Popup>
-                <div className="space-y-2 min-w-[200px]">
-                  <div>
-                    <p className="font-medium text-sm leading-tight">{m.title}</p>
-                    <p className="text-xs text-muted-foreground font-mono">{m.code}</p>
-                  </div>
-                  {m.display_price && (
-                    <p className="text-base font-bold text-primary">{m.display_price}</p>
-                  )}
-                  <div className="flex gap-1 flex-wrap">
-                    <Badge variant="outline" className="text-[10px]">
-                      {TRANSACTION_TYPE_LABELS[m.transaction_type] ?? m.transaction_type}
-                    </Badge>
-                    <Badge variant="outline" className="text-[10px]">
-                      {PROPERTY_TYPE_LABELS[m.property_type] ?? m.property_type}
-                    </Badge>
-                  </div>
-                  {m.icon_summary && (
-                    <div className="flex gap-2 text-xs text-muted-foreground">
-                      {m.icon_summary.bedrooms > 0 && <span className="flex items-center gap-0.5"><Bed className="h-3 w-3" />{m.icon_summary.bedrooms}</span>}
-                      {m.icon_summary.bathrooms > 0 && <span className="flex items-center gap-0.5"><Bath className="h-3 w-3" />{m.icon_summary.bathrooms}</span>}
-                      {m.icon_summary.parking > 0 && <span className="flex items-center gap-0.5"><Car className="h-3 w-3" />{m.icon_summary.parking}</span>}
-                      {m.icon_summary.useful_area_m2 > 0 && <span className="flex items-center gap-0.5"><Ruler className="h-3 w-3" />{m.icon_summary.useful_area_m2}m²</span>}
-                    </div>
-                  )}
-                  {(m.neighborhood || m.city) && (
-                    <p className="text-xs text-muted-foreground">
-                      {[m.neighborhood, m.city].filter(Boolean).join(', ')}
-                    </p>
-                  )}
-                </div>
-              </Popup>
-            </Marker>
+            <Marker
+              key={m.id}
+              position={[m.lat as number, m.lng as number]}
+              icon={customIcon}
+              title={m.title}
+              eventHandlers={eventosDoPino.get(m.id)}
+            />
           ))}
         </MapContainer>
       </div>
+      <CardNoMapa
+        alvo={card.alvo}
+        destino={card.alvo ? destinoDe(card.alvo.imovel) : null}
+        onEntrar={card.segurar}
+        onSair={card.fecharDepois}
+      />
     </div>
   );
 }
