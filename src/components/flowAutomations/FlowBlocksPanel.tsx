@@ -9,7 +9,7 @@ import { blockDescription, blockIcon } from '@/features/flowAutomations/blockInf
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 import { INDISPONIVEL } from '@/features/flowAutomations/personal';
-import { MOBILE_QUERY } from './FlowSidePanel';
+import { MOBILE_QUERY } from './FlowBlockDialog';
 
 // Painel "Blocos" (sprint 4, spec 04/10/2026, A.2): abre e fecha pelo botão no
 // canto do canvas, com busca e as seções Mensagem pro lead · Lead · Avisos ·

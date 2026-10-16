@@ -40,7 +40,7 @@ import { cleanProgressPrefix, progressOf, progressTagName, withProgress } from '
 import { RECOVERED_EFFECTS } from '@/features/flowAutomations/recovered';
 import { moveStageModeOf, stageNameOf, withMoveStageMode, withStageName } from '@/features/flowAutomations/moveStage';
 import { FormAnswerPicker } from './FormAnswerPicker';
-import { FlowSidePanel } from './FlowSidePanel';
+import { FlowBlockDialog } from './FlowBlockDialog';
 import { FunnelMessageFields, hasRichMessage } from './FunnelMessageFields';
 import { BOOK_HELP, BOOK_LABEL, usesBook, withBook } from '@/features/flowAutomations/book';
 import { VariableChipBar } from './VariableChipBar';
@@ -697,8 +697,9 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
   };
 
   return (
-    <FlowSidePanel
+    <FlowBlockDialog
       testId="painel-do-bloco"
+      size={activeNode.kind === 'send_whatsapp' ? '2xl' : 'default'}
       title={title}
       description={hidden ? undefined : blockDescription(activeNode)}
       icon={blockIcon(activeNode)}
@@ -734,6 +735,6 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
         )}
         {problem && <p className="text-xs text-destructive" role="alert">{problem}</p>}
       </div>
-    </FlowSidePanel>
+    </FlowBlockDialog>
   );
 }

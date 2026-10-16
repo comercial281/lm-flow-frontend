@@ -21,7 +21,7 @@ import { BLOCK_DRAG_TYPE, FlowBlocksPanel } from '@/components/flowAutomations/F
 import { FlowNodePanel } from '@/components/flowAutomations/FlowNodePanel';
 import { FlowTriggerPanel } from '@/components/flowAutomations/FlowTriggerPanel';
 import { FlowSettingsDialog } from '@/components/flowAutomations/FlowSettingsDialog';
-import { MOBILE_QUERY } from '@/components/flowAutomations/FlowSidePanel';
+import { MOBILE_QUERY } from '@/components/flowAutomations/FlowBlockDialog';
 import { MessageVariablesContext, useTenantMessageVariables } from '@/components/flowAutomations/VariableChipBar';
 import { useSidePanel } from '@/components/flowAutomations/useSidePanel';
 import { FlowGuideBanner, FlowGuideChecklist } from '@/components/flowAutomations/FlowGuide';
@@ -70,8 +70,9 @@ import EmptyState from '@/components/base/EmptyState';
 //
 // Layout da sprint 4 (spec 04/10/2026, seção A): o gatilho é o bloco "Início"
 // dentro do canvas (a barra do topo saiu); "Blocos" e "Simular" no canto
-// superior esquerdo; o bloco (e o Início) abrem num painel à direita, não numa
-// janela. No celular os painéis viram tela cheia.
+// superior esquerdo; o bloco (e o Início) abrem numa janela no meio da tela
+// (FlowBlockDialog, 16/10/2026), que não empurra o mapa nem o minimapa. O
+// painel Blocos segue lateral e vira tela cheia no celular.
 
 export interface FlowAutomationCanvasProps {
   /**

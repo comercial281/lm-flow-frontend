@@ -10,7 +10,7 @@ vi.mock('@/services/messageFunnels/messageFunnelsService', () => ({
 }));
 
 import { FlowBlocksPanel } from './FlowBlocksPanel';
-import { FlowSidePanel } from './FlowSidePanel';
+import { FlowBlockDialog } from './FlowBlockDialog';
 import { VariableChipBar } from './VariableChipBar';
 import { PEDIDO_DESCARTAR_PAINEL, useSidePanel } from './useSidePanel';
 import { readBlocksOpen, saveBlocksOpen } from '@/features/flowAutomations/blocksPanelState';
@@ -59,36 +59,35 @@ describe('painel Blocos', () => {
   });
 });
 
-describe('painel lateral', () => {
-  it('no computador fica ao lado do canvas; no celular, tela cheia', () => {
-    screenWidth(false);
-    const { unmount } = render(<FlowSidePanel title="Esperar" onClose={() => {}}><p>campos</p></FlowSidePanel>);
-    expect(screen.getByRole('dialog').getAttribute('data-layout')).toBe('lateral');
-    expect(screen.getByRole('dialog').className).toContain('w-[420px]');
-    unmount();
-    screenWidth(true);
-    render(<FlowSidePanel title="Esperar" onClose={() => {}}><p>campos</p></FlowSidePanel>);
-    expect(screen.getByRole('dialog').getAttribute('data-layout')).toBe('tela-cheia');
-    expect(screen.getByRole('dialog').className).toContain('fixed inset-0');
-  });
-
+describe('janela do bloco', () => {
   it('o painel Blocos também vira tela cheia no celular', () => {
     screenWidth(true);
     render(<FlowBlocksPanel onPick={() => {}} onClose={() => {}} />);
     expect(screen.getByTestId('painel-blocos').getAttribute('data-layout')).toBe('tela-cheia');
   });
 
-  it('cabeçalho com nome e frase; Esc e o X fecham', () => {
-    const onClose = vi.fn();
+  it('a janela do bloco abre no meio, com título, descrição e rodapé', () => {
     render(
-      <FlowSidePanel title="Esperar" description="Segura o fluxo." onClose={onClose} footer={<button>Salvar</button>}>
-        <input aria-label="campo" />
-      </FlowSidePanel>,
+      <FlowBlockDialog title="Esperar" description="Para o fluxo por um tempo." onClose={vi.fn()} testId="painel-do-bloco"
+        footer={<button>Salvar</button>}><p>campos</p></FlowBlockDialog>,
     );
-    const dialog = screen.getByRole('dialog', { name: 'Esperar' });
-    expect(within(dialog).getByText('Segura o fluxo.')).toBeTruthy();
-    fireEvent.keyDown(screen.getByLabelText('campo'), { key: 'Escape' });
-    fireEvent.click(screen.getByRole('button', { name: 'Fechar o painel' }));
+    const janela = screen.getByRole('dialog', { name: 'Esperar' });
+    expect(janela).toHaveAttribute('data-testid', 'painel-do-bloco');
+    expect(within(janela).getByText('Para o fluxo por um tempo.')).toBeInTheDocument();
+    expect(within(janela).getByRole('button', { name: 'Salvar' })).toBeInTheDocument();
+    expect(janela.getAttribute('data-layout')).toBeNull();
+  });
+
+  it('size 2xl alarga a janela', () => {
+    render(<FlowBlockDialog title="Mandar WhatsApp" size="2xl" onClose={vi.fn()}><p>x</p></FlowBlockDialog>);
+    expect(screen.getByRole('dialog').className).toContain('max-w-2xl');
+  });
+
+  it('Esc e o X fecham pela mesma função', () => {
+    const onClose = vi.fn();
+    render(<FlowBlockDialog title="Esperar" onClose={onClose}><p>x</p></FlowBlockDialog>);
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 });
