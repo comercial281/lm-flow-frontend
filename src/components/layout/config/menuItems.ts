@@ -83,6 +83,8 @@ export interface MenuItem {
    * features[clientToggleKey] === true (default OFF — diferente do featureKey).
    */
   clientToggleKey?: string;
+  /** Ver `SubMenuItem.clientToggleSoPara`. */
+  clientToggleSoPara?: string;
   /** Quando true, só aparece no tenant raiz (VITE_IS_ROOT_TENANT=true). */
   rootTenantOnly?: boolean;
   /** O inverso: some no painel raiz (app.lmflow), tela que só faz sentido no CRM do cliente. */
@@ -119,6 +121,12 @@ export interface SubMenuItem {
   requiredEmail?: string | string[];
   featureKey?: string;
   clientToggleKey?: string;
+  /**
+   * A chave do cliente (`clientToggleKey`) só barra quem entra por ESTA chave
+   * (`recurso.acao`). Quem tem outra das `permissions` do item passa direto.
+   * Ex.: Automações: `.read` depende do cliente; `.own` (corretor) não.
+   */
+  clientToggleSoPara?: string;
   rootTenantOnly?: boolean;
   hideOnRoot?: boolean;
   hiddenFromClient?: boolean;
@@ -195,6 +203,18 @@ function permissionFromRoute(href: string): { resource: string; action: string }
     throw new Error(`menuItems: href "${href}" não está em ROUTE_PERMISSIONS`);
   }
   return { resource: entry.resource, action: entry.action };
+}
+
+/**
+ * Rota que abre com QUALQUER uma de várias chaves (ex.: o construtor de
+ * Automações: `.read` OU `.own`). Mesma fonte única: as chaves vêm do mapa.
+ */
+function permissionsFromRoute(href: string): { permissions: string[] } {
+  const entry = permissionForPath(href);
+  if (!entry?.permissions) {
+    throw new Error(`menuItems: href "${href}" não tem várias chaves em ROUTE_PERMISSIONS`);
+  }
+  return { permissions: [...entry.permissions] };
 }
 
 /**
@@ -301,7 +321,7 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       // na lista (sprint 2, 03/10/2026). Reusa a função das regras por não ter
       // registro próprio. "Regras de lead" e "Lembretes" saíram do menu e abrem
       // só pelo endereço (suporte e avisos da tela de Follow-up apontam pra lá).
-      { name: 'Automações', href: '/automations/flow-builder', icon: Zap, ...permissionFromRoute('/automations/flow-builder'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations' },
+      { name: 'Automações', href: '/automations/flow-builder', icon: Zap, ...permissionFromRoute('/automations/flow-builder'), ...permissionsFromRoute('/automations/flow-builder'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations', clientToggleSoPara: 'flow_automations.read' },
     ],
   },
   {
@@ -525,8 +545,12 @@ export const shouldShowMenuItem = (
   // Gate de acesso do cliente a feature gerenciada pela Leal Mídia.
   // Super-admin (Leal Mídia) SEMPRE vê; o cliente só vê se o toggle estiver
   // explicitamente ligado no painel de Funções do CRM (default OFF).
+  // Exceção (Automações próprias): com `clientToggleSoPara`, a chave só barra
+  // quem entra por aquela permissão; quem tem outra das `permissions` passa.
   if (item.clientToggleKey) {
-    if (!isSuper && features?.[item.clientToggleKey] !== true) return false;
+    const entraPorOutraChave = !!item.clientToggleSoPara
+      && canAnyFunction((item.permissions ?? []).filter(p => p !== item.clientToggleSoPara));
+    if (!isSuper && !entraPorOutraChave && features?.[item.clientToggleKey] !== true) return false;
   }
 
   // Gate por tenant raiz (apenas no deploy principal, não em tenants de clientes)

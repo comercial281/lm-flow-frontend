@@ -26,10 +26,17 @@ export interface RoutePermission {
   path: string;
   resource: string;
   action: string;
+  /** Rota que abre com QUALQUER uma destas chaves (`recurso.acao`): em index.tsx
+   * é `<PermissionRoute permissions={[...]}>`. `resource`/`action` seguem sendo
+   * a chave principal (a de leitura). */
+  permissions?: readonly string[];
   /** true quando a rota é filha de `<Route path="/automations">` em index.tsx
    * (path relativo, sem barra inicial) — o endereço completo leva o prefixo. */
   automationsChild?: true;
 }
+
+// Construtor de automações: o gestor entra pela leitura; o corretor, por "Automações próprias".
+const FLOW_BUILDER_PERMISSIONS = ['flow_automations.read', 'flow_automations.own'] as const;
 
 export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/equipe/cargos/lista', resource: 'roles', action: 'read' },
@@ -52,8 +59,8 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   // path="/automations">` é quem dá o prefixo).
   { path: 'message-funnels', resource: 'message_funnels', action: 'read', automationsChild: true },
   { path: 'message-funnels/:id', resource: 'message_funnels', action: 'read', automationsChild: true },
-  { path: 'flow-builder', resource: 'flow_automations', action: 'read', automationsChild: true },
-  { path: 'flow-builder/:id', resource: 'flow_automations', action: 'read', automationsChild: true },
+  { path: 'flow-builder', resource: 'flow_automations', action: 'read', permissions: FLOW_BUILDER_PERMISSIONS, automationsChild: true },
+  { path: 'flow-builder/:id', resource: 'flow_automations', action: 'read', permissions: FLOW_BUILDER_PERMISSIONS, automationsChild: true },
   { path: 'template-variables', resource: 'canned_responses', action: 'read', automationsChild: true },
   { path: 'origem', resource: 'lead_ads_form_configs', action: 'read', automationsChild: true },
   { path: 'lead-automations', resource: 'lead_automation_rules', action: 'read', automationsChild: true },

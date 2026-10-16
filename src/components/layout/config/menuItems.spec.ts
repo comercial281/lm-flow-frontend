@@ -99,6 +99,40 @@ describe('o menu do CRM confere o cargo', () => {
       .filter(({ mapa, item }) => mapa && `${mapa.resource}.${mapa.action}` !== item);
     expect(divergentes).toEqual([]);
   });
+
+  it('rota com várias chaves no mapa: o item do menu declara as MESMAS chaves, na mesma ordem', () => {
+    const divergentes = folhas
+      .map(i => ({ href: i.href, item: i.permissions, mapa: permissionForPath(i.href)?.permissions }))
+      .filter(({ mapa, item }) => mapa && JSON.stringify(mapa) !== JSON.stringify(item));
+    expect(divergentes).toEqual([]);
+    expect(permissionForPath('/automations/flow-builder')?.permissions).toEqual(['flow_automations.read', 'flow_automations.own']);
+  });
+});
+
+describe('Automações próprias (15/10/2026)', () => {
+  const nomes = (c: Set<string>, funcoes: Record<string, boolean>) => {
+    const can = (r: string, a: string) => c.has(`${r}.${a}`);
+    const um = (ps: string[]) => ps.some(p => c.has(p));
+    const todas = (ps: string[]) => ps.every(p => c.has(p));
+    return filterMenuSections(secoes, can, um, todas, 'agent', 'c@x.com', funcoes, [], false)
+      .flatMap(s => s.itens.map(i => i.name));
+  };
+
+  it('Corretor com flow_automations.own vê Automações mesmo com a chave do cliente desligada', () => {
+    const c = new Set([...CORRETOR, 'flow_automations.own']);
+    expect(nomes(c, { bolsao: true })).toContain('Automações');
+    expect(nomes(c, { bolsao: true, client_manage_automations: true })).toContain('Automações');
+  });
+
+  it('Gerente com flow_automations.read e a chave do cliente desligada continua sem ver', () => {
+    const c = new Set([...CORRETOR, 'flow_automations.read']);
+    expect(nomes(c, { bolsao: true })).not.toContain('Automações');
+    expect(nomes(c, { bolsao: true, client_manage_automations: true })).toContain('Automações');
+  });
+
+  it('Corretor sem .own segue com a lista de hoje', () => {
+    expect(nomes(CORRETOR, { bolsao: true, client_manage_automations: true })).not.toContain('Automações');
+  });
 });
 
 describe('menu novo: seções (fase 4)', () => {
