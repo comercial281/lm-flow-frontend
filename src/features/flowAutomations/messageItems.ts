@@ -150,19 +150,49 @@ function storedOf(draft: SequenceDraftItem): StoredMessageItem {
 }
 
 /**
+ * Rede de segurança de deploy/rollback: o servidor de antes do backend #497 não
+ * conhece `items` e lê só os campos soltos. Uma sequência de UMA mensagem e sem
+ * espera é o bloco antigo de sempre, então ela também vai nos campos soltos e
+ * esse servidor manda a mesma coisa. Com 2+ itens ou com espera, não há como
+ * espelhar: os campos soltos ficam vazios (num servidor antigo esse bloco não
+ * manda nada). Os leitores daqui e do servidor novo preferem `items`.
+ */
+function looseFieldsOf(drafts: SequenceDraftItem[]): Partial<FlowNodeConfig> {
+  const blank = {
+    text: '', media_url: '', media_kind: '', media_filename: '', contact_name: '', contact_phone: '',
+  };
+  if (drafts.length !== 1 || drafts[0].kind === 'delay') return blank;
+  const item = storedOf(drafts[0]);
+  switch (item.kind) {
+    case 'text':
+      return { ...blank, text: item.text_content ?? '' };
+    case 'contact':
+      return { ...blank, contact_name: str(item.config?.contact_name), contact_phone: str(item.config?.contact_phone) };
+    case 'property_book':
+      // `media_source` (o book) não é mexido aqui: quem grava é a escolha do book.
+      return { ...blank, text: item.media_caption ?? '' };
+    default:
+      return {
+        ...blank,
+        media_kind: item.kind,
+        media_url: item.media_url ?? '',
+        media_filename: item.media_filename ?? '',
+        text: item.media_caption ?? '',
+      };
+  }
+}
+
+/**
  * Grava a sequência em `items`. Os campos soltos de conteúdo ficam com texto
- * vazio, e não apagados: no modo guiado o servidor junta o que chega com o que
- * está gravado. `media_source`, "por qual número sai" e o progresso não mudam.
+ * vazio, e não apagados (no modo guiado o servidor junta o que chega com o que
+ * está gravado), a não ser quando a sequência é uma mensagem só: aí ela também
+ * vai nos campos soltos (ver `looseFieldsOf`). `media_source`, "por qual número
+ * sai" e o progresso não mudam.
  */
 export function withItems(config: FlowNodeConfig, drafts: SequenceDraftItem[]): FlowNodeConfig {
   return {
     ...config,
-    text: '',
-    media_url: '',
-    media_kind: '',
-    media_filename: '',
-    contact_name: '',
-    contact_phone: '',
+    ...looseFieldsOf(drafts),
     items: drafts.map(storedOf),
   };
 }

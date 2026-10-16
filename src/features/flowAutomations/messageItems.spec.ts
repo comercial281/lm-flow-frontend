@@ -140,3 +140,55 @@ describe('draftsOf e withItems', () => {
     ]);
   });
 });
+
+// Rede de segurança de deploy/rollback: o servidor antes do backend #497 ignora
+// `items` e lê só os campos soltos. Uma mensagem só, sem espera, vai também nos
+// campos soltos; o resto fica em branco (nesse servidor, não manda nada).
+describe('withItems: uma mensagem só também vai nos campos soltos', () => {
+  const loose = (config: Record<string, unknown>) => ({
+    text: config.text, media_url: config.media_url, media_kind: config.media_kind, media_filename: config.media_filename,
+    contact_name: config.contact_name, contact_phone: config.contact_phone,
+  });
+  const old = { text: 'velho', media_url: 'u', media_kind: 'video', media_filename: 'v.mp4', contact_name: 'X', contact_phone: '1' };
+
+  it('1 texto: vai em text', () => {
+    const next = withItems(old, [draft({ uiKey: 'a', kind: 'text', text_content: 'Oi, {{nome}}' })]);
+    expect(loose(next)).toEqual({ text: 'Oi, {{nome}}', media_url: '', media_kind: '', media_filename: '', contact_name: '', contact_phone: '' });
+    expect(next.items).toEqual([{ id: 'a', kind: 'text', text_content: 'Oi, {{nome}}' }]);
+  });
+
+  it('1 foto com legenda: arquivo nos campos de mídia e a legenda em text', () => {
+    const next = withItems(old, [draft({
+      uiKey: 'a', kind: 'image', text_content: null, media_url: 'https://cdn/foto.jpg', media_filename: 'foto.jpg', media_caption: 'Fachada',
+    })]);
+    expect(loose(next)).toEqual({
+      text: 'Fachada', media_url: 'https://cdn/foto.jpg', media_kind: 'image', media_filename: 'foto.jpg', contact_name: '', contact_phone: '',
+    });
+  });
+
+  it('1 contato: nome e telefone, text vazio', () => {
+    const next = withItems(old, [draft({ uiKey: 'a', kind: 'contact', text_content: null, config: { contact_name: 'Giovani', contact_phone: '5511999' } })]);
+    expect(loose(next)).toEqual({ text: '', media_url: '', media_kind: '', media_filename: '', contact_name: 'Giovani', contact_phone: '5511999' });
+  });
+
+  it('1 book: a legenda vai em text e media_source não é mexido', () => {
+    const next = withItems({ ...old, media_source: 'property_book' }, [draft({ uiKey: 'a', kind: 'property_book', text_content: null, media_caption: 'Segue o book' })]);
+    expect(loose(next)).toEqual({ text: 'Segue o book', media_url: '', media_kind: '', media_filename: '', contact_name: '', contact_phone: '' });
+    expect(next.media_source).toBe('property_book');
+    const semBook = withItems({ media_source: '' }, [draft({ uiKey: 'a', kind: 'property_book', text_content: null, media_caption: 'Segue' })]);
+    expect(semBook.media_source).toBe('');
+  });
+
+  it('2 mensagens, ou texto + espera: os campos soltos ficam em branco', () => {
+    const blank = { text: '', media_url: '', media_kind: '', media_filename: '', contact_name: '', contact_phone: '' };
+    expect(loose(withItems(old, [
+      draft({ uiKey: 'a', kind: 'text', text_content: 'Oi' }),
+      draft({ uiKey: 'b', kind: 'text', text_content: 'Tudo bem?' }),
+    ]))).toEqual(blank);
+    expect(loose(withItems(old, [
+      draft({ uiKey: 'a', kind: 'text', text_content: 'Oi' }),
+      draft({ uiKey: 'b', kind: 'delay', text_content: null, delay_seconds: 30 }),
+    ]))).toEqual(blank);
+    expect(loose(withItems(old, [draft({ uiKey: 'b', kind: 'delay', text_content: null, delay_seconds: 30 })]))).toEqual(blank);
+  });
+});

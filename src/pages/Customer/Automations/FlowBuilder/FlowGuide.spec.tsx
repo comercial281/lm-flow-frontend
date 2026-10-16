@@ -146,7 +146,8 @@ describe('construção guiada', () => {
     expect(m1.guide_done).toBe(true);
     // PR 8: a mensagem vai como sequência de 1 item, com o id do formato antigo.
     expect(m1.config.items).toEqual([{ id: 'legado', kind: 'text', text_content: 'Oi {{nome}}, separei um imóvel' }]);
-    expect(m1.config.text).toBe('');
+    // Uma mensagem só: também vai no campo solto (servidor antes do backend #497 lê só ele).
+    expect(m1.config.text).toBe('Oi {{nome}}, separei um imóvel');
     expect(m1.guide).toBeUndefined();
     // Os outros blocos não confirmam passo.
     expect(payload.nodes.find((n: { id: string }) => n.id === 'm2').guide_done).toBeUndefined();

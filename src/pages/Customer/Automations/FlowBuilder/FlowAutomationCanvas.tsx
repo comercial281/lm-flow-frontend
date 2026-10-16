@@ -354,7 +354,9 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     const original = nodes.find(n => n.id === nodeId);
     if (!original) return;
     const copyId = newTempId();
-    setNodes(prev => [...prev, { ...original, id: copyId, next_node_id: null, next_yes_node_id: null, next_no_node_id: null, pos_x: (original.pos_x || 0) + 40, pos_y: (original.pos_y || 0) + 40 }]);
+    // Config funda e com id novo em cada item da sequência: a cópia não divide
+    // nada com o original (o modo guiado do servidor casa itens por id).
+    setNodes(prev => [...prev, { ...original, id: copyId, config: freshBlockConfig(original.config ?? {}), next_node_id: null, next_yes_node_id: null, next_no_node_id: null, pos_x: (original.pos_x || 0) + 40, pos_y: (original.pos_y || 0) + 40 }]);
   }, [nodes]);
 
   const handleRename = useCallback((id: string, label: string | null) => {

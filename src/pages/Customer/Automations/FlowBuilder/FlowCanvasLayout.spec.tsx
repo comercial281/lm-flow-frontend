@@ -227,6 +227,32 @@ describe('lista de blocos pelo "+ saída"', () => {
   });
 });
 
+describe('duplicar bloco', () => {
+  it('a cópia da Mensagem ganha config própria, com id novo em cada item', async () => {
+    saveFlow.mockResolvedValue(undefined);
+    get.mockResolvedValue(flow({
+      nodes: [{
+        id: 'n1', kind: 'send_whatsapp', label: null,
+        config: { text: '', items: [{ id: 'a', kind: 'text', text_content: 'Oi' }, { id: 'b', kind: 'text', text_content: 'Tudo bem?' }] },
+        next_node_id: null, next_yes_node_id: null, next_no_node_id: null, pos_x: null, pos_y: null, steps: [],
+      }],
+    }));
+    renderCanvas();
+    await screen.findByTestId('bloco-inicio');
+    fireEvent.click(screen.getByLabelText(/^Duplicar /));
+    fireEvent.click(screen.getByRole('button', { name: /^Salvar$/ }));
+    await waitFor(() => expect(saveFlow).toHaveBeenCalled());
+    const payload = saveFlow.mock.calls[0][1] as { nodes: Array<{ id: string; config: { items: Array<{ id: string; text_content: string }> } }> };
+    expect(payload.nodes).toHaveLength(2);
+    const [original, copia] = [payload.nodes.find(n => n.id === 'n1')!, payload.nodes.find(n => n.id !== 'n1')!];
+    expect(original.config.items.map(i => i.id)).toEqual(['a', 'b']);
+    expect(copia.config.items.map(i => i.text_content)).toEqual(['Oi', 'Tudo bem?']);
+    expect(copia.config.items.map(i => i.id)).not.toContain('a');
+    expect(copia.config.items.map(i => i.id)).not.toContain('b');
+    expect(copia.config).not.toBe(original.config);
+  });
+});
+
 describe('painel do bloco', () => {
   it('clicar no cartão abre o painel; Cancelar com alteração pergunta antes de descartar', async () => {
     get.mockResolvedValue(flow());

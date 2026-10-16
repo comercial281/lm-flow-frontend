@@ -135,6 +135,13 @@ describe('janela do bloco', () => {
     })));
   });
 
+  it('Mensagem com um texto: abre com o foco no texto, não no "Duplicar" do item', async () => {
+    render(<FlowNodePanel node={node({ kind: 'send_whatsapp', config: { text: 'Oi' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    await screen.findByText('Enviar pelo número');
+    expect(document.activeElement?.tagName).toBe('TEXTAREA');
+    expect((document.activeElement as HTMLTextAreaElement).value).toBe('Oi');
+  });
+
   it('bloco renomeado: o nome dado vira o título e o tipo vai pra frente da descrição', () => {
     render(<FlowNodePanel node={node({ label: 'Lembrete do sábado' })} resources={resources} onClose={() => {}} onSave={() => {}} />);
     const janela = screen.getByRole('dialog', { name: 'Lembrete do sábado' });
