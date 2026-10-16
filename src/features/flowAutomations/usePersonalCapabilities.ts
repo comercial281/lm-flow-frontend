@@ -1,18 +1,18 @@
 // O QUE O CORRETOR TEM PRA USAR NO CONSTRUTOR: número próprio e IA Vendedora.
 //
-// `temNumero`: algum número dele que não esteja confirmado como desconectado
-// (o servidor trata "desconectado" como sem número). `temIA`: o cartão do
-// número principal lista IA Vendedora ligada (Numbers::Card#ai). Enquanto
-// carrega ou se der erro, vale "não tem" (o servidor decide de qualquer jeito).
+// Vem pronto do servidor (`GET /flow_automations/personal_capabilities`), pela
+// MESMA regra do envio da automação pessoal: só o número que a pessoa tem
+// (nunca o compartilhado em que ela atende), que não esteja desconectado, e se
+// ele tem IA Vendedora ligada. Enquanto carrega ou se der erro, vale "não tem"
+// (o servidor decide de qualquer jeito).
 
 import { useEffect, useState } from 'react';
-import numbersService from '@/services/numbers/numbersService';
-import type { OwnedNumber } from '@/features/numbers/types';
+import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 
 export interface PersonalCapabilities {
   temNumero: boolean;
   temIA: boolean;
-  /** Telefone do número principal (pro "Sai pelo seu WhatsApp"). */
+  /** Telefone do número próprio (pro "Sai pelo seu WhatsApp"). */
   principalPhone: string | null;
   loading: boolean;
 }
@@ -27,17 +27,16 @@ export function usePersonalCapabilities(enabled: boolean): PersonalCapabilities 
     let alive = true;
     (async () => {
       try {
-        const mine = await numbersService.myNumbers();
-        const usable = mine.numbers.filter((n: OwnedNumber) => n.connection !== 'disconnected');
-        const principal = usable.find(n => n.principal) ?? usable[0] ?? null;
-        let temIA = false;
-        if (principal) {
-          try {
-            const card = await numbersService.numberCard(principal.inbox_id);
-            temIA = (card.ai ?? []).length > 0;
-          } catch { /* sem cartão = sem IA */ }
+        const caps = await flowAutomationsService.personalCapabilities();
+        const temNumero = caps?.tem_numero === true;
+        if (alive) {
+          setState({
+            temNumero,
+            temIA: temNumero && caps.tem_ia === true,
+            principalPhone: temNumero ? caps.numero ?? null : null,
+            loading: false,
+          });
         }
-        if (alive) setState({ temNumero: usable.length > 0, temIA, principalPhone: principal?.phone ?? null, loading: false });
       } catch {
         if (alive) setState({ ...NONE, loading: false });
       }

@@ -48,6 +48,16 @@ class FlowAutomationsService {
     return unwrap<FlowAutomation[]>(response);
   }
 
+  /**
+   * O número PRÓPRIO de quem pede e se ele tem IA Vendedora (a mesma regra do
+   * envio da automação pessoal no servidor). `numero`: o telefone, ou null.
+   */
+  async personalCapabilities(): Promise<{ tem_numero: boolean; numero: string | null; tem_ia: boolean }> {
+    return unwrap<{ tem_numero: boolean; numero: string | null; tem_ia: boolean }>(
+      await api.get(`${this.baseUrl}/personal_capabilities`),
+    );
+  }
+
   async get(id: string): Promise<FlowAutomation> {
     return unwrap<FlowAutomation>(await api.get(`${this.baseUrl}/${id}`));
   }
