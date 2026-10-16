@@ -113,6 +113,8 @@ export interface FlowPermissions {
   can_mark_team: boolean;
   /** Criar do zero (só o gestor, no funil de conversa). */
   can_create_blank: boolean;
+  /** Automação pessoal do corretor (regras de gatilho/bloco do cargo). */
+  personal?: boolean;
 }
 
 // Contrato (spec 02/10): o backend devolve SEMPRE `{ event, conditions }`. O
