@@ -8637,6 +8637,7 @@ Armadilhas:
 2. `modulosVisiveis` precisa saber se as aulas carregaram (senão a home pisca vazia).
 3. **audience só viaja quando importa.** Criar manda a chave só com 'managers' (o banco tem padrão 'all'); editar manda só quando mudou. Assim salvar não quebra se a coluna faltar num banco antigo.
 4. **A ordem empata nos dados reais** (todos com ordem 0): aulas e módulos desempatam por created_at, e reordenar regrava todos os índices (`trocarOrdem` em quemVe.ts).
+5. **Marcar como vista, comentar e avaliar mandam o cliente do endereço (16/10/2026).** Até aqui as três davam "Autenticacao falhou." pra todo corretor (zero linhas gravadas desde sempre): a `tutorial-admin` perguntava "quem é você?" ao servidor sem `X-Tenant`, o servidor procurava o usuário no `public` e respondia 401. Agora `callAdmin` manda `X-Tenant` só nessas três ações, e o escopo delas (`SCOPE_SLUG`) é o cliente do endereço, não o `VITE_TENANT_SLUG` (vazio na produção, que jogava todo mundo em `root`). A edição das aulas segue SEM `X-Tenant`: a função só reconhece super-admin fora de cliente, senão um usuário criado dentro de um cliente com o e-mail do suporte editaria o Tutorial de todos. Função nova em `LM FLOW/specs/registros/2026-10-16-tutorial-admin-cliente/`.
 
 Não reabrir sem o dono pedir.
 
