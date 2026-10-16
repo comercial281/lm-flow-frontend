@@ -9188,13 +9188,13 @@ PR 8 do redesenho do construtor. Spec: `LM FLOW/specs/2026-10-16-flow-builder-re
 - **Saíram da lista de Blocos** "Mandar áudio", "Mandar imagem", "Mandar vídeo", "Mandar documento" e "Mandar figurinha" (viraram itens da Mensagem). Fluxo antigo que já tem esses blocos continua abrindo, editando e rodando como estava.
 - **Bloco antigo (sem `items`) abre como sequência de 1 item** (texto, foto, contato ou book, montado dos campos soltos) e só é regravado em `items` quando a pessoa mexe nele e salva. Os campos soltos ficam com texto vazio (não somem: no modo guiado o servidor junta o que chega com o gravado).
 - **Cartão:** com 1 mensagem, a linha dela ("Foto: Olha a fachada"); com mais, "N mensagens" (as esperas não contam).
-- **O que falta no bloco** (`nodeProblem`), na ordem: mídia sem arquivo, texto vazio, contato sem telefone, nenhuma mensagem. Com book, só o número e o progresso.
+- **O que falta no bloco** (`nodeProblem`), na ordem: mídia sem arquivo, texto vazio, contato sem telefone, nenhuma mensagem. O item de book não é conferido (o servidor acha o arquivo), mas conta como mensagem; os outros itens do mesmo bloco são conferidos. O bloco antigo de book (sem `items`) segue como era: só o número e o progresso.
 - **Modo guiado (corretor):** sem "+ Adicionar", duplicar e mover; a mensagem troca de tipo e a espera só muda o tempo. Texto que vira foto, vídeo ou documento leva o texto pra legenda.
 - **Arquivo subindo não apaga o que foi digitado:** o editor aplica o resultado do envio sobre a lista mais nova (vale também pro Disparo em massa e pro Agendar envio).
 
 Armadilhas:
 
 1. **Leitor único.** Bloco com `items` se lê pelo `src/features/flowAutomations/messageItems.ts` (`itemsOf`, `messageItemsOf`, `hasMessageContent`, `hasMessageMedia`, `hasStoredItems`). O `media_source: 'property_book'` do bloco antigo pode sobrar depois de converter: `usesBook` só vale pro formato antigo. Leitores: `readiness.ts`, `guide.ts` (régua do passo do guia), `FlowNodeCard.tsx`, `funnelPreview.ts` (um passo por item, e daí as Mensagens prontas) e `conversationFunnelDraft.ts` ("Usar funil": um item por item, a espera de dentro soma com a do bloco Esperar, o book fica de fora).
-2. **O `id` do item faz ida e volta** (`uiKey` = `id`): o modo guiado do servidor casa os itens por ele. Bloco antigo usa o id fixo `legado`.
+2. **O `id` do item faz ida e volta** (`uiKey` = `id`): o modo guiado do servidor casa os itens por ele. Bloco antigo usa o id fixo `legado`. Bloco novo ganha cópia funda da config, com id novo em cada item (`freshBlockConfig` em `palette.ts`, usado pela paleta e pelo `insertNode` do canvas): nunca espalhar o `defaultConfig` raso.
 
 Código: `src/components/flowAutomations/MessageBlockFields.tsx` (com o `ProgressFields`, que saiu do `FlowNodePanel`); saiu o `FunnelMessageFields.tsx`. Testes: `readiness.spec.ts`, `guide.spec.ts`, `BookBlocks.spec.tsx`, `FlowBlocks.spec.tsx`, `FlowCanvasLayout.spec.tsx`, `FlowGuide.spec.tsx`, `MessageSequenceEditor.spec.tsx`.

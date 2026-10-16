@@ -40,7 +40,7 @@ import {
 } from '@/features/flowAutomations/trigger';
 import { businessHoursOnlyOf } from '@/features/flowAutomations/businessHours';
 import { FLOW_KIND_COPY, kindOf } from '@/features/flowAutomations/kind';
-import { paletteItems, podeSoltarBloco, type PaletteItem } from '@/features/flowAutomations/palette';
+import { freshBlockConfig, paletteItems, podeSoltarBloco, type PaletteItem } from '@/features/flowAutomations/palette';
 import {
   modoPessoal, NUMERO_FIXO_NA_EQUIPE, personalAvailabilityState, personalBlockState, personalTriggerGroups,
   presaNaEquipe, tirarDaEquipe, useEhCorretorDeAutomacao,
@@ -277,7 +277,8 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     const target = from || (initialNodeId ? appendTarget(nodes, initialNodeId) : null);
     const newId = newTempId();
     const newNode: FlowAutomationNode = {
-      id: newId, kind: item.kind, label: null, config: { ...item.config },
+      // Cópia própria do bloco: o mesmo botão escolhido duas vezes não divide a sequência.
+      id: newId, kind: item.kind, label: null, config: freshBlockConfig(item.config),
       next_node_id: null, next_yes_node_id: null, next_no_node_id: null,
       pos_x: position?.x ?? null, pos_y: position?.y ?? null, steps: [],
     };

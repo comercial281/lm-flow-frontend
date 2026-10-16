@@ -98,6 +98,12 @@ describe('cartão do bloco Mensagem em sequência', () => {
     expect(um({ kind: 'property_book', media_caption: 'Segue' })).toBe('Manda o book do imóvel de interesse');
   });
 
+  it('book junto com texto vazio: o cartão conta as duas e mostra o que falta', () => {
+    const cfg = { text: '', items: [{ id: 'a', kind: 'property_book' }, { id: 'b', kind: 'text', text_content: '' }] };
+    expect(summaryLine(node({ config: cfg }))).toBe('2 mensagens');
+    expect(nodeProblem({ kind: 'send_whatsapp', config: cfg })).toBe('Escreva a mensagem.');
+  });
+
   it('o media_source antigo que sobrou não vira book quando os itens não têm book', () => {
     expect(summaryLine(node({ config: { text: '', media_source: 'property_book', items: [{ id: 'legado', kind: 'text', text_content: 'Oi' }] } })))
       .toBe('Oi');

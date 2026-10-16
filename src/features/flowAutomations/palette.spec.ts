@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { FLOW_NODE_DEFS } from '@/types/flowAutomations';
 import { ACTION_TYPE_LABELS } from '@/services/leadAutomation/leadAutomationService';
-import { isVisibleKind, isVisibleNode, paletteGroups, paletteItems, blockLabel, HIDDEN_BLOCK_NOTICE } from './palette';
+import { freshBlockConfig, isVisibleKind, isVisibleNode, paletteGroups, paletteItems, blockLabel, HIDDEN_BLOCK_NOTICE } from './palette';
 import { summaryLine } from '@/components/flowAutomations/FlowNodeCard';
 
 const node = (kind: string, config: Record<string, unknown> = {}) => ({
@@ -90,6 +90,20 @@ describe('paleta da sprint 2', () => {
     expect(mensagem.config).toEqual({ items: [{ id: expect.any(String), kind: 'text', text_content: '' }] });
     expect(isVisibleNode(node('lead_action', { action_type: 'send_image', params: { media_url: 'https://x/f.jpg' } }))).toBe(true);
     expect(blockLabel(node('lead_action', { action_type: 'send_image' }))).toBe('Mandar imagem');
+  });
+
+  it('cada bloco Mensagem novo tem a própria sequência, com id novo em cada item', () => {
+    const [a, b] = [paletteItems(), paletteItems()].map(list => list.find(i => i.kind === 'send_whatsapp')!);
+    const itemsA = a.config.items as Array<{ id: string }>;
+    const itemsB = b.config.items as Array<{ id: string }>;
+    expect(itemsA).not.toBe(itemsB);
+    expect(itemsA[0]).not.toBe(itemsB[0]);
+    expect(itemsA[0].id).not.toBe(itemsB[0].id);
+    // O mesmo botão usado duas vezes também não divide a sequência.
+    const c = freshBlockConfig(a.config);
+    expect(c.items).not.toBe(a.config.items);
+    expect((c.items as Array<{ id: string }>)[0].id).not.toBe(itemsA[0].id);
+    expect(FLOW_NODE_DEFS.find(d => d.kind === 'send_whatsapp')!.defaultConfig.items).not.toBe(itemsA);
   });
 
   it('o sino não fala do Hub', () => {

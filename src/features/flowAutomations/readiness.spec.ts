@@ -88,11 +88,19 @@ describe('bloco Mensagem em sequência (items)', () => {
     expect(nodeProblem(msg(pronto, { progress_tag_prefix: '', progress_step: 1 }))).toBe('Escreva o nome da etiqueta de progresso.');
   });
 
-  it('com book, só valem o número e o progresso', () => {
+  it('o book não é conferido, mas os outros itens do bloco são', () => {
     expect(nodeProblem(msg([
       { id: 'a', kind: 'property_book', media_caption: '' },
       { id: 'b', kind: 'text', text_content: '' },
-    ]))).toBeNull();
+    ]))).toBe('Escreva a mensagem.');
+    expect(nodeProblem(msg([
+      { id: 'a', kind: 'property_book' },
+      { id: 'b', kind: 'video', media_url: '' },
+    ]))).toBe('Escolha o arquivo pra mandar.');
+  });
+
+  it('só o book conta como mensagem: sobram o número e o progresso', () => {
+    expect(nodeProblem(msg([{ id: 'a', kind: 'property_book' }]))).toBeNull();
     expect(nodeProblem(msg([{ id: 'a', kind: 'property_book' }], { progress_tag_prefix: '', progress_step: 1 })))
       .toBe('Escreva o nome da etiqueta de progresso.');
   });

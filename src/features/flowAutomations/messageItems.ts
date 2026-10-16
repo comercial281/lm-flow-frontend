@@ -85,11 +85,6 @@ export function delayItemSeconds(item: StoredMessageItem): number {
   return Math.max(0, Math.round(Number(seconds) || 0));
 }
 
-/** Algum item é o book do imóvel. */
-export function hasBookItem(config: FlowNodeConfig): boolean {
-  return itemsOf(config).some(item => item.kind === 'property_book');
-}
-
 /** Os itens que mandam algo (sem as esperas). */
 export function messageItemsOf(config: FlowNodeConfig): StoredMessageItem[] {
   return itemsOf(config).filter(item => item.kind !== 'delay');
