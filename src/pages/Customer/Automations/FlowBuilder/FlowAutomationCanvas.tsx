@@ -70,8 +70,9 @@ import EmptyState from '@/components/base/EmptyState';
 // Layout da sprint 4 (spec 04/10/2026, seção A): o gatilho é o bloco "Início"
 // dentro do canvas (a barra do topo saiu); "Blocos" e "Simular" no canto
 // superior esquerdo; o bloco (e o Início) abrem numa janela no meio da tela
-// (FlowBlockDialog, 16/10/2026), que não empurra o mapa nem o minimapa. O
-// painel Blocos segue lateral e vira tela cheia no celular.
+// (FlowBlockDialog, 16/10/2026), que não empurra o mapa nem o minimapa. Blocos
+// abre uma lista que desce embaixo do botão (FlowBlocksMenu, 16/10/2026); pelo
+// "+" de uma saída, a própria lista mostra em qual saída o bloco vai ligar.
 
 export interface FlowAutomationCanvasProps {
   /**
@@ -384,6 +385,14 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const addFrom = useCallback((sourceId: string, handle: OutputHandle) => {
     setPendingSource({ id: sourceId, handle });
     setBlocksOpen(true);
+  }, []);
+
+  // Fechar a lista sem escolher (Esc, clique fora, o próprio botão) desfaz o
+  // "+" da saída: senão o próximo bloco ia pra saída antiga. Escolher um bloco
+  // não passa por aqui (o insertNode fecha e limpa).
+  const closeOrOpenBlocks = useCallback((next: boolean) => {
+    setBlocksOpen(next);
+    if (!next) setPendingSource(null);
   }, []);
 
   // Arrastar um bloco do painel Blocos pro canvas (A.2).
@@ -779,8 +788,10 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
             <div className="absolute left-2 top-2 z-10 flex items-center gap-2">
               <FlowBlocksMenu
                 open={blocksOpen}
-                onOpenChange={setBlocksOpen}
+                onOpenChange={closeOrOpenBlocks}
                 onPick={item => insertNode(item, pendingSource)}
+                pendingLabel={pendingSource ? pendingLabel : null}
+                onCancelPending={() => setPendingSource(null)}
                 estadoDoBloco={estadoDoBloco}
                 trigger={
                   <Button
@@ -804,13 +815,6 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
                 {testing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />} Simular
               </Button>
             </div>
-            )}
-
-            {pendingSource && (
-              <div className="absolute top-12 left-2 z-10 rounded-md bg-primary/10 border border-primary text-primary text-xs px-2 py-1">
-                Escolha um bloco em Blocos pra ligar na saída "{pendingLabel}"
-                <button className="ml-2 underline" onClick={() => setPendingSource(null)}>cancelar</button>
-              </div>
             )}
 
             {nodes.length === 0 && builderTools && (

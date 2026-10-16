@@ -24,9 +24,16 @@ interface Props {
   estadoDoBloco?: (item: PaletteItem) => 'ok' | 'indisponivel' | 'fora';
   /** O botão que abre a lista (a lista desce embaixo dele). */
   trigger: ReactNode;
+  /**
+   * A lista abriu pelo "+" de uma saída: o nome da saída ("Sim", "Continuar"…).
+   * `null`/ausente = a lista abriu pelo botão Blocos.
+   */
+  pendingLabel?: string | null;
+  /** O "cancelar" da linha da saída: volta a ligar no fim do caminho. */
+  onCancelPending?: () => void;
 }
 
-export function FlowBlocksMenu({ open, onOpenChange, onPick, estadoDoBloco, trigger }: Props) {
+export function FlowBlocksMenu({ open, onOpenChange, onPick, estadoDoBloco, trigger, pendingLabel = null, onCancelPending }: Props) {
   const [query, setQuery] = useState('');
   const groups = useMemo(() => {
     const all = paletteGroups(query);
@@ -52,6 +59,15 @@ export function FlowBlocksMenu({ open, onOpenChange, onPick, estadoDoBloco, trig
         data-testid="painel-blocos"
         className="flex max-h-[min(70dvh,32rem)] w-72 flex-col p-0"
       >
+      {pendingLabel != null && (
+        // Fica dentro da lista: um aviso solto no canvas ficaria embaixo dela.
+        <div data-testid="saida-pendente" className="border-b border-border bg-primary/10 px-3 py-1.5 text-xs text-primary">
+          Ligando na saída "{pendingLabel}"
+          {onCancelPending && (
+            <button type="button" className="ml-2 underline" onClick={onCancelPending}>cancelar</button>
+          )}
+        </div>
+      )}
       <div className="p-2 border-b border-border">
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />

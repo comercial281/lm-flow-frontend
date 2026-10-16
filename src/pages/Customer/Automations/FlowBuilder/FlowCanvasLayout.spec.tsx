@@ -3,8 +3,9 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 // Automações · sprint 4 (04/10/2026), seção A: o gatilho virou o bloco Início
-// dentro do canvas, os blocos ficam num painel que abre e fecha, "Simular" fica
-// ao lado de "Blocos", e o bloco abre num painel à direita.
+// dentro do canvas e "Simular" fica ao lado de "Blocos". Redesenho de
+// 16/10/2026: Blocos abre uma lista embaixo do botão e o bloco (e o Início)
+// abre numa janela no meio da tela.
 
 const get = vi.hoisted(() => vi.fn());
 const testRun = vi.hoisted(() => vi.fn());
@@ -174,7 +175,8 @@ describe('lista de blocos', () => {
     // No jsdom o React Flow esconde os cartões: o botão se acha pelo texto.
     fireEvent.click(screen.getByText(/\+ Respondeu/));
     const lista = await screen.findByTestId('painel-blocos');
-    expect(screen.getByText(/Escolha um bloco em Blocos pra ligar na saída "Respondeu"/)).toBeTruthy();
+    // A saída aparece dentro da própria lista (um aviso solto no canvas ficaria embaixo dela).
+    expect(within(lista).getByTestId('saida-pendente').textContent).toContain('Ligando na saída "Respondeu"');
     fireEvent.click(within(lista).getByRole('button', { name: /Esperar/ }));
     const painel = await screen.findByTestId('painel-do-bloco');
     fireEvent.click(within(painel).getByRole('button', { name: 'Salvar' }));
@@ -187,6 +189,39 @@ describe('lista de blocos', () => {
     expect(novo).toBeTruthy();
     expect(espera?.next_yes_node_id).toBe(novo?.id);
     expect(espera?.next_no_node_id).toBeNull();
+  });
+});
+
+describe('lista de blocos pelo "+ saída"', () => {
+  const comEspera = () => flow({
+    nodes: [{
+      id: 'n1', kind: 'wait_for_reply', label: null, config: {},
+      next_node_id: null, next_yes_node_id: null, next_no_node_id: null, pos_x: null, pos_y: null, steps: [],
+    }],
+  });
+
+  it('fechar a lista com Esc esquece a saída: reabrir por Blocos não liga mais nela', async () => {
+    get.mockResolvedValue(comEspera());
+    renderCanvas();
+    await screen.findByTestId('bloco-inicio');
+    fireEvent.click(screen.getByText(/\+ Respondeu/));
+    await screen.findByTestId('saida-pendente');
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('painel-blocos')).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: /Blocos/ }));
+    await screen.findByTestId('painel-blocos');
+    expect(screen.queryByTestId('saida-pendente')).toBeNull();
+  });
+
+  it('"cancelar" dentro da lista esquece a saída e a lista continua aberta', async () => {
+    get.mockResolvedValue(comEspera());
+    renderCanvas();
+    await screen.findByTestId('bloco-inicio');
+    fireEvent.click(screen.getByText(/\+ Respondeu/));
+    const linha = await screen.findByTestId('saida-pendente');
+    fireEvent.click(within(linha).getByRole('button', { name: 'cancelar' }));
+    await waitFor(() => expect(screen.queryByTestId('saida-pendente')).toBeNull());
+    expect(screen.getByTestId('painel-blocos')).toBeTruthy();
   });
 });
 
