@@ -313,22 +313,20 @@ function withOwnerSendFrom(kind: string, config: FlowNodeConfig): FlowNodeConfig
   return config;
 }
 
-export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false, donoDoEnvio = null }: Props) {
+export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false, donoDoEnvio = null }: Props) {
   // Pessoal (a minha ou a de outra pessoa): a mensagem sai pelo número do dono.
   const peloDono = pessoal || donoDoEnvio != null;
-  const [label, setLabel] = useState(node?.label || '');
   const [config, setConfig] = useState<FlowNodeConfig>(node?.config || {});
   const [problem, setProblem] = useState<string | null>(null);
   const messageRef = useRef<HTMLTextAreaElement>(null);
 
   React.useEffect(() => {
-    setLabel(node?.label || '');
     setConfig(node?.config || {});
     setProblem(null);
   }, [node?.id]);
 
   // O rascunho mudou alguma coisa do bloco? (o canvas pergunta antes de descartar)
-  const dirty = !!node && !mesmoConteudo({ label: label || '', config }, { label: node.label || '', config: node.config || {} });
+  const dirty = !!node && !mesmoConteudo({ config }, { config: node.config || {} });
   React.useEffect(() => {
     onDirtyChange?.(dirty);
   }, [dirty]); // eslint-disable-line react-hooks/exhaustive-deps -- só quando muda
@@ -693,7 +691,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
       setProblem(issue);
       return;
     }
-    onSave(activeNode.id, { label, config: finalConfig });
+    onSave(activeNode.id, { label: activeNode.label ?? '', config: finalConfig });
   };
 
   return (
@@ -726,13 +724,6 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
           </div>
         )}
         {renderFields()}
-        {!hidden && !guided && (
-          <div className="space-y-1">
-            <Label className="text-xs" htmlFor="flow-node-label">Apelido do bloco (opcional)</Label>
-            <Input id="flow-node-label" value={label} onChange={e => setLabel(e.target.value)} placeholder={title} />
-            <p className="text-xs text-muted-foreground">Aparece no cartão no lugar do nome do bloco.</p>
-          </div>
-        )}
         {problem && <p className="text-xs text-destructive" role="alert">{problem}</p>}
       </div>
     </FlowBlockDialog>

@@ -132,8 +132,9 @@ describe('construção guiada', () => {
     const painel = await screen.findByTestId('painel-do-bloco');
     expect(within(painel).getByTestId('dica-do-passo').textContent).toContain('Passo 1 de 2 — Escreva a mensagem de abertura');
     expect(within(painel).getByTestId('dica-do-passo').textContent).toContain('Dica: Dica do passo 1');
-    // Modo guiado: sem apelido do bloco.
+    // Modo guiado: o nome do bloco não é editável (nem no painel, nem no cartão).
     expect(within(painel).queryByLabelText('Apelido do bloco (opcional)')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Renomear / })).toBeNull();
     fireEvent.change(within(painel).getByLabelText('Mensagem'), { target: { value: 'Oi {{nome}}, separei um imóvel' } });
     fireEvent.click(within(painel).getByRole('button', { name: 'Salvar' }));
 

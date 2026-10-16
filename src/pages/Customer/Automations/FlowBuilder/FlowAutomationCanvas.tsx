@@ -363,6 +363,10 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     setNodes(prev => [...prev, { ...original, id: copyId, next_node_id: null, next_yes_node_id: null, next_no_node_id: null, pos_x: (original.pos_x || 0) + 40, pos_y: (original.pos_y || 0) + 40 }]);
   }, [nodes]);
 
+  const handleRename = useCallback((id: string, label: string | null) => {
+    setNodes(ns => ns.map(n => (n.id === id ? { ...n, label } : n)));
+  }, []);
+
   const handleSaveNodeConfig = useCallback(async (nodeId: string, patch: { label: string; config: Record<string, unknown> }) => {
     const target = nodes.find(n => n.id === nodeId);
     // Bloco com passo do guia: Salvar no painel confirma o passo (`guide_done`).
@@ -492,9 +496,9 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     const rest: Node[] = nodes.map(n => {
       const st = stepByNode.get(n.id);
       const allow = readOnly
-        ? { edit: false, duplicate: false, remove: false, add: false }
+        ? { edit: false, duplicate: false, remove: false, add: false, rename: false }
         : guided
-          ? { edit: true, duplicate: false, remove: isMessageNode(n), add: false }
+          ? { edit: true, duplicate: false, remove: isMessageNode(n), add: false, rename: false }
           : undefined;
       return {
         id: n.id,
@@ -509,12 +513,12 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
           highlighted: highlighted === n.id,
           guideMark: st ? { step: st.step, state: st.done ? 'done' : step?.nodeId === n.id ? 'current' : 'pending' } : null,
           allow,
-          onEdit: openNode, onDuplicate: handleDuplicate, onRemove: handleRemove, onAddFrom: addFrom,
+          onEdit: openNode, onDuplicate: handleDuplicate, onRemove: handleRemove, onAddFrom: addFrom, onRename: handleRename,
         },
       };
     });
     return [startNode, ...rest];
-  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, addFrom, peloMeuNumero, donoDoEnvio]);
+  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, handleRename, addFrom, peloMeuNumero, donoDoEnvio]);
 
   const reactFlowEdges: Edge[] = useMemo(
     () => graphEdges.map(e => ({
