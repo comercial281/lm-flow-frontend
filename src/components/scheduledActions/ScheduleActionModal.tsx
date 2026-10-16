@@ -19,7 +19,7 @@ import {
 import { scheduledActionsService } from '@/services/scheduledActions/scheduledActionsService';
 import { followupSequencesService } from '@/services/followupSequences/followupSequencesService';
 import { tenantTemplateVariablesService } from '@/services/messageFunnels/messageFunnelsService';
-import type { TemplateVariable } from '@/types/messageFunnels';
+import type { FunnelItemKind, TemplateVariable } from '@/types/messageFunnels';
 import { ConversationFunnelSelect } from '@/components/flowAutomations/ConversationFunnelSelect';
 import InboxesService from '@/services/channels/inboxesService';
 import { contactsService } from '@/services/contacts';
@@ -32,6 +32,7 @@ import { toast } from 'sonner';
 import MessageSequenceEditor, {
   type SequenceDraftItem,
   newSequenceItem,
+  isFunnelItemKind,
 } from '@/components/messaging/MessageSequenceEditor';
 import {
   buildChannelOptions,
@@ -97,6 +98,8 @@ function draftFromSavedItem(it: SavedSequenceItem): SequenceDraftItem {
 function toSeqPayload(items: SequenceDraftItem[]) {
   return items
     .filter(itemIsValid)
+    // Book do imóvel é só do bloco Mensagem (o editor não oferece aqui): afunila o tipo.
+    .filter((it): it is SequenceDraftItem & { kind: FunnelItemKind } => isFunnelItemKind(it.kind))
     .map((it, idx) => ({
       position: idx,
       kind: it.kind,

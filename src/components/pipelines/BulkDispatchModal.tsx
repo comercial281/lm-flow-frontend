@@ -77,9 +77,10 @@ const STATUS_META: Record<BroadcastCampaign['status'], { label: string; cls: str
   failed: { label: 'Falhou', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
 };
 
-// contact/sticker entram só pra satisfazer o tipo (SequenceDraftItem cobre os
-// 8 tipos do editor compartilhado) — nunca aparecem aqui de verdade porque o
-// editor já exclui os dois nesta tela (excludeKinds).
+// contact/sticker/property_book entram só pra satisfazer o tipo (SequenceDraftItem
+// cobre os tipos do editor compartilhado) — nunca aparecem aqui de verdade: o
+// editor exclui contact/sticker nesta tela (excludeKinds) e o book só aparece
+// com `extraKinds`, que o disparo não passa.
 const KIND_LABEL: Record<SequenceDraftItem['kind'], string> = {
   text: 'Texto',
   image: 'Imagem',
@@ -89,6 +90,7 @@ const KIND_LABEL: Record<SequenceDraftItem['kind'], string> = {
   delay: 'Aguardar',
   contact: 'Contato',
   sticker: 'Figurinha',
+  property_book: 'Book do imóvel',
 };
 
 // Preview substituindo {{nome}} por um exemplo só na revisão.
@@ -112,7 +114,8 @@ function itemIsValid(it: SequenceDraftItem) {
 // um item desses sobreviva de uma edição anterior salva antes da exclusão.
 function toSequencePayload(items: SequenceDraftItem[]): BroadcastSequenceItem[] {
   return items
-    .filter((it): it is SequenceDraftItem & { kind: BroadcastSequenceItem['kind'] } => it.kind !== 'contact' && it.kind !== 'sticker')
+    .filter((it): it is SequenceDraftItem & { kind: BroadcastSequenceItem['kind'] } =>
+      it.kind !== 'contact' && it.kind !== 'sticker' && it.kind !== 'property_book')
     .map((it, idx) => {
       const variations = (it.text_variations ?? []).map(s => s.trim()).filter(Boolean);
       return {

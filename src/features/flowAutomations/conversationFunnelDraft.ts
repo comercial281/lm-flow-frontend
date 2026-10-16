@@ -20,7 +20,7 @@
 // Bloco que não é mensagem nem espera (etiqueta, mover etapa, aviso…) não tem
 // como entrar na sequência: fica de fora, e a tela avisa quantos.
 
-import type { SequenceDraftItem } from '@/components/messaging/MessageSequenceEditor';
+import type { SequenceDraftItem, SequenceItemKind } from '@/components/messaging/MessageSequenceEditor';
 import type { FunnelItemKind } from '@/types/messageFunnels';
 import type { FlowAutomation, FlowAutomationNode } from '@/types/flowAutomations';
 import { waitTotalSeconds } from './waitTime';
@@ -120,7 +120,8 @@ export function draftFromConversationFunnel(
   flow: Pick<FlowAutomation, 'initial_node_id' | 'nodes'>,
   options: DraftOptions = {},
 ): ConversationFunnelDraft {
-  const skipKinds = new Set(options.skipKinds ?? []);
+  // Set do tipo largo do editor: o item pode ser book (só o bloco Mensagem tem).
+  const skipKinds = new Set<SequenceItemKind>(options.skipKinds ?? []);
   const byId = new Map((flow.nodes ?? []).map(n => [n.id, n]));
   const items: SequenceDraftItem[] = [];
   const seen = new Set<string>();
