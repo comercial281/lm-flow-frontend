@@ -197,6 +197,36 @@ describe('gestor', () => {
     expect(screen.getByRole('switch', { name: 'Da equipe' }).getAttribute('aria-checked')).toBe('true');
   });
 
+  // Ajuste do dono do produto (16/10/2026): bloco preso a número específico.
+  it('"Da equipe" travada quando algum bloco manda por número específico, com o porquê', async () => {
+    can.manager = true;
+    list.mockResolvedValue([
+      teamFlow('a3', 'Presa', { permissions: { ...mgrPerms, personal: false, fixed_number: true } }),
+    ]);
+    renderPage();
+    const item = (await screen.findByText('Presa')).closest('li')!;
+    const chave = within(item).getByRole('switch', { name: 'Da equipe' });
+    expect(chave.getAttribute('aria-checked')).toBe('true');
+    expect((chave as HTMLButtonElement).disabled).toBe(true);
+    expect(within(item).getByText('Esta automação manda por um número específico. Pra virar pessoal, troque o número nos blocos.')).toBeTruthy();
+    fireEvent.click(chave);
+    expect(screen.queryByText('Tirar da equipe?')).toBeNull();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('pessoal com bloco de número específico ainda pode virar da equipe', async () => {
+    can.manager = true;
+    list.mockResolvedValue([flow('a1', 'Minha', { permissions: { ...mgrPerms, personal: true, fixed_number: true } })]);
+    update.mockResolvedValue({});
+    renderPage();
+    await screen.findByText('Minha');
+    const chave = screen.getByRole('switch', { name: 'Da equipe' });
+    expect((chave as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByText(/número específico/)).toBeNull();
+    fireEvent.click(chave);
+    await waitFor(() => expect(update).toHaveBeenCalledWith('a1', { team: true }));
+  });
+
   it('cria Pessoal (team false) ou Da equipe (team true)', async () => {
     can.manager = true;
     list.mockResolvedValue([flow('a1', 'Minha', { permissions: { ...mgrPerms, personal: true } })]);

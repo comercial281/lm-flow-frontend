@@ -87,12 +87,65 @@ export function personalBlockState(
   if (key.startsWith('lead_action:')) {
     const type = key.slice('lead_action:'.length);
     if (!PERSONAL_LEAD_ACTIONS.includes(type)) return 'fora';
-    return MESSAGE_ACTIONS.has(type) && !ctx.temNumero ? 'indisponivel' : 'ok';
+  } else if (!(PERSONAL_NATIVE_KINDS as string[]).includes(key)) {
+    return 'fora';
   }
-  if (!(PERSONAL_NATIVE_KINDS as string[]).includes(key)) return 'fora';
+  return personalAvailabilityState(item, ctx);
+}
+
+/**
+ * Só o "tem número / tem IA", sem a lista do cargo: a automação pessoal do
+ * GESTOR (ele tem todos os blocos, mas a mensagem sai pelo número dele).
+ */
+export function personalAvailabilityState(
+  item: PaletteItem,
+  ctx: { temNumero: boolean; temIA: boolean },
+): 'ok' | 'indisponivel' {
+  const key = item.key;
+  if (key.startsWith('lead_action:')) {
+    const type = key.slice('lead_action:'.length);
+    const mandaMensagem = MESSAGE_ACTIONS.has(type) || type.startsWith('send_');
+    return mandaMensagem && !ctx.temNumero ? 'indisponivel' : 'ok';
+  }
   if (key === 'send_whatsapp') return ctx.temNumero ? 'ok' : 'indisponivel';
   if (key === 'hand_to_ai') return ctx.temIA ? 'ok' : 'indisponivel';
   return 'ok';
+}
+
+/**
+ * Como o construtor trata a automação aberta:
+ * - 'corretor': a pessoal do corretor (lista do cargo + número e IA dele);
+ * - 'dono': a pessoal de quem não é corretor e é o dono (todos os blocos, mas
+ *   a mensagem sai pelo número dele: "Indisponível" sem número ou sem IA);
+ * - 'de_outro': a pessoal de outra pessoa aberta pelo gestor (o servidor manda
+ *   pelo número do dono; a tela só avisa, sem escolha de número);
+ * - null: da equipe (ou sem a informação), como sempre.
+ */
+export type ModoPessoal = 'corretor' | 'dono' | 'de_outro' | null;
+
+export function modoPessoal(
+  flow: Pick<FlowAutomation, 'permissions' | 'owner_user_id'> | null | undefined,
+  ctx: { ehCorretor: boolean; meId: string },
+): ModoPessoal {
+  if (!flow || !isPersonalFlow(flow)) return null;
+  if (ctx.ehCorretor) return 'corretor';
+  const dono = flow.owner_user_id == null ? '' : String(flow.owner_user_id);
+  return dono !== '' && dono === ctx.meId ? 'dono' : 'de_outro';
+}
+
+/** A linha do bloco de mensagem na pessoal de outra pessoa. */
+export function saiPeloWhatsAppDe(nome: string | null | undefined): string {
+  const quem = nome?.trim();
+  return quem ? `Sai pelo WhatsApp de ${quem}` : 'Sai pelo WhatsApp do dono';
+}
+
+/** Mesmo texto do 422 do servidor ao tirar "Da equipe". */
+export const NUMERO_FIXO_NA_EQUIPE =
+  'Esta automação manda por um número específico. Pra virar pessoal, troque o número nos blocos.';
+
+/** Da equipe com bloco preso a número específico: "Da equipe" não sai (o servidor diz). */
+export function presaNaEquipe(flow: Pick<FlowAutomation, 'permissions'>): boolean {
+  return !isPersonalFlow(flow) && flow.permissions?.fixed_number === true;
 }
 
 export function isPersonalFlow(flow: Pick<FlowAutomation, 'permissions'>): boolean {

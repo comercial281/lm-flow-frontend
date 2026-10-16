@@ -96,4 +96,49 @@ describe('Mensagem do corretor', () => {
     expect(sendFromLine({}, true)).toBe('Pelo seu WhatsApp');
     expect(sendFromLine({ send_from: 'owner' }, false)).toBe('Pelo número do responsável pelo lead');
   });
+
+  // Ajuste do dono do produto (16/10/2026): o gestor na pessoal de outra pessoa.
+  it('pessoal de outra pessoa: avisa "Sai pelo WhatsApp de Ana", sem escolher número, e grava owner', async () => {
+    const onSave = vi.fn();
+    render(
+      <FlowNodePanel
+        node={node({ config: { text: 'Oi', send_from: 'number', send_from_inbox_id: '9' } })}
+        resources={resources} onClose={() => {}} onSave={onSave}
+        donoDoEnvio="Ana"
+      />,
+    );
+    expect(screen.getByText('Sai pelo WhatsApp de Ana')).toBeTruthy();
+    expect(screen.queryByText('Enviar pelo número')).toBeNull();
+    fireEvent.click(screen.getByText('Salvar'));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const cfg = onSave.mock.calls[0][1].config as Record<string, unknown>;
+    expect(cfg.send_from).toBe('owner');
+    expect(cfg.send_from_inbox_id).toBe('');
+    expect(sendFromLine({}, false, 'Ana')).toBe('Pelo WhatsApp de Ana');
+    expect(sendFromLine({}, false, '')).toBe('Pelo WhatsApp do dono');
+  });
+
+  it('ação de envio na pessoal de outra pessoa também avisa por qual WhatsApp sai', () => {
+    render(
+      <FlowNodePanel
+        node={node({ kind: 'lead_action', config: { action_type: 'send_image', params: { media_url: 'https://a.com/x.png' } } })}
+        resources={resources} onClose={() => {}} onSave={() => {}}
+        donoDoEnvio="Ana"
+      />,
+    );
+    expect(screen.getByText('Sai pelo WhatsApp de Ana')).toBeTruthy();
+    expect(screen.queryByText('Enviar pelo número')).toBeNull();
+  });
+
+  it('gestor na pessoal dele: "Sai pelo seu WhatsApp (número)" também na ação de envio', () => {
+    render(
+      <FlowNodePanel
+        node={node({ kind: 'lead_action', config: { action_type: 'send_whatsapp_message', params: { message: 'Oi' } } })}
+        resources={resources} onClose={() => {}} onSave={() => {}}
+        pessoal numeroPessoal="5511987654321"
+      />,
+    );
+    expect(screen.getByText(/Sai pelo seu WhatsApp/)).toBeTruthy();
+    expect(screen.queryByText('Enviar pelo número')).toBeNull();
+  });
 });

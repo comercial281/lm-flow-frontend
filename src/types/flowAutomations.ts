@@ -115,6 +115,8 @@ export interface FlowPermissions {
   can_create_blank: boolean;
   /** Automação pessoal do corretor (regras de gatilho/bloco do cargo). */
   personal?: boolean;
+  /** Algum bloco manda por número específico: "Da equipe" não sai (servidor). */
+  fixed_number?: boolean;
 }
 
 // Contrato (spec 02/10): o backend devolve SEMPRE `{ event, conditions }`. O

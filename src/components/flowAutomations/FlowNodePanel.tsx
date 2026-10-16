@@ -5,6 +5,7 @@ import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
 import SendFromField from '@/components/numbers/SendFromField';
 import { SaiPeloSeuWhatsApp } from './SaiPeloSeuWhatsApp';
+import { saiPeloWhatsAppDe } from '@/features/flowAutomations/personal';
 import { applySendFrom, sendFromOf } from '@/features/numbers/sendFrom';
 import type { FlowAutomationKind, FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
 import { ActionEditor, type AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
@@ -66,6 +67,11 @@ interface Props {
   numeroPessoal?: string | null;
   /** O número do corretor ainda está carregando. */
   numeroPessoalCarregando?: boolean;
+  /**
+   * Pessoal de OUTRA pessoa aberta pelo gestor: o nome do dono ('' sem nome).
+   * A mensagem só avisa por qual WhatsApp sai (o servidor força o do dono).
+   */
+  donoDoEnvio?: string | null;
 }
 
 // "Por um tempo, saindo só em horário comercial" (o modo `schedule`) virou a
@@ -297,7 +303,7 @@ const SENDING_LEAD_ACTIONS = new Set([
   'send_whatsapp_message', 'send_audio', 'send_image', 'send_video', 'send_document', 'send_sticker', 'send_quick_reply',
 ]);
 
-/** Corretor: o bloco que manda mensagem grava `send_from: 'owner'` (o servidor também força). */
+/** Pessoal: o bloco que manda mensagem grava `send_from: 'owner'` (o servidor também força). */
 function withOwnerSendFrom(kind: string, config: FlowNodeConfig): FlowNodeConfig {
   if (kind === 'send_whatsapp') return applySendFrom(config, OWNER_SEND);
   if (kind === 'lead_action' && SENDING_LEAD_ACTIONS.has(String(config.action_type))) {
@@ -307,7 +313,9 @@ function withOwnerSendFrom(kind: string, config: FlowNodeConfig): FlowNodeConfig
   return config;
 }
 
-export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false }: Props) {
+export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false, donoDoEnvio = null }: Props) {
+  // Pessoal (a minha ou a de outra pessoa): a mensagem sai pelo número do dono.
+  const peloDono = pessoal || donoDoEnvio != null;
   const [label, setLabel] = useState(node?.label || '');
   const [config, setConfig] = useState<FlowNodeConfig>(node?.config || {});
   const [problem, setProblem] = useState<string | null>(null);
@@ -407,6 +415,12 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
     );
   }
 
+  // Por qual WhatsApp sai a mensagem da automação pessoal (sem escolha de número).
+  function linhaDoEnvio() {
+    if (pessoal) return <SaiPeloSeuWhatsApp phone={numeroPessoal} loading={numeroPessoalCarregando} />;
+    return <p className="text-sm font-medium" data-testid="sai-pelo-whatsapp-do-dono">{saiPeloWhatsAppDe(donoDoEnvio)}</p>;
+  }
+
   function renderFields() {
     if (hidden) {
       return <p className="text-sm text-muted-foreground">{HIDDEN_BLOCK_NOTICE}. Ele continua no fluxo como estava.</p>;
@@ -414,8 +428,8 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
     switch (activeNode.kind) {
       case 'send_whatsapp': {
         const envio = sendFromOf(config);
-        const sendFromField = pessoal
-          ? <SaiPeloSeuWhatsApp phone={numeroPessoal} loading={numeroPessoalCarregando} />
+        const sendFromField = peloDono
+          ? linhaDoEnvio()
           : (
             <SendFromField
               scope="lead_automation_rules"
@@ -650,12 +664,15 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
           return <p className="text-xs text-muted-foreground">Sem configuração adicional.</p>;
         }
         return (
-          <ActionEditor
-            action={leadActionOf(config)}
-            onChange={next => setConfig(leadActionConfig(next))}
-            resources={resources}
-            pessoal={pessoal}
-          />
+          <>
+            <ActionEditor
+              action={leadActionOf(config)}
+              onChange={next => setConfig(leadActionConfig(next))}
+              resources={resources}
+              pessoal={peloDono}
+            />
+            {peloDono && SENDING_LEAD_ACTIONS.has(String(config.action_type)) && linhaDoEnvio()}
+          </>
         );
       default:
         return <p className="text-xs text-muted-foreground">Sem configuração adicional.</p>;
@@ -668,7 +685,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
     const baseConfig = activeNode.kind === 'move_stage' && moveStageModeOf(config) === 'name'
       ? withStageName(config, stageNameOf(config))
       : config;
-    const finalConfig = pessoal ? withOwnerSendFrom(activeNode.kind, baseConfig) : baseConfig;
+    const finalConfig = peloDono ? withOwnerSendFrom(activeNode.kind, baseConfig) : baseConfig;
     // Mesma régua do cartão e da chave de ligar (readiness.ts), e o que o passo
     // do guia pede (sprint 4).
     const issue = nodeProblem({ kind: activeNode.kind, config: finalConfig }) ?? guideRequiredProblem(guide, finalConfig);

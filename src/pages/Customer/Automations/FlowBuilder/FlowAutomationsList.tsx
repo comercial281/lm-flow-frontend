@@ -22,7 +22,9 @@ import { enableProblem } from '@/features/flowAutomations/readiness';
 import { serverMessage } from '@/features/flowAutomations/guide';
 import { FlowTemplateList, FlowTemplatesDialog } from '@/components/flowAutomations/FlowTemplates';
 
-import { isPersonalFlow, tirarDaEquipe, useEhCorretorDeAutomacao } from '@/features/flowAutomations/personal';
+import {
+  isPersonalFlow, NUMERO_FIXO_NA_EQUIPE, presaNaEquipe, tirarDaEquipe, useEhCorretorDeAutomacao,
+} from '@/features/flowAutomations/personal';
 import { useAuthStore } from '@/store/authStore';
 import { useCan } from '@/hooks/useCan';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -420,8 +422,14 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
                   </>
                 )}
                 {canMarkTeam && (
-                  <div className="ml-auto">
-                    <Chave rotulo="Da equipe" ligada={!isPersonalFlow(a)} aoMudar={next => markTeam(a, next)} />
+                  <div className={presaNaEquipe(a) ? 'ml-auto max-w-xs' : 'ml-auto'}>
+                    <Chave
+                      rotulo="Da equipe"
+                      ligada={!isPersonalFlow(a)}
+                      aoMudar={next => markTeam(a, next)}
+                      desabilitada={presaNaEquipe(a)}
+                      descricao={presaNaEquipe(a) ? NUMERO_FIXO_NA_EQUIPE : undefined}
+                    />
                   </div>
                 )}
               </div>

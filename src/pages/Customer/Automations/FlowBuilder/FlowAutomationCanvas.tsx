@@ -42,7 +42,8 @@ import { businessHoursOnlyOf } from '@/features/flowAutomations/businessHours';
 import { FLOW_KIND_COPY, kindOf } from '@/features/flowAutomations/kind';
 import { paletteItems, podeSoltarBloco, type PaletteItem } from '@/features/flowAutomations/palette';
 import {
-  isPersonalFlow, personalBlockState, personalTriggerGroups, tirarDaEquipe, useEhCorretorDeAutomacao,
+  modoPessoal, NUMERO_FIXO_NA_EQUIPE, personalAvailabilityState, personalBlockState, personalTriggerGroups,
+  presaNaEquipe, tirarDaEquipe, useEhCorretorDeAutomacao,
 } from '@/features/flowAutomations/personal';
 import { usePersonalCapabilities } from '@/features/flowAutomations/usePersonalCapabilities';
 import { readBlocksOpen, saveBlocksOpen } from '@/features/flowAutomations/blocksPanelState';
@@ -187,16 +188,23 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const kind = kindOf(automation);
   const isConversation = kind === 'conversation';
   const readOnly = isReadOnly(automation);
-  // Corretor editando a automação PESSOAL dele: gatilhos e blocos do cargo.
+  // Automação PESSOAL: o corretor monta com os gatilhos e blocos do cargo; o
+  // gestor na pessoal DELE tem tudo, mas a mensagem sai pelo número dele
+  // ("Indisponível" sem número ou sem IA); na pessoal de outra pessoa, o bloco
+  // de mensagem só avisa por qual WhatsApp sai (o servidor força o do dono).
   const ehCorretor = useEhCorretorDeAutomacao();
-  const pessoal = ehCorretor && !!automation && isPersonalFlow(automation);
-  const capacidades = usePersonalCapabilities(pessoal);
-  const estadoDoBloco = useMemo(
-    () => (pessoal
-      ? (item: PaletteItem) => personalBlockState(item, { temNumero: capacidades.temNumero, temIA: capacidades.temIA })
-      : undefined),
-    [pessoal, capacidades.temNumero, capacidades.temIA],
-  );
+  const modo = modoPessoal(automation, { ehCorretor, meId });
+  const pessoal = modo === 'corretor';
+  const peloMeuNumero = modo === 'corretor' || modo === 'dono';
+  // '' = de outra pessoa sem nome conhecido; null = não é o caso.
+  const donoDoEnvio = modo === 'de_outro' ? automation?.owner_name ?? '' : null;
+  const capacidades = usePersonalCapabilities(peloMeuNumero);
+  const estadoDoBloco = useMemo(() => {
+    const ctx = { temNumero: capacidades.temNumero, temIA: capacidades.temIA };
+    if (modo === 'corretor') return (item: PaletteItem) => personalBlockState(item, ctx);
+    if (modo === 'dono') return (item: PaletteItem) => personalAvailabilityState(item, ctx);
+    return undefined;
+  }, [modo, capacidades.temNumero, capacidades.temIA]);
   const gatilhosDoCargo = useMemo(() => (pessoal ? personalTriggerGroups(FLOW_TRIGGER_GROUPS) : undefined), [pessoal]);
   const guided = isGuided(automation);
   const builderTools = !readOnly && !guided;
@@ -494,7 +502,8 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
         draggable: builderTools,
         connectable: builderTools,
         data: {
-          node: n, lookups, pessoal, problem: problems[n.id] ?? null,
+          node: n, lookups, pessoal: peloMeuNumero, donoDoEnvio,
+          problem: problems[n.id] ?? null,
           editing: openPanel?.type === 'node' && openPanel.id === n.id,
           highlighted: highlighted === n.id,
           guideMark: st ? { step: st.step, state: st.done ? 'done' : step?.nodeId === n.id ? 'current' : 'pending' } : null,
@@ -504,7 +513,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
       };
     });
     return [startNode, ...rest];
-  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, addFrom, pessoal]);
+  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, addFrom, peloMeuNumero, donoDoEnvio]);
 
   const reactFlowEdges: Edge[] = useMemo(
     () => graphEdges.map(e => ({
@@ -582,6 +591,8 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     : !!automation.team;
   // O gestor marca e desmarca "Da equipe" no cabeçalho também (a mesma pergunta da lista).
   const podeMarcarEquipe = ehAutomacao && !readOnly && automation.permissions?.can_mark_team === true;
+  // Bloco preso a número específico: "Da equipe" não sai (o servidor recusa).
+  const presa = ehAutomacao && presaNaEquipe(automation);
 
   async function marcarEquipe(next: boolean): Promise<boolean> {
     if (!automation) return false;
@@ -666,7 +677,14 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
             disabled={readOnly}
           />
           {podeMarcarEquipe ? (
-            <Chave rotulo="Da equipe" className="ml-2 shrink-0" ligada={daEquipe} aoMudar={marcarEquipe} />
+            <Chave
+              rotulo="Da equipe"
+              className={presa ? 'ml-2 max-w-xs' : 'ml-2 shrink-0'}
+              ligada={daEquipe}
+              aoMudar={marcarEquipe}
+              desabilitada={presa}
+              descricao={presa ? NUMERO_FIXO_NA_EQUIPE : undefined}
+            />
           ) : daEquipe && (
             <Badge variant="secondary" className="shrink-0 gap-1 text-[10px]">
               <Users className="h-3 w-3" aria-hidden="true" /> Da equipe
@@ -837,9 +855,10 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
               flowKind={kind}
               guided={guided}
               saving={saving}
-              pessoal={pessoal}
+              pessoal={peloMeuNumero}
               numeroPessoal={capacidades.principalPhone}
               numeroPessoalCarregando={capacidades.loading}
+              donoDoEnvio={donoDoEnvio}
             />
           )}
           {openPanel?.type === 'trigger' && !isConversation && (
