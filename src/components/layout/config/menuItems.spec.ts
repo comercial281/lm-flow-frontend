@@ -130,6 +130,19 @@ describe('Automações próprias (15/10/2026)', () => {
     expect(nomes(c, { bolsao: true, client_manage_automations: true })).toContain('Automações');
   });
 
+  // Revisão final: a chave do cliente continua valendo pro gestor. O `.own`
+  // só passa direto quem não tem `flow_automations.update`.
+  it('Gestor com .own e .update e a chave do cliente desligada: não vê', () => {
+    const c = new Set([...CORRETOR, 'flow_automations.read', 'flow_automations.update', 'flow_automations.own']);
+    expect(nomes(c, { bolsao: true })).not.toContain('Automações');
+    expect(nomes(c, { bolsao: true, client_manage_automations: true })).toContain('Automações');
+  });
+
+  it('Corretor só com .own e a chave do cliente desligada: vê', () => {
+    const c = new Set([...CORRETOR, 'flow_automations.own']);
+    expect(nomes(c, {})).toContain('Automações');
+  });
+
   it('Corretor sem .own segue com a lista de hoje', () => {
     expect(nomes(CORRETOR, { bolsao: true, client_manage_automations: true })).not.toContain('Automações');
   });

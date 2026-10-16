@@ -85,6 +85,8 @@ export interface MenuItem {
   clientToggleKey?: string;
   /** Ver `SubMenuItem.clientToggleSoPara`. */
   clientToggleSoPara?: string;
+  /** Ver `SubMenuItem.clientToggleGestor`. */
+  clientToggleGestor?: string;
   /** Quando true, só aparece no tenant raiz (VITE_IS_ROOT_TENANT=true). */
   rootTenantOnly?: boolean;
   /** O inverso: some no painel raiz (app.lmflow), tela que só faz sentido no CRM do cliente. */
@@ -127,6 +129,12 @@ export interface SubMenuItem {
    * Ex.: Automações: `.read` depende do cliente; `.own` (corretor) não.
    */
   clientToggleSoPara?: string;
+  /**
+   * Quem tem ESTA chave segue a chave do cliente, mesmo tendo a outra que
+   * passaria direto (`clientToggleSoPara`). Ex.: Automações: o gestor
+   * (`flow_automations.update`) com `.own` continua dependendo do cliente.
+   */
+  clientToggleGestor?: string;
   rootTenantOnly?: boolean;
   hideOnRoot?: boolean;
   hiddenFromClient?: boolean;
@@ -321,7 +329,7 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       // na lista (sprint 2, 03/10/2026). Reusa a função das regras por não ter
       // registro próprio. "Regras de lead" e "Lembretes" saíram do menu e abrem
       // só pelo endereço (suporte e avisos da tela de Follow-up apontam pra lá).
-      { name: 'Automações', href: '/automations/flow-builder', icon: Zap, ...permissionFromRoute('/automations/flow-builder'), ...permissionsFromRoute('/automations/flow-builder'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations', clientToggleSoPara: 'flow_automations.read' },
+      { name: 'Automações', href: '/automations/flow-builder', icon: Zap, ...permissionFromRoute('/automations/flow-builder'), ...permissionsFromRoute('/automations/flow-builder'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations', clientToggleSoPara: 'flow_automations.read', clientToggleGestor: 'flow_automations.update' },
     ],
   },
   {
@@ -547,8 +555,10 @@ export const shouldShowMenuItem = (
   // explicitamente ligado no painel de Funções do CRM (default OFF).
   // Exceção (Automações próprias): com `clientToggleSoPara`, a chave só barra
   // quem entra por aquela permissão; quem tem outra das `permissions` passa.
+  // Menos o gestor (`clientToggleGestor`): ele segue a chave do cliente.
   if (item.clientToggleKey) {
-    const entraPorOutraChave = !!item.clientToggleSoPara
+    const gestor = !!item.clientToggleGestor && canAnyFunction([item.clientToggleGestor]);
+    const entraPorOutraChave = !!item.clientToggleSoPara && !gestor
       && canAnyFunction((item.permissions ?? []).filter(p => p !== item.clientToggleSoPara));
     if (!isSuper && !entraPorOutraChave && features?.[item.clientToggleKey] !== true) return false;
   }
