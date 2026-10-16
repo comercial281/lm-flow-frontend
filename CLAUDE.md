@@ -5927,6 +5927,7 @@ Clientes → Custos (`/admin/clientes/custos`, `src/pages/SuperAdmin/Custos/`). 
 
 Sprint 4 de 4 da unificação das automações, parte A (layout do construtor).
 > **Reaberto em 16/10/2026:** o painel lateral do bloco (e do Início) e o campo "Apelido do bloco" descritos aqui foram trocados. Ver "Construtor: bloco e Início numa janela no meio, nome no cartão (desde 2026-10-16)".
+> **Reaberto também em 16/10/2026:** o painel Blocos fixo à esquerda virou uma lista que desce embaixo do botão. Ver "Construtor: Blocos em grupos e numa lista embaixo do botão (desde 2026-10-16)".
 
 Decisões do dono do produto em 04/10, não reabrir sem ele pedir. Spec:
 `LM FLOW/specs/2026-10-04-automacoes-sprint-4-layout-e-funil-do-corretor-design.md`.
@@ -9153,3 +9154,16 @@ PR 4 do redesenho do construtor. O dono (Tony) reabriu em 16/10/2026 as decisõe
 - **Modo guiado e "só ver":** o nome não é editável (`allow.rename` false), como já era com o apelido.
 
 Código: `FlowNodeCardData.onRename(id, label | null)` e `allow.rename` em `FlowNodeCard.tsx`; `handleRename` no `FlowAutomationCanvas.tsx`. Spec: `FlowNodeCardRename.spec.tsx`.
+
+## Construtor: Blocos em grupos e numa lista embaixo do botão (desde 2026-10-16)
+
+PR 5 do redesenho do construtor. O dono (Tony) reabriu em 16/10/2026 a decisão de 04/10 sobre o "painel Blocos" (fixo à esquerda, aberto por padrão e lembrado). Spec: `LM FLOW/specs/2026-10-16-flow-builder-redesenho-design.md`. Só frontend.
+
+- **Seis grupos.** A lista de blocos agora se divide em Mensagem, Lead, IA, Distribuição, Notificação e Controle (antes: Mensagem pro lead, Lead, Avisos, Controle). A composição continua em `palette.ts`; cada grupo tem a própria cor em `GROUP_COLORS`.
+- **Lista embaixo do botão.** O botão "Blocos" (canto do desenho, ao lado de "Simular") abre uma lista logo abaixo dele (`FlowBlocksMenu`, um Popover do design system), com busca "Buscar blocos..." e os grupos. O mapa não é mais empurrado pro lado.
+- **Começa fechada e não lembra.** A lista abre fechada toda vez que a tela abre; saiu o `blocksPanelState.ts` (a chave `lmflow:construtor:blocos-aberto` não é mais lida nem gravada). Escolher um bloco, soltar um bloco no mapa, Esc ou clicar fora fecham.
+- **"+ saída" do cartão** continua abrindo a lista e ligando o bloco escolhido àquela saída (o aviso "Escolha um bloco em Blocos pra ligar na saída ..." fica no mapa).
+- **Arrastar** pro mapa continua: o bloco da lista é arrastável (`BLOCK_DRAG_TYPE`) e a lista fica aberta durante o arraste (só conferido por teste, falta olhar no navegador); o `onDrop` do mapa coloca o bloco e fecha. Corretor: bloco "fora" some e "Indisponível" fica cinza, sem clique nem arraste, como antes.
+- **Botão.** Passou a ter `aria-expanded` (saiu o `aria-pressed`). Celular: sem mudança, o construtor não abre no celular.
+
+Código: `src/components/flowAutomations/FlowBlocksMenu.tsx` (era `FlowBlocksPanel.tsx`) e `FlowAutomationCanvas.tsx`. Testes: describe "lista de blocos" em `FlowCanvasLayout.spec.tsx` e `FlowLayoutPieces.spec.tsx`.

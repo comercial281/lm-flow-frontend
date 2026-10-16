@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { FlowTriggerPanel } from './FlowTriggerPanel';
-import { FlowBlocksPanel } from './FlowBlocksPanel';
+import { FlowBlocksMenu } from './FlowBlocksMenu';
 import { FLOW_TRIGGER_GROUPS } from '@/features/flowAutomations/trigger';
 import { personalTriggerGroups, personalBlockState, PERSONAL_TRIGGERS } from '@/features/flowAutomations/personal';
 import { podeSoltarBloco } from '@/features/flowAutomations/palette';
@@ -69,14 +69,14 @@ describe('construtor do corretor', () => {
     personalBlockState(item, { temNumero: false, temIA: false });
 
   it('a paleta não mostra "Avisar no grupo" (fora)', () => {
-    render(<FlowBlocksPanel onPick={() => {}} onClose={() => {}} estadoDoBloco={estado} />);
+    render(<FlowBlocksMenu open onOpenChange={() => {}} onPick={() => {}} estadoDoBloco={estado} trigger={<button>Blocos</button>} />);
     expect(screen.queryByText('Avisar no grupo')).toBeNull();
     expect(screen.getByText('Esperar')).toBeTruthy();
   });
 
   it('"Mandar WhatsApp" indisponível: desabilitado, com texto, e clique não chama onPick', () => {
     const onPick = vi.fn();
-    render(<FlowBlocksPanel onPick={onPick} onClose={() => {}} estadoDoBloco={estado} />);
+    render(<FlowBlocksMenu open onOpenChange={() => {}} onPick={onPick} estadoDoBloco={estado} trigger={<button>Blocos</button>} />);
     const btn = screen.getByRole('button', { name: /Mandar WhatsApp/ }) as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
     expect(btn.draggable).toBe(false);

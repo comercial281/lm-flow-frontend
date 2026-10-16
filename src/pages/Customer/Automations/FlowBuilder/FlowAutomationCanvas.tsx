@@ -17,7 +17,7 @@ import {
   normalizeLoadedNodes, buildSaveFlowPayload, handleLabel, type OutputHandle,
 } from '@/lib/flowAutomationGraph';
 import { flowNodeTypes, type FlowLookups, type FlowStartNodeData } from '@/components/flowAutomations/FlowNodeCard';
-import { BLOCK_DRAG_TYPE, FlowBlocksPanel } from '@/components/flowAutomations/FlowBlocksPanel';
+import { BLOCK_DRAG_TYPE, FlowBlocksMenu } from '@/components/flowAutomations/FlowBlocksMenu';
 import { FlowNodePanel } from '@/components/flowAutomations/FlowNodePanel';
 import { FlowTriggerPanel } from '@/components/flowAutomations/FlowTriggerPanel';
 import { FlowSettingsDialog } from '@/components/flowAutomations/FlowSettingsDialog';
@@ -46,7 +46,6 @@ import {
   presaNaEquipe, tirarDaEquipe, useEhCorretorDeAutomacao,
 } from '@/features/flowAutomations/personal';
 import { usePersonalCapabilities } from '@/features/flowAutomations/usePersonalCapabilities';
-import { readBlocksOpen, saveBlocksOpen } from '@/features/flowAutomations/blocksPanelState';
 import { enableProblem, nodeProblem } from '@/features/flowAutomations/readiness';
 import {
   reentryOf, reentrySummary, reentryWarning, serializeReentry, type ReentrySetting,
@@ -127,10 +126,8 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   // SÓ na abertura. Seguir o redimensionamento trocaria o canvas no meio da
   // edição ao girar o celular, desmontando o painel do bloco e perdendo o texto.
   const [modoCelular] = useState(ehCelular);
-  // No celular o painel Blocos cobre a tela: começa sempre fechado.
-  const [blocksOpen, setBlocksOpenState] = useState(
-    () => readBlocksOpen() && !(typeof window !== 'undefined' && window.matchMedia?.(MOBILE_QUERY).matches),
-  );
+  // A lista Blocos começa sempre fechada e não lembra como ficou (16/10/2026).
+  const [blocksOpen, setBlocksOpen] = useState(false);
   const flowInstance = useRef<ReactFlowInstance | null>(null);
 
   const [automation, setAutomation] = useState<FlowAutomation | null>(null);
@@ -229,11 +226,6 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   }, [step]);
   const highlighted = highlightedNodeId !== undefined ? highlightedNodeId : step?.nodeId ?? null;
 
-  const setBlocksOpen = useCallback((open: boolean) => {
-    setBlocksOpenState(open);
-    if (!isMobile) saveBlocksOpen(open);
-  }, [isMobile]);
-
   // Voltar pra lista pergunta antes de perder o que não foi salvo (a guarda da
   // casa cobre o menu e fechar a aba; a seta do canvas é um navigate direto).
   const goBack = async () => {
@@ -295,10 +287,10 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     });
     if (!initialNodeId) setInitialNodeId(newId);
     setPendingSource(null);
-    // No celular os dois painéis são tela cheia: fecha o Blocos pra mostrar o do bloco.
-    if (isMobile) setBlocksOpenState(false);
+    // Escolher (ou soltar) um bloco fecha a lista.
+    setBlocksOpen(false);
     requestPanel({ type: 'node', id: newId });
-  }, [nodes, initialNodeId, isMobile, requestPanel]);
+  }, [nodes, initialNodeId, requestPanel]);
 
   // Grava no servidor: o cabeçalho (nome, gatilho, configurações) e os blocos.
   // No modo guiado vai só o nome (o servidor recusa o resto) e o fluxo do
@@ -392,7 +384,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const addFrom = useCallback((sourceId: string, handle: OutputHandle) => {
     setPendingSource({ id: sourceId, handle });
     setBlocksOpen(true);
-  }, [setBlocksOpen]);
+  }, []);
 
   // Arrastar um bloco do painel Blocos pro canvas (A.2).
   const onDragOver = useCallback((e: DragEvent) => {
@@ -752,14 +744,6 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
         )}
 
         <div className="flex-1 flex min-h-0">
-          {blocksOpen && builderTools && (
-            <FlowBlocksPanel
-              onPick={item => insertNode(item, pendingSource)}
-              onClose={() => setBlocksOpen(false)}
-              estadoDoBloco={estadoDoBloco}
-            />
-          )}
-
           <div className="flex-1 relative min-w-0" onDragOver={onDragOver} onDrop={onDrop}>
             <ReactFlowProvider>
               <ReactFlow
@@ -793,16 +777,22 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
 
             {builderTools && (
             <div className="absolute left-2 top-2 z-10 flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className={cn('h-8 bg-background shadow-sm', blocksOpen && 'border-primary text-primary')}
-                onClick={() => setBlocksOpen(!blocksOpen)}
-                aria-pressed={blocksOpen}
-                title={blocksOpen ? 'Fechar o painel de blocos' : 'Abrir o painel de blocos'}
-              >
-                <LayoutGrid className="h-4 w-4 mr-1" aria-hidden="true" /> Blocos
-              </Button>
+              <FlowBlocksMenu
+                open={blocksOpen}
+                onOpenChange={setBlocksOpen}
+                onPick={item => insertNode(item, pendingSource)}
+                estadoDoBloco={estadoDoBloco}
+                trigger={
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className={cn('h-8 bg-background shadow-sm', blocksOpen && 'border-primary text-primary')}
+                    title="Escolher um bloco pra colocar no fluxo"
+                  >
+                    <LayoutGrid className="h-4 w-4 mr-1" aria-hidden="true" /> Blocos
+                  </Button>
+                }
+              />
               <Button
                 size="sm"
                 variant="outline"

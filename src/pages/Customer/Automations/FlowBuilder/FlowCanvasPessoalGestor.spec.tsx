@@ -82,7 +82,7 @@ const renderCanvas = () =>
 
 async function abrirBlocos() {
   const botao = await screen.findByRole('button', { name: /Blocos/ });
-  if (botao.getAttribute('aria-pressed') !== 'true') fireEvent.click(botao);
+  if (botao.getAttribute('aria-expanded') !== 'true') fireEvent.click(botao);
 }
 
 beforeEach(() => {

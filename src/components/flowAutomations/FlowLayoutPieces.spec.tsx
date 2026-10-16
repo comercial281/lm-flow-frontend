@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
-import { useRef, useState } from 'react';
+import { useRef, useState, type ComponentProps } from 'react';
 
 // Automações · sprint 4 (04/10/2026), seção A: as peças do layout novo do
 // construtor, uma a uma.
@@ -9,28 +9,18 @@ vi.mock('@/services/messageFunnels/messageFunnelsService', () => ({
   tenantTemplateVariablesService: { list: vi.fn() },
 }));
 
-import { FlowBlocksPanel } from './FlowBlocksPanel';
+import { BLOCK_DRAG_TYPE, FlowBlocksMenu } from './FlowBlocksMenu';
 import { FlowBlockDialog } from './FlowBlockDialog';
 import { VariableChipBar } from './VariableChipBar';
 import { PEDIDO_DESCARTAR_PAINEL, useSidePanel } from './useSidePanel';
-import { readBlocksOpen, saveBlocksOpen } from '@/features/flowAutomations/blocksPanelState';
 
-const originalMatchMedia = window.matchMedia;
-function screenWidth(mobile: boolean) {
-  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-    matches: mobile,
-    media: query,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  })) as unknown as typeof window.matchMedia;
-}
-afterEach(() => {
-  window.matchMedia = originalMatchMedia;
-});
+const menu = (props: Partial<ComponentProps<typeof FlowBlocksMenu>> = {}) => (
+  <FlowBlocksMenu open onOpenChange={() => {}} onPick={() => {}} trigger={<button>Blocos</button>} {...props} />
+);
 
-describe('painel Blocos', () => {
+describe('lista de blocos', () => {
   it('mostra as seis seções e filtra pela busca, sem ligar pra acento', () => {
-    render(<FlowBlocksPanel onPick={() => {}} onClose={() => {}} />);
+    render(menu());
     ['Mensagem', 'Lead', 'IA', 'Distribuição', 'Notificação', 'Controle'].forEach(section => {
       expect(screen.getByRole('region', { name: section })).toBeTruthy();
     });
@@ -41,31 +31,27 @@ describe('painel Blocos', () => {
     expect(screen.getByText('Nenhum bloco com esse nome.')).toBeTruthy();
   });
 
-  it('clicar escolhe o bloco; o X fecha', () => {
+  it('clicar escolhe o bloco; fechada, a lista não aparece e não tem botão de fechar', () => {
     const onPick = vi.fn();
-    const onClose = vi.fn();
-    render(<FlowBlocksPanel onPick={onPick} onClose={onClose} />);
+    const { rerender } = render(menu({ onPick }));
+    expect(screen.queryByRole('button', { name: 'Fechar os blocos' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Aguardar resposta/ }));
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ kind: 'wait_for_reply' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Fechar os blocos' }));
-    expect(onClose).toHaveBeenCalled();
+    rerender(menu({ open: false }));
+    expect(screen.queryByTestId('painel-blocos')).toBeNull();
   });
 
-  it('lembra se ficou aberto ou fechado', () => {
-    saveBlocksOpen(false);
-    expect(readBlocksOpen()).toBe(false);
-    saveBlocksOpen(true);
-    expect(readBlocksOpen()).toBe(true);
+  it('o bloco da lista é arrastável e leva a chave no arraste', () => {
+    render(menu());
+    const btn = screen.getByRole('button', { name: /Aguardar resposta/ }) as HTMLButtonElement;
+    expect(btn.draggable).toBe(true);
+    const setData = vi.fn();
+    fireEvent.dragStart(btn, { dataTransfer: { setData, effectAllowed: '' } });
+    expect(setData).toHaveBeenCalledWith(BLOCK_DRAG_TYPE, 'wait_for_reply');
   });
 });
 
 describe('janela do bloco', () => {
-  it('o painel Blocos também vira tela cheia no celular', () => {
-    screenWidth(true);
-    render(<FlowBlocksPanel onPick={() => {}} onClose={() => {}} />);
-    expect(screen.getByTestId('painel-blocos').getAttribute('data-layout')).toBe('tela-cheia');
-  });
-
   it('ao abrir, o foco vai pro primeiro campo de texto, não pro primeiro botão', () => {
     render(
       <FlowBlockDialog title="Mensagem" onClose={vi.fn()}>
