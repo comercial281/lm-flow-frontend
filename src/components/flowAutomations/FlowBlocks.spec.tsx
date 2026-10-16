@@ -124,6 +124,19 @@ describe('janela do bloco', () => {
     })));
   });
 
+  it('bloco renomeado: o nome dado vira o título e o tipo vai pra frente da descrição', () => {
+    render(<FlowNodePanel node={node({ label: 'Lembrete do sábado' })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    const janela = screen.getByRole('dialog', { name: 'Lembrete do sábado' });
+    expect(janela).toBeTruthy();
+    expect(screen.getByText(/^Aguardar resposta · /)).toBeTruthy();
+  });
+
+  it('bloco sem nome dado: o título é o tipo do bloco', () => {
+    render(<FlowNodePanel node={node({ label: '  ' })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByRole('dialog', { name: 'Aguardar resposta' })).toBeTruthy();
+    expect(screen.queryByText(/^Aguardar resposta · /)).toBeNull();
+  });
+
   it('bloco escondido abre com o aviso e sem Salvar', () => {
     render(<FlowNodePanel node={node({ kind: 'http_call', config: { url: 'x' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
     expect(screen.getByText(/Este bloco volta na próxima versão/)).toBeTruthy();

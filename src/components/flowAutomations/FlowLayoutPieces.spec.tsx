@@ -66,6 +66,26 @@ describe('janela do bloco', () => {
     expect(screen.getByTestId('painel-blocos').getAttribute('data-layout')).toBe('tela-cheia');
   });
 
+  it('ao abrir, o foco vai pro primeiro campo de texto, não pro primeiro botão', () => {
+    render(
+      <FlowBlockDialog title="Mensagem" onClose={vi.fn()}>
+        <button type="button">Duplicar</button>
+        <textarea aria-label="Texto da mensagem" />
+      </FlowBlockDialog>,
+    );
+    expect(document.activeElement).toBe(screen.getByLabelText('Texto da mensagem'));
+  });
+
+  it('sem campo de texto, o foco fica na regra da casa (primeiro focável)', () => {
+    render(
+      <FlowBlockDialog title="Fim" onClose={vi.fn()}>
+        <input type="text" aria-label="travado" disabled />
+        <button type="button">Escolher</button>
+      </FlowBlockDialog>,
+    );
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Escolher' }));
+  });
+
   it('a janela do bloco abre no meio, com título, descrição e rodapé', () => {
     render(
       <FlowBlockDialog title="Esperar" description="Para o fluxo por um tempo." onClose={vi.fn()} testId="painel-do-bloco"

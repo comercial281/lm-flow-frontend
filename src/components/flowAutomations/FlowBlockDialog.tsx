@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -11,6 +11,11 @@ import { CONSULTA_CELULAR } from '@/hooks/useCelular';
 // do que o bloco faz; campos no meio, com rolagem; Cancelar e Salvar no rodapé.
 // Esc, o X e o clique fora chamam `onClose`, que o canvas transforma em
 // "Descartar o que você mudou?" quando há rascunho (useSidePanel).
+//
+// Foco ao abrir: vai pro primeiro campo de texto do corpo (a mensagem, o nome),
+// não pro primeiro botão. Numa Mensagem com um texto só, o primeiro focável é o
+// "Duplicar" do item, e o Enter de quem já sai digitando duplicava a mensagem.
+// Sem campo de texto, fica a regra da casa (primeiro focável sem o X).
 //
 // É só a moldura: o rascunho, a validação e a pergunta de "descartar?" ficam
 // com quem usa (FlowNodePanel, FlowTriggerPanel) e com o canvas.
@@ -30,16 +35,27 @@ interface Props {
   children: ReactNode;
   /** Pra testes e pro guia de construção: identifica a janela. */
   testId?: string;
-  /** '2xl' para blocos com muito campo (Mandar WhatsApp). */
+  /** '2xl' para blocos com muito campo (Mensagem). */
   size?: 'default' | '2xl';
 }
 
 export function FlowBlockDialog({
   title, description, icon: Icon, color, onClose, footer, children, testId, size = 'default',
 }: Props) {
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const focusFirstTextField = (e: Event) => {
+    const field = firstTextField(bodyRef.current);
+    if (!field) return; // sem campo de texto: o padrão da casa decide
+    e.preventDefault();
+    field.focus({ preventScroll: true });
+  };
   return (
     <Dialog open onOpenChange={o => !o && onClose()}>
-      <DialogContent className={size === '2xl' ? 'max-w-2xl' : undefined} data-testid={testId}>
+      <DialogContent
+        className={size === '2xl' ? 'max-w-2xl' : undefined}
+        data-testid={testId}
+        onOpenAutoFocus={focusFirstTextField}
+      >
         <DialogHeader>
           <div className="flex items-start gap-3">
             {Icon && (
@@ -57,9 +73,22 @@ export function FlowBlockDialog({
             </div>
           </div>
         </DialogHeader>
-        <div className="py-2">{children}</div>
+        <div ref={bodyRef} className="py-2">{children}</div>
         {footer && <DialogFooter className="sm:justify-between">{footer}</DialogFooter>}
       </DialogContent>
     </Dialog>
   );
+}
+
+const TEXT_FIELD = 'textarea, input[type="text"], input[type="search"], input:not([type])';
+
+/** O primeiro campo de texto do corpo que dá pra digitar (sem desabilitado, só leitura ou escondido). */
+function firstTextField(body: HTMLElement | null): HTMLElement | null {
+  if (!body) return null;
+  for (const el of Array.from(body.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(TEXT_FIELD))) {
+    if (el.disabled || el.readOnly || el.tabIndex < 0) continue;
+    if (el.closest('[hidden], [aria-hidden="true"]')) continue;
+    return el;
+  }
+  return null;
 }

@@ -334,8 +334,16 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
 
   if (!node) return null;
   const activeNode = node; // const próprio pra narrowing sobreviver dentro das funções aninhadas
-  const title = blockLabel(activeNode);
   const hidden = !isVisibleNode(activeNode);
+  // O nome que a pessoa deu ao bloco (renomeado no cartão) vira o título; o tipo
+  // do bloco passa pra frente da descrição, pra não sumir ("Mensagem · …").
+  const typeName = blockLabel(activeNode);
+  const givenName = (activeNode.label ?? '').trim();
+  const title = givenName || typeName;
+  const baseDescription = hidden ? '' : blockDescription(activeNode);
+  const description = givenName
+    ? [typeName, baseDescription].filter(Boolean).join(' · ')
+    : baseDescription || undefined;
 
   const set = (key: string, value: unknown) => setConfig(c => ({ ...c, [key]: value }));
   const isConversation = flowKind === 'conversation';
@@ -699,7 +707,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
       testId="painel-do-bloco"
       size={activeNode.kind === 'send_whatsapp' ? '2xl' : 'default'}
       title={title}
-      description={hidden ? undefined : blockDescription(activeNode)}
+      description={description}
       icon={blockIcon(activeNode)}
       color={hidden ? '#94a3b8' : nodeColor(activeNode.kind, blockGroup(activeNode))}
       onClose={onClose}

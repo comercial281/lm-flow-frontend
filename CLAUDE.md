@@ -9148,6 +9148,8 @@ PR 4 do redesenho do construtor. O dono (Tony) reabriu em 16/10/2026 as decisõe
 - **Janela no meio.** Clicar num bloco, ou no Início, abre uma janela centralizada (`FlowBlockDialog.tsx`, no lugar do antigo `FlowSidePanel.tsx`). Cancelar com rascunho continua perguntando "Descartar o que você mudou?". O construtor não abre no celular, então não há versão de celular.
 - **Nome editado no cartão.** O nome do bloco, na faixa colorida, é um botão: clicar troca por um campo ("Nome do bloco"). Enter ou sair do campo confirma, Esc cancela, texto vazio volta ao nome padrão do bloco. O clique no nome não abre a janela. A mudança entra no Salvar do topo, como as outras do canvas.
 - **Sai o campo "Apelido do bloco".** Não existe mais dentro da janela. O `FlowNodePanel` segue mandando `label` no `onSave`, agora o do próprio nó (assinatura inalterada).
+- **Título da janela = o nome dado.** Bloco renomeado abre com o nome dele no título, e o tipo do bloco vai pra frente da descrição ("Aguardar resposta · …"). Sem nome dado, o título é o tipo, como antes.
+- **Foco ao abrir:** no primeiro campo de texto da janela (a mensagem, o nome), não no primeiro botão. Sem campo de texto, vale a regra da casa (primeiro focável sem o X).
 - **Modo guiado e "só ver":** o nome não é editável (`allow.rename` false), como já era com o apelido.
 
 Código: `FlowNodeCardData.onRename(id, label | null)` e `allow.rename` em `FlowNodeCard.tsx`; `handleRename` no `FlowAutomationCanvas.tsx`. Spec: `FlowNodeCardRename.spec.tsx`.
