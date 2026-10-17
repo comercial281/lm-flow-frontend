@@ -14,6 +14,7 @@
 // (`FlowAutomations::GuidedSave`); a tela esconde o que ele recusaria.
 
 import type { FlowAutomation, FlowAutomationKind, FlowAutomationNode, FlowNodeGuide } from '@/types/flowAutomations';
+import { hasMessageContent, hasMessageMedia, hasStoredItems } from './messageItems';
 
 export interface GuideStep {
   nodeId: string;
@@ -76,6 +77,11 @@ export const MESSAGE_CONTENT_FIELDS = ['text', 'media_url', 'contact_phone'] as 
 
 /** Leitura de campo com ponto (`params.group_jid`), igual ao servidor (`Guide.filled?`). */
 export function fieldFilled(config: Record<string, unknown> | null | undefined, path: string, kind?: string): boolean {
+  // Bloco Mensagem em sequência (PR 8): lê os itens, não os campos soltos que sobraram.
+  if (kind === 'send_whatsapp' && config && hasStoredItems(config)) {
+    if (path === 'text') return hasMessageContent(config);
+    if (path === 'media_url') return hasMessageMedia(config);
+  }
   // Bloco de mensagem: o "text" do guia vale com texto, arquivo ou contato (mesma régua do servidor).
   if (kind === 'send_whatsapp' && path === 'text') {
     return MESSAGE_CONTENT_FIELDS.some(field => fieldFilled(config, field));

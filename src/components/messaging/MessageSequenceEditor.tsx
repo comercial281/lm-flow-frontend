@@ -1,13 +1,14 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, type ReactNode } from 'react';
 import { Button, Input, Textarea } from '@/components/ui/ds';
 import {
   X, Trash2, Type, Mic, Image as ImageIcon, Video, FileText,
   ChevronUp, ChevronDown, Square, Upload, Clock, AlertCircle, Loader2, Copy, Plus,
-  Contact as ContactIcon, Sticker,
+  Contact as ContactIcon, Sticker, BookOpen,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { FunnelItemKind, TemplateVariable } from '@/types/messageFunnels';
 import { Seletor } from '@/components/base/Seletor';
+import { BOOK_HELP } from '@/features/flowAutomations/book';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Editor de SEQUÊNCIA de mensagens (itens text/audio/image/video/document).
@@ -19,11 +20,26 @@ import { Seletor } from '@/components/base/Seletor';
 //                 precisa de URL pública).
 //   - ausente   → guarda `pendingFile` + preview local; o pai sobe depois de salvar
 //                 (Funil: upload por item via /message_funnels/:id/items/:id/media).
+//
+// Bloco Mensagem do construtor (PR 8 do redesenho, 16/10/2026) usa o mesmo
+// editor com três ajustes opcionais, que os outros não passam:
+//   - `extraKinds`: tipos a mais. Hoje só o book do imóvel (`property_book`).
+//   - `variableBar`: a barra de variáveis do construtor no lugar da de dentro.
+//   - `guided`: modo guiado (o corretor só ajusta o que o gestor montou).
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** Os tipos do funil mais o book do imóvel, que só o bloco Mensagem oferece. */
+export type SequenceItemKind = FunnelItemKind | 'property_book';
+
+/** Tipo extra que só aparece quando o chamador pede (`extraKinds`). */
+export type ExtraSequenceKind = Exclude<SequenceItemKind, FunnelItemKind>;
+
+/** Afunila pros tipos do funil: quem converte pra API do funil/disparo/agendamento usa. */
+export const isFunnelItemKind = (kind: SequenceItemKind): kind is FunnelItemKind => kind !== 'property_book';
 
 export interface SequenceDraftItem {
   uiKey: string;
-  kind: FunnelItemKind;
+  kind: SequenceItemKind;
   text_content: string | null;
   /** Variações EXTRAS do texto (além de text_content). No disparo, o backend
    *  sorteia UMA por destinatário entre [text_content, ...text_variations].
@@ -41,7 +57,7 @@ export interface SequenceDraftItem {
   serverItemId?: string;     // pra updates de item já existente no backend
 }
 
-export function newSequenceItem(kind: FunnelItemKind = 'text'): SequenceDraftItem {
+export function newSequenceItem(kind: SequenceItemKind = 'text'): SequenceDraftItem {
   return {
     uiKey: crypto.randomUUID(),
     kind,
@@ -55,7 +71,7 @@ export function newSequenceItem(kind: FunnelItemKind = 'text'): SequenceDraftIte
   };
 }
 
-const KIND_LABELS: Record<FunnelItemKind, string> = {
+const KIND_LABELS: Record<SequenceItemKind, string> = {
   text: 'Texto',
   audio: 'Áudio',
   image: 'Imagem',
@@ -64,8 +80,9 @@ const KIND_LABELS: Record<FunnelItemKind, string> = {
   delay: 'Aguardar',
   contact: 'Contato',
   sticker: 'Figurinha',
+  property_book: 'Book do imóvel',
 };
-const KIND_ICONS: Record<FunnelItemKind, typeof Type> = {
+const KIND_ICONS: Record<SequenceItemKind, typeof Type> = {
   text: Type,
   audio: Mic,
   image: ImageIcon,
@@ -74,8 +91,9 @@ const KIND_ICONS: Record<FunnelItemKind, typeof Type> = {
   delay: Clock,
   contact: ContactIcon,
   sticker: Sticker,
+  property_book: BookOpen,
 };
-const KIND_COLORS: Record<FunnelItemKind, string> = {
+const KIND_COLORS: Record<SequenceItemKind, string> = {
   text: '#7c3aed',
   audio: '#00a884',
   image: '#3b82f6',
@@ -84,7 +102,20 @@ const KIND_COLORS: Record<FunnelItemKind, string> = {
   delay: '#64748b',
   contact: '#0891b2',
   sticker: '#f59e0b',
+  property_book: '#4f46e5',
 };
+
+const MEDIA_KINDS: SequenceItemKind[] = ['audio', 'image', 'video', 'document', 'sticker'];
+const isMediaKind = (kind: SequenceItemKind) => MEDIA_KINDS.includes(kind);
+/** Mídias que levam legenda. */
+const CAPTION_KINDS: SequenceItemKind[] = ['image', 'video', 'document'];
+
+/** Barra de variáveis de quem chama (o construtor tem a dele). */
+export type VariableBarRender = (p: {
+  targetRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>;
+  value: string;
+  onChange: (next: string) => void;
+}) => ReactNode;
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -100,11 +131,32 @@ interface Props {
   /** Tipos que o chamador NÃO sabe entregar ainda — somem do "+ Adicionar".
    *  Ex.: Disparo em Massa ainda não manda contato/figurinha em lote. */
   excludeKinds?: FunnelItemKind[];
+  /** Tipos a mais no "+ Adicionar". `property_book`: o book do imóvel do lead,
+   *  que o servidor acha sozinho; o cartão só tem a legenda. */
+  extraKinds?: ExtraSequenceKind[];
+  /** Presente = desenha esta barra no lugar das variáveis de dentro (texto,
+   *  legenda e variações). */
+  variableBar?: VariableBarRender;
+  /** Modo guiado: sem "+ Adicionar", duplicar e mover. A mensagem pode trocar de
+   *  tipo; a espera não sai nem troca de tipo, só o tempo muda. A última
+   *  mensagem também não sai (o servidor recusaria). */
+  guided?: boolean;
 }
 
-export default function MessageSequenceEditor({ items, onChange, variables, uploadMedia, allowTextVariations, excludeKinds }: Props) {
+export default function MessageSequenceEditor({
+  items, onChange, variables, uploadMedia, allowTextVariations, excludeKinds, extraKinds, variableBar, guided,
+}: Props) {
+  // A lista e o onChange mais novos. O arquivo que termina de subir chega
+  // depois de outras edições: aplicar sobre a lista de quando ele foi escolhido
+  // apagaria o que foi digitado nos outros itens enquanto ele subia.
+  const latest = useRef({ items, onChange });
+  latest.current = { items, onChange };
+
   const updateItem = (uiKey: string, patch: Partial<SequenceDraftItem>) => {
-    onChange(items.map(it => (it.uiKey === uiKey ? { ...it, ...patch } : it)));
+    const next = latest.current.items.map(it => (it.uiKey === uiKey ? { ...it, ...patch } : it));
+    // Duas mudanças antes do pai desenhar de novo não se atropelam.
+    latest.current = { ...latest.current, items: next };
+    latest.current.onChange(next);
   };
 
   const removeItem = (uiKey: string) => {
@@ -121,7 +173,7 @@ export default function MessageSequenceEditor({ items, onChange, variables, uplo
     onChange(next);
   };
 
-  const addItem = (kind: FunnelItemKind = 'text') => {
+  const addItem = (kind: SequenceItemKind = 'text') => {
     onChange([...items, newSequenceItem(kind)]);
   };
 
@@ -135,6 +187,10 @@ export default function MessageSequenceEditor({ items, onChange, variables, uplo
     next.splice(idx + 1, 0, copy);
     onChange(next);
   };
+
+  const messageCount = items.filter(it => it.kind !== 'delay').length;
+  // No guiado a mensagem pode virar qualquer tipo de mensagem que esta tela oferece.
+  const switchKinds = guided ? offeredKinds(excludeKinds, extraKinds).filter(k => k !== 'delay') : undefined;
 
   return (
     <div>
@@ -151,6 +207,11 @@ export default function MessageSequenceEditor({ items, onChange, variables, uplo
             variables={variables}
             uploadMedia={uploadMedia}
             allowTextVariations={allowTextVariations}
+            variableBar={variableBar}
+            guided={guided}
+            switchKinds={switchKinds}
+            showRemove={!(guided && it.kind === 'delay')}
+            canRemove={items.length > 1 && !(guided && messageCount === 1)}
             onUpdate={patch => updateItem(it.uiKey, patch)}
             onRemove={() => removeItem(it.uiKey)}
             onDuplicate={() => duplicateItem(it.uiKey)}
@@ -159,7 +220,7 @@ export default function MessageSequenceEditor({ items, onChange, variables, uplo
           />
         ))}
       </div>
-      <AddItemButtons onAdd={addItem} excludeKinds={excludeKinds} />
+      {!guided && <AddItemButtons onAdd={addItem} kinds={offeredKinds(excludeKinds, extraKinds)} />}
     </div>
   );
 }
@@ -173,6 +234,12 @@ interface ItemEditorProps {
   variables: TemplateVariable[];
   uploadMedia?: (file: File) => Promise<{ url: string }>;
   allowTextVariations?: boolean;
+  variableBar?: VariableBarRender;
+  guided?: boolean;
+  /** Tipos pra onde a mensagem pode trocar (só no guiado). */
+  switchKinds?: SequenceItemKind[];
+  showRemove: boolean;
+  canRemove: boolean;
   onUpdate: (patch: Partial<SequenceDraftItem>) => void;
   onRemove: () => void;
   onDuplicate: () => void;
@@ -181,8 +248,8 @@ interface ItemEditorProps {
 }
 
 function ItemEditor({
-  item, index, totalCount, variables, uploadMedia, allowTextVariations,
-  onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown,
+  item, index, totalCount, variables, uploadMedia, allowTextVariations, variableBar, guided, switchKinds,
+  showRemove, canRemove, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown,
 }: ItemEditorProps) {
   const Icon = KIND_ICONS[item.kind];
   const color = KIND_COLORS[item.kind];
@@ -195,6 +262,41 @@ function ItemEditor({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const captionRef = useRef<HTMLInputElement>(null);
+  const isMedia = isMediaKind(item.kind);
+  // Fora do guiado, só a mídia troca de tipo (entre mídias), como sempre.
+  const kindOptions: SequenceItemKind[] = switchKinds
+    ? (switchKinds.includes(item.kind) ? switchKinds : [item.kind, ...switchKinds])
+    : isMedia ? MEDIA_KINDS : [];
+
+  // Variáveis embaixo de uma caixa: a barra de quem chama, ou a de dentro.
+  const vars = (
+    targetRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>,
+    value: string,
+    change: (next: string) => void,
+  ) =>
+    variableBar
+      ? variableBar({ targetRef, value, onChange: change })
+      : <VariableChips variables={variables} targetRef={targetRef} currentValue={value} onChange={change} />;
+
+  // Troca de tipo. Entre mídias, como sempre: some o arquivo e fica a legenda.
+  // Entre famílias (texto, contato, book, mídia), só no guiado: começa vazio,
+  // menos o texto que vira foto, vídeo ou documento: ele passa a ser a legenda.
+  function switchKind(kind: SequenceItemKind) {
+    if (isMedia && isMediaKind(kind)) {
+      onUpdate({ kind, media_url: null, media_filename: null, pendingFile: null });
+      return;
+    }
+    const caption = item.kind === 'text' && CAPTION_KINDS.includes(kind) ? item.text_content || null : null;
+    onUpdate({
+      kind,
+      text_content: kind === 'text' ? '' : null,
+      media_url: null,
+      media_filename: null,
+      media_caption: caption,
+      config: {},
+      pendingFile: null,
+    });
+  }
 
   async function selectFile(file: File) {
     if (uploadMedia) {
@@ -269,43 +371,41 @@ function ItemEditor({
           <Icon className="h-3.5 w-3.5" />
           <span className="text-xs font-semibold">{KIND_LABELS[item.kind]}</span>
         </div>
-        {item.kind !== 'text' && item.kind !== 'delay' && item.kind !== 'contact' && (
+        {item.kind !== 'delay' && kindOptions.length > 0 && (
           <Seletor
+            aria-label="Tipo do item"
             value={item.kind}
-            onChange={e =>
-              onUpdate({
-                kind: e.target.value as FunnelItemKind,
-                media_url: null,
-                media_filename: null,
-                pendingFile: null,
-              })
-            }
+            onChange={e => switchKind(e.target.value as SequenceItemKind)}
             className="h-auto w-28 text-xs bg-background border border-border rounded px-1.5 py-0.5"
           >
-            <option value="audio">Áudio</option>
-            <option value="image">Imagem</option>
-            <option value="video">Vídeo</option>
-            <option value="document">Documento</option>
-            <option value="sticker">Figurinha</option>
+            {kindOptions.map(k => (
+              <option key={k} value={k}>{KIND_LABELS[k]}</option>
+            ))}
           </Seletor>
         )}
         <div className="ml-auto flex items-center gap-0.5">
-          <Button variant="ghost" size="icon" className="size-8"
-                  onClick={onMoveUp} disabled={index === 0} aria-label="Mover pra cima">
-            <ChevronUp className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="size-8"
-                  onClick={onMoveDown} disabled={index === totalCount - 1} aria-label="Mover pra baixo">
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="size-8"
-                  onClick={onDuplicate} aria-label="Duplicar" title="Duplicar">
-            <Copy className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="size-8 text-destructive"
-                  onClick={onRemove} disabled={totalCount === 1} aria-label="Remover">
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {!guided && (
+            <>
+              <Button variant="ghost" size="icon" className="size-8"
+                      onClick={onMoveUp} disabled={index === 0} aria-label="Mover pra cima">
+                <ChevronUp className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="size-8"
+                      onClick={onMoveDown} disabled={index === totalCount - 1} aria-label="Mover pra baixo">
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="size-8"
+                      onClick={onDuplicate} aria-label="Duplicar" title="Duplicar">
+                <Copy className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+          {showRemove && (
+            <Button variant="ghost" size="icon" className="size-8 text-destructive"
+                    onClick={onRemove} disabled={!canRemove} aria-label="Remover">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -314,22 +414,19 @@ function ItemEditor({
         <>
           <Textarea
             ref={textareaRef}
+            aria-label="Mensagem"
             value={item.text_content ?? ''}
             onChange={e => onUpdate({ text_content: e.target.value })}
             placeholder="Digite a mensagem... Use {{nome}} para inserir o nome do lead."
             rows={3}
             className="resize-none"
           />
-          <VariableChips
-            variables={variables}
-            targetRef={textareaRef}
-            currentValue={item.text_content ?? ''}
-            onChange={next => onUpdate({ text_content: next })}
-          />
+          {vars(textareaRef, item.text_content ?? '', next => onUpdate({ text_content: next }))}
           {allowTextVariations && (
             <TextVariations
               variations={item.text_variations ?? []}
               variables={variables}
+              variableBar={variableBar}
               onChange={next => onUpdate({ text_variations: next })}
             />
           )}
@@ -352,8 +449,24 @@ function ItemEditor({
         </div>
       )}
 
+      {/* Book do imóvel: o servidor acha o arquivo; aqui só a legenda. */}
+      {item.kind === 'property_book' && (
+        <div className="space-y-1.5">
+          <Input
+            ref={captionRef}
+            type="text"
+            value={item.media_caption ?? ''}
+            onChange={e => onUpdate({ media_caption: e.target.value })}
+            placeholder="Legenda (opcional)"
+            maxLength={1024}
+          />
+          {vars(captionRef, item.media_caption ?? '', next => onUpdate({ media_caption: next }))}
+          <p className="text-xs text-muted-foreground">{BOOK_HELP}</p>
+        </div>
+      )}
+
       {/* Mídia */}
-      {item.kind !== 'text' && item.kind !== 'delay' && item.kind !== 'contact' && (
+      {isMedia && (
         <div className="space-y-2">
           {item.media_url ? (
             <div className="flex items-center gap-2 bg-background border border-border rounded-lg px-2.5 py-2">
@@ -438,7 +551,7 @@ function ItemEditor({
           )}
 
           {/* Legenda pra imagem/vídeo/doc */}
-          {(item.kind === 'image' || item.kind === 'video' || item.kind === 'document') && item.media_url && (
+          {CAPTION_KINDS.includes(item.kind) && item.media_url && (
             <>
               <Input
                 ref={captionRef}
@@ -448,12 +561,7 @@ function ItemEditor({
                 placeholder="Legenda (opcional)"
                 maxLength={1024}
               />
-              <VariableChips
-                variables={variables}
-                targetRef={captionRef}
-                currentValue={item.media_caption ?? ''}
-                onChange={next => onUpdate({ media_caption: next })}
-              />
+              {vars(captionRef, item.media_caption ?? '', next => onUpdate({ media_caption: next }))}
             </>
           )}
 
@@ -539,10 +647,11 @@ function ItemEditor({
 interface TextVariationsProps {
   variations: string[];
   variables: TemplateVariable[];
+  variableBar?: VariableBarRender;
   onChange: (next: string[]) => void;
 }
 
-function TextVariations({ variations, variables, onChange }: TextVariationsProps) {
+function TextVariations({ variations, variables, variableBar, onChange }: TextVariationsProps) {
   const add = () => onChange([...variations, '']);
   const update = (i: number, val: string) => onChange(variations.map((v, idx) => (idx === i ? val : v)));
   const remove = (i: number) => onChange(variations.filter((_, idx) => idx !== i));
@@ -560,6 +669,7 @@ function TextVariations({ variations, variables, onChange }: TextVariationsProps
           value={v}
           index={i}
           variables={variables}
+          variableBar={variableBar}
           onChange={val => update(i, val)}
           onRemove={() => remove(i)}
         />
@@ -582,11 +692,12 @@ interface VariationFieldProps {
   value: string;
   index: number;
   variables: TemplateVariable[];
+  variableBar?: VariableBarRender;
   onChange: (val: string) => void;
   onRemove: () => void;
 }
 
-function VariationField({ value, index, variables, onChange, onRemove }: VariationFieldProps) {
+function VariationField({ value, index, variables, variableBar, onChange, onRemove }: VariationFieldProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
   return (
     <div className="rounded-md border border-dashed border-border/70 bg-background/40 p-2">
@@ -612,7 +723,9 @@ function VariationField({ value, index, variables, onChange, onRemove }: Variati
         rows={2}
         className="resize-none"
       />
-      <VariableChips variables={variables} targetRef={ref} currentValue={value} onChange={onChange} />
+      {variableBar
+        ? variableBar({ targetRef: ref, value, onChange })
+        : <VariableChips variables={variables} targetRef={ref} currentValue={value} onChange={onChange} />}
     </div>
   );
 }
@@ -666,9 +779,15 @@ function VariableChips({ variables, targetRef, currentValue, onChange }: Variabl
 
 // ── Add item buttons ─────────────────────────────────────────────────────────
 
-function AddItemButtons({ onAdd, excludeKinds }: { onAdd: (kind: FunnelItemKind) => void; excludeKinds?: FunnelItemKind[] }) {
-  const allKinds: FunnelItemKind[] = ['text', 'audio', 'image', 'video', 'document', 'delay', 'contact', 'sticker'];
-  const kinds = excludeKinds?.length ? allKinds.filter(k => !excludeKinds.includes(k)) : allKinds;
+const ALL_KINDS: FunnelItemKind[] = ['text', 'audio', 'image', 'video', 'document', 'delay', 'contact', 'sticker'];
+
+/** O que esta tela oferece: os tipos do funil menos os excluídos, mais os extras. */
+function offeredKinds(excludeKinds?: FunnelItemKind[], extraKinds?: ExtraSequenceKind[]): SequenceItemKind[] {
+  const kinds: SequenceItemKind[] = excludeKinds?.length ? ALL_KINDS.filter(k => !excludeKinds.includes(k)) : ALL_KINDS;
+  return extraKinds?.length ? [...kinds, ...extraKinds] : kinds;
+}
+
+function AddItemButtons({ onAdd, kinds }: { onAdd: (kind: SequenceItemKind) => void; kinds: SequenceItemKind[] }) {
   return (
     <div className="flex flex-wrap gap-1.5 mt-3">
       <span className="text-xs text-muted-foreground flex items-center mr-1">+ Adicionar:</span>

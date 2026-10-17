@@ -34,7 +34,9 @@ import {
 import MessageSequenceEditor, {
   type SequenceDraftItem,
   newSequenceItem,
+  isFunnelItemKind,
 } from '@/components/messaging/MessageSequenceEditor';
+import type { FunnelItemKind } from '@/types/messageFunnels';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -175,6 +177,11 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved, de
 
     setSaving(true);
     try {
+      // O funil não tem book do imóvel (o editor só oferece com `extraKinds`):
+      // afunila o tipo pro da API do funil.
+      const funnelItems = items.filter(
+        (it): it is SequenceDraftItem & { kind: FunnelItemKind } => isFunnelItemKind(it.kind),
+      );
       const payload: FunnelPayload = {
         name: name.trim(),
         description: description.trim() || null,
@@ -184,7 +191,7 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved, de
         folder_id: folderId,
         tag_ids: tagIds,
         humanize,
-        items: items.map((it, idx) => ({
+        items: funnelItems.map((it, idx) => ({
           // Manda o id do item existente pro backend fazer upsert e PRESERVAR a
           // mídia já anexada (antes o update apagava a mídia de quem não foi reanexado).
           ...(it.serverItemId ? { id: it.serverItemId } : {}),
@@ -204,7 +211,7 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved, de
 
       // Após salvar, sobe arquivos pendentes (cada um vincula ao item via id retornado).
       // O backend ordena items por position — alinhamos pela mesma ordem do array.
-      const itemsPendentes = items
+      const itemsPendentes = funnelItems
         .map((it, idx) => ({ draft: it, serverItem: saved.items[idx] }))
         .filter(p => p.draft.pendingFile && p.serverItem);
 

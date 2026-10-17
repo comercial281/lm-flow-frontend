@@ -92,13 +92,13 @@ beforeEach(() => {
 });
 
 describe('gestor na automação pessoal DELE', () => {
-  it('sem número: "Mandar WhatsApp" Indisponível, mas segue com todos os blocos', async () => {
+  it('sem número: "Mensagem" Indisponível, mas segue com todos os blocos', async () => {
     personalCapabilities.mockResolvedValue({ tem_numero: false, numero: null, tem_ia: false });
     get.mockResolvedValue(flow());
     renderCanvas();
     await abrirBlocos();
     await waitFor(() => expect(personalCapabilities).toHaveBeenCalled());
-    const mandar = await screen.findByRole('button', { name: /Mandar WhatsApp.*Indisponível/ });
+    const mandar = await screen.findByRole('button', { name: /^Mensagem.*Indisponível/ });
     expect((mandar as HTMLButtonElement).disabled).toBe(true);
     // Bloco fora da lista do corretor continua disponível pro gestor.
     const avisar = screen.getByRole('button', { name: /Avisar no grupo/ });
@@ -110,8 +110,8 @@ describe('gestor na automação pessoal DELE', () => {
     get.mockResolvedValue(flow());
     renderCanvas();
     await abrirBlocos();
-    await waitFor(() => expect(screen.queryByRole('button', { name: /Mandar WhatsApp.*Indisponível/ })).toBeNull());
-    expect(screen.getAllByRole('button', { name: /Mandar WhatsApp/ }).length).toBeGreaterThan(0);
+    await waitFor(() => expect(screen.queryByRole('button', { name: /^Mensagem.*Indisponível/ })).toBeNull());
+    expect(screen.getAllByRole('button', { name: /^Mensagem/ }).length).toBeGreaterThan(0);
   });
 });
 

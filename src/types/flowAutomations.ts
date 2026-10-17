@@ -209,7 +209,9 @@ export interface FlowNodeDef {
 }
 
 export const FLOW_NODE_DEFS: FlowNodeDef[] = [
-  { kind: 'send_whatsapp', label: 'Mandar WhatsApp', group: 'message', canFail: true, defaultConfig: { text: '' } },
+  // PR 8 (16/10/2026): "Mensagem" guarda uma sequência em `items` (o editor do Disparo em massa).
+  // O id do item é só do modelo: bloco novo ganha cópia funda com id novo (`freshBlockConfig`).
+  { kind: 'send_whatsapp', label: 'Mensagem', group: 'message', canFail: true, defaultConfig: { items: [{ id: 'mensagem-1', kind: 'text', text_content: '' }] } },
   { kind: 'send_email', label: 'Mandar e-mail', group: 'message', canFail: true, defaultConfig: { subject: '', text: '' } },
   { kind: 'notify_group', label: 'Avisar no WhatsApp (grupo ou número)', group: 'notify', canFail: true, defaultConfig: { text: '', targets: [] } },
   { kind: 'send_capi', label: 'Enviar evento pra Meta (CAPI)', group: 'notify', canFail: true, defaultConfig: { event_name: 'Lead' } },

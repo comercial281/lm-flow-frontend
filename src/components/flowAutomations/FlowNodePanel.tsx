@@ -1,12 +1,9 @@
-import React, { useRef, useState } from 'react';
-import { Button, Input, Label, Textarea } from '@/components/ui/ds';
+import React, { useState } from 'react';
+import { Button, Input, Label } from '@/components/ui/ds';
 import Aviso from '@/components/base/Aviso';
 import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
-import SendFromField from '@/components/numbers/SendFromField';
-import { SaiPeloSeuWhatsApp } from './SaiPeloSeuWhatsApp';
-import { saiPeloWhatsAppDe } from '@/features/flowAutomations/personal';
-import { applySendFrom, sendFromOf } from '@/features/numbers/sendFrom';
+import { applySendFrom } from '@/features/numbers/sendFrom';
 import type { FlowAutomationKind, FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
 import { ActionEditor, type AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
 import { HIDDEN_BLOCK_NOTICE, blockGroup, blockLabel, isVisibleNode } from '@/features/flowAutomations/palette';
@@ -36,14 +33,11 @@ import {
   waitUsesBusinessHours,
   withWaitBusinessHours,
 } from '@/features/flowAutomations/businessHours';
-import { cleanProgressPrefix, progressOf, progressTagName, withProgress } from '@/features/flowAutomations/progress';
 import { RECOVERED_EFFECTS } from '@/features/flowAutomations/recovered';
 import { moveStageModeOf, stageNameOf, withMoveStageMode, withStageName } from '@/features/flowAutomations/moveStage';
 import { FormAnswerPicker } from './FormAnswerPicker';
 import { FlowBlockDialog } from './FlowBlockDialog';
-import { FunnelMessageFields, hasRichMessage } from './FunnelMessageFields';
-import { BOOK_HELP, BOOK_LABEL, usesBook, withBook } from '@/features/flowAutomations/book';
-import { VariableChipBar } from './VariableChipBar';
+import { LinhaDoEnvio, MessageBlockFields } from './MessageBlockFields';
 
 interface Props {
   node: FlowAutomationNode | null;
@@ -191,54 +185,6 @@ function BusinessHoursCheck({ checked, onChange }: { checked: boolean; onChange:
   );
 }
 
-function ProgressFields({ config, onChange }: { config: FlowNodeConfig; onChange: (next: FlowNodeConfig) => void }) {
-  const mark = progressOf(config);
-  return (
-    <div className="space-y-2 rounded-md border border-border p-3">
-      <label className="flex items-center gap-2 text-sm cursor-pointer">
-        <input
-          type="checkbox"
-          checked={mark.on}
-          onChange={e => onChange(withProgress(config, { ...mark, on: e.target.checked }))}
-          className="h-4 w-4 accent-primary"
-        />
-        Marcar progresso
-      </label>
-      {mark.on && (
-        <div className="pl-6 space-y-2">
-          <div className="flex items-end gap-2">
-            <div className="flex-1 space-y-1">
-              <Label className="text-xs">Nome da etiqueta</Label>
-              <Input
-                value={mark.prefix}
-                onChange={e => onChange(withProgress(config, { ...mark, prefix: cleanProgressPrefix(e.target.value) }))}
-                placeholder="follow-up-longo"
-                aria-label="Nome da etiqueta de progresso"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Mensagem nº</Label>
-              <Input
-                type="number"
-                min={1}
-                className="w-20"
-                value={mark.step}
-                onChange={e => onChange(withProgress(config, { ...mark, step: Number(e.target.value) || 1 }))}
-                aria-label="Número da mensagem"
-              />
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Quando esta mensagem sai, o lead ganha a etiqueta{' '}
-            <strong>{progressTagName(mark.prefix || 'nome', mark.step)}</strong> e perde a da mensagem anterior. É ela que
-            faz o lead que volta ao fluxo continuar de onde parou.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function StagePicker({ value, onPick, resources }: { value: string; onPick: (id: string) => void; resources: AutomationResources }) {
   const groups = resources.pipelines.map(p => ({ pipeline: p, stages: resources.stagesByPipeline[p.id] ?? [] }));
   const known = groups.some(g => g.stages.some(s => s.id === value));
@@ -313,12 +259,11 @@ function withOwnerSendFrom(kind: string, config: FlowNodeConfig): FlowNodeConfig
   return config;
 }
 
-export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false, donoDoEnvio = null }: Props) {
+export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false, donoDoEnvio = null }: Props) {
   // Pessoal (a minha ou a de outra pessoa): a mensagem sai pelo número do dono.
   const peloDono = pessoal || donoDoEnvio != null;
   const [config, setConfig] = useState<FlowNodeConfig>(node?.config || {});
   const [problem, setProblem] = useState<string | null>(null);
-  const messageRef = useRef<HTMLTextAreaElement>(null);
 
   React.useEffect(() => {
     setConfig(node?.config || {});
@@ -421,79 +366,25 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
     );
   }
 
-  // Por qual WhatsApp sai a mensagem da automação pessoal (sem escolha de número).
-  function linhaDoEnvio() {
-    if (pessoal) return <SaiPeloSeuWhatsApp phone={numeroPessoal} loading={numeroPessoalCarregando} />;
-    return <p className="text-sm font-medium" data-testid="sai-pelo-whatsapp-do-dono">{saiPeloWhatsAppDe(donoDoEnvio)}</p>;
-  }
-
   function renderFields() {
     if (hidden) {
       return <p className="text-sm text-muted-foreground">{HIDDEN_BLOCK_NOTICE}. Ele continua no fluxo como estava.</p>;
     }
     switch (activeNode.kind) {
-      case 'send_whatsapp': {
-        const envio = sendFromOf(config);
-        const sendFromField = peloDono
-          ? linhaDoEnvio()
-          : (
-            <SendFromField
-              scope="lead_automation_rules"
-              value={envio}
-              onChange={v => setConfig(c => applySendFrom(c, v))}
-            />
-          );
-        // Funil de conversa (sprint 4): texto, mídia ou contato, pelo número da conversa.
-        if (isConversation) {
-          return <FunnelMessageFields config={config} onChange={setConfig} conversation />;
-        }
-        if (hasRichMessage(node?.config ?? {})) {
-          return (
-            <>
-              <FunnelMessageFields config={config} onChange={setConfig} />
-              {sendFromField}
-            </>
-          );
-        }
+      case 'send_whatsapp':
+        // PR 8 (16/10/2026): a sequência do Disparo em massa; o book é um item.
         return (
-          <>
-            <div className="space-y-1">
-              <Label className="text-xs" htmlFor="flow-node-message">Mensagem</Label>
-              <p className="text-xs text-muted-foreground">
-                Toque numa variável pra pôr o dado do lead no texto, onde o cursor estiver.
-              </p>
-              <Textarea
-                id="flow-node-message"
-                ref={messageRef}
-                rows={8}
-                className="min-h-[180px]"
-                value={(config.text as string) || ''}
-                onChange={e => set('text', e.target.value)}
-                placeholder="Oi {{nome}}, tudo bem?"
-              />
-              <VariableChipBar
-                targetRef={messageRef}
-                value={(config.text as string) || ''}
-                onChange={next => set('text', next)}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={usesBook(config)}
-                  onChange={e => setConfig(c => withBook(c, e.target.checked))}
-                />
-                {BOOK_LABEL}
-              </label>
-              <p className="pl-6 text-xs text-muted-foreground">{BOOK_HELP}</p>
-            </div>
-            {sendFromField}
-            <ProgressFields config={config} onChange={setConfig} />
-            <p className="text-xs text-muted-foreground">A mensagem sai marcada como automática, igual o Follow-up.</p>
-          </>
+          <MessageBlockFields
+            config={config}
+            onChange={setConfig}
+            conversation={isConversation}
+            guided={guided}
+            pessoal={pessoal}
+            numeroPessoal={numeroPessoal}
+            numeroPessoalCarregando={numeroPessoalCarregando}
+            donoDoEnvio={donoDoEnvio}
+          />
         );
-      }
       case 'add_label':
       case 'remove_label':
         return (
@@ -677,7 +568,14 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
               resources={resources}
               pessoal={peloDono}
             />
-            {peloDono && SENDING_LEAD_ACTIONS.has(String(config.action_type)) && linhaDoEnvio()}
+            {peloDono && SENDING_LEAD_ACTIONS.has(String(config.action_type)) && (
+              <LinhaDoEnvio
+                pessoal={pessoal}
+                numeroPessoal={numeroPessoal}
+                numeroPessoalCarregando={numeroPessoalCarregando}
+                donoDoEnvio={donoDoEnvio}
+              />
+            )}
           </>
         );
       default:

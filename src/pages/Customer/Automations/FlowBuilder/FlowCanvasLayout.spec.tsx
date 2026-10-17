@@ -12,9 +12,10 @@ const testRun = vi.hoisted(() => vi.fn());
 const variablesList = vi.hoisted(() => vi.fn());
 const toggle = vi.hoisted(() => vi.fn());
 const saveFlow = vi.hoisted(() => vi.fn());
+const uploadMedia = vi.hoisted(() => vi.fn());
 
 vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
-  flowAutomationsService: { get, testRun, update: vi.fn(), saveFlow, toggle, movePositions: vi.fn() },
+  flowAutomationsService: { get, testRun, update: vi.fn(), saveFlow, toggle, movePositions: vi.fn(), uploadMedia },
   flowAutomationFoldersService: {},
 }));
 vi.mock('@/services/messageFunnels/messageFunnelsService', () => ({
@@ -83,6 +84,7 @@ beforeEach(() => {
   get.mockReset();
   testRun.mockReset();
   saveFlow.mockReset();
+  uploadMedia.mockReset();
   variablesList.mockReset();
   variablesList.mockResolvedValue({ builtin: [], custom: [] });
   try {
@@ -225,12 +227,38 @@ describe('lista de blocos pelo "+ saída"', () => {
   });
 });
 
+describe('duplicar bloco', () => {
+  it('a cópia da Mensagem ganha config própria, com id novo em cada item', async () => {
+    saveFlow.mockResolvedValue(undefined);
+    get.mockResolvedValue(flow({
+      nodes: [{
+        id: 'n1', kind: 'send_whatsapp', label: null,
+        config: { text: '', items: [{ id: 'a', kind: 'text', text_content: 'Oi' }, { id: 'b', kind: 'text', text_content: 'Tudo bem?' }] },
+        next_node_id: null, next_yes_node_id: null, next_no_node_id: null, pos_x: null, pos_y: null, steps: [],
+      }],
+    }));
+    renderCanvas();
+    await screen.findByTestId('bloco-inicio');
+    fireEvent.click(screen.getByLabelText(/^Duplicar /));
+    fireEvent.click(screen.getByRole('button', { name: /^Salvar$/ }));
+    await waitFor(() => expect(saveFlow).toHaveBeenCalled());
+    const payload = saveFlow.mock.calls[0][1] as { nodes: Array<{ id: string; config: { items: Array<{ id: string; text_content: string }> } }> };
+    expect(payload.nodes).toHaveLength(2);
+    const [original, copia] = [payload.nodes.find(n => n.id === 'n1')!, payload.nodes.find(n => n.id !== 'n1')!];
+    expect(original.config.items.map(i => i.id)).toEqual(['a', 'b']);
+    expect(copia.config.items.map(i => i.text_content)).toEqual(['Oi', 'Tudo bem?']);
+    expect(copia.config.items.map(i => i.id)).not.toContain('a');
+    expect(copia.config.items.map(i => i.id)).not.toContain('b');
+    expect(copia.config).not.toBe(original.config);
+  });
+});
+
 describe('painel do bloco', () => {
   it('clicar no cartão abre o painel; Cancelar com alteração pergunta antes de descartar', async () => {
     get.mockResolvedValue(flow());
     renderCanvas();
     await screen.findByTestId('bloco-inicio');
-    fireEvent.click(screen.getByLabelText('Editar Mandar WhatsApp'));
+    fireEvent.click(screen.getByLabelText('Editar Mensagem'));
     const painel = await screen.findByTestId('painel-do-bloco');
     fireEvent.change(within(painel).getByLabelText('Mensagem'), { target: { value: 'Oi, tudo bem?' } });
     fireEvent.click(within(painel).getByRole('button', { name: 'Cancelar' }));
@@ -246,12 +274,48 @@ describe('painel do bloco', () => {
     get.mockResolvedValue(flow());
     renderCanvas();
     await screen.findByTestId('bloco-inicio');
-    fireEvent.click(screen.getByLabelText('Editar Mandar WhatsApp'));
+    fireEvent.click(screen.getByLabelText('Editar Mensagem'));
     const painel = await screen.findByTestId('painel-do-bloco');
     fireEvent.change(within(painel).getByLabelText('Mensagem'), { target: { value: 'Olá de novo' } });
     fireEvent.click(within(painel).getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(screen.queryByTestId('painel-do-bloco')).toBeNull());
     expect(screen.getByText('Olá de novo')).toBeTruthy();
+  });
+
+  // PR 8 (16/10/2026): o bloco Mensagem é uma sequência, no editor do Disparo em massa.
+  it('o bloco Mensagem abre a sequência; adicionar Imagem e salvar grava items no saveFlow', async () => {
+    saveFlow.mockResolvedValue(undefined);
+    uploadMedia.mockResolvedValue('https://cdn/foto.jpg');
+    get.mockResolvedValue(flow());
+    renderCanvas();
+    await screen.findByTestId('bloco-inicio');
+    fireEvent.click(screen.getByLabelText('Editar Mensagem'));
+    const painel = await screen.findByTestId('painel-do-bloco');
+    expect(within(painel).getByRole('heading', { name: 'Mensagem' })).toBeTruthy();
+    expect(within(painel).getByText('Itens em sequência (1)')).toBeTruthy();
+    expect(within(painel).getByRole('button', { name: 'Book do imóvel' })).toBeTruthy();
+    fireEvent.click(within(painel).getByRole('button', { name: 'Imagem' }));
+    expect(within(painel).getByText('Itens em sequência (2)')).toBeTruthy();
+    const file = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
+    fireEvent.change(painel.querySelector('input[type="file"]')!, { target: { files: [file] } });
+    await waitFor(() => expect(uploadMedia).toHaveBeenCalledWith(file));
+    await waitFor(() => expect(within(painel).getByText('foto.jpg')).toBeTruthy());
+    fireEvent.click(within(painel).getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(screen.queryByTestId('painel-do-bloco')).toBeNull());
+    expect(screen.getByText('2 mensagens')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /^Salvar$/ }));
+    await waitFor(() => expect(saveFlow).toHaveBeenCalled());
+    const payload = saveFlow.mock.calls[0][1] as { nodes: unknown[] };
+    expect(payload.nodes).toEqual([
+      expect.objectContaining({
+        config: expect.objectContaining({
+          items: [
+            expect.objectContaining({ kind: 'text' }),
+            expect.objectContaining({ kind: 'image', media_url: 'https://cdn/foto.jpg' }),
+          ],
+        }),
+      }),
+    ]);
   });
 
   it('mostra as variáveis da imobiliária junto com as prontas', async () => {
@@ -262,7 +326,7 @@ describe('painel do bloco', () => {
     get.mockResolvedValue(flow());
     renderCanvas();
     await screen.findByTestId('bloco-inicio');
-    fireEvent.click(screen.getByLabelText('Editar Mandar WhatsApp'));
+    fireEvent.click(screen.getByLabelText('Editar Mensagem'));
     const painel = await screen.findByTestId('painel-do-bloco');
     expect(within(painel).getByRole('button', { name: /^Corretor/ })).toBeTruthy();
     // A da imobiliária fica recolhida em "Mais variáveis" > "Da imobiliária".
@@ -283,7 +347,7 @@ describe('extensões pro guia', () => {
       </MemoryRouter>,
     );
     expect(await screen.findByText('Passo 1 de 2')).toBeTruthy();
-    const cartao = screen.getByLabelText('Editar Mandar WhatsApp').closest('[data-highlighted]');
+    const cartao = screen.getByLabelText('Editar Mensagem').closest('[data-highlighted]');
     expect(cartao?.getAttribute('data-highlighted')).toBe('true');
   });
 });

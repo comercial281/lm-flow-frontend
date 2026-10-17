@@ -58,7 +58,7 @@ const ICONS: Record<string, LucideIcon> = {
 };
 
 const DESCRIPTIONS: Record<string, string> = {
-  send_whatsapp: 'Manda uma mensagem de texto pro lead no WhatsApp.',
+  send_whatsapp: 'Manda pro lead no WhatsApp uma ou mais mensagens em sequência: texto, foto, vídeo, áudio, documento e mais.',
   wait: 'Segura o fluxo um tempo antes de seguir pro próximo bloco.',
   wait_for_reply: 'Espera o lead responder e segue por um caminho ou pelo outro.',
   condition: 'Confere algo do lead e segue pelo Sim ou pelo Não.',

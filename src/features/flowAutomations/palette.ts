@@ -56,9 +56,22 @@ export interface PaletteItem {
   config: FlowNodeConfig;
 }
 
+/**
+ * A config de um bloco novo, só dele: cópia funda (nada compartilhado com o
+ * modelo nem com outro bloco) e id novo em cada item da sequência do bloco
+ * Mensagem (o modo guiado do servidor casa os itens por id).
+ */
+export function freshBlockConfig(config: FlowNodeConfig): FlowNodeConfig {
+  const copy = structuredClone(config);
+  if (Array.isArray(copy.items)) {
+    copy.items = copy.items.map(item => ({ ...(item as Record<string, unknown>), id: crypto.randomUUID() }));
+  }
+  return copy;
+}
+
 function nativeItem(kind: FlowNodeKind): PaletteItem {
   const def = FLOW_NODE_DEF_BY_KIND[kind];
-  return { key: kind, kind, label: def.label, group: def.group, config: { ...def.defaultConfig } };
+  return { key: kind, kind, label: def.label, group: def.group, config: freshBlockConfig(def.defaultConfig) };
 }
 
 function actionItem(type: string): PaletteItem {

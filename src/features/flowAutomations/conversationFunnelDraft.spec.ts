@@ -129,6 +129,43 @@ describe('funil de conversa → itens do editor de sequência', () => {
     expect(result.items.map(it => it.text_content)).toEqual(['Um', 'Dois']);
   });
 
+  // PR 8 (16/10/2026): o bloco Mensagem guarda uma sequência; cada item vira item do editor.
+  it('bloco em sequência: os itens entram em ordem, a espera de dentro soma com a do bloco Esperar', () => {
+    const result = draftFromConversationFunnel(
+      flow([
+        node('a', 'send_whatsapp', { text: 'Antes' }, 'b'),
+        node('b', 'wait', { seconds: 10 }, 'c'),
+        node('c', 'send_whatsapp', {
+          text: '', media_source: 'property_book',
+          items: [
+            { id: 'i1', kind: 'delay', delay_seconds: 3 },
+            { id: 'i2', kind: 'text', text_content: 'Oi' },
+            { id: 'i3', kind: 'delay', delay_seconds: 5 },
+            { id: 'i4', kind: 'image', media_url: 'https://x/f.jpg', media_filename: 'f.jpg', media_caption: 'Fachada' },
+            { id: 'i5', kind: 'audio', media_url: 'https://x/a.ogg', media_caption: 'não vai' },
+            { id: 'i6', kind: 'contact', config: { contact_name: 'Ana', contact_phone: '5511' } },
+            { id: 'i7', kind: 'property_book', media_caption: 'Book' },
+            { id: 'i8', kind: 'image', media_url: '', media_caption: 'Sem foto' },
+            { id: 'i9', kind: 'text', text_content: '  ' },
+          ],
+        }),
+      ]),
+      { skipKinds: ['contact'] },
+    );
+    expect(shape(result.items).map(it => [it.kind, it.kind === 'delay' ? it.delay_seconds : it.text_content ?? it.media_url, it.media_caption])).toEqual([
+      ['text', 'Antes', null],
+      ['delay', 13, null],
+      ['text', 'Oi', null],
+      ['delay', 5, null],
+      ['image', 'https://x/f.jpg', 'Fachada'],
+      ['audio', 'https://x/a.ogg', null],
+      ['text', 'Sem foto', null],
+    ]);
+    // O contato (que a tela não manda) e o book (só o bloco Mensagem acha) ficam de fora.
+    expect(result.skipped).toBe(2);
+    expect(new Set(result.items.map(it => it.uiKey)).size).toBe(result.items.length);
+  });
+
   it('funil sem blocos', () => {
     expect(draftFromConversationFunnel({ initial_node_id: null, nodes: undefined })).toEqual({ items: [], skipped: 0, clampedWaits: 0 });
   });

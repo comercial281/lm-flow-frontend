@@ -6,7 +6,9 @@
 // "Usar funil" lê os blocos do funil, a partir do primeiro, e devolve os itens
 // no formato do editor (SequenceDraftItem).
 //
-//   - "Mandar WhatsApp" com arquivo → item de foto/vídeo/documento/áudio/
+//   - "Mensagem" em sequência (PR 8, 16/10/2026) → um item por item do bloco
+//     (ver `sequenceParts`);
+//   - "Mensagem" antiga com arquivo → item de foto/vídeo/documento/áudio/
 //     figurinha (o texto vira legenda na foto, no vídeo e no documento; no
 //     áudio e na figurinha o servidor não manda texto, então aqui também não);
 //   - com contato (sem arquivo) → item de contato;
@@ -20,10 +22,11 @@
 // Bloco que não é mensagem nem espera (etiqueta, mover etapa, aviso…) não tem
 // como entrar na sequência: fica de fora, e a tela avisa quantos.
 
-import type { SequenceDraftItem } from '@/components/messaging/MessageSequenceEditor';
+import type { SequenceDraftItem, SequenceItemKind } from '@/components/messaging/MessageSequenceEditor';
 import type { FunnelItemKind } from '@/types/messageFunnels';
-import type { FlowAutomation, FlowAutomationNode } from '@/types/flowAutomations';
+import type { FlowAutomation, FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
 import { waitTotalSeconds } from './waitTime';
+import { delayItemSeconds, hasStoredItems, itemsOf } from './messageItems';
 
 /** Teto da espera de um item no editor e no servidor do disparo/agendamento. */
 export const MAX_DRAFT_DELAY_SECONDS = 600;
@@ -112,6 +115,60 @@ function messageOf(node: FlowAutomationNode): SequenceDraftItem | null | 'other'
   return 'other';
 }
 
+/** O que sai de um bloco, na ordem: esperas, mensagens e o que fica de fora. */
+type Part = { wait: number } | { message: SequenceDraftItem } | 'other';
+
+/**
+ * Bloco Mensagem em sequência (PR 8, 16/10/2026): cada item vira item do
+ * editor, e a espera de dentro soma com a do bloco Esperar. Mídia sem arquivo
+ * sai como texto da legenda (igual ao servidor); item vazio não vira nada. O
+ * book fica de fora: quem usa o funil fora da conversa não sabe achar o book.
+ */
+function sequenceParts(config: FlowNodeConfig): Part[] {
+  return itemsOf(config).flatMap((item): Part[] => {
+    switch (item.kind) {
+      case 'delay':
+        return [{ wait: delayItemSeconds(item) }];
+      case 'property_book':
+        return ['other'];
+      case 'text': {
+        const text = str(item.text_content).trim();
+        return text ? [{ message: draft('text', { text_content: text }) }] : [];
+      }
+      case 'contact': {
+        const phone = str(item.config?.contact_phone).trim();
+        const name = str(item.config?.contact_name).trim();
+        return phone ? [{ message: draft('contact', { config: { contact_name: name, contact_phone: phone } }) }] : [];
+      }
+      default: {
+        const kind = item.kind as FunnelItemKind;
+        const mediaUrl = str(item.media_url).trim();
+        const caption = str(item.media_caption).trim();
+        if (!mediaUrl) return caption ? [{ message: draft('text', { text_content: caption }) }] : [];
+        return [{
+          message: draft(kind, {
+            media_url: mediaUrl,
+            media_filename: str(item.media_filename).trim() || null,
+            media_caption: CAPTION_KINDS.includes(kind) && caption ? caption : null,
+          }),
+        }];
+      }
+    }
+  });
+}
+
+function partsOf(node: FlowAutomationNode): Part[] {
+  const cfg = (node.config ?? {}) as Record<string, unknown>;
+  if (node.kind === 'wait') {
+    // "até a data" não cabe na sequência
+    return cfg.mode === 'date' ? ['other'] : [{ wait: waitTotalSeconds(cfg as { minutes?: unknown; seconds?: unknown }) }];
+  }
+  if (node.kind === 'send_whatsapp' && hasStoredItems(cfg)) return sequenceParts(cfg);
+  const message = messageOf(node);
+  if (message === 'other') return ['other'];
+  return message ? [{ message }] : []; // mensagem vazia: nada sai, nem no funil
+}
+
 /**
  * Os blocos do funil, em ordem a partir do primeiro (o caminho principal: em
  * bloco de duas saídas, o "Sim"), viram os itens do editor.
@@ -120,7 +177,8 @@ export function draftFromConversationFunnel(
   flow: Pick<FlowAutomation, 'initial_node_id' | 'nodes'>,
   options: DraftOptions = {},
 ): ConversationFunnelDraft {
-  const skipKinds = new Set(options.skipKinds ?? []);
+  // Set do tipo largo do editor: o item pode ser book (só o bloco Mensagem tem).
+  const skipKinds = new Set<SequenceItemKind>(options.skipKinds ?? []);
   const byId = new Map((flow.nodes ?? []).map(n => [n.id, n]));
   const items: SequenceDraftItem[] = [];
   const seen = new Set<string>();
@@ -134,26 +192,27 @@ export function draftFromConversationFunnel(
     const node = byId.get(current)!;
     current = node.next_node_id ?? node.next_yes_node_id ?? null;
 
-    if (node.kind === 'wait') {
-      const cfg = (node.config ?? {}) as Record<string, unknown>;
-      if (cfg.mode === 'date') skipped += 1; // "até a data" não cabe na sequência
-      else pendingWait += waitTotalSeconds(cfg as { minutes?: unknown; seconds?: unknown });
-      continue;
+    for (const part of partsOf(node)) {
+      if (part === 'other') {
+        skipped += 1;
+        continue;
+      }
+      if ('wait' in part) {
+        pendingWait += part.wait;
+        continue;
+      }
+      const message = part.message;
+      if (skipKinds.has(message.kind)) {
+        skipped += 1;
+        continue;
+      }
+      if (pendingWait > 0 && items.length > 0) {
+        if (pendingWait > MAX_DRAFT_DELAY_SECONDS) clampedWaits += 1;
+        items.push(draft('delay', { delay_seconds: Math.min(pendingWait, MAX_DRAFT_DELAY_SECONDS) }));
+      }
+      pendingWait = 0;
+      items.push(message);
     }
-
-    const message = messageOf(node);
-    if (message === 'other' || (message && skipKinds.has(message.kind))) {
-      skipped += 1;
-      continue;
-    }
-    if (!message) continue; // mensagem vazia: nada sai, nem no funil
-
-    if (pendingWait > 0 && items.length > 0) {
-      if (pendingWait > MAX_DRAFT_DELAY_SECONDS) clampedWaits += 1;
-      items.push(draft('delay', { delay_seconds: Math.min(pendingWait, MAX_DRAFT_DELAY_SECONDS) }));
-    }
-    pendingWait = 0;
-    items.push(message);
   }
 
   return { items, skipped, clampedWaits };

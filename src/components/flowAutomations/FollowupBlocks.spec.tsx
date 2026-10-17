@@ -48,7 +48,7 @@ beforeEach(() => {
 
 const savedConfig = (onSave: ReturnType<typeof vi.fn>) => onSave.mock.calls[0][1].config as Record<string, unknown>;
 
-describe('Mandar WhatsApp: "Marcar progresso"', () => {
+describe('Mensagem: "Marcar progresso"', () => {
   it('grava o prefixo (limpo) e o número da mensagem', async () => {
     const onSave = vi.fn();
     render(<FlowNodePanel node={node({ config: { text: 'Oi' } })} resources={resources} onClose={() => {}} onSave={onSave} />);
