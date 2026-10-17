@@ -11,7 +11,7 @@
 
 ## Não confundir com o backend
 
-A lógica/API fica em **outro repositório**: `comercial281/lm-flow` (Railway).
+A lógica/API fica em **outro repositório**: `comercial281/lm-flow` (AWS São Paulo desde 15/10/2026; antes, Railway).
 Lá a produção roda a branch **`saas-multitenant`** (NÃO `main`). Mudança de
 backend (ex.: deletar contato, endpoints, jobs) vai nesse outro repo, com base
 `saas-multitenant`.
@@ -19,7 +19,7 @@ backend (ex.: deletar contato, endpoints, jobs) vai nesse outro repo, com base
 | Peça | Repositório | Hospedagem | Branch de produção |
 |---|---|---|---|
 | Frontend (telas, site builder) | `lm-flow-frontend` | Vercel | **`main`** |
-| Backend (API, lógica) | `lm-flow` | Railway | **`saas-multitenant`** |
+| Backend (API, lógica) | `lm-flow` | AWS São Paulo (Lightsail, `api.lmflow.com.br`) | **`saas-multitenant`** |
 
 ## Follow-up: decisões já tomadas (não reabrir sem o dono pedir)
 
