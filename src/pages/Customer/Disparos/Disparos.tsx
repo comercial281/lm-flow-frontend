@@ -11,7 +11,6 @@ import {
   ListOrdered,
   BarChart3,
   Plus,
-  Radio,
   ExternalLink,
   Pause,
   Play,
@@ -31,8 +30,6 @@ import { toast } from 'sonner';
 import {
   broadcastsService,
   BroadcastCampaign,
-  CloudChannelOption,
-  CloudMetrics,
 } from '@/services/broadcasts/broadcastsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
@@ -40,14 +37,20 @@ import type { FlowAutomation } from '@/types/flowAutomations';
 import { FLOW_KIND_COPY } from '@/features/flowAutomations/kind';
 import { funnelMessageCount } from '@/features/flowAutomations/conversationFunnelDraft';
 import type { PipelineStage } from '@/types/analytics';
-import MessageTemplateForm from '@/components/channels/settings/MessageTemplateForm';
+import {
+  MetricasOficiais,
+  ModelosOficiais,
+  NumerosOficiais,
+  SemNumeroOficial,
+  useNumerosOficiais,
+} from '@/pages/Customer/Settings/Integrations/WhatsappOficialPartes';
 import BulkDispatchModal from '@/components/pipelines/BulkDispatchModal';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { useCan } from '@/hooks/useCan';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
-import { dinheiro, dolar, plural, telefone } from '@/lib/formato';
+import { plural } from '@/lib/formato';
 type Tab = 'disparos' | 'templates' | 'canais' | 'cadencias' | 'metricas';
 
 const STATUS_META: Record<BroadcastCampaign['status'], { label: string; cls: string }> = {
@@ -73,12 +76,8 @@ export default function Disparos() {
   const [tab, setTab] = useState<Tab>('disparos');
   const [recusado, setRecusado] = useState(false);
 
-  // Canais oficiais (WhatsApp Cloud)
-  const [channels, setChannels] = useState<CloudChannelOption[]>([]);
-  const [loadingChannels, setLoadingChannels] = useState(true);
-  // Canais e funis carregam em separado: o erro de um não apaga o que o outro trouxe.
-  const [erroCanais, setErroCanais] = useState(false);
-  const ultimaCargaCanais = useRef(0);
+  // Números oficiais (WhatsApp Cloud). Canais e funis carregam em separado: o erro de um não apaga o que o outro trouxe.
+  const { numeros: channels, carregando: loadingChannels, erro: erroCanais, carregar: carregarCanais } = useNumerosOficiais();
 
   // Aba Disparos
   const [pipelines, setPipelines] = useState<{ id: string; name: string }[]>([]);
@@ -89,59 +88,11 @@ export default function Disparos() {
   const [erroDisparos, setErroDisparos] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Aba Templates
-  const [tplInboxId, setTplInboxId] = useState('');
-
   // Aba Funis (05/10/2026): os funis de conversa de Funis de mensagem.
   const [funnels, setFunnels] = useState<FlowAutomation[]>([]);
   const [loadingFunnels, setLoadingFunnels] = useState(true);
   const [erroFunis, setErroFunis] = useState(false);
   const ultimaCargaFunis = useRef(0);
-
-  // Aba Métricas
-  const [metrics, setMetrics] = useState<CloudMetrics | null>(null);
-  const [metricsDays, setMetricsDays] = useState(30);
-  const [loadingMetrics, setLoadingMetrics] = useState(false);
-  // Falha na leitura não vira "Nenhum número oficial conectado ainda".
-  const [erroMetricas, setErroMetricas] = useState(false);
-
-  const loadMetrics = useCallback((days: number) => {
-    setLoadingMetrics(true);
-    broadcastsService
-      .whatsappCloudMetrics(days)
-      .then(m => {
-        setMetrics(m);
-        setErroMetricas(false);
-      })
-      .catch(() => {
-        setMetrics(null);
-        setErroMetricas(true);
-      })
-      .finally(() => setLoadingMetrics(false));
-  }, []);
-
-  useEffect(() => {
-    if (tab === 'metricas') loadMetrics(metricsDays);
-  }, [tab, metricsDays, loadMetrics]);
-
-  const carregarCanais = useCallback(() => {
-    const vez = ++ultimaCargaCanais.current;
-    setLoadingChannels(true);
-    setErroCanais(false);
-    broadcastsService
-      .whatsappCloudOptions()
-      .then(c => {
-        if (vez !== ultimaCargaCanais.current) return;
-        setChannels(c);
-        if (c[0]) setTplInboxId(atual => atual || c[0].inbox_id);
-      })
-      .catch(() => {
-        if (vez !== ultimaCargaCanais.current) return;
-        setChannels([]);
-        setErroCanais(true);
-      })
-      .finally(() => { if (vez === ultimaCargaCanais.current) setLoadingChannels(false); });
-  }, []);
 
   const carregarFunis = useCallback(() => {
     const vez = ++ultimaCargaFunis.current;
@@ -162,7 +113,6 @@ export default function Disparos() {
   }, []);
 
   useEffect(() => {
-    carregarCanais();
     carregarFunis();
 
     pipelinesService
@@ -173,7 +123,7 @@ export default function Disparos() {
         if (list[0]) setPipelineId(list[0].id);
       })
       .catch(() => setPipelines([]));
-  }, [carregarCanais, carregarFunis]);
+  }, [carregarFunis]);
 
   const loadCampaigns = useCallback((pid: string) => {
     if (!pid) {
@@ -220,7 +170,6 @@ export default function Disparos() {
   };
 
   const selectedPipeline = pipelines.find(p => p.id === pipelineId);
-  const selectedTplChannel = channels.find(o => o.inbox_id === tplInboxId) || channels[0];
 
   if (recusado) return <NoAccessState />;
 
@@ -389,92 +338,19 @@ export default function Disparos() {
         </div>
       )}
 
-      {/* ===================== TEMPLATES ===================== */}
-      {tab === 'templates' && (
-        <div className="space-y-4">
-          {loadingChannels ? (
-            <Carregando variante="texto" linhas={4} rotulo="Carregando canais..." />
-          ) : erroCanais ? (
-            <EmptyState tipo="erro" aoTentarDeNovo={carregarCanais} />
-          ) : channels.length === 0 ? (
-            <EmptyState
-              title="Nenhum canal WhatsApp Oficial conectado."
-              description="Templates são criados e aprovados por número oficial."
-              action={{ label: 'Conectar canal oficial', onClick: () => navigate('/channels'), variant: 'outline' }}
-            />
-          ) : (
-            <>
-              {channels.length > 1 && (
-                <div className="space-y-1.5 max-w-sm">
-                  <label className="text-sm text-muted-foreground">Número (canal oficial)</label>
-                  <Select value={selectedTplChannel?.inbox_id ?? ''} onValueChange={setTplInboxId}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {channels.map(o => (
-                        <SelectItem key={o.inbox_id} value={o.inbox_id}>
-                          {o.name} · {telefone(o.phone_number)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Crie o template, submeta pra Meta e acompanhe o status (a Meta é quem aprova). O nome do template não pode
-                ser alterado depois de criado — pra "renomear", duplique com um nome novo.
-              </p>
-              {selectedTplChannel && (
-                <MessageTemplateForm
-                  inboxId={selectedTplChannel.inbox_id}
-                  channelType="Channel::Whatsapp"
-                />
-              )}
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ===================== CANAIS OFICIAIS ===================== */}
-      {tab === 'canais' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm text-muted-foreground">Números oficiais do WhatsApp conectados ao LM Flow.</p>
-            <Button variant="outline" size="sm" onClick={() => navigate('/channels')}>
-              <Plus className="w-4 h-4 mr-1" /> Conectar número
-            </Button>
-          </div>
-          {loadingChannels ? (
-            <Carregando rotulo="Carregando..." />
-          ) : erroCanais ? (
-            <EmptyState tipo="erro" aoTentarDeNovo={carregarCanais} />
-          ) : channels.length === 0 ? (
-            <EmptyState title="Nenhum canal oficial conectado ainda." />
-          ) : (
-            <div className="space-y-3">
-              {channels.map(o => {
-                const approved = o.templates.filter(t => t.approved).length;
-                return (
-                  <div key={o.inbox_id} className="border border-border rounded-xl p-3 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <Radio className="w-4 h-4 text-primary shrink-0" />
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium truncate">{o.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {telefone(o.phone_number)} · {plural(approved, 'template aprovado', 'templates aprovados')} de {o.templates.length}
-                        </div>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/channels`)}>
-                      <ExternalLink className="w-3.5 h-3.5 mr-1" /> Gerenciar
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+      {/* ===================== MODELOS / NÚMEROS OFICIAIS (F6: agora também em Integrações) ===================== */}
+      {(tab === 'templates' || tab === 'canais') && (
+        loadingChannels ? (
+          <Carregando variante="texto" linhas={4} rotulo="Carregando números..." />
+        ) : erroCanais ? (
+          <EmptyState tipo="erro" aoTentarDeNovo={carregarCanais} />
+        ) : channels.length === 0 ? (
+          <SemNumeroOficial />
+        ) : tab === 'templates' ? (
+          <ModelosOficiais numeros={channels} />
+        ) : (
+          <NumerosOficiais numeros={channels} />
+        )
       )}
 
       {/* ===================== FUNIS ===================== */}
@@ -534,168 +410,7 @@ export default function Disparos() {
       )}
 
       {/* ===================== MÉTRICAS ===================== */}
-      {tab === 'metricas' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="text-sm text-muted-foreground max-w-xl">
-              Enviadas, entregues e <strong>custo real</strong> (dados da Meta) por número oficial. A fatura/cobrança
-              fica no billing da Meta Business — aqui é o acompanhamento.
-            </p>
-            <Select value={String(metricsDays)} onValueChange={v => setMetricsDays(Number(v))}>
-              <SelectTrigger className="w-32 h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">7 dias</SelectItem>
-                <SelectItem value="30">30 dias</SelectItem>
-                <SelectItem value="90">90 dias</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* ROI / funil por disparo (Fase 3): custo estimado x resposta real. */}
-          {(() => {
-            const rates: Record<string, number> = { marketing: 0.35, utility: 0.02, authentication: 0.16, service: 0 };
-            const rows = campaigns
-              .filter(c => (c.sent_count ?? 0) > 0)
-              .map(c => {
-                const cat = (c.template_category ?? '').toLowerCase();
-                const rate = c.channel_kind === 'whatsapp_cloud' ? (rates[cat] ?? rates.marketing) : 0;
-                const cost = (c.sent_count ?? 0) * rate;
-                const replied = c.replied_count ?? 0;
-                const delivered = c.delivered_count ?? 0;
-                return { c, cost, replied, delivered, cpr: replied > 0 ? cost / replied : null,
-                  rate: delivered > 0 ? Math.round((replied / delivered) * 100) : null };
-              });
-            if (rows.length === 0) return null;
-            const totCost = rows.reduce((s, r) => s + r.cost, 0);
-            const totReplied = rows.reduce((s, r) => s + r.replied, 0);
-            return (
-              <div className="rounded-xl border border-border p-3 space-y-3">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="text-sm font-medium">Retorno por disparo (funil selecionado)</div>
-                  <div className="text-xs text-muted-foreground">
-                    Custo estimado {dinheiro(totCost)} · {totReplied} respostas
-                    {totReplied > 0 && <> · <strong className="text-foreground">{dinheiro(totCost / totReplied)}/resposta</strong></>}
-                  </div>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead className="text-muted-foreground">
-                      <tr className="text-left">
-                        <th className="py-1 pr-2 font-medium">Disparo</th>
-                        <th className="py-1 px-2 font-medium">Enviadas</th>
-                        <th className="py-1 px-2 font-medium">Entregues</th>
-                        <th className="py-1 px-2 font-medium">Responderam</th>
-                        <th className="py-1 px-2 font-medium">Taxa resp.</th>
-                        <th className="py-1 px-2 font-medium">Custo est.</th>
-                        <th className="py-1 pl-2 font-medium">Custo/resp.</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map(({ c, cost, replied, delivered, cpr, rate }) => (
-                        <tr key={c.id} className="border-t border-border">
-                          <td className="py-1.5 pr-2 max-w-[180px] truncate">{c.name}</td>
-                          <td className="py-1.5 px-2">{c.sent_count}</td>
-                          <td className="py-1.5 px-2">{delivered || '—'}</td>
-                          <td className="py-1.5 px-2 font-medium text-foreground">{replied || '—'}</td>
-                          <td className="py-1.5 px-2">{rate != null ? `${rate}%` : '—'}</td>
-                          <td className="py-1.5 px-2">{cost > 0 ? dinheiro(cost) : '—'}</td>
-                          <td className="py-1.5 pl-2">{cpr != null ? dinheiro(cpr) : '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Custo é estimativa (nº enviadas × tarifa da categoria). Custo real por número está abaixo (dados da Meta).
-                  Respostas vêm da conferência automática do status que a Meta manda.
-                </p>
-              </div>
-            );
-          })()}
-
-          {loadingMetrics ? (
-            <Carregando variante="texto" linhas={4} rotulo="Carregando métricas..." />
-          ) : !metrics && erroMetricas ? (
-            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => loadMetrics(metricsDays)} />
-          ) : !metrics || metrics.channels.length === 0 ? (
-            <EmptyState tamanho="compacto" title="Nenhum número oficial conectado ainda, ou sem envios no período." />
-          ) : (
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <div className="rounded-xl border border-border p-3">
-                  <div className="text-xs text-muted-foreground">Enviadas</div>
-                  <div className="text-2xl font-semibold">{metrics.totals.sent}</div>
-                </div>
-                <div className="rounded-xl border border-border p-3">
-                  <div className="text-xs text-muted-foreground">Entregues</div>
-                  <div className="text-2xl font-semibold">
-                    {metrics.totals.delivered}
-                    {metrics.totals.sent > 0 && (
-                      <span className="text-xs text-muted-foreground ml-1">
-                        ({Math.round((metrics.totals.delivered / metrics.totals.sent) * 100)}%)
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="rounded-xl border border-border p-3">
-                  <div className="text-xs text-muted-foreground">Custo (Meta, US$)</div>
-                  <div className="text-2xl font-semibold">
-                    {dolar(metrics.totals.cost)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {metrics.channels.map(c => {
-                  const q = c.quality_rating?.toLowerCase();
-                  const qClr =
-                    q === 'green' ? 'text-green-600' : q === 'yellow' ? 'text-amber-600' : q === 'red' ? 'text-red-600' : 'text-muted-foreground';
-                  return (
-                    <div key={c.inbox_id} className="border border-border rounded-xl p-3 space-y-2">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium truncate">{c.name}</div>
-                          <div className="text-xs text-muted-foreground">{telefone(c.phone_number)}</div>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs">
-                          <span className={qClr}>● {c.quality_rating || 'sem dado'}</span>
-                          {c.messaging_tier != null && <span className="text-muted-foreground">tier {c.messaging_tier}</span>}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-sm">
-                        <div>
-                          <span className="text-muted-foreground text-xs block">Enviadas</span>
-                          <strong>{c.totals.sent}</strong>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground text-xs block">Entregues</span>
-                          <strong>{c.totals.delivered}</strong>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground text-xs block">Custo</span>
-                          <strong>{dolar(c.totals.cost)}</strong>
-                        </div>
-                      </div>
-                      {Object.keys(c.templates_by_category).length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {Object.entries(c.templates_by_category).map(([cat, n]) => (
-                            <Badge key={cat} className="text-[11px] border bg-muted text-muted-foreground">
-                              {cat}: {n}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-            </>
-          )}
-        </div>
-      )}
+      {tab === 'metricas' && <MetricasOficiais />}
     </Pagina>
       {dialogoDeConfirmacao}
     </>

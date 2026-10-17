@@ -16,6 +16,7 @@ import { lazyWithRetry } from '@/utils/chunkReload';
 export const Dashboard = lazyWithRetry(() => import('@/pages/Customer/DashboardNova'));
 export const Contacts = lazyWithRetry(() => import('@/pages/Customer/Contacts'));
 export const ScheduledActions = lazyWithRetry(() => import('@/pages/Customer/Contacts/ScheduledActions'));
+export const WhatsappOficial = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/WhatsappOficial'));
 export const IntegracoesEntrada = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/IntegracoesEntrada'));
 export const Channels = lazyWithRetry(() => import('@/pages/Customer/Channels').then(m => ({ default: m.Channels })));
 export const ChatPage = lazyWithRetry(() => import('@/pages/Customer/Chat/ChatPage'));
@@ -73,6 +74,7 @@ export const routePrefetchMap: Record<string, () => Promise<unknown>> = {
   '/contracts': Contracts.__preload,
   '/property-interests': PropertyInterests.__preload,
   '/settings/integrations': IntegracoesEntrada.__preload,
+  '/settings/whatsapp-oficial': WhatsappOficial.__preload,
   '/channels': Channels.__preload,
   '/automations': AutomationsLayout.__preload,
   '/marketplace': Marketplace.__preload,

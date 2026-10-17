@@ -18,6 +18,7 @@ import {
   Bolsao,
   BolsaoBatches,
   Disparos,
+  WhatsappOficial,
   TeamAccess,
   AccountSettings,
   Labels,
@@ -1026,6 +1027,15 @@ const AppRouter = () => {
                 element={
                   <PermissionRoute resource="properties" action="read">
                     <SiteDaImobiliaria />
+                  </PermissionRoute>
+                }
+              />
+              {/* WhatsApp Oficial (16/10/2026): números, modelos e métricas que eram abas do Disparos. */}
+              <Route
+                path="/settings/whatsapp-oficial"
+                element={
+                  <PermissionRoute resource="broadcasts" action="read">
+                    <WhatsappOficial />
                   </PermissionRoute>
                 }
               />

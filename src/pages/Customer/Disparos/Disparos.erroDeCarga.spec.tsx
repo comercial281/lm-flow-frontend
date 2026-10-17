@@ -57,7 +57,7 @@ describe('Disparos · erro de carga', () => {
     tela();
     await aba('Canais oficiais');
     expect(await screen.findByText('Não deu pra carregar')).toBeInTheDocument();
-    expect(screen.queryByText('Nenhum canal oficial conectado ainda.')).toBeNull();
+    expect(screen.queryByText('Nenhum número oficial conectado.')).toBeNull();
     s.canais.mockResolvedValueOnce([canal]);
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
     expect(await screen.findByText(/Oficial 1/)).toBeInTheDocument();
