@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import BulkDispatchModal from './BulkDispatchModal';
 
-// Passos 1 e 2 da janela de disparo (16/10/2026): por onde sai, número de
+// Passos 1 a 4 da janela de disparo (16/10/2026): por onde sai, número de
 // saída, quem fica de fora e o funil pronto.
 
 const s = vi.hoisted(() => ({
@@ -13,6 +14,12 @@ const s = vi.hoisted(() => ({
   funis: vi.fn(),
   funil: vi.fn(),
   criar: vi.fn(),
+  testar: vi.fn(),
+  navegar: vi.fn(),
+}));
+vi.mock('react-router-dom', async orig => ({
+  ...(await orig<typeof import('react-router-dom')>()),
+  useNavigate: () => s.navegar,
 }));
 vi.mock('@/services/broadcasts/broadcastsService', async orig => {
   const real = await orig<typeof import('@/services/broadcasts/broadcastsService')>();
@@ -24,6 +31,7 @@ vi.mock('@/services/broadcasts/broadcastsService', async orig => {
       audiencePreviewFull: s.previa,
       whatsappCloudOptions: s.canais,
       create: s.criar,
+      testSendSequence: s.testar,
       uploadMedia: vi.fn(),
     },
   };
@@ -43,7 +51,12 @@ vi.mock('@/components/flowAutomations/ConversationFunnelSelect', () => ({
 }));
 vi.mock('@/components/messaging/MessageSequenceEditor', async orig => {
   const real = await orig<typeof import('@/components/messaging/MessageSequenceEditor')>();
-  return { ...real, default: () => null };
+  return {
+    ...real,
+    default: ({ onChange }: { onChange: (itens: unknown[]) => void }) => (
+      <button onClick={() => onChange([{ ...real.newSequenceItem(), text_content: 'Oi {{nome}}' }])}>Preencher mensagem</button>
+    ),
+  };
 });
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() } }));
 
@@ -56,10 +69,14 @@ const numeros = {
   ],
   default_inbox_id: 'in2',
 };
-const previa = (count: number, excluded: Partial<Record<'opt_out' | 'frequency' | 'other_owner' | 'busy', number>> = {}) => ({
+const previa = (
+  count: number,
+  excluded: Partial<Record<'opt_out' | 'frequency' | 'other_owner' | 'busy', number>> = {},
+  eta: Partial<Record<'fast' | 'normal' | 'slow', string>> = {},
+) => ({
   count,
   excluded: { opt_out: 0, frequency: 0, other_owner: 0, busy: 0, ...excluded },
-  eta: {},
+  eta,
 });
 const funilPronto = {
   id: 'f1', name: 'Reativar base', is_enabled: true, archived_at: null, guide_done: true, team: false,
@@ -69,7 +86,11 @@ const funilDaEquipe = {
 };
 
 const abrir = () =>
-  render(<BulkDispatchModal open onOpenChange={() => {}} pipelineId="p1" pipelineName="Leads" stages={[]} />);
+  render(
+    <MemoryRouter>
+      <BulkDispatchModal open onOpenChange={() => {}} pipelineId="p1" pipelineName="Leads" stages={[]} />
+    </MemoryRouter>,
+  );
 
 beforeEach(() => {
   Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture ?? (() => false);
@@ -81,6 +102,8 @@ beforeEach(() => {
   s.funis.mockReset().mockResolvedValue([funilPronto, funilDaEquipe]);
   s.funil.mockReset();
   s.criar.mockReset().mockResolvedValue({ id: 'b1' });
+  s.testar.mockReset().mockResolvedValue(undefined);
+  s.navegar.mockReset();
 });
 
 describe('BulkDispatchModal · passo 1 (por onde sai e quem recebe)', () => {
@@ -205,5 +228,148 @@ describe('BulkDispatchModal · passo 2 (o que mandar)', () => {
     const payload = s.criar.mock.calls[0][0];
     expect(payload).toMatchObject({ channel_kind: 'evolution', inbox_id: 'in2', flow_automation_id: 'f1' });
     expect(payload.funnel_items).toBeUndefined();
+  });
+});
+
+
+// Terça-feira 20/10/2026, 10h em São Paulo.
+const TERCA_10H = new Date('2026-10-20T13:00:00Z');
+const ETA = {
+  fast: '2026-10-20T20:00:00Z',
+  normal: '2026-10-21T18:00:00Z',
+  slow: '2026-10-22T18:00:00Z',
+};
+
+describe('BulkDispatchModal · passo 3 (ritmo) e 4 (revisar)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  const plural = (n: number, a: string, b: string) => `${n} ${n === 1 ? a : b}`;
+  // Chega no passo Ritmo pelo funil pronto (não precisa montar mensagem).
+  const irProRitmo = async (contagem = 300) => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(TERCA_10H);
+    s.previa.mockResolvedValue(previa(contagem, {}, ETA));
+    s.funil.mockResolvedValue({ ...funilPronto, initial_node_id: null, nodes: [] });
+    abrir();
+    await screen.findByText(plural(contagem, 'lead', 'leads'));
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('radio', { name: 'Funil pronto' }));
+    await userEvent.selectOptions(await screen.findByLabelText('Funil'), 'f1');
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+  };
+
+  it('abre com Normal escolhido e diz quando termina', async () => {
+    await irProRitmo(300);
+    expect(await screen.findByRole('radio', { name: 'Normal' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Rápido' })).toHaveAccessibleDescription('30 a 50 segundos entre mensagens, pausa de 5 min a cada 10');
+    expect(screen.getByRole('radio', { name: 'Devagar' })).toHaveAccessibleDescription('2 a 4 minutos entre mensagens, pausa de 20 min a cada 10');
+    expect(screen.getByText('300 leads no ritmo Normal: termina amanhã por volta das 15h')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('radio', { name: 'Rápido' }));
+    expect(screen.getByText('300 leads no ritmo Rápido: termina hoje por volta das 17h')).toBeInTheDocument();
+  });
+
+  it('sem previsão do servidor, mostra só o ritmo e não quebra', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    s.previa.mockResolvedValue(previa(5));
+    abrir();
+    await screen.findByText('5 leads');
+    s.funil.mockResolvedValue({ ...funilPronto, initial_node_id: null, nodes: [] });
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('radio', { name: 'Funil pronto' }));
+    await userEvent.selectOptions(await screen.findByLabelText('Funil'), 'f1');
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    expect(await screen.findByText('5 leads no ritmo Normal.')).toBeInTheDocument();
+  });
+
+  it('não tem mais intervalo, lote, pausa nem limites na tela', async () => {
+    await irProRitmo(300);
+    await screen.findByRole('radio', { name: 'Normal' });
+    expect(screen.queryByLabelText(/Intervalo mínimo/)).toBeNull();
+    expect(screen.queryByLabelText(/Não reenviar nos últimos/)).toBeNull();
+    expect(screen.queryByText('Limites')).toBeNull();
+  });
+
+  it('lista com mais de 100 leads avisa; com 100 não', async () => {
+    await irProRitmo(101);
+    expect(await screen.findByText('Quanto maior a lista, mais devagar: o risco de bloqueio do número é menor.')).toBeInTheDocument();
+  });
+
+  it('com 100 leads o aviso de lista grande não aparece', async () => {
+    await irProRitmo(100);
+    await screen.findByRole('radio', { name: 'Normal' });
+    expect(screen.queryByText(/Quanto maior a lista/)).toBeNull();
+  });
+
+  it('criar no modo funil manda pace normal, o funil e o número, sem sequência nem os campos antigos', async () => {
+    await irProRitmo(300);
+    await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
+    expect(await screen.findByText('Campanha direta · Corretor Ana (11) 99999-0002')).toBeInTheDocument();
+    expect(screen.getByText('Normal · termina amanhã por volta das 15h')).toBeInTheDocument();
+    expect(screen.queryByText('Enviar teste pra um número')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: /Disparar pra 300/ }));
+    await waitFor(() => expect(s.criar).toHaveBeenCalled());
+    const payload = s.criar.mock.calls[0][0];
+    expect(payload).toMatchObject({ pace: 'normal', flow_automation_id: 'f1', inbox_id: 'in2', channel_kind: 'evolution' });
+    for (const campo of ['funnel_items', 'min_interval_seconds', 'max_interval_seconds', 'batch_size', 'batch_pause_seconds', 'business_hours_only', 'respect_opt_out', 'frequency_cap_days']) {
+      expect(payload).not.toHaveProperty(campo, expect.anything());
+    }
+  });
+
+  it('depois de criar, Acompanhar leva pra /disparos/<id> e fecha a janela', async () => {
+    const fechar = vi.fn();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    s.previa.mockResolvedValue(previa(300, {}, ETA));
+    s.funil.mockResolvedValue({ ...funilPronto, initial_node_id: null, nodes: [] });
+    render(
+      <MemoryRouter>
+        <BulkDispatchModal open onOpenChange={fechar} pipelineId="p1" pipelineName="Leads" stages={[]} />
+      </MemoryRouter>,
+    );
+    await screen.findByText('300 leads');
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('radio', { name: 'Funil pronto' }));
+    await userEvent.selectOptions(await screen.findByLabelText('Funil'), 'f1');
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Disparar pra 300/ }));
+    expect(await screen.findByText('Disparo criado')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Acompanhar' }));
+    expect(s.navegar).toHaveBeenCalledWith('/disparos/b1');
+    expect(fechar).toHaveBeenCalledWith(false);
+  });
+
+  it('o teste da sequência sai do número escolhido', async () => {
+    s.previa.mockResolvedValue(previa(300, {}, ETA));
+    abrir();
+    await screen.findByText('300 leads');
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Preencher mensagem' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
+    await userEvent.type(await screen.findByPlaceholderText('(11) 99999-9999'), '11988887777');
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar teste' }));
+    await waitFor(() => expect(s.testar).toHaveBeenCalled());
+    expect(s.testar.mock.calls[0][2]).toBe('in2');
+  });
+});
+
+describe('BulkDispatchModal · espera as cargas', () => {
+  it('enquanto recontamos o público, o Próximo espera', async () => {
+    abrir();
+    await screen.findByText('300 leads');
+    expect(screen.getByRole('button', { name: 'Próximo' })).toBeEnabled();
+    s.previa.mockReturnValue(new Promise(() => {}));
+    await userEvent.selectOptions(screen.getByLabelText('Número de saída'), 'in1');
+    expect(await screen.findByText('Contando destinatários...')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Próximo' })).toBeDisabled();
+  });
+
+  it('enquanto os números oficiais carregam, não diz que a conta não tem', async () => {
+    s.canais.mockReturnValue(new Promise(() => {}));
+    abrir();
+    const oficial = await screen.findByRole('radio', { name: 'WhatsApp oficial (modelo aprovado)' });
+    expect(oficial).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getAllByText('Carregando números oficiais…').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Conecte um número oficial em Integrações')).toBeNull();
   });
 });

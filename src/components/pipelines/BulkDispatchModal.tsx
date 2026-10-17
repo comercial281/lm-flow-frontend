@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { plural, telefone } from '@/lib/formato';
+import { useNavigate } from 'react-router-dom';
+import { telefone } from '@/lib/formato';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ import {
   AudienceMode,
   AudiencePreviewFull,
   BroadcastChannelKind,
+  BroadcastPace,
   BroadcastTemplateConfig,
   CloudChannelOption,
   SenderOption,
@@ -42,10 +44,12 @@ import type { TemplateVariable } from '@/types/messageFunnels';
 import { type SequenceDraftItem, newSequenceItem } from '@/components/messaging/MessageSequenceEditor';
 
 import { PhoneInput } from '@/components/shared/PhoneInput';
-import Aviso from '@/components/base/Aviso';
-import { CaixaDaJanela, CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
+import { CaixaDaJanela, CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import PassoQuemRecebe from './disparo/PassoQuemRecebe';
 import PassoMensagem, { type ModoDoEnvio } from './disparo/PassoMensagem';
+import PassoRitmo from './disparo/PassoRitmo';
+import { previsaoDoPacote, rotuloDoPacote } from './disparo/ritmo';
+
 interface BulkDispatchModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -130,6 +134,8 @@ export default function BulkDispatchModal({
   // Etiquetas e canais oficiais: falha ao carregar não vira "Nenhuma … cadastrada/conectada".
   const [erroEtiquetas, setErroEtiquetas] = useState(false);
   const [erroCanais, setErroCanais] = useState(false);
+  // Os números oficiais ainda estão chegando: não é o mesmo que "não tem".
+  const [carregandoCanais, setCarregandoCanais] = useState(true);
   const ultimaCargaEtiquetas = useRef(0);
   const ultimaCargaCanais = useRef(0);
   const [audiencePreview, setAudiencePreview] = useState<AudiencePreviewFull | null>(null);
@@ -157,22 +163,18 @@ export default function BulkDispatchModal({
   const [postStageId, setPostStageId] = useState('');
   const [postLabel, setPostLabel] = useState('');
 
-  // Cadência (o passo Ritmo troca isso pelos pacotes na próxima tarefa).
-  const [minS, setMinS] = useState(4);
-  const [maxS, setMaxS] = useState(8);
-  const [batchSize, setBatchSize] = useState(10);
-  const [pauseS, setPauseS] = useState(60);
-  const [businessHours, setBusinessHours] = useState(true);
-  // Fase 4/5: teto de gasto (R$), respeitar opt-out, frequency cap (dias).
+  // Ritmo: um dos 3 pacotes. O servidor define intervalo, lote, pausa e os limites.
+  const [pace, setPace] = useState<BroadcastPace>('normal');
+  // Teto de gasto (R$) do disparo oficial.
   const [maxSpend, setMaxSpend] = useState('');
-  const [respectOptOut, setRespectOptOut] = useState(true);
-  const [frequencyCapDays, setFrequencyCapDays] = useState(0);
 
   // Teste
   const [testPhone, setTestPhone] = useState('');
   const [testing, setTesting] = useState(false);
 
   const [creating, setCreating] = useState(false);
+  const [createdId, setCreatedId] = useState('');
+  const navigate = useNavigate();
 
   const resetWizard = useCallback(() => {
     setStep('audience');
@@ -193,15 +195,10 @@ export default function BulkDispatchModal({
     setCampaignName('');
     setPostStageId('');
     setPostLabel('');
-    setMinS(4);
-    setMaxS(8);
-    setBatchSize(10);
-    setPauseS(60);
-    setBusinessHours(true);
+    setPace('normal');
     setMaxSpend('');
-    setRespectOptOut(true);
-    setFrequencyCapDays(0);
     setTestPhone('');
+    setCreatedId('');
   }, []);
 
   const carregarNumeros = useCallback(() => {
@@ -242,13 +239,19 @@ export default function BulkDispatchModal({
   const carregarCanais = useCallback(() => {
     const vez = ++ultimaCargaCanais.current;
     setErroCanais(false);
+    setCarregandoCanais(true);
     broadcastsService
       .whatsappCloudOptions()
-      .then(c => { if (vez === ultimaCargaCanais.current) setCloudOptions(c); })
+      .then(c => {
+        if (vez !== ultimaCargaCanais.current) return;
+        setCloudOptions(c);
+        setCarregandoCanais(false);
+      })
       .catch(() => {
         if (vez !== ultimaCargaCanais.current) return;
         setCloudOptions([]);
         setErroCanais(true);
+        setCarregandoCanais(false);
       });
   }, []);
 
@@ -350,7 +353,7 @@ export default function BulkDispatchModal({
       marketing: 0.35, utility: 0.02, authentication: 0.16, service: 0,
     };
     const rate = rates[cat] ?? rates.marketing;
-    return { cat, rate, total: recipientCount * rate };
+    return { categoria: cat, tarifa: rate, total: recipientCount * rate };
   }, [channelKind, recipientCount, selectedCloudTemplate]);
   const buildTemplateConfig = useCallback(
     (): BroadcastTemplateConfig => ({
@@ -363,26 +366,18 @@ export default function BulkDispatchModal({
   );
 
   const flowMode = !cloudMode && sendMode === 'flow';
-  const step1Ok = (recipientCount ?? 0) > 0 && (cloudMode ? cloudOptions.length > 0 : !!selectedSender?.sendable);
+  // Sem avançar com número velho: enquanto recontamos, o Próximo espera.
+  const contando = countingAudience || esperandoNumeros;
+  const step1Ok =
+    !contando && (recipientCount ?? 0) > 0 && (cloudMode ? cloudOptions.length > 0 : !!selectedSender?.sendable);
   const step2Ok = cloudMode
     ? !!selectedCloudInbox && !!selectedCloudTemplate && !!selectedCloudTemplate.approved && cloudVarsFilled
     : flowMode
       ? !!flowId
       : itemsValid;
-  const step3Ok = minS >= 2 && maxS >= minS && batchSize >= 1 && batchSize <= 50 && pauseS >= 10;
 
-  const sumItemDelays = useMemo(
-    () => (flowMode ? 0 : items.reduce((acc, it) => acc + (it.delay_seconds || 0), 0)),
-    [items, flowMode],
-  );
-
-  const estDurationMin = useMemo(() => {
-    const n = recipientCount ?? 0;
-    if (!n) return 0;
-    const avg = (minS + maxS) / 2;
-    const pauses = Math.max(0, Math.ceil(n / batchSize) - 1);
-    return Math.round((n * (avg + sumItemDelays) + pauses * pauseS) / 60);
-  }, [recipientCount, minS, maxS, batchSize, pauseS, sumItemDelays]);
+  const eta = audiencePreview?.eta ?? {};
+  const previsao = previsaoDoPacote(eta, pace);
 
   const handleTest = async () => {
     const phone = testPhone.replace(/\D/g, '');
@@ -404,7 +399,7 @@ export default function BulkDispatchModal({
       if (cloudMode) {
         await broadcastsService.testSendTemplate(phone, buildTemplateConfig());
       } else {
-        await broadcastsService.testSendSequence(phone, toSequencePayload(items));
+        await broadcastsService.testSendSequence(phone, toSequencePayload(items), senderInboxId || undefined);
       }
       toast.success('Teste enviado! Confere o WhatsApp.');
     } catch (err: any) {
@@ -423,7 +418,7 @@ export default function BulkDispatchModal({
     setCreating(true);
     setStep('creating');
     try {
-      await broadcastsService.create({
+      const campanha = await broadcastsService.create({
         name: campaignName.trim() || undefined,
         pipeline_id: pipelineId,
         channel_kind: channelKind,
@@ -438,15 +433,10 @@ export default function BulkDispatchModal({
           postStageId || postLabel.trim()
             ? { stage_id: postStageId || undefined, label: postLabel.trim() || undefined }
             : undefined,
-        min_interval_seconds: minS,
-        max_interval_seconds: maxS,
-        batch_size: batchSize,
-        batch_pause_seconds: pauseS,
-        business_hours_only: businessHours,
-        respect_opt_out: respectOptOut,
-        frequency_cap_days: frequencyCapDays,
-        max_spend: maxSpend.trim() ? Number(maxSpend.replace(',', '.')) : undefined,
+        pace,
+        max_spend: cloudMode && maxSpend.trim() ? Number(maxSpend.replace(',', '.')) : undefined,
       });
+      setCreatedId(campanha?.id ?? '');
       setStep('done');
       toast.success('Disparo criado. As mensagens saem em lotes.');
     } catch (err: any) {
@@ -501,6 +491,7 @@ export default function BulkDispatchModal({
             channelKind={channelKind}
             aoEscolherCanal={setChannelKind}
             temOficial={cloudOptions.length > 0}
+            carregandoOficial={carregandoCanais}
             erroCanais={erroCanais}
             aoTentarCanais={carregarCanais}
             numeros={senderOptions}
@@ -521,7 +512,7 @@ export default function BulkDispatchModal({
               setSelectedLabels(prev => (prev.includes(titulo) ? prev.filter(t => t !== titulo) : [...prev, titulo]))
             }
             previa={audiencePreview}
-            contando={countingAudience || esperandoNumeros}
+            contando={contando}
             erroPrevia={erroPrevia}
           />
         )}
@@ -557,129 +548,15 @@ export default function BulkDispatchModal({
             }}
             cloudVars={cloudVars}
             aoMudarVariavel={(v, valor) => setCloudVars(prev => ({ ...prev, [v]: valor }))}
+            tetoDeGasto={maxSpend}
+            aoMudarTeto={setMaxSpend}
+            custo={costEstimate}
+            quantidade={recipientCount ?? 0}
           />
         )}
-        {/* STEP 3 — Cadência */}
+        {/* STEP 3 — Ritmo */}
         {step === 'cadence' && (
-          <div className="grid gap-5">
-            <GrupoDaJanela titulo="Intervalo entre mensagens">
-              <GradeDaJanela>
-                <CampoDaJanela rotulo="Intervalo mínimo (segundos)" htmlFor="disparo-min" colunas={2}>
-                  <Input
-                    id="disparo-min"
-                    type="number"
-                    min={2}
-                    value={minS}
-                    onChange={e => setMinS(Math.max(2, Number(e.target.value) || 2))}
-                    className="h-9"
-                  />
-                </CampoDaJanela>
-                <CampoDaJanela rotulo="Intervalo máximo (segundos)" htmlFor="disparo-max" colunas={2}>
-                  <Input
-                    id="disparo-max"
-                    type="number"
-                    min={2}
-                    value={maxS}
-                    onChange={e => setMaxS(Math.max(2, Number(e.target.value) || 2))}
-                    className="h-9"
-                  />
-                </CampoDaJanela>
-              </GradeDaJanela>
-            </GrupoDaJanela>
-
-            <GrupoDaJanela titulo="Lote">
-              <GradeDaJanela>
-                <CampoDaJanela rotulo="Mensagens por lote" htmlFor="disparo-lote" colunas={2}>
-                  <Input
-                    id="disparo-lote"
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={batchSize}
-                    onChange={e => setBatchSize(Math.min(50, Math.max(1, Number(e.target.value) || 1)))}
-                    className="h-9"
-                  />
-                </CampoDaJanela>
-                <CampoDaJanela rotulo="Pausa entre lotes (segundos)" htmlFor="disparo-pausa" colunas={2}>
-                  <Input
-                    id="disparo-pausa"
-                    type="number"
-                    min={10}
-                    value={pauseS}
-                    onChange={e => setPauseS(Math.max(10, Number(e.target.value) || 10))}
-                    className="h-9"
-                  />
-                </CampoDaJanela>
-              </GradeDaJanela>
-            </GrupoDaJanela>
-
-            <GrupoDaJanela titulo="Limites">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={businessHours}
-                  onChange={e => setBusinessHours(e.target.checked)}
-                  className="rounded border-border"
-                />
-                Só enviar em horário comercial (seg-sex 08-20h, sáb 09-18h)
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={respectOptOut}
-                  onChange={e => setRespectOptOut(e.target.checked)}
-                  className="rounded border-border"
-                />
-                Não enviar pra quem pediu pra parar
-              </label>
-              <GradeDaJanela>
-                <CampoDaJanela rotulo="Não reenviar nos últimos (dias)" htmlFor="disparo-frequencia" colunas={channelKind === 'whatsapp_cloud' ? 2 : 4}>
-                  <Input
-                    id="disparo-frequencia"
-                    type="number"
-                    min={0}
-                    value={frequencyCapDays}
-                    onChange={e => setFrequencyCapDays(Math.max(0, Number(e.target.value) || 0))}
-                    className="h-9"
-                    placeholder="0 = sem limite"
-                  />
-                </CampoDaJanela>
-                {channelKind === 'whatsapp_cloud' && (
-                  <CampoDaJanela rotulo="Teto de gasto (R$)" htmlFor="disparo-teto" colunas={2}>
-                    <Input
-                      id="disparo-teto"
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={maxSpend}
-                      onChange={e => setMaxSpend(e.target.value)}
-                      className="h-9"
-                      placeholder="opcional"
-                    />
-                  </CampoDaJanela>
-                )}
-              </GradeDaJanela>
-            </GrupoDaJanela>
-
-            {costEstimate && (
-              <p className="text-xs text-muted-foreground">
-                Custo estimado: <strong className="text-foreground">
-                  R$ {costEstimate.total.toFixed(2).replace('.', ',')}
-                </strong>{' '}
-                ({recipientCount} msg × R$ {costEstimate.rate.toFixed(2).replace('.', ',')}, categoria {costEstimate.cat}). Estimativa — custo real vem da Meta.
-              </p>
-            )}
-            {!step3Ok && (
-              <Aviso tom="atencao" compacto>
-                O máximo deve ser maior ou igual ao mínimo (a partir de 2 segundos), o lote fica entre 1 e 50 e a pausa é de pelo menos 10 segundos.
-              </Aviso>
-            )}
-            {recipientCount ? (
-              <p className="text-xs text-muted-foreground">
-                Duração estimada: ~{estDurationMin} min pra {plural(recipientCount, 'contato', 'contatos')}.
-              </p>
-            ) : null}
-          </div>
+          <PassoRitmo pace={pace} aoEscolher={setPace} quantidade={recipientCount ?? 0} eta={eta} />
         )}
 
         {/* STEP 4 — Revisão */}
@@ -746,19 +623,14 @@ export default function BulkDispatchModal({
                   <span className="text-muted-foreground">Destinatários</span>
                   <strong>{recipientCount}</strong>
                 </div>
-                <div className="flex justify-between py-2">
+                <div className="flex justify-between gap-3 py-2">
                   <span className="text-muted-foreground">Canal</span>
-                  <strong>{cloudMode ? 'WhatsApp oficial (modelo)' : 'Campanha direta'}</strong>
+                  <strong className="text-right">
+                    {cloudMode
+                      ? 'WhatsApp oficial (modelo)'
+                      : `Campanha direta${selectedSender ? ` · ${selectedSender.name}${selectedSender.phone ? ` ${telefone(selectedSender.phone)}` : ''}` : ''}`}
+                  </strong>
                 </div>
-                {!cloudMode && selectedSender && (
-                  <div className="flex justify-between gap-3 py-2">
-                    <span className="text-muted-foreground">Número de saída</span>
-                    <strong className="text-right">
-                      {selectedSender.name}
-                      {selectedSender.phone ? ` · ${telefone(selectedSender.phone)}` : ''}
-                    </strong>
-                  </div>
-                )}
                 <div className="flex justify-between gap-3 py-2">
                   <span className="text-muted-foreground">
                     {cloudMode ? 'Modelo' : flowMode ? 'Funil' : 'Itens na sequência'}
@@ -767,15 +639,12 @@ export default function BulkDispatchModal({
                     {cloudMode ? selectedCloudTemplate?.name : flowMode ? flowName : items.length}
                   </strong>
                 </div>
-                <div className="flex justify-between py-2">
+                <div className="flex justify-between gap-3 py-2">
                   <span className="text-muted-foreground">Ritmo</span>
-                  <strong>
-                    {minS}-{maxS}s · lotes de {batchSize} · pausa {pauseS}s
+                  <strong className="text-right">
+                    {rotuloDoPacote(pace)}
+                    {previsao ? ` · ${previsao}` : ''}
                   </strong>
-                </div>
-                <div className="flex justify-between py-2">
-                  <span className="text-muted-foreground">Horário comercial</span>
-                  <strong>{businessHours ? 'Sim' : 'Não'}</strong>
                 </div>
               </div>
             </CaixaDaJanela>
@@ -866,9 +735,9 @@ export default function BulkDispatchModal({
         {step === 'done' && (
           <div className="space-y-3 py-8 text-center">
             <CheckCircle2 className="h-10 w-10 text-green-500 mx-auto" />
-            <div className="text-lg font-semibold">Disparo no ar</div>
+            <div className="text-lg font-semibold">Disparo criado</div>
             <div className="text-sm text-muted-foreground">
-              As mensagens saem em lotes respeitando o ritmo escolhido. Acompanhe na página Disparos.
+              As mensagens saem em lotes respeitando o ritmo escolhido. Acompanhe o andamento na página do disparo.
             </div>
           </div>
         )}
@@ -899,7 +768,7 @@ export default function BulkDispatchModal({
               <Button variant="outline" onClick={() => setStep('messages')}>
                 <ChevronLeft className="w-4 h-4 mr-1" /> Voltar
               </Button>
-              <Button onClick={() => setStep('review')} disabled={!step3Ok}>
+              <Button onClick={() => setStep('review')}>
                 Próximo
               </Button>
             </>
@@ -915,7 +784,14 @@ export default function BulkDispatchModal({
             </>
           )}
           {step === 'done' && (
-            <Button onClick={() => handleClose(false)}>Ver disparos</Button>
+            <Button
+              onClick={() => {
+                handleClose(false);
+                if (createdId) navigate(`/disparos/${createdId}`);
+              }}
+            >
+              Acompanhar
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>

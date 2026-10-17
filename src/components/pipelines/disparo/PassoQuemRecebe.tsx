@@ -63,6 +63,8 @@ interface Props {
   aoEscolherCanal: (canal: BroadcastChannelKind) => void;
   /** Tem número oficial conectado (o "WhatsApp oficial" só fica clicável assim). */
   temOficial: boolean;
+  /** Os números oficiais ainda estão chegando (não é "sem número oficial"). */
+  carregandoOficial: boolean;
   erroCanais: boolean;
   aoTentarCanais: () => void;
 
@@ -107,12 +109,18 @@ export default function PassoQuemRecebe(p: Props) {
               valor: 'whatsapp_cloud',
               rotulo: 'WhatsApp oficial (modelo aprovado)',
               desabilitada: !p.temOficial,
-              motivo: p.erroCanais ? undefined : 'Conecte um número oficial em Integrações',
+              motivo: p.erroCanais
+                ? undefined
+                : p.carregandoOficial
+                  ? 'Carregando números oficiais…'
+                  : 'Conecte um número oficial em Integrações',
             },
           ]}
         />
         {p.erroCanais ? (
           <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={p.aoTentarCanais} className="p-3" />
+        ) : p.carregandoOficial ? (
+          <p className="text-xs text-muted-foreground">Carregando números oficiais…</p>
         ) : !p.temOficial ? (
           <p className="text-xs text-muted-foreground">Conecte um número oficial em Integrações</p>
         ) : null}

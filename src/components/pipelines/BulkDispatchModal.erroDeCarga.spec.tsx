@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import BulkDispatchModal from './BulkDispatchModal';
 
 const s = vi.hoisted(() => ({ etiquetas: vi.fn(), canais: vi.fn() }));
@@ -35,7 +36,11 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const canal = { inbox_id: 'i1', name: 'Oficial 1', phone_number: '5511999990000', templates: [] };
 const abrir = () =>
-  render(<BulkDispatchModal open onOpenChange={() => {}} pipelineId="p1" pipelineName="Leads" stages={[]} />);
+  render(
+    <MemoryRouter>
+      <BulkDispatchModal open onOpenChange={() => {}} pipelineId="p1" pipelineName="Leads" stages={[]} />
+    </MemoryRouter>,
+  );
 
 beforeEach(() => {
   Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture ?? (() => false);

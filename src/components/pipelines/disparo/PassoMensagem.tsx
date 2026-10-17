@@ -6,7 +6,7 @@ import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import MessageSequenceEditor, { type SequenceDraftItem } from '@/components/messaging/MessageSequenceEditor';
 import { broadcastsService, type CloudChannelOption, type CloudTemplateOption } from '@/services/broadcasts/broadcastsService';
 import type { TemplateVariable } from '@/types/messageFunnels';
-import { telefone } from '@/lib/formato';
+import { dinheiro, telefone } from '@/lib/formato';
 import FunilDoDisparo from './FunilDoDisparo';
 
 // PASSO 2 DO DISPARO (16/10/2026): o que mandar. Na Campanha direta, uma
@@ -36,6 +36,12 @@ interface Props {
   aoEscolherModelo: (nome: string) => void;
   cloudVars: Record<string, string>;
   aoMudarVariavel: (variavel: string, valor: string) => void;
+  /** Teto de gasto (R$) do disparo oficial, como o usuário digitou. */
+  tetoDeGasto: string;
+  aoMudarTeto: (valor: string) => void;
+  /** Custo estimado do disparo oficial (null = ainda sem como estimar). */
+  custo: { categoria: string; tarifa: number; total: number } | null;
+  quantidade: number;
 }
 
 export default function PassoMensagem(p: Props) {
@@ -155,6 +161,26 @@ function ModeloOficial(p: Props) {
                   ))}
                 </div>
               </CampoDaJanela>
+            )}
+
+            <CampoDaJanela rotulo="Teto de gasto (R$)" htmlFor="disparo-teto" ajuda="Opcional. O disparo para quando chegar nesse valor.">
+              <Input
+                id="disparo-teto"
+                type="number"
+                min={0}
+                step="0.01"
+                value={p.tetoDeGasto}
+                onChange={e => p.aoMudarTeto(e.target.value)}
+                className="h-9"
+                placeholder="opcional"
+              />
+            </CampoDaJanela>
+
+            {p.custo && (
+              <p className="text-xs text-muted-foreground">
+                Custo estimado: <strong className="text-foreground">{dinheiro(p.custo.total)}</strong>{' '}
+                ({p.quantidade} msg × {dinheiro(p.custo.tarifa)}, categoria {p.custo.categoria}). Estimativa: o custo real vem da Meta.
+              </p>
             )}
 
             <Aviso tom="info" compacto>

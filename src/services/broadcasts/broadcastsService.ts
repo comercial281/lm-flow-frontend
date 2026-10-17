@@ -169,24 +169,14 @@ export interface CreateBroadcastPayload {
   variations?: BroadcastVariation[];
   /** Destino pós-envio: mover pra etapa + criar/aplicar tag. */
   post_send?: { stage_id?: string; label?: string };
-  /** Ritmo (pacote). O servidor define intervalo, lote e pausa. */
-  pace?: BroadcastPace;
+  /** Ritmo (pacote). O servidor define intervalo, lote, pausa e os limites fixos. */
+  pace: BroadcastPace;
   /** Número de WhatsApp de saída. */
   inbox_id?: string;
   /** Funil de mensagens (fluxo) que o disparo executa. */
   flow_automation_id?: string;
-  /** Legado: não são mais mandados pela tela nova. */
-  min_interval_seconds?: number;
-  max_interval_seconds?: number;
-  batch_size?: number;
-  batch_pause_seconds?: number;
-  business_hours_only?: boolean;
   /** Teto de gasto em REAIS (Fase 4); backend converte pra centavos. */
   max_spend?: number;
-  /** Não reenviar pra quem recebeu disparo nos últimos N dias (0 = off, Fase 5). */
-  frequency_cap_days?: number;
-  /** Excluir contatos que pediram PARAR (opt-out). Default true (Fase 5). */
-  respect_opt_out?: boolean;
 }
 
 /** Estimativa de custo de um disparo oficial (Fase 4). */
@@ -349,8 +339,9 @@ class BroadcastsService {
   }
 
   // Manda a SEQUÊNCIA inteira só pra um número de teste (sem criar campanha).
-  async testSendSequence(phone: string, items: BroadcastSequenceItem[]): Promise<void> {
-    await api.post(`${this.base}/test_send`, { phone, funnel_items: items });
+  // `inboxId`: o teste sai do número de saída escolhido.
+  async testSendSequence(phone: string, items: BroadcastSequenceItem[], inboxId?: string): Promise<void> {
+    await api.post(`${this.base}/test_send`, { phone, funnel_items: items, inbox_id: inboxId });
   }
 
   // Canais OFICIAIS (WhatsApp Cloud) conectados + templates aprovados, pra UI de disparo.
