@@ -18,7 +18,10 @@ import {
   type CloudMetrics,
 } from '@/services/broadcasts/broadcastsService';
 import MessageTemplateForm from '@/components/channels/settings/MessageTemplateForm';
-import { dolar, plural, telefone } from '@/lib/formato';
+import { capitalizar, dolar, plural, telefone } from '@/lib/formato';
+
+const QUALIDADE: Record<string, string> = { green: 'Boa', yellow: 'Média', red: 'Ruim' };
+const CATEGORIA: Record<string, string> = { marketing: 'Marketing', utility: 'Utilidade', authentication: 'Autenticação' };
 
 // Pedaços do WhatsApp Oficial (16/10/2026). Moram aqui porque a tela
 // Integrações → WhatsApp Oficial e (até a limpeza das abas) o Disparos usam os
@@ -222,8 +225,10 @@ export function MetricasOficiais() {
                       <div className="text-xs text-muted-foreground">{telefone(c.phone_number)}</div>
                     </div>
                     <div className="flex items-center gap-3 text-xs">
-                      <span className={qClr}>● {c.quality_rating || 'sem dado'}</span>
-                      {c.messaging_tier != null && <span className="text-muted-foreground">tier {c.messaging_tier}</span>}
+                      {q && QUALIDADE[q] && <span className={qClr}>● Qualidade: <strong>{QUALIDADE[q]}</strong></span>}
+                      {c.messaging_tier != null && /^\d+$/.test(String(c.messaging_tier)) && (
+                        <span className="text-muted-foreground">Limite: {c.messaging_tier} conversas por dia</span>
+                      )}
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-sm">
@@ -244,7 +249,7 @@ export function MetricasOficiais() {
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       {Object.entries(c.templates_by_category).map(([cat, n]) => (
                         <Badge key={cat} className="text-[11px] border bg-muted text-muted-foreground">
-                          {cat}: {n}
+                          {CATEGORIA[cat.toLowerCase()] ?? capitalizar(cat)}: {n}
                         </Badge>
                       ))}
                     </div>

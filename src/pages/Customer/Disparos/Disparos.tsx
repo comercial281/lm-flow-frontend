@@ -1,57 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Pagina, BaseHeader } from '@/components/base';
-import Abas from '@/components/base/Abas';
+import { Pagina, BaseHeader, BasePagination } from '@/components/base';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
-import {
-  Megaphone,
-  ShieldCheck,
-  Layers,
-  ListOrdered,
-  BarChart3,
-  Plus,
-  ExternalLink,
-  Pause,
-  Play,
-  Ban,
-} from 'lucide-react';
-import {
-  Card,
-  Button,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Badge,
-} from '@/components/ui/ds';
-import { toast } from 'sonner';
+import { Seletor } from '@/components/base/Seletor';
+import { Plus } from 'lucide-react';
+import { Card, Button, Badge } from '@/components/ui/ds';
 import {
   broadcastsService,
   BroadcastCampaign,
 } from '@/services/broadcasts/broadcastsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
-import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
-import type { FlowAutomation } from '@/types/flowAutomations';
-import { FLOW_KIND_COPY } from '@/features/flowAutomations/kind';
-import { funnelMessageCount } from '@/features/flowAutomations/conversationFunnelDraft';
-import type { PipelineStage } from '@/types/analytics';
-import {
-  MetricasOficiais,
-  ModelosOficiais,
-  NumerosOficiais,
-  SemNumeroOficial,
-  useNumerosOficiais,
-} from '@/pages/Customer/Settings/Integrations/WhatsappOficialPartes';
+import type { Pipeline } from '@/types/analytics';
 import BulkDispatchModal from '@/components/pipelines/BulkDispatchModal';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { useCan } from '@/hooks/useCan';
-
-import { useConfirmacao } from '@/hooks/useConfirmacao';
-import { plural } from '@/lib/formato';
-type Tab = 'disparos' | 'templates' | 'canais' | 'cadencias' | 'metricas';
+import { telefone, terminaPorVoltaDe } from '@/lib/formato';
 
 const STATUS_META: Record<BroadcastCampaign['status'], { label: string; cls: string }> = {
   running: { label: 'Enviando', cls: 'bg-primary/15 text-primary border-primary/40' },
@@ -61,358 +26,216 @@ const STATUS_META: Record<BroadcastCampaign['status'], { label: string; cls: str
   failed: { label: 'Falhou', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
 };
 
-const TABS: { id: Tab; label: string; icon: typeof Megaphone }[] = [
-  { id: 'disparos', label: 'Disparos', icon: Megaphone },
-  { id: 'templates', label: 'Templates', icon: ShieldCheck },
-  { id: 'canais', label: 'Canais oficiais', icon: Layers },
-  { id: 'cadencias', label: 'Funis', icon: ListOrdered },
-  { id: 'metricas', label: 'Métricas', icon: BarChart3 },
-];
+const PACOTE: Record<string, string> = { fast: 'Rápido', normal: 'Normal', slow: 'Devagar' };
+
+function rotuloDoModo(c: BroadcastCampaign): string {
+  if (c.mode === 'flow') return c.flow_name ? `Funil ${c.flow_name}` : 'Funil';
+  if (c.mode === 'template') return 'Modelo oficial';
+  return 'Mensagem';
+}
 
 export default function Disparos() {
-  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const navigate = useNavigate();
   const pode = useCan();
-  const [tab, setTab] = useState<Tab>('disparos');
   const [recusado, setRecusado] = useState(false);
 
-  // Números oficiais (WhatsApp Cloud). Canais e funis carregam em separado: o erro de um não apaga o que o outro trouxe.
-  const { numeros: channels, carregando: loadingChannels, erro: erroCanais, carregar: carregarCanais } = useNumerosOficiais();
-
-  // Aba Disparos
-  const [pipelines, setPipelines] = useState<{ id: string; name: string }[]>([]);
-  const [pipelineId, setPipelineId] = useState('');
-  const [stages, setStages] = useState<PipelineStage[]>([]);
-  const [campaigns, setCampaigns] = useState<BroadcastCampaign[]>([]);
-  // Falha na leitura não vira "Nenhum disparo neste funil ainda".
-  const [erroDisparos, setErroDisparos] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-
-  // Aba Funis (05/10/2026): os funis de conversa de Funis de mensagem.
-  const [funnels, setFunnels] = useState<FlowAutomation[]>([]);
-  const [loadingFunnels, setLoadingFunnels] = useState(true);
-  const [erroFunis, setErroFunis] = useState(false);
-  const ultimaCargaFunis = useRef(0);
-
-  const carregarFunis = useCallback(() => {
-    const vez = ++ultimaCargaFunis.current;
-    setLoadingFunnels(true);
-    setErroFunis(false);
-    flowAutomationsService
-      .list({ kind: 'conversation' })
-      .then(list => {
-        if (vez !== ultimaCargaFunis.current) return;
-        setFunnels((Array.isArray(list) ? list : []).filter(f => !f.archived_at));
-      })
-      .catch(() => {
-        if (vez !== ultimaCargaFunis.current) return;
-        setFunnels([]);
-        setErroFunis(true);
-      })
-      .finally(() => { if (vez === ultimaCargaFunis.current) setLoadingFunnels(false); });
-  }, []);
+  const [funis, setFunis] = useState<Pipeline[]>([]);
+  // '' = Todos os funis.
+  const [filtro, setFiltro] = useState('');
+  const [pagina, setPagina] = useState(1);
+  const [campanhas, setCampanhas] = useState<BroadcastCampaign[]>([]);
+  const [meta, setMeta] = useState({ total: 0, per_page: 25 });
+  const [carregando, setCarregando] = useState(true);
+  // Falha na leitura não vira "Nenhum disparo ainda".
+  const [erro, setErro] = useState(false);
+  const [janelaAberta, setJanelaAberta] = useState(false);
+  const ultimaCarga = useRef(0);
 
   useEffect(() => {
-    carregarFunis();
-
     pipelinesService
       .getPipelines({ include_items: false })
-      .then(r => {
-        const list = (r?.data ?? []) as { id: string; name: string }[];
-        setPipelines(list.map(p => ({ id: p.id, name: p.name })));
-        if (list[0]) setPipelineId(list[0].id);
-      })
-      .catch(() => setPipelines([]));
-  }, [carregarFunis]);
-
-  const loadCampaigns = useCallback((pid: string) => {
-    if (!pid) {
-      setCampaigns([]);
-      setErroDisparos(false);
-      return;
-    }
-    broadcastsService.list(pid).then(list => { setCampaigns(list); setRecusado(false); setErroDisparos(false); }).catch(e => {
-      setCampaigns([]);
-      if (isForbiddenError(e)) setRecusado(true);
-      else setErroDisparos(true);
-    });
+      .then(r => setFunis((r?.data ?? []) as Pipeline[]))
+      .catch(() => setFunis([]));
   }, []);
 
-  useEffect(() => {
-    if (!pipelineId) {
-      setStages([]);
-      setCampaigns([]);
-      return;
-    }
-    pipelinesService
-      // Só o nome das etapas: o funil inteiro (com todos os cards) é pesado.
-      .getPipelineStages(pipelineId)
-      .then(r => setStages(r.data || []))
-      .catch(() => setStages([]));
-    loadCampaigns(pipelineId);
-  }, [pipelineId, loadCampaigns]);
+  const carregar = useCallback(() => {
+    const vez = ++ultimaCarga.current;
+    setCarregando(true);
+    setErro(false);
+    broadcastsService
+      .listAll({ ...(filtro ? { pipeline_id: filtro } : {}), page: pagina })
+      .then(r => {
+        if (vez !== ultimaCarga.current) return;
+        setCampanhas(r.data);
+        setMeta({ total: r.meta.total, per_page: r.meta.per_page || 25 });
+        setRecusado(false);
+      })
+      .catch(e => {
+        if (vez !== ultimaCarga.current) return;
+        setCampanhas([]);
+        if (isForbiddenError(e)) setRecusado(true);
+        else setErro(true);
+      })
+      .finally(() => { if (vez === ultimaCarga.current) setCarregando(false); });
+  }, [filtro, pagina]);
 
-  const setStatus = async (c: BroadcastCampaign, action: 'pause' | 'resume' | 'cancel') => {
-    try {
-      if (action === 'cancel' && !(await confirmar({
-        titulo: 'Cancelar disparo',
-        descricao: 'As mensagens ainda não enviadas não sairão.',
-        rotuloDaAcao: 'Cancelar disparo',
-        rotuloDeCancelar: 'Voltar',
-        destrutivo: true,
-      }))) return;
-      const fn = action === 'pause' ? broadcastsService.pause : action === 'resume' ? broadcastsService.resume : broadcastsService.cancel;
-      await fn.call(broadcastsService, c.id);
-      loadCampaigns(pipelineId);
-    } catch {
-      toast.error('Não consegui atualizar o disparo.');
-    }
-  };
-
-  const selectedPipeline = pipelines.find(p => p.id === pipelineId);
+  useEffect(() => { carregar(); }, [carregar]);
 
   if (recusado) return <NoAccessState />;
 
+  // Números do topo: soma das campanhas da página e do filtro que estão na tela (sem endpoint extra).
+  const fila = campanhas.reduce((n, c) => n + (c.pending_count ?? 0), 0);
+  const enviadas = campanhas.reduce((n, c) => n + c.sent_count, 0);
+  const falhas = campanhas.reduce((n, c) => n + c.failed_count, 0);
+  const numeros = [
+    { rotulo: 'Na fila', valor: fila, cor: 'text-violet-400' },
+    { rotulo: 'Enviadas', valor: enviadas, cor: 'text-blue-400' },
+    { rotulo: 'Falhas', valor: falhas, cor: 'text-red-400' },
+  ];
+  const porPagina = meta.per_page || 25;
+  const totalDePaginas = Math.max(1, Math.ceil(meta.total / porPagina));
+  const funilDaJanela = filtro || funis[0]?.id || '';
+
   return (
-    <>
     <Pagina
       cabecalho={
         <BaseHeader
           title="Disparos"
-          subtitle="Disparo em massa por WhatsApp — por QR code ou número oficial, templates e cadências."
+          subtitle="Disparo em massa pelo WhatsApp: escolha quem recebe, o número, a mensagem ou um funil, e acompanhe a fila."
         />
       }
     >
-      {/* Abas */}
-      <Abas
-        rotulo="Partes de Disparos"
-        ativa={tab}
-        aoTrocar={chave => setTab(chave as Tab)}
-        abas={TABS.map(t => ({ chave: t.id, rotulo: t.label, icone: t.icon }))}
-      />
-
-      {/* ===================== DISPAROS ===================== */}
-      {tab === 'disparos' && (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1.5 min-w-[240px]">
-              <label className="text-sm text-muted-foreground">Funil</label>
-              <Select value={pipelineId} onValueChange={setPipelineId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Escolher funil" />
-                </SelectTrigger>
-                <SelectContent>
-                  {pipelines.map(p => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {pode('broadcasts', 'create') && (
-              <Button onClick={() => setModalOpen(true)} disabled={!pipelineId}>
-                <Plus className="w-4 h-4 mr-1" /> Novo disparo
-              </Button>
-            )}
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1.5 min-w-[240px]">
+            <label htmlFor="disparos-filtro-funil" className="text-sm text-muted-foreground">Funil</label>
+            <Seletor
+              id="disparos-filtro-funil"
+              className="w-full"
+              value={filtro}
+              onChange={e => { setFiltro(e.target.value); setPagina(1); }}
+            >
+              <option value="">Todos os funis</option>
+              {funis.map(f => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </Seletor>
           </div>
-
-          {campaigns.length === 0 && erroDisparos ? (
-            <EmptyState tipo="erro" aoTentarDeNovo={() => loadCampaigns(pipelineId)} />
-          ) : campaigns.length === 0 ? (
-            <EmptyState
-              title="Nenhum disparo neste funil ainda."
-              description='Clique em "Novo disparo" pra criar o primeiro.'
-            />
-          ) : (
-            <>
-              {/* KPIs — agregado real das campanhas */}
-              {(() => {
-                const agg = campaigns.reduce((a, c) => ({
-                  sent: a.sent + c.sent_count,
-                  delivered: a.delivered + (c.delivered_count ?? 0),
-                  replied: a.replied + (c.replied_count ?? 0),
-                }), { sent: 0, delivered: 0, replied: 0 });
-                const kpis = [
-                  { label: 'Campanhas', value: campaigns.length, color: 'text-violet-400', tint: 'rgba(124,58,237,0.14)' },
-                  { label: 'Enviadas', value: agg.sent, color: 'text-blue-400', tint: 'rgba(59,130,246,0.14)' },
-                  { label: 'Entregues', value: agg.delivered, color: 'text-emerald-400', tint: 'rgba(16,185,129,0.14)' },
-                  { label: 'Respostas', value: agg.replied, color: 'text-fuchsia-400', tint: 'rgba(217,70,239,0.14)' },
-                ];
-                return (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {kpis.map(k => (
-                      <Card key={k.label} className="relative gap-0 overflow-hidden p-4">
-                        <div aria-hidden className="pointer-events-none absolute -top-8 -right-8 h-24 w-24 rounded-full blur-2xl" style={{ background: k.tint }} />
-                        <p className="relative text-xs font-medium text-muted-foreground">{k.label}</p>
-                        <p className={`relative text-2xl font-bold tracking-tight mt-1 ${k.color}`}>{k.value.toLocaleString('pt-BR')}</p>
-                      </Card>
-                    ))}
-                  </div>
-                );
-              })()}
-
-              {/* Tabela de campanhas — estilo protótipo */}
-              <Card className="gap-0 overflow-hidden py-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                        <th className="font-medium px-4 py-3">Campanha</th>
-                        <th className="font-medium px-4 py-3">Enviadas</th>
-                        <th className="font-medium px-4 py-3">Entregues</th>
-                        <th className="font-medium px-4 py-3">Respostas</th>
-                        <th className="font-medium px-4 py-3 min-w-[140px]">Progresso</th>
-                        <th className="font-medium px-4 py-3">Status</th>
-                        <th className="font-medium px-4 py-3 text-right">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {campaigns.map(c => {
-                        const meta = STATUS_META[c.status];
-                        const done = c.sent_count + c.failed_count + c.skipped_count;
-                        const pct = c.total_count ? Math.round((done / c.total_count) * 100) : 0;
-                        return (
-                          <tr key={c.id} className="border-t border-border/60 hover:bg-muted/20 transition-colors">
-                            <td className="px-4 py-3 font-medium max-w-[220px] truncate" title={c.name}>{c.name}</td>
-                            <td className="px-4 py-3 tabular-nums">{c.sent_count}</td>
-                            <td className="px-4 py-3 tabular-nums text-muted-foreground">{c.delivered_count ?? 0}</td>
-                            <td className="px-4 py-3 tabular-nums font-medium">{c.replied_count ?? 0}</td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <div className="h-2 w-full min-w-[70px] overflow-hidden rounded-full bg-muted">
-                                  <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
-                                </div>
-                                <span className="text-[11px] text-muted-foreground tabular-nums">{pct}%</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3"><Badge className={`text-xs border ${meta.cls}`}>{meta.label}</Badge></td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center justify-end gap-1.5">
-                                {(c.status === 'running' || c.status === 'paused') && (
-                                  <>
-                                    {c.status === 'running' ? (
-                                      pode('broadcasts', 'pause') && (
-                                        <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setStatus(c, 'pause')}>
-                                          <Pause className="w-3.5 h-3.5 mr-1" /> Pausar
-                                        </Button>
-                                      )
-                                    ) : (
-                                      pode('broadcasts', 'resume') && (
-                                        <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setStatus(c, 'resume')}>
-                                          <Play className="w-3.5 h-3.5 mr-1" /> Retomar
-                                        </Button>
-                                      )
-                                    )}
-                                    {pode('broadcasts', 'cancel') && (
-                                      <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive" onClick={() => setStatus(c, 'cancel')}>
-                                        <Ban className="w-3.5 h-3.5 mr-1" /> Cancelar
-                                      </Button>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            </>
-          )}
-
-          {pipelineId && (
-            <BulkDispatchModal
-              open={modalOpen}
-              onOpenChange={o => {
-                setModalOpen(o);
-                if (!o) loadCampaigns(pipelineId);
-              }}
-              pipelineId={pipelineId}
-              pipelineName={selectedPipeline?.name}
-              stages={stages}
-            />
+          {pode('broadcasts', 'create') && (
+            <Button onClick={() => setJanelaAberta(true)} disabled={!funilDaJanela}>
+              <Plus className="w-4 h-4 mr-1" /> Novo disparo
+            </Button>
           )}
         </div>
-      )}
 
-      {/* ===================== MODELOS / NÚMEROS OFICIAIS (F6: agora também em Integrações) ===================== */}
-      {(tab === 'templates' || tab === 'canais') && (
-        loadingChannels ? (
-          <Carregando variante="texto" linhas={4} rotulo="Carregando números..." />
-        ) : erroCanais ? (
-          <EmptyState tipo="erro" aoTentarDeNovo={carregarCanais} />
-        ) : channels.length === 0 ? (
-          <SemNumeroOficial />
-        ) : tab === 'templates' ? (
-          <ModelosOficiais numeros={channels} />
+        {carregando && campanhas.length === 0 ? (
+          <Carregando variante="texto" linhas={4} rotulo="Carregando os disparos..." />
+        ) : campanhas.length === 0 && erro ? (
+          <EmptyState tipo="erro" aoTentarDeNovo={carregar} />
+        ) : campanhas.length === 0 ? (
+          <EmptyState
+            title="Nenhum disparo ainda."
+            description='Clique em "Novo disparo" pra criar o primeiro.'
+          />
         ) : (
-          <NumerosOficiais numeros={channels} />
-        )
-      )}
-
-      {/* ===================== FUNIS ===================== */}
-      {/* Desde 05/10/2026 a biblioteca é a de Funis de mensagem (funis de
-          conversa). No Novo disparo, "Usar funil" carrega um deles na sequência. */}
-      {tab === 'cadencias' && (
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Os funis ficam em <strong>Funis de mensagem</strong>. No Novo disparo, use <strong>Usar funil</strong> pra
-            carregar um deles na sequência de mensagens.
-          </p>
-          {loadingFunnels ? (
-            <Carregando rotulo="Carregando os funis…" />
-          ) : erroFunis ? (
-            <EmptyState tipo="erro" aoTentarDeNovo={carregarFunis} />
-          ) : funnels.length === 0 ? (
-            <EmptyState
-              title="Nenhum funil ainda."
-              action={{ label: 'Novo funil', onClick: () => navigate(FLOW_KIND_COPY.conversation.listPath), variant: 'outline' }}
-            />
-          ) : (
-            <div className="space-y-2">
-              {funnels.map(f => {
-                const count = funnelMessageCount(f);
-                return (
-                  <div key={f.id} className="border border-border rounded-xl p-3 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <ListOrdered className="w-4 h-4 text-primary shrink-0" />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-sm font-medium truncate">{f.name}</span>
-                          {f.team && <Badge variant="secondary" className="shrink-0">Da equipe</Badge>}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {[
-                            count != null ? plural(count, 'mensagem', 'mensagens') : null,
-                            f.guide_done === false ? 'falta terminar o passo a passo' : f.is_enabled ? null : 'desligado',
-                          ]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate(`${FLOW_KIND_COPY.conversation.listPath}/${f.id}`)}
-                    >
-                      <ExternalLink className="w-3.5 h-3.5 mr-1" /> Abrir em Funis de mensagem
-                    </Button>
-                  </div>
-                );
-              })}
+          <>
+            <div className="grid grid-cols-3 gap-3">
+              {numeros.map(n => (
+                <Card key={n.rotulo} className="gap-0 p-4">
+                  <p className="text-xs font-medium text-muted-foreground">{n.rotulo}</p>
+                  <p className={`text-2xl font-bold tracking-tight mt-1 ${n.cor}`}>{n.valor}</p>
+                </Card>
+              ))}
             </div>
-          )}
-        </div>
-      )}
 
-      {/* ===================== MÉTRICAS ===================== */}
-      {tab === 'metricas' && <MetricasOficiais />}
+            <Card className="gap-0 overflow-hidden py-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/30 text-left text-xs text-muted-foreground">
+                      <th className="font-medium px-4 py-3">Disparo</th>
+                      <th className="font-medium px-4 py-3">Número</th>
+                      <th className="font-medium px-4 py-3">O que sai</th>
+                      <th className="font-medium px-4 py-3">Pacote</th>
+                      <th className="font-medium px-4 py-3 min-w-[160px]">Andamento</th>
+                      <th className="font-medium px-4 py-3">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {campanhas.map(c => {
+                      const estado = STATUS_META[c.status];
+                      const feitas = c.sent_count + c.failed_count + c.skipped_count;
+                      const pct = c.total_count ? Math.min(100, Math.round((feitas / c.total_count) * 100)) : 0;
+                      return (
+                        <tr
+                          key={c.id}
+                          onClick={() => navigate(`/disparos/${c.id}`)}
+                          className="border-t border-border/60 hover:bg-muted/20 transition-colors cursor-pointer"
+                        >
+                          <td className="px-4 py-3 font-medium max-w-[220px]">
+                            {/* O botão é o ponto de teclado; o clique sobe pra linha, que navega. */}
+                            <button type="button" className="max-w-full truncate text-left hover:underline focus-visible:underline outline-none" title={c.name}>
+                              {c.name}
+                            </button>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div>{c.sender_name ?? ''}</div>
+                            {c.sender_phone && <div className="text-xs text-muted-foreground">{telefone(c.sender_phone)}</div>}
+                          </td>
+                          <td className="px-4 py-3">{rotuloDoModo(c)}</td>
+                          <td className="px-4 py-3">{c.pace ? PACOTE[c.pace] ?? '' : ''}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-full min-w-[70px] overflow-hidden rounded-full bg-muted">
+                                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">{feitas} de {c.total_count}</span>
+                            </div>
+                            {c.status === 'running' && c.estimated_finish_at && (
+                              <div className="text-xs text-muted-foreground mt-1">{terminaPorVoltaDe(c.estimated_finish_at)}</div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge className={`text-xs border ${estado.cls}`}>{estado.label}</Badge>
+                            {c.status === 'paused' && c.pause_message && (
+                              <div className="text-xs text-muted-foreground mt-1 max-w-[240px]">{c.pause_message}</div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {totalDePaginas > 1 && (
+              <BasePagination
+                currentPage={pagina}
+                totalPages={totalDePaginas}
+                totalItems={meta.total}
+                itemsPerPage={porPagina}
+                onPageChange={setPagina}
+                showItemsPerPage={false}
+              />
+            )}
+          </>
+        )}
+
+        {funilDaJanela && (
+          <BulkDispatchModal
+            open={janelaAberta}
+            onOpenChange={o => {
+              setJanelaAberta(o);
+              if (!o) carregar();
+            }}
+            pipelineId={funilDaJanela}
+            pipelineName={funis.find(f => f.id === funilDaJanela)?.name}
+            stages={[]}
+            funis={funis}
+          />
+        )}
+      </div>
     </Pagina>
-      {dialogoDeConfirmacao}
-    </>
   );
 }

@@ -16,6 +16,7 @@ const s = vi.hoisted(() => ({
   criar: vi.fn(),
   testar: vi.fn(),
   navegar: vi.fn(),
+  etapas: vi.fn(),
 }));
 vi.mock('react-router-dom', async orig => ({
   ...(await orig<typeof import('react-router-dom')>()),
@@ -38,6 +39,9 @@ vi.mock('@/services/broadcasts/broadcastsService', async orig => {
 });
 vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
   flowAutomationsService: { list: s.funis, get: s.funil },
+}));
+vi.mock('@/services/pipelines/pipelinesService', () => ({
+  pipelinesService: { getPipelineStages: s.etapas },
 }));
 vi.mock('@/services/contacts/labelsService', () => ({
   labelsService: { getLabels: vi.fn().mockResolvedValue({ data: [] }) },
@@ -104,6 +108,7 @@ beforeEach(() => {
   s.criar.mockReset().mockResolvedValue({ id: 'b1' });
   s.testar.mockReset().mockResolvedValue(undefined);
   s.navegar.mockReset();
+  s.etapas.mockReset().mockResolvedValue({ data: [] });
 });
 
 describe('BulkDispatchModal · passo 1 (por onde sai e quem recebe)', () => {
@@ -402,3 +407,29 @@ describe('BulkDispatchModal · disparo oficial', () => {
   });
 });
 
+describe('BulkDispatchModal · seletor de funil (página Disparos)', () => {
+  const funis = [{ id: 'p1', name: 'Vendas' }, { id: 'p2', name: 'Locação' }] as never[];
+  const abrirComFunis = () =>
+    render(
+      <MemoryRouter>
+        <BulkDispatchModal open onOpenChange={() => {}} pipelineId="p1" stages={[]} funis={funis} />
+      </MemoryRouter>,
+    );
+
+  it('sem a lista de funis não mostra o seletor "Funil"', async () => {
+    abrir();
+    await screen.findByLabelText('Número de saída');
+    expect(screen.queryByLabelText('Funil')).toBeNull();
+  });
+
+  it('com funis mostra o seletor, e trocar recarrega as etapas e a contagem', async () => {
+    abrirComFunis();
+    const seletor = await screen.findByLabelText('Funil');
+    expect(seletor).toHaveValue('p1');
+    await waitFor(() => expect(s.etapas).toHaveBeenCalledWith('p1'));
+    await waitFor(() => expect(s.previa).toHaveBeenCalledWith('p1', expect.anything(), expect.anything()));
+    await userEvent.selectOptions(seletor, 'p2');
+    await waitFor(() => expect(s.etapas).toHaveBeenLastCalledWith('p2'));
+    await waitFor(() => expect(s.previa).toHaveBeenLastCalledWith('p2', expect.anything(), expect.anything()));
+  });
+});

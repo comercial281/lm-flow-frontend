@@ -75,6 +75,11 @@ interface Props {
   senderInboxId: string;
   aoEscolherNumero: (inboxId: string) => void;
 
+  /** Só na página Disparos: escolher o funil de onde sai o público. */
+  funis?: { id: string; name: string }[];
+  funilId?: string;
+  aoEscolherFunil?: (id: string) => void;
+
   audienceMode: AudienceMode;
   aoEscolherPublico: (modo: AudienceMode) => void;
   stages: PipelineStage[];
@@ -162,6 +167,20 @@ export default function PassoQuemRecebe(p: Props) {
       </GrupoDaJanela>
 
       <GrupoDaJanela titulo="Quem recebe">
+        {p.funis && (
+          <CampoDaJanela rotulo="Funil" htmlFor="disparo-funil">
+            <Seletor
+              id="disparo-funil"
+              className="w-full"
+              value={p.funilId ?? ''}
+              onChange={e => p.aoEscolherFunil?.(e.target.value)}
+            >
+              {p.funis.map(f => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </Seletor>
+          </CampoDaJanela>
+        )}
         <CampoDaJanela rotulo="Enviar para" htmlFor="disparo-quem-recebe">
           <Select value={p.audienceMode} onValueChange={v => p.aoEscolherPublico(v as AudienceMode)}>
             <SelectTrigger id="disparo-quem-recebe" className="w-full">

@@ -25,7 +25,8 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { PipelineStage } from '@/types/analytics';
+import type { Pipeline, PipelineStage } from '@/types/analytics';
+import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import {
   broadcastsService,
   BroadcastSequenceItem,
@@ -56,6 +57,8 @@ interface BulkDispatchModalProps {
   pipelineId: string;
   pipelineName?: string;
   stages: PipelineStage[];
+  /** Quando vem (página Disparos), o passo 1 ganha o seletor "Funil". Sem isso, o funil é o do Funil de vendas. */
+  funis?: Pipeline[];
 }
 
 type Step = 'audience' | 'messages' | 'cadence' | 'review' | 'creating' | 'done';
@@ -112,11 +115,19 @@ function toSequencePayload(items: SequenceDraftItem[]): BroadcastSequenceItem[] 
 export default function BulkDispatchModal({
   open,
   onOpenChange,
-  pipelineId,
-  pipelineName,
-  stages,
+  pipelineId: pipelineIdProp,
+  pipelineName: pipelineNameProp,
+  stages: stagesProp,
+  funis,
 }: BulkDispatchModalProps) {
   const [step, setStep] = useState<Step>('audience');
+
+  // Funil escolhido na janela (só quando `funis` vem). Troca recarrega as etapas e a contagem.
+  const [funilId, setFunilId] = useState(pipelineIdProp);
+  const [etapasDoFunil, setEtapasDoFunil] = useState<PipelineStage[]>(stagesProp);
+  const pipelineId = funis ? funilId : pipelineIdProp;
+  const stages = funis ? etapasDoFunil : stagesProp;
+  const pipelineName = funis ? funis.find(f => f.id === funilId)?.name : pipelineNameProp;
 
   // Por onde sai: 'evolution' (Campanha direta) ou 'whatsapp_cloud' (modelo oficial).
   const [channelKind, setChannelKind] = useState<BroadcastChannelKind>('evolution');
@@ -255,10 +266,27 @@ export default function BulkDispatchModal({
       });
   }, []);
 
+  const carregarEtapas = useCallback((id: string) => {
+    setEtapasDoFunil([]);
+    pipelinesService
+      .getPipelineStages(id)
+      .then(r => setEtapasDoFunil(r.data || []))
+      .catch(() => setEtapasDoFunil([]));
+  }, []);
+
+  const escolherFunil = useCallback((id: string) => {
+    setFunilId(id);
+    setStageId('');
+    setPostStageId('');
+    carregarEtapas(id);
+  }, [carregarEtapas]);
+
   // Ao abrir: zera a janela e carrega números, etiquetas, variáveis e canais oficiais.
   useEffect(() => {
     if (!open) return;
     resetWizard();
+    setFunilId(pipelineIdProp);
+    if (funis) carregarEtapas(pipelineIdProp);
     carregarNumeros();
     carregarEtiquetas();
     tenantTemplateVariablesService
@@ -283,6 +311,7 @@ export default function BulkDispatchModal({
         ]),
       );
     carregarCanais();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só zera ao abrir (funis/props mudam de identidade sem ser reabertura)
   }, [open, resetWizard, carregarNumeros, carregarEtiquetas, carregarCanais]);
 
   const cloudMode = channelKind === 'whatsapp_cloud';
@@ -502,6 +531,9 @@ export default function BulkDispatchModal({
             aoEscolherNumero={setSenderInboxId}
             audienceMode={audienceMode}
             aoEscolherPublico={setAudienceMode}
+            funis={funis?.map(f => ({ id: f.id, name: f.name }))}
+            funilId={funilId}
+            aoEscolherFunil={escolherFunil}
             stages={stages}
             stageId={stageId}
             aoEscolherEtapa={setStageId}
