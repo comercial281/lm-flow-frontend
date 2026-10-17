@@ -9167,3 +9167,14 @@ PR 5 do redesenho do construtor. O dono (Tony) reabriu em 16/10/2026 a decisão 
 - **Botão.** Passou a ter `aria-expanded` (saiu o `aria-pressed`). Celular: sem mudança, o construtor não abre no celular.
 
 Código: `src/components/flowAutomations/FlowBlocksMenu.tsx` (era `FlowBlocksPanel.tsx`) e `FlowAutomationCanvas.tsx`. Testes: describe "lista de blocos" em `FlowCanvasLayout.spec.tsx` e `FlowLayoutPieces.spec.tsx`.
+
+## Construtor: Nome, Corretor e Imóvel à vista, o resto em "Mais variáveis" (desde 2026-10-16)
+
+PR 6 do redesenho do construtor. Spec: `LM FLOW/specs/2026-10-16-flow-builder-redesenho-design.md`. Só frontend.
+
+- **Três à vista.** Dentro do construtor, os botõezinhos de variável embaixo de uma caixa de mensagem mostram só Nome, Corretor e Imóvel (nessa ordem, `FEATURED_VARIABLE_TOKENS`). Cada um mostra o nome e o código, por exemplo `Nome {{nome}}`.
+- **"Mais variáveis".** Um botão (abre e fecha, `aria-expanded`) mostra o resto em grupos: "Do lead", "Da visita (só nos gatilhos de visita)", "Do anúncio" e "Da imobiliária" (as que a imobiliária criou). Grupo vazio não aparece.
+- **Só no construtor.** As telas de regras de automação, Roleta e Book do site continuam com todas as variáveis à vista, sem mudança: o recolhimento é um contexto (`RecolherVariaveisContext`, padrão `false`) ligado só no `FlowAutomationCanvas`. Blocos de aviso dentro do construtor (editor de parâmetros) também recolhem, de propósito.
+- **Grupo de cada variável** mora em `messageVariables.ts` (`group`: lead, visita, anuncio). Variável nova pronta precisa de `group`; sem ele cai em "Do lead".
+
+Código: `VariableChipBar.tsx`, `messageVariables.ts`, `FlowAutomationCanvas.tsx`. Testes: "variáveis em botõezinhos" em `FlowLayoutPieces.spec.tsx` e o teste das variáveis da imobiliária em `FlowCanvasLayout.spec.tsx`.

@@ -11,7 +11,7 @@ vi.mock('@/services/messageFunnels/messageFunnelsService', () => ({
 
 import { BLOCK_DRAG_TYPE, FlowBlocksMenu } from './FlowBlocksMenu';
 import { FlowBlockDialog } from './FlowBlockDialog';
-import { VariableChipBar } from './VariableChipBar';
+import { RecolherVariaveisContext, VariableChipBar } from './VariableChipBar';
 import { PEDIDO_DESCARTAR_PAINEL, useSidePanel } from './useSidePanel';
 
 const menu = (props: Partial<ComponentProps<typeof FlowBlocksMenu>> = {}) => (
@@ -148,5 +148,52 @@ describe('variáveis em botõezinhos', () => {
     render(<VariableChipBar onInsert={onInsert} />);
     fireEvent.click(screen.getByRole('button', { name: 'Link do card' }));
     expect(onInsert).toHaveBeenCalledWith('{{link_do_card}}');
+  });
+  it('recolhida: só Nome, Corretor e Imóvel; "Mais variáveis" mostra o resto em grupos', () => {
+    render(
+      <RecolherVariaveisContext.Provider value>
+        <VariableChipBar onInsert={vi.fn()} />
+      </RecolherVariaveisContext.Provider>,
+    );
+    expect(screen.getAllByRole('button').map(b => b.textContent)).toEqual([
+      expect.stringContaining('Nome'),
+      expect.stringContaining('Corretor'),
+      expect.stringContaining('Imóvel'),
+      'Mais variáveis',
+    ]);
+    const mais = screen.getByRole('button', { name: 'Mais variáveis' });
+    expect(mais.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(mais);
+    expect(mais.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByText('Do lead')).toBeInTheDocument();
+    expect(screen.getByText('Da visita (só nos gatilhos de visita)')).toBeInTheDocument();
+    expect(screen.getByText('Do anúncio')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Campanha/ })).toBeInTheDocument();
+  });
+
+  it('recolhida: variável da imobiliária fica em "Da imobiliária" e insere o código', () => {
+    const onInsert = vi.fn();
+    render(
+      <RecolherVariaveisContext.Provider value>
+        <VariableChipBar
+          onInsert={onInsert}
+          variables={[
+            { label: 'Nome', token: '{{nome}}', group: 'lead' },
+            { label: 'Empreendimento', token: '{{empreendimento}}', custom: true },
+          ]}
+        />
+      </RecolherVariaveisContext.Provider>,
+    );
+    expect(screen.queryByRole('button', { name: /Empreendimento/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Mais variáveis' }));
+    expect(screen.getByText('Da imobiliária')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Empreendimento/ }));
+    expect(onInsert).toHaveBeenCalledWith('{{empreendimento}}');
+  });
+
+  it('fora do construtor (sem o contexto) mostra todas, como antes', () => {
+    render(<VariableChipBar onInsert={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /Link do card/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mais variáveis' })).toBeNull();
   });
 });
