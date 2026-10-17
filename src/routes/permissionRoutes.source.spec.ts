@@ -59,6 +59,8 @@ describe('toda rota do CRM confere o cargo', () => {
   it.each([
     ['/ia-vendedora', 'sales_agents', 'read'],
     ['/disparos', 'broadcasts', 'read'],
+    // Monitoria de um disparo (16/10/2026): quem vê a lista vê a fila.
+    ['/disparos/:id', 'broadcasts', 'read'],
     ['/settings/lead-automations', 'lead_automation_rules', 'read'],
     ['lead-automations', 'lead_automation_rules', 'read'],
     ['follow-ups', 'followup_sequences', 'read'],

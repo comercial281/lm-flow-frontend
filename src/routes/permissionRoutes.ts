@@ -52,6 +52,8 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/equipe', resource: 'users', action: 'read' },
   { path: '/ia-vendedora', resource: 'sales_agents', action: 'read' },
   { path: '/disparos', resource: 'broadcasts', action: 'read' },
+  // Monitoria de um disparo: quem vê a lista vê a fila.
+  { path: '/disparos/:id', resource: 'broadcasts', action: 'read' },
   { path: '/conversations', resource: 'conversations', action: 'read' },
   { path: '/conversations/:conversationId', resource: 'conversations', action: 'read' },
 

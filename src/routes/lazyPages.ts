@@ -24,6 +24,8 @@ export const Pipelines = lazyWithRetry(() => import('@/pages/Customer/Pipelines/
 export const Bolsao = lazyWithRetry(() => import('@/pages/Customer/Bolsao/Bolsao'));
 export const BolsaoBatches = lazyWithRetry(() => import('@/pages/Customer/Bolsao/BolsaoBatches'));
 export const Disparos = lazyWithRetry(() => import('@/pages/Customer/Disparos/Disparos'));
+// Monitoria de um disparo (/disparos/:id): abre pela lista de Disparos.
+export const DisparoDetalhe = lazyWithRetry(() => import('@/pages/Customer/Disparos/DisparoDetalhe'));
 export const TeamAccess = lazyWithRetry(() => import('@/pages/Customer/Team/TeamAccessPage'));
 export const AccountSettings = lazyWithRetry(() => import('@/pages/Customer/Settings/Account').then(m => ({ default: m.AccountSettings })));
 export const Labels = lazyWithRetry(() => import('@/pages/Customer/Settings/Labels'));

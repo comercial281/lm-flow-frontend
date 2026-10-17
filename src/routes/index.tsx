@@ -18,6 +18,7 @@ import {
   Bolsao,
   BolsaoBatches,
   Disparos,
+  DisparoDetalhe,
   WhatsappOficial,
   TeamAccess,
   AccountSettings,
@@ -649,6 +650,16 @@ const AppRouter = () => {
               element={
                 <PermissionRoute resource="broadcasts" action="read">
                   <Disparos />
+                </PermissionRoute>
+              }
+            />
+
+            {/* Monitoria de um disparo (16/10/2026): a fila lead por lead. */}
+            <Route
+              path="/disparos/:id"
+              element={
+                <PermissionRoute resource="broadcasts" action="read">
+                  <DisparoDetalhe />
                 </PermissionRoute>
               }
             />
