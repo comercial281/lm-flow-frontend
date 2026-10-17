@@ -11,7 +11,7 @@
 
 ## Não confundir com o backend
 
-A lógica/API fica em **outro repositório**: `comercial281/lm-flow` (Railway).
+A lógica/API fica em **outro repositório**: `comercial281/lm-flow` (AWS São Paulo desde 15/10/2026; antes, Railway).
 Lá a produção roda a branch **`saas-multitenant`** (NÃO `main`). Mudança de
 backend (ex.: deletar contato, endpoints, jobs) vai nesse outro repo, com base
 `saas-multitenant`.
@@ -19,7 +19,7 @@ backend (ex.: deletar contato, endpoints, jobs) vai nesse outro repo, com base
 | Peça | Repositório | Hospedagem | Branch de produção |
 |---|---|---|---|
 | Frontend (telas, site builder) | `lm-flow-frontend` | Vercel | **`main`** |
-| Backend (API, lógica) | `lm-flow` | Railway | **`saas-multitenant`** |
+| Backend (API, lógica) | `lm-flow` | AWS São Paulo (Lightsail, `api.lmflow.com.br`) | **`saas-multitenant`** |
 
 ## Follow-up: decisões já tomadas (não reabrir sem o dono pedir)
 
@@ -9000,6 +9000,14 @@ Armadilhas:
 3. **O contorno entra num `requestAnimationFrame` depois do dragstart**: o navegador tira a foto do card que segue o cursor ao fim do dragstart, e ela tem que ser a do card normal.
 4. **No vão entre dois cards, a coluna acha o card abaixo do cursor** (`[data-card-id]`), senão o esqueleto pularia pro topo a cada vão e voltaria. O esqueleto segura o próprio dragover (`stopPropagation`).
 5. **O esqueleto some quando o card já foi pro destino** (`limparEsqueleto` no `commitReorder`/`ganhar`), não quando o servidor responde: senão o card movido ficaria tracejado durante o pedido.
+
+## Automações: o mapa aberto recolhe o menu (desde 2026-10-16)
+
+Pedido do dono: abrir um mapa de fluxo pela lista tem que recolher o menu com o mesmo movimento de Conversas e do funil, e voltar à lista devolve o menu como estava.
+
+- **Menu:** `/automations/flow-builder/:id`, `/automations/message-funnels/:id` e `/automations/follow-ups/:id` entraram na `ROTA_RECOLHE_MENU`. As listas (`/automations`, `/automations/flow-builder`, `/automations/message-funnels`, `/automations/follow-ups`) não recolhem. Mesma regra: o botão do topo reabre, a escolha vale só pra visita e não mexe na preferência salva.
+
+Armadilha: a regex exige o id depois do segmento (`[^/]+`). Rota nova de mapa de Automações tem que entrar na mesma alternância, senão abre sem recolher.
 
 ## Funil: mini card ao passar o mouse (desde 2026-10-15)
 
