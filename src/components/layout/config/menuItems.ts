@@ -352,6 +352,8 @@ export const getCustomerMenuSections = (): MenuSection[] => [
         // `inboxes.update` é o "vejo qualquer número", que o Gerente tem pelo
         // piso de reparos e o Corretor não.
         { name: 'WhatsApp', href: '/channels', icon: Smartphone, ...gestao('/channels', 'inboxes.update'), featureKey: 'channels', cartao: 'whatsapp' },
+        // Números oficiais, modelos de mensagem e métricas (16/10/2026): era das abas do Disparos.
+        { name: 'WhatsApp Oficial', href: '/settings/whatsapp-oficial', icon: Smartphone, ...permissionFromRoute('/settings/whatsapp-oficial'), featureKey: 'disparos', cartao: 'whatsapp' },
         // Páginas do Facebook/Instagram dos Lead Ads (era a aba de Origem). Mesmas
         // travas da antiga Origem: some no painel raiz, e o cliente só vê com a
         // função de automações liberada pela Leal Mídia.

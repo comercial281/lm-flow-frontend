@@ -52,6 +52,8 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/equipe', resource: 'users', action: 'read' },
   { path: '/ia-vendedora', resource: 'sales_agents', action: 'read' },
   { path: '/disparos', resource: 'broadcasts', action: 'read' },
+  // Monitoria de um disparo: quem vê a lista vê a fila.
+  { path: '/disparos/:id', resource: 'broadcasts', action: 'read' },
   { path: '/conversations', resource: 'conversations', action: 'read' },
   { path: '/conversations/:conversationId', resource: 'conversations', action: 'read' },
 
@@ -86,6 +88,7 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/settings/pixel-capi', resource: 'capi_configs', action: 'read' },
   { path: '/settings/portals', resource: 'portals', action: 'read' },
   { path: '/settings/portals/:portalKey', resource: 'portals', action: 'read' },
+  { path: '/settings/whatsapp-oficial', resource: 'broadcasts', action: 'read' },
   { path: '/settings/facebook', resource: 'lead_ads_form_configs', action: 'read' },
   // Mesmas chaves do servidor (Api::V1::CvcrmConnectionController: integrations.*).
   { path: '/settings/cvcrm', resource: 'integrations', action: 'read' },

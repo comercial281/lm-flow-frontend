@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import BulkDispatchModal from './BulkDispatchModal';
 
 const s = vi.hoisted(() => ({ etiquetas: vi.fn(), canais: vi.fn() }));
@@ -10,8 +11,11 @@ vi.mock('@/services/broadcasts/broadcastsService', async orig => {
     ...real,
     broadcastsService: {
       ...real.broadcastsService,
-      list: vi.fn().mockResolvedValue([]),
-      audiencePreview: vi.fn().mockResolvedValue(3),
+      senderOptions: vi.fn().mockResolvedValue({
+        data: [{ inbox_id: 'in1', name: 'Imobiliária', phone: '5511999990001', connection: 'open', owner_name: null, provider: 'evolution', sendable: true, reason: null }],
+        default_inbox_id: 'in1',
+      }),
+      audiencePreviewFull: vi.fn().mockResolvedValue({ count: 3, excluded: { opt_out: 0, frequency: 0, other_owner: 0, busy: 0 }, eta: {} }),
       whatsappCloudOptions: s.canais,
       uploadMedia: vi.fn(),
     },
@@ -21,7 +25,9 @@ vi.mock('@/services/contacts/labelsService', () => ({ labelsService: { getLabels
 vi.mock('@/services/messageFunnels/messageFunnelsService', () => ({
   tenantTemplateVariablesService: { list: vi.fn().mockResolvedValue({ builtin: [], custom: [] }) },
 }));
-vi.mock('@/components/flowAutomations/ConversationFunnelSelect', () => ({ ConversationFunnelSelect: () => null }));
+vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
+  flowAutomationsService: { list: vi.fn().mockResolvedValue([]), get: vi.fn() },
+}));
 vi.mock('@/components/messaging/MessageSequenceEditor', async orig => {
   const real = await orig<typeof import('@/components/messaging/MessageSequenceEditor')>();
   return { ...real, default: () => null };
@@ -30,7 +36,11 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const canal = { inbox_id: 'i1', name: 'Oficial 1', phone_number: '5511999990000', templates: [] };
 const abrir = () =>
-  render(<BulkDispatchModal open onOpenChange={() => {}} pipelineId="p1" pipelineName="Leads" stages={[]} />);
+  render(
+    <MemoryRouter>
+      <BulkDispatchModal open onOpenChange={() => {}} pipelineId="p1" pipelineName="Leads" stages={[]} />
+    </MemoryRouter>,
+  );
 
 beforeEach(() => {
   Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture ?? (() => false);
@@ -41,7 +51,7 @@ beforeEach(() => {
 });
 
 const escolherPorEtiqueta = async () => {
-  await userEvent.click((await screen.findAllByRole('combobox'))[0]);
+  await userEvent.click(await screen.findByRole('combobox', { name: 'Enviar para' }));
   await userEvent.click(await screen.findByRole('option', { name: 'Por etiqueta' }));
 };
 
@@ -71,33 +81,36 @@ describe('BulkDispatchModal · erro de carga', () => {
     s.etiquetas.mockResolvedValue({ data: [] });
     s.canais.mockRejectedValueOnce(new Error('rede'));
     abrir();
-    await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
-    await userEvent.click(await screen.findByRole('button', { name: /WhatsApp oficial/ }));
     expect(await screen.findByText('Não deu pra carregar')).toBeInTheDocument();
-    expect(screen.queryByText(/Nenhum canal WhatsApp oficial/)).toBeNull();
+    expect(screen.getByRole('radio', { name: /WhatsApp oficial/ })).toHaveAttribute('aria-disabled', 'true');
     s.canais.mockResolvedValueOnce([canal]);
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
     await waitFor(() => expect(screen.queryByText('Não deu pra carregar')).toBeNull());
-    expect(screen.queryByText(/Nenhum canal WhatsApp oficial/)).toBeNull();
+    expect(screen.getByRole('radio', { name: /WhatsApp oficial/ })).not.toHaveAttribute('aria-disabled');
+    await userEvent.click(screen.getByRole('radio', { name: /WhatsApp oficial/ }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
+    expect(await screen.findByRole('group', { name: 'Modelo aprovado' })).toBeInTheDocument();
   });
 });
 
 describe('BulkDispatchModal · miolo em grupos', () => {
-  it('a primeira etapa tem o grupo "Quem recebe" e as abas Novo e Disparos usam aria-pressed', async () => {
+  it('a primeira etapa tem os grupos "Por onde sai" e "Quem recebe", sem o alternador Novo/Disparos', async () => {
     s.etiquetas.mockResolvedValue({ data: [] });
     abrir();
-    expect(await screen.findByRole('group', { name: 'Quem recebe' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Novo' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: /^Disparos/ })).toHaveAttribute('aria-pressed', 'false');
+    expect(await screen.findByRole('group', { name: 'Por onde sai' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Quem recebe' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Novo' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Disparos/ })).toBeNull();
   });
 
-  it('o passo da mensagem tem os grupos Canal de envio e Sequência de mensagens', async () => {
+  it('o passo da mensagem tem os grupos O que mandar e Sequência de mensagens; o canal é Campanha direta', async () => {
     s.etiquetas.mockResolvedValue({ data: [] });
     abrir();
-    await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
-    for (const nome of ['Canal de envio', 'Sequência de mensagens']) {
+    expect(await screen.findByRole('radio', { name: 'Campanha direta' })).toHaveAttribute('aria-checked', 'true');
+    await screen.findByText('3 leads');
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    for (const nome of ['O que mandar', 'Sequência de mensagens']) {
       expect(await screen.findByRole('group', { name: nome })).toBeInTheDocument();
     }
-    expect(screen.getByRole('button', { name: /WhatsApp por código QR/ })).toHaveAttribute('aria-pressed', 'true');
   });
 });

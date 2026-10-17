@@ -18,6 +18,8 @@ import {
   Bolsao,
   BolsaoBatches,
   Disparos,
+  DisparoDetalhe,
+  WhatsappOficial,
   TeamAccess,
   AccountSettings,
   Labels,
@@ -652,6 +654,16 @@ const AppRouter = () => {
               }
             />
 
+            {/* Monitoria de um disparo (16/10/2026): a fila lead por lead. */}
+            <Route
+              path="/disparos/:id"
+              element={
+                <PermissionRoute resource="broadcasts" action="read">
+                  <DisparoDetalhe />
+                </PermissionRoute>
+              }
+            />
+
             {/* Automações — aba única com submenu por setor (substitui os itens
                 soltos que viviam em Configurações). As rotas /settings/* antigas
                 continuam vivas para deep-links/compat. Já usava nested routes
@@ -1026,6 +1038,15 @@ const AppRouter = () => {
                 element={
                   <PermissionRoute resource="properties" action="read">
                     <SiteDaImobiliaria />
+                  </PermissionRoute>
+                }
+              />
+              {/* WhatsApp Oficial (16/10/2026): números, modelos e métricas que eram abas do Disparos. */}
+              <Route
+                path="/settings/whatsapp-oficial"
+                element={
+                  <PermissionRoute resource="broadcasts" action="read">
+                    <WhatsappOficial />
                   </PermissionRoute>
                 }
               />

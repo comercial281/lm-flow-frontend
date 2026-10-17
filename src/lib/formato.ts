@@ -214,6 +214,20 @@ export function dolar(valor: unknown, casas = 2): string {
   return `${n < 0 ? '-' : ''}US$${NBSP}${corpo}`;
 }
 
+// Valor em reais como a pessoa digita: "R$ 1.000,00", "1.000", "12,5", "150".
+// Ponto é milhar (sempre de 3 em 3), vírgula é centavo (até 2 casas). Qualquer
+// outra coisa ("12abc", "12.5", "-10") volta null, pra tela avisar em vez de
+// adivinhar: "1.000" lido como 1,00 virava um teto mil vezes menor.
+const DINHEIRO_DIGITADO = /^(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?$/;
+
+/** "R$ 1.000,00" → 1000 · "12,5" → 12.5 · vazio ou inválido → null. */
+export function lerDinheiro(texto: string): number | null {
+  const limpo = (texto ?? '').replace(/R\$/gi, '').replace(/[\s\u00a0]/g, '');
+  if (!DINHEIRO_DIGITADO.test(limpo)) return null;
+  const n = Number(limpo.replace(/\./g, '').replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
 /** "1 imóvel" · "3 imóveis" · "0 imóveis" · "1.234 imóveis" */
 export function plural(quantidade: number, singular: string, pluralDaPalavra: string): string {
   return `${numero(quantidade)} ${quantidade === 1 ? singular : pluralDaPalavra}`;
@@ -250,4 +264,58 @@ export function tempoDesde(desde: Date | string | number, agora: Date = new Date
   if (horas < 24) return `há ${horas} h`;
   const dias = Math.floor(horas / 24);
   return dias === 1 ? 'há 1 dia' : `há ${dias} dias`;
+}
+
+const fmtPartesSp = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Sao_Paulo',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+});
+
+const DIAS_DA_SEMANA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+
+function partesEmSaoPaulo(d: Date) {
+  const p: Record<string, number> = {};
+  for (const x of fmtPartesSp.formatToParts(d)) if (x.type !== 'literal') p[x.type] = Number(x.value);
+  return p;
+}
+
+/**
+ * "termina hoje por volta das 15h" · "termina amanhã por volta das 9h" ·
+ * "termina sexta por volta das 11h" (de 2 a 6 dias à frente) · "termina em 24/10 por volta das 15h".
+ * Hora arredondada pra cima na hora cheia, sempre no fuso de São Paulo.
+ */
+export function terminaPorVoltaDe(iso: string, agora: Date = new Date()): string {
+  const d = toDate(iso);
+  if (!d) return VAZIO;
+  const p = partesEmSaoPaulo(d);
+  const a = partesEmSaoPaulo(agora);
+  const horaCheia = p.minute > 0 || p.second > 0 ? p.hour + 1 : p.hour;
+  const dias = Math.round((Date.UTC(p.year, p.month - 1, p.day) - Date.UTC(a.year, a.month - 1, a.day)) / 86_400_000);
+  let quando: string;
+  if (dias <= 0) quando = 'hoje';
+  else if (dias === 1) quando = 'amanhã';
+  else if (dias <= 6) quando = DIAS_DA_SEMANA[new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay()];
+  else quando = `em ${String(p.day).padStart(2, '0')}/${String(p.month).padStart(2, '0')}`;
+  return `termina ${quando} por volta das ${horaCheia}h`;
+}
+
+/**
+ * Quando algo aconteceu, no fuso de São Paulo: "às 14:32" (hoje) ·
+ * "em 12/10 às 14:32" (outro dia). Pra frase do tipo "Enviada às 14:32".
+ */
+export function diaEHoraEmSaoPaulo(valor: unknown, agora: Date = new Date()): string {
+  const d = toDate(valor);
+  if (!d) return VAZIO;
+  const p = partesEmSaoPaulo(d);
+  const a = partesEmSaoPaulo(agora);
+  const doisDigitos = (n: number) => String(n).padStart(2, '0');
+  const h = `${doisDigitos(p.hour)}:${doisDigitos(p.minute)}`;
+  const mesmoDia = p.year === a.year && p.month === a.month && p.day === a.day;
+  return mesmoDia ? `às ${h}` : `em ${doisDigitos(p.day)}/${doisDigitos(p.month)} às ${h}`;
 }

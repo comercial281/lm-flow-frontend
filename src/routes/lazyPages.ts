@@ -16,6 +16,7 @@ import { lazyWithRetry } from '@/utils/chunkReload';
 export const Dashboard = lazyWithRetry(() => import('@/pages/Customer/DashboardNova'));
 export const Contacts = lazyWithRetry(() => import('@/pages/Customer/Contacts'));
 export const ScheduledActions = lazyWithRetry(() => import('@/pages/Customer/Contacts/ScheduledActions'));
+export const WhatsappOficial = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/WhatsappOficial'));
 export const IntegracoesEntrada = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/IntegracoesEntrada'));
 export const Channels = lazyWithRetry(() => import('@/pages/Customer/Channels').then(m => ({ default: m.Channels })));
 export const ChatPage = lazyWithRetry(() => import('@/pages/Customer/Chat/ChatPage'));
@@ -23,6 +24,8 @@ export const Pipelines = lazyWithRetry(() => import('@/pages/Customer/Pipelines/
 export const Bolsao = lazyWithRetry(() => import('@/pages/Customer/Bolsao/Bolsao'));
 export const BolsaoBatches = lazyWithRetry(() => import('@/pages/Customer/Bolsao/BolsaoBatches'));
 export const Disparos = lazyWithRetry(() => import('@/pages/Customer/Disparos/Disparos'));
+// Monitoria de um disparo (/disparos/:id): abre pela lista de Disparos.
+export const DisparoDetalhe = lazyWithRetry(() => import('@/pages/Customer/Disparos/DisparoDetalhe'));
 export const TeamAccess = lazyWithRetry(() => import('@/pages/Customer/Team/TeamAccessPage'));
 export const AccountSettings = lazyWithRetry(() => import('@/pages/Customer/Settings/Account').then(m => ({ default: m.AccountSettings })));
 export const Labels = lazyWithRetry(() => import('@/pages/Customer/Settings/Labels'));
@@ -73,6 +76,7 @@ export const routePrefetchMap: Record<string, () => Promise<unknown>> = {
   '/contracts': Contracts.__preload,
   '/property-interests': PropertyInterests.__preload,
   '/settings/integrations': IntegracoesEntrada.__preload,
+  '/settings/whatsapp-oficial': WhatsappOficial.__preload,
   '/channels': Channels.__preload,
   '/automations': AutomationsLayout.__preload,
   '/marketplace': Marketplace.__preload,
