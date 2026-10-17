@@ -5926,6 +5926,8 @@ Clientes → Custos (`/admin/clientes/custos`, `src/pages/SuperAdmin/Custos/`). 
 ## Construtor: bloco Início, painel Blocos e painel lateral (04/10/2026)
 
 Sprint 4 de 4 da unificação das automações, parte A (layout do construtor).
+> **Reaberto em 16/10/2026:** o painel lateral do bloco (e do Início) e o campo "Apelido do bloco" descritos aqui foram trocados. Ver "Construtor: bloco e Início numa janela no meio, nome no cartão (desde 2026-10-16)".
+
 Decisões do dono do produto em 04/10, não reabrir sem ele pedir. Spec:
 `LM FLOW/specs/2026-10-04-automacoes-sprint-4-layout-e-funil-do-corretor-design.md`.
 Referência visual: o construtor do Leona. Vale pra Automações e Follow-up (e
@@ -9138,3 +9140,16 @@ Armadilhas:
 
 1. **O backend vem PRIMEIRO.** A mesma régua mora no servidor (lm-flow, PR gêmeo da validação do guia). Com a tela nova contra o servidor antigo, o Salvar passa e o servidor ainda recusa. Merge é deploy: só com ok do Tony, backend antes.
 2. **Régua espelhada:** mudou a lista de campos no servidor, muda `MESSAGE_CONTENT_FIELDS` aqui, com o spec.
+
+## Construtor: bloco e Início numa janela no meio, nome no cartão (desde 2026-10-16)
+
+PR 4 do redesenho do construtor. O dono (Tony) reabriu em 16/10/2026 as decisões de 04/10 marcadas "não reabrir sem ele pedir" (seção "Construtor: bloco Início, painel Blocos e painel lateral (04/10/2026)"): o painel à direita saiu e o "Apelido do bloco" também. Spec: `LM FLOW/specs/2026-10-16-flow-builder-redesenho-design.md`. Só frontend.
+
+- **Janela no meio.** Clicar num bloco, ou no Início, abre uma janela centralizada (`FlowBlockDialog.tsx`, no lugar do antigo `FlowSidePanel.tsx`). Cancelar com rascunho continua perguntando "Descartar o que você mudou?". O construtor não abre no celular, então não há versão de celular.
+- **Nome editado no cartão.** O nome do bloco, na faixa colorida, é um botão: clicar troca por um campo ("Nome do bloco"). Enter ou sair do campo confirma, Esc cancela, texto vazio volta ao nome padrão do bloco. O clique no nome não abre a janela. A mudança entra no Salvar do topo, como as outras do canvas.
+- **Sai o campo "Apelido do bloco".** Não existe mais dentro da janela. O `FlowNodePanel` segue mandando `label` no `onSave`, agora o do próprio nó (assinatura inalterada).
+- **Título da janela = o nome dado.** Bloco renomeado abre com o nome dele no título, e o tipo do bloco vai pra frente da descrição ("Aguardar resposta · …"). Sem nome dado, o título é o tipo, como antes.
+- **Foco ao abrir:** no primeiro campo de texto da janela (a mensagem, o nome), não no primeiro botão. Sem campo de texto, vale a regra da casa (primeiro focável sem o X).
+- **Modo guiado e "só ver":** o nome não é editável (`allow.rename` false), como já era com o apelido.
+
+Código: `FlowNodeCardData.onRename(id, label | null)` e `allow.rename` em `FlowNodeCard.tsx`; `handleRename` no `FlowAutomationCanvas.tsx`. Spec: `FlowNodeCardRename.spec.tsx`.

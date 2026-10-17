@@ -1,6 +1,7 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Pencil, Copy, Trash2, Zap, AlertTriangle } from 'lucide-react';
-import type { MouseEvent } from 'react';
+import { useRef, useState, type MouseEvent } from 'react';
+import { Input } from '@/components/ui/ds';
 import type { FlowAutomationNode } from '@/types/flowAutomations';
 import {
   nodeColor, looseOutputs, NODE_WIDTH, TRIGGER_NODE_ID, branchHandles, handleColor, handleLabel, isBranching,
@@ -51,11 +52,13 @@ export interface FlowNodeCardData {
    * e "Excluir" só em mensagem. Só ver (funil da equipe): nada, nem abrir.
    * Ausente = tudo.
    */
-  allow?: { edit: boolean; duplicate: boolean; remove: boolean; add: boolean };
+  allow?: { edit: boolean; duplicate: boolean; remove: boolean; add: boolean; rename: boolean };
   onEdit: (id: string) => void;
   onDuplicate: (id: string) => void;
   onRemove: (id: string) => void;
   onAddFrom: (sourceId: string, handle: OutputHandle) => void;
+  /** Renomeia o bloco no próprio cartão. `null` = volta ao nome padrão. */
+  onRename: (id: string, label: string | null) => void;
 }
 
 /** O bloco Início (sprint 4): o gatilho, desenhado como o primeiro bloco. */
@@ -206,14 +209,23 @@ export function FlowStartNode({ data }: NodeProps) {
 }
 
 export function FlowNodeCard({ id, data, selected }: NodeProps) {
-  const { node, lookups, pessoal, donoDoEnvio, problem, editing, highlighted, guideMark, allow, onEdit, onDuplicate, onRemove, onAddFrom } = data as unknown as FlowNodeCardData;
-  const can = allow ?? { edit: true, duplicate: true, remove: true, add: true };
+  const { node, lookups, pessoal, donoDoEnvio, problem, editing, highlighted, guideMark, allow, onEdit, onDuplicate, onRemove, onAddFrom, onRename } = data as unknown as FlowNodeCardData;
+  const can = allow ?? { edit: true, duplicate: true, remove: true, add: true, rename: true };
   const hidden = !isVisibleNode(node);
   const color = hidden ? '#94a3b8' : nodeColor(node.kind, blockGroup(node));
   const loose = looseOutputs(node);
   const branching = isBranching(node);
   const branches = branchHandles(node);
   const title = node.label || blockLabel(node);
+  const [renaming, setRenaming] = useState(false);
+  const [draft, setDraft] = useState('');
+  const cancelled = useRef(false);
+  const finishRename = () => {
+    setRenaming(false);
+    if (cancelled.current) { cancelled.current = false; return; }
+    const next = draft.trim();
+    if (next !== (node.label ?? '')) onRename(id, next || null);
+  };
   const envio = node.kind === 'send_whatsapp' ? sendFromLine(node.config || {}, !!pessoal, donoDoEnvio ?? null) : null;
   const progresso = node.kind === 'send_whatsapp' ? progressLine(node.config) : null;
 
@@ -247,7 +259,35 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
       )}
 
       <div className="flex items-center justify-between gap-1 rounded-t-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ backgroundColor: color }}>
-        <span className="truncate">{title}</span>
+        {renaming ? (
+          <Input
+            aria-label="Nome do bloco"
+            autoFocus
+            value={draft}
+            maxLength={80}
+            onChange={e => setDraft(e.target.value)}
+            onClick={e => e.stopPropagation()}
+            onBlur={finishRename}
+            onKeyDown={e => {
+              e.stopPropagation();
+              if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
+              else if (e.key === 'Escape') { cancelled.current = true; e.currentTarget.blur(); }
+            }}
+            className="nodrag nopan h-7 min-w-0 flex-1 bg-white text-xs text-foreground"
+          />
+        ) : can.rename ? (
+          <button
+            type="button"
+            onClick={own(() => { setDraft(node.label ?? ''); setRenaming(true); })}
+            className="nodrag min-w-0 truncate rounded text-left hover:underline"
+            aria-label={`Renomear ${title}`}
+            title="Clique para renomear"
+          >
+            {title}
+          </button>
+        ) : (
+          <span className="truncate">{title}</span>
+        )}
         <div className="flex items-center gap-1 shrink-0">
           {can.edit && (
             <button onClick={own(() => onEdit(id))} className="rounded p-0.5 hover:bg-white/20" aria-label={`Editar ${title}`} title="Editar">

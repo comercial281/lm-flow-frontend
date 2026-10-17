@@ -10,7 +10,7 @@ import {
 } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
 import { Plus, X, Zap } from 'lucide-react';
 import { mesmoConteudo } from '@/hooks/useAlteracoesNaoSalvas';
-import { FlowSidePanel } from './FlowSidePanel';
+import { FlowBlockDialog } from './FlowBlockDialog';
 import {
   FLOW_TRIGGER_GROUPS,
   LEAD_CREATED_HINT,
@@ -38,7 +38,7 @@ import {
 // Sprint 3 (03/10/2026): "+ Ou quando…" acrescenta outro gatilho. O fluxo
 // começa quando qualquer um acontece; cada um é editado com o mesmo editor.
 //
-// Sprint 4 (04/10/2026): deixou de ser janela. É o painel lateral do bloco
+// Sprint 4 (04/10/2026) tirou a janela e 16/10/2026 a trouxe de volta, no meio (FlowBlockDialog). É a janela do bloco
 // "Início", o primeiro bloco do canvas (a barra de gatilho do topo saiu).
 
 interface Props {
@@ -160,7 +160,7 @@ export function FlowTriggerPanel({
   };
 
   return (
-    <FlowSidePanel
+    <FlowBlockDialog
       testId="painel-do-inicio"
       title="Início"
       description="O que precisa acontecer pra este fluxo começar."
@@ -223,6 +223,6 @@ export function FlowTriggerPanel({
 
         {problem && <p className="text-xs text-destructive" role="alert">{problem}</p>}
       </div>
-    </FlowSidePanel>
+    </FlowBlockDialog>
   );
 }
