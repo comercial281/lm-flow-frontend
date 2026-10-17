@@ -39,6 +39,8 @@ interface Props {
   /** Teto de gasto (R$) do disparo oficial, como o usuário digitou. */
   tetoDeGasto: string;
   aoMudarTeto: (valor: string) => void;
+  /** Frase de erro do teto (texto que não é valor em reais); vazio = ok. */
+  erroDoTeto?: string;
   /** Custo estimado do disparo oficial (null = ainda sem como estimar). */
   custo: { categoria: string; tarifa: number; total: number } | null;
   quantidade: number;
@@ -163,7 +165,12 @@ function ModeloOficial(p: Props) {
               </CampoDaJanela>
             )}
 
-            <CampoDaJanela rotulo="Teto de gasto (R$)" htmlFor="disparo-teto" ajuda="Opcional. O disparo para quando chegar nesse valor.">
+            <CampoDaJanela
+              rotulo="Teto de gasto (R$)"
+              htmlFor="disparo-teto"
+              ajuda="Opcional. O disparo para quando chegar nesse valor."
+              erro={p.erroDoTeto || undefined}
+            >
               <Input
                 id="disparo-teto"
                 type="text"
@@ -172,6 +179,7 @@ function ModeloOficial(p: Props) {
                 onChange={e => p.aoMudarTeto(e.target.value)}
                 className="h-9"
                 placeholder="opcional"
+                aria-invalid={p.erroDoTeto ? true : undefined}
               />
             </CampoDaJanela>
 

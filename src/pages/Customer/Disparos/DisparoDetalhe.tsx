@@ -31,7 +31,7 @@ import { isForbiddenError } from '@/services/core/forbidden';
 import { serverMessage } from '@/features/flowAutomations/guide';
 import { useCan } from '@/hooks/useCan';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
-import { capitalizar, dataHora, hora, telefone, terminaPorVoltaDe } from '@/lib/formato';
+import { capitalizar, dataHora, diaEHoraEmSaoPaulo, telefone, terminaPorVoltaDe } from '@/lib/formato';
 import { STATUS_META, PACOTE, rotuloDoModo } from './rotulos';
 
 const ATUALIZA_A_CADA_MS = 20_000;
@@ -60,8 +60,8 @@ function rotuloDoItem(item: Pick<BroadcastItemRow, 'status' | 'reason' | 'sent_a
   switch (item.status) {
     case 'pending': return 'Na fila';
     case 'sending': return 'Enviando';
-    case 'sent': return item.sent_at ? `Enviada às ${hora(item.sent_at)}` : 'Enviada';
-    case 'in_funnel': return item.sent_at ? `Entrou no funil às ${hora(item.sent_at)}` : 'Entrou no funil';
+    case 'sent': return item.sent_at ? `Enviada ${diaEHoraEmSaoPaulo(item.sent_at)}` : 'Enviada';
+    case 'in_funnel': return item.sent_at ? `Entrou no funil ${diaEHoraEmSaoPaulo(item.sent_at)}` : 'Entrou no funil';
     case 'failed': return item.reason ? `Falhou: ${item.reason}` : 'Falhou';
     case 'skipped': return item.reason ? `Ficou de fora: ${item.reason}` : 'Ficou de fora';
     case 'cancelled': return 'Cancelada';

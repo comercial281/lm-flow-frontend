@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { data, dataCurta, hora, dataHora, numero, porcentagem, dinheiro, dolar, plural, telefone, capitalizar, tempoDesde, quandoMudou, quandoAcontece, terminaPorVoltaDe, toDate, VAZIO, moedaValida } from './formato';
+import { data, dataCurta, hora, dataHora, numero, porcentagem, dinheiro, dolar, plural, telefone, capitalizar, tempoDesde, quandoMudou, quandoAcontece, terminaPorVoltaDe, toDate, VAZIO, moedaValida, lerDinheiro, diaEHoraEmSaoPaulo } from './formato';
 
 // Espaço não-quebrável: é o que o Intl põe entre "R$" e o número (não quebra linha).
 const NB = ' ';
@@ -212,5 +212,48 @@ describe('terminaPorVoltaDe', () => {
   it('usa o fuso de São Paulo, não o do navegador', () => {
     // 01:30Z do dia 14 ainda é noite do dia 13 em SP
     expect(terminaPorVoltaDe('2026-10-14T01:30:00Z', agora)).toBe('termina hoje por volta das 23h');
+  });
+});
+
+describe('lerDinheiro (o que a pessoa digita em reais)', () => {
+  it('lê o jeito brasileiro: milhar com ponto, centavo com vírgula, com ou sem R$', () => {
+    expect(lerDinheiro('R$ 1.000,00')).toBe(1000);
+    expect(lerDinheiro('1.000,00')).toBe(1000);
+    expect(lerDinheiro('1.000')).toBe(1000);
+    expect(lerDinheiro('12,5')).toBe(12.5);
+    expect(lerDinheiro('150')).toBe(150);
+    expect(lerDinheiro(' R$150,75 ')).toBe(150.75);
+    expect(lerDinheiro('1.234.567,89')).toBe(1234567.89);
+    expect(lerDinheiro(`R$${NB}2.500`)).toBe(2500);
+  });
+  it('texto que não é dinheiro volta null', () => {
+    expect(lerDinheiro('12abc')).toBeNull();
+    expect(lerDinheiro('1.00')).toBeNull();
+    expect(lerDinheiro('12.5')).toBeNull();
+    expect(lerDinheiro('1,234')).toBeNull();
+    expect(lerDinheiro('-10')).toBeNull();
+    expect(lerDinheiro('1.0000')).toBeNull();
+    expect(lerDinheiro('R$')).toBeNull();
+  });
+  it('vazio volta null', () => {
+    expect(lerDinheiro('')).toBeNull();
+    expect(lerDinheiro('   ')).toBeNull();
+  });
+});
+
+describe('diaEHoraEmSaoPaulo', () => {
+  const agora = new Date('2026-10-13T15:00:00Z'); // 13/10 12:00 em SP
+  it('hoje: só a hora', () => {
+    expect(diaEHoraEmSaoPaulo('2026-10-13T17:32:00Z', agora)).toBe('às 14:32');
+  });
+  it('outro dia: com a data', () => {
+    expect(diaEHoraEmSaoPaulo('2026-10-12T17:32:00Z', agora)).toBe('em 12/10 às 14:32');
+  });
+  it('usa o dia de São Paulo, não o do navegador', () => {
+    // 01:30Z do dia 13 ainda é dia 12 às 22:30 em SP
+    expect(diaEHoraEmSaoPaulo('2026-10-13T01:30:00Z', agora)).toBe('em 12/10 às 22:30');
+  });
+  it('valor inválido vira o vazio', () => {
+    expect(diaEHoraEmSaoPaulo(null, agora)).toBe(VAZIO);
   });
 });

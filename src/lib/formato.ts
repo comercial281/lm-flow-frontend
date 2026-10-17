@@ -214,6 +214,20 @@ export function dolar(valor: unknown, casas = 2): string {
   return `${n < 0 ? '-' : ''}US$${NBSP}${corpo}`;
 }
 
+// Valor em reais como a pessoa digita: "R$ 1.000,00", "1.000", "12,5", "150".
+// Ponto é milhar (sempre de 3 em 3), vírgula é centavo (até 2 casas). Qualquer
+// outra coisa ("12abc", "12.5", "-10") volta null, pra tela avisar em vez de
+// adivinhar: "1.000" lido como 1,00 virava um teto mil vezes menor.
+const DINHEIRO_DIGITADO = /^(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?$/;
+
+/** "R$ 1.000,00" → 1000 · "12,5" → 12.5 · vazio ou inválido → null. */
+export function lerDinheiro(texto: string): number | null {
+  const limpo = (texto ?? '').replace(/R\$/gi, '').replace(/[\s\u00a0]/g, '');
+  if (!DINHEIRO_DIGITADO.test(limpo)) return null;
+  const n = Number(limpo.replace(/\./g, '').replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
 /** "1 imóvel" · "3 imóveis" · "0 imóveis" · "1.234 imóveis" */
 export function plural(quantidade: number, singular: string, pluralDaPalavra: string): string {
   return `${numero(quantidade)} ${quantidade === 1 ? singular : pluralDaPalavra}`;
@@ -289,4 +303,19 @@ export function terminaPorVoltaDe(iso: string, agora: Date = new Date()): string
   else if (dias <= 6) quando = DIAS_DA_SEMANA[new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay()];
   else quando = `em ${String(p.day).padStart(2, '0')}/${String(p.month).padStart(2, '0')}`;
   return `termina ${quando} por volta das ${horaCheia}h`;
+}
+
+/**
+ * Quando algo aconteceu, no fuso de São Paulo: "às 14:32" (hoje) ·
+ * "em 12/10 às 14:32" (outro dia). Pra frase do tipo "Enviada às 14:32".
+ */
+export function diaEHoraEmSaoPaulo(valor: unknown, agora: Date = new Date()): string {
+  const d = toDate(valor);
+  if (!d) return VAZIO;
+  const p = partesEmSaoPaulo(d);
+  const a = partesEmSaoPaulo(agora);
+  const doisDigitos = (n: number) => String(n).padStart(2, '0');
+  const h = `${doisDigitos(p.hour)}:${doisDigitos(p.minute)}`;
+  const mesmoDia = p.year === a.year && p.month === a.month && p.day === a.day;
+  return mesmoDia ? `às ${h}` : `em ${doisDigitos(p.day)}/${doisDigitos(p.month)} às ${h}`;
 }

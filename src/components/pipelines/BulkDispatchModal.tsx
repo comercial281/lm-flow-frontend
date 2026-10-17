@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { telefone } from '@/lib/formato';
+import { dinheiro, lerDinheiro, telefone } from '@/lib/formato';
 import {
   Dialog,
   DialogContent,
@@ -404,8 +404,14 @@ export default function BulkDispatchModal({
   const contando = countingAudience || esperandoNumeros;
   const step1Ok =
     !contando && (recipientCount ?? 0) > 0 && (cloudMode ? cloudOptions.length > 0 : !!selectedSender?.sendable);
+  // Teto de gasto (só oficial), lido no jeito brasileiro ("1.000,00", "12,5").
+  // Vazio = sem teto; texto que não é valor trava o Próximo com o erro no campo.
+  const tetoVazio = maxSpend.trim() === '';
+  const tetoLido = tetoVazio ? null : lerDinheiro(maxSpend);
+  const tetoInvalido = cloudMode && !tetoVazio && (tetoLido === null || tetoLido <= 0);
+  const teto = cloudMode && !tetoInvalido && tetoLido !== null ? tetoLido : undefined;
   const step2Ok = cloudMode
-    ? !!selectedCloudInbox && !!selectedCloudTemplate && !!selectedCloudTemplate.approved && cloudVarsFilled
+    ? !!selectedCloudInbox && !!selectedCloudTemplate && !!selectedCloudTemplate.approved && cloudVarsFilled && !tetoInvalido
     : flowMode
       ? !!flowId
       : itemsValid;
@@ -452,7 +458,6 @@ export default function BulkDispatchModal({
     setCreating(true);
     setStep('creating');
     try {
-      const teto = Number(maxSpend.trim().replace(',', '.'));
       const campanha = await broadcastsService.create({
         name: campaignName.trim() || undefined,
         pipeline_id: pipelineId,
@@ -469,7 +474,7 @@ export default function BulkDispatchModal({
             ? { stage_id: postStageId || undefined, label: postLabel.trim() || undefined }
             : undefined,
         pace,
-        max_spend: cloudMode && Number.isFinite(teto) && teto > 0 ? teto : undefined,
+        max_spend: teto,
       });
       setCreatedId(campanha?.id ?? '');
       setStep('done');
@@ -588,6 +593,7 @@ export default function BulkDispatchModal({
             aoMudarVariavel={(v, valor) => setCloudVars(prev => ({ ...prev, [v]: valor }))}
             tetoDeGasto={maxSpend}
             aoMudarTeto={setMaxSpend}
+            erroDoTeto={tetoInvalido ? 'Digite o valor em reais, como 150 ou 1.000,00.' : ''}
             custo={costEstimate}
             quantidade={recipientCount ?? 0}
           />
@@ -677,6 +683,12 @@ export default function BulkDispatchModal({
                     {cloudMode ? selectedCloudTemplate?.name : flowMode ? flowName : items.length}
                   </strong>
                 </div>
+                {cloudMode && (
+                  <div className="flex justify-between gap-3 py-2">
+                    <span className="text-muted-foreground">Teto de gasto</span>
+                    <strong className="text-right">{teto !== undefined ? dinheiro(teto) : 'Sem teto'}</strong>
+                  </div>
+                )}
                 <div className="flex justify-between gap-3 py-2">
                   <span className="text-muted-foreground">Ritmo</span>
                   <strong className="text-right">
@@ -730,7 +742,7 @@ export default function BulkDispatchModal({
             )}
 
             {/* Enviar teste pra um número antes de disparar pros leads. No funil
-                pronto fica escondido por enquanto (o passo Revisar é refeito na próxima tarefa). */}
+                pronto fica escondido: o teste manda a sequência montada, e ali não há sequência. */}
             {!flowMode && (
               <GrupoDaJanela titulo="Teste (opcional)">
                 <CampoDaJanela

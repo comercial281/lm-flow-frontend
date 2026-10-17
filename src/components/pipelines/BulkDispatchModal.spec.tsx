@@ -358,6 +358,38 @@ describe('BulkDispatchModal · passo 3 (ritmo) e 4 (revisar)', () => {
   });
 });
 
+describe('BulkDispatchModal · campanha direta (mensagem) e ritmo', () => {
+  const irProRevisarComMensagem = async () => {
+    abrir();
+    await screen.findByText('300 leads');
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Preencher mensagem' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await screen.findByRole('radio', { name: 'Normal' });
+  };
+
+  it('criar em "Mensagem" manda a sequência e o número, sem funil', async () => {
+    await irProRevisarComMensagem();
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Disparar pra 300/ }));
+    await waitFor(() => expect(s.criar).toHaveBeenCalled());
+    const payload = s.criar.mock.calls[0][0];
+    expect(payload).toMatchObject({ channel_kind: 'evolution', inbox_id: 'in2', pace: 'normal' });
+    expect(payload.funnel_items).toEqual([expect.objectContaining({ kind: 'text', text_content: 'Oi {{nome}}' })]);
+    expect(payload.flow_automation_id).toBeUndefined();
+    expect(payload.max_spend).toBeUndefined();
+  });
+
+  it('escolher "Rápido" manda pace fast', async () => {
+    await irProRevisarComMensagem();
+    await userEvent.click(screen.getByRole('radio', { name: 'Rápido' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Disparar pra 300/ }));
+    await waitFor(() => expect(s.criar).toHaveBeenCalled());
+    expect(s.criar.mock.calls[0][0]).toMatchObject({ pace: 'fast' });
+  });
+});
+
 describe('BulkDispatchModal · espera as cargas', () => {
   it('enquanto recontamos o público, o Próximo espera', async () => {
     abrir();
@@ -380,7 +412,8 @@ describe('BulkDispatchModal · espera as cargas', () => {
 });
 
 describe('BulkDispatchModal · disparo oficial', () => {
-  it('cria pelo modelo aprovado com o teto de gasto, o ritmo normal e sem número de saída', async () => {
+  // Chega no passo "O que mandar" do oficial, com o modelo escolhido.
+  const irProModeloOficial = async () => {
     s.canais.mockResolvedValue([
       {
         inbox_id: 'of1', name: 'Oficial 1', phone_number: '5511999990000',
@@ -395,15 +428,54 @@ describe('BulkDispatchModal · disparo oficial', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
     await userEvent.click(await screen.findByRole('combobox', { name: 'Modelo' }));
     await userEvent.click(await screen.findByRole('option', { name: /oferta/ }));
-    await userEvent.type(screen.getByLabelText('Teto de gasto (R$)'), '12,5');
+  };
+  const criarComTeto = async (teto: string) => {
+    await irProModeloOficial();
+    if (teto) await userEvent.type(screen.getByLabelText('Teto de gasto (R$)'), teto);
     await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
+  };
+  const disparar = async () => {
     await userEvent.click(await screen.findByRole('button', { name: /Disparar pra 300/ }));
     await waitFor(() => expect(s.criar).toHaveBeenCalled());
-    const payload = s.criar.mock.calls[0][0];
+    return s.criar.mock.calls[0][0];
+  };
+
+  it('cria pelo modelo aprovado com o teto de gasto, o ritmo normal e sem número de saída', async () => {
+    await criarComTeto('12,5');
+    const payload = await disparar();
     expect(payload).toMatchObject({ channel_kind: 'whatsapp_cloud', pace: 'normal', max_spend: 12.5 });
     expect(payload.template_config).toMatchObject({ template_name: 'oferta' });
     expect(payload.inbox_id).toBeUndefined();
+  });
+
+  it('teto no jeito brasileiro: "1.000,00" vira 1000 e o resumo mostra o teto', async () => {
+    await criarComTeto('1.000,00');
+    expect(await screen.findByText('Teto de gasto')).toBeInTheDocument();
+    expect(screen.getByText(/^R\$\s1\.000,00$/)).toBeInTheDocument();
+    expect(await disparar()).toMatchObject({ max_spend: 1000 });
+  });
+
+  it('"1.000" é mil reais, não um real', async () => {
+    await criarComTeto('R$ 1.000');
+    expect(await disparar()).toMatchObject({ max_spend: 1000 });
+  });
+
+  it('teto que não é valor mostra o erro embaixo do campo e não deixa avançar', async () => {
+    await irProModeloOficial();
+    await userEvent.type(screen.getByLabelText('Teto de gasto (R$)'), '12abc');
+    expect(screen.getByRole('alert')).toHaveTextContent('Digite o valor em reais, como 150 ou 1.000,00.');
+    expect(screen.getByRole('button', { name: 'Próximo' })).toBeDisabled();
+    await userEvent.clear(screen.getByLabelText('Teto de gasto (R$)'));
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Próximo' })).toBeEnabled();
+  });
+
+  it('sem teto, o resumo diz "Sem teto" e o disparo vai sem limite de gasto', async () => {
+    await criarComTeto('');
+    expect(await screen.findByText('Sem teto')).toBeInTheDocument();
+    const payload = await disparar();
+    expect(payload.max_spend).toBeUndefined();
   });
 });
 

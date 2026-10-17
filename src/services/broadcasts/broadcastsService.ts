@@ -62,12 +62,20 @@ export interface BroadcastCampaign {
   flow_automation_id?: string | null;
   flow_name?: string | null;
   mode?: BroadcastMode;
-  pause_reason?: string | null;
+  pause_reason?: BroadcastPauseReason | null;
+  /** A frase da pausa automática, pronta pra tela (vem do servidor pra todo motivo). */
   pause_message?: string | null;
   pending_count?: number;
   estimated_finish_at?: string | null;
   created_by_name?: string | null;
 }
+
+/**
+ * Por que o motor pausou sozinho. A tela não traduz o motivo: mostra o
+ * `pause_message` que o servidor manda (motivo novo aparece sem mexer aqui).
+ * 'number_removed' = o número de saída escolhido não existe mais.
+ */
+export type BroadcastPauseReason = 'number_disconnected' | 'number_removed' | 'funnel_disabled' | 'spend_cap';
 
 /** Número de WhatsApp que pode mandar o disparo. */
 export interface SenderOption {

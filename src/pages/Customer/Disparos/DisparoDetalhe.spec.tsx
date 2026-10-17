@@ -71,7 +71,7 @@ describe('DisparoDetalhe', () => {
     s.get.mockResolvedValue({ ...campanha, mode: 'flow', flow_name: 'Boas-vindas' });
     s.items.mockResolvedValue(fila([{ ...linhas[0], status: 'in_funnel' }]));
     tela();
-    expect(await screen.findByText(/Entrou no funil às/)).toBeInTheDocument();
+    expect(await screen.findByText(/^Entrou no funil (às|em)/)).toBeInTheDocument();
     expect(screen.getByText('Funil Boas-vindas')).toBeInTheDocument();
     expect(within(screen.getByRole('list', { name: 'Números do disparo' })).getByText('Entraram no funil')).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Entraram no funil' })).toBeInTheDocument();
@@ -92,12 +92,40 @@ describe('DisparoDetalhe', () => {
     await screen.findByText('Maria');
     const link = screen.getByRole('link', { name: 'Maria' });
     expect(link).toHaveAttribute('href', `/conversations/${UUID}`);
-    await userEvent.click(screen.getByText(/Enviada às/));
+    await userEvent.click(screen.getByText(/^Enviada (às|em)/));
     expect(s.navegar).toHaveBeenCalledWith(`/conversations/${UUID}`);
     s.navegar.mockReset();
     expect(screen.queryByRole('link', { name: 'João' })).toBeNull();
     await userEvent.click(screen.getByText('João'));
     expect(s.navegar).not.toHaveBeenCalled();
+  });
+
+  it('enviada hoje mostra só a hora; de outro dia mostra a data (hora de São Paulo)', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-16T20:00:00Z')); // 16/10 17:00 em SP
+    s.items.mockResolvedValue(fila([
+      linhas[0],
+      { ...linhas[1], id: 'i5', lead_name: 'Bia', status: 'sent', reason: null, sent_at: '2026-10-15T12:05:00Z' },
+    ]));
+    tela();
+    expect(await screen.findByText('Enviada às 14:32')).toBeInTheDocument();
+    expect(screen.getByText('Enviada em 15/10 às 09:05')).toBeInTheDocument();
+  });
+
+  it('no modo funil, entrada de outro dia mostra a data', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-17T13:00:00Z'));
+    s.get.mockResolvedValue({ ...campanha, mode: 'flow', flow_name: 'Boas-vindas' });
+    s.items.mockResolvedValue(fila([{ ...linhas[0], status: 'in_funnel' }]));
+    tela();
+    expect(await screen.findByText('Entrou no funil em 16/10 às 14:32')).toBeInTheDocument();
+  });
+
+  it('pausado porque o número de saída não existe mais mostra a frase do servidor', async () => {
+    const aviso = 'O número de saída deste disparo não existe mais. Crie um novo disparo.';
+    s.get.mockResolvedValue({ ...campanha, status: 'paused', pause_reason: 'number_removed', pause_message: aviso });
+    tela();
+    expect(await screen.findByText(aviso)).toBeInTheDocument();
   });
 
   it('o filtro "Falhas" chama a fila só com as falhas, na página 1', async () => {
