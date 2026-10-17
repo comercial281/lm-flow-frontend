@@ -71,8 +71,15 @@ export function guidePendingText(steps: GuideStep[], prefix = 'Falta terminar o 
   return step ? `${prefix}: ${stepLabel(step)} — ${step.title}.` : null;
 }
 
+/** Campos que, no bloco de mensagem, cumprem o "text" obrigatório do guia. */
+export const MESSAGE_CONTENT_FIELDS = ['text', 'media_url', 'contact_phone'] as const;
+
 /** Leitura de campo com ponto (`params.group_jid`), igual ao servidor (`Guide.filled?`). */
-export function fieldFilled(config: Record<string, unknown> | null | undefined, path: string): boolean {
+export function fieldFilled(config: Record<string, unknown> | null | undefined, path: string, kind?: string): boolean {
+  // Bloco de mensagem: o "text" do guia vale com texto, arquivo ou contato (mesma régua do servidor).
+  if (kind === 'send_whatsapp' && path === 'text') {
+    return MESSAGE_CONTENT_FIELDS.some(field => fieldFilled(config, field));
+  }
   const value = path.split('.').reduce<unknown>(
     (acc, key) => (acc && typeof acc === 'object' && !Array.isArray(acc) ? (acc as Record<string, unknown>)[key] : undefined),
     config ?? {},
@@ -91,9 +98,9 @@ const REQUIRED_MESSAGES: Record<string, string> = {
 };
 
 /** O que falta preencher pro passo do guia contar, ou null. */
-export function guideRequiredProblem(guide: Pick<FlowNodeGuide, 'required'> | null | undefined, config: Record<string, unknown>): string | null {
+export function guideRequiredProblem(guide: Pick<FlowNodeGuide, 'required'> | null | undefined, config: Record<string, unknown>, kind?: string): string | null {
   for (const field of guide?.required ?? []) {
-    if (!fieldFilled(config, field)) return REQUIRED_MESSAGES[field] ?? 'Preencha este bloco antes de salvar.';
+    if (!fieldFilled(config, field, kind)) return REQUIRED_MESSAGES[field] ?? 'Preencha este bloco antes de salvar.';
   }
   return null;
 }
