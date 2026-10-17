@@ -235,11 +235,13 @@ export function newTempId(): string {
   return `tmp_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-// Grupo visual por kind — mirror de cores.ts do Hub (5 grupos, não por tipo,
+// Grupo visual por kind — mirror de cores.ts do Hub (6 grupos, não por tipo,
 // senão 22 tipos viram confete).
 export const GROUP_COLORS: Record<string, string> = {
   message: '#7C3AED',
   contact: '#0891B2',
+  ai: '#4F46E5',
+  distribution: '#EA580C',
   control: '#D97706',
   notify: '#DB2777',
 };

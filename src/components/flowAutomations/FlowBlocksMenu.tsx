@@ -1,32 +1,39 @@
-import { useMemo, useState } from 'react';
-import { Search, X } from 'lucide-react';
-import { Input } from '@/components/ui/ds';
-import IconActionButton from '@/components/base/IconActionButton';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Search } from 'lucide-react';
+import { Input, Popover, PopoverContent, PopoverTrigger } from '@/components/ui/ds';
 import EmptyState from '@/components/base/EmptyState';
 import { nodeColor } from '@/lib/flowAutomationGraph';
 import { paletteGroups, type PaletteItem } from '@/features/flowAutomations/palette';
 import { blockDescription, blockIcon } from '@/features/flowAutomations/blockInfo';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 import { INDISPONIVEL } from '@/features/flowAutomations/personal';
-import { MOBILE_QUERY } from './FlowBlockDialog';
 
-// Painel "Blocos" (sprint 4, spec 04/10/2026, A.2): abre e fecha pelo botão no
-// canto do canvas, com busca e as seções Mensagem pro lead · Lead · Avisos ·
-// Controle (a composição continua em palette.ts). Clicar num bloco ou
-// arrastá-lo pro canvas coloca o bloco no fluxo. No celular, tela cheia.
+// Lista "Blocos" (spec 16/10/2026, peça 5): desce embaixo do botão Blocos, com
+// busca e os grupos Mensagem · Lead · IA · Distribuição · Notificação · Controle
+// (a composição continua em palette.ts). Clicar num bloco ou arrastá-lo pro
+// canvas coloca o bloco no fluxo. Começa fechada e não lembra como ficou.
 
 /** Tipo do arraste do painel pro canvas (o valor é a `key` do bloco). */
 export const BLOCK_DRAG_TYPE = 'application/x-lmflow-bloco';
 
 interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onPick: (item: PaletteItem) => void;
-  onClose: () => void;
   /** Corretor: 'fora' some da lista, 'indisponivel' fica cinza e sem clique nem arraste. */
   estadoDoBloco?: (item: PaletteItem) => 'ok' | 'indisponivel' | 'fora';
+  /** O botão que abre a lista (a lista desce embaixo dele). */
+  trigger: ReactNode;
+  /**
+   * A lista abriu pelo "+" de uma saída: o nome da saída ("Sim", "Continuar"…).
+   * `null`/ausente = a lista abriu pelo botão Blocos.
+   */
+  pendingLabel?: string | null;
+  /** O "cancelar" da linha da saída: volta a ligar no fim do caminho. */
+  onCancelPending?: () => void;
 }
 
-export function FlowBlocksPanel({ onPick, onClose, estadoDoBloco }: Props) {
+export function FlowBlocksMenu({ open, onOpenChange, onPick, estadoDoBloco, trigger, pendingLabel = null, onCancelPending }: Props) {
   const [query, setQuery] = useState('');
   const groups = useMemo(() => {
     const all = paletteGroups(query);
@@ -35,29 +42,32 @@ export function FlowBlocksPanel({ onPick, onClose, estadoDoBloco }: Props) {
       .map(g => ({ ...g, items: g.items.filter(i => estadoDoBloco(i) !== 'fora') }))
       .filter(g => g.items.length > 0);
   }, [query, estadoDoBloco]);
-  const isMobile = useMediaQuery(MOBILE_QUERY);
 
   return (
-    <div
-      role="region"
-      aria-label="Blocos"
-      data-testid="painel-blocos"
-      data-layout={isMobile ? 'tela-cheia' : 'lateral'}
-      className={cn(
-        'flex flex-col bg-background',
-        isMobile ? 'fixed inset-0 z-50 w-full' : 'h-full w-64 shrink-0 border-r border-border',
-      )}
+    <Popover
+      open={open}
+      onOpenChange={next => {
+        if (!next) setQuery('');
+        onOpenChange(next);
+      }}
     >
-      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <span className="flex-1 text-sm font-semibold">Blocos</span>
-        <IconActionButton
-          label="Fechar os blocos"
-          icon={<X className="h-4 w-4" />}
-          variant="ghost"
-          className="h-7 w-7"
-          onClick={onClose}
-        />
-      </div>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      <PopoverContent
+        align="start"
+        role="region"
+        aria-label="Blocos"
+        data-testid="painel-blocos"
+        className="flex max-h-[min(70dvh,32rem)] w-72 flex-col p-0"
+      >
+      {pendingLabel != null && (
+        // Fica dentro da lista: um aviso solto no canvas ficaria embaixo dela.
+        <div data-testid="saida-pendente" className="border-b border-border bg-primary/10 px-3 py-1.5 text-xs text-primary">
+          Ligando na saída "{pendingLabel}"
+          {onCancelPending && (
+            <button type="button" className="ml-2 underline" onClick={onCancelPending}>cancelar</button>
+          )}
+        </div>
+      )}
       <div className="p-2 border-b border-border">
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
@@ -70,7 +80,7 @@ export function FlowBlocksPanel({ onPick, onClose, estadoDoBloco }: Props) {
           />
         </div>
       </div>
-      <div className="flex-1 overflow-auto p-2 space-y-3">
+      <div className="flex-1 overflow-auto overscroll-contain p-2 space-y-3" onWheel={ev => ev.stopPropagation()}>
         {groups.length === 0 && (
           <EmptyState tipo="semResultado" tamanho="compacto" title="Nenhum bloco com esse nome." className="p-3 text-xs" />
         )}
@@ -136,6 +146,7 @@ export function FlowBlocksPanel({ onPick, onClose, estadoDoBloco }: Props) {
           </section>
         ))}
       </div>
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }

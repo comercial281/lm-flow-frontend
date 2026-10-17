@@ -197,7 +197,7 @@ export interface TestRunResult {
 
 // Mirror de `PASSOS`/`DEF_POR_TIPO` de data/fluxos.ts do Hub — catálogo de
 // blocos pra paleta do canvas. Cor/ícone ficam em flowAutomationGraph.ts.
-export const FLOW_NODE_GROUPS = ['message', 'notify', 'contact', 'control'] as const;
+export const FLOW_NODE_GROUPS = ['message', 'contact', 'ai', 'distribution', 'notify', 'control'] as const;
 export type FlowNodeGroup = (typeof FLOW_NODE_GROUPS)[number];
 
 export interface FlowNodeDef {
@@ -235,8 +235,8 @@ export const FLOW_NODE_DEFS: FlowNodeDef[] = [
   // Nome e grupo de cada ação vêm de features/flowAutomations/leadAction.ts.
   { kind: 'lead_action', label: 'Ação', group: 'contact', canFail: true, defaultConfig: { action_type: '', params: {} } },
   { kind: 'followup_recovered', label: 'Marcar como recuperado pelo follow-up', group: 'contact', canFail: false, defaultConfig: {} },
-  { kind: 'hand_to_ai', label: 'Passar para a IA', group: 'contact', canFail: false, defaultConfig: {} },
-  { kind: 'disable_ai', label: 'Desligar a IA', group: 'contact', canFail: false, defaultConfig: {} },
+  { kind: 'hand_to_ai', label: 'Passar para a IA', group: 'ai', canFail: false, defaultConfig: {} },
+  { kind: 'disable_ai', label: 'Desligar a IA', group: 'ai', canFail: false, defaultConfig: {} },
 ];
 
 export const FLOW_NODE_DEF_BY_KIND: Record<FlowNodeKind, FlowNodeDef> = FLOW_NODE_DEFS.reduce(
