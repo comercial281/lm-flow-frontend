@@ -273,7 +273,7 @@ function partesEmSaoPaulo(d: Date) {
 
 /**
  * "termina hoje por volta das 15h" · "termina amanhã por volta das 9h" ·
- * "termina sexta por volta das 11h" (até 6 dias depois de amanhã) · "termina em 24/10 por volta das 15h".
+ * "termina sexta por volta das 11h" (de 2 a 6 dias à frente) · "termina em 24/10 por volta das 15h".
  * Hora arredondada pra cima na hora cheia, sempre no fuso de São Paulo.
  */
 export function terminaPorVoltaDe(iso: string, agora: Date = new Date()): string {
@@ -286,7 +286,7 @@ export function terminaPorVoltaDe(iso: string, agora: Date = new Date()): string
   let quando: string;
   if (dias <= 0) quando = 'hoje';
   else if (dias === 1) quando = 'amanhã';
-  else if (dias <= 7) quando = DIAS_DA_SEMANA[new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay()];
+  else if (dias <= 6) quando = DIAS_DA_SEMANA[new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay()];
   else quando = `em ${String(p.day).padStart(2, '0')}/${String(p.month).padStart(2, '0')}`;
   return `termina ${quando} por volta das ${horaCheia}h`;
 }

@@ -213,7 +213,7 @@ export interface AudiencePreviewFull {
   count: number;
   excluded: Required<AudienceExcluded>;
   /** Término previsto (ISO) em cada ritmo. */
-  eta: Record<BroadcastPace, string>;
+  eta: Partial<Record<BroadcastPace, string>>;
 }
 
 class BroadcastsService {
@@ -259,7 +259,7 @@ class BroadcastsService {
     return {
       count: d?.count ?? 0,
       excluded: { opt_out: 0, frequency: 0, other_owner: 0, busy: 0, ...(d?.excluded ?? {}) },
-      eta: d?.eta ?? ({} as Record<BroadcastPace, string>),
+      eta: d?.eta ?? {},
     };
   }
 

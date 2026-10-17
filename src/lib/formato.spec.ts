@@ -202,6 +202,10 @@ describe('terminaPorVoltaDe', () => {
     expect(terminaPorVoltaDe('2026-10-17T13:00:00Z', agora)).toBe('termina sábado por volta das 10h');
     expect(terminaPorVoltaDe('2026-10-19T13:00:00Z', agora)).toBe('termina segunda por volta das 10h');
   });
+  it('exatamente 6 dias usa o dia da semana, 7 dias usa a data', () => {
+    expect(terminaPorVoltaDe('2026-10-19T13:00:00Z', agora)).toBe('termina segunda por volta das 10h');
+    expect(terminaPorVoltaDe('2026-10-20T13:00:00Z', agora)).toBe('termina em 20/10 por volta das 10h');
+  });
   it('mais longe usa a data', () => {
     expect(terminaPorVoltaDe('2026-10-23T17:20:00Z', agora)).toBe('termina em 23/10 por volta das 15h');
   });
