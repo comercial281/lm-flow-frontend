@@ -71,9 +71,18 @@ describe('Disparos', () => {
   it('clicar na linha abre o disparo', async () => {
     s.listAll.mockResolvedValue(resposta([c1]));
     tela();
-    await userEvent.click(await screen.findByText('Oferta junho'));
+    await userEvent.click(await screen.findByText('Normal'));
     expect(s.navegar).toHaveBeenCalledWith('/disparos/c1');
     expect(s.navegar).toHaveBeenCalledTimes(1);
+  });
+
+  it('o nome do disparo é um link pro detalhe e não navega duas vezes', async () => {
+    s.listAll.mockResolvedValue(resposta([c1]));
+    tela();
+    const link = await screen.findByRole('link', { name: 'Oferta junho' });
+    expect(link).toHaveAttribute('href', '/disparos/c1');
+    await userEvent.click(link);
+    expect(s.navegar).not.toHaveBeenCalled();
   });
 
   it('pausado com motivo mostra a frase', async () => {

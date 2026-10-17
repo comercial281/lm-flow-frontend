@@ -432,4 +432,22 @@ describe('BulkDispatchModal · seletor de funil (página Disparos)', () => {
     await waitFor(() => expect(s.etapas).toHaveBeenLastCalledWith('p2'));
     await waitFor(() => expect(s.previa).toHaveBeenLastCalledWith('p2', expect.anything(), expect.anything()));
   });
+
+  it('duas cargas de etapas fora de ordem deixam as etapas do funil mais novo', async () => {
+    abrirComFunis();
+    const seletor = await screen.findByLabelText('Funil');
+    await waitFor(() => expect(s.etapas).toHaveBeenCalledWith('p1'));
+    const adiado: Record<string, (v: unknown) => void> = {};
+    s.etapas.mockImplementation((id: string) => new Promise(r => { adiado[id] = r; }));
+    await userEvent.selectOptions(seletor, 'p2');
+    await userEvent.selectOptions(seletor, 'p1');
+    // a do p1 (mais nova) chega antes; a do p2 (velha) chega depois
+    adiado['p1']({ data: [{ id: 'sp1', name: 'Etapa do Vendas' }] });
+    adiado['p2']({ data: [{ id: 'sp2', name: 'Etapa da Locação' }] });
+    await userEvent.click(await screen.findByRole('combobox', { name: /Enviar para/ }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Uma etapa específica' }));
+    await userEvent.click(await screen.findByRole('combobox', { name: /Etapa/ }));
+    expect(await screen.findByRole('option', { name: 'Etapa do Vendas' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Etapa da Locação' })).toBeNull();
+  });
 });

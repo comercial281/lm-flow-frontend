@@ -266,12 +266,14 @@ export default function BulkDispatchModal({
       });
   }, []);
 
+  const ultimaCargaEtapas = useRef(0);
   const carregarEtapas = useCallback((id: string) => {
+    const vez = ++ultimaCargaEtapas.current;
     setEtapasDoFunil([]);
     pipelinesService
       .getPipelineStages(id)
-      .then(r => setEtapasDoFunil(r.data || []))
-      .catch(() => setEtapasDoFunil([]));
+      .then(r => { if (vez === ultimaCargaEtapas.current) setEtapasDoFunil(r.data || []); })
+      .catch(() => { if (vez === ultimaCargaEtapas.current) setEtapasDoFunil([]); });
   }, []);
 
   const escolherFunil = useCallback((id: string) => {
@@ -283,7 +285,10 @@ export default function BulkDispatchModal({
 
   // Ao abrir: zera a janela e carrega números, etiquetas, variáveis e canais oficiais.
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      ultimaCargaEtapas.current++; // resposta que chega depois de fechar não vale
+      return;
+    }
     resetWizard();
     setFunilId(pipelineIdProp);
     if (funis) carregarEtapas(pipelineIdProp);

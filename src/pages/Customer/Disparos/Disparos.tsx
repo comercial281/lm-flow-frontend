@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Pagina, BaseHeader, BasePagination } from '@/components/base';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
@@ -173,10 +173,15 @@ export default function Disparos() {
                           className="border-t border-border/60 hover:bg-muted/20 transition-colors cursor-pointer"
                         >
                           <td className="px-4 py-3 font-medium max-w-[220px]">
-                            {/* O botão é o ponto de teclado; o clique sobe pra linha, que navega. */}
-                            <button type="button" className="max-w-full truncate text-left hover:underline focus-visible:underline outline-none" title={c.name}>
+                            {/* O link é o ponto de teclado (e do ctrl+clique); o resto da linha também navega. */}
+                            <Link
+                              to={`/disparos/${c.id}`}
+                              onClick={e => e.stopPropagation()}
+                              className="block max-w-full truncate hover:underline focus-visible:underline outline-none"
+                              title={c.name}
+                            >
                               {c.name}
-                            </button>
+                            </Link>
                           </td>
                           <td className="px-4 py-3">
                             <div>{c.sender_name ?? ''}</div>
@@ -227,7 +232,8 @@ export default function Disparos() {
             open={janelaAberta}
             onOpenChange={o => {
               setJanelaAberta(o);
-              if (!o) carregar();
+              // Disparo novo entra no topo: volta pra página 1 (se já está nela, só recarrega).
+              if (!o) { if (pagina === 1) carregar(); else setPagina(1); }
             }}
             pipelineId={funilDaJanela}
             pipelineName={funis.find(f => f.id === funilDaJanela)?.name}
