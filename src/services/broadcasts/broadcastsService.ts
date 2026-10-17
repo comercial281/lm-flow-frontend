@@ -4,6 +4,10 @@ import { extractData } from '@/utils/apiHelpers';
 export type AudienceMode = 'pipeline' | 'stage' | 'manual' | 'tag';
 export type BroadcastStatus = 'running' | 'paused' | 'completed' | 'cancelled' | 'failed';
 
+/** Ritmo do disparo: pacotes fixos (o servidor traduz em intervalo, lote e pausa). */
+export type BroadcastPace = 'fast' | 'normal' | 'slow';
+export type BroadcastMode = 'flow' | 'message' | 'template';
+
 export interface BroadcastVariation {
   kind: 'text' | 'image' | 'audio' | 'video';
   text: string;
@@ -51,6 +55,42 @@ export interface BroadcastCampaign {
   next_run_at: string;
   completed_at: string | null;
   created_at: string;
+  pace?: BroadcastPace | null;
+  inbox_id?: string | null;
+  sender_name?: string | null;
+  sender_phone?: string | null;
+  flow_automation_id?: string | null;
+  flow_name?: string | null;
+  mode?: BroadcastMode;
+  pause_reason?: string | null;
+  pause_message?: string | null;
+  pending_count?: number;
+  estimated_finish_at?: string | null;
+  created_by_name?: string | null;
+}
+
+/** Número de WhatsApp que pode mandar o disparo. */
+export interface SenderOption {
+  inbox_id: string;
+  name: string;
+  phone: string;
+  connection: string;
+  owner_name: string | null;
+  provider: string;
+  sendable: boolean;
+  reason?: 'disconnected' | 'unsupported' | null;
+}
+
+export type BroadcastItemStatus = 'pending' | 'sending' | 'sent' | 'in_funnel' | 'failed' | 'skipped' | 'cancelled';
+
+export interface BroadcastItemRow {
+  id: string;
+  lead_name: string | null;
+  phone: string | null;
+  status: BroadcastItemStatus;
+  reason: string | null;
+  sent_at: string | null;
+  conversation_id: string | null;
 }
 
 export interface BroadcastAudience {
@@ -129,11 +169,18 @@ export interface CreateBroadcastPayload {
   variations?: BroadcastVariation[];
   /** Destino pós-envio: mover pra etapa + criar/aplicar tag. */
   post_send?: { stage_id?: string; label?: string };
-  min_interval_seconds: number;
-  max_interval_seconds: number;
-  batch_size: number;
-  batch_pause_seconds: number;
-  business_hours_only: boolean;
+  /** Ritmo (pacote). O servidor define intervalo, lote e pausa. */
+  pace?: BroadcastPace;
+  /** Número de WhatsApp de saída. */
+  inbox_id?: string;
+  /** Funil de mensagens (fluxo) que o disparo executa. */
+  flow_automation_id?: string;
+  /** Legado: não são mais mandados pela tela nova. */
+  min_interval_seconds?: number;
+  max_interval_seconds?: number;
+  batch_size?: number;
+  batch_pause_seconds?: number;
+  business_hours_only?: boolean;
   /** Teto de gasto em REAIS (Fase 4); backend converte pra centavos. */
   max_spend?: number;
   /** Não reenviar pra quem recebeu disparo nos últimos N dias (0 = off, Fase 5). */
@@ -156,6 +203,17 @@ export interface CostEstimate {
 export interface AudienceExcluded {
   opt_out: number;
   frequency: number;
+  /** Lead de outro corretor naquele número (só com inbox_id). */
+  other_owner?: number;
+  /** Já está em outro disparo em andamento. */
+  busy?: number;
+}
+
+export interface AudiencePreviewFull {
+  count: number;
+  excluded: Required<AudienceExcluded>;
+  /** Término previsto (ISO) em cada ritmo. */
+  eta: Record<BroadcastPace, string>;
 }
 
 class BroadcastsService {
@@ -164,6 +222,59 @@ class BroadcastsService {
   async list(pipelineId: string): Promise<BroadcastCampaign[]> {
     const res = await api.get(this.base, { params: { pipeline_id: pipelineId } });
     return extractData<BroadcastCampaign[]>(res) || [];
+  }
+
+  async listAll(params?: { pipeline_id?: string; page?: number }): Promise<{
+    data: BroadcastCampaign[];
+    meta: { total: number; page: number; per_page: number };
+  }> {
+    const res = await api.get(this.base, { params });
+    const body = res?.data ?? {};
+    return {
+      data: (body.data as BroadcastCampaign[]) ?? [],
+      meta: body.meta ?? { total: 0, page: 1, per_page: 0 },
+    };
+  }
+
+  async get(id: string): Promise<BroadcastCampaign> {
+    return extractData<BroadcastCampaign>(await api.get(`${this.base}/${id}`));
+  }
+
+  async senderOptions(): Promise<{ data: SenderOption[]; default_inbox_id: string | null }> {
+    const body = (await api.get(`${this.base}/sender_options`))?.data ?? {};
+    return { data: body.data ?? [], default_inbox_id: body.default_inbox_id ?? null };
+  }
+
+  async audiencePreviewFull(
+    pipelineId: string,
+    audience: BroadcastAudience,
+    inboxId?: string,
+  ): Promise<AudiencePreviewFull> {
+    const res = await api.post(`${this.base}/audience_preview`, {
+      pipeline_id: pipelineId,
+      audience,
+      inbox_id: inboxId,
+    });
+    const d = extractData<Partial<AudiencePreviewFull>>(res);
+    return {
+      count: d?.count ?? 0,
+      excluded: { opt_out: 0, frequency: 0, other_owner: 0, busy: 0, ...(d?.excluded ?? {}) },
+      eta: d?.eta ?? ({} as Record<BroadcastPace, string>),
+    };
+  }
+
+  async items(
+    id: string,
+    params?: { status?: BroadcastItemStatus; page?: number },
+  ): Promise<{
+    data: BroadcastItemRow[];
+    meta: { total: number; page: number; per_page: number; counts: Record<string, number> };
+  }> {
+    const body = (await api.get(`${this.base}/${id}/items`, { params }))?.data ?? {};
+    return {
+      data: body.data ?? [],
+      meta: body.meta ?? { total: 0, page: 1, per_page: 0, counts: {} },
+    };
   }
 
   async create(payload: CreateBroadcastPayload): Promise<BroadcastCampaign> {

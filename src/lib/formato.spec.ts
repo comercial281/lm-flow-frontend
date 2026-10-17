@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { data, dataCurta, hora, dataHora, numero, porcentagem, dinheiro, dolar, plural, telefone, capitalizar, tempoDesde, quandoMudou, quandoAcontece, toDate, VAZIO, moedaValida } from './formato';
+import { data, dataCurta, hora, dataHora, numero, porcentagem, dinheiro, dolar, plural, telefone, capitalizar, tempoDesde, quandoMudou, quandoAcontece, terminaPorVoltaDe, toDate, VAZIO, moedaValida } from './formato';
 
 // Espaço não-quebrável: é o que o Intl põe entre "R$" e o número (não quebra linha).
 const NB = ' ';
@@ -181,5 +181,32 @@ describe('capitalizar', () => {
   it('capitaliza só a primeira letra', () => {
     expect(capitalizar('terça-feira, 13 de outubro')).toBe('Terça-feira, 13 de outubro');
     expect(capitalizar('')).toBe('');
+  });
+});
+
+describe('terminaPorVoltaDe', () => {
+  // terça 13/10/2026, 10:00 em São Paulo (UTC-3)
+  const agora = new Date('2026-10-13T13:00:00Z');
+
+  it('hoje, hora arredondada pra cima', () => {
+    expect(terminaPorVoltaDe('2026-10-13T17:20:00Z', agora)).toBe('termina hoje por volta das 15h');
+  });
+  it('hora cheia exata não sobe', () => {
+    expect(terminaPorVoltaDe('2026-10-13T18:00:00Z', agora)).toBe('termina hoje por volta das 15h');
+  });
+  it('amanhã', () => {
+    expect(terminaPorVoltaDe('2026-10-14T11:40:00Z', agora)).toBe('termina amanhã por volta das 9h');
+  });
+  it('até 6 dias usa o dia da semana', () => {
+    expect(terminaPorVoltaDe('2026-10-16T13:10:00Z', agora)).toBe('termina sexta por volta das 11h');
+    expect(terminaPorVoltaDe('2026-10-17T13:00:00Z', agora)).toBe('termina sábado por volta das 10h');
+    expect(terminaPorVoltaDe('2026-10-19T13:00:00Z', agora)).toBe('termina segunda por volta das 10h');
+  });
+  it('mais longe usa a data', () => {
+    expect(terminaPorVoltaDe('2026-10-23T17:20:00Z', agora)).toBe('termina em 23/10 por volta das 15h');
+  });
+  it('usa o fuso de São Paulo, não o do navegador', () => {
+    // 01:30Z do dia 14 ainda é noite do dia 13 em SP
+    expect(terminaPorVoltaDe('2026-10-14T01:30:00Z', agora)).toBe('termina hoje por volta das 23h');
   });
 });

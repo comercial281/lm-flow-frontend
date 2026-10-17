@@ -251,3 +251,42 @@ export function tempoDesde(desde: Date | string | number, agora: Date = new Date
   const dias = Math.floor(horas / 24);
   return dias === 1 ? 'há 1 dia' : `há ${dias} dias`;
 }
+
+const fmtPartesSp = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Sao_Paulo',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+});
+
+const DIAS_DA_SEMANA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+
+function partesEmSaoPaulo(d: Date) {
+  const p: Record<string, number> = {};
+  for (const x of fmtPartesSp.formatToParts(d)) if (x.type !== 'literal') p[x.type] = Number(x.value);
+  return p;
+}
+
+/**
+ * "termina hoje por volta das 15h" · "termina amanhã por volta das 9h" ·
+ * "termina sexta por volta das 11h" (até 6 dias depois de amanhã) · "termina em 24/10 por volta das 15h".
+ * Hora arredondada pra cima na hora cheia, sempre no fuso de São Paulo.
+ */
+export function terminaPorVoltaDe(iso: string, agora: Date = new Date()): string {
+  const d = toDate(iso);
+  if (!d) return VAZIO;
+  const p = partesEmSaoPaulo(d);
+  const a = partesEmSaoPaulo(agora);
+  const horaCheia = p.minute > 0 || p.second > 0 ? p.hour + 1 : p.hour;
+  const dias = Math.round((Date.UTC(p.year, p.month - 1, p.day) - Date.UTC(a.year, a.month - 1, a.day)) / 86_400_000);
+  let quando: string;
+  if (dias <= 0) quando = 'hoje';
+  else if (dias === 1) quando = 'amanhã';
+  else if (dias <= 7) quando = DIAS_DA_SEMANA[new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay()];
+  else quando = `em ${String(p.day).padStart(2, '0')}/${String(p.month).padStart(2, '0')}`;
+  return `termina ${quando} por volta das ${horaCheia}h`;
+}
