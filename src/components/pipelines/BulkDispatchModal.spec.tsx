@@ -373,3 +373,32 @@ describe('BulkDispatchModal · espera as cargas', () => {
     expect(screen.queryByText('Conecte um número oficial em Integrações')).toBeNull();
   });
 });
+
+describe('BulkDispatchModal · disparo oficial', () => {
+  it('cria pelo modelo aprovado com o teto de gasto, o ritmo normal e sem número de saída', async () => {
+    s.canais.mockResolvedValue([
+      {
+        inbox_id: 'of1', name: 'Oficial 1', phone_number: '5511999990000',
+        templates: [{ name: 'oferta', language: 'pt_BR', category: 'marketing', status: 'APPROVED', approved: true, variables: [], variable_count: 0, content: 'Oi!' }],
+      },
+    ]);
+    abrir();
+    await screen.findByText('300 leads');
+    const oficial = screen.getByRole('radio', { name: 'WhatsApp oficial (modelo aprovado)' });
+    await waitFor(() => expect(oficial).not.toHaveAttribute('aria-disabled'));
+    await userEvent.click(oficial);
+    await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Modelo' }));
+    await userEvent.click(await screen.findByRole('option', { name: /oferta/ }));
+    await userEvent.type(screen.getByLabelText('Teto de gasto (R$)'), '12,5');
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Disparar pra 300/ }));
+    await waitFor(() => expect(s.criar).toHaveBeenCalled());
+    const payload = s.criar.mock.calls[0][0];
+    expect(payload).toMatchObject({ channel_kind: 'whatsapp_cloud', pace: 'normal', max_spend: 12.5 });
+    expect(payload.template_config).toMatchObject({ template_name: 'oferta' });
+    expect(payload.inbox_id).toBeUndefined();
+  });
+});
+

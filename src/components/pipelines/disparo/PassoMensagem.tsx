@@ -166,9 +166,8 @@ function ModeloOficial(p: Props) {
             <CampoDaJanela rotulo="Teto de gasto (R$)" htmlFor="disparo-teto" ajuda="Opcional. O disparo para quando chegar nesse valor.">
               <Input
                 id="disparo-teto"
-                type="number"
-                min={0}
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={p.tetoDeGasto}
                 onChange={e => p.aoMudarTeto(e.target.value)}
                 className="h-9"

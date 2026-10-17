@@ -418,6 +418,7 @@ export default function BulkDispatchModal({
     setCreating(true);
     setStep('creating');
     try {
+      const teto = Number(maxSpend.trim().replace(',', '.'));
       const campanha = await broadcastsService.create({
         name: campaignName.trim() || undefined,
         pipeline_id: pipelineId,
@@ -434,7 +435,7 @@ export default function BulkDispatchModal({
             ? { stage_id: postStageId || undefined, label: postLabel.trim() || undefined }
             : undefined,
         pace,
-        max_spend: cloudMode && maxSpend.trim() ? Number(maxSpend.replace(',', '.')) : undefined,
+        max_spend: cloudMode && Number.isFinite(teto) && teto > 0 ? teto : undefined,
       });
       setCreatedId(campanha?.id ?? '');
       setStep('done');
