@@ -9001,6 +9001,14 @@ Armadilhas:
 4. **No vão entre dois cards, a coluna acha o card abaixo do cursor** (`[data-card-id]`), senão o esqueleto pularia pro topo a cada vão e voltaria. O esqueleto segura o próprio dragover (`stopPropagation`).
 5. **O esqueleto some quando o card já foi pro destino** (`limparEsqueleto` no `commitReorder`/`ganhar`), não quando o servidor responde: senão o card movido ficaria tracejado durante o pedido.
 
+## Automações: o mapa aberto recolhe o menu (desde 2026-10-16)
+
+Pedido do dono: abrir um mapa de fluxo pela lista tem que recolher o menu com o mesmo movimento de Conversas e do funil, e voltar à lista devolve o menu como estava.
+
+- **Menu:** `/automations/flow-builder/:id`, `/automations/message-funnels/:id` e `/automations/follow-ups/:id` entraram na `ROTA_RECOLHE_MENU`. As listas (`/automations`, `/automations/flow-builder`, `/automations/message-funnels`, `/automations/follow-ups`) não recolhem. Mesma regra: o botão do topo reabre, a escolha vale só pra visita e não mexe na preferência salva.
+
+Armadilha: a regex exige o id depois do segmento (`[^/]+`). Rota nova de mapa de Automações tem que entrar na mesma alternância, senão abre sem recolher.
+
 ## Funil: mini card ao passar o mouse (desde 2026-10-15)
 
 Pedido do dono: com o mouse parado em cima de um card do quadro, abre um resumo ao lado, sem abrir a janela. Ele escolheu a versão **Enxuto** numa página de comparação (Enxuto, Com etiquetas, Completo) e tirou a última mensagem.

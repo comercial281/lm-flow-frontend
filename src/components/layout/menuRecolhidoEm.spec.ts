@@ -48,4 +48,12 @@ describe('ROTA_RECOLHE_MENU', () => {
     expect(ROTA_RECOLHE_MENU.test('/conversations')).toBe(true);
     expect(ROTA_RECOLHE_MENU.test('/conversations/123')).toBe(true);
   });
+
+  it('o mapa aberto recolhe; as listas das Automações não', () => {
+    for (const url of ['/automations/flow-builder/abc', '/automations/message-funnels/abc', '/automations/follow-ups/abc'])
+      expect(ROTA_RECOLHE_MENU.test(url)).toBe(true);
+    for (const url of ['/automations', '/automations/flow-builder', '/automations/message-funnels', '/automations/follow-ups',
+      '/automations/follow-ups/', '/automations/lead-automations'])
+      expect(ROTA_RECOLHE_MENU.test(url)).toBe(false);
+  });
 });
