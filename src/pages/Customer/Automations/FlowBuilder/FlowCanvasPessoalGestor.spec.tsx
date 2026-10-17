@@ -32,8 +32,8 @@ vi.mock('@/hooks/useCan', () => ({
 vi.mock('@/store/authStore', () => ({
   useAuthStore: (sel: (s: unknown) => unknown) => sel({ currentUser: { id: 'g1' } }),
 }));
-vi.mock('@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors', async importOriginal => {
-  const original = await importOriginal<typeof import('@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors')>();
+vi.mock('@/features/flowAutomations/editores/LeadAutomationsEditors', async importOriginal => {
+  const original = await importOriginal<typeof import('@/features/flowAutomations/editores/LeadAutomationsEditors')>();
   const resources = {
     labels: [], sequences: [], followupFlows: [], users: [], pipelines: [],
     stagesByPipeline: {}, quickReplies: [], adOrigins: [], formOrigins: [], messageFunnels: [], conversationFunnels: [], evolutionInstances: [],

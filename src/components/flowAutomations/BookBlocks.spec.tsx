@@ -14,7 +14,7 @@ vi.mock('@/services/numbers/numbersService', () => ({
 
 import { FlowNodePanel } from './FlowNodePanel';
 import { summaryLine } from './FlowNodeCard';
-import type { AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
+import type { AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import type { FlowAutomationNode } from '@/types/flowAutomations';
 import { paletteItems } from '@/features/flowAutomations/palette';
 import { blockDescription } from '@/features/flowAutomations/blockInfo';

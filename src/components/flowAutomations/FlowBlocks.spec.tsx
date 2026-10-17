@@ -13,7 +13,7 @@ vi.mock('@/services/numbers/numbersService', () => ({ default: { sendNumbers } }
 import { FormAnswerPicker } from './FormAnswerPicker';
 import { FlowNodePanel } from './FlowNodePanel';
 import { emptyFormAnswer, pickForm, type FormAnswerConfig } from '@/features/flowAutomations/formAnswer';
-import type { AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
+import type { AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import type { FlowAutomationNode } from '@/types/flowAutomations';
 
 const resources: AutomationResources = {

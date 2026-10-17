@@ -27,7 +27,7 @@ vi.mock('@/services/leadAutomation/leadAutomationService', async orig => {
   };
 });
 
-import { ConditionEditor, useAutomationResources, type AutomationResources } from './LeadAutomationsEditors';
+import { ConditionEditor, useAutomationResources, type AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import { FlowNodePanel } from '@/components/flowAutomations/FlowNodePanel';
 import type { FlowAutomationNode } from '@/types/flowAutomations';
 

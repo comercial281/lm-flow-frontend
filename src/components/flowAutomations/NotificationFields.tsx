@@ -1,6 +1,6 @@
 import { Label } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
-import { ActionEditor, type AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
+import { ActionEditor, type AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import { leadActionConfig, leadActionOf } from '@/features/flowAutomations/leadAction';
 import {
   notifyChoiceOf, viasFor, withNotifyChoice, type NotifyVia, type NotifyWho,

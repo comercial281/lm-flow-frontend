@@ -17,7 +17,7 @@ import { FlowNodePanel } from './FlowNodePanel';
 import { FlowSettingsDialog } from './FlowSettingsDialog';
 import { FlowTriggerPanel } from './FlowTriggerPanel';
 import { summaryLine } from './FlowNodeCard';
-import type { AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
+import type { AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import type { FlowAutomation, FlowAutomationNode } from '@/types/flowAutomations';
 import { paletteItems } from '@/features/flowAutomations/palette';
 import { nodeProblem } from '@/features/flowAutomations/readiness';

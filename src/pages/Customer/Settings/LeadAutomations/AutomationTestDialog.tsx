@@ -13,7 +13,7 @@ import { Loader2, CheckCircle2, XCircle, MinusCircle, AlertTriangle, FlaskConica
 import { toast } from 'sonner';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import type { User } from '@/types/users';
-import { ACCEPTED_BY_FIELD } from './acceptedByFilter';
+import { ACCEPTED_BY_FIELD } from '@/features/flowAutomations/editores/acceptedByFilter';
 import {
   leadAutomationService,
   LeadAutomationRule,

@@ -1,14 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { validateRule } from './LeadAutomationsEditors';
+import { validateRule } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import { SEND_FROM_NEEDS_NUMBER } from '@/features/numbers/sendFrom';
 
 // "Enviar pelo número" e o aviso de nome fixo na ação de mensagem (fase 2b.2).
 // A regra (validar a escolha) é testada de verdade; a ligação na tela (~1.400
 // linhas, meia dúzia de serviços) é conferida no código-fonte.
 const semComentarios = (bruto: string) => bruto.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-const editores = semComentarios(readFileSync(resolve(__dirname, 'LeadAutomationsEditors.tsx'), 'utf8'));
+const editores = semComentarios(readFileSync(resolve(__dirname, '../../../../features/flowAutomations/editores/LeadAutomationsEditors.tsx'), 'utf8'));
 const pagina = semComentarios(readFileSync(resolve(__dirname, 'LeadAutomations.tsx'), 'utf8'));
 
 const mensagem = (params: Record<string, string>) => [{ type: 'send_whatsapp_message', params: { message: 'Oi', ...params } }];

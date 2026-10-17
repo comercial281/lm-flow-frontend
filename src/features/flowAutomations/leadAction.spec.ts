@@ -3,7 +3,7 @@ import {
   leadActionConfig, leadActionLabel, leadActionOf, leadActionProblem, isLeadActionType, newLeadActionConfig,
 } from './leadAction';
 import { summaryLine } from '@/components/flowAutomations/FlowNodeCard';
-import { formatActionSummary, type AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
+import { formatActionSummary, type AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import { ACTION_TYPE_LABELS, missingActionParams } from '@/services/leadAutomation/leadAutomationService';
 import { blockIcon, blockKey } from './blockInfo';
 import { blockLabel, isVisibleNode, paletteItems } from './palette';

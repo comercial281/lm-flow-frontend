@@ -7,7 +7,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 // (o mesmo editor e a mesma régua).
 vi.mock('@/hooks/useIsSuperAdmin', () => ({ useIsSuperAdmin: () => false }));
 
-import { ActionEditor, formatActionSummary, validateRule, type AutomationResources } from './LeadAutomationsEditors';
+import { ActionEditor, formatActionSummary, validateRule, type AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import { missingActionParams } from '@/services/leadAutomation/leadAutomationService';
 import { leadActionProblem } from '@/features/flowAutomations/leadAction';
 import { enableProblem } from '@/features/flowAutomations/readiness';

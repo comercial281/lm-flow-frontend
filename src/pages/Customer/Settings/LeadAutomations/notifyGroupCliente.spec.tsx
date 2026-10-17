@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { fireEvent } from '@testing-library/react';
-import { ActionEditor, formatActionSummary } from './LeadAutomationsEditors';
+import { ActionEditor, formatActionSummary } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 
 const svc = vi.hoisted(() => ({ getGroupsResult: vi.fn() }));
 vi.mock('@/services/leadAutomation/leadAutomationService', async importOriginal => {

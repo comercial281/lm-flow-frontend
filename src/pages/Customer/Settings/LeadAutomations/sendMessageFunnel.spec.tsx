@@ -6,7 +6,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 // (`funnel_id`) continua aparecendo, marcada como "formato antigo".
 vi.mock('@/hooks/useIsSuperAdmin', () => ({ useIsSuperAdmin: () => false }));
 
-import { ActionEditor, formatActionSummary, type AutomationResources } from './LeadAutomationsEditors';
+import { ActionEditor, formatActionSummary, type AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import { missingActionParams, type LeadAutomationAction } from '@/services/leadAutomation/leadAutomationService';
 import type { FlowAutomation } from '@/types/flowAutomations';
 import type { MessageFunnel } from '@/types/messageFunnels';

@@ -52,7 +52,7 @@ import {
   validateRule,
   formatConditionSummary,
   formatActionSummary,
-} from './LeadAutomationsEditors';
+} from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import AutomationLibraryModal from './AutomationLibraryModal';
 import AutomationTestDialog from './AutomationTestDialog';
 import AutomationHistoryDialog from './AutomationHistoryDialog';

@@ -7,7 +7,7 @@ import {
   RETIRED_ACTION_TYPES,
   WAIT_ACTION_NOTICE,
 } from '@/services/leadAutomation/leadAutomationService';
-import { formatActionSummary, type AutomationResources } from './LeadAutomationsEditors';
+import { formatActionSummary, type AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 
 // "Aguardar (delay)" sai da lista de ações (Automações · sprint 1): o servidor
 // nunca esperou nessa etapa. Regra que já tem a ação continua igual, com aviso.

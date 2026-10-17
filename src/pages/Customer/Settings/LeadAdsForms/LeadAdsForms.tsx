@@ -39,7 +39,7 @@ import {
 } from '@/services/leadAds/leadAdsFormsService';
 import { metaPagesService, type MetaPage } from '@/services/integrations/metaPagesService';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
-import { useAutomationResources } from '../LeadAutomations/LeadAutomationsEditors';
+import { useAutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import CampoQuemAssume, { type QuemAssume } from '@/components/roleta/CampoQuemAssume';
 import { regraQuePega } from './regraPorPalavra';

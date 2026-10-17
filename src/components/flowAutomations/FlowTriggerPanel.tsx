@@ -7,7 +7,7 @@ import {
   PipelineFilterEditor,
   triggerNeedsCondition,
   type AutomationResources,
-} from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
+} from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import { Plus, X, Zap } from 'lucide-react';
 import { mesmoConteudo } from '@/hooks/useAlteracoesNaoSalvas';
 import { FlowBlockDialog } from './FlowBlockDialog';
