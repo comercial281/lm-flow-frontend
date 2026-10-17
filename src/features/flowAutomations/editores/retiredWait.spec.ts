@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import {
   ACTION_TYPE_LABELS,
@@ -11,18 +9,10 @@ import { formatActionSummary, type AutomationResources } from '@/features/flowAu
 
 // "Aguardar (delay)" sai da lista de ações (Automações · sprint 1): o servidor
 // nunca esperou nessa etapa. Regra que já tem a ação continua igual, com aviso.
-const semComentarios = (bruto: string) => bruto.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-const pagina = semComentarios(readFileSync(resolve(__dirname, 'LeadAutomations.tsx'), 'utf8'));
 
 describe('Aguardar (delay) nas Automações', () => {
   it('não aparece pra ação nova', () => {
     expect(RETIRED_ACTION_TYPES.has('wait')).toBe(true);
-    expect(pagina).toContain('RETIRED_ACTION_TYPES.has(value) || LEGACY_ACTION_TYPES.has(value)');
-    expect(pagina).toContain('.filter(([value]) => !naoOferecida(value))');
-  });
-
-  it('a ação que já existe continua na lista dela', () => {
-    expect(pagina).toContain('actionTypesFor(action.type)');
   });
 
   it('o cartão da regra avisa que a etapa não espera', () => {

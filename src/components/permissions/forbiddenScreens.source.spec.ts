@@ -68,12 +68,6 @@ describe('nove listas que viravam vazias na recusa (G3)', () => {
     expect(src).toContain('<NoAccessState');
   });
 
-  it('Lembretes WhatsApp: leitura principal recusada mostra o aviso do cargo', () => {
-    const src = read('src/pages/Customer/Settings/WhatsappReminders/WhatsappReminders.tsx');
-    expect(src).toContain('isForbiddenError');
-    expect(src).toContain('<NoAccessState');
-  });
-
   // Follow-up (sprint 3): a aba é a lista do construtor com `kind="followup"`.
   it('Follow-up: leitura principal recusada mostra o aviso do cargo', () => {
     const src = read('src/pages/Customer/Automations/FlowBuilder/FlowAutomationsList.tsx');
@@ -81,9 +75,4 @@ describe('nove listas que viravam vazias na recusa (G3)', () => {
     expect(src).toContain('<NoAccessState');
   });
 
-  it('Regras de Lead (Automações de Lead): leitura principal recusada mostra o aviso do cargo', () => {
-    const src = read('src/pages/Customer/Settings/LeadAutomations/LeadAutomations.tsx');
-    expect(src).toContain('isForbiddenError');
-    expect(src).toContain('<NoAccessState');
-  });
 });

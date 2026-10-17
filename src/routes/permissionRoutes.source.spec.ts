@@ -61,8 +61,6 @@ describe('toda rota do CRM confere o cargo', () => {
     ['/disparos', 'broadcasts', 'read'],
     // Monitoria de um disparo (16/10/2026): quem vê a lista vê a fila.
     ['/disparos/:id', 'broadcasts', 'read'],
-    ['/settings/lead-automations', 'lead_automation_rules', 'read'],
-    ['lead-automations', 'lead_automation_rules', 'read'],
     ['follow-ups', 'followup_sequences', 'read'],
     ['follow-ups/:id', 'followup_sequences', 'read'],
     ['/settings/site-builder', 'sites', 'read'],
@@ -91,8 +89,6 @@ describe('toda rota do CRM confere o cargo', () => {
     ['roleta-config/:id', 'roleta_configs', 'read'],
     // Rulings do controlador (X36/G5, 2026-09-26) — além da tabela do brief;
     // chave confirmada no backend via PermissionRegistry.
-    ['whatsapp-reminders', 'whatsapp_reminders', 'read'],
-    ['/settings/whatsapp-reminders', 'whatsapp_reminders', 'read'],
     ['lead-ads-forms', 'lead_ads_form_configs', 'read'],
     ['/settings/lead-ads-forms', 'lead_ads_form_configs', 'read'],
     // Listas da casa (E1 do funil): abre pra quem lê o funil; mudar é pipelines.update no servidor.

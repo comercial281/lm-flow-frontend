@@ -190,10 +190,8 @@ export const MENU_FREE_BY_DESIGN = ['/tutorials'];
  *   - Interesses ........... /property-interests
  *   - Ações agendadas ...... /contacts/scheduled-actions
  *   - Marketplace .......... /marketplace
- * Saíram em 03/10/2026 (Automações · sprint 2): a página Automações virou o
- * construtor de fluxos. Abrem pelo endereço (suporte, avisos do Follow-up):
- *   - Regras de lead ....... /automations/lead-automations
- *   - Lembretes ............ /automations/whatsapp-reminders
+ * Regras de lead e Lembretes saíram em 03/10/2026 (Automações · sprint 2) e as
+ * telas foram apagadas em 17/10/2026: os endereços antigos levam pra Automações.
  *
  * Também saiu o "Personalizar menu" (esconder/favoritar/reordenar): com seções
  * fixas ele quebrava os rótulos. Ver a seção "Menu novo" no CLAUDE.md.
@@ -326,9 +324,8 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       { name: 'IA Vendedora', href: '/ia-vendedora', icon: Bot, ...permissionFromRoute('/ia-vendedora'), clientToggleKey: 'client_manage_automations' },
       { name: 'Follow-up', href: '/automations/follow-ups', icon: Repeat, ...permissionFromRoute('/automations/follow-ups'), featureKey: 'follow_ups' },
       // Automações = "quando X acontecer, faça Y": o construtor de fluxos, direto
-      // na lista (sprint 2, 03/10/2026). Reusa a função das regras por não ter
-      // registro próprio. "Regras de lead" e "Lembretes" saíram do menu e abrem
-      // só pelo endereço (suporte e avisos da tela de Follow-up apontam pra lá).
+      // na lista (sprint 2, 03/10/2026). "Regras de lead" e "Lembretes" não
+      // existem mais: os endereços antigos levam pra cá.
       { name: 'Automações', href: '/automations/flow-builder', icon: Zap, ...permissionFromRoute('/automations/flow-builder'), ...permissionsFromRoute('/automations/flow-builder'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations', clientToggleSoPara: 'flow_automations.read', clientToggleGestor: 'flow_automations.update' },
     ],
   },

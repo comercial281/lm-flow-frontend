@@ -8,8 +8,7 @@ import { SEND_FROM_NEEDS_NUMBER } from '@/features/numbers/sendFrom';
 // A regra (validar a escolha) é testada de verdade; a ligação na tela (~1.400
 // linhas, meia dúzia de serviços) é conferida no código-fonte.
 const semComentarios = (bruto: string) => bruto.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-const editores = semComentarios(readFileSync(resolve(__dirname, '../../../../features/flowAutomations/editores/LeadAutomationsEditors.tsx'), 'utf8'));
-const pagina = semComentarios(readFileSync(resolve(__dirname, 'LeadAutomations.tsx'), 'utf8'));
+const editores = semComentarios(readFileSync(resolve(__dirname, 'LeadAutomationsEditors.tsx'), 'utf8'));
 
 const mensagem = (params: Record<string, string>) => [{ type: 'send_whatsapp_message', params: { message: 'Oi', ...params } }];
 
@@ -47,10 +46,4 @@ describe('a ação de mensagem', () => {
     expect(editores).toContain('{avisoNome && <p className="text-xs text-amber-600 mt-1">{avisoNome}</p>}');
   });
 
-  // E33: o aviso do servidor aparece depois de salvar, criando e editando.
-  it('o salvar mostra os avisos do servidor', () => {
-    expect(pagina).toContain('avisar(sendFromWarnings(updated))');
-    expect(pagina).toContain('avisar(sendFromWarnings(created))');
-    expect(pagina).toContain('toast.warning(aviso, { duration: SEND_FROM_WARNING_MS })');
-  });
 });
