@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { plural, numero, telefone } from '@/lib/formato';
+import { plural, telefone } from '@/lib/formato';
 import {
   Dialog,
   DialogContent,
@@ -14,50 +14,38 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Badge,
 } from '@/components/ui/ds';
 import {
   Megaphone,
-  Users,
   Loader2,
   CheckCircle2,
-  Pause,
-  Play,
-  Ban,
   ChevronLeft,
   Paperclip,
   ShieldCheck,
-  Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PipelineStage } from '@/types/analytics';
 import {
   broadcastsService,
-  BroadcastCampaign,
   BroadcastSequenceItem,
   AudienceMode,
+  AudiencePreviewFull,
   BroadcastChannelKind,
   BroadcastTemplateConfig,
   CloudChannelOption,
+  SenderOption,
 } from '@/services/broadcasts/broadcastsService';
 import { labelsService } from '@/services/contacts/labelsService';
 import type { Label as LabelType } from '@/types/settings';
 import { tenantTemplateVariablesService } from '@/services/messageFunnels/messageFunnelsService';
 import type { TemplateVariable } from '@/types/messageFunnels';
-import { ConversationFunnelSelect } from '@/components/flowAutomations/ConversationFunnelSelect';
-import { FLOW_KIND_COPY } from '@/features/flowAutomations/kind';
-import MessageSequenceEditor, {
-  type SequenceDraftItem,
-  newSequenceItem,
-} from '@/components/messaging/MessageSequenceEditor';
+import { type SequenceDraftItem, newSequenceItem } from '@/components/messaging/MessageSequenceEditor';
 
-import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { PhoneInput } from '@/components/shared/PhoneInput';
-import EmptyState from '@/components/base/EmptyState';
 import Aviso from '@/components/base/Aviso';
-import { CaixaDaJanela, CampoDaJanela, ESCOLHA, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
-import { cn } from '@/lib/utils';
-import type { LucideIcon, LucideProps } from 'lucide-react';
+import { CaixaDaJanela, CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
+import PassoQuemRecebe from './disparo/PassoQuemRecebe';
+import PassoMensagem, { type ModoDoEnvio } from './disparo/PassoMensagem';
 interface BulkDispatchModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -67,15 +55,6 @@ interface BulkDispatchModalProps {
 }
 
 type Step = 'audience' | 'messages' | 'cadence' | 'review' | 'creating' | 'done';
-type View = 'new' | 'list';
-
-const STATUS_META: Record<BroadcastCampaign['status'], { label: string; cls: string }> = {
-  running: { label: 'Enviando', cls: 'bg-primary/15 text-primary border-primary/40' },
-  paused: { label: 'Pausado', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-  completed: { label: 'Concluído', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-  cancelled: { label: 'Cancelado', cls: 'bg-muted text-muted-foreground' },
-  failed: { label: 'Falhou', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
-};
 
 // contact/sticker/property_book entram só pra satisfazer o tipo (SequenceDraftItem
 // cobre os tipos do editor compartilhado) — nunca aparecem aqui de verdade: o
@@ -94,11 +73,6 @@ const KIND_LABEL: Record<SequenceDraftItem['kind'], string> = {
 };
 
 // Preview substituindo {{nome}} por um exemplo só na revisão.
-// Aviso não gira ícone sozinho: este gira durante a contagem.
-const IconeGirando = ((props: LucideProps) => (
-  <Loader2 {...props} className={cn(props.className, 'animate-spin')} />
-)) as unknown as LucideIcon;
-
 function preview(text: string, name = 'Giovani') {
   return text.replace(/\{\{?\s*nome\s*\}?\}/gi, name);
 }
@@ -138,9 +112,15 @@ export default function BulkDispatchModal({
   pipelineName,
   stages,
 }: BulkDispatchModalProps) {
-  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
-  const [view, setView] = useState<View>('new');
   const [step, setStep] = useState<Step>('audience');
+
+  // Por onde sai: 'evolution' (Campanha direta) ou 'whatsapp_cloud' (modelo oficial).
+  const [channelKind, setChannelKind] = useState<BroadcastChannelKind>('evolution');
+  // Números de saída da Campanha direta (null = carregando).
+  const [senderOptions, setSenderOptions] = useState<SenderOption[] | null>(null);
+  const [senderInboxId, setSenderInboxId] = useState('');
+  const [erroNumeros, setErroNumeros] = useState(false);
+  const ultimaCargaNumeros = useRef(0);
 
   // Audiência
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('pipeline');
@@ -152,15 +132,19 @@ export default function BulkDispatchModal({
   const [erroCanais, setErroCanais] = useState(false);
   const ultimaCargaEtiquetas = useRef(0);
   const ultimaCargaCanais = useRef(0);
-  const [recipientCount, setRecipientCount] = useState<number | null>(null);
+  const [audiencePreview, setAudiencePreview] = useState<AudiencePreviewFull | null>(null);
+  const [erroPrevia, setErroPrevia] = useState(false);
   const [countingAudience, setCountingAudience] = useState(false);
+  const recipientCount = audiencePreview?.count ?? null;
 
-  // Mensagem (sequência multi-item — MESMO editor do funil)
+  // O que mandar: sequência (MESMO editor do funil) ou funil pronto (o lead entra nele).
+  const [sendMode, setSendMode] = useState<ModoDoEnvio>('message');
+  const [flowId, setFlowId] = useState('');
+  const [flowName, setFlowName] = useState('');
   const [items, setItems] = useState<SequenceDraftItem[]>([newSequenceItem()]);
   const [variables, setVariables] = useState<TemplateVariable[]>([]);
 
-  // Canal do disparo: 'evolution' (sessão livre) ou 'whatsapp_cloud' (template oficial).
-  const [channelKind, setChannelKind] = useState<BroadcastChannelKind>('evolution');
+  // Modelo oficial (WhatsApp Cloud).
   const [cloudOptions, setCloudOptions] = useState<CloudChannelOption[]>([]);
   const [cloudInboxId, setCloudInboxId] = useState('');
   const [cloudTemplateName, setCloudTemplateName] = useState('');
@@ -173,7 +157,7 @@ export default function BulkDispatchModal({
   const [postStageId, setPostStageId] = useState('');
   const [postLabel, setPostLabel] = useState('');
 
-  // Cadência
+  // Cadência (o passo Ritmo troca isso pelos pacotes na próxima tarefa).
   const [minS, setMinS] = useState(4);
   const [maxS, setMaxS] = useState(8);
   const [batchSize, setBatchSize] = useState(10);
@@ -188,20 +172,21 @@ export default function BulkDispatchModal({
   const [testPhone, setTestPhone] = useState('');
   const [testing, setTesting] = useState(false);
 
-  // Acompanhamento
-  const [campaigns, setCampaigns] = useState<BroadcastCampaign[]>([]);
-  // Falha ao listar os disparos não vira "Nenhum disparo ainda".
-  const [erroLista, setErroLista] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const resetWizard = useCallback(() => {
     setStep('audience');
+    setChannelKind('evolution');
+    setSenderInboxId('');
     setAudienceMode('pipeline');
     setStageId('');
     setSelectedLabels([]);
-    setRecipientCount(null);
+    setAudiencePreview(null);
+    setErroPrevia(false);
+    setSendMode('message');
+    setFlowId('');
+    setFlowName('');
     setItems([newSequenceItem()]);
-    setChannelKind('evolution');
     setCloudInboxId('');
     setCloudTemplateName('');
     setCloudVars({});
@@ -219,18 +204,25 @@ export default function BulkDispatchModal({
     setTestPhone('');
   }, []);
 
-  const refreshList = useCallback(async () => {
-    try {
-      const list = await broadcastsService.list(pipelineId);
-      setCampaigns(list);
-      setErroLista(false);
-      return list;
-    } catch {
-      setCampaigns([]);
-      setErroLista(true);
-      return [];
-    }
-  }, [pipelineId]);
+  const carregarNumeros = useCallback(() => {
+    const vez = ++ultimaCargaNumeros.current;
+    setErroNumeros(false);
+    setSenderOptions(null);
+    broadcastsService
+      .senderOptions()
+      .then(({ data, default_inbox_id }) => {
+        if (vez !== ultimaCargaNumeros.current) return;
+        setSenderOptions(data);
+        // O padrão da conta já marcado; se ele não puder disparar, o primeiro que pode.
+        const padrao = data.find(o => o.inbox_id === default_inbox_id && o.sendable) ?? data.find(o => o.sendable);
+        setSenderInboxId(atual => atual || padrao?.inbox_id || '');
+      })
+      .catch(() => {
+        if (vez !== ultimaCargaNumeros.current) return;
+        setSenderOptions([]);
+        setErroNumeros(true);
+      });
+  }, []);
 
   const carregarEtiquetas = useCallback(() => {
     const vez = ++ultimaCargaEtiquetas.current;
@@ -260,14 +252,11 @@ export default function BulkDispatchModal({
       });
   }, []);
 
-  // Ao abrir: carrega campanhas + variáveis do tenant e decide a view inicial.
+  // Ao abrir: zera a janela e carrega números, etiquetas, variáveis e canais oficiais.
   useEffect(() => {
     if (!open) return;
     resetWizard();
-    refreshList().then(list => {
-      const hasActive = list.some(c => c.status === 'running' || c.status === 'paused');
-      setView(hasActive ? 'list' : 'new');
-    });
+    carregarNumeros();
     carregarEtiquetas();
     tenantTemplateVariablesService
       .list()
@@ -291,42 +280,8 @@ export default function BulkDispatchModal({
         ]),
       );
     carregarCanais();
-  }, [open, refreshList, resetWizard, carregarEtiquetas, carregarCanais]);
+  }, [open, resetWizard, carregarNumeros, carregarEtiquetas, carregarCanais]);
 
-  // Conta destinatários quando a audiência muda (só na view de criação).
-  const audiencePayload = useMemo(
-    () => ({
-      mode: audienceMode,
-      stage_id: audienceMode === 'stage' ? stageId : undefined,
-      labels: audienceMode === 'tag' ? selectedLabels : undefined,
-    }),
-    [audienceMode, stageId, selectedLabels],
-  );
-  useEffect(() => {
-    if (!open || view !== 'new') return;
-    if (audienceMode === 'stage' && !stageId) {
-      setRecipientCount(null);
-      return;
-    }
-    if (audienceMode === 'tag' && selectedLabels.length === 0) {
-      setRecipientCount(null);
-      return;
-    }
-    let alive = true;
-    setCountingAudience(true);
-    broadcastsService
-      .audiencePreview(pipelineId, audiencePayload)
-      .then(n => alive && setRecipientCount(n))
-      .catch(() => alive && setRecipientCount(null))
-      .finally(() => alive && setCountingAudience(false));
-    return () => {
-      alive = false;
-    };
-  }, [open, view, pipelineId, audienceMode, stageId, audiencePayload]);
-
-  const itemsValid = useMemo(() => items.length > 0 && items.every(itemIsValid), [items]);
-
-  // Canal oficial (WhatsApp Cloud): exige template aprovado + variáveis preenchidas.
   const cloudMode = channelKind === 'whatsapp_cloud';
   const selectedCloudInbox = useMemo(
     () => cloudOptions.find(o => o.inbox_id === cloudInboxId) || cloudOptions[0],
@@ -336,6 +291,52 @@ export default function BulkDispatchModal({
     () => selectedCloudInbox?.templates.find(t => t.name === cloudTemplateName),
     [selectedCloudInbox, cloudTemplateName],
   );
+  const selectedSender = useMemo(
+    () => senderOptions?.find(o => o.inbox_id === senderInboxId),
+    [senderOptions, senderInboxId],
+  );
+
+  // Conta quem recebe com o número de saída: lead de outro corretor depende dele.
+  const audiencePayload = useMemo(
+    () => ({
+      mode: audienceMode,
+      stage_id: audienceMode === 'stage' ? stageId : undefined,
+      labels: audienceMode === 'tag' ? selectedLabels : undefined,
+    }),
+    [audienceMode, stageId, selectedLabels],
+  );
+  const previewInboxId = cloudMode ? selectedCloudInbox?.inbox_id : senderInboxId || undefined;
+  // Campanha direta: espera os números chegarem (senão conta duas vezes, sem e com o número).
+  const esperandoNumeros = !cloudMode && senderOptions === null;
+  useEffect(() => {
+    if (!open) return;
+    setErroPrevia(false);
+    // A contagem anterior foi descartada pela limpeza: não deixa o "Contando" preso.
+    setCountingAudience(false);
+    if ((audienceMode === 'stage' && !stageId) || (audienceMode === 'tag' && selectedLabels.length === 0)) {
+      setAudiencePreview(null);
+      return;
+    }
+    if (esperandoNumeros) return;
+    let alive = true;
+    setCountingAudience(true);
+    broadcastsService
+      .audiencePreviewFull(pipelineId, audiencePayload, previewInboxId)
+      .then(r => { if (alive) setAudiencePreview(r); })
+      .catch(() => {
+        if (!alive) return;
+        setAudiencePreview(null);
+        setErroPrevia(true);
+      })
+      .finally(() => { if (alive) setCountingAudience(false); });
+    return () => {
+      alive = false;
+    };
+  }, [open, pipelineId, audienceMode, stageId, selectedLabels, audiencePayload, previewInboxId, esperandoNumeros]);
+
+  const itemsValid = useMemo(() => items.length > 0 && items.every(itemIsValid), [items]);
+
+  // Canal oficial (WhatsApp Cloud): exige template aprovado + variáveis preenchidas.
   const cloudVarsFilled = useMemo(
     () => (selectedCloudTemplate?.variables ?? []).every(v => (cloudVars[v] ?? '').trim() !== ''),
     [selectedCloudTemplate, cloudVars],
@@ -361,15 +362,18 @@ export default function BulkDispatchModal({
     [selectedCloudInbox, selectedCloudTemplate, cloudVars],
   );
 
-  const step1Ok = (recipientCount ?? 0) > 0;
+  const flowMode = !cloudMode && sendMode === 'flow';
+  const step1Ok = (recipientCount ?? 0) > 0 && (cloudMode ? cloudOptions.length > 0 : !!selectedSender?.sendable);
   const step2Ok = cloudMode
     ? !!selectedCloudInbox && !!selectedCloudTemplate && !!selectedCloudTemplate.approved && cloudVarsFilled
-    : itemsValid;
+    : flowMode
+      ? !!flowId
+      : itemsValid;
   const step3Ok = minS >= 2 && maxS >= minS && batchSize >= 1 && batchSize <= 50 && pauseS >= 10;
 
   const sumItemDelays = useMemo(
-    () => items.reduce((acc, it) => acc + (it.delay_seconds || 0), 0),
-    [items],
+    () => (flowMode ? 0 : items.reduce((acc, it) => acc + (it.delay_seconds || 0), 0)),
+    [items, flowMode],
   );
 
   const estDurationMin = useMemo(() => {
@@ -424,12 +428,12 @@ export default function BulkDispatchModal({
         pipeline_id: pipelineId,
         channel_kind: channelKind,
         template_config: cloudMode ? buildTemplateConfig() : undefined,
-        audience: {
-          mode: audienceMode,
-          stage_id: audienceMode === 'stage' ? stageId : undefined,
-          labels: audienceMode === 'tag' ? selectedLabels : undefined,
-        },
-        funnel_items: cloudMode ? undefined : toSequencePayload(items),
+        // Campanha direta: o número de saída escolhido.
+        inbox_id: cloudMode ? undefined : senderInboxId,
+        audience: audiencePayload,
+        // Funil pronto: o lead entra no funil; senão, a sequência montada.
+        flow_automation_id: flowMode ? flowId : undefined,
+        funnel_items: cloudMode || flowMode ? undefined : toSequencePayload(items),
         post_send:
           postStageId || postLabel.trim()
             ? { stage_id: postStageId || undefined, label: postLabel.trim() || undefined }
@@ -443,7 +447,6 @@ export default function BulkDispatchModal({
         frequency_cap_days: frequencyCapDays,
         max_spend: maxSpend.trim() ? Number(maxSpend.replace(',', '.')) : undefined,
       });
-      await refreshList();
       setStep('done');
       toast.success('Disparo criado. As mensagens saem em lotes.');
     } catch (err: any) {
@@ -455,725 +458,423 @@ export default function BulkDispatchModal({
     }
   };
 
-  const setStatus = async (c: BroadcastCampaign, action: 'pause' | 'resume' | 'cancel') => {
-    try {
-      if (action === 'cancel' && !(await confirmar({
-        titulo: 'Cancelar disparo',
-        descricao: 'As mensagens ainda não enviadas não sairão.',
-        rotuloDaAcao: 'Cancelar disparo',
-        rotuloDeCancelar: 'Voltar',
-        destrutivo: true,
-      }))) return;
-      const fn = action === 'pause' ? broadcastsService.pause : action === 'resume' ? broadcastsService.resume : broadcastsService.cancel;
-      await fn.call(broadcastsService, c.id);
-      await refreshList();
-    } catch {
-      toast.error('Não consegui atualizar o disparo.');
-    }
-  };
-
   const stepIndex = ['audience', 'messages', 'cadence', 'review'].indexOf(step);
 
   return (
-    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between gap-2">
-            <DialogTitle className="flex items-center gap-2">
-              <Megaphone className="h-5 w-5 text-primary" />
-              Disparo em massa {pipelineName ? `· ${pipelineName}` : ''}
-            </DialogTitle>
-            <div className="flex items-center gap-1 mr-6">
-              <Button
-                variant="outline" aria-pressed={view === 'new'} className={ESCOLHA}
-                size="sm"
-                onClick={() => {
-                  setView('new');
-                  setStep('audience');
-                }}
-              >
-                Novo
-              </Button>
-              <Button variant="outline" aria-pressed={view === 'list'} className={ESCOLHA} size="sm" onClick={() => setView('list')}>
-                Disparos {campaigns.length > 0 && `(${campaigns.length})`}
-              </Button>
-            </div>
-          </div>
+          <DialogTitle className="flex items-center gap-2">
+            <Megaphone className="h-5 w-5 text-primary" />
+            Disparo em massa {pipelineName ? `· ${pipelineName}` : ''}
+          </DialogTitle>
           <DialogDescription>
-            {view === 'new'
-              ? 'Escolha quem recebe, monte a sequência de mensagens, ajuste o ritmo e dispare.'
-              : 'Acompanhe, pause, retome ou cancele os disparos deste funil.'}
+            Escolha por onde sai e quem recebe, o que mandar e o ritmo, e dispare.
           </DialogDescription>
         </DialogHeader>
 
-        {/* ===================== ACOMPANHAMENTO ===================== */}
-        {view === 'list' && (
-          <div className="space-y-3 py-2">
-            {campaigns.length === 0 &&
-              (erroLista ? (
-                <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void refreshList()} />
-              ) : (
-                <EmptyState
-                  tamanho="compacto"
-                  title="Nenhum disparo ainda."
-                  description={'Clique em "Novo" pra criar o primeiro.'}
-                />
-              ))}
-            {campaigns.map(c => {
-              const meta = STATUS_META[c.status];
-              const done = c.sent_count + c.failed_count + c.skipped_count;
-              const pct = c.total_count ? Math.round((done / c.total_count) * 100) : 0;
-              return (
-                <div key={c.id} className="border border-border rounded-xl p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium truncate">{c.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {c.sent_count} enviadas · {c.failed_count} falhas · {c.total_count} no total
-                      </div>
-                    </div>
-                    <Badge className={`text-xs border ${meta.cls}`}>{meta.label}</Badge>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
-                  </div>
-                  {(c.status === 'running' || c.status === 'paused') && (
-                    <div className="flex items-center gap-2 pt-1">
-                      {c.status === 'running' ? (
-                        <Button variant="outline" size="sm" onClick={() => setStatus(c, 'pause')}>
-                          <Pause className="w-3.5 h-3.5 mr-1" /> Pausar
-                        </Button>
-                      ) : (
-                        <Button variant="outline" size="sm" onClick={() => setStatus(c, 'resume')}>
-                          <Play className="w-3.5 h-3.5 mr-1" /> Retomar
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive"
-                        onClick={() => setStatus(c, 'cancel')}
-                      >
-                        <Ban className="w-3.5 h-3.5 mr-1" /> Cancelar
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        {/* indicador de passos */}
+        {step !== 'creating' && step !== 'done' && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground pb-1">
+            {['Quem recebe', 'Mensagem', 'Ritmo', 'Revisar'].map((lbl, i) => (
+              <span
+                key={lbl}
+                className={`flex items-center gap-1 ${i === stepIndex ? 'text-primary font-medium' : ''}`}
+              >
+                <span
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                    i <= stepIndex ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                  }`}
+                >
+                  {i + 1}
+                </span>
+                {lbl}
+                {i < 3 && <span className="mx-1">·</span>}
+              </span>
+            ))}
           </div>
         )}
 
-        {/* ===================== WIZARD ===================== */}
-        {view === 'new' && (
-          <>
-            {/* indicador de passos */}
-            {step !== 'creating' && step !== 'done' && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground pb-1">
-                {['Quem recebe', 'Mensagem', 'Ritmo', 'Revisar'].map((lbl, i) => (
-                  <span
-                    key={lbl}
-                    className={`flex items-center gap-1 ${i === stepIndex ? 'text-primary font-medium' : ''}`}
-                  >
-                    <span
-                      className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                        i <= stepIndex ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                      }`}
-                    >
-                      {i + 1}
-                    </span>
-                    {lbl}
-                    {i < 3 && <span className="mx-1">·</span>}
-                  </span>
-                ))}
-              </div>
-            )}
+        {/* STEP 1 — Por onde sai e quem recebe */}
+        {step === 'audience' && (
+          <PassoQuemRecebe
+            channelKind={channelKind}
+            aoEscolherCanal={setChannelKind}
+            temOficial={cloudOptions.length > 0}
+            erroCanais={erroCanais}
+            aoTentarCanais={carregarCanais}
+            numeros={senderOptions}
+            erroNumeros={erroNumeros}
+            aoTentarNumeros={carregarNumeros}
+            senderInboxId={senderInboxId}
+            aoEscolherNumero={setSenderInboxId}
+            audienceMode={audienceMode}
+            aoEscolherPublico={setAudienceMode}
+            stages={stages}
+            stageId={stageId}
+            aoEscolherEtapa={setStageId}
+            etiquetas={availableLabels}
+            erroEtiquetas={erroEtiquetas}
+            aoTentarEtiquetas={carregarEtiquetas}
+            etiquetasMarcadas={selectedLabels}
+            aoMarcarEtiqueta={titulo =>
+              setSelectedLabels(prev => (prev.includes(titulo) ? prev.filter(t => t !== titulo) : [...prev, titulo]))
+            }
+            previa={audiencePreview}
+            contando={countingAudience || esperandoNumeros}
+            erroPrevia={erroPrevia}
+          />
+        )}
 
-            {/* STEP 1 — Audiência */}
-            {step === 'audience' && (
-              <div className="grid gap-5">
-                <GrupoDaJanela titulo="Quem recebe">
-                  <CampoDaJanela rotulo="Enviar para" htmlFor="disparo-quem-recebe">
-                    <Select value={audienceMode} onValueChange={v => setAudienceMode(v as AudienceMode)}>
-                      <SelectTrigger id="disparo-quem-recebe" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pipeline">Todos os leads do funil</SelectItem>
-                        <SelectItem value="stage">Uma etapa específica</SelectItem>
-                        <SelectItem value="tag">Por etiqueta</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </CampoDaJanela>
+        {/* STEP 2 — O que mandar */}
+        {step === 'messages' && (
+          <PassoMensagem
+            cloudMode={cloudMode}
+            sendMode={sendMode}
+            aoEscolherModo={setSendMode}
+            items={items}
+            aoMudarItens={setItems}
+            variables={variables}
+            flowId={flowId}
+            aoEscolherFunil={(id, nome) => {
+              setFlowId(id);
+              setFlowName(nome);
+            }}
+            cloudOptions={cloudOptions}
+            erroCanais={erroCanais}
+            aoTentarCanais={carregarCanais}
+            cloudInbox={selectedCloudInbox}
+            aoEscolherNumeroOficial={v => {
+              setCloudInboxId(v);
+              setCloudTemplateName('');
+              setCloudVars({});
+            }}
+            cloudTemplateName={cloudTemplateName}
+            cloudTemplate={selectedCloudTemplate}
+            aoEscolherModelo={v => {
+              setCloudTemplateName(v);
+              setCloudVars({});
+            }}
+            cloudVars={cloudVars}
+            aoMudarVariavel={(v, valor) => setCloudVars(prev => ({ ...prev, [v]: valor }))}
+          />
+        )}
+        {/* STEP 3 — Cadência */}
+        {step === 'cadence' && (
+          <div className="grid gap-5">
+            <GrupoDaJanela titulo="Intervalo entre mensagens">
+              <GradeDaJanela>
+                <CampoDaJanela rotulo="Intervalo mínimo (segundos)" htmlFor="disparo-min" colunas={2}>
+                  <Input
+                    id="disparo-min"
+                    type="number"
+                    min={2}
+                    value={minS}
+                    onChange={e => setMinS(Math.max(2, Number(e.target.value) || 2))}
+                    className="h-9"
+                  />
+                </CampoDaJanela>
+                <CampoDaJanela rotulo="Intervalo máximo (segundos)" htmlFor="disparo-max" colunas={2}>
+                  <Input
+                    id="disparo-max"
+                    type="number"
+                    min={2}
+                    value={maxS}
+                    onChange={e => setMaxS(Math.max(2, Number(e.target.value) || 2))}
+                    className="h-9"
+                  />
+                </CampoDaJanela>
+              </GradeDaJanela>
+            </GrupoDaJanela>
 
-                  {audienceMode === 'tag' && (
-                    <CampoDaJanela rotulo="Etiquetas" ajuda="Recebe quem tem qualquer uma das etiquetas marcadas.">
-                      {erroEtiquetas ? (
-                        <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregarEtiquetas} className="p-3" />
-                      ) : availableLabels.length === 0 ? (
-                        <EmptyState tamanho="compacto" title="Nenhuma etiqueta cadastrada ainda." className="p-3" />
-                      ) : (
-                        <div className="flex flex-wrap gap-1.5">
-                          {availableLabels.map(l => {
-                            const active = selectedLabels.includes(l.title);
-                            const color = l.color || '#7c3aed';
-                            return (
-                              <button
-                                key={l.title}
-                                type="button"
-                                aria-pressed={active}
-                                onClick={() =>
-                                  setSelectedLabels(prev =>
-                                    prev.includes(l.title) ? prev.filter(t => t !== l.title) : [...prev, l.title],
-                                  )
-                                }
-                                className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium border transition-colors ${
-                                  active ? 'text-white' : 'text-foreground hover:bg-muted'
-                                }`}
-                                style={
-                                  active
-                                    ? { backgroundColor: color, borderColor: color }
-                                    : { borderColor: `${color}66` }
-                                }
-                              >
-                                {l.title}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </CampoDaJanela>
-                  )}
+            <GrupoDaJanela titulo="Lote">
+              <GradeDaJanela>
+                <CampoDaJanela rotulo="Mensagens por lote" htmlFor="disparo-lote" colunas={2}>
+                  <Input
+                    id="disparo-lote"
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={batchSize}
+                    onChange={e => setBatchSize(Math.min(50, Math.max(1, Number(e.target.value) || 1)))}
+                    className="h-9"
+                  />
+                </CampoDaJanela>
+                <CampoDaJanela rotulo="Pausa entre lotes (segundos)" htmlFor="disparo-pausa" colunas={2}>
+                  <Input
+                    id="disparo-pausa"
+                    type="number"
+                    min={10}
+                    value={pauseS}
+                    onChange={e => setPauseS(Math.max(10, Number(e.target.value) || 10))}
+                    className="h-9"
+                  />
+                </CampoDaJanela>
+              </GradeDaJanela>
+            </GrupoDaJanela>
 
-                  {audienceMode === 'stage' && (
-                    <CampoDaJanela rotulo="Etapa" htmlFor="disparo-etapa">
-                      <Select value={stageId} onValueChange={setStageId}>
-                        <SelectTrigger id="disparo-etapa" className="w-full">
-                          <SelectValue placeholder="Escolher etapa" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {stages.map(s => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </CampoDaJanela>
-                  )}
-                </GrupoDaJanela>
-
-                <Aviso tom="info" icone={countingAudience ? IconeGirando : Users}>
-                  {countingAudience ? (
-                    <>Contando destinatários...</>
-                  ) : recipientCount === null ? (
-                    <>
-                      {audienceMode === 'tag'
-                        ? 'Marque ao menos uma etiqueta pra contar os destinatários.'
-                        : 'Escolha a etapa pra contar os destinatários.'}
-                    </>
-                  ) : (
-                    <>
-                      <strong>{numero(recipientCount ?? 0)}</strong>{' '}
-                      {(recipientCount ?? 0) === 1
-                        ? 'contato com telefone vai receber'
-                        : 'contatos com telefone vão receber'}
-                      . Contatos sem telefone são ignorados automaticamente.
-                    </>
-                  )}
-                </Aviso>
-              </div>
-            )}
-
-            {/* STEP 2 — Mensagem (canal + conteúdo) */}
-            {step === 'messages' && (
-              <div className="grid gap-5">
-                {/* Seletor de canal */}
-                <GrupoDaJanela titulo="Canal de envio">
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      aria-pressed={!cloudMode}
-                      onClick={() => setChannelKind('evolution')}
-                      className={cn(ESCOLHA, 'h-auto items-start justify-start gap-2 whitespace-normal p-3 text-left')}
-                    >
-                      <Zap className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span className="text-sm">
-                        <span className="block font-medium">WhatsApp por código QR</span>
-                        <span className="text-xs font-normal text-muted-foreground">Mensagem livre (sequência)</span>
-                      </span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      aria-pressed={cloudMode}
-                      onClick={() => setChannelKind('whatsapp_cloud')}
-                      className={cn(ESCOLHA, 'h-auto items-start justify-start gap-2 whitespace-normal p-3 text-left')}
-                    >
-                      <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span className="text-sm">
-                        <span className="block font-medium">WhatsApp oficial</span>
-                        <span className="text-xs font-normal text-muted-foreground">Modelo aprovado pela Meta</span>
-                      </span>
-                    </Button>
-                  </div>
-                </GrupoDaJanela>
-
-                {/* ---- Sessão por QR code: sequência livre ---- */}
-                {!cloudMode && (
-                  <GrupoDaJanela
-                    titulo="Sequência de mensagens"
-                    acao={(
-                      <div className="flex items-center gap-2">
-                        {/* "Usar funil" (05/10/2026): os funis de conversa de Funis de
-                            mensagem. Contato e figurinha não saem no disparo em massa. */}
-                        <ConversationFunnelSelect
-                          enabled={open}
-                          skipKinds={['contact', 'sticker']}
-                          onLoad={loaded => setItems(loaded)}
-                        />
-                        <a
-                          href={FLOW_KIND_COPY.conversation.listPath}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs text-primary hover:underline"
-                          title="Os funis ficam em Funis de mensagem: monte lá e use aqui"
-                        >
-                          Montar funil
-                        </a>
-                      </div>
-                    )}
-                  >
-                    <MessageSequenceEditor
-                      items={items}
-                      onChange={setItems}
-                      variables={variables}
-                      uploadMedia={broadcastsService.uploadMedia.bind(broadcastsService)}
-                      allowTextVariations
-                      excludeKinds={['contact', 'sticker']}
-                    />
-
-                    <p className="text-xs text-muted-foreground">
-                      Use as variáveis pra personalizar (ex.: {'{{nome}}'}); a mídia é anexada na hora.
-                    </p>
-                  </GrupoDaJanela>
-                )}
-
-                {/* ---- WhatsApp oficial: modelo aprovado ---- */}
-                {cloudMode && (
-                  <GrupoDaJanela titulo="Modelo aprovado">
-                    {erroCanais ? (
-                      <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregarCanais} className="p-4" />
-                    ) : cloudOptions.length === 0 ? (
-                      <EmptyState
-                        tamanho="compacto"
-                        title="Nenhum canal WhatsApp oficial conectado."
-                        description={
-                          <>
-                            Conecte um número em <strong>Canais → WhatsApp oficial</strong> e aprove um modelo pra
-                            disparar por aqui.
-                          </>
-                        }
-                        className="p-4"
-                      />
-                    ) : (
-                      <>
-                        {cloudOptions.length > 1 && (
-                          <CampoDaJanela rotulo="Número do canal oficial" htmlFor="disparo-numero-oficial">
-                            <Select
-                              value={selectedCloudInbox?.inbox_id ?? ''}
-                              onValueChange={v => {
-                                setCloudInboxId(v);
-                                setCloudTemplateName('');
-                                setCloudVars({});
-                              }}
-                            >
-                              <SelectTrigger id="disparo-numero-oficial" className="w-full">
-                                <SelectValue placeholder="Escolher número" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {cloudOptions.map(o => (
-                                  <SelectItem key={o.inbox_id} value={o.inbox_id}>
-                                    {o.name} · {telefone(o.phone_number)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </CampoDaJanela>
-                        )}
-
-                        <CampoDaJanela rotulo="Modelo" htmlFor="disparo-template">
-                          {(selectedCloudInbox?.templates.length ?? 0) === 0 ? (
-                            <p className="text-xs text-muted-foreground">
-                              Esse número não tem modelo ainda. Crie e aprove um modelo de mensagem na Meta primeiro.
-                            </p>
-                          ) : (
-                            <Select
-                              value={cloudTemplateName}
-                              onValueChange={v => {
-                                setCloudTemplateName(v);
-                                setCloudVars({});
-                              }}
-                            >
-                              <SelectTrigger id="disparo-template" className="w-full">
-                                <SelectValue placeholder="Escolher modelo" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {selectedCloudInbox?.templates.map(t => (
-                                  <SelectItem key={`${t.name}_${t.language}`} value={t.name} disabled={!t.approved}>
-                                    {t.name} · {t.language}
-                                    {!t.approved && ` (${(t.status || 'pendente').toLowerCase()})`}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </CampoDaJanela>
-
-                        {selectedCloudTemplate && (
-                          <div className="rounded-lg bg-muted/50 p-3 text-sm whitespace-pre-wrap">
-                            {selectedCloudTemplate.content}
-                          </div>
-                        )}
-
-                        {selectedCloudTemplate && selectedCloudTemplate.variables.length > 0 && (
-                          <CampoDaJanela
-                            rotulo="Variáveis do modelo"
-                            ajuda={<>Use {'{{nome}}'} pra puxar o nome do lead.</>}
-                          >
-                            <div className="grid gap-2">
-                              {selectedCloudTemplate.variables.map((v, i) => (
-                                <div key={v} className="flex items-center gap-2">
-                                  <span className="text-xs text-muted-foreground w-14 shrink-0">{`{{${i + 1}}}`}</span>
-                                  <Input
-                                    value={cloudVars[v] ?? ''}
-                                    onChange={e => setCloudVars(prev => ({ ...prev, [v]: e.target.value }))}
-                                    placeholder="{{nome}} ou texto fixo"
-                                    aria-label={`Variável ${i + 1} do modelo`}
-                                    className="h-9"
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </CampoDaJanela>
-                        )}
-
-                        <Aviso tom="info" compacto>
-                          Fora da janela de 24h, a Meta só entrega modelo aprovado. As variáveis são preenchidas por lead.
-                        </Aviso>
-                      </>
-                    )}
-                  </GrupoDaJanela>
-                )}
-              </div>
-            )}
-
-            {/* STEP 3 — Cadência */}
-            {step === 'cadence' && (
-              <div className="grid gap-5">
-                <GrupoDaJanela titulo="Intervalo entre mensagens">
-                  <GradeDaJanela>
-                    <CampoDaJanela rotulo="Intervalo mínimo (segundos)" htmlFor="disparo-min" colunas={2}>
-                      <Input
-                        id="disparo-min"
-                        type="number"
-                        min={2}
-                        value={minS}
-                        onChange={e => setMinS(Math.max(2, Number(e.target.value) || 2))}
-                        className="h-9"
-                      />
-                    </CampoDaJanela>
-                    <CampoDaJanela rotulo="Intervalo máximo (segundos)" htmlFor="disparo-max" colunas={2}>
-                      <Input
-                        id="disparo-max"
-                        type="number"
-                        min={2}
-                        value={maxS}
-                        onChange={e => setMaxS(Math.max(2, Number(e.target.value) || 2))}
-                        className="h-9"
-                      />
-                    </CampoDaJanela>
-                  </GradeDaJanela>
-                </GrupoDaJanela>
-
-                <GrupoDaJanela titulo="Lote">
-                  <GradeDaJanela>
-                    <CampoDaJanela rotulo="Mensagens por lote" htmlFor="disparo-lote" colunas={2}>
-                      <Input
-                        id="disparo-lote"
-                        type="number"
-                        min={1}
-                        max={50}
-                        value={batchSize}
-                        onChange={e => setBatchSize(Math.min(50, Math.max(1, Number(e.target.value) || 1)))}
-                        className="h-9"
-                      />
-                    </CampoDaJanela>
-                    <CampoDaJanela rotulo="Pausa entre lotes (segundos)" htmlFor="disparo-pausa" colunas={2}>
-                      <Input
-                        id="disparo-pausa"
-                        type="number"
-                        min={10}
-                        value={pauseS}
-                        onChange={e => setPauseS(Math.max(10, Number(e.target.value) || 10))}
-                        className="h-9"
-                      />
-                    </CampoDaJanela>
-                  </GradeDaJanela>
-                </GrupoDaJanela>
-
-                <GrupoDaJanela titulo="Limites">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={businessHours}
-                      onChange={e => setBusinessHours(e.target.checked)}
-                      className="rounded border-border"
-                    />
-                    Só enviar em horário comercial (seg-sex 08-20h, sáb 09-18h)
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={respectOptOut}
-                      onChange={e => setRespectOptOut(e.target.checked)}
-                      className="rounded border-border"
-                    />
-                    Não enviar pra quem pediu pra parar
-                  </label>
-                  <GradeDaJanela>
-                    <CampoDaJanela rotulo="Não reenviar nos últimos (dias)" htmlFor="disparo-frequencia" colunas={channelKind === 'whatsapp_cloud' ? 2 : 4}>
-                      <Input
-                        id="disparo-frequencia"
-                        type="number"
-                        min={0}
-                        value={frequencyCapDays}
-                        onChange={e => setFrequencyCapDays(Math.max(0, Number(e.target.value) || 0))}
-                        className="h-9"
-                        placeholder="0 = sem limite"
-                      />
-                    </CampoDaJanela>
-                    {channelKind === 'whatsapp_cloud' && (
-                      <CampoDaJanela rotulo="Teto de gasto (R$)" htmlFor="disparo-teto" colunas={2}>
-                        <Input
-                          id="disparo-teto"
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={maxSpend}
-                          onChange={e => setMaxSpend(e.target.value)}
-                          className="h-9"
-                          placeholder="opcional"
-                        />
-                      </CampoDaJanela>
-                    )}
-                  </GradeDaJanela>
-                </GrupoDaJanela>
-
-                {costEstimate && (
-                  <p className="text-xs text-muted-foreground">
-                    Custo estimado: <strong className="text-foreground">
-                      R$ {costEstimate.total.toFixed(2).replace('.', ',')}
-                    </strong>{' '}
-                    ({recipientCount} msg × R$ {costEstimate.rate.toFixed(2).replace('.', ',')}, categoria {costEstimate.cat}). Estimativa — custo real vem da Meta.
-                  </p>
-                )}
-                {!step3Ok && (
-                  <Aviso tom="atencao" compacto>
-                    O máximo deve ser maior ou igual ao mínimo (a partir de 2 segundos), o lote fica entre 1 e 50 e a pausa é de pelo menos 10 segundos.
-                  </Aviso>
-                )}
-                {recipientCount ? (
-                  <p className="text-xs text-muted-foreground">
-                    Duração estimada: ~{estDurationMin} min pra {plural(recipientCount, 'contato', 'contatos')}.
-                  </p>
-                ) : null}
-              </div>
-            )}
-
-            {/* STEP 4 — Revisão */}
-            {step === 'review' && (
-              <div className="grid gap-5">
-                <GrupoDaJanela titulo="Envio">
-                  <CampoDaJanela rotulo="Nome do envio" htmlFor="disparo-nome" ajuda="Aparece no registro dos disparos.">
+            <GrupoDaJanela titulo="Limites">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={businessHours}
+                  onChange={e => setBusinessHours(e.target.checked)}
+                  className="rounded border-border"
+                />
+                Só enviar em horário comercial (seg-sex 08-20h, sáb 09-18h)
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={respectOptOut}
+                  onChange={e => setRespectOptOut(e.target.checked)}
+                  className="rounded border-border"
+                />
+                Não enviar pra quem pediu pra parar
+              </label>
+              <GradeDaJanela>
+                <CampoDaJanela rotulo="Não reenviar nos últimos (dias)" htmlFor="disparo-frequencia" colunas={channelKind === 'whatsapp_cloud' ? 2 : 4}>
+                  <Input
+                    id="disparo-frequencia"
+                    type="number"
+                    min={0}
+                    value={frequencyCapDays}
+                    onChange={e => setFrequencyCapDays(Math.max(0, Number(e.target.value) || 0))}
+                    className="h-9"
+                    placeholder="0 = sem limite"
+                  />
+                </CampoDaJanela>
+                {channelKind === 'whatsapp_cloud' && (
+                  <CampoDaJanela rotulo="Teto de gasto (R$)" htmlFor="disparo-teto" colunas={2}>
                     <Input
-                      id="disparo-nome"
-                      value={campaignName}
-                      onChange={e => setCampaignName(e.target.value)}
-                      placeholder="Ex.: oferta de lançamento, base quente"
-                      maxLength={120}
+                      id="disparo-teto"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={maxSpend}
+                      onChange={e => setMaxSpend(e.target.value)}
                       className="h-9"
+                      placeholder="opcional"
                     />
                   </CampoDaJanela>
-                </GrupoDaJanela>
+                )}
+              </GradeDaJanela>
+            </GrupoDaJanela>
 
-                {/* Após o envio (opcional): mover pra etapa + criar/aplicar tag */}
-                <GrupoDaJanela titulo="Após o envio (opcional)">
-                  <CampoDaJanela rotulo="Mover quem recebeu para a etapa" htmlFor="disparo-etapa-depois">
-                    <Select value={postStageId || 'none'} onValueChange={v => setPostStageId(v === 'none' ? '' : v)}>
-                      <SelectTrigger id="disparo-etapa-depois" className="h-9 w-full">
-                        <SelectValue placeholder="Não mover" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Não mover</SelectItem>
-                        {stages.map(s => (
-                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </CampoDaJanela>
-                  <CampoDaJanela rotulo="Aplicar etiqueta" htmlFor="disparo-etiqueta-depois" ajuda="Cria a etiqueta se ela não existir.">
-                    <Input
-                      id="disparo-etiqueta-depois"
-                      value={postLabel}
-                      onChange={e => setPostLabel(e.target.value)}
-                      placeholder="Ex.: recebeu-oferta"
-                      maxLength={60}
-                      className="h-9"
-                    />
-                    {availableLabels.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-0.5">
-                        {availableLabels.slice(0, 12).map(l => (
-                          <button
-                            key={l.title}
-                            type="button"
-                            onClick={() => setPostLabel(l.title)}
-                            className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] hover:bg-muted"
-                            style={{ borderColor: `${l.color || '#7c3aed'}66` }}
-                          >
-                            {l.title}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </CampoDaJanela>
-                </GrupoDaJanela>
+            {costEstimate && (
+              <p className="text-xs text-muted-foreground">
+                Custo estimado: <strong className="text-foreground">
+                  R$ {costEstimate.total.toFixed(2).replace('.', ',')}
+                </strong>{' '}
+                ({recipientCount} msg × R$ {costEstimate.rate.toFixed(2).replace('.', ',')}, categoria {costEstimate.cat}). Estimativa — custo real vem da Meta.
+              </p>
+            )}
+            {!step3Ok && (
+              <Aviso tom="atencao" compacto>
+                O máximo deve ser maior ou igual ao mínimo (a partir de 2 segundos), o lote fica entre 1 e 50 e a pausa é de pelo menos 10 segundos.
+              </Aviso>
+            )}
+            {recipientCount ? (
+              <p className="text-xs text-muted-foreground">
+                Duração estimada: ~{estDurationMin} min pra {plural(recipientCount, 'contato', 'contatos')}.
+              </p>
+            ) : null}
+          </div>
+        )}
 
-                <CaixaDaJanela titulo="Resumo">
-                  <div className="divide-y divide-border text-sm">
-                    <div className="flex justify-between py-2">
-                      <span className="text-muted-foreground">Destinatários</span>
-                      <strong>{recipientCount}</strong>
-                    </div>
-                    <div className="flex justify-between py-2">
-                      <span className="text-muted-foreground">Canal</span>
-                      <strong>{cloudMode ? 'WhatsApp oficial (modelo)' : 'WhatsApp por código QR'}</strong>
-                    </div>
-                    <div className="flex justify-between py-2">
-                      <span className="text-muted-foreground">{cloudMode ? 'Modelo' : 'Itens na sequência'}</span>
-                      <strong>{cloudMode ? selectedCloudTemplate?.name ?? '—' : items.length}</strong>
-                    </div>
-                    <div className="flex justify-between py-2">
-                      <span className="text-muted-foreground">Ritmo</span>
-                      <strong>
-                        {minS}-{maxS}s · lotes de {batchSize} · pausa {pauseS}s
-                      </strong>
-                    </div>
-                    <div className="flex justify-between py-2">
-                      <span className="text-muted-foreground">Horário comercial</span>
-                      <strong>{businessHours ? 'Sim' : 'Não'}</strong>
-                    </div>
-                  </div>
-                </CaixaDaJanela>
+        {/* STEP 4 — Revisão */}
+        {step === 'review' && (
+          <div className="grid gap-5">
+            <GrupoDaJanela titulo="Envio">
+              <CampoDaJanela rotulo="Nome do envio" htmlFor="disparo-nome" ajuda="Aparece no registro dos disparos.">
+                <Input
+                  id="disparo-nome"
+                  value={campaignName}
+                  onChange={e => setCampaignName(e.target.value)}
+                  placeholder="Ex.: oferta de lançamento, base quente"
+                  maxLength={120}
+                  className="h-9"
+                />
+              </CampoDaJanela>
+            </GrupoDaJanela>
 
-                {!cloudMode && (
-                  <GrupoDaJanela titulo="Mensagens">
-                    {items.map((it, i) => (
-                      <div key={it.uiKey} className="p-3 rounded-lg bg-muted/50 text-sm whitespace-pre-wrap">
-                        <span className="text-xs text-muted-foreground block mb-1">
-                          #{i + 1} · {KIND_LABEL[it.kind]}
-                          {it.delay_seconds > 0 && ` · aguarda ${it.delay_seconds}s`}
-                          {it.kind === 'text' &&
-                            (it.text_variations?.filter(v => v.trim()).length ?? 0) > 0 &&
-                            ` · ${(it.text_variations?.filter(v => v.trim()).length ?? 0) + 1} variações (sorteia 1/lead)`}
-                        </span>
-                        {it.kind !== 'text' && (
-                          <span className="text-xs text-primary flex items-center gap-1 mb-1">
-                            <Paperclip className="w-3 h-3" /> mídia anexada
-                          </span>
-                        )}
-                        {it.kind === 'text'
-                          ? preview(it.text_content ?? '')
-                          : it.media_caption
-                            ? preview(it.media_caption)
-                            : <span className="text-muted-foreground italic">(sem legenda)</span>}
-                      </div>
+            {/* Após o envio (opcional): mover pra etapa + criar/aplicar tag */}
+            <GrupoDaJanela titulo="Após o envio (opcional)">
+              <CampoDaJanela rotulo="Mover quem recebeu para a etapa" htmlFor="disparo-etapa-depois">
+                <Select value={postStageId || 'none'} onValueChange={v => setPostStageId(v === 'none' ? '' : v)}>
+                  <SelectTrigger id="disparo-etapa-depois" className="h-9 w-full">
+                    <SelectValue placeholder="Não mover" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Não mover</SelectItem>
+                    {stages.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
-                  </GrupoDaJanela>
-                )}
-
-                {cloudMode && selectedCloudTemplate && (
-                  <GrupoDaJanela titulo="Mensagem">
-                    <div className="p-3 rounded-lg bg-muted/50 text-sm whitespace-pre-wrap">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
-                        <ShieldCheck className="w-3 h-3" /> Modelo {selectedCloudTemplate.name} · {selectedCloudTemplate.language}
-                      </span>
-                      {preview(
-                        selectedCloudTemplate.variables.reduce(
-                          (txt, v, i) => txt.replace(`{{${i + 1}}}`, cloudVars[v] || `{{${i + 1}}}`),
-                          selectedCloudTemplate.content,
-                        ),
-                      )}
-                    </div>
-                  </GrupoDaJanela>
-                )}
-
-                {/* Enviar teste pra um número antes de disparar pros leads */}
-                <GrupoDaJanela titulo="Teste (opcional)">
-                  <CampoDaJanela
-                    rotulo="Enviar teste pra um número"
-                    ajuda={cloudMode
-                      ? 'Manda o modelo só pra esse número, sem tocar nos leads.'
-                      : 'Manda a sequência inteira só pra esse número, sem tocar nos leads.'}
-                  >
-                    <div className="flex items-center gap-2">
-                      <PhoneInput
-                        value={testPhone}
-                        onChange={setTestPhone}
-                        placeholder="(11) 99999-9999"
-                        valueFormat="digits"
-                        className="flex-1"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleTest}
-                        disabled={testing}
-                        className="whitespace-nowrap"
+                  </SelectContent>
+                </Select>
+              </CampoDaJanela>
+              <CampoDaJanela rotulo="Aplicar etiqueta" htmlFor="disparo-etiqueta-depois" ajuda="Cria a etiqueta se ela não existir.">
+                <Input
+                  id="disparo-etiqueta-depois"
+                  value={postLabel}
+                  onChange={e => setPostLabel(e.target.value)}
+                  placeholder="Ex.: recebeu-oferta"
+                  maxLength={60}
+                  className="h-9"
+                />
+                {availableLabels.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {availableLabels.slice(0, 12).map(l => (
+                      <button
+                        key={l.title}
+                        type="button"
+                        onClick={() => setPostLabel(l.title)}
+                        className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] hover:bg-muted"
+                        style={{ borderColor: `${l.color || '#7c3aed'}66` }}
                       >
-                        {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Enviar teste'}
-                      </Button>
-                    </div>
-                  </CampoDaJanela>
-                </GrupoDaJanela>
-              </div>
-            )}
+                        {l.title}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </CampoDaJanela>
+            </GrupoDaJanela>
 
-            {/* STEP creating / done */}
-            {step === 'creating' && (
-              <div className="space-y-3 py-10 text-center">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-                <div className="text-sm">Criando o disparo...</div>
-              </div>
-            )}
-            {step === 'done' && (
-              <div className="space-y-3 py-8 text-center">
-                <CheckCircle2 className="h-10 w-10 text-green-500 mx-auto" />
-                <div className="text-lg font-semibold">Disparo no ar</div>
-                <div className="text-sm text-muted-foreground">
-                  As mensagens saem em lotes respeitando o ritmo escolhido. Acompanhe na aba "Disparos".
+            <CaixaDaJanela titulo="Resumo">
+              <div className="divide-y divide-border text-sm">
+                <div className="flex justify-between py-2">
+                  <span className="text-muted-foreground">Destinatários</span>
+                  <strong>{recipientCount}</strong>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-muted-foreground">Canal</span>
+                  <strong>{cloudMode ? 'WhatsApp oficial (modelo)' : 'Campanha direta'}</strong>
+                </div>
+                {!cloudMode && selectedSender && (
+                  <div className="flex justify-between gap-3 py-2">
+                    <span className="text-muted-foreground">Número de saída</span>
+                    <strong className="text-right">
+                      {selectedSender.name}
+                      {selectedSender.phone ? ` · ${telefone(selectedSender.phone)}` : ''}
+                    </strong>
+                  </div>
+                )}
+                <div className="flex justify-between gap-3 py-2">
+                  <span className="text-muted-foreground">
+                    {cloudMode ? 'Modelo' : flowMode ? 'Funil' : 'Itens na sequência'}
+                  </span>
+                  <strong className="text-right">
+                    {cloudMode ? selectedCloudTemplate?.name : flowMode ? flowName : items.length}
+                  </strong>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-muted-foreground">Ritmo</span>
+                  <strong>
+                    {minS}-{maxS}s · lotes de {batchSize} · pausa {pauseS}s
+                  </strong>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-muted-foreground">Horário comercial</span>
+                  <strong>{businessHours ? 'Sim' : 'Não'}</strong>
                 </div>
               </div>
+            </CaixaDaJanela>
+
+            {!cloudMode && !flowMode && (
+              <GrupoDaJanela titulo="Mensagens">
+                {items.map((it, i) => (
+                  <div key={it.uiKey} className="p-3 rounded-lg bg-muted/50 text-sm whitespace-pre-wrap">
+                    <span className="text-xs text-muted-foreground block mb-1">
+                      #{i + 1} · {KIND_LABEL[it.kind]}
+                      {it.delay_seconds > 0 && ` · aguarda ${it.delay_seconds}s`}
+                      {it.kind === 'text' &&
+                        (it.text_variations?.filter(v => v.trim()).length ?? 0) > 0 &&
+                        ` · ${(it.text_variations?.filter(v => v.trim()).length ?? 0) + 1} variações (sorteia 1/lead)`}
+                    </span>
+                    {it.kind !== 'text' && (
+                      <span className="text-xs text-primary flex items-center gap-1 mb-1">
+                        <Paperclip className="w-3 h-3" /> mídia anexada
+                      </span>
+                    )}
+                    {it.kind === 'text'
+                      ? preview(it.text_content ?? '')
+                      : it.media_caption
+                        ? preview(it.media_caption)
+                        : <span className="text-muted-foreground italic">(sem legenda)</span>}
+                  </div>
+                ))}
+              </GrupoDaJanela>
             )}
-          </>
+
+            {cloudMode && selectedCloudTemplate && (
+              <GrupoDaJanela titulo="Mensagem">
+                <div className="p-3 rounded-lg bg-muted/50 text-sm whitespace-pre-wrap">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                    <ShieldCheck className="w-3 h-3" /> Modelo {selectedCloudTemplate.name} · {selectedCloudTemplate.language}
+                  </span>
+                  {preview(
+                    selectedCloudTemplate.variables.reduce(
+                      (txt, v, i) => txt.replace(`{{${i + 1}}}`, cloudVars[v] || `{{${i + 1}}}`),
+                      selectedCloudTemplate.content,
+                    ),
+                  )}
+                </div>
+              </GrupoDaJanela>
+            )}
+
+            {/* Enviar teste pra um número antes de disparar pros leads. No funil
+                pronto fica escondido por enquanto (o passo Revisar é refeito na próxima tarefa). */}
+            {!flowMode && (
+              <GrupoDaJanela titulo="Teste (opcional)">
+                <CampoDaJanela
+                  rotulo="Enviar teste pra um número"
+                  ajuda={cloudMode
+                    ? 'Manda o modelo só pra esse número, sem tocar nos leads.'
+                    : 'Manda a sequência inteira só pra esse número, sem tocar nos leads.'}
+                >
+                  <div className="flex items-center gap-2">
+                    <PhoneInput
+                      value={testPhone}
+                      onChange={setTestPhone}
+                      placeholder="(11) 99999-9999"
+                      valueFormat="digits"
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleTest}
+                      disabled={testing}
+                      className="whitespace-nowrap"
+                    >
+                      {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Enviar teste'}
+                    </Button>
+                  </div>
+                </CampoDaJanela>
+              </GrupoDaJanela>
+            )}
+          </div>
+        )}
+
+        {/* STEP creating / done */}
+        {step === 'creating' && (
+          <div className="space-y-3 py-10 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <div className="text-sm">Criando o disparo...</div>
+          </div>
+        )}
+        {step === 'done' && (
+          <div className="space-y-3 py-8 text-center">
+            <CheckCircle2 className="h-10 w-10 text-green-500 mx-auto" />
+            <div className="text-lg font-semibold">Disparo no ar</div>
+            <div className="text-sm text-muted-foreground">
+              As mensagens saem em lotes respeitando o ritmo escolhido. Acompanhe na página Disparos.
+            </div>
+          </div>
         )}
 
         <DialogFooter>
-          {view === 'list' && <Button onClick={() => handleClose(false)}>Fechar</Button>}
-
-          {view === 'new' && step === 'audience' && (
+          {step === 'audience' && (
             <>
               <Button variant="outline" onClick={() => handleClose(false)}>
                 Cancelar
@@ -1183,7 +884,7 @@ export default function BulkDispatchModal({
               </Button>
             </>
           )}
-          {view === 'new' && step === 'messages' && (
+          {step === 'messages' && (
             <>
               <Button variant="outline" onClick={() => setStep('audience')}>
                 <ChevronLeft className="w-4 h-4 mr-1" /> Voltar
@@ -1193,7 +894,7 @@ export default function BulkDispatchModal({
               </Button>
             </>
           )}
-          {view === 'new' && step === 'cadence' && (
+          {step === 'cadence' && (
             <>
               <Button variant="outline" onClick={() => setStep('messages')}>
                 <ChevronLeft className="w-4 h-4 mr-1" /> Voltar
@@ -1203,7 +904,7 @@ export default function BulkDispatchModal({
               </Button>
             </>
           )}
-          {view === 'new' && step === 'review' && (
+          {step === 'review' && (
             <>
               <Button variant="outline" onClick={() => setStep('cadence')}>
                 <ChevronLeft className="w-4 h-4 mr-1" /> Voltar
@@ -1213,13 +914,11 @@ export default function BulkDispatchModal({
               </Button>
             </>
           )}
-          {view === 'new' && step === 'done' && (
-            <Button onClick={() => setView('list')}>Ver disparos</Button>
+          {step === 'done' && (
+            <Button onClick={() => handleClose(false)}>Ver disparos</Button>
           )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
-      {dialogoDeConfirmacao}
-    </>
   );
 }
