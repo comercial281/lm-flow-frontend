@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react';
 import type { PedidoDeConfirmacao } from '@/hooks/useConfirmacao';
 
-// Qual painel lateral está aberto no canvas (sprint 4): o de um bloco ou o do
-// Início. Um por vez. Trocar de painel (clicar em outro bloco, no Início, em
+// Qual janela está aberta no canvas (sprint 4; era painel lateral até
+// 16/10/2026, o nome do hook ficou): a de um bloco ou a do Início. Um por vez. Trocar de painel (clicar em outro bloco, no Início, em
 // Cancelar ou no X) com o rascunho mexido pergunta antes de descartar.
 
 export type SidePanel = { type: 'node'; id: string } | { type: 'trigger' } | null;

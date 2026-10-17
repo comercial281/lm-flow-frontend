@@ -20,7 +20,7 @@ describe('paleta da sprint 2', () => {
       ]],
       ['IA', ['Passar para a IA', 'Desligar a IA']],
       ['Distribuição', ['Definir corretor', 'Distribuir pela roleta']],
-      ['Notificação', ['Avisar no grupo', 'Avisar pessoa', 'Avisar corretor', 'Avisar gestor', 'Notificação no celular']],
+      ['Notificação', ['Notificação']],
       ['Controle', ['Esperar', 'Aguardar resposta', 'Se / senão', 'Só continuar se']],
     ]);
   });
@@ -44,13 +44,16 @@ describe('paleta da sprint 2', () => {
     // Os envios de mídia são itens do bloco Mensagem (PR 8); os blocos antigos continuam abrindo.
     const itensDaMensagem = ['send_audio', 'send_image', 'send_video', 'send_document', 'send_sticker'];
     itensDaMensagem.forEach(t => expect(actions.has(t)).toBe(false));
-    const faltando = Object.keys(ACTION_TYPE_LABELS).filter(t => !actions.has(t) && !comBlocoProprio.includes(t) && !itensDaMensagem.includes(t));
+    // Os outros quatro avisos são escolhas do bloco Notificação (PR 9); os blocos antigos continuam abrindo.
+    const escolhasDaNotificacao = ['notify_user', 'notify_broker', 'notify_gestor', 'notify_push'];
+    escolhasDaNotificacao.forEach(t => expect(actions.has(t)).toBe(false));
+    const faltando = Object.keys(ACTION_TYPE_LABELS).filter(t => !actions.has(t) && !comBlocoProprio.includes(t) && !itensDaMensagem.includes(t) && !escolhasDaNotificacao.includes(t));
     expect(faltando).toEqual(['start_followup_sequence', 'wait']);
     expect(paletteItems().find(i => i.label === 'Iniciar follow-up')?.config).toEqual({ action_type: 'start_followup_flow', params: {} });
   });
 
   it('o botão da ação cria o bloco lead_action com { action_type, params }', () => {
-    const avisar = paletteItems().find(i => i.label === 'Avisar no grupo')!;
+    const avisar = paletteItems().find(i => i.key === 'lead_action:notify_group')!;
     expect(avisar).toMatchObject({ kind: 'lead_action', group: 'notify', config: { action_type: 'notify_group', params: {} } });
     // Cada clique ganha a própria config (não compartilha o objeto).
     const [a, b] = [paletteItems(), paletteItems()].map(list => list.find(i => i.key === avisar.key)!);
@@ -67,7 +70,7 @@ describe('paleta da sprint 2', () => {
   it('a busca ignora acento e maiúscula', () => {
     expect(paletteGroups('AGUARDAR').flatMap(g => g.items.map(i => i.kind))).toEqual(['wait_for_reply']);
     expect(paletteGroups('so continuar').flatMap(g => g.items.map(i => i.kind))).toEqual(['filter_label']);
-    expect(paletteGroups('notificacao').flatMap(g => g.items.map(i => i.label))).toEqual(['Notificação no celular']);
+    expect(paletteGroups('notificacao').flatMap(g => g.items.map(i => i.label))).toEqual(['Notificação']);
     expect(paletteGroups('nada disso')).toEqual([]);
   });
 

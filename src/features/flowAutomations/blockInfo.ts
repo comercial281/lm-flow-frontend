@@ -1,14 +1,14 @@
 // ÍCONE E FRASE DE CADA BLOCO (sprint 4, spec 04/10/2026, seção A).
 //
-// O painel Blocos mostra ícone + nome, e o painel lateral do bloco abre com o
-// ícone, o nome e uma linha dizendo o que o bloco faz. Os dois leem daqui pra
+// A lista Blocos mostra ícone + nome, e a janela do bloco abre com o ícone, o
+// nome e uma linha dizendo o que o bloco faz. Os dois leem daqui pra
 // falarem a mesma coisa. O NOME continua em `blockLabel` (palette.ts); aqui só
 // o que vai junto dele.
 
 import {
   ArrowRightLeft, Bell, BellRing, CircleCheck, Clock, Eraser, FileText, Filter, GitBranch, Hourglass, Image,
-  ListOrdered, Megaphone, MessageSquare, Mic, Bot, BotOff, Repeat, Send, Shuffle, Smartphone, Sticker, Tag,
-  Trophy, User, UserCheck, ClipboardList, Users, Video, Zap, type LucideIcon,
+  ListOrdered, MessageSquare, Mic, Bot, BotOff, Repeat, Send, Shuffle, Sticker, Tag,
+  Trophy, UserCheck, ClipboardList, Video, Zap, type LucideIcon,
 } from 'lucide-react';
 import type { FlowAutomationNode, FlowNodeConfig, FlowNodeKind } from '@/types/flowAutomations';
 import { isLeadActionType } from './leadAction';
@@ -49,11 +49,11 @@ const ICONS: Record<string, LucideIcon> = {
   'lead_action:create_task': ClipboardList,
   'lead_action:start_followup_sequence': Repeat,
   'lead_action:start_followup_flow': Repeat,
-  'lead_action:notify_group': Users,
-  'lead_action:notify_user': User,
-  'lead_action:notify_broker': Megaphone,
+  'lead_action:notify_group': BellRing,
+  'lead_action:notify_user': BellRing,
+  'lead_action:notify_broker': BellRing,
   'lead_action:notify_gestor': BellRing,
-  'lead_action:notify_push': Smartphone,
+  'lead_action:notify_push': BellRing,
   'lead_action:followup_ended': CircleCheck,
 };
 
@@ -85,7 +85,7 @@ const DESCRIPTIONS: Record<string, string> = {
   'lead_action:create_task': 'Cria uma tarefa pra alguém da equipe.',
   'lead_action:start_followup_sequence': 'Coloca o lead num follow-up do formato antigo.',
   'lead_action:start_followup_flow': 'Coloca o lead num follow-up.',
-  'lead_action:notify_group': 'Manda um aviso num grupo de WhatsApp.',
+  'lead_action:notify_group': 'Avisa alguém da equipe: no grupo, no WhatsApp ou no app.',
   'lead_action:notify_user': 'Manda um aviso pra uma pessoa da equipe.',
   'lead_action:notify_broker': 'Avisa o corretor responsável pelo lead.',
   'lead_action:notify_gestor': 'Avisa o gestor.',
@@ -93,7 +93,7 @@ const DESCRIPTIONS: Record<string, string> = {
   'lead_action:followup_ended': 'Fim do follow-up sem resposta: o lead sai do alerta "Sem contato do corretor há mais de 3 dias" até escrever de novo.',
 };
 
-/** Ícone do bloco no painel Blocos e no topo do painel lateral. */
+/** Ícone do bloco na lista Blocos e no topo da janela do bloco. */
 export function blockIcon(node: { kind: FlowNodeKind; config?: FlowNodeConfig | null }): LucideIcon {
   return ICONS[blockKey(node)] ?? (node.kind === 'lead_action' ? Bell : Zap);
 }

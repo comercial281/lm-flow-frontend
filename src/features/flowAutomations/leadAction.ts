@@ -37,11 +37,11 @@ export const LEAD_ACTION_BLOCK_LABELS: Record<string, string> = {
   create_task: 'Criar tarefa',
   start_followup_sequence: 'Iniciar follow-up (formato antigo)',
   start_followup_flow: 'Iniciar follow-up',
-  notify_group: 'Avisar no grupo',
-  notify_user: 'Avisar pessoa',
-  notify_broker: 'Avisar corretor',
-  notify_gestor: 'Avisar gestor',
-  notify_push: 'Notificação no celular',
+  notify_group: 'Notificação',
+  notify_user: 'Notificação',
+  notify_broker: 'Notificação',
+  notify_gestor: 'Notificação',
+  notify_push: 'Notificação',
   followup_ended: 'Marcar follow-up encerrado',
 };
 
@@ -105,7 +105,9 @@ export const PALETTE_LEAD_ACTIONS: string[] = [
   // itens do bloco Mensagem. Os blocos antigos continuam abrindo pelo ActionEditor.
   'send_quick_reply', 'send_message_funnel',
   'assign_broker', 'assign_via_roleta', 'create_task', 'start_followup_flow',
-  'notify_group', 'notify_user', 'notify_broker', 'notify_gestor', 'notify_push',
+  // Os cinco avisos viraram o bloco Notificação (PR 9): um item só, que nasce como
+  // notify_group. Os blocos antigos continuam abrindo pelo NotificationFields.
+  'notify_group',
 ];
 
 /** Ação que o bloco aceita: qualquer uma das Automações, menos as aposentadas, mais as só do construtor. */

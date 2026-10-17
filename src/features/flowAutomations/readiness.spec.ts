@@ -11,7 +11,7 @@ describe('o fluxo pode ser ligado?', () => {
       b('send_whatsapp', { text: 'Oi {{first_name}}', send_from: 'owner' }),
       b('lead_action', { action_type: 'notify_group', params: { message: 'Chegou lead' } }),
     ];
-    expect(enableProblem(gatilho, blocos)).toBe('Antes de ligar, complete o bloco "Avisar no grupo": falta preencher o destino do aviso.');
+    expect(enableProblem(gatilho, blocos)).toBe('Antes de ligar, complete o bloco "Notificação": falta preencher o destino do aviso.');
   });
 
   it('usa o apelido do bloco quando tem', () => {
